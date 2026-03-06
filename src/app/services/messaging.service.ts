@@ -49,6 +49,9 @@ interface DirectMessage {
   replyTo?: string; // The event ID this message is replying to (from 'e' tag)
   giftWrapId?: string; // For NIP-44 messages, the gift wrap event ID (used to skip re-decryption)
   failureReason?: string; // Human-readable reason for send failure
+  eventKind?: 'message' | 'reaction';
+  reactionTo?: string;
+  reactionContent?: string;
 }
 
 @Injectable({
@@ -204,6 +207,101 @@ export class MessagingService implements NostriaService {
     return eTag ? eTag[1] : undefined;
   }
 
+  private isLikelyReactionContent(content: string): boolean {
+    if (!content) {
+      return false;
+    }
+
+    if (content === '+' || content === '-') {
+      return true;
+    }
+
+    if (/^:[A-Za-z0-9_\-+]+:$/.test(content)) {
+      return true;
+    }
+
+    const compact = content.trim();
+    if (!compact || compact.includes(' ')) {
+      return false;
+    }
+
+    // Most emoji reactions are short grapheme clusters; keep this strict to avoid classifying short reply text.
+    return Array.from(compact).length <= 4;
+  }
+
+  private isReactionFromTags(tags: string[][], content: string): boolean {
+    const syntheticKindTag = tags.find(tag => tag[0] === '_nostria_kind');
+    if (syntheticKindTag?.[1] === String(kinds.Reaction)) {
+      return true;
+    }
+
+    const kTag = tags.find(tag => tag[0] === 'k');
+    const hasETag = tags.some(tag => tag[0] === 'e' && !!tag[1]);
+    if (!hasETag) {
+      return false;
+    }
+
+    if (kTag?.[1] === String(kinds.PrivateDirectMessage)) {
+      return true;
+    }
+
+    return this.isLikelyReactionContent(content);
+  }
+
+  private getReactionTargetFromTags(tags: string[][]): string | undefined {
+    const syntheticTarget = tags.find(tag => tag[0] === '_nostria_reaction_to');
+    if (syntheticTarget?.[1]) {
+      return syntheticTarget[1];
+    }
+
+    const eTag = tags.find(tag => tag[0] === 'e');
+    return eTag?.[1];
+  }
+
+  private withInnerKindTag(tags: string[][], innerKind?: number): string[][] {
+    if (typeof innerKind !== 'number') {
+      return tags;
+    }
+
+    if (tags.some(tag => tag[0] === '_nostria_kind')) {
+      return tags;
+    }
+
+    return [...tags, ['_nostria_kind', String(innerKind)]];
+  }
+
+  private normalizeMessage(message: DirectMessage): DirectMessage {
+    const tags = [...(message.tags || [])];
+    const isReaction = message.eventKind === 'reaction' || this.isReactionFromTags(tags, message.content || '');
+
+    if (!isReaction) {
+      return {
+        ...message,
+        tags,
+        eventKind: 'message',
+      };
+    }
+
+    const reactionTarget = message.reactionTo || this.getReactionTargetFromTags(tags);
+
+    if (!tags.some(tag => tag[0] === '_nostria_kind')) {
+      tags.push(['_nostria_kind', String(kinds.Reaction)]);
+    }
+
+    if (reactionTarget && !tags.some(tag => tag[0] === '_nostria_reaction_to')) {
+      tags.push(['_nostria_reaction_to', reactionTarget]);
+    }
+
+    return {
+      ...message,
+      tags,
+      eventKind: 'reaction',
+      reactionTo: reactionTarget,
+      reactionContent: message.reactionContent || message.content,
+      replyTo: undefined,
+    };
+  }
+
   /**
    * Update an existing message in a chat (e.g., to change pending/failed/received status).
    * Returns true if the message was found and updated, false otherwise.
@@ -263,23 +361,24 @@ export class MessagingService implements NostriaService {
       return;
     }
 
+    const normalizedMessage = this.normalizeMessage(message);
     const currentMap = this.chatsMap();
     // Use pubkey directly as chatId - messages are merged regardless of encryption type
     const chatId = pubkey;
 
     // Check if this message already exists in the specific chat to prevent duplicates
     const existingChat = currentMap.get(chatId);
-    if (existingChat && existingChat.messages.has(message.id)) {
+    if (existingChat && existingChat.messages.has(normalizedMessage.id)) {
       // Message already exists in this chat, don't add it again
-      this.logger.debug(`Message ${message.id} already exists in chat ${chatId}, skipping to prevent duplicate`);
+      this.logger.debug(`Message ${normalizedMessage.id} already exists in chat ${chatId}, skipping to prevent duplicate`);
       return;
     }
 
     // Track the outer event ID so future encounters can skip decryption entirely
-    if (message.giftWrapId) {
-      this.knownEventIds.add(message.giftWrapId);
+    if (normalizedMessage.giftWrapId) {
+      this.knownEventIds.add(normalizedMessage.giftWrapId);
     }
-    this.knownEventIds.add(message.id);
+    this.knownEventIds.add(normalizedMessage.id);
 
     // Create a new Map to ensure signal reactivity
     const newMap = new Map(currentMap);
@@ -292,18 +391,18 @@ export class MessagingService implements NostriaService {
       const newChat: Chat = {
         id: chatId,
         pubkey: pubkey,
-        unreadCount: message.isOutgoing ? 0 : 1, // Count as unread if incoming
-        lastMessage: message,
+        unreadCount: normalizedMessage.isOutgoing ? 0 : 1, // Count as unread if incoming
+        lastMessage: normalizedMessage,
         relays: [],
         encryptionType: 'nip44', // Default to modern encryption for new messages
-        hasLegacyMessages: message.encryptionType === 'nip04',
-        messages: new Map([[message.id, message]]),
+        hasLegacyMessages: normalizedMessage.encryptionType === 'nip04',
+        messages: new Map([[normalizedMessage.id, normalizedMessage]]),
       };
 
       this.logger.debug('Created new chat with message', {
         chatId,
-        messageId: message.id,
-        isOutgoing: message.isOutgoing,
+        messageId: normalizedMessage.id,
+        isOutgoing: normalizedMessage.isOutgoing,
         unreadCount: newChat.unreadCount,
       });
 
@@ -312,21 +411,21 @@ export class MessagingService implements NostriaService {
     } else {
       // Update existing chat
       const updatedMessagesMap = new Map(chat.messages);
-      updatedMessagesMap.set(message.id, message);
+      updatedMessagesMap.set(normalizedMessage.id, normalizedMessage);
 
       const updatedChat: Chat = {
         ...chat,
         messages: updatedMessagesMap,
         lastMessage: this.getLatestMessage(updatedMessagesMap),
-        unreadCount: message.isOutgoing ? chat.unreadCount : chat.unreadCount + 1,
+        unreadCount: normalizedMessage.isOutgoing ? chat.unreadCount : chat.unreadCount + 1,
         // Track if chat has any legacy (NIP-04) messages
-        hasLegacyMessages: chat.hasLegacyMessages || message.encryptionType === 'nip04',
+        hasLegacyMessages: chat.hasLegacyMessages || normalizedMessage.encryptionType === 'nip04',
       };
 
       this.logger.debug('Updated chat with message', {
         chatId,
-        messageId: message.id,
-        isOutgoing: message.isOutgoing,
+        messageId: normalizedMessage.id,
+        isOutgoing: normalizedMessage.isOutgoing,
         previousUnread: chat.unreadCount,
         newUnread: updatedChat.unreadCount,
       });
@@ -339,7 +438,7 @@ export class MessagingService implements NostriaService {
     this.chatsMap.set(newMap);
 
     // Save message to storage asynchronously
-    this.saveMessageToStorage(message, chatId);
+    this.saveMessageToStorage(normalizedMessage, chatId);
   }
 
   /**
@@ -481,16 +580,18 @@ export class MessagingService implements NostriaService {
             giftWrapId: storedMsg.giftWrapId,
           };
 
-          messagesMap.set(dm.id, dm);
+          const normalizedDm = this.normalizeMessage(dm);
+
+          messagesMap.set(normalizedDm.id, normalizedDm);
 
           // Track known event IDs from storage so we can skip re-decryption
-          if (dm.giftWrapId) {
-            this.knownEventIds.add(dm.giftWrapId);
+          if (normalizedDm.giftWrapId) {
+            this.knownEventIds.add(normalizedDm.giftWrapId);
           }
-          this.knownEventIds.add(dm.id);
+          this.knownEventIds.add(normalizedDm.id);
 
-          if (!lastMessage || dm.created_at > lastMessage.created_at) {
-            lastMessage = dm;
+          if (!lastMessage || normalizedDm.created_at > lastMessage.created_at) {
+            lastMessage = normalizedDm;
           }
 
           // Track if chat has any legacy messages
@@ -499,8 +600,8 @@ export class MessagingService implements NostriaService {
           }
 
           // Track the oldest message timestamp across all chats
-          if (oldestStoredTimestamp === null || dm.created_at < oldestStoredTimestamp) {
-            oldestStoredTimestamp = dm.created_at;
+          if (oldestStoredTimestamp === null || normalizedDm.created_at < oldestStoredTimestamp) {
+            oldestStoredTimestamp = normalizedDm.created_at;
           }
         }
 
@@ -671,7 +772,7 @@ export class MessagingService implements NostriaService {
           pubkey: unwrappedMessage.pubkey,
           created_at: unwrappedMessage.created_at,
           content: unwrappedMessage.content,
-          tags: unwrappedMessage.tags || [],
+          tags: this.withInnerKindTag(unwrappedMessage.tags || [], unwrappedMessage.kind),
           isOutgoing: unwrappedMessage.pubkey === myPubkey,
           pending: false,
           failed: false,
@@ -705,7 +806,7 @@ export class MessagingService implements NostriaService {
           pubkey: unwrappedMessage.pubkey,
           created_at: unwrappedMessage.created_at,
           content: unwrappedMessage.content,
-          tags: unwrappedMessage.tags || [],
+          tags: this.withInnerKindTag(unwrappedMessage.tags || [], unwrappedMessage.kind),
           isOutgoing: event.pubkey === myPubkey,
           pending: false,
           failed: false,
@@ -821,7 +922,7 @@ export class MessagingService implements NostriaService {
                   pubkey: wrappedevent.pubkey,
                   created_at: wrappedevent.created_at,
                   content: wrappedevent.content,
-                  tags: wrappedevent.tags || [],
+                  tags: this.withInnerKindTag(wrappedevent.tags || [], wrappedevent.kind),
                   isOutgoing: wrappedevent.pubkey === myPubkey,
                   pending: false,
                   failed: false,
@@ -886,7 +987,7 @@ export class MessagingService implements NostriaService {
                   pubkey: unwrappedMessage.pubkey,
                   created_at: unwrappedMessage.created_at,
                   content: unwrappedMessage.content,
-                  tags: unwrappedMessage.tags || [],
+                  tags: this.withInnerKindTag(unwrappedMessage.tags || [], unwrappedMessage.kind),
                   isOutgoing: event.pubkey === myPubkey,
                   pending: false,
                   failed: false,
@@ -1062,7 +1163,7 @@ export class MessagingService implements NostriaService {
               pubkey: unwrappedMessage.pubkey,
               created_at: unwrappedMessage.created_at,
               content: unwrappedMessage.content,
-              tags: unwrappedMessage.tags || [],
+              tags: this.withInnerKindTag(unwrappedMessage.tags || [], unwrappedMessage.kind),
               isOutgoing: unwrappedMessage.pubkey === myPubkey,
               pending: false,
               failed: false,
@@ -1096,7 +1197,7 @@ export class MessagingService implements NostriaService {
               pubkey: unwrappedMessage.pubkey,
               created_at: unwrappedMessage.created_at,
               content: unwrappedMessage.content,
-              tags: unwrappedMessage.tags || [],
+              tags: this.withInnerKindTag(unwrappedMessage.tags || [], unwrappedMessage.kind),
               isOutgoing: event.pubkey === myPubkey,
               pending: false,
               failed: false,
@@ -1274,7 +1375,7 @@ export class MessagingService implements NostriaService {
             pubkey: unwrappedMessage.pubkey,
             created_at: unwrappedMessage.created_at,
             content: unwrappedMessage.content,
-            tags: unwrappedMessage.tags || [],
+            tags: this.withInnerKindTag(unwrappedMessage.tags || [], unwrappedMessage.kind),
             isOutgoing: unwrappedMessage.pubkey === myPubkey,
             pending: false,
             failed: false,
@@ -1321,7 +1422,7 @@ export class MessagingService implements NostriaService {
             pubkey: unwrappedMessage.pubkey,
             created_at: unwrappedMessage.created_at,
             content: unwrappedMessage.content,
-            tags: unwrappedMessage.tags || [],
+            tags: this.withInnerKindTag(unwrappedMessage.tags || [], unwrappedMessage.kind),
             isOutgoing: event.pubkey === myPubkey,
             pending: false,
             failed: false,
@@ -1617,7 +1718,7 @@ export class MessagingService implements NostriaService {
             created_at: unwrappedMessage.created_at,
             content: unwrappedMessage.content,
             isOutgoing: isOutgoing,
-            tags: unwrappedMessage.tags || [],
+            tags: this.withInnerKindTag(unwrappedMessage.tags || [], unwrappedMessage.kind),
             pending: false,
             failed: false,
             received: true,
@@ -1822,7 +1923,7 @@ export class MessagingService implements NostriaService {
                 pubkey: wrappedevent.pubkey,
                 created_at: wrappedevent.created_at,
                 content: wrappedevent.content,
-                tags: wrappedevent.tags || [],
+                tags: this.withInnerKindTag(wrappedevent.tags || [], wrappedevent.kind),
                 isOutgoing: wrappedevent.pubkey === myPubkey,
                 pending: false,
                 failed: false,
@@ -1899,7 +2000,7 @@ export class MessagingService implements NostriaService {
                 pubkey: unwrappedMessage.pubkey,
                 created_at: unwrappedMessage.created_at,
                 content: unwrappedMessage.content,
-                tags: unwrappedMessage.tags || [],
+                tags: this.withInnerKindTag(unwrappedMessage.tags || [], unwrappedMessage.kind),
                 isOutgoing: event.pubkey === myPubkey,
                 pending: false,
                 failed: false,
@@ -1973,7 +2074,7 @@ export class MessagingService implements NostriaService {
                 pubkey: wrappedevent.pubkey,
                 created_at: wrappedevent.created_at,
                 content: wrappedevent.content,
-                tags: wrappedevent.tags || [],
+                tags: this.withInnerKindTag(wrappedevent.tags || [], wrappedevent.kind),
                 isOutgoing: wrappedevent.pubkey === myPubkey,
                 pending: false,
                 failed: false,
@@ -2050,7 +2151,7 @@ export class MessagingService implements NostriaService {
                 pubkey: unwrappedMessage.pubkey,
                 created_at: unwrappedMessage.created_at,
                 content: unwrappedMessage.content,
-                tags: unwrappedMessage.tags || [],
+                tags: this.withInnerKindTag(unwrappedMessage.tags || [], unwrappedMessage.kind),
                 isOutgoing: event.pubkey === myPubkey,
                 pending: false,
                 failed: false,

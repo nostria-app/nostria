@@ -108,6 +108,15 @@ interface DirectMessage {
   encryptionType?: 'nip04' | 'nip44';
   replyTo?: string; // The event ID this message is replying to (from 'e' tag)
   failureReason?: string; // Human-readable reason for send failure
+  eventKind?: 'message' | 'reaction';
+  reactionTo?: string;
+  reactionContent?: string;
+}
+
+interface MessageReactionSummary {
+  content: string;
+  count: number;
+  userReacted: boolean;
 }
 
 interface MessageGroup {
@@ -262,7 +271,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
 
   // Computed signal for messages grouped by date
   groupedMessages = computed(() => {
-    const msgs = this.messages();
+    const msgs = this.messages().filter(message => !this.isReactionMessage(message));
     if (msgs.length === 0) return [];
 
     const groups: MessageGroup[] = [];
@@ -1817,8 +1826,160 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
    * Get a message by ID for displaying reply context
    */
   getMessageById(messageId: string): DirectMessage | undefined {
-    const messages = this.messages();
+    const messages = this.messages().filter(message => !this.isReactionMessage(message));
     return messages.find(m => m.id === messageId);
+  }
+
+  isReactionMessage(message: DirectMessage): boolean {
+    if (message.eventKind === 'reaction') {
+      return true;
+    }
+
+    const kindTag = message.tags.find(tag => tag[0] === '_nostria_kind');
+    return kindTag?.[1] === String(kinds.Reaction);
+  }
+
+  getReactionDisplay(content: string): string {
+    if (!content || content === '+') {
+      return '\u2764\uFE0F';
+    }
+    return content;
+  }
+
+  getMessageReactions(messageId: string): MessageReactionSummary[] {
+    const latestReactionByPubkey = new Map<string, DirectMessage>();
+
+    for (const entry of this.messages()) {
+      if (!this.isReactionMessage(entry)) {
+        continue;
+      }
+
+      const reactionTarget = entry.reactionTo || this.getReactionTargetFromTags(entry.tags);
+      if (reactionTarget !== messageId) {
+        continue;
+      }
+
+      const existing = latestReactionByPubkey.get(entry.pubkey);
+      if (!existing || entry.created_at >= existing.created_at) {
+        latestReactionByPubkey.set(entry.pubkey, entry);
+      }
+    }
+
+    const myPubkey = this.accountState.pubkey();
+    const groupedReactions = new Map<string, MessageReactionSummary>();
+
+    for (const reaction of latestReactionByPubkey.values()) {
+      const content = reaction.reactionContent || reaction.content;
+
+      // NIP-25 reaction removal marker.
+      if (!content || content === '-') {
+        continue;
+      }
+
+      const existingSummary = groupedReactions.get(content);
+      if (existingSummary) {
+        existingSummary.count += 1;
+        existingSummary.userReacted = existingSummary.userReacted || (myPubkey === reaction.pubkey);
+      } else {
+        groupedReactions.set(content, {
+          content,
+          count: 1,
+          userReacted: myPubkey === reaction.pubkey,
+        });
+      }
+    }
+
+    return Array.from(groupedReactions.values()).sort((a, b) => b.count - a.count);
+  }
+
+  async openReactionPickerDialog(message: DirectMessage): Promise<void> {
+    const { EmojiPickerDialogComponent } = await import('../../components/emoji-picker/emoji-picker-dialog.component');
+    const dialogRef = this.customDialog.open<typeof EmojiPickerDialogComponent.prototype, string>(EmojiPickerDialogComponent, {
+      title: 'React',
+      width: '400px',
+      panelClass: 'emoji-picker-dialog',
+    });
+
+    dialogRef.afterClosed$.subscribe(({ result }) => {
+      if (result) {
+        void this.sendReaction(message, result);
+      }
+    });
+  }
+
+  async sendReaction(message: DirectMessage, reactionContent: string): Promise<void> {
+    const reaction = reactionContent.trim();
+    if (!reaction) {
+      return;
+    }
+
+    if (this.isReactionMessage(message) || message.isOutgoing) {
+      return;
+    }
+
+    const receiverPubkey = this.selectedChat()?.pubkey;
+    const myPubkey = this.accountState.pubkey();
+    if (!receiverPubkey || !myPubkey) {
+      return;
+    }
+
+    try {
+      await this.userRelayService.ensureRelaysForPubkey(receiverPubkey);
+
+      const result = await this.createNip44Message(
+        reaction,
+        receiverPubkey,
+        myPubkey,
+        undefined,
+        {
+          rumorKind: kinds.Reaction,
+          extraRumorTags: [
+            ['e', message.id],
+            ['k', String(kinds.PrivateDirectMessage)],
+            ['_nostria_kind', String(kinds.Reaction)],
+            ['_nostria_reaction_to', message.id],
+          ],
+          eventKind: 'reaction',
+          reactionTo: message.id,
+          reactionContent: reaction,
+        }
+      );
+
+      this.messaging.addMessageToChat(receiverPubkey, {
+        ...result.message,
+        pending: true,
+      });
+
+      result.publish().then(publishResult => {
+        if (publishResult.success) {
+          this.messaging.updateMessageInChat(receiverPubkey, result.message.id, {
+            pending: false,
+            received: true,
+            failed: false,
+          });
+        } else {
+          this.messaging.removeMessageFromChat(receiverPubkey, result.message.id);
+          this.snackBar.open(publishResult.failureReason || 'Failed to send reaction', 'Close', { duration: 3000 });
+        }
+      }).catch(err => {
+        this.messaging.removeMessageFromChat(receiverPubkey, result.message.id);
+        this.logger.error('Failed to publish DM reaction', err);
+        this.snackBar.open('Failed to send reaction', 'Close', { duration: 3000 });
+      });
+    } catch (error) {
+      this.logger.error('Failed to prepare DM reaction', error);
+      this.snackBar.open('Failed to send reaction', 'Close', { duration: 3000 });
+    }
+  }
+
+  private getReactionTargetFromTags(tags: string[][]): string | undefined {
+    const syntheticTag = tags.find(tag => tag[0] === '_nostria_reaction_to');
+    if (syntheticTag?.[1]) {
+      return syntheticTag[1];
+    }
+
+    const eTag = tags.find(tag => tag[0] === 'e');
+    return eTag?.[1];
   }
 
   /**
@@ -2395,10 +2556,18 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     messageText: string,
     receiverPubkey: string,
     myPubkey: string,
-    replyToId?: string
+    replyToId?: string,
+    options?: {
+      rumorKind?: number;
+      extraRumorTags?: string[][];
+      eventKind?: 'message' | 'reaction';
+      reactionTo?: string;
+      reactionContent?: string;
+    }
   ): Promise<{ message: DirectMessage; publish: () => Promise<{ success: boolean; failureReason?: string }> }> {
     try {
       const isNoteToSelf = receiverPubkey === myPubkey;
+      const rumorKind = options?.rumorKind ?? kinds.PrivateDirectMessage;
 
       // Step 1: Create the message (unsigned event) - kind 14
       const tags: string[][] = [['p', receiverPubkey]];
@@ -2408,8 +2577,12 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
         tags.push(['e', replyToId]);
       }
 
+      if (options?.extraRumorTags?.length) {
+        tags.push(...options.extraRumorTags);
+      }
+
       const unsignedMessage = {
-        kind: kinds.PrivateDirectMessage,
+        kind: rumorKind,
         pubkey: myPubkey,
         created_at: Math.floor(Date.now() / 1000),
         tags: tags,
@@ -2499,6 +2672,9 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
         tags: unsignedMessage.tags,
         replyTo: replyToId,
         encryptionType: 'nip44',
+        eventKind: options?.eventKind ?? 'message',
+        reactionTo: options?.reactionTo,
+        reactionContent: options?.reactionContent,
       };
 
       // Return a publish function that handles all relay publishing in the background.

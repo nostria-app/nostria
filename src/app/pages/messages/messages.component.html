@@ -429,6 +429,18 @@
             </span>
           </div>
 
+          @if (getMessageReactions(message.id).length > 0) {
+          <div class="message-reactions" [class.outgoing]="message.isOutgoing">
+            @for (reaction of getMessageReactions(message.id); track reaction.content) {
+            <button type="button" class="reaction-chip" [class.user-reacted]="reaction.userReacted"
+              (click)="sendReaction(message, reaction.content)">
+              <span class="reaction-emoji">{{ getReactionDisplay(reaction.content) }}</span>
+              <span class="reaction-count">{{ reaction.count }}</span>
+            </button>
+            }
+          </div>
+          }
+
           @if (message.failed) {
           <div class="message-actions">
             <button mat-icon-button class="retry-button" (click)="retryMessage(message)" matTooltip="Retry sending">
@@ -442,6 +454,12 @@
               <mat-icon>more_vert</mat-icon>
             </button>
             <mat-menu #messageMenu="matMenu">
+              @if (!message.isOutgoing && !isReactionMessage(message)) {
+              <button mat-menu-item [matMenuTriggerFor]="reactionMenu">
+                <mat-icon>sentiment_satisfied</mat-icon>
+                <span>React</span>
+              </button>
+              }
               <button mat-menu-item (click)="setReplyTo(message)">
                 <mat-icon>reply</mat-icon>
                 <span>Reply</span>
@@ -473,6 +491,30 @@
                 <span>Hide</span>
               </button>
               }
+            </mat-menu>
+
+            <mat-menu #reactionMenu="matMenu">
+              <button mat-menu-item (click)="sendReaction(message, '+')">
+                <span class="reaction-menu-emoji">{{ getReactionDisplay('+') }}</span>
+                <span>Like</span>
+              </button>
+              <button mat-menu-item (click)="sendReaction(message, '😂')">
+                <span class="reaction-menu-emoji">😂</span>
+                <span>Laugh</span>
+              </button>
+              <button mat-menu-item (click)="sendReaction(message, '😮')">
+                <span class="reaction-menu-emoji">😮</span>
+                <span>Surprised</span>
+              </button>
+              <button mat-menu-item (click)="sendReaction(message, '😢')">
+                <span class="reaction-menu-emoji">😢</span>
+                <span>Sad</span>
+              </button>
+              <mat-divider></mat-divider>
+              <button mat-menu-item (click)="openReactionPickerDialog(message)">
+                <mat-icon>add_reaction</mat-icon>
+                <span>More reactions...</span>
+              </button>
             </mat-menu>
           </div>
           }

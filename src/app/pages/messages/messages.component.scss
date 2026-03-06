@@ -1792,3 +1792,47 @@ app-message-content {
     color: var(--mat-sys-on-surface-variant);
   }
 }
+
+.message-reactions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+  max-width: min(600px, calc(100% - 56px));
+
+  &.outgoing {
+    justify-content: flex-end;
+  }
+
+  .reaction-chip {
+    border: 1px solid var(--mat-sys-outline-variant);
+    border-radius: var(--mat-sys-corner-full);
+    background-color: var(--mat-sys-surface-container);
+    color: var(--mat-sys-on-surface);
+    padding: 2px 8px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+
+    &.user-reacted {
+      background-color: var(--mat-sys-secondary-container);
+      border-color: var(--mat-sys-secondary);
+      color: var(--mat-sys-on-secondary-container);
+    }
+
+    .reaction-emoji {
+      font-size: var(--text-sm);
+      line-height: 1;
+    }
+
+    .reaction-count {
+      font-size: var(--text-xs);
+      opacity: 0.85;
+    }
+  }
+}
+
+.reaction-menu-emoji {
+  margin-right: 8px;
+}
