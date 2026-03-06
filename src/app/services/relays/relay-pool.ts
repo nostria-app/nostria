@@ -366,7 +366,11 @@ export class RelayPoolService {
     // Filter out relays that have failed authentication
     const filteredUrls = this.relayAuth.filterAuthFailedRelays(relayUrls);
     if (filteredUrls.length === 0) {
-      throw new Error('All relays are unavailable, cannot publish');
+      if (relayUrls.length === 1) {
+        throw new Error(`${relayUrls[0]}: relay unavailable for publishing at the moment`);
+      }
+
+      throw new Error('No available relays for this publish attempt');
     }
 
     // Add any new relays to the pool
