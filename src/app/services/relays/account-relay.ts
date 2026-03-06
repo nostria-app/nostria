@@ -20,6 +20,8 @@ export class AccountRelayService extends RelayServiceBase {
     super(inject(PoolService).pool);
     // Ensure we always connect to all account relays to maximise data availability
     this.useOptimizedRelays = false;
+    // Preserve user-configured relay domains (including known dead/ignored) in account relay state.
+    this.keepIgnoredRelayDomains = true;
   }
 
   async setAccount(pubkey: string, destroy = false): Promise<{

@@ -44,6 +44,7 @@ export abstract class RelayServiceBase {
     return this._eventProcessor;
   }
   protected useOptimizedRelays = false;
+  protected keepIgnoredRelayDomains = false;
 
   // Pool instance identifier for tracking
   protected poolInstanceId: string;
@@ -135,7 +136,10 @@ export abstract class RelayServiceBase {
 
     // Normalize + dedupe to prevent nostr-tools "duplicate url" errors.
     // This also canonicalizes equivalent forms like trailing slash differences.
-    const normalizedUniqueUrls = this.utilities.getUniqueNormalizedRelayUrls(secureUrls);
+    const normalizedUniqueUrls = this.utilities.getUniqueNormalizedRelayUrls(
+      secureUrls,
+      this.keepIgnoredRelayDomains
+    );
 
     if (normalizedUniqueUrls.length < secureUrls.length) {
       const deduped = secureUrls.length - normalizedUniqueUrls.length;

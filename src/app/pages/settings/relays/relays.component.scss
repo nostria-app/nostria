@@ -232,35 +232,10 @@ app-info-tooltip {
   border-left-color: var(--mat-sys-tertiary);
 }
 
-.dead-relays-card {
-  border-left-color: var(--mat-sys-error);
-}
-
-.dead-relays-list {
-  display: grid;
-  gap: 8px;
-  margin: 12px 0 16px;
-}
-
-.dead-relay-item {
+.dead-relays-action {
+  margin-top: 12px;
   display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 10px;
-  border-radius: var(--mat-sys-corner-medium);
-  background: var(--mat-sys-surface-container);
-  color: var(--mat-sys-on-surface-variant);
-
-  mat-icon {
-    color: var(--mat-sys-error);
-    width: 18px;
-    height: 18px;
-    font-size: 18px;
-  }
-
-  span {
-    font-family: monospace;
-  }
+  justify-content: flex-start;
 }
 
 .deprecated-actions {

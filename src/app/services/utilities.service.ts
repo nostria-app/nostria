@@ -833,8 +833,10 @@ export class UtilitiesService {
     'wss://nos.lol',
   ];
 
-  normalizeRelayUrls(urls: string[]): string[] {
-    return urls.map(url => this.normalizeRelayUrl(url)).filter(url => url !== '');
+  normalizeRelayUrls(urls: string[], includeIgnoredRelays = false): string[] {
+    return urls
+      .map(url => this.normalizeRelayUrl(url, includeIgnoredRelays))
+      .filter(url => url !== '');
   }
 
   /**
@@ -842,10 +844,10 @@ export class UtilitiesService {
    * @param urls - Array of relay URLs to deduplicate and normalize
    * @returns Array of unique normalized relay URLs
    */
-  getUniqueNormalizedRelayUrls(urls: string[]): string[] {
+  getUniqueNormalizedRelayUrls(urls: string[], includeIgnoredRelays = false): string[] {
     // Normalize all URLs first, then deduplicate
     const normalizedUrls = urls
-      .map(url => this.normalizeRelayUrl(url.trim()))
+      .map(url => this.normalizeRelayUrl(url.trim(), includeIgnoredRelays))
       .filter(url => url.length > 0);
 
     // Remove duplicates after normalization
@@ -895,7 +897,7 @@ export class UtilitiesService {
    * Only accepts secure wss:// URLs - insecure ws:// URLs are rejected.
    * Also validates that the hostname is a valid domain (contains a dot).
    */
-  normalizeRelayUrl(url: string): string {
+  normalizeRelayUrl(url: string, includeIgnoredRelays = false): string {
     try {
       // Only allow secure WebSocket connections (wss://)
       // Reject ws:// to prevent mixed content errors when served over HTTPS
@@ -911,7 +913,7 @@ export class UtilitiesService {
 
       const parsedUrl = new URL(url);
 
-      if (this.ignoredRelayDomains.has(parsedUrl.hostname.toLowerCase())) {
+      if (!includeIgnoredRelays && this.ignoredRelayDomains.has(parsedUrl.hostname.toLowerCase())) {
         return '';
       }
 
