@@ -117,6 +117,7 @@ interface MessageReactionSummary {
   content: string;
   count: number;
   userReacted: boolean;
+  customEmojiUrl?: string;
 }
 
 interface MessageGroup {
@@ -1846,6 +1847,25 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     return content;
   }
 
+  getReactionCustomEmojiUrl(content: string, tags: string[][]): string | undefined {
+    const shortcode = this.getEmojiShortcode(content);
+    if (!shortcode) {
+      return undefined;
+    }
+
+    const emojiTag = tags.find(tag => tag[0] === 'emoji' && tag[1] === shortcode && !!tag[2]);
+    return emojiTag?.[2];
+  }
+
+  private getEmojiShortcode(content: string): string | undefined {
+    if (!content || !content.startsWith(':') || !content.endsWith(':')) {
+      return undefined;
+    }
+
+    const shortcode = content.slice(1, -1).trim();
+    return shortcode || undefined;
+  }
+
   getMessageReactions(messageId: string): MessageReactionSummary[] {
     const latestReactionByPubkey = new Map<string, DirectMessage>();
 
@@ -1870,6 +1890,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
 
     for (const reaction of latestReactionByPubkey.values()) {
       const content = reaction.reactionContent || reaction.content;
+      const customEmojiUrl = this.getReactionCustomEmojiUrl(content, reaction.tags || []);
 
       // NIP-25 reaction removal marker.
       if (!content || content === '-') {
@@ -1880,11 +1901,15 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       if (existingSummary) {
         existingSummary.count += 1;
         existingSummary.userReacted = existingSummary.userReacted || (myPubkey === reaction.pubkey);
+        if (!existingSummary.customEmojiUrl && customEmojiUrl) {
+          existingSummary.customEmojiUrl = customEmojiUrl;
+        }
       } else {
         groupedReactions.set(content, {
           content,
           count: 1,
           userReacted: myPubkey === reaction.pubkey,
+          customEmojiUrl,
         });
       }
     }
@@ -1907,7 +1932,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     });
   }
 
-  async sendReaction(message: DirectMessage, reactionContent: string): Promise<void> {
+  async sendReaction(message: DirectMessage, reactionContent: string, customEmojiUrl?: string): Promise<void> {
     const reaction = reactionContent.trim();
     if (!reaction) {
       return;
@@ -1926,6 +1951,18 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     try {
       await this.userRelayService.ensureRelaysForPubkey(receiverPubkey);
 
+      const extraRumorTags: string[][] = [
+        ['e', message.id],
+        ['k', String(kinds.PrivateDirectMessage)],
+        ['_nostria_kind', String(kinds.Reaction)],
+        ['_nostria_reaction_to', message.id],
+      ];
+
+      const shortcode = this.getEmojiShortcode(reaction);
+      if (shortcode && customEmojiUrl) {
+        extraRumorTags.push(['emoji', shortcode, customEmojiUrl]);
+      }
+
       const result = await this.createNip44Message(
         reaction,
         receiverPubkey,
@@ -1933,12 +1970,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
         undefined,
         {
           rumorKind: kinds.Reaction,
-          extraRumorTags: [
-            ['e', message.id],
-            ['k', String(kinds.PrivateDirectMessage)],
-            ['_nostria_kind', String(kinds.Reaction)],
-            ['_nostria_reaction_to', message.id],
-          ],
+          extraRumorTags,
           eventKind: 'reaction',
           reactionTo: message.id,
           reactionContent: reaction,

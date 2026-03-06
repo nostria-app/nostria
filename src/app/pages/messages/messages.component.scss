@@ -1826,6 +1826,13 @@ app-message-content {
       line-height: 1;
     }
 
+    .reaction-custom-emoji {
+      width: 16px;
+      height: 16px;
+      object-fit: contain;
+      display: block;
+    }
+
     .reaction-count {
       font-size: var(--text-xs);
       opacity: 0.85;
