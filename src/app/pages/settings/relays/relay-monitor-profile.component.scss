@@ -1,0 +1,48 @@
+.monitor-profile {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.avatar-wrap {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--mat-sys-corner-full);
+  overflow: hidden;
+  background: var(--mat-sys-surface-container);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.avatar {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.avatar-fallback {
+  width: 100%;
+  height: 100%;
+  font-size: 32px;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.monitor-meta {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.monitor-pubkey {
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 0.7rem;
+  font-family: 'Roboto Mono', monospace;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 360px;
+}

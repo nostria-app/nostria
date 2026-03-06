@@ -178,13 +178,36 @@ app-info-tooltip {
   margin-top: 0px; // Fine-tune vertical alignment
 }
 
+.find-button {
+  height: 56px;
+  align-self: flex-start;
+  margin-top: 0px;
+}
+
+.add-actions {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
 @media (max-width: 599px) {
   .flex-container {
     flex-direction: column;
     align-items: stretch;
   }
 
+  .add-actions {
+    width: 100%;
+    flex-direction: column;
+    gap: 8px;
+  }
+
   .add-button {
+    width: 100%;
+    margin-top: 0;
+  }
+
+  .find-button {
     width: 100%;
     margin-top: 0;
   }

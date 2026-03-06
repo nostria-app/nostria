@@ -87,10 +87,15 @@
             <input matInput placeholder="wss://relay.example.com" [value]="newRelayUrl()"
               (input)="newRelayUrl.set($any($event.target).value)" (keyup.enter)="addRelay()" />
           </mat-form-field>
-          <button mat-flat-button color="primary" class="add-button" (click)="addRelay()"
-            i18n="@@settings.relays.add-button">
-            Add Relay
-          </button>
+          <div class="add-actions">
+            <button mat-flat-button class="add-button" (click)="addRelay()" i18n="@@settings.relays.add-button">
+              Add
+            </button>
+            <button mat-stroked-button class="find-button" (click)="openFindRelaysDialog()"
+              i18n="@@settings.relays.find-button">
+              Find
+            </button>
+          </div>
         </div>
 
         @if (userRelays().length > 0) {

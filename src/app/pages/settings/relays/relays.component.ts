@@ -47,6 +47,11 @@ import { PanelActionsService } from '../../../services/panel-actions.service';
 import { RightPanelService } from '../../../services/right-panel.service';
 import { BackupComponent } from '../backup/backup.component';
 import { ConfirmDialogComponent } from '../../../components/confirm-dialog/confirm-dialog.component';
+import { CustomDialogService } from '../../../services/custom-dialog.service';
+import {
+  FindResponsiveRelaysDialogComponent,
+  FindResponsiveRelaysDialogResult,
+} from './find-responsive-relays-dialog.component';
 
 @Component({
   selector: 'app-relays-page',
@@ -90,6 +95,7 @@ export class RelaysComponent implements OnInit, OnDestroy {
   readonly relayAuth = inject(RelayAuthService);
   private readonly panelActions = inject(PanelActionsService);
   private readonly rightPanel = inject(RightPanelService);
+  private readonly customDialog = inject(CustomDialogService);
 
   followingRelayUrls = signal<string[]>([]);
   newRelayUrl = signal('');
@@ -501,6 +507,62 @@ export class RelaysComponent implements OnInit, OnDestroy {
         this.newRelayUrl.set('');
         this.showMessage('Relay added successfully');
       }
+    });
+  }
+
+  openFindRelaysDialog(): void {
+    const queryRelays = [
+      ...new Set([
+        ...this.discoveryRelay.getRelayUrls(),
+        ...this.knownDiscoveryRelays,
+        ...this.accountRelay.getRelayUrls(),
+      ]),
+    ];
+
+    const dialogRef = this.customDialog.open<
+      typeof FindResponsiveRelaysDialogComponent.prototype,
+      FindResponsiveRelaysDialogResult
+    >(FindResponsiveRelaysDialogComponent, {
+      title: 'Find Responsive Relays',
+      width: '760px',
+      maxWidth: '95vw',
+      data: {
+        relayUrls: queryRelays,
+        existingRelayUrls: this.accountRelay.getRelayUrls(),
+      },
+    });
+
+    dialogRef.afterClosed$.subscribe(async ({ result }) => {
+      const selectedUrls = result?.selectedUrls ?? [];
+      if (selectedUrls.length === 0) {
+        return;
+      }
+
+      const existingRelays = new Set(
+        this.accountRelay
+          .getRelayUrls()
+          .map((relayUrl) => this.utilities.normalizeRelayUrl(relayUrl))
+      );
+
+      let addedCount = 0;
+      for (const relayUrl of selectedUrls) {
+        const normalizedRelayUrl = this.utilities.normalizeRelayUrl(relayUrl);
+        if (existingRelays.has(normalizedRelayUrl)) {
+          continue;
+        }
+
+        this.accountRelay.addRelay(normalizedRelayUrl);
+        existingRelays.add(normalizedRelayUrl);
+        addedCount += 1;
+      }
+
+      if (addedCount === 0) {
+        this.showMessage('All selected relays are already in your list');
+        return;
+      }
+
+      await this.publish();
+      this.showMessage(`Added ${addedCount} responsive relays`);
     });
   }
 
