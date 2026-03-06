@@ -19,6 +19,10 @@
       Recommendations are from NIP-66 relay discovery events (kind 30166) and sorted by
       responsiveness.
     </p>
+    <p class="latency-note">
+      Reported latency is measured by monitor providers and can differ from your own network. Use
+      <strong>Check Local Latency</strong> for your actual connection.
+    </p>
     @if (lastUpdatedAt()) {
     <p class="updated-at">Updated just now.</p>
     }
@@ -52,7 +56,7 @@
     @for (relay of recommendations(); track relay.url) {
     <article class="relay-card" [class.already-added]="relay.isAlreadyAdded" [class.selected]="hasSelected(relay.url)"
       [class.quality-good]="relay.quality === 'good'" [class.quality-fair]="relay.quality === 'fair'"
-      [class.quality-poor]="relay.quality === 'poor'">
+      [class.quality-poor]="relay.quality === 'poor'" (pointerup)="onCardPointerUp($event, relay.url)">
       <div class="relay-row">
         <div class="relay-main">
           <div class="relay-title-row">
@@ -78,12 +82,12 @@
 
         <div class="relay-actions">
           @if (relay.isAlreadyAdded) {
-          <button mat-button disabled>
+          <button mat-button disabled (click)="$event.stopPropagation()">
             <mat-icon>check_circle</mat-icon>
             Added
           </button>
           } @else {
-          <button mat-button (click)="toggleSelection(relay.url)">
+          <button mat-button (click)="toggleSelection(relay.url); $event.stopPropagation()">
             <mat-icon>
               @if (hasSelected(relay.url)) {
               check_circle
@@ -99,7 +103,13 @@
           </button>
           }
 
-          <button mat-icon-button (click)="toggleExpanded(relay.url)" [attr.aria-expanded]="isExpanded(relay.url)">
+          <button mat-icon-button (click)="copyRelayUrl(relay.url); $event.stopPropagation()"
+            aria-label="Copy relay URL">
+            <mat-icon>content_copy</mat-icon>
+          </button>
+
+          <button mat-icon-button (click)="toggleExpanded(relay.url); $event.stopPropagation()"
+            [attr.aria-expanded]="isExpanded(relay.url)">
             <mat-icon>{{ isExpanded(relay.url) ? 'expand_less' : 'expand_more' }}</mat-icon>
           </button>
         </div>
@@ -220,7 +230,8 @@
           <div class="detail-item detail-item-latency">
             <div class="detail-label">Your Local Latency</div>
             <div class="detail-latency-row">
-              <button mat-button (click)="checkLocalLatency(relay.url)" [disabled]="isCheckingLocalLatency(relay.url)">
+              <button mat-button (click)="checkLocalLatency(relay.url); $event.stopPropagation()"
+                [disabled]="isCheckingLocalLatency(relay.url)">
                 <mat-icon>
                   @if (isCheckingLocalLatency(relay.url)) {
                   sync

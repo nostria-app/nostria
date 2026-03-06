@@ -41,6 +41,10 @@
   .updated-at {
     margin-top: 0.25rem;
   }
+
+  .latency-note {
+    margin-top: 0.25rem;
+  }
 }
 
 .state-panel {
@@ -84,6 +88,7 @@
   flex-direction: column;
   gap: 0.5rem;
   align-items: stretch;
+  cursor: pointer;
 
   &.selected {
     border-color: var(--mat-sys-primary);

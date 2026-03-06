@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { Event, SimplePool } from 'nostr-tools';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { MatSnackBar } from '@angular/material/snack-bar';
 import { CustomDialogRef } from '../../../services/custom-dialog.service';
 import { LoggerService } from '../../../services/logger.service';
 import { UtilitiesService } from '../../../services/utilities.service';
@@ -65,6 +66,7 @@ export class FindResponsiveRelaysDialogComponent implements OnInit, OnDestroy {
 
   private readonly logger = inject(LoggerService);
   private readonly utilities = inject(UtilitiesService);
+  private readonly snackBar = inject(MatSnackBar);
 
   // Populated by CustomDialogService via config.data
   data: FindResponsiveRelaysDialogData = {
@@ -285,6 +287,19 @@ export class FindResponsiveRelaysDialogComponent implements OnInit, OnDestroy {
     }
   }
 
+  async copyRelayUrl(url: string): Promise<void> {
+    try {
+      await navigator.clipboard.writeText(url);
+      this.snackBar.open('Relay URL copied', 'Close', {
+        duration: 2500,
+      });
+    } catch {
+      this.snackBar.open('Failed to copy relay URL', 'Close', {
+        duration: 2500,
+      });
+    }
+  }
+
   isCheckingLocalLatency(url: string): boolean {
     return this.localLatencyChecking().has(url);
   }
@@ -295,6 +310,15 @@ export class FindResponsiveRelaysDialogComponent implements OnInit, OnDestroy {
 
   getLocalLatencyError(url: string): string | null {
     return this.localLatencyError().get(url) ?? null;
+  }
+
+  onCardPointerUp(event: PointerEvent, url: string): void {
+    const target = event.target as HTMLElement | null;
+    if (target?.closest('button')) {
+      return;
+    }
+
+    this.toggleExpanded(url);
   }
 
   private buildRecommendations(
