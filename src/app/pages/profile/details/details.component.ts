@@ -564,7 +564,7 @@ export class DetailsComponent {
       // Check for relay list (kind 10002)
       const relayListEvent = await this.database.getEventByPubkeyAndKind(pubkey, kinds.RelayList);
       if (relayListEvent) {
-        const relayUrls = this.utilities.getRelayUrls(relayListEvent);
+        const relayUrls = this.utilities.getRelayUrls(relayListEvent, true);
         this.relayListInfo.set({
           hasRelayList: true,
           relayCount: relayUrls.length,
@@ -581,7 +581,7 @@ export class DetailsComponent {
       // Check for relays in contact list (kind 3)
       const contactsEvent = await this.database.getEventByPubkeyAndKind(pubkey, kinds.Contacts);
       if (contactsEvent) {
-        const relayUrls = this.utilities.getRelayUrlsFromFollowing(contactsEvent);
+        const relayUrls = this.utilities.getRelayUrlsFromFollowing(contactsEvent, true);
         this.contactListRelayInfo.set({
           hasRelaysInContacts: relayUrls.length > 0,
           relayCount: relayUrls.length,

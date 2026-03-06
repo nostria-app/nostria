@@ -565,7 +565,7 @@ export class ProfileState {
             // Fallback for profiles without kind 10002 relay list:
             // parse relays from kind 3 content (legacy relay map).
             if (this.relayList().length === 0) {
-              const fallbackRelayUrls = Array.from(new Set(this.utilities.getRelayUrlsFromFollowing(event)));
+              const fallbackRelayUrls = Array.from(new Set(this.utilities.getRelayUrlsFromFollowing(event, true)));
               if (fallbackRelayUrls.length > 0) {
                 this.relayList.set(fallbackRelayUrls);
                 this.logger.debug(`Loaded cached relay list fallback from kind 3 with ${fallbackRelayUrls.length} relays`);
@@ -577,7 +577,7 @@ export class ProfileState {
           // Only set if this is newer than what we already have
           const currentTimestamp = this.relayListTimestamp();
           if (event.created_at > currentTimestamp) {
-            const relayUrls = this.utilities.getRelayUrls(event);
+            const relayUrls = this.utilities.getRelayUrls(event, true);
             if (relayUrls.length > 0) {
               this.relayList.set(relayUrls);
               this.relayListTimestamp.set(event.created_at);
@@ -795,7 +795,7 @@ export class ProfileState {
         // Fallback for profiles without kind 10002 relay list:
         // parse relays from kind 3 content (legacy relay map).
         if (this.relayList().length === 0) {
-          const fallbackRelayUrls = Array.from(new Set(this.utilities.getRelayUrlsFromFollowing(contactsEvent)));
+          const fallbackRelayUrls = Array.from(new Set(this.utilities.getRelayUrlsFromFollowing(contactsEvent, true)));
           if (fallbackRelayUrls.length > 0) {
             this.relayList.set(fallbackRelayUrls);
             this.logger.debug(`Updated relay list fallback from kind 3 with ${fallbackRelayUrls.length} relays`);
@@ -820,7 +820,7 @@ export class ProfileState {
       if (relayListEvent && relayListEvent.kind === kinds.RelayList) {
         const currentTimestamp = this.relayListTimestamp();
         if (relayListEvent.created_at > currentTimestamp) {
-          const relayUrls = this.utilities.getRelayUrls(relayListEvent);
+          const relayUrls = this.utilities.getRelayUrls(relayListEvent, true);
           this.relayList.set(relayUrls);
           this.relayListTimestamp.set(relayListEvent.created_at);
           this.logger.debug(`Updated relay list with ${relayUrls.length} relays`);

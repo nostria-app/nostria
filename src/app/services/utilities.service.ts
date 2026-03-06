@@ -586,7 +586,7 @@ export class UtilitiesService {
   }
 
   /** Parses the URLs and cleans up, ensuring only wss:// instances are returned. */
-  getRelayUrlsFromFollowing(event: Event): string[] {
+  getRelayUrlsFromFollowing(event: Event, includeIgnoredRelays = false): string[] {
     // Check if event.content is a string, return empty array if it is
     if (!event.content) {
       return [];
@@ -615,11 +615,15 @@ export class UtilitiesService {
 
     this.trackIgnoredRelayUsage(event.pubkey, relayUrls);
 
+    if (includeIgnoredRelays) {
+      return relayUrls;
+    }
+
     return relayUrls.filter(url => !this.isIgnoredRelayDomain(url));
   }
 
   /** Parses the URLs and cleans up, ensuring only wss:// instances are returned. */
-  getRelayUrls(event: Event): string[] {
+  getRelayUrls(event: Event, includeIgnoredRelays = false): string[] {
     const relayUrlsRaw = event.tags
       .filter(tag => tag.length >= 2 && tag[0] === 'r')
       .map(tag => {
@@ -630,6 +634,10 @@ export class UtilitiesService {
       .filter(url => url.trim() !== '');
 
     this.trackIgnoredRelayUsage(event.pubkey, relayUrlsRaw);
+
+    if (includeIgnoredRelays) {
+      return relayUrlsRaw;
+    }
 
     const relayUrls = relayUrlsRaw.filter(url => !this.isIgnoredRelayDomain(url));
 
@@ -718,7 +726,7 @@ export class UtilitiesService {
    * When fetching events FROM a user, prefer WRITE relays.
    * When fetching events ABOUT a user (mentions), prefer READ relays.
    */
-  getRelayEntries(event: Event): RelayEntry[] {
+  getRelayEntries(event: Event, includeIgnoredRelays = false): RelayEntry[] {
     const entries = event.tags
       .filter(tag => tag.length >= 2 && tag[0] === 'r')
       .map(tag => {
@@ -737,6 +745,10 @@ export class UtilitiesService {
       .filter(entry => entry.url.trim() !== '');
 
     this.trackIgnoredRelayUsage(event.pubkey, entries.map((entry) => entry.url));
+
+    if (includeIgnoredRelays) {
+      return entries;
+    }
 
     return entries.filter(entry => !this.isIgnoredRelayDomain(entry.url));
   }

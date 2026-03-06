@@ -55,13 +55,15 @@ export class AccountRelayService extends RelayServiceBase {
         // Don't use malformed relays - leave relayUrls empty to force user to repair
         relayUrls = [];
       } else {
-        relayUrls = this.utilities.getRelayUrls(event);
+        // Keep the user's relay list intact in account settings, including known dead/ignored domains.
+        relayUrls = this.utilities.getRelayUrls(event, true);
       }
     } else {
       event = await this.database.getEventByPubkeyAndKind(pubkey, kinds.Contacts);
 
       if (event) {
-        relayUrls = this.utilities.getRelayUrlsFromFollowing(event);
+        // Preserve relays from legacy contacts relay maps as-is for account ownership visibility.
+        relayUrls = this.utilities.getRelayUrlsFromFollowing(event, true);
       }
     }
 
