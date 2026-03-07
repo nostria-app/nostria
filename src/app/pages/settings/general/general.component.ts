@@ -282,6 +282,23 @@ export class GeneralSettingsComponent implements OnInit, OnDestroy {
     }
   }
 
+  async reconnectX(): Promise<void> {
+    if (!this.xPremiumEligible()) {
+      this.snackBar.open('X dual-posting is available for Premium accounts only.', 'Close', {
+        duration: 5000,
+      });
+      return;
+    }
+
+    try {
+      await this.xDualPost.reconnect();
+    } catch (error) {
+      this.snackBar.open(`Failed to reconnect X: ${error instanceof Error ? error.message : 'Unknown error'}`, 'Close', {
+        duration: 5000,
+      });
+    }
+  }
+
   private handleXAuthReturn(): void {
     const status = this.route.snapshot.queryParamMap.get('xAuth');
     const message = this.route.snapshot.queryParamMap.get('xMessage');

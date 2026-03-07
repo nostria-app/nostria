@@ -158,6 +158,11 @@ export class XDualPostService {
     }
   }
 
+  async reconnect(): Promise<void> {
+    await this.disconnect();
+    await this.connect();
+  }
+
   async publishPost(text: string, media: XPostMediaItem[] = []): Promise<void> {
     const pubkey = this.getPubkey();
 
