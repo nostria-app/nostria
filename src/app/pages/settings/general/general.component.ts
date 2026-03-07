@@ -1,5 +1,5 @@
 import { Component, computed, inject, signal, OnInit, OnDestroy } from '@angular/core';
-import { DatePipe } from '@angular/common';
+import { DatePipe, NgOptimizedImage } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -40,6 +40,7 @@ interface Language {
   selector: 'app-general-settings',
   imports: [
     DatePipe,
+    NgOptimizedImage,
     FormsModule,
     MatButtonModule,
     MatCardModule,

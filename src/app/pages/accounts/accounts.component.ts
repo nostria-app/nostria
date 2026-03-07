@@ -1,5 +1,5 @@
 import { Component, inject, signal, effect, OnInit, computed, OnDestroy, ChangeDetectionStrategy } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { CommonModule, NgOptimizedImage } from '@angular/common';
 import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -47,6 +47,7 @@ type RemoteRelayOption = 'nip46' | 'eu' | 'us' | 'custom';
   selector: 'app-accounts',
   imports: [
     CommonModule,
+    NgOptimizedImage,
     MatButtonModule,
     MatCardModule,
     MatIconModule,

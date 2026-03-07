@@ -201,12 +201,18 @@
         </div>
       </div>
 
-      <!-- X Dual-posting Option -->
+      <!-- Post to X Option -->
       <div class="option-row">
         <div class="option-header">
           <mat-slide-toggle [checked]="postToX()" (change)="onPostToXChange($event.checked)"
             [disabled]="!xPostingAvailable()">
-            Post to X
+            <span class="x-toggle-label">
+              <img src="/logos/clients/x.png" width="16" height="16" alt="X" class="x-logo" />
+              <span>Post to X</span>
+              @if (postToX() && xPostValidation().valid) {
+              <span class="x-enabled-pill">Enabled</span>
+              }
+            </span>
           </mat-slide-toggle>
           <span class="option-description">
             Publish this post to your connected X account. Supports up to 4 images or 1 video/GIF. Quote/reply threading
@@ -221,6 +227,17 @@
         } @else if (!xPremiumEligible()) {
         <div class="option-content">
           <span class="option-description">Post to X is available for Premium accounts only.</span>
+
+          @if (postToX() && !xPostValidation().valid) {
+          <div class="x-post-validation">
+            <mat-icon>warning</mat-icon>
+            <span>{{ xPostValidation().message }}</span>
+          </div>
+          }
+        </div>
+        } @else if (hasReplyTarget()) {
+        <div class="option-content">
+          <span class="option-description">Replies stay on Nostr only. Post to X is available for original posts.</span>
 
           @if (postToX() && !xPostValidation().valid) {
           <div class="x-post-validation">

@@ -823,6 +823,18 @@
   margin-bottom: 1.5rem;
 }
 
+.x-card-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.x-card-logo {
+  border-radius: var(--mat-sys-corner-full);
+  object-fit: contain;
+  flex: 0 0 auto;
+}
+
 .x-status-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));

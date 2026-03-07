@@ -103,7 +103,10 @@
 
   @if (accountState.account()) {
   <div>
-    <h2>Post to X</h2>
+    <h2 class="x-section-title">
+      <img ngSrc="/logos/clients/x.png" width="22" height="22" alt="X" class="x-section-logo" />
+      <span>Post to X</span>
+    </h2>
     <p class="setting-description">Connect your X account to publish the text of your Nostria posts to X.</p>
     <p class="setting-description">Post to X is available for Premium accounts only.</p>
 
@@ -121,7 +124,7 @@
       </div>
     </mat-card>
     }
-    <p class="setting-description">X dual-posting is available for Premium accounts only.</p>
+    <p class="setting-description">Post to X is available for Premium accounts only.</p>
     <p class="setting-description">Upgrade to Premium to connect or publish to X from Nostria.</p>
     } @else if (xDualPost.status().connected) {
     <mat-card class="x-connection-card">
@@ -178,7 +181,10 @@
         images or 1 video/GIF per post. Quote/reply threading and post edits are not mirrored to X yet.</p>
 
       <div class="setting-item x-default-toggle-row">
-        <span>Post to X by default</span>
+        <span class="x-inline-label">
+          <img ngSrc="/logos/clients/x.png" width="18" height="18" alt="X" class="x-inline-logo" />
+          <span>Post to X by default</span>
+        </span>
         <mat-slide-toggle [checked]="settings.settings().postToXByDefault ?? false" (change)="togglePostToXByDefault()">
         </mat-slide-toggle>
       </div>

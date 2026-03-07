@@ -376,6 +376,13 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       };
     }
 
+    if (this.hasReplyTarget()) {
+      return {
+        valid: false,
+        message: 'Replies are not posted to X. Only original posts can use Post to X.',
+      };
+    }
+
     if (!this.xDualPost.status().connected) {
       return {
         valid: false,
@@ -394,21 +401,21 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     if (imageCount > 0 && videoOrGifCount > 0) {
       return {
         valid: false,
-        message: 'X dual-posting supports either up to 4 images or 1 video/GIF, but not both in the same post.',
+        message: 'Post to X supports either up to 4 images or 1 video/GIF, but not both in the same post.',
       };
     }
 
     if (imageCount > 4) {
       return {
         valid: false,
-        message: 'X dual-posting supports up to 4 images per post.',
+        message: 'Post to X supports up to 4 images per post.',
       };
     }
 
     if (videoOrGifCount > 1) {
       return {
         valid: false,
-        message: 'X dual-posting supports only 1 video or GIF per post.',
+        message: 'Post to X supports only 1 video or GIF per post.',
       };
     }
 
@@ -577,6 +584,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   isQuote = computed(() => !!this.data?.quote);
   /** NIP-41: Check if we're editing an existing note */
   isEdit = computed(() => !!this.data?.editEvent);
+  hasReplyTarget = computed(() => !!this.data?.replyTo || !!this.replyToEvent());
   xPremiumEligible = computed(() => {
     const subscription = this.accountState.subscription();
     const isPremiumTier = subscription?.tier === 'premium' || subscription?.tier === 'premium_plus';
@@ -600,7 +608,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
 
   // PoW computed properties
   isPowMining = computed(() => this.powProgress().isRunning);
-  xPostingAvailable = computed(() => this.xPremiumEligible() && this.xDualPost.status().connected && !this.isEdit());
+  xPostingAvailable = computed(() => this.xPremiumEligible() && this.xDualPost.status().connected && !this.isEdit() && !this.hasReplyTarget());
   xStatusLoading = computed(() => this.xDualPost.loading());
   hasPowResult = computed(() => this.powMinedEvent() !== null);
   powDifficulty = computed(() => this.powProgress().difficulty);
@@ -809,8 +817,9 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     effect(() => {
       const isConnected = this.xDualPost.status().connected;
       const defaultXPosting = this.syncedSettings.settings().postToXByDefault ?? false;
+      const isReply = this.hasReplyTarget();
 
-      if (!isConnected || this.isEdit()) {
+      if (!isConnected || this.isEdit() || isReply) {
         this.postToX.set(false);
         this.xPostingChoiceInitialized = false;
         return;

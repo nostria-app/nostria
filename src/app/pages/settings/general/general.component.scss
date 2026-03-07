@@ -74,6 +74,20 @@
   margin: 0 0 16px 0;
 }
 
+.x-section-title,
+.x-inline-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.x-section-logo,
+.x-inline-logo {
+  border-radius: var(--mat-sys-corner-full);
+  object-fit: contain;
+  flex: 0 0 auto;
+}
+
 .external-domains-list {
   display: flex;
   flex-direction: column;
