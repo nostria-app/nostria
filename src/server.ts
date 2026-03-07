@@ -195,12 +195,89 @@ function extractMetaContent(html: string, tag: string): string {
   return byProperty.exec(html)?.[1] || byName.exec(html)?.[1] || '';
 }
 
+function extractTitleContent(html: string): string {
+  const titleMatch = html.match(/<title>([\s\S]*?)<\/title>/i);
+  return titleMatch?.[1]?.trim() || '';
+}
+
 function escapeHtmlAttribute(value: string): string {
   return value
     .replace(/&/g, '&amp;')
     .replace(/"/g, '&quot;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;');
+}
+
+function normalizePreviewImageUrl(imageUrl: string, userAgent: string | undefined): string {
+  const normalized = imageUrl.trim();
+  if (!normalized) {
+    return 'https://nostria.app/assets/nostria-social.jpg';
+  }
+
+  if (/^https?:\/\//i.test(normalized)) {
+    // Discord unfurling is less reliable with modern image formats from third-party media domains.
+    if (/discordbot/i.test(userAgent || '') && /\.(avif|webp)(\?|$)/i.test(normalized)) {
+      return 'https://nostria.app/assets/nostria-social.jpg';
+    }
+    return normalized;
+  }
+
+  if (normalized.startsWith('/')) {
+    return `https://nostria.app${normalized}`;
+  }
+
+  return `https://nostria.app/${normalized}`;
+}
+
+function injectPrioritySocialTags(html: string, path: string, userAgent: string | undefined): string {
+  if (!/<head[\s>]/i.test(html)) {
+    return html;
+  }
+
+  const ogTitle = extractMetaContent(html, 'og:title').trim();
+  const twitterTitle = extractMetaContent(html, 'twitter:title').trim();
+  const pageTitle = extractTitleContent(html).trim();
+  const title = ogTitle || twitterTitle || pageTitle || 'Nostria - Your Social Network';
+
+  const ogDescription = extractMetaContent(html, 'og:description').trim();
+  const twitterDescription = extractMetaContent(html, 'twitter:description').trim();
+  const descriptionTag = extractMetaContent(html, 'description').trim();
+  const description =
+    ogDescription ||
+    twitterDescription ||
+    descriptionTag ||
+    'Nostria: Built for human connections. See your friends again. Nostria is social without the noise.';
+
+  const ogUrl = extractMetaContent(html, 'og:url').trim() || `https://nostria.app${path}`;
+  const twitterCard = extractMetaContent(html, 'twitter:card').trim() || 'summary_large_image';
+  const rawImage = extractMetaContent(html, 'og:image').trim() || extractMetaContent(html, 'twitter:image').trim();
+  const image = normalizePreviewImageUrl(rawImage, userAgent);
+
+  const priorityBlock = [
+    '<!-- SSR_PRIORITY_SOCIAL_TAGS -->',
+    `<title>${escapeHtmlAttribute(title)}</title>`,
+    `<meta name="description" content="${escapeHtmlAttribute(description)}">`,
+    `<meta property="og:site_name" content="Nostria">`,
+    `<meta property="og:type" content="article">`,
+    `<meta property="og:title" content="${escapeHtmlAttribute(title)}">`,
+    `<meta property="og:description" content="${escapeHtmlAttribute(description)}">`,
+    `<meta property="og:url" content="${escapeHtmlAttribute(ogUrl)}">`,
+    `<meta property="og:image" content="${escapeHtmlAttribute(image)}">`,
+    `<meta property="og:image:secure_url" content="${escapeHtmlAttribute(image)}">`,
+    `<meta name="twitter:card" content="${escapeHtmlAttribute(twitterCard)}">`,
+    `<meta name="twitter:site" content="@nostriaapp">`,
+    `<meta name="twitter:title" content="${escapeHtmlAttribute(title)}">`,
+    `<meta name="twitter:description" content="${escapeHtmlAttribute(description)}">`,
+    `<meta name="twitter:image" content="${escapeHtmlAttribute(image)}">`,
+    '<!-- /SSR_PRIORITY_SOCIAL_TAGS -->',
+  ].join('\n');
+
+  const markerRegex = /<!-- SSR_PRIORITY_SOCIAL_TAGS -->[\s\S]*?<!-- \/SSR_PRIORITY_SOCIAL_TAGS -->\n?/i;
+  if (markerRegex.test(html)) {
+    return html.replace(markerRegex, `${priorityBlock}\n`);
+  }
+
+  return html.replace(/<head([^>]*)>/i, `<head$1>\n${priorityBlock}\n`);
 }
 
 function upsertMetaTag(html: string, attr: 'property' | 'name', key: string, content: string): string {
@@ -711,9 +788,10 @@ app.use(async (req, res, next) => {
           headersToCache[key] = value;
         });
 
-        const analysis = analyzeSsrPreviewHtml(html);
+        const htmlWithPriorityTags = injectPrioritySocialTags(html, path, userAgent);
+        const analysis = analyzeSsrPreviewHtml(htmlWithPriorityTags);
         const isCacheableHtml = analysis.isCacheable;
-        const finalHtml = isCacheableHtml ? html : applyRouteFallbackPreviewHtml(html, path);
+        const finalHtml = isCacheableHtml ? htmlWithPriorityTags : applyRouteFallbackPreviewHtml(htmlWithPriorityTags, path);
         if (isCacheableHtml) {
           // Cache healthy SSR response for bots
           ssrCache.set(path, {
