@@ -608,8 +608,10 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
 
   // PoW computed properties
   isPowMining = computed(() => this.powProgress().isRunning);
-  xPostingAvailable = computed(() => this.xPremiumEligible() && this.xDualPost.status().connected && !this.isEdit() && !this.hasReplyTarget());
+  xStatusReady = computed(() => this.xDualPost.loaded() && !this.xDualPost.loading());
+  xPostingAvailable = computed(() => this.xStatusReady() && this.xPremiumEligible() && this.xDualPost.status().connected && !this.isEdit() && !this.hasReplyTarget());
   xStatusLoading = computed(() => this.xDualPost.loading());
+  xHeaderIndicatorVisible = computed(() => this.xPostingAvailable() && this.postToX() && this.xPostValidation().valid);
   hasPowResult = computed(() => this.powMinedEvent() !== null);
   powDifficulty = computed(() => this.powProgress().difficulty);
   powAttempts = computed(() => this.powProgress().attempts);
@@ -819,6 +821,10 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       const defaultXPosting = this.syncedSettings.settings().postToXByDefault ?? false;
       const isReply = this.hasReplyTarget();
 
+      if (!this.xStatusReady()) {
+        return;
+      }
+
       if (!isConnected || this.isEdit() || isReply) {
         this.postToX.set(false);
         this.xPostingChoiceInitialized = false;
@@ -985,6 +991,10 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     // Handle shared files
     if (this.data?.files && this.data.files.length > 0) {
       this.uploadFiles(this.data.files);
+    }
+
+    if (this.xPremiumEligible()) {
+      this.xDualPost.ensureStatusLoaded();
     }
   }
 

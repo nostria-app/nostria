@@ -345,7 +345,7 @@ export class CommandPaletteDialogComponent implements AfterViewInit, OnDestroy {
     },
     {
       id: 'nav-settings-x',
-      label: 'Settings: X Dual-posting',
+      label: 'Settings: Post to X',
       icon: 'share',
       action: () => this.router.navigate(['/settings/general']),
       keywords: ['x', 'twitter', 'dual post', 'cross post', 'share to x', 'oauth']
