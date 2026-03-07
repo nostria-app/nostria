@@ -233,10 +233,6 @@ function normalizePreviewImageUrl(imageUrl: string, userAgent: string | undefine
   }
 
   if (/^https?:\/\//i.test(normalized)) {
-    // Discord unfurling is less reliable with modern image formats from third-party media domains.
-    if (/discordbot/i.test(userAgent || '') && /\.(avif|webp)(\?|$)/i.test(normalized)) {
-      return 'https://nostria.app/assets/nostria-social.jpg';
-    }
     return normalized;
   }
 
@@ -275,27 +271,36 @@ function normalizePreviewImageUrls(imageUrls: string[], userAgent: string | unde
   return ['https://nostria.app/assets/nostria-social.jpg'];
 }
 
+function stripSocialImageMetaTags(html: string): string {
+  return html
+    .replace(/\s*<meta\s+property=["']og:image["']\s+content=["'][\s\S]*?["'][^>]*>/ig, '')
+    .replace(/\s*<meta\s+property=["']og:image:secure_url["']\s+content=["'][\s\S]*?["'][^>]*>/ig, '')
+    .replace(/\s*<meta\s+name=["']twitter:image["']\s+content=["'][\s\S]*?["'][^>]*>/ig, '');
+}
+
 function injectPrioritySocialTags(html: string, path: string, userAgent: string | undefined): string {
   if (!/<head[\s>]/i.test(html)) {
     return html;
   }
 
-  const ogTitle = extractMetaContent(html, 'og:title').trim();
-  const twitterTitle = extractMetaContent(html, 'twitter:title').trim();
-  const pageTitle = extractTitleContent(html).trim();
+  const sanitizedHtml = stripSocialImageMetaTags(html);
+
+  const ogTitle = extractMetaContent(sanitizedHtml, 'og:title').trim();
+  const twitterTitle = extractMetaContent(sanitizedHtml, 'twitter:title').trim();
+  const pageTitle = extractTitleContent(sanitizedHtml).trim();
   const title = ogTitle || twitterTitle || pageTitle || 'Nostria - Your Social Network';
 
-  const ogDescription = extractMetaContent(html, 'og:description').trim();
-  const twitterDescription = extractMetaContent(html, 'twitter:description').trim();
-  const descriptionTag = extractMetaContent(html, 'description').trim();
+  const ogDescription = extractMetaContent(sanitizedHtml, 'og:description').trim();
+  const twitterDescription = extractMetaContent(sanitizedHtml, 'twitter:description').trim();
+  const descriptionTag = extractMetaContent(sanitizedHtml, 'description').trim();
   const description =
     ogDescription ||
     twitterDescription ||
     descriptionTag ||
     'Nostria: Built for human connections. See your friends again. Nostria is social without the noise.';
 
-  const ogUrl = extractMetaContent(html, 'og:url').trim() || `https://nostria.app${path}`;
-  const twitterCard = extractMetaContent(html, 'twitter:card').trim() || 'summary_large_image';
+  const ogUrl = extractMetaContent(sanitizedHtml, 'og:url').trim() || `https://nostria.app${path}`;
+  const twitterCard = extractMetaContent(sanitizedHtml, 'twitter:card').trim() || 'summary_large_image';
   const rawImages = [
     ...extractMetaContents(html, 'og:image'),
     ...extractMetaContents(html, 'twitter:image'),
@@ -330,11 +335,11 @@ function injectPrioritySocialTags(html: string, path: string, userAgent: string 
   ].join('\n');
 
   const markerRegex = /<!-- SSR_PRIORITY_SOCIAL_TAGS -->[\s\S]*?<!-- \/SSR_PRIORITY_SOCIAL_TAGS -->\n?/i;
-  if (markerRegex.test(html)) {
-    return html.replace(markerRegex, `${priorityBlock}\n`);
+  if (markerRegex.test(sanitizedHtml)) {
+    return sanitizedHtml.replace(markerRegex, `${priorityBlock}\n`);
   }
 
-  return html.replace(/<head([^>]*)>/i, `<head$1>\n${priorityBlock}\n`);
+  return sanitizedHtml.replace(/<head([^>]*)>/i, `<head$1>\n${priorityBlock}\n`);
 }
 
 function upsertMetaTag(html: string, attr: 'property' | 'name', key: string, content: string): string {
