@@ -6,6 +6,7 @@ import { SettingsService } from '../../services/settings.service';
 import { ParsingService } from '../../services/parsing.service';
 import { LayoutService } from '../../services/layout.service';
 import { signal } from '@angular/core';
+import type { ContentToken } from '../../services/parsing.service';
 
 describe('ContentComponent', () => {
   let component: ContentComponent;
@@ -229,5 +230,52 @@ describe('ContentComponent', () => {
     fixture.detectChanges();
     fixture.destroy();
     expect(mockParsingService.clearNostrUriCache).toHaveBeenCalled();
+  });
+
+  it('should hide inline X status URLs when social previews are enabled', () => {
+    mockSettingsService.settings.set({ socialSharingPreview: true });
+
+    (component as unknown as {
+      _hasBeenVisible: { set: (value: boolean) => void };
+      _cachedTokens: { set: (value: ContentToken[]) => void };
+    })._hasBeenVisible.set(true);
+
+    (component as unknown as {
+      _cachedTokens: { set: (value: ContentToken[]) => void };
+    })._cachedTokens.set([
+      { id: 1, type: 'text', content: 'Before ' } as ContentToken,
+      { id: 2, type: 'url', content: 'https://x.com/user/status/1234567890' } as ContentToken,
+      { id: 3, type: 'text', content: ' after' } as ContentToken,
+      { id: 4, type: 'url', content: 'https://example.com' } as ContentToken,
+    ]);
+
+    fixture.detectChanges();
+
+    expect(component.displayContentTokens().map(token => token.content)).toEqual([
+      'Before ',
+      ' after',
+      'https://example.com',
+    ]);
+  });
+
+  it('should keep inline X status URLs when social previews are disabled', () => {
+    mockSettingsService.settings.set({ socialSharingPreview: false });
+
+    (component as unknown as {
+      _hasBeenVisible: { set: (value: boolean) => void };
+      _cachedTokens: { set: (value: ContentToken[]) => void };
+    })._hasBeenVisible.set(true);
+
+    (component as unknown as {
+      _cachedTokens: { set: (value: ContentToken[]) => void };
+    })._cachedTokens.set([
+      { id: 1, type: 'url', content: 'https://x.com/user/status/1234567890' } as ContentToken,
+    ]);
+
+    fixture.detectChanges();
+
+    expect(component.displayContentTokens().map(token => token.content)).toEqual([
+      'https://x.com/user/status/1234567890',
+    ]);
   });
 });

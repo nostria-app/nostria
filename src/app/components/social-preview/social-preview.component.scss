@@ -20,6 +20,45 @@
   }
 }
 
+.x-preview-card {
+  display: flex;
+  justify-content: center;
+  text-decoration: none;
+
+  .x-preview-shell {
+    height: auto;
+    min-height: 0;
+    width: min(100%, 550px);
+    padding: 0.25rem 0;
+    box-shadow: var(--mat-sys-level1);
+    background: var(--mat-sys-surface-container-low);
+  }
+}
+
+.x-embed-host {
+  display: flex;
+  justify-content: center;
+  overflow: visible;
+  padding: 0;
+  min-width: 0;
+
+  ::ng-deep blockquote.twitter-tweet,
+  ::ng-deep .twitter-tweet {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+  }
+
+  ::ng-deep iframe {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  ::ng-deep .twitter-tweet-rendered {
+    margin: 0 !important;
+  }
+}
+
 .preview-content {
   display: flex;
   height: 100%;
@@ -191,6 +230,7 @@
   from {
     opacity: 0.6;
   }
+
   to {
     opacity: 1;
   }

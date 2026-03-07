@@ -242,4 +242,33 @@ describe('SocialPreviewComponent', () => {
     expect(mockOpenGraphService.getOpenGraphData).toHaveBeenCalledWith('https://other.com');
     expect(component.preview().title).toBe('Other Title');
   });
+
+  it('should render an X embed card when the preview type is x-post', async () => {
+    mockOpenGraphService.getOpenGraphData.mockResolvedValue({
+      url: 'https://x.com/user/status/1234567890',
+      title: 'User on X',
+      providerName: 'Twitter',
+      authorName: 'User',
+      authorUrl: 'https://x.com/user',
+      embedHtml: '<blockquote class="twitter-tweet"><p>Hello from X</p></blockquote>',
+      previewType: 'x-post',
+      loading: false,
+      error: false,
+    });
+
+    fixture.componentRef.setInput('compact', true);
+    fixture.componentRef.setInput('url', 'https://x.com/user/status/1234567890');
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    fixture.detectChanges();
+    const xPreview = fixture.nativeElement.querySelector('.x-preview-card');
+    const embedHost = fixture.nativeElement.querySelector('.x-embed-host');
+
+    expect(xPreview).toBeTruthy();
+    expect(embedHost.innerHTML).toContain('twitter-tweet');
+    expect(fixture.nativeElement.querySelector('.compact-preview')).toBeNull();
+    expect(fixture.nativeElement.textContent).not.toContain('Open post');
+    expect(fixture.nativeElement.textContent).not.toContain('TWITTER');
+  });
 });

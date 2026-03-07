@@ -2,6 +2,9 @@ import {
   removeTrackingParameters,
   cleanTrackingParametersFromText,
   hasTrackingParameters,
+  isXStatusUrl,
+  normalizePreviewUrl,
+  normalizeXStatusUrl,
 } from './url-cleaner';
 
 describe('URL Cleaner Utility', () => {
@@ -142,6 +145,48 @@ describe('URL Cleaner Utility', () => {
     it('should return false for URLs without query parameters', () => {
       const url = 'https://example.com/page';
       expect(hasTrackingParameters(url)).toBe(false);
+    });
+  });
+
+  describe('isXStatusUrl', () => {
+    it('should detect x.com status URLs', () => {
+      expect(isXStatusUrl('https://x.com/user/status/1234567890')).toBe(true);
+    });
+
+    it('should detect twitter.com status URLs', () => {
+      expect(isXStatusUrl('https://twitter.com/user/status/1234567890')).toBe(true);
+    });
+
+    it('should reject non-status X URLs', () => {
+      expect(isXStatusUrl('https://x.com/user')).toBe(false);
+    });
+  });
+
+  describe('normalizeXStatusUrl', () => {
+    it('should normalize twitter.com status URLs to x.com', () => {
+      const input = 'https://twitter.com/user/status/1234567890';
+      const expected = 'https://x.com/user/status/1234567890';
+      expect(normalizeXStatusUrl(input)).toBe(expected);
+    });
+
+    it('should remove X tracking parameters while normalizing', () => {
+      const input = 'https://twitter.com/user/status/1234567890?s=20&t=abc123';
+      const expected = 'https://x.com/user/status/1234567890';
+      expect(normalizeXStatusUrl(input)).toBe(expected);
+    });
+  });
+
+  describe('normalizePreviewUrl', () => {
+    it('should normalize X status links for preview reuse', () => {
+      const input = 'https://twitter.com/user/status/1234567890?s=20&t=abc123';
+      const expected = 'https://x.com/user/status/1234567890';
+      expect(normalizePreviewUrl(input)).toBe(expected);
+    });
+
+    it('should only remove tracking params for non-X links', () => {
+      const input = 'https://example.com/page?utm_source=google&id=1';
+      const expected = 'https://example.com/page?id=1';
+      expect(normalizePreviewUrl(input)).toBe(expected);
     });
   });
 
