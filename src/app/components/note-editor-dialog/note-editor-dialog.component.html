@@ -20,7 +20,8 @@
 @if (!inlineMode() || isExpanded()) {
 <!-- Content Area -->
 <div dialog-content class="note-editor-dialog" [class.inline-editor]="inlineMode()">
-  <div class="dialog-content-wrapper" [attr.data-drag-enabled]="!showPreview() && !showAdvancedOptions() || null"
+  <div class="dialog-content-wrapper" [class.scrollable]="showPreview() || showAdvancedOptions()"
+    [attr.data-drag-enabled]="!showPreview() && !showAdvancedOptions() || null"
     (dragenter)="!showPreview() && !showAdvancedOptions() && onDragEnter($event)"
     (dragover)="!showPreview() && !showAdvancedOptions() && onDragOver($event)"
     (dragleave)="!showPreview() && !showAdvancedOptions() && onDragLeave($event)"

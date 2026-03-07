@@ -2257,6 +2257,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
 
     // Set the new height
     textarea.style.height = `${newHeight}px`;
+    textarea.style.overflowY = textarea.scrollHeight > maxHeight ? 'auto' : 'hidden';
   }
 
   /**

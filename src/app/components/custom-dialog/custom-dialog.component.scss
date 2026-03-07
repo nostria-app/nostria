@@ -78,7 +78,7 @@
   flex-direction: row;
   align-items: center;
   justify-content: space-between;
-  padding: 20px 64px;
+  padding: 14px 64px 10px;
   position: relative;
   // border-bottom: 1px solid var(--mat-sys-outline-variant);
   flex-shrink: 0;
@@ -87,13 +87,13 @@
 
   @media (max-width: 600px),
   (max-height: 700px) {
-    padding: 12px 56px;
+    padding: 10px 56px 8px;
     gap: 6px;
     min-height: 56px;
   }
 
   @media (max-height: 600px) {
-    padding: 8px 52px;
+    padding: 8px 52px 6px;
     gap: 4px;
     min-height: 48px;
   }
@@ -293,19 +293,19 @@
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 20px 24px;
+  padding: 10px 14px 14px;
 
   @media (max-width: 600px),
   (max-height: 700px) {
-    padding: 4px 10px 8px 10px;
+    padding: 4px 8px 8px;
   }
 
   @media (max-width: 400px) {
-    padding: 2px 6px 4px 6px;
+    padding: 2px 6px 4px;
   }
 
   @media (max-height: 600px) {
-    padding: 4px 12px 8px 12px;
+    padding: 4px 10px 8px;
   }
 
   // Custom scrollbar
@@ -376,6 +376,15 @@
 
   .dialog-content {
     padding: 8px 14px 10px;
+  }
+}
+
+// Note Editor Dialog Override
+.dialog-container.note-editor-dialog-panel {
+  min-height: min(360px, calc(100vh - 32px));
+
+  .dialog-content {
+    overflow: hidden;
   }
 }
 

@@ -2185,6 +2185,7 @@ export class EventService {
       {
         title,
         headerIcon: this.accountState.profile()?.data?.picture || '',
+        panelClass: 'note-editor-dialog-panel',
         width: '680px',
         maxWidth: '95vw',
         disableClose: true,

@@ -1,32 +1,37 @@
 .note-editor-dialog {
   display: flex;
   flex-direction: column;
-  height: 100%;
   width: 100%;
+  min-height: 0;
 
   .dialog-content-wrapper {
     position: relative;
     flex: 1;
-    overflow-y: auto;
+    min-height: 0;
+    overflow-y: hidden;
     display: flex;
     flex-direction: column;
-    padding: 16px 20px;
+    padding: 8px 12px 10px;
     width: 100%;
     box-sizing: border-box;
 
     @media (max-width: 600px),
     (max-height: 700px) {
-      padding: 4px 10px 8px 10px;
+      padding: 2px 6px 6px;
     }
 
     @media (max-width: 400px) {
-      padding: 2px 6px 4px 6px;
+      padding: 2px 4px 4px;
     }
 
     &.drag-over {
       border: 0px dashed var(--mat-sys-primary);
       border-radius: 8px;
       background-color: rgba(var(--mat-sys-primary-rgb), 0.05);
+    }
+
+    &.scrollable {
+      overflow-y: auto;
     }
   }
 
@@ -299,8 +304,9 @@
 
     .content-textarea {
       resize: none;
-      overflow-y: auto;
-      max-height: 500px;
+      overflow-y: hidden;
+      min-height: 150px;
+      max-height: min(500px, calc(100vh - 320px));
       height: auto;
       width: 100% !important;
       max-width: 100% !important;
@@ -309,10 +315,21 @@
       word-wrap: break-word;
       word-break: normal;
       white-space: pre-wrap;
-      padding: 4px 0 !important;
+      field-sizing: content;
+      padding: 4px 0 10px !important;
 
       &.over-limit {
         color: var(--mat-sys-error);
+      }
+
+      @media (max-width: 600px),
+      (max-height: 700px) {
+        min-height: 128px;
+        max-height: min(360px, calc(100vh - 260px));
+      }
+
+      @media (max-height: 600px) {
+        max-height: min(300px, calc(100vh - 240px));
       }
     }
   }
@@ -687,10 +704,11 @@
     flex-direction: column;
     min-height: 0;
     width: 100%;
+    padding-bottom: 12px;
 
     .content-field {
       width: 100%;
-      margin-bottom: 0;
+      margin-bottom: 8px;
       flex: 0 0 auto;
       display: flex;
       flex-direction: column;
@@ -719,6 +737,10 @@
           height: 0 !important;
           padding: 0 !important;
           display: block;
+        }
+
+        .mat-mdc-form-field-hint-wrapper {
+          padding-top: 6px;
         }
 
         textarea.mat-mdc-input-element,
