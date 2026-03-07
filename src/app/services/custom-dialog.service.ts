@@ -134,6 +134,15 @@ export class CustomDialogRef<T = unknown, R = unknown> {
   }
 
   /**
+   * Update the secondary header tooltip dynamically
+   */
+  updateSecondaryHeaderTooltip(tooltip: string): void {
+    if (this.dialogComponentRef && !this.hasBeenClosed()) {
+      this.dialogComponentRef.setInput('secondaryHeaderTooltip', tooltip);
+    }
+  }
+
+  /**
    * Update the dialog max width dynamically
    */
   updateMaxWidth(maxWidth: string): void {
@@ -167,6 +176,8 @@ export interface CustomDialogConfig {
   headerIcon?: string;
   /** Secondary icon to show in the header */
   secondaryHeaderIcon?: string;
+  /** Tooltip for the secondary header icon */
+  secondaryHeaderTooltip?: string;
   /** Show back button instead of close button */
   showBackButton?: boolean;
   /** Show close button */
@@ -257,6 +268,7 @@ export class CustomDialogService {
     if (config.title) dialogRef.setInput('title', config.title);
     if (config.headerIcon) dialogRef.setInput('headerIcon', config.headerIcon);
     if (config.secondaryHeaderIcon) dialogRef.setInput('secondaryHeaderIcon', config.secondaryHeaderIcon);
+    if (config.secondaryHeaderTooltip) dialogRef.setInput('secondaryHeaderTooltip', config.secondaryHeaderTooltip);
     if (config.showBackButton !== undefined) dialogRef.setInput('showBackButton', config.showBackButton);
     if (config.showCloseButton !== undefined) dialogRef.setInput('showCloseButton', config.showCloseButton);
     if (config.disableClose !== undefined) dialogRef.setInput('disableClose', config.disableClose);

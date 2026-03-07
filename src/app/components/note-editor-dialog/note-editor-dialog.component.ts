@@ -840,7 +840,12 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
 
     effect(() => {
       const secondaryHeaderIcon = !this.inlineMode() && this.xHeaderIndicatorVisible() ? this.xHeaderIconUrl : '';
+      const username = this.xDualPost.status().username;
+      const secondaryHeaderTooltip = secondaryHeaderIcon
+        ? (username ? `Publishing to X as @${username}` : 'Publishing to X')
+        : '';
       this.dialogRef?.updateSecondaryHeaderIcon(secondaryHeaderIcon);
+      this.dialogRef?.updateSecondaryHeaderTooltip(secondaryHeaderTooltip);
     });
 
     // Load PoW settings from account state

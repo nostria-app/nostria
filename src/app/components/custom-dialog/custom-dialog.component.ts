@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, input, output, effect, ElementRef, 
 import { CommonModule, DOCUMENT } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
 /**
  * Custom dialog component that provides better mobile support and easier styling than Material Dialog
@@ -39,7 +40,7 @@ import { MatButtonModule } from '@angular/material/button';
  */
 @Component({
   selector: 'app-custom-dialog',
-  imports: [CommonModule, MatIconModule, MatButtonModule],
+  imports: [CommonModule, MatIconModule, MatButtonModule, MatTooltipModule],
   template: `
     <div 
       class="dialog-backdrop" 
@@ -87,7 +88,9 @@ import { MatButtonModule } from '@angular/material/button';
           }
 
           @if (getSecondaryHeaderIcon()) {
-            <img [src]="getSecondaryHeaderIcon()" alt="Dialog status" class="secondary-header-icon" />
+            <img [src]="getSecondaryHeaderIcon()" [alt]="getSecondaryHeaderTooltip() || 'Dialog status'"
+              [matTooltip]="getSecondaryHeaderTooltip()" [matTooltipDisabled]="!getSecondaryHeaderTooltip()"
+              class="secondary-header-icon" />
           }
           
           <!-- Custom header content -->
@@ -114,6 +117,7 @@ export class CustomDialogComponent implements AfterViewInit, OnDestroy {
   title = input<string>('');
   headerIcon = input<string>('');
   secondaryHeaderIcon = input<string>('');
+  secondaryHeaderTooltip = input<string>('');
   showBackButton = input<boolean>(false);
   showCloseButton = input<boolean>(true);
   disableClose = input<boolean>(false);
@@ -213,6 +217,10 @@ export class CustomDialogComponent implements AfterViewInit, OnDestroy {
 
   getSecondaryHeaderIcon(): string {
     return this.secondaryHeaderIcon();
+  }
+
+  getSecondaryHeaderTooltip(): string {
+    return this.secondaryHeaderTooltip();
   }
 
   getShowBackButton(): boolean {
