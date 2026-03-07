@@ -357,6 +357,13 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       return { valid: true, message: '' };
     }
 
+    if (!this.xDualPost.status().premiumEligible) {
+      return {
+        valid: false,
+        message: 'X dual-posting is available for Premium accounts only.',
+      };
+    }
+
     if (this.isEdit()) {
       return {
         valid: false,
@@ -565,6 +572,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   isQuote = computed(() => !!this.data?.quote);
   /** NIP-41: Check if we're editing an existing note */
   isEdit = computed(() => !!this.data?.editEvent);
+  xPremiumEligible = computed(() => this.xDualPost.status().premiumEligible);
 
   // Check if a mention is the reply target (cannot be removed)
   isReplyTargetMention(pubkey: string): boolean {
@@ -582,7 +590,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
 
   // PoW computed properties
   isPowMining = computed(() => this.powProgress().isRunning);
-  xPostingAvailable = computed(() => this.xDualPost.status().connected && !this.isEdit());
+  xPostingAvailable = computed(() => this.xPremiumEligible() && this.xDualPost.status().connected && !this.isEdit());
   xStatusLoading = computed(() => this.xDualPost.loading());
   hasPowResult = computed(() => this.powMinedEvent() !== null);
   powDifficulty = computed(() => this.powProgress().difficulty);
@@ -1571,6 +1579,13 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   }
 
   async connectXFromComposer(): Promise<void> {
+    if (!this.xPremiumEligible()) {
+      this.snackBar.open('X dual-posting is available for Premium accounts only.', 'Close', {
+        duration: 5000,
+      });
+      return;
+    }
+
     try {
       await this.xDualPost.connect();
     } catch (error) {

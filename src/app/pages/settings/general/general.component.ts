@@ -1,4 +1,4 @@
-import { Component, inject, signal, OnInit, OnDestroy } from '@angular/core';
+import { Component, computed, inject, signal, OnInit, OnDestroy } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -85,6 +85,7 @@ export class GeneralSettingsComponent implements OnInit, OnDestroy {
   }
 
   currentFeatureLevel = signal<FeatureLevel>(this.app.featureLevel());
+  xPremiumEligible = computed(() => this.xDualPost.status().premiumEligible);
 
   // Global event expiration (in hours, null = disabled)
   globalEventExpiration = signal<number | null>(this.getInitialGlobalExpiration());
@@ -247,6 +248,13 @@ export class GeneralSettingsComponent implements OnInit, OnDestroy {
   }
 
   async connectX(): Promise<void> {
+    if (!this.xPremiumEligible()) {
+      this.snackBar.open('X dual-posting is available for Premium accounts only.', 'Close', {
+        duration: 5000,
+      });
+      return;
+    }
+
     try {
       await this.xDualPost.connect();
     } catch (error) {

@@ -7,6 +7,7 @@ import { environment } from '../../environments/environment';
 
 export interface XConnectionStatus {
   connected: boolean;
+  premiumEligible: boolean;
   username?: string;
   userId?: string;
 }
@@ -32,7 +33,7 @@ export class XDualPostService {
   private readonly logger = inject(LoggerService);
   private readonly webRequest = inject(WebRequest);
 
-  readonly status = signal<XConnectionStatus>({ connected: false });
+  readonly status = signal<XConnectionStatus>({ connected: false, premiumEligible: false });
   readonly loading = signal(false);
   readonly connecting = signal(false);
 
@@ -41,7 +42,7 @@ export class XDualPostService {
       const pubkey = this.accountState.pubkey();
 
       if (!pubkey) {
-        this.status.set({ connected: false });
+        this.status.set({ connected: false, premiumEligible: false });
         return;
       }
 
@@ -66,7 +67,7 @@ export class XDualPostService {
     const pubkey = this.accountState.pubkey();
 
     if (!pubkey) {
-      const disconnected = { connected: false } satisfies XConnectionStatus;
+      const disconnected = { connected: false, premiumEligible: false } satisfies XConnectionStatus;
       this.status.set(disconnected);
       return disconnected;
     }
@@ -86,7 +87,7 @@ export class XDualPostService {
       return response.data;
     } catch (error) {
       this.logger.warn('Failed to refresh X connection status', { error });
-      const disconnected = { connected: false } satisfies XConnectionStatus;
+      const disconnected = { connected: false, premiumEligible: false } satisfies XConnectionStatus;
       this.status.set(disconnected);
       return disconnected;
     } finally {
@@ -132,7 +133,7 @@ export class XDualPostService {
         { kind: 27235 }
       );
 
-      this.status.set({ connected: false });
+      this.status.update(status => ({ ...status, connected: false, username: undefined, userId: undefined }));
     } finally {
       this.loading.set(false);
     }
