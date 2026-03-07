@@ -247,11 +247,26 @@ function normalizePreviewImageUrl(imageUrl: string, userAgent: string | undefine
   return `https://nostria.app/${normalized}`;
 }
 
+function isDefaultSocialImageUrl(imageUrl: string): boolean {
+  const normalized = imageUrl.trim().toLowerCase();
+  return (
+    normalized === 'https://nostria.app/assets/nostria-social.jpg' ||
+    normalized.endsWith('/assets/nostria-social.jpg')
+  );
+}
+
 function normalizePreviewImageUrls(imageUrls: string[], userAgent: string | undefined): string[] {
-  const normalized = imageUrls
+  let normalized = imageUrls
     .map((imageUrl) => normalizePreviewImageUrl(imageUrl, userAgent))
     .filter(Boolean)
     .filter((value, index, array) => array.indexOf(value) === index);
+
+  // If we found at least one real image from the event/content, do not include
+  // the generic social banner image in the gallery.
+  const hasNonDefaultImage = normalized.some((value) => !isDefaultSocialImageUrl(value));
+  if (hasNonDefaultImage) {
+    normalized = normalized.filter((value) => !isDefaultSocialImageUrl(value));
+  }
 
   if (normalized.length > 0) {
     return normalized;
