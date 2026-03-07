@@ -1,0 +1,30 @@
+<mat-card class="relay-list-card" appearance="outlined">
+  <mat-card-header>
+    <mat-card-title>
+      <mat-icon>dns</mat-icon>
+      <span>{{ title() }}</span>
+    </mat-card-title>
+    <mat-card-subtitle>{{ relayUrls().length }} relays configured</mat-card-subtitle>
+  </mat-card-header>
+
+  <mat-card-content>
+    @if (relayUrls().length > 0) {
+    <div class="relay-list">
+      @for (url of relayUrls(); track url; let index = $index) {
+      <div class="relay-row">
+        <div class="relay-host">{{ relayHosts()[index] }}</div>
+        <div class="relay-url">{{ url }}</div>
+      </div>
+      }
+    </div>
+
+    <mat-chip-set>
+      @for (host of relayHosts(); track host) {
+      <mat-chip>{{ host }}</mat-chip>
+      }
+    </mat-chip-set>
+    } @else {
+    <div class="relay-fallback">No relay tags found on this event.</div>
+    }
+  </mat-card-content>
+</mat-card>

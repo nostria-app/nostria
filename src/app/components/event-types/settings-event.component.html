@@ -1,0 +1,59 @@
+<mat-card class="settings-event-card" appearance="outlined">
+  <mat-card-header>
+    <mat-card-title>
+      <mat-icon>tune</mat-icon>
+      <span>{{ title() }}</span>
+    </mat-card-title>
+    <mat-card-subtitle>
+      {{ summaryItems().length }} saved preferences
+    </mat-card-subtitle>
+  </mat-card-header>
+
+  <mat-card-content>
+    @if (settings(); as snapshot) {
+    <div class="settings-grid">
+      @for (item of summaryItems(); track item.label) {
+      <div class="setting-row">
+        <span class="setting-label">{{ item.label }}</span>
+        <span class="setting-value">{{ item.value }}</span>
+      </div>
+      }
+    </div>
+
+    @if (enabledFlags().length > 0) {
+    <section class="settings-section">
+      <h4>Enabled Features</h4>
+      <mat-chip-set>
+        @for (flag of enabledFlags(); track flag) {
+        <mat-chip>{{ flag }}</mat-chip>
+        }
+      </mat-chip-set>
+    </section>
+    }
+
+    @if (feedLabels().length > 0) {
+    <section class="settings-section">
+      <h4>Custom Feeds</h4>
+      <div class="feed-list">
+        @for (feedLabel of feedLabels(); track feedLabel) {
+        <div class="feed-item">{{ feedLabel }}</div>
+        }
+      </div>
+    </section>
+    }
+
+    @if (quickZapAmounts().length > 0) {
+    <section class="settings-section">
+      <h4>Quick Zap Presets</h4>
+      <mat-chip-set>
+        @for (amount of quickZapAmounts(); track amount) {
+        <mat-chip>{{ amount }} sats</mat-chip>
+        }
+      </mat-chip-set>
+    </section>
+    }
+    } @else {
+    <div class="settings-fallback">Could not parse this settings snapshot.</div>
+    }
+  </mat-card-content>
+</mat-card>

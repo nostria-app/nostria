@@ -328,6 +328,14 @@
     [kind]="mention!.event!.event.kind" [relayHints]="getEventMentionRelayHints(token)" mode="compact"
     [showAuthor]="true" [showMetadata]="true" [clickable]="true"></app-article>
 </div>
+} @else if (mention!.event!.event.kind === 30078) {
+<div class="embedded-settings-event">
+  <app-settings-event [event]="mention!.event!.event"></app-settings-event>
+</div>
+} @else if (mention!.event!.event.kind === 10086) {
+<div class="embedded-relay-list-event">
+  <app-relay-list-event [event]="mention!.event!.event"></app-relay-list-event>
+</div>
 } @else {
 <!-- Regular event mention (kind 1, etc.) -->
 <mat-card appearance="outlined" class="event-mention-card" tabindex="0" role="button"

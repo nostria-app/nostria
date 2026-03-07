@@ -435,23 +435,7 @@ export class EventPageComponent {
       this.transferState.remove(EVENT_STATE_KEY); // optional cleanup
     }
 
-    // Check for router navigation state
-    const navigation = this.router.currentNavigation();
-    if (navigation?.extras.state?.['event']) {
-      this.event.set(navigation.extras.state['event'] as Event);
-    }
-    // Check for pre-loaded reply count from feed
-    if (navigation?.extras.state?.['replyCount'] !== undefined) {
-      this.initialReplyCount.set(navigation.extras.state['replyCount'] as number);
-    }
-    // Check for pre-loaded parent event from feed
-    if (navigation?.extras.state?.['parentEvent']) {
-      this.initialParentEvent.set(navigation.extras.state['parentEvent'] as Event);
-    }
-    // Check for pre-loaded replies from thread view (for instant rendering)
-    if (navigation?.extras.state?.['replies']) {
-      this.initialReplies.set(navigation.extras.state['replies'] as ThreadedEvent[]);
-    }
+    this.applyNavigationState();
 
     // Effect to load event when in dialog mode with direct event ID input
     effect(() => {
@@ -475,6 +459,8 @@ export class EventPageComponent {
         untracked(async () => {
           const id = this.routeParams()?.get('id');
           if (id) {
+            this.applyNavigationState(id);
+
             if (id.startsWith('naddr')) {
               if (this.isInRightPanel()) {
                 this.layout.navigateToRightPanel(`a/${id}`);
@@ -541,10 +527,14 @@ export class EventPageComponent {
       this.handledPublishedReplyIds.clear();
 
       // Reset state
+      const preloadedEvent = this.getPreloadedEvent(nevent);
+      this.event.set(preloadedEvent);
+      this.id.set(preloadedEvent?.id ?? null);
       this.parentEvents.set([]);
       this.replies.set([]);
       this.threadedReplies.set([]);
       this.reactions.set([]);
+      this.threadData.set(null);
       this.isDeleted.set(false);
       this.deletionReason.set(null);
 
@@ -671,6 +661,84 @@ export class EventPageComponent {
       }
 
     }
+  }
+
+  private applyNavigationState(routeId?: string): void {
+    const state = this.getNavigationState();
+    const expectedId = routeId ? this.extractRouteEventId(routeId) : null;
+    const stateEvent = state?.['event'];
+    const eventFromState = this.isEventWithId(stateEvent)
+      && (!expectedId || stateEvent.id === expectedId)
+      ? stateEvent
+      : undefined;
+
+    if (eventFromState) {
+      this.event.set(eventFromState);
+      this.id.set(eventFromState.id);
+      this.item = {
+        title: this.item?.title || '',
+        description: this.item?.description || '',
+        event: eventFromState,
+      };
+    } else if (expectedId && this.item?.event?.id !== expectedId) {
+      this.item = {
+        title: this.item?.title || '',
+        description: this.item?.description || '',
+      };
+    }
+
+    this.initialReplyCount.set(typeof state?.['replyCount'] === 'number' ? state['replyCount'] as number : undefined);
+    this.initialParentEvent.set(this.isEventWithId(state?.['parentEvent']) ? state['parentEvent'] : undefined);
+    this.initialReplies.set(Array.isArray(state?.['replies']) ? state['replies'] as ThreadedEvent[] : undefined);
+  }
+
+  private getPreloadedEvent(routeId: string): Event | undefined {
+    const expectedId = this.extractRouteEventId(routeId);
+    const itemEvent = this.item?.event;
+
+    if (expectedId && this.isEventWithId(itemEvent) && itemEvent.id === expectedId) {
+      return itemEvent;
+    }
+
+    return undefined;
+  }
+
+  private getNavigationState(): Record<string, unknown> | undefined {
+    const navigationState = this.router.currentNavigation()?.extras.state as Record<string, unknown> | undefined;
+    if (navigationState) {
+      return navigationState;
+    }
+
+    if (!this.app.isBrowser()) {
+      return undefined;
+    }
+
+    const historyState = window.history.state as Record<string, unknown> | undefined;
+    return historyState;
+  }
+
+  private extractRouteEventId(routeId: string): string | null {
+    if (this.utilities.isHex(routeId)) {
+      return routeId;
+    }
+
+    try {
+      const decoded = this.utilities.decode(routeId);
+      if (decoded.type === 'note') {
+        return decoded.data;
+      }
+      if (decoded.type === 'nevent') {
+        return decoded.data.id;
+      }
+    } catch {
+      return null;
+    }
+
+    return null;
+  }
+
+  private isEventWithId(value: unknown): value is Event {
+    return !!value && typeof value === 'object' && 'id' in value && typeof value.id === 'string';
   }
 
   onReplyPublished(event: Event): void {

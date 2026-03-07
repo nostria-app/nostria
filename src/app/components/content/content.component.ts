@@ -39,7 +39,7 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
 
   @ViewChild('contentContainer') contentContainer!: ElementRef;
   // Input for raw content
-  content = input<string | undefined>('');
+  content = input<unknown>('');
 
   // Input for the event (to access tags for mentions/articles)
   event = input<NostrEvent | null>(null);
@@ -130,7 +130,7 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
     // Effect to parse content when it changes and component is visible
     effect(() => {
       const shouldRender = this._isVisible() || this._hasBeenVisible();
-      const currentContent = this.content() || '';
+      const currentContent = this.normalizeContent(this.content());
 
       if (!shouldRender) {
         return;
@@ -230,7 +230,7 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
           const fallbackTokens: ContentToken[] = [{
             id: 0,
             type: 'text',
-            content: content
+            content: this.normalizeContent(content)
           }];
           this._cachedTokens.set(fallbackTokens);
           this._lastParsedContent = content;
@@ -239,6 +239,22 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
         this._isParsing.set(false);
       }
     }, this.PARSE_DEBOUNCE_TIME);
+  }
+
+  private normalizeContent(content: unknown): string {
+    if (typeof content === 'string') {
+      return content;
+    }
+
+    if (content == null) {
+      return '';
+    }
+
+    try {
+      return JSON.stringify(content);
+    } catch {
+      return String(content);
+    }
   }
 
   /**

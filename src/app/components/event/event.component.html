@@ -127,6 +127,14 @@
     <!-- Profile events (kind 0) -->
     @else if (targetItem.event.kind === 0) {
     <app-profile-update-event [event]="targetItem.event"></app-profile-update-event>
+    }
+    <!-- Settings snapshots (kind 30078) -->
+    @else if (targetItem.event.kind === 30078) {
+    <app-settings-event [event]="targetItem.event"></app-settings-event>
+    }
+    <!-- Relay lists (kind 10086) -->
+    @else if (targetItem.event.kind === 10086) {
+    <app-relay-list-event [event]="targetItem.event"></app-relay-list-event>
     } @else {
     <div class="main-content-wrapper" [class.collapsed]="isMainContentCollapsed()">
       <app-content [content]="displayedRecord()?.data" [event]="targetItem.event"
@@ -270,6 +278,14 @@
           <!-- Profile events (kind 0) -->
           @else if (rootRecordData.event.kind === 0) {
           <app-profile-update-event [event]="rootRecordData.event"></app-profile-update-event>
+          }
+          <!-- Settings snapshots (kind 30078) -->
+          @else if (rootRecordData.event.kind === 30078) {
+          <app-settings-event [event]="rootRecordData.event"></app-settings-event>
+          }
+          <!-- Relay lists (kind 10086) -->
+          @else if (rootRecordData.event.kind === 10086) {
+          <app-relay-list-event [event]="rootRecordData.event"></app-relay-list-event>
           } @else {
           <app-content [content]="rootRecordData.data" [event]="rootRecordData.event"
             [trustedByPubkey]="trustedByPubkey() || item.event.pubkey" [disableExpansion]="navigationDisabled()"
@@ -403,6 +419,14 @@
           <!-- Profile events (kind 0) -->
           @else if (parentRecordData.event.kind === 0) {
           <app-profile-update-event [event]="parentRecordData.event"></app-profile-update-event>
+          }
+          <!-- Settings snapshots (kind 30078) -->
+          @else if (parentRecordData.event.kind === 30078) {
+          <app-settings-event [event]="parentRecordData.event"></app-settings-event>
+          }
+          <!-- Relay lists (kind 10086) -->
+          @else if (parentRecordData.event.kind === 10086) {
+          <app-relay-list-event [event]="parentRecordData.event"></app-relay-list-event>
           } @else {
           <app-content [content]="parentRecordData.data" [event]="parentRecordData.event"
             [trustedByPubkey]="trustedByPubkey() || item.event.pubkey" [disableExpansion]="navigationDisabled()"
@@ -530,6 +554,14 @@
     <!-- Profile events (kind 0) -->
     @else if (item.event.kind === 0) {
     <app-profile-update-event [event]="item.event"></app-profile-update-event>
+    }
+    <!-- Settings snapshots (kind 30078) -->
+    @else if (item.event.kind === 30078) {
+    <app-settings-event [event]="item.event"></app-settings-event>
+    }
+    <!-- Relay lists (kind 10086) -->
+    @else if (item.event.kind === 10086) {
+    <app-relay-list-event [event]="item.event"></app-relay-list-event>
     } @else {
     <div class="main-content-wrapper" [class.collapsed]="isMainContentCollapsed()">
       <app-content [content]="displayedRecord()?.data" [event]="item.event"
@@ -662,6 +694,14 @@
     <!-- Profile events (kind 0) -->
     @else if (item.event.kind === 0) {
     <app-profile-update-event [event]="item.event"></app-profile-update-event>
+    }
+    <!-- Settings snapshots (kind 30078) -->
+    @else if (item.event.kind === 30078) {
+    <app-settings-event [event]="item.event"></app-settings-event>
+    }
+    <!-- Relay lists (kind 10086) -->
+    @else if (item.event.kind === 10086) {
+    <app-relay-list-event [event]="item.event"></app-relay-list-event>
     } @else {
     <div class="main-content-wrapper" [class.collapsed]="isMainContentCollapsed()">
       <app-content [content]="displayedRecord()?.data" [event]="item.event"

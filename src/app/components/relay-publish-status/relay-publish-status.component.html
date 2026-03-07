@@ -23,7 +23,7 @@
     </mat-card-title>
     <mat-card-subtitle>
       <div class="subtitle-row">
-        <span>Event ID: <a (click)="layout.openGenericEvent(notification().event.id)" tabindex="0">{{
+        <span>Event ID: <a class="event-id-link" (click)="openPublishedEvent()" tabindex="0">{{
             notification().event.id.substring(0, 8)
             }}</a>...</span>
         <span class="progress-text">{{ progressText }}</span>

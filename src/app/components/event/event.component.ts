@@ -43,6 +43,8 @@ import {
   EmojiSetEventComponent,
   PeopleSetEventComponent,
   ProfileUpdateEventComponent,
+  SettingsEventComponent,
+  RelayListEventComponent,
 } from '../event-types';
 import { UserProfileComponent } from '../user-profile/user-profile.component';
 import { BadgeComponent } from '../../pages/badges/badge/badge.component';
@@ -113,6 +115,8 @@ interface CollapsedContentMedia {
     EmojiSetEventComponent,
     PeopleSetEventComponent,
     ProfileUpdateEventComponent,
+    SettingsEventComponent,
+    RelayListEventComponent,
     UserProfileComponent,
     BadgeComponent,
     ReportedContentComponent,

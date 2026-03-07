@@ -352,11 +352,12 @@ export class ParsingService implements OnDestroy {
     ':black_circle:': '⚫',
   };
 
-  async parseContent(content: string, tags?: string[][], authorPubkey?: string): Promise<ParseContentResult> {
-    if (!content) return { tokens: [], pendingMentions: [] };
+  async parseContent(content: unknown, tags?: string[][], authorPubkey?: string): Promise<ParseContentResult> {
+    const normalizedContent = this.normalizeContent(content);
+    if (!normalizedContent) return { tokens: [], pendingMentions: [] };
 
     // Replace line breaks with placeholders
-    const processedContent = content.replace(/\n/g, '##LINEBREAK##');
+    const processedContent = normalizedContent.replace(/\n/g, '##LINEBREAK##');
 
     // Regex for different types of content - updated to avoid capturing trailing LINEBREAK placeholders
     // URL regex: matches http/https URLs, allows #, :, ., and () in the URL path
@@ -1118,6 +1119,22 @@ export class ParsingService implements OnDestroy {
     }
 
     return { tokens, pendingMentions };
+  }
+
+  private normalizeContent(content: unknown): string {
+    if (typeof content === 'string') {
+      return content;
+    }
+
+    if (content == null) {
+      return '';
+    }
+
+    try {
+      return JSON.stringify(content);
+    } catch {
+      return String(content);
+    }
   }
   private processTextSegment(segment: string, tokens: ContentToken[], basePosition: number): void {
     // Process line breaks in text segments

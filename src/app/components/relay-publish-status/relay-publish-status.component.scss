@@ -42,6 +42,13 @@
   color: var(--mat-sys-primary);
 }
 
+.event-id-link {
+  cursor: pointer;
+  color: var(--mat-sys-primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
 .status-indicators {
   display: flex;
   gap: 8px;

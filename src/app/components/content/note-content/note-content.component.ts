@@ -37,6 +37,8 @@ import { ArticleComponent } from '../../article/article.component';
 import { MusicEmbedComponent } from '../../music-embed/music-embed.component';
 import { EmojiSetMentionComponent } from '../../emoji-set-mention/emoji-set-mention.component';
 import { StarterPackEventComponent } from '../../event-types/starter-pack-event.component';
+import { SettingsEventComponent } from '../../event-types/settings-event.component';
+import { RelayListEventComponent } from '../../event-types/relay-list-event.component';
 import { UserProfileComponent } from '../../user-profile/user-profile.component';
 import { DataService } from '../../../services/data.service';
 import { RelayPoolService } from '../../../services/relays/relay-pool';
@@ -82,6 +84,8 @@ export interface DisplayItem {
     MusicEmbedComponent,
     EmojiSetMentionComponent,
     StarterPackEventComponent,
+    SettingsEventComponent,
+    RelayListEventComponent,
     UserProfileComponent,
     AgoPipe,
     TimestampPipe,
@@ -1771,9 +1775,10 @@ export class NoteContentComponent implements OnDestroy {
    * Check if content looks like JSON (starts with { or [ and ends with } or ])
    * This helps detect malformed events that have JSON in the content field
    */
-  isJsonContent(content: string): boolean {
-    if (!content || content.length < 2) return false;
-    const trimmed = content.trim();
+  isJsonContent(content: unknown): boolean {
+    const normalizedContent = this.normalizeContent(content);
+    if (!normalizedContent || normalizedContent.length < 2) return false;
+    const trimmed = normalizedContent.trim();
     return (trimmed.startsWith('{') && trimmed.endsWith('}')) ||
       (trimmed.startsWith('[') && trimmed.endsWith(']'));
   }
@@ -1781,13 +1786,30 @@ export class NoteContentComponent implements OnDestroy {
   /**
    * Format JSON content for display - pretty prints if possible
    */
-  formatJsonContent(content: string): string {
+  formatJsonContent(content: unknown): string {
+    const normalizedContent = this.normalizeContent(content);
     try {
-      const parsed = JSON.parse(content);
+      const parsed = JSON.parse(normalizedContent);
       return JSON.stringify(parsed, null, 2);
     } catch {
       // If parsing fails, just return the original content
+      return normalizedContent;
+    }
+  }
+
+  private normalizeContent(content: unknown): string {
+    if (typeof content === 'string') {
       return content;
+    }
+
+    if (content == null) {
+      return '';
+    }
+
+    try {
+      return JSON.stringify(content);
+    } catch {
+      return String(content);
     }
   }
 
