@@ -85,7 +85,12 @@ export class GeneralSettingsComponent implements OnInit, OnDestroy {
   }
 
   currentFeatureLevel = signal<FeatureLevel>(this.app.featureLevel());
-  xPremiumEligible = computed(() => this.xDualPost.status().premiumEligible);
+  xPremiumEligible = computed(() => {
+    const subscription = this.accountState.subscription();
+    const isPremiumTier = subscription?.tier === 'premium' || subscription?.tier === 'premium_plus';
+    const isNotExpired = !subscription?.expires || Date.now() < subscription.expires;
+    return !!subscription && isPremiumTier && isNotExpired;
+  });
 
   // Global event expiration (in hours, null = disabled)
   globalEventExpiration = signal<number | null>(this.getInitialGlobalExpiration());

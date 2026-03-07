@@ -7,7 +7,6 @@ import { environment } from '../../environments/environment';
 
 export interface XConnectionStatus {
   connected: boolean;
-  premiumEligible: boolean;
   username?: string;
   userId?: string;
 }
@@ -32,21 +31,29 @@ export class XDualPostService {
   private readonly accountState = inject(AccountStateService);
   private readonly logger = inject(LoggerService);
   private readonly webRequest = inject(WebRequest);
+  private lastPubkey = '';
 
-  readonly status = signal<XConnectionStatus>({ connected: false, premiumEligible: false });
+  readonly status = signal<XConnectionStatus>({ connected: false });
   readonly loading = signal(false);
   readonly connecting = signal(false);
+  readonly loaded = signal(false);
 
   constructor() {
     effect(() => {
       const pubkey = this.accountState.pubkey();
 
       if (!pubkey) {
-        this.status.set({ connected: false, premiumEligible: false });
+        this.lastPubkey = '';
+        this.status.set({ connected: false });
+        this.loaded.set(false);
         return;
       }
 
-      void this.refreshStatus();
+      if (this.lastPubkey !== pubkey) {
+        this.lastPubkey = pubkey;
+        this.status.set({ connected: false });
+        this.loaded.set(false);
+      }
     });
   }
 
@@ -67,8 +74,9 @@ export class XDualPostService {
     const pubkey = this.accountState.pubkey();
 
     if (!pubkey) {
-      const disconnected = { connected: false, premiumEligible: false } satisfies XConnectionStatus;
+      const disconnected = { connected: false } satisfies XConnectionStatus;
       this.status.set(disconnected);
+      this.loaded.set(false);
       return disconnected;
     }
 
@@ -84,15 +92,25 @@ export class XDualPostService {
       ) as ApiEnvelope<XConnectionStatus>;
 
       this.status.set(response.data);
+      this.loaded.set(true);
       return response.data;
     } catch (error) {
       this.logger.warn('Failed to refresh X connection status', { error });
-      const disconnected = { connected: false, premiumEligible: false } satisfies XConnectionStatus;
+      const disconnected = { connected: false } satisfies XConnectionStatus;
       this.status.set(disconnected);
+      this.loaded.set(false);
       return disconnected;
     } finally {
       this.loading.set(false);
     }
+  }
+
+  ensureStatusLoaded(): void {
+    if (this.loaded() || this.loading()) {
+      return;
+    }
+
+    void this.refreshStatus();
   }
 
   async connect(): Promise<void> {
@@ -134,6 +152,7 @@ export class XDualPostService {
       );
 
       this.status.update(status => ({ ...status, connected: false, username: undefined, userId: undefined }));
+      this.loaded.set(true);
     } finally {
       this.loading.set(false);
     }

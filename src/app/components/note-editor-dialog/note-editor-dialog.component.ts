@@ -357,7 +357,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       return { valid: true, message: '' };
     }
 
-    if (!this.xDualPost.status().premiumEligible) {
+    if (!this.xPremiumEligible()) {
       return {
         valid: false,
         message: 'X dual-posting is available for Premium accounts only.',
@@ -572,7 +572,12 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   isQuote = computed(() => !!this.data?.quote);
   /** NIP-41: Check if we're editing an existing note */
   isEdit = computed(() => !!this.data?.editEvent);
-  xPremiumEligible = computed(() => this.xDualPost.status().premiumEligible);
+  xPremiumEligible = computed(() => {
+    const subscription = this.accountState.subscription();
+    const isPremiumTier = subscription?.tier === 'premium' || subscription?.tier === 'premium_plus';
+    const isNotExpired = !subscription?.expires || Date.now() < subscription.expires;
+    return !!subscription && isPremiumTier && isNotExpired;
+  });
 
   // Check if a mention is the reply target (cannot be removed)
   isReplyTargetMention(pubkey: string): boolean {
@@ -795,7 +800,6 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   constructor() {
     // Set default value for addClientTag from user's local settings
     this.addClientTag.set(this.localSettings.addClientTag());
-    void this.xDualPost.refreshStatus();
 
     effect(() => {
       const isConnected = this.xDualPost.status().connected;
@@ -2630,6 +2634,10 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   toggleAdvancedOptions(): void {
     const wasInAdvancedOptions = this.showAdvancedOptions();
     this.showAdvancedOptions.update(current => !current);
+
+    if (!wasInAdvancedOptions && this.xPremiumEligible()) {
+      this.xDualPost.ensureStatusLoaded();
+    }
 
     // If coming back from advanced options, re-trigger textarea auto-resize after it renders
     if (wasInAdvancedOptions) {
