@@ -86,6 +86,7 @@ export class MetaService {
     title?: string;
     description?: string;
     image?: string;
+    images?: string[];
     url?: string;
     type?: string;
     author?: string;
@@ -103,8 +104,10 @@ export class MetaService {
     if (config.description) {
       this.meta.updateTag({ property: 'og:description', content: config.description }, 'property="og:description"');
     }
-    if (config.image) {
-      this.meta.updateTag({ property: 'og:image', content: config.image }, 'property="og:image"');
+    const socialImages = this.buildSocialImageList(config.image, config.images);
+    if (socialImages.length > 0) {
+      this.replaceMetaTags('property', 'og:image', socialImages);
+      this.replaceMetaTags('property', 'og:image:secure_url', socialImages);
     }
     if (config.url) {
       this.meta.updateTag({ property: 'og:url', content: config.url }, 'property="og:url"');
@@ -150,8 +153,40 @@ export class MetaService {
     if (config.description) {
       this.meta.updateTag({ name: 'twitter:description', content: config.description }, 'name="twitter:description"');
     }
-    if (config.image) {
-      this.meta.updateTag({ name: 'twitter:image', content: config.image }, 'name="twitter:image"');
+    if (socialImages.length > 0) {
+      this.meta.updateTag({ name: 'twitter:image', content: socialImages[0] }, 'name="twitter:image"');
+    }
+  }
+
+  private buildSocialImageList(primaryImage?: string, images?: string[]): string[] {
+    const result: string[] = [];
+    const add = (value: string | undefined): void => {
+      const trimmed = value?.trim();
+      if (!trimmed) {
+        return;
+      }
+      if (!result.includes(trimmed)) {
+        result.push(trimmed);
+      }
+    };
+
+    add(primaryImage);
+    for (const image of images || []) {
+      add(image);
+    }
+
+    return result;
+  }
+
+  private replaceMetaTags(attr: 'property' | 'name', key: string, values: string[]): void {
+    const selector = `${attr}='${key}'`;
+
+    while (this.meta.getTag(selector)) {
+      this.meta.removeTag(selector);
+    }
+
+    for (const value of values) {
+      this.meta.addTag({ [attr]: key, content: value }, false);
     }
   }
 

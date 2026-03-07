@@ -259,59 +259,82 @@ function parseImetaTag(tag: string[]): Record<string, string> {
  * 6. Author profile picture (fallback)
  */
 function extractImageFromEvent(event: Event, authorPicture?: string): string | null {
+  const images = extractImagesFromEvent(event, authorPicture);
+  return images[0] || null;
+}
+
+function extractImagesFromEvent(event: Event, authorPicture?: string): string[] {
+  const images: string[] = [];
+
+  const addImage = (url: string | undefined | null): void => {
+    const trimmed = typeof url === 'string' ? url.trim() : '';
+    if (!trimmed) {
+      return;
+    }
+
+    if (!images.includes(trimmed)) {
+      images.push(trimmed);
+    }
+  };
+
   const tags = event.tags;
 
-  // 1. Explicit 'image' tag
+  // 1. Explicit 'image' tags
   if (tags) {
-    const imageTag = tags.find((t: string[]) => t[0] === 'image' && t[1]);
-    if (imageTag) return imageTag[1];
+    for (const tag of tags) {
+      if (Array.isArray(tag) && tag[0] === 'image' && tag[1]) {
+        addImage(tag[1]);
+      }
+    }
   }
 
-  // 2 & 3. imeta tags — prefer image-type URL, then video thumbnail
+  // 2 & 3. imeta tags — collect image-type URLs and video thumbnails
   if (tags) {
-    let firstVideoThumbnail: string | null = null;
-
     for (const tag of tags) {
       if (!Array.isArray(tag) || tag[0] !== 'imeta') continue;
 
       const parsed = parseImetaTag(tag);
 
-      // Direct image attachment
       if (parsed['m']?.startsWith('image/') && parsed['url']) {
-        return parsed['url'];
+        addImage(parsed['url']);
       }
 
       // Video thumbnail (NIP-71 `image` field)
-      if (!firstVideoThumbnail && parsed['image']) {
-        firstVideoThumbnail = parsed['image'];
+      if (parsed['image']) {
+        addImage(parsed['image']);
       }
 
-      // URL that looks like an image (no mime type specified)
       if (!parsed['m'] && parsed['url']) {
         if (/\.(jpg|jpeg|png|gif|webp|avif|svg)(\?|$)/i.test(parsed['url'])) {
-          return parsed['url'];
+          addImage(parsed['url']);
         }
       }
     }
-
-    if (firstVideoThumbnail) return firstVideoThumbnail;
   }
 
-  // 4. Image URL in content
+  // 4. Image URLs in content
   if (event.content) {
-    const urlRegex = /(https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp))/i;
-    const match = event.content.match(urlRegex);
-    if (match) return match[0];
+    const urlRegex = /https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp|avif|svg)(\?[^\s]*)?/gi;
+    const matches = event.content.match(urlRegex) || [];
+    for (const match of matches) {
+      addImage(match);
+    }
   }
 
-  // 5. YouTube thumbnail from content
-  if (event.content) {
+  // 5. YouTube thumbnail from content (fallback media)
+  if (images.length === 0 && event.content) {
     const ytId = extractYouTubeId(event.content);
-    if (ytId) return `https://img.youtube.com/vi/${ytId}/0.jpg`;
+    if (ytId) {
+      addImage(`https://img.youtube.com/vi/${ytId}/0.jpg`);
+    }
   }
 
   // 6. Author picture fallback
-  return authorPicture || null;
+  if (images.length === 0) {
+    addImage(authorPicture || null);
+  }
+
+  return images;
 }
 
 /**
@@ -891,12 +914,14 @@ export class DataResolver implements Resolve<EventData | null> {
           // Try to extract an image for the social preview from the relay-fetched event.
           // Priority: image tag > imeta image > content image > YouTube thumbnail > author picture
           const authorPicture = relayProfilePicture;
-          const eventImage = extractImageFromEvent(directEvent, authorPicture);
+          const eventImages = extractImagesFromEvent(directEvent, authorPicture);
+          const eventImage = eventImages[0] || null;
 
           this.metaService.updateSocialMetadata({
             title,
             description,
             image: eventImage || 'https://nostria.app/assets/nostria-social.jpg',
+            images: eventImages,
             publishedAtSeconds: directEvent.created_at,
             author: authorName,
           });

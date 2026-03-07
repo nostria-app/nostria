@@ -195,6 +195,24 @@ function extractMetaContent(html: string, tag: string): string {
   return byProperty.exec(html)?.[1] || byName.exec(html)?.[1] || '';
 }
 
+function extractMetaContents(html: string, tag: string): string[] {
+  const escapedTag = tag.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
+  const byProperty = new RegExp(`<meta\\s+property=["']${escapedTag}["']\\s+content=["']([\\s\\S]*?)["']`, 'ig');
+  const byName = new RegExp(`<meta\\s+name=["']${escapedTag}["']\\s+content=["']([\\s\\S]*?)["']`, 'ig');
+
+  const values: string[] = [];
+  for (const regex of [byProperty, byName]) {
+    for (const match of html.matchAll(regex)) {
+      const value = match[1]?.trim();
+      if (value && !values.includes(value)) {
+        values.push(value);
+      }
+    }
+  }
+
+  return values;
+}
+
 function extractTitleContent(html: string): string {
   const titleMatch = html.match(/<title>([\s\S]*?)<\/title>/i);
   return titleMatch?.[1]?.trim() || '';
@@ -229,6 +247,19 @@ function normalizePreviewImageUrl(imageUrl: string, userAgent: string | undefine
   return `https://nostria.app/${normalized}`;
 }
 
+function normalizePreviewImageUrls(imageUrls: string[], userAgent: string | undefined): string[] {
+  const normalized = imageUrls
+    .map((imageUrl) => normalizePreviewImageUrl(imageUrl, userAgent))
+    .filter(Boolean)
+    .filter((value, index, array) => array.indexOf(value) === index);
+
+  if (normalized.length > 0) {
+    return normalized;
+  }
+
+  return ['https://nostria.app/assets/nostria-social.jpg'];
+}
+
 function injectPrioritySocialTags(html: string, path: string, userAgent: string | undefined): string {
   if (!/<head[\s>]/i.test(html)) {
     return html;
@@ -250,8 +281,19 @@ function injectPrioritySocialTags(html: string, path: string, userAgent: string 
 
   const ogUrl = extractMetaContent(html, 'og:url').trim() || `https://nostria.app${path}`;
   const twitterCard = extractMetaContent(html, 'twitter:card').trim() || 'summary_large_image';
-  const rawImage = extractMetaContent(html, 'og:image').trim() || extractMetaContent(html, 'twitter:image').trim();
-  const image = normalizePreviewImageUrl(rawImage, userAgent);
+  const rawImages = [
+    ...extractMetaContents(html, 'og:image'),
+    ...extractMetaContents(html, 'twitter:image'),
+  ];
+  const images = normalizePreviewImageUrls(rawImages, userAgent);
+  const image = images[0];
+
+  const ogImageTags = images
+    .map((img) => `<meta property="og:image" content="${escapeHtmlAttribute(img)}">`)
+    .join('\n');
+  const ogImageSecureTags = images
+    .map((img) => `<meta property="og:image:secure_url" content="${escapeHtmlAttribute(img)}">`)
+    .join('\n');
 
   const priorityBlock = [
     '<!-- SSR_PRIORITY_SOCIAL_TAGS -->',
@@ -262,8 +304,8 @@ function injectPrioritySocialTags(html: string, path: string, userAgent: string 
     `<meta property="og:title" content="${escapeHtmlAttribute(title)}">`,
     `<meta property="og:description" content="${escapeHtmlAttribute(description)}">`,
     `<meta property="og:url" content="${escapeHtmlAttribute(ogUrl)}">`,
-    `<meta property="og:image" content="${escapeHtmlAttribute(image)}">`,
-    `<meta property="og:image:secure_url" content="${escapeHtmlAttribute(image)}">`,
+    ogImageTags,
+    ogImageSecureTags,
     `<meta name="twitter:card" content="${escapeHtmlAttribute(twitterCard)}">`,
     `<meta name="twitter:site" content="@nostriaapp">`,
     `<meta name="twitter:title" content="${escapeHtmlAttribute(title)}">`,
