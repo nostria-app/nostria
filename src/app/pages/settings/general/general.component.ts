@@ -87,6 +87,10 @@ export class GeneralSettingsComponent implements OnInit, OnDestroy {
     this.rightPanel.goBack();
   }
 
+  openPremiumTab(): void {
+    void this.router.navigate(['/accounts'], { queryParams: { tab: 'premium' } });
+  }
+
   currentFeatureLevel = signal<FeatureLevel>(this.app.featureLevel());
   xPremiumEligible = computed(() => {
     const subscription = this.accountState.subscription();

@@ -126,8 +126,7 @@
     }
     <div class="x-upgrade-prompt">
       <p class="setting-description">Upgrade to Premium to connect or publish to X from Nostria.</p>
-      <button mat-flat-button type="button"
-        (click)="router.navigate(['/accounts'], { queryParams: { tab: 'premium' } })">
+      <button mat-flat-button type="button" (click)="openPremiumTab()">
         Open Premium
       </button>
     </div>
