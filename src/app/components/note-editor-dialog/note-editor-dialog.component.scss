@@ -515,6 +515,41 @@
   pointer-events: none !important;
 }
 
+.dialog-platform-indicators {
+  position: absolute;
+  top: 19px;
+  right: 108px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--mat-sys-corner-full);
+  background: var(--mat-sys-surface-container-high);
+  box-shadow: var(--mat-sys-level1);
+  z-index: 2;
+
+  @media (max-width: 600px),
+  (max-height: 700px) {
+    top: 14px;
+    right: 96px;
+    width: 24px;
+    height: 24px;
+  }
+
+  @media (max-height: 600px) {
+    top: 12px;
+    right: 88px;
+    width: 22px;
+    height: 22px;
+  }
+}
+
+.dialog-platform-logo {
+  border-radius: var(--mat-sys-corner-full);
+  object-fit: contain;
+}
+
 // Text color classes for character count
 .error-text {
   color: var(--mat-sys-error) !important;
