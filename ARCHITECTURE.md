@@ -1,3 +1,7 @@
+- Composer-level publish decisions remain ephemeral. The per-post toggle in the note editor controls whether the current publish operation should first create the X post, then inject a NIP-48 `proxy` tag pointing at that X URL into the Nostr event before signing and publishing to relays.
+
+- After the Nostr event has been accepted by a relay, the app finalizes the backend mapping between the Nostr event id and the previously created X post id. The NIP-48 proxy tag is therefore the user-visible source of truth embedded in the event itself, while the backend mapping supports account-scoped usage tracking and future X metrics sync.
+
 # Nostria - Software Architecture Document
 
 > **Nostria** - Your Social Network

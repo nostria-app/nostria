@@ -35,6 +35,11 @@ interface XPublishResult {
   nostrEventId?: string;
 }
 
+interface XPostLinkResult {
+  xPostId: string;
+  nostrEventId: string;
+}
+
 interface ApiEnvelope<T> {
   success: boolean;
   data: T;
@@ -88,7 +93,7 @@ export class XDualPostService {
   private getPubkey(): string {
     const pubkey = this.accountState.pubkey();
     if (!pubkey) {
-      throw new Error('You must be logged in to use X dual-posting');
+      throw new Error('You must be logged in to use Post to X');
     }
 
     return pubkey;
@@ -229,7 +234,7 @@ export class XDualPostService {
     }
   }
 
-  async publishPost(text: string, media: XPostMediaItem[] = [], nostrEventId?: string): Promise<void> {
+  async publishPost(text: string, media: XPostMediaItem[] = [], nostrEventId?: string): Promise<XPublishResult> {
     const pubkey = this.getPubkey();
 
     const response = await this.webRequest.fetchJson(
@@ -248,6 +253,32 @@ export class XDualPostService {
           nostrEventId: response.data.nostrEventId as string,
           xPostId: response.data.id,
           url: response.data.url,
+        },
+      }));
+    }
+
+    return response.data;
+  }
+
+  async linkPostToEvent(xPostId: string, nostrEventId: string, url?: string): Promise<void> {
+    const pubkey = this.getPubkey();
+
+    await this.webRequest.fetchJson(
+      this.getApiUrl(`api/x/post-link/${pubkey}`),
+      {
+        method: 'POST',
+        body: JSON.stringify({ xPostId, nostrEventId }),
+      },
+      { kind: 27235 }
+    ) as ApiEnvelope<XPostLinkResult>;
+
+    if (url) {
+      this.linkedPosts.update(current => ({
+        ...current,
+        [nostrEventId]: {
+          nostrEventId,
+          xPostId,
+          url,
         },
       }));
     }

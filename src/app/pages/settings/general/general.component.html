@@ -103,8 +103,9 @@
 
   @if (accountState.account()) {
   <div>
-    <h2>X Dual-posting</h2>
+    <h2>Post to X</h2>
     <p class="setting-description">Connect your X account to publish the text of your Nostria posts to X.</p>
+    <p class="setting-description">Post to X is available for Premium accounts only.</p>
 
     @if (xDualPost.loading()) {
     <p class="setting-description">Checking X connection status...</p>
@@ -182,7 +183,7 @@
         </mat-slide-toggle>
       </div>
       <p class="setting-description x-default-toggle-description">When enabled, new posts will start with the X
-        dual-post option turned on in Advanced Options.</p>
+        Post to X option turned on in Advanced Options.</p>
     </mat-card>
     } @else {
     <div class="setting-item">
@@ -192,7 +193,7 @@
     <p class="setting-description">Only one X account is supported per Nostria account. If you connected the wrong one
       previously, disconnect it and then connect again with the correct X account.</p>
     <p class="setting-description">You will be redirected to X to authorize Nostria. The backend stores your X access
-      tokens and uses them only when you choose to dual-post.</p>
+      tokens and uses them only when you choose to post to X.</p>
     }
   </div>
   }

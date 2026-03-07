@@ -1065,6 +1065,16 @@ export class EventComponent implements AfterViewInit, OnDestroy {
 
   xLinkedPost = computed(() => {
     const targetEvent = this.targetRecord()?.event;
+    const taggedXUrl = this.getTaggedXUrl(targetEvent);
+
+    if (targetEvent && taggedXUrl) {
+      return {
+        nostrEventId: targetEvent.id,
+        xPostId: '',
+        url: taggedXUrl,
+      };
+    }
+
     const currentPubkey = this.accountState.pubkey();
 
     if (!targetEvent || targetEvent.kind !== 1 || !currentPubkey || targetEvent.pubkey !== currentPubkey) {
@@ -1073,6 +1083,27 @@ export class EventComponent implements AfterViewInit, OnDestroy {
 
     return this.xDualPost.linkedPostForEvent(targetEvent.id);
   });
+
+  private getTaggedXUrl(event?: Event | null): string | undefined {
+    if (!event) {
+      return undefined;
+    }
+
+    const proxyReference = event.tags.find(tag => {
+      if (tag[0] !== 'proxy' || tag[2] !== 'web' || typeof tag[1] !== 'string') {
+        return false;
+      }
+
+      try {
+        const parsed = new URL(tag[1]);
+        return parsed.hostname === 'x.com' || parsed.hostname === 'www.x.com' || parsed.hostname === 'twitter.com' || parsed.hostname === 'www.twitter.com';
+      } catch {
+        return false;
+      }
+    });
+
+    return proxyReference?.[1];
+  }
 
   // Check if this event is a quote-only event (has q tags or inline nostr: references but no meaningful reply context)
   // Quote events should NOT show the "replied to" header because the quoted content is rendered inline

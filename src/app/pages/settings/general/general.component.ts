@@ -260,7 +260,7 @@ export class GeneralSettingsComponent implements OnInit, OnDestroy {
 
   async connectX(): Promise<void> {
     if (!this.xPremiumEligible()) {
-      this.snackBar.open('X dual-posting is available for Premium accounts only.', 'Close', {
+      this.snackBar.open('Post to X is available for Premium accounts only.', 'Close', {
         duration: 5000,
       });
       return;
@@ -290,7 +290,7 @@ export class GeneralSettingsComponent implements OnInit, OnDestroy {
 
   async reconnectX(): Promise<void> {
     if (!this.xPremiumEligible()) {
-      this.snackBar.open('X dual-posting is available for Premium accounts only.', 'Close', {
+      this.snackBar.open('Post to X is available for Premium accounts only.', 'Close', {
         duration: 5000,
       });
       return;

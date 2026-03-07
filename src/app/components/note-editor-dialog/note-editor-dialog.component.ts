@@ -112,6 +112,11 @@ interface XPostValidation {
   message: string;
 }
 
+interface PreparedXPost {
+  id: string;
+  url: string;
+}
+
 @Component({
   selector: 'app-note-editor-dialog',
   imports: [
@@ -360,7 +365,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     if (!this.xPremiumEligible()) {
       return {
         valid: false,
-        message: 'X dual-posting is available for Premium accounts only.',
+        message: 'Post to X is available for Premium accounts only.',
       };
     }
 
@@ -374,7 +379,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     if (!this.xDualPost.status().connected) {
       return {
         valid: false,
-        message: 'Connect your X account before enabling dual-posting.',
+        message: 'Connect your X account before enabling Post to X.',
       };
     }
 
@@ -1233,7 +1238,8 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       }
     } catch (error) {
       console.error('Error publishing note:', error);
-      this.snackBar.open('Failed to publish note. Please try again.', 'Close', {
+      const message = error instanceof Error ? error.message : 'Failed to publish note. Please try again.';
+      this.snackBar.open(message, 'Close', {
         duration: 5000,
       });
     } finally {
@@ -1450,6 +1456,14 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   }
 
   private async publishEvent(contentToPublish: string, tags: string[][], xText?: string, xMedia: XPostMediaItem[] = []): Promise<void> {
+    let preparedXPost: PreparedXPost | undefined;
+    const finalTags = tags.map(tag => [...tag]);
+
+    if (xText?.trim() && this.postToX() && this.xDualPost.status().connected) {
+      preparedXPost = await this.prepareXPost(xText, xMedia);
+      this.appendXProxyTag(finalTags, preparedXPost.url);
+    }
+
     let eventToSign: UnsignedEvent;
 
     // If PoW is enabled, ensure we have a mined event
@@ -1457,7 +1471,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       // If we don't have a mined event yet, or content has changed, mine it now
       if (!this.powMinedEvent() || this.powMinedEvent()?.content !== contentToPublish) {
         // Build the base event for mining
-        const baseEvent = this.nostrService.createEvent(1, contentToPublish, tags);
+        const baseEvent = this.nostrService.createEvent(1, contentToPublish, finalTags);
 
         // Start mining
         this.snackBar.open('Mining Proof-of-Work before publishing...', '', { duration: 2000 });
@@ -1488,7 +1502,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       }
     } else {
       // PoW is not enabled, create event normally
-      eventToSign = this.nostrService.createEvent(1, contentToPublish, tags);
+      eventToSign = this.nostrService.createEvent(1, contentToPublish, finalTags);
     }
 
     // Use the centralized publishing service which handles relay distribution
@@ -1516,8 +1530,8 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
 
           this.haptics.triggerSuccess();
 
-          if (xText?.trim()) {
-            void this.dualPostToX(signedEvent.id, xText, xMedia);
+          if (preparedXPost) {
+            void this.finalizePreparedXPost(signedEvent.id, preparedXPost);
           }
 
           // Clear draft and close dialog immediately after first successful publish
@@ -1562,7 +1576,17 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     });
 
     // Start the publish operation (will continue in background even after dialog closes)
-    const result = await this.nostrService.signAndPublish(eventToSign);
+    let result;
+
+    try {
+      result = await this.nostrService.signAndPublish(eventToSign);
+    } catch (error) {
+      if (preparedXPost) {
+        throw new Error(`Posted to X, but failed to publish to Nostr: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
+
+      throw error;
+    }
 
     console.log('[NoteEditorDialog] Publish result:', {
       success: result.success,
@@ -1577,13 +1601,17 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
 
     // If no relay succeeded at all (dialog would still be open)
     if (!dialogClosed && (!result.success || !result.event)) {
+      if (preparedXPost) {
+        throw new Error('Posted to X, but failed to publish to Nostr');
+      }
+
       throw new Error('Failed to publish event');
     }
   }
 
   async connectXFromComposer(): Promise<void> {
     if (!this.xPremiumEligible()) {
-      this.snackBar.open('X dual-posting is available for Premium accounts only.', 'Close', {
+      this.snackBar.open('Post to X is available for Premium accounts only.', 'Close', {
         duration: 5000,
       });
       return;
@@ -1613,21 +1641,40 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       }));
   }
 
-  private async dualPostToX(nostrEventId: string, text: string, media: XPostMediaItem[]): Promise<void> {
-    if (!this.postToX() || !this.xDualPost.status().connected) {
-      return;
-    }
+  private async prepareXPost(text: string, media: XPostMediaItem[]): Promise<PreparedXPost> {
+    const result = await this.xDualPost.publishPost(text.trim(), media);
 
+    return {
+      id: result.id,
+      url: result.url,
+    };
+  }
+
+  private async finalizePreparedXPost(nostrEventId: string, preparedXPost: PreparedXPost): Promise<void> {
     try {
-      await this.xDualPost.publishPost(text.trim(), media, nostrEventId);
-      this.snackBar.open(media.length > 0 ? 'Also posted to X with media' : 'Also posted to X', 'Close', {
-        duration: 3000,
-      });
+      await this.xDualPost.linkPostToEvent(preparedXPost.id, nostrEventId, preparedXPost.url);
     } catch (error) {
-      this.snackBar.open(`Published to Nostr, but X posting failed: ${error instanceof Error ? error.message : 'Unknown error'}`, 'Close', {
-        duration: 6000,
+      console.warn('Failed to finalize Post to X link', {
+        error,
+        nostrEventId,
+        xPostId: preparedXPost.id,
       });
     }
+  }
+
+  private appendXProxyTag(tags: string[][], xUrl: string): void {
+    const normalizedUrl = this.normalizeExternalWebUrl(xUrl);
+    const hasProxyTag = tags.some(tag => tag[0] === 'proxy' && tag[1] === normalizedUrl && tag[2] === 'web');
+
+    if (!hasProxyTag) {
+      tags.push(['proxy', normalizedUrl, 'web']);
+    }
+  }
+
+  private normalizeExternalWebUrl(url: string): string {
+    const parsed = new URL(url);
+    parsed.hash = '';
+    return parsed.toString();
   }
 
   private buildTags(): string[][] {
