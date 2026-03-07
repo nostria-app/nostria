@@ -120,7 +120,7 @@
           <textarea matInput [value]="content()" (input)="onContentInput($event)" (keydown)="onContentKeyDown($event)"
             (keyup)="onContentKeyUp($event)" (click)="onContentClick($event)"
             [placeholder]="inlineMode() ? 'Write your reply... Use @ to mention someone' : 'Write your note... Use @ to mention someone'"
-            [rows]="inlineMode() ? 3 : 4" class="content-textarea" #contentTextarea>
+            [title]="inlineMode() ? 'Reply content' : 'Note content'" [rows]="inlineMode() ? 3 : 4" class="content-textarea" #contentTextarea>
           </textarea>
           <mat-hint align="end"> {{ characterCount() }} characters </mat-hint>
         </mat-form-field>
@@ -197,6 +197,33 @@
             Add the Nostria client tag to this event
           </span>
         </div>
+      </div>
+
+      <!-- X Dual-posting Option -->
+      <div class="option-row">
+        <div class="option-header">
+          <mat-slide-toggle [checked]="postToX()" (change)="onPostToXChange($event.checked)"
+            [disabled]="!xPostingAvailable()">
+            Post to X
+          </mat-slide-toggle>
+          <span class="option-description">
+            Publish the text of this post to your connected X account. Media uploads, quote/reply threading, and edits are not mirrored yet.
+          </span>
+        </div>
+
+        @if (xStatusLoading()) {
+        <div class="option-content">
+          <span class="option-description">Checking X connection...</span>
+        </div>
+        } @else if (xPostingAvailable()) {
+        <div class="option-content">
+          <span class="option-description">Connected as {{ xDualPost.status().username || 'X user' }}</span>
+        </div>
+        } @else {
+        <div class="option-content">
+          <button mat-button type="button" (click)="connectXFromComposer()">Connect X</button>
+        </div>
+        }
       </div>
 
       <!-- Expiration Option -->

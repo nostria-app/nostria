@@ -37,6 +37,7 @@ export interface SyncedFeedConfig {
 
 export interface UserSettings {
   socialSharingPreview: boolean;
+  postToXByDefault?: boolean;
   relayDiscoveryMode?: RelayDiscoveryMode;
   imageCacheEnabled?: boolean; // Optional setting for image cache
   // Report type visibility settings (NIP-56)
@@ -81,6 +82,7 @@ export interface UserSettings {
 
 const DEFAULT_SETTINGS: UserSettings = {
   socialSharingPreview: true,
+  postToXByDefault: false,
   relayDiscoveryMode: 'outbox',
   imageCacheEnabled: true,
   // By default, hide all reported content

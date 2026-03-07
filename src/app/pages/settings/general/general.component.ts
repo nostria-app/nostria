@@ -1,4 +1,5 @@
 import { Component, inject, signal, OnInit, OnDestroy } from '@angular/core';
+import { ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -26,6 +27,8 @@ import { MatInputModule } from '@angular/material/input';
 import { AccountLocalStateService } from '../../../services/account-local-state.service';
 import { RightPanelService } from '../../../services/right-panel.service';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatSnackBar } from '@angular/material/snack-bar';
+import { XDualPostService } from '../../../services/x-dual-post.service';
 
 interface Language {
   code: string;
@@ -61,10 +64,16 @@ export class GeneralSettingsComponent implements OnInit, OnDestroy {
   imagePlaceholder = inject(ImagePlaceholderService);
   externalLinkHandler = inject(ExternalLinkHandlerService);
   accountLocalState = inject(AccountLocalStateService);
+  xDualPost = inject(XDualPostService);
   private rightPanel = inject(RightPanelService);
+  private route = inject(ActivatedRoute);
+  private router = inject(Router);
+  private snackBar = inject(MatSnackBar);
 
   ngOnInit(): void {
     // Parent settings component handles the page title
+    void this.xDualPost.refreshStatus();
+    this.handleXAuthReturn();
   }
 
   ngOnDestroy(): void {
@@ -169,6 +178,11 @@ export class GeneralSettingsComponent implements OnInit, OnDestroy {
     this.settings.updateSettings({ autoPlayVideos: !currentValue });
   }
 
+  togglePostToXByDefault(): void {
+    const currentValue = this.settings.settings()?.postToXByDefault ?? false;
+    this.settings.updateSettings({ postToXByDefault: !currentValue });
+  }
+
   togglePublishMusicStatus(): void {
     const currentValue = this.settings.settings()?.publishMusicStatus !== false;
     this.settings.updateSettings({ publishMusicStatus: !currentValue });
@@ -230,5 +244,62 @@ export class GeneralSettingsComponent implements OnInit, OnDestroy {
 
     this.globalEventExpiration.set(hours);
     this.accountLocalState.setGlobalEventExpiration(pubkey, hours);
+  }
+
+  async connectX(): Promise<void> {
+    try {
+      await this.xDualPost.connect();
+    } catch (error) {
+      this.snackBar.open(`Failed to connect X: ${error instanceof Error ? error.message : 'Unknown error'}`, 'Close', {
+        duration: 5000,
+      });
+    }
+  }
+
+  async disconnectX(): Promise<void> {
+    try {
+      await this.xDualPost.disconnect();
+      this.snackBar.open('Disconnected X account', 'Close', {
+        duration: 3000,
+      });
+    } catch (error) {
+      this.snackBar.open(`Failed to disconnect X: ${error instanceof Error ? error.message : 'Unknown error'}`, 'Close', {
+        duration: 5000,
+      });
+    }
+  }
+
+  private handleXAuthReturn(): void {
+    const status = this.route.snapshot.queryParamMap.get('xAuth');
+    const message = this.route.snapshot.queryParamMap.get('xMessage');
+
+    if (!status) {
+      return;
+    }
+
+    if (status === 'success') {
+      this.snackBar.open('X account connected', 'Close', {
+        duration: 3000,
+      });
+    } else if (status === 'cancelled') {
+      this.snackBar.open('X authorization was cancelled', 'Close', {
+        duration: 3000,
+      });
+    } else {
+      this.snackBar.open(message || 'X authorization failed', 'Close', {
+        duration: 5000,
+      });
+    }
+
+    void this.xDualPost.refreshStatus();
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: {
+        xAuth: null,
+        xMessage: null,
+      },
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
   }
 }

@@ -344,6 +344,13 @@ export class CommandPaletteDialogComponent implements AfterViewInit, OnDestroy {
       keywords: ['general settings', 'language', 'theme', 'dark mode', 'media']
     },
     {
+      id: 'nav-settings-x',
+      label: 'Settings: X Dual-posting',
+      icon: 'share',
+      action: () => this.router.navigate(['/settings/general']),
+      keywords: ['x', 'twitter', 'dual post', 'cross post', 'share to x', 'oauth']
+    },
+    {
       id: 'nav-settings-media-servers',
       label: 'Settings: Media Servers',
       icon: 'cloud_upload',

@@ -65,6 +65,8 @@ import { PlatformService } from '../../services/platform.service';
 import { UserProfileComponent } from '../user-profile/user-profile.component';
 import { EmojiPickerComponent } from '../emoji-picker/emoji-picker.component';
 import { HapticsService } from '../../services/haptics.service';
+import { SettingsService } from '../../services/settings.service';
+import { XDualPostService } from '../../services/x-dual-post.service';
 
 // Re-export for backward compatibility
 export type { NoteEditorDialogData } from '../../interfaces/note-editor';
@@ -182,6 +184,8 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   private speechService = inject(SpeechService);
   private platformService = inject(PlatformService);
   private haptics = inject(HapticsService);
+  private syncedSettings = inject(SettingsService);
+  xDualPost = inject(XDualPostService);
   private destroyRef = inject(DestroyRef);
 
   private shouldNavigateAfterPublish(): boolean {
@@ -236,6 +240,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
 
   // Guard against double-click publishing
   private publishInitiated = signal(false);
+  private xPostingChoiceInitialized = false;
 
   // Media metadata for imeta tags (NIP-92)
   mediaMetadata = signal<MediaMetadata[]>([]);
@@ -258,6 +263,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   expirationTime = signal<string>('12:00');
   uploadOriginal = signal(false);
   addClientTag = signal(true); // Default to true, will be set from user preference in constructor
+  postToX = signal(false);
 
   // Proof of Work options
   powEnabled = signal(false);
@@ -519,6 +525,8 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
 
   // PoW computed properties
   isPowMining = computed(() => this.powProgress().isRunning);
+  xPostingAvailable = computed(() => this.xDualPost.status().connected && !this.isEdit());
+  xStatusLoading = computed(() => this.xDualPost.loading());
   hasPowResult = computed(() => this.powMinedEvent() !== null);
   powDifficulty = computed(() => this.powProgress().difficulty);
   powAttempts = computed(() => this.powProgress().attempts);
@@ -722,6 +730,23 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   constructor() {
     // Set default value for addClientTag from user's local settings
     this.addClientTag.set(this.localSettings.addClientTag());
+    void this.xDualPost.refreshStatus();
+
+    effect(() => {
+      const isConnected = this.xDualPost.status().connected;
+      const defaultXPosting = this.syncedSettings.settings().postToXByDefault ?? false;
+
+      if (!isConnected || this.isEdit()) {
+        this.postToX.set(false);
+        this.xPostingChoiceInitialized = false;
+        return;
+      }
+
+      if (!this.xPostingChoiceInitialized) {
+        this.postToX.set(defaultXPosting);
+        this.xPostingChoiceInitialized = true;
+      }
+    });
 
     // Load PoW settings from account state
     const pubkey = this.accountState.pubkey();
@@ -1144,7 +1169,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   private async publishStandardFlow(): Promise<void> {
     const content = this.processContentForPublishing(this.content().trim());
     const tags = this.buildTags();
-    await this.publishEvent(content, tags);
+    await this.publishEvent(content, tags, content);
   }
 
   private async publishMediaFlow(): Promise<void> {
@@ -1217,7 +1242,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     filteredKind1Tags.push(['q', signedMediaEvent.id, '', signedMediaEvent.pubkey]);
 
     // 7. Publish Kind 1 Event
-    await this.publishEvent(kind1Content, filteredKind1Tags);
+    await this.publishEvent(kind1Content, filteredKind1Tags, content);
   }
 
   private getMediaEventKind(): number {
@@ -1347,7 +1372,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     }
   }
 
-  private async publishEvent(contentToPublish: string, tags: string[][]): Promise<void> {
+  private async publishEvent(contentToPublish: string, tags: string[][], xText?: string): Promise<void> {
     let eventToSign: UnsignedEvent;
 
     // If PoW is enabled, ensure we have a mined event
@@ -1413,6 +1438,10 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
 
           this.haptics.triggerSuccess();
 
+          if (xText?.trim()) {
+            void this.dualPostToX(xText);
+          }
+
           // Clear draft and close dialog immediately after first successful publish
           if (!this.inlineMode()) {
             this.clearAutoDraft();
@@ -1473,6 +1502,38 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     // If no relay succeeded at all (dialog would still be open)
     if (!dialogClosed && (!result.success || !result.event)) {
       throw new Error('Failed to publish event');
+    }
+  }
+
+  async connectXFromComposer(): Promise<void> {
+    try {
+      await this.xDualPost.connect();
+    } catch (error) {
+      this.snackBar.open(`Failed to connect X: ${error instanceof Error ? error.message : 'Unknown error'}`, 'Close', {
+        duration: 5000,
+      });
+    }
+  }
+
+  onPostToXChange(checked: boolean): void {
+    this.xPostingChoiceInitialized = true;
+    this.postToX.set(checked);
+  }
+
+  private async dualPostToX(text: string): Promise<void> {
+    if (!this.postToX() || !this.xDualPost.status().connected) {
+      return;
+    }
+
+    try {
+      await this.xDualPost.publishText(text.trim());
+      this.snackBar.open('Also posted to X', 'Close', {
+        duration: 3000,
+      });
+    } catch (error) {
+      this.snackBar.open(`Published to Nostr, but X posting failed: ${error instanceof Error ? error.message : 'Unknown error'}`, 'Close', {
+        duration: 6000,
+      });
     }
   }
 

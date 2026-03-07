@@ -101,6 +101,36 @@
       using</p>
   </div>
 
+  @if (accountState.account()) {
+  <div>
+    <h2>X Dual-posting</h2>
+    <p class="setting-description">Connect your X account to publish the text of your Nostria posts to X.</p>
+
+    @if (xDualPost.loading()) {
+    <p class="setting-description">Checking X connection status...</p>
+    } @else if (xDualPost.status().connected) {
+    <div class="setting-item">
+      <span>Connected as {{ xDualPost.status().username || 'X user' }}</span>
+      <button mat-button type="button" (click)="disconnectX()">Disconnect</button>
+    </div>
+
+    <div class="setting-item">
+      <span>Post to X by default</span>
+      <mat-slide-toggle [checked]="settings.settings().postToXByDefault ?? false" (change)="togglePostToXByDefault()">
+      </mat-slide-toggle>
+    </div>
+    <p class="setting-description">When enabled, new posts will start with the X dual-post option turned on in Advanced Options.</p>
+    <p class="setting-description">Current limitations: media uploads, quote/reply threading, and post edits are not mirrored to X yet.</p>
+    } @else {
+    <div class="setting-item">
+      <span>No X account connected</span>
+      <button mat-flat-button type="button" (click)="connectX()" [disabled]="xDualPost.connecting()">Connect X</button>
+    </div>
+    <p class="setting-description">You will be redirected to X to authorize Nostria. The backend stores your X access tokens and uses them only when you choose to dual-post.</p>
+    }
+  </div>
+  }
+
   <div>
     <h2 i18n="@@settings.media.title">Media</h2>
     <p class="setting-description" i18n="@@settings.media.description">Control how media content is displayed based on
