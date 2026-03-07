@@ -114,3 +114,119 @@
   background-color: var(--mat-sys-error-container);
   border-radius: 8px;
 }
+
+.x-connection-card {
+  margin: 0 0 16px 0;
+  padding: 20px;
+  background: linear-gradient(135deg, var(--mat-sys-surface-container-highest), var(--mat-sys-surface-container));
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: 20px;
+  box-shadow: var(--mat-sys-level1);
+}
+
+.x-connection-card-premium-locked {
+  margin-bottom: 12px;
+}
+
+.x-connection-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.x-connection-eyebrow {
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--mat-sys-primary);
+  margin-bottom: 8px;
+}
+
+.x-connection-title {
+  font-size: 1.75rem;
+  line-height: 1.1;
+  color: var(--mat-sys-on-surface);
+  margin: 0;
+  word-break: break-word;
+}
+
+.x-connection-subtitle {
+  font-size: 0.95rem;
+  color: var(--mat-sys-on-surface-variant);
+  margin-top: 8px;
+  max-width: 44ch;
+}
+
+.x-connection-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.x-connection-meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  margin: 20px 0 16px 0;
+}
+
+.x-connection-meta-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: var(--mat-sys-surface-container-high);
+  border: 1px solid var(--mat-sys-outline-variant);
+}
+
+.x-connection-meta-label {
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.x-connection-handle {
+  font-size: 1.2rem;
+  line-height: 1.1;
+  color: var(--mat-sys-on-surface);
+}
+
+.x-connection-note {
+  font-size: 0.9rem;
+  color: var(--mat-sys-on-surface-variant);
+  margin: 0 0 16px 0;
+}
+
+.x-default-toggle-row {
+  margin-bottom: 8px;
+  padding: 12px 0 0 0;
+  border-top: 1px solid var(--mat-sys-outline-variant);
+}
+
+.x-default-toggle-description {
+  margin-bottom: 0;
+}
+
+@media (max-width: 768px) {
+  .x-connection-card {
+    padding: 16px;
+  }
+
+  .x-connection-card-header {
+    flex-direction: column;
+  }
+
+  .x-connection-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .x-connection-title {
+    font-size: 1.4rem;
+  }
+}

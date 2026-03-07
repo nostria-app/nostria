@@ -110,35 +110,57 @@
     <p class="setting-description">Checking X connection status...</p>
     } @else if (!xPremiumEligible()) {
     @if (xDualPost.status().connected) {
-    <div class="setting-item">
-      <span>Connected as {{ xDualPost.status().username || 'X user' }}</span>
-      <button mat-button type="button" (click)="disconnectX()">Disconnect</button>
-    </div>
+    <mat-card class="x-connection-card x-connection-card-premium-locked">
+      <div class="x-connection-card-header">
+        <div>
+          <div class="x-connection-eyebrow">X Connected</div>
+          <div class="x-connection-title">{{ xDualPost.status().username || 'X user' }}</div>
+        </div>
+        <button mat-button type="button" (click)="disconnectX()">Disconnect</button>
+      </div>
+    </mat-card>
     }
     <p class="setting-description">X dual-posting is available for Premium accounts only.</p>
     <p class="setting-description">Upgrade to Premium to connect or publish to X from Nostria.</p>
     } @else if (xDualPost.status().connected) {
-    <div class="setting-item">
-      <span>Connected as {{ xDualPost.status().username || 'X user' }}</span>
-      <div>
-        <button mat-button type="button" (click)="reconnectX()"
-          [disabled]="xDualPost.loading() || xDualPost.connecting()">Reconnect</button>
-        <button mat-button type="button" (click)="disconnectX()"
-          [disabled]="xDualPost.loading() || xDualPost.connecting()">Disconnect</button>
-      </div>
-    </div>
-    <p class="setting-description">Only one X account is supported per Nostria account. Disconnect first to connect a
-      different X account.</p>
+    <mat-card class="x-connection-card">
+      <div class="x-connection-card-header">
+        <div>
+          <div class="x-connection-eyebrow">X Connected</div>
+          <div class="x-connection-title">{{ xDualPost.status().username || 'X user' }}</div>
+          <div class="x-connection-subtitle">Your Nostria posts can now also publish to this X account.</div>
+        </div>
 
-    <div class="setting-item">
-      <span>Post to X by default</span>
-      <mat-slide-toggle [checked]="settings.settings().postToXByDefault ?? false" (change)="togglePostToXByDefault()">
-      </mat-slide-toggle>
-    </div>
-    <p class="setting-description">When enabled, new posts will start with the X dual-post option turned on in Advanced
-      Options.</p>
-    <p class="setting-description">Media support includes up to 4 images or 1 video/GIF per post. Quote/reply threading
-      and post edits are not mirrored to X yet.</p>
+        <div class="x-connection-actions">
+          <button mat-stroked-button type="button" (click)="reconnectX()"
+            [disabled]="xDualPost.loading() || xDualPost.connecting()">Reconnect</button>
+          <button mat-button type="button" (click)="disconnectX()"
+            [disabled]="xDualPost.loading() || xDualPost.connecting()">Disconnect</button>
+        </div>
+      </div>
+
+      <div class="x-connection-meta">
+        <div class="x-connection-meta-item">
+          <span class="x-connection-meta-label">Account</span>
+          <span class="x-connection-handle">&#64;{{ xDualPost.status().username || 'x-user' }}</span>
+        </div>
+        <div class="x-connection-meta-item">
+          <span class="x-connection-meta-label">Mode</span>
+          <span>Single X account per Nostria account</span>
+        </div>
+      </div>
+
+      <p class="x-connection-note">Reconnect if you want to switch to another X account. Media support includes up to 4
+        images or 1 video/GIF per post. Quote/reply threading and post edits are not mirrored to X yet.</p>
+
+      <div class="setting-item x-default-toggle-row">
+        <span>Post to X by default</span>
+        <mat-slide-toggle [checked]="settings.settings().postToXByDefault ?? false" (change)="togglePostToXByDefault()">
+        </mat-slide-toggle>
+      </div>
+      <p class="setting-description x-default-toggle-description">When enabled, new posts will start with the X
+        dual-post option turned on in Advanced Options.</p>
+    </mat-card>
     } @else {
     <div class="setting-item">
       <span>No X account connected</span>
