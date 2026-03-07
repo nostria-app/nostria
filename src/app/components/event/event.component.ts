@@ -71,6 +71,7 @@ import { SocialPreviewComponent } from '../social-preview/social-preview.compone
 import { MediaPreviewDialogComponent } from '../media-preview-dialog/media-preview.component';
 import { InlineVideoPlayerComponent } from '../inline-video-player/inline-video-player.component';
 import { HapticsService } from '../../services/haptics.service';
+import { XDualPostService } from '../../services/x-dual-post.service';
 
 type EventCardAppearance = 'card' | 'plain';
 
@@ -230,6 +231,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   private readonly logger = inject(LoggerService);
   private readonly accountLocalState = inject(AccountLocalStateService);
   private readonly haptics = inject(HapticsService);
+  private readonly xDualPost = inject(XDualPostService);
   private readonly platformId = inject(PLATFORM_ID);
   private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
   private readonly canHover = this.isBrowser && window.matchMedia('(hover: hover)').matches;
@@ -1061,6 +1063,17 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     return targetItem;
   });
 
+  xLinkedPost = computed(() => {
+    const targetEvent = this.targetRecord()?.event;
+    const currentPubkey = this.accountState.pubkey();
+
+    if (!targetEvent || targetEvent.kind !== 1 || !currentPubkey || targetEvent.pubkey !== currentPubkey) {
+      return undefined;
+    }
+
+    return this.xDualPost.linkedPostForEvent(targetEvent.id);
+  });
+
   // Check if this event is a quote-only event (has q tags or inline nostr: references but no meaningful reply context)
   // Quote events should NOT show the "replied to" header because the quoted content is rendered inline
   isQuoteOnly = computed<boolean>(() => {
@@ -1378,6 +1391,19 @@ export class EventComponent implements AfterViewInit, OnDestroy {
           }
         });
       }
+    });
+
+    effect(() => {
+      const targetEvent = this.targetRecord()?.event;
+      const currentPubkey = this.accountState.pubkey();
+
+      if (!targetEvent || targetEvent.kind !== 1 || !currentPubkey || targetEvent.pubkey !== currentPubkey) {
+        return;
+      }
+
+      untracked(() => {
+        void this.xDualPost.ensureLinkedPostLoaded(targetEvent.id);
+      });
     });
 
     // Effect to load parent event when parentEventId changes

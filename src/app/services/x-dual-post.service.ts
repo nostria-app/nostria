@@ -22,6 +22,19 @@ export interface XPostMediaItem {
   fallbackUrls?: string[];
 }
 
+export interface XLinkedPost {
+  nostrEventId: string;
+  xPostId: string;
+  url: string;
+}
+
+interface XPublishResult {
+  id: string;
+  text: string;
+  url: string;
+  nostrEventId?: string;
+}
+
 interface ApiEnvelope<T> {
   success: boolean;
   data: T;
@@ -37,6 +50,8 @@ export class XDualPostService {
   private readonly logger = inject(LoggerService);
   private readonly webRequest = inject(WebRequest);
   private lastPubkey = '';
+  private readonly linkedPosts = signal<Record<string, XLinkedPost>>({});
+  private readonly linkedPostRequests = new Set<string>();
 
   readonly status = signal<XConnectionStatus>({ connected: false, totalPosts: 0, postsLast24h: 0 });
   readonly loading = signal(false);
@@ -50,6 +65,8 @@ export class XDualPostService {
       if (!pubkey) {
         this.lastPubkey = '';
         this.status.set({ connected: false, totalPosts: 0, postsLast24h: 0 });
+        this.linkedPosts.set({});
+        this.linkedPostRequests.clear();
         this.loaded.set(false);
         return;
       }
@@ -57,6 +74,8 @@ export class XDualPostService {
       if (this.lastPubkey !== pubkey) {
         this.lastPubkey = pubkey;
         this.status.set({ connected: false, totalPosts: 0, postsLast24h: 0 });
+        this.linkedPosts.set({});
+        this.linkedPostRequests.clear();
         this.loaded.set(false);
       }
     });
@@ -168,16 +187,69 @@ export class XDualPostService {
     await this.connect();
   }
 
-  async publishPost(text: string, media: XPostMediaItem[] = []): Promise<void> {
+  linkedPostForEvent(eventId?: string): XLinkedPost | undefined {
+    if (!eventId) {
+      return undefined;
+    }
+
+    return this.linkedPosts()[eventId];
+  }
+
+  async ensureLinkedPostLoaded(eventId: string): Promise<void> {
+    if (!eventId || this.linkedPosts()[eventId] || this.linkedPostRequests.has(eventId)) {
+      return;
+    }
+
+    const pubkey = this.accountState.pubkey();
+    if (!pubkey) {
+      return;
+    }
+
+    this.linkedPostRequests.add(eventId);
+
+    try {
+      const response = await this.webRequest.fetchJson(
+        this.getApiUrl(`api/x/post-link/${pubkey}/${eventId}`),
+        {
+          method: 'GET',
+        },
+        { kind: 27235 }
+      ) as ApiEnvelope<XLinkedPost | null>;
+
+      if (response.data) {
+        this.linkedPosts.update(current => ({
+          ...current,
+          [eventId]: response.data as XLinkedPost,
+        }));
+      }
+    } catch (error) {
+      this.logger.warn('Failed to load linked X post', { error, eventId });
+    } finally {
+      this.linkedPostRequests.delete(eventId);
+    }
+  }
+
+  async publishPost(text: string, media: XPostMediaItem[] = [], nostrEventId?: string): Promise<void> {
     const pubkey = this.getPubkey();
 
-    await this.webRequest.fetchJson(
+    const response = await this.webRequest.fetchJson(
       this.getApiUrl(`api/x/post/${pubkey}`),
       {
         method: 'POST',
-        body: JSON.stringify({ text, media }),
+        body: JSON.stringify({ text, media, nostrEventId }),
       },
       { kind: 27235 }
-    );
+    ) as ApiEnvelope<XPublishResult>;
+
+    if (response.data?.nostrEventId && response.data.url) {
+      this.linkedPosts.update(current => ({
+        ...current,
+        [response.data.nostrEventId as string]: {
+          nostrEventId: response.data.nostrEventId as string,
+          xPostId: response.data.id,
+          url: response.data.url,
+        },
+      }));
+    }
   }
 }

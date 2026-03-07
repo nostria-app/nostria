@@ -850,6 +850,15 @@
         <span class="action-text">Share</span>
       </div>
 
+      @if (xLinkedPost(); as linkedPost) {
+      <a class="action-button x-action" [href]="linkedPost.url" target="_blank" rel="noopener noreferrer"
+        [attr.tabindex]="requiresSpamConfirmation() ? -1 : 0" matTooltip="View linked X post"
+        (click)="$event.stopPropagation()">
+        <span class="action-icon x-action-icon" aria-hidden="true">X</span>
+        <span class="action-text">X</span>
+      </a>
+      }
+
       <!-- Zap with sats -->
       <div class="action-button zap-action" (click)="zapBtn.onClick($event); $event.stopPropagation()">
         <app-zap-button class="action-icon" #zapBtn [event]="targetItem.event"

@@ -1512,11 +1512,12 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
         if (isOurEvent && relayEvent.success) {
           dialogClosed = true;
           publishedEventId = relayEvent.event.id;
+          const signedEvent = relayEvent.event;
 
           this.haptics.triggerSuccess();
 
           if (xText?.trim()) {
-            void this.dualPostToX(xText, xMedia);
+            void this.dualPostToX(signedEvent.id, xText, xMedia);
           }
 
           // Clear draft and close dialog immediately after first successful publish
@@ -1528,8 +1529,6 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
           });
 
           // Close dialog with the signed event
-          const signedEvent = relayEvent.event;
-
           if (this.inlineMode()) {
             // In inline mode: reset state and emit event
             this.content.set('');
@@ -1614,13 +1613,13 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       }));
   }
 
-  private async dualPostToX(text: string, media: XPostMediaItem[]): Promise<void> {
+  private async dualPostToX(nostrEventId: string, text: string, media: XPostMediaItem[]): Promise<void> {
     if (!this.postToX() || !this.xDualPost.status().connected) {
       return;
     }
 
     try {
-      await this.xDualPost.publishPost(text.trim(), media);
+      await this.xDualPost.publishPost(text.trim(), media, nostrEventId);
       this.snackBar.open(media.length > 0 ? 'Also posted to X with media' : 'Also posted to X', 'Close', {
         duration: 3000,
       });
