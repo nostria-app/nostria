@@ -18,12 +18,6 @@
 
 <!-- Main Editor Content (Dialog mode always, Inline mode when expanded) -->
 @if (!inlineMode() || isExpanded()) {
-@if (!inlineMode() && xHeaderIndicatorVisible()) {
-<div dialog-header class="dialog-platform-indicators" aria-label="Publishing to X">
-  <img src="/logos/clients/x.png" width="22" height="22" alt="X" class="dialog-platform-logo" />
-</div>
-}
-
 <!-- Content Area -->
 <div dialog-content class="note-editor-dialog" [class.inline-editor]="inlineMode()">
   <div class="dialog-content-wrapper" [attr.data-drag-enabled]="!showPreview() && !showAdvancedOptions() || null"

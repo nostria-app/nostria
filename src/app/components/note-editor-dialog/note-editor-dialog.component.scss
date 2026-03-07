@@ -515,15 +515,6 @@
   pointer-events: none !important;
 }
 
-.dialog-platform-indicators {
-  visibility: hidden;
-}
-
-.dialog-platform-logo {
-  border-radius: var(--mat-sys-corner-full);
-  object-fit: contain;
-}
-
 // Text color classes for character count
 .error-text {
   color: var(--mat-sys-error) !important;

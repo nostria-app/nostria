@@ -85,6 +85,10 @@ import { MatButtonModule } from '@angular/material/button';
           @if (getHeaderIcon()) {
             <img [src]="getHeaderIcon()" [alt]="getTitle() || 'Dialog'" class="header-icon" />
           }
+
+          @if (getSecondaryHeaderIcon()) {
+            <img [src]="getSecondaryHeaderIcon()" alt="Dialog status" class="secondary-header-icon" />
+          }
           
           <!-- Custom header content -->
           <ng-content select="[dialog-header]"></ng-content>
@@ -109,6 +113,7 @@ export class CustomDialogComponent implements AfterViewInit, OnDestroy {
   // Modern signal-based inputs
   title = input<string>('');
   headerIcon = input<string>('');
+  secondaryHeaderIcon = input<string>('');
   showBackButton = input<boolean>(false);
   showCloseButton = input<boolean>(true);
   disableClose = input<boolean>(false);
@@ -204,6 +209,10 @@ export class CustomDialogComponent implements AfterViewInit, OnDestroy {
 
   getHeaderIcon(): string {
     return this.headerIcon();
+  }
+
+  getSecondaryHeaderIcon(): string {
+    return this.secondaryHeaderIcon();
   }
 
   getShowBackButton(): boolean {

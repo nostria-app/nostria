@@ -151,6 +151,7 @@ interface PreparedXPost {
   },
 })
 export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestroy {
+  private readonly xHeaderIconUrl = '/logos/clients/x.png';
   // Inline mode inputs/outputs
   /** When true, renders in inline mode (embedded in page) instead of dialog mode */
   inlineMode = input(false);
@@ -835,6 +836,11 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
         this.postToX.set(defaultXPosting);
         this.xPostingChoiceInitialized = true;
       }
+    });
+
+    effect(() => {
+      const secondaryHeaderIcon = !this.inlineMode() && this.xHeaderIndicatorVisible() ? this.xHeaderIconUrl : '';
+      this.dialogRef?.updateSecondaryHeaderIcon(secondaryHeaderIcon);
     });
 
     // Load PoW settings from account state
