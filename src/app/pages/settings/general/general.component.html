@@ -121,11 +121,14 @@
     <div class="setting-item">
       <span>Connected as {{ xDualPost.status().username || 'X user' }}</span>
       <div>
-        <button mat-button type="button" (click)="reconnectX()" [disabled]="xDualPost.loading() || xDualPost.connecting()">Reconnect</button>
-        <button mat-button type="button" (click)="disconnectX()" [disabled]="xDualPost.loading() || xDualPost.connecting()">Disconnect</button>
+        <button mat-button type="button" (click)="reconnectX()"
+          [disabled]="xDualPost.loading() || xDualPost.connecting()">Reconnect</button>
+        <button mat-button type="button" (click)="disconnectX()"
+          [disabled]="xDualPost.loading() || xDualPost.connecting()">Disconnect</button>
       </div>
     </div>
-    <p class="setting-description">Only one X account is supported per Nostria account. Disconnect first to connect a different X account.</p>
+    <p class="setting-description">Only one X account is supported per Nostria account. Disconnect first to connect a
+      different X account.</p>
 
     <div class="setting-item">
       <span>Post to X by default</span>
@@ -141,7 +144,8 @@
       <span>No X account connected</span>
       <button mat-flat-button type="button" (click)="connectX()" [disabled]="xDualPost.connecting()">Connect X</button>
     </div>
-    <p class="setting-description">Only one X account is supported per Nostria account. If you connected the wrong one previously, disconnect it and then connect again with the correct X account.</p>
+    <p class="setting-description">Only one X account is supported per Nostria account. If you connected the wrong one
+      previously, disconnect it and then connect again with the correct X account.</p>
     <p class="setting-description">You will be redirected to X to authorize Nostria. The backend stores your X access
       tokens and uses them only when you choose to dual-post.</p>
     }
