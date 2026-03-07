@@ -429,37 +429,6 @@
     min-height: 0;
     height: 100%;
   }
-
-  .dialog-actions {
-    min-height: fit-content !important;
-    max-height: none !important;
-    overflow: visible !important;
-    padding: 12px 24px 14px !important;
-    border-top-color: var(--mat-sys-outline-variant);
-    background: var(--mat-sys-surface);
-    position: sticky;
-    bottom: 0;
-    z-index: 4;
-  }
-
-  @media (max-width: 600px),
-  (max-height: 700px) {
-    .dialog-actions {
-      padding: 8px 10px 10px !important;
-    }
-  }
-
-  @media (max-width: 400px) {
-    .dialog-actions {
-      padding: 6px 6px 8px !important;
-    }
-  }
-
-  @media (max-height: 600px) {
-    .dialog-actions {
-      padding: 6px 12px 8px !important;
-    }
-  }
 }
 
 // Actions
