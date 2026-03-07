@@ -11,6 +11,12 @@ export interface XConnectionStatus {
   userId?: string;
 }
 
+export interface XPostMediaItem {
+  url: string;
+  mimeType?: string;
+  fallbackUrls?: string[];
+}
+
 interface ApiEnvelope<T> {
   success: boolean;
   data: T;
@@ -132,14 +138,14 @@ export class XDualPostService {
     }
   }
 
-  async publishText(text: string): Promise<void> {
+  async publishPost(text: string, media: XPostMediaItem[] = []): Promise<void> {
     const pubkey = this.getPubkey();
 
     await this.webRequest.fetchJson(
       this.getApiUrl(`api/x/post/${pubkey}`),
       {
         method: 'POST',
-        body: JSON.stringify({ text }),
+        body: JSON.stringify({ text, media }),
       },
       { kind: 27235 }
     );

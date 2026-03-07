@@ -120,7 +120,8 @@
           <textarea matInput [value]="content()" (input)="onContentInput($event)" (keydown)="onContentKeyDown($event)"
             (keyup)="onContentKeyUp($event)" (click)="onContentClick($event)"
             [placeholder]="inlineMode() ? 'Write your reply... Use @ to mention someone' : 'Write your note... Use @ to mention someone'"
-            [title]="inlineMode() ? 'Reply content' : 'Note content'" [rows]="inlineMode() ? 3 : 4" class="content-textarea" #contentTextarea>
+            [title]="inlineMode() ? 'Reply content' : 'Note content'" [rows]="inlineMode() ? 3 : 4"
+            class="content-textarea" #contentTextarea>
           </textarea>
           <mat-hint align="end"> {{ characterCount() }} characters </mat-hint>
         </mat-form-field>
@@ -207,7 +208,7 @@
             Post to X
           </mat-slide-toggle>
           <span class="option-description">
-            Publish the text of this post to your connected X account. Media uploads, quote/reply threading, and edits are not mirrored yet.
+            Publish this post to your connected X account. Supports up to 4 images or 1 video/GIF. Quote/reply threading and edits are not mirrored yet.
           </span>
         </div>
 

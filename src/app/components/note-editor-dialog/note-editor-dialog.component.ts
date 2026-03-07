@@ -66,7 +66,7 @@ import { UserProfileComponent } from '../user-profile/user-profile.component';
 import { EmojiPickerComponent } from '../emoji-picker/emoji-picker.component';
 import { HapticsService } from '../../services/haptics.service';
 import { SettingsService } from '../../services/settings.service';
-import { XDualPostService } from '../../services/x-dual-post.service';
+import { XDualPostService, XPostMediaItem } from '../../services/x-dual-post.service';
 
 // Re-export for backward compatibility
 export type { NoteEditorDialogData } from '../../interfaces/note-editor';
@@ -1169,7 +1169,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   private async publishStandardFlow(): Promise<void> {
     const content = this.processContentForPublishing(this.content().trim());
     const tags = this.buildTags();
-    await this.publishEvent(content, tags, content);
+    await this.publishEvent(content, tags, content, this.getXMediaItems());
   }
 
   private async publishMediaFlow(): Promise<void> {
@@ -1242,7 +1242,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     filteredKind1Tags.push(['q', signedMediaEvent.id, '', signedMediaEvent.pubkey]);
 
     // 7. Publish Kind 1 Event
-    await this.publishEvent(kind1Content, filteredKind1Tags, content);
+    await this.publishEvent(kind1Content, filteredKind1Tags, content, this.getXMediaItems());
   }
 
   private getMediaEventKind(): number {
@@ -1372,7 +1372,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     }
   }
 
-  private async publishEvent(contentToPublish: string, tags: string[][], xText?: string): Promise<void> {
+  private async publishEvent(contentToPublish: string, tags: string[][], xText?: string, xMedia: XPostMediaItem[] = []): Promise<void> {
     let eventToSign: UnsignedEvent;
 
     // If PoW is enabled, ensure we have a mined event
@@ -1439,7 +1439,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
           this.haptics.triggerSuccess();
 
           if (xText?.trim()) {
-            void this.dualPostToX(xText);
+            void this.dualPostToX(xText, xMedia);
           }
 
           // Clear draft and close dialog immediately after first successful publish
@@ -1520,14 +1520,24 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     this.postToX.set(checked);
   }
 
-  private async dualPostToX(text: string): Promise<void> {
+  private getXMediaItems(): XPostMediaItem[] {
+    return this.mediaMetadata()
+      .filter(media => !!media.url)
+      .map(media => ({
+        url: media.url,
+        mimeType: media.mimeType,
+        fallbackUrls: media.fallbackUrls,
+      }));
+  }
+
+  private async dualPostToX(text: string, media: XPostMediaItem[]): Promise<void> {
     if (!this.postToX() || !this.xDualPost.status().connected) {
       return;
     }
 
     try {
-      await this.xDualPost.publishText(text.trim());
-      this.snackBar.open('Also posted to X', 'Close', {
+      await this.xDualPost.publishPost(text.trim(), media);
+      this.snackBar.open(media.length > 0 ? 'Also posted to X with media' : 'Also posted to X', 'Close', {
         duration: 3000,
       });
     } catch (error) {
