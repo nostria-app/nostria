@@ -491,9 +491,6 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   hasFollowingChats = computed(() => this.followingChats().length > 0 || this.noteToSelfChat() !== null);
   hasOtherChats = computed(() => this.otherChats().length > 0);
 
-  // Subscription management
-  private messageSubscription: any = null;
-  private chatSubscription: any = null;
   private readonly destroyRef = inject(DestroyRef);
 
   // ViewChild for scrolling functionality
@@ -633,6 +630,19 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
 
       // Update the last message count
       this.lastMessageCount.set(messageCount);
+    });
+
+    effect(() => {
+      const chatId = this.selectedChatId();
+      const chat = this.selectedChat();
+
+      if (!chatId || !chat || chat.unreadCount === 0) {
+        return;
+      }
+
+      untracked(() => {
+        void this.messaging.markChatAsRead(chatId);
+      });
     });
 
     // Listen to connection status changes
@@ -791,16 +801,8 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
    * This allows the message list to auto-update when new DMs arrive.
    */
   private async startLiveSubscription(): Promise<void> {
-    // Close any existing subscriptions first
-    if (this.messageSubscription) {
-      this.messageSubscription.close();
-      this.messageSubscription = null;
-    }
-
-    // Start the live subscription via the messaging service
     const sub = await this.messaging.subscribeToIncomingMessages();
     if (sub) {
-      this.messageSubscription = sub;
       this.logger.debug('Live DM subscription started');
     }
   }
@@ -1135,14 +1137,6 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     this.contentMutationObserver?.disconnect();
     this.contentMutationObserver = null;
 
-    // Clean up subscriptions
-    if (this.messageSubscription) {
-      this.messageSubscription.close();
-    }
-
-    if (this.chatSubscription) {
-      this.chatSubscription.close();
-    }
   }
 
   /**

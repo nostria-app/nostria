@@ -1197,25 +1197,58 @@ export class MessagingService implements NostriaService {
    * falls back to account relays if no DM relays are configured.
    */
   private async getDmRelayUrls(pubkey: string): Promise<string[]> {
-    // Try to get DM relay list (kind 10050) from storage or relay
+    const relayUrls = new Set<string>();
+
+    // Try to get DM relay list (kind 10050) from local storage first.
     const dmRelayEvent = await this.database.getEventByPubkeyAndKind(pubkey, kinds.DirectMessageRelaysList);
 
     if (dmRelayEvent) {
-      // Extract relay URLs from 'relay' tags
-      const dmRelayUrls = dmRelayEvent.tags
+      const storedDmRelayUrls = dmRelayEvent.tags
         .filter(t => t[0] === 'relay' && t[1])
         .map(t => t[1]);
 
-      if (dmRelayUrls.length > 0) {
-        this.logger.info('Using DM relays from kind 10050', { count: dmRelayUrls.length, relays: dmRelayUrls });
-        return dmRelayUrls;
+      storedDmRelayUrls.forEach(url => relayUrls.add(url));
+
+      if (storedDmRelayUrls.length > 0) {
+        this.logger.info('Loaded cached DM relays from kind 10050', {
+          count: storedDmRelayUrls.length,
+          relays: storedDmRelayUrls,
+        });
       }
     }
 
-    // Fall back to account relays
+    // Refresh from discovery relays as well so the live subscription can join
+    // the actual DM inbox relays even when local cache is missing or stale.
+    try {
+      const discoveredDmRelayUrls = await this.discoveryRelay.getUserDmRelayUrls(pubkey);
+      discoveredDmRelayUrls.forEach(url => relayUrls.add(url));
+
+      if (discoveredDmRelayUrls.length > 0) {
+        this.logger.info('Loaded DM relays from discovery for live subscription', {
+          count: discoveredDmRelayUrls.length,
+          relays: discoveredDmRelayUrls,
+        });
+      }
+    } catch (error) {
+      this.logger.warn('Failed to refresh DM relays from discovery, continuing with cached/account relays', error);
+    }
+
     const accountRelays = this.relay.getRelayUrls();
-    this.logger.info('No DM relays found, using account relays', { count: accountRelays.length });
-    return accountRelays;
+    accountRelays.forEach(url => relayUrls.add(url));
+
+    const combinedRelays = Array.from(relayUrls);
+
+    if (combinedRelays.length === 0) {
+      this.logger.info('No DM relays found, using account relays', { count: accountRelays.length });
+      return accountRelays;
+    }
+
+    this.logger.info('Using combined DM relay set for subscription', {
+      count: combinedRelays.length,
+      relays: combinedRelays,
+    });
+
+    return combinedRelays;
   }
 
   /**
@@ -1300,18 +1333,11 @@ export class MessagingService implements NostriaService {
       if (this.knownEventIds.has(event.id)) {
         return;
       }
-      this.knownEventIds.add(event.id);
 
       this.logger.debug('Received real-time DM event', { kind: event.kind, id: event.id });
 
       try {
         if (event.kind === kinds.GiftWrap) {
-          // Check if this gift wrap has already been processed to avoid re-decryption
-          if (this.knownEventIds.has(event.id)) {
-            this.logger.debug('Gift wrap already processed, skipping decryption (live subscription)', { eventId: event.id });
-            return;
-          }
-
           // Handle NIP-44 gift-wrapped message
           const unwrappedMessage = await this.unwrapMessageInternal(event);
           if (!unwrappedMessage) {
