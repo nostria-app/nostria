@@ -238,6 +238,22 @@
   margin-bottom: 0;
 }
 
+.x-upgrade-prompt {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+  padding: 16px 18px;
+  border-radius: 16px;
+  background: var(--mat-sys-surface-container);
+  border: 1px solid var(--mat-sys-outline-variant);
+
+  .setting-description {
+    margin: 0;
+  }
+}
+
 @media (max-width: 768px) {
   .x-connection-card {
     padding: 16px;
@@ -250,6 +266,11 @@
   .x-connection-actions {
     width: 100%;
     justify-content: flex-start;
+  }
+
+  .x-upgrade-prompt {
+    flex-direction: column;
+    align-items: flex-start;
   }
 
   .x-connection-title {

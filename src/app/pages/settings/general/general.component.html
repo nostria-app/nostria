@@ -124,8 +124,12 @@
       </div>
     </mat-card>
     }
-    <p class="setting-description">Post to X is available for Premium accounts only.</p>
-    <p class="setting-description">Upgrade to Premium to connect or publish to X from Nostria.</p>
+    <div class="x-upgrade-prompt">
+      <p class="setting-description">Upgrade to Premium to connect or publish to X from Nostria.</p>
+      <button mat-flat-button type="button" (click)="router.navigate(['/accounts'], { queryParams: { tab: 'premium' } })">
+        Open Premium
+      </button>
+    </div>
     } @else if (xDualPost.status().connected) {
     <mat-card class="x-connection-card">
       <div class="x-connection-card-header">
