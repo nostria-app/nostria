@@ -5,6 +5,8 @@ import DOMPurify from 'dompurify';
 import { OpenGraphData, OpenGraphService } from '../../services/opengraph.service';
 import { MatCardModule } from '@angular/material/card';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { ThemeService } from '../../services/theme.service';
+import { isXStatusUrl } from '../../utils/url-cleaner';
 
 @Component({
   selector: 'app-social-preview',
@@ -17,6 +19,7 @@ export class SocialPreviewComponent {
   private static widgetsScriptPromise: Promise<void> | null = null;
 
   openGraphService = inject(OpenGraphService);
+  private themeService = inject(ThemeService);
   private sanitizer = inject(DomSanitizer);
   private document = inject(DOCUMENT);
   private isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
@@ -32,6 +35,13 @@ export class SocialPreviewComponent {
   constructor() {
     effect(() => {
       const url = this.url();
+      const isXUrl = isXStatusUrl(url);
+
+      if (isXUrl) {
+        this.themeService.darkMode();
+        this.openGraphService.clearCache(url);
+      }
+
       this.loadSocialPreview(url);
     });
 

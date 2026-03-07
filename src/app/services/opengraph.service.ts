@@ -37,10 +37,11 @@ export class OpenGraphService {
    */
   async getOpenGraphData(url: string): Promise<OpenGraphData> {
     const normalizedUrl = normalizePreviewUrl(url);
+    const cacheKey = this.getCacheKey(normalizedUrl);
 
     // Check cache first
-    if (this.cache.has(normalizedUrl)) {
-      return this.cache.get(normalizedUrl)!;
+    if (this.cache.has(cacheKey)) {
+      return this.cache.get(cacheKey)!;
     }
 
     try {
@@ -49,7 +50,7 @@ export class OpenGraphService {
           const xPostEmbed = await this.getXPostEmbedData(normalizedUrl);
 
           if (xPostEmbed) {
-            this.cache.set(normalizedUrl, xPostEmbed);
+            this.cache.set(cacheKey, xPostEmbed);
             return xPostEmbed;
           }
         } catch (error) {
@@ -96,7 +97,7 @@ export class OpenGraphService {
       }
 
       // Cache the result
-      this.cache.set(normalizedUrl, metadata);
+      this.cache.set(cacheKey, metadata);
       return metadata;
     } catch (error) {
       console.error(`Error fetching OpenGraph data for ${normalizedUrl}:`, error);
@@ -109,9 +110,18 @@ export class OpenGraphService {
       };
 
       // Cache the error result too, but with a shorter TTL in a real app
-      this.cache.set(normalizedUrl, errorData);
+      this.cache.set(cacheKey, errorData);
       return errorData;
     }
+  }
+
+  private getCacheKey(url: string): string {
+    if (!isXStatusUrl(url)) {
+      return url;
+    }
+
+    const theme = this.getXEmbedTheme() || 'light';
+    return `${url}::theme:${theme}`;
   }
 
   private async getXPostEmbedData(url: string): Promise<OpenGraphData | null> {
@@ -202,7 +212,17 @@ export class OpenGraphService {
    */
   clearCache(url?: string): void {
     if (url) {
-      this.cache.delete(normalizePreviewUrl(url));
+      const normalizedUrl = normalizePreviewUrl(url);
+
+      if (isXStatusUrl(normalizedUrl)) {
+        const keysToDelete = [...this.cache.keys()].filter(key => key.startsWith(`${normalizedUrl}::theme:`));
+        for (const key of keysToDelete) {
+          this.cache.delete(key);
+        }
+        return;
+      }
+
+      this.cache.delete(normalizedUrl);
     } else {
       this.cache.clear();
     }

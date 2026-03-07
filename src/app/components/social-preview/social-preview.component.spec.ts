@@ -1,17 +1,22 @@
 import type { MockedObject } from "vitest";
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideZonelessChangeDetection } from '@angular/core';
+import { provideZonelessChangeDetection, signal } from '@angular/core';
 import { SocialPreviewComponent } from './social-preview.component';
 import { OpenGraphService } from '../../services/opengraph.service';
+import { ThemeService } from '../../services/theme.service';
 
 describe('SocialPreviewComponent', () => {
   let component: SocialPreviewComponent;
   let fixture: ComponentFixture<SocialPreviewComponent>;
   let mockOpenGraphService: MockedObject<OpenGraphService>;
+  let mockThemeService: Pick<ThemeService, 'darkMode'> & {
+    darkMode: ReturnType<typeof signal>;
+  };
 
   beforeEach(async () => {
     mockOpenGraphService = {
-      getOpenGraphData: vi.fn().mockName("OpenGraphService.getOpenGraphData")
+      getOpenGraphData: vi.fn().mockName("OpenGraphService.getOpenGraphData"),
+      clearCache: vi.fn().mockName("OpenGraphService.clearCache")
     } as unknown as MockedObject<OpenGraphService>;
     mockOpenGraphService.getOpenGraphData.mockResolvedValue({
       url: 'https://example.com',
@@ -21,12 +26,16 @@ describe('SocialPreviewComponent', () => {
       loading: false,
       error: false,
     });
+    mockThemeService = {
+      darkMode: signal(false),
+    };
 
     await TestBed.configureTestingModule({
       imports: [SocialPreviewComponent],
       providers: [
         provideZonelessChangeDetection(),
         { provide: OpenGraphService, useValue: mockOpenGraphService },
+        { provide: ThemeService, useValue: mockThemeService },
       ],
     }).compileComponents();
 
@@ -270,5 +279,28 @@ describe('SocialPreviewComponent', () => {
     expect(fixture.nativeElement.querySelector('.compact-preview')).toBeNull();
     expect(fixture.nativeElement.textContent).not.toContain('Open post');
     expect(fixture.nativeElement.textContent).not.toContain('TWITTER');
+  });
+
+  it('should reload X embeds when the app theme changes', async () => {
+    mockOpenGraphService.getOpenGraphData.mockResolvedValue({
+      url: 'https://x.com/user/status/1234567890',
+      embedHtml: '<blockquote class="twitter-tweet" data-theme="light"><p>Hello</p></blockquote>',
+      previewType: 'x-post',
+      loading: false,
+      error: false,
+    });
+
+    fixture.componentRef.setInput('url', 'https://x.com/user/status/1234567890');
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(mockOpenGraphService.getOpenGraphData).toHaveBeenCalledTimes(1);
+    expect(mockOpenGraphService.clearCache).toHaveBeenCalledWith('https://x.com/user/status/1234567890');
+
+    mockThemeService.darkMode.set(true);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(mockOpenGraphService.getOpenGraphData).toHaveBeenCalledTimes(2);
   });
 });
