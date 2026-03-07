@@ -107,6 +107,11 @@ interface NoteAutoDraft {
   title?: string;
 }
 
+interface XPostValidation {
+  valid: boolean;
+  message: string;
+}
+
 @Component({
   selector: 'app-note-editor-dialog',
   imports: [
@@ -335,6 +340,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     const hasContent = this.content().trim().length > 0;
     const notPublishing = !this.isPublishing();
     const notUploading = !this.isUploading();
+    const xPostValid = this.xPostValidation().valid;
 
     // Check expiration validation
     let expirationValid = true;
@@ -343,7 +349,58 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       expirationValid = expirationDateTime !== null && expirationDateTime > new Date();
     }
 
-    return hasContent && notPublishing && notUploading && expirationValid;
+    return hasContent && notPublishing && notUploading && expirationValid && xPostValid;
+  });
+
+  xPostValidation = computed<XPostValidation>(() => {
+    if (!this.postToX()) {
+      return { valid: true, message: '' };
+    }
+
+    if (this.isEdit()) {
+      return {
+        valid: false,
+        message: 'Editing existing notes cannot be mirrored to X yet.',
+      };
+    }
+
+    if (!this.xDualPost.status().connected) {
+      return {
+        valid: false,
+        message: 'Connect your X account before enabling dual-posting.',
+      };
+    }
+
+    const mediaItems = this.getXMediaItems();
+    if (mediaItems.length === 0) {
+      return { valid: true, message: '' };
+    }
+
+    const imageCount = mediaItems.filter(item => item.mimeType?.startsWith('image/') && item.mimeType !== 'image/gif').length;
+    const videoOrGifCount = mediaItems.filter(item => item.mimeType?.startsWith('video/') || item.mimeType === 'image/gif').length;
+
+    if (imageCount > 0 && videoOrGifCount > 0) {
+      return {
+        valid: false,
+        message: 'X dual-posting supports either up to 4 images or 1 video/GIF, but not both in the same post.',
+      };
+    }
+
+    if (imageCount > 4) {
+      return {
+        valid: false,
+        message: 'X dual-posting supports up to 4 images per post.',
+      };
+    }
+
+    if (videoOrGifCount > 1) {
+      return {
+        valid: false,
+        message: 'X dual-posting supports only 1 video or GIF per post.',
+      };
+    }
+
+    return { valid: true, message: '' };
   });
 
   // Validation for expiration
@@ -1129,6 +1186,14 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   }
 
   async publishNote(): Promise<void> {
+    const xPostValidation = this.xPostValidation();
+    if (!xPostValidation.valid) {
+      this.snackBar.open(xPostValidation.message, 'Close', {
+        duration: 5000,
+      });
+      return;
+    }
+
     // CRITICAL: Guard against double-click/double-submit
     // Check publishInitiated first to prevent race conditions
     if (this.publishInitiated()) {

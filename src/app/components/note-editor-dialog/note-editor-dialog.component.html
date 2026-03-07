@@ -220,6 +220,13 @@
         } @else if (xPostingAvailable()) {
         <div class="option-content">
           <span class="option-description">Connected as {{ xDualPost.status().username || 'X user' }}</span>
+
+          @if (postToX() && !xPostValidation().valid) {
+          <div class="x-post-validation">
+            <mat-icon>warning</mat-icon>
+            <span>{{ xPostValidation().message }}</span>
+          </div>
+          }
         </div>
         } @else {
         <div class="option-content">

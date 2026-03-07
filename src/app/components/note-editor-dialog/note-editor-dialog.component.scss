@@ -1002,6 +1002,23 @@
         }
       }
 
+      .x-post-validation {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 8px;
+        color: var(--mat-sys-error);
+        font-size: 12px;
+        line-height: 1.4;
+
+        mat-icon {
+          font-size: 16px;
+          width: 16px;
+          height: 16px;
+          flex: 0 0 auto;
+        }
+      }
+
       // Proof of Work specific styles
       &.pow-content {
         .difficulty-field {
