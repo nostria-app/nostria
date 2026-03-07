@@ -612,7 +612,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   xStatusReady = computed(() => this.xDualPost.loaded() && !this.xDualPost.loading());
   xPostingAvailable = computed(() => this.xStatusReady() && this.xPremiumEligible() && this.xDualPost.status().connected && !this.isEdit() && !this.hasReplyTarget());
   xStatusLoading = computed(() => this.xDualPost.loading());
-  xHeaderIndicatorVisible = computed(() => this.xPostingAvailable() && this.postToX() && this.xPostValidation().valid);
+  xHeaderIndicatorVisible = computed(() => this.xPostingAvailable());
   hasPowResult = computed(() => this.powMinedEvent() !== null);
   powDifficulty = computed(() => this.powProgress().difficulty);
   powAttempts = computed(() => this.powProgress().attempts);
@@ -839,13 +839,19 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     });
 
     effect(() => {
-      const secondaryHeaderIcon = !this.inlineMode() && this.xHeaderIndicatorVisible() ? this.xHeaderIconUrl : '';
+      const canToggleXFromHeader = !this.inlineMode() && this.xHeaderIndicatorVisible();
+      const secondaryHeaderIcon = canToggleXFromHeader ? this.xHeaderIconUrl : '';
       const username = this.xDualPost.status().username;
       const secondaryHeaderTooltip = secondaryHeaderIcon
-        ? (username ? `Publishing to X as @${username}` : 'Publishing to X')
+        ? this.postToX()
+          ? (username ? `Post to X is on. Publishing as @${username}. Click to turn off.` : 'Post to X is on. Click to turn off.')
+          : (username ? `Post to X is off. Click to publish as @${username}.` : 'Post to X is off. Click to turn on.')
         : '';
       this.dialogRef?.updateSecondaryHeaderIcon(secondaryHeaderIcon);
       this.dialogRef?.updateSecondaryHeaderTooltip(secondaryHeaderTooltip);
+      this.dialogRef?.updateSecondaryHeaderActive(canToggleXFromHeader && this.postToX());
+      this.dialogRef?.updateSecondaryHeaderClickable(canToggleXFromHeader);
+      this.dialogRef?.updateSecondaryHeaderAriaLabel(this.postToX() ? 'Turn off Post to X' : 'Turn on Post to X');
     });
 
     // Load PoW settings from account state
@@ -1659,6 +1665,14 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   onPostToXChange(checked: boolean): void {
     this.xPostingChoiceInitialized = true;
     this.postToX.set(checked);
+  }
+
+  toggleSecondaryHeaderAction(): void {
+    if (!this.xPostingAvailable()) {
+      return;
+    }
+
+    this.onPostToXChange(!this.postToX());
   }
 
   private getXMediaItems(): XPostMediaItem[] {

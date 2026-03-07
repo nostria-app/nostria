@@ -149,7 +149,7 @@
   }
 }
 
-.secondary-header-icon {
+.secondary-header-button {
   position: absolute;
   top: 19px;
   right: 108px;
@@ -159,10 +159,32 @@
   width: 28px;
   height: 28px;
   border-radius: var(--mat-sys-corner-full);
-  background: var(--mat-sys-surface-container-high);
+  border: none;
+  background: var(--mat-sys-surface-container-low);
   box-shadow: var(--mat-sys-level1);
-  visibility: visible;
   z-index: 2;
+  padding: 0;
+  transition: background-color 0.2s ease, opacity 0.2s ease, transform 0.2s ease;
+
+  &.active {
+    background: var(--mat-sys-surface-container-high);
+  }
+
+  &.clickable {
+    cursor: pointer;
+
+    &:hover:not(:disabled) {
+      background: var(--mat-sys-surface-container-highest);
+    }
+
+    &:active:not(:disabled) {
+      transform: scale(0.96);
+    }
+  }
+
+  &:disabled {
+    cursor: default;
+  }
 
   @media (max-width: 600px),
   (max-height: 700px) {
@@ -178,6 +200,18 @@
     width: 22px;
     height: 22px;
   }
+}
+
+.secondary-header-icon {
+  width: 100%;
+  height: 100%;
+  border-radius: var(--mat-sys-corner-full);
+  object-fit: contain;
+  opacity: 0.55;
+}
+
+.secondary-header-button.active .secondary-header-icon {
+  opacity: 1;
 }
 
 .back-button {
@@ -384,7 +418,47 @@
   min-height: min(360px, calc(100vh - 32px));
 
   .dialog-content {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
     overflow: hidden;
+  }
+
+  .dialog-content>.note-editor-dialog {
+    flex: 1;
+    min-height: 0;
+    height: 100%;
+  }
+
+  .dialog-actions {
+    min-height: fit-content !important;
+    max-height: none !important;
+    overflow: visible !important;
+    padding: 12px 24px 14px !important;
+    border-top-color: var(--mat-sys-outline-variant);
+    background: var(--mat-sys-surface);
+    position: sticky;
+    bottom: 0;
+    z-index: 4;
+  }
+
+  @media (max-width: 600px),
+  (max-height: 700px) {
+    .dialog-actions {
+      padding: 8px 10px 10px !important;
+    }
+  }
+
+  @media (max-width: 400px) {
+    .dialog-actions {
+      padding: 6px 6px 8px !important;
+    }
+  }
+
+  @media (max-height: 600px) {
+    .dialog-actions {
+      padding: 6px 12px 8px !important;
+    }
   }
 }
 

@@ -88,9 +88,13 @@ import { MatTooltipModule } from '@angular/material/tooltip';
           }
 
           @if (getSecondaryHeaderIcon()) {
-            <img [src]="getSecondaryHeaderIcon()" [alt]="getSecondaryHeaderTooltip() || 'Dialog status'"
-              [matTooltip]="getSecondaryHeaderTooltip()" [matTooltipDisabled]="!getSecondaryHeaderTooltip()"
-              class="secondary-header-icon" />
+            <button class="secondary-header-button" [class.active]="getSecondaryHeaderActive()"
+              [class.clickable]="getSecondaryHeaderClickable()" [matTooltip]="getSecondaryHeaderTooltip()"
+              [matTooltipDisabled]="!getSecondaryHeaderTooltip()" [attr.aria-label]="getSecondaryHeaderAriaLabel()"
+              [disabled]="!getSecondaryHeaderClickable()" (click)="onSecondaryHeaderClick()" type="button">
+              <img [src]="getSecondaryHeaderIcon()" [alt]="getSecondaryHeaderTooltip() || 'Dialog status'"
+                class="secondary-header-icon" />
+            </button>
           }
           
           <!-- Custom header content -->
@@ -118,6 +122,9 @@ export class CustomDialogComponent implements AfterViewInit, OnDestroy {
   headerIcon = input<string>('');
   secondaryHeaderIcon = input<string>('');
   secondaryHeaderTooltip = input<string>('');
+  secondaryHeaderActive = input<boolean>(false);
+  secondaryHeaderClickable = input<boolean>(false);
+  secondaryHeaderAriaLabel = input<string>('Dialog status');
   showBackButton = input<boolean>(false);
   showCloseButton = input<boolean>(true);
   disableClose = input<boolean>(false);
@@ -131,6 +138,7 @@ export class CustomDialogComponent implements AfterViewInit, OnDestroy {
   closed = output<void>();
   backdropClicked = output<void>();
   backClicked = output<void>();
+  secondaryHeaderClicked = output<void>();
 
   // Modern viewChild
   dialogContainer = viewChild<ElementRef>('dialogContainer');
@@ -223,6 +231,18 @@ export class CustomDialogComponent implements AfterViewInit, OnDestroy {
     return this.secondaryHeaderTooltip();
   }
 
+  getSecondaryHeaderActive(): boolean {
+    return this.secondaryHeaderActive();
+  }
+
+  getSecondaryHeaderClickable(): boolean {
+    return this.secondaryHeaderClickable();
+  }
+
+  getSecondaryHeaderAriaLabel(): string {
+    return this.secondaryHeaderAriaLabel();
+  }
+
   getShowBackButton(): boolean {
     return this.showBackButton();
   }
@@ -308,6 +328,12 @@ export class CustomDialogComponent implements AfterViewInit, OnDestroy {
 
   onBackClick(): void {
     this.backClicked.emit();
+  }
+
+  onSecondaryHeaderClick(): void {
+    if (this.getSecondaryHeaderClickable()) {
+      this.secondaryHeaderClicked.emit();
+    }
   }
 
   close(): void {

@@ -20,7 +20,8 @@
 @if (!inlineMode() || isExpanded()) {
 <!-- Content Area -->
 <div dialog-content class="note-editor-dialog" [class.inline-editor]="inlineMode()">
-  <div class="dialog-content-wrapper" [class.scrollable]="showPreview() || showAdvancedOptions()"
+  <div class="dialog-content-wrapper" [class.scrollable]="showAdvancedOptions()"
+    [class.preview-mode]="showPreview() && !showAdvancedOptions()"
     [attr.data-drag-enabled]="!showPreview() && !showAdvancedOptions() || null"
     (dragenter)="!showPreview() && !showAdvancedOptions() && onDragEnter($event)"
     (dragover)="!showPreview() && !showAdvancedOptions() && onDragOver($event)"
@@ -399,8 +400,14 @@
     @if (showPreview() && !showAdvancedOptions() && !inlineMode()) {
     <div class="preview-section">
       <div class="preview-header">
-        <mat-icon class="preview-icon">visibility</mat-icon>
-        <span class="preview-title">Preview</span>
+        <div class="preview-header-label">
+          <mat-icon class="preview-icon">visibility</mat-icon>
+          <span class="preview-title">Preview</span>
+        </div>
+        <button mat-button type="button" class="preview-exit-button" (click)="togglePreview()">
+          <mat-icon>visibility_off</mat-icon>
+          Hide preview
+        </button>
       </div>
       <app-content class="preview-content" [content]="previewContent()"
         [preloadedEvents]="previewEventsMap()"></app-content>
