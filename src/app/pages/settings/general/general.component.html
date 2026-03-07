@@ -142,12 +142,35 @@
       <div class="x-connection-meta">
         <div class="x-connection-meta-item">
           <span class="x-connection-meta-label">Account</span>
+          @if (xProfileUrl(); as profileUrl) {
+          <a class="x-connection-handle x-connection-link" [href]="profileUrl" target="_blank"
+            rel="noopener noreferrer">&#64;{{ xDualPost.status().username || 'x-user' }}</a>
+          } @else {
           <span class="x-connection-handle">&#64;{{ xDualPost.status().username || 'x-user' }}</span>
+          }
         </div>
         <div class="x-connection-meta-item">
           <span class="x-connection-meta-label">Mode</span>
           <span>Single X account per Nostria account</span>
         </div>
+        <div class="x-connection-meta-item">
+          <span class="x-connection-meta-label">X Posts</span>
+          <span class="x-connection-metric">{{ xDualPost.status().totalPosts }} total</span>
+        </div>
+        <div class="x-connection-meta-item">
+          <span class="x-connection-meta-label">Last 24h</span>
+          <span class="x-connection-metric">{{ xDualPost.status().postsLast24h }}</span>
+        </div>
+        <div class="x-connection-meta-item">
+          <span class="x-connection-meta-label">24h Limit</span>
+          <span class="x-connection-metric">{{ getXUsageRemaining() }}</span>
+        </div>
+        @if (xDualPost.status().lastPosted) {
+        <div class="x-connection-meta-item">
+          <span class="x-connection-meta-label">Last X Post</span>
+          <span class="x-connection-metric">{{ xDualPost.status().lastPosted | date: 'medium' }}</span>
+        </div>
+        }
       </div>
 
       <p class="x-connection-note">Reconnect if you want to switch to another X account. Media support includes up to 4

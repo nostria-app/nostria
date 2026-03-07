@@ -9,6 +9,11 @@ export interface XConnectionStatus {
   connected: boolean;
   username?: string;
   userId?: string;
+  totalPosts: number;
+  postsLast24h: number;
+  lastPosted?: number;
+  limit24h?: number;
+  remaining24h?: number;
 }
 
 export interface XPostMediaItem {
@@ -33,7 +38,7 @@ export class XDualPostService {
   private readonly webRequest = inject(WebRequest);
   private lastPubkey = '';
 
-  readonly status = signal<XConnectionStatus>({ connected: false });
+  readonly status = signal<XConnectionStatus>({ connected: false, totalPosts: 0, postsLast24h: 0 });
   readonly loading = signal(false);
   readonly connecting = signal(false);
   readonly loaded = signal(false);
@@ -44,14 +49,14 @@ export class XDualPostService {
 
       if (!pubkey) {
         this.lastPubkey = '';
-        this.status.set({ connected: false });
+        this.status.set({ connected: false, totalPosts: 0, postsLast24h: 0 });
         this.loaded.set(false);
         return;
       }
 
       if (this.lastPubkey !== pubkey) {
         this.lastPubkey = pubkey;
-        this.status.set({ connected: false });
+        this.status.set({ connected: false, totalPosts: 0, postsLast24h: 0 });
         this.loaded.set(false);
       }
     });
@@ -74,7 +79,7 @@ export class XDualPostService {
     const pubkey = this.accountState.pubkey();
 
     if (!pubkey) {
-      const disconnected = { connected: false } satisfies XConnectionStatus;
+      const disconnected = { connected: false, totalPosts: 0, postsLast24h: 0 } satisfies XConnectionStatus;
       this.status.set(disconnected);
       this.loaded.set(false);
       return disconnected;
@@ -96,7 +101,7 @@ export class XDualPostService {
       return response.data;
     } catch (error) {
       this.logger.warn('Failed to refresh X connection status', { error });
-      const disconnected = { connected: false } satisfies XConnectionStatus;
+      const disconnected = { connected: false, totalPosts: 0, postsLast24h: 0 } satisfies XConnectionStatus;
       this.status.set(disconnected);
       this.loaded.set(false);
       return disconnected;

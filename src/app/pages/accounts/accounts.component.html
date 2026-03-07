@@ -177,13 +177,16 @@
             <p class="relay-switch-hint">Choose one of the default signing relays or set a custom relay.</p>
 
             <div class="relay-option-buttons">
-              <button mat-stroked-button [class.active]="remoteRelayOption() === 'nip46'" (click)="setRemoteRelayOption('nip46')">
+              <button mat-stroked-button [class.active]="remoteRelayOption() === 'nip46'"
+                (click)="setRemoteRelayOption('nip46')">
                 {{ getRemoteRelayLabel('nip46') }}
               </button>
-              <button mat-stroked-button [class.active]="remoteRelayOption() === 'eu'" (click)="setRemoteRelayOption('eu')">
+              <button mat-stroked-button [class.active]="remoteRelayOption() === 'eu'"
+                (click)="setRemoteRelayOption('eu')">
                 {{ getRemoteRelayLabel('eu') }}
               </button>
-              <button mat-stroked-button [class.active]="remoteRelayOption() === 'us'" (click)="setRemoteRelayOption('us')">
+              <button mat-stroked-button [class.active]="remoteRelayOption() === 'us'"
+                (click)="setRemoteRelayOption('us')">
                 {{ getRemoteRelayLabel('us') }}
               </button>
               <button mat-stroked-button [class.active]="remoteRelayOption() === 'custom'"
@@ -195,8 +198,9 @@
             @if (remoteRelayOption() === 'custom') {
             <mat-form-field appearance="outline" class="remote-relay-input">
               <mat-label>Custom relay</mat-label>
-              <input matInput [value]="customRemoteRelayInput()" (input)="onCustomRemoteRelayInput($any($event.target).value)"
-                (blur)="autoFormatCustomRemoteRelay()" placeholder="relay.example.com" autocomplete="off" />
+              <input matInput [value]="customRemoteRelayInput()"
+                (input)="onCustomRemoteRelayInput($any($event.target).value)" (blur)="autoFormatCustomRemoteRelay()"
+                placeholder="relay.example.com" autocomplete="off" />
               <mat-hint>Domain-only input auto-formats to wss://.../</mat-hint>
             </mat-form-field>
             }
@@ -286,13 +290,16 @@
             <p class="relay-switch-hint">Choose one of the default signing relays or set a custom relay.</p>
 
             <div class="relay-option-buttons">
-              <button mat-stroked-button [class.active]="remoteRelayOption() === 'nip46'" (click)="setRemoteRelayOption('nip46')">
+              <button mat-stroked-button [class.active]="remoteRelayOption() === 'nip46'"
+                (click)="setRemoteRelayOption('nip46')">
                 {{ getRemoteRelayLabel('nip46') }}
               </button>
-              <button mat-stroked-button [class.active]="remoteRelayOption() === 'eu'" (click)="setRemoteRelayOption('eu')">
+              <button mat-stroked-button [class.active]="remoteRelayOption() === 'eu'"
+                (click)="setRemoteRelayOption('eu')">
                 {{ getRemoteRelayLabel('eu') }}
               </button>
-              <button mat-stroked-button [class.active]="remoteRelayOption() === 'us'" (click)="setRemoteRelayOption('us')">
+              <button mat-stroked-button [class.active]="remoteRelayOption() === 'us'"
+                (click)="setRemoteRelayOption('us')">
                 {{ getRemoteRelayLabel('us') }}
               </button>
               <button mat-stroked-button [class.active]="remoteRelayOption() === 'custom'"
@@ -304,8 +311,9 @@
             @if (remoteRelayOption() === 'custom') {
             <mat-form-field appearance="outline" class="remote-relay-input">
               <mat-label>Custom relay</mat-label>
-              <input matInput [value]="customRemoteRelayInput()" (input)="onCustomRemoteRelayInput($any($event.target).value)"
-                (blur)="autoFormatCustomRemoteRelay()" placeholder="relay.example.com" autocomplete="off" />
+              <input matInput [value]="customRemoteRelayInput()"
+                (input)="onCustomRemoteRelayInput($any($event.target).value)" (blur)="autoFormatCustomRemoteRelay()"
+                placeholder="relay.example.com" autocomplete="off" />
               <mat-hint>Domain-only input auto-formats to wss://.../</mat-hint>
             </mat-form-field>
             }
@@ -724,6 +732,45 @@
           }
         </mat-card-actions>
       </mat-card>
+
+      @if (xDualPost.status().connected) {
+      <mat-card class="x-status-card">
+        <mat-card-header>
+          <mat-card-title>X Dual-posting</mat-card-title>
+        </mat-card-header>
+
+        <mat-card-content>
+          <div class="x-status-grid">
+            <div class="x-status-item">
+              <div class="x-status-label">X Authorization</div>
+              @if (xProfileUrl(); as profileUrl) {
+              <a class="x-status-value x-status-link" [href]="profileUrl" target="_blank"
+                rel="noopener noreferrer">Connected as &#64;{{ xDualPost.status().username || 'x-user' }}</a>
+              } @else {
+              <div class="x-status-value">Connected as &#64;{{ xDualPost.status().username || 'x-user' }}</div>
+              }
+            </div>
+
+            <div class="x-status-item">
+              <div class="x-status-label">X Posts</div>
+              <div class="x-status-value">{{ xDualPost.status().totalPosts }} total</div>
+            </div>
+
+            <div class="x-status-item">
+              <div class="x-status-label">24h Limit</div>
+              <div class="x-status-value">{{ getXUsageRemaining() }}</div>
+            </div>
+
+            @if (xDualPost.status().lastPosted) {
+            <div class="x-status-item">
+              <div class="x-status-label">Last X Post</div>
+              <div class="x-status-value">{{ xDualPost.status().lastPosted | date: 'medium' }}</div>
+            </div>
+            }
+          </div>
+        </mat-card-content>
+      </mat-card>
+      }
 
       <mat-card class="history-card">
         <mat-card-header>

@@ -1,4 +1,5 @@
 import { Component, computed, inject, signal, OnInit, OnDestroy } from '@angular/core';
+import { DatePipe } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -38,6 +39,7 @@ interface Language {
 @Component({
   selector: 'app-general-settings',
   imports: [
+    DatePipe,
     FormsModule,
     MatButtonModule,
     MatCardModule,
@@ -90,6 +92,10 @@ export class GeneralSettingsComponent implements OnInit, OnDestroy {
     const isPremiumTier = subscription?.tier === 'premium' || subscription?.tier === 'premium_plus';
     const isNotExpired = !subscription?.expires || Date.now() < subscription.expires;
     return !!subscription && isPremiumTier && isNotExpired;
+  });
+  xProfileUrl = computed(() => {
+    const username = this.xDualPost.status().username;
+    return username ? `https://x.com/${username}` : null;
   });
 
   // Global event expiration (in hours, null = disabled)
@@ -297,6 +303,16 @@ export class GeneralSettingsComponent implements OnInit, OnDestroy {
         duration: 5000,
       });
     }
+  }
+
+  getXUsageRemaining(): string {
+    const status = this.xDualPost.status();
+
+    if (status.limit24h === undefined || status.remaining24h === undefined) {
+      return 'No daily cap configured';
+    }
+
+    return `${status.remaining24h} remaining of ${status.limit24h}`;
   }
 
   private handleXAuthReturn(): void {

@@ -196,6 +196,18 @@
   color: var(--mat-sys-on-surface);
 }
 
+.x-connection-link {
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.x-connection-metric {
+  color: var(--mat-sys-on-surface);
+}
+
 .x-connection-note {
   font-size: 0.9rem;
   color: var(--mat-sys-on-surface-variant);
