@@ -123,7 +123,7 @@
                       </div>
                       <div class="chat-preview">
                         @if (chat.lastMessage) {
-                        <span class="message-preview">{{ chat.lastMessage.content }}</span>
+                        <span class="message-preview">{{ getChatPreviewText(chat.lastMessage) }}</span>
                         } @else {
                         <span class="message-preview empty-message">Save private notes</span>
                         }
@@ -170,7 +170,7 @@
                             @if (chat.lastMessage.isOutgoing) {
                             <span class="outgoing-prefix">You: </span>
                             }
-                            {{ chat.lastMessage.content }}
+                            {{ getChatPreviewText(chat.lastMessage) }}
                           </span>
                           <!-- <span class="message-time">{{ chat.lastMessage?.created_at | ago }}</span> -->
                           } @else {
@@ -256,7 +256,7 @@
                             @if (chat.lastMessage.isOutgoing) {
                             <span class="outgoing-prefix">You: </span>
                             }
-                            {{ chat.lastMessage.content }}
+                            {{ getChatPreviewText(chat.lastMessage) }}
                           </span>
                           } @else {
                           <span class="message-preview empty-message">New conversation</span>
@@ -406,7 +406,8 @@
             </div>
             }
             }
-            <app-message-content [content]="message.content"></app-message-content>
+            <app-message-content [content]="message.content" [tags]="message.tags"
+              [authorPubkey]="message.pubkey"></app-message-content>
             <span class="message-inline-meta">
               <span class="message-time">{{ formatMessageTime(message.created_at) }}</span>
               <!-- Only show encryption warning for legacy NIP-04 messages -->

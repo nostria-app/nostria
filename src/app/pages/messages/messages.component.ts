@@ -81,6 +81,7 @@ import { OpenGraphService, OpenGraphData } from '../../services/opengraph.servic
 import { isImageUrl } from '../../services/format/utils';
 import { HiddenChatInfoPromptComponent } from '../../components/hidden-chat-info-prompt/hidden-chat-info-prompt.component';
 import { HapticsService } from '../../services/haptics.service';
+import { EmojiSetService } from '../../services/emoji-set.service';
 
 // Define interfaces for our DM data structures
 interface Chat {
@@ -183,11 +184,16 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   readonly mediaService = inject(MediaService);
   private readonly haptics = inject(HapticsService);
   private readonly openGraph = inject(OpenGraphService);
+  private readonly emojiSetService = inject(EmojiSetService);
   private readonly dialog = inject(MatDialog);
 
   // Link preview data - keyed by URL
   linkPreviews = signal<Map<string, OpenGraphData>>(new Map());
   private linkPreviewsLoaded = new Set<string>();
+
+  // Cache of resolved custom emoji URLs (shortcode with colons -> URL)
+  private resolvedEmojiUrls = signal<Map<string, string>>(new Map());
+  private emojiResolutionPending = new Set<string>();
 
   @ViewChild('chatSearchInput') chatSearchInput?: ElementRef<HTMLInputElement>;
 
@@ -1871,6 +1877,22 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     return content;
   }
 
+  /**
+   * Get the display text for a chat preview in the chat list.
+   * For reaction messages, shows "Reacted ❤️" or similar instead of raw content.
+   */
+  getChatPreviewText(lastMessage: DirectMessage): string {
+    if (lastMessage.eventKind === 'reaction' || this.isReactionMessage(lastMessage)) {
+      const content = lastMessage.reactionContent || lastMessage.content;
+      if (!content || content === '+') {
+        return 'Reacted \u2764\uFE0F';
+      }
+      // For custom emoji shortcodes, show the shortcode as-is since we can't render images in text
+      return `Reacted ${content}`;
+    }
+    return lastMessage.content;
+  }
+
   getReactionCustomEmojiUrl(content: string, tags: string[][]): string | undefined {
     const shortcode = this.getEmojiShortcode(content);
     if (!shortcode) {
@@ -1878,7 +1900,12 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     }
 
     const emojiTag = tags.find(tag => tag[0] === 'emoji' && tag[1] === shortcode && !!tag[2]);
-    return emojiTag?.[2];
+    if (emojiTag?.[2]) {
+      return emojiTag[2];
+    }
+
+    // Fall back to resolved emoji cache (populated async from user emoji sets)
+    return this.resolvedEmojiUrls().get(content);
   }
 
   private getEmojiShortcode(content: string): string | undefined {
@@ -1888,6 +1915,31 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
 
     const shortcode = content.slice(1, -1).trim();
     return shortcode || undefined;
+  }
+
+  /**
+   * Asynchronously resolve a custom emoji URL from the sender's emoji sets.
+   * Updates the resolvedEmojiUrls signal when found, which triggers re-render.
+   */
+  private resolveEmojiUrl(content: string, senderPubkey: string): void {
+    if (this.emojiResolutionPending.has(content)) return;
+    this.emojiResolutionPending.add(content);
+
+    const shortcode = this.getEmojiShortcode(content);
+    if (!shortcode) return;
+
+    this.emojiSetService.getUserEmojiSets(senderPubkey).then(emojiSets => {
+      const url = emojiSets.get(shortcode);
+      if (url) {
+        this.resolvedEmojiUrls.update(map => {
+          const updated = new Map(map);
+          updated.set(content, url);
+          return updated;
+        });
+      }
+    }).catch(() => {
+      // Ignore resolution failures
+    });
   }
 
   getMessageReactions(messageId: string): MessageReactionSummary[] {
@@ -1915,6 +1967,11 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     for (const reaction of latestReactionByPubkey.values()) {
       const content = reaction.reactionContent || reaction.content;
       const customEmojiUrl = this.getReactionCustomEmojiUrl(content, reaction.tags || []);
+
+      // Trigger async resolution for unresolved custom emoji shortcodes
+      if (!customEmojiUrl && this.getEmojiShortcode(content)) {
+        this.resolveEmojiUrl(content, reaction.pubkey);
+      }
 
       // NIP-25 reaction removal marker.
       if (!content || content === '-') {
@@ -1981,8 +2038,20 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       ];
 
       const shortcode = this.getEmojiShortcode(reaction);
-      if (shortcode && customEmojiUrl) {
-        extraRumorTags.push(['emoji', shortcode, customEmojiUrl]);
+      if (shortcode) {
+        // If URL not provided, resolve from user's emoji sets
+        let emojiUrl = customEmojiUrl;
+        if (!emojiUrl) {
+          try {
+            const userEmojis = await this.emojiSetService.getUserEmojiSets(myPubkey);
+            emojiUrl = userEmojis.get(shortcode);
+          } catch {
+            // Ignore - emoji URL won't be attached
+          }
+        }
+        if (emojiUrl) {
+          extraRumorTags.push(['emoji', shortcode, emojiUrl]);
+        }
       }
 
       const result = await this.createNip44Message(
