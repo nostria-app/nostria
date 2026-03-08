@@ -137,4 +137,37 @@ describe('MessagingService live subscriptions', () => {
     expect(messages[0].content).toBe('hello from peer');
     expect(messages[0].encryptionType).toBe('nip44');
   });
+
+  it('clears stale pending state when the same message arrives from relays', () => {
+    service.addMessageToChat('peer-pubkey', {
+      id: 'same-message-id',
+      pubkey: 'my-pubkey',
+      created_at: 1_700_000_000,
+      content: 'hello',
+      isOutgoing: true,
+      tags: [['p', 'peer-pubkey']],
+      pending: true,
+      received: false,
+      failed: false,
+      encryptionType: 'nip44',
+    });
+
+    service.addMessageToChat('peer-pubkey', {
+      id: 'same-message-id',
+      pubkey: 'my-pubkey',
+      created_at: 1_700_000_000,
+      content: 'hello',
+      isOutgoing: true,
+      tags: [['p', 'peer-pubkey']],
+      pending: false,
+      received: true,
+      failed: false,
+      encryptionType: 'nip44',
+    });
+
+    const [message] = service.getChatMessages('peer-pubkey');
+    expect(message.pending).toBe(false);
+    expect(message.received).toBe(true);
+    expect(message.failed).toBe(false);
+  });
 });

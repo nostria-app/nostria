@@ -339,7 +339,30 @@ export class MessagingService implements NostriaService {
     // Check if this message already exists in the specific chat to prevent duplicates
     const existingChat = currentMap.get(chatId);
     if (existingChat && existingChat.messages.has(normalizedMessage.id)) {
-      // Message already exists in this chat, don't add it again
+      const existingMessage = existingChat.messages.get(normalizedMessage.id)!;
+
+      // Relay-sourced copies of an existing optimistic message should clear stale
+      // local delivery state instead of being ignored as a duplicate.
+      const shouldConfirmExistingMessage =
+        (!!existingMessage.pending || !!existingMessage.failed || !existingMessage.received) &&
+        !normalizedMessage.pending &&
+        !normalizedMessage.failed &&
+        !!normalizedMessage.received;
+
+      if (shouldConfirmExistingMessage) {
+        this.logger.debug(`Message ${normalizedMessage.id} already exists in chat ${chatId}, merging relay-confirmed state`);
+        this.updateMessageInChat(chatId, normalizedMessage.id, {
+          pending: false,
+          failed: false,
+          received: true,
+          failureReason: undefined,
+          giftWrapId: normalizedMessage.giftWrapId || existingMessage.giftWrapId,
+          encryptionType: normalizedMessage.encryptionType || existingMessage.encryptionType,
+        });
+        return;
+      }
+
+      // Message already exists in this chat, don't add it again.
       this.logger.debug(`Message ${normalizedMessage.id} already exists in chat ${chatId}, skipping to prevent duplicate`);
       return;
     }
