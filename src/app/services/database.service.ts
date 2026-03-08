@@ -2410,6 +2410,27 @@ export class DatabaseService {
   }
 
   /**
+   * Get all direct messages for an account (account DB)
+   */
+  async getDirectMessagesForAccount(accountPubkey: string): Promise<StoredDirectMessage[]> {
+    const db = this.getAccountDb();
+    if (!db) return [];
+
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORES.MESSAGES, 'readonly');
+      const store = transaction.objectStore(STORES.MESSAGES);
+      const index = store.index('by-account');
+
+      const request = index.getAll(accountPubkey);
+
+      request.onsuccess = () => {
+        resolve(request.result || []);
+      };
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  /**
    * Check if a message already exists in the database (account DB)
    */
   async messageExists(accountPubkey: string, chatId: string, messageId: string): Promise<boolean> {

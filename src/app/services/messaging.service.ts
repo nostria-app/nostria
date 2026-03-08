@@ -77,9 +77,11 @@ export class MessagingService implements NostriaService {
   isLoadingMoreChats = signal<boolean>(false);
   hasMoreChats = signal<boolean>(true);
   error = signal<string | null>(null);
+  bootstrapUnreadCount = signal<number | null>(null);
 
   private chatsMap = signal<Map<string, Chat>>(new Map());
   private oldestChatTimestamp = signal<number | null>(null);
+  private bootstrappedPubkey: string | null = null;
 
   /**
    * Fast in-memory lookup of all known outer event IDs (gift wrap IDs for NIP-44,
@@ -123,6 +125,15 @@ export class MessagingService implements NostriaService {
     return count;
   });
 
+  unreadBadgeCount = computed(() => {
+    const liveCount = this.totalUnreadCount();
+    if (this.chatsMap().size > 0 || liveCount > 0) {
+      return liveCount;
+    }
+
+    return this.bootstrapUnreadCount() ?? 0;
+  });
+
   constructor() {
     // Effect to persist unread count to local storage when it changes
     effect(() => {
@@ -161,6 +172,8 @@ export class MessagingService implements NostriaService {
       } else {
         // User logged out - close the subscription
         untracked(() => {
+          this.bootstrapUnreadCount.set(null);
+          this.bootstrappedPubkey = null;
           if (this.liveSubscription) {
             this.logger.info('Closing DM subscription - user logged out');
             this.closeLiveSubscription();
@@ -182,6 +195,8 @@ export class MessagingService implements NostriaService {
     } catch {
       this.logger.warn('[MessagingService] Relay initialization timed out, attempting subscription anyway');
     }
+
+    await this.bootstrapFromStorage();
 
     this.logger.debug('Starting DM subscription...');
     const sub = await this.subscribeToIncomingMessages();
@@ -619,12 +634,63 @@ export class MessagingService implements NostriaService {
     this.hasMoreChats.set(true);
     this.error.set(null);
     this.knownEventIds.clear();
+    this.bootstrapUnreadCount.set(null);
+    this.bootstrappedPubkey = null;
   }
 
   reset() {
     this.chatsMap.set(new Map());
     this.oldestChatTimestamp.set(null);
     this.knownEventIds.clear();
+    this.bootstrapUnreadCount.set(null);
+    this.bootstrappedPubkey = null;
+  }
+
+  hasLiveSubscription(): boolean {
+    return !!this.liveSubscription;
+  }
+
+  private async bootstrapFromStorage(): Promise<void> {
+    const myPubkey = this.accountState.pubkey();
+    if (!myPubkey) {
+      return;
+    }
+
+    if (this.bootstrappedPubkey === myPubkey) {
+      return;
+    }
+
+    try {
+      await this.database.init();
+
+      const [storedChats, storedMessages] = await Promise.all([
+        this.database.getChatsForAccount(myPubkey),
+        this.database.getDirectMessagesForAccount(myPubkey),
+      ]);
+
+      let unreadCount = 0;
+      for (const chat of storedChats) {
+        unreadCount += chat.unreadCount;
+      }
+
+      for (const message of storedMessages) {
+        this.knownEventIds.add(message.messageId);
+        if (message.giftWrapId) {
+          this.knownEventIds.add(message.giftWrapId);
+        }
+      }
+
+      this.bootstrapUnreadCount.set(unreadCount);
+      this.bootstrappedPubkey = myPubkey;
+
+      this.logger.debug('Bootstrapped DM state from storage', {
+        unreadCount,
+        storedMessages: storedMessages.length,
+        storedChats: storedChats.length,
+      });
+    } catch (error) {
+      this.logger.warn('Failed to bootstrap DM state from storage', error);
+    }
   }
 
   async load() {

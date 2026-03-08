@@ -399,20 +399,8 @@ export class App implements OnInit, OnDestroy {
    * Get unread messages count - tries messaging service first, falls back to cached value
    */
   getUnreadMessagesCount(): number | null {
-    // First try to get live count from messaging service (if loaded)
-    const liveCount = this.messagingService.totalUnreadCount();
-    if (liveCount > 0) {
-      return liveCount;
-    }
-
-    // Fall back to cached count from local state
-    const pubkey = this.accountState.pubkey();
-    if (pubkey) {
-      const cachedCount = this.accountLocalState.getUnreadMessagesCount(pubkey);
-      return cachedCount > 0 ? cachedCount : null;
-    }
-
-    return null;
+    const count = this.messagingService.unreadBadgeCount();
+    return count > 0 ? count : null;
   }
 
   private isEventRoute(url: string): boolean {

@@ -809,6 +809,11 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
    * This allows the message list to auto-update when new DMs arrive.
    */
   private async startLiveSubscription(): Promise<void> {
+    if (this.messaging.hasLiveSubscription()) {
+      this.logger.debug('Live DM subscription already active');
+      return;
+    }
+
     const sub = await this.messaging.subscribeToIncomingMessages();
     if (sub) {
       this.logger.debug('Live DM subscription started');
