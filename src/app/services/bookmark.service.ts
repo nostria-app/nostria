@@ -79,15 +79,13 @@ export class BookmarkService {
 
     // Add default bookmark list
     const defaultEvent = this.bookmarkEvent();
-    if (defaultEvent) {
-      lists.push({
-        id: 'default',
-        name: 'Bookmarks',
-        event: defaultEvent,
-        isDefault: true,
-        isPrivate: false
-      });
-    }
+    lists.push({
+      id: 'default',
+      name: 'Bookmarks',
+      event: defaultEvent,
+      isDefault: true,
+      isPrivate: false
+    });
 
     // Add custom bookmark lists
     lists.push(...this.bookmarkLists());

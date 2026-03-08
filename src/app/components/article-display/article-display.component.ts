@@ -151,7 +151,6 @@ export class ArticleDisplayComponent implements OnDestroy {
   reactionChanged = output<void>();
   zapSent = output<number>();
   replyClick = output<MouseEvent>();
-  bookmarkClick = output<MouseEvent>();
 
   // Playback speed options
   playbackRates = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];

@@ -109,7 +109,8 @@
             </div>
 
             <div class="action-button bookmark-action" role="button"
-              [attr.tabindex]="requiresSpamConfirmation() ? -1 : 0" (click)="bookmarkClick.emit($event)"
+              [attr.tabindex]="requiresSpamConfirmation() ? -1 : 0"
+              (click)="openBookmarkSelector(); $event.stopPropagation()"
               (contextmenu)="onActionsDisplayModeToggle($event)" (touchstart)="onBookmarkLongPressStart($event)"
               (touchend)="onBookmarkLongPressEnd()" (touchcancel)="onBookmarkLongPressEnd()">
               <mat-icon class="action-icon">{{ bookmark.getBookmarkIcon(id(), 'a') }}</mat-icon>
@@ -361,7 +362,7 @@
 
       <!-- Bookmark -->
       <div class="action-button bookmark-action" role="button" [attr.tabindex]="requiresSpamConfirmation() ? -1 : 0"
-        (click)="bookmarkClick.emit($event)" (contextmenu)="onActionsDisplayModeToggle($event)"
+        (click)="openBookmarkSelector(); $event.stopPropagation()" (contextmenu)="onActionsDisplayModeToggle($event)"
         (touchstart)="onBookmarkLongPressStart($event)" (touchend)="onBookmarkLongPressEnd()"
         (touchcancel)="onBookmarkLongPressEnd()">
         <mat-icon class="action-icon">{{ bookmark.getBookmarkIcon(id(), 'a') }}</mat-icon>
