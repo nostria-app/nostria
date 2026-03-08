@@ -603,6 +603,48 @@ export class ContentNotificationService implements OnDestroy {
     return knownFollowerPubkeys;
   }
 
+  private eventShowsFollower(event: Event, pubkey: string): boolean {
+    return event.tags.some(tag => tag[0] === 'p' && tag[1] === pubkey);
+  }
+
+  private async hasHistoricalFollowEvent(pubkey: string, event: Event): Promise<boolean> {
+    const storedEvents = await this.database.getEventsByPubkeyAndKind(event.pubkey, kinds.Contacts);
+    const hasStoredHistoricalFollow = storedEvents.some(storedEvent => {
+      if (storedEvent.id === event.id) {
+        return false;
+      }
+
+      if (storedEvent.created_at >= event.created_at) {
+        return false;
+      }
+
+      return this.eventShowsFollower(storedEvent, pubkey);
+    });
+
+    if (hasStoredHistoricalFollow) {
+      return true;
+    }
+
+    const relayEvents = await this.accountRelay.getMany({
+      kinds: [kinds.Contacts],
+      authors: [event.pubkey],
+      until: event.created_at,
+      limit: 10,
+    });
+
+    return relayEvents.some(previousEvent => {
+      if (previousEvent.id === event.id) {
+        return false;
+      }
+
+      if (previousEvent.created_at >= event.created_at) {
+        return false;
+      }
+
+      return this.eventShowsFollower(previousEvent, pubkey);
+    });
+  }
+
   /**
    * Paginate through ALL kind 3 events that reference the user's pubkey.
    * Fetches 500 events at a time, using the oldest event's created_at as the
@@ -721,13 +763,19 @@ export class ContentNotificationService implements OnDestroy {
       return;
     }
 
-    const followsCurrentUser = event.tags.some(tag => tag[0] === 'p' && tag[1] === pubkey);
+    const followsCurrentUser = this.eventShowsFollower(event, pubkey);
     if (!followsCurrentUser) {
       return;
     }
 
     const knownFollowerPubkeys = await this.getKnownFollowerPubkeys(pubkey);
     if (knownFollowerPubkeys.has(event.pubkey)) {
+      return;
+    }
+
+    if (await this.hasHistoricalFollowEvent(pubkey, event)) {
+      this.accountLocalState.markFollowerNotificationProcessed(pubkey, event.pubkey, event.created_at);
+      knownFollowerPubkeys.add(event.pubkey);
       return;
     }
 

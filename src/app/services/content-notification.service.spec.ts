@@ -72,10 +72,12 @@ describe('ContentNotificationService', () => {
     mockDatabase = {
       getNotification: vi.fn().mockName("DatabaseService.getNotification"),
       deleteNotification: vi.fn().mockName("DatabaseService.deleteNotification"),
+      getEventsByPubkeyAndKind: vi.fn().mockName("DatabaseService.getEventsByPubkeyAndKind"),
       getEventById: vi.fn().mockName("DatabaseService.getEventById")
     } as unknown as MockedObject<DatabaseService>;
     mockDatabase.getNotification.mockReturnValue(Promise.resolve(undefined));
     mockDatabase.deleteNotification.mockReturnValue(Promise.resolve());
+    mockDatabase.getEventsByPubkeyAndKind.mockReturnValue(Promise.resolve([]));
     mockDatabase.getEventById.mockReturnValue(Promise.resolve(null));
 
     mockLocalSettings = {
@@ -477,6 +479,57 @@ describe('ContentNotificationService', () => {
       expect(mockAccountLocalState.markFollowerNotificationsBatchProcessed)
         .toHaveBeenCalledWith(TEST_PUBKEY_A, [TEST_PUBKEY_B], now);
       expect(mockAccountLocalState.markFollowerNotificationProcessed).not.toHaveBeenCalled();
+    });
+
+    it('should skip follower notification when author already followed in an earlier contact list event', async () => {
+      mockAccountLocalState.getNotificationLastCheck.mockReturnValue(1700000000);
+      mockAccountLocalState.getFollowerNotificationsProcessedAt.mockReturnValue({});
+
+      const now = Math.floor(Date.now() / 1000);
+      const olderFollowerEvent = {
+        id: 'follow-old',
+        pubkey: TEST_PUBKEY_B,
+        kind: kinds.Contacts,
+        created_at: now - 86400,
+        content: '',
+        tags: [['p', TEST_PUBKEY_A]],
+      };
+      const newerFollowerEvent = {
+        id: 'follow-new',
+        pubkey: TEST_PUBKEY_B,
+        kind: kinds.Contacts,
+        created_at: now,
+        content: '',
+        tags: [
+          ['p', TEST_PUBKEY_A],
+          ['p', 'cccc'.repeat(16)],
+        ],
+      };
+
+      mockDatabase.getNotification.mockReturnValue(Promise.resolve(undefined));
+      mockDatabase.getEventsByPubkeyAndKind = vi.fn().mockResolvedValue([olderFollowerEvent]) as unknown as typeof mockDatabase.getEventsByPubkeyAndKind;
+
+      mockAccountRelay.getMany.mockImplementation(async <T>(filter: {
+        kinds?: number[];
+        authors?: string[];
+      }) => {
+        if (filter.authors?.includes(TEST_PUBKEY_B)) {
+          return [olderFollowerEvent] as unknown as T[];
+        }
+
+        if (filter.kinds?.includes(kinds.Contacts)) {
+          return [newerFollowerEvent] as unknown as T[];
+        }
+
+        return [] as T[];
+      });
+
+      await service.initialize();
+      await service.checkForNewNotifications();
+
+      expect(mockNotificationService.addNotification).not.toHaveBeenCalled();
+      expect(mockAccountLocalState.markFollowerNotificationProcessed)
+        .toHaveBeenCalledWith(TEST_PUBKEY_A, TEST_PUBKEY_B, now);
     });
   });
 
