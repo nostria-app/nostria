@@ -12,6 +12,10 @@
   height: 100dvh;
 }
 
+:host {
+  --mobile-dialog-footer-space: 88px;
+}
+
 // Backdrop
 .dialog-backdrop {
   position: absolute;
@@ -69,6 +73,7 @@
     max-height: 100%;
     height: 100%;
     border-radius: 0;
+    position: relative;
   }
 }
 
@@ -296,21 +301,22 @@
 // Content
 .dialog-content {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
   padding: 10px 14px 14px;
 
   @media (max-width: 600px),
   (max-height: 700px) {
-    padding: 4px 8px 8px;
+    padding: 4px 8px calc(8px + var(--mobile-dialog-footer-space) + env(safe-area-inset-bottom));
   }
 
   @media (max-width: 400px) {
-    padding: 2px 6px 4px;
+    padding: 2px 6px calc(4px + var(--mobile-dialog-footer-space) + env(safe-area-inset-bottom));
   }
 
   @media (max-height: 600px) {
-    padding: 4px 10px 8px;
+    padding: 4px 10px calc(8px + var(--mobile-dialog-footer-space) + env(safe-area-inset-bottom));
   }
 
   // Custom scrollbar
@@ -465,20 +471,28 @@
 
   @media (max-width: 600px),
   (max-height: 700px) {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 2;
+    background: var(--mat-sys-surface);
+    border-top: 1px solid var(--mat-sys-outline-variant);
+
     &:has([dialog-actions]) {
-      padding: 8px 10px 10px;
+      padding: 10px 10px calc(10px + env(safe-area-inset-bottom));
     }
   }
 
   @media (max-width: 400px) {
     &:has([dialog-actions]) {
-      padding: 6px 6px 8px;
+      padding: 8px 6px calc(8px + env(safe-area-inset-bottom));
     }
   }
 
   @media (max-height: 600px) {
     &:has([dialog-actions]) {
-      padding: 6px 12px 8px;
+      padding: 8px 12px calc(8px + env(safe-area-inset-bottom));
     }
   }
 

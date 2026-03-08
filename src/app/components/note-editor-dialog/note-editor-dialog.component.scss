@@ -7,6 +7,13 @@
   min-height: 0;
   overflow: hidden;
 
+  @media (max-width: 600px),
+  (max-height: 700px) {
+    position: relative;
+    height: 100%;
+    max-height: 100%;
+  }
+
   .dialog-content-wrapper {
     position: relative;
     min-height: 0;
@@ -45,7 +52,10 @@
 
     @media (max-width: 600px),
     (max-height: 700px) {
-      padding: 12px 2px 8px;
+      position: relative;
+      z-index: 1;
+      padding: 12px 2px calc(8px + env(safe-area-inset-bottom));
+      border-top: 1px solid var(--mat-sys-outline-variant);
     }
   }
 
