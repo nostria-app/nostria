@@ -120,7 +120,8 @@
         <mat-form-field appearance="outline" class="content-field" [class.focused]="isContentFocused()"
           subscriptSizing="dynamic">
           @if (!content() && !isContentFocused()) {
-          <mat-label>{{ isMediaModeEnabled() ? 'Description' : (inlineMode() ? 'Post your reply' : "What's on your mind?") }}</mat-label>
+          <mat-label>{{ isMediaModeEnabled() ? 'Description' : (inlineMode() ? 'Post your reply' : "What's on your
+            mind?") }}</mat-label>
           }
           <textarea matInput [value]="content()" (input)="onContentInput($event)" (focus)="onContentFocus()"
             (blur)="onContentBlur()" (keydown)="onContentKeyDown($event)" (keyup)="onContentKeyUp($event)"
