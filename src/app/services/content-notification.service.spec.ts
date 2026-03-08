@@ -7,7 +7,7 @@ import { NotificationService } from './notification.service';
 import { AccountRelayService } from './relays/account-relay';
 import { AccountLocalStateService } from './account-local-state.service';
 import { AccountStateService } from './account-state.service';
-import { DatabaseService } from './database.service';
+import { DatabaseService, NotificationType } from './database.service';
 import { LocalSettingsService } from './local-settings.service';
 import { kinds } from 'nostr-tools';
 
@@ -21,6 +21,7 @@ describe('ContentNotificationService', () => {
   let mockNotificationService: {
     notifications: ReturnType<typeof signal<unknown[]>>;
     addNotification: Mock;
+    removeNotification: Mock;
     persistNotificationToStorage: Mock;
   };
   let mockAccountRelay: MockedObject<AccountRelayService>;
@@ -41,16 +42,23 @@ describe('ContentNotificationService', () => {
     mockAccountLocalState = {
       getNotificationLastCheck: vi.fn().mockName("AccountLocalStateService.getNotificationLastCheck"),
       setNotificationLastCheck: vi.fn().mockName("AccountLocalStateService.setNotificationLastCheck"),
+      getFollowerNotificationsProcessedAt: vi.fn().mockName("AccountLocalStateService.getFollowerNotificationsProcessedAt"),
       hasProcessedFollowerNotification: vi.fn().mockName("AccountLocalStateService.hasProcessedFollowerNotification"),
       markFollowerNotificationProcessed: vi.fn().mockName("AccountLocalStateService.markFollowerNotificationProcessed"),
+      markFollowerNotificationsBatchProcessed: vi.fn().mockName("AccountLocalStateService.markFollowerNotificationsBatchProcessed"),
+      getFollowerCheckLastTimestamp: vi.fn().mockName("AccountLocalStateService.getFollowerCheckLastTimestamp"),
+      setFollowerCheckLastTimestamp: vi.fn().mockName("AccountLocalStateService.setFollowerCheckLastTimestamp"),
       clearFollowerNotificationsProcessed: vi.fn().mockName("AccountLocalStateService.clearFollowerNotificationsProcessed")
     } as unknown as MockedObject<AccountLocalStateService>;
     mockAccountLocalState.getNotificationLastCheck.mockReturnValue(0);
+    mockAccountLocalState.getFollowerNotificationsProcessedAt.mockReturnValue({});
+    mockAccountLocalState.getFollowerCheckLastTimestamp.mockReturnValue(1700000000);
     mockAccountLocalState.hasProcessedFollowerNotification.mockReturnValue(false);
 
     mockNotificationService = {
       notifications: signal<unknown[]>([]),
       addNotification: vi.fn(),
+      removeNotification: vi.fn(),
       persistNotificationToStorage: vi.fn().mockReturnValue(Promise.resolve()),
     };
 
@@ -63,9 +71,11 @@ describe('ContentNotificationService', () => {
 
     mockDatabase = {
       getNotification: vi.fn().mockName("DatabaseService.getNotification"),
+      deleteNotification: vi.fn().mockName("DatabaseService.deleteNotification"),
       getEventById: vi.fn().mockName("DatabaseService.getEventById")
     } as unknown as MockedObject<DatabaseService>;
     mockDatabase.getNotification.mockReturnValue(Promise.resolve(undefined));
+    mockDatabase.deleteNotification.mockReturnValue(Promise.resolve());
     mockDatabase.getEventById.mockReturnValue(Promise.resolve(null));
 
     mockLocalSettings = {
@@ -384,6 +394,9 @@ describe('ContentNotificationService', () => {
 
     it('should skip follower notification when already processed for this follower', async () => {
       mockAccountLocalState.getNotificationLastCheck.mockReturnValue(1700000000);
+      mockAccountLocalState.getFollowerNotificationsProcessedAt.mockReturnValue({
+        [TEST_PUBKEY_B]: 1700000000,
+      });
       mockAccountLocalState.hasProcessedFollowerNotification.mockImplementation((recipient: string, follower: string) => {
         return recipient === TEST_PUBKEY_A && follower === TEST_PUBKEY_B;
       });
@@ -411,6 +424,58 @@ describe('ContentNotificationService', () => {
       await service.checkForNewNotifications();
 
       expect(mockNotificationService.addNotification).not.toHaveBeenCalled();
+      expect(mockAccountLocalState.markFollowerNotificationProcessed).not.toHaveBeenCalled();
+    });
+
+    it('should skip follower notification when follower exists in stored follower summary metadata', async () => {
+      mockAccountLocalState.getNotificationLastCheck.mockReturnValue(1700000000);
+      mockAccountLocalState.getFollowerNotificationsProcessedAt.mockReturnValue({});
+
+      const now = Math.floor(Date.now() / 1000);
+      const followerEvent = {
+        id: 'follow-3',
+        pubkey: TEST_PUBKEY_B,
+        kind: kinds.Contacts,
+        created_at: now,
+        content: '',
+        tags: [['p', TEST_PUBKEY_A]],
+      };
+
+      mockDatabase.getNotification.mockImplementation(async (notificationId: string) => {
+        if (notificationId === `content-${NotificationType.FOLLOWER_SUMMARY}-${TEST_PUBKEY_A}`) {
+          return {
+            id: notificationId,
+            type: NotificationType.FOLLOWER_SUMMARY,
+            title: 'Followers',
+            timestamp: now * 1000,
+            read: false,
+            recipientPubkey: TEST_PUBKEY_A,
+            authorPubkey: TEST_PUBKEY_A,
+            metadata: {
+              followerCount: 1,
+              followerPubkeys: [TEST_PUBKEY_B],
+            },
+          };
+        }
+
+        return undefined;
+      });
+
+      mockAccountRelay.getMany.mockImplementation(async <T>(filter: {
+        kinds?: number[];
+      }) => {
+        if (filter.kinds?.includes(kinds.Contacts)) {
+          return [followerEvent] as unknown as T[];
+        }
+        return [] as T[];
+      });
+
+      await service.initialize();
+      await service.checkForNewNotifications();
+
+      expect(mockNotificationService.addNotification).not.toHaveBeenCalled();
+      expect(mockAccountLocalState.markFollowerNotificationsBatchProcessed)
+        .toHaveBeenCalledWith(TEST_PUBKEY_A, [TEST_PUBKEY_B], now);
       expect(mockAccountLocalState.markFollowerNotificationProcessed).not.toHaveBeenCalled();
     });
   });
