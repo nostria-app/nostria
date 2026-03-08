@@ -86,6 +86,12 @@ export class MessagingService implements NostriaService {
    */
   private knownEventIds = new Set<string>();
 
+  /**
+   * Tracks gift-wrap event IDs currently being decrypted so concurrent relay
+   * callbacks do not queue duplicate decrypt operations for the same event.
+   */
+  private inFlightGiftWrapIds = new Set<string>();
+
   MESSAGE_SIZE = 400;
 
   getChat(chatId: string): Chat | null {
@@ -1552,6 +1558,22 @@ export class MessagingService implements NostriaService {
     const myPubkey = this.accountState.pubkey();
     if (!myPubkey) return null;
 
+    if (!wrappedEvent?.id) {
+      return null;
+    }
+
+    // Cross-path dedup: skip immediately when we already handled this outer event.
+    if (this.knownEventIds.has(wrappedEvent.id)) {
+      return null;
+    }
+
+    // In-flight dedup: avoid multiple concurrent decrypts of the same gift wrap.
+    if (this.inFlightGiftWrapIds.has(wrappedEvent.id)) {
+      return null;
+    }
+
+    this.inFlightGiftWrapIds.add(wrappedEvent.id);
+
     try {
       // Check if this message is for us
       const recipient = wrappedEvent.tags.find((t: string[]) => t[0] === 'p')?.[1];
@@ -1576,6 +1598,18 @@ export class MessagingService implements NostriaService {
         wrappedContent = JSON.parse(decryptionResult.content);
       } catch (err) {
         this.logger.debug('Failed to decrypt wrapped content', { eventId: wrappedEvent.id });
+        return null;
+      }
+
+      // Root/sealed event ID is stable for this wrapped payload. If we already know it
+      // from cache or previous processing, skip the second decrypt stage entirely.
+      const rootWrappedEventId = typeof wrappedContent?.id === 'string' ? wrappedContent.id : null;
+      if (rootWrappedEventId && this.knownEventIds.has(rootWrappedEventId)) {
+        this.knownEventIds.add(wrappedEvent.id);
+        this.logger.debug('Skipping NIP-44 unwrap: root wrapped event already known', {
+          giftWrapId: wrappedEvent.id,
+          rootWrappedEventId,
+        });
         return null;
       }
 
@@ -1605,6 +1639,10 @@ export class MessagingService implements NostriaService {
         throw new Error('Decrypted message pubkey does not match wrapped content pubkey');
       }
 
+      if (rootWrappedEventId) {
+        this.knownEventIds.add(rootWrappedEventId);
+      }
+
       // Return the final decrypted message
       return {
         ...sealedEvent,
@@ -1612,6 +1650,8 @@ export class MessagingService implements NostriaService {
     } catch (err) {
       this.logger.error('Failed to unwrap message', err);
       throw err;
+    } finally {
+      this.inFlightGiftWrapIds.delete(wrappedEvent.id);
     }
   }
 
