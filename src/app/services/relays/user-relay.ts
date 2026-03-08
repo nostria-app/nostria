@@ -22,6 +22,78 @@ export class UserRelayService {
   private injector = inject(Injector);
 
   private useOptimizedRelays = true;
+  private readonly LOOKUP_CACHE_TTL_MS = 15_000;
+  private readonly PREFERRED_RELAYS_LIMIT = 3;
+  private readonly PREFERRED_RELAY_FALLBACK_QUEUE_THRESHOLD = 100;
+  private readonly eventByIdCache = new Map<string, { value: Event | null; expiresAt: number }>();
+  private readonly taggedEventCache = new Map<string, { value: Event | null; expiresAt: number }>();
+  private readonly inflightEventByIdRequests = new Map<string, Promise<Event | null>>();
+  private readonly inflightTaggedEventRequests = new Map<string, Promise<Event | null>>();
+
+  private getCachedLookupResult(
+    cache: Map<string, { value: Event | null; expiresAt: number }>,
+    cacheKey: string,
+  ): Event | null | undefined {
+    const cached = cache.get(cacheKey);
+    if (!cached) {
+      return undefined;
+    }
+
+    if (Date.now() > cached.expiresAt) {
+      cache.delete(cacheKey);
+      return undefined;
+    }
+
+    return cached.value;
+  }
+
+  private setCachedLookupResult(
+    cache: Map<string, { value: Event | null; expiresAt: number }>,
+    cacheKey: string,
+    value: Event | null,
+  ): Event | null {
+    cache.set(cacheKey, {
+      value,
+      expiresAt: Date.now() + this.LOOKUP_CACHE_TTL_MS,
+    });
+
+    return value;
+  }
+
+  private async getOrCreateLookup<T extends Event | null>(
+    cache: Map<string, { value: T; expiresAt: number }>,
+    inflightRequests: Map<string, Promise<T>>,
+    cacheKey: string,
+    operation: () => Promise<T>,
+  ): Promise<T> {
+    const cached = this.getCachedLookupResult(cache as Map<string, { value: Event | null; expiresAt: number }>, cacheKey);
+    if (cached !== undefined) {
+      return cached as T;
+    }
+
+    const existingRequest = inflightRequests.get(cacheKey);
+    if (existingRequest) {
+      return existingRequest;
+    }
+
+    const requestPromise = operation()
+      .then(result => this.setCachedLookupResult(cache as Map<string, { value: Event | null; expiresAt: number }>, cacheKey, result as Event | null) as T)
+      .finally(() => {
+        inflightRequests.delete(cacheKey);
+      });
+
+    inflightRequests.set(cacheKey, requestPromise);
+    return requestPromise;
+  }
+
+  private createEventByIdCacheKey(pubkey: string, id: string): string {
+    return `event:${pubkey}:${id}`;
+  }
+
+  private createTaggedEventCacheKey(pubkeys: string[], kind: number, tag: { key: string; value: string }): string {
+    const normalizedPubkeys = [...pubkeys].sort();
+    return `tagged:${normalizedPubkeys.join(',')}:${kind}:${tag.key}:${tag.value}`;
+  }
 
   /**
    * Ensure relay URLs are discovered and cached for a pubkey
@@ -83,15 +155,19 @@ export class UserRelayService {
   }
 
   async getEventById(pubkey: string, id: string): Promise<Event | null> {
-    await this.ensureRelaysForPubkey(pubkey);
-    const relayUrls = this.getEffectiveRelayUrls(this.getRelaysForPubkey(pubkey));
+    const cacheKey = this.createEventByIdCacheKey(pubkey, id);
 
-    if (relayUrls.length === 0) {
-      this.logger.warn(`[UserRelayService] No relays available for pubkey: ${pubkey.slice(0, 16)}...`);
-      return null;
-    }
+    return this.getOrCreateLookup(this.eventByIdCache, this.inflightEventByIdRequests, cacheKey, async () => {
+      await this.ensureRelaysForPubkey(pubkey);
+      const relayUrls = this.getEffectiveRelayUrls(this.getRelaysForPubkey(pubkey));
 
-    return this.pool.get(relayUrls, { ids: [id] });
+      if (relayUrls.length === 0) {
+        this.logger.warn(`[UserRelayService] No relays available for pubkey: ${pubkey.slice(0, 16)}...`);
+        return null;
+      }
+
+      return this.pool.get(relayUrls, { ids: [id] });
+    });
   }
 
   /**
@@ -387,63 +463,78 @@ export class UserRelayService {
       return null;
     }
 
-    const allRelayUrls = new Set<string>();
+    const cacheKey = this.createTaggedEventCacheKey(validPubkeys, kind, tag);
 
-    for (const pk of validPubkeys) {
-      await this.ensureRelaysForPubkey(pk);
-      const relayUrls = this.getRelaysForPubkey(pk);
-      relayUrls.forEach(url => allRelayUrls.add(url));
-    }
+    return this.getOrCreateLookup(this.taggedEventCache, this.inflightTaggedEventRequests, cacheKey, async () => {
+      const allRelayUrls = new Set<string>();
 
-    const relayUrls = this.getEffectiveRelayUrls(Array.from(allRelayUrls));
-
-    const filter = {
-      authors: validPubkeys,
-      kinds: [kind],
-    } as {
-      authors: string[];
-      kinds: number[];
-      '#e'?: string[];
-      '#p'?: string[];
-      '#d'?: string[];
-    };
-
-    if (tag.key === 'e') {
-      filter['#e'] = [tag.value];
-    } else if (tag.key === 'p') {
-      filter['#p'] = [tag.value];
-    } else if (tag.key === 'd') {
-      filter['#d'] = [tag.value];
-    }
-
-    // First try user's relays (prioritizing WRITE relays)
-    if (relayUrls.length > 0) {
-      const event = await this.pool.get(relayUrls, filter);
-      if (event) {
-        return event;
+      for (const pk of validPubkeys) {
+        await this.ensureRelaysForPubkey(pk);
+        const relayUrls = this.getRelaysForPubkey(pk);
+        relayUrls.forEach(url => allRelayUrls.add(url));
       }
-      this.logger.debug(`[UserRelayService] Event not found on user's relays, trying preferred relays...`);
-    } else {
-      this.logger.warn(`[UserRelayService] No relays available for pubkeys: ${validPubkeys.map(pk => pk.slice(0, 16)).join(', ')}...`);
-    }
 
-    // Fallback: Try preferred relays (common public relays)
-    // This helps when users have changed their relay list but old events
-    // were published to different relays
-    const preferredRelays = this.relaysService.getOptimalRelays(
-      this.utilities.preferredRelays,
-      5
-    );
+      const relayUrls = this.getEffectiveRelayUrls(Array.from(allRelayUrls));
 
-    if (preferredRelays.length > 0) {
-      const event = await this.pool.get(preferredRelays, filter);
-      if (event) {
-        this.logger.debug(`[UserRelayService] Event found on preferred relays`);
-        return event;
+      const filter = {
+        authors: validPubkeys,
+        kinds: [kind],
+      } as {
+        authors: string[];
+        kinds: number[];
+        '#e'?: string[];
+        '#p'?: string[];
+        '#d'?: string[];
+      };
+
+      if (tag.key === 'e') {
+        filter['#e'] = [tag.value];
+      } else if (tag.key === 'p') {
+        filter['#p'] = [tag.value];
+      } else if (tag.key === 'd') {
+        filter['#d'] = [tag.value];
       }
-    }
 
-    return null;
+      // First try user's relays (prioritizing WRITE relays)
+      if (relayUrls.length > 0) {
+        const event = await this.pool.get(relayUrls, filter);
+        if (event) {
+          return event;
+        }
+
+        if (this.pool.isBacklogged(this.PREFERRED_RELAY_FALLBACK_QUEUE_THRESHOLD)) {
+          this.logger.debug('[UserRelayService] Skipping preferred relay fallback because relay pool is backlogged', {
+            queueLength: this.pool.getQueueLength(),
+            activeRequestCount: this.pool.getActiveRequestCount(),
+            kind,
+            tagKey: tag.key,
+          });
+          return null;
+        }
+
+        this.logger.debug(`[UserRelayService] Event not found on user's relays, trying preferred relays...`);
+      } else {
+        this.logger.warn(`[UserRelayService] No relays available for pubkeys: ${validPubkeys.map(pk => pk.slice(0, 16)).join(', ')}...`);
+      }
+
+      // Fallback: Try preferred relays (common public relays)
+      // This helps when users have changed their relay list but old events
+      // were published to different relays
+      const preferredRelays = this.relaysService.getOptimalRelays(
+        this.utilities.preferredRelays,
+        this.PREFERRED_RELAYS_LIMIT
+      );
+
+      if (preferredRelays.length > 0) {
+        const event = await this.pool.get(preferredRelays, filter);
+        if (event) {
+          this.logger.debug(`[UserRelayService] Event found on preferred relays`);
+          return event;
+        }
+      }
+
+      return null;
+    });
   }
 
   /**

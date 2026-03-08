@@ -36,6 +36,118 @@ export class RelayPoolService {
 
   // Pool instance identifier
   private readonly poolInstanceId = `RelayPoolService_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  private readonly maxConcurrentRequests = 4;
+  private readonly maxConcurrentRequestsPerRelay = 2;
+  private activeRequestCount = 0;
+  private readonly activeRequestsByRelay = new Map<string, number>();
+  private readonly requestQueue: {
+    id: string;
+    type: 'get' | 'query';
+    relayUrls: string[];
+    enqueuedAt: number;
+    execute: () => Promise<unknown>;
+    resolve: (value: unknown) => void;
+    reject: (reason?: unknown) => void;
+  }[] = [];
+
+  private canStartRequest(relayUrls: string[]): boolean {
+    if (this.activeRequestCount >= this.maxConcurrentRequests) {
+      return false;
+    }
+
+    return relayUrls.every(url => (this.activeRequestsByRelay.get(url) || 0) < this.maxConcurrentRequestsPerRelay);
+  }
+
+  private markRequestStarted(relayUrls: string[]): void {
+    this.activeRequestCount++;
+
+    relayUrls.forEach(url => {
+      this.activeRequestsByRelay.set(url, (this.activeRequestsByRelay.get(url) || 0) + 1);
+    });
+  }
+
+  private markRequestCompleted(relayUrls: string[]): void {
+    this.activeRequestCount = Math.max(0, this.activeRequestCount - 1);
+
+    relayUrls.forEach(url => {
+      const nextCount = Math.max(0, (this.activeRequestsByRelay.get(url) || 0) - 1);
+      if (nextCount === 0) {
+        this.activeRequestsByRelay.delete(url);
+      } else {
+        this.activeRequestsByRelay.set(url, nextCount);
+      }
+    });
+  }
+
+  private processRequestQueue(): void {
+    while (this.activeRequestCount < this.maxConcurrentRequests && this.requestQueue.length > 0) {
+      const nextIndex = this.requestQueue.findIndex(entry => this.canStartRequest(entry.relayUrls));
+      if (nextIndex === -1) {
+        return;
+      }
+
+      const [entry] = this.requestQueue.splice(nextIndex, 1);
+      this.markRequestStarted(entry.relayUrls);
+
+      const queueWaitMs = Date.now() - entry.enqueuedAt;
+      if (queueWaitMs > 25) {
+        this.logger.debug('[RelayPoolService] Dequeued relay request', {
+          requestId: entry.id,
+          type: entry.type,
+          relayCount: entry.relayUrls.length,
+          queueWaitMs,
+          remainingQueueLength: this.requestQueue.length,
+          activeRequestCount: this.activeRequestCount,
+        });
+      }
+
+      void entry.execute()
+        .then(result => entry.resolve(result))
+        .catch(error => entry.reject(error))
+        .finally(() => {
+          this.markRequestCompleted(entry.relayUrls);
+          this.processRequestQueue();
+        });
+    }
+  }
+
+  private enqueueRequest<T>(requestId: string, type: 'get' | 'query', relayUrls: string[], operation: () => Promise<T>): Promise<T> {
+    return new Promise<T>((resolve, reject) => {
+      this.requestQueue.push({
+        id: requestId,
+        type,
+        relayUrls,
+        enqueuedAt: Date.now(),
+        execute: operation,
+        resolve: value => resolve(value as T),
+        reject,
+      });
+
+      if (this.requestQueue.length > 1 || !this.canStartRequest(relayUrls)) {
+        this.logger.debug('[RelayPoolService] Queued relay request', {
+          requestId,
+          type,
+          relayCount: relayUrls.length,
+          queueLength: this.requestQueue.length,
+          activeRequestCount: this.activeRequestCount,
+        });
+      }
+
+      this.processRequestQueue();
+    });
+  }
+
+  getQueueLength(): number {
+    return this.requestQueue.length;
+  }
+
+  getActiveRequestCount(): number {
+    return this.activeRequestCount;
+  }
+
+  isBacklogged(queueThreshold = 100): boolean {
+    return this.requestQueue.length >= queueThreshold;
+  }
 
   /**
    * Add relays to the pool and register them with RelaysService
@@ -94,47 +206,49 @@ export class RelayPoolService {
       this.poolInstanceId
     );
 
-    this.logger.debug('[RelayPoolService] Executing get request', {
-      requestId,
-      relayCount: filteredUrls.length,
-      filter,
-      timeout: timeoutMs,
-    });
-
-    try {
-      let event = await this.#pool.get(filteredUrls, filter, { maxWait: timeoutMs });
-
-      // Filter event through centralized processor (expiration, deletion, muting)
-      if (event && !this.eventProcessor.shouldAcceptEvent(event)) {
-        event = null;
-      }
-
-      // Track successful event retrieval
-      if (event) {
-        filteredUrls.forEach(url => {
-          this.relaysService.incrementEventCount(url);
-          this.subscriptionManager.updateConnectionStatus(url, true, this.poolInstanceId);
-        });
-      } else {
-        filteredUrls.forEach(url => {
-          this.subscriptionManager.updateConnectionStatus(url, true, this.poolInstanceId);
-        });
-      }
-
-      return event;
-    } catch (error) {
-      this.logger.error('[RelayPoolService] Error fetching events:', error);
-
-      // Record connection issues for all relays
-      filteredUrls.forEach(url => {
-        this.relaysService.recordConnectionRetry(url);
-        this.subscriptionManager.updateConnectionStatus(url, false, this.poolInstanceId);
+    return this.enqueueRequest(requestId, 'get', filteredUrls, async () => {
+      this.logger.debug('[RelayPoolService] Executing get request', {
+        requestId,
+        relayCount: filteredUrls.length,
+        filter,
+        timeout: timeoutMs,
       });
 
-      return null;
-    } finally {
-      this.subscriptionManager.unregisterRequest(requestId, filteredUrls);
-    }
+      try {
+        let event = await this.#pool.get(filteredUrls, filter, { maxWait: timeoutMs });
+
+        // Filter event through centralized processor (expiration, deletion, muting)
+        if (event && !this.eventProcessor.shouldAcceptEvent(event)) {
+          event = null;
+        }
+
+        // Track successful event retrieval
+        if (event) {
+          filteredUrls.forEach(url => {
+            this.relaysService.incrementEventCount(url);
+            this.subscriptionManager.updateConnectionStatus(url, true, this.poolInstanceId);
+          });
+        } else {
+          filteredUrls.forEach(url => {
+            this.subscriptionManager.updateConnectionStatus(url, true, this.poolInstanceId);
+          });
+        }
+
+        return event;
+      } catch (error) {
+        this.logger.error('[RelayPoolService] Error fetching events:', error);
+
+        // Record connection issues for all relays
+        filteredUrls.forEach(url => {
+          this.relaysService.recordConnectionRetry(url);
+          this.subscriptionManager.updateConnectionStatus(url, false, this.poolInstanceId);
+        });
+
+        return null;
+      } finally {
+        this.subscriptionManager.unregisterRequest(requestId, filteredUrls);
+      }
+    });
   }
 
   /**
@@ -169,56 +283,58 @@ export class RelayPoolService {
       this.poolInstanceId
     );
 
-    this.logger.debug('[RelayPoolService] Executing query request', {
-      requestId,
-      relayCount: filteredUrls.length,
-      filter: JSON.stringify(filter),
-      timeout: timeoutMs,
-    });
-
-    try {
-      let events = await this.#pool.querySync(filteredUrls, filter, { maxWait: timeoutMs });
-
-      // Filter events through centralized processor (expiration, deletion, muting)
-      events = this.eventProcessor.filterEvents(events);
-
-      // Debug: Log pagination results
-      if (filter.until) {
-        const untilDate = new Date(filter.until * 1000).toISOString();
-        this.logger.debug(`[RelayPoolService] Pagination query returned ${events.length} events (until: ${untilDate})`);
-        if (events.length > 0) {
-          const oldestEvent = events.reduce((oldest, e) => (e.created_at || 0) < (oldest.created_at || 0) ? e : oldest);
-          const newestEvent = events.reduce((newest, e) => (e.created_at || 0) > (newest.created_at || 0) ? e : newest);
-          this.logger.debug(`[RelayPoolService] Event range: ${new Date((oldestEvent.created_at || 0) * 1000).toISOString()} to ${new Date((newestEvent.created_at || 0) * 1000).toISOString()}`);
-        }
-      }
-
-      // Track successful event retrieval
-      if (events.length > 0) {
-        filteredUrls.forEach(url => {
-          this.relaysService.incrementEventCount(url);
-          this.subscriptionManager.updateConnectionStatus(url, true, this.poolInstanceId);
-        });
-      } else {
-        filteredUrls.forEach(url => {
-          this.subscriptionManager.updateConnectionStatus(url, true, this.poolInstanceId);
-        });
-      }
-
-      return events;
-    } catch (error) {
-      this.logger.error('[RelayPoolService] Error fetching events:', error);
-
-      // Record connection issues for all relays
-      filteredUrls.forEach(url => {
-        this.relaysService.recordConnectionRetry(url);
-        this.subscriptionManager.updateConnectionStatus(url, false, this.poolInstanceId);
+    return this.enqueueRequest(requestId, 'query', filteredUrls, async () => {
+      this.logger.debug('[RelayPoolService] Executing query request', {
+        requestId,
+        relayCount: filteredUrls.length,
+        filter: JSON.stringify(filter),
+        timeout: timeoutMs,
       });
 
-      return [];
-    } finally {
-      this.subscriptionManager.unregisterRequest(requestId, filteredUrls);
-    }
+      try {
+        let events = await this.#pool.querySync(filteredUrls, filter, { maxWait: timeoutMs });
+
+        // Filter events through centralized processor (expiration, deletion, muting)
+        events = this.eventProcessor.filterEvents(events);
+
+        // Debug: Log pagination results
+        if (filter.until) {
+          const untilDate = new Date(filter.until * 1000).toISOString();
+          this.logger.debug(`[RelayPoolService] Pagination query returned ${events.length} events (until: ${untilDate})`);
+          if (events.length > 0) {
+            const oldestEvent = events.reduce((oldest, e) => (e.created_at || 0) < (oldest.created_at || 0) ? e : oldest);
+            const newestEvent = events.reduce((newest, e) => (e.created_at || 0) > (newest.created_at || 0) ? e : newest);
+            this.logger.debug(`[RelayPoolService] Event range: ${new Date((oldestEvent.created_at || 0) * 1000).toISOString()} to ${new Date((newestEvent.created_at || 0) * 1000).toISOString()}`);
+          }
+        }
+
+        // Track successful event retrieval
+        if (events.length > 0) {
+          filteredUrls.forEach(url => {
+            this.relaysService.incrementEventCount(url);
+            this.subscriptionManager.updateConnectionStatus(url, true, this.poolInstanceId);
+          });
+        } else {
+          filteredUrls.forEach(url => {
+            this.subscriptionManager.updateConnectionStatus(url, true, this.poolInstanceId);
+          });
+        }
+
+        return events;
+      } catch (error) {
+        this.logger.error('[RelayPoolService] Error fetching events:', error);
+
+        // Record connection issues for all relays
+        filteredUrls.forEach(url => {
+          this.relaysService.recordConnectionRetry(url);
+          this.subscriptionManager.updateConnectionStatus(url, false, this.poolInstanceId);
+        });
+
+        return [];
+      } finally {
+        this.subscriptionManager.unregisterRequest(requestId, filteredUrls);
+      }
+    });
   }
 
   /**
@@ -432,7 +548,6 @@ export class RelayPoolService {
 
     } catch (error) {
       this.logger.error('[RelayPoolService] Error publishing event:', error);
-      const errorMessage = error instanceof Error ? error.message : String(error);
 
       // Record connection issues for all relays
       filteredUrls.forEach(url => {
