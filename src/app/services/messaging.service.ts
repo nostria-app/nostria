@@ -435,20 +435,16 @@ export class MessagingService implements NostriaService {
   }
 
   /**
-   * Save a message to IndexedDB storage
+   * Save a message to IndexedDB storage.
+   * Uses put() semantics — inserts new messages and updates existing ones
+   * (e.g. when pending→received status changes).
    */
   private async saveMessageToStorage(message: DirectMessage, chatId: string): Promise<void> {
     const myPubkey = this.accountState.pubkey();
     if (!myPubkey) return;
 
     try {
-      // Check if message already exists in storage to avoid duplicates
       await this.database.init();
-      const exists = await this.database.messageExists(myPubkey, chatId, message.id);
-      if (exists) {
-        this.logger.debug(`Message ${message.id} already in storage, skipping save`);
-        return;
-      }
 
       const storedMessage: StoredDirectMessage = {
         id: `${myPubkey}::${chatId}::${message.id}`,
@@ -468,6 +464,8 @@ export class MessagingService implements NostriaService {
         giftWrapId: message.giftWrapId, // Store gift wrap ID for NIP-44 messages
       };
 
+      // database.saveDirectMessage uses store.put() which upserts,
+      // so this correctly handles both inserts and status updates.
       await this.database.saveDirectMessage(storedMessage);
       this.logger.debug(`Saved message ${message.id} to storage`);
     } catch (error) {
