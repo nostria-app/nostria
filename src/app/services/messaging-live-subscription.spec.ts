@@ -38,6 +38,7 @@ describe('MessagingService live subscriptions', () => {
 
   const database = {
     getEventByPubkeyAndKind: vi.fn().mockResolvedValue(null),
+    getDirectMessage: vi.fn().mockResolvedValue(null),
     init: vi.fn().mockResolvedValue(undefined),
     messageExists: vi.fn().mockResolvedValue(false),
     saveDirectMessage: vi.fn().mockResolvedValue(undefined),
@@ -169,5 +170,52 @@ describe('MessagingService live subscriptions', () => {
     expect(message.pending).toBe(false);
     expect(message.received).toBe(true);
     expect(message.failed).toBe(false);
+  });
+
+  it('does not restore unread state when a replayed DM is already marked read in storage', async () => {
+    const callbacks: Array<(event: unknown) => Promise<void> | void> = [];
+    subscribeMock.mockImplementation((_relays: unknown, _filter: unknown, callback: (event: unknown) => Promise<void> | void) => {
+      callbacks.push(callback);
+      return { close: vi.fn() };
+    });
+
+    database.getDirectMessage.mockResolvedValue({
+      id: 'my-pubkey::peer-pubkey::inner-message-id',
+      accountPubkey: 'my-pubkey',
+      chatId: 'peer-pubkey',
+      messageId: 'inner-message-id',
+      pubkey: 'peer-pubkey',
+      created_at: 1_700_000_000,
+      content: 'hello again',
+      isOutgoing: false,
+      tags: [['p', 'my-pubkey']],
+      encryptionType: 'nip44',
+      read: true,
+      received: true,
+    });
+
+    vi.spyOn(service as any, 'unwrapMessageInternal').mockResolvedValue({
+      id: 'inner-message-id',
+      pubkey: 'peer-pubkey',
+      created_at: 1_700_000_000,
+      content: 'hello again',
+      tags: [['p', 'my-pubkey']],
+    });
+
+    await service.subscribeToIncomingMessages();
+    await callbacks[0]({
+      id: 'gift-wrap-id-2',
+      kind: kinds.GiftWrap,
+      pubkey: 'ephemeral-pubkey',
+      created_at: 1_700_000_100,
+      content: 'encrypted',
+      tags: [['p', 'my-pubkey']],
+    });
+
+    const chat = service.getChat('peer-pubkey');
+    const [message] = service.getChatMessages('peer-pubkey');
+
+    expect(chat?.unreadCount).toBe(0);
+    expect(message.read).toBe(true);
   });
 });

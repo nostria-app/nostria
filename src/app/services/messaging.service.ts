@@ -278,6 +278,48 @@ export class MessagingService implements NostriaService {
     };
   }
 
+  private getUnreadDelta(message: DirectMessage): number {
+    return !message.isOutgoing && !message.read ? 1 : 0;
+  }
+
+  private async hydrateStoredMessageState(chatId: string, message: DirectMessage): Promise<DirectMessage> {
+    if (message.isOutgoing || message.read) {
+      return message;
+    }
+
+    const myPubkey = this.accountState.pubkey();
+    if (!myPubkey) {
+      return message;
+    }
+
+    try {
+      await this.database.init();
+      const storedMessage = await this.database.getDirectMessage(myPubkey, chatId, message.id);
+
+      if (!storedMessage) {
+        return message;
+      }
+
+      return {
+        ...message,
+        read: storedMessage.read || message.read,
+        received: storedMessage.received || message.received,
+        pending: message.pending ?? storedMessage.pending,
+        failed: message.failed ?? storedMessage.failed,
+        giftWrapId: message.giftWrapId || storedMessage.giftWrapId,
+        failureReason: message.failureReason ?? storedMessage.failureReason,
+      };
+    } catch (error) {
+      this.logger.warn('Failed to hydrate stored message state, using live payload', error);
+      return message;
+    }
+  }
+
+  private async addResolvedMessageToChat(pubkey: string, message: DirectMessage): Promise<void> {
+    const resolvedMessage = await this.hydrateStoredMessageState(pubkey, message);
+    this.addMessageToChat(pubkey, resolvedMessage);
+  }
+
   /**
    * Update an existing message in a chat (e.g., to change pending/failed/received status).
    * Returns true if the message was found and updated, false otherwise.
@@ -390,7 +432,7 @@ export class MessagingService implements NostriaService {
       const newChat: Chat = {
         id: chatId,
         pubkey: pubkey,
-        unreadCount: normalizedMessage.isOutgoing ? 0 : 1, // Count as unread if incoming
+        unreadCount: this.getUnreadDelta(normalizedMessage),
         lastMessage: normalizedMessage,
         relays: [],
         encryptionType: 'nip44', // Default to modern encryption for new messages
@@ -416,7 +458,7 @@ export class MessagingService implements NostriaService {
         ...chat,
         messages: updatedMessagesMap,
         lastMessage: this.getLatestMessage(updatedMessagesMap),
-        unreadCount: normalizedMessage.isOutgoing ? chat.unreadCount : chat.unreadCount + 1,
+        unreadCount: chat.unreadCount + this.getUnreadDelta(normalizedMessage),
         // Track if chat has any legacy (NIP-04) messages
         hasLegacyMessages: chat.hasLegacyMessages || normalizedMessage.encryptionType === 'nip04',
       };
@@ -451,6 +493,7 @@ export class MessagingService implements NostriaService {
 
     try {
       await this.database.init();
+      const existingStoredMessage = await this.database.getDirectMessage(myPubkey, chatId, message.id);
 
       const storedMessage: StoredDirectMessage = {
         id: `${myPubkey}::${chatId}::${message.id}`,
@@ -463,11 +506,12 @@ export class MessagingService implements NostriaService {
         isOutgoing: message.isOutgoing,
         tags: message.tags,
         encryptionType: message.encryptionType!,
-        read: message.read || false,
-        received: message.received || false,
-        pending: message.pending,
-        failed: message.failed,
-        giftWrapId: message.giftWrapId, // Store gift wrap ID for NIP-44 messages
+        read: message.read || existingStoredMessage?.read || false,
+        received: message.received ?? existingStoredMessage?.received ?? false,
+        pending: message.pending ?? existingStoredMessage?.pending,
+        failed: message.failed ?? existingStoredMessage?.failed,
+        giftWrapId: message.giftWrapId || existingStoredMessage?.giftWrapId, // Store gift wrap ID for NIP-44 messages
+        failureReason: message.failureReason ?? existingStoredMessage?.failureReason,
       };
 
       // database.saveDirectMessage uses store.put() which upserts,
@@ -780,7 +824,7 @@ export class MessagingService implements NostriaService {
           giftWrapId: event.id, // Store gift wrap ID to skip re-decryption later
         };
 
-        this.addMessageToChat(targetPubkey, directMessage);
+        await this.addResolvedMessageToChat(targetPubkey, directMessage);
       } else if (event.kind === kinds.EncryptedDirectMessage) {
         let targetPubkey = event.pubkey;
 
@@ -813,7 +857,7 @@ export class MessagingService implements NostriaService {
           replyTo: this.getReplyToFromTags(unwrappedMessage.tags || []),
         };
 
-        this.addMessageToChat(targetPubkey, directMessage);
+        await this.addResolvedMessageToChat(targetPubkey, directMessage);
       }
     } catch (err) {
       this.logger.error('Error processing incoming event:', err);
@@ -947,7 +991,7 @@ export class MessagingService implements NostriaService {
                   }
                 }
 
-                this.addMessageToChat(targetPubkey, directMessage);
+                await this.addResolvedMessageToChat(targetPubkey, directMessage);
               } catch (err) {
                 this.logger.error('Error processing GiftWrap event:', err);
               }
@@ -994,7 +1038,7 @@ export class MessagingService implements NostriaService {
                   replyTo: this.getReplyToFromTags(unwrappedMessage.tags || []),
                 };
 
-                this.addMessageToChat(targetPubkey, directMessage);
+                await this.addResolvedMessageToChat(targetPubkey, directMessage);
               } catch (err) {
                 this.logger.error('Error processing NIP-04 event:', err);
               }
@@ -1171,7 +1215,7 @@ export class MessagingService implements NostriaService {
               giftWrapId: event.id, // Store gift wrap ID to skip re-decryption later
             };
 
-            this.addMessageToChat(targetPubkey, directMessage);
+            await this.addResolvedMessageToChat(targetPubkey, directMessage);
           } else if (event.kind === kinds.EncryptedDirectMessage) {
             let targetPubkey = event.pubkey;
 
@@ -1204,7 +1248,7 @@ export class MessagingService implements NostriaService {
               replyTo: this.getReplyToFromTags(unwrappedMessage.tags || []),
             };
 
-            this.addMessageToChat(targetPubkey, directMessage);
+            await this.addResolvedMessageToChat(targetPubkey, directMessage);
           }
         } catch (err) {
           this.logger.error('Error processing event from additional relay:', err);
@@ -1786,7 +1830,7 @@ export class MessagingService implements NostriaService {
           };
 
           loadedMessages.push(directMessage);
-          this.addMessageToChat(targetPubkey, directMessage);
+          await this.addResolvedMessageToChat(targetPubkey, directMessage);
 
         } else if (event.kind === kinds.EncryptedDirectMessage) {
           // --- NIP-04 ---
@@ -1832,7 +1876,7 @@ export class MessagingService implements NostriaService {
           };
 
           loadedMessages.push(directMessage);
-          this.addMessageToChat(targetPubkey, directMessage);
+          await this.addResolvedMessageToChat(targetPubkey, directMessage);
         }
       } catch (error) {
         this.logger.error('Failed to process older message:', error);
@@ -2018,7 +2062,7 @@ export class MessagingService implements NostriaService {
               }
 
               // Add the message to the chat (this will create new chats if needed)
-              this.addMessageToChat(targetPubkey, directMessage);
+              await this.addResolvedMessageToChat(targetPubkey, directMessage);
             } else if (event.kind === kinds.EncryptedDirectMessage) {
               // Handle incoming NIP-04 direct messages
               let targetPubkey = event.pubkey;
@@ -2074,7 +2118,7 @@ export class MessagingService implements NostriaService {
               }
 
               // Add the message to the chat (this will create new chats if needed)
-              this.addMessageToChat(targetPubkey, directMessage);
+              await this.addResolvedMessageToChat(targetPubkey, directMessage);
             }
           } catch (error) {
             this.logger.error('Error processing message during loadMoreChats:', error);
@@ -2169,7 +2213,7 @@ export class MessagingService implements NostriaService {
               }
 
               // Add the message to the chat (this will create new chats if needed)
-              this.addMessageToChat(targetPubkey, directMessage);
+              await this.addResolvedMessageToChat(targetPubkey, directMessage);
             } else if (event.kind === kinds.EncryptedDirectMessage) {
               // Handle incoming NIP-04 direct messages
               let targetPubkey = event.pubkey;
@@ -2225,7 +2269,7 @@ export class MessagingService implements NostriaService {
               }
 
               // Add the message to the chat (this will create new chats if needed)
-              this.addMessageToChat(targetPubkey, directMessage);
+              await this.addResolvedMessageToChat(targetPubkey, directMessage);
             }
           } catch (error) {
             this.logger.error('Error processing message during loadMoreChats:', error);

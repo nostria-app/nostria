@@ -2428,6 +2428,24 @@ export class DatabaseService {
   }
 
   /**
+   * Get a direct message from the database (account DB)
+   */
+  async getDirectMessage(accountPubkey: string, chatId: string, messageId: string): Promise<StoredDirectMessage | null> {
+    const db = this.getAccountDb();
+    if (!db) return null;
+
+    const id = `${accountPubkey}::${chatId}::${messageId}`;
+
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORES.MESSAGES, 'readonly');
+      const store = transaction.objectStore(STORES.MESSAGES);
+      const request = store.get(id);
+      request.onsuccess = () => resolve(request.result || null);
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  /**
    * Check if a gift wrap event has already been processed (account DB)
    */
   async giftWrapExists(accountPubkey: string, giftWrapId: string): Promise<boolean> {
