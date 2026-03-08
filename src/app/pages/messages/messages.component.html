@@ -434,6 +434,7 @@
           <div class="message-reactions" [class.outgoing]="message.isOutgoing">
             @for (reaction of getMessageReactions(message.id); track reaction.content) {
             <button type="button" class="reaction-chip" [class.user-reacted]="reaction.userReacted"
+              [disabled]="reaction.userReacted"
               (click)="sendReaction(message, reaction.content, reaction.customEmojiUrl)">
               @if (reaction.customEmojiUrl) {
               <img class="reaction-custom-emoji" [src]="reaction.customEmojiUrl" [alt]="reaction.content"

@@ -1821,6 +1821,11 @@ app-message-content {
       color: var(--mat-sys-on-secondary-container);
     }
 
+    &:disabled {
+      cursor: default;
+      opacity: 1;
+    }
+
     .reaction-emoji {
       font-size: var(--text-sm);
       line-height: 1;
