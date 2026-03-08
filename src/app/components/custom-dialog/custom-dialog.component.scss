@@ -386,8 +386,8 @@
 
 // Note Editor Dialog Override
 .dialog-container.note-editor-dialog-panel {
-  min-height: min(360px, calc(100dvh - 32px));
-  height: min(760px, calc(100dvh - 32px));
+  min-height: 0;
+  height: auto;
   max-height: calc(100dvh - 32px);
 
   .dialog-content {
@@ -395,14 +395,15 @@
     min-height: 0;
     overflow: hidden;
     padding: 0 18px;
-    height: 100%;
+    height: auto;
   }
 
   .dialog-content>.note-editor-dialog {
     display: grid;
-    grid-template-rows: minmax(0, 1fr) auto;
+    grid-template-rows: auto auto;
     min-height: 0;
-    height: 100%;
+    height: auto;
+    max-height: 100%;
   }
 
   @media (max-width: 600px),
@@ -412,6 +413,12 @@
 
     .dialog-content {
       padding: 0 10px;
+      height: 100%;
+    }
+
+    .dialog-content>.note-editor-dialog {
+      grid-template-rows: minmax(0, 1fr) auto;
+      height: 100%;
     }
   }
 }
