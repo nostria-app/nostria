@@ -1,105 +1,135 @@
 <!-- Panel Header -->
-<div class="panel-header">
-  <h2 class="panel-title title-font">Bookmarks</h2>
+<div class="panel-header bookmarks-header" [class.explorer-open]="folderExplorerExpanded()">
+  <div class="panel-header-main">
+    <button type="button" class="folder-launcher" (click)="toggleFolderExplorer()"
+      [attr.aria-expanded]="folderExplorerExpanded()" aria-label="Toggle bookmark folders">
+      <span class="folder-launcher-title-row">
+        <span class="folder-launcher-title title-font">{{ currentList()?.name || 'Bookmarks' }}</span>
+        @if (currentList()?.isPrivate) {
+        <mat-icon class="folder-launcher-lock">lock</mat-icon>
+        }
+      </span>
+      <span class="folder-launcher-meta">{{ getFolderCountLabel(currentList()) }}</span>
+      <mat-icon class="folder-launcher-chevron">{{ folderExplorerExpanded() ? 'expand_less' : 'expand_more'
+        }}</mat-icon>
+    </button>
 
-  <!-- Bookmark List Selector -->
-  <mat-form-field appearance="outline" class="toolbar-list-select">
-    <mat-select [value]="bookmarkService.selectedListId()" (valueChange)="onListChange($event)">
-      <mat-select-trigger>
-        @for (list of bookmarkService.allBookmarkLists(); track list.id) {
-        @if (list.id === bookmarkService.selectedListId()) {
-        <div class="list-option-content">
-          <mat-icon class="list-icon">{{ list.isDefault ? 'bookmark' : 'label' }}</mat-icon>
-          <span class="list-name">{{ list.name }}</span>
-          @if (list.isPrivate) {
-          <mat-icon class="private-icon" matTooltip="Private (Encrypted)">lock</mat-icon>
-          }
-        </div>
-        }
-        }
-      </mat-select-trigger>
-      @for (list of bookmarkService.allBookmarkLists(); track list.id) {
-      <mat-option [value]="list.id">
-        <div class="list-option-content">
-          <mat-icon class="list-icon">{{ list.isDefault ? 'bookmark' : 'label' }}</mat-icon>
-          <span class="list-name">{{ list.name }}</span>
-          @if (list.isPrivate) {
-          <mat-icon class="private-icon" matTooltip="Private (Encrypted)">lock</mat-icon>
-          }
-        </div>
-      </mat-option>
+    <span class="panel-header-spacer"></span>
+
+    <!-- Add menu button - hidden on small screens -->
+    <button mat-icon-button [matMenuTriggerFor]="addMenu" [disabled]="loading()" matTooltip="Add New"
+      class="hide-small">
+      <mat-icon>add</mat-icon>
+    </button>
+    <mat-menu #addMenu="matMenu">
+      <button mat-menu-item (click)="addBookmark()">
+        <mat-icon>bookmark_add</mat-icon>
+        <span>Add Bookmark</span>
+      </button>
+      <button mat-menu-item (click)="createNewList()">
+        <mat-icon>create_new_folder</mat-icon>
+        <span>Create Folder</span>
+      </button>
+    </mat-menu>
+
+    <!-- View mode toggle button - hidden on small screens -->
+    <button mat-icon-button (click)="toggleViewMode()" matTooltip="Switch View" class="hide-small">
+      <mat-icon>{{ getViewIcon() }}</mat-icon>
+    </button>
+
+    <!-- Manage folders menu -->
+    <button mat-icon-button [matMenuTriggerFor]="listMenu" matTooltip="Manage Folders">
+      <mat-icon>more_vert</mat-icon>
+    </button>
+    <mat-menu #listMenu="matMenu">
+      <!-- Add options - shown only on small screens -->
+      <button mat-menu-item (click)="addBookmark()" class="show-small">
+        <mat-icon>bookmark_add</mat-icon>
+        <span>Add Bookmark</span>
+      </button>
+      <button mat-menu-item (click)="createNewList()" class="show-small">
+        <mat-icon>create_new_folder</mat-icon>
+        <span>Create Folder</span>
+      </button>
+      <mat-divider class="show-small"></mat-divider>
+
+      <!-- View mode options - shown only on small screens -->
+      <button mat-menu-item (click)="setViewMode('content')" class="show-small"
+        [class.active]="viewMode() === 'content'">
+        <mat-icon>view_stream</mat-icon>
+        <span>Content View</span>
+      </button>
+      <button mat-menu-item (click)="setViewMode('tiles')" class="show-small" [class.active]="viewMode() === 'tiles'">
+        <mat-icon>grid_view</mat-icon>
+        <span>Tiles View</span>
+      </button>
+      <button mat-menu-item (click)="setViewMode('list')" class="show-small" [class.active]="viewMode() === 'list'">
+        <mat-icon>view_list</mat-icon>
+        <span>List View</span>
+      </button>
+      <mat-divider class="show-small"></mat-divider>
+
+      @if (bookmarkService.selectedListId() !== 'default') {
+      <button mat-menu-item (click)="renameCurrentList()">
+        <mat-icon>drive_file_rename_outline</mat-icon>
+        <span>Rename Folder</span>
+      </button>
       }
-    </mat-select>
-  </mat-form-field>
+      <button mat-menu-item (click)="toggleListPrivacy()">
+        <mat-icon>{{ currentList()?.isPrivate ? 'lock_open' : 'lock' }}</mat-icon>
+        <span>{{ currentList()?.isPrivate ? 'Make Public' : 'Make Private' }}</span>
+      </button>
+      <button mat-menu-item (click)="deleteCurrentList()">
+        <mat-icon>delete</mat-icon>
+        <span>Delete Folder</span>
+      </button>
+    </mat-menu>
+  </div>
 
-  <span class="panel-header-spacer"></span>
+  @if (folderExplorerExpanded()) {
+  <div class="folder-explorer" [class.folder-explorer--loading]="folderExplorerLoading()">
+    <button type="button" class="folder-node folder-node--root" [class.active]="isFolderActive('default')"
+      (click)="selectFolder('default')">
+      <span class="folder-node-branch">
+        <mat-icon class="folder-node-icon">bookmarks</mat-icon>
+      </span>
+      <span class="folder-node-copy">
+        <span class="folder-node-name">Bookmarks</span>
+      </span>
+      <span class="folder-node-count">{{ getBookmarkCount(rootBookmarkFolder()) }}</span>
+    </button>
 
-  <!-- Add menu button - hidden on small screens -->
-  <button mat-icon-button [matMenuTriggerFor]="addMenu" [disabled]="loading()" matTooltip="Add New" class="hide-small">
-    <mat-icon>add</mat-icon>
-  </button>
-  <mat-menu #addMenu="matMenu">
-    <button mat-menu-item (click)="addBookmark()">
-      <mat-icon>bookmark_add</mat-icon>
-      <span>Add Bookmark</span>
-    </button>
-    <button mat-menu-item (click)="createNewList()">
-      <mat-icon>playlist_add</mat-icon>
-      <span>Create List</span>
-    </button>
-  </mat-menu>
-
-  <!-- View mode toggle button - hidden on small screens -->
-  <button mat-icon-button (click)="toggleViewMode()" matTooltip="Switch View" class="hide-small">
-    <mat-icon>{{ getViewIcon() }}</mat-icon>
-  </button>
-
-  <!-- Manage lists menu -->
-  <button mat-icon-button [matMenuTriggerFor]="listMenu" matTooltip="Manage Lists">
-    <mat-icon>more_vert</mat-icon>
-  </button>
-  <mat-menu #listMenu="matMenu">
-    <!-- Add options - shown only on small screens -->
-    <button mat-menu-item (click)="addBookmark()" class="show-small">
-      <mat-icon>bookmark_add</mat-icon>
-      <span>Add Bookmark</span>
-    </button>
-    <button mat-menu-item (click)="createNewList()" class="show-small">
-      <mat-icon>playlist_add</mat-icon>
-      <span>Create List</span>
-    </button>
-    <mat-divider class="show-small"></mat-divider>
-
-    <!-- View mode options - shown only on small screens -->
-    <button mat-menu-item (click)="setViewMode('content')" class="show-small" [class.active]="viewMode() === 'content'">
-      <mat-icon>view_stream</mat-icon>
-      <span>Content View</span>
-    </button>
-    <button mat-menu-item (click)="setViewMode('tiles')" class="show-small" [class.active]="viewMode() === 'tiles'">
-      <mat-icon>grid_view</mat-icon>
-      <span>Tiles View</span>
-    </button>
-    <button mat-menu-item (click)="setViewMode('list')" class="show-small" [class.active]="viewMode() === 'list'">
-      <mat-icon>view_list</mat-icon>
-      <span>List View</span>
-    </button>
-    <mat-divider class="show-small"></mat-divider>
-
-    @if (bookmarkService.selectedListId() !== 'default') {
-    <button mat-menu-item (click)="renameCurrentList()">
-      <mat-icon>edit</mat-icon>
-      <span>Rename List</span>
-    </button>
+    @if (folderExplorerLoading()) {
+    <div class="folder-explorer-status">
+      <mat-spinner diameter="18"></mat-spinner>
+      <span>Loading encrypted folder counts...</span>
+    </div>
     }
-    <button mat-menu-item (click)="toggleListPrivacy()">
-      <mat-icon>{{ currentList()?.isPrivate ? 'lock_open' : 'lock' }}</mat-icon>
-      <span>{{ currentList()?.isPrivate ? 'Make Public' : 'Make Private' }}</span>
-    </button>
-    <button mat-menu-item (click)="deleteCurrentList()">
-      <mat-icon>delete</mat-icon>
-      <span>Delete List</span>
-    </button>
-  </mat-menu>
+
+    <div class="folder-children">
+      @for (list of bookmarkFolderChildren(); track list.id) {
+      <button type="button" class="folder-node folder-node--child" [class.active]="isFolderActive(list.id)"
+        (click)="selectFolder(list.id)">
+        <span class="folder-node-branch">
+          <span class="folder-node-branch-line"></span>
+          <mat-icon class="folder-node-icon">{{ list.isPrivate ? 'folder_lock' : 'folder' }}</mat-icon>
+        </span>
+        <span class="folder-node-copy">
+          <span class="folder-node-name">{{ list.name }}</span>
+        </span>
+        <span class="folder-node-count">{{ getBookmarkCount(list) }}</span>
+      </button>
+      }
+    </div>
+
+    @if (bookmarkFolderChildren().length === 0) {
+    <div class="folder-empty-state">
+      <mat-icon>create_new_folder</mat-icon>
+      <span>Create your first folder to organize saved items under Bookmarks.</span>
+    </div>
+    }
+  </div>
+  }
 </div>
 
 <div class="bookmarks-container">
@@ -113,19 +143,32 @@
     <div class="categories-container">
       <div class="categories-list">
         @for (category of categories(); track category.id) {
-        <div class="category-chip" [class.selected]="selectedCategory() === category.id" [style.background-color]="
-                selectedCategory() === category.id ? category.color : 'transparent'
-              " [style.color]="selectedCategory() === category.id ? '#fff' : category.color"
-          [style.border-color]="category.color" (click)="selectCategory(category.id)">
-          {{ category.name }}
-        </div>
+        <button type="button" class="category-chip" [class.selected]="isCategoryVisible(category.id)"
+          [style.background-color]="isCategoryVisible(category.id) ? category.color : 'transparent'"
+          [style.color]="isCategoryVisible(category.id) ? '#fff' : category.color" [style.border-color]="category.color"
+          (click)="toggleCategoryVisibility(category.id)">
+          <span>{{ category.name }}</span>
+          <span class="category-chip-count">{{ getCategoryItemCount(category.id) }}</span>
+        </button>
         }
       </div>
     </div>
   </div>
 
   <div class="bookmarks-list" [attr.data-view]="viewMode()" (scroll)="onScroll($event)">
-    @if (selectedCategory() === 'events') {
+    @if (!hasVisibleCategories()) {
+    <div class="empty-state bookmarks-empty-state">
+      <mat-icon>visibility_off</mat-icon>
+      <p>Enable at least one toggle to show bookmark sections.</p>
+    </div>
+    }
+
+    @if (isCategoryVisible('events')) {
+    <section class="bookmark-section">
+      <div class="bookmark-section-header">
+        <h3 class="bookmark-section-title">Notes</h3>
+        <span class="bookmark-section-count">{{ bookmarkService.bookmarkEvents().length }}</span>
+      </div>
     @if (viewMode() === 'list') {
     <div class="bookmark-drag-list" cdkDropList cdkDropListLockAxis="y"
       (cdkDropListDropped)="onBookmarksDrop('events', $event)">
@@ -178,7 +221,7 @@
           <button mat-menu-item
             (click)="openAddToAnotherList(bookmark.id, 'e', $event, bookmark.relay, bookmark.pubkey)">
             <mat-icon>bookmark_add</mat-icon>
-            <span>Add to another list</span>
+            <span>Add to another folder</span>
           </button>
           <mat-divider></mat-divider>
           @if (getMoveTargetLists().length === 0) {
@@ -209,7 +252,15 @@
       [compact]="viewMode() === 'tiles'"></app-event>
     }
     }
-    } @else if (selectedCategory() === 'articles') {
+    </section>
+    }
+
+    @if (isCategoryVisible('articles')) {
+    <section class="bookmark-section">
+      <div class="bookmark-section-header">
+        <h3 class="bookmark-section-title">Other</h3>
+        <span class="bookmark-section-count">{{ bookmarkService.bookmarkArticles().length }}</span>
+      </div>
     @if (viewMode() === 'list') {
     <div class="bookmark-drag-list" cdkDropList cdkDropListLockAxis="y"
       (cdkDropListDropped)="onBookmarksDrop('articles', $event)">
@@ -265,7 +316,7 @@
           <button mat-menu-item
             (click)="openAddToAnotherList(bookmark.id, 'a', $event, bookmark.relay, undefined, bm.kind)">
             <mat-icon>bookmark_add</mat-icon>
-            <span>Add to another list</span>
+            <span>Add to another folder</span>
           </button>
           <mat-divider></mat-divider>
           @if (getMoveTargetLists().length === 0) {
@@ -305,7 +356,15 @@
     </div>
     }
     }
-    } @else if (selectedCategory() === 'websites') {
+    </section>
+    }
+
+    @if (isCategoryVisible('websites')) {
+    <section class="bookmark-section">
+      <div class="bookmark-section-header">
+        <h3 class="bookmark-section-title">Websites</h3>
+        <span class="bookmark-section-count">{{ bookmarkService.bookmarkUrls().length }}</span>
+      </div>
     @if (viewMode() === 'list') {
     <div class="bookmark-drag-list" cdkDropList cdkDropListLockAxis="y"
       (cdkDropListDropped)="onBookmarksDrop('websites', $event)">
@@ -348,7 +407,7 @@
         <mat-menu #urlRowActionsMenu="matMenu">
           <button mat-menu-item (click)="openAddToAnotherList(bookmark.id, 'r', $event)">
             <mat-icon>bookmark_add</mat-icon>
-            <span>Add to another list</span>
+            <span>Add to another folder</span>
           </button>
           <mat-divider></mat-divider>
           @if (getMoveTargetLists().length === 0) {
@@ -412,10 +471,11 @@
     }
     }
     }
+    </section>
     }
 
     <!-- Load more indicator -->
-    @if (hasMoreToLoad()) {
+    @if (hasVisibleCategories() && hasMoreToLoad()) {
     <div class="load-more-indicator">
       <p>Scroll for more...</p>
     </div>

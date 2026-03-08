@@ -11,7 +11,7 @@
     </div>
     <div class="top-actions-right">
       <button mat-icon-button (click)="openBookmarkSelector()"
-        [title]="bookmark.isBookmarkedInAnyList(id(), 'a') ? 'Manage bookmarks' : 'Add to bookmark list'">
+        [title]="bookmark.isBookmarkedInAnyList(id(), 'a') ? 'Manage bookmarks' : 'Add to bookmark folder'">
         <mat-icon>{{ bookmark.getBookmarkIcon(id(), 'a') }}</mat-icon>
       </button>
       <button mat-icon-button (click)="share.emit()" title="Share Article">

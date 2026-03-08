@@ -1,9 +1,9 @@
-<h2 mat-dialog-title>{{ isRename ? 'Rename Bookmark List' : 'Create Bookmark List' }}</h2>
+<h2 mat-dialog-title>{{ isRename ? 'Rename Bookmark Folder' : 'Create Bookmark Folder' }}</h2>
 
 <mat-dialog-content>
   <mat-form-field appearance="outline" class="full-width">
-    <mat-label>List Name</mat-label>
-    <input matInput [(ngModel)]="listName" (ngModelChange)="generateIdFromName()" placeholder="My Reading List"
+    <mat-label>Folder Name</mat-label>
+    <input matInput [(ngModel)]="listName" (ngModelChange)="generateIdFromName()" placeholder="My Reading Folder"
       required>
   </mat-form-field>
 
@@ -19,7 +19,7 @@
       <span class="checkbox-label">Private (Encrypted)</span>
     </mat-checkbox>
     <div class="checkbox-hint">
-      Private lists encrypt bookmark contents using NIP-44 so only you can see them
+      Private folders encrypt bookmark contents using NIP-44 so only you can see them
     </div>
   </div>
   }
@@ -28,6 +28,6 @@
 <mat-dialog-actions align="end">
   <button mat-button (click)="cancel()">Cancel</button>
   <button mat-flat-button (click)="create()" [disabled]="!listName().trim() || (!isRename && !listId().trim())">
-    {{ isRename ? 'Rename' : 'Create' }}
+    {{ isRename ? 'Rename' : 'Create Folder' }}
   </button>
 </mat-dialog-actions>

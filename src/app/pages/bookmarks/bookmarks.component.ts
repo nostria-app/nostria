@@ -4,8 +4,6 @@ import { CdkDragDrop, DragDropModule } from '@angular/cdk/drag-drop';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { MatInputModule } from '@angular/material/input';
-import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatCardModule } from '@angular/material/card';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatMenuModule } from '@angular/material/menu';
@@ -13,7 +11,6 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDialogModule, MatDialog } from '@angular/material/dialog';
 import { MatSnackBarModule, MatSnackBar } from '@angular/material/snack-bar';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatSelectModule } from '@angular/material/select';
 import { MatDividerModule } from '@angular/material/divider';
 import { LoggerService } from '../../services/logger.service';
 import { BookmarkCategoryDialogComponent } from './bookmark-category-dialog/bookmark-category-dialog.component';
@@ -54,6 +51,8 @@ interface BookmarkCategory {
   color: string;
 }
 
+type BookmarkCategoryVisibility = Record<string, boolean>;
+
 export type ViewMode = 'tiles' | 'content' | 'list';
 
 interface CompactEventDetails {
@@ -81,8 +80,6 @@ interface CompactUrlDetails {
     FormsModule,
     MatButtonModule,
     MatIconModule,
-    MatInputModule,
-    MatFormFieldModule,
     MatCardModule,
     MatChipsModule,
     MatMenuModule,
@@ -90,7 +87,6 @@ interface CompactUrlDetails {
     MatDialogModule,
     MatSnackBarModule,
     MatProgressSpinnerModule,
-    MatSelectModule,
     MatDividerModule,
     DragDropModule,
     EventComponent,
@@ -142,7 +138,11 @@ export class BookmarksComponent implements OnInit {
 
   // Current state
   searchQuery = signal('');
-  selectedCategory = signal('events');
+  visibleCategories = signal<BookmarkCategoryVisibility>({
+    events: true,
+    articles: true,
+    websites: true,
+  });
   viewMode = signal<ViewMode>('content');
 
   // Paginated/sliced bookmarks for display
@@ -179,13 +179,27 @@ export class BookmarksComponent implements OnInit {
     return this.bookmarkService.allBookmarkLists().find(l => l.id === listId);
   });
 
+  rootBookmarkFolder = computed(() => {
+    return this.bookmarkService.allBookmarkLists().find(list => list.isDefault) ?? null;
+  });
+
+  bookmarkFolderChildren = computed(() => {
+    return this.bookmarkService
+      .allBookmarkLists()
+      .filter(list => !list.isDefault)
+      .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
+  });
+
+  folderExplorerExpanded = signal(false);
+  folderExplorerLoading = signal(false);
+
   constructor() {
     this.twoColumnLayout.setWideLeft();
     // Load categories and view preference from storage
     this.loadFromStorage();
 
     effect(() => {
-      this.logger.debug('Selected category changed:', this.selectedCategory());
+      this.logger.debug('Visible categories changed:', this.visibleCategories());
       this.resetPagination();
     });
 
@@ -199,7 +213,7 @@ export class BookmarksComponent implements OnInit {
     });
 
     effect(() => {
-      if (this.viewMode() !== 'list' || this.selectedCategory() !== 'events') {
+      if (this.viewMode() !== 'list' || !this.isCategoryVisible('events')) {
         return;
       }
 
@@ -207,7 +221,7 @@ export class BookmarksComponent implements OnInit {
     });
 
     effect(() => {
-      if (this.viewMode() !== 'list' || this.selectedCategory() !== 'articles') {
+      if (this.viewMode() !== 'list' || !this.isCategoryVisible('articles')) {
         return;
       }
 
@@ -215,7 +229,7 @@ export class BookmarksComponent implements OnInit {
     });
 
     effect(() => {
-      if (this.viewMode() !== 'list' || this.selectedCategory() !== 'websites') {
+      if (this.viewMode() !== 'list' || !this.isCategoryVisible('websites')) {
         return;
       }
 
@@ -248,23 +262,25 @@ export class BookmarksComponent implements OnInit {
       return;
     }
 
-    const category = this.selectedCategory();
-
-    if (category === 'events') {
+    if (this.isCategoryVisible('events')) {
       const current = this.displayedEventCount();
       const total = this.bookmarkService.bookmarkEvents().length;
       if (current < total) {
         this.displayedEventCount.set(Math.min(current + this.PAGE_SIZE, total));
         this.logger.debug(`[Bookmarks] Loaded more events: ${this.displayedEventCount()}/${total}`);
       }
-    } else if (category === 'articles') {
+    }
+
+    if (this.isCategoryVisible('articles')) {
       const current = this.displayedArticleCount();
       const total = this.bookmarkService.bookmarkArticles().length;
       if (current < total) {
         this.displayedArticleCount.set(Math.min(current + this.PAGE_SIZE, total));
         this.logger.debug(`[Bookmarks] Loaded more articles: ${this.displayedArticleCount()}/${total}`);
       }
-    } else if (category === 'websites') {
+    }
+
+    if (this.isCategoryVisible('websites')) {
       const current = this.displayedUrlCount();
       const total = this.bookmarkService.bookmarkUrls().length;
       if (current < total) {
@@ -296,17 +312,14 @@ export class BookmarksComponent implements OnInit {
       return false;
     }
 
-    const category = this.selectedCategory();
-
-    if (category === 'events') {
-      return this.displayedEventCount() < this.bookmarkService.bookmarkEvents().length;
-    } else if (category === 'articles') {
-      return this.displayedArticleCount() < this.bookmarkService.bookmarkArticles().length;
-    } else if (category === 'websites') {
-      return this.displayedUrlCount() < this.bookmarkService.bookmarkUrls().length;
-    }
-
-    return false;
+    return (
+      (this.isCategoryVisible('events')
+        && this.displayedEventCount() < this.bookmarkService.bookmarkEvents().length)
+      || (this.isCategoryVisible('articles')
+        && this.displayedArticleCount() < this.bookmarkService.bookmarkArticles().length)
+      || (this.isCategoryVisible('websites')
+        && this.displayedUrlCount() < this.bookmarkService.bookmarkUrls().length)
+    );
   }
 
   private loadFromStorage(): void {
@@ -322,6 +335,21 @@ export class BookmarksComponent implements OnInit {
         }
       } catch (error) {
         this.logger.error('Error parsing saved categories:', error);
+      }
+    }
+
+    const savedVisibleCategories = this.localStorage.getItem('bookmark_visible_categories');
+    if (savedVisibleCategories) {
+      try {
+        const parsedVisibility = JSON.parse(savedVisibleCategories) as BookmarkCategoryVisibility;
+        if (parsedVisibility && typeof parsedVisibility === 'object') {
+          this.visibleCategories.update(current => ({
+            ...current,
+            ...parsedVisibility,
+          }));
+        }
+      } catch (error) {
+        this.logger.error('Error parsing bookmark visibility:', error);
       }
     }
 
@@ -344,6 +372,10 @@ export class BookmarksComponent implements OnInit {
     this.logger.debug('Categories saved to storage');
   }
 
+  private saveCategoryVisibility(): void {
+    this.localStorage.setItem('bookmark_visible_categories', JSON.stringify(this.visibleCategories()));
+  }
+
   private saveViewMode(): void {
     const pubkey = this.accountState.pubkey();
     if (pubkey) {
@@ -353,8 +385,33 @@ export class BookmarksComponent implements OnInit {
   }
 
   // Actions
-  selectCategory(categoryId: string): void {
-    this.selectedCategory.set(categoryId);
+  toggleCategoryVisibility(categoryId: string): void {
+    this.visibleCategories.update(current => ({
+      ...current,
+      [categoryId]: !current[categoryId],
+    }));
+    this.saveCategoryVisibility();
+  }
+
+  isCategoryVisible(categoryId: string): boolean {
+    return this.visibleCategories()[categoryId] ?? false;
+  }
+
+  hasVisibleCategories(): boolean {
+    return this.categories().some(category => this.isCategoryVisible(category.id));
+  }
+
+  getCategoryItemCount(categoryId: string): number {
+    switch (categoryId) {
+      case 'events':
+        return this.bookmarkService.bookmarkEvents().length;
+      case 'articles':
+        return this.bookmarkService.bookmarkArticles().length;
+      case 'websites':
+        return this.bookmarkService.bookmarkUrls().length;
+      default:
+        return 0;
+    }
   }
 
   setViewMode(mode: ViewMode): void {
@@ -509,7 +566,7 @@ export class BookmarksComponent implements OnInit {
     this.loading.set(true);
     try {
       await this.bookmarkService.addBookmark(articleId, 'a'); // Toggle removes it from current list
-      this.snackBar.open('Removed from bookmark list', 'Close', {
+      this.snackBar.open('Removed from folder', 'Close', {
         duration: 2000,
       });
     } catch (error) {
@@ -968,6 +1025,62 @@ export class BookmarksComponent implements OnInit {
     window.open(url, '_blank');
   }
 
+  getBookmarkCount(list: BookmarkList | null | undefined): number {
+    if (!list?.event) {
+      return 0;
+    }
+
+    return list.event.tags.filter(tag => {
+      const marker = tag[0];
+      return (marker === 'e' || marker === 'a' || marker === 'r' || marker === 't') && !!tag[1];
+    }).length;
+  }
+
+  getFolderCountLabel(list: BookmarkList | null | undefined): string {
+    const count = this.getBookmarkCount(list);
+    return `${count} ${count === 1 ? 'item' : 'items'}`;
+  }
+
+  isFolderActive(listId: string): boolean {
+    return this.bookmarkService.selectedListId() === listId;
+  }
+
+  async toggleFolderExplorer(): Promise<void> {
+    const shouldOpen = !this.folderExplorerExpanded();
+    this.folderExplorerExpanded.set(shouldOpen);
+
+    if (shouldOpen) {
+      await this.prepareFolderExplorer();
+    }
+  }
+
+  async selectFolder(listId: string): Promise<void> {
+    await this.onListChange(listId);
+    this.folderExplorerExpanded.set(false);
+  }
+
+  private async prepareFolderExplorer(): Promise<void> {
+    const encryptedFolders = this.bookmarkFolderChildren().filter(list => this.needsFolderHydration(list));
+    if (encryptedFolders.length === 0) {
+      return;
+    }
+
+    this.folderExplorerLoading.set(true);
+    try {
+      await Promise.all(encryptedFolders.map(list => this.bookmarkService.decryptPrivateList(list.id)));
+    } finally {
+      this.folderExplorerLoading.set(false);
+    }
+  }
+
+  private needsFolderHydration(list: BookmarkList): boolean {
+    if (!list.isPrivate || !list.event?.content) {
+      return false;
+    }
+
+    return !list.event.tags.some(tag => tag[0] === 'e' || tag[0] === 'a' || tag[0] === 'r' || tag[0] === 't');
+  }
+
   getMoveTargetLists(): BookmarkList[] {
     const currentListId = this.bookmarkService.selectedListId();
     return this.bookmarkService
@@ -1029,9 +1142,9 @@ export class BookmarksComponent implements OnInit {
       }
 
       const targetList = this.bookmarkService.allBookmarkLists().find(list => list.id === targetListId);
-      this.snackBar.open(`Moved to ${targetList?.name || 'another list'}`, 'Close', { duration: 2000 });
+      this.snackBar.open(`Moved to ${targetList?.name || 'another folder'}`, 'Close', { duration: 2000 });
     } catch (error) {
-      this.logger.error('Error moving bookmark to another list:', error);
+      this.logger.error('Error moving bookmark to another folder:', error);
       this.snackBar.open('Failed to move bookmark', 'Close', { duration: 3000 });
     }
   }
@@ -1041,7 +1154,7 @@ export class BookmarksComponent implements OnInit {
     this.loading.set(true);
     try {
       await this.bookmarkService.addBookmark(id, 'e');
-      this.snackBar.open('Removed from bookmark list', 'Close', { duration: 2000 });
+      this.snackBar.open('Removed from folder', 'Close', { duration: 2000 });
     } catch (error) {
       this.logger.error('Error removing bookmark:', error);
       this.snackBar.open('Failed to remove bookmark', 'Close', { duration: 3000 });
@@ -1055,7 +1168,7 @@ export class BookmarksComponent implements OnInit {
     this.loading.set(true);
     try {
       await this.bookmarkService.addBookmark(url, 'r');
-      this.snackBar.open('Removed from bookmark list', 'Close', { duration: 2000 });
+      this.snackBar.open('Removed from folder', 'Close', { duration: 2000 });
     } catch (error) {
       this.logger.error('Error removing bookmark:', error);
       this.snackBar.open('Failed to remove bookmark', 'Close', { duration: 3000 });
@@ -1084,7 +1197,7 @@ export class BookmarksComponent implements OnInit {
     if (result) {
       const newList = await this.bookmarkService.createBookmarkList(result.name, result.id, result.isPrivate);
       if (newList) {
-        this.snackBar.open(`Created "${result.name}"`, 'Close', { duration: 2000 });
+        this.snackBar.open(`Created folder "${result.name}"`, 'Close', { duration: 2000 });
         this.bookmarkService.selectedListId.set(newList.id);
       }
     }
@@ -1108,7 +1221,7 @@ export class BookmarksComponent implements OnInit {
 
     if (result && result.name.trim() !== currentList.name) {
       await this.bookmarkService.updateBookmarkList(currentListId, result.name.trim());
-      this.snackBar.open(`Renamed to "${result.name.trim()}"`, 'Close', { duration: 2000 });
+      this.snackBar.open(`Renamed folder to "${result.name.trim()}"`, 'Close', { duration: 2000 });
     }
   }
 
@@ -1121,10 +1234,10 @@ export class BookmarksComponent implements OnInit {
     const newState = list.isPrivate ? 'public' : 'private';
     const dialogRef = this.dialog.open(ConfirmDialogComponent, {
       data: {
-        title: `Make List ${list.isPrivate ? 'Public' : 'Private'}`,
+        title: `Make Folder ${list.isPrivate ? 'Public' : 'Private'}`,
         message: list.isPrivate
-          ? `Are you sure you want to make "${list.name}" public? The bookmarks will be visible to everyone.`
-          : `Are you sure you want to make "${list.name}" private? The bookmarks will be encrypted and only visible to you.`,
+          ? `Are you sure you want to make folder "${list.name}" public? The bookmarks will be visible to everyone.`
+          : `Are you sure you want to make folder "${list.name}" private? The bookmarks will be encrypted and only visible to you.`,
         confirmText: `Make ${list.isPrivate ? 'Public' : 'Private'}`,
         cancelText: 'Cancel',
       },
@@ -1134,7 +1247,7 @@ export class BookmarksComponent implements OnInit {
 
     if (confirmed) {
       await this.bookmarkService.toggleListPrivacy(list.id);
-      this.snackBar.open(`List is now ${newState}`, 'Close', { duration: 2000 });
+      this.snackBar.open(`Folder is now ${newState}`, 'Close', { duration: 2000 });
     }
   }
 
@@ -1148,8 +1261,8 @@ export class BookmarksComponent implements OnInit {
 
     const dialogRef = this.dialog.open(ConfirmDialogComponent, {
       data: {
-        title: 'Delete Bookmark List',
-        message: `Are you sure you want to delete "${currentList.name}"? This will remove all bookmarks in this list.`,
+        title: 'Delete Bookmark Folder',
+        message: `Are you sure you want to delete folder "${currentList.name}"? This will remove all bookmarks in this folder.`,
         confirmText: 'Delete',
         cancelText: 'Cancel',
         confirmColor: 'warn'
@@ -1160,7 +1273,7 @@ export class BookmarksComponent implements OnInit {
 
     if (confirmed) {
       await this.bookmarkService.deleteBookmarkList(currentListId);
-      this.snackBar.open(`Deleted "${currentList.name}"`, 'Close', { duration: 2000 });
+      this.snackBar.open(`Deleted folder "${currentList.name}"`, 'Close', { duration: 2000 });
     }
   }
 }

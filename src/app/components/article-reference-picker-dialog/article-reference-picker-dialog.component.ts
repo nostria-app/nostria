@@ -251,20 +251,20 @@ export class ArticleReferencePickerDialogComponent {
       const currentList = this.bookmarkService.allBookmarkLists().find((item) => item.id === list.id);
       const event = currentList?.event;
       if (!event) {
-        this.snackBar.open('No references found in this bookmark list', 'Close', { duration: 3000 });
+        this.snackBar.open('No references found in this bookmark folder', 'Close', { duration: 3000 });
         return;
       }
 
       const references = this.getReferencesFromBookmarkTags(event.tags);
       if (references.length === 0) {
-        this.snackBar.open('No reference tags found in this bookmark list', 'Close', { duration: 3000 });
+        this.snackBar.open('No reference tags found in this bookmark folder', 'Close', { duration: 3000 });
         return;
       }
 
       this.dialogRef?.close({ references });
     } catch (error) {
       console.error('Failed to insert bookmark list references:', error);
-      this.snackBar.open('Failed to load bookmark list references', 'Close', { duration: 3000 });
+      this.snackBar.open('Failed to load bookmark folder references', 'Close', { duration: 3000 });
     }
   }
 

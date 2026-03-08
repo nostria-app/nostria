@@ -1,4 +1,4 @@
-<h2 mat-dialog-title>Save to Bookmark List</h2>
+<h2 mat-dialog-title>Save to Bookmark Folder</h2>
 
 <mat-dialog-content>
   @if (!showNewListInput() && !showNewBoardInput()) {
@@ -31,7 +31,7 @@
 
   <button mat-button (click)="showNewListForm()" class="new-list-button">
     <mat-icon>add</mat-icon>
-    Create New List
+    Create New Folder
   </button>
 
   <!-- Boards Section -->
@@ -82,8 +82,8 @@
   } @else if (showNewListInput()) {
   <div class="new-list-form">
     <mat-form-field appearance="outline" class="full-width">
-      <mat-label>List Name</mat-label>
-      <input matInput [(ngModel)]="newListName" placeholder="Enter list name" (keyup.enter)="createAndAddToNewList()">
+      <mat-label>Folder Name</mat-label>
+      <input matInput [(ngModel)]="newListName" placeholder="Enter folder name" (keyup.enter)="createAndAddToNewList()">
     </mat-form-field>
 
     <div class="form-actions">
@@ -92,7 +92,7 @@
         @if (creatingList()) {
         Creating...
         } @else {
-        Create & Add
+        Create Folder & Add
         }
       </button>
     </div>
@@ -101,7 +101,8 @@
   <div class="new-list-form">
     <mat-form-field appearance="outline" class="full-width">
       <mat-label>Board Name</mat-label>
-      <input matInput [(ngModel)]="newBoardName" placeholder="Enter board name" (keyup.enter)="createAndAddToNewBoard()">
+      <input matInput [(ngModel)]="newBoardName" placeholder="Enter board name"
+        (keyup.enter)="createAndAddToNewBoard()">
     </mat-form-field>
 
     <div class="form-actions">

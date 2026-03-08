@@ -88,7 +88,7 @@
     <mat-tab label="Bookmarks">
       <div class="tab-content">
         @if (bookmarkLists().length === 0) {
-        <div class="empty-state">No bookmark lists available.</div>
+        <div class="empty-state">No bookmark folders available.</div>
         } @else {
         <mat-list>
           @for (list of bookmarkLists(); track list.id) {

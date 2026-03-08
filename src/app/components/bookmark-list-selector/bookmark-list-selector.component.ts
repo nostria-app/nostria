@@ -205,7 +205,7 @@ export class BookmarkListSelectorComponent implements OnInit {
   async createAndAddToNewList() {
     const name = this.newListName().trim();
     if (!name) {
-      this.snackBar.open('Please enter a list name', 'Close', { duration: 3000 });
+      this.snackBar.open('Please enter a folder name', 'Close', { duration: 3000 });
       return;
     }
 
