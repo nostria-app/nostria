@@ -78,13 +78,37 @@
         </span>
         <span class="stat">
           <span class="stat-value">{{ playlistCount() }}</span>
-          <span class="stat-label">Playlists</span>
+          <span class="stat-label">Releases</span>
         </span>
       </div>
     </div>
 
     <!-- Content Tabs -->
     <mat-tab-group [selectedIndex]="selectedTabIndex()" (selectedIndexChange)="onTabChange($event)">
+      <mat-tab>
+        <ng-template mat-tab-label>
+          <mat-icon class="tab-icon">queue_music</mat-icon>
+          Releases
+          @if (playlistCount() > 0) {
+          <span class="tab-count">{{ playlistCount() }}</span>
+          }
+        </ng-template>
+        <div class="tab-content">
+          @if (playlists().length === 0) {
+          <div class="empty-state">
+            <mat-icon>playlist_remove</mat-icon>
+            <p>No releases found from this artist</p>
+          </div>
+          } @else {
+          <div class="playlists-grid">
+            @for (playlist of playlists(); track playlist.id) {
+            <app-music-playlist-card [event]="playlist"></app-music-playlist-card>
+            }
+          </div>
+          }
+        </div>
+      </mat-tab>
+
       <mat-tab>
         <ng-template mat-tab-label>
           <mat-icon class="tab-icon">music_note</mat-icon>
@@ -148,30 +172,6 @@
                 <mat-icon>more_horiz</mat-icon>
               </button>
             </div>
-            }
-          </div>
-          }
-        </div>
-      </mat-tab>
-
-      <mat-tab>
-        <ng-template mat-tab-label>
-          <mat-icon class="tab-icon">queue_music</mat-icon>
-          Playlists
-          @if (playlistCount() > 0) {
-          <span class="tab-count">{{ playlistCount() }}</span>
-          }
-        </ng-template>
-        <div class="tab-content">
-          @if (playlists().length === 0) {
-          <div class="empty-state">
-            <mat-icon>playlist_remove</mat-icon>
-            <p>No playlists found from this artist</p>
-          </div>
-          } @else {
-          <div class="playlists-grid">
-            @for (playlist of playlists(); track playlist.id) {
-            <app-music-playlist-card [event]="playlist"></app-music-playlist-card>
             }
           </div>
           }
