@@ -78,7 +78,7 @@
         </span>
         <span class="stat">
           <span class="stat-value">{{ playlistCount() }}</span>
-          <span class="stat-label">Releases</span>
+          <span class="stat-label">Albums</span>
         </span>
       </div>
     </div>
@@ -88,7 +88,7 @@
       <mat-tab>
         <ng-template mat-tab-label>
           <mat-icon class="tab-icon">queue_music</mat-icon>
-          Releases
+          Albums
           @if (playlistCount() > 0) {
           <span class="tab-count">{{ playlistCount() }}</span>
           }
@@ -97,7 +97,7 @@
           @if (playlists().length === 0) {
           <div class="empty-state">
             <mat-icon>playlist_remove</mat-icon>
-            <p>No releases found from this artist</p>
+            <p>No albums found from this artist</p>
           </div>
           } @else {
           <div class="playlists-grid">
