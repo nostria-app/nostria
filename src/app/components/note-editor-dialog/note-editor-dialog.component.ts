@@ -32,6 +32,7 @@ import { MatSliderModule } from '@angular/material/slider';
 import { DomSanitizer } from '@angular/platform-browser';
 import { FormsModule } from '@angular/forms';
 import { DragDropModule, CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
+import { CdkTextareaAutosize, TextFieldModule } from '@angular/cdk/text-field';
 
 import { NostrService } from '../../services/nostr.service';
 import { MediaService } from '../../services/media.service';
@@ -137,6 +138,7 @@ interface PreparedXPost {
     MentionAutocompleteComponent,
     MatMenuModule,
     DragDropModule,
+    TextFieldModule,
     UserProfileComponent,
     EmojiPickerComponent,
   ],
@@ -189,6 +191,8 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   private imagePlaceholder = inject(ImagePlaceholderService);
   private publishEventBus = inject(PublishEventBus);
   private publishSubscription?: Subscription;
+  private readonly pasteHandler = (event: ClipboardEvent): void => this.handlePaste(event);
+  private readonly handleViewportResize = (): void => this.scheduleTextareaRefresh();
   private dialog = inject(MatDialog);
   private customDialog = inject(CustomDialogService);
   private aiService = inject(AiService);
@@ -205,6 +209,9 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
 
   @ViewChild('contentTextarea')
   contentTextarea!: ElementRef<HTMLTextAreaElement>;
+  @ViewChild(CdkTextareaAutosize) textareaAutosize?: CdkTextareaAutosize;
+  @ViewChild('noteEditorLayout') noteEditorLayout?: ElementRef<HTMLElement>;
+  @ViewChild('composerActions') composerActions?: ElementRef<HTMLElement>;
   @ViewChild('fileInput') fileInput!: ElementRef<HTMLInputElement>;
   @ViewChild(MentionAutocompleteComponent) mentionAutocomplete?: MentionAutocompleteComponent;
 
@@ -224,6 +231,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
 
   showPreview = signal(false);
   showAdvancedOptions = signal(false);
+  isContentFocused = signal(false);
   isDragOver = signal(false);
   isUploading = signal(false);
   uploadStatus = signal(''); // Detailed upload status message
@@ -564,11 +572,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       currentContent = currentContent.replace(/[ \t]+/g, ' ').replace(/\n\s*\n/g, '\n\n').trim();
 
       this.content.set(currentContent);
-
-      // Update textarea
-      if (this.contentTextarea) {
-        this.contentTextarea.nativeElement.value = currentContent;
-      }
+      this.scheduleTextareaRefresh();
     }
 
     // If no more media, disable media mode
@@ -733,14 +737,15 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
 
     // Add paste event listener for clipboard image handling
     this.setupPasteHandler();
+    window.addEventListener('resize', this.handleViewportResize);
+    window.visualViewport?.addEventListener('resize', this.handleViewportResize);
 
     // Auto-focus the textarea (only in dialog mode)
     if (!this.inlineMode()) {
       setTimeout(() => {
         if (this.contentTextarea) {
           this.contentTextarea.nativeElement.focus();
-          // Initial auto-resize for any pre-filled content
-          this.autoResizeTextarea(this.contentTextarea.nativeElement);
+          this.scheduleTextareaRefresh();
         }
       }, 100);
     }
@@ -794,6 +799,12 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   };
 
   ngOnDestroy() {
+    if (this.contentTextarea?.nativeElement) {
+      this.contentTextarea.nativeElement.removeEventListener('paste', this.pasteHandler);
+    }
+    window.removeEventListener('resize', this.handleViewportResize);
+    window.visualViewport?.removeEventListener('resize', this.handleViewportResize);
+
     // Clear auto-save timer on destroy
     if (this.autoSaveTimer) {
       clearTimeout(this.autoSaveTimer);
@@ -839,7 +850,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     });
 
     effect(() => {
-      const canToggleXFromHeader = !this.inlineMode() && this.xHeaderIndicatorVisible();
+      const canToggleXFromHeader = !this.inlineMode() && this.xHeaderIndicatorVisible() && this.postToX();
       const secondaryHeaderIcon = canToggleXFromHeader ? this.xHeaderIconUrl : '';
       const username = this.xDualPost.status().username;
       const secondaryHeaderTooltip = secondaryHeaderIcon
@@ -2099,11 +2110,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       currentContent = currentContent.replace(/[ \t]+/g, ' ').replace(/^ +| +$/gm, '').trim();
 
       this.content.set(currentContent);
-
-      // Update textarea
-      if (this.contentTextarea) {
-        this.contentTextarea.nativeElement.value = currentContent;
-      }
+      this.scheduleTextareaRefresh();
 
       // Remove from pubkeyToNameMap
       this.pubkeyToNameMap.delete(pubkey);
@@ -2124,14 +2131,9 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       const currentContent = this.content();
       const newContent = currentContent.substring(0, start) + emoji + currentContent.substring(end);
       this.content.set(newContent);
-      textarea.value = newContent;
 
-      // Restore cursor position after emoji
-      setTimeout(() => {
-        const newPos = start + emoji.length;
-        textarea.setSelectionRange(newPos, newPos);
-        textarea.focus();
-      });
+      const newPos = start + emoji.length;
+      this.scheduleTextareaRefresh(newPos, true);
     } else {
       this.content.update(text => text + emoji);
     }
@@ -2211,15 +2213,10 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       const newContent = before + textToInsert + after;
 
       this.content.set(newContent);
-      textarea.value = newContent;
 
       // Position cursor after the inserted text
-      setTimeout(() => {
-        const newPos = start + textToInsert.length;
-        textarea.setSelectionRange(newPos, newPos);
-        textarea.focus();
-        this.autoResizeTextarea(textarea);
-      });
+      const newPos = start + textToInsert.length;
+      this.scheduleTextareaRefresh(newPos, true);
     } else {
       // Fallback: append to end
       const currentContent = this.content();
@@ -2243,9 +2240,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     const target = event.target as HTMLTextAreaElement;
     const newContent = target.value;
     this.content.set(newContent);
-
-    // Auto-resize the textarea
-    this.autoResizeTextarea(target);
+    this.scheduleTextareaRefresh(target.selectionStart || 0);
 
     // Check for removed mentions and sync with mentions list
     this.syncMentionsWithContent(newContent);
@@ -2254,29 +2249,44 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     this.handleMentionInput(newContent, target.selectionStart || 0);
   }
 
-  /**
-   * Auto-resize the textarea based on its content.
-   * Adjusts the height to fit the content while respecting min/max constraints.
-   * Scrollbar will automatically appear when content exceeds max height (via CSS overflow-y: auto).
-   */
-  private autoResizeTextarea(textarea: HTMLTextAreaElement): void {
-    // Reset height to auto to get the correct scrollHeight
+  onContentFocus(): void {
+    this.isContentFocused.set(true);
+    this.scheduleTextareaRefresh();
+  }
+
+  onContentBlur(): void {
+    this.isContentFocused.set(false);
+    this.scheduleTextareaRefresh();
+  }
+
+  private scheduleTextareaRefresh(cursorPosition?: number, focus = false): void {
+    requestAnimationFrame(() => {
+      const textarea = this.contentTextarea?.nativeElement;
+      if (!textarea) {
+        return;
+      }
+
+      this.syncTextareaHeight(textarea);
+
+      if (typeof cursorPosition === 'number') {
+        textarea.setSelectionRange(cursorPosition, cursorPosition);
+      }
+
+      if (focus) {
+        textarea.focus();
+      }
+    });
+  }
+
+  private syncTextareaHeight(textarea: HTMLTextAreaElement): void {
+    const minHeight = this.inlineMode() ? 88 : 112;
+
+    textarea.style.maxHeight = 'none';
     textarea.style.height = 'auto';
 
-    // Get computed style for min/max height
-    const computedStyle = window.getComputedStyle(textarea);
-    const cssMinHeight = Number.parseFloat(computedStyle.minHeight);
-    const minHeight = Number.isFinite(cssMinHeight) && cssMinHeight > 0
-      ? cssMinHeight
-      : (this.inlineMode() ? 60 : 96);
-    const maxHeight = this.inlineMode() ? 200 : 500; // Max height for inline vs dialog mode
-
-    // Calculate the new height based on scrollHeight
-    const newHeight = Math.min(Math.max(textarea.scrollHeight, minHeight), maxHeight);
-
-    // Set the new height
-    textarea.style.height = `${newHeight}px`;
-    textarea.style.overflowY = textarea.scrollHeight > maxHeight ? 'auto' : 'hidden';
+    const nextHeight = Math.max(minHeight, textarea.scrollHeight);
+    textarea.style.height = `${nextHeight}px`;
+    textarea.style.overflowY = 'hidden';
   }
 
   /**
@@ -2445,12 +2455,26 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     }
 
     const target = event.target as HTMLTextAreaElement;
-    this.handleMentionInput(this.content(), target.selectionStart || 0);
+    this.syncMentionStateFromSelection(target);
   }
 
   onContentClick(event: MouseEvent): void {
     const target = event.target as HTMLTextAreaElement;
-    this.handleMentionInput(this.content(), target.selectionStart || 0);
+    this.syncMentionStateFromSelection(target);
+  }
+
+  onContentSelectionChange(event: Event): void {
+    const target = event.target as HTMLTextAreaElement;
+    this.syncMentionStateFromSelection(target);
+  }
+
+  private syncMentionStateFromSelection(textarea: HTMLTextAreaElement): void {
+    if (textarea.selectionStart !== textarea.selectionEnd) {
+      this.onMentionDismissed();
+      return;
+    }
+
+    this.handleMentionInput(this.content(), textarea.selectionStart || 0);
   }
 
   private handleMentionInput(content: string, cursorPosition: number): void {
@@ -2589,16 +2613,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
 
     // Update content
     this.content.set(replacement.replacementText);
-
-    // Update cursor position
-    setTimeout(() => {
-      const textarea = this.contentTextarea?.nativeElement;
-      if (textarea) {
-        textarea.selectionStart = replacement.newCursorPosition;
-        textarea.selectionEnd = replacement.newCursorPosition;
-        textarea.focus();
-      }
-    }, 0);
+    this.scheduleTextareaRefresh(replacement.newCursorPosition, true);
 
     // Add to mentions list for p tags
     this.addMention(selection.pubkey);
@@ -2696,10 +2711,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     // Clear auto-saved draft from storage
     this.clearAutoDraft();
 
-    // Update the textarea value directly to ensure UI sync
-    if (this.contentTextarea) {
-      this.contentTextarea.nativeElement.value = this.initialContent;
-    }
+    this.scheduleTextareaRefresh();
 
     this.snackBar.open('Draft cleared', 'Dismiss', {
       duration: 2000,
@@ -2714,9 +2726,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     // If coming back from preview, re-trigger textarea auto-resize after it renders
     if (wasInPreview) {
       setTimeout(() => {
-        if (this.contentTextarea) {
-          this.autoResizeTextarea(this.contentTextarea.nativeElement);
-        }
+        this.scheduleTextareaRefresh();
       }, 0);
     }
   }
@@ -2733,9 +2743,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     // If coming back from advanced options, re-trigger textarea auto-resize after it renders
     if (wasInAdvancedOptions) {
       setTimeout(() => {
-        if (this.contentTextarea) {
-          this.autoResizeTextarea(this.contentTextarea.nativeElement);
-        }
+        this.scheduleTextareaRefresh();
       }, 0);
     }
   }
@@ -3168,17 +3176,13 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     const newContent = beforeCursor + prefix + url + suffix + afterCursor;
     this.content.set(newContent);
 
-    // Restore cursor position after the inserted URL
-    setTimeout(() => {
-      const newCursorPosition = cursorPosition + prefix.length + url.length + suffix.length;
-      textarea.setSelectionRange(newCursorPosition, newCursorPosition);
-      textarea.focus();
-    }, 0);
+    const newCursorPosition = cursorPosition + prefix.length + url.length + suffix.length;
+    this.scheduleTextareaRefresh(newCursorPosition, true);
   }
 
   private setupPasteHandler(): void {
     if (this.contentTextarea) {
-      this.contentTextarea.nativeElement.addEventListener('paste', this.handlePaste.bind(this));
+      this.contentTextarea.nativeElement.addEventListener('paste', this.pasteHandler);
     }
   }
 
@@ -3433,12 +3437,8 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
 
     this.content.set(newContent);
 
-    // Restore cursor position after the inserted text
-    setTimeout(() => {
-      const newCursorPosition = cursorPosition + processedText.length;
-      textarea.setSelectionRange(newCursorPosition, newCursorPosition);
-      textarea.focus();
-    }, 0);
+    const newCursorPosition = cursorPosition + processedText.length;
+    this.scheduleTextareaRefresh(newCursorPosition, true);
   }
 
   /**
@@ -3457,12 +3457,8 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
 
     this.content.set(newContent);
 
-    // Restore cursor position after the inserted text
-    setTimeout(() => {
-      const newCursorPosition = cursorPosition + text.length;
-      textarea.setSelectionRange(newCursorPosition, newCursorPosition);
-      textarea.focus();
-    }, 0);
+    const newCursorPosition = cursorPosition + text.length;
+    this.scheduleTextareaRefresh(newCursorPosition, true);
   }
 
   // Proof of Work methods
@@ -3652,11 +3648,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   }
 
   adjustTextareaHeight(): void {
-    if (this.contentTextarea) {
-      const textarea = this.contentTextarea.nativeElement;
-      textarea.style.height = 'auto';
-      textarea.style.height = textarea.scrollHeight + 'px';
-    }
+    this.scheduleTextareaRefresh();
   }
 
   private processContentForPublishing(content: string): string {

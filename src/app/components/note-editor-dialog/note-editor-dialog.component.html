@@ -19,7 +19,7 @@
 <!-- Main Editor Content (Dialog mode always, Inline mode when expanded) -->
 @if (!inlineMode() || isExpanded()) {
 <!-- Content Area -->
-<div dialog-content class="note-editor-dialog" [class.inline-editor]="inlineMode()">
+<div dialog-content class="note-editor-dialog" [class.inline-editor]="inlineMode()" #noteEditorLayout>
   <div class="dialog-content-wrapper" [class.scrollable]="showAdvancedOptions()"
     [class.preview-mode]="showPreview() && !showAdvancedOptions()"
     [attr.data-drag-enabled]="!showPreview() && !showAdvancedOptions() || null"
@@ -117,16 +117,20 @@
       }
 
       <div class="textarea-container">
-        <mat-form-field appearance="outline" class="content-field">
-          <mat-label>{{ isMediaModeEnabled() ? 'Description' : (inlineMode() ? 'Post your reply' : "What's on your
-            mind?") }}</mat-label>
-          <textarea matInput [value]="content()" (input)="onContentInput($event)" (keydown)="onContentKeyDown($event)"
-            (keyup)="onContentKeyUp($event)" (click)="onContentClick($event)"
-            [placeholder]="inlineMode() ? 'Write your reply... Use @ to mention someone' : 'Write your note... Use @ to mention someone'"
-            [title]="inlineMode() ? 'Reply content' : 'Note content'" [rows]="inlineMode() ? 3 : 4"
-            class="content-textarea" #contentTextarea>
+        <mat-form-field appearance="outline" class="content-field" [class.focused]="isContentFocused()"
+          subscriptSizing="dynamic">
+          @if (!content() && !isContentFocused()) {
+          <mat-label>{{ isMediaModeEnabled() ? 'Description' : (inlineMode() ? 'Post your reply' : "What's on your mind?") }}</mat-label>
+          }
+          <textarea matInput [value]="content()" (input)="onContentInput($event)" (focus)="onContentFocus()"
+            (blur)="onContentBlur()" (keydown)="onContentKeyDown($event)" (keyup)="onContentKeyUp($event)"
+            (click)="onContentClick($event)" (select)="onContentSelectionChange($event)"
+            placeholder="{{ inlineMode() ? 'Write your reply... Use @ to mention someone' : 'Write your note... Use @ to mention someone' }}"
+            title="{{ inlineMode() ? 'Reply content' : 'Note content' }}"
+            aria-label="{{ inlineMode() ? 'Reply content' : 'Note content' }}" class="content-textarea"
+            #contentTextarea>
           </textarea>
-          <mat-hint align="end"> {{ characterCount() }} characters </mat-hint>
+          <mat-hint align="end">{{ characterCount() }} characters</mat-hint>
         </mat-form-field>
 
         <!-- Mentions (kept directly below text input) -->
@@ -434,7 +438,7 @@
     } -->
   </div>
 
-  <div dialog-actions class="action-container" [class.inline-actions]="inlineMode()"
+  <div class="action-container composer-actions" [class.inline-actions]="inlineMode()" #composerActions
     (dragenter)="!showPreview() && !showAdvancedOptions() && onDragEnter($event)"
     (dragover)="!showPreview() && !showAdvancedOptions() && onDragOver($event)"
     (dragleave)="!showPreview() && !showAdvancedOptions() && onDragLeave($event)"

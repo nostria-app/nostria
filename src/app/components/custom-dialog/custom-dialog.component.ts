@@ -59,46 +59,50 @@ import { MatTooltipModule } from '@angular/material/tooltip';
         
         <!-- Header -->
         <div class="dialog-header">
-          @if (getShowBackButton()) {
-            <button 
-              class="back-button" 
-              (click)="onBackClick()"
-              aria-label="Back"
-              type="button">
-              <mat-icon>arrow_back</mat-icon>
-            </button>
-          }
-          
-          @if (getShowCloseButton()) {
-            <button 
-              class="close-button" 
-              (click)="onCloseClick()"
-              aria-label="Close"
-              type="button">
-              <mat-icon>close</mat-icon>
-            </button>
-          }
-          
+          <div class="dialog-header-leading">
+            @if (getShowBackButton()) {
+              <button 
+                class="back-button" 
+                (click)="onBackClick()"
+                aria-label="Back"
+                type="button">
+                <mat-icon>arrow_back</mat-icon>
+              </button>
+            }
+
+            @if (getHeaderIcon()) {
+              <img [src]="getHeaderIcon()" [alt]="getTitle() || 'Dialog'" class="header-icon" />
+            }
+
+            @if (getSecondaryHeaderIcon()) {
+              <button class="secondary-header-button" [class.active]="getSecondaryHeaderActive()"
+                [class.clickable]="getSecondaryHeaderClickable()" [matTooltip]="getSecondaryHeaderTooltip()"
+                [matTooltipDisabled]="!getSecondaryHeaderTooltip()" [attr.aria-label]="getSecondaryHeaderAriaLabel()"
+                [disabled]="!getSecondaryHeaderClickable()" (click)="onSecondaryHeaderClick()" type="button">
+                <img [src]="getSecondaryHeaderIcon()" [alt]="getSecondaryHeaderTooltip() || 'Dialog status'"
+                  class="secondary-header-icon" />
+              </button>
+            }
+          </div>
+
           @if (getTitle()) {
             <h2 class="dialog-title" id="dialog-title">{{ getTitle() }}</h2>
           }
-          
-          @if (getHeaderIcon()) {
-            <img [src]="getHeaderIcon()" [alt]="getTitle() || 'Dialog'" class="header-icon" />
-          }
 
-          @if (getSecondaryHeaderIcon()) {
-            <button class="secondary-header-button" [class.active]="getSecondaryHeaderActive()"
-              [class.clickable]="getSecondaryHeaderClickable()" [matTooltip]="getSecondaryHeaderTooltip()"
-              [matTooltipDisabled]="!getSecondaryHeaderTooltip()" [attr.aria-label]="getSecondaryHeaderAriaLabel()"
-              [disabled]="!getSecondaryHeaderClickable()" (click)="onSecondaryHeaderClick()" type="button">
-              <img [src]="getSecondaryHeaderIcon()" [alt]="getSecondaryHeaderTooltip() || 'Dialog status'"
-                class="secondary-header-icon" />
-            </button>
-          }
-          
-          <!-- Custom header content -->
-          <ng-content select="[dialog-header]"></ng-content>
+          <div class="dialog-header-trailing">
+            <!-- Custom header content -->
+            <ng-content select="[dialog-header]"></ng-content>
+
+            @if (getShowCloseButton()) {
+              <button 
+                class="close-button" 
+                (click)="onCloseClick()"
+                aria-label="Close"
+                type="button">
+                <mat-icon>close</mat-icon>
+              </button>
+            }
+          </div>
         </div>
         
         <!-- Content -->

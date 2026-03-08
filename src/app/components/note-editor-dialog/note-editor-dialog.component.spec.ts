@@ -278,6 +278,37 @@ describe('NoteEditorDialogComponent', () => {
     });
   });
 
+  describe('selection handling', () => {
+    it('should dismiss mention autocomplete when text is selected', () => {
+      createComponent();
+      const dismissSpy = vi.spyOn(component, 'onMentionDismissed');
+
+      component.onContentSelectionChange({
+        target: {
+          selectionStart: 2,
+          selectionEnd: 5,
+        },
+      } as unknown as Event);
+
+      expect(dismissSpy).toHaveBeenCalled();
+    });
+
+    it('should keep mention detection active when the cursor is collapsed', () => {
+      createComponent();
+      component.content.set('hello @so');
+      const handleMentionInputSpy = vi.spyOn(component as never, 'handleMentionInput' as never);
+
+      component.onContentSelectionChange({
+        target: {
+          selectionStart: 9,
+          selectionEnd: 9,
+        },
+      } as unknown as Event);
+
+      expect(handleMentionInputSpy).toHaveBeenCalledWith('hello @so', 9);
+    });
+  });
+
   describe('cleanup', () => {
     it('should remove document event listeners on destroy', async () => {
       createComponent();
