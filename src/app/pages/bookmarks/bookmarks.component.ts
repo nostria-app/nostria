@@ -4,6 +4,8 @@ import { CdkDragDrop, DragDropModule } from '@angular/cdk/drag-drop';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { MatInputModule } from '@angular/material/input';
+import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatCardModule } from '@angular/material/card';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatMenuModule } from '@angular/material/menu';
@@ -33,6 +35,8 @@ import { ConfirmDialogComponent } from '../../components/confirm-dialog/confirm-
 import { CreateListDialogComponent } from './create-list-dialog/create-list-dialog.component';
 import { SocialPreviewComponent } from '../../components/social-preview/social-preview.component';
 import { BookmarkListSelectorComponent } from '../../components/bookmark-list-selector/bookmark-list-selector.component';
+import { FilterButtonComponent } from '../../components/filter-button/filter-button.component';
+import { BookmarkSortFilterPanelComponent } from './bookmark-sort-filter-panel/bookmark-sort-filter-panel.component';
 
 export interface Bookmark {
   id: string;
@@ -54,12 +58,23 @@ interface BookmarkCategory {
 type BookmarkCategoryVisibility = Record<string, boolean>;
 
 export type ViewMode = 'tiles' | 'content' | 'list';
+type BookmarkSortMode = 'default' | 'published-desc' | 'published-asc';
+
+interface MixedBookmarkItem {
+  key: string;
+  id: string;
+  type: BookmarkType;
+  relay?: string;
+  pubkey?: string;
+  addedOrder: number;
+}
 
 interface CompactEventDetails {
   contentPreview: string;
   authorPubkey: string;
   authorName: string;
   authorPicture: string | null;
+  publishedAt: number | null;
 }
 
 interface CompactAddressableDetails {
@@ -67,6 +82,7 @@ interface CompactAddressableDetails {
   contentPreview: string;
   authorName: string;
   authorPicture: string | null;
+  publishedAt: number | null;
 }
 
 interface CompactUrlDetails {
@@ -80,6 +96,8 @@ interface CompactUrlDetails {
     FormsModule,
     MatButtonModule,
     MatIconModule,
+    MatInputModule,
+    MatFormFieldModule,
     MatCardModule,
     MatChipsModule,
     MatMenuModule,
@@ -92,6 +110,8 @@ interface CompactUrlDetails {
     EventComponent,
     ArticleComponent,
     SocialPreviewComponent,
+    FilterButtonComponent,
+    BookmarkSortFilterPanelComponent,
   ],
   templateUrl: './bookmarks.component.html',
   styleUrl: './bookmarks.component.scss',
@@ -125,9 +145,7 @@ export class BookmarksComponent implements OnInit {
 
   // Pagination for continuous scrolling
   private readonly PAGE_SIZE = 10;
-  displayedEventCount = signal(this.PAGE_SIZE);
-  displayedArticleCount = signal(this.PAGE_SIZE);
-  displayedUrlCount = signal(this.PAGE_SIZE);
+  displayedBookmarkCount = signal(this.PAGE_SIZE);
 
   // Default categories with types
   categories = signal<BookmarkCategory[]>([
@@ -138,39 +156,103 @@ export class BookmarksComponent implements OnInit {
 
   // Current state
   searchQuery = signal('');
+  showSearch = signal(false);
   visibleCategories = signal<BookmarkCategoryVisibility>({
     events: true,
     articles: true,
     websites: true,
   });
+  sortMode = signal<BookmarkSortMode>('default');
   viewMode = signal<ViewMode>('content');
 
-  // Paginated/sliced bookmarks for display
-  displayedEvents = computed(() => {
-    const events = this.bookmarkService.bookmarkEvents();
-    if (this.viewMode() === 'list') {
-      return events;
+  mergedBookmarks = computed<MixedBookmarkItem[]>(() => {
+    const activeEvent = this.bookmarkService.activeBookmarkEvent();
+    if (!activeEvent) {
+      return [];
     }
-    const count = this.displayedEventCount();
-    return events.slice(0, count);
+
+    const visibleTypes = new Set<BookmarkType>();
+    if (this.isCategoryVisible('events')) {
+      visibleTypes.add('e');
+    }
+    if (this.isCategoryVisible('articles')) {
+      visibleTypes.add('a');
+    }
+    if (this.isCategoryVisible('websites')) {
+      visibleTypes.add('r');
+    }
+
+    const seen = new Set<string>();
+    const items: MixedBookmarkItem[] = [];
+
+    for (let index = activeEvent.tags.length - 1; index >= 0; index--) {
+      const tag = activeEvent.tags[index];
+      const type = tag[0] as BookmarkType;
+      const id = tag[1];
+
+      if (!id || !visibleTypes.has(type)) {
+        continue;
+      }
+
+      const key = `${type}:${id}`;
+      if (seen.has(key)) {
+        continue;
+      }
+
+      seen.add(key);
+      items.push({
+        key,
+        id,
+        type,
+        relay: tag[2] || undefined,
+        pubkey: tag[3] || undefined,
+        addedOrder: items.length,
+      });
+    }
+
+    return items;
   });
 
-  displayedArticles = computed(() => {
-    const articles = this.bookmarkService.bookmarkArticles();
-    if (this.viewMode() === 'list') {
-      return articles;
+  filteredSortedBookmarks = computed<MixedBookmarkItem[]>(() => {
+    const query = this.searchQuery().trim().toLowerCase();
+    const filtered = this.mergedBookmarks().filter(item => this.matchesSearch(item, query));
+    const sortMode = this.sortMode();
+
+    if (sortMode === 'default') {
+      return filtered;
     }
-    const count = this.displayedArticleCount();
-    return articles.slice(0, count);
+
+    return [...filtered].sort((left, right) => {
+      const leftPublished = this.getPublishedTimestamp(left);
+      const rightPublished = this.getPublishedTimestamp(right);
+
+      if (leftPublished == null && rightPublished == null) {
+        return left.addedOrder - right.addedOrder;
+      }
+
+      if (leftPublished == null) {
+        return 1;
+      }
+
+      if (rightPublished == null) {
+        return -1;
+      }
+
+      if (sortMode === 'published-asc') {
+        return leftPublished - rightPublished;
+      }
+
+      return rightPublished - leftPublished;
+    });
   });
 
-  displayedUrls = computed(() => {
-    const urls = this.bookmarkService.bookmarkUrls();
+  displayedBookmarks = computed<MixedBookmarkItem[]>(() => {
+    const bookmarks = this.filteredSortedBookmarks();
     if (this.viewMode() === 'list') {
-      return urls;
+      return bookmarks;
     }
-    const count = this.displayedUrlCount();
-    return urls.slice(0, count);
+
+    return bookmarks.slice(0, this.displayedBookmarkCount());
   });
 
   // Get the currently selected list
@@ -213,27 +295,27 @@ export class BookmarksComponent implements OnInit {
     });
 
     effect(() => {
-      if (this.viewMode() !== 'list' || !this.isCategoryVisible('events')) {
+      if (!this.shouldLoadEventDetails()) {
         return;
       }
 
-      void this.loadCompactEventDetails(this.displayedEvents());
+      void this.loadCompactEventDetails(this.getEventBookmarksForLookup());
     });
 
     effect(() => {
-      if (this.viewMode() !== 'list' || !this.isCategoryVisible('articles')) {
+      if (!this.shouldLoadAddressableDetails()) {
         return;
       }
 
-      void this.loadCompactAddressableDetails(this.displayedArticles());
+      void this.loadCompactAddressableDetails(this.getAddressableBookmarksForLookup());
     });
 
     effect(() => {
-      if (this.viewMode() !== 'list' || !this.isCategoryVisible('websites')) {
+      if (!this.shouldLoadUrlDetails()) {
         return;
       }
 
-      void this.loadCompactUrlDetails(this.displayedUrls());
+      void this.loadCompactUrlDetails(this.getUrlBookmarksForLookup());
     });
   }
 
@@ -249,9 +331,7 @@ export class BookmarksComponent implements OnInit {
   }
 
   private resetPagination(): void {
-    this.displayedEventCount.set(this.PAGE_SIZE);
-    this.displayedArticleCount.set(this.PAGE_SIZE);
-    this.displayedUrlCount.set(this.PAGE_SIZE);
+    this.displayedBookmarkCount.set(this.PAGE_SIZE);
   }
 
   /**
@@ -262,31 +342,11 @@ export class BookmarksComponent implements OnInit {
       return;
     }
 
-    if (this.isCategoryVisible('events')) {
-      const current = this.displayedEventCount();
-      const total = this.bookmarkService.bookmarkEvents().length;
-      if (current < total) {
-        this.displayedEventCount.set(Math.min(current + this.PAGE_SIZE, total));
-        this.logger.debug(`[Bookmarks] Loaded more events: ${this.displayedEventCount()}/${total}`);
-      }
-    }
-
-    if (this.isCategoryVisible('articles')) {
-      const current = this.displayedArticleCount();
-      const total = this.bookmarkService.bookmarkArticles().length;
-      if (current < total) {
-        this.displayedArticleCount.set(Math.min(current + this.PAGE_SIZE, total));
-        this.logger.debug(`[Bookmarks] Loaded more articles: ${this.displayedArticleCount()}/${total}`);
-      }
-    }
-
-    if (this.isCategoryVisible('websites')) {
-      const current = this.displayedUrlCount();
-      const total = this.bookmarkService.bookmarkUrls().length;
-      if (current < total) {
-        this.displayedUrlCount.set(Math.min(current + this.PAGE_SIZE, total));
-        this.logger.debug(`[Bookmarks] Loaded more URLs: ${this.displayedUrlCount()}/${total}`);
-      }
+    const current = this.displayedBookmarkCount();
+    const total = this.filteredSortedBookmarks().length;
+    if (current < total) {
+      this.displayedBookmarkCount.set(Math.min(current + this.PAGE_SIZE, total));
+      this.logger.debug(`[Bookmarks] Loaded more bookmarks: ${this.displayedBookmarkCount()}/${total}`);
     }
   }
 
@@ -312,14 +372,7 @@ export class BookmarksComponent implements OnInit {
       return false;
     }
 
-    return (
-      (this.isCategoryVisible('events')
-        && this.displayedEventCount() < this.bookmarkService.bookmarkEvents().length)
-      || (this.isCategoryVisible('articles')
-        && this.displayedArticleCount() < this.bookmarkService.bookmarkArticles().length)
-      || (this.isCategoryVisible('websites')
-        && this.displayedUrlCount() < this.bookmarkService.bookmarkUrls().length)
-    );
+    return this.displayedBookmarkCount() < this.filteredSortedBookmarks().length;
   }
 
   private loadFromStorage(): void {
@@ -393,6 +446,33 @@ export class BookmarksComponent implements OnInit {
     this.saveCategoryVisibility();
   }
 
+  toggleSearch(): void {
+    this.showSearch.update(current => !current);
+
+    if (!this.showSearch()) {
+      this.searchQuery.set('');
+    }
+  }
+
+  setSortMode(mode: BookmarkSortMode): void {
+    this.sortMode.set(mode);
+  }
+
+  getSortLabel(): string {
+    switch (this.sortMode()) {
+      case 'published-desc':
+        return 'Published: Newest';
+      case 'published-asc':
+        return 'Published: Oldest';
+      default:
+        return 'Default';
+    }
+  }
+
+  hasActiveSort(): boolean {
+    return this.sortMode() !== 'default';
+  }
+
   isCategoryVisible(categoryId: string): boolean {
     return this.visibleCategories()[categoryId] ?? false;
   }
@@ -412,6 +492,71 @@ export class BookmarksComponent implements OnInit {
       default:
         return 0;
     }
+  }
+
+  private shouldLoadEventDetails(): boolean {
+    return this.isCategoryVisible('events') && (this.viewMode() === 'list' || !!this.searchQuery().trim() || this.sortMode() !== 'default');
+  }
+
+  private shouldLoadAddressableDetails(): boolean {
+    return this.isCategoryVisible('articles') && (this.viewMode() === 'list' || !!this.searchQuery().trim() || this.sortMode() !== 'default');
+  }
+
+  private shouldLoadUrlDetails(): boolean {
+    return this.isCategoryVisible('websites') && (this.viewMode() === 'list' || !!this.searchQuery().trim());
+  }
+
+  private getEventBookmarksForLookup(): Array<{ id: string; relay?: string; pubkey?: string }> {
+    return this.mergedBookmarks().filter(item => item.type === 'e').map(item => ({
+      id: item.id,
+      relay: item.relay,
+      pubkey: item.pubkey,
+    }));
+  }
+
+  private getAddressableBookmarksForLookup(): Array<{ id: string; relay?: string }> {
+    return this.mergedBookmarks().filter(item => item.type === 'a').map(item => ({
+      id: item.id,
+      relay: item.relay,
+    }));
+  }
+
+  private getUrlBookmarksForLookup(): Array<{ id: string }> {
+    return this.mergedBookmarks().filter(item => item.type === 'r').map(item => ({ id: item.id }));
+  }
+
+  private matchesSearch(item: MixedBookmarkItem, query: string): boolean {
+    if (!query) {
+      return true;
+    }
+
+    const haystacks: string[] = [item.id];
+
+    if (item.type === 'e') {
+      const details = this.compactEventDetails()[item.id];
+      haystacks.push(details?.authorName || '', details?.contentPreview || '', item.pubkey || '');
+    } else if (item.type === 'a') {
+      const details = this.compactAddressableDetails()[item.id];
+      const parsed = this.bookmarkService.parseArticleId(item.id);
+      haystacks.push(details?.authorName || '', details?.contentPreview || '', details?.typeLabel || '', parsed.slug || '', parsed.id || '');
+    } else if (item.type === 'r') {
+      const details = this.compactUrlDetails()[item.id];
+      haystacks.push(details?.title || '', details?.subtitle || '');
+    }
+
+    return haystacks.some(value => value.toLowerCase().includes(query));
+  }
+
+  private getPublishedTimestamp(item: MixedBookmarkItem): number | null {
+    if (item.type === 'e') {
+      return this.compactEventDetails()[item.id]?.publishedAt ?? null;
+    }
+
+    if (item.type === 'a') {
+      return this.compactAddressableDetails()[item.id]?.publishedAt ?? null;
+    }
+
+    return null;
   }
 
   setViewMode(mode: ViewMode): void {
@@ -749,6 +894,7 @@ export class BookmarksComponent implements OnInit {
                 authorPubkey: '',
                 authorName: 'Unknown',
                 authorPicture: null,
+                publishedAt: null,
               };
             }
             return;
@@ -788,6 +934,7 @@ export class BookmarksComponent implements OnInit {
             authorPubkey,
             authorName,
             authorPicture,
+            publishedAt: event.created_at ?? null,
           };
         })
       );
@@ -918,6 +1065,7 @@ export class BookmarksComponent implements OnInit {
               contentPreview: this.getCompactPubkeyLabel(parsed.id),
               authorName: author.name,
               authorPicture: author.picture,
+              publishedAt: null,
             };
             return;
           }
@@ -957,6 +1105,7 @@ export class BookmarksComponent implements OnInit {
             contentPreview: this.toCompactPreview(contentSource),
             authorName: author.name,
             authorPicture: author.picture,
+            publishedAt: event?.created_at ?? null,
           };
         })
       );
