@@ -90,6 +90,7 @@ const SWIPE_COMPLETION_ANIMATION_MS = 220;
   styleUrl: './clips.component.scss',
 })
 export class ClipsComponent implements OnInit, OnDestroy {
+  private hostElement = inject(ElementRef<HTMLElement>);
   private pool = inject(RelayPoolService);
   private relaysService = inject(RelaysService);
   private accountRelay = inject(AccountRelayService);
@@ -154,6 +155,7 @@ export class ClipsComponent implements OnInit, OnDestroy {
   private prefetchedInteractionIds = new Set<string>();
   private interactionPrefetchInFlight = new Set<string>();
   private interactionLastPrefetchedAt = new Map<string, number>();
+  private overlayPanelElement: HTMLElement | null = null;
 
   commentsOpen = signal(false);
   commentsEvent = signal<Event | null>(null);
@@ -224,6 +226,7 @@ export class ClipsComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.setPanelOverlayActive(false);
     this.clearSwipeCompletionTimer();
     this.persistFollowingPosition();
     this.persistForYouPosition();
@@ -629,11 +632,23 @@ export class ClipsComponent implements OnInit, OnDestroy {
   openComments(event: Event): void {
     this.commentsEvent.set(event);
     this.commentsOpen.set(true);
+    this.setPanelOverlayActive(true);
   }
 
   closeComments(): void {
     this.commentsOpen.set(false);
     this.commentsEvent.set(null);
+    this.setPanelOverlayActive(false);
+  }
+
+  private setPanelOverlayActive(active: boolean): void {
+    const panelElement = this.overlayPanelElement ?? this.hostElement.nativeElement.closest('.left-panel, .right-panel');
+    if (!(panelElement instanceof HTMLElement)) {
+      return;
+    }
+
+    this.overlayPanelElement = panelElement;
+    panelElement.classList.toggle('panel-overlay-active', active);
   }
 
   private async initializeClips(): Promise<void> {

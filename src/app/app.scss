@@ -1501,6 +1501,11 @@ mat-sidenav-content {
   }
 }
 
+.left-panel.panel-overlay-active,
+.right-panel.panel-overlay-active {
+  z-index: 20;
+}
+
 // Panel Content Area (used by both panels)
 // Content flows naturally - scrolling happens at panel level (.left-panel, .right-panel)
 .panel-content {
