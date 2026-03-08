@@ -1887,10 +1887,21 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       if (!content || content === '+') {
         return 'Reacted \u2764\uFE0F';
       }
-      // For custom emoji shortcodes, show the shortcode as-is since we can't render images in text
+      const shortcode = this.getEmojiShortcode(content);
+      if (shortcode) {
+        return 'Reacted';
+      }
       return `Reacted ${content}`;
     }
     return lastMessage.content;
+  }
+
+  getChatPreviewEmojiUrl(lastMessage: DirectMessage): string | undefined {
+    if (lastMessage.eventKind !== 'reaction' && !this.isReactionMessage(lastMessage)) {
+      return undefined;
+    }
+    const content = lastMessage.reactionContent || lastMessage.content;
+    return this.getReactionCustomEmojiUrl(content, lastMessage.tags || []);
   }
 
   getReactionCustomEmojiUrl(content: string, tags: string[][]): string | undefined {

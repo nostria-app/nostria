@@ -123,7 +123,9 @@
                       </div>
                       <div class="chat-preview">
                         @if (chat.lastMessage) {
-                        <span class="message-preview">{{ getChatPreviewText(chat.lastMessage) }}</span>
+                        <span class="message-preview">{{ getChatPreviewText(chat.lastMessage) }}@if
+                          (getChatPreviewEmojiUrl(chat.lastMessage); as emojiUrl) { <img class="chat-preview-emoji"
+                            [src]="emojiUrl" alt="emoji" loading="lazy" />}</span>
                         } @else {
                         <span class="message-preview empty-message">Save private notes</span>
                         }
@@ -170,7 +172,8 @@
                             @if (chat.lastMessage.isOutgoing) {
                             <span class="outgoing-prefix">You: </span>
                             }
-                            {{ getChatPreviewText(chat.lastMessage) }}
+                            {{ getChatPreviewText(chat.lastMessage) }}@if (getChatPreviewEmojiUrl(chat.lastMessage); as
+                            emojiUrl) { <img class="chat-preview-emoji" [src]="emojiUrl" alt="emoji" loading="lazy" />}
                           </span>
                           <!-- <span class="message-time">{{ chat.lastMessage?.created_at | ago }}</span> -->
                           } @else {
@@ -256,7 +259,8 @@
                             @if (chat.lastMessage.isOutgoing) {
                             <span class="outgoing-prefix">You: </span>
                             }
-                            {{ getChatPreviewText(chat.lastMessage) }}
+                            {{ getChatPreviewText(chat.lastMessage) }}@if (getChatPreviewEmojiUrl(chat.lastMessage); as
+                            emojiUrl) { <img class="chat-preview-emoji" [src]="emojiUrl" alt="emoji" loading="lazy" />}
                           </span>
                           } @else {
                           <span class="message-preview empty-message">New conversation</span>
