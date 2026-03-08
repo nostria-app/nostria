@@ -102,6 +102,9 @@ export class MusicTrackDialogComponent {
   audioFile = signal<File | null>(null);
   audioUrl = signal<string | null>(null);
   coverImage = signal<string | null>(null);
+  showExternalUrlInput = signal(false);
+  externalUrlValue = signal('');
+  externalCoverUrlValue = signal('');
   agreedToTerms = signal(false);
   showTermsDialog = signal(false);
   originalDTag = signal<string>('');
@@ -536,6 +539,44 @@ export class MusicTrackDialogComponent {
         this.snackBar.open(`Failed to delete ${fileType}`, 'Close', { duration: 3000 });
       }
     }
+  }
+
+  toggleExternalUrlInput(event: MouseEvent): void {
+    event.stopPropagation();
+    this.showExternalUrlInput.update(v => !v);
+    if (!this.showExternalUrlInput()) {
+      this.externalUrlValue.set('');
+      this.externalCoverUrlValue.set('');
+    }
+  }
+
+  applyExternalUrls(): void {
+    const audioUrl = this.externalUrlValue().trim();
+    if (!audioUrl) return;
+
+    try {
+      new URL(audioUrl);
+    } catch {
+      this.snackBar.open('Please enter a valid audio URL', 'Close', { duration: 3000 });
+      return;
+    }
+
+    const coverUrl = this.externalCoverUrlValue().trim();
+    if (coverUrl) {
+      try {
+        new URL(coverUrl);
+      } catch {
+        this.snackBar.open('Please enter a valid cover image URL', 'Close', { duration: 3000 });
+        return;
+      }
+      this.coverImage.set(coverUrl);
+      this.trackForm.patchValue({ imageUrl: coverUrl });
+    }
+
+    this.audioUrl.set(audioUrl);
+    this.showExternalUrlInput.set(false);
+    this.externalUrlValue.set('');
+    this.externalCoverUrlValue.set('');
   }
 
   async selectAudioFile(): Promise<void> {

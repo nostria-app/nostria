@@ -152,6 +152,28 @@ mat-dialog-content {
       }
     }
 
+    .external-url-section {
+      margin-top: 1rem;
+      width: 100%;
+
+      .external-url-btn {
+        color: var(--mat-sys-primary);
+        font-size: 0.875rem;
+      }
+
+      .external-url-input {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+
+        .external-url-actions {
+          display: flex;
+          justify-content: flex-end;
+          gap: 0.5rem;
+        }
+      }
+    }
+
     .choose-file-btn {
       display: flex;
       align-items: center;
@@ -492,6 +514,7 @@ mat-dialog-content {
     line-height: 1.5;
   }
 }
+
 mat-dialog-actions {
   padding-top: 1rem;
   display: flex;

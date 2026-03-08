@@ -31,8 +31,8 @@
         } @else {
         <label class="field-label">Audio File @if (!isEditMode()) { * }</label>
         }
-        <div class="audio-upload" [class.drag-over]="isDraggingAudio()" [class.audio-upload-large]="!showFullForm()" (dragover)="onAudioDragOver($event)"
-          (dragleave)="onAudioDragLeave($event)" (drop)="onAudioDrop($event)">
+        <div class="audio-upload" [class.drag-over]="isDraggingAudio()" [class.audio-upload-large]="!showFullForm()"
+          (dragover)="onAudioDragOver($event)" (dragleave)="onAudioDragLeave($event)" (drop)="onAudioDrop($event)">
           @if (isUploadingAudio()) {
           <div class="uploading-indicator">
             <mat-spinner diameter="24"></mat-spinner>
@@ -67,6 +67,37 @@
             <span class="supported-formats">Supported: MP3, WAV, FLAC, AAC, OGG</span>
             }
           </div>
+          @if (!showFullForm()) {
+          <div class="external-url-section">
+            @if (!showExternalUrlInput()) {
+            <button mat-button type="button" class="external-url-btn" (click)="toggleExternalUrlInput($event)">
+              <mat-icon>link</mat-icon>
+              Use externally hosted audio
+            </button>
+            } @else {
+            <div class="external-url-input" (click)="$event.stopPropagation()">
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Audio URL</mat-label>
+                <input matInput type="url" placeholder="https://example.com/track.mp3" [value]="externalUrlValue()"
+                  (input)="externalUrlValue.set($any($event.target).value)" />
+                <mat-icon matPrefix>link</mat-icon>
+              </mat-form-field>
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Album Art URL (optional)</mat-label>
+                <input matInput type="url" placeholder="https://example.com/cover.jpg" [value]="externalCoverUrlValue()"
+                  (input)="externalCoverUrlValue.set($any($event.target).value)" />
+                <mat-icon matPrefix>image</mat-icon>
+              </mat-form-field>
+              <div class="external-url-actions">
+                <button mat-button type="button" (click)="toggleExternalUrlInput($event)">Cancel</button>
+                <button mat-flat-button type="button" (click)="applyExternalUrls()" [disabled]="!externalUrlValue()">
+                  Continue
+                </button>
+              </div>
+            </div>
+            }
+          </div>
+          }
           }
         </div>
       </div>
