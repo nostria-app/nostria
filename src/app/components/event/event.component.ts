@@ -1093,6 +1093,8 @@ export class EventComponent implements AfterViewInit, OnDestroy {
         url: taggedXUrl,
       };
     }
+
+    return undefined;
   });
 
   // Check if this event is a quote-only event (has q tags or inline nostr: references but no meaningful reply context)
