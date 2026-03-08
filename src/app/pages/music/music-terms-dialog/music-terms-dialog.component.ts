@@ -20,7 +20,7 @@ import { MusicTermsContentComponent } from '../music-terms-content/music-terms-c
         <app-music-terms-content />
       </div>
       
-      <div dialog-actions style="display: flex; justify-content: flex-end;">
+      <div dialog-actions>
         <button mat-flat-button (click)="handleClose()">
           Close
         </button>

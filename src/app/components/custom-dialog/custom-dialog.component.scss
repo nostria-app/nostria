@@ -474,6 +474,10 @@
       padding: 6px 12px 8px;
     }
   }
+
+  &:not(:has([dialog-actions])) {
+    display: none;
+  }
 }
 
 // Note: z-index handling is done by #custom-dialog-container in styles.scss
