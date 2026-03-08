@@ -384,14 +384,11 @@
     </form>
   </div>
 
-  <div dialog-actions class="action-container">
-    <div class="left-actions"></div>
-    <div class="right-actions">
-      <button mat-button type="button" (click)="onClose()">Cancel</button>
-      <button mat-flat-button (click)="onSubmit()" [disabled]="!feedForm.valid">
-        {{ isEditMode() ? 'Save Changes' : 'Create Feed' }}
-      </button>
-    </div>
+  <div dialog-actions>
+    <button mat-button type="button" (click)="onClose()">Cancel</button>
+    <button mat-flat-button (click)="onSubmit()" [disabled]="!feedForm.valid">
+      {{ isEditMode() ? 'Save Changes' : 'Create Feed' }}
+    </button>
   </div>
 </app-custom-dialog>
 
