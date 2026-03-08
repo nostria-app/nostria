@@ -353,6 +353,7 @@
     </form>
   </div>
 
+  @if (showFullForm()) {
   <div dialog-actions>
     <button mat-stroked-button (click)="cancel()" [disabled]="isPublishing()">Cancel</button>
     <button mat-flat-button (click)="submitTrack()"
@@ -365,6 +366,7 @@
       }
     </button>
   </div>
+  }
 </app-custom-dialog>
 
 <!-- Terms Dialog -->
