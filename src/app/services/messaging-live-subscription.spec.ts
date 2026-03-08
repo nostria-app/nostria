@@ -218,4 +218,22 @@ describe('MessagingService live subscriptions', () => {
     expect(chat?.unreadCount).toBe(0);
     expect(message.read).toBe(true);
   });
+
+  it('normalizes structured legacy DM payloads into plain text', () => {
+    service.addMessageToChat('peer-pubkey', {
+      id: 'structured-message-id',
+      pubkey: 'peer-pubkey',
+      created_at: 1_700_000_200,
+      content: '{"c":"nip04","type":100,"msg":"Rendered text","name":"{\"user\":\"sondreb\",\"content\":\"Quoted content\"}"}',
+      isOutgoing: false,
+      tags: [['p', 'my-pubkey']],
+      pending: false,
+      received: true,
+      failed: false,
+      encryptionType: 'nip04',
+    });
+
+    const [message] = service.getChatMessages('peer-pubkey');
+    expect(message.content).toBe('Rendered text');
+  });
 });

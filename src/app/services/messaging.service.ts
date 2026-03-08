@@ -254,13 +254,69 @@ export class MessagingService implements NostriaService {
     return eTag?.[1];
   }
 
+  private extractStructuredDirectMessageContent(content: string): string {
+    const trimmedContent = content.trim();
+    if (!trimmedContent.startsWith('{') || !trimmedContent.endsWith('}')) {
+      return content;
+    }
+
+    try {
+      const parsed = JSON.parse(trimmedContent) as {
+        c?: unknown;
+        type?: unknown;
+        msg?: unknown;
+        content?: unknown;
+        name?: unknown;
+      };
+
+      const looksLikeStructuredPayload =
+        typeof parsed === 'object' &&
+        parsed !== null &&
+        (
+          typeof parsed.c === 'string' ||
+          typeof parsed.type === 'number' ||
+          typeof parsed.msg === 'string' ||
+          typeof parsed.name === 'string'
+        );
+
+      if (!looksLikeStructuredPayload) {
+        return content;
+      }
+
+      if (typeof parsed.msg === 'string' && parsed.msg.trim()) {
+        return parsed.msg;
+      }
+
+      if (typeof parsed.content === 'string' && parsed.content.trim()) {
+        return parsed.content;
+      }
+
+      if (typeof parsed.name === 'string') {
+        try {
+          const nested = JSON.parse(parsed.name) as { content?: unknown };
+          if (typeof nested.content === 'string' && nested.content.trim()) {
+            return nested.content;
+          }
+        } catch {
+          return content;
+        }
+      }
+
+      return content;
+    } catch {
+      return content;
+    }
+  }
+
   private normalizeMessage(message: DirectMessage): DirectMessage {
+    const normalizedContent = this.extractStructuredDirectMessageContent(message.content || '');
     const tags = [...(message.tags || [])].filter(tag => !tag[0]?.startsWith('_nostria_'));
-    const isReaction = message.eventKind === 'reaction' || this.isReactionFromTags(tags, message.content || '');
+    const isReaction = message.eventKind === 'reaction' || this.isReactionFromTags(tags, normalizedContent);
 
     if (!isReaction) {
       return {
         ...message,
+        content: normalizedContent,
         tags,
         eventKind: 'message',
       };
@@ -270,10 +326,11 @@ export class MessagingService implements NostriaService {
 
     return {
       ...message,
+      content: normalizedContent,
       tags,
       eventKind: 'reaction',
       reactionTo: reactionTarget,
-      reactionContent: message.reactionContent || message.content,
+      reactionContent: message.reactionContent || normalizedContent,
       replyTo: undefined,
     };
   }
