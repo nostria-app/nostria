@@ -13,6 +13,11 @@ export interface SearchFilter extends Filter {
   search?: string;
 }
 
+export interface SearchResultWithSources {
+  event: Event;
+  relayUrls: string[];
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -182,6 +187,16 @@ export class SearchRelayService extends RelayServiceBase implements NostriaServi
     limit = 50,
     options: { since?: number; until?: number; authors?: string[] } = {}
   ): Promise<Event[]> {
+    const sourcedResults = await this.searchWithSources(searchQuery, kinds, limit, options);
+    return sourcedResults.map((result) => result.event);
+  }
+
+  async searchWithSources(
+    searchQuery: string,
+    kinds: number[] = [1],
+    limit = 50,
+    options: { since?: number; until?: number; authors?: string[] } = {}
+  ): Promise<SearchResultWithSources[]> {
     await this.ensureInitialized();
 
     const urls = this.getRelayUrls();
@@ -201,30 +216,63 @@ export class SearchRelayService extends RelayServiceBase implements NostriaServi
 
     try {
       const pool = this.getPool();
-      const events = await pool.querySync(urls, filter);
+      const relayResults = await Promise.all(
+        urls.map(async (url) => {
+          try {
+            const events = await pool.querySync([url], filter, { maxWait: 3000 });
+            return {
+              relayUrl: url,
+              events: this.eventProcessor.filterEvents(events),
+            };
+          } catch (error) {
+            this.logger.debug(`[SearchRelayService] Search query failed for relay ${url}`, error);
+            return {
+              relayUrl: url,
+              events: [] as Event[],
+            };
+          }
+        })
+      );
 
-      // Deduplicate events by pubkey (for profiles) or id (for other events)
-      // Multiple relays may return the same event
-      const seen = new Set<string>();
-      const uniqueEvents = events.filter(event => {
-        // For kind 0 (profiles), deduplicate by pubkey and keep newest
-        const key = event.kind === 0 ? event.pubkey : event.id;
-        if (seen.has(key)) {
-          return false;
+      const deduplicated = new Map<string, SearchResultWithSources>();
+      let totalEvents = 0;
+
+      for (const relayResult of relayResults) {
+        totalEvents += relayResult.events.length;
+
+        for (const event of relayResult.events) {
+          if (this.utilities.isEventExpired(event)) {
+            continue;
+          }
+
+          const key = event.kind === 0 ? event.pubkey : event.id;
+          const existing = deduplicated.get(key);
+
+          if (!existing) {
+            deduplicated.set(key, {
+              event,
+              relayUrls: [relayResult.relayUrl],
+            });
+            continue;
+          }
+
+          if (!existing.relayUrls.includes(relayResult.relayUrl)) {
+            existing.relayUrls.push(relayResult.relayUrl);
+          }
+
+          if ((event.created_at || 0) > (existing.event.created_at || 0)) {
+            existing.event = event;
+          }
         }
-        seen.add(key);
-        return true;
-      });
-
-      // For profiles, sort by created_at descending to keep newest when deduplicating
-      if (kinds.includes(0)) {
-        uniqueEvents.sort((a, b) => b.created_at - a.created_at);
       }
 
-      // Filter out expired events
-      const validEvents = uniqueEvents.filter(event => !this.utilities.isEventExpired(event));
+      const validEvents = [...deduplicated.values()];
 
-      this.logger.debug(`Search returned ${validEvents.length} results (${events.length} before dedup)`);
+      if (kinds.includes(0)) {
+        validEvents.sort((a, b) => (b.event.created_at || 0) - (a.event.created_at || 0));
+      }
+
+      this.logger.debug(`Search returned ${validEvents.length} results (${totalEvents} before dedup)`);
       return validEvents;
     } catch (error) {
       this.logger.error('Search query failed', error);

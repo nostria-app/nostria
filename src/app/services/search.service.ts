@@ -28,6 +28,7 @@ export interface SearchAction {
 export interface SearchResultProfile extends NostrRecord {
   source: 'following' | 'cached' | 'remote';
   wotRank?: number; // Web of Trust rank score
+  searchRelayUrls?: string[];
 }
 
 export interface SearchResultEvent {
@@ -753,25 +754,26 @@ export class SearchService {
     this.isSearchingRemote.set(true);
 
     try {
-      const remoteProfiles = await this.searchRelay.searchProfiles(searchValue, 20);
+      const remoteProfiles = await this.searchRelay.searchWithSources(searchValue, [0], 20);
 
       if (remoteProfiles.length > 0) {
         // Convert remote events to NostrRecords with source marker
         const localPubkeys = new Set(localResults.map(r => r.event.pubkey));
 
         const remoteResults: SearchResultProfile[] = remoteProfiles
-          .filter(event => !localPubkeys.has(event.pubkey)) // Exclude duplicates
-          .map(event => {
+          .filter(result => !localPubkeys.has(result.event.pubkey)) // Exclude duplicates
+          .map(result => {
             let data = {};
             try {
-              data = JSON.parse(event.content);
+              data = JSON.parse(result.event.content);
             } catch {
               // Invalid JSON in content
             }
             return {
-              event,
+              event: result.event,
               data,
               source: 'remote' as const,
+              searchRelayUrls: [...result.relayUrls],
             };
           });
 

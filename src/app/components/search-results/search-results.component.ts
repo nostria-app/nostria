@@ -8,7 +8,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { SearchService, SearchResultProfile, SearchTab, SearchResultEvent } from '../../services/search.service';
 import { UtilitiesService } from '../../services/utilities.service';
 import { LayoutService } from '../../services/layout.service';
-import { Event, nip19, kinds } from 'nostr-tools';
+import { Event as NostrEvent, nip19, kinds } from 'nostr-tools';
 
 @Component({
   selector: 'app-search-results',
@@ -150,6 +150,20 @@ import { Event, nip19, kinds } from 'nostr-tools';
                     </div>
                   }
                 </div>
+                @if (hasRelaySources(profile)) {
+                  <button
+                    mat-icon-button
+                    type="button"
+                    class="search-result-relay-button"
+                    [matTooltip]="getRelaySourceTooltip(profile)"
+                    matTooltipPosition="left"
+                    [attr.aria-label]="getRelaySourceTooltip(profile)"
+                    (click)="stopResultSelection($event)"
+                    (keydown.enter)="stopResultSelection($event)"
+                  >
+                    <mat-icon>info</mat-icon>
+                  </button>
+                }
               </div>
             }
           </div>
@@ -420,6 +434,29 @@ import { Event, nip19, kinds } from 'nostr-tools';
         overflow: hidden;
       }
 
+      .search-result-relay-button {
+        width: 30px;
+        height: 30px;
+        min-width: 30px;
+        flex-shrink: 0;
+        margin-left: 8px;
+        color: var(--mat-sys-on-surface-variant);
+        padding: 0 !important;
+        display: flex !important;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .search-result-relay-button mat-icon {
+        width: 18px;
+        height: 18px;
+        font-size: 18px;
+      }
+
+      .search-result-relay-button:hover {
+        color: var(--mat-sys-on-surface);
+      }
+
       .search-result-name {
         font-size: 14px;
         color: var(--mat-sys-on-surface);
@@ -590,7 +627,7 @@ export class SearchResultsComponent {
   }
 
   // Get article title from tags or content
-  getArticleTitle(event: Event): string {
+  getArticleTitle(event: NostrEvent): string {
     const titleTag = event.tags.find(t => t[0] === 'title');
     if (titleTag && titleTag[1]) {
       return titleTag[1];
@@ -693,6 +730,33 @@ export class SearchResultsComponent {
   selectItem(profile: SearchResultProfile, index: number) {
     this.setFocusedIndex(index);
     this.searchService.selectSearchResult(profile);
+  }
+
+  hasRelaySources(profile: SearchResultProfile): boolean {
+    return (profile.searchRelayUrls?.length || 0) > 0;
+  }
+
+  getRelaySourceTooltip(profile: SearchResultProfile): string {
+    const relayLabels = (profile.searchRelayUrls || []).map((relayUrl) => this.getRelayDisplayName(relayUrl));
+
+    if (relayLabels.length === 0) {
+      return 'Search relay unavailable';
+    }
+
+    const prefix = relayLabels.length === 1 ? 'Found on search relay: ' : 'Found on search relays: ';
+    return `${prefix}${relayLabels.join(', ')}`;
+  }
+
+  stopResultSelection(event: globalThis.Event): void {
+    event.stopPropagation();
+  }
+
+  private getRelayDisplayName(relayUrl: string): string {
+    try {
+      return new URL(relayUrl).hostname;
+    } catch {
+      return relayUrl;
+    }
   }
 
   /**
