@@ -136,7 +136,7 @@ export class SettingsRegistryService {
     },
     {
       id: 'x-dual-posting',
-      title: 'X Dual-posting',
+      title: 'Post to X',
       description: 'Connect X and optionally post to X when publishing from Nostria',
       keywords: ['x', 'twitter', 'dual post', 'cross post', 'share to x', 'social', 'oauth'],
       section: 'general',
