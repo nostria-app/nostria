@@ -108,6 +108,8 @@ interface DirectMessage {
   read?: boolean;
   encryptionType?: 'nip04' | 'nip44';
   replyTo?: string; // The event ID this message is replying to (from 'e' tag)
+  quotedReplyContent?: string;
+  quotedReplyAuthor?: string;
   failureReason?: string; // Human-readable reason for send failure
   eventKind?: 'message' | 'reaction';
   reactionTo?: string;
@@ -1837,6 +1839,17 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   getMessageById(messageId: string): DirectMessage | undefined {
     const messages = this.messages().filter(message => !this.isReactionMessage(message));
     return messages.find(m => m.id === messageId);
+  }
+
+  getReplyPreviewText(message: DirectMessage): string | null {
+    if (message.replyTo) {
+      const repliedMessage = this.getMessageById(message.replyTo);
+      if (repliedMessage) {
+        return repliedMessage.content;
+      }
+    }
+
+    return message.quotedReplyContent || null;
   }
 
   isReactionMessage(message: DirectMessage): boolean {

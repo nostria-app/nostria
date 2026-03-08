@@ -235,5 +235,7 @@ describe('MessagingService live subscriptions', () => {
 
     const [message] = service.getChatMessages('peer-pubkey');
     expect(message.content).toBe('Rendered text');
+    expect(message.quotedReplyContent).toBe('Quoted content');
+    expect(message.quotedReplyAuthor).toBe('sondreb');
   });
 });

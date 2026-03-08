@@ -399,16 +399,13 @@
           (touchmove)="onMessageTouchEnd()" (contextmenu)="onMessageContextMenu($event, message)">
           <div class="message-bubble" [class.outgoing]="message.isOutgoing" [class.pending]="message.pending"
             [class.failed]="message.failed" [class.long-press-active]="longPressedMessage()?.id === message.id">
-            @if (message.replyTo) {
-            @let repliedMessage = getMessageById(message.replyTo);
-            @if (repliedMessage) {
+            @if (getReplyPreviewText(message); as replyPreviewText) {
             <div class="reply-context">
               <mat-icon>reply</mat-icon>
               <div class="reply-content">
-                <span class="reply-text">{{ repliedMessage.content }}</span>
+                <span class="reply-text">{{ replyPreviewText }}</span>
               </div>
             </div>
-            }
             }
             <app-message-content [content]="message.content" [tags]="message.tags"
               [authorPubkey]="message.pubkey"></app-message-content>

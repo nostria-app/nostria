@@ -47,6 +47,8 @@ interface DirectMessage {
   read?: boolean;
   encryptionType?: 'nip04' | 'nip44';
   replyTo?: string; // The event ID this message is replying to (from 'e' tag)
+  quotedReplyContent?: string;
+  quotedReplyAuthor?: string;
   giftWrapId?: string; // For NIP-44 messages, the gift wrap event ID (used to skip re-decryption)
   failureReason?: string; // Human-readable reason for send failure
   eventKind?: 'message' | 'reaction';
@@ -254,10 +256,14 @@ export class MessagingService implements NostriaService {
     return eTag?.[1];
   }
 
-  private extractStructuredDirectMessageContent(content: string): string {
+  private extractStructuredReplyPreview(content: string): {
+    content: string;
+    quotedReplyContent?: string;
+    quotedReplyAuthor?: string;
+  } {
     const trimmedContent = content.trim();
     if (!trimmedContent.startsWith('{') || !trimmedContent.endsWith('}')) {
-      return content;
+      return { content };
     }
 
     try {
@@ -280,36 +286,50 @@ export class MessagingService implements NostriaService {
         );
 
       if (!looksLikeStructuredPayload) {
-        return content;
+        return { content };
       }
+
+      const result: {
+        content: string;
+        quotedReplyContent?: string;
+        quotedReplyAuthor?: string;
+      } = {
+        content,
+      };
 
       if (typeof parsed.msg === 'string' && parsed.msg.trim()) {
-        return parsed.msg;
-      }
-
-      if (typeof parsed.content === 'string' && parsed.content.trim()) {
-        return parsed.content;
+        result.content = parsed.msg;
+      } else if (typeof parsed.content === 'string' && parsed.content.trim()) {
+        result.content = parsed.content;
       }
 
       if (typeof parsed.name === 'string') {
         try {
-          const nested = JSON.parse(parsed.name) as { content?: unknown };
+          const nested = JSON.parse(parsed.name) as { content?: unknown; user?: unknown };
           if (typeof nested.content === 'string' && nested.content.trim()) {
-            return nested.content;
+            result.quotedReplyContent = nested.content;
+          }
+          if (typeof nested.user === 'string' && nested.user.trim()) {
+            result.quotedReplyAuthor = nested.user;
           }
         } catch {
-          return content;
+          return result;
         }
       }
 
-      return content;
+      return result;
     } catch {
-      return content;
+      return { content };
     }
   }
 
+  private extractStructuredDirectMessageContent(content: string): string {
+    return this.extractStructuredReplyPreview(content).content;
+  }
+
   private normalizeMessage(message: DirectMessage): DirectMessage {
-    const normalizedContent = this.extractStructuredDirectMessageContent(message.content || '');
+    const structuredPreview = this.extractStructuredReplyPreview(message.content || '');
+    const normalizedContent = structuredPreview.content;
     const tags = [...(message.tags || [])].filter(tag => !tag[0]?.startsWith('_nostria_'));
     const isReaction = message.eventKind === 'reaction' || this.isReactionFromTags(tags, normalizedContent);
 
@@ -317,6 +337,8 @@ export class MessagingService implements NostriaService {
       return {
         ...message,
         content: normalizedContent,
+        quotedReplyContent: message.quotedReplyContent || structuredPreview.quotedReplyContent,
+        quotedReplyAuthor: message.quotedReplyAuthor || structuredPreview.quotedReplyAuthor,
         tags,
         eventKind: 'message',
       };
@@ -327,6 +349,8 @@ export class MessagingService implements NostriaService {
     return {
       ...message,
       content: normalizedContent,
+      quotedReplyContent: message.quotedReplyContent || structuredPreview.quotedReplyContent,
+      quotedReplyAuthor: message.quotedReplyAuthor || structuredPreview.quotedReplyAuthor,
       tags,
       eventKind: 'reaction',
       reactionTo: reactionTarget,
