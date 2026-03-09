@@ -13,7 +13,6 @@ import { EventPointer } from 'nostr-tools/nip19';
 import { firstValueFrom } from 'rxjs';
 import { NostrRecord } from '../../../interfaces';
 import { AgoPipe } from '../../../pipes/ago.pipe';
-import { TimestampPipe } from '../../../pipes/timestamp.pipe';
 import { AccountStateService } from '../../../services/account-state.service';
 import { DataService } from '../../../services/data.service';
 import { LayoutService } from '../../../services/layout.service';
@@ -21,6 +20,7 @@ import { NostrService } from '../../../services/nostr.service';
 import { EventService } from '../../../services/event';
 import { LoggerService } from '../../../services/logger.service';
 import { UserRelaysService } from '../../../services/relays/user-relays';
+import { UtilitiesService } from '../../../services/utilities.service';
 import {
   ConfirmDialogComponent,
   ConfirmDialogData,
@@ -40,7 +40,6 @@ import { EventMenuComponent } from '../event-menu/event-menu.component';
     UserProfileComponent,
     EventMenuComponent,
     AgoPipe,
-    TimestampPipe,
     RouterLink,
   ],
   templateUrl: './header.component.html',
@@ -56,6 +55,7 @@ export class EventHeaderComponent {
   nostrService = inject(NostrService);
   snackBar = inject(MatSnackBar);
   eventService = inject(EventService);
+  utilities = inject(UtilitiesService);
   private logger = inject(LoggerService);
   private userRelaysService = inject(UserRelaysService);
   event = input.required<Event>();
@@ -65,6 +65,33 @@ export class EventHeaderComponent {
   /** Timestamp of the most recent edit (for tooltip) */
   editedAt = input<number | undefined>(undefined);
   record = signal<NostrRecord | null>(null);
+  expirationTimestamp = computed<number | null>(() => {
+    const event = this.event();
+    return event ? this.utilities.getEventExpiration(event) : null;
+  });
+
+  hasExpiration = computed<boolean>(() => {
+    const expirationTimestamp = this.expirationTimestamp();
+    return expirationTimestamp !== null && expirationTimestamp > Math.floor(Date.now() / 1000);
+  });
+
+  publishedLabel = computed<string>(() => {
+    const event = this.event();
+    if (!event) {
+      return '';
+    }
+
+    return this.utilities.getRelativeTime(event.created_at);
+  });
+
+  expirationLabel = computed<string>(() => {
+    const expirationTimestamp = this.expirationTimestamp();
+    if (expirationTimestamp === null || expirationTimestamp <= Math.floor(Date.now() / 1000)) {
+      return '';
+    }
+
+    return `Expires in ${this.formatExpirationDistance(expirationTimestamp)}`;
+  });
 
   isOurEvent = computed<boolean>(() => {
     const event = this.event();
@@ -211,5 +238,70 @@ export class EventHeaderComponent {
         });
       }
     }
+  }
+
+  private formatExpirationDistance(expirationTimestamp: number): string {
+    const diff = Math.max(0, expirationTimestamp - Math.floor(Date.now() / 1000));
+
+    if (diff < 5) {
+      return 'a few seconds';
+    }
+
+    const minute = 60;
+    const hour = minute * 60;
+    const day = hour * 24;
+    const week = day * 7;
+    const month = day * 30;
+    const year = day * 365;
+
+    if (diff < minute) {
+      return `${Math.floor(diff)} seconds`;
+    }
+
+    if (diff < minute * 2) {
+      return 'a minute';
+    }
+
+    if (diff < hour) {
+      return `${Math.floor(diff / minute)} minutes`;
+    }
+
+    if (diff < hour * 2) {
+      return 'an hour';
+    }
+
+    if (diff < day) {
+      return `${Math.floor(diff / hour)} hours`;
+    }
+
+    if (diff < day * 2) {
+      return 'a day';
+    }
+
+    if (diff < week) {
+      return `${Math.floor(diff / day)} days`;
+    }
+
+    if (diff < week * 2) {
+      return 'a week';
+    }
+
+    if (diff < month) {
+      return `${Math.floor(diff / week)} weeks`;
+    }
+
+    if (diff < month * 2) {
+      return 'a month';
+    }
+
+    if (diff < year) {
+      return `${Math.floor(diff / month)} months`;
+    }
+
+    if (diff < year * 2) {
+      return 'a year';
+    }
+
+    return `${Math.floor(diff / year)} years`;
   }
 }
