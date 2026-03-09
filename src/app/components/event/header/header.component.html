@@ -2,14 +2,13 @@
   <app-user-profile [pubkey]="event().pubkey" [view]="compact() ? 'compact' : 'list'">
     <div class="event-metadata" [class.has-expiration]="hasExpiration()">
       <div class="event-metadata-row primary">
-        <a class="date-link" [routerLink]="eventUrl()" tabindex="0"
-          (click)="openEventAndStopPropagation($event)" (keyup.enter)="navigateToEvent()" (keyup.space)="navigateToEvent()">
+        <a class="date-link" [routerLink]="eventUrl()" tabindex="0" (click)="openEventAndStopPropagation($event)"
+          (keyup.enter)="navigateToEvent()" (keyup.space)="navigateToEvent()">
           {{ publishedLabel() }}
         </a>
         @if (isEdited()) {
-        <span class="edited-indicator" 
-              [matTooltip]="editedAt() ? 'Edited ' + (editedAt() | ago) : 'Edited'"
-              matTooltipPosition="below">
+        <span class="edited-indicator" [matTooltip]="editedAt() ? 'Edited ' + (editedAt() | ago) : 'Edited'"
+          matTooltipPosition="below">
           (edited)
         </span>
         }

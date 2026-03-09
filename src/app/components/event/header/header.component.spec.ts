@@ -9,118 +9,118 @@ import { UtilitiesService } from '../../../services/utilities.service';
 import { kinds } from 'nostr-tools';
 
 describe('EventHeaderComponent', () => {
-    let component: EventHeaderComponent;
-    let fixture: ComponentFixture<EventHeaderComponent>;
-    let mockAccountState: {
-        pubkey: ReturnType<typeof signal<string>>;
-        account: ReturnType<typeof signal<{
-            pubkey: string;
-            source: string;
-            hasActivated: boolean;
-        } | null>>;
+  let component: EventHeaderComponent;
+  let fixture: ComponentFixture<EventHeaderComponent>;
+  let mockAccountState: {
+    pubkey: ReturnType<typeof signal<string>>;
+    account: ReturnType<typeof signal<{
+      pubkey: string;
+      source: string;
+      hasActivated: boolean;
+    } | null>>;
+  };
+  let mockUtilities: {
+    getEventExpiration: Mock;
+    getRelativeTime: Mock;
+  };
+
+  const fixedNowMs = Date.UTC(2026, 2, 9, 12, 0, 0);
+  const fixedNowSeconds = Math.floor(fixedNowMs / 1000);
+
+  const mockEvent = {
+    id: 'test-event-id',
+    pubkey: 'test-pubkey',
+    created_at: fixedNowSeconds - (11 * 60 * 60),
+    kind: kinds.ShortTextNote,
+    tags: [],
+    content: 'Hello, world!',
+    sig: 'test-sig',
+  };
+
+  beforeEach(async () => {
+    vi.spyOn(Date, 'now').mockReturnValue(fixedNowMs);
+
+    mockAccountState = {
+      pubkey: signal('other-pubkey'),
+      account: signal<{
+        pubkey: string;
+        source: string;
+        hasActivated: boolean;
+      } | null>(null),
     };
-    let mockUtilities: {
-        getEventExpiration: Mock;
-        getRelativeTime: Mock;
+    mockUtilities = {
+      getEventExpiration: vi.fn().mockReturnValue(null),
+      getRelativeTime: vi.fn().mockReturnValue('11 hours ago'),
     };
 
-    const fixedNowMs = Date.UTC(2026, 2, 9, 12, 0, 0);
-    const fixedNowSeconds = Math.floor(fixedNowMs / 1000);
+    await TestBed.configureTestingModule({
+      imports: [EventHeaderComponent],
+      providers: [
+        provideZonelessChangeDetection(),
+        provideRouter([]),
+        provideAnimationsAsync(),
+        { provide: AccountStateService, useValue: mockAccountState },
+        { provide: UtilitiesService, useValue: mockUtilities },
+      ],
+    }).compileComponents();
 
-    const mockEvent = {
-        id: 'test-event-id',
-        pubkey: 'test-pubkey',
-        created_at: fixedNowSeconds - (11 * 60 * 60),
-        kind: kinds.ShortTextNote,
-        tags: [],
-        content: 'Hello, world!',
-        sig: 'test-sig',
-    };
+    fixture = TestBed.createComponent(EventHeaderComponent);
+    component = fixture.componentInstance;
+    fixture.componentRef.setInput('event', mockEvent);
+  });
 
-    beforeEach(async () => {
-        vi.spyOn(Date, 'now').mockReturnValue(fixedNowMs);
+  it('should create', () => {
+    expect(component).toBeTruthy();
+  });
 
-        mockAccountState = {
-            pubkey: signal('other-pubkey'),
-            account: signal<{
-                pubkey: string;
-                source: string;
-                hasActivated: boolean;
-            } | null>(null),
-        };
-        mockUtilities = {
-            getEventExpiration: vi.fn().mockReturnValue(null),
-            getRelativeTime: vi.fn().mockReturnValue('11 hours ago'),
-        };
+  it('should detect own event when pubkeys match', () => {
+    mockAccountState.pubkey.set('test-pubkey');
+    expect(component.isOurEvent()).toBe(true);
+  });
 
-        await TestBed.configureTestingModule({
-            imports: [EventHeaderComponent],
-            providers: [
-                provideZonelessChangeDetection(),
-                provideRouter([]),
-                provideAnimationsAsync(),
-                { provide: AccountStateService, useValue: mockAccountState },
-                { provide: UtilitiesService, useValue: mockUtilities },
-            ],
-        }).compileComponents();
+  it('should not detect own event when pubkeys differ', () => {
+    mockAccountState.pubkey.set('other-pubkey');
+    expect(component.isOurEvent()).toBe(false);
+  });
 
-        fixture = TestBed.createComponent(EventHeaderComponent);
-        component = fixture.componentInstance;
-        fixture.componentRef.setInput('event', mockEvent);
-    });
+  it('should generate nevent string', () => {
+    const nevent = component.nevent();
+    expect(nevent).toBeTruthy();
+    expect(typeof nevent).toBe('string');
+  });
 
-    it('should create', () => {
-        expect(component).toBeTruthy();
-    });
+  it('should generate event URL for short text note', () => {
+    const url = component.eventUrl();
+    expect(url).toContain('/e/');
+  });
 
-    it('should detect own event when pubkeys match', () => {
-        mockAccountState.pubkey.set('test-pubkey');
-        expect(component.isOurEvent()).toBe(true);
-    });
+  it('should generate event URL for article', () => {
+    const articleEvent = { ...mockEvent, kind: 30023 };
+    fixture.componentRef.setInput('event', articleEvent);
+    fixture.detectChanges();
+    const url = component.eventUrl();
+    expect(url).toContain('/a/');
+  });
 
-    it('should not detect own event when pubkeys differ', () => {
-        mockAccountState.pubkey.set('other-pubkey');
-        expect(component.isOurEvent()).toBe(false);
-    });
+  it('should show published age when the event has no expiration', () => {
+    fixture.detectChanges();
 
-    it('should generate nevent string', () => {
-        const nevent = component.nevent();
-        expect(nevent).toBeTruthy();
-        expect(typeof nevent).toBe('string');
-    });
+    const dateLink = fixture.nativeElement.querySelector('.date-link') as HTMLAnchorElement;
 
-    it('should generate event URL for short text note', () => {
-        const url = component.eventUrl();
-        expect(url).toContain('/e/');
-    });
+    expect(dateLink.textContent?.trim()).toBe('11 hours ago');
+    expect(fixture.nativeElement.querySelector('.expiration-label')).toBeNull();
+  });
 
-    it('should generate event URL for article', () => {
-        const articleEvent = { ...mockEvent, kind: 30023 };
-        fixture.componentRef.setInput('event', articleEvent);
-        fixture.detectChanges();
-        const url = component.eventUrl();
-        expect(url).toContain('/a/');
-    });
+  it('should show expiration as a second line when the event has a future expiration', () => {
+    const expirationTimestamp = fixedNowSeconds + (3 * 60 * 60);
+    mockUtilities.getEventExpiration.mockReturnValue(expirationTimestamp);
 
-    it('should show published age when the event has no expiration', () => {
-        fixture.detectChanges();
+    fixture.detectChanges();
 
-        const dateLink = fixture.nativeElement.querySelector('.date-link') as HTMLAnchorElement;
+    const dateLink = fixture.nativeElement.querySelector('.date-link') as HTMLAnchorElement;
+    const expirationLabel = fixture.nativeElement.querySelector('.expiration-label') as HTMLElement;
 
-        expect(dateLink.textContent?.trim()).toBe('11 hours ago');
-        expect(fixture.nativeElement.querySelector('.expiration-label')).toBeNull();
-    });
-
-    it('should show expiration as a second line when the event has a future expiration', () => {
-        const expirationTimestamp = fixedNowSeconds + (3 * 60 * 60);
-        mockUtilities.getEventExpiration.mockReturnValue(expirationTimestamp);
-
-        fixture.detectChanges();
-
-        const dateLink = fixture.nativeElement.querySelector('.date-link') as HTMLAnchorElement;
-        const expirationLabel = fixture.nativeElement.querySelector('.expiration-label') as HTMLElement;
-
-        expect(dateLink.textContent?.trim()).toBe('11 hours ago');
-        expect(expirationLabel.textContent?.trim()).toBe('Expires in 3 hours');
-    });
+    expect(dateLink.textContent?.trim()).toBe('11 hours ago');
+    expect(expirationLabel.textContent?.trim()).toBe('Expires in 3 hours');
+  });
 });
