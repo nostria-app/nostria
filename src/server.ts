@@ -418,8 +418,8 @@ function buildRouteFallbackPreview(path: string): { title: string; description: 
 
   if (path.startsWith('/music/playlist/')) {
     return {
-      title: 'Nostr Playlist on Nostria',
-      description: 'Open this playlist on Nostria, the decentralized social app.',
+      title: 'Nostr Album on Nostria',
+      description: 'Open this album on Nostria, the decentralized social app.',
       url: `https://nostria.app${path}`,
     };
   }
@@ -480,7 +480,7 @@ function analyzeSsrPreviewHtml(html: string): PreviewCacheabilityAnalysis {
     'nostr profile on nostria',
     'nostr post on nostria',
     'nostr song on nostria',
-    'nostr playlist on nostria',
+    'nostr album on nostria',
     'nostr artist on nostria',
     'nostr live stream on nostria',
   ];
@@ -491,7 +491,7 @@ function analyzeSsrPreviewHtml(html: string): PreviewCacheabilityAnalysis {
     'view this nostr profile on nostria',
     'open this content on nostria',
     'listen to this song on nostria',
-    'open this playlist on nostria',
+    'open this album on nostria',
     'discover this artist on nostria',
     'watch this live stream on nostria',
   ];

@@ -911,13 +911,13 @@ export class SongDetailComponent implements OnInit, OnDestroy {
 
       if (success) {
         const playlist = this.userPlaylists().find(p => p.id === playlistId);
-        this.snackBar.open(`Added to "${playlist?.title || 'playlist'}"`, 'Close', { duration: 2000 });
+        this.snackBar.open(`Added to "${playlist?.title || 'album'}"`, 'Close', { duration: 2000 });
       } else {
-        this.snackBar.open('Failed to add to playlist', 'Close', { duration: 3000 });
+        this.snackBar.open('Failed to add to album', 'Close', { duration: 3000 });
       }
     } catch (error) {
       this.logger.error('Error adding to playlist:', error);
-      this.snackBar.open('Failed to add to playlist', 'Close', { duration: 3000 });
+      this.snackBar.open('Failed to add to album', 'Close', { duration: 3000 });
     }
   }
 

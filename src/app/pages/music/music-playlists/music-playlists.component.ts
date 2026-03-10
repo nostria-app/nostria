@@ -39,14 +39,14 @@ const PAGE_SIZE = 24;
       <button mat-icon-button (click)="goBack()" matTooltip="Back to Music">
         <mat-icon>arrow_back</mat-icon>
       </button>
-      <h2 class="panel-title title-font" i18n="@@music.playlists.title">Playlists</h2>
+      <h2 class="panel-title title-font" i18n="@@music.playlists.title">Albums</h2>
       <span class="panel-header-spacer"></span>
       @if (isAuthenticated()) {
         <app-list-filter-menu storageKey="music" [showPublicOption]="true" defaultFilter="all"
           [initialFilter]="urlListFilter()"
           (filterChanged)="onFilterChanged($event)" />
       }
-      <button mat-icon-button (click)="toggleSearch()" [matTooltip]="showSearch() ? 'Close search' : 'Search playlists'" class="hide-small">
+      <button mat-icon-button (click)="toggleSearch()" [matTooltip]="showSearch() ? 'Close search' : 'Search albums'" class="hide-small">
         <mat-icon>{{ showSearch() ? 'search_off' : 'search' }}</mat-icon>
       </button>
       <button mat-icon-button [matMenuTriggerFor]="sortMenu" matTooltip="Sort" class="hide-small">
@@ -84,7 +84,7 @@ const PAGE_SIZE = 24;
     <div class="music-playlists-container">
       <div class="search-bar" [class.hidden]="!showSearch()">
         <mat-icon class="search-icon">search</mat-icon>
-        <input #searchInput type="text" class="search-input" placeholder="Search playlists..."
+        <input #searchInput type="text" class="search-input" placeholder="Search albums..."
           [value]="searchQuery()" (input)="onSearchInput($any($event))" />
         <button mat-icon-button class="clear-search-btn" [class.invisible]="!searchQuery()" (click)="clearSearch()"
           aria-label="Clear search">
@@ -105,17 +105,17 @@ const PAGE_SIZE = 24;
         @if (loading()) {
           <div class="loading-container">
             <mat-spinner diameter="50"></mat-spinner>
-            <p i18n="@@music.loading">Loading playlists...</p>
+            <p i18n="@@music.loading">Loading albums...</p>
           </div>
         } @else if (displayedPlaylists().length === 0) {
           <div class="empty-state">
             <mat-icon>queue_music</mat-icon>
-            <h2 i18n="@@music.playlists.empty.title">No playlists found</h2>
+            <h2 i18n="@@music.playlists.empty.title">No albums found</h2>
             <p>
               @if (selectedListFilter() === 'following') {
-                <span i18n="@@music.playlists.empty.following">People you follow haven't created any playlists yet. Switch to Public to discover playlists from the wider Nostr network.</span>
+                <span i18n="@@music.playlists.empty.following">People you follow haven't created any albums yet. Switch to Public to discover albums from the wider Nostr network.</span>
               } @else {
-                <span i18n="@@music.playlists.empty.public">No playlists have been created yet.</span>
+                <span i18n="@@music.playlists.empty.public">No albums have been created yet.</span>
               }
             </p>
             <button mat-flat-button (click)="refresh()">

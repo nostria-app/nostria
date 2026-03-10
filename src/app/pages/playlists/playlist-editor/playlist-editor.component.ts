@@ -231,10 +231,10 @@ export class PlaylistEditorComponent implements OnInit {
 
     try {
       this.playlistService.savePlaylist();
-      this.snackBar.open('Playlist saved!', 'Close', { duration: 2000 });
+      this.snackBar.open('Album saved!', 'Close', { duration: 2000 });
       this.router.navigate(['/playlists']);
     } catch {
-      this.snackBar.open('Failed to save playlist', 'Close', { duration: 3000 });
+      this.snackBar.open('Failed to save album', 'Close', { duration: 3000 });
     }
   }
 
@@ -247,13 +247,13 @@ export class PlaylistEditorComponent implements OnInit {
     try {
       const result = await this.playlistService.saveAndPublishPlaylist();
       if (result) {
-        this.snackBar.open('Playlist published to Nostr!', 'Close', { duration: 3000 });
+        this.snackBar.open('Album published to Nostr!', 'Close', { duration: 3000 });
         this.router.navigate(['/playlists']);
       } else {
-        this.snackBar.open('Failed to publish playlist to Nostr', 'Close', { duration: 3000 });
+        this.snackBar.open('Failed to publish album to Nostr', 'Close', { duration: 3000 });
       }
     } catch {
-      this.snackBar.open('Failed to publish playlist', 'Close', { duration: 3000 });
+      this.snackBar.open('Failed to publish album', 'Close', { duration: 3000 });
     }
   }
 

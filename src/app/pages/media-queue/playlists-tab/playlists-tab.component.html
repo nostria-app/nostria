@@ -3,7 +3,7 @@
     <div class="header-actions">
       <button mat-flat-button (click)="createNewPlaylist()">
         <mat-icon>add</mat-icon>
-        New Playlist
+        New Album
       </button>
     </div>
   </header>
@@ -13,7 +13,7 @@
     @if (isLoading() && playlists().length === 0 && drafts().length === 0) {
     <div class="loading-container">
       <mat-spinner></mat-spinner>
-      <p>Loading playlists...</p>
+      <p>Loading albums...</p>
     </div>
     } @else {
     <!-- Drafts Section -->
@@ -65,7 +65,7 @@
     <!-- Playlists Section -->
     <section class="playlists-section">
       <div class="section-header">
-        <h3>Playlists</h3>
+        <h3>Albums</h3>
         @if (isLoading() && playlists().length > 0) {
         <mat-spinner diameter="16"></mat-spinner>
         }
@@ -73,11 +73,11 @@
       @if (playlists().length === 0 && !isLoading()) {
       <div class="empty-state">
         <mat-icon class="empty-icon">queue_music</mat-icon>
-        <h4>No playlists yet</h4>
-        <p>Create your first playlist to get started</p>
+        <h4>No albums yet</h4>
+        <p>Create your first album to get started</p>
         <button mat-flat-button (click)="createNewPlaylist()">
           <mat-icon>add</mat-icon>
-          Create Playlist
+          Create Album
         </button>
       </div>
       } @else if (playlists().length > 0) {
@@ -86,7 +86,7 @@
         <div class="playlist-item" tabindex="0" (click)="playPlaylist(playlist)"
           (keydown.enter)="playPlaylist(playlist)" (keydown.space)="playPlaylist(playlist)">
           <button mat-icon-button class="play-button" (click)="playPlaylist(playlist); $event.stopPropagation()"
-            matTooltip="Play playlist">
+            matTooltip="Play album">
             <mat-icon>play_arrow</mat-icon>
           </button>
 

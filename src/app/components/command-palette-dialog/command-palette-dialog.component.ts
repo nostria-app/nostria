@@ -198,10 +198,10 @@ export class CommandPaletteDialogComponent implements AfterViewInit, OnDestroy {
     // Navigation - Media & Entertainment
     {
       id: 'nav-playlists',
-      label: 'Open Playlists',
+      label: 'Open Albums',
       icon: 'playlist_play',
       action: () => this.router.navigate(['/playlists']),
-      keywords: ['playlists', 'music playlists', 'queue']
+      keywords: ['albums', 'music albums', 'playlists', 'music playlists', 'queue']
     },
     {
       id: 'nav-media-queue',

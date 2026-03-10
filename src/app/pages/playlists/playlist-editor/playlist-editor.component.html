@@ -1,11 +1,11 @@
 <div class="playlist-editor-container">
   <header class="editor-header">
     <div class="header-content">
-      <button mat-icon-button (click)="cancel()" matTooltip="Back to playlists">
+      <button mat-icon-button (click)="cancel()" matTooltip="Back to albums">
         <mat-icon>arrow_back</mat-icon>
       </button>
       <div class="header-info">
-        <h1>{{ currentPlaylist()?.isNewPlaylist ? 'Create' : 'Edit' }} Playlist</h1>
+        <h1>{{ currentPlaylist()?.isNewPlaylist ? 'Create' : 'Edit' }} Album</h1>
         <p class="track-count">
           {{ tracks().length }} tracks
           @if (totalDuration() !== '0:00') {
@@ -21,7 +21,7 @@
         <button mat-flat-button color="primary" (click)="savePlaylist()"
           [disabled]="!playlistForm.valid || !currentPlaylist()">
           <mat-icon>check</mat-icon>
-          {{ currentPlaylist()?.isNewPlaylist ? 'Create' : 'Save' }} Playlist
+          {{ currentPlaylist()?.isNewPlaylist ? 'Create' : 'Save' }} Album
         </button>
         <button mat-stroked-button color="accent" (click)="publishPlaylist()"
           [disabled]="!playlistForm.valid || !currentPlaylist()">
@@ -40,15 +40,15 @@
         <form [formGroup]="playlistForm" class="details-form">
           <div class="id-field-container">
             <mat-form-field appearance="outline" class="id-field">
-              <mat-label>Playlist ID (d tag)</mat-label>
-              <input matInput formControlName="id" placeholder="unique-playlist-id">
+              <mat-label>Album ID (d tag)</mat-label>
+              <input matInput formControlName="id" placeholder="unique-album-id">
               @if (playlistForm.get('id')?.hasError('required')) {
-              <mat-error>Playlist ID is required</mat-error>
+              <mat-error>Album ID is required</mat-error>
               }
               @if (playlistForm.get('id')?.hasError('duplicateId')) {
-              <mat-error>This playlist ID already exists</mat-error>
+              <mat-error>This album ID already exists</mat-error>
               }
-              <mat-hint>Unique identifier for this playlist (used in Nostr events)</mat-hint>
+              <mat-hint>Unique identifier for this album (used in Nostr events)</mat-hint>
             </mat-form-field>
             <button type="button" mat-icon-button (click)="generateRandomId()" matTooltip="Generate random ID"
               class="generate-id-button">
@@ -57,16 +57,16 @@
           </div>
 
           <mat-form-field appearance="outline" class="full-width">
-            <mat-label>Playlist Title</mat-label>
-            <input matInput formControlName="title" placeholder="Enter playlist title">
+            <mat-label>Album Title</mat-label>
+            <input matInput formControlName="title" placeholder="Enter album title">
             @if (playlistForm.get('title')?.hasError('required')) {
-            <mat-error>Playlist title is required</mat-error>
+            <mat-error>Album title is required</mat-error>
             }
           </mat-form-field>
 
           <mat-form-field appearance="outline" class="full-width">
             <mat-label>Description</mat-label>
-            <textarea matInput formControlName="description" placeholder="Enter playlist description" rows="3">
+            <textarea matInput formControlName="description" placeholder="Enter album description" rows="3">
               </textarea>
           </mat-form-field>
 
@@ -172,7 +172,7 @@
     </div>
     } @else {
     <div class="loading-state">
-      <p>Loading playlist...</p>
+      <p>Loading album...</p>
     </div>
     }
   </main>

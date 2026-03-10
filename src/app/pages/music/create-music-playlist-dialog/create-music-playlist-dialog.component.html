@@ -1,4 +1,4 @@
-<app-custom-dialog [title]="'Create Playlist'" [showCloseButton]="true" [disableClose]="true" [width]="'500px'"
+<app-custom-dialog [title]="'Create Album'" [showCloseButton]="true" [disableClose]="true" [width]="'500px'"
   [maxWidth]="'95vw'" (closed)="onCancel()">
 
   <div dialog-content>
@@ -15,12 +15,12 @@
     </div>
     }
 
-    <p class="dialog-subtitle">Create a new playlist to organize your favorite tracks.</p>
+    <p class="dialog-subtitle">Create a new album to organize your favorite tracks.</p>
 
     <form [formGroup]="playlistForm" class="playlist-form">
       <mat-form-field appearance="outline" class="full-width">
         <mat-label>Title</mat-label>
-        <input matInput formControlName="title" placeholder="My awesome playlist" autocomplete="off" required>
+        <input matInput formControlName="title" placeholder="My awesome album" autocomplete="off" required>
         @if (playlistForm.get('title')?.hasError('required')) {
         <mat-error>Title is required</mat-error>
         }
@@ -28,7 +28,7 @@
 
       <mat-form-field appearance="outline" class="full-width">
         <mat-label>Description</mat-label>
-        <textarea matInput formControlName="description" placeholder="What's this playlist about?" rows="2"
+        <textarea matInput formControlName="description" placeholder="What's this album about?" rows="2"
           autocomplete="off"></textarea>
       </mat-form-field>
 
@@ -75,8 +75,8 @@
       <div class="toggle-section">
         <div class="toggle-row">
           <div class="toggle-info">
-            <span class="toggle-label">Public Playlist</span>
-            <span class="toggle-description">Allow others to discover this playlist</span>
+            <span class="toggle-label">Public Album</span>
+            <span class="toggle-description">Allow others to discover this album</span>
           </div>
           <mat-slide-toggle formControlName="isPublic"></mat-slide-toggle>
         </div>
@@ -101,7 +101,7 @@
       @if (isCreating()) {
       <mat-spinner diameter="18"></mat-spinner>
       } @else {
-      Create Playlist
+      Create Album
       }
     </button>
   </div>

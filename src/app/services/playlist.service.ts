@@ -793,7 +793,7 @@ export class PlaylistService implements OnInitialized {
 
       const playlist: Playlist = {
         id: dTag || event.id,
-        title: altTag || 'Imported Playlist',
+        title: altTag || 'Imported Album',
         description: dTag,
         tags: tTags,
         url: uTag,

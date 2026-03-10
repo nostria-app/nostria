@@ -444,7 +444,7 @@ export class FormatService {
   }
 
   private buildMusicPlaylistNaddrPreview(event: Event, identifier: string, naddrEncoded: string): string {
-    const title = this.getTagValue(event, 'title') || 'Untitled Playlist';
+    const title = this.getTagValue(event, 'title') || 'Untitled Album';
     const description = this.getTagValue(event, 'description') || event.content || '';
     const trackCount = event.tags.filter(tag => tag[0] === 'a' && tag[1]?.startsWith(`${FormatService.MUSIC_TRACK_KIND}:`)).length;
     const route = this.getAddressableRoute(event.kind, event.pubkey, identifier, naddrEncoded);
@@ -452,7 +452,7 @@ export class FormatService {
       ? `<div class="nostr-embed-meta">${this.escapeHtml(description).replace(/\n/g, ' ')}</div>`
       : '';
 
-    const html = `<div class="nostr-embed-preview" data-naddr="${naddrEncoded}" data-identifier="${identifier}" data-kind="${event.kind}" data-pubkey="${event.pubkey}"><a href="${route}" class="nostr-embed-link"><div class="nostr-embed-icon"><span class="embed-icon">🎼</span></div><div class="nostr-embed-content"><div class="nostr-embed-title">${this.escapeHtml(title)}</div><div class="nostr-embed-meta">Music Playlist · Kind ${event.kind}</div><div class="nostr-embed-meta">Tracks: ${trackCount}</div>${descriptionHtml}</div></a></div>`;
+    const html = `<div class="nostr-embed-preview" data-naddr="${naddrEncoded}" data-identifier="${identifier}" data-kind="${event.kind}" data-pubkey="${event.pubkey}"><a href="${route}" class="nostr-embed-link"><div class="nostr-embed-icon"><span class="embed-icon">🎼</span></div><div class="nostr-embed-content"><div class="nostr-embed-title">${this.escapeHtml(title)}</div><div class="nostr-embed-meta">Music Album · Kind ${event.kind}</div><div class="nostr-embed-meta">Tracks: ${trackCount}</div>${descriptionHtml}</div></a></div>`;
 
     return this.wrapEmbedBlock(html);
   }

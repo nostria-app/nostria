@@ -57,7 +57,7 @@
   </button>
   <button mat-menu-item (click)="openCreatePlaylist()">
     <mat-icon>playlist_add</mat-icon>
-    <span i18n="@@music.menu.createPlaylist">Create Playlist</span>
+    <span i18n="@@music.menu.createPlaylist">Create Album</span>
   </button>
   <button mat-menu-item (click)="openImportFromRss()">
     <mat-icon>rss_feed</mat-icon>
@@ -70,7 +70,7 @@
   <!-- Search Bar (always in DOM for Safari/iOS focus support) -->
   <div class="search-bar" [class.hidden]="!showSearch()">
     <mat-icon class="search-icon">search</mat-icon>
-    <input #searchInput type="text" class="search-input" placeholder="Search tracks, playlists, and artists..."
+    <input #searchInput type="text" class="search-input" placeholder="Search tracks, albums, and artists..."
       [value]="searchQuery()" (input)="onSearchInput($any($event))" />
     <button mat-icon-button class="clear-search-btn" [class.invisible]="!searchQuery()" (click)="clearSearch()"
       aria-label="Clear search">
@@ -118,7 +118,7 @@
             <mat-icon>playlist_play</mat-icon>
           </div>
           <div class="yours-card-info">
-            <span class="yours-card-title">Liked Playlists</span>
+            <span class="yours-card-title">Liked Albums</span>
             <span class="yours-card-meta">Your favorite collections</span>
           </div>
         </div>

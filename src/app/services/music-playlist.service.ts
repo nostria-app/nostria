@@ -153,7 +153,7 @@ export class MusicPlaylistService {
 
     return {
       id: dTag,
-      title: titleTag?.[1] || 'Untitled Playlist',
+      title: titleTag?.[1] || 'Untitled Album',
       description: descTag?.[1] || event.content || undefined,
       image: imageTag?.[1] || undefined,
       pubkey: event.pubkey,

@@ -677,7 +677,7 @@ export class App implements OnInit, OnDestroy {
     { path: 'collections/media', label: $localize`:@@menu.media:Media`, icon: 'photo_library', authenticated: true },
     // Note: 'lists' is intentionally omitted - it's a power-user feature accessible only via direct URL /lists
     { path: 'polls', label: $localize`:@@menu.polls:Polls`, icon: 'poll', authenticated: false },
-    { path: 'playlists', label: $localize`:@@menu.playlists:Playlists`, icon: 'playlist_play', authenticated: false },
+    { path: 'playlists', label: $localize`:@@menu.playlists:Albums`, icon: 'playlist_play', authenticated: false },
     { path: 'queue', label: $localize`:@@menu.queue:Queue`, icon: 'queue_music', authenticated: false },
     { path: 'meetings', label: $localize`:@@menu.meetings:Live Meetings`, icon: 'adaptive_audio_mic', authenticated: false },
     { path: 'memos', label: $localize`:@@menu.memos:Memos`, icon: 'sticky_note_2', authenticated: true },
