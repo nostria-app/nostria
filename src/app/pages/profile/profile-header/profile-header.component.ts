@@ -590,6 +590,21 @@ export class ProfileHeaderComponent implements OnDestroy {
       });
     });
 
+    effect(() => {
+      if (!this.isOwnProfile()) {
+        return;
+      }
+
+      const ownGeneralStatus = this.userStatusService.ownGeneralStatus();
+      const ownMusicStatus = this.userStatusService.ownMusicStatus();
+
+      untracked(() => {
+        this.generalStatus.set(ownGeneralStatus);
+        this.musicStatus.set(ownMusicStatus);
+        this.showStatusFlyout.set(Boolean(ownGeneralStatus || ownMusicStatus));
+      });
+    });
+
     // Load badges when pubkey changes - DEFERRED: badges are lowest priority
     // Wait for cachedEventsLoaded signal to be true before loading badges
     effect(async () => {

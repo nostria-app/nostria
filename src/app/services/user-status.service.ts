@@ -72,11 +72,13 @@ export class UserStatusService {
     const result = await this.nostr.signAndPublish(event);
 
     if (result.success) {
+      const nextGeneralStatus = content
+        ? { content, type: 'general' as const, url, createdAt: event.created_at }
+        : null;
       this.ownGeneralStatus.set(
-        content
-          ? { content, type: 'general', url, createdAt: event.created_at }
-          : null,
+        nextGeneralStatus,
       );
+      this.updateOwnStatusCache({ general: nextGeneralStatus });
       this.logger.info('[UserStatus] General status published');
     } else {
       this.logger.error('[UserStatus] Failed to publish general status', result.error);
@@ -126,14 +128,16 @@ export class UserStatusService {
       const aTag = trackInfo?.eventPubkey && trackInfo?.eventIdentifier
         ? `36787:${trackInfo.eventPubkey}:${trackInfo.eventIdentifier}`
         : undefined;
-      this.ownMusicStatus.set({
+      const nextMusicStatus: UserStatus = {
         content: trackTitle,
         type: 'music',
         url: tags.find(t => t[0] === 'r')?.[1],
         aTag,
         expiration: expirationTimestamp,
         createdAt: event.created_at,
-      });
+      };
+      this.ownMusicStatus.set(nextMusicStatus);
+      this.updateOwnStatusCache({ music: nextMusicStatus });
       this.logger.info('[UserStatus] Music status published');
     } else {
       this.logger.error('[UserStatus] Failed to publish music status', result.error);
@@ -152,6 +156,7 @@ export class UserStatusService {
 
     if (result.success) {
       this.ownMusicStatus.set(null);
+      this.updateOwnStatusCache({ music: null });
     }
 
     return result.success;
@@ -269,6 +274,20 @@ export class UserStatusService {
    */
   invalidateCache(pubkey: string): void {
     this.statusCache.delete(pubkey);
+  }
+
+  private updateOwnStatusCache(updates: { general?: UserStatus | null; music?: UserStatus | null }): void {
+    const pubkey = this.accountState.pubkey();
+    if (!pubkey) {
+      return;
+    }
+
+    const cached = this.statusCache.get(pubkey);
+    this.statusCache.set(pubkey, {
+      general: updates.general !== undefined ? updates.general : (cached?.general ?? this.ownGeneralStatus()),
+      music: updates.music !== undefined ? updates.music : (cached?.music ?? this.ownMusicStatus()),
+      fetchedAt: Date.now(),
+    });
   }
 
   /**
