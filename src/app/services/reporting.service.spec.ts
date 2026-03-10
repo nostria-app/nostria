@@ -1,4 +1,16 @@
+import { signal } from '@angular/core';
+import { TestBed } from '@angular/core/testing';
+import { Event, UnsignedEvent } from 'nostr-tools';
 import { ReportingService } from './reporting.service';
+import { AccountStateService } from './account-state.service';
+import { UtilitiesService } from './utilities.service';
+import { DataService } from './data.service';
+import { LoggerService } from './logger.service';
+import { NostrService, NostrUser } from './nostr.service';
+import { SettingsService } from './settings.service';
+import { PublishService } from './publish.service';
+import { AccountRelayService } from './relays/account-relay';
+import { DatabaseService } from './database.service';
 
 describe('ReportingService', () => {
     describe('stripNostrUrisAndUrls', () => {
@@ -186,6 +198,118 @@ describe('ReportingService', () => {
         it('should match case-insensitively', () => {
             expect(ReportingService.fieldsContainMutedWord(['GM Master'], ['gm'])).toBe(true);
             expect(ReportingService.fieldsContainMutedWord(['gm lover'], ['GM'])).toBe(true);
+        });
+    });
+
+    describe('mute list updates', () => {
+        let service: ReportingService;
+        let mockAccountStateService: Pick<AccountStateService, 'account' | 'muteList' | 'updateMuteList'>;
+        let mockAccountRelayService: Pick<AccountRelayService, 'getEventByPubkeyAndKind'>;
+        let mockDatabaseService: Pick<DatabaseService, 'getEventByPubkeyAndKind' | 'saveReplaceableEvent'>;
+        let mockNostrService: Pick<NostrService, 'signEvent'>;
+        let mockPublishService: Pick<PublishService, 'publish'>;
+        let mockLoggerService: Pick<LoggerService, 'debug' | 'error' | 'info' | 'warn'>;
+
+        const accountPubkey = 'account-pubkey';
+
+        const createMuteListEvent = (id: string, createdAt: number, tags: string[][]): Event => ({
+            id,
+            sig: `${id}-sig`,
+            kind: 10000,
+            created_at: createdAt,
+            content: '',
+            tags,
+            pubkey: accountPubkey,
+        });
+
+        beforeEach(() => {
+            mockAccountStateService = {
+                account: signal<NostrUser | null>({
+                    pubkey: accountPubkey,
+                    source: 'extension',
+                    hasActivated: true,
+                }),
+                muteList: signal<Event | undefined>(undefined),
+                updateMuteList: vi.fn(),
+            };
+            mockAccountRelayService = {
+                getEventByPubkeyAndKind: vi.fn(),
+            };
+            mockDatabaseService = {
+                getEventByPubkeyAndKind: vi.fn(),
+                saveReplaceableEvent: vi.fn().mockResolvedValue(true),
+            };
+            mockNostrService = {
+                signEvent: vi.fn(async (event: UnsignedEvent) => ({
+                    ...event,
+                    id: 'signed-event',
+                    sig: 'signed-sig',
+                })),
+            };
+            mockPublishService = {
+                publish: vi.fn(async (event: Event) => ({
+                    success: true,
+                    relayResults: new Map(),
+                    event,
+                })),
+            };
+            mockLoggerService = {
+                debug: vi.fn(),
+                error: vi.fn(),
+                info: vi.fn(),
+                warn: vi.fn(),
+            };
+
+            TestBed.configureTestingModule({
+                providers: [
+                    ReportingService,
+                    { provide: AccountStateService, useValue: mockAccountStateService },
+                    { provide: UtilitiesService, useValue: { createEvent: vi.fn() } },
+                    { provide: DataService, useValue: {} },
+                    { provide: LoggerService, useValue: mockLoggerService },
+                    { provide: NostrService, useValue: mockNostrService },
+                    { provide: SettingsService, useValue: {} },
+                    { provide: PublishService, useValue: mockPublishService },
+                    { provide: AccountRelayService, useValue: mockAccountRelayService },
+                    { provide: DatabaseService, useValue: mockDatabaseService },
+                ],
+            });
+
+            service = TestBed.inject(ReportingService);
+        });
+
+        it('should preserve the latest relay mute list when creating a fresh mute list event', async () => {
+            const relayMuteList = createMuteListEvent('relay-event', 200, [['p', 'existing-user']]);
+            vi.mocked(mockAccountRelayService.getEventByPubkeyAndKind).mockResolvedValue(relayMuteList);
+            vi.mocked(mockDatabaseService.getEventByPubkeyAndKind).mockResolvedValue(null);
+
+            const signedEvent = await service.createFreshMuteListEvent('user', 'new-user');
+
+            expect(mockNostrService.signEvent).toHaveBeenCalledWith(expect.objectContaining({
+                pubkey: accountPubkey,
+                tags: [['p', 'existing-user'], ['p', 'new-user']],
+            }));
+            expect(mockDatabaseService.saveReplaceableEvent).toHaveBeenCalledWith(signedEvent);
+            expect(mockAccountStateService.muteList()).toEqual(signedEvent);
+        });
+
+        it('should preserve other mute entries when unblocking a user without local mute state', async () => {
+            const storedMuteList = createMuteListEvent('stored-event', 150, [
+                ['p', 'keep-user'],
+                ['p', 'remove-user'],
+                ['e', 'muted-event'],
+            ]);
+            vi.mocked(mockAccountRelayService.getEventByPubkeyAndKind).mockResolvedValue(null);
+            vi.mocked(mockDatabaseService.getEventByPubkeyAndKind).mockResolvedValue(storedMuteList);
+
+            const signedEvent = await service.createFreshMuteListWithoutUser('remove-user');
+
+            expect(mockNostrService.signEvent).toHaveBeenCalledWith(expect.objectContaining({
+                pubkey: accountPubkey,
+                tags: [['p', 'keep-user'], ['e', 'muted-event']],
+            }));
+            expect(mockDatabaseService.saveReplaceableEvent).toHaveBeenCalledWith(signedEvent);
+            expect(mockAccountStateService.muteList()).toEqual(signedEvent);
         });
     });
 });

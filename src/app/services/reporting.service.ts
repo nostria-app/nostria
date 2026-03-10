@@ -1,5 +1,5 @@
 import { Injectable, inject, signal, computed } from '@angular/core';
-import { Event, UnsignedEvent } from 'nostr-tools';
+import { Event, kinds, UnsignedEvent } from 'nostr-tools';
 import { AccountStateService } from './account-state.service';
 import { UtilitiesService } from './utilities.service';
 import { DataService } from './data.service';
@@ -7,6 +7,8 @@ import { LoggerService } from './logger.service';
 import { NostrService } from './nostr.service';
 import { SettingsService } from './settings.service';
 import { PublishService } from './publish.service';
+import { AccountRelayService } from './relays/account-relay';
+import { DatabaseService } from './database.service';
 
 export type ReportType =
   | 'nudity'
@@ -42,6 +44,8 @@ export class ReportingService {
   private nostr = inject(NostrService);
   private settings = inject(SettingsService);
   private publishService = inject(PublishService);
+  private accountRelay = inject(AccountRelayService);
+  private database = inject(DatabaseService);
 
   // Override signals for showing blocked content
   private contentOverrides = signal<Set<string>>(new Set());
@@ -464,7 +468,7 @@ export class ReportingService {
    * Add a word to mute list and publish to relays
    */
   async addWordToMuteListAndPublish(word: string): Promise<void> {
-    const unsignedEvent = this.createUnsignedMuteListWithItem('word', word.toLowerCase());
+    const unsignedEvent = await this.createUnsignedMuteListWithItem('word', word.toLowerCase());
     if (!unsignedEvent) return;
 
     try {
@@ -473,6 +477,7 @@ export class ReportingService {
 
       // Update local state immediately after signing
       this.accountState.muteList.set(signedEvent);
+      await this.saveMuteListEvent(signedEvent);
 
       // Publish the already-signed event
       const result = await this.publishService.publish(signedEvent);
@@ -489,7 +494,7 @@ export class ReportingService {
    * Add a tag to mute list and publish to relays
    */
   async addTagToMuteListAndPublish(tag: string): Promise<void> {
-    const unsignedEvent = this.createUnsignedMuteListWithItem('t', tag.toLowerCase());
+    const unsignedEvent = await this.createUnsignedMuteListWithItem('t', tag.toLowerCase());
     if (!unsignedEvent) return;
 
     try {
@@ -498,6 +503,7 @@ export class ReportingService {
 
       // Update local state immediately after signing
       this.accountState.muteList.set(signedEvent);
+      await this.saveMuteListEvent(signedEvent);
 
       // Publish the already-signed event
       const result = await this.publishService.publish(signedEvent);
@@ -513,14 +519,14 @@ export class ReportingService {
   /**
    * Create an unsigned mute list event with a new item (does not sign or update state)
    */
-  private createUnsignedMuteListWithItem(type: 'word' | 't' | 'e' | 'p', value: string): UnsignedEvent | null {
+  private async createUnsignedMuteListWithItem(type: 'word' | 't' | 'e' | 'p', value: string): Promise<UnsignedEvent | null> {
     const account = this.accountState.account();
     if (!account?.pubkey) {
       return null;
     }
 
     // Get current mute list or create empty tags array
-    const currentMuteList = this.accountState.muteList();
+    const currentMuteList = await this.getLatestMuteList(account.pubkey);
     let existingTags: string[][] = [];
 
     if (currentMuteList) {
@@ -596,7 +602,7 @@ export class ReportingService {
     }
 
     // Get current mute list or create empty tags array
-    const currentMuteList = this.accountState.muteList();
+    const currentMuteList = await this.getLatestMuteList(account.pubkey);
     let existingTags: string[][] = [];
 
     if (currentMuteList) {
@@ -634,6 +640,7 @@ export class ReportingService {
       // Update the account state with the new mute list
       // Use update() to force signal change detection
       this.accountState.muteList.set(signedEvent);
+      await this.saveMuteListEvent(signedEvent);
 
       // Force update by accessing the signal to ensure change detection
       this.accountState.muteList();
@@ -649,12 +656,13 @@ export class ReportingService {
    * Create a fresh mute list event without a specific user
    */
   async createFreshMuteListWithoutUser(pubkeyToRemove: string): Promise<Event | null> {
-    const unsignedEvent = this.createUnsignedMuteListWithoutItem('p', pubkeyToRemove);
+    const unsignedEvent = await this.createUnsignedMuteListWithoutItem('p', pubkeyToRemove);
     if (!unsignedEvent) return null;
 
     try {
       const signedEvent = await this.nostr.signEvent(unsignedEvent);
       this.accountState.muteList.set(signedEvent);
+      await this.saveMuteListEvent(signedEvent);
       return signedEvent;
     } catch (error) {
       this.logger.error('Error creating fresh mute list event:', error);
@@ -665,14 +673,14 @@ export class ReportingService {
   /**
    * Create an unsigned mute list event without a specific item (does not sign or update state)
    */
-  private createUnsignedMuteListWithoutItem(type: string, value: string): UnsignedEvent | null {
+  private async createUnsignedMuteListWithoutItem(type: string, value: string): Promise<UnsignedEvent | null> {
     const account = this.accountState.account();
     if (!account?.pubkey) {
       return null;
     }
 
     // Get current mute list or create empty tags array
-    const currentMuteList = this.accountState.muteList();
+    const currentMuteList = await this.getLatestMuteList(account.pubkey);
     let existingTags: string[][] = [];
 
     if (currentMuteList) {
@@ -696,7 +704,7 @@ export class ReportingService {
    * Remove an item from the mute list and publish to relays
    */
   async removeFromMuteListAndPublish(item: MuteListItem): Promise<void> {
-    const unsignedEvent = this.createUnsignedMuteListWithoutItem(item.type, item.value);
+    const unsignedEvent = await this.createUnsignedMuteListWithoutItem(item.type, item.value);
     if (!unsignedEvent) return;
 
     try {
@@ -705,6 +713,7 @@ export class ReportingService {
 
       // Update local state immediately after signing
       this.accountState.muteList.set(signedEvent);
+      await this.saveMuteListEvent(signedEvent);
 
       // Publish the already-signed event
       const result = await this.publishService.publish(signedEvent);
@@ -723,5 +732,37 @@ export class ReportingService {
   clear(): void {
     // Reset content overrides
     this.contentOverrides.set(new Set());
+  }
+
+  private async getLatestMuteList(pubkey: string): Promise<Event | undefined> {
+    const currentMuteList = this.accountState.muteList();
+
+    try {
+      const [relayMuteList, storedMuteList] = await Promise.all([
+        this.accountRelay.getEventByPubkeyAndKind(pubkey, kinds.Mutelist),
+        this.database.getEventByPubkeyAndKind(pubkey, kinds.Mutelist),
+      ]);
+
+      const latestMuteList = [currentMuteList, storedMuteList ?? undefined, relayMuteList ?? undefined]
+        .filter((event): event is Event => !!event)
+        .sort((left, right) => right.created_at - left.created_at)[0];
+
+      if (latestMuteList && (!currentMuteList || latestMuteList.id !== currentMuteList.id)) {
+        this.accountState.muteList.set(latestMuteList);
+      }
+
+      return latestMuteList;
+    } catch (error) {
+      this.logger.warn('Failed to load latest mute list before updating it', error);
+      return currentMuteList;
+    }
+  }
+
+  private async saveMuteListEvent(event: Event): Promise<void> {
+    try {
+      await this.database.saveReplaceableEvent(event);
+    } catch (error) {
+      this.logger.warn('Failed to store mute list locally', error);
+    }
   }
 }
