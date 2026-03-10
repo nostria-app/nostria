@@ -337,6 +337,77 @@ describe('MessagesComponent formatMessageTime', () => {
     });
 });
 
+describe('MessagesComponent message input layout', () => {
+    let component: MessagesComponent;
+
+    beforeEach(() => {
+        component = Object.create(MessagesComponent.prototype) as MessagesComponent;
+    });
+
+    it('should not force the textarea to the bottom while editing earlier text', () => {
+        const textarea = document.createElement('textarea');
+        textarea.value = 'A long message that spans multiple lines\n'.repeat(10);
+        document.body.appendChild(textarea);
+        textarea.focus();
+        textarea.setSelectionRange(0, 0);
+
+        Object.defineProperty(textarea, 'scrollHeight', { configurable: true, value: 400 });
+        Object.defineProperty(textarea, 'clientHeight', { configurable: true, value: 150 });
+        textarea.scrollTop = 25;
+
+        (component as any).messageInput = { nativeElement: textarea };
+        (component as any).autoResizeTextarea = vi.fn();
+
+        (component as any).syncMessageInputLayout();
+
+        expect((component as any).autoResizeTextarea).toHaveBeenCalled();
+        expect(textarea.scrollTop).toBe(25);
+
+        textarea.remove();
+    });
+
+    it('should keep the textarea pinned to the bottom when typing at the end', () => {
+        const textarea = document.createElement('textarea');
+        textarea.value = 'A long message that spans multiple lines\n'.repeat(10);
+        document.body.appendChild(textarea);
+        textarea.focus();
+        textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+
+        Object.defineProperty(textarea, 'scrollHeight', { configurable: true, value: 400 });
+        Object.defineProperty(textarea, 'clientHeight', { configurable: true, value: 150 });
+        textarea.scrollTop = 25;
+
+        (component as any).messageInput = { nativeElement: textarea };
+        (component as any).autoResizeTextarea = vi.fn();
+
+        (component as any).syncMessageInputLayout();
+
+        expect(textarea.scrollTop).toBe(400);
+
+        textarea.remove();
+    });
+
+    it('should preserve the selection while auto-resizing a focused textarea', () => {
+        const textarea = document.createElement('textarea');
+        textarea.value = 'Hello long direct message';
+        document.body.appendChild(textarea);
+        textarea.focus();
+        textarea.setSelectionRange(5, 5);
+
+        Object.defineProperty(textarea, 'scrollHeight', { configurable: true, value: 120 });
+
+        (component as any).messageInput = { nativeElement: textarea };
+
+        component.autoResizeTextarea();
+
+        expect(textarea.style.height).toBe('120px');
+        expect(textarea.selectionStart).toBe(5);
+        expect(textarea.selectionEnd).toBe(5);
+
+        textarea.remove();
+    });
+});
+
 describe('MessagesComponent template structure', () => {
     it('should not reference message-time-side class in template file', async () => {
         // Verify old external timestamp class is no longer used

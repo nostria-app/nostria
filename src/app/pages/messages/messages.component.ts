@@ -712,18 +712,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       // Use untracked to avoid infinite loops and schedule after DOM updates
       untracked(() => {
         setTimeout(() => {
-          const textarea = this.messageInput?.nativeElement;
-          if (textarea) {
-            // Auto-resize textarea for iOS Safari which doesn't support field-sizing: content
-            this.autoResizeTextarea();
-
-            // Only scroll if we're not already at the bottom
-            // This avoids unnecessary DOM operations on every keystroke
-            const isAtBottom = textarea.scrollHeight - textarea.scrollTop <= textarea.clientHeight + 5;
-            if (!isAtBottom) {
-              textarea.scrollTop = textarea.scrollHeight;
-            }
-          }
+          this.syncMessageInputLayout();
         }, 0);
       });
     });
@@ -1318,10 +1307,49 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   autoResizeTextarea(): void {
     const textarea = this.messageInput?.nativeElement;
     if (!textarea) return;
+    const isFocused = typeof document !== 'undefined' && document.activeElement === textarea;
+    const selectionStart = isFocused ? textarea.selectionStart : null;
+    const selectionEnd = isFocused ? textarea.selectionEnd : null;
     // Reset to auto so shrinking works correctly, then set to scrollHeight
     textarea.style.height = 'auto';
     const newHeight = Math.min(textarea.scrollHeight, 150); // matches CSS max-height
     textarea.style.height = newHeight + 'px';
+    if (selectionStart !== null && selectionEnd !== null) {
+      textarea.setSelectionRange(selectionStart, selectionEnd);
+    }
+  }
+
+  private syncMessageInputLayout(): void {
+    const textarea = this.messageInput?.nativeElement;
+    if (!textarea) return;
+
+    // Preserve the user's current edit position instead of forcing the textarea
+    // back to the bottom while they are editing older text on Safari/iOS.
+    const shouldScrollToBottom = this.shouldKeepMessageInputScrolledToBottom(textarea);
+
+    // Auto-resize textarea for iOS Safari which doesn't support field-sizing: content
+    this.autoResizeTextarea();
+
+    if (!shouldScrollToBottom) {
+      return;
+    }
+
+    // Only scroll if we're not already at the bottom
+    // This avoids unnecessary DOM operations on every keystroke
+    const isAtBottom = textarea.scrollHeight - textarea.scrollTop <= textarea.clientHeight + 5;
+    if (!isAtBottom) {
+      textarea.scrollTop = textarea.scrollHeight;
+    }
+  }
+
+  private shouldKeepMessageInputScrolledToBottom(textarea: HTMLTextAreaElement): boolean {
+    if (typeof document === 'undefined' || document.activeElement !== textarea) {
+      return true;
+    }
+
+    const selectionStart = textarea.selectionStart ?? textarea.value.length;
+    const selectionEnd = textarea.selectionEnd ?? textarea.value.length;
+    return selectionStart === selectionEnd && selectionEnd === textarea.value.length;
   }
 
   /**
