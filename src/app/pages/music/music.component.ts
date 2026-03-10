@@ -37,7 +37,17 @@ import { LoggerService } from '../../services/logger.service';
 
 const MUSIC_KIND = 36787;
 const PLAYLIST_KIND = 34139;
+const USER_STATUS_KIND = 30315;
 const SECTION_LIMIT = 12;
+
+interface ListeningEntry {
+  pubkey: string;
+  content: string;
+  createdAt: number;
+  expiration?: number;
+  trackPubkey?: string;
+  trackIdentifier?: string;
+}
 
 @Component({
   selector: 'app-music',
@@ -88,6 +98,7 @@ export class MusicComponent implements OnDestroy {
 
   allTracks = signal<Event[]>([]);
   allPlaylists = signal<Event[]>([]);
+  recentListening = signal<ListeningEntry[]>([]);
   loading = signal(true);
   isLoadingLikedSongs = signal(false);
 
@@ -113,8 +124,12 @@ export class MusicComponent implements OnDestroy {
 
   private trackSubscription: { close: () => void } | null = null;
   private playlistSubscription: { close: () => void } | null = null;
+  private listeningSubscription: { close: () => void } | null = null;
   private trackMap = new Map<string, Event>();
   private playlistMap = new Map<string, Event>();
+  private listeningMap = new Map<string, ListeningEntry>();
+  private latestListeningTimestamps = new Map<string, number>();
+  private listeningPruneIntervalId: number | null = null;
   private syncingOwnMusicCache = false;
   private lastSyncedOwnMusicPubkey: string | null = null;
 
@@ -381,6 +396,12 @@ export class MusicComponent implements OnDestroy {
 
   artistsCount = computed(() => this.allArtists().length);
 
+  recentListeningEntries = computed(() => {
+    return this.recentListening()
+      .slice()
+      .sort((a, b) => b.createdAt - a.createdAt);
+  });
+
   // Search results indicator
   hasSearchResults = computed(() => {
     const query = this.searchQuery().trim();
@@ -475,6 +496,7 @@ export class MusicComponent implements OnDestroy {
 
     // Then load relay set and start subscriptions for fresh data
     await this.loadMusicRelaySet();
+    await this.refreshListeningSection();
     this.startSubscriptions();
 
     // Ensure the current account's own catalog is cached for offline playback/navigation.
@@ -644,6 +666,12 @@ export class MusicComponent implements OnDestroy {
   ngOnDestroy(): void {
     this.trackSubscription?.close();
     this.playlistSubscription?.close();
+    this.listeningSubscription?.close();
+
+    if (this.listeningPruneIntervalId !== null) {
+      clearInterval(this.listeningPruneIntervalId);
+      this.listeningPruneIntervalId = null;
+    }
   }
 
   /**
@@ -832,7 +860,322 @@ export class MusicComponent implements OnDestroy {
     this.trackSubscription?.close();
     this.playlistSubscription?.close();
 
+    void this.refreshListeningSection();
     this.startSubscriptions();
+  }
+
+  private async refreshListeningSection(): Promise<void> {
+    this.listeningSubscription?.close();
+    this.listeningSubscription = null;
+    this.resetListeningState();
+    await this.loadRecentListening();
+    this.startListeningSubscription();
+    this.startListeningPruneTimer();
+  }
+
+  private async loadRecentListening(): Promise<void> {
+    if (!this.isAuthenticated()) {
+      this.resetListeningState();
+      return;
+    }
+
+    try {
+      const oneHourAgo = Math.floor(Date.now() / 1000) - 3600;
+      const events = await this.accountRelay.getMany<Event>(
+        {
+          kinds: [USER_STATUS_KIND],
+          '#d': ['music'],
+          since: oneHourAgo,
+          limit: 500,
+        },
+        { timeout: 5000 },
+      );
+
+      for (const event of events) {
+        this.applyListeningEvent(event);
+      }
+    } catch (error) {
+      this.logger.warn('[Music] Failed to load recent listening statuses:', error);
+      this.resetListeningState();
+    }
+  }
+
+  private startListeningSubscription(): void {
+    if (!this.isAuthenticated()) {
+      return;
+    }
+
+    const relayUrls = this.accountRelay.getRelayUrls();
+    if (relayUrls.length === 0) {
+      return;
+    }
+
+    const oneHourAgo = Math.floor(Date.now() / 1000) - 3600;
+    const filter: Filter = {
+      kinds: [USER_STATUS_KIND],
+      '#d': ['music'],
+      since: oneHourAgo,
+    };
+
+    this.listeningSubscription = this.pool.subscribe(relayUrls, filter, (event: Event) => {
+      this.applyListeningEvent(event);
+    });
+  }
+
+  private startListeningPruneTimer(): void {
+    if (!this.app.isBrowser()) {
+      return;
+    }
+
+    if (this.listeningPruneIntervalId !== null) {
+      clearInterval(this.listeningPruneIntervalId);
+    }
+
+    this.listeningPruneIntervalId = window.setInterval(() => {
+      this.pruneExpiredListeningEntries();
+    }, 30_000);
+  }
+
+  private resetListeningState(): void {
+    this.listeningMap.clear();
+    this.latestListeningTimestamps.clear();
+    this.recentListening.set([]);
+  }
+
+  private applyListeningEvent(event: Event): void {
+    if (this.reporting.isUserBlocked(event.pubkey)) return;
+    if (this.reporting.isContentBlocked(event)) return;
+
+    const latestTimestamp = this.latestListeningTimestamps.get(event.pubkey);
+    if (latestTimestamp !== undefined && latestTimestamp >= event.created_at) {
+      return;
+    }
+
+    this.latestListeningTimestamps.set(event.pubkey, event.created_at);
+
+    const entry = this.parseListeningEvent(event);
+    if (entry) {
+      this.listeningMap.set(event.pubkey, entry);
+      void this.dataService.getProfiles([entry.pubkey]);
+    } else {
+      this.listeningMap.delete(event.pubkey);
+    }
+
+    this.syncListeningSignal();
+  }
+
+  private parseListeningEvent(event: Event): ListeningEntry | null {
+    const dTag = event.tags.find(tag => tag[0] === 'd')?.[1];
+    if (dTag !== 'music') {
+      return null;
+    }
+
+    const content = event.content.trim();
+    if (!content) {
+      return null;
+    }
+
+    const expirationValue = event.tags.find(tag => tag[0] === 'expiration')?.[1];
+    const expiration = expirationValue ? Number.parseInt(expirationValue, 10) : undefined;
+    const now = Math.floor(Date.now() / 1000);
+    if (expiration && expiration < now) {
+      return null;
+    }
+
+    const [trackPubkey, trackIdentifier] = this.parseMusicTrackReference(
+      event.tags.find(tag => tag[0] === 'a')?.[1],
+    );
+
+    return {
+      pubkey: event.pubkey,
+      content,
+      createdAt: event.created_at,
+      expiration,
+      trackPubkey,
+      trackIdentifier,
+    };
+  }
+
+  private pruneExpiredListeningEntries(): void {
+    const now = Math.floor(Date.now() / 1000);
+    let changed = false;
+
+    for (const [pubkey, entry] of this.listeningMap.entries()) {
+      if (entry.expiration && entry.expiration < now) {
+        this.listeningMap.delete(pubkey);
+        changed = true;
+      }
+    }
+
+    if (changed) {
+      this.syncListeningSignal();
+    }
+  }
+
+  private syncListeningSignal(): void {
+    this.recentListening.set(
+      Array.from(this.listeningMap.values()).sort((a, b) => b.createdAt - a.createdAt),
+    );
+  }
+
+  private parseMusicTrackReference(aTag?: string): [string | undefined, string | undefined] {
+    if (!aTag) {
+      return [undefined, undefined];
+    }
+
+    const parts = aTag.split(':');
+    if (parts.length < 3 || parts[0] !== String(MUSIC_KIND)) {
+      return [undefined, undefined];
+    }
+
+    return [parts[1], parts.slice(2).join(':') || undefined];
+  }
+
+  openListeningTrack(entry: ListeningEntry, event?: MouseEvent): void {
+    event?.stopPropagation();
+
+    if (!entry.trackPubkey || !entry.trackIdentifier) {
+      return;
+    }
+
+    this.layout.openSongDetail(entry.trackPubkey, entry.trackIdentifier);
+  }
+
+  async playListeningEntry(entry: ListeningEntry, event?: MouseEvent): Promise<void> {
+    event?.stopPropagation();
+
+    if (!entry.trackPubkey || !entry.trackIdentifier) {
+      return;
+    }
+
+    const track = await this.resolveTrackEvent(entry.trackPubkey, entry.trackIdentifier);
+    if (!track) {
+      return;
+    }
+
+    const mediaItem = await this.createMediaItemFromTrack(track);
+    if (!mediaItem) {
+      return;
+    }
+
+    this.mediaPlayer.play(mediaItem);
+  }
+
+  openListeningProfile(pubkey: string): void {
+    this.layout.openProfile(pubkey);
+  }
+
+  getListeningPicture(pubkey: string): string | null {
+    const profile = this.dataService.getCachedProfile(pubkey);
+    return typeof profile?.data?.picture === 'string' ? profile.data.picture : null;
+  }
+
+  getListeningDisplayName(pubkey: string): string {
+    const profile = this.dataService.getCachedProfile(pubkey);
+    const displayName = profile?.data?.display_name;
+    if (typeof displayName === 'string' && displayName.trim()) {
+      return displayName;
+    }
+
+    const name = profile?.data?.name;
+    if (typeof name === 'string' && name.trim()) {
+      return name;
+    }
+
+    return this.utilities.getTruncatedNpub(pubkey);
+  }
+
+  getListeningTrackArtwork(entry: ListeningEntry): string | null {
+    if (!entry.trackPubkey || !entry.trackIdentifier) {
+      return null;
+    }
+
+    const track = this.findCachedTrackEvent(entry.trackPubkey, entry.trackIdentifier);
+    const artwork = track?.tags.find(tag => tag[0] === 'image')?.[1];
+
+    if (artwork) {
+      return artwork;
+    }
+
+    return this.getListeningPicture(entry.trackPubkey);
+  }
+
+  private findCachedTrackEvent(pubkey: string, dTag: string): Event | undefined {
+    return this.allTracks().find(track => {
+      return track.pubkey === pubkey && track.tags.find(tag => tag[0] === 'd')?.[1] === dTag;
+    });
+  }
+
+  private async resolveTrackEvent(pubkey: string, dTag: string): Promise<Event | null> {
+    const cachedTrack = this.findCachedTrackEvent(pubkey, dTag);
+
+    if (cachedTrack) {
+      return cachedTrack;
+    }
+
+    const relayUrls = [...new Set([...this.accountRelay.getRelayUrls(), ...this.musicRelays()])];
+    if (relayUrls.length === 0) {
+      return null;
+    }
+
+    return await new Promise<Event | null>((resolve) => {
+      let latestEvent: Event | null = null;
+      const filter: Filter = {
+        kinds: [MUSIC_KIND],
+        authors: [pubkey],
+        '#d': [dTag],
+        limit: 1,
+      };
+
+      const sub = this.pool.subscribe(relayUrls, filter, (event: Event) => {
+        if (!latestEvent || event.created_at > latestEvent.created_at) {
+          latestEvent = event;
+        }
+      });
+
+      setTimeout(() => {
+        sub.close();
+        resolve(latestEvent);
+      }, 2500);
+    });
+  }
+
+  private async createMediaItemFromTrack(track: Event): Promise<MediaItem | null> {
+    const urlTag = track.tags.find(tag => tag[0] === 'url');
+    if (!urlTag?.[1]) {
+      return null;
+    }
+
+    const titleTag = track.tags.find(tag => tag[0] === 'title');
+    const artistTag = track.tags.find(tag => tag[0] === 'artist');
+    const imageTag = track.tags.find(tag => tag[0] === 'image');
+    const videoTag = track.tags.find(tag => tag[0] === 'video');
+    const dTag = track.tags.find(tag => tag[0] === 'd')?.[1] || '';
+
+    let artistName = artistTag?.[1]?.trim() || 'Unknown Artist';
+    let fallbackArtwork = '';
+
+    try {
+      const profile = await this.dataService.getProfile(track.pubkey);
+      if ((!artistName || artistName === 'Unknown Artist') && profile?.data) {
+        artistName = profile.data.display_name || profile.data.name || artistName;
+      }
+      fallbackArtwork = typeof profile?.data?.picture === 'string' ? profile.data.picture : '';
+    } catch {
+      // Keep current fallbacks
+    }
+
+    return {
+      source: urlTag[1],
+      title: titleTag?.[1] || 'Untitled Track',
+      artist: artistName,
+      artwork: imageTag?.[1] || fallbackArtwork,
+      video: videoTag?.[1] || undefined,
+      type: 'Music',
+      eventPubkey: track.pubkey,
+      eventIdentifier: dTag,
+      lyrics: this.utilities.extractLyricsFromEvent(track),
+    };
   }
 
   // Navigation methods

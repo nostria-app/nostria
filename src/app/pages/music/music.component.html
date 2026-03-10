@@ -245,8 +245,70 @@
     </section>
     }
 
+    <!-- LISTENING SECTION -->
+    @if (!searchQuery() && recentListeningEntries().length > 0) {
+    <section class="music-section">
+      <div class="section-header">
+        <h2>
+          <span i18n="@@music.section.listening">Listening</span>
+          <span class="section-count">{{ recentListeningEntries().length }}</span>
+        </h2>
+      </div>
+      <div class="listening-grid">
+        @for (entry of recentListeningEntries(); track entry.pubkey) {
+        <div class="listening-card">
+          <div class="listening-card-header">
+            <button type="button" class="listening-profile" (click)="openListeningProfile(entry.pubkey)">
+              <div class="listening-avatar">
+                @if (getListeningPicture(entry.pubkey); as picture) {
+                <img [src]="picture" alt="Listener profile picture" title="Listener profile picture" />
+                } @else {
+                <mat-icon>account_circle</mat-icon>
+                }
+              </div>
+              <span class="listening-name">{{ getListeningDisplayName(entry.pubkey) }}</span>
+            </button>
+
+            @if (entry.trackPubkey && entry.trackIdentifier) {
+            <button mat-icon-button class="listening-play-button" (click)="playListeningEntry(entry, $event)"
+              aria-label="Play this song" matTooltip="Play this song">
+              <mat-icon>play_arrow</mat-icon>
+            </button>
+            }
+          </div>
+
+          <div class="listening-card-body">
+            <div class="listening-card-label" i18n="@@music.listening.label">Listening to</div>
+
+            @if (entry.trackPubkey && entry.trackIdentifier) {
+            <button type="button" class="listening-track-button" (click)="openListeningTrack(entry, $event)">
+              <div class="listening-track-art">
+                @if (getListeningTrackArtwork(entry); as artwork) {
+                <img [src]="artwork" alt="Track artwork" title="Track artwork" />
+                } @else {
+                <mat-icon>music_note</mat-icon>
+                }
+              </div>
+              <span>{{ entry.content }}</span>
+            </button>
+            } @else {
+            <div class="listening-track-text">
+              <div class="listening-track-art">
+                <mat-icon>music_note</mat-icon>
+              </div>
+              <span>{{ entry.content }}</span>
+            </div>
+            }
+          </div>
+        </div>
+        }
+      </div>
+    </section>
+    }
+
     <!-- EMPTY STATE -->
-    @if (listFilteredTracksPreview().length === 0 && listFilteredPlaylistsPreview().length === 0) {
+    @if (listFilteredTracksPreview().length === 0 && listFilteredPlaylistsPreview().length === 0 && (searchQuery() ||
+    recentListeningEntries().length === 0)) {
     <div class="empty-state">
       <mat-icon>library_music</mat-icon>
       <h2 i18n="@@music.empty.title">No music found</h2>
