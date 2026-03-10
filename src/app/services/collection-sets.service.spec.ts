@@ -9,6 +9,7 @@ describe('CollectionSetsService', () => {
     databaseEvents?: Event[];
     relayEvents?: Event[];
     deletedEvents?: Event[];
+    initError?: Error;
     lastLoadedPubkey?: string | null;
     cachedInterestSets?: InterestSet[];
   }): CollectionSetsService {
@@ -22,7 +23,9 @@ describe('CollectionSetsService', () => {
         error: vi.fn(),
       },
       database: {
-        init: vi.fn().mockResolvedValue(undefined),
+        init: overrides?.initError
+          ? vi.fn().mockRejectedValue(overrides.initError)
+          : vi.fn().mockResolvedValue(undefined),
         getEventsByPubkeyAndKind: vi.fn().mockResolvedValue(databaseEvents),
       },
       accountRelay: {
@@ -74,6 +77,26 @@ describe('CollectionSetsService', () => {
     expect(result).toEqual(cachedInterestSets);
     expect(result).not.toBe(cachedInterestSets);
     expect(result[0].hashtags).not.toBe(cachedInterestSets[0].hashtags);
+  });
+
+  it('keeps cached custom interest sets when reloading fails', async () => {
+    const cachedInterestSets: InterestSet[] = [{
+      identifier: 'interests',
+      title: 'My Interests',
+      hashtags: ['nostr', 'gardening'],
+      eventId: 'cached-event',
+      created_at: 123,
+    }];
+    const service = createService({
+      initError: new Error('database unavailable'),
+      lastLoadedPubkey: 'pubkey',
+      cachedInterestSets,
+    });
+
+    const result = await service.getInterestSets('pubkey');
+
+    expect(result).toEqual(cachedInterestSets);
+    expect(result).not.toBe(cachedInterestSets);
   });
 
   it('prefers the latest event when multiple interest updates share the same second', async () => {
