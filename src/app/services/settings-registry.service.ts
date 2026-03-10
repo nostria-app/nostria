@@ -262,6 +262,18 @@ export class SettingsRegistryService {
       priority: 3,
     },
     {
+      id: 'right-sidebar',
+      title: $localize`:@@settings.layout.right-sidebar:Show Right Sidebar`,
+      description: $localize`:@@settings.layout.right-sidebar.description:Show the desktop right sidebar with Favorites and Runes. This syncs with your account settings across devices.`,
+      keywords: ['right sidebar', 'sidebar', 'favorites', 'runes', 'layout', 'desktop', 'panel', 'widgets'],
+      section: 'layout',
+      sectionTitle: $localize`:@@settings.sections.layout:Layout`,
+      icon: 'right_panel_open',
+      route: '/settings/layout',
+      authenticated: true,
+      priority: 4,
+    },
+    {
       id: 'event-expiration',
       title: $localize`:@@settings.event-expiration.title:Global Event Expiration`,
       description: $localize`:@@settings.event-expiration.description:When enabled, all events you create will include an expiration tag (NIP-40)`,

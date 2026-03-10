@@ -6,6 +6,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { LocalSettingsService } from '../../../services/local-settings.service';
 import { AccountStateService } from '../../../services/account-state.service';
 import { AccountLocalStateService } from '../../../services/account-local-state.service';
+import { SettingsService } from '../../../services/settings.service';
 import { SettingMenuEditorComponent } from '../sections/menu-editor.component';
 import { SettingTextSizeComponent } from '../sections/text-size.component';
 import { SettingFontSelectorComponent } from '../sections/font-selector.component';
@@ -145,6 +146,14 @@ const REACTION_EMOJI_OPTIONS = ['❤️', '👍', '🔥', '😂', '🎉', '👏'
         <p class="setting-description" i18n="@@settings.navigation.open-threads-expanded.description">When viewing a thread,
           show all replies expanded by default. Disable for a cleaner initial view with collapsed replies.</p>
 
+        <div class="setting-item">
+          <span i18n="@@settings.layout.right-sidebar">Show Right Sidebar</span>
+          <mat-slide-toggle [checked]="settings.settings().rightSidebarEnabled !== false"
+            (change)="toggleRightSidebar()">
+          </mat-slide-toggle>
+        </div>
+        <p class="setting-description" i18n="@@settings.layout.right-sidebar.description">Show the desktop right sidebar with Favorites and Runes. This syncs with your account settings across devices.</p>
+
         <app-setting-home-destination />
       </div>
 
@@ -156,6 +165,7 @@ const REACTION_EMOJI_OPTIONS = ['❤️', '👍', '🔥', '😂', '🎉', '👏'
 })
 export class LayoutSettingsComponent implements OnInit, OnDestroy {
   readonly localSettings = inject(LocalSettingsService);
+  readonly settings = inject(SettingsService);
   private readonly rightPanel = inject(RightPanelService);
   private readonly accountState = inject(AccountStateService);
   private readonly accountLocalState = inject(AccountLocalStateService);
@@ -209,6 +219,11 @@ export class LayoutSettingsComponent implements OnInit, OnDestroy {
 
   toggleOpenThreadsExpanded(): void {
     this.localSettings.setOpenThreadsExpanded(!this.localSettings.openThreadsExpanded());
+  }
+
+  toggleRightSidebar(): void {
+    const currentValue = this.settings.settings().rightSidebarEnabled !== false;
+    void this.settings.updateSettings({ rightSidebarEnabled: !currentValue });
   }
 
   setPostsDisplayMode(mode: string): void {
