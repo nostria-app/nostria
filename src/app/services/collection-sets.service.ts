@@ -406,6 +406,8 @@ export class CollectionSetsService {
         if (!dTag) continue;
 
         const existing = eventsByDTag.get(dTag);
+        // Nostr created_at uses second-level timestamps, so saves in the same second
+        // should let the later event in the returned sequence win for this d-tag.
         if (!existing || event.created_at >= existing.created_at) {
           eventsByDTag.set(dTag, event);
         }

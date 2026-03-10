@@ -51,7 +51,7 @@ describe('CollectionSetsService', () => {
         ['title', 'My Interests'],
         ...hashtags.map(hashtag => ['t', hashtag]),
       ],
-    } as unknown as Event;
+    } satisfies Event;
   }
 
   it('keeps cached custom interest sets when a reload returns no events', async () => {
