@@ -311,5 +311,71 @@ describe('ReportingService', () => {
             expect(mockDatabaseService.saveReplaceableEvent).toHaveBeenCalledWith(signedEvent);
             expect(mockAccountStateService.muteList()).toEqual(signedEvent);
         });
+
+        it('should prefer the newest mute list between relay and storage', async () => {
+            const storedMuteList = createMuteListEvent('stored-event', 150, [['p', 'stored-user']]);
+            const relayMuteList = createMuteListEvent('relay-event', 250, [['p', 'relay-user']]);
+            vi.mocked(mockAccountRelayService.getEventByPubkeyAndKind).mockResolvedValue(relayMuteList);
+            vi.mocked(mockDatabaseService.getEventByPubkeyAndKind).mockResolvedValue(storedMuteList);
+
+            await service.createFreshMuteListEvent('user', 'new-user');
+
+            expect(mockNostrService.signEvent).toHaveBeenCalledWith(expect.objectContaining({
+                pubkey: accountPubkey,
+                tags: [['p', 'relay-user'], ['p', 'new-user']],
+            }));
+        });
+
+        it('should hydrate the latest relay mute list before adding a muted word', async () => {
+            const relayMuteList = createMuteListEvent('relay-event', 220, [['p', 'existing-user']]);
+            vi.mocked(mockAccountRelayService.getEventByPubkeyAndKind).mockResolvedValue(relayMuteList);
+            vi.mocked(mockDatabaseService.getEventByPubkeyAndKind).mockResolvedValue(null);
+
+            await service.addWordToMuteListAndPublish('Spoiler');
+
+            expect(mockNostrService.signEvent).toHaveBeenCalledWith(expect.objectContaining({
+                pubkey: accountPubkey,
+                tags: [['p', 'existing-user'], ['word', 'spoiler']],
+            }));
+            expect(mockPublishService.publish).toHaveBeenCalledWith(expect.objectContaining({
+                tags: [['p', 'existing-user'], ['word', 'spoiler']],
+            }));
+        });
+
+        it('should hydrate the latest relay mute list before adding a muted tag', async () => {
+            const relayMuteList = createMuteListEvent('relay-event', 220, [['p', 'existing-user']]);
+            vi.mocked(mockAccountRelayService.getEventByPubkeyAndKind).mockResolvedValue(relayMuteList);
+            vi.mocked(mockDatabaseService.getEventByPubkeyAndKind).mockResolvedValue(null);
+
+            await service.addTagToMuteListAndPublish('Nostr');
+
+            expect(mockNostrService.signEvent).toHaveBeenCalledWith(expect.objectContaining({
+                pubkey: accountPubkey,
+                tags: [['p', 'existing-user'], ['t', 'nostr']],
+            }));
+            expect(mockPublishService.publish).toHaveBeenCalledWith(expect.objectContaining({
+                tags: [['p', 'existing-user'], ['t', 'nostr']],
+            }));
+        });
+
+        it('should hydrate the latest stored mute list before removing an item', async () => {
+            const storedMuteList = createMuteListEvent('stored-event', 180, [
+                ['p', 'keep-user'],
+                ['word', 'spoiler'],
+                ['t', 'nostr'],
+            ]);
+            vi.mocked(mockAccountRelayService.getEventByPubkeyAndKind).mockResolvedValue(null);
+            vi.mocked(mockDatabaseService.getEventByPubkeyAndKind).mockResolvedValue(storedMuteList);
+
+            await service.removeFromMuteListAndPublish({ type: 'word', value: 'spoiler' });
+
+            expect(mockNostrService.signEvent).toHaveBeenCalledWith(expect.objectContaining({
+                pubkey: accountPubkey,
+                tags: [['p', 'keep-user'], ['t', 'nostr']],
+            }));
+            expect(mockPublishService.publish).toHaveBeenCalledWith(expect.objectContaining({
+                tags: [['p', 'keep-user'], ['t', 'nostr']],
+            }));
+        });
     });
 });

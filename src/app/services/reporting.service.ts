@@ -743,7 +743,7 @@ export class ReportingService {
         this.database.getEventByPubkeyAndKind(pubkey, kinds.Mutelist),
       ]);
 
-      const latestMuteList = [currentMuteList, storedMuteList ?? undefined, relayMuteList ?? undefined]
+      const latestMuteList = [currentMuteList, storedMuteList, relayMuteList]
         .filter((event): event is Event => !!event)
         .sort((left, right) => right.created_at - left.created_at)[0];
 
@@ -753,7 +753,11 @@ export class ReportingService {
 
       return latestMuteList;
     } catch (error) {
-      this.logger.warn('Failed to load latest mute list before updating it', error);
+      this.logger.warn('Unable to sync mute list from relays before update. Changes will use local state only.', {
+        pubkey,
+        hasLocalMuteList: !!currentMuteList,
+        error,
+      });
       return currentMuteList;
     }
   }
