@@ -8,10 +8,6 @@
 // Collapsed state
 :host.collapsed {
   cursor: pointer;
-
-  &:hover {
-    background-color: var(--mat-sys-surface-container-lowest);
-  }
 }
 
 // Collapsed state UI
@@ -19,8 +15,13 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px 0;
+  padding: 12px 8px;
+  border-radius: 8px;
   cursor: pointer;
+
+  &:hover {
+    background-color: var(--mat-sys-surface-container-low);
+  }
 
   .avatar-wrapper {
     flex-shrink: 0;
@@ -80,7 +81,7 @@
 
 // Expanded editor
 .inline-editor {
-  padding: 8px 0;
+  padding: 8px;
 
   .editor-content {
     position: relative;
@@ -383,6 +384,7 @@
   from {
     transform: rotate(0deg);
   }
+
   to {
     transform: rotate(360deg);
   }

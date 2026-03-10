@@ -89,6 +89,7 @@ export enum NotificationType {
 
   // Content notifications (social interactions, counted in badge)
   NEW_FOLLOWER = 'newfollower',
+  FOLLOWER_SUMMARY = 'followersummary',
   MENTION = 'mention',
   REPOST = 'repost',
   REPLY = 'reply',
@@ -129,6 +130,10 @@ export interface RelayPublishingNotification extends Notification {
   event: Event;
   relayPromises?: RelayPublishPromise[];
   complete: boolean;
+  /** Number of retry attempts already executed for failed relay publishes. */
+  retryCount?: number;
+  /** Timestamp (ms) when the latest retry attempt was executed. */
+  lastRetryAttemptAt?: number;
 }
 
 // Track status of publishing to an individual relay
@@ -166,6 +171,8 @@ export interface ContentNotification extends Notification {
     zappedEventId?: string; // For zaps, the event that was zapped (if any)
     zapReceiptId?: string; // For zaps, the zap receipt event ID (kind 9735)
     recipientPubkey?: string; // For profile zaps, the recipient's pubkey
+    followerCount?: number; // For follower summary, total follower count
+    followerPubkeys?: string[]; // For follower summary, the list of follower pubkeys
   };
 }
 
@@ -226,6 +233,7 @@ export interface StoredDirectMessage {
   pending?: boolean; // Whether the message is still being sent
   failed?: boolean; // Whether the message failed to send
   giftWrapId?: string; // For NIP-44 messages, the gift wrap event ID (used to skip re-decryption)
+  failureReason?: string; // Human-readable reason for send failure
 }
 
 /**
@@ -2402,6 +2410,27 @@ export class DatabaseService {
   }
 
   /**
+   * Get all direct messages for an account (account DB)
+   */
+  async getDirectMessagesForAccount(accountPubkey: string): Promise<StoredDirectMessage[]> {
+    const db = this.getAccountDb();
+    if (!db) return [];
+
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORES.MESSAGES, 'readonly');
+      const store = transaction.objectStore(STORES.MESSAGES);
+      const index = store.index('by-account');
+
+      const request = index.getAll(accountPubkey);
+
+      request.onsuccess = () => {
+        resolve(request.result || []);
+      };
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  /**
    * Check if a message already exists in the database (account DB)
    */
   async messageExists(accountPubkey: string, chatId: string, messageId: string): Promise<boolean> {
@@ -2415,6 +2444,24 @@ export class DatabaseService {
       const store = transaction.objectStore(STORES.MESSAGES);
       const request = store.get(id);
       request.onsuccess = () => resolve(!!request.result);
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  /**
+   * Get a direct message from the database (account DB)
+   */
+  async getDirectMessage(accountPubkey: string, chatId: string, messageId: string): Promise<StoredDirectMessage | null> {
+    const db = this.getAccountDb();
+    if (!db) return null;
+
+    const id = `${accountPubkey}::${chatId}::${messageId}`;
+
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORES.MESSAGES, 'readonly');
+      const store = transaction.objectStore(STORES.MESSAGES);
+      const request = store.get(id);
+      request.onsuccess = () => resolve(request.result || null);
       request.onerror = () => reject(request.error);
     });
   }

@@ -105,12 +105,6 @@
   </mat-menu>
   }
 
-  <!-- View toggle button - cycles through modes - hidden on small screens -->
-  <button mat-icon-button (click)="cycleViewMode()" [matTooltip]="'View: ' + viewMode() + ' (click to change)'"
-    class="hide-small">
-    <mat-icon>{{ viewModeIcon() }}</mat-icon>
-  </button>
-
   <!-- Filter button with overlay panel -->
   <app-filter-button [active]="hasActiveFilters()" tooltip="Filter & Sort">
     <app-people-filter-panel [filters]="filters()" [sortOption]="sortOption()"
@@ -119,14 +113,18 @@
     </app-people-filter-panel>
   </app-filter-button>
 
-  <!-- More options menu - shown only on small screens -->
+  <!-- View toggle button - cycles through modes - always visible -->
+  <button mat-icon-button (click)="cycleViewMode()" [matTooltip]="'View: ' + viewModeLabel()">
+    <mat-icon>{{ viewModeIcon() }}</mat-icon>
+  </button>
+
+  <!-- More options menu - shown only on small screens when a list is selected -->
+  @if (canUseListActions()) {
   <button mat-icon-button [matMenuTriggerFor]="moreOptionsMenu" matTooltip="More options" class="show-small">
     <mat-icon>more_vert</mat-icon>
   </button>
 
   <mat-menu #moreOptionsMenu="matMenu">
-    <!-- Edit List (only when a list is selected) -->
-    @if (canUseListActions()) {
     <button mat-menu-item (click)="openEditListDialog()">
       <mat-icon>edit</mat-icon>
       <span>Edit List</span>
@@ -136,25 +134,6 @@
     <button mat-menu-item [matMenuTriggerFor]="mobileShortcutsMenu">
       <mat-icon>open_in_new</mat-icon>
       <span>View list in...</span>
-    </button>
-    <mat-divider></mat-divider>
-    }
-    <!-- View mode options -->
-    <button mat-menu-item (click)="setViewMode('comfortable')" [class.active]="viewMode() === 'comfortable'">
-      <mat-icon>view_agenda</mat-icon>
-      <span>Comfortable view</span>
-    </button>
-    <button mat-menu-item (click)="setViewMode('medium')" [class.active]="viewMode() === 'medium'">
-      <mat-icon>grid_view</mat-icon>
-      <span>Grid view</span>
-    </button>
-    <button mat-menu-item (click)="setViewMode('small')" [class.active]="viewMode() === 'small'">
-      <mat-icon>apps</mat-icon>
-      <span>Compact view</span>
-    </button>
-    <button mat-menu-item (click)="setViewMode('details')" [class.active]="viewMode() === 'details'">
-      <mat-icon>view_list</mat-icon>
-      <span>Details view</span>
     </button>
   </mat-menu>
 
@@ -181,6 +160,7 @@
       <span>Music</span>
     </button>
   </mat-menu>
+  }
 
 
 </div>
@@ -239,8 +219,7 @@
       } @else {
       <!-- Apply different container classes based on viewMode() -->
       <div class="people-container" [class.comfortable-list]="viewMode() === 'comfortable'"
-        [class.medium-grid]="viewMode() === 'medium'" [class.small-grid]="viewMode() === 'small'"
-        [class.details-list]="viewMode() === 'details'">
+        [class.medium-grid]="viewMode() === 'medium'" [class.details-list]="viewMode() === 'details'">
         @for (pubkey of visiblePeople(); track pubkey) {
         <div class="person-item" [attr.data-pubkey]="pubkey" (click)="selectContact(pubkey)"
           (keydown.enter)="selectContact(pubkey)" (keydown.space)="selectContact(pubkey); $event.preventDefault()"
@@ -248,8 +227,7 @@
           [attr.aria-label]="'View contact details for ' + (followingService.getProfile(pubkey)?.info?.['displayName'] || 'user')">
           <app-user-profile [info]="followingService.getProfile(pubkey)?.info ?? undefined"
             [trust]="followingService.getProfile(pubkey)?.trust ?? undefined" [pubkey]="pubkey"
-            [view]="$any(viewMode())"
-            [hostWidthAuto]="viewMode() === 'comfortable' || viewMode() === 'medium' || viewMode() === 'small'"
+            [view]="$any(viewMode())" [hostWidthAuto]="viewMode() === 'comfortable' || viewMode() === 'medium'"
             [showRank]="filters().showRank" [disableLink]="true">
           </app-user-profile>
         </div>

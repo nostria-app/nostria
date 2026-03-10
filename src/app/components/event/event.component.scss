@@ -504,6 +504,29 @@
   }
 }
 
+.x-action {
+  text-decoration: none;
+
+  &:hover {
+    color: var(--mat-sys-primary);
+
+    .action-text,
+    .x-action-icon {
+      color: var(--mat-sys-primary);
+    }
+  }
+}
+
+.x-action-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid currentColor;
+  border-radius: var(--mat-sys-corner-full);
+  font-size: 12px;
+  line-height: 1;
+}
+
 .zap-action {
   color: var(--nostria-bitcoin);
 

@@ -61,6 +61,10 @@
   }
 }
 
+.relay-card-known-dead {
+  border: 1px solid var(--mat-sys-error-container);
+}
+
 .relay-card-header {
   display: flex;
   justify-content: space-between;
@@ -97,6 +101,10 @@
   flex-shrink: 0;
 }
 
+.relay-icon-warning {
+  color: var(--mat-sys-error);
+}
+
 .relay-details {
   display: flex;
   flex-direction: column;
@@ -120,6 +128,22 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   font-family: monospace;
+}
+
+.relay-warning-badge {
+  margin-left: 8px;
+  padding: 1px 8px;
+  border-radius: var(--mat-sys-corner-full);
+  background: var(--mat-sys-error-container);
+  color: var(--mat-sys-on-error-container);
+  font-family: inherit;
+  font-size: 11px;
+}
+
+.relay-warning-note {
+  margin-top: 2px;
+  color: var(--mat-sys-error);
+  font-size: 12px;
 }
 
 .relay-actions {

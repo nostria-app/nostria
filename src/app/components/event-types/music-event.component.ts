@@ -225,6 +225,7 @@ import { DateToggleComponent } from '../date-toggle/date-toggle.component';
       border-radius: 12px;
       background-color: var(--mat-sys-surface-container-low);
       overflow: hidden;
+      min-width: 0;
       transition: background-color 0.2s ease, transform 0.2s ease;
       
       &:hover {
@@ -233,6 +234,14 @@ import { DateToggleComponent } from '../date-toggle/date-toggle.component';
         .play-overlay {
           opacity: 1;
           transform: translateY(0);
+        }
+      }
+
+      @media (max-width: 600px) {
+        border-radius: 8px;
+        
+        &:hover {
+          transform: none;
         }
       }
       
@@ -251,7 +260,7 @@ import { DateToggleComponent } from '../date-toggle/date-toggle.component';
       align-items: center;
       justify-content: center;
       background: linear-gradient(135deg, var(--mat-sys-tertiary-container) 0%, var(--mat-sys-secondary-container) 100%);
-      border-radius: 8px;
+      border-radius: 8px 8px 0 0;
       
       .cover-image {
         width: 100%;
@@ -324,6 +333,13 @@ import { DateToggleComponent } from '../date-toggle/date-toggle.component';
         border-radius: 50%;
         box-shadow: var(--mat-sys-level3);
         z-index: 2;
+
+        @media (max-width: 600px) {
+          width: 32px;
+          height: 32px;
+          bottom: 6px;
+          right: 6px;
+        }
         
         &:hover {
           background: var(--mat-sys-primary-container);
@@ -335,46 +351,55 @@ import { DateToggleComponent } from '../date-toggle/date-toggle.component';
           font-size: 24px;
           width: 24px;
           height: 24px;
+
+          @media (max-width: 600px) {
+            font-size: 20px;
+            width: 20px;
+            height: 20px;
+          }
         }
       }
     }
     
     .card-info {
-      padding: 0.75rem;
-      padding-top: 0.5rem;
+      padding: 0.5rem 0.625rem;
       display: flex;
       flex-direction: column;
       gap: 0.125rem;
+      min-width: 0;
+      overflow: hidden;
       
       .card-title-row {
         display: flex;
         align-items: center;
         gap: 0.25rem;
+        min-width: 0;
         
         .card-title {
           flex: 1;
           margin: 0;
-          font-size: 1rem;
+          font-size: 0.875rem;
           line-height: 1.3;
           color: var(--mat-sys-on-surface);
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
+          min-width: 0;
         }
         
         .menu-btn {
           flex-shrink: 0;
-          width: 40px;
-          height: 40px;
+          width: 28px;
+          height: 28px;
           padding: 0;
-          margin: -4px -8px -4px 0;
+          margin: -2px -4px -2px 0;
           opacity: 0.6;
           transition: opacity 0.2s ease;
           
           mat-icon {
-            font-size: 1.25rem;
-            width: 1.25rem;
-            height: 1.25rem;
+            font-size: 1.125rem;
+            width: 1.125rem;
+            height: 1.125rem;
           }
           
           &:hover {
@@ -384,7 +409,7 @@ import { DateToggleComponent } from '../date-toggle/date-toggle.component';
       }
       
       .card-artist {
-        font-size: 0.875rem;
+        font-size: 0.75rem;
         color: var(--mat-sys-on-surface-variant);
         overflow: hidden;
         text-overflow: ellipsis;

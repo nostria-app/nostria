@@ -66,6 +66,10 @@ export class ProfileState {
   // This allows UI components to wait for cached data before loading from relays
   cachedEventsLoaded = signal<boolean>(false);
 
+  // Signal to indicate when relay list loading is fully complete (cache + relay fetch)
+  // Unlike cachedEventsLoaded, this stays false until the relay list has been queried from relays too
+  relayListFullyLoaded = signal<boolean>(false);
+
   // Track the oldest timestamp from relay-loaded events for pagination
   // This is separate from cached events to ensure proper infinite scroll
   private oldestRelayTimestamp = signal<number | null>(null);
@@ -200,6 +204,7 @@ export class ProfileState {
     this.currentlyLoadingPubkey.set('');
     this.isInitiallyLoading.set(false);
     this.cachedEventsLoaded.set(false);
+    this.relayListFullyLoaded.set(false);
     this.followingList.set([]);
     this.followingListTimestamp.set(0);
     this.relayList.set([]);
@@ -560,7 +565,7 @@ export class ProfileState {
             // Fallback for profiles without kind 10002 relay list:
             // parse relays from kind 3 content (legacy relay map).
             if (this.relayList().length === 0) {
-              const fallbackRelayUrls = Array.from(new Set(this.utilities.getRelayUrlsFromFollowing(event)));
+              const fallbackRelayUrls = Array.from(new Set(this.utilities.getRelayUrlsFromFollowing(event, true)));
               if (fallbackRelayUrls.length > 0) {
                 this.relayList.set(fallbackRelayUrls);
                 this.logger.debug(`Loaded cached relay list fallback from kind 3 with ${fallbackRelayUrls.length} relays`);
@@ -572,7 +577,7 @@ export class ProfileState {
           // Only set if this is newer than what we already have
           const currentTimestamp = this.relayListTimestamp();
           if (event.created_at > currentTimestamp) {
-            const relayUrls = this.utilities.getRelayUrls(event);
+            const relayUrls = this.utilities.getRelayUrls(event, true);
             if (relayUrls.length > 0) {
               this.relayList.set(relayUrls);
               this.relayListTimestamp.set(event.created_at);
@@ -790,7 +795,7 @@ export class ProfileState {
         // Fallback for profiles without kind 10002 relay list:
         // parse relays from kind 3 content (legacy relay map).
         if (this.relayList().length === 0) {
-          const fallbackRelayUrls = Array.from(new Set(this.utilities.getRelayUrlsFromFollowing(contactsEvent)));
+          const fallbackRelayUrls = Array.from(new Set(this.utilities.getRelayUrlsFromFollowing(contactsEvent, true)));
           if (fallbackRelayUrls.length > 0) {
             this.relayList.set(fallbackRelayUrls);
             this.logger.debug(`Updated relay list fallback from kind 3 with ${fallbackRelayUrls.length} relays`);
@@ -815,7 +820,7 @@ export class ProfileState {
       if (relayListEvent && relayListEvent.kind === kinds.RelayList) {
         const currentTimestamp = this.relayListTimestamp();
         if (relayListEvent.created_at > currentTimestamp) {
-          const relayUrls = this.utilities.getRelayUrls(relayListEvent);
+          const relayUrls = this.utilities.getRelayUrls(relayListEvent, true);
           this.relayList.set(relayUrls);
           this.relayListTimestamp.set(relayListEvent.created_at);
           this.logger.debug(`Updated relay list with ${relayUrls.length} relays`);
@@ -826,6 +831,11 @@ export class ProfileState {
       }
     } catch (err) {
       this.logger.error('Error loading relay list:', err);
+    } finally {
+      // Mark relay list loading as fully complete (cache + relay fetch done)
+      if (this.currentlyLoadingPubkey() === pubkey) {
+        this.relayListFullyLoaded.set(true);
+      }
     }
 
     // Small delay between queries

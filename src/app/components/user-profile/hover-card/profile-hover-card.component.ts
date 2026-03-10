@@ -28,6 +28,7 @@ import { LayoutService } from '../../../services/layout.service';
 import { DatabaseService } from '../../../services/database.service';
 import { UserDataService } from '../../../services/user-data.service';
 import { nip19 } from 'nostr-tools';
+import { Router } from '@angular/router';
 import { TrustService } from '../../../services/trust.service';
 import { FavoritesService } from '../../../services/favorites.service';
 import { PublishService } from '../../../services/publish.service';
@@ -38,6 +39,7 @@ import { CreateListDialogComponent, CreateListDialogResult } from '../../create-
 import { firstValueFrom } from 'rxjs';
 import { stripImageProxy } from '../../../utils/strip-image-proxy';
 import { Nip05VerificationService, Nip05VerificationResult } from '../../../services/nip05-verification.service';
+import { UserStatusService, UserStatus } from '../../../services/user-status.service';
 
 interface ProfileData {
   data?: {
@@ -91,6 +93,16 @@ export class ProfileHoverCardComponent {
   private followSetsService = inject(FollowSetsService);
   private hoverCardService = inject(ProfileHoverCardService);
   private nip05Service = inject(Nip05VerificationService);
+  private userStatusService = inject(UserStatusService);
+  private router = inject(Router);
+
+  // NIP-38 User Status
+  generalStatus = signal<UserStatus | null>(null);
+  musicStatus = signal<UserStatus | null>(null);
+
+  activeStatus = computed(() => {
+    return this.musicStatus() || this.generalStatus();
+  });
 
   pubkey = input.required<string>();
   profile = signal<ProfileData | null>(null);
@@ -157,6 +169,7 @@ export class ProfileHoverCardComponent {
           this.checkFollowingStatus(pubkey);
           this.loadMutualFollowing(pubkey);
           this.loadTrustMetrics(pubkey);
+          this.loadUserStatuses(pubkey);
         });
       }
     });
@@ -254,6 +267,16 @@ export class ProfileHoverCardComponent {
       this.trustRank.set(metrics?.rank);
     } catch (error) {
       console.error('Failed to load trust metrics for hover card:', error);
+    }
+  }
+
+  private async loadUserStatuses(pubkey: string): Promise<void> {
+    try {
+      const statuses = await this.userStatusService.getUserStatuses(pubkey);
+      this.generalStatus.set(statuses.general);
+      this.musicStatus.set(statuses.music);
+    } catch (error) {
+      console.error('Failed to load user statuses for hover card:', error);
     }
   }
 
@@ -516,6 +539,24 @@ export class ProfileHoverCardComponent {
     }
     if (target.tagName === 'A' || target.closest('a') || target.tagName === 'BUTTON' || target.closest('button')) {
       setTimeout(() => this.hoverCardService.closeHoverCard(), 100);
+    }
+  }
+
+  /** Navigate to a music track page from an aTag like "36787:pubkey:identifier" */
+  navigateToMusicTrack(aTag: string): void {
+    const parts = aTag.split(':');
+    if (parts.length < 3) return;
+
+    const kind = parseInt(parts[0], 10);
+    const pubkey = parts[1];
+    const identifier = parts.slice(2).join(':');
+
+    try {
+      const naddr = nip19.naddrEncode({ kind, pubkey, identifier });
+      this.router.navigate(['/a', naddr]);
+      this.hoverCardService.closeHoverCard();
+    } catch (err) {
+      console.warn('[HoverCard] Failed to navigate to music track:', err);
     }
   }
 }

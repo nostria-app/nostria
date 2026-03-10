@@ -1261,22 +1261,32 @@ export class RunesSidebarComponent implements OnDestroy {
   private async fetchTracksFromRefs(relayUrls: string[], refs: string[]): Promise<Event[]> {
     const trackMap = new Map<string, Event>();
 
-    const filters: Filter[] = [];
+    // Group refs by author to batch #d tags into a single filter per author
+    const authorDTags = new Map<string, Set<string>>();
     for (const ref of refs) {
       const parts = ref.split(':');
       if (parts.length < 3) {
         continue;
       }
+      const author = parts[1];
+      const dTag = parts[2];
+      if (!authorDTags.has(author)) {
+        authorDTags.set(author, new Set());
+      }
+      authorDTags.get(author)!.add(dTag);
+    }
 
-      filters.push({
+    const batchedFilters: Filter[] = [];
+    for (const [author, dTags] of authorDTags) {
+      batchedFilters.push({
         kinds: [MUSIC_KIND],
-        authors: [parts[1]],
-        '#d': [parts[2]],
+        authors: [author],
+        '#d': Array.from(dTags),
       });
     }
 
-    await Promise.all(filters.map(async filter => {
-      const events = await this.collectEvents(relayUrls, filter, 1800);
+    await Promise.all(batchedFilters.map(async filter => {
+      const events = await this.collectEvents(relayUrls, filter, 3000);
       for (const event of events) {
         const dTag = event.tags.find(tag => tag[0] === 'd')?.[1] || '';
         const key = `${event.pubkey}:${dTag}`;
@@ -1294,22 +1304,32 @@ export class RunesSidebarComponent implements OnDestroy {
   private async fetchPlaylistsFromRefs(relayUrls: string[], refs: string[]): Promise<Event[]> {
     const playlistMap = new Map<string, Event>();
 
-    const filters: Filter[] = [];
+    // Group refs by author to batch #d tags into a single filter per author
+    const authorDTags = new Map<string, Set<string>>();
     for (const ref of refs) {
       const parts = ref.split(':');
       if (parts.length < 3) {
         continue;
       }
+      const author = parts[1];
+      const dTag = parts[2];
+      if (!authorDTags.has(author)) {
+        authorDTags.set(author, new Set());
+      }
+      authorDTags.get(author)!.add(dTag);
+    }
 
-      filters.push({
+    const batchedFilters: Filter[] = [];
+    for (const [author, dTags] of authorDTags) {
+      batchedFilters.push({
         kinds: [MUSIC_PLAYLIST_KIND],
-        authors: [parts[1]],
-        '#d': [parts[2]],
+        authors: [author],
+        '#d': Array.from(dTags),
       });
     }
 
-    await Promise.all(filters.map(async filter => {
-      const events = await this.collectEvents(relayUrls, filter, 1800);
+    await Promise.all(batchedFilters.map(async filter => {
+      const events = await this.collectEvents(relayUrls, filter, 3000);
       for (const event of events) {
         const dTag = event.tags.find(tag => tag[0] === 'd')?.[1] || '';
         const key = `${event.pubkey}:${dTag}`;

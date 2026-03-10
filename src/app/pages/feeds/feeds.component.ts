@@ -196,6 +196,9 @@ export class FeedsComponent implements OnDestroy {
   // This ensures scroll position is preserved when navigating away and back
   feedsScrollTop = signal(0);
   feedsScrolledToTop = computed(() => this.feedsScrollTop() < 100);
+  // Track if user has scrolled away from top at least once since feed was activated.
+  // Prevents auto-loading pending events immediately on startup when scroll is at 0.
+  private userHasScrolledAway = signal(false);
   // Show scroll-to-top button when scrolled down - uses feeds' own scroll state
   showScrollToTop = computed(() => !this.feedsScrolledToTop());
   // Feed expanded state - use layoutService signal for cross-component communication
@@ -981,6 +984,9 @@ export class FeedsComponent implements OnDestroy {
             ...counts,
             [feed.id]: this.INITIAL_RENDER_COUNT,
           }));
+
+          // Reset scroll tracking so auto-load doesn't fire immediately on the new feed
+          this.userHasScrolledAway.set(false);
         });
       }
 
@@ -996,13 +1002,18 @@ export class FeedsComponent implements OnDestroy {
       const scrolledToTop = this.feedsScrolledToTop();
       const feed = this.activeFeed();
       const feedsVisible = this.panelNav.showFeeds();
+      const userHasScrolled = this.userHasScrolledAway();
 
       // Only auto-load when feeds panel is actually visible.
       // When feeds is hidden (e.g. user is on profile page), feedsScrollTop stays at 0
       // so scrolledToTop is always true. Loading pending events while hidden causes DOM
       // changes inside the same scroll container, triggering browser scroll anchoring
       // which unexpectedly scrolls the profile page.
-      if (pendingCount > 0 && scrolledToTop && feed && feedsVisible) {
+      //
+      // Also require userHasScrolled: on startup, scroll is at 0 and pending events
+      // would be auto-loaded immediately, causing UI jumps. Only auto-load after
+      // the user has scrolled down at least once and returned to the top.
+      if (pendingCount > 0 && scrolledToTop && feed && feedsVisible && userHasScrolled) {
         untracked(() => {
           this.logger.debug(`Auto-loading ${pendingCount} pending events (user is scrolled to top)`);
           this.feedService.loadPendingEvents(feed.id);
@@ -1271,6 +1282,12 @@ export class FeedsComponent implements OnDestroy {
 
     // Track feeds' own scroll position for scroll-to-top button
     this.feedsScrollTop.set(container.scrollTop);
+
+    // Mark that the user has scrolled away from top at least once.
+    // This enables auto-loading pending events when they scroll back to top.
+    if (container.scrollTop >= 100 && !this.userHasScrolledAway()) {
+      this.userHasScrolledAway.set(true);
+    }
 
     // Update scroll position for horizontal scrollbar syncing
     this.columnsScrollLeft.set(container.scrollLeft);

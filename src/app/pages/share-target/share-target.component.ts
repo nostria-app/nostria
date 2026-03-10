@@ -152,6 +152,7 @@ export class ShareTargetComponent {
         title: 'Create Note',
         headerIcon: this.accountState.profile()?.data?.picture || '',
         data: { content, files },
+        panelClass: 'note-editor-dialog-panel',
         width: '680px',
         maxWidth: '95vw',
         disableClose: true

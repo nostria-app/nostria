@@ -101,6 +101,113 @@
       using</p>
   </div>
 
+  @if (accountState.account()) {
+  <div>
+    <h2 class="x-section-title">
+      <img ngSrc="/logos/clients/x.png" width="22" height="22" alt="X" class="x-section-logo" />
+      <span>Post to X</span>
+    </h2>
+    <p class="setting-description">Connect your X account to publish the text of your Nostria posts to X.</p>
+    <p class="setting-description">Post to X is available for Premium accounts only.</p>
+
+    @if (xDualPost.loading()) {
+    <p class="setting-description">Checking X connection status...</p>
+    } @else if (!xPremiumEligible()) {
+    @if (xDualPost.status().connected) {
+    <mat-card class="x-connection-card x-connection-card-premium-locked">
+      <div class="x-connection-card-header">
+        <div>
+          <div class="x-connection-eyebrow">X Connected</div>
+          <div class="x-connection-title">{{ xDualPost.status().username || 'X user' }}</div>
+        </div>
+        <button mat-button type="button" (click)="disconnectX()">Disconnect</button>
+      </div>
+    </mat-card>
+    }
+    <div class="x-upgrade-prompt">
+      <p class="setting-description">Upgrade to Premium to connect or publish to X from Nostria.</p>
+      <button mat-flat-button type="button" (click)="openPremiumTab()">
+        Open Premium
+      </button>
+    </div>
+    } @else if (xDualPost.status().connected) {
+    <mat-card class="x-connection-card">
+      <div class="x-connection-card-header">
+        <div>
+          <div class="x-connection-eyebrow">X Connected</div>
+          <div class="x-connection-title">{{ xDualPost.status().username || 'X user' }}</div>
+          <div class="x-connection-subtitle">Your Nostria posts can now also publish to this X account.</div>
+        </div>
+
+        <div class="x-connection-actions">
+          <button mat-stroked-button type="button" (click)="reconnectX()"
+            [disabled]="xDualPost.loading() || xDualPost.connecting()">Reconnect</button>
+          <button mat-button type="button" (click)="disconnectX()"
+            [disabled]="xDualPost.loading() || xDualPost.connecting()">Disconnect</button>
+        </div>
+      </div>
+
+      <div class="x-connection-meta">
+        <div class="x-connection-meta-item">
+          <span class="x-connection-meta-label">Account</span>
+          @if (xProfileUrl(); as profileUrl) {
+          <a class="x-connection-handle x-connection-link" [href]="profileUrl" target="_blank"
+            rel="noopener noreferrer">&#64;{{ xDualPost.status().username || 'x-user' }}</a>
+          } @else {
+          <span class="x-connection-handle">&#64;{{ xDualPost.status().username || 'x-user' }}</span>
+          }
+        </div>
+        <div class="x-connection-meta-item">
+          <span class="x-connection-meta-label">Mode</span>
+          <span>Single X account per Nostria account</span>
+        </div>
+        <div class="x-connection-meta-item">
+          <span class="x-connection-meta-label">X Posts</span>
+          <span class="x-connection-metric">{{ xDualPost.status().totalPosts }} total</span>
+        </div>
+        <div class="x-connection-meta-item">
+          <span class="x-connection-meta-label">Last 24h</span>
+          <span class="x-connection-metric">{{ xDualPost.status().postsLast24h }}</span>
+        </div>
+        <div class="x-connection-meta-item">
+          <span class="x-connection-meta-label">24h Limit</span>
+          <span class="x-connection-metric">{{ getXUsageRemaining() }}</span>
+        </div>
+        @if (xDualPost.status().lastPosted) {
+        <div class="x-connection-meta-item">
+          <span class="x-connection-meta-label">Last X Post</span>
+          <span class="x-connection-metric">{{ xDualPost.status().lastPosted | date: 'medium' }}</span>
+        </div>
+        }
+      </div>
+
+      <p class="x-connection-note">Reconnect if you want to switch to another X account. Media support includes up to 4
+        images or 1 video/GIF per post. Quote/reply threading and post edits are not mirrored to X yet.</p>
+
+      <div class="setting-item x-default-toggle-row">
+        <span class="x-inline-label">
+          <img ngSrc="/logos/clients/x.png" width="18" height="18" alt="X" class="x-inline-logo" />
+          <span>Post to X by default</span>
+        </span>
+        <mat-slide-toggle [checked]="settings.settings().postToXByDefault ?? false" (change)="togglePostToXByDefault()">
+        </mat-slide-toggle>
+      </div>
+      <p class="setting-description x-default-toggle-description">When enabled, new posts will start with the X
+        Post to X option turned on in Advanced Options.</p>
+    </mat-card>
+    } @else {
+    <div class="setting-item">
+      <span>No X account connected</span>
+      <button mat-flat-button type="button" (click)="connectX()" [disabled]="xDualPost.connecting()">Connect X</button>
+    </div>
+    <p class="setting-description">Only one X account is supported per Nostria account. If you connected the wrong one
+      previously, disconnect it and then connect again with the correct X account.</p>
+    <p class="setting-description">You will be redirected to X to authorize Nostria. The backend stores your X access
+      tokens and uses them only when you choose to post to X.</p>
+    }
+  </div>
+  }
+
   <div>
     <h2 i18n="@@settings.media.title">Media</h2>
     <p class="setting-description" i18n="@@settings.media.description">Control how media content is displayed based on
@@ -179,6 +286,16 @@
     <p class="setting-description" i18n="@@settings.media.auto-play-all.description">
       When enabled, all videos will automatically play muted when they appear in the feed.
       Short videos (15 seconds or less) will also loop automatically.
+    </p>
+
+    <div class="setting-item">
+      <span i18n="@@settings.music-status.toggle">Share Music Status (NIP-38)</span>
+      <mat-slide-toggle [checked]="settings.settings().publishMusicStatus !== false"
+        (change)="togglePublishMusicStatus()">
+      </mat-slide-toggle>
+    </div>
+    <p class="setting-description" i18n="@@settings.music-status.description">
+      When enabled, your currently playing song is shared as a user status so others can see what you're listening to.
     </p>
   </div>
 

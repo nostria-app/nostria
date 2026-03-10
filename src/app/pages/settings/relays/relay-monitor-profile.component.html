@@ -1,0 +1,14 @@
+<div class="monitor-profile">
+  <div class="avatar-wrap">
+    @if (avatarUrl()) {
+    <img [src]="avatarUrl()!" alt="Monitor avatar" class="avatar" loading="lazy" />
+    } @else {
+    <mat-icon class="avatar-fallback">account_circle</mat-icon>
+    }
+  </div>
+
+  <div class="monitor-meta">
+    <app-profile-display-name [pubkey]="pubkey()" [showFallbackWhileLoading]="true"></app-profile-display-name>
+    <div class="monitor-pubkey">{{ pubkey() }}</div>
+  </div>
+</div>

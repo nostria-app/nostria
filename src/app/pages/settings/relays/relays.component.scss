@@ -63,12 +63,36 @@
   .status-restricted {
     color: var(--mat-sys-tertiary);
   }
+
+  .status-dead {
+    color: var(--mat-sys-error);
+  }
 }
 
 .relay-has-error {
   background-color: var(--mat-sys-error-container);
   border-radius: 8px;
   margin: 4px 0;
+}
+
+.relay-known-dead {
+  background-color: var(--mat-sys-error-container);
+  border-radius: 8px;
+  margin: 4px 0;
+}
+
+.relay-state-badge {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: var(--mat-sys-corner-full);
+  font-size: 12px;
+}
+
+.relay-state-badge-dead {
+  background: var(--mat-sys-error-container);
+  color: var(--mat-sys-on-error-container);
 }
 
 // CDK Drag Drop styles for relay reordering
@@ -154,13 +178,36 @@ app-info-tooltip {
   margin-top: 0px; // Fine-tune vertical alignment
 }
 
+.find-button {
+  height: 56px;
+  align-self: flex-start;
+  margin-top: 0px;
+}
+
+.add-actions {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
 @media (max-width: 599px) {
   .flex-container {
     flex-direction: column;
     align-items: stretch;
   }
 
+  .add-actions {
+    width: 100%;
+    flex-direction: column;
+    gap: 8px;
+  }
+
   .add-button {
+    width: 100%;
+    margin-top: 0;
+  }
+
+  .find-button {
     width: 100%;
     margin-top: 0;
   }
@@ -206,6 +253,12 @@ app-info-tooltip {
 
 .warning-card {
   border-left-color: var(--mat-sys-tertiary);
+}
+
+.dead-relays-action {
+  margin-top: 12px;
+  display: flex;
+  justify-content: flex-start;
 }
 
 .deprecated-actions {

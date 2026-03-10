@@ -75,6 +75,8 @@ When adding new features or routes, always add corresponding commands to the Com
 
 Always use "field-sizing: content" for textareas that grow with content. This is compatible with all modern browsers.
 
+When resizing `mat-icon-button` smaller than its default size, never use `line-height` to center the icon. Instead use `padding: 0 !important; display: flex !important; align-items: center; justify-content: center;` to properly center the icon within the button.
+
 - The app supports dark and light mode, so make sure your styles work well in both modes.
 - Don't add hardcoded colors. Use CSS variables defined in styles.scss and theme.scss
 

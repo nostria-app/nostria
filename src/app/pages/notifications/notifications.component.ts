@@ -14,6 +14,7 @@ import { MatMenuModule } from '@angular/material/menu';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { NotificationService } from '../../services/notification.service';
 import {
   NotificationType,
@@ -67,6 +68,7 @@ const NOTIFICATION_FILTERS_KEY = 'nostria-notification-filters';
     UserProfileComponent,
     MatSnackBarModule,
     MatProgressSpinnerModule,
+    MatProgressBarModule,
     FilterButtonComponent,
     NotificationsFilterPanelComponent,
     ResolveNostrPipe
@@ -153,6 +155,7 @@ export class NotificationsComponent implements OnInit, OnDestroy {
   consecutiveEmptyLoads = signal(0);
   // State for refreshing notifications
   isRefreshing = signal(false);
+  isLoadingNotifications = computed(() => this.contentNotificationService.isCheckingNotifications());
   // Default lookback period in days
   private readonly DEFAULT_LOOKBACK_DAYS = 2;
   // How many more days to load when scrolling
@@ -165,6 +168,7 @@ export class NotificationsComponent implements OnInit, OnDestroy {
   // Notification type filter preferences
   notificationFilters = signal<Record<NotificationType, boolean>>({
     [NotificationType.NEW_FOLLOWER]: true,
+    [NotificationType.FOLLOWER_SUMMARY]: true,
     [NotificationType.MENTION]: true,
     [NotificationType.REPOST]: true,
     [NotificationType.REPLY]: true,
@@ -186,6 +190,7 @@ export class NotificationsComponent implements OnInit, OnDestroy {
 
   private readonly defaultNotificationFilters: Record<NotificationType, boolean> = {
     [NotificationType.NEW_FOLLOWER]: true,
+    [NotificationType.FOLLOWER_SUMMARY]: true,
     [NotificationType.MENTION]: true,
     [NotificationType.REPOST]: true,
     [NotificationType.REPLY]: true,
@@ -263,7 +268,7 @@ export class NotificationsComponent implements OnInit, OnDestroy {
 
     // Recalculate viewport when filtered content size changes.
     effect(() => {
-      this.contentNotifications().length;
+      void this.contentNotifications().length;
 
       untracked(() => {
         this.scheduleViewportRefresh();
@@ -392,6 +397,7 @@ export class NotificationsComponent implements OnInit, OnDestroy {
   private isContentNotification(type: NotificationType): boolean {
     return [
       NotificationType.NEW_FOLLOWER,
+      NotificationType.FOLLOWER_SUMMARY,
       NotificationType.MENTION,
       NotificationType.REPOST,
       NotificationType.REPLY,
@@ -422,7 +428,11 @@ export class NotificationsComponent implements OnInit, OnDestroy {
     return this.notifications()
       .filter(n => {
         // Filter by notification type
-        if (!this.isContentNotification(n.type) || !filters[n.type]) {
+        // FOLLOWER_SUMMARY follows the NEW_FOLLOWER filter toggle
+        const filterType = n.type === NotificationType.FOLLOWER_SUMMARY
+          ? NotificationType.NEW_FOLLOWER
+          : n.type;
+        if (!this.isContentNotification(n.type) || !filters[filterType]) {
           return false;
         }
 
@@ -432,13 +442,17 @@ export class NotificationsComponent implements OnInit, OnDestroy {
         }
 
         // CRITICAL: Filter out notifications from muted/blocked accounts
+        // Skip muted-account filtering for follower summary (it aggregates many users)
         const contentNotif = n as ContentNotification;
-        if (contentNotif.authorPubkey && mutedAccountsSet.has(contentNotif.authorPubkey)) {
+        if (contentNotif.type !== NotificationType.FOLLOWER_SUMMARY
+          && contentNotif.authorPubkey && mutedAccountsSet.has(contentNotif.authorPubkey)) {
           return false;
         }
 
+        // Skip WoT filtering for follower summary (authorPubkey is just the first follower)
         if (
-          contentNotif.authorPubkey
+          contentNotif.type !== NotificationType.FOLLOWER_SUMMARY
+          && contentNotif.authorPubkey
           && !this.passesWotRankFilter(
             trustRanks.get(contentNotif.authorPubkey),
             wotLevel,
@@ -714,6 +728,9 @@ export class NotificationsComponent implements OnInit, OnDestroy {
 
     this.isRefreshing.set(true);
 
+    // Pause periodic polling so it doesn't race with the manual refresh
+    this.contentNotificationService.stopPolling();
+
     try {
       await this.contentNotificationService.refreshRecentNotifications(this.REFRESH_LOOKBACK_DAYS);
       this.snackBar.open('Notifications refreshed', 'Close', {
@@ -730,18 +747,16 @@ export class NotificationsComponent implements OnInit, OnDestroy {
       });
     } finally {
       this.isRefreshing.set(false);
+      // Resume periodic polling now that the manual refresh is done
+      this.contentNotificationService.startPolling();
     }
   }
 
   clearNotifications(): void {
     this.notificationService.clearNotifications();
 
-    // Update the notification last check timestamp to now to prevent re-fetching cleared notifications
-    const pubkey = this.accountState.pubkey();
-    if (pubkey) {
-      const now = Math.floor(Date.now() / 1000); // Nostr uses seconds
-      this.accountLocalState.setNotificationLastCheck(pubkey, now);
-    }
+    // Reset notification state so the next refresh triggers a full first-time scan
+    this.contentNotificationService.resetLastCheckTimestamp();
   }
 
   removeNotification(id: string): void {
@@ -823,6 +838,18 @@ export class NotificationsComponent implements OnInit, OnDestroy {
     // For new follower notifications, navigate to the follower's profile
     if (contentNotif.type === NotificationType.NEW_FOLLOWER && contentNotif.authorPubkey) {
       this.layout.openProfile(contentNotif.authorPubkey);
+      return;
+    }
+
+    // For follower summary notifications, navigate to current user's followers page
+    if (contentNotif.type === NotificationType.FOLLOWER_SUMMARY) {
+      const currentPubkey = this.accountState.pubkey();
+      if (currentPubkey) {
+        this.layout.openFollowersPage(
+          currentPubkey,
+          contentNotif.metadata?.followerPubkeys,
+        );
+      }
       return;
     }
 
@@ -963,6 +990,11 @@ export class NotificationsComponent implements OnInit, OnDestroy {
       if (contentNotif.type === NotificationType.NEW_FOLLOWER && contentNotif.authorPubkey) {
         return 'new-follower'; // Placeholder to indicate clickable
       }
+
+      // For follower summary, always clickable (navigate to followers page)
+      if (contentNotif.type === NotificationType.FOLLOWER_SUMMARY) {
+        return 'follower-summary'; // Placeholder to indicate clickable
+      }
     }
     return undefined;
   }
@@ -992,6 +1024,7 @@ export class NotificationsComponent implements OnInit, OnDestroy {
   getNotificationTypeLabel(type: NotificationType): string {
     const labels: Record<NotificationType, string> = {
       [NotificationType.NEW_FOLLOWER]: 'Followers',
+      [NotificationType.FOLLOWER_SUMMARY]: 'Followers',
       [NotificationType.MENTION]: 'Mentions',
       [NotificationType.REPOST]: 'Reposts',
       [NotificationType.REPLY]: 'Replies',
@@ -1012,6 +1045,7 @@ export class NotificationsComponent implements OnInit, OnDestroy {
   getNotificationTypeIcon(type: NotificationType): string {
     const icons: Record<NotificationType, string> = {
       [NotificationType.NEW_FOLLOWER]: 'person_add',
+      [NotificationType.FOLLOWER_SUMMARY]: 'group',
       [NotificationType.MENTION]: 'alternate_email',
       [NotificationType.REPOST]: 'repeat',
       [NotificationType.REPLY]: 'reply',

@@ -125,6 +125,42 @@ export class CustomDialogRef<T = unknown, R = unknown> {
   }
 
   /**
+   * Update the secondary header icon dynamically
+   */
+  updateSecondaryHeaderIcon(icon: string): void {
+    if (this.dialogComponentRef && !this.hasBeenClosed()) {
+      this.dialogComponentRef.setInput('secondaryHeaderIcon', icon);
+    }
+  }
+
+  /**
+   * Update the secondary header tooltip dynamically
+   */
+  updateSecondaryHeaderTooltip(tooltip: string): void {
+    if (this.dialogComponentRef && !this.hasBeenClosed()) {
+      this.dialogComponentRef.setInput('secondaryHeaderTooltip', tooltip);
+    }
+  }
+
+  updateSecondaryHeaderActive(active: boolean): void {
+    if (this.dialogComponentRef && !this.hasBeenClosed()) {
+      this.dialogComponentRef.setInput('secondaryHeaderActive', active);
+    }
+  }
+
+  updateSecondaryHeaderClickable(clickable: boolean): void {
+    if (this.dialogComponentRef && !this.hasBeenClosed()) {
+      this.dialogComponentRef.setInput('secondaryHeaderClickable', clickable);
+    }
+  }
+
+  updateSecondaryHeaderAriaLabel(label: string): void {
+    if (this.dialogComponentRef && !this.hasBeenClosed()) {
+      this.dialogComponentRef.setInput('secondaryHeaderAriaLabel', label);
+    }
+  }
+
+  /**
    * Update the dialog max width dynamically
    */
   updateMaxWidth(maxWidth: string): void {
@@ -156,6 +192,16 @@ export interface CustomDialogConfig {
   title?: string;
   /** Icon to show in the header */
   headerIcon?: string;
+  /** Secondary icon to show in the header */
+  secondaryHeaderIcon?: string;
+  /** Tooltip for the secondary header icon */
+  secondaryHeaderTooltip?: string;
+  /** Whether the secondary header icon is active */
+  secondaryHeaderActive?: boolean;
+  /** Whether the secondary header icon is clickable */
+  secondaryHeaderClickable?: boolean;
+  /** Accessible label for the secondary header icon */
+  secondaryHeaderAriaLabel?: string;
   /** Show back button instead of close button */
   showBackButton?: boolean;
   /** Show close button */
@@ -245,6 +291,11 @@ export class CustomDialogService {
     // Set dialog configuration using setInput
     if (config.title) dialogRef.setInput('title', config.title);
     if (config.headerIcon) dialogRef.setInput('headerIcon', config.headerIcon);
+    if (config.secondaryHeaderIcon) dialogRef.setInput('secondaryHeaderIcon', config.secondaryHeaderIcon);
+    if (config.secondaryHeaderTooltip) dialogRef.setInput('secondaryHeaderTooltip', config.secondaryHeaderTooltip);
+    if (config.secondaryHeaderActive !== undefined) dialogRef.setInput('secondaryHeaderActive', config.secondaryHeaderActive);
+    if (config.secondaryHeaderClickable !== undefined) dialogRef.setInput('secondaryHeaderClickable', config.secondaryHeaderClickable);
+    if (config.secondaryHeaderAriaLabel) dialogRef.setInput('secondaryHeaderAriaLabel', config.secondaryHeaderAriaLabel);
     if (config.showBackButton !== undefined) dialogRef.setInput('showBackButton', config.showBackButton);
     if (config.showCloseButton !== undefined) dialogRef.setInput('showCloseButton', config.showCloseButton);
     if (config.disableClose !== undefined) dialogRef.setInput('disableClose', config.disableClose);
@@ -376,6 +427,13 @@ export class CustomDialogService {
     const backSubscription = dialogRef.instance.backClicked.subscribe(() => {
       customDialogRef.close();
       backSubscription.unsubscribe();
+    });
+
+    const secondaryHeaderSubscription = dialogRef.instance.secondaryHeaderClicked.subscribe(() => {
+      const component = contentRef.instance as unknown as { toggleSecondaryHeaderAction?: () => void };
+      if (typeof component.toggleSecondaryHeaderAction === 'function') {
+        component.toggleSecondaryHeaderAction();
+      }
     });
 
     return customDialogRef;

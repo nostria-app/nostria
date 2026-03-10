@@ -121,6 +121,7 @@ const MUSIC_KIND = 36787;
       cursor: pointer;
       transition: transform 0.2s ease, background-color 0.2s ease;
       overflow: hidden;
+      min-width: 0;
 
       &:hover {
         transform: translateY(-2px);
@@ -131,6 +132,12 @@ const MUSIC_KIND = 36787;
         }
       }
 
+      @media (max-width: 600px) {
+        &:hover {
+          transform: none;
+        }
+      }
+
       &:focus {
         outline: 2px solid var(--mat-sys-primary);
         outline-offset: 2px;
@@ -138,7 +145,7 @@ const MUSIC_KIND = 36787;
     }
 
     .playlist-cover {
-      height: 160px;
+      width: 100%;
       aspect-ratio: 1;
       overflow: hidden;
       position: relative;
@@ -159,9 +166,9 @@ const MUSIC_KIND = 36787;
         background: linear-gradient(135deg, var(--mat-sys-tertiary-container) 0%, var(--mat-sys-secondary-container) 100%);
 
         mat-icon {
-          font-size: 4rem;
-          width: 4rem;
-          height: 4rem;
+          font-size: 3rem;
+          width: 3rem;
+          height: 3rem;
           color: var(--mat-sys-on-tertiary-container);
           opacity: 0.5;
         }
@@ -210,27 +217,37 @@ const MUSIC_KIND = 36787;
 
     mat-card-content {
       padding-top: 0.75rem;
+      min-width: 0;
+      overflow: hidden;
+
+      @media (max-width: 600px) {
+        padding-top: 0.5rem;
+      }
     }
 
     .playlist-info {
       display: flex;
       flex-direction: column;
       gap: 0.125rem;
+      min-width: 0;
+      overflow: hidden;
     }
 
     .playlist-title-row {
       display: flex;
       align-items: center;
       gap: 0.25rem;
+      min-width: 0;
     }
 
     .playlist-title {
       flex: 1;
-      font-size: 1rem;
+      font-size: 0.875rem;
       color: var(--mat-sys-on-surface);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      min-width: 0;
     }
 
     .menu-btn {
@@ -254,33 +271,134 @@ const MUSIC_KIND = 36787;
     }
 
     .playlist-meta {
-      font-size: 0.875rem;
+      font-size: 0.75rem;
       color: var(--mat-sys-on-surface-variant);
       display: flex;
       align-items: center;
-      gap: 0.5rem;
+      gap: 0.375rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
 
       .public-badge {
         display: inline-flex;
         align-items: center;
-        gap: 0.25rem;
-        font-size: 0.75rem;
+        gap: 0.125rem;
+        font-size: 0.6875rem;
 
         mat-icon {
-          font-size: 0.875rem;
-          width: 0.875rem;
-          height: 0.875rem;
+          font-size: 0.75rem;
+          width: 0.75rem;
+          height: 0.75rem;
         }
       }
     }
 
     .playlist-description {
-      font-size: 0.75rem;
+      font-size: 0.6875rem;
       color: var(--mat-sys-on-surface-variant);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
       margin-top: 0.125rem;
+
+      @media (max-width: 600px) {
+        display: none;
+      }
+    }
+
+    .menu-btn {
+      @media (max-width: 600px) {
+        width: 28px;
+        height: 28px;
+        margin: -2px -4px -2px 0;
+      }
+    }
+
+    // Compact mode when inside yours-grid (all screen sizes)
+    :host-context(.yours-grid) {
+      :host {
+        min-width: 0;
+        overflow: hidden;
+      }
+
+      .playlist-card {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        height: 56px;
+        border-radius: var(--mat-sys-corner-small);
+        overflow: hidden;
+
+        &:hover {
+          transform: none;
+
+          .play-btn {
+            opacity: 0;
+          }
+        }
+      }
+
+      .playlist-cover {
+        width: 56px;
+        min-width: 56px;
+        height: 56px;
+        aspect-ratio: auto;
+        border-radius: var(--mat-sys-corner-small) 0 0 var(--mat-sys-corner-small);
+
+        .cover-image {
+          width: 56px;
+          height: 56px;
+          object-fit: cover;
+        }
+
+        .cover-placeholder mat-icon {
+          font-size: 1.5rem;
+          width: 1.5rem;
+          height: 1.5rem;
+        }
+
+        .play-btn {
+          display: none;
+        }
+      }
+
+      mat-card-content {
+        padding: 0 0.625rem;
+        flex: 1;
+        min-width: 0;
+        overflow: hidden;
+      }
+
+      .playlist-info {
+        overflow: hidden;
+      }
+
+      .playlist-title-row {
+        overflow: hidden;
+      }
+
+      .playlist-title {
+        font-size: 0.8125rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .playlist-meta {
+        font-size: 0.6875rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .playlist-description {
+        display: none;
+      }
+
+      .menu-btn {
+        display: none;
+      }
     }
   `],
 })

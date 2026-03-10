@@ -21,6 +21,7 @@ import { DataService } from '../../services/data.service';
 import { RelayPoolService } from '../../services/relays/relay-pool';
 import { UserRelayService } from '../../services/relays/user-relay';
 import { ParsingService, ContentToken } from '../../services/parsing.service';
+import { EmojiSetService } from '../../services/emoji-set.service';
 import { LoggerService } from '../../services/logger.service';
 import { ProfileDisplayNameComponent } from '../user-profile/display-name/profile-display-name.component';
 import { UserProfileComponent } from '../user-profile/user-profile.component';
@@ -41,11 +42,12 @@ const MUSIC_PLAYLIST_KIND = 34139;
 const EMOJI_SET_KIND = 30030;
 
 interface ContentPart {
-  type: 'text' | 'url' | 'image' | 'video' | 'npub' | 'nprofile' | 'note' | 'nevent' | 'naddr' | 'linebreak';
+  type: 'text' | 'url' | 'image' | 'video' | 'npub' | 'nprofile' | 'note' | 'nevent' | 'naddr' | 'linebreak' | 'emoji';
   content: string;
   pubkey?: string;
   eventId?: string;
   encodedEvent?: string;
+  customEmojiUrl?: string;
   naddrData?: {
     pubkey: string;
     identifier: string;
@@ -88,6 +90,8 @@ interface EventMention {
     @for (part of parsedContent(); track part.id) {
       @if (part.type === 'text') {
         <span class="text-content">{{ part.content }}</span>
+      } @else if (part.type === 'emoji') {
+        <img class="custom-emoji" [src]="part.customEmojiUrl" [alt]="part.content" [title]="part.content" loading="lazy" />
       } @else if (part.type === 'linebreak') {
         <br />
       } @else if (part.type === 'image') {
@@ -198,6 +202,13 @@ interface EventMention {
     
     .text-content {
       white-space: pre-wrap;
+    }
+
+    .custom-emoji {
+      display: inline;
+      height: 1.5em;
+      vertical-align: middle;
+      margin: 0 1px;
     }
     
     .message-link {
@@ -482,8 +493,11 @@ export class MessageContentComponent {
   private parsing = inject(ParsingService);
   private readonly logger = inject(LoggerService);
   private readonly dialog = inject(MatDialog);
+  private readonly emojiSetService = inject(EmojiSetService);
 
   content = input.required<string>();
+  tags = input<string[][]>([]);
+  authorPubkey = input<string>();
 
   // Content length threshold for showing "Show more" button
   private readonly CONTENT_LENGTH_THRESHOLD = 300;
@@ -506,8 +520,14 @@ export class MessageContentComponent {
     /imgproxy\..+/i,
   ];
 
+  // NIP-30 emoji shortcode regex
+  private readonly emojiRegex = /(:[a-zA-Z0-9_]+:)/g;
+
   // Store event mentions data
   eventMentionsMap = signal<Map<number, EventMention>>(new Map());
+
+  // Resolved custom emoji map (built from tags + author emoji sets)
+  private resolvedEmojiMap = signal<Map<string, string>>(new Map());
 
   // Track last processed content to prevent redundant re-execution
   private lastProcessedContent = '';
@@ -520,6 +540,48 @@ export class MessageContentComponent {
       if (content !== this.lastProcessedContent) {
         this.lastProcessedContent = content;
         this.loadEventPreviews();
+      }
+    });
+
+    // Effect to resolve custom emoji URLs from tags and author emoji sets
+    effect(() => {
+      const tags = this.tags();
+      const content = this.content();
+      const authorPubkey = this.authorPubkey();
+
+      // Build emoji map from event tags (NIP-30)
+      const emojiMap = new Map<string, string>();
+      for (const tag of tags) {
+        if (tag[0] === 'emoji' && tag[1] && tag[2]) {
+          emojiMap.set(`:${tag[1]}:`, tag[2]);
+        }
+      }
+
+      // Check for unresolved shortcodes that need author emoji sets
+      const unresolvedRegex = /(:[a-zA-Z0-9_]+:)/g;
+      let hasUnresolved = false;
+      let m: RegExpExecArray | null;
+      while ((m = unresolvedRegex.exec(content)) !== null) {
+        if (!emojiMap.has(m[0])) {
+          hasUnresolved = true;
+          break;
+        }
+      }
+
+      if (hasUnresolved && authorPubkey) {
+        this.emojiSetService.getUserEmojiSets(authorPubkey).then(authorEmojis => {
+          for (const [shortcode, url] of authorEmojis) {
+            const key = `:${shortcode}:`;
+            if (!emojiMap.has(key)) {
+              emojiMap.set(key, url);
+            }
+          }
+          this.resolvedEmojiMap.set(emojiMap);
+        }).catch(() => {
+          this.resolvedEmojiMap.set(emojiMap);
+        });
+      } else {
+        this.resolvedEmojiMap.set(emojiMap);
       }
     });
   }
@@ -604,11 +666,7 @@ export class MessageContentComponent {
     const segments = text.split(/\r?\n/);
     for (let i = 0; i < segments.length; i++) {
       if (segments[i]) {
-        parts.push({
-          type: 'text',
-          content: segments[i],
-          id: this.partIdCounter++,
-        });
+        this.addTextWithEmojis(parts, segments[i]);
       }
       // Add linebreak between segments (but not after the last one)
       if (i < segments.length - 1) {
@@ -618,6 +676,33 @@ export class MessageContentComponent {
           id: this.partIdCounter++,
         });
       }
+    }
+  }
+
+  private addTextWithEmojis(parts: ContentPart[], text: string): void {
+    const emojiMap = this.resolvedEmojiMap();
+    if (emojiMap.size === 0) {
+      parts.push({ type: 'text', content: text, id: this.partIdCounter++ });
+      return;
+    }
+
+    const emojiRegex = /(:[a-zA-Z0-9_]+:)/g;
+    let lastIdx = 0;
+    let m: RegExpExecArray | null;
+
+    while ((m = emojiRegex.exec(text)) !== null) {
+      const url = emojiMap.get(m[0]);
+      if (!url) continue;
+
+      if (m.index > lastIdx) {
+        parts.push({ type: 'text', content: text.substring(lastIdx, m.index), id: this.partIdCounter++ });
+      }
+      parts.push({ type: 'emoji', content: m[0], customEmojiUrl: url, id: this.partIdCounter++ });
+      lastIdx = m.index + m[0].length;
+    }
+
+    if (lastIdx < text.length) {
+      parts.push({ type: 'text', content: text.substring(lastIdx), id: this.partIdCounter++ });
     }
   }
 

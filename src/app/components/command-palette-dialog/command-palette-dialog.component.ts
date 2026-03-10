@@ -309,6 +309,20 @@ export class CommandPaletteDialogComponent implements AfterViewInit, OnDestroy {
       keywords: ['edit profile', 'update profile', 'change profile']
     },
     {
+      id: 'set-status',
+      label: 'Set Status',
+      icon: 'add_reaction',
+      action: () => {
+        // Navigate to own profile to set status
+        const pubkey = this.accountState.pubkey();
+        if (pubkey) {
+          this.router.navigate(['/p', pubkey], { queryParams: { status: 'edit' } });
+        }
+      },
+      keywords: ['status', 'user status', 'nip-38', 'set status', 'mood', 'what are you doing', 'activity'],
+      description: 'Set your general status (NIP-38)'
+    },
+    {
       id: 'nav-accounts',
       label: 'Open Accounts',
       icon: 'manage_accounts',
@@ -328,6 +342,13 @@ export class CommandPaletteDialogComponent implements AfterViewInit, OnDestroy {
       icon: 'settings',
       action: () => this.router.navigate(['/settings/general']),
       keywords: ['general settings', 'language', 'theme', 'dark mode', 'media']
+    },
+    {
+      id: 'nav-settings-x',
+      label: 'Settings: Post to X',
+      icon: 'share',
+      action: () => this.router.navigate(['/settings/general']),
+      keywords: ['x', 'twitter', 'dual post', 'cross post', 'share to x', 'oauth']
     },
     {
       id: 'nav-settings-media-servers',
@@ -377,6 +398,23 @@ export class CommandPaletteDialogComponent implements AfterViewInit, OnDestroy {
       icon: 'account_balance_wallet',
       action: () => this.router.navigate(['/settings/wallet']),
       keywords: ['wallet', 'nwc', 'lightning', 'bitcoin', 'payments', 'zap']
+    },
+    {
+      id: 'toggle-music-status',
+      label: 'Toggle Music Status',
+      icon: 'music_note',
+      action: () => {
+        const current = this.settings.settings().publishMusicStatus !== false;
+        this.settings.updateSettings({ publishMusicStatus: !current }).then(() => {
+          this.snackBar.open(
+            !current ? 'Music status enabled' : 'Music status disabled',
+            'Dismiss',
+            { duration: 3000 },
+          );
+        });
+      },
+      keywords: ['music status', 'nip-38', 'now playing', 'listening', 'share music', 'user status', 'music settings'],
+      description: 'Enable or disable sharing your currently playing track as a Nostr status',
     },
     {
       id: 'nav-settings-logs',

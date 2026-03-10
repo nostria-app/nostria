@@ -21,6 +21,12 @@ export class DiscoveryRelayService extends RelayServiceBase implements NostriaSe
   private database = inject(DatabaseService);
   private region = inject(RegionService);
   private poolLoaded = false;
+  private readonly relayCacheTtlMs = 5 * 60 * 1000;
+  private readonly dmRelayCacheTtlMs = 10 * 60 * 1000;
+  private readonly relayCache = new Map<string, { relayUrls: string[]; expiresAt: number }>();
+  private readonly dmRelayCache = new Map<string, { relayUrls: string[]; expiresAt: number }>();
+  private readonly inflightRelayRequests = new Map<string, Promise<string[]>>();
+  private readonly inflightDmRelayRequests = new Map<string, Promise<string[]>>();
 
   private readonly DEFAULT_BOOTSTRAP_RELAYS = ['wss://discovery.eu.nostria.app/', 'wss://indexer.coracle.social/', 'wss://purplepag.es/'];
 
@@ -31,7 +37,59 @@ export class DiscoveryRelayService extends RelayServiceBase implements NostriaSe
     super(inject(PoolService).pool);
   }
 
+  private getCachedRelayUrls(
+    cache: Map<string, { relayUrls: string[]; expiresAt: number }>,
+    pubkey: string,
+  ): string[] | null {
+    const cached = cache.get(pubkey);
+    if (!cached) {
+      return null;
+    }
+
+    if (Date.now() > cached.expiresAt) {
+      cache.delete(pubkey);
+      return null;
+    }
+
+    return [...cached.relayUrls];
+  }
+
+  private setCachedRelayUrls(
+    cache: Map<string, { relayUrls: string[]; expiresAt: number }>,
+    pubkey: string,
+    relayUrls: string[],
+    ttlMs: number,
+  ): string[] {
+    cache.set(pubkey, {
+      relayUrls: [...relayUrls],
+      expiresAt: Date.now() + ttlMs,
+    });
+
+    return relayUrls;
+  }
+
   async getUserRelayUrls(pubkey: string): Promise<string[]> {
+    const cachedRelayUrls = this.getCachedRelayUrls(this.relayCache, pubkey);
+    if (cachedRelayUrls) {
+      return cachedRelayUrls;
+    }
+
+    const existingRequest = this.inflightRelayRequests.get(pubkey);
+    if (existingRequest) {
+      return existingRequest;
+    }
+
+    const requestPromise = this.fetchUserRelayUrls(pubkey);
+    this.inflightRelayRequests.set(pubkey, requestPromise);
+
+    try {
+      return await requestPromise;
+    } finally {
+      this.inflightRelayRequests.delete(pubkey);
+    }
+  }
+
+  private async fetchUserRelayUrls(pubkey: string): Promise<string[]> {
     if (!this.poolLoaded) {
       await this.load();
     }
@@ -81,8 +139,7 @@ export class DiscoveryRelayService extends RelayServiceBase implements NostriaSe
       }
     }
 
-    // Fallback methods... should we attempt to get the relay URLs from the account relays?
-    return relayUrls;
+    return this.setCachedRelayUrls(this.relayCache, pubkey, relayUrls, this.relayCacheTtlMs);
   }
 
   /**
@@ -91,6 +148,27 @@ export class DiscoveryRelayService extends RelayServiceBase implements NostriaSe
    * Falls back to regular relay list (kind 10002) if no DM relays are found.
    */
   async getUserDmRelayUrls(pubkey: string): Promise<string[]> {
+    const cachedRelayUrls = this.getCachedRelayUrls(this.dmRelayCache, pubkey);
+    if (cachedRelayUrls) {
+      return cachedRelayUrls;
+    }
+
+    const existingRequest = this.inflightDmRelayRequests.get(pubkey);
+    if (existingRequest) {
+      return existingRequest;
+    }
+
+    const requestPromise = this.fetchUserDmRelayUrls(pubkey);
+    this.inflightDmRelayRequests.set(pubkey, requestPromise);
+
+    try {
+      return await requestPromise;
+    } finally {
+      this.inflightDmRelayRequests.delete(pubkey);
+    }
+  }
+
+  private async fetchUserDmRelayUrls(pubkey: string): Promise<string[]> {
     if (!this.poolLoaded) {
       await this.load();
     }
@@ -119,7 +197,7 @@ export class DiscoveryRelayService extends RelayServiceBase implements NostriaSe
 
       if (relayUrls.length > 0) {
         this.logger.debug(`[DiscoveryRelay] Found ${relayUrls.length} DM relays (kind 10050) for pubkey ${pubkey.slice(0, 16)}:`, relayUrls);
-        return relayUrls;
+        return this.setCachedRelayUrls(this.dmRelayCache, pubkey, relayUrls, this.dmRelayCacheTtlMs);
       }
     }
 
@@ -127,7 +205,7 @@ export class DiscoveryRelayService extends RelayServiceBase implements NostriaSe
     this.logger.debug(`[DiscoveryRelay] No DM relays found for pubkey ${pubkey.slice(0, 16)}, falling back to regular relays`);
     const fallbackRelays = await this.getUserRelayUrls(pubkey);
     this.logger.debug(`[DiscoveryRelay] Fallback relays for pubkey ${pubkey.slice(0, 16)}:`, fallbackRelays);
-    return fallbackRelays;
+    return this.setCachedRelayUrls(this.dmRelayCache, pubkey, fallbackRelays, this.dmRelayCacheTtlMs);
   }
 
   /**
@@ -154,14 +232,23 @@ export class DiscoveryRelayService extends RelayServiceBase implements NostriaSe
     // The actual publishing of defaults happens in ensureDefaultDiscoveryRelays()
     if (pubkey) {
       const relaysFromEvent = await this.loadFromEvent(pubkey);
-      if (relaysFromEvent !== null && relaysFromEvent.length > 0) {
-        // User has a kind 10086 event, use those relays
-        this.logger.debug(`Loaded ${relaysFromEvent.length} discovery relays from kind 10086 event for user`);
-        this.init(relaysFromEvent);
+      if (relaysFromEvent !== null) {
+        // User has a kind 10086 event, use those relays when available.
+        // If the event exists but has no usable relay tags, keep bootstrap relays
+        // but still treat it as existing so we don't overwrite the user's event.
+        if (relaysFromEvent.length > 0) {
+          this.logger.debug(`Loaded ${relaysFromEvent.length} discovery relays from kind 10086 event for user`);
+          this.init(relaysFromEvent);
+        } else {
+          this.logger.debug('Kind 10086 event exists but has no usable relay tags, keeping bootstrap relays');
+          this.init(bootstrapRelays);
+        }
+
         this.poolLoaded = true;
         return true; // Event found
       }
-      // If relaysFromEvent is null or empty, we'll use the bootstrap relays from storage/defaults
+
+      // No kind 10086 event found, use bootstrap relays from storage/defaults
       this.logger.debug('No kind 10086 event found for user, using bootstrap relays');
     }
 
@@ -184,6 +271,18 @@ export class DiscoveryRelayService extends RelayServiceBase implements NostriaSe
   }
 
   /**
+   * Extract normalized relay URLs from a kind 10086 event.
+   * Supports both "relay" and legacy "r" tags.
+   */
+  getRelayUrlsFromDiscoveryEvent(event: Event): string[] {
+    return this.utilities.normalizeRelayUrls(
+      event.tags
+        .filter(tag => (tag[0] === 'relay' || tag[0] === 'r') && typeof tag[1] === 'string')
+        .map(tag => tag[1])
+    );
+  }
+
+  /**
    * Load discovery relays from kind 10086 event for a user.
    * Returns null if no event exists (to distinguish from empty list).
    */
@@ -193,9 +292,7 @@ export class DiscoveryRelayService extends RelayServiceBase implements NostriaSe
       const event = await this.database.getEventByPubkeyAndKind(pubkey, DiscoveryRelayListKind);
 
       if (event) {
-        const relayUrls = event.tags
-          .filter(tag => tag[0] === 'relay' && tag[1])
-          .map(tag => tag[1]);
+        const relayUrls = this.getRelayUrlsFromDiscoveryEvent(event);
 
         this.logger.debug(`Loaded ${relayUrls.length} discovery relays from kind 10086 event`);
         return relayUrls;

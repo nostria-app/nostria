@@ -85,10 +85,10 @@
       </div>
     </mat-tab>
 
-    <mat-tab label="Bookmark Lists">
+    <mat-tab label="Bookmarks">
       <div class="tab-content">
         @if (bookmarkLists().length === 0) {
-        <div class="empty-state">No bookmark lists available.</div>
+        <div class="empty-state">No bookmark folders available.</div>
         } @else {
         <mat-list>
           @for (list of bookmarkLists(); track list.id) {
@@ -96,7 +96,7 @@
             <div class="list-row">
               <div class="list-content">
                 <div class="list-title">{{ list.name }}</div>
-                <div class="list-subtitle">Insert all references from this list</div>
+                <div class="list-subtitle">{{ getBookmarkListEntryLabel(list) }}</div>
               </div>
               <button mat-button type="button" (click)="insertBookmarkListReferences(list)">
                 Insert all

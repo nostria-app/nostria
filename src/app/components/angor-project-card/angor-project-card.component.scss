@@ -1,0 +1,249 @@
+:host {
+  display: block;
+  height: 100%;
+}
+
+.angor-card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  border-radius: 16px;
+  // overflow on the card itself is not set to hidden 
+  border: 1px solid var(--mat-sys-outline-variant, rgba(255, 255, 255, 0.1));
+  background: var(--mat-sys-surface-container, #1a1a2e);
+  cursor: pointer;
+  transition:
+    box-shadow 0.25s ease,
+    transform 0.2s ease,
+    border-color 0.2s ease;
+
+  &:hover {
+    box-shadow: 0 8px 36px rgba(0, 0, 0, 0.35);
+    transform: translateY(-3px);
+    border-color: var(--mat-sys-primary, #7c4dff);
+  }
+
+
+
+  &__banner {
+    position: relative;
+    height: 96px;
+    flex-shrink: 0;
+    overflow: hidden;              
+    border-radius: 15px 15px 0 0;  
+    // Default purple→orange gradient, shown whenever no banner image
+    background: linear-gradient(
+      135deg,
+      #1a0533 0%,
+      #3d1469 35%,
+      #7b2d8b 65%,
+      #f7931a 100%
+    );
+  }
+
+  &__banner-img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+
+
+  &__body {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 14px 16px 16px;
+    flex: 1;
+
+    border-radius: 0 0 15px 15px;
+    background: var(--mat-sys-surface-container, #1a1a2e);
+  }
+
+  &__header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  &__avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+    border: 2px solid var(--mat-sys-outline-variant, rgba(255, 255, 255, 0.15));
+
+    &--placeholder {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #4a1b8a 0%, #c96cc5 100%);
+      color: rgba(255, 255, 255, 0.85);
+
+      mat-icon {
+        font-size: 22px;
+        width: 22px;
+        height: 22px;
+      }
+    }
+  }
+
+  &__title-group {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    gap: 2px;
+  }
+
+  &__name {
+    margin: 0;
+    font-size: 0.97rem;
+    font-weight: 600;
+    line-height: 1.3;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--mat-sys-on-surface, #f0f0f0);
+
+    // No metadata name
+    &--id {
+      font-family: 'Courier New', monospace;
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: var(--mat-sys-on-surface-variant, #aaa);
+      letter-spacing: 0.01em;
+    }
+  }
+
+  &__sub {
+    font-size: 0.72rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    line-height: 1.2;
+
+    &--nip05 {
+      color: var(--mat-sys-primary, #ab82ff);
+    }
+
+    &--id {
+      color: var(--mat-sys-on-surface-variant, #888);
+      font-family: 'Courier New', monospace;
+    }
+  }
+
+  // About
+
+  &__about {
+    margin: 0;
+    font-size: 0.84rem;
+    line-height: 1.6;
+    color: var(--mat-sys-on-surface-variant, #ccc);
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    flex: 1;
+
+    &--empty {
+      font-style: italic;
+      color: var(--mat-sys-on-surface-variant, #777);
+      opacity: 0.6;
+      -webkit-line-clamp: 1;
+    }
+  }
+
+  // Stats chips
+
+  &__stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  &__stat {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.76rem;
+    font-weight: 500;
+    color: var(--mat-sys-on-surface-variant, #bbb);
+    background: rgba(255, 255, 255, 0.07);
+    padding: 4px 10px;
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+
+    // Bitcoin target amount
+    &--btc {
+      background: rgba(247, 147, 26, 0.12);
+      border-color: rgba(247, 147, 26, 0.25);
+      color: #f7a94a;
+
+      .angor-card__stat-icon {
+        color: #f7931a;
+      }
+    }
+  }
+
+  &__stat-icon {
+    font-size: 13px;
+    width: 13px;
+    height: 13px;
+    color: var(--mat-sys-primary, #ab82ff);
+    flex-shrink: 0;
+  }
+
+  //  Footer 
+
+  &__footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-top: auto;
+    padding-top: 10px;
+    border-top: 1px solid rgba(255, 255, 255, 0.07);
+  }
+
+  &__badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.71rem;
+    font-weight: 600;
+    color: #f7a030;
+    background: rgba(247, 147, 26, 0.13);
+    border: 1px solid rgba(247, 147, 26, 0.3);
+    padding: 3px 9px;
+    border-radius: 12px;
+    white-space: nowrap;
+
+    mat-icon {
+      font-size: 13px;
+      width: 13px;
+      height: 13px;
+      color: #f7931a;
+    }
+  }
+
+  &__cta {
+    font-size: 0.77rem;
+    height: 30px;
+    padding: 0 12px;
+    border-radius: 15px;
+    line-height: 30px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+
+    mat-icon {
+      font-size: 13px;
+      width: 13px;
+      height: 13px;
+    }
+  }
+}

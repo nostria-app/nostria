@@ -10,6 +10,8 @@ import { WakeLockService } from './wake-lock.service';
 import { OfflineMusicService } from './offline-music.service';
 import { AccountStateService } from './account-state.service';
 import { AccountLocalStateService } from './account-local-state.service';
+import { UserStatusService } from './user-status.service';
+import { SettingsService } from './settings.service';
 
 // YouTube Player API types
 interface YouTubePlayer {
@@ -37,6 +39,8 @@ export class MediaPlayerService implements OnInitialized {
   private offlineMusicService = inject(OfflineMusicService);
   private accountState = inject(AccountStateService);
   private accountLocalState = inject(AccountLocalStateService);
+  private userStatusService = inject(UserStatusService);
+  private settingsService = inject(SettingsService);
   media = signal<MediaItem[]>([]);
   audio?: HTMLAudioElement;
   current = signal<MediaItem | undefined>(undefined);
@@ -402,6 +406,14 @@ export class MediaPlayerService implements OnInitialized {
    */
   exit() {
     console.log('Exiting media player and hiding footer');
+
+    // NIP-38: Clear music status when player is closed
+    const exitingItem = this.current();
+    if (exitingItem?.type === 'Music' && this.accountState.pubkey() && this.settingsService.settings().publishMusicStatus !== false) {
+      this.userStatusService.clearMusicStatus().catch(err => {
+        console.warn('[MediaPlayer] Failed to clear music status on exit:', err);
+      });
+    }
 
     // Check if we're on a stream route and in fullscreen mode
     const currentUrl = this.router.url;
@@ -966,8 +978,41 @@ export class MediaPlayerService implements OnInitialized {
     console.log('[MediaPlayer] Restored volume settings:', { volume, muted });
   }
 
+  /**
+   * Publish NIP-38 music status for the given item.
+   * Respects the publishMusicStatus setting.
+   * @param item The currently playing MediaItem
+   * @param durationOverride Optional duration override (e.g. remaining time on resume)
+   */
+  private publishMusicStatusForItem(item: MediaItem, durationOverride?: number): void {
+    if (!this.accountState.pubkey()) return;
+    if (this.settingsService.settings().publishMusicStatus === false) return;
+
+    const duration = durationOverride || this.durationSig() || 180; // fallback 3 minutes
+    const statusText = item.artist ? `${item.title} - ${item.artist}` : item.title;
+
+    // Build track info for a/r tags if event metadata is available
+    const trackInfo = item.eventPubkey && item.eventIdentifier
+      ? { eventPubkey: item.eventPubkey, eventIdentifier: item.eventIdentifier }
+      : undefined;
+
+    this.userStatusService.setMusicStatus(statusText, duration, trackInfo).catch(err => {
+      console.warn('[MediaPlayer] Failed to publish music status:', err);
+    });
+  }
+
   private handleMediaEnded = () => {
     console.log('Media ended, checking for next item');
+
+    // NIP-38: Clear music status when track ends (if not advancing to next)
+    const endedItem = this.current();
+    if (endedItem?.type === 'Music' && this.accountState.pubkey() && !this.canNext()) {
+      if (this.settingsService.settings().publishMusicStatus !== false) {
+        this.userStatusService.clearMusicStatus().catch(err => {
+          console.warn('[MediaPlayer] Failed to clear music status:', err);
+        });
+      }
+    }
 
     // Mark podcast as completed if applicable
     const currentItem = this.current();
@@ -1125,6 +1170,11 @@ export class MediaPlayerService implements OnInitialized {
           this.audio.currentTime = savedPosition;
           console.log(`Restored podcast position: ${savedPosition}s for ${currentItem.source}`);
         }
+      }
+
+      // NIP-38: Publish music status once metadata (and thus accurate duration) is available
+      if (currentItem?.type === 'Music') {
+        this.publishMusicStatusForItem(currentItem);
       }
     }
   };
@@ -1314,6 +1364,12 @@ export class MediaPlayerService implements OnInitialized {
       });
 
       navigator.mediaSession.playbackState = 'playing';
+    }
+
+    // NIP-38: Publish music status for video-based music tracks
+    // (Audio tracks publish in handleLoadedMetadata for accurate duration)
+    if (file.type === 'Music' && file.video?.trim()) {
+      this.publishMusicStatusForItem(file);
     }
   }
 
@@ -1653,6 +1709,14 @@ export class MediaPlayerService implements OnInitialized {
     if (this.isMediaSessionSupported) {
       navigator.mediaSession.playbackState = 'playing';
     }
+
+    // NIP-38: Re-publish music status when resuming
+    if (currentItem?.type === 'Music' && this.accountState.pubkey()) {
+      const remainingTime = this.durationSig() - this.currentTimeSig();
+      if (remainingTime > 5) {
+        this.publishMusicStatusForItem(currentItem, remainingTime);
+      }
+    }
   }
 
   pause() {
@@ -1702,6 +1766,13 @@ export class MediaPlayerService implements OnInitialized {
     this._isPaused.set(true);
     if (this.isMediaSessionSupported) {
       navigator.mediaSession.playbackState = 'paused';
+    }
+
+    // NIP-38: Clear music status when paused
+    if (currentItem?.type === 'Music' && this.accountState.pubkey() && this.settingsService.settings().publishMusicStatus !== false) {
+      this.userStatusService.clearMusicStatus().catch(err => {
+        console.warn('[MediaPlayer] Failed to clear music status on pause:', err);
+      });
     }
   }
 

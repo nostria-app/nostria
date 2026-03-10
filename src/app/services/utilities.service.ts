@@ -134,6 +134,73 @@ export class UtilitiesService {
     'nostr.cercatrova.me',
     'nostr.com.de',
     'shu02.shugur.net',
+    'bullishrelay.zeabur.app',
+    'algo.utxo.one',
+    'au.purplerelay.com',
+    'bitcoinforthe.lol',
+    'blg.nostr.sx',
+    'ch.purplerelay.com',
+    'bullishrelay.zeabur.app',
+    'fiatdenier.com',
+    'freeben666.fr',
+    'haven.accioly.social',
+    'global.relay.red',
+    'haven.accioly.social',
+    'garden.zap.cooking',
+    'jiggytom.ddns.net',
+    'lnbits.satoshisignal.com',
+    'junxingwang.org',
+    'njump.me',
+    'nostr-01.bolt.observer',
+    'nosdrive.app',
+    'feeds.nostr.band',
+    'nostr.100p.org',
+    'nostr.bch.ninja',
+    'nostr.blockpower.capital',
+    'nostr.bitcoinist.org',
+    'nostr.at',
+    'nostr.geekgalaxy.com',
+    'nostr.gocharlie.ai',
+    'nostr.inosta.cc',
+    'nostr.kollider.xyz',
+    'nostr.fbxl.net',
+    'bitstack.app',
+    'nostr.sandwich.farm',
+    'nostr.plebchain.org',
+    'nostr.sethforprivacy.com',
+    'nostr.roundrockbitcoiners.com',
+    'nostr-02.dorafactory.org',
+    'nostr1.tunnelsats.com',
+    'nostr.terminus.money',
+    'nostrrelay.com',
+    'nostream.nostrly.io',
+    'nproxy.kristapsk.lv',
+    'nostr.extrabits.io',
+    'r.kojira.io',
+    'relay.0xchat.com',
+    'relay.austrich.net',
+    'nostr.fmt.wiz.biz',
+    'relay.coindebit.io',
+    'relay.deezy.io',
+    'relay.humanumest.social',
+    'relay.hodl.ar',
+    'relay.livefreebtc.dev',
+    'relay.laantungir.net',
+    'relay.nosto.re',
+    'relay.nostr.wine',
+    'relay.nostr.scot',
+    'nostrafrica.pcdkd.fyi',
+    'relay.orangepill.dev',
+    'relay.npub.bar',
+    'relay.roadrunner.lat',
+    'relay.notoshi.win',
+    'relay.raybuni.com',
+    'relay.plebstr.com',
+    'relay.bitcoinveneto.org',
+    'relay.tapestry.ninja',
+    'relay.uid.ovh',
+    'relay.zhoushen929.com',
+    'relay.hasenpfeffr.com',
   ]);
 
   NIP05_REGEX = /^(?:([\w.+-]+)@)?([\w_-]+(\.[\w_-]+)+)$/;
@@ -519,7 +586,7 @@ export class UtilitiesService {
   }
 
   /** Parses the URLs and cleans up, ensuring only wss:// instances are returned. */
-  getRelayUrlsFromFollowing(event: Event): string[] {
+  getRelayUrlsFromFollowing(event: Event, includeIgnoredRelays = false): string[] {
     // Check if event.content is a string, return empty array if it is
     if (!event.content) {
       return [];
@@ -548,11 +615,15 @@ export class UtilitiesService {
 
     this.trackIgnoredRelayUsage(event.pubkey, relayUrls);
 
+    if (includeIgnoredRelays) {
+      return relayUrls;
+    }
+
     return relayUrls.filter(url => !this.isIgnoredRelayDomain(url));
   }
 
   /** Parses the URLs and cleans up, ensuring only wss:// instances are returned. */
-  getRelayUrls(event: Event): string[] {
+  getRelayUrls(event: Event, includeIgnoredRelays = false): string[] {
     const relayUrlsRaw = event.tags
       .filter(tag => tag.length >= 2 && tag[0] === 'r')
       .map(tag => {
@@ -563,6 +634,10 @@ export class UtilitiesService {
       .filter(url => url.trim() !== '');
 
     this.trackIgnoredRelayUsage(event.pubkey, relayUrlsRaw);
+
+    if (includeIgnoredRelays) {
+      return relayUrlsRaw;
+    }
 
     const relayUrls = relayUrlsRaw.filter(url => !this.isIgnoredRelayDomain(url));
 
@@ -585,7 +660,44 @@ export class UtilitiesService {
     this.ignoredRelayAudit.recordIgnoredRelayUsage(pubkey, ignoredDomains, relayUrls);
   }
 
+  /**
+   * Returns relay URLs that match known dead/defunct relay domains.
+   * By default, excludes audit-exception domains (e.g. nwc.primal.net) for user-facing warnings.
+   */
+  getKnownDeadRelayUrls(relayUrls: string[], excludeAuditExceptions = true): string[] {
+    const knownDeadRelayUrls = relayUrls.filter((url) => {
+      const domain = this.resolveIgnoredRelayDomain(url, !excludeAuditExceptions);
+      return !!domain;
+    });
+
+    return this.unique(knownDeadRelayUrls);
+  }
+
+  /**
+   * Returns relay domains that are known dead/defunct from the provided relay URLs.
+   * By default, excludes audit-exception domains (e.g. nwc.primal.net) for user-facing warnings.
+   */
+  getKnownDeadRelayDomains(relayUrls: string[], excludeAuditExceptions = true): string[] {
+    const knownDeadDomains = relayUrls
+      .map((url) => this.resolveIgnoredRelayDomain(url, !excludeAuditExceptions))
+      .filter((domain): domain is string => !!domain);
+
+    return this.unique(knownDeadDomains);
+  }
+
+  /**
+   * Check if a relay URL belongs to a known dead/defunct relay domain.
+   * By default, excludes audit-exception domains (e.g. nwc.primal.net) for user-facing warnings.
+   */
+  isKnownDeadRelayUrl(url: string, excludeAuditExceptions = true): boolean {
+    return !!this.resolveIgnoredRelayDomain(url, !excludeAuditExceptions);
+  }
+
   private getIgnoredRelayDomain(url: string): string | null {
+    return this.resolveIgnoredRelayDomain(url, false);
+  }
+
+  private resolveIgnoredRelayDomain(url: string, includeAuditExceptions: boolean): string | null {
     try {
       const parsedUrl = new URL(url);
       const domain = parsedUrl.hostname.toLowerCase();
@@ -594,7 +706,7 @@ export class UtilitiesService {
         return null;
       }
 
-      if (this.ignoredRelayAudit.isExcludedAuditDomain(domain)) {
+      if (!includeAuditExceptions && this.ignoredRelayAudit.isExcludedAuditDomain(domain)) {
         return null;
       }
 
@@ -614,7 +726,7 @@ export class UtilitiesService {
    * When fetching events FROM a user, prefer WRITE relays.
    * When fetching events ABOUT a user (mentions), prefer READ relays.
    */
-  getRelayEntries(event: Event): RelayEntry[] {
+  getRelayEntries(event: Event, includeIgnoredRelays = false): RelayEntry[] {
     const entries = event.tags
       .filter(tag => tag.length >= 2 && tag[0] === 'r')
       .map(tag => {
@@ -633,6 +745,10 @@ export class UtilitiesService {
       .filter(entry => entry.url.trim() !== '');
 
     this.trackIgnoredRelayUsage(event.pubkey, entries.map((entry) => entry.url));
+
+    if (includeIgnoredRelays) {
+      return entries;
+    }
 
     return entries.filter(entry => !this.isIgnoredRelayDomain(entry.url));
   }
@@ -717,8 +833,10 @@ export class UtilitiesService {
     'wss://nos.lol',
   ];
 
-  normalizeRelayUrls(urls: string[]): string[] {
-    return urls.map(url => this.normalizeRelayUrl(url)).filter(url => url !== '');
+  normalizeRelayUrls(urls: string[], includeIgnoredRelays = false): string[] {
+    return urls
+      .map(url => this.normalizeRelayUrl(url, includeIgnoredRelays))
+      .filter(url => url !== '');
   }
 
   /**
@@ -726,10 +844,10 @@ export class UtilitiesService {
    * @param urls - Array of relay URLs to deduplicate and normalize
    * @returns Array of unique normalized relay URLs
    */
-  getUniqueNormalizedRelayUrls(urls: string[]): string[] {
+  getUniqueNormalizedRelayUrls(urls: string[], includeIgnoredRelays = false): string[] {
     // Normalize all URLs first, then deduplicate
     const normalizedUrls = urls
-      .map(url => this.normalizeRelayUrl(url.trim()))
+      .map(url => this.normalizeRelayUrl(url.trim(), includeIgnoredRelays))
       .filter(url => url.length > 0);
 
     // Remove duplicates after normalization
@@ -779,7 +897,7 @@ export class UtilitiesService {
    * Only accepts secure wss:// URLs - insecure ws:// URLs are rejected.
    * Also validates that the hostname is a valid domain (contains a dot).
    */
-  normalizeRelayUrl(url: string): string {
+  normalizeRelayUrl(url: string, includeIgnoredRelays = false): string {
     try {
       // Only allow secure WebSocket connections (wss://)
       // Reject ws:// to prevent mixed content errors when served over HTTPS
@@ -795,8 +913,7 @@ export class UtilitiesService {
 
       const parsedUrl = new URL(url);
 
-      if (this.ignoredRelayDomains.has(parsedUrl.hostname.toLowerCase())) {
-        this.logger.debug(`Ignoring relay URL from excluded domain: ${url}`);
+      if (!includeIgnoredRelays && this.ignoredRelayDomains.has(parsedUrl.hostname.toLowerCase())) {
         return '';
       }
 

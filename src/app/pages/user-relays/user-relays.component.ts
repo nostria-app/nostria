@@ -114,7 +114,7 @@ export class UserRelaysComponent {
       let relays: string[] = [];
 
       if (relayListEvent) {
-        relays = this.utilities.getRelayUrls(relayListEvent);
+        relays = this.utilities.getRelayUrls(relayListEvent, true);
       }
 
       // Fallback for users without usable kind 10002 relay list:
@@ -122,7 +122,7 @@ export class UserRelaysComponent {
       if (relays.length === 0) {
         const contactsEvent = await this.dataService.getContactsEvent(pubkey);
         if (contactsEvent) {
-          relays = this.utilities.getRelayUrlsFromFollowing(contactsEvent);
+          relays = this.utilities.getRelayUrlsFromFollowing(contactsEvent, true);
         }
       }
 
@@ -255,5 +255,14 @@ export class UserRelaysComponent {
   copyRelayUrl(event: Event, url: string): void {
     event.stopPropagation();
     this.layout.copyToClipboard(url, 'relay URL');
+  }
+
+  isKnownDeadRelay(url: string): boolean {
+    return this.utilities.isKnownDeadRelayUrl(url);
+  }
+
+  getKnownDeadRelayDomain(url: string): string {
+    const domains = this.utilities.getKnownDeadRelayDomains([url]);
+    return domains[0] ?? '';
   }
 }

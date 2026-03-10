@@ -43,6 +43,8 @@ import {
   EmojiSetEventComponent,
   PeopleSetEventComponent,
   ProfileUpdateEventComponent,
+  SettingsEventComponent,
+  RelayListEventComponent,
 } from '../event-types';
 import { UserProfileComponent } from '../user-profile/user-profile.component';
 import { BadgeComponent } from '../../pages/badges/badge/badge.component';
@@ -68,6 +70,7 @@ import { ParsingService } from '../../services/parsing.service';
 import { SocialPreviewComponent } from '../social-preview/social-preview.component';
 import { MediaPreviewDialogComponent } from '../media-preview-dialog/media-preview.component';
 import { InlineVideoPlayerComponent } from '../inline-video-player/inline-video-player.component';
+import { HapticsService } from '../../services/haptics.service';
 
 type EventCardAppearance = 'card' | 'plain';
 
@@ -81,6 +84,27 @@ interface CollapsedContentMedia {
   images: string[];
   videos: CollapsedVideoInfo[];
   urls: string[];
+}
+
+export function getTaggedXUrl(event?: Event | null): string | undefined {
+  if (!event) {
+    return undefined;
+  }
+
+  const proxyReference = event.tags.find(tag => {
+    if (tag[0] !== 'proxy' || tag[2] !== 'web' || typeof tag[1] !== 'string') {
+      return false;
+    }
+
+    try {
+      const parsed = new URL(tag[1]);
+      return parsed.hostname === 'x.com' || parsed.hostname === 'www.x.com' || parsed.hostname === 'twitter.com' || parsed.hostname === 'www.twitter.com';
+    } catch {
+      return false;
+    }
+  });
+
+  return proxyReference?.[1];
 }
 
 @Component({
@@ -112,6 +136,8 @@ interface CollapsedContentMedia {
     EmojiSetEventComponent,
     PeopleSetEventComponent,
     ProfileUpdateEventComponent,
+    SettingsEventComponent,
+    RelayListEventComponent,
     UserProfileComponent,
     BadgeComponent,
     ReportedContentComponent,
@@ -224,6 +250,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   private userRelaysService = inject(UserRelaysService);
   private readonly logger = inject(LoggerService);
   private readonly accountLocalState = inject(AccountLocalStateService);
+  private readonly haptics = inject(HapticsService);
   private readonly platformId = inject(PLATFORM_ID);
   private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
   private readonly canHover = this.isBrowser && window.matchMedia('(hover: hover)').matches;
@@ -496,6 +523,21 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     }
 
     return { images, videos, urls };
+  }
+
+  isPortraitAspectRatio(aspectRatio?: string): boolean {
+    if (!aspectRatio) {
+      return false;
+    }
+
+    const normalized = aspectRatio.replace(/\s+/g, '');
+    const [widthValue, heightValue] = normalized.split('/').map(Number);
+
+    if (!Number.isFinite(widthValue) || !Number.isFinite(heightValue) || widthValue <= 0 || heightValue <= 0) {
+      return false;
+    }
+
+    return heightValue > widthValue;
   }
 
   // Check if root event content should be collapsible (content is long enough)
@@ -1038,6 +1080,21 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     }
 
     return targetItem;
+  });
+
+  xLinkedPost = computed(() => {
+    const targetEvent = this.targetRecord()?.event;
+    const taggedXUrl = getTaggedXUrl(targetEvent);
+
+    if (targetEvent && taggedXUrl) {
+      return {
+        nostrEventId: targetEvent.id,
+        xPostId: '',
+        url: taggedXUrl,
+      };
+    }
+
+    return undefined;
   });
 
   // Check if this event is a quote-only event (has q tags or inline nostr: references but no meaningful reply context)
@@ -2250,6 +2307,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     if (ev.kind === kinds.ShortTextNote) {
       const eventTags = this.eventService.getEventTags(ev);
       this.eventService.createNote({
+        navigateOnPublish: this.mode() !== 'thread',
         replyTo: {
           id: ev.id,
           pubkey: ev.pubkey,
@@ -2314,6 +2372,8 @@ export class EventComponent implements AfterViewInit, OnDestroy {
           // Revert optimistic update if failed
           this.updateReactionsOptimistically(userPubkey, '+', false);
           this.snackBar.open('Failed to add like. Please try again.', 'Dismiss', { duration: 3000 });
+        } else {
+          this.haptics.triggerMedium();
         }
       }
 

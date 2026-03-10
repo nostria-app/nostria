@@ -1,16 +1,24 @@
 <mat-card-header [class.compact]="compact()">
   <app-user-profile [pubkey]="event().pubkey" [view]="compact() ? 'compact' : 'list'">
-    <a class="date-link" [routerLink]="eventUrl()" [title]="event().created_at | timestamp: 'medium'" tabindex="0"
-      (click)="openEventAndStopPropagation($event)" (keyup.enter)="navigateToEvent()" (keyup.space)="navigateToEvent()">
-      {{ event().created_at | ago }}
-    </a>
-    @if (isEdited()) {
-    <span class="edited-indicator" 
-          [matTooltip]="editedAt() ? 'Edited ' + (editedAt() | ago) : 'Edited'"
+    <div class="event-metadata" [class.has-expiration]="hasExpiration()">
+      <div class="event-metadata-row primary">
+        <a class="date-link" [routerLink]="eventUrl()" tabindex="0" (click)="openEventAndStopPropagation($event)"
+          (keyup.enter)="navigateToEvent()" (keyup.space)="navigateToEvent()">
+          {{ publishedLabel() }}
+        </a>
+        @if (isEdited()) {
+        <span class="edited-indicator" [matTooltip]="editedAt() ? 'Edited ' + (editedAt() | ago) : 'Edited'"
           matTooltipPosition="below">
-      (edited)
-    </span>
-    }
+          (edited)
+        </span>
+        }
+      </div>
+      @if (hasExpiration()) {
+      <div class="event-metadata-row secondary expiration-label">
+        {{ expirationLabel() }}
+      </div>
+      }
+    </div>
     @if (!compact()) {
     <app-event-menu [event]="event()"></app-event-menu>
     }

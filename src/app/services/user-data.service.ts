@@ -380,8 +380,13 @@ export class UserDataService {
       return null;
     }
 
-    // Extract just the URLs
-    const relayUrls = observedRelays.map(r => r.url);
+    // Filter out ignored/malformed/insecure relays before deep discovery.
+    const relayUrls = this.utilities.getUniqueNormalizedRelayUrls(observedRelays.map(r => r.url));
+
+    if (relayUrls.length === 0) {
+      this.logger.info('[Profile Deep Resolution] No eligible observed relays available after filtering ignored domains');
+      return null;
+    }
 
     // Calculate number of batches
     const totalBatches = Math.ceil(relayUrls.length / BATCH_SIZE);

@@ -1,0 +1,28 @@
+<div class="dead-relays-warning-sheet">
+  <div class="sheet-header">
+    <mat-icon class="sheet-icon">warning</mat-icon>
+    <h3>Some account relays look inactive</h3>
+  </div>
+
+  <p class="sheet-message">
+    One or more relays in your account relay list are known to be dead, defunct, or no longer used.
+    Keeping them can slow down syncing and reduce reliability.
+  </p>
+
+  <div class="problem-relays">
+    <div class="problem-relays-label">Problematic relays found:</div>
+    <div class="problem-relays-list" role="list" aria-label="Problematic account relays">
+      @for (relayUrl of data.relayUrls; track relayUrl) {
+      <div role="listitem" class="problem-relay-item">{{ formatRelayUrl(relayUrl) }}</div>
+      }
+    </div>
+  </div>
+
+  <div class="sheet-actions">
+    <button mat-button (click)="dismiss()">Dismiss</button>
+    <button mat-flat-button (click)="openAccountRelays()">
+      <mat-icon>settings</mat-icon>
+      Open Account Relays
+    </button>
+  </div>
+</div>

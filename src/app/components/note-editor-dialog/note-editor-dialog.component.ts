@@ -32,6 +32,7 @@ import { MatSliderModule } from '@angular/material/slider';
 import { DomSanitizer } from '@angular/platform-browser';
 import { FormsModule } from '@angular/forms';
 import { DragDropModule, CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
+import { CdkTextareaAutosize, TextFieldModule } from '@angular/cdk/text-field';
 
 import { NostrService } from '../../services/nostr.service';
 import { MediaService } from '../../services/media.service';
@@ -64,6 +65,9 @@ import { SpeechService } from '../../services/speech.service';
 import { PlatformService } from '../../services/platform.service';
 import { UserProfileComponent } from '../user-profile/user-profile.component';
 import { EmojiPickerComponent } from '../emoji-picker/emoji-picker.component';
+import { HapticsService } from '../../services/haptics.service';
+import { SettingsService } from '../../services/settings.service';
+import { XDualPostService, XPostMediaItem } from '../../services/x-dual-post.service';
 
 // Re-export for backward compatibility
 export type { NoteEditorDialogData } from '../../interfaces/note-editor';
@@ -104,6 +108,16 @@ interface NoteAutoDraft {
   title?: string;
 }
 
+interface XPostValidation {
+  valid: boolean;
+  message: string;
+}
+
+interface PreparedXPost {
+  id: string;
+  url: string;
+}
+
 @Component({
   selector: 'app-note-editor-dialog',
   imports: [
@@ -124,6 +138,7 @@ interface NoteAutoDraft {
     MentionAutocompleteComponent,
     MatMenuModule,
     DragDropModule,
+    TextFieldModule,
     UserProfileComponent,
     EmojiPickerComponent,
   ],
@@ -138,6 +153,7 @@ interface NoteAutoDraft {
   },
 })
 export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestroy {
+  private readonly xHeaderIconUrl = '/logos/clients/x.png';
   // Inline mode inputs/outputs
   /** When true, renders in inline mode (embedded in page) instead of dialog mode */
   inlineMode = input(false);
@@ -175,15 +191,27 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   private imagePlaceholder = inject(ImagePlaceholderService);
   private publishEventBus = inject(PublishEventBus);
   private publishSubscription?: Subscription;
+  private readonly pasteHandler = (event: ClipboardEvent): void => this.handlePaste(event);
+  private readonly handleViewportResize = (): void => this.scheduleTextareaRefresh();
   private dialog = inject(MatDialog);
   private customDialog = inject(CustomDialogService);
   private aiService = inject(AiService);
   private speechService = inject(SpeechService);
   private platformService = inject(PlatformService);
+  private haptics = inject(HapticsService);
+  private syncedSettings = inject(SettingsService);
+  xDualPost = inject(XDualPostService);
   private destroyRef = inject(DestroyRef);
+
+  private shouldNavigateAfterPublish(): boolean {
+    return this.data?.navigateOnPublish !== false;
+  }
 
   @ViewChild('contentTextarea')
   contentTextarea!: ElementRef<HTMLTextAreaElement>;
+  @ViewChild(CdkTextareaAutosize) textareaAutosize?: CdkTextareaAutosize;
+  @ViewChild('noteEditorLayout') noteEditorLayout?: ElementRef<HTMLElement>;
+  @ViewChild('composerActions') composerActions?: ElementRef<HTMLElement>;
   @ViewChild('fileInput') fileInput!: ElementRef<HTMLInputElement>;
   @ViewChild(MentionAutocompleteComponent) mentionAutocomplete?: MentionAutocompleteComponent;
 
@@ -203,6 +231,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
 
   showPreview = signal(false);
   showAdvancedOptions = signal(false);
+  isContentFocused = signal(false);
   isDragOver = signal(false);
   isUploading = signal(false);
   uploadStatus = signal(''); // Detailed upload status message
@@ -230,6 +259,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
 
   // Guard against double-click publishing
   private publishInitiated = signal(false);
+  private xPostingChoiceInitialized = false;
 
   // Media metadata for imeta tags (NIP-92)
   mediaMetadata = signal<MediaMetadata[]>([]);
@@ -252,6 +282,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   expirationTime = signal<string>('12:00');
   uploadOriginal = signal(false);
   addClientTag = signal(true); // Default to true, will be set from user preference in constructor
+  postToX = signal(false);
 
   // Proof of Work options
   powEnabled = signal(false);
@@ -323,6 +354,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     const hasContent = this.content().trim().length > 0;
     const notPublishing = !this.isPublishing();
     const notUploading = !this.isUploading();
+    const xPostValid = this.xPostValidation().valid;
 
     // Check expiration validation
     let expirationValid = true;
@@ -331,7 +363,72 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       expirationValid = expirationDateTime !== null && expirationDateTime > new Date();
     }
 
-    return hasContent && notPublishing && notUploading && expirationValid;
+    return hasContent && notPublishing && notUploading && expirationValid && xPostValid;
+  });
+
+  xPostValidation = computed<XPostValidation>(() => {
+    if (!this.postToX()) {
+      return { valid: true, message: '' };
+    }
+
+    if (!this.xPremiumEligible()) {
+      return {
+        valid: false,
+        message: 'Post to X is available for Premium accounts only.',
+      };
+    }
+
+    if (this.isEdit()) {
+      return {
+        valid: false,
+        message: 'Editing existing notes cannot be mirrored to X yet.',
+      };
+    }
+
+    if (this.hasReplyTarget()) {
+      return {
+        valid: false,
+        message: 'Replies are not posted to X. Only original posts can use Post to X.',
+      };
+    }
+
+    if (!this.xDualPost.status().connected) {
+      return {
+        valid: false,
+        message: 'Connect your X account before enabling Post to X.',
+      };
+    }
+
+    const mediaItems = this.getXMediaItems();
+    if (mediaItems.length === 0) {
+      return { valid: true, message: '' };
+    }
+
+    const imageCount = mediaItems.filter(item => item.mimeType?.startsWith('image/') && item.mimeType !== 'image/gif').length;
+    const videoOrGifCount = mediaItems.filter(item => item.mimeType?.startsWith('video/') || item.mimeType === 'image/gif').length;
+
+    if (imageCount > 0 && videoOrGifCount > 0) {
+      return {
+        valid: false,
+        message: 'Post to X supports either up to 4 images or 1 video/GIF, but not both in the same post.',
+      };
+    }
+
+    if (imageCount > 4) {
+      return {
+        valid: false,
+        message: 'Post to X supports up to 4 images per post.',
+      };
+    }
+
+    if (videoOrGifCount > 1) {
+      return {
+        valid: false,
+        message: 'Post to X supports only 1 video or GIF per post.',
+      };
+    }
+
+    return { valid: true, message: '' };
   });
 
   // Validation for expiration
@@ -475,11 +572,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       currentContent = currentContent.replace(/[ \t]+/g, ' ').replace(/\n\s*\n/g, '\n\n').trim();
 
       this.content.set(currentContent);
-
-      // Update textarea
-      if (this.contentTextarea) {
-        this.contentTextarea.nativeElement.value = currentContent;
-      }
+      this.scheduleTextareaRefresh();
     }
 
     // If no more media, disable media mode
@@ -496,6 +589,13 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   isQuote = computed(() => !!this.data?.quote);
   /** NIP-41: Check if we're editing an existing note */
   isEdit = computed(() => !!this.data?.editEvent);
+  hasReplyTarget = computed(() => !!this.data?.replyTo || !!this.replyToEvent());
+  xPremiumEligible = computed(() => {
+    const subscription = this.accountState.subscription();
+    const isPremiumTier = subscription?.tier === 'premium' || subscription?.tier === 'premium_plus';
+    const isNotExpired = !subscription?.expires || Date.now() < subscription.expires;
+    return !!subscription && isPremiumTier && isNotExpired;
+  });
 
   // Check if a mention is the reply target (cannot be removed)
   isReplyTargetMention(pubkey: string): boolean {
@@ -513,6 +613,10 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
 
   // PoW computed properties
   isPowMining = computed(() => this.powProgress().isRunning);
+  xStatusReady = computed(() => this.xDualPost.loaded() && !this.xDualPost.loading());
+  xPostingAvailable = computed(() => this.xStatusReady() && this.xPremiumEligible() && this.xDualPost.status().connected && !this.isEdit() && !this.hasReplyTarget());
+  xStatusLoading = computed(() => this.xDualPost.loading());
+  xHeaderIndicatorVisible = computed(() => this.xPostingAvailable());
   hasPowResult = computed(() => this.powMinedEvent() !== null);
   powDifficulty = computed(() => this.powProgress().difficulty);
   powAttempts = computed(() => this.powProgress().attempts);
@@ -633,14 +737,15 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
 
     // Add paste event listener for clipboard image handling
     this.setupPasteHandler();
+    window.addEventListener('resize', this.handleViewportResize);
+    window.visualViewport?.addEventListener('resize', this.handleViewportResize);
 
     // Auto-focus the textarea (only in dialog mode)
     if (!this.inlineMode()) {
       setTimeout(() => {
         if (this.contentTextarea) {
           this.contentTextarea.nativeElement.focus();
-          // Initial auto-resize for any pre-filled content
-          this.autoResizeTextarea(this.contentTextarea.nativeElement);
+          this.scheduleTextareaRefresh();
         }
       }, 100);
     }
@@ -694,6 +799,12 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   };
 
   ngOnDestroy() {
+    if (this.contentTextarea?.nativeElement) {
+      this.contentTextarea.nativeElement.removeEventListener('paste', this.pasteHandler);
+    }
+    window.removeEventListener('resize', this.handleViewportResize);
+    window.visualViewport?.removeEventListener('resize', this.handleViewportResize);
+
     // Clear auto-save timer on destroy
     if (this.autoSaveTimer) {
       clearTimeout(this.autoSaveTimer);
@@ -716,6 +827,43 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   constructor() {
     // Set default value for addClientTag from user's local settings
     this.addClientTag.set(this.localSettings.addClientTag());
+
+    effect(() => {
+      const isConnected = this.xDualPost.status().connected;
+      const defaultXPosting = this.syncedSettings.settings().postToXByDefault ?? false;
+      const isReply = this.hasReplyTarget();
+
+      if (!this.xStatusReady()) {
+        return;
+      }
+
+      if (!isConnected || this.isEdit() || isReply) {
+        this.postToX.set(false);
+        this.xPostingChoiceInitialized = false;
+        return;
+      }
+
+      if (!this.xPostingChoiceInitialized) {
+        this.postToX.set(defaultXPosting);
+        this.xPostingChoiceInitialized = true;
+      }
+    });
+
+    effect(() => {
+      const canToggleXFromHeader = !this.inlineMode() && this.xHeaderIndicatorVisible() && this.postToX();
+      const secondaryHeaderIcon = canToggleXFromHeader ? this.xHeaderIconUrl : '';
+      const username = this.xDualPost.status().username;
+      const secondaryHeaderTooltip = secondaryHeaderIcon
+        ? this.postToX()
+          ? (username ? `Post to X is on. Publishing as @${username}. Click to turn off.` : 'Post to X is on. Click to turn off.')
+          : (username ? `Post to X is off. Click to publish as @${username}.` : 'Post to X is off. Click to turn on.')
+        : '';
+      this.dialogRef?.updateSecondaryHeaderIcon(secondaryHeaderIcon);
+      this.dialogRef?.updateSecondaryHeaderTooltip(secondaryHeaderTooltip);
+      this.dialogRef?.updateSecondaryHeaderActive(canToggleXFromHeader && this.postToX());
+      this.dialogRef?.updateSecondaryHeaderClickable(canToggleXFromHeader);
+      this.dialogRef?.updateSecondaryHeaderAriaLabel(this.postToX() ? 'Turn off Post to X' : 'Turn on Post to X');
+    });
 
     // Load PoW settings from account state
     const pubkey = this.accountState.pubkey();
@@ -871,6 +1019,10 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     // Handle shared files
     if (this.data?.files && this.data.files.length > 0) {
       this.uploadFiles(this.data.files);
+    }
+
+    if (this.xPremiumEligible()) {
+      this.xDualPost.ensureStatusLoaded();
     }
   }
 
@@ -1098,6 +1250,14 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   }
 
   async publishNote(): Promise<void> {
+    const xPostValidation = this.xPostValidation();
+    if (!xPostValidation.valid) {
+      this.snackBar.open(xPostValidation.message, 'Close', {
+        duration: 5000,
+      });
+      return;
+    }
+
     // CRITICAL: Guard against double-click/double-submit
     // Check publishInitiated first to prevent race conditions
     if (this.publishInitiated()) {
@@ -1125,7 +1285,8 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       }
     } catch (error) {
       console.error('Error publishing note:', error);
-      this.snackBar.open('Failed to publish note. Please try again.', 'Close', {
+      const message = error instanceof Error ? error.message : 'Failed to publish note. Please try again.';
+      this.snackBar.open(message, 'Close', {
         duration: 5000,
       });
     } finally {
@@ -1138,7 +1299,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   private async publishStandardFlow(): Promise<void> {
     const content = this.processContentForPublishing(this.content().trim());
     const tags = this.buildTags();
-    await this.publishEvent(content, tags);
+    await this.publishEvent(content, tags, content, this.getXMediaItems());
   }
 
   private async publishMediaFlow(): Promise<void> {
@@ -1211,7 +1372,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     filteredKind1Tags.push(['q', signedMediaEvent.id, '', signedMediaEvent.pubkey]);
 
     // 7. Publish Kind 1 Event
-    await this.publishEvent(kind1Content, filteredKind1Tags);
+    await this.publishEvent(kind1Content, filteredKind1Tags, content, this.getXMediaItems());
   }
 
   private getMediaEventKind(): number {
@@ -1306,13 +1467,15 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
             this.dialogRef?.close({ published: true, event: signedEvent });
           }
 
-          // Navigate to the original event (not the edit event)
-          const nevent = nip19.neventEncode({
-            id: editEvent.id,
-            author: editEvent.pubkey,
-            kind: editEvent.kind,
-          });
-          this.layout.openGenericEvent(nevent, editEvent);
+          if (this.shouldNavigateAfterPublish()) {
+            // Navigate to the original event (not the edit event)
+            const nevent = nip19.neventEncode({
+              id: editEvent.id,
+              author: editEvent.pubkey,
+              kind: editEvent.kind,
+            });
+            this.layout.openGenericEvent(nevent, editEvent);
+          }
 
           if (this.publishSubscription) {
             this.publishSubscription.unsubscribe();
@@ -1339,7 +1502,15 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     }
   }
 
-  private async publishEvent(contentToPublish: string, tags: string[][]): Promise<void> {
+  private async publishEvent(contentToPublish: string, tags: string[][], xText?: string, xMedia: XPostMediaItem[] = []): Promise<void> {
+    let preparedXPost: PreparedXPost | undefined;
+    const finalTags = tags.map(tag => [...tag]);
+
+    if (xText?.trim() && this.postToX() && this.xDualPost.status().connected) {
+      preparedXPost = await this.prepareXPost(xText, xMedia);
+      this.appendXProxyTag(finalTags, preparedXPost.url);
+    }
+
     let eventToSign: UnsignedEvent;
 
     // If PoW is enabled, ensure we have a mined event
@@ -1347,7 +1518,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       // If we don't have a mined event yet, or content has changed, mine it now
       if (!this.powMinedEvent() || this.powMinedEvent()?.content !== contentToPublish) {
         // Build the base event for mining
-        const baseEvent = this.nostrService.createEvent(1, contentToPublish, tags);
+        const baseEvent = this.nostrService.createEvent(1, contentToPublish, finalTags);
 
         // Start mining
         this.snackBar.open('Mining Proof-of-Work before publishing...', '', { duration: 2000 });
@@ -1378,7 +1549,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       }
     } else {
       // PoW is not enabled, create event normally
-      eventToSign = this.nostrService.createEvent(1, contentToPublish, tags);
+      eventToSign = this.nostrService.createEvent(1, contentToPublish, finalTags);
     }
 
     // Use the centralized publishing service which handles relay distribution
@@ -1402,6 +1573,13 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
         if (isOurEvent && relayEvent.success) {
           dialogClosed = true;
           publishedEventId = relayEvent.event.id;
+          const signedEvent = relayEvent.event;
+
+          this.haptics.triggerSuccess();
+
+          if (preparedXPost) {
+            void this.finalizePreparedXPost(signedEvent.id, preparedXPost);
+          }
 
           // Clear draft and close dialog immediately after first successful publish
           if (!this.inlineMode()) {
@@ -1412,8 +1590,6 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
           });
 
           // Close dialog with the signed event
-          const signedEvent = relayEvent.event;
-
           if (this.inlineMode()) {
             // In inline mode: reset state and emit event
             this.content.set('');
@@ -1427,13 +1603,15 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
             this.dialogRef?.close({ published: true, event: signedEvent });
           }
 
-          // Navigate to the published event
-          const nevent = nip19.neventEncode({
-            id: signedEvent.id,
-            author: signedEvent.pubkey,
-            kind: signedEvent.kind,
-          });
-          this.layout.openGenericEvent(nevent, signedEvent);
+          if (this.shouldNavigateAfterPublish()) {
+            // Navigate to the published event
+            const nevent = nip19.neventEncode({
+              id: signedEvent.id,
+              author: signedEvent.pubkey,
+              kind: signedEvent.kind,
+            });
+            this.layout.openGenericEvent(nevent, signedEvent);
+          }
 
           // Unsubscribe after handling
           if (this.publishSubscription) {
@@ -1445,7 +1623,17 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     });
 
     // Start the publish operation (will continue in background even after dialog closes)
-    const result = await this.nostrService.signAndPublish(eventToSign);
+    let result;
+
+    try {
+      result = await this.nostrService.signAndPublish(eventToSign);
+    } catch (error) {
+      if (preparedXPost) {
+        throw new Error(`Posted to X, but failed to publish to Nostr: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
+
+      throw error;
+    }
 
     console.log('[NoteEditorDialog] Publish result:', {
       success: result.success,
@@ -1460,8 +1648,88 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
 
     // If no relay succeeded at all (dialog would still be open)
     if (!dialogClosed && (!result.success || !result.event)) {
+      if (preparedXPost) {
+        throw new Error('Posted to X, but failed to publish to Nostr');
+      }
+
       throw new Error('Failed to publish event');
     }
+  }
+
+  async connectXFromComposer(): Promise<void> {
+    if (!this.xPremiumEligible()) {
+      this.snackBar.open('Post to X is available for Premium accounts only.', 'Close', {
+        duration: 5000,
+      });
+      return;
+    }
+
+    try {
+      await this.xDualPost.connect();
+    } catch (error) {
+      this.snackBar.open(`Failed to connect X: ${error instanceof Error ? error.message : 'Unknown error'}`, 'Close', {
+        duration: 5000,
+      });
+    }
+  }
+
+  onPostToXChange(checked: boolean): void {
+    this.xPostingChoiceInitialized = true;
+    this.postToX.set(checked);
+  }
+
+  toggleSecondaryHeaderAction(): void {
+    if (!this.xPostingAvailable()) {
+      return;
+    }
+
+    this.onPostToXChange(!this.postToX());
+  }
+
+  private getXMediaItems(): XPostMediaItem[] {
+    return this.mediaMetadata()
+      .filter(media => !!media.url)
+      .map(media => ({
+        url: media.url,
+        mimeType: media.mimeType,
+        fallbackUrls: media.fallbackUrls,
+      }));
+  }
+
+  private async prepareXPost(text: string, media: XPostMediaItem[]): Promise<PreparedXPost> {
+    const result = await this.xDualPost.publishPost(text.trim(), media);
+
+    return {
+      id: result.id,
+      url: result.url,
+    };
+  }
+
+  private async finalizePreparedXPost(nostrEventId: string, preparedXPost: PreparedXPost): Promise<void> {
+    try {
+      await this.xDualPost.linkPostToEvent(preparedXPost.id, nostrEventId, preparedXPost.url);
+    } catch (error) {
+      console.warn('Failed to finalize Post to X link', {
+        error,
+        nostrEventId,
+        xPostId: preparedXPost.id,
+      });
+    }
+  }
+
+  private appendXProxyTag(tags: string[][], xUrl: string): void {
+    const normalizedUrl = this.normalizeExternalWebUrl(xUrl);
+    const hasProxyTag = tags.some(tag => tag[0] === 'proxy' && tag[1] === normalizedUrl && tag[2] === 'web');
+
+    if (!hasProxyTag) {
+      tags.push(['proxy', normalizedUrl, 'web']);
+    }
+  }
+
+  private normalizeExternalWebUrl(url: string): string {
+    const parsed = new URL(url);
+    parsed.hash = '';
+    return parsed.toString();
   }
 
   private buildTags(): string[][] {
@@ -1842,11 +2110,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       currentContent = currentContent.replace(/[ \t]+/g, ' ').replace(/^ +| +$/gm, '').trim();
 
       this.content.set(currentContent);
-
-      // Update textarea
-      if (this.contentTextarea) {
-        this.contentTextarea.nativeElement.value = currentContent;
-      }
+      this.scheduleTextareaRefresh();
 
       // Remove from pubkeyToNameMap
       this.pubkeyToNameMap.delete(pubkey);
@@ -1867,14 +2131,9 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       const currentContent = this.content();
       const newContent = currentContent.substring(0, start) + emoji + currentContent.substring(end);
       this.content.set(newContent);
-      textarea.value = newContent;
 
-      // Restore cursor position after emoji
-      setTimeout(() => {
-        const newPos = start + emoji.length;
-        textarea.setSelectionRange(newPos, newPos);
-        textarea.focus();
-      });
+      const newPos = start + emoji.length;
+      this.scheduleTextareaRefresh(newPos, true);
     } else {
       this.content.update(text => text + emoji);
     }
@@ -1954,15 +2213,10 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       const newContent = before + textToInsert + after;
 
       this.content.set(newContent);
-      textarea.value = newContent;
 
       // Position cursor after the inserted text
-      setTimeout(() => {
-        const newPos = start + textToInsert.length;
-        textarea.setSelectionRange(newPos, newPos);
-        textarea.focus();
-        this.autoResizeTextarea(textarea);
-      });
+      const newPos = start + textToInsert.length;
+      this.scheduleTextareaRefresh(newPos, true);
     } else {
       // Fallback: append to end
       const currentContent = this.content();
@@ -1986,9 +2240,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     const target = event.target as HTMLTextAreaElement;
     const newContent = target.value;
     this.content.set(newContent);
-
-    // Auto-resize the textarea
-    this.autoResizeTextarea(target);
+    this.scheduleTextareaRefresh(target.selectionStart || 0);
 
     // Check for removed mentions and sync with mentions list
     this.syncMentionsWithContent(newContent);
@@ -1997,28 +2249,44 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     this.handleMentionInput(newContent, target.selectionStart || 0);
   }
 
-  /**
-   * Auto-resize the textarea based on its content.
-   * Adjusts the height to fit the content while respecting min/max constraints.
-   * Scrollbar will automatically appear when content exceeds max height (via CSS overflow-y: auto).
-   */
-  private autoResizeTextarea(textarea: HTMLTextAreaElement): void {
-    // Reset height to auto to get the correct scrollHeight
+  onContentFocus(): void {
+    this.isContentFocused.set(true);
+    this.scheduleTextareaRefresh();
+  }
+
+  onContentBlur(): void {
+    this.isContentFocused.set(false);
+    this.scheduleTextareaRefresh();
+  }
+
+  private scheduleTextareaRefresh(cursorPosition?: number, focus = false): void {
+    requestAnimationFrame(() => {
+      const textarea = this.contentTextarea?.nativeElement;
+      if (!textarea) {
+        return;
+      }
+
+      this.syncTextareaHeight(textarea);
+
+      if (typeof cursorPosition === 'number') {
+        textarea.setSelectionRange(cursorPosition, cursorPosition);
+      }
+
+      if (focus) {
+        textarea.focus();
+      }
+    });
+  }
+
+  private syncTextareaHeight(textarea: HTMLTextAreaElement): void {
+    const minHeight = this.inlineMode() ? 88 : 112;
+
+    textarea.style.maxHeight = 'none';
     textarea.style.height = 'auto';
 
-    // Get computed style for min/max height
-    const computedStyle = window.getComputedStyle(textarea);
-    const cssMinHeight = Number.parseFloat(computedStyle.minHeight);
-    const minHeight = Number.isFinite(cssMinHeight) && cssMinHeight > 0
-      ? cssMinHeight
-      : (this.inlineMode() ? 60 : 96);
-    const maxHeight = this.inlineMode() ? 200 : 500; // Max height for inline vs dialog mode
-
-    // Calculate the new height based on scrollHeight
-    const newHeight = Math.min(Math.max(textarea.scrollHeight, minHeight), maxHeight);
-
-    // Set the new height
-    textarea.style.height = `${newHeight}px`;
+    const nextHeight = Math.max(minHeight, textarea.scrollHeight);
+    textarea.style.height = `${nextHeight}px`;
+    textarea.style.overflowY = 'hidden';
   }
 
   /**
@@ -2187,12 +2455,26 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     }
 
     const target = event.target as HTMLTextAreaElement;
-    this.handleMentionInput(this.content(), target.selectionStart || 0);
+    this.syncMentionStateFromSelection(target);
   }
 
   onContentClick(event: MouseEvent): void {
     const target = event.target as HTMLTextAreaElement;
-    this.handleMentionInput(this.content(), target.selectionStart || 0);
+    this.syncMentionStateFromSelection(target);
+  }
+
+  onContentSelectionChange(event: Event): void {
+    const target = event.target as HTMLTextAreaElement;
+    this.syncMentionStateFromSelection(target);
+  }
+
+  private syncMentionStateFromSelection(textarea: HTMLTextAreaElement): void {
+    if (textarea.selectionStart !== textarea.selectionEnd) {
+      this.onMentionDismissed();
+      return;
+    }
+
+    this.handleMentionInput(this.content(), textarea.selectionStart || 0);
   }
 
   private handleMentionInput(content: string, cursorPosition: number): void {
@@ -2331,16 +2613,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
 
     // Update content
     this.content.set(replacement.replacementText);
-
-    // Update cursor position
-    setTimeout(() => {
-      const textarea = this.contentTextarea?.nativeElement;
-      if (textarea) {
-        textarea.selectionStart = replacement.newCursorPosition;
-        textarea.selectionEnd = replacement.newCursorPosition;
-        textarea.focus();
-      }
-    }, 0);
+    this.scheduleTextareaRefresh(replacement.newCursorPosition, true);
 
     // Add to mentions list for p tags
     this.addMention(selection.pubkey);
@@ -2438,10 +2711,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     // Clear auto-saved draft from storage
     this.clearAutoDraft();
 
-    // Update the textarea value directly to ensure UI sync
-    if (this.contentTextarea) {
-      this.contentTextarea.nativeElement.value = this.initialContent;
-    }
+    this.scheduleTextareaRefresh();
 
     this.snackBar.open('Draft cleared', 'Dismiss', {
       duration: 2000,
@@ -2456,9 +2726,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     // If coming back from preview, re-trigger textarea auto-resize after it renders
     if (wasInPreview) {
       setTimeout(() => {
-        if (this.contentTextarea) {
-          this.autoResizeTextarea(this.contentTextarea.nativeElement);
-        }
+        this.scheduleTextareaRefresh();
       }, 0);
     }
   }
@@ -2468,12 +2736,14 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     const wasInAdvancedOptions = this.showAdvancedOptions();
     this.showAdvancedOptions.update(current => !current);
 
+    if (!wasInAdvancedOptions && this.xPremiumEligible()) {
+      this.xDualPost.ensureStatusLoaded();
+    }
+
     // If coming back from advanced options, re-trigger textarea auto-resize after it renders
     if (wasInAdvancedOptions) {
       setTimeout(() => {
-        if (this.contentTextarea) {
-          this.autoResizeTextarea(this.contentTextarea.nativeElement);
-        }
+        this.scheduleTextareaRefresh();
       }, 0);
     }
   }
@@ -2906,17 +3176,13 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     const newContent = beforeCursor + prefix + url + suffix + afterCursor;
     this.content.set(newContent);
 
-    // Restore cursor position after the inserted URL
-    setTimeout(() => {
-      const newCursorPosition = cursorPosition + prefix.length + url.length + suffix.length;
-      textarea.setSelectionRange(newCursorPosition, newCursorPosition);
-      textarea.focus();
-    }, 0);
+    const newCursorPosition = cursorPosition + prefix.length + url.length + suffix.length;
+    this.scheduleTextareaRefresh(newCursorPosition, true);
   }
 
   private setupPasteHandler(): void {
     if (this.contentTextarea) {
-      this.contentTextarea.nativeElement.addEventListener('paste', this.handlePaste.bind(this));
+      this.contentTextarea.nativeElement.addEventListener('paste', this.pasteHandler);
     }
   }
 
@@ -3171,12 +3437,8 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
 
     this.content.set(newContent);
 
-    // Restore cursor position after the inserted text
-    setTimeout(() => {
-      const newCursorPosition = cursorPosition + processedText.length;
-      textarea.setSelectionRange(newCursorPosition, newCursorPosition);
-      textarea.focus();
-    }, 0);
+    const newCursorPosition = cursorPosition + processedText.length;
+    this.scheduleTextareaRefresh(newCursorPosition, true);
   }
 
   /**
@@ -3195,12 +3457,8 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
 
     this.content.set(newContent);
 
-    // Restore cursor position after the inserted text
-    setTimeout(() => {
-      const newCursorPosition = cursorPosition + text.length;
-      textarea.setSelectionRange(newCursorPosition, newCursorPosition);
-      textarea.focus();
-    }, 0);
+    const newCursorPosition = cursorPosition + text.length;
+    this.scheduleTextareaRefresh(newCursorPosition, true);
   }
 
   // Proof of Work methods
@@ -3390,11 +3648,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   }
 
   adjustTextareaHeight(): void {
-    if (this.contentTextarea) {
-      const textarea = this.contentTextarea.nativeElement;
-      textarea.style.height = 'auto';
-      textarea.style.height = textarea.scrollHeight + 'px';
-    }
+    this.scheduleTextareaRefresh();
   }
 
   private processContentForPublishing(content: string): string {

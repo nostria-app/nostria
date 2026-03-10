@@ -25,7 +25,6 @@ import { DataService } from '../../services/data.service';
 import { LayoutService } from '../../services/layout.service';
 import { UrlUpdateService } from '../../services/url-update.service';
 import { FormatService } from '../../services/format/format.service';
-import { BookmarkService } from '../../services/bookmark.service';
 import { AccountStateService } from '../../services/account-state.service';
 import { ShareArticleDialogComponent, ShareArticleDialogData } from '../../components/share-article-dialog/share-article-dialog.component';
 import { CustomDialogService } from '../../services/custom-dialog.service';
@@ -33,7 +32,6 @@ import { NostrRecord } from '../../interfaces';
 import { RelayPoolService } from '../../services/relays/relay-pool';
 import { RightPanelService } from '../../services/right-panel.service';
 import { PanelNavigationService } from '../../services/panel-navigation.service';
-import { ZapButtonComponent } from '../../components/zap-button/zap-button.component';
 import { EventMenuComponent } from '../../components/event/event-menu/event-menu.component';
 import { UserRelaysService } from '../../services/relays/user-relays';
 import { EventComponent as NostrEventComponent } from '../../components/event/event.component';
@@ -48,7 +46,6 @@ import { normalizeMarkdownLinkDestinations } from '../../services/format/utils';
     MatProgressSpinnerModule,
     MatTooltipModule,
     ArticleDisplayComponent,
-    ZapButtonComponent,
     EventMenuComponent,
     NostrEventComponent,
   ],
@@ -67,7 +64,6 @@ export class ArticleComponent implements OnDestroy {
   private readonly formatService = inject(FormatService);
   private readonly url = inject(UrlUpdateService);
   private readonly customDialog = inject(CustomDialogService);
-  bookmark = inject(BookmarkService);
   accountState = inject(AccountStateService);
   private readonly relayPool = inject(RelayPoolService);
   private readonly rightPanel = inject(RightPanelService);
@@ -282,10 +278,6 @@ export class ArticleComponent implements OnDestroy {
     } else {
       this.router.navigate(['/f']);
     }
-  }
-
-  bookmarkArticle(): void {
-    this.bookmark.toggleBookmark(this.id(), 'a');
   }
 
   retryLoad(): void {

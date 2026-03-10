@@ -25,6 +25,8 @@ interface BunkerQueueItem<T> {
   operation: () => Promise<T>;
   resolve: (value: T) => void;
   reject: (error: Error) => void;
+  /** Higher priority = processed first. Defaults to 0. Use event timestamps so newer events decrypt first. */
+  priority: number;
 }
 
 @Injectable({
@@ -119,16 +121,38 @@ export class EncryptionService {
   }
 
   /**
-   * Queue a bunker operation to be processed sequentially
-   * This prevents overwhelming the remote signer with concurrent requests
+   * Queue a bunker operation to be processed sequentially.
+   * Operations are sorted by priority (highest first) so that newer
+   * messages are decrypted before older ones.
+   *
+   * @param operation The async operation to execute
+   * @param priority Higher = processed first. Use event `created_at` timestamp
+   *                 so that recent messages are decrypted before old ones.
    */
-  private queueBunkerOperation<T>(operation: () => Promise<T>): Promise<T> {
+  private queueBunkerOperation<T>(operation: () => Promise<T>, priority = 0): Promise<T> {
     return new Promise<T>((resolve, reject) => {
-      this.bunkerQueue.push({
+      const item: BunkerQueueItem<unknown> = {
         operation,
         resolve: resolve as (value: unknown) => void,
-        reject
-      });
+        reject,
+        priority,
+      };
+
+      // Insert sorted by priority descending (newest/highest first).
+      // Binary-ish insertion keeps the hot path fast for the common case
+      // where events arrive roughly newest-first from the relay.
+      let inserted = false;
+      for (let i = 0; i < this.bunkerQueue.length; i++) {
+        if (this.bunkerQueue[i].priority < priority) {
+          this.bunkerQueue.splice(i, 0, item);
+          inserted = true;
+          break;
+        }
+      }
+      if (!inserted) {
+        this.bunkerQueue.push(item);
+      }
+
       this.pendingBunkerOperations.set(this.bunkerQueue.length);
 
       // Start processing if not already running (fire and forget)
@@ -375,7 +399,7 @@ export class EncryptionService {
   /**
    * Decrypt a message using NIP-04 (legacy, less secure)
    */
-  async decryptNip04(ciphertext: string, pubkey: string): Promise<string> {
+  async decryptNip04(ciphertext: string, pubkey: string, priority = 0): Promise<string> {
     try {
       const account = this.accountState.account();
 
@@ -397,7 +421,7 @@ export class EncryptionService {
         return await this.queueBunkerOperation(async () => {
           const bunker = await this.getBunkerSigner(account);
           return await bunker.nip04Decrypt(pubkey, ciphertext);
-        });
+        }, priority);
       }
 
       if (!account?.privkey) {
@@ -472,7 +496,7 @@ export class EncryptionService {
   /**
    * Decrypt a message using NIP-44 (modern, secure)
    */
-  async decryptNip44(ciphertext: string, senderPubkey: string): Promise<string> {
+  async decryptNip44(ciphertext: string, senderPubkey: string, priority = 0): Promise<string> {
     try {
       const account = this.accountState.account();
 
@@ -494,7 +518,7 @@ export class EncryptionService {
         return await this.queueBunkerOperation(async () => {
           const bunker = await this.getBunkerSigner(account);
           return await bunker.nip44Decrypt(senderPubkey, ciphertext);
-        });
+        }, priority);
       }
 
       if (!account?.privkey) {
@@ -545,12 +569,14 @@ export class EncryptionService {
    * @param ciphertext The encrypted content
    * @param senderPubkey The sender's public key
    * @param _event (unused) The event containing the message - kept for API compatibility
+   * @param priority Higher = processed first in bunker queue. Use event `created_at`.
    */
   async autoDecrypt(
     ciphertext: string,
     senderPubkey: string,
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    _event?: Event
+    _event?: Event,
+    priority = 0
   ): Promise<DecryptionResult> {
     // First check if the content appears to be encrypted
     if (!this.isContentEncrypted(ciphertext)) {
@@ -564,7 +590,7 @@ export class EncryptionService {
         // Sometimes the ciphertext might have a prefix like "Echo: ".
         ciphertext = ciphertext.replace('Echo: ', '');
 
-        const content = await this.decryptNip04(ciphertext, senderPubkey);
+        const content = await this.decryptNip04(ciphertext, senderPubkey, priority);
         return { content, algorithm: 'nip04' };
       } catch (error) {
         this.logger.debug('NIP-04 decryption failed', error);
@@ -572,7 +598,7 @@ export class EncryptionService {
     } else {
       // Try NIP-44 first (modern format)
       try {
-        const content = await this.decryptNip44(ciphertext, senderPubkey);
+        const content = await this.decryptNip44(ciphertext, senderPubkey, priority);
         return { content, algorithm: 'nip44' };
       } catch (error) {
         this.logger.debug('NIP-44 decryption failed, trying NIP-04', error);

@@ -11,6 +11,7 @@ import {
   EnvironmentInjector,
 } from '@angular/core';
 import { VolumeOverlayComponent } from './volume-overlay.component';
+import { HapticsService } from '../services/haptics.service';
 
 @Directive({
   selector: '[appVolumeGesture]',
@@ -19,6 +20,7 @@ export class VolumeGestureDirective implements AfterViewInit, OnDestroy {
   private readonly elementRef = inject(ElementRef);
   private readonly appRef = inject(ApplicationRef);
   private readonly environmentInjector = inject(EnvironmentInjector);
+  private readonly haptics = inject(HapticsService);
 
   volumeChange = output<number>();
   tap = output<void>(); // Emitted on short press (for mute toggle)
@@ -135,10 +137,7 @@ export class VolumeGestureDirective implements AfterViewInit, OnDestroy {
       this.showVolumeOverlay();
       this.updateVolumeIndicator(this.startVolume);
 
-      // Vibrate on mobile to indicate gesture started
-      if (navigator.vibrate) {
-        navigator.vibrate(50);
-      }
+      this.haptics.triggerMedium();
     }, this.HOLD_DELAY);
   }
 

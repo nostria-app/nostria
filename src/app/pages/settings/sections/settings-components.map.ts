@@ -12,6 +12,7 @@ import { SettingExternalLinksComponent } from './external-links.component';
 import { SettingMenuEditorComponent } from './menu-editor.component';
 import { SettingHomeDestinationComponent } from './home-destination.component';
 import { SettingNotificationSpamFilterComponent } from './notification-spam-filter.component';
+import { SettingMusicStatusComponent } from './music-status.component';
 
 /**
  * Maps setting item IDs to their standalone component types.
@@ -53,6 +54,9 @@ export const SETTINGS_COMPONENT_MAP: Record<string, Type<unknown>> = {
 
   // Notification spam filter
   'notification-spam-filter': SettingNotificationSpamFilterComponent,
+
+  // Music status
+  'music-status': SettingMusicStatusComponent,
 };
 
 /**

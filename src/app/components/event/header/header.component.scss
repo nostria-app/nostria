@@ -9,6 +9,10 @@ mat-card-header {
       gap: 6px;
     }
 
+    .event-metadata-row.secondary {
+      font-size: 0.7rem;
+    }
+
     .date-link {
       font-size: 0.75rem;
       opacity: 0.7;
@@ -20,9 +24,33 @@ mat-card-header {
   }
 }
 
+.event-metadata {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  min-width: 0;
+  margin-right: 0.4rem;
+}
+
+.event-metadata-row {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  min-width: 0;
+
+  &.primary {
+    flex-wrap: wrap;
+  }
+
+  &.secondary {
+    font-size: 12px;
+    opacity: 0.8;
+  }
+}
+
 .date-link {
   cursor: pointer;
-  margin-right: 0.4rem;
   font-size: 13px;
   opacity: 0.8;
   text-decoration: none;
@@ -35,10 +63,13 @@ mat-card-header {
   }
 }
 
+.expiration-label {
+  color: var(--mat-sys-primary);
+}
+
 .edited-indicator {
   color: var(--mat-sys-outline);
   font-size: 13px;
   opacity: 0.8;
   cursor: default;
-  margin-right: 0.4rem;
 }

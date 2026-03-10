@@ -194,6 +194,33 @@ mat-divider {
   }
 }
 
+.status-section {
+  margin: 16px 0;
+
+  h3 {
+    margin: 0 0 8px 0;
+    font-size: 16px;
+    color: var(--mat-sys-on-surface);
+  }
+
+  .section-description {
+    font-size: 14px;
+    color: var(--mat-sys-on-surface-variant);
+    margin: 0;
+  }
+}
+
+.status-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+
+  .status-toggle-info {
+    flex: 1;
+  }
+}
+
 // Dialog actions
 [dialog-actions] {
   button {

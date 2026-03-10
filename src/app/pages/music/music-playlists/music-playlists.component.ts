@@ -101,12 +101,6 @@ const PAGE_SIZE = 24;
         </div>
       }
 
-      <div class="page-header">
-        <div class="header-info">
-          <p class="subtitle">{{ playlistsCount() }} <span i18n="@@music.playlists.count">playlists</span></p>
-        </div>
-      </div>
-
       <div class="page-content">
         @if (loading()) {
           <div class="loading-container">
@@ -254,29 +248,8 @@ const PAGE_SIZE = 24;
       gap: 1rem;
     }
 
-    .page-header {
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-      padding: 0.5rem 0;
-      flex-wrap: wrap;
-    }
-
-    .header-info {
-      display: flex;
-      flex-direction: column;
-      gap: 0.25rem;
-      flex: 1;
-
-      .subtitle {
-        margin: 0;
-        font-size: 0.875rem;
-        color: var(--mat-sys-on-surface-variant);
-      }
-    }
-
     .page-content {
-      padding: 1rem 0;
+      padding: 0;
     }
 
     .loading-container {

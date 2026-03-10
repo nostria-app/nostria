@@ -11,7 +11,7 @@
     </div>
     <div class="top-actions-right">
       <button mat-icon-button (click)="openBookmarkSelector()"
-        [title]="bookmark.isBookmarkedInAnyList(id(), 'a') ? 'Manage bookmarks' : 'Add to bookmark list'">
+        [title]="bookmark.isBookmarkedInAnyList(id(), 'a') ? 'Manage bookmarks' : 'Add to bookmark folder'">
         <mat-icon>{{ bookmark.getBookmarkIcon(id(), 'a') }}</mat-icon>
       </button>
       <button mat-icon-button (click)="share.emit()" title="Share Article">
@@ -109,7 +109,8 @@
             </div>
 
             <div class="action-button bookmark-action" role="button"
-              [attr.tabindex]="requiresSpamConfirmation() ? -1 : 0" (click)="bookmarkClick.emit($event)"
+              [attr.tabindex]="requiresSpamConfirmation() ? -1 : 0"
+              (click)="openBookmarkSelector(); $event.stopPropagation()"
               (contextmenu)="onActionsDisplayModeToggle($event)" (touchstart)="onBookmarkLongPressStart($event)"
               (touchend)="onBookmarkLongPressEnd()" (touchcancel)="onBookmarkLongPressEnd()">
               <mat-icon class="action-icon">{{ bookmark.getBookmarkIcon(id(), 'a') }}</mat-icon>
@@ -117,8 +118,10 @@
             </div>
 
             @if (likes().length > 0 || zapCount() > 0 || repostCount() > 0 || quoteCount() > 0) {
-            <div class="emoji-indicators"
-              (click)="toggleReactionsSummary('reactions', 'top'); $event.stopPropagation()">
+            <div class="emoji-indicators" (click)="toggleReactionsSummary('reactions', 'top'); $event.stopPropagation()"
+              (contextmenu)="onActionsDisplayModeToggle($event); $event.stopPropagation()"
+              (touchstart)="onBookmarkLongPressStart($event)" (touchend)="onBookmarkLongPressEnd()"
+              (touchcancel)="onBookmarkLongPressEnd()">
               @if (topEmojis().length > 0) {
               <span class="aggregated-emojis">
                 @for (emoji of topEmojis(); track emoji.emoji) {
@@ -359,7 +362,7 @@
 
       <!-- Bookmark -->
       <div class="action-button bookmark-action" role="button" [attr.tabindex]="requiresSpamConfirmation() ? -1 : 0"
-        (click)="bookmarkClick.emit($event)" (contextmenu)="onActionsDisplayModeToggle($event)"
+        (click)="openBookmarkSelector(); $event.stopPropagation()" (contextmenu)="onActionsDisplayModeToggle($event)"
         (touchstart)="onBookmarkLongPressStart($event)" (touchend)="onBookmarkLongPressEnd()"
         (touchcancel)="onBookmarkLongPressEnd()">
         <mat-icon class="action-icon">{{ bookmark.getBookmarkIcon(id(), 'a') }}</mat-icon>
@@ -368,7 +371,10 @@
 
       <!-- Top emojis indicator (right-aligned) -->
       @if (likes().length > 0 || zapCount() > 0 || repostCount() > 0 || quoteCount() > 0) {
-      <div class="emoji-indicators" (click)="toggleReactionsSummary(); $event.stopPropagation()">
+      <div class="emoji-indicators" (click)="toggleReactionsSummary(); $event.stopPropagation()"
+        (contextmenu)="onActionsDisplayModeToggle($event); $event.stopPropagation()"
+        (touchstart)="onBookmarkLongPressStart($event)" (touchend)="onBookmarkLongPressEnd()"
+        (touchcancel)="onBookmarkLongPressEnd()">
         @if (topEmojis().length > 0) {
         <span class="aggregated-emojis">
           @for (emoji of topEmojis(); track emoji.emoji) {

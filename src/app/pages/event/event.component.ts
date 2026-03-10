@@ -27,7 +27,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatDividerModule } from '@angular/material/divider';
 import { ApplicationService } from '../../services/application.service';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { toSignal, takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { EVENT_STATE_KEY, EventData } from '../../data-resolver';
 import { EventService, Reaction, ThreadData, ThreadedEvent } from '../../services/event';
 import { Title } from '@angular/platform-browser';
@@ -39,6 +39,7 @@ import { FollowSetsService, FollowSet } from '../../services/follow-sets.service
 import { AccountStateService } from '../../services/account-state.service';
 import { AccountLocalStateService } from '../../services/account-local-state.service';
 import { EventFocusService } from '../../services/event-focus.service';
+import { PublishEventBus, PublishRelayResultEvent } from '../../services/publish-event-bus.service';
 
 /** Description of the EventPageComponent
  *
@@ -85,6 +86,9 @@ export class EventPageComponent {
   // Computed to check if we're in dialog mode
   isInDialogMode = computed(() => !!this.dialogEventId());
 
+  // Reduce indentation on mobile to preserve horizontal space in thread view
+  readonly threadIndent = computed(() => this.panelNav.isMobile() ? 8 : 16);
+
   // Detect if event is rendered in the right panel outlet
   isInRightPanel = computed(() => {
     // Check both the route outlet property AND the current URL structure
@@ -117,6 +121,7 @@ export class EventPageComponent {
   private elementRef = inject(ElementRef);
   private readonly eventFocus = inject(EventFocusService);
   private readonly destroyRef = inject(DestroyRef);
+  private publishEventBus = inject(PublishEventBus);
   id = signal<string | null>(null);
   userRelays: string[] = [];
   app = inject(ApplicationService);
@@ -230,9 +235,12 @@ export class EventPageComponent {
           replies: filteredChildren,
         });
       } else if (filteredChildren.length > 0) {
-        // This reply is filtered out, but it has children that match
-        // Include the children directly (they become top-level in this branch)
-        result.push(...filteredChildren);
+        // Keep disallowed connector replies when they have matching descendants.
+        // This preserves thread structure and avoids making intermediate events disappear.
+        result.push({
+          ...reply,
+          replies: filteredChildren,
+        });
       }
       // If not allowed and no matching children, skip entirely
     }
@@ -374,6 +382,7 @@ export class EventPageComponent {
 
   item!: EventData;
   reactions = signal<Reaction[]>([]);
+  private handledPublishedReplyIds = new Set<string>();
 
   // Computed signal to track if anything is still loading
   isAnyLoading = computed(
@@ -402,6 +411,17 @@ export class EventPageComponent {
       });
     }
 
+    this.publishEventBus
+      .on('relay-result')
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((publishEvent) => {
+        const relayEvent = publishEvent as PublishRelayResultEvent;
+        if (!relayEvent.success || relayEvent.event.kind !== 1) {
+          return;
+        }
+        this.onReplyPublished(relayEvent.event);
+      });
+
     // this.item = this.route.snapshot.data['data'];
 
     // Load saved reply filter from local storage
@@ -415,23 +435,7 @@ export class EventPageComponent {
       this.transferState.remove(EVENT_STATE_KEY); // optional cleanup
     }
 
-    // Check for router navigation state
-    const navigation = this.router.currentNavigation();
-    if (navigation?.extras.state?.['event']) {
-      this.event.set(navigation.extras.state['event'] as Event);
-    }
-    // Check for pre-loaded reply count from feed
-    if (navigation?.extras.state?.['replyCount'] !== undefined) {
-      this.initialReplyCount.set(navigation.extras.state['replyCount'] as number);
-    }
-    // Check for pre-loaded parent event from feed
-    if (navigation?.extras.state?.['parentEvent']) {
-      this.initialParentEvent.set(navigation.extras.state['parentEvent'] as Event);
-    }
-    // Check for pre-loaded replies from thread view (for instant rendering)
-    if (navigation?.extras.state?.['replies']) {
-      this.initialReplies.set(navigation.extras.state['replies'] as ThreadedEvent[]);
-    }
+    this.applyNavigationState();
 
     // Effect to load event when in dialog mode with direct event ID input
     effect(() => {
@@ -455,6 +459,8 @@ export class EventPageComponent {
         untracked(async () => {
           const id = this.routeParams()?.get('id');
           if (id) {
+            this.applyNavigationState(id);
+
             if (id.startsWith('naddr')) {
               if (this.isInRightPanel()) {
                 this.layout.navigateToRightPanel(`a/${id}`);
@@ -518,12 +524,17 @@ export class EventPageComponent {
       this.error.set(null);
       this.showCompletionStatus.set(false);
       this.deepResolutionProgress.set('');
+      this.handledPublishedReplyIds.clear();
 
       // Reset state
+      const preloadedEvent = this.getPreloadedEvent(nevent);
+      this.event.set(preloadedEvent);
+      this.id.set(preloadedEvent?.id ?? null);
       this.parentEvents.set([]);
       this.replies.set([]);
       this.threadedReplies.set([]);
       this.reactions.set([]);
+      this.threadData.set(null);
       this.isDeleted.set(false);
       this.deletionReason.set(null);
 
@@ -650,6 +661,164 @@ export class EventPageComponent {
       }
 
     }
+  }
+
+  private applyNavigationState(routeId?: string): void {
+    const state = this.getNavigationState();
+    const expectedId = routeId ? this.extractRouteEventId(routeId) : null;
+    const stateEvent = state?.['event'];
+    const eventFromState = this.isEventWithId(stateEvent)
+      && (!expectedId || stateEvent.id === expectedId)
+      ? stateEvent
+      : undefined;
+
+    if (eventFromState) {
+      this.event.set(eventFromState);
+      this.id.set(eventFromState.id);
+      this.item = {
+        title: this.item?.title || '',
+        description: this.item?.description || '',
+        event: eventFromState,
+      };
+    } else if (expectedId && this.item?.event?.id !== expectedId) {
+      this.item = {
+        title: this.item?.title || '',
+        description: this.item?.description || '',
+      };
+    }
+
+    this.initialReplyCount.set(typeof state?.['replyCount'] === 'number' ? state['replyCount'] as number : undefined);
+    this.initialParentEvent.set(this.isEventWithId(state?.['parentEvent']) ? state['parentEvent'] : undefined);
+    this.initialReplies.set(Array.isArray(state?.['replies']) ? state['replies'] as ThreadedEvent[] : undefined);
+  }
+
+  private getPreloadedEvent(routeId: string): Event | undefined {
+    const expectedId = this.extractRouteEventId(routeId);
+    const itemEvent = this.item?.event;
+
+    if (expectedId && this.isEventWithId(itemEvent) && itemEvent.id === expectedId) {
+      return itemEvent;
+    }
+
+    return undefined;
+  }
+
+  private getNavigationState(): Record<string, unknown> | undefined {
+    const navigationState = this.router.currentNavigation()?.extras.state as Record<string, unknown> | undefined;
+    if (navigationState) {
+      return navigationState;
+    }
+
+    if (!this.app.isBrowser()) {
+      return undefined;
+    }
+
+    const historyState = window.history.state as Record<string, unknown> | undefined;
+    return historyState;
+  }
+
+  private extractRouteEventId(routeId: string): string | null {
+    if (this.utilities.isHex(routeId)) {
+      return routeId;
+    }
+
+    try {
+      const decoded = this.utilities.decode(routeId);
+      if (decoded.type === 'note') {
+        return decoded.data;
+      }
+      if (decoded.type === 'nevent') {
+        return decoded.data.id;
+      }
+    } catch {
+      return null;
+    }
+
+    return null;
+  }
+
+  private isEventWithId(value: unknown): value is Event {
+    return !!value && typeof value === 'object' && 'id' in value && typeof value.id === 'string';
+  }
+
+  onReplyPublished(event: Event): void {
+    const currentEvent = this.event();
+    if (!currentEvent || event.id === currentEvent.id) {
+      return;
+    }
+
+    if (this.handledPublishedReplyIds.has(event.id)) {
+      return;
+    }
+
+    const tags = this.eventService.getEventTags(event);
+    if (!tags.rootId && !tags.replyId) {
+      return;
+    }
+
+    const threadRootId = this.parentEvents()[0]?.id || currentEvent.id;
+    const knownIds = this.collectKnownThreadEventIds();
+
+    const isDirectReplyToCurrent = tags.replyId === currentEvent.id || (!tags.replyId && tags.rootId === currentEvent.id);
+    const repliesToKnownEvent = !!tags.replyId && knownIds.has(tags.replyId);
+    const isInCurrentThreadRoot = tags.rootId === threadRootId || tags.rootId === currentEvent.id;
+
+    if (!isDirectReplyToCurrent && !(isInCurrentThreadRoot && repliesToKnownEvent)) {
+      return;
+    }
+
+    this.handledPublishedReplyIds.add(event.id);
+
+    const mergedReplies = [...this.replies(), event];
+    const dedupedById = new Map<string, Event>();
+    for (const replyEvent of mergedReplies) {
+      dedupedById.set(replyEvent.id, replyEvent);
+    }
+
+    const parentEventIds = new Set(this.parentEvents().map((p) => p.id));
+    parentEventIds.add(currentEvent.id);
+
+    const filteredReplies = Array.from(dedupedById.values()).filter((replyEvent) => !parentEventIds.has(replyEvent.id));
+    this.replies.set(filteredReplies);
+
+    const isViewingThreadRoot = this.threadData()?.isThreadRoot ?? this.parentEvents().length === 0;
+    const rebuiltThread = this.eventService.buildThreadTree(filteredReplies, currentEvent.id, isViewingThreadRoot);
+    this.threadedReplies.set(rebuiltThread);
+    this.initialReplyCount.set(undefined);
+
+    const currentThreadData = this.threadData();
+    if (currentThreadData) {
+      this.threadData.set({
+        ...currentThreadData,
+        replies: filteredReplies,
+        threadedReplies: rebuiltThread,
+      });
+    }
+  }
+
+  private collectKnownThreadEventIds(): Set<string> {
+    const ids = new Set<string>();
+    const currentEvent = this.event();
+    if (currentEvent) {
+      ids.add(currentEvent.id);
+    }
+
+    const addThread = (thread: ThreadedEvent): void => {
+      ids.add(thread.event.id);
+      for (const child of thread.replies) {
+        addThread(child);
+      }
+    };
+
+    for (const parent of this.parentEvents()) {
+      ids.add(parent.id);
+    }
+
+    for (const reply of this.threadedReplies()) {
+      addThread(reply);
+    }
+
+    return ids;
   }
 
   /**
@@ -805,20 +974,32 @@ export class EventPageComponent {
         }
       }
 
-      const event = await this.eventService.loadEventWithDeepResolution(hex, (current, total, relays) => {
+      const result = await this.eventService.loadEventWithDeepResolution(hex, (current, total, relays) => {
         this.deepResolutionProgress.set(`Scanning batch ${current}/${total} (${relays.length} relays)...`);
       });
 
-      if (event) {
+      if (result.event) {
         this.deepResolutionProgress.set('Event found! Loading thread...');
         // Update item so loadEvent picks it up
         if (!this.item) {
           this.item = { title: '', description: '' };
         }
-        this.item.event = event;
+        this.item.event = result.event;
 
         // Restart loading
         await this.loadEvent(nevent);
+      } else if (result.deletionEvent) {
+        this.logger.info('Deep resolution found deletion request for missing event:', {
+          eventId: hex,
+          deletionEventId: result.deletionEvent.id,
+          reason: result.deletionEvent.content || '(no reason given)',
+        });
+
+        this.isDeleted.set(true);
+        this.deletionReason.set(result.deletionEvent.content || null);
+        this.error.set('This event has been deleted by its author');
+        this.deepResolutionProgress.set('');
+        this.isLoading.set(false);
       } else {
         this.error.set('Event not found');
         this.deepResolutionProgress.set('');

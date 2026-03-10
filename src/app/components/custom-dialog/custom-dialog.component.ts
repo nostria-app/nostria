@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, input, output, effect, ElementRef, 
 import { CommonModule, DOCUMENT } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
 /**
  * Custom dialog component that provides better mobile support and easier styling than Material Dialog
@@ -39,7 +40,7 @@ import { MatButtonModule } from '@angular/material/button';
  */
 @Component({
   selector: 'app-custom-dialog',
-  imports: [CommonModule, MatIconModule, MatButtonModule],
+  imports: [CommonModule, MatIconModule, MatButtonModule, MatTooltipModule],
   template: `
     <div 
       class="dialog-backdrop" 
@@ -58,36 +59,50 @@ import { MatButtonModule } from '@angular/material/button';
         
         <!-- Header -->
         <div class="dialog-header">
-          @if (getShowBackButton()) {
-            <button 
-              class="back-button" 
-              (click)="onBackClick()"
-              aria-label="Back"
-              type="button">
-              <mat-icon>arrow_back</mat-icon>
-            </button>
-          }
-          
-          @if (getShowCloseButton()) {
-            <button 
-              class="close-button" 
-              (click)="onCloseClick()"
-              aria-label="Close"
-              type="button">
-              <mat-icon>close</mat-icon>
-            </button>
-          }
-          
+          <div class="dialog-header-leading">
+            @if (getShowBackButton()) {
+              <button 
+                class="back-button" 
+                (click)="onBackClick()"
+                aria-label="Back"
+                type="button">
+                <mat-icon>arrow_back</mat-icon>
+              </button>
+            }
+
+            @if (getHeaderIcon()) {
+              <img [src]="getHeaderIcon()" [alt]="getTitle() || 'Dialog'" class="header-icon" />
+            }
+
+            @if (getSecondaryHeaderIcon()) {
+              <button class="secondary-header-button" [class.active]="getSecondaryHeaderActive()"
+                [class.clickable]="getSecondaryHeaderClickable()" [matTooltip]="getSecondaryHeaderTooltip()"
+                [matTooltipDisabled]="!getSecondaryHeaderTooltip()" [attr.aria-label]="getSecondaryHeaderAriaLabel()"
+                [disabled]="!getSecondaryHeaderClickable()" (click)="onSecondaryHeaderClick()" type="button">
+                <img [src]="getSecondaryHeaderIcon()" [alt]="getSecondaryHeaderTooltip() || 'Dialog status'"
+                  class="secondary-header-icon" />
+              </button>
+            }
+          </div>
+
           @if (getTitle()) {
             <h2 class="dialog-title" id="dialog-title">{{ getTitle() }}</h2>
           }
-          
-          @if (getHeaderIcon()) {
-            <img [src]="getHeaderIcon()" [alt]="getTitle() || 'Dialog'" class="header-icon" />
-          }
-          
-          <!-- Custom header content -->
-          <ng-content select="[dialog-header]"></ng-content>
+
+          <div class="dialog-header-trailing">
+            <!-- Custom header content -->
+            <ng-content select="[dialog-header]"></ng-content>
+
+            @if (getShowCloseButton()) {
+              <button 
+                class="close-button" 
+                (click)="onCloseClick()"
+                aria-label="Close"
+                type="button">
+                <mat-icon>close</mat-icon>
+              </button>
+            }
+          </div>
         </div>
         
         <!-- Content -->
@@ -109,6 +124,11 @@ export class CustomDialogComponent implements AfterViewInit, OnDestroy {
   // Modern signal-based inputs
   title = input<string>('');
   headerIcon = input<string>('');
+  secondaryHeaderIcon = input<string>('');
+  secondaryHeaderTooltip = input<string>('');
+  secondaryHeaderActive = input<boolean>(false);
+  secondaryHeaderClickable = input<boolean>(false);
+  secondaryHeaderAriaLabel = input<string>('Dialog status');
   showBackButton = input<boolean>(false);
   showCloseButton = input<boolean>(true);
   disableClose = input<boolean>(false);
@@ -122,6 +142,7 @@ export class CustomDialogComponent implements AfterViewInit, OnDestroy {
   closed = output<void>();
   backdropClicked = output<void>();
   backClicked = output<void>();
+  secondaryHeaderClicked = output<void>();
 
   // Modern viewChild
   dialogContainer = viewChild<ElementRef>('dialogContainer');
@@ -204,6 +225,26 @@ export class CustomDialogComponent implements AfterViewInit, OnDestroy {
 
   getHeaderIcon(): string {
     return this.headerIcon();
+  }
+
+  getSecondaryHeaderIcon(): string {
+    return this.secondaryHeaderIcon();
+  }
+
+  getSecondaryHeaderTooltip(): string {
+    return this.secondaryHeaderTooltip();
+  }
+
+  getSecondaryHeaderActive(): boolean {
+    return this.secondaryHeaderActive();
+  }
+
+  getSecondaryHeaderClickable(): boolean {
+    return this.secondaryHeaderClickable();
+  }
+
+  getSecondaryHeaderAriaLabel(): string {
+    return this.secondaryHeaderAriaLabel();
   }
 
   getShowBackButton(): boolean {
@@ -291,6 +332,12 @@ export class CustomDialogComponent implements AfterViewInit, OnDestroy {
 
   onBackClick(): void {
     this.backClicked.emit();
+  }
+
+  onSecondaryHeaderClick(): void {
+    if (this.getSecondaryHeaderClickable()) {
+      this.secondaryHeaderClicked.emit();
+    }
   }
 
   close(): void {

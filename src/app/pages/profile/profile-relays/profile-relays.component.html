@@ -37,14 +37,24 @@
     } @else {
     <div class="relays-list">
       @for (url of getUserRelays(); track url) {
-      <mat-card class="relay-card">
+      <mat-card class="relay-card" [class.relay-card-known-dead]="isKnownDeadRelay(url)">
         <div class="relay-card-header" (click)="toggleRelayDetails(url)" (keydown.enter)="toggleRelayDetails(url)"
           (keydown)="onKeyDown($event, url)" tabindex="0" role="button" [attr.aria-expanded]="isRelayExpanded(url)">
           <div class="relay-info">
-            <mat-icon class="relay-icon">dns</mat-icon>
+            <mat-icon class="relay-icon" [class.relay-icon-warning]="isKnownDeadRelay(url)">
+              {{ isKnownDeadRelay(url) ? 'warning' : 'dns' }}
+            </mat-icon>
             <div class="relay-details">
               <div class="relay-name">{{ getRelayDisplayName(url) }}</div>
-              <div class="relay-url">{{ formatRelayUrl(url) }}</div>
+              <div class="relay-url">
+                {{ formatRelayUrl(url) }}
+                @if (isKnownDeadRelay(url)) {
+                <span class="relay-warning-badge">Known dead</span>
+                }
+              </div>
+              @if (isKnownDeadRelay(url)) {
+              <div class="relay-warning-note">{{ getKnownDeadRelayDomain(url) }} is marked as dead/defunct.</div>
+              }
             </div>
           </div>
           <div class="relay-actions">

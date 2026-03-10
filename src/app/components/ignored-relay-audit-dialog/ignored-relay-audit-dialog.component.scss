@@ -35,6 +35,8 @@
   display: flex;
   flex-wrap: wrap;
   gap: 0.375rem;
+  max-height: 160px;
+  overflow-y: auto;
 }
 
 .domain-chip {

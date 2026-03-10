@@ -16,6 +16,7 @@ import { MetricsTrackingService } from './metrics-tracking.service';
 import { LoggerService } from './logger.service';
 import { UtilitiesService } from './utilities.service';
 import { SettingsService } from './settings.service';
+import { DiscoveryRelayListKind } from './relays/discovery-relay';
 
 /** Service that handles changing account, will clear and load data in different services. */
 @Injectable({
@@ -228,6 +229,22 @@ export class StateService implements NostriaService {
   private async ensureDefaultDiscoveryRelays(pubkey: string, hasDiscoveryRelays: boolean): Promise<void> {
     try {
       if (!hasDiscoveryRelays) {
+        // Fallback check: if local DB didn't have kind 10086 yet, query account relays
+        // before creating defaults. This avoids overwriting users who already published
+        // a valid discovery relay list from another client.
+        const existingDiscoveryEvent = await this.accountRelay.getEventByPubkeyAndKind(pubkey, DiscoveryRelayListKind);
+        if (existingDiscoveryEvent) {
+          const relayUrls = this.discoveryRelay.getRelayUrlsFromDiscoveryEvent(existingDiscoveryEvent);
+
+          if (relayUrls.length > 0) {
+            this.discoveryRelay.setDiscoveryRelays(relayUrls);
+          }
+
+          await this.discoveryRelay.saveEvent(existingDiscoveryEvent);
+          this.logger.info('[StateService] Found existing discovery relays event (kind 10086), skipping default publish');
+          return;
+        }
+
         // User has no kind 10086 event, create and publish defaults
         this.logger.info('[StateService] User has no discovery relays (kind 10086), setting defaults');
 

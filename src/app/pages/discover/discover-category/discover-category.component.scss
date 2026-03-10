@@ -107,6 +107,11 @@
     mat-icon {
       color: var(--mat-sys-primary);
     }
+
+    .section-count {
+      color: var(--mat-sys-on-surface-variant);
+      font-size: 16px;
+    }
   }
 
   .section-header-with-action {
@@ -603,6 +608,35 @@
   }
 }
 
+// Angor Projects Grid
+.angor-projects-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
+
+  app-angor-project-card {
+    display: block;
+  }
+}
+
+.angor-load-more {
+  margin-top: 18px;
+  min-height: 46px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: var(--mat-sys-on-surface-variant);
+
+  &--end {
+    color: var(--mat-sys-on-surface-variant);
+
+    mat-icon {
+      color: var(--mat-success-color);
+    }
+  }
+}
+
 // Playlists Grid
 .playlists-grid {
   display: grid;
@@ -715,7 +749,8 @@
 
   .articles-grid,
   .videos-grid,
-  .playlists-grid {
+  .playlists-grid,
+  .angor-projects-grid {
     grid-template-columns: 1fr;
   }
 }

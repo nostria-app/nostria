@@ -28,6 +28,9 @@
     <div class="panel-header">
       <h2 class="panel-title title-font">Messages</h2>
       <span class="panel-header-spacer"></span>
+      @if (messaging.isLoading()) {
+      <mat-spinner diameter="20" matTooltip="Loading messages..."></mat-spinner>
+      }
       <button mat-icon-button (click)="toggleSearch()" matTooltip="Search chats">
         <mat-icon>search</mat-icon>
       </button>
@@ -120,7 +123,9 @@
                       </div>
                       <div class="chat-preview">
                         @if (chat.lastMessage) {
-                        <span class="message-preview">{{ chat.lastMessage.content }}</span>
+                        <span class="message-preview">{{ getChatPreviewText(chat.lastMessage) }}@if
+                          (getChatPreviewEmojiUrl(chat.lastMessage); as emojiUrl) { <img class="chat-preview-emoji"
+                            [src]="emojiUrl" alt="emoji" loading="lazy" />}</span>
                         } @else {
                         <span class="message-preview empty-message">Save private notes</span>
                         }
@@ -137,10 +142,7 @@
                 (click)="selectChat(chat)">
                 <div class="chat-item-content">
                   <div class="chat-avatar">
-                    @if (!chat.hasLegacyMessages) {
-                    <mat-icon inline="true" class="chat-encryption-icon secure"
-                      matTooltip="All messages use secure encryption (NIP-17)">verified_user</mat-icon>
-                    } @else {
+                    @if (chat.hasLegacyMessages) {
                     <mat-icon inline="true" class="chat-encryption-icon mixed"
                       matTooltip="Contains legacy messages (NIP-04)">shield</mat-icon>
                     }
@@ -170,7 +172,8 @@
                             @if (chat.lastMessage.isOutgoing) {
                             <span class="outgoing-prefix">You: </span>
                             }
-                            {{ chat.lastMessage.content }}
+                            {{ getChatPreviewText(chat.lastMessage) }}@if (getChatPreviewEmojiUrl(chat.lastMessage); as
+                            emojiUrl) { <img class="chat-preview-emoji" [src]="emojiUrl" alt="emoji" loading="lazy" />}
                           </span>
                           <!-- <span class="message-time">{{ chat.lastMessage?.created_at | ago }}</span> -->
                           } @else {
@@ -228,10 +231,7 @@
                 (click)="selectChat(chat)">
                 <div class="chat-item-content">
                   <div class="chat-avatar">
-                    @if (!chat.hasLegacyMessages) {
-                    <mat-icon inline="true" class="chat-encryption-icon secure"
-                      matTooltip="All messages use secure encryption (NIP-17)">verified_user</mat-icon>
-                    } @else {
+                    @if (chat.hasLegacyMessages) {
                     <mat-icon inline="true" class="chat-encryption-icon mixed"
                       matTooltip="Contains legacy messages (NIP-04)">shield</mat-icon>
                     }
@@ -259,7 +259,8 @@
                             @if (chat.lastMessage.isOutgoing) {
                             <span class="outgoing-prefix">You: </span>
                             }
-                            {{ chat.lastMessage.content }}
+                            {{ getChatPreviewText(chat.lastMessage) }}@if (getChatPreviewEmojiUrl(chat.lastMessage); as
+                            emojiUrl) { <img class="chat-preview-emoji" [src]="emojiUrl" alt="emoji" loading="lazy" />}
                           </span>
                           } @else {
                           <span class="message-preview empty-message">New conversation</span>
@@ -398,30 +399,30 @@
           (touchmove)="onMessageTouchEnd()" (contextmenu)="onMessageContextMenu($event, message)">
           <div class="message-bubble" [class.outgoing]="message.isOutgoing" [class.pending]="message.pending"
             [class.failed]="message.failed" [class.long-press-active]="longPressedMessage()?.id === message.id">
-            @if (message.replyTo) {
-            @let repliedMessage = getMessageById(message.replyTo);
-            @if (repliedMessage) {
+            @if (getReplyPreviewText(message); as replyPreviewText) {
             <div class="reply-context">
               <mat-icon>reply</mat-icon>
               <div class="reply-content">
-                <span class="reply-text">{{ repliedMessage.content }}</span>
+                <span class="reply-text">{{ replyPreviewText }}</span>
               </div>
             </div>
             }
-            }
-            <app-message-content [content]="message.content"></app-message-content>
+            <app-message-content [content]="message.content" [tags]="message.tags"
+              [authorPubkey]="message.pubkey"></app-message-content>
             <span class="message-inline-meta">
               <span class="message-time">{{ formatMessageTime(message.created_at) }}</span>
-              <!-- Encryption status indicator -->
-              @if (message.encryptionType === 'nip44') {
-              <mat-icon class="encryption-icon secure" matTooltip="Secure (NIP-17)">verified_user</mat-icon>
-              } @else {
+              <!-- Only show encryption warning for legacy NIP-04 messages -->
+              @if (message.encryptionType === 'nip04') {
               <mat-icon class="encryption-icon insecure" matTooltip="Legacy encryption (NIP-04)">block</mat-icon>
               }
               @if (message.pending) {
-              <mat-spinner diameter="10" class="pending-spinner"></mat-spinner>
+              <span class="sending-indicator">
+                <mat-spinner diameter="10" class="pending-spinner"></mat-spinner>
+                <span class="sending-text">Sending</span>
+              </span>
               } @else if (message.failed) {
-              <mat-icon class="status-icon failed-icon">error_outline</mat-icon>
+              <mat-icon class="status-icon failed-icon"
+                [matTooltip]="message.failureReason || 'Message delivery failed'">error_outline</mat-icon>
               } @else if (message.isOutgoing && message.read) {
               <mat-icon class="status-icon read-icon">done_all</mat-icon>
               } @else if (message.isOutgoing && message.received) {
@@ -430,9 +431,29 @@
             </span>
           </div>
 
+          @if (getMessageReactions(message.id).length > 0) {
+          <div class="message-reactions" [class.outgoing]="message.isOutgoing">
+            @for (reaction of getMessageReactions(message.id); track reaction.content) {
+            <button type="button" class="reaction-chip" [class.user-reacted]="reaction.userReacted"
+              [disabled]="reaction.userReacted"
+              (click)="sendReaction(message, reaction.content, reaction.customEmojiUrl)">
+              @if (reaction.customEmojiUrl) {
+              <img class="reaction-custom-emoji" [src]="reaction.customEmojiUrl" [alt]="reaction.content"
+                title="Custom reaction emoji" loading="lazy" />
+              } @else {
+              <span class="reaction-emoji">{{ getReactionDisplay(reaction.content) }}</span>
+              }
+              @if (reaction.count > 1) {
+              <span class="reaction-count">{{ reaction.count }}</span>
+              }
+            </button>
+            }
+          </div>
+          }
+
           @if (message.failed) {
           <div class="message-actions">
-            <button mat-icon-button class="retry-button" (click)="retryMessage(message)">
+            <button mat-icon-button class="retry-button" (click)="retryMessage(message)" matTooltip="Retry sending">
               <mat-icon>refresh</mat-icon>
             </button>
           </div>
@@ -443,6 +464,12 @@
               <mat-icon>more_vert</mat-icon>
             </button>
             <mat-menu #messageMenu="matMenu">
+              @if (!message.isOutgoing && !isReactionMessage(message)) {
+              <button mat-menu-item [matMenuTriggerFor]="reactionMenu">
+                <mat-icon>sentiment_satisfied</mat-icon>
+                <span>React</span>
+              </button>
+              }
               <button mat-menu-item (click)="setReplyTo(message)">
                 <mat-icon>reply</mat-icon>
                 <span>Reply</span>
@@ -455,6 +482,13 @@
                 <mat-icon>content_copy</mat-icon>
                 <span>Copy</span>
               </button>
+              @if (message.isOutgoing && message.failed) {
+              <mat-divider></mat-divider>
+              <button mat-menu-item (click)="retryMessage(message)">
+                <mat-icon>refresh</mat-icon>
+                <span>Retry</span>
+              </button>
+              }
               <mat-divider></mat-divider>
               @if (message.isOutgoing) {
               <button mat-menu-item class="delete-menu-item" (click)="confirmDeleteMessage(message)">
@@ -468,12 +502,44 @@
               </button>
               }
             </mat-menu>
+
+            <mat-menu #reactionMenu="matMenu">
+              <button mat-menu-item (click)="sendReaction(message, '+')">
+                <span class="reaction-menu-emoji">{{ getReactionDisplay('+') }}</span>
+                <span>Like</span>
+              </button>
+              <button mat-menu-item (click)="sendReaction(message, '😂')">
+                <span class="reaction-menu-emoji">😂</span>
+                <span>Laugh</span>
+              </button>
+              <button mat-menu-item (click)="sendReaction(message, '😮')">
+                <span class="reaction-menu-emoji">😮</span>
+                <span>Surprised</span>
+              </button>
+              <button mat-menu-item (click)="sendReaction(message, '😢')">
+                <span class="reaction-menu-emoji">😢</span>
+                <span>Sad</span>
+              </button>
+              <mat-divider></mat-divider>
+              <button mat-menu-item (click)="openReactionPickerDialog(message)">
+                <mat-icon>add_reaction</mat-icon>
+                <span>More reactions...</span>
+              </button>
+            </mat-menu>
           </div>
           }
         </div>
         }
         }
       </div>
+
+      @if (showScrollToLatestButton()) {
+      <button mat-mini-fab class="scroll-latest-button" (click)="scrollToLatestMessage()"
+        matTooltip="Scroll to latest message" aria-label="Scroll to latest message">
+        <mat-icon>keyboard_arrow_down</mat-icon>
+      </button>
+      }
+
       <div class="message-input-container" [class.has-reply]="replyingToMessage()"
         [class.drag-over]="isDragOverMessageInput()" (dragover)="onMessageDragOver($event)"
         (dragleave)="onMessageDragLeave($event)" (drop)="onMessageDrop($event)">
@@ -600,82 +666,126 @@
           }
         </div>
 
-        <!-- Shared Links -->
-        @if (sharedLinks().length > 0) {
-        <div class="chat-section">
-          <div class="section-header">
-            <mat-icon>link</mat-icon>
-            <span>Shared Links</span>
-            <span class="section-count">{{ sharedLinks().length }}</span>
-          </div>
-          <div class="shared-links-list">
-            @for (link of sharedLinks().slice(0, 10); track link.url + link.timestamp) {
-            <a class="shared-link-item" [href]="link.url" target="_blank" rel="noopener noreferrer">
-              <mat-icon class="link-icon">open_in_new</mat-icon>
-              <span class="link-text">{{ getDisplayUrl(link.url) }}</span>
-            </a>
-            }
-            @if (sharedLinks().length > 10) {
-            <div class="see-all-hint">+ {{ sharedLinks().length - 10 }} more links</div>
-            }
-          </div>
-        </div>
-        }
-
-        <!-- Shared Files -->
-        @if (sharedFiles().length > 0) {
-        <div class="chat-section">
-          <div class="section-header">
-            <mat-icon>attach_file</mat-icon>
-            <span>Shared Files</span>
-            <span class="section-count">{{ sharedFiles().length }}</span>
-          </div>
-          <div class="shared-links-list">
-            @for (file of sharedFiles().slice(0, 10); track file.url + file.timestamp) {
-            <a class="shared-link-item" [href]="file.url" target="_blank" rel="noopener noreferrer">
-              <mat-icon class="link-icon">description</mat-icon>
-              <span class="link-text">{{ getDisplayUrl(file.url) }}</span>
-            </a>
-            }
-            @if (sharedFiles().length > 10) {
-            <div class="see-all-hint">+ {{ sharedFiles().length - 10 }} more files</div>
-            }
-          </div>
-        </div>
-        }
-
-        <!-- Shared Media -->
-        @if (sharedMedia().length > 0) {
+        <!-- Shared Images (Thumbnail Grid) -->
+        @if (sharedImages().length > 0) {
         <div class="chat-section">
           <div class="section-header">
             <mat-icon>photo_library</mat-icon>
-            <span>Shared Media</span>
-            <span class="section-count">{{ sharedMedia().length }}</span>
+            <span>Shared Images</span>
+            <span class="section-count">{{ sharedImages().length }}</span>
           </div>
-          <div class="shared-links-list">
-            @for (media of sharedMedia().slice(0, 10); track media.url + media.timestamp) {
-            <a class="shared-link-item" [href]="media.url" target="_blank" rel="noopener noreferrer">
-              <mat-icon class="link-icon">image</mat-icon>
-              <span class="link-text">{{ getDisplayUrl(media.url) }}</span>
-            </a>
-            }
-            @if (sharedMedia().length > 10) {
-            <div class="see-all-hint">+ {{ sharedMedia().length - 10 }} more media</div>
-            }
+          <div class="shared-images-grid">
+            @for (media of sharedImages(); track media.url + media.timestamp; let i = $index) {
+            @if (i < 12) { <div class="shared-image-thumb" (click)="openImagePreview(i, $event)">
+              <img [src]="media.url" [alt]="getDisplayUrl(media.url)" title="Shared image"
+                [attr.title]="getDisplayUrl(media.url)" loading="lazy" />
           </div>
+          }
+          }
+          @if (sharedImages().length > 12) {
+          <div class="see-all-hint">+ {{ sharedImages().length - 12 }} more images</div>
+          }
         </div>
-        }
-
-        @if (sharedLinks().length === 0 && sharedFiles().length === 0 && sharedMedia().length === 0) {
-        <div class="empty-details">
-          <mat-icon>folder_open</mat-icon>
-          <p>No shared content yet</p>
-        </div>
-        }
       </div>
+      }
+
+      <!-- Shared Videos -->
+      @if (sharedVideos().length > 0) {
+      <div class="chat-section">
+        <div class="section-header">
+          <mat-icon>videocam</mat-icon>
+          <span>Shared Videos</span>
+          <span class="section-count">{{ sharedVideos().length }}</span>
+        </div>
+        <div class="shared-links-list">
+          @for (video of sharedVideos().slice(0, 10); track video.url + video.timestamp) {
+          <a class="shared-link-item" [href]="video.url" target="_blank" rel="noopener noreferrer">
+            <mat-icon class="link-icon">play_circle</mat-icon>
+            <span class="link-text">{{ getDisplayUrl(video.url) }}</span>
+          </a>
+          }
+          @if (sharedVideos().length > 10) {
+          <div class="see-all-hint">+ {{ sharedVideos().length - 10 }} more videos</div>
+          }
+        </div>
+      </div>
+      }
+
+      <!-- Shared Links (with OG Previews) -->
+      @if (regularLinks().length > 0) {
+      <div class="chat-section">
+        <div class="section-header">
+          <mat-icon>link</mat-icon>
+          <span>Shared Links</span>
+          <span class="section-count">{{ regularLinks().length }}</span>
+        </div>
+        <div class="shared-links-list">
+          @for (link of regularLinks().slice(0, 10); track link.url + link.timestamp) {
+          @if (getLinkPreview(link.url); as preview) {
+          <a class="shared-link-preview" [href]="link.url" target="_blank" rel="noopener noreferrer">
+            @if (preview.image) {
+            <div class="link-preview-image">
+              <img [src]="preview.image" [alt]="preview.title || ''" title="Link preview"
+                [attr.title]="preview.title || ''" loading="lazy" />
+            </div>
+            }
+            <div class="link-preview-info">
+              @if (preview.title) {
+              <div class="link-preview-title">{{ preview.title }}</div>
+              }
+              @if (preview.description) {
+              <div class="link-preview-description">{{ preview.description }}</div>
+              }
+              <div class="link-preview-url">{{ getDisplayUrl(link.url) }}</div>
+            </div>
+          </a>
+          } @else {
+          <a class="shared-link-item" [href]="link.url" target="_blank" rel="noopener noreferrer">
+            <mat-icon class="link-icon">open_in_new</mat-icon>
+            <span class="link-text">{{ getDisplayUrl(link.url) }}</span>
+          </a>
+          }
+          }
+          @if (regularLinks().length > 10) {
+          <div class="see-all-hint">+ {{ regularLinks().length - 10 }} more links</div>
+          }
+        </div>
+      </div>
+      }
+
+      <!-- Shared Files -->
+      @if (sharedFiles().length > 0) {
+      <div class="chat-section">
+        <div class="section-header">
+          <mat-icon>attach_file</mat-icon>
+          <span>Shared Files</span>
+          <span class="section-count">{{ sharedFiles().length }}</span>
+        </div>
+        <div class="shared-links-list">
+          @for (file of sharedFiles().slice(0, 10); track file.url + file.timestamp) {
+          <a class="shared-link-item" [href]="file.url" target="_blank" rel="noopener noreferrer">
+            <mat-icon class="link-icon">description</mat-icon>
+            <span class="link-text">{{ getDisplayUrl(file.url) }}</span>
+          </a>
+          }
+          @if (sharedFiles().length > 10) {
+          <div class="see-all-hint">+ {{ sharedFiles().length - 10 }} more files</div>
+          }
+        </div>
+      </div>
+      }
+
+      @if (regularLinks().length === 0 && sharedFiles().length === 0 && sharedImages().length === 0 &&
+      sharedVideos().length === 0) {
+      <div class="empty-details">
+        <mat-icon>folder_open</mat-icon>
+        <p>No shared content yet</p>
+      </div>
+      }
     </div>
-    }
-    }
   </div>
   }
+  }
+</div>
+}
 </div>

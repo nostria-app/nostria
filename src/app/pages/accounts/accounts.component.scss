@@ -819,6 +819,59 @@
   justify-content: flex-end;
 }
 
+.x-status-card {
+  margin-bottom: 1.5rem;
+}
+
+.x-card-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.x-card-logo {
+  border-radius: var(--mat-sys-corner-full);
+  object-fit: contain;
+  flex: 0 0 auto;
+}
+
+.x-status-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+}
+
+.x-status-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 1rem;
+  border-radius: 12px;
+  background: var(--mat-sys-surface-container-high);
+  border: 1px solid var(--mat-sys-outline-variant);
+}
+
+.x-status-label {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.x-status-value {
+  color: var(--mat-sys-on-surface);
+  font-size: 1rem;
+}
+
+.x-status-link {
+  color: var(--mat-sys-primary);
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
 .renew-button {
   mat-icon {
     margin-right: 0.5rem;

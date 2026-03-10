@@ -1,4 +1,4 @@
-import { Injectable, effect, inject, signal, untracked } from '@angular/core';
+import { Injectable, effect, inject, signal, untracked, OnDestroy } from '@angular/core';
 import { LoggerService } from './logger.service';
 import {
   GeneralNotification,
@@ -12,15 +12,24 @@ import { DatabaseService } from './database.service';
 import { Event } from 'nostr-tools';
 import { AccountStateService } from './account-state.service';
 import { PublishEventBus } from './publish-event-bus.service';
+import { AccountRelayService } from './relays/account-relay';
 
 @Injectable({
   providedIn: 'root',
 })
-export class NotificationService {
+export class NotificationService implements OnDestroy {
   private logger = inject(LoggerService);
   private database = inject(DatabaseService);
   private accountState = inject(AccountStateService);
   private eventBus = inject(PublishEventBus);
+  private accountRelay = inject(AccountRelayService);
+
+  private readonly AUTO_RETRY_INTERVAL_MS = 10 * 60 * 1000;
+  // Original publish + 2 retries = 3 total attempts.
+  private readonly MAX_AUTO_RETRY_ATTEMPTS = 2;
+  private autoRetryIntervalHandle: ReturnType<typeof setInterval> | null = null;
+  private autoRetryStartTimeoutHandle: ReturnType<typeof setTimeout> | null = null;
+  private autoRetryInProgress = new Set<string>();
 
   // Store all notifications
   private _notifications = signal<Notification[]>([]);
@@ -46,6 +55,7 @@ export class NotificationService {
 
     // Subscribe to publish events from event bus
     this.subscribeToPublishEvents();
+    this.startAutoRetryScheduler();
 
     // Set up effect to persist notifications when they change
     effect(() => {
@@ -110,6 +120,106 @@ export class NotificationService {
     });
   }
 
+  ngOnDestroy(): void {
+    if (this.autoRetryIntervalHandle) {
+      clearInterval(this.autoRetryIntervalHandle);
+      this.autoRetryIntervalHandle = null;
+    }
+
+    if (this.autoRetryStartTimeoutHandle) {
+      clearTimeout(this.autoRetryStartTimeoutHandle);
+      this.autoRetryStartTimeoutHandle = null;
+    }
+  }
+
+  private startAutoRetryScheduler(): void {
+    if (this.autoRetryStartTimeoutHandle) {
+      clearTimeout(this.autoRetryStartTimeoutHandle);
+      this.autoRetryStartTimeoutHandle = null;
+    }
+
+    if (this.autoRetryIntervalHandle) {
+      clearInterval(this.autoRetryIntervalHandle);
+      this.autoRetryIntervalHandle = null;
+    }
+
+    // Start auto-retries only after the app has been open for 10 minutes,
+    // then keep checking every 10 minutes.
+    this.autoRetryStartTimeoutHandle = setTimeout(() => {
+      void this.processAutomaticRetryCycle();
+
+      this.autoRetryIntervalHandle = setInterval(() => {
+        void this.processAutomaticRetryCycle();
+      }, this.AUTO_RETRY_INTERVAL_MS);
+
+      this.autoRetryStartTimeoutHandle = null;
+    }, this.AUTO_RETRY_INTERVAL_MS);
+  }
+
+  private async processAutomaticRetryCycle(): Promise<void> {
+    if (!this._notificationsLoaded()) {
+      return;
+    }
+
+    const now = Date.now();
+    const candidates = this._notifications().filter((notification): notification is RelayPublishingNotification => {
+      if (notification.type !== NotificationType.RELAY_PUBLISHING) {
+        return false;
+      }
+
+      const relayNotification = notification as RelayPublishingNotification;
+
+      if (this.autoRetryInProgress.has(notification.id)) {
+        return false;
+      }
+
+      const failedCount = relayNotification.relayPromises?.filter((rp: RelayPublishPromise) => rp.status === 'failed').length || 0;
+      if (failedCount === 0 || !relayNotification.complete) {
+        return false;
+      }
+
+      const retryCount = relayNotification.retryCount ?? 0;
+      if (retryCount >= this.MAX_AUTO_RETRY_ATTEMPTS) {
+        return false;
+      }
+
+      const lastAttemptAt = relayNotification.lastRetryAttemptAt ?? relayNotification.timestamp;
+      return now - lastAttemptAt >= this.AUTO_RETRY_INTERVAL_MS;
+    });
+
+    if (candidates.length === 0) {
+      return;
+    }
+
+    this.logger.info(`[NotificationService] Auto-retrying ${candidates.length} failed publish notification(s)`);
+
+    for (const candidate of candidates) {
+      this.autoRetryInProgress.add(candidate.id);
+      try {
+        await this.retryFailedRelays(candidate.id, (event, relayUrl) => this.accountRelay.publishToRelay(event, relayUrl));
+      } catch (error) {
+        this.logger.error(`[NotificationService] Auto-retry failed for notification ${candidate.id}`, error);
+      } finally {
+        this.autoRetryInProgress.delete(candidate.id);
+      }
+    }
+  }
+
+  private normalizeRelayNotification(notification: Notification): Notification {
+    if (notification.type !== NotificationType.RELAY_PUBLISHING) {
+      return notification;
+    }
+
+    const relayNotification = notification as RelayPublishingNotification;
+    const normalizedRelayNotification: RelayPublishingNotification = {
+      ...relayNotification,
+      retryCount: relayNotification.retryCount ?? 0,
+      lastRetryAttemptAt: relayNotification.lastRetryAttemptAt ?? relayNotification.timestamp,
+    };
+
+    return normalizedRelayNotification;
+  }
+
   /**
    * Subscribe to publish events from the event bus
    */
@@ -169,6 +279,8 @@ export class NotificationService {
       event,
       relayPromises: relayPromiseObjects,
       complete: false,
+      retryCount: 0,
+      lastRetryAttemptAt: Date.now(),
       recipientPubkey: pubkey,
     };
 
@@ -282,8 +394,12 @@ export class NotificationService {
         // Sort by timestamp (newest first)
         filteredNotifications.sort((a, b) => b.timestamp - a.timestamp);
 
-        this.logger.info(`Loaded ${filteredNotifications.length} notifications from storage`);
-        this._notifications.set(filteredNotifications);
+        const normalizedNotifications = filteredNotifications.map(notification =>
+          this.normalizeRelayNotification(notification)
+        );
+
+        this.logger.info(`Loaded ${normalizedNotifications.length} notifications from storage`);
+        this._notifications.set(normalizedNotifications);
       } else {
         this.logger.info('No notifications found in storage');
         this._notifications.set([]);
@@ -356,6 +472,8 @@ export class NotificationService {
       event,
       relayPromises: relayPromiseObjects,
       complete: false,
+      retryCount: 0,
+      lastRetryAttemptAt: Date.now(),
       recipientPubkey: pubkey, // Associate with current account
     };
 
@@ -374,6 +492,8 @@ export class NotificationService {
         // Don't persist the promise itself, just the metadata
       })),
       complete: false,
+      retryCount: 0,
+      lastRetryAttemptAt: Date.now(),
       recipientPubkey: pubkey, // Associate with current account
     };
 
@@ -567,8 +687,35 @@ export class NotificationService {
         ?.filter(rp => rp.status === 'failed')
         .map(rp => rp.relayUrl) || [];
 
+    if (failedRelays.length === 0) {
+      this.logger.debug(`No failed relays to retry for notification ${notificationId}`);
+      return;
+    }
+
+    const currentRetryCount = relayNotification.retryCount ?? 0;
+    const nextRetryCount = currentRetryCount + 1;
+    const retryTimestamp = Date.now();
+
+    this._notifications.update(notifications => notifications.map(notification => {
+      if (notification.id !== notificationId || notification.type !== NotificationType.RELAY_PUBLISHING) {
+        return notification;
+      }
+
+      const relayPublishNotification = notification as RelayPublishingNotification;
+      return {
+        ...relayPublishNotification,
+        retryCount: nextRetryCount,
+        lastRetryAttemptAt: retryTimestamp,
+      };
+    }));
+
+    const updatedNotification = this._notifications().find(n => n.id === notificationId);
+    if (updatedNotification && updatedNotification.type === NotificationType.RELAY_PUBLISHING) {
+      await this.persistNotificationToStorage(updatedNotification);
+    }
+
     this.logger.debug(
-      `Found ${failedRelays.length} failed relays to retry: ${failedRelays.join(', ')}`
+      `Retry attempt #${nextRetryCount} for notification ${notificationId}. Failed relays: ${failedRelays.join(', ')}`
     );
 
     // Update status of failed relays back to pending

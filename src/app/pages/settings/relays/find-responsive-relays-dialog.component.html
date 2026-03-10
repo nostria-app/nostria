@@ -1,0 +1,285 @@
+<div class="find-relays-dialog" dialog-content>
+  <section class="summary-grid">
+    <article class="summary-card">
+      <div class="summary-label">Recommended</div>
+      <div class="summary-value">{{ suggestedRelays().length }}</div>
+    </article>
+    <article class="summary-card">
+      <div class="summary-label">Already Added</div>
+      <div class="summary-value">{{ alreadyAddedCount() }}</div>
+    </article>
+    <article class="summary-card">
+      <div class="summary-label">Selected</div>
+      <div class="summary-value">{{ selectedUrls().size }}</div>
+    </article>
+  </section>
+
+  <section class="intro">
+    <p>
+      Recommendations are from NIP-66 relay discovery events (kind 30166) and sorted by
+      responsiveness.
+    </p>
+    <p class="latency-note">
+      Reported latency is measured by monitor providers and can differ from your own network. Use
+      <strong>Check Local Latency</strong> for your actual connection.
+    </p>
+    @if (lastUpdatedAt()) {
+    <p class="updated-at">Updated just now.</p>
+    }
+  </section>
+
+  @if (loading()) {
+  <section class="state-panel">
+    <mat-icon class="spinning">sync</mat-icon>
+    <p>Checking relay monitors for responsive relays...</p>
+  </section>
+  } @else if (error()) {
+  <section class="state-panel">
+    <mat-icon>error</mat-icon>
+    <p>{{ error() }}</p>
+    <button mat-button (click)="findRelays()">
+      <mat-icon>refresh</mat-icon>
+      Try Again
+    </button>
+  </section>
+  } @else if (recommendations().length === 0) {
+  <section class="state-panel">
+    <mat-icon>search_off</mat-icon>
+    <p>No relay recommendations found right now.</p>
+    <button mat-button (click)="findRelays()">
+      <mat-icon>refresh</mat-icon>
+      Refresh
+    </button>
+  </section>
+  } @else {
+  <section class="results">
+    @for (relay of recommendations(); track relay.url) {
+    <article class="relay-card" [class.already-added]="relay.isAlreadyAdded" [class.selected]="hasSelected(relay.url)"
+      [class.quality-good]="relay.quality === 'good'" [class.quality-fair]="relay.quality === 'fair'"
+      [class.quality-poor]="relay.quality === 'poor'" (pointerup)="onCardPointerUp($event, relay.url)">
+      <div class="relay-row">
+        <div class="relay-main">
+          <div class="relay-title-row">
+            <div class="relay-url">{{ formatRelayUrl(relay.url) }}</div>
+            <span class="quality-pill" [class.quality-good]="relay.quality === 'good'"
+              [class.quality-fair]="relay.quality === 'fair'" [class.quality-poor]="relay.quality === 'poor'">
+              {{ getQualityLabel(relay) }}
+            </span>
+          </div>
+          <div class="relay-meta">
+            <span class="meta-chip">Open: {{ formatLatency(relay.openRtt) }}</span>
+            <span class="meta-chip">Read: {{ formatLatency(relay.readRtt) }}</span>
+            <span class="meta-chip">Write: {{ formatLatency(relay.writeRtt) }}</span>
+            <span class="meta-chip">Seen: {{ formatAge(relay.ageSeconds) }}</span>
+            @if (!relay.hasRttData) {
+            <span class="meta-chip">No RTT in event</span>
+            }
+            @if (!relay.isFresh) {
+            <span class="meta-chip stale">Older data</span>
+            }
+          </div>
+        </div>
+
+        <div class="relay-actions">
+          @if (relay.isAlreadyAdded) {
+          <button mat-button disabled (click)="$event.stopPropagation()">
+            <mat-icon>check_circle</mat-icon>
+            Added
+          </button>
+          } @else {
+          <button mat-button (click)="toggleSelection(relay.url); $event.stopPropagation()">
+            <mat-icon>
+              @if (hasSelected(relay.url)) {
+              check_circle
+              } @else {
+              add_circle
+              }
+            </mat-icon>
+            @if (hasSelected(relay.url)) {
+            Selected
+            } @else {
+            Select
+            }
+          </button>
+          }
+
+          <button mat-icon-button (click)="copyRelayUrl(relay.url); $event.stopPropagation()"
+            aria-label="Copy relay URL">
+            <mat-icon>content_copy</mat-icon>
+          </button>
+
+          <button mat-icon-button (click)="toggleExpanded(relay.url); $event.stopPropagation()"
+            [attr.aria-expanded]="isExpanded(relay.url)">
+            <mat-icon>{{ isExpanded(relay.url) ? 'expand_less' : 'expand_more' }}</mat-icon>
+          </button>
+        </div>
+      </div>
+
+      @if (isExpanded(relay.url)) {
+      <div class="relay-details">
+        <div class="detail-grid">
+          <div class="detail-item">
+            <div class="detail-label">Monitor</div>
+            <app-relay-monitor-profile [pubkey]="relay.protocol.monitorPubkey"></app-relay-monitor-profile>
+          </div>
+
+          <div class="detail-item">
+            <div class="detail-label">NIPs</div>
+            <div class="detail-value">
+              @if (relay.protocol.supportedNips.length > 0) {
+              {{ relay.protocol.supportedNips.join(', ') }}
+              } @else {
+              Not provided
+              }
+            </div>
+          </div>
+
+          <div class="detail-item">
+            <div class="detail-label">Accepted Kinds</div>
+            <div class="detail-value">
+              @if (relay.protocol.acceptedKinds.length > 0) {
+              {{ relay.protocol.acceptedKinds.join(', ') }}
+              } @else {
+              Not provided
+              }
+            </div>
+          </div>
+
+          <div class="detail-item">
+            <div class="detail-label">Rejected Kinds</div>
+            <div class="detail-value">
+              @if (relay.protocol.rejectedKinds.length > 0) {
+              {{ relay.protocol.rejectedKinds.join(', ') }}
+              } @else {
+              Not provided
+              }
+            </div>
+          </div>
+
+          <div class="detail-item">
+            <div class="detail-label">Requirements</div>
+            <div class="detail-value">
+              @if (relay.protocol.requirements.length > 0) {
+              {{ relay.protocol.requirements.join(', ') }}
+              } @else {
+              Not provided
+              }
+            </div>
+          </div>
+
+          <div class="detail-item">
+            <div class="detail-label">Not Required</div>
+            <div class="detail-value">
+              @if (relay.protocol.rejectedRequirements.length > 0) {
+              {{ relay.protocol.rejectedRequirements.join(', ') }}
+              } @else {
+              Not provided
+              }
+            </div>
+          </div>
+
+          <div class="detail-item">
+            <div class="detail-label">Network</div>
+            <div class="detail-value">
+              @if (relay.protocol.networkTypes.length > 0) {
+              {{ relay.protocol.networkTypes.join(', ') }}
+              } @else {
+              Not provided
+              }
+            </div>
+          </div>
+
+          <div class="detail-item">
+            <div class="detail-label">Relay Type</div>
+            <div class="detail-value">
+              @if (relay.protocol.relayTypes.length > 0) {
+              {{ relay.protocol.relayTypes.join(', ') }}
+              } @else {
+              Not provided
+              }
+            </div>
+          </div>
+
+          <div class="detail-item">
+            <div class="detail-label">Topics</div>
+            <div class="detail-value">
+              @if (relay.protocol.topics.length > 0) {
+              {{ relay.protocol.topics.join(', ') }}
+              } @else {
+              Not provided
+              }
+            </div>
+          </div>
+
+          <div class="detail-item">
+            <div class="detail-label">Geohash</div>
+            <div class="detail-value">
+              @if (relay.protocol.geohashes.length > 0) {
+              {{ relay.protocol.geohashes.join(', ') }}
+              } @else {
+              Not provided
+              }
+            </div>
+          </div>
+
+          <div class="detail-item">
+            <div class="detail-label">NIP-11 Content</div>
+            <div class="detail-value">{{ relay.protocol.hasNip11Content ? 'Included' : 'Not included' }}</div>
+          </div>
+
+          <div class="detail-item detail-item-latency">
+            <div class="detail-label">Your Local Latency</div>
+            <div class="detail-latency-row">
+              <button mat-button (click)="checkLocalLatency(relay.url); $event.stopPropagation()"
+                [disabled]="isCheckingLocalLatency(relay.url)">
+                <mat-icon>
+                  @if (isCheckingLocalLatency(relay.url)) {
+                  sync
+                  } @else {
+                  speed
+                  }
+                </mat-icon>
+                @if (isCheckingLocalLatency(relay.url)) {
+                Checking...
+                } @else {
+                Check Local Latency
+                }
+              </button>
+
+              @if (getLocalLatency(relay.url) !== null) {
+              <span class="detail-value">{{ getLocalLatency(relay.url) }} ms</span>
+              }
+
+              @if (getLocalLatencyError(relay.url)) {
+              <span class="detail-value latency-error">{{ getLocalLatencyError(relay.url) }}</span>
+              }
+            </div>
+          </div>
+        </div>
+      </div>
+      }
+    </article>
+    }
+  </section>
+  }
+
+  <div class="actions" dialog-actions>
+    <div class="left-actions">
+      <button mat-button (click)="findRelays()" [disabled]="loading()">
+        <mat-icon>refresh</mat-icon>
+        Refresh
+      </button>
+      <button mat-button (click)="addTopRelays(3)" [disabled]="loading() || suggestedRelays().length === 0">
+        <mat-icon>bolt</mat-icon>
+        Add Top 3
+      </button>
+    </div>
+
+    <div class="right-actions">
+      <button mat-button (click)="dialogRef.close()">Cancel</button>
+      <button mat-flat-button (click)="confirmSelection()" [disabled]="selectedUrls().size === 0">
+        Add Selected ({{ selectedUrls().size }})
+      </button>
+    </div>
+  </div>
+</div>

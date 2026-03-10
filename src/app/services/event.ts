@@ -97,6 +97,11 @@ export interface ThreadData {
   rootEvent: Event | null;
 }
 
+export interface DeepResolutionResult {
+  event: Event | null;
+  deletionEvent: Event | null;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -570,24 +575,30 @@ export class EventService {
    * This is a fallback mechanism when normal event loading fails.
    * @param eventId The hex event ID to search for
    * @param onProgress Optional callback to report progress (currentBatch, totalBatches, relayUrls)
-   * @returns The found event or null
+   * @returns Found event (if discovered) and/or a kind 5 deletion request referencing the event
    */
   async loadEventWithDeepResolution(
     eventId: string,
     onProgress?: (currentBatch: number, totalBatches: number, relayUrls: string[]) => void
-  ): Promise<Event | null> {
+  ): Promise<DeepResolutionResult> {
     const BATCH_SIZE = 10;
+    let foundDeletionEvent: Event | null = null;
 
     // Get observed relays sorted by events received (most active first)
     const observedRelays = await this.relays.getObservedRelaysSorted('eventsReceived');
 
     if (observedRelays.length === 0) {
       this.logger.info('[Deep Resolution] No observed relays available');
-      return null;
+      return { event: null, deletionEvent: null };
     }
 
-    // Extract just the URLs
-    const relayUrls = observedRelays.map(r => r.url);
+    // Filter out ignored/malformed/insecure relays before batching.
+    const relayUrls = this.utilities.getUniqueNormalizedRelayUrls(observedRelays.map(r => r.url));
+
+    if (relayUrls.length === 0) {
+      this.logger.info('[Deep Resolution] No eligible observed relays available after filtering ignored domains');
+      return { event: null, deletionEvent: null };
+    }
 
     // Calculate number of batches
     const totalBatches = Math.ceil(relayUrls.length / BATCH_SIZE);
@@ -614,16 +625,35 @@ export class EventService {
       }
 
       try {
-        // Query this batch of relays
-        const filter: Filter = { ids: [eventId] };
-        const events = await this.relayPool.query(batchRelays, filter, 3000);
+        const eventFilter: Filter = { ids: [eventId] };
+        const deletionFilter: Filter = {
+          kinds: [kinds.EventDeletion],
+          '#e': [eventId],
+        };
+
+        // Query event and deletion requests in parallel for the same relay batch.
+        const [events, deletionEvents] = await Promise.all([
+          this.relayPool.query(batchRelays, eventFilter, 3000),
+          this.relayPool.query(batchRelays, deletionFilter, 3000),
+        ]);
 
         if (events && events.length > 0) {
           this.logger.info(`[Deep Resolution] Event found in batch ${i + 1}/${totalBatches}!`, {
             eventId: events[0].id,
             relays: batchRelays,
           });
-          return events[0];
+          return { event: events[0], deletionEvent: foundDeletionEvent };
+        }
+
+        if (!foundDeletionEvent && deletionEvents && deletionEvents.length > 0) {
+          const latestDeletion = [...deletionEvents].sort((a, b) => b.created_at - a.created_at)[0];
+          foundDeletionEvent = latestDeletion;
+
+          this.logger.info(`[Deep Resolution] Found deletion request in batch ${i + 1}/${totalBatches}`, {
+            deletionEventId: latestDeletion.id,
+            deletionAuthor: latestDeletion.pubkey,
+            targetEventId: eventId,
+          });
         }
       } catch (error) {
         this.logger.error(`[Deep Resolution] Error querying batch ${i + 1}:`, error);
@@ -631,8 +661,14 @@ export class EventService {
       }
     }
 
-    this.logger.info('[Deep Resolution] Event not found after searching all batches');
-    return null;
+    this.logger.info('[Deep Resolution] Event not found after searching all batches', {
+      deletionFound: !!foundDeletionEvent,
+    });
+
+    return {
+      event: null,
+      deletionEvent: foundDeletionEvent,
+    };
   }
 
   /**
@@ -2149,6 +2185,7 @@ export class EventService {
       {
         title,
         headerIcon: this.accountState.profile()?.data?.picture || '',
+        panelClass: 'note-editor-dialog-panel',
         width: '680px',
         maxWidth: '95vw',
         disableClose: true,

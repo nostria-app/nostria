@@ -9,6 +9,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { LayoutService } from '../../services/layout.service';
 import { TaggedReferencesComponent } from './tagged-references/tagged-references.component';
 import { Event as NostrEvent, nip19 } from 'nostr-tools';
+import { isXStatusUrl, normalizePreviewUrl } from '../../utils/url-cleaner';
 
 interface SocialPreview {
   url: string;
@@ -39,7 +40,7 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
 
   @ViewChild('contentContainer') contentContainer!: ElementRef;
   // Input for raw content
-  content = input<string | undefined>('');
+  content = input<unknown>('');
 
   // Input for the event (to access tags for mentions/articles)
   event = input<NostrEvent | null>(null);
@@ -106,7 +107,11 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
   });
 
   displayContentTokens = computed<ContentToken[]>(() => {
-    const tokens = this.contentTokens();
+    let tokens = this.contentTokens();
+
+    if (!this.hideSocialPreviews() && this.settings.settings().socialSharingPreview) {
+      tokens = tokens.filter(token => token.type !== 'url' || !isXStatusUrl(token.content));
+    }
 
     if (!this.hideInlineMediaAndLinks()) {
       return tokens;
@@ -130,7 +135,7 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
     // Effect to parse content when it changes and component is visible
     effect(() => {
       const shouldRender = this._isVisible() || this._hasBeenVisible();
-      const currentContent = this.content() || '';
+      const currentContent = this.normalizeContent(this.content());
 
       if (!shouldRender) {
         return;
@@ -156,10 +161,20 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
       const urlTokens = tokens.filter(token => token.type === 'url');
 
       // Collect URLs from content tokens, excluding proxy web URL (shown as globe icon instead)
-      const urlSet = new Set<string>(urlTokens.map(token => token.content));
       const proxyUrl = this.proxyWebUrl();
+      const normalizedProxyUrl = proxyUrl ? normalizePreviewUrl(proxyUrl) : null;
+      const urlSet = new Set<string>(
+        urlTokens
+          .map(token => normalizePreviewUrl(token.content))
+          .filter(url => !!url && url !== normalizedProxyUrl)
+      );
+
       if (proxyUrl) {
         urlSet.delete(proxyUrl);
+      }
+
+      if (normalizedProxyUrl) {
+        urlSet.delete(normalizedProxyUrl);
       }
 
       const uniqueUrls = [...urlSet];
@@ -230,7 +245,7 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
           const fallbackTokens: ContentToken[] = [{
             id: 0,
             type: 'text',
-            content: content
+            content: this.normalizeContent(content)
           }];
           this._cachedTokens.set(fallbackTokens);
           this._lastParsedContent = content;
@@ -239,6 +254,22 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
         this._isParsing.set(false);
       }
     }, this.PARSE_DEBOUNCE_TIME);
+  }
+
+  private normalizeContent(content: unknown): string {
+    if (typeof content === 'string') {
+      return content;
+    }
+
+    if (content == null) {
+      return '';
+    }
+
+    try {
+      return JSON.stringify(content);
+    } catch {
+      return String(content);
+    }
   }
 
   /**
@@ -329,74 +360,11 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
   }
 
   private async loadSocialPreviews(urls: string[]): Promise<void> {
-    // Initialize previews with loading state
-    const initialPreviews = urls.map(url => ({
+    this.socialPreviews.set(urls.map(url => ({
       url,
-      loading: true,
+      loading: false,
       error: false,
-    }));
-
-    this.socialPreviews.set(initialPreviews);
-
-    // Load previews for each URL
-    const previewPromises = urls.map(async url => {
-      try {
-        // In a real implementation, you would call an API to fetch the metadata
-        // For example, using a service like Open Graph or your own backend API
-        await fetch(`https://metadata.nostria.app/og?url=${encodeURIComponent(url)}`);
-
-        // This is a mock response - replace with actual API call
-        // const preview = await response.json();
-
-        // Mock preview data
-        const preview = await this.mockFetchPreview(url);
-
-        return {
-          ...preview,
-          url,
-          loading: false,
-          error: false,
-        };
-      } catch (error) {
-        console.error(`Failed to load preview for ${url}:`, error);
-        return {
-          url,
-          loading: false,
-          error: true,
-        };
-      }
-    });
-
-    // Update previews as they complete
-    const previews = await Promise.all(previewPromises);
-    this.socialPreviews.set(previews);
-  }
-
-  // Mock function for demonstration purposes
-  private async mockFetchPreview(url: string): Promise<Partial<SocialPreview>> {
-    // In a real application, replace this with an actual API call
-    await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate network delay
-
-    // Return mock data based on URL type
-    if (url.includes('youtube.com') || url.includes('youtu.be')) {
-      return {
-        title: 'YouTube Video Title',
-        description: 'This is a YouTube video description',
-        image: 'https://i.ytimg.com/vi/SAMPLE_ID/hqdefault.jpg',
-      };
-    } else if (url.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
-      return {
-        title: 'Image',
-        description: 'Image from the web',
-        image: url,
-      };
-    } else {
-      return {
-        title: `Website Title for ${new URL(url).hostname}`,
-        description: 'Website description would appear here',
-        image: 'https://via.placeholder.com/300x200?text=Website+Preview',
-      };
-    }
+    })));
   }
 
   onNostrMentionClick(token: ContentToken) {

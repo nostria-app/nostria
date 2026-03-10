@@ -35,7 +35,7 @@ nav {
 // Glass toolbar styles - positioned beside sidenav (not fixed)
 .app-toolbar {
   position: relative !important;
-  z-index: 60;
+  z-index: 600;
   height: var(--toolbar-height);
   padding: 8px 16px;
   display: flex;
@@ -1499,6 +1499,11 @@ mat-sidenav-content {
     height: auto !important;
     min-height: 0 !important;
   }
+}
+
+.left-panel.panel-overlay-active,
+.right-panel.panel-overlay-active {
+  z-index: 20;
 }
 
 // Panel Content Area (used by both panels)

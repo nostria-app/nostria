@@ -22,55 +22,55 @@ const TRACKING_PARAMETERS = [
   'dclid',
   'gbraid',
   'wbraid',
-  
+
   // Facebook/Meta
   'fbclid',
   'fb_action_ids',
   'fb_action_types',
   'fb_source',
   'fb_ref',
-  
+
   // Twitter/X
   'twclid',
   's',
   't',
-  
+
   // Microsoft
   'msclkid',
-  
+
   // Mailchimp
   'mc_cid',
   'mc_eid',
-  
+
   // HubSpot
   '_hsenc',
   '_hsmi',
   'hsCtaTracking',
-  
+
   // Marketo
   'mkt_tok',
-  
+
   // Adobe
   'icid',
-  
+
   // Yandex
   'yclid',
-  
+
   // TikTok
   'ttclid',
-  
+
   // LinkedIn
   'li_fat_id',
   'trk',
-  
+
   // Instagram
   'igshid',
   'igsh',
-  
+
   // YouTube
   'si',
   'feature',
-  
+
   // Generic tracking parameters
   'ref',
   'source',
@@ -102,10 +102,10 @@ export function removeTrackingParameters(url: string): string {
   try {
     const urlObj = new URL(url);
     const params = new URLSearchParams(urlObj.search);
-    
+
     // Track if any parameters were removed
     let hasChanges = false;
-    
+
     // Remove tracking parameters
     TRACKING_PARAMETERS.forEach(param => {
       if (params.has(param)) {
@@ -113,18 +113,77 @@ export function removeTrackingParameters(url: string): string {
         hasChanges = true;
       }
     });
-    
+
     // Only modify the URL if we actually removed something
     if (hasChanges) {
       urlObj.search = params.toString();
     }
-    
+
     return urlObj.toString();
   } catch (error) {
     // If URL parsing fails, return the original URL
     console.warn('Failed to parse URL for tracking parameter removal:', error);
     return url;
   }
+}
+
+/**
+ * Check if a URL points to a Twitter/X status post
+ * @param url The URL to check
+ * @returns True when the URL is a tweet/status permalink
+ */
+export function isXStatusUrl(url: string): boolean {
+  try {
+    const urlObj = new URL(url);
+    const hostname = urlObj.hostname.toLowerCase();
+
+    if (!['x.com', 'www.x.com', 'twitter.com', 'www.twitter.com'].includes(hostname)) {
+      return false;
+    }
+
+    return /\/status\/\d+/i.test(urlObj.pathname);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Normalize a Twitter/X status URL for preview caching and deduplication
+ * @param url The URL to normalize
+ * @returns A cleaned URL with tracking parameters removed and canonical host/path for status links
+ */
+export function normalizeXStatusUrl(url: string): string {
+  const cleanedUrl = removeTrackingParameters(url);
+
+  if (!isXStatusUrl(cleanedUrl)) {
+    return cleanedUrl;
+  }
+
+  try {
+    const urlObj = new URL(cleanedUrl);
+    const pathSegments = urlObj.pathname.split('/').filter(Boolean);
+    const statusIndex = pathSegments.findIndex(segment => segment.toLowerCase() === 'status');
+
+    if (statusIndex <= 0 || statusIndex === pathSegments.length - 1) {
+      return cleanedUrl;
+    }
+
+    const username = pathSegments[statusIndex - 1];
+    const statusId = pathSegments[statusIndex + 1];
+    return `https://x.com/${username}/status/${statusId}`;
+  } catch {
+    return cleanedUrl;
+  }
+}
+
+/**
+ * Normalize URLs before fetching previews so equivalent links map to the same cache entry
+ * @param url The URL to normalize
+ * @returns The normalized URL
+ */
+export function normalizePreviewUrl(url: string): string {
+  const cleanedUrl = removeTrackingParameters(url);
+  return isXStatusUrl(cleanedUrl) ? normalizeXStatusUrl(cleanedUrl) : cleanedUrl;
 }
 
 /**
@@ -136,7 +195,7 @@ export function cleanTrackingParametersFromText(text: string): string {
   // More comprehensive URL regex that handles common edge cases
   // Matches http(s) URLs and stops at common punctuation that's likely not part of the URL
   const urlRegex = /(https?:\/\/[^\s<>"{}|\\^`\]]+)/g;
-  
+
   return text.replace(urlRegex, (match) => {
     // Remove trailing punctuation that's likely not part of the URL
     // (periods, commas, semicolons, etc. at the end)
@@ -144,11 +203,11 @@ export function cleanTrackingParametersFromText(text: string): string {
     const trailingPunctuationRegex = /[.,;:!?)\]]+$/;
     const trailingMatch = url.match(trailingPunctuationRegex);
     const trailingPunctuation = trailingMatch ? trailingMatch[0] : '';
-    
+
     if (trailingPunctuation) {
       url = url.slice(0, -trailingPunctuation.length);
     }
-    
+
     const cleanedUrl = removeTrackingParameters(url);
     return cleanedUrl + trailingPunctuation;
   });
@@ -163,9 +222,9 @@ export function hasTrackingParameters(url: string): boolean {
   try {
     const urlObj = new URL(url);
     const params = new URLSearchParams(urlObj.search);
-    
+
     return TRACKING_PARAMETERS.some(param => params.has(param));
-  } catch (error) {
+  } catch {
     return false;
   }
 }

@@ -1,0 +1,43 @@
+.relay-list-card {
+  background: var(--mat-sys-surface-container-low);
+}
+
+mat-card-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.relay-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.relay-row {
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--mat-sys-surface-container);
+}
+
+.relay-host {
+  color: var(--mat-sys-on-surface);
+}
+
+.relay-url {
+  margin-top: 4px;
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 0.84rem;
+  word-break: break-all;
+}
+
+.relay-fallback {
+  color: var(--mat-sys-on-surface-variant);
+}
+
+mat-chip-set {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}

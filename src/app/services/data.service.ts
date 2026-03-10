@@ -162,7 +162,7 @@ export class DataService implements OnDestroy {
 
     if (typeof event === 'object') {
       const candidate = event as Record<string, unknown>;
-      const requiredFields: Array<keyof Event> = ['id', 'kind', 'pubkey', 'tags', 'content'];
+      const requiredFields: (keyof Event)[] = ['id', 'kind', 'pubkey', 'tags', 'content'];
       const missingFields = requiredFields.filter((field) => !(field in candidate));
 
       return {
@@ -872,8 +872,32 @@ export class DataService implements OnDestroy {
     try {
       userRelayUrls = await this.discoveryRelayEx.getUserRelayUrls(pubkey);
       this.logger.debug(`[Profile Deep Resolution] Found ${userRelayUrls.length} relay URLs for user`);
+
+      // Update status with the result
+      this.deepDiscoveryStatus.set({
+        pubkey,
+        phase: 'user-relays',
+        currentBatch: 0,
+        totalBatches: 0,
+        message: userRelayUrls.length > 0
+          ? `Found ${userRelayUrls.length} user relays, querying...`
+          : 'No relay list found, searching observed relays...',
+      });
+
+      // If we found relay URLs, re-publish the relay list event to our discovery/indexer relays
+      // so future lookups for this user are faster for everyone using the same indexers
+      if (userRelayUrls.length > 0) {
+        this.republishRelayListToDiscoveryRelays(pubkey);
+      }
     } catch (error) {
       this.logger.warn(`[Profile Deep Resolution] Failed to get user relay URLs:`, error);
+      this.deepDiscoveryStatus.set({
+        pubkey,
+        phase: 'user-relays',
+        currentBatch: 0,
+        totalBatches: 0,
+        message: 'No relay list found, searching observed relays...',
+      });
     }
 
     // If we have user relay URLs, try them first with a longer timeout
@@ -886,7 +910,7 @@ export class DataService implements OnDestroy {
         phase: 'user-relays',
         currentBatch: 0,
         totalBatches: 0,
-        message: `Querying ${optimalRelays.length} user relays...`,
+        message: `Querying ${optimalRelays.length} of ${userRelayUrls.length} user relays...`,
       });
 
       try {
@@ -900,12 +924,17 @@ export class DataService implements OnDestroy {
           const mostRecent = events.sort((a, b) => b.created_at - a.created_at)[0];
           this.logger.info(`[Profile Deep Resolution] Profile found on user's relays!`);
           this.deepDiscoveryStatus.set(null); // Clear status on success
+
+          // If we already have relay URLs, the relay list was found via indexers — republish already triggered above
           return mostRecent;
         }
       } catch (error) {
         this.logger.warn(`[Profile Deep Resolution] Error querying user relays:`, error);
       }
     }
+
+    // Track whether we had relay URLs before the observed-relay search
+    const hadRelayList = userRelayUrls.length > 0;
 
     // Get observed relays sorted by events received (most active first)
     const observedRelays = await this.relaysService.getObservedRelaysSorted('eventsReceived');
@@ -916,8 +945,14 @@ export class DataService implements OnDestroy {
       return null;
     }
 
-    // Extract just the URLs
-    const relayUrls = observedRelays.map(r => r.url);
+    // Filter out ignored/malformed/insecure relays before deep discovery.
+    const relayUrls = this.utilities.getUniqueNormalizedRelayUrls(observedRelays.map(r => r.url));
+
+    if (relayUrls.length === 0) {
+      this.logger.info('[Profile Deep Resolution] No eligible observed relays available after filtering ignored domains');
+      this.deepDiscoveryStatus.set(null);
+      return null;
+    }
 
     // Calculate number of batches
     const totalBatches = Math.ceil(relayUrls.length / BATCH_SIZE);
@@ -957,6 +992,13 @@ export class DataService implements OnDestroy {
           const mostRecent = events.sort((a, b) => b.created_at - a.created_at)[0];
           this.logger.info(`[Profile Deep Resolution] Profile found in batch ${i + 1}/${totalBatches}!`);
           this.deepDiscoveryStatus.set(null); // Clear status on success
+
+          // If we didn't have a relay list from the indexer relays, do a deep discovery
+          // for the relay list so we can republish it to our discovery relays
+          if (!hadRelayList) {
+            this.deepDiscoverAndRepublishRelayList(pubkey);
+          }
+
           return mostRecent;
         }
       } catch (error) {
@@ -968,6 +1010,74 @@ export class DataService implements OnDestroy {
     this.logger.info('[Profile Deep Resolution] Profile not found after searching all batches');
     this.deepDiscoveryStatus.set(null); // Clear status
     return null;
+  }
+
+  /**
+   * Deep discover a user's relay list (kind 10002) by searching observed relays in batches,
+   * then re-publish it to the current user's discovery/indexer relays.
+   * This runs entirely in the background and does not block the caller.
+   */
+  private deepDiscoverAndRepublishRelayList(pubkey: string): void {
+    queueMicrotask(async () => {
+      const BATCH_SIZE = 10;
+
+      try {
+        // First check if we already have the relay list in the database
+        const existing = await this.database.getEventByPubkeyAndKind(pubkey, kinds.RelayList);
+        if (existing) {
+          this.logger.debug(`[Relay List Deep Discovery] Relay list already in DB for ${pubkey.substring(0, 8)}..., republishing`);
+          this.republishRelayListToDiscoveryRelays(pubkey);
+          return;
+        }
+
+        this.logger.info(`[Relay List Deep Discovery] Searching observed relays for relay list of ${pubkey.substring(0, 8)}...`);
+
+        // Get observed relays sorted by events received (most active first)
+        const observedRelays = await this.relaysService.getObservedRelaysSorted('eventsReceived');
+        if (observedRelays.length === 0) {
+          this.logger.debug(`[Relay List Deep Discovery] No observed relays available`);
+          return;
+        }
+
+        const relayUrls = this.utilities.getUniqueNormalizedRelayUrls(observedRelays.map(r => r.url));
+        if (relayUrls.length === 0) {
+          this.logger.debug('[Relay List Deep Discovery] No eligible observed relays available after filtering ignored domains');
+          return;
+        }
+        const totalBatches = Math.ceil(relayUrls.length / BATCH_SIZE);
+
+        for (let i = 0; i < totalBatches; i++) {
+          const start = i * BATCH_SIZE;
+          const end = Math.min(start + BATCH_SIZE, relayUrls.length);
+          const batchRelays = relayUrls.slice(start, end);
+
+          try {
+            const events = await this.relayPool.query(batchRelays, {
+              authors: [pubkey],
+              kinds: [kinds.RelayList],
+            }, 5000);
+
+            if (events && events.length > 0) {
+              const mostRecent = events.sort((a, b) => b.created_at - a.created_at)[0];
+              this.logger.info(`[Relay List Deep Discovery] Found relay list in batch ${i + 1}/${totalBatches}`);
+
+              // Save to database
+              await this.database.saveReplaceableEvent(mostRecent);
+
+              // Republish to discovery relays
+              this.republishRelayListToDiscoveryRelays(pubkey);
+              return;
+            }
+          } catch (error) {
+            this.logger.debug(`[Relay List Deep Discovery] Error in batch ${i + 1}:`, error);
+          }
+        }
+
+        this.logger.debug(`[Relay List Deep Discovery] Relay list not found for ${pubkey.substring(0, 8)}...`);
+      } catch (error) {
+        this.logger.warn(`[Relay List Deep Discovery] Failed for ${pubkey.substring(0, 8)}...:`, error);
+      }
+    });
   }
 
   /**
@@ -1021,6 +1131,41 @@ export class DataService implements OnDestroy {
     } catch (error) {
       this.logger.warn(`[Profile Republish] Failed to republish profile for ${pubkey.substring(0, 8)}...:`, error);
     }
+  }
+
+  /**
+   * Re-publish a user's relay list (kind 10002) to the current user's discovery/indexer relays.
+   * This ensures that indexer relays have up-to-date relay list information for the discovered user,
+   * making future lookups faster for everyone using the same indexers.
+   * Runs in the background and does not block the caller.
+   */
+  private republishRelayListToDiscoveryRelays(pubkey: string): void {
+    queueMicrotask(async () => {
+      try {
+        // Get the relay list event (kind 10002) from the database — it was saved by getUserRelayUrls
+        const relayListEvent = await this.database.getEventByPubkeyAndKind(pubkey, kinds.RelayList);
+        if (!relayListEvent) {
+          this.logger.debug(`[Relay List Republish] No relay list event found in DB for ${pubkey.substring(0, 8)}...`);
+          return;
+        }
+
+        // Get the current user's discovery/indexer relay URLs
+        const discoveryRelayUrls = this.discoveryRelayEx.getRelayUrls();
+        if (discoveryRelayUrls.length === 0) {
+          this.logger.debug(`[Relay List Republish] No discovery relays configured, skipping`);
+          return;
+        }
+
+        this.logger.info(
+          `[Relay List Republish] Re-publishing relay list for ${pubkey.substring(0, 8)}... to ${discoveryRelayUrls.length} discovery relays`
+        );
+
+        await this.relayPool.publish(discoveryRelayUrls, relayListEvent, 10000);
+        this.logger.debug(`[Relay List Republish] Successfully published relay list to discovery relays`);
+      } catch (error) {
+        this.logger.warn(`[Relay List Republish] Failed to republish relay list for ${pubkey.substring(0, 8)}...:`, error);
+      }
+    });
   }
 
   private refreshProfileInBackground(pubkey: string, cacheKey: string): void {

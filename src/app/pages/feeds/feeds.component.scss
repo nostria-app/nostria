@@ -2661,6 +2661,11 @@ h1 {
   padding: 16px;
   margin: 8px 0;
 
+  // Keep the CTA tappable above the fixed mobile action bar at scroll end.
+  @media (max-width: 1023px) {
+    padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+  }
+
   .load-more-button {
     min-width: 200px;
     display: flex;

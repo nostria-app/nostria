@@ -15,6 +15,7 @@ import { PROFILE_STATE } from '../../../services/profile-state-factory.service';
 import { LayoutService } from '../../../services/layout.service';
 import { LoggerService } from '../../../services/logger.service';
 import { RelaysService, Nip11RelayInfo } from '../../../services/relays/relays';
+import { UtilitiesService } from '../../../services/utilities.service';
 
 @Component({
   selector: 'app-following',
@@ -57,6 +58,7 @@ export class ProfileRelaysComponent {
   private logger = inject(LoggerService);
   profileState = inject(PROFILE_STATE);
   private relaysService = inject(RelaysService);
+  private utilities = inject(UtilitiesService);
 
   @ViewChild('followingContainer') followingContainerRef!: ElementRef;
 
@@ -220,5 +222,14 @@ export class ProfileRelaysComponent {
   copyRelayUrl(event: Event, url: string): void {
     event.stopPropagation(); // Prevent toggling relay details
     this.layout.copyToClipboard(url, 'relay URL');
+  }
+
+  isKnownDeadRelay(url: string): boolean {
+    return this.utilities.isKnownDeadRelayUrl(url);
+  }
+
+  getKnownDeadRelayDomain(url: string): string {
+    const domains = this.utilities.getKnownDeadRelayDomains([url]);
+    return domains[0] ?? '';
   }
 }

@@ -46,6 +46,10 @@ import { DataService } from '../../../services/data.service';
 import { ImageCacheService } from '../../../services/image-cache.service';
 import { SettingsService } from '../../../services/settings.service';
 import { stripImageProxy } from '../../../utils/strip-image-proxy';
+import { cleanWebsiteValue, normalizeWebsiteUrl } from '../../../utils/website-url';
+import { UserStatusService, UserStatus } from '../../../services/user-status.service';
+import { FormsModule } from '@angular/forms';
+import { MatInputModule } from '@angular/material/input';
 
 import { Router } from '@angular/router';
 import type { Event as NostrEvent } from 'nostr-tools';
@@ -75,6 +79,8 @@ interface MutualFollowProfile {
     QrCodeComponent,
     ZapButtonComponent,
     BioContentComponent,
+    FormsModule,
+    MatInputModule,
   ],
   templateUrl: './profile-header.component.html',
   styleUrl: './profile-header.component.scss',
@@ -112,6 +118,18 @@ export class ProfileHeaderComponent implements OnDestroy {
   private relayPool = inject(RelayPoolService);
   private imageCacheService = inject(ImageCacheService);
   readonly settingsService = inject(SettingsService);
+  private userStatusService = inject(UserStatusService);
+
+  // User status (NIP-38)
+  generalStatus = signal<UserStatus | null>(null);
+  musicStatus = signal<UserStatus | null>(null);
+  showStatusEditor = signal(false);
+  statusInput = signal('');
+  isSavingStatus = signal(false);
+  showStatusFlyout = signal(false);
+
+  /** Cleanup function for the live status subscription */
+  private statusSubscriptionCleanup: (() => void) | null = null;
 
   // Mutual followers ("Followers you know")
   mutualFollowing = signal<string[]>([]);
@@ -280,12 +298,11 @@ export class ProfileHeaderComponent implements OnDestroy {
 
   // Computed to get website URL with protocol prefix
   websiteUrl = computed(() => {
-    const website = this.profile()?.data.website;
-    if (!website) {
-      return '';
-    }
+    return normalizeWebsiteUrl(this.profile()?.data.website);
+  });
 
-    return this.getWebsiteUrl(website);
+  websiteDisplay = computed(() => {
+    return cleanWebsiteValue(this.profile()?.data.website);
   });
 
   // Add signal for verified identifier
@@ -355,9 +372,9 @@ export class ProfileHeaderComponent implements OnDestroy {
     return this.profileState.relayList() || [];
   });
 
-  // Check if we're still loading cached events (relay list is loaded as part of cached events)
+  // Check if we're still loading relay list (includes both cache and relay fetch)
   isLoadingRelays = computed(() => {
-    return !this.profileState.cachedEventsLoaded();
+    return !this.profileState.relayListFullyLoaded();
   });
 
   // Check if the current user is blocked
@@ -515,6 +532,62 @@ export class ProfileHeaderComponent implements OnDestroy {
           this.verifiedIdentifier.set({ value: '', valid: false, status: '' });
         });
       }
+    });
+
+    // NIP-38: Load user statuses when profile changes + subscribe for live updates
+    effect(async () => {
+      const currentPubkey = this.pubkey();
+      const cachedLoaded = this.profileState.cachedEventsLoaded();
+
+      // Clean up previous status subscription when profile changes
+      untracked(() => {
+        this.cleanupStatusSubscription();
+        this.generalStatus.set(null);
+        this.musicStatus.set(null);
+        this.showStatusEditor.set(false);
+        this.showStatusFlyout.set(false);
+      });
+
+      if (!currentPubkey || !cachedLoaded) return;
+
+      // Delay to avoid competing with higher priority queries
+      await new Promise(resolve => setTimeout(resolve, 400));
+
+      // Verify we're still on the same profile
+      if (this.pubkey() !== currentPubkey) return;
+
+      try {
+        const statuses = await this.userStatusService.getUserStatuses(currentPubkey);
+        untracked(() => {
+          this.generalStatus.set(statuses.general);
+          this.musicStatus.set(statuses.music);
+          // Auto-show fly-out if user has a status
+          if (statuses.general || statuses.music) {
+            this.showStatusFlyout.set(true);
+          }
+        });
+      } catch (error) {
+        this.logger.debug('[ProfileHeader] Failed to load user statuses:', error);
+      }
+
+      // Verify we're still on the same profile before subscribing
+      if (this.pubkey() !== currentPubkey) return;
+
+      // Subscribe for live status updates
+      untracked(() => {
+        this.statusSubscriptionCleanup = this.userStatusService.subscribeToUserStatuses(
+          currentPubkey,
+          (statuses) => {
+            this.generalStatus.set(statuses.general);
+            this.musicStatus.set(statuses.music);
+            if (statuses.general || statuses.music) {
+              this.showStatusFlyout.set(true);
+            } else {
+              this.showStatusFlyout.set(false);
+            }
+          },
+        );
+      });
     });
 
     // Load badges when pubkey changes - DEFERRED: badges are lowest priority
@@ -1172,17 +1245,7 @@ export class ProfileHeaderComponent implements OnDestroy {
    * Get website URL with protocol prefix
    */
   getWebsiteUrl(website: string): string {
-    if (!website) {
-      return '';
-    }
-
-    // Check if the website already has a protocol prefix
-    if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(website)) {
-      return website;
-    }
-
-    // If no protocol prefix, add https:// as default
-    return `https://${website}`;
+    return normalizeWebsiteUrl(website);
   }
 
   // Add methods for QR code visibility
@@ -1617,5 +1680,90 @@ export class ProfileHeaderComponent implements OnDestroy {
 
   ngOnDestroy(): void {
     this.clearBadgeTimeouts();
+    this.cleanupStatusSubscription();
+  }
+
+  private cleanupStatusSubscription(): void {
+    if (this.statusSubscriptionCleanup) {
+      this.statusSubscriptionCleanup();
+      this.statusSubscriptionCleanup = null;
+    }
+  }
+
+  // NIP-38: User Status methods
+  toggleStatusEditor(): void {
+    const showing = !this.showStatusEditor();
+    this.showStatusEditor.set(showing);
+    if (showing) {
+      this.statusInput.set(this.generalStatus()?.content || '');
+    }
+  }
+
+  async saveStatus(): Promise<void> {
+    this.isSavingStatus.set(true);
+    try {
+      const content = this.statusInput().trim();
+      const success = await this.userStatusService.setGeneralStatus(content);
+      if (success) {
+        this.generalStatus.set(content ? { content, type: 'general', createdAt: Math.floor(Date.now() / 1000) } : null);
+        this.showStatusEditor.set(false);
+      }
+    } finally {
+      this.isSavingStatus.set(false);
+    }
+  }
+
+  async clearStatus(): Promise<void> {
+    this.isSavingStatus.set(true);
+    try {
+      const success = await this.userStatusService.clearGeneralStatus();
+      if (success) {
+        this.generalStatus.set(null);
+        this.statusInput.set('');
+        this.showStatusEditor.set(false);
+      }
+    } finally {
+      this.isSavingStatus.set(false);
+    }
+  }
+
+  /** Returns the active status to display (music takes priority over general) */
+  activeStatus = computed(() => {
+    return this.musicStatus() || this.generalStatus();
+  });
+
+  /** Handle click on status flyout: toggle text, or navigate to track if expanded and aTag present */
+  onStatusFlyoutClick(event: MouseEvent, status: UserStatus): void {
+    if (!this.showStatusFlyout()) {
+      // First click: expand the flyout text
+      this.showStatusFlyout.set(true);
+      return;
+    }
+
+    // Flyout is already expanded
+    if (status.aTag) {
+      // Navigate to the music track
+      event.stopPropagation();
+      this.navigateToMusicTrack(status.aTag);
+    } else {
+      this.showStatusFlyout.set(false);
+    }
+  }
+
+  /** Navigate to a music track page from an aTag like "36787:pubkey:identifier" */
+  private navigateToMusicTrack(aTag: string): void {
+    const parts = aTag.split(':');
+    if (parts.length < 3) return;
+
+    const kind = parseInt(parts[0], 10);
+    const pubkey = parts[1];
+    const identifier = parts.slice(2).join(':');
+
+    try {
+      const naddr = nip19.naddrEncode({ kind, pubkey, identifier });
+      this.router.navigate(['/a', naddr]);
+    } catch (err) {
+      console.warn('[ProfileHeader] Failed to navigate to music track:', err);
+    }
   }
 }

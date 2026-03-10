@@ -1,3 +1,4 @@
+<!-- Post to X Option -->
 <!-- Inline Mode: Collapsed State -->
 @if (inlineMode() && !isExpanded()) {
 <div class="inline-collapsed-state" (click)="expandEditor()">
@@ -18,8 +19,10 @@
 <!-- Main Editor Content (Dialog mode always, Inline mode when expanded) -->
 @if (!inlineMode() || isExpanded()) {
 <!-- Content Area -->
-<div dialog-content class="note-editor-dialog" [class.inline-editor]="inlineMode()">
-  <div class="dialog-content-wrapper" [attr.data-drag-enabled]="!showPreview() && !showAdvancedOptions() || null"
+<div dialog-content class="note-editor-dialog" [class.inline-editor]="inlineMode()" #noteEditorLayout>
+  <div class="dialog-content-wrapper" [class.scrollable]="showAdvancedOptions()"
+    [class.preview-mode]="showPreview() && !showAdvancedOptions()"
+    [attr.data-drag-enabled]="!showPreview() && !showAdvancedOptions() || null"
     (dragenter)="!showPreview() && !showAdvancedOptions() && onDragEnter($event)"
     (dragover)="!showPreview() && !showAdvancedOptions() && onDragOver($event)"
     (dragleave)="!showPreview() && !showAdvancedOptions() && onDragLeave($event)"
@@ -114,15 +117,21 @@
       }
 
       <div class="textarea-container">
-        <mat-form-field appearance="outline" class="content-field">
+        <mat-form-field appearance="outline" class="content-field" [class.focused]="isContentFocused()"
+          subscriptSizing="dynamic">
+          @if (!content() && !isContentFocused()) {
           <mat-label>{{ isMediaModeEnabled() ? 'Description' : (inlineMode() ? 'Post your reply' : "What's on your
             mind?") }}</mat-label>
-          <textarea matInput [value]="content()" (input)="onContentInput($event)" (keydown)="onContentKeyDown($event)"
-            (keyup)="onContentKeyUp($event)" (click)="onContentClick($event)"
-            [placeholder]="inlineMode() ? 'Write your reply... Use @ to mention someone' : 'Write your note... Use @ to mention someone'"
-            [rows]="inlineMode() ? 3 : 4" class="content-textarea" #contentTextarea>
+          }
+          <textarea matInput [value]="content()" (input)="onContentInput($event)" (focus)="onContentFocus()"
+            (blur)="onContentBlur()" (keydown)="onContentKeyDown($event)" (keyup)="onContentKeyUp($event)"
+            (click)="onContentClick($event)" (select)="onContentSelectionChange($event)"
+            placeholder="{{ inlineMode() ? 'Write your reply... Use @ to mention someone' : 'Write your note... Use @ to mention someone' }}"
+            title="{{ inlineMode() ? 'Reply content' : 'Note content' }}"
+            aria-label="{{ inlineMode() ? 'Reply content' : 'Note content' }}" class="content-textarea"
+            #contentTextarea>
           </textarea>
-          <mat-hint align="end"> {{ characterCount() }} characters </mat-hint>
+          <mat-hint align="end">{{ characterCount() }} characters</mat-hint>
         </mat-form-field>
 
         <!-- Mentions (kept directly below text input) -->
@@ -197,6 +206,69 @@
             Add the Nostria client tag to this event
           </span>
         </div>
+      </div>
+
+      <!-- Post to X Option -->
+      <div class="option-row">
+        <div class="option-header">
+          <mat-slide-toggle [checked]="postToX()" (change)="onPostToXChange($event.checked)"
+            [disabled]="!xPostingAvailable()">
+            <span class="x-toggle-label">
+              <img src="/logos/clients/x.png" width="16" height="16" alt="X" class="x-logo" />
+              <span>Post to X</span>
+              @if (postToX() && xPostValidation().valid) {
+              <span class="x-enabled-pill">Enabled</span>
+              }
+            </span>
+          </mat-slide-toggle>
+          <span class="option-description">
+            Publish this post to your connected X account. Supports up to 4 images or 1 video/GIF. Quote/reply threading
+            and edits are not mirrored yet.
+          </span>
+        </div>
+
+        @if (xStatusLoading()) {
+        <div class="option-content">
+          <span class="option-description">Checking X connection...</span>
+        </div>
+        } @else if (!xPremiumEligible()) {
+        <div class="option-content">
+          <span class="option-description">Post to X is available for Premium accounts only.</span>
+
+          @if (postToX() && !xPostValidation().valid) {
+          <div class="x-post-validation">
+            <mat-icon>warning</mat-icon>
+            <span>{{ xPostValidation().message }}</span>
+          </div>
+          }
+        </div>
+        } @else if (hasReplyTarget()) {
+        <div class="option-content">
+          <span class="option-description">Replies stay on Nostr only. Post to X is available for original posts.</span>
+
+          @if (postToX() && !xPostValidation().valid) {
+          <div class="x-post-validation">
+            <mat-icon>warning</mat-icon>
+            <span>{{ xPostValidation().message }}</span>
+          </div>
+          }
+        </div>
+        } @else if (xPostingAvailable()) {
+        <div class="option-content">
+          <span class="option-description">Connected as {{ xDualPost.status().username || 'X user' }}</span>
+
+          @if (postToX() && !xPostValidation().valid) {
+          <div class="x-post-validation">
+            <mat-icon>warning</mat-icon>
+            <span>{{ xPostValidation().message }}</span>
+          </div>
+          }
+        </div>
+        } @else {
+        <div class="option-content">
+          <button mat-button type="button" (click)="connectXFromComposer()">Connect X</button>
+        </div>
+        }
       </div>
 
       <!-- Expiration Option -->
@@ -333,8 +405,14 @@
     @if (showPreview() && !showAdvancedOptions() && !inlineMode()) {
     <div class="preview-section">
       <div class="preview-header">
-        <mat-icon class="preview-icon">visibility</mat-icon>
-        <span class="preview-title">Preview</span>
+        <div class="preview-header-label">
+          <mat-icon class="preview-icon">visibility</mat-icon>
+          <span class="preview-title">Preview</span>
+        </div>
+        <button mat-button type="button" class="preview-exit-button" (click)="togglePreview()">
+          <mat-icon>visibility_off</mat-icon>
+          Hide preview
+        </button>
       </div>
       <app-content class="preview-content" [content]="previewContent()"
         [preloadedEvents]="previewEventsMap()"></app-content>
@@ -361,7 +439,7 @@
     } -->
   </div>
 
-  <div dialog-actions class="action-container" [class.inline-actions]="inlineMode()"
+  <div class="action-container composer-actions" [class.inline-actions]="inlineMode()" #composerActions
     (dragenter)="!showPreview() && !showAdvancedOptions() && onDragEnter($event)"
     (dragover)="!showPreview() && !showAdvancedOptions() && onDragOver($event)"
     (dragleave)="!showPreview() && !showAdvancedOptions() && onDragLeave($event)"
@@ -436,22 +514,6 @@
       </button>
       }
 
-      <!-- Dictation button (hidden on smaller screens) -->
-      @if (!layout.isHandset()) {
-      <button mat-icon-button type="button" class="desktop-action action-priority-medium dictation-action"
-        (click)="toggleRecording()" [color]="isRecording() ? 'warn' : ''"
-        [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions() || isTranscribing()"
-        [class.button-disabled-visible]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions() || isTranscribing()"
-        [matTooltip]="isRecording() ? 'Stop listening' : (inlineMode() ? 'Dictate reply' : 'Dictate note')">
-        @if (isTranscribing()) {
-        <mat-icon class="spinning">sync</mat-icon>
-        } @else if (isRecording()) {
-        <mat-icon>stop</mat-icon>
-        } @else {
-        <mat-icon>mic</mat-icon>
-        }
-      </button>
-      }
       @if (recordingHistory.length > 0) {
       <button mat-icon-button type="button" class="desktop-action action-priority-low" (click)="undoLastRecording()"
         [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions() || isTranscribing()"
@@ -462,26 +524,6 @@
       }
 
       @if (!inlineMode()) {
-      <button mat-icon-button type="button" class="desktop-action action-priority-low" [matMenuTriggerFor]="aiMenu"
-        [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions()"
-        [class.button-disabled-visible]="showPreview() || showAdvancedOptions()" matTooltip="AI Tools">
-        <mat-icon>psychology</mat-icon>
-      </button>
-      <mat-menu #aiMenu="matMenu">
-        <button mat-menu-item (click)="openAiDialog('generate')" disabled matTooltip="Temporarily disabled">
-          <mat-icon>auto_awesome</mat-icon>
-          <span>Generate Text</span>
-        </button>
-        <button mat-menu-item (click)="openAiDialog('translate')">
-          <mat-icon>translate</mat-icon>
-          <span>Translate</span>
-        </button>
-        <button mat-menu-item (click)="openAiDialog('sentiment')">
-          <mat-icon>mood</mat-icon>
-          <span>Sentiment Analysis</span>
-        </button>
-      </mat-menu>
-
       <button mat-icon-button type="button" class="mobile-actions-trigger" [matMenuTriggerFor]="mobileActionsMenu"
         [disabled]="isUploading() || isPublishing()" matTooltip="More actions">
         <mat-icon>more_horiz</mat-icon>

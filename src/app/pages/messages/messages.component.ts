@@ -28,6 +28,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatBadgeModule } from '@angular/material/badge';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatDialog } from '@angular/material/dialog';
 import { MatBottomSheet } from '@angular/material/bottom-sheet';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatSidenavModule } from '@angular/material/sidenav';
@@ -76,7 +77,11 @@ import { LocalSettingsService } from '../../services/local-settings.service';
 import { MediaService } from '../../services/media.service';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { EmojiPickerComponent } from '../../components/emoji-picker/emoji-picker.component';
+import { OpenGraphService, OpenGraphData } from '../../services/opengraph.service';
+import { isImageUrl } from '../../services/format/utils';
 import { HiddenChatInfoPromptComponent } from '../../components/hidden-chat-info-prompt/hidden-chat-info-prompt.component';
+import { HapticsService } from '../../services/haptics.service';
+import { EmojiSetService } from '../../services/emoji-set.service';
 
 // Define interfaces for our DM data structures
 interface Chat {
@@ -103,6 +108,19 @@ interface DirectMessage {
   read?: boolean;
   encryptionType?: 'nip04' | 'nip44';
   replyTo?: string; // The event ID this message is replying to (from 'e' tag)
+  quotedReplyContent?: string;
+  quotedReplyAuthor?: string;
+  failureReason?: string; // Human-readable reason for send failure
+  eventKind?: 'message' | 'reaction';
+  reactionTo?: string;
+  reactionContent?: string;
+}
+
+interface MessageReactionSummary {
+  content: string;
+  count: number;
+  userReacted: boolean;
+  customEmojiUrl?: string;
 }
 
 interface MessageGroup {
@@ -166,6 +184,18 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   private readonly accountLocalState = inject(AccountLocalStateService);
   readonly localSettings = inject(LocalSettingsService);
   readonly mediaService = inject(MediaService);
+  private readonly haptics = inject(HapticsService);
+  private readonly openGraph = inject(OpenGraphService);
+  private readonly emojiSetService = inject(EmojiSetService);
+  private readonly dialog = inject(MatDialog);
+
+  // Link preview data - keyed by URL
+  linkPreviews = signal<Map<string, OpenGraphData>>(new Map());
+  private linkPreviewsLoaded = new Set<string>();
+
+  // Cache of resolved custom emoji URLs (shortcode with colons -> URL)
+  private resolvedEmojiUrls = signal<Map<string, string>>(new Map());
+  private emojiResolutionPending = new Set<string>();
 
   @ViewChild('chatSearchInput') chatSearchInput?: ElementRef<HTMLInputElement>;
 
@@ -188,6 +218,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   longPressedMessage = signal<DirectMessage | null>(null);
   private longPressTimeout: ReturnType<typeof setTimeout> | null = null;
   private readonly LONG_PRESS_DURATION = 500; // 500ms for long press
+  readonly showScrollToLatestButton = signal<boolean>(false);
 
   // Computed signal for single-pane view - collapse chat list when mobile or when right panel is open
   // This enables the same behavior as mobile (toggle between list and thread) when viewing
@@ -250,7 +281,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
 
   // Computed signal for messages grouped by date
   groupedMessages = computed(() => {
-    const msgs = this.messages();
+    const msgs = this.messages().filter(message => !this.isReactionMessage(message));
     if (msgs.length === 0) return [];
 
     const groups: MessageGroup[] = [];
@@ -340,6 +371,27 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     const links = this.sharedLinks();
     const mediaExtensions = /\.(jpg|jpeg|png|gif|webp|mp4|webm|mov|mp3|wav|ogg)$/i;
     return links.filter(link => mediaExtensions.test(link.url));
+  });
+
+  /** Image-only subset of shared media for thumbnail grid */
+  sharedImages = computed(() => {
+    const links = this.sharedLinks();
+    return links.filter(link => isImageUrl(link.url));
+  });
+
+  /** Video-only subset of shared media */
+  sharedVideos = computed(() => {
+    const links = this.sharedLinks();
+    const videoExtensions = /\.(mp4|webm|mov)$/i;
+    return links.filter(link => videoExtensions.test(link.url));
+  });
+
+  /** Regular links (not media, not files) that need OG previews */
+  regularLinks = computed(() => {
+    const links = this.sharedLinks();
+    const mediaExtensions = /\.(jpg|jpeg|png|gif|webp|mp4|webm|mov|mp3|wav|ogg)$/i;
+    const fileExtensions = /\.(pdf|doc|docx|xls|xlsx|ppt|pptx|zip|rar|7z|txt|csv|json|xml)$/i;
+    return links.filter(link => !mediaExtensions.test(link.url) && !fileExtensions.test(link.url) && !isImageUrl(link.url));
   });
 
   // Helper to check if a chat matches the search query
@@ -447,9 +499,6 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   hasFollowingChats = computed(() => this.followingChats().length > 0 || this.noteToSelfChat() !== null);
   hasOtherChats = computed(() => this.otherChats().length > 0);
 
-  // Subscription management
-  private messageSubscription: any = null;
-  private chatSubscription: any = null;
   private readonly destroyRef = inject(DestroyRef);
 
   // ViewChild for scrolling functionality
@@ -472,6 +521,15 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   private scrollThrottleTimeout: any = null;
   private chatListScrollThrottleTimeout: any = null;
   private chatListScrollElement: HTMLElement | null = null;
+
+  /** Whether the user has manually scrolled away from the bottom of the chat. */
+  private userScrolledUp = false;
+  /** Last known scrollHeight — used to detect content growth vs. shrink. */
+  private lastScrollHeight = 0;
+  /** Bound handler for capturing `load` events on media elements. */
+  private mediaLoadHandler: ((e: Event) => void) | null = null;
+  /** MutationObserver that watches for new DOM nodes (e.g. Angular rendering new message bubbles). */
+  private contentMutationObserver: MutationObserver | null = null;
 
   constructor() {
     // Initialize lastAccountPubkey with current account to avoid false "account changed" on first load
@@ -534,12 +592,16 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
             this.hasMoreMessages.set(true);
             // Reset message count tracking for the new chat
             this.lastMessageCount.set(chatMessages.length);
-            this.scrollToBottom();
 
-            // Re-setup scroll listener for the new chat
+            // Set up scroll listener + ResizeObserver FIRST so it can catch
+            // content reflows that happen after the initial scrollToBottom.
             setTimeout(() => {
               this.setupScrollListener();
-            }, 200);
+              this.scrollToBottom();
+              // Secondary delayed scroll to catch late-rendering content
+              // (Angular template rendering, lazy images, embeds)
+              setTimeout(() => this.scrollToBottomIfNotScrolledUp(), 500);
+            }, 50);
           } else if (!this.isLoadingMoreMessages() && chatMessages.length > 0) {
             // Same chat but check for new messages
             const latestLocalTimestamp =
@@ -576,6 +638,19 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
 
       // Update the last message count
       this.lastMessageCount.set(messageCount);
+    });
+
+    effect(() => {
+      const chatId = this.selectedChatId();
+      const chat = this.selectedChat();
+
+      if (!chatId || !chat || chat.unreadCount === 0) {
+        return;
+      }
+
+      untracked(() => {
+        void this.messaging.markChatAsRead(chatId);
+      });
     });
 
     // Listen to connection status changes
@@ -734,16 +809,13 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
    * This allows the message list to auto-update when new DMs arrive.
    */
   private async startLiveSubscription(): Promise<void> {
-    // Close any existing subscriptions first
-    if (this.messageSubscription) {
-      this.messageSubscription.close();
-      this.messageSubscription = null;
+    if (this.messaging.hasLiveSubscription()) {
+      this.logger.debug('Live DM subscription already active');
+      return;
     }
 
-    // Start the live subscription via the messaging service
     const sub = await this.messaging.subscribeToIncomingMessages();
     if (sub) {
-      this.messageSubscription = sub;
       this.logger.debug('Live DM subscription started');
     }
   }
@@ -887,6 +959,79 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
 
     // Add the scroll event listener
     scrollElement.addEventListener('scroll', this.scrollHandler);
+
+    // Set up auto-scroll watchers for rich content loading
+    this.setupMediaLoadListener(scrollElement);
+    this.setupContentMutationObserver(scrollElement);
+  }
+
+  /**
+   * Auto-scroll to bottom when new content causes the scroll height to grow,
+   * but only if the user was already near the bottom before the growth.
+   *
+   * Uses the *previous* scrollHeight (`lastScrollHeight`) to determine the
+   * "was near bottom" state so that the height increase itself doesn't
+   * falsely mark the user as scrolled up.
+   */
+  private autoScrollAfterContentGrowth(scrollElement: HTMLElement): void {
+    const newScrollHeight = scrollElement.scrollHeight;
+    if (newScrollHeight <= this.lastScrollHeight) {
+      this.lastScrollHeight = newScrollHeight;
+      return;
+    }
+
+    const { scrollTop, clientHeight } = scrollElement;
+    const wasNearBottom = (this.lastScrollHeight - (scrollTop + clientHeight)) < 150;
+
+    if (wasNearBottom) {
+      scrollElement.scrollTop = newScrollHeight;
+      this.userScrolledUp = false;
+    }
+
+    this.lastScrollHeight = newScrollHeight;
+  }
+
+  /**
+   * Listen for `load` events on media elements (img, video, iframe) inside
+   * the message list. The `load` event does NOT bubble, so we must use
+   * capturing (`{ capture: true }`) to intercept it on the scroll container.
+   */
+  private setupMediaLoadListener(scrollElement: HTMLElement): void {
+    // Clean up previous listener
+    if (this.mediaLoadHandler) {
+      scrollElement.removeEventListener('load', this.mediaLoadHandler, true);
+    }
+
+    this.lastScrollHeight = scrollElement.scrollHeight;
+
+    this.mediaLoadHandler = (e: Event) => {
+      const target = e.target as HTMLElement;
+      if (!target) return;
+      const tag = target.tagName;
+      if (tag === 'IMG' || tag === 'VIDEO' || tag === 'IFRAME') {
+        this.autoScrollAfterContentGrowth(scrollElement);
+      }
+    };
+
+    scrollElement.addEventListener('load', this.mediaLoadHandler, true);
+  }
+
+  /**
+   * Watch for DOM mutations (new child nodes added by Angular rendering)
+   * that increase the scroll height. This catches cases where new message
+   * bubbles are inserted or Angular components expand after rendering.
+   */
+  private setupContentMutationObserver(scrollElement: HTMLElement): void {
+    this.contentMutationObserver?.disconnect();
+
+    this.contentMutationObserver = new MutationObserver(() => {
+      this.autoScrollAfterContentGrowth(scrollElement);
+    });
+
+    this.contentMutationObserver.observe(scrollElement, {
+      childList: true,
+      subtree: true,
+    });
   }
 
   /**
@@ -905,8 +1050,15 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       const scrollElement = this.messagesWrapper?.nativeElement;
       if (!scrollElement) return;
 
-      // Check if user is near the top and we have messages to load
       const { scrollTop, scrollHeight, clientHeight } = scrollElement;
+
+      // Track whether the user has scrolled away from the bottom.
+      // "Near the bottom" = within 150px of the end.
+      const distFromBottom = scrollHeight - (scrollTop + clientHeight);
+      this.userScrolledUp = distFromBottom > 150;
+      this.showScrollToLatestButton.set(distFromBottom > 600);
+
+      // Check if user is near the top and we have messages to load
       const threshold = 100; // pixels from top
 
       this.logger.debug(
@@ -926,16 +1078,38 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   };
 
   /**
-   * Scroll the messages wrapper to the bottom to show latest messages
+   * Scroll the messages wrapper to the bottom to show latest messages.
+   * Also resets the userScrolledUp flag so the ResizeObserver keeps scrolling.
    */
   private scrollToBottom(): void {
+    this.userScrolledUp = false;
+    this.showScrollToLatestButton.set(false);
     // Use setTimeout to ensure DOM is updated
     setTimeout(() => {
       if (this.messagesWrapper?.nativeElement) {
         const element = this.messagesWrapper.nativeElement;
         element.scrollTop = element.scrollHeight;
+        this.lastScrollHeight = element.scrollHeight;
       }
     }, 100);
+  }
+
+  /**
+   * Scroll to bottom only if the user hasn't manually scrolled up.
+   * Used as a delayed safety-net scroll after content may have reflowed.
+   */
+  private scrollToBottomIfNotScrolledUp(): void {
+    if (this.userScrolledUp) return;
+    this.showScrollToLatestButton.set(false);
+    if (this.messagesWrapper?.nativeElement) {
+      const element = this.messagesWrapper.nativeElement;
+      element.scrollTop = element.scrollHeight;
+      this.lastScrollHeight = element.scrollHeight;
+    }
+  }
+
+  scrollToLatestMessage(): void {
+    this.scrollToBottom();
   }
 
   ngOnDestroy(): void {
@@ -966,14 +1140,16 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       this.chatListScrollThrottleTimeout = null;
     }
 
-    // Clean up subscriptions
-    if (this.messageSubscription) {
-      this.messageSubscription.close();
+    // Clean up media load listener
+    if (this.mediaLoadHandler && scrollElement) {
+      scrollElement.removeEventListener('load', this.mediaLoadHandler, true);
+      this.mediaLoadHandler = null;
     }
 
-    if (this.chatSubscription) {
-      this.chatSubscription.close();
-    }
+    // Clean up MutationObserver
+    this.contentMutationObserver?.disconnect();
+    this.contentMutationObserver = null;
+
   }
 
   /**
@@ -1073,6 +1249,10 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     // Mark chat as read when selected
     await this.markChatAsRead(chat.id);
 
+    // Resolve any messages stuck in "pending" state from a previous session.
+    // These were likely sent but the publish callback was lost (e.g. page refresh).
+    this.resolveStalePendingMessages(chat.pubkey);
+
     // Preload DM relays (kind 10050) for this contact so sending is instant.
     // Loads from database first, refreshes from network in the background.
     this.userRelayService.ensureDmRelaysForPubkey(chat.pubkey).catch(err => {
@@ -1084,6 +1264,41 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     this.router.navigate(['/messages', chat.id], {
       queryParams: {},
     });
+  }
+
+  /**
+   * Resolve messages stuck in "pending" state from a previous session.
+   * These messages were encrypted, signed, and the publish() call was fired,
+   * but the component was destroyed (page refresh, navigation) before the
+   * relay response arrived. Since they were already published, re-signing
+   * would risk duplicates. We mark them as delivered because the publish
+   * likely succeeded.
+   *
+   * Only resolves messages that are NOT in the current in-memory pendingMessages
+   * signal (those are actively being published right now).
+   */
+  private resolveStalePendingMessages(chatPubkey: string): void {
+    const persistedMessages = this.messaging.getChatMessages(chatPubkey);
+    const activePendingIds = new Set(this.pendingMessages().map(m => m.id));
+
+    const staleMessages = persistedMessages.filter(
+      m => m.pending && !activePendingIds.has(m.id)
+    );
+
+    if (staleMessages.length === 0) return;
+
+    this.logger.info(
+      `[MessagesComponent] Resolving ${staleMessages.length} stale pending message(s) in chat ${chatPubkey.slice(0, 16)}...`
+    );
+
+    for (const msg of staleMessages) {
+      this.messaging.updateMessageInChat(chatPubkey, msg.id, {
+        pending: false,
+        received: true,
+        failed: false,
+        failureReason: undefined,
+      });
+    }
   }
 
   /**
@@ -1419,8 +1634,9 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
 
   /**
    * Send a direct message using both NIP-04 and NIP-44.
-   * Uses optimistic UI: the message appears immediately while
-   * relay publishing happens in the background.
+   * Uses optimistic UI: the message appears as pending immediately while
+   * relay publishing happens in the background. The message transitions
+   * to received/failed based on actual relay delivery results.
    */
   async sendMessage(): Promise<void> {
     const messageText = this.newMessageText().trim();
@@ -1456,7 +1672,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       const useModernEncryption = this.supportsModernEncryption(selectedChat);
 
       // Create the message (encrypts + signs, but does NOT publish yet)
-      let result: { message: DirectMessage; publish: () => Promise<void> };
+      let result: { message: DirectMessage; publish: () => Promise<{ success: boolean; failureReason?: string }> };
 
       if (useModernEncryption) {
         result = await this.createNip44Message(
@@ -1476,37 +1692,82 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
 
       const finalMessage = result.message;
 
-      // Create a pending message to show immediately in the UI
+      // Add message as PENDING to both the messaging service and local pending list.
+      // It stays pending until relay publishing confirms delivery.
       const pendingMessage: DirectMessage = {
         ...finalMessage,
         pending: true,
         received: false,
       };
 
-      // Add to pending messages so the user sees feedback right away
+      // Add to messaging service (persists to DB as pending)
+      this.messaging.addMessageToChat(receiverPubkey, pendingMessage);
+
+      // Also add to local pending signal for immediate UI feedback
       this.pendingMessages.update(msgs => [...msgs, pendingMessage]);
 
-      // Add the message to the messaging service to update the chat's lastMessage
-      const updatedMessage = {
-        ...finalMessage,
-        pending: false,
-        received: true,
-      };
-
-      this.messaging.addMessageToChat(receiverPubkey, updatedMessage);
-
-      // Release the send button immediately - message is visible in the UI
+      // Release the send button immediately - message is visible as pending
       this.isSending.set(false);
       this.focusMessageInput();
 
-      // Publish to relays in the background (fire-and-forget from UI perspective)
-      result.publish().catch(err => {
+      // Publish to relays in the background, then update message status
+      result.publish().then(publishResult => {
+        if (publishResult.success) {
+          // At least one relay accepted — mark as delivered
+          this.messaging.updateMessageInChat(receiverPubkey, finalMessage.id, {
+            pending: false,
+            received: true,
+            failed: false,
+            failureReason: undefined,
+          });
+          // Remove from local pending (persisted version will take over)
+          this.pendingMessages.update(msgs => msgs.filter(m => m.id !== finalMessage.id));
+        } else {
+          // All relays rejected — mark as failed with reason
+          const reason = publishResult.failureReason || 'All relays rejected the message';
+          this.logger.error('Message delivery failed:', reason);
+          this.messaging.updateMessageInChat(receiverPubkey, finalMessage.id, {
+            pending: false,
+            received: false,
+            failed: true,
+            failureReason: reason,
+          });
+          this.pendingMessages.update(msgs => msgs.filter(m => m.id !== finalMessage.id));
+
+          this.notifications.addNotification({
+            id: Date.now().toString(),
+            type: NotificationType.ERROR,
+            title: 'Message Not Delivered',
+            message: reason,
+            timestamp: Date.now(),
+            read: false,
+          });
+        }
+      }).catch(err => {
         this.logger.error('Background relay publishing failed', err);
+        const reason = err?.message || 'Failed to publish message to relays';
+        // Mark as failed so user can see and retry
+        this.messaging.updateMessageInChat(receiverPubkey, finalMessage.id, {
+          pending: false,
+          received: false,
+          failed: true,
+          failureReason: reason,
+        });
+        this.pendingMessages.update(msgs => msgs.filter(m => m.id !== finalMessage.id));
+
+        this.notifications.addNotification({
+          id: Date.now().toString(),
+          type: NotificationType.ERROR,
+          title: 'Message Not Delivered',
+          message: reason,
+          timestamp: Date.now(),
+          read: false,
+        });
       });
     } catch (err) {
       this.logger.error('Failed to send message', err);
 
-      // Clear any pending messages since the send failed
+      // Clear any pending messages since the send failed before publishing
       this.pendingMessages.set([]);
 
       this.isSending.set(false);
@@ -1530,14 +1791,33 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   /**
-   * Retry sending a failed message
+   * Retry sending a failed message.
+   * Removes the failed message and re-triggers the full send flow
+   * with the same content and reply context.
    */
-  retryMessage(message: DirectMessage): void {
-    // Remove the failed message from pending
+  async retryMessage(message: DirectMessage): Promise<void> {
+    const receiverPubkey = this.selectedChat()?.pubkey;
+    if (!receiverPubkey) return;
+
+    // Remove the failed message from pending list
     this.pendingMessages.update(msgs => msgs.filter(msg => msg.id !== message.id));
 
-    // Then set its content to the input field so the user can try again
+    // Remove from persisted chat state (it was saved as failed)
+    this.messaging.removeMessageFromChat(receiverPubkey, message.id);
+
+    // Re-send: put the content into the input field and trigger send
     this.newMessageText.set(message.content);
+
+    // Restore reply context if the original message was a reply
+    if (message.replyTo) {
+      const repliedMessage = this.getMessageById(message.replyTo);
+      if (repliedMessage) {
+        this.replyingToMessage.set(repliedMessage);
+      }
+    }
+
+    // Trigger the send flow
+    await this.sendMessage();
   }
 
   /**
@@ -1562,8 +1842,291 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
    * Get a message by ID for displaying reply context
    */
   getMessageById(messageId: string): DirectMessage | undefined {
-    const messages = this.messages();
+    const messages = this.messages().filter(message => !this.isReactionMessage(message));
     return messages.find(m => m.id === messageId);
+  }
+
+  getReplyPreviewText(message: DirectMessage): string | null {
+    if (message.replyTo) {
+      const repliedMessage = this.getMessageById(message.replyTo);
+      if (repliedMessage) {
+        return repliedMessage.content;
+      }
+    }
+
+    return message.quotedReplyContent || null;
+  }
+
+  isReactionMessage(message: DirectMessage): boolean {
+    if (message.eventKind === 'reaction') {
+      return true;
+    }
+
+    const kTag = message.tags.find(tag => tag[0] === 'k');
+    const hasETag = message.tags.some(tag => tag[0] === 'e' && !!tag[1]);
+    return hasETag && (kTag?.[1] === String(kinds.PrivateDirectMessage) || this.isLikelyReactionContent(message.reactionContent || message.content));
+  }
+
+  private isLikelyReactionContent(content: string): boolean {
+    if (!content) {
+      return false;
+    }
+
+    if (content === '+' || content === '-') {
+      return true;
+    }
+
+    if (/^:[A-Za-z0-9_\-+]+:$/.test(content)) {
+      return true;
+    }
+
+    const compact = content.trim();
+    if (!compact || compact.includes(' ')) {
+      return false;
+    }
+
+    return Array.from(compact).length <= 4;
+  }
+
+  getReactionDisplay(content: string): string {
+    if (!content || content === '+') {
+      return '\u2764\uFE0F';
+    }
+    return content;
+  }
+
+  /**
+   * Get the display text for a chat preview in the chat list.
+   * For reaction messages, shows "Reacted ❤️" or similar instead of raw content.
+   */
+  getChatPreviewText(lastMessage: DirectMessage): string {
+    if (lastMessage.eventKind === 'reaction' || this.isReactionMessage(lastMessage)) {
+      const content = lastMessage.reactionContent || lastMessage.content;
+      if (!content || content === '+') {
+        return 'Reacted \u2764\uFE0F';
+      }
+      const shortcode = this.getEmojiShortcode(content);
+      if (shortcode) {
+        return 'Reacted';
+      }
+      return `Reacted ${content}`;
+    }
+    return lastMessage.content;
+  }
+
+  getChatPreviewEmojiUrl(lastMessage: DirectMessage): string | undefined {
+    if (lastMessage.eventKind !== 'reaction' && !this.isReactionMessage(lastMessage)) {
+      return undefined;
+    }
+    const content = lastMessage.reactionContent || lastMessage.content;
+    return this.getReactionCustomEmojiUrl(content, lastMessage.tags || []);
+  }
+
+  getReactionCustomEmojiUrl(content: string, tags: string[][]): string | undefined {
+    const shortcode = this.getEmojiShortcode(content);
+    if (!shortcode) {
+      return undefined;
+    }
+
+    const emojiTag = tags.find(tag => tag[0] === 'emoji' && tag[1] === shortcode && !!tag[2]);
+    if (emojiTag?.[2]) {
+      return emojiTag[2];
+    }
+
+    // Fall back to resolved emoji cache (populated async from user emoji sets)
+    return this.resolvedEmojiUrls().get(content);
+  }
+
+  private getEmojiShortcode(content: string): string | undefined {
+    if (!content || !content.startsWith(':') || !content.endsWith(':')) {
+      return undefined;
+    }
+
+    const shortcode = content.slice(1, -1).trim();
+    return shortcode || undefined;
+  }
+
+  /**
+   * Asynchronously resolve a custom emoji URL from the sender's emoji sets.
+   * Updates the resolvedEmojiUrls signal when found, which triggers re-render.
+   */
+  private resolveEmojiUrl(content: string, senderPubkey: string): void {
+    if (this.emojiResolutionPending.has(content)) return;
+    this.emojiResolutionPending.add(content);
+
+    const shortcode = this.getEmojiShortcode(content);
+    if (!shortcode) return;
+
+    this.emojiSetService.getUserEmojiSets(senderPubkey).then(emojiSets => {
+      const url = emojiSets.get(shortcode);
+      if (url) {
+        this.resolvedEmojiUrls.update(map => {
+          const updated = new Map(map);
+          updated.set(content, url);
+          return updated;
+        });
+      }
+    }).catch(() => {
+      // Ignore resolution failures
+    });
+  }
+
+  getMessageReactions(messageId: string): MessageReactionSummary[] {
+    const latestReactionByPubkey = new Map<string, DirectMessage>();
+
+    for (const entry of this.messages()) {
+      if (!this.isReactionMessage(entry)) {
+        continue;
+      }
+
+      const reactionTarget = entry.reactionTo || this.getReactionTargetFromTags(entry.tags);
+      if (reactionTarget !== messageId) {
+        continue;
+      }
+
+      const existing = latestReactionByPubkey.get(entry.pubkey);
+      if (!existing || entry.created_at >= existing.created_at) {
+        latestReactionByPubkey.set(entry.pubkey, entry);
+      }
+    }
+
+    const myPubkey = this.accountState.pubkey();
+    const groupedReactions = new Map<string, MessageReactionSummary>();
+
+    for (const reaction of latestReactionByPubkey.values()) {
+      const content = reaction.reactionContent || reaction.content;
+      const customEmojiUrl = this.getReactionCustomEmojiUrl(content, reaction.tags || []);
+
+      // Trigger async resolution for unresolved custom emoji shortcodes
+      if (!customEmojiUrl && this.getEmojiShortcode(content)) {
+        this.resolveEmojiUrl(content, reaction.pubkey);
+      }
+
+      // NIP-25 reaction removal marker.
+      if (!content || content === '-') {
+        continue;
+      }
+
+      const existingSummary = groupedReactions.get(content);
+      if (existingSummary) {
+        existingSummary.count += 1;
+        existingSummary.userReacted = existingSummary.userReacted || (myPubkey === reaction.pubkey);
+        if (!existingSummary.customEmojiUrl && customEmojiUrl) {
+          existingSummary.customEmojiUrl = customEmojiUrl;
+        }
+      } else {
+        groupedReactions.set(content, {
+          content,
+          count: 1,
+          userReacted: myPubkey === reaction.pubkey,
+          customEmojiUrl,
+        });
+      }
+    }
+
+    return Array.from(groupedReactions.values()).sort((a, b) => b.count - a.count);
+  }
+
+  async openReactionPickerDialog(message: DirectMessage): Promise<void> {
+    const { EmojiPickerDialogComponent } = await import('../../components/emoji-picker/emoji-picker-dialog.component');
+    const dialogRef = this.customDialog.open<typeof EmojiPickerDialogComponent.prototype, string>(EmojiPickerDialogComponent, {
+      title: 'React',
+      width: '400px',
+      panelClass: 'emoji-picker-dialog',
+    });
+
+    dialogRef.afterClosed$.subscribe(({ result }) => {
+      if (result) {
+        void this.sendReaction(message, result);
+      }
+    });
+  }
+
+  async sendReaction(message: DirectMessage, reactionContent: string, customEmojiUrl?: string): Promise<void> {
+    const reaction = reactionContent.trim();
+    if (!reaction) {
+      return;
+    }
+
+    if (this.isReactionMessage(message) || message.isOutgoing) {
+      return;
+    }
+
+    const receiverPubkey = this.selectedChat()?.pubkey;
+    const myPubkey = this.accountState.pubkey();
+    if (!receiverPubkey || !myPubkey) {
+      return;
+    }
+
+    try {
+      await this.userRelayService.ensureRelaysForPubkey(receiverPubkey);
+
+      const extraRumorTags: string[][] = [
+        ['e', message.id],
+        ['k', String(kinds.PrivateDirectMessage)],
+      ];
+
+      const shortcode = this.getEmojiShortcode(reaction);
+      if (shortcode) {
+        // If URL not provided, resolve from user's emoji sets
+        let emojiUrl = customEmojiUrl;
+        if (!emojiUrl) {
+          try {
+            const userEmojis = await this.emojiSetService.getUserEmojiSets(myPubkey);
+            emojiUrl = userEmojis.get(shortcode);
+          } catch {
+            // Ignore - emoji URL won't be attached
+          }
+        }
+        if (emojiUrl) {
+          extraRumorTags.push(['emoji', shortcode, emojiUrl]);
+        }
+      }
+
+      const result = await this.createNip44Message(
+        reaction,
+        receiverPubkey,
+        myPubkey,
+        undefined,
+        {
+          rumorKind: kinds.Reaction,
+          extraRumorTags,
+          eventKind: 'reaction',
+          reactionTo: message.id,
+          reactionContent: reaction,
+        }
+      );
+
+      this.messaging.addMessageToChat(receiverPubkey, {
+        ...result.message,
+        pending: true,
+      });
+
+      result.publish().then(publishResult => {
+        if (publishResult.success) {
+          this.messaging.updateMessageInChat(receiverPubkey, result.message.id, {
+            pending: false,
+            received: true,
+            failed: false,
+          });
+        } else {
+          this.messaging.removeMessageFromChat(receiverPubkey, result.message.id);
+          this.snackBar.open(publishResult.failureReason || 'Failed to send reaction', 'Close', { duration: 3000 });
+        }
+      }).catch(err => {
+        this.messaging.removeMessageFromChat(receiverPubkey, result.message.id);
+        this.logger.error('Failed to publish DM reaction', err);
+        this.snackBar.open('Failed to send reaction', 'Close', { duration: 3000 });
+      });
+    } catch (error) {
+      this.logger.error('Failed to prepare DM reaction', error);
+      this.snackBar.open('Failed to send reaction', 'Close', { duration: 3000 });
+    }
+  }
+
+  private getReactionTargetFromTags(tags: string[][]): string | undefined {
+    const eTag = tags.find(tag => tag[0] === 'e');
+    return eTag?.[1];
   }
 
   /**
@@ -1575,10 +2138,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
 
     // Start the long press timer
     this.longPressTimeout = setTimeout(() => {
-      // Trigger haptic feedback if available
-      if ('vibrate' in navigator) {
-        navigator.vibrate(50);
-      }
+      this.haptics.triggerMedium();
 
       this.longPressedMessage.set(message);
       this.showMessageContextMenu(message, event);
@@ -1873,6 +2433,9 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
    */
   toggleChatDetails(): void {
     this.showChatDetails.update(v => !v);
+    if (this.showChatDetails()) {
+      this.loadLinkPreviews();
+    }
   }
 
   /**
@@ -1958,11 +2521,72 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     }
   }
 
+  /** Check if a URL points to an image */
+  isImageLink(url: string): boolean {
+    return isImageUrl(url);
+  }
+
+  /** Get the OG preview for a URL, only when loaded */
+  getLinkPreview(url: string): OpenGraphData | undefined {
+    const preview = this.linkPreviews().get(url);
+    if (preview && !preview.loading && !preview.error) {
+      return preview;
+    }
+    return undefined;
+  }
+
+  /** Load OG previews for visible regular links */
+  loadLinkPreviews(): void {
+    const links = this.regularLinks();
+    const toFetch = links
+      .slice(0, 10)
+      .filter(link => !this.linkPreviewsLoaded.has(link.url));
+
+    for (const link of toFetch) {
+      this.linkPreviewsLoaded.add(link.url);
+      this.openGraph.getOpenGraphData(link.url).then(data => {
+        this.linkPreviews.update(map => {
+          const newMap = new Map(map);
+          newMap.set(link.url, data);
+          return newMap;
+        });
+      });
+    }
+  }
+
   /**
    * Open URL in new tab
    */
   openUrl(url: string): void {
     window.open(url, '_blank', 'noopener,noreferrer');
+  }
+
+  /**
+   * Open image preview dialog for shared images
+   */
+  async openImagePreview(index: number, event?: MouseEvent): Promise<void> {
+    event?.preventDefault();
+    event?.stopPropagation();
+
+    const images = this.sharedImages();
+    if (images.length === 0) return;
+
+    const { MediaPreviewDialogComponent } = await import('../../components/media-preview-dialog/media-preview.component');
+
+    this.dialog.open(MediaPreviewDialogComponent, {
+      data: {
+        mediaItems: images.map(img => ({
+          url: img.url,
+          type: 'image',
+        })),
+        initialIndex: index,
+      },
+      maxWidth: '100vw',
+      maxHeight: '100vh',
+      width: '100vw',
+      height: '100vh',
+      panelClass: 'image-dialog-panel',
+    });
   }
 
   /**
@@ -2021,7 +2645,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     receiverPubkey: string,
     myPubkey: string,
     replyToId?: string
-  ): Promise<{ message: DirectMessage; publish: () => Promise<void> }> {
+  ): Promise<{ message: DirectMessage; publish: () => Promise<{ success: boolean; failureReason?: string }> }> {
     try {
       // Encrypt the message using NIP-04
       const encryptedContent = await this.encryption.encryptNip04(messageText, receiverPubkey);
@@ -2058,7 +2682,11 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
         encryptionType: 'nip04',
       };
 
-      const publish = () => this.publishToRelays(signedEvent, receiverPubkey);
+      const publish = async (): Promise<{ success: boolean; failureReason?: string }> => {
+        const success = await this.publishToRelays(signedEvent, receiverPubkey);
+        if (success) return { success: true };
+        return { success: false, failureReason: 'Failed to publish to recipient\'s relays' };
+      };
 
       return { message, publish };
     } catch (error) {
@@ -2075,10 +2703,18 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     messageText: string,
     receiverPubkey: string,
     myPubkey: string,
-    replyToId?: string
-  ): Promise<{ message: DirectMessage; publish: () => Promise<void> }> {
+    replyToId?: string,
+    options?: {
+      rumorKind?: number;
+      extraRumorTags?: string[][];
+      eventKind?: 'message' | 'reaction';
+      reactionTo?: string;
+      reactionContent?: string;
+    }
+  ): Promise<{ message: DirectMessage; publish: () => Promise<{ success: boolean; failureReason?: string }> }> {
     try {
       const isNoteToSelf = receiverPubkey === myPubkey;
+      const rumorKind = options?.rumorKind ?? kinds.PrivateDirectMessage;
 
       // Step 1: Create the message (unsigned event) - kind 14
       const tags: string[][] = [['p', receiverPubkey]];
@@ -2088,8 +2724,12 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
         tags.push(['e', replyToId]);
       }
 
+      if (options?.extraRumorTags?.length) {
+        tags.push(...options.extraRumorTags);
+      }
+
       const unsignedMessage = {
-        kind: kinds.PrivateDirectMessage,
+        kind: rumorKind,
         pubkey: myPubkey,
         created_at: Math.floor(Date.now() / 1000),
         tags: tags,
@@ -2179,25 +2819,52 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
         tags: unsignedMessage.tags,
         replyTo: replyToId,
         encryptionType: 'nip44',
+        eventKind: options?.eventKind ?? 'message',
+        reactionTo: options?.reactionTo,
+        reactionContent: options?.reactionContent,
       };
 
-      // Return a publish function that handles all relay publishing in the background
-      const publish = async () => {
+      // Return a publish function that handles all relay publishing in the background.
+      // Uses kind 10050 DM relays only — does NOT fall back to all account relays (10002).
+      // Returns true if at least one relay accepted the recipient's gift wrap.
+      const publish = async (): Promise<{ success: boolean; failureReason?: string }> => {
+        const errors: string[] = [];
+
         if (isNoteToSelf) {
-          // Note to Self: Only one gift wrap needed
-          await Promise.allSettled([
+          const results = await Promise.allSettled([
             this.publishToUserDmRelays(signedGiftWrap, myPubkey),
-            this.publishToAccountRelays(signedGiftWrap),
           ]);
+          const success = results.some(r => r.status === 'fulfilled');
+          if (!success) {
+            errors.push(...results.filter(r => r.status === 'rejected').map(r => (r as PromiseRejectedResult).reason?.message || 'Relay rejected'));
+            return { success: false, failureReason: errors.join('; ') || 'Failed to publish to DM relays' };
+          }
+          return { success: true };
         } else {
-          // Regular message: publish both gift wraps
-          await Promise.allSettled([
+          // Publish recipient's gift wrap to their DM relays (kind 10050)
+          // and to discovery relays as fallback
+          const recipientResults = await Promise.allSettled([
             this.publishToUserDmRelays(signedGiftWrap, receiverPubkey),
-            this.publishToAccountRelays(signedGiftWrap),
             this.publishToDiscoveryRelays(signedGiftWrap),
-            this.publishToUserDmRelays(signedGiftWrap2!, myPubkey),
-            this.publishToAccountRelays(signedGiftWrap2!),
           ]);
+          const recipientSuccess = recipientResults.some(r => r.status === 'fulfilled');
+
+          // Publish sender's self-copy to own DM relays (kind 10050)
+          const selfResults = await Promise.allSettled([
+            this.publishToUserDmRelays(signedGiftWrap2!, myPubkey),
+          ]);
+
+          if (!recipientSuccess) {
+            errors.push(...recipientResults.filter(r => r.status === 'rejected').map(r => (r as PromiseRejectedResult).reason?.message || 'Relay rejected'));
+            return { success: false, failureReason: errors.join('; ') || 'Failed to deliver to recipient\'s relays' };
+          }
+
+          // Log self-copy failures but don't treat as overall failure
+          if (selfResults.every(r => r.status === 'rejected')) {
+            this.logger.warn('Self-copy gift wrap failed to publish to own DM relays');
+          }
+
+          return { success: true };
         }
       };
 
@@ -2209,14 +2876,16 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   /**
-   * Publish an event to multiple relays
+   * Publish an event to multiple relays.
+   * Returns true if at least one relay accepted the event.
    */
-  private async publishToRelays(event: NostrEvent, pubkey: string): Promise<void> {
+  private async publishToRelays(event: NostrEvent, pubkey: string): Promise<boolean> {
     const promisesUser = this.userRelayService.publish(pubkey, event);
     const promisesAccount = this.accountRelay.publish(event);
 
     // Wait for all publish attempts to complete
-    await Promise.allSettled([promisesUser, promisesAccount]);
+    const results = await Promise.allSettled([promisesUser, promisesAccount]);
+    return results.some(r => r.status === 'fulfilled');
   }
 
   /**

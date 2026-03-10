@@ -1,32 +1,61 @@
 .note-editor-dialog {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
   width: 100%;
+  height: auto;
+  max-height: 100%;
+  min-height: 0;
+  overflow: hidden;
+
+  @media (max-width: 600px),
+  (max-height: 700px) {
+    position: relative;
+    height: 100%;
+    max-height: 100%;
+  }
 
   .dialog-content-wrapper {
     position: relative;
-    flex: 1;
+    min-height: 0;
+    max-height: min(56dvh, 520px);
     overflow-y: auto;
     display: flex;
     flex-direction: column;
-    padding: 16px 20px;
+    padding: 8px 12px 10px;
     width: 100%;
     box-sizing: border-box;
 
     @media (max-width: 600px),
     (max-height: 700px) {
-      padding: 4px 10px 8px 10px;
+      max-height: none;
+      padding: 2px 6px 6px;
     }
 
     @media (max-width: 400px) {
-      padding: 2px 6px 4px 6px;
+      padding: 2px 4px 4px;
     }
 
     &.drag-over {
       border: 0px dashed var(--mat-sys-primary);
       border-radius: 8px;
       background-color: rgba(var(--mat-sys-primary-rgb), 0.05);
+    }
+
+    &.preview-mode {
+      overflow-y: auto;
+    }
+  }
+
+  .composer-actions {
+    padding: 14px 6px 10px;
+    background-color: var(--mat-sys-surface);
+
+    @media (max-width: 600px),
+    (max-height: 700px) {
+      position: relative;
+      z-index: 1;
+      padding: 12px 2px calc(8px + env(safe-area-inset-bottom));
+      border-top: 1px solid var(--mat-sys-outline-variant);
     }
   }
 
@@ -224,9 +253,7 @@
 
   .content-field {
     width: 100%;
-    flex: 1;
-    display: flex;
-    flex-direction: column;
+    display: block;
 
     // Make the mat-form-field itself full width
     &.mat-mdc-form-field {
@@ -240,26 +267,17 @@
       // Ensure all wrapper elements are full width
       .mat-mdc-text-field-wrapper {
         overflow: visible;
-        flex: 1;
-        display: flex;
-        flex-direction: column;
         width: 100% !important;
         max-width: 100% !important;
       }
 
       .mat-mdc-form-field-flex {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
         width: 100% !important;
         max-width: 100% !important;
       }
 
       .mat-mdc-form-field-infix {
         overflow: visible;
-        flex: 1;
-        display: flex;
-        flex-direction: column;
         width: 100% !important;
         max-width: 100% !important;
         min-width: 0 !important;
@@ -299,8 +317,9 @@
 
     .content-textarea {
       resize: none;
-      overflow-y: auto;
-      max-height: 500px;
+      overflow-y: hidden;
+      min-height: 150px;
+      max-height: min(500px, calc(100vh - 320px));
       height: auto;
       width: 100% !important;
       max-width: 100% !important;
@@ -309,10 +328,20 @@
       word-wrap: break-word;
       word-break: normal;
       white-space: pre-wrap;
-      padding: 4px 0 !important;
+      padding: 4px 0 10px !important;
 
       &.over-limit {
         color: var(--mat-sys-error);
+      }
+
+      @media (max-width: 600px),
+      (max-height: 700px) {
+        min-height: 128px;
+        max-height: min(360px, calc(100vh - 260px));
+      }
+
+      @media (max-height: 600px) {
+        max-height: min(300px, calc(100vh - 240px));
       }
     }
   }
@@ -435,7 +464,7 @@
 
   .action-container {
     .mobile-actions-trigger {
-      display: none;
+      display: inline-flex;
     }
   }
 
@@ -675,70 +704,62 @@
 }
 
 .content-editor-section {
-  flex: 1;
+  flex: 0 0 auto;
   display: flex;
   flex-direction: column;
   min-height: 0;
   width: 100%;
 
   .textarea-container {
-    flex: 1;
+    flex: 0 0 auto;
     display: flex;
     flex-direction: column;
     min-height: 0;
     width: 100%;
+    padding-bottom: 12px;
 
     .content-field {
       width: 100%;
-      margin-bottom: 0;
-      flex: 0 0 auto;
-      display: flex;
-      flex-direction: column;
-      min-height: 0;
+      margin-bottom: 8px;
+      display: block;
 
-      // Override mat-form-field width
       &.mat-mdc-form-field {
         width: 100% !important;
         max-width: 100% !important;
       }
 
-      // Ensure all Material form field internals are full width
-      ::ng-deep {
-
-        .mat-mdc-text-field-wrapper,
-        .mat-mdc-form-field-flex,
-        .mat-mdc-form-field-infix {
-          width: 100% !important;
-          max-width: 100% !important;
-        }
-
-        .mat-mdc-form-field-subscript-wrapper,
-        .mat-mdc-form-field-bottom-align::before {
-          margin: 0 !important;
-          min-height: 0 !important;
-          height: 0 !important;
-          padding: 0 !important;
-          display: block;
-        }
-
-        textarea.mat-mdc-input-element,
-        textarea.mdc-text-field__input {
-          width: 100% !important;
-          max-width: 100% !important;
-          box-sizing: border-box;
-        }
+      ::ng-deep .mat-mdc-form-field-subscript-wrapper {
+        margin-top: 6px;
       }
 
-      // Reduce top spacing on mobile
-      @media (max-width: 600px),
-      (max-height: 700px) {
-        ::ng-deep .mat-mdc-text-field-wrapper {
-          padding-top: 0;
+      ::ng-deep .mat-mdc-form-field-hint-wrapper {
+        padding: 0;
+      }
+
+      .content-textarea {
+        display: block;
+        width: 100%;
+        resize: none;
+        overflow-y: hidden;
+        min-height: 112px;
+        max-height: none;
+        box-sizing: border-box;
+        word-wrap: break-word;
+        word-break: normal;
+        white-space: pre-wrap;
+        padding: 4px 0 8px !important;
+
+        &:focus {
+          outline: none;
         }
 
-        ::ng-deep .mat-mdc-form-field-subscript-wrapper {
-          position: static;
-          margin-bottom: 4px;
+        @media (max-width: 600px),
+        (max-height: 700px) {
+          min-height: 96px;
+        }
+
+        @media (max-width: 400px) {
+          min-height: 88px;
         }
       }
     }
@@ -762,6 +783,12 @@
 
 // Preview section styles
 .preview-section {
+  flex: 0 1 auto;
+  min-height: 0;
+  max-height: min(56vh, calc(100dvh - 280px));
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   margin-bottom: 16px;
   border: 1px solid var(--mat-sys-outline-variant);
   border-radius: 8px;
@@ -778,7 +805,8 @@
   .preview-header {
     display: flex;
     align-items: center;
-    gap: 8px;
+    justify-content: space-between;
+    gap: 12px;
     padding: 12px 16px;
     background-color: var(--mat-sys-surface-variant);
     border-bottom: 1px solid var(--mat-sys-outline-variant);
@@ -793,21 +821,48 @@
       padding: 8px 10px;
     }
 
-    .preview-icon {
-      color: var(--mat-sys-primary);
-      font-size: 16px;
-      width: 16px;
-      height: 16px;
+    .preview-header-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+
+      .preview-icon {
+        color: var(--mat-sys-primary);
+        font-size: 16px;
+        width: 16px;
+        height: 16px;
+        flex-shrink: 0;
+      }
+
+      .preview-title {
+        font-size: 14px;
+        color: var(--mat-sys-on-surface-variant);
+      }
     }
 
-    .preview-title {
-      font-size: 14px;
-      font-weight: 500;
-      color: var(--mat-sys-on-surface-variant);
+    .preview-exit-button {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      min-width: 0;
+      flex-shrink: 0;
+      color: var(--mat-sys-primary);
+
+      mat-icon {
+        width: 18px;
+        height: 18px;
+        font-size: 18px;
+      }
     }
   }
 
   .preview-content {
+    display: block;
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: 100%;
+    overflow-y: auto;
     padding: 16px;
     background-color: var(--mat-sys-surface);
     color: var(--mat-sys-on-surface);
@@ -946,6 +1001,32 @@
         align-self: flex-start;
       }
 
+      .x-toggle-label {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+
+      .x-logo {
+        border-radius: var(--mat-sys-corner-full);
+        object-fit: contain;
+        flex: 0 0 auto;
+      }
+
+      .x-enabled-pill {
+        display: inline-flex;
+        align-items: center;
+        min-height: 20px;
+        padding: 0 8px;
+        border-radius: var(--mat-sys-corner-full);
+        background: var(--mat-sys-surface-container-high);
+        color: var(--mat-sys-primary);
+        font-size: 11px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+
       .option-description {
         font-size: 12px;
         color: var(--mat-sys-on-surface-variant);
@@ -999,6 +1080,23 @@
           font-size: 16px;
           width: 16px;
           height: 16px;
+        }
+      }
+
+      .x-post-validation {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 8px;
+        color: var(--mat-sys-error);
+        font-size: 12px;
+        line-height: 1.4;
+
+        mat-icon {
+          font-size: 16px;
+          width: 16px;
+          height: 16px;
+          flex: 0 0 auto;
         }
       }
 

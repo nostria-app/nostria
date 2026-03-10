@@ -30,10 +30,19 @@
 
   // Hide cursor when idle - only in native fullscreen mode
   &:fullscreen.cursor-hidden {
-    cursor: none;
 
-    * {
+    .video-wrapper,
+    .video-wrapper *,
+    .stream-controls-overlay,
+    .stream-controls-overlay *,
+    app-video-controls,
+    app-video-controls * {
       cursor: none !important;
+    }
+
+    .chat-sidebar,
+    .chat-sidebar * {
+      cursor: auto !important;
     }
   }
 

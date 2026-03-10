@@ -37,6 +37,7 @@ export interface SyncedFeedConfig {
 
 export interface UserSettings {
   socialSharingPreview: boolean;
+  postToXByDefault?: boolean;
   relayDiscoveryMode?: RelayDiscoveryMode;
   imageCacheEnabled?: boolean; // Optional setting for image cache
   // Report type visibility settings (NIP-56)
@@ -70,6 +71,8 @@ export interface UserSettings {
   hideWalletAmounts?: boolean; // Hide sat amounts in wallet UI
   // Video playback settings
   autoPlayVideos?: boolean; // Auto-play all videos (muted)
+  // Music settings
+  publishMusicStatus?: boolean; // Publish NIP-38 music status when playing tracks
   // Custom feeds - synced across devices via kind 30078
   customFeeds?: SyncedFeedConfig[];
   // Favicon settings
@@ -79,6 +82,7 @@ export interface UserSettings {
 
 const DEFAULT_SETTINGS: UserSettings = {
   socialSharingPreview: true,
+  postToXByDefault: false,
   relayDiscoveryMode: 'outbox',
   imageCacheEnabled: true,
   // By default, hide all reported content
@@ -109,6 +113,8 @@ const DEFAULT_SETTINGS: UserSettings = {
   hideWalletAmounts: false, // Show amounts by default
   // Video playback
   autoPlayVideos: false, // Off by default - user must opt-in
+  // Music
+  publishMusicStatus: true, // Publish NIP-38 music status by default
   // Custom feeds - empty by default, will be populated from FeedService
   customFeeds: undefined,
   // Favicon settings - disabled by default for privacy

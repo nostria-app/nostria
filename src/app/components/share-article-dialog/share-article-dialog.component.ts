@@ -1028,6 +1028,7 @@ export class ShareArticleDialogComponent {
       this.customDialog.open(NoteEditorDialogComponent, {
         title: 'Share Article',
         data: noteData,
+        panelClass: 'note-editor-dialog-panel',
         width: '680px',
         maxWidth: '95vw',
       });

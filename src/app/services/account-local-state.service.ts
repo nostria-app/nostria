@@ -37,6 +37,7 @@ interface AccountLocalState {
   launchCount?: number;
   dismissedPushNotificationDialog?: boolean;
   dismissedCredentialsBackupDialog?: boolean;
+  dismissedDeadRelaysWarningDialog?: boolean;
   dismissedHiddenChatInfoNotification?: boolean;
   articlesActiveTab?: number;
   /**
@@ -101,6 +102,7 @@ interface AccountLocalState {
   actionsDisplayModeReplies?: string; // Display mode for action buttons on replies: 'labels-only', 'icons-and-labels', 'icons-only'
   clipsLastForYouEventId?: string; // Last viewed clip event id in Clips For You
   clipsLastFollowingEventId?: string; // Last viewed clip event id in Clips Following
+  followerCheckLastTimestamp?: number; // Unix timestamp (seconds) when follower events were last fetched from relays
 }
 
 /**
@@ -273,7 +275,40 @@ export class AccountLocalStateService {
    * Clear all processed follower notifications for an account.
    */
   clearFollowerNotificationsProcessed(pubkey: string): void {
-    this.updateAccountState(pubkey, { followerNotificationsProcessedAt: undefined });
+    this.updateAccountState(pubkey, {
+      followerNotificationsProcessedAt: undefined,
+      followerCheckLastTimestamp: undefined,
+    });
+  }
+
+  /**
+   * Batch-mark multiple follower pubkeys as processed for an account.
+   * More efficient than calling markFollowerNotificationProcessed() individually.
+   */
+  markFollowerNotificationsBatchProcessed(pubkey: string, followerPubkeys: string[], timestamp: number): void {
+    const state = this.getAccountState(pubkey);
+    const existing = state.followerNotificationsProcessedAt || {};
+    const updated: Record<string, number> = { ...existing };
+    for (const followerPubkey of followerPubkeys) {
+      updated[followerPubkey] = timestamp;
+    }
+    this.updateAccountState(pubkey, { followerNotificationsProcessedAt: updated });
+  }
+
+  /**
+   * Get the timestamp when follower events were last fetched from relays.
+   * Returns 0 if never fetched (first-time user).
+   */
+  getFollowerCheckLastTimestamp(pubkey: string): number {
+    const state = this.getAccountState(pubkey);
+    return state.followerCheckLastTimestamp || 0;
+  }
+
+  /**
+   * Set the timestamp when follower events were last fetched from relays.
+   */
+  setFollowerCheckLastTimestamp(pubkey: string, timestamp: number): void {
+    this.updateAccountState(pubkey, { followerCheckLastTimestamp: timestamp });
   }
 
   /**
@@ -632,6 +667,21 @@ export class AccountLocalStateService {
   }
 
   /**
+   * Get dismissed dead relays warning dialog status for an account
+   */
+  getDismissedDeadRelaysWarningDialog(pubkey: string): boolean {
+    const state = this.getAccountState(pubkey);
+    return state.dismissedDeadRelaysWarningDialog || false;
+  }
+
+  /**
+   * Set dismissed dead relays warning dialog status for an account
+   */
+  setDismissedDeadRelaysWarningDialog(pubkey: string, dismissed: boolean): void {
+    this.updateAccountState(pubkey, { dismissedDeadRelaysWarningDialog: dismissed });
+  }
+
+  /**
    * Get dismissed hidden chat info notification status for an account
    */
   getDismissedHiddenChatInfoNotification(pubkey: string): boolean {
@@ -653,6 +703,7 @@ export class AccountLocalStateService {
     this.updateAccountState(pubkey, {
       dismissedPushNotificationDialog: undefined,
       dismissedCredentialsBackupDialog: undefined,
+      dismissedDeadRelaysWarningDialog: undefined,
       dismissedHiddenChatInfoNotification: undefined,
     });
   }

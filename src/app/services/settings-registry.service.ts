@@ -135,6 +135,19 @@ export class SettingsRegistryService {
       priority: 12,
     },
     {
+      id: 'x-dual-posting',
+      title: 'Post to X',
+      description: 'Connect X and optionally post to X when publishing from Nostria',
+      keywords: ['x', 'twitter', 'dual post', 'cross post', 'share to x', 'social', 'oauth'],
+      section: 'general',
+      sectionTitle: $localize`:@@settings.sections.general:General`,
+      icon: 'share',
+      route: '/settings/general',
+      priority: 13,
+      authenticated: true,
+      popular: true,
+    },
+    {
       id: 'media-privacy',
       title: $localize`:@@settings.media.title:Media`,
       description: $localize`:@@settings.media.description:Control how media content is displayed based on your following status`,
@@ -623,6 +636,19 @@ export class SettingsRegistryService {
       priority: 4,
       popular: true,
     },
+    // Music Settings
+    {
+      id: 'music-status',
+      title: $localize`:@@settings.music-status.title:Music Status`,
+      description: $localize`:@@settings.music-status.description:Share what you're listening to via NIP-38 user status`,
+      keywords: ['music', 'status', 'nip-38', 'now playing', 'listening', 'share', 'song', 'track', 'audio'],
+      section: 'general',
+      sectionTitle: $localize`:@@settings.sections.general:General`,
+      icon: 'music_note',
+      route: '/settings/general',
+      priority: 19,
+    },
+
     // Debug Settings
     {
       id: 'simulate-platform',

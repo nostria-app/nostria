@@ -1,5 +1,4 @@
 import { ChangeDetectionStrategy, Component, inject, input, output } from '@angular/core';
-import { DecimalPipe } from '@angular/common';
 
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -8,7 +7,6 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { NostrService } from '../../services/nostr.service';
 import { RelayPublishingNotification, RelayPublishPromise } from '../../services/database.service';
 import {
   EventDetailsDialogComponent,
@@ -27,7 +25,6 @@ import { LayoutService } from '../../services/layout.service';
     MatDividerModule,
     MatChipsModule,
     MatTooltipModule,
-    DecimalPipe,
   ],
   templateUrl: './relay-publish-status.component.html',
   styleUrls: ['./relay-publish-status.component.scss'],
@@ -38,7 +35,6 @@ export class RelayPublishStatusComponent {
   retry = output<string>();
   republish = output<string>();
 
-  private nostrService = inject(NostrService);
   private customDialog = inject(CustomDialogService);
   layout = inject(LayoutService);
 
@@ -64,12 +60,31 @@ export class RelayPublishStatusComponent {
     const promises = this.notification().relayPromises;
     if (!promises || promises.length === 0) return 0;
     const total = promises.length;
-    const completed = this.successCount + this.failedCount;
-    return total > 0 ? (completed / total) * 100 : 0;
+    return total > 0 ? (this.successCount / total) * 100 : 0;
+  }
+
+  get progressText(): string {
+    if (this.pendingCount > 0) {
+      return `${this.progress.toFixed(0)}% success so far`;
+    }
+
+    if (this.failedCount > 0) {
+      return `${this.progress.toFixed(0)}% success`;
+    }
+
+    return '100% complete';
   }
 
   get hasFailures(): boolean {
     return this.failedCount > 0;
+  }
+
+  get retryCount(): number {
+    return this.notification().retryCount ?? 0;
+  }
+
+  get autoRetryLimitReached(): boolean {
+    return this.hasFailures && this.retryCount >= 2;
   }
 
   onRetry(): void {
@@ -112,5 +127,10 @@ export class RelayPublishStatusComponent {
 
     dialogRef.componentInstance.dialogRef = dialogRef;
     dialogRef.componentInstance.dialogData = { event: this.notification().event };
+  }
+
+  openPublishedEvent(): void {
+    const event = this.notification().event;
+    this.layout.openGenericEvent(event.id, event);
   }
 }

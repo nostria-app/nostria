@@ -251,20 +251,20 @@ export class ArticleReferencePickerDialogComponent {
       const currentList = this.bookmarkService.allBookmarkLists().find((item) => item.id === list.id);
       const event = currentList?.event;
       if (!event) {
-        this.snackBar.open('No references found in this bookmark list', 'Close', { duration: 3000 });
+        this.snackBar.open('No references found in this bookmark folder', 'Close', { duration: 3000 });
         return;
       }
 
       const references = this.getReferencesFromBookmarkTags(event.tags);
       if (references.length === 0) {
-        this.snackBar.open('No reference tags found in this bookmark list', 'Close', { duration: 3000 });
+        this.snackBar.open('No reference tags found in this bookmark folder', 'Close', { duration: 3000 });
         return;
       }
 
       this.dialogRef?.close({ references });
     } catch (error) {
       console.error('Failed to insert bookmark list references:', error);
-      this.snackBar.open('Failed to load bookmark list references', 'Close', { duration: 3000 });
+      this.snackBar.open('Failed to load bookmark folder references', 'Close', { duration: 3000 });
     }
   }
 
@@ -289,6 +289,23 @@ export class ArticleReferencePickerDialogComponent {
     const fallbackContent = (event.content || '').replace(/\s+/g, ' ').trim().slice(0, 90);
 
     return title || subject || identifier || fallbackContent || `Event ${event.id.slice(0, 12)}...`;
+  }
+
+  getBookmarkListEntryLabel(list: BookmarkList): string {
+    const count = this.getBookmarkListEntryCount(list);
+    return `${count} ${count === 1 ? 'entry' : 'entries'}`;
+  }
+
+  private getBookmarkListEntryCount(list: BookmarkList): number {
+    const tags = list.event?.tags;
+    if (!tags || tags.length === 0) {
+      return 0;
+    }
+
+    return tags.filter((tag) => {
+      const marker = tag[0];
+      return (marker === 'p' || marker === 'e' || marker === 'a') && !!tag[1];
+    }).length;
   }
 
   private getReferenceForEvent(event: Event): string | null {

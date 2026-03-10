@@ -20,6 +20,7 @@ import { MediaPlayerService } from '../../../services/media-player.service';
 import { AccountStateService } from '../../../services/account-state.service';
 import { LayoutService } from '../../../services/layout.service';
 import { PanelNavigationService } from '../../../services/panel-navigation.service';
+import { DatabaseService } from '../../../services/database.service';
 import { LoggerService } from '../../../services/logger.service';
 import { NostrRecord, MediaItem } from '../../../interfaces';
 import { UserRelaysService } from '../../../services/relays/user-relays';
@@ -61,6 +62,7 @@ export class MusicArtistComponent implements OnInit, OnDestroy {
   private accountState = inject(AccountStateService);
   private layout = inject(LayoutService);
   private panelNav = inject(PanelNavigationService);
+  private database = inject(DatabaseService);
   private readonly logger = inject(LoggerService);
   private snackBar = inject(MatSnackBar);
   private clipboard = inject(Clipboard);
@@ -178,12 +180,16 @@ export class MusicArtistComponent implements OnInit, OnDestroy {
     this.subscriptions.forEach(sub => sub.close());
   }
 
-  private loadArtistContent(pubkey: string): void {
+  private async loadArtistContent(pubkey: string): Promise<void> {
+    const hadCachedData = await this.loadArtistContentFromDatabase(pubkey);
+
     const relayUrls = this.relaysService.getOptimalRelays(this.utilities.preferredRelays);
 
     if (relayUrls.length === 0) {
       this.logger.warn('No relays available');
-      this.loading.set(false);
+      if (!hadCachedData) {
+        this.loading.set(false);
+      }
       return;
     }
 
@@ -219,6 +225,10 @@ export class MusicArtistComponent implements OnInit, OnDestroy {
       this.trackMap.set(uniqueId, event);
       this.updateTracks();
       this.loading.set(false);
+
+      this.database.saveEvent({ ...event, dTag }).catch((err: unknown) => {
+        this.logger.warn('[MusicArtist] Failed to save track to database:', err);
+      });
     });
 
     this.subscriptions.push(trackSub);
@@ -245,9 +255,55 @@ export class MusicArtistComponent implements OnInit, OnDestroy {
       this.playlistMap.set(uniqueId, event);
       this.updatePlaylists();
       this.loading.set(false);
+
+      this.database.saveEvent({ ...event, dTag }).catch((err: unknown) => {
+        this.logger.warn('[MusicArtist] Failed to save playlist to database:', err);
+      });
     });
 
     this.subscriptions.push(playlistSub);
+  }
+
+  /**
+   * Load cached artist tracks/playlists first so the page works offline.
+   */
+  private async loadArtistContentFromDatabase(pubkey: string): Promise<boolean> {
+    try {
+      const [cachedTracks, cachedPlaylists] = await Promise.all([
+        this.database.getEventsByPubkeyAndKind(pubkey, MUSIC_KIND),
+        this.database.getEventsByPubkeyAndKind(pubkey, MUSIC_PLAYLIST_KIND),
+      ]);
+
+      for (const track of cachedTracks) {
+        if (this.reporting.isContentBlocked(track)) {
+          continue;
+        }
+        const dTag = track.tags.find(t => t[0] === 'd')?.[1] || '';
+        this.trackMap.set(`${track.pubkey}:${dTag}`, track);
+      }
+
+      for (const playlist of cachedPlaylists) {
+        const dTag = playlist.tags.find(t => t[0] === 'd')?.[1] || '';
+        this.playlistMap.set(`${playlist.pubkey}:${dTag}`, playlist);
+      }
+
+      if (this.trackMap.size > 0) {
+        this.updateTracks();
+      }
+      if (this.playlistMap.size > 0) {
+        this.updatePlaylists();
+      }
+
+      const hasCachedData = this.trackMap.size > 0 || this.playlistMap.size > 0;
+      if (hasCachedData) {
+        this.loading.set(false);
+      }
+
+      return hasCachedData;
+    } catch (error) {
+      this.logger.warn('[MusicArtist] Failed to load artist content from database:', error);
+      return false;
+    }
   }
 
   private updateTracks(): void {

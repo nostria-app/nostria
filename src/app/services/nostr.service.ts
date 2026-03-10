@@ -37,7 +37,6 @@ import { CryptoEncryptionService, EncryptedData } from './crypto-encryption.serv
 import { PinPromptService } from './pin-prompt.service';
 import { MnemonicService } from './mnemonic.service';
 import { RelayAuthService } from './relays/relay-auth.service';
-import { RelayWebSocketService } from './relays/relay-websocket.service';
 import { AccountLocalStateService } from './account-local-state.service';
 import { FollowSetsService } from './follow-sets.service';
 import { TrustProviderService, TRUST_PROVIDER_LIST_KIND } from './trust-provider.service';
@@ -129,7 +128,6 @@ export class NostrService implements NostriaService {
   private readonly pinPrompt = inject(PinPromptService);
   private readonly mnemonicService = inject(MnemonicService);
   private readonly relayAuth = inject(RelayAuthService);
-  private readonly relayWebSocket = inject(RelayWebSocketService);
   private readonly accountLocalState = inject(AccountLocalStateService);
   private readonly followSetsService = inject(FollowSetsService);
   private readonly ngZone = inject(NgZone);
@@ -198,9 +196,6 @@ export class NostrService implements NostriaService {
 
     // Set the signing function for NIP-42 relay authentication
     this.relayAuth.setSignFunction((event: EventTemplate) => this.signEvent(event));
-
-    // Ensure nostr-tools uses our relay-aware WebSocket implementation
-    this.relayWebSocket.initialize();
 
     // DEPRECATED: Old signal-based publishing removed
     // The accountState.publish signal has been replaced with direct publishEvent() calls
@@ -1483,7 +1478,6 @@ export class NostrService implements NostriaService {
         info.foundMetadataOnUserRelays = true;
       }
 
-      // this.relayService.timeoutRelays(failedRelays);
     } catch (error) {
       this.logger.debug('Failed to fetch metadata from relay', { error });
     } finally {

@@ -47,6 +47,11 @@ import { PanelActionsService } from '../../../services/panel-actions.service';
 import { RightPanelService } from '../../../services/right-panel.service';
 import { BackupComponent } from '../backup/backup.component';
 import { ConfirmDialogComponent } from '../../../components/confirm-dialog/confirm-dialog.component';
+import { CustomDialogService } from '../../../services/custom-dialog.service';
+import {
+  FindResponsiveRelaysDialogComponent,
+  FindResponsiveRelaysDialogResult,
+} from './find-responsive-relays-dialog.component';
 
 @Component({
   selector: 'app-relays-page',
@@ -90,6 +95,7 @@ export class RelaysComponent implements OnInit, OnDestroy {
   readonly relayAuth = inject(RelayAuthService);
   private readonly panelActions = inject(PanelActionsService);
   private readonly rightPanel = inject(RightPanelService);
+  private readonly customDialog = inject(CustomDialogService);
 
   followingRelayUrls = signal<string[]>([]);
   newRelayUrl = signal('');
@@ -180,6 +186,9 @@ export class RelaysComponent implements OnInit, OnDestroy {
   malformedRelayEvent = signal<any>(undefined);
   isRepairingRelayList = signal(false);
 
+  // Relays in the published account relay list that are known dead/defunct
+  knownDeadAccountRelays = signal<string[]>([]);
+
   constructor() {
     // Effect to re-check following list when active pubkey changes
     effect(async () => {
@@ -189,12 +198,43 @@ export class RelaysComponent implements OnInit, OnDestroy {
         await this.checkDirectMessageRelayList(pubkey);
         await this.checkForMalformedRelayList(pubkey);
         await this.loadDiscoveryRelayListFromEvent(pubkey);
+        await this.loadKnownDeadAccountRelays(pubkey);
       } else {
         this.showFollowingRelayCleanup.set(false);
         this.showUpdateDMRelays.set(false);
         this.hasMalformedRelayList.set(false);
+        this.knownDeadAccountRelays.set([]);
       }
     });
+  }
+
+  private async loadKnownDeadAccountRelays(pubkey: string): Promise<void> {
+    try {
+      const relayListEvent = await this.data.getRelayListEvent(pubkey);
+      const relayUrls = this.extractRelayUrlsFromRelayListEvent(relayListEvent);
+      const knownDeadRelayUrls = this.utilities.getKnownDeadRelayUrls(relayUrls);
+      this.knownDeadAccountRelays.set(knownDeadRelayUrls);
+    } catch (error) {
+      this.logger.warn('Failed to load known dead account relays', error);
+      this.knownDeadAccountRelays.set([]);
+    }
+  }
+
+  private extractRelayUrlsFromRelayListEvent(event: { tags: string[][] } | null): string[] {
+    if (!event) {
+      return [];
+    }
+
+    const relayUrls = event.tags
+      .filter((tag) => tag.length >= 2 && (tag[0] === 'r' || tag[0] === 'relay'))
+      .map((tag) => {
+        const url = tag[1]?.trim() ?? '';
+        const wssIndex = url.indexOf('wss://');
+        return wssIndex >= 0 ? url.substring(wssIndex) : url;
+      })
+      .filter((url) => !!url);
+
+    return this.utilities.unique(relayUrls);
   }
 
   // Async method to detect if contact list (kind 3) contains relay URLs in content
@@ -470,6 +510,62 @@ export class RelaysComponent implements OnInit, OnDestroy {
     });
   }
 
+  openFindRelaysDialog(): void {
+    const queryRelays = [
+      ...new Set([
+        ...this.discoveryRelay.getRelayUrls(),
+        ...this.knownDiscoveryRelays,
+        ...this.accountRelay.getRelayUrls(),
+      ]),
+    ];
+
+    const dialogRef = this.customDialog.open<
+      typeof FindResponsiveRelaysDialogComponent.prototype,
+      FindResponsiveRelaysDialogResult
+    >(FindResponsiveRelaysDialogComponent, {
+      title: 'Find Responsive Relays',
+      width: '760px',
+      maxWidth: '95vw',
+      data: {
+        relayUrls: queryRelays,
+        existingRelayUrls: this.accountRelay.getRelayUrls(),
+      },
+    });
+
+    dialogRef.afterClosed$.subscribe(async ({ result }) => {
+      const selectedUrls = result?.selectedUrls ?? [];
+      if (selectedUrls.length === 0) {
+        return;
+      }
+
+      const existingRelays = new Set(
+        this.accountRelay
+          .getRelayUrls()
+          .map((relayUrl) => this.utilities.normalizeRelayUrl(relayUrl))
+      );
+
+      let addedCount = 0;
+      for (const relayUrl of selectedUrls) {
+        const normalizedRelayUrl = this.utilities.normalizeRelayUrl(relayUrl);
+        if (existingRelays.has(normalizedRelayUrl)) {
+          continue;
+        }
+
+        this.accountRelay.addRelay(normalizedRelayUrl);
+        existingRelays.add(normalizedRelayUrl);
+        addedCount += 1;
+      }
+
+      if (addedCount === 0) {
+        this.showMessage('All selected relays are already in your list');
+        return;
+      }
+
+      await this.publish();
+      this.showMessage(`Added ${addedCount} responsive relays`);
+    });
+  }
+
   viewRelayInfo(relayUrl: string, showMigration = true): void {
     const dialogRef = this.dialog.open(RelayInfoDialogComponent, {
       width: '500px',
@@ -485,6 +581,7 @@ export class RelaysComponent implements OnInit, OnDestroy {
     this.logger.info('Removing relay', { url: relay.url });
     this.accountRelay.removeRelay(relay.url);
     await this.publish();
+    await this.loadKnownDeadAccountRelays(this.accountState.pubkey());
     this.showMessage('Relay removed');
   }
 
@@ -607,6 +704,42 @@ export class RelaysComponent implements OnInit, OnDestroy {
     // Republish important events to all relays to ensure data is accessible
     // This runs in the background and doesn't block the UI
     this.republishImportantEventsInBackground();
+
+    const pubkey = this.accountState.pubkey();
+    if (pubkey) {
+      await this.loadKnownDeadAccountRelays(pubkey);
+    }
+  }
+
+  isKnownDeadRelay(url: string): boolean {
+    return this.utilities.isKnownDeadRelayUrl(url);
+  }
+
+  async removeKnownDeadRelays(): Promise<void> {
+    const pubkey = this.accountState.pubkey();
+    if (!pubkey) {
+      this.showMessage('No active account');
+      return;
+    }
+
+    const relayListEvent = await this.data.getRelayListEvent(pubkey);
+    const relayUrls = this.extractRelayUrlsFromRelayListEvent(relayListEvent);
+
+    if (relayUrls.length === 0) {
+      this.showMessage('No account relays found to clean');
+      return;
+    }
+
+    const cleanedRelayUrls = relayUrls.filter((url) => !this.utilities.isKnownDeadRelayUrl(url));
+
+    if (cleanedRelayUrls.length === relayUrls.length) {
+      this.showMessage('No known dead relays found in your account relay list');
+      return;
+    }
+
+    this.accountRelay.updateRelays(cleanedRelayUrls);
+    await this.publish();
+    this.showMessage('Known dead relays removed from your account relay list');
   }
 
   /**

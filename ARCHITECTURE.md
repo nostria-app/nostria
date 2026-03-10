@@ -1,3 +1,7 @@
+- Composer-level publish decisions remain ephemeral. The per-post toggle in the note editor controls whether the current publish operation should first create the X post, then inject a NIP-48 `proxy` tag pointing at that X URL into the Nostr event before signing and publishing to relays.
+
+- After the Nostr event has been accepted by a relay, the app finalizes the backend mapping between the Nostr event id and the previously created X post id. The NIP-48 proxy tag is therefore the user-visible source of truth embedded in the event itself, while the backend mapping supports account-scoped usage tracking and future X metrics sync.
+
 # Nostria - Software Architecture Document
 
 > **Nostria** - Your Social Network
@@ -379,6 +383,16 @@ export class StateService {
 | `FeedService`              | Feed configuration and data   |
 | `SettingsService`          | User settings                 |
 | `LocalSettingsService`     | Device-local settings         |
+
+### External Publishing Integrations
+
+Dual-posting integrations follow a split-responsibility model:
+
+- `SettingsService` stores the user's product preference for whether dual-posting should be enabled by default on new posts. This preference is synchronized through the existing Nostr settings event so it follows the user across devices.
+- Backend-managed credentials and connection state are kept out of the Nostr settings event. For X dual-posting, OAuth tokens are stored only in the `nostria-service` database and used server-side when the app explicitly requests a dual-post.
+- Composer-level publish decisions remain ephemeral. The per-post toggle in the note editor controls whether the current publish operation should also trigger the backend X post call after the Nostr event has been published successfully.
+
+This separation keeps secrets off relays while still allowing user preferences to sync naturally with the rest of the app settings.
 
 ### AccountLocalStateService vs LocalSettingsService
 

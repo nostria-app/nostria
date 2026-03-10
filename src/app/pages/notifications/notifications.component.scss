@@ -434,6 +434,10 @@
     background: linear-gradient(180deg, #10b981 0%, #34d399 100%);
   }
 
+  &[data-notification-type="followersummary"]::before {
+    background: linear-gradient(180deg, #10b981 0%, #34d399 100%);
+  }
+
   &[data-notification-type="mention"]::before {
     background: linear-gradient(180deg, #8b5cf6 0%, #a78bfa 100%);
   }
@@ -588,6 +592,12 @@
 
       // New follower - Cheerful green/teal
       &[data-badge-type="newfollower"] {
+        background: linear-gradient(135deg, #10b981 0%, #34d399 100%);
+        box-shadow: 0 2px 4px rgba(16, 185, 129, 0.4);
+      }
+
+      // Follower summary - Same style as new follower
+      &[data-badge-type="followersummary"] {
         background: linear-gradient(135deg, #10b981 0%, #34d399 100%);
         box-shadow: 0 2px 4px rgba(16, 185, 129, 0.4);
       }
@@ -1059,6 +1069,11 @@
     }
 
     &[data-badge-type="newfollower"] {
+      background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+      box-shadow: 0 2px 8px rgba(16, 185, 129, 0.5);
+    }
+
+    &[data-badge-type="followersummary"] {
       background: linear-gradient(135deg, #059669 0%, #10b981 100%);
       box-shadow: 0 2px 8px rgba(16, 185, 129, 0.5);
     }

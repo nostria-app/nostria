@@ -85,6 +85,7 @@ import { Subject } from 'rxjs';
 import { WebPushService } from './services/webpush.service';
 import { PushNotificationPromptComponent } from './components/push-notification-prompt/push-notification-prompt.component';
 import { CredentialsBackupPromptComponent } from './components/credentials-backup-prompt/credentials-backup-prompt.component';
+import { DeadRelaysWarningSheetComponent } from './components/dead-relays-warning-sheet/dead-relays-warning-sheet.component';
 import { isPlatformBrowser } from '@angular/common';
 import { StandaloneLoginDialogComponent } from './components/standalone-login-dialog/standalone-login-dialog.component';
 import { StandaloneTermsDialogComponent } from './components/standalone-terms-dialog/standalone-terms-dialog.component';
@@ -114,6 +115,8 @@ import { LeftPanelHeaderService } from './services/left-panel-header.service';
 import { EventFocusService } from './services/event-focus.service';
 import { RunesSettingsService } from './services/runes-settings.service';
 import { TextScaleService } from './services/text-scale.service';
+import { UtilitiesService } from './services/utilities.service';
+import { AccountRelayService } from './services/relays/account-relay';
 
 interface NavItem {
   path: string;
@@ -239,6 +242,8 @@ export class App implements OnInit, OnDestroy {
   private readonly platformService = inject(PlatformService);
   private readonly eventFocus = inject(EventFocusService);
   private readonly textScale = inject(TextScaleService);
+  private readonly utilities = inject(UtilitiesService);
+  private readonly accountRelay = inject(AccountRelayService);
 
   // Two-column layout services
   twoColumnLayout = inject(TwoColumnLayoutService);
@@ -270,6 +275,10 @@ export class App implements OnInit, OnDestroy {
 
   // Track if credentials backup prompt has been shown
   private credentialsBackupPromptShown = signal(false);
+
+  // Track dead relay warning state per account for this app session
+  private deadRelaysPromptCheckedForPubkey: string | null = null;
+  private deadRelaysPromptInFlight = false;
 
   // Voice search - using SpeechService
   private readonly speechService = inject(SpeechService);
@@ -390,20 +399,8 @@ export class App implements OnInit, OnDestroy {
    * Get unread messages count - tries messaging service first, falls back to cached value
    */
   getUnreadMessagesCount(): number | null {
-    // First try to get live count from messaging service (if loaded)
-    const liveCount = this.messagingService.totalUnreadCount();
-    if (liveCount > 0) {
-      return liveCount;
-    }
-
-    // Fall back to cached count from local state
-    const pubkey = this.accountState.pubkey();
-    if (pubkey) {
-      const cachedCount = this.accountLocalState.getUnreadMessagesCount(pubkey);
-      return cachedCount > 0 ? cachedCount : null;
-    }
-
-    return null;
+    const count = this.messagingService.unreadBadgeCount();
+    return count > 0 ? count : null;
   }
 
   private isEventRoute(url: string): boolean {
@@ -994,7 +991,43 @@ export class App implements OnInit, OnDestroy {
         this.logger.debug(`[App] Account changed from ${lastPubkey?.substring(0, 8)} to ${pubkey?.substring(0, 8)}, resetting route restoration flag`);
         lastPubkey = pubkey;
         this.hasRestoredRoute = false;
+        this.deadRelaysPromptCheckedForPubkey = null;
+        this.deadRelaysPromptInFlight = false;
       }
+    });
+
+    // Warn users when their published relay list contains known dead/defunct relays.
+    effect(() => {
+      const authenticated = this.app.authenticated();
+      const initialized = this.app.initialized();
+      const pubkey = this.accountState.pubkey();
+      const accountRelayUrls = this.accountRelay.relaysSignal().map((relay) => relay.url);
+      const accountRelayOwnerPubkey = this.accountRelay.activeAccountPubkey();
+
+      if (!authenticated || !initialized || !pubkey) {
+        return;
+      }
+
+      // Avoid evaluating dead-relay warnings with stale relay URLs from a previously selected account.
+      if (accountRelayOwnerPubkey !== pubkey) {
+        return;
+      }
+
+      if (this.deadRelaysPromptCheckedForPubkey === pubkey || this.deadRelaysPromptInFlight) {
+        return;
+      }
+
+      this.deadRelaysPromptInFlight = true;
+
+      void this.checkAndShowDeadRelaysWarning(pubkey, accountRelayUrls)
+        .then((checked) => {
+          if (checked && this.accountState.pubkey() === pubkey) {
+            this.deadRelaysPromptCheckedForPubkey = pubkey;
+          }
+        })
+        .finally(() => {
+          this.deadRelaysPromptInFlight = false;
+        });
     });
 
     // Effect to restore last route when account is loaded
@@ -2460,5 +2493,62 @@ export class App implements OnInit, OnDestroy {
       disableClose: false,
       hasBackdrop: true,
     });
+  }
+
+  private async checkAndShowDeadRelaysWarning(pubkey: string, activeAccountRelayUrls: string[]): Promise<boolean> {
+    try {
+      const dismissed = this.accountLocalState.getDismissedDeadRelaysWarningDialog(pubkey);
+      if (dismissed) {
+        return true;
+      }
+
+      // Prefer active account relays because they are account-scoped and may be available
+      // before replaceable events are persisted to the account database.
+      let relayUrls = this.utilities.unique(activeAccountRelayUrls.filter((url) => !!url));
+
+      if (relayUrls.length === 0) {
+        const relayListEvent = await this.database.getEventByPubkeyAndKind(pubkey, kinds.RelayList);
+        relayUrls = this.getRawRelayUrlsFromRelayListEvent(relayListEvent);
+      }
+
+      if (relayUrls.length === 0) {
+        return false;
+      }
+
+      const knownDeadRelayUrls = this.utilities.getKnownDeadRelayUrls(relayUrls);
+      if (knownDeadRelayUrls.length === 0) {
+        return true;
+      }
+
+      this.bottomSheet.open(DeadRelaysWarningSheetComponent, {
+        disableClose: false,
+        hasBackdrop: true,
+        data: {
+          relayUrls: knownDeadRelayUrls,
+        },
+      });
+
+      return true;
+    } catch (error) {
+      this.logger.warn('[App] Failed to evaluate dead relay warning prompt', error);
+      return false;
+    }
+  }
+
+  private getRawRelayUrlsFromRelayListEvent(event: { tags: string[][] } | null): string[] {
+    if (!event) {
+      return [];
+    }
+
+    const relayUrls = event.tags
+      .filter((tag) => tag.length >= 2 && (tag[0] === 'r' || tag[0] === 'relay'))
+      .map((tag) => {
+        const url = tag[1]?.trim() ?? '';
+        const wssIndex = url.indexOf('wss://');
+        return wssIndex >= 0 ? url.substring(wssIndex) : url;
+      })
+      .filter((url) => !!url);
+
+    return this.utilities.unique(relayUrls);
   }
 }

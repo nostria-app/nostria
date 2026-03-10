@@ -87,10 +87,15 @@
             <input matInput placeholder="wss://relay.example.com" [value]="newRelayUrl()"
               (input)="newRelayUrl.set($any($event.target).value)" (keyup.enter)="addRelay()" />
           </mat-form-field>
-          <button mat-flat-button color="primary" class="add-button" (click)="addRelay()"
-            i18n="@@settings.relays.add-button">
-            Add Relay
-          </button>
+          <div class="add-actions">
+            <button mat-flat-button class="add-button" (click)="addRelay()" i18n="@@settings.relays.add-button">
+              Add
+            </button>
+            <button mat-stroked-button class="find-button" (click)="openFindRelaysDialog()"
+              i18n="@@settings.relays.find-button">
+              Find
+            </button>
+          </div>
         </div>
 
         @if (userRelays().length > 0) {
@@ -105,13 +110,17 @@
           <mat-card-content>
             <mat-list cdkDropList (cdkDropListDropped)="onRelayDrop($event)">
               @for (relay of userRelays(); track relay.url) {
-              <mat-list-item cdkDrag [class.relay-has-error]="hasRelayAuthFailed(relay.url)">
+              <mat-list-item cdkDrag [class.relay-has-error]="hasRelayAuthFailed(relay.url)"
+                [class.relay-known-dead]="isKnownDeadRelay(relay.url)">
                 <div class="relay-item-container">
                   <div class="relay-drag-handle" cdkDragHandle>
                     <mat-icon>drag_indicator</mat-icon>
                   </div>
                   <div class="relay-status-icon">
-                    @if (hasRelayAuthFailed(relay.url)) {
+                    @if (isKnownDeadRelay(relay.url)) {
+                    <mat-icon class="status-icon status-dead"
+                      matTooltip="Known dead relay: defunct or no longer in use">warning</mat-icon>
+                    } @else if (hasRelayAuthFailed(relay.url)) {
                     @if (isRelayRestricted(getObservedRelayByUrl(relay.url))) {
                     <mat-icon class="status-icon status-restricted"
                       matTooltip="Access restricted - payment or signup required">block</mat-icon>
@@ -124,6 +133,9 @@
                   </div>
                   <div class="relay-url">
                     {{ formatRelayUrl(relay.url) }}
+                    @if (isKnownDeadRelay(relay.url)) {
+                    <span class="relay-state-badge relay-state-badge-dead">Known dead</span>
+                    }
                   </div>
                   <div class="action-buttons">
                     <button mat-icon-button color="primary" (click)="viewRelayInfo(relay.url)"
@@ -143,6 +155,15 @@
             </mat-list>
           </mat-card-content>
         </mat-card>
+
+        @if (knownDeadAccountRelays().length > 0) {
+        <div class="dead-relays-action">
+          <button mat-flat-button (click)="removeKnownDeadRelays()">
+            <mat-icon>auto_fix_high</mat-icon>
+            Remove Known Dead Relays
+          </button>
+        </div>
+        }
         }
 
         @if (showUpdateDMRelays() && userRelays().length > 0) {

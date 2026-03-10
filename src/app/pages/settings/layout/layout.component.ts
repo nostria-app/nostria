@@ -1,9 +1,11 @@
-import { Component, inject, OnInit, OnDestroy, ChangeDetectionStrategy } from '@angular/core';
+import { Component, computed, inject, OnInit, OnDestroy, ChangeDetectionStrategy } from '@angular/core';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { LocalSettingsService } from '../../../services/local-settings.service';
+import { AccountStateService } from '../../../services/account-state.service';
+import { AccountLocalStateService } from '../../../services/account-local-state.service';
 import { SettingMenuEditorComponent } from '../sections/menu-editor.component';
 import { SettingTextSizeComponent } from '../sections/text-size.component';
 import { SettingFontSelectorComponent } from '../sections/font-selector.component';
@@ -61,6 +63,53 @@ const REACTION_EMOJI_OPTIONS = ['❤️', '👍', '🔥', '😂', '🎉', '👏'
       </div>
 
       <div>
+        <h2 i18n="@@settings.action-buttons.title">Action Buttons</h2>
+        <p class="setting-description" i18n="@@settings.action-buttons.description">Choose how the action buttons (Like, Reply, Share, etc.) are displayed below posts and replies. You can also right-click or long-press the expand button on any post to cycle through modes.</p>
+
+        <div class="display-mode-section">
+          <h3 i18n="@@settings.action-buttons.posts">Posts</h3>
+          <div class="display-mode-options">
+            @for (mode of displayModes; track mode.value) {
+            <button class="display-mode-option" [class.selected]="postsDisplayMode() === mode.value"
+              (click)="setPostsDisplayMode(mode.value)" type="button">
+              <div class="display-mode-preview" [class.mode-labels-only]="mode.value === 'labels-only'"
+                [class.mode-icons-only]="mode.value === 'icons-only'"
+                [class.mode-icons-and-labels]="mode.value === 'icons-and-labels'">
+                <div class="preview-action">
+                  <mat-icon class="preview-icon">favorite_border</mat-icon>
+                  <span class="preview-count">3</span>
+                  <span class="preview-text">Like</span>
+                </div>
+              </div>
+              <span class="display-mode-label">{{ mode.label }}</span>
+            </button>
+            }
+          </div>
+        </div>
+
+        <div class="display-mode-section">
+          <h3 i18n="@@settings.action-buttons.replies">Replies</h3>
+          <div class="display-mode-options">
+            @for (mode of displayModes; track mode.value) {
+            <button class="display-mode-option" [class.selected]="repliesDisplayMode() === mode.value"
+              (click)="setRepliesDisplayMode(mode.value)" type="button">
+              <div class="display-mode-preview" [class.mode-labels-only]="mode.value === 'labels-only'"
+                [class.mode-icons-only]="mode.value === 'icons-only'"
+                [class.mode-icons-and-labels]="mode.value === 'icons-and-labels'">
+                <div class="preview-action">
+                  <mat-icon class="preview-icon">favorite_border</mat-icon>
+                  <span class="preview-count">3</span>
+                  <span class="preview-text">Like</span>
+                </div>
+              </div>
+              <span class="display-mode-label">{{ mode.label }}</span>
+            </button>
+            }
+          </div>
+        </div>
+      </div>
+
+      <div>
         <h2 i18n="@@settings.navigation.title">Navigation</h2>
 
         <div class="setting-item">
@@ -108,7 +157,27 @@ const REACTION_EMOJI_OPTIONS = ['❤️', '👍', '🔥', '😂', '🎉', '👏'
 export class LayoutSettingsComponent implements OnInit, OnDestroy {
   readonly localSettings = inject(LocalSettingsService);
   private readonly rightPanel = inject(RightPanelService);
+  private readonly accountState = inject(AccountStateService);
+  private readonly accountLocalState = inject(AccountLocalStateService);
   readonly reactionEmojiOptions = REACTION_EMOJI_OPTIONS;
+
+  readonly displayModes = [
+    { value: 'icons-and-labels', label: 'Icons & Labels' },
+    { value: 'icons-only', label: 'Icons Only' },
+    { value: 'labels-only', label: 'Labels Only' },
+  ];
+
+  postsDisplayMode = computed(() => {
+    const pubkey = this.accountState.pubkey();
+    if (!pubkey) return 'icons-and-labels';
+    return this.accountLocalState.getActionsDisplayMode(pubkey);
+  });
+
+  repliesDisplayMode = computed(() => {
+    const pubkey = this.accountState.pubkey();
+    if (!pubkey) return 'labels-only';
+    return this.accountLocalState.getActionsDisplayModeReplies(pubkey);
+  });
 
   ngOnInit(): void {
     // Parent settings component handles the page title
@@ -140,5 +209,17 @@ export class LayoutSettingsComponent implements OnInit, OnDestroy {
 
   toggleOpenThreadsExpanded(): void {
     this.localSettings.setOpenThreadsExpanded(!this.localSettings.openThreadsExpanded());
+  }
+
+  setPostsDisplayMode(mode: string): void {
+    const pubkey = this.accountState.pubkey();
+    if (!pubkey) return;
+    this.accountLocalState.setActionsDisplayMode(pubkey, mode);
+  }
+
+  setRepliesDisplayMode(mode: string): void {
+    const pubkey = this.accountState.pubkey();
+    if (!pubkey) return;
+    this.accountLocalState.setActionsDisplayModeReplies(pubkey, mode);
   }
 }

@@ -20,6 +20,7 @@ import { PlaylistsTabComponent } from './playlists-tab/playlists-tab.component';
 import { UserProfileComponent } from '../../components/user-profile/user-profile.component';
 import { PanelHeaderComponent, PanelAction } from '../../components/panel-header/panel-header.component';
 import { nip19 } from 'nostr-tools';
+import { HapticsService } from '../../services/haptics.service';
 
 @Component({
   selector: 'app-media-queue',
@@ -49,6 +50,7 @@ export class MediaQueueComponent implements OnInit {
   private router = inject(Router);
   private route = inject(ActivatedRoute);
   private ngZone = inject(NgZone);
+  private haptics = inject(HapticsService);
 
   selectedTabIndex = signal(0);
 
@@ -92,9 +94,7 @@ export class MediaQueueComponent implements OnInit {
 
   onDragStarted() {
     this.pressedItemIndex = -1; // Clear pressed state when drag starts
-    if (navigator.vibrate) {
-      navigator.vibrate(50);
-    }
+    this.haptics.triggerMedium();
   }
 
   drop(event: CdkDragDrop<string[]>) {

@@ -1,5 +1,5 @@
 import { Component, inject, signal, effect, OnInit, computed, OnDestroy, ChangeDetectionStrategy } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { CommonModule, NgOptimizedImage } from '@angular/common';
 import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -36,6 +36,7 @@ import { CryptoEncryptionService, EncryptedData } from '../../services/crypto-en
 import { PinPromptService } from '../../services/pin-prompt.service';
 import { ApplicationService } from '../../services/application.service';
 import { PremiumApiService, SubscriptionHistoryItem, PaymentHistoryItem } from '../../services/premium-api.service';
+import { XDualPostService } from '../../services/x-dual-post.service';
 import { SetUsernameDialogComponent, SetUsernameDialogData } from '../premium/set-username-dialog/set-username-dialog.component';
 import { environment } from '../../../environments/environment';
 import { NostrUser } from '../../services/nostr.service';
@@ -46,6 +47,7 @@ type RemoteRelayOption = 'nip46' | 'eu' | 'us' | 'custom';
   selector: 'app-accounts',
   imports: [
     CommonModule,
+    NgOptimizedImage,
     MatButtonModule,
     MatCardModule,
     MatIconModule,
@@ -95,6 +97,7 @@ export class AccountsComponent implements OnInit, OnDestroy {
   snackBar = inject(MatSnackBar);
   app = inject(ApplicationService);
   premiumApi = inject(PremiumApiService);
+  xDualPost = inject(XDualPostService);
   private route = inject(ActivatedRoute);
   environment = environment;
 
@@ -153,6 +156,10 @@ export class AccountsComponent implements OnInit, OnDestroy {
     
     const thirtyDaysFromNow = Date.now() + (30 * 24 * 60 * 60 * 1000);
     return expires < thirtyDaysFromNow && expires > Date.now();
+  });
+  xProfileUrl = computed(() => {
+    const username = this.xDualPost.status().username;
+    return username ? `https://x.com/${username}` : null;
   });
 
   constructor() {
@@ -1032,12 +1039,23 @@ export class AccountsComponent implements OnInit, OnDestroy {
   async refreshPremiumData(): Promise<void> {
     try {
       await this.accountState.refreshSubscription();
+      await this.xDualPost.refreshStatus();
       if (this.accountState.subscription()?.expires) {
         this.loadHistory();
       }
     } catch (error) {
       this.logger.error('Failed to refresh subscription:', error);
     }
+  }
+
+  getXUsageRemaining(): string {
+    const status = this.xDualPost.status();
+
+    if (status.limit24h === undefined || status.remaining24h === undefined) {
+      return 'No daily cap configured';
+    }
+
+    return `${status.remaining24h} remaining of ${status.limit24h}`;
   }
 
   loadHistory(): void {

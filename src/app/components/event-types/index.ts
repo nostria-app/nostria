@@ -10,3 +10,5 @@ export { MusicEventComponent } from './music-event.component';
 export { EmojiSetEventComponent } from './emoji-set-event.component';
 export { PeopleSetEventComponent } from './people-set-event.component';
 export { ProfileUpdateEventComponent } from './profile-update-event.component';
+export { SettingsEventComponent } from './settings-event.component';
+export { RelayListEventComponent } from './relay-list-event.component';

@@ -5,7 +5,6 @@ import { RelaysService } from './relays';
 import { UtilitiesService } from '../utilities.service';
 import { SubscriptionManagerService } from './subscription-manager';
 import { RelayAuthService } from './relay-auth.service';
-import { RelayBlockService } from './relay-block.service';
 import { LocalSettingsService } from '../local-settings.service';
 import { PerformanceMetricsService } from '../performance-metrics.service';
 
@@ -31,7 +30,6 @@ export abstract class RelayServiceBase {
   protected injector = inject(Injector);
   protected subscriptionManager = inject(SubscriptionManagerService);
   protected relayAuth = inject(RelayAuthService);
-  protected relayBlock = inject(RelayBlockService);
   protected localSettings = inject(LocalSettingsService);
   protected perfMetrics = inject(PerformanceMetricsService);
   // Lazy-loaded to avoid circular dependency (relay.ts -> EventProcessorService -> DeletionFilterService -> AccountRelayService -> relay.ts)
@@ -46,6 +44,7 @@ export abstract class RelayServiceBase {
     return this._eventProcessor;
   }
   protected useOptimizedRelays = false;
+  protected keepIgnoredRelayDomains = false;
 
   // Pool instance identifier for tracking
   protected poolInstanceId: string;
@@ -137,7 +136,10 @@ export abstract class RelayServiceBase {
 
     // Normalize + dedupe to prevent nostr-tools "duplicate url" errors.
     // This also canonicalizes equivalent forms like trailing slash differences.
-    const normalizedUniqueUrls = this.utilities.getUniqueNormalizedRelayUrls(secureUrls);
+    const normalizedUniqueUrls = this.utilities.getUniqueNormalizedRelayUrls(
+      secureUrls,
+      this.keepIgnoredRelayDomains
+    );
 
     if (normalizedUniqueUrls.length < secureUrls.length) {
       const deduped = secureUrls.length - normalizedUniqueUrls.length;
@@ -214,9 +216,7 @@ export abstract class RelayServiceBase {
    * @returns Object with filtered URLs and whether the operation should proceed
    */
   protected filterAuthFailedRelays(urls: string[]): { urls: string[]; shouldProceed: boolean } {
-    const filteredUrls = this.relayBlock.filterBlockedRelays(
-      this.relayAuth.filterAuthFailedRelays(urls)
-    );
+    const filteredUrls = this.relayAuth.filterAuthFailedRelays(urls);
     if (filteredUrls.length === 0) {
       this.logger.warn(`[${this.constructor.name}] All relays are unavailable, cannot execute operation`);
       return { urls: [], shouldProceed: false };
@@ -750,7 +750,6 @@ export abstract class RelayServiceBase {
 
       // Track connection retries for failed connections
       urls.forEach((url) => {
-        this.relayBlock.recordFailure(url, errorMessage, this.localSettings.autoRelayAuth());
         this.relaysService.recordConnectionRetry(url);
         this.relaysService.updateRelayConnection(url, false);
         this.subscriptionManager.updateConnectionStatus(url, false, this.poolInstanceId);
@@ -851,7 +850,7 @@ export abstract class RelayServiceBase {
             reasons.forEach((reason) => {
               if (reason) {
                 urls.forEach((url) => {
-                  this.relayBlock.recordFailure(url, reason, this.localSettings.autoRelayAuth());
+                  this.logger.debug(`Relay ${url} closed with reason: ${reason}`);
                 });
               }
             });
@@ -938,7 +937,6 @@ export abstract class RelayServiceBase {
               if (errorMsg.includes('auth-required:') || errorMsg.includes('restricted:')) {
                 this.relayAuth.markAuthFailed(relayUrl, errorMsg);
               }
-              this.relayBlock.recordFailure(relayUrl, errorMsg, this.localSettings.autoRelayAuth());
               throw new Error(`${relayUrl}: ${errorMsg}`);
             });
           relayPromises.set(wrappedPromise, relayUrl);
@@ -1004,7 +1002,7 @@ export abstract class RelayServiceBase {
           if (!errorMsg || errorMsg.trim() === '') {
             errorMsg = 'Unknown error (relay returned empty response)';
           }
-          this.relayBlock.recordFailure(relayUrl, errorMsg, this.localSettings.autoRelayAuth());
+          this.logger.warn(`Relay ${relayUrl} publish failed: ${errorMsg}`);
         });
       });
 
@@ -1082,7 +1080,7 @@ export abstract class RelayServiceBase {
     const subscriptionId = `sub_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
     // Check for duplicate subscriptions
-    const duplicateId = this.subscriptionManager.hasDuplicateSubscription(filter, urls);
+    const duplicateId = this.subscriptionManager.hasDuplicateSubscription(filter as Filter, urls);
     if (duplicateId) {
       this.logger.warn(
         `[${this.constructor.name}] Duplicate subscription detected, reusing existing: ${duplicateId}`,
@@ -1097,7 +1095,7 @@ export abstract class RelayServiceBase {
     // Try to register the subscription - returns available relays (those not at limit)
     const availableRelays = this.subscriptionManager.registerSubscription(
       subscriptionId,
-      filter,
+      filter as Filter,
       urls,
       this.constructor.name,
       this.poolInstanceId
@@ -1132,7 +1130,7 @@ export abstract class RelayServiceBase {
       });
 
       // Create the subscription with auth support, using only available relays
-      const sub = this.#pool.subscribeMany(availableRelays, filter, {
+      const sub = this.#pool.subscribeMany(availableRelays, filter as Filter, {
         onauth: authCallback,
         onevent: (evt) => {
           this.perfMetrics.incrementCounter('relay.subscribe.events_received');
@@ -1176,7 +1174,7 @@ export abstract class RelayServiceBase {
           reasons.forEach((reason) => {
             if (reason) {
               availableRelays.forEach((url) => {
-                this.relayBlock.recordFailure(url, reason, this.localSettings.autoRelayAuth());
+                this.logger.debug(`Relay ${url} subscription closed with reason: ${reason}`);
               });
             }
           });
@@ -1304,7 +1302,7 @@ export abstract class RelayServiceBase {
           reasons.forEach((reason) => {
             if (reason) {
               urls.forEach((url) => {
-                this.relayBlock.recordFailure(url, reason, this.localSettings.autoRelayAuth());
+                this.logger.debug(`Relay ${url} closed with reason: ${reason}`);
               });
             }
           });

@@ -1,58 +1,64 @@
 @if (preview(); as preview) {
-  <a class="social-preview-card" [href]="preview.url" [attr.data-url]="preview.url" target="_blank" rel="noopener noreferrer">
-    <mat-card [class.compact-preview]="compact() || (!preview.title && !preview.image)">
-      <div class="preview-content">
-        <div class="thumbnail-container">
-          @if (preview.loading) {
-            <div class="thumbnail-placeholder">
-              <mat-progress-spinner mode="indeterminate" diameter="24"></mat-progress-spinner>
-            </div>
-          } @else if (preview.error) {
-            <div class="thumbnail-placeholder error">
-              <span class="error-icon">⚠️</span>
-            </div>
-          } @else {
-            @if (preview.image) {
-              <img
-                class="thumbnail"
-                [src]="preview.image"
-                [alt]="preview.title || 'Link preview image'"
-              />
-            } @else {
-              <div class="thumbnail-placeholder">
-                <span class="link-icon">🔗</span>
-              </div>
-            }
-          }
+@if (preview.previewType === 'x-post' && safeEmbedHtml()) {
+<div class="social-preview-card x-preview-card" [attr.data-url]="preview.url">
+  <mat-card class="x-preview-shell">
+    <div class="x-embed-host" #xEmbedHost [innerHTML]="safeEmbedHtml()"></div>
+  </mat-card>
+</div>
+} @else {
+<a class="social-preview-card" [href]="preview.url" [attr.data-url]="preview.url" target="_blank"
+  rel="noopener noreferrer">
+  <mat-card [class.compact-preview]="compact() || (!preview.title && !preview.image)">
+    <div class="preview-content">
+      <div class="thumbnail-container">
+        @if (preview.loading) {
+        <div class="thumbnail-placeholder">
+          <mat-progress-spinner mode="indeterminate" diameter="24"></mat-progress-spinner>
         </div>
-
-        <div class="text-content">
-          @if (preview.loading) {
-            <div class="loading-text">
-              <div class="loading-placeholder title-placeholder"></div>
-              @if (!compact()) {
-                <div class="loading-placeholder description-placeholder"></div>
-              }
-              <div class="loading-placeholder url-placeholder"></div>
-            </div>
-          } @else if (preview.error) {
-            <div class="error-content">
-              <div class="error-title">Could not load preview</div>
-              <div class="preview-url">{{ preview.url }}</div>
-            </div>
-          } @else {
-            <div class="preview-title">
-              {{ preview.title || 'No title available' }}
-            </div>
-            @if (!compact()) {
-              <div class="preview-description">
-                {{ preview.description || 'No description available' }}
-              </div>
-            }
-            <div class="preview-url">{{ preview.url }}</div>
-          }
+        } @else if (preview.error) {
+        <div class="thumbnail-placeholder error">
+          <span class="error-icon">⚠️</span>
         </div>
+        } @else {
+        @if (preview.image) {
+        <img class="thumbnail" [src]="preview.image" [alt]="preview.title || 'Link preview image'"
+          title="Link preview image" />
+        } @else {
+        <div class="thumbnail-placeholder">
+          <span class="link-icon">🔗</span>
+        </div>
+        }
+        }
       </div>
-    </mat-card>
-  </a>
+
+      <div class="text-content">
+        @if (preview.loading) {
+        <div class="loading-text">
+          <div class="loading-placeholder title-placeholder"></div>
+          @if (!compact()) {
+          <div class="loading-placeholder description-placeholder"></div>
+          }
+          <div class="loading-placeholder url-placeholder"></div>
+        </div>
+        } @else if (preview.error) {
+        <div class="error-content">
+          <div class="error-title">Could not load preview</div>
+          <div class="preview-url">{{ preview.url }}</div>
+        </div>
+        } @else {
+        <div class="preview-title">
+          {{ preview.title || 'No title available' }}
+        </div>
+        @if (!compact()) {
+        <div class="preview-description">
+          {{ preview.description || 'No description available' }}
+        </div>
+        }
+        <div class="preview-url">{{ preview.url }}</div>
+        }
+      </div>
+    </div>
+  </mat-card>
+</a>
+}
 }
