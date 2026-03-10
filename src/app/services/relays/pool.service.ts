@@ -14,7 +14,7 @@ import { SimplePool } from 'nostr-tools';
  */
 @Injectable({ providedIn: 'root' })
 export class PoolService {
-  readonly pool = new SimplePool({ enablePing: true, enableReconnect: true });
+  readonly pool = new SimplePool({ enablePing: false, enableReconnect: true });
 
   /**
    * Gracefully close connections to all provided relay URLs.

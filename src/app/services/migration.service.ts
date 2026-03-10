@@ -180,7 +180,7 @@ export class MigrationService {
 
     try {
       // Create a dedicated pool for migration
-      this.migrationPool = new SimplePool({ enablePing: true, enableReconnect: true });
+      this.migrationPool = new SimplePool({ enablePing: false, enableReconnect: true });
 
       // Process each event kind
       for (let i = 0; i < eventKinds.length; i++) {

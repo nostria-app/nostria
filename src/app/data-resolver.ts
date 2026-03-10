@@ -52,7 +52,7 @@ async function createSSRPool() {
   await configureSsrWebSocketImplementation();
 
   const { SimplePool } = await import('nostr-tools/pool');
-  return new SimplePool({ enablePing: true, enableReconnect: true });
+  return new SimplePool({ enablePing: false, enableReconnect: true });
 }
 
 /**

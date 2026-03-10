@@ -323,7 +323,7 @@ export class EncryptionService {
       });
     }
 
-    this.cachedBunkerPool = new SimplePool({ enablePing: true, enableReconnect: true });
+    this.cachedBunkerPool = new SimplePool({ enablePing: false, enableReconnect: true });
     this.cachedBunkerSigner = BunkerSigner.fromBunker(clientKey, bunkerPointer, { pool: this.cachedBunkerPool });
     this.cachedBunkerPubkey = account.pubkey;
 

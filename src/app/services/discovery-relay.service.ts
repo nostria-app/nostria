@@ -43,7 +43,7 @@ export class DiscoveryRelayService {
   discoveryPool: SimplePool | null = null;
 
   getDiscoveryPool(): SimplePool {
-    return this.discoveryPool || (this.discoveryPool = new SimplePool({ enablePing: true, enableReconnect: true }));
+    return this.discoveryPool || (this.discoveryPool = new SimplePool({ enablePing: false, enableReconnect: true }));
   }
 
   async checkServerLatency(): Promise<ServerInfo> {

@@ -28,7 +28,7 @@ export class NwcRelayService extends RelayServiceBase {
     const key = relayUrls.sort().join(',');
 
     if (!this.connectionPools.has(key)) {
-      const pool = new SimplePool({ enablePing: true, enableReconnect: true });
+      const pool = new SimplePool({ enablePing: false, enableReconnect: true });
       this.connectionPools.set(key, pool);
       this.logger.debug('Created new NWC pool for relays:', relayUrls);
     }

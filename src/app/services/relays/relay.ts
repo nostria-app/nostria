@@ -165,8 +165,8 @@ export abstract class RelayServiceBase {
 
     // Assign new pool if required
     if (shouldRecreate) {
-      this.#pool = new SimplePool({ enablePing: true, enableReconnect: true });
-      this.logger.debug(`[${this.constructor.name}] Created new SimplePool with ping and reconnect enabled (recreate=${forceRecreate}, urlsChanged=${urlsChanged})`);
+      this.#pool = new SimplePool({ enablePing: false, enableReconnect: true });
+      this.logger.debug(`[${this.constructor.name}] Created new SimplePool with reconnect enabled and ping disabled (recreate=${forceRecreate}, urlsChanged=${urlsChanged})`);
     }
 
     // Always reset the destroyed flag when init() is called – it expresses intent to be active,

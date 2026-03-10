@@ -48,7 +48,7 @@ async function fetchEventFromRelays(eventId: string, relayHints?: string[], time
 
   // Import SimplePool dynamically
   const { SimplePool } = await import('nostr-tools/pool');
-  const pool = new SimplePool({ enablePing: true, enableReconnect: true });
+  const pool = new SimplePool({ enablePing: false, enableReconnect: true });
 
   const relays = buildRelayList(relayHints);
   const startedAt = Date.now();
@@ -94,7 +94,7 @@ async function fetchEventByAddress(kind: number, pubkey: string, identifier: str
   await configureSsrWebSocketImplementation();
 
   const { SimplePool } = await import('nostr-tools/pool');
-  const pool = new SimplePool({ enablePing: true, enableReconnect: true });
+  const pool = new SimplePool({ enablePing: false, enableReconnect: true });
 
   const relays = buildRelayList(relayHints);
   const startedAt = Date.now();

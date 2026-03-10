@@ -119,7 +119,7 @@ export class FindResponsiveRelaysDialogComponent implements OnInit, OnDestroy {
 
     try {
       this.closePool();
-      this.pool = new SimplePool({ enablePing: true, enableReconnect: true });
+      this.pool = new SimplePool({ enablePing: false, enableReconnect: true });
 
       const nowSeconds = Math.floor(Date.now() / 1000);
       const since = nowSeconds - RELAY_DISCOVERY_LOOKBACK_SECONDS;

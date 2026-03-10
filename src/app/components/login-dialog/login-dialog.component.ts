@@ -825,7 +825,7 @@ export class LoginDialogComponent implements OnDestroy {
       this.nostrConnectListenTimeoutId = null;
     }
 
-    this.remoteSignerPool = new SimplePool({ enablePing: true, enableReconnect: false });
+    this.remoteSignerPool = new SimplePool({ enablePing: false, enableReconnect: false });
 
     // Capture the client key NOW (synchronously) so that a concurrent QR regeneration
     // (which replaces this.remoteSignerClientKey) cannot invalidate the key mid-flight.
