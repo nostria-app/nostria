@@ -1,3 +1,4 @@
+import '@angular/compiler';
 import { signal } from '@angular/core';
 import { FeedService, FeedItem } from './feed.service';
 import { Event } from 'nostr-tools';
@@ -15,6 +16,9 @@ describe('FeedService', () => {
 
         const map = new Map<string, unknown>();
         (service as any)._feedData = signal(map);
+        (service as any).eventProcessor = {
+            shouldAcceptEvent: () => true,
+        };
 
         (service as any).saveEventToDatabase = vi.fn();
 
@@ -45,6 +49,9 @@ describe('FeedService', () => {
         (service as any)._feedData = signal(new Map<string, FeedItem>());
         (service as any)._activeFeedId = signal<string | null>(null);
         (service as any)._feedsPageActive = signal(true);
+        (service as any).eventProcessor = {
+            shouldAcceptEvent: () => true,
+        };
 
         (service as any).logger = {
             debug: () => { },
@@ -54,6 +61,21 @@ describe('FeedService', () => {
         };
 
         return service;
+    }
+
+    function createServiceForFeedSyncTests() {
+        const service = Object.create(FeedService.prototype) as FeedService;
+
+        const logger = {
+            debug: vi.fn(),
+            info: vi.fn(),
+            warn: vi.fn(),
+            error: vi.fn(),
+        };
+
+        (service as any).logger = logger;
+
+        return { service, logger };
     }
 
     describe('handleFollowingIncrementalUpdate', () => {
@@ -147,6 +169,55 @@ describe('FeedService', () => {
             await (service as any).checkForNewEvents();
 
             expect((service as any).checkColumnForNewEvents).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('shouldUseSyncedFeeds', () => {
+        it('should keep local custom feeds when synced feeds only contain defaults', () => {
+            const { service, logger } = createServiceForFeedSyncTests();
+
+            const localFeeds = [
+                { id: 'default-feed-for-you', updatedAt: 1000 },
+                { id: 'feed-custom', updatedAt: 1000 },
+            ] as any;
+            const syncedFeeds = [
+                { id: 'default-feed-for-you', updatedAt: 2000 },
+                { id: 'default-feed-following', updatedAt: 2000 },
+            ] as any;
+
+            expect((service as any).shouldUseSyncedFeeds(localFeeds, syncedFeeds)).toBe(false);
+            expect(logger.warn).toHaveBeenCalledWith('Ignoring synced default feeds because local custom feeds exist');
+        });
+
+        it('should use newer synced feeds when they include custom feeds too', () => {
+            const { service } = createServiceForFeedSyncTests();
+
+            const localFeeds = [
+                { id: 'default-feed-for-you', updatedAt: 1000 },
+                { id: 'feed-custom', updatedAt: 1000 },
+            ] as any;
+            const syncedFeeds = [
+                { id: 'default-feed-for-you', updatedAt: 2000 },
+                { id: 'feed-custom', updatedAt: 2000 },
+            ] as any;
+
+            expect((service as any).shouldUseSyncedFeeds(localFeeds, syncedFeeds)).toBe(true);
+        });
+
+        it('should ignore synced feeds when they are not newer', () => {
+            const { service, logger } = createServiceForFeedSyncTests();
+
+            const localFeeds = [
+                { id: 'default-feed-for-you', updatedAt: 2000 },
+                { id: 'feed-custom', updatedAt: 2000 },
+            ] as any;
+            const syncedFeeds = [
+                { id: 'default-feed-for-you', updatedAt: 1000 },
+                { id: 'default-feed-following', updatedAt: 1000 },
+            ] as any;
+
+            expect((service as any).shouldUseSyncedFeeds(localFeeds, syncedFeeds)).toBe(false);
+            expect(logger.warn).not.toHaveBeenCalled();
         });
     });
 

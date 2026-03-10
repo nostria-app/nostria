@@ -152,6 +152,8 @@ const DEFAULT_FEEDS: FeedConfig[] = [
   },
 ];
 
+const DEFAULT_FEED_IDS = new Set(DEFAULT_FEEDS.map(feed => feed.id));
+
 // Trending feed ID constant - this feed is always appended at the end and never persisted
 const TRENDING_FEED_ID = 'default-feed-trending';
 
@@ -3749,6 +3751,26 @@ export class FeedService {
     return [migratedFeed];
   }
 
+  private hasCustomFeedIds(feeds: Array<Pick<FeedConfig | SyncedFeedConfig, 'id'>>): boolean {
+    return feeds.some(feed => !DEFAULT_FEED_IDS.has(feed.id));
+  }
+
+  private shouldUseSyncedFeeds(localFeeds: FeedConfig[], syncedFeeds: SyncedFeedConfig[]): boolean {
+    const syncedFeedsUpdatedAt = Math.max(...syncedFeeds.map(f => f.updatedAt || 0));
+    const localFeedsUpdatedAt = Math.max(...localFeeds.map(f => f.updatedAt || 0), 0);
+
+    if (syncedFeedsUpdatedAt <= localFeedsUpdatedAt) {
+      return false;
+    }
+
+    if (this.hasCustomFeedIds(localFeeds) && !this.hasCustomFeedIds(syncedFeeds)) {
+      this.logger.warn('Ignoring synced default feeds because local custom feeds exist');
+      return false;
+    }
+
+    return true;
+  }
+
   private async loadFeeds(pubkey: string): Promise<void> {
     try {
       const storedFeeds = this.getFeedsFromStorage(pubkey);
@@ -3801,10 +3823,9 @@ export class FeedService {
         // Check if synced feeds are newer than local feeds
         // Compare by checking if synced has feeds that local doesn't, or vice versa
         if (hasSyncedFeeds) {
-          const syncedFeedsUpdatedAt = Math.max(...syncedFeeds.map(f => f.updatedAt || 0));
-          const localFeedsUpdatedAt = Math.max(...filteredFeeds.map(f => f.updatedAt || 0), 0);
-
-          if (syncedFeedsUpdatedAt > localFeedsUpdatedAt) {
+          if (this.shouldUseSyncedFeeds(filteredFeeds, syncedFeeds)) {
+            const syncedFeedsUpdatedAt = Math.max(...syncedFeeds.map(f => f.updatedAt || 0));
+            const localFeedsUpdatedAt = Math.max(...filteredFeeds.map(f => f.updatedAt || 0), 0);
             this.logger.info(`Synced feeds are newer (${syncedFeedsUpdatedAt} > ${localFeedsUpdatedAt}), using synced feeds`);
             const feedsFromSync = this.convertSyncedFeedsToFeedConfig(syncedFeeds);
             this._feeds.set(feedsFromSync);
