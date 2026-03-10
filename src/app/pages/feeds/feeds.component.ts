@@ -62,6 +62,7 @@ import { FeedFilterPanelComponent } from './feed-filter-panel/feed-filter-panel.
 import { FilterButtonComponent } from '../../components/filter-button/filter-button.component';
 import { VideoPlaybackService } from '../../services/video-playback.service';
 import { PanelNavigationService } from '../../services/panel-navigation.service';
+import { FollowSetsService } from '../../services/follow-sets.service';
 import { formatDuration } from '../../utils/format-duration';
 
 // NavLink interface removed because it was unused.
@@ -119,6 +120,7 @@ export class FeedsComponent implements OnDestroy {
   private relayFeedsService = inject(RelayFeedsService);
   private videoPlayback = inject(VideoPlaybackService);
   private panelNav = inject(PanelNavigationService);
+  private followSetsService = inject(FollowSetsService);
 
   // Dialog State Signals
   showNewFeedDialog = signal(false);
@@ -993,6 +995,34 @@ export class FeedsComponent implements OnDestroy {
       // Store current values for next comparison
       previousFeedId = currentFeedId;
       previousFeedKinds = [...currentKinds];
+    });
+
+    effect(() => {
+      const activeListFeed = this.activeListFeed();
+      const followSets = this.followSetsService.followSets();
+
+      if (!activeListFeed) {
+        return;
+      }
+
+      const matchingSet = followSets.find(set => set.dTag === activeListFeed.dTag);
+      if (!matchingSet) {
+        return;
+      }
+
+      const titleChanged = matchingSet.title !== activeListFeed.title;
+      const pubkeysChanged = matchingSet.pubkeys.length !== activeListFeed.pubkeys.length ||
+        matchingSet.pubkeys.some((pubkey, index) => pubkey !== activeListFeed.pubkeys[index]);
+
+      if (titleChanged || pubkeysChanged) {
+        untracked(() => {
+          this.activeListFeed.set({
+            dTag: matchingSet.dTag,
+            title: matchingSet.title,
+            pubkeys: [...matchingSet.pubkeys],
+          });
+        });
+      }
     });
 
     // Auto-load new posts when user is scrolled to top

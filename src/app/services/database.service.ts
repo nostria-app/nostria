@@ -992,7 +992,15 @@ export class DatabaseService {
       storedEvent = await this.getEventByPubkeyAndKind(event.pubkey, event.kind);
     }
 
-    if (storedEvent && storedEvent.created_at >= event.created_at) {
+    if (storedEvent && storedEvent.id === event.id) {
+      this.logger.debug(
+        `Skipping save for already stored replaceable event (kind ${event.kind}) for pubkey ${event.pubkey.slice(0, 16)}... ` +
+        `Timestamp: ${new Date(event.created_at * 1000).toISOString()}`
+      );
+      return false;
+    }
+
+    if (storedEvent && storedEvent.created_at > event.created_at) {
       this.logger.debug(
         `Skipping save for older replaceable event (kind ${event.kind}) for pubkey ${event.pubkey.slice(0, 16)}... ` +
         `Stored: ${new Date(storedEvent.created_at * 1000).toISOString()}, ` +
@@ -1002,6 +1010,14 @@ export class DatabaseService {
     }
 
     await this.saveEvent(event);
+
+    if (storedEvent && storedEvent.id !== event.id) {
+      await this.deleteEvent(storedEvent.id);
+      this.logger.debug(
+        `Replaced existing replaceable event ${storedEvent.id} with ${event.id} for kind ${event.kind}`
+      );
+    }
+
     this.logger.debug(
       `Saved replaceable event (kind ${event.kind}) for pubkey ${event.pubkey.slice(0, 16)}... ` +
       `Timestamp: ${new Date(event.created_at * 1000).toISOString()}`
@@ -1153,8 +1169,16 @@ export class DatabaseService {
     if (events.length === 0) {
       return null;
     }
-    // Return the most recent event
-    return events.sort((a, b) => b.created_at - a.created_at)[0];
+    // Return the most recent event.
+    // If timestamps tie, prefer the lexicographically greater event id so
+    // replaceable conflicts are resolved deterministically.
+    return events.sort((a, b) => {
+      if (b.created_at !== a.created_at) {
+        return b.created_at - a.created_at;
+      }
+
+      return b.id.localeCompare(a.id);
+    })[0];
   }
 
   /**

@@ -16,8 +16,11 @@ describe('FollowSetsService equality comparison', () => {
     for (const setA of a) {
       const setB = b.find(s => s.dTag === setA.dTag);
       if (!setB) return false;
+      if (setA.title !== setB.title) return false;
       if (setA.pubkeys.length !== setB.pubkeys.length) return false;
       if (setA.createdAt !== setB.createdAt) return false;
+      if (setA.isPrivate !== setB.isPrivate) return false;
+      if ((setA.decryptionPending ?? false) !== (setB.decryptionPending ?? false)) return false;
       for (let i = 0; i < setA.pubkeys.length; i++) {
         if (setA.pubkeys[i] !== setB.pubkeys[i]) return false;
       }
@@ -101,11 +104,32 @@ describe('FollowSetsService equality comparison', () => {
     expect(followSetsEqual([set1], [set2])).toBe(false);
   });
 
-  it('should ignore differences in non-compared fields (id, title, isPrivate)', () => {
-    const set1 = makeFollowSet({ id: 'id1', title: 'Title A', isPrivate: false });
-    const set2 = makeFollowSet({ id: 'id2', title: 'Title B', isPrivate: true });
+  it('should ignore differences in non-compared fields (id only)', () => {
+    const set1 = makeFollowSet({ id: 'id1' });
+    const set2 = makeFollowSet({ id: 'id2' });
 
     expect(followSetsEqual([set1], [set2])).toBe(true);
+  });
+
+  it('should return false when title differs', () => {
+    const set1 = makeFollowSet({ title: 'Title A' });
+    const set2 = makeFollowSet({ title: 'Title B' });
+
+    expect(followSetsEqual([set1], [set2])).toBe(false);
+  });
+
+  it('should return false when privacy differs', () => {
+    const set1 = makeFollowSet({ isPrivate: false });
+    const set2 = makeFollowSet({ isPrivate: true });
+
+    expect(followSetsEqual([set1], [set2])).toBe(false);
+  });
+
+  it('should return false when decryption state differs', () => {
+    const set1 = makeFollowSet({ decryptionPending: false });
+    const set2 = makeFollowSet({ decryptionPending: true });
+
+    expect(followSetsEqual([set1], [set2])).toBe(false);
   });
 
   it('should handle sets with empty pubkeys arrays', () => {

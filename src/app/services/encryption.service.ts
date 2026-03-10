@@ -60,6 +60,17 @@ export class EncryptionService {
   readonly pendingBunkerOperations = signal(0);
   readonly isBunkerConnecting = signal(false);
 
+  private isExpectedDecryptFailure(error: unknown): boolean {
+    if (!(error instanceof Error)) {
+      return false;
+    }
+
+    const message = error.message.toLowerCase();
+    return message.includes('invalid payload length')
+      || message.includes('content does not appear to be encrypted')
+      || message.includes('decryption returned empty result');
+  }
+
   constructor() {
     // Clear cached bunker when account changes
     effect(() => {
@@ -496,7 +507,11 @@ export class EncryptionService {
   /**
    * Decrypt a message using NIP-44 (modern, secure)
    */
-  async decryptNip44(ciphertext: string, senderPubkey: string, priority = 0): Promise<string> {
+  async decryptNip44(ciphertext: string, senderPubkey: string, priority = 0, event?: Event): Promise<string> {
+    if (!this.isContentEncrypted(ciphertext)) {
+      throw new Error('Content does not appear to be encrypted');
+    }
+
     try {
       const account = this.accountState.account();
 
@@ -539,7 +554,21 @@ export class EncryptionService {
 
       return v2.decrypt(ciphertext, conversationKey);
     } catch (error) {
-      this.logger.error('Failed to decrypt with NIP-44', error);
+      if (this.isExpectedDecryptFailure(error)) {
+        this.logger.debug('Skipped NIP-44 decryption for invalid payload', {
+          error,
+          event,
+          senderPubkey,
+          ciphertext,
+        });
+      } else {
+        this.logger.error('Failed to decrypt with NIP-44', {
+          error,
+          event,
+          senderPubkey,
+          ciphertext,
+        });
+      }
       throw new Error('Decryption failed');
     }
   }
@@ -598,7 +627,7 @@ export class EncryptionService {
     } else {
       // Try NIP-44 first (modern format)
       try {
-        const content = await this.decryptNip44(ciphertext, senderPubkey, priority);
+        const content = await this.decryptNip44(ciphertext, senderPubkey, priority, _event);
         return { content, algorithm: 'nip44' };
       } catch (error) {
         this.logger.debug('NIP-44 decryption failed, trying NIP-04', error);

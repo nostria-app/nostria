@@ -1,4 +1,4 @@
-import { Injectable, inject, signal, computed, effect } from '@angular/core';
+import { Injectable, inject, signal, computed, effect, untracked } from '@angular/core';
 import { Event, UnsignedEvent, kinds } from 'nostr-tools';
 import { DataService } from './data.service';
 import { LoggerService } from './logger.service';
@@ -8,6 +8,7 @@ import { PublishService } from './publish.service';
 import { EncryptionService } from './encryption.service';
 import { UtilitiesService } from './utilities.service';
 import { DeletionFilterService } from './deletion-filter.service';
+import { AccountRelayService } from './relays/account-relay';
 
 export interface FollowSet {
   id: string; // Event ID
@@ -20,6 +21,22 @@ export interface FollowSet {
   event?: Event; // The raw Nostr event
 }
 
+interface DecryptedFollowSetData {
+  pubkeys: string[];
+  title: string | null;
+}
+
+interface DecryptedFollowSetPayload {
+  title?: unknown;
+  name?: unknown;
+  label?: unknown;
+  pubkeys?: unknown;
+  people?: unknown;
+  p?: unknown;
+  tags?: unknown;
+  items?: unknown;
+}
+
 const NOSTRIA_PREFIX = 'nostria-';
 const FAVORITES_D_TAG = 'nostria-favorites';
 
@@ -30,6 +47,7 @@ export class FollowSetsService {
   private readonly dataService = inject(DataService);
   private readonly logger = inject(LoggerService);
   private readonly accountState = inject(AccountStateService);
+  private readonly accountRelay = inject(AccountRelayService);
   private readonly database = inject(DatabaseService);
   private readonly publishService = inject(PublishService);
   private readonly encryption = inject(EncryptionService);
@@ -48,6 +66,8 @@ export class FollowSetsService {
   private lastEffectPubkey: string | null = null;
   // Track the pubkey we last loaded data for, to avoid clearing on re-initialization
   private lastDataPubkey: string | null = null;
+  private liveFollowSetsSubscription: { close: () => void } | { unsubscribe: () => void } | null = null;
+  private liveFollowSetsSubscriptionPubkey: string | null = null;
 
   // Function to sign events - must be set by NostrService to avoid circular dependency
   private signFunction?: (event: UnsignedEvent) => Promise<Event>;
@@ -123,7 +143,28 @@ export class FollowSetsService {
         this.followSets.set([]);
         this.hasInitiallyLoaded.set(false);
         this.lastDataPubkey = null;
+        this.stopLiveFollowSetsSubscription();
       }
+    });
+
+    effect(() => {
+      const account = this.accountState.account();
+      const initialized = this.accountState.initialized();
+      const pubkey = this.accountState.pubkey();
+
+      if (!account || !initialized || !pubkey) {
+        this.stopLiveFollowSetsSubscription();
+        return;
+      }
+
+      if (this.liveFollowSetsSubscriptionPubkey === pubkey) {
+        return;
+      }
+
+      untracked(() => {
+        this.stopLiveFollowSetsSubscription();
+        this.startLiveFollowSetsSubscription(pubkey);
+      });
     });
   }
 
@@ -206,7 +247,7 @@ export class FollowSetsService {
           pubkey,
           30000,
           {
-            cache: true,
+            cache: false,
             save: true,
           }
         );
@@ -219,8 +260,9 @@ export class FollowSetsService {
           .map(event => this.parseFollowSetEventSync(event))
           .filter((set): set is FollowSet => set !== null);
 
-        // Deduplicate by dTag, keeping only the newest event for each dTag
+        // Deduplicate by dTag, preferring the relay variant seen most often
         const deduplicatedSets = this.deduplicateByDTag(sets);
+        await this.persistPreferredFollowSetVersions(filteredEvents, deduplicatedSets);
 
         // Only update from relay if we got results, or if we had no cached data
         // This prevents overwriting good cached data with empty relay response
@@ -262,14 +304,134 @@ export class FollowSetsService {
     for (const setA of a) {
       const setB = b.find(s => s.dTag === setA.dTag);
       if (!setB) return false;
+      if (setA.title !== setB.title) return false;
       if (setA.pubkeys.length !== setB.pubkeys.length) return false;
       if (setA.createdAt !== setB.createdAt) return false;
+      if (setA.isPrivate !== setB.isPrivate) return false;
+      if ((setA.decryptionPending ?? false) !== (setB.decryptionPending ?? false)) return false;
       for (let i = 0; i < setA.pubkeys.length; i++) {
         if (setA.pubkeys[i] !== setB.pubkeys[i]) return false;
       }
     }
 
     return true;
+  }
+
+  private async handleLiveFollowSetEvent(event: Event): Promise<void> {
+    if (event.kind === kinds.EventDeletion) {
+      await this.handleLiveFollowSetDeletion(event);
+      return;
+    }
+
+    const followSet = this.parseFollowSetEventSync(event);
+    if (!followSet) {
+      return;
+    }
+
+    try {
+      await this.persistPreferredFollowSetEvent(event);
+      const wasDeleted = await this.deletionFilter.checkDeletionFromDatabase(
+        event.kind,
+        event.pubkey,
+        followSet.dTag,
+        event.created_at
+      );
+
+      if (wasDeleted) {
+        this.removeLocalFollowSet(followSet.dTag);
+        return;
+      }
+
+      const existingFollowSet = this.getFollowSetByDTag(followSet.dTag);
+      if (existingFollowSet && existingFollowSet.createdAt > followSet.createdAt) {
+        return;
+      }
+
+      const wasUpdated = this.updateLocalFollowSet(followSet);
+
+      if (wasUpdated) {
+        this.logger.info('[FollowSets] Applied live follow set update', {
+          dTag: followSet.dTag,
+          createdAt: followSet.createdAt,
+        });
+      }
+
+      if (followSet.isPrivate && followSet.decryptionPending) {
+        this.decryptPrivateListsInBackground([followSet]);
+      }
+    } catch (error) {
+      this.logger.warn('[FollowSets] Failed to handle live follow set update:', error);
+    }
+  }
+
+  private async handleLiveFollowSetDeletion(event: Event): Promise<void> {
+    const dTag = this.getDeletedFollowSetDTag(event);
+    if (!dTag) {
+      return;
+    }
+
+    try {
+      await this.database.saveEvent(event);
+      const existingFollowSet = this.getFollowSetByDTag(dTag);
+      const removed = !existingFollowSet || existingFollowSet.createdAt <= event.created_at
+        ? this.removeLocalFollowSet(dTag)
+        : false;
+
+      if (removed) {
+        this.logger.info('[FollowSets] Applied live follow set deletion', {
+          dTag,
+          createdAt: event.created_at,
+        });
+      }
+    } catch (error) {
+      this.logger.warn('[FollowSets] Failed to handle live follow set deletion:', error);
+    }
+  }
+
+  private getDeletedFollowSetDTag(event: Event): string | null {
+    if (event.kind !== kinds.EventDeletion) {
+      return null;
+    }
+
+    const identifierPrefix = `30000:${event.pubkey}:`;
+    const addressTag = event.tags.find(tag => tag[0] === 'a' && tag[1]?.startsWith(identifierPrefix));
+    if (!addressTag?.[1]) {
+      return null;
+    }
+
+    return addressTag[1].slice(identifierPrefix.length);
+  }
+
+  private startLiveFollowSetsSubscription(pubkey: string): void {
+    const filter = {
+      kinds: [30000, kinds.EventDeletion],
+      authors: [pubkey],
+      limit: 200,
+    };
+
+    this.liveFollowSetsSubscriptionPubkey = pubkey;
+    this.liveFollowSetsSubscription = this.accountRelay.subscribe(
+      filter,
+      (event) => {
+        void this.handleLiveFollowSetEvent(event);
+      },
+      () => {
+        this.logger.debug('[FollowSets] Live follow sets subscription reached EOSE');
+      }
+    );
+  }
+
+  private stopLiveFollowSetsSubscription(): void {
+    if (this.liveFollowSetsSubscription) {
+      if ('close' in this.liveFollowSetsSubscription) {
+        this.liveFollowSetsSubscription.close();
+      } else {
+        this.liveFollowSetsSubscription.unsubscribe();
+      }
+    }
+
+    this.liveFollowSetsSubscription = null;
+    this.liveFollowSetsSubscriptionPubkey = null;
   }
 
   /**
@@ -301,15 +463,18 @@ export class FollowSetsService {
       // Process each private set one at a time to avoid overwhelming the extension
       for (const set of privateSets) {
         try {
-          const privatePubkeys = await this.parsePrivatePubkeys(set.event!.content);
+          const privateData = await this.parsePrivateFollowSetData(set.event!.content);
+          const privatePubkeys = privateData.pubkeys;
+          const decryptedTitle = privateData.title;
 
-          if (privatePubkeys.length > 0) {
-            // Update the follow set with decrypted pubkeys
+          if (privatePubkeys.length > 0 || decryptedTitle) {
+            // Update the follow set with decrypted data
             this.followSets.update(currentSets => {
               return currentSets.map(s => {
                 if (s.dTag === set.dTag) {
                   return {
                     ...s,
+                    title: decryptedTitle || s.title,
                     pubkeys: [...s.pubkeys, ...privatePubkeys],
                     decryptionPending: false,
                   };
@@ -318,7 +483,7 @@ export class FollowSetsService {
               });
             });
 
-            this.logger.debug(`[FollowSets] Decrypted ${privatePubkeys.length} private pubkeys for "${set.title}"`);
+            this.logger.debug(`[FollowSets] Decrypted private follow set data for "${decryptedTitle || set.title}"`);
           } else {
             // No private pubkeys found, just mark as not pending
             this.followSets.update(currentSets => {
@@ -366,6 +531,14 @@ export class FollowSetsService {
   }
 
   /**
+   * Extract a human-readable follow set title from supported NIP-51 metadata tags.
+   * Some clients use `title`, while others use `name`.
+   */
+  private getTitleFromEvent(event: Event, dTag: string): string {
+    return event.tags.find(tag => tag[0] === 'title' || tag[0] === 'name')?.[1] || this.formatTitle(dTag);
+  }
+
+  /**
    * Parse a kind 30000 event into a FollowSet object synchronously (without decryption)
    * This allows immediate rendering of lists with public content while decryption happens in background
    */
@@ -378,8 +551,7 @@ export class FollowSetsService {
       }
 
       // Extract title from tags or use d-tag as fallback
-      const titleTag = event.tags.find(tag => tag[0] === 'title');
-      const title = titleTag ? titleTag[1] : this.formatTitle(dTag);
+      const title = this.getTitleFromEvent(event, dTag);
 
       // Extract pubkeys from public p tags
       const publicPubkeys = event.tags
@@ -419,23 +591,21 @@ export class FollowSetsService {
         return null;
       }
 
-      // Extract title from tags or use d-tag as fallback
-      const titleTag = event.tags.find(tag => tag[0] === 'title');
-      const title = titleTag ? titleTag[1] : this.formatTitle(dTag);
-
       // Extract pubkeys from public p tags
       const publicPubkeys = event.tags
         .filter(tag => tag[0] === 'p')
         .map(tag => tag[1]);
 
       // Try to decrypt private content if it exists
-      const privatePubkeys = await this.parsePrivatePubkeys(event.content);
+      const privateData = await this.parsePrivateFollowSetData(event.content);
+      const privatePubkeys = privateData.pubkeys;
 
       // Determine if this set is private based on whether content is encrypted
       const isPrivate = this.encryption.isContentEncrypted(event.content);
 
       // Combine public and private pubkeys
       const allPubkeys = [...publicPubkeys, ...privatePubkeys];
+      const title = privateData.title || this.getTitleFromEvent(event, dTag);
 
       return {
         id: event.id,
@@ -453,40 +623,125 @@ export class FollowSetsService {
   }
 
   /**
-   * Deduplicate follow sets by dTag, keeping only the newest event for each dTag
+   * Deduplicate follow sets by dTag.
+   * When relays disagree, prefer the event id seen most often, then fall back
+   * to timestamp/id priority.
    */
   private deduplicateByDTag(sets: FollowSet[]): FollowSet[] {
-    const setsByDTag = new Map<string, FollowSet>();
+    const setsByDTag = new Map<string, Map<string, { set: FollowSet; count: number }>>();
 
     for (const set of sets) {
-      const existing = setsByDTag.get(set.dTag);
-      // Keep the newer event (higher createdAt timestamp)
-      if (!existing || set.createdAt > existing.createdAt) {
-        setsByDTag.set(set.dTag, set);
+      let versions = setsByDTag.get(set.dTag);
+      if (!versions) {
+        versions = new Map<string, { set: FollowSet; count: number }>();
+        setsByDTag.set(set.dTag, versions);
+      }
+
+      const existingVersion = versions.get(set.id);
+      if (existingVersion) {
+        existingVersion.count += 1;
+      } else {
+        versions.set(set.id, { set, count: 1 });
       }
     }
 
-    return Array.from(setsByDTag.values());
+    return Array.from(setsByDTag.values()).map(versions => {
+      const preferred = Array.from(versions.values()).reduce((currentBest, candidate) => {
+        if (!currentBest) {
+          return candidate;
+        }
+
+        if (candidate.count !== currentBest.count) {
+          return candidate.count > currentBest.count ? candidate : currentBest;
+        }
+
+        return this.compareFollowSetPriority(candidate.set, currentBest.set) > 0 ? candidate : currentBest;
+      }, null as { set: FollowSet; count: number } | null);
+
+      return preferred!.set;
+    });
+  }
+
+  private compareFollowSetPriority(a: FollowSet, b: FollowSet): number {
+    if (a.createdAt !== b.createdAt) {
+      return a.createdAt - b.createdAt;
+    }
+
+    return a.id.localeCompare(b.id);
+  }
+
+  private async persistPreferredFollowSetVersions(events: Event[], preferredSets: FollowSet[]): Promise<void> {
+    const preferredByDTag = new Map(preferredSets.map(set => [set.dTag, set.id]));
+    const processedDTags = new Set<string>();
+
+    for (const event of events) {
+      const dTag = this.getDTagFromEvent(event);
+      if (!dTag || processedDTags.has(dTag)) {
+        continue;
+      }
+
+      processedDTags.add(dTag);
+      const preferredId = preferredByDTag.get(dTag);
+      if (!preferredId) {
+        continue;
+      }
+
+      const preferredEvent = events.find(candidate =>
+        this.getDTagFromEvent(candidate) === dTag && candidate.id === preferredId
+      );
+
+      if (preferredEvent) {
+        await this.persistPreferredFollowSetEvent(preferredEvent);
+      }
+    }
+  }
+
+  private async persistPreferredFollowSetEvent(event: Event): Promise<void> {
+    const dTag = this.getDTagFromEvent(event);
+
+    await this.database.saveEvent(event);
+
+    if (!dTag) {
+      return;
+    }
+
+    const existingEvents = await this.database.getEventsByPubkeyKindAndDTag(event.pubkey, event.kind, dTag);
+    const conflictingIds = existingEvents
+      .filter(existingEvent => existingEvent.id !== event.id)
+      .map(existingEvent => existingEvent.id);
+
+    if (conflictingIds.length > 0) {
+      await this.database.deleteEvents(conflictingIds);
+    }
   }
 
   /**
    * Parse private pubkeys from encrypted content
    */
   private async parsePrivatePubkeys(content: string): Promise<string[]> {
+    const privateData = await this.parsePrivateFollowSetData(content);
+    return privateData.pubkeys;
+  }
+
+  /**
+   * Parse decrypted follow set data from encrypted content.
+   * Some clients may include `title`/`name` tags in the encrypted payload for private lists.
+   */
+  private async parsePrivateFollowSetData(content: string): Promise<DecryptedFollowSetData> {
     if (!content || content.trim() === '') {
-      return [];
+      return { pubkeys: [], title: null };
     }
 
     // Check if content is encrypted
     if (!this.encryption.isContentEncrypted(content)) {
-      return [];
+      return { pubkeys: [], title: null };
     }
 
     try {
       const pubkey = this.accountState.pubkey();
       if (!pubkey) {
         this.logger.debug('[FollowSets] No pubkey available for decryption');
-        return [];
+        return { pubkeys: [], title: null };
       }
 
       // Decrypt content - try NIP-44 first, fallback to NIP-04
@@ -498,20 +753,57 @@ export class FollowSetsService {
         decrypted = await this.encryption.decryptNip04(content, pubkey);
       }
 
-      // Parse the decrypted JSON array of tags
-      const privateTags: string[][] = JSON.parse(decrypted);
-
-      // Extract pubkeys from p tags
-      const pubkeys = privateTags
-        .filter(tag => Array.isArray(tag) && tag[0] === 'p' && tag[1])
-        .map(tag => tag[1]);
+      const parsedPayload = JSON.parse(decrypted) as unknown;
+      const { pubkeys, title } = this.extractPrivateFollowSetData(parsedPayload);
 
       this.logger.debug(`[FollowSets] Decrypted ${pubkeys.length} private pubkeys`);
-      return pubkeys;
+      return { pubkeys, title };
     } catch (error) {
       this.logger.debug('[FollowSets] Could not decrypt private content:', error);
-      return [];
+      return { pubkeys: [], title: null };
     }
+  }
+
+  private extractPrivateFollowSetData(payload: unknown): DecryptedFollowSetData {
+    if (Array.isArray(payload)) {
+      const privateTags = payload.filter((tag): tag is string[] => Array.isArray(tag));
+
+      const pubkeys = privateTags
+        .filter(tag => tag[0] === 'p' && typeof tag[1] === 'string' && tag[1].trim() !== '')
+        .map(tag => tag[1]);
+
+      const title = privateTags.find(tag =>
+        (tag[0] === 'title' || tag[0] === 'name') &&
+        typeof tag[1] === 'string' &&
+        tag[1].trim() !== ''
+      )?.[1] || null;
+
+      return { pubkeys, title };
+    }
+
+    if (payload && typeof payload === 'object') {
+      const data = payload as DecryptedFollowSetPayload;
+      const title = [data.title, data.name, data.label].find(
+        (value): value is string => typeof value === 'string' && value.trim() !== ''
+      ) || null;
+
+      const candidateArrays = [data.pubkeys, data.people, data.p]
+        .filter(Array.isArray) as unknown[][];
+
+      const objectPubkeys = candidateArrays
+        .flatMap(array => array)
+        .filter((value): value is string => typeof value === 'string' && value.trim() !== '');
+
+      const nestedTagData = [data.tags, data.items].find(Array.isArray);
+      const nested = nestedTagData ? this.extractPrivateFollowSetData(nestedTagData) : { pubkeys: [], title: null };
+
+      return {
+        pubkeys: Array.from(new Set([...objectPubkeys, ...nested.pubkeys])),
+        title: title || nested.title,
+      };
+    }
+
+    return { pubkeys: [], title: null };
   }
 
   /**
@@ -636,19 +928,41 @@ export class FollowSetsService {
   /**
    * Update local follow set state
    */
-  private updateLocalFollowSet(updatedSet: FollowSet): void {
+  private updateLocalFollowSet(updatedSet: FollowSet): boolean {
+    let wasUpdated = false;
+
     this.followSets.update(sets => {
       const index = sets.findIndex(set => set.dTag === updatedSet.dTag);
       if (index >= 0) {
+        if (this.followSetsEqual([sets[index]], [updatedSet])) {
+          return sets;
+        }
+
         // Update existing
         const newSets = [...sets];
         newSets[index] = updatedSet;
+        wasUpdated = true;
         return newSets;
       } else {
         // Add new
+        wasUpdated = true;
         return [...sets, updatedSet];
       }
     });
+
+    return wasUpdated;
+  }
+
+  private removeLocalFollowSet(dTag: string): boolean {
+    let removed = false;
+
+    this.followSets.update(sets => {
+      const filteredSets = sets.filter(set => set.dTag !== dTag);
+      removed = filteredSets.length !== sets.length;
+      return removed ? filteredSets : sets;
+    });
+
+    return removed;
   }
 
   /**

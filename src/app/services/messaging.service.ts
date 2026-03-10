@@ -1813,15 +1813,15 @@ export class MessagingService implements NostriaService {
       } else {
         // Decrypt the sealed content using the EncryptionService
         try {
-          const sealedDecryptionResult = await this.encryption.autoDecrypt(
-            wrappedContent.content,
-            wrappedContent.pubkey,
-            wrappedEvent,
-            wrappedEvent.created_at
-          );
-          sealedEvent = JSON.parse(sealedDecryptionResult.content);
+          sealedEvent = await this.unwrapSealedContent(wrappedContent, wrappedEvent);
         } catch (err) {
-          this.logger.error('Failed to decrypt sealed content', err);
+          this.logger.warn('Failed to decrypt sealed content', {
+            error: err,
+            giftWrapId: wrappedEvent.id,
+            wrappedKind: wrappedContent?.kind,
+            originalEvent: wrappedEvent,
+            decryptedWrappedContent: wrappedContent,
+          });
           return null;
         }
       }
@@ -1844,6 +1844,72 @@ export class MessagingService implements NostriaService {
     } finally {
       this.inFlightGiftWrapIds.delete(wrappedEvent.id);
     }
+  }
+
+  private async unwrapSealedContent(wrappedContent: any, wrappedEvent: NostrEvent): Promise<any> {
+    if (!wrappedContent || typeof wrappedContent !== 'object') {
+      throw new Error('Wrapped content is not a valid object');
+    }
+
+    if (!this.encryption.isContentEncrypted(wrappedContent.content)) {
+      const fallbackEvent = this.extractFallbackSealedEvent(wrappedContent);
+      if (fallbackEvent) {
+        this.logger.debug('Wrapped content was already unsealed, using fallback event shape', {
+          giftWrapId: wrappedEvent.id,
+          wrappedKind: wrappedContent.kind,
+          eventKind: fallbackEvent.kind,
+        });
+        return fallbackEvent;
+      }
+
+      throw new Error('Content does not appear to be encrypted');
+    }
+
+    const sealedDecryptionResult = await this.encryption.autoDecrypt(
+      wrappedContent.content,
+      wrappedContent.pubkey,
+      wrappedEvent,
+      wrappedEvent.created_at
+    );
+
+    return JSON.parse(sealedDecryptionResult.content);
+  }
+
+  private extractFallbackSealedEvent(wrappedContent: any): any | null {
+    if (this.looksLikeNostrEvent(wrappedContent)) {
+      return wrappedContent;
+    }
+
+    if (typeof wrappedContent.content === 'string') {
+      try {
+        const parsed = JSON.parse(wrappedContent.content);
+        if (this.looksLikeNostrEvent(parsed)) {
+          return parsed;
+        }
+      } catch {
+        // Ignore JSON parse failure, fall through to null.
+      }
+    }
+
+    if (this.looksLikeNostrEvent(wrappedContent.encryptedMessage)) {
+      return wrappedContent.encryptedMessage;
+    }
+
+    return null;
+  }
+
+  private looksLikeNostrEvent(value: unknown): value is NostrEvent {
+    if (!value || typeof value !== 'object') {
+      return false;
+    }
+
+    const candidate = value as Partial<NostrEvent>;
+    return typeof candidate.id === 'string'
+      && typeof candidate.pubkey === 'string'
+      && typeof candidate.kind === 'number'
+      && typeof candidate.content === 'string'
+      && Array.isArray(candidate.tags)
+      && typeof candidate.created_at === 'number';
   }
 
   /**

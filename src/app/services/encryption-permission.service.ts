@@ -23,6 +23,17 @@ export class EncryptionPermissionService {
   private decryptionQueue: DecryptionRequest[] = [];
   private isProcessingQueue = false;
 
+  private isExpectedDecryptFailure(error: unknown): boolean {
+    if (!(error instanceof Error)) {
+      return false;
+    }
+
+    const message = error.message.toLowerCase();
+    return message.includes('invalid payload length')
+      || message.includes('content does not appear to be encrypted')
+      || message.includes('decryption returned empty result');
+  }
+
   /**
    * Check if the current account needs decryption permission
    */
@@ -100,7 +111,11 @@ export class EncryptionPermissionService {
           await new Promise(resolve => setTimeout(resolve, 100));
         }
       } catch (error) {
-        this.logger.error('Failed to process decryption request:', error);
+        if (this.isExpectedDecryptFailure(error)) {
+          this.logger.debug('Skipping expected decryption failure', error);
+        } else {
+          this.logger.error('Failed to process decryption request:', error);
+        }
         request.reject(error as Error);
       }
     }
@@ -143,7 +158,11 @@ export class EncryptionPermissionService {
         return result;
       }
     } catch (error) {
-      this.logger.error(`❌ ${method} decryption failed:`, error);
+      if (this.isExpectedDecryptFailure(error)) {
+        this.logger.debug(`${method} decryption skipped`, error);
+      } else {
+        this.logger.error(`❌ ${method} decryption failed:`, error);
+      }
       throw error;
     }
   }

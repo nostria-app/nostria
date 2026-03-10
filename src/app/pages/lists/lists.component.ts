@@ -452,7 +452,7 @@ export class ListsComponent implements OnInit {
       this.logger.debug(`[ListsComponent] Found ${privateItems.length} private items`);
 
       // Extract metadata
-      const title = event.tags.find(t => t[0] === 'title')?.[1];
+      const title = event.tags.find(t => t[0] === 'title' || t[0] === 'name')?.[1];
       const description = event.tags.find(t => t[0] === 'description')?.[1];
       const image = event.tags.find(t => t[0] === 'image')?.[1];
       const identifier = event.tags.find(t => t[0] === 'd')?.[1];
