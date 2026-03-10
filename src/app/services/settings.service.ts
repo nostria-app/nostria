@@ -1,6 +1,6 @@
-import { Injectable, effect, inject, signal } from '@angular/core';
+import { Injectable, effect, inject, signal, untracked } from '@angular/core';
 import { NostrService } from './nostr.service';
-import { kinds } from 'nostr-tools';
+import { Event, kinds } from 'nostr-tools';
 import { LoggerService } from './logger.service';
 import { AccountStateService } from './account-state.service';
 import { AccountRelayService } from './relays/account-relay';
@@ -144,6 +144,11 @@ export class SettingsService {
   // - null: unknown (for example due to startup or fetch failure)
   hasPersistedSettingsEvent = signal<boolean | null>(null);
 
+  private liveSettingsSubscription: { close: () => void } | { unsubscribe: () => void } | null =
+    null;
+  private liveSettingsSubscriptionPubkey: string | null = null;
+  private currentSettingsEventCreatedAt: number | null = null;
+
   constructor() {
     effect(async () => {
       const account = this.accountState.account();
@@ -168,9 +173,116 @@ export class SettingsService {
         // No account, reset to defaults and mark as loaded (defaults are safe for anonymous)
         this.settings.set({ ...DEFAULT_SETTINGS });
         this.hasPersistedSettingsEvent.set(false);
+        this.currentSettingsEventCreatedAt = null;
         this.settingsLoaded.set(true);
       }
     });
+
+    effect(() => {
+      const account = this.accountState.account();
+      const initialized = this.accountState.initialized();
+      const pubkey = this.accountState.pubkey();
+
+      if (!account || !initialized || !pubkey) {
+        this.stopLiveSettingsSubscription();
+        return;
+      }
+
+      if (this.liveSettingsSubscriptionPubkey === pubkey) {
+        return;
+      }
+
+      untracked(() => {
+        this.stopLiveSettingsSubscription();
+        this.startLiveSettingsSubscription(pubkey);
+      });
+    });
+  }
+
+  private applySettingsEvent(event: Event, source: string): boolean {
+    if (!event.content) {
+      return false;
+    }
+
+    try {
+      const parsedContent = JSON.parse(event.content);
+      const mergedSettings = {
+        ...DEFAULT_SETTINGS,
+        ...parsedContent,
+      };
+
+      this.settings.set(mergedSettings);
+      this.hasPersistedSettingsEvent.set(true);
+      this.currentSettingsEventCreatedAt = event.created_at;
+      this.localSettings.setRelayDiscoveryMode(mergedSettings.relayDiscoveryMode ?? 'outbox');
+      this.logger.info(`Settings ${source}`, this.settings());
+      return true;
+    } catch (error) {
+      this.logger.warn(`Failed to parse settings from ${source}`, error);
+      return false;
+    }
+  }
+
+  private async persistSettingsEvent(event: Event): Promise<boolean> {
+    return this.database.saveReplaceableEvent({
+      ...event,
+      dTag: 'nostria:settings',
+    });
+  }
+
+  private async handleLiveSettingsEvent(event: Event): Promise<void> {
+    if (!event.content) {
+      return;
+    }
+
+    try {
+      const wasSaved = await this.persistSettingsEvent(event);
+      if (!wasSaved && (this.currentSettingsEventCreatedAt ?? 0) >= event.created_at) {
+        return;
+      }
+
+      if (this.applySettingsEvent(event, 'updated from relay subscription')) {
+        this.logger.info('Applied live settings update from another device', {
+          pubkey: event.pubkey,
+          createdAt: event.created_at,
+        });
+      }
+    } catch (error) {
+      this.logger.warn('Failed to handle live settings update', error);
+    }
+  }
+
+  private startLiveSettingsSubscription(pubkey: string): void {
+    const filter = {
+      kinds: [kinds.Application],
+      '#d': ['nostria:settings'],
+      authors: [pubkey],
+      limit: 1,
+    };
+
+    this.liveSettingsSubscriptionPubkey = pubkey;
+    this.liveSettingsSubscription = this.accountRelay.subscribe(
+      filter,
+      (event) => {
+        void this.handleLiveSettingsEvent(event);
+      },
+      () => {
+        this.logger.debug('Live settings subscription reached EOSE');
+      }
+    );
+  }
+
+  private stopLiveSettingsSubscription(): void {
+    if (this.liveSettingsSubscription) {
+      if ('close' in this.liveSettingsSubscription) {
+        this.liveSettingsSubscription.close();
+      } else {
+        this.liveSettingsSubscription.unsubscribe();
+      }
+    }
+
+    this.liveSettingsSubscription = null;
+    this.liveSettingsSubscriptionPubkey = null;
   }
 
   async loadSettings(pubkey: string): Promise<void> {
@@ -183,23 +295,13 @@ export class SettingsService {
       );
 
       if (cachedEvent && cachedEvent.content) {
-        try {
-          const parsedContent = JSON.parse(cachedEvent.content);
-          const mergedSettings = {
-            ...DEFAULT_SETTINGS,
-            ...parsedContent,
-          };
-          this.settings.set(mergedSettings);
-          this.hasPersistedSettingsEvent.set(true);
-          this.localSettings.setRelayDiscoveryMode(mergedSettings.relayDiscoveryMode ?? 'outbox');
-          this.logger.info('Settings loaded from cache', this.settings());
-
+        if (this.applySettingsEvent(cachedEvent, 'loaded from cache')) {
           // Refresh from relay in background (don't await)
           this.refreshSettingsFromRelay(pubkey);
           return;
-        } catch (error) {
-          this.logger.warn('Failed to parse cached settings, will fetch from relay', error);
         }
+
+        this.logger.warn('Failed to use cached settings, will fetch from relay');
       }
 
       // No cache or invalid cache - fetch from relay
@@ -207,6 +309,7 @@ export class SettingsService {
     } catch (error) {
       this.logger.error('Failed to load settings', error);
       this.hasPersistedSettingsEvent.set(null);
+      this.currentSettingsEventCreatedAt = null;
       this.settings.set({ ...DEFAULT_SETTINGS });
     }
   }
@@ -225,27 +328,19 @@ export class SettingsService {
     const event = await this.accountRelay.get(filter);
 
     if (event && event.content) {
-      try {
-        const parsedContent = JSON.parse(event.content);
-        const mergedSettings = {
-          ...DEFAULT_SETTINGS,
-          ...parsedContent,
-        };
-        this.settings.set(mergedSettings);
-        this.hasPersistedSettingsEvent.set(true);
-        this.localSettings.setRelayDiscoveryMode(mergedSettings.relayDiscoveryMode ?? 'outbox');
-        this.logger.info('Settings loaded successfully', this.settings());
-
+      if (this.applySettingsEvent(event, 'loaded successfully from relay')) {
         // Save to cache for next time
-        await this.database.saveEvent(event);
-      } catch (error) {
-        this.logger.error('Failed to parse settings content', error);
+        await this.persistSettingsEvent(event);
+      } else {
+        this.logger.error('Failed to parse settings content from relay');
         this.hasPersistedSettingsEvent.set(null);
+        this.currentSettingsEventCreatedAt = null;
         this.settings.set({ ...DEFAULT_SETTINGS });
       }
     } else {
       this.logger.info('No settings found, using defaults', DEFAULT_SETTINGS);
       this.hasPersistedSettingsEvent.set(false);
+      this.currentSettingsEventCreatedAt = null;
       this.settings.set({ ...DEFAULT_SETTINGS });
     }
   }
@@ -273,21 +368,9 @@ export class SettingsService {
         );
 
         if (!cachedEvent || event.created_at > cachedEvent.created_at) {
-          try {
-            const parsedContent = JSON.parse(event.content);
-            const mergedSettings = {
-              ...DEFAULT_SETTINGS,
-              ...parsedContent,
-            };
-            this.settings.set(mergedSettings);
-            this.hasPersistedSettingsEvent.set(true);
-            this.localSettings.setRelayDiscoveryMode(mergedSettings.relayDiscoveryMode ?? 'outbox');
-            this.logger.info('Settings refreshed from relay', this.settings());
-
+          if (this.applySettingsEvent(event, 'refreshed from relay')) {
             // Update cache
-            await this.database.saveEvent(event);
-          } catch (error) {
-            this.logger.warn('Failed to parse refreshed settings', error);
+            await this.persistSettingsEvent(event);
           }
         }
       }
@@ -305,6 +388,7 @@ export class SettingsService {
 
     this.settings.set(newSettings);
     this.hasPersistedSettingsEvent.set(true);
+    this.localSettings.setRelayDiscoveryMode(newSettings.relayDiscoveryMode ?? 'outbox');
 
     // Skip publishing for preview accounts - they cannot sign events
     const account = this.accountState.account();
@@ -320,11 +404,12 @@ export class SettingsService {
 
       const unsignedEvent = this.nostrService.createEvent(kinds.Application, content, tags);
       const signedEvent = await this.nostrService.signEvent(unsignedEvent);
+      this.currentSettingsEventCreatedAt = signedEvent.created_at;
 
       // Persist immediately to the local database so settings such as custom feeds
       // are available on the next reload without waiting for relays to echo the event back.
       try {
-        await this.database.saveEvent(signedEvent);
+        await this.persistSettingsEvent(signedEvent);
       } catch (cacheError) {
         this.logger.warn('Failed to cache settings event locally before publish', cacheError);
       }

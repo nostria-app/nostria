@@ -220,6 +220,7 @@ export class FeedService {
 
   // Track if sync is in progress to prevent loops
   private syncInProgress = false;
+  private applyingSyncedFeedUpdate = false;
 
   // Active feed subscription management
   private readonly _activeFeedId = signal<string | null>(null);
@@ -333,6 +334,50 @@ export class FeedService {
           loadingForPubkey = null;
         });
       }
+    });
+
+    effect(() => {
+      const account = this.accountState.account();
+      const pubkey = this.accountState.pubkey();
+      const settingsLoaded = this.settingsService.settingsLoaded();
+      const syncedFeeds = this.settingsService.getSyncedFeeds();
+      const feedsLoaded = this._feedsLoaded();
+
+      if (!account || !pubkey || !settingsLoaded || !feedsLoaded || !syncedFeeds) {
+        return;
+      }
+
+      if (this.syncInProgress || this.applyingSyncedFeedUpdate) {
+        return;
+      }
+
+      untracked(async () => {
+        const currentFeeds = this._feeds().filter(feed => feed.id !== TRENDING_FEED_ID);
+
+        if (!this.shouldUseSyncedFeeds(currentFeeds, syncedFeeds)) {
+          return;
+        }
+
+        this.applyingSyncedFeedUpdate = true;
+
+        try {
+          const updatedFeeds = this.convertSyncedFeedsToFeedConfig(syncedFeeds);
+          this.logger.info('Applying newer synced feed updates from settings', {
+            pubkey,
+            syncedFeedCount: syncedFeeds.length,
+          });
+
+          this._feeds.set(updatedFeeds);
+          this.saveFeeds({ syncToSettings: false, preserveBackup: true });
+
+          if (this._feedsPageActive()) {
+            this.unsubscribe();
+            await this.subscribe();
+          }
+        } finally {
+          this.applyingSyncedFeedUpdate = false;
+        }
+      });
     });
   }
 
