@@ -15,6 +15,29 @@ export interface PeopleFilters {
   showRank: boolean;
 }
 
+export interface StoredFeedConfig {
+  id: string;
+  label: string;
+  icon: string;
+  type: 'notes' | 'articles' | 'photos' | 'videos' | 'music' | 'polls' | 'custom';
+  kinds: number[];
+  source?: 'following' | 'public' | 'custom' | 'for-you' | 'search' | 'trending' | 'interests';
+  customUsers?: string[];
+  customStarterPacks?: string[];
+  customFollowSets?: string[];
+  customInterestHashtags?: string[];
+  searchQuery?: string;
+  relayConfig: 'account' | 'custom' | 'search';
+  customRelays?: string[];
+  filters?: Record<string, unknown>;
+  showReplies?: boolean;
+  showReposts?: boolean;
+  createdAt: number;
+  updatedAt: number;
+  lastRetrieved?: number;
+  isSystem?: boolean;
+}
+
 /**
  * Per-account state stored in localStorage
  */
@@ -23,6 +46,7 @@ interface AccountLocalState {
   followerNotificationsProcessedAt?: Record<string, number>;
   messagesLastCheck?: number;
   activeFeed?: string;
+  feedConfigs?: StoredFeedConfig[];
   favorites?: string[];
   peopleViewMode?: string;
   peopleSortOption?: string;
@@ -354,6 +378,22 @@ export class AccountLocalStateService {
    */
   setActiveFeed(pubkey: string, feedId: string | null | undefined): void {
     this.updateAccountState(pubkey, { activeFeed: feedId || undefined });
+  }
+
+  /**
+   * Get cached feed configurations for an account.
+   * Returns undefined when no feed configuration has been cached yet.
+   */
+  getFeedConfigs(pubkey: string): StoredFeedConfig[] | undefined {
+    const state = this.getAccountState(pubkey);
+    return state.feedConfigs;
+  }
+
+  /**
+   * Cache feed configurations for an account for instant startup restore.
+   */
+  setFeedConfigs(pubkey: string, feedConfigs: StoredFeedConfig[] | null | undefined): void {
+    this.updateAccountState(pubkey, { feedConfigs: feedConfigs?.length ? feedConfigs : undefined });
   }
 
   /**

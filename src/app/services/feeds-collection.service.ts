@@ -3,13 +3,17 @@ import { LocalStorageService } from './local-storage.service';
 import { LoggerService } from './logger.service';
 import { FeedService, FeedConfig } from './feed.service';
 import { AccountStateService } from './account-state.service';
-import { AccountLocalStateService } from './account-local-state.service';
+import { AccountLocalStateService, ANONYMOUS_PUBKEY } from './account-local-state.service';
+import { SettingsService } from './settings.service';
+import { ApplicationService } from './application.service';
 
 // FeedDefinition is now the same as FeedConfig - no more separate column definitions
 export type FeedDefinition = FeedConfig;
 
 // Default feed ID for new users - "For You" is optimized for quick rendering
 const DEFAULT_FEED_ID = 'default-feed-for-you';
+const ACTIVE_FEED_STORAGE_KEY = 'nostria-active-feed-by-account';
+const LAST_ACTIVE_FEED_STORAGE_KEY = 'nostria-last-active-feed';
 
 @Injectable({
   providedIn: 'root',
@@ -20,6 +24,8 @@ export class FeedsCollectionService {
   private readonly feedService = inject(FeedService);
   private readonly accountState = inject(AccountStateService);
   private readonly accountLocalState = inject(AccountLocalStateService);
+  private readonly settingsService = inject(SettingsService);
+  private readonly app = inject(ApplicationService);
 
   readonly ACTIVE_FEED_KEY = 'nostria-active-feed';
 
@@ -35,79 +41,222 @@ export class FeedsCollectionService {
   // Track the last account pubkey to detect account switches
   private lastAccountPubkey: string | null = null;
 
+  // Track which account has had its saved feed restored for the current session.
+  // This prevents the default feed auto-selection from overwriting a saved custom feed
+  // before restoration runs.
+  private readonly _restoredActiveFeedForPubkey = signal<string | null>(null);
+
   // Public computed signals that use FeedService as source of truth
   // Since FeedDefinition is now the same as FeedConfig, no conversion needed
   readonly feeds = computed(() => this.feedService.feeds());
   readonly activeFeedId = computed(() => this._activeFeedId());
+  readonly activeFeedSelectionResolved = computed(() => {
+    const pubkey = this.accountState.pubkey();
+    const authenticated = this.app.authenticated();
+
+    if (authenticated && !pubkey) {
+      return false;
+    }
+
+    if (!pubkey) {
+      return true;
+    }
+
+    return this._restoredActiveFeedForPubkey() === pubkey;
+  });
   readonly activeFeed = computed(() => {
     const feedId = this._activeFeedId();
     return feedId ? this.feeds().find(f => f.id === feedId) ?? null : null;
   });
+
+  private getActiveFeedStorageAccountKey(pubkey: string | null | undefined): string {
+    return pubkey || ANONYMOUS_PUBKEY;
+  }
+
+  private getPersistedActiveFeedId(pubkey: string | null | undefined): string | null {
+    try {
+      const storageKey = this.getActiveFeedStorageAccountKey(pubkey);
+      const activeFeedByAccount = this.localStorageService.getObject<Record<string, string>>(
+        ACTIVE_FEED_STORAGE_KEY
+      ) || {};
+
+      return activeFeedByAccount[storageKey]
+        || this.localStorageService.getItem(LAST_ACTIVE_FEED_STORAGE_KEY)
+        || null;
+    } catch (error) {
+      this.logger.error('Error reading persisted active feed:', error);
+      return null;
+    }
+  }
+
+  private persistActiveFeedId(pubkey: string | null | undefined, feedId: string | null): void {
+    try {
+      const storageKey = this.getActiveFeedStorageAccountKey(pubkey);
+      const activeFeedByAccount = this.localStorageService.getObject<Record<string, string>>(
+        ACTIVE_FEED_STORAGE_KEY
+      ) || {};
+
+      if (feedId) {
+        activeFeedByAccount[storageKey] = feedId;
+        this.localStorageService.setObject(ACTIVE_FEED_STORAGE_KEY, activeFeedByAccount);
+        this.localStorageService.setItem(LAST_ACTIVE_FEED_STORAGE_KEY, feedId);
+      } else {
+        delete activeFeedByAccount[storageKey];
+        this.localStorageService.setObject(ACTIVE_FEED_STORAGE_KEY, activeFeedByAccount);
+      }
+    } catch (error) {
+      this.logger.error('Error persisting active feed:', error);
+    }
+  }
+
   constructor() {
     this.loadActiveFeed();
+
+    // Prime the active feed from per-account state as soon as the pubkey is known.
+    // This prevents startup fallback logic from briefly selecting "For You" before
+    // the previously selected custom feed can be validated against the loaded feed list.
+    effect(() => {
+      const pubkey = this.accountState.pubkey();
+
+      untracked(() => {
+        if (!pubkey) {
+          this.lastAccountPubkey = null;
+          this._restoredActiveFeedForPubkey.set(null);
+          this._activeFeedId.set(null);
+          return;
+        }
+
+        if (this.lastAccountPubkey === pubkey) {
+          return;
+        }
+
+        this.lastAccountPubkey = pubkey;
+        this.userChangedFeed = false;
+        this._restoredActiveFeedForPubkey.set(null);
+
+        const savedFeedId = this.accountLocalState.getActiveFeed(pubkey)
+          ?? this.getPersistedActiveFeedId(pubkey);
+        this._activeFeedId.set(savedFeedId);
+      });
+    });
 
     // Reload active feed when account changes
     effect(() => {
       const pubkey = this.accountState.pubkey();
       const feedsLoaded = this.feedService.feedsLoaded(); // Wait for feeds to be loaded
       const feeds = this.feeds(); // Get current feeds to validate saved feed
+      const settingsLoaded = this.settingsService.settingsLoaded();
+      const restoredActiveFeedForPubkey = this._restoredActiveFeedForPubkey();
 
       untracked(() => {
         if (pubkey && feedsLoaded) {
-          // Only restore saved feed if:
-          // 1. Account has changed (user switched accounts)
-          // 2. User hasn't manually changed the feed in this session
-          const accountChanged = this.lastAccountPubkey !== pubkey;
+          // Restore the saved feed exactly once per account after feeds have finished loading.
+          // Without this guard, the default auto-selection effect can run first and overwrite
+          // the previously saved custom feed in account-local storage.
+          if (restoredActiveFeedForPubkey === pubkey) {
+            return;
+          }
 
-          if (accountChanged) {
-            // Account switched - reset the user change flag and restore saved feed
-            this.lastAccountPubkey = pubkey;
-            this.userChangedFeed = false;
+          const savedFeedId = this.accountLocalState.getActiveFeed(pubkey)
+            ?? this.getPersistedActiveFeedId(pubkey);
 
-            const savedFeedId = this.accountLocalState.getActiveFeed(pubkey);
+          // Validate that the saved feed still exists
+          // If not, fall back to "For You" feed for optimal new user experience
+          let feedIdToSet: string | null = null;
 
-            // Validate that the saved feed still exists
-            // If not, fall back to "For You" feed for optimal new user experience
-            let feedIdToSet: string | null = null;
+          if (savedFeedId && feeds.some(f => f.id === savedFeedId)) {
+            // Saved feed exists, use it
+            feedIdToSet = savedFeedId;
+          } else if (savedFeedId && !settingsLoaded) {
+            // A saved feed exists, but settings/synced feeds may still be loading.
+            // Keep the selector unresolved instead of temporarily falling back to
+            // "For You" and flashing the wrong selection.
+            return;
+          } else if (feeds.length > 0) {
+            // Saved feed doesn't exist or is invalid - use "For You" as default
+            // Fall back to first feed if "For You" doesn't exist
+            const forYouFeed = feeds.find(f => f.id === DEFAULT_FEED_ID);
+            feedIdToSet = forYouFeed ? forYouFeed.id : feeds[0].id;
+            this.logger.debug(`Saved feed ${savedFeedId} not found, falling back to ${feedIdToSet}`);
+          }
 
-            if (savedFeedId && feeds.some(f => f.id === savedFeedId)) {
-              // Saved feed exists, use it
-              feedIdToSet = savedFeedId;
-            } else if (feeds.length > 0) {
-              // Saved feed doesn't exist or is invalid - use "For You" as default
-              // Fall back to first feed if "For You" doesn't exist
-              const forYouFeed = feeds.find(f => f.id === DEFAULT_FEED_ID);
-              feedIdToSet = forYouFeed ? forYouFeed.id : feeds[0].id;
-              this.logger.debug(`Saved feed ${savedFeedId} not found, falling back to ${feedIdToSet}`);
-            }
-
-            if (feedIdToSet) {
-              this._activeFeedId.set(feedIdToSet);
-              // Sync with FeedService
-              this.feedService.setActiveFeed(feedIdToSet);
-              // Save the corrected feed ID if we had to fall back
-              if (feedIdToSet !== savedFeedId) {
-                this.saveActiveFeed();
-              }
+          if (feedIdToSet) {
+            this._activeFeedId.set(feedIdToSet);
+            // Sync with FeedService
+            this.feedService.setActiveFeed(feedIdToSet);
+            // Only persist fallback when there was no previously saved preference.
+            // If a saved custom feed is temporarily missing during startup, never
+            // overwrite that preference with "For You".
+            if (!savedFeedId && feedIdToSet !== savedFeedId) {
+              this.saveActiveFeed();
             }
           }
+
+          this._restoredActiveFeedForPubkey.set(pubkey);
           // If account hasn't changed and user has manually selected a feed,
           // don't override their selection
         }
       });
     });
 
+    // If a saved feed becomes available after the initial restore pass, switch to it.
+    // This handles late feed-list population without permanently falling back to For You.
+    effect(() => {
+      const pubkey = this.accountState.pubkey();
+      const feeds = this.feeds();
+      const activeFeedId = this._activeFeedId();
+      const restoredActiveFeedForPubkey = this._restoredActiveFeedForPubkey();
+
+      untracked(() => {
+        if (!pubkey || restoredActiveFeedForPubkey !== pubkey || this.userChangedFeed) {
+          return;
+        }
+
+        const savedFeedId = this.accountLocalState.getActiveFeed(pubkey)
+          ?? this.getPersistedActiveFeedId(pubkey);
+
+        if (!savedFeedId || activeFeedId === savedFeedId) {
+          return;
+        }
+
+        if (!feeds.some(feed => feed.id === savedFeedId)) {
+          return;
+        }
+
+        this.logger.debug(`Late-restoring saved active feed ${savedFeedId}`);
+        this._activeFeedId.set(savedFeedId);
+        this.feedService.setActiveFeed(savedFeedId);
+      });
+    });
+
     // Sync with FeedService - if FeedService has feeds but we don't have an active feed, set one
     effect(() => {
+      const authenticated = this.app.authenticated();
+      const pubkey = this.accountState.pubkey();
+      const feedsLoaded = this.feedService.feedsLoaded();
       const feeds = this.feeds();
       const activeFeedId = this._activeFeedId();
       const dynamicFeedActive = this._dynamicFeedActive();
+      const restoredActiveFeedForPubkey = this._restoredActiveFeedForPubkey();
 
       // Use untracked to prevent reactive loops when updating signals
       untracked(() => {
         // Don't auto-select a feed if a dynamic feed is active
         if (dynamicFeedActive) {
           this.logger.debug('Dynamic feed active - skipping auto-selection');
+          return;
+        }
+
+        // For authenticated users, never auto-select a default feed until the
+        // account pubkey is available and the saved selection can be restored.
+        if (authenticated && !pubkey) {
+          return;
+        }
+
+        // Wait until the saved feed has been restored for the current account.
+        // Otherwise a default feed can be selected and persisted too early,
+        // overwriting the user's previous custom feed selection.
+        if (pubkey && restoredActiveFeedForPubkey !== pubkey) {
           return;
         }
 
@@ -142,7 +291,8 @@ export class FeedsCollectionService {
         return;
       }
 
-      const activeFeedId = this.accountLocalState.getActiveFeed(pubkey);
+      const activeFeedId = this.accountLocalState.getActiveFeed(pubkey)
+        ?? this.getPersistedActiveFeedId(pubkey);
       if (activeFeedId) {
         this._activeFeedId.set(activeFeedId);
       }
@@ -164,8 +314,10 @@ export class FeedsCollectionService {
       const activeFeedId = this._activeFeedId();
       if (activeFeedId) {
         this.accountLocalState.setActiveFeed(pubkey, activeFeedId);
+        this.persistActiveFeedId(pubkey, activeFeedId);
       } else {
         this.accountLocalState.setActiveFeed(pubkey, null);
+        this.persistActiveFeedId(pubkey, null);
       }
     } catch (error) {
       this.logger.error('Error saving active feed to storage:', error);

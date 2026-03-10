@@ -24,13 +24,7 @@
               <mat-icon>close</mat-icon>
             </button>
           </div>
-          } @else if (!feedService.feedsLoaded()) {
-          <!-- Show loading indicator while feeds are loading -->
-          <div class="feed-selector-loading">
-            <mat-icon class="selector-icon">dynamic_feed</mat-icon>
-            <span class="selector-label">Loading...</span>
-          </div>
-          } @else {
+          } @else if (feedViewReady() && feedsCollectionService.activeFeedSelectionResolved()) {
           <!-- Feed Selector Button -->
           <button class="feed-selector-button" mat-button [matMenuTriggerFor]="feedMenu"
             [class.has-selection]="activeFeed()">

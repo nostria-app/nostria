@@ -14,7 +14,7 @@ import { DatabaseService } from './database.service';
 import { Event, kinds } from 'nostr-tools';
 import { ApplicationStateService } from './application-state.service';
 import { AccountStateService } from './account-state.service';
-import { AccountLocalStateService } from './account-local-state.service';
+import { AccountLocalStateService, StoredFeedConfig } from './account-local-state.service';
 import { DataService } from './data.service';
 import { UtilitiesService } from './utilities.service';
 import { ApplicationService } from './application.service';
@@ -153,6 +153,7 @@ const DEFAULT_FEEDS: FeedConfig[] = [
 ];
 
 const DEFAULT_FEED_IDS = new Set(DEFAULT_FEEDS.map(feed => feed.id));
+const FEEDS_BACKUP_STORAGE_KEY = 'nostria-feeds-backup';
 
 // Trending feed ID constant - this feed is always appended at the end and never persisted
 const TRENDING_FEED_ID = 'default-feed-trending';
@@ -3623,6 +3624,11 @@ export class FeedService {
    */
   private getFeedsFromStorage(pubkey: string): FeedConfig[] | null {
     try {
+      const accountLocalFeeds = this.accountLocalState.getFeedConfigs(pubkey);
+      if (accountLocalFeeds) {
+        return accountLocalFeeds as FeedConfig[];
+      }
+
       const feedsByAccount = this.localStorageService.getObject<Record<string, FeedConfig[]>>(
         this.appState.FEEDS_STORAGE_KEY
       );
@@ -3638,9 +3644,32 @@ export class FeedService {
       }
 
       // Return whatever is stored for this pubkey (could be empty array if user deleted all feeds)
-      return feedsByAccount[pubkey];
+      const feeds = feedsByAccount[pubkey];
+
+      // Hydrate per-account local state cache from legacy feed storage so subsequent
+      // startups can restore instantly without waiting on other initialization paths.
+      this.accountLocalState.setFeedConfigs(pubkey, feeds as StoredFeedConfig[]);
+
+      return feeds;
     } catch (error) {
       this.logger.error('Error getting feeds from storage:', error);
+      return null;
+    }
+  }
+
+  private getFeedsBackupFromStorage(pubkey: string): FeedConfig[] | null {
+    try {
+      const feedsBackupByAccount = this.localStorageService.getObject<Record<string, FeedConfig[]>>(
+        FEEDS_BACKUP_STORAGE_KEY
+      );
+
+      if (!feedsBackupByAccount || !(pubkey in feedsBackupByAccount)) {
+        return null;
+      }
+
+      return feedsBackupByAccount[pubkey];
+    } catch (error) {
+      this.logger.error('Error getting feeds backup from storage:', error);
       return null;
     }
   }
@@ -3751,20 +3780,86 @@ export class FeedService {
     return [migratedFeed];
   }
 
-  private hasCustomFeedIds(feeds: Array<Pick<FeedConfig | SyncedFeedConfig, 'id'>>): boolean {
+  private hasCustomFeedIds(feeds: Pick<FeedConfig | SyncedFeedConfig, 'id'>[]): boolean {
     return feeds.some(feed => !DEFAULT_FEED_IDS.has(feed.id));
   }
 
+  private getCustomFeedIds(feeds: Pick<FeedConfig | SyncedFeedConfig, 'id'>[]): Set<string> {
+    return new Set(
+      feeds
+        .filter(feed => !DEFAULT_FEED_IDS.has(feed.id))
+        .map(feed => feed.id)
+    );
+  }
+
+  private getCustomFeeds<T extends Pick<FeedConfig | SyncedFeedConfig, 'id'>>(feeds: T[]): T[] {
+    return feeds.filter(feed => !DEFAULT_FEED_IDS.has(feed.id));
+  }
+
+  private mergeFeedsWithDefaults(feeds: FeedConfig[]): FeedConfig[] {
+    const filteredFeeds = feeds.filter(feed => feed.id !== TRENDING_FEED_ID);
+    const defaultFeedOverrides = new Map(
+      filteredFeeds
+        .filter(feed => DEFAULT_FEED_IDS.has(feed.id))
+        .map(feed => [feed.id, feed])
+    );
+
+    const mergedDefaults = DEFAULT_FEEDS.map(defaultFeed => defaultFeedOverrides.get(defaultFeed.id) ?? defaultFeed);
+    const customFeeds = filteredFeeds.filter(feed => !DEFAULT_FEED_IDS.has(feed.id));
+
+    return [...mergedDefaults, ...customFeeds];
+  }
+
+  private shouldUseBackupFeeds(
+    currentFeeds: Pick<FeedConfig | SyncedFeedConfig, 'id'>[],
+    backupFeeds: FeedConfig[] | null
+  ): backupFeeds is FeedConfig[] {
+    if (!backupFeeds || backupFeeds.length === 0) {
+      return false;
+    }
+
+    const backupCustomFeedIds = this.getCustomFeedIds(backupFeeds);
+    if (backupCustomFeedIds.size === 0) {
+      return false;
+    }
+
+    const currentCustomFeedIds = this.getCustomFeedIds(currentFeeds);
+    if (currentCustomFeedIds.size === 0) {
+      return true;
+    }
+
+    return [...backupCustomFeedIds].some(id => !currentCustomFeedIds.has(id));
+  }
+
   private shouldUseSyncedFeeds(localFeeds: FeedConfig[], syncedFeeds: SyncedFeedConfig[]): boolean {
-    const syncedFeedsUpdatedAt = Math.max(...syncedFeeds.map(f => f.updatedAt || 0));
-    const localFeedsUpdatedAt = Math.max(...localFeeds.map(f => f.updatedAt || 0), 0);
+    const localCustomFeeds = this.getCustomFeeds(localFeeds);
+    const syncedCustomFeeds = this.getCustomFeeds(syncedFeeds);
+
+    if (syncedCustomFeeds.length === 0) {
+      return false;
+    }
+
+    const syncedFeedsUpdatedAt = Math.max(...syncedCustomFeeds.map(f => f.updatedAt || 0));
+    const localFeedsUpdatedAt = Math.max(...localCustomFeeds.map(f => f.updatedAt || 0), 0);
 
     if (syncedFeedsUpdatedAt <= localFeedsUpdatedAt) {
       return false;
     }
 
-    if (this.hasCustomFeedIds(localFeeds) && !this.hasCustomFeedIds(syncedFeeds)) {
+    const localCustomFeedIds = this.getCustomFeedIds(localCustomFeeds);
+    const syncedCustomFeedIds = this.getCustomFeedIds(syncedCustomFeeds);
+
+    if (localCustomFeedIds.size > 0 && syncedCustomFeedIds.size === 0) {
       this.logger.warn('Ignoring synced default feeds because local custom feeds exist');
+      return false;
+    }
+
+    const missingLocalCustomFeedIds = [...localCustomFeedIds].filter(id => !syncedCustomFeedIds.has(id));
+    if (missingLocalCustomFeedIds.length > 0) {
+      this.logger.warn(
+        'Ignoring synced feeds because they would remove local custom feeds',
+        missingLocalCustomFeedIds
+      );
       return false;
     }
 
@@ -3774,6 +3869,7 @@ export class FeedService {
   private async loadFeeds(pubkey: string): Promise<void> {
     try {
       const storedFeeds = this.getFeedsFromStorage(pubkey);
+      const backupFeeds = this.getFeedsBackupFromStorage(pubkey);
 
       // Check if we have synced feeds from kind 30078 settings
       // This takes priority for cross-device sync scenarios
@@ -3782,20 +3878,31 @@ export class FeedService {
 
       // If storedFeeds is null, this user has never had feeds before on this device
       if (storedFeeds === null) {
+        if (this.shouldUseBackupFeeds([], backupFeeds)) {
+          this.logger.warn(`Restoring ${backupFeeds.length} feeds from local backup for pubkey ${pubkey}`);
+          this._feeds.set(this.mergeFeedsWithDefaults(backupFeeds));
+          this._feedsLoaded.set(true);
+          this.saveFeeds({ syncToSettings: false, preserveBackup: true });
+        }
         // Check if there are synced feeds from another device
-        if (hasSyncedFeeds) {
+        else if (hasSyncedFeeds) {
           this.logger.info(`Found ${syncedFeeds.length} synced feeds from settings, using those`);
           const feedsFromSync = this.convertSyncedFeedsToFeedConfig(syncedFeeds);
           this._feeds.set(feedsFromSync);
           this._feedsLoaded.set(true);
           // Save to local storage for faster loading next time
-          this.saveFeeds();
+          this.saveFeeds({ syncToSettings: false, preserveBackup: true });
         } else {
           this.logger.info('No feeds found for pubkey, initializing default feeds for pubkey', pubkey);
           const defaultFeeds = await this.initializeDefaultFeeds();
           this._feeds.set(defaultFeeds);
           this._feedsLoaded.set(true);
-          this.saveFeeds();
+          // Critical safety guard:
+          // if we had to fall back to defaults because no local feeds were found,
+          // never publish those defaults back to synced settings unless we explicitly
+          // know no persisted settings event exists for this account.
+          const canSyncBootstrapDefaults = this.settingsService.hasPersistedSettingsEvent() === false;
+          this.saveFeeds({ syncToSettings: canSyncBootstrapDefaults, preserveBackup: true });
         }
       } else {
         // storedFeeds exists (could be empty array if user deleted all feeds)
@@ -3812,7 +3919,19 @@ export class FeedService {
           const defaultFeeds = await this.initializeDefaultFeeds();
           this._feeds.set(defaultFeeds);
           this._feedsLoaded.set(true);
-          this.saveFeeds();
+          this.saveFeeds({ preserveBackup: true });
+
+          if (this.accountState.account()) {
+            await this.subscribe();
+          }
+          return;
+        }
+
+        if (this.shouldUseBackupFeeds(filteredFeeds, backupFeeds)) {
+          this.logger.warn(`Restoring ${backupFeeds.length} feeds from backup because active storage is missing custom feeds`);
+          this._feeds.set(this.mergeFeedsWithDefaults(backupFeeds));
+          this._feedsLoaded.set(true);
+          this.saveFeeds({ syncToSettings: false, preserveBackup: true });
 
           if (this.accountState.account()) {
             await this.subscribe();
@@ -3831,7 +3950,7 @@ export class FeedService {
             this._feeds.set(feedsFromSync);
             this._feedsLoaded.set(true);
             // Save to local storage for faster loading next time
-            this.saveFeeds();
+            this.saveFeeds({ syncToSettings: false, preserveBackup: true });
             this.logger.debug('Loaded feeds from synced settings for pubkey', pubkey, feedsFromSync);
 
             // Only subscribe if there's an active account
@@ -3875,7 +3994,7 @@ export class FeedService {
       this.logger.error('Error loading feeds from storage:', error);
       this._feeds.set(DEFAULT_FEEDS);
       this._feedsLoaded.set(true);
-      this.saveFeeds();
+      this.saveFeeds({ preserveBackup: true });
     }
 
     // Only subscribe if there's an active account
@@ -3889,11 +4008,13 @@ export class FeedService {
    * Adds runtime properties that aren't synced (lastRetrieved, etc.)
    */
   private convertSyncedFeedsToFeedConfig(syncedFeeds: SyncedFeedConfig[]): FeedConfig[] {
-    return syncedFeeds.map(synced => ({
+    const convertedFeeds = syncedFeeds.map(synced => ({
       ...synced,
       // Runtime properties not stored in sync
       lastRetrieved: undefined,
     }));
+
+    return this.mergeFeedsWithDefaults(convertedFeeds);
   }
 
   /**
@@ -3989,7 +4110,7 @@ export class FeedService {
    * - The system won't auto-reset to defaults on next login
    * - Custom configurations are respected
    */
-  private saveFeeds(): void {
+  private saveFeeds(options?: { syncToSettings?: boolean; preserveBackup?: boolean }): void {
     try {
       const pubkey = this.accountState.pubkey();
       if (!pubkey) {
@@ -4007,14 +4128,40 @@ export class FeedService {
       const feedsToSave = this._feeds().filter(f => f.id !== TRENDING_FEED_ID);
       feedsByAccount[pubkey] = feedsToSave;
       this.localStorageService.setObject(this.appState.FEEDS_STORAGE_KEY, feedsByAccount);
+      this.accountLocalState.setFeedConfigs(pubkey, feedsToSave as StoredFeedConfig[]);
+
+      this.saveFeedsBackup(pubkey, feedsToSave, options?.preserveBackup ?? false);
 
       this.logger.debug('Saved feeds to storage for pubkey', pubkey, feedsToSave);
 
       // Also sync to kind 30078 settings for cross-device sync
-      this.syncFeedsToSettings(feedsToSave);
+      if (options?.syncToSettings ?? true) {
+        this.syncFeedsToSettings(feedsToSave);
+      }
     } catch (error) {
       this.logger.error('Error saving feeds to storage:', error);
       // Note: Don't set feedsInitialized flag on error to allow retry
+    }
+  }
+
+  private saveFeedsBackup(pubkey: string, feeds: FeedConfig[], preserveBackup: boolean): void {
+    try {
+      const feedsBackupByAccount = this.localStorageService.getObject<Record<string, FeedConfig[]>>(
+        FEEDS_BACKUP_STORAGE_KEY
+      ) || {};
+
+      if (this.hasCustomFeedIds(feeds)) {
+        feedsBackupByAccount[pubkey] = feeds;
+        this.localStorageService.setObject(FEEDS_BACKUP_STORAGE_KEY, feedsBackupByAccount);
+        return;
+      }
+
+      if (!preserveBackup) {
+        delete feedsBackupByAccount[pubkey];
+        this.localStorageService.setObject(FEEDS_BACKUP_STORAGE_KEY, feedsBackupByAccount);
+      }
+    } catch (error) {
+      this.logger.error('Error saving feeds backup:', error);
     }
   }
 
@@ -4049,7 +4196,7 @@ export class FeedService {
         this.syncInProgress = true;
 
         // Convert to synced format (strip runtime properties)
-        const syncedFeeds = feeds.map(feed => this.convertFeedConfigToSynced(feed));
+        const syncedFeeds = this.getCustomFeeds(feeds).map(feed => this.convertFeedConfigToSynced(feed));
 
         // Compare with existing synced feeds to avoid unnecessary publishes
         const existingSyncedFeeds = this.settingsService.getSyncedFeeds();
@@ -4142,7 +4289,7 @@ export class FeedService {
       this.syncFeedsToSettingsTimeout = null;
     }
 
-    const feeds = this._feeds().filter(f => f.id !== TRENDING_FEED_ID);
+    const feeds = this.getCustomFeeds(this._feeds().filter(f => f.id !== TRENDING_FEED_ID));
     const syncedFeeds = feeds.map(feed => this.convertFeedConfigToSynced(feed));
 
     this.logger.info(`Force syncing ${syncedFeeds.length} feeds to kind 30078 settings`);

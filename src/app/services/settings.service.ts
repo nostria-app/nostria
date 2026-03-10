@@ -138,6 +138,12 @@ export class SettingsService {
   // This prevents showing media before user's privacy preferences are known
   settingsLoaded = signal<boolean>(false);
 
+  // Tracks whether a persisted settings event definitely exists for the current account.
+  // - true: a cached or relay-backed settings event was found
+  // - false: relay fetch completed and no settings event exists
+  // - null: unknown (for example due to startup or fetch failure)
+  hasPersistedSettingsEvent = signal<boolean | null>(null);
+
   constructor() {
     effect(async () => {
       const account = this.accountState.account();
@@ -151,6 +157,7 @@ export class SettingsService {
         }
         // Mark settings as not loaded while we fetch
         this.settingsLoaded.set(false);
+        this.hasPersistedSettingsEvent.set(null);
         // Reset to defaults first to ensure clean state
         this.settings.set({ ...DEFAULT_SETTINGS });
         // Then load settings for this account
@@ -160,6 +167,7 @@ export class SettingsService {
       } else if (!account) {
         // No account, reset to defaults and mark as loaded (defaults are safe for anonymous)
         this.settings.set({ ...DEFAULT_SETTINGS });
+        this.hasPersistedSettingsEvent.set(false);
         this.settingsLoaded.set(true);
       }
     });
@@ -182,6 +190,7 @@ export class SettingsService {
             ...parsedContent,
           };
           this.settings.set(mergedSettings);
+          this.hasPersistedSettingsEvent.set(true);
           this.localSettings.setRelayDiscoveryMode(mergedSettings.relayDiscoveryMode ?? 'outbox');
           this.logger.info('Settings loaded from cache', this.settings());
 
@@ -197,6 +206,7 @@ export class SettingsService {
       await this.fetchSettingsFromRelay(pubkey);
     } catch (error) {
       this.logger.error('Failed to load settings', error);
+      this.hasPersistedSettingsEvent.set(null);
       this.settings.set({ ...DEFAULT_SETTINGS });
     }
   }
@@ -222,6 +232,7 @@ export class SettingsService {
           ...parsedContent,
         };
         this.settings.set(mergedSettings);
+        this.hasPersistedSettingsEvent.set(true);
         this.localSettings.setRelayDiscoveryMode(mergedSettings.relayDiscoveryMode ?? 'outbox');
         this.logger.info('Settings loaded successfully', this.settings());
 
@@ -229,10 +240,12 @@ export class SettingsService {
         await this.database.saveEvent(event);
       } catch (error) {
         this.logger.error('Failed to parse settings content', error);
+        this.hasPersistedSettingsEvent.set(null);
         this.settings.set({ ...DEFAULT_SETTINGS });
       }
     } else {
       this.logger.info('No settings found, using defaults', DEFAULT_SETTINGS);
+      this.hasPersistedSettingsEvent.set(false);
       this.settings.set({ ...DEFAULT_SETTINGS });
     }
   }
@@ -267,6 +280,7 @@ export class SettingsService {
               ...parsedContent,
             };
             this.settings.set(mergedSettings);
+            this.hasPersistedSettingsEvent.set(true);
             this.localSettings.setRelayDiscoveryMode(mergedSettings.relayDiscoveryMode ?? 'outbox');
             this.logger.info('Settings refreshed from relay', this.settings());
 
@@ -290,6 +304,7 @@ export class SettingsService {
     };
 
     this.settings.set(newSettings);
+    this.hasPersistedSettingsEvent.set(true);
 
     // Skip publishing for preview accounts - they cannot sign events
     const account = this.accountState.account();
@@ -305,6 +320,14 @@ export class SettingsService {
 
       const unsignedEvent = this.nostrService.createEvent(kinds.Application, content, tags);
       const signedEvent = await this.nostrService.signEvent(unsignedEvent);
+
+      // Persist immediately to the local database so settings such as custom feeds
+      // are available on the next reload without waiting for relays to echo the event back.
+      try {
+        await this.database.saveEvent(signedEvent);
+      } catch (cacheError) {
+        this.logger.warn('Failed to cache settings event locally before publish', cacheError);
+      }
 
       const publishResult = await this.accountRelay.publish(signedEvent);
       this.logger.info('Settings published', publishResult);
