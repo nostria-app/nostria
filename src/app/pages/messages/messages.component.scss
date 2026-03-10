@@ -1811,20 +1811,18 @@ app-message-content {
   }
 
   .reaction-chip {
-    border: 1px solid var(--mat-sys-outline-variant);
-    border-radius: var(--mat-sys-corner-full);
-    background-color: var(--mat-sys-surface-container);
-    color: var(--mat-sys-on-surface);
-    padding: 2px 8px;
+    border: 0;
+    background: none;
+    color: inherit;
+    padding: 0;
     display: inline-flex;
     align-items: center;
     gap: 4px;
     cursor: pointer;
+    box-shadow: none;
 
     &.user-reacted {
-      background-color: var(--mat-sys-secondary-container);
-      border-color: var(--mat-sys-secondary);
-      color: var(--mat-sys-on-secondary-container);
+      color: inherit;
     }
 
     &:disabled {
