@@ -406,7 +406,7 @@ export class CollectionSetsService {
         if (!dTag) continue;
 
         const existing = eventsByDTag.get(dTag);
-        if (!existing || event.created_at > existing.created_at) {
+        if (!existing || event.created_at >= existing.created_at) {
           eventsByDTag.set(dTag, event);
         }
       }
@@ -436,27 +436,21 @@ export class CollectionSetsService {
 
       // If no interest sets exist, return a default one
       if (interestSets.length === 0) {
+        const cachedSets = this.getCachedInterestSets(pubkey);
+        if (cachedSets) {
+          this.logger.debug('No interest sets found, keeping cached interest sets');
+          return cachedSets;
+        }
+
         this.logger.debug('No interest sets found, returning default');
-        return [{
-          identifier: 'interests',
-          title: 'My Interests',
-          hashtags: [...DEFAULT_HASHTAGS],
-          eventId: '',
-          created_at: Math.floor(Date.now() / 1000),
-        }];
+        return [this.createDefaultInterestSet()];
       }
 
       this.logger.debug(`Found ${interestSets.length} interest sets`);
       return interestSets;
     } catch (error) {
       this.logger.error('Error loading interest sets:', error);
-      return [{
-        identifier: 'interests',
-        title: 'My Interests',
-        hashtags: [...DEFAULT_HASHTAGS],
-        eventId: '',
-        created_at: Math.floor(Date.now() / 1000),
-      }];
+      return this.getCachedInterestSets(pubkey) ?? [this.createDefaultInterestSet()];
     }
   }
 
@@ -659,6 +653,32 @@ export class CollectionSetsService {
    */
   getDefaultHashtags(): string[] {
     return [...DEFAULT_HASHTAGS];
+  }
+
+  private getCachedInterestSets(pubkey: string): InterestSet[] | null {
+    if (this.lastLoadedPubkey !== pubkey) {
+      return null;
+    }
+
+    const cachedSets = this.interestSets();
+    if (cachedSets.length === 0) {
+      return null;
+    }
+
+    return cachedSets.map(set => ({
+      ...set,
+      hashtags: [...set.hashtags],
+    }));
+  }
+
+  private createDefaultInterestSet(): InterestSet {
+    return {
+      identifier: 'interests',
+      title: 'My Interests',
+      hashtags: [...DEFAULT_HASHTAGS],
+      eventId: '',
+      created_at: Math.floor(Date.now() / 1000),
+    };
   }
 
   /**
