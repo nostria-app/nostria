@@ -27,8 +27,6 @@ export class FeedsCollectionService {
   private readonly settingsService = inject(SettingsService);
   private readonly app = inject(ApplicationService);
 
-  readonly ACTIVE_FEED_KEY = 'nostria-active-feed';
-
   // Signal for active feed ID
   private readonly _activeFeedId = signal<string | null>(null);
 
@@ -109,9 +107,16 @@ export class FeedsCollectionService {
     }
   }
 
-  constructor() {
-    this.loadActiveFeed();
+  private getSavedActiveFeedId(pubkey: string | null | undefined): string | null {
+    if (!pubkey) {
+      return null;
+    }
 
+    return this.accountLocalState.getActiveFeed(pubkey)
+      ?? this.getPersistedActiveFeedId(pubkey);
+  }
+
+  constructor() {
     // Prime the active feed from per-account state as soon as the pubkey is known.
     // This prevents startup fallback logic from briefly selecting "For You" before
     // the previously selected custom feed can be validated against the loaded feed list.
@@ -134,8 +139,7 @@ export class FeedsCollectionService {
         this.userChangedFeed = false;
         this._restoredActiveFeedForPubkey.set(null);
 
-        const savedFeedId = this.accountLocalState.getActiveFeed(pubkey)
-          ?? this.getPersistedActiveFeedId(pubkey);
+        const savedFeedId = this.getSavedActiveFeedId(pubkey);
         this._activeFeedId.set(savedFeedId);
       });
     });
@@ -157,8 +161,7 @@ export class FeedsCollectionService {
             return;
           }
 
-          const savedFeedId = this.accountLocalState.getActiveFeed(pubkey)
-            ?? this.getPersistedActiveFeedId(pubkey);
+          const savedFeedId = this.getSavedActiveFeedId(pubkey);
 
           // Validate that the saved feed still exists
           // If not, fall back to "For You" feed for optimal new user experience
@@ -212,8 +215,7 @@ export class FeedsCollectionService {
           return;
         }
 
-        const savedFeedId = this.accountLocalState.getActiveFeed(pubkey)
-          ?? this.getPersistedActiveFeedId(pubkey);
+        const savedFeedId = this.getSavedActiveFeedId(pubkey);
 
         if (!savedFeedId || activeFeedId === savedFeedId) {
           return;
@@ -279,26 +281,6 @@ export class FeedsCollectionService {
         // synced through the first effect and through setActiveFeed calls.
       });
     });
-  }
-
-  /**
-   * Load active feed ID from storage
-   */
-  private loadActiveFeed(): void {
-    try {
-      const pubkey = this.accountState.pubkey();
-      if (!pubkey) {
-        return;
-      }
-
-      const activeFeedId = this.accountLocalState.getActiveFeed(pubkey)
-        ?? this.getPersistedActiveFeedId(pubkey);
-      if (activeFeedId) {
-        this._activeFeedId.set(activeFeedId);
-      }
-    } catch (error) {
-      this.logger.error('Error loading active feed from storage:', error);
-    }
   }
 
   /**
