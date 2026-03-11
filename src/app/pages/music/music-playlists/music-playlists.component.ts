@@ -15,7 +15,8 @@ import { ApplicationService } from '../../../services/application.service';
 import { MusicDataService } from '../../../services/music-data.service';
 import { FollowSetsService } from '../../../services/follow-sets.service';
 import { MusicPlaylistCardComponent } from '../../../components/music-playlist-card/music-playlist-card.component';
-import { ListFilterMenuComponent, ListFilterValue } from '../../../components/list-filter-menu/list-filter-menu.component';
+import { ListFilterValue } from '../../../components/list-filter-menu/list-filter-menu.component';
+import { MusicListFilterComponent } from '../../../components/music-list-filter/music-list-filter.component';
 import { PanelNavigationService } from '../../../services/panel-navigation.service';
 import { LoggerService } from '../../../services/logger.service';
 
@@ -32,7 +33,7 @@ const PAGE_SIZE = 24;
     MatMenuModule,
     MatTooltipModule,
     MusicPlaylistCardComponent,
-    ListFilterMenuComponent,
+    MusicListFilterComponent,
   ],
   template: `
     <div class="panel-header">
@@ -42,7 +43,7 @@ const PAGE_SIZE = 24;
       <h2 class="panel-title title-font" i18n="@@music.playlists.title">Albums</h2>
       <span class="panel-header-spacer"></span>
       @if (isAuthenticated()) {
-        <app-list-filter-menu storageKey="music" [showPublicOption]="true" defaultFilter="all"
+        <app-music-list-filter
           [initialFilter]="urlListFilter()"
           (filterChanged)="onFilterChanged($event)" />
       }

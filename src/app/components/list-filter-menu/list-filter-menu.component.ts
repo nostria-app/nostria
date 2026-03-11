@@ -32,92 +32,61 @@ export type MusicTrackSortValue = 'released' | 'published';
   ],
   template: `
     <app-filter-button [active]="isFilterActive()" [tooltip]="'Filter by: ' + filterTitle()">
-      <div class="filter-panel" [class.music-layout]="showMusicSortLayout()" (click)="$event.stopPropagation()">
-        <div class="filter-sections" [class.music-layout]="showMusicSortLayout()">
-          <div class="filter-section list-section">
-            <div class="section-title">List filter</div>
+      <div class="filter-panel" [class.compact]="compact()" (click)="$event.stopPropagation()">
+        <div class="section-title">List filter</div>
 
-            @if (showPublicOption()) {
-            <button
-              class="filter-option-chip"
-              [class.selected]="selectedFilter() === 'all'"
-              (click)="selectFilter('all')">
-              <mat-icon class="chip-icon">public</mat-icon>
-              <div class="chip-text">
-                <span class="chip-label">Public</span>
-                <span class="chip-description">All public content</span>
-              </div>
-            </button>
-            }
-
-            <button
-              class="filter-option-chip"
-              [class.selected]="selectedFilter() === 'following'"
-              (click)="selectFilter('following')">
-              <mat-icon class="chip-icon">people</mat-icon>
-              <div class="chip-text">
-                <span class="chip-label">Following</span>
-                <span class="chip-description">People you follow</span>
-              </div>
-            </button>
-
-            @if (favoritesSet(); as favorites) {
-            <button
-              class="filter-option-chip"
-              [class.selected]="selectedFilter() === 'nostria-favorites'"
-              (click)="selectFilter('nostria-favorites')">
-              <mat-icon class="chip-icon">star</mat-icon>
-              <div class="chip-text">
-                <span class="chip-label">Favorites</span>
-                <span class="chip-description">{{ favorites.pubkeys.length }} people</span>
-              </div>
-            </button>
-            }
-
-            @if (otherFollowSets().length > 0) {
-            <mat-divider></mat-divider>
-            @for (set of otherFollowSets(); track set.id) {
-            <button
-              class="filter-option-chip"
-              [class.selected]="selectedFilter() === set.dTag"
-              (click)="selectFilter(set.dTag)">
-              <mat-icon class="chip-icon">{{ set.isPrivate ? 'lock' : 'group' }}</mat-icon>
-              <div class="chip-text">
-                <span class="chip-label">{{ set.title }}</span>
-                <span class="chip-description">{{ set.pubkeys.length }} people</span>
-              </div>
-            </button>
-            }
-            }
+        @if (showPublicOption()) {
+        <button
+          class="filter-option-chip"
+          [class.selected]="selectedFilter() === 'all'"
+          (click)="selectFilter('all')">
+          <mat-icon class="chip-icon">public</mat-icon>
+          <div class="chip-text">
+            <span class="chip-label">Public</span>
+            <span class="chip-description">All public content</span>
           </div>
+        </button>
+        }
 
-          @if (storageKey() === 'music' && showMusicTrackSort()) {
-          <div class="filter-section sort-section">
-            <div class="section-title">Songs sort by</div>
-            <button
-              class="filter-option-chip"
-              [class.selected]="selectedMusicTrackSort() === 'released'"
-              (click)="selectMusicTrackSort('released')">
-              <mat-icon class="chip-icon">event</mat-icon>
-              <div class="chip-text">
-                <span class="chip-label">Released</span>
-                <span class="chip-description">Use release date, then fall back to published</span>
-              </div>
-            </button>
-
-            <button
-              class="filter-option-chip"
-              [class.selected]="selectedMusicTrackSort() === 'published'"
-              (click)="selectMusicTrackSort('published')">
-              <mat-icon class="chip-icon">schedule</mat-icon>
-              <div class="chip-text">
-                <span class="chip-label">Published</span>
-                <span class="chip-description">Use the event publish time</span>
-              </div>
-            </button>
+        <button
+          class="filter-option-chip"
+          [class.selected]="selectedFilter() === 'following'"
+          (click)="selectFilter('following')">
+          <mat-icon class="chip-icon">people</mat-icon>
+          <div class="chip-text">
+            <span class="chip-label">Following</span>
+            <span class="chip-description">People you follow</span>
           </div>
-          }
-        </div>
+        </button>
+
+        @if (favoritesSet(); as favorites) {
+        <button
+          class="filter-option-chip"
+          [class.selected]="selectedFilter() === 'nostria-favorites'"
+          (click)="selectFilter('nostria-favorites')">
+          <mat-icon class="chip-icon">star</mat-icon>
+          <div class="chip-text">
+            <span class="chip-label">Favorites</span>
+            <span class="chip-description">{{ favorites.pubkeys.length }} people</span>
+          </div>
+        </button>
+        }
+
+        @if (otherFollowSets().length > 0) {
+        <mat-divider></mat-divider>
+        @for (set of otherFollowSets(); track set.id) {
+        <button
+          class="filter-option-chip"
+          [class.selected]="selectedFilter() === set.dTag"
+          (click)="selectFilter(set.dTag)">
+          <mat-icon class="chip-icon">{{ set.isPrivate ? 'lock' : 'group' }}</mat-icon>
+          <div class="chip-text">
+            <span class="chip-label">{{ set.title }}</span>
+            <span class="chip-description">{{ set.pubkeys.length }} people</span>
+          </div>
+        </button>
+        }
+        }
 
         <div class="actions-row">
           <button mat-stroked-button class="action-btn" (click)="resetSelections()">
@@ -133,8 +102,7 @@ export type MusicTrackSortValue = 'released' | 'published';
       flex-direction: column;
       gap: 0.5rem;
       padding: 1rem;
-      width: max-content;
-      min-width: min(300px, calc(100vw - 2rem));
+      width: min(320px, calc(100vw - 2rem));
       max-width: calc(100vw - 2rem);
       max-height: 400px;
       overflow-y: auto;
@@ -144,33 +112,8 @@ export type MusicTrackSortValue = 'released' | 'published';
       box-sizing: border-box;
     }
 
-    .filter-panel.music-layout {
-      max-width: 640px;
-    }
-
-    .filter-sections {
-      display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
-    }
-
-    .filter-sections.music-layout {
-      display: grid;
-      grid-template-columns: minmax(0, 0.9fr) minmax(280px, 1fr);
-      gap: 1rem;
-      align-items: start;
-    }
-
-    .filter-section {
-      display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
-      min-width: 0;
-    }
-
-    .sort-section {
-      padding-left: 1rem;
-      border-left: 1px solid var(--mat-sys-outline-variant);
+    .filter-panel.compact {
+      width: min(280px, calc(100vw - 2rem));
     }
 
     .filter-option-chip {
@@ -259,22 +202,6 @@ export type MusicTrackSortValue = 'released' | 'published';
       font-size: 0.8125rem;
     }
 
-    @media (max-width: 720px) {
-      .filter-panel.music-layout {
-        max-width: 420px;
-      }
-
-      .filter-sections.music-layout {
-        grid-template-columns: 1fr;
-      }
-
-      .sort-section {
-        padding-left: 0;
-        border-left: none;
-        border-top: 1px solid var(--mat-sys-outline-variant);
-        padding-top: 1rem;
-      }
-    }
   `],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -285,7 +212,7 @@ export class ListFilterMenuComponent implements OnInit {
 
   // Inputs
   showPublicOption = input<boolean>(false);
-  showMusicTrackSort = input<boolean>(true);
+  compact = input<boolean>(false);
   defaultFilter = input<ListFilterValue>('following');
   storageKey = input.required<'streams' | 'articles' | 'summary' | 'music'>();
   initialFilter = input<ListFilterValue | undefined>(undefined); // Override from URL query params
@@ -293,11 +220,9 @@ export class ListFilterMenuComponent implements OnInit {
   // Outputs
   filterChanged = output<ListFilterValue>();
   followSetChanged = output<FollowSet | null>();
-  musicTrackSortChanged = output<MusicTrackSortValue>();
 
   // Internal state
   selectedFilter = signal<ListFilterValue>('following');
-  selectedMusicTrackSort = signal<MusicTrackSortValue>('released');
 
   // Computed: all follow sets
   private allFollowSets = computed(() => this.followSetsService.followSets());
@@ -323,11 +248,8 @@ export class ListFilterMenuComponent implements OnInit {
 
   // Computed: whether filter is active (different from default)
   isFilterActive = computed(() => {
-    return this.selectedFilter() !== this.defaultFilter()
-      || (this.storageKey() === 'music' && this.showMusicTrackSort() && this.selectedMusicTrackSort() !== 'released');
+    return this.selectedFilter() !== this.defaultFilter();
   });
-
-  showMusicSortLayout = computed(() => this.storageKey() === 'music' && this.showMusicTrackSort());
 
   // Computed: filter title for tooltip
   filterTitle = computed(() => {
@@ -343,10 +265,6 @@ export class ListFilterMenuComponent implements OnInit {
       title = followSet?.title || 'Filter';
     }
 
-    if (this.storageKey() === 'music' && this.showMusicTrackSort()) {
-      return `${title} · Songs: ${this.selectedMusicTrackSort() === 'released' ? 'Released' : 'Published'}`;
-    }
-
     return title;
   });
 
@@ -360,14 +278,6 @@ export class ListFilterMenuComponent implements OnInit {
   ngOnInit() {
     const pubkey = this.accountState.pubkey();
 
-    if (this.storageKey() === 'music' && this.showMusicTrackSort()) {
-      const savedSort = pubkey
-        ? this.accountLocalState.getMusicTrackSort(pubkey)
-        : 'released';
-      this.selectedMusicTrackSort.set(savedSort as MusicTrackSortValue);
-      this.musicTrackSortChanged.emit(savedSort as MusicTrackSortValue);
-    }
-
     // Check for initial filter from URL query params first (takes precedence)
     const urlFilter = this.initialFilter();
     if (urlFilter) {
@@ -379,7 +289,7 @@ export class ListFilterMenuComponent implements OnInit {
     // Load persisted filter from storage
     if (pubkey) {
       const key = this.storageKey();
-      let savedFilter: string;
+      let savedFilter = this.defaultFilter();
 
       switch (key) {
         case 'streams':
@@ -396,6 +306,7 @@ export class ListFilterMenuComponent implements OnInit {
           break;
         default:
           savedFilter = this.defaultFilter();
+          break;
       }
 
       this.selectedFilter.set(savedFilter as ListFilterValue);
@@ -430,20 +341,7 @@ export class ListFilterMenuComponent implements OnInit {
     }
   }
 
-  selectMusicTrackSort(sort: MusicTrackSortValue) {
-    this.selectedMusicTrackSort.set(sort);
-    this.musicTrackSortChanged.emit(sort);
-
-    const pubkey = this.accountState.pubkey();
-    if (pubkey && this.storageKey() === 'music') {
-      this.accountLocalState.setMusicTrackSort(pubkey, sort);
-    }
-  }
-
   resetSelections() {
     this.selectFilter(this.defaultFilter());
-    if (this.storageKey() === 'music' && this.showMusicTrackSort()) {
-      this.selectMusicTrackSort('released');
-    }
   }
 }

@@ -13,9 +13,11 @@
     <mat-icon>{{ showSearch() ? 'search_off' : 'search' }}</mat-icon>
   </button>
   @if (isAuthenticated()) {
-  <app-list-filter-menu storageKey="music" [showPublicOption]="true" defaultFilter="all" [showMusicTrackSort]="false"
-    [initialFilter]="urlListFilter()" (filterChanged)="onListFilterChanged($event)" />
+  <app-music-list-filter [initialFilter]="urlListFilter()" (filterChanged)="onListFilterChanged($event)" />
   }
+  <button mat-icon-button [matMenuTriggerFor]="sortMenu" matTooltip="Sort songs" class="hide-small">
+    <mat-icon>sort</mat-icon>
+  </button>
   <!-- Refresh button - hidden on small screens -->
   <button mat-icon-button (click)="refresh()" matTooltip="Refresh music" class="hide-small">
     <mat-icon>refresh</mat-icon>
@@ -36,6 +38,10 @@
       <mat-icon>{{ showSearch() ? 'search_off' : 'search' }}</mat-icon>
       <span>{{ showSearch() ? 'Close Search' : 'Search' }}</span>
     </button>
+    <button mat-menu-item [matMenuTriggerFor]="sortMenu">
+      <mat-icon>sort</mat-icon>
+      <span>Song Sort</span>
+    </button>
     <button mat-menu-item (click)="refresh()">
       <mat-icon>refresh</mat-icon>
       <span>Refresh</span>
@@ -47,6 +53,17 @@
       <span>Music Settings</span>
     </button>
     }
+  </mat-menu>
+
+  <mat-menu #sortMenu="matMenu">
+    <button mat-menu-item (click)="setTrackSort('released')">
+      <mat-icon>{{ selectedTrackSort() === 'released' ? 'check' : '' }}</mat-icon>
+      <span>Released</span>
+    </button>
+    <button mat-menu-item (click)="setTrackSort('published')">
+      <mat-icon>{{ selectedTrackSort() === 'published' ? 'check' : '' }}</mat-icon>
+      <span>Published</span>
+    </button>
   </mat-menu>
 </div>
 

@@ -32,13 +32,15 @@ import { ImportRssDialogComponent } from './import-rss-dialog/import-rss-dialog.
 import { MusicSettingsDialogComponent } from './music-settings-dialog/music-settings-dialog.component';
 import { MusicPlaylist } from '../../services/music-playlist.service';
 import { MusicDataService } from '../../services/music-data.service';
-import { ListFilterMenuComponent, ListFilterValue } from '../../components/list-filter-menu/list-filter-menu.component';
+import { ListFilterValue } from '../../components/list-filter-menu/list-filter-menu.component';
+import { MusicListFilterComponent } from '../../components/music-list-filter/music-list-filter.component';
 import { LoggerService } from '../../services/logger.service';
 
 const MUSIC_KIND = 36787;
 const PLAYLIST_KIND = 34139;
 const USER_STATUS_KIND = 30315;
 const SECTION_LIMIT = 12;
+type MusicTrackSortValue = 'released' | 'published';
 
 interface ListeningEntry {
   pubkey: string;
@@ -69,7 +71,7 @@ interface ListeningEntry {
     MusicTrackDialogComponent,
     ImportRssDialogComponent,
     MusicSettingsDialogComponent,
-    ListFilterMenuComponent,
+    MusicListFilterComponent,
   ],
   templateUrl: './music.component.html',
   styleUrls: ['./music.component.scss'],
@@ -156,6 +158,7 @@ export class MusicComponent implements OnDestroy {
 
   // List filter state - 'all', 'following', or follow set d-tag
   selectedListFilter = signal<ListFilterValue>('all');
+  selectedTrackSort = signal<MusicTrackSortValue>('released');
   // Computed: get all follow sets for the dropdown
   allFollowSets = computed(() => this.followSetsService.followSets());
 
@@ -419,6 +422,13 @@ export class MusicComponent implements OnDestroy {
   constructor() {
     this.twoColumnLayout.setWideLeft();
     this.initializeMusic();
+
+    effect(() => {
+      const pubkey = this.currentPubkey();
+      if (pubkey) {
+        this.selectedTrackSort.set(this.accountLocalState.getMusicTrackSort(pubkey) as MusicTrackSortValue);
+      }
+    });
 
     effect(() => {
       const artistPubkeys = this.allArtists().map(artist => artist.pubkey);
@@ -1236,7 +1246,20 @@ export class MusicComponent implements OnDestroy {
   }
 
   private getTrackSortValue(track: Event): number {
+    if (this.selectedTrackSort() === 'published') {
+      return this.getTrackPublishedSortValue(track);
+    }
+
     return this.getTrackReleaseSortValue(track) ?? this.getTrackPublishedSortValue(track);
+  }
+
+  setTrackSort(sort: MusicTrackSortValue): void {
+    this.selectedTrackSort.set(sort);
+
+    const pubkey = this.currentPubkey();
+    if (pubkey) {
+      this.accountLocalState.setMusicTrackSort(pubkey, sort);
+    }
   }
 
   private getTrackPublishedSortValue(track: Event): number {

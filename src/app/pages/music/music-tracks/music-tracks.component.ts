@@ -16,7 +16,8 @@ import { AccountLocalStateService } from '../../../services/account-local-state.
 import { MusicDataService } from '../../../services/music-data.service';
 import { MusicEventComponent } from '../../../components/event-types/music-event.component';
 import { FollowSetsService } from '../../../services/follow-sets.service';
-import { ListFilterMenuComponent, ListFilterValue, MusicTrackSortValue } from '../../../components/list-filter-menu/list-filter-menu.component';
+import { ListFilterValue, MusicTrackSortValue } from '../../../components/list-filter-menu/list-filter-menu.component';
+import { MusicListFilterComponent } from '../../../components/music-list-filter/music-list-filter.component';
 import { PanelNavigationService } from '../../../services/panel-navigation.service';
 import { LoggerService } from '../../../services/logger.service';
 
@@ -33,7 +34,7 @@ const PAGE_SIZE = 24;
     MatMenuModule,
     MatTooltipModule,
     MusicEventComponent,
-    ListFilterMenuComponent,
+    MusicListFilterComponent,
   ],
   template: `
     <div class="panel-header">
@@ -43,14 +44,9 @@ const PAGE_SIZE = 24;
       <h2 class="panel-title title-font" i18n="@@music.tracks.title">Songs</h2>
       <span class="panel-header-spacer"></span>
       @if (isAuthenticated()) {
-        <app-list-filter-menu
-          storageKey="music"
-          [showPublicOption]="true"
-          defaultFilter="all"
+        <app-music-list-filter
           [initialFilter]="urlListFilter()"
-          (filterChanged)="onFilterChanged($event)"
-          (musicTrackSortChanged)="onMusicTrackSortChanged($event)"
-        />
+          (filterChanged)="onFilterChanged($event)" />
       }
       <button mat-icon-button (click)="toggleSearch()" [matTooltip]="showSearch() ? 'Close search' : 'Search songs'" class="hide-small">
         <mat-icon>{{ showSearch() ? 'search_off' : 'search' }}</mat-icon>
@@ -638,15 +634,6 @@ export class MusicTracksComponent implements OnInit, OnDestroy, AfterViewInit {
       queryParams: { list: filter },
       queryParamsHandling: 'merge',
     });
-  }
-
-  onMusicTrackSortChanged(sort: MusicTrackSortValue): void {
-    if (this.sortBy() === sort) {
-      return;
-    }
-
-    this.sortBy.set(sort);
-    this.displayLimit.set(PAGE_SIZE);
   }
 
   setSort(sort: 'released' | 'published' | 'alphabetical' | 'artist'): void {
