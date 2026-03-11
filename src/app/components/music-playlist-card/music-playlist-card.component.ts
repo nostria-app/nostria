@@ -34,9 +34,10 @@ const MUSIC_KIND = 36787;
   selector: 'app-music-playlist-card',
   imports: [MatIconModule, MatCardModule, MatButtonModule, MatMenuModule, MatSnackBarModule, MatProgressSpinnerModule, EditMusicPlaylistDialogComponent],
   template: `
-    <mat-card class="playlist-card" (click)="openPlaylist()" (keydown.enter)="openPlaylist()" 
-      tabindex="0" role="button" [attr.aria-label]="'Open playlist ' + title()">
-      <div class="playlist-cover" [style.background]="gradient() || ''">
+    <mat-card class="playlist-card">
+      <div class="playlist-cover" [style.background]="gradient() || ''" (click)="playPlaylist($any($event))"
+        (keydown.enter)="playPlaylist($any($event))" (keydown.space)="playPlaylist($any($event))" tabindex="0" role="button"
+        [attr.aria-label]="'Play ' + title()">
         @if (coverImage() && !gradient()) {
           <img [src]="coverImage()" [alt]="title()" class="cover-image" loading="lazy" />
         } @else if (!gradient()) {
@@ -45,7 +46,7 @@ const MUSIC_KIND = 36787;
           </div>
         }
         @if (trackCount() > 0) {
-        <button mat-icon-button class="play-btn" (click)="playPlaylist($event)" 
+        <button mat-icon-button class="play-btn media-action-button media-primary-action" (click)="playPlaylist($event)"
           [disabled]="isLoadingTracks()"
           aria-label="Play playlist">
           @if (isLoadingTracks()) {
@@ -55,8 +56,23 @@ const MUSIC_KIND = 36787;
           }
         </button>
         }
+        <div class="hover-action-row">
+          <button mat-icon-button class="media-action-button" (click)="likePlaylist($event)" [disabled]="isLiked()"
+            [attr.aria-label]="isLiked() ? 'Liked playlist' : 'Like playlist'" [title]="isLiked() ? 'Liked' : 'Like'">
+            <mat-icon>{{ isLiked() ? 'favorite' : 'favorite_border' }}</mat-icon>
+          </button>
+          <button mat-icon-button class="media-action-button" (click)="sharePlaylist(); $event.stopPropagation()"
+            aria-label="Share playlist" title="Share playlist">
+            <mat-icon>share</mat-icon>
+          </button>
+          <button mat-icon-button class="media-action-button" (click)="zapCreator($event)"
+            aria-label="Zap creator" title="Zap creator">
+            <mat-icon>bolt</mat-icon>
+          </button>
+        </div>
       </div>
-      <mat-card-content>
+      <mat-card-content (click)="openPlaylist($any($event))" (keydown.enter)="openPlaylist($any($event))" (keydown.space)="openPlaylist($any($event))"
+        tabindex="0" role="button" [attr.aria-label]="'Open playlist ' + title()">
         <div class="playlist-info">
           <div class="playlist-title-row">
             <span class="playlist-title">{{ title() }}</span>
@@ -118,7 +134,6 @@ const MUSIC_KIND = 36787;
   `,
   styles: [`
     .playlist-card {
-      cursor: pointer;
       transition: transform 0.2s ease, background-color 0.2s ease;
       overflow: hidden;
       min-width: 0;
@@ -126,9 +141,32 @@ const MUSIC_KIND = 36787;
       &:hover {
         transform: translateY(-2px);
 
-        .play-btn {
+        .play-btn,
+        .hover-action-row {
           opacity: 1;
-          transform: translateY(0);
+        }
+
+        .play-btn {
+          transform: translate(-50%, -50%) scale(1);
+        }
+
+        .hover-action-row {
+          transform: translate(-50%, 0);
+        }
+      }
+
+      &:focus-within {
+        .play-btn,
+        .hover-action-row {
+          opacity: 1;
+        }
+
+        .play-btn {
+          transform: translate(-50%, -50%) scale(1);
+        }
+
+        .hover-action-row {
+          transform: translate(-50%, 0);
         }
       }
 
@@ -150,6 +188,36 @@ const MUSIC_KIND = 36787;
       overflow: hidden;
       position: relative;
       border-radius: 8px;
+      cursor: pointer;
+
+      &:focus {
+        outline: none;
+      }
+
+      &:focus-visible {
+        outline: 2px solid var(--mat-sys-primary);
+        outline-offset: -2px;
+      }
+
+      &::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(
+          180deg,
+          color-mix(in srgb, var(--mat-sys-scrim) 8%, transparent) 0%,
+          color-mix(in srgb, var(--mat-sys-scrim) 18%, transparent) 52%,
+          color-mix(in srgb, var(--mat-sys-scrim) 48%, transparent) 100%
+        );
+        opacity: 0;
+        transition: opacity 0.2s ease;
+        pointer-events: none;
+      }
+
+      .playlist-card:hover &::after,
+      .playlist-card:focus-within &::after {
+        opacity: 1;
+      }
 
       .cover-image {
         width: 100%;
@@ -176,41 +244,88 @@ const MUSIC_KIND = 36787;
 
       .play-btn {
         position: absolute;
-        bottom: 8px;
-        right: 8px;
-        width: 40px;
-        height: 40px;
+        top: 50%;
+        left: 50%;
+        width: 64px;
+        height: 64px;
         opacity: 0;
-        transform: translateY(8px);
-        transition: opacity 0.2s ease, transform 0.2s ease;
-        background: var(--mat-sys-primary);
-        color: var(--mat-sys-on-primary);
+        transform: translate(-50%, -44%) scale(0.92);
+        transition: opacity 0.2s ease, transform 0.2s ease, background-color 0.2s ease;
         border-radius: 50%;
-        box-shadow: var(--mat-sys-level3);
+        padding: 0 !important;
+        display: flex !important;
+        align-items: center;
+        justify-content: center;
 
         &:hover:not(:disabled) {
-          background-color: var(--mat-sys-primary-container);
-          color: var(--mat-sys-on-primary-container);
-          transform: scale(1.1);
+          transform: translate(-50%, -50%) scale(1.04);
         }
 
         &:disabled {
           opacity: 1;
-          transform: translateY(0);
+          transform: translate(-50%, -50%) scale(1);
         }
 
         mat-icon {
-          font-size: 24px;
-          width: 24px;
-          height: 24px;
+          font-size: 32px;
+          width: 32px;
+          height: 32px;
         }
 
         mat-spinner {
           margin: auto;
 
           ::ng-deep circle {
-            stroke: var(--mat-sys-on-primary) !important;
+            stroke: var(--mat-sys-on-surface) !important;
           }
+        }
+      }
+
+      .hover-action-row {
+        position: absolute;
+        left: 50%;
+        bottom: 12px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        opacity: 0;
+        transform: translate(-50%, 8px);
+        transition: opacity 0.2s ease, transform 0.2s ease;
+        z-index: 2;
+      }
+
+      .media-action-button {
+        width: 40px;
+        height: 40px;
+        padding: 0 !important;
+        display: flex !important;
+        align-items: center;
+        justify-content: center;
+        background: color-mix(in srgb, var(--mat-sys-scrim) 42%, transparent);
+        color: var(--mat-sys-on-surface);
+        border: 1px solid color-mix(in srgb, var(--mat-sys-outline) 32%, transparent);
+        backdrop-filter: blur(14px);
+        box-shadow: var(--mat-sys-level2);
+
+        &:not(.media-primary-action):hover:not(:disabled) {
+          background: color-mix(in srgb, var(--mat-sys-scrim) 56%, transparent);
+          transform: translateY(-1px);
+        }
+
+        mat-icon {
+          font-size: 20px;
+          width: 20px;
+          height: 20px;
+        }
+      }
+
+      .media-primary-action {
+        background: color-mix(in srgb, var(--mat-sys-surface-container-highest) 68%, transparent);
+        color: var(--mat-sys-on-surface);
+        border-color: color-mix(in srgb, var(--mat-sys-outline) 40%, transparent);
+
+        &:hover:not(:disabled) {
+          background: color-mix(in srgb, var(--mat-sys-surface-container-highest) 82%, transparent);
         }
       }
     }
@@ -219,6 +334,16 @@ const MUSIC_KIND = 36787;
       padding-top: 0.75rem;
       min-width: 0;
       overflow: hidden;
+      cursor: pointer;
+
+      &:focus {
+        outline: none;
+      }
+
+      &:focus-visible {
+        outline: 2px solid var(--mat-sys-primary);
+        outline-offset: -2px;
+      }
 
       @media (max-width: 600px) {
         padding-top: 0.5rem;
@@ -359,6 +484,10 @@ const MUSIC_KIND = 36787;
         }
 
         .play-btn {
+          display: none;
+        }
+
+        .hover-action-row {
           display: none;
         }
       }
@@ -524,7 +653,12 @@ export class MusicPlaylistCardComponent {
     }
   });
 
-  openPlaylist(): void {
+  openPlaylist(triggerEvent?: MouseEvent | KeyboardEvent): void {
+    if (triggerEvent instanceof KeyboardEvent) {
+      triggerEvent.preventDefault();
+    }
+    triggerEvent?.stopPropagation();
+
     const event = this.event();
     const dTag = event.tags.find(t => t[0] === 'd')?.[1];
     if (dTag) {
@@ -663,6 +797,9 @@ export class MusicPlaylistCardComponent {
 
   // Play all tracks in the playlist
   async playPlaylist(clickEvent: MouseEvent | KeyboardEvent): Promise<void> {
+    if (clickEvent instanceof KeyboardEvent) {
+      clickEvent.preventDefault();
+    }
     clickEvent.stopPropagation();
 
     if (this.isLoadingTracks()) return;

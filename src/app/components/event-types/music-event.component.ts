@@ -35,11 +35,12 @@ import { DateToggleComponent } from '../date-toggle/date-toggle.component';
   template: `
     <!-- Card mode: Vertical layout for grid views -->
     @if (mode() === 'card') {
-      <div class="music-card-vertical" (click)="openDetails($any($event))" (keydown.enter)="openDetails($any($event))" tabindex="0" role="button"
-        [attr.aria-label]="'View ' + title()">
+      <div class="music-card-vertical">
         
         <!-- Cover image/placeholder -->
-        <div class="card-cover" [style.background]="gradient() || ''">
+        <div class="card-cover" [style.background]="gradient() || ''" (click)="playTrack($any($event))"
+          (keydown.enter)="playTrack($any($event))" (keydown.space)="playTrack($any($event))" tabindex="0" role="button"
+          [attr.aria-label]="'Play ' + (title() || 'track')">
           @if (image() && !gradient()) {
             <img [src]="image()" [alt]="title()" class="cover-image" loading="lazy" />
           } @else if (!gradient()) {
@@ -56,15 +57,31 @@ import { DateToggleComponent } from '../date-toggle/date-toggle.component';
             </span>
           }
           
-          <!-- Play button overlay -->
-          <button mat-icon-button class="play-overlay" (click)="playTrack($any($event))" 
+          <!-- Hover actions -->
+          <button mat-icon-button class="play-overlay media-action-button media-primary-action" (click)="playTrack($any($event))"
             aria-label="Play now" title="Play Now">
             <mat-icon>play_arrow</mat-icon>
           </button>
+
+          <div class="hover-action-row">
+            <button mat-icon-button class="media-action-button" (click)="likeTrack($any($event))" [disabled]="isLiked()"
+              [attr.aria-label]="isLiked() ? 'Liked track' : 'Like track'" [title]="isLiked() ? 'Liked' : 'Like'">
+              <mat-icon>{{ isLiked() ? 'favorite' : 'favorite_border' }}</mat-icon>
+            </button>
+            <button mat-icon-button class="media-action-button" (click)="shareTrack(); $event.stopPropagation()"
+              aria-label="Share track" title="Share track">
+              <mat-icon>share</mat-icon>
+            </button>
+            <button mat-icon-button class="media-action-button" (click)="zapArtist($any($event))"
+              aria-label="Zap creator" title="Zap creator">
+              <mat-icon>bolt</mat-icon>
+            </button>
+          </div>
         </div>
         
         <!-- Info section -->
-        <div class="card-info">
+        <div class="card-info" (click)="openDetails($any($event))" (keydown.enter)="openDetails($any($event))"
+          (keydown.space)="openDetails($any($event))" tabindex="0" role="button" [attr.aria-label]="'View ' + title()">
           <div class="card-title-row">
             <h4 class="card-title">{{ title() || 'Untitled Track' }}</h4>
             <button mat-icon-button class="menu-btn" [matMenuTriggerFor]="menu" (click)="$event.stopPropagation()" aria-label="More options">
@@ -221,7 +238,6 @@ import { DateToggleComponent } from '../date-toggle/date-toggle.component';
     .music-card-vertical {
       display: flex;
       flex-direction: column;
-      cursor: pointer;
       border-radius: 12px;
       background-color: var(--mat-sys-surface-container-low);
       overflow: hidden;
@@ -231,9 +247,32 @@ import { DateToggleComponent } from '../date-toggle/date-toggle.component';
       &:hover {
         background-color: var(--mat-sys-surface-container);
         
-        .play-overlay {
+        .play-overlay,
+        .hover-action-row {
           opacity: 1;
-          transform: translateY(0);
+        }
+
+        .play-overlay {
+          transform: translate(-50%, -50%) scale(1);
+        }
+
+        .hover-action-row {
+          transform: translate(-50%, 0);
+        }
+      }
+
+      &:focus-within {
+        .play-overlay,
+        .hover-action-row {
+          opacity: 1;
+        }
+
+        .play-overlay {
+          transform: translate(-50%, -50%) scale(1);
+        }
+
+        .hover-action-row {
+          transform: translate(-50%, 0);
         }
       }
 
@@ -259,8 +298,38 @@ import { DateToggleComponent } from '../date-toggle/date-toggle.component';
       display: flex;
       align-items: center;
       justify-content: center;
+      cursor: pointer;
       background: linear-gradient(135deg, var(--mat-sys-tertiary-container) 0%, var(--mat-sys-secondary-container) 100%);
       border-radius: 8px 8px 0 0;
+
+      &:focus {
+        outline: none;
+      }
+
+      &:focus-visible {
+        outline: 2px solid var(--mat-sys-primary);
+        outline-offset: -2px;
+      }
+
+      &::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(
+          180deg,
+          color-mix(in srgb, var(--mat-sys-scrim) 8%, transparent) 0%,
+          color-mix(in srgb, var(--mat-sys-scrim) 18%, transparent) 52%,
+          color-mix(in srgb, var(--mat-sys-scrim) 48%, transparent) 100%
+        );
+        opacity: 0;
+        transition: opacity 0.2s ease;
+        pointer-events: none;
+      }
+
+      .music-card-vertical:hover &::after,
+      .music-card-vertical:focus-within &::after {
+        opacity: 1;
+      }
       
       .cover-image {
         width: 100%;
@@ -321,42 +390,101 @@ import { DateToggleComponent } from '../date-toggle/date-toggle.component';
       
       .play-overlay {
         position: absolute;
-        bottom: 8px;
-        right: 8px;
-        width: 40px;
-        height: 40px;
+        top: 50%;
+        left: 50%;
+        width: 64px;
+        height: 64px;
         opacity: 0;
-        transform: translateY(8px);
-        transition: opacity 0.2s ease, transform 0.2s ease;
-        background: var(--mat-sys-primary);
-        color: var(--mat-sys-on-primary);
+        transform: translate(-50%, -44%) scale(0.92);
+        transition: opacity 0.2s ease, transform 0.2s ease, background-color 0.2s ease;
         border-radius: 50%;
-        box-shadow: var(--mat-sys-level3);
         z-index: 2;
+        padding: 0 !important;
+        display: flex !important;
+        align-items: center;
+        justify-content: center;
 
         @media (max-width: 600px) {
-          width: 32px;
-          height: 32px;
-          bottom: 6px;
-          right: 6px;
+          width: 56px;
+          height: 56px;
         }
         
         &:hover {
-          background: var(--mat-sys-primary-container);
-          color: var(--mat-sys-on-primary-container);
-          transform: scale(1.1);
+          transform: translate(-50%, -50%) scale(1.04);
         }
         
         mat-icon {
-          font-size: 24px;
-          width: 24px;
-          height: 24px;
+          font-size: 32px;
+          width: 32px;
+          height: 32px;
 
           @media (max-width: 600px) {
-            font-size: 20px;
-            width: 20px;
-            height: 20px;
+            font-size: 28px;
+            width: 28px;
+            height: 28px;
           }
+        }
+      }
+
+      .hover-action-row {
+        position: absolute;
+        left: 50%;
+        bottom: 12px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        opacity: 0;
+        transform: translate(-50%, 8px);
+        transition: opacity 0.2s ease, transform 0.2s ease;
+        z-index: 2;
+
+        @media (max-width: 600px) {
+          bottom: 10px;
+          gap: 6px;
+        }
+      }
+
+      .media-action-button {
+        width: 40px;
+        height: 40px;
+        padding: 0 !important;
+        display: flex !important;
+        align-items: center;
+        justify-content: center;
+        background: color-mix(in srgb, var(--mat-sys-scrim) 42%, transparent);
+        color: var(--mat-sys-on-surface);
+        border: 1px solid color-mix(in srgb, var(--mat-sys-outline) 32%, transparent);
+        backdrop-filter: blur(14px);
+        box-shadow: var(--mat-sys-level2);
+
+        @media (max-width: 600px) {
+          width: 36px;
+          height: 36px;
+        }
+
+        &:not(.media-primary-action):hover:not(:disabled) {
+          background: color-mix(in srgb, var(--mat-sys-scrim) 56%, transparent);
+          transform: translateY(-1px);
+        }
+
+        &:disabled {
+          opacity: 0.7;
+        }
+
+        mat-icon {
+          font-size: 20px;
+          width: 20px;
+          height: 20px;
+        }
+      }
+
+      .media-primary-action {
+        background: color-mix(in srgb, var(--mat-sys-surface-container-highest) 68%, transparent);
+        color: var(--mat-sys-on-surface);
+        border-color: color-mix(in srgb, var(--mat-sys-outline) 40%, transparent);
+
+        &:hover {
+          background: color-mix(in srgb, var(--mat-sys-surface-container-highest) 82%, transparent);
         }
       }
     }
@@ -368,6 +496,16 @@ import { DateToggleComponent } from '../date-toggle/date-toggle.component';
       gap: 0.125rem;
       min-width: 0;
       overflow: hidden;
+      cursor: pointer;
+
+      &:focus {
+        outline: none;
+      }
+
+      &:focus-visible {
+        outline: 2px solid var(--mat-sys-primary);
+        outline-offset: -2px;
+      }
       
       .card-title-row {
         display: flex;
@@ -801,6 +939,9 @@ export class MusicEventComponent {
 
   // Open song details page in right panel
   openDetails(event: MouseEvent | KeyboardEvent): void {
+    if (event instanceof KeyboardEvent) {
+      event.preventDefault();
+    }
     event.stopPropagation();
     const ev = this.event();
     const id = this.identifier();
@@ -811,6 +952,9 @@ export class MusicEventComponent {
 
   // Open artist page in right panel
   openArtist(event: MouseEvent | KeyboardEvent): void {
+    if (event instanceof KeyboardEvent) {
+      event.preventDefault();
+    }
     event.stopPropagation();
     const npub = this.artistNpub();
     if (npub) {
@@ -820,6 +964,9 @@ export class MusicEventComponent {
 
   // Play track in media player
   playTrack(event: MouseEvent | KeyboardEvent): void {
+    if (event instanceof KeyboardEvent) {
+      event.preventDefault();
+    }
     event.stopPropagation();
 
     const url = this.audioUrl();
