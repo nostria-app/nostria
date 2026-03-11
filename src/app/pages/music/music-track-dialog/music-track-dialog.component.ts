@@ -181,8 +181,7 @@ export class MusicTrackDialogComponent {
       title: ['', [Validators.required, Validators.minLength(1)]],
       duration: ['', [this.durationValidator]],
       genres: [[]],
-      artistNpub: [''],
-      artistName: [''],
+      artist: [''],
       aiGenerated: [false],
       // Advanced settings
       album: [''],
@@ -213,12 +212,6 @@ export class MusicTrackDialogComponent {
       }
     });
 
-    // Auto-fill artist name when npub is entered
-    this.trackForm.get('artistNpub')?.valueChanges.subscribe(async (npub: string) => {
-      if (npub && npub.startsWith('npub')) {
-        await this.autoFillArtistName(npub);
-      }
-    });
   }
 
   private async initializeFromTrack(track: Event): Promise<void> {
@@ -259,17 +252,6 @@ export class MusicTrackDialogComponent {
     const customTags = allTTags
       .filter(tag => !reservedTTags.includes(tag.toLowerCase()))
       .filter(tag => !genreLowerCase.includes(tag.toLowerCase()));
-
-    // Extract artist npub from p tag
-    const artistPubkey = track.tags.find(t => t[0] === 'p')?.[1];
-    let artistNpub = '';
-    if (artistPubkey) {
-      try {
-        artistNpub = nip19.npubEncode(artistPubkey);
-      } catch {
-        // Invalid pubkey
-      }
-    }
 
     // Extract artist name
     const artistName = track.tags.find(t => t[0] === 'artist')?.[1] || '';
@@ -372,8 +354,7 @@ export class MusicTrackDialogComponent {
       title,
       duration,
       genres,
-      artistNpub,
-      artistName,
+      artist: artistName,
       aiGenerated,
       album,
       trackNumber,
@@ -470,24 +451,6 @@ export class MusicTrackDialogComponent {
         percentage: 100,
         isUploader: true,
       }]);
-    }
-  }
-
-  private async autoFillArtistName(npub: string): Promise<void> {
-    try {
-      const decoded = nip19.decode(npub);
-      if (decoded.type !== 'npub') return;
-
-      const pubkey = decoded.data;
-      const profile = await this.dataService.getProfile(pubkey);
-      if (profile?.data) {
-        const name = profile.data.name || profile.data.display_name;
-        if (name && !this.trackForm.get('artistName')?.value) {
-          this.trackForm.patchValue({ artistName: name });
-        }
-      }
-    } catch {
-      // Invalid npub, ignore
     }
   }
 
@@ -733,9 +696,9 @@ export class MusicTrackDialogComponent {
       }
 
       // Auto-fill artist name (update if forceUpdate or empty)
-      const currentArtist = this.trackForm.get('artistName')?.value;
+      const currentArtist = this.trackForm.get('artist')?.value;
       if ((forceUpdate || !currentArtist) && metadata.common.artist) {
-        this.trackForm.patchValue({ artistName: metadata.common.artist });
+        this.trackForm.patchValue({ artist: metadata.common.artist });
       }
 
       // Auto-fill duration from audio metadata (update if forceUpdate or empty)
@@ -1172,19 +1135,12 @@ export class MusicTrackDialogComponent {
       }
 
       // Add artist info
-      if (formValue.artistNpub) {
-        try {
-          const artistPubkey = this.utilities.getPubkeyFromNpub(formValue.artistNpub);
-          if (artistPubkey && artistPubkey.length === 64) {
-            tags.push(['p', artistPubkey]);
-          }
-        } catch {
-          // Invalid npub, skip
-        }
-      }
+      const artistInput = String(formValue.artist || '').trim();
+      let artistDisplay = 'Unknown Artist';
 
-      if (formValue.artistName) {
-        tags.push(['artist', formValue.artistName]);
+      if (artistInput) {
+        tags.push(['artist', artistInput]);
+        artistDisplay = artistInput;
       }
 
       // Add AI generated flag
@@ -1242,7 +1198,6 @@ export class MusicTrackDialogComponent {
       }
 
       // Add alt tag for accessibility
-      const artistDisplay = formValue.artistName || 'Unknown Artist';
       tags.push(['alt', `Music track: ${formValue.title} by ${artistDisplay}`]);
 
       // Build content (lyrics, credits, and license go here)
