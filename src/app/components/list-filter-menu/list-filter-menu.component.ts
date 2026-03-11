@@ -155,7 +155,7 @@ export type MusicTrackSortValue = 'released' | 'published';
 
     .filter-sections.music-layout {
       display: grid;
-      grid-template-columns: minmax(0, 1.4fr) minmax(240px, 1fr);
+      grid-template-columns: minmax(0, 0.9fr) minmax(280px, 1fr);
       gap: 1rem;
       align-items: start;
     }
