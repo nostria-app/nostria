@@ -98,7 +98,7 @@ export class MusicArtistComponent implements OnInit, OnDestroy {
   // Profile data
   artistName = computed(() => {
     const profile = this.authorProfile();
-    return profile?.data?.name || profile?.data?.display_name || 'Unknown Artist';
+    return profile?.data?.display_name || profile?.data?.name || 'Unknown Artist';
   });
 
   artistAvatar = computed(() => {
@@ -135,7 +135,7 @@ export class MusicArtistComponent implements OnInit, OnDestroy {
   trackCount = computed(() => this.tracks().length);
   playlistCount = computed(() => this.playlists().length);
 
-  panelTitle = computed(() => this.isOwnProfile() ? $localize`:@@music.myMusic:My Music` : this.artistName());
+  panelTitle = computed(() => this.artistName());
 
   selectedTabIndex = signal(0);
 
@@ -437,7 +437,6 @@ export class MusicArtistComponent implements OnInit, OnDestroy {
     const artistTracks = this.tracks();
     if (index < 0 || index >= artistTracks.length) return;
 
-    const artistName = this.artistName();
     const profile = this.authorProfile();
 
     // Play from this track and queue the rest

@@ -39,7 +39,7 @@
       <div class="artist-info">
         <div class="avatar-container">
           @if (artistAvatar()) {
-          <img [src]="artistAvatar()" [alt]="artistName()" class="artist-avatar" />
+          <img [src]="artistAvatar()" [alt]="artistName()" title="Artist avatar" class="artist-avatar" />
           } @else {
           <div class="avatar-placeholder">
             <mat-icon>person</mat-icon>
