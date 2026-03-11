@@ -26,7 +26,7 @@ import { NostrRecord } from '../../../interfaces';
 import { RelayPublishSelectorComponent, RelayPublishConfig } from '../../../components/relay-publish-selector/relay-publish-selector.component';
 import { LoggerService } from '../../../services/logger.service';
 
-const MUSIC_KIND = 36787;
+const MUSIC_KINDS = [...UtilitiesService.MUSIC_KINDS];
 
 export interface EditMusicPlaylistDialogData {
   playlist: MusicPlaylist;
@@ -35,6 +35,7 @@ export interface EditMusicPlaylistDialogData {
 
 export interface TrackItem {
   ref: string;
+  kind: number;
   pubkey: string;
   dTag: string;
   title: string;
@@ -267,13 +268,12 @@ export class EditMusicPlaylistDialogComponent {
 
     // Initialize tracks with loading state
     const initialTracks: TrackItem[] = playlist.trackRefs.map(ref => {
-      const parts = ref.split(':');
-      const pubkey = parts[1] || '';
-      const dTag = parts.slice(2).join(':');
+      const coordinate = this.utilities.parseMusicTrackCoordinate(ref);
       return {
         ref,
-        pubkey,
-        dTag,
+        kind: coordinate?.kind ?? UtilitiesService.PRIMARY_MUSIC_KIND,
+        pubkey: coordinate?.pubkey || '',
+        dTag: coordinate?.identifier || '',
         title: 'Loading...',
         artist: '',
         loading: true,
@@ -281,8 +281,8 @@ export class EditMusicPlaylistDialogComponent {
     });
     this.tracks.set(initialTracks);
 
-    const trackKeys = initialTracks.map(t => ({ author: t.pubkey, dTag: t.dTag }));
-    const trackKeySet = new Set(trackKeys.map(k => `${k.author}:${k.dTag}`));
+    const trackKeys = initialTracks.map(t => ({ kind: t.kind, author: t.pubkey, dTag: t.dTag }));
+    const trackKeySet = new Set(trackKeys.map(k => `${k.kind}:${k.author}:${k.dTag}`));
 
     const trackMap = new Map<string, Event>();
 
@@ -290,7 +290,7 @@ export class EditMusicPlaylistDialogComponent {
     const preloadedTrackEvents = this.data().preloadedTrackEvents || [];
     for (const event of preloadedTrackEvents) {
       const dTag = event.tags.find(t => t[0] === 'd')?.[1] || '';
-      const key = `${event.pubkey}:${dTag}`;
+      const key = `${event.kind}:${event.pubkey}:${dTag}`;
       if (!trackKeySet.has(key)) {
         continue;
       }
@@ -301,7 +301,7 @@ export class EditMusicPlaylistDialogComponent {
       }
     }
 
-    const missingTrackKeys = trackKeys.filter(k => !trackMap.has(`${k.author}:${k.dTag}`));
+    const missingTrackKeys = trackKeys.filter(k => !trackMap.has(`${k.kind}:${k.author}:${k.dTag}`));
 
     if (missingTrackKeys.length > 0) {
       // Fetch only missing track events
@@ -315,7 +315,7 @@ export class EditMusicPlaylistDialogComponent {
       const uniqueDTags = [...new Set(missingTrackKeys.map(k => k.dTag))];
 
       const filter: Filter = {
-        kinds: [MUSIC_KIND],
+        kinds: MUSIC_KINDS,
         authors: uniqueAuthors,
         '#d': uniqueDTags,
         limit: missingTrackKeys.length * 2,
@@ -328,7 +328,7 @@ export class EditMusicPlaylistDialogComponent {
 
         const sub = this.pool.subscribe(relayUrls, filter, async (event: Event) => {
           const dTag = event.tags.find(t => t[0] === 'd')?.[1] || '';
-          const key = `${event.pubkey}:${dTag}`;
+          const key = `${event.kind}:${event.pubkey}:${dTag}`;
           const existing = trackMap.get(key);
           if (!existing || existing.created_at < event.created_at) {
             trackMap.set(key, event);
@@ -374,9 +374,9 @@ export class EditMusicPlaylistDialogComponent {
 
           return {
             ...track,
-            title: titleTag?.[1] || 'Untitled Track',
+            title: this.utilities.getMusicTitle(event) || 'Untitled Track',
             artist: artistName,
-            image: imageTag?.[1],
+            image: this.utilities.getMusicImage(event),
             loading: false,
             event,
           };

@@ -869,29 +869,19 @@ export class MusicEventComponent {
   // Extract title from tags
   title = computed(() => {
     const event = this.event();
-    const titleTag = event.tags.find(t => t[0] === 'title');
-    return titleTag?.[1] || null;
+    return this.utilities.getMusicTitle(event) || null;
   });
 
   // Extract audio URL
   audioUrl = computed(() => {
     const event = this.event();
-    const url = this.utilities.getUrlWithImetaFallback(event);
-    if (url) {
-      return url;
-    }
-
-    // Fallback to content if it's a URL
-    const content = event.content;
-    const match = content.match(/(https?:\/\/[^\s]+\.(mp3|wav|ogg|flac|m4a))/i);
-    return match ? match[0] : '';
+    return this.utilities.getMusicAudioUrl(event) || '';
   });
 
   // Extract cover image (raw URL for media player)
   rawImage = computed(() => {
     const event = this.event();
-    const imageTag = event.tags.find(t => t[0] === 'image');
-    return imageTag?.[1] || null;
+    return this.utilities.getMusicImage(event) || null;
   });
 
   // Extract cover image (proxied for display to reduce image size)
@@ -933,8 +923,7 @@ export class MusicEventComponent {
   // Extract duration from tags
   duration = computed(() => {
     const event = this.event();
-    const durationTag = event.tags.find(t => t[0] === 'duration');
-    const durationSeconds = durationTag?.[1] ? parseInt(durationTag[1], 10) : null;
+    const durationSeconds = this.utilities.getMusicDuration(event) ?? null;
 
     if (!durationSeconds) return null;
 
@@ -973,9 +962,9 @@ export class MusicEventComponent {
   artistName = computed(() => {
     const event = this.event();
     // First check if artist tag exists in the event
-    const artistTag = event.tags.find(t => t[0] === 'artist');
-    if (artistTag?.[1]) {
-      return artistTag[1];
+    const artistTag = this.utilities.getMusicArtist(event);
+    if (artistTag) {
+      return artistTag;
     }
     // Fallback to profile name
     const profile = this.authorProfile();
@@ -1064,6 +1053,7 @@ export class MusicEventComponent {
       type: 'Music',
       eventPubkey: this.artistNpub(),
       eventIdentifier: this.identifier(),
+      eventKind: this.event().kind,
       lyrics: this.utilities.extractLyricsFromEvent(this.event()),
     };
 
@@ -1087,6 +1077,7 @@ export class MusicEventComponent {
       type: 'Music',
       eventPubkey: this.artistNpub(),
       eventIdentifier: this.identifier(),
+      eventKind: this.event().kind,
       lyrics: this.utilities.extractLyricsFromEvent(this.event()),
     };
 
@@ -1241,6 +1232,7 @@ export class MusicEventComponent {
     this.createPlaylistDialogData.set({
       trackPubkey: ev.pubkey,
       trackDTag: dTag,
+      trackKind: ev.kind,
     });
     this.showCreatePlaylistDialog.set(true);
   }
@@ -1262,7 +1254,8 @@ export class MusicEventComponent {
       const success = await this.musicPlaylistService.addTrackToPlaylist(
         playlistId,
         ev.pubkey,
-        dTag
+        dTag,
+        ev.kind
       );
 
       if (success) {

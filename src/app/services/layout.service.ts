@@ -1111,7 +1111,7 @@ export class LayoutService implements OnDestroy {
           // Music playlist - route directly to music playlist page
           const npub = nip19.npubEncode(decoded.pubkey);
           this.openMusicPlaylist(npub, decoded.identifier);
-        } else if (decoded.kind === 36787) {
+        } else if (this.utilities.isMusicKind(decoded.kind)) {
           // Music track - route directly to song detail page
           const npub = nip19.npubEncode(decoded.pubkey);
           this.openSongDetail(npub, decoded.identifier);
@@ -1352,8 +1352,8 @@ export class LayoutService implements OnDestroy {
     const dTag = event.tags.find((tag: string[]) => tag[0] === 'd')?.[1] || '';
     const npub = nip19.npubEncode(event.pubkey);
 
-    // Music tracks (kind 36787)
-    if (event.kind === 36787) {
+    // Music tracks
+    if (this.utilities.isMusicKind(event.kind)) {
       this.openSongDetail(npub, dTag, event);
       return;
     }
@@ -1382,7 +1382,7 @@ export class LayoutService implements OnDestroy {
         if (decoded.type === 'naddr') {
           const { kind, pubkey, identifier } = decoded.data;
           const npub = nip19.npubEncode(pubkey);
-          if (kind === 36787) {
+          if (this.utilities.isMusicKind(kind)) {
             this.openSongDetail(npub, identifier, event);
             return;
           }
@@ -1415,7 +1415,7 @@ export class LayoutService implements OnDestroy {
         if (decoded.type === 'naddr') {
           const { kind, pubkey, identifier } = decoded.data;
           const npub = nip19.npubEncode(pubkey);
-          if (kind === 36787) {
+          if (this.utilities.isMusicKind(kind)) {
             this.openSongDetail(npub, identifier, event);
             return;
           }

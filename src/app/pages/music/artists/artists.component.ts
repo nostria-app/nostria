@@ -15,13 +15,14 @@ import { AccountRelayService } from '../../../services/relays/account-relay';
 import { ReportingService } from '../../../services/reporting.service';
 import { DatabaseService } from '../../../services/database.service';
 import { DataService } from '../../../services/data.service';
+import { UtilitiesService } from '../../../services/utilities.service';
 import { LayoutService } from '../../../services/layout.service';
 import { MusicDataService, ArtistData } from '../../../services/music-data.service';
 import { PanelNavigationService } from '../../../services/panel-navigation.service';
 import { ZapDialogComponent, ZapDialogData } from '../../../components/zap-dialog/zap-dialog.component';
 import { LoggerService } from '../../../services/logger.service';
 
-const MUSIC_KIND = 36787;
+const MUSIC_KINDS = [...UtilitiesService.MUSIC_KINDS];
 
 type SortOption = 'name-asc' | 'name-desc' | 'tracks-asc' | 'tracks-desc';
 
@@ -47,6 +48,7 @@ export class ArtistsComponent implements OnDestroy {
   private reporting = inject(ReportingService);
   private database = inject(DatabaseService);
   private dataService = inject(DataService);
+  private utilities = inject(UtilitiesService);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
   private layout = inject(LayoutService);
@@ -71,6 +73,11 @@ export class ArtistsComponent implements OnDestroy {
   private trackMap = new Map<string, Event>();
   private requestedProfilePubkeys = new Set<string>();
 
+  private getTrackUniqueId(track: Pick<Event, 'kind' | 'pubkey' | 'tags'>): string {
+    const dTag = track.tags.find((tag: string[]) => tag[0] === 'd')?.[1] || '';
+    return `${track.kind}:${track.pubkey}:${dTag}`;
+  }
+
   /**
    * Extract all unique artists from tracks with track counts
    * If preloaded artists are available, use those instead
@@ -86,9 +93,8 @@ export class ArtistsComponent implements OnDestroy {
     const artistMap = new Map<string, ArtistData>();
 
     this.allTracks().forEach(track => {
-      const artistTag = track.tags.find(t => t[0] === 'artist');
-      if (artistTag?.[1]) {
-        const artistName = artistTag[1].trim();
+      const artistName = this.utilities.getMusicArtist(track)?.trim();
+      if (artistName) {
         if (artistName) {
           const existing = artistMap.get(artistName);
           if (existing) {
@@ -164,8 +170,7 @@ export class ArtistsComponent implements OnDestroy {
       // If we also have preloaded tracks, use them
       if (preloadedTracks && preloadedTracks.length > 0) {
         for (const track of preloadedTracks) {
-          const dTag = track.tags.find((tag: string[]) => tag[0] === 'd')?.[1] || '';
-          const uniqueId = `${track.pubkey}:${dTag}`;
+          const uniqueId = this.getTrackUniqueId(track);
           this.trackMap.set(uniqueId, track);
         }
         this.allTracks.set(Array.from(this.trackMap.values()));
@@ -183,17 +188,18 @@ export class ArtistsComponent implements OnDestroy {
 
   private async loadFromDatabase(): Promise<void> {
     try {
-      const cachedTracks = await this.database.getEventsByKind(MUSIC_KIND);
-      for (const track of cachedTracks) {
-        if (this.reporting.isUserBlocked(track.pubkey)) continue;
-        if (this.reporting.isContentBlocked(track)) continue;
+      for (const musicKind of MUSIC_KINDS) {
+        const cachedTracks = await this.database.getEventsByKind(musicKind);
+        for (const track of cachedTracks) {
+          if (this.reporting.isUserBlocked(track.pubkey)) continue;
+          if (this.reporting.isContentBlocked(track)) continue;
 
-        const dTag = track.tags.find((tag: string[]) => tag[0] === 'd')?.[1] || '';
-        const uniqueId = `${track.pubkey}:${dTag}`;
+          const uniqueId = this.getTrackUniqueId(track);
 
-        const existing = this.trackMap.get(uniqueId);
-        if (!existing || track.created_at > existing.created_at) {
-          this.trackMap.set(uniqueId, track);
+          const existing = this.trackMap.get(uniqueId);
+          if (!existing || track.created_at > existing.created_at) {
+            this.trackMap.set(uniqueId, track);
+          }
         }
       }
 
@@ -214,14 +220,14 @@ export class ArtistsComponent implements OnDestroy {
       return;
     }
 
-    const filters = { kinds: [MUSIC_KIND], limit: 500 };
+    const filters = { kinds: MUSIC_KINDS, limit: 500 };
 
     this.trackSubscription = this.pool.subscribe(accountRelays, filters, (event: Event) => {
       if (this.reporting.isUserBlocked(event.pubkey)) return;
       if (this.reporting.isContentBlocked(event)) return;
 
       const dTag = event.tags.find((tag: string[]) => tag[0] === 'd')?.[1] || '';
-      const uniqueId = `${event.pubkey}:${dTag}`;
+      const uniqueId = this.getTrackUniqueId(event);
 
       const existing = this.trackMap.get(uniqueId);
       if (!existing || event.created_at > existing.created_at) {

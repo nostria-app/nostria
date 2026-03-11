@@ -49,7 +49,7 @@ interface TopZapper {
   amount: number;
 }
 
-const MUSIC_KIND = 36787;
+const MUSIC_KINDS = [...UtilitiesService.MUSIC_KINDS];
 
 @Component({
   selector: 'app-song-detail',
@@ -152,17 +152,13 @@ export class SongDetailComponent implements OnInit, OnDestroy {
   title = computed(() => {
     const event = this.song();
     if (!event) return 'Untitled Track';
-    const titleTag = event.tags.find(t => t[0] === 'title');
-    return titleTag?.[1] || 'Untitled Track';
+    return this.utilities.getMusicTitle(event) || 'Untitled Track';
   });
 
   audioUrl = computed(() => {
     const event = this.song();
     if (!event) return '';
-    const url = this.utilities.getUrlWithImetaFallback(event);
-    if (url) return url;
-    const match = event.content.match(/(https?:\/\/[^\s]+\.(mp3|wav|ogg|flac|m4a))/i);
-    return match ? match[0] : '';
+    return this.utilities.getMusicAudioUrl(event) || '';
   });
 
   videoUrl = computed(() => {
@@ -175,8 +171,7 @@ export class SongDetailComponent implements OnInit, OnDestroy {
   image = computed(() => {
     const event = this.song();
     if (!event) return null;
-    const imageTag = event.tags.find(t => t[0] === 'image');
-    return imageTag?.[1] || null;
+    return this.utilities.getMusicImage(event) || null;
   });
 
   // Get gradient background (alternative to image)
@@ -600,7 +595,7 @@ export class SongDetailComponent implements OnInit, OnDestroy {
     }
 
     const filter: Filter = {
-      kinds: [MUSIC_KIND],
+      kinds: MUSIC_KINDS,
       authors: [decodedPubkey],
       '#d': [identifier],
       limit: 1,
@@ -633,6 +628,7 @@ export class SongDetailComponent implements OnInit, OnDestroy {
       isAiGenerated: this.isAiGenerated(),
       eventPubkey: this.artistNpub(),
       eventIdentifier: this.identifier(),
+      eventKind: this.song()?.kind,
       lyrics: this.lyrics() || undefined,
     };
 
@@ -728,6 +724,7 @@ export class SongDetailComponent implements OnInit, OnDestroy {
       isAiGenerated: this.isAiGenerated(),
       eventPubkey: this.artistNpub(),
       eventIdentifier: this.identifier(),
+      eventKind: this.song()?.kind,
       lyrics: this.lyrics() || undefined,
     };
 
@@ -883,6 +880,7 @@ export class SongDetailComponent implements OnInit, OnDestroy {
     this.createPlaylistDialogData.set({
       trackPubkey: ev.pubkey,
       trackDTag: dTag,
+      trackKind: ev.kind,
     });
     this.showCreatePlaylistDialog.set(true);
   }
@@ -906,7 +904,8 @@ export class SongDetailComponent implements OnInit, OnDestroy {
       const success = await this.musicPlaylistService.addTrackToPlaylist(
         playlistId,
         ev.pubkey,
-        dTag
+        dTag,
+        ev.kind
       );
 
       if (success) {

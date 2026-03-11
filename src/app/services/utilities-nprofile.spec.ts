@@ -200,4 +200,5 @@ describe('UtilitiesService nprofile handling', () => {
       expect(service.getUrlWithImetaFallback(event)).toBeUndefined();
     });
   });
+
 });

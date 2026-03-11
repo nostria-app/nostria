@@ -6,6 +6,7 @@ import { LoggerService } from './logger.service';
 import { ApplicationService } from './application.service';
 import { RelayPoolService } from './relays/relay-pool';
 import { AccountRelayService } from './relays/account-relay';
+import { UtilitiesService } from './utilities.service';
 import { nip19 } from 'nostr-tools';
 import type { Event as NostrEvent } from 'nostr-tools';
 
@@ -93,8 +94,13 @@ export class UserStatusService {
    * @param durationSeconds - Track duration in seconds (used to set expiration)
    * @param trackInfo - Optional track event info for linking
    */
-  async setMusicStatus(trackTitle: string, durationSeconds: number, trackInfo?: { eventPubkey: string; eventIdentifier: string }): Promise<boolean> {
+  async setMusicStatus(
+    trackTitle: string,
+    durationSeconds: number,
+    trackInfo?: { eventPubkey: string; eventIdentifier: string; eventKind?: number }
+  ): Promise<boolean> {
     const expirationTimestamp = Math.floor(Date.now() / 1000) + Math.ceil(durationSeconds);
+    const trackKind = trackInfo?.eventKind ?? UtilitiesService.PRIMARY_MUSIC_KIND;
 
     const tags: string[][] = [
       ['d', 'music'],
@@ -103,14 +109,14 @@ export class UserStatusService {
 
     if (trackInfo?.eventPubkey && trackInfo?.eventIdentifier) {
       // Add "a" tag referencing the music track event
-      const aTagValue = `36787:${trackInfo.eventPubkey}:${trackInfo.eventIdentifier}`;
+      const aTagValue = `${trackKind}:${trackInfo.eventPubkey}:${trackInfo.eventIdentifier}`;
       tags.push(['a', aTagValue]);
 
       // Generate naddr URL for the "r" tag
       try {
         const relayUrls = this.accountRelay.getRelayUrls().slice(0, 3);
         const naddrEncoded = nip19.naddrEncode({
-          kind: 36787,
+          kind: trackKind,
           pubkey: trackInfo.eventPubkey,
           identifier: trackInfo.eventIdentifier,
           relays: relayUrls,
@@ -126,7 +132,7 @@ export class UserStatusService {
 
     if (result.success) {
       const aTag = trackInfo?.eventPubkey && trackInfo?.eventIdentifier
-        ? `36787:${trackInfo.eventPubkey}:${trackInfo.eventIdentifier}`
+        ? `${trackKind}:${trackInfo.eventPubkey}:${trackInfo.eventIdentifier}`
         : undefined;
       const nextMusicStatus: UserStatus = {
         content: trackTitle,

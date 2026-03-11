@@ -23,6 +23,7 @@ export interface MediaItem {
   // For linking to song/artist pages from media player
   eventPubkey?: string; // npub of the event author
   eventIdentifier?: string; // d-tag identifier for the event
+  eventKind?: number; // addressable event kind for music tracks
   // Lyrics for the track (plain text or LRC format)
   lyrics?: string;
 }

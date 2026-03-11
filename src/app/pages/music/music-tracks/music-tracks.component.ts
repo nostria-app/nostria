@@ -21,7 +21,7 @@ import { MusicListFilterComponent } from '../../../components/music-list-filter/
 import { PanelNavigationService } from '../../../services/panel-navigation.service';
 import { LoggerService } from '../../../services/logger.service';
 
-const MUSIC_KIND = 36787;
+const MUSIC_KINDS = [...UtilitiesService.MUSIC_KINDS];
 const PAGE_SIZE = 24;
 
 @Component({
@@ -415,13 +415,18 @@ export class MusicTracksComponent implements OnInit, OnDestroy, AfterViewInit {
   private trackMatchesSearch(track: Event, query: string): boolean {
     if (!query) return true;
     const lowerQuery = query.toLowerCase();
-    const titleTag = track.tags.find(t => t[0] === 'title');
-    if (titleTag?.[1]?.toLowerCase().includes(lowerQuery)) return true;
-    const artistTag = track.tags.find(t => t[0] === 'artist');
-    if (artistTag?.[1]?.toLowerCase().includes(lowerQuery)) return true;
+    const title = this.utilities.getMusicTitle(track);
+    if (title?.toLowerCase().includes(lowerQuery)) return true;
+    const artist = this.utilities.getMusicArtist(track);
+    if (artist?.toLowerCase().includes(lowerQuery)) return true;
     const hashtags = track.tags.filter(t => t[0] === 't').map(t => t[1]?.toLowerCase());
     if (hashtags.some(tag => tag?.includes(lowerQuery))) return true;
     return false;
+  }
+
+  private getTrackUniqueId(track: Pick<Event, 'kind' | 'pubkey' | 'tags'>): string {
+    const dTag = track.tags.find((tag: string[]) => tag[0] === 'd')?.[1] || '';
+    return `${track.kind}:${track.pubkey}:${dTag}`;
   }
 
   filteredTracks = computed(() => {
@@ -453,15 +458,15 @@ export class MusicTracksComponent implements OnInit, OnDestroy, AfterViewInit {
 
       case 'alphabetical':
         return [...filtered].sort((a, b) => {
-          const titleA = a.tags.find(t => t[0] === 'title')?.[1] || '';
-          const titleB = b.tags.find(t => t[0] === 'title')?.[1] || '';
+          const titleA = this.utilities.getMusicTitle(a) || '';
+          const titleB = this.utilities.getMusicTitle(b) || '';
           return titleA.localeCompare(titleB);
         });
 
       case 'artist':
         return [...filtered].sort((a, b) => {
-          const artistA = a.tags.find(t => t[0] === 'artist')?.[1] || '';
-          const artistB = b.tags.find(t => t[0] === 'artist')?.[1] || '';
+          const artistA = this.utilities.getMusicArtist(a) || '';
+          const artistB = this.utilities.getMusicArtist(b) || '';
           return artistA.localeCompare(artistB);
         });
 
@@ -531,8 +536,7 @@ export class MusicTracksComponent implements OnInit, OnDestroy, AfterViewInit {
     if (preloadedTracks && preloadedTracks.length > 0) {
       // Use preloaded data - populate track map and signal
       for (const track of preloadedTracks) {
-        const dTag = track.tags.find((tag: string[]) => tag[0] === 'd')?.[1] || '';
-        const uniqueId = `${track.pubkey}:${dTag}`;
+        const uniqueId = this.getTrackUniqueId(track);
         this.trackMap.set(uniqueId, track);
       }
       this.allTracks.set(
@@ -602,13 +606,12 @@ export class MusicTracksComponent implements OnInit, OnDestroy, AfterViewInit {
     }, 5000);
 
     const filter: Filter = {
-      kinds: [MUSIC_KIND],
+      kinds: MUSIC_KINDS,
       limit: 500,
     };
 
     this.trackSubscription = this.pool.subscribe(relayUrls, filter, (event: Event) => {
-      const dTag = event.tags.find((tag: string[]) => tag[0] === 'd')?.[1] || '';
-      const uniqueId = `${event.pubkey}:${dTag}`;
+      const uniqueId = this.getTrackUniqueId(event);
 
       const existing = this.trackMap.get(uniqueId);
       if (existing && existing.created_at >= event.created_at) return;
@@ -661,12 +664,9 @@ export class MusicTracksComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   private getTrackPublishedSortValue(track: Event): number {
-    const publishedAt = track.tags.find(tag => tag[0] === 'published_at')?.[1]?.trim();
+    const publishedAt = this.utilities.getMusicPublishedAt(track);
     if (publishedAt) {
-      const parsed = Number.parseInt(publishedAt, 10);
-      if (!Number.isNaN(parsed)) {
-        return parsed * 1000;
-      }
+      return publishedAt * 1000;
     }
 
     return track.created_at * 1000;

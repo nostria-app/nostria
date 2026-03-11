@@ -18,6 +18,7 @@ export interface CreateMusicPlaylistDialogData {
   // Optional track to add immediately after creation
   trackPubkey?: string;
   trackDTag?: string;
+  trackKind?: number;
 }
 
 @Component({
@@ -258,7 +259,8 @@ export class CreateMusicPlaylistDialogComponent {
           await this.musicPlaylistService.addTrackToPlaylist(
             playlist.id,
             dialogData.trackPubkey,
-            dialogData.trackDTag
+            dialogData.trackDTag,
+            dialogData.trackKind
           );
         }
 

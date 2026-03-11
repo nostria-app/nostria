@@ -26,8 +26,6 @@ import { ZapService } from '../../services/zap.service';
 import { ZapDialogComponent, ZapDialogData } from '../zap-dialog/zap-dialog.component';
 import { DataService } from '../../services/data.service';
 
-const MUSIC_KIND = 36787;
-
 @Component({
   selector: 'app-music-track-menu',
   imports: [
@@ -232,15 +230,13 @@ export class MusicTrackMenuComponent {
   // Get track title
   private getTitle(): string {
     const ev = this.track();
-    const titleTag = ev.tags.find(t => t[0] === 'title');
-    return titleTag?.[1] || 'Untitled Track';
+    return this.utilities.getMusicTitle(ev) || 'Untitled Track';
   }
 
   // Get cover image
   private getImage(): string | null {
     const ev = this.track();
-    const imageTag = ev.tags.find(t => t[0] === 'image');
-    return imageTag?.[1] || null;
+    return this.utilities.getMusicImage(ev) || null;
   }
 
   onEdit(): void {
@@ -267,6 +263,7 @@ export class MusicTrackMenuComponent {
       type: 'Music',
       eventPubkey: this.getArtistNpub(),
       eventIdentifier: this.getIdentifier(),
+      eventKind: this.track().kind,
       lyrics: this.utilities.extractLyricsFromEvent(this.track()),
     };
 
@@ -311,7 +308,7 @@ export class MusicTrackMenuComponent {
       await this.userRelaysService.ensureRelaysForPubkey(ev.pubkey);
       const authorRelays = this.userRelaysService.getRelaysForPubkey(ev.pubkey);
       const naddr = nip19.naddrEncode({
-        kind: MUSIC_KIND,
+        kind: ev.kind,
         pubkey: ev.pubkey,
         identifier: dTag,
         relays: authorRelays.length > 0 ? authorRelays : undefined,
@@ -341,7 +338,7 @@ export class MusicTrackMenuComponent {
       await this.userRelaysService.ensureRelaysForPubkey(ev.pubkey);
       const authorRelays = this.userRelaysService.getRelaysForPubkey(ev.pubkey);
       const naddr = nip19.naddrEncode({
-        kind: MUSIC_KIND,
+        kind: ev.kind,
         pubkey: ev.pubkey,
         identifier: id,
         relays: authorRelays.length > 0 ? authorRelays : undefined,
@@ -355,7 +352,7 @@ export class MusicTrackMenuComponent {
         eventId: ev.id,
         pubkey: ev.pubkey,
         identifier: id,
-        kind: MUSIC_KIND,
+        kind: ev.kind,
         encodedId: naddr,
         event: ev,
       };
@@ -384,6 +381,7 @@ export class MusicTrackMenuComponent {
     this.createPlaylistDialogData.set({
       trackPubkey: ev.pubkey,
       trackDTag: dTag,
+      trackKind: ev.kind,
     });
     this.showCreatePlaylistDialog.set(true);
   }
@@ -404,7 +402,8 @@ export class MusicTrackMenuComponent {
       const success = await this.musicPlaylistService.addTrackToPlaylist(
         playlistId,
         ev.pubkey,
-        dTag
+        dTag,
+        ev.kind
       );
 
       if (success) {

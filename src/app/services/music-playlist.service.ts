@@ -10,7 +10,7 @@ import { ApplicationService } from './application.service';
 import { LoggerService } from './logger.service';
 
 const MUSIC_PLAYLIST_KIND = 34139;
-const MUSIC_KIND = 36787;
+const MUSIC_KIND = UtilitiesService.PRIMARY_MUSIC_KIND;
 
 export interface MusicPlaylist {
   id: string; // d-tag
@@ -145,7 +145,7 @@ export class MusicPlaylistService {
     const collaborativeTag = event.tags.find(t => t[0] === 'collaborative');
 
     const trackRefs = event.tags
-      .filter(t => t[0] === 'a' && t[1]?.startsWith(`${MUSIC_KIND}:`))
+      .filter(t => t[0] === 'a' && !!this.utilities.parseMusicTrackCoordinate(t[1]))
       .map(t => t[1]);
 
     // Per spec: 'public' tag means public, 'private' tag means private, default to public
@@ -239,7 +239,8 @@ export class MusicPlaylistService {
   async addTrackToPlaylist(
     playlistId: string,
     trackPubkey: string,
-    trackDTag: string
+    trackDTag: string,
+    trackKind = MUSIC_KIND
   ): Promise<boolean> {
     const pubkey = this.accountState.pubkey();
     if (!pubkey) {
@@ -256,7 +257,7 @@ export class MusicPlaylistService {
     }
 
     // Check if track already exists
-    const trackRef = `${MUSIC_KIND}:${trackPubkey}:${trackDTag}`;
+    const trackRef = `${trackKind}:${trackPubkey}:${trackDTag}`;
     if (playlist.trackRefs.includes(trackRef)) {
       this.logger.info('Track already in playlist');
       return true;

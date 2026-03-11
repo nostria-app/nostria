@@ -19,7 +19,7 @@ import { MediaItem } from '../../../interfaces';
 import { MusicEventComponent } from '../../../components/event-types/music-event.component';
 import { LoggerService } from '../../../services/logger.service';
 
-const MUSIC_KIND = 36787;
+const MUSIC_KINDS = [...UtilitiesService.MUSIC_KINDS];
 const PAGE_SIZE = 24;
 
 @Component({
@@ -410,13 +410,18 @@ export class MusicLikedComponent implements OnDestroy, AfterViewInit {
   private trackMatchesSearch(track: Event, query: string): boolean {
     if (!query) return true;
     const lowerQuery = query.toLowerCase();
-    const titleTag = track.tags.find(t => t[0] === 'title');
-    if (titleTag?.[1]?.toLowerCase().includes(lowerQuery)) return true;
-    const artistTag = track.tags.find(t => t[0] === 'artist');
-    if (artistTag?.[1]?.toLowerCase().includes(lowerQuery)) return true;
+    const title = this.utilities.getMusicTitle(track);
+    if (title?.toLowerCase().includes(lowerQuery)) return true;
+    const artist = this.utilities.getMusicArtist(track);
+    if (artist?.toLowerCase().includes(lowerQuery)) return true;
     const hashtags = track.tags.filter(t => t[0] === 't').map(t => t[1]?.toLowerCase());
     if (hashtags.some(tag => tag?.includes(lowerQuery))) return true;
     return false;
+  }
+
+  private getTrackUniqueId(track: Pick<Event, 'kind' | 'pubkey' | 'tags'>): string {
+    const dTag = track.tags.find((tag: string[]) => tag[0] === 'd')?.[1] || '';
+    return `${track.kind}:${track.pubkey}:${dTag}`;
   }
 
   filteredTracks = computed(() => {
@@ -490,11 +495,11 @@ export class MusicLikedComponent implements OnDestroy, AfterViewInit {
       return;
     }
 
-    // First, fetch user's reactions (kind 7) to music events (kind 36787)
+    // First, fetch user's reactions (kind 7) to supported music track events
     const reactionFilter: Filter = {
       kinds: [kinds.Reaction],
       authors: [pubkey],
-      '#k': [MUSIC_KIND.toString()],
+      '#k': MUSIC_KINDS.map(String),
       limit: 500,
     };
 
@@ -558,15 +563,13 @@ export class MusicLikedComponent implements OnDestroy, AfterViewInit {
     if (aTagCoordinates.length > 0) {
       // Parse coordinates and build filters
       const trackFilters: Filter[] = aTagCoordinates
-        .filter(coord => coord.startsWith(`${MUSIC_KIND}:`))
-        .map(coord => {
-          const parts = coord.split(':');
-          return {
-            kinds: [MUSIC_KIND],
-            authors: [parts[1]],
-            '#d': [parts[2]],
-          };
-        });
+        .map(coord => this.utilities.parseMusicTrackCoordinate(coord))
+        .filter((coord): coord is { kind: number; pubkey: string; identifier: string } => coord !== null)
+        .map(coord => ({
+          kinds: [coord.kind],
+          authors: [coord.pubkey],
+          '#d': [coord.identifier],
+        }));
 
       if (trackFilters.length > 0) {
         // Batch filters in groups of 20 to avoid too large requests
@@ -578,8 +581,7 @@ export class MusicLikedComponent implements OnDestroy, AfterViewInit {
               if (this.reporting.isUserBlocked(event.pubkey)) return;
               if (this.reporting.isContentBlocked(event)) return;
 
-              const dTag = event.tags.find((tag: string[]) => tag[0] === 'd')?.[1] || '';
-              const uniqueId = `${event.pubkey}:${dTag}`;
+              const uniqueId = this.getTrackUniqueId(event);
 
               const existing = this.trackMap.get(uniqueId);
               if (existing && existing.created_at >= event.created_at) return;
@@ -604,7 +606,7 @@ export class MusicLikedComponent implements OnDestroy, AfterViewInit {
     // Also fetch by event IDs if any
     if (eventIds.length > 0) {
       const idFilter: Filter = {
-        kinds: [MUSIC_KIND],
+        kinds: MUSIC_KINDS,
         ids: eventIds.slice(0, 100), // Limit to 100 IDs per request
       };
 
@@ -612,8 +614,7 @@ export class MusicLikedComponent implements OnDestroy, AfterViewInit {
         if (this.reporting.isUserBlocked(event.pubkey)) return;
         if (this.reporting.isContentBlocked(event)) return;
 
-        const dTag = event.tags.find((tag: string[]) => tag[0] === 'd')?.[1] || '';
-        const uniqueId = `${event.pubkey}:${dTag}`;
+        const uniqueId = this.getTrackUniqueId(event);
 
         const existing = this.trackMap.get(uniqueId);
         if (existing && existing.created_at >= event.created_at) return;
@@ -655,11 +656,11 @@ export class MusicLikedComponent implements OnDestroy, AfterViewInit {
     // Create media items for all tracks and play the first one
     for (let i = 0; i < tracks.length; i++) {
       const track = tracks[i];
-      const url = this.utilities.getUrlWithImetaFallback(track);
+      const url = this.utilities.getMusicAudioUrl(track);
       if (!url) continue;
 
-      const titleTag = track.tags.find(t => t[0] === 'title');
-      const imageTag = track.tags.find(t => t[0] === 'image');
+      const title = this.utilities.getMusicTitle(track) || 'Untitled Track';
+      const imageTag = this.utilities.getMusicImage(track);
       const videoTag = track.tags.find(t => t[0] === 'video');
       const dTag = track.tags.find(t => t[0] === 'd')?.[1] || '';
 
@@ -672,13 +673,14 @@ export class MusicLikedComponent implements OnDestroy, AfterViewInit {
 
       const mediaItem: MediaItem = {
         source: url,
-        title: titleTag?.[1] || 'Untitled Track',
+        title,
         artist: artistName,
-        artwork: imageTag?.[1] || '/icons/icon-192x192.png',
+        artwork: imageTag || '/icons/icon-192x192.png',
         video: videoTag?.[1] || undefined,
         type: 'Music',
         eventPubkey: track.pubkey,
         eventIdentifier: dTag,
+        eventKind: track.kind,
         lyrics: this.utilities.extractLyricsFromEvent(track),
       };
 

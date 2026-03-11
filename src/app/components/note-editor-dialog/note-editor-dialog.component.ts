@@ -394,6 +394,13 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       };
     }
 
+    if (this.xStatusLoading()) {
+      return {
+        valid: false,
+        message: 'Checking X connection...',
+      };
+    }
+
     if (!this.xDualPost.status().connected) {
       return {
         valid: false,
@@ -592,6 +599,42 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   /** NIP-41: Check if we're editing an existing note */
   isEdit = computed(() => !!this.data?.editEvent);
   hasReplyTarget = computed(() => !!this.data?.replyTo || !!this.replyToEvent());
+  canTogglePostToX = computed(() => this.xPremiumEligible() && !this.isEdit() && !this.hasReplyTarget());
+  replyPreviewEvent = computed(() => this.data?.replyTo?.event ?? this.replyToEvent() ?? null);
+  replyPreviewPubkey = computed(() => this.replyPreviewEvent()?.pubkey || this.data?.replyTo?.pubkey || '');
+  replyPreviewText = computed(() => {
+    const event = this.replyPreviewEvent();
+    if (!event) {
+      return '';
+    }
+
+    const normalized = event.content
+      .replace(/\r\n/g, '\n')
+      .replace(/\s*\n\s*/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    if (normalized.length <= 140) {
+      return normalized;
+    }
+
+    return `${normalized.slice(0, 137).trim()}…`;
+  });
+  replyPreviewShortId = computed(() => {
+    const id = this.replyPreviewEvent()?.id || this.data?.replyTo?.id || '';
+    if (!id) {
+      return '';
+    }
+
+    return `${id.slice(0, 8)}…`;
+  });
+  replyPreviewFallbackText = computed(() => {
+    if (!this.replyPreviewEvent()) {
+      return 'Preview unavailable for this note.';
+    }
+
+    return 'This note has no text content.';
+  });
   xPremiumEligible = computed(() => {
     const subscription = this.accountState.subscription();
     const isPremiumTier = subscription?.tier === 'premium' || subscription?.tier === 'premium_plus';
@@ -840,11 +883,22 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       const defaultXPosting = this.syncedSettings.settings().postToXByDefault ?? false;
       const isReply = this.hasReplyTarget();
 
+      if (!this.xPremiumEligible() || this.isEdit() || isReply) {
+        this.postToX.set(false);
+        this.xPostingChoiceInitialized = false;
+        return;
+      }
+
+      if (defaultXPosting && !this.xPostingChoiceInitialized && !this.xStatusReady()) {
+        this.xDualPost.ensureStatusLoaded();
+        return;
+      }
+
       if (!this.xStatusReady()) {
         return;
       }
 
-      if (!isConnected || this.isEdit() || isReply) {
+      if (!isConnected) {
         this.postToX.set(false);
         this.xPostingChoiceInitialized = false;
         return;
@@ -1026,10 +1080,6 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     // Handle shared files
     if (this.data?.files && this.data.files.length > 0) {
       this.uploadFiles(this.data.files);
-    }
-
-    if (this.xPremiumEligible()) {
-      this.xDualPost.ensureStatusLoaded();
     }
   }
 
@@ -1683,6 +1733,10 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   onPostToXChange(checked: boolean): void {
     this.xPostingChoiceInitialized = true;
     this.postToX.set(checked);
+
+    if (checked && !this.xStatusReady()) {
+      this.xDualPost.ensureStatusLoaded();
+    }
   }
 
   toggleSecondaryHeaderAction(): void {
@@ -2312,13 +2366,19 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
 
   private syncTextareaHeight(textarea: HTMLTextAreaElement): void {
     const minHeight = this.inlineMode() ? 88 : 112;
+    const computedStyle = window.getComputedStyle(textarea);
+    const parsedMaxHeight = Number.parseFloat(computedStyle.maxHeight);
+    const maxHeight = Number.isFinite(parsedMaxHeight) ? parsedMaxHeight : Number.POSITIVE_INFINITY;
 
     textarea.style.maxHeight = 'none';
     textarea.style.height = 'auto';
 
     const nextHeight = Math.max(minHeight, textarea.scrollHeight);
-    textarea.style.height = `${nextHeight}px`;
-    textarea.style.overflowY = 'hidden';
+    const targetHeight = Math.min(nextHeight, maxHeight);
+
+    textarea.style.height = `${targetHeight}px`;
+    textarea.style.maxHeight = Number.isFinite(maxHeight) ? `${maxHeight}px` : 'none';
+    textarea.style.overflowY = nextHeight > maxHeight ? 'auto' : 'hidden';
   }
 
   /**
@@ -2767,10 +2827,6 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   toggleAdvancedOptions(): void {
     const wasInAdvancedOptions = this.showAdvancedOptions();
     this.showAdvancedOptions.update(current => !current);
-
-    if (!wasInAdvancedOptions && this.xPremiumEligible()) {
-      this.xDualPost.ensureStatusLoaded();
-    }
 
     // If coming back from advanced options, re-trigger textarea auto-resize after it renders
     if (wasInAdvancedOptions) {

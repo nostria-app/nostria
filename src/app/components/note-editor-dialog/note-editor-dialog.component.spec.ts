@@ -2,6 +2,7 @@ import type { Mock } from "vitest";
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideZonelessChangeDetection, signal } from '@angular/core';
 import { nip19 } from 'nostr-tools';
+import type { Event as NostrEvent } from 'nostr-tools';
 import { NoteEditorDialogComponent } from './note-editor-dialog.component';
 import { NostrService } from '../../services/nostr.service';
 import { MediaService } from '../../services/media.service';
@@ -24,6 +25,7 @@ import { CustomDialogService } from '../../services/custom-dialog.service';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatDialog } from '@angular/material/dialog';
 import { Router } from '@angular/router';
+import { XDualPostService } from '../../services/x-dual-post.service';
 
 describe('NoteEditorDialogComponent', () => {
   let component: NoteEditorDialogComponent;
@@ -36,6 +38,14 @@ describe('NoteEditorDialogComponent', () => {
   };
   let mockCustomDialogService: {
     open: Mock;
+  };
+  let mockXDualPostService: {
+    status: ReturnType<typeof signal>;
+    loading: ReturnType<typeof signal>;
+    loaded: ReturnType<typeof signal>;
+    connecting: ReturnType<typeof signal>;
+    ensureStatusLoaded: Mock;
+    connect: Mock;
   };
   let mockUtilitiesService: {
     normalizeRelayUrls: Mock;
@@ -56,6 +66,15 @@ describe('NoteEditorDialogComponent', () => {
 
     mockCustomDialogService = {
       open: vi.fn(),
+    };
+
+    mockXDualPostService = {
+      status: signal({ connected: false, totalPosts: 0, postsLast24h: 0 }),
+      loading: signal(false),
+      loaded: signal(false),
+      connecting: signal(false),
+      ensureStatusLoaded: vi.fn(),
+      connect: vi.fn(),
     };
 
     mockUtilitiesService = {
@@ -104,6 +123,7 @@ describe('NoteEditorDialogComponent', () => {
         { provide: PublishEventBus, useValue: { results$: { subscribe: () => ({ unsubscribe: vi.fn() }) } } },
         { provide: MatDialog, useValue: { open: vi.fn() } },
         { provide: CustomDialogService, useValue: mockCustomDialogService },
+        { provide: XDualPostService, useValue: mockXDualPostService },
         { provide: AiService, useValue: {} },
         { provide: SpeechService, useValue: { isRecording: signal(false), startRecording: vi.fn(), stopRecording: vi.fn() } },
         { provide: PlatformService, useValue: mockPlatformService },
@@ -125,6 +145,57 @@ describe('NoteEditorDialogComponent', () => {
   it('should create', () => {
     createComponent();
     expect(component).toBeTruthy();
+  });
+
+  describe('reply preview', () => {
+    it('should show the replied note content and short id', async () => {
+      const replyEvent: NostrEvent = {
+        id: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+        pubkey: 'abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789',
+        created_at: Math.floor(Date.now() / 1000),
+        kind: 1,
+        tags: [],
+        content: 'Original reply content that should be visible in the composer preview.',
+        sig: 'f'.repeat(128),
+      };
+
+      createComponent(instance => {
+        instance.data = {
+          replyTo: {
+            id: replyEvent.id,
+            pubkey: replyEvent.pubkey,
+            event: replyEvent,
+          },
+        };
+      });
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      const preview = fixture.nativeElement.querySelector('.reply-preview-content');
+      const noteId = fixture.nativeElement.querySelector('.reply-note-id');
+
+      expect(preview?.textContent).toContain('Original reply content that should be visible in the composer preview.');
+      expect(noteId?.textContent.trim()).toBe('01234567…');
+    });
+  });
+
+  describe('Post to X status loading', () => {
+    it('should not load X status when the editor opens with Post to X disabled by default', async () => {
+      createComponent();
+      await fixture.whenStable();
+
+      expect(mockXDualPostService.ensureStatusLoaded).not.toHaveBeenCalled();
+    });
+
+    it('should load X status when Post to X is enabled by the user', async () => {
+      createComponent();
+      await fixture.whenStable();
+
+      component.onPostToXChange(true);
+
+      expect(mockXDualPostService.ensureStatusLoaded).toHaveBeenCalledTimes(1);
+      expect(component.postToX()).toBe(true);
+    });
   });
 
   describe('document mousedown listener (onDocumentClick)', () => {

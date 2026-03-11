@@ -359,7 +359,7 @@ export class UtilitiesService {
   }
 
   /**
-   * Extract lyrics from a Nostr music event (kind 32123).
+   * Extract lyrics from a Nostr music event.
    * Lyrics can be in: 1) 'lyrics' tag, 2) content with "Lyrics:" section, 3) plain content
    */
   extractLyricsFromEvent(event: Event): string | undefined {
@@ -1214,6 +1214,20 @@ export class UtilitiesService {
   }
 
   /**
+   * Get the best available audio URL for a music track.
+   */
+  getMusicAudioUrl(event: Event | UnsignedEvent): string | undefined {
+    const taggedUrl = this.getUrlWithImetaFallback(event);
+    if (taggedUrl) {
+      return taggedUrl;
+    }
+
+    const content = typeof event.content === 'string' ? event.content : '';
+    const match = content.match(/(https?:\/\/[^\s]+\.(mp3|wav|ogg|flac|m4a))/i);
+    return match ? match[0] : undefined;
+  }
+
+  /**
    * Get all values for a specific tag from an event.
    * @param event The Nostr event
    * @param tagName The tag name to search for
@@ -1253,10 +1267,33 @@ export class UtilitiesService {
   }
 
   /**
+   * Get the display title for a music track.
+   */
+  getMusicTitle(event: Event | UnsignedEvent): string | undefined {
+    return this.getTitleTag(event) || this.getTagValue(event, 'subject');
+  }
+
+  /**
+   * Get the display artist for a music track.
+   */
+  getMusicArtist(event: Event | UnsignedEvent): string | undefined {
+    return this.getTagValue(event, 'artist');
+  }
+
+  /**
    * Get the image tag value from an event.
    */
   getImageTag(event: Event | UnsignedEvent): string | undefined {
     return this.getTagValue(event, 'image');
+  }
+
+  /**
+   * Get the best available cover image URL for a music track.
+   */
+  getMusicImage(event: Event | UnsignedEvent): string | undefined {
+    return this.getImageTag(event)
+      || this.getTagValue(event, 'cover')
+      || this.getTagValue(event, 'thumb');
   }
 
   /**
@@ -1307,6 +1344,60 @@ export class UtilitiesService {
   getDurationTag(event: Event | UnsignedEvent): number | undefined {
     const value = this.getTagValue(event, 'duration');
     return value ? parseInt(value, 10) : undefined;
+  }
+
+  /**
+   * Get the duration for a music track in seconds.
+   */
+  getMusicDuration(event: Event | UnsignedEvent): number | undefined {
+    const tagDuration = this.getDurationTag(event);
+    if (tagDuration && !Number.isNaN(tagDuration)) {
+      return tagDuration;
+    }
+
+    return undefined;
+  }
+
+  /**
+   * Get the published timestamp for a music track in seconds.
+   */
+  getMusicPublishedAt(event: Event | UnsignedEvent): number | undefined {
+    const publishedAt = this.getTagValue(event, 'published_at')?.trim();
+    if (publishedAt) {
+      const parsed = Number.parseInt(publishedAt, 10);
+      if (!Number.isNaN(parsed)) {
+        return parsed;
+      }
+    }
+
+    return undefined;
+  }
+
+  /**
+   * Parse a music a-tag coordinate supported by the app.
+   */
+  parseMusicTrackCoordinate(coordinate?: string): { kind: number; pubkey: string; identifier: string } | null {
+    if (!coordinate) {
+      return null;
+    }
+
+    const parts = coordinate.split(':');
+    if (parts.length < 3) {
+      return null;
+    }
+
+    const kind = Number.parseInt(parts[0], 10);
+    if (!this.isMusicKind(kind)) {
+      return null;
+    }
+
+    const pubkey = parts[1]?.trim();
+    const identifier = parts.slice(2).join(':').trim();
+    if (!pubkey || !identifier) {
+      return null;
+    }
+
+    return { kind, pubkey, identifier };
   }
 
   /**
@@ -2238,7 +2329,10 @@ export class UtilitiesService {
   static readonly ARTICLE_KINDS = [30023] as const;
 
   /** Music track event kinds */
-  static readonly MUSIC_KINDS = [32123] as const;
+  static readonly MUSIC_KINDS = [36787] as const;
+
+  /** Primary music track kind used when a legacy default is required */
+  static readonly PRIMARY_MUSIC_KIND = 36787;
 
   /**
    * Check if a kind is a video event kind
@@ -2265,6 +2359,6 @@ export class UtilitiesService {
    * Check if a kind is a music track event kind
    */
   isMusicKind(kind: number): boolean {
-    return kind === 32123;
+    return UtilitiesService.MUSIC_KINDS.some(value => value === kind);
   }
 }

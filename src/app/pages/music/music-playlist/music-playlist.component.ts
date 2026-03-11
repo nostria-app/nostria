@@ -42,7 +42,7 @@ import { EventActionsToolbarComponent } from '../../../components/event-actions-
 import { CommentsListComponent } from '../../../components/comments-list/comments-list.component';
 import { BookmarkListSelectorComponent } from '../../../components/bookmark-list-selector/bookmark-list-selector.component';
 
-const MUSIC_KIND = 36787;
+const MUSIC_KINDS = [...UtilitiesService.MUSIC_KINDS];
 const MUSIC_PLAYLIST_KIND = 34139;
 
 @Component({
@@ -172,7 +172,7 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
     const event = this.playlist();
     if (!event) return [];
     return event.tags
-      .filter(t => t[0] === 'a' && t[1]?.startsWith('36787:'))
+      .filter(t => t[0] === 'a' && !!this.utilities.parseMusicTrackCoordinate(t[1]))
       .map(t => t[1]);
   });
 
@@ -415,14 +415,12 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
     const requestedTrackKeys = new Set<string>();
 
     // Parse the a-tag references to get authors and d-tags
-    const trackKeys: { author: string; dTag: string }[] = [];
+    const trackKeys: { kind: number; author: string; dTag: string }[] = [];
     for (const ref of refs) {
-      const parts = ref.split(':');
-      if (parts.length >= 3) {
-        const author = parts[1];
-        const dTag = parts.slice(2).join(':');
-        trackKeys.push({ author, dTag });
-        requestedTrackKeys.add(`${author}:${dTag}`);
+      const coordinate = this.utilities.parseMusicTrackCoordinate(ref);
+      if (coordinate) {
+        trackKeys.push({ kind: coordinate.kind, author: coordinate.pubkey, dTag: coordinate.identifier });
+        requestedTrackKeys.add(`${coordinate.kind}:${coordinate.pubkey}:${coordinate.identifier}`);
       }
     }
 
@@ -469,9 +467,9 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
     // Create a single filter with all authors and d-tags (deduplicated)
     const uniqueAuthors = [...new Set(remainingTrackKeys.map(k => k.author))];
     const uniqueDTags = [...new Set(remainingTrackKeys.map(k => k.dTag))];
-    const missingKeysSet = new Set(remainingTrackKeys.map(k => `${k.author}:${k.dTag}`));
+    const missingKeysSet = new Set(remainingTrackKeys.map(k => `${k.kind}:${k.author}:${k.dTag}`));
     const filter: Filter = {
-      kinds: [MUSIC_KIND],
+      kinds: MUSIC_KINDS,
       authors: uniqueAuthors,
       '#d': uniqueDTags,
       limit: remainingTrackKeys.length * 2, // Allow for duplicates
@@ -492,7 +490,7 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
     const sub = this.pool.subscribe(relayUrls, filter, (event: Event) => {
       receivedAny = true;
       const dTag = event.tags.find(t => t[0] === 'd')?.[1] || '';
-      const uniqueId = `${event.pubkey}:${dTag}`;
+      const uniqueId = `${event.kind}:${event.pubkey}:${dTag}`;
 
       this.logger.debug('Received track event', { uniqueId, dTag, pubkey: event.pubkey });
 
@@ -515,7 +513,7 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
       }
 
       // Check if we have all missing tracks
-      const missingRemaining = remainingTrackKeys.some(k => !this.trackMap.has(`${k.author}:${k.dTag}`));
+      const missingRemaining = remainingTrackKeys.some(k => !this.trackMap.has(`${k.kind}:${k.author}:${k.dTag}`));
       if (!missingRemaining) {
         clearTimeout(timeout);
         this.loadingTracks.set(false);
@@ -546,7 +544,7 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
   }
 
   private async loadMissingTracksFromDatabase(
-    missingTrackKeys: { author: string; dTag: string }[],
+    missingTrackKeys: { kind: number; author: string; dTag: string }[],
     refs: string[]
   ): Promise<void> {
     if (missingTrackKeys.length === 0) {
@@ -556,7 +554,7 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
     try {
       const cachedEvents = await Promise.all(
         missingTrackKeys.map(key =>
-          this.database.getParameterizedReplaceableEvent(key.author, MUSIC_KIND, key.dTag)
+          this.database.getParameterizedReplaceableEvent(key.author, key.kind, key.dTag)
         )
       );
 
@@ -567,7 +565,7 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
           continue;
         }
         const dTag = event.tags.find(t => t[0] === 'd')?.[1] || '';
-        const uniqueId = `${event.pubkey}:${dTag}`;
+        const uniqueId = `${event.kind}:${event.pubkey}:${dTag}`;
         const existing = this.trackMap.get(uniqueId);
         if (!existing || existing.created_at < event.created_at) {
           this.trackMap.set(uniqueId, event);
@@ -587,11 +585,9 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
     // Sort tracks according to playlist order
     const orderedTracks: Event[] = [];
     for (const ref of refs) {
-      const parts = ref.split(':');
-      if (parts.length >= 3) {
-        const author = parts[1];
-        const dTag = parts.slice(2).join(':');
-        const key = `${author}:${dTag}`;
+      const coordinate = this.utilities.parseMusicTrackCoordinate(ref);
+      if (coordinate) {
+        const key = `${coordinate.kind}:${coordinate.pubkey}:${coordinate.identifier}`;
         const track = this.trackMap.get(key);
         if (track) {
           orderedTracks.push(track);
@@ -810,7 +806,7 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
     const publicTag = ev.tags.find(t => t[0] === 'public');
     const collaborativeTag = ev.tags.find(t => t[0] === 'collaborative');
     const trackRefs = ev.tags
-      .filter(t => t[0] === 'a' && t[1]?.startsWith('36787:'))
+      .filter(t => t[0] === 'a' && !!this.utilities.parseMusicTrackCoordinate(t[1]))
       .map(t => t[1]);
 
     const playlist: MusicPlaylist = {
@@ -924,13 +920,11 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
 
   // Helper methods for track display
   getTrackTitle(track: Event): string {
-    const titleTag = track.tags.find(t => t[0] === 'title');
-    return titleTag?.[1] || 'Untitled Track';
+    return this.utilities.getMusicTitle(track) || 'Untitled Track';
   }
 
   getTrackImage(track: Event): string | null {
-    const imageTag = track.tags.find(t => t[0] === 'image');
-    const rawUrl = imageTag?.[1] || null;
+    const rawUrl = this.utilities.getMusicImage(track) || null;
     if (!rawUrl) return null;
     return this.imageCache.getOptimizedImageUrlWithSize(rawUrl, 64, 64);
   }
@@ -948,9 +942,9 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
     if (profile) {
       return profile.data?.name || profile.data?.display_name || 'Unknown Artist';
     }
-    const artistTag = track.tags.find(t => t[0] === 'artist');
-    if (artistTag?.[1]) {
-      return artistTag[1];
+    const artistTag = this.utilities.getMusicArtist(track);
+    if (artistTag) {
+      return artistTag;
     }
     return 'Unknown Artist';
   }
@@ -989,12 +983,9 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
   }
 
   getTrackDuration(track: Event): string {
-    const durationTag = track.tags.find(t => t[0] === 'duration');
-    if (durationTag?.[1]) {
-      const seconds = parseInt(durationTag[1], 10);
-      if (!isNaN(seconds)) {
-        return formatDuration(seconds);
-      }
+    const seconds = this.utilities.getMusicDuration(track);
+    if (seconds && !Number.isNaN(seconds)) {
+      return formatDuration(seconds);
     }
     return '--:--';
   }
@@ -1007,24 +998,25 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
     // Play from this track and queue the rest
     for (let i = index; i < allTracks.length; i++) {
       const track = allTracks[i];
-      const url = this.utilities.getUrlWithImetaFallback(track);
+      const url = this.utilities.getMusicAudioUrl(track);
       if (!url) continue;
 
-      const titleTag = track.tags.find(t => t[0] === 'title');
-      const imageTag = track.tags.find(t => t[0] === 'image');
+      const title = this.utilities.getMusicTitle(track) || 'Untitled Track';
+      const imageTag = this.utilities.getMusicImage(track);
       const videoTag = track.tags.find(t => t[0] === 'video');
       const dTag = track.tags.find(t => t[0] === 'd')?.[1] || '';
 
       const mediaItem: MediaItem = {
         source: url,
-        title: titleTag?.[1] || 'Untitled Track',
+        title,
         artist: this.getTrackArtist(track),
-        artwork: imageTag?.[1] || '/icons/icon-192x192.png',
+        artwork: imageTag || '/icons/icon-192x192.png',
         video: videoTag?.[1] || undefined,
         type: 'Music',
         playlistSourceKey,
         eventPubkey: track.pubkey,
         eventIdentifier: dTag,
+        eventKind: track.kind,
         lyrics: this.utilities.extractLyricsFromEvent(track),
       };
 
@@ -1037,25 +1029,26 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
   }
 
   addTrackToQueue(track: Event): void {
-    const url = this.utilities.getUrlWithImetaFallback(track);
+    const url = this.utilities.getMusicAudioUrl(track);
     if (!url) return;
 
-    const titleTag = track.tags.find(t => t[0] === 'title');
-    const imageTag = track.tags.find(t => t[0] === 'image');
+    const title = this.utilities.getMusicTitle(track) || 'Untitled Track';
+    const imageTag = this.utilities.getMusicImage(track);
     const videoTag = track.tags.find(t => t[0] === 'video');
     const dTag = track.tags.find(t => t[0] === 'd')?.[1] || '';
     const playlistSourceKey = this.getCurrentPlaylistSourceKey();
 
     const mediaItem: MediaItem = {
       source: url,
-      title: titleTag?.[1] || 'Untitled Track',
+      title,
       artist: this.getTrackArtist(track),
-      artwork: imageTag?.[1] || '/icons/icon-192x192.png',
+      artwork: imageTag || '/icons/icon-192x192.png',
       video: videoTag?.[1] || undefined,
       type: 'Music',
       playlistSourceKey,
       eventPubkey: track.pubkey,
       eventIdentifier: dTag,
+      eventKind: track.kind,
       lyrics: this.utilities.extractLyricsFromEvent(track),
     };
 

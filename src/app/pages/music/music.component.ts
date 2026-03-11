@@ -36,7 +36,7 @@ import { ListFilterValue } from '../../components/list-filter-menu/list-filter-m
 import { MusicListFilterComponent } from '../../components/music-list-filter/music-list-filter.component';
 import { LoggerService } from '../../services/logger.service';
 
-const MUSIC_KIND = 36787;
+const MUSIC_KINDS = [...UtilitiesService.MUSIC_KINDS];
 const PLAYLIST_KIND = 34139;
 const USER_STATUS_KIND = 30315;
 const SECTION_LIMIT = 12;
@@ -47,6 +47,7 @@ interface ListeningEntry {
   content: string;
   createdAt: number;
   expiration?: number;
+  trackKind?: number;
   trackPubkey?: string;
   trackIdentifier?: string;
 }
@@ -203,12 +204,12 @@ export class MusicComponent implements OnDestroy {
     const lowerQuery = query.toLowerCase();
 
     // Check title
-    const titleTag = track.tags.find(t => t[0] === 'title');
-    if (titleTag?.[1]?.toLowerCase().includes(lowerQuery)) return true;
+    const title = this.utilities.getMusicTitle(track);
+    if (title?.toLowerCase().includes(lowerQuery)) return true;
 
     // Check artist tag
-    const artistTag = track.tags.find(t => t[0] === 'artist');
-    if (artistTag?.[1]?.toLowerCase().includes(lowerQuery)) return true;
+    const artist = this.utilities.getMusicArtist(track);
+    if (artist?.toLowerCase().includes(lowerQuery)) return true;
 
     // Check hashtags
     const hashtags = track.tags.filter(t => t[0] === 't').map(t => t[1]?.toLowerCase());
@@ -241,6 +242,11 @@ export class MusicComponent implements OnDestroy {
 
   private isPrivatePlaylist(playlist: Event): boolean {
     return playlist.tags.some(tag => tag[0] === 'private' && tag[1] === 'true');
+  }
+
+  private getTrackUniqueId(track: Pick<Event, 'kind' | 'pubkey' | 'tags'>): string {
+    const dTag = track.tags.find((tag: string[]) => tag[0] === 'd')?.[1] || '';
+    return `${track.kind}:${track.pubkey}:${dTag}`;
   }
 
   // Filtered tracks and playlists based on search
@@ -305,7 +311,7 @@ export class MusicComponent implements OnDestroy {
   listFilteredTracks = computed(() => {
     const pubkeys = this.filterPubkeys();
 
-    let tracks = [...this.filteredTracks()];
+    let tracks = this.filteredTracks();
 
     // Apply filter
     if (pubkeys !== null) {
@@ -373,16 +379,13 @@ export class MusicComponent implements OnDestroy {
     const artistMap = new Map<string, { name: string; pubkey: string }>();
 
     this.filteredTracks().forEach(track => {
-      const artistTag = track.tags.find(t => t[0] === 'artist');
-      if (artistTag?.[1]) {
-        const artistName = artistTag[1].trim();
-        if (artistName) {
-          // Apply search filter if active
-          if (!query || artistName.toLowerCase().includes(query)) {
-            // Use the first pubkey we find for each artist name
-            if (!artistMap.has(artistName)) {
-              artistMap.set(artistName, { name: artistName, pubkey: track.pubkey });
-            }
+      const artistName = this.utilities.getMusicArtist(track)?.trim();
+      if (artistName) {
+        // Apply search filter if active
+        if (!query || artistName.toLowerCase().includes(query)) {
+          // Use the first pubkey we find for each artist name
+          if (!artistMap.has(artistName)) {
+            artistMap.set(artistName, { name: artistName, pubkey: track.pubkey });
           }
         }
       }
@@ -540,10 +543,12 @@ export class MusicComponent implements OnDestroy {
     this.syncingOwnMusicCache = true;
 
     try {
-      const [trackCount, playlistCount] = await Promise.all([
-        this.fetchAndCacheOwnEvents(pubkey, MUSIC_KIND, 300),
+      const [trackCounts, playlistCount] = await Promise.all([
+        Promise.all(MUSIC_KINDS.map(kind => this.fetchAndCacheOwnEvents(pubkey, kind, 300))),
         this.fetchAndCacheOwnEvents(pubkey, PLAYLIST_KIND, 200),
       ]);
+
+      const trackCount = trackCounts.reduce((total, count) => total + count, 0);
 
       this.lastSyncedOwnMusicPubkey = pubkey;
       if (trackCount > 0 || playlistCount > 0) {
@@ -582,7 +587,7 @@ export class MusicComponent implements OnDestroy {
         break;
       }
 
-      const targetMap = kind === MUSIC_KIND ? this.trackMap : this.playlistMap;
+      const targetMap = this.utilities.isMusicKind(kind) ? this.trackMap : this.playlistMap;
       let mapChanged = false;
       let oldestTimestamp = Number.MAX_SAFE_INTEGER;
 
@@ -593,7 +598,7 @@ export class MusicComponent implements OnDestroy {
         seenIds.add(event.id);
 
         const dTag = event.tags.find((tag: string[]) => tag[0] === 'd')?.[1] || '';
-        const uniqueId = `${event.pubkey}:${dTag}`;
+        const uniqueId = this.utilities.isMusicKind(kind) ? this.getTrackUniqueId(event) : `${event.pubkey}:${dTag}`;
         const existing = targetMap.get(uniqueId);
 
         if (!existing || event.created_at > existing.created_at) {
@@ -610,7 +615,7 @@ export class MusicComponent implements OnDestroy {
       }
 
       if (mapChanged) {
-        if (kind === MUSIC_KIND) {
+        if (this.utilities.isMusicKind(kind)) {
           this.allTracks.set(Array.from(this.trackMap.values()));
         } else {
           this.allPlaylists.set(Array.from(this.playlistMap.values()));
@@ -635,17 +640,18 @@ export class MusicComponent implements OnDestroy {
       this.logger.debug('[Music] Loading from database...');
 
       // Load tracks from database
-      const cachedTracks = await this.database.getEventsByKind(MUSIC_KIND);
-      for (const track of cachedTracks) {
-        if (this.reporting.isUserBlocked(track.pubkey)) continue;
-        if (this.reporting.isContentBlocked(track)) continue;
+      for (const musicKind of MUSIC_KINDS) {
+        const cachedTracks = await this.database.getEventsByKind(musicKind);
+        for (const track of cachedTracks) {
+          if (this.reporting.isUserBlocked(track.pubkey)) continue;
+          if (this.reporting.isContentBlocked(track)) continue;
 
-        const dTag = track.tags.find((tag: string[]) => tag[0] === 'd')?.[1] || '';
-        const uniqueId = `${track.pubkey}:${dTag}`;
+          const uniqueId = this.getTrackUniqueId(track);
 
-        const existing = this.trackMap.get(uniqueId);
-        if (!existing || track.created_at > existing.created_at) {
-          this.trackMap.set(uniqueId, track);
+          const existing = this.trackMap.get(uniqueId);
+          if (!existing || track.created_at > existing.created_at) {
+            this.trackMap.set(uniqueId, track);
+          }
         }
       }
 
@@ -811,13 +817,13 @@ export class MusicComponent implements OnDestroy {
 
     // Subscribe to tracks
     const trackFilter: Filter = {
-      kinds: [MUSIC_KIND],
+      kinds: MUSIC_KINDS,
       limit: 500,
     };
 
     this.trackSubscription = this.pool.subscribe(allRelayUrls, trackFilter, (event: Event) => {
       const dTag = event.tags.find((tag: string[]) => tag[0] === 'd')?.[1] || '';
-      const uniqueId = `${event.pubkey}:${dTag}`;
+      const uniqueId = this.getTrackUniqueId(event);
 
       const existing = this.trackMap.get(uniqueId);
       if (existing && existing.created_at >= event.created_at) return;
@@ -1002,7 +1008,7 @@ export class MusicComponent implements OnDestroy {
       return null;
     }
 
-    const [trackPubkey, trackIdentifier] = this.parseMusicTrackReference(
+    const [trackKind, trackPubkey, trackIdentifier] = this.parseMusicTrackReference(
       event.tags.find(tag => tag[0] === 'a')?.[1],
     );
 
@@ -1011,6 +1017,7 @@ export class MusicComponent implements OnDestroy {
       content,
       createdAt: event.created_at,
       expiration,
+      trackKind,
       trackPubkey,
       trackIdentifier,
     };
@@ -1038,17 +1045,13 @@ export class MusicComponent implements OnDestroy {
     );
   }
 
-  private parseMusicTrackReference(aTag?: string): [string | undefined, string | undefined] {
-    if (!aTag) {
-      return [undefined, undefined];
+  private parseMusicTrackReference(aTag?: string): [number | undefined, string | undefined, string | undefined] {
+    const parsed = this.utilities.parseMusicTrackCoordinate(aTag);
+    if (!parsed) {
+      return [undefined, undefined, undefined];
     }
 
-    const parts = aTag.split(':');
-    if (parts.length < 3 || parts[0] !== String(MUSIC_KIND)) {
-      return [undefined, undefined];
-    }
-
-    return [parts[1], parts.slice(2).join(':') || undefined];
+    return [parsed.kind, parsed.pubkey, parsed.identifier];
   }
 
   openListeningTrack(entry: ListeningEntry, event?: MouseEvent): void {
@@ -1068,7 +1071,7 @@ export class MusicComponent implements OnDestroy {
       return;
     }
 
-    const track = await this.resolveTrackEvent(entry.trackPubkey, entry.trackIdentifier);
+    const track = await this.resolveTrackEvent(entry.trackPubkey, entry.trackIdentifier, entry.trackKind);
     if (!track) {
       return;
     }
@@ -1131,8 +1134,8 @@ export class MusicComponent implements OnDestroy {
       return null;
     }
 
-    const track = this.findCachedTrackEvent(entry.trackPubkey, entry.trackIdentifier);
-    const artwork = track?.tags.find(tag => tag[0] === 'image')?.[1];
+    const track = this.findCachedTrackEvent(entry.trackPubkey, entry.trackIdentifier, entry.trackKind);
+    const artwork = track ? this.utilities.getMusicImage(track) : undefined;
 
     if (artwork) {
       return artwork;
@@ -1141,14 +1144,16 @@ export class MusicComponent implements OnDestroy {
     return this.getListeningPicture(entry.trackPubkey);
   }
 
-  private findCachedTrackEvent(pubkey: string, dTag: string): Event | undefined {
+  private findCachedTrackEvent(pubkey: string, dTag: string, kind?: number): Event | undefined {
     return this.allTracks().find(track => {
-      return track.pubkey === pubkey && track.tags.find(tag => tag[0] === 'd')?.[1] === dTag;
+      return track.pubkey === pubkey
+        && track.tags.find(tag => tag[0] === 'd')?.[1] === dTag
+        && (kind === undefined || track.kind === kind);
     });
   }
 
-  private async resolveTrackEvent(pubkey: string, dTag: string): Promise<Event | null> {
-    const cachedTrack = this.findCachedTrackEvent(pubkey, dTag);
+  private async resolveTrackEvent(pubkey: string, dTag: string, kind?: number): Promise<Event | null> {
+    const cachedTrack = this.findCachedTrackEvent(pubkey, dTag, kind);
 
     if (cachedTrack) {
       return cachedTrack;
@@ -1162,7 +1167,7 @@ export class MusicComponent implements OnDestroy {
     return await new Promise<Event | null>((resolve) => {
       let latestEvent: Event | null = null;
       const filter: Filter = {
-        kinds: [MUSIC_KIND],
+        kinds: kind ? [kind] : MUSIC_KINDS,
         authors: [pubkey],
         '#d': [dTag],
         limit: 1,
@@ -1182,18 +1187,18 @@ export class MusicComponent implements OnDestroy {
   }
 
   private async createMediaItemFromTrack(track: Event): Promise<MediaItem | null> {
-    const source = this.utilities.getUrlWithImetaFallback(track);
+    const source = this.utilities.getMusicAudioUrl(track);
     if (!source) {
       return null;
     }
 
-    const titleTag = track.tags.find(tag => tag[0] === 'title');
-    const artistTag = track.tags.find(tag => tag[0] === 'artist');
-    const imageTag = track.tags.find(tag => tag[0] === 'image');
+    const title = this.utilities.getMusicTitle(track) || 'Untitled Track';
+    const artistTag = this.utilities.getMusicArtist(track);
+    const imageTag = this.utilities.getMusicImage(track);
     const videoTag = track.tags.find(tag => tag[0] === 'video');
     const dTag = track.tags.find(tag => tag[0] === 'd')?.[1] || '';
 
-    let artistName = artistTag?.[1]?.trim() || 'Unknown Artist';
+    let artistName = artistTag?.trim() || 'Unknown Artist';
     let fallbackArtwork = '';
 
     try {
@@ -1208,13 +1213,14 @@ export class MusicComponent implements OnDestroy {
 
     return {
       source,
-      title: titleTag?.[1] || 'Untitled Track',
+      title,
       artist: artistName,
-      artwork: imageTag?.[1] || fallbackArtwork,
+      artwork: imageTag || fallbackArtwork,
       video: videoTag?.[1] || undefined,
       type: 'Music',
       eventPubkey: track.pubkey,
       eventIdentifier: dTag,
+      eventKind: track.kind,
       lyrics: this.utilities.extractLyricsFromEvent(track),
     };
   }
@@ -1270,12 +1276,9 @@ export class MusicComponent implements OnDestroy {
   }
 
   private getTrackPublishedSortValue(track: Event): number {
-    const publishedAt = track.tags.find(tag => tag[0] === 'published_at')?.[1]?.trim();
+    const publishedAt = this.utilities.getMusicPublishedAt(track);
     if (publishedAt) {
-      const parsed = Number.parseInt(publishedAt, 10);
-      if (!Number.isNaN(parsed)) {
-        return parsed * 1000;
-      }
+      return publishedAt * 1000;
     }
 
     return track.created_at * 1000;
@@ -1363,10 +1366,7 @@ export class MusicComponent implements OnDestroy {
     const artistsWithCount = this.allArtists().map(artist => ({
       name: artist.name,
       pubkey: artist.pubkey,
-      trackCount: this.allTracks().filter(track => {
-        const artistTag = track.tags.find(t => t[0] === 'artist');
-        return artistTag?.[1]?.trim() === artist.name;
-      }).length,
+      trackCount: this.allTracks().filter(track => this.utilities.getMusicArtist(track)?.trim() === artist.name).length,
     }));
     this.musicData.setPreloadedArtists(artistsWithCount);
     this.musicData.setPreloadedTracks(this.allTracks());
@@ -1476,7 +1476,7 @@ export class MusicComponent implements OnDestroy {
       const reactionsFilter: Filter = {
         kinds: [kinds.Reaction],
         authors: [pubkey],
-        '#k': [String(MUSIC_KIND)],
+        '#k': MUSIC_KINDS.map(String),
         limit: 500,
       };
 
@@ -1517,12 +1517,12 @@ export class MusicComponent implements OnDestroy {
       // Build individual filters for each address
       const addressFilters: Filter[] = [];
       for (const addr of Array.from(trackAddresses).slice(0, 100)) {
-        const parts = addr.split(':');
-        if (parts.length >= 3) {
+        const coordinate = this.utilities.parseMusicTrackCoordinate(addr);
+        if (coordinate) {
           addressFilters.push({
-            kinds: [MUSIC_KIND],
-            authors: [parts[1]],
-            '#d': [parts[2]],
+            kinds: [coordinate.kind],
+            authors: [coordinate.pubkey],
+            '#d': [coordinate.identifier],
           });
         }
       }
@@ -1536,8 +1536,7 @@ export class MusicComponent implements OnDestroy {
 
         for (const filter of addressFilters) {
           const sub = this.pool.subscribe(relayUrls, filter, (event: Event) => {
-            const dTag = event.tags.find(t => t[0] === 'd')?.[1] || '';
-            const uniqueId = `${event.pubkey}:${dTag}`;
+            const uniqueId = this.getTrackUniqueId(event);
 
             const existing = trackMap.get(uniqueId);
             if (!existing || event.created_at > existing.created_at) {
@@ -1566,11 +1565,11 @@ export class MusicComponent implements OnDestroy {
       // Play the tracks
       for (let i = 0; i < allTracks.length; i++) {
         const track = allTracks[i];
-        const source = this.utilities.getUrlWithImetaFallback(track);
+        const source = this.utilities.getMusicAudioUrl(track);
         if (!source) continue;
 
-        const titleTag = track.tags.find(t => t[0] === 'title');
-        const imageTag = track.tags.find(t => t[0] === 'image');
+        const title = this.utilities.getMusicTitle(track) || 'Untitled Track';
+        const imageTag = this.utilities.getMusicImage(track);
         const videoTag = track.tags.find(t => t[0] === 'video');
         const dTag = track.tags.find(t => t[0] === 'd')?.[1] || '';
 
@@ -1587,13 +1586,14 @@ export class MusicComponent implements OnDestroy {
 
         const mediaItem: MediaItem = {
           source,
-          title: titleTag?.[1] || 'Untitled Track',
+          title,
           artist: artistName,
-          artwork: imageTag?.[1] || '',
+          artwork: imageTag || '',
           video: videoTag?.[1] || undefined,
           type: 'Music',
           eventPubkey: track.pubkey,
           eventIdentifier: dTag,
+          eventKind: track.kind,
           lyrics: this.utilities.extractLyricsFromEvent(track),
         };
 

@@ -993,7 +993,11 @@ export class MediaPlayerService implements OnInitialized {
 
     // Build track info for a/r tags if event metadata is available
     const trackInfo = item.eventPubkey && item.eventIdentifier
-      ? { eventPubkey: item.eventPubkey, eventIdentifier: item.eventIdentifier }
+      ? {
+        eventPubkey: item.eventPubkey,
+        eventIdentifier: item.eventIdentifier,
+        eventKind: item.eventKind,
+      }
       : undefined;
 
     this.userStatusService.setMusicStatus(statusText, duration, trackInfo).catch(err => {

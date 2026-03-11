@@ -30,7 +30,7 @@ import { MusicTrackMenuComponent } from '../../../components/music-track-menu/mu
 import { ZapDialogComponent, ZapDialogData } from '../../../components/zap-dialog/zap-dialog.component';
 import { ZapService } from '../../../services/zap.service';
 
-const MUSIC_KIND = 36787;
+const MUSIC_KINDS = [...UtilitiesService.MUSIC_KINDS];
 const MUSIC_PLAYLIST_KIND = 34139;
 
 @Component({
@@ -88,6 +88,11 @@ export class MusicArtistComponent implements OnInit, OnDestroy {
   private trackMap = new Map<string, Event>();
   private playlistMap = new Map<string, Event>();
   private hasResolvedInitialTabSelection = false;
+
+  private getTrackUniqueId(track: Pick<Event, 'kind' | 'pubkey' | 'tags'>): string {
+    const dTag = track.tags.find((tag: string[]) => tag[0] === 'd')?.[1] || '';
+    return `${track.kind}:${track.pubkey}:${dTag}`;
+  }
 
   // Check if viewing own profile
   isOwnProfile = computed(() => {
@@ -208,7 +213,7 @@ export class MusicArtistComponent implements OnInit, OnDestroy {
 
     // Load tracks
     const trackFilter: Filter = {
-      kinds: [MUSIC_KIND],
+      kinds: MUSIC_KINDS,
       authors: [pubkey],
       limit: 500,
     };
@@ -220,7 +225,7 @@ export class MusicArtistComponent implements OnInit, OnDestroy {
       }
 
       const dTag = event.tags.find(t => t[0] === 'd')?.[1] || '';
-      const uniqueId = `${event.pubkey}:${dTag}`;
+      const uniqueId = this.getTrackUniqueId(event);
 
       const existing = this.trackMap.get(uniqueId);
       if (existing && existing.created_at >= event.created_at) return;
@@ -276,17 +281,18 @@ export class MusicArtistComponent implements OnInit, OnDestroy {
    */
   private async loadArtistContentFromDatabase(pubkey: string): Promise<boolean> {
     try {
-      const [cachedTracks, cachedPlaylists] = await Promise.all([
-        this.database.getEventsByPubkeyAndKind(pubkey, MUSIC_KIND),
+      const [cachedTrackGroups, cachedPlaylists] = await Promise.all([
+        Promise.all(MUSIC_KINDS.map(kind => this.database.getEventsByPubkeyAndKind(pubkey, kind))),
         this.database.getEventsByPubkeyAndKind(pubkey, MUSIC_PLAYLIST_KIND),
       ]);
+
+      const cachedTracks = cachedTrackGroups.flat();
 
       for (const track of cachedTracks) {
         if (this.reporting.isContentBlocked(track)) {
           continue;
         }
-        const dTag = track.tags.find(t => t[0] === 'd')?.[1] || '';
-        this.trackMap.set(`${track.pubkey}:${dTag}`, track);
+        this.trackMap.set(this.getTrackUniqueId(track), track);
       }
 
       for (const playlist of cachedPlaylists) {
@@ -467,12 +473,11 @@ export class MusicArtistComponent implements OnInit, OnDestroy {
 
     // Convert tracks to MediaItems
     const mediaItems: MediaItem[] = artistTracks.map(track => {
-      const titleTag = track.tags.find(t => t[0] === 'title' || t[0] === 'subject');
-      const title = titleTag?.[1] || track.content?.substring(0, 50) || 'Unknown Track';
-      const streamUrl = this.utilities.getUrlWithImetaFallback(track) || '';
-      const coverTag = track.tags.find(t => t[0] === 'image' || t[0] === 'cover' || t[0] === 'thumb');
+      const title = this.utilities.getMusicTitle(track) || track.content?.substring(0, 50) || 'Unknown Track';
+      const streamUrl = this.utilities.getMusicAudioUrl(track) || '';
+      const coverTag = this.utilities.getMusicImage(track);
       const videoTag = track.tags.find(t => t[0] === 'video');
-      const cover = coverTag?.[1] || profile?.data?.picture || '/icons/icon-192x192.png';
+      const cover = coverTag || profile?.data?.picture || '/icons/icon-192x192.png';
       const dTag = track.tags.find(t => t[0] === 'd')?.[1] || '';
 
       return {
@@ -484,6 +489,7 @@ export class MusicArtistComponent implements OnInit, OnDestroy {
         type: 'Music' as const,
         eventPubkey: this.artistNpub(),
         eventIdentifier: dTag,
+        eventKind: track.kind,
         lyrics: this.utilities.extractLyricsFromEvent(track),
       };
     }).filter(item => item.source); // Only include tracks with valid stream URLs
@@ -502,13 +508,11 @@ export class MusicArtistComponent implements OnInit, OnDestroy {
 
   // Helper methods for track display
   getTrackTitle(track: Event): string {
-    const titleTag = track.tags.find(t => t[0] === 'title');
-    return titleTag?.[1] || 'Untitled Track';
+    return this.utilities.getMusicTitle(track) || 'Untitled Track';
   }
 
   getTrackImage(track: Event): string | null {
-    const imageTag = track.tags.find(t => t[0] === 'image');
-    return imageTag?.[1] || null;
+    return this.utilities.getMusicImage(track) || null;
   }
 
   getTrackGradient(track: Event): string | null {
@@ -521,9 +525,9 @@ export class MusicArtistComponent implements OnInit, OnDestroy {
 
   getTrackArtist(track: Event): string {
     // First check for artist tag in the event
-    const artistTag = track.tags.find(t => t[0] === 'artist');
-    if (artistTag?.[1]) {
-      return artistTag[1];
+    const artistTag = this.utilities.getMusicArtist(track);
+    if (artistTag) {
+      return artistTag;
     }
     // Fall back to profile name
     return this.artistName();
@@ -558,12 +562,9 @@ export class MusicArtistComponent implements OnInit, OnDestroy {
   }
 
   getTrackDuration(track: Event): string {
-    const durationTag = track.tags.find(t => t[0] === 'duration');
-    if (durationTag?.[1]) {
-      const seconds = parseInt(durationTag[1], 10);
-      if (!isNaN(seconds)) {
-        return formatDuration(seconds);
-      }
+    const seconds = this.utilities.getMusicDuration(track);
+    if (seconds && !Number.isNaN(seconds)) {
+      return formatDuration(seconds);
     }
     return '--:--';
   }
@@ -577,23 +578,24 @@ export class MusicArtistComponent implements OnInit, OnDestroy {
     // Play from this track and queue the rest
     for (let i = index; i < artistTracks.length; i++) {
       const track = artistTracks[i];
-      const url = this.utilities.getUrlWithImetaFallback(track);
+      const url = this.utilities.getMusicAudioUrl(track);
       if (!url) continue;
 
-      const titleTag = track.tags.find(t => t[0] === 'title');
-      const imageTag = track.tags.find(t => t[0] === 'image');
+      const title = this.utilities.getMusicTitle(track) || 'Untitled Track';
+      const imageTag = this.utilities.getMusicImage(track);
       const videoTag = track.tags.find(t => t[0] === 'video');
       const dTag = track.tags.find(t => t[0] === 'd')?.[1] || '';
 
       const mediaItem: MediaItem = {
         source: url,
-        title: titleTag?.[1] || 'Untitled Track',
+        title,
         artist: this.getTrackArtist(track),
-        artwork: imageTag?.[1] || profile?.data?.picture || '/icons/icon-192x192.png',
+        artwork: imageTag || profile?.data?.picture || '/icons/icon-192x192.png',
         video: videoTag?.[1] || undefined,
         type: 'Music',
         eventPubkey: track.pubkey,
         eventIdentifier: dTag,
+        eventKind: track.kind,
         lyrics: this.utilities.extractLyricsFromEvent(track),
       };
 
@@ -606,24 +608,25 @@ export class MusicArtistComponent implements OnInit, OnDestroy {
   }
 
   addTrackToQueue(track: Event): void {
-    const url = this.utilities.getUrlWithImetaFallback(track);
+    const url = this.utilities.getMusicAudioUrl(track);
     if (!url) return;
 
-    const titleTag = track.tags.find(t => t[0] === 'title');
-    const imageTag = track.tags.find(t => t[0] === 'image');
+    const title = this.utilities.getMusicTitle(track) || 'Untitled Track';
+    const imageTag = this.utilities.getMusicImage(track);
     const videoTag = track.tags.find(t => t[0] === 'video');
     const dTag = track.tags.find(t => t[0] === 'd')?.[1] || '';
     const profile = this.authorProfile();
 
     const mediaItem: MediaItem = {
       source: url,
-      title: titleTag?.[1] || 'Untitled Track',
+      title,
       artist: this.getTrackArtist(track),
-      artwork: imageTag?.[1] || profile?.data?.picture || '/icons/icon-192x192.png',
+      artwork: imageTag || profile?.data?.picture || '/icons/icon-192x192.png',
       video: videoTag?.[1] || undefined,
       type: 'Music',
       eventPubkey: track.pubkey,
       eventIdentifier: dTag,
+      eventKind: track.kind,
       lyrics: this.utilities.extractLyricsFromEvent(track),
     };
 

@@ -61,9 +61,6 @@
 
   .reply-context,
   .quote-context {
-    display: flex;
-    align-items: center;
-    gap: 8px;
     margin-bottom: 16px;
     padding: 8px 12px;
     background-color: var(--mat-sys-surface-variant);
@@ -103,6 +100,106 @@
       @media (max-width: 400px) {
         font-size: 13px;
       }
+    }
+  }
+
+  .reply-context {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+
+    .reply-context-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .reply-context-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+    }
+
+    .reply-note-id {
+      font-size: 12px;
+      color: var(--mat-sys-on-surface-variant);
+      white-space: nowrap;
+    }
+
+    .reply-author {
+      display: inline-flex;
+      align-items: center;
+      max-width: 100%;
+
+      ::ng-deep .user-profile.list {
+        width: auto;
+      }
+
+      ::ng-deep .user-profile.list .user-profile-container {
+        justify-content: flex-start;
+        gap: 8px;
+        width: auto;
+      }
+
+      ::ng-deep .user-profile.list .user-profile-avatar {
+        width: 28px;
+        height: 28px;
+      }
+
+      ::ng-deep .user-profile.list .default-user-avatar {
+        font-size: 28px;
+      }
+
+      ::ng-deep .user-profile.list .user-profile-content {
+        margin-left: 0;
+      }
+
+      ::ng-deep .user-profile.list .user-profile-npub-link,
+      ::ng-deep .user-profile.list .user-profile-about,
+      ::ng-deep .user-profile.list .user-profile-details {
+        display: none;
+      }
+
+      ::ng-deep .user-profile.list app-profile-display-name,
+      ::ng-deep .user-profile.list .user-profile-name {
+        font-size: 13px;
+        line-height: 1.2;
+      }
+    }
+
+    .reply-preview {
+      padding-left: 10px;
+      border-left: 2px solid var(--mat-sys-outline-variant);
+    }
+
+    .reply-preview-content,
+    .reply-preview-empty {
+      margin: 0;
+      font-size: 12px;
+      color: var(--mat-sys-on-surface);
+      white-space: pre-wrap;
+      word-break: break-word;
+      overflow: hidden;
+      display: -webkit-box;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 2;
+    }
+
+    .reply-preview-empty {
+      color: var(--mat-sys-on-surface-variant);
+    }
+  }
+
+  .quote-context {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    .quote-text {
+      min-width: 0;
     }
   }
 
@@ -1365,17 +1462,42 @@
     .reply-context {
       margin-bottom: 8px;
       padding: 6px 10px;
-      font-size: 13px;
 
-      .reply-label {
-        font-size: 12px;
-        color: var(--mat-sys-on-surface-variant);
-        margin-right: 4px;
+      .reply-context-header {
+        gap: 6px;
       }
 
       .reply-author {
         display: inline-flex;
         align-items: center;
+
+        ::ng-deep .user-profile.list .user-profile-avatar {
+          width: 24px;
+          height: 24px;
+        }
+
+        ::ng-deep .user-profile.list .default-user-avatar {
+          font-size: 24px;
+        }
+
+        ::ng-deep .user-profile.list app-profile-display-name,
+        ::ng-deep .user-profile.list .user-profile-name {
+          font-size: 12px;
+        }
+      }
+
+      .reply-note-id {
+        font-size: 11px;
+      }
+
+      .reply-preview {
+        padding-left: 10px;
+      }
+
+      .reply-preview-content,
+      .reply-preview-empty {
+        font-size: 12px;
+        -webkit-line-clamp: 2;
       }
     }
   }
