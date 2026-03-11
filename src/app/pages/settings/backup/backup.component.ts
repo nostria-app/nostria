@@ -30,6 +30,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MigrationService, MigrationResult } from '../../../services/migration.service';
 import { Subscription } from 'rxjs';
 import { RelayInfoDialogComponent, RelayDialogData } from '../relays/relay-info-dialog.component';
+import { Event as NostrEvent } from 'nostr-tools';
 
 interface BackupStats {
   eventsCount: number;
@@ -37,6 +38,31 @@ interface BackupStats {
   totalSize: number;
   formattedSize: string;
 }
+
+const BACKUP_RELAY_EVENT_KINDS = [
+  kinds.Metadata,
+  kinds.Contacts,
+  kinds.Mutelist,
+  10001, // Pin list
+  kinds.RelayList,
+  10012, // Relay feeds
+  30000, // Follow sets
+  30001, // Generic lists
+  30002, // Relay sets
+  30003, // Bookmark lists
+  30008, // Profile badges
+  30009, // Badge definitions
+  30023, // Articles
+  30024, // Draft articles
+  30078, // App data / synced settings
+  31922, // Calendar events (date)
+  31923, // Calendar events (time)
+  31924, // Calendars
+  31925, // Calendar RSVPs
+  32100, // Music playlists
+  34139, // Music/Nostr playlists
+  36787, // Music tracks
+];
 
 @Component({
   selector: 'app-backup',
@@ -162,7 +188,7 @@ export class BackupComponent implements OnInit, OnDestroy {
       const pubkey = this.accountState.pubkey();
       if (!pubkey) return;
 
-      const userEvents = await this.database.getUserEvents(pubkey);
+      const userEvents = await this.getBackupEvents(pubkey);
       // const userRelays = await this.database.getUserRelays(pubkey);
 
       // Estimate size by converting events to JSON and measuring string length
@@ -197,7 +223,7 @@ export class BackupComponent implements OnInit, OnDestroy {
       }
 
       // Fetch all user data
-      const userEvents = await this.database.getUserEvents(pubkey);
+      const userEvents = await this.getBackupEvents(pubkey);
       // const userRelays = await this.database.getUserRelays(pubkey);
       // const userMetadata = await this.database.getUserMetadata(pubkey);
 
@@ -370,6 +396,42 @@ export class BackupComponent implements OnInit, OnDestroy {
       horizontalPosition: 'center',
       verticalPosition: 'bottom',
     });
+  }
+
+  private async getBackupEvents(pubkey: string): Promise<NostrEvent[]> {
+    await this.backfillRelayBackupEvents(pubkey);
+
+    const userEvents = await this.database.getUserEvents(pubkey);
+    return [...userEvents].sort((left, right) => left.created_at - right.created_at);
+  }
+
+  private async backfillRelayBackupEvents(pubkey: string): Promise<void> {
+    try {
+      const relayEvents = await this.accountRelay.getMany<NostrEvent>(
+        {
+          authors: [pubkey],
+          kinds: BACKUP_RELAY_EVENT_KINDS,
+        },
+        { timeout: 8000 }
+      );
+
+      await Promise.all(
+        relayEvents.map(async event => {
+          try {
+            await this.database.saveReplaceableEvent(event);
+          } catch (error) {
+            this.logger.warn('Failed to cache relay backup event as replaceable, falling back to raw save', {
+              kind: event.kind,
+              eventId: event.id,
+              error,
+            });
+            await this.database.saveEvent(event);
+          }
+        })
+      );
+    } catch (error) {
+      this.logger.warn('Failed to backfill backup events from relays', { pubkey, error });
+    }
   }
 
   // Migration methods
