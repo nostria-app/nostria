@@ -30,12 +30,13 @@ import {
   EditMusicPlaylistDialogComponent,
   EditMusicPlaylistDialogData,
 } from '../../pages/music/edit-music-playlist-dialog/edit-music-playlist-dialog.component';
+import { MatDividerModule } from '@angular/material/divider';
 
 const MUSIC_KIND = 36787;
 
 @Component({
   selector: 'app-music-playlist-card',
-  imports: [MatIconModule, MatCardModule, MatButtonModule, MatMenuModule, MatSnackBarModule, MatProgressSpinnerModule, EditMusicPlaylistDialogComponent],
+  imports: [MatIconModule, MatCardModule, MatDividerModule, MatButtonModule, MatMenuModule, MatSnackBarModule, MatProgressSpinnerModule, EditMusicPlaylistDialogComponent],
   template: `
     <mat-card class="playlist-card">
       <div class="playlist-cover" [style.background]="gradient() || ''" (click)="playPlaylist($any($event))"
@@ -101,20 +102,27 @@ const MUSIC_KIND = 36787;
             <mat-icon>play_arrow</mat-icon>
             <span>Play All</span>
           </button>
+          <mat-divider></mat-divider>
           <button mat-menu-item (click)="likePlaylist($event)" [disabled]="isLiked()">
             <mat-icon>{{ isLiked() ? 'favorite' : 'favorite_border' }}</mat-icon>
             <span>{{ isLiked() ? 'Liked' : 'Like' }}</span>
           </button>
-          @if (isOwnPlaylist()) {
+
+          <button mat-menu-item (click)="sharePlaylist()">
+            <mat-icon>share</mat-icon>
+            <span>Share</span>
+          </button>
+          <button mat-menu-item (click)="zapCreator($event)">
+            <mat-icon>bolt</mat-icon>
+            <span>Zap Creator</span>
+          </button>
+          <mat-divider></mat-divider>
+           @if (isOwnPlaylist()) {
             <button mat-menu-item (click)="editPlaylist()">
               <mat-icon>edit</mat-icon>
               <span>Edit Playlist</span>
             </button>
           }
-          <button mat-menu-item (click)="sharePlaylist()">
-            <mat-icon>share</mat-icon>
-            <span>Share Playlist</span>
-          </button>
           <button mat-menu-item (click)="copyEventLink()">
             <mat-icon>link</mat-icon>
             <span>Copy Link</span>
@@ -123,10 +131,7 @@ const MUSIC_KIND = 36787;
             <mat-icon>data_object</mat-icon>
             <span>Copy Data</span>
           </button>
-          <button mat-menu-item (click)="zapCreator($event)">
-            <mat-icon>bolt</mat-icon>
-            <span>Zap Creator</span>
-          </button>
+
         </mat-menu>
       </mat-card-content>
     </mat-card>

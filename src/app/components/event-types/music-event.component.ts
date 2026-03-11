@@ -31,10 +31,11 @@ import { CreateMusicPlaylistDialogComponent, CreateMusicPlaylistDialogData } fro
 import { MusicTrackDialogComponent, MusicTrackDialogData } from '../../pages/music/music-track-dialog/music-track-dialog.component';
 import { UserProfileComponent } from '../user-profile/user-profile.component';
 import { DateToggleComponent } from '../date-toggle/date-toggle.component';
+import { MatDividerModule } from '@angular/material/divider';
 
 @Component({
   selector: 'app-music-event',
-  imports: [MatIconModule, MatButtonModule, MatMenuModule, MatSnackBarModule, MatProgressSpinnerModule, MatChipsModule, MusicTrackDialogComponent, CreateMusicPlaylistDialogComponent, UserProfileComponent, DateToggleComponent],
+  imports: [MatIconModule, MatButtonModule, MatMenuModule, MatDividerModule, MatSnackBarModule, MatProgressSpinnerModule, MatChipsModule, MusicTrackDialogComponent, CreateMusicPlaylistDialogComponent, UserProfileComponent, DateToggleComponent],
   template: `
     <!-- Card mode: Vertical layout for grid views -->
     @if (mode() === 'card') {
@@ -155,34 +156,45 @@ import { DateToggleComponent } from '../date-toggle/date-toggle.component';
     
     <!-- Shared menu for both modes -->
     <mat-menu #menu="matMenu">
-      @if (isOwnTrack()) {
-        <button mat-menu-item (click)="editTrack()">
-          <mat-icon>edit</mat-icon>
-          <span>Edit Track</span>
-        </button>
-      }
+
       <button mat-menu-item (click)="playTrack($any($event))">
         <mat-icon>{{ isCurrentTrackPlaying() ? 'pause' : 'play_arrow' }}</mat-icon>
         <span>{{ isCurrentTrackPlaying() ? 'Pause' : 'Play Now' }}</span>
       </button>
+      <button mat-menu-item (click)="addToQueue()">
+        <mat-icon>queue_music</mat-icon>
+        <span>Add to Queue</span>
+      </button>
+            @if (isAuthenticated()) {
+        <button mat-menu-item [matMenuTriggerFor]="playlistMenu" (click)="loadPlaylists()">
+          <mat-icon>playlist_add</mat-icon>
+          <span>Add to Playlist</span>
+        </button>
+      }
+      <mat-divider></mat-divider>
       @if (isAuthenticated()) {
         <button mat-menu-item (click)="likeTrack($any($event))" [disabled]="isLiked()">
           <mat-icon>{{ isLiked() ? 'favorite' : 'favorite_border' }}</mat-icon>
           <span>{{ isLiked() ? 'Liked' : 'Like' }}</span>
         </button>
       }
-      <button mat-menu-item (click)="addToQueue()">
-        <mat-icon>queue_music</mat-icon>
-        <span>Add to Queue</span>
-      </button>
+
       <button mat-menu-item (click)="shareTrack()">
         <mat-icon>share</mat-icon>
-        <span>Share Track</span>
+        <span>Share</span>
       </button>
       @if (isAuthenticated()) {
-        <button mat-menu-item [matMenuTriggerFor]="playlistMenu" (click)="loadPlaylists()">
-          <mat-icon>playlist_add</mat-icon>
-          <span>Add to Playlist</span>
+        <button mat-menu-item (click)="zapArtist($any($event))">
+          <mat-icon>bolt</mat-icon>
+          <span>Zap Creator</span>
+        </button>
+      }
+
+      <mat-divider></mat-divider>
+        @if (isOwnTrack()) {
+        <button mat-menu-item (click)="editTrack()">
+          <mat-icon>edit</mat-icon>
+          <span>Edit Track</span>
         </button>
       }
       <button mat-menu-item (click)="copyEventLink()">
@@ -193,12 +205,7 @@ import { DateToggleComponent } from '../date-toggle/date-toggle.component';
         <mat-icon>data_object</mat-icon>
         <span>Copy Data</span>
       </button>
-      @if (isAuthenticated()) {
-        <button mat-menu-item (click)="zapArtist($any($event))">
-          <mat-icon>bolt</mat-icon>
-          <span>Zap Creator</span>
-        </button>
-      }
+
     </mat-menu>
     <mat-menu #playlistMenu="matMenu">
       <button mat-menu-item (click)="createNewPlaylist()">
