@@ -87,6 +87,7 @@ export class MusicArtistComponent implements OnInit, OnDestroy {
   private subscriptions: { close: () => void }[] = [];
   private trackMap = new Map<string, Event>();
   private playlistMap = new Map<string, Event>();
+  private hasResolvedInitialTabSelection = false;
 
   // Check if viewing own profile
   isOwnProfile = computed(() => {
@@ -170,9 +171,11 @@ export class MusicArtistComponent implements OnInit, OnDestroy {
       }
 
       this.pubkey.set(decodedPubkey);
+      this.hasResolvedInitialTabSelection = false;
       this.loadArtistContent(decodedPubkey);
     } else {
       this.loading.set(false);
+      this.maybeSelectInitialTab();
     }
   }
 
@@ -189,6 +192,7 @@ export class MusicArtistComponent implements OnInit, OnDestroy {
       this.logger.warn('No relays available');
       if (!hadCachedData) {
         this.loading.set(false);
+        this.maybeSelectInitialTab();
       }
       return;
     }
@@ -198,6 +202,7 @@ export class MusicArtistComponent implements OnInit, OnDestroy {
     const timeout = setTimeout(() => {
       if (this.loading()) {
         this.loading.set(false);
+        this.maybeSelectInitialTab();
       }
     }, 5000);
 
@@ -225,6 +230,7 @@ export class MusicArtistComponent implements OnInit, OnDestroy {
       this.trackMap.set(uniqueId, event);
       this.updateTracks();
       this.loading.set(false);
+      this.maybeSelectInitialTab();
 
       this.database.saveEvent({ ...event, dTag }).catch((err: unknown) => {
         this.logger.warn('[MusicArtist] Failed to save track to database:', err);
@@ -255,6 +261,7 @@ export class MusicArtistComponent implements OnInit, OnDestroy {
       this.playlistMap.set(uniqueId, event);
       this.updatePlaylists();
       this.loading.set(false);
+      this.maybeSelectInitialTab();
 
       this.database.saveEvent({ ...event, dTag }).catch((err: unknown) => {
         this.logger.warn('[MusicArtist] Failed to save playlist to database:', err);
@@ -297,6 +304,7 @@ export class MusicArtistComponent implements OnInit, OnDestroy {
       const hasCachedData = this.trackMap.size > 0 || this.playlistMap.size > 0;
       if (hasCachedData) {
         this.loading.set(false);
+        this.maybeSelectInitialTab();
       }
 
       return hasCachedData;
@@ -407,6 +415,24 @@ export class MusicArtistComponent implements OnInit, OnDestroy {
     const playlists = Array.from(this.playlistMap.values())
       .sort((a, b) => b.created_at - a.created_at);
     this.playlists.set(playlists);
+  }
+
+  private maybeSelectInitialTab(): void {
+    if (this.hasResolvedInitialTabSelection) {
+      return;
+    }
+
+    if (this.playlistMap.size > 0) {
+      this.hasResolvedInitialTabSelection = true;
+      return;
+    }
+
+    if (this.loading()) {
+      return;
+    }
+
+    this.selectedTabIndex.set(1);
+    this.hasResolvedInitialTabSelection = true;
   }
 
   onTabChange(index: number): void {
