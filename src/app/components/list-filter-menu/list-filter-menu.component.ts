@@ -32,88 +32,93 @@ export type MusicTrackSortValue = 'released' | 'published';
   ],
   template: `
     <app-filter-button [active]="isFilterActive()" [tooltip]="'Filter by: ' + filterTitle()">
-      <div class="filter-panel" (click)="$event.stopPropagation()">
-        <!-- Filter Options -->
-        @if (showPublicOption()) {
-        <button
-          class="filter-option-chip"
-          [class.selected]="selectedFilter() === 'all'"
-          (click)="selectFilter('all')">
-          <mat-icon class="chip-icon">public</mat-icon>
-          <div class="chip-text">
-            <span class="chip-label">Public</span>
-            <span class="chip-description">All public content</span>
-          </div>
-        </button>
-        }
+      <div class="filter-panel" [class.music-layout]="storageKey() === 'music'" (click)="$event.stopPropagation()">
+        <div class="filter-sections" [class.music-layout]="storageKey() === 'music'">
+          <div class="filter-section list-section">
+            <div class="section-title">List filter</div>
 
-        <button
-          class="filter-option-chip"
-          [class.selected]="selectedFilter() === 'following'"
-          (click)="selectFilter('following')">
-          <mat-icon class="chip-icon">people</mat-icon>
-          <div class="chip-text">
-            <span class="chip-label">Following</span>
-            <span class="chip-description">People you follow</span>
-          </div>
-        </button>
+            @if (showPublicOption()) {
+            <button
+              class="filter-option-chip"
+              [class.selected]="selectedFilter() === 'all'"
+              (click)="selectFilter('all')">
+              <mat-icon class="chip-icon">public</mat-icon>
+              <div class="chip-text">
+                <span class="chip-label">Public</span>
+                <span class="chip-description">All public content</span>
+              </div>
+            </button>
+            }
 
-        @if (favoritesSet(); as favorites) {
-        <button
-          class="filter-option-chip"
-          [class.selected]="selectedFilter() === 'nostria-favorites'"
-          (click)="selectFilter('nostria-favorites')">
-          <mat-icon class="chip-icon">star</mat-icon>
-          <div class="chip-text">
-            <span class="chip-label">Favorites</span>
-            <span class="chip-description">{{ favorites.pubkeys.length }} people</span>
-          </div>
-        </button>
-        }
+            <button
+              class="filter-option-chip"
+              [class.selected]="selectedFilter() === 'following'"
+              (click)="selectFilter('following')">
+              <mat-icon class="chip-icon">people</mat-icon>
+              <div class="chip-text">
+                <span class="chip-label">Following</span>
+                <span class="chip-description">People you follow</span>
+              </div>
+            </button>
 
-        @if (otherFollowSets().length > 0) {
-        <mat-divider></mat-divider>
-        @for (set of otherFollowSets(); track set.id) {
-        <button
-          class="filter-option-chip"
-          [class.selected]="selectedFilter() === set.dTag"
-          (click)="selectFilter(set.dTag)">
-          <mat-icon class="chip-icon">{{ set.isPrivate ? 'lock' : 'group' }}</mat-icon>
-          <div class="chip-text">
-            <span class="chip-label">{{ set.title }}</span>
-            <span class="chip-description">{{ set.pubkeys.length }} people</span>
-          </div>
-        </button>
-        }
-        }
+            @if (favoritesSet(); as favorites) {
+            <button
+              class="filter-option-chip"
+              [class.selected]="selectedFilter() === 'nostria-favorites'"
+              (click)="selectFilter('nostria-favorites')">
+              <mat-icon class="chip-icon">star</mat-icon>
+              <div class="chip-text">
+                <span class="chip-label">Favorites</span>
+                <span class="chip-description">{{ favorites.pubkeys.length }} people</span>
+              </div>
+            </button>
+            }
 
-        @if (storageKey() === 'music') {
-        <mat-divider></mat-divider>
-        <div class="section-title">Songs sort by</div>
-        <button
-          class="filter-option-chip"
-          [class.selected]="selectedMusicTrackSort() === 'released'"
-          (click)="selectMusicTrackSort('released')">
-          <mat-icon class="chip-icon">event</mat-icon>
-          <div class="chip-text">
-            <span class="chip-label">Released</span>
-            <span class="chip-description">Use release date, then fall back to published</span>
+            @if (otherFollowSets().length > 0) {
+            <mat-divider></mat-divider>
+            @for (set of otherFollowSets(); track set.id) {
+            <button
+              class="filter-option-chip"
+              [class.selected]="selectedFilter() === set.dTag"
+              (click)="selectFilter(set.dTag)">
+              <mat-icon class="chip-icon">{{ set.isPrivate ? 'lock' : 'group' }}</mat-icon>
+              <div class="chip-text">
+                <span class="chip-label">{{ set.title }}</span>
+                <span class="chip-description">{{ set.pubkeys.length }} people</span>
+              </div>
+            </button>
+            }
+            }
           </div>
-        </button>
 
-        <button
-          class="filter-option-chip"
-          [class.selected]="selectedMusicTrackSort() === 'published'"
-          (click)="selectMusicTrackSort('published')">
-          <mat-icon class="chip-icon">schedule</mat-icon>
-          <div class="chip-text">
-            <span class="chip-label">Published</span>
-            <span class="chip-description">Use the event publish time</span>
+          @if (storageKey() === 'music') {
+          <div class="filter-section sort-section">
+            <div class="section-title">Songs sort by</div>
+            <button
+              class="filter-option-chip"
+              [class.selected]="selectedMusicTrackSort() === 'released'"
+              (click)="selectMusicTrackSort('released')">
+              <mat-icon class="chip-icon">event</mat-icon>
+              <div class="chip-text">
+                <span class="chip-label">Released</span>
+                <span class="chip-description">Use release date, then fall back to published</span>
+              </div>
+            </button>
+
+            <button
+              class="filter-option-chip"
+              [class.selected]="selectedMusicTrackSort() === 'published'"
+              (click)="selectMusicTrackSort('published')">
+              <mat-icon class="chip-icon">schedule</mat-icon>
+              <div class="chip-text">
+                <span class="chip-label">Published</span>
+                <span class="chip-description">Use the event publish time</span>
+              </div>
+            </button>
           </div>
-        </button>
-        }
+          }
+        </div>
 
-        <!-- Actions Row -->
         <div class="actions-row">
           <button mat-stroked-button class="action-btn" (click)="resetSelections()">
             Reset
@@ -136,6 +141,35 @@ export type MusicTrackSortValue = 'released' | 'published';
       border-radius: 12px;
       border: 1px solid var(--mat-sys-outline-variant);
       box-sizing: border-box;
+    }
+
+    .filter-panel.music-layout {
+      max-width: 640px;
+    }
+
+    .filter-sections {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .filter-sections.music-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1.4fr) minmax(240px, 1fr);
+      gap: 1rem;
+      align-items: start;
+    }
+
+    .filter-section {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      min-width: 0;
+    }
+
+    .sort-section {
+      padding-left: 1rem;
+      border-left: 1px solid var(--mat-sys-outline-variant);
     }
 
     .filter-option-chip {
@@ -222,6 +256,23 @@ export type MusicTrackSortValue = 'released' | 'published';
     .action-btn {
       flex: 1;
       font-size: 0.8125rem;
+    }
+
+    @media (max-width: 720px) {
+      .filter-panel.music-layout {
+        max-width: 420px;
+      }
+
+      .filter-sections.music-layout {
+        grid-template-columns: 1fr;
+      }
+
+      .sort-section {
+        padding-left: 0;
+        border-left: none;
+        border-top: 1px solid var(--mat-sys-outline-variant);
+        padding-top: 1rem;
+      }
     }
   `],
   changeDetection: ChangeDetectionStrategy.OnPush,
