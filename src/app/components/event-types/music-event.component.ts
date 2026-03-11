@@ -62,8 +62,9 @@ import { DateToggleComponent } from '../date-toggle/date-toggle.component';
           
           <!-- Hover actions -->
           <button mat-icon-button class="play-overlay media-action-button media-primary-action" (click)="playTrack($any($event))"
-            aria-label="Play now" title="Play Now">
-            <mat-icon>play_arrow</mat-icon>
+            [attr.aria-label]="isCurrentTrackPlaying() ? 'Pause track' : 'Play now'"
+            [title]="isCurrentTrackPlaying() ? 'Pause' : 'Play Now'">
+            <mat-icon>{{ isCurrentTrackPlaying() ? 'pause' : 'play_arrow' }}</mat-icon>
           </button>
 
           <div class="hover-action-row">
@@ -141,8 +142,9 @@ import { DateToggleComponent } from '../date-toggle/date-toggle.component';
         <!-- Action buttons -->
         <div class="music-actions">
           <button mat-icon-button class="play-btn" (click)="playTrack($any($event))" 
-            aria-label="Play now" title="Play Now">
-            <mat-icon>play_arrow</mat-icon>
+            [attr.aria-label]="isCurrentTrackPlaying() ? 'Pause track' : 'Play now'"
+            [title]="isCurrentTrackPlaying() ? 'Pause' : 'Play Now'">
+            <mat-icon>{{ isCurrentTrackPlaying() ? 'pause' : 'play_arrow' }}</mat-icon>
           </button>
           <button mat-icon-button [matMenuTriggerFor]="menu" (click)="$event.stopPropagation()" aria-label="More options">
             <mat-icon>more_vert</mat-icon>
@@ -160,8 +162,8 @@ import { DateToggleComponent } from '../date-toggle/date-toggle.component';
         </button>
       }
       <button mat-menu-item (click)="playTrack($any($event))">
-        <mat-icon>play_arrow</mat-icon>
-        <span>Play Now</span>
+        <mat-icon>{{ isCurrentTrackPlaying() ? 'pause' : 'play_arrow' }}</mat-icon>
+        <span>{{ isCurrentTrackPlaying() ? 'Pause' : 'Play Now' }}</span>
       </button>
       @if (isAuthenticated()) {
         <button mat-menu-item (click)="likeTrack($any($event))" [disabled]="isLiked()">
@@ -945,6 +947,21 @@ export class MusicEventComponent {
   private _isLiked = signal(false);
   isLiked = this._isLiked.asReadonly();
 
+  isCurrentTrackPlaying = computed(() => {
+    const currentItem = this.mediaPlayer.current();
+    const currentSource = this.audioUrl();
+
+    if (!currentItem || currentItem.type !== 'Music' || !currentSource || this.mediaPlayer.paused) {
+      return false;
+    }
+
+    const sameEvent = !!this.identifier()
+      && currentItem.eventIdentifier === this.identifier()
+      && currentItem.eventPubkey === this.artistNpub();
+
+    return sameEvent || currentItem.source === currentSource;
+  });
+
   // Get artist name from event tag first, then profile as fallback
   artistName = computed(() => {
     const event = this.event();
@@ -1004,6 +1021,26 @@ export class MusicEventComponent {
       event.preventDefault();
     }
     event.stopPropagation();
+
+    const currentItem = this.mediaPlayer.current();
+    const currentSource = this.audioUrl();
+    const sameCurrentTrack = !!currentItem
+      && currentItem.type === 'Music'
+      && (
+        (!!this.identifier()
+          && currentItem.eventIdentifier === this.identifier()
+          && currentItem.eventPubkey === this.artistNpub())
+        || (!!currentSource && currentItem.source === currentSource)
+      );
+
+    if (sameCurrentTrack) {
+      if (this.mediaPlayer.paused) {
+        void this.mediaPlayer.resume();
+      } else {
+        this.mediaPlayer.pause();
+      }
+      return;
+    }
 
     const url = this.audioUrl();
     if (!url) {
