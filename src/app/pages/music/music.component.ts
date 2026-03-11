@@ -239,6 +239,10 @@ export class MusicComponent implements OnDestroy {
     return false;
   }
 
+  private isPrivatePlaylist(playlist: Event): boolean {
+    return playlist.tags.some(tag => tag[0] === 'private' && tag[1] === 'true');
+  }
+
   // Filtered tracks and playlists based on search
   private filteredTracks = computed(() => {
     const query = this.searchQuery().trim();
@@ -272,7 +276,8 @@ export class MusicComponent implements OnDestroy {
     const pubkeys = this.filterPubkeys();
 
     let playlists = this.filteredPlaylists()
-      .filter(p => p.pubkey !== myPubkey);
+      .filter(p => p.pubkey !== myPubkey)
+      .filter(p => !this.isPrivatePlaylist(p));
 
     // Apply filter
     if (pubkeys !== null) {
@@ -331,6 +336,7 @@ export class MusicComponent implements OnDestroy {
     if (following.length === 0) return [];
     return this.filteredPlaylists()
       .filter(p => following.includes(p.pubkey) && p.pubkey !== myPubkey)
+      .filter(p => !this.isPrivatePlaylist(p))
       .sort((a, b) => b.created_at - a.created_at);
   });
 
@@ -347,6 +353,7 @@ export class MusicComponent implements OnDestroy {
     const myPubkey = this.currentPubkey();
     return this.filteredPlaylists()
       .filter(p => !following.includes(p.pubkey) && p.pubkey !== myPubkey)
+      .filter(p => !this.isPrivatePlaylist(p))
       .sort((a, b) => b.created_at - a.created_at);
   });
 

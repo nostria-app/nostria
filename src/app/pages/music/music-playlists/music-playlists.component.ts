@@ -416,13 +416,17 @@ export class MusicPlaylistsComponent implements OnInit, OnDestroy, AfterViewInit
     return false;
   }
 
+  private isPrivatePlaylist(playlist: Event): boolean {
+    return playlist.tags.some(tag => tag[0] === 'private' && tag[1] === 'true');
+  }
+
   filteredPlaylists = computed(() => {
     const playlists = this.allPlaylists();
     const myPubkey = this.currentPubkey();
     const pubkeys = this.filterPubkeys();
     const sort = this.sortBy();
 
-    let filtered = [...playlists];
+    let filtered = playlists.filter(playlist => !this.isPrivatePlaylist(playlist));
 
     // Apply pubkey filter
     if (pubkeys !== null) {
