@@ -11,7 +11,7 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
-import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
+import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, AbstractControl, ValidationErrors } from '@angular/forms';
 import { Event, nip19 } from 'nostr-tools';
 import { parseBlob, selectCover } from 'music-metadata';
 import { MediaService } from '../../../services/media.service';
@@ -28,6 +28,7 @@ import { ConfirmDialogComponent } from '../../../components/confirm-dialog/confi
 import { MentionAutocompleteComponent, MentionAutocompleteConfig, MentionSelection } from '../../../components/mention-autocomplete/mention-autocomplete.component';
 import { MentionInputService } from '../../../services/mention-input.service';
 import { RelayPublishSelectorComponent, RelayPublishConfig } from '../../../components/relay-publish-selector/relay-publish-selector.component';
+import { formatDuration } from '../../../utils/format-duration';
 
 const MUSIC_KIND = 36787;
 
@@ -178,6 +179,7 @@ export class MusicTrackDialogComponent {
   constructor() {
     this.trackForm = this.fb.group({
       title: ['', [Validators.required, Validators.minLength(1)]],
+      duration: ['', [this.durationValidator]],
       genres: [[]],
       artistNpub: [''],
       artistName: [''],
@@ -272,6 +274,12 @@ export class MusicTrackDialogComponent {
     // Extract artist name
     const artistName = track.tags.find(t => t[0] === 'artist')?.[1] || '';
 
+    // Extract duration from tag (stored in seconds)
+    const durationSeconds = this.utilities.getDurationTag(track);
+    const duration = durationSeconds && durationSeconds > 0
+      ? formatDuration(durationSeconds)
+      : '';
+
     // Extract AI flag (check both 'ai_generated' and legacy 'ai' tag)
     const aiGenerated = track.tags.find(t => t[0] === 'ai_generated')?.[1] === 'true' ||
       track.tags.find(t => t[0] === 'ai')?.[1] === 'true';
@@ -362,6 +370,7 @@ export class MusicTrackDialogComponent {
     // Set form values
     this.trackForm.patchValue({
       title,
+      duration,
       genres,
       artistNpub,
       artistName,
@@ -490,6 +499,45 @@ export class MusicTrackDialogComponent {
     this.currentGradient.set(this.getRandomGradient());
     this.coverImage.set(null);
     this.trackForm.patchValue({ imageUrl: '' });
+  }
+
+  private durationValidator(control: AbstractControl): ValidationErrors | null {
+    const value = String(control.value || '').trim();
+    if (!value) {
+      return null;
+    }
+
+    // Accept formats like "3:45", "1:23:45", or "225" (seconds)
+    const durationPattern = /^(\d+:)?\d{1,2}:\d{2}$|^\d+$/;
+
+    return durationPattern.test(value) ? null : { invalidDuration: true };
+  }
+
+  private parseDurationToSeconds(duration: string): number | null {
+    const value = duration.trim();
+    if (!value) {
+      return null;
+    }
+
+    if (value.includes(':')) {
+      const parts = value.split(':').map(part => parseInt(part, 10));
+      if (parts.some(part => Number.isNaN(part))) {
+        return null;
+      }
+
+      if (parts.length === 2) {
+        return parts[0] * 60 + parts[1];
+      }
+
+      if (parts.length === 3) {
+        return parts[0] * 3600 + parts[1] * 60 + parts[2];
+      }
+
+      return null;
+    }
+
+    const seconds = parseInt(value, 10);
+    return Number.isNaN(seconds) ? null : seconds;
   }
 
   // Extract SHA256 hash from a blossom URL
@@ -688,6 +736,13 @@ export class MusicTrackDialogComponent {
       const currentArtist = this.trackForm.get('artistName')?.value;
       if ((forceUpdate || !currentArtist) && metadata.common.artist) {
         this.trackForm.patchValue({ artistName: metadata.common.artist });
+      }
+
+      // Auto-fill duration from audio metadata (update if forceUpdate or empty)
+      const currentDuration = this.trackForm.get('duration')?.value;
+      const durationSeconds = metadata.format.duration ? Math.round(metadata.format.duration) : 0;
+      if ((forceUpdate || !currentDuration) && durationSeconds > 0) {
+        this.trackForm.patchValue({ duration: formatDuration(durationSeconds) });
       }
 
       // Auto-fill album (update if forceUpdate or empty)
@@ -1144,6 +1199,13 @@ export class MusicTrackDialogComponent {
 
       if (formValue.trackNumber) {
         tags.push(['track_number', String(formValue.trackNumber)]);
+      }
+
+      const durationSeconds = formValue.duration
+        ? this.parseDurationToSeconds(String(formValue.duration))
+        : null;
+      if (durationSeconds && durationSeconds > 0) {
+        tags.push(['duration', String(durationSeconds)]);
       }
 
       if (formValue.releaseDate) {

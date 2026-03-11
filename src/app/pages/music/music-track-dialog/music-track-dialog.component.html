@@ -42,7 +42,7 @@
           <div class="audio-selected">
             <mat-icon>audio_file</mat-icon>
             <span>{{ audioFile()!.name }}</span>
-            <button mat-icon-button (click)="selectAudioFile()" aria-label="Change file">
+            <button mat-icon-button type="button" (click)="selectAudioFile()" aria-label="Change file">
               <mat-icon>edit</mat-icon>
             </button>
           </div>
@@ -109,6 +109,15 @@
       <mat-form-field appearance="outline" class="full-width">
         <mat-label>Track Title</mat-label>
         <input matInput formControlName="title" placeholder="Summer Nights" required />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Duration</mat-label>
+        <input matInput formControlName="duration" placeholder="3:45 or 225" autocomplete="off" />
+        @if (trackForm.get('duration')?.hasError('invalidDuration')) {
+        <mat-error>Use format like "3:45" or "225" (seconds)</mat-error>
+        }
+        <mat-hint>Format: mm:ss, h:mm:ss, or seconds</mat-hint>
       </mat-form-field>
 
       <!-- Album Art -->
@@ -216,7 +225,7 @@
           <div class="split-item">
             <div class="split-avatar">
               @if (split.avatar) {
-              <img [src]="split.avatar" [alt]="split.name" />
+              <img [src]="split.avatar" [alt]="split.name" title="Recipient avatar" />
               } @else {
               <mat-icon>person</mat-icon>
               }
@@ -227,7 +236,7 @@
                 split.percentage }}% of zaps</span>
             </div>
             <div class="split-controls">
-              <input type="number" [value]="split.percentage" min="0" max="100"
+              <input type="number" [value]="split.percentage" min="0" max="100" title="Split percentage" placeholder="0"
                 (input)="updateSplitPercentage(i, +$any($event.target).value)" />
               <span>%</span>
               <button mat-icon-button type="button" (click)="removeSplit(i)" aria-label="Remove recipient">
@@ -275,7 +284,7 @@
 
           <mat-form-field appearance="outline" class="full-width">
             <mat-label>Release Date</mat-label>
-            <input matInput formControlName="releaseDate" type="date" />
+            <input matInput formControlName="releaseDate" type="date" placeholder="YYYY-MM-DD" />
           </mat-form-field>
 
           <div class="row-2">
