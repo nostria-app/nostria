@@ -19,6 +19,7 @@ import { AccountLocalStateService } from '../../services/account-local-state.ser
 import { FilterButtonComponent } from '../filter-button/filter-button.component';
 
 export type ListFilterValue = 'all' | 'following' | string;
+export type MusicTrackSortValue = 'released' | 'published';
 
 @Component({
   selector: 'app-list-filter-menu',
@@ -86,9 +87,35 @@ export type ListFilterValue = 'all' | 'following' | string;
         }
         }
 
+        @if (storageKey() === 'music') {
+        <mat-divider></mat-divider>
+        <div class="section-title">Songs sort by</div>
+        <button
+          class="filter-option-chip"
+          [class.selected]="selectedMusicTrackSort() === 'released'"
+          (click)="selectMusicTrackSort('released')">
+          <mat-icon class="chip-icon">event</mat-icon>
+          <div class="chip-text">
+            <span class="chip-label">Released</span>
+            <span class="chip-description">Use release date, then fall back to published</span>
+          </div>
+        </button>
+
+        <button
+          class="filter-option-chip"
+          [class.selected]="selectedMusicTrackSort() === 'published'"
+          (click)="selectMusicTrackSort('published')">
+          <mat-icon class="chip-icon">schedule</mat-icon>
+          <div class="chip-text">
+            <span class="chip-label">Published</span>
+            <span class="chip-description">Use the event publish time</span>
+          </div>
+        </button>
+        }
+
         <!-- Actions Row -->
         <div class="actions-row">
-          <button mat-stroked-button class="action-btn" (click)="selectFilter(defaultFilter())">
+          <button mat-stroked-button class="action-btn" (click)="resetSelections()">
             Reset
           </button>
         </div>
@@ -178,6 +205,14 @@ export type ListFilterValue = 'all' | 'following' | string;
       margin: 0.25rem 0;
     }
 
+    .section-title {
+      color: var(--mat-sys-on-surface-variant);
+      font-size: 0.75rem;
+      letter-spacing: 0.03em;
+      padding: 0 0.25rem;
+      text-transform: uppercase;
+    }
+
     .actions-row {
       display: flex;
       gap: 0.5rem;
@@ -205,9 +240,11 @@ export class ListFilterMenuComponent implements OnInit {
   // Outputs
   filterChanged = output<ListFilterValue>();
   followSetChanged = output<FollowSet | null>();
+  musicTrackSortChanged = output<MusicTrackSortValue>();
 
   // Internal state
   selectedFilter = signal<ListFilterValue>('following');
+  selectedMusicTrackSort = signal<MusicTrackSortValue>('released');
 
   // Computed: all follow sets
   private allFollowSets = computed(() => this.followSetsService.followSets());
@@ -233,16 +270,29 @@ export class ListFilterMenuComponent implements OnInit {
 
   // Computed: whether filter is active (different from default)
   isFilterActive = computed(() => {
-    return this.selectedFilter() !== this.defaultFilter();
+    return this.selectedFilter() !== this.defaultFilter()
+      || (this.storageKey() === 'music' && this.selectedMusicTrackSort() !== 'released');
   });
 
   // Computed: filter title for tooltip
   filterTitle = computed(() => {
     const filter = this.selectedFilter();
-    if (filter === 'all') return 'Public';
-    if (filter === 'following') return 'Following';
-    const followSet = this.selectedFollowSet();
-    return followSet?.title || 'Filter';
+    let title = 'Filter';
+
+    if (filter === 'all') {
+      title = 'Public';
+    } else if (filter === 'following') {
+      title = 'Following';
+    } else {
+      const followSet = this.selectedFollowSet();
+      title = followSet?.title || 'Filter';
+    }
+
+    if (this.storageKey() === 'music') {
+      return `${title} · Songs: ${this.selectedMusicTrackSort() === 'released' ? 'Released' : 'Published'}`;
+    }
+
+    return title;
   });
 
   constructor() {
@@ -253,6 +303,16 @@ export class ListFilterMenuComponent implements OnInit {
   }
 
   ngOnInit() {
+    const pubkey = this.accountState.pubkey();
+
+    if (this.storageKey() === 'music') {
+      const savedSort = pubkey
+        ? this.accountLocalState.getMusicTrackSort(pubkey)
+        : 'released';
+      this.selectedMusicTrackSort.set(savedSort as MusicTrackSortValue);
+      this.musicTrackSortChanged.emit(savedSort as MusicTrackSortValue);
+    }
+
     // Check for initial filter from URL query params first (takes precedence)
     const urlFilter = this.initialFilter();
     if (urlFilter) {
@@ -262,7 +322,6 @@ export class ListFilterMenuComponent implements OnInit {
     }
 
     // Load persisted filter from storage
-    const pubkey = this.accountState.pubkey();
     if (pubkey) {
       const key = this.storageKey();
       let savedFilter: string;
@@ -313,6 +372,23 @@ export class ListFilterMenuComponent implements OnInit {
           this.accountLocalState.setMusicListFilter(pubkey, filter);
           break;
       }
+    }
+  }
+
+  selectMusicTrackSort(sort: MusicTrackSortValue) {
+    this.selectedMusicTrackSort.set(sort);
+    this.musicTrackSortChanged.emit(sort);
+
+    const pubkey = this.accountState.pubkey();
+    if (pubkey && this.storageKey() === 'music') {
+      this.accountLocalState.setMusicTrackSort(pubkey, sort);
+    }
+  }
+
+  resetSelections() {
+    this.selectFilter(this.defaultFilter());
+    if (this.storageKey() === 'music') {
+      this.selectMusicTrackSort('released');
     }
   }
 }

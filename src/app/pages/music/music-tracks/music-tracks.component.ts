@@ -12,10 +12,11 @@ import { UtilitiesService } from '../../../services/utilities.service';
 import { ReportingService } from '../../../services/reporting.service';
 import { AccountStateService } from '../../../services/account-state.service';
 import { ApplicationService } from '../../../services/application.service';
+import { AccountLocalStateService } from '../../../services/account-local-state.service';
 import { MusicDataService } from '../../../services/music-data.service';
 import { MusicEventComponent } from '../../../components/event-types/music-event.component';
 import { FollowSetsService } from '../../../services/follow-sets.service';
-import { ListFilterMenuComponent, ListFilterValue } from '../../../components/list-filter-menu/list-filter-menu.component';
+import { ListFilterMenuComponent, ListFilterValue, MusicTrackSortValue } from '../../../components/list-filter-menu/list-filter-menu.component';
 import { PanelNavigationService } from '../../../services/panel-navigation.service';
 import { LoggerService } from '../../../services/logger.service';
 
@@ -48,6 +49,7 @@ const PAGE_SIZE = 24;
           defaultFilter="all"
           [initialFilter]="urlListFilter()"
           (filterChanged)="onFilterChanged($event)"
+          (musicTrackSortChanged)="onMusicTrackSortChanged($event)"
         />
       }
       <button mat-icon-button (click)="toggleSearch()" [matTooltip]="showSearch() ? 'Close search' : 'Search songs'" class="hide-small">
@@ -70,15 +72,19 @@ const PAGE_SIZE = 24;
         </button>
       </mat-menu>
       <mat-menu #sortMenu="matMenu">
-        <button mat-menu-item (click)="sortBy.set('recents')">
-          <mat-icon>{{ sortBy() === 'recents' ? 'check' : '' }}</mat-icon>
-          <span>Recents</span>
+        <button mat-menu-item (click)="setSort('released')">
+          <mat-icon>{{ sortBy() === 'released' ? 'check' : '' }}</mat-icon>
+          <span>Released</span>
         </button>
-        <button mat-menu-item (click)="sortBy.set('alphabetical')">
+        <button mat-menu-item (click)="setSort('published')">
+          <mat-icon>{{ sortBy() === 'published' ? 'check' : '' }}</mat-icon>
+          <span>Published</span>
+        </button>
+        <button mat-menu-item (click)="setSort('alphabetical')">
           <mat-icon>{{ sortBy() === 'alphabetical' ? 'check' : '' }}</mat-icon>
           <span>Alphabetical</span>
         </button>
-        <button mat-menu-item (click)="sortBy.set('artist')">
+        <button mat-menu-item (click)="setSort('artist')">
           <mat-icon>{{ sortBy() === 'artist' ? 'check' : '' }}</mat-icon>
           <span>Artist</span>
         </button>
@@ -342,6 +348,7 @@ export class MusicTracksComponent implements OnInit, OnDestroy, AfterViewInit {
   private reporting = inject(ReportingService);
   private accountState = inject(AccountStateService);
   private app = inject(ApplicationService);
+  private accountLocalState = inject(AccountLocalStateService);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
   private musicData = inject(MusicDataService);
@@ -357,7 +364,7 @@ export class MusicTracksComponent implements OnInit, OnDestroy, AfterViewInit {
   loading = signal(true);
   loadingMore = signal(false);
   displayLimit = signal(PAGE_SIZE);
-  sortBy = signal<'recents' | 'alphabetical' | 'artist'>('recents');
+  sortBy = signal<'released' | 'published' | 'alphabetical' | 'artist'>('released');
 
   // Search functionality
   searchQuery = signal('');
@@ -438,6 +445,12 @@ export class MusicTracksComponent implements OnInit, OnDestroy, AfterViewInit {
 
     // Apply sorting
     switch (sort) {
+      case 'released':
+        return [...filtered].sort((a, b) => this.getTrackSortValue(b, 'released') - this.getTrackSortValue(a, 'released'));
+
+      case 'published':
+        return [...filtered].sort((a, b) => this.getTrackSortValue(b, 'published') - this.getTrackSortValue(a, 'published'));
+
       case 'alphabetical':
         return [...filtered].sort((a, b) => {
           const titleA = a.tags.find(t => t[0] === 'title')?.[1] || '';
@@ -452,7 +465,6 @@ export class MusicTracksComponent implements OnInit, OnDestroy, AfterViewInit {
           return artistA.localeCompare(artistB);
         });
 
-      case 'recents':
       default:
         return filtered;
     }
@@ -475,6 +487,11 @@ export class MusicTracksComponent implements OnInit, OnDestroy, AfterViewInit {
   });
 
   ngOnInit(): void {
+    const pubkey = this.accountState.pubkey();
+    if (pubkey) {
+      this.sortBy.set(this.accountLocalState.getMusicTrackSort(pubkey) as MusicTrackSortValue);
+    }
+
     // Check for input first (when opened via RightPanelService)
     const sourceFromInput = this.sourceInput();
     if (sourceFromInput) {
@@ -621,6 +638,61 @@ export class MusicTracksComponent implements OnInit, OnDestroy, AfterViewInit {
       queryParams: { list: filter },
       queryParamsHandling: 'merge',
     });
+  }
+
+  onMusicTrackSortChanged(sort: MusicTrackSortValue): void {
+    if (this.sortBy() === sort) {
+      return;
+    }
+
+    this.sortBy.set(sort);
+    this.displayLimit.set(PAGE_SIZE);
+  }
+
+  setSort(sort: 'released' | 'published' | 'alphabetical' | 'artist'): void {
+    this.sortBy.set(sort);
+    this.displayLimit.set(PAGE_SIZE);
+
+    if (sort === 'released' || sort === 'published') {
+      const pubkey = this.accountState.pubkey();
+      if (pubkey) {
+        this.accountLocalState.setMusicTrackSort(pubkey, sort);
+      }
+    }
+  }
+
+  private getTrackSortValue(track: Event, mode: MusicTrackSortValue): number {
+    if (mode === 'published') {
+      return this.getTrackPublishedSortValue(track);
+    }
+
+    return this.getTrackReleaseSortValue(track) ?? this.getTrackPublishedSortValue(track);
+  }
+
+  private getTrackPublishedSortValue(track: Event): number {
+    const publishedAt = track.tags.find(tag => tag[0] === 'published_at')?.[1]?.trim();
+    if (publishedAt) {
+      const parsed = Number.parseInt(publishedAt, 10);
+      if (!Number.isNaN(parsed)) {
+        return parsed * 1000;
+      }
+    }
+
+    return track.created_at * 1000;
+  }
+
+  private getTrackReleaseSortValue(track: Event): number | null {
+    const released = track.tags.find(tag => tag[0] === 'released')?.[1]?.trim();
+    if (!released) {
+      return null;
+    }
+
+    if (/^\d{4}$/.test(released)) {
+      return Date.UTC(Number.parseInt(released, 10), 0, 1);
+    }
+
+    const parsed = Date.parse(released);
+    return Number.isNaN(parsed) ? null : parsed;
   }
 
   loadMore(): void {

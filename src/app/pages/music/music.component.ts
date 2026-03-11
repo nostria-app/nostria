@@ -32,7 +32,7 @@ import { ImportRssDialogComponent } from './import-rss-dialog/import-rss-dialog.
 import { MusicSettingsDialogComponent } from './music-settings-dialog/music-settings-dialog.component';
 import { MusicPlaylist } from '../../services/music-playlist.service';
 import { MusicDataService } from '../../services/music-data.service';
-import { ListFilterMenuComponent, ListFilterValue } from '../../components/list-filter-menu/list-filter-menu.component';
+import { ListFilterMenuComponent, ListFilterValue, MusicTrackSortValue } from '../../components/list-filter-menu/list-filter-menu.component';
 import { LoggerService } from '../../services/logger.service';
 
 const MUSIC_KIND = 36787;
@@ -156,6 +156,7 @@ export class MusicComponent implements OnDestroy {
 
   // List filter state - 'all', 'following', or follow set d-tag
   selectedListFilter = signal<ListFilterValue>('all');
+  selectedTrackSort = signal<MusicTrackSortValue>('released');
 
   // Computed: get all follow sets for the dropdown
   allFollowSets = computed(() => this.followSetsService.followSets());
@@ -298,7 +299,7 @@ export class MusicComponent implements OnDestroy {
   listFilteredTracks = computed(() => {
     const pubkeys = this.filterPubkeys();
 
-    let tracks = this.filteredTracks();
+    let tracks = [...this.filteredTracks()];
 
     // Apply filter
     if (pubkeys !== null) {
@@ -306,7 +307,7 @@ export class MusicComponent implements OnDestroy {
       tracks = tracks.filter(t => pubkeys.includes(t.pubkey));
     }
 
-    return tracks.sort((a, b) => b.created_at - a.created_at);
+    return this.sortTracks(tracks);
   });
 
   listFilteredTracksPreview = computed(() => {
@@ -336,9 +337,7 @@ export class MusicComponent implements OnDestroy {
   followingTracks = computed(() => {
     const following = this.followingPubkeys();
     if (following.length === 0) return [];
-    return this.filteredTracks()
-      .filter(track => following.includes(track.pubkey))
-      .sort((a, b) => b.created_at - a.created_at);
+    return this.sortTracks(this.filteredTracks().filter(track => following.includes(track.pubkey)));
   });
 
   // === PLAYLISTS (PUBLIC) - for "Show all" navigation ===
@@ -353,9 +352,7 @@ export class MusicComponent implements OnDestroy {
   // === SONGS (PUBLIC) - for "Show all" navigation ===
   publicTracks = computed(() => {
     const following = this.followingPubkeys();
-    return this.filteredTracks()
-      .filter(track => !following.includes(track.pubkey))
-      .sort((a, b) => b.created_at - a.created_at);
+    return this.sortTracks(this.filteredTracks().filter(track => !following.includes(track.pubkey)));
   });
 
   // === ARTISTS ===
@@ -1234,6 +1231,48 @@ export class MusicComponent implements OnDestroy {
    */
   onListFilterChanged(filter: ListFilterValue): void {
     this.selectedListFilter.set(filter);
+  }
+
+  onTrackSortChanged(sort: MusicTrackSortValue): void {
+    this.selectedTrackSort.set(sort);
+  }
+
+  private sortTracks(tracks: Event[]): Event[] {
+    return [...tracks].sort((a, b) => this.getTrackSortValue(b) - this.getTrackSortValue(a));
+  }
+
+  private getTrackSortValue(track: Event): number {
+    if (this.selectedTrackSort() === 'published') {
+      return this.getTrackPublishedSortValue(track);
+    }
+
+    return this.getTrackReleaseSortValue(track) ?? this.getTrackPublishedSortValue(track);
+  }
+
+  private getTrackPublishedSortValue(track: Event): number {
+    const publishedAt = track.tags.find(tag => tag[0] === 'published_at')?.[1]?.trim();
+    if (publishedAt) {
+      const parsed = Number.parseInt(publishedAt, 10);
+      if (!Number.isNaN(parsed)) {
+        return parsed * 1000;
+      }
+    }
+
+    return track.created_at * 1000;
+  }
+
+  private getTrackReleaseSortValue(track: Event): number | null {
+    const released = track.tags.find(tag => tag[0] === 'released')?.[1]?.trim();
+    if (!released) {
+      return null;
+    }
+
+    if (/^\d{4}$/.test(released)) {
+      return Date.UTC(Number.parseInt(released, 10), 0, 1);
+    }
+
+    const parsed = Date.parse(released);
+    return Number.isNaN(parsed) ? null : parsed;
   }
 
   /**
