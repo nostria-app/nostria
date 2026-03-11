@@ -52,18 +52,18 @@
       <div class="reply-context-header">
         <div class="reply-context-title">
           <mat-icon class="reply-icon">reply</mat-icon>
-          <span class="reply-text">Replying to note</span>
+          <span class="reply-text">Replying to note by</span>
+
+          @if (replyPreviewPubkey()) {
+          <app-user-profile [pubkey]="replyPreviewPubkey()" view="list" class="reply-author" [disableLink]="true"
+            [disableHoverCard]="true" [hostWidthAuto]="true" [showRank]="false"></app-user-profile>
+          }
         </div>
 
         @if (replyPreviewShortId()) {
         <span class="reply-note-id">{{ replyPreviewShortId() }}</span>
         }
       </div>
-
-      @if (replyPreviewPubkey()) {
-      <app-user-profile [pubkey]="replyPreviewPubkey()" view="list" class="reply-author" [disableLink]="true"
-        [disableHoverCard]="true" [hostWidthAuto]="true" [showRank]="false"></app-user-profile>
-      }
 
       <div class="reply-preview">
         @if (replyPreviewText()) {

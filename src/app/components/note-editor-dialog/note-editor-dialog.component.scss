@@ -107,7 +107,7 @@
     display: flex;
     flex-direction: column;
     align-items: stretch;
-    gap: 10px;
+    gap: 8px;
 
     .reply-context-header {
       display: flex;
@@ -121,6 +121,7 @@
       align-items: center;
       gap: 8px;
       min-width: 0;
+      flex: 1 1 auto;
     }
 
     .reply-note-id {
@@ -133,6 +134,7 @@
       display: inline-flex;
       align-items: center;
       max-width: 100%;
+      min-width: 0;
 
       ::ng-deep .user-profile.list {
         width: auto;
@@ -155,6 +157,7 @@
 
       ::ng-deep .user-profile.list .user-profile-content {
         margin-left: 0;
+        min-width: 0;
       }
 
       ::ng-deep .user-profile.list .user-profile-npub-link,
@@ -167,6 +170,10 @@
       ::ng-deep .user-profile.list .user-profile-name {
         font-size: 13px;
         line-height: 1.2;
+      }
+
+      ::ng-deep .user-profile.list .user-profile-name-link {
+        max-width: 140px;
       }
     }
 
@@ -1483,6 +1490,10 @@
         ::ng-deep .user-profile.list app-profile-display-name,
         ::ng-deep .user-profile.list .user-profile-name {
           font-size: 12px;
+        }
+
+        ::ng-deep .user-profile.list .user-profile-name-link {
+          max-width: 110px;
         }
       }
 
