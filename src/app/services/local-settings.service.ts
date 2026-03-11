@@ -82,6 +82,8 @@ export interface LocalSettings {
   defaultReactionEmoji: string;
   /** Show the article editor formatting toolbar above the body editor. */
   articleEditorShowToolbar: boolean;
+  /** Lock app screen orientation to portrait mode when supported. */
+  lockScreenRotation: boolean;
 }
 
 const DEFAULT_LOCAL_SETTINGS: LocalSettings = {
@@ -108,6 +110,7 @@ const DEFAULT_LOCAL_SETTINGS: LocalSettings = {
   maxTaggedAccountsFilter: 100, // Filter mass-tagging by default
   defaultReactionEmoji: '❤️', // Default reaction sent on single-tap
   articleEditorShowToolbar: true,
+  lockScreenRotation: false,
 };
 
 /**
@@ -167,6 +170,7 @@ export class LocalSettingsService {
   readonly maxTaggedAccountsFilter = computed(() => this.settings().maxTaggedAccountsFilter ?? 100);
   readonly defaultReactionEmoji = computed(() => this.settings().defaultReactionEmoji ?? '❤️');
   readonly articleEditorShowToolbar = computed(() => this.settings().articleEditorShowToolbar ?? true);
+  readonly lockScreenRotation = computed(() => this.settings().lockScreenRotation ?? false);
 
   /** Default menu item IDs in order (used when no custom config is set) */
   private readonly defaultMenuIds = [
@@ -581,6 +585,13 @@ export class LocalSettingsService {
    */
   setArticleEditorShowToolbar(articleEditorShowToolbar: boolean): void {
     this.updateSettings({ articleEditorShowToolbar });
+  }
+
+  /**
+   * Set screen rotation lock preference.
+   */
+  setLockScreenRotation(lockScreenRotation: boolean): void {
+    this.updateSettings({ lockScreenRotation });
   }
 
   /**

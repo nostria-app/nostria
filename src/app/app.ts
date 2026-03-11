@@ -751,6 +751,11 @@ export class App implements OnInit, OnDestroy {
       }
     });
 
+    // Apply screen rotation lock preference on startup and whenever it changes.
+    effect(() => {
+      void this.applyScreenRotationPreference(this.localSettings.lockScreenRotation());
+    });
+
     if (!this.app.isBrowser()) {
       this.logger.info('[App] Not in browser environment, skipping browser-specific setup');
       return;
@@ -1126,6 +1131,27 @@ export class App implements OnInit, OnDestroy {
       // Initialize sidenav state after view is ready
       this.initializeSidenavState();
     });
+  }
+
+  private async applyScreenRotationPreference(lockRotation: boolean): Promise<void> {
+    if (!this.app.isBrowser() || typeof screen === 'undefined' || !('orientation' in screen)) {
+      return;
+    }
+
+    const orientation = screen.orientation as ScreenOrientation & {
+      lock?: (orientation: 'portrait' | 'portrait-primary' | 'portrait-secondary' | 'landscape' | 'landscape-primary' | 'landscape-secondary' | 'natural' | 'any') => Promise<void>;
+      unlock?: () => void;
+    };
+
+    try {
+      if (lockRotation && orientation.lock) {
+        await orientation.lock('portrait');
+      } else if (!lockRotation && orientation.unlock) {
+        orientation.unlock();
+      }
+    } catch {
+      // Screen orientation APIs can fail depending on browser/platform restrictions.
+    }
   }
 
   async ngOnInit() {

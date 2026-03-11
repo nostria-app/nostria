@@ -206,3 +206,111 @@ describe('Search blur dismiss logic', () => {
     expect(action).toBe('dismiss');
   });
 });
+
+/**
+ * Unit tests for screen rotation lock preference handling.
+ * Verifies lock/unlock behavior based on user setting and API availability.
+ */
+describe('Screen rotation lock preference', () => {
+  interface OrientationLike {
+    lock: (orientation: string) => Promise<void>;
+    unlock: () => void;
+  }
+
+  async function applyScreenRotationPreference(
+    isBrowser: boolean,
+    lockRotation: boolean,
+    orientation: OrientationLike | null,
+  ): Promise<void> {
+    if (!isBrowser || !orientation) {
+      return;
+    }
+
+    try {
+      if (lockRotation) {
+        await orientation.lock('portrait');
+      } else {
+        orientation.unlock();
+      }
+    } catch {
+      // Ignore failures to match app behavior on unsupported platforms.
+    }
+  }
+
+  it('should call lock(portrait) when setting is enabled', async () => {
+    let lockedTo: string | null = null;
+    let unlockCalls = 0;
+    const orientation: OrientationLike = {
+      lock: async (orientationMode: string) => {
+        lockedTo = orientationMode;
+      },
+      unlock: () => {
+        unlockCalls++;
+      },
+    };
+
+    await applyScreenRotationPreference(true, true, orientation);
+
+    expect(lockedTo).toBe('portrait');
+    expect(unlockCalls).toBe(0);
+  });
+
+  it('should call unlock when setting is disabled', async () => {
+    let lockCalls = 0;
+    let unlockCalls = 0;
+    const orientation: OrientationLike = {
+      lock: async () => {
+        lockCalls++;
+      },
+      unlock: () => {
+        unlockCalls++;
+      },
+    };
+
+    await applyScreenRotationPreference(true, false, orientation);
+
+    expect(unlockCalls).toBe(1);
+    expect(lockCalls).toBe(0);
+  });
+
+  it('should do nothing when not in browser or orientation API is unavailable', async () => {
+    let lockCalls = 0;
+    let unlockCalls = 0;
+    const orientation: OrientationLike = {
+      lock: async () => {
+        lockCalls++;
+      },
+      unlock: () => {
+        unlockCalls++;
+      },
+    };
+
+    await applyScreenRotationPreference(false, true, orientation);
+    await applyScreenRotationPreference(true, true, null);
+
+    expect(lockCalls).toBe(0);
+    expect(unlockCalls).toBe(0);
+  });
+
+  it('should swallow lock errors gracefully', async () => {
+    let lockCalls = 0;
+    const orientation: OrientationLike = {
+      lock: async () => {
+        lockCalls++;
+        throw new Error('lock unsupported');
+      },
+      unlock: () => {
+        // no-op
+      },
+    };
+
+    let thrown = false;
+    try {
+      await applyScreenRotationPreference(true, true, orientation);
+    } catch {
+      thrown = true;
+    }
+    expect(thrown).toBe(false);
+    expect(lockCalls).toBe(1);
+  });
+});
