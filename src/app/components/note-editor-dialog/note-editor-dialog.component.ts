@@ -211,6 +211,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   contentTextarea!: ElementRef<HTMLTextAreaElement>;
   @ViewChild(CdkTextareaAutosize) textareaAutosize?: CdkTextareaAutosize;
   @ViewChild('noteEditorLayout') noteEditorLayout?: ElementRef<HTMLElement>;
+  @ViewChild('dialogContentWrapper') dialogContentWrapper?: ElementRef<HTMLElement>;
   @ViewChild('composerActions') composerActions?: ElementRef<HTMLElement>;
   @ViewChild('fileInput') fileInput!: ElementRef<HTMLInputElement>;
   @ViewChild(MentionAutocompleteComponent) mentionAutocomplete?: MentionAutocompleteComponent;
@@ -220,6 +221,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   private autoSaveTimer?: ReturnType<typeof setTimeout>;
   private contentCheckIntervalHandle?: ReturnType<typeof setInterval>;
   private otherChangesIntervalHandle?: ReturnType<typeof setInterval>;
+  private textareaRefreshFrame: number | null = null;
 
   // Signals for reactive state
   content = signal('');
@@ -799,6 +801,11 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   };
 
   ngOnDestroy() {
+    if (this.textareaRefreshFrame !== null) {
+      cancelAnimationFrame(this.textareaRefreshFrame);
+      this.textareaRefreshFrame = null;
+    }
+
     if (this.contentTextarea?.nativeElement) {
       this.contentTextarea.nativeElement.removeEventListener('paste', this.pasteHandler);
     }
@@ -2260,20 +2267,45 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   }
 
   private scheduleTextareaRefresh(cursorPosition?: number, focus = false): void {
-    requestAnimationFrame(() => {
+    const textarea = this.contentTextarea?.nativeElement;
+    if (!textarea) {
+      return;
+    }
+
+    const dialogContentWrapper = this.dialogContentWrapper?.nativeElement;
+    const shouldRestoreSelection = typeof cursorPosition === 'number' || document.activeElement === textarea;
+    const selectionStart = typeof cursorPosition === 'number' ? cursorPosition : textarea.selectionStart;
+    const selectionEnd = typeof cursorPosition === 'number' ? cursorPosition : textarea.selectionEnd;
+    const textareaScrollTop = textarea.scrollTop;
+    const dialogScrollTop = dialogContentWrapper?.scrollTop ?? null;
+
+    if (this.textareaRefreshFrame !== null) {
+      cancelAnimationFrame(this.textareaRefreshFrame);
+    }
+
+    this.textareaRefreshFrame = requestAnimationFrame(() => {
+      this.textareaRefreshFrame = null;
       const textarea = this.contentTextarea?.nativeElement;
       if (!textarea) {
         return;
       }
 
-      this.syncTextareaHeight(textarea);
+      const dialogContentWrapper = this.dialogContentWrapper?.nativeElement;
 
-      if (typeof cursorPosition === 'number') {
-        textarea.setSelectionRange(cursorPosition, cursorPosition);
+      if (focus && document.activeElement !== textarea) {
+        textarea.focus({ preventScroll: true });
       }
 
-      if (focus) {
-        textarea.focus();
+      this.syncTextareaHeight(textarea);
+
+      if (shouldRestoreSelection && selectionStart !== null && selectionEnd !== null) {
+        textarea.setSelectionRange(selectionStart, selectionEnd);
+      }
+
+      textarea.scrollTop = textareaScrollTop;
+
+      if (dialogContentWrapper && dialogScrollTop !== null) {
+        dialogContentWrapper.scrollTop = dialogScrollTop;
       }
     });
   }

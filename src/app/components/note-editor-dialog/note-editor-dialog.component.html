@@ -26,7 +26,8 @@
     (dragenter)="!showPreview() && !showAdvancedOptions() && onDragEnter($event)"
     (dragover)="!showPreview() && !showAdvancedOptions() && onDragOver($event)"
     (dragleave)="!showPreview() && !showAdvancedOptions() && onDragLeave($event)"
-    (drop)="!showPreview() && !showAdvancedOptions() && onDrop($event)" [class.drag-over]="isDragOver()">
+    (drop)="!showPreview() && !showAdvancedOptions() && onDrop($event)" [class.drag-over]="isDragOver()"
+    #dialogContentWrapper>
 
     <!-- Error display -->
     @if (mediaService.error()) {
