@@ -44,6 +44,13 @@ const REACTION_EMOJI_OPTIONS = ['❤️', '👍', '🔥', '😂', '🎉', '👏'
         <h2 i18n="@@settings.display.title">Display</h2>
         <app-setting-text-size></app-setting-text-size>
         <app-setting-font-selector></app-setting-font-selector>
+
+        <div class="setting-item">
+          <span i18n="@@settings.display.lock-screen-rotation">Lock Screen Rotation</span>
+          <mat-slide-toggle [checked]="localSettings.lockScreenRotation()" (change)="toggleLockScreenRotation()">
+          </mat-slide-toggle>
+        </div>
+        <p class="setting-description" i18n="@@settings.display.lock-screen-rotation.description">Keep the app in portrait mode so it does not rotate when your device rotates. Applies only on devices and browsers that support orientation lock.</p>
       </div>
 
       <div>
@@ -219,6 +226,10 @@ export class LayoutSettingsComponent implements OnInit, OnDestroy {
 
   toggleOpenThreadsExpanded(): void {
     this.localSettings.setOpenThreadsExpanded(!this.localSettings.openThreadsExpanded());
+  }
+
+  toggleLockScreenRotation(): void {
+    this.localSettings.setLockScreenRotation(!this.localSettings.lockScreenRotation());
   }
 
   toggleRightSidebar(): void {
