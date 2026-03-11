@@ -546,7 +546,7 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
   }
 
   private async loadMissingTracksFromDatabase(
-    missingTrackKeys: Array<{ author: string; dTag: string }>,
+    missingTrackKeys: { author: string; dTag: string }[],
     refs: string[]
   ): Promise<void> {
     if (missingTrackKeys.length === 0) {
