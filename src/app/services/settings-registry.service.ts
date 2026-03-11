@@ -239,6 +239,17 @@ export class SettingsRegistryService {
       priority: 1,
     },
     {
+      id: 'lock-screen-rotation',
+      title: $localize`:@@settings.display.lock-screen-rotation:Lock Screen Rotation`,
+      description: $localize`:@@settings.display.lock-screen-rotation.description:Keep the app in portrait mode so it does not rotate when your device rotates. Applies only on devices and browsers that support orientation lock.`,
+      keywords: ['rotation', 'orientation', 'portrait', 'landscape', 'lock', 'screen', 'display', 'mobile'],
+      section: 'layout',
+      sectionTitle: $localize`:@@settings.sections.layout:Layout`,
+      icon: 'screen_lock_rotation',
+      route: '/settings/layout',
+      priority: 2,
+    },
+    {
       id: 'menu-customization',
       title: $localize`:@@settings.menu.title:Menu Customization`,
       description: $localize`:@@settings.menu.description:Drag items to reorder. Move items between lists to show or hide them.`,
