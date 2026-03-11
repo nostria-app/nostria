@@ -307,9 +307,100 @@ export class MusicArtistComponent implements OnInit, OnDestroy {
   }
 
   private updateTracks(): void {
-    const tracks = Array.from(this.trackMap.values())
-      .sort((a, b) => b.created_at - a.created_at);
+    const tracks = Array.from(this.trackMap.values());
+    const albumSortValues = this.buildAlbumSortValues(tracks);
+
+    tracks.sort((a, b) => this.compareTracksForDisplay(a, b, albumSortValues));
     this.tracks.set(tracks);
+  }
+
+  private compareTracksForDisplay(a: Event, b: Event, albumSortValues: Map<string, number>): number {
+    const albumSortA = albumSortValues.get(this.getTrackAlbumGroupKey(a)) ?? this.getTrackPrimarySortValue(a);
+    const albumSortB = albumSortValues.get(this.getTrackAlbumGroupKey(b)) ?? this.getTrackPrimarySortValue(b);
+
+    if (albumSortA !== albumSortB) {
+      return albumSortB - albumSortA;
+    }
+
+    const albumCompare = this.getTrackAlbumSortValue(a).localeCompare(this.getTrackAlbumSortValue(b));
+    if (albumCompare !== 0) {
+      return albumCompare;
+    }
+
+    const trackNumberA = this.getTrackNumberSortValue(a);
+    const trackNumberB = this.getTrackNumberSortValue(b);
+
+    if (trackNumberA !== null && trackNumberB !== null && trackNumberA !== trackNumberB) {
+      return trackNumberA - trackNumberB;
+    }
+
+    if (trackNumberA !== null && trackNumberB === null) {
+      return -1;
+    }
+
+    if (trackNumberA === null && trackNumberB !== null) {
+      return 1;
+    }
+
+    return b.created_at - a.created_at;
+  }
+
+  private buildAlbumSortValues(tracks: Event[]): Map<string, number> {
+    const albumSortValues = new Map<string, number>();
+
+    for (const track of tracks) {
+      const albumKey = this.getTrackAlbumGroupKey(track);
+      const trackSortValue = this.getTrackPrimarySortValue(track);
+      const existing = albumSortValues.get(albumKey);
+
+      if (existing === undefined || trackSortValue > existing) {
+        albumSortValues.set(albumKey, trackSortValue);
+      }
+    }
+
+    return albumSortValues;
+  }
+
+  private getTrackPrimarySortValue(track: Event): number {
+    return this.getTrackReleaseSortValue(track) ?? track.created_at * 1000;
+  }
+
+  private getTrackReleaseSortValue(track: Event): number | null {
+    const released = track.tags.find(t => t[0] === 'released')?.[1]?.trim();
+    if (!released) {
+      return null;
+    }
+
+    if (/^\d{4}$/.test(released)) {
+      return Date.UTC(parseInt(released, 10), 0, 1);
+    }
+
+    const parsed = Date.parse(released);
+    return Number.isNaN(parsed) ? null : parsed;
+  }
+
+  private getTrackNumberSortValue(track: Event): number | null {
+    const trackNumber = track.tags.find(t => t[0] === 'track_number')?.[1]?.trim();
+    if (!trackNumber) {
+      return null;
+    }
+
+    const parsed = parseInt(trackNumber, 10);
+    return Number.isNaN(parsed) ? null : parsed;
+  }
+
+  private getTrackAlbumSortValue(track: Event): string {
+    return track.tags.find(t => t[0] === 'album')?.[1]?.trim().toLocaleLowerCase() || '';
+  }
+
+  private getTrackAlbumGroupKey(track: Event): string {
+    const album = this.getTrackAlbumSortValue(track);
+    if (album) {
+      return `album:${album}`;
+    }
+
+    const dTag = track.tags.find(t => t[0] === 'd')?.[1]?.trim();
+    return `single:${track.pubkey}:${dTag || track.id}`;
   }
 
   private updatePlaylists(): void {
@@ -417,9 +508,27 @@ export class MusicArtistComponent implements OnInit, OnDestroy {
     return albumTag?.[1] || '';
   }
 
+  getTrackNumber(track: Event): string {
+    return track.tags.find(t => t[0] === 'track_number')?.[1] || '–';
+  }
+
   getTrackDate(track: Event): string {
-    const date = new Date(track.created_at * 1000);
-    return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+    const released = track.tags.find(t => t[0] === 'released')?.[1]?.trim();
+    if (!released) {
+      const createdAtDate = new Date(track.created_at * 1000);
+      return createdAtDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+    }
+
+    if (/^\d{4}$/.test(released)) {
+      return released;
+    }
+
+    const parsed = Date.parse(released);
+    if (Number.isNaN(parsed)) {
+      return released;
+    }
+
+    return new Date(parsed).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
   }
 
   getTrackDuration(track: Event): string {

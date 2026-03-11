@@ -129,7 +129,7 @@
             <span class="track-number">#</span>
             <span class="track-title-header">Title</span>
             <span class="track-album-header">Album</span>
-            <span class="track-date-header">Date added</span>
+            <span class="track-date-header">Released</span>
             <span class="track-duration-header">
               <mat-icon>schedule</mat-icon>
             </span>
@@ -142,7 +142,7 @@
             @for (track of tracks(); track track.id; let i = $index) {
             <div class="track-row" role="listitem" tabindex="0" (click)="playTrack(i)" (keydown.enter)="playTrack(i)">
               <span class="track-number">
-                <span class="number-text">{{ i + 1 }}</span>
+                <span class="number-text">{{ getTrackNumber(track) }}</span>
                 <mat-icon class="play-icon">play_arrow</mat-icon>
               </span>
               <div class="track-info">
