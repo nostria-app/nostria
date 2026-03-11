@@ -766,8 +766,7 @@ export class MusicPlaylistCardComponent {
       // Play tracks
       for (let i = 0; i < orderedTracks.length; i++) {
         const track = orderedTracks[i];
-        const urlTag = track.tags.find(t => t[0] === 'url');
-        const url = urlTag?.[1];
+        const url = this.utilities.getUrlWithImetaFallback(track);
         if (!url) continue;
 
         const titleTag = track.tags.find(t => t[0] === 'title');

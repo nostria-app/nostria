@@ -16,6 +16,7 @@ import { PlaylistService } from '../../services/playlist.service';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { DataService } from '../../services/data.service';
 import { LoggerService } from '../../services/logger.service';
+import { UtilitiesService } from '../../services/utilities.service';
 import { MusicEventComponent } from './music-event.component';
 
 interface PlaylistTrack {
@@ -58,6 +59,7 @@ export class PlaylistEventComponent {
   private snackBar = inject(MatSnackBar);
   private dataService = inject(DataService);
   private logger = inject(LoggerService);
+  private utilities = inject(UtilitiesService);
 
   layout = inject(LayoutService);
 
@@ -171,17 +173,17 @@ export class PlaylistEventComponent {
 
     // Convert track events to MediaItems
     const mediaItems: MediaItem[] = tracks.map((trackEvent, index) => {
-      const urlTag = trackEvent.tags.find(t => t[0] === 'url');
+      const source = this.utilities.getUrlWithImetaFallback(trackEvent) || '';
       const titleTag = trackEvent.tags.find(t => t[0] === 'title');
       const artistTag = trackEvent.tags.find(t => t[0] === 'artist');
       const imageTag = trackEvent.tags.find(t => t[0] === 'image');
 
       return {
-        source: urlTag?.[1] || '',
+        source,
         title: titleTag?.[1] || `Track ${index + 1}`,
         artist: artistTag?.[1] || 'Unknown Artist',
         artwork: imageTag?.[1] || '/icons/icon-192x192.png',
-        type: this.getMediaType(urlTag?.[1] || ''),
+        type: this.getMediaType(source),
       };
     });
 
@@ -211,17 +213,17 @@ export class PlaylistEventComponent {
 
     // Convert track events to MediaItems and add to queue
     const mediaItems: MediaItem[] = tracks.map((trackEvent, index) => {
-      const urlTag = trackEvent.tags.find(t => t[0] === 'url');
+      const source = this.utilities.getUrlWithImetaFallback(trackEvent) || '';
       const titleTag = trackEvent.tags.find(t => t[0] === 'title');
       const artistTag = trackEvent.tags.find(t => t[0] === 'artist');
       const imageTag = trackEvent.tags.find(t => t[0] === 'image');
 
       return {
-        source: urlTag?.[1] || '',
+        source,
         title: titleTag?.[1] || `Track ${index + 1}`,
         artist: artistTag?.[1] || 'Unknown Artist',
         artwork: imageTag?.[1] || '/icons/icon-192x192.png',
-        type: this.getMediaType(urlTag?.[1] || ''),
+        type: this.getMediaType(source),
       };
     });
 

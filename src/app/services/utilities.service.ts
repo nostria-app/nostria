@@ -1193,6 +1193,27 @@ export class UtilitiesService {
   }
 
   /**
+   * Get the primary URL for an event, falling back to the first imeta url when needed.
+   * @param event The Nostr event
+   * @returns The direct url tag value, imeta url, or undefined if not found
+   */
+  getUrlWithImetaFallback(event: Event | UnsignedEvent): string | undefined {
+    const url = this.getTagValue(event, 'url');
+    if (url) {
+      return url;
+    }
+
+    for (const tag of this.getImetaTags(event)) {
+      const imetaUrl = this.parseImetaTag(tag, true)['url'];
+      if (imetaUrl) {
+        return imetaUrl;
+      }
+    }
+
+    return undefined;
+  }
+
+  /**
    * Get all values for a specific tag from an event.
    * @param event The Nostr event
    * @param tagName The tag name to search for

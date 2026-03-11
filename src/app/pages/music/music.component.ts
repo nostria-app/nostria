@@ -1167,8 +1167,8 @@ export class MusicComponent implements OnDestroy {
   }
 
   private async createMediaItemFromTrack(track: Event): Promise<MediaItem | null> {
-    const urlTag = track.tags.find(tag => tag[0] === 'url');
-    if (!urlTag?.[1]) {
+    const source = this.utilities.getUrlWithImetaFallback(track);
+    if (!source) {
       return null;
     }
 
@@ -1192,7 +1192,7 @@ export class MusicComponent implements OnDestroy {
     }
 
     return {
-      source: urlTag[1],
+      source,
       title: titleTag?.[1] || 'Untitled Track',
       artist: artistName,
       artwork: imageTag?.[1] || fallbackArtwork,
@@ -1546,8 +1546,8 @@ export class MusicComponent implements OnDestroy {
       // Play the tracks
       for (let i = 0; i < allTracks.length; i++) {
         const track = allTracks[i];
-        const urlTag = track.tags.find(t => t[0] === 'url');
-        if (!urlTag?.[1]) continue;
+        const source = this.utilities.getUrlWithImetaFallback(track);
+        if (!source) continue;
 
         const titleTag = track.tags.find(t => t[0] === 'title');
         const imageTag = track.tags.find(t => t[0] === 'image');
@@ -1566,7 +1566,7 @@ export class MusicComponent implements OnDestroy {
         }
 
         const mediaItem: MediaItem = {
-          source: urlTag[1],
+          source,
           title: titleTag?.[1] || 'Untitled Track',
           artist: artistName,
           artwork: imageTag?.[1] || '',

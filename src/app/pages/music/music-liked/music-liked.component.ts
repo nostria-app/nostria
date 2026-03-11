@@ -655,8 +655,7 @@ export class MusicLikedComponent implements OnDestroy, AfterViewInit {
     // Create media items for all tracks and play the first one
     for (let i = 0; i < tracks.length; i++) {
       const track = tracks[i];
-      const urlTag = track.tags.find(t => t[0] === 'url');
-      const url = urlTag?.[1];
+      const url = this.utilities.getUrlWithImetaFallback(track);
       if (!url) continue;
 
       const titleTag = track.tags.find(t => t[0] === 'title');

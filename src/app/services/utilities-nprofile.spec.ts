@@ -162,4 +162,42 @@ describe('UtilitiesService nprofile handling', () => {
       }
     });
   });
+
+  describe('getUrlWithImetaFallback', () => {
+    const createEvent = (tags: string[][]) => ({
+      id: 'event-id',
+      pubkey: testHexPubkey,
+      created_at: 1741550000,
+      kind: 36787,
+      tags,
+      content: '',
+      sig: '1'.repeat(128),
+    });
+
+    it('should return the direct url tag when present', () => {
+      const event = createEvent([
+        ['url', 'https://example.com/direct.mp3'],
+        ['imeta', 'url https://example.com/fallback.mp3', 'm audio/mpeg'],
+      ]);
+
+      expect(service.getUrlWithImetaFallback(event)).toBe('https://example.com/direct.mp3');
+    });
+
+    it('should fall back to the imeta url when the url tag is missing', () => {
+      const event = createEvent([
+        ['imeta', 'url https://cdn.pixabay.com/audio/2023/10/07/audio_2fed639bb0.mp3', 'm audio/mpeg'],
+      ]);
+
+      expect(service.getUrlWithImetaFallback(event)).toBe('https://cdn.pixabay.com/audio/2023/10/07/audio_2fed639bb0.mp3');
+    });
+
+    it('should return undefined when neither url nor imeta url exists', () => {
+      const event = createEvent([
+        ['title', 'No URL Track'],
+        ['imeta', 'm audio/mpeg'],
+      ]);
+
+      expect(service.getUrlWithImetaFallback(event)).toBeUndefined();
+    });
+  });
 });

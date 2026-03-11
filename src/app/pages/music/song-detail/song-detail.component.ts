@@ -159,8 +159,8 @@ export class SongDetailComponent implements OnInit, OnDestroy {
   audioUrl = computed(() => {
     const event = this.song();
     if (!event) return '';
-    const urlTag = event.tags.find(t => t[0] === 'url');
-    if (urlTag?.[1]) return urlTag[1];
+    const url = this.utilities.getUrlWithImetaFallback(event);
+    if (url) return url;
     const match = event.content.match(/(https?:\/\/[^\s]+\.(mp3|wav|ogg|flac|m4a))/i);
     return match ? match[0] : '';
   });

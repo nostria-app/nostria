@@ -701,7 +701,7 @@ export class RunesSidebarComponent implements OnDestroy {
         eventId: firstPlaylist.id,
         kind: firstPlaylist.kind,
         tracks: playlistTracks.map(track => ({
-          url: track.tags.find(tag => tag[0] === 'url')?.[1] || '',
+          url: this.utilities.getUrlWithImetaFallback(track) || '',
           title: track.tags.find(tag => tag[0] === 'title')?.[1] || 'Untitled Track',
           artist: track.tags.find(tag => tag[0] === 'artist')?.[1] || 'Unknown Artist',
           duration: track.tags.find(tag => tag[0] === 'duration')?.[1],
@@ -1355,7 +1355,7 @@ export class RunesSidebarComponent implements OnDestroy {
     eventIdentifier: string;
     lyrics: string;
   } | null> {
-    const source = track.tags.find(tag => tag[0] === 'url')?.[1];
+    const source = this.utilities.getUrlWithImetaFallback(track);
     if (!source) {
       return null;
     }

@@ -1144,17 +1144,17 @@ export class MusicEmbedComponent {
   private tracksToMediaItems(tracks: Event[]): MediaItem[] {
     return tracks
       .map(track => {
-        const urlTag = track.tags.find(t => t[0] === 'url');
+        const url = this.utilities.getUrlWithImetaFallback(track);
         const titleTag = track.tags.find(t => t[0] === 'title');
         const artistTag = track.tags.find(t => t[0] === 'artist');
         const imageTag = track.tags.find(t => t[0] === 'image');
         const videoTag = track.tags.find(t => t[0] === 'video');
         const dTag = track.tags.find(t => t[0] === 'd');
 
-        if (!urlTag?.[1]) return null;
+        if (!url) return null;
 
         const item: MediaItem = {
-          source: urlTag[1],
+          source: url,
           title: titleTag?.[1] || 'Untitled',
           artist: artistTag?.[1] || 'Unknown Artist',
           artwork: imageTag?.[1] || '/icons/icon-192x192.png',
@@ -1271,7 +1271,7 @@ export class MusicEmbedComponent {
   }
 
   getTrackAudioUrl(track: Event): string {
-    return track.tags.find(tag => tag[0] === 'url')?.[1] || '';
+    return this.utilities.getUrlWithImetaFallback(track) || '';
   }
 
   private trackToMediaItem(track: Event): MediaItem | null {

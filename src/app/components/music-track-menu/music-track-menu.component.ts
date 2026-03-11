@@ -219,9 +219,9 @@ export class MusicTrackMenuComponent {
   // Get audio URL
   private getAudioUrl(): string {
     const ev = this.track();
-    const urlTag = ev.tags.find(t => t[0] === 'url');
-    if (urlTag?.[1]) {
-      return urlTag[1];
+    const url = this.utilities.getUrlWithImetaFallback(ev);
+    if (url) {
+      return url;
     }
     // Fallback to content if it's a URL
     const content = ev.content;

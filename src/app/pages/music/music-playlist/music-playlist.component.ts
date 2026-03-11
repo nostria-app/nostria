@@ -619,8 +619,7 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
     // Create media items for all tracks and play the first one
     for (let i = 0; i < allTracks.length; i++) {
       const track = allTracks[i];
-      const urlTag = track.tags.find(t => t[0] === 'url');
-      const url = urlTag?.[1];
+      const url = this.utilities.getUrlWithImetaFallback(track);
       if (!url) continue;
 
       const titleTag = track.tags.find(t => t[0] === 'title');
@@ -1008,8 +1007,7 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
     // Play from this track and queue the rest
     for (let i = index; i < allTracks.length; i++) {
       const track = allTracks[i];
-      const urlTag = track.tags.find(t => t[0] === 'url');
-      const url = urlTag?.[1];
+      const url = this.utilities.getUrlWithImetaFallback(track);
       if (!url) continue;
 
       const titleTag = track.tags.find(t => t[0] === 'title');
@@ -1039,8 +1037,7 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
   }
 
   addTrackToQueue(track: Event): void {
-    const urlTag = track.tags.find(t => t[0] === 'url');
-    const url = urlTag?.[1];
+    const url = this.utilities.getUrlWithImetaFallback(track);
     if (!url) return;
 
     const titleTag = track.tags.find(t => t[0] === 'title');
@@ -1113,8 +1110,7 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
     const lines: string[] = ['#EXTM3U'];
 
     for (const track of allTracks) {
-      const urlTag = track.tags.find(t => t[0] === 'url');
-      const url = urlTag?.[1];
+      const url = this.utilities.getUrlWithImetaFallback(track);
       if (!url) continue;
 
       const title = this.getTrackTitle(track);

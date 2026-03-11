@@ -223,7 +223,7 @@ export class MusicTrackDialogComponent {
     const title = track.tags.find(t => t[0] === 'title')?.[1] || '';
 
     // Extract audio URL and store as previous for potential cleanup
-    const url = track.tags.find(t => t[0] === 'url')?.[1] || '';
+    const url = this.utilities.getUrlWithImetaFallback(track) || '';
     this.audioUrl.set(url);
     this.previousAudioUrl.set(url);
 

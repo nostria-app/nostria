@@ -693,9 +693,9 @@ export class MusicEventComponent {
   // Extract audio URL
   audioUrl = computed(() => {
     const event = this.event();
-    const urlTag = event.tags.find(t => t[0] === 'url');
-    if (urlTag?.[1]) {
-      return urlTag[1];
+    const url = this.utilities.getUrlWithImetaFallback(event);
+    if (url) {
+      return url;
     }
 
     // Fallback to content if it's a URL

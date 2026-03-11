@@ -443,7 +443,7 @@ export class MusicArtistComponent implements OnInit, OnDestroy {
     const mediaItems: MediaItem[] = artistTracks.map(track => {
       const titleTag = track.tags.find(t => t[0] === 'title' || t[0] === 'subject');
       const title = titleTag?.[1] || track.content?.substring(0, 50) || 'Unknown Track';
-      const streamUrl = track.tags.find(t => t[0] === 'url')?.[1] || '';
+      const streamUrl = this.utilities.getUrlWithImetaFallback(track) || '';
       const coverTag = track.tags.find(t => t[0] === 'image' || t[0] === 'cover' || t[0] === 'thumb');
       const videoTag = track.tags.find(t => t[0] === 'video');
       const cover = coverTag?.[1] || profile?.data?.picture || '/icons/icon-192x192.png';
@@ -551,8 +551,7 @@ export class MusicArtistComponent implements OnInit, OnDestroy {
     // Play from this track and queue the rest
     for (let i = index; i < artistTracks.length; i++) {
       const track = artistTracks[i];
-      const urlTag = track.tags.find(t => t[0] === 'url');
-      const url = urlTag?.[1];
+      const url = this.utilities.getUrlWithImetaFallback(track);
       if (!url) continue;
 
       const titleTag = track.tags.find(t => t[0] === 'title');
@@ -581,8 +580,7 @@ export class MusicArtistComponent implements OnInit, OnDestroy {
   }
 
   addTrackToQueue(track: Event): void {
-    const urlTag = track.tags.find(t => t[0] === 'url');
-    const url = urlTag?.[1];
+    const url = this.utilities.getUrlWithImetaFallback(track);
     if (!url) return;
 
     const titleTag = track.tags.find(t => t[0] === 'title');
@@ -674,8 +672,7 @@ export class MusicArtistComponent implements OnInit, OnDestroy {
     const lines: string[] = ['#EXTM3U'];
 
     for (const track of allTracks) {
-      const urlTag = track.tags.find(t => t[0] === 'url');
-      const url = urlTag?.[1];
+      const url = this.utilities.getUrlWithImetaFallback(track);
       if (!url) continue;
 
       const title = this.getTrackTitle(track);
