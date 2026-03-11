@@ -22,8 +22,11 @@ import { OfflineMusicService } from '../../services/offline-music.service';
 import { ImageCacheService } from '../../services/image-cache.service';
 import { LayoutService } from '../../services/layout.service';
 import { LoggerService } from '../../services/logger.service';
+import { CustomDialogService } from '../../services/custom-dialog.service';
+import { UserRelaysService } from '../../services/relays/user-relays';
 import { NostrRecord, MediaItem } from '../../interfaces';
 import { ZapDialogComponent, ZapDialogData } from '../zap-dialog/zap-dialog.component';
+import { ShareArticleDialogComponent, ShareArticleDialogData } from '../share-article-dialog/share-article-dialog.component';
 import { CreateMusicPlaylistDialogComponent, CreateMusicPlaylistDialogData } from '../../pages/music/create-music-playlist-dialog/create-music-playlist-dialog.component';
 import { MusicTrackDialogComponent, MusicTrackDialogData } from '../../pages/music/music-track-dialog/music-track-dialog.component';
 import { UserProfileComponent } from '../user-profile/user-profile.component';
@@ -64,15 +67,15 @@ import { DateToggleComponent } from '../date-toggle/date-toggle.component';
           </button>
 
           <div class="hover-action-row">
-            <button mat-icon-button class="media-action-button" (click)="likeTrack($any($event))" [disabled]="isLiked()"
+            <button mat-icon-button class="media-action-button like-action" (click)="likeTrack($any($event))" [disabled]="isLiked()"
               [attr.aria-label]="isLiked() ? 'Liked track' : 'Like track'" [title]="isLiked() ? 'Liked' : 'Like'">
               <mat-icon>{{ isLiked() ? 'favorite' : 'favorite_border' }}</mat-icon>
             </button>
-            <button mat-icon-button class="media-action-button" (click)="shareTrack(); $event.stopPropagation()"
+            <button mat-icon-button class="media-action-button share-action" (click)="shareTrack(); $event.stopPropagation()"
               aria-label="Share track" title="Share track">
               <mat-icon>share</mat-icon>
             </button>
-            <button mat-icon-button class="media-action-button" (click)="zapArtist($any($event))"
+            <button mat-icon-button class="media-action-button zap-action" (click)="zapArtist($any($event))"
               aria-label="Zap creator" title="Zap creator">
               <mat-icon>bolt</mat-icon>
             </button>
@@ -335,6 +338,12 @@ import { DateToggleComponent } from '../date-toggle/date-toggle.component';
         width: 100%;
         height: 100%;
         object-fit: cover;
+        transition: transform 0.28s ease;
+      }
+
+      .music-card-vertical:hover & .cover-image,
+      .music-card-vertical:focus-within & .cover-image {
+        transform: scale(1.05);
       }
       
       .cover-placeholder {
@@ -456,6 +465,7 @@ import { DateToggleComponent } from '../date-toggle/date-toggle.component';
         border: 1px solid color-mix(in srgb, var(--mat-sys-outline) 32%, transparent);
         backdrop-filter: blur(14px);
         box-shadow: var(--mat-sys-level2);
+        transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
 
         @media (max-width: 600px) {
           width: 36px;
@@ -485,6 +495,30 @@ import { DateToggleComponent } from '../date-toggle/date-toggle.component';
 
         &:hover {
           background: color-mix(in srgb, var(--mat-sys-surface-container-highest) 82%, transparent);
+        }
+      }
+
+      .like-action {
+        &:hover:not(:disabled) {
+          background: color-mix(in srgb, var(--mat-sys-error-container) 58%, transparent);
+          color: color-mix(in srgb, var(--mat-sys-error) 76%, var(--mat-sys-on-surface) 24%);
+          border-color: color-mix(in srgb, var(--mat-sys-error) 34%, transparent);
+        }
+      }
+
+      .share-action {
+        &:hover:not(:disabled) {
+          background: color-mix(in srgb, #2f6dff 26%, transparent);
+          color: color-mix(in srgb, #8ab4ff 78%, var(--mat-sys-on-surface) 22%);
+          border-color: color-mix(in srgb, #6ea0ff 38%, transparent);
+        }
+      }
+
+      .zap-action {
+        &:hover:not(:disabled) {
+          background: color-mix(in srgb, #ff9800 24%, transparent);
+          color: color-mix(in srgb, #ffbf66 78%, var(--mat-sys-on-surface) 22%);
+          border-color: color-mix(in srgb, #ffb74d 34%, transparent);
         }
       }
     }
@@ -754,6 +788,8 @@ export class MusicEventComponent {
   private offlineMusicService = inject(OfflineMusicService);
   private imageCache = inject(ImageCacheService);
   private logger = inject(LoggerService);
+  private customDialog = inject(CustomDialogService);
+  private userRelaysService = inject(UserRelaysService);
 
   event = input.required<Event>();
   mode = input<'card' | 'list'>('list');
@@ -1078,21 +1114,55 @@ export class MusicEventComponent {
     this.snackBar.open('Event data copied!', 'Close', { duration: 2000 });
   }
 
-  // Share track as a kind 1 note with reference
-  shareTrack(): void {
+  // Open standard share dialog
+  async shareTrack(): Promise<void> {
     const ev = this.event();
-    const addr = this.naddr();
+    const dTag = this.identifier();
+    const npub = this.artistNpub();
 
-    if (!addr) {
-      this.snackBar.open('Failed to generate track reference', 'Close', { duration: 3000 });
+    if (!dTag || !npub) {
+      this.snackBar.open('Failed to generate share link', 'Close', { duration: 3000 });
       return;
     }
 
-    // Create content with nostr: reference to the track
-    const content = `nostr:${addr}`;
+    try {
+      await this.userRelaysService.ensureRelaysForPubkey(ev.pubkey);
+      const authorRelays = this.userRelaysService.getRelaysForPubkey(ev.pubkey);
+      const naddr = nip19.naddrEncode({
+        kind: ev.kind,
+        pubkey: ev.pubkey,
+        identifier: dTag,
+        relays: authorRelays.length > 0 ? authorRelays : undefined,
+      });
 
-    // Open note editor with the track reference
-    this.eventService.createNote({ content });
+      const link = `https://nostria.app/music/song/${npub}/${encodeURIComponent(dTag)}`;
+      const title = this.title() || 'Untitled Track';
+
+      const dialogData: ShareArticleDialogData = {
+        title,
+        summary: `Listen to ${title} by ${this.artistName()}`,
+        image: this.rawImage() || undefined,
+        url: link,
+        eventId: ev.id,
+        pubkey: ev.pubkey,
+        identifier: dTag,
+        kind: ev.kind,
+        encodedId: naddr,
+        naddr,
+        event: ev,
+      };
+
+      this.customDialog.open(ShareArticleDialogComponent, {
+        title: '',
+        showCloseButton: false,
+        panelClass: 'share-sheet-dialog',
+        data: dialogData,
+        width: '450px',
+        maxWidth: '95vw',
+      });
+    } catch {
+      this.snackBar.open('Failed to share track', 'Close', { duration: 3000 });
+    }
   }
 
   // Edit track (for user's own tracks)

@@ -21,8 +21,11 @@ import { EventService } from '../../services/event';
 import { ZapService } from '../../services/zap.service';
 import { ImageCacheService } from '../../services/image-cache.service';
 import { LayoutService } from '../../services/layout.service';
+import { CustomDialogService } from '../../services/custom-dialog.service';
+import { UserRelaysService } from '../../services/relays/user-relays';
 import { NostrRecord, MediaItem } from '../../interfaces';
 import { ZapDialogComponent, ZapDialogData } from '../zap-dialog/zap-dialog.component';
+import { ShareArticleDialogComponent, ShareArticleDialogData } from '../share-article-dialog/share-article-dialog.component';
 import {
   EditMusicPlaylistDialogComponent,
   EditMusicPlaylistDialogData,
@@ -57,15 +60,15 @@ const MUSIC_KIND = 36787;
         </button>
         }
         <div class="hover-action-row">
-          <button mat-icon-button class="media-action-button" (click)="likePlaylist($event)" [disabled]="isLiked()"
+          <button mat-icon-button class="media-action-button like-action" (click)="likePlaylist($event)" [disabled]="isLiked()"
             [attr.aria-label]="isLiked() ? 'Liked playlist' : 'Like playlist'" [title]="isLiked() ? 'Liked' : 'Like'">
             <mat-icon>{{ isLiked() ? 'favorite' : 'favorite_border' }}</mat-icon>
           </button>
-          <button mat-icon-button class="media-action-button" (click)="sharePlaylist(); $event.stopPropagation()"
+          <button mat-icon-button class="media-action-button share-action" (click)="sharePlaylist(); $event.stopPropagation()"
             aria-label="Share playlist" title="Share playlist">
             <mat-icon>share</mat-icon>
           </button>
-          <button mat-icon-button class="media-action-button" (click)="zapCreator($event)"
+          <button mat-icon-button class="media-action-button zap-action" (click)="zapCreator($event)"
             aria-label="Zap creator" title="Zap creator">
             <mat-icon>bolt</mat-icon>
           </button>
@@ -223,6 +226,12 @@ const MUSIC_KIND = 36787;
         width: 100%;
         height: 100%;
         object-fit: cover;
+        transition: transform 0.28s ease;
+      }
+
+      .playlist-card:hover & .cover-image,
+      .playlist-card:focus-within & .cover-image {
+        transform: scale(1.05);
       }
 
       .cover-placeholder {
@@ -306,6 +315,7 @@ const MUSIC_KIND = 36787;
         border: 1px solid color-mix(in srgb, var(--mat-sys-outline) 32%, transparent);
         backdrop-filter: blur(14px);
         box-shadow: var(--mat-sys-level2);
+        transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
 
         &:not(.media-primary-action):hover:not(:disabled) {
           background: color-mix(in srgb, var(--mat-sys-scrim) 56%, transparent);
@@ -326,6 +336,30 @@ const MUSIC_KIND = 36787;
 
         &:hover:not(:disabled) {
           background: color-mix(in srgb, var(--mat-sys-surface-container-highest) 82%, transparent);
+        }
+      }
+
+      .like-action {
+        &:hover:not(:disabled) {
+          background: color-mix(in srgb, var(--mat-sys-error-container) 58%, transparent);
+          color: color-mix(in srgb, var(--mat-sys-error) 76%, var(--mat-sys-on-surface) 24%);
+          border-color: color-mix(in srgb, var(--mat-sys-error) 34%, transparent);
+        }
+      }
+
+      .share-action {
+        &:hover:not(:disabled) {
+          background: color-mix(in srgb, #2f6dff 26%, transparent);
+          color: color-mix(in srgb, #8ab4ff 78%, var(--mat-sys-on-surface) 22%);
+          border-color: color-mix(in srgb, #6ea0ff 38%, transparent);
+        }
+      }
+
+      .zap-action {
+        &:hover:not(:disabled) {
+          background: color-mix(in srgb, #ff9800 24%, transparent);
+          color: color-mix(in srgb, #ffbf66 78%, var(--mat-sys-on-surface) 22%);
+          border-color: color-mix(in srgb, #ffb74d 34%, transparent);
         }
       }
     }
@@ -548,6 +582,8 @@ export class MusicPlaylistCardComponent {
   private zapService = inject(ZapService);
   private imageCache = inject(ImageCacheService);
   private layout = inject(LayoutService);
+  private customDialog = inject(CustomDialogService);
+  private userRelaysService = inject(UserRelaysService);
 
   event = input.required<Event>();
 
@@ -730,20 +766,53 @@ export class MusicPlaylistCardComponent {
     this.snackBar.open('Event data copied!', 'Close', { duration: 2000 });
   }
 
-  // Share playlist as a kind 1 note with reference
-  sharePlaylist(): void {
-    const addr = this.naddr();
+  // Open standard share dialog
+  async sharePlaylist(): Promise<void> {
+    const ev = this.event();
+    const dTag = ev.tags.find(t => t[0] === 'd')?.[1] || '';
 
-    if (!addr) {
-      this.snackBar.open('Failed to generate playlist reference', 'Close', { duration: 3000 });
+    if (!dTag) {
+      this.snackBar.open('Failed to generate playlist link', 'Close', { duration: 3000 });
       return;
     }
 
-    // Create content with nostr: reference to the playlist
-    const content = `nostr:${addr}`;
+    try {
+      await this.userRelaysService.ensureRelaysForPubkey(ev.pubkey);
+      const authorRelays = this.userRelaysService.getRelaysForPubkey(ev.pubkey);
+      const npub = nip19.npubEncode(ev.pubkey);
+      const link = `https://nostria.app/music/playlist/${npub}/${encodeURIComponent(dTag)}`;
+      const naddr = nip19.naddrEncode({
+        kind: ev.kind,
+        pubkey: ev.pubkey,
+        identifier: dTag,
+        relays: authorRelays.length > 0 ? authorRelays : undefined,
+      });
 
-    // Open note editor with the playlist reference
-    this.eventService.createNote({ content });
+      const dialogData: ShareArticleDialogData = {
+        title: this.title(),
+        summary: this.description() || `Check out ${this.title()}`,
+        image: this.coverImage() || undefined,
+        url: link,
+        eventId: ev.id,
+        pubkey: ev.pubkey,
+        identifier: dTag,
+        kind: ev.kind,
+        encodedId: naddr,
+        naddr,
+        event: ev,
+      };
+
+      this.customDialog.open(ShareArticleDialogComponent, {
+        title: '',
+        showCloseButton: false,
+        panelClass: 'share-sheet-dialog',
+        data: dialogData,
+        width: '450px',
+        maxWidth: '95vw',
+      });
+    } catch {
+      this.snackBar.open('Failed to share playlist', 'Close', { duration: 3000 });
+    }
   }
 
   // Edit playlist
