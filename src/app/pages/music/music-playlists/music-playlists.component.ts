@@ -422,13 +422,17 @@ export class MusicPlaylistsComponent implements OnInit, OnDestroy, AfterViewInit
     const pubkeys = this.filterPubkeys();
     const sort = this.sortBy();
 
-    // Filter out user's own playlists
-    let filtered = playlists.filter(p => p.pubkey !== myPubkey);
+    let filtered = [...playlists];
 
     // Apply pubkey filter
     if (pubkeys !== null) {
-      if (pubkeys.length === 0) return [];
-      filtered = filtered.filter(p => pubkeys.includes(p.pubkey));
+      const allowedPubkeys = new Set(pubkeys);
+      if (myPubkey) {
+        allowedPubkeys.add(myPubkey);
+      }
+
+      if (allowedPubkeys.size === 0) return [];
+      filtered = filtered.filter(p => allowedPubkeys.has(p.pubkey));
     }
 
     // Apply sorting
