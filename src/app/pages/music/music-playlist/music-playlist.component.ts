@@ -142,11 +142,11 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
     return descTag?.[1] || event.content || null;
   });
 
-  isPublic = computed(() => {
+  isPrivate = computed(() => {
     const event = this.playlist();
     if (!event) return false;
-    const publicTag = event.tags.find(t => t[0] === 'public');
-    return publicTag?.[1] === 'true';
+    const privateTag = event.tags.find(t => t[0] === 'private');
+    return privateTag?.[1] === 'true';
   });
 
   coverImage = computed(() => {

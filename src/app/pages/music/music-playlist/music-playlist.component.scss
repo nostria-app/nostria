@@ -250,6 +250,18 @@
   .separator {
     opacity: 0.5;
   }
+
+  .visibility-chip-icon {
+    margin-right: 0.375rem;
+    font-size: 1rem;
+    width: 1rem;
+    height: 1rem;
+    padding: 0 !important;
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    vertical-align: middle;
+  }
 }
 
 .artist-row {

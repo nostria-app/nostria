@@ -108,11 +108,11 @@
           <span class="date">{{ publishedDate() }}</span>
           <span class="separator">•</span>
           <span class="track-count">{{ trackCount() }} tracks</span>
-          @if (isPublic()) {
+          @if (isPrivate()) {
           <span class="separator">•</span>
           <mat-chip>
-            <mat-icon>public</mat-icon>
-            Public
+            <mat-icon class="visibility-chip-icon">lock</mat-icon>
+            Private
           </mat-chip>
           }
         </div>
