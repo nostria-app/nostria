@@ -32,7 +32,7 @@ import { ImportRssDialogComponent } from './import-rss-dialog/import-rss-dialog.
 import { MusicSettingsDialogComponent } from './music-settings-dialog/music-settings-dialog.component';
 import { MusicPlaylist } from '../../services/music-playlist.service';
 import { MusicDataService } from '../../services/music-data.service';
-import { ListFilterMenuComponent, ListFilterValue, MusicTrackSortValue } from '../../components/list-filter-menu/list-filter-menu.component';
+import { ListFilterMenuComponent, ListFilterValue } from '../../components/list-filter-menu/list-filter-menu.component';
 import { LoggerService } from '../../services/logger.service';
 
 const MUSIC_KIND = 36787;
@@ -156,8 +156,6 @@ export class MusicComponent implements OnDestroy {
 
   // List filter state - 'all', 'following', or follow set d-tag
   selectedListFilter = signal<ListFilterValue>('all');
-  selectedTrackSort = signal<MusicTrackSortValue>('released');
-
   // Computed: get all follow sets for the dropdown
   allFollowSets = computed(() => this.followSetsService.followSets());
 
@@ -1233,19 +1231,11 @@ export class MusicComponent implements OnDestroy {
     this.selectedListFilter.set(filter);
   }
 
-  onTrackSortChanged(sort: MusicTrackSortValue): void {
-    this.selectedTrackSort.set(sort);
-  }
-
   private sortTracks(tracks: Event[]): Event[] {
     return [...tracks].sort((a, b) => this.getTrackSortValue(b) - this.getTrackSortValue(a));
   }
 
   private getTrackSortValue(track: Event): number {
-    if (this.selectedTrackSort() === 'published') {
-      return this.getTrackPublishedSortValue(track);
-    }
-
     return this.getTrackReleaseSortValue(track) ?? this.getTrackPublishedSortValue(track);
   }
 

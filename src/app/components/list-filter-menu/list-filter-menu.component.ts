@@ -32,8 +32,8 @@ export type MusicTrackSortValue = 'released' | 'published';
   ],
   template: `
     <app-filter-button [active]="isFilterActive()" [tooltip]="'Filter by: ' + filterTitle()">
-      <div class="filter-panel" [class.music-layout]="storageKey() === 'music'" (click)="$event.stopPropagation()">
-        <div class="filter-sections" [class.music-layout]="storageKey() === 'music'">
+      <div class="filter-panel" [class.music-layout]="showMusicSortLayout()" (click)="$event.stopPropagation()">
+        <div class="filter-sections" [class.music-layout]="showMusicSortLayout()">
           <div class="filter-section list-section">
             <div class="section-title">List filter</div>
 
@@ -91,7 +91,7 @@ export type MusicTrackSortValue = 'released' | 'published';
             }
           </div>
 
-          @if (storageKey() === 'music') {
+          @if (storageKey() === 'music' && showMusicTrackSort()) {
           <div class="filter-section sort-section">
             <div class="section-title">Songs sort by</div>
             <button
@@ -133,8 +133,9 @@ export type MusicTrackSortValue = 'released' | 'published';
       flex-direction: column;
       gap: 0.5rem;
       padding: 1rem;
-      width: calc(100vw - 2rem);
-      max-width: 300px;
+      width: max-content;
+      min-width: min(300px, calc(100vw - 2rem));
+      max-width: calc(100vw - 2rem);
       max-height: 400px;
       overflow-y: auto;
       background: var(--mat-sys-surface-container);
@@ -284,6 +285,7 @@ export class ListFilterMenuComponent implements OnInit {
 
   // Inputs
   showPublicOption = input<boolean>(false);
+  showMusicTrackSort = input<boolean>(true);
   defaultFilter = input<ListFilterValue>('following');
   storageKey = input.required<'streams' | 'articles' | 'summary' | 'music'>();
   initialFilter = input<ListFilterValue | undefined>(undefined); // Override from URL query params
@@ -322,8 +324,10 @@ export class ListFilterMenuComponent implements OnInit {
   // Computed: whether filter is active (different from default)
   isFilterActive = computed(() => {
     return this.selectedFilter() !== this.defaultFilter()
-      || (this.storageKey() === 'music' && this.selectedMusicTrackSort() !== 'released');
+      || (this.storageKey() === 'music' && this.showMusicTrackSort() && this.selectedMusicTrackSort() !== 'released');
   });
+
+  showMusicSortLayout = computed(() => this.storageKey() === 'music' && this.showMusicTrackSort());
 
   // Computed: filter title for tooltip
   filterTitle = computed(() => {
@@ -339,7 +343,7 @@ export class ListFilterMenuComponent implements OnInit {
       title = followSet?.title || 'Filter';
     }
 
-    if (this.storageKey() === 'music') {
+    if (this.storageKey() === 'music' && this.showMusicTrackSort()) {
       return `${title} · Songs: ${this.selectedMusicTrackSort() === 'released' ? 'Released' : 'Published'}`;
     }
 
@@ -356,7 +360,7 @@ export class ListFilterMenuComponent implements OnInit {
   ngOnInit() {
     const pubkey = this.accountState.pubkey();
 
-    if (this.storageKey() === 'music') {
+    if (this.storageKey() === 'music' && this.showMusicTrackSort()) {
       const savedSort = pubkey
         ? this.accountLocalState.getMusicTrackSort(pubkey)
         : 'released';
@@ -438,7 +442,7 @@ export class ListFilterMenuComponent implements OnInit {
 
   resetSelections() {
     this.selectFilter(this.defaultFilter());
-    if (this.storageKey() === 'music') {
+    if (this.storageKey() === 'music' && this.showMusicTrackSort()) {
       this.selectMusicTrackSort('released');
     }
   }

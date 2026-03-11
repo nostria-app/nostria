@@ -13,9 +13,8 @@
     <mat-icon>{{ showSearch() ? 'search_off' : 'search' }}</mat-icon>
   </button>
   @if (isAuthenticated()) {
-  <app-list-filter-menu storageKey="music" [showPublicOption]="true" defaultFilter="all"
-    [initialFilter]="urlListFilter()" (filterChanged)="onListFilterChanged($event)"
-    (musicTrackSortChanged)="onTrackSortChanged($event)" />
+  <app-list-filter-menu storageKey="music" [showPublicOption]="true" defaultFilter="all" [showMusicTrackSort]="false"
+    [initialFilter]="urlListFilter()" (filterChanged)="onListFilterChanged($event)" />
   }
   <!-- Refresh button - hidden on small screens -->
   <button mat-icon-button (click)="refresh()" matTooltip="Refresh music" class="hide-small">
