@@ -66,10 +66,10 @@ const MUSIC_KIND = 36787;
           </div>
           <span class="playlist-meta">
             {{ trackCount() }} tracks
-            @if (isPublic()) {
-              <span class="public-badge">
-                <mat-icon>public</mat-icon>
-                Public
+            @if (isPrivate()) {
+              <span class="visibility-badge">
+                <mat-icon>lock</mat-icon>
+                Private
               </span>
             }
           </span>
@@ -280,7 +280,7 @@ const MUSIC_KIND = 36787;
       overflow: hidden;
       text-overflow: ellipsis;
 
-      .public-badge {
+      .visibility-badge {
         display: inline-flex;
         align-items: center;
         gap: 0.125rem;
@@ -472,11 +472,11 @@ export class MusicPlaylistCardComponent {
     return event.tags.filter(t => t[0] === 'a' && t[1]?.startsWith('36787:')).length;
   });
 
-  // Check if public
-  isPublic = computed(() => {
+  // Check if private
+  isPrivate = computed(() => {
     const event = this.event();
-    const publicTag = event.tags.find(t => t[0] === 'public');
-    return publicTag?.[1] === 'true';
+    const privateTag = event.tags.find(t => t[0] === 'private');
+    return privateTag?.[1] === 'true';
   });
 
   // Cover image (raw URL)
