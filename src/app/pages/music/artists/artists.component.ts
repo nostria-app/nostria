@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, OnDestroy, ElementRef, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal, computed, OnDestroy, ElementRef, viewChild, effect } from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatButtonModule } from '@angular/material/button';
@@ -38,6 +38,7 @@ type SortOption = 'name-asc' | 'name-desc' | 'tracks-asc' | 'tracks-desc';
   ],
   templateUrl: './artists.component.html',
   styleUrls: ['./artists.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ArtistsComponent implements OnDestroy {
   private pool = inject(RelayPoolService);
@@ -64,9 +65,11 @@ export class ArtistsComponent implements OnDestroy {
   // Search functionality
   searchQuery = signal('');
   showSearch = signal(false);
+  private profileRenderVersion = signal(0);
 
   private trackSubscription: { close: () => void } | null = null;
   private trackMap = new Map<string, Event>();
+  private requestedProfilePubkeys = new Set<string>();
 
   /**
    * Extract all unique artists from tracks with track counts
@@ -137,6 +140,11 @@ export class ArtistsComponent implements OnDestroy {
 
   constructor() {
     this.initializeArtists();
+
+    effect(() => {
+      const artistPubkeys = this.allArtistsData().map(artist => artist.pubkey);
+      void this.prefetchProfiles(artistPubkeys);
+    });
   }
 
   ngOnDestroy(): void {
@@ -266,7 +274,27 @@ export class ArtistsComponent implements OnDestroy {
     this.searchQuery.set(target.value);
   }
 
+  private async prefetchProfiles(pubkeys: string[]): Promise<void> {
+    const uniquePubkeys = [...new Set(pubkeys.filter(pubkey => !!pubkey?.trim()))]
+      .filter(pubkey => !this.requestedProfilePubkeys.has(pubkey));
+
+    if (uniquePubkeys.length === 0) {
+      return;
+    }
+
+    uniquePubkeys.forEach(pubkey => this.requestedProfilePubkeys.add(pubkey));
+
+    await this.dataService.batchLoadProfiles(
+      uniquePubkeys,
+      () => this.profileRenderVersion.update(version => version + 1),
+      true,
+    );
+
+    this.profileRenderVersion.update(version => version + 1);
+  }
+
   getArtistPicture(pubkey: string): string | null {
+    this.profileRenderVersion();
     const profile = this.dataService.getCachedProfile(pubkey);
     return profile?.data?.picture || null;
   }

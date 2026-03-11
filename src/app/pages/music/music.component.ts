@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, OnDestroy, ViewChild, ElementRef, ChangeDetectionStrategy } from '@angular/core';
+import { Component, inject, signal, computed, OnDestroy, ViewChild, ElementRef, ChangeDetectionStrategy, effect } from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -121,6 +121,7 @@ export class MusicComponent implements OnDestroy {
   // Music relay set state
   musicRelaySet = signal<Event | null>(null);
   musicRelays = signal<string[]>([]);
+  private profileRenderVersion = signal(0);
 
   private trackSubscription: { close: () => void } | null = null;
   private playlistSubscription: { close: () => void } | null = null;
@@ -132,6 +133,7 @@ export class MusicComponent implements OnDestroy {
   private listeningPruneIntervalId: number | null = null;
   private syncingOwnMusicCache = false;
   private lastSyncedOwnMusicPubkey: string | null = null;
+  private requestedProfilePubkeys = new Set<string>();
 
   // Search input reference for focusing
   @ViewChild('searchInput') searchInput!: ElementRef<HTMLInputElement>;
@@ -422,6 +424,12 @@ export class MusicComponent implements OnDestroy {
   constructor() {
     this.twoColumnLayout.setWideLeft();
     this.initializeMusic();
+
+    effect(() => {
+      const artistPubkeys = this.allArtists().map(artist => artist.pubkey);
+      const listeningPubkeys = this.recentListeningEntries().map(entry => entry.pubkey);
+      void this.prefetchProfiles([...artistPubkeys, ...listeningPubkeys]);
+    });
 
     // Update container width after view init and after CSS transitions complete
     // First update quickly for initial render
@@ -1065,12 +1073,33 @@ export class MusicComponent implements OnDestroy {
     this.layout.openProfile(pubkey);
   }
 
+  private async prefetchProfiles(pubkeys: string[]): Promise<void> {
+    const uniquePubkeys = [...new Set(pubkeys.filter(pubkey => !!pubkey?.trim()))]
+      .filter(pubkey => !this.requestedProfilePubkeys.has(pubkey));
+
+    if (uniquePubkeys.length === 0) {
+      return;
+    }
+
+    uniquePubkeys.forEach(pubkey => this.requestedProfilePubkeys.add(pubkey));
+
+    await this.dataService.batchLoadProfiles(
+      uniquePubkeys,
+      () => this.profileRenderVersion.update(version => version + 1),
+      true,
+    );
+
+    this.profileRenderVersion.update(version => version + 1);
+  }
+
   getListeningPicture(pubkey: string): string | null {
+    this.profileRenderVersion();
     const profile = this.dataService.getCachedProfile(pubkey);
     return typeof profile?.data?.picture === 'string' ? profile.data.picture : null;
   }
 
   getListeningDisplayName(pubkey: string): string {
+    this.profileRenderVersion();
     const profile = this.dataService.getCachedProfile(pubkey);
     const displayName = profile?.data?.display_name;
     if (typeof displayName === 'string' && displayName.trim()) {
@@ -1294,6 +1323,7 @@ export class MusicComponent implements OnDestroy {
    * Get profile picture URL for an artist's pubkey
    */
   getArtistPicture(pubkey: string): string | null {
+    this.profileRenderVersion();
     const profile = this.dataService.getCachedProfile(pubkey);
     return profile?.data?.picture || null;
   }
