@@ -1852,16 +1852,6 @@ export class MessagingService implements NostriaService {
     }
 
     if (!this.encryption.isContentEncrypted(wrappedContent.content)) {
-      const fallbackEvent = this.extractFallbackSealedEvent(wrappedContent);
-      if (fallbackEvent) {
-        this.logger.debug('Wrapped content was already unsealed, using fallback event shape', {
-          giftWrapId: wrappedEvent.id,
-          wrappedKind: wrappedContent.kind,
-          eventKind: fallbackEvent.kind,
-        });
-        return fallbackEvent;
-      }
-
       throw new Error('Content does not appear to be encrypted');
     }
 
@@ -1873,43 +1863,6 @@ export class MessagingService implements NostriaService {
     );
 
     return JSON.parse(sealedDecryptionResult.content);
-  }
-
-  private extractFallbackSealedEvent(wrappedContent: any): any | null {
-    if (this.looksLikeNostrEvent(wrappedContent)) {
-      return wrappedContent;
-    }
-
-    if (typeof wrappedContent.content === 'string') {
-      try {
-        const parsed = JSON.parse(wrappedContent.content);
-        if (this.looksLikeNostrEvent(parsed)) {
-          return parsed;
-        }
-      } catch {
-        // Ignore JSON parse failure, fall through to null.
-      }
-    }
-
-    if (this.looksLikeNostrEvent(wrappedContent.encryptedMessage)) {
-      return wrappedContent.encryptedMessage;
-    }
-
-    return null;
-  }
-
-  private looksLikeNostrEvent(value: unknown): value is NostrEvent {
-    if (!value || typeof value !== 'object') {
-      return false;
-    }
-
-    const candidate = value as Partial<NostrEvent>;
-    return typeof candidate.id === 'string'
-      && typeof candidate.pubkey === 'string'
-      && typeof candidate.kind === 'number'
-      && typeof candidate.content === 'string'
-      && Array.isArray(candidate.tags)
-      && typeof candidate.created_at === 'number';
   }
 
   /**
