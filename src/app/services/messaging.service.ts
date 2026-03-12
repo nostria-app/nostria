@@ -56,6 +56,10 @@ interface DirectMessage {
   reactionContent?: string;
 }
 
+interface DeadLetterListRecord {
+  eventIds?: string[];
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -95,6 +99,18 @@ export class MessagingService implements NostriaService {
    * callbacks do not queue duplicate decrypt operations for the same event.
    */
   private inFlightGiftWrapIds = new Set<string>();
+
+  /**
+   * Persistent dead-letter list for invalid/corrupted DM event IDs.
+   * These IDs are skipped across reloads so the app does not repeatedly try
+   * to decrypt the same unrecoverable spam/corrupted events.
+   */
+  private deadLetterEventIds = new Set<string>();
+  private deadLetterPersistPromise: Promise<void> = Promise.resolve();
+
+  private readonly deadLetterInfoKey = 'direct-messages';
+  private readonly deadLetterInfoType = 'dead-letter-list';
+  private readonly maxDeadLetterEventIds = 2000;
 
   MESSAGE_SIZE = 400;
 
@@ -626,6 +642,130 @@ export class MessagingService implements NostriaService {
     return Array.from(messagesMap.values()).sort((a, b) => b.created_at - a.created_at)[0];
   }
 
+  private shouldSkipDmEvent(eventId: string | null | undefined): boolean {
+    if (!eventId) {
+      return false;
+    }
+
+    return this.knownEventIds.has(eventId) || this.deadLetterEventIds.has(eventId);
+  }
+
+  private getDecryptFailureReason(error: unknown): string {
+    if (error instanceof Error && error.message) {
+      return error.message;
+    }
+
+    if (typeof error === 'string' && error.trim()) {
+      return error;
+    }
+
+    return 'Unknown decrypt failure';
+  }
+
+  private isTransientDecryptFailure(error: unknown): boolean {
+    const reason = this.getDecryptFailureReason(error).toLowerCase();
+
+    return reason.includes('browser extension nip-04 not available') ||
+      reason.includes('browser extension nip-44 not available') ||
+      reason.includes('private key not available') ||
+      reason.includes('failed to decrypt private key') ||
+      reason.includes('user may have cancelled') ||
+      reason.includes('failed to establish remote signer session') ||
+      reason.includes('reconnect your signer') ||
+      reason.includes('timed out') ||
+      reason.includes('missing ciphertext or pubkey');
+  }
+
+  private isPermanentDecryptFailure(error: unknown, options?: { allowGenericDecryptFailure?: boolean }): boolean {
+    if (this.isTransientDecryptFailure(error)) {
+      return false;
+    }
+
+    if (error instanceof SyntaxError) {
+      return true;
+    }
+
+    const reason = this.getDecryptFailureReason(error).toLowerCase();
+
+    return reason.includes('invalid payload length') ||
+      reason.includes('content does not appear to be encrypted') ||
+      reason.includes('wrapped content is not a valid object') ||
+      reason.includes('decrypted message pubkey does not match wrapped content pubkey') ||
+      (!!options?.allowGenericDecryptFailure && (
+        reason.includes('decryption failed') ||
+        reason.includes('unable to decrypt message with any supported algorithm')
+      ));
+  }
+
+  private normalizeDeadLetterEventIds(record: Record<string, unknown> | null): string[] {
+    const eventIds = (record as DeadLetterListRecord | null)?.eventIds;
+    if (!Array.isArray(eventIds)) {
+      return [];
+    }
+
+    return eventIds.filter((eventId): eventId is string => typeof eventId === 'string' && eventId.trim().length > 0);
+  }
+
+  private trimDeadLetterEventIds(): void {
+    if (this.deadLetterEventIds.size <= this.maxDeadLetterEventIds) {
+      return;
+    }
+
+    const trimmedEventIds = Array.from(this.deadLetterEventIds).slice(-this.maxDeadLetterEventIds);
+    this.deadLetterEventIds = new Set(trimmedEventIds);
+  }
+
+  private persistDeadLetterList(): void {
+    this.trimDeadLetterEventIds();
+
+    const eventIds = Array.from(this.deadLetterEventIds);
+    if (eventIds.length === 0) {
+      return;
+    }
+
+    this.deadLetterPersistPromise = this.deadLetterPersistPromise
+      .catch(() => undefined)
+      .then(async () => {
+        await this.database.init();
+        await this.database.saveInfo(this.deadLetterInfoKey, this.deadLetterInfoType, { eventIds });
+      })
+      .catch(error => {
+        this.logger.warn('Failed to persist DM dead-letter list', error);
+      });
+  }
+
+  private async loadDeadLetterListFromStorage(): Promise<void> {
+    try {
+      await this.database.init();
+      const record = await this.database.getInfo(this.deadLetterInfoKey, this.deadLetterInfoType);
+      const storedEventIds = this.normalizeDeadLetterEventIds(record);
+      const mergedEventIds = new Set([...storedEventIds, ...this.deadLetterEventIds]);
+
+      this.deadLetterEventIds = mergedEventIds;
+      for (const eventId of mergedEventIds) {
+        this.knownEventIds.add(eventId);
+      }
+    } catch (error) {
+      this.logger.warn('Failed to load DM dead-letter list from storage', error);
+    }
+  }
+
+  private markEventAsDeadLetter(eventId: string | null | undefined, reason: string, context?: Record<string, unknown>): void {
+    if (!eventId || this.deadLetterEventIds.has(eventId)) {
+      return;
+    }
+
+    this.deadLetterEventIds.add(eventId);
+    this.knownEventIds.add(eventId);
+    this.persistDeadLetterList();
+
+    this.logger.warn('Added DM event to dead-letter list', {
+      eventId,
+      reason,
+      ...context,
+    });
+  }
+
   clear() {
     this.chatsMap.set(new Map());
     this.oldestChatTimestamp.set(null);
@@ -634,6 +774,8 @@ export class MessagingService implements NostriaService {
     this.hasMoreChats.set(true);
     this.error.set(null);
     this.knownEventIds.clear();
+    this.deadLetterEventIds.clear();
+    this.deadLetterPersistPromise = Promise.resolve();
     this.bootstrapUnreadCount.set(null);
     this.bootstrappedPubkey = null;
   }
@@ -642,6 +784,8 @@ export class MessagingService implements NostriaService {
     this.chatsMap.set(new Map());
     this.oldestChatTimestamp.set(null);
     this.knownEventIds.clear();
+    this.deadLetterEventIds.clear();
+    this.deadLetterPersistPromise = Promise.resolve();
     this.bootstrapUnreadCount.set(null);
     this.bootstrappedPubkey = null;
   }
@@ -662,6 +806,7 @@ export class MessagingService implements NostriaService {
 
     try {
       await this.database.init();
+      await this.loadDeadLetterListFromStorage();
 
       const [storedChats, storedMessages] = await Promise.all([
         this.database.getChatsForAccount(myPubkey),
@@ -705,6 +850,7 @@ export class MessagingService implements NostriaService {
     try {
       // Load messages from IndexedDB first for instant display
       await this.database.init();
+      await this.loadDeadLetterListFromStorage();
       const storedChats = await this.database.getChatsForAccount(myPubkey);
 
       this.logger.info(`Found ${storedChats.length} stored chats`);
@@ -927,7 +1073,7 @@ export class MessagingService implements NostriaService {
     try {
       if (event.kind === kinds.GiftWrap) {
         // Check if this gift wrap has already been processed to avoid re-decryption
-        if (this.knownEventIds.has(event.id)) {
+        if (this.shouldSkipDmEvent(event.id)) {
           this.logger.debug('Gift wrap already processed, skipping decryption (processIncomingEvent)', { eventId: event.id });
           return;
         }
@@ -1093,7 +1239,7 @@ export class MessagingService implements NostriaService {
           if (event.kind === kinds.GiftWrap) {
             const processPromise = (async () => {
               try {
-                if (this.knownEventIds.has(event.id)) {
+                if (this.shouldSkipDmEvent(event.id)) {
                   this.logger.debug('Gift wrap already processed, skipping decryption', { eventId: event.id });
                   return;
                 }
@@ -1324,7 +1470,7 @@ export class MessagingService implements NostriaService {
         try {
           if (event.kind === kinds.GiftWrap) {
             // Check if this gift wrap has already been processed to avoid re-decryption
-            if (this.knownEventIds.has(event.id)) {
+            if (this.shouldSkipDmEvent(event.id)) {
               this.logger.debug('Gift wrap already processed, skipping decryption (queryDmRelays)', { eventId: event.id });
               continue;
             }
@@ -1548,7 +1694,7 @@ export class MessagingService implements NostriaService {
 
     const processEvent = async (event: NostrEvent) => {
       // Skip if already processed (across all code paths, not just this batch)
-      if (this.knownEventIds.has(event.id)) {
+      if (this.shouldSkipDmEvent(event.id)) {
         return;
       }
 
@@ -1703,10 +1849,12 @@ export class MessagingService implements NostriaService {
       const tags = this.utilities.getPTagsValuesFromEvent(event);
 
       if (tags.length === 0) {
+        this.markEventAsDeadLetter(event.id, 'NIP-04 message missing recipient p-tag');
         return null;
       } else if (tags.length > 1) {
         // NIP-04 only supports one recipient, yet some clients have sent DMs with more. Ignore those.
         this.logger.warn('NIP-04 message has multiple recipients, ignoring.', event);
+        this.markEventAsDeadLetter(event.id, 'NIP-04 message has multiple recipients');
         return null;
       }
 
@@ -1737,6 +1885,14 @@ export class MessagingService implements NostriaService {
         tags: event.tags,
       };
     } catch (err) {
+      if (this.isPermanentDecryptFailure(err)) {
+        this.markEventAsDeadLetter(event.id, this.getDecryptFailureReason(err), {
+          encryptionType: 'nip04',
+        });
+        this.logger.warn('Failed to decrypt NIP-04 message permanently; moving to dead-letter list', err);
+        return null;
+      }
+
       this.logger.error('Failed to decrypt NIP-04 message', err);
       return null;
     }
@@ -1754,7 +1910,7 @@ export class MessagingService implements NostriaService {
     }
 
     // Cross-path dedup: skip immediately when we already handled this outer event.
-    if (this.knownEventIds.has(wrappedEvent.id)) {
+    if (this.shouldSkipDmEvent(wrappedEvent.id)) {
       return null;
     }
 
@@ -1788,6 +1944,12 @@ export class MessagingService implements NostriaService {
         );
         wrappedContent = JSON.parse(decryptionResult.content);
       } catch (err) {
+        if (this.isPermanentDecryptFailure(err, { allowGenericDecryptFailure: true })) {
+          this.markEventAsDeadLetter(wrappedEvent.id, this.getDecryptFailureReason(err), {
+            encryptionType: 'nip44',
+            stage: 'wrapped-content',
+          });
+        }
         this.logger.debug('Failed to decrypt wrapped content', { eventId: wrappedEvent.id });
         return null;
       }
@@ -1795,7 +1957,7 @@ export class MessagingService implements NostriaService {
       // Root/sealed event ID is stable for this wrapped payload. If we already know it
       // from cache or previous processing, skip the second decrypt stage entirely.
       const rootWrappedEventId = typeof wrappedContent?.id === 'string' ? wrappedContent.id : null;
-      if (rootWrappedEventId && this.knownEventIds.has(rootWrappedEventId)) {
+      if (rootWrappedEventId && this.shouldSkipDmEvent(rootWrappedEventId)) {
         this.knownEventIds.add(wrappedEvent.id);
         this.logger.debug('Skipping NIP-44 unwrap: root wrapped event already known', {
           giftWrapId: wrappedEvent.id,
@@ -1815,6 +1977,13 @@ export class MessagingService implements NostriaService {
         try {
           sealedEvent = await this.unwrapSealedContent(wrappedContent, wrappedEvent);
         } catch (err) {
+          if (this.isPermanentDecryptFailure(err, { allowGenericDecryptFailure: true })) {
+            this.markEventAsDeadLetter(wrappedEvent.id, this.getDecryptFailureReason(err), {
+              encryptionType: 'nip44',
+              stage: 'sealed-content',
+              rootWrappedEventId,
+            });
+          }
           this.logger.warn('Failed to decrypt sealed content', {
             error: err,
             giftWrapId: wrappedEvent.id,
@@ -1827,7 +1996,13 @@ export class MessagingService implements NostriaService {
       }
 
       if (wrappedContent.pubkey !== sealedEvent.pubkey) {
-        throw new Error('Decrypted message pubkey does not match wrapped content pubkey');
+        const pubkeyMismatchError = new Error('Decrypted message pubkey does not match wrapped content pubkey');
+        this.markEventAsDeadLetter(wrappedEvent.id, pubkeyMismatchError.message, {
+          encryptionType: 'nip44',
+          stage: 'pubkey-validation',
+          rootWrappedEventId,
+        });
+        return null;
       }
 
       if (rootWrappedEventId) {
@@ -1839,6 +2014,15 @@ export class MessagingService implements NostriaService {
         ...sealedEvent,
       };
     } catch (err) {
+      if (this.isPermanentDecryptFailure(err, { allowGenericDecryptFailure: true })) {
+        this.markEventAsDeadLetter(wrappedEvent.id, this.getDecryptFailureReason(err), {
+          encryptionType: 'nip44',
+          stage: 'unwrap',
+        });
+        this.logger.warn('Failed to unwrap message permanently; moving to dead-letter list', err);
+        return null;
+      }
+
       this.logger.error('Failed to unwrap message', err);
       throw err;
     } finally {
@@ -1942,7 +2126,7 @@ export class MessagingService implements NostriaService {
     const processEvent = async (event: NostrEvent) => {
       try {
         // Dedup: skip if we already processed this outer event in this or any previous batch
-        if (this.knownEventIds.has(event.id)) {
+        if (this.shouldSkipDmEvent(event.id)) {
           return;
         }
         this.knownEventIds.add(event.id);
@@ -2168,7 +2352,7 @@ export class MessagingService implements NostriaService {
             // Handle incoming wrapped events
             if (event.kind === kinds.GiftWrap) {
               // Check if this gift wrap has already been processed to avoid re-decryption
-              if (this.knownEventIds.has(event.id)) {
+              if (this.shouldSkipDmEvent(event.id)) {
                 this.logger.debug('Gift wrap already processed, skipping decryption (loadMoreChats sub1)', { eventId: event.id });
                 completedDecryptions++;
                 checkCompletion();
@@ -2319,7 +2503,7 @@ export class MessagingService implements NostriaService {
             // Handle incoming wrapped events
             if (event.kind === kinds.GiftWrap) {
               // Check if this gift wrap has already been processed to avoid re-decryption
-              if (this.knownEventIds.has(event.id)) {
+              if (this.shouldSkipDmEvent(event.id)) {
                 this.logger.debug('Gift wrap already processed, skipping decryption (loadMoreChats sub2)', { eventId: event.id });
                 completedDecryptions++;
                 checkCompletion();
