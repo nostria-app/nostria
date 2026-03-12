@@ -275,20 +275,27 @@
   letter-spacing: 0.1em;
 
   @media (max-width: 900px) {
-    grid-template-columns: 40px 1fr 120px 48px;
+    grid-template-columns: 34px minmax(0, 1.45fr) 92px 38px 34px;
 
-    .track-album-header,
-    .track-duration-header {
+    .track-album-header {
       display: none;
     }
   }
 
   @media (max-width: 600px) {
-    grid-template-columns: 40px 1fr 48px;
+    grid-template-columns: 34px minmax(0, 1fr) 38px 34px;
 
     .track-album-header,
-    .track-date-header,
-    .track-duration-header {
+    .track-date-header {
+      display: none;
+    }
+  }
+
+  @media (max-width: 400px) {
+    grid-template-columns: 34px minmax(0, 1fr) 38px 34px;
+
+    .track-album-header,
+    .track-date-header {
       display: none;
     }
   }
@@ -321,20 +328,27 @@
   transition: background-color 0.15s ease;
 
   @media (max-width: 900px) {
-    grid-template-columns: 40px 1fr 120px 48px;
+    grid-template-columns: 34px minmax(0, 1.45fr) 92px 38px 34px;
 
-    .track-album,
-    .track-duration {
+    .track-album {
       display: none;
     }
   }
 
   @media (max-width: 600px) {
-    grid-template-columns: 40px 1fr 48px;
+    grid-template-columns: 34px minmax(0, 1fr) 38px 34px;
 
     .track-album,
-    .track-date,
-    .track-duration {
+    .track-date {
+      display: none;
+    }
+  }
+
+  @media (max-width: 400px) {
+    grid-template-columns: 34px minmax(0, 1fr) 38px 34px;
+
+    .track-album,
+    .track-date {
       display: none;
     }
   }
@@ -459,6 +473,7 @@
   background-color: var(--mat-sys-secondary-container);
   color: var(--mat-sys-on-secondary-container);
   font-size: 0.625rem;
+  line-height: 1;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   flex-shrink: 0;

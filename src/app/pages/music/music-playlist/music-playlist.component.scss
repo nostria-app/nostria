@@ -160,11 +160,11 @@
 
   .play-fab {
     position: absolute;
-    bottom: 0.75rem;
-    right: 0.75rem;
+    bottom: -14px;
+    right: -14px;
     z-index: 2;
-    width: 56px;
-    height: 56px;
+    width: 52px;
+    height: 52px;
     border-radius: 50%;
     background: rgba(0, 0, 0, 0.42);
     color: var(--mat-sys-on-surface);
@@ -185,9 +185,9 @@
     }
 
     mat-icon {
-      font-size: 2rem;
-      width: 2rem;
-      height: 2rem;
+      font-size: 1.75rem;
+      width: 1.75rem;
+      height: 1.75rem;
     }
   }
 }
@@ -351,7 +351,7 @@
 
   // First breakpoint: hide Date Added (container width < 600px)
   @container playlist (max-width: 600px) {
-    grid-template-columns: 48px 1fr 60px 48px;
+    grid-template-columns: 34px minmax(0, 1fr) 38px 34px;
 
     .track-date-header {
       display: none;
@@ -360,10 +360,9 @@
 
   // Second breakpoint: hide Duration as well, keep only #, title, menu
   @container playlist (max-width: 400px) {
-    grid-template-columns: 40px 1fr 48px;
+    grid-template-columns: 34px minmax(0, 1fr) 38px 34px;
 
-    .track-date-header,
-    .track-duration-header {
+    .track-date-header {
       display: none;
     }
   }
@@ -397,7 +396,7 @@
 
   // First breakpoint: hide Date Added (container width < 600px)
   @container playlist (max-width: 600px) {
-    grid-template-columns: 48px 1fr 60px 48px;
+    grid-template-columns: 34px minmax(0, 1fr) 38px 34px;
 
     .track-date {
       display: none;
@@ -406,10 +405,9 @@
 
   // Second breakpoint: hide Duration as well, keep only #, title, menu
   @container playlist (max-width: 400px) {
-    grid-template-columns: 40px 1fr 48px;
+    grid-template-columns: 34px minmax(0, 1fr) 38px 34px;
 
-    .track-date,
-    .track-duration {
+    .track-date {
       display: none;
     }
   }
@@ -534,6 +532,7 @@
   background-color: var(--mat-sys-secondary-container);
   color: var(--mat-sys-on-secondary-container);
   font-size: 0.625rem;
+  line-height: 1;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   flex-shrink: 0;

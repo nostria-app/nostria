@@ -186,10 +186,10 @@
 
   .play-button {
     position: absolute;
-    bottom: 0.75rem;
-    right: 0.75rem;
-    width: 56px;
-    height: 56px;
+    bottom: -14px;
+    right: -14px;
+    width: 52px;
+    height: 52px;
     border-radius: 50%;
     background: rgba(0, 0, 0, 0.42);
     color: var(--mat-sys-on-surface);
@@ -210,9 +210,9 @@
     }
 
     mat-icon {
-      font-size: 32px;
-      width: 32px;
-      height: 32px;
+      font-size: 1.75rem;
+      width: 1.75rem;
+      height: 1.75rem;
     }
   }
 }
