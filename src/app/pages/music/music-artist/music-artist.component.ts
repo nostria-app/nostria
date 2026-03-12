@@ -177,10 +177,26 @@ export class MusicArtistComponent implements OnInit, OnDestroy {
 
       this.pubkey.set(decodedPubkey);
       this.hasResolvedInitialTabSelection = false;
+      this.applyInitialTabFromQuery();
       this.loadArtistContent(decodedPubkey);
     } else {
       this.loading.set(false);
       this.maybeSelectInitialTab();
+    }
+  }
+
+  private applyInitialTabFromQuery(): void {
+    const tab = this.route.snapshot.queryParamMap.get('tab')?.toLowerCase();
+
+    if (tab === 'tracks') {
+      this.selectedTabIndex.set(1);
+      this.hasResolvedInitialTabSelection = true;
+      return;
+    }
+
+    if (tab === 'albums') {
+      this.selectedTabIndex.set(0);
+      this.hasResolvedInitialTabSelection = true;
     }
   }
 
@@ -443,6 +459,14 @@ export class MusicArtistComponent implements OnInit, OnDestroy {
 
   onTabChange(index: number): void {
     this.selectedTabIndex.set(index);
+
+    const tab = index === 1 ? 'tracks' : 'albums';
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { tab },
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
   }
 
   goBack(): void {
@@ -641,6 +665,12 @@ export class MusicArtistComponent implements OnInit, OnDestroy {
     }
   }
 
+  openTrackDetailsFromList(track: Event, event: MouseEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.goToTrackDetails(track);
+  }
+
   async copyTrackLink(track: Event): Promise<void> {
     try {
       await this.userRelaysService.ensureRelaysForPubkey(track.pubkey);
@@ -678,6 +708,12 @@ export class MusicArtistComponent implements OnInit, OnDestroy {
       this.updateTracks();
       this.snackBar.open('Track updated', 'Close', { duration: 2000 });
     }
+  }
+
+  onTrackDeleted(track: Event): void {
+    const uniqueId = this.getTrackUniqueId(track);
+    this.trackMap.delete(uniqueId);
+    this.updateTracks();
   }
 
   copyArtistLink(): void {

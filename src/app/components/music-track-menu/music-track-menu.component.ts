@@ -7,6 +7,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDialog } from '@angular/material/dialog';
 import { Clipboard } from '@angular/cdk/clipboard';
+import { firstValueFrom } from 'rxjs';
 import { Event, nip19 } from 'nostr-tools';
 import { MediaPlayerService } from '../../services/media-player.service';
 import { MusicPlaylistService, MusicPlaylist } from '../../services/music-playlist.service';
@@ -25,6 +26,8 @@ import { ReactionService } from '../../services/reaction.service';
 import { ZapService } from '../../services/zap.service';
 import { ZapDialogComponent, ZapDialogData } from '../zap-dialog/zap-dialog.component';
 import { DataService } from '../../services/data.service';
+import { NostrService } from '../../services/nostr.service';
+import { ConfirmDialogComponent, ConfirmDialogData } from '../confirm-dialog/confirm-dialog.component';
 
 @Component({
   selector: 'app-music-track-menu',
@@ -42,6 +45,14 @@ import { DataService } from '../../services/data.service';
         <button mat-menu-item (click)="onEdit()">
           <mat-icon>edit</mat-icon>
           <span>Edit Track</span>
+        </button>
+        <button mat-menu-item (click)="deleteTrack()" [disabled]="isDeleting()">
+          @if (isDeleting()) {
+            <mat-spinner diameter="18"></mat-spinner>
+          } @else {
+            <mat-icon>delete</mat-icon>
+          }
+          <span>Delete Track</span>
         </button>
       }
       @if (isAuthenticated()) {
@@ -169,10 +180,12 @@ export class MusicTrackMenuComponent {
   private reactionService = inject(ReactionService);
   private zapService = inject(ZapService);
   private dataService = inject(DataService);
+  private nostrService = inject(NostrService);
 
   // Like state
   isLiked = signal(false);
   isLiking = signal(false);
+  isDeleting = signal(false);
 
   // ViewChild for exposing the menu - must be public for template access
   @ViewChild('trackMenu', { static: true }) public trackMenu!: MatMenu;
@@ -184,6 +197,7 @@ export class MusicTrackMenuComponent {
 
   // Outputs
   editRequested = output<Event>();
+  trackDeleted = output<Event>();
 
   // Playlist state from service
   userPlaylists = this.musicPlaylistService.userPlaylists;
@@ -241,6 +255,43 @@ export class MusicTrackMenuComponent {
 
   onEdit(): void {
     this.editRequested.emit(this.track());
+  }
+
+  async deleteTrack(): Promise<void> {
+    const ev = this.track();
+    if (!ev || !this.isOwnTrack() || this.isDeleting()) return;
+
+    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
+      data: {
+        title: 'Delete Track',
+        message: 'Are you sure you want to request deletion of this track? This action creates a deletion request (NIP-09) but cannot guarantee the track will be removed from all relays and clients.',
+        confirmText: 'Delete',
+        cancelText: 'Cancel',
+        confirmColor: 'warn',
+      } as ConfirmDialogData,
+    });
+
+    const confirmedDelete = await firstValueFrom(dialogRef.afterClosed());
+    if (!confirmedDelete) return;
+
+    this.isDeleting.set(true);
+    try {
+      const deleteEvent = this.nostrService.createRetractionEvent(ev);
+      const result = await this.nostrService.signAndPublish(deleteEvent);
+
+      if (result.success) {
+        await this.eventService.deleteEventFromLocalStorage(ev.id);
+        this.trackDeleted.emit(ev);
+        this.snackBar.open('Track deleted successfully', 'Dismiss', { duration: 3000 });
+      } else {
+        this.snackBar.open('Failed to delete track', 'Close', { duration: 3000 });
+      }
+    } catch (error) {
+      this.logger.error('Error deleting track:', error);
+      this.snackBar.open('Failed to delete track', 'Close', { duration: 3000 });
+    } finally {
+      this.isDeleting.set(false);
+    }
   }
 
   loadPlaylists(): void {

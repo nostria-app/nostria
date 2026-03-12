@@ -1359,6 +1359,19 @@ export class UtilitiesService {
   }
 
   /**
+   * Check whether a music event is marked as AI-generated.
+   * Supports standard tags and legacy rendering-only variants.
+   */
+  isMusicAiGenerated(event: Event | UnsignedEvent): boolean {
+    const aiTag = event.tags.find(t => t[0] === 'ai_generated' || t[0] === 'ai-generated' || t[0] === 'ai');
+    const hasAiTopic = event.tags.some(
+      t => t[0] === 't' && (t[1]?.toLowerCase() === 'ai_generated' || t[1]?.toLowerCase() === 'ai-generated')
+    );
+
+    return aiTag?.[1] === 'true' || hasAiTopic;
+  }
+
+  /**
    * Get the published timestamp for a music track in seconds.
    */
   getMusicPublishedAt(event: Event | UnsignedEvent): number | undefined {

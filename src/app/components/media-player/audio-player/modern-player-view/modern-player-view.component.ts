@@ -14,6 +14,7 @@ import { MatSliderModule } from '@angular/material/slider';
 import { MediaPlayerService } from '../../../../services/media-player.service';
 import { PlatformService } from '../../../../services/platform.service';
 import { DataService } from '../../../../services/data.service';
+import { UtilitiesService } from '../../../../services/utilities.service';
 import { formatDuration } from '../../../../utils/format-duration';
 import { trigger, transition, style, animate, state } from '@angular/animations';
 import { LyricsViewComponent } from '../lyrics-view/lyrics-view.component';
@@ -55,6 +56,7 @@ export class ModernPlayerViewComponent {
   readonly media = inject(MediaPlayerService);
   private readonly platform = inject(PlatformService);
   private readonly data = inject(DataService);
+  private readonly utilities = inject(UtilitiesService);
 
   openQueue = output<void>();
   queueDragProgress = output<number>();
@@ -174,12 +176,7 @@ export class ModernPlayerViewComponent {
         return false;
       }
 
-      const aiTag = trackEvent.tags.find(t => t[0] === 'ai_generated' || t[0] === 'ai');
-      const hasAiTopic = trackEvent.tags.some(
-        t => t[0] === 't' && t[1]?.toLowerCase() === 'ai_generated'
-      );
-
-      return aiTag?.[1] === 'true' || hasAiTopic;
+      return this.utilities.isMusicAiGenerated(trackEvent);
     } catch {
       return false;
     }

@@ -239,7 +239,7 @@ export class MusicTrackDialogComponent {
     }
 
     // Extract genres from t tags (exclude reserved tags)
-    const reservedTTags = ['music', 'ai_generated'];
+    const reservedTTags = ['music', 'ai_generated', 'ai-generated'];
     const allTTags = track.tags.filter(t => t[0] === 't').map(t => t[1]);
 
     const genres = allTTags
@@ -262,8 +262,9 @@ export class MusicTrackDialogComponent {
       ? formatDuration(durationSeconds)
       : '';
 
-    // Extract AI flag (check both 'ai_generated' and legacy 'ai' tag)
+    // Extract AI flag (check standard and legacy rendering tags)
     const aiGenerated = track.tags.find(t => t[0] === 'ai_generated')?.[1] === 'true' ||
+      track.tags.find(t => t[0] === 'ai-generated')?.[1] === 'true' ||
       track.tags.find(t => t[0] === 'ai')?.[1] === 'true';
 
     // Extract advanced settings

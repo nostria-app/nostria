@@ -1397,9 +1397,7 @@ export class MusicEventComponent {
   // Check if AI generated
   isAiGenerated = computed(() => {
     const event = this.event();
-    const aiTag = event.tags.find(t => t[0] === 'ai_generated');
-    const hasAiTopic = event.tags.some(t => t[0] === 't' && t[1]?.toLowerCase() === 'ai_generated');
-    return aiTag?.[1] === 'true' || hasAiTopic;
+    return this.utilities.isMusicAiGenerated(event);
   });
 
   // Get gradient background (alternative to image)
