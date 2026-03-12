@@ -619,8 +619,7 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
    * Shows the profile hover card (for desktop mouse hover)
    */
   onMouseEnter(event: MouseEvent, triggerElement: HTMLElement): void {
-    // Don't show hover card if disabled or for tiny/name-only views
-    if (this.disableHoverCard() || this.view() === 'tiny' || this.view() === 'name' || this.view() === 'chip') {
+    if (this.disableHoverCard()) {
       return;
     }
 
@@ -638,7 +637,7 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
    * Handles touch start for long-press hover card (mobile)
    */
   onTouchStart(event: TouchEvent, triggerElement: HTMLElement): void {
-    if (this.disableHoverCard() || this.view() === 'tiny' || this.view() === 'name' || this.view() === 'chip') {
+    if (this.disableHoverCard()) {
       return;
     }
 

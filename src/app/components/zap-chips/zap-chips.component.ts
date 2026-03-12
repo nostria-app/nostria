@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatIconModule } from '@angular/material/icon';
 import { DataService } from '../../services/data.service';
+import { UserProfileComponent } from '../user-profile/user-profile.component';
 
 export interface ZapperInfo {
   pubkey: string;
@@ -17,19 +18,12 @@ interface ProfileCache {
 
 @Component({
   selector: 'app-zap-chips',
-  imports: [CommonModule, MatTooltipModule, MatIconModule],
+  imports: [CommonModule, MatTooltipModule, MatIconModule, UserProfileComponent],
   template: `
     <div class="zap-chips-container">
       @for (zapper of displayedZappers(); track zapper.pubkey; let i = $index) {
-        <div class="zap-chip" [class.has-avatar]="getAvatar(zapper.pubkey)">
-          @if (getAvatar(zapper.pubkey); as avatar) {
-            <img [src]="avatar" class="zapper-avatar" [alt]="getName(zapper.pubkey)" />
-          } @else {
-            <div class="zapper-initial" [style.background-color]="getColor(i)">
-              {{ getInitial(zapper.pubkey) }}
-            </div>
-          }
-          <span class="zapper-name">{{ getName(zapper.pubkey) }}</span>
+        <div class="zap-chip">
+          <app-user-profile [pubkey]="zapper.pubkey" view="tiny" [hostWidthAuto]="true"></app-user-profile>
           <mat-icon class="zap-icon">bolt</mat-icon>
           <span class="zap-amount">{{ formatAmount(zapper.amount) }}</span>
         </div>
@@ -53,7 +47,7 @@ interface ProfileCache {
       display: flex;
       align-items: center;
       gap: 6px;
-      padding: 4px 10px 4px 4px;
+      padding: 4px 10px 4px 6px;
       background-color: var(--mat-sys-surface-container-high);
       border-radius: 20px;
       font-size: 0.8125rem;
@@ -69,32 +63,10 @@ interface ProfileCache {
         color: var(--mat-sys-on-surface-variant);
         cursor: default;
       }
-    }
 
-    .zapper-avatar {
-      width: 24px;
-      height: 24px;
-      border-radius: 50%;
-      object-fit: cover;
-    }
-
-    .zapper-initial {
-      width: 24px;
-      height: 24px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 0.75rem;
-      color: white;
-      text-transform: uppercase;
-    }
-
-    .zapper-name {
-      max-width: 100px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
+      app-user-profile {
+        min-width: 0;
+      }
     }
 
     .zap-icon {
@@ -121,12 +93,6 @@ export class ZapChipsComponent {
 
   // Track which pubkeys we've already requested to prevent duplicate fetches
   private loadedPubkeys = new Set<string>();
-
-  // Colors for initial avatars
-  private colors = [
-    '#e91e63', '#9c27b0', '#673ab7', '#3f51b5', '#2196f3',
-    '#00bcd4', '#009688', '#4caf50', '#ff9800', '#ff5722'
-  ];
 
   constructor() {
     // Load profile data when zappers change
@@ -197,12 +163,6 @@ export class ZapChipsComponent {
     return remaining.map(z => `${this.getName(z.pubkey)}: ${this.formatAmount(z.amount)}`).join('\n');
   });
 
-  getAvatar(pubkey: string): string | null {
-    const cache = this.profileCache();
-    const profile = cache.get(pubkey);
-    return profile?.picture || null;
-  }
-
   getName(pubkey: string): string {
     const cache = this.profileCache();
     const profile = cache.get(pubkey);
@@ -210,15 +170,6 @@ export class ZapChipsComponent {
     if (profile?.name) return profile.name;
     // Return shortened pubkey
     return pubkey.slice(0, 8) + '...';
-  }
-
-  getInitial(pubkey: string): string {
-    const name = this.getName(pubkey);
-    return name.charAt(0);
-  }
-
-  getColor(index: number): string {
-    return this.colors[index % this.colors.length];
   }
 
   formatAmount(sats: number): string {

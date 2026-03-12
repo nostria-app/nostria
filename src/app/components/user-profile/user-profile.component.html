@@ -170,7 +170,10 @@
     }
 
     @if (view() === 'tiny') {
-    <a [href]="profileUrl()" class="user-profile-content tiny-view" (click)="onProfileClick($event)">
+    <a [href]="profileUrl()" class="user-profile-content tiny-view" #tinyElement (click)="onProfileClick($event)"
+      (mouseenter)="onMouseEnter($event, tinyElement)" (mouseleave)="onMouseLeave()"
+      (touchstart)="onTouchStart($event, tinyElement)" (touchmove)="onTouchMove($event)" (touchend)="onTouchEnd()"
+      (touchcancel)="onTouchEnd()">
       <div class="user-profile-avatar name-avatar">
         @if (isLoading()) {
         <mat-spinner [diameter]="24" color="primary"></mat-spinner>
