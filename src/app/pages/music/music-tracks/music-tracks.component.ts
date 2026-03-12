@@ -1187,7 +1187,32 @@ export class MusicTracksComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   private getTrackArtistSortValue(track: Event): string {
-    return (this.utilities.getMusicArtist(track) || '').trim().toLocaleLowerCase();
+    const taggedArtist = this.utilities.getMusicArtist(track)?.trim();
+    if (taggedArtist) {
+      return taggedArtist.toLocaleLowerCase();
+    }
+
+    return this.getCachedProfileNameSortValue(track.pubkey);
+  }
+
+  private getCachedProfileNameSortValue(pubkey: string): string {
+    const profile = this.accountState.getAccountProfileSync(pubkey);
+    const profileData = profile?.data as Record<string, unknown> | undefined;
+    const displayName = this.getProfileFieldAsString(profileData?.['display_name']);
+    if (displayName) {
+      return displayName.toLocaleLowerCase();
+    }
+
+    const name = this.getProfileFieldAsString(profileData?.['name']);
+    if (name) {
+      return name.toLocaleLowerCase();
+    }
+
+    return '';
+  }
+
+  private getProfileFieldAsString(value: unknown): string {
+    return typeof value === 'string' ? value.trim() : '';
   }
 
   private getTrackAlbumSortValue(track: Event): string {
