@@ -603,6 +603,26 @@ export class MediaPlayerService implements OnInitialized {
     this.start();
   }
 
+  replaceQueue(files: MediaItem[], startIndex = 0) {
+    if (files.length === 0) {
+      return;
+    }
+
+    const safeStartIndex = Math.min(Math.max(startIndex, 0), files.length - 1);
+    const previousFile = this.current();
+
+    this.clearQueue();
+
+    this.layout.showMediaPlayer.set(true);
+    this.layout.expandedMediaPlayer.set(this.resolveExpandedPlayerState(files[safeStartIndex], previousFile));
+
+    this.media.set([...files]);
+    this.index = safeStartIndex;
+
+    void this.save();
+    this.start();
+  }
+
   enque(file: MediaItem) {
     // TODO: Clean the file.source URL!
     // this.layout.showMediaPlayer.set(true);

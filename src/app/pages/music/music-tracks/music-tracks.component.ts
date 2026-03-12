@@ -152,13 +152,14 @@ type MusicTracksViewKind = 'list' | 'grid';
             </div>
             <div class="track-list">
               @for (track of displayedTracks(); track track.id; let i = $index) {
-                <app-music-event [event]="track" mode="track-list" [trackNumber]="getTrackDisplayNumber(track)"></app-music-event>
+                <app-music-event [event]="track" mode="track-list" [trackNumber]="getTrackDisplayNumber(track)"
+                  [queueTracks]="searchedTracks()" [queueTrackIndex]="i"></app-music-event>
               }
             </div>
           } @else {
             <div class="music-grid">
-              @for (track of displayedTracks(); track track.id) {
-                <app-music-event [event]="track" mode="card"></app-music-event>
+              @for (track of displayedTracks(); track track.id; let i = $index) {
+                <app-music-event [event]="track" mode="card" [queueTracks]="searchedTracks()" [queueTrackIndex]="i"></app-music-event>
               }
             </div>
           }

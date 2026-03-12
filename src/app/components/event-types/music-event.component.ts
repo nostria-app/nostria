@@ -1199,6 +1199,8 @@ export class MusicEventComponent {
   event = input.required<Event>();
   mode = input<'card' | 'list' | 'track-list'>('list');
   trackNumber = input<string | null>(null);
+  queueTracks = input<Event[] | null>(null);
+  queueTrackIndex = input<number | null>(null);
 
   authorProfile = signal<NostrRecord | undefined>(undefined);
   userPlaylists = this.musicPlaylistService.userPlaylists;
@@ -1446,42 +1448,76 @@ export class MusicEventComponent {
       return;
     }
 
-    const mediaItem: MediaItem = {
-      source: url,
-      title: this.title() || 'Untitled Track',
-      artist: this.artistName(),
-      artwork: this.rawImage() || '/icons/icon-192x192.png',
-      video: this.event().tags.find(t => t[0] === 'video')?.[1] || undefined,
-      type: 'Music',
-      eventPubkey: this.artistNpub(),
-      eventIdentifier: this.identifier(),
-      eventKind: this.event().kind,
-      lyrics: this.utilities.extractLyricsFromEvent(this.event()),
-    };
+    const queuedPlayback = this.buildQueuedPlayback();
+    if (queuedPlayback) {
+      this.mediaPlayer.replaceQueue(queuedPlayback.items, queuedPlayback.startIndex);
+      return;
+    }
+
+    const mediaItem = this.buildMediaItem(this.event());
+    if (!mediaItem) {
+      this.logger.warn('No audio URL found for track');
+      return;
+    }
 
     this.mediaPlayer.play(mediaItem);
   }
 
+  private buildQueuedPlayback(): { items: MediaItem[]; startIndex: number } | null {
+    const queueTracks = this.queueTracks();
+    const queueTrackIndex = this.queueTrackIndex();
+
+    if (!queueTracks || queueTrackIndex === null || queueTrackIndex < 0 || queueTrackIndex >= queueTracks.length) {
+      return null;
+    }
+
+    const queueEntries = queueTracks
+      .map((track, originalIndex) => ({
+        originalIndex,
+        mediaItem: this.buildMediaItem(track),
+      }))
+      .filter((entry): entry is { originalIndex: number; mediaItem: MediaItem } => !!entry.mediaItem);
+
+    const startIndex = queueEntries.findIndex(entry => entry.originalIndex === queueTrackIndex);
+    if (startIndex === -1) {
+      return null;
+    }
+
+    return {
+      items: queueEntries.map(entry => entry.mediaItem),
+      startIndex,
+    };
+  }
+
+  private buildMediaItem(track: Event): MediaItem | null {
+    const url = this.utilities.getMusicAudioUrl(track);
+    if (!url) {
+      return null;
+    }
+
+    const dTag = track.tags.find(tag => tag[0] === 'd')?.[1] || '';
+
+    return {
+      source: url,
+      title: this.utilities.getMusicTitle(track) || 'Untitled Track',
+      artist: this.utilities.getMusicArtist(track) || 'Unknown Artist',
+      artwork: this.utilities.getMusicImage(track) || '/icons/icon-192x192.png',
+      video: track.tags.find(tag => tag[0] === 'video')?.[1] || undefined,
+      type: 'Music',
+      eventPubkey: track.pubkey,
+      eventIdentifier: dTag,
+      eventKind: track.kind,
+      lyrics: this.utilities.extractLyricsFromEvent(track),
+    };
+  }
+
   // Add track to queue
   addToQueue(): void {
-    const url = this.audioUrl();
-    if (!url) {
+    const mediaItem = this.buildMediaItem(this.event());
+    if (!mediaItem) {
       this.snackBar.open('No audio URL found', 'Close', { duration: 3000 });
       return;
     }
-
-    const mediaItem: MediaItem = {
-      source: url,
-      title: this.title() || 'Untitled Track',
-      artist: this.artistName(),
-      artwork: this.rawImage() || '/icons/icon-192x192.png',
-      video: this.event().tags.find(t => t[0] === 'video')?.[1] || undefined,
-      type: 'Music',
-      eventPubkey: this.artistNpub(),
-      eventIdentifier: this.identifier(),
-      eventKind: this.event().kind,
-      lyrics: this.utilities.extractLyricsFromEvent(this.event()),
-    };
 
     this.mediaPlayer.enque(mediaItem);
     this.snackBar.open('Added to queue', 'Close', { duration: 2000 });
