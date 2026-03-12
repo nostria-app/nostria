@@ -152,7 +152,7 @@ type MusicTracksViewKind = 'list' | 'grid';
             </div>
             <div class="track-list">
               @for (track of displayedTracks(); track track.id; let i = $index) {
-                <app-music-event [event]="track" mode="track-list" [trackNumber]="i + 1"></app-music-event>
+                <app-music-event [event]="track" mode="track-list" [trackNumber]="getTrackDisplayNumber(track)"></app-music-event>
               }
             </div>
           } @else {
@@ -387,6 +387,30 @@ type MusicTracksViewKind = 'list' | 'grid';
       width: 10.5rem;
     }
 
+    @media (max-width: 780px) {
+      .track-list-header {
+        grid-template-columns: minmax(0, 1fr) 3.25rem auto;
+      }
+
+      .track-list-header-number,
+      .track-list-header-album {
+        display: none;
+      }
+    }
+
+    @media (max-width: 520px) {
+      .track-list-header {
+        grid-template-columns: minmax(0, 1fr) 3rem auto;
+        gap: 0.5rem;
+        padding-left: 0.5rem;
+        padding-right: 0.5rem;
+      }
+
+      .track-list-header-actions {
+        width: 8.5rem;
+      }
+    }
+
     .search-bar,
     .search-results-info,
     .loading-container,
@@ -537,27 +561,21 @@ export class MusicTracksComponent implements OnInit, OnDestroy, AfterViewInit {
       filtered = filtered.filter(t => allowedPubkeys.has(t.pubkey));
     }
 
+    const albumSortValues = this.buildAlbumSortValues(filtered, sort);
+
     // Apply sorting
     switch (sort) {
       case 'released':
-        return [...filtered].sort((a, b) => this.getTrackSortValue(b, 'released') - this.getTrackSortValue(a, 'released'));
+        return [...filtered].sort((a, b) => this.compareTracksForDisplay(a, b, 'released', albumSortValues));
 
       case 'published':
-        return [...filtered].sort((a, b) => this.getTrackSortValue(b, 'published') - this.getTrackSortValue(a, 'published'));
+        return [...filtered].sort((a, b) => this.compareTracksForDisplay(a, b, 'published', albumSortValues));
 
       case 'alphabetical':
-        return [...filtered].sort((a, b) => {
-          const titleA = this.utilities.getMusicTitle(a) || '';
-          const titleB = this.utilities.getMusicTitle(b) || '';
-          return titleA.localeCompare(titleB);
-        });
+        return [...filtered].sort((a, b) => this.compareTracksForDisplay(a, b, 'alphabetical', albumSortValues));
 
       case 'artist':
-        return [...filtered].sort((a, b) => {
-          const artistA = this.utilities.getMusicArtist(a) || '';
-          const artistB = this.utilities.getMusicArtist(b) || '';
-          return artistA.localeCompare(artistB);
-        });
+        return [...filtered].sort((a, b) => this.compareTracksForDisplay(a, b, 'artist', albumSortValues));
 
       default:
         return filtered;
@@ -758,6 +776,156 @@ export class MusicTracksComponent implements OnInit, OnDestroy, AfterViewInit {
     }
 
     return this.getTrackReleaseSortValue(track) ?? this.getTrackPublishedSortValue(track);
+  }
+
+  private compareTracksForDisplay(
+    a: Event,
+    b: Event,
+    mode: 'released' | 'published' | 'alphabetical' | 'artist',
+    albumSortValues: Map<string, number>
+  ): number {
+    const groupKeyA = this.getTrackAlbumGroupKey(a);
+    const groupKeyB = this.getTrackAlbumGroupKey(b);
+
+    if (groupKeyA === groupKeyB) {
+      return this.compareTracksWithinGroup(a, b, mode);
+    }
+
+    switch (mode) {
+      case 'released':
+      case 'published': {
+        const sortA = albumSortValues.get(groupKeyA) ?? this.getTrackSortValue(a, mode);
+        const sortB = albumSortValues.get(groupKeyB) ?? this.getTrackSortValue(b, mode);
+        if (sortA !== sortB) {
+          return sortB - sortA;
+        }
+        break;
+      }
+
+      case 'artist': {
+        const artistCompare = this.getTrackArtistSortValue(a).localeCompare(this.getTrackArtistSortValue(b));
+        if (artistCompare !== 0) {
+          return artistCompare;
+        }
+        break;
+      }
+
+      case 'alphabetical':
+        break;
+    }
+
+    const albumCompare = this.getTrackAlbumSortValue(a).localeCompare(this.getTrackAlbumSortValue(b));
+    if (albumCompare !== 0) {
+      return albumCompare;
+    }
+
+    const artistCompare = this.getTrackArtistSortValue(a).localeCompare(this.getTrackArtistSortValue(b));
+    if (artistCompare !== 0) {
+      return artistCompare;
+    }
+
+    const titleCompare = this.getTrackTitleSortValue(a).localeCompare(this.getTrackTitleSortValue(b));
+    if (titleCompare !== 0) {
+      return titleCompare;
+    }
+
+    return b.created_at - a.created_at;
+  }
+
+  private compareTracksWithinGroup(
+    a: Event,
+    b: Event,
+    mode: 'released' | 'published' | 'alphabetical' | 'artist'
+  ): number {
+    const trackNumberA = this.getTrackNumberSortValue(a);
+    const trackNumberB = this.getTrackNumberSortValue(b);
+
+    if (trackNumberA !== null && trackNumberB !== null && trackNumberA !== trackNumberB) {
+      return trackNumberA - trackNumberB;
+    }
+
+    if (trackNumberA !== null && trackNumberB === null) {
+      return -1;
+    }
+
+    if (trackNumberA === null && trackNumberB !== null) {
+      return 1;
+    }
+
+    if (mode === 'released' || mode === 'published') {
+      const sortA = this.getTrackSortValue(a, mode);
+      const sortB = this.getTrackSortValue(b, mode);
+      if (sortA !== sortB) {
+        return sortB - sortA;
+      }
+    }
+
+    const titleCompare = this.getTrackTitleSortValue(a).localeCompare(this.getTrackTitleSortValue(b));
+    if (titleCompare !== 0) {
+      return titleCompare;
+    }
+
+    return b.created_at - a.created_at;
+  }
+
+  private buildAlbumSortValues(
+    tracks: Event[],
+    mode: 'released' | 'published' | 'alphabetical' | 'artist'
+  ): Map<string, number> {
+    const albumSortValues = new Map<string, number>();
+
+    if (mode !== 'released' && mode !== 'published') {
+      return albumSortValues;
+    }
+
+    for (const track of tracks) {
+      const albumKey = this.getTrackAlbumGroupKey(track);
+      const trackSortValue = this.getTrackSortValue(track, mode);
+      const existing = albumSortValues.get(albumKey);
+
+      if (existing === undefined || trackSortValue > existing) {
+        albumSortValues.set(albumKey, trackSortValue);
+      }
+    }
+
+    return albumSortValues;
+  }
+
+  private getTrackArtistSortValue(track: Event): string {
+    return (this.utilities.getMusicArtist(track) || '').trim().toLocaleLowerCase();
+  }
+
+  private getTrackAlbumSortValue(track: Event): string {
+    return track.tags.find(tag => tag[0] === 'album')?.[1]?.trim().toLocaleLowerCase() || '';
+  }
+
+  private getTrackTitleSortValue(track: Event): string {
+    return (this.utilities.getMusicTitle(track) || '').trim().toLocaleLowerCase();
+  }
+
+  private getTrackNumberSortValue(track: Event): number | null {
+    const trackNumber = track.tags.find(tag => tag[0] === 'track_number')?.[1]?.trim();
+    if (!trackNumber) {
+      return null;
+    }
+
+    const parsed = Number.parseInt(trackNumber, 10);
+    return Number.isNaN(parsed) ? null : parsed;
+  }
+
+  private getTrackAlbumGroupKey(track: Event): string {
+    const album = this.getTrackAlbumSortValue(track);
+    const artist = this.getTrackArtistSortValue(track);
+    if (album) {
+      return `album:${artist}:${album}`;
+    }
+
+    const dTag = track.tags.find(tag => tag[0] === 'd')?.[1]?.trim();
+    return `single:${track.pubkey}:${dTag || track.id}`;
+  }
+
+  getTrackDisplayNumber(track: Event): string | null {
+    return track.tags.find(tag => tag[0] === 'track_number')?.[1]?.trim() || null;
   }
 
   private getTrackPublishedSortValue(track: Event): number {

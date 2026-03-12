@@ -100,15 +100,17 @@ import { MatDividerModule } from '@angular/material/divider';
     } @else if (mode() === 'track-list') {
       <div class="music-track-row" (click)="playTrack($any($event))" (keydown.enter)="playTrack($any($event))"
         (keydown.space)="playTrack($any($event))" tabindex="0" role="button" [attr.aria-label]="'Play ' + (title() || 'track')">
-        @if (trackNumber() !== null) {
-          <span class="track-row-number">{{ trackNumber() }}</span>
-        }
+        <div class="track-row-leading" [class.has-track-number]="trackNumber() !== null">
+          @if (trackNumber() !== null) {
+            <span class="track-row-number">{{ trackNumber() }}</span>
+          }
 
-        <button mat-icon-button class="track-row-play" (click)="playTrack($any($event))"
-          [attr.aria-label]="isCurrentTrackPlaying() ? 'Pause track' : 'Play now'"
-          [title]="isCurrentTrackPlaying() ? 'Pause' : 'Play Now'">
-          <mat-icon>{{ isCurrentTrackPlaying() ? 'pause' : 'play_arrow' }}</mat-icon>
-        </button>
+          <button mat-icon-button class="track-row-play" (click)="playTrack($any($event))"
+            [attr.aria-label]="isCurrentTrackPlaying() ? 'Pause track' : 'Play now'"
+            [title]="isCurrentTrackPlaying() ? 'Pause' : 'Play Now'">
+            <mat-icon>{{ isCurrentTrackPlaying() ? 'pause' : 'play_arrow' }}</mat-icon>
+          </button>
+        </div>
 
         <div class="track-row-cover" [style.background]="gradient() || ''">
           @if (image() && !gradient()) {
@@ -697,11 +699,42 @@ import { MatDividerModule } from '@angular/material/divider';
     }
 
     .track-row-number {
-      flex: 0 0 1.5rem;
+      display: block;
+      width: 100%;
       color: var(--mat-sys-on-surface-variant);
       font-size: 0.8125rem;
       text-align: right;
       font-variant-numeric: tabular-nums;
+      transition: opacity 0.15s ease;
+    }
+
+    .track-row-leading {
+      position: relative;
+      flex: 0 0 1.5rem;
+      width: 1.5rem;
+      min-width: 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+
+      &.has-track-number .track-row-play {
+        position: absolute;
+        inset: 50% auto auto 50%;
+        transform: translate(-50%, -50%);
+        opacity: 0;
+        pointer-events: none;
+      }
+    }
+
+    .music-track-row:hover .track-row-leading.has-track-number .track-row-play,
+    .music-track-row:focus-within .track-row-leading.has-track-number .track-row-play {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .music-track-row:hover .track-row-leading.has-track-number .track-row-number,
+    .music-track-row:focus-within .track-row-leading.has-track-number .track-row-number {
+      opacity: 0;
     }
 
     .track-row-play,
@@ -920,36 +953,16 @@ import { MatDividerModule } from '@angular/material/divider';
     }
 
     @media (max-width: 780px) {
-      .music-track-row {
-        align-items: flex-start;
-        flex-wrap: wrap;
-      }
-
-      .track-row-main {
-        flex: 1 1 calc(100% - 116px);
+      .track-row-leading {
+        display: none;
       }
 
       .track-row-meta {
-        order: 4;
-        flex: 1 1 calc(100% - 116px);
-        justify-content: flex-start;
-        margin-left: 4.75rem;
-        gap: 0.625rem;
+        flex: 0 0 3.25rem;
       }
 
       .track-row-album {
-        text-align: left;
-      }
-
-      .track-row-actions {
-        order: 5;
-        width: auto;
-        margin-left: auto;
-        padding-top: 0;
-      }
-
-      .track-row-menu {
-        order: 6;
+        display: none;
       }
     }
 
@@ -959,8 +972,13 @@ import { MatDividerModule } from '@angular/material/divider';
         gap: 0.5rem;
       }
 
-      .track-row-number {
+      .track-row-leading {
         flex-basis: 1.25rem;
+        width: 1.25rem;
+        min-width: 1.25rem;
+      }
+
+      .track-row-number {
         font-size: 0.75rem;
       }
 
@@ -970,18 +988,9 @@ import { MatDividerModule } from '@angular/material/divider';
         min-width: 32px;
       }
 
-      .track-row-actions {
-        margin-left: 0;
-      }
-
-      .track-row-album {
-        flex-basis: auto;
-      }
-
       .track-row-meta {
-        margin-left: 0;
-        flex: 1 1 100%;
-        gap: 0.375rem;
+        flex: 0 0 3rem;
+        gap: 0;
         font-size: 0.625rem;
       }
     }
@@ -1184,7 +1193,7 @@ export class MusicEventComponent {
 
   event = input.required<Event>();
   mode = input<'card' | 'list' | 'track-list'>('list');
-  trackNumber = input<number | null>(null);
+  trackNumber = input<string | null>(null);
 
   authorProfile = signal<NostrRecord | undefined>(undefined);
   userPlaylists = this.musicPlaylistService.userPlaylists;
