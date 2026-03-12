@@ -653,7 +653,19 @@ export class MusicPlaylistCardComponent {
   // Count tracks (a tags referencing kind 36787)
   trackCount = computed(() => {
     const event = this.event();
-    return event.tags.filter(t => t[0] === 'a' && t[1]?.startsWith('36787:')).length;
+    const dTag = event.tags.find(t => t[0] === 'd')?.[1] || '';
+
+    if (dTag) {
+      const playlistFromService = this.musicPlaylistService
+        .userPlaylists()
+        .find(playlist => playlist.id === dTag && playlist.pubkey === event.pubkey);
+
+      if (playlistFromService) {
+        return playlistFromService.trackRefs.length;
+      }
+    }
+
+    return this.getTrackRefsFromEvent(event).length;
   });
 
   // Check if private
@@ -850,9 +862,7 @@ export class MusicPlaylistCardComponent {
       const imageTag = ev.tags.find(t => t[0] === 'image');
       const publicTag = ev.tags.find(t => t[0] === 'public');
       const collaborativeTag = ev.tags.find(t => t[0] === 'collaborative');
-      const trackRefs = ev.tags
-        .filter(t => t[0] === 'a' && t[1]?.startsWith('36787:'))
-        .map(t => t[1]);
+      const trackRefs = this.getTrackRefsFromEvent(ev);
 
       playlist = {
         id: dTag,
@@ -871,6 +881,12 @@ export class MusicPlaylistCardComponent {
     // Use inline dialog instead of MatDialog
     this.editDialogData.set({ playlist });
     this.showEditDialog.set(true);
+  }
+
+  private getTrackRefsFromEvent(event: Event): string[] {
+    return event.tags
+      .filter(tag => tag[0] === 'a' && !!this.utilities.parseMusicTrackCoordinate(tag[1]))
+      .map(tag => tag[1]);
   }
 
   // Handle edit dialog closed
