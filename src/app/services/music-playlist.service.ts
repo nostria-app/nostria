@@ -29,6 +29,7 @@ export interface CreateMusicPlaylistData {
   title: string;
   description?: string;
   image?: string;
+  gradient?: string | null;
   isPublic: boolean;
   isCollaborative: boolean;
   customRelays?: string[]; // Optional custom relay URLs to publish to
@@ -191,6 +192,8 @@ export class MusicPlaylistService {
 
     if (data.image) {
       tags.push(['image', data.image]);
+    } else if (data.gradient) {
+      tags.push(['gradient', 'colors', data.gradient]);
     }
 
     // Per spec: use 'public' tag for public playlists, 'private' tag for private ones
@@ -339,10 +342,17 @@ export class MusicPlaylistService {
       newTags.push(['image', image]);
     }
 
-    // Keep gradient if it exists
-    const gradientTag = playlist.event.tags.find(t => t[0] === 'gradient');
-    if (gradientTag) {
-      newTags.push(gradientTag);
+    // Gradient handling:
+    // - updates.gradient === undefined: keep existing gradient tag if present
+    // - updates.gradient === null: remove gradient tag
+    // - updates.gradient is string: set gradient tag to that value
+    if (updates.gradient === undefined) {
+      const gradientTag = playlist.event.tags.find(t => t[0] === 'gradient' && t[1] === 'colors');
+      if (gradientTag?.[2]) {
+        newTags.push(['gradient', 'colors', gradientTag[2]]);
+      }
+    } else if (updates.gradient) {
+      newTags.push(['gradient', 'colors', updates.gradient]);
     }
 
     // Public/Collaborative - use spec format

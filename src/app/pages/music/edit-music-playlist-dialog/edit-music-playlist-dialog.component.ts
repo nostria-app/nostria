@@ -166,6 +166,11 @@ export class EditMusicPlaylistDialogComponent {
             this.previousCoverImage.set(playlist.image); // Track original for cleanup
           }
 
+          const gradientTag = playlist.event?.tags.find(t => t[0] === 'gradient' && t[1] === 'colors');
+          if (!playlist.image && gradientTag?.[2]) {
+            this.currentGradient.set(gradientTag[2]);
+          }
+
           // Initialize current user profile
           this.initializeCurrentUserProfile();
 
@@ -833,6 +838,7 @@ export class EditMusicPlaylistDialogComponent {
         title: formValue.title,
         description: formValue.description || undefined,
         image: formValue.imageUrl || undefined,
+        gradient: formValue.imageUrl ? null : this.currentGradient(),
         isPublic: formValue.isPublic,
         isCollaborative: formValue.isCollaborative,
         trackRefs: newTrackRefs,

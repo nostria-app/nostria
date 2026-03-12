@@ -853,7 +853,11 @@ export class MusicPlaylistCardComponent {
 
     // Get the playlist from the service or create from event
     const playlists = this.musicPlaylistService.userPlaylists();
-    let playlist = playlists.find(p => p.id === dTag);
+    let playlist = playlists.find(p => p.id === dTag && p.pubkey === ev.pubkey);
+
+    if (playlist?.event && playlist.event.created_at < ev.created_at) {
+      playlist = undefined;
+    }
 
     if (!playlist) {
       // Create playlist object from event

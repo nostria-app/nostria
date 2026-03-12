@@ -245,6 +245,7 @@ export class CreateMusicPlaylistDialogComponent {
         title: formValue.title,
         description: formValue.description || undefined,
         image: formValue.imageUrl || undefined,
+        gradient: formValue.imageUrl ? null : this.currentGradient(),
         isPublic: formValue.isPublic,
         isCollaborative: formValue.isCollaborative,
         customRelays: customRelays && customRelays.length > 0 ? customRelays : undefined,
