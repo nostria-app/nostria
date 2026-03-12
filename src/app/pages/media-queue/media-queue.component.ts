@@ -17,10 +17,10 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatTabsModule } from '@angular/material/tabs';
 import { DragDropModule, CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
 import { PlaylistsTabComponent } from './playlists-tab/playlists-tab.component';
-import { UserProfileComponent } from '../../components/user-profile/user-profile.component';
 import { PanelHeaderComponent, PanelAction } from '../../components/panel-header/panel-header.component';
 import { nip19 } from 'nostr-tools';
 import { HapticsService } from '../../services/haptics.service';
+import { LayoutService } from '../../services/layout.service';
 
 @Component({
   selector: 'app-media-queue',
@@ -34,7 +34,6 @@ import { HapticsService } from '../../services/haptics.service';
     MatTabsModule,
     DragDropModule,
     PlaylistsTabComponent,
-    UserProfileComponent,
     PanelHeaderComponent,
   ],
   templateUrl: './media-queue.component.html',
@@ -51,6 +50,7 @@ export class MediaQueueComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private ngZone = inject(NgZone);
   private haptics = inject(HapticsService);
+  private layout = inject(LayoutService);
 
   selectedTabIndex = signal(0);
 
@@ -164,21 +164,6 @@ export class MediaQueueComponent implements OnInit {
    */
   isNpubArtist(artist: string | undefined): boolean {
     return !!artist && artist.startsWith('npub1');
-  }
-
-  /**
-   * Get hex pubkey from npub artist
-   */
-  getNpubPubkey(artist: string): string {
-    try {
-      const decoded = nip19.decode(artist);
-      if (decoded.type === 'npub') {
-        return decoded.data;
-      }
-    } catch {
-      // Ignore decoding errors
-    }
-    return '';
   }
 
   /**
@@ -332,6 +317,46 @@ export class MediaQueueComponent implements OnInit {
   playItem(index: number) {
     this.media.index = index;
     this.media.start();
+  }
+
+  canOpenTrackDetails(item: MediaItem): boolean {
+    return !!item.eventPubkey && !!item.eventIdentifier;
+  }
+
+  openTrackDetails(item: MediaItem, event: MouseEvent): void {
+    event.stopPropagation();
+    if (!item.eventPubkey || !item.eventIdentifier) {
+      return;
+    }
+    this.layout.openSongDetail(item.eventPubkey, item.eventIdentifier);
+  }
+
+  canOpenArtist(item: MediaItem): boolean {
+    return this.isNpubArtist(item.artist) || !!item.eventPubkey;
+  }
+
+  openArtistDetails(item: MediaItem, event: MouseEvent): void {
+    event.stopPropagation();
+
+    if (this.isNpubArtist(item.artist)) {
+      this.layout.openMusicArtist(item.artist);
+      return;
+    }
+
+    if (!item.eventPubkey) {
+      return;
+    }
+
+    let npub = item.eventPubkey;
+    if (!npub.startsWith('npub1')) {
+      try {
+        npub = nip19.npubEncode(item.eventPubkey);
+      } catch {
+        return;
+      }
+    }
+
+    this.layout.openMusicArtist(npub);
   }
 
   /**

@@ -78,10 +78,38 @@
 }
 
 .artist-line {
-  ::ng-deep app-user-profile {
-    display: inline-block;
-    vertical-align: middle;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.title-line {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+
+  .queue-index {
+    flex-shrink: 0;
   }
+}
+
+.queue-link {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.artist-link {
+  color: var(--mat-sys-on-surface-variant);
 }
 
 .queue-item {

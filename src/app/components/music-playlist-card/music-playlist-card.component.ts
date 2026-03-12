@@ -19,6 +19,7 @@ import { RelayPoolService } from '../../services/relays/relay-pool';
 import { RelaysService } from '../../services/relays/relays';
 import { UtilitiesService } from '../../services/utilities.service';
 import { EventService } from '../../services/event';
+import { DatabaseService } from '../../services/database.service';
 import { ZapService } from '../../services/zap.service';
 import { ImageCacheService } from '../../services/image-cache.service';
 import { LayoutService } from '../../services/layout.service';
@@ -34,8 +35,6 @@ import {
   EditMusicPlaylistDialogData,
 } from '../../pages/music/edit-music-playlist-dialog/edit-music-playlist-dialog.component';
 import { MatDividerModule } from '@angular/material/divider';
-
-const MUSIC_KIND = 36787;
 
 @Component({
   selector: 'app-music-playlist-card',
@@ -593,6 +592,7 @@ export class MusicPlaylistCardComponent {
   private relaysService = inject(RelaysService);
   private utilities = inject(UtilitiesService);
   private eventService = inject(EventService);
+  private database = inject(DatabaseService);
   private snackBar = inject(MatSnackBar);
   private dialog = inject(MatDialog);
   private clipboard = inject(Clipboard);
@@ -931,7 +931,7 @@ export class MusicPlaylistCardComponent {
 
     const ev = this.event();
     const trackRefs = ev.tags
-      .filter(t => t[0] === 'a' && t[1]?.startsWith(`${MUSIC_KIND}:`))
+      .filter(t => t[0] === 'a' && !!this.utilities.parseMusicTrackCoordinate(t[1]))
       .map(t => t[1]);
 
     if (trackRefs.length === 0) {
@@ -942,64 +942,83 @@ export class MusicPlaylistCardComponent {
     this.isLoadingTracks.set(true);
 
     try {
-      // Parse track references
-      const trackKeys: { author: string; dTag: string }[] = [];
+      const trackKeys: { kind: number; author: string; dTag: string }[] = [];
       for (const ref of trackRefs) {
-        const parts = ref.split(':');
-        if (parts.length >= 3) {
-          trackKeys.push({ author: parts[1], dTag: parts.slice(2).join(':') });
+        const coordinate = this.utilities.parseMusicTrackCoordinate(ref);
+        if (coordinate) {
+          trackKeys.push({
+            kind: coordinate.kind,
+            author: coordinate.pubkey,
+            dTag: coordinate.identifier,
+          });
         }
       }
 
-      const relayUrls = this.relaysService.getOptimalRelays(this.utilities.preferredRelays);
-      if (relayUrls.length === 0) {
-        this.snackBar.open('No relays available', 'Close', { duration: 3000 });
+      if (trackKeys.length === 0) {
+        this.snackBar.open('Playlist is empty', 'Close', { duration: 2000 });
         return;
       }
 
-      // Fetch tracks
       const trackMap = new Map<string, Event>();
-      const uniqueAuthors = [...new Set(trackKeys.map(k => k.author))];
-      const uniqueDTags = [...new Set(trackKeys.map(k => k.dTag))];
 
-      const filter: Filter = {
-        kinds: [MUSIC_KIND],
-        authors: uniqueAuthors,
-        '#d': uniqueDTags,
-        limit: trackKeys.length * 2,
-      };
+      await Promise.all(trackKeys.map(async (trackKey) => {
+        const cached = await this.database.getParameterizedReplaceableEvent(trackKey.author, trackKey.kind, trackKey.dTag);
+        if (!cached) return;
+        const key = `${trackKey.kind}:${trackKey.author}:${trackKey.dTag}`;
+        const existing = trackMap.get(key);
+        if (!existing || existing.created_at < cached.created_at) {
+          trackMap.set(key, cached);
+        }
+      }));
 
-      await new Promise<void>((resolve) => {
-        const timeout = setTimeout(() => resolve(), 5000);
+      const missingTrackKeys = trackKeys.filter(k => !trackMap.has(`${k.kind}:${k.author}:${k.dTag}`));
 
-        const sub = this.pool.subscribe(relayUrls, filter, (trackEvent: Event) => {
-          const dTag = trackEvent.tags.find(t => t[0] === 'd')?.[1] || '';
-          const uniqueId = `${trackEvent.pubkey}:${dTag}`;
+      if (missingTrackKeys.length > 0) {
+        const relayUrls = this.relaysService.getOptimalRelays(this.utilities.preferredRelays);
+        if (relayUrls.length > 0) {
+          const uniqueAuthors = [...new Set(missingTrackKeys.map(k => k.author))];
+          const uniqueDTags = [...new Set(missingTrackKeys.map(k => k.dTag))];
+          const missingKeysSet = new Set(missingTrackKeys.map(k => `${k.kind}:${k.author}:${k.dTag}`));
 
-          const isInPlaylist = trackKeys.some(k => k.author === trackEvent.pubkey && k.dTag === dTag);
-          if (!isInPlaylist) return;
+          const filter: Filter = {
+            kinds: [...UtilitiesService.MUSIC_KINDS],
+            authors: uniqueAuthors,
+            '#d': uniqueDTags,
+            limit: missingTrackKeys.length * 2,
+          };
 
-          const existing = trackMap.get(uniqueId);
-          if (!existing || existing.created_at < trackEvent.created_at) {
-            trackMap.set(uniqueId, trackEvent);
-          }
+          await new Promise<void>((resolve) => {
+            const timeout = setTimeout(() => resolve(), 5000);
 
-          if (trackMap.size >= trackKeys.length) {
-            clearTimeout(timeout);
-            sub.close();
-            resolve();
-          }
-        });
+            const sub = this.pool.subscribe(relayUrls, filter, (trackEvent: Event) => {
+              const dTag = trackEvent.tags.find(t => t[0] === 'd')?.[1] || '';
+              const key = `${trackEvent.kind}:${trackEvent.pubkey}:${dTag}`;
 
-        // Also resolve after shorter timeout if we got some tracks
-        setTimeout(() => {
-          if (trackMap.size > 0) {
-            clearTimeout(timeout);
-            sub.close();
-            resolve();
-          }
-        }, 3000);
-      });
+              if (!missingKeysSet.has(key)) return;
+
+              const existing = trackMap.get(key);
+              if (!existing || existing.created_at < trackEvent.created_at) {
+                trackMap.set(key, trackEvent);
+              }
+
+              const stillMissing = missingTrackKeys.some(k => !trackMap.has(`${k.kind}:${k.author}:${k.dTag}`));
+              if (!stillMissing) {
+                clearTimeout(timeout);
+                sub.close();
+                resolve();
+              }
+            });
+
+            setTimeout(() => {
+              if (trackMap.size > 0) {
+                clearTimeout(timeout);
+                sub.close();
+                resolve();
+              }
+            }, 3000);
+          });
+        }
+      }
 
       if (trackMap.size === 0) {
         this.snackBar.open('Could not load tracks', 'Close', { duration: 3000 });
@@ -1009,12 +1028,10 @@ export class MusicPlaylistCardComponent {
       // Sort tracks according to playlist order
       const orderedTracks: Event[] = [];
       for (const ref of trackRefs) {
-        const parts = ref.split(':');
-        if (parts.length >= 3) {
-          const author = parts[1];
-          const dTag = parts.slice(2).join(':');
-          const uniqueId = `${author}:${dTag}`;
-          const track = trackMap.get(uniqueId);
+        const coordinate = this.utilities.parseMusicTrackCoordinate(ref);
+        if (coordinate) {
+          const key = `${coordinate.kind}:${coordinate.pubkey}:${coordinate.identifier}`;
+          const track = trackMap.get(key);
           if (track && !orderedTracks.includes(track)) {
             orderedTracks.push(track);
           }

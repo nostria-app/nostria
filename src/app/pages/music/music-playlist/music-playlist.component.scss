@@ -160,23 +160,24 @@
 
   .play-fab {
     position: absolute;
-    bottom: -0.5rem;
-    right: -0.5rem;
+    bottom: 0.75rem;
+    right: 0.75rem;
     z-index: 2;
     width: 56px;
     height: 56px;
     border-radius: 50%;
-    background: linear-gradient(140deg, var(--mat-sys-primary) 0%, var(--mat-sys-primary-container) 100%);
-    color: var(--mat-sys-on-primary);
-    box-shadow: var(--mat-sys-level3);
-    border: 1px solid var(--mat-sys-outline-variant);
-    -webkit-backdrop-filter: blur(10px) saturate(1.2);
-    backdrop-filter: blur(10px) saturate(1.2);
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    background: rgba(0, 0, 0, 0.42);
+    color: var(--mat-sys-on-surface);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    -webkit-backdrop-filter: blur(14px);
+    backdrop-filter: blur(14px);
+    box-shadow: var(--mat-sys-level2);
+    transition: transform 0.2s ease, background-color 0.2s ease, border-color 0.2s ease;
 
     &:hover:not(:disabled) {
-      transform: scale(1.05);
-      box-shadow: var(--mat-sys-level4);
+      transform: scale(1.04);
+      background: rgba(0, 0, 0, 0.56);
+      border-color: rgba(255, 255, 255, 0.3);
     }
 
     &:disabled {

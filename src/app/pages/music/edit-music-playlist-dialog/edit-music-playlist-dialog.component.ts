@@ -18,6 +18,7 @@ import { AccountStateService } from '../../../services/account-state.service';
 import { RelayPoolService } from '../../../services/relays/relay-pool';
 import { RelaysService } from '../../../services/relays/relays';
 import { UtilitiesService } from '../../../services/utilities.service';
+import { DatabaseService } from '../../../services/database.service';
 import { CustomDialogComponent } from '../../../components/custom-dialog/custom-dialog.component';
 import { ConfirmDialogComponent } from '../../../components/confirm-dialog/confirm-dialog.component';
 import { MentionAutocompleteComponent, MentionAutocompleteConfig, MentionSelection } from '../../../components/mention-autocomplete/mention-autocomplete.component';
@@ -84,6 +85,7 @@ export class EditMusicPlaylistDialogComponent {
   private pool = inject(RelayPoolService);
   private relaysService = inject(RelaysService);
   private utilities = inject(UtilitiesService);
+  private database = inject(DatabaseService);
   private snackBar = inject(MatSnackBar);
   private router = inject(Router);
   private dialog = inject(MatDialog);
@@ -304,6 +306,20 @@ export class EditMusicPlaylistDialogComponent {
     const missingTrackKeys = trackKeys.filter(k => !trackMap.has(`${k.kind}:${k.author}:${k.dTag}`));
 
     if (missingTrackKeys.length > 0) {
+      await Promise.all(missingTrackKeys.map(async (trackKey) => {
+        const cached = await this.database.getParameterizedReplaceableEvent(trackKey.author, trackKey.kind, trackKey.dTag);
+        if (!cached) return;
+        const key = `${trackKey.kind}:${trackKey.author}:${trackKey.dTag}`;
+        const existing = trackMap.get(key);
+        if (!existing || existing.created_at < cached.created_at) {
+          trackMap.set(key, cached);
+        }
+      }));
+    }
+
+    const remainingTrackKeys = trackKeys.filter(k => !trackMap.has(`${k.kind}:${k.author}:${k.dTag}`));
+
+    if (remainingTrackKeys.length > 0) {
       // Fetch only missing track events
       const relayUrls = this.relaysService.getOptimalRelays(this.utilities.preferredRelays);
       if (relayUrls.length === 0) {
@@ -311,14 +327,14 @@ export class EditMusicPlaylistDialogComponent {
         return;
       }
 
-      const uniqueAuthors = [...new Set(missingTrackKeys.map(k => k.author))];
-      const uniqueDTags = [...new Set(missingTrackKeys.map(k => k.dTag))];
+      const uniqueAuthors = [...new Set(remainingTrackKeys.map(k => k.author))];
+      const uniqueDTags = [...new Set(remainingTrackKeys.map(k => k.dTag))];
 
       const filter: Filter = {
         kinds: MUSIC_KINDS,
         authors: uniqueAuthors,
         '#d': uniqueDTags,
-        limit: missingTrackKeys.length * 2,
+        limit: remainingTrackKeys.length * 2,
       };
 
       await new Promise<void>((resolve) => {
@@ -353,7 +369,7 @@ export class EditMusicPlaylistDialogComponent {
     // Update tracks with fetched data
     const updatedTracks = await Promise.all(
       initialTracks.map(async (track) => {
-        const key = `${track.pubkey}:${track.dTag}`;
+        const key = `${track.kind}:${track.pubkey}:${track.dTag}`;
         const event = trackMap.get(key);
         if (event) {
           const titleTag = event.tags.find(t => t[0] === 'title');
