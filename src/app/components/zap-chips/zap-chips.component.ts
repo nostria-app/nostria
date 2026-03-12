@@ -23,7 +23,7 @@ interface ProfileCache {
     <div class="zap-chips-container">
       @for (zapper of displayedZappers(); track zapper.pubkey; let i = $index) {
         <div class="zap-chip">
-          <app-user-profile [pubkey]="zapper.pubkey" view="tiny" [hostWidthAuto]="true"></app-user-profile>
+          <app-user-profile [pubkey]="zapper.pubkey" view="compact" [hostWidthAuto]="true"></app-user-profile>
           <mat-icon class="zap-icon">bolt</mat-icon>
           <span class="zap-amount">{{ formatAmount(zapper.amount) }}</span>
         </div>
@@ -66,6 +66,7 @@ interface ProfileCache {
 
       app-user-profile {
         min-width: 0;
+        max-width: 8.5rem;
       }
     }
 
