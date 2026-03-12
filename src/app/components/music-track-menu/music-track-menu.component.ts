@@ -312,6 +312,7 @@ export class MusicTrackMenuComponent {
       artwork: this.getImage() || '/icons/icon-192x192.png',
       video: this.track().tags.find(t => t[0] === 'video')?.[1] || undefined,
       type: 'Music',
+      isAiGenerated: this.utilities.isMusicAiGenerated(this.track()),
       eventPubkey: this.getArtistNpub(),
       eventIdentifier: this.getIdentifier(),
       eventKind: this.track().kind,

@@ -299,6 +299,7 @@ export class SongDetailComponent implements OnInit, OnDestroy {
     if (artistTag?.[1]) {
       return artistTag[1];
     }
+
     // Fallback to profile name
     const profile = this.authorProfile();
     return profile?.data?.name || profile?.data?.display_name || 'Unknown Artist';

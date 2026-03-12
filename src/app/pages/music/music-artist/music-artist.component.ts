@@ -593,6 +593,10 @@ export class MusicArtistComponent implements OnInit, OnDestroy {
     return '--:--';
   }
 
+  isTrackAiGenerated(track: Event): boolean {
+    return this.utilities.isMusicAiGenerated(track);
+  }
+
   playTrack(index: number): void {
     const artistTracks = this.tracks();
     if (index < 0 || index >= artistTracks.length) return;
@@ -617,6 +621,7 @@ export class MusicArtistComponent implements OnInit, OnDestroy {
         artwork: imageTag || profile?.data?.picture || '/icons/icon-192x192.png',
         video: videoTag?.[1] || undefined,
         type: 'Music',
+        isAiGenerated: this.utilities.isMusicAiGenerated(track),
         eventPubkey: track.pubkey,
         eventIdentifier: dTag,
         eventKind: track.kind,
@@ -648,6 +653,7 @@ export class MusicArtistComponent implements OnInit, OnDestroy {
       artwork: imageTag || profile?.data?.picture || '/icons/icon-192x192.png',
       video: videoTag?.[1] || undefined,
       type: 'Music',
+      isAiGenerated: this.utilities.isMusicAiGenerated(track),
       eventPubkey: track.pubkey,
       eventIdentifier: dTag,
       eventKind: track.kind,

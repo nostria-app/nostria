@@ -886,6 +886,52 @@ export class MusicTrackDialogComponent {
     }
   }
 
+  async onArtistInputBlur(): Promise<void> {
+    await this.resolveArtistFieldFromNpub();
+  }
+
+  private normalizeArtistPubkeyInput(value: string): string | null {
+    const normalized = value.trim().replace(/^nostr:/i, '').replace(/^@/, '');
+    if (!normalized.startsWith('npub1')) {
+      return null;
+    }
+
+    try {
+      const decoded = nip19.decode(normalized);
+      if (decoded.type !== 'npub') {
+        return null;
+      }
+      return decoded.data;
+    } catch {
+      return null;
+    }
+  }
+
+  private async resolveArtistFieldFromNpub(): Promise<void> {
+    const artistControl = this.trackForm.get('artist');
+    const artistValue = String(artistControl?.value || '').trim();
+    if (!artistValue) {
+      return;
+    }
+
+    const pubkey = this.normalizeArtistPubkeyInput(artistValue);
+    if (!pubkey) {
+      return;
+    }
+
+    try {
+      const profile = await this.dataService.getProfile(pubkey, { deepResolve: true, allowDeepResolve: true });
+      const resolvedName = profile?.data?.display_name?.trim() || profile?.data?.name?.trim();
+      if (resolvedName) {
+        artistControl?.setValue(resolvedName);
+      } else {
+        this.snackBar.open('Could not resolve artist name from npub', 'Close', { duration: 2500 });
+      }
+    } catch {
+      this.snackBar.open('Could not resolve artist name from npub', 'Close', { duration: 2500 });
+    }
+  }
+
   toggleAddSplit(): void {
     this.isAddingSplit.update(v => !v);
     if (!this.isAddingSplit()) {
@@ -1089,6 +1135,8 @@ export class MusicTrackDialogComponent {
     if (!this.trackForm.valid || !this.audioUrl() || (!this.isEditMode() && !this.agreedToTerms())) {
       return;
     }
+
+    await this.resolveArtistFieldFromNpub();
 
     // Validate split percentages (empty list is valid - 100% goes to author)
     const splits = this.zapSplits();

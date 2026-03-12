@@ -158,8 +158,13 @@
                   }
                 </div>
                 <div class="track-text">
-                  <a class="track-title" href="" (click)="openTrackDetailsFromList(track, $event)">{{
-                    getTrackTitle(track) }}</a>
+                  <span class="track-title-row">
+                    <a class="track-title" href="" (click)="openTrackDetailsFromList(track, $event)">{{
+                      getTrackTitle(track) }}</a>
+                    @if (isTrackAiGenerated(track)) {
+                    <span class="track-ai-badge">AI</span>
+                    }
+                  </span>
                   <span class="track-artist">{{ getTrackArtist(track) }}</span>
                 </div>
               </div>

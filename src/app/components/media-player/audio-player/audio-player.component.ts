@@ -275,6 +275,11 @@ export class AudioPlayerComponent {
     return !!current?.eventPubkey;
   }
 
+  currentTrackIsAi(): boolean {
+    const current = this.media.current();
+    return !!(current?.type === 'Music' && current.isAiGenerated);
+  }
+
   // Navigate to song detail page
   goToSong(): void {
     const current = this.media.current();

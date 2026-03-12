@@ -4,7 +4,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { Event } from 'nostr-tools';
 import { MediaPlayerService } from '../../services/media-player.service';
-import { MediaItem, Playlist, NostrRecord } from '../../interfaces';
+import { MediaItem, Playlist } from '../../interfaces';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { LayoutService } from '../../services/layout.service';
 import { MatMenuModule } from '@angular/material/menu';

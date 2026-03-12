@@ -170,7 +170,8 @@
       <!-- Artist -->
       <mat-form-field appearance="outline" class="full-width">
         <mat-label>Artist Name (or npub)</mat-label>
-        <input matInput formControlName="artist" title="Artist name" placeholder="Name of artist" />
+        <input matInput formControlName="artist" title="Artist name" placeholder="Name of artist"
+          (blur)="onArtistInputBlur()" />
       </mat-form-field>
 
       <!-- AI-Generated Toggle -->
