@@ -8,6 +8,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDialog } from '@angular/material/dialog';
 import { Clipboard } from '@angular/cdk/clipboard';
+import { firstValueFrom } from 'rxjs';
 import { Event, Filter, nip19 } from 'nostr-tools';
 import { DataService } from '../../services/data.service';
 import { ReactionService } from '../../services/reaction.service';
@@ -23,9 +24,11 @@ import { ImageCacheService } from '../../services/image-cache.service';
 import { LayoutService } from '../../services/layout.service';
 import { CustomDialogService } from '../../services/custom-dialog.service';
 import { UserRelaysService } from '../../services/relays/user-relays';
+import { NostrService } from '../../services/nostr.service';
 import { NostrRecord, MediaItem } from '../../interfaces';
 import { ZapDialogComponent, ZapDialogData } from '../zap-dialog/zap-dialog.component';
 import { ShareArticleDialogComponent, ShareArticleDialogData } from '../share-article-dialog/share-article-dialog.component';
+import { ConfirmDialogComponent, ConfirmDialogData } from '../confirm-dialog/confirm-dialog.component';
 import {
   EditMusicPlaylistDialogComponent,
   EditMusicPlaylistDialogData,
@@ -120,8 +123,17 @@ const MUSIC_KIND = 36787;
            @if (isOwnPlaylist()) {
             <button mat-menu-item (click)="editPlaylist()">
               <mat-icon>edit</mat-icon>
-              <span>Edit Playlist</span>
+              <span>Edit Album</span>
             </button>
+            <button mat-menu-item (click)="deletePlaylist($event)" [disabled]="isDeleting()">
+              @if (isDeleting()) {
+                <mat-spinner diameter="18"></mat-spinner>
+              } @else {
+                <mat-icon>delete</mat-icon>
+              }
+              <span>Delete Album</span>
+            </button>
+            <mat-divider></mat-divider>
           }
           <button mat-menu-item (click)="copyEventLink()">
             <mat-icon>link</mat-icon>
@@ -589,11 +601,13 @@ export class MusicPlaylistCardComponent {
   private layout = inject(LayoutService);
   private customDialog = inject(CustomDialogService);
   private userRelaysService = inject(UserRelaysService);
+  private nostrService = inject(NostrService);
 
   event = input.required<Event>();
 
   authorProfile = signal<NostrRecord | undefined>(undefined);
   isLoadingTracks = signal(false);
+  isDeleting = signal(false);
 
   // Edit dialog state
   showEditDialog = signal(false);
@@ -866,6 +880,43 @@ export class MusicPlaylistCardComponent {
 
     if (result?.updated) {
       this.snackBar.open('Playlist updated', 'Close', { duration: 2000 });
+    }
+  }
+
+  async deletePlaylist(event: MouseEvent | KeyboardEvent): Promise<void> {
+    event.stopPropagation();
+    const ev = this.event();
+    if (!this.isOwnPlaylist() || this.isDeleting()) return;
+
+    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
+      data: {
+        title: 'Delete Album',
+        message: 'Are you sure you want to request deletion of this album? This action creates a deletion request (NIP-09) but cannot guarantee the album will be removed from all relays and clients.',
+        confirmText: 'Delete',
+        cancelText: 'Cancel',
+        confirmColor: 'warn',
+      } as ConfirmDialogData,
+    });
+
+    const confirmedDelete = await firstValueFrom(dialogRef.afterClosed());
+    if (!confirmedDelete) return;
+
+    this.isDeleting.set(true);
+    try {
+      const deleteEvent = this.nostrService.createRetractionEvent(ev);
+      const result = await this.nostrService.signAndPublish(deleteEvent);
+
+      if (result.success) {
+        await this.eventService.deleteEventFromLocalStorage(ev.id);
+        await this.musicPlaylistService.fetchUserPlaylists(ev.pubkey);
+        this.snackBar.open('Album deleted successfully', 'Dismiss', { duration: 3000 });
+      } else {
+        this.snackBar.open('Failed to delete album', 'Close', { duration: 3000 });
+      }
+    } catch {
+      this.snackBar.open('Failed to delete album', 'Close', { duration: 3000 });
+    } finally {
+      this.isDeleting.set(false);
     }
   }
 

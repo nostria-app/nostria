@@ -6,10 +6,12 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatMenuModule } from '@angular/material/menu';
+import { MatDividerModule } from '@angular/material/divider';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDialog } from '@angular/material/dialog';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { Clipboard } from '@angular/cdk/clipboard';
+import { firstValueFrom } from 'rxjs';
 import { Event, Filter, kinds, nip19 } from 'nostr-tools';
 import { formatDuration } from '../../../utils/format-duration';
 import { RelayPoolService } from '../../../services/relays/relay-pool';
@@ -27,6 +29,7 @@ import { LayoutService } from '../../../services/layout.service';
 import { ImageCacheService } from '../../../services/image-cache.service';
 import { ZapService } from '../../../services/zap.service';
 import { PanelNavigationService } from '../../../services/panel-navigation.service';
+import { NostrService } from '../../../services/nostr.service';
 import { NostrRecord, MediaItem } from '../../../interfaces';
 import { UserRelaysService } from '../../../services/relays/user-relays';
 import {
@@ -41,6 +44,7 @@ import { CustomDialogService } from '../../../services/custom-dialog.service';
 import { EventActionsToolbarComponent } from '../../../components/event-actions-toolbar/event-actions-toolbar.component';
 import { CommentsListComponent } from '../../../components/comments-list/comments-list.component';
 import { BookmarkListSelectorComponent } from '../../../components/bookmark-list-selector/bookmark-list-selector.component';
+import { ConfirmDialogComponent, ConfirmDialogData } from '../../../components/confirm-dialog/confirm-dialog.component';
 
 const MUSIC_KINDS = [...UtilitiesService.MUSIC_KINDS];
 const MUSIC_PLAYLIST_KIND = 34139;
@@ -53,6 +57,7 @@ const MUSIC_PLAYLIST_KIND = 34139;
     MatIconModule,
     MatChipsModule,
     MatMenuModule,
+    MatDividerModule,
     MatSnackBarModule,
     MatTooltipModule,
     EditMusicPlaylistDialogComponent,
@@ -87,6 +92,7 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
   private zapService = inject(ZapService);
   private panelNav = inject(PanelNavigationService);
   private userRelaysService = inject(UserRelaysService);
+  private nostrService = inject(NostrService);
 
   // Template for playlist menu (used in panel header)
   @ViewChild('playlistMenuTemplate') playlistMenuTemplate!: TemplateRef<unknown>;
@@ -105,6 +111,7 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
   authorProfile = signal<NostrRecord | undefined>(undefined);
   isLiked = signal(false);
   isLiking = signal(false);
+  isDeleting = signal(false);
 
   // Edit dialog state
   showEditDialog = signal(false);
@@ -839,6 +846,43 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
       if (updatedEvent) {
         this.playlist.set(updatedEvent);
       }
+    }
+  }
+
+  async deletePlaylist(): Promise<void> {
+    const ev = this.playlist();
+    if (!ev || !this.isOwnPlaylist() || this.isDeleting()) return;
+
+    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
+      data: {
+        title: 'Delete Album',
+        message: 'Are you sure you want to request deletion of this album? This action creates a deletion request (NIP-09) but cannot guarantee the album will be removed from all relays and clients.',
+        confirmText: 'Delete',
+        cancelText: 'Cancel',
+        confirmColor: 'warn',
+      } as ConfirmDialogData,
+    });
+
+    const confirmedDelete = await firstValueFrom(dialogRef.afterClosed());
+    if (!confirmedDelete) return;
+
+    this.isDeleting.set(true);
+    try {
+      const deleteEvent = this.nostrService.createRetractionEvent(ev);
+      const result = await this.nostrService.signAndPublish(deleteEvent);
+
+      if (result.success) {
+        await this.eventService.deleteEventFromLocalStorage(ev.id);
+        this.snackBar.open('Album deleted successfully', 'Dismiss', { duration: 3000 });
+        this.goBack();
+      } else {
+        this.snackBar.open('Failed to delete album', 'Close', { duration: 3000 });
+      }
+    } catch (error) {
+      this.logger.error('Error deleting album:', error);
+      this.snackBar.open('Failed to delete album', 'Close', { duration: 3000 });
+    } finally {
+      this.isDeleting.set(false);
     }
   }
 

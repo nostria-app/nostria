@@ -8,16 +8,6 @@
     <mat-icon>more_vert</mat-icon>
   </button>
   <mat-menu #headerMenu="matMenu">
-    @if (isOwnPlaylist()) {
-    <button mat-menu-item (click)="editPlaylist()">
-      <mat-icon>edit</mat-icon>
-      <span>Edit Album</span>
-    </button>
-    }
-    <button mat-menu-item [matMenuTriggerFor]="copyMenu">
-      <mat-icon>content_copy</mat-icon>
-      <span>Copy</span>
-    </button>
     <button mat-menu-item (click)="openShareDialog()">
       <mat-icon>share</mat-icon>
       <span>Share</span>
@@ -30,12 +20,24 @@
       <mat-icon>publish</mat-icon>
       <span>Publish Event</span>
     </button>
-  </mat-menu>
-</div>
 
-<div class="playlist-container">
-  <!-- Submenus (kept outside template for proper nesting) -->
-  <mat-menu #copyMenu="matMenu">
+    @if (isOwnPlaylist()) {
+    <mat-divider></mat-divider>
+    <button mat-menu-item (click)="editPlaylist()">
+      <mat-icon>edit</mat-icon>
+      <span>Edit Album</span>
+    </button>
+    <button mat-menu-item (click)="deletePlaylist()" [disabled]="isDeleting()">
+      @if (isDeleting()) {
+      <mat-spinner diameter="18"></mat-spinner>
+      } @else {
+      <mat-icon>delete</mat-icon>
+      }
+      <span>Delete Album</span>
+    </button>
+    }
+
+    <mat-divider></mat-divider>
     <button mat-menu-item (click)="copyEventLink()">
       <mat-icon>link</mat-icon>
       <span>Copy Link</span>
@@ -49,7 +51,9 @@
       <span>Copy Data</span>
     </button>
   </mat-menu>
+</div>
 
+<div class="playlist-container">
   @if (loading()) {
   <div class="loading-container">
     <mat-spinner diameter="50"></mat-spinner>
