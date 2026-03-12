@@ -922,7 +922,22 @@ export class MusicTracksComponent implements OnInit, OnDestroy, AfterViewInit {
   private observeSentinel(): void {
     const sentinel = this.loadMoreSentinel();
     if (sentinel && this.intersectionObserver) {
+      this.intersectionObserver.disconnect();
       this.intersectionObserver.observe(sentinel.nativeElement);
+      this.checkSentinelProximity();
+    }
+  }
+
+  private checkSentinelProximity(): void {
+    const sentinel = this.loadMoreSentinel()?.nativeElement as HTMLElement | undefined;
+    if (!sentinel || !this.hasMore() || this.loadingMore() || this.loading()) {
+      return;
+    }
+
+    const rect = sentinel.getBoundingClientRect();
+    const preloadOffset = 240;
+    if (rect.top <= window.innerHeight + preloadOffset) {
+      this.loadMore();
     }
   }
 
@@ -1198,6 +1213,10 @@ export class MusicTracksComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   loadMore(): void {
+    if (this.loadingMore() || !this.hasMore()) {
+      return;
+    }
+
     this.loadingMore.set(true);
     this.displayLimit.update(limit => limit + PAGE_SIZE);
     setTimeout(() => {

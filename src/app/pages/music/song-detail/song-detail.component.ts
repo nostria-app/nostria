@@ -283,7 +283,7 @@ export class SongDetailComponent implements OnInit, OnDestroy {
     return event.tags
       .filter(t => t[0] === 't')
       .map(t => t[1])
-      .filter(Boolean);
+      .filter((tag): tag is string => !!tag && tag.trim().toLocaleLowerCase() !== 'music');
   });
 
   isAiGenerated = computed(() => {
