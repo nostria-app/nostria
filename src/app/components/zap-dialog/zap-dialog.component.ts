@@ -177,6 +177,39 @@ export class ZapDialogComponent {
     return this.getContentInfo(content);
   });
 
+  eventTargetInfo = computed(() => {
+    const event = this.data.event;
+    if (!event) {
+      return null;
+    }
+
+    if (this.utilities.isMusicKind(event.kind)) {
+      const title = this.utilities.getMusicTitle(event)?.trim();
+      return {
+        icon: 'link',
+        label: title ? `Track: ${title}` : 'Track zap',
+      };
+    }
+
+    const address = this.data.eventAddress?.trim();
+    if (address) {
+      return {
+        icon: 'link',
+        label: address,
+      };
+    }
+
+    const eventId = this.data.eventId?.trim();
+    if (eventId) {
+      return {
+        icon: 'link',
+        label: eventId,
+      };
+    }
+
+    return null;
+  });
+
   zapForm = new FormGroup({
     amount: new FormControl<string | number>(21, [Validators.required]),
     customAmount: new FormControl({ value: null, disabled: true }), // Start disabled

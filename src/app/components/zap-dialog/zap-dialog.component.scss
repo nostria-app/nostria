@@ -209,6 +209,12 @@
   min-width: 0; // Allow text to shrink
 }
 
+.event-target-context {
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--mat-sys-surface-container-low);
+}
+
 
 
 .amount-display {

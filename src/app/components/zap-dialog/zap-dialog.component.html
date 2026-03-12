@@ -59,6 +59,11 @@
         <mat-icon>{{ contentInfo().icon }}</mat-icon>
         <span class="content-description">{{ contentInfo().display }}</span>
       </div>
+      } @else if (eventTargetInfo()) {
+      <div class="event-context event-target-context">
+        <mat-icon>{{ eventTargetInfo()!.icon }}</mat-icon>
+        <span class="content-description">{{ eventTargetInfo()!.label }}</span>
+      </div>
       } @else if (!data.eventId) {
       <div class="event-context">
         <mat-icon>person</mat-icon>
@@ -253,6 +258,11 @@
         <div class="event-context">
           <mat-icon>{{ contentInfo().icon }}</mat-icon>
           <span class="content-description">{{ contentInfo().display }}</span>
+        </div>
+        } @else if (eventTargetInfo()) {
+        <div class="event-context event-target-context">
+          <mat-icon>{{ eventTargetInfo()!.icon }}</mat-icon>
+          <span class="content-description">{{ eventTargetInfo()!.label }}</span>
         </div>
         } @else if (!data.eventId) {
         <div class="event-context">
