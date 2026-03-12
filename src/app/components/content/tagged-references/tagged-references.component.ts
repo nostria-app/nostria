@@ -44,6 +44,7 @@ interface ParsedArticle {
   image?: string; // Add image property
   title?: string; // Add title property for caching
   description?: string; // Add description property for caching
+  source?: 'tag' | 'content';
 }
 
 @Component({
@@ -74,6 +75,7 @@ export class TaggedReferencesComponent {
   private clipsRelayUrlsPromise: Promise<string[]> | null = null;
   private readonly MARKDOWN_IMAGE_REGEX = /!\[.*?\]\((https?:\/\/[^\s)]+(?:\?[^\s)]*)?)\)/i;
   private readonly STANDALONE_IMAGE_REGEX = /https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp|avif|svg)(\?[^\s]*)?/i;
+  private readonly NADDR_REFERENCE_REGEX = /(?:nostr:)?naddr1[qpzry9x8gf2tvdw0s3jn54khce6mua7l]+/gi;
 
   event = input<Event | null>(null);
 
@@ -100,37 +102,40 @@ export class TaggedReferencesComponent {
   // Parse a tags (article references) from the event
   articles = computed<ParsedArticle[]>(() => {
     const event = this.event();
-    if (!event || !event.tags) return [];
+    if (!event) return [];
 
-    const validArticles = event.tags
-      .filter(tag => (tag[0] === 'a' || tag[0] === 'A') && tag[1])
-      .map(tag => {
-        const parts = tag[1].split(':');
-        if (parts.length !== 3) return null;
+    const tagArticles = this.parseTaggedArticles(event.tags || []);
+    const contentArticles = this.parseNaddrArticlesFromContent(event.content);
 
-        const article: ParsedArticle = {
-          kind: parseInt(parts[0], 10),
-          pubkey: parts[1],
-          identifier: parts[2],
-          relay: tag[2] || undefined,
-          marker: tag[3] || undefined,
-        };
+    // If content contains naddr references matching an a-tag by kind+identifier,
+    // prefer naddr coordinates because they often carry canonical pubkey/relays.
+    for (const contentArticle of contentArticles) {
+      const matchingTagIndex = tagArticles.findIndex(tagArticle =>
+        tagArticle.kind === contentArticle.kind &&
+        tagArticle.identifier === contentArticle.identifier
+      );
 
-        // Don't load data here - will be done in effect
-        return article;
-      })
-      .filter((article): article is ParsedArticle => article !== null);
+      if (matchingTagIndex === -1) {
+        tagArticles.push(contentArticle);
+        continue;
+      }
 
-    // Remove duplicates
-    const articles = validArticles.filter((article, index, array) =>
+      const existing = tagArticles[matchingTagIndex];
+      tagArticles[matchingTagIndex] = {
+        ...existing,
+        ...contentArticle,
+        marker: existing.marker,
+        relay: contentArticle.relay || existing.relay,
+      };
+    }
+
+    return tagArticles.filter((article, index, array) =>
       array.findIndex(a =>
         a.kind === article.kind &&
         a.pubkey === article.pubkey &&
         a.identifier === article.identifier
       ) === index
     );
-
-    return articles;
   });
 
   // Track which articles have been loaded
@@ -398,6 +403,83 @@ export class TaggedReferencesComponent {
 
   private isLikelyImageUrl(url: string): boolean {
     return this.STANDALONE_IMAGE_REGEX.test(url);
+  }
+
+  private parseTaggedArticles(tags: string[][]): ParsedArticle[] {
+    const parsed = tags
+      .filter(tag => (tag[0] === 'a' || tag[0] === 'A') && tag[1])
+      .map((tag): ParsedArticle | null => {
+        const parts = tag[1].split(':');
+        if (parts.length !== 3) {
+          return null;
+        }
+
+        const kind = Number.parseInt(parts[0], 10);
+        if (Number.isNaN(kind)) {
+          return null;
+        }
+
+        const article: ParsedArticle = {
+          kind,
+          pubkey: parts[1],
+          identifier: parts[2],
+          relay: tag[2] || undefined,
+          marker: tag[3] || undefined,
+          source: 'tag',
+        };
+
+        return article;
+      })
+      .filter((article): article is ParsedArticle => article !== null);
+
+    return parsed;
+  }
+
+  private parseNaddrArticlesFromContent(content: string): ParsedArticle[] {
+    if (!content) {
+      return [];
+    }
+
+    const matches = content.match(this.NADDR_REFERENCE_REGEX);
+    if (!matches || matches.length === 0) {
+      return [];
+    }
+
+    const parsed: ParsedArticle[] = [];
+
+    for (const match of matches) {
+      const identifier = match.startsWith('nostr:') ? match.slice(6) : match;
+
+      try {
+        const decoded = nip19.decode(identifier);
+        if (decoded.type !== 'naddr') {
+          continue;
+        }
+
+        const naddrData = decoded.data as {
+          kind?: number;
+          pubkey?: string;
+          identifier?: string;
+          relays?: string[];
+        };
+
+        if (!naddrData.kind || !naddrData.pubkey || !naddrData.identifier) {
+          continue;
+        }
+
+        parsed.push({
+          kind: naddrData.kind,
+          pubkey: naddrData.pubkey,
+          identifier: naddrData.identifier,
+          relay: naddrData.relays?.[0],
+          source: 'content',
+        });
+      } catch {
+        // Ignore malformed naddr references in content
+      }
+    }
+
+    return parsed;
   }
 
   getArticleIcon(kind: number): string {
