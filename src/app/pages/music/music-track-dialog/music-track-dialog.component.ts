@@ -1106,8 +1106,9 @@ export class MusicTrackDialogComponent {
         return;
       }
 
-      // Use original d tag if editing, otherwise generate new one
-      const dTag = this.isEditMode() && this.originalDTag()
+      // In edit mode always preserve the original d tag, including empty values for legacy events.
+      // This keeps the same addressable coordinate and prevents duplicates after edits.
+      const dTag = this.isEditMode()
         ? this.originalDTag()
         : `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
 

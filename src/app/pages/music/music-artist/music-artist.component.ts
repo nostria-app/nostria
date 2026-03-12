@@ -673,8 +673,7 @@ export class MusicArtistComponent implements OnInit, OnDestroy {
     if (result?.updated && result?.event) {
       // Update the track in the local map
       const event = result.event;
-      const dTag = event.tags.find(t => t[0] === 'd')?.[1] || '';
-      const uniqueId = `${event.pubkey}:${dTag}`;
+      const uniqueId = this.getTrackUniqueId(event);
       this.trackMap.set(uniqueId, event);
       this.updateTracks();
       this.snackBar.open('Track updated', 'Close', { duration: 2000 });
