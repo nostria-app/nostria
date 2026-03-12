@@ -2368,7 +2368,11 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     const minHeight = this.inlineMode() ? 88 : 112;
     const computedStyle = window.getComputedStyle(textarea);
     const parsedMaxHeight = Number.parseFloat(computedStyle.maxHeight);
-    const maxHeight = Number.isFinite(parsedMaxHeight) ? parsedMaxHeight : Number.POSITIVE_INFINITY;
+    const viewportCap = Math.max(minHeight, window.innerHeight - (this.inlineMode() ? 220 : 320));
+    const fallbackMaxHeight = this.inlineMode()
+      ? Math.min(200, viewportCap)
+      : Math.min(500, viewportCap);
+    const maxHeight = Number.isFinite(parsedMaxHeight) ? parsedMaxHeight : fallbackMaxHeight;
 
     textarea.style.maxHeight = 'none';
     textarea.style.height = 'auto';
@@ -2377,7 +2381,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     const targetHeight = Math.min(nextHeight, maxHeight);
 
     textarea.style.height = `${targetHeight}px`;
-    textarea.style.maxHeight = Number.isFinite(maxHeight) ? `${maxHeight}px` : 'none';
+    textarea.style.maxHeight = `${maxHeight}px`;
     textarea.style.overflowY = nextHeight > maxHeight ? 'auto' : 'hidden';
   }
 

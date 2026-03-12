@@ -844,9 +844,9 @@
         display: block;
         width: 100%;
         resize: none;
-        overflow-y: hidden;
+        overflow-y: auto;
         min-height: 112px;
-        max-height: none;
+        max-height: min(500px, calc(100dvh - 320px));
         box-sizing: border-box;
         word-wrap: break-word;
         word-break: normal;
@@ -860,10 +860,15 @@
         @media (max-width: 600px),
         (max-height: 700px) {
           min-height: 96px;
+          max-height: min(360px, calc(100dvh - 260px));
         }
 
         @media (max-width: 400px) {
           min-height: 88px;
+        }
+
+        @media (max-height: 600px) {
+          max-height: min(300px, calc(100dvh - 240px));
         }
       }
     }
