@@ -190,20 +190,20 @@ function setPreviewDebugHeaders(
 
 function extractMetaContent(html: string, tag: string): string {
   const escapedTag = tag.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
-  const byProperty = new RegExp(`<meta\\s+property=["']${escapedTag}["']\\s+content=["']([\\s\\S]*?)["']`, 'i');
-  const byName = new RegExp(`<meta\\s+name=["']${escapedTag}["']\\s+content=["']([\\s\\S]*?)["']`, 'i');
-  return byProperty.exec(html)?.[1] || byName.exec(html)?.[1] || '';
+  const byProperty = new RegExp(`<meta\\s+property=["']${escapedTag}["']\\s+content=(['"])([\\s\\S]*?)\\1`, 'i');
+  const byName = new RegExp(`<meta\\s+name=["']${escapedTag}["']\\s+content=(['"])([\\s\\S]*?)\\1`, 'i');
+  return byProperty.exec(html)?.[2] || byName.exec(html)?.[2] || '';
 }
 
 function extractMetaContents(html: string, tag: string): string[] {
   const escapedTag = tag.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
-  const byProperty = new RegExp(`<meta\\s+property=["']${escapedTag}["']\\s+content=["']([\\s\\S]*?)["']`, 'ig');
-  const byName = new RegExp(`<meta\\s+name=["']${escapedTag}["']\\s+content=["']([\\s\\S]*?)["']`, 'ig');
+  const byProperty = new RegExp(`<meta\\s+property=["']${escapedTag}["']\\s+content=(['"])([\\s\\S]*?)\\1`, 'ig');
+  const byName = new RegExp(`<meta\\s+name=["']${escapedTag}["']\\s+content=(['"])([\\s\\S]*?)\\1`, 'ig');
 
   const values: string[] = [];
   for (const regex of [byProperty, byName]) {
     for (const match of html.matchAll(regex)) {
-      const value = match[1]?.trim();
+      const value = match[2]?.trim();
       if (value && !values.includes(value)) {
         values.push(value);
       }
@@ -222,6 +222,7 @@ function escapeHtmlAttribute(value: string): string {
   return value
     .replace(/&/g, '&amp;')
     .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;');
 }
@@ -346,14 +347,14 @@ function upsertMetaTag(html: string, attr: 'property' | 'name', key: string, con
   const escapedKey = key.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
   const escapedContent = escapeHtmlAttribute(content);
 
-  const attrFirst = new RegExp(`(<meta\\s+${attr}=["']${escapedKey}["']\\s+content=["'])[^"']*(["'][^>]*>)`, 'i');
+  const attrFirst = new RegExp(`(<meta\\s+${attr}=["']${escapedKey}["']\\s+content=(['"]))[\\s\\S]*?(\\2[^>]*>)`, 'i');
   if (attrFirst.test(html)) {
-    return html.replace(attrFirst, `$1${escapedContent}$2`);
+    return html.replace(attrFirst, `$1${escapedContent}$3`);
   }
 
-  const contentFirst = new RegExp(`(<meta\\s+content=["'])[^"']*(["']\\s+${attr}=["']${escapedKey}["'][^>]*>)`, 'i');
+  const contentFirst = new RegExp(`(<meta\\s+content=(['"]))[\\s\\S]*?(\\2\\s+${attr}=["']${escapedKey}["'][^>]*>)`, 'i');
   if (contentFirst.test(html)) {
-    return html.replace(contentFirst, `$1${escapedContent}$2`);
+    return html.replace(contentFirst, `$1${escapedContent}$3`);
   }
 
   return html.replace('</head>', `  <meta ${attr}="${key}" content="${escapedContent}">\n</head>`);
