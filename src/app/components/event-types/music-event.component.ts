@@ -590,9 +590,9 @@ import { MatDividerModule } from '@angular/material/divider';
 
       .like-action {
         &.is-liked {
-          background: color-mix(in srgb, var(--mat-sys-error-container) 72%, transparent);
-          color: var(--mat-sys-error);
-          border-color: color-mix(in srgb, var(--mat-sys-error) 44%, transparent);
+          background: color-mix(in srgb, var(--mat-sys-error-container) 34%, transparent);
+          color: color-mix(in srgb, var(--mat-sys-error) 68%, var(--mat-sys-on-surface) 32%);
+          border-color: color-mix(in srgb, var(--mat-sys-error) 20%, transparent);
         }
 
         &:hover:not(:disabled) {
@@ -959,9 +959,9 @@ import { MatDividerModule } from '@angular/material/divider';
 
     .like-action {
       &.is-liked {
-        background: color-mix(in srgb, var(--mat-sys-error-container) 72%, transparent);
-        color: var(--mat-sys-error);
-        border-color: color-mix(in srgb, var(--mat-sys-error) 44%, transparent);
+        background: color-mix(in srgb, var(--mat-sys-error-container) 34%, transparent);
+        color: color-mix(in srgb, var(--mat-sys-error) 68%, var(--mat-sys-on-surface) 32%);
+        border-color: color-mix(in srgb, var(--mat-sys-error) 20%, transparent);
       }
 
       &:hover:not(:disabled) {
@@ -1608,15 +1608,6 @@ export class MusicEventComponent {
     }
 
     const ev = this.event();
-    const dTag = ev.tags.find(tag => tag[0] === 'd')?.[1] || null;
-    this.logger.info('[MusicEvent Likes] Like button clicked', {
-      eventId: ev.id,
-      title: this.utilities.getMusicTitle(ev),
-      pubkey: ev.pubkey,
-      dTag,
-      isLikedBeforeClick: this.isLiked(),
-      effectiveLikedReactionId: this.effectiveLikedReaction()?.id ?? null,
-    });
 
     if (this.isLiked()) {
       const existingReaction = this.effectiveLikedReaction();
@@ -1626,12 +1617,6 @@ export class MusicEventComponent {
       }
 
       const result = await this.reactionService.deleteReaction(existingReaction);
-      this.logger.info('[MusicEvent Likes] Unlike result', {
-        eventId: ev.id,
-        title: this.utilities.getMusicTitle(ev),
-        success: result.success,
-        deletedReactionId: existingReaction.id,
-      });
       if (result.success) {
         this.likedReactionOverride.set(null);
         this.likedReactionChange.emit(null);
@@ -1643,13 +1628,6 @@ export class MusicEventComponent {
     }
 
     const result = await this.reactionService.addLike(ev);
-    this.logger.info('[MusicEvent Likes] Like result', {
-      eventId: ev.id,
-      title: this.utilities.getMusicTitle(ev),
-      success: result.success,
-      reactionId: result.event?.id ?? null,
-      reactionContent: result.event?.content ?? null,
-    });
     if (result.success) {
       this.likedReactionOverride.set(result.event ?? null);
       if (result.event) {
