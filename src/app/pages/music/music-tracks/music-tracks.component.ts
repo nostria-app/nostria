@@ -24,7 +24,6 @@ import { LoggerService } from '../../../services/logger.service';
 const MUSIC_KINDS = [...UtilitiesService.MUSIC_KINDS];
 const PAGE_SIZE = 24;
 const COLLAPSED_GENRE_LIMIT = 16;
-type MusicTracksViewKind = 'list' | 'grid';
 
 interface MusicGenreOption {
   key: string;
@@ -59,9 +58,6 @@ interface MusicGenreOption {
           [initialFilter]="urlListFilter()"
           (filterChanged)="onFilterChanged($event)" />
       }
-      <button mat-icon-button (click)="toggleViewKind()" [matTooltip]="viewKind() === 'list' ? 'Switch to grid view' : 'Switch to list view'" class="hide-small">
-        <mat-icon>{{ viewKind() === 'list' ? 'view_agenda' : 'grid_view' }}</mat-icon>
-      </button>
       <button mat-icon-button [matMenuTriggerFor]="sortMenu" matTooltip="Sort" class="hide-small">
         <mat-icon>sort</mat-icon>
       </button>
@@ -76,10 +72,6 @@ interface MusicGenreOption {
         <button mat-menu-item [matMenuTriggerFor]="sortMenu">
           <mat-icon>sort</mat-icon>
           <span>Sort</span>
-        </button>
-        <button mat-menu-item (click)="toggleViewKind()">
-          <mat-icon>{{ viewKind() === 'list' ? 'view_agenda' : 'grid_view' }}</mat-icon>
-          <span>{{ viewKind() === 'list' ? 'Grid View' : 'List View' }}</span>
         </button>
       </mat-menu>
       <mat-menu #sortMenu="matMenu">
@@ -192,29 +184,21 @@ interface MusicGenreOption {
             </button>
           </div>
         } @else {
-          @if (viewKind() === 'list') {
-            <div class="track-list-header hide-small">
-              <span class="track-list-header-number">#</span>
-              <span class="track-list-header-title">Title</span>
-              <span class="track-list-header-album">Album</span>
-              <span class="track-list-header-duration">
-                <mat-icon>schedule</mat-icon>
-              </span>
-              <span class="track-list-header-actions"></span>
-            </div>
-            <div class="track-list">
-              @for (track of displayedTracks(); track track.id; let i = $index) {
-                <app-music-event [event]="track" mode="track-list" [trackNumber]="getTrackDisplayNumber(track)"
-                  [queueTracks]="searchedTracks()" [queueTrackIndex]="i"></app-music-event>
-              }
-            </div>
-          } @else {
-            <div class="music-grid">
-              @for (track of displayedTracks(); track track.id; let i = $index) {
-                <app-music-event [event]="track" mode="card" [queueTracks]="searchedTracks()" [queueTrackIndex]="i"></app-music-event>
-              }
-            </div>
-          }
+          <div class="track-list-header hide-small">
+            <span class="track-list-header-number">#</span>
+            <span class="track-list-header-title">Title</span>
+            <span class="track-list-header-album">Album</span>
+            <span class="track-list-header-duration">
+              <mat-icon>schedule</mat-icon>
+            </span>
+            <span class="track-list-header-actions"></span>
+          </div>
+          <div class="track-list">
+            @for (track of displayedTracks(); track track.id; let i = $index) {
+              <app-music-event [event]="track" mode="track-list" [trackNumber]="getTrackDisplayNumber(track)"
+                [queueTracks]="searchedTracks()" [queueTrackIndex]="i"></app-music-event>
+            }
+          </div>
 
           @if (hasMore()) {
             <div #loadMoreSentinel class="load-more-container">
@@ -473,19 +457,6 @@ interface MusicGenreOption {
       }
     }
 
-    .music-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-      gap: 1rem;
-      padding: 0.5rem 0;
-      max-width: 100%;
-
-      @media (max-width: 600px) {
-        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-        gap: 0.75rem;
-      }
-    }
-
     .track-list {
       display: flex;
       flex-direction: column;
@@ -616,7 +587,6 @@ export class MusicTracksComponent implements OnInit, OnDestroy, AfterViewInit {
   // Search functionality
   searchQuery = signal('');
   showSearch = signal(false);
-  viewKind = signal<MusicTracksViewKind>('list');
   selectedGenres = signal<string[]>([]);
   genresExpanded = signal(false);
 
@@ -1022,10 +992,6 @@ export class MusicTracksComponent implements OnInit, OnDestroy, AfterViewInit {
     }
   }
 
-  setViewKind(viewKind: MusicTracksViewKind): void {
-    this.viewKind.set(viewKind);
-  }
-
   isGenreSelected(genre: string): boolean {
     return this.selectedGenres().includes(genre);
   }
@@ -1048,10 +1014,6 @@ export class MusicTracksComponent implements OnInit, OnDestroy, AfterViewInit {
 
   toggleGenresExpanded(): void {
     this.genresExpanded.update(expanded => !expanded);
-  }
-
-  toggleViewKind(): void {
-    this.viewKind.set(this.viewKind() === 'list' ? 'grid' : 'list');
   }
 
   private getTrackSortValue(track: Event, mode: MusicTrackSortValue): number {
