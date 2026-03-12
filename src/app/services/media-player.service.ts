@@ -588,7 +588,7 @@ export class MediaPlayerService implements OnInitialized {
     }
 
     if (nextFile.type === 'Music') {
-      return false;
+      return wasExpanded;
     }
 
     return false;
