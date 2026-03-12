@@ -11,7 +11,8 @@
 
       <div class="expanded-queue" role="list" aria-label="Media queue">
         @for (entry of visibleTrackEntries(); track entry.track.source + '-' + entry.index) {
-        <div class="queue-track" [class.current]="entry.index === currentIndex()" role="listitem">
+        <div #queueTrackElement class="queue-track" [class.current]="entry.index === currentIndex()"
+          [attr.data-queue-index]="entry.index" role="listitem">
           <button class="queue-track-main" (click)="playTrackFromQueue(entry.index)"
             [attr.aria-label]="'Play ' + (entry.track.title || 'track')">
             @if (entry.track.artwork) {

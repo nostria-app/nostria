@@ -5,6 +5,9 @@ import {
   signal,
   input,
   output,
+  effect,
+  viewChildren,
+  ElementRef,
   ChangeDetectionStrategy,
 } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
@@ -68,6 +71,7 @@ export class AudioPlayerComponent {
 
   footer = input<boolean>(false);
   miniMediaToggleRequested = output<MouseEvent>();
+  queueTrackElements = viewChildren<ElementRef<HTMLElement>>('queueTrackElement');
 
   // Player view state
   currentView = signal<PlayerViewType>(this.loadSavedView());
@@ -150,7 +154,25 @@ export class AudioPlayerComponent {
 
   formatLabel = formatDuration;
 
-  constructor() { }
+  constructor() {
+    effect(() => {
+      if (!this.showExpandedQueue()) {
+        return;
+      }
+
+      const currentIndex = this.currentIndex();
+      this.visibleTrackEntries();
+      this.queueTrackElements();
+
+      if (currentIndex < 0) {
+        return;
+      }
+
+      setTimeout(() => {
+        this.scrollCurrentTrackIntoView();
+      });
+    });
+  }
 
   onTimeChange(event: Event): void {
     const input = event.target as HTMLInputElement;
@@ -183,6 +205,22 @@ export class AudioPlayerComponent {
     }
 
     this.layout.expandedMediaPlayer.set(!this.layout.expandedMediaPlayer());
+  }
+
+  private scrollCurrentTrackIntoView(): void {
+    const currentIndex = this.currentIndex();
+    if (currentIndex < 0) {
+      return;
+    }
+
+    const currentTrackElement = this.queueTrackElements().find(element => {
+      return Number(element.nativeElement.dataset['queueIndex']) === currentIndex;
+    });
+
+    currentTrackElement?.nativeElement.scrollIntoView({
+      behavior: 'smooth',
+      block: 'nearest',
+    });
   }
 
   playTrackFromQueue(index: number): void {
