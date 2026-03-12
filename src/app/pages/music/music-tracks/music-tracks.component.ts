@@ -258,6 +258,7 @@ interface MusicGenreOption {
       padding: 0.75rem 1rem;
       background-color: var(--mat-sys-surface-container);
       border-radius: var(--mat-sys-corner-large);
+      margin-top: 0.5rem;
       margin-bottom: 0.5rem;
 
       &.hidden {
@@ -793,7 +794,7 @@ export class MusicTracksComponent implements OnInit, OnDestroy, AfterViewInit {
         return [...filtered].sort((a, b) => this.compareTracksForDisplay(a, b, 'alphabetical', albumSortValues));
 
       case 'artist':
-        return [...filtered].sort((a, b) => this.compareTracksForDisplay(a, b, 'artist', albumSortValues));
+        return [...filtered].sort((a, b) => this.compareTracksByArtist(a, b));
 
       default:
         return filtered;
@@ -1119,6 +1120,39 @@ export class MusicTracksComponent implements OnInit, OnDestroy, AfterViewInit {
       if (sortA !== sortB) {
         return sortB - sortA;
       }
+    }
+
+    const titleCompare = this.getTrackTitleSortValue(a).localeCompare(this.getTrackTitleSortValue(b));
+    if (titleCompare !== 0) {
+      return titleCompare;
+    }
+
+    return b.created_at - a.created_at;
+  }
+
+  private compareTracksByArtist(a: Event, b: Event): number {
+    const artistCompare = this.getTrackArtistSortValue(a).localeCompare(this.getTrackArtistSortValue(b));
+    if (artistCompare !== 0) {
+      return artistCompare;
+    }
+
+    const albumCompare = this.getTrackAlbumSortValue(a).localeCompare(this.getTrackAlbumSortValue(b));
+    if (albumCompare !== 0) {
+      return albumCompare;
+    }
+
+    const trackNumberA = this.getTrackNumberSortValue(a);
+    const trackNumberB = this.getTrackNumberSortValue(b);
+    if (trackNumberA !== null && trackNumberB !== null && trackNumberA !== trackNumberB) {
+      return trackNumberA - trackNumberB;
+    }
+
+    if (trackNumberA !== null && trackNumberB === null) {
+      return -1;
+    }
+
+    if (trackNumberA === null && trackNumberB !== null) {
+      return 1;
     }
 
     const titleCompare = this.getTrackTitleSortValue(a).localeCompare(this.getTrackTitleSortValue(b));

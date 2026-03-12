@@ -24,6 +24,8 @@ import { LayoutService } from '../../services/layout.service';
 import { LoggerService } from '../../services/logger.service';
 import { CustomDialogService } from '../../services/custom-dialog.service';
 import { UserRelaysService } from '../../services/relays/user-relays';
+import { SettingsService } from '../../services/settings.service';
+import { HapticsService } from '../../services/haptics.service';
 import { NostrRecord, MediaItem } from '../../interfaces';
 import { ZapDialogComponent, ZapDialogData } from '../zap-dialog/zap-dialog.component';
 import { ShareArticleDialogComponent, ShareArticleDialogData } from '../share-article-dialog/share-article-dialog.component';
@@ -77,7 +79,10 @@ import { MatDividerModule } from '@angular/material/divider';
               aria-label="Share track" title="Share track">
               <mat-icon>share</mat-icon>
             </button>
-            <button mat-icon-button class="media-action-button zap-action" (click)="zapArtist($any($event))"
+            <button mat-icon-button class="media-action-button zap-action" (click)="onZapButtonClick($any($event))"
+              (pointerdown)="onZapButtonPointerDown($any($event))" (pointerup)="onZapButtonPointerUp($any($event))"
+              (pointerleave)="onZapButtonPointerCancel()" (pointercancel)="onZapButtonPointerCancel()"
+              (contextmenu)="onZapButtonContextMenu($any($event))"
               aria-label="Zap creator" title="Zap creator">
               <mat-icon>bolt</mat-icon>
             </button>
@@ -160,7 +165,10 @@ import { MatDividerModule } from '@angular/material/divider';
             aria-label="Share track" title="Share track">
             <mat-icon>share</mat-icon>
           </button>
-          <button mat-icon-button class="track-row-action zap-action" (click)="zapArtist($any($event))"
+          <button mat-icon-button class="track-row-action zap-action" (click)="onZapButtonClick($any($event))"
+            (pointerdown)="onZapButtonPointerDown($any($event))" (pointerup)="onZapButtonPointerUp($any($event))"
+            (pointerleave)="onZapButtonPointerCancel()" (pointercancel)="onZapButtonPointerCancel()"
+            (contextmenu)="onZapButtonContextMenu($any($event))"
             aria-label="Zap creator" title="Zap creator">
             <mat-icon>bolt</mat-icon>
           </button>
@@ -1195,6 +1203,8 @@ export class MusicEventComponent {
   private logger = inject(LoggerService);
   private customDialog = inject(CustomDialogService);
   private userRelaysService = inject(UserRelaysService);
+  private settingsService = inject(SettingsService);
+  private haptics = inject(HapticsService);
 
   event = input.required<Event>();
   mode = input<'card' | 'list' | 'track-list'>('list');
@@ -1206,6 +1216,8 @@ export class MusicEventComponent {
   userPlaylists = this.musicPlaylistService.userPlaylists;
   playlistsLoading = this.musicPlaylistService.loading;
   isAuthenticated = computed(() => this.app.authenticated());
+  quickZapEnabled = computed(() => this.settingsService.settings().quickZapEnabled ?? false);
+  quickZapAmount = computed(() => this.settingsService.settings().quickZapAmount ?? 21);
 
   // Edit dialog state
   showEditDialog = signal(false);
@@ -1230,6 +1242,9 @@ export class MusicEventComponent {
   });
 
   private profileLoaded = false;
+  private zapLongPressTimer: ReturnType<typeof setTimeout> | null = null;
+  private zapLongPressTriggered = false;
+  private readonly ZAP_LONG_PRESS_DURATION = 500;
 
   constructor() {
     // Load author profile - use untracked to prevent re-triggers from cache updates
@@ -1541,10 +1556,84 @@ export class MusicEventComponent {
 
   // Zap the artist
   zapArtist(event: MouseEvent | KeyboardEvent): void {
+    void this.openZapDialogForArtist(event);
+  }
+
+  onZapButtonPointerDown(event: PointerEvent): void {
+    if (!this.quickZapEnabled()) {
+      return;
+    }
+
+    if (event.pointerType === 'mouse' && event.button !== 0) {
+      return;
+    }
+
+    this.clearZapLongPressTimer();
+    this.zapLongPressTriggered = false;
+    this.zapLongPressTimer = setTimeout(() => {
+      this.zapLongPressTriggered = true;
+      this.haptics.triggerMedium();
+      void this.openZapDialogForArtist(event as unknown as MouseEvent);
+    }, this.ZAP_LONG_PRESS_DURATION);
+  }
+
+  onZapButtonPointerUp(event: PointerEvent): void {
+    this.clearZapLongPressTimer();
+
+    if (this.zapLongPressTriggered) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+  }
+
+  onZapButtonPointerCancel(): void {
+    this.clearZapLongPressTimer();
+  }
+
+  onZapButtonContextMenu(event: MouseEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.clearZapLongPressTimer();
+    this.zapLongPressTriggered = false;
+    void this.openZapDialogForArtist(event);
+  }
+
+  onZapButtonClick(event: MouseEvent): void {
+    event.stopPropagation();
+    event.preventDefault();
+
+    if (this.zapLongPressTriggered) {
+      this.zapLongPressTriggered = false;
+      return;
+    }
+
+    if (this.quickZapEnabled()) {
+      void this.sendQuickZap(event);
+      return;
+    }
+
+    void this.openZapDialogForArtist(event);
+  }
+
+  private clearZapLongPressTimer(): void {
+    if (this.zapLongPressTimer) {
+      clearTimeout(this.zapLongPressTimer);
+      this.zapLongPressTimer = null;
+    }
+  }
+
+  private async openZapDialogForArtist(event: MouseEvent | KeyboardEvent): Promise<void> {
     event.stopPropagation();
     const ev = this.event();
     const dTag = ev.tags.find(t => t[0] === 'd')?.[1] || '';
     const profile = this.authorProfile();
+
+    const userPubkey = this.accountState.pubkey();
+    const currentAccount = this.accountState.account();
+    if (!userPubkey || currentAccount?.source === 'preview') {
+      await this.layout.showLoginDialog();
+      return;
+    }
 
     // Check for zap splits in the event
     const zapSplits = this.zapService.parseZapSplits(ev);
@@ -1565,6 +1654,80 @@ export class MusicEventComponent {
       width: '400px',
       maxWidth: '95vw',
     });
+  }
+
+  private async sendQuickZap(event: MouseEvent): Promise<void> {
+    const ev = this.event();
+    const dTag = ev.tags.find(t => t[0] === 'd')?.[1] || '';
+    const userPubkey = this.accountState.pubkey();
+    const currentAccount = this.accountState.account();
+
+    if (!userPubkey || currentAccount?.source === 'preview') {
+      await this.layout.showLoginDialog();
+      return;
+    }
+
+    const amount = this.quickZapAmount();
+    if (amount <= 0) {
+      this.snackBar.open('Quick zap amount not configured. Go to Settings > Wallet.', 'Dismiss', {
+        duration: 4000,
+      });
+      return;
+    }
+
+    let recipientMetadata = this.authorProfile()?.data;
+    if (!recipientMetadata) {
+      try {
+        const userProfile = await this.data.getProfile(ev.pubkey);
+        recipientMetadata = userProfile?.data;
+      } catch (error) {
+        this.logger.warn('Failed to get user profile for quick zap', { error, pubkey: ev.pubkey });
+      }
+    }
+
+    if (!recipientMetadata) {
+      this.snackBar.open('Unable to get recipient information for zap', 'Dismiss', { duration: 4000 });
+      return;
+    }
+
+    const lightningAddress = this.zapService.getLightningAddress(recipientMetadata);
+    if (!lightningAddress) {
+      this.snackBar.open('This user has no lightning address configured for zaps', 'Dismiss', {
+        duration: 4000,
+      });
+      return;
+    }
+
+    try {
+      const zapSplits = this.zapService.parseZapSplits(ev);
+      if (zapSplits.length > 0) {
+        await this.zapService.sendSplitZap(ev, amount, '');
+      } else {
+        await this.zapService.sendZap(
+          ev.pubkey,
+          amount,
+          '',
+          ev.id,
+          recipientMetadata,
+          undefined,
+          undefined,
+          ev.kind,
+          `${ev.kind}:${ev.pubkey}:${dTag}`
+        );
+      }
+
+      this.haptics.triggerZapBuzz();
+      this.snackBar.open(`⚡ Zapped ${amount} sats to ${this.artistName()}!`, 'Dismiss', {
+        duration: 3000,
+      });
+    } catch (error) {
+      this.logger.error('Failed to send quick zap for music track', { error, eventId: ev.id });
+      this.snackBar.open(
+        `Failed to send zap: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        'Dismiss',
+        { duration: 5000 }
+      );
+    }
   }
 
   // Copy event link (music song URL)
