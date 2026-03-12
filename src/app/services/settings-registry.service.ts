@@ -566,18 +566,18 @@ export class SettingsRegistryService {
       priority: 2,
       popular: true,
     },
-    {
-      id: 'auto-zap',
-      title: $localize`:@@settings.wallet.auto-zap:Auto Zap`,
-      description: $localize`:@@settings.wallet.auto-zap.description:Automatically zap content you like`,
-      keywords: ['auto', 'zap', 'automatic', 'like', 'reaction'],
-      section: 'wallet',
-      sectionTitle: $localize`:@@settings.sections.wallet:Wallet`,
-      icon: 'auto_awesome',
-      route: '/settings/wallet',
-      authenticated: true,
-      priority: 3,
-    },
+    // {
+    //   id: 'auto-zap',
+    //   title: $localize`:@@settings.wallet.auto-zap:Auto Zap`,
+    //   description: $localize`:@@settings.wallet.auto-zap.description:Automatically zap content you like`,
+    //   keywords: ['auto', 'zap', 'automatic', 'like', 'reaction'],
+    //   section: 'wallet',
+    //   sectionTitle: $localize`:@@settings.sections.wallet:Wallet`,
+    //   icon: 'auto_awesome',
+    //   route: '/settings/wallet',
+    //   authenticated: true,
+    //   priority: 3,
+    // },
 
     // Backup Settings
     {

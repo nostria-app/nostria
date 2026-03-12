@@ -396,6 +396,52 @@ export class ZapService {
     }
   }
 
+  private async getCurrentAccountRelays(): Promise<string[]> {
+    const currentUserPubkey = this.accountState.pubkey();
+    if (!currentUserPubkey) {
+      return [];
+    }
+
+    const accountRelays = this.accountRelay.getRelayUrls();
+    if (accountRelays.length > 0) {
+      return accountRelays;
+    }
+
+    try {
+      return await this.discoveryRelay.getUserRelayUrls(currentUserPubkey);
+    } catch (error) {
+      this.logger.warn('Failed to fetch current account relays for zap request', error);
+      return [];
+    }
+  }
+
+  private async getZapRequestRelays(
+    recipientPubkey: string,
+    customRelays?: string[]
+  ): Promise<string[]> {
+    const [currentAccountRelays, recipientRelays] = await Promise.all([
+      this.getCurrentAccountRelays(),
+      this.getRecipientRelays(recipientPubkey),
+    ]);
+
+    const mergedRelays = this.utilities.getUniqueNormalizedRelayUrls([
+      ...currentAccountRelays,
+      ...recipientRelays,
+      ...(customRelays || []),
+    ]);
+
+    if (mergedRelays.length > 0) {
+      return mergedRelays.slice(0, 20);
+    }
+
+    const connectedRelays = this.relayService.getConnectedRelays();
+    if (Array.isArray(connectedRelays) && connectedRelays.length > 0) {
+      return this.utilities.getUniqueNormalizedRelayUrls(connectedRelays).slice(0, 10);
+    }
+
+    return ['wss://relay.damus.io/', 'wss://nos.lol/', 'wss://relay.snort.social/'];
+  }
+
   /**
    * Create a zap request event (kind 9734)
    */
@@ -687,6 +733,7 @@ export class ZapService {
     message = ''
   ): Promise<void> {
     const splits = this.parseZapSplits(event);
+    const eventAddress = this.getEventAddress(event);
 
     if (splits.length === 0) {
       throw new Error('No valid zap split recipients found in event');
@@ -776,7 +823,8 @@ export class ZapService {
         payment.metadata!,
         payment.relay ? [payment.relay] : undefined,
         undefined, // goalEventId
-        event.kind // eventKind
+        event.kind,
+        eventAddress
       );
 
       try {
@@ -807,6 +855,19 @@ export class ZapService {
     } else {
       this.logger.info(`Successfully sent split zap to ${successCount} recipients`);
     }
+  }
+
+  private getEventAddress(event: Event): string | undefined {
+    if (event.kind < 30000 || event.kind >= 40000) {
+      return undefined;
+    }
+
+    const dTag = event.tags.find(tag => tag[0] === 'd')?.[1]?.trim();
+    if (!dTag) {
+      return undefined;
+    }
+
+    return `${event.kind}:${event.pubkey}:${dTag}`;
   }
 
   /**
@@ -883,10 +944,14 @@ export class ZapService {
       // Convert lightning address to LNURL for the request
       const lnurl = this.lightningAddressToLnurl(lightningAddress);
 
-      // Fetch recipient's relays so the Lightning service knows where to publish the zap receipt
-      // Use custom relays if provided (for gift subscriptions), otherwise fetch recipient's relays
-      const recipientRelays = customRelays || await this.getRecipientRelays(recipientPubkey);
-      this.logger.debug('Recipient relays for zap request:', recipientRelays);
+      // Include both sender and recipient relays so the zap receipt has the best chance
+      // of being published where both parties will later query it.
+      const zapRequestRelays = await this.getZapRequestRelays(recipientPubkey, customRelays);
+      this.logger.debug('Relays for zap request:', {
+        recipientPubkey,
+        relayCount: zapRequestRelays.length,
+        relays: zapRequestRelays,
+      });
 
       // Create zap request (usually succeeds, so no retry needed)
       const zapRequest = await this.createZapRequest(
@@ -895,7 +960,7 @@ export class ZapService {
         message,
         eventId,
         lnurl,
-        recipientRelays,
+        zapRequestRelays,
         goalEventId,
         eventKind,
         eventAddress

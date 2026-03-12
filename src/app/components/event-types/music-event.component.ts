@@ -79,12 +79,12 @@ import { MatDividerModule } from '@angular/material/divider';
               aria-label="Share track" title="Share track">
               <mat-icon>share</mat-icon>
             </button>
-            <button mat-icon-button class="media-action-button zap-action" (click)="onZapButtonClick($any($event))"
+            <button mat-icon-button class="media-action-button zap-action" [class.is-zapped]="hasZappedState()" (click)="onZapButtonClick($any($event))"
               (pointerdown)="onZapButtonPointerDown($any($event))" (pointerup)="onZapButtonPointerUp($any($event))"
               (pointerleave)="onZapButtonPointerCancel()" (pointercancel)="onZapButtonPointerCancel()"
               (contextmenu)="onZapButtonContextMenu($any($event))"
               aria-label="Zap creator" title="Zap creator">
-              <mat-icon>bolt</mat-icon>
+              <mat-icon [class.is-zapped]="hasZappedState()">bolt</mat-icon>
             </button>
           </div>
         </div>
@@ -165,12 +165,12 @@ import { MatDividerModule } from '@angular/material/divider';
             aria-label="Share track" title="Share track">
             <mat-icon>share</mat-icon>
           </button>
-          <button mat-icon-button class="track-row-action zap-action" (click)="onZapButtonClick($any($event))"
+          <button mat-icon-button class="track-row-action zap-action" [class.is-zapped]="hasZappedState()" (click)="onZapButtonClick($any($event))"
             (pointerdown)="onZapButtonPointerDown($any($event))" (pointerup)="onZapButtonPointerUp($any($event))"
             (pointerleave)="onZapButtonPointerCancel()" (pointercancel)="onZapButtonPointerCancel()"
             (contextmenu)="onZapButtonContextMenu($any($event))"
             aria-label="Zap creator" title="Zap creator">
-            <mat-icon>bolt</mat-icon>
+            <mat-icon [class.is-zapped]="hasZappedState()">bolt</mat-icon>
           </button>
         </div>
 
@@ -615,10 +615,20 @@ import { MatDividerModule } from '@angular/material/divider';
       }
 
       .zap-action {
+        &.is-zapped {
+          background: color-mix(in srgb, #ff9800 16%, transparent);
+          color: color-mix(in srgb, #ffbf66 70%, var(--mat-sys-on-surface) 30%);
+          border-color: color-mix(in srgb, #ffb74d 18%, transparent);
+        }
+
         &:hover:not(:disabled) {
           background: color-mix(in srgb, #ff9800 24%, transparent);
           color: color-mix(in srgb, #ffbf66 78%, var(--mat-sys-on-surface) 22%);
           border-color: color-mix(in srgb, #ffb74d 34%, transparent);
+        }
+
+        mat-icon.is-zapped {
+          font-variation-settings: 'FILL' 1;
         }
       }
     }
@@ -987,6 +997,16 @@ import { MatDividerModule } from '@angular/material/divider';
       border-color: color-mix(in srgb, #ffb74d 34%, transparent);
     }
 
+    .zap-action.is-zapped {
+      background: color-mix(in srgb, #ff9800 16%, transparent);
+      color: color-mix(in srgb, #ffbf66 70%, var(--mat-sys-on-surface) 30%);
+      border-color: color-mix(in srgb, #ffb74d 18%, transparent);
+
+      mat-icon.is-zapped {
+        font-variation-settings: 'FILL' 1;
+      }
+    }
+
     @media (max-width: 780px) {
       .track-row-leading {
         display: none;
@@ -1234,7 +1254,9 @@ export class MusicEventComponent {
   queueTracks = input<Event[] | null>(null);
   queueTrackIndex = input<number | null>(null);
   likedReaction = input<Event | null>(null);
+  hasZapped = input(false);
   likedReactionChange = output<Event | null>();
+  hasZappedChange = output<boolean>();
 
   authorProfile = signal<NostrRecord | undefined>(undefined);
   userPlaylists = this.musicPlaylistService.userPlaylists;
@@ -1267,6 +1289,7 @@ export class MusicEventComponent {
 
   private profileLoaded = false;
   private lastLikedStateEventId: string | null = null;
+  private lastZappedStateEventId: string | null = null;
   private zapLongPressTimer: ReturnType<typeof setTimeout> | null = null;
   private zapLongPressTriggered = false;
   private readonly ZAP_LONG_PRESS_DURATION = 500;
@@ -1310,6 +1333,16 @@ export class MusicEventComponent {
       if (override && inputReaction?.id === override.id) {
         this.likedReactionOverride.set(undefined);
       }
+    });
+
+    effect(() => {
+      const eventId = this.event().id;
+      if (eventId === this.lastZappedStateEventId) {
+        return;
+      }
+
+      this.lastZappedStateEventId = eventId;
+      this.hasZappedOverride.set(undefined);
     });
   }
 
@@ -1419,6 +1452,8 @@ export class MusicEventComponent {
     return this.likedReaction();
   });
   isLiked = computed(() => !!this.effectiveLikedReaction());
+  private hasZappedOverride = signal<boolean | undefined>(undefined);
+  hasZappedState = computed(() => this.hasZappedOverride() ?? this.hasZapped());
 
   isCurrentTrackPlaying = computed(() => {
     const currentItem = this.mediaPlayer.current();
@@ -1802,6 +1837,8 @@ export class MusicEventComponent {
       }
 
       this.haptics.triggerZapBuzz();
+      this.hasZappedOverride.set(true);
+      this.hasZappedChange.emit(true);
       this.snackBar.open(`⚡ Zapped ${amount} sats to ${this.artistName()}!`, 'Dismiss', {
         duration: 3000,
       });

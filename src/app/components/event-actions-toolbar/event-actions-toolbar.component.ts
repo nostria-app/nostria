@@ -308,7 +308,32 @@ export class EventActionsToolbarComponent {
 
   private async loadZaps(event: Event): Promise<{ total: number; count: number; zaps: ZapInfo[] }> {
     try {
-      const zapReceipts = await this.zapService.getZapsForEvent(event.id);
+      const filters: { kinds: number[]; '#e'?: string[]; '#a'?: string[]; limit: number }[] = [];
+      const address = this.getAddressableEventCoordinate(event);
+
+      if (address) {
+        filters.push({
+          kinds: [9735],
+          '#a': [address],
+          limit: 100,
+        });
+      } else {
+        filters.push({
+          kinds: [9735],
+          '#e': [event.id],
+          limit: 100,
+        });
+      }
+
+      const receiptsById = new Map<string, Event>();
+      for (const filter of filters) {
+        const receipts = await this.sharedRelay.getMany(event.pubkey, filter);
+        for (const receipt of receipts) {
+          receiptsById.set(receipt.id, receipt);
+        }
+      }
+
+      const zapReceipts = Array.from(receiptsById.values());
       let total = 0;
       const zaps: ZapInfo[] = [];
 
@@ -335,6 +360,19 @@ export class EventActionsToolbarComponent {
       this.logger.error('Failed to load zaps:', err);
       return { total: 0, count: 0, zaps: [] };
     }
+  }
+
+  private getAddressableEventCoordinate(event: Event): string | null {
+    if (event.kind < 30000 || event.kind >= 40000) {
+      return null;
+    }
+
+    const dTag = event.tags.find(tag => tag[0] === 'd')?.[1]?.trim();
+    if (!dTag) {
+      return null;
+    }
+
+    return `${event.kind}:${event.pubkey}:${dTag}`;
   }
 
   onReactionChanged(): void {
