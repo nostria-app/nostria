@@ -28,6 +28,7 @@ const MUSIC_RELAY_SET_D_TAG = 'music';
 const DEFAULT_MUSIC_RELAYS = [
   'wss://nos.lol/',
   'wss://relay.damus.io/',
+  'wss://drops.basspistol.org',
 ];
 
 interface MusicRelaySet {

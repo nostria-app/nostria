@@ -43,6 +43,9 @@ type MusicTracksViewKind = 'list' | 'grid';
         <mat-icon>arrow_back</mat-icon>
       </button>
       <h2 class="panel-title title-font" i18n="@@music.tracks.title">Songs</h2>
+      <button mat-icon-button (click)="toggleSearch()" [matTooltip]="showSearch() ? 'Close search' : 'Search songs'" class="hide-small">
+        <mat-icon>{{ showSearch() ? 'search_off' : 'search' }}</mat-icon>
+      </button>
       <span class="panel-header-spacer"></span>
       @if (isAuthenticated()) {
         <app-music-list-filter
@@ -51,9 +54,6 @@ type MusicTracksViewKind = 'list' | 'grid';
       }
       <button mat-icon-button (click)="toggleViewKind()" [matTooltip]="viewKind() === 'list' ? 'Switch to grid view' : 'Switch to list view'" class="hide-small">
         <mat-icon>{{ viewKind() === 'list' ? 'view_agenda' : 'grid_view' }}</mat-icon>
-      </button>
-      <button mat-icon-button (click)="toggleSearch()" [matTooltip]="showSearch() ? 'Close search' : 'Search songs'" class="hide-small">
-        <mat-icon>{{ showSearch() ? 'search_off' : 'search' }}</mat-icon>
       </button>
       <button mat-icon-button [matMenuTriggerFor]="sortMenu" matTooltip="Sort" class="hide-small">
         <mat-icon>sort</mat-icon>
@@ -358,7 +358,7 @@ type MusicTracksViewKind = 'list' | 'grid';
 
     .track-list-header {
       display: grid;
-      grid-template-columns: 1.5rem minmax(0, 1fr) minmax(8rem, 20vw) 3.25rem auto;
+      grid-template-columns: 2rem minmax(0, 1fr) minmax(8rem, 20vw) 3.25rem auto;
       align-items: center;
       gap: 0.625rem;
       padding: 0 0.75rem 0.35rem;

@@ -39,10 +39,10 @@ const PAGE_SIZE = 24;
         <mat-icon>arrow_back</mat-icon>
       </button>
       <h2 class="panel-title title-font" i18n="@@music.liked.title">Liked Songs</h2>
-      <span class="panel-header-spacer"></span>
       <button mat-icon-button (click)="toggleSearch()" [matTooltip]="showSearch() ? 'Close search' : 'Search music'" class="hide-small">
         <mat-icon>{{ showSearch() ? 'search_off' : 'search' }}</mat-icon>
       </button>
+      <span class="panel-header-spacer"></span>
       <button mat-icon-button [matMenuTriggerFor]="moreOptionsMenu" matTooltip="More options" class="show-small">
         <mat-icon>more_vert</mat-icon>
       </button>

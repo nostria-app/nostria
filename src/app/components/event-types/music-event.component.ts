@@ -148,9 +148,7 @@ import { MatDividerModule } from '@angular/material/divider';
           @if (album()) {
             <span class="track-row-album">{{ album() }}</span>
           }
-          @if (duration()) {
-            <span class="track-row-duration">{{ duration() }}</span>
-          }
+          <span class="track-row-duration" [class.is-empty]="!duration()">{{ duration() || '' }}</span>
         </div>
 
         <div class="track-row-actions">
@@ -710,12 +708,12 @@ import { MatDividerModule } from '@angular/material/divider';
 
     .track-row-leading {
       position: relative;
-      flex: 0 0 1.5rem;
-      width: 1.5rem;
-      min-width: 1.5rem;
+      flex: 0 0 2rem;
+      width: 2rem;
+      min-width: 2rem;
       display: flex;
       align-items: center;
-      justify-content: flex-end;
+      justify-content: center;
 
       &.has-track-number .track-row-play {
         position: absolute;
@@ -763,6 +761,8 @@ import { MatDividerModule } from '@angular/material/divider';
     }
 
     .track-row-play {
+      width: 30px;
+      height: 30px;
       color: var(--mat-sys-on-surface);
 
       &:hover {
@@ -921,6 +921,10 @@ import { MatDividerModule } from '@angular/material/divider';
       font-variant-numeric: tabular-nums;
       min-width: 3.25rem;
       text-align: right;
+
+      &.is-empty {
+        visibility: hidden;
+      }
     }
 
     .track-row-actions {
@@ -973,9 +977,9 @@ import { MatDividerModule } from '@angular/material/divider';
       }
 
       .track-row-leading {
-        flex-basis: 1.25rem;
-        width: 1.25rem;
-        min-width: 1.25rem;
+        flex-basis: 1.75rem;
+        width: 1.75rem;
+        min-width: 1.75rem;
       }
 
       .track-row-number {

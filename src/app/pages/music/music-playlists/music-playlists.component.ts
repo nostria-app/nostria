@@ -41,15 +41,15 @@ const PAGE_SIZE = 24;
         <mat-icon>arrow_back</mat-icon>
       </button>
       <h2 class="panel-title title-font" i18n="@@music.playlists.title">Albums</h2>
+      <button mat-icon-button (click)="toggleSearch()" [matTooltip]="showSearch() ? 'Close search' : 'Search albums'" class="hide-small">
+        <mat-icon>{{ showSearch() ? 'search_off' : 'search' }}</mat-icon>
+      </button>
       <span class="panel-header-spacer"></span>
       @if (isAuthenticated()) {
         <app-music-list-filter
           [initialFilter]="urlListFilter()"
           (filterChanged)="onFilterChanged($event)" />
       }
-      <button mat-icon-button (click)="toggleSearch()" [matTooltip]="showSearch() ? 'Close search' : 'Search albums'" class="hide-small">
-        <mat-icon>{{ showSearch() ? 'search_off' : 'search' }}</mat-icon>
-      </button>
       <button mat-icon-button [matMenuTriggerFor]="sortMenu" matTooltip="Sort" class="hide-small">
         <mat-icon>sort</mat-icon>
       </button>

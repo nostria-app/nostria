@@ -1,17 +1,17 @@
 <!-- Panel Header -->
 <div class="panel-header">
   <h2 class="panel-title title-font" i18n="@@nav.music">Music</h2>
+  <!-- Search toggle - hidden on small screens -->
+  <button mat-icon-button (click)="toggleSearch()" [matTooltip]="showSearch() ? 'Close search' : 'Search music'"
+    class="hide-small">
+    <mat-icon>{{ showSearch() ? 'search_off' : 'search' }}</mat-icon>
+  </button>
   <span class="panel-header-spacer"></span>
   @if (isAuthenticated()) {
   <button mat-icon-button [matMenuTriggerFor]="addMenu" matTooltip="Add content">
     <mat-icon>add</mat-icon>
   </button>
   }
-  <!-- Search toggle - hidden on small screens -->
-  <button mat-icon-button (click)="toggleSearch()" [matTooltip]="showSearch() ? 'Close search' : 'Search music'"
-    class="hide-small">
-    <mat-icon>{{ showSearch() ? 'search_off' : 'search' }}</mat-icon>
-  </button>
   @if (isAuthenticated()) {
   <app-music-list-filter [initialFilter]="urlListFilter()" (filterChanged)="onListFilterChanged($event)" />
   }
