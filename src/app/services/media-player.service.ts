@@ -578,13 +578,13 @@ export class MediaPlayerService implements OnInitialized {
     return file.type === 'Music' && !!file.video?.trim();
   }
 
-  private resolveExpandedPlayerState(nextFile: MediaItem, previousFile?: MediaItem): boolean {
+  private resolveExpandedPlayerState(nextFile: MediaItem, previousFile?: MediaItem, wasExpanded = this.layout.expandedMediaPlayer()): boolean {
     if (this.shouldAutoExpandForVideo(nextFile)) {
       return true;
     }
 
     if (this.hasMusicVideo(nextFile)) {
-      return this.layout.expandedMediaPlayer() && previousFile?.type === 'Music';
+      return wasExpanded;
     }
 
     if (nextFile.type === 'Music') {
@@ -618,11 +618,12 @@ export class MediaPlayerService implements OnInitialized {
 
     const safeStartIndex = Math.min(Math.max(startIndex, 0), files.length - 1);
     const previousFile = this.current();
+    const wasExpanded = this.layout.expandedMediaPlayer();
 
     this.clearQueue();
 
     this.layout.showMediaPlayer.set(true);
-    this.layout.expandedMediaPlayer.set(this.resolveExpandedPlayerState(files[safeStartIndex], previousFile));
+    this.layout.expandedMediaPlayer.set(this.resolveExpandedPlayerState(files[safeStartIndex], previousFile, wasExpanded));
 
     this.media.set([...files]);
     this.index = safeStartIndex;
