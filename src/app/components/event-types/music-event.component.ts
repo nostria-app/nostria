@@ -1769,10 +1769,19 @@ export class MusicEventComponent {
       zapSplits: zapSplits.length > 0 ? zapSplits : undefined,
     };
 
-    this.dialog.open(ZapDialogComponent, {
+    const dialogRef = this.dialog.open(ZapDialogComponent, {
       data,
       width: '400px',
       maxWidth: '95vw',
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (!result?.amount) {
+        return;
+      }
+
+      this.hasZappedOverride.set(true);
+      this.hasZappedChange.emit(true);
     });
   }
 

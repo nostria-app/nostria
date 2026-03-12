@@ -625,6 +625,7 @@ export class MusicTracksComponent implements OnInit, OnDestroy, AfterViewInit {
   private queuedZapATargets = new Set<string>();
   private queuedZapETargets = new Set<string>();
   private zapDisplayTargetKeyByQueryKey = new Map<string, string>();
+  private zapRefreshTimeouts = new Map<string, ReturnType<typeof setTimeout>>();
   private likedReactionByTargetKey = signal(new Map<string, Event>());
   private zappedTargetKeys = signal(new Set<string>());
 
@@ -942,6 +943,7 @@ export class MusicTracksComponent implements OnInit, OnDestroy, AfterViewInit {
     this.intersectionObserver?.disconnect();
     this.clearLikeLoadingState();
     this.clearZapLoadingState();
+    this.clearZapRefreshTimeouts();
   }
 
   private setupIntersectionObserver(): void {
@@ -1136,6 +1138,8 @@ export class MusicTracksComponent implements OnInit, OnDestroy, AfterViewInit {
       next.add(targetKey);
       return next;
     });
+
+    this.scheduleTrackZapReceiptRefresh(track);
   }
 
   toggleGenresExpanded(): void {
@@ -1195,6 +1199,13 @@ export class MusicTracksComponent implements OnInit, OnDestroy, AfterViewInit {
       clearTimeout(this.zapLoadTimeout);
       this.zapLoadTimeout = null;
     }
+  }
+
+  private clearZapRefreshTimeouts(): void {
+    for (const timeout of this.zapRefreshTimeouts.values()) {
+      clearTimeout(timeout);
+    }
+    this.zapRefreshTimeouts.clear();
   }
 
   private scheduleLikeStateLoad(tracks: Event[], userPubkey: string | null): void {
@@ -1398,10 +1409,11 @@ export class MusicTracksComponent implements OnInit, OnDestroy, AfterViewInit {
   private async loadZapBatch(
     userPubkey: string,
     targetType: 'a' | 'e',
-    targetValues: string[]
-  ): Promise<void> {
+    targetValues: string[],
+    markLoaded = true
+  ): Promise<string[]> {
     if (targetValues.length === 0 || this.zapStatePubkey !== userPubkey) {
-      return;
+      return [];
     }
 
     const targetTag = targetType === 'a' ? '#a' : '#e';
@@ -1454,7 +1466,7 @@ export class MusicTracksComponent implements OnInit, OnDestroy, AfterViewInit {
     });
 
     if (this.zapStatePubkey !== userPubkey) {
-      return;
+      return [];
     }
 
     const matchedKeys = new Set<string>();
@@ -1524,7 +1536,11 @@ export class MusicTracksComponent implements OnInit, OnDestroy, AfterViewInit {
       });
     }
 
-    this.markZapTargetsLoaded(targetType, targetValues);
+    if (markLoaded) {
+      this.markZapTargetsLoaded(targetType, targetValues);
+    }
+
+    return Array.from(matchedKeys);
   }
 
   private markZapTargetsLoaded(targetType: 'a' | 'e', targetValues: string[]): void {
@@ -1542,6 +1558,71 @@ export class MusicTracksComponent implements OnInit, OnDestroy, AfterViewInit {
     }
 
     return [displayTarget];
+  }
+
+  private scheduleTrackZapReceiptRefresh(track: Event): void {
+    const userPubkey = this.currentPubkey();
+    const displayTarget = this.getTrackReactionTarget(track);
+    if (!userPubkey || !displayTarget) {
+      return;
+    }
+
+    const refreshKey = this.buildReactionTargetKey(displayTarget.type, displayTarget.value);
+    const existingTimeout = this.zapRefreshTimeouts.get(refreshKey);
+    if (existingTimeout) {
+      clearTimeout(existingTimeout);
+    }
+
+    const timeout = setTimeout(() => {
+      this.zapRefreshTimeouts.delete(refreshKey);
+      void this.refreshTrackZapReceiptState(userPubkey, track, 3);
+    }, 1500);
+
+    this.zapRefreshTimeouts.set(refreshKey, timeout);
+  }
+
+  private async refreshTrackZapReceiptState(
+    userPubkey: string,
+    track: Event,
+    attemptsRemaining: number
+  ): Promise<void> {
+    if (this.zapStatePubkey !== userPubkey) {
+      return;
+    }
+
+    const queryTargets = this.getTrackZapQueryTargets(track);
+    const aTargets = queryTargets.filter(target => target.type === 'a').map(target => target.value);
+    const eTargets = queryTargets.filter(target => target.type === 'e').map(target => target.value);
+
+    const matchedKeys = new Set<string>();
+    for (const batch of this.chunkTargets(aTargets, ZAP_BATCH_SIZE)) {
+      for (const matchedKey of await this.loadZapBatch(userPubkey, 'a', batch, attemptsRemaining <= 1)) {
+        matchedKeys.add(matchedKey);
+      }
+    }
+
+    for (const batch of this.chunkTargets(eTargets, ZAP_BATCH_SIZE)) {
+      for (const matchedKey of await this.loadZapBatch(userPubkey, 'e', batch, attemptsRemaining <= 1)) {
+        matchedKeys.add(matchedKey);
+      }
+    }
+
+    if (matchedKeys.size > 0 || attemptsRemaining <= 1) {
+      return;
+    }
+
+    const displayTarget = this.getTrackReactionTarget(track);
+    if (!displayTarget) {
+      return;
+    }
+
+    const refreshKey = this.buildReactionTargetKey(displayTarget.type, displayTarget.value);
+    const timeout = setTimeout(() => {
+      this.zapRefreshTimeouts.delete(refreshKey);
+      void this.refreshTrackZapReceiptState(userPubkey, track, attemptsRemaining - 1);
+    }, 2000);
+
+    this.zapRefreshTimeouts.set(refreshKey, timeout);
   }
 
   private async loadAllMusicLikes(userPubkey: string): Promise<void> {
