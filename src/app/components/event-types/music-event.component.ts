@@ -703,6 +703,7 @@ import { MatDividerModule } from '@angular/material/divider';
       font-size: 0.8125rem;
       text-align: right;
       font-variant-numeric: tabular-nums;
+      transform: translateX(-10px);
       transition: opacity 0.15s ease;
     }
 
