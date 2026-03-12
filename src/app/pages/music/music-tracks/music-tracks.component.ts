@@ -1,13 +1,14 @@
-import { Component, inject, signal, computed, OnDestroy, OnInit, ChangeDetectionStrategy, AfterViewInit, ElementRef, viewChild, input } from '@angular/core';
+import { Component, inject, signal, computed, OnDestroy, OnInit, ChangeDetectionStrategy, AfterViewInit, ElementRef, viewChild, input, effect, untracked } from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { Event, Filter } from 'nostr-tools';
+import { Event, Filter, kinds } from 'nostr-tools';
 import { RelayPoolService } from '../../../services/relays/relay-pool';
 import { RelaysService } from '../../../services/relays/relays';
+import { AccountRelayService } from '../../../services/relays/account-relay';
 import { UtilitiesService } from '../../../services/utilities.service';
 import { ReportingService } from '../../../services/reporting.service';
 import { AccountStateService } from '../../../services/account-state.service';
@@ -24,6 +25,9 @@ import { LoggerService } from '../../../services/logger.service';
 const MUSIC_KINDS = [...UtilitiesService.MUSIC_KINDS];
 const PAGE_SIZE = 24;
 const COLLAPSED_GENRE_LIMIT = 16;
+const LIKE_BATCH_SIZE = 50;
+const LIKE_QUERY_DEBOUNCE_MS = 120;
+const LIKE_QUERY_TIMEOUT_MS = 3000;
 
 interface MusicGenreOption {
   key: string;
@@ -196,7 +200,8 @@ interface MusicGenreOption {
           <div class="track-list">
             @for (track of displayedTracks(); track track.id; let i = $index) {
               <app-music-event [event]="track" mode="track-list" [trackNumber]="getTrackDisplayNumber(track)"
-                [queueTracks]="searchedTracks()" [queueTrackIndex]="i"></app-music-event>
+                [queueTracks]="searchedTracks()" [queueTrackIndex]="i" [likedReaction]="getTrackLikedReaction(track)"
+                (likedReactionChange)="onTrackLikedReactionChange(track, $event)"></app-music-event>
             }
           </div>
 
@@ -563,6 +568,7 @@ interface MusicGenreOption {
 export class MusicTracksComponent implements OnInit, OnDestroy, AfterViewInit {
   private pool = inject(RelayPoolService);
   private relaysService = inject(RelaysService);
+  private accountRelay = inject(AccountRelayService);
   private utilities = inject(UtilitiesService);
   private reporting = inject(ReportingService);
   private accountState = inject(AccountStateService);
@@ -600,6 +606,16 @@ export class MusicTracksComponent implements OnInit, OnDestroy, AfterViewInit {
   private trackSubscription: { close: () => void } | null = null;
   private trackMap = new Map<string, Event>();
   private intersectionObserver: IntersectionObserver | null = null;
+  private likeLoadTimeout: ReturnType<typeof setTimeout> | null = null;
+  private likeStatePubkey: string | null = null;
+  private allMusicLikesLoaded = false;
+  private allMusicLikesLoading = false;
+  private loadedLikeKeys = new Set<string>();
+  private pendingLikeKeys = new Set<string>();
+  private queuedLikeATargets = new Set<string>();
+  private queuedLikeETargets = new Set<string>();
+  private activeLikeSubscriptions = new Set<{ close: () => void }>();
+  private likedReactionByTargetKey = signal(new Map<string, Event>());
 
   private followingPubkeys = computed(() => {
     return this.accountState.followingList() || [];
@@ -611,6 +627,21 @@ export class MusicTracksComponent implements OnInit, OnDestroy, AfterViewInit {
 
   // Computed: get all follow sets
   private allFollowSets = computed(() => this.followSetsService.followSets());
+
+  constructor() {
+    effect(() => {
+      const userPubkey = this.currentPubkey();
+      untracked(() => this.syncLikeStateAccount(userPubkey));
+    });
+
+    effect(() => {
+      const userPubkey = this.currentPubkey();
+      const tracks = this.displayedTracks();
+      untracked(() => this.ensureAllMusicLikesLoaded(userPubkey, tracks.length));
+      untracked(() => this.scheduleLikeStateLoad(tracks, userPubkey));
+      untracked(() => this.logDisplayedTrackLikeState(tracks, userPubkey));
+    });
+  }
 
   // Computed: get the currently selected follow set (if any)
   selectedFollowSet = computed(() => {
@@ -897,6 +928,7 @@ export class MusicTracksComponent implements OnInit, OnDestroy, AfterViewInit {
   ngOnDestroy(): void {
     this.trackSubscription?.close();
     this.intersectionObserver?.disconnect();
+    this.clearLikeLoadingState();
   }
 
   private setupIntersectionObserver(): void {
@@ -1028,8 +1060,441 @@ export class MusicTracksComponent implements OnInit, OnDestroy, AfterViewInit {
     this.displayLimit.set(PAGE_SIZE);
   }
 
+  getTrackLikedReaction(track: Event): Event | null {
+    const target = this.getTrackReactionTarget(track);
+    if (!target) {
+      return null;
+    }
+
+    return this.likedReactionByTargetKey().get(this.buildReactionTargetKey(target.type, target.value)) ?? null;
+  }
+
+  onTrackLikedReactionChange(track: Event, reaction: Event | null): void {
+    const target = this.getTrackReactionTarget(track);
+    if (!target) {
+      this.logger.info('[MusicTracks Likes] Parent received likedReactionChange without target', {
+        trackId: track.id,
+        title: this.utilities.getMusicTitle(track),
+        reactionId: reaction?.id ?? null,
+      });
+      return;
+    }
+
+    const targetKey = this.buildReactionTargetKey(target.type, target.value);
+    this.logger.info('[MusicTracks Likes] Parent received likedReactionChange', {
+      trackId: track.id,
+      title: this.utilities.getMusicTitle(track),
+      targetKey,
+      reactionId: reaction?.id ?? null,
+      reactionContent: reaction?.content ?? null,
+    });
+
+    this.loadedLikeKeys.add(targetKey);
+    this.pendingLikeKeys.delete(targetKey);
+
+    this.likedReactionByTargetKey.update(existing => {
+      const next = new Map(existing);
+      if (reaction) {
+        next.set(targetKey, reaction);
+      } else {
+        next.delete(targetKey);
+      }
+      return next;
+    });
+  }
+
   toggleGenresExpanded(): void {
     this.genresExpanded.update(expanded => !expanded);
+  }
+
+  private syncLikeStateAccount(userPubkey: string | null): void {
+    if (this.likeStatePubkey === userPubkey) {
+      return;
+    }
+
+    this.likeStatePubkey = userPubkey;
+    this.clearLikeLoadingState();
+    this.loadedLikeKeys.clear();
+    this.pendingLikeKeys.clear();
+    this.queuedLikeATargets.clear();
+    this.queuedLikeETargets.clear();
+    this.allMusicLikesLoaded = false;
+    this.allMusicLikesLoading = false;
+    this.likedReactionByTargetKey.set(new Map());
+  }
+
+  private ensureAllMusicLikesLoaded(userPubkey: string | null, visibleTrackCount: number): void {
+    if (!userPubkey || visibleTrackCount === 0 || this.allMusicLikesLoaded || this.allMusicLikesLoading) {
+      return;
+    }
+
+    this.allMusicLikesLoading = true;
+    this.logger.info('[MusicTracks Likes] Starting full like-state load', {
+      userPubkey,
+      visibleTrackCount,
+      accountRelayCount: this.getLikeRelayUrls().length,
+    });
+
+    void this.loadAllMusicLikes(userPubkey);
+  }
+
+  private clearLikeLoadingState(): void {
+    if (this.likeLoadTimeout) {
+      clearTimeout(this.likeLoadTimeout);
+      this.likeLoadTimeout = null;
+    }
+
+    for (const subscription of this.activeLikeSubscriptions) {
+      subscription.close();
+    }
+    this.activeLikeSubscriptions.clear();
+  }
+
+  private scheduleLikeStateLoad(tracks: Event[], userPubkey: string | null): void {
+    if (!userPubkey || tracks.length === 0) {
+      return;
+    }
+
+    let hasQueuedTargets = false;
+    for (const track of tracks) {
+      const target = this.getTrackReactionTarget(track);
+      if (!target) {
+        continue;
+      }
+
+      const targetKey = this.buildReactionTargetKey(target.type, target.value);
+      if (this.loadedLikeKeys.has(targetKey) || this.pendingLikeKeys.has(targetKey)) {
+        continue;
+      }
+
+      this.pendingLikeKeys.add(targetKey);
+      if (target.type === 'a') {
+        this.queuedLikeATargets.add(target.value);
+      } else {
+        this.queuedLikeETargets.add(target.value);
+      }
+      hasQueuedTargets = true;
+    }
+
+    if (!hasQueuedTargets || this.likeLoadTimeout) {
+      return;
+    }
+
+    this.likeLoadTimeout = setTimeout(() => {
+      this.likeLoadTimeout = null;
+      void this.flushQueuedLikeLoads(userPubkey);
+    }, LIKE_QUERY_DEBOUNCE_MS);
+  }
+
+  private async flushQueuedLikeLoads(userPubkey: string): Promise<void> {
+    if (this.likeStatePubkey !== userPubkey) {
+      return;
+    }
+
+    const aTargets = Array.from(this.queuedLikeATargets);
+    const eTargets = Array.from(this.queuedLikeETargets);
+    this.queuedLikeATargets.clear();
+    this.queuedLikeETargets.clear();
+
+    this.logger.info('[MusicTracks Likes] Flushing queued like lookups', {
+      userPubkey,
+      aTargetCount: aTargets.length,
+      eTargetCount: eTargets.length,
+      accountRelayCount: this.getLikeRelayUrls().length,
+      aTargetsPreview: aTargets.slice(0, 5),
+      eTargetsPreview: eTargets.slice(0, 5),
+    });
+
+    for (const batch of this.chunkTargets(aTargets, LIKE_BATCH_SIZE)) {
+      await this.loadLikeBatch(userPubkey, 'a', batch);
+    }
+
+    for (const batch of this.chunkTargets(eTargets, LIKE_BATCH_SIZE)) {
+      await this.loadLikeBatch(userPubkey, 'e', batch);
+    }
+  }
+
+  private async loadLikeBatch(
+    userPubkey: string,
+    targetType: 'a' | 'e',
+    targetValues: string[]
+  ): Promise<void> {
+    if (targetValues.length === 0 || this.likeStatePubkey !== userPubkey) {
+      return;
+    }
+
+    const targetTag = targetType === 'a' ? '#a' : '#e';
+    const filter: Filter = {
+      kinds: [kinds.Reaction],
+      authors: [userPubkey],
+      limit: Math.max(targetValues.length * 4, targetValues.length),
+      [targetTag]: targetValues,
+    } as Filter;
+
+    this.logger.info('[MusicTracks Likes] Querying like batch', {
+      userPubkey,
+      targetType,
+      targetCount: targetValues.length,
+      targetsPreview: targetValues.slice(0, 5),
+      filter,
+    });
+
+    const newestReactionByKey = new Map<string, Event>();
+
+    const reactions = await this.accountRelay.getMany<Event>(filter, { timeout: LIKE_QUERY_TIMEOUT_MS });
+    this.logger.info('[MusicTracks Likes] Like batch query returned', {
+      userPubkey,
+      targetType,
+      targetCount: targetValues.length,
+      reactionCount: reactions.length,
+      sampleReactions: reactions.slice(0, 5).map(reaction => ({
+        id: reaction.id,
+        content: reaction.content,
+        created_at: reaction.created_at,
+        a: reaction.tags.find(tag => tag[0] === 'a')?.[1],
+        e: reaction.tags.find(tag => tag[0] === 'e')?.[1],
+        k: reaction.tags.find(tag => tag[0] === 'k')?.[1],
+      })),
+    });
+
+    for (const reaction of reactions) {
+      if (!this.isPositiveReaction(reaction)) {
+        continue;
+      }
+
+      const reactionKey = this.getReactionTargetKeyFromReaction(reaction);
+      if (!reactionKey) {
+        continue;
+      }
+
+      const existing = newestReactionByKey.get(reactionKey);
+      if (!existing || reaction.created_at > existing.created_at) {
+        newestReactionByKey.set(reactionKey, reaction);
+      }
+    }
+
+    if (this.likeStatePubkey !== userPubkey) {
+      return;
+    }
+
+    if (newestReactionByKey.size > 0) {
+      this.likedReactionByTargetKey.update(existing => {
+        const next = new Map(existing);
+        for (const [key, reaction] of newestReactionByKey.entries()) {
+          next.set(key, reaction);
+        }
+        return next;
+      });
+    }
+
+    this.logger.info('[MusicTracks Likes] Like batch matched targets', {
+      userPubkey,
+      targetType,
+      matchedKeyCount: newestReactionByKey.size,
+      matchedKeysPreview: Array.from(newestReactionByKey.keys()).slice(0, 5),
+    });
+
+    this.markLikeTargetsLoaded(targetType, targetValues);
+  }
+
+  private markLikeTargetsLoaded(targetType: 'a' | 'e', targetValues: string[]): void {
+    for (const targetValue of targetValues) {
+      const targetKey = this.buildReactionTargetKey(targetType, targetValue);
+      this.pendingLikeKeys.delete(targetKey);
+      this.loadedLikeKeys.add(targetKey);
+    }
+  }
+
+  private getLikeRelayUrls(): string[] {
+    return this.accountRelay.getRelayUrls();
+  }
+
+  private async loadAllMusicLikes(userPubkey: string): Promise<void> {
+    const relayUrls = this.getLikeRelayUrls();
+    this.logger.info('[MusicTracks Likes] Running full account-relay reaction scan', {
+      userPubkey,
+      relayCount: relayUrls.length,
+      relayUrls,
+    });
+
+    const reactions = await this.accountRelay.getMany<Event>({
+      kinds: [kinds.Reaction],
+      authors: [userPubkey],
+      limit: 1000,
+    }, { timeout: LIKE_QUERY_TIMEOUT_MS });
+
+    this.logger.info('[MusicTracks Likes] Full reaction scan returned', {
+      userPubkey,
+      reactionCount: reactions.length,
+      sampleReactions: reactions.slice(0, 10).map(reaction => ({
+        id: reaction.id,
+        content: reaction.content,
+        created_at: reaction.created_at,
+        a: reaction.tags.find(tag => tag[0] === 'a')?.[1],
+        e: reaction.tags.find(tag => tag[0] === 'e')?.[1],
+        k: reaction.tags.find(tag => tag[0] === 'k')?.[1],
+      })),
+    });
+
+    if (this.likeStatePubkey !== userPubkey) {
+      return;
+    }
+
+    const newestReactionByKey = new Map<string, Event>();
+    let positiveReactionCount = 0;
+    let musicTrackReactionCount = 0;
+
+    for (const reaction of reactions) {
+      if (!this.isPositiveReaction(reaction)) {
+        continue;
+      }
+
+      positiveReactionCount++;
+
+      if (!this.isTrackLikeReaction(reaction)) {
+        continue;
+      }
+
+      musicTrackReactionCount++;
+
+      const reactionKey = this.getReactionTargetKeyFromReaction(reaction);
+      if (!reactionKey) {
+        continue;
+      }
+
+      const existing = newestReactionByKey.get(reactionKey);
+      if (!existing || reaction.created_at > existing.created_at) {
+        newestReactionByKey.set(reactionKey, reaction);
+      }
+    }
+
+    this.logger.info('[MusicTracks Likes] Full reaction scan summary', {
+      userPubkey,
+      totalReactions: reactions.length,
+      positiveReactionCount,
+      musicTrackReactionCount,
+      matchedKeyCount: newestReactionByKey.size,
+      matchedKeysPreview: Array.from(newestReactionByKey.keys()).slice(0, 10),
+    });
+
+    if (newestReactionByKey.size > 0) {
+      this.likedReactionByTargetKey.update(existing => {
+        const next = new Map(existing);
+        for (const [key, reaction] of newestReactionByKey.entries()) {
+          next.set(key, reaction);
+        }
+        return next;
+      });
+
+      for (const key of newestReactionByKey.keys()) {
+        this.loadedLikeKeys.add(key);
+        this.pendingLikeKeys.delete(key);
+      }
+    }
+
+    this.allMusicLikesLoading = false;
+    this.allMusicLikesLoaded = true;
+  }
+
+  private isTrackLikeReaction(reaction: Event): boolean {
+    if (!this.isPositiveReaction(reaction)) {
+      return false;
+    }
+
+    const aTag = reaction.tags.find(tag => tag[0] === 'a')?.[1]?.trim();
+    if (aTag) {
+      return !!this.utilities.parseMusicTrackCoordinate(aTag);
+    }
+
+    const kindTag = reaction.tags.find(tag => tag[0] === 'k')?.[1]?.trim();
+    if (!kindTag) {
+      return false;
+    }
+
+    const kind = Number.parseInt(kindTag, 10);
+    return !Number.isNaN(kind) && this.utilities.isMusicKind(kind);
+  }
+
+  private chunkTargets(targetValues: string[], chunkSize: number): string[][] {
+    const chunks: string[][] = [];
+    for (let index = 0; index < targetValues.length; index += chunkSize) {
+      chunks.push(targetValues.slice(index, index + chunkSize));
+    }
+    return chunks;
+  }
+
+  private getTrackReactionTarget(track: Event): { type: 'a' | 'e'; value: string } | null {
+    if (this.utilities.isParameterizedReplaceableEvent(track.kind)) {
+      const identifier = track.tags.find(tag => tag[0] === 'd')?.[1] || '';
+      return {
+        type: 'a',
+        value: `${track.kind}:${track.pubkey}:${identifier}`,
+      };
+    }
+
+    if (!track.id) {
+      return null;
+    }
+
+    return {
+      type: 'e',
+      value: track.id,
+    };
+  }
+
+  private getReactionTargetKeyFromReaction(reaction: Event): string | null {
+    const aTag = reaction.tags.find(tag => tag[0] === 'a')?.[1]?.trim();
+    if (aTag) {
+      return this.buildReactionTargetKey('a', aTag);
+    }
+
+    const eTag = reaction.tags.find(tag => tag[0] === 'e')?.[1]?.trim();
+    if (eTag) {
+      return this.buildReactionTargetKey('e', eTag);
+    }
+
+    return null;
+  }
+
+  private buildReactionTargetKey(targetType: 'a' | 'e', value: string): string {
+    return `${targetType}:${value}`;
+  }
+
+  private isPositiveReaction(reaction: Event): boolean {
+    return reaction.content === '+'
+      || reaction.content === '❤️'
+      || reaction.content === '🤙'
+      || reaction.content === '👍';
+  }
+
+  private logDisplayedTrackLikeState(tracks: Event[], userPubkey: string | null): void {
+    if (!userPubkey || tracks.length === 0) {
+      return;
+    }
+
+    const loadedKeys = Array.from(this.likedReactionByTargetKey().keys());
+    const displayedTrackTargets = tracks.slice(0, 15).map(track => {
+      const target = this.getTrackReactionTarget(track);
+      const targetKey = target ? this.buildReactionTargetKey(target.type, target.value) : null;
+      return {
+        id: track.id,
+        kind: track.kind,
+        title: this.utilities.getMusicTitle(track),
+        d: track.tags.find(tag => tag[0] === 'd')?.[1],
+        a: target?.type === 'a' ? target.value : undefined,
+        e: target?.type === 'e' ? target.value : undefined,
+        targetKey,
+        matched: !!(targetKey && this.likedReactionByTargetKey().has(targetKey)),
+      };
+    });
+
+    this.logger.info('[MusicTracks Likes] Displayed track like-state snapshot', {
+      userPubkey,
+      displayedTrackCount: tracks.length,
+      loadedLikeKeyCount: loadedKeys.length,
+      loadedLikeKeysPreview: loadedKeys.slice(0, 15),
+      displayedTrackTargets,
+    });
   }
 
   private getTrackSortValue(track: Event, mode: MusicTrackSortValue): number {

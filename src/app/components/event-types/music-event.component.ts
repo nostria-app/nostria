@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, input, inject, signal, effect, untracked } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, inject, signal, effect, untracked, output } from '@angular/core';
 import { Router } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -71,9 +71,9 @@ import { MatDividerModule } from '@angular/material/divider';
           </button>
 
           <div class="hover-action-row">
-            <button mat-icon-button class="media-action-button like-action" (click)="likeTrack($any($event))" [disabled]="isLiked()"
-              [attr.aria-label]="isLiked() ? 'Liked track' : 'Like track'" [title]="isLiked() ? 'Liked' : 'Like'">
-              <mat-icon>{{ isLiked() ? 'favorite' : 'favorite_border' }}</mat-icon>
+            <button mat-icon-button class="media-action-button like-action" [class.is-liked]="isLiked()" (click)="likeTrack($any($event))"
+              [attr.aria-label]="isLiked() ? 'Unlike track' : 'Like track'" [title]="isLiked() ? 'Unlike' : 'Like'">
+              <mat-icon [class.is-liked]="isLiked()">{{ isLiked() ? 'favorite' : 'favorite_border' }}</mat-icon>
             </button>
             <button mat-icon-button class="media-action-button share-action" (click)="shareTrack(); $event.stopPropagation()"
               aria-label="Share track" title="Share track">
@@ -157,9 +157,9 @@ import { MatDividerModule } from '@angular/material/divider';
         </div>
 
         <div class="track-row-actions">
-          <button mat-icon-button class="track-row-action like-action" (click)="likeTrack($any($event))" [disabled]="isLiked()"
-            [attr.aria-label]="isLiked() ? 'Liked track' : 'Like track'" [title]="isLiked() ? 'Liked' : 'Like'">
-            <mat-icon>{{ isLiked() ? 'favorite' : 'favorite_border' }}</mat-icon>
+          <button mat-icon-button class="track-row-action like-action" [class.is-liked]="isLiked()" (click)="likeTrack($any($event))"
+            [attr.aria-label]="isLiked() ? 'Unlike track' : 'Like track'" [title]="isLiked() ? 'Unlike' : 'Like'">
+            <mat-icon [class.is-liked]="isLiked()">{{ isLiked() ? 'favorite' : 'favorite_border' }}</mat-icon>
           </button>
           <button mat-icon-button class="track-row-action share-action" (click)="shareTrack(); $event.stopPropagation()"
             aria-label="Share track" title="Share track">
@@ -254,9 +254,9 @@ import { MatDividerModule } from '@angular/material/divider';
       }
       <mat-divider></mat-divider>
       @if (isAuthenticated()) {
-        <button mat-menu-item (click)="likeTrack($any($event))" [disabled]="isLiked()">
+        <button mat-menu-item (click)="likeTrack($any($event))">
           <mat-icon>{{ isLiked() ? 'favorite' : 'favorite_border' }}</mat-icon>
-          <span>{{ isLiked() ? 'Liked' : 'Like' }}</span>
+          <span>{{ isLiked() ? 'Unlike' : 'Like' }}</span>
         </button>
       }
 
@@ -589,10 +589,20 @@ import { MatDividerModule } from '@angular/material/divider';
       }
 
       .like-action {
+        &.is-liked {
+          background: color-mix(in srgb, var(--mat-sys-error-container) 72%, transparent);
+          color: var(--mat-sys-error);
+          border-color: color-mix(in srgb, var(--mat-sys-error) 44%, transparent);
+        }
+
         &:hover:not(:disabled) {
           background: color-mix(in srgb, var(--mat-sys-error-container) 58%, transparent);
           color: color-mix(in srgb, var(--mat-sys-error) 76%, var(--mat-sys-on-surface) 24%);
           border-color: color-mix(in srgb, var(--mat-sys-error) 34%, transparent);
+        }
+
+        mat-icon.is-liked {
+          font-variation-settings: 'FILL' 1;
         }
       }
 
@@ -947,10 +957,22 @@ import { MatDividerModule } from '@angular/material/divider';
       color: var(--mat-sys-on-surface-variant);
     }
 
-    .like-action:hover:not(:disabled) {
-      background: color-mix(in srgb, var(--mat-sys-error-container) 58%, transparent);
-      color: color-mix(in srgb, var(--mat-sys-error) 76%, var(--mat-sys-on-surface) 24%);
-      border-color: color-mix(in srgb, var(--mat-sys-error) 34%, transparent);
+    .like-action {
+      &.is-liked {
+        background: color-mix(in srgb, var(--mat-sys-error-container) 72%, transparent);
+        color: var(--mat-sys-error);
+        border-color: color-mix(in srgb, var(--mat-sys-error) 44%, transparent);
+      }
+
+      &:hover:not(:disabled) {
+        background: color-mix(in srgb, var(--mat-sys-error-container) 58%, transparent);
+        color: color-mix(in srgb, var(--mat-sys-error) 76%, var(--mat-sys-on-surface) 24%);
+        border-color: color-mix(in srgb, var(--mat-sys-error) 34%, transparent);
+      }
+
+      mat-icon.is-liked {
+        font-variation-settings: 'FILL' 1;
+      }
     }
 
     .share-action:hover:not(:disabled) {
@@ -1211,6 +1233,8 @@ export class MusicEventComponent {
   trackNumber = input<string | null>(null);
   queueTracks = input<Event[] | null>(null);
   queueTrackIndex = input<number | null>(null);
+  likedReaction = input<Event | null>(null);
+  likedReactionChange = output<Event | null>();
 
   authorProfile = signal<NostrRecord | undefined>(undefined);
   userPlaylists = this.musicPlaylistService.userPlaylists;
@@ -1242,6 +1266,7 @@ export class MusicEventComponent {
   });
 
   private profileLoaded = false;
+  private lastLikedStateEventId: string | null = null;
   private zapLongPressTimer: ReturnType<typeof setTimeout> | null = null;
   private zapLongPressTriggered = false;
   private readonly ZAP_LONG_PRESS_DURATION = 500;
@@ -1259,8 +1284,33 @@ export class MusicEventComponent {
         });
       }
     });
-    // Note: Like checking is done on-demand when user opens track details,
-    // not for every card on the list to avoid subscription overflow
+
+    effect(() => {
+      const eventId = this.event().id;
+      if (eventId === this.lastLikedStateEventId) {
+        return;
+      }
+
+      this.lastLikedStateEventId = eventId;
+      this.likedReactionOverride.set(undefined);
+    });
+
+    effect(() => {
+      const inputReaction = this.likedReaction();
+      const override = this.likedReactionOverride();
+      if (override === undefined) {
+        return;
+      }
+
+      if (override === null && inputReaction === null) {
+        this.likedReactionOverride.set(undefined);
+        return;
+      }
+
+      if (override && inputReaction?.id === override.id) {
+        this.likedReactionOverride.set(undefined);
+      }
+    });
   }
 
   // Extract d-tag identifier
@@ -1358,9 +1408,17 @@ export class MusicEventComponent {
     }
   });
 
-  // Track liked state - set after liking
-  private _isLiked = signal(false);
-  isLiked = this._isLiked.asReadonly();
+  // Track liked state - prefer parent input, but keep a local override until parent catches up
+  private likedReactionOverride = signal<Event | null | undefined>(undefined);
+  effectiveLikedReaction = computed(() => {
+    const override = this.likedReactionOverride();
+    if (override !== undefined) {
+      return override;
+    }
+
+    return this.likedReaction();
+  });
+  isLiked = computed(() => !!this.effectiveLikedReaction());
 
   isCurrentTrackPlaying = computed(() => {
     const currentItem = this.mediaPlayer.current();
@@ -1539,19 +1597,68 @@ export class MusicEventComponent {
   }
 
   // Like the track
-  likeTrack(event: MouseEvent | KeyboardEvent): void {
+  async likeTrack(event: MouseEvent | KeyboardEvent): Promise<void> {
     event.stopPropagation();
-    if (this._isLiked()) return;
+
+    const userPubkey = this.accountState.pubkey();
+    const currentAccount = this.accountState.account();
+    if (!userPubkey || currentAccount?.source === 'preview') {
+      await this.layout.showLoginDialog();
+      return;
+    }
 
     const ev = this.event();
-    this.reactionService.addLike(ev).then(result => {
-      if (result.success) {
-        this._isLiked.set(true);
-        this.snackBar.open('Liked!', 'Close', { duration: 2000 });
-      } else {
-        this.snackBar.open('Failed to like', 'Close', { duration: 3000 });
-      }
+    const dTag = ev.tags.find(tag => tag[0] === 'd')?.[1] || null;
+    this.logger.info('[MusicEvent Likes] Like button clicked', {
+      eventId: ev.id,
+      title: this.utilities.getMusicTitle(ev),
+      pubkey: ev.pubkey,
+      dTag,
+      isLikedBeforeClick: this.isLiked(),
+      effectiveLikedReactionId: this.effectiveLikedReaction()?.id ?? null,
     });
+
+    if (this.isLiked()) {
+      const existingReaction = this.effectiveLikedReaction();
+      if (!existingReaction) {
+        this.snackBar.open('Like is still syncing. Try again in a moment.', 'Close', { duration: 2500 });
+        return;
+      }
+
+      const result = await this.reactionService.deleteReaction(existingReaction);
+      this.logger.info('[MusicEvent Likes] Unlike result', {
+        eventId: ev.id,
+        title: this.utilities.getMusicTitle(ev),
+        success: result.success,
+        deletedReactionId: existingReaction.id,
+      });
+      if (result.success) {
+        this.likedReactionOverride.set(null);
+        this.likedReactionChange.emit(null);
+        this.snackBar.open('Like removed', 'Close', { duration: 2000 });
+      } else {
+        this.snackBar.open('Failed to remove like', 'Close', { duration: 3000 });
+      }
+      return;
+    }
+
+    const result = await this.reactionService.addLike(ev);
+    this.logger.info('[MusicEvent Likes] Like result', {
+      eventId: ev.id,
+      title: this.utilities.getMusicTitle(ev),
+      success: result.success,
+      reactionId: result.event?.id ?? null,
+      reactionContent: result.event?.content ?? null,
+    });
+    if (result.success) {
+      this.likedReactionOverride.set(result.event ?? null);
+      if (result.event) {
+        this.likedReactionChange.emit(result.event);
+      }
+      this.snackBar.open('Liked!', 'Close', { duration: 2000 });
+    } else {
+      this.snackBar.open('Failed to like', 'Close', { duration: 3000 });
+    }
   }
 
   // Zap the artist
@@ -1608,7 +1715,7 @@ export class MusicEventComponent {
     }
 
     if (this.quickZapEnabled()) {
-      void this.sendQuickZap(event);
+      void this.sendQuickZap();
       return;
     }
 
@@ -1656,7 +1763,7 @@ export class MusicEventComponent {
     });
   }
 
-  private async sendQuickZap(event: MouseEvent): Promise<void> {
+  private async sendQuickZap(): Promise<void> {
     const ev = this.event();
     const dTag = ev.tags.find(t => t[0] === 'd')?.[1] || '';
     const userPubkey = this.accountState.pubkey();
