@@ -23,7 +23,14 @@ import { LoggerService } from '../../../services/logger.service';
 
 const MUSIC_KINDS = [...UtilitiesService.MUSIC_KINDS];
 const PAGE_SIZE = 24;
+const COLLAPSED_GENRE_LIMIT = 16;
 type MusicTracksViewKind = 'list' | 'grid';
+
+interface MusicGenreOption {
+  key: string;
+  label: string;
+  count: number;
+}
 
 @Component({
   selector: 'app-music-tracks',
@@ -115,6 +122,45 @@ type MusicTracksViewKind = 'list' | 'grid';
         </div>
       }
 
+      @if (availableGenres().length > 0) {
+        <div class="genre-filters-section">
+          <div class="genre-filters" aria-label="Filter songs by genre">
+            <button
+              type="button"
+              class="genre-filter-button"
+              [class.active]="!hasGenreFilters()"
+              [attr.aria-pressed]="!hasGenreFilters()"
+              (click)="clearGenreFilters()">
+              <span class="genre-filter-label">All</span>
+              <span class="genre-filter-count">{{ pubkeyFilteredTracks().length }}</span>
+            </button>
+
+            @for (genre of visibleGenres(); track genre.key) {
+              <button
+                type="button"
+                class="genre-filter-button"
+                [class.active]="isGenreSelected(genre.key)"
+                [attr.aria-pressed]="isGenreSelected(genre.key)"
+                (click)="toggleGenre(genre.key)">
+                <span class="genre-filter-label">{{ genre.label }}</span>
+                <span class="genre-filter-count">{{ genre.count }}</span>
+              </button>
+            }
+          </div>
+
+          @if (shouldShowGenreToggle()) {
+            <button
+              type="button"
+              mat-button
+              class="genre-expand-button"
+              (click)="toggleGenresExpanded()">
+              <span>{{ genresExpanded() ? 'Show less' : 'Show ' + hiddenGenreCount() + ' more' }}</span>
+              <mat-icon>{{ genresExpanded() ? 'expand_less' : 'expand_more' }}</mat-icon>
+            </button>
+          }
+        </div>
+      }
+
       <div class="page-content">
         @if (loading()) {
           <div class="loading-container">
@@ -126,7 +172,13 @@ type MusicTracksViewKind = 'list' | 'grid';
             <mat-icon>music_note</mat-icon>
             <h2 i18n="@@music.tracks.empty.title">No songs found</h2>
             <p>
-              @if (selectedListFilter() === 'following') {
+              @if (searchQuery() && hasGenreFilters()) {
+                <span>No songs match your search and selected genres.</span>
+              } @else if (searchQuery()) {
+                <span>No songs match your search.</span>
+              } @else if (hasGenreFilters()) {
+                <span>No songs match the selected genres.</span>
+              } @else if (selectedListFilter() === 'following') {
                 <span i18n="@@music.tracks.empty.following">People you follow haven't shared any music yet. Switch to Public to discover music from the wider Nostr network.</span>
               } @else if (selectedFollowSet()) {
                 <span>No songs from people in "{{ selectedFollowSet()?.title || 'this list' }}".</span>
@@ -273,6 +325,90 @@ type MusicTracksViewKind = 'list' | 'grid';
       font-size: 0.875rem;
       color: var(--mat-sys-on-surface-variant);
     }
+
+    .genre-filters-section {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.125rem;
+      padding-top: 0.375rem;
+    }
+
+    .genre-filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.375rem;
+      padding: 0.125rem 0;
+    }
+
+    .genre-filter-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      box-sizing: border-box;
+      gap: 0.25rem;
+      height: 1.7rem;
+      padding: 0 0.5rem;
+      margin: 0;
+      border-radius: 999px;
+      border-width: 1px;
+      border-style: solid;
+      border-color: color-mix(in srgb, var(--mat-sys-outline) 65%, transparent);
+      background-color: color-mix(in srgb, var(--mat-sys-surface-container-low) 92%, transparent);
+      color: var(--mat-sys-on-surface);
+      font-size: 0.75rem;
+      line-height: 1;
+      white-space: nowrap;
+      cursor: pointer;
+
+      &.active {
+        background-color: var(--mat-sys-primary-container);
+        border-color: color-mix(in srgb, var(--mat-sys-primary) 55%, transparent);
+        color: var(--mat-sys-on-primary-container);
+      }
+    }
+
+    .genre-filter-label,
+    .genre-filter-count {
+      line-height: 1;
+    }
+
+    .genre-filter-label {
+      white-space: nowrap;
+    }
+
+    .genre-filter-count {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 1rem;
+      min-height: 1rem;
+      padding: 0 0.1875rem;
+      border-radius: 999px;
+      background-color: color-mix(in srgb, var(--mat-sys-surface-container-highest) 85%, transparent);
+      color: inherit;
+      font-size: 0.5625rem;
+    }
+
+    .genre-filter-button.active .genre-filter-count {
+      background-color: color-mix(in srgb, var(--mat-sys-primary) 24%, transparent);
+    }
+
+    .genre-expand-button {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      min-height: 1.75rem;
+      padding: 0;
+      color: var(--mat-sys-primary);
+      font-size: 0.875rem;
+
+      mat-icon {
+        font-size: 16px;
+        width: 16px;
+        height: 16px;
+      }
+    }
     
     .music-tracks-container {
       display: flex;
@@ -413,6 +549,7 @@ type MusicTracksViewKind = 'list' | 'grid';
     }
 
     .search-bar,
+    .genre-filters-section,
     .search-results-info,
     .loading-container,
     .empty-state,
@@ -428,6 +565,7 @@ type MusicTracksViewKind = 'list' | 'grid';
       }
 
       .search-bar,
+      .genre-filters-section,
       .search-results-info,
       .loading-container,
       .empty-state,
@@ -479,6 +617,8 @@ export class MusicTracksComponent implements OnInit, OnDestroy, AfterViewInit {
   searchQuery = signal('');
   showSearch = signal(false);
   viewKind = signal<MusicTracksViewKind>('list');
+  selectedGenres = signal<string[]>([]);
+  genresExpanded = signal(false);
 
   // List filter state - 'all', 'following', or follow set d-tag
   selectedListFilter = signal<ListFilterValue>('all');
@@ -525,6 +665,61 @@ export class MusicTracksComponent implements OnInit, OnDestroy, AfterViewInit {
   });
 
   isAuthenticated = computed(() => this.app.authenticated());
+  hasGenreFilters = computed(() => this.selectedGenres().length > 0);
+  shouldShowGenreToggle = computed(() => this.availableGenres().length > COLLAPSED_GENRE_LIMIT);
+  hiddenGenreCount = computed(() => Math.max(0, this.availableGenres().length - this.visibleGenres().length));
+
+  availableGenres = computed<MusicGenreOption[]>(() => {
+    const genreMap = new Map<string, MusicGenreOption>();
+
+    for (const track of this.pubkeyFilteredTracks()) {
+      for (const genre of this.getTrackGenres(track)) {
+        const existing = genreMap.get(genre);
+        if (existing) {
+          existing.count += 1;
+          continue;
+        }
+
+        genreMap.set(genre, {
+          key: genre,
+          label: this.formatGenreLabel(genre),
+          count: 1,
+        });
+      }
+    }
+
+    for (const genre of this.selectedGenres()) {
+      if (!genreMap.has(genre)) {
+        genreMap.set(genre, {
+          key: genre,
+          label: this.formatGenreLabel(genre),
+          count: 0,
+        });
+      }
+    }
+
+    return Array.from(genreMap.values()).sort((a, b) => {
+      if (a.count !== b.count) {
+        return b.count - a.count;
+      }
+
+      return a.label.localeCompare(b.label);
+    });
+  });
+
+  visibleGenres = computed<MusicGenreOption[]>(() => {
+    const genres = this.availableGenres();
+    if (this.genresExpanded() || genres.length <= COLLAPSED_GENRE_LIMIT) {
+      return genres;
+    }
+
+    const prioritizedKeys = new Set(genres.slice(0, COLLAPSED_GENRE_LIMIT).map(genre => genre.key));
+    for (const selectedGenre of this.selectedGenres()) {
+      prioritizedKeys.add(selectedGenre);
+    }
+
+    return genres.filter(genre => prioritizedKeys.has(genre.key));
+  });
 
   private trackMatchesSearch(track: Event, query: string): boolean {
     if (!query) return true;
@@ -543,7 +738,59 @@ export class MusicTracksComponent implements OnInit, OnDestroy, AfterViewInit {
     return `${track.kind}:${track.pubkey}:${dTag}`;
   }
 
-  filteredTracks = computed(() => {
+  private getTrackGenres(track: Event): string[] {
+    const genres = new Set<string>();
+
+    for (const tag of track.tags) {
+      if (tag[0] !== 't') {
+        continue;
+      }
+
+      const genre = this.normalizeGenreTag(tag[1]);
+      if (genre) {
+        genres.add(genre);
+      }
+    }
+
+    return Array.from(genres);
+  }
+
+  private normalizeGenreTag(value: string | undefined): string {
+    const normalizedValue = value?.trim().toLocaleLowerCase() || '';
+    if (!normalizedValue || normalizedValue === 'music') {
+      return '';
+    }
+
+    return normalizedValue;
+  }
+
+  private formatGenreLabel(value: string): string {
+    return value
+      .replace(/_/g, ' ')
+      .split(' ')
+      .filter(segment => segment.length > 0)
+      .map(segment => segment
+        .split('-')
+        .map(part => this.formatGenreLabelPart(part))
+        .join('-'))
+      .join(' ');
+  }
+
+  private formatGenreLabelPart(value: string): string {
+    const lowerValue = value.toLocaleLowerCase();
+
+    if (lowerValue === 'ai') {
+      return 'AI';
+    }
+
+    if (!/^[a-z]+$/i.test(value)) {
+      return lowerValue;
+    }
+
+    return `${lowerValue.charAt(0).toLocaleUpperCase()}${lowerValue.slice(1)}`;
+  }
+
+  pubkeyFilteredTracks = computed(() => {
     const tracks = this.allTracks();
     const myPubkey = this.currentPubkey();
     const pubkeys = this.filterPubkeys();
@@ -581,6 +828,18 @@ export class MusicTracksComponent implements OnInit, OnDestroy, AfterViewInit {
       default:
         return filtered;
     }
+  });
+
+  filteredTracks = computed(() => {
+    const selectedGenres = this.selectedGenres();
+    if (selectedGenres.length === 0) {
+      return this.pubkeyFilteredTracks();
+    }
+
+    const selectedGenreSet = new Set(selectedGenres);
+    return this.pubkeyFilteredTracks().filter(track =>
+      this.getTrackGenres(track).some(genre => selectedGenreSet.has(genre))
+    );
   });
 
   searchedTracks = computed(() => {
@@ -765,6 +1024,30 @@ export class MusicTracksComponent implements OnInit, OnDestroy, AfterViewInit {
 
   setViewKind(viewKind: MusicTracksViewKind): void {
     this.viewKind.set(viewKind);
+  }
+
+  isGenreSelected(genre: string): boolean {
+    return this.selectedGenres().includes(genre);
+  }
+
+  toggleGenre(genre: string): void {
+    this.selectedGenres.update(selectedGenres => {
+      if (selectedGenres.includes(genre)) {
+        return selectedGenres.filter(selectedGenre => selectedGenre !== genre);
+      }
+
+      return [...selectedGenres, genre];
+    });
+    this.displayLimit.set(PAGE_SIZE);
+  }
+
+  clearGenreFilters(): void {
+    this.selectedGenres.set([]);
+    this.displayLimit.set(PAGE_SIZE);
+  }
+
+  toggleGenresExpanded(): void {
+    this.genresExpanded.update(expanded => !expanded);
   }
 
   toggleViewKind(): void {
