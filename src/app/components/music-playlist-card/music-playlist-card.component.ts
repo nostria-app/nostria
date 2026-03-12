@@ -693,12 +693,7 @@ export class MusicPlaylistCardComponent {
   // Get gradient background (alternative to image)
   gradient = computed(() => {
     const event = this.event();
-    const gradientTag = event.tags.find(t => t[0] === 'gradient' && t[1] === 'colors');
-    if (gradientTag?.[2]) {
-      const colors = gradientTag[2];
-      return `linear-gradient(135deg, ${colors})`;
-    }
-    return null;
+    return this.utilities.getMusicGradient(event);
   });
 
   // Track liked state - set after liking

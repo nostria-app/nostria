@@ -1297,6 +1297,37 @@ export class UtilitiesService {
   }
 
   /**
+   * Normalize a gradient tag payload into a CSS-ready background value.
+   * Supports both raw color lists ("#a, #b") and full CSS gradients ("linear-gradient(...)").
+   */
+  getGradientCss(value?: string | null): string | null {
+    if (!value) {
+      return null;
+    }
+
+    const trimmed = value.trim();
+    const lowerValue = trimmed.toLowerCase();
+
+    if (
+      lowerValue.startsWith('linear-gradient(')
+      || lowerValue.startsWith('radial-gradient(')
+      || lowerValue.startsWith('conic-gradient(')
+    ) {
+      return trimmed;
+    }
+
+    return `linear-gradient(135deg, ${trimmed})`;
+  }
+
+  /**
+   * Get gradient background CSS from a Nostr event gradient tag.
+   */
+  getMusicGradient(event: Event | UnsignedEvent): string | null {
+    const gradientTag = event.tags.find(t => t[0] === 'gradient' && t[1] === 'colors');
+    return this.getGradientCss(gradientTag?.[2]);
+  }
+
+  /**
    * Get the thumb tag value from an event.
    */
   getThumbTag(event: Event | UnsignedEvent): string | undefined {

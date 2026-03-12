@@ -635,11 +635,7 @@ export class MusicEmbedComponent {
   gradient = computed(() => {
     const ev = this.event();
     if (!ev) return null;
-    const gradientTag = ev.tags.find(t => t[0] === 'gradient' && t[1] === 'colors');
-    if (gradientTag?.[2]) {
-      return `linear-gradient(135deg, ${gradientTag[2]})`;
-    }
-    return null;
+    return this.utilities.getMusicGradient(ev);
   });
 
   hashtags = computed(() => {

@@ -540,11 +540,7 @@ export class MusicArtistComponent implements OnInit, OnDestroy {
   }
 
   getTrackGradient(track: Event): string | null {
-    const gradientTag = track.tags.find(t => t[0] === 'gradient' && t[1] === 'colors');
-    if (gradientTag?.[2]) {
-      return `linear-gradient(135deg, ${gradientTag[2]})`;
-    }
-    return null;
+    return this.utilities.getMusicGradient(track);
   }
 
   getTrackArtist(track: Event): string {

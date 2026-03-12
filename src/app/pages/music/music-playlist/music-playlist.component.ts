@@ -167,12 +167,7 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
   gradient = computed(() => {
     const event = this.playlist();
     if (!event) return null;
-    const gradientTag = event.tags.find(t => t[0] === 'gradient' && t[1] === 'colors');
-    if (gradientTag?.[2]) {
-      const colors = gradientTag[2];
-      return `linear-gradient(135deg, ${colors})`;
-    }
-    return null;
+    return this.utilities.getMusicGradient(event);
   });
 
   trackRefs = computed(() => {
@@ -974,11 +969,7 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
   }
 
   getTrackGradient(track: Event): string | null {
-    const gradientTag = track.tags.find(t => t[0] === 'gradient' && t[1] === 'colors');
-    if (gradientTag?.[2]) {
-      return `linear-gradient(135deg, ${gradientTag[2]})`;
-    }
-    return null;
+    return this.utilities.getMusicGradient(track);
   }
 
   getTrackArtist(track: Event): string {
