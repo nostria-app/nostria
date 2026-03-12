@@ -145,7 +145,7 @@
       <div class="track-header">
         <span class="track-number">#</span>
         <span class="track-title-header">Title</span>
-        <span class="track-date-header">Date added</span>
+        <span class="track-date-header">Released</span>
         <span class="track-duration-header">
           <mat-icon>schedule</mat-icon>
         </span>
@@ -173,7 +173,13 @@
               }
             </div>
             <div class="track-text">
-              <span class="track-title">{{ getTrackTitle(track) }}</span>
+              <span class="track-title-row">
+                <a class="track-title" href="" (click)="openTrackDetailsFromList(track, $event)">{{ getTrackTitle(track)
+                  }}</a>
+                @if (isTrackAiGenerated(track)) {
+                <span class="track-ai-badge">AI</span>
+                }
+              </span>
               <a class="track-artist" (click)="goToTrackArtist(track, $any($event))">{{ getTrackArtist(track) }}</a>
             </div>
           </div>

@@ -448,12 +448,12 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
     // Keep UI responsive by showing already loaded tracks immediately
     this.updateTracks(refs);
 
-    const missingTrackKeys = trackKeys.filter(k => !this.trackMap.has(`${k.author}:${k.dTag}`));
+    const missingTrackKeys = trackKeys.filter(k => !this.trackMap.has(`${k.kind}:${k.author}:${k.dTag}`));
 
     // Load any missing tracks from local cache before hitting relays.
     await this.loadMissingTracksFromDatabase(missingTrackKeys, refs);
 
-    const remainingTrackKeys = trackKeys.filter(k => !this.trackMap.has(`${k.author}:${k.dTag}`));
+    const remainingTrackKeys = trackKeys.filter(k => !this.trackMap.has(`${k.kind}:${k.author}:${k.dTag}`));
 
     if (remainingTrackKeys.length === 0) {
       this.loadingTracks.set(false);
@@ -1022,8 +1022,22 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
   }
 
   getTrackDate(track: Event): string {
-    const date = new Date(track.created_at * 1000);
-    return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+    const released = track.tags.find(t => t[0] === 'released')?.[1]?.trim();
+    if (!released) {
+      const fallbackDate = new Date(track.created_at * 1000);
+      return fallbackDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+    }
+
+    if (/^\d{4}$/.test(released)) {
+      return released;
+    }
+
+    const parsed = Date.parse(released);
+    if (Number.isNaN(parsed)) {
+      return released;
+    }
+
+    return new Date(parsed).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
   }
 
   getTrackDuration(track: Event): string {
@@ -1108,6 +1122,16 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
     } catch {
       // Ignore
     }
+  }
+
+  openTrackDetailsFromList(track: Event, event: MouseEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.goToTrackDetails(track);
+  }
+
+  isTrackAiGenerated(track: Event): boolean {
+    return this.utilities.isMusicAiGenerated(track);
   }
 
   goToTrackDetails(track: Event): void {
