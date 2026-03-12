@@ -574,13 +574,21 @@ export class MediaPlayerService implements OnInitialized {
     return ['YouTube', 'Video', 'HLS', 'LiveKit', 'External'].includes(file.type);
   }
 
+  private hasMusicVideo(file: MediaItem): boolean {
+    return file.type === 'Music' && !!file.video?.trim();
+  }
+
   private resolveExpandedPlayerState(nextFile: MediaItem, previousFile?: MediaItem): boolean {
     if (this.shouldAutoExpandForVideo(nextFile)) {
       return true;
     }
 
-    if (nextFile.type === 'Music') {
+    if (this.hasMusicVideo(nextFile)) {
       return this.layout.expandedMediaPlayer() && previousFile?.type === 'Music';
+    }
+
+    if (nextFile.type === 'Music') {
+      return false;
     }
 
     return false;
