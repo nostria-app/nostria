@@ -44,12 +44,12 @@ import { MatDividerModule } from '@angular/material/divider';
       <div class="playlist-cover" [style.background]="gradient() || ''" (click)="playPlaylist($any($event))"
         (keydown.enter)="playPlaylist($any($event))" (keydown.space)="playPlaylist($any($event))" tabindex="0" role="button"
         [attr.aria-label]="'Play ' + title()">
-        @if (coverImage() && !gradient()) {
+        @if (coverImage()) {
           <img [src]="coverImage()" [alt]="title()" class="cover-image" loading="lazy" />
-        } @else if (!gradient()) {
-          <div class="cover-placeholder">
-            <mat-icon>queue_music</mat-icon>
-          </div>
+        } @else {
+        <div class="cover-placeholder" [class.with-gradient]="!!gradient()">
+          <mat-icon>queue_music</mat-icon>
+        </div>
         }
         @if (trackCount() > 0) {
         <button mat-icon-button class="play-btn media-action-button media-primary-action" (click)="playPlaylist($event)"
@@ -257,6 +257,10 @@ import { MatDividerModule } from '@angular/material/divider';
         align-items: center;
         justify-content: center;
         background: linear-gradient(135deg, var(--mat-sys-tertiary-container) 0%, var(--mat-sys-secondary-container) 100%);
+
+        &.with-gradient {
+          background: transparent;
+        }
 
         mat-icon {
           font-size: 3rem;
