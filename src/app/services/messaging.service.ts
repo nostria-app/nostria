@@ -111,6 +111,7 @@ export class MessagingService implements NostriaService {
   private readonly deadLetterInfoKey = 'direct-messages';
   private readonly deadLetterInfoType = 'dead-letter-list';
   private readonly maxDeadLetterEventIds = 2000;
+  private readonly directMessagePublishTimeoutMs = 5000;
 
   MESSAGE_SIZE = 400;
 
@@ -2994,7 +2995,7 @@ export class MessagingService implements NostriaService {
           publishPromises.push(userRelayService.publishToDmRelays(myPubkey, signedGiftWrap));
         }
 
-        await Promise.allSettled(publishPromises);
+        await this.awaitDirectMessagePublishes(publishPromises, 'note-to-self');
       } else {
         // Regular message: Create second gift wrap for self
         const sealedContent2 = await this.encryption.encryptNip44(eventText, myPubkey);
@@ -3055,7 +3056,7 @@ export class MessagingService implements NostriaService {
           }
         }
 
-        await Promise.allSettled(publishPromises);
+        await this.awaitDirectMessagePublishes(publishPromises, 'direct-message');
       }
 
       // Create the message object
@@ -3077,5 +3078,58 @@ export class MessagingService implements NostriaService {
       this.logger.error('Failed to send NIP-44 message', error);
       throw error;
     }
+  }
+
+  private async awaitDirectMessagePublishes(
+    publishPromises: Promise<unknown>[],
+    publishContext: 'direct-message' | 'note-to-self'
+  ): Promise<void> {
+    if (publishPromises.length === 0) {
+      return;
+    }
+
+    const results = await Promise.allSettled(
+      publishPromises.map((promise, index) =>
+        this.withPublishTimeout(
+          promise,
+          `${publishContext}:${index + 1}`,
+          this.directMessagePublishTimeoutMs
+        )
+      )
+    );
+
+    const timedOutPublishes = results.filter(result => {
+      if (result.status !== 'rejected') {
+        return false;
+      }
+
+      const reason = result.reason instanceof Error ? result.reason.message : String(result.reason);
+      return reason.includes('Publish timeout');
+    }).length;
+
+    if (timedOutPublishes > 0) {
+      this.logger.warn('[MessagingService] Some DM relay publishes timed out after local send completed', {
+        publishContext,
+        timeoutMs: this.directMessagePublishTimeoutMs,
+        timedOutPublishes,
+        totalPublishes: publishPromises.length,
+      });
+    }
+  }
+
+  private withPublishTimeout<T>(promise: Promise<T>, publishLabel: string, timeoutMs: number): Promise<T> {
+    let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
+
+    const timeoutPromise = new Promise<T>((_, reject) => {
+      timeoutHandle = setTimeout(() => {
+        reject(new Error(`Publish timeout (${publishLabel}) after ${timeoutMs}ms`));
+      }, timeoutMs);
+    });
+
+    return Promise.race([promise, timeoutPromise]).finally(() => {
+      if (timeoutHandle) {
+        clearTimeout(timeoutHandle);
+      }
+    });
   }
 }
