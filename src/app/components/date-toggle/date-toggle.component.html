@@ -1,7 +1,7 @@
 <span class="date-ago" (click)="onComponentClick($event)">
   @if (date()) {
   @if (showAgo()) {
-  {{ date() | ago }}
+  {{ formattedAgo() }}
   } @else {
   {{ date() | timestamp: 'medium' }}
   }

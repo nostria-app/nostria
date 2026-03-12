@@ -23,6 +23,7 @@ import { LoggerService } from '../../../services/logger.service';
 
 const MUSIC_KINDS = [...UtilitiesService.MUSIC_KINDS];
 const PAGE_SIZE = 24;
+type MusicTracksViewKind = 'list' | 'grid';
 
 @Component({
   selector: 'app-music-tracks',
@@ -48,6 +49,9 @@ const PAGE_SIZE = 24;
           [initialFilter]="urlListFilter()"
           (filterChanged)="onFilterChanged($event)" />
       }
+      <button mat-icon-button (click)="toggleViewKind()" [matTooltip]="viewKind() === 'list' ? 'Switch to grid view' : 'Switch to list view'" class="hide-small">
+        <mat-icon>{{ viewKind() === 'list' ? 'view_agenda' : 'grid_view' }}</mat-icon>
+      </button>
       <button mat-icon-button (click)="toggleSearch()" [matTooltip]="showSearch() ? 'Close search' : 'Search songs'" class="hide-small">
         <mat-icon>{{ showSearch() ? 'search_off' : 'search' }}</mat-icon>
       </button>
@@ -65,6 +69,10 @@ const PAGE_SIZE = 24;
         <button mat-menu-item [matMenuTriggerFor]="sortMenu">
           <mat-icon>sort</mat-icon>
           <span>Sort</span>
+        </button>
+        <button mat-menu-item (click)="toggleViewKind()">
+          <mat-icon>{{ viewKind() === 'list' ? 'view_agenda' : 'grid_view' }}</mat-icon>
+          <span>{{ viewKind() === 'list' ? 'Grid View' : 'List View' }}</span>
         </button>
       </mat-menu>
       <mat-menu #sortMenu="matMenu">
@@ -132,11 +140,28 @@ const PAGE_SIZE = 24;
             </button>
           </div>
         } @else {
-          <div class="music-grid">
-            @for (track of displayedTracks(); track track.id) {
-              <app-music-event [event]="track" mode="card"></app-music-event>
-            }
-          </div>
+          @if (viewKind() === 'list') {
+            <div class="track-list-header hide-small">
+              <span class="track-list-header-number">#</span>
+              <span class="track-list-header-title">Title</span>
+              <span class="track-list-header-album">Album</span>
+              <span class="track-list-header-duration">
+                <mat-icon>schedule</mat-icon>
+              </span>
+              <span class="track-list-header-actions"></span>
+            </div>
+            <div class="track-list">
+              @for (track of displayedTracks(); track track.id; let i = $index) {
+                <app-music-event [event]="track" mode="track-list" [trackNumber]="i + 1"></app-music-event>
+              }
+            </div>
+          } @else {
+            <div class="music-grid">
+              @for (track of displayedTracks(); track track.id) {
+                <app-music-event [event]="track" mode="card"></app-music-event>
+              }
+            </div>
+          }
 
           @if (hasMore()) {
             <div #loadMoreSentinel class="load-more-container">
@@ -251,7 +276,7 @@ const PAGE_SIZE = 24;
     .music-tracks-container {
       display: flex;
       flex-direction: column;
-      padding: 1rem;
+      padding: 0;
       padding-bottom: 120px;
       gap: 1rem;
     }
@@ -324,6 +349,69 @@ const PAGE_SIZE = 24;
       }
     }
 
+    .track-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      padding: 0;
+    }
+
+    .track-list-header {
+      display: grid;
+      grid-template-columns: 1.5rem minmax(0, 1fr) minmax(8rem, 20vw) 3.25rem auto;
+      align-items: center;
+      gap: 0.625rem;
+      padding: 0 0.75rem 0.35rem;
+      border-bottom: 1px solid color-mix(in srgb, var(--mat-sys-outline-variant) 78%, transparent);
+      color: var(--mat-sys-on-surface-variant);
+      font-size: 0.75rem;
+    }
+
+    .track-list-header-number,
+    .track-list-header-duration {
+      text-align: right;
+    }
+
+    .track-list-header-duration {
+      display: flex;
+      justify-content: flex-end;
+
+      mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+      }
+    }
+
+    .track-list-header-actions {
+      width: 10.5rem;
+    }
+
+    .search-bar,
+    .search-results-info,
+    .loading-container,
+    .empty-state,
+    .load-more-container {
+      margin-left: 0.75rem;
+      margin-right: 0.75rem;
+    }
+
+    @media (max-width: 600px) {
+      .music-tracks-container {
+        padding: 0;
+        padding-bottom: 120px;
+      }
+
+      .search-bar,
+      .search-results-info,
+      .loading-container,
+      .empty-state,
+      .load-more-container {
+        margin-left: 0.5rem;
+        margin-right: 0.5rem;
+      }
+    }
+
     .load-more-container {
       display: flex;
       justify-content: center;
@@ -365,6 +453,7 @@ export class MusicTracksComponent implements OnInit, OnDestroy, AfterViewInit {
   // Search functionality
   searchQuery = signal('');
   showSearch = signal(false);
+  viewKind = signal<MusicTracksViewKind>('list');
 
   // List filter state - 'all', 'following', or follow set d-tag
   selectedListFilter = signal<ListFilterValue>('all');
@@ -653,6 +742,14 @@ export class MusicTracksComponent implements OnInit, OnDestroy, AfterViewInit {
         this.accountLocalState.setMusicTrackSort(pubkey, sort);
       }
     }
+  }
+
+  setViewKind(viewKind: MusicTracksViewKind): void {
+    this.viewKind.set(viewKind);
+  }
+
+  toggleViewKind(): void {
+    this.viewKind.set(this.viewKind() === 'list' ? 'grid' : 'list');
   }
 
   private getTrackSortValue(track: Event, mode: MusicTrackSortValue): number {

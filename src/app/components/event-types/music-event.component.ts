@@ -97,6 +97,79 @@ import { MatDividerModule } from '@angular/material/divider';
             tabindex="0" role="link">{{ artistName() }}</span>
         </div>
       </div>
+    } @else if (mode() === 'track-list') {
+      <div class="music-track-row" (click)="playTrack($any($event))" (keydown.enter)="playTrack($any($event))"
+        (keydown.space)="playTrack($any($event))" tabindex="0" role="button" [attr.aria-label]="'Play ' + (title() || 'track')">
+        @if (trackNumber() !== null) {
+          <span class="track-row-number">{{ trackNumber() }}</span>
+        }
+
+        <button mat-icon-button class="track-row-play" (click)="playTrack($any($event))"
+          [attr.aria-label]="isCurrentTrackPlaying() ? 'Pause track' : 'Play now'"
+          [title]="isCurrentTrackPlaying() ? 'Pause' : 'Play Now'">
+          <mat-icon>{{ isCurrentTrackPlaying() ? 'pause' : 'play_arrow' }}</mat-icon>
+        </button>
+
+        <div class="track-row-cover" [style.background]="gradient() || ''">
+          @if (image() && !gradient()) {
+            <img [src]="image()" [alt]="title()" class="cover-image" loading="lazy" />
+          } @else if (!gradient()) {
+            <div class="cover-placeholder">
+              <mat-icon>music_note</mat-icon>
+            </div>
+          }
+        </div>
+
+        <div class="track-row-main">
+          <div class="track-row-heading">
+            <button type="button" class="track-row-title-link" (click)="openDetails($any($event))"
+              (keydown.enter)="openDetails($any($event))">
+              <h4 class="track-row-title">{{ title() || 'Untitled Track' }}</h4>
+            </button>
+            @if (isAiGenerated()) {
+              <span class="track-row-badge">AI</span>
+            }
+            @if (isOffline()) {
+              <span class="track-row-status" title="Available offline">
+                <mat-icon>offline_pin</mat-icon>
+              </span>
+            }
+          </div>
+
+          <button type="button" class="track-row-artist" (click)="openArtist($any($event))"
+            (keydown.enter)="openArtist($any($event))">
+            {{ artistName() }}
+          </button>
+        </div>
+
+        <div class="track-row-meta">
+          @if (album()) {
+            <span class="track-row-album">{{ album() }}</span>
+          }
+          @if (duration()) {
+            <span class="track-row-duration">{{ duration() }}</span>
+          }
+        </div>
+
+        <div class="track-row-actions">
+          <button mat-icon-button class="track-row-action like-action" (click)="likeTrack($any($event))" [disabled]="isLiked()"
+            [attr.aria-label]="isLiked() ? 'Liked track' : 'Like track'" [title]="isLiked() ? 'Liked' : 'Like'">
+            <mat-icon>{{ isLiked() ? 'favorite' : 'favorite_border' }}</mat-icon>
+          </button>
+          <button mat-icon-button class="track-row-action share-action" (click)="shareTrack(); $event.stopPropagation()"
+            aria-label="Share track" title="Share track">
+            <mat-icon>share</mat-icon>
+          </button>
+          <button mat-icon-button class="track-row-action zap-action" (click)="zapArtist($any($event))"
+            aria-label="Zap creator" title="Zap creator">
+            <mat-icon>bolt</mat-icon>
+          </button>
+        </div>
+
+        <button mat-icon-button class="track-row-menu" [matMenuTriggerFor]="menu" (click)="$event.stopPropagation()" aria-label="More options">
+          <mat-icon>more_horiz</mat-icon>
+        </button>
+      </div>
     } @else {
       <!-- List mode: Horizontal compact layout for embedding -->
       <div class="music-card" (click)="openDetails($any($event))" (keydown.enter)="openDetails($any($event))" tabindex="0" role="button"
@@ -604,6 +677,315 @@ import { MatDividerModule } from '@angular/material/divider';
       }
     }
     
+    /* ========== Track List Mode (Songs page) ========== */
+    .music-track-row {
+      display: flex;
+      align-items: center;
+      gap: 0.625rem;
+      padding: 0.4rem 0.75rem;
+      border-bottom: 1px solid color-mix(in srgb, var(--mat-sys-outline-variant) 78%, transparent);
+      transition: background-color 0.15s ease;
+
+      &:hover {
+        background: color-mix(in srgb, var(--mat-sys-surface-container-high) 38%, transparent);
+      }
+
+      &:focus {
+        outline: 2px solid var(--mat-sys-primary);
+        outline-offset: -2px;
+      }
+    }
+
+    .track-row-number {
+      flex: 0 0 1.5rem;
+      color: var(--mat-sys-on-surface-variant);
+      font-size: 0.8125rem;
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .track-row-play,
+    .track-row-action,
+    .track-row-menu {
+      flex-shrink: 0;
+      width: 34px;
+      height: 34px;
+      padding: 0 !important;
+      display: flex !important;
+      align-items: center;
+      justify-content: center;
+
+      mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+      }
+    }
+
+    .track-row-play,
+    .track-row-action {
+      background: var(--mat-sys-surface-container);
+      border: 1px solid color-mix(in srgb, var(--mat-sys-outline) 26%, transparent);
+      transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+    }
+
+    .track-row-play {
+      color: var(--mat-sys-on-surface);
+
+      &:hover {
+        background: var(--mat-sys-primary-container);
+        color: var(--mat-sys-on-primary-container);
+        border-color: color-mix(in srgb, var(--mat-sys-primary) 40%, transparent);
+      }
+    }
+
+    .track-row-cover {
+      position: relative;
+      width: 36px;
+      height: 36px;
+      min-width: 36px;
+      border-radius: var(--mat-sys-corner-extra-small);
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, var(--mat-sys-tertiary-container) 0%, var(--mat-sys-secondary-container) 100%);
+
+      .cover-image {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+
+      .cover-placeholder {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        height: 100%;
+
+        mat-icon {
+          font-size: 20px;
+          width: 20px;
+          height: 20px;
+          color: var(--mat-sys-on-tertiary-container);
+          opacity: 0.7;
+        }
+      }
+    }
+
+    .track-row-main {
+      flex: 1 1 180px;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 0.125rem;
+    }
+
+    .track-row-heading {
+      display: flex;
+      align-items: center;
+      gap: 0.375rem;
+      min-width: 0;
+    }
+
+    .track-row-title-link {
+      min-width: 0;
+      max-width: 100%;
+      padding: 0;
+      border: 0;
+      background: transparent;
+      text-align: left;
+      cursor: pointer;
+
+      &:hover .track-row-title {
+        color: var(--mat-sys-primary);
+        text-decoration: underline;
+      }
+    }
+
+    .track-row-title {
+      margin: 0;
+      font-size: 0.875rem;
+      line-height: 1.2;
+      color: var(--mat-sys-on-surface);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .track-row-badge {
+      flex-shrink: 0;
+      padding: 2px 6px;
+      border-radius: var(--mat-sys-corner-full);
+      background: var(--mat-sys-secondary-container);
+      color: var(--mat-sys-on-secondary-container);
+      font-size: 0.625rem;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .track-row-status {
+      flex-shrink: 0;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--mat-sys-tertiary-container);
+      color: var(--mat-sys-on-tertiary-container);
+
+      mat-icon {
+        font-size: 14px;
+        width: 14px;
+        height: 14px;
+      }
+    }
+
+    .track-row-artist {
+      width: fit-content;
+      max-width: 100%;
+      padding: 0;
+      border: 0;
+      background: transparent;
+      color: var(--mat-sys-on-surface-variant);
+      font-size: 0.75rem;
+      text-align: left;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      cursor: pointer;
+
+      &:hover {
+        color: var(--mat-sys-primary);
+        text-decoration: underline;
+      }
+    }
+
+    .track-row-meta {
+      flex: 0 1 min(38vw, 440px);
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 0.75rem;
+      min-width: 0;
+      color: var(--mat-sys-on-surface-variant);
+      font-size: 0.6875rem;
+    }
+
+    .track-row-album {
+      flex: 1 1 180px;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      text-align: right;
+    }
+
+    .track-row-duration {
+      flex-shrink: 0;
+      font-variant-numeric: tabular-nums;
+      min-width: 3.25rem;
+      text-align: right;
+    }
+
+    .track-row-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+      flex-shrink: 0;
+    }
+
+    .track-row-menu {
+      color: var(--mat-sys-on-surface-variant);
+    }
+
+    .like-action:hover:not(:disabled) {
+      background: color-mix(in srgb, var(--mat-sys-error-container) 58%, transparent);
+      color: color-mix(in srgb, var(--mat-sys-error) 76%, var(--mat-sys-on-surface) 24%);
+      border-color: color-mix(in srgb, var(--mat-sys-error) 34%, transparent);
+    }
+
+    .share-action:hover:not(:disabled) {
+      background: color-mix(in srgb, #2f6dff 26%, transparent);
+      color: color-mix(in srgb, #8ab4ff 78%, var(--mat-sys-on-surface) 22%);
+      border-color: color-mix(in srgb, #6ea0ff 38%, transparent);
+    }
+
+    .zap-action:hover:not(:disabled) {
+      background: color-mix(in srgb, #ff9800 24%, transparent);
+      color: color-mix(in srgb, #ffbf66 78%, var(--mat-sys-on-surface) 22%);
+      border-color: color-mix(in srgb, #ffb74d 34%, transparent);
+    }
+
+    @media (max-width: 780px) {
+      .music-track-row {
+        align-items: flex-start;
+        flex-wrap: wrap;
+      }
+
+      .track-row-main {
+        flex: 1 1 calc(100% - 116px);
+      }
+
+      .track-row-meta {
+        order: 4;
+        flex: 1 1 calc(100% - 116px);
+        justify-content: flex-start;
+        margin-left: 4.75rem;
+        gap: 0.625rem;
+      }
+
+      .track-row-album {
+        text-align: left;
+      }
+
+      .track-row-actions {
+        order: 5;
+        width: auto;
+        margin-left: auto;
+        padding-top: 0;
+      }
+
+      .track-row-menu {
+        order: 6;
+      }
+    }
+
+    @media (max-width: 520px) {
+      .music-track-row {
+        padding: 0.4rem 0.5rem;
+        gap: 0.5rem;
+      }
+
+      .track-row-number {
+        flex-basis: 1.25rem;
+        font-size: 0.75rem;
+      }
+
+      .track-row-cover {
+        width: 32px;
+        height: 32px;
+        min-width: 32px;
+      }
+
+      .track-row-actions {
+        margin-left: 0;
+      }
+
+      .track-row-album {
+        flex-basis: auto;
+      }
+
+      .track-row-meta {
+        margin-left: 0;
+        flex: 1 1 100%;
+        gap: 0.375rem;
+        font-size: 0.625rem;
+      }
+    }
+
     /* ========== List Mode (Horizontal) ========== */
     .music-card {
       display: flex;
@@ -801,7 +1183,8 @@ export class MusicEventComponent {
   private userRelaysService = inject(UserRelaysService);
 
   event = input.required<Event>();
-  mode = input<'card' | 'list'>('list');
+  mode = input<'card' | 'list' | 'track-list'>('list');
+  trackNumber = input<number | null>(null);
 
   authorProfile = signal<NostrRecord | undefined>(undefined);
   userPlaylists = this.musicPlaylistService.userPlaylists;
@@ -870,6 +1253,11 @@ export class MusicEventComponent {
   title = computed(() => {
     const event = this.event();
     return this.utilities.getMusicTitle(event) || null;
+  });
+
+  album = computed(() => {
+    const event = this.event();
+    return event.tags.find(t => t[0] === 'album')?.[1] || null;
   });
 
   // Extract audio URL
