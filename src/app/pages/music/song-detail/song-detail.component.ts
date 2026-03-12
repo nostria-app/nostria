@@ -6,6 +6,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatCardModule } from '@angular/material/card';
 import { MatMenuModule } from '@angular/material/menu';
+import { MatDividerModule } from '@angular/material/divider';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
@@ -60,6 +61,7 @@ const MUSIC_KINDS = [...UtilitiesService.MUSIC_KINDS];
     MatChipsModule,
     MatCardModule,
     MatMenuModule,
+    MatDividerModule,
     MatSnackBarModule,
     MatSlideToggleModule,
     MatTooltipModule,

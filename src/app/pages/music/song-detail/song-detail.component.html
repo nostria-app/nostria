@@ -11,26 +11,57 @@
 
 <!-- Header menu -->
 <mat-menu #headerMenu="matMenu">
-  @if (isOwnTrack()) {
-  <button mat-menu-item (click)="editTrack()">
-    <mat-icon>edit</mat-icon>
-    <span>Edit Track</span>
+  <button mat-menu-item (click)="playTrack()" [disabled]="!audioUrl()">
+    <mat-icon>play_arrow</mat-icon>
+    <span>Play Now</span>
   </button>
-  }
+  <button mat-menu-item (click)="addToQueue()">
+    <mat-icon>queue_music</mat-icon>
+    <span>Add to Queue</span>
+  </button>
   @if (isAuthenticated()) {
   <button mat-menu-item [matMenuTriggerFor]="playlistMenu" (click)="loadPlaylists()">
     <mat-icon>playlist_add</mat-icon>
     <span>Add to Album</span>
   </button>
   }
-  <button mat-menu-item (click)="addToQueue()">
-    <mat-icon>queue_music</mat-icon>
-    <span>Add to Queue</span>
+
+  <mat-divider></mat-divider>
+
+  @if (isAuthenticated()) {
+  <button mat-menu-item (click)="likeTrack()" [disabled]="isLiked() || isLiking()">
+    <mat-icon>{{ isLiked() ? 'favorite' : 'favorite_border' }}</mat-icon>
+    <span>{{ isLiked() ? 'Liked' : 'Like' }}</span>
   </button>
+  }
   <button mat-menu-item (click)="shareTrack()">
     <mat-icon>share</mat-icon>
     <span>Share</span>
   </button>
+  @if (isAuthenticated()) {
+  <button mat-menu-item (click)="zapArtist()">
+    <mat-icon>bolt</mat-icon>
+    <span>Zap Creator</span>
+  </button>
+  }
+  <button mat-menu-item (click)="publishTrack()">
+    <mat-icon>publish</mat-icon>
+    <span>Publish Event</span>
+  </button>
+
+  @if (isOwnTrack()) {
+  <mat-divider></mat-divider>
+  <button mat-menu-item (click)="editTrack()">
+    <mat-icon>edit</mat-icon>
+    <span>Edit Track</span>
+  </button>
+  <button mat-menu-item (click)="deleteTrack()" [disabled]="isDeleting()">
+    <mat-icon>delete</mat-icon>
+    <span>Delete</span>
+  </button>
+  }
+
+  <mat-divider></mat-divider>
   <button mat-menu-item (click)="copyEventLink()">
     <mat-icon>link</mat-icon>
     <span>Copy Link</span>
@@ -39,16 +70,6 @@
     <mat-icon>data_object</mat-icon>
     <span>Copy Data</span>
   </button>
-  <button mat-menu-item (click)="publishTrack()">
-    <mat-icon>publish</mat-icon>
-    <span>Publish Event</span>
-  </button>
-  @if (isOwnTrack()) {
-  <button mat-menu-item (click)="deleteTrack()" [disabled]="isDeleting()">
-    <mat-icon>delete</mat-icon>
-    <span>Delete</span>
-  </button>
-  }
 </mat-menu>
 
 <!-- Playlist submenu -->

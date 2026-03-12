@@ -3,6 +3,7 @@ import { Router } from '@angular/router';
 import { MatMenuModule, MatMenu } from '@angular/material/menu';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { MatDividerModule } from '@angular/material/divider';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDialog } from '@angular/material/dialog';
@@ -35,12 +36,57 @@ import { ConfirmDialogComponent, ConfirmDialogData } from '../confirm-dialog/con
     MatMenuModule,
     MatButtonModule,
     MatIconModule,
+    MatDividerModule,
     MatProgressSpinnerModule,
     MatSnackBarModule,
     CreateMusicPlaylistDialogComponent,
   ],
   template: `
     <mat-menu #trackMenu="matMenu">
+      <button mat-menu-item (click)="playNow()">
+        <mat-icon>play_arrow</mat-icon>
+        <span>Play Now</span>
+      </button>
+      <button mat-menu-item (click)="addTrackToQueue()">
+        <mat-icon>queue_music</mat-icon>
+        <span>Add to Queue</span>
+      </button>
+      @if (isAuthenticated()) {
+        <button mat-menu-item [matMenuTriggerFor]="playlistMenu" (click)="loadPlaylists()">
+          <mat-icon>playlist_add</mat-icon>
+          <span>Add to Playlist</span>
+        </button>
+      }
+      <button mat-menu-item (click)="goToTrackDetails()">
+        <mat-icon>info</mat-icon>
+        <span>Track Details</span>
+      </button>
+
+      <mat-divider></mat-divider>
+
+      @if (isAuthenticated()) {
+        <button mat-menu-item (click)="likeTrack()" [disabled]="isLiked() || isLiking()">
+          <mat-icon>{{ isLiked() ? 'favorite' : 'favorite_border' }}</mat-icon>
+          <span>{{ isLiked() ? 'Liked' : 'Like' }}</span>
+        </button>
+      }
+      <button mat-menu-item (click)="openShareDialog()">
+        <mat-icon>share</mat-icon>
+        <span>Share</span>
+      </button>
+      @if (isAuthenticated()) {
+        <button mat-menu-item (click)="zapCreator()">
+          <mat-icon>bolt</mat-icon>
+          <span>Zap Creator</span>
+        </button>
+      }
+      <button mat-menu-item (click)="publishEvent()">
+        <mat-icon>publish</mat-icon>
+        <span>Publish Event</span>
+      </button>
+
+      <mat-divider></mat-divider>
+
       @if (showEditOption() && isOwnTrack()) {
         <button mat-menu-item (click)="onEdit()">
           <mat-icon>edit</mat-icon>
@@ -54,48 +100,9 @@ import { ConfirmDialogComponent, ConfirmDialogData } from '../confirm-dialog/con
           }
           <span>Delete Track</span>
         </button>
+        <mat-divider></mat-divider>
       }
-      @if (isAuthenticated()) {
-        <button mat-menu-item [matMenuTriggerFor]="playlistMenu" (click)="loadPlaylists()">
-          <mat-icon>playlist_add</mat-icon>
-          <span>Add to Playlist</span>
-        </button>
-      }
-      <button mat-menu-item (click)="addTrackToQueue()">
-        <mat-icon>queue_music</mat-icon>
-        <span>Add to Queue</span>
-      </button>
-      @if (isAuthenticated()) {
-        <button mat-menu-item (click)="likeTrack()" [disabled]="isLiked() || isLiking()">
-          <mat-icon>{{ isLiked() ? 'favorite' : 'favorite_border' }}</mat-icon>
-          <span>{{ isLiked() ? 'Liked' : 'Like' }}</span>
-        </button>
-      }
-      <button mat-menu-item (click)="goToTrackDetails()">
-        <mat-icon>info</mat-icon>
-        <span>Track Details</span>
-      </button>
-      <button mat-menu-item [matMenuTriggerFor]="copyMenu">
-        <mat-icon>content_copy</mat-icon>
-        <span>Copy</span>
-      </button>
-      <button mat-menu-item (click)="openShareDialog()">
-        <mat-icon>share</mat-icon>
-        <span>Share</span>
-      </button>
-      <button mat-menu-item (click)="publishEvent()">
-        <mat-icon>publish</mat-icon>
-        <span>Publish Event</span>
-      </button>
-      @if (isAuthenticated()) {
-        <button mat-menu-item (click)="zapCreator()">
-          <mat-icon>bolt</mat-icon>
-          <span>Zap Creator</span>
-        </button>
-      }
-    </mat-menu>
-    
-    <mat-menu #copyMenu="matMenu">
+
       <button mat-menu-item (click)="copyTrackLink()">
         <mat-icon>link</mat-icon>
         <span>Copy Link</span>
@@ -299,13 +306,32 @@ export class MusicTrackMenuComponent {
   }
 
   addTrackToQueue(): void {
-    const url = this.getAudioUrl();
-    if (!url) {
-      this.snackBar.open('No audio URL found', 'Close', { duration: 3000 });
+    const mediaItem = this.buildMediaItem();
+    if (!mediaItem) {
       return;
     }
 
-    const mediaItem: MediaItem = {
+    this.mediaPlayer.enque(mediaItem);
+    this.snackBar.open('Added to queue', 'Close', { duration: 2000 });
+  }
+
+  playNow(): void {
+    const mediaItem = this.buildMediaItem();
+    if (!mediaItem) {
+      return;
+    }
+
+    this.mediaPlayer.play(mediaItem);
+  }
+
+  private buildMediaItem(): MediaItem | null {
+    const url = this.getAudioUrl();
+    if (!url) {
+      this.snackBar.open('No audio URL found', 'Close', { duration: 3000 });
+      return null;
+    }
+
+    return {
       source: url,
       title: this.getTitle(),
       artist: this.artistName(),
@@ -318,9 +344,6 @@ export class MusicTrackMenuComponent {
       eventKind: this.track().kind,
       lyrics: this.utilities.extractLyricsFromEvent(this.track()),
     };
-
-    this.mediaPlayer.enque(mediaItem);
-    this.snackBar.open('Added to queue', 'Close', { duration: 2000 });
   }
 
   goToTrackDetails(): void {
