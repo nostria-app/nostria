@@ -136,6 +136,12 @@
   }
 }
 
+.audio-player-container .album-art,
+.audio-player-container .album-art-video {
+  pointer-events: auto;
+  cursor: pointer;
+}
+
 .media-info-text {
   flex: 1;
   min-width: 0;

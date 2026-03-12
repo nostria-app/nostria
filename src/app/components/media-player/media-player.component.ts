@@ -338,7 +338,7 @@ export class MediaPlayerComponent implements OnDestroy {
     document.removeEventListener('mouseup', this.boundResizeUp);
   }
 
-  onMiniMediaDoubleClick(event: MouseEvent): void {
+  onMiniMediaToggleRequest(event: MouseEvent): void {
     event.preventDefault();
     event.stopPropagation();
 

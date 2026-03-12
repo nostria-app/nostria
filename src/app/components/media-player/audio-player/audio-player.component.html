@@ -52,9 +52,11 @@
       <div class="media-info" [class.no-artwork]="!media.current()?.artwork && !currentTrackVideo()">
         @if (currentTrackVideo()) {
         <video class="album-art album-art-video" [src]="currentTrackVideo()" muted autoplay loop preload="metadata"
-          aria-label="Track video preview" (dblclick)="onMiniArtworkDoubleClick($event)"></video>
+          aria-label="Track video preview" data-mini-toggle-artwork="true"
+          (dblclick)="onMiniArtworkDoubleClick($event)"></video>
         } @else if (footerArtwork()) {
         <img class="album-art" [src]="footerArtwork()" alt="{{ media.current()?.title || 'Album artwork' }}"
+          data-mini-toggle-artwork="true" draggable="false" (dragstart)="$event.preventDefault()"
           (dblclick)="onMiniArtworkDoubleClick($event)" />
         }
         <div class="media-info-text">
