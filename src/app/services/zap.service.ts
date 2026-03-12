@@ -677,7 +677,9 @@ export class ZapService {
 
   /**
    * Parse zap split tags from an event (NIP-57 Appendix G)
-   * Returns array of recipients with their pubkeys, relays, and weights
+    * Returns array of recipients with their pubkeys, relay hints, and weights.
+    * The relay value from the zap tag is treated as a profile lookup hint only,
+    * and is not used to decide zap request relay routing.
    */
   parseZapSplits(event: Event): { pubkey: string; relay: string; weight: number }[] {
     const zapTags = event.tags.filter(tag => tag[0] === 'zap' && tag.length >= 3);
@@ -821,7 +823,7 @@ export class ZapService {
         message,
         event.id,
         payment.metadata!,
-        payment.relay ? [payment.relay] : undefined,
+        undefined,
         undefined, // goalEventId
         event.kind,
         eventAddress
