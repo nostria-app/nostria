@@ -613,10 +613,9 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
     const allTracks = this.tracks();
     if (allTracks.length === 0) return;
     const playlistSourceKey = this.getCurrentPlaylistSourceKey();
+    const mediaItems: MediaItem[] = [];
 
-    // Create media items for all tracks and play the first one
-    for (let i = 0; i < allTracks.length; i++) {
-      const track = allTracks[i];
+    for (const track of allTracks) {
       const url = this.utilities.getUrlWithImetaFallback(track);
       if (!url) continue;
 
@@ -625,7 +624,7 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
       const videoTag = track.tags.find(t => t[0] === 'video');
       const dTag = track.tags.find(t => t[0] === 'd')?.[1] || '';
 
-      const mediaItem: MediaItem = {
+      mediaItems.push({
         source: url,
         title: titleTag?.[1] || 'Untitled Track',
         artist: this.getTrackArtist(track),
@@ -636,13 +635,19 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
         eventPubkey: track.pubkey,
         eventIdentifier: dTag,
         lyrics: this.utilities.extractLyricsFromEvent(track),
-      };
+      });
+    }
 
-      if (i === 0) {
-        this.mediaPlayer.play(mediaItem);
-      } else {
-        this.mediaPlayer.enque(mediaItem);
-      }
+    if (mediaItems.length === 0) {
+      return;
+    }
+
+    // Match album-listing behavior: clear existing queue, then queue this album
+    this.mediaPlayer.clearQueue();
+    this.mediaPlayer.play(mediaItems[0]);
+
+    for (let i = 1; i < mediaItems.length; i++) {
+      this.mediaPlayer.enque(mediaItems[i]);
     }
   }
 
