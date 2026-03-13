@@ -28,6 +28,7 @@
   max-width: 600px;
   -webkit-user-select: none;
   user-select: none;
+  touch-action: pan-y;
   position: relative;
 
   &.clickable {

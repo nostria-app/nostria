@@ -36,8 +36,8 @@
 @let currentIndex = getCarouselIndex(item.id);
 @let currentImage = item.images[currentIndex];
 @let carouselPlaceholder = getImagePlaceholderUrl(currentImage);
-<div class="image-carousel-container" (touchstart)="onTouchStart($event)"
-  (touchend)="onTouchEnd($event, item.id, item.images)">
+<div class="image-carousel-container" (touchstart)="onTouchStart($event)" (touchmove)="onTouchMove($event)"
+  (touchend)="onTouchEnd($event, item.id, item.images)" (touchcancel)="onTouchCancel()">
   <div class="image-carousel">
     <div class="carousel-image-wrapper" [class.blurred]="shouldBlurImages() && !isImageRevealed(currentImage.content)"
       [class.revealing]="shouldBlurImages() && isImageRevealed(currentImage.content)"

@@ -175,10 +175,20 @@ export class NoteContentComponent implements OnDestroy {
   // Carousel state for image groups - maps group ID to current index
   private carouselIndices = signal<Map<number, number>>(new Map());
 
-  // Touch tracking for swipe gestures (horizontal and vertical)
+  // Touch tracking for carousel swipe gestures (horizontal only)
   private touchStartX = 0;
   private touchStartY = 0;
-  private readonly SWIPE_THRESHOLD = 50;
+  private touchLastX = 0;
+  private touchLastY = 0;
+  private touchStartTime = 0;
+  private touchStartScrollY: number | null = null;
+  private gestureAxis: 'undecided' | 'horizontal' | 'vertical' = 'undecided';
+  private swipeCancelled = false;
+  private readonly SWIPE_THRESHOLD = 80;
+  private readonly SWIPE_MAX_DURATION_MS = 500;
+  private readonly DIRECTION_LOCK_THRESHOLD = 10;
+  private readonly MAX_VERTICAL_DRIFT_FOR_SWIPE = 32;
+  private readonly SCROLL_CANCEL_THRESHOLD = 2;
 
   // Long press support for mention hover cards on touch devices
   private longPressTimeout?: number;
@@ -1121,44 +1131,109 @@ export class NoteContentComponent implements OnDestroy {
    * Handle touch start for swipe gestures
    */
   onTouchStart(event: TouchEvent): void {
-    this.touchStartX = event.touches[0].clientX;
-    this.touchStartY = event.touches[0].clientY;
+    const touch = event.changedTouches[0];
+    if (!touch) {
+      return;
+    }
+
+    this.touchStartX = touch.clientX;
+    this.touchStartY = touch.clientY;
+    this.touchLastX = touch.clientX;
+    this.touchLastY = touch.clientY;
+    this.touchStartTime = Date.now();
+    this.touchStartScrollY = this.getWindowScrollY();
+    this.gestureAxis = 'undecided';
+    this.swipeCancelled = false;
+  }
+
+  onTouchMove(event: TouchEvent): void {
+    const touch = event.changedTouches[0];
+    if (!touch) {
+      return;
+    }
+
+    this.touchLastX = touch.clientX;
+    this.touchLastY = touch.clientY;
+
+    const deltaX = this.touchLastX - this.touchStartX;
+    const deltaY = this.touchLastY - this.touchStartY;
+    const absX = Math.abs(deltaX);
+    const absY = Math.abs(deltaY);
+
+    if (this.getScrollDeltaFromStart() > this.SCROLL_CANCEL_THRESHOLD) {
+      this.gestureAxis = 'vertical';
+      this.swipeCancelled = true;
+      return;
+    }
+
+    if (this.gestureAxis === 'undecided' && (absX > this.DIRECTION_LOCK_THRESHOLD || absY > this.DIRECTION_LOCK_THRESHOLD)) {
+      this.gestureAxis = absX > absY ? 'horizontal' : 'vertical';
+    }
+
+    if (this.gestureAxis === 'vertical') {
+      this.swipeCancelled = true;
+      return;
+    }
+
+    if (absY > this.MAX_VERTICAL_DRIFT_FOR_SWIPE) {
+      this.swipeCancelled = true;
+    }
   }
 
   /**
    * Handle touch end for swipe gestures (horizontal and vertical)
    */
   onTouchEnd(event: TouchEvent, groupId: number, images: ContentToken[]): void {
-    const touchEndX = event.changedTouches[0].clientX;
-    const touchEndY = event.changedTouches[0].clientY;
-    const diffX = this.touchStartX - touchEndX;
-    const diffY = this.touchStartY - touchEndY;
+    if (this.getScrollDeltaFromStart() > this.SCROLL_CANCEL_THRESHOLD || this.swipeCancelled || this.gestureAxis !== 'horizontal') {
+      this.resetCarouselTouchTracking();
+      return;
+    }
 
-    // Determine if swipe is more horizontal or vertical
-    const absX = Math.abs(diffX);
-    const absY = Math.abs(diffY);
+    const touch = event.changedTouches[0];
+    const touchEndX = touch ? touch.clientX : this.touchLastX;
+    const touchEndY = touch ? touch.clientY : this.touchLastY;
+    const deltaX = touchEndX - this.touchStartX;
+    const deltaY = touchEndY - this.touchStartY;
+    const absX = Math.abs(deltaX);
+    const absY = Math.abs(deltaY);
+    const durationMs = Date.now() - this.touchStartTime;
 
-    if (absX > this.SWIPE_THRESHOLD || absY > this.SWIPE_THRESHOLD) {
-      if (absX >= absY) {
-        // Horizontal swipe
-        if (diffX > 0) {
-          // Swipe left - go to next
-          this.goToNext(groupId, images);
-        } else {
-          // Swipe right - go to previous
-          this.goToPrevious(groupId, images);
-        }
+    if (durationMs <= this.SWIPE_MAX_DURATION_MS && absX >= this.SWIPE_THRESHOLD && absY <= this.MAX_VERTICAL_DRIFT_FOR_SWIPE) {
+      if (deltaX < 0) {
+        this.goToNext(groupId, images);
       } else {
-        // Vertical swipe
-        if (diffY > 0) {
-          // Swipe up - go to next
-          this.goToNext(groupId, images);
-        } else {
-          // Swipe down - go to previous
-          this.goToPrevious(groupId, images);
-        }
+        this.goToPrevious(groupId, images);
       }
     }
+
+    this.resetCarouselTouchTracking();
+  }
+
+  onTouchCancel(): void {
+    this.resetCarouselTouchTracking();
+  }
+
+  private resetCarouselTouchTracking(): void {
+    this.touchStartX = 0;
+    this.touchStartY = 0;
+    this.touchLastX = 0;
+    this.touchLastY = 0;
+    this.touchStartTime = 0;
+    this.touchStartScrollY = null;
+    this.gestureAxis = 'undecided';
+    this.swipeCancelled = false;
+  }
+
+  private getWindowScrollY(): number {
+    return typeof window === 'undefined' ? 0 : window.scrollY;
+  }
+
+  private getScrollDeltaFromStart(): number {
+    if (this.touchStartScrollY === null) {
+      return 0;
+    }
+
+    return Math.abs(this.getWindowScrollY() - this.touchStartScrollY);
   }
 
   /**

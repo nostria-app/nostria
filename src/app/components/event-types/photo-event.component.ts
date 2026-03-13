@@ -50,9 +50,21 @@ export class PhotoEventComponent {
   // Touch tracking for swipe gestures
   private touchStartX = 0;
   private touchStartY = 0;
+  private touchLastX = 0;
+  private touchLastY = 0;
   private touchEndX = 0;
   private touchEndY = 0;
-  private readonly SWIPE_THRESHOLD = 50;
+  private touchStartTime = 0;
+  private touchStartScrollY: number | null = null;
+  private gestureAxis: 'undecided' | 'horizontal' | 'vertical' = 'undecided';
+  private swipeCancelled = false;
+  private readonly SWIPE_THRESHOLD = 80;
+  private readonly SWIPE_MAX_DURATION_MS = 500;
+  private readonly VERTICAL_CANCEL_THRESHOLD = 12;
+  private readonly HORIZONTAL_DOMINANCE_RATIO = 1.8;
+  private readonly DIRECTION_LOCK_THRESHOLD = 10;
+  private readonly MAX_VERTICAL_DRIFT_FOR_SWIPE = 32;
+  private readonly SCROLL_CANCEL_THRESHOLD = 2;
 
   // Track if media has been revealed (for blur-to-show animation)
   isRevealed = signal(false);
@@ -288,27 +300,102 @@ export class PhotoEventComponent {
 
     this.touchStartX = touch.clientX;
     this.touchStartY = touch.clientY;
+    this.touchLastX = touch.clientX;
+    this.touchLastY = touch.clientY;
+    this.touchStartTime = Date.now();
+    this.touchStartScrollY = this.getWindowScrollY();
+    this.gestureAxis = 'undecided';
+    this.swipeCancelled = false;
   }
 
-  onTouchEnd(event: TouchEvent): void {
+  onTouchMove(event: TouchEvent): void {
     const touch = event.changedTouches[0];
     if (!touch) {
       return;
     }
 
-    this.touchEndX = touch.clientX;
-    this.touchEndY = touch.clientY;
-    this.handleSwipe();
+    this.touchLastX = touch.clientX;
+    this.touchLastY = touch.clientY;
+
+    const deltaX = this.touchLastX - this.touchStartX;
+    const deltaY = this.touchLastY - this.touchStartY;
+    const absX = Math.abs(deltaX);
+    const absY = Math.abs(deltaY);
+
+    const scrollDelta = this.getScrollDeltaFromStart();
+    if (scrollDelta > this.SCROLL_CANCEL_THRESHOLD) {
+      this.swipeCancelled = true;
+      this.gestureAxis = 'vertical';
+      return;
+    }
+
+    if (this.gestureAxis === 'undecided' && (absX > this.DIRECTION_LOCK_THRESHOLD || absY > this.DIRECTION_LOCK_THRESHOLD)) {
+      this.gestureAxis = absX > absY ? 'horizontal' : 'vertical';
+    }
+
+    if (this.gestureAxis === 'vertical') {
+      this.swipeCancelled = true;
+      return;
+    }
+
+    if (absY > this.MAX_VERTICAL_DRIFT_FOR_SWIPE) {
+      this.swipeCancelled = true;
+    }
   }
 
-  private handleSwipe(): void {
+  onTouchEnd(event: TouchEvent): void {
+    if (this.getScrollDeltaFromStart() > this.SCROLL_CANCEL_THRESHOLD) {
+      this.resetTouchTracking();
+      return;
+    }
+
+    if (this.swipeCancelled) {
+      this.resetTouchTracking();
+      return;
+    }
+
+    const touch = event.changedTouches[0];
+    if (touch) {
+      this.touchEndX = touch.clientX;
+      this.touchEndY = touch.clientY;
+    } else {
+      this.touchEndX = this.touchLastX;
+      this.touchEndY = this.touchLastY;
+    }
+
+    this.handleSwipe(Date.now() - this.touchStartTime);
+    this.resetTouchTracking();
+  }
+
+  onTouchCancel(): void {
+    this.resetTouchTracking();
+  }
+
+  private handleSwipe(durationMs: number): void {
+    if (this.gestureAxis !== 'horizontal') {
+      return;
+    }
+
     const deltaX = this.touchEndX - this.touchStartX;
     const deltaY = this.touchEndY - this.touchStartY;
+    const absX = Math.abs(deltaX);
+    const absY = Math.abs(deltaY);
 
-    // Only treat as a swipe when horizontal movement is both substantial and
-    // dominant over vertical movement (prevents accidental image changes while
-    // vertically scrolling on touch devices).
-    if (Math.abs(deltaX) < this.SWIPE_THRESHOLD || Math.abs(deltaX) <= Math.abs(deltaY)) {
+    // Only treat as a swipe when horizontal movement is substantial, dominant,
+    // and performed quickly enough to represent an intentional swipe.
+    if (durationMs > this.SWIPE_MAX_DURATION_MS) {
+      return;
+    }
+
+    if (absX < this.SWIPE_THRESHOLD) {
+      return;
+    }
+
+    if (absY > this.VERTICAL_CANCEL_THRESHOLD && absX < absY * this.HORIZONTAL_DOMINANCE_RATIO) {
+      return;
+    }
+
+    if (absY > this.MAX_VERTICAL_DRIFT_FOR_SWIPE) {
       return;
     }
 
@@ -319,6 +406,31 @@ export class PhotoEventComponent {
       // Swiped right - go to previous
       this.goToPrevious();
     }
+  }
+
+  private resetTouchTracking(): void {
+    this.swipeCancelled = false;
+    this.touchStartTime = 0;
+    this.touchStartScrollY = null;
+    this.gestureAxis = 'undecided';
+    this.touchStartX = 0;
+    this.touchStartY = 0;
+    this.touchLastX = 0;
+    this.touchLastY = 0;
+    this.touchEndX = 0;
+    this.touchEndY = 0;
+  }
+
+  private getWindowScrollY(): number {
+    return typeof window === 'undefined' ? 0 : window.scrollY;
+  }
+
+  private getScrollDeltaFromStart(): number {
+    if (this.touchStartScrollY === null) {
+      return 0;
+    }
+
+    return Math.abs(this.getWindowScrollY() - this.touchStartScrollY);
   }
 
   async openImageDialog(imageUrl: string, alt: string, event?: MouseEvent | KeyboardEvent): Promise<void> {

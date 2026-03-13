@@ -10,8 +10,8 @@
 }
 
 @if (hasValidImages()) {
-<div class="photo-carousel-container" (touchstart)="onTouchStart($event)" (touchend)="onTouchEnd($event)"
-  [class.clickable]="showOverlay()"
+<div class="photo-carousel-container" (touchstart)="onTouchStart($event)" (touchmove)="onTouchMove($event)"
+  (touchend)="onTouchEnd($event)" (touchcancel)="onTouchCancel()" [class.clickable]="showOverlay()"
   (click)="showOverlay() ? openImageDialog(currentImageUrl(), currentAltText(), $event) : null">
   <div class="photo-carousel">
     <div class="photo-container" [class.blurred]="shouldBlurMedia()"
