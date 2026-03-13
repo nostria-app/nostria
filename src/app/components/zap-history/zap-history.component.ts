@@ -297,13 +297,18 @@ interface ZapHistoryEntry {
 
       .counterparty {
         color: var(--mat-sys-on-surface);
-        min-width: 0;
-        max-width: 120px;
-        flex-shrink: 1;
-        overflow: hidden;
+        width: 20px;
+        min-width: 20px;
+        max-width: 20px;
+        flex: 0 0 20px;
+        overflow: visible;
+        display: flex;
+        align-items: center;
       }
 
       .counterparty app-user-profile {
+        width: 40px;
+        min-width: 40px;
         transform: scale(0.5);
         transform-origin: left center;
       }
@@ -336,13 +341,14 @@ interface ZapHistoryEntry {
       .comment-text {
         font-size: 12px;
         color: var(--mat-sys-on-surface-variant);
-        flex: 0 1 auto;
+        flex: 1 1 auto;
         min-width: 0;
-        max-width: 200px;
+        max-width: clamp(70px, 34vw, 200px);
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
         font-style: italic;
+        line-height: 1.25;
       }
 
       .spacer {
@@ -437,6 +443,23 @@ interface ZapHistoryEntry {
 
         .zap-time {
           min-width: 50px;
+        }
+
+        .counterparty {
+          width: 18px;
+          min-width: 18px;
+          max-width: 18px;
+          flex-basis: 18px;
+        }
+
+        .counterparty app-user-profile {
+          width: 36px;
+          min-width: 36px;
+        }
+
+        .comment-text {
+          max-width: clamp(64px, 30vw, 120px);
+          font-size: 11px;
         }
       }
     `,
