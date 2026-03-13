@@ -276,13 +276,11 @@ export class MusicComponent implements OnDestroy {
   hasMoreMyPlaylists = computed(() => this.myPlaylists().length > SECTION_LIMIT);
 
   // === FILTERED PLAYLISTS (based on list filter) ===
-  // Playlists filtered by list filter (excluding user's own)
+  // Playlists filtered by list filter
   listFilteredPlaylists = computed(() => {
-    const myPubkey = this.currentPubkey();
     const pubkeys = this.filterPubkeys();
 
     let playlists = this.filteredPlaylists()
-      .filter(p => p.pubkey !== myPubkey)
       .filter(p => !this.isPrivatePlaylist(p));
 
     // Apply filter
