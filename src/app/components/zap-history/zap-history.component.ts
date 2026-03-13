@@ -56,13 +56,13 @@ interface ZapHistoryEntry {
         </div>
       } @else {
         <div class="controls-row">
-          <mat-button-toggle-group class="filter-toggles" [value]="filterMode()" (change)="setFilterMode($event.value)">
+          <mat-button-toggle-group class="filter-toggles" [value]="filterMode()" (change)="setFilterMode($event.value)" [hideSingleSelectionIndicator]="true">
             <mat-button-toggle value="all">All ({{ allZaps().length }})</mat-button-toggle>
             <mat-button-toggle value="sent">Sent ({{ sentZaps().length }})</mat-button-toggle>
             <mat-button-toggle value="received">Received ({{ receivedZaps().length }})</mat-button-toggle>
           </mat-button-toggle-group>
 
-          <mat-button-toggle-group class="sort-toggles" [value]="sortBy()" (change)="setSortBy($event.value)">
+          <mat-button-toggle-group class="sort-toggles" [value]="sortBy()" (change)="setSortBy($event.value)" [hideSingleSelectionIndicator]="true">
             <mat-button-toggle value="date">Date</mat-button-toggle>
             <mat-button-toggle value="amount">Amount</mat-button-toggle>
           </mat-button-toggle-group>
