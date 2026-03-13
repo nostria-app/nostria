@@ -49,7 +49,9 @@ export class PhotoEventComponent {
 
   // Touch tracking for swipe gestures
   private touchStartX = 0;
+  private touchStartY = 0;
   private touchEndX = 0;
+  private touchEndY = 0;
   private readonly SWIPE_THRESHOLD = 50;
 
   // Track if media has been revealed (for blur-to-show animation)
@@ -279,25 +281,43 @@ export class PhotoEventComponent {
 
   // Touch event handlers for swipe
   onTouchStart(event: TouchEvent): void {
-    this.touchStartX = event.changedTouches[0].screenX;
+    const touch = event.changedTouches[0];
+    if (!touch) {
+      return;
+    }
+
+    this.touchStartX = touch.clientX;
+    this.touchStartY = touch.clientY;
   }
 
   onTouchEnd(event: TouchEvent): void {
-    this.touchEndX = event.changedTouches[0].screenX;
+    const touch = event.changedTouches[0];
+    if (!touch) {
+      return;
+    }
+
+    this.touchEndX = touch.clientX;
+    this.touchEndY = touch.clientY;
     this.handleSwipe();
   }
 
   private handleSwipe(): void {
-    const swipeDistance = this.touchStartX - this.touchEndX;
+    const deltaX = this.touchEndX - this.touchStartX;
+    const deltaY = this.touchEndY - this.touchStartY;
 
-    if (Math.abs(swipeDistance) > this.SWIPE_THRESHOLD) {
-      if (swipeDistance > 0) {
-        // Swiped left - go to next
-        this.goToNext();
-      } else {
-        // Swiped right - go to previous
-        this.goToPrevious();
-      }
+    // Only treat as a swipe when horizontal movement is both substantial and
+    // dominant over vertical movement (prevents accidental image changes while
+    // vertically scrolling on touch devices).
+    if (Math.abs(deltaX) < this.SWIPE_THRESHOLD || Math.abs(deltaX) <= Math.abs(deltaY)) {
+      return;
+    }
+
+    if (deltaX < 0) {
+      // Swiped left - go to next
+      this.goToNext();
+    } else {
+      // Swiped right - go to previous
+      this.goToPrevious();
     }
   }
 

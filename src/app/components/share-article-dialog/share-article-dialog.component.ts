@@ -69,12 +69,17 @@ export interface ShareArticleDialogData {
       <!-- Prominent Nostr Actions: Repost & Quote -->
       @if (canRepostOrQuote()) {
       <div class="prominent-actions">
-        <button class="prominent-action-button repost-button" (click)="createRepost()">
+        <button class="prominent-action-button repost-button" (click)="createRepost()" [disabled]="isRepostInProgress()">
+          @if (isRepostInProgress()) {
+          <mat-spinner diameter="16"></mat-spinner>
+          <span>Processing...</span>
+          } @else {
           <mat-icon>repeat</mat-icon>
           @if (hasReposted()) {
           <span>Undo Repost</span>
           } @else {
           <span>Repost</span>
+          }
           }
         </button>
         <button class="prominent-action-button quote-button" (click)="createQuote()">
@@ -326,6 +331,12 @@ export interface ShareArticleDialogData {
       &:hover {
         background: var(--mat-sys-surface-container-highest);
         border-color: var(--mat-sys-outline);
+      }
+
+      &:disabled {
+        cursor: not-allowed;
+        opacity: 0.8;
+        background: var(--mat-sys-surface-container-low);
       }
     }
 
@@ -773,6 +784,7 @@ export class ShareArticleDialogComponent {
 
   // Track repost state
   hasReposted = signal<boolean>(false);
+  isRepostInProgress = signal<boolean>(false);
 
   constructor() {
     // Check if user has already reposted this event
@@ -900,6 +912,8 @@ export class ShareArticleDialogComponent {
   // --- Repost / Quote ---
 
   async createRepost() {
+    if (this.isRepostInProgress()) return;
+
     const ev = this.data.event;
     if (!ev) return;
 
@@ -915,9 +929,11 @@ export class ShareArticleDialogComponent {
       return;
     }
 
-    if (this.hasReposted()) {
-      // Undo repost
-      try {
+    this.isRepostInProgress.set(true);
+
+    try {
+      if (this.hasReposted()) {
+        // Undo repost
         const reposts = await this.eventService.loadReposts(
           this.data.eventId,
           this.data.kind,
@@ -926,23 +942,28 @@ export class ShareArticleDialogComponent {
         );
         const ourRepost = reposts.find(r => r.event.pubkey === userPubkey);
         if (ourRepost) {
-          await this.repostService.deleteRepost(ourRepost.event);
-          this.hasReposted.set(false);
-          this.snackBar.open('Repost removed', 'Close', { duration: 2000 });
+          const deleted = await this.repostService.deleteRepost(ourRepost.event);
+          if (deleted) {
+            this.hasReposted.set(false);
+            this.snackBar.open('Repost removed', 'Close', { duration: 2000 });
+          } else {
+            this.snackBar.open('Failed to undo repost', 'Close', { duration: 3000 });
+          }
         }
-      } catch (error) {
-        console.error('Failed to undo repost:', error);
-        this.snackBar.open('Failed to undo repost', 'Close', { duration: 3000 });
+      } else {
+        const reposted = await this.repostService.repostNote(ev);
+        if (reposted) {
+          this.hasReposted.set(true);
+          this.snackBar.open('Reposted', 'Close', { duration: 2000 });
+        } else {
+          this.snackBar.open('Failed to repost', 'Close', { duration: 3000 });
+        }
       }
-    } else {
-      try {
-        await this.repostService.repostNote(ev);
-        this.hasReposted.set(true);
-        this.snackBar.open('Reposted', 'Close', { duration: 2000 });
-      } catch (error) {
-        console.error('Failed to repost:', error);
-        this.snackBar.open('Failed to repost', 'Close', { duration: 3000 });
-      }
+    } catch (error) {
+      console.error('Failed to process repost action:', error);
+      this.snackBar.open(this.hasReposted() ? 'Failed to undo repost' : 'Failed to repost', 'Close', { duration: 3000 });
+    } finally {
+      this.isRepostInProgress.set(false);
     }
   }
 
