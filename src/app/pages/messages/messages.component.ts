@@ -501,6 +501,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       .filter(item => item.chat.pubkey !== myPubkey) // Exclude Note to Self
       .filter(item => !followingSet.has(item.chat.pubkey))
       .filter(item => {
+        const chat = item.chat;
         const rank = this.trustService.getRankSignal(item.chat.pubkey);
 
         // -1 means no rank filter (show everything in Others).
@@ -508,12 +509,14 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
           return true;
         }
 
-        // Slider value 0 means: only include chats with a known positive WoT rank.
-        // This excludes both explicit 0-score profiles and profiles with no rank data.
+        // Slider value 0 means: include chats with known positive WoT rank,
+        // and chats the user has already replied to (treated as trusted).
         if (minTrustRank === 0) {
-          return typeof rank === 'number' && rank > 0;
+          const hasOutgoingReply = Array.from(chat.messages.values()).some(message => message.isOutgoing === true);
+          return hasOutgoingReply || (typeof rank === 'number' && rank > 0);
         }
 
+        // Slider 1+ is strict rank filtering only.
         return typeof rank === 'number' && rank >= minTrustRank;
       })
       .filter(item => this.chatMatchesSearch(item.chat, query))
