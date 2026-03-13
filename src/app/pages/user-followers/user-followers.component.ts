@@ -28,6 +28,7 @@ import { PanelNavigationService } from '../../services/panel-navigation.service'
 import { NostrRecord } from '../../interfaces';
 import { UserRelayService } from '../../services/relays/user-relay';
 import { RelayPoolService } from '../../services/relays/relay-pool';
+import { TrustService } from '../../services/trust.service';
 
 interface UserProfile {
   id: string;
@@ -36,7 +37,7 @@ interface UserProfile {
   picture: string | null;
 }
 
-type SortOption = 'default' | 'reverse' | 'name-asc' | 'name-desc';
+type SortOption = 'default' | 'reverse' | 'name-asc' | 'name-desc' | 'rank';
 
 @Component({
   selector: 'app-user-followers',
@@ -78,6 +79,7 @@ export class UserFollowersComponent {
   private panelNav = inject(PanelNavigationService);
   private userRelayService = inject(UserRelayService);
   private relayPool = inject(RelayPoolService);
+  private trustService = inject(TrustService);
   private destroyRef = inject(DestroyRef);
 
   isLoadingFollowing = signal(true);
@@ -507,6 +509,20 @@ export class UserFollowersComponent {
           const nameA = this.getDisplayName(a.id).toLowerCase();
           const nameB = this.getDisplayName(b.id).toLowerCase();
           return nameB.localeCompare(nameA);
+        });
+      case 'rank':
+        return sorted.sort((a, b) => {
+          const aRank = this.trustService.getRankSignal(a.id);
+          const bRank = this.trustService.getRankSignal(b.id);
+
+          const aMissing = aRank === undefined || aRank === null;
+          const bMissing = bRank === undefined || bRank === null;
+
+          if (aMissing && bMissing) return 0;
+          if (aMissing) return 1;
+          if (bMissing) return -1;
+
+          return bRank - aRank;
         });
       case 'default':
       default:
