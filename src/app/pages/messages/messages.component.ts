@@ -82,6 +82,7 @@ import { isImageUrl } from '../../services/format/utils';
 import { HiddenChatInfoPromptComponent } from '../../components/hidden-chat-info-prompt/hidden-chat-info-prompt.component';
 import { HapticsService } from '../../services/haptics.service';
 import { EmojiSetService } from '../../services/emoji-set.service';
+import type { ReportTarget } from '../../services/reporting.service';
 
 // Define interfaces for our DM data structures
 interface Chat {
@@ -110,6 +111,7 @@ interface DirectMessage {
   replyTo?: string; // The event ID this message is replying to (from 'e' tag)
   quotedReplyContent?: string;
   quotedReplyAuthor?: string;
+  giftWrapId?: string;
   failureReason?: string; // Human-readable reason for send failure
   eventKind?: 'message' | 'reaction';
   reactionTo?: string;
@@ -2634,6 +2636,75 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     if (pubkey) {
       this.layout.openProfile(pubkey);
     }
+  }
+
+  reportSelectedChatUser(): void {
+    const pubkey = this.selectedChat()?.pubkey;
+    if (!pubkey) {
+      return;
+    }
+
+    const profile = this.data.getCachedProfile(pubkey);
+    const displayName = profile?.data.display_name || profile?.data.name || undefined;
+    const reportTarget: ReportTarget = {
+      type: 'user',
+      pubkey,
+    };
+
+    this.layout.showReportDialog(reportTarget, displayName);
+  }
+
+  async deleteSelectedChat(): Promise<void> {
+    await this.removeSelectedChatLocally({
+      hideChat: false,
+      deadLetterReason: 'Chat deleted by user',
+      successMessage: 'Chat deleted',
+      failureMessage: 'Failed to delete chat',
+    });
+  }
+
+  async blockSelectedChatUser(): Promise<void> {
+    await this.removeSelectedChatLocally({
+      hideChat: true,
+      deadLetterReason: 'User blocked from messages',
+      successMessage: 'User blocked and chat removed',
+      failureMessage: 'Failed to block user',
+    });
+  }
+
+  private async removeSelectedChatLocally(options: {
+    hideChat: boolean;
+    deadLetterReason: string;
+    successMessage: string;
+    failureMessage: string;
+  }): Promise<void> {
+    const chat = this.selectedChat();
+    if (!chat) {
+      return;
+    }
+
+    const accountPubkey = this.accountState.pubkey();
+
+    if (options.hideChat && accountPubkey) {
+      this.accountLocalState.hideChat(accountPubkey, chat.id);
+    }
+
+    const success = await this.messaging.deleteChatLocally(chat.id, {
+      addToDeadLetter: true,
+      deadLetterReason: options.deadLetterReason,
+    });
+
+    if (success) {
+      if (this.selectedChatId() === chat.id) {
+        this.selectedChatId.set(null);
+      }
+      this.showMobileList.set(true);
+      this.showChatDetails.set(false);
+      this.layout.toast(options.successMessage);
+      return;
+    }
+
+    this.layout.toast(options.failureMessage, 3000, 'error-snackbar');
   }
 
   /**

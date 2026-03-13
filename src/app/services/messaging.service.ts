@@ -2667,6 +2667,81 @@ export class MessagingService implements NostriaService {
   }
 
   /**
+   * Delete a chat locally, including stored direct messages and cached raw events.
+   * Optionally places the chat's event IDs in the DM dead-letter list so replayed
+   * spam/corrupted events are ignored in future loads.
+   */
+  async deleteChatLocally(
+    chatId: string,
+    options: { addToDeadLetter?: boolean; deadLetterReason?: string } = {}
+  ): Promise<boolean> {
+    const myPubkey = this.accountState.pubkey();
+    if (!myPubkey) {
+      this.logger.warn('Cannot delete chat: no account pubkey');
+      return false;
+    }
+
+    const chat = this.getChat(chatId);
+    if (!chat) {
+      this.logger.warn(`Cannot delete chat: chat ${chatId} not found`);
+      return false;
+    }
+
+    const eventIds = new Set<string>();
+    for (const message of chat.messages.values()) {
+      if (message.id) {
+        eventIds.add(message.id);
+      }
+      if (message.giftWrapId) {
+        eventIds.add(message.giftWrapId);
+      }
+    }
+
+    try {
+      const shouldAddToDeadLetter = options.addToDeadLetter === true;
+      if (shouldAddToDeadLetter) {
+        const reason = options.deadLetterReason || 'Chat deleted by user';
+        for (const eventId of eventIds) {
+          this.markEventAsDeadLetter(eventId, reason, { chatId });
+        }
+      }
+
+      await this.database.init();
+      await this.database.deleteChat(myPubkey, chatId);
+
+      if (eventIds.size > 0) {
+        await this.database.deleteEvents(Array.from(eventIds));
+      }
+
+      const currentMap = this.chatsMap();
+      const newMap = new Map(currentMap);
+      newMap.delete(chatId);
+      this.chatsMap.set(newMap);
+
+      for (const eventId of eventIds) {
+        this.inFlightGiftWrapIds.delete(eventId);
+        if (!shouldAddToDeadLetter) {
+          this.knownEventIds.delete(eventId);
+        }
+      }
+
+      this.logger.info('Deleted chat locally', {
+        chatId,
+        messageCount: chat.messages.size,
+        eventCount: eventIds.size,
+        addToDeadLetter: shouldAddToDeadLetter,
+      });
+      return true;
+    } catch (error) {
+      this.logger.error('Failed to delete chat locally', {
+        chatId,
+        error,
+      });
+      return false;
+    }
+  }
+
+  /**
    * Mark all unread messages in a chat as read
    */
   async markChatAsRead(chatId: string): Promise<void> {

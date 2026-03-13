@@ -353,6 +353,19 @@
               <mat-icon>person</mat-icon>
               <span>View Profile</span>
             </button>
+            <button mat-menu-item (click)="reportSelectedChatUser()">
+              <mat-icon>flag</mat-icon>
+              <span>Report User</span>
+            </button>
+            <button mat-menu-item (click)="blockSelectedChatUser()">
+              <mat-icon>block</mat-icon>
+              <span>Block User</span>
+            </button>
+            <button mat-menu-item (click)="deleteSelectedChat()">
+              <mat-icon>delete</mat-icon>
+              <span>Delete Chat</span>
+            </button>
+            <mat-divider></mat-divider>
             @if (isSelectedChatHidden()) {
             <button mat-menu-item (click)="unhideChat()">
               <mat-icon>visibility</mat-icon>
