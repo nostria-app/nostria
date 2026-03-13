@@ -11,6 +11,11 @@ export interface MessageDetailsDialogData {
   relaySources: string[];
   rawMessageJson: string;
   rawEnvelopeJson?: string;
+  unwrapStages?: {
+    title: string;
+    json?: string;
+    error?: string;
+  }[];
 }
 
 @Component({

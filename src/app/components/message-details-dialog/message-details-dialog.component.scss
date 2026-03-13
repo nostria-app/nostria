@@ -50,6 +50,19 @@
   color: var(--mat-sys-on-surface-variant);
 }
 
+.stage-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.stage-error {
+  color: var(--mat-sys-error);
+  background: var(--mat-sys-error-container);
+  border-radius: var(--mat-sys-corner-small);
+  padding: 8px 10px;
+}
+
 .json-text {
   width: 100%;
   min-height: 180px;

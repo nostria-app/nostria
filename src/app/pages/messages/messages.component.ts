@@ -2271,13 +2271,22 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   private async buildMessageDetailsData(message: DirectMessage): Promise<MessageDetailsDialogData> {
     await this.database.init();
 
-    const [rawMessageEvent, rawEnvelopeEvent] = await Promise.all([
+    let [rawMessageEvent, rawEnvelopeEvent] = await Promise.all([
       this.database.getEvent(message.id),
       message.giftWrapId ? this.database.getEvent(message.giftWrapId) : Promise.resolve(undefined),
     ]);
 
+    if (!rawMessageEvent) {
+      rawMessageEvent = await this.fetchEventByIdFromRelays(message.id, message);
+    }
+
+    if (message.giftWrapId && !rawEnvelopeEvent) {
+      rawEnvelopeEvent = await this.fetchEventByIdFromRelays(message.giftWrapId, message);
+    }
+
     const relaySources = await this.resolveMessageRelaySources(message);
     const rawMessageJson = JSON.stringify(rawMessageEvent || this.createFallbackMessageJson(message), null, 2);
+    const unwrapStages = await this.buildGiftWrapUnwrapStages(message, rawMessageEvent, rawEnvelopeEvent);
 
     return {
       eventId: message.id,
@@ -2286,7 +2295,312 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       relaySources,
       rawMessageJson,
       rawEnvelopeJson: rawEnvelopeEvent ? JSON.stringify(rawEnvelopeEvent, null, 2) : undefined,
+      unwrapStages,
     };
+  }
+
+  private async buildGiftWrapUnwrapStages(
+    message: DirectMessage,
+    rawMessageEvent: NostrEvent | undefined,
+    rawEnvelopeEvent: NostrEvent | undefined
+  ): Promise<MessageDetailsDialogData['unwrapStages']> {
+    const unwrapStages: NonNullable<MessageDetailsDialogData['unwrapStages']> = [];
+
+    if (rawMessageEvent) {
+      unwrapStages.push({
+        title: `Original Event JSON (message.id: ${message.id})`,
+        json: JSON.stringify(rawMessageEvent, null, 2),
+      });
+    } else {
+      unwrapStages.push({
+        title: `Original Event JSON (message.id: ${message.id})`,
+        error: 'Event not found in local cache or queried relays',
+      });
+    }
+
+    if (message.giftWrapId) {
+      if (rawEnvelopeEvent) {
+        unwrapStages.push({
+          title: `Original Gift Wrap JSON (giftWrapId: ${message.giftWrapId})`,
+          json: JSON.stringify(rawEnvelopeEvent, null, 2),
+        });
+      } else {
+        unwrapStages.push({
+          title: `Original Gift Wrap JSON (giftWrapId: ${message.giftWrapId})`,
+          error: 'Gift wrap event not found in local cache or queried relays',
+        });
+      }
+    }
+
+    const giftWrapSourceEvent =
+      (rawEnvelopeEvent?.kind === kinds.GiftWrap ? rawEnvelopeEvent : undefined)
+      || (rawMessageEvent?.kind === kinds.GiftWrap ? rawMessageEvent : undefined);
+
+    if (!giftWrapSourceEvent) {
+      if (rawMessageEvent?.kind === kinds.EncryptedDirectMessage) {
+        const nip04Stages = await this.tryDecryptNip04Event(rawMessageEvent);
+        unwrapStages.push(...nip04Stages);
+      }
+      return unwrapStages;
+    }
+
+    let wrappedContent: unknown;
+    try {
+      const firstDecrypt = await this.encryption.autoDecrypt(
+        giftWrapSourceEvent.content,
+        giftWrapSourceEvent.pubkey,
+        giftWrapSourceEvent,
+        giftWrapSourceEvent.created_at
+      );
+
+      wrappedContent = JSON.parse(firstDecrypt.content);
+      unwrapStages.push({
+        title: `Stage 1: Decrypted Gift Wrap Content (${giftWrapSourceEvent.id})`,
+        json: JSON.stringify(wrappedContent, null, 2),
+      });
+    } catch (error) {
+      unwrapStages.push({
+        title: `Stage 1: Decrypted Gift Wrap Content (${giftWrapSourceEvent.id})`,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return unwrapStages;
+    }
+
+    const wrappedContentObj = wrappedContent as { content?: string; pubkey?: string };
+    if (typeof wrappedContentObj.content !== 'string' || typeof wrappedContentObj.pubkey !== 'string') {
+      unwrapStages.push({
+        title: 'Stage 2: Decrypted Seal Content',
+        error: 'Wrapped content does not contain expected encrypted seal fields',
+      });
+      return unwrapStages;
+    }
+
+    try {
+      const secondDecrypt = await this.encryption.autoDecrypt(
+        wrappedContentObj.content,
+        wrappedContentObj.pubkey,
+        giftWrapSourceEvent,
+        giftWrapSourceEvent.created_at
+      );
+
+      unwrapStages.push({
+        title: 'Stage 2: Decrypted Seal Content (Raw)',
+        json: secondDecrypt.content,
+      });
+
+      try {
+        const parsedSecondStage = JSON.parse(secondDecrypt.content);
+        unwrapStages.push({
+          title: 'Stage 3: Parsed Inner Event JSON',
+          json: JSON.stringify(parsedSecondStage, null, 2),
+        });
+
+        const stage4 = await this.tryDecryptInnerEventContent(parsedSecondStage, giftWrapSourceEvent);
+        unwrapStages.push(...stage4);
+      } catch (parseError) {
+        unwrapStages.push({
+          title: 'Stage 3: Parsed Inner Event JSON',
+          error: parseError instanceof Error ? parseError.message : String(parseError),
+        });
+      }
+    } catch (error) {
+      unwrapStages.push({
+        title: 'Stage 2: Decrypted Seal Content',
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+
+    return unwrapStages;
+  }
+
+  private async tryDecryptInnerEventContent(
+    parsedInnerEvent: unknown,
+    fallbackContextEvent: NostrEvent
+  ): Promise<NonNullable<MessageDetailsDialogData['unwrapStages']>> {
+    const stages: NonNullable<MessageDetailsDialogData['unwrapStages']> = [];
+    const myPubkey = this.accountState.pubkey();
+    if (!myPubkey || !parsedInnerEvent || typeof parsedInnerEvent !== 'object') {
+      return stages;
+    }
+
+    const innerEvent = parsedInnerEvent as {
+      id?: string;
+      pubkey?: string;
+      created_at?: number;
+      tags?: string[][];
+      content?: string;
+    };
+
+    if (typeof innerEvent.content !== 'string' || innerEvent.content.trim().length === 0) {
+      stages.push({
+        title: 'Stage 4: Decrypt Inner Event Content',
+        error: 'Inner event has no content to decrypt',
+      });
+      return stages;
+    }
+
+    if (!this.encryption.isContentEncrypted(innerEvent.content)) {
+      stages.push({
+        title: 'Stage 4: Decrypt Inner Event Content',
+        error: 'Inner event content does not look encrypted',
+      });
+      return stages;
+    }
+
+    const pTags = Array.isArray(innerEvent.tags)
+      ? innerEvent.tags.filter(tag => Array.isArray(tag) && tag[0] === 'p').map(tag => tag[1]).filter(Boolean)
+      : [];
+
+    const authorPubkey = typeof innerEvent.pubkey === 'string' ? innerEvent.pubkey : '';
+    let decryptionPubkey = authorPubkey;
+    if (authorPubkey === myPubkey && pTags.length > 0) {
+      decryptionPubkey = pTags[0] || '';
+    }
+
+    if (!decryptionPubkey) {
+      stages.push({
+        title: 'Stage 4: Decrypt Inner Event Content',
+        error: 'Could not determine peer pubkey for decryption',
+      });
+      return stages;
+    }
+
+    const innerEventId = typeof innerEvent.id === 'string' ? innerEvent.id : 'unknown-inner-event';
+    const eventContext = {
+      ...fallbackContextEvent,
+      ...innerEvent,
+      tags: Array.isArray(innerEvent.tags) ? innerEvent.tags : fallbackContextEvent.tags,
+      created_at:
+        typeof innerEvent.created_at === 'number'
+          ? innerEvent.created_at
+          : fallbackContextEvent.created_at,
+      pubkey: authorPubkey || fallbackContextEvent.pubkey,
+      content: innerEvent.content,
+      id: innerEventId,
+    } as NostrEvent;
+
+    try {
+      const decryptResult = await this.encryption.autoDecrypt(
+        innerEvent.content,
+        decryptionPubkey,
+        eventContext,
+        eventContext.created_at
+      );
+
+      stages.push({
+        title: `Stage 4: Decrypted Inner Event Content (${innerEventId})`,
+        json: decryptResult.content,
+      });
+
+      try {
+        const parsed = JSON.parse(decryptResult.content);
+        stages.push({
+          title: `Stage 5: Parsed Decrypted Inner Content (${innerEventId})`,
+          json: JSON.stringify(parsed, null, 2),
+        });
+      } catch {
+      }
+    } catch (error) {
+      this.logger.error('Message details: failed to decrypt inner event content', {
+        innerEventId,
+        decryptionPubkey,
+        authorPubkey,
+        kind: (innerEvent as { kind?: number }).kind,
+        contentLength: innerEvent.content.length,
+        error,
+      });
+      stages.push({
+        title: `Stage 4: Decrypted Inner Event Content (${innerEventId})`,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+
+    return stages;
+  }
+
+  private async tryDecryptNip04Event(event: NostrEvent): Promise<NonNullable<MessageDetailsDialogData['unwrapStages']>> {
+    const stages: NonNullable<MessageDetailsDialogData['unwrapStages']> = [];
+    const myPubkey = this.accountState.pubkey();
+    if (!myPubkey) {
+      return stages;
+    }
+
+    const pTags = this.utilities.getPTagsValuesFromEvent(event);
+    let decryptionPubkey = event.pubkey;
+    if (decryptionPubkey === myPubkey && pTags.length > 0 && pTags[0]) {
+      decryptionPubkey = pTags[0];
+    }
+
+    try {
+      const decryptResult = await this.encryption.autoDecrypt(
+        event.content,
+        decryptionPubkey,
+        event,
+        event.created_at
+      );
+
+      stages.push({
+        title: `Decrypted Ciphertext Content (${event.id})`,
+        json: decryptResult.content,
+      });
+
+      try {
+        const parsed = JSON.parse(decryptResult.content);
+        stages.push({
+          title: `Parsed Decrypted JSON (${event.id})`,
+          json: JSON.stringify(parsed, null, 2),
+        });
+      } catch {
+        // No-op if decrypted payload is not JSON.
+      }
+    } catch (error) {
+      this.logger.error('Message details: failed to decrypt NIP-04 content', {
+        eventId: event.id,
+        eventKind: event.kind,
+        decryptionPubkey,
+        authorPubkey: event.pubkey,
+        contentLength: event.content?.length || 0,
+        error,
+      });
+      stages.push({
+        title: `Decrypted Ciphertext Content (${event.id})`,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+
+    return stages;
+  }
+
+  private getCandidateRelaysForMessage(message: DirectMessage): string[] {
+    const chatPubkey = this.selectedChat()?.pubkey || message.pubkey;
+    const chatRelays = this.selectedChat()?.relays || [];
+    const userRelays = chatPubkey ? this.userRelayService.getRelaysForPubkey(chatPubkey) : [];
+
+    return [
+      ...new Set([
+        ...this.accountRelay.getRelayUrls(),
+        ...this.discoveryRelay.getRelayUrls(),
+        ...chatRelays,
+        ...userRelays,
+      ]),
+    ]
+      .filter(url => typeof url === 'string' && url.length > 0)
+      .slice(0, 20);
+  }
+
+  private async fetchEventByIdFromRelays(eventId: string, message: DirectMessage): Promise<NostrEvent | undefined> {
+    const candidateRelays = this.getCandidateRelaysForMessage(message);
+    if (candidateRelays.length === 0) {
+      return undefined;
+    }
+
+    try {
+      const events = await this.relayPool.query(candidateRelays, { ids: [eventId] }, 4500);
+      const exact = events.find(event => event.id === eventId);
+      return exact;
+    } catch {
+      return undefined;
+    }
   }
 
   private createFallbackMessageJson(message: DirectMessage): NostrEvent {
@@ -2302,20 +2616,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   private async resolveMessageRelaySources(message: DirectMessage): Promise<string[]> {
-    const chatPubkey = this.selectedChat()?.pubkey || message.pubkey;
-    const chatRelays = this.selectedChat()?.relays || [];
-    const userRelays = chatPubkey ? this.userRelayService.getRelaysForPubkey(chatPubkey) : [];
-
-    const candidateRelays = [
-      ...new Set([
-        ...this.accountRelay.getRelayUrls(),
-        ...this.discoveryRelay.getRelayUrls(),
-        ...chatRelays,
-        ...userRelays,
-      ]),
-    ]
-      .filter(url => typeof url === 'string' && url.length > 0)
-      .slice(0, 20);
+    const candidateRelays = this.getCandidateRelaysForMessage(message);
 
     if (candidateRelays.length === 0) {
       return [];

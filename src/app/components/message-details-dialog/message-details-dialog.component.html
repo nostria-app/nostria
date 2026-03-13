@@ -54,4 +54,34 @@
   </div>
   <textarea class="json-text" readonly aria-label="Raw envelope JSON" [value]="data.rawEnvelopeJson"></textarea>
   }
+
+  @if (data.unwrapStages?.length) {
+  <mat-divider></mat-divider>
+  <div class="section-header">
+    <span>Gift Wrap Unwrap Stages</span>
+  </div>
+
+  @for (stage of data.unwrapStages; track stage.title) {
+  <div class="stage-card">
+    <div class="section-header actions">
+      <span>{{ stage.title }}</span>
+      @if (stage.json) {
+      <button mat-stroked-button type="button" (click)="copyText(stage.json, stage.title)">
+        <mat-icon>content_copy</mat-icon>
+        Copy
+      </button>
+      }
+    </div>
+
+    @if (stage.error) {
+    <div class="stage-error">{{ stage.error }}</div>
+    }
+
+    @if (stage.json) {
+    <textarea class="json-text" readonly [attr.aria-label]="stage.title" [title]="stage.title" placeholder="JSON data"
+      [value]="stage.json"></textarea>
+    }
+  </div>
+  }
+  }
 </div>
