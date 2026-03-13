@@ -166,6 +166,7 @@ export class MusicTrackDialogComponent {
   ];
 
   currentGradient = signal(this.getRandomGradient());
+  private extractedCoverPreviewObjectUrl: string | null = null;
 
   totalSplitPercentage = computed(() => {
     const splits = this.zapSplits();
@@ -229,6 +230,7 @@ export class MusicTrackDialogComponent {
 
     // Extract image and store as previous for potential cleanup
     const image = track.tags.find(t => t[0] === 'image')?.[1] || null;
+    this.clearExtractedCoverPreview();
     this.coverImage.set(image);
     this.previousCoverImage.set(image);
 
@@ -463,6 +465,7 @@ export class MusicTrackDialogComponent {
     this.currentGradient.set(this.getRandomGradient());
     this.coverImage.set(null);
     this.trackForm.patchValue({ imageUrl: '' });
+    this.clearExtractedCoverPreview();
   }
 
   private durationValidator(control: AbstractControl): ValidationErrors | null {
@@ -562,7 +565,7 @@ export class MusicTrackDialogComponent {
     }
   }
 
-  applyExternalUrls(): void {
+  async applyExternalUrls(): Promise<void> {
     const audioUrl = this.externalUrlValue().trim();
     if (!audioUrl) return;
 
@@ -574,6 +577,9 @@ export class MusicTrackDialogComponent {
     }
 
     const coverUrl = this.externalCoverUrlValue().trim();
+    this.audioFile.set(null);
+    this.audioUrl.set(audioUrl);
+
     if (coverUrl) {
       try {
         new URL(coverUrl);
@@ -581,11 +587,17 @@ export class MusicTrackDialogComponent {
         this.snackBar.open('Please enter a valid cover image URL', 'Close', { duration: 3000 });
         return;
       }
+      this.clearExtractedCoverPreview();
       this.coverImage.set(coverUrl);
       this.trackForm.patchValue({ imageUrl: coverUrl });
+    } else {
+      this.trackForm.patchValue({ imageUrl: '' });
+      this.coverImage.set(null);
     }
 
-    this.audioUrl.set(audioUrl);
+    const shouldForceMetadataUpdate = this.isEditMode() || !this.trackForm.get('title')?.value;
+    await this.extractAudioMetadataFromUrl(audioUrl, shouldForceMetadataUpdate);
+
     this.showExternalUrlInput.set(false);
     this.externalUrlValue.set('');
     this.externalCoverUrlValue.set('');
@@ -679,8 +691,58 @@ export class MusicTrackDialogComponent {
   }
 
   private async extractAudioMetadata(file: File, forceUpdate = false): Promise<void> {
+    await this.extractAudioMetadataFromBlob(file, {
+      forceUpdate,
+      fallbackTitle: file.name,
+      uploadExtractedCover: true,
+    });
+  }
+
+  private async extractAudioMetadataFromUrl(url: string, forceUpdate = false): Promise<void> {
     try {
-      const metadata = await parseBlob(file);
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      const blob = await response.blob();
+      await this.extractAudioMetadataFromBlob(blob, {
+        forceUpdate,
+        fallbackTitle: this.getFilenameFromUrl(url),
+        uploadExtractedCover: false,
+      });
+    } catch (error) {
+      this.logger.warn('Could not extract metadata from external audio URL:', error);
+      this.snackBar.open('Using external URL directly. Could not auto-extract full metadata.', 'Close', { duration: 3500 });
+    }
+  }
+
+  private getFilenameFromUrl(url: string): string {
+    try {
+      const parsed = new URL(url);
+      const rawName = parsed.pathname.split('/').pop() || 'Track';
+      const decodedName = decodeURIComponent(rawName);
+      return decodedName || 'Track';
+    } catch {
+      return 'Track';
+    }
+  }
+
+  private clearExtractedCoverPreview(): void {
+    if (this.extractedCoverPreviewObjectUrl) {
+      URL.revokeObjectURL(this.extractedCoverPreviewObjectUrl);
+      this.extractedCoverPreviewObjectUrl = null;
+    }
+  }
+
+  private async extractAudioMetadataFromBlob(
+    blob: Blob,
+    options: { forceUpdate: boolean; fallbackTitle: string; uploadExtractedCover: boolean }
+  ): Promise<void> {
+    const { forceUpdate, fallbackTitle, uploadExtractedCover } = options;
+
+    try {
+      const metadata = await parseBlob(blob);
 
       // Auto-fill title from metadata or filename (update if forceUpdate or empty)
       const currentTitle = this.trackForm.get('title')?.value;
@@ -690,7 +752,7 @@ export class MusicTrackDialogComponent {
           this.trackForm.patchValue({ title });
         } else {
           // Fallback to filename
-          const fileName = file.name.replace(/\.[^/.]+$/, '');
+          const fileName = fallbackTitle.replace(/\.[^/.]+$/, '');
           const cleanTitle = fileName.replace(/[_-]/g, ' ').trim();
           this.trackForm.patchValue({ title: cleanTitle });
         }
@@ -774,7 +836,11 @@ export class MusicTrackDialogComponent {
       if (forceUpdate || !this.coverImage()) {
         const cover = selectCover(metadata.common.picture);
         if (cover) {
-          await this.uploadExtractedCoverArt(cover);
+          if (uploadExtractedCover) {
+            await this.uploadExtractedCoverArt(cover);
+          } else {
+            this.setExtractedCoverPreview(cover);
+          }
         }
       }
     } catch (error) {
@@ -782,11 +848,20 @@ export class MusicTrackDialogComponent {
       // Fallback to filename for title
       const currentTitle = this.trackForm.get('title')?.value;
       if (forceUpdate || !currentTitle) {
-        const fileName = file.name.replace(/\.[^/.]+$/, '');
+        const fileName = fallbackTitle.replace(/\.[^/.]+$/, '');
         const cleanTitle = fileName.replace(/[_-]/g, ' ').trim();
         this.trackForm.patchValue({ title: cleanTitle });
       }
     }
+  }
+
+  private setExtractedCoverPreview(cover: { format: string; data: Uint8Array }): void {
+    this.clearExtractedCoverPreview();
+    const buffer = new Uint8Array(cover.data).buffer;
+    const blob = new Blob([buffer], { type: cover.format });
+    const objectUrl = URL.createObjectURL(blob);
+    this.extractedCoverPreviewObjectUrl = objectUrl;
+    this.coverImage.set(objectUrl);
   }
 
   private async uploadExtractedCoverArt(cover: { format: string; data: Uint8Array }): Promise<void> {
@@ -849,6 +924,7 @@ export class MusicTrackDialogComponent {
 
   private async handleImageFile(file: File): Promise<void> {
     const previousImage = this.coverImage();
+    this.clearExtractedCoverPreview();
     this.isUploadingImage.set(true);
     try {
       const servers = this.mediaService.mediaServers();
@@ -882,6 +958,7 @@ export class MusicTrackDialogComponent {
   onImageUrlChange(): void {
     const url = this.trackForm.get('imageUrl')?.value;
     if (url) {
+      this.clearExtractedCoverPreview();
       this.coverImage.set(url);
     }
   }
@@ -1171,8 +1248,9 @@ export class MusicTrackDialogComponent {
       ];
 
       // Add image or gradient
-      if (this.coverImage()) {
-        tags.push(['image', this.coverImage()!]);
+      const imageUrl = String(formValue.imageUrl || '').trim();
+      if (imageUrl) {
+        tags.push(['image', imageUrl]);
       } else {
         tags.push(['gradient', 'colors', this.currentGradient()]);
       }
@@ -1354,6 +1432,7 @@ export class MusicTrackDialogComponent {
   }
 
   cancel(): void {
+    this.clearExtractedCoverPreview();
     this.closed.emit(null);
   }
 

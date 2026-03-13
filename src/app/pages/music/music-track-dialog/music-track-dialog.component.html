@@ -40,20 +40,30 @@
           </div>
           } @else if (audioFile()) {
           <div class="audio-selected">
-            <mat-icon>audio_file</mat-icon>
-            <span>{{ audioFile()!.name }}</span>
-            <button mat-icon-button type="button" (click)="selectAudioFile()" aria-label="Change file">
-              <mat-icon>edit</mat-icon>
-            </button>
+            <div class="audio-selected-header">
+              <mat-icon>audio_file</mat-icon>
+              <span>{{ audioFile()!.name }}</span>
+              <button mat-icon-button type="button" (click)="selectAudioFile()" aria-label="Change file">
+                <mat-icon>edit</mat-icon>
+              </button>
+            </div>
+            @if (audioUrl()) {
+            <audio class="audio-preview" controls preload="metadata" [src]="audioUrl()!"
+              (click)="$event.stopPropagation()"></audio>
+            }
           </div>
           } @else if (audioUrl()) {
           <div class="audio-selected">
-            <mat-icon>audio_file</mat-icon>
-            <span class="audio-url-display">{{ audioUrl() }}</span>
-            <button mat-stroked-button type="button" (click)="selectAudioFile()">
-              <mat-icon>upload</mat-icon>
-              Replace
-            </button>
+            <div class="audio-selected-header">
+              <mat-icon>audio_file</mat-icon>
+              <span class="audio-url-display">{{ audioUrl() }}</span>
+              <button mat-stroked-button type="button" (click)="selectAudioFile()">
+                <mat-icon>upload</mat-icon>
+                Replace
+              </button>
+            </div>
+            <audio class="audio-preview" controls preload="metadata" [src]="audioUrl()!"
+              (click)="$event.stopPropagation()"></audio>
           </div>
           } @else {
           <div class="drop-zone" [class.drop-zone-large]="!showFullForm()" (click)="selectAudioFile()">
