@@ -266,7 +266,7 @@
   border-radius: var(--mat-sys-corner-small);
   background-color: var(--mat-sys-surface-container-high);
 
-  &:not(.enhanced) > div {
+  &:not(.enhanced)>div {
     display: flex;
     gap: 0.5rem;
     align-items: baseline;
@@ -446,7 +446,7 @@
   background-color: var(--mat-sys-surface-container-high);
   margin-bottom: 0.5rem;
 
-  > div {
+  >div {
     display: flex;
     flex-direction: column;
     gap: 0.25rem;

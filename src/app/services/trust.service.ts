@@ -92,14 +92,18 @@ export class TrustService {
     if (this.metricsCache.has(pubkey)) {
       const cached = this.metricsCache.get(pubkey);
       if (cached) {
-        // Check if data is older than 24 hours
-        const age = Date.now() - (cached.lastUpdated || 0);
-        const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
-        if (age > TWENTY_FOUR_HOURS) {
-          // Refresh in background but return cached data immediately
-          this.refreshMetricsInBackground(pubkey);
+        if (!this.isMetricsCompatibleWithCurrentProviders(cached)) {
+          this.metricsCache.delete(pubkey);
+        } else {
+          // Check if data is older than 24 hours
+          const age = Date.now() - (cached.lastUpdated || 0);
+          const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
+          if (age > TWENTY_FOUR_HOURS) {
+            // Refresh in background but return cached data immediately
+            this.refreshMetricsInBackground(pubkey);
+          }
+          return cached;
         }
-        return cached;
       }
     }
 
@@ -134,18 +138,24 @@ export class TrustService {
     try {
       const cachedMetrics = await this.database.getTrustMetrics(pubkey);
       if (cachedMetrics) {
-        // Cache in memory for quick access
-        this.metricsCache.set(pubkey, cachedMetrics);
-        this.loadedPubkeys.update(set => new Set(set).add(pubkey));
+        if (!this.isMetricsCompatibleWithCurrentProviders(cachedMetrics)) {
+          this.logger.debug(`Ignoring stale trust metrics from previous provider for ${pubkey}`, {
+            authorPubkey: cachedMetrics.authorPubkey,
+          });
+        } else {
+          // Cache in memory for quick access
+          this.metricsCache.set(pubkey, cachedMetrics);
+          this.loadedPubkeys.update(set => new Set(set).add(pubkey));
 
-        // Check if data is older than 24 hours
-        const age = Date.now() - (cachedMetrics.lastUpdated || 0);
-        const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
-        if (age > TWENTY_FOUR_HOURS) {
-          this.refreshMetricsInBackground(pubkey);
+          // Check if data is older than 24 hours
+          const age = Date.now() - (cachedMetrics.lastUpdated || 0);
+          const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
+          if (age > TWENTY_FOUR_HOURS) {
+            this.refreshMetricsInBackground(pubkey);
+          }
+
+          return cachedMetrics;
         }
-
-        return cachedMetrics;
       }
     } catch (error) {
       this.logger.error(`Failed to load trust metrics from database for ${pubkey}`, error);
@@ -373,7 +383,7 @@ export class TrustService {
       for (const pubkey of toFetch) {
         try {
           const cached = await this.database.getTrustMetrics(pubkey);
-          if (cached) {
+          if (cached && this.isMetricsCompatibleWithCurrentProviders(cached)) {
             this.metricsCache.set(pubkey, cached);
             this.loadedPubkeys.update(set => new Set(set).add(pubkey));
             results.set(pubkey, cached);
@@ -572,5 +582,22 @@ export class TrustService {
    */
   getRankSignal(pubkey: string): number | undefined {
     return this.metricsCache.get(pubkey)?.rank;
+  }
+
+  /**
+   * Check if cached metrics were produced by one of the currently configured trust providers.
+   * If no provider authors are configured, we accept any cached metrics.
+   */
+  private isMetricsCompatibleWithCurrentProviders(metrics: TrustMetrics): boolean {
+    const { authors } = this.resolveProviderConfig();
+    if (authors.length === 0) {
+      return true;
+    }
+
+    if (!metrics.authorPubkey) {
+      return false;
+    }
+
+    return authors.includes(metrics.authorPubkey);
   }
 }

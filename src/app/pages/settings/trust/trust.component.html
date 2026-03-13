@@ -23,7 +23,8 @@
       <div class="service-card" [class.enabled]="isProviderConfigured(provider)">
         <div class="service-info">
           <div class="service-header">
-            <a class="service-name service-name-link" href="https://brainstorm.nosfabrica.com/" target="_blank" rel="noopener noreferrer">
+            <a class="service-name service-name-link" href="https://brainstorm.nosfabrica.com/" target="_blank"
+              rel="noopener noreferrer">
               {{ provider.name }}
             </a>
             @if (isProviderConfigured(provider)) {
@@ -37,7 +38,8 @@
             <div>
               <p class="service-migration-title" i18n="@@settings.trust.providers.migrationTitle">Migration required</p>
               <p class="service-migration-text" i18n="@@settings.trust.providers.migrationText">
-                Your account uses the previous Brainstorm trust provider configuration. Click Activate to migrate to the new Brainstorm setup.
+                Your account uses the previous Brainstorm trust provider configuration. Click Activate to migrate to the
+                new Brainstorm setup.
               </p>
               <p class="service-migration-text" i18n="@@settings.trust.providers.migrationWarning">
                 Warning: this will replace your current service provider configuration in kind 10040.
@@ -50,25 +52,26 @@
           <button mat-stroked-button (click)="activateProvider(provider)"
             [disabled]="brainstormActivateLoading() || brainstormStatusLoading() || brainstormRecalculateLoading() || brainstormConfigLoading() || (isProviderConfigured(provider) && !needsBrainstormMigration())">
             @if (brainstormActivateLoading()) {
-              <mat-spinner diameter="18"></mat-spinner>
+            <mat-spinner diameter="18"></mat-spinner>
             }
             @if (!brainstormActivateLoading() && !(isProviderConfigured(provider) && !needsBrainstormMigration())) {
-              <mat-icon>bolt</mat-icon>
+            <mat-icon>bolt</mat-icon>
             }
             @if (!brainstormActivateLoading() && isProviderConfigured(provider) && !needsBrainstormMigration()) {
-              <mat-icon>check_circle</mat-icon>
+            <mat-icon>check_circle</mat-icon>
             }
             @if (brainstormActivateLoading()) {
-              <span i18n="@@settings.trust.providers.activating">Activating...</span>
+            <span i18n="@@settings.trust.providers.activating">Activating...</span>
             }
             @if (!brainstormActivateLoading() && isProviderConfigured(provider) && !needsBrainstormMigration()) {
-              <span i18n="@@settings.trust.providers.activated">Activated</span>
+            <span i18n="@@settings.trust.providers.activated">Activated</span>
             }
             @if (!brainstormActivateLoading() && provider.name === 'Brainstorm' && needsBrainstormMigration()) {
-              <span i18n="@@settings.trust.providers.migrateActivate">Migrate &amp; Activate</span>
+            <span i18n="@@settings.trust.providers.migrateActivate">Migrate &amp; Activate</span>
             }
-            @if (!brainstormActivateLoading() && !(provider.name === 'Brainstorm' && needsBrainstormMigration()) && !isProviderConfigured(provider)) {
-              <span i18n="@@settings.trust.providers.activate">Activate</span>
+            @if (!brainstormActivateLoading() && !(provider.name === 'Brainstorm' && needsBrainstormMigration()) &&
+            !isProviderConfigured(provider)) {
+            <span i18n="@@settings.trust.providers.activate">Activate</span>
             }
           </button>
         </div>
@@ -94,10 +97,13 @@
         <div class="trust-calculation-card">
           <div class="trust-calculation-header">
             <div>
-              <p class="trust-calculation-title" i18n="@@settings.trust.personalized.calculationTitle">Trust Calculation</p>
-              <p class="trust-calculation-subtitle">{{ formatNullableValue(brainstormStatus()?.algorithm) }} network analysis</p>
+              <p class="trust-calculation-title" i18n="@@settings.trust.personalized.calculationTitle">Trust Calculation
+              </p>
+              <p class="trust-calculation-subtitle">{{ formatNullableValue(brainstormStatus()?.algorithm) }} network
+                analysis</p>
             </div>
-            <span class="trust-status-pill" [class]="'trust-status-pill ' + getStatusPillClass(brainstormStatus()?.status)">
+            <span class="trust-status-pill"
+              [class]="'trust-status-pill ' + getStatusPillClass(brainstormStatus()?.status)">
               {{ formatCalculationStatus(brainstormStatus()?.status) }}
             </span>
           </div>
@@ -105,7 +111,8 @@
           @if ((brainstormStatus()?.how_many_others_with_priority ?? 0) > 0) {
           <div class="trust-queue-highlight">
             <span class="trust-status-label" i18n="@@settings.trust.personalized.queueAhead">Queue ahead</span>
-            <span class="trust-queue-value">{{ formatNullableValue(brainstormStatus()?.how_many_others_with_priority) }}</span>
+            <span class="trust-queue-value">{{ formatNullableValue(brainstormStatus()?.how_many_others_with_priority)
+              }}</span>
           </div>
           }
 
@@ -120,39 +127,40 @@
             <span class="trust-status-value">{{ formatNullableValue(brainstormStatus()?.algorithm) }}</span>
 
             <span class="trust-status-label" i18n="@@settings.trust.personalized.publisherLabel">Publisher pubkey</span>
-            <span class="trust-status-value trust-code-value">{{ formatNullableValue(brainstormPublisherPubkey()) }}</span>
+            <span class="trust-status-value trust-code-value">{{ formatNullableValue(brainstormPublisherPubkey())
+              }}</span>
           </div>
 
           <div class="trust-calculation-actions">
             <button mat-stroked-button (click)="checkBrainstormStatus()"
               [disabled]="brainstormStatusLoading() || brainstormActivateLoading() || brainstormRecalculateLoading() || brainstormConfigLoading()">
               @if (brainstormStatusLoading()) {
-                <mat-spinner diameter="18"></mat-spinner>
+              <mat-spinner diameter="18"></mat-spinner>
               }
               @if (!brainstormStatusLoading()) {
-                <mat-icon>sync</mat-icon>
+              <mat-icon>sync</mat-icon>
               }
               @if (brainstormStatusLoading()) {
-                <span i18n="@@settings.trust.personalized.refreshingStatus">Refreshing status...</span>
+              <span i18n="@@settings.trust.personalized.refreshingStatus">Refreshing status...</span>
               }
               @if (!brainstormStatusLoading()) {
-                <span i18n="@@settings.trust.personalized.refreshStatus">Refresh Calculation Status</span>
+              <span i18n="@@settings.trust.personalized.refreshStatus">Refresh Calculation Status</span>
               }
             </button>
 
             <button mat-flat-button (click)="startBrainstormCalculation()"
               [disabled]="!canRecalculate() || brainstormRecalculateLoading() || brainstormStatusLoading() || brainstormActivateLoading() || brainstormConfigLoading()">
               @if (brainstormRecalculateLoading()) {
-                <mat-spinner diameter="18"></mat-spinner>
+              <mat-spinner diameter="18"></mat-spinner>
               }
               @if (!brainstormRecalculateLoading()) {
-                <mat-icon>refresh</mat-icon>
+              <mat-icon>refresh</mat-icon>
               }
               @if (brainstormRecalculateLoading()) {
-                <span i18n="@@settings.trust.personalized.recalculating">Recalculating...</span>
+              <span i18n="@@settings.trust.personalized.recalculating">Recalculating...</span>
               }
               @if (!brainstormRecalculateLoading()) {
-                <span i18n="@@settings.trust.personalized.recalculateGrapeRank">Recalculate GrapeRank</span>
+              <span i18n="@@settings.trust.personalized.recalculateGrapeRank">Recalculate GrapeRank</span>
               }
             </button>
           </div>
@@ -164,7 +172,8 @@
         <div class="brainstorm-status-card">
           <div>
             <span class="trust-status-label" i18n="@@settings.trust.personalized.status">Status</span>
-            <span class="trust-status-value" i18n="@@settings.trust.personalized.noStatusData">No status data found</span>
+            <span class="trust-status-value" i18n="@@settings.trust.personalized.noStatusData">No status data
+              found</span>
           </div>
         </div>
         }
