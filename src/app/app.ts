@@ -185,6 +185,7 @@ export class App implements OnInit, OnDestroy {
 
   // Subject for managing subscription cleanup
   private readonly destroy$ = new Subject<void>();
+  private backdropInteractionHandler?: (event: Event) => void;
 
   // Computed tooltip for profile caching progress
   cachingTooltip = computed(() => {
@@ -1272,6 +1273,12 @@ export class App implements OnInit, OnDestroy {
     // Clean up subscriptions
     this.destroy$.next();
     this.destroy$.complete();
+
+    if (this.app.isBrowser() && this.backdropInteractionHandler) {
+      this.document.removeEventListener('click', this.backdropInteractionHandler, { capture: true });
+      this.document.removeEventListener('touchend', this.backdropInteractionHandler, { capture: true });
+      this.backdropInteractionHandler = undefined;
+    }
   }
 
   private showStorageError(error: any, diagnostics: any): void {
@@ -1312,25 +1319,30 @@ export class App implements OnInit, OnDestroy {
   private setupBackdropClickHandler(): void {
     if (!this.app.isBrowser()) return;
 
+    if (this.backdropInteractionHandler) {
+      this.document.removeEventListener('click', this.backdropInteractionHandler, { capture: true });
+      this.document.removeEventListener('touchend', this.backdropInteractionHandler, { capture: true });
+    }
+
     // Use event delegation on document to catch backdrop clicks
     // This handles both click and touch events
-    const handleBackdropInteraction = (event: Event) => {
-      const target = event.target as HTMLElement;
+    this.backdropInteractionHandler = (event: Event) => {
+      const target = event.target as HTMLElement | null;
+      const backdropElement = target?.closest('.mat-drawer-backdrop');
 
-      // Check if the click/touch is on the backdrop
-      if (target && target.classList.contains('mat-drawer-backdrop')) {
-        // Only close if sidenav is open and we're in mobile (over) mode
-        if (this.sidenav?.opened && this.layout.isHandset()) {
-          event.preventDefault();
-          event.stopPropagation();
-          this.sidenav.close();
+      // Close whenever the actual drawer backdrop is interacted with.
+      // This avoids relying on potentially stale breakpoint state after resize transitions.
+      if (backdropElement && this.sidenav?.opened) {
+        if (this.localSettings.menuOpen()) {
+          this.localSettings.setMenuOpen(false);
         }
+        this.sidenav.close();
       }
     };
 
     // Listen for both click and touchend events
-    this.document.addEventListener('click', handleBackdropInteraction, { capture: true });
-    this.document.addEventListener('touchend', handleBackdropInteraction, { capture: true });
+    this.document.addEventListener('click', this.backdropInteractionHandler, { capture: true });
+    this.document.addEventListener('touchend', this.backdropInteractionHandler, { capture: true });
   }
 
   private deferStartupTask(taskName: string, task: () => Promise<void> | void): void {
@@ -1575,6 +1587,9 @@ export class App implements OnInit, OnDestroy {
    * from 'side' to 'over' when resizing the window.
    */
   onBackdropClick() {
+    if (this.localSettings.menuOpen()) {
+      this.localSettings.setMenuOpen(false);
+    }
     if (this.sidenav?.opened) {
       this.sidenav.close();
     }
