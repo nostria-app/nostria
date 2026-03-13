@@ -9,6 +9,7 @@ import { SettingsService } from './settings.service';
 import { PublishService } from './publish.service';
 import { AccountRelayService } from './relays/account-relay';
 import { DatabaseService } from './database.service';
+import { MessagingService } from './messaging.service';
 
 export type ReportType =
   | 'nudity'
@@ -46,6 +47,7 @@ export class ReportingService {
   private publishService = inject(PublishService);
   private accountRelay = inject(AccountRelayService);
   private database = inject(DatabaseService);
+  private messaging = inject(MessagingService);
 
   // Override signals for showing blocked content
   private contentOverrides = signal<Set<string>>(new Set());
@@ -171,10 +173,10 @@ export class ReportingService {
     }
 
     const profileData = profile.data;
-    
+
     // Build a list of profile fields to check
     const fieldsToCheck: string[] = [];
-    
+
     if (profileData.name) {
       fieldsToCheck.push(profileData.name.toLowerCase());
     }
@@ -413,6 +415,13 @@ export class ReportingService {
     if (freshMuteList) {
       // Publish the already-signed mute list to account relays
       await this.publishService.publish(freshMuteList);
+
+      await this.messaging.deleteChatsForPubkeyLocally(pubkey, {
+        addToDeadLetter: true,
+        deadLetterReason: 'User blocked (NIP-51 mute list)',
+        hideChat: true,
+      });
+
       this.logger.debug('Blocked user and published mute list:', pubkey);
       return true;
     }

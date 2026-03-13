@@ -321,19 +321,13 @@ export class ReportDialogComponent {
   async blockTarget(): Promise<boolean> {
     try {
       if (this.data.target.type === 'user') {
-        // Create a fresh mute list event with the user
-        const freshMuteList = await this.createFreshMuteListWithUser(this.data.target.pubkey);
-        if (!freshMuteList) {
+        const success = await this.reportingService.muteUser(this.data.target.pubkey);
+        if (!success) {
           this.snackBar.open('Failed to block target', 'Dismiss', {
             duration: 3000,
           });
           return false;
         }
-
-        await this.publishService.signAndPublishAuto(
-          freshMuteList,
-          (event) => this.nostrService.signEvent(event)
-        );
 
         this.snackBar.open('User blocked successfully', 'Dismiss', {
           duration: 3000,
@@ -367,10 +361,6 @@ export class ReportDialogComponent {
       });
       return false;
     }
-  }
-
-  private async createFreshMuteListWithUser(pubkey: string): Promise<Event | null> {
-    return this.reportingService.createFreshMuteListEvent('user', pubkey);
   }
 
   private async createFreshMuteListWithEvent(eventId: string): Promise<Event | null> {

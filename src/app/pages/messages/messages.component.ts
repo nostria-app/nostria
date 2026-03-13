@@ -71,6 +71,7 @@ import { NamePipe } from '../../pipes/name.pipe';
 import { AccountRelayService } from '../../services/relays/account-relay';
 import { UserRelayService } from '../../services/relays/user-relay';
 import { DiscoveryRelayService } from '../../services/relays/discovery-relay';
+import { RelayPoolService } from '../../services/relays/relay-pool';
 import { DatabaseService } from '../../services/database.service';
 import { AccountLocalStateService } from '../../services/account-local-state.service';
 import { LocalSettingsService } from '../../services/local-settings.service';
@@ -84,6 +85,7 @@ import { HapticsService } from '../../services/haptics.service';
 import { EmojiSetService } from '../../services/emoji-set.service';
 import type { ReportTarget } from '../../services/reporting.service';
 import type { ReportDialogResult } from '../../components/report-dialog/report-dialog.component';
+import type { MessageDetailsDialogData } from '../../components/message-details-dialog/message-details-dialog.component';
 
 // Define interfaces for our DM data structures
 interface Chat {
@@ -229,6 +231,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   isSinglePaneView = computed(() => this.layout.isHandset() || this.layout.hasNavigationItems());
   private accountRelay = inject(AccountRelayService);
   private discoveryRelay = inject(DiscoveryRelayService);
+  private relayPool = inject(RelayPoolService);
 
   // Timeout duration for waiting for chats to load when opening a specific chat
   private readonly CHAT_LOAD_TIMEOUT_MS = 10000;
@@ -2243,6 +2246,104 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     }
   }
 
+  async showMessageDetails(message: DirectMessage): Promise<void> {
+    try {
+      const detailsData = await this.buildMessageDetailsData(message);
+      const { MessageDetailsDialogComponent } = await import(
+        '../../components/message-details-dialog/message-details-dialog.component'
+      );
+
+      this.customDialog.open<typeof MessageDetailsDialogComponent.prototype, void>(
+        MessageDetailsDialogComponent,
+        {
+          title: 'Message Details',
+          width: '760px',
+          maxWidth: '95vw',
+          data: detailsData,
+        }
+      );
+    } catch (error) {
+      this.logger.error('Failed to open message details:', error);
+      this.layout.toast('Failed to load message details', 3000, 'error-snackbar');
+    }
+  }
+
+  private async buildMessageDetailsData(message: DirectMessage): Promise<MessageDetailsDialogData> {
+    await this.database.init();
+
+    const [rawMessageEvent, rawEnvelopeEvent] = await Promise.all([
+      this.database.getEvent(message.id),
+      message.giftWrapId ? this.database.getEvent(message.giftWrapId) : Promise.resolve(undefined),
+    ]);
+
+    const relaySources = await this.resolveMessageRelaySources(message);
+    const rawMessageJson = JSON.stringify(rawMessageEvent || this.createFallbackMessageJson(message), null, 2);
+
+    return {
+      eventId: message.id,
+      giftWrapId: message.giftWrapId,
+      chatPubkey: this.selectedChat()?.pubkey || message.pubkey,
+      relaySources,
+      rawMessageJson,
+      rawEnvelopeJson: rawEnvelopeEvent ? JSON.stringify(rawEnvelopeEvent, null, 2) : undefined,
+    };
+  }
+
+  private createFallbackMessageJson(message: DirectMessage): NostrEvent {
+    return {
+      id: message.id,
+      pubkey: message.pubkey,
+      created_at: message.created_at,
+      kind: message.encryptionType === 'nip44' ? kinds.GiftWrap : kinds.EncryptedDirectMessage,
+      tags: message.tags,
+      content: message.content,
+      sig: '',
+    } as NostrEvent;
+  }
+
+  private async resolveMessageRelaySources(message: DirectMessage): Promise<string[]> {
+    const chatPubkey = this.selectedChat()?.pubkey || message.pubkey;
+    const chatRelays = this.selectedChat()?.relays || [];
+    const userRelays = chatPubkey ? this.userRelayService.getRelaysForPubkey(chatPubkey) : [];
+
+    const candidateRelays = [
+      ...new Set([
+        ...this.accountRelay.getRelayUrls(),
+        ...this.discoveryRelay.getRelayUrls(),
+        ...chatRelays,
+        ...userRelays,
+      ]),
+    ]
+      .filter(url => typeof url === 'string' && url.length > 0)
+      .slice(0, 20);
+
+    if (candidateRelays.length === 0) {
+      return [];
+    }
+
+    const eventIdsToQuery = [message.id, message.giftWrapId].filter(
+      (value): value is string => !!value
+    );
+
+    const relayChecks = candidateRelays.map(async relayUrl => {
+      try {
+        const events = await this.relayPool.query([
+          relayUrl,
+        ], {
+          ids: eventIdsToQuery,
+        }, 3500);
+
+        const found = events.some(event => eventIdsToQuery.includes(event.id));
+        return found ? relayUrl : null;
+      } catch {
+        return null;
+      }
+    });
+
+    const resolvedRelays = await Promise.all(relayChecks);
+    return resolvedRelays.filter((relayUrl): relayUrl is string => !!relayUrl);
+  }
+
   /**
    * Show confirmation dialog before deleting a message
    */
@@ -2706,38 +2807,25 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     successMessage: string;
     failureMessage: string;
   }): Promise<void> {
-    const chatsToDelete = this.messaging
+    const chatsToDeleteCount = this.messaging
       .sortedChats()
-      .map(item => item.chat)
-      .filter(chat => chat.pubkey === pubkey);
+      .filter(item => item.chat.pubkey === pubkey).length;
 
-    if (chatsToDelete.length === 0) {
+    if (chatsToDeleteCount === 0) {
       return;
     }
 
-    const accountPubkey = this.accountState.pubkey();
+    const result = await this.messaging.deleteChatsForPubkeyLocally(pubkey, {
+      addToDeadLetter: true,
+      deadLetterReason: options.deadLetterReason,
+      hideChat: options.hideChat,
+    });
 
-    let deleteSuccessCount = 0;
-    for (const chat of chatsToDelete) {
-      if (options.hideChat && accountPubkey) {
-        this.accountLocalState.hideChat(accountPubkey, chat.id);
-      }
-
-      const success = await this.messaging.deleteChatLocally(chat.id, {
-        addToDeadLetter: true,
-        deadLetterReason: options.deadLetterReason,
-      });
-
-      if (success) {
-        deleteSuccessCount++;
-      }
-
-      if (this.selectedChatId() === chat.id) {
-        this.selectedChatId.set(null);
-      }
+    if (this.selectedChat()?.pubkey === pubkey) {
+      this.selectedChatId.set(null);
     }
 
-    if (deleteSuccessCount === chatsToDelete.length) {
+    if (result.failedCount === 0) {
       this.showMobileList.set(true);
       this.showChatDetails.set(false);
       this.layout.toast(options.successMessage);

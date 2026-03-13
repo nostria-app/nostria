@@ -1,0 +1,57 @@
+<div class="details-content">
+  <div class="details-row">
+    <span class="label">Event ID</span>
+    <span class="value">{{ data.eventId }}</span>
+  </div>
+
+  @if (data.giftWrapId) {
+  <div class="details-row">
+    <span class="label">Gift Wrap ID</span>
+    <span class="value">{{ data.giftWrapId }}</span>
+  </div>
+  }
+
+  <div class="details-row">
+    <span class="label">Chat Pubkey</span>
+    <span class="value">{{ data.chatPubkey }}</span>
+  </div>
+
+  <mat-divider></mat-divider>
+
+  <div class="section-header">
+    <span>Relays where message was found</span>
+  </div>
+
+  @if (data.relaySources.length > 0) {
+  <div class="relay-list">
+    @for (relayUrl of data.relaySources; track relayUrl) {
+    <div class="relay-item">{{ relayUrl }}</div>
+    }
+  </div>
+  } @else {
+  <div class="empty-state">No relay origin resolved for this message.</div>
+  }
+
+  <mat-divider></mat-divider>
+
+  <div class="section-header actions">
+    <span>Raw Message JSON</span>
+    <button mat-stroked-button type="button" (click)="copyText(data.rawMessageJson, 'Raw message JSON')">
+      <mat-icon>content_copy</mat-icon>
+      Copy
+    </button>
+  </div>
+  <textarea class="json-text" readonly aria-label="Raw message JSON" [value]="data.rawMessageJson"></textarea>
+
+  @if (data.rawEnvelopeJson) {
+  <mat-divider></mat-divider>
+  <div class="section-header actions">
+    <span>Raw Envelope JSON</span>
+    <button mat-stroked-button type="button" (click)="copyText(data.rawEnvelopeJson, 'Raw envelope JSON')">
+      <mat-icon>content_copy</mat-icon>
+      Copy
+    </button>
+  </div>
+  <textarea class="json-text" readonly aria-label="Raw envelope JSON" [value]="data.rawEnvelopeJson"></textarea>
+  }
+</div>

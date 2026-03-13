@@ -2760,6 +2760,40 @@ export class MessagingService implements NostriaService {
     }
   }
 
+  async deleteChatsForPubkeyLocally(
+    targetPubkey: string,
+    options: { addToDeadLetter?: boolean; deadLetterReason?: string; hideChat?: boolean } = {}
+  ): Promise<{ deletedCount: number; failedCount: number }> {
+    const accountPubkey = this.accountState.pubkey();
+    const chatsToDelete = Array.from(this.chatsMap().values()).filter(chat => chat.pubkey === targetPubkey);
+
+    if (chatsToDelete.length === 0) {
+      return { deletedCount: 0, failedCount: 0 };
+    }
+
+    let deletedCount = 0;
+    let failedCount = 0;
+
+    for (const chat of chatsToDelete) {
+      if (options.hideChat && accountPubkey) {
+        this.accountLocalState.hideChat(accountPubkey, chat.id);
+      }
+
+      const success = await this.deleteChatLocally(chat.id, {
+        addToDeadLetter: options.addToDeadLetter,
+        deadLetterReason: options.deadLetterReason,
+      });
+
+      if (success) {
+        deletedCount++;
+      } else {
+        failedCount++;
+      }
+    }
+
+    return { deletedCount, failedCount };
+  }
+
   /**
    * Mark all unread messages in a chat as read
    */

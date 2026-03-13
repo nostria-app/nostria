@@ -1,0 +1,66 @@
+:host {
+  display: block;
+}
+
+.details-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.details-row {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: 8px;
+  align-items: start;
+}
+
+.label {
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.value {
+  color: var(--mat-sys-on-surface);
+  word-break: break-all;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--mat-sys-on-surface);
+}
+
+.relay-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.relay-item {
+  padding: 8px 10px;
+  border-radius: var(--mat-sys-corner-small);
+  background: var(--mat-sys-surface-container-low);
+  color: var(--mat-sys-on-surface);
+  word-break: break-all;
+}
+
+.empty-state {
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.json-text {
+  width: 100%;
+  min-height: 180px;
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: var(--mat-sys-corner-small);
+  background: var(--mat-sys-surface-container-low);
+  color: var(--mat-sys-on-surface);
+  padding: 10px;
+  resize: vertical;
+  field-sizing: content;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+  font-size: 12px;
+  line-height: 1.4;
+}
