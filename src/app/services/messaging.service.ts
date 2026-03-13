@@ -767,6 +767,32 @@ export class MessagingService implements NostriaService {
     });
   }
 
+  getDeadLetterCount(): number {
+    return this.deadLetterEventIds.size;
+  }
+
+  async clearDeadLetterList(): Promise<void> {
+    const eventIds = Array.from(this.deadLetterEventIds);
+
+    this.deadLetterEventIds.clear();
+    for (const eventId of eventIds) {
+      this.knownEventIds.delete(eventId);
+    }
+
+    this.deadLetterPersistPromise = this.deadLetterPersistPromise
+      .catch(() => undefined)
+      .then(async () => {
+        await this.database.init();
+        await this.database.deleteInfoByKeyAndType(this.deadLetterInfoKey, this.deadLetterInfoType);
+      })
+      .catch(error => {
+        this.logger.warn('Failed to clear DM dead-letter list', error);
+      });
+
+    await this.deadLetterPersistPromise;
+    this.logger.info('Cleared DM dead-letter list');
+  }
+
   clear() {
     this.chatsMap.set(new Map());
     this.oldestChatTimestamp.set(null);

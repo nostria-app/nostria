@@ -219,6 +219,43 @@
 
 // tab-content allows scrolling behind mobile menu
 
+.others-filter-row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 10px 2px;
+  border-bottom: 1px solid var(--mat-sys-outline-variant);
+  overflow-x: clip;
+
+  mat-slider {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    margin: 0;
+  }
+}
+
+.others-filter-header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.others-filter-label {
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 13px;
+}
+
+.others-filter-value {
+  color: var(--mat-sys-on-surface);
+  font-size: 13px;
+}
+
+.others-filter-row ::ng-deep .mdc-slider {
+  max-width: 100%;
+}
+
 .empty-chats {
   display: flex;
   flex-direction: column;

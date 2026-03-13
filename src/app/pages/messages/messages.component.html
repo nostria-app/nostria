@@ -55,6 +55,10 @@
           <mat-icon>done_all</mat-icon>
           <span>Mark All as Read</span>
         </button>
+        <button mat-menu-item (click)="openManageInbox()">
+          <mat-icon>inbox</mat-icon>
+          <span>Manage Inbox</span>
+        </button>
         <button mat-menu-item (click)="resetLocalMessagesCache()">
           <mat-icon>delete_sweep</mat-icon>
           <span>Reset Messages Cache</span>
@@ -222,6 +226,16 @@
         </mat-tab>
 
         <mat-tab label="Others">
+          <div class="others-filter-row">
+            <div class="others-filter-header">
+              <span class="others-filter-label">Min WoT rank</span>
+              <span class="others-filter-value">{{ getOthersMinTrustRankLabel() }}</span>
+            </div>
+            <mat-slider min="-1" max="100" step="1" discrete>
+              <input matSliderThumb [value]="othersMinTrustRank()" title="Minimum Web of Trust rank"
+                aria-label="Minimum Web of Trust rank" (valueChange)="onOthersMinTrustRankChange($any($event))" />
+            </mat-slider>
+          </div>
           @if (hasOtherChats()) {
           <div class="tab-content">
             <mat-nav-list class="chat-list">

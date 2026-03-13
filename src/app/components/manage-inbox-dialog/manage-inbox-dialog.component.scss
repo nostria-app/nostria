@@ -1,0 +1,35 @@
+:host {
+  display: block;
+}
+
+.manage-inbox-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.description {
+  margin: 0;
+  color: var(--mat-sys-on-surface);
+}
+
+.option-row {
+  display: flex;
+  align-items: center;
+}
+
+.hint {
+  margin: 0;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.count {
+  margin: 0;
+  color: var(--mat-sys-on-surface);
+}
+
+.manage-inbox-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}

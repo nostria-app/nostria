@@ -32,6 +32,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { MatBottomSheet } from '@angular/material/bottom-sheet';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatSidenavModule } from '@angular/material/sidenav';
+import { MatSliderModule } from '@angular/material/slider';
 import { Router, RouterModule, ActivatedRoute } from '@angular/router';
 import { NostrService } from '../../services/nostr.service';
 import { LoggerService } from '../../services/logger.service';
@@ -76,6 +77,7 @@ import { DatabaseService } from '../../services/database.service';
 import { AccountLocalStateService } from '../../services/account-local-state.service';
 import { LocalSettingsService } from '../../services/local-settings.service';
 import { MediaService } from '../../services/media.service';
+import { TrustService } from '../../services/trust.service';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { EmojiPickerComponent } from '../../components/emoji-picker/emoji-picker.component';
 import { OpenGraphService, OpenGraphData } from '../../services/opengraph.service';
@@ -86,6 +88,7 @@ import { EmojiSetService } from '../../services/emoji-set.service';
 import type { ReportTarget } from '../../services/reporting.service';
 import type { ReportDialogResult } from '../../components/report-dialog/report-dialog.component';
 import type { MessageDetailsDialogData } from '../../components/message-details-dialog/message-details-dialog.component';
+import type { ManageInboxDialogResult } from '../../components/manage-inbox-dialog/manage-inbox-dialog.component';
 
 // Define interfaces for our DM data structures
 interface Chat {
@@ -152,6 +155,7 @@ interface MessageGroup {
     MatSnackBarModule,
     MatTabsModule,
     MatSidenavModule,
+    MatSliderModule,
     MatProgressBarModule,
     RouterModule,
     LoadingOverlayComponent,
@@ -218,6 +222,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   showChatDetails = signal<boolean>(false); // Chat details sidepanel
   showHiddenChats = signal<boolean>(false); // Toggle to show hidden chats
   showSearch = signal<boolean>(false); // Toggle search input visibility
+  othersMinTrustRank = signal<number>(-1); // Web of Trust rank filter for Others tab (-1 = no filter)
 
   // Long-press support for touch devices
   longPressedMessage = signal<DirectMessage | null>(null);
@@ -232,6 +237,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   private accountRelay = inject(AccountRelayService);
   private discoveryRelay = inject(DiscoveryRelayService);
   private relayPool = inject(RelayPoolService);
+  private trustService = inject(TrustService);
 
   // Timeout duration for waiting for chats to load when opening a specific chat
   private readonly CHAT_LOAD_TIMEOUT_MS = 10000;
@@ -490,12 +496,42 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     const myPubkey = this.accountState.pubkey();
     const query = this.chatSearchQuery();
     const showHidden = this.showHiddenChats();
+    const minTrustRank = this.othersMinTrustRank();
     return this.messaging.sortedChats()
       .filter(item => item.chat.pubkey !== myPubkey) // Exclude Note to Self
       .filter(item => !followingSet.has(item.chat.pubkey))
+      .filter(item => {
+        const rank = this.trustService.getRankSignal(item.chat.pubkey);
+
+        // -1 means no rank filter (show everything in Others).
+        if (minTrustRank < 0) {
+          return true;
+        }
+
+        // Slider value 0 means: only include chats with a known positive WoT rank.
+        // This excludes both explicit 0-score profiles and profiles with no rank data.
+        if (minTrustRank === 0) {
+          return typeof rank === 'number' && rank > 0;
+        }
+
+        return typeof rank === 'number' && rank >= minTrustRank;
+      })
       .filter(item => this.chatMatchesSearch(item.chat, query))
       .filter(item => showHidden || !this.isChatHidden(item.chat.id));
   });
+
+  getTrustRank(pubkey: string): number {
+    return this.trustService.getRankSignal(pubkey) || 0;
+  }
+
+  onOthersMinTrustRankChange(value: number): void {
+    this.othersMinTrustRank.set(Number(value) || 0);
+  }
+
+  getOthersMinTrustRankLabel(): string {
+    const value = this.othersMinTrustRank();
+    return value < 0 ? '-' : String(value);
+  }
 
   filteredChats = computed(() => {
     const tabIndex = this.selectedTabIndex();
@@ -2812,6 +2848,125 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       this.logger.error('Failed to mark all chats as read:', error);
       this.snackBar.open('Failed to mark messages as read', 'Close', { duration: 3000 });
     }
+  }
+
+  private isUnknownProfile(pubkey: string): boolean {
+    const profile = this.data.getCachedProfile(pubkey);
+    if (!profile?.data) {
+      return true;
+    }
+
+    const hasDisplayName = !!profile.data.display_name?.trim();
+    const hasName = !!profile.data.name?.trim();
+    const nip05Value = profile.data.nip05;
+    const hasNip05 = Array.isArray(nip05Value)
+      ? nip05Value.some(value => !!value?.trim())
+      : !!nip05Value?.trim();
+
+    return !hasDisplayName && !hasName && !hasNip05;
+  }
+
+  private isPurgeCandidateChat(chat: Chat): boolean {
+    const myPubkey = this.accountState.pubkey();
+    if (chat.pubkey === myPubkey) {
+      return false;
+    }
+
+    const followingSet = new Set(this.accountState.followingList());
+    if (followingSet.has(chat.pubkey)) {
+      return false;
+    }
+
+    // Only purge chats where user has never replied
+    const hasOutgoingReply = Array.from(chat.messages.values()).some(message => message.isOutgoing === true);
+    if (hasOutgoingReply) {
+      return false;
+    }
+
+    return this.isUnknownProfile(chat.pubkey);
+  }
+
+  getPurgeInboxCandidatesCount(): number {
+    return this.messaging.sortedChats().filter(item => this.isPurgeCandidateChat(item.chat)).length;
+  }
+
+  async openManageInbox(): Promise<void> {
+    const { ManageInboxDialogComponent } = await import(
+      '../../components/manage-inbox-dialog/manage-inbox-dialog.component'
+    );
+
+    const dialogRef = this.customDialog.open<typeof ManageInboxDialogComponent.prototype, ManageInboxDialogResult>(
+      ManageInboxDialogComponent,
+      {
+        title: 'Manage Inbox',
+        width: '520px',
+        maxWidth: '95vw',
+        data: {
+          purgeCandidatesCount: this.getPurgeInboxCandidatesCount(),
+          deadLetterCount: this.messaging.getDeadLetterCount(),
+        },
+      }
+    );
+
+    dialogRef.afterClosed$.subscribe(async ({ result }) => {
+      if (!result) {
+        return;
+      }
+
+      if (result.clearDeadLetterList) {
+        await this.clearDeadLetterList();
+      }
+
+      if (result.purgeUnknownProfiles) {
+        await this.purgeMessagesFromUnknownProfiles();
+      }
+    });
+  }
+
+  async clearDeadLetterList(): Promise<void> {
+    try {
+      await this.messaging.clearDeadLetterList();
+      this.layout.toast('Dead-letter list cleared');
+    } catch (error) {
+      this.logger.error('Failed to clear dead-letter list:', error);
+      this.layout.toast('Failed to clear dead-letter list', 3000, 'error-snackbar');
+    }
+  }
+
+  async purgeMessagesFromUnknownProfiles(): Promise<void> {
+    const candidates = this.messaging.sortedChats()
+      .map(item => item.chat)
+      .filter(chat => this.isPurgeCandidateChat(chat));
+
+    if (candidates.length === 0) {
+      this.layout.toast('No purge candidates found');
+      return;
+    }
+
+    let deletedCount = 0;
+    for (const chat of candidates) {
+      const success = await this.messaging.deleteChatLocally(chat.id, {
+        addToDeadLetter: true,
+        deadLetterReason: 'Purged unknown inbox chat',
+      });
+
+      if (success) {
+        deletedCount++;
+      }
+
+      if (this.selectedChatId() === chat.id) {
+        this.selectedChatId.set(null);
+      }
+    }
+
+    if (deletedCount > 0) {
+      this.showMobileList.set(true);
+      this.showChatDetails.set(false);
+      this.layout.toast(`Purged ${deletedCount} unknown chat${deletedCount === 1 ? '' : 's'}`);
+      return;
+    }
+
+    this.layout.toast('Failed to purge unknown chats', 3000, 'error-snackbar');
   }
 
   /**

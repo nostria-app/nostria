@@ -1,0 +1,27 @@
+<div dialog-content class="manage-inbox-content">
+  <p class="description">Manage your inbox with safe cleanup options.</p>
+
+  <div class="option-row">
+    <mat-checkbox [checked]="purgeUnknownProfiles()" (change)="purgeUnknownProfiles.set($event.checked)">
+      Purge Messages from Unknown profiles
+    </mat-checkbox>
+  </div>
+
+  <div class="option-row">
+    <mat-checkbox [checked]="clearDeadLetterList()" (change)="clearDeadLetterList.set($event.checked)">
+      Clear dead-letter list
+    </mat-checkbox>
+  </div>
+
+  <p class="hint">
+    This removes only chats from <strong>Others</strong> where you have not replied yet and profile metadata is unknown.
+  </p>
+
+  <p class="count">Candidates: {{ data.purgeCandidatesCount }}</p>
+  <p class="count">Dead-letter entries: {{ data.deadLetterCount }}</p>
+</div>
+
+<div dialog-actions class="manage-inbox-actions">
+  <button mat-button type="button" (click)="close()">Cancel</button>
+  <button mat-flat-button type="button" (click)="run()">Run</button>
+</div>
