@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, signal, effect, untracked } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal, effect, untracked, OnDestroy } from '@angular/core';
 import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 
 import { MatCardModule } from '@angular/material/card';
@@ -12,7 +12,8 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatSelectModule } from '@angular/material/select';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTabsModule } from '@angular/material/tabs';
-import { RouterModule } from '@angular/router';
+import { RouterModule, Router, NavigationEnd } from '@angular/router';
+import { filter, Subscription } from 'rxjs';
 import { Wallets, Wallet } from '../../services/wallets';
 import { NwcService, WalletData, NwcTransaction } from '../../services/nwc.service';
 import { LN, USD } from '@getalby/sdk';
@@ -21,6 +22,7 @@ import { DatePipe, DecimalPipe } from '@angular/common';
 import { CustomDialogService } from '../../services/custom-dialog.service';
 import { AddWalletDialogComponent } from './add-wallet-dialog/add-wallet-dialog.component';
 import { SettingsService } from '../../services/settings.service';
+import { ZapHistoryComponent } from '../../components/zap-history/zap-history.component';
 
 @Component({
   selector: 'app-wallet',
@@ -39,12 +41,13 @@ import { SettingsService } from '../../services/settings.service';
     RouterModule,
     UserProfileComponent,
     DatePipe,
+    ZapHistoryComponent,
   ],
   templateUrl: './wallet.component.html',
   styleUrl: './wallet.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class WalletComponent {
+export class WalletComponent implements OnDestroy {
   // Toggle wallet balance hiding
   toggleHideWalletAmounts() {
     const current = this.settingsService.settings().hideWalletAmounts;
@@ -56,6 +59,8 @@ export class WalletComponent {
   wallets = inject(Wallets);
   private customDialog = inject(CustomDialogService);
   private settingsService = inject(SettingsService);
+  private router = inject(Router);
+  private routerSubscription: Subscription;
 
   connectionStringControl = new FormControl('', [
     Validators.required,
@@ -99,6 +104,14 @@ export class WalletComponent {
   activeTabIndex = signal(0);
 
   constructor() {
+    this.syncTabFromUrl(this.router.url);
+
+    this.routerSubscription = this.router.events
+      .pipe(filter((event): event is NavigationEnd => event instanceof NavigationEnd))
+      .subscribe(event => {
+        this.syncTabFromUrl(event.urlAfterRedirects);
+      });
+
     // Auto-load wallet balances when wallets change
     effect(() => {
       const walletEntries = Object.entries(this.wallets.wallets());
@@ -140,6 +153,10 @@ export class WalletComponent {
         }
       });
     });
+  }
+
+  ngOnDestroy(): void {
+    this.routerSubscription.unsubscribe();
   }
 
   openAddWalletDialog(): void {
@@ -537,9 +554,106 @@ export class WalletComponent {
    * Get transaction description or fallback
    */
   getTransactionDescription(tx: NwcTransaction): string {
-    if (tx.description) return tx.description;
+    const parsedDescription = this.parseTransactionDescription(tx.description);
+    if (parsedDescription) {
+      return parsedDescription;
+    }
+
+    const metadataDescription = this.parseTransactionMetadata(tx.metadata);
+    if (metadataDescription) {
+      return metadataDescription;
+    }
+
     if (tx.type === 'incoming') return 'Received payment';
     return 'Sent payment';
+  }
+
+  private parseTransactionDescription(description?: string): string | null {
+    if (!description) {
+      return null;
+    }
+
+    const trimmed = description.trim();
+    if (!trimmed) {
+      return null;
+    }
+
+    try {
+      const parsed = JSON.parse(trimmed) as unknown;
+
+      if (Array.isArray(parsed)) {
+        for (const item of parsed) {
+          if (!Array.isArray(item) || item.length < 2) {
+            continue;
+          }
+
+          const key = String(item[0]).toLowerCase();
+          const value = typeof item[1] === 'string' ? item[1].trim() : '';
+          if (!value) {
+            continue;
+          }
+
+          if (key.includes('text/plain') || key.includes('description') || key.includes('memo')) {
+            return value;
+          }
+
+          if (key.includes('identifier')) {
+            return `Payment to ${value}`;
+          }
+        }
+      }
+
+      if (parsed && typeof parsed === 'object') {
+        const obj = parsed as Record<string, unknown>;
+        const content = typeof obj['content'] === 'string' ? obj['content'].trim() : '';
+        if (content) {
+          return content;
+        }
+
+        const memo = typeof obj['memo'] === 'string' ? obj['memo'].trim() : '';
+        if (memo) {
+          return memo;
+        }
+
+        const recipient = typeof obj['identifier'] === 'string' ? obj['identifier'].trim() : '';
+        if (recipient) {
+          return `Payment to ${recipient}`;
+        }
+
+        if (typeof obj['kind'] === 'number') {
+          return `Nostr event payment (${obj['kind']})`;
+        }
+      }
+    } catch {
+      // Not JSON, return cleaned text below
+    }
+
+    const cleaned = trimmed.replace(/\s+/g, ' ').trim();
+    if (!cleaned) {
+      return null;
+    }
+
+    if (cleaned.length > 120) {
+      return `${cleaned.slice(0, 117)}...`;
+    }
+
+    return cleaned;
+  }
+
+  private parseTransactionMetadata(metadata?: Record<string, unknown>): string | null {
+    if (!metadata) {
+      return null;
+    }
+
+    const descriptionKeys = ['description', 'memo', 'comment', 'identifier'];
+    for (const key of descriptionKeys) {
+      const value = metadata[key];
+      if (typeof value === 'string' && value.trim()) {
+        return key === 'identifier' ? `Payment to ${value.trim()}` : value.trim();
+      }
+    }
+
+    return null;
   }
 
   /**
@@ -650,5 +764,39 @@ export class WalletComponent {
     if (index === 1) {
       this.loadAllTransactions();
     }
+
+    const currentPath = this.router.url.split('?')[0].split('#')[0];
+    const targetPath = this.getTabPath(index);
+    if (currentPath !== targetPath) {
+      this.router.navigateByUrl(targetPath);
+    }
+  }
+
+  private syncTabFromUrl(url: string): void {
+    const path = url.split('?')[0].split('#')[0];
+    if (path === '/wallet/transactions') {
+      this.activeTabIndex.set(1);
+      this.loadAllTransactions();
+      return;
+    }
+
+    if (path === '/wallet/zaps') {
+      this.activeTabIndex.set(2);
+      return;
+    }
+
+    this.activeTabIndex.set(0);
+  }
+
+  private getTabPath(index: number): string {
+    if (index === 1) {
+      return '/wallet/transactions';
+    }
+
+    if (index === 2) {
+      return '/wallet/zaps';
+    }
+
+    return '/wallet';
   }
 }

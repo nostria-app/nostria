@@ -470,10 +470,22 @@ export const routes: Routes = [
   },
   {
     path: 'zaps',
+    pathMatch: 'full',
+    redirectTo: 'wallet/zaps',
+  },
+  {
+    path: 'wallet/transactions',
     data: { isRoot: true },
     loadComponent: () =>
-      import('./components/zap-history/zap-history.component').then(m => m.ZapHistoryComponent),
-    title: 'Zap History',
+      import('./pages/wallet/wallet.component').then(m => m.WalletComponent),
+    title: 'Wallet Transactions',
+  },
+  {
+    path: 'wallet/zaps',
+    data: { isRoot: true },
+    loadComponent: () =>
+      import('./pages/wallet/wallet.component').then(m => m.WalletComponent),
+    title: 'Wallet Zaps',
   },
   {
     path: 'wallet',

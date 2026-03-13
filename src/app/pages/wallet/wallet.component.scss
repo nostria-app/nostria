@@ -116,6 +116,11 @@
   padding: 20px 16px;
 }
 
+.wallet-zaps-content {
+  height: calc(100vh - 220px);
+  min-height: 480px;
+}
+
 // Empty state styles
 .empty-state {
   display: flex;
@@ -389,6 +394,7 @@
 .transfer-success {
   background-color: rgba(76, 175, 80, 0.1);
   color: var(--mat-success-color);
+  margin-bottom: 10px;
 }
 
 .transfer-card mat-card-actions {

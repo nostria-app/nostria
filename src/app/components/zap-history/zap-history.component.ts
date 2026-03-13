@@ -4,7 +4,7 @@ import { Router } from '@angular/router';
 import { ScrollingModule } from '@angular/cdk/scrolling';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
-import { MatTabsModule } from '@angular/material/tabs';
+import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatMenuModule } from '@angular/material/menu';
@@ -39,7 +39,7 @@ interface ZapHistoryEntry {
     ScrollingModule,
     MatIconModule,
     MatButtonModule,
-    MatTabsModule,
+    MatButtonToggleModule,
     MatProgressSpinnerModule,
     MatTooltipModule,
     MatMenuModule,
@@ -55,212 +55,94 @@ interface ZapHistoryEntry {
           <p>Loading zap history...</p>
         </div>
       } @else {
-        <mat-tab-group (selectedTabChange)="onTabChange($event)" class="zap-tabs">
-          <mat-tab label="All Zaps">
-            <div class="tab-content">
-              <div class="stats-row">
-                <div class="stat">
-                  <span class="stat-label">Total Sent:</span>
-                  <span class="stat-value sent">{{ totalSent() }} sats</span>
-                </div>
-                <div class="stat">
-                  <span class="stat-label">Total Received:</span>
-                  <span class="stat-value received">{{ totalReceived() }} sats</span>
-                </div>
-                <div class="stat">
-                  <span class="stat-label">Net:</span>
-                  <span
-                    class="stat-value"
-                    [class.sent]="netAmount() < 0"
-                    [class.received]="netAmount() > 0"
-                  >
-                    {{ netAmount() }} sats
+        <div class="controls-row">
+          <mat-button-toggle-group class="filter-toggles" [value]="filterMode()" (change)="setFilterMode($event.value)">
+            <mat-button-toggle value="all">All ({{ allZaps().length }})</mat-button-toggle>
+            <mat-button-toggle value="sent">Sent ({{ sentZaps().length }})</mat-button-toggle>
+            <mat-button-toggle value="received">Received ({{ receivedZaps().length }})</mat-button-toggle>
+          </mat-button-toggle-group>
+
+          <mat-button-toggle-group class="sort-toggles" [value]="sortBy()" (change)="setSortBy($event.value)">
+            <mat-button-toggle value="date">Date</mat-button-toggle>
+            <mat-button-toggle value="amount">Amount</mat-button-toggle>
+          </mat-button-toggle-group>
+        </div>
+
+        <div class="stats-row">
+          <div class="stat">
+            <span class="stat-label">Total Sent:</span>
+            <span class="stat-value sent">{{ totalSent() }} sats</span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Total Received:</span>
+            <span class="stat-value received">{{ totalReceived() }} sats</span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Net:</span>
+            <span class="stat-value" [class.sent]="netAmount() < 0" [class.received]="netAmount() > 0">
+              {{ netAmount() }} sats
+            </span>
+          </div>
+        </div>
+
+        @if (displayedZaps().length === 0) {
+          <div class="empty-state">
+            <mat-icon class="empty-icon">bolt</mat-icon>
+            <h3>{{ emptyStateTitle() }}</h3>
+            <p>{{ emptyStateDescription() }}</p>
+          </div>
+        } @else {
+          <cdk-virtual-scroll-viewport [itemSize]="56" [minBufferPx]="800" [maxBufferPx]="1400" class="zaps-viewport">
+            <div
+              *cdkVirtualFor="let zap of displayedZaps(); trackBy: trackByZapId"
+              class="zap-entry"
+              [class.sent]="zap.type === 'sent'"
+              [class.received]="zap.type === 'received'"
+            >
+              <div class="zap-entry-inner" (click)="openZapEvent(zap)" (keydown.enter)="openZapEvent(zap)" tabindex="0" role="button">
+                <div class="zap-row">
+                  <mat-icon class="type-icon">{{ zap.type === 'sent' ? 'trending_up' : 'trending_down' }}</mat-icon>
+                  <span class="type-label">{{ zap.type === 'sent' ? 'Sent to' : 'From' }}</span>
+                  <span class="counterparty">
+                    <app-user-profile
+                      [pubkey]="zap.counterparty"
+                      view="icon"
+                      [hostWidthAuto]="true"
+                      [prefetchedProfile]="prefetchedProfiles()[zap.counterparty]"
+                    ></app-user-profile>
                   </span>
+                  @if (zap.eventId) {
+                    <mat-icon class="context-indicator" matTooltip="View zapped event">note</mat-icon>
+                  }
+                  @if (zap.comment) {
+                    <span class="comment-text" [matTooltip]="zap.comment">{{ zap.comment }}</span>
+                  }
+                  <span class="spacer"></span>
+                  <div class="zap-amount">
+                    <mat-icon class="bolt-icon">bolt</mat-icon>
+                    <span class="amount">{{ formatAmount(zap.amount) }}</span>
+                  </div>
+                  <div class="zap-time" [matTooltip]="zap.timestamp | timestamp: 'medium'">
+                    {{ zap.timestamp | ago }}
+                  </div>
+                  <button mat-icon-button [matMenuTriggerFor]="zapMenu" class="zap-menu-button" matTooltip="More options" (click)="$event.stopPropagation()">
+                    <mat-icon>more_vert</mat-icon>
+                  </button>
+                  <mat-menu #zapMenu="matMenu">
+                    <button mat-menu-item (click)="copyEventData(zap)">
+                      <mat-icon>content_copy</mat-icon>
+                      <span>Copy Event Data</span>
+                    </button>
+                    <button mat-menu-item (click)="layout.publishEvent(zap.zapReceipt)">
+                      <mat-icon>publish</mat-icon>
+                      <span>Publish Event</span>
+                    </button>
+                  </mat-menu>
                 </div>
               </div>
-              @if (allZaps().length === 0) {
-                <div class="empty-state">
-                  <mat-icon class="empty-icon">bolt</mat-icon>
-                  <h3>No zaps yet</h3>
-                  <p>Your zap history will appear here once you send or receive lightning payments.</p>
-                </div>
-              } @else {
-                <cdk-virtual-scroll-viewport [itemSize]="56" [minBufferPx]="800" [maxBufferPx]="1400" class="zaps-viewport">
-                  <div
-                    *cdkVirtualFor="let zap of allZaps(); trackBy: trackByZapId"
-                    class="zap-entry"
-                    [class.sent]="zap.type === 'sent'"
-                    [class.received]="zap.type === 'received'"
-                  >
-                    <div class="zap-entry-inner" (click)="openZapEvent(zap)" (keydown.enter)="openZapEvent(zap)" tabindex="0" role="button">
-                      <div class="zap-row">
-                        <mat-icon class="type-icon">{{ zap.type === 'sent' ? 'trending_up' : 'trending_down' }}</mat-icon>
-                        <span class="type-label">{{ zap.type === 'sent' ? 'Sent to' : 'From' }}</span>
-                        <span class="counterparty">
-                          <app-user-profile
-                            [pubkey]="zap.counterparty"
-                            view="icon"
-                            [hostWidthAuto]="true"
-                            [prefetchedProfile]="prefetchedProfiles()[zap.counterparty]"
-                          ></app-user-profile>
-                        </span>
-                        @if (zap.eventId) {
-                          <mat-icon class="context-indicator" matTooltip="View zapped event">note</mat-icon>
-                        }
-                        @if (zap.comment) {
-                          <span class="comment-text" [matTooltip]="zap.comment">{{ zap.comment }}</span>
-                        }
-                        <span class="spacer"></span>
-                        <div class="zap-amount">
-                          <mat-icon class="bolt-icon">bolt</mat-icon>
-                          <span class="amount">{{ formatAmount(zap.amount) }}</span>
-                        </div>
-                        <div class="zap-time" [matTooltip]="zap.timestamp | timestamp: 'medium'">
-                          {{ zap.timestamp | ago }}
-                        </div>
-                        <button mat-icon-button [matMenuTriggerFor]="zapMenu" class="zap-menu-button" matTooltip="More options" (click)="$event.stopPropagation()">
-                          <mat-icon>more_vert</mat-icon>
-                        </button>
-                        <mat-menu #zapMenu="matMenu">
-                          <button mat-menu-item (click)="copyEventData(zap)">
-                            <mat-icon>content_copy</mat-icon>
-                            <span>Copy Event Data</span>
-                          </button>
-                          <button mat-menu-item (click)="layout.publishEvent(zap.zapReceipt)">
-                            <mat-icon>publish</mat-icon>
-                            <span>Publish Event</span>
-                          </button>
-                        </mat-menu>
-                      </div>
-                    </div>
-                  </div>
-                </cdk-virtual-scroll-viewport>
-              }
             </div>
-          </mat-tab>
-
-          <mat-tab label="Sent ({{ sentZaps().length }})">
-            <div class="tab-content">
-              @if (sentZaps().length === 0) {
-                <div class="empty-state">
-                  <mat-icon class="empty-icon">trending_up</mat-icon>
-                  <h3>No zaps sent</h3>
-                  <p>Zaps you send to others will appear here.</p>
-                </div>
-              } @else {
-                <cdk-virtual-scroll-viewport [itemSize]="56" [minBufferPx]="800" [maxBufferPx]="1400" class="zaps-viewport">
-                  <div
-                    *cdkVirtualFor="let zap of sentZaps(); trackBy: trackByZapId"
-                    class="zap-entry sent"
-                  >
-                    <div class="zap-entry-inner" (click)="openZapEvent(zap)" (keydown.enter)="openZapEvent(zap)" tabindex="0" role="button">
-                      <div class="zap-row">
-                        <mat-icon class="type-icon">trending_up</mat-icon>
-                        <span class="type-label">Sent to</span>
-                        <span class="counterparty">
-                          <app-user-profile
-                            [pubkey]="zap.counterparty"
-                            view="icon"
-                            [hostWidthAuto]="true"
-                            [prefetchedProfile]="prefetchedProfiles()[zap.counterparty]"
-                          ></app-user-profile>
-                        </span>
-                        @if (zap.eventId) {
-                          <mat-icon class="context-indicator" matTooltip="View zapped event">note</mat-icon>
-                        }
-                        @if (zap.comment) {
-                          <span class="comment-text" [matTooltip]="zap.comment">{{ zap.comment }}</span>
-                        }
-                        <span class="spacer"></span>
-                        <div class="zap-amount">
-                          <mat-icon class="bolt-icon">bolt</mat-icon>
-                          <span class="amount">{{ formatAmount(zap.amount) }}</span>
-                        </div>
-                        <div class="zap-time" [matTooltip]="zap.timestamp | timestamp: 'medium'">
-                          {{ zap.timestamp | ago }}
-                        </div>
-                        <button mat-icon-button [matMenuTriggerFor]="sentZapMenu" class="zap-menu-button" matTooltip="More options" (click)="$event.stopPropagation()">
-                          <mat-icon>more_vert</mat-icon>
-                        </button>
-                        <mat-menu #sentZapMenu="matMenu">
-                          <button mat-menu-item (click)="copyEventData(zap)">
-                            <mat-icon>content_copy</mat-icon>
-                            <span>Copy Event Data</span>
-                          </button>
-                          <button mat-menu-item (click)="layout.publishEvent(zap.zapReceipt)">
-                            <mat-icon>publish</mat-icon>
-                            <span>Publish Event</span>
-                          </button>
-                        </mat-menu>
-                      </div>
-                    </div>
-                  </div>
-                </cdk-virtual-scroll-viewport>
-              }
-            </div>
-          </mat-tab>
-
-          <mat-tab label="Received ({{ receivedZaps().length }})">
-            <div class="tab-content">
-              @if (receivedZaps().length === 0) {
-                <div class="empty-state">
-                  <mat-icon class="empty-icon">trending_down</mat-icon>
-                  <h3>No zaps received</h3>
-                  <p>Zaps you receive from others will appear here.</p>
-                </div>
-              } @else {
-                <cdk-virtual-scroll-viewport [itemSize]="56" [minBufferPx]="800" [maxBufferPx]="1400" class="zaps-viewport">
-                  <div
-                    *cdkVirtualFor="let zap of receivedZaps(); trackBy: trackByZapId"
-                    class="zap-entry received"
-                  >
-                    <div class="zap-entry-inner" (click)="openZapEvent(zap)" (keydown.enter)="openZapEvent(zap)" tabindex="0" role="button">
-                      <div class="zap-row">
-                        <mat-icon class="type-icon">trending_down</mat-icon>
-                        <span class="type-label">From</span>
-                        <span class="counterparty">
-                          <app-user-profile
-                            [pubkey]="zap.counterparty"
-                            view="icon"
-                            [hostWidthAuto]="true"
-                            [prefetchedProfile]="prefetchedProfiles()[zap.counterparty]"
-                          ></app-user-profile>
-                        </span>
-                        @if (zap.eventId) {
-                          <mat-icon class="context-indicator" matTooltip="View zapped event">note</mat-icon>
-                        }
-                        @if (zap.comment) {
-                          <span class="comment-text" [matTooltip]="zap.comment">{{ zap.comment }}</span>
-                        }
-                        <span class="spacer"></span>
-                        <div class="zap-amount">
-                          <mat-icon class="bolt-icon">bolt</mat-icon>
-                          <span class="amount">{{ formatAmount(zap.amount) }}</span>
-                        </div>
-                        <div class="zap-time" [matTooltip]="zap.timestamp | timestamp: 'medium'">
-                          {{ zap.timestamp | ago }}
-                        </div>
-                        <button mat-icon-button [matMenuTriggerFor]="receivedZapMenu" class="zap-menu-button" matTooltip="More options" (click)="$event.stopPropagation()">
-                          <mat-icon>more_vert</mat-icon>
-                        </button>
-                        <mat-menu #receivedZapMenu="matMenu">
-                          <button mat-menu-item (click)="copyEventData(zap)">
-                            <mat-icon>content_copy</mat-icon>
-                            <span>Copy Event Data</span>
-                          </button>
-                          <button mat-menu-item (click)="layout.publishEvent(zap.zapReceipt)">
-                            <mat-icon>publish</mat-icon>
-                            <span>Publish Event</span>
-                          </button>
-                        </mat-menu>
-                      </div>
-                    </div>
-                  </div>
-                </cdk-virtual-scroll-viewport>
-              }
-            </div>
-          </mat-tab>
-        </mat-tab-group>
+          </cdk-virtual-scroll-viewport>
+        }
       }
     </div>
   `,
@@ -290,33 +172,19 @@ interface ZapHistoryEntry {
         flex: 1;
       }
 
-      .zap-tabs {
-        flex: 1;
+      .controls-row {
         display: flex;
-        flex-direction: column;
-        min-height: 0;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 16px 0 12px 0;
+        flex-wrap: wrap;
+        flex-shrink: 0;
       }
 
-      ::ng-deep .zap-tabs .mat-mdc-tab-body-wrapper {
-        flex: 1;
-        min-height: 0;
-      }
-
-      ::ng-deep .zap-tabs .mat-mdc-tab-body {
-        height: 100%;
-      }
-
-      ::ng-deep .zap-tabs .mat-mdc-tab-body-content {
-        height: 100%;
-        overflow: hidden;
-      }
-
-      .tab-content {
-        height: 100%;
-        display: flex;
-        flex-direction: column;
-        padding-top: 16px;
-        overflow: hidden;
+      .filter-toggles,
+      .sort-toggles {
+        --mat-standard-button-toggle-height: 36px;
       }
 
       .stats-row {
@@ -548,6 +416,15 @@ interface ZapHistoryEntry {
           padding: 0 8px 8px 8px;
         }
 
+        .controls-row {
+          align-items: stretch;
+        }
+
+        .filter-toggles,
+        .sort-toggles {
+          width: 100%;
+        }
+
         .stats-row {
           flex-direction: column;
           gap: 8px;
@@ -581,6 +458,8 @@ export class ZapHistoryComponent implements OnDestroy {
   isLoading = signal(false);
   allZaps = signal<ZapHistoryEntry[]>([]);
   prefetchedProfiles = signal<Record<string, unknown>>({});
+  filterMode = signal<'all' | 'sent' | 'received'>('all');
+  sortBy = signal<'date' | 'amount'>('date');
 
   // Computed properties
   sentZaps = computed(() => this.allZaps().filter(zap => zap.type === 'sent'));
@@ -596,6 +475,48 @@ export class ZapHistoryComponent implements OnDestroy {
 
   netAmount = computed(() => {
     return this.totalReceived() - this.totalSent();
+  });
+
+  displayedZaps = computed(() => {
+    let base = this.allZaps();
+    const filterMode = this.filterMode();
+
+    if (filterMode === 'sent') {
+      base = this.sentZaps();
+    } else if (filterMode === 'received') {
+      base = this.receivedZaps();
+    }
+
+    const sorted = [...base];
+    if (this.sortBy() === 'amount') {
+      sorted.sort((a, b) => b.amount - a.amount || b.timestamp - a.timestamp);
+    } else {
+      sorted.sort((a, b) => b.timestamp - a.timestamp);
+    }
+
+    return sorted;
+  });
+
+  emptyStateTitle = computed(() => {
+    switch (this.filterMode()) {
+      case 'sent':
+        return 'No zaps sent';
+      case 'received':
+        return 'No zaps received';
+      default:
+        return 'No zaps yet';
+    }
+  });
+
+  emptyStateDescription = computed(() => {
+    switch (this.filterMode()) {
+      case 'sent':
+        return 'Zaps you send to others will appear here.';
+      case 'received':
+        return 'Zaps you receive from others will appear here.';
+      default:
+        return 'Your zap history will appear here once you send or receive lightning payments.';
+    }
   });
 
   trackByZapId = (_index: number, zap: ZapHistoryEntry) => zap.zapReceipt.id;
@@ -785,8 +706,18 @@ export class ZapHistoryComponent implements OnDestroy {
     }
   }
 
-  onTabChange(event: { index: number }): void {
-    console.log('Tab changed to index:', event.index);
+  setFilterMode(value: 'all' | 'sent' | 'received' | null): void {
+    if (!value) {
+      return;
+    }
+    this.filterMode.set(value);
+  }
+
+  setSortBy(value: 'date' | 'amount' | null): void {
+    if (!value) {
+      return;
+    }
+    this.sortBy.set(value);
   }
 
   formatAmount(amount: number): string {

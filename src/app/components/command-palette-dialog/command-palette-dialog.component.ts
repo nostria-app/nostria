@@ -275,7 +275,7 @@ export class CommandPaletteDialogComponent implements AfterViewInit, OnDestroy {
       id: 'nav-zaps',
       label: 'Open Zap History',
       icon: 'bolt',
-      action: () => this.router.navigate(['/zaps']),
+      action: () => this.router.navigate(['/wallet/zaps']),
       keywords: ['zaps', 'payments', 'lightning', 'bitcoin', 'tips', 'history']
     },
     {

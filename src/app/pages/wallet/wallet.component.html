@@ -126,6 +126,7 @@
         }
 
         <!-- Transfer Card -->
+        @if (getTransferWalletOptions().length >= 2) {
         <mat-card class="transfer-card">
           <mat-card-header>
             <mat-card-title>
@@ -137,7 +138,6 @@
           </mat-card-header>
 
           <mat-card-content>
-            @if (getTransferWalletOptions().length >= 2) {
             <div class="transfer-content">
               <div class="transfer-wallets-row">
                 <mat-form-field appearance="outline" class="transfer-field">
@@ -191,15 +191,11 @@
               </div>
               }
             </div>
-            } @else {
-            <p class="transfer-empty" i18n="@@wallet.transfer.empty">Add at least two wallets to transfer between them.
-            </p>
-            }
           </mat-card-content>
 
           <mat-card-actions>
             <button mat-flat-button (click)="transferBetweenWallets()"
-              [disabled]="isTransferring() || getTransferWalletOptions().length < 2 || transferAmountControl.invalid || !transferFromPubkey() || !transferToPubkey()">
+              [disabled]="isTransferring() || transferAmountControl.invalid || !transferFromPubkey() || !transferToPubkey()">
               @if (isTransferring()) {
               <span i18n="@@wallet.transfer.processing">Transferring...</span>
               } @else {
@@ -208,6 +204,7 @@
             </button>
           </mat-card-actions>
         </mat-card>
+        }
 
         <!-- Donation Card -->
         <mat-card class="donation-card">
@@ -389,14 +386,8 @@
       </ng-template>
 
       <div class="tab-content">
-        <div class="zaps-redirect">
-          <mat-icon class="zaps-icon">bolt</mat-icon>
-          <h2 i18n="@@wallet.zaps.title">Zap History</h2>
-          <p i18n="@@wallet.zaps.description">View all your sent and received zaps in the dedicated Zaps page.</p>
-          <button mat-flat-button routerLink="/zaps">
-            <mat-icon>open_in_new</mat-icon>
-            <span i18n="@@wallet.zaps.view-button">View Zap History</span>
-          </button>
+        <div class="wallet-zaps-content">
+          <app-zap-history></app-zap-history>
         </div>
       </div>
     </mat-tab>
