@@ -46,6 +46,16 @@ export interface TrackItem {
   event?: Event;
 }
 
+interface AvailableTrackItem {
+  ref: string;
+  title: string;
+  artist: string;
+  album: string;
+  image?: string;
+  createdAt: number;
+  event: Event;
+}
+
 interface ZapSplit {
   pubkey: string;
   name: string;
@@ -102,6 +112,9 @@ export class EditMusicPlaylistDialogComponent {
   previousCoverImage = signal<string | null>(null); // Track original image for cleanup
   tracks = signal<TrackItem[]>([]);
   loadingTracks = signal(true);
+  availableTracks = signal<AvailableTrackItem[]>([]);
+  loadingAvailableTracks = signal(false);
+  trackSearchQuery = signal('');
 
   // Zap splits
   zapSplits = signal<ZapSplit[]>([]);
@@ -115,6 +128,20 @@ export class EditMusicPlaylistDialogComponent {
   totalSplitPercentage = computed(() => {
     const splits = this.zapSplits();
     return splits.reduce((sum, split) => sum + split.percentage, 0);
+  });
+
+  filteredAvailableTracks = computed(() => {
+    const existingRefs = new Set(this.tracks().map(track => track.ref));
+    const query = this.trackSearchQuery().trim().toLowerCase();
+
+    return this.availableTracks()
+      .filter(track => !existingRefs.has(track.ref))
+      .filter(track => {
+        if (!query) return true;
+        return track.title.toLowerCase().includes(query)
+          || track.artist.toLowerCase().includes(query)
+          || track.album.toLowerCase().includes(query);
+      });
   });
 
   // Relay publishing configuration
@@ -179,6 +206,7 @@ export class EditMusicPlaylistDialogComponent {
 
           // Load track details
           this.loadTrackDetails();
+          this.loadAvailableTracks();
         });
       }
     });
@@ -412,6 +440,138 @@ export class EditMusicPlaylistDialogComponent {
 
     this.tracks.set(updatedTracks);
     this.loadingTracks.set(false);
+  }
+
+  private getTrackRefFromEvent(event: Event): string | null {
+    const dTag = event.tags.find(tag => tag[0] === 'd')?.[1]?.trim();
+    if (!dTag) {
+      return null;
+    }
+    return `${event.kind}:${event.pubkey}:${dTag}`;
+  }
+
+  private async loadAvailableTracks(): Promise<void> {
+    const pubkey = this.accountState.pubkey();
+    if (!pubkey) {
+      this.availableTracks.set([]);
+      return;
+    }
+
+    this.loadingAvailableTracks.set(true);
+
+    const trackMap = new Map<string, Event>();
+    const upsertTrack = (event: Event): void => {
+      if (event.pubkey !== pubkey) {
+        return;
+      }
+
+      const ref = this.getTrackRefFromEvent(event);
+      if (!ref) {
+        return;
+      }
+
+      const existing = trackMap.get(ref);
+      if (!existing || existing.created_at < event.created_at) {
+        trackMap.set(ref, event);
+      }
+    };
+
+    try {
+      await Promise.all(MUSIC_KINDS.map(async (kind) => {
+        const cachedTracks = await this.database.getEventsByKind(kind);
+        for (const track of cachedTracks) {
+          upsertTrack(track);
+        }
+      }));
+
+      const relayUrls = this.relaysService.getOptimalRelays(this.utilities.preferredRelays);
+      if (relayUrls.length > 0) {
+        const filter: Filter = {
+          kinds: MUSIC_KINDS,
+          authors: [pubkey],
+          limit: 500,
+        };
+
+        await new Promise<void>((resolve) => {
+          const timeout = setTimeout(() => {
+            subscription?.close();
+            resolve();
+          }, 3500);
+
+          const subscription = this.pool.subscribe(relayUrls, filter, (event: Event) => {
+            upsertTrack(event);
+            const dTag = event.tags.find(tag => tag[0] === 'd')?.[1];
+            this.database.saveEvent({ ...event, dTag }).catch(error => {
+              this.logger.warn('Failed to save available track cache event', error);
+            });
+          });
+
+          setTimeout(() => {
+            clearTimeout(timeout);
+            subscription?.close();
+            resolve();
+          }, 2200);
+        });
+      }
+
+      const defaultArtist = this.currentUserProfile().name || 'Unknown Artist';
+      const availableTracks = Array.from(trackMap.values())
+        .map(event => {
+          const ref = this.getTrackRefFromEvent(event);
+          if (!ref) return null;
+
+          return {
+            ref,
+            title: this.utilities.getMusicTitle(event) || 'Untitled Track',
+            artist: this.utilities.getMusicArtist(event) || defaultArtist,
+            album: event.tags.find(tag => tag[0] === 'album')?.[1] || '',
+            image: this.utilities.getMusicImage(event),
+            createdAt: event.created_at,
+            event,
+          } as AvailableTrackItem;
+        })
+        .filter((track): track is AvailableTrackItem => track !== null)
+        .sort((first, second) => second.createdAt - first.createdAt);
+
+      this.availableTracks.set(availableTracks);
+    } catch (error) {
+      this.logger.error('Failed loading available tracks for album editor', error);
+      this.availableTracks.set([]);
+    } finally {
+      this.loadingAvailableTracks.set(false);
+    }
+  }
+
+  onTrackSearchInput(event: globalThis.Event): void {
+    const target = event.target as HTMLInputElement;
+    this.trackSearchQuery.set(target.value || '');
+  }
+
+  addTrackToAlbumFromLibrary(track: AvailableTrackItem): void {
+    const existingRefs = new Set(this.tracks().map(item => item.ref));
+    if (existingRefs.has(track.ref)) {
+      return;
+    }
+
+    const coordinate = this.utilities.parseMusicTrackCoordinate(track.ref);
+    if (!coordinate) {
+      return;
+    }
+
+    this.tracks.update(items => [
+      ...items,
+      {
+        ref: track.ref,
+        kind: coordinate.kind,
+        pubkey: coordinate.pubkey,
+        dTag: coordinate.identifier,
+        title: track.title,
+        artist: track.artist,
+        image: track.image,
+        loading: false,
+        event: track.event,
+      },
+    ]);
   }
 
   randomizeGradient(): void {

@@ -357,6 +357,129 @@
       height: 1rem;
     }
   }
+
+  .available-tracks {
+    margin-top: 14px;
+    border: 1px solid var(--mat-sys-outline-variant);
+    border-radius: var(--mat-sys-corner-small);
+    padding: 12px;
+    background: var(--mat-sys-surface-container-low);
+  }
+
+  .available-tracks-header {
+    font-size: 0.875rem;
+    color: var(--mat-sys-on-surface);
+    margin-bottom: 10px;
+  }
+
+  .available-track-search {
+    margin-bottom: 10px;
+  }
+
+  .available-tracks-loading,
+  .available-tracks-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 16px;
+    color: var(--mat-sys-on-surface-variant);
+
+    mat-icon {
+      font-size: 1rem;
+      width: 1rem;
+      height: 1rem;
+    }
+  }
+
+  .available-tracks-list {
+    display: flex;
+    flex-direction: column;
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px solid var(--mat-sys-outline-variant);
+    border-radius: var(--mat-sys-corner-small);
+    background: var(--mat-sys-surface-container);
+  }
+
+  .available-track-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px;
+    border-bottom: 1px solid var(--mat-sys-outline-variant);
+
+    &:last-child {
+      border-bottom: none;
+    }
+  }
+
+  .available-track-image {
+    width: 40px;
+    height: 40px;
+    border-radius: var(--mat-sys-corner-extra-small);
+    background: var(--mat-sys-surface-container-high);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    flex-shrink: 0;
+
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    mat-icon {
+      color: var(--mat-sys-on-surface-variant);
+      font-size: 1rem;
+      width: 1rem;
+      height: 1rem;
+    }
+  }
+
+  .available-track-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .available-track-title {
+    color: var(--mat-sys-on-surface);
+    font-size: 0.9375rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .available-track-meta {
+    color: var(--mat-sys-on-surface-variant);
+    font-size: 0.8125rem;
+    display: flex;
+    gap: 8px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .available-track-album {
+    color: var(--mat-sys-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .available-track-add {
+    flex-shrink: 0;
+    opacity: 0.85;
+
+    &:hover {
+      opacity: 1;
+    }
+  }
 }
 
 // Zap Splits Section

@@ -113,7 +113,7 @@
             </div>
             <div class="track-image">
               @if (track.image) {
-              <img [src]="track.image" [alt]="track.title" [title]="track.title" />
+              <img [src]="track.image" [alt]="track.title" title="{{ track.title }}" />
               } @else {
               <mat-icon>music_note</mat-icon>
               }
@@ -135,6 +135,55 @@
           Drag tracks to reorder
         </p>
         }
+
+        <div class="available-tracks">
+          <div class="available-tracks-header">Available Tracks</div>
+
+          <mat-form-field appearance="outline" class="full-width available-track-search">
+            <mat-icon matPrefix>music_note</mat-icon>
+            <input matInput placeholder="Search tracks..." [value]="trackSearchQuery()"
+              (input)="onTrackSearchInput($event)" autocomplete="off" />
+          </mat-form-field>
+
+          @if (loadingAvailableTracks()) {
+          <div class="available-tracks-loading">
+            <mat-spinner diameter="20"></mat-spinner>
+            <span>Loading available tracks...</span>
+          </div>
+          } @else if (filteredAvailableTracks().length === 0) {
+          <div class="available-tracks-empty">
+            <mat-icon>queue_music</mat-icon>
+            <span>No matching tracks found</span>
+          </div>
+          } @else {
+          <div class="available-tracks-list">
+            @for (track of filteredAvailableTracks(); track track.ref) {
+            <div class="available-track-item">
+              <div class="available-track-image">
+                @if (track.image) {
+                <img [src]="track.image" [alt]="track.title" title="{{ track.title }}" />
+                } @else {
+                <mat-icon>music_note</mat-icon>
+                }
+              </div>
+              <div class="available-track-info">
+                <span class="available-track-title">{{ track.title }}</span>
+                <span class="available-track-meta">
+                  {{ track.artist }}
+                  @if (track.album) {
+                  <span class="available-track-album">{{ track.album }}</span>
+                  }
+                </span>
+              </div>
+              <button mat-icon-button type="button" class="available-track-add"
+                (click)="addTrackToAlbumFromLibrary(track)" aria-label="Add track to album">
+                <mat-icon>add</mat-icon>
+              </button>
+            </div>
+            }
+          </div>
+          }
+        </div>
       </div>
 
       <!-- Zap Splits Section -->
@@ -172,7 +221,7 @@
           <div class="split-item">
             <div class="split-avatar">
               @if (split.avatar) {
-              <img [src]="split.avatar" [alt]="split.name" [title]="split.name" />
+              <img [src]="split.avatar" [alt]="split.name" title="{{ split.name }}" />
               } @else {
               <mat-icon>person</mat-icon>
               }
