@@ -2375,8 +2375,8 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       await this.database.init();
       await this.database.clearAllMessages();
 
-      // Clear the in-memory chats
-      this.messaging.clear();
+      // Clear in-memory chats but keep dead-letter IDs for spam/deleted message resync safety
+      this.messaging.clearForResyncPreserveDeadLetter();
 
       // Reset the messages last check timestamp so we fetch all messages again
       const pubkey = this.accountState.pubkey();

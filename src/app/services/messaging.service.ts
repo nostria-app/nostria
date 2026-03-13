@@ -781,6 +781,25 @@ export class MessagingService implements NostriaService {
     this.bootstrappedPubkey = null;
   }
 
+  /**
+   * Clear loaded chat/message state for a local cache reset while preserving
+   * the dead-letter list so previously deleted/spam event IDs remain skipped.
+   */
+  clearForResyncPreserveDeadLetter(): void {
+    this.chatsMap.set(new Map());
+    this.oldestChatTimestamp.set(null);
+    this.isLoading.set(false);
+    this.isLoadingMoreChats.set(false);
+    this.hasMoreChats.set(true);
+    this.error.set(null);
+    this.knownEventIds.clear();
+    for (const eventId of this.deadLetterEventIds) {
+      this.knownEventIds.add(eventId);
+    }
+    this.bootstrapUnreadCount.set(null);
+    this.bootstrappedPubkey = null;
+  }
+
   reset() {
     this.chatsMap.set(new Map());
     this.oldestChatTimestamp.set(null);
