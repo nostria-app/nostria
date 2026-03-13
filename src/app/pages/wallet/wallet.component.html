@@ -125,6 +125,87 @@
         </mat-card>
         }
 
+        <!-- Transfer Card -->
+        <mat-card class="transfer-card">
+          <mat-card-header>
+            <mat-card-title>
+              <mat-icon>swap_horiz</mat-icon>
+              <span i18n="@@wallet.transfer.title">Transfer Between Wallets</span>
+            </mat-card-title>
+            <mat-card-subtitle i18n="@@wallet.transfer.subtitle">Move sats from one connected wallet to another</mat-card-subtitle>
+          </mat-card-header>
+
+          <mat-card-content>
+            @if (getTransferWalletOptions().length >= 2) {
+              <div class="transfer-content">
+                <div class="transfer-wallets-row">
+                  <mat-form-field appearance="outline" class="transfer-field">
+                    <mat-label i18n="@@wallet.transfer.from">From wallet</mat-label>
+                    <mat-select [value]="transferFromPubkey()" (selectionChange)="selectTransferFrom($event.value)">
+                      @for (option of getTransferWalletOptions(); track option.pubkey) {
+                        @if (option.pubkey !== transferToPubkey()) {
+                          <mat-option [value]="option.pubkey">{{ option.name }}</mat-option>
+                        }
+                      }
+                    </mat-select>
+                  </mat-form-field>
+
+                  <mat-form-field appearance="outline" class="transfer-field">
+                    <mat-label i18n="@@wallet.transfer.to">To wallet</mat-label>
+                    <mat-select [value]="transferToPubkey()" (selectionChange)="selectTransferTo($event.value)">
+                      @for (option of getTransferWalletOptions(); track option.pubkey) {
+                        @if (option.pubkey !== transferFromPubkey()) {
+                          <mat-option [value]="option.pubkey">{{ option.name }}</mat-option>
+                        }
+                      }
+                    </mat-select>
+                  </mat-form-field>
+                </div>
+
+                <div class="transfer-inputs-row">
+                  <mat-form-field appearance="outline" class="transfer-amount-field">
+                    <mat-label i18n="@@wallet.transfer.amount">Amount</mat-label>
+                    <input matInput type="number" min="1" step="1" [formControl]="transferAmountControl" placeholder="Enter amount in sats" />
+                    <span matSuffix>sats</span>
+                  </mat-form-field>
+
+                  <mat-form-field appearance="outline" class="transfer-memo-field">
+                    <mat-label i18n="@@wallet.transfer.memo">Memo (optional)</mat-label>
+                    <input matInput [formControl]="transferMemoControl" placeholder="Transfer note" />
+                  </mat-form-field>
+                </div>
+
+                @if (transferError()) {
+                  <div class="transfer-error">
+                    <mat-icon>error</mat-icon>
+                    <span>{{ transferError() }}</span>
+                  </div>
+                }
+
+                @if (transferSuccess()) {
+                  <div class="transfer-success">
+                    <mat-icon>check_circle</mat-icon>
+                    <span>{{ transferSuccess() }}</span>
+                  </div>
+                }
+              </div>
+            } @else {
+              <p class="transfer-empty" i18n="@@wallet.transfer.empty">Add at least two wallets to transfer between them.</p>
+            }
+          </mat-card-content>
+
+          <mat-card-actions>
+            <button mat-flat-button (click)="transferBetweenWallets()"
+              [disabled]="isTransferring() || getTransferWalletOptions().length < 2 || transferAmountControl.invalid || !transferFromPubkey() || !transferToPubkey()">
+              @if (isTransferring()) {
+                <span i18n="@@wallet.transfer.processing">Transferring...</span>
+              } @else {
+                <span i18n="@@wallet.transfer.button">Transfer</span>
+              }
+            </button>
+          </mat-card-actions>
+        </mat-card>
+
         <!-- Donation Card -->
         <mat-card class="donation-card">
           <mat-card-header>

@@ -294,6 +294,69 @@
   border-left: 4px solid var(--mat-sys-tertiary);
 }
 
+.transfer-card {
+  margin-bottom: 16px;
+  border-left: 4px solid var(--mat-sys-secondary);
+}
+
+.transfer-card mat-card-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.transfer-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 8px;
+}
+
+.transfer-wallets-row,
+.transfer-inputs-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.transfer-field,
+.transfer-amount-field,
+.transfer-memo-field {
+  width: 100%;
+}
+
+.transfer-empty {
+  margin: 4px 0;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.transfer-error,
+.transfer-success {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 4px;
+}
+
+.transfer-error {
+  background-color: rgba(255, 82, 82, 0.1);
+  color: var(--mat-sys-error);
+}
+
+.transfer-success {
+  background-color: rgba(76, 175, 80, 0.1);
+  color: var(--mat-success-color);
+}
+
+.transfer-card mat-card-actions {
+  padding: 16px;
+
+  button {
+    min-width: 140px;
+  }
+}
+
 .donation-card mat-card-title {
   display: flex;
   align-items: center;
@@ -565,5 +628,10 @@
   .wallet-balance-header {
     margin-left: 0;
     margin-top: 8px;
+  }
+
+  .transfer-wallets-row,
+  .transfer-inputs-row {
+    grid-template-columns: 1fr;
   }
 }

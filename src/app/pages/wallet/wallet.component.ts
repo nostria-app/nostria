@@ -86,6 +86,15 @@ export class WalletComponent {
   donationSuccess = signal(false);
   donationError = signal<string | null>(null);
 
+  // Wallet transfer properties
+  transferFromPubkey = signal<string | null>(null);
+  transferToPubkey = signal<string | null>(null);
+  transferAmountControl = new FormControl<number | null>(null, [Validators.required, Validators.min(1)]);
+  transferMemoControl = new FormControl('');
+  isTransferring = signal(false);
+  transferError = signal<string | null>(null);
+  transferSuccess = signal<string | null>(null);
+
   // Active tab index
   activeTabIndex = signal(0);
 
@@ -96,6 +105,26 @@ export class WalletComponent {
 
       // Use untracked to prevent signal reads inside async calls from creating dependencies
       untracked(() => {
+        const walletPubkeys = walletEntries.map(([pubkey]) => pubkey);
+
+        if (walletPubkeys.length >= 2) {
+          const currentFrom = this.transferFromPubkey();
+          const currentTo = this.transferToPubkey();
+
+          if (!currentFrom || !walletPubkeys.includes(currentFrom)) {
+            this.transferFromPubkey.set(walletPubkeys[0]);
+          }
+
+          const nextFrom = this.transferFromPubkey();
+          if (!currentTo || !walletPubkeys.includes(currentTo) || currentTo === nextFrom) {
+            const fallbackTo = walletPubkeys.find(pubkey => pubkey !== nextFrom) || null;
+            this.transferToPubkey.set(fallbackTo);
+          }
+        } else {
+          this.transferFromPubkey.set(null);
+          this.transferToPubkey.set(null);
+        }
+
         for (const [pubkey] of walletEntries) {
           // Skip if already loaded
           if (this.loadedWalletBalances.has(pubkey)) {
@@ -300,6 +329,92 @@ export class WalletComponent {
 
   getWalletEntries() {
     return Object.entries(this.wallets.wallets());
+  }
+
+  getTransferWalletOptions(): { pubkey: string; name: string }[] {
+    return this.getWalletEntries().map(([pubkey, wallet]) => ({
+      pubkey,
+      name: this.getWalletName(wallet),
+    }));
+  }
+
+  selectTransferFrom(pubkey: string): void {
+    this.transferFromPubkey.set(pubkey);
+    this.transferError.set(null);
+
+    if (this.transferToPubkey() === pubkey) {
+      const fallbackTo = this.getTransferWalletOptions().find(option => option.pubkey !== pubkey);
+      this.transferToPubkey.set(fallbackTo?.pubkey || null);
+    }
+  }
+
+  selectTransferTo(pubkey: string): void {
+    this.transferToPubkey.set(pubkey);
+    this.transferError.set(null);
+
+    if (this.transferFromPubkey() === pubkey) {
+      const fallbackFrom = this.getTransferWalletOptions().find(option => option.pubkey !== pubkey);
+      this.transferFromPubkey.set(fallbackFrom?.pubkey || null);
+    }
+  }
+
+  async transferBetweenWallets(): Promise<void> {
+    const fromPubkey = this.transferFromPubkey();
+    const toPubkey = this.transferToPubkey();
+    const amountSats = this.transferAmountControl.value;
+
+    if (!fromPubkey || !toPubkey || fromPubkey === toPubkey) {
+      this.transferError.set('Please choose two different wallets');
+      return;
+    }
+
+    if (!amountSats || amountSats <= 0) {
+      this.transferError.set('Please enter a valid transfer amount');
+      return;
+    }
+
+    this.transferError.set(null);
+    this.transferSuccess.set(null);
+    this.isTransferring.set(true);
+
+    try {
+      await this.nwcService.transferBetweenWallets(
+        fromPubkey,
+        toPubkey,
+        amountSats,
+        this.transferMemoControl.value || undefined
+      );
+
+      await Promise.all([
+        this.refreshBalance(fromPubkey),
+        this.refreshBalance(toPubkey),
+        this.loadTransactions(fromPubkey),
+        this.loadTransactions(toPubkey),
+      ]);
+
+      const fromName = this.getWalletName(this.wallets.wallets()[fromPubkey]);
+      const toName = this.getWalletName(this.wallets.wallets()[toPubkey]);
+      const successMessage = `Transferred ${amountSats.toLocaleString()} sats from ${fromName} to ${toName}`;
+
+      this.transferSuccess.set(successMessage);
+      this.transferAmountControl.reset();
+      this.transferMemoControl.reset();
+      this.snackBar.open(successMessage, 'Dismiss', {
+        duration: 4000,
+        horizontalPosition: 'center',
+        verticalPosition: 'bottom',
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Transfer failed. Please try again.';
+      this.transferError.set(message);
+      this.snackBar.open(message, 'Dismiss', {
+        duration: 4000,
+        horizontalPosition: 'center',
+        verticalPosition: 'bottom',
+      });
+    } finally {
+      this.isTransferring.set(false);
+    }
   }
 
   getFirstConnectionString(wallet: Wallet): string {

@@ -56,6 +56,13 @@ export interface WalletData {
   error: string | null;
 }
 
+export interface WalletTransferResult {
+  invoice: string;
+  paymentHash?: string;
+  preimage?: string;
+  feesPaidMsats?: number;
+}
+
 /**
  * NWC Service - Implements NIP-47 Nostr Wallet Connect
  * Provides balance checking and transaction history
@@ -302,6 +309,65 @@ export class NwcService {
       this.logger.error('Failed to get wallet info:', error);
       return null;
     }
+  }
+
+  /**
+   * Transfer sats between two connected NWC wallets.
+   * Creates an invoice on the destination wallet and pays it from the source wallet.
+   */
+  async transferBetweenWallets(
+    fromWalletPubkey: string,
+    toWalletPubkey: string,
+    amountSats: number,
+    description?: string
+  ): Promise<WalletTransferResult> {
+    if (!Number.isFinite(amountSats) || amountSats <= 0) {
+      throw new Error('Transfer amount must be greater than 0 sats');
+    }
+
+    if (fromWalletPubkey === toWalletPubkey) {
+      throw new Error('Source and destination wallets must be different');
+    }
+
+    const wallets = this.walletsService.wallets();
+    const fromWallet = wallets[fromWalletPubkey];
+    const toWallet = wallets[toWalletPubkey];
+
+    if (!fromWallet || !toWallet) {
+      throw new Error('Wallet not found');
+    }
+
+    const [fromClient, toClient] = await Promise.all([
+      this.getNwcClient(fromWallet),
+      this.getNwcClient(toWallet),
+    ]);
+
+    if (!fromClient || !toClient) {
+      throw new Error('No connection available for one or both wallets');
+    }
+
+    const amountMsats = Math.floor(amountSats * 1000);
+
+    const invoiceResult = await toClient.makeInvoice({
+      amount: amountMsats,
+      description: description?.trim() || 'Wallet transfer',
+    });
+
+    const invoice = typeof invoiceResult.invoice === 'string' ? invoiceResult.invoice : null;
+    if (!invoice) {
+      throw new Error('Failed to create transfer invoice');
+    }
+
+    const paymentResult = await fromClient.payInvoice({ invoice });
+
+    return {
+      invoice,
+      paymentHash:
+        typeof invoiceResult.payment_hash === 'string' ? invoiceResult.payment_hash : undefined,
+      preimage: typeof paymentResult.preimage === 'string' ? paymentResult.preimage : undefined,
+      feesPaidMsats:
+        typeof paymentResult.fees_paid === 'number' ? paymentResult.fees_paid : undefined,
+    };
   }
 
   /**
