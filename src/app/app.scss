@@ -427,7 +427,7 @@ mat-sidenav-content {
   &.following-sidebar-docked {
     margin-right: 220px; // Width of docked sidebar (reduced from 320px)
 
-    @media (max-width: 599px) {
+    @media (max-width: 699px) {
       margin-right: 0; // No margin on mobile, keep as overlay
     }
   }
@@ -463,7 +463,7 @@ mat-sidenav-content {
   }
 
   // On mobile (over mode), ensure proper z-index
-  @media (max-width: 599px) {
+  @media (max-width: 699px) {
     z-index: 100 !important;
 
     &.mobile-glass-menu {
@@ -472,7 +472,7 @@ mat-sidenav-content {
     }
   }
 
-  @media (min-width: 599px) {
+  @media (min-width: 700px) {
     z-index: 0 !important;
   }
 
@@ -482,7 +482,7 @@ mat-sidenav-content {
       min-height: 48px !important;
     }
 
-    @media (max-width: 599px) {
+    @media (max-width: 699px) {
       padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px));
     }
   }
@@ -2359,7 +2359,7 @@ mat-sidenav-content {
   animation: slideUp 0.3s ease-out;
 
   // Position above mobile navigation on small screens
-  @media (max-width: 599px) {
+  @media (max-width: 699px) {
     bottom: calc(100px + env(safe-area-inset-bottom, 0px));
   }
 }
