@@ -1441,6 +1441,13 @@ export class ShareArticleDialogComponent {
     const relayHint = authorRelays[0];
     const relayHints = this.utilities.normalizeRelayUrls(relayHint ? [relayHint] : []);
 
+    if (this.data.kind === kinds.Metadata) {
+      return nip19.nprofileEncode({
+        pubkey: this.data.pubkey,
+        relays: relayHints,
+      });
+    }
+
     if (this.data.kind >= 30000 && this.data.kind < 40000) {
       return nip19.naddrEncode({
         identifier: this.data.identifier || '',
