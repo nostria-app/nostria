@@ -19,8 +19,8 @@
   gap: 4px;
   padding: 8px 12px;
   background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
   border-radius: 24px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   opacity: 1;
@@ -42,10 +42,15 @@
   cursor: none;
 
   .controls-left,
-  .controls-right,
   .controls-bottom {
     opacity: 0;
     pointer-events: none;
+  }
+
+  // Keep top-right controls (including close) always visible for easy exit
+  .controls-right {
+    opacity: 1;
+    pointer-events: auto;
   }
 
   // Ensure cursor is hidden on all interactive elements

@@ -33,9 +33,9 @@
 // Header with buttons
 .dialog-header {
   position: absolute;
-  top: 12px;
+  top: calc(env(safe-area-inset-top, 0px) + 12px);
   left: 12px;
-  right: 12px;
+  right: 16px;
   z-index: 1000;
   display: flex;
   justify-content: space-between;
@@ -251,7 +251,7 @@
   justify-content: flex-start;
   background: var(--mat-sys-surface-container-lowest);
   overflow: auto; // Keep media scrollable
-  padding: 4rem 0 0 0; // Only top padding for header, no side padding
+  padding: 0;
   gap: 1rem;
   min-width: 0;
   min-height: 0;
@@ -265,6 +265,10 @@
   padding: 0 1rem; // Add horizontal padding so title doesn't touch edges
   width: 100%;
   box-sizing: border-box;
+}
+
+.media-title-bottom {
+  margin-top: 0.5rem;
 }
 
 .media-description {
@@ -496,6 +500,61 @@
 
 // Mobile responsive layout
 @media (max-width: 900px) {
+  .dialog-header {
+    position: fixed;
+    top: calc(env(safe-area-inset-top, 0px) + 8px);
+    left: 8px;
+    right: 14px;
+    z-index: 3000;
+    gap: 6px;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+  }
+
+  .header-navigation {
+    position: static;
+    left: auto;
+    transform: none;
+    margin: 0;
+    gap: 4px;
+    justify-self: center;
+    max-width: 100%;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+
+  .media-counter {
+    font-size: 12px;
+    padding: 4px 8px;
+    min-width: 52px;
+    text-align: center;
+  }
+
+  .bookmark-button,
+  .close-button,
+  .media-nav-button,
+  .header-buttons-right app-event-menu ::ng-deep button {
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    min-height: 40px;
+    padding: 0 !important;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+
+    mat-icon {
+      font-size: 22px;
+      width: 22px;
+      height: 22px;
+    }
+  }
+
+  .header-buttons-right {
+    gap: 6px;
+  }
+
   .split-view {
     display: flex; // Change from grid to flex
     flex-direction: column; // Stack vertically
@@ -505,7 +564,7 @@
   }
 
   .media-side {
-    padding: 4rem 0 0 0; // Top padding for header only
+    padding: 0;
     overflow: hidden; // Contain the media content properly
     height: auto;
     flex-shrink: 0; // Don't shrink

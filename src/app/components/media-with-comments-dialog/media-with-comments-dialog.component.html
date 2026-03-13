@@ -35,10 +35,6 @@
   <div class="split-view" (touchstart)="onTouchStart($event)" (touchend)="onTouchEnd($event)">
     <!-- Left side: Media -->
     <div class="media-side">
-      @if (title()) {
-      <h3 class="media-title">{{ title() }}</h3>
-      }
-
       @if (isPhoto()) {
       <!-- Photo Carousel -->
       <div class="photo-carousel">
@@ -126,6 +122,10 @@
         }
       </div>
       }
+      }
+
+      @if (title()) {
+      <h3 class="media-title media-title-bottom">{{ title() }}</h3>
       }
 
       @if (description()) {

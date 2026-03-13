@@ -474,7 +474,8 @@ export class PanelNavigationService {
         // Scroll left panel to top on forward navigation (not back, not feeds)
         // Feeds route ('/f') should preserve scroll position as users navigate feeds
         const isFeedsRoute = leftPath === 'f' || leftPath === '/f';
-        if (!this._isBackNavigation && !isFeedsRoute) {
+        const isProfileTabSwitch = this.isProfileTabSwitch(currentLeft?.path, leftPath);
+        if (!this._isBackNavigation && !isFeedsRoute && !isProfileTabSwitch) {
           this.logger.debug('[PanelNav] Scrolling left panel to top');
           this.scrollLeftPanelToTop();
         }
@@ -763,6 +764,27 @@ export class PanelNavigationService {
         rightPanel.scrollTop = 0;
       }
     }, 0);
+  }
+
+  private isProfileTabSwitch(previousPath: string | undefined, nextPath: string): boolean {
+    if (!previousPath || previousPath === nextPath) {
+      return false;
+    }
+
+    const previousProfile = this.extractProfileRouteKey(previousPath);
+    const nextProfile = this.extractProfileRouteKey(nextPath);
+
+    return !!previousProfile && !!nextProfile && previousProfile === nextProfile;
+  }
+
+  private extractProfileRouteKey(path: string): string | null {
+    const normalized = path.replace(/^\/+/, '');
+    const match = normalized.match(/^(u|p)\/([^/]+)(?:\/(?:notes|articles|media|connection))?$/);
+    if (!match) {
+      return null;
+    }
+
+    return `${match[1]}/${match[2]}`;
   }
 
   /**

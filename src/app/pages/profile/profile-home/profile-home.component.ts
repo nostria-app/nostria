@@ -23,9 +23,9 @@ interface NavLink {
 @Component({
   selector: 'app-profile-home',
   imports: [
-    MatIconModule, 
-    MatTabsModule, 
-    RouterModule, 
+    MatIconModule,
+    MatTabsModule,
+    RouterModule,
     ProfileNotesComponent,
     ProfileReadsComponent,
     ProfileMediaComponent,
@@ -74,7 +74,8 @@ export class ProfileHomeComponent {
   }
 
   // Set active tab (for right panel mode)
-  setActiveTab(path: string): void {
+  setActiveTab(event: Event, path: string): void {
+    event.preventDefault();
     this.activeTab.set(path);
   }
 
@@ -88,7 +89,7 @@ export class ProfileHomeComponent {
         if (this.route.outlet === 'right') {
           return;
         }
-        
+
         const currentPubkey = this.accountState.pubkey();
         const profilePubkey = this.getPubkey();
         const currentPath = this.route.firstChild?.snapshot?.url[0]?.path ?? 'notes';
@@ -115,12 +116,12 @@ export class ProfileHomeComponent {
       // Check if this saved tab is for the current profile
       if (savedTab && savedTab.startsWith(`${profilePubkey}:`)) {
         let tabPath = savedTab.split(':')[1];
-        
+
         // Migration: rename 'reads' to 'articles'
         if (tabPath === 'reads') {
           tabPath = 'articles';
         }
-        
+
         const currentPath = this.route.firstChild?.snapshot?.url[0]?.path ?? '';
 
         // Only navigate if we're at the default route (empty or 'notes') and the saved tab is different
