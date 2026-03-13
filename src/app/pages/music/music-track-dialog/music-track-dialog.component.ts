@@ -186,6 +186,7 @@ export class MusicTrackDialogComponent {
       aiGenerated: [false],
       // Advanced settings
       album: [''],
+      video: [''],
       trackNumber: [''],
       releaseDate: [''],
       language: ['en'],
@@ -271,6 +272,7 @@ export class MusicTrackDialogComponent {
 
     // Extract advanced settings
     const album = track.tags.find(t => t[0] === 'album')?.[1] || '';
+    const video = track.tags.find(t => t[0] === 'video')?.[1] || '';
     const trackNumber = track.tags.find(t => t[0] === 'track_number')?.[1] || '';
     const releaseDate = track.tags.find(t => t[0] === 'released')?.[1] || '';
     const language = track.tags.find(t => t[0] === 'language')?.[1] || 'en';
@@ -360,6 +362,7 @@ export class MusicTrackDialogComponent {
       artist: artistName,
       aiGenerated,
       album,
+      video,
       trackNumber,
       releaseDate,
       language,
@@ -1279,6 +1282,11 @@ export class MusicTrackDialogComponent {
       // Advanced settings
       if (formValue.album) {
         tags.push(['album', formValue.album]);
+      }
+
+      const videoUrl = String(formValue.video || '').trim();
+      if (videoUrl) {
+        tags.push(['video', videoUrl]);
       }
 
       if (formValue.trackNumber) {
