@@ -147,6 +147,7 @@ export interface AccountWallet {
   pubkey: string;
   connections: string[];
   name?: string;
+  isPrimary?: boolean;
 }
 
 /**

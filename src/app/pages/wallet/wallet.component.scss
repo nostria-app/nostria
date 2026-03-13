@@ -26,6 +26,10 @@
   font-size: 1.25rem;
 }
 
+.clickable-balance {
+  cursor: pointer;
+}
+
 .panel-header-spacer {
   flex: 1;
 }
@@ -180,6 +184,21 @@
   gap: 8px;
   flex: 1;
   min-width: 150px;
+}
+
+.wallet-title-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.primary-badge {
+  background: var(--mat-sys-primary-container);
+  color: var(--mat-sys-on-primary-container);
+  border-radius: var(--mat-sys-corner-full);
+  padding: 2px 8px;
+  font-size: 11px;
+  line-height: 1.4;
 }
 
 // Wallet balance in header

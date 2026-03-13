@@ -331,6 +331,15 @@ export class WalletComponent {
     }
   }
 
+  setPrimaryWallet(pubkey: string, walletName: string): void {
+    this.wallets.setPrimaryWallet(pubkey);
+    this.snackBar.open(`${walletName} set as primary wallet`, 'Dismiss', {
+      duration: 3000,
+      horizontalPosition: 'center',
+      verticalPosition: 'bottom',
+    });
+  }
+
   getWalletName(wallet: Wallet): string {
     return wallet.name || 'Unnamed Wallet';
   }

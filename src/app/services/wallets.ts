@@ -33,6 +33,11 @@ export class Wallets {
 
   hasWallets = computed(() => Object.keys(this.wallets()).length > 0);
 
+  primaryWalletPubkey = computed(() => {
+    const primaryEntry = this.getPrimaryWallet();
+    return primaryEntry ? primaryEntry[0] : null;
+  });
+
   constructor() {
     // Note: We don't log wallet data as it contains secrets
 
@@ -142,13 +147,51 @@ export class Wallets {
 
     const storedWallets = this.accountLocalState.getWallets(accountPubkey);
     const migratedWallets = this.migrateCorruptedWallets(storedWallets, accountPubkey);
+    const normalizedWallets = this.normalizePrimaryWallets(migratedWallets);
+
+    if (normalizedWallets.changed) {
+      this.accountLocalState.setWallets(accountPubkey, normalizedWallets.wallets);
+    }
 
     this.logger.debug('[Wallets] Loading wallets for account:', {
       accountPubkey: accountPubkey.substring(0, 8) + '...',
-      walletCount: Object.keys(migratedWallets).length
+      walletCount: Object.keys(normalizedWallets.wallets).length
     });
 
-    this.wallets.set(migratedWallets);
+    this.wallets.set(normalizedWallets.wallets);
+  }
+
+  private normalizePrimaryWallets(wallets: Record<string, Wallet>): {
+    wallets: Record<string, Wallet>;
+    changed: boolean;
+  } {
+    const walletEntries = Object.entries(wallets);
+    if (walletEntries.length === 0) {
+      return { wallets, changed: false };
+    }
+
+    const primaryEntries = walletEntries.filter(([, wallet]) => wallet.isPrimary);
+    const primaryPubkey = primaryEntries.length > 0 ? primaryEntries[0][0] : walletEntries[0][0];
+
+    let changed = false;
+    const normalizedWallets: Record<string, Wallet> = {};
+
+    for (const [pubkey, wallet] of walletEntries) {
+      const shouldBePrimary = pubkey === primaryPubkey;
+      if ((wallet.isPrimary ?? false) !== shouldBePrimary) {
+        changed = true;
+      }
+
+      normalizedWallets[pubkey] = {
+        ...wallet,
+        isPrimary: shouldBePrimary,
+      };
+    }
+
+    return {
+      wallets: normalizedWallets,
+      changed,
+    };
   }
 
   /**
@@ -215,6 +258,7 @@ export class Wallets {
       connections: [],
       data,
       name: this.generateWalletName(currentWallets),
+      isPrimary: Object.keys(currentWallets).length === 0,
     };
 
     if (!currentWallet.connections.includes(connection)) {
@@ -237,10 +281,50 @@ export class Wallets {
   removeWallet(pubkey: string) {
     const currentWallets = this.wallets();
     if (currentWallets[pubkey]) {
+      const removedWasPrimary = currentWallets[pubkey].isPrimary ?? false;
       delete currentWallets[pubkey];
+
+      if (removedWasPrimary) {
+        const firstRemainingPubkey = Object.keys(currentWallets)[0];
+        if (firstRemainingPubkey && currentWallets[firstRemainingPubkey]) {
+          currentWallets[firstRemainingPubkey] = {
+            ...currentWallets[firstRemainingPubkey],
+            isPrimary: true,
+          };
+        }
+      }
+
       this.wallets.set({ ...currentWallets });
       this.save();
     }
+  }
+
+  getPrimaryWallet(): [string, Wallet] | null {
+    const walletEntries = Object.entries(this.wallets());
+    if (walletEntries.length === 0) {
+      return null;
+    }
+
+    const explicitPrimary = walletEntries.find(([, wallet]) => wallet.isPrimary);
+    return explicitPrimary || walletEntries[0];
+  }
+
+  setPrimaryWallet(pubkey: string): void {
+    const currentWallets = this.wallets();
+    if (!currentWallets[pubkey]) {
+      return;
+    }
+
+    const updatedWallets: Record<string, Wallet> = {};
+    for (const [walletPubkey, wallet] of Object.entries(currentWallets)) {
+      updatedWallets[walletPubkey] = {
+        ...wallet,
+        isPrimary: walletPubkey === pubkey,
+      };
+    }
+
+    this.wallets.set(updatedWallets);
+    this.save();
   }
 
   generateWalletName(wallets: Record<string, Wallet>): string {

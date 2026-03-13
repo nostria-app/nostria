@@ -571,8 +571,8 @@ export class ZapService {
       throw new Error('No wallets connected. Please connect a wallet first.');
     }
 
-    // For now, use the first available wallet
-    const [walletName, wallet] = walletEntries[0];
+    const primaryWalletEntry = this.wallets.getPrimaryWallet();
+    const [walletName, wallet] = primaryWalletEntry || walletEntries[0];
     const connectionString = wallet.connections[0];
 
     this.logger.debug(`Using wallet: ${walletName}`);
