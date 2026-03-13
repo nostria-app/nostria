@@ -83,6 +83,7 @@ import { HiddenChatInfoPromptComponent } from '../../components/hidden-chat-info
 import { HapticsService } from '../../services/haptics.service';
 import { EmojiSetService } from '../../services/emoji-set.service';
 import type { ReportTarget } from '../../services/reporting.service';
+import type { ReportDialogResult } from '../../components/report-dialog/report-dialog.component';
 
 // Define interfaces for our DM data structures
 interface Chat {
@@ -2638,7 +2639,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     }
   }
 
-  reportSelectedChatUser(): void {
+  async reportSelectedChatUser(): Promise<void> {
     const pubkey = this.selectedChat()?.pubkey;
     if (!pubkey) {
       return;
@@ -2651,7 +2652,20 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       pubkey,
     };
 
-    this.layout.showReportDialog(reportTarget, displayName);
+    const reportResult$ = await this.layout.showReportDialog(reportTarget, displayName);
+    reportResult$.subscribe(async (result: ReportDialogResult | null | undefined) => {
+      const blockedUserPubkey = result?.blockedUserPubkey;
+      if (!blockedUserPubkey) {
+        return;
+      }
+
+      await this.removeChatsForPubkeyLocally(blockedUserPubkey, {
+        hideChat: true,
+        deadLetterReason: 'User blocked from report dialog',
+        successMessage: 'User blocked and chat removed',
+        failureMessage: 'Failed to remove blocked user chat',
+      });
+    });
   }
 
   async deleteSelectedChat(): Promise<void> {
@@ -2683,21 +2697,47 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       return;
     }
 
-    const accountPubkey = this.accountState.pubkey();
+    await this.removeChatsForPubkeyLocally(chat.pubkey, options);
+  }
 
-    if (options.hideChat && accountPubkey) {
-      this.accountLocalState.hideChat(accountPubkey, chat.id);
+  private async removeChatsForPubkeyLocally(pubkey: string, options: {
+    hideChat: boolean;
+    deadLetterReason: string;
+    successMessage: string;
+    failureMessage: string;
+  }): Promise<void> {
+    const chatsToDelete = this.messaging
+      .sortedChats()
+      .map(item => item.chat)
+      .filter(chat => chat.pubkey === pubkey);
+
+    if (chatsToDelete.length === 0) {
+      return;
     }
 
-    const success = await this.messaging.deleteChatLocally(chat.id, {
-      addToDeadLetter: true,
-      deadLetterReason: options.deadLetterReason,
-    });
+    const accountPubkey = this.accountState.pubkey();
 
-    if (success) {
+    let deleteSuccessCount = 0;
+    for (const chat of chatsToDelete) {
+      if (options.hideChat && accountPubkey) {
+        this.accountLocalState.hideChat(accountPubkey, chat.id);
+      }
+
+      const success = await this.messaging.deleteChatLocally(chat.id, {
+        addToDeadLetter: true,
+        deadLetterReason: options.deadLetterReason,
+      });
+
+      if (success) {
+        deleteSuccessCount++;
+      }
+
       if (this.selectedChatId() === chat.id) {
         this.selectedChatId.set(null);
       }
+    }
+
+    if (deleteSuccessCount === chatsToDelete.length) {
       this.showMobileList.set(true);
       this.showChatDetails.set(false);
       this.layout.toast(options.successMessage);

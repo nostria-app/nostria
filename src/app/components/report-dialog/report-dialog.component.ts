@@ -28,6 +28,11 @@ export interface ReportDialogData {
   userDisplayName?: string;
 }
 
+export interface ReportDialogResult {
+  submitted: boolean;
+  blockedUserPubkey?: string;
+}
+
 interface PublishOption {
   id: 'account' | 'author' | 'custom';
   label: string;
@@ -62,7 +67,7 @@ interface RelayPublishResult {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ReportDialogComponent {
-  private dialogRef = inject(MatDialogRef<ReportDialogComponent>);
+  private dialogRef = inject(MatDialogRef<ReportDialogComponent, ReportDialogResult>);
   data: ReportDialogData = inject(MAT_DIALOG_DATA);
   private reportingService = inject(ReportingService);
   accountRelay = inject(AccountRelayService);
@@ -264,14 +269,22 @@ export class ReportDialogComponent {
         duration: 3000,
       });
 
+      let blockedUserPubkey: string | undefined;
+
       // Handle blocking if requested
       if (this.shouldBlock()) {
-        await this.blockTarget();
+        const blocked = await this.blockTarget();
+        if (blocked && this.data.target.type === 'user') {
+          blockedUserPubkey = this.data.target.pubkey;
+        }
       }
 
       // Close dialog after successful submission
       setTimeout(() => {
-        this.dialogRef.close(true);
+        this.dialogRef.close({
+          submitted: true,
+          blockedUserPubkey,
+        });
       }, 2000);
     } catch (error) {
       this.logger.error('Error submitting report:', error);
@@ -290,7 +303,7 @@ export class ReportDialogComponent {
   }
 
   close(): void {
-    this.dialogRef.close(false);
+    this.dialogRef.close({ submitted: false });
   }
 
   canSubmit(): boolean {
@@ -305,40 +318,54 @@ export class ReportDialogComponent {
     this.showRelaysView.update(show => !show);
   }
 
-  async blockTarget(): Promise<void> {
+  async blockTarget(): Promise<boolean> {
     try {
       if (this.data.target.type === 'user') {
         // Create a fresh mute list event with the user
         const freshMuteList = await this.createFreshMuteListWithUser(this.data.target.pubkey);
-        if (freshMuteList) {
-          await this.publishService.signAndPublishAuto(
-            freshMuteList,
-            (event) => this.nostrService.signEvent(event)
-          );
+        if (!freshMuteList) {
+          this.snackBar.open('Failed to block target', 'Dismiss', {
+            duration: 3000,
+          });
+          return false;
         }
+
+        await this.publishService.signAndPublishAuto(
+          freshMuteList,
+          (event) => this.nostrService.signEvent(event)
+        );
 
         this.snackBar.open('User blocked successfully', 'Dismiss', {
           duration: 3000,
         });
+        return true;
       } else if (this.data.target.eventId) {
         // Create a fresh mute list event with the event
         const freshMuteList = await this.createFreshMuteListWithEvent(this.data.target.eventId);
-        if (freshMuteList) {
-          await this.publishService.signAndPublishAuto(
-            freshMuteList,
-            (event) => this.nostrService.signEvent(event)
-          );
+        if (!freshMuteList) {
+          this.snackBar.open('Failed to block target', 'Dismiss', {
+            duration: 3000,
+          });
+          return false;
         }
+
+        await this.publishService.signAndPublishAuto(
+          freshMuteList,
+          (event) => this.nostrService.signEvent(event)
+        );
 
         this.snackBar.open('Content blocked successfully', 'Dismiss', {
           duration: 3000,
         });
+        return true;
       }
+      return false;
     } catch (error) {
       this.logger.error('Error blocking target:', error);
       this.snackBar.open('Failed to block target', 'Dismiss', {
         duration: 3000,
       });
+      return false;
     }
   }
 
