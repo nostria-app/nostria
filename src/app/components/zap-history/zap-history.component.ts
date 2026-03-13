@@ -174,7 +174,7 @@ interface ZapHistoryEntry {
 
       .controls-row {
         display: flex;
-        align-items: center;
+        align-items: flex-start;
         justify-content: space-between;
         gap: 12px;
         padding: 16px 0 12px 0;
@@ -185,6 +185,14 @@ interface ZapHistoryEntry {
       .filter-toggles,
       .sort-toggles {
         --mat-standard-button-toggle-height: 36px;
+        width: fit-content;
+        max-width: 100%;
+      }
+
+      ::ng-deep .filter-toggles .mat-button-toggle-label-content,
+      ::ng-deep .sort-toggles .mat-button-toggle-label-content {
+        padding: 0 12px;
+        white-space: nowrap;
       }
 
       .stats-row {
@@ -423,12 +431,23 @@ interface ZapHistoryEntry {
         }
 
         .controls-row {
-          align-items: stretch;
+          align-items: flex-start;
+          gap: 8px;
         }
 
         .filter-toggles,
         .sort-toggles {
-          width: 100%;
+          width: auto;
+          display: inline-flex;
+          max-width: 100%;
+          overflow-x: auto;
+          -webkit-overflow-scrolling: touch;
+        }
+
+        ::ng-deep .filter-toggles .mat-button-toggle-label-content,
+        ::ng-deep .sort-toggles .mat-button-toggle-label-content {
+          padding: 0 10px;
+          font-size: 13px;
         }
 
         .stats-row {
