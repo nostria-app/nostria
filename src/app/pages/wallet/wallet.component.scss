@@ -113,7 +113,7 @@
 }
 
 .tab-content {
-  padding: 16px;
+  padding: 20px 16px;
 }
 
 // Empty state styles
@@ -167,7 +167,36 @@
 // Wallet card styles
 .wallet-card {
   margin-bottom: 16px;
-  border-left: 4px solid var(--mat-sys-primary);
+}
+
+.wallet-card,
+.transfer-card,
+.donation-card {
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: var(--mat-sys-corner-large);
+  background: var(--mat-sys-surface-container-low);
+  box-shadow: var(--mat-sys-level1);
+  overflow: hidden;
+  transition: background-color 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+
+  &:hover {
+    background: var(--mat-sys-surface-container);
+    box-shadow: var(--mat-sys-level2);
+    border-color: var(--mat-sys-outline);
+  }
+}
+
+.wallet-card mat-card-header,
+.transfer-card mat-card-header,
+.donation-card mat-card-header {
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--mat-sys-outline-variant);
+}
+
+.wallet-card mat-card-content,
+.transfer-card mat-card-content,
+.donation-card mat-card-content {
+  padding-top: 14px;
 }
 
 .wallet-card mat-card-header {
@@ -289,14 +318,11 @@
 
 // Donation card styles
 .donation-card {
-  margin-top: 16px;
   margin-bottom: 16px;
-  border-left: 4px solid var(--mat-sys-tertiary);
 }
 
 .transfer-card {
   margin-bottom: 16px;
-  border-left: 4px solid var(--mat-sys-secondary);
 }
 
 .transfer-card mat-card-title {
@@ -325,6 +351,22 @@
   width: 100%;
 }
 
+.transfer-amount-field {
+  ::ng-deep .mat-mdc-form-field-flex {
+    padding-right: 8px;
+  }
+
+  ::ng-deep .mat-mdc-form-field-text-suffix,
+  ::ng-deep .mat-mdc-form-field-icon-suffix,
+  ::ng-deep .mdc-text-field__affix--suffix {
+    display: inline-flex;
+    align-items: center;
+    padding-left: 8px;
+    padding-right: 10px;
+    margin-right: 0;
+  }
+}
+
 .transfer-empty {
   margin: 4px 0;
   color: var(--mat-sys-on-surface-variant);
@@ -351,6 +393,7 @@
 
 .transfer-card mat-card-actions {
   padding: 16px;
+  border-top: 1px solid var(--mat-sys-outline-variant);
 
   button {
     min-width: 140px;
@@ -463,6 +506,7 @@
 
 .donation-card mat-card-actions {
   padding: 16px;
+  border-top: 1px solid var(--mat-sys-outline-variant);
 
   button {
     min-width: 150px;
@@ -482,11 +526,13 @@
   gap: 12px;
   padding: 12px 16px;
   background-color: var(--mat-sys-surface-container);
+  border: 1px solid var(--mat-sys-outline-variant);
   border-radius: 12px;
-  transition: background-color 0.2s ease;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
 
   &:hover {
     background-color: var(--mat-sys-surface-container-high);
+    border-color: var(--mat-sys-outline);
   }
 }
 
