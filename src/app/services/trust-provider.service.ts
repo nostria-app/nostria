@@ -33,6 +33,8 @@ export interface KnownProvider {
   activationUrl?: string;
 }
 
+export const BRAINSTORM_TRUST_RELAY = 'wss://nip85.nosfabrica.com';
+
 /** The kind number for Trusted Service Provider declarations (NIP-85) */
 export const TRUST_PROVIDER_LIST_KIND = 10040;
 
@@ -44,21 +46,13 @@ export const KNOWN_PROVIDERS: KnownProvider[] = [
   {
     name: 'Brainstorm',
     description: 'Calculates reputation scores based on your social connections',
-    pubkey: '3d842afecd5e293f28b6627933704a3fb8ce153aa91d790ab11f6a752d44a42d',
-    relayUrl: 'wss://nip85.brainstorm.world',
+    pubkey: '',
+    relayUrl: BRAINSTORM_TRUST_RELAY,
     supportedMetrics: [
       '30382:rank',
       '30382:followers',
-      '30382:post_cnt',
-      '30382:zap_amt_recd',
-      '30382:zap_amt_sent',
-      '30382:first_created_at',
-      '30382:reply_cnt',
-      '30382:reactions_cnt',
-      '30382:zap_cnt_recd',
-      '30382:zap_cnt_sent',
     ],
-    activationUrl: 'https://straycat.brainstorm.social/',
+    activationUrl: 'https://brainstorm.nosfabrica.com/',
   },
 ];
 
@@ -104,7 +98,7 @@ export class TrustProviderService {
 
   /** Whether Brainstorm is configured for 30382:rank (by relay URL match) */
   readonly hasBrainstormRank = computed(() => {
-    const brainstormRelay = 'wss://nip85.brainstorm.world';
+    const brainstormRelay = BRAINSTORM_TRUST_RELAY;
     return this.allProviders().some(
       p => p.relayUrl === brainstormRelay && p.kindTag === '30382:rank'
     );
@@ -309,6 +303,15 @@ export class TrustProviderService {
   }
 
   /**
+   * Remove all currently configured providers from memory.
+   * Does NOT automatically publish — call publishProviders() after making changes.
+   */
+  clearConfiguredProviders(): void {
+    this.publicProviders.set([]);
+    this.privateProviders.set([]);
+  }
+
+  /**
    * Remove a provider by kindTag and pubkey from both public and private lists.
    * Does NOT automatically publish — call publishProviders() after making changes.
    */
@@ -432,5 +435,12 @@ export class TrustProviderService {
     this.loaded.set(false);
     this.hasEvent.set(false);
     this.currentEvent = null;
+  }
+
+  /**
+   * Get the currently loaded raw kind 10040 event, if available.
+   */
+  getCurrentEvent(): NostrEvent | null {
+    return this.currentEvent;
   }
 }

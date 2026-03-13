@@ -9,7 +9,7 @@ describe('TrustSettingsComponent', () => {
 
     it('should include Brainstorm as a fallback relay', () => {
       const urls = KNOWN_PROVIDERS.map(provider => provider.relayUrl);
-      expect(urls).toContain('wss://nip85.brainstorm.world');
+      expect(urls).toContain('wss://nip85.nosfabrica.com');
     });
 
     it('should have only one fallback relay', () => {

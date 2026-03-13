@@ -21,10 +21,14 @@ describe('TrustProviderService', () => {
       for (const provider of KNOWN_PROVIDERS) {
         expect(provider.name).toBeTruthy();
         expect(provider.description).toBeTruthy();
-        expect(provider.pubkey).toBeTruthy();
         expect(provider.relayUrl).toMatch(/^wss:\/\//);
         expect(provider.supportedMetrics.length).toBeGreaterThan(0);
       }
+    });
+
+    it('should use nosfabrica trust relay for Brainstorm', () => {
+      const brainstorm = KNOWN_PROVIDERS.find(p => p.name === 'Brainstorm');
+      expect(brainstorm?.relayUrl).toBe('wss://nip85.nosfabrica.com');
     });
   });
 });

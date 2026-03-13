@@ -23,12 +23,54 @@
       <div class="service-card" [class.enabled]="isProviderConfigured(provider)">
         <div class="service-info">
           <div class="service-header">
-            <span class="service-name">{{ provider.name }}</span>
+            <a class="service-name service-name-link" href="https://brainstorm.nosfabrica.com/" target="_blank" rel="noopener noreferrer">
+              {{ provider.name }}
+            </a>
             @if (isProviderConfigured(provider)) {
             <mat-icon class="service-active-icon">check_circle</mat-icon>
             }
           </div>
           <p class="service-description">{{ provider.description }}</p>
+          @if (provider.name === 'Brainstorm' && needsBrainstormMigration()) {
+          <div class="service-migration-warning" role="alert">
+            <mat-icon>warning</mat-icon>
+            <div>
+              <p class="service-migration-title" i18n="@@settings.trust.providers.migrationTitle">Migration required</p>
+              <p class="service-migration-text" i18n="@@settings.trust.providers.migrationText">
+                Your account uses the previous Brainstorm trust provider configuration. Click Activate to migrate to the new Brainstorm setup.
+              </p>
+              <p class="service-migration-text" i18n="@@settings.trust.providers.migrationWarning">
+                Warning: this will replace your current service provider configuration in kind 10040.
+              </p>
+            </div>
+          </div>
+          }
+        </div>
+        <div class="service-actions">
+          <button mat-stroked-button (click)="activateProvider(provider)"
+            [disabled]="brainstormActivateLoading() || brainstormStatusLoading() || brainstormRecalculateLoading() || brainstormConfigLoading() || (isProviderConfigured(provider) && !needsBrainstormMigration())">
+            @if (brainstormActivateLoading()) {
+              <mat-spinner diameter="18"></mat-spinner>
+            }
+            @if (!brainstormActivateLoading() && !(isProviderConfigured(provider) && !needsBrainstormMigration())) {
+              <mat-icon>bolt</mat-icon>
+            }
+            @if (!brainstormActivateLoading() && isProviderConfigured(provider) && !needsBrainstormMigration()) {
+              <mat-icon>check_circle</mat-icon>
+            }
+            @if (brainstormActivateLoading()) {
+              <span i18n="@@settings.trust.providers.activating">Activating...</span>
+            }
+            @if (!brainstormActivateLoading() && isProviderConfigured(provider) && !needsBrainstormMigration()) {
+              <span i18n="@@settings.trust.providers.activated">Activated</span>
+            }
+            @if (!brainstormActivateLoading() && provider.name === 'Brainstorm' && needsBrainstormMigration()) {
+              <span i18n="@@settings.trust.providers.migrateActivate">Migrate &amp; Activate</span>
+            }
+            @if (!brainstormActivateLoading() && !(provider.name === 'Brainstorm' && needsBrainstormMigration()) && !isProviderConfigured(provider)) {
+              <span i18n="@@settings.trust.providers.activate">Activate</span>
+            }
+          </button>
         </div>
       </div>
       }
@@ -39,48 +81,181 @@
   <section class="section">
     <h2 i18n="@@settings.trust.personalized.title">Personalized Scoring</h2>
     <div class="callout-card">
-      <mat-icon class="callout-icon">psychology</mat-icon>
       <div class="callout-content">
-        <p i18n="@@settings.trust.personalized.description">
-          Get scores tailored to your social graph. Activate your account on Brainstorm
-          to receive personalized rankings based on who you follow and interact with.
-        </p>
-        <button mat-button (click)="openBrainstorm()" class="callout-action">
-          <mat-icon>open_in_new</mat-icon>
-          <span i18n="@@settings.trust.personalized.activate">Set up on Brainstorm</span>
-        </button>
+        @if (brainstormError()) {
+        <p class="brainstorm-feedback error">{{ brainstormError() }}</p>
+        }
+
+        @if (brainstormMessage()) {
+        <p class="brainstorm-feedback success">{{ brainstormMessage() }}</p>
+        }
+
+        @if (brainstormStatusChecked() && brainstormStatus()) {
+        <div class="trust-calculation-card">
+          <div class="trust-calculation-header">
+            <div>
+              <p class="trust-calculation-title" i18n="@@settings.trust.personalized.calculationTitle">Trust Calculation</p>
+              <p class="trust-calculation-subtitle">{{ formatNullableValue(brainstormStatus()?.algorithm) }} network analysis</p>
+            </div>
+            <span class="trust-status-pill" [class]="'trust-status-pill ' + getStatusPillClass(brainstormStatus()?.status)">
+              {{ formatCalculationStatus(brainstormStatus()?.status) }}
+            </span>
+          </div>
+
+          @if ((brainstormStatus()?.how_many_others_with_priority ?? 0) > 0) {
+          <div class="trust-queue-highlight">
+            <span class="trust-status-label" i18n="@@settings.trust.personalized.queueAhead">Queue ahead</span>
+            <span class="trust-queue-value">{{ formatNullableValue(brainstormStatus()?.how_many_others_with_priority) }}</span>
+          </div>
+          }
+
+          <div class="trust-calculation-grid">
+            <span class="trust-status-label" i18n="@@settings.trust.personalized.lastCalculated">Last calculated</span>
+            <span class="trust-status-value">{{ formatIsoDate(brainstormStatus()?.updated_at || null) }}</span>
+
+            <span class="trust-status-label" i18n="@@settings.trust.personalized.lastTriggered">Last triggered</span>
+            <span class="trust-status-value">{{ formatIsoDate(brainstormStatus()?.created_at || null) }}</span>
+
+            <span class="trust-status-label" i18n="@@settings.trust.personalized.algorithm">Algorithm</span>
+            <span class="trust-status-value">{{ formatNullableValue(brainstormStatus()?.algorithm) }}</span>
+
+            <span class="trust-status-label" i18n="@@settings.trust.personalized.publisherLabel">Publisher pubkey</span>
+            <span class="trust-status-value trust-code-value">{{ formatNullableValue(brainstormPublisherPubkey()) }}</span>
+          </div>
+
+          <div class="trust-calculation-actions">
+            <button mat-stroked-button (click)="checkBrainstormStatus()"
+              [disabled]="brainstormStatusLoading() || brainstormActivateLoading() || brainstormRecalculateLoading() || brainstormConfigLoading()">
+              @if (brainstormStatusLoading()) {
+                <mat-spinner diameter="18"></mat-spinner>
+              }
+              @if (!brainstormStatusLoading()) {
+                <mat-icon>sync</mat-icon>
+              }
+              @if (brainstormStatusLoading()) {
+                <span i18n="@@settings.trust.personalized.refreshingStatus">Refreshing status...</span>
+              }
+              @if (!brainstormStatusLoading()) {
+                <span i18n="@@settings.trust.personalized.refreshStatus">Refresh Calculation Status</span>
+              }
+            </button>
+
+            <button mat-flat-button (click)="startBrainstormCalculation()"
+              [disabled]="!canRecalculate() || brainstormRecalculateLoading() || brainstormStatusLoading() || brainstormActivateLoading() || brainstormConfigLoading()">
+              @if (brainstormRecalculateLoading()) {
+                <mat-spinner diameter="18"></mat-spinner>
+              }
+              @if (!brainstormRecalculateLoading()) {
+                <mat-icon>refresh</mat-icon>
+              }
+              @if (brainstormRecalculateLoading()) {
+                <span i18n="@@settings.trust.personalized.recalculating">Recalculating...</span>
+              }
+              @if (!brainstormRecalculateLoading()) {
+                <span i18n="@@settings.trust.personalized.recalculateGrapeRank">Recalculate GrapeRank</span>
+              }
+            </button>
+          </div>
+        </div>
+
+        }
+
+        @if (brainstormStatusChecked() && !brainstormStatus()) {
+        <div class="brainstorm-status-card">
+          <div>
+            <span class="trust-status-label" i18n="@@settings.trust.personalized.status">Status</span>
+            <span class="trust-status-value" i18n="@@settings.trust.personalized.noStatusData">No status data found</span>
+          </div>
+        </div>
+        }
+
+        <div class="event-10040-section">
+          <div class="event-10040-actions">
+            <button mat-stroked-button (click)="toggleShow10040Event()">
+              <mat-icon>code</mat-icon>
+              @if (show10040Event()) {
+              <span i18n="@@settings.trust.personalized.hide10040">Hide 10040 Event</span>
+              } @else {
+              <span i18n="@@settings.trust.personalized.show10040">Show 10040 Event</span>
+              }
+            </button>
+
+            <button mat-stroked-button (click)="copy10040Json()" [disabled]="!trustProviderService.hasEvent()">
+              <mat-icon>content_copy</mat-icon>
+              <span i18n="@@settings.trust.personalized.copy10040">Copy JSON</span>
+            </button>
+          </div>
+
+          @if (copy10040Status() === 'done') {
+          <p class="brainstorm-feedback success" i18n="@@settings.trust.personalized.copyDone">
+            Copied 10040 JSON to clipboard.
+          </p>
+          }
+
+          @if (copy10040Status() === 'error') {
+          <p class="brainstorm-feedback error" i18n="@@settings.trust.personalized.copyFailed">
+            Failed to copy 10040 JSON.
+          </p>
+          }
+
+          @if (show10040Event()) {
+          @if (event10040()) {
+          <div class="event-summary-grid">
+            <div class="event-summary-item">
+              <span class="status-label" i18n="@@settings.trust.personalized.eventKind">Kind</span>
+              <span class="status-value">{{ event10040()?.kind }}</span>
+            </div>
+            <div class="event-summary-item">
+              <span class="status-label" i18n="@@settings.trust.personalized.eventCreatedAt">Created</span>
+              <span class="status-value">{{ formatNostrTimestamp(event10040()?.created_at || 0) }}</span>
+            </div>
+            <div class="event-summary-item event-summary-item-full">
+              <span class="status-label" i18n="@@settings.trust.personalized.eventId">ID</span>
+              <span class="status-value wrap-value">{{ event10040()?.id }}</span>
+            </div>
+            <div class="event-summary-item event-summary-item-full">
+              <span class="status-label" i18n="@@settings.trust.personalized.eventPubkey">Pubkey</span>
+              <span class="status-value wrap-value">{{ event10040()?.pubkey }}</span>
+            </div>
+            <div class="event-summary-item event-summary-item-full">
+              <span class="status-label" i18n="@@settings.trust.personalized.eventSig">Signature</span>
+              <span class="status-value wrap-value">{{ event10040()?.sig }}</span>
+            </div>
+          </div>
+
+          <div class="event-tags-list">
+            <h3 class="event-tags-title" i18n="@@settings.trust.personalized.eventTags">Provider Tags</h3>
+
+            @for (tag of event10040Tags(); track $index) {
+            <div class="event-tag-card">
+              <div>
+                <span class="status-label" i18n="@@settings.trust.personalized.tagKind">Kind</span>
+                <span class="status-value">{{ tag.kind }}</span>
+              </div>
+              <div>
+                <span class="status-label" i18n="@@settings.trust.personalized.tagMetric">Metric</span>
+                <span class="status-value">{{ tag.metric }}</span>
+              </div>
+              <div>
+                <span class="status-label" i18n="@@settings.trust.personalized.tagRelay">Relay</span>
+                <span class="status-value wrap-value">{{ tag.relay }}</span>
+              </div>
+              <div>
+                <span class="status-label" i18n="@@settings.trust.personalized.tagPubkey">Provider</span>
+                <span class="status-value wrap-value">{{ tag.pubkey }}</span>
+              </div>
+            </div>
+            }
+          </div>
+          } @else {
+          <p class="brainstorm-feedback" i18n="@@settings.trust.personalized.no10040">
+            No kind 10040 event is loaded for this account yet.
+          </p>
+          }
+          }
+        </div>
       </div>
     </div>
   </section>
 
-  <!-- Update Scores -->
-  <section class="section">
-    <h2 i18n="@@settings.trust.refresh.title">Update Scores</h2>
-    <p class="setting-description" i18n="@@settings.trust.refresh.description">
-      Download the latest reputation scores for accounts you follow.
-    </p>
-    <div class="refresh-section">
-      <button mat-stroked-button (click)="refreshTrustRanks()" [disabled]="refreshStatus() === 'refreshing'"
-        class="refresh-button">
-        @if (refreshStatus() === 'refreshing') {
-        <mat-spinner diameter="18"></mat-spinner>
-        <span i18n="@@settings.trust.refresh.refreshing">Updating...</span>
-        } @else if (refreshStatus() === 'done') {
-        <mat-icon>check</mat-icon>
-        <span i18n="@@settings.trust.refresh.done">Done!</span>
-        } @else {
-        <mat-icon>refresh</mat-icon>
-        <span i18n="@@settings.trust.refresh.button">Update Scores</span>
-        }
-      </button>
-      @if (refreshStatus() === 'refreshing') {
-      <div class="refresh-progress">
-        <mat-progress-bar mode="determinate" [value]="refreshProgress()"></mat-progress-bar>
-        <span class="refresh-progress-label">
-          {{ refreshCompleted() }} / {{ refreshTotal() }}
-        </span>
-      </div>
-      }
-    </div>
-  </section>
 </div>

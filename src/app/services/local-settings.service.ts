@@ -96,7 +96,7 @@ const DEFAULT_LOCAL_SETTINGS: LocalSettings = {
   addClientTag: true,
   showClientTag: true,
   trustEnabled: true,
-  trustRelay: 'wss://nip85.brainstorm.world',
+  trustRelay: 'wss://nip85.nosfabrica.com',
   startOnLastRoute: true,
   startFeedsOnLastEvent: true,
   showThreadLines: true,
