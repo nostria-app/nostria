@@ -1061,6 +1061,8 @@ export class MusicPlaylistCardComponent {
       const profile = this.authorProfile();
       const artistName = profile?.data?.name || profile?.data?.display_name || 'Unknown Artist';
 
+      this.mediaPlayer.clearQueue();
+
       // Play tracks
       for (let i = 0; i < orderedTracks.length; i++) {
         const track = orderedTracks[i];

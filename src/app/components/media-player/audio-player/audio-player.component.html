@@ -4,11 +4,24 @@
     @if (showExpandedQueue()) {
     <div class="expanded-track-list-shell">
       <div class="expanded-queue-header">
-        <div class="expanded-queue-title">Media queue</div>
-        <button mat-button (click)="clearEntireQueue()" [disabled]="visibleTrackEntries().length === 0">Clear
+        <div class="expanded-queue-tabs" role="tablist" aria-label="Expanded media panel tabs">
+          <button class="expanded-queue-tab" [class.active]="expandedPanelTab() === 'queue'"
+            (click)="selectExpandedPanelTab('queue')" type="button" role="tab"
+            [attr.aria-selected]="expandedPanelTab() === 'queue'">Media queue</button>
+          <button class="expanded-queue-tab" [class.active]="expandedPanelTab() === 'lyrics'"
+            [disabled]="!canShowLyricsTab()" (click)="selectExpandedPanelTab('lyrics')" type="button" role="tab"
+            [attr.aria-selected]="expandedPanelTab() === 'lyrics'">Lyrics</button>
+        </div>
+        <button mat-button (click)="clearEntireQueue()" [disabled]="visibleTrackEntries().length === 0"
+          [style.visibility]="expandedPanelTab() === 'queue' ? 'visible' : 'hidden'">Clear
           all</button>
       </div>
 
+      @if (expandedPanelTab() === 'lyrics') {
+      <div class="expanded-lyrics-panel">
+        <app-lyrics-view [compact]="true" (closeLyrics)="closeLyricsPanel()"></app-lyrics-view>
+      </div>
+      } @else {
       <div class="expanded-queue" role="list" aria-label="Media queue">
         @for (entry of visibleTrackEntries(); track entry.track.source + '-' + entry.index) {
         <div #queueTrackElement class="queue-track" [class.current]="entry.index === currentIndex()"
@@ -39,6 +52,7 @@
         <div class="expanded-empty-state">No tracks available</div>
         }
       </div>
+      }
     </div>
     } @else if (showExpandedVideo()) {
     <div class="expanded-track-list-shell expanded-track-video-shell">

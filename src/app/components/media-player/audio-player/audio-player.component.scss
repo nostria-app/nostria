@@ -745,9 +745,6 @@
   align-items: center;
   gap: 4px;
   background: transparent;
-  padding: 4px 8px;
-  border-radius: var(--mat-sys-corner-small);
-  min-height: 56px;
   position: relative;
   overflow: visible;
   border: 1px solid transparent;
@@ -777,6 +774,53 @@
       opacity: 0.28;
       pointer-events: none;
     }
+  }
+}
+
+.expanded-queue-tabs {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.expanded-queue-tab {
+  -webkit-appearance: none;
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--mat-sys-on-surface-variant);
+  text-decoration: none;
+  opacity: 0.8;
+  padding: 0;
+  cursor: pointer;
+  font: inherit;
+
+  &:hover:not(:disabled) {
+    color: var(--mat-sys-on-surface);
+    text-decoration: underline;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+
+  &.active {
+    color: var(--mat-sys-on-surface);
+    text-decoration: none;
+    opacity: 1;
+  }
+}
+
+.expanded-lyrics-panel {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  overflow: hidden;
+
+  app-lyrics-view {
+    flex: 1;
+    min-height: 0;
   }
 }
 

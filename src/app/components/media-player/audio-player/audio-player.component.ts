@@ -27,6 +27,7 @@ import { ModernPlayerViewComponent } from './modern-player-view/modern-player-vi
 import { CardsPlayerViewComponent } from './cards-player-view/cards-player-view.component';
 import { WinampPlayerViewComponent } from './winamp-player-view/winamp-player-view.component';
 import { PlaylistDrawerComponent } from './playlist-drawer/playlist-drawer.component';
+import { LyricsViewComponent } from './lyrics-view/lyrics-view.component';
 import { nip19 } from 'nostr-tools';
 import { formatDuration } from '../../../utils/format-duration';
 import { MediaItem } from '../../../interfaces';
@@ -50,6 +51,7 @@ type TrackEntry = { track: MediaItem; index: number };
     CardsPlayerViewComponent,
     WinampPlayerViewComponent,
     PlaylistDrawerComponent,
+    LyricsViewComponent,
   ],
   templateUrl: './audio-player.component.html',
   styleUrl: './audio-player.component.scss',
@@ -77,6 +79,7 @@ export class AudioPlayerComponent {
   currentView = signal<PlayerViewType>(this.loadSavedView());
   showQueue = signal(false);
   queueDragOffset = signal(0);
+  expandedPanelTab = signal<'queue' | 'lyrics'>('queue');
 
   // View options for the menu
   viewOptions: { type: PlayerViewType; icon: string; label: string }[] = [
@@ -143,6 +146,10 @@ export class AudioPlayerComponent {
   showExpandedQueue = computed(() => this.playlistExpanded() && !this.currentTrackVideo());
   queueTrackEntries = computed<TrackEntry[]>(() => this.queue().map((track, index) => ({ track, index })));
   visibleTrackEntries = computed(() => this.queueTrackEntries());
+  canShowLyricsTab = computed(() => {
+    const current = this.media.current();
+    return current?.type === 'Music' || !!current?.lyrics;
+  });
 
   // Proxied artwork for footer/minimized mode (smaller size for performance)
   footerArtwork = computed(() => {
@@ -155,6 +162,13 @@ export class AudioPlayerComponent {
   formatLabel = formatDuration;
 
   constructor() {
+    effect(() => {
+      const canShowLyrics = this.canShowLyricsTab();
+      if (!canShowLyrics && this.expandedPanelTab() === 'lyrics') {
+        this.expandedPanelTab.set('queue');
+      }
+    });
+
     effect(() => {
       if (!this.showExpandedQueue()) {
         return;
@@ -172,6 +186,17 @@ export class AudioPlayerComponent {
         this.scrollCurrentTrackIntoView();
       });
     });
+  }
+
+  selectExpandedPanelTab(tab: 'queue' | 'lyrics'): void {
+    if (tab === 'lyrics' && !this.canShowLyricsTab()) {
+      return;
+    }
+    this.expandedPanelTab.set(tab);
+  }
+
+  closeLyricsPanel(): void {
+    this.expandedPanelTab.set('queue');
   }
 
   onTimeChange(event: Event): void {
