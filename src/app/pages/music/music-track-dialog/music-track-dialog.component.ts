@@ -29,6 +29,7 @@ import { MentionAutocompleteComponent, MentionAutocompleteConfig, MentionSelecti
 import { MentionInputService } from '../../../services/mention-input.service';
 import { RelayPublishSelectorComponent, RelayPublishConfig } from '../../../components/relay-publish-selector/relay-publish-selector.component';
 import { formatDuration } from '../../../utils/format-duration';
+import { shouldAutoMarkTrackAsAiGenerated } from './music-track-metadata.util';
 
 const MUSIC_KIND = 36787;
 
@@ -805,33 +806,9 @@ export class MusicTrackDialogComponent {
         }
       }
 
-      // Check for AI-generated music sources (e.g., Suno.com)
-      const nativeTags = metadata.native;
-      let isAiGenerated = false;
-
-      for (const tagType of Object.keys(nativeTags)) {
-        const tags = nativeTags[tagType];
-        for (const tag of tags) {
-          if (tag.id === 'WWWAUDIOSOURCE' || tag.id === 'WOAS' || tag.id === 'website' || tag.id === 'WOAF') {
-            const value = typeof tag.value === 'string' ? tag.value : '';
-            if (value.toLowerCase().includes('suno.com')) {
-              isAiGenerated = true;
-              break;
-            }
-          }
-          if (tag.id === 'COMM' || tag.id === 'comment') {
-            const value = typeof tag.value === 'string' ? tag.value :
-              (tag.value && typeof tag.value === 'object' && 'text' in tag.value ? String(tag.value.text) : '');
-            if (value.toLowerCase().includes('suno.com')) {
-              isAiGenerated = true;
-              break;
-            }
-          }
-        }
-        if (isAiGenerated) break;
-      }
-
-      if (isAiGenerated) {
+      // Only auto-mark AI when the file contains an explicit AI metadata flag.
+      // Source/comment heuristics were causing false positives for normal uploads.
+      if (shouldAutoMarkTrackAsAiGenerated(metadata.native)) {
         this.trackForm.patchValue({ aiGenerated: true });
       }
 

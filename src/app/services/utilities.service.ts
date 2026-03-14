@@ -1391,15 +1391,12 @@ export class UtilitiesService {
 
   /**
    * Check whether a music event is marked as AI-generated.
-   * Supports standard tags and legacy rendering-only variants.
+   * Only explicit AI tags count. Topic-style hints are ignored to avoid false positives.
    */
   isMusicAiGenerated(event: Event | UnsignedEvent): boolean {
     const aiTag = event.tags.find(t => t[0] === 'ai_generated' || t[0] === 'ai-generated' || t[0] === 'ai');
-    const hasAiTopic = event.tags.some(
-      t => t[0] === 't' && (t[1]?.toLowerCase() === 'ai_generated' || t[1]?.toLowerCase() === 'ai-generated')
-    );
 
-    return aiTag?.[1] === 'true' || hasAiTopic;
+    return aiTag?.[1] === 'true';
   }
 
   /**

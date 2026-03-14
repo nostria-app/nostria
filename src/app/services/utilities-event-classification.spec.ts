@@ -91,4 +91,22 @@ describe('UtilitiesService Event Classification', () => {
       expect(service.shouldAlwaysFetchFromRelay(20000)).toBe(false);
     });
   });
+
+  describe('isMusicAiGenerated', () => {
+    it('returns true for explicit AI tags', () => {
+      expect(service.isMusicAiGenerated({
+        kind: 36787,
+        content: '',
+        tags: [['ai_generated', 'true']],
+      } as never)).toBe(true);
+    });
+
+    it('returns false for ai-like topic tags without an explicit AI flag', () => {
+      expect(service.isMusicAiGenerated({
+        kind: 36787,
+        content: '',
+        tags: [['t', 'ai_generated']],
+      } as never)).toBe(false);
+    });
+  });
 });
