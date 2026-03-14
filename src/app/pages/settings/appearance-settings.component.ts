@@ -60,6 +60,7 @@ import { SettingTextSizeComponent } from './sections/text-size.component';
       justify-content: space-between;
       align-items: center;
       gap: 16px;
+      padding: 12px 0;
     }
 
     .setting-description {

@@ -1,5 +1,4 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
-import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -17,7 +16,6 @@ import { SettingRelayAuthComponent } from './sections/relay-auth.component';
 @Component({
   selector: 'app-relays-network-settings',
   imports: [
-    FormsModule,
     MatButtonModule,
     MatCardModule,
     MatFormFieldModule,
@@ -49,7 +47,7 @@ import { SettingRelayAuthComponent } from './sections/relay-auth.component';
 
         <mat-form-field appearance="outline" class="full-width">
           <mat-label i18n="@@settings.relay-mode.label">Relays Mode</mat-label>
-          <mat-select [ngModel]="settings.settings().relayDiscoveryMode ?? 'outbox'" (selectionChange)="setRelayDiscoveryMode($event.value)">
+          <mat-select [value]="settings.settings().relayDiscoveryMode ?? 'outbox'" (selectionChange)="setRelayDiscoveryMode($event.value)">
             <mat-option value="outbox" i18n="@@settings.relay-mode.outbox">Outbox</mat-option>
             <mat-option value="hybrid" i18n="@@settings.relay-mode.hybrid">Hybrid</mat-option>
           </mat-select>
@@ -77,7 +75,7 @@ import { SettingRelayAuthComponent } from './sections/relay-auth.component';
               <h3 i18n="@@settings.relays.account-relays">Account Relays</h3>
               <p i18n="@@settings.relays.account-relays.description">Manage your personal relay connections</p>
             </div>
-            <button mat-stroked-button type="button" (click)="openRelays()">Open</button>
+            <button mat-stroked-button type="button" (click)="openRelays('account')">Open</button>
           </mat-card>
 
           <mat-card appearance="outlined" class="link-card">
@@ -85,15 +83,15 @@ import { SettingRelayAuthComponent } from './sections/relay-auth.component';
               <h3 i18n="@@settings.relays.discovery">Discovery Relays</h3>
               <p i18n="@@settings.relays.discovery.description">Relays used to discover other users</p>
             </div>
-            <button mat-stroked-button type="button" (click)="openRelays()">Open</button>
+            <button mat-stroked-button type="button" (click)="openRelays('discovery')">Open</button>
           </mat-card>
 
           <mat-card appearance="outlined" class="link-card">
             <div>
               <h3 i18n="@@settings.relays.observed">Observed Relays</h3>
-              <p>Inspect relays observed from the wider network.</p>
+              <p i18n="@@settings.relays.observed.description">Inspect relays observed from the wider network.</p>
             </div>
-            <button mat-stroked-button type="button" (click)="openRelays()">Open</button>
+            <button mat-stroked-button type="button" (click)="openRelays('observed')">Open</button>
           </mat-card>
 
           <mat-card appearance="outlined" class="link-card">
@@ -168,8 +166,8 @@ export class RelaysNetworkSettingsComponent {
     void this.settings.updateSettings({ relayDiscoveryMode: mode });
   }
 
-  openRelays(): void {
-    void this.router.navigate(['/relays']);
+  openRelays(tab: 'account' | 'discovery' | 'observed'): void {
+    void this.router.navigate(['/relays'], { queryParams: { tab } });
   }
 
   openSearchRelays(): void {
