@@ -46,7 +46,7 @@ describe('SettingsRegistryService', () => {
     expect(find('navigation-settings')).toMatchObject({ section: 'navigation', route: '/settings/navigation' });
     expect(find('media-privacy')).toMatchObject({ section: 'content', route: '/settings/content' });
     expect(find('notification-spam-filter')).toMatchObject({ section: 'privacy', route: '/settings/privacy' });
-    expect(find('account-relays')).toMatchObject({ section: 'network', route: '/relays' });
+    expect(find('account-relays')).toMatchObject({ section: 'network', route: '/relays?tab=account' });
     expect(find('search-relays')).toMatchObject({ section: 'network', route: '/settings/search' });
     expect(find('trust-network')).toMatchObject({ section: 'web-of-trust', route: '/settings/web-of-trust' });
     expect(find('storage-stats')).toMatchObject({ section: 'storage', route: '/settings/storage' });

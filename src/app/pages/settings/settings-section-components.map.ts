@@ -15,6 +15,7 @@ export const SETTINGS_SECTION_COMPONENT_MAP: Record<string, () => Promise<Type<u
   'web-of-trust': () => import('./trust/trust.component').then(m => m.TrustSettingsComponent),
   'storage': () => import('./database/database.component').then(m => m.DatabaseSettingsComponent),
   'logs-debug': () => import('./logs-debug-settings.component').then(m => m.LogsDebugSettingsComponent),
+  'advanced-posting': () => import('./general/general.component').then(m => m.GeneralSettingsComponent),
   'legacy-general': () => import('./general/general.component').then(m => m.GeneralSettingsComponent),
   'layout': () => import('./layout/layout.component').then(m => m.LayoutSettingsComponent),
   'algorithm': () => import('./algorithm/algorithm').then(m => m.AlgorithmComponent),

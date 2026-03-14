@@ -9,6 +9,7 @@ import {
   ViewChild,
   TemplateRef,
 } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatListModule } from '@angular/material/list';
 import { MatIconModule } from '@angular/material/icon';
@@ -53,6 +54,12 @@ import {
   FindResponsiveRelaysDialogResult,
 } from './find-responsive-relays-dialog.component';
 
+const RELAY_TAB_INDEX = {
+  account: 0,
+  discovery: 1,
+  observed: 2,
+} as const;
+
 @Component({
   selector: 'app-relays-page',
   imports: [
@@ -96,6 +103,7 @@ export class RelaysComponent implements OnInit, OnDestroy {
   private readonly panelActions = inject(PanelActionsService);
   private readonly rightPanel = inject(RightPanelService);
   private readonly customDialog = inject(CustomDialogService);
+  private readonly route = inject(ActivatedRoute);
 
   followingRelayUrls = signal<string[]>([]);
   newRelayUrl = signal('');
@@ -188,6 +196,7 @@ export class RelaysComponent implements OnInit, OnDestroy {
 
   // Relays in the published account relay list that are known dead/defunct
   knownDeadAccountRelays = signal<string[]>([]);
+  selectedTabIndex = signal<number>(RELAY_TAB_INDEX.account);
 
   constructor() {
     // Effect to re-check following list when active pubkey changes
@@ -357,6 +366,8 @@ export class RelaysComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
+    this.selectedTabIndex.set(this.getInitialTabIndex(this.route.snapshot.queryParamMap.get('tab')));
+
     // Only set page title if not in right panel (right panel has its own title)
     if (!this.rightPanel.hasContent()) {
       this.panelActions.setPageTitle($localize`:@@settings.relays.title:Relays`);
@@ -371,6 +382,18 @@ export class RelaysComponent implements OnInit, OnDestroy {
 
   goBack(): void {
     this.rightPanel.goBack();
+  }
+
+  private getInitialTabIndex(tab: string | null): number {
+    switch (tab) {
+      case 'discovery':
+        return RELAY_TAB_INDEX.discovery;
+      case 'observed':
+        return RELAY_TAB_INDEX.observed;
+      case 'account':
+      default:
+        return RELAY_TAB_INDEX.account;
+    }
   }
 
   cleanFollowingList() {

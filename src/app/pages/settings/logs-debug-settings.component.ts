@@ -29,7 +29,7 @@ import { SettingLoggingComponent } from './sections/logging.component';
         <mat-card appearance="outlined" class="link-card">
           <div>
             <h2 i18n="@@settings.logs.title">Logs</h2>
-            <p>Relay statistics, all relays, and cluster analysis for troubleshooting.</p>
+            <p i18n="@@settings.logs.description">Relay statistics, all relays, and cluster analysis for troubleshooting.</p>
           </div>
           <button mat-stroked-button type="button" (click)="openLogs()">Open Logs</button>
         </mat-card>
@@ -37,7 +37,7 @@ import { SettingLoggingComponent } from './sections/logging.component';
         <mat-card appearance="outlined" class="link-card">
           <div>
             <h2 i18n="@@settings.sections.debug">Debug</h2>
-            <p>Platform simulation and developer-focused payment flow testing tools.</p>
+            <p i18n="@@settings.debug.description">Platform simulation and developer-focused payment flow testing tools.</p>
           </div>
           <button mat-stroked-button type="button" (click)="openDebug()">Open Debug Tools</button>
         </mat-card>

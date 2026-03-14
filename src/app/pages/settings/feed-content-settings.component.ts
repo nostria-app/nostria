@@ -139,18 +139,18 @@ const REACTION_EMOJI_OPTIONS = ['❤️', '👍', '🔥', '😂', '🎉', '👏'
 
       @if (accountState.account()) {
         <div class="setting-section section-actions">
-          <h2>Advanced posting</h2>
-          <p class="setting-description">
+          <h2 i18n="@@settings.advanced-posting.title">Advanced posting</h2>
+          <p class="setting-description" i18n="@@settings.advanced-posting.description">
             Manage Post to X and Global Event Expiration in the advanced posting settings screen.
           </p>
           <div class="action-row">
-            <button mat-stroked-button type="button" (click)="openLegacyGeneral()">
+            <button mat-stroked-button type="button" (click)="openAdvancedPostingSettings()">
               <mat-icon>share</mat-icon>
-              <span>Manage Post to X</span>
+              <span i18n="@@settings.advanced-posting.post-to-x">Manage Post to X</span>
             </button>
-            <button mat-stroked-button type="button" (click)="openLegacyGeneral()">
+            <button mat-stroked-button type="button" (click)="openAdvancedPostingSettings()">
               <mat-icon>timer</mat-icon>
-              <span>Manage Global Expiration</span>
+              <span i18n="@@settings.advanced-posting.global-expiration">Manage Global Expiration</span>
             </button>
           </div>
         </div>
@@ -340,7 +340,7 @@ export class FeedContentSettingsComponent {
     this.accountLocalState.setActionsDisplayModeReplies(pubkey, mode);
   }
 
-  openLegacyGeneral(): void {
-    void this.router.navigate(['/settings/legacy-general']);
+  openAdvancedPostingSettings(): void {
+    void this.router.navigate(['/settings/advanced-posting']);
   }
 }
