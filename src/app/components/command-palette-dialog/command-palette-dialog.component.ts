@@ -341,14 +341,28 @@ export class CommandPaletteDialogComponent implements AfterViewInit, OnDestroy {
       label: 'Settings: General',
       icon: 'settings',
       action: () => this.router.navigate(['/settings/general']),
-      keywords: ['general settings', 'language', 'theme', 'dark mode', 'media']
+      keywords: ['general settings', 'language', 'calendar', 'time format', 'release channel']
     },
     {
-      id: 'nav-settings-x',
-      label: 'Settings: Post to X',
-      icon: 'share',
-      action: () => this.router.navigate(['/settings/general']),
-      keywords: ['x', 'twitter', 'dual post', 'cross post', 'share to x', 'oauth']
+      id: 'nav-settings-appearance',
+      label: 'Settings: Appearance',
+      icon: 'palette',
+      action: () => this.router.navigate(['/settings/appearance']),
+      keywords: ['appearance settings', 'dark mode', 'text size', 'font', 'display']
+    },
+    {
+      id: 'nav-settings-navigation',
+      label: 'Settings: Menu & Navigation',
+      icon: 'menu',
+      action: () => this.router.navigate(['/settings/navigation']),
+      keywords: ['navigation settings', 'menu', 'home button', 'start page', 'sidebar']
+    },
+    {
+      id: 'nav-settings-content',
+      label: 'Settings: Feed & Content',
+      icon: 'article',
+      action: () => this.router.navigate(['/settings/content']),
+      keywords: ['feed settings', 'content settings', 'media', 'client tag', 'post to x', 'videos']
     },
     {
       id: 'nav-settings-media-servers',
@@ -366,17 +380,10 @@ export class CommandPaletteDialogComponent implements AfterViewInit, OnDestroy {
     },
     {
       id: 'nav-relays',
-      label: 'Settings: Relays',
+      label: 'Settings: Relays & Network',
       icon: 'dns',
-      action: () => this.router.navigate(['/settings/relays']),
-      keywords: ['relays', 'servers', 'connections', 'network']
-    },
-    {
-      id: 'nav-settings-search',
-      label: 'Settings: Search',
-      icon: 'search',
-      action: () => this.router.navigate(['/settings/search']),
-      keywords: ['search settings', 'search relays']
+      action: () => this.router.navigate(['/settings/network']),
+      keywords: ['relays', 'servers', 'connections', 'network', 'search relays']
     },
     {
       id: 'nav-settings-privacy',
@@ -387,16 +394,16 @@ export class CommandPaletteDialogComponent implements AfterViewInit, OnDestroy {
     },
     {
       id: 'nav-settings-trust',
-      label: 'Settings: Trust',
+      label: 'Settings: Web of Trust',
       icon: 'verified_user',
-      action: () => this.router.navigate(['/settings/trust']),
+      action: () => this.router.navigate(['/settings/web-of-trust']),
       keywords: ['trust', 'verify', 'web of trust', 'reputation', 'nip-85', 'providers', 'brainstorm']
     },
     {
       id: 'nav-wallet',
-      label: 'Settings: Wallet',
+      label: 'Open Wallet',
       icon: 'account_balance_wallet',
-      action: () => this.router.navigate(['/settings/wallet']),
+      action: () => this.router.navigate(['/wallet']),
       keywords: ['wallet', 'nwc', 'lightning', 'bitcoin', 'payments', 'zap']
     },
     {
@@ -417,11 +424,18 @@ export class CommandPaletteDialogComponent implements AfterViewInit, OnDestroy {
       description: 'Enable or disable sharing your currently playing track as a Nostr status',
     },
     {
+      id: 'nav-settings-storage',
+      label: 'Settings: Storage',
+      icon: 'storage',
+      action: () => this.router.navigate(['/settings/storage']),
+      keywords: ['storage', 'database', 'cache', 'data']
+    },
+    {
       id: 'nav-settings-logs',
-      label: 'Settings: Logs',
-      icon: 'article',
-      action: () => this.router.navigate(['/settings/logs']),
-      keywords: ['logs', 'debug', 'console', 'errors']
+      label: 'Settings: Logs & Debug',
+      icon: 'bug_report',
+      action: () => this.router.navigate(['/settings/logs-debug']),
+      keywords: ['logs', 'debug', 'console', 'errors', 'platform simulation']
     },
     {
       id: 'nav-settings-about',
