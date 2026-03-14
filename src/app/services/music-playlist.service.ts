@@ -141,16 +141,10 @@ export class MusicPlaylistService {
     const titleTag = event.tags.find(t => t[0] === 'title');
     const descTag = event.tags.find(t => t[0] === 'description');
     const imageTag = event.tags.find(t => t[0] === 'image');
-    const publicTag = event.tags.find(t => t[0] === 'public');
-    const privateTag = event.tags.find(t => t[0] === 'private');
     const collaborativeTag = event.tags.find(t => t[0] === 'collaborative');
 
-    const trackRefs = event.tags
-      .filter(t => t[0] === 'a' && !!this.utilities.parseMusicTrackCoordinate(t[1]))
-      .map(t => t[1]);
-
-    // Per spec: 'public' tag means public, 'private' tag means private, default to public
-    const isPublic = publicTag?.[1] === 'true' || privateTag?.[1] !== 'true';
+    const trackRefs = this.utilities.getMusicPlaylistTrackRefs(event);
+    const isPublic = this.utilities.isMusicPlaylistPublic(event);
 
     return {
       id: dTag,

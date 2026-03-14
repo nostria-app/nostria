@@ -1442,6 +1442,32 @@ export class UtilitiesService {
   }
 
   /**
+   * Get music playlist track references from supported a-tags.
+   */
+  getMusicPlaylistTrackRefs(event: Event | UnsignedEvent): string[] {
+    return event.tags
+      .filter(tag => tag[0] === 'a' && !!this.parseMusicTrackCoordinate(tag[1]))
+      .map(tag => tag[1]);
+  }
+
+  /**
+   * Music playlists default to public unless explicitly tagged private.
+   */
+  isMusicPlaylistPublic(event: Event | UnsignedEvent): boolean {
+    const publicTag = event.tags.find(tag => tag[0] === 'public');
+    const privateTag = event.tags.find(tag => tag[0] === 'private');
+
+    return publicTag?.[1] === 'true' || privateTag?.[1] !== 'true';
+  }
+
+  /**
+   * Check whether a music playlist is explicitly private.
+   */
+  isMusicPlaylistPrivate(event: Event | UnsignedEvent): boolean {
+    return !this.isMusicPlaylistPublic(event);
+  }
+
+  /**
    * Get the alt tag value from an event.
    */
   getAltTag(event: Event | UnsignedEvent): string | undefined {

@@ -109,4 +109,37 @@ describe('UtilitiesService Event Classification', () => {
       } as never)).toBe(false);
     });
   });
+
+  describe('music playlist helpers', () => {
+    it('defaults playlists to public when no visibility tag exists', () => {
+      expect(service.isMusicPlaylistPublic({
+        kind: 30078,
+        content: '',
+        tags: [['title', 'Album']],
+      } as never)).toBe(true);
+    });
+
+    it('treats private tag as private', () => {
+      expect(service.isMusicPlaylistPrivate({
+        kind: 30078,
+        content: '',
+        tags: [['private', 'true']],
+      } as never)).toBe(true);
+    });
+
+    it('extracts only valid music track refs from playlist events', () => {
+      expect(service.getMusicPlaylistTrackRefs({
+        kind: 30078,
+        content: '',
+        tags: [
+          ['a', '36787:pubkey-1:track-one'],
+          ['a', '12345:pubkey-1:not-music'],
+          ['a', '36787:pubkey-2:track-two'],
+        ],
+      } as never)).toEqual([
+        '36787:pubkey-1:track-one',
+        '36787:pubkey-2:track-two',
+      ]);
+    });
+  });
 });

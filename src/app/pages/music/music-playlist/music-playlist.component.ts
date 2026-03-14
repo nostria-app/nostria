@@ -152,8 +152,7 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
   isPrivate = computed(() => {
     const event = this.playlist();
     if (!event) return false;
-    const privateTag = event.tags.find(t => t[0] === 'private');
-    return privateTag?.[1] === 'true';
+    return this.utilities.isMusicPlaylistPrivate(event);
   });
 
   coverImage = computed(() => {
@@ -173,9 +172,7 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
   trackRefs = computed(() => {
     const event = this.playlist();
     if (!event) return [];
-    return event.tags
-      .filter(t => t[0] === 'a' && !!this.utilities.parseMusicTrackCoordinate(t[1]))
-      .map(t => t[1]);
+    return this.utilities.getMusicPlaylistTrackRefs(event);
   });
 
   trackCount = computed(() => this.trackRefs().length);
@@ -810,11 +807,8 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
     const titleTag = ev.tags.find(t => t[0] === 'title');
     const descTag = ev.tags.find(t => t[0] === 'description');
     const imageTag = ev.tags.find(t => t[0] === 'image');
-    const publicTag = ev.tags.find(t => t[0] === 'public');
     const collaborativeTag = ev.tags.find(t => t[0] === 'collaborative');
-    const trackRefs = ev.tags
-      .filter(t => t[0] === 'a' && !!this.utilities.parseMusicTrackCoordinate(t[1]))
-      .map(t => t[1]);
+    const trackRefs = this.utilities.getMusicPlaylistTrackRefs(ev);
 
     const playlist: MusicPlaylist = {
       id: dTag,
@@ -822,7 +816,7 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
       description: descTag?.[1] || ev.content || undefined,
       image: imageTag?.[1] || undefined,
       pubkey: ev.pubkey,
-      isPublic: publicTag?.[1] === 'true',
+      isPublic: this.utilities.isMusicPlaylistPublic(ev),
       isCollaborative: collaborativeTag?.[1] === 'true',
       trackRefs,
       created_at: ev.created_at,

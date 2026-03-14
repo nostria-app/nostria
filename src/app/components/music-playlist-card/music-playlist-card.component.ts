@@ -658,6 +658,7 @@ export class MusicPlaylistCardComponent {
   trackCount = computed(() => {
     const event = this.event();
     const dTag = event.tags.find(t => t[0] === 'd')?.[1] || '';
+    const eventTrackRefs = this.getTrackRefsFromEvent(event);
 
     if (dTag) {
       const playlistFromService = this.musicPlaylistService
@@ -665,18 +666,21 @@ export class MusicPlaylistCardComponent {
         .find(playlist => playlist.id === dTag && playlist.pubkey === event.pubkey);
 
       if (playlistFromService) {
-        return playlistFromService.trackRefs.length;
+        if (playlistFromService.created_at >= event.created_at) {
+          return playlistFromService.trackRefs.length;
+        }
+
+        return eventTrackRefs.length;
       }
     }
 
-    return this.getTrackRefsFromEvent(event).length;
+    return eventTrackRefs.length;
   });
 
   // Check if private
   isPrivate = computed(() => {
     const event = this.event();
-    const privateTag = event.tags.find(t => t[0] === 'private');
-    return privateTag?.[1] === 'true';
+    return this.utilities.isMusicPlaylistPrivate(event);
   });
 
   // Cover image (raw URL)
@@ -863,7 +867,6 @@ export class MusicPlaylistCardComponent {
       const titleTag = ev.tags.find(t => t[0] === 'title');
       const descTag = ev.tags.find(t => t[0] === 'description');
       const imageTag = ev.tags.find(t => t[0] === 'image');
-      const publicTag = ev.tags.find(t => t[0] === 'public');
       const collaborativeTag = ev.tags.find(t => t[0] === 'collaborative');
       const trackRefs = this.getTrackRefsFromEvent(ev);
 
@@ -873,7 +876,7 @@ export class MusicPlaylistCardComponent {
         description: descTag?.[1] || ev.content || undefined,
         image: imageTag?.[1] || undefined,
         pubkey: ev.pubkey,
-        isPublic: publicTag?.[1] === 'true',
+        isPublic: this.utilities.isMusicPlaylistPublic(ev),
         isCollaborative: collaborativeTag?.[1] === 'true',
         trackRefs,
         created_at: ev.created_at,
@@ -887,9 +890,7 @@ export class MusicPlaylistCardComponent {
   }
 
   private getTrackRefsFromEvent(event: Event): string[] {
-    return event.tags
-      .filter(tag => tag[0] === 'a' && !!this.utilities.parseMusicTrackCoordinate(tag[1]))
-      .map(tag => tag[1]);
+    return this.utilities.getMusicPlaylistTrackRefs(event);
   }
 
   // Handle edit dialog closed
