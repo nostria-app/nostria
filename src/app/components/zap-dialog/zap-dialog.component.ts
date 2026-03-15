@@ -123,6 +123,13 @@ export class ZapDialogComponent {
     }));
   });
 
+  // Computed property for the selected wallet display in the trigger
+  selectedWalletDisplay = computed(() => {
+    const selectedId = this.zapForm.get('selectedWallet')?.value;
+    if (!selectedId) return null;
+    return this.availableWallets().find(w => w.id === selectedId) ?? null;
+  });
+
   // Helper to check for NWC wallets
   hasNwcWallet = computed(() => {
     try {
@@ -240,15 +247,19 @@ export class ZapDialogComponent {
       customAmountControl?.updateValueAndValidity();
     });
 
-    // Set default wallet if only one is available
+    // Set default wallet - prefer the primary wallet
     const wallets = this.availableWallets();
     if (wallets.length === 1) {
       this.zapForm.get('selectedWallet')?.setValue(wallets[0].id);
     } else if (wallets.length > 1) {
-      // Set the first connected wallet as default
-      const connectedWallet = wallets.find(w => w.connected);
-      if (connectedWallet) {
-        this.zapForm.get('selectedWallet')?.setValue(connectedWallet.id);
+      const primaryWallet = this.wallets.getPrimaryWallet();
+      if (primaryWallet) {
+        this.zapForm.get('selectedWallet')?.setValue(primaryWallet[0]);
+      } else {
+        const connectedWallet = wallets.find(w => w.connected);
+        if (connectedWallet) {
+          this.zapForm.get('selectedWallet')?.setValue(connectedWallet.id);
+        }
       }
     }
 

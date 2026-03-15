@@ -79,6 +79,14 @@
         <mat-form-field appearance="outline" class="full-width">
           <mat-label>Select Wallet</mat-label>
           <mat-select formControlName="selectedWallet">
+            <mat-select-trigger>
+              @if (selectedWalletDisplay(); as wallet) {
+              {{ wallet.name }}
+              @if (wallet.connected) {
+              <span class="wallet-status connected">Connected</span>
+              }
+              }
+            </mat-select-trigger>
             @for (wallet of availableWallets(); track wallet.id) {
             <mat-option [value]="wallet.id">
               <div class="wallet-option">
