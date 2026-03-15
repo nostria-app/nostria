@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, computed, ElementRef, viewChild } from '@angular/core';
+import { Component, inject, OnInit, computed, ElementRef, viewChild, effect } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule, NgComponentOutlet } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -309,6 +309,19 @@ export class SettingsHomeComponent implements OnInit {
   clearLabel = $localize`:@@settings.home.clear-search:Clear search`;
 
   constructor() {
+    // When the right panel is closed (e.g., via goBack), navigate to base settings
+    // so the route param resets. Without this, re-clicking the same section is a no-op
+    // because the Angular Router sees the param hasn't changed.
+    effect(() => {
+      const hasContent = this.rightPanel.hasContent();
+      if (!hasContent) {
+        const sectionId = this.route.snapshot.paramMap.get('section');
+        if (sectionId) {
+          void this.router.navigate(['/settings'], { replaceUrl: true });
+        }
+      }
+    });
+
     // Subscribe to route param changes for deep linking and section-to-section navigation
     this.route.paramMap.pipe(
       takeUntilDestroyed()

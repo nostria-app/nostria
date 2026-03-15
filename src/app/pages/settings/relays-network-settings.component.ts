@@ -34,10 +34,6 @@ import { getSettingsSectionComponent } from './settings-section-components.map';
     </div>
 
     <div class="content-medium">
-      <app-setting-max-relays />
-      <app-setting-relay-mode />
-      <app-setting-relay-auth />
-
       <div class="setting-section">
         <h2 i18n="@@settings.relays.title">Relay Sources</h2>
         <div class="settings-link-list">
@@ -62,6 +58,10 @@ import { getSettingsSectionComponent } from './settings-section-components.map';
             description="Manage your upload and fallback media servers" (activated)="openMediaServers()" />
         </div>
       </div>
+
+      <app-setting-max-relays />
+      <app-setting-relay-mode />
+      <app-setting-relay-auth />
     </div>
   `,
   styles: [`

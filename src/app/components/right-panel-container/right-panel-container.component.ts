@@ -81,8 +81,8 @@ export class RightPanelContainerComponent implements AfterViewInit {
   // Track the previous active index to manage visibility
   private previousActiveIndex = -1;
 
-  // Track which entries have been created
-  private createdEntryIndices = new Set<number>();
+  // Track which entry config was created at each index to detect replacements
+  private createdEntryConfigs = new Map<number, RightPanelEntry['config']>();
 
   ngAfterViewInit(): void {
     // Initial setup handled by effect
@@ -99,9 +99,14 @@ export class RightPanelContainerComponent implements AfterViewInit {
         return;
       }
 
-      // Create components for new entries that don't have one yet
+      // Create components for new entries or replace changed ones
       for (let i = 0; i < entries.length; i++) {
-        if (!this.createdEntryIndices.has(i)) {
+        const existingConfig = this.createdEntryConfigs.get(i);
+        if (!existingConfig) {
+          this.createComponentForEntry(i, entries[i], containerRef);
+        } else if (existingConfig !== entries[i].config) {
+          // Entry at this index was replaced (e.g., after truncate + append)
+          this.destroyComponentAtIndex(i);
           this.createComponentForEntry(i, entries[i], containerRef);
         }
       }
@@ -139,12 +144,21 @@ export class RightPanelContainerComponent implements AfterViewInit {
       }
     }
 
-    // Store the reference
+    // Store the reference and config for change detection
     this.componentRefs.set(index, componentRef);
-    this.createdEntryIndices.add(index);
+    this.createdEntryConfigs.set(index, entry.config);
 
     // Save ref in the service
     this.rightPanel.setComponentRef(index, componentRef);
+  }
+
+  private destroyComponentAtIndex(index: number): void {
+    const ref = this.componentRefs.get(index);
+    if (ref) {
+      ref.destroy();
+      this.componentRefs.delete(index);
+      this.createdEntryConfigs.delete(index);
+    }
   }
 
   private updateComponentVisibility(activeIndex: number): void {
@@ -160,11 +174,9 @@ export class RightPanelContainerComponent implements AfterViewInit {
 
   private cleanupRemovedEntries(currentLength: number): void {
     // Remove component refs for indices that no longer exist
-    for (const [index, ref] of this.componentRefs) {
+    for (const [index] of this.componentRefs) {
       if (index >= currentLength) {
-        ref.destroy();
-        this.componentRefs.delete(index);
-        this.createdEntryIndices.delete(index);
+        this.destroyComponentAtIndex(index);
       }
     }
   }
