@@ -6,324 +6,321 @@
   <span class="panel-header-spacer"></span>
 </div>
 
-<div class="delete-account-container">
-  <mat-card class="main-card">
-    <mat-card-header>
-      <div mat-card-avatar>
-        <mat-icon class="danger-icon">delete_forever</mat-icon>
-      </div>
-      <mat-card-title>Delete Account Data</mat-card-title>
-      <mat-card-subtitle>
+<div class="delete-account-container content-medium">
+  <div class="danger-header">
+    <div class="danger-header-icon">
+      <mat-icon class="danger-icon">delete_forever</mat-icon>
+    </div>
+    <div>
+      <h3 class="danger-header-title">Delete Account Data</h3>
+      <p class="danger-header-subtitle">
         Permanently delete all events associated with your account
-      </mat-card-subtitle>
-    </mat-card-header>
-
-    <mat-card-content>
-      <!-- Completion State -->
-      @if (deletionState() === 'completed') {
-      <div class="completion-section">
-        <div class="completion-icon">
-          <mat-icon>check_circle</mat-icon>
-        </div>
-        <h3>
-          @if (vanishSent()) {
-          Vanish Request Sent
-          } @else {
-          Deletion Complete
-          }
-        </h3>
-
-        @if (vanishSent()) {
-        <div class="completion-stats">
-          <p>
-            Vanish request delivered to <strong>{{ vanishSuccessCount() }}</strong> of
-            <strong>{{ vanishRelayCount() }}</strong> relays.
-            @if (vanishFailCount() > 0) {
-            <span class="vanish-fail-note">{{ vanishFailCount() }} relays could not be reached.</span>
-            }
-          </p>
-        </div>
-        <p class="completion-hint">
-          Compliant relays will permanently delete all your events and prevent re-broadcast.
-          Local data has also been cleared.
-        </p>
-        } @else {
-        <div class="completion-stats">
-          <p>
-            <strong>{{ deletedCount() }}</strong> events deleted successfully.
-            @if (failedCount() > 0) {
-            <strong>{{ failedCount() }}</strong> failed.
-            }
-          </p>
-        </div>
-        }
-
-        @if (!vanishSent()) {
-        <p class="completion-hint">
-          You can sign out of this account or go back to continue using the app.
-        </p>
-        }
-
-        <div class="completion-actions">
-          <button mat-stroked-button (click)="navigateBack()">
-            <mat-icon>arrow_back</mat-icon>
-            Back to Settings
-          </button>
-          <button mat-stroked-button (click)="resetState()">
-            <mat-icon>refresh</mat-icon>
-            Start Over
-          </button>
-          <button mat-flat-button (click)="signOut()">
-            <mat-icon>logout</mat-icon>
-            Sign Out
-          </button>
-        </div>
-      </div>
+      </p>
+    </div>
+  </div>
+  <!-- Completion State -->
+  @if (deletionState() === 'completed') {
+  <div class="completion-section">
+    <div class="completion-icon">
+      <mat-icon>check_circle</mat-icon>
+    </div>
+    <h3>
+      @if (vanishSent()) {
+      Vanish Request Sent
       } @else {
-
-      <!-- Account Info -->
-      @if (currentAccount(); as account) {
-      <div class="account-info">
-        <h3>Current Account</h3>
-        <div class="account-profile">
-          <app-user-profile [pubkey]="currentAccount()!.pubkey" view="compact"></app-user-profile>
-        </div>
-        <p class="account-npub">{{ account.pubkey | npub }}</p>
-        <p class="account-pubkey">{{ account.pubkey }}</p>
-      </div>
+      Deletion Complete
       }
+    </h3>
 
-      <mat-divider></mat-divider>
-
-      <!-- Events Scan Section -->
-      <div class="scan-section">
-        <div class="section-header">
-          <h3>Account Data Analysis</h3>
-          <button mat-stroked-button (click)="rescanEvents()" [disabled]="scanning()" class="rescan-button">
-            <mat-icon>refresh</mat-icon>
-            {{ scanning() ? 'Scanning...' : 'Rescan' }}
-          </button>
-        </div>
-
-        @if (scanning()) {
-        <div class="scanning-indicator">
-          <mat-icon class="spinning">sync</mat-icon>
-          <span>Scanning your account data...</span>
-        </div>
-        } @else {
-        @if (hasEvents()) {
-        <div class="events-summary">
-          <div class="total-count">
-            <mat-icon>storage</mat-icon>
-            <span class="count">{{ totalEventsCount() }}</span>
-            <span class="label">Total Events Found</span>
-          </div>
-        </div>
-
-        <!-- Events by Kind -->
-        <mat-accordion class="events-by-kind-accordion">
-          <mat-expansion-panel class="events-by-kind">
-            <mat-expansion-panel-header>
-              <mat-panel-title>Events by Type</mat-panel-title>
-              <mat-panel-description>{{ eventKinds().length }} types</mat-panel-description>
-            </mat-expansion-panel-header>
-
-            <div class="kind-list">
-              @for (kindInfo of eventKinds(); track kindInfo.kind) {
-              <div class="kind-item">
-                <div class="kind-header">
-                  <span class="kind-name">{{ kindInfo.name }}</span>
-                  <span class="kind-count">{{ kindInfo.count }}</span>
-                </div>
-                <div class="kind-description">{{ kindInfo.description }}</div>
-              </div>
-              }
-            </div>
-          </mat-expansion-panel>
-        </mat-accordion>
-        } @else {
-        <div class="no-events">
-          <mat-icon>check_circle</mat-icon>
-          <h4>No Events Found</h4>
-          <p>Your account has no stored events to delete.</p>
-        </div>
+    @if (vanishSent()) {
+    <div class="completion-stats">
+      <p>
+        Vanish request delivered to <strong>{{ vanishSuccessCount() }}</strong> of
+        <strong>{{ vanishRelayCount() }}</strong> relays.
+        @if (vanishFailCount() > 0) {
+        <span class="vanish-fail-note">{{ vanishFailCount() }} relays could not be reached.</span>
         }
+      </p>
+    </div>
+    <p class="completion-hint">
+      Compliant relays will permanently delete all your events and prevent re-broadcast.
+      Local data has also been cleared.
+    </p>
+    } @else {
+    <div class="completion-stats">
+      <p>
+        <strong>{{ deletedCount() }}</strong> events deleted successfully.
+        @if (failedCount() > 0) {
+        <strong>{{ failedCount() }}</strong> failed.
         }
+      </p>
+    </div>
+    }
+
+    @if (!vanishSent()) {
+    <p class="completion-hint">
+      You can sign out of this account or go back to continue using the app.
+    </p>
+    }
+
+    <div class="completion-actions">
+      <button mat-stroked-button (click)="navigateBack()">
+        <mat-icon>arrow_back</mat-icon>
+        Back to Settings
+      </button>
+      <button mat-stroked-button (click)="resetState()">
+        <mat-icon>refresh</mat-icon>
+        Start Over
+      </button>
+      <button mat-flat-button (click)="signOut()">
+        <mat-icon>logout</mat-icon>
+        Sign Out
+      </button>
+    </div>
+  </div>
+  } @else {
+
+  <!-- Account Info -->
+  @if (currentAccount(); as account) {
+  <div class="account-info">
+    <h3>Current Account</h3>
+    <div class="account-profile">
+      <app-user-profile [pubkey]="currentAccount()!.pubkey" view="compact"></app-user-profile>
+    </div>
+    <p class="account-npub">{{ account.pubkey | npub }}</p>
+    <p class="account-pubkey">{{ account.pubkey }}</p>
+  </div>
+  }
+
+  <mat-divider></mat-divider>
+
+  <!-- Events Scan Section -->
+  <div class="scan-section">
+    <div class="section-header">
+      <h3>Account Data Analysis</h3>
+      <button mat-stroked-button (click)="rescanEvents()" [disabled]="scanning()" class="rescan-button">
+        <mat-icon>refresh</mat-icon>
+        {{ scanning() ? 'Scanning...' : 'Rescan' }}
+      </button>
+    </div>
+
+    @if (scanning()) {
+    <div class="scanning-indicator">
+      <mat-icon class="spinning">sync</mat-icon>
+      <span>Scanning your account data...</span>
+    </div>
+    } @else {
+    @if (hasEvents()) {
+    <div class="events-summary">
+      <div class="total-count">
+        <mat-icon>storage</mat-icon>
+        <span class="count">{{ totalEventsCount() }}</span>
+        <span class="label">Total Events Found</span>
       </div>
+    </div>
 
-      <!-- Deletion Form Section -->
-      @if (hasEvents()) {
-      <mat-divider></mat-divider>
+    <!-- Events by Kind -->
+    <mat-accordion class="events-by-kind-accordion">
+      <mat-expansion-panel class="events-by-kind">
+        <mat-expansion-panel-header>
+          <mat-panel-title>Events by Type</mat-panel-title>
+          <mat-panel-description>{{ eventKinds().length }} types</mat-panel-description>
+        </mat-expansion-panel-header>
 
-      <div class="deletion-section">
-        <div class="warning-notice">
-          <mat-icon class="warning-icon">warning</mat-icon>
-          <div class="warning-content">
-            <h4>Permanent Action Warning</h4>
-            <p>
-              This will create NIP-09 deletion requests for <strong>all {{ totalEventsCount() }} events</strong>
-              in your account. While deletion requests will be published to relays, there is no guarantee
-              that all relays and clients will honor these requests.
-            </p>
-          </div>
-        </div>
-
-        <form [formGroup]="deleteForm" class="deletion-form">
-          <mat-form-field appearance="outline" class="full-width">
-            <mat-label>Type "DELETE MY ACCOUNT" to confirm</mat-label>
-            <input matInput formControlName="confirmationText" placeholder="DELETE MY ACCOUNT" />
-            @if (deleteForm.get('confirmationText')?.hasError('required')) {
-            <mat-error>Confirmation text is required</mat-error>
-            }
-            @if (deleteForm.get('confirmationText')?.hasError('invalidConfirmation')) {
-            <mat-error>You must type "DELETE MY ACCOUNT" exactly</mat-error>
-            }
-          </mat-form-field>
-
-          <!-- Deletion Progress -->
-          @if (deleting()) {
-          <div class="deletion-progress">
-            <div class="progress-info">
-              <span>Deleting events...</span>
-              <span>{{ deletedCount() + failedCount() }} of {{ totalEventsCount() }}</span>
+        <div class="kind-list">
+          @for (kindInfo of eventKinds(); track kindInfo.kind) {
+          <div class="kind-item">
+            <div class="kind-header">
+              <span class="kind-name">{{ kindInfo.name }}</span>
+              <span class="kind-count">{{ kindInfo.count }}</span>
             </div>
-            <mat-progress-bar mode="determinate" [value]="deletionProgress()" class="progress-bar">
-            </mat-progress-bar>
-            <div class="progress-stats">
-              <span class="success">{{ deletedCount() }} deleted</span>
-              @if (failedCount() > 0) {
-              <span class="failed">{{ failedCount() }} failed</span>
-              }
-            </div>
+            <div class="kind-description">{{ kindInfo.description }}</div>
           </div>
           }
+        </div>
+      </mat-expansion-panel>
+    </mat-accordion>
+    } @else {
+    <div class="no-events">
+      <mat-icon>check_circle</mat-icon>
+      <h4>No Events Found</h4>
+      <p>Your account has no stored events to delete.</p>
+    </div>
+    }
+    }
+  </div>
 
-          <div class="form-actions">
-            <button mat-stroked-button type="button" (click)="navigateBack()" [disabled]="deleting()">
-              <mat-icon>arrow_back</mat-icon>
-              Back to Privacy Settings
-            </button>
+  <!-- Deletion Form Section -->
+  @if (hasEvents()) {
+  <mat-divider></mat-divider>
 
-            <button mat-flat-button type="button" class="danger-button" (click)="deleteAllEvents()"
-              [disabled]="!isDeleteConfirmationValid() || deleting()">
-              <span class="button-content">
-                @if (deleting()) {
-                <mat-icon class="spinning">sync</mat-icon>
-                Deleting...
-                } @else {
-                <mat-icon>delete_forever</mat-icon>
-                Delete All Events
-                }
-              </span>
-            </button>
-          </div>
-        </form>
+  <div class="deletion-section">
+    <div class="warning-notice">
+      <mat-icon class="warning-icon">warning</mat-icon>
+      <div class="warning-content">
+        <h4>Permanent Action Warning</h4>
+        <p>
+          This will create NIP-09 deletion requests for <strong>all {{ totalEventsCount() }} events</strong>
+          in your account. While deletion requests will be published to relays, there is no guarantee
+          that all relays and clients will honor these requests.
+        </p>
+      </div>
+    </div>
+
+    <form [formGroup]="deleteForm" class="deletion-form">
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Type "DELETE MY ACCOUNT" to confirm</mat-label>
+        <input matInput formControlName="confirmationText" placeholder="DELETE MY ACCOUNT" />
+        @if (deleteForm.get('confirmationText')?.hasError('required')) {
+        <mat-error>Confirmation text is required</mat-error>
+        }
+        @if (deleteForm.get('confirmationText')?.hasError('invalidConfirmation')) {
+        <mat-error>You must type "DELETE MY ACCOUNT" exactly</mat-error>
+        }
+      </mat-form-field>
+
+      <!-- Deletion Progress -->
+      @if (deleting()) {
+      <div class="deletion-progress">
+        <div class="progress-info">
+          <span>Deleting events...</span>
+          <span>{{ deletedCount() + failedCount() }} of {{ totalEventsCount() }}</span>
+        </div>
+        <mat-progress-bar mode="determinate" [value]="deletionProgress()" class="progress-bar">
+        </mat-progress-bar>
+        <div class="progress-stats">
+          <span class="success">{{ deletedCount() }} deleted</span>
+          @if (failedCount() > 0) {
+          <span class="failed">{{ failedCount() }} failed</span>
+          }
+        </div>
       </div>
       }
 
-      <!-- NIP-62 Request to Vanish Section -->
-      <mat-divider></mat-divider>
+      <div class="form-actions">
+        <button mat-stroked-button type="button" (click)="navigateBack()" [disabled]="deleting()">
+          <mat-icon>arrow_back</mat-icon>
+          Back to Privacy Settings
+        </button>
 
-      <div class="vanish-section">
-        <div class="section-header">
-          <h3>Request to Vanish (NIP-62)</h3>
-        </div>
-        <p class="section-description">
-          Send a cryptographic request to relays asking them to permanently delete <strong>all</strong> your events
-          and block future re-broadcasts. This is a stronger signal than individual NIP-09 deletions.
+        <button mat-flat-button type="button" class="danger-button" (click)="deleteAllEvents()"
+          [disabled]="!isDeleteConfirmationValid() || deleting()">
+          <span class="button-content">
+            @if (deleting()) {
+            <mat-icon class="spinning">sync</mat-icon>
+            Deleting...
+            } @else {
+            <mat-icon>delete_forever</mat-icon>
+            Delete All Events
+            }
+          </span>
+        </button>
+      </div>
+    </form>
+  </div>
+  }
+
+  <!-- NIP-62 Request to Vanish Section -->
+  <mat-divider></mat-divider>
+
+  <div class="vanish-section">
+    <div class="section-header">
+      <h3>Request to Vanish (NIP-62)</h3>
+    </div>
+    <p class="section-description">
+      Send a cryptographic request to relays asking them to permanently delete <strong>all</strong> your events
+      and block future re-broadcasts. This is a stronger signal than individual NIP-09 deletions.
+    </p>
+
+    <p class="section-description">
+      This always sends a global vanish request with relay tag <strong>ALL_RELAYS</strong> to your configured
+      relays only.
+    </p>
+
+    <div class="warning-notice vanish-warning">
+      <mat-icon class="warning-icon">warning</mat-icon>
+      <div class="warning-content">
+        <h4>Irreversible Action</h4>
+        <p>
+          Compliant relays will permanently delete all events from your pubkey and prevent
+          re-broadcast. A kind 5 deletion event cannot undo a vanish request.
         </p>
+      </div>
+    </div>
 
-        <p class="section-description">
-          This always sends a global vanish request with relay tag <strong>ALL_RELAYS</strong> to your configured
-          relays only.
-        </p>
-
-        <div class="warning-notice vanish-warning">
-          <mat-icon class="warning-icon">warning</mat-icon>
-          <div class="warning-content">
-            <h4>Irreversible Action</h4>
-            <p>
-              Compliant relays will permanently delete all events from your pubkey and prevent
-              re-broadcast. A kind 5 deletion event cannot undo a vanish request.
-            </p>
-          </div>
-        </div>
-
-        <div class="vanish-reason">
-          <mat-form-field appearance="outline" class="full-width">
-            <mat-label>Reason (optional)</mat-label>
-            <textarea matInput [ngModel]="vanishReason()" (ngModelChange)="vanishReason.set($event)"
-              placeholder="Optionally explain why you want to vanish" rows="2">
+    <div class="vanish-reason">
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Reason (optional)</mat-label>
+        <textarea matInput [ngModel]="vanishReason()" (ngModelChange)="vanishReason.set($event)"
+          placeholder="Optionally explain why you want to vanish" rows="2">
             </textarea>
-          </mat-form-field>
-        </div>
+      </mat-form-field>
+    </div>
 
-        <div class="vanish-confirmation" [formGroup]="deleteForm">
-          <mat-form-field appearance="outline" class="full-width">
-            <mat-label>Type "REQUEST TO VANISH" to confirm</mat-label>
-            <input matInput formControlName="vanishConfirmationText" placeholder="REQUEST TO VANISH" />
-            @if (deleteForm.get('vanishConfirmationText')?.hasError('required')) {
-            <mat-error>Vanish confirmation text is required</mat-error>
-            }
-            @if (deleteForm.get('vanishConfirmationText')?.hasError('invalidVanishConfirmation')) {
-            <mat-error>You must type "REQUEST TO VANISH" exactly</mat-error>
-            }
-          </mat-form-field>
-        </div>
-
-        @if (deletionState() === 'vanishing') {
-        <div class="vanish-progress">
-          <mat-icon class="spinning">sync</mat-icon>
-          <span>Sending vanish request to {{ vanishRelayCount() }} relays...</span>
-        </div>
+    <div class="vanish-confirmation" [formGroup]="deleteForm">
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Type "REQUEST TO VANISH" to confirm</mat-label>
+        <input matInput formControlName="vanishConfirmationText" placeholder="REQUEST TO VANISH" />
+        @if (deleteForm.get('vanishConfirmationText')?.hasError('required')) {
+        <mat-error>Vanish confirmation text is required</mat-error>
         }
+        @if (deleteForm.get('vanishConfirmationText')?.hasError('invalidVanishConfirmation')) {
+        <mat-error>You must type "REQUEST TO VANISH" exactly</mat-error>
+        }
+      </mat-form-field>
+    </div>
 
-        <div class="vanish-actions">
-          <button mat-flat-button class="danger-button" (click)="requestToVanish()"
-            [disabled]="!isDeleteConfirmationValid() || !isVanishConfirmationValid() || deletionState() === 'vanishing' || deleting()">
-            <span class="button-content">
-              @if (deletionState() === 'vanishing') {
-              <mat-icon class="spinning">sync</mat-icon>
-              Sending Vanish Request...
-              } @else {
-              <mat-icon>delete_sweep</mat-icon>
-              Request to Vanish
-              }
-            </span>
-          </button>
-        </div>
-      </div>
+    @if (deletionState() === 'vanishing') {
+    <div class="vanish-progress">
+      <mat-icon class="spinning">sync</mat-icon>
+      <span>Sending vanish request to {{ vanishRelayCount() }} relays...</span>
+    </div>
+    }
 
-      <!-- NIP-09 Information -->
-      <mat-divider></mat-divider>
+    <div class="vanish-actions">
+      <button mat-flat-button class="danger-button" (click)="requestToVanish()"
+        [disabled]="!isDeleteConfirmationValid() || !isVanishConfirmationValid() || deletionState() === 'vanishing' || deleting()">
+        <span class="button-content">
+          @if (deletionState() === 'vanishing') {
+          <mat-icon class="spinning">sync</mat-icon>
+          Sending Vanish Request...
+          } @else {
+          <mat-icon>delete_sweep</mat-icon>
+          Request to Vanish
+          }
+        </span>
+      </button>
+    </div>
+  </div>
 
-      <div class="info-section">
-        <div class="info-header">
-          <mat-icon>info</mat-icon>
-          <h4>About Event Deletion</h4>
-        </div>
-        <div class="info-content">
-          <p>
-            <strong>NIP-09 (Delete Events):</strong> Publishes individual deletion requests for each event.
-            Well-behaved relays and clients will honor these requests, but compliance is not guaranteed.
-          </p>
-          <p>
-            <strong>NIP-62 (Request to Vanish):</strong> A single signed event requesting relays to delete
-            <em>all</em> events from your pubkey and prevent re-broadcast. This is a stronger, more
-            comprehensive signal and is irreversible.
-          </p>
-          <ul>
-            <li>NIP-09 targets specific events you have stored locally</li>
-            <li>NIP-62 instructs relays to wipe everything from your pubkey, even events you do not have locally</li>
-            <li>Neither method can guarantee deletion from all relays or backups</li>
-          </ul>
-          <p>
-            <strong>Consider this carefully before proceeding.</strong>
-          </p>
-        </div>
-      </div>
+  <!-- NIP-09 Information -->
+  <mat-divider></mat-divider>
 
-      } <!-- end of non-completed state -->
-    </mat-card-content>
-  </mat-card>
+  <div class="info-section">
+    <div class="info-header">
+      <mat-icon>info</mat-icon>
+      <h4>About Event Deletion</h4>
+    </div>
+    <div class="info-content">
+      <p>
+        <strong>NIP-09 (Delete Events):</strong> Publishes individual deletion requests for each event.
+        Well-behaved relays and clients will honor these requests, but compliance is not guaranteed.
+      </p>
+      <p>
+        <strong>NIP-62 (Request to Vanish):</strong> A single signed event requesting relays to delete
+        <em>all</em> events from your pubkey and prevent re-broadcast. This is a stronger, more
+        comprehensive signal and is irreversible.
+      </p>
+      <ul>
+        <li>NIP-09 targets specific events you have stored locally</li>
+        <li>NIP-62 instructs relays to wipe everything from your pubkey, even events you do not have locally</li>
+        <li>Neither method can guarantee deletion from all relays or backups</li>
+      </ul>
+      <p>
+        <strong>Consider this carefully before proceeding.</strong>
+      </p>
+    </div>
+  </div>
+
+  } <!-- end of non-completed state -->
 </div>
