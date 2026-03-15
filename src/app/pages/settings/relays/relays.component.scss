@@ -170,6 +170,33 @@ app-info-tooltip {
   z-index: 2;
 }
 
+.message-relay-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+
+  .relay-url {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.message-relay-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.empty-message {
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 14px;
+  padding: 8px 0;
+}
+
 .relay-item {
   height: auto !important;
   min-height: 60px;
@@ -365,8 +392,15 @@ app-info-tooltip {
 // Card positioning for tooltips
 .user-relays-card,
 .discovery-relays-card,
-.observed-relays-card {
+.observed-relays-card,
+.message-relays-card {
   position: relative;
+}
+
+.tab-content>mat-card,
+.tab-content>.info-card,
+.tab-content>.dead-relays-action {
+  margin-bottom: 24px;
 }
 
 // Styles for observed relays tab - List-based design inspired by the screenshot

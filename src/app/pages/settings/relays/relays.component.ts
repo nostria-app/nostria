@@ -110,6 +110,16 @@ export class RelaysComponent implements OnInit, OnDestroy {
   // Show DM relay update card unless already matching
   showUpdateDMRelays = signal(false);
 
+  // Message relays (kind 10050)
+  messageRelays = signal<string[]>([]);
+  newMessageRelayUrl = signal('');
+
+  messageRelaysSynced = computed(() => {
+    const accountUrls = new Set(this.utilities.normalizeRelayUrls(this.accountRelay.getRelayUrls()));
+    const msgUrls = new Set(this.utilities.normalizeRelayUrls(this.messageRelays()));
+    return accountUrls.size === msgUrls.size && [...accountUrls].every(u => msgUrls.has(u));
+  });
+
   // Template references for tooltip content
   @ViewChild('userRelaysInfoContent')
   userRelaysInfoContent!: TemplateRef<unknown>;
@@ -292,19 +302,14 @@ export class RelaysComponent implements OnInit, OnDestroy {
         this.accountRelay.getRelayUrls().map(r => r)
       );
 
-      // Don't show the DM relay warning if user has zero account relays
-      if (userRelayUrls.length === 0) {
-        this.showUpdateDMRelays.set(false);
-        return;
-      }
-
       // Fetch existing DM relay list event (10050)
       const dmRelayEvent = await this.data.getEventByPubkeyAndKind(
         pubkey,
         kinds.DirectMessageRelaysList
       );
       if (!dmRelayEvent) {
-        this.showUpdateDMRelays.set(true); // Need to create one
+        this.messageRelays.set([]);
+        this.showUpdateDMRelays.set(userRelayUrls.length > 0);
         return;
       }
 
@@ -314,6 +319,8 @@ export class RelaysComponent implements OnInit, OnDestroy {
         .map(t => t[1]);
       const normalizedDMUrls = this.utilities.normalizeRelayUrls(dmRelayUrls);
 
+      this.messageRelays.set(normalizedDMUrls);
+
       // Compare sets (unordered)
       const setA = new Set(userRelayUrls);
       const setB = new Set(normalizedDMUrls);
@@ -322,6 +329,7 @@ export class RelaysComponent implements OnInit, OnDestroy {
       this.showUpdateDMRelays.set(!same);
     } catch (err) {
       this.logger.error('Failed to check DM relay list', err);
+      this.messageRelays.set([]);
       this.showUpdateDMRelays.set(true);
     }
   }
@@ -928,12 +936,46 @@ export class RelaysComponent implements OnInit, OnDestroy {
       return relay;
     });
     const normalizedUrls = this.utilities.normalizeRelayUrls(relayUrls);
-    const relayTags = this.nostr.createTags('relay', normalizedUrls);
+    await this.publishMessageRelayList(normalizedUrls);
+    this.showMessage('Message relays synced with account relays');
+  }
+
+  async addMessageRelay(): Promise<void> {
+    const url = this.newMessageRelayUrl().trim();
+    if (!url || !url.startsWith('wss://')) {
+      this.showMessage('Please enter a valid relay URL starting with wss://');
+      return;
+    }
+
+    const normalized = this.utilities.normalizeRelayUrls([url]);
+    const current = this.messageRelays();
+    if (current.some(r => this.utilities.normalizeRelayUrls([r])[0] === normalized[0])) {
+      this.showMessage('Relay already in message relay list');
+      return;
+    }
+
+    const updated = [...current, normalized[0]];
+    await this.publishMessageRelayList(updated);
+    this.newMessageRelayUrl.set('');
+    this.showMessage('Message relay added');
+  }
+
+  async removeMessageRelay(url: string): Promise<void> {
+    const updated = this.messageRelays().filter(r => r !== url);
+    await this.publishMessageRelayList(updated);
+    this.showMessage('Message relay removed');
+  }
+
+  async syncMessageRelaysWithAccount(): Promise<void> {
+    const accountUrls = this.utilities.normalizeRelayUrls(this.accountRelay.getRelayUrls());
+    await this.publishMessageRelayList(accountUrls);
+    this.showMessage('Message relays synced with account relays');
+  }
+
+  private async publishMessageRelayList(relayUrls: string[]): Promise<void> {
+    const relayTags = this.nostr.createTags('relay', relayUrls);
     const pubkey = this.accountState.pubkey();
 
-    // const relayTags = this.createTags('r', [relayServerUrl!]);
-
-    // Create Relay List event for the new user
     const relayListEvent: UnsignedEvent = {
       pubkey,
       created_at: Math.floor(Date.now() / 1000),
@@ -946,7 +988,7 @@ export class RelaysComponent implements OnInit, OnDestroy {
     await this.accountRelay.publish(signedEvent);
     await this.database.saveEvent(signedEvent);
 
-    // Hide the warning after updating
+    this.messageRelays.set(relayUrls);
     this.showUpdateDMRelays.set(false);
     this.logger.info('DM relay list updated successfully');
   }
