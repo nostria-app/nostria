@@ -120,7 +120,7 @@ import { getSettingsSectionComponent } from '../settings-section-components.map'
         </div>
       } @else {
         <!-- Popular Settings -->
-        <div class="popular-section">
+        <!-- <div class="popular-section">
           <h3 class="section-title" i18n="@@settings.home.popular">Popular Settings</h3>
           <mat-nav-list>
             @for (item of popularItems(); track item.id) {
@@ -135,7 +135,7 @@ import { getSettingsSectionComponent } from '../settings-section-components.map'
           </mat-nav-list>
         </div>
 
-        <mat-divider></mat-divider>
+        <mat-divider></mat-divider> -->
 
         <!-- All Categories -->
         <div class="categories-section">
