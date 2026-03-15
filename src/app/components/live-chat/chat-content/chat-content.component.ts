@@ -1,15 +1,15 @@
 import { Component, input, inject, computed, ChangeDetectionStrategy } from '@angular/core';
 import { nip19 } from 'nostr-tools';
-import { UtilitiesService } from '../../../services/utilities.service';
 import { ProfileDisplayNameComponent } from '../../user-profile/display-name/profile-display-name.component';
 import { LayoutService } from '../../../services/layout.service';
 
 interface ContentPart {
-  type: 'text' | 'npub' | 'nprofile' | 'note' | 'nevent' | 'naddr';
+  type: 'text' | 'url' | 'npub' | 'nprofile' | 'note' | 'nevent' | 'naddr';
   content: string;
   pubkey?: string;
   eventId?: string;
   encodedEvent?: string;
+  displayUrl?: string;
 }
 
 @Component({
@@ -19,6 +19,8 @@ interface ContentPart {
     @for (part of parsedContent(); track $index) {
       @if (part.type === 'text') {
         <span>{{ part.content }}</span>
+      } @else if (part.type === 'url') {
+        <a class="message-link" [href]="part.content" target="_blank" rel="noopener noreferrer">{{ part.displayUrl || part.content }}</a>
       } @else if (part.type === 'npub' || part.type === 'nprofile') {
         <a class="nostr-mention" (click)="onProfileClick($event, part.pubkey!)">@<app-profile-display-name [pubkey]="part.pubkey!" /></a>
       } @else if (part.type === 'note' || part.type === 'nevent') {
@@ -31,6 +33,16 @@ interface ContentPart {
   styles: [`
     :host {
       display: inline;
+    }
+
+    .message-link {
+      color: var(--mat-sys-primary);
+      text-decoration: none;
+      word-break: break-all;
+
+      &:hover {
+        text-decoration: underline;
+      }
     }
     
     .nostr-mention {
@@ -64,13 +76,15 @@ interface ContentPart {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ChatContentComponent {
-  private utilities = inject(UtilitiesService);
   private layout = inject(LayoutService);
 
   content = input.required<string>();
 
   // Regex to match nostr URIs and bare NIP-19 identifiers
   private readonly nostrUriRegex = /((?:nostr:)?(?:npub|nprofile|note|nevent|naddr)1(?:(?!(?:npub|nprofile|note|nevent|naddr)1)[a-zA-Z0-9])+)/g;
+
+  // Regex to match http/https URLs
+  private readonly urlRegex = /(https?:\/\/[^\s<>"{}|\\^`[\]]+)/g;
 
   parsedContent = computed<ContentPart[]>(() => {
     const text = this.content();
@@ -116,8 +130,77 @@ export class ChatContentComponent {
       });
     }
 
-    return parts;
+    // Second pass: split text parts to extract URLs
+    return parts.flatMap((part) => (part.type === 'text' ? this.parseUrls(part.content) : [part]));
   });
+
+  private parseUrls(text: string): ContentPart[] {
+    if (!text) return [];
+
+    const parts: ContentPart[] = [];
+    let lastIndex = 0;
+
+    this.urlRegex.lastIndex = 0;
+
+    let match: RegExpExecArray | null;
+    while ((match = this.urlRegex.exec(text)) !== null) {
+      // Add text before this URL
+      if (match.index > lastIndex) {
+        parts.push({ type: 'text', content: text.substring(lastIndex, match.index) });
+      }
+
+      // Strip trailing punctuation that likely isn't part of the URL
+      let url = match[0];
+      const trailingMatch = url.match(/[.,;:!?)]+$/);
+      let trailing = '';
+      if (trailingMatch) {
+        trailing = trailingMatch[0];
+        url = url.slice(0, -trailing.length);
+      }
+
+      parts.push({
+        type: 'url',
+        content: url,
+        displayUrl: this.truncateUrl(url),
+      });
+
+      if (trailing) {
+        parts.push({ type: 'text', content: trailing });
+      }
+
+      lastIndex = match.index + match[0].length;
+    }
+
+    // Add remaining text
+    if (lastIndex < text.length) {
+      parts.push({ type: 'text', content: text.substring(lastIndex) });
+    }
+
+    return parts;
+  }
+
+  private truncateUrl(url: string, maxLength = 50): string {
+    if (url.length <= maxLength) return url;
+
+    try {
+      const urlObj = new URL(url);
+      const domain = urlObj.hostname;
+      const path = urlObj.pathname + urlObj.search;
+
+      if (domain.length + 10 >= maxLength) {
+        return domain.slice(0, maxLength - 3) + '...';
+      }
+
+      const availablePathLength = maxLength - domain.length - 3;
+      if (path.length > availablePathLength) {
+        return domain + path.slice(0, availablePathLength) + '...';
+      }
+
+      return domain + path;
+    } catch {
+      return url.slice(0, maxLength - 3) + '...';
+    }
+  }
 
   private parseNostrUri(uri: string): ContentPart | null {
     try {

@@ -89,6 +89,16 @@ export class EventPageComponent {
   // Reduce indentation on mobile to preserve horizontal space in thread view
   readonly threadIndent = computed(() => this.panelNav.isMobile() ? 8 : 16);
 
+  // Cap the maximum indentation from parent events on mobile to prevent content being pushed off-screen
+  readonly maxParentIndent = computed(() => {
+    const indent = this.parentEvents().length * this.threadIndent();
+    // On mobile, cap indent at 2 levels worth (16px) to keep content readable
+    if (this.panelNav.isMobile()) {
+      return Math.min(indent, 16);
+    }
+    return indent;
+  });
+
   // Detect if event is rendered in the right panel outlet
   isInRightPanel = computed(() => {
     // Check both the route outlet property AND the current URL structure

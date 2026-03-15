@@ -151,7 +151,8 @@
 
         <!-- User's playlists -->
         @for (playlist of myPlaylistsPreview(); track playlist.id) {
-        <app-music-playlist-card [event]="playlist"></app-music-playlist-card>
+        <app-music-playlist-card [event]="playlist" [likedReaction]="playlistLikedReactionById().get(playlist.id) ?? null"
+          (likedReactionChange)="onPlaylistLikedReactionChange(playlist, $event)"></app-music-playlist-card>
         }
       </div>
     </section>
@@ -176,7 +177,9 @@
       </div>
       <div class="music-grid">
         @for (track of listFilteredTracksPreview(); track track.id) {
-        <app-music-event [event]="track" mode="card"></app-music-event>
+        <app-music-event [event]="track" mode="card" [likedReaction]="trackLikedReactionById().get(track.id) ?? null"
+          [hasZapped]="trackHasZappedById().has(track.id)" (likedReactionChange)="onTrackLikedReactionChange(track, $event)"
+          (hasZappedChange)="onTrackHasZappedChange(track, $event)"></app-music-event>
         }
       </div>
     </section>
@@ -201,7 +204,8 @@
       </div>
       <div class="playlists-grid">
         @for (playlist of listFilteredPlaylistsPreview(); track playlist.id) {
-        <app-music-playlist-card [event]="playlist"></app-music-playlist-card>
+        <app-music-playlist-card [event]="playlist" [likedReaction]="playlistLikedReactionById().get(playlist.id) ?? null"
+          (likedReactionChange)="onPlaylistLikedReactionChange(playlist, $event)"></app-music-playlist-card>
         }
       </div>
     </section>

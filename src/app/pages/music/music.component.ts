@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, OnDestroy, ViewChild, ElementRef, ChangeDetectionStrategy, effect } from '@angular/core';
+import { Component, inject, signal, computed, OnDestroy, ViewChild, ElementRef, ChangeDetectionStrategy, effect, untracked } from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -23,6 +23,7 @@ import { AccountLocalStateService } from '../../services/account-local-state.ser
 import { LayoutService } from '../../services/layout.service';
 import { TwoColumnLayoutService } from '../../services/two-column-layout.service';
 import { FollowSetsService } from '../../services/follow-sets.service';
+import { ZapService } from '../../services/zap.service';
 import { MediaItem } from '../../interfaces';
 import { MusicEventComponent } from '../../components/event-types/music-event.component';
 import { MusicPlaylistCardComponent } from '../../components/music-playlist-card/music-playlist-card.component';
@@ -40,6 +41,7 @@ const MUSIC_KINDS = [...UtilitiesService.MUSIC_KINDS];
 const PLAYLIST_KIND = 34139;
 const USER_STATUS_KIND = 30315;
 const SECTION_LIMIT = 12;
+const LIKE_QUERY_TIMEOUT_MS = 3000;
 type MusicTrackSortValue = 'released' | 'published';
 
 interface ListeningEntry {
@@ -98,6 +100,7 @@ export class MusicComponent implements OnDestroy {
   private musicData = inject(MusicDataService);
   followSetsService = inject(FollowSetsService);
   private readonly logger = inject(LoggerService);
+  private zapService = inject(ZapService);
 
   allTracks = signal<Event[]>([]);
   allPlaylists = signal<Event[]>([]);
@@ -137,6 +140,54 @@ export class MusicComponent implements OnDestroy {
   private syncingOwnMusicCache = false;
   private lastSyncedOwnMusicPubkey: string | null = null;
   private requestedProfilePubkeys = new Set<string>();
+
+  // Like/zap state for home page tracks
+  private likedReactionByTargetKey = signal(new Map<string, Event>());
+  private zappedTargetKeys = signal(new Set<string>());
+  private likeZapStatePubkey: string | null = null;
+  private likeZapLoaded = false;
+  private likeZapLoading = false;
+
+  // Computed signals that map event IDs to liked reaction / zap state
+  // Using computed signals instead of template method calls ensures reliable OnPush CD tracking
+  trackLikedReactionById = computed(() => {
+    const likeMap = this.likedReactionByTargetKey();
+    const tracks = this.listFilteredTracksPreview();
+    const result = new Map<string, Event>();
+    for (const track of tracks) {
+      const target = this.getTrackReactionTarget(track);
+      if (!target) continue;
+      const reaction = likeMap.get(`${target.type}:${target.value}`);
+      if (reaction) result.set(track.id, reaction);
+    }
+    return result;
+  });
+
+  trackHasZappedById = computed(() => {
+    const zapSet = this.zappedTargetKeys();
+    const tracks = this.listFilteredTracksPreview();
+    const result = new Set<string>();
+    for (const track of tracks) {
+      const target = this.getTrackReactionTarget(track);
+      if (!target) continue;
+      if (zapSet.has(`${target.type}:${target.value}`)) result.add(track.id);
+    }
+    return result;
+  });
+
+  playlistLikedReactionById = computed(() => {
+    const likeMap = this.likedReactionByTargetKey();
+    const playlists = this.listFilteredPlaylistsPreview();
+    const myPlaylists = this.myPlaylistsPreview();
+    const result = new Map<string, Event>();
+    for (const playlist of [...playlists, ...myPlaylists]) {
+      const target = this.getTrackReactionTarget(playlist);
+      if (!target) continue;
+      const reaction = likeMap.get(`${target.type}:${target.value}`);
+      if (reaction) result.set(playlist.id, reaction);
+    }
+    return result;
+  });
 
   // Search input reference for focusing
   @ViewChild('searchInput') searchInput!: ElementRef<HTMLInputElement>;
@@ -449,6 +500,14 @@ export class MusicComponent implements OnDestroy {
       const artistPubkeys = this.allArtists().map(artist => artist.pubkey);
       const listeningPubkeys = this.recentListeningEntries().map(entry => entry.pubkey);
       void this.prefetchProfiles([...artistPubkeys, ...listeningPubkeys]);
+    });
+
+    // Load like/zap state when preview tracks/playlists change or user changes
+    effect(() => {
+      const userPubkey = this.currentPubkey();
+      const tracks = this.listFilteredTracksPreview();
+      const playlists = this.listFilteredPlaylistsPreview();
+      untracked(() => this.loadLikeZapState(userPubkey, tracks, playlists));
     });
 
     // Update container width after view init and after CSS transitions complete
@@ -887,6 +946,8 @@ export class MusicComponent implements OnDestroy {
     this.allTracks.set([]);
     this.allPlaylists.set([]);
     this.loading.set(true);
+
+    this.resetLikeZapState();
 
     this.trackSubscription?.close();
     this.playlistSubscription?.close();
@@ -1613,5 +1674,256 @@ export class MusicComponent implements OnDestroy {
     } finally {
       this.isLoadingLikedSongs.set(false);
     }
+  }
+
+  // === Like/Zap state for home page tracks ===
+
+  onTrackLikedReactionChange(track: Event, reaction: Event | null): void {
+    const target = this.getTrackReactionTarget(track);
+    if (!target) return;
+
+    const targetKey = `${target.type}:${target.value}`;
+    this.likedReactionByTargetKey.update(existing => {
+      const next = new Map(existing);
+      if (reaction) {
+        next.set(targetKey, reaction);
+      } else {
+        next.delete(targetKey);
+      }
+      return next;
+    });
+  }
+
+  onTrackHasZappedChange(track: Event, hasZapped: boolean): void {
+    const target = this.getTrackReactionTarget(track);
+    if (!target || !hasZapped) return;
+
+    const targetKey = `${target.type}:${target.value}`;
+    this.zappedTargetKeys.update(existing => {
+      if (existing.has(targetKey)) return existing;
+      const next = new Set(existing);
+      next.add(targetKey);
+      return next;
+    });
+  }
+
+  onPlaylistLikedReactionChange(playlist: Event, reaction: Event | null): void {
+    const target = this.getTrackReactionTarget(playlist);
+    if (!target) return;
+
+    const targetKey = `${target.type}:${target.value}`;
+    this.likedReactionByTargetKey.update(existing => {
+      const next = new Map(existing);
+      if (reaction) {
+        next.set(targetKey, reaction);
+      } else {
+        next.delete(targetKey);
+      }
+      return next;
+    });
+  }
+
+  private getTrackReactionTarget(track: Event): { type: 'a' | 'e'; value: string } | null {
+    if (this.utilities.isParameterizedReplaceableEvent(track.kind)) {
+      const identifier = track.tags.find(tag => tag[0] === 'd')?.[1] || '';
+      return { type: 'a', value: `${track.kind}:${track.pubkey}:${identifier}` };
+    }
+    if (!track.id) return null;
+    return { type: 'e', value: track.id };
+  }
+
+  private resetLikeZapState(): void {
+    this.likedReactionByTargetKey.set(new Map());
+    this.zappedTargetKeys.set(new Set());
+    this.likeZapLoaded = false;
+    this.likeZapLoading = false;
+  }
+
+  private loadLikeZapState(userPubkey: string | null, tracks: Event[], playlists: Event[] = []): void {
+    // Reset if user changed
+    if (this.likeZapStatePubkey !== userPubkey) {
+      this.likeZapStatePubkey = userPubkey;
+      this.resetLikeZapState();
+    }
+
+    if (!userPubkey || (tracks.length === 0 && playlists.length === 0) || this.likeZapLoaded || this.likeZapLoading) {
+      return;
+    }
+
+    this.likeZapLoading = true;
+    void this.fetchLikeZapState(userPubkey, [...tracks, ...playlists]);
+  }
+
+  private async fetchLikeZapState(userPubkey: string, events: Event[]): Promise<void> {
+    try {
+      // Collect targets from all events (tracks + playlists)
+      const aTargets: string[] = [];
+      const eTargets: string[] = [];
+      for (const ev of events) {
+        const target = this.getTrackReactionTarget(ev);
+        if (!target) continue;
+        if (target.type === 'a') {
+          aTargets.push(target.value);
+        } else {
+          eTargets.push(target.value);
+        }
+      }
+
+      // Load likes
+      await this.fetchLikes(userPubkey);
+
+      // Load zaps
+      await this.fetchZaps(userPubkey, aTargets, eTargets);
+    } catch (error) {
+      this.logger.warn('[Music] Failed to load like/zap state for home page:', error);
+    } finally {
+      this.likeZapLoading = false;
+      this.likeZapLoaded = true;
+    }
+  }
+
+  private async fetchLikes(userPubkey: string): Promise<void> {
+    // Use broad query approach (same as music-tracks component) — fetch ALL user
+    // reactions and filter locally, since targeted #a/#e filters may miss reactions
+    // depending on relay support.
+    const reactions = await this.accountRelay.getMany<Event>({
+      kinds: [kinds.Reaction],
+      authors: [userPubkey],
+      limit: 1000,
+    }, { timeout: LIKE_QUERY_TIMEOUT_MS });
+
+    if (this.likeZapStatePubkey !== userPubkey) return;
+
+    const newestReactionByKey = new Map<string, Event>();
+
+    for (const reaction of reactions) {
+      if (!this.isPositiveReaction(reaction)) continue;
+      if (!this.isMusicLikeReaction(reaction)) continue;
+
+      const reactionKey = this.getReactionTargetKeyFromReaction(reaction);
+      if (!reactionKey) continue;
+
+      const existing = newestReactionByKey.get(reactionKey);
+      if (!existing || reaction.created_at > existing.created_at) {
+        newestReactionByKey.set(reactionKey, reaction);
+      }
+    }
+
+    if (newestReactionByKey.size > 0) {
+      this.likedReactionByTargetKey.update(existing => {
+        const next = new Map(existing);
+        for (const [key, reaction] of newestReactionByKey.entries()) {
+          next.set(key, reaction);
+        }
+        return next;
+      });
+    }
+  }
+
+  private async fetchZaps(userPubkey: string, aTargets: string[], eTargets: string[]): Promise<void> {
+    const matchedKeys = new Set<string>();
+
+    const loadBatch = async (targetType: 'a' | 'e', targetValues: string[]) => {
+      if (targetValues.length === 0) return;
+      const targetTag = targetType === 'a' ? '#a' : '#e';
+
+      const [senderFiltered, targetFiltered] = await Promise.all([
+        this.accountRelay.getMany<Event>({
+          kinds: [9735],
+          '#P': [userPubkey],
+          [targetTag]: targetValues,
+          limit: targetValues.length * 4,
+        } as unknown as Filter, { timeout: LIKE_QUERY_TIMEOUT_MS }),
+        this.accountRelay.getMany<Event>({
+          kinds: [9735],
+          [targetTag]: targetValues,
+          limit: targetValues.length * 8,
+        } as Filter, { timeout: LIKE_QUERY_TIMEOUT_MS }),
+      ]);
+
+      const merged = new Map<string, Event>();
+      for (const receipt of [...senderFiltered, ...targetFiltered]) {
+        merged.set(receipt.id, receipt);
+      }
+
+      for (const zapReceipt of merged.values()) {
+        const parsed = this.zapService.parseZapReceipt(zapReceipt);
+        const zapRequest = parsed.zapRequest;
+        if (!zapRequest || zapRequest.pubkey !== userPubkey) continue;
+
+        const target = this.getMusicTrackTargetFromZapRequest(zapRequest);
+        if (!target || target.type !== targetType || !targetValues.includes(target.value)) continue;
+
+        matchedKeys.add(`${target.type}:${target.value}`);
+      }
+    };
+
+    await loadBatch('a', aTargets);
+    await loadBatch('e', eTargets);
+
+    if (this.likeZapStatePubkey !== userPubkey) return;
+
+    if (matchedKeys.size > 0) {
+      this.zappedTargetKeys.update(existing => {
+        const next = new Set(existing);
+        for (const key of matchedKeys) {
+          next.add(key);
+        }
+        return next;
+      });
+    }
+  }
+
+  private getMusicTrackTargetFromZapRequest(zapRequest: Event): { type: 'a' | 'e'; value: string } | null {
+    const aTag = zapRequest.tags.find((tag: string[]) => tag[0] === 'a')?.[1]?.trim();
+    if (aTag && this.utilities.parseMusicTrackCoordinate(aTag)) {
+      return { type: 'a', value: aTag };
+    }
+
+    const eTag = zapRequest.tags.find((tag: string[]) => tag[0] === 'e')?.[1]?.trim();
+    const kindTag = zapRequest.tags.find((tag: string[]) => tag[0] === 'k')?.[1]?.trim();
+    if (!eTag || !kindTag) return null;
+
+    const kind = Number.parseInt(kindTag, 10);
+    if (Number.isNaN(kind) || !this.utilities.isMusicKind(kind)) return null;
+
+    return { type: 'e', value: eTag };
+  }
+
+  private isPositiveReaction(reaction: Event): boolean {
+    return reaction.content === '+'
+      || reaction.content === '❤️'
+      || reaction.content === '🤙'
+      || reaction.content === '👍';
+  }
+
+  private isMusicLikeReaction(reaction: Event): boolean {
+    const aTag = reaction.tags.find(tag => tag[0] === 'a')?.[1]?.trim();
+    if (aTag) {
+      return !!this.utilities.parseMusicTrackCoordinate(aTag) || this.isMusicPlaylistCoordinate(aTag);
+    }
+
+    const kindTag = reaction.tags.find(tag => tag[0] === 'k')?.[1]?.trim();
+    if (!kindTag) return false;
+
+    const kind = Number.parseInt(kindTag, 10);
+    return !Number.isNaN(kind) && (this.utilities.isMusicKind(kind) || kind === 34139);
+  }
+
+  private isMusicPlaylistCoordinate(coordinate: string): boolean {
+    const parts = coordinate.split(':');
+    if (parts.length < 3) return false;
+    const kind = Number.parseInt(parts[0], 10);
+    return kind === 34139;
+  }
+
+  private getReactionTargetKeyFromReaction(reaction: Event): string | null {
+    const aTag = reaction.tags.find(tag => tag[0] === 'a')?.[1]?.trim();
+    if (aTag) return `a:${aTag}`;
+
+    const eTag = reaction.tags.find(tag => tag[0] === 'e')?.[1]?.trim();
+    if (eTag) return `e:${eTag}`;
+
+    return null;
   }
 }

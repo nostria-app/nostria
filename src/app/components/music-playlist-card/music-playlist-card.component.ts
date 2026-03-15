@@ -1,4 +1,4 @@
-import { Component, computed, input, inject, signal, effect, untracked } from '@angular/core';
+import { Component, computed, input, inject, signal, effect, untracked, output } from '@angular/core';
 import { Router } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { MatCardModule } from '@angular/material/card';
@@ -608,6 +608,8 @@ export class MusicPlaylistCardComponent {
   private nostrService = inject(NostrService);
 
   event = input.required<Event>();
+  likedReaction = input<Event | null>(null);
+  likedReactionChange = output<Event | null>();
 
   authorProfile = signal<NostrRecord | undefined>(undefined);
   isLoadingTracks = signal(false);
@@ -704,9 +706,13 @@ export class MusicPlaylistCardComponent {
     return this.utilities.getMusicGradient(event);
   });
 
-  // Track liked state - set after liking
-  private _isLiked = signal(false);
-  isLiked = this._isLiked.asReadonly();
+  // Track liked state - prefer parent input, keep local override until parent catches up
+  private _likedOverride = signal<boolean | undefined>(undefined);
+  isLiked = computed(() => {
+    const override = this._likedOverride();
+    if (override !== undefined) return override;
+    return !!this.likedReaction();
+  });
 
   // Get naddr for addressable event
   naddr = computed(() => {
@@ -739,12 +745,13 @@ export class MusicPlaylistCardComponent {
   // Like the playlist
   likePlaylist(event: MouseEvent | KeyboardEvent): void {
     event.stopPropagation();
-    if (this._isLiked()) return;
+    if (this.isLiked()) return;
 
     const ev = this.event();
     this.reactionService.addLike(ev).then(result => {
       if (result.success) {
-        this._isLiked.set(true);
+        this._likedOverride.set(true);
+        this.likedReactionChange.emit(result.event ?? null);
         this.snackBar.open('Liked!', 'Close', { duration: 2000 });
       } else {
         this.snackBar.open('Failed to like', 'Close', { duration: 3000 });

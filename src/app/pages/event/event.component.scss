@@ -76,6 +76,7 @@
 @media (max-width: 699px) {
   .event-content {
     padding: 0;
+    padding-bottom: 80px; // Space for mobile navigation menu
   }
 }
 
@@ -516,5 +517,38 @@
 
   mat-icon {
     color: var(--mat-sys-primary);
+  }
+}
+
+// Mobile: flatten deep thread nesting to prevent content being pushed off-screen
+// Reduce thread-line width so each nesting level takes minimal horizontal space
+@media (max-width: 699px) {
+  .threaded-reply {
+    // Reduce the thread line column width on mobile
+    .thread-line-clickable {
+      width: 6px;
+      min-width: 6px;
+      margin-right: 2px;
+
+      &::before {
+        left: 2px;
+      }
+    }
+  }
+
+  // Cap visual nesting: after a certain depth, remove indentation entirely
+  // Each level of DOM nesting adds ~8px (6px line + 2px margin) on mobile
+  // After 3 levels deep, flatten to prevent runaway indentation
+  .threaded-reply .threaded-reply .threaded-reply .threaded-reply {
+    .thread-line-clickable {
+      width: 0;
+      min-width: 0;
+      margin-right: 0;
+
+      // Keep the line visible but absolutely positioned so it doesn't take space
+      &::before {
+        display: none;
+      }
+    }
   }
 }
