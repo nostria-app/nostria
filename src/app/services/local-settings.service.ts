@@ -90,7 +90,7 @@ const DEFAULT_LOCAL_SETTINGS: LocalSettings = {
   menuOpen: false,
   menuExpanded: true,
   locale: 'en',
-  maxRelaysPerUser: 4,
+  maxRelaysPerUser: 3,
   relayDiscoveryMode: 'outbox',
   autoRelayAuth: false,
   addClientTag: true,
