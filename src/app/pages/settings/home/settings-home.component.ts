@@ -121,24 +121,6 @@ import { getSettingsSectionComponent } from '../settings-section-components.map'
           }
         </div>
       } @else {
-        <!-- Popular Settings -->
-        <!-- <div class="popular-section">
-          <h3 class="section-title" i18n="@@settings.home.popular">Popular Settings</h3>
-          <mat-nav-list>
-            @for (item of popularItems(); track item.id) {
-              @if (canShowItem(item)) {
-                <a mat-list-item (click)="navigateToItem(item)" (keydown.enter)="navigateToItem(item)" tabindex="0" class="settings-item">
-                  <mat-icon matListItemIcon>{{ item.icon }}</mat-icon>
-                  <div matListItemTitle>{{ item.title }}</div>
-                  <div matListItemLine class="item-description">{{ item.description }}</div>
-                </a>
-              }
-            }
-          </mat-nav-list>
-        </div>
-
-        <mat-divider></mat-divider> -->
-
         <!-- All Categories -->
         <div class="categories-section">
           <mat-nav-list>
@@ -350,7 +332,6 @@ export class SettingsHomeComponent implements OnInit {
 
   // Computed signals
   filteredItems = computed(() => this.registry.filteredItems());
-  popularItems = computed(() => this.registry.popularItems());
 
   /**
    * Maps filtered items to their components for inline rendering.
