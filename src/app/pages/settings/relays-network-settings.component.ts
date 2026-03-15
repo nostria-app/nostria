@@ -1,28 +1,25 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
-import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
-import { MatSelectModule } from '@angular/material/select';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { Router } from '@angular/router';
 
-import { LocalSettingsService, RelayDiscoveryMode } from '../../services/local-settings.service';
 import { RightPanelService } from '../../services/right-panel.service';
-import { SettingsService } from '../../services/settings.service';
+import { CustomDialogService } from '../../services/custom-dialog.service';
 import { SettingMaxRelaysComponent } from './sections/max-relays.component';
 import { SettingRelayAuthComponent } from './sections/relay-auth.component';
+import { SettingRelayModeComponent } from './sections/relay-mode.component';
 import { SettingsLinkCardComponent } from './sections/settings-link-card.component';
+import { getSettingsSectionComponent } from './settings-section-components.map';
 
 @Component({
   selector: 'app-relays-network-settings',
   imports: [
     MatButtonModule,
-    MatFormFieldModule,
     MatIconModule,
-    MatSelectModule,
     MatTooltipModule,
     SettingMaxRelaysComponent,
     SettingRelayAuthComponent,
+    SettingRelayModeComponent,
     SettingsLinkCardComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -38,33 +35,7 @@ import { SettingsLinkCardComponent } from './sections/settings-link-card.compone
 
     <div class="content-medium">
       <app-setting-max-relays />
-
-      <div class="setting-section">
-        <h2 i18n="@@settings.relay-mode.title">Relays Mode</h2>
-        <p class="setting-description" i18n="@@settings.relay-mode.description">
-          Choose how relays are selected when querying events for other users.
-        </p>
-
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label i18n="@@settings.relay-mode.label">Relays Mode</mat-label>
-          <mat-select [value]="settings.settings().relayDiscoveryMode ?? 'outbox'" (selectionChange)="setRelayDiscoveryMode($event.value)">
-            <mat-option value="outbox" i18n="@@settings.relay-mode.outbox">Outbox</mat-option>
-            <mat-option value="hybrid" i18n="@@settings.relay-mode.hybrid">Hybrid</mat-option>
-          </mat-select>
-        </mat-form-field>
-
-        <p class="setting-description">
-          @switch (settings.settings().relayDiscoveryMode ?? 'outbox') {
-            @case ('hybrid') {
-              <ng-container i18n="@@settings.relay-mode.hybrid.description">Hybrid combines discovered user relays with your current account relays for improved event discovery.</ng-container>
-            }
-            @default {
-              <ng-container i18n="@@settings.relay-mode.outbox.description">Outbox queries only the relays discovered from the target user (kind 10002 or kind 3).</ng-container>
-            }
-          }
-        </p>
-      </div>
-
+      <app-setting-relay-mode />
       <app-setting-relay-auth />
 
       <div class="setting-section">
@@ -98,17 +69,8 @@ import { SettingsLinkCardComponent } from './sections/settings-link-card.compone
       padding: 16px 0;
     }
 
-    .full-width {
-      width: 100%;
-    }
-
-    h2,
-    h3 {
+    h2 {
       margin-top: 0;
-    }
-
-    .setting-description {
-      color: var(--mat-sys-on-surface-variant);
     }
 
     .settings-link-list {
@@ -119,29 +81,47 @@ import { SettingsLinkCardComponent } from './sections/settings-link-card.compone
   `],
 })
 export class RelaysNetworkSettingsComponent {
-  readonly localSettings = inject(LocalSettingsService);
-  readonly settings = inject(SettingsService);
   private readonly rightPanel = inject(RightPanelService);
-  private readonly router = inject(Router);
+  private readonly customDialog = inject(CustomDialogService);
 
   goBack(): void {
     this.rightPanel.goBack();
   }
 
-  setRelayDiscoveryMode(mode: RelayDiscoveryMode): void {
-    this.localSettings.setRelayDiscoveryMode(mode);
-    void this.settings.updateSettings({ relayDiscoveryMode: mode });
+  async openRelays(tab: 'account' | 'discovery' | 'observed'): Promise<void> {
+    const componentLoader = getSettingsSectionComponent('relays');
+    if (!componentLoader) return;
+    const component = await componentLoader();
+
+    const titles: Record<string, string> = {
+      account: $localize`:@@settings.relays.account-relays:Account Relays`,
+      discovery: $localize`:@@settings.relays.discovery-relays:Discovery Relays`,
+      observed: $localize`:@@settings.relays.observed-relays:Observed Relays`,
+    };
+
+    this.rightPanel.open({
+      component,
+      title: titles[tab],
+      inputs: { tab },
+    });
   }
 
-  openRelays(tab: 'account' | 'discovery' | 'observed'): void {
-    void this.router.navigate(['/relays'], { queryParams: { tab } });
+  async openSearchRelays(): Promise<void> {
+    const componentLoader = getSettingsSectionComponent('search');
+    if (!componentLoader) return;
+    const component = await componentLoader();
+    this.rightPanel.open({
+      component,
+      title: $localize`:@@settings.search.relays:Search Relays`,
+    });
   }
 
-  openSearchRelays(): void {
-    void this.router.navigate(['/settings/search']);
-  }
-
-  openMediaServers(): void {
-    void this.router.navigate(['/collections/media'], { queryParams: { tab: 'servers' } });
+  async openMediaServers(): Promise<void> {
+    const { MediaServersSettingsDialogComponent } = await import('../media/media-servers-settings-dialog/media-servers-settings-dialog.component');
+    this.customDialog.open(MediaServersSettingsDialogComponent, {
+      title: $localize`:@@settings.media-servers.title:Media Servers`,
+      width: '550px',
+      maxWidth: '95vw',
+    });
   }
 }

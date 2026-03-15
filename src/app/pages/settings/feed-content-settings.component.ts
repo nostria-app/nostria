@@ -1,21 +1,20 @@
-import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { Router } from '@angular/router';
 
-import { AccountLocalStateService } from '../../services/account-local-state.service';
 import { AccountStateService } from '../../services/account-state.service';
 import { LocalSettingsService } from '../../services/local-settings.service';
 import { RightPanelService } from '../../services/right-panel.service';
+import { SettingActionButtonsComponent } from './sections/action-buttons.component';
 import { SettingClientTagsComponent } from './sections/client-tags.component';
 import { SettingExternalLinksComponent } from './sections/external-links.component';
 import { SettingMediaComponent } from './sections/media.component';
 import { SettingMusicStatusComponent } from './sections/music-status.component';
+import { SettingReactionEmojiComponent } from './sections/reaction-emoji.component';
 import { SettingsLinkCardComponent } from './sections/settings-link-card.component';
-
-const REACTION_EMOJI_OPTIONS = ['❤️', '👍', '🔥', '😂', '🎉', '👏', '🤙', '⚡'];
+import { getSettingsSectionComponent } from './settings-section-components.map';
 
 @Component({
   selector: 'app-feed-content-settings',
@@ -24,10 +23,12 @@ const REACTION_EMOJI_OPTIONS = ['❤️', '👍', '🔥', '😂', '🎉', '👏'
     MatIconModule,
     MatSlideToggleModule,
     MatTooltipModule,
+    SettingActionButtonsComponent,
     SettingClientTagsComponent,
     SettingExternalLinksComponent,
     SettingMediaComponent,
     SettingMusicStatusComponent,
+    SettingReactionEmojiComponent,
     SettingsLinkCardComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -73,66 +74,8 @@ const REACTION_EMOJI_OPTIONS = ['❤️', '👍', '🔥', '😂', '🎉', '👏'
         </p>
       </div>
 
-      <div class="setting-section">
-        <h2 i18n="@@settings.reactions.title">Reactions</h2>
-        <p class="setting-description" i18n="@@settings.reactions.default-emoji.description">
-          Choose the emoji sent when you single-tap the reaction button. Long-press opens the full emoji picker.
-        </p>
-        <div class="default-reaction-picker">
-          @for (emoji of reactionEmojiOptions; track emoji) {
-            <button
-              class="reaction-option"
-              type="button"
-              [class.selected]="localSettings.defaultReactionEmoji() === emoji"
-              (click)="setDefaultReactionEmoji(emoji)">
-              {{ emoji }}
-            </button>
-          }
-        </div>
-      </div>
-
-      <div class="setting-section">
-        <h2 i18n="@@settings.action-buttons.title">Action Buttons</h2>
-        <p class="setting-description" i18n="@@settings.action-buttons.description">
-          Choose how the action buttons (Like, Reply, Share, etc.) are displayed below posts and replies. You can also right-click or long-press the expand button on any post to cycle through modes.
-        </p>
-
-        <div class="display-mode-section">
-          <h3 i18n="@@settings.action-buttons.posts">Posts</h3>
-          <div class="display-mode-options">
-            @for (mode of displayModes; track mode.value) {
-              <button class="display-mode-option" type="button" [class.selected]="postsDisplayMode() === mode.value" (click)="setPostsDisplayMode(mode.value)">
-                <div class="display-mode-preview" [class.mode-labels-only]="mode.value === 'labels-only'" [class.mode-icons-only]="mode.value === 'icons-only'" [class.mode-icons-and-labels]="mode.value === 'icons-and-labels'">
-                  <div class="preview-action">
-                    <mat-icon class="preview-icon">favorite_border</mat-icon>
-                    <span class="preview-count">3</span>
-                    <span class="preview-text">Like</span>
-                  </div>
-                </div>
-                <span class="display-mode-label">{{ mode.label }}</span>
-              </button>
-            }
-          </div>
-        </div>
-
-        <div class="display-mode-section">
-          <h3 i18n="@@settings.action-buttons.replies">Replies</h3>
-          <div class="display-mode-options">
-            @for (mode of displayModes; track mode.value) {
-              <button class="display-mode-option" type="button" [class.selected]="repliesDisplayMode() === mode.value" (click)="setRepliesDisplayMode(mode.value)">
-                <div class="display-mode-preview" [class.mode-labels-only]="mode.value === 'labels-only'" [class.mode-icons-only]="mode.value === 'icons-only'" [class.mode-icons-and-labels]="mode.value === 'icons-and-labels'">
-                  <div class="preview-action">
-                    <mat-icon class="preview-icon">favorite_border</mat-icon>
-                    <span class="preview-count">3</span>
-                    <span class="preview-text">Like</span>
-                  </div>
-                </div>
-                <span class="display-mode-label">{{ mode.label }}</span>
-              </button>
-            }
-          </div>
-        </div>
-      </div>
+      <app-setting-reaction-emoji />
+      <app-setting-action-buttons />
 
       <app-setting-client-tags />
       <app-setting-media />
@@ -165,8 +108,7 @@ const REACTION_EMOJI_OPTIONS = ['❤️', '👍', '🔥', '😂', '🎉', '👏'
       padding: 16px 0;
     }
 
-    h2,
-    h3 {
+    h2 {
       margin-top: 0;
     }
 
@@ -185,81 +127,6 @@ const REACTION_EMOJI_OPTIONS = ['❤️', '👍', '🔥', '😂', '🎉', '👏'
       margin-bottom: 16px;
     }
 
-    .default-reaction-picker {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-    }
-
-    .reaction-option,
-    .display-mode-option {
-      border: 1px solid var(--mat-sys-outline-variant);
-      background: var(--mat-sys-surface-container-low);
-      color: var(--mat-sys-on-surface);
-      border-radius: var(--mat-sys-corner-medium);
-      cursor: pointer;
-    }
-
-    .reaction-option {
-      min-width: 48px;
-      min-height: 48px;
-      padding: 8px 12px;
-      font-size: 1.25rem;
-    }
-
-    .selected {
-      border-color: var(--mat-sys-primary);
-      background: var(--mat-sys-primary-container);
-      color: var(--mat-sys-on-primary-container);
-    }
-
-    .display-mode-section {
-      margin-bottom: 24px;
-    }
-
-    .display-mode-options {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-      gap: 12px;
-    }
-
-    .display-mode-option {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      padding: 12px;
-      text-align: left;
-    }
-
-    .display-mode-preview {
-      display: flex;
-      align-items: center;
-      min-height: 40px;
-    }
-
-    .preview-action {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      color: var(--mat-sys-on-surface-variant);
-    }
-
-    .preview-icon {
-      font-size: 20px;
-      width: 20px;
-      height: 20px;
-    }
-
-    .mode-icons-only .preview-text,
-    .mode-labels-only .preview-icon,
-    .mode-labels-only .preview-count {
-      display: none;
-    }
-
-    .display-mode-label {
-      font-size: 0.875rem;
-    }
-
     .section-actions {
       display: flex;
       flex-direction: column;
@@ -276,34 +143,7 @@ const REACTION_EMOJI_OPTIONS = ['❤️', '👍', '🔥', '😂', '🎉', '👏'
 export class FeedContentSettingsComponent {
   readonly accountState = inject(AccountStateService);
   readonly localSettings = inject(LocalSettingsService);
-  private readonly accountLocalState = inject(AccountLocalStateService);
   private readonly rightPanel = inject(RightPanelService);
-  private readonly router = inject(Router);
-
-  readonly reactionEmojiOptions = REACTION_EMOJI_OPTIONS;
-  readonly displayModes = [
-    { value: 'icons-and-labels', label: 'Icons & Labels' },
-    { value: 'icons-only', label: 'Icons Only' },
-    { value: 'labels-only', label: 'Labels Only' },
-  ];
-
-  readonly postsDisplayMode = computed(() => {
-    const pubkey = this.accountState.pubkey();
-    if (!pubkey) {
-      return 'icons-and-labels';
-    }
-
-    return this.accountLocalState.getActionsDisplayMode(pubkey);
-  });
-
-  readonly repliesDisplayMode = computed(() => {
-    const pubkey = this.accountState.pubkey();
-    if (!pubkey) {
-      return 'labels-only';
-    }
-
-    return this.accountLocalState.getActionsDisplayModeReplies(pubkey);
-  });
 
   goBack(): void {
     this.rightPanel.goBack();
@@ -321,29 +161,13 @@ export class FeedContentSettingsComponent {
     this.localSettings.setOpenThreadsExpanded(!this.localSettings.openThreadsExpanded());
   }
 
-  setDefaultReactionEmoji(emoji: string): void {
-    this.localSettings.setDefaultReactionEmoji(emoji);
-  }
-
-  setPostsDisplayMode(mode: string): void {
-    const pubkey = this.accountState.pubkey();
-    if (!pubkey) {
-      return;
-    }
-
-    this.accountLocalState.setActionsDisplayMode(pubkey, mode);
-  }
-
-  setRepliesDisplayMode(mode: string): void {
-    const pubkey = this.accountState.pubkey();
-    if (!pubkey) {
-      return;
-    }
-
-    this.accountLocalState.setActionsDisplayModeReplies(pubkey, mode);
-  }
-
-  openAdvancedPostingSettings(): void {
-    void this.router.navigate(['/settings/advanced-posting']);
+  async openAdvancedPostingSettings(): Promise<void> {
+    const componentLoader = getSettingsSectionComponent('advanced-posting');
+    if (!componentLoader) return;
+    const component = await componentLoader();
+    this.rightPanel.open({
+      component,
+      title: $localize`:@@settings.sections.advanced-posting:Advanced Posting`,
+    });
   }
 }

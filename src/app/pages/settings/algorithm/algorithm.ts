@@ -45,6 +45,7 @@ import { RightPanelService } from '../../../services/right-panel.service';
   ],
   templateUrl: './algorithm.html',
   styleUrl: './algorithm.scss',
+  host: { class: 'panel-with-sticky-header' },
 })
 export class AlgorithmComponent implements OnInit, OnDestroy {
   private readonly metrics = inject(Metrics);

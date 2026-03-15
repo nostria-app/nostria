@@ -1,16 +1,5 @@
 .delete-event-container {
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
-  min-height: 100vh;
-  padding: 2rem 1rem;
-  background-color: var(--mat-app-background-color);
-}
-
-.delete-event-card {
-  max-width: 600px;
-  width: 100%;
-  margin: 0 auto;
+  padding: 1rem;
 }
 
 .info-section {
@@ -167,10 +156,6 @@
 @media (max-width: 600px) {
   .delete-event-container {
     padding: 1rem 0.5rem;
-  }
-
-  .delete-event-card {
-    margin: 0;
   }
 
   .info-box {

@@ -1,8 +1,8 @@
 <div class="panel-header">
-  <button mat-icon-button (click)="goBack()" matTooltip="Back">
+  <button mat-icon-button (click)="goBack()" matTooltip="Back" i18n-matTooltip="@@common.back">
     <mat-icon>arrow_back</mat-icon>
   </button>
-  <h2 class="panel-title title-font">Storage</h2>
+  <h2 class="panel-title title-font" i18n="@@settings.sections.storage">Storage</h2>
   <span class="panel-header-spacer"></span>
   <button mat-icon-button (click)="refreshStats()" [disabled]="isLoading()" matTooltip="Refresh statistics">
     <mat-icon>refresh</mat-icon>

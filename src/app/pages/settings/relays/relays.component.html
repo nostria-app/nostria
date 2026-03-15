@@ -2,15 +2,13 @@
   <button mat-icon-button (click)="goBack()" matTooltip="Back" i18n-matTooltip="@@common.back">
     <mat-icon>arrow_back</mat-icon>
   </button>
-  <h2 class="panel-title title-font" i18n="@@settings.sections.relays">Relays</h2>
+  <h2 class="panel-title title-font">{{ panelTitle() }}</h2>
   <span class="panel-header-spacer"></span>
 </div>
 
 <div class="content-medium">
-  <mat-tab-group animationDuration="300ms" [selectedIndex]="selectedTabIndex()"
-    (selectedIndexChange)="selectedTabIndex.set($event)">
-    <!-- Your Relays Tab -->
-    <mat-tab label="Account Relays" i18n-label="@@settings.relays.account-relays">
+  @switch (tab()) {
+    @case ('account') {
       <div class="tab-content">
         @if (userRelays().length === 0 && !hasMalformedRelayList()) {
         <mat-card class="user-relays-card zero-relays-card">
@@ -235,10 +233,9 @@
         </mat-card>
         }
       </div>
-    </mat-tab>
+    }
 
-    <!-- Discovery Relays Tab -->
-    <mat-tab label="Discovery Relays" i18n-label="@@settings.relays.discovery-relays">
+    @case ('discovery') {
       <div class="tab-content">
         <div class="action-buttons-container">
           <button mat-flat-button color="accent" class="find-closest-button" (click)="findClosestRelay()"
@@ -311,10 +308,9 @@
           </mat-card-content>
         </mat-card>
       </div>
-    </mat-tab>
+    }
 
-    <!-- Observed Relays Tab -->
-    <mat-tab label="Observed Relays" i18n-label="@@settings.relays.observed-relays">
+    @case ('observed') {
       <div class="tab-content">
         <div class="observed-relays-header">
           <div class="sort-controls">
@@ -638,8 +634,8 @@
         </div>
         }
       </div>
-    </mat-tab>
-  </mat-tab-group>
+    }
+  }
 
   <!-- Template definitions for tooltip content -->
   <ng-template #userRelaysInfoContent>

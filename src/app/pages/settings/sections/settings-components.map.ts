@@ -13,11 +13,18 @@ import { SettingMenuEditorComponent } from './menu-editor.component';
 import { SettingHomeDestinationComponent } from './home-destination.component';
 import { SettingNotificationSpamFilterComponent } from './notification-spam-filter.component';
 import { SettingMusicStatusComponent } from './music-status.component';
+import { SettingTextSizeComponent } from './text-size.component';
+import { SettingFontSelectorComponent } from './font-selector.component';
+import { SettingReactionEmojiComponent } from './reaction-emoji.component';
+import { SettingActionButtonsComponent } from './action-buttons.component';
+import { SettingLockScreenRotationComponent } from './lock-screen-rotation.component';
+import { SettingRightSidebarComponent } from './right-sidebar.component';
+import { SettingRelayModeComponent } from './relay-mode.component';
 
 /**
  * Maps setting item IDs to their standalone component types.
  * This enables dynamic rendering of individual setting sections when searching.
- * 
+ *
  * The IDs here must match the `id` field in SettingsRegistryService.items
  */
 export const SETTINGS_COMPONENT_MAP: Record<string, Type<unknown>> = {
@@ -25,6 +32,11 @@ export const SETTINGS_COMPONENT_MAP: Record<string, Type<unknown>> = {
   'dark-mode': SettingDarkModeComponent,
   'language': SettingLanguageComponent,
   'logging': SettingLoggingComponent,
+
+  // Appearance settings
+  'text-size': SettingTextSizeComponent,
+  'font-selector': SettingFontSelectorComponent,
+  'lock-screen-rotation': SettingLockScreenRotationComponent,
 
   // Media settings (multiple registry items map to same component)
   'media-privacy': SettingMediaComponent,
@@ -35,6 +47,7 @@ export const SETTINGS_COMPONENT_MAP: Record<string, Type<unknown>> = {
   // Navigation settings
   'navigation-settings': SettingNavigationComponent,
   'home-destination': SettingHomeDestinationComponent,
+  'right-sidebar': SettingRightSidebarComponent,
 
   // Menu customization
   'menu-customization': SettingMenuEditorComponent,
@@ -42,21 +55,20 @@ export const SETTINGS_COMPONENT_MAP: Record<string, Type<unknown>> = {
   // Calendar settings
   'calendar-system': SettingCalendarComponent,
 
+  // Feed & Content settings
+  'default-reaction-emoji': SettingReactionEmojiComponent,
+  'action-buttons': SettingActionButtonsComponent,
+  'client-tags': SettingClientTagsComponent,
+  'external-links': SettingExternalLinksComponent,
+  'music-status': SettingMusicStatusComponent,
+
   // Relay settings
   'auto-relay-auth': SettingRelayAuthComponent,
   'max-relays-per-user': SettingMaxRelaysComponent,
-
-  // Client tags
-  'client-tags': SettingClientTagsComponent,
-
-  // External links
-  'external-links': SettingExternalLinksComponent,
+  'relay-mode': SettingRelayModeComponent,
 
   // Notification spam filter
   'notification-spam-filter': SettingNotificationSpamFilterComponent,
-
-  // Music status
-  'music-status': SettingMusicStatusComponent,
 };
 
 /**

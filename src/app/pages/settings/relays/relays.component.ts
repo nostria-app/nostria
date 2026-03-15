@@ -2,6 +2,7 @@ import {
   Component,
   effect,
   inject,
+  input,
   signal,
   OnInit,
   OnDestroy,
@@ -9,7 +10,7 @@ import {
   ViewChild,
   TemplateRef,
 } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
+import { Location } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatListModule } from '@angular/material/list';
 import { MatIconModule } from '@angular/material/icon';
@@ -18,7 +19,6 @@ import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
-import { MatTabsModule } from '@angular/material/tabs';
 import { MatDialog } from '@angular/material/dialog';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatSelectModule } from '@angular/material/select';
@@ -54,12 +54,6 @@ import {
   FindResponsiveRelaysDialogResult,
 } from './find-responsive-relays-dialog.component';
 
-const RELAY_TAB_INDEX = {
-  account: 0,
-  discovery: 1,
-  observed: 2,
-} as const;
-
 @Component({
   selector: 'app-relays-page',
   imports: [
@@ -71,7 +65,6 @@ const RELAY_TAB_INDEX = {
     MatInputModule,
     MatFormFieldModule,
     MatSlideToggleModule,
-    MatTabsModule,
     MatDividerModule,
     MatSelectModule,
     MatTooltipModule,
@@ -103,7 +96,7 @@ export class RelaysComponent implements OnInit, OnDestroy {
   private readonly panelActions = inject(PanelActionsService);
   private readonly rightPanel = inject(RightPanelService);
   private readonly customDialog = inject(CustomDialogService);
-  private readonly route = inject(ActivatedRoute);
+  private readonly location = inject(Location);
 
   followingRelayUrls = signal<string[]>([]);
   newRelayUrl = signal('');
@@ -196,7 +189,22 @@ export class RelaysComponent implements OnInit, OnDestroy {
 
   // Relays in the published account relay list that are known dead/defunct
   knownDeadAccountRelays = signal<string[]>([]);
-  selectedTabIndex = signal<number>(RELAY_TAB_INDEX.account);
+
+  /** Which relay section to display: 'account', 'discovery', or 'observed' */
+  tab = input<string>('account');
+
+  /** Dynamic panel title based on the active tab */
+  panelTitle = computed(() => {
+    switch (this.tab()) {
+      case 'discovery':
+        return $localize`:@@settings.relays.discovery-relays:Discovery Relays`;
+      case 'observed':
+        return $localize`:@@settings.relays.observed-relays:Observed Relays`;
+      case 'account':
+      default:
+        return $localize`:@@settings.relays.account-relays:Account Relays`;
+    }
+  });
 
   constructor() {
     // Effect to re-check following list when active pubkey changes
@@ -366,11 +374,9 @@ export class RelaysComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
-    this.selectedTabIndex.set(this.getInitialTabIndex(this.route.snapshot.queryParamMap.get('tab')));
-
     // Only set page title if not in right panel (right panel has its own title)
     if (!this.rightPanel.hasContent()) {
-      this.panelActions.setPageTitle($localize`:@@settings.relays.title:Relays`);
+      this.panelActions.setPageTitle(this.panelTitle());
     }
   }
 
@@ -381,18 +387,10 @@ export class RelaysComponent implements OnInit, OnDestroy {
   }
 
   goBack(): void {
-    this.rightPanel.goBack();
-  }
-
-  private getInitialTabIndex(tab: string | null): number {
-    switch (tab) {
-      case 'discovery':
-        return RELAY_TAB_INDEX.discovery;
-      case 'observed':
-        return RELAY_TAB_INDEX.observed;
-      case 'account':
-      default:
-        return RELAY_TAB_INDEX.account;
+    if (this.rightPanel.hasContent()) {
+      this.rightPanel.goBack();
+    } else {
+      this.location.back();
     }
   }
 
