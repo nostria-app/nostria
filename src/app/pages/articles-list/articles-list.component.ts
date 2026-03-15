@@ -127,7 +127,7 @@ export class ArticlesListComponent {
 
   constructor() {
     effect(() => {
-      if (this.app.initialized() && this.accountState.account()) {
+      if (this.app.initialized() && this.accountState.account() && this.accountRelay.initialized()) {
         const pubkey = this.accountState.account()!.pubkey;
         this.selectedTab.set(this.accountLocalState.getArticlesActiveTab(pubkey));
         this.loadArticles();
@@ -286,11 +286,46 @@ export class ArticlesListComponent {
     });
   }
 
-  async deleteArticle(article: ArticleItem, event?: MouseEvent): Promise<void> {
-    if (event) {
-      event.stopPropagation();
-    }
+  async deleteDraft(article: ArticleItem): Promise<void> {
+    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
+      data: {
+        title: 'Delete Draft',
+        message: `Are you sure you want to delete the draft "${article.title}"? This action cannot be undone.`,
+        confirmText: 'Delete',
+        cancelText: 'Cancel',
+      },
+    });
 
+    const result = await dialogRef.afterClosed().toPromise();
+    if (result) {
+      try {
+        // Create a deletion event (kind 5) referencing only the "e" tag (event ID),
+        // not the "a" tag. This allows re-creating a new draft with the same d-tag.
+        const tags: string[][] = [
+          ['e', article.event.id],
+          ['k', '30024'],
+        ];
+
+        const deleteEvent = this.nostrService.createEvent(5, 'Deleted draft', tags);
+        const signedEvent = await this.nostrService.signEvent(deleteEvent);
+        await this.accountRelay.publish(signedEvent);
+
+        // Remove from local list
+        this.articles.update(articles => articles.filter(a => a.id !== article.id));
+
+        this.snackBar.open('Draft deleted successfully', 'Close', {
+          duration: 3000,
+        });
+      } catch (error) {
+        this.logger.error('Error deleting draft:', error);
+        this.snackBar.open('Failed to delete draft', 'Close', {
+          duration: 3000,
+        });
+      }
+    }
+  }
+
+  async deleteArticle(article: ArticleItem): Promise<void> {
     const dialogRef = this.dialog.open(ConfirmDialogComponent, {
       data: {
         title: 'Delete Article',
@@ -303,24 +338,19 @@ export class ArticlesListComponent {
     const result = await dialogRef.afterClosed().toPromise();
     if (result) {
       try {
-        // Create a deletion event (kind 5)
-        // We should delete both draft and published version if they exist?
-        // Or just the one we are looking at?
-        // Usually "Delete" implies deleting the whole thing.
+        const tags: string[][] = [];
 
-        const tags = [];
         if (article.event) {
           tags.push(['a', `${article.event.kind}:${article.event.pubkey}:${article.dTag}`]);
-          tags.push(['e', article.event.id]);
+          tags.push(['k', `${article.event.kind}`]);
         }
 
         if (article.publishedEvent) {
           tags.push(['a', `${article.publishedEvent.kind}:${article.publishedEvent.pubkey}:${article.dTag}`]);
-          tags.push(['e', article.publishedEvent.id]);
+          tags.push(['k', `${article.publishedEvent.kind}`]);
         }
 
         const deleteEvent = this.nostrService.createEvent(5, 'Deleted article', tags);
-
         const signedEvent = await this.nostrService.signEvent(deleteEvent);
         await this.accountRelay.publish(signedEvent);
 

@@ -93,10 +93,23 @@
                 Last modified {{ article.lastModified | ago }} • Created {{ article.createdAt | ago }}
               </p>
             </div>
-            <button mat-icon-button (click)="deleteArticle(article, $event)" matTooltip="Delete article"
-              class="delete-button">
-              <mat-icon>delete</mat-icon>
+            <button mat-icon-button [matMenuTriggerFor]="articleMenu" (click)="$event.stopPropagation()"
+              class="more-button">
+              <mat-icon>more_vert</mat-icon>
             </button>
+            <mat-menu #articleMenu="matMenu">
+              @if (selectedTab() === 0) {
+              <button mat-menu-item (click)="deleteDraft(article)">
+                <mat-icon>delete</mat-icon>
+                <span>Delete</span>
+              </button>
+              } @else {
+              <button mat-menu-item (click)="deleteArticle(article)">
+                <mat-icon>delete</mat-icon>
+                <span>Delete</span>
+              </button>
+              }
+            </mat-menu>
           </div>
 
           <!-- <p class="article-summary">{{ article.summary }}</p> -->
