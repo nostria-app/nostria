@@ -1077,7 +1077,17 @@ export class MusicPlaylistCardComponent {
 
       // Get artist name from playlist author
       const profile = this.authorProfile();
-      const artistName = profile?.data?.name || profile?.data?.display_name || nip19.npubEncode(this.event().pubkey);
+      const playlistArtistName = profile?.data?.name || profile?.data?.display_name || 'Unknown Artist';
+
+      // Resolve profiles for tracks from different authors
+      const uniquePubkeys = [...new Set(orderedTracks.map(t => t.pubkey))];
+      const profileMap = new Map<string, string>();
+      await Promise.all(uniquePubkeys.map(async (pk) => {
+        const p = await this.data.getProfile(pk);
+        if (p?.data?.name || p?.data?.display_name) {
+          profileMap.set(pk, p.data.name || p.data.display_name);
+        }
+      }));
 
       this.mediaPlayer.clearQueue();
 
@@ -1096,7 +1106,7 @@ export class MusicPlaylistCardComponent {
         const mediaItem: MediaItem = {
           source: url,
           title: titleTag?.[1] || 'Untitled Track',
-          artist: trackArtist || artistName,
+          artist: trackArtist || profileMap.get(track.pubkey) || playlistArtistName,
           artwork: imageTag?.[1] || '/icons/icon-192x192.png',
           video: videoTag?.[1] || undefined,
           type: 'Music',

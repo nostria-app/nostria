@@ -1601,7 +1601,7 @@ export class MusicEventComponent {
     return {
       source: url,
       title: this.utilities.getMusicTitle(track) || 'Untitled Track',
-      artist: this.utilities.getMusicArtist(track) || nip19.npubEncode(track.pubkey),
+      artist: this.utilities.getMusicArtist(track) || this.artistName(),
       artwork: this.utilities.getMusicImage(track) || '/icons/icon-192x192.png',
       video: track.tags.find(tag => tag[0] === 'video')?.[1] || undefined,
       type: 'Music',
