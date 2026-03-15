@@ -4,17 +4,16 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatTooltipModule } from '@angular/material/tooltip';
 
-import { AccountStateService } from '../../services/account-state.service';
 import { LocalSettingsService } from '../../services/local-settings.service';
 import { RightPanelService } from '../../services/right-panel.service';
 import { SettingActionButtonsComponent } from './sections/action-buttons.component';
 import { SettingClientTagsComponent } from './sections/client-tags.component';
 import { SettingExternalLinksComponent } from './sections/external-links.component';
+import { SettingGlobalExpirationComponent } from './sections/global-expiration.component';
 import { SettingMediaComponent } from './sections/media.component';
 import { SettingMusicStatusComponent } from './sections/music-status.component';
+import { SettingPostToXComponent } from './sections/post-to-x.component';
 import { SettingReactionEmojiComponent } from './sections/reaction-emoji.component';
-import { SettingsLinkCardComponent } from './sections/settings-link-card.component';
-import { getSettingsSectionComponent } from './settings-section-components.map';
 
 @Component({
   selector: 'app-feed-content-settings',
@@ -26,10 +25,11 @@ import { getSettingsSectionComponent } from './settings-section-components.map';
     SettingActionButtonsComponent,
     SettingClientTagsComponent,
     SettingExternalLinksComponent,
+    SettingGlobalExpirationComponent,
     SettingMediaComponent,
     SettingMusicStatusComponent,
+    SettingPostToXComponent,
     SettingReactionEmojiComponent,
-    SettingsLinkCardComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'panel-with-sticky-header' },
@@ -80,27 +80,11 @@ import { getSettingsSectionComponent } from './settings-section-components.map';
       <app-setting-client-tags />
       <app-setting-media />
       <app-setting-music-status />
-      <app-setting-external-links />
 
-      @if (accountState.account()) {
-        <div class="setting-section section-actions">
-          <h2 i18n="@@settings.advanced-posting.title">Advanced posting</h2>
-          <p class="setting-description" i18n="@@settings.advanced-posting.description">
-            Manage Post to X and Global Event Expiration in the advanced posting settings screen.
-          </p>
-          <div class="settings-link-list">
-            <app-settings-link-card icon="share" i18n-title="@@settings.advanced-posting.post-to-x"
-              title="Manage Post to X" i18n-description="@@settings.advanced-posting.post-to-x.description"
-              description="Review dual-posting defaults and account connection status."
-              (activated)="openAdvancedPostingSettings()" />
-            <app-settings-link-card icon="timer" i18n-title="@@settings.advanced-posting.global-expiration"
-              title="Manage Global Expiration"
-              i18n-description="@@settings.advanced-posting.global-expiration.description"
-              description="Choose how long newly created events should stay available by default."
-              (activated)="openAdvancedPostingSettings()" />
-          </div>
-        </div>
-      }
+      <app-setting-post-to-x />
+      <app-setting-global-expiration />
+
+      <app-setting-external-links />
     </div>
   `,
   styles: [`
@@ -132,16 +116,9 @@ import { getSettingsSectionComponent } from './settings-section-components.map';
       flex-direction: column;
       gap: 12px;
     }
-
-    .settings-link-list {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
   `],
 })
 export class FeedContentSettingsComponent {
-  readonly accountState = inject(AccountStateService);
   readonly localSettings = inject(LocalSettingsService);
   private readonly rightPanel = inject(RightPanelService);
 
@@ -159,15 +136,5 @@ export class FeedContentSettingsComponent {
 
   toggleOpenThreadsExpanded(): void {
     this.localSettings.setOpenThreadsExpanded(!this.localSettings.openThreadsExpanded());
-  }
-
-  async openAdvancedPostingSettings(): Promise<void> {
-    const componentLoader = getSettingsSectionComponent('advanced-posting');
-    if (!componentLoader) return;
-    const component = await componentLoader();
-    this.rightPanel.open({
-      component,
-      title: $localize`:@@settings.sections.advanced-posting:Advanced Posting`,
-    });
   }
 }
