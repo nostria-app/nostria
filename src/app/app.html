@@ -140,12 +140,8 @@
           }
           <button mat-icon-button routerLink="/settings" data-settings-quick-trigger="true"
             (click)="onSettingsQuickCardTriggerClick($event); closeSidenavOnMobile()"
-            (mouseenter)="onSettingsQuickCardTriggerMouseEnter($event)"
-            (mouseleave)="onSettingsQuickCardTriggerMouseLeave()" (focusin)="onSettingsQuickCardTriggerFocus($event)"
-            (touchstart)="onSettingsQuickCardTriggerTouchStart($event)"
-            (touchend)="onSettingsQuickCardTriggerTouchEnd($event)"
-            (touchcancel)="onSettingsQuickCardTriggerTouchCancel()" (touchmove)="onSettingsQuickCardTriggerTouchMove()"
-            matTooltip="Settings" i18n-matTooltip="@@app.profile.settings">
+            (contextmenu)="onSettingsQuickCardTriggerContextMenu($event)" matTooltip="Settings"
+            i18n-matTooltip="@@app.profile.settings">
             <mat-icon>settings</mat-icon>
           </button>
         </div>
@@ -173,12 +169,9 @@
         <!-- Settings gear icon - opens profile actions menu -->
         <button mat-list-item [matMenuTriggerFor]="minimizedProfileActionsMenu"
           class="nav-item sidenav-minimized-settings-button" data-settings-quick-trigger="true"
-          (click)="onSettingsQuickCardTriggerClick($event)" (mouseenter)="onSettingsQuickCardTriggerMouseEnter($event)"
-          (mouseleave)="onSettingsQuickCardTriggerMouseLeave()" (focusin)="onSettingsQuickCardTriggerFocus($event)"
-          (touchstart)="onSettingsQuickCardTriggerTouchStart($event)"
-          (touchend)="onSettingsQuickCardTriggerTouchEnd($event)"
-          (touchcancel)="onSettingsQuickCardTriggerTouchCancel()" (touchmove)="onSettingsQuickCardTriggerTouchMove()"
-          matTooltip="Profile & Settings" matTooltipPosition="right">
+          (click)="onSettingsQuickCardTriggerClick($event)"
+          (contextmenu)="onSettingsQuickCardTriggerContextMenu($event)" matTooltip="Profile & Settings"
+          matTooltipPosition="right">
           <mat-icon matListItemIcon>settings</mat-icon>
         </button>
         }
@@ -503,8 +496,7 @@
     (click)="closeSettingsQuickCard()"></div>
   <div #settingsQuickCardLayer class="settings-quick-card-layer" [class.fullscreen]="settingsQuickCardFullscreen()"
     [style.top.px]="settingsQuickCardFullscreen() ? null : settingsQuickCardPosition().top"
-    [style.left.px]="settingsQuickCardFullscreen() ? null : settingsQuickCardPosition().left"
-    (mouseenter)="onSettingsQuickCardMouseEnter()" (mouseleave)="onSettingsQuickCardMouseLeave()">
+    [style.left.px]="settingsQuickCardFullscreen() ? null : settingsQuickCardPosition().left">
     <app-settings-quick-card [fullscreen]="settingsQuickCardFullscreen()" (closeRequested)="closeSettingsQuickCard()"
       (openSettingsRequested)="openFullSettingsFromQuickCard()" />
   </div>

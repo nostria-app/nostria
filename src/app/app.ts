@@ -275,14 +275,10 @@ export class App implements OnInit, OnDestroy {
   private createMenuOverlayRef?: OverlayRef;
   private settingsQuickCardOutsideHandler?: (event: Event) => void;
   private settingsQuickCardCloseTimer: ReturnType<typeof setTimeout> | null = null;
-  private settingsQuickCardLongPressTimer: number | null = null;
-  private settingsQuickCardLongPressTriggered = false;
   private settingsQuickCardAnchor: HTMLElement | null = null;
   private readonly QUICK_SETTINGS_CARD_WIDTH = 360;
   private readonly QUICK_SETTINGS_CARD_MARGIN = 16;
   private readonly QUICK_SETTINGS_CARD_OFFSET = 12;
-  private readonly QUICK_SETTINGS_CARD_CLOSE_DELAY = 140;
-  private readonly QUICK_SETTINGS_CARD_LONG_PRESS_DELAY = 450;
 
   // Track if push notification prompt has been shown
   private pushPromptShown = signal(false);
@@ -1291,7 +1287,6 @@ export class App implements OnInit, OnDestroy {
     this.destroy$.complete();
 
     this.clearSettingsQuickCardCloseTimer();
-    this.clearSettingsQuickCardLongPressTimer();
     this.unregisterSettingsQuickCardOutsideHandler();
 
     if (this.app.isBrowser() && this.backdropInteractionHandler) {
@@ -2046,89 +2041,22 @@ export class App implements OnInit, OnDestroy {
     }
   }
 
-  onSettingsQuickCardTriggerMouseEnter(event: MouseEvent): void {
+  onSettingsQuickCardTriggerContextMenu(event: MouseEvent): void {
+    event.preventDefault();
+
     if (this.layout.isHandset()) {
       return;
     }
 
-    this.clearSettingsQuickCardCloseTimer();
+    if (this.settingsQuickCardOpen()) {
+      this.closeSettingsQuickCard();
+      return;
+    }
+
     this.openSettingsQuickCard(event.currentTarget as HTMLElement | null);
   }
 
-  onSettingsQuickCardTriggerFocus(event: FocusEvent): void {
-    if (this.layout.isHandset()) {
-      return;
-    }
-
-    this.clearSettingsQuickCardCloseTimer();
-    this.openSettingsQuickCard(event.currentTarget as HTMLElement | null);
-  }
-
-  onSettingsQuickCardTriggerMouseLeave(): void {
-    if (this.layout.isHandset()) {
-      return;
-    }
-
-    this.scheduleSettingsQuickCardClose();
-  }
-
-  onSettingsQuickCardMouseEnter(): void {
-    this.clearSettingsQuickCardCloseTimer();
-  }
-
-  onSettingsQuickCardMouseLeave(): void {
-    if (this.settingsQuickCardFullscreen()) {
-      return;
-    }
-
-    this.scheduleSettingsQuickCardClose();
-  }
-
-  onSettingsQuickCardTriggerTouchStart(event: TouchEvent): void {
-    this.clearSettingsQuickCardLongPressTimer();
-    this.settingsQuickCardLongPressTriggered = false;
-
-    const anchor = event.currentTarget as HTMLElement | null;
-    if (!anchor) {
-      return;
-    }
-
-    this.settingsQuickCardLongPressTimer = window.setTimeout(() => {
-      this.settingsQuickCardLongPressTriggered = true;
-      this.openSettingsQuickCard(anchor);
-    }, this.QUICK_SETTINGS_CARD_LONG_PRESS_DELAY);
-  }
-
-  onSettingsQuickCardTriggerTouchMove(): void {
-    this.clearSettingsQuickCardLongPressTimer();
-  }
-
-  onSettingsQuickCardTriggerTouchEnd(event: TouchEvent): void {
-    this.clearSettingsQuickCardLongPressTimer();
-
-    if (this.settingsQuickCardLongPressTriggered) {
-      event.preventDefault();
-      event.stopPropagation();
-    }
-  }
-
-  onSettingsQuickCardTriggerTouchCancel(): void {
-    this.clearSettingsQuickCardLongPressTimer();
-    this.settingsQuickCardLongPressTriggered = false;
-  }
-
-  onSettingsQuickCardTriggerClick(event: Event): void {
-    if (this.settingsQuickCardLongPressTriggered) {
-      event.preventDefault();
-      event.stopPropagation();
-      this.settingsQuickCardLongPressTriggered = false;
-      return;
-    }
-
-    if (this.layout.isHandset()) {
-      return;
-    }
-
+  onSettingsQuickCardTriggerClick(_event: Event): void {
     this.closeSettingsQuickCard();
   }
 
@@ -2140,11 +2068,9 @@ export class App implements OnInit, OnDestroy {
 
   closeSettingsQuickCard(): void {
     this.clearSettingsQuickCardCloseTimer();
-    this.clearSettingsQuickCardLongPressTimer();
     this.unregisterSettingsQuickCardOutsideHandler();
     this.settingsQuickCardOpen.set(false);
     this.settingsQuickCardAnchor = null;
-    this.settingsQuickCardLongPressTriggered = false;
   }
 
   private openSettingsQuickCard(anchor: HTMLElement | null): void {
@@ -2178,24 +2104,10 @@ export class App implements OnInit, OnDestroy {
     this.settingsQuickCardPosition.set({ top, left });
   }
 
-  private scheduleSettingsQuickCardClose(): void {
-    this.clearSettingsQuickCardCloseTimer();
-    this.settingsQuickCardCloseTimer = setTimeout(() => {
-      this.closeSettingsQuickCard();
-    }, this.QUICK_SETTINGS_CARD_CLOSE_DELAY);
-  }
-
   private clearSettingsQuickCardCloseTimer(): void {
     if (this.settingsQuickCardCloseTimer) {
       clearTimeout(this.settingsQuickCardCloseTimer);
       this.settingsQuickCardCloseTimer = null;
-    }
-  }
-
-  private clearSettingsQuickCardLongPressTimer(): void {
-    if (this.settingsQuickCardLongPressTimer) {
-      clearTimeout(this.settingsQuickCardLongPressTimer);
-      this.settingsQuickCardLongPressTimer = null;
     }
   }
 
