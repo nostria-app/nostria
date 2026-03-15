@@ -45,10 +45,6 @@ import { getSettingsSectionComponent } from './settings-section-components.map';
             title="Discovery Relays" i18n-description="@@settings.relays.discovery.description"
             description="Relays used to discover other users" (activated)="openRelays('discovery')" />
 
-          <app-settings-link-card icon="visibility" i18n-title="@@settings.relays.observed" title="Observed Relays"
-            i18n-description="@@settings.relays.observed.description"
-            description="Inspect relays observed from the wider network." (activated)="openRelays('observed')" />
-
           <app-settings-link-card icon="search" i18n-title="@@settings.search.relays" title="Search Relays"
             i18n-description="@@settings.search.relays.description"
             description="Configure which relays to use for search" (activated)="openSearchRelays()" />
@@ -62,6 +58,10 @@ import { getSettingsSectionComponent } from './settings-section-components.map';
       <app-setting-max-relays />
       <app-setting-relay-mode />
       <app-setting-relay-auth />
+
+      <app-settings-link-card icon="visibility" i18n-title="@@settings.relays.observed" title="Observed Relays"
+        i18n-description="@@settings.relays.observed.description"
+        description="Inspect relays observed from the wider network." (activated)="openRelays('observed')" />
     </div>
   `,
   styles: [`

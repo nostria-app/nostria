@@ -180,30 +180,55 @@
     }
     }
 
-    @if (showUpdateDMRelays() && userRelays().length > 0) {
-    <mat-card class="info-card">
+    <!-- Message Relays (kind 10050) -->
+    @if (userRelays().length > 0) {
+    <mat-card class="user-relays-card message-relays-card">
       <mat-card-header>
-        <mat-card-title>
-          <div class="info-title">
-            <mat-icon class="info-icon">dns</mat-icon>
-            <span i18n="@@settings.relays.dm-relays.title">Direct Message relays</span>
-          </div>
-        </mat-card-title>
+        <mat-card-title i18n="@@settings.relays.message-relays">Message Relays</mat-card-title>
+        <mat-card-subtitle i18n="@@settings.relays.message-relays-description">Relays used for receiving direct messages
+          (NIP-17)</mat-card-subtitle>
       </mat-card-header>
       <mat-card-content>
-        <p i18n="@@settings.relays.dm-relays.description">
-          Nostria advices Nostr users to not use different relays for Direct Messages. If you
-          want this advanced feature, you can use a different Nostr client that supports it.
-        </p>
-        <p>
-          Click the button below to update your Direct Messages Relays to be the same relays
-          as your Account Relays.
-        </p>
-        <p>
-          <button mat-flat-button (click)="updateDirectMessageRelayList()" i18n="@@settings.relays.dm-relays.update">
-            Update Direct Message Relay List
+        @if (messageRelays().length > 0) {
+        <mat-list>
+          @for (url of messageRelays(); track url) {
+          <mat-list-item>
+            <div class="message-relay-item">
+              <mat-icon class="status-icon status-ok">check_circle</mat-icon>
+              <span class="relay-url">{{ formatRelayUrl(url) }}</span>
+              <button mat-icon-button (click)="removeMessageRelay(url)" aria-label="Remove message relay">
+                <mat-icon>delete</mat-icon>
+              </button>
+            </div>
+          </mat-list-item>
+          @if (!$last) {
+          <mat-divider></mat-divider>
+          }
+          }
+        </mat-list>
+        } @else {
+        <p class="empty-message" i18n="@@settings.relays.no-message-relays">No message relays configured. Sync with your
+          account relays or add one manually.</p>
+        }
+
+        <div class="message-relay-actions">
+          @if (!messageRelaysSynced()) {
+          <button mat-stroked-button (click)="syncMessageRelaysWithAccount()">
+            <mat-icon>sync</mat-icon>
+            <span i18n="@@settings.relays.sync-with-account">Sync with Account Relays</span>
           </button>
-        </p>
+          }
+          <div class="flex-container add-relay-container">
+            <mat-form-field appearance="outline" class="relay-input" subscriptSizing="dynamic">
+              <mat-label i18n="@@settings.relays.add-message-relay-url">Relay URL (wss://...)</mat-label>
+              <input matInput placeholder="wss://relay.example.com" [value]="newMessageRelayUrl()"
+                (input)="newMessageRelayUrl.set($any($event.target).value)" (keyup.enter)="addMessageRelay()" />
+            </mat-form-field>
+            <button mat-flat-button class="add-button" (click)="addMessageRelay()" i18n="@@settings.relays.add-button">
+              Add
+            </button>
+          </div>
+        </div>
       </mat-card-content>
     </mat-card>
     }
