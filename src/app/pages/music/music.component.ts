@@ -186,6 +186,10 @@ export class MusicComponent implements OnDestroy {
       const reaction = likeMap.get(`${target.type}:${target.value}`);
       if (reaction) result.set(playlist.id, reaction);
     }
+    // Debug: log computed result
+    if (likeMap.size > 0 && (playlists.length > 0 || myPlaylists.length > 0)) {
+      console.warn('[MusicHome] playlistLikedReactionById:', result.size, 'matches from', playlists.length + myPlaylists.length, 'playlists, likeMap has', likeMap.size, 'entries');
+    }
     return result;
   });
 
@@ -1807,6 +1811,14 @@ export class MusicComponent implements OnDestroy {
       if (!existing || reaction.created_at > existing.created_at) {
         newestReactionByKey.set(reactionKey, reaction);
       }
+    }
+
+    // Debug: log playlist-like reactions found
+    const playlistLikes = [...newestReactionByKey.entries()].filter(([k]) => k.includes(':34139:'));
+    if (playlistLikes.length > 0) {
+      console.warn('[MusicHome] Found', playlistLikes.length, 'playlist-like reactions:', playlistLikes.map(([k]) => k));
+    } else {
+      console.warn('[MusicHome] No playlist-like reactions found among', newestReactionByKey.size, 'total music reactions from', reactions.length, 'raw reactions');
     }
 
     if (newestReactionByKey.size > 0) {

@@ -63,9 +63,9 @@ import { MatDividerModule } from '@angular/material/divider';
         </button>
         }
         <div class="hover-action-row">
-          <button mat-icon-button class="media-action-button like-action" (click)="likePlaylist($event)" [disabled]="isLiked()"
+          <button mat-icon-button class="media-action-button like-action" [class.is-liked]="isLiked()" (click)="likePlaylist($event)"
             [attr.aria-label]="isLiked() ? 'Liked playlist' : 'Like playlist'" [title]="isLiked() ? 'Liked' : 'Like'">
-            <mat-icon>{{ isLiked() ? 'favorite' : 'favorite_border' }}</mat-icon>
+            <mat-icon [class.is-liked]="isLiked()">{{ isLiked() ? 'favorite' : 'favorite_border' }}</mat-icon>
           </button>
           <button mat-icon-button class="media-action-button share-action" (click)="sharePlaylist(); $event.stopPropagation()"
             aria-label="Share playlist" title="Share playlist">
@@ -360,10 +360,20 @@ import { MatDividerModule } from '@angular/material/divider';
       }
 
       .like-action {
+        &.is-liked {
+          background: color-mix(in srgb, var(--mat-sys-error-container) 34%, transparent);
+          color: color-mix(in srgb, var(--mat-sys-error) 68%, var(--mat-sys-on-surface) 32%);
+          border-color: color-mix(in srgb, var(--mat-sys-error) 20%, transparent);
+        }
+
         &:hover:not(:disabled) {
           background: color-mix(in srgb, var(--mat-sys-error-container) 58%, transparent);
           color: color-mix(in srgb, var(--mat-sys-error) 76%, var(--mat-sys-on-surface) 24%);
           border-color: color-mix(in srgb, var(--mat-sys-error) 34%, transparent);
+        }
+
+        mat-icon.is-liked {
+          font-variation-settings: 'FILL' 1;
         }
       }
 
@@ -1067,7 +1077,7 @@ export class MusicPlaylistCardComponent {
 
       // Get artist name from playlist author
       const profile = this.authorProfile();
-      const artistName = profile?.data?.name || profile?.data?.display_name || 'Unknown Artist';
+      const artistName = profile?.data?.name || profile?.data?.display_name || nip19.npubEncode(this.event().pubkey);
 
       this.mediaPlayer.clearQueue();
 
@@ -1082,10 +1092,11 @@ export class MusicPlaylistCardComponent {
         const videoTag = track.tags.find(t => t[0] === 'video');
         const trackDTag = track.tags.find(t => t[0] === 'd')?.[1] || '';
 
+        const trackArtist = this.utilities.getMusicArtist(track);
         const mediaItem: MediaItem = {
           source: url,
           title: titleTag?.[1] || 'Untitled Track',
-          artist: artistName,
+          artist: trackArtist || artistName,
           artwork: imageTag?.[1] || '/icons/icon-192x192.png',
           video: videoTag?.[1] || undefined,
           type: 'Music',
