@@ -1,5 +1,5 @@
-import { Component, inject, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, inject, PLATFORM_ID, signal } from '@angular/core';
+import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { Clipboard, ClipboardModule } from '@angular/cdk/clipboard';
 import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
@@ -59,6 +59,10 @@ import { FollowingBackupService, FollowingBackup } from '../../../../services/fo
                   <button mat-menu-item (click)="merge(backup.id)">
                     <mat-icon>merge</mat-icon>
                     <span>Merge (Combine)</span>
+                  </button>
+                  <button mat-menu-item (click)="downloadBackup(backup)">
+                    <mat-icon>download</mat-icon>
+                    <span>Download</span>
                   </button>
                   <button mat-menu-item (click)="copyEventData(backup)">
                     <mat-icon>content_copy</mat-icon>
@@ -138,6 +142,8 @@ export class FollowingHistoryDialogComponent {
   private followingBackupService = inject(FollowingBackupService);
   private snackBar = inject(MatSnackBar);
   private clipboard = inject(Clipboard);
+  private platformId = inject(PLATFORM_ID);
+  private isBrowser = isPlatformBrowser(this.platformId);
 
   backups = this.followingBackupService.backups;
   processing = signal(false);
@@ -149,6 +155,43 @@ export class FollowingHistoryDialogComponent {
       this.showMessage('Event data copied to clipboard');
     } else {
       this.showMessage('Failed to copy event data', true);
+    }
+  }
+
+  downloadBackup(backup: FollowingBackup): void {
+    if (!this.isBrowser) {
+      return;
+    }
+
+    try {
+      const exportData = {
+        id: backup.id,
+        timestamp: backup.timestamp,
+        pubkeys: backup.pubkeys,
+        event: backup.event,
+      };
+      const content = JSON.stringify(exportData, null, 2);
+      const blob = new Blob([content], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      const datePart = new Date(backup.event.created_at * 1000)
+        .toISOString()
+        .replace(/[:.]/g, '-')
+        .replace('T', '_')
+        .replace('Z', '');
+
+      link.href = url;
+      link.download = `following-list-backup-${datePart}.json`;
+      link.style.display = 'none';
+
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      this.showMessage('Backup downloaded');
+    } catch {
+      this.showMessage('Failed to download backup', true);
     }
   }
 
