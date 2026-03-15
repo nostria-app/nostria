@@ -250,8 +250,16 @@
                     </mat-chip-row>
                     }
                   </mat-chip-grid>
-                  <input matInput placeholder="Type and press Enter..." [matChipInputFor]="rssGenreChipGrid"
+                  <input matInput placeholder="Type and press Enter..."
+                    [matChipInputFor]="rssGenreChipGrid"
+                    [matAutocomplete]="rssGenreAuto"
                     (matChipInputTokenEnd)="addTrackGenre(i, $event.value); $event.chipInput.clear()" />
+                  <mat-autocomplete #rssGenreAuto="matAutocomplete"
+                    (optionSelected)="addTrackGenre(i, $event.option.viewValue); $event.option.deselect()">
+                    @for (suggestion of getFilteredGenres(track.genres); track suggestion) {
+                    <mat-option [value]="suggestion">{{ suggestion }}</mat-option>
+                    }
+                  </mat-autocomplete>
                 </mat-form-field>
 
                 <mat-form-field appearance="outline" class="full-width">

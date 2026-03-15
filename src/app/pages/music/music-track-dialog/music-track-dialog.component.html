@@ -180,8 +180,17 @@
           </mat-chip-row>
           }
         </mat-chip-grid>
-        <input matInput placeholder="Type and press Enter..." [matChipInputFor]="genreChipGrid"
+        <input matInput placeholder="Type and press Enter..."
+          [matChipInputFor]="genreChipGrid"
+          [matAutocomplete]="genreAuto"
+          [value]="genreInput()"
+          (input)="genreInput.set($any($event.target).value)"
           (matChipInputTokenEnd)="addGenre($event.value); $event.chipInput.clear()" />
+        <mat-autocomplete #genreAuto="matAutocomplete" (optionSelected)="onGenreSelected($event)">
+          @for (suggestion of filteredGenres(); track suggestion) {
+          <mat-option [value]="suggestion">{{ suggestion }}</mat-option>
+          }
+        </mat-autocomplete>
       </mat-form-field>
 
       <!-- Artist -->

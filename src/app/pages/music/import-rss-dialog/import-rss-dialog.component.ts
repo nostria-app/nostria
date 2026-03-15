@@ -8,6 +8,7 @@ import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import { MatChipsModule } from '@angular/material/chips';
+import { MatAutocompleteModule, MatAutocompleteSelectedEvent } from '@angular/material/autocomplete';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { FormBuilder, ReactiveFormsModule, FormsModule } from '@angular/forms';
@@ -83,6 +84,7 @@ interface ValueRecipient {
     MatProgressSpinnerModule,
     MatSelectModule,
     MatChipsModule,
+    MatAutocompleteModule,
     MatExpansionModule,
     MatSnackBarModule,
     ReactiveFormsModule,
@@ -168,6 +170,14 @@ export class ImportRssDialogComponent {
     { value: 'CC BY-NC 4.0', label: 'CC BY-NC 4.0', url: 'https://creativecommons.org/licenses/by-nc/4.0/' },
     { value: 'CC BY-NC-SA 4.0', label: 'CC BY-NC-SA 4.0', url: 'https://creativecommons.org/licenses/by-nc-sa/4.0/' },
     { value: 'CC BY-NC-ND 4.0', label: 'CC BY-NC-ND 4.0', url: 'https://creativecommons.org/licenses/by-nc-nd/4.0/' },
+  ];
+
+  readonly suggestedGenres = [
+    'Electronic', 'Rock', 'Pop', 'Hip Hop', 'R&B', 'Jazz', 'Classical',
+    'Country', 'Folk', 'Metal', 'Punk', 'Alternative', 'Indie',
+    'Dance', 'House', 'Techno', 'Ambient', 'Experimental', 'Soul',
+    'Reggae', 'Blues', 'Latin', 'World', 'Soundtrack', 'Lo-Fi',
+    'Trap', 'Dubstep', 'Drum & Bass', 'Synthwave',
   ];
 
   // Computed
@@ -490,6 +500,11 @@ export class ImportRssDialogComponent {
       updated[index] = { ...track, genres: track.genres.filter(g => g !== genre) };
       return updated;
     });
+  }
+
+  getFilteredGenres(currentGenres: string[]): string[] {
+    const current = currentGenres.map(g => g.toLowerCase());
+    return this.suggestedGenres.filter(g => !current.includes(g.toLowerCase()));
   }
 
   updateAlbumInfo(updates: Partial<AlbumInfo>): void {

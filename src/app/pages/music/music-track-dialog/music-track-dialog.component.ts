@@ -9,6 +9,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatChipsModule } from '@angular/material/chips';
+import { MatAutocompleteModule, MatAutocompleteSelectedEvent } from '@angular/material/autocomplete';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
@@ -59,6 +60,7 @@ interface ZapSplit {
     MatSelectModule,
     MatCheckboxModule,
     MatChipsModule,
+    MatAutocompleteModule,
     MatExpansionModule,
     MatSnackBarModule,
     MatDialogModule,
@@ -135,6 +137,23 @@ export class MusicTrackDialogComponent {
 
   // Genre tags for the track (free-form, user can add any value)
   genres = signal<string[]>([]);
+  genreInput = signal('');
+
+  readonly suggestedGenres = [
+    'Electronic', 'Rock', 'Pop', 'Hip Hop', 'R&B', 'Jazz', 'Classical',
+    'Country', 'Folk', 'Metal', 'Punk', 'Alternative', 'Indie',
+    'Dance', 'House', 'Techno', 'Ambient', 'Experimental', 'Soul',
+    'Reggae', 'Blues', 'Latin', 'World', 'Soundtrack', 'Lo-Fi',
+    'Trap', 'Dubstep', 'Drum & Bass', 'Synthwave',
+  ];
+
+  filteredGenres = computed(() => {
+    const input = this.genreInput().toLowerCase();
+    const current = this.genres().map(g => g.toLowerCase());
+    return this.suggestedGenres
+      .filter(g => !current.includes(g.toLowerCase()))
+      .filter(g => !input || g.toLowerCase().includes(input));
+  });
 
   // Available license options
   licenseOptions = [
@@ -921,6 +940,12 @@ export class MusicTrackDialogComponent {
     if (trimmed && !this.genres().some(g => g.toLowerCase() === trimmed.toLowerCase())) {
       this.genres.update(genres => [...genres, trimmed]);
     }
+    this.genreInput.set('');
+  }
+
+  onGenreSelected(event: MatAutocompleteSelectedEvent): void {
+    this.addGenre(event.option.viewValue);
+    event.option.deselect();
   }
 
   removeGenre(genre: string): void {
