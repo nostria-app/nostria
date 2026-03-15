@@ -22,6 +22,7 @@
     </div>
     <p class="hint-text">Supports podcast RSS feeds with audio enclosures (iTunes/podcast format)</p>
     } @else {
+    @if (!showPreview()) {
     <!-- Fetched Content Step -->
     <div class="fetched-content">
       <!-- Album Information Section -->
@@ -250,8 +251,7 @@
                     </mat-chip-row>
                     }
                   </mat-chip-grid>
-                  <input matInput placeholder="Type and press Enter..."
-                    [matChipInputFor]="rssGenreChipGrid"
+                  <input matInput placeholder="Type and press Enter..." [matChipInputFor]="rssGenreChipGrid"
                     [matAutocomplete]="rssGenreAuto"
                     (matChipInputTokenEnd)="addTrackGenre(i, $event.value); $event.chipInput.clear()" />
                   <mat-autocomplete #rssGenreAuto="matAutocomplete"
@@ -306,6 +306,7 @@
         </div>
       </div>
     </div>
+    }
 
     @if (showPreview()) {
     <!-- Event Preview -->

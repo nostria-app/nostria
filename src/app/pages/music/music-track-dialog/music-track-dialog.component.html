@@ -180,11 +180,8 @@
           </mat-chip-row>
           }
         </mat-chip-grid>
-        <input matInput placeholder="Type and press Enter..."
-          [matChipInputFor]="genreChipGrid"
-          [matAutocomplete]="genreAuto"
-          [value]="genreInput()"
-          (input)="genreInput.set($any($event.target).value)"
+        <input matInput placeholder="Type and press Enter..." [matChipInputFor]="genreChipGrid"
+          [matAutocomplete]="genreAuto" [value]="genreInput()" (input)="genreInput.set($any($event.target).value)"
           (matChipInputTokenEnd)="addGenre($event.value); $event.chipInput.clear()" />
         <mat-autocomplete #genreAuto="matAutocomplete" (optionSelected)="onGenreSelected($event)">
           @for (suggestion of filteredGenres(); track suggestion) {

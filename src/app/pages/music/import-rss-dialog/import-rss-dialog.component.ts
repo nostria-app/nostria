@@ -29,6 +29,7 @@ import { MentionInputService } from '../../../services/mention-input.service';
 const MUSIC_KIND = 36787;
 
 interface RssFeedItem {
+  guid: string;
   title: string;
   artist: string;
   album: string;
@@ -48,6 +49,7 @@ interface RssFeedItem {
 }
 
 interface AlbumInfo {
+  guid: string;
   title: string;
   artist: string;
   imageUrl: string;
@@ -120,6 +122,7 @@ export class ImportRssDialogComponent {
 
   // Album information
   albumInfo = signal<AlbumInfo>({
+    guid: '',
     title: '',
     artist: '',
     imageUrl: '',
@@ -230,8 +233,10 @@ export class ImportRssDialogComponent {
         this.getItunesText(channel, 'author') || '';
       const channelImage = channel.querySelector('image > url')?.textContent ||
         this.getItunesImageHref(channel) || '';
+      const channelGuid = this.getPodcastText(channel, 'guid');
 
       this.albumInfo.set({
+        guid: channelGuid,
         title: channelTitle,
         artist: channelAuthor,
         imageUrl: channelImage,
@@ -265,6 +270,7 @@ export class ImportRssDialogComponent {
         const pubDate = item.querySelector('pubDate')?.textContent || '';
         const description = item.querySelector('description')?.textContent ||
           this.getItunesText(item, 'summary') || '';
+        const itemGuid = item.querySelector('guid')?.textContent || '';
 
         // Parse item-level podcast:license (overrides channel-level)
         const itemLicense = this.matchRssLicense(this.getPodcastText(item, 'license'));
@@ -291,6 +297,7 @@ export class ImportRssDialogComponent {
         // Only include items with audio URLs
         if (audioUrl) {
           parsedTracks.push({
+            guid: itemGuid,
             title,
             artist: author,
             album: channelTitle,
@@ -409,6 +416,22 @@ export class ImportRssDialogComponent {
     return formatDuration(seconds);
   }
 
+  private parseDurationToSeconds(duration: string): number | null {
+    const value = duration.trim();
+    if (!value) return null;
+
+    if (value.includes(':')) {
+      const parts = value.split(':').map(part => parseInt(part, 10));
+      if (parts.some(part => Number.isNaN(part))) return null;
+      if (parts.length === 2) return parts[0] * 60 + parts[1];
+      if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
+      return null;
+    }
+
+    const seconds = parseInt(value, 10);
+    return Number.isNaN(seconds) ? null : seconds;
+  }
+
   private formatDate(date: Date): string {
     if (!(date instanceof Date) || isNaN(date.getTime())) {
       return '';
@@ -416,7 +439,7 @@ export class ImportRssDialogComponent {
     const month = (date.getMonth() + 1).toString().padStart(2, '0');
     const day = date.getDate().toString().padStart(2, '0');
     const year = date.getFullYear();
-    return `${month}/${day}/${year}`;
+    return `${year}-${month}-${day}`;
   }
 
   private getPodcastText(parent: Element, tagName: string): string {
@@ -518,13 +541,14 @@ export class ImportRssDialogComponent {
     this.activeRecipientIndex.set(-1);
   }
 
-  private generateEventTemplates(): { kind: number; created_at: number; tags: string[][]; content: string }[] {
+  private generateEventTemplates(pubkey?: string): { kind: number; created_at: number; tags: string[][]; content: string }[] {
     const selectedTracks = this.tracks().filter(t => t.selected);
     const album = this.albumInfo();
     const events: { kind: number; created_at: number; tags: string[][]; content: string }[] = [];
+    const trackDTags: string[] = [];
 
     for (const track of selectedTracks) {
-      const dTag = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+      const dTag = track.guid || `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
 
       const tags: string[][] = [
         ['d', dTag],
@@ -554,7 +578,10 @@ export class ImportRssDialogComponent {
       }
 
       if (track.duration) {
-        tags.push(['duration', track.duration]);
+        const durationSeconds = this.parseDurationToSeconds(track.duration);
+        if (durationSeconds && durationSeconds > 0) {
+          tags.push(['duration', String(durationSeconds)]);
+        }
       }
 
       if (track.releaseDate) {
@@ -591,6 +618,50 @@ export class ImportRssDialogComponent {
         tags,
         content,
       });
+
+      trackDTags.push(dTag);
+    }
+
+    // Generate album event (kind 34139) if album is enabled
+    if (album.enabled && album.title && trackDTags.length > 0) {
+      const albumDTag = album.guid || `album-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+      const authorPubkey = pubkey || '<pubkey>';
+
+      const albumTags: string[][] = [
+        ['d', albumDTag],
+        ['title', album.title],
+        ['client', 'nostria'],
+      ];
+
+      if (album.imageUrl) {
+        albumTags.push(['image', album.imageUrl]);
+      } else {
+        albumTags.push(['gradient', 'colors', this.currentGradient()]);
+      }
+
+      if (album.artist) {
+        albumTags.push(['artist', album.artist]);
+      }
+
+      if (album.releaseDate) {
+        albumTags.push(['released', album.releaseDate]);
+      }
+
+      // Reference each track
+      for (const dTag of trackDTags) {
+        albumTags.push(['a', `${MUSIC_KIND}:${authorPubkey}:${dTag}`]);
+      }
+
+      albumTags.push(['t', 'music']);
+      albumTags.push(['t', 'album']);
+      albumTags.push(['alt', `Music album: ${album.title} by ${album.artist || 'Unknown Artist'}`]);
+
+      events.push({
+        kind: 34139,
+        created_at: Math.floor(Date.now() / 1000),
+        tags: albumTags,
+        content: '',
+      });
     }
 
     return events;
@@ -601,13 +672,20 @@ export class ImportRssDialogComponent {
       this.showPreview.set(false);
       this.previewEvents.set([]);
     } else {
-      this.previewEvents.set(this.generateEventTemplates());
+      const pubkey = this.accountState.pubkey() || '<pubkey>';
+      this.previewEvents.set(this.generateEventTemplates(pubkey));
       this.showPreview.set(true);
     }
   }
 
   async publishTracks(): Promise<void> {
-    const eventTemplates = this.generateEventTemplates();
+    const pubkey = this.accountState.pubkey();
+    if (!pubkey) {
+      this.snackBar.open('Not authenticated', 'Close', { duration: 3000 });
+      return;
+    }
+
+    const eventTemplates = this.generateEventTemplates(pubkey);
     if (eventTemplates.length === 0) {
       this.snackBar.open('No tracks selected', 'Close', { duration: 3000 });
       return;
@@ -618,12 +696,6 @@ export class ImportRssDialogComponent {
     const publishedEvents: Event[] = [];
 
     try {
-      const pubkey = this.accountState.pubkey();
-      if (!pubkey) {
-        this.snackBar.open('Not authenticated', 'Close', { duration: 3000 });
-        return;
-      }
-
       const relayUrls = this.relaysService.getOptimalRelays(this.utilities.preferredRelays);
       if (relayUrls.length === 0) {
         this.snackBar.open('No relays available', 'Close', { duration: 3000 });
@@ -648,7 +720,12 @@ export class ImportRssDialogComponent {
       }
 
       if (publishedEvents.length > 0) {
-        this.snackBar.open(`Published ${publishedEvents.length} tracks successfully!`, 'Close', { duration: 3000 });
+        const trackCount = publishedEvents.filter(e => e.kind === MUSIC_KIND).length;
+        const albumCount = publishedEvents.filter(e => e.kind === 34139).length;
+        const parts = [];
+        if (trackCount > 0) parts.push(`${trackCount} track${trackCount > 1 ? 's' : ''}`);
+        if (albumCount > 0) parts.push(`${albumCount} album`);
+        this.snackBar.open(`Published ${parts.join(' + ')} successfully!`, 'Close', { duration: 3000 });
         this.closed.emit({ published: true, events: publishedEvents });
       } else {
         this.snackBar.open('Failed to publish any tracks', 'Close', { duration: 3000 });
