@@ -79,6 +79,82 @@
         </div>
       </div>
 
+      <!-- Payment Recipients Section -->
+      @if (valueRecipients().length > 0) {
+      <div class="zap-recipients-section">
+        <div class="zap-header">
+          <div class="zap-title">
+            <mat-icon>bolt</mat-icon>
+            <span>Payment Recipients</span>
+          </div>
+        </div>
+
+        <p class="rss-mapping-intro">
+          The RSS feed includes lightning payment recipients. Assign a Nostr profile to each one so zaps can be split
+          accordingly.
+        </p>
+
+        <div class="rss-recipients-mapping">
+          @for (recipient of valueRecipients(); track recipient.address; let i = $index) {
+          <div class="rss-recipient-row" [class.resolved]="!!recipient.resolvedPubkey">
+            <div class="rss-recipient-info">
+              <span class="rss-recipient-name">{{ recipient.name }}</span>
+              <span class="rss-recipient-address">{{ recipient.address }}</span>
+            </div>
+
+            <div class="rss-recipient-resolve">
+              @if (recipient.resolvedPubkey) {
+              <!-- Resolved: show the assigned profile -->
+              <div class="resolved-profile">
+                <div class="resolved-avatar">
+                  @if (recipient.resolvedAvatar) {
+                  <img [src]="recipient.resolvedAvatar" [alt]="recipient.resolvedName" />
+                  } @else {
+                  <mat-icon>person</mat-icon>
+                  }
+                </div>
+                <span class="resolved-name">{{ recipient.resolvedName }}</span>
+                <button mat-icon-button (click)="clearRecipientResolution(i)" aria-label="Clear assignment">
+                  <mat-icon>close</mat-icon>
+                </button>
+              </div>
+              } @else if (recipient.isEditing) {
+              <!-- Editing: show search input -->
+              <div class="recipient-search-form">
+                <mat-form-field appearance="outline" class="full-width">
+                  <mat-label>npub, hex, or @username</mat-label>
+                  <input matInput [value]="recipient.searchInput" (input)="onRecipientInputChange(i, $event)"
+                    (keydown)="onRecipientInputKeyDown($event)" (keydown.enter)="confirmRecipientSearch(i)"
+                    placeholder="@username, npub1..., or hex" />
+                </mat-form-field>
+                <div class="recipient-search-actions">
+                  <button mat-button (click)="cancelEditRecipient(i)">Cancel</button>
+                  <button mat-flat-button (click)="confirmRecipientSearch(i)">Assign</button>
+                </div>
+                <app-mention-autocomplete [config]="mentionConfig()" [position]="mentionPosition()" [maxResults]="6"
+                  [maxHeight]="250" (mentionSelected)="onMentionSelected($event)" (dismissed)="onMentionDismissed()" />
+              </div>
+              } @else {
+              <!-- Unresolved: show assign button -->
+              <button mat-stroked-button class="assign-btn" (click)="startEditRecipient(i)">
+                <mat-icon>person_search</mat-icon>
+                Assign Profile
+              </button>
+              }
+            </div>
+          </div>
+          }
+        </div>
+
+        @if (!allRecipientsResolved()) {
+        <p class="splits-hint">
+          <mat-icon>info</mat-icon>
+          Unassigned recipients will be skipped when publishing zap splits.
+        </p>
+        }
+      </div>
+      }
+
       <!-- Tracks Section -->
       <div class="tracks-section">
         <div class="tracks-header">
@@ -173,6 +249,15 @@
                 </mat-form-field>
 
                 <mat-form-field appearance="outline" class="full-width">
+                  <mat-label>License</mat-label>
+                  <mat-select [value]="track.license" (selectionChange)="updateTrack(i, { license: $event.value })">
+                    @for (option of licenseOptions; track option.value) {
+                    <mat-option [value]="option.value">{{ option.label }}</mat-option>
+                    }
+                  </mat-select>
+                </mat-form-field>
+
+                <mat-form-field appearance="outline" class="full-width">
                   <mat-label>Description</mat-label>
                   <textarea matInput [value]="track.description" rows="4" placeholder="Track description"
                     (input)="updateTrack(i, { description: $any($event.target).value })"></textarea>
@@ -184,6 +269,21 @@
                     AI-Generated
                   </mat-slide-toggle>
                 </div>
+
+                @if (track.splits.length > 0) {
+                <div class="track-splits">
+                  <span class="track-splits-label">
+                    <mat-icon>bolt</mat-icon>
+                    Zap Splits
+                  </span>
+                  @for (split of track.splits; track split.address) {
+                  <div class="track-split-item">
+                    <span class="track-split-name">{{ getRecipientDisplayName(split.address) }}</span>
+                    <span class="track-split-percentage">{{ split.percentage }}%</span>
+                  </div>
+                  }
+                </div>
+                }
               </div>
             </div>
             }

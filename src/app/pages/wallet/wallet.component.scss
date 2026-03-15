@@ -85,7 +85,7 @@
 
       .mat-mdc-tab {
         min-width: 0;
-        flex: 1 1 33.333%;
+        flex: 1 1 25%;
         padding-left: 8px;
         padding-right: 8px;
 
@@ -686,4 +686,48 @@
   .transfer-inputs-row {
     grid-template-columns: 1fr;
   }
+}
+
+// Wallet Settings tab styles
+.wallet-settings-content {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.settings-card {
+  margin-bottom: 16px;
+}
+
+.settings-toggle-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 8px 0;
+}
+
+.quick-zap-amount-field {
+  .amount-field {
+    max-width: 300px;
+  }
+}
+
+.settings-info {
+  display: flex;
+  gap: 12px;
+  padding: 16px;
+  background-color: var(--mat-sys-surface-container-low);
+  border-radius: 8px;
+  margin-top: 8px;
+
+  p {
+    margin: 0;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    color: var(--mat-sys-on-surface-variant);
+  }
+}
+
+.settings-info-icon {
+  color: var(--mat-sys-primary);
+  flex-shrink: 0;
 }

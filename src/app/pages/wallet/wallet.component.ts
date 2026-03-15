@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, inject, signal, effect, untracked, OnDestroy } from '@angular/core';
-import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormControl, ReactiveFormsModule, Validators, FormsModule } from '@angular/forms';
 
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
@@ -12,6 +12,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatSelectModule } from '@angular/material/select';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTabsModule } from '@angular/material/tabs';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { RouterModule, Router, NavigationEnd } from '@angular/router';
 import { filter, Subscription } from 'rxjs';
 import { Wallets, Wallet } from '../../services/wallets';
@@ -22,6 +23,7 @@ import { DatePipe, DecimalPipe } from '@angular/common';
 import { CustomDialogService } from '../../services/custom-dialog.service';
 import { AddWalletDialogComponent } from './add-wallet-dialog/add-wallet-dialog.component';
 import { SettingsService } from '../../services/settings.service';
+import { LoggerService } from '../../services/logger.service';
 import { ZapHistoryComponent } from '../../components/zap-history/zap-history.component';
 
 @Component({
@@ -37,7 +39,9 @@ import { ZapHistoryComponent } from '../../components/zap-history/zap-history.co
     MatSelectModule,
     MatProgressSpinnerModule,
     MatTabsModule,
+    MatSlideToggleModule,
     ReactiveFormsModule,
+    FormsModule,
     RouterModule,
     UserProfileComponent,
     DatePipe,
@@ -59,6 +63,7 @@ export class WalletComponent implements OnDestroy {
   wallets = inject(Wallets);
   private customDialog = inject(CustomDialogService);
   private settingsService = inject(SettingsService);
+  private logger = inject(LoggerService);
   private router = inject(Router);
   private routerSubscription: Subscription;
 
@@ -103,8 +108,16 @@ export class WalletComponent implements OnDestroy {
   // Active tab index
   activeTabIndex = signal(0);
 
+  // Wallet settings - Quick Zap
+  quickZapEnabled = signal(false);
+  quickZapAmount = signal(21);
+
+  // Wallet settings - Hide Wallet Amounts
+  hideWalletAmountsEnabled = signal(false);
+
   constructor() {
     this.syncTabFromUrl(this.router.url);
+    this.loadWalletSettings();
 
     this.routerSubscription = this.router.events
       .pipe(filter((event): event is NavigationEnd => event instanceof NavigationEnd))
@@ -785,6 +798,11 @@ export class WalletComponent implements OnDestroy {
       return;
     }
 
+    if (path === '/wallet/settings') {
+      this.activeTabIndex.set(3);
+      return;
+    }
+
     this.activeTabIndex.set(0);
   }
 
@@ -797,6 +815,79 @@ export class WalletComponent implements OnDestroy {
       return '/wallet/zaps';
     }
 
+    if (index === 3) {
+      return '/wallet/settings';
+    }
+
     return '/wallet';
+  }
+
+  // --- Wallet Settings Methods ---
+
+  private loadWalletSettings(): void {
+    const currentSettings = this.settingsService.settings();
+    this.quickZapEnabled.set(currentSettings.quickZapEnabled ?? false);
+    this.quickZapAmount.set(currentSettings.quickZapAmount ?? 21);
+    this.hideWalletAmountsEnabled.set(currentSettings.hideWalletAmounts ?? false);
+  }
+
+  async toggleQuickZap(): Promise<void> {
+    const newValue = !this.quickZapEnabled();
+    this.quickZapEnabled.set(newValue);
+
+    try {
+      await this.settingsService.updateSettings({
+        quickZapEnabled: newValue,
+      });
+      this.snackBar.open(
+        newValue ? 'Quick Zap enabled' : 'Quick Zap disabled',
+        'Dismiss',
+        { duration: 2000 }
+      );
+    } catch (error) {
+      this.logger.error('Failed to save quick zap setting:', error);
+      this.quickZapEnabled.set(!newValue);
+      this.snackBar.open('Failed to save settings', 'Dismiss', { duration: 3000 });
+    }
+  }
+
+  async updateQuickZapAmount(): Promise<void> {
+    const amount = this.quickZapAmount();
+    if (amount <= 0) {
+      this.snackBar.open('Please enter a valid positive number', 'Dismiss', { duration: 3000 });
+      return;
+    }
+
+    try {
+      await this.settingsService.updateSettings({
+        quickZapAmount: amount,
+      });
+      this.snackBar.open(`Quick zap amount set to ${amount.toLocaleString()} sats`, 'Dismiss', {
+        duration: 2000,
+      });
+    } catch (error) {
+      this.logger.error('Failed to save quick zap amount:', error);
+      this.snackBar.open('Failed to save settings', 'Dismiss', { duration: 3000 });
+    }
+  }
+
+  async toggleHideWalletAmountsSetting(): Promise<void> {
+    const newValue = !this.hideWalletAmountsEnabled();
+    this.hideWalletAmountsEnabled.set(newValue);
+
+    try {
+      await this.settingsService.updateSettings({
+        hideWalletAmounts: newValue,
+      });
+      this.snackBar.open(
+        newValue ? 'Wallet amounts hidden' : 'Wallet amounts visible',
+        'Dismiss',
+        { duration: 2000 }
+      );
+    } catch (error) {
+      this.logger.error('Failed to save hide wallet amounts setting:', error);
+      this.hideWalletAmountsEnabled.set(!newValue);
+      this.snackBar.open('Failed to save settings', 'Dismiss', { duration: 3000 });
+    }
   }
 }

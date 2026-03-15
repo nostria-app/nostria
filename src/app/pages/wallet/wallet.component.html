@@ -391,5 +391,84 @@
         </div>
       </div>
     </mat-tab>
+
+    <!-- Settings Tab -->
+    <mat-tab>
+      <ng-template mat-tab-label>
+        <mat-icon>settings</mat-icon>
+        <span i18n="@@wallet.tab.settings">Settings</span>
+      </ng-template>
+
+      <div class="tab-content">
+        <div class="wallet-settings-content">
+          <!-- Hide Wallet Amounts Settings -->
+          <mat-card appearance="outlined" class="settings-card">
+            <mat-card-header>
+              <mat-icon mat-card-avatar>visibility_off</mat-icon>
+              <mat-card-title i18n="@@wallet.settings.hide-amounts.title">Hide Wallet Amounts</mat-card-title>
+              <mat-card-subtitle i18n="@@wallet.settings.hide-amounts.subtitle">
+                Hide the amount of sats in your wallet for privacy.
+              </mat-card-subtitle>
+            </mat-card-header>
+            <mat-card-content>
+              <div class="settings-toggle-section">
+                <mat-slide-toggle [checked]="hideWalletAmountsEnabled()" (change)="toggleHideWalletAmountsSetting()"
+                  i18n="@@wallet.settings.hide-amounts.toggle">
+                  Hide Wallet Amounts
+                </mat-slide-toggle>
+
+                <div class="settings-info">
+                  <mat-icon class="settings-info-icon">info</mat-icon>
+                  <p i18n="@@wallet.settings.hide-amounts.info">
+                    When enabled, sat amounts in your wallet will be hidden and replaced with asterisks (****).
+                    This provides privacy when viewing your wallet on shared or public screens.
+                  </p>
+                </div>
+              </div>
+            </mat-card-content>
+          </mat-card>
+
+          <!-- Quick Zap Button Settings -->
+          <mat-card appearance="outlined" class="settings-card">
+            <mat-card-header>
+              <mat-icon mat-card-avatar>electric_bolt</mat-icon>
+              <mat-card-title i18n="@@wallet.settings.quick-zap.title">Quick Zap Button</mat-card-title>
+              <mat-card-subtitle i18n="@@wallet.settings.quick-zap.subtitle">
+                Enable a separate quick zap button that sends a preset amount instantly with one click.
+              </mat-card-subtitle>
+            </mat-card-header>
+            <mat-card-content>
+              <div class="settings-toggle-section">
+                <mat-slide-toggle [checked]="quickZapEnabled()" (change)="toggleQuickZap()"
+                  i18n="@@wallet.settings.quick-zap.toggle">
+                  Enable Quick Zap Button
+                </mat-slide-toggle>
+
+                @if (quickZapEnabled()) {
+                <div class="quick-zap-amount-field">
+                  <mat-form-field appearance="outline" class="amount-field">
+                    <mat-label i18n="@@wallet.settings.quick-zap.amount-label">Quick Zap Amount</mat-label>
+                    <input matInput type="number" [ngModel]="quickZapAmount()"
+                      (ngModelChange)="quickZapAmount.set($event)" (blur)="updateQuickZapAmount()"
+                      (keyup.enter)="updateQuickZapAmount()" placeholder="Enter amount in sats" min="1" />
+                    <mat-icon matPrefix>bolt</mat-icon>
+                    <span matSuffix>sats</span>
+                  </mat-form-field>
+                </div>
+                }
+
+                <div class="settings-info">
+                  <mat-icon class="settings-info-icon">info</mat-icon>
+                  <p i18n="@@wallet.settings.quick-zap.info">
+                    When enabled, a quick zap button appears next to the regular zap button.
+                    Clicking it instantly sends the configured amount without opening any dialog.
+                  </p>
+                </div>
+              </div>
+            </mat-card-content>
+          </mat-card>
+        </div>
+      </div>
+    </mat-tab>
   </mat-tab-group>
 </div>

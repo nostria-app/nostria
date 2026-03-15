@@ -488,6 +488,13 @@ export const routes: Routes = [
     title: 'Wallet Zaps',
   },
   {
+    path: 'wallet/settings',
+    data: { isRoot: true },
+    loadComponent: () =>
+      import('./pages/wallet/wallet.component').then(m => m.WalletComponent),
+    title: 'Wallet Settings',
+  },
+  {
     path: 'wallet',
     data: { isRoot: true },
     loadComponent: () =>

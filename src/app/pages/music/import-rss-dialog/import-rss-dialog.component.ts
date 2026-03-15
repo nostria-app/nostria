@@ -9,7 +9,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { FormBuilder, ReactiveFormsModule, FormsModule } from '@angular/forms';
-import { Event } from 'nostr-tools';
+import { Event, nip19 } from 'nostr-tools';
 import { MediaService } from '../../../services/media.service';
 import { formatDuration } from '../../../utils/format-duration';
 import { AccountStateService } from '../../../services/account-state.service';
@@ -20,6 +20,8 @@ import { UtilitiesService } from '../../../services/utilities.service';
 import { DataService } from '../../../services/data.service';
 import { LoggerService } from '../../../services/logger.service';
 import { CustomDialogComponent } from '../../../components/custom-dialog/custom-dialog.component';
+import { MentionAutocompleteComponent, MentionAutocompleteConfig, MentionSelection } from '../../../components/mention-autocomplete/mention-autocomplete.component';
+import { MentionInputService } from '../../../services/mention-input.service';
 
 const MUSIC_KIND = 36787;
 
@@ -35,6 +37,8 @@ interface RssFeedItem {
   trackNumber: number;
   genres: string[];
   aiGenerated: boolean;
+  license: string;
+  splits: TrackSplit[];
   // Used for UI state
   expanded: boolean;
   selected: boolean;
@@ -46,6 +50,23 @@ interface AlbumInfo {
   imageUrl: string;
   releaseDate: string;
   enabled: boolean;
+}
+
+interface TrackSplit {
+  address: string;
+  percentage: number;
+}
+
+interface ValueRecipient {
+  name: string;
+  address: string;
+  type: string;
+  // UI state for profile resolution
+  resolvedPubkey: string;
+  resolvedName: string;
+  resolvedAvatar: string | null;
+  isEditing: boolean;
+  searchInput: string;
 }
 
 @Component({
@@ -63,6 +84,7 @@ interface AlbumInfo {
     MatSnackBarModule,
     ReactiveFormsModule,
     FormsModule,
+    MentionAutocompleteComponent,
   ],
   templateUrl: './import-rss-dialog.component.html',
   styleUrl: './import-rss-dialog.component.scss',
@@ -80,6 +102,7 @@ export class ImportRssDialogComponent {
   private dataService = inject(DataService);
   private readonly logger = inject(LoggerService);
   private snackBar = inject(MatSnackBar);
+  private mentionInputService = inject(MentionInputService);
 
   // Form state
   rssUrl = signal('');
@@ -98,6 +121,21 @@ export class ImportRssDialogComponent {
 
   // Tracks from RSS feed
   tracks = signal<RssFeedItem[]>([]);
+
+  // Value recipients from RSS feed
+  valueRecipients = signal<ValueRecipient[]>([]);
+  activeRecipientIndex = signal<number>(-1);
+
+  // Mention autocomplete
+  mentionConfig = signal<MentionAutocompleteConfig | null>(null);
+  mentionPosition = signal({ top: 0, left: 0 });
+
+  // Whether all RSS recipients have been resolved
+  allRecipientsResolved = computed(() => {
+    const recipients = this.valueRecipients();
+    if (recipients.length === 0) return true;
+    return recipients.every(r => !!r.resolvedPubkey);
+  });
 
   // Random gradients for default cover
   private gradients = [
@@ -120,6 +158,19 @@ export class ImportRssDialogComponent {
     'Dance', 'House', 'Techno', 'Ambient', 'Experimental', 'Soul',
     'Reggae', 'Blues', 'Latin', 'World', 'Soundtrack', 'Lo-Fi',
     'Trap', 'Dubstep', 'Drum & Bass', 'Synthwave', 'Podcast', 'Other'
+  ];
+
+  // Available license options (same as music-track-dialog)
+  licenseOptions = [
+    { value: '', label: 'None', url: '' },
+    { value: 'All Rights Reserved', label: 'All Rights Reserved', url: '' },
+    { value: 'CC0 1.0', label: 'CC0 1.0', url: 'https://creativecommons.org/publicdomain/zero/1.0/' },
+    { value: 'CC-BY 4.0', label: 'CC-BY 4.0', url: 'https://creativecommons.org/licenses/by/4.0/' },
+    { value: 'CC BY-SA 4.0', label: 'CC BY-SA 4.0', url: 'https://creativecommons.org/licenses/by-sa/4.0/' },
+    { value: 'CC BY-ND 4.0', label: 'CC BY-ND 4.0', url: 'https://creativecommons.org/licenses/by-nd/4.0/' },
+    { value: 'CC BY-NC 4.0', label: 'CC BY-NC 4.0', url: 'https://creativecommons.org/licenses/by-nc/4.0/' },
+    { value: 'CC BY-NC-SA 4.0', label: 'CC BY-NC-SA 4.0', url: 'https://creativecommons.org/licenses/by-nc-sa/4.0/' },
+    { value: 'CC BY-NC-ND 4.0', label: 'CC BY-NC-ND 4.0', url: 'https://creativecommons.org/licenses/by-nc-nd/4.0/' },
   ];
 
   // Computed
@@ -181,6 +232,16 @@ export class ImportRssDialogComponent {
         enabled: true,
       });
 
+      // Parse channel-level podcast:value recipients
+      const channelRawRecipients = this.parseRawValueRecipients(channel);
+      const allUniqueAddresses = new Map<string, { name: string; address: string; type: string }>();
+      for (const r of channelRawRecipients) {
+        allUniqueAddresses.set(r.address, { name: r.name, address: r.address, type: r.type });
+      }
+
+      // Parse channel-level podcast:license
+      const channelLicense = this.matchRssLicense(this.getPodcastText(channel, 'license'));
+
       // Parse items
       const items = doc.querySelectorAll('item');
       const parsedTracks: RssFeedItem[] = [];
@@ -198,6 +259,20 @@ export class ImportRssDialogComponent {
         const description = item.querySelector('description')?.textContent ||
           this.getItunesText(item, 'summary') || '';
 
+        // Parse item-level podcast:license (overrides channel-level)
+        const itemLicense = this.matchRssLicense(this.getPodcastText(item, 'license'));
+
+        // Parse item-level value recipients (overrides channel-level if present)
+        const itemRawRecipients = this.parseRawValueRecipients(item);
+        const trackRecipients = itemRawRecipients.length > 0 ? itemRawRecipients : channelRawRecipients;
+
+        // Collect unique addresses for profile assignment
+        for (const r of trackRecipients) {
+          if (!allUniqueAddresses.has(r.address)) {
+            allUniqueAddresses.set(r.address, { name: r.name, address: r.address, type: r.type });
+          }
+        }
+
         // Only include items with audio URLs
         if (audioUrl) {
           parsedTracks.push({
@@ -212,11 +287,25 @@ export class ImportRssDialogComponent {
             trackNumber: index + 1,
             genres: [],
             aiGenerated: false,
+            license: itemLicense || channelLicense,
+            splits: trackRecipients.map(r => ({ address: r.address, percentage: r.split })),
             expanded: false,
             selected: true,
           });
         }
       });
+
+      // Set unique value recipients for profile assignment UI
+      this.valueRecipients.set(Array.from(allUniqueAddresses.values()).map(r => ({
+        name: r.name,
+        address: r.address,
+        type: r.type,
+        resolvedPubkey: '',
+        resolvedName: '',
+        resolvedAvatar: null,
+        isEditing: false,
+        searchInput: '',
+      })));
 
       if (parsedTracks.length === 0) {
         this.snackBar.open('No audio tracks found in the RSS feed', 'Close', { duration: 3000 });
@@ -315,6 +404,43 @@ export class ImportRssDialogComponent {
     return `${month}/${day}/${year}`;
   }
 
+  private getPodcastText(parent: Element, tagName: string): string {
+    const PODCAST_NS = 'https://podcastindex.org/namespace/1.0';
+    const nsElements = parent.getElementsByTagNameNS(PODCAST_NS, tagName);
+    if (nsElements.length > 0) {
+      return nsElements[0].textContent || '';
+    }
+    for (const child of Array.from(parent.children)) {
+      if (child.nodeName === `podcast:${tagName}`) {
+        return child.textContent || '';
+      }
+    }
+    return '';
+  }
+
+  private matchRssLicense(rssLicense: string): string {
+    if (!rssLicense) return '';
+    const normalized = rssLicense.trim().toLowerCase().replace(/[\s_]+/g, '-');
+    const mapping: Record<string, string> = {
+      'cc0-1.0': 'CC0 1.0',
+      'cc0': 'CC0 1.0',
+      'cc-by-4.0': 'CC-BY 4.0',
+      'cc-by': 'CC-BY 4.0',
+      'cc-by-sa-4.0': 'CC BY-SA 4.0',
+      'cc-by-sa': 'CC BY-SA 4.0',
+      'cc-by-nd-4.0': 'CC BY-ND 4.0',
+      'cc-by-nd': 'CC BY-ND 4.0',
+      'cc-by-nc-4.0': 'CC BY-NC 4.0',
+      'cc-by-nc': 'CC BY-NC 4.0',
+      'cc-by-nc-sa-4.0': 'CC BY-NC-SA 4.0',
+      'cc-by-nc-sa': 'CC BY-NC-SA 4.0',
+      'cc-by-nc-nd-4.0': 'CC BY-NC-ND 4.0',
+      'cc-by-nc-nd': 'CC BY-NC-ND 4.0',
+      'all-rights-reserved': 'All Rights Reserved',
+    };
+    return mapping[normalized] || '';
+  }
+
   toggleTrackExpanded(index: number): void {
     this.tracks.update(tracks => {
       const updated = [...tracks];
@@ -346,6 +472,8 @@ export class ImportRssDialogComponent {
   goBack(): void {
     this.hasFetched.set(false);
     this.tracks.set([]);
+    this.valueRecipients.set([]);
+    this.activeRecipientIndex.set(-1);
   }
 
   async publishTracks(): Promise<void> {
@@ -429,11 +557,37 @@ export class ImportRssDialogComponent {
           tags.push(['ai_generated', 'true']);
         }
 
+        // Add license tag
+        if (track.license) {
+          tags.push(['license', track.license]);
+        }
+
+        // Add zap splits from track's own recipients
+        const recipients = this.valueRecipients();
+        for (const split of track.splits) {
+          const recipient = recipients.find(r => r.address === split.address);
+          if (recipient?.resolvedPubkey && split.percentage > 0) {
+            tags.push(['zap', recipient.resolvedPubkey, 'wss://relay.damus.io', String(split.percentage)]);
+          }
+        }
+
         // Add alt tag for accessibility
         tags.push(['alt', `Music track: ${track.title} by ${track.artist || 'Unknown Artist'}`]);
 
-        // Build content from description
-        const content = track.description || '';
+        // Build content from description and license
+        const contentParts: string[] = [];
+        if (track.description) {
+          contentParts.push(track.description);
+        }
+        if (track.license) {
+          const licenseUrl = this.licenseOptions.find(opt => opt.value === track.license)?.url || '';
+          if (licenseUrl) {
+            contentParts.push(`License:\n${track.license}\n${licenseUrl}`);
+          } else {
+            contentParts.push(`License:\n${track.license}`);
+          }
+        }
+        const content = contentParts.join('\n\n');
 
         // Create and sign the event
         const eventTemplate = {
@@ -477,5 +631,199 @@ export class ImportRssDialogComponent {
 
   cancel(): void {
     this.closed.emit(null);
+  }
+
+  // --- Podcast value recipient parsing ---
+
+  private parseRawValueRecipients(parent: Element): { name: string; address: string; split: number; type: string }[] {
+    const PODCAST_NS = 'https://podcastindex.org/namespace/1.0';
+    const recipients: { name: string; address: string; split: number; type: string }[] = [];
+
+    // Find podcast:value element
+    let valueEl: Element | null = null;
+    const nsValues = parent.getElementsByTagNameNS(PODCAST_NS, 'value');
+    if (nsValues.length > 0) {
+      valueEl = nsValues[0];
+    } else {
+      for (const child of Array.from(parent.children)) {
+        if (child.nodeName === 'podcast:value') {
+          valueEl = child;
+          break;
+        }
+      }
+    }
+
+    if (!valueEl) return recipients;
+
+    // Find podcast:valueRecipient elements
+    const nsRecipients = valueEl.getElementsByTagNameNS(PODCAST_NS, 'valueRecipient');
+    const recipientEls = nsRecipients.length > 0
+      ? Array.from(nsRecipients)
+      : Array.from(valueEl.children).filter(c => c.nodeName === 'podcast:valueRecipient');
+
+    for (const el of recipientEls) {
+      const name = el.getAttribute('name') || '';
+      const address = el.getAttribute('address') || '';
+      const split = parseInt(el.getAttribute('split') || '0', 10);
+      const type = el.getAttribute('type') || '';
+      if (address) {
+        recipients.push({ name, address, split, type });
+      }
+    }
+
+    return recipients;
+  }
+
+  onMentionSelected(selection: MentionSelection): void {
+    const recipientIdx = this.activeRecipientIndex();
+    if (recipientIdx >= 0) {
+      this.resolveRecipientByPubkey(recipientIdx, selection.pubkey, selection.displayName);
+    }
+    this.mentionConfig.set(null);
+  }
+
+  onMentionDismissed(): void {
+    this.mentionConfig.set(null);
+  }
+
+  // --- RSS recipient resolution ---
+
+  startEditRecipient(index: number): void {
+    this.activeRecipientIndex.set(index);
+    this.valueRecipients.update(recipients => {
+      return recipients.map((r, i) => ({
+        ...r,
+        isEditing: i === index,
+        searchInput: i === index ? '' : r.searchInput,
+      }));
+    });
+  }
+
+  cancelEditRecipient(index: number): void {
+    this.activeRecipientIndex.set(-1);
+    this.mentionConfig.set(null);
+    this.valueRecipients.update(recipients => {
+      const updated = [...recipients];
+      updated[index] = { ...updated[index], isEditing: false, searchInput: '' };
+      return updated;
+    });
+  }
+
+  onRecipientInputChange(index: number, event: globalThis.Event): void {
+    const input = event.target as HTMLInputElement;
+    const value = input.value;
+    this.activeRecipientIndex.set(index);
+
+    this.valueRecipients.update(recipients => {
+      const updated = [...recipients];
+      updated[index] = { ...updated[index], searchInput: value };
+      return updated;
+    });
+
+    const detection = this.mentionInputService.detectMention(value, input.selectionStart || value.length);
+    if (detection.isTypingMention) {
+      const rect = input.getBoundingClientRect();
+      this.mentionPosition.set({
+        top: rect.bottom + 4,
+        left: rect.left
+      });
+      this.mentionConfig.set({
+        cursorPosition: detection.cursorPosition,
+        query: detection.query,
+        mentionStart: detection.mentionStart
+      });
+    } else {
+      this.mentionConfig.set(null);
+    }
+  }
+
+  onRecipientInputKeyDown(event: KeyboardEvent): void {
+    if (this.mentionConfig()) {
+      if (['ArrowDown', 'ArrowUp', 'Enter', 'Escape'].includes(event.key)) {
+        if (event.key === 'Escape') {
+          this.mentionConfig.set(null);
+        }
+        return;
+      }
+    }
+  }
+
+  async confirmRecipientSearch(index: number): Promise<void> {
+    const recipient = this.valueRecipients()[index];
+    const input = recipient.searchInput.trim();
+    if (!input) return;
+
+    try {
+      let pubkey: string;
+
+      if (input.startsWith('npub')) {
+        const decoded = nip19.decode(input);
+        if (decoded.type !== 'npub') {
+          this.snackBar.open('Invalid npub', 'Close', { duration: 3000 });
+          return;
+        }
+        pubkey = decoded.data;
+      } else {
+        if (!/^[0-9a-fA-F]{64}$/.test(input)) {
+          this.snackBar.open('Invalid pubkey format. Use npub or 64-character hex.', 'Close', { duration: 3000 });
+          return;
+        }
+        pubkey = input.toLowerCase();
+      }
+
+      await this.resolveRecipientByPubkey(index, pubkey);
+    } catch {
+      this.snackBar.open('Failed to resolve profile', 'Close', { duration: 3000 });
+    }
+  }
+
+  async resolveRecipientByPubkey(index: number, pubkey: string, displayName?: string): Promise<void> {
+    // Check if this pubkey is already used by another recipient
+    const otherResolved = this.valueRecipients().some((r, i) => i !== index && r.resolvedPubkey === pubkey);
+    if (otherResolved) {
+      this.snackBar.open('This profile is already assigned', 'Close', { duration: 3000 });
+      return;
+    }
+
+    const profile = await this.dataService.getProfile(pubkey);
+    const name = displayName || profile?.data?.name || profile?.data?.display_name || nip19.npubEncode(pubkey).slice(0, 12) + '...';
+    const avatar = profile?.data?.picture || null;
+
+    // Update the recipient
+    this.valueRecipients.update(recipients => {
+      const updated = [...recipients];
+      updated[index] = {
+        ...updated[index],
+        resolvedPubkey: pubkey,
+        resolvedName: name,
+        resolvedAvatar: avatar,
+        isEditing: false,
+        searchInput: '',
+      };
+      return updated;
+    });
+
+    this.activeRecipientIndex.set(-1);
+    this.mentionConfig.set(null);
+  }
+
+  clearRecipientResolution(index: number): void {
+    this.valueRecipients.update(recipients => {
+      const updated = [...recipients];
+      updated[index] = {
+        ...updated[index],
+        resolvedPubkey: '',
+        resolvedName: '',
+        resolvedAvatar: null,
+      };
+      return updated;
+    });
+  }
+
+  getRecipientDisplayName(address: string): string {
+    const recipient = this.valueRecipients().find(r => r.address === address);
+    if (recipient?.resolvedName) return recipient.resolvedName;
+    if (recipient?.name) return recipient.name;
+    return address;
   }
 }
