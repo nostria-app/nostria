@@ -4,24 +4,24 @@
 
 .settings-link-card {
   width: 100%;
-  display: grid;
-  grid-template-columns: auto 1fr auto;
+  display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 14px 14px;
+  gap: 10px;
+  min-height: 56px;
+  padding: 8px 14px;
   border: 1px solid var(--mat-sys-outline-variant);
-  border-radius: var(--mat-sys-corner-medium);
-  background: var(--mat-sys-surface-container-high);
+  border-radius: 12px;
+  background: var(--mat-sys-surface-container);
   color: var(--mat-sys-on-surface);
   text-align: left;
   cursor: pointer;
-  transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
+  box-shadow: none;
+  transition: background-color 0.18s ease, border-color 0.18s ease;
 }
 
 .settings-link-card:hover {
   background: var(--mat-sys-surface-container-highest);
   border-color: var(--mat-sys-outline);
-  transform: translateY(-1px);
 }
 
 .settings-link-card:focus-visible {
@@ -35,30 +35,94 @@
 }
 
 .leading-icon {
-  width: 22px;
-  height: 22px;
+  width: 24px;
+  height: 24px;
+  flex: 0 0 24px;
   display: flex;
   align-items: center;
   justify-content: center;
+  opacity: 0.92;
+
+  .mat-icon {
+    width: 16px;
+    height: 16px;
+    font-size: 16px;
+  }
 }
 
 .content {
   min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  text-align: left;
 }
 
 .title {
   color: var(--mat-sys-on-surface);
-  margin-bottom: 1px;
+  font-size: 0.93rem;
+  line-height: 1.15;
+  margin: 0;
+  width: 100%;
+  text-align: left;
 }
 
 .description {
   color: var(--mat-sys-on-surface-variant);
-  font-size: 0.875rem;
-  line-height: 1.3;
+  font-size: 0.75rem;
+  line-height: 1.15;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin: 0;
+  opacity: 0.92;
+  width: 100%;
+  text-align: left;
 }
 
 .trailing-icon {
-  width: 20px;
-  height: 20px;
-  font-size: 20px;
+  width: 16px;
+  height: 16px;
+  font-size: 16px;
+  flex: 0 0 16px;
+  margin-left: auto;
+  opacity: 0.9;
+}
+
+@media (max-width: 599px) {
+  .settings-link-card {
+    gap: 9px;
+    min-height: 52px;
+    padding: 8px 12px;
+    border-radius: 11px;
+  }
+
+  .leading-icon {
+    width: 22px;
+    height: 22px;
+    flex-basis: 22px;
+
+    .mat-icon {
+      width: 15px;
+      height: 15px;
+      font-size: 15px;
+    }
+  }
+
+  .title {
+    font-size: 0.89rem;
+  }
+
+  .description {
+    font-size: 0.72rem;
+  }
+
+  .trailing-icon {
+    width: 15px;
+    height: 15px;
+    font-size: 15px;
+    flex-basis: 15px;
+  }
 }
