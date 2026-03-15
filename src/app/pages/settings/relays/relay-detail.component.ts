@@ -50,8 +50,6 @@ type RelayMode = 'readwrite' | 'read' | 'write';
         </div>
       </div>
 
-      <mat-divider></mat-divider>
-
       <!-- Read/Write Mode -->
       <div class="setting-row">
         <div class="setting-label">
@@ -81,8 +79,6 @@ type RelayMode = 'readwrite' | 'read' | 'write';
           </button>
         </mat-menu>
       </div>
-
-      <mat-divider></mat-divider>
 
       <!-- NIP-11 Relay Information -->
       <mat-accordion>
@@ -216,8 +212,6 @@ type RelayMode = 'readwrite' | 'read' | 'write';
         </mat-expansion-panel>
       </mat-accordion>
 
-      <mat-divider></mat-divider>
-
       <!-- Data Migration -->
       <div class="migration-section">
         <h3 class="section-heading">
@@ -254,8 +248,6 @@ type RelayMode = 'readwrite' | 'read' | 'write';
           </div>
         }
       </div>
-
-      <mat-divider></mat-divider>
 
       <!-- Remove Relay -->
       <div class="danger-section">
