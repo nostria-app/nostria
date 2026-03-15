@@ -318,6 +318,40 @@
   gap: 0.75rem;
 }
 
+// Event Preview
+.event-preview-section {
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: var(--mat-sys-corner-medium);
+  padding: 1rem;
+  background: var(--mat-sys-surface-container-low);
+
+  .event-preview-header {
+    margin-bottom: 0.75rem;
+  }
+
+  .event-preview-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .event-preview-item {
+    background: var(--mat-sys-surface-container-highest);
+    border-radius: var(--mat-sys-corner-small);
+    overflow: auto;
+  }
+
+  .event-json {
+    margin: 0;
+    padding: 0.75rem;
+    font-size: 0.75rem;
+    line-height: 1.4;
+    color: var(--mat-sys-on-surface);
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+}
+
 // Zap Recipients Section
 .zap-recipients-section {
   border: 1px solid var(--mat-sys-outline-variant);

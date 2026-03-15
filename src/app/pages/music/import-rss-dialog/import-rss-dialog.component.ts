@@ -1,4 +1,5 @@
 import { Component, inject, signal, computed, output } from '@angular/core';
+import { JsonPipe } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -85,6 +86,7 @@ interface ValueRecipient {
     ReactiveFormsModule,
     FormsModule,
     MentionAutocompleteComponent,
+    JsonPipe,
   ],
   templateUrl: './import-rss-dialog.component.html',
   styleUrl: './import-rss-dialog.component.scss',
@@ -109,6 +111,8 @@ export class ImportRssDialogComponent {
   isFetching = signal(false);
   isPublishing = signal(false);
   hasFetched = signal(false);
+  showPreview = signal(false);
+  previewEvents = signal<{ kind: number; created_at: number; tags: string[][]; content: string }[]>([]);
 
   // Album information
   albumInfo = signal<AlbumInfo>({
@@ -476,14 +480,103 @@ export class ImportRssDialogComponent {
     this.activeRecipientIndex.set(-1);
   }
 
-  async publishTracks(): Promise<void> {
+  private generateEventTemplates(): { kind: number; created_at: number; tags: string[][]; content: string }[] {
     const selectedTracks = this.tracks().filter(t => t.selected);
-    if (selectedTracks.length === 0) {
+    const album = this.albumInfo();
+    const events: { kind: number; created_at: number; tags: string[][]; content: string }[] = [];
+
+    for (const track of selectedTracks) {
+      const dTag = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+
+      const tags: string[][] = [
+        ['d', dTag],
+        ['title', track.title],
+        ['url', track.audioUrl],
+        ['client', 'nostria'],
+      ];
+
+      if (track.imageUrl) {
+        tags.push(['image', track.imageUrl]);
+      } else if (album.enabled && album.imageUrl) {
+        tags.push(['image', album.imageUrl]);
+      } else {
+        tags.push(['gradient', 'colors', this.currentGradient()]);
+      }
+
+      if (track.artist) {
+        tags.push(['artist', track.artist]);
+      }
+
+      if (album.enabled && album.title) {
+        tags.push(['album', album.title]);
+      }
+
+      if (track.trackNumber) {
+        tags.push(['track_number', String(track.trackNumber)]);
+      }
+
+      if (track.duration) {
+        tags.push(['duration', track.duration]);
+      }
+
+      if (track.releaseDate) {
+        tags.push(['released', track.releaseDate]);
+      }
+
+      for (const genre of track.genres) {
+        tags.push(['t', genre.toLowerCase()]);
+      }
+
+      if (track.aiGenerated) {
+        tags.push(['ai_generated', 'true']);
+      }
+
+      if (track.license) {
+        tags.push(['license', track.license]);
+      }
+
+      const recipients = this.valueRecipients();
+      for (const split of track.splits) {
+        const recipient = recipients.find(r => r.address === split.address);
+        if (recipient?.resolvedPubkey && split.percentage > 0) {
+          tags.push(['zap', recipient.resolvedPubkey, 'wss://relay.damus.io', String(split.percentage)]);
+        }
+      }
+
+      tags.push(['alt', `Music track: ${track.title} by ${track.artist || 'Unknown Artist'}`]);
+
+      const content = track.description || '';
+
+      events.push({
+        kind: MUSIC_KIND,
+        created_at: Math.floor(Date.now() / 1000),
+        tags,
+        content,
+      });
+    }
+
+    return events;
+  }
+
+  togglePreview(): void {
+    if (this.showPreview()) {
+      this.showPreview.set(false);
+      this.previewEvents.set([]);
+    } else {
+      this.previewEvents.set(this.generateEventTemplates());
+      this.showPreview.set(true);
+    }
+  }
+
+  async publishTracks(): Promise<void> {
+    const eventTemplates = this.generateEventTemplates();
+    if (eventTemplates.length === 0) {
       this.snackBar.open('No tracks selected', 'Close', { duration: 3000 });
       return;
     }
 
     this.isPublishing.set(true);
+    this.showPreview.set(false);
     const publishedEvents: Event[] = [];
 
     try {
@@ -499,119 +592,20 @@ export class ImportRssDialogComponent {
         return;
       }
 
-      const album = this.albumInfo();
-
-      for (const track of selectedTracks) {
-        // Generate unique identifier
-        const dTag = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-
-        // Build tags
-        const tags: string[][] = [
-          ['d', dTag],
-          ['title', track.title],
-          ['url', track.audioUrl],
-          ['client', 'nostria'],
-        ];
-
-        // Add image
-        if (track.imageUrl) {
-          tags.push(['image', track.imageUrl]);
-        } else if (album.enabled && album.imageUrl) {
-          tags.push(['image', album.imageUrl]);
-        } else {
-          tags.push(['gradient', 'colors', this.currentGradient()]);
-        }
-
-        // Add artist
-        if (track.artist) {
-          tags.push(['artist', track.artist]);
-        }
-
-        // Add album info if enabled
-        if (album.enabled && album.title) {
-          tags.push(['album', album.title]);
-        }
-
-        // Add track number
-        if (track.trackNumber) {
-          tags.push(['track_number', String(track.trackNumber)]);
-        }
-
-        // Add duration
-        if (track.duration) {
-          tags.push(['duration', track.duration]);
-        }
-
-        // Add release date
-        if (track.releaseDate) {
-          tags.push(['released', track.releaseDate]);
-        }
-
-        // Add genres
-        for (const genre of track.genres) {
-          tags.push(['t', genre.toLowerCase()]);
-        }
-
-        // Add AI generated flag
-        if (track.aiGenerated) {
-          tags.push(['ai_generated', 'true']);
-        }
-
-        // Add license tag
-        if (track.license) {
-          tags.push(['license', track.license]);
-        }
-
-        // Add zap splits from track's own recipients
-        const recipients = this.valueRecipients();
-        for (const split of track.splits) {
-          const recipient = recipients.find(r => r.address === split.address);
-          if (recipient?.resolvedPubkey && split.percentage > 0) {
-            tags.push(['zap', recipient.resolvedPubkey, 'wss://relay.damus.io', String(split.percentage)]);
-          }
-        }
-
-        // Add alt tag for accessibility
-        tags.push(['alt', `Music track: ${track.title} by ${track.artist || 'Unknown Artist'}`]);
-
-        // Build content from description and license
-        const contentParts: string[] = [];
-        if (track.description) {
-          contentParts.push(track.description);
-        }
-        if (track.license) {
-          const licenseUrl = this.licenseOptions.find(opt => opt.value === track.license)?.url || '';
-          if (licenseUrl) {
-            contentParts.push(`License:\n${track.license}\n${licenseUrl}`);
-          } else {
-            contentParts.push(`License:\n${track.license}`);
-          }
-        }
-        const content = contentParts.join('\n\n');
-
-        // Create and sign the event
-        const eventTemplate = {
-          kind: MUSIC_KIND,
-          created_at: Math.floor(Date.now() / 1000),
-          tags,
-          content,
-        };
-
+      for (const eventTemplate of eventTemplates) {
         const signedEvent = await this.nostrService.signEvent(eventTemplate);
         if (!signedEvent) {
-          this.logger.warn('Failed to sign event for track:', track.title);
+          this.logger.warn('Failed to sign event');
           continue;
         }
 
-        // Publish to relays
         try {
           await this.pool.publish(relayUrls, signedEvent);
           publishedEvents.push(signedEvent);
         } catch (error) {
-          this.logger.warn('Failed to publish track:', track.title, error);
+          this.logger.warn('Failed to publish track:', error);
         }
 
-        // Small delay between publishes
         await new Promise(resolve => setTimeout(resolve, 100));
       }
 

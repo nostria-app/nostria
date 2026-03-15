@@ -292,12 +292,32 @@
         </div>
       </div>
     </div>
+
+    @if (showPreview()) {
+    <!-- Event Preview -->
+    <div class="event-preview-section">
+      <div class="event-preview-header">
+        <span class="section-title">Event Preview ({{ previewEvents().length }})</span>
+      </div>
+      <div class="event-preview-list">
+        @for (event of previewEvents(); track $index) {
+        <div class="event-preview-item">
+          <pre class="event-json">{{ event | json }}</pre>
+        </div>
+        }
+      </div>
+    </div>
+    }
     }
   </div>
 
   <div dialog-actions>
     @if (hasFetched()) {
     <button mat-stroked-button (click)="goBack()" [disabled]="isPublishing()">Back</button>
+    <button mat-stroked-button (click)="togglePreview()" [disabled]="isPublishing() || trackCount() === 0">
+      <mat-icon>{{ showPreview() ? 'visibility_off' : 'data_object' }}</mat-icon>
+      {{ showPreview() ? 'Hide Events' : 'Events' }}
+    </button>
     <button mat-flat-button (click)="publishTracks()" [disabled]="isPublishing() || trackCount() === 0">
       @if (isPublishing()) {
       <mat-spinner diameter="18"></mat-spinner>

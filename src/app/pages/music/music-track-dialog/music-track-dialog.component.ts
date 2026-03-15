@@ -279,18 +279,47 @@ export class MusicTrackDialogComponent {
     const language = track.tags.find(t => t[0] === 'language')?.[1] || 'en';
     const explicitContent = track.tags.some(t => t[0] === 'explicit' && t[1] === 'true');
 
-    // Extract lyrics and credits from content (per spec, both go in content field)
-    let lyrics = '';
-    let credits = '';
+    // Extract license - prioritize tag, fall back to content
     let license = '';
     let customLicense = '';
     let customLicenseUrl = '';
 
+    const licenseTag = track.tags.find(t => t[0] === 'license');
+    if (licenseTag) {
+      const licenseName = licenseTag[1] || '';
+      const matchedOption = this.licenseOptions.find(opt => opt.value === licenseName && opt.value !== 'custom');
+      if (matchedOption) {
+        license = matchedOption.value;
+      } else if (licenseName) {
+        license = 'custom';
+        customLicense = licenseName;
+      }
+    }
+
+    // Fallback: check content for License: section (legacy format)
+    if (!license && track.content) {
+      const licenseMatch = track.content.match(/License:\n([^\n]+)(?:\n(https?:\/\/[^\s]+))?/);
+      if (licenseMatch) {
+        const licenseName = licenseMatch[1].trim();
+        const licenseUrl = licenseMatch[2]?.trim() || '';
+        const matchedOption = this.licenseOptions.find(opt => opt.value === licenseName && opt.value !== 'custom');
+        if (matchedOption) {
+          license = matchedOption.value;
+        } else if (licenseName) {
+          license = 'custom';
+          customLicense = licenseName;
+          customLicenseUrl = licenseUrl;
+        }
+      }
+    }
+
+    // Extract lyrics and credits from content
+    let lyrics = '';
+    let credits = '';
+
     if (track.content) {
-      // Try to parse content for Lyrics:, Credits:, and License: sections
       const lyricsMatch = track.content.match(/Lyrics:\n([\s\S]*?)(?=\n\n(?:Credits:|License:)|$)/);
       const creditsMatch = track.content.match(/Credits:\n([\s\S]*?)(?=\n\nLicense:|$)/);
-      const licenseMatch = track.content.match(/License:\n([^\n]+)(?:\n(https?:\/\/[^\s]+))?/);
 
       if (lyricsMatch) {
         lyrics = lyricsMatch[1].trim();
@@ -312,47 +341,11 @@ export class MusicTrackDialogComponent {
       if (creditsMatch) {
         credits = creditsMatch[1].trim();
       }
-
-      if (licenseMatch) {
-        const licenseName = licenseMatch[1].trim();
-        const licenseUrl = licenseMatch[2]?.trim() || '';
-
-        // Check if it's a standard license
-        const matchedOption = this.licenseOptions.find(opt => opt.value === licenseName && opt.value !== 'custom');
-        if (matchedOption) {
-          license = matchedOption.value;
-        } else if (licenseName) {
-          // It's a custom license
-          license = 'custom';
-          customLicense = licenseName;
-          customLicenseUrl = licenseUrl;
-        }
-      }
     }
 
     // Fallback: check for legacy lyrics tag
     if (!lyrics) {
       lyrics = track.tags.find(t => t[0] === 'lyrics')?.[1] || '';
-    }
-
-    // Fallback: check for legacy license tag
-    if (!license) {
-      const licenseTag = track.tags.find(t => t[0] === 'license');
-      if (licenseTag) {
-        const licenseName = licenseTag[1] || '';
-        const licenseUrl = licenseTag[2] || '';
-
-        // Check if it's a standard license
-        const matchedOption = this.licenseOptions.find(opt => opt.value === licenseName && opt.value !== 'custom');
-        if (matchedOption) {
-          license = matchedOption.value;
-        } else if (licenseName) {
-          // It's a custom license
-          license = 'custom';
-          customLicense = licenseName;
-          customLicenseUrl = licenseUrl;
-        }
-      }
     }
 
     // Set form values
@@ -1310,10 +1303,20 @@ export class MusicTrackDialogComponent {
         }
       }
 
+      // Add license tag
+      if (formValue.license) {
+        const licenseName = formValue.license === 'custom'
+          ? formValue.customLicense
+          : formValue.license;
+        if (licenseName) {
+          tags.push(['license', licenseName]);
+        }
+      }
+
       // Add alt tag for accessibility
       tags.push(['alt', `Music track: ${formValue.title} by ${artistDisplay}`]);
 
-      // Build content (lyrics, credits, and license go here)
+      // Build content (lyrics and credits go here)
       const contentParts: string[] = [];
 
       if (formValue.lyrics) {
@@ -1322,24 +1325,6 @@ export class MusicTrackDialogComponent {
 
       if (formValue.credits) {
         contentParts.push(`Credits:\n${formValue.credits}`);
-      }
-
-      // Add license to content
-      if (formValue.license) {
-        const licenseName = formValue.license === 'custom'
-          ? formValue.customLicense
-          : formValue.license;
-        const licenseUrl = formValue.license === 'custom'
-          ? formValue.customLicenseUrl
-          : this.licenseOptions.find(opt => opt.value === formValue.license)?.url || '';
-
-        if (licenseName) {
-          if (licenseUrl) {
-            contentParts.push(`License:\n${licenseName}\n${licenseUrl}`);
-          } else {
-            contentParts.push(`License:\n${licenseName}`);
-          }
-        }
       }
 
       const content = contentParts.join('\n\n');
