@@ -2,6 +2,11 @@
   display: block;
 }
 
+.section-description {
+  color: var(--mat-sys-on-surface-variant);
+  margin: 0 0 8px;
+}
+
 .loading-container {
   display: flex;
   flex-direction: column;

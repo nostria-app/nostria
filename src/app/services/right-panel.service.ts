@@ -80,6 +80,13 @@ export class RightPanelService {
       });
     }
 
+    // Truncate any forward history beyond the current position (like browser history).
+    // Component refs are cleaned up by the container's effect when it detects the stack shrunk.
+    const stack = this._stack();
+    if (currentIndex >= 0 && currentIndex < stack.length - 1) {
+      this._stack.update(s => s.slice(0, currentIndex + 1));
+    }
+
     // Add new entry to end of stack and make it active
     this._stack.update(stack => [...stack, entry]);
     this._activeIndex.set(this._stack().length - 1);
