@@ -1850,9 +1850,9 @@ export class LayoutService implements OnDestroy {
     }
   }
 
-  /** Navigate to music page to upload a new track */
+  /** Navigate to music page and open the upload track dialog */
   openMusicUpload(): void {
-    this.router.navigateByUrl('/music');
+    this.router.navigate(['/music'], { queryParams: { upload: 'true' } });
   }
 
   /** Open the streaming apps dialog to start a live stream */

@@ -431,6 +431,13 @@ export class MusicComponent implements OnDestroy {
     this.twoColumnLayout.setWideLeft();
     this.initializeMusic();
 
+    // Auto-open upload dialog if navigated with ?upload=true
+    if (this.route.snapshot.queryParams['upload'] === 'true') {
+      this.showUploadDialog.set(true);
+      // Remove the query param so refreshing doesn't re-open
+      this.router.navigate([], { queryParams: { upload: undefined }, queryParamsHandling: 'merge', replaceUrl: true });
+    }
+
     effect(() => {
       const pubkey = this.currentPubkey();
       if (pubkey) {
