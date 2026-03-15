@@ -19,6 +19,26 @@ export interface RelayEntry {
   write: boolean;
 }
 
+export interface RelayNormalizationContext {
+  source?:
+  | 'account-relays'
+  | 'contacts-relays'
+  | 'discovery-relays'
+  | 'publish-relays'
+  | 'relay-hint'
+  | 'remote-signer-relays'
+  | 'user-relay-list'
+  | 'unknown';
+  ownerPubkey?: string;
+  currentPubkey?: string;
+  eventId?: string;
+  eventKind?: number;
+  discoveryMode?: string;
+  details?: string;
+  itemIndex?: number;
+  totalItems?: number;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -833,9 +853,17 @@ export class UtilitiesService {
     'wss://nos.lol',
   ];
 
-  normalizeRelayUrls(urls: string[], includeIgnoredRelays = false): string[] {
+  normalizeRelayUrls(
+    urls: string[],
+    includeIgnoredRelays = false,
+    context?: RelayNormalizationContext,
+  ): string[] {
     return urls
-      .map(url => this.normalizeRelayUrl(url, includeIgnoredRelays))
+      .map((url, index) => this.normalizeRelayUrl(url, includeIgnoredRelays, {
+        ...context,
+        itemIndex: index,
+        totalItems: urls.length,
+      }))
       .filter(url => url !== '');
   }
 
@@ -844,10 +872,18 @@ export class UtilitiesService {
    * @param urls - Array of relay URLs to deduplicate and normalize
    * @returns Array of unique normalized relay URLs
    */
-  getUniqueNormalizedRelayUrls(urls: string[], includeIgnoredRelays = false): string[] {
+  getUniqueNormalizedRelayUrls(
+    urls: string[],
+    includeIgnoredRelays = false,
+    context?: RelayNormalizationContext,
+  ): string[] {
     // Normalize all URLs first, then deduplicate
     const normalizedUrls = urls
-      .map(url => this.normalizeRelayUrl(url.trim(), includeIgnoredRelays))
+      .map((url, index) => this.normalizeRelayUrl(url.trim(), includeIgnoredRelays, {
+        ...context,
+        itemIndex: index,
+        totalItems: urls.length,
+      }))
       .filter(url => url.length > 0);
 
     // Remove duplicates after normalization
@@ -873,14 +909,14 @@ export class UtilitiesService {
    * autocomplete errors turn "wss" into "was" creating invalid hostnames.
    */
   isValidRelayUrl(url: string): boolean {
-    if (!url || !this.isSecureRelayUrl(url)) {
+    const cleanedUrl = this.cleanupCommonRelayUrlTypos(url);
+
+    if (!cleanedUrl || !this.isSecureRelayUrl(cleanedUrl)) {
       return false;
     }
-    if (url.includes(',')) {
-      return false;
-    }
+
     try {
-      const parsedUrl = new URL(url);
+      const parsedUrl = new URL(cleanedUrl);
       if (this.ignoredRelayDomains.has(parsedUrl.hostname.toLowerCase())) {
         return false;
       }
@@ -897,21 +933,17 @@ export class UtilitiesService {
    * Only accepts secure wss:// URLs - insecure ws:// URLs are rejected.
    * Also validates that the hostname is a valid domain (contains a dot).
    */
-  normalizeRelayUrl(url: string, includeIgnoredRelays = false): string {
+  normalizeRelayUrl(url: string, includeIgnoredRelays = false, context?: RelayNormalizationContext): string {
     try {
+      const cleanedUrl = this.cleanupCommonRelayUrlTypos(url);
+
       // Only allow secure WebSocket connections (wss://)
       // Reject ws:// to prevent mixed content errors when served over HTTPS
-      if (!this.isSecureRelayUrl(url)) {
+      if (!this.isSecureRelayUrl(cleanedUrl)) {
         return '';
       }
 
-      // Reject URLs with commas or other invalid hostname characters (e.g. "relay,damus.io")
-      if (url.includes(',')) {
-        this.logger.warn(`Invalid relay URL (contains comma): ${url}`);
-        return '';
-      }
-
-      const parsedUrl = new URL(url);
+      const parsedUrl = new URL(cleanedUrl);
 
       if (!includeIgnoredRelays && this.ignoredRelayDomains.has(parsedUrl.hostname.toLowerCase())) {
         return '';
@@ -920,23 +952,67 @@ export class UtilitiesService {
       // Must have a real hostname with a dot (not malformed like "wss://was//snort.social")
       // This catches autocomplete errors where "wss" becomes "was" and creates invalid URLs
       if (!parsedUrl.hostname.includes('.')) {
-        this.logger.warn(`Invalid relay hostname (no domain): ${url}`);
+        this.logInvalidRelayUrl('hostname has no domain', cleanedUrl, context);
         return '';
       }
 
       // If the URL has no pathname (or just '/'), ensure it ends with a slash
       if (parsedUrl.pathname === '' || parsedUrl.pathname === '/') {
         // Add trailing slash if missing
-        return url.endsWith('/') ? url : `${url}/`;
+        return cleanedUrl.endsWith('/') ? cleanedUrl : `${cleanedUrl}/`;
       }
 
       // URL already has a path, return as is
-      return url;
+      return cleanedUrl;
     } catch (error) {
       // If URL parsing fails, return original URL
-      this.logger.warn(`Failed to parse URL: ${url}`, error);
+      this.logInvalidRelayUrl('failed to parse', url, context, error);
       return '';
     }
+  }
+
+  private cleanupCommonRelayUrlTypos(url: string): string {
+    let cleanedUrl = url.trim();
+
+    if (!cleanedUrl.startsWith('wss://')) {
+      return cleanedUrl;
+    }
+
+    cleanedUrl = cleanedUrl.replace(/,+$/g, '');
+    cleanedUrl = cleanedUrl.replace(/\/+,+$/g, '/');
+
+    const relayWithoutProtocol = cleanedUrl.slice('wss://'.length);
+    const authorityMatch = relayWithoutProtocol.match(/^([^/?#]+)(.*)$/);
+
+    if (!authorityMatch) {
+      return cleanedUrl;
+    }
+
+    const [, authority, suffix] = authorityMatch;
+    const sanitizedAuthority = authority
+      .replace(/,+$/g, '')
+      .replace(/,/g, '.');
+
+    return `wss://${sanitizedAuthority}${suffix}`;
+  }
+
+  private logInvalidRelayUrl(
+    reason: string,
+    url: string,
+    context?: RelayNormalizationContext,
+    error?: unknown,
+  ): void {
+    const debugContext = {
+      invalidRelayUrl: url,
+      ...(context ?? { source: 'unknown' as const }),
+    };
+
+    if (error !== undefined) {
+      this.logger.warn(`[RelayNormalization] Invalid relay URL (${reason}): ${url}`, debugContext, error);
+      return;
+    }
+
+    this.logger.warn(`[RelayNormalization] Invalid relay URL (${reason}): ${url}`, debugContext);
   }
 
   private isIgnoredRelayDomain(url: string): boolean {

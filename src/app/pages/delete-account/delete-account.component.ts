@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, OnInit, signal, computed } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, OnInit, signal, computed, effect } from '@angular/core';
 import { Location } from '@angular/common';
 
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators, AbstractControl } from '@angular/forms';
@@ -106,6 +106,30 @@ export class DeleteAccountComponent implements OnInit {
 
   currentAccount = computed(() => this.accountStateService.account());
 
+  private readonly syncDeleteFormState = effect(() => {
+    if (!this.deleteForm) {
+      return;
+    }
+
+    const isDeleting = this.deleting();
+    const isVanishing = this.deletionState() === 'vanishing';
+
+    const confirmationControl = this.deleteForm.get('confirmationText');
+    const vanishConfirmationControl = this.deleteForm.get('vanishConfirmationText');
+
+    if (isDeleting) {
+      confirmationControl?.disable({ emitEvent: false });
+    } else {
+      confirmationControl?.enable({ emitEvent: false });
+    }
+
+    if (isDeleting || isVanishing) {
+      vanishConfirmationControl?.disable({ emitEvent: false });
+    } else {
+      vanishConfirmationControl?.enable({ emitEvent: false });
+    }
+  });
+
   ngOnInit() {
     const navigation = this.router.getCurrentNavigation();
     const navigationState = (navigation?.extras.state ?? history.state) as { source?: DeleteAccountSource };
@@ -120,6 +144,8 @@ export class DeleteAccountComponent implements OnInit {
       confirmationText: ['', [Validators.required, this.confirmationValidator.bind(this)]],
       vanishConfirmationText: ['', [Validators.required, this.vanishConfirmationValidator.bind(this)]],
     });
+
+    this.deleteForm.updateValueAndValidity({ emitEvent: false });
   }
 
   private confirmationValidator(control: AbstractControl) {

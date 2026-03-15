@@ -111,8 +111,8 @@ export class RightPanelService {
    */
   private getCurrentScrollPosition(): number {
     if (typeof document === 'undefined') return 0;
-    const content = document.querySelector('.right-panel-content');
-    return content?.scrollTop ?? 0;
+    const panel = document.querySelector('.right-panel');
+    return panel?.scrollTop ?? 0;
   }
 
   /**
@@ -120,9 +120,9 @@ export class RightPanelService {
    */
   private scrollToTop(): void {
     if (typeof document === 'undefined') return;
-    const content = document.querySelector('.right-panel-content');
-    if (content) {
-      content.scrollTop = 0;
+    const panel = document.querySelector('.right-panel');
+    if (panel) {
+      panel.scrollTo({ top: 0, behavior: 'auto' });
     }
   }
 

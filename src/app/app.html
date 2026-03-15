@@ -138,17 +138,15 @@
             <mat-icon>person_add</mat-icon>
           </button>
           }
-          <button mat-icon-button routerLink="/settings" (click)="closeSidenavOnMobile()" matTooltip="Settings"
-            i18n-matTooltip="@@app.profile.settings">
+          <button mat-icon-button routerLink="/settings" data-settings-quick-trigger="true"
+            (click)="onSettingsQuickCardTriggerClick($event); closeSidenavOnMobile()"
+            (mouseenter)="onSettingsQuickCardTriggerMouseEnter($event)"
+            (mouseleave)="onSettingsQuickCardTriggerMouseLeave()" (focusin)="onSettingsQuickCardTriggerFocus($event)"
+            (touchstart)="onSettingsQuickCardTriggerTouchStart($event)"
+            (touchend)="onSettingsQuickCardTriggerTouchEnd($event)"
+            (touchcancel)="onSettingsQuickCardTriggerTouchCancel()" (touchmove)="onSettingsQuickCardTriggerTouchMove()"
+            matTooltip="Settings" i18n-matTooltip="@@app.profile.settings">
             <mat-icon>settings</mat-icon>
-          </button>
-          <button mat-icon-button (click)="themeService.toggleDarkMode()"
-            [matTooltip]="themeService.darkMode() ? 'Light mode' : 'Dark mode'">
-            @if (themeService.darkMode()) {
-            <mat-icon>light_mode</mat-icon>
-            } @else {
-            <mat-icon>dark_mode</mat-icon>
-            }
           </button>
         </div>
       </div>
@@ -174,7 +172,13 @@
         </button>
         <!-- Settings gear icon - opens profile actions menu -->
         <button mat-list-item [matMenuTriggerFor]="minimizedProfileActionsMenu"
-          class="nav-item sidenav-minimized-settings-button" matTooltip="Profile & Settings" matTooltipPosition="right">
+          class="nav-item sidenav-minimized-settings-button" data-settings-quick-trigger="true"
+          (click)="onSettingsQuickCardTriggerClick($event)" (mouseenter)="onSettingsQuickCardTriggerMouseEnter($event)"
+          (mouseleave)="onSettingsQuickCardTriggerMouseLeave()" (focusin)="onSettingsQuickCardTriggerFocus($event)"
+          (touchstart)="onSettingsQuickCardTriggerTouchStart($event)"
+          (touchend)="onSettingsQuickCardTriggerTouchEnd($event)"
+          (touchcancel)="onSettingsQuickCardTriggerTouchCancel()" (touchmove)="onSettingsQuickCardTriggerTouchMove()"
+          matTooltip="Profile & Settings" matTooltipPosition="right">
           <mat-icon matListItemIcon>settings</mat-icon>
         </button>
         }
@@ -494,6 +498,18 @@
     </mat-sidenav-content>
   </mat-sidenav-container>
 
+  @if (settingsQuickCardOpen()) {
+  <div class="settings-quick-card-backdrop" [class.active]="settingsQuickCardFullscreen()"
+    (click)="closeSettingsQuickCard()"></div>
+  <div #settingsQuickCardLayer class="settings-quick-card-layer" [class.fullscreen]="settingsQuickCardFullscreen()"
+    [style.top.px]="settingsQuickCardFullscreen() ? null : settingsQuickCardPosition().top"
+    [style.left.px]="settingsQuickCardFullscreen() ? null : settingsQuickCardPosition().left"
+    (mouseenter)="onSettingsQuickCardMouseEnter()" (mouseleave)="onSettingsQuickCardMouseLeave()">
+    <app-settings-quick-card [fullscreen]="settingsQuickCardFullscreen()" (closeRequested)="closeSettingsQuickCard()"
+      (openSettingsRequested)="openFullSettingsFromQuickCard()" />
+  </div>
+  }
+
   <!-- Media player - positioned in footer or fullscreen based on state -->
   @if (layout.showMediaPlayer()) {
   <app-media-player></app-media-player>
@@ -635,9 +651,14 @@
   <button mat-menu-item (click)="themeService.toggleDarkMode()">
     @if (themeService.darkMode()) {
     <mat-icon>light_mode</mat-icon>
-    <span i18n="@@app.theme.light-mode">Light mode</span>
-    } @else {
+    }
+    @if (!themeService.darkMode()) {
     <mat-icon>dark_mode</mat-icon>
+    }
+    @if (themeService.darkMode()) {
+    <span i18n="@@app.theme.light-mode">Light mode</span>
+    }
+    @if (!themeService.darkMode()) {
     <span i18n="@@app.theme.dark-mode">Dark mode</span>
     }
   </button>

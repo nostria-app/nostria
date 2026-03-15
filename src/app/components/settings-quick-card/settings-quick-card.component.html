@@ -1,0 +1,90 @@
+<div class="quick-card" [class.fullscreen]="fullscreen()">
+  <div class="quick-card-header">
+    <div class="header-actions">
+      @if (!fullscreen()) {
+      <button mat-stroked-button type="button" class="open-settings-button" (click)="openSettings()">
+        <mat-icon>settings</mat-icon>
+        <span i18n="@@settings.quick-card.open-settings">Open settings</span>
+      </button>
+      }
+
+      <button mat-icon-button type="button" class="close-button" (click)="close()" aria-label="Close quick settings"
+        i18n-aria-label="@@settings.quick-card.close">
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
+  </div>
+
+  <div class="quick-card-grid">
+    <section class="quick-card-section">
+      <div class="theme-options" role="group" aria-label="Theme" i18n-aria-label="@@settings.quick-card.theme">
+        <button mat-button type="button" class="theme-option" [class.active]="!themeService.darkMode()"
+          (click)="setTheme(false)">
+          <mat-icon>light_mode</mat-icon>
+          <span i18n="@@settings.quick-card.theme.light">Light</span>
+        </button>
+        <button mat-button type="button" class="theme-option" [class.active]="themeService.darkMode()"
+          (click)="setTheme(true)">
+          <mat-icon>dark_mode</mat-icon>
+          <span i18n="@@settings.quick-card.theme.dark">Dark</span>
+        </button>
+      </div>
+    </section>
+
+    <section class="quick-card-section">
+      <mat-form-field appearance="outline" class="language-field">
+        <mat-label i18n="@@settings.language.label">Language</mat-label>
+        <mat-select [ngModel]="localSettings.locale()" (selectionChange)="setLanguage($event.value)">
+          @for (language of languageOptions; track language.code) {
+          <mat-option [value]="language.code">{{ language.name }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+    </section>
+
+    <section class="quick-card-section font-size-section">
+      <div class="font-size-header">
+        <div>
+          <div class="section-label" i18n="@@settings.display.text-size">Text Size</div>
+          <div class="scale-value">{{ scalePercentage() }}%</div>
+        </div>
+        <div class="text-preview" [style.font-size]="previewFontSize()">Aa</div>
+      </div>
+
+      <div class="slider-row">
+        <button mat-icon-button type="button" (click)="decreaseScale()" [disabled]="isMinScale()"
+          aria-label="Decrease text size" i18n-aria-label="@@settings.display.text-size.decrease">
+          <mat-icon>remove</mat-icon>
+        </button>
+
+        <mat-slider [min]="minScale" [max]="maxScale" [step]="0.05" [discrete]="true" [displayWith]="formatScaleLabel"
+          class="text-scale-slider">
+          <input matSliderThumb [value]="textScaleService.textScale()" (valueChange)="onScaleChange($event)"
+            aria-label="Text size" i18n-aria-label="@@settings.display.text-size" />
+        </mat-slider>
+
+        <button mat-icon-button type="button" (click)="increaseScale()" [disabled]="isMaxScale()"
+          aria-label="Increase text size" i18n-aria-label="@@settings.display.text-size.increase">
+          <mat-icon>add</mat-icon>
+        </button>
+      </div>
+
+      @if (textScaleService.textScale() !== defaultScale) {
+      <button mat-button type="button" class="reset-scale-button" (click)="resetScale()">
+        <mat-icon>restart_alt</mat-icon>
+        <span i18n="@@settings.display.text-size.reset">Reset to Default</span>
+      </button>
+      }
+    </section>
+
+  </div>
+
+  @if (fullscreen()) {
+  <div class="mobile-footer">
+    <button mat-flat-button type="button" class="mobile-open-settings-button" (click)="openSettings()">
+      <mat-icon>settings</mat-icon>
+      <span i18n="@@settings.quick-card.open-settings">Open settings</span>
+    </button>
+  </div>
+  }
+</div>

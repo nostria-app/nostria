@@ -280,7 +280,11 @@ export class RelaysService {
    * Set relays for a user
    */
   setUserRelays(pubkey: string, relays: string[]): void {
-    const normalizedRelays = this.utilities.normalizeRelayUrls(relays);
+    const normalizedRelays = this.utilities.normalizeRelayUrls(relays, false, {
+      source: 'user-relay-list',
+      ownerPubkey: pubkey,
+      details: 'RelaysService.setUserRelays',
+    });
     this.userRelays.set(pubkey, normalizedRelays);
 
     // Add these relays to our stats if they don't exist

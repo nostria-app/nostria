@@ -1,16 +1,16 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
-import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { Router } from '@angular/router';
 
 import { RightPanelService } from '../../services/right-panel.service';
 import { SettingLoggingComponent } from './sections/logging.component';
+import { SettingsLinkCardComponent } from './sections/settings-link-card.component';
 
 @Component({
   selector: 'app-logs-debug-settings',
-  imports: [MatButtonModule, MatCardModule, MatIconModule, MatTooltipModule, SettingLoggingComponent],
+  imports: [MatButtonModule, MatIconModule, MatTooltipModule, SettingLoggingComponent, SettingsLinkCardComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'panel-with-sticky-header' },
   template: `
@@ -25,48 +25,25 @@ import { SettingLoggingComponent } from './sections/logging.component';
     <div class="content-medium">
       <app-setting-logging />
 
-      <div class="link-grid">
-        <mat-card appearance="outlined" class="link-card">
-          <div>
-            <h2 i18n="@@settings.logs.title">Logs</h2>
-            <p i18n="@@settings.logs.description">Relay statistics, all relays, and cluster analysis for troubleshooting.</p>
-          </div>
-          <button mat-stroked-button type="button" (click)="openLogs()">Open Logs</button>
-        </mat-card>
+      <div class="settings-link-list">
+        <app-settings-link-card icon="description" i18n-title="@@settings.logs.title" title="Logs"
+          i18n-description="@@settings.logs.description"
+          description="Relay statistics, all relays, and cluster analysis for troubleshooting."
+          (activated)="openLogs()" />
 
-        <mat-card appearance="outlined" class="link-card">
-          <div>
-            <h2 i18n="@@settings.sections.debug">Debug</h2>
-            <p i18n="@@settings.debug.description">Platform simulation and developer-focused payment flow testing tools.</p>
-          </div>
-          <button mat-stroked-button type="button" (click)="openDebug()">Open Debug Tools</button>
-        </mat-card>
+        <app-settings-link-card icon="code" i18n-title="@@settings.sections.debug" title="Debug"
+          i18n-description="@@settings.debug.description"
+          description="Platform simulation and developer-focused payment flow testing tools."
+          (activated)="openDebug()" />
       </div>
     </div>
   `,
   styles: [`
-    .link-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-      gap: 12px;
-      padding: 16px 0;
-    }
-
-    .link-card {
+    .settings-link-list {
       display: flex;
       flex-direction: column;
-      justify-content: space-between;
       gap: 12px;
-      padding: 16px;
-    }
-
-    .link-card h2 {
-      margin-top: 0;
-    }
-
-    .link-card p {
-      color: var(--mat-sys-on-surface-variant);
-      margin-bottom: 0;
+      padding: 16px 0;
     }
   `],
 })

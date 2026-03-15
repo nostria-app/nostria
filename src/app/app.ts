@@ -117,6 +117,7 @@ import { RunesSettingsService } from './services/runes-settings.service';
 import { TextScaleService } from './services/text-scale.service';
 import { UtilitiesService } from './services/utilities.service';
 import { AccountRelayService } from './services/relays/account-relay';
+import { SettingsQuickCardComponent } from './components/settings-quick-card/settings-quick-card.component';
 
 interface NavItem {
   path: string;
@@ -171,6 +172,7 @@ interface NavItem {
     NewFeedDialogComponent,
     FeedsComponent,
     RightPanelContainerComponent,
+    SettingsQuickCardComponent,
   ],
   templateUrl: './app.html',
   styleUrl: './app.scss',
@@ -267,9 +269,20 @@ export class App implements OnInit, OnDestroy {
   @ViewChild(SearchResultsComponent) searchResults!: SearchResultsComponent;
   @ViewChild(FavoritesOverlayComponent) favoritesOverlay?: FavoritesOverlayComponent;
   @ViewChild('searchInputElement') searchInputElement?: ElementRef<HTMLInputElement>;
+  @ViewChild('settingsQuickCardLayer') settingsQuickCardLayer?: ElementRef<HTMLElement>;
 
   // Create menu overlay
   private createMenuOverlayRef?: OverlayRef;
+  private settingsQuickCardOutsideHandler?: (event: Event) => void;
+  private settingsQuickCardCloseTimer: ReturnType<typeof setTimeout> | null = null;
+  private settingsQuickCardLongPressTimer: number | null = null;
+  private settingsQuickCardLongPressTriggered = false;
+  private settingsQuickCardAnchor: HTMLElement | null = null;
+  private readonly QUICK_SETTINGS_CARD_WIDTH = 360;
+  private readonly QUICK_SETTINGS_CARD_MARGIN = 16;
+  private readonly QUICK_SETTINGS_CARD_OFFSET = 12;
+  private readonly QUICK_SETTINGS_CARD_CLOSE_DELAY = 140;
+  private readonly QUICK_SETTINGS_CARD_LONG_PRESS_DELAY = 450;
 
   // Track if push notification prompt has been shown
   private pushPromptShown = signal(false);
@@ -288,6 +301,8 @@ export class App implements OnInit, OnDestroy {
 
   // Track search focus state for mobile full-width mode
   searchFocused = signal(false);
+  settingsQuickCardOpen = signal(false);
+  settingsQuickCardPosition = signal({ top: 16, left: 16 });
 
   // Track current route for route-aware shell UI behaviors
   currentRouteUrl = signal(this.router.url);
@@ -307,6 +322,7 @@ export class App implements OnInit, OnDestroy {
   // Use local settings for sidenav state
   opened = computed(() => this.localSettings.menuOpen());
   displayLabels = computed(() => this.localSettings.menuExpanded());
+  settingsQuickCardFullscreen = computed(() => this.layout.isHandset());
 
   // User's preference for whether to collapse left panel when right panel has content
   preferLeftPanelCollapsed = computed(() => {
@@ -1274,6 +1290,10 @@ export class App implements OnInit, OnDestroy {
     this.destroy$.next();
     this.destroy$.complete();
 
+    this.clearSettingsQuickCardCloseTimer();
+    this.clearSettingsQuickCardLongPressTimer();
+    this.unregisterSettingsQuickCardOutsideHandler();
+
     if (this.app.isBrowser() && this.backdropInteractionHandler) {
       this.document.removeEventListener('click', this.backdropInteractionHandler, { capture: true });
       this.document.removeEventListener('touchend', this.backdropInteractionHandler, { capture: true });
@@ -1899,6 +1919,10 @@ export class App implements OnInit, OnDestroy {
         this.toggleLeftPanelCollapse();
       }
     }
+
+    if (event.key === 'Escape' && this.settingsQuickCardOpen()) {
+      this.closeSettingsQuickCard();
+    }
   }
 
   openCommandPalette(listening = false): void {
@@ -2020,6 +2044,195 @@ export class App implements OnInit, OnDestroy {
       this.createMenuOverlayRef.dispose();
       this.createMenuOverlayRef = undefined;
     }
+  }
+
+  onSettingsQuickCardTriggerMouseEnter(event: MouseEvent): void {
+    if (this.layout.isHandset()) {
+      return;
+    }
+
+    this.clearSettingsQuickCardCloseTimer();
+    this.openSettingsQuickCard(event.currentTarget as HTMLElement | null);
+  }
+
+  onSettingsQuickCardTriggerFocus(event: FocusEvent): void {
+    if (this.layout.isHandset()) {
+      return;
+    }
+
+    this.clearSettingsQuickCardCloseTimer();
+    this.openSettingsQuickCard(event.currentTarget as HTMLElement | null);
+  }
+
+  onSettingsQuickCardTriggerMouseLeave(): void {
+    if (this.layout.isHandset()) {
+      return;
+    }
+
+    this.scheduleSettingsQuickCardClose();
+  }
+
+  onSettingsQuickCardMouseEnter(): void {
+    this.clearSettingsQuickCardCloseTimer();
+  }
+
+  onSettingsQuickCardMouseLeave(): void {
+    if (this.settingsQuickCardFullscreen()) {
+      return;
+    }
+
+    this.scheduleSettingsQuickCardClose();
+  }
+
+  onSettingsQuickCardTriggerTouchStart(event: TouchEvent): void {
+    this.clearSettingsQuickCardLongPressTimer();
+    this.settingsQuickCardLongPressTriggered = false;
+
+    const anchor = event.currentTarget as HTMLElement | null;
+    if (!anchor) {
+      return;
+    }
+
+    this.settingsQuickCardLongPressTimer = window.setTimeout(() => {
+      this.settingsQuickCardLongPressTriggered = true;
+      this.openSettingsQuickCard(anchor);
+    }, this.QUICK_SETTINGS_CARD_LONG_PRESS_DELAY);
+  }
+
+  onSettingsQuickCardTriggerTouchMove(): void {
+    this.clearSettingsQuickCardLongPressTimer();
+  }
+
+  onSettingsQuickCardTriggerTouchEnd(event: TouchEvent): void {
+    this.clearSettingsQuickCardLongPressTimer();
+
+    if (this.settingsQuickCardLongPressTriggered) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+  }
+
+  onSettingsQuickCardTriggerTouchCancel(): void {
+    this.clearSettingsQuickCardLongPressTimer();
+    this.settingsQuickCardLongPressTriggered = false;
+  }
+
+  onSettingsQuickCardTriggerClick(event: Event): void {
+    if (this.settingsQuickCardLongPressTriggered) {
+      event.preventDefault();
+      event.stopPropagation();
+      this.settingsQuickCardLongPressTriggered = false;
+      return;
+    }
+
+    if (this.layout.isHandset()) {
+      return;
+    }
+
+    this.closeSettingsQuickCard();
+  }
+
+  openFullSettingsFromQuickCard(): void {
+    this.closeSettingsQuickCard();
+    this.closeSidenavOnMobile();
+    void this.router.navigate(['/settings']);
+  }
+
+  closeSettingsQuickCard(): void {
+    this.clearSettingsQuickCardCloseTimer();
+    this.clearSettingsQuickCardLongPressTimer();
+    this.unregisterSettingsQuickCardOutsideHandler();
+    this.settingsQuickCardOpen.set(false);
+    this.settingsQuickCardAnchor = null;
+    this.settingsQuickCardLongPressTriggered = false;
+  }
+
+  private openSettingsQuickCard(anchor: HTMLElement | null): void {
+    if (!anchor) {
+      return;
+    }
+
+    this.settingsQuickCardAnchor = anchor;
+    this.updateSettingsQuickCardPosition(anchor);
+    this.settingsQuickCardOpen.set(true);
+    this.registerSettingsQuickCardOutsideHandler();
+  }
+
+  private updateSettingsQuickCardPosition(anchor: HTMLElement): void {
+    if (!this.app.isBrowser() || this.settingsQuickCardFullscreen()) {
+      return;
+    }
+
+    const rect = anchor.getBoundingClientRect();
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+
+    const left = Math.min(
+      Math.max(this.QUICK_SETTINGS_CARD_MARGIN, rect.right + this.QUICK_SETTINGS_CARD_OFFSET),
+      viewportWidth - this.QUICK_SETTINGS_CARD_WIDTH - this.QUICK_SETTINGS_CARD_MARGIN
+    );
+
+    const maxTop = Math.max(this.QUICK_SETTINGS_CARD_MARGIN, viewportHeight - this.QUICK_SETTINGS_CARD_MARGIN - 240);
+    const top = Math.max(this.QUICK_SETTINGS_CARD_MARGIN, Math.min(rect.top - 12, maxTop));
+
+    this.settingsQuickCardPosition.set({ top, left });
+  }
+
+  private scheduleSettingsQuickCardClose(): void {
+    this.clearSettingsQuickCardCloseTimer();
+    this.settingsQuickCardCloseTimer = setTimeout(() => {
+      this.closeSettingsQuickCard();
+    }, this.QUICK_SETTINGS_CARD_CLOSE_DELAY);
+  }
+
+  private clearSettingsQuickCardCloseTimer(): void {
+    if (this.settingsQuickCardCloseTimer) {
+      clearTimeout(this.settingsQuickCardCloseTimer);
+      this.settingsQuickCardCloseTimer = null;
+    }
+  }
+
+  private clearSettingsQuickCardLongPressTimer(): void {
+    if (this.settingsQuickCardLongPressTimer) {
+      clearTimeout(this.settingsQuickCardLongPressTimer);
+      this.settingsQuickCardLongPressTimer = null;
+    }
+  }
+
+  private registerSettingsQuickCardOutsideHandler(): void {
+    if (!this.app.isBrowser() || this.settingsQuickCardOutsideHandler) {
+      return;
+    }
+
+    this.settingsQuickCardOutsideHandler = (event: Event) => {
+      const target = event.target as Node | null;
+      if (!target) {
+        return;
+      }
+
+      if (this.settingsQuickCardLayer?.nativeElement.contains(target)) {
+        return;
+      }
+
+      if (target instanceof Element && target.closest('[data-settings-quick-trigger="true"]')) {
+        return;
+      }
+
+      this.closeSettingsQuickCard();
+    };
+
+    this.document.addEventListener('mousedown', this.settingsQuickCardOutsideHandler, true);
+    this.document.addEventListener('touchstart', this.settingsQuickCardOutsideHandler, true);
+  }
+
+  private unregisterSettingsQuickCardOutsideHandler(): void {
+    if (!this.app.isBrowser() || !this.settingsQuickCardOutsideHandler) {
+      return;
+    }
+
+    this.document.removeEventListener('mousedown', this.settingsQuickCardOutsideHandler, true);
+    this.document.removeEventListener('touchstart', this.settingsQuickCardOutsideHandler, true);
+    this.settingsQuickCardOutsideHandler = undefined;
   }
 
   openInstallDialog(): void {

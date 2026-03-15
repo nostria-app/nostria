@@ -24,6 +24,7 @@ import { AccountLocalStateService } from '../../../services/account-local-state.
 import { PanelActionsService } from '../../../services/panel-actions.service';
 import { RightPanelService } from '../../../services/right-panel.service';
 import { LoggerService } from '../../../services/logger.service';
+import { SettingsLinkCardComponent } from '../sections/settings-link-card.component';
 
 @Component({
   selector: 'app-privacy-settings',
@@ -41,6 +42,7 @@ import { LoggerService } from '../../../services/logger.service';
     FormsModule,
     UserProfileComponent,
     InfoTooltipComponent,
+    SettingsLinkCardComponent,
   ],
   templateUrl: './privacy-settings.component.html',
   styleUrls: ['./privacy-settings.component.scss'],

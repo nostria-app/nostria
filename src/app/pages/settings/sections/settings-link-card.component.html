@@ -1,0 +1,14 @@
+<button type="button" class="settings-link-card" (click)="onActivate()">
+  <div class="leading-icon" aria-hidden="true">
+    <mat-icon>{{ icon() }}</mat-icon>
+  </div>
+
+  <div class="content">
+    <div class="title">{{ title() }}</div>
+    @if (description()) {
+    <div class="description">{{ description() }}</div>
+    }
+  </div>
+
+  <mat-icon class="trailing-icon" aria-hidden="true">chevron_right</mat-icon>
+</button>

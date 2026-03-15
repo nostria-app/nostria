@@ -108,23 +108,10 @@
     line-height: 1.4;
   }
 
-  .delete-actions {
+  .settings-link-list {
     display: flex;
+    flex-direction: column;
     gap: 12px;
-    flex-wrap: wrap;
-
-    button {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 0.875rem;
-
-      mat-icon {
-        font-size: 18px;
-        width: 18px;
-        height: 18px;
-      }
-    }
   }
 }
 

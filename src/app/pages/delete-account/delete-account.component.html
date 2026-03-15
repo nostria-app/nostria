@@ -171,8 +171,7 @@
         <form [formGroup]="deleteForm" class="deletion-form">
           <mat-form-field appearance="outline" class="full-width">
             <mat-label>Type "DELETE MY ACCOUNT" to confirm</mat-label>
-            <input matInput formControlName="confirmationText" placeholder="DELETE MY ACCOUNT"
-              [disabled]="deleting()" />
+            <input matInput formControlName="confirmationText" placeholder="DELETE MY ACCOUNT" />
             @if (deleteForm.get('confirmationText')?.hasError('required')) {
             <mat-error>Confirmation text is required</mat-error>
             }
@@ -259,11 +258,10 @@
           </mat-form-field>
         </div>
 
-        <div class="vanish-confirmation">
+        <div class="vanish-confirmation" [formGroup]="deleteForm">
           <mat-form-field appearance="outline" class="full-width">
             <mat-label>Type "REQUEST TO VANISH" to confirm</mat-label>
-            <input matInput formControlName="vanishConfirmationText" placeholder="REQUEST TO VANISH"
-              [disabled]="deletionState() === 'vanishing' || deleting()" />
+            <input matInput formControlName="vanishConfirmationText" placeholder="REQUEST TO VANISH" />
             @if (deleteForm.get('vanishConfirmationText')?.hasError('required')) {
             <mat-error>Vanish confirmation text is required</mat-error>
             }

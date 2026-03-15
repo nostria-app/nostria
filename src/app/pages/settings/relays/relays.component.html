@@ -7,7 +7,8 @@
 </div>
 
 <div class="content-medium">
-  <mat-tab-group animationDuration="300ms" [selectedIndex]="selectedTabIndex()" (selectedIndexChange)="selectedTabIndex.set($event)">
+  <mat-tab-group animationDuration="300ms" [selectedIndex]="selectedTabIndex()"
+    (selectedIndexChange)="selectedTabIndex.set($event)">
     <!-- Your Relays Tab -->
     <mat-tab label="Account Relays" i18n-label="@@settings.relays.account-relays">
       <div class="tab-content">
