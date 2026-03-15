@@ -7,6 +7,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
+import { MatChipsModule } from '@angular/material/chips';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { FormBuilder, ReactiveFormsModule, FormsModule } from '@angular/forms';
@@ -81,6 +82,7 @@ interface ValueRecipient {
     MatSlideToggleModule,
     MatProgressSpinnerModule,
     MatSelectModule,
+    MatChipsModule,
     MatExpansionModule,
     MatSnackBarModule,
     ReactiveFormsModule,
@@ -154,15 +156,6 @@ export class ImportRssDialogComponent {
   ];
 
   currentGradient = signal(this.getRandomGradient());
-
-  // Available genres for music
-  availableGenres = [
-    'Electronic', 'Rock', 'Pop', 'Hip Hop', 'R&B', 'Jazz', 'Classical',
-    'Country', 'Folk', 'Metal', 'Punk', 'Alternative', 'Indie',
-    'Dance', 'House', 'Techno', 'Ambient', 'Experimental', 'Soul',
-    'Reggae', 'Blues', 'Latin', 'World', 'Soundtrack', 'Lo-Fi',
-    'Trap', 'Dubstep', 'Drum & Bass', 'Synthwave', 'Podcast', 'Other'
-  ];
 
   // Available license options (same as music-track-dialog)
   licenseOptions = [
@@ -270,6 +263,14 @@ export class ImportRssDialogComponent {
         const itemRawRecipients = this.parseRawValueRecipients(item);
         const trackRecipients = itemRawRecipients.length > 0 ? itemRawRecipients : channelRawRecipients;
 
+        // Parse genres from itunes:keywords (item-level, fallback to channel-level)
+        const itemKeywords = this.getItunesText(item, 'keywords');
+        const channelKeywords = this.getItunesText(channel, 'keywords');
+        const keywordsText = itemKeywords || channelKeywords;
+        const genres = keywordsText
+          ? keywordsText.split(',').map(k => k.trim()).filter(k => k.length > 0)
+          : [];
+
         // Collect unique addresses for profile assignment
         for (const r of trackRecipients) {
           if (!allUniqueAddresses.has(r.address)) {
@@ -289,7 +290,7 @@ export class ImportRssDialogComponent {
             releaseDate: this.formatDate(pubDate ? new Date(pubDate) : new Date()),
             description: this.stripHtml(description),
             trackNumber: index + 1,
-            genres: [],
+            genres,
             aiGenerated: false,
             license: itemLicense || channelLicense,
             splits: trackRecipients.map(r => ({ address: r.address, percentage: r.split })),
@@ -465,6 +466,28 @@ export class ImportRssDialogComponent {
     this.tracks.update(tracks => {
       const updated = [...tracks];
       updated[index] = { ...updated[index], ...updates };
+      return updated;
+    });
+  }
+
+  addTrackGenre(index: number, value: string): void {
+    const trimmed = value.trim();
+    if (!trimmed) return;
+    this.tracks.update(tracks => {
+      const updated = [...tracks];
+      const track = updated[index];
+      if (!track.genres.some(g => g.toLowerCase() === trimmed.toLowerCase())) {
+        updated[index] = { ...track, genres: [...track.genres, trimmed] };
+      }
+      return updated;
+    });
+  }
+
+  removeTrackGenre(index: number, genre: string): void {
+    this.tracks.update(tracks => {
+      const updated = [...tracks];
+      const track = updated[index];
+      updated[index] = { ...track, genres: track.genres.filter(g => g !== genre) };
       return updated;
     });
   }

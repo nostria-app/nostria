@@ -8,6 +8,7 @@ import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatChipsModule } from '@angular/material/chips';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
@@ -57,6 +58,7 @@ interface ZapSplit {
     MatProgressSpinnerModule,
     MatSelectModule,
     MatCheckboxModule,
+    MatChipsModule,
     MatExpansionModule,
     MatSnackBarModule,
     MatDialogModule,
@@ -131,14 +133,8 @@ export class MusicTrackDialogComponent {
   mentionConfig = signal<MentionAutocompleteConfig | null>(null);
   mentionPosition = signal({ top: 0, left: 0 });
 
-  // Available genres for music
-  availableGenres = [
-    'Electronic', 'Rock', 'Pop', 'Hip Hop', 'R&B', 'Jazz', 'Classical',
-    'Country', 'Folk', 'Metal', 'Punk', 'Alternative', 'Indie',
-    'Dance', 'House', 'Techno', 'Ambient', 'Experimental', 'Soul',
-    'Reggae', 'Blues', 'Latin', 'World', 'Soundtrack', 'Lo-Fi',
-    'Trap', 'Dubstep', 'Drum & Bass', 'Synthwave', 'Other'
-  ];
+  // Genre tags for the track (free-form, user can add any value)
+  genres = signal<string[]>([]);
 
   // Available license options
   licenseOptions = [
@@ -182,7 +178,6 @@ export class MusicTrackDialogComponent {
     this.trackForm = this.fb.group({
       title: ['', [Validators.required, Validators.minLength(1)]],
       duration: ['', [this.durationValidator]],
-      genres: [[]],
       artist: [''],
       aiGenerated: [false],
       // Advanced settings
@@ -195,7 +190,6 @@ export class MusicTrackDialogComponent {
       lyrics: [''],
       credits: [''],
       imageUrl: [''],
-      customTags: [''], // Custom tags as comma-separated values
       license: [''], // License selection
       customLicense: [''], // Custom license name
       customLicenseUrl: [''], // Custom license URL
@@ -247,15 +241,9 @@ export class MusicTrackDialogComponent {
     const allTTags = track.tags.filter(t => t[0] === 't').map(t => t[1]);
 
     const genres = allTTags
-      .filter(tag => !reservedTTags.includes(tag.toLowerCase()))
-      .filter(tag => this.availableGenres.some(g => g.toLowerCase() === tag.toLowerCase()))
-      .map(tag => this.availableGenres.find(g => g.toLowerCase() === tag.toLowerCase()) || tag);
+      .filter(tag => !reservedTTags.includes(tag.toLowerCase()));
 
-    // Extract custom tags (t tags that are not genres or reserved)
-    const genreLowerCase = this.availableGenres.map(g => g.toLowerCase());
-    const customTags = allTTags
-      .filter(tag => !reservedTTags.includes(tag.toLowerCase()))
-      .filter(tag => !genreLowerCase.includes(tag.toLowerCase()));
+    this.genres.set(genres);
 
     // Extract artist name
     const artistName = track.tags.find(t => t[0] === 'artist')?.[1] || '';
@@ -352,7 +340,6 @@ export class MusicTrackDialogComponent {
     this.trackForm.patchValue({
       title,
       duration,
-      genres,
       artist: artistName,
       aiGenerated,
       album,
@@ -364,7 +351,6 @@ export class MusicTrackDialogComponent {
       lyrics,
       credits,
       imageUrl: image || '',
-      customTags: customTags.join(', '),
       license,
       customLicense,
       customLicenseUrl,
@@ -788,15 +774,9 @@ export class MusicTrackDialogComponent {
       }
 
       // Auto-fill genre (update if forceUpdate or empty)
-      const currentGenres = this.trackForm.get('genres')?.value;
-      if ((forceUpdate || !currentGenres || currentGenres.length === 0) && metadata.common.genre && metadata.common.genre.length > 0) {
-        const matchedGenres = metadata.common.genre
-          .map(g => this.availableGenres.find(ag => ag.toLowerCase() === g.toLowerCase()))
-          .filter((g): g is string => g !== undefined);
-
-        if (matchedGenres.length > 0) {
-          this.trackForm.patchValue({ genres: matchedGenres });
-        }
+      const currentGenres = this.genres();
+      if ((forceUpdate || currentGenres.length === 0) && metadata.common.genre && metadata.common.genre.length > 0) {
+        this.genres.set(metadata.common.genre);
       }
 
       // Only auto-mark AI when the file contains an explicit AI metadata flag.
@@ -934,6 +914,17 @@ export class MusicTrackDialogComponent {
       this.clearExtractedCoverPreview();
       this.coverImage.set(url);
     }
+  }
+
+  addGenre(value: string): void {
+    const trimmed = value.trim();
+    if (trimmed && !this.genres().some(g => g.toLowerCase() === trimmed.toLowerCase())) {
+      this.genres.update(genres => [...genres, trimmed]);
+    }
+  }
+
+  removeGenre(genre: string): void {
+    this.genres.update(genres => genres.filter(g => g !== genre));
   }
 
   async onArtistInputBlur(): Promise<void> {
@@ -1229,8 +1220,9 @@ export class MusicTrackDialogComponent {
       }
 
       // Add genres
-      if (formValue.genres && formValue.genres.length > 0) {
-        for (const genre of formValue.genres) {
+      const genres = this.genres();
+      if (genres.length > 0) {
+        for (const genre of genres) {
           tags.push(['t', genre.toLowerCase()]);
         }
       }
@@ -1280,17 +1272,6 @@ export class MusicTrackDialogComponent {
 
       if (formValue.explicitContent) {
         tags.push(['explicit', 'true']);
-      }
-
-      // Add custom tags
-      if (formValue.customTags) {
-        const customTagsList = formValue.customTags
-          .split(',')
-          .map((t: string) => t.trim().toLowerCase())
-          .filter((t: string) => t.length > 0);
-        for (const tag of customTagsList) {
-          tags.push(['t', tag]);
-        }
       }
 
       // Add zap splits

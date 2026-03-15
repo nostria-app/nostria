@@ -239,13 +239,20 @@
                 </mat-form-field>
 
                 <mat-form-field appearance="outline" class="full-width">
-                  <mat-label>Genres</mat-label>
-                  <mat-select [value]="track.genres" multiple
-                    (selectionChange)="updateTrack(i, { genres: $event.value })">
-                    @for (genre of availableGenres; track genre) {
-                    <mat-option [value]="genre">{{ genre }}</mat-option>
+                  <mat-label>Genres / Tags</mat-label>
+                  <mat-chip-grid #rssGenreChipGrid>
+                    @for (genre of track.genres; track genre) {
+                    <mat-chip-row (removed)="removeTrackGenre(i, genre)">
+                      {{ genre }}
+                      <button matChipRemove>
+                        <mat-icon>cancel</mat-icon>
+                      </button>
+                    </mat-chip-row>
                     }
-                  </mat-select>
+                  </mat-chip-grid>
+                  <input matInput placeholder="Type and press Enter..."
+                    [matChipInputFor]="rssGenreChipGrid"
+                    (matChipInputTokenEnd)="addTrackGenre(i, $event.value); $event.chipInput.clear()" />
                 </mat-form-field>
 
                 <mat-form-field appearance="outline" class="full-width">

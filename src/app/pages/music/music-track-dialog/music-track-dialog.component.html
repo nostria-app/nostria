@@ -169,12 +169,20 @@
 
       <!-- Genres -->
       <mat-form-field appearance="outline" class="full-width">
-        <mat-label>Genres</mat-label>
-        <mat-select formControlName="genres" multiple>
-          @for (genre of availableGenres; track genre) {
-          <mat-option [value]="genre">{{ genre }}</mat-option>
+        <mat-label>Genres / Tags</mat-label>
+        <mat-chip-grid #genreChipGrid>
+          @for (genre of genres(); track genre) {
+          <mat-chip-row (removed)="removeGenre(genre)">
+            {{ genre }}
+            <button matChipRemove>
+              <mat-icon>cancel</mat-icon>
+            </button>
+          </mat-chip-row>
           }
-        </mat-select>
+        </mat-chip-grid>
+        <input matInput placeholder="Type and press Enter..."
+          [matChipInputFor]="genreChipGrid"
+          (matChipInputTokenEnd)="addGenre($event.value); $event.chipInput.clear()" />
       </mat-form-field>
 
       <!-- Artist -->
@@ -343,12 +351,6 @@
             <mat-hint>Link to the full license text</mat-hint>
           </mat-form-field>
           }
-
-          <mat-form-field appearance="outline" class="full-width">
-            <mat-label>Custom Tags</mat-label>
-            <input matInput formControlName="customTags" placeholder="tag1, tag2, tag3" />
-            <mat-hint>Comma-separated custom tags (in addition to genres)</mat-hint>
-          </mat-form-field>
         </div>
       </mat-expansion-panel>
 
