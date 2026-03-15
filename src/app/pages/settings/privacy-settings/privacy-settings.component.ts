@@ -15,16 +15,17 @@ import { Router } from '@angular/router';
 import { AccountStateService } from '../../../services/account-state.service';
 import { NostrService } from '../../../services/nostr.service';
 import { UserProfileComponent } from '../../../components/user-profile/user-profile.component';
-import { SettingsService } from '../../../services/settings.service';
-import { ImageCacheService } from '../../../services/image-cache.service';
 import { InfoTooltipComponent } from '../../../components/info-tooltip/info-tooltip.component';
 import { ReportingService } from '../../../services/reporting.service';
+import { ImageCacheService } from '../../../services/image-cache.service';
+import { SettingsLinkCardComponent } from '../sections/settings-link-card.component';
+import { SettingsService } from '../../../services/settings.service';
 import { LocalSettingsService } from '../../../services/local-settings.service';
 import { AccountLocalStateService } from '../../../services/account-local-state.service';
 import { PanelActionsService } from '../../../services/panel-actions.service';
 import { RightPanelService } from '../../../services/right-panel.service';
 import { LoggerService } from '../../../services/logger.service';
-import { SettingsLinkCardComponent } from '../sections/settings-link-card.component';
+import { getSettingsSectionComponent } from '../settings-section-components.map';
 
 @Component({
   selector: 'app-privacy-settings',
@@ -259,11 +260,23 @@ export class PrivacySettingsComponent implements OnInit, OnDestroy {
     }
   }
 
-  navigateToDeleteEventPage(): void {
-    this.router.navigate(['/delete-event']);
+  async navigateToDeleteEventPage(): Promise<void> {
+    const componentLoader = getSettingsSectionComponent('delete-event');
+    if (componentLoader) {
+      const component = await componentLoader();
+      this.rightPanel.open({ component, title: 'Delete Event' });
+    }
   }
 
-  navigateToDeleteAccountPage(): void {
-    this.router.navigate(['/delete-account'], { state: { source: 'privacy' } });
+  async navigateToDeleteAccountPage(): Promise<void> {
+    const componentLoader = getSettingsSectionComponent('delete-account');
+    if (componentLoader) {
+      const component = await componentLoader();
+      this.rightPanel.open({
+        component,
+        title: 'Delete Account Data',
+        inputs: { source: 'privacy' },
+      });
+    }
   }
 }

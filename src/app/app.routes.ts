@@ -682,20 +682,7 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/collections/boards/board-detail/board-detail.component').then(m => m.BoardDetailComponent),
     title: 'Board',
   },
-  {
-    path: 'delete-event',
-    loadComponent: () =>
-      import('./pages/delete-event/delete-event.component').then(m => m.DeleteEventComponent),
-    data: { isRoot: true },
-    title: 'Delete Event',
-  },
-  {
-    path: 'delete-account',
-    loadComponent: () =>
-      import('./pages/delete-account/delete-account.component').then(m => m.DeleteAccountComponent),
-    data: { isRoot: true },
-    title: 'Delete Account',
-  },
+
   {
     path: 'debug/storage',
     loadComponent: () =>

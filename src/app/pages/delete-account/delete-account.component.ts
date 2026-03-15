@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, OnInit, signal, computed, effect } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, OnInit, signal, computed, effect, input } from '@angular/core';
 import { Location } from '@angular/common';
 
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators, AbstractControl } from '@angular/forms';
@@ -97,6 +97,9 @@ export class DeleteAccountComponent implements OnInit {
   vanishSent = signal(false);
   source = signal<DeleteAccountSource | null>(null);
 
+  /** Source passed as input (e.g., from right panel) */
+  sourceInput = input<DeleteAccountSource | null>(null, { alias: 'source' });
+
   // Computed values
   totalEventsCount = computed(() =>
     this.eventKinds().reduce((sum, kind) => sum + kind.count, 0)
@@ -133,7 +136,7 @@ export class DeleteAccountComponent implements OnInit {
   ngOnInit() {
     const navigation = this.router.getCurrentNavigation();
     const navigationState = (navigation?.extras.state ?? history.state) as { source?: DeleteAccountSource };
-    this.source.set(navigationState.source ?? null);
+    this.source.set(this.sourceInput() ?? navigationState.source ?? null);
 
     this.initializeForm();
     this.scanUserEvents();

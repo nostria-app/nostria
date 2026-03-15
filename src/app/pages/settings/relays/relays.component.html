@@ -344,7 +344,6 @@
         <div class="header-connects" i18n="@@settings.relays.observed.header.connects">Connects</div>
         <div class="header-last-connected" i18n="@@settings.relays.observed.header.last-connected">Last Connected
         </div>
-        <div class="header-actions"></div>
       </div>
 
       @for (relay of observedRelays(); track relay.url) {
@@ -403,19 +402,6 @@
 
         <div class="relay-last-connected">
           <span class="time-value">{{ formatRelativeTime(relay.lastSuccessfulConnection) }}</span>
-        </div>
-
-        <div class="relay-actions">
-          @if (hasRelayAuthFailed(relay.url)) {
-          <button mat-button color="warn" (click)="resetRelayAuth(relay.url)">
-            <mat-icon>refresh</mat-icon>
-            Reset Auth
-          </button>
-          } @else {
-          <button mat-button color="primary" (click)="viewRelayInfo(relay.url)">
-            Explore
-          </button>
-          }
         </div>
       </div>
 

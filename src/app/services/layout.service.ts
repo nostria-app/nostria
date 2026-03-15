@@ -40,6 +40,7 @@ import { OnDemandUserDataService } from './on-demand-user-data.service';
 import { CommandPaletteDialogComponent } from '../components/command-palette-dialog/command-palette-dialog.component';
 import { stripImageProxy } from '../utils/strip-image-proxy';
 import { RightPanelService } from './right-panel.service';
+import { getSettingsSectionComponent } from '../pages/settings/settings-section-components.map';
 import { PanelNavigationService } from './panel-navigation.service';
 import { ThreadedEvent } from './event';
 
@@ -2783,7 +2784,7 @@ export class LayoutService implements OnDestroy {
     this.copyToClipboard(url, 'profile URL');
   }
 
-  navigateToDeleteEventPage(event: Event) {
+  async navigateToDeleteEventPage(event: Event) {
     if (!event) {
       return;
     }
@@ -2794,9 +2795,15 @@ export class LayoutService implements OnDestroy {
       kind: event.kind,
     });
 
-    this.router.navigate(['/delete-event'], {
-      queryParams: { eventId: neventId }
-    });
+    const componentLoader = getSettingsSectionComponent('delete-event');
+    if (componentLoader) {
+      const component = await componentLoader();
+      this.rightPanel.open({
+        component,
+        title: 'Delete Event',
+        inputs: { eventId: neventId },
+      });
+    }
   }
 
   toast(message: string, duration = 3000, panelClass = 'success-snackbar') {

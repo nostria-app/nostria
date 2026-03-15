@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal, OnInit } from '@angular/core';
+import { Component, computed, inject, signal, OnInit, input, effect } from '@angular/core';
 import { Location } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -45,6 +45,9 @@ export class DeleteEventComponent implements OnInit {
   private readonly eventService = inject(EventService);
   private readonly logger = inject(LoggerService);
 
+  /** Event ID passed as input (e.g., from right panel) */
+  eventId = input<string>();
+
   deleteForm: FormGroup;
   event = signal<Event | null>(null);
   isLoading = signal(false);
@@ -66,6 +69,15 @@ export class DeleteEventComponent implements OnInit {
     this.deleteForm = this.fb.group({
       eventId: ['', [Validators.required, this.eventIdValidator]],
       reason: [''],
+    });
+
+    // React to eventId input changes (from right panel)
+    effect(() => {
+      const id = this.eventId();
+      if (id) {
+        this.deleteForm.patchValue({ eventId: id });
+        setTimeout(() => this.lookupEvent(), 100);
+      }
     });
   }
 
