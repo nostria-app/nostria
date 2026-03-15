@@ -250,8 +250,7 @@
                     </mat-chip-row>
                     }
                   </mat-chip-grid>
-                  <input matInput placeholder="Type and press Enter..."
-                    [matChipInputFor]="rssGenreChipGrid"
+                  <input matInput placeholder="Type and press Enter..." [matChipInputFor]="rssGenreChipGrid"
                     (matChipInputTokenEnd)="addTrackGenre(i, $event.value); $event.chipInput.clear()" />
                 </mat-form-field>
 

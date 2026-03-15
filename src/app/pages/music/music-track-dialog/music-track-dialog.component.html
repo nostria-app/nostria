@@ -180,8 +180,7 @@
           </mat-chip-row>
           }
         </mat-chip-grid>
-        <input matInput placeholder="Type and press Enter..."
-          [matChipInputFor]="genreChipGrid"
+        <input matInput placeholder="Type and press Enter..." [matChipInputFor]="genreChipGrid"
           (matChipInputTokenEnd)="addGenre($event.value); $event.chipInput.clear()" />
       </mat-form-field>
 
