@@ -28,6 +28,8 @@ export const SETTINGS_SECTION_COMPONENT_MAP: Record<string, () => Promise<Type<u
   'logs': () => import('./logs-settings/logs-settings.component').then(m => m.LogsSettingsComponent),
   'about': () => import('./about/about.component').then(m => m.AboutComponent),
   'debug': () => import('./debug/debug.component').then(m => m.DebugSettingsComponent),
+  'delete-event': () => import('../delete-event/delete-event.component').then(m => m.DeleteEventComponent),
+  'delete-account': () => import('../delete-account/delete-account.component').then(m => m.DeleteAccountComponent),
 };
 
 /**
