@@ -26,6 +26,8 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { FormsModule } from '@angular/forms';
 import { CdkDragDrop, DragDropModule } from '@angular/cdk/drag-drop';
 import { RelayInfoDialogComponent } from './relay-info-dialog.component';
+import { RelayDetailComponent } from './relay-detail.component';
+import { MatMenuModule } from '@angular/material/menu';
 import { RelayPingResultsDialogComponent, PingResult, RelayPingDialogResult } from './relay-ping-results-dialog.component';
 import { kinds, SimplePool, UnsignedEvent } from 'nostr-tools';
 import { NostrService } from '../../../services/nostr.service';
@@ -68,6 +70,7 @@ import {
     MatDividerModule,
     MatSelectModule,
     MatTooltipModule,
+    MatMenuModule,
     InfoTooltipComponent,
     DragDropModule,
   ],
@@ -598,12 +601,61 @@ export class RelaysComponent implements OnInit, OnDestroy {
     });
   }
 
+  openRelayDetail(relay: Relay): void {
+    this.rightPanel.open({
+      component: RelayDetailComponent,
+      inputs: {
+        relayUrl: relay.url,
+        onRelayRemoved: () => {
+          this.loadKnownDeadAccountRelays(this.accountState.pubkey());
+          this.showMessage('Relay removed');
+        },
+      },
+      title: 'Relay Details',
+    });
+  }
+
+  getRelayModeLabel(relay: Relay): string {
+    if (relay.read && relay.write) return 'Read/Write';
+    if (relay.read) return 'Read';
+    return 'Write';
+  }
+
+  getRelayModeIcon(relay: Relay): string {
+    if (relay.read && relay.write) return 'swap_vert';
+    if (relay.read) return 'download';
+    return 'upload';
+  }
+
+  async setRelayMode(relay: Relay, mode: 'readwrite' | 'read' | 'write'): Promise<void> {
+    const read = mode === 'readwrite' || mode === 'read';
+    const write = mode === 'readwrite' || mode === 'write';
+    this.accountRelay.setRelayMarker(relay.url, read, write);
+    await this.publish();
+  }
+
   async removeRelay(relay: Relay) {
     this.logger.info('Removing relay', { url: relay.url });
     this.accountRelay.removeRelay(relay.url);
     await this.publish();
     await this.loadKnownDeadAccountRelays(this.accountState.pubkey());
     this.showMessage('Relay removed');
+  }
+
+  async toggleRelayRead(relay: Relay) {
+    const newRead = !relay.read;
+    // Ensure at least one of read/write remains enabled
+    if (!newRead && !relay.write) return;
+    this.accountRelay.setRelayMarker(relay.url, newRead, relay.write);
+    await this.publish();
+  }
+
+  async toggleRelayWrite(relay: Relay) {
+    const newWrite = !relay.write;
+    // Ensure at least one of read/write remains enabled
+    if (!newWrite && !relay.read) return;
+    this.accountRelay.setRelayMarker(relay.url, relay.read, newWrite);
+    await this.publish();
   }
 
   async onRelayDrop(event: CdkDragDrop<Relay[]>) {
@@ -669,13 +721,20 @@ export class RelaysComponent implements OnInit, OnDestroy {
   async publish() {
     this.logger.info('Starting relay list publication process');
 
-    const relays = this.accountRelay.getRelayUrls();
+    const relays = this.accountRelay.relaysSignal();
     this.logger.debug('User relays being published:', relays);
 
-    const tags = this.nostr.createTags(
-      'r',
-      relays.map(relay => relay)
-    );
+    // Build tags with NIP-65 read/write markers
+    const tags: string[][] = relays.map(relay => {
+      if (relay.read && relay.write) {
+        // Both read and write: no marker needed (NIP-65 default)
+        return ['r', relay.url];
+      } else if (relay.write) {
+        return ['r', relay.url, 'write'];
+      } else {
+        return ['r', relay.url, 'read'];
+      }
+    });
 
     const relayListEvent = this.nostr.createEvent(kinds.RelayList, '', tags);
 
