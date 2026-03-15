@@ -57,7 +57,7 @@
     <h2>No {{ selectedTab() === 0 ? 'drafts' : 'published articles' }} yet</h2>
     <p>{{ selectedTab() === 0 ? 'Start writing your first article!' : 'Publish your drafts to see them here.' }}</p>
     @if (selectedTab() === 0) {
-    <button mat-raised-button color="primary" (click)="createNewArticle()">
+    <button mat-flat-button (click)="createNewArticle()">
       <mat-icon>add</mat-icon>
       Create Your First Article
     </button>
