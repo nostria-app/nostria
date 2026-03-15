@@ -1,4 +1,5 @@
 import { Component, inject, OnInit, computed, ElementRef, viewChild } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule, NgComponentOutlet } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
@@ -307,6 +308,33 @@ export class SettingsHomeComponent implements OnInit {
   searchPlaceholder = $localize`:@@settings.home.search-placeholder:Search settings...`;
   clearLabel = $localize`:@@settings.home.clear-search:Clear search`;
 
+  constructor() {
+    // Subscribe to route param changes for deep linking and section-to-section navigation
+    this.route.paramMap.pipe(
+      takeUntilDestroyed()
+    ).subscribe(params => {
+      const sectionId = params.get('section');
+
+      if (sectionId === 'wallet') {
+        void this.router.navigate(['/wallet']);
+        return;
+      }
+
+      if (sectionId === 'premium') {
+        void this.router.navigate(['/accounts'], { queryParams: { tab: 'premium' } });
+        return;
+      }
+
+      if (sectionId) {
+        this.openSectionInRightPanel(sectionId);
+      } else {
+        // Close right panel when returning to settings home (e.g., browser back)
+        this.rightPanel.close();
+        setTimeout(() => this.searchInput()?.nativeElement?.focus(), 100);
+      }
+    });
+  }
+
   // Computed signals
   filteredItems = computed(() => this.registry.filteredItems());
   popularItems = computed(() => this.registry.popularItems());
@@ -335,28 +363,7 @@ export class SettingsHomeComponent implements OnInit {
   });
 
   ngOnInit(): void {
-    // Handle URL-based section opening for deep linking
-    const sectionId = this.route.snapshot.paramMap.get('section');
-    if (sectionId === 'wallet') {
-      void this.router.navigate(['/wallet']);
-      return;
-    }
-
-    if (sectionId === 'premium') {
-      void this.router.navigate(['/accounts'], { queryParams: { tab: 'premium' } });
-      return;
-    }
-
-    if (sectionId && !this.rightPanel.hasContent()) {
-      this.openSectionInRightPanel(sectionId);
-    }
-
-    // Focus search input on init (only if no section is open)
-    if (!sectionId) {
-      setTimeout(() => {
-        this.searchInput()?.nativeElement?.focus();
-      }, 100);
-    }
+    // Section handling is done via paramMap subscription in constructor
   }
 
   canShowItem(item: SettingsItem): boolean {
@@ -370,12 +377,8 @@ export class SettingsHomeComponent implements OnInit {
 
   /**
    * Opens a settings section in the right panel.
-   * NOTE: We intentionally do NOT pass the section.route URL to rightPanel.open()
-   * because using window.history.pushState to change the URL without Angular Router
-   * knowing about it causes the router state tree to get corrupted. When the user
-   * navigates away and back to settings, Angular's setRouterState enters infinite
-   * recursion trying to reconcile the browser URL with its internal state.
-   * See: https://github.com/angular/angular/issues - Maximum call stack size exceeded
+   * URL is managed by Angular Router (navigating to /settings/:section),
+   * not by rightPanel.open() URL parameter, to avoid router state corruption.
    */
   async openSectionInRightPanel(sectionId: string): Promise<void> {
     const section = this.registry.sections.find(s => s.id === sectionId);
@@ -400,7 +403,7 @@ export class SettingsHomeComponent implements OnInit {
     // Extract section from route (e.g., /settings/general -> general)
     const sectionMatch = item.route.match(/\/settings\/([^?#/]+)/);
     if (sectionMatch && sectionMatch[1]) {
-      await this.openSectionInRightPanel(sectionMatch[1]);
+      await this.router.navigate(['/settings', sectionMatch[1]]);
       return;
     }
 
@@ -409,7 +412,7 @@ export class SettingsHomeComponent implements OnInit {
   }
 
   async navigateToSection(section: SettingsSection): Promise<void> {
-    await this.openSectionInRightPanel(section.id);
+    await this.router.navigate(['/settings', section.id]);
   }
 
   clearSearch(): void {
