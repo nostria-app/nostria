@@ -299,9 +299,12 @@ export class ArticlesListComponent {
     const result = await dialogRef.afterClosed().toPromise();
     if (result) {
       try {
-        // Create a deletion event (kind 5) referencing only the "e" tag (event ID),
-        // not the "a" tag. This allows re-creating a new draft with the same d-tag.
+        // Create a deletion event (kind 5) using the "a" tag for the replaceable event.
+        // Per NIP-09, relays delete all versions up to the deletion request's created_at,
+        // so the user can re-create a new draft with the same d-tag after deletion.
         const tags: string[][] = [
+          // DELETE WITH "a" TAG DOESN'T WORK WITH STRFRY!
+          //['a', `${article.event.kind}:${article.event.pubkey}:${article.dTag}`],
           ['e', article.event.id],
           ['k', '30024'],
         ];
@@ -310,8 +313,34 @@ export class ArticlesListComponent {
         const signedEvent = await this.nostrService.signEvent(deleteEvent);
         await this.accountRelay.publish(signedEvent);
 
-        // Remove from local list
-        this.articles.update(articles => articles.filter(a => a.id !== article.id));
+        // Update local list: if a published version exists, keep it without the draft.
+        // Otherwise remove the item entirely.
+        this.articles.update(articles =>
+          articles.flatMap(a => {
+            if (a.dTag !== article.dTag) return [a];
+            if (!a.publishedEvent) return [];
+            // Rebuild the item from the published event only
+            const pub = a.publishedEvent;
+            const titleTag = this.nostrService.getTags(pub, standardizedTag.title);
+            const imageTag = this.nostrService.getTags(pub, standardizedTag.image);
+            const summaryTag = this.nostrService.getTags(pub, standardizedTag.summary);
+            const topicTags = pub.tags.filter(tag => tag[0] === 't').map(tag => tag[1]);
+            return [{
+              ...a,
+              id: pub.id,
+              title: titleTag[0] || 'Untitled Article',
+              summary: summaryTag[0] || this.generateSummary(pub.content),
+              content: pub.content,
+              createdAt: pub.created_at,
+              lastModified: pub.created_at,
+              tags: topicTags,
+              imageUrl: imageTag[0],
+              event: pub,
+              status: 'published' as const,
+              isEdited: false,
+            }];
+          })
+        );
 
         this.snackBar.open('Draft deleted successfully', 'Close', {
           duration: 3000,
