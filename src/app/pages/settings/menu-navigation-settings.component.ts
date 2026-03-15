@@ -4,12 +4,11 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatTooltipModule } from '@angular/material/tooltip';
 
-import { AccountStateService } from '../../services/account-state.service';
 import { LocalSettingsService } from '../../services/local-settings.service';
 import { RightPanelService } from '../../services/right-panel.service';
-import { SettingsService } from '../../services/settings.service';
 import { SettingHomeDestinationComponent } from './sections/home-destination.component';
 import { SettingMenuEditorComponent } from './sections/menu-editor.component';
+import { SettingRightSidebarComponent } from './sections/right-sidebar.component';
 
 @Component({
   selector: 'app-menu-navigation-settings',
@@ -20,6 +19,7 @@ import { SettingMenuEditorComponent } from './sections/menu-editor.component';
     MatTooltipModule,
     SettingHomeDestinationComponent,
     SettingMenuEditorComponent,
+    SettingRightSidebarComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'panel-with-sticky-header' },
@@ -44,19 +44,9 @@ import { SettingMenuEditorComponent } from './sections/menu-editor.component';
         <p class="setting-description" i18n="@@settings.navigation.start-last-page.description">
           When opening the app, restore the last page you were viewing.
         </p>
-
-        @if (accountState.account()) {
-          <div class="setting-item">
-            <span i18n="@@settings.layout.right-sidebar">Show Right Sidebar</span>
-            <mat-slide-toggle [checked]="settings.settings().rightSidebarEnabled !== false" (change)="toggleRightSidebar()">
-            </mat-slide-toggle>
-          </div>
-          <p class="setting-description" i18n="@@settings.layout.right-sidebar.description">
-            Show the desktop right sidebar with Favorites and Runes. This syncs with your account settings across devices.
-          </p>
-        }
       </div>
 
+      <app-setting-right-sidebar />
       <app-setting-home-destination />
       <app-setting-menu-editor />
     </div>
@@ -87,9 +77,7 @@ import { SettingMenuEditorComponent } from './sections/menu-editor.component';
   `],
 })
 export class MenuNavigationSettingsComponent {
-  readonly accountState = inject(AccountStateService);
   readonly localSettings = inject(LocalSettingsService);
-  readonly settings = inject(SettingsService);
   private readonly rightPanel = inject(RightPanelService);
 
   goBack(): void {
@@ -98,10 +86,5 @@ export class MenuNavigationSettingsComponent {
 
   toggleStartOnLastRoute(): void {
     this.localSettings.setStartOnLastRoute(!this.localSettings.startOnLastRoute());
-  }
-
-  toggleRightSidebar(): void {
-    const currentValue = this.settings.settings().rightSidebarEnabled !== false;
-    void this.settings.updateSettings({ rightSidebarEnabled: !currentValue });
   }
 }

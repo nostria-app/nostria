@@ -275,6 +275,17 @@ export class SettingsRegistryService {
       priority: 3,
     },
     {
+      id: 'action-buttons',
+      title: $localize`:@@settings.action-buttons.title:Action Buttons`,
+      description: $localize`:@@settings.action-buttons.description:Choose how the action buttons (Like, Reply, Share, etc.) are displayed below posts and replies.`,
+      keywords: ['action', 'buttons', 'display', 'mode', 'icons', 'labels', 'posts', 'replies', 'like', 'reply', 'share'],
+      section: 'content',
+      sectionTitle: $localize`:@@settings.sections.content:Feed & Content`,
+      icon: 'touch_app',
+      route: '/settings/content',
+      priority: 4,
+    },
+    {
       id: 'right-sidebar',
       title: $localize`:@@settings.layout.right-sidebar:Show Right Sidebar`,
       description: $localize`:@@settings.layout.right-sidebar.description:Show the desktop right sidebar with Favorites and Runes. This syncs with your account settings across devices.`,

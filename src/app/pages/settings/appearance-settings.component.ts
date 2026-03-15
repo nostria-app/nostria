@@ -1,13 +1,12 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatTooltipModule } from '@angular/material/tooltip';
 
-import { LocalSettingsService } from '../../services/local-settings.service';
 import { RightPanelService } from '../../services/right-panel.service';
 import { SettingDarkModeComponent } from './sections/dark-mode.component';
 import { SettingFontSelectorComponent } from './sections/font-selector.component';
+import { SettingLockScreenRotationComponent } from './sections/lock-screen-rotation.component';
 import { SettingTextSizeComponent } from './sections/text-size.component';
 
 @Component({
@@ -15,10 +14,10 @@ import { SettingTextSizeComponent } from './sections/text-size.component';
   imports: [
     MatButtonModule,
     MatIconModule,
-    MatSlideToggleModule,
     MatTooltipModule,
     SettingDarkModeComponent,
     SettingFontSelectorComponent,
+    SettingLockScreenRotationComponent,
     SettingTextSizeComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -36,18 +35,7 @@ import { SettingTextSizeComponent } from './sections/text-size.component';
       <app-setting-dark-mode />
       <app-setting-text-size />
       <app-setting-font-selector />
-
-      <div class="setting-section">
-        <div class="setting-item">
-          <span i18n="@@settings.display.lock-screen-rotation">Lock Screen Rotation</span>
-          <mat-slide-toggle [checked]="localSettings.lockScreenRotation()" (change)="toggleLockScreenRotation()">
-          </mat-slide-toggle>
-        </div>
-        <p class="setting-description" i18n="@@settings.display.lock-screen-rotation.description">
-          Keep the app in portrait mode so it does not rotate when your device rotates. Applies only on devices and
-          browsers that support orientation lock.
-        </p>
-      </div>
+      <app-setting-lock-screen-rotation />
     </div>
   `,
   styles: [`
@@ -69,14 +57,9 @@ import { SettingTextSizeComponent } from './sections/text-size.component';
   `],
 })
 export class AppearanceSettingsComponent {
-  readonly localSettings = inject(LocalSettingsService);
   private readonly rightPanel = inject(RightPanelService);
 
   goBack(): void {
     this.rightPanel.goBack();
-  }
-
-  toggleLockScreenRotation(): void {
-    this.localSettings.setLockScreenRotation(!this.localSettings.lockScreenRotation());
   }
 }

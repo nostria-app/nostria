@@ -7,7 +7,6 @@ import { MetaService } from '../../../services/meta.service';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { Router } from '@angular/router';
-import { Location } from '@angular/common';
 import { LayoutService } from '../../../services/layout.service';
 import { LoggerService } from '../../../services/logger.service';
 import { MatButtonModule } from '@angular/material/button';
@@ -36,7 +35,6 @@ export class AboutComponent implements OnInit, OnDestroy {
   private readonly meta = inject(MetaService);
   private readonly http = inject(HttpClient);
   private readonly router = inject(Router);
-  private readonly location = inject(Location);
   private readonly layout = inject(LayoutService);
   private readonly logger = inject(LoggerService);
   private readonly rightPanel = inject(RightPanelService);
@@ -90,11 +88,7 @@ export class AboutComponent implements OnInit, OnDestroy {
   }
 
   goBack(): void {
-    if (this.rightPanel.hasContent()) {
-      this.rightPanel.goBack();
-    } else {
-      this.location.back();
-    }
+    this.rightPanel.goBack();
   }
 
   private async fetchManifestVersion(): Promise<void> {

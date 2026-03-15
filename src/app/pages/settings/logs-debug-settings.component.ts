@@ -2,11 +2,11 @@ import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { Router } from '@angular/router';
 
 import { RightPanelService } from '../../services/right-panel.service';
 import { SettingLoggingComponent } from './sections/logging.component';
 import { SettingsLinkCardComponent } from './sections/settings-link-card.component';
+import { getSettingsSectionComponent } from './settings-section-components.map';
 
 @Component({
   selector: 'app-logs-debug-settings',
@@ -49,17 +49,28 @@ import { SettingsLinkCardComponent } from './sections/settings-link-card.compone
 })
 export class LogsDebugSettingsComponent {
   private readonly rightPanel = inject(RightPanelService);
-  private readonly router = inject(Router);
 
   goBack(): void {
     this.rightPanel.goBack();
   }
 
-  openLogs(): void {
-    void this.router.navigate(['/settings/logs']);
+  async openLogs(): Promise<void> {
+    const componentLoader = getSettingsSectionComponent('logs');
+    if (!componentLoader) return;
+    const component = await componentLoader();
+    this.rightPanel.open({
+      component,
+      title: $localize`:@@settings.logs.title:Logs`,
+    });
   }
 
-  openDebug(): void {
-    void this.router.navigate(['/settings/debug']);
+  async openDebug(): Promise<void> {
+    const componentLoader = getSettingsSectionComponent('debug');
+    if (!componentLoader) return;
+    const component = await componentLoader();
+    this.rightPanel.open({
+      component,
+      title: $localize`:@@settings.sections.debug:Debug`,
+    });
   }
 }

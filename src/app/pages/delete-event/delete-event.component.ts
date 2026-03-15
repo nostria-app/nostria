@@ -1,13 +1,13 @@
 import { Component, computed, inject, signal, OnInit } from '@angular/core';
-
+import { Location } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
-import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { Router, ActivatedRoute } from '@angular/router';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { ActivatedRoute } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
 import { firstValueFrom } from 'rxjs';
 import { Event, nip19 } from 'nostr-tools';
@@ -24,18 +24,19 @@ import { ConfirmDialogComponent, ConfirmDialogData } from '../../components/conf
   imports: [
     ReactiveFormsModule,
     MatButtonModule,
-    MatCardModule,
     MatFormFieldModule,
     MatIconModule,
-    MatInputModule
-],
+    MatInputModule,
+    MatTooltipModule,
+  ],
   templateUrl: './delete-event.component.html',
   styleUrl: './delete-event.component.scss',
+  host: { class: 'panel-with-sticky-header' },
 })
 export class DeleteEventComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly snackBar = inject(MatSnackBar);
-  private readonly router = inject(Router);
+  private readonly location = inject(Location);
   private readonly route = inject(ActivatedRoute);
   private readonly dialog = inject(MatDialog);
   private readonly accountState = inject(AccountStateService);
@@ -213,6 +214,6 @@ export class DeleteEventComponent implements OnInit {
   }
 
   goBack() {
-    this.router.navigate(['/settings/privacy']);
+    this.location.back();
   }
 }

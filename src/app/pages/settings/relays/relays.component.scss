@@ -241,10 +241,6 @@ app-info-tooltip {
   padding: 16px 0;
 }
 
-::ng-deep .mat-mdc-tab-body-content {
-  overflow: hidden !important;
-}
-
 .info-card {
   margin-top: 2rem;
   border-left: 4px solid var(--mat-sys-primary);
