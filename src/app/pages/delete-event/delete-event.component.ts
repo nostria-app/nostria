@@ -17,6 +17,7 @@ import { DataService } from '../../services/data.service';
 import { NostrService } from '../../services/nostr.service';
 import { EventService } from '../../services/event';
 import { LoggerService } from '../../services/logger.service';
+import { RightPanelService } from '../../services/right-panel.service';
 import { ConfirmDialogComponent, ConfirmDialogData } from '../../components/confirm-dialog/confirm-dialog.component';
 
 @Component({
@@ -44,6 +45,7 @@ export class DeleteEventComponent implements OnInit {
   private readonly nostrService = inject(NostrService);
   private readonly eventService = inject(EventService);
   private readonly logger = inject(LoggerService);
+  private readonly rightPanel = inject(RightPanelService);
 
   /** Event ID passed as input (e.g., from right panel) */
   eventId = input<string>();
@@ -202,7 +204,7 @@ export class DeleteEventComponent implements OnInit {
       if (result.success) {
         // Delete from local database after successful deletion request
         await this.eventService.deleteEventFromLocalStorage(event.id);
-        
+
         this.snackBar.open('Event deleted successfully', 'Dismiss', {
           duration: 5000,
         });
@@ -226,6 +228,10 @@ export class DeleteEventComponent implements OnInit {
   }
 
   goBack() {
+    if (this.rightPanel.hasContent()) {
+      this.rightPanel.goBack();
+      return;
+    }
     this.location.back();
   }
 }

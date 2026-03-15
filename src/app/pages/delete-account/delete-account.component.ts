@@ -23,6 +23,7 @@ import { DatabaseService } from '../../services/database.service';
 import { PublishService } from '../../services/publish.service';
 import { AccountRelayService } from '../../services/relays/account-relay';
 import { LoggerService } from '../../services/logger.service';
+import { RightPanelService } from '../../services/right-panel.service';
 import { ConfirmDialogComponent, ConfirmDialogData } from '../../components/confirm-dialog/confirm-dialog.component';
 import { NPubPipe } from '../../pipes/npub.pipe';
 import { UserProfileComponent } from '../../components/user-profile/user-profile.component';
@@ -75,6 +76,7 @@ export class DeleteAccountComponent implements OnInit {
   private readonly snackBar = inject(MatSnackBar);
   private readonly router = inject(Router);
   private readonly location = inject(Location);
+  private readonly rightPanel = inject(RightPanelService);
 
   // Form
   deleteForm!: FormGroup;
@@ -521,6 +523,11 @@ export class DeleteAccountComponent implements OnInit {
   }
 
   navigateBack() {
+    if (this.rightPanel.hasContent()) {
+      this.rightPanel.goBack();
+      return;
+    }
+
     if (this.source() === 'accounts') {
       this.router.navigate(['/accounts']);
       return;
