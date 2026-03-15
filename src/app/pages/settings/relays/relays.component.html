@@ -110,8 +110,8 @@
           @for (relay of userRelays(); track relay.url) {
           <mat-list-item cdkDrag [class.relay-has-error]="hasRelayAuthFailed(relay.url)"
             [class.relay-known-dead]="isKnownDeadRelay(relay.url)">
-            <div class="relay-item-container">
-              <div class="relay-drag-handle" cdkDragHandle>
+            <div class="relay-item-container clickable-row" (click)="openRelayDetail(relay)">
+              <div class="relay-drag-handle" cdkDragHandle (click)="$event.stopPropagation()">
                 <mat-icon>drag_indicator</mat-icon>
               </div>
               <div class="relay-status-icon">
@@ -135,13 +135,30 @@
                 <span class="relay-state-badge relay-state-badge-dead">Known dead</span>
                 }
               </div>
+              <div class="relay-mode">
+                <button mat-stroked-button class="mode-button" [matMenuTriggerFor]="relayModeMenu"
+                  (click)="$event.stopPropagation()">
+                  <mat-icon>{{ getRelayModeIcon(relay) }}</mat-icon>
+                  <span class="mode-label">{{ getRelayModeLabel(relay) }}</span>
+                  <mat-icon class="dropdown-arrow">arrow_drop_down</mat-icon>
+                </button>
+                <mat-menu #relayModeMenu="matMenu">
+                  <button mat-menu-item (click)="setRelayMode(relay, 'readwrite')">
+                    <mat-icon>swap_vert</mat-icon>
+                    <span>Read & Write</span>
+                  </button>
+                  <button mat-menu-item (click)="setRelayMode(relay, 'read')">
+                    <mat-icon>download</mat-icon>
+                    <span>Read Only</span>
+                  </button>
+                  <button mat-menu-item (click)="setRelayMode(relay, 'write')">
+                    <mat-icon>upload</mat-icon>
+                    <span>Write Only</span>
+                  </button>
+                </mat-menu>
+              </div>
               <div class="action-buttons">
-                <button mat-icon-button color="primary" (click)="viewRelayInfo(relay.url)" aria-label="View relay info">
-                  <mat-icon>info</mat-icon>
-                </button>
-                <button mat-icon-button color="warn" (click)="removeRelay(relay)" aria-label="Remove relay">
-                  <mat-icon>delete</mat-icon>
-                </button>
+                <mat-icon class="chevron-icon">chevron_right</mat-icon>
               </div>
             </div>
           </mat-list-item>

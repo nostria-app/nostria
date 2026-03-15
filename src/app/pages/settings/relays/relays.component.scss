@@ -11,7 +11,7 @@
 
 .relay-item-container {
   display: grid;
-  grid-template-columns: auto auto 1fr auto;
+  grid-template-columns: auto auto 1fr auto auto;
   grid-gap: 12px;
   align-items: center;
   width: 100%;
@@ -93,6 +93,53 @@
 .relay-state-badge-dead {
   background: var(--mat-sys-error-container);
   color: var(--mat-sys-on-error-container);
+}
+
+.relay-mode {
+  .mode-button {
+    min-width: 0;
+    padding: 0 8px;
+    height: 28px;
+    font-size: 12px;
+    line-height: 28px;
+    border-radius: var(--mat-sys-corner-full);
+
+    mat-icon {
+      font-size: 16px;
+      width: 16px;
+      height: 16px;
+    }
+
+    .dropdown-arrow {
+      margin-left: -4px;
+      margin-right: -4px;
+    }
+  }
+
+  @media (max-width: 768px) {
+    .mode-label {
+      display: none;
+    }
+
+    .mode-button .dropdown-arrow {
+      display: none;
+    }
+  }
+}
+
+.relay-item-container.clickable-row {
+  cursor: pointer;
+  border-radius: 8px;
+  margin: -4px -8px;
+  padding: 8px 8px;
+
+  &:hover {
+    background-color: var(--mat-sys-surface-container-high);
+  }
+}
+
+.chevron-icon {
+  color: var(--mat-sys-on-surface-variant);
 }
 
 // CDK Drag Drop styles for relay reordering

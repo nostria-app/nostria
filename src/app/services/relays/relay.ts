@@ -13,6 +13,8 @@ let EventProcessorServiceRef: any;
 
 export interface Relay {
   url: string;
+  read: boolean;
+  write: boolean;
   status?: 'connected' | 'disconnected' | 'connecting' | 'error';
   lastUsed?: number;
   timeout?: number;
@@ -24,6 +26,8 @@ export abstract class RelayServiceBase {
   // never be destroyed or recreated by this service.
   #externalPool = false;
   protected relayUrls: string[] = [];
+  // NIP-65 read/write markers per relay URL
+  protected relayMarkers = new Map<string, { read: boolean; write: boolean }>();
   protected logger = inject(LoggerService);
   protected relaysService = inject(RelaysService);
   protected utilities = inject(UtilitiesService);
@@ -299,10 +303,13 @@ export abstract class RelayServiceBase {
   /**
    * Add a relay URL to the existing list
    * @param relayUrl The relay URL to add
+   * @param read Whether the relay is used for reading (default: true)
+   * @param write Whether the relay is used for writing (default: true)
    */
-  addRelay(relayUrl: string): void {
+  addRelay(relayUrl: string, read = true, write = true): void {
     if (!this.relayUrls.includes(relayUrl)) {
       this.relayUrls.push(relayUrl);
+      this.relayMarkers.set(relayUrl, { read, write });
       this.updateRelaysSignal();
       this.notifyRelaysModified();
       this.logger.debug('Added relay:', relayUrl);
@@ -317,6 +324,7 @@ export abstract class RelayServiceBase {
     const index = this.relayUrls.indexOf(relayUrl);
     if (index > -1) {
       this.relayUrls.splice(index, 1);
+      this.relayMarkers.delete(relayUrl);
       this.updateRelaysSignal();
       this.notifyRelaysModified();
       this.logger.debug('Removed relay:', relayUrl);
@@ -357,9 +365,40 @@ export abstract class RelayServiceBase {
    */
   clearRelays(): void {
     this.relayUrls = [];
+    this.relayMarkers.clear();
     this.updateRelaysSignal();
     this.notifyRelaysModified();
     this.logger.debug('Cleared all relays');
+  }
+
+  /**
+   * Update read/write markers for a specific relay
+   */
+  setRelayMarker(relayUrl: string, read: boolean, write: boolean): void {
+    if (this.relayUrls.includes(relayUrl)) {
+      this.relayMarkers.set(relayUrl, { read, write });
+      this.updateRelaysSignal();
+      this.notifyRelaysModified();
+    }
+  }
+
+  /**
+   * Get the read/write markers for a relay
+   */
+  getRelayMarker(relayUrl: string): { read: boolean; write: boolean } {
+    return this.relayMarkers.get(relayUrl) ?? { read: true, write: true };
+  }
+
+  /**
+   * Initialize with RelayEntry objects that include read/write markers
+   */
+  initWithEntries(entries: import('../utilities.service').RelayEntry[]): void {
+    const urls = entries.map(e => e.url);
+    this.relayMarkers.clear();
+    for (const entry of entries) {
+      this.relayMarkers.set(entry.url, { read: entry.read, write: entry.write });
+    }
+    this.init(urls);
   }
 
   /**
@@ -388,12 +427,17 @@ export abstract class RelayServiceBase {
    * Update the relays signal with current relay information
    */
   private updateRelaysSignal(): void {
-    const relayObjects: Relay[] = this.relayUrls.map((url) => ({
-      url,
-      status: 'disconnected', // Default status, can be updated by connection monitoring
-      lastUsed: undefined,
-      timeout: undefined,
-    }));
+    const relayObjects: Relay[] = this.relayUrls.map((url) => {
+      const markers = this.relayMarkers.get(url);
+      return {
+        url,
+        read: markers?.read ?? true,
+        write: markers?.write ?? true,
+        status: 'disconnected', // Default status, can be updated by connection monitoring
+        lastUsed: undefined,
+        timeout: undefined,
+      };
+    });
     this.relays.set(relayObjects);
   }
 

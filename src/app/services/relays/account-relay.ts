@@ -4,6 +4,7 @@ import { DatabaseService } from '../database.service';
 import { RelayServiceBase } from './relay';
 import { DiscoveryRelayService } from './discovery-relay';
 import { PoolService } from './pool.service';
+import { RelayEntry } from '../utilities.service';
 
 @Injectable({
   providedIn: 'root',
@@ -42,6 +43,7 @@ export class AccountRelayService extends RelayServiceBase {
     this.logger.debug(`Setting account relays for pubkey: ${pubkey}`);
 
     let relayUrls: string[] = [];
+    let relayEntries: RelayEntry[] = [];
     let hasMalformedRelayList = false;
     let malformedEvent: any = undefined;
 
@@ -63,8 +65,9 @@ export class AccountRelayService extends RelayServiceBase {
           // Don't use malformed relays - leave relayUrls empty to force user to repair
           relayUrls = [];
         } else {
-          // Keep the user's relay list intact in account settings, including known dead/ignored domains.
-          relayUrls = this.utilities.getRelayUrls(event, true);
+          // Load relay entries with read/write markers from NIP-65
+          relayEntries = this.utilities.getRelayEntries(event, true);
+          relayUrls = relayEntries.map(e => e.url);
         }
       } else {
         event = await this.database.getEventByPubkeyAndKind(pubkey, kinds.Contacts);
@@ -75,11 +78,16 @@ export class AccountRelayService extends RelayServiceBase {
         }
       }
 
-      if (relayUrls.length === 0) {
+      if (relayUrls.length === 0 && relayEntries.length === 0) {
         relayUrls = await this.discoveryRelay.getUserRelayUrls(pubkey);
       }
 
-      this.init(relayUrls);
+      // Use initWithEntries if we have relay entries with markers, otherwise fall back to init
+      if (relayEntries.length > 0) {
+        this.initWithEntries(relayEntries);
+      } else {
+        this.init(relayUrls);
+      }
       this.activeAccountPubkey.set(pubkey);
 
       return {
