@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, OnDestroy, computed, ElementRef, viewChild } from '@angular/core';
+import { Component, inject, OnInit, computed, ElementRef, viewChild } from '@angular/core';
 import { CommonModule, NgComponentOutlet } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
@@ -292,7 +292,7 @@ import { getSettingsSectionComponent } from '../settings-section-components.map'
     }
   `],
 })
-export class SettingsHomeComponent implements OnInit, OnDestroy {
+export class SettingsHomeComponent implements OnInit {
   readonly registry = inject(SettingsRegistryService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
@@ -336,6 +336,16 @@ export class SettingsHomeComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     // Handle URL-based section opening for deep linking
     const sectionId = this.route.snapshot.paramMap.get('section');
+    if (sectionId === 'wallet') {
+      void this.router.navigate(['/wallet']);
+      return;
+    }
+
+    if (sectionId === 'premium') {
+      void this.router.navigate(['/accounts'], { queryParams: { tab: 'premium' } });
+      return;
+    }
+
     if (sectionId && !this.rightPanel.hasContent()) {
       this.openSectionInRightPanel(sectionId);
     }
@@ -346,10 +356,6 @@ export class SettingsHomeComponent implements OnInit, OnDestroy {
         this.searchInput()?.nativeElement?.focus();
       }, 100);
     }
-  }
-
-  ngOnDestroy(): void {
-    // Component cleanup - no panel actions to clear anymore
   }
 
   canShowItem(item: SettingsItem): boolean {
