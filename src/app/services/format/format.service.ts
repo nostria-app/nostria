@@ -57,7 +57,12 @@ export class FormatService {
 
       // 1. If we have relay hints, use them first
       if (relayHints && relayHints.length > 0) {
-        relaysToUse = this.utilities.normalizeRelayUrls(relayHints);
+        relaysToUse = this.utilities.normalizeRelayUrls(relayHints, false, {
+          source: 'relay-hint',
+          ownerPubkey: authorPubkey,
+          eventId,
+          details: 'fetchEventPreview relay hints',
+        });
         this.logger.debug('[fetchEventPreview] Trying relay hints:', relaysToUse);
         event = await this.relayPool.get(relaysToUse, { ids: [eventId] }, 3000);
 
@@ -220,7 +225,12 @@ export class FormatService {
 
       // 1. If we have relay hints, use them first
       if (relayHints && relayHints.length > 0) {
-        relaysToUse = this.utilities.normalizeRelayUrls(relayHints);
+        relaysToUse = this.utilities.normalizeRelayUrls(relayHints, false, {
+          source: 'relay-hint',
+          ownerPubkey: authorPubkey,
+          eventId,
+          details: 'fetchEvent relay hints',
+        });
         event = await this.relayPool.get(relaysToUse, { ids: [eventId] }, 3000);
       }
 
@@ -486,7 +496,11 @@ export class FormatService {
 
     try {
       if (relayHints && relayHints.length > 0) {
-        const normalizedHints = this.utilities.normalizeRelayUrls(relayHints);
+        const normalizedHints = this.utilities.normalizeRelayUrls(relayHints, false, {
+          source: 'relay-hint',
+          ownerPubkey: pubkey,
+          details: 'resolveAddressableEvent relay hints',
+        });
         const hintedEvent = await this.relayPool.get(normalizedHints, filter, 3000);
         if (hintedEvent) return hintedEvent;
       }

@@ -222,19 +222,18 @@
   <mat-divider></mat-divider>
 
   <section class="delete-section">
-    <h3 i18n="@@settings.privacy.event-management.title">Event Management</h3>
+    <h3 i18n="@@settings.privacy.remove-content.title">Remove My Content</h3>
     <p class="section-description" i18n="@@settings.privacy.event-management.description">
       Manage and delete events you've published on Nostr.
     </p>
-    <div class="delete-actions">
-      <button mat-raised-button color="primary" (click)="navigateToDeleteEventPage()">
-        <mat-icon>delete_outline</mat-icon>
-        <span i18n="@@settings.privacy.event-management.delete-event">Delete Specific Event</span>
-      </button>
-      <button mat-raised-button color="warn" (click)="navigateToDeleteAccountPage()">
-        <mat-icon>delete_forever</mat-icon>
-        <span i18n="@@settings.privacy.event-management.delete-account">Delete All Account Data</span>
-      </button>
+    <div class="settings-link-list">
+      <app-settings-link-card icon="article" i18n-title="@@settings.privacy.event-management.delete-event"
+        title="Delete Specific Event" i18n-description="@@settings.privacy.remove-content.delete-event.description"
+        description="Choose an event and review the removal flow." (activated)="navigateToDeleteEventPage()" />
+      <app-settings-link-card icon="manage_accounts" i18n-title="@@settings.privacy.event-management.delete-account"
+        title="Delete All Account Data" i18n-description="@@settings.privacy.remove-content.delete-account.description"
+        description="Open the account data removal screen and review the available options."
+        (activated)="navigateToDeleteAccountPage()" />
     </div>
   </section>
 

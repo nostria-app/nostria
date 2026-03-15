@@ -1,6 +1,5 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
-import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSelectModule } from '@angular/material/select';
@@ -12,18 +11,19 @@ import { RightPanelService } from '../../services/right-panel.service';
 import { SettingsService } from '../../services/settings.service';
 import { SettingMaxRelaysComponent } from './sections/max-relays.component';
 import { SettingRelayAuthComponent } from './sections/relay-auth.component';
+import { SettingsLinkCardComponent } from './sections/settings-link-card.component';
 
 @Component({
   selector: 'app-relays-network-settings',
   imports: [
     MatButtonModule,
-    MatCardModule,
     MatFormFieldModule,
     MatIconModule,
     MatSelectModule,
     MatTooltipModule,
     SettingMaxRelaysComponent,
     SettingRelayAuthComponent,
+    SettingsLinkCardComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'panel-with-sticky-header' },
@@ -69,46 +69,26 @@ import { SettingRelayAuthComponent } from './sections/relay-auth.component';
 
       <div class="setting-section">
         <h2 i18n="@@settings.relays.title">Relay Sources</h2>
-        <div class="link-grid">
-          <mat-card appearance="outlined" class="link-card">
-            <div>
-              <h3 i18n="@@settings.relays.account-relays">Account Relays</h3>
-              <p i18n="@@settings.relays.account-relays.description">Manage your personal relay connections</p>
-            </div>
-            <button mat-stroked-button type="button" (click)="openRelays('account')">Open</button>
-          </mat-card>
+        <div class="settings-link-list">
+          <app-settings-link-card icon="hub" i18n-title="@@settings.relays.account-relays" title="Account Relays"
+            i18n-description="@@settings.relays.account-relays.description"
+            description="Manage your personal relay connections" (activated)="openRelays('account')" />
 
-          <mat-card appearance="outlined" class="link-card">
-            <div>
-              <h3 i18n="@@settings.relays.discovery">Discovery Relays</h3>
-              <p i18n="@@settings.relays.discovery.description">Relays used to discover other users</p>
-            </div>
-            <button mat-stroked-button type="button" (click)="openRelays('discovery')">Open</button>
-          </mat-card>
+          <app-settings-link-card icon="travel_explore" i18n-title="@@settings.relays.discovery"
+            title="Discovery Relays" i18n-description="@@settings.relays.discovery.description"
+            description="Relays used to discover other users" (activated)="openRelays('discovery')" />
 
-          <mat-card appearance="outlined" class="link-card">
-            <div>
-              <h3 i18n="@@settings.relays.observed">Observed Relays</h3>
-              <p i18n="@@settings.relays.observed.description">Inspect relays observed from the wider network.</p>
-            </div>
-            <button mat-stroked-button type="button" (click)="openRelays('observed')">Open</button>
-          </mat-card>
+          <app-settings-link-card icon="visibility" i18n-title="@@settings.relays.observed" title="Observed Relays"
+            i18n-description="@@settings.relays.observed.description"
+            description="Inspect relays observed from the wider network." (activated)="openRelays('observed')" />
 
-          <mat-card appearance="outlined" class="link-card">
-            <div>
-              <h3 i18n="@@settings.search.relays">Search Relays</h3>
-              <p i18n="@@settings.search.relays.description">Configure which relays to use for search</p>
-            </div>
-            <button mat-stroked-button type="button" (click)="openSearchRelays()">Open</button>
-          </mat-card>
+          <app-settings-link-card icon="search" i18n-title="@@settings.search.relays" title="Search Relays"
+            i18n-description="@@settings.search.relays.description"
+            description="Configure which relays to use for search" (activated)="openSearchRelays()" />
 
-          <mat-card appearance="outlined" class="link-card">
-            <div>
-              <h3 i18n="@@settings.media-servers.title">Media Servers</h3>
-              <p i18n="@@settings.media-servers.description">Manage your upload and fallback media servers</p>
-            </div>
-            <button mat-stroked-button type="button" (click)="openMediaServers()">Open</button>
-          </mat-card>
+          <app-settings-link-card icon="cloud_upload" i18n-title="@@settings.media-servers.title"
+            title="Media Servers" i18n-description="@@settings.media-servers.description"
+            description="Manage your upload and fallback media servers" (activated)="openMediaServers()" />
         </div>
       </div>
     </div>
@@ -131,23 +111,10 @@ import { SettingRelayAuthComponent } from './sections/relay-auth.component';
       color: var(--mat-sys-on-surface-variant);
     }
 
-    .link-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 12px;
-    }
-
-    .link-card {
+    .settings-link-list {
       display: flex;
       flex-direction: column;
-      justify-content: space-between;
       gap: 12px;
-      padding: 16px;
-    }
-
-    .link-card p {
-      margin-bottom: 0;
-      color: var(--mat-sys-on-surface-variant);
     }
   `],
 })

@@ -336,12 +336,22 @@ export class PublishService {
   ): Promise<string[]> {
     // If explicit relay URLs provided, use those (deduplicated and normalized)
     if (options.relayUrls && options.relayUrls.length > 0) {
-      const normalizedRelays = this.utilities.getUniqueNormalizedRelayUrls(options.relayUrls);
+      const normalizedRelays = this.utilities.getUniqueNormalizedRelayUrls(options.relayUrls, false, {
+        source: 'publish-relays',
+        eventId: event.id,
+        eventKind: event.kind,
+        details: 'publish options relayUrls',
+      });
       return this.applyRelayOptimization(normalizedRelays, options.useOptimizedRelays);
     }
 
     // Normalize account relay URLs to ensure consistent comparison
-    const accountRelayUrls = this.utilities.normalizeRelayUrls(this.accountRelay.getRelayUrls());
+    const accountRelayUrls = this.utilities.normalizeRelayUrls(this.accountRelay.getRelayUrls(), false, {
+      source: 'account-relays',
+      eventId: event.id,
+      eventKind: event.kind,
+      details: 'publish current account relays',
+    });
     const allRelayUrls = new Set<string>(accountRelayUrls);
 
     console.log('[PublishService] DEBUG getRelayUrlsForPublish:', {

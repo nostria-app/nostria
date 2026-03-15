@@ -645,7 +645,10 @@ export class EncryptionService {
   }
 
   private sanitizeRemoteSignerRelays(relays: string[]): string[] {
-    const normalizedRelays = this.utilities.normalizeRelayUrls(relays);
+    const normalizedRelays = this.utilities.normalizeRelayUrls(relays, false, {
+      source: 'remote-signer-relays',
+      details: 'bunker remote signer relay list',
+    });
     return normalizedRelays.filter(relay => {
       try {
         const host = new URL(relay).hostname.toLowerCase();

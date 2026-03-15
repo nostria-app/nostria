@@ -2704,7 +2704,13 @@ export class LayoutService implements OnDestroy {
     await this.userRelayService.ensureRelaysForPubkey(event.pubkey);
     const authorRelays = this.userRelayService.getRelaysForPubkey(event.pubkey);
     const relayHint = authorRelays[0];
-    const relayHints = this.utilities.normalizeRelayUrls(relayHint ? [relayHint] : []);
+    const relayHints = this.utilities.normalizeRelayUrls(relayHint ? [relayHint] : [], false, {
+      source: 'relay-hint',
+      ownerPubkey: event.pubkey,
+      eventId: event.id,
+      eventKind: event.kind,
+      details: 'shareEvent author relay hint',
+    });
     const encoded = this.utilities.encodeEventForUrl(event, relayHints.length > 0 ? relayHints : undefined);
     const shareUrl = event.kind === kinds.LongFormArticle
       ? `https://nostria.app/a/${encoded}`

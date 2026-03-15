@@ -68,8 +68,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
     // Listen to route changes to scroll to top
     this.router.events.pipe(filter(event => event instanceof NavigationEnd)).subscribe(() => {
       this.updateActiveSection();
-      // Scroll the right panel to top
-      this.layout.scrollToTop('.right-panel');
+      this.scrollSettingsToTop();
     });
 
     // Set initial active section
@@ -85,7 +84,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    this.layout.scrollToTop('.right-panel');
+    this.scrollSettingsToTop();
   }
 
   ngOnDestroy(): void {
@@ -120,5 +119,13 @@ export class SettingsComponent implements OnInit, OnDestroy {
 
   clearSearch(): void {
     this.registry.clearSearch();
+  }
+
+  private scrollSettingsToTop(): void {
+    this.layout.scrollToTop('.right-panel');
+
+    if (this.layout.isHandset()) {
+      this.layout.scrollToTop('.left-panel');
+    }
   }
 }

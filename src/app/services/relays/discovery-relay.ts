@@ -131,7 +131,12 @@ export class DiscoveryRelayService extends RelayServiceBase implements NostriaSe
       try {
         const accountRelayUrls = this.injector.get(AccountRelayService).getRelayUrls();
         if (accountRelayUrls.length > 0) {
-          relayUrls = this.utilities.normalizeRelayUrls([...relayUrls, ...accountRelayUrls]);
+          relayUrls = this.utilities.normalizeRelayUrls([...relayUrls, ...accountRelayUrls], false, {
+            source: 'account-relays',
+            ownerPubkey: pubkey,
+            discoveryMode: this.localSettings.relayDiscoveryMode(),
+            details: 'discovery relay hybrid merge with current account relays',
+          });
           this.logger.debug(`[DiscoveryRelay] Hybrid mode enabled: merged ${accountRelayUrls.length} account relays for ${pubkey.slice(0, 16)}...`);
         }
       } catch (error) {
@@ -278,7 +283,14 @@ export class DiscoveryRelayService extends RelayServiceBase implements NostriaSe
     return this.utilities.normalizeRelayUrls(
       event.tags
         .filter(tag => (tag[0] === 'relay' || tag[0] === 'r') && typeof tag[1] === 'string')
-        .map(tag => tag[1])
+        .map(tag => tag[1]),
+      false,
+      {
+        source: 'discovery-relays',
+        ownerPubkey: event.pubkey,
+        eventKind: event.kind,
+        details: 'kind 10086 discovery event tags',
+      }
     );
   }
 

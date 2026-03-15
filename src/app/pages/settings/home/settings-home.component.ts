@@ -15,6 +15,7 @@ import { AccountStateService } from '../../../services/account-state.service';
 import { ApplicationService } from '../../../services/application.service';
 import { LoggerService } from '../../../services/logger.service';
 import { RightPanelService } from '../../../services/right-panel.service';
+import { LayoutService } from '../../../services/layout.service';
 import { getSettingComponent } from '../sections/settings-components.map';
 import { getSettingsSectionComponent } from '../settings-section-components.map';
 
@@ -139,7 +140,6 @@ import { getSettingsSectionComponent } from '../settings-section-components.map'
 
         <!-- All Categories -->
         <div class="categories-section">
-          <h3 class="section-title" i18n="@@settings.home.categories">Categories</h3>
           <mat-nav-list>
             @for (section of visibleSections(); track section.id) {
               <a mat-list-item (click)="navigateToSection(section)" (keydown.enter)="navigateToSection(section)" tabindex="0" class="section-item">
@@ -300,6 +300,7 @@ export class SettingsHomeComponent implements OnInit {
   private readonly app = inject(ApplicationService);
   private readonly logger = inject(LoggerService);
   private readonly rightPanel = inject(RightPanelService);
+  private readonly layout = inject(LayoutService);
 
   searchInput = viewChild<ElementRef<HTMLInputElement>>('searchInput');
 
@@ -389,6 +390,7 @@ export class SettingsHomeComponent implements OnInit {
         component,
         title: section.title,
       });
+      this.scheduleScrollReset();
     } catch (error) {
       this.logger.error(`Failed to load settings section component: ${sectionId}`, error);
     }
@@ -413,5 +415,15 @@ export class SettingsHomeComponent implements OnInit {
   clearSearch(): void {
     this.registry.clearSearch();
     this.searchInput()?.nativeElement?.focus();
+  }
+
+  private scheduleScrollReset(): void {
+    requestAnimationFrame(() => {
+      this.layout.scrollToTop('.right-panel');
+
+      if (this.layout.isHandset()) {
+        this.layout.scrollToTop('.left-panel');
+      }
+    });
   }
 }

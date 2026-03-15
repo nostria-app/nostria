@@ -13,6 +13,7 @@ import { SettingClientTagsComponent } from './sections/client-tags.component';
 import { SettingExternalLinksComponent } from './sections/external-links.component';
 import { SettingMediaComponent } from './sections/media.component';
 import { SettingMusicStatusComponent } from './sections/music-status.component';
+import { SettingsLinkCardComponent } from './sections/settings-link-card.component';
 
 const REACTION_EMOJI_OPTIONS = ['❤️', '👍', '🔥', '😂', '🎉', '👏', '🤙', '⚡'];
 
@@ -27,6 +28,7 @@ const REACTION_EMOJI_OPTIONS = ['❤️', '👍', '🔥', '😂', '🎉', '👏'
     SettingExternalLinksComponent,
     SettingMediaComponent,
     SettingMusicStatusComponent,
+    SettingsLinkCardComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'panel-with-sticky-header' },
@@ -143,15 +145,16 @@ const REACTION_EMOJI_OPTIONS = ['❤️', '👍', '🔥', '😂', '🎉', '👏'
           <p class="setting-description" i18n="@@settings.advanced-posting.description">
             Manage Post to X and Global Event Expiration in the advanced posting settings screen.
           </p>
-          <div class="action-row">
-            <button mat-stroked-button type="button" (click)="openAdvancedPostingSettings()">
-              <mat-icon>share</mat-icon>
-              <span i18n="@@settings.advanced-posting.post-to-x">Manage Post to X</span>
-            </button>
-            <button mat-stroked-button type="button" (click)="openAdvancedPostingSettings()">
-              <mat-icon>timer</mat-icon>
-              <span i18n="@@settings.advanced-posting.global-expiration">Manage Global Expiration</span>
-            </button>
+          <div class="settings-link-list">
+            <app-settings-link-card icon="share" i18n-title="@@settings.advanced-posting.post-to-x"
+              title="Manage Post to X" i18n-description="@@settings.advanced-posting.post-to-x.description"
+              description="Review dual-posting defaults and account connection status."
+              (activated)="openAdvancedPostingSettings()" />
+            <app-settings-link-card icon="timer" i18n-title="@@settings.advanced-posting.global-expiration"
+              title="Manage Global Expiration"
+              i18n-description="@@settings.advanced-posting.global-expiration.description"
+              description="Choose how long newly created events should stay available by default."
+              (activated)="openAdvancedPostingSettings()" />
           </div>
         </div>
       }
@@ -263,9 +266,9 @@ const REACTION_EMOJI_OPTIONS = ['❤️', '👍', '🔥', '😂', '🎉', '👏'
       gap: 12px;
     }
 
-    .action-row {
+    .settings-link-list {
       display: flex;
-      flex-wrap: wrap;
+      flex-direction: column;
       gap: 12px;
     }
   `],

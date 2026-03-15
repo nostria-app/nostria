@@ -853,6 +853,58 @@ mat-sidenav-content {
   }
 }
 
+.settings-quick-card-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1099;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+.settings-quick-card-backdrop.active {
+  opacity: 1;
+  pointer-events: auto;
+  background: rgba(0, 0, 0, 0.24);
+}
+
+.settings-quick-card-layer {
+  position: fixed;
+  z-index: 1101;
+  width: min(360px, calc(100vw - 32px));
+  max-width: calc(100vw - 32px);
+}
+
+.settings-quick-card-layer.fullscreen {
+  inset: 0;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100%;
+  height: 100dvh;
+  max-width: none;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+@media (max-width: 900px) {
+  .settings-quick-card-layer {
+    inset: 0;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100%;
+    max-width: none;
+    height: 100dvh;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  .settings-quick-card-backdrop {
+    opacity: 1;
+    pointer-events: auto;
+    background: rgba(0, 0, 0, 0.24);
+  }
+}
+
 // Sidenav Wallet Section
 .sidenav-wallet-section {
   display: flex;
