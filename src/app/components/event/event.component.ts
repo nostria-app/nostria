@@ -681,6 +681,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     21,     // Video (kind 21) - NIP-71 horizontal video
     22,     // Short video (kind 22) - NIP-71 vertical video
     1068,   // Poll (kind 1068)
+    1111,   // Comment (kind 1111) - NIP-22
     1222,   // Audio track (kind 1222)
     1244,   // Audio file (kind 1244)
     30023,  // Long-form article (kind 30023)

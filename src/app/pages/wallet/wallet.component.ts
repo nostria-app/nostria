@@ -17,7 +17,8 @@ import { RouterModule, Router, NavigationEnd } from '@angular/router';
 import { filter, Subscription } from 'rxjs';
 import { Wallets, Wallet } from '../../services/wallets';
 import { NwcService, WalletData, NwcTransaction } from '../../services/nwc.service';
-import { LN, USD } from '@getalby/sdk';
+import { NWCClient } from '@getalby/sdk/nwc';
+import { LightningAddress, getSatoshiValue } from '@getalby/lightning-tools';
 import { UserProfileComponent } from '../../components/user-profile/user-profile.component';
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { CustomDialogService } from '../../services/custom-dialog.service';
@@ -124,6 +125,19 @@ export class WalletComponent implements OnDestroy {
       .subscribe(event => {
         this.syncTabFromUrl(event.urlAfterRedirects);
       });
+
+    // Auto-select the primary wallet's connection for donations
+    effect(() => {
+      const primaryWallet = this.wallets.getPrimaryWallet();
+      untracked(() => {
+        if (!this.selectedConnectionString() && primaryWallet) {
+          const [, wallet] = primaryWallet;
+          if (wallet.connections.length > 0) {
+            this.selectedConnectionString.set(wallet.connections[0]);
+          }
+        }
+      });
+    });
 
     // Auto-load wallet balances when wallets change
     effect(() => {
@@ -326,12 +340,23 @@ export class WalletComponent implements OnDestroy {
     this.donationError.set(null);
 
     try {
-      const ln = new LN(connectionString);
+      // Convert USD amount to satoshis
+      const satoshi = await getSatoshiValue({ amount, currency: 'USD' });
+
+      // Fetch invoice from lightning address
+      const ln = new LightningAddress('nostria@rizful.com');
+      await ln.fetch();
+      const invoiceObj = await ln.requestInvoice({ satoshi });
+      const invoice = invoiceObj.paymentRequest;
+
+      // Pay the invoice without passing the amount parameter to avoid
+      // "Amount in invoice does not match amount in request" errors.
+      // The amount is already encoded in the BOLT-11 invoice.
+      const nwcClient = new NWCClient({ nostrWalletConnectUrl: connectionString });
       try {
-        const request = await ln.pay('nostria@rizful.com', USD(amount));
-        console.log('Payment request created:', request);
+        await nwcClient.payInvoice({ invoice });
       } finally {
-        ln.close();
+        nwcClient.close();
       }
 
       this.donationSuccess.set(true);
@@ -341,8 +366,8 @@ export class WalletComponent implements OnDestroy {
         verticalPosition: 'bottom',
       });
 
-      // Reset donation state after success
-      this.selectedDonationAmount.set(null);
+      // Reset donation state after success (reset to default preset, not null which triggers custom mode)
+      this.selectedDonationAmount.set(5);
       this.customDonationAmount.reset();
     } catch (error) {
       console.error('Donation failed:', error);

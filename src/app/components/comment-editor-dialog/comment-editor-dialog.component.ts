@@ -258,6 +258,17 @@ export class CommentEditorDialogComponent implements AfterViewInit {
       }
     }
 
+    // Extract hashtags and add as lowercase "t" tags
+    const hashtagRegex = /#([a-zA-Z0-9_]+)/g;
+    const hashtags = new Set<string>();
+    let match;
+    while ((match = hashtagRegex.exec(processedContent)) !== null) {
+      hashtags.add(match[1].toLowerCase());
+    }
+    for (const hashtag of hashtags) {
+      event.tags.push(['t', hashtag]);
+    }
+
     return event;
   }
 

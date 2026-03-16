@@ -3,7 +3,8 @@ import { Component, computed, inject, input, output } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatCardModule } from '@angular/material/card';
-import { Event } from 'nostr-tools';
+import { MatDialog } from '@angular/material/dialog';
+import { Event, nip19 } from 'nostr-tools';
 import { ContentComponent } from '../content/content.component';
 import { EventHeaderComponent } from '../event/header/header.component';
 import { MatTooltipModule } from '@angular/material/tooltip';
@@ -11,7 +12,8 @@ import { EventService } from '../../services/event';
 import { AccountStateService } from '../../services/account-state.service';
 import { LayoutService } from '../../services/layout.service';
 import { NostrRecord } from '../../interfaces';
-import { ReactionButtonComponent } from '../event/reaction-button/reaction-button.component';
+import { EventActionsToolbarComponent } from '../event-actions-toolbar/event-actions-toolbar.component';
+import { BookmarkListSelectorComponent } from '../bookmark-list-selector/bookmark-list-selector.component';
 
 // Re-export CommentThread for recursive template usage
 export interface CommentThread {
@@ -47,7 +49,7 @@ interface CommentTags {
     ContentComponent,
     EventHeaderComponent,
     MatTooltipModule,
-    ReactionButtonComponent,
+    EventActionsToolbarComponent,
   ],
   templateUrl: './comment.component.html',
   styleUrl: './comment.component.scss',
@@ -65,6 +67,7 @@ export class CommentComponent {
   private eventService = inject(EventService);
   private accountState = inject(AccountStateService);
   private layout = inject(LayoutService);
+  private dialog = inject(MatDialog);
 
   // Maximum nesting depth for visual indentation (after this, no more indent)
   readonly maxVisualDepth = 4;
@@ -124,6 +127,28 @@ export class CommentComponent {
     if (result?.published && result.event) {
       this.replyAdded.emit(result.event);
     }
+  }
+
+  onBookmarkClick(event: MouseEvent): void {
+    event.stopPropagation();
+    const commentEvent = this.event();
+    this.dialog.open(BookmarkListSelectorComponent, {
+      data: {
+        itemId: commentEvent.id,
+        type: 'e',
+        eventKind: commentEvent.kind,
+        pubkey: commentEvent.pubkey,
+      },
+      width: '400px',
+      panelClass: 'responsive-dialog',
+    });
+  }
+
+  onShareClick(): void {
+    const commentEvent = this.event();
+    const nevent = nip19.neventEncode({ id: commentEvent.id, author: commentEvent.pubkey });
+    const url = `https://nostria.app/e/${nevent}`;
+    navigator.clipboard.writeText(url);
   }
 
   private parseCommentTags(event: Event): CommentTags {
