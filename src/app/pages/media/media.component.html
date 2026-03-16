@@ -85,7 +85,8 @@
   </mat-menu>
 
   <!-- Select all button - hidden on small screens -->
-  <button mat-icon-button (click)="selectAll()" [disabled]="filteredMedia().length === 0" matTooltip="Select All" class="hide-small">
+  <button mat-icon-button (click)="selectAll()" [disabled]="filteredMedia().length === 0" matTooltip="Select All"
+    class="hide-small">
     <mat-icon>checklist</mat-icon>
   </button>
 
@@ -251,7 +252,8 @@
         <ng-container matColumnDef="select">
           <th mat-header-cell *matHeaderCellDef width="48px">
             <mat-icon class="select-all-icon" (click)="selectAll()">
-              {{ selectedItems().length === filteredMedia().length && filteredMedia().length > 0 ? 'check_box' : 'check_box_outline_blank' }}
+              {{ selectedItems().length === filteredMedia().length && filteredMedia().length > 0 ? 'check_box' :
+              'check_box_outline_blank' }}
             </mat-icon>
           </th>
           <td mat-cell *matCellDef="let item">
@@ -359,10 +361,8 @@
     <div class="media-grid" [class.large]="viewMode() === 'large'" [class.medium]="viewMode() === 'medium'">
       @for (item of filteredMedia(); track item.sha256) {
       <div class="media-card" [class.selected]="isSelected(item.sha256)"
-        (pointerdown)="onItemPointerDown($event, item.sha256)"
-        (pointerup)="onItemPointerUp($event)"
-        (pointerleave)="onItemPointerLeave()"
-        (click)="onCardClick($event, item)">
+        (pointerdown)="onItemPointerDown($event, item.sha256)" (pointerup)="onItemPointerUp($event)"
+        (pointerleave)="onItemPointerLeave()" (click)="onCardClick($event, item)">
         <div class="media-thumbnail">
           <!-- Checkbox (shown on hover or in selection mode) -->
           <button type="button" class="checkbox-container" [class.visible]="selectionMode()"
