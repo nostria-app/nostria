@@ -251,13 +251,25 @@ export class Wallets {
     return { pubkey, relay, secret };
   }
 
+  private getWalletNameFromConnectionString(connectionString: string): string | null {
+    const normalizedConnectionString = connectionString.startsWith('web+nostr+walletconnect://')
+      ? connectionString.replace('web+nostr+walletconnect://', 'nostr+walletconnect://')
+      : connectionString;
+
+    const parsedUrl = new URL(normalizedConnectionString);
+    const lud16 = parsedUrl.searchParams.get('lud16')?.trim();
+
+    return lud16 || null;
+  }
+
   addWallet(pubkey: string, connection: string, data: { relay: string[]; secret: string }) {
     const currentWallets = this.wallets();
+    const connectionStringName = this.getWalletNameFromConnectionString(connection);
     const currentWallet = currentWallets[pubkey] || {
       pubkey,
       connections: [],
       data,
-      name: this.generateWalletName(currentWallets),
+      name: connectionStringName || this.generateWalletName(currentWallets),
       isPrimary: Object.keys(currentWallets).length === 0,
     };
 
