@@ -26,6 +26,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatDividerModule } from '@angular/material/divider';
+import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { ApplicationService } from '../../services/application.service';
 import { toSignal, takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { EVENT_STATE_KEY, EventData } from '../../data-resolver';
@@ -66,7 +67,7 @@ export const REPLY_FILTER_FOLLOWING = 'following';
 
 @Component({
   selector: 'app-event-page',
-  imports: [CommonModule, EventComponent, MatIconModule, MatButtonModule, MatProgressSpinnerModule, MatTooltipModule, MatMenuModule, MatDividerModule, InlineReplyEditorComponent],
+  imports: [CommonModule, EventComponent, MatIconModule, MatButtonModule, MatProgressSpinnerModule, MatTooltipModule, MatMenuModule, MatDividerModule, MatButtonToggleModule, InlineReplyEditorComponent],
   templateUrl: './event.component.html',
   styleUrl: './event.component.scss',
   host: {
@@ -139,6 +140,24 @@ export class EventPageComponent {
   replies = signal<Event[]>([]);
   threadedReplies = signal<ThreadedEvent[]>([]);
 
+  /** Filter for comment kinds: 'all' shows both kind 1 and 1111, 'nip10' shows only kind 1, 'nip22' shows only kind 1111 */
+  commentKindFilter = signal<'all' | 'nip10' | 'nip22'>('all');
+
+  /** Whether we have any NIP-22 comments in the thread */
+  hasNip22Comments = computed(() => this.threadedReplies().some(r => this.containsKind(r, 1111)));
+
+  /** Whether we have any NIP-10 replies in the thread */
+  hasNip10Replies = computed(() => this.threadedReplies().some(r => this.containsKind(r, 1)));
+
+  /** Whether to show the kind filter (only when both kinds exist) */
+  showKindFilter = computed(() => this.hasNip22Comments() && this.hasNip10Replies());
+
+  /** Check recursively if a threaded event tree contains events of a specific kind */
+  private containsKind(thread: ThreadedEvent, kind: number): boolean {
+    if (thread.event.kind === kind) return true;
+    return thread.replies.some(r => this.containsKind(r, kind));
+  }
+
   // Total reply count (including nested replies) - passed to app-event to avoid duplicate relay queries
   // Uses initial reply count from router state for instant display until thread is fully loaded
   totalReplyCount = computed<number>(() => {
@@ -192,7 +211,14 @@ export class EventPageComponent {
   // Filtered threaded replies based on selected follow set
   filteredThreadedReplies = computed<ThreadedEvent[]>(() => {
     const filter = this.selectedReplyFilter();
-    const replies = this.threadedReplies();
+    const kindFilter = this.commentKindFilter();
+    let replies = this.threadedReplies();
+
+    // Apply kind filter first
+    if (kindFilter !== 'all') {
+      const allowedKind = kindFilter === 'nip22' ? 1111 : 1;
+      replies = this.filterByKind(replies, allowedKind);
+    }
 
     // No filter - show all replies
     if (filter === REPLY_FILTER_EVERYONE) {
@@ -261,6 +287,25 @@ export class EventPageComponent {
   /**
    * Set the reply filter and persist it
    */
+  /** Recursively filter threaded replies to only include events of a specific kind */
+  private filterByKind(replies: ThreadedEvent[], kind: number): ThreadedEvent[] {
+    const result: ThreadedEvent[] = [];
+    for (const reply of replies) {
+      const filteredChildren = this.filterByKind(reply.replies, kind);
+      if (reply.event.kind === kind) {
+        result.push({ ...reply, replies: filteredChildren });
+      } else if (filteredChildren.length > 0) {
+        // Keep non-matching parents that have matching descendants to preserve thread structure
+        result.push({ ...reply, replies: filteredChildren });
+      }
+    }
+    return result;
+  }
+
+  setCommentKindFilter(filter: 'all' | 'nip10' | 'nip22'): void {
+    this.commentKindFilter.set(filter);
+  }
+
   setReplyFilter(filter: string): void {
     this.selectedReplyFilter.set(filter);
     // Persist to local storage

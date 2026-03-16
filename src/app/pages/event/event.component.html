@@ -8,6 +8,16 @@
   <h2 class="panel-title title-font">Thread</h2>
   <span class="panel-header-spacer"></span>
 
+  <!-- Comment Kind Toggle -->
+  @if (showKindFilter()) {
+  <mat-button-toggle-group [value]="commentKindFilter()" (change)="setCommentKindFilter($event.value)"
+    class="kind-filter-toggle" hideSingleSelectionIndicator>
+    <mat-button-toggle value="all" matTooltip="Show all replies">All</mat-button-toggle>
+    <mat-button-toggle value="nip22" matTooltip="NIP-22 comments (kind 1111)">Comments</mat-button-toggle>
+    <mat-button-toggle value="nip10" matTooltip="Legacy replies (kind 1)">Replies</mat-button-toggle>
+  </mat-button-toggle-group>
+  }
+
   <!-- Reply Filter Button -->
   <button mat-icon-button [matMenuTriggerFor]="replyFilterMenu"
     [matTooltip]="'Filter replies: ' + selectedFollowSetName()" [class.filter-active]="isReplyFilterActive()">

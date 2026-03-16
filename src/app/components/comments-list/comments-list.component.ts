@@ -65,14 +65,8 @@ export class CommentsListComponent implements AfterViewInit {
   /** Current kind filter for comment display */
   commentKindFilter = signal<CommentKindFilter>('all');
 
-  /** Whether the root event is kind 1 (short text note) - no toggle needed */
-  isKind1Root = computed(() => this.event().kind === 1);
-
   /** Effective kinds to query based on the current filter */
   private effectiveKinds = computed(() => {
-    // If the root event is kind 1, NIP-22 says don't use 1111 for replies
-    if (this.isKind1Root()) return this.allowedKinds();
-
     const filter = this.commentKindFilter();
     const base = this.allowedKinds();
     switch (filter) {

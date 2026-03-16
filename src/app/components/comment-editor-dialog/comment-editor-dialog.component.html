@@ -6,13 +6,8 @@
       <div class="reply-context">
         <mat-icon class="reply-icon">{{ data.parentComment ? 'reply' : 'comment' }}</mat-icon>
         <span>{{ data.parentComment ? 'Replying to comment by' : 'Commenting on event by' }}</span>
-        <app-user-profile
-          [pubkey]="data.parentComment ? data.parentComment.pubkey : data.rootEvent.pubkey"
-          view="list"
-          [disableLink]="true"
-          [disableHoverCard]="true"
-          [hostWidthAuto]="true"
-          [showRank]="false">
+        <app-user-profile [pubkey]="data.parentComment ? data.parentComment.pubkey : data.rootEvent.pubkey" view="list"
+          [disableLink]="true" [disableHoverCard]="true" [hostWidthAuto]="true" [showRank]="false">
         </app-user-profile>
       </div>
 

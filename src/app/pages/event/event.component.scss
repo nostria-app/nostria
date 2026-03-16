@@ -54,6 +54,11 @@
     flex: 1;
   }
 
+  .kind-filter-toggle {
+    transform: scale(0.75);
+    transform-origin: right center;
+  }
+
   .back-button {
     margin-left: -8px;
   }
@@ -524,6 +529,7 @@
 // Reduce thread-line width so each nesting level takes minimal horizontal space
 @media (max-width: 699px) {
   .threaded-reply {
+
     // Reduce the thread line column width on mobile
     .thread-line-clickable {
       width: 6px;

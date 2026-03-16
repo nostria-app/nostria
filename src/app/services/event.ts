@@ -392,19 +392,20 @@ export class EventService {
 
     // First pass: build parent-child relationships
     events.forEach((event) => {
-      const { replyId, rootId } = this.getEventTags(event);
-
-      // Determine the actual parent this event replies to:
-      // 1. If replyId is set, use it (explicit reply marker)
-      // 2. If no replyId but rootId matches our rootEventId, it's a direct reply to root
-      // 3. Otherwise, skip this event (it belongs to a different branch)
       let parentId: string | null = null;
 
-      if (replyId) {
-        parentId = replyId;
-      } else if (rootId === rootEventId) {
-        // Direct reply to root (has root marker but no reply marker)
-        parentId = rootEventId;
+      if (event.kind === 1111) {
+        // NIP-22 comment: use uppercase E for root scope, lowercase e for parent scope
+        parentId = this.getNip22ParentId(event, rootEventId);
+      } else {
+        // NIP-10 threading (kind 1)
+        const { replyId, rootId } = this.getEventTags(event);
+
+        if (replyId) {
+          parentId = replyId;
+        } else if (rootId === rootEventId) {
+          parentId = rootEventId;
+        }
       }
 
       if (parentId) {
@@ -441,6 +442,48 @@ export class EventService {
     };
 
     return buildNode(rootEventId);
+  }
+
+  /**
+   * Determine the parent event ID for a NIP-22 comment (kind 1111).
+   * NIP-22 uses uppercase tags (E/A/I) for root scope and lowercase (e/a/i) for parent scope.
+   * If root and parent point to the same event, it's a top-level comment on the root.
+   * If the parent e tag points to a different event, that's the parent comment.
+   */
+  private getNip22ParentId(event: Event, rootEventId: string): string | null {
+    const tags = event.tags;
+
+    const rootETag = tags.find(t => t[0] === 'E');
+    const parentETag = tags.find(t => t[0] === 'e');
+    const parentKindTag = tags.find(t => t[0] === 'k');
+    const parentKind = parentKindTag?.[1];
+
+    // If parent kind is a comment kind (1111), this is a reply to another comment
+    if (parentKind === '1111' && parentETag?.[1] && parentETag[1] !== rootEventId) {
+      return parentETag[1];
+    }
+
+    // If root E and parent e point to the same event, it's a top-level comment
+    if (rootETag && parentETag && rootETag[1] === parentETag[1]) {
+      return rootEventId;
+    }
+
+    // If parent e tag points to the root event, it's top-level
+    if (parentETag?.[1] === rootEventId) {
+      return rootEventId;
+    }
+
+    // If the root E tag points to our root event, treat as top-level
+    if (rootETag?.[1] === rootEventId) {
+      return rootEventId;
+    }
+
+    // Fallback: if there's a parent e tag pointing to another comment, use it
+    if (parentETag?.[1]) {
+      return parentETag[1];
+    }
+
+    return rootEventId;
   }
 
   /**
@@ -977,6 +1020,47 @@ export class EventService {
       return replies;
     } catch (error) {
       this.logger.error('Error loading replies:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Load NIP-22 comments (kind 1111) for an event.
+   * Queries both uppercase E tags (root scope) and lowercase e tags (parent scope)
+   * to find all comments referencing this event.
+   */
+  async loadNip22Comments(eventId: string, pubkey: string): Promise<Event[]> {
+    this.logger.info('loadNip22Comments called with eventId:', eventId, 'pubkey:', pubkey);
+
+    try {
+      // Get relays from the event author + account relays
+      const authorRelays = await this.discoveryRelay.getUserRelayUrls(pubkey);
+      const accountRelays = this.accountRelay.getRelayUrls();
+      const allRelays = [...new Set([...authorRelays, ...accountRelays])];
+
+      if (allRelays.length === 0) {
+        return [];
+      }
+
+      // Query for kind 1111 events referencing this event via both E and e tags
+      const [uppercaseResults, lowercaseResults] = await Promise.all([
+        this.relayPool.query(allRelays, { kinds: [1111], '#E': [eventId] }, 8000),
+        this.relayPool.query(allRelays, { kinds: [1111], '#e': [eventId] }, 8000),
+      ]);
+
+      // Deduplicate by event ID
+      const seen = new Map<string, Event>();
+      for (const event of [...(uppercaseResults || []), ...(lowercaseResults || [])]) {
+        if (event.content?.trim()) {
+          seen.set(event.id, event);
+        }
+      }
+
+      const comments = Array.from(seen.values());
+      this.logger.info('Loaded NIP-22 comments for event:', eventId, 'count:', comments.length);
+      return comments;
+    } catch (error) {
+      this.logger.error('Error loading NIP-22 comments:', error);
       return [];
     }
   }
@@ -1824,6 +1908,7 @@ export class EventService {
 
     // Start loading replies and reactions for the target event (reposted content for reposts)
     const currentEventRepliesPromise = this.loadReplies(targetEventId, targetEventPubkey);
+    const currentEventNip22CommentsPromise = this.loadNip22Comments(targetEventId, targetEventPubkey);
     const currentEventReactionsPromise = this.loadReactions(targetEventId, targetEventPubkey);
 
     // Wait for parents first and yield updated data
@@ -1855,17 +1940,22 @@ export class EventService {
 
       if (isRepost) {
         // For reposts, just load replies for the reposted content
-        replies = await currentEventRepliesPromise;
+        const [nip10Replies, nip22Comments] = await Promise.all([
+          currentEventRepliesPromise,
+          currentEventNip22CommentsPromise,
+        ]);
+        replies = [...nip10Replies, ...nip22Comments];
       } else if (!isThreadRoot && threadRootId !== event.id) {
         // Load replies from both thread root and current event in parallel
-        const [threadRootReplies, currentEventReplies] = await Promise.all([
+        const [threadRootReplies, currentEventReplies, nip22Comments] = await Promise.all([
           this.loadReplies(threadRootId, rootEvent?.pubkey || event.pubkey),
           currentEventRepliesPromise,
+          currentEventNip22CommentsPromise,
         ]);
 
         // Merge and deduplicate replies by event ID
         const seenIds = new Set<string>();
-        replies = [...threadRootReplies, ...currentEventReplies].filter((reply) => {
+        replies = [...threadRootReplies, ...currentEventReplies, ...nip22Comments].filter((reply) => {
           if (seenIds.has(reply.id)) return false;
           seenIds.add(reply.id);
           return true;
@@ -1873,8 +1963,19 @@ export class EventService {
 
         finalReactionsPromise = this.loadReactions(threadRootId, rootEvent?.pubkey || event.pubkey);
       } else {
-        // Thread root - just load direct replies
-        replies = await currentEventRepliesPromise;
+        // Thread root - load direct replies and NIP-22 comments
+        const [nip10Replies, nip22Comments] = await Promise.all([
+          currentEventRepliesPromise,
+          currentEventNip22CommentsPromise,
+        ]);
+
+        // Merge and deduplicate
+        const seenIds = new Set<string>();
+        replies = [...nip10Replies, ...nip22Comments].filter((reply) => {
+          if (seenIds.has(reply.id)) return false;
+          seenIds.add(reply.id);
+          return true;
+        });
       }
 
       // Only filter out parent events and current event from the flat replies list
@@ -1923,7 +2024,18 @@ export class EventService {
 
       // Try to at least load replies for the current event
       try {
-        const replies = await currentEventRepliesPromise;
+        const [nip10Replies, nip22Comments] = await Promise.all([
+          currentEventRepliesPromise,
+          currentEventNip22CommentsPromise.catch(() => [] as Event[]),
+        ]);
+
+        // Merge and deduplicate
+        const seenIds = new Set<string>();
+        const replies = [...nip10Replies, ...nip22Comments].filter((reply) => {
+          if (seenIds.has(reply.id)) return false;
+          seenIds.add(reply.id);
+          return true;
+        });
 
         // Filter out the current event from replies
         const filteredReplies = replies.filter((reply) => reply.id !== event.id);

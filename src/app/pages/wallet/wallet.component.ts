@@ -328,7 +328,7 @@ export class WalletComponent implements OnDestroy {
     try {
       const ln = new LN(connectionString);
       try {
-        const request = await ln.pay('nostria@coinos.io', USD(amount));
+        const request = await ln.pay('nostria@rizful.com', USD(amount));
         console.log('Payment request created:', request);
       } finally {
         ln.close();
