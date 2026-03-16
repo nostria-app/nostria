@@ -652,6 +652,7 @@ export class ImportRssDialogComponent {
         albumTags.push(['a', `${MUSIC_KIND}:${authorPubkey}:${dTag}`]);
       }
 
+      albumTags.push(['public', 'true']);
       albumTags.push(['t', 'music']);
       albumTags.push(['t', 'album']);
       albumTags.push(['alt', `Music album: ${album.title} by ${album.artist || 'Unknown Artist'}`]);
