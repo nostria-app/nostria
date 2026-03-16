@@ -159,13 +159,22 @@ nav {
       height var(--toolbar-transition-duration) cubic-bezier(0.4, 0, 0.2, 1),
       padding var(--toolbar-transition-duration) cubic-bezier(0.4, 0, 0.2, 1);
 
-    .search-icon {
-      color: var(--mat-sys-on-surface-variant);
-      font-size: 20px;
-      width: 20px;
-      height: 20px;
+    .search-icon-button {
+      width: 32px;
+      height: 32px;
+      padding: 0 !important;
+      display: flex !important;
+      align-items: center;
+      justify-content: center;
       flex-shrink: 0;
-      transition: font-size var(--toolbar-transition-duration) cubic-bezier(0.4, 0, 0.2, 1);
+
+      .search-icon {
+        color: var(--mat-sys-on-surface-variant);
+        font-size: 20px;
+        width: 20px;
+        height: 20px;
+        transition: font-size var(--toolbar-transition-duration) cubic-bezier(0.4, 0, 0.2, 1);
+      }
     }
 
     .search-input {
@@ -223,7 +232,7 @@ nav {
     padding: 0 8px;
     gap: 6px;
 
-    .search-icon {
+    .search-icon-button {
       display: none;
     }
 
