@@ -19,7 +19,6 @@ import { NostrService } from '../../services/nostr.service';
 import { AccountStateService } from '../../services/account-state.service';
 import { ContentComponent } from '../content/content.component';
 import { Event as NostrEvent, UnsignedEvent } from 'nostr-tools';
-import { AccountRelayService } from '../../services/relays/account-relay';
 import { MatDialog } from '@angular/material/dialog';
 import { AudioRecordDialogComponent } from '../../pages/media/audio-record-dialog/audio-record-dialog.component';
 import { MediaService } from '../../services/media.service';
@@ -56,7 +55,6 @@ export class CommentEditorDialogComponent implements AfterViewInit {
   private dialogRef = inject(MatDialogRef<CommentEditorDialogComponent>);
   data = inject(MAT_DIALOG_DATA) as CommentEditorDialogData;
   private nostrService = inject(NostrService);
-  private accountRelay = inject(AccountRelayService);
   private accountState = inject(AccountStateService);
   private snackBar = inject(MatSnackBar);
   private eventService = inject(EventService);
@@ -174,20 +172,17 @@ export class CommentEditorDialogComponent implements AfterViewInit {
       // Build NIP-22 comment event
       const unsignedEvent = this.buildCommentEvent(commentText, pubkey);
 
-      // Sign the event
-      const signedEvent = await this.nostrService.signEvent(unsignedEvent);
+      // Sign and publish via PublishService so publishEventBus fires relay-result events
+      const result = await this.nostrService.signAndPublish(unsignedEvent);
 
-      if (!signedEvent) {
-        throw new Error('Failed to sign comment');
+      if (!result.success || !result.event) {
+        throw new Error(result.error || 'Failed to publish comment');
       }
-
-      // Publish to relays
-      await this.accountRelay.publish(signedEvent);
 
       this.snackBar.open('Comment published successfully!', 'Close', { duration: 3000 });
 
       // Close dialog with success
-      this.dialogRef.close({ published: true, event: signedEvent });
+      this.dialogRef.close({ published: true, event: result.event });
     } catch (error) {
       console.error('Failed to publish comment:', error);
       this.snackBar.open('Failed to publish comment. Please try again.', 'Close', {

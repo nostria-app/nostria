@@ -146,7 +146,7 @@ export class CommentComponent {
 
   onShareClick(): void {
     const commentEvent = this.event();
-    const nevent = nip19.neventEncode({ id: commentEvent.id, author: commentEvent.pubkey });
+    const nevent = nip19.neventEncode({ id: commentEvent.id, author: commentEvent.pubkey, kind: commentEvent.kind });
     const url = `https://nostria.app/e/${nevent}`;
     navigator.clipboard.writeText(url);
   }
