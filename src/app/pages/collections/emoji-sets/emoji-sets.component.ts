@@ -18,6 +18,7 @@ import { CollectionSetsService, EmojiSet, EmojiEntry, EmojiItem, PreferredEmojiS
 import { AccountStateService } from '../../../services/account-state.service';
 import { LoggerService } from '../../../services/logger.service';
 import { ConfirmDialogComponent } from '../../../components/confirm-dialog/confirm-dialog.component';
+import { MediaPreviewDialogComponent } from '../../../components/media-preview-dialog/media-preview.component';
 import { LayoutService } from '../../../services/layout.service';
 import { TwoColumnLayoutService } from '../../../services/two-column-layout.service';
 import { EmojiSetService } from '../../../services/emoji-set.service';
@@ -334,6 +335,22 @@ export class EmojiSetsComponent implements OnInit {
     }
   }
 
+  openEmojiPreview(emoji: EmojiItem, event: MouseEvent): void {
+    event.stopPropagation();
+    this.dialog.open(MediaPreviewDialogComponent, {
+      data: {
+        mediaUrl: emoji.url,
+        mediaType: 'image',
+        mediaTitle: `:${emoji.shortcode}:`,
+      },
+      maxWidth: '100vw',
+      maxHeight: '100vh',
+      width: '100vw',
+      height: '100vh',
+      panelClass: 'image-dialog-panel',
+    });
+  }
+
   async copyPackData(pack: SuggestedEmojiPack): Promise<void> {
     if (!pack.event) {
       this.snackBar.open('Event data not available', 'Close', { duration: 3000 });
@@ -627,6 +644,15 @@ export class EmojiSetsComponent implements OnInit {
       this.snackBar.open('Error removing emoji set', 'Close', { duration: 3000 });
     } finally {
       this.isLoading.set(false);
+    }
+  }
+
+  async uninstallSetByIdentifier(identifier: string, title: string): Promise<void> {
+    const ref = this.installedSetsList().find(r => r.identifier === identifier);
+    if (ref) {
+      await this.uninstallSet(ref);
+    } else {
+      this.snackBar.open('Could not find set reference', 'Close', { duration: 3000 });
     }
   }
 }

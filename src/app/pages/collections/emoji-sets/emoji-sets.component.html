@@ -80,7 +80,7 @@
     <div class="section-header">
       <div class="section-title">
         <mat-icon>favorite</mat-icon>
-        <h2 i18n="@@emoji-sets.my-emojis.title">My Emojis</h2>
+        <h2>Installed Emoji Sets</h2>
       </div>
     </div>
 
@@ -89,12 +89,20 @@
     <div class="section-content">
       @for (emojiSet of preferredEmojis(); track emojiSet.identifier) {
       <div class="emoji-set-group">
-        <h3 class="set-title">{{ emojiSet.title }}</h3>
+        <div class="set-title-row">
+          <h3 class="set-title">{{ emojiSet.title }}</h3>
+          @if (emojiSet.identifier !== 'custom') {
+          <button mat-icon-button (click)="uninstallSetByIdentifier(emojiSet.identifier, emojiSet.title)"
+            matTooltip="Remove emoji set">
+            <mat-icon>remove_circle_outline</mat-icon>
+          </button>
+          }
+        </div>
         <div class="emoji-grid">
           @for (emoji of emojiSet.emojis; track $index) {
           <button mat-icon-button class="emoji-item"
             [matTooltip]="copiedEmoji === emoji.shortcode ? 'Copied!' : emoji.shortcode"
-            (click)="copyEmoji(emoji, $event)">
+            (click)="openEmojiPreview(emoji, $event)">
             <img [src]="emoji.url" [alt]="emoji.shortcode" class="emoji-image">
           </button>
           }
@@ -234,45 +242,4 @@
     </div>
   </mat-card>
 
-  <!-- Installed Emoji Sets (kind 10030 references) -->
-  @if (installedSetsList().length > 0) {
-  <mat-card class="section-card">
-    <div class="section-header">
-      <div class="section-title">
-        <mat-icon>inventory_2</mat-icon>
-        <h2>Installed Emoji Sets</h2>
-      </div>
-    </div>
-
-    <mat-divider></mat-divider>
-
-    <div class="section-content">
-      <div class="installed-sets-list">
-        @for (ref of installedSetsList(); track ref.aTagValue) {
-        <div class="installed-set-item">
-          <div class="installed-set-info">
-            <div class="installed-set-header">
-              <span class="installed-set-title">{{ ref.title }}</span>
-              <span class="installed-set-count">{{ ref.emojiCount }} emoji(s)</span>
-            </div>
-            @if (ref.previewEmojis.length > 0) {
-            <div class="installed-set-preview">
-              @for (emoji of ref.previewEmojis; track emoji.shortcode) {
-              <img [src]="emoji.url" [alt]="emoji.shortcode" class="preview-emoji-small" [matTooltip]="emoji.shortcode">
-              }
-              @if (ref.emojiCount > 6) {
-              <span class="emoji-more-small">+{{ ref.emojiCount - 6 }}</span>
-              }
-            </div>
-            }
-          </div>
-          <button mat-icon-button (click)="uninstallSet(ref)" matTooltip="Remove">
-            <mat-icon>remove_circle_outline</mat-icon>
-          </button>
-        </div>
-        }
-      </div>
-    </div>
-  </mat-card>
-  }
 </div>
