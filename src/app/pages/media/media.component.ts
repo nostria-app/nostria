@@ -384,27 +384,39 @@ export class MediaComponent {
     });
 
     dialogRef.afterClosed().subscribe(async result => {
-      if (result && result.file) {
+      if (result && result.files && result.files.length > 0) {
         try {
           this.mediaService.uploading.set(true);
+          const files: File[] = result.files;
+          let successCount = 0;
+          let duplicateCount = 0;
+          let failCount = 0;
 
-          const uploadResult = await this.mediaService.uploadFile(
-            result.file,
-            result.uploadOriginal,
-            result.servers
-          );
+          for (const file of files) {
+            try {
+              const uploadResult = await this.mediaService.uploadFile(
+                file,
+                result.uploadOriginal,
+                result.servers
+              );
+
+              if (uploadResult.status === 'duplicate') {
+                duplicateCount++;
+              } else if (uploadResult.status === 'success') {
+                successCount++;
+              }
+            } catch {
+              failCount++;
+            }
+          }
 
           this.mediaService.uploading.set(false);
 
-          if (uploadResult.status === 'duplicate') {
-            this.snackBar.open('This file already exists in your media library.', 'Close', {
-              duration: 3000,
-            });
-          } else if (uploadResult.status === 'success') {
-            this.snackBar.open('Media uploaded successfully', 'Close', {
-              duration: 3000,
-            });
-          }
+          const parts: string[] = [];
+          if (successCount > 0) parts.push(`${successCount} uploaded`);
+          if (duplicateCount > 0) parts.push(`${duplicateCount} duplicate(s)`);
+          if (failCount > 0) parts.push(`${failCount} failed`);
+          this.snackBar.open(parts.join(', '), 'Close', { duration: 4000 });
         } catch {
           this.mediaService.uploading.set(false);
           this.snackBar.open('Failed to upload media', 'Close', {

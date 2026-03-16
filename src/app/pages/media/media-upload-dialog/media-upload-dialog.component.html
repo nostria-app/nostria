@@ -1,45 +1,50 @@
 <h2 mat-dialog-title>Upload Media</h2>
 <mat-dialog-content>
-  <div class="upload-container">
-    @if (!selectedFile()) {
-    <div class="drop-zone" [class.dragging]="isDragging()" (click)="fileInput.click()" (dragover)="onDragOver($event)"
-      (dragleave)="onDragLeave($event)" (drop)="onDrop($event)">
-      <input #fileInput type="file" hidden (change)="onFileSelected($event)" />
+  <div class="upload-container" (dragover)="onDragOver($event)" (dragleave)="onDragLeave($event)"
+    (drop)="onDrop($event)">
+    @if (!hasFiles()) {
+    <div class="drop-zone" [class.dragging]="isDragging()" (click)="fileInput.click()">
+      <input #fileInput type="file" multiple hidden (change)="onFileSelected($event)" />
       <mat-icon>cloud_upload</mat-icon>
-      <p>Drag & drop a file here, paste from clipboard or click to browse</p>
-      <!-- <p class="file-types">Supports images and videos</p> -->
+      <p>Drag & drop files here, paste from clipboard or click to browse</p>
+      <p class="file-types">You can select multiple files</p>
     </div>
     } @else {
-    <div class="file-preview">
-      @if (previewUrl()) {
-      <img [src]="previewUrl()" alt="Preview" class="image-preview" />
-      } @else if (isVideo() && videoThumbnailUrl()) {
-      <!-- Show video thumbnail preview -->
-      <img [src]="videoThumbnailUrl()" alt="Video preview" class="image-preview" />
-      } @else if (isVideo() && extractingThumbnail()) {
-      <!-- Show loading state while extracting thumbnail -->
-      <div class="generic-preview">
-        <mat-spinner diameter="48"></mat-spinner>
-        <p class="extracting-text">Extracting thumbnail...</p>
-      </div>
-      } @else {
-      <div class="generic-preview">
-        <mat-icon>{{ getFileTypeIcon(selectedFile()!) }}</mat-icon>
-      </div>
-      }
-      <div class="file-info">
-        <p class="file-name">{{ selectedFile()!.name }}</p>
-        <p class="file-size">{{ formatFileSize(selectedFile()!.size) }}</p>
-        <button mat-icon-button color="warn" (click)="clearFile()" [disabled]="isUploading()">
+    <div class="files-list">
+      @for (entry of selectedFiles(); track $index) {
+      <div class="file-entry">
+        <div class="file-thumb">
+          @if (entry.previewUrl) {
+          <img [src]="entry.previewUrl" alt="Preview" />
+          } @else if (entry.isVideo && entry.videoThumbnailUrl) {
+          <img [src]="entry.videoThumbnailUrl" alt="Video preview" />
+          } @else {
+          <mat-icon>{{ getFileTypeIcon(entry.file) }}</mat-icon>
+          }
+        </div>
+        <div class="file-details">
+          <span class="file-name">{{ entry.file.name }}</span>
+          <span class="file-size">{{ formatFileSize(entry.file.size) }}</span>
+        </div>
+        <button mat-icon-button (click)="removeFile($index)" [disabled]="isUploading()" matTooltip="Remove">
           <mat-icon>close</mat-icon>
         </button>
+      </div>
+      }
+
+      <div class="files-summary">
+        <span>{{ selectedFiles().length }} file(s) &middot; {{ formatFileSize(totalSize()) }}</span>
+        <button mat-button (click)="addFileInput.click()" [disabled]="isUploading()">
+          <mat-icon>add</mat-icon> Add more
+        </button>
+        <input #addFileInput type="file" multiple hidden (change)="onFileSelected($event)" />
       </div>
     </div>
 
     <form [formGroup]="uploadForm" class="upload-form">
-      @if (showOriginalOption()) {
+      @if (hasImageOrVideo()) {
       <mat-checkbox formControlName="uploadOriginal" [disabled]="isUploading()">
-        Upload original (no optimization)
+        Upload originals (no optimization)
       </mat-checkbox>
       }
 
@@ -76,15 +81,15 @@
 <mat-dialog-actions align="end">
   <button mat-button (click)="cancel()" [disabled]="isUploading()">Cancel</button>
   <button mat-flat-button [disabled]="
-      !selectedFile() || isUploading() || (showServerSelection() && selectedServers().length === 0)
+      !hasFiles() || isUploading() || (showServerSelection() && selectedServers().length === 0)
     " (click)="onSubmit()" class="upload-button">
     @if (isUploading()) {
     <div class="spinner-container">
       <mat-spinner diameter="16"></mat-spinner>
     </div>
-    <span>{{ isVideo() && !uploadForm.value.uploadOriginal ? 'Uploading and optimizing...' : 'Uploading...' }}</span>
+    <span>Uploading...</span>
     } @else {
-    <span>Upload</span>
+    <span>Upload{{ selectedFiles().length > 1 ? ' ' + selectedFiles().length + ' files' : '' }}</span>
     }
   </button>
 </mat-dialog-actions>

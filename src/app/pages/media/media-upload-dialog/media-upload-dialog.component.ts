@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, computed } from '@angular/core';
 
 import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -11,6 +11,14 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MediaService } from '../../../services/media.service';
 import { LoggerService } from '../../../services/logger.service';
+
+interface SelectedFileEntry {
+  file: File;
+  previewUrl: string | null;
+  isImage: boolean;
+  isVideo: boolean;
+  videoThumbnailUrl: string | null;
+}
 
 @Component({
   selector: 'app-media-upload-dialog',
@@ -35,17 +43,11 @@ export class MediaUploadDialogComponent {
   private readonly logger = inject(LoggerService);
 
   uploadForm: FormGroup;
-  selectedFile = signal<File | null>(null);
-  previewUrl = signal<string | null>(null);
-  isImage = signal<boolean>(false);
-  isVideo = signal<boolean>(false);
-  showOriginalOption = signal<boolean>(false);
+  selectedFiles = signal<SelectedFileEntry[]>([]);
+  hasFiles = computed(() => this.selectedFiles().length > 0);
+  hasImageOrVideo = computed(() => this.selectedFiles().some(f => f.isImage || f.isVideo));
   isDragging = signal<boolean>(false);
   isUploading = signal<boolean>(false);
-
-  // Video thumbnail preview (for display only, not uploaded)
-  videoThumbnailUrl = signal<string | null>(null);
-  extractingThumbnail = signal<boolean>(false);
 
   // Add signals for servers
   availableServers = signal<string[]>([]);
@@ -69,48 +71,47 @@ export class MediaUploadDialogComponent {
 
   onFileSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
-    if (input.files && input.files[0]) {
-      const file = input.files[0];
-      this.processFile(file);
+    if (input.files && input.files.length > 0) {
+      this.addFiles(Array.from(input.files));
+      input.value = '';
     }
   }
 
-  processFile(file: File): void {
-    this.selectedFile.set(file);
-
-    // Check if the file is an image or video
-    this.isImage.set(file.type.startsWith('image/'));
-    this.isVideo.set(file.type.startsWith('video/'));
-
-    // Only show original option for images and videos
-    this.showOriginalOption.set(this.isImage() || this.isVideo());
-
-    // Create a preview if it's an image
-    if (this.isImage()) {
-      const reader = new FileReader();
-      reader.onload = () => {
-        this.previewUrl.set(reader.result as string);
+  addFiles(files: File[]): void {
+    for (const file of files) {
+      const entry: SelectedFileEntry = {
+        file,
+        previewUrl: null,
+        isImage: file.type.startsWith('image/'),
+        isVideo: file.type.startsWith('video/'),
+        videoThumbnailUrl: null,
       };
-      reader.readAsDataURL(file);
-    } else if (this.isVideo()) {
-      // For videos, extract thumbnail for preview only
-      this.extractVideoThumbnail(file);
-      this.previewUrl.set(null);
-    } else {
-      this.previewUrl.set(null);
+
+      if (entry.isImage) {
+        const reader = new FileReader();
+        reader.onload = () => {
+          this.selectedFiles.update(list =>
+            list.map(e => e.file === file ? { ...e, previewUrl: reader.result as string } : e)
+          );
+        };
+        reader.readAsDataURL(file);
+      } else if (entry.isVideo) {
+        this.extractVideoThumbnail(file);
+      }
+
+      this.selectedFiles.update(list => [...list, entry]);
     }
   }
 
-  clearFile(): void {
-    this.selectedFile.set(null);
-    this.previewUrl.set(null);
-    this.showOriginalOption.set(false);
-    this.videoThumbnailUrl.set(null);
+  removeFile(index: number): void {
+    this.selectedFiles.update(list => list.filter((_, i) => i !== index));
+  }
+
+  clearAllFiles(): void {
+    this.selectedFiles.set([]);
   }
 
   async extractVideoThumbnail(videoFile: File): Promise<void> {
-    this.extractingThumbnail.set(true);
-
     try {
       const video = document.createElement('video');
       video.preload = 'metadata';
@@ -119,22 +120,18 @@ export class MediaUploadDialogComponent {
       const videoUrl = URL.createObjectURL(videoFile);
       video.src = videoUrl;
 
-      // Wait for video to load metadata
       await new Promise<void>((resolve, reject) => {
         video.onloadedmetadata = () => resolve();
         video.onerror = () => reject(new Error('Failed to load video'));
       });
 
-      // Seek to 1 second or 10% of duration, whichever is smaller
       const seekTime = Math.min(1, video.duration * 0.1);
       video.currentTime = seekTime;
 
-      // Wait for seek to complete
       await new Promise<void>(resolve => {
         video.onseeked = () => resolve();
       });
 
-      // Create canvas and draw the video frame
       const canvas = document.createElement('canvas');
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
@@ -146,7 +143,6 @@ export class MediaUploadDialogComponent {
 
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-      // Convert canvas to blob
       const blob = await new Promise<Blob>((resolve, reject) => {
         canvas.toBlob(blob => {
           if (blob) {
@@ -157,16 +153,14 @@ export class MediaUploadDialogComponent {
         }, 'image/jpeg', 0.9);
       });
 
-      // Create preview URL (for display only, not saved)
-      this.videoThumbnailUrl.set(URL.createObjectURL(blob));
+      const thumbnailUrl = URL.createObjectURL(blob);
+      this.selectedFiles.update(list =>
+        list.map(e => e.file === videoFile ? { ...e, videoThumbnailUrl: thumbnailUrl } : e)
+      );
 
-      // Clean up
       URL.revokeObjectURL(videoUrl);
     } catch (error) {
       this.logger.error('Failed to extract video thumbnail:', error);
-      this.videoThumbnailUrl.set(null);
-    } finally {
-      this.extractingThumbnail.set(false);
     }
   }
 
@@ -185,13 +179,13 @@ export class MediaUploadDialogComponent {
   }
 
   onSubmit(): void {
-    if (this.uploadForm.valid && this.selectedFile()) {
-      this.isUploading.set(true); // Set uploading state to true when upload starts
+    if (this.uploadForm.valid && this.hasFiles()) {
+      this.isUploading.set(true);
       this.dialogRef.close({
-        file: this.selectedFile(),
+        files: this.selectedFiles().map(e => e.file),
         uploadOriginal: this.uploadForm.value.uploadOriginal,
         servers: this.selectedServers(),
-        isUploading: this.isUploading, // Pass the signal to the parent component
+        isUploading: this.isUploading,
       });
     }
   }
@@ -214,6 +208,10 @@ export class MediaUploadDialogComponent {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   }
 
+  totalSize = computed(() => {
+    return this.selectedFiles().reduce((sum, entry) => sum + entry.file.size, 0);
+  });
+
   // Drag and drop handlers
   onDragOver(event: DragEvent): void {
     event.preventDefault();
@@ -234,8 +232,7 @@ export class MediaUploadDialogComponent {
 
     const files = event.dataTransfer?.files;
     if (files && files.length > 0) {
-      // Take only the first file
-      this.processFile(files[0]);
+      this.addFiles(Array.from(files));
     }
   }
 }
