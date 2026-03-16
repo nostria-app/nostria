@@ -6,6 +6,7 @@ import { DatabaseService } from './database.service';
 import { AccountStateService } from './account-state.service';
 import { PublishService } from './publish.service';
 import { AccountRelayService } from './relays/account-relay';
+import { UserRelayService } from './relays/user-relay';
 import { DeletionFilterService } from './deletion-filter.service';
 
 /**
@@ -80,6 +81,7 @@ export class CollectionSetsService {
   private accountState = inject(AccountStateService);
   private publishService = inject(PublishService);
   private accountRelay = inject(AccountRelayService);
+  private userRelay = inject(UserRelayService);
   private deletionFilter = inject(DeletionFilterService);
 
   // Reactive signal for interest sets - shared across all consumers
@@ -124,17 +126,23 @@ export class CollectionSetsService {
    */
   async getPreferredEmojis(pubkey: string): Promise<PreferredEmojiSet[]> {
     try {
-      // First check local database for faster loading
+      // Load from local database first
       await this.database.init();
       let events = await this.database.getEventsByPubkeyAndKind(pubkey, PREFERRED_EMOJI_KIND);
 
-      // If no local data, fetch from relays
-      if (events.length === 0) {
-        events = await this.accountRelay.getEventsByPubkeyAndKind(pubkey, PREFERRED_EMOJI_KIND);
-        // Save to local database for next time
-        for (const event of events) {
-          await this.database.saveEvent(event);
+      // Always also fetch from relays to pick up edits from other devices
+      try {
+        const relayEvents = await this.userRelay.getEventsByPubkeyAndKind(pubkey, PREFERRED_EMOJI_KIND);
+        if (relayEvents.length > 0) {
+          // Merge relay events into local events for immediate use
+          events = [...events, ...relayEvents];
+          // Persist newer events to database in the background
+          for (const relayEvent of relayEvents) {
+            await this.database.saveReplaceableEvent(relayEvent);
+          }
         }
+      } catch (relayError) {
+        this.logger.warn('Failed to sync kind 10030 from relays, using local data:', relayError);
       }
 
       this.logger.info(`Found ${events.length} kind 10030 events for pubkey ${pubkey.substring(0, 8)}...`);
@@ -242,17 +250,23 @@ export class CollectionSetsService {
    */
   async getEmojiSets(pubkey: string): Promise<EmojiSet[]> {
     try {
-      // First check local database for faster loading
+      // Load from local database first
       await this.database.init();
       let events = await this.database.getEventsByPubkeyAndKind(pubkey, EMOJI_SET_KIND);
 
-      // If no local data, fetch from relays
-      if (events.length === 0) {
-        events = await this.accountRelay.getEventsByPubkeyAndKind(pubkey, EMOJI_SET_KIND);
-        // Save to local database for next time
-        for (const event of events) {
-          await this.database.saveEvent(event);
+      // Always also fetch from relays to pick up edits from other devices
+      try {
+        const relayEvents = await this.userRelay.getEventsByPubkeyAndKind(pubkey, EMOJI_SET_KIND);
+        if (relayEvents.length > 0) {
+          // Merge relay events into local events for immediate use
+          events = [...events, ...relayEvents];
+          // Persist newer events to database in the background
+          for (const relayEvent of relayEvents) {
+            await this.database.saveReplaceableEvent(relayEvent);
+          }
         }
+      } catch (relayError) {
+        this.logger.warn('Failed to sync kind 30030 from relays, using local data:', relayError);
       }
 
       this.logger.info(`Found ${events.length} kind 30030 events for pubkey ${pubkey.substring(0, 8)}...`);
