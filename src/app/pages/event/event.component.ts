@@ -471,7 +471,7 @@ export class EventPageComponent {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((publishEvent) => {
         const relayEvent = publishEvent as PublishRelayResultEvent;
-        if (!relayEvent.success || relayEvent.event.kind !== 1) {
+        if (!relayEvent.success || (relayEvent.event.kind !== 1 && relayEvent.event.kind !== 1111)) {
           return;
         }
         this.onReplyPublished(relayEvent.event);
@@ -806,19 +806,39 @@ export class EventPageComponent {
       return;
     }
 
-    const tags = this.eventService.getEventTags(event);
-    if (!tags.rootId && !tags.replyId) {
-      return;
-    }
-
     const threadRootId = this.parentEvents()[0]?.id || currentEvent.id;
     const knownIds = this.collectKnownThreadEventIds();
+    let belongsToThread = false;
 
-    const isDirectReplyToCurrent = tags.replyId === currentEvent.id || (!tags.replyId && tags.rootId === currentEvent.id);
-    const repliesToKnownEvent = !!tags.replyId && knownIds.has(tags.replyId);
-    const isInCurrentThreadRoot = tags.rootId === threadRootId || tags.rootId === currentEvent.id;
+    if (event.kind === 1111) {
+      // NIP-22: uppercase E = root scope, lowercase e = parent scope
+      const rootETag = event.tags.find(t => t[0] === 'E');
+      const parentETag = event.tags.find(t => t[0] === 'e');
+      const rootATag = event.tags.find(t => t[0] === 'A');
 
-    if (!isDirectReplyToCurrent && !(isInCurrentThreadRoot && repliesToKnownEvent)) {
+      const nip22RootId = rootETag?.[1] || rootATag?.[1];
+      const nip22ParentId = parentETag?.[1];
+
+      const isRootMatch = nip22RootId === threadRootId || nip22RootId === currentEvent.id;
+      const isDirectReply = nip22ParentId === currentEvent.id || nip22ParentId === threadRootId;
+      const repliesToKnown = !!nip22ParentId && knownIds.has(nip22ParentId);
+
+      belongsToThread = isDirectReply || (isRootMatch && repliesToKnown);
+    } else {
+      // NIP-10: standard e-tag threading
+      const tags = this.eventService.getEventTags(event);
+      if (!tags.rootId && !tags.replyId) {
+        return;
+      }
+
+      const isDirectReplyToCurrent = tags.replyId === currentEvent.id || (!tags.replyId && tags.rootId === currentEvent.id);
+      const repliesToKnownEvent = !!tags.replyId && knownIds.has(tags.replyId);
+      const isInCurrentThreadRoot = tags.rootId === threadRootId || tags.rootId === currentEvent.id;
+
+      belongsToThread = isDirectReplyToCurrent || (isInCurrentThreadRoot && repliesToKnownEvent);
+    }
+
+    if (!belongsToThread) {
       return;
     }
 

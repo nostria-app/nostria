@@ -2316,6 +2316,40 @@ export class EventComponent implements AfterViewInit, OnDestroy {
           event: ev,
         },
       });
+    } else if (ev.kind === 1111) {
+      // NIP-22: replying to a comment — extract root event info from the comment's tags
+      const rootETag = ev.tags.find(t => t[0] === 'E');
+      const rootATag = ev.tags.find(t => t[0] === 'A');
+      const rootKTag = ev.tags.find(t => t[0] === 'K');
+      const rootPTag = ev.tags.find(t => t[0] === 'P');
+
+      const rootKind = rootKTag ? parseInt(rootKTag[1]) : 1;
+      const rootPubkey = rootPTag?.[1] || rootETag?.[3] || '';
+
+      // Reconstruct minimal root event for buildCommentEvent
+      let rootTags: string[][] = [];
+      let rootId = '';
+
+      if (rootATag) {
+        // Addressable root — extract d-tag from A tag value (kind:pubkey:d-tag)
+        const parts = rootATag[1].split(':');
+        rootTags = [['d', parts.slice(2).join(':')]];
+      }
+      if (rootETag) {
+        rootId = rootETag[1];
+      }
+
+      const rootEvent = {
+        id: rootId,
+        pubkey: rootPubkey,
+        kind: rootKind,
+        content: '',
+        tags: rootTags,
+        created_at: 0,
+        sig: '',
+      } as Event;
+
+      this.eventService.createCommentReply(rootEvent, ev);
     } else {
       this.eventService.createComment(ev);
     }
