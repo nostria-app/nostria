@@ -192,7 +192,8 @@ function extractMetaContent(html: string, tag: string): string {
   const escapedTag = tag.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
   const byProperty = new RegExp(`<meta\\s+property=["']${escapedTag}["']\\s+content=(['"])([\\s\\S]*?)\\1`, 'i');
   const byName = new RegExp(`<meta\\s+name=["']${escapedTag}["']\\s+content=(['"])([\\s\\S]*?)\\1`, 'i');
-  return byProperty.exec(html)?.[2] || byName.exec(html)?.[2] || '';
+  const raw = byProperty.exec(html)?.[2] || byName.exec(html)?.[2] || '';
+  return unescapeHtmlEntities(raw);
 }
 
 function extractMetaContents(html: string, tag: string): string[] {
@@ -203,7 +204,7 @@ function extractMetaContents(html: string, tag: string): string[] {
   const values: string[] = [];
   for (const regex of [byProperty, byName]) {
     for (const match of html.matchAll(regex)) {
-      const value = match[2]?.trim();
+      const value = unescapeHtmlEntities(match[2]?.trim() ?? '');
       if (value && !values.includes(value)) {
         values.push(value);
       }
@@ -215,7 +216,16 @@ function extractMetaContents(html: string, tag: string): string[] {
 
 function extractTitleContent(html: string): string {
   const titleMatch = html.match(/<title>([\s\S]*?)<\/title>/i);
-  return titleMatch?.[1]?.trim() || '';
+  return unescapeHtmlEntities(titleMatch?.[1]?.trim() || '');
+}
+
+function unescapeHtmlEntities(value: string): string {
+  return value
+    .replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>');
 }
 
 function escapeHtmlAttribute(value: string): string {
