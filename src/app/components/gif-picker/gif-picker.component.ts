@@ -18,10 +18,13 @@ import { Event as NostrEvent } from 'nostr-tools';
 import { AccountStateService } from '../../services/account-state.service';
 import { AccountLocalStateService, FavoriteGif } from '../../services/account-local-state.service';
 import { EmojiSetService } from '../../services/emoji-set.service';
+import { CollectionSetsService } from '../../services/collection-sets.service';
 import { UserDataService } from '../../services/user-data.service';
 import { RelayPoolService } from '../../services/relays/relay-pool';
 import { DatabaseService } from '../../services/database.service';
 import { LoggerService } from '../../services/logger.service';
+
+type GifSource = 'own' | 'public';
 
 interface GifEntry {
   shortcode: string;
@@ -46,18 +49,30 @@ interface GifSet {
   ],
   template: `
     <div class="gif-picker" (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()">
-      <!-- Search -->
-      <div class="gif-search">
-        <mat-icon class="search-icon">search</mat-icon>
-        <input type="text" placeholder="Search GIFs..."
-          [value]="searchQuery()"
-          (input)="searchQuery.set($any($event.target).value)"
-          (keydown.escape)="searchQuery.set('')" />
-        @if (searchQuery()) {
-        <button class="clear-btn" (click)="searchQuery.set('')">
-          <mat-icon>close</mat-icon>
-        </button>
-        }
+      <!-- Search + source toggle -->
+      <div class="gif-toolbar">
+        <div class="gif-search">
+          <mat-icon class="search-icon">search</mat-icon>
+          <input type="text" placeholder="Search GIFs..."
+            [value]="searchQuery()"
+            (input)="searchQuery.set($any($event.target).value)"
+            (keydown.escape)="searchQuery.set('')" />
+          @if (searchQuery()) {
+          <button class="clear-btn" (click)="searchQuery.set('')">
+            <mat-icon>close</mat-icon>
+          </button>
+          }
+        </div>
+        <div class="source-toggle">
+          <button class="toggle-btn" [class.active]="gifSource() === 'own'" (click)="setSource('own')"
+            matTooltip="Your GIF sets">
+            Mine
+          </button>
+          <button class="toggle-btn" [class.active]="gifSource() === 'public'" (click)="setSource('public')"
+            matTooltip="Public GIF sets from relays">
+            Public
+          </button>
+        </div>
       </div>
 
       <div class="gif-content">
@@ -152,12 +167,17 @@ interface GifSet {
       height: 100%;
     }
 
+    .gif-toolbar {
+      display: flex;
+      flex-direction: column;
+      border-bottom: 1px solid var(--mat-sys-outline-variant);
+    }
+
     .gif-search {
       display: flex;
       align-items: center;
       gap: 6px;
       padding: 8px;
-      border-bottom: 1px solid var(--mat-sys-outline-variant);
 
       .search-icon {
         font-size: 20px;
@@ -191,6 +211,34 @@ interface GifSet {
           font-size: 18px;
           width: 18px;
           height: 18px;
+        }
+      }
+    }
+
+    .source-toggle {
+      display: flex;
+      gap: 4px;
+      padding: 0 8px 8px;
+
+      .toggle-btn {
+        flex: 1;
+        background: var(--mat-sys-surface-container);
+        border: 1px solid var(--mat-sys-outline-variant);
+        border-radius: 16px;
+        padding: 4px 12px;
+        font-size: 12px;
+        cursor: pointer;
+        color: var(--mat-sys-on-surface-variant);
+        transition: all 0.15s;
+
+        &.active {
+          background: var(--mat-sys-primary-container);
+          color: var(--mat-sys-on-primary-container);
+          border-color: var(--mat-sys-primary);
+        }
+
+        &:hover:not(.active) {
+          background: var(--mat-sys-surface-container-high);
         }
       }
     }
@@ -321,6 +369,7 @@ export class GifPickerComponent implements OnDestroy {
   private readonly accountState = inject(AccountStateService);
   private readonly accountLocalState = inject(AccountLocalStateService);
   private readonly emojiSetService = inject(EmojiSetService);
+  private readonly collectionSets = inject(CollectionSetsService);
   private readonly userData = inject(UserDataService);
   private readonly relayPool = inject(RelayPoolService);
   private readonly database = inject(DatabaseService);
@@ -329,10 +378,16 @@ export class GifPickerComponent implements OnDestroy {
   gifSelected = output<string>();
 
   searchQuery = signal('');
+  gifSource = signal<GifSource>('public');
   isLoading = signal(false);
-  gifSets = signal<GifSet[]>([]);
+  ownGifSets = signal<GifSet[]>([]);
+  publicGifSets = signal<GifSet[]>([]);
   favorites = signal<FavoriteGif[]>([]);
   private favoriteUrls = signal<Set<string>>(new Set());
+  private ownLoaded = false;
+  private publicLoaded = false;
+
+  gifSets = computed(() => this.gifSource() === 'own' ? this.ownGifSets() : this.publicGifSets());
 
   private allGifs = computed<GifEntry[]>(() => {
     const entries: GifEntry[] = [];
@@ -356,12 +411,23 @@ export class GifPickerComponent implements OnDestroy {
       if (!pubkey) return;
       untracked(() => {
         this.loadFavorites(pubkey);
-        this.loadGifSets(pubkey);
+        this.loadPublicGifSets(pubkey);
       });
     });
   }
 
   ngOnDestroy(): void { }
+
+  setSource(source: GifSource) {
+    this.gifSource.set(source);
+    const pubkey = this.accountState.pubkey();
+    if (!pubkey) return;
+    if (source === 'public' && !this.publicLoaded) {
+      this.loadPublicGifSets(pubkey);
+    } else if (source === 'own' && !this.ownLoaded) {
+      this.loadOwnGifSets(pubkey);
+    }
+  }
 
   private loadFavorites(pubkey: string) {
     const favs = this.accountLocalState.getFavoriteGifs(pubkey);
@@ -397,29 +463,55 @@ export class GifPickerComponent implements OnDestroy {
     }
   }
 
-  private async loadGifSets(pubkey: string): Promise<void> {
+  private async loadOwnGifSets(pubkey: string): Promise<void> {
+    if (this.ownLoaded) return;
     this.isLoading.set(true);
     try {
       const sets: GifSet[] = [];
 
-      // 1. Load from user's installed emoji sets (kind 10030 references)
-      const userSets = await this.loadUserGifSets(pubkey);
-      sets.push(...userSets);
+      // 1. Load user's own kind 30030 sets with "gifs" tag (fast, from local DB)
+      const allUserSets = await this.collectionSets.getEmojiSets(pubkey);
+      for (const emojiSet of allUserSets) {
+        if (!emojiSet.tags.some(t => t.toLowerCase() === 'gifs')) continue;
+        if (emojiSet.emojis.length === 0) continue;
+        sets.push({
+          id: `30030:${pubkey}:${emojiSet.identifier}`,
+          title: emojiSet.name,
+          gifs: emojiSet.emojis.map(e => ({ shortcode: e.shortcode, url: e.url })),
+        });
+      }
 
-      // 2. Query relays for kind 30030 events with #t=gifs
-      const relaySets = await this.loadRelayGifSets(sets.map(s => s.id));
-      sets.push(...relaySets);
+      // 2. Load from user's installed emoji sets (kind 10030 references)
+      const installedSets = await this.loadInstalledGifSets(pubkey, sets.map(s => s.id));
+      sets.push(...installedSets);
 
-      this.gifSets.set(sets);
+      this.ownGifSets.set(sets);
+      this.ownLoaded = true;
     } catch (error) {
-      this.logger.error('Error loading GIF sets:', error);
+      this.logger.error('Error loading own GIF sets:', error);
     } finally {
       this.isLoading.set(false);
     }
   }
 
-  private async loadUserGifSets(pubkey: string): Promise<GifSet[]> {
+  private async loadPublicGifSets(pubkey: string): Promise<void> {
+    if (this.publicLoaded) return;
+    this.isLoading.set(true);
+    try {
+      const ownIds = this.ownGifSets().map(s => s.id);
+      const sets = await this.loadRelayGifSets(ownIds);
+      this.publicGifSets.set(sets);
+      this.publicLoaded = true;
+    } catch (error) {
+      this.logger.error('Error loading public GIF sets:', error);
+    } finally {
+      this.isLoading.set(false);
+    }
+  }
+
+  private async loadInstalledGifSets(pubkey: string, existingIds: string[]): Promise<GifSet[]> {
     const sets: GifSet[] = [];
+    const existingIdSet = new Set(existingIds);
     try {
       const emojiListRecord = await this.userData.getEventByPubkeyAndKind(pubkey, 10030, { save: true });
       if (!emojiListRecord) return sets;
@@ -432,6 +524,9 @@ export class GifPickerComponent implements OnDestroy {
       for (const ref of emojiSetRefs) {
         const [, refPubkey, identifier] = ref[1].split(':');
         if (!refPubkey || !identifier) continue;
+
+        const refId = `30030:${refPubkey}:${identifier}`;
+        if (existingIdSet.has(refId)) continue;
 
         const emojiSet = await this.emojiSetService.getEmojiSet(refPubkey, identifier);
         if (!emojiSet) continue;

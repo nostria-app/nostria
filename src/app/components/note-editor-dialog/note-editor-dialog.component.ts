@@ -2206,7 +2206,11 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
    * Insert a GIF URL at the current cursor position
    */
   insertGifUrl(url: string): void {
-    this.insertEmoji('\n' + url + '\n');
+    const textarea = this.contentTextarea?.nativeElement;
+    const currentContent = this.content();
+    const start = textarea?.selectionStart ?? currentContent.length;
+    const needsNewlineBefore = start > 0 && currentContent[start - 1] !== '\n';
+    this.insertEmoji((needsNewlineBefore ? '\n' : '') + url + '\n');
   }
 
   /**
