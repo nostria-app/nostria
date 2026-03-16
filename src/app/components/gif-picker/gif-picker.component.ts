@@ -501,14 +501,69 @@ export class GifPickerComponent implements OnDestroy {
     this.isLoading.set(true);
     try {
       const ownIds = this.ownGifSets().map(s => s.id);
-      const sets = await this.loadRelayGifSets(ownIds);
-      this.publicGifSets.set(sets);
+      const ownIdSet = new Set(ownIds);
+
+      // 1. Load cached GIF sets from local database first (instant)
+      const cachedSets = await this.loadCachedPublicGifSets(ownIdSet);
+      if (cachedSets.length > 0) {
+        this.publicGifSets.set(cachedSets);
+        this.isLoading.set(false);
+      }
+
+      // 2. Fetch from relays in background to pick up new sets
+      const relaySets = await this.loadRelayGifSets(ownIdSet);
+      if (relaySets.length > 0) {
+        // Merge: relay sets take priority (fresher), then cached-only sets
+        const relayIdSet = new Set(relaySets.map(s => s.id));
+        const cachedOnly = cachedSets.filter(s => !relayIdSet.has(s.id));
+        this.publicGifSets.set([...relaySets, ...cachedOnly]);
+      }
+
       this.publicLoaded = true;
     } catch (error) {
       this.logger.error('Error loading public GIF sets:', error);
     } finally {
       this.isLoading.set(false);
     }
+  }
+
+  private async loadCachedPublicGifSets(existingIdSet: Set<string>): Promise<GifSet[]> {
+    const sets: GifSet[] = [];
+    try {
+      await this.database.init();
+      const cachedEvents = await this.database.getEventsByKind(30030);
+      const seen = new Map<string, NostrEvent>();
+      for (const event of cachedEvents) {
+        const hasGifsTag = event.tags.some(
+          (t: string[]) => t[0] === 't' && t[1]?.toLowerCase() === 'gifs'
+        );
+        if (!hasGifsTag) continue;
+        const dTag = event.tags.find((t: string[]) => t[0] === 'd')?.[1];
+        if (!dTag) continue;
+        const key = `30030:${event.pubkey}:${dTag}`;
+        const existing = seen.get(key);
+        if (!existing || event.created_at > existing.created_at) {
+          seen.set(key, event);
+        }
+      }
+      for (const [key, event] of seen) {
+        if (existingIdSet.has(key)) continue;
+        const title = event.tags.find((t: string[]) => t[0] === 'title')?.[1] ||
+          event.tags.find((t: string[]) => t[0] === 'd')?.[1] || 'Untitled';
+        const gifs: { shortcode: string; url: string }[] = [];
+        for (const tag of event.tags) {
+          if (tag[0] === 'emoji' && tag[1] && tag[2]) {
+            gifs.push({ shortcode: tag[1], url: tag[2] });
+          }
+        }
+        if (gifs.length > 0) {
+          sets.push({ id: key, title, gifs });
+        }
+      }
+    } catch (error) {
+      this.logger.error('Error loading cached public GIF sets:', error);
+    }
+    return sets;
   }
 
   private async loadInstalledGifSets(pubkey: string, existingIds: string[]): Promise<GifSet[]> {
@@ -550,9 +605,8 @@ export class GifPickerComponent implements OnDestroy {
     return sets;
   }
 
-  private async loadRelayGifSets(existingIds: string[]): Promise<GifSet[]> {
+  private async loadRelayGifSets(existingIdSet: Set<string>): Promise<GifSet[]> {
     const sets: GifSet[] = [];
-    const existingIdSet = new Set(existingIds);
 
     try {
       // Query well-known relays for emoji sets tagged with "gifs"
@@ -596,8 +650,8 @@ export class GifPickerComponent implements OnDestroy {
 
         if (gifs.length > 0) {
           sets.push({ id: key, title, gifs });
-          // Cache for future use
-          await this.database.saveEvent(event);
+          // Cache for future use (replaceable event dedup)
+          await this.database.saveReplaceableEvent(event);
         }
       }
     } catch (error) {

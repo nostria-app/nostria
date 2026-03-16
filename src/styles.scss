@@ -310,12 +310,14 @@ html.locale-fa {
   width: min(360px, calc(100vw - 24px)) !important;
   min-width: min(360px, calc(100vw - 24px)) !important;
   max-width: min(360px, calc(100vw - 24px)) !important;
-  overflow: hidden !important;
 }
 
 .mat-mdc-menu-panel.gif-picker-menu .mat-mdc-menu-content {
   padding: 0 !important;
   overflow: hidden !important;
+  display: flex;
+  flex-direction: column;
+  max-height: inherit;
 }
 
 // Emoji picker menu panel - needs wider max-width
