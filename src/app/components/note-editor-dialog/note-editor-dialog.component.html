@@ -497,14 +497,6 @@
         </button>
       </mat-menu>
 
-      @if (!inlineMode()) {
-      <button mat-icon-button type="button" class="desktop-action action-priority-high"
-        (click)="toggleAdvancedOptions()" [color]="showAdvancedOptions() ? 'primary' : ''"
-        matTooltip="Advanced options">
-        <mat-icon>settings</mat-icon>
-      </button>
-      }
-
       <!-- Emoji picker button (shown in both dialog and inline modes) -->
       @if (layout.isHandset()) {
       <button mat-icon-button type="button" class="desktop-action action-priority-medium"
