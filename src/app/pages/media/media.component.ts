@@ -649,6 +649,15 @@ export class MediaComponent {
     }
   }
 
+  async copyLink(url: string): Promise<void> {
+    try {
+      await navigator.clipboard.writeText(url);
+      this.snackBar.open('Link copied to clipboard', 'Close', { duration: 2000 });
+    } catch {
+      this.snackBar.open('Failed to copy link', 'Close', { duration: 2000 });
+    }
+  }
+
   refreshMedia(): void {
     this.mediaService.getFiles();
   }
