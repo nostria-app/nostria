@@ -305,6 +305,19 @@ html.locale-fa {
   height: 10px;
 }
 
+// GIF picker menu panel - single scrollbar inside gif-content only
+.mat-mdc-menu-panel.gif-picker-menu {
+  width: min(360px, calc(100vw - 24px)) !important;
+  min-width: min(360px, calc(100vw - 24px)) !important;
+  max-width: min(360px, calc(100vw - 24px)) !important;
+  overflow: hidden !important;
+}
+
+.mat-mdc-menu-panel.gif-picker-menu .mat-mdc-menu-content {
+  padding: 0 !important;
+  overflow: hidden !important;
+}
+
 // Emoji picker menu panel - needs wider max-width
 .mat-mdc-menu-panel.emoji-picker-menu {
   max-width: none;

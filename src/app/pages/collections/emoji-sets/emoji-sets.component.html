@@ -224,13 +224,11 @@
             </div>
             }
             <div class="emoji-grid">
-              @for (emoji of set.emojis.slice(0, 12); track $index) {
-              <span class="emoji-item" [matTooltip]="emoji.shortcode">
+              @for (emoji of set.emojis; track $index) {
+              <button mat-icon-button class="emoji-item" [matTooltip]="emoji.shortcode"
+                (click)="openEmojiPreview(emoji, $event)">
                 <img [src]="emoji.url" [alt]="emoji.shortcode" class="emoji-image">
-              </span>
-              }
-              @if (set.emojis.length > 12) {
-              <span class="emoji-more" i18n="@@emoji-sets.more-emojis">+{{ set.emojis.length - 12 }}</span>
+              </button>
               }
             </div>
           </div>

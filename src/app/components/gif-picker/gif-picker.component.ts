@@ -160,6 +160,7 @@ interface GifSet {
       width: 100%;
       max-height: 400px;
       min-height: 200px;
+      overflow: hidden;
     }
 
     :host-context(.gif-picker-dialog) .gif-picker {
@@ -244,9 +245,10 @@ interface GifSet {
     }
 
     .gif-content {
+      flex: 1;
+      min-height: 0;
       overflow-y: auto;
       overflow-x: hidden;
-      max-height: 350px;
       padding: 6px;
       scrollbar-gutter: stable both-edges;
       scrollbar-width: thin;
