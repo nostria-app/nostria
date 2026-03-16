@@ -48,10 +48,16 @@ export interface PreferredEmojiSet {
   emojis: EmojiItem[];
 }
 
+export interface EmojiEntry {
+  shortcode: string;
+  url: string;
+}
+
 export interface EmojiSet {
   identifier: string; // d-tag
   name: string;
-  emojis: string[]; // shortcodes or emoji characters
+  emojis: EmojiEntry[];
+  tags: string[]; // t-tags for categorization
   eventId: string;
   created_at: number;
 }
@@ -251,21 +257,35 @@ export class CollectionSetsService {
 
       this.logger.info(`Found ${events.length} kind 30030 events for pubkey ${pubkey.substring(0, 8)}...`);
 
-      const sets: EmojiSet[] = [];
-
+      // Deduplicate by d-tag, keeping only the latest event per identifier
+      const latestByDTag = new Map<string, typeof events[0]>();
       for (const event of events) {
         const dTag = event.tags.find(tag => tag[0] === 'd')?.[1];
         if (!dTag) continue;
+        const existing = latestByDTag.get(dTag);
+        if (!existing || event.created_at > existing.created_at) {
+          latestByDTag.set(dTag, event);
+        }
+      }
+
+      const sets: EmojiSet[] = [];
+
+      for (const [dTag, event] of latestByDTag) {
 
         const name = event.tags.find(tag => tag[0] === 'title' || tag[0] === 'name')?.[1] || dTag;
-        const emojis = event.tags
-          .filter(tag => tag[0] === 'emoji' && tag[1])
-          .map(tag => tag[1]); // Get shortcode or emoji character
+        const emojis: EmojiEntry[] = event.tags
+          .filter(tag => tag[0] === 'emoji' && tag[1] && tag[2])
+          .map(tag => ({ shortcode: tag[1], url: tag[2] }));
+
+        const tags = event.tags
+          .filter(tag => tag[0] === 't' && tag[1])
+          .map(tag => tag[1]);
 
         sets.push({
           identifier: dTag,
           name,
           emojis,
+          tags,
           eventId: event.id,
           created_at: event.created_at,
         });
@@ -281,7 +301,7 @@ export class CollectionSetsService {
   /**
    * Create or update an emoji set (kind 30030)
    */
-  async saveEmojiSet(identifier: string, name: string, emojis: string[]): Promise<boolean> {
+  async saveEmojiSet(identifier: string, name: string, emojis: EmojiEntry[], tags: string[] = []): Promise<boolean> {
     const pubkey = this.accountState.pubkey();
     if (!pubkey) {
       this.logger.error('No authenticated user');
@@ -289,19 +309,27 @@ export class CollectionSetsService {
     }
 
     try {
-      // Build tags
-      const tags: string[][] = [
+      // Build event tags
+      const eventTags: string[][] = [
         ['d', identifier],
         ['name', name],
       ];
 
       // Add emoji tags
       for (const emoji of emojis) {
-        tags.push(['emoji', emoji]);
+        eventTags.push(['emoji', emoji.shortcode, emoji.url]);
+      }
+
+      // Add t-tags for categorization
+      for (const tag of tags) {
+        const trimmed = tag.trim().toLowerCase();
+        if (trimmed) {
+          eventTags.push(['t', trimmed]);
+        }
       }
 
       // Create event
-      const event = this.nostrService.createEvent(EMOJI_SET_KIND, '', tags);
+      const event = this.nostrService.createEvent(EMOJI_SET_KIND, '', eventTags);
       const signedEvent = await this.nostrService.signEvent(event);
 
       // Save to database

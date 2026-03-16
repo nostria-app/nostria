@@ -10,9 +10,11 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatChipsModule } from '@angular/material/chips';
+import { MatMenuModule } from '@angular/material/menu';
 import { MatDialog } from '@angular/material/dialog';
 import { Event as NostrEvent } from 'nostr-tools';
-import { CollectionSetsService, EmojiSet, EmojiItem, PreferredEmojiSet } from '../../../services/collection-sets.service';
+import { CollectionSetsService, EmojiSet, EmojiEntry, EmojiItem, PreferredEmojiSet } from '../../../services/collection-sets.service';
 import { AccountStateService } from '../../../services/account-state.service';
 import { LoggerService } from '../../../services/logger.service';
 import { ConfirmDialogComponent } from '../../../components/confirm-dialog/confirm-dialog.component';
@@ -35,6 +37,7 @@ interface SuggestedEmojiPack extends SuggestedEmojiPackDef {
   previewEmojis: { shortcode: string; url: string }[];
   isLoading: boolean;
   isInstalling: boolean;
+  event: NostrEvent | null;
 }
 
 @Component({
@@ -51,6 +54,8 @@ interface SuggestedEmojiPack extends SuggestedEmojiPackDef {
     MatProgressSpinnerModule,
     MatTooltipModule,
     MatSnackBarModule,
+    MatChipsModule,
+    MatMenuModule,
   ],
   templateUrl: './emoji-sets.component.html',
   styleUrl: './emoji-sets.component.scss',
@@ -77,9 +82,12 @@ export class EmojiSetsComponent implements OnInit {
 
   // Editing state
   isEditingSet = signal(false);
-  editingSetId = signal<string | null>(null);
+  isEditingExisting = signal(false);
+  editingSetId = signal('');
   editingSetName = signal('');
   editingSetEmojis = signal('');
+  editingSetTags = signal<string[]>([]);
+  newTagInput = signal('');
 
   // Suggested emoji packs
   suggestedPacks = signal<SuggestedEmojiPack[]>([]);
@@ -109,7 +117,7 @@ export class EmojiSetsComponent implements OnInit {
     return refs;
   });
 
-async ngOnInit() {
+  async ngOnInit() {
     this.twoColumnLayout.setSplitView();
     await this.loadData();
     // Load suggested packs after main data
@@ -143,24 +151,67 @@ async ngOnInit() {
   }
 
   startCreatingSet() {
-    this.editingSetId.set(null);
+    this.isEditingExisting.set(false);
+    this.editingSetId.set(this.generateRandomId());
     this.editingSetName.set('');
     this.editingSetEmojis.set('');
+    this.editingSetTags.set([]);
+    this.newTagInput.set('');
     this.isEditingSet.set(true);
   }
 
+  private generateRandomId(): string {
+    const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+    let result = '';
+    const array = new Uint8Array(12);
+    crypto.getRandomValues(array);
+    for (const byte of array) {
+      result += chars[byte % chars.length];
+    }
+    return result;
+  }
+
+  regenerateId() {
+    this.editingSetId.set(this.generateRandomId());
+  }
+
   startEditingSet(set: EmojiSet) {
+    this.isEditingExisting.set(true);
     this.editingSetId.set(set.identifier);
     this.editingSetName.set(set.name);
-    this.editingSetEmojis.set(set.emojis.join('\n'));
+    this.editingSetEmojis.set(set.emojis.map(e => `${e.shortcode} ${e.url}`).join('\n'));
+    this.editingSetTags.set([...set.tags]);
+    this.newTagInput.set('');
     this.isEditingSet.set(true);
   }
 
   cancelEditingSet() {
     this.isEditingSet.set(false);
-    this.editingSetId.set(null);
+    this.isEditingExisting.set(false);
+    this.editingSetId.set('');
     this.editingSetName.set('');
     this.editingSetEmojis.set('');
+    this.editingSetTags.set([]);
+    this.newTagInput.set('');
+  }
+
+  addTag() {
+    const tag = this.newTagInput().trim().toLowerCase();
+    if (tag && !this.editingSetTags().includes(tag)) {
+      this.editingSetTags.update(tags => [...tags, tag]);
+    }
+    this.newTagInput.set('');
+  }
+
+  removeTag(tag: string) {
+    this.editingSetTags.update(tags => tags.filter(t => t !== tag));
+  }
+
+  onTagKeyPress(event: KeyboardEvent) {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      this.addTag();
+    }
   }
 
   async saveSetEdit() {
@@ -177,11 +228,22 @@ async ngOnInit() {
       return;
     }
 
-    // Parse emojis - one per line or space-separated
-    const emojis = emojisInput
-      .split(/[\n\s]+/)
-      .map(e => e.trim())
-      .filter(e => e.length > 0);
+    // Parse emojis - one per line, format: shortcode url
+    const emojis: EmojiEntry[] = [];
+    const lines = emojisInput.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+
+    for (const line of lines) {
+      const spaceIndex = line.indexOf(' ');
+      if (spaceIndex === -1) {
+        this.snackBar.open(`Invalid format on line: "${line}". Expected: shortcode url`, 'Close', { duration: 5000 });
+        return;
+      }
+      const shortcode = line.substring(0, spaceIndex).trim();
+      const url = line.substring(spaceIndex + 1).trim();
+      if (shortcode && url) {
+        emojis.push({ shortcode, url });
+      }
+    }
 
     if (emojis.length === 0) {
       this.snackBar.open('Please enter at least one emoji', 'Close', { duration: 3000 });
@@ -190,8 +252,8 @@ async ngOnInit() {
 
     this.isLoading.set(true);
     try {
-      const identifier = this.editingSetId() || Date.now().toString();
-      const success = await this.collectionSetsService.saveEmojiSet(identifier, name, emojis);
+      const identifier = this.editingSetId().trim() || this.generateRandomId();
+      const success = await this.collectionSetsService.saveEmojiSet(identifier, name, emojis, this.editingSetTags());
 
       if (success) {
         this.snackBar.open('Emoji set saved successfully', 'Close', { duration: 3000 });
@@ -244,7 +306,7 @@ async ngOnInit() {
     this.layout.openSearchInLeftPanel('kind:30030');
   }
 
-async copyEmoji(emoji: EmojiItem, event: MouseEvent): Promise<void> {
+  async copyEmoji(emoji: EmojiItem, event: MouseEvent): Promise<void> {
     event.stopPropagation();
 
     try {
@@ -259,6 +321,19 @@ async copyEmoji(emoji: EmojiItem, event: MouseEvent): Promise<void> {
     }
   }
 
+  async copyPackData(pack: SuggestedEmojiPack): Promise<void> {
+    if (!pack.event) {
+      this.snackBar.open('Event data not available', 'Close', { duration: 3000 });
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(pack.event, null, 2));
+      this.snackBar.open('Event data copied to clipboard', 'Close', { duration: 3000 });
+    } catch (err) {
+      this.logger.error('Failed to copy event data:', err);
+    }
+  }
+
   /**
    * Load suggested emoji packs with preview emojis
    */
@@ -269,6 +344,7 @@ async copyEmoji(emoji: EmojiItem, event: MouseEvent): Promise<void> {
       previewEmojis: [],
       isLoading: true,
       isInstalling: false,
+      event: null,
     }));
     this.suggestedPacks.set(packs);
 
@@ -277,23 +353,23 @@ async copyEmoji(emoji: EmojiItem, event: MouseEvent): Promise<void> {
       try {
         // First try the normal EmojiSetService method
         let emojiSet = await this.emojiSetService.getEmojiSet(pack.pubkey, pack.identifier);
-        
+
         // If not found OR found but empty, and we have relay hints, try fetching from specific relays
         if ((!emojiSet || emojiSet.emojis.size === 0) && pack.relayHints && pack.relayHints.length > 0) {
           const event = await this.fetchEmojiSetFromRelays(pack.pubkey, pack.identifier, pack.relayHints);
           if (event) {
             // Parse the event to extract emojis
             const emojis = new Map<string, string>();
-            const title = event.tags.find(tag => tag[0] === 'title')?.[1] || 
-                         event.tags.find(tag => tag[0] === 'd')?.[1] || 
-                         pack.title;
-            
+            const title = event.tags.find(tag => tag[0] === 'title')?.[1] ||
+              event.tags.find(tag => tag[0] === 'd')?.[1] ||
+              pack.title;
+
             for (const tag of event.tags) {
               if (tag[0] === 'emoji' && tag[1] && tag[2]) {
                 emojis.set(tag[1], tag[2]);
               }
             }
-            
+
             if (emojis.size > 0) {
               emojiSet = {
                 id: `30030:${pack.pubkey}:${pack.identifier}`,
@@ -301,13 +377,13 @@ async copyEmoji(emoji: EmojiItem, event: MouseEvent): Promise<void> {
                 emojis,
                 event,
               };
-              
+
               // Save to database for future use
               await this.database.saveEvent(event);
             }
           }
         }
-        
+
         if (emojiSet) {
           // Get first 6 emojis as preview
           const previewEmojis: { shortcode: string; url: string }[] = [];
@@ -319,6 +395,7 @@ async copyEmoji(emoji: EmojiItem, event: MouseEvent): Promise<void> {
           }
           pack.previewEmojis = previewEmojis;
           pack.title = emojiSet.title || pack.title;
+          pack.event = emojiSet.event || null;
         }
       } catch (error) {
         this.logger.error(`Error loading suggested pack ${pack.identifier}:`, error);
@@ -334,8 +411,8 @@ async copyEmoji(emoji: EmojiItem, event: MouseEvent): Promise<void> {
    * Fetch emoji set from specific relays using relay hints
    */
   private async fetchEmojiSetFromRelays(
-    pubkey: string, 
-    identifier: string, 
+    pubkey: string,
+    identifier: string,
     relayHints: string[]
   ): Promise<NostrEvent | null> {
     try {
@@ -384,7 +461,7 @@ async copyEmoji(emoji: EmojiItem, event: MouseEvent): Promise<void> {
     try {
       // Get current kind 10030 event
       const currentEvent = await this.database.getEventByPubkeyAndKind(pubkey, 10030);
-      
+
       // Build new tags array
       let tags: string[][] = [];
       if (currentEvent) {
@@ -394,7 +471,7 @@ async copyEmoji(emoji: EmojiItem, event: MouseEvent): Promise<void> {
       // Check if already installed
       const aTagValue = `30030:${pack.pubkey}:${pack.identifier}`;
       const alreadyInstalled = tags.some(tag => tag[0] === 'a' && tag[1] === aTagValue);
-      
+
       if (alreadyInstalled) {
         this.snackBar.open('Emoji pack already installed', 'Close', { duration: 3000 });
         return;
@@ -418,9 +495,9 @@ async copyEmoji(emoji: EmojiItem, event: MouseEvent): Promise<void> {
       if (result.success) {
         // Clear emoji set cache to force refresh
         this.emojiSetService.clearUserCache(pubkey);
-        
+
         this.snackBar.open(`${pack.title} installed!`, 'Close', { duration: 3000 });
-        
+
         // Reload data to show the new pack
         await this.loadData();
       } else {

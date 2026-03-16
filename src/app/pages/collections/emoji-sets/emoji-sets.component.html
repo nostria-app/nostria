@@ -37,7 +37,7 @@
             <span class="pack-title">{{ pack.title }}</span>
             <div class="pack-action">
               @if (isPackInstalled(pack)) {
-              <mat-icon class="installed-icon" matTooltip="Already installed">check_circle</mat-icon>
+              <button mat-flat-button disabled>Installed</button>
               } @else if (pack.isInstalling) {
               <mat-spinner diameter="20"></mat-spinner>
               } @else {
@@ -45,6 +45,15 @@
                 Install
               </button>
               }
+              <button mat-icon-button [matMenuTriggerFor]="packMenu" class="pack-menu-button">
+                <mat-icon>more_vert</mat-icon>
+              </button>
+              <mat-menu #packMenu="matMenu">
+                <button mat-menu-item (click)="copyPackData(pack)" [disabled]="!pack.event">
+                  <mat-icon>content_copy</mat-icon>
+                  <span>Copy Data</span>
+                </button>
+              </mat-menu>
             </div>
           </div>
           <div class="pack-preview">
@@ -117,11 +126,51 @@
           <input matInput [(ngModel)]="editingSetName" placeholder="My Emojis" />
         </mat-form-field>
 
+        <div class="id-field-container">
+          <mat-form-field appearance="outline" class="id-input">
+            <mat-label>Identifier (d tag)</mat-label>
+            <input matInput [(ngModel)]="editingSetId" placeholder="unique-identifier"
+              [readonly]="isEditingExisting()" />
+            <mat-hint>Unique identifier for this emoji set</mat-hint>
+          </mat-form-field>
+          @if (!isEditingExisting()) {
+          <button mat-icon-button (click)="regenerateId()" matTooltip="Generate new random ID">
+            <mat-icon>refresh</mat-icon>
+          </button>
+          }
+        </div>
+
         <mat-form-field appearance="outline" class="full-width">
           <mat-label i18n="@@emoji-sets.emojis-label">Emojis</mat-label>
-          <textarea matInput [(ngModel)]="editingSetEmojis" placeholder="😀 😃 😄&#10;😁 😆 😅&#10;..."></textarea>
-          <mat-hint i18n="@@emoji-sets.emojis-hint">Enter emojis separated by spaces or one per line</mat-hint>
+          <textarea matInput [(ngModel)]="editingSetEmojis"
+            placeholder="LUL https://example.com/lul.png&#10;catJAM https://example.com/catjam.webp&#10;..."></textarea>
+          <mat-hint i18n="@@emoji-sets.emojis-hint">One emoji per line: shortcode url</mat-hint>
         </mat-form-field>
+
+        <div class="tags-section">
+          <h3>Tags</h3>
+          <div class="tag-input-container">
+            <mat-form-field appearance="outline" class="tag-input">
+              <input matInput [value]="newTagInput()" (input)="newTagInput.set($any($event.target).value)"
+                (keypress)="onTagKeyPress($event)" placeholder="Enter a tag" />
+            </mat-form-field>
+            <button mat-icon-button (click)="addTag()" [disabled]="!newTagInput().trim()">
+              <mat-icon>add</mat-icon>
+            </button>
+          </div>
+
+          @if (editingSetTags().length > 0) {
+          <div class="tags-container">
+            @for (tag of editingSetTags(); track tag) {
+            <mat-chip class="tag-chip" [removable]="true" (removed)="removeTag(tag)">
+              {{ tag }}
+              <mat-icon matChipRemove>cancel</mat-icon>
+            </mat-chip>
+            }
+          </div>
+          }
+          <p class="tags-hint">If your emoji set should be used for gif picker, add "gifs" tag.</p>
+        </div>
 
         <div class="form-actions">
           <button mat-button (click)="cancelEditingSet()" i18n="@@emoji-sets.cancel">Cancel</button>
@@ -159,9 +208,18 @@
               <mat-icon>emoji_emotions</mat-icon>
               <span i18n="@@emoji-sets.emoji-count">{{ set.emojis.length }} emoji(s)</span>
             </div>
+            @if (set.tags.length > 0) {
+            <div class="set-tags">
+              @for (tag of set.tags; track tag) {
+              <mat-chip class="tag-chip-small">{{ tag }}</mat-chip>
+              }
+            </div>
+            }
             <div class="emoji-grid">
               @for (emoji of set.emojis.slice(0, 12); track $index) {
-              <span class="emoji-item">{{ emoji }}</span>
+              <span class="emoji-item" [matTooltip]="emoji.shortcode">
+                <img [src]="emoji.url" [alt]="emoji.shortcode" class="emoji-image">
+              </span>
               }
               @if (set.emojis.length > 12) {
               <span class="emoji-more" i18n="@@emoji-sets.more-emojis">+{{ set.emojis.length - 12 }}</span>
