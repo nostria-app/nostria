@@ -9,11 +9,21 @@
       }
     </button>
 
-    @if (isExpanded()) {
-    <button mat-icon-button (click)="onAddComment()" [matTooltip]="'Add ' + singularLabel().toLowerCase()">
-      <mat-icon>add_comment</mat-icon>
-    </button>
-    }
+    <div class="comments-header-actions">
+      @if (isExpanded() && showKindFilter() && !isKind1Root()) {
+      <mat-button-toggle-group [value]="commentKindFilter()" (change)="onKindFilterChange($event.value)" class="kind-filter-toggle" hideSingleSelectionIndicator>
+        <mat-button-toggle value="all" matTooltip="Show all replies">All</mat-button-toggle>
+        <mat-button-toggle value="nip22" matTooltip="NIP-22 comments (kind 1111)">Comments</mat-button-toggle>
+        <mat-button-toggle value="nip10" matTooltip="Legacy replies (kind 1)">Replies</mat-button-toggle>
+      </mat-button-toggle-group>
+      }
+
+      @if (isExpanded()) {
+      <button mat-icon-button (click)="onAddComment()" [matTooltip]="'Add ' + singularLabel().toLowerCase()">
+        <mat-icon>add_comment</mat-icon>
+      </button>
+      }
+    </div>
   </div>
 
   @if (isExpanded()) {

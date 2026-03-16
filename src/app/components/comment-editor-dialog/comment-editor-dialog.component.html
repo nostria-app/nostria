@@ -3,6 +3,25 @@
 
   <mat-dialog-content>
     <div class="editor-container">
+      <div class="reply-context">
+        <mat-icon class="reply-icon">{{ data.parentComment ? 'reply' : 'comment' }}</mat-icon>
+        <span>{{ data.parentComment ? 'Replying to comment by' : 'Commenting on event by' }}</span>
+        <app-user-profile
+          [pubkey]="data.parentComment ? data.parentComment.pubkey : data.rootEvent.pubkey"
+          view="list"
+          [disableLink]="true"
+          [disableHoverCard]="true"
+          [hostWidthAuto]="true"
+          [showRank]="false">
+        </app-user-profile>
+      </div>
+
+      @if (data.parentComment) {
+      <div class="parent-preview">
+        <app-content [content]="data.parentComment.content" [event]="data.parentComment"></app-content>
+      </div>
+      }
+
       <div class="textarea-wrapper">
         <mat-form-field appearance="outline" class="full-width">
           <mat-label>Your comment</mat-label>

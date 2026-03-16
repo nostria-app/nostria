@@ -2167,7 +2167,7 @@ export class EventService {
   }
 
   // Handler methods for different creation types
-  async createNote(data: NoteEditorDialogData = {}): Promise<void> {
+  async createNote(data: NoteEditorDialogData = {}): Promise<{ published: boolean; event?: Event } | undefined> {
     // Dynamically import NoteEditorDialogComponent to avoid circular dependency
     const { NoteEditorDialogComponent } = await import('../components/note-editor-dialog/note-editor-dialog.component');
 
@@ -2197,19 +2197,21 @@ export class EventService {
     dialogRef.componentInstance.dialogRef = dialogRef;
     dialogRef.componentInstance.data = data;
 
-    // Handle dialog close - using effect-like approach with signals
-    const checkClosed = () => {
-      const result = dialogRef.afterClosed()();
-      if (result !== undefined) {
-        if (result?.published) {
-          this.logger.debug('Note published successfully:', result.event);
+    // Wait for dialog to close and return the result
+    return new Promise<{ published: boolean; event?: Event } | undefined>((resolve) => {
+      const checkClosed = () => {
+        const result = dialogRef.afterClosed()();
+        if (result !== undefined) {
+          if (result?.published) {
+            this.logger.debug('Note published successfully:', result.event);
+          }
+          resolve(result ?? undefined);
+        } else {
+          setTimeout(checkClosed, 100);
         }
-      } else {
-        // Keep checking if not closed yet
-        setTimeout(checkClosed, 100);
-      }
-    };
-    checkClosed();
+      };
+      checkClosed();
+    });
   }
 
   async createComment(rootEvent: Event): Promise<{ published: boolean; event?: Event } | undefined> {

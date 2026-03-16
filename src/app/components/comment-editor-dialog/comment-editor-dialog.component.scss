@@ -30,6 +30,34 @@ mat-dialog-content {
   padding-top: 8px; // Add top padding to prevent label cutoff
 }
 
+.reply-context {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--mat-sys-surface-container);
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--mat-sys-on-surface-variant);
+
+  .reply-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+  }
+}
+
+.parent-preview {
+  padding: 8px 12px;
+  background: var(--mat-sys-surface-container-low);
+  border-radius: 8px;
+  border-left: 3px solid var(--mat-sys-outline-variant);
+  font-size: 13px;
+  max-height: 80px;
+  overflow: hidden;
+  opacity: 0.8;
+}
+
 .textarea-wrapper {
   position: relative;
 }

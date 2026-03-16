@@ -26,6 +26,7 @@ import { MediaService } from '../../services/media.service';
 import { EventService } from '../../services/event';
 import { MentionAutocompleteComponent, MentionSelection, MentionAutocompleteConfig } from '../mention-autocomplete/mention-autocomplete.component';
 import { MentionInputService, MentionDetectionResult } from '../../services/mention-input.service';
+import { UserProfileComponent } from '../user-profile/user-profile.component';
 
 export interface CommentEditorDialogData {
   rootEvent: NostrEvent; // The event being commented on
@@ -44,7 +45,8 @@ export interface CommentEditorDialogData {
     MatProgressBarModule,
     ContentComponent,
     MentionAutocompleteComponent,
-],
+    UserProfileComponent,
+  ],
   templateUrl: './comment-editor-dialog.component.html',
   styleUrl: './comment-editor-dialog.component.scss',
 })

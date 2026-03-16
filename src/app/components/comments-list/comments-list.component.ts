@@ -1,9 +1,10 @@
-import { Component, computed, inject, input, signal, ElementRef, ViewChild, AfterViewInit, effect, untracked } from '@angular/core';
+import { Component, computed, inject, input, signal, ElementRef, ViewChild, AfterViewInit, effect, untracked, ChangeDetectionStrategy } from '@angular/core';
 
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { Event } from 'nostr-tools';
 import { CommentComponent } from '../comment/comment.component';
 import { DataService } from '../../services/data.service';
@@ -12,6 +13,8 @@ import { AccountStateService } from '../../services/account-state.service';
 import { LayoutService } from '../../services/layout.service';
 import { EventService } from '../../services/event';
 import { SharedRelayService } from '../../services/relays/shared-relay';
+
+export type CommentKindFilter = 'nip22' | 'nip10' | 'all';
 
 // Interface for threaded comments
 export interface CommentThread {
@@ -27,10 +30,12 @@ export interface CommentThread {
     MatIconModule,
     MatProgressSpinnerModule,
     MatTooltipModule,
+    MatButtonToggleModule,
     CommentComponent
   ],
   templateUrl: './comments-list.component.html',
   styleUrl: './comments-list.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CommentsListComponent implements AfterViewInit {
   event = input.required<Event>();
@@ -39,6 +44,8 @@ export class CommentsListComponent implements AfterViewInit {
   singularLabel = input<string>('Comment');
   allowedKinds = input<number[]>([1111]);
   replyType = input<'text' | 'audio'>('text');
+  /** Whether to show the kind filter toggle (replies vs comments vs all) */
+  showKindFilter = input<boolean>(true);
 
   @ViewChild('commentsContainer') commentsContainer?: ElementRef<HTMLElement>;
 
@@ -55,6 +62,26 @@ export class CommentsListComponent implements AfterViewInit {
   hasMore = signal(true);
   hasLoadedInitial = signal(false);
 
+  /** Current kind filter for comment display */
+  commentKindFilter = signal<CommentKindFilter>('all');
+
+  /** Whether the root event is kind 1 (short text note) - no toggle needed */
+  isKind1Root = computed(() => this.event().kind === 1);
+
+  /** Effective kinds to query based on the current filter */
+  private effectiveKinds = computed(() => {
+    // If the root event is kind 1, NIP-22 says don't use 1111 for replies
+    if (this.isKind1Root()) return this.allowedKinds();
+
+    const filter = this.commentKindFilter();
+    const base = this.allowedKinds();
+    switch (filter) {
+      case 'nip22': return base.filter(k => k !== 1); // Only NIP-22 kinds (1111, 1244, etc.)
+      case 'nip10': return [1];
+      case 'all': return [...new Set([...base, 1])];
+    }
+  });
+
   private readonly INITIAL_LIMIT = 30;
   private readonly LOAD_MORE_LIMIT = 20;
   private oldestCommentTimestamp: number | null = null;
@@ -64,6 +91,9 @@ export class CommentsListComponent implements AfterViewInit {
 
   // Build threaded comment tree from flat list
   commentThreads = computed(() => this.buildThreadTree(this.comments()));
+
+  /** Track optimistically added event IDs so refreshComments preserves them */
+  private optimisticEventIds = new Set<string>();
 
   constructor() {
     // Reset and reload comments when event changes
@@ -143,7 +173,7 @@ export class CommentsListComponent implements AfterViewInit {
       // For regular events, query by both 'e' and 'E' tags
       const isAddressable = event.kind >= 30000 && event.kind < 40000;
       const filter: Record<string, unknown> = {
-        kinds: this.allowedKinds(),
+        kinds: this.effectiveKinds(),
         limit: this.INITIAL_LIMIT,
       };
 
@@ -247,7 +277,7 @@ export class CommentsListComponent implements AfterViewInit {
       // Determine filter based on event kind
       const isAddressable = event.kind >= 30000 && event.kind < 40000;
       const filter: Record<string, unknown> = {
-        kinds: this.allowedKinds(),
+        kinds: this.effectiveKinds(),
         until: this.oldestCommentTimestamp - 1,
         limit: this.LOAD_MORE_LIMIT,
       };
@@ -361,20 +391,22 @@ export class CommentsListComponent implements AfterViewInit {
   }
 
   private addCommentToList(event: Event) {
+    // Track this as an optimistic event
+    this.optimisticEventIds.add(event.id);
+
     // Immediately add the new comment to the list (optimistic update)
     const newCommentRecord = this.data.toRecord(event);
     const currentComments = this.comments();
+
+    // Deduplicate
+    if (currentComments.some(c => c.event.id === event.id)) return;
+
     const updatedComments = [...currentComments, newCommentRecord];
 
     // Sort by created_at (oldest first for display)
     updatedComments.sort((a, b) => a.event.created_at - b.event.created_at);
 
     this.comments.set(updatedComments);
-
-    // Optionally refresh after a delay to catch any other new comments
-    setTimeout(() => {
-      this.refreshComments();
-    }, 2000);
   }
 
   // Handle reply added from nested comment component
@@ -383,19 +415,38 @@ export class CommentsListComponent implements AfterViewInit {
   }
 
   async refreshComments(): Promise<void> {
-    // Reset state and reload
+    // Save optimistic events before clearing
+    const optimistic = this.comments().filter(c => this.optimisticEventIds.has(c.event.id));
+
     this.hasLoadedInitial.set(false);
     this.oldestCommentTimestamp = null;
     this.comments.set([]);
     this.hasMore.set(true);
     await this.loadComments();
+
+    // Merge back any optimistic events that weren't returned in the fetch
+    if (optimistic.length > 0) {
+      const currentIds = new Set(this.comments().map(c => c.event.id));
+      const missing = optimistic.filter(c => !currentIds.has(c.event.id));
+      if (missing.length > 0) {
+        const merged = [...this.comments(), ...missing];
+        merged.sort((a, b) => a.event.created_at - b.event.created_at);
+        this.comments.set(merged);
+      }
+    }
+  }
+
+  /** Switch the kind filter and reload comments */
+  onKindFilterChange(filter: CommentKindFilter): void {
+    this.commentKindFilter.set(filter);
+    this.refreshComments();
   }
 
   /**
    * Build a threaded tree structure from flat list of comments.
-   * NIP-22 threading:
-   * - Top-level comments: root tags (E/A/I) and parent tags (e/a/i) point to same value
-   * - Replies to comments: lowercase 'e' tag points to parent comment ID, 'k' tag is '1111'
+   * Handles both NIP-22 (kind 1111) and NIP-10 (kind 1) threading.
+   * NIP-22: root tags (E/A/I) and parent tags (e/a/i) point to same value for top-level
+   * NIP-10: e tags with root/reply markers for kind 1 threading
    */
   private buildThreadTree(comments: NostrRecord[]): CommentThread[] {
     if (comments.length === 0) return [];
@@ -464,8 +515,7 @@ export class CommentsListComponent implements AfterViewInit {
 
   /**
    * Determine the parent comment ID for a given comment event.
-   * Returns { isTopLevel: true } if it's a direct reply to the root event.
-   * Returns { parentCommentId: string } if it's a reply to another comment.
+   * Handles both NIP-22 (kind 1111) and NIP-10 (kind 1) threading.
    */
   private getParentCommentId(
     commentEvent: Event,
@@ -474,13 +524,17 @@ export class CommentsListComponent implements AfterViewInit {
   ): { isTopLevel: boolean; parentCommentId?: string } {
     const tags = commentEvent.tags;
 
-    // Find lowercase 'k' tag (parent kind)
+    // Handle NIP-10 kind 1 threading
+    if (commentEvent.kind === 1) {
+      return this.getParentFromNip10(tags, rootEventId);
+    }
+
+    // Handle NIP-22 kind 1111+ threading
     const parentKindTag = tags.find(tag => tag[0] === 'k');
     const parentKind = parentKindTag?.[1];
 
-    // If parent kind is 1111, it's a reply to another comment
-    if (parentKind === '1111') {
-      // Find the lowercase 'e' tag pointing to parent comment
+    // If parent kind is 1111 (or another comment kind), it's a reply to another comment
+    if (parentKind === '1111' || parentKind === '1244') {
       const parentETag = tags.find(tag => tag[0] === 'e');
       if (parentETag && parentETag[1]) {
         return { isTopLevel: false, parentCommentId: parentETag[1] };
@@ -488,15 +542,11 @@ export class CommentsListComponent implements AfterViewInit {
     }
 
     // Check if this is a top-level comment by comparing root and parent references
-    // For regular events: E tag (root) vs e tag (parent)
     const rootETag = tags.find(tag => tag[0] === 'E');
     const parentETag = tags.find(tag => tag[0] === 'e');
-
-    // For addressable events: A tag (root) vs a tag (parent)
     const rootATag = tags.find(tag => tag[0] === 'A');
     const parentATag = tags.find(tag => tag[0] === 'a');
 
-    // If root and parent point to the same value, it's top-level
     if (rootETag && parentETag && rootETag[1] === parentETag[1]) {
       return { isTopLevel: true };
     }
@@ -505,22 +555,72 @@ export class CommentsListComponent implements AfterViewInit {
       return { isTopLevel: true };
     }
 
-    // If parent 'e' tag points to root event ID, it's top-level
     if (parentETag && parentETag[1] === rootEventId) {
       return { isTopLevel: true };
     }
 
-    // If parent 'a' tag points to root event address, it's top-level
     if (aTagValue && parentATag && parentATag[1] === aTagValue) {
       return { isTopLevel: true };
     }
 
-    // If we have a parent 'e' tag that doesn't match root, it's a reply
-    if (parentETag && parentETag[1] && parentKind === '1111') {
+    if (parentETag && parentETag[1] && (parentKind === '1111' || parentKind === '1244')) {
       return { isTopLevel: false, parentCommentId: parentETag[1] };
     }
 
-    // Default to top-level if we can't determine
     return { isTopLevel: true };
+  }
+
+  /**
+   * Parse NIP-10 threading from kind 1 events.
+   * Looks for e tags with root/reply markers or uses positional convention.
+   */
+  private getParentFromNip10(
+    tags: string[][],
+    rootEventId: string
+  ): { isTopLevel: boolean; parentCommentId?: string } {
+    const eTags = tags.filter(tag => tag[0] === 'e');
+    if (eTags.length === 0) return { isTopLevel: true };
+
+    // Preferred: NIP-10 marked tags
+    const rootTag = eTags.find(t => t[3] === 'root');
+    const replyTag = eTags.find(t => t[3] === 'reply');
+
+    if (rootTag && replyTag) {
+      // Has explicit root and reply markers
+      if (replyTag[1] === rootEventId) {
+        // Replying directly to the root event
+        return { isTopLevel: true };
+      }
+      return { isTopLevel: false, parentCommentId: replyTag[1] };
+    }
+
+    if (rootTag && !replyTag) {
+      // Only root marker = direct reply to root
+      if (rootTag[1] === rootEventId) {
+        return { isTopLevel: true };
+      }
+      // Root points elsewhere, but this event references our root event
+      return { isTopLevel: true };
+    }
+
+    // Fallback: positional convention (deprecated but still used)
+    // First e tag = root, last e tag = reply (if different)
+    if (eTags.length === 1) {
+      // Single e tag - direct reply to that event
+      if (eTags[0][1] === rootEventId) {
+        return { isTopLevel: true };
+      }
+      return { isTopLevel: false, parentCommentId: eTags[0][1] };
+    }
+
+    // Multiple e tags without markers: first=root, last=reply
+    const firstETag = eTags[0];
+    const lastETag = eTags[eTags.length - 1];
+
+    if (lastETag[1] === rootEventId || lastETag[1] === firstETag[1]) {
+      return { isTopLevel: true };
+    }
+
+    return { isTopLevel: false, parentCommentId: lastETag[1] };
   }
 }
