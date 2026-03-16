@@ -40,6 +40,15 @@ interface SuggestedEmojiPack extends SuggestedEmojiPackDef {
   event: NostrEvent | null;
 }
 
+interface InstalledEmojiSetRef {
+  aTagValue: string; // e.g. "30030:pubkey:d-tag"
+  pubkey: string;
+  identifier: string;
+  title: string;
+  emojiCount: number;
+  previewEmojis: { shortcode: string; url: string }[];
+}
+
 @Component({
   selector: 'app-emoji-sets',
   imports: [
@@ -78,6 +87,7 @@ export class EmojiSetsComponent implements OnInit {
   isLoading = signal(false);
   emojiSets = signal<EmojiSet[]>([]);
   preferredEmojis = signal<PreferredEmojiSet[]>([]);
+  installedSetsList = signal<InstalledEmojiSetRef[]>([]);
   copiedEmoji: string | null = null;
 
   // Editing state
@@ -142,6 +152,9 @@ export class EmojiSetsComponent implements OnInit {
       const preferred = await this.collectionSetsService.getPreferredEmojis(pubkey);
       this.logger.info('Loaded preferred emojis:', preferred);
       this.preferredEmojis.set(preferred);
+
+      // Build installed sets list from kind 10030 a tags
+      await this.loadInstalledSets(pubkey, preferred);
     } catch (error) {
       this.logger.error('Error loading emoji data:', error);
       this.snackBar.open('Error loading emoji data', 'Close', { duration: 3000 });
@@ -514,6 +527,106 @@ export class EmojiSetsComponent implements OnInit {
         updatedPacks[idx].isInstalling = false;
         this.suggestedPacks.set([...updatedPacks]);
       }
+    }
+  }
+
+  /**
+   * Load installed emoji set references from the raw kind 10030 event
+   */
+  private async loadInstalledSets(pubkey: string, preferred: PreferredEmojiSet[]): Promise<void> {
+    const currentEvent = await this.database.getEventByPubkeyAndKind(pubkey, 10030);
+    if (!currentEvent) {
+      this.installedSetsList.set([]);
+      return;
+    }
+
+    // Build a map from identifier to preferred set data for enrichment
+    const preferredMap = new Map<string, PreferredEmojiSet>();
+    for (const set of preferred) {
+      preferredMap.set(set.identifier, set);
+    }
+
+    const installed: InstalledEmojiSetRef[] = [];
+    for (const tag of currentEvent.tags) {
+      if (tag[0] !== 'a' || !tag[1]?.startsWith('30030:')) continue;
+
+      const parts = tag[1].split(':');
+      if (parts.length < 3) continue;
+
+      const [, refPubkey, identifier] = parts;
+      const preferredSet = preferredMap.get(identifier);
+
+      installed.push({
+        aTagValue: tag[1],
+        pubkey: refPubkey,
+        identifier,
+        title: preferredSet?.title || identifier,
+        emojiCount: preferredSet?.emojis.length || 0,
+        previewEmojis: (preferredSet?.emojis || []).slice(0, 6),
+      });
+    }
+
+    this.installedSetsList.set(installed);
+  }
+
+  /**
+   * Uninstall an emoji set by removing its reference from kind 10030
+   */
+  async uninstallSet(ref: InstalledEmojiSetRef): Promise<void> {
+    const pubkey = this.accountState.pubkey();
+    if (!pubkey) return;
+
+    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
+      data: {
+        title: 'Remove Emoji Set',
+        message: `Are you sure you want to remove "${ref.title}"?`,
+        confirmText: 'Remove',
+        cancelText: 'Cancel',
+      },
+    });
+
+    const result = await dialogRef.afterClosed().toPromise();
+    if (!result) return;
+
+    this.isLoading.set(true);
+    try {
+      const currentEvent = await this.database.getEventByPubkeyAndKind(pubkey, 10030);
+      if (!currentEvent) {
+        this.snackBar.open('No emoji preferences found', 'Close', { duration: 3000 });
+        return;
+      }
+
+      // Remove the matching a tag
+      const newTags = currentEvent.tags.filter(
+        (tag: string[]) => !(tag[0] === 'a' && tag[1] === ref.aTagValue)
+      );
+
+      if (newTags.length === currentEvent.tags.length) {
+        this.snackBar.open('Set reference not found', 'Close', { duration: 3000 });
+        return;
+      }
+
+      const event = this.nostrService.createEvent(10030, '', newTags);
+      const signedEvent = await this.nostrService.signEvent(event);
+
+      await this.database.saveReplaceableEvent(signedEvent);
+
+      const publishResult = await this.publishService.publish(signedEvent, {
+        useOptimizedRelays: false,
+      });
+
+      if (publishResult.success) {
+        this.emojiSetService.clearUserCache(pubkey);
+        this.snackBar.open(`${ref.title} removed`, 'Close', { duration: 3000 });
+        await this.loadData();
+      } else {
+        this.snackBar.open('Failed to remove emoji set', 'Close', { duration: 3000 });
+      }
+    } catch (error) {
+      this.logger.error('Error removing emoji set:', error);
+      this.snackBar.open('Error removing emoji set', 'Close', { duration: 3000 });
+    } finally {
+      this.isLoading.set(false);
     }
   }
 }
