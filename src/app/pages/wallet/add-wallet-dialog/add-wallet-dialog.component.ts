@@ -5,8 +5,10 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { MatDialog } from '@angular/material/dialog';
 import { CustomDialogRef } from '../../../services/custom-dialog.service';
 import { Wallets } from '../../../services/wallets';
+import { QrcodeScanDialogComponent } from '../../../components/qrcode-scan-dialog/qrcode-scan-dialog.component';
 
 @Component({
   selector: 'app-add-wallet-dialog',
@@ -24,6 +26,7 @@ import { Wallets } from '../../../services/wallets';
 export class AddWalletDialogComponent {
   private snackBar = inject(MatSnackBar);
   private wallets = inject(Wallets);
+  private dialog = inject(MatDialog);
   dialogRef = inject(CustomDialogRef);
 
   connectionStringControl = new FormControl('', [
@@ -74,6 +77,32 @@ export class AddWalletDialogComponent {
     } finally {
       this.isAddingWallet.set(false);
     }
+  }
+
+  scanQrCode(): void {
+    const scanDialogRef = this.dialog.open(QrcodeScanDialogComponent, {
+      width: '100vw',
+      height: '100vh',
+      maxWidth: '100vw',
+      maxHeight: '100vh',
+      panelClass: 'qr-scan-dialog',
+      hasBackdrop: true,
+      disableClose: false,
+    });
+
+    scanDialogRef.afterClosed().subscribe(result => {
+      if (result && typeof result === 'string') {
+        if (result.startsWith('nostr+walletconnect://') || result.startsWith('web+nostr+walletconnect://')) {
+          this.connectionStringControl.setValue(result);
+        } else {
+          this.snackBar.open('Invalid QR code. Expected a Nostr Wallet Connect connection string.', 'Dismiss', {
+            duration: 3000,
+            horizontalPosition: 'center',
+            verticalPosition: 'bottom',
+          });
+        }
+      }
+    });
   }
 
   cancel(): void {

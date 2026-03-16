@@ -7,6 +7,9 @@
     <mat-label i18n="@@wallet.connection-string">Connection String</mat-label>
     <input matInput [formControl]="connectionStringControl" placeholder="nostr+walletconnect://..." type="text"
       (keydown.enter)="addWallet()" />
+    <button mat-icon-button matSuffix type="button" (click)="scanQrCode()" aria-label="Scan QR code">
+      <mat-icon>qr_code_scanner</mat-icon>
+    </button>
     <mat-hint i18n="@@wallet.connection-string.hint">Paste your Nostr Wallet Connect connection string here</mat-hint>
     @if (connectionStringControl.hasError('required')) {
     <mat-error i18n="@@wallet.error.required">Connection string is required</mat-error>
