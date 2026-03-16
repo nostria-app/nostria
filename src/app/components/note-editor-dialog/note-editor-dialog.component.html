@@ -525,6 +525,25 @@
       </mat-menu>
       }
 
+      <!-- GIF picker button -->
+      @if (layout.isHandset()) {
+      <button mat-icon-button type="button" class="desktop-action action-priority-medium"
+        [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions()"
+        [class.button-disabled-visible]="showPreview() || showAdvancedOptions()" matTooltip="GIFs"
+        (click)="openGifPickerDialog()">
+        <mat-icon>gif_box</mat-icon>
+      </button>
+      } @else {
+      <button mat-icon-button type="button" class="desktop-action action-priority-medium" [matMenuTriggerFor]="gifMenu"
+        [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions()"
+        [class.button-disabled-visible]="showPreview() || showAdvancedOptions()" matTooltip="GIFs">
+        <mat-icon>gif_box</mat-icon>
+      </button>
+      <mat-menu #gifMenu="matMenu" class="gif-picker-menu">
+        <app-gif-picker (gifSelected)="insertGifUrl($event)"></app-gif-picker>
+      </mat-menu>
+      }
+
       <!-- Insert reference button (dialog mode only) -->
       @if (!inlineMode()) {
       <button mat-icon-button type="button" class="desktop-action action-priority-medium"
@@ -577,6 +596,12 @@
           [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions()">
           <mat-icon>sentiment_satisfied</mat-icon>
           <span>Emoji</span>
+        </button>
+
+        <button mat-menu-item (click)="openGifPickerDialog()"
+          [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions()">
+          <mat-icon>gif_box</mat-icon>
+          <span>GIFs</span>
         </button>
 
         <button mat-menu-item (click)="openReferencePicker()"

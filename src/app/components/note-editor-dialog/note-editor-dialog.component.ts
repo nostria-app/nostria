@@ -65,6 +65,7 @@ import { SpeechService } from '../../services/speech.service';
 import { PlatformService } from '../../services/platform.service';
 import { UserProfileComponent } from '../user-profile/user-profile.component';
 import { EmojiPickerComponent } from '../emoji-picker/emoji-picker.component';
+import { GifPickerComponent } from '../gif-picker/gif-picker.component';
 import { HapticsService } from '../../services/haptics.service';
 import { SettingsService } from '../../services/settings.service';
 import { XDualPostService, XPostMediaItem } from '../../services/x-dual-post.service';
@@ -141,6 +142,7 @@ interface PreparedXPost {
     TextFieldModule,
     UserProfileComponent,
     EmojiPickerComponent,
+    GifPickerComponent,
   ],
   providers: [provideNativeDateAdapter()],
   templateUrl: './note-editor-dialog.component.html',
@@ -2198,6 +2200,31 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     } else {
       this.content.update(text => text + emoji);
     }
+  }
+
+  /**
+   * Insert a GIF URL at the current cursor position
+   */
+  insertGifUrl(url: string): void {
+    this.insertEmoji('\n' + url + '\n');
+  }
+
+  /**
+   * Open GIF picker in a fullscreen dialog on small screens
+   */
+  async openGifPickerDialog(): Promise<void> {
+    const { GifPickerDialogComponent } = await import('../gif-picker/gif-picker-dialog.component');
+    const dialogRef = this.customDialog.open<typeof GifPickerDialogComponent.prototype, string>(GifPickerDialogComponent, {
+      title: 'GIFs',
+      width: '400px',
+      panelClass: 'gif-picker-dialog',
+    });
+
+    dialogRef.afterClosed$.subscribe(result => {
+      if (result.result) {
+        this.insertGifUrl(result.result);
+      }
+    });
   }
 
   /**

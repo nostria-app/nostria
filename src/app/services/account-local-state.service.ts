@@ -128,6 +128,16 @@ interface AccountLocalState {
   clipsLastForYouEventId?: string; // Last viewed clip event id in Clips For You
   clipsLastFollowingEventId?: string; // Last viewed clip event id in Clips Following
   followerCheckLastTimestamp?: number; // Unix timestamp (seconds) when follower events were last fetched from relays
+  favoriteGifs?: FavoriteGif[]; // Favorite GIFs for quick access in GIF picker
+}
+
+/**
+ * Favorite GIF stored per-account
+ */
+export interface FavoriteGif {
+  shortcode: string;
+  url: string;
+  timestamp: number;
 }
 
 /**
@@ -1505,6 +1515,30 @@ export class AccountLocalStateService {
    */
   clearRecentEmojis(pubkey: string): void {
     this.updateAccountState(pubkey, { recentEmojis: [] });
+  }
+
+  getFavoriteGifs(pubkey: string): FavoriteGif[] {
+    const state = this.getAccountState(pubkey);
+    return [...(state.favoriteGifs || [])].sort((a, b) => b.timestamp - a.timestamp);
+  }
+
+  addFavoriteGif(pubkey: string, shortcode: string, url: string): void {
+    const state = this.getAccountState(pubkey);
+    const current = state.favoriteGifs || [];
+    const filtered = current.filter(g => g.url !== url);
+    const updated = [{ shortcode, url, timestamp: Date.now() }, ...filtered].slice(0, 50);
+    this.updateAccountState(pubkey, { favoriteGifs: updated });
+  }
+
+  removeFavoriteGif(pubkey: string, url: string): void {
+    const state = this.getAccountState(pubkey);
+    const current = state.favoriteGifs || [];
+    this.updateAccountState(pubkey, { favoriteGifs: current.filter(g => g.url !== url) });
+  }
+
+  isFavoriteGif(pubkey: string, url: string): boolean {
+    const state = this.getAccountState(pubkey);
+    return (state.favoriteGifs || []).some(g => g.url === url);
   }
 
   /**
