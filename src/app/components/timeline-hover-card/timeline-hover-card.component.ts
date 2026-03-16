@@ -287,7 +287,7 @@ export class TimelineHoverCardComponent {
           }
           case 'hashtag': {
             const hashtag = token.content?.replace(/^#/, '') || '';
-            return `<a class="hashtag-link" href="/f?t=${encodeURIComponent(hashtag)}">#${this.utilities.escapeHtml(hashtag)}</a>`;
+            return `<a class="hashtag-link" href="/f?t=${encodeURIComponent(hashtag.toLowerCase())}">#${this.utilities.escapeHtml(hashtag)}</a>`;
           }
           case 'image': {
             if (!this.isValidExternalUrl(token.content)) {

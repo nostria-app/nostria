@@ -987,7 +987,7 @@ export class ArticleDisplayComponent implements OnDestroy {
    */
   openHashtagFeed(hashtag: string): void {
     this.router.navigate(['/f'], {
-      queryParams: { t: hashtag },
+      queryParams: { t: hashtag.toLowerCase() },
     });
   }
 

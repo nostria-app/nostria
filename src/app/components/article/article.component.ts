@@ -256,7 +256,7 @@ export class ArticleComponent {
   openHashtagFeed(hashtag: string, event: MouseEvent): void {
     event.stopPropagation(); // Prevent opening the article when clicking hashtag
     this.router.navigate(['/f'], {
-      queryParams: { t: hashtag },
+      queryParams: { t: hashtag.toLowerCase() },
     });
   }
 }
