@@ -29,7 +29,7 @@ import { RelayInfoDialogComponent } from './relay-info-dialog.component';
 import { RelayDetailComponent } from './relay-detail.component';
 import { MatMenuModule } from '@angular/material/menu';
 import { RelayPingResultsDialogComponent, PingResult, RelayPingDialogResult } from './relay-ping-results-dialog.component';
-import { kinds, SimplePool, UnsignedEvent } from 'nostr-tools';
+import { kinds, SimplePool, UnsignedEvent, Event as NostrEvent } from 'nostr-tools';
 import { NostrService } from '../../../services/nostr.service';
 import { LoggerService } from '../../../services/logger.service';
 import { LayoutService } from '../../../services/layout.service';
@@ -302,36 +302,53 @@ export class RelaysComponent implements OnInit, OnDestroy {
         this.accountRelay.getRelayUrls().map(r => r)
       );
 
-      // Fetch existing DM relay list event (10050)
-      const dmRelayEvent = await this.data.getEventByPubkeyAndKind(
+      // 1. Load from local database first (instant)
+      const cachedEvent = await this.database.getEventByPubkeyAndKind(pubkey, kinds.DirectMessageRelaysList);
+      if (cachedEvent) {
+        this.applyDmRelayEvent(cachedEvent, userRelayUrls);
+      }
+
+      // 2. Fetch from relays in the background for potentially newer data
+      const relayEvent = await this.data.getEventByPubkeyAndKind(
         pubkey,
         kinds.DirectMessageRelaysList
       );
-      if (!dmRelayEvent) {
+
+      if (relayEvent) {
+        // Only update if this is newer than what we loaded from the database
+        if (!cachedEvent || relayEvent.event.created_at > cachedEvent.created_at) {
+          this.applyDmRelayEvent(relayEvent.event, userRelayUrls);
+          // Save the newer event to the database for next time
+          await this.database.saveReplaceableEvent(relayEvent.event);
+        }
+      } else if (!cachedEvent) {
+        // No data from database or relays
         this.messageRelays.set([]);
         this.showUpdateDMRelays.set(userRelayUrls.length > 0);
-        return;
       }
-
-      // Extract relay tag URLs from dmRelayEvent
-      const dmRelayUrls = dmRelayEvent.event.tags
-        .filter(t => t[0] === 'relay' && t[1])
-        .map(t => t[1]);
-      const normalizedDMUrls = this.utilities.normalizeRelayUrls(dmRelayUrls);
-
-      this.messageRelays.set(normalizedDMUrls);
-
-      // Compare sets (unordered)
-      const setA = new Set(userRelayUrls);
-      const setB = new Set(normalizedDMUrls);
-      const same = setA.size === setB.size && [...setA].every(u => setB.has(u));
-
-      this.showUpdateDMRelays.set(!same);
     } catch (err) {
       this.logger.error('Failed to check DM relay list', err);
-      this.messageRelays.set([]);
-      this.showUpdateDMRelays.set(true);
+      if (this.messageRelays().length === 0) {
+        this.messageRelays.set([]);
+        this.showUpdateDMRelays.set(true);
+      }
     }
+  }
+
+  private applyDmRelayEvent(event: NostrEvent, userRelayUrls: string[]) {
+    const dmRelayUrls = event.tags
+      .filter(t => t[0] === 'relay' && t[1])
+      .map(t => t[1]);
+    const normalizedDMUrls = this.utilities.normalizeRelayUrls(dmRelayUrls);
+
+    this.messageRelays.set(normalizedDMUrls);
+
+    // Compare sets (unordered)
+    const setA = new Set(userRelayUrls);
+    const setB = new Set(normalizedDMUrls);
+    const same = setA.size === setB.size && [...setA].every(u => setB.has(u));
+
+    this.showUpdateDMRelays.set(!same);
   }
 
   // Check for malformed kind 10002 relay list with 'relay' tags instead of 'r' tags

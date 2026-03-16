@@ -30,6 +30,10 @@ mat-dialog-content {
   padding-top: 8px; // Add top padding to prevent label cutoff
 }
 
+.textarea-wrapper {
+  position: relative;
+}
+
 .full-width {
   width: 100%;
 }

@@ -3,13 +3,22 @@
 
   <mat-dialog-content>
     <div class="editor-container">
-      <mat-form-field appearance="outline" class="full-width">
-        <mat-label>Your comment</mat-label>
-        <textarea #contentTextarea matInput [(ngModel)]="content"
-          placeholder="Write your comment... (plaintext only, no formatting)" rows="6" [disabled]="isPublishing()"
-          (keydown)="onKeydown($event)"></textarea>
-        <mat-hint>Press Ctrl+Enter (Option+Enter on Mac) to publish</mat-hint>
-      </mat-form-field>
+      <div class="textarea-wrapper">
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Your comment</mat-label>
+          <textarea #contentTextarea matInput [ngModel]="content()"
+            placeholder="Write your comment... Use @ to mention someone" rows="6" [disabled]="isPublishing()"
+            (keydown)="onKeydown($event)" (keyup)="onKeyup($event)" (input)="onContentInput($event)"
+            (click)="onContentClick($event)"></textarea>
+          <mat-hint>Press Ctrl+Enter (Option+Enter on Mac) to publish · Type @ to mention</mat-hint>
+        </mat-form-field>
+
+        @if (mentionConfig()) {
+        <app-mention-autocomplete [config]="mentionConfig()" [position]="mentionPosition()" [maxResults]="8"
+          [maxHeight]="300" (mentionSelected)="onMentionSelected($event)"
+          (dismissed)="onMentionDismissed()"></app-mention-autocomplete>
+        }
+      </div>
 
       <div class="actions-row">
         <button mat-icon-button (click)="recordAudio()" [disabled]="isPublishing()" matTooltip="Record audio clip">
