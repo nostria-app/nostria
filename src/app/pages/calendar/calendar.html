@@ -174,7 +174,6 @@
       </div>
       }
 
-      @if (publicCalendars().length > 0) {
       <div class="sidebar-calendars-group">
         <div class="sidebar-calendar-item group-header-item" (click)="toggleAllPublicCalendars()">
           <mat-icon [class.calendar-enabled]="allPublicCalendarsEnabled()"
@@ -182,6 +181,14 @@
             {{ allPublicCalendarsEnabled() ? 'check_box' : 'check_box_outline_blank' }}
           </mat-icon>
           <span class="group-header-label">Other Calendars</span>
+        </div>
+        <!-- Virtual calendar: events not belonging to any calendar collection -->
+        <div class="sidebar-calendar-item" (click)="otherCalendarEnabled.set(!otherCalendarEnabled())">
+          <mat-icon [class.calendar-enabled]="otherCalendarEnabled()"
+            [class.calendar-disabled]="!otherCalendarEnabled()">
+            {{ otherCalendarEnabled() ? 'check_box' : 'check_box_outline_blank' }}
+          </mat-icon>
+          <span class="calendar-name">Other Events</span>
         </div>
         @for (calendar of publicCalendars(); track calendar.id) {
         <div class="sidebar-calendar-item" (click)="toggleCalendar(calendar.id)">
@@ -193,7 +200,6 @@
         </div>
         }
       </div>
-      }
 
       @if (myCalendars().length === 0 && !isLoadingCalendars()) {
       <div class="sidebar-calendars-group">
@@ -209,12 +215,6 @@
       </div>
       }
 
-      @if (publicCalendars().length === 0 && myCalendars().length === 0 && !isLoadingCalendars()) {
-      <div class="no-calendars-hint">
-        <mat-icon>info_outline</mat-icon>
-        <span>No other calendars found.</span>
-      </div>
-      }
     </div>
 
     <!-- Main calendar area -->
@@ -333,7 +333,7 @@
             </div>
             } @else {
             @for (dayGroup of agendaEventsFiltered(); track dayGroup.date) {
-            <div class="agenda-day-group">
+            <div class="agenda-day-group" [attr.data-date]="getDateKey(dayGroup.date)">
               <div class="agenda-date-header">
                 <h3>{{ formatDateFull(dayGroup.date) }}</h3>
                 @if (isToday(dayGroup.date)) {

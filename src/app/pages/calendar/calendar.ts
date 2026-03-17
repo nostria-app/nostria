@@ -1,5 +1,5 @@
-import { ChangeDetectionStrategy, Component, AfterViewInit, ViewChild, TemplateRef, computed, effect, inject, OnDestroy, OnInit, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { ChangeDetectionStrategy, Component, AfterViewInit, ViewChild, TemplateRef, PLATFORM_ID, computed, effect, inject, OnDestroy, OnInit, signal } from '@angular/core';
+import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -138,6 +138,7 @@ export class Calendar implements OnInit, OnDestroy, AfterViewInit {
   protected layout = inject(LayoutService);
   private followSetsService = inject(FollowSetsService);
   private nostrService = inject(NostrService);
+  private platformId = inject(PLATFORM_ID);
 
   // Premium check
   isPremium = computed(() => {
@@ -170,6 +171,10 @@ export class Calendar implements OnInit, OnDestroy, AfterViewInit {
   // Virtual RSVP calendar — not a real kind-31924, just a filter toggle
   readonly RSVP_VIRTUAL_CALENDAR_ID = '__rsvp__';
   rsvpCalendarEnabled = signal<boolean>(false);
+
+  // Virtual "Other Events" calendar — events not belonging to any calendar collection
+  readonly OTHER_VIRTUAL_CALENDAR_ID = '__other__';
+  otherCalendarEnabled = signal<boolean>(true);
 
   // Separated calendar views
   myCalendars = computed(() => {
@@ -333,25 +338,40 @@ export class Calendar implements OnInit, OnDestroy, AfterViewInit {
     const enabledCals = this.enabledCalendars();
     const listFilter = this.calendarListFilter();
     const followSet = this.calendarFollowSet();
-    const rsvpOnly = this.rsvpCalendarEnabled();
+    const rsvpEnabled = this.rsvpCalendarEnabled();
+    const otherEnabled = this.otherCalendarEnabled();
 
-    // Filter by RSVP virtual calendar
     let events = allEvents;
-    if (rsvpOnly) {
-      const myRsvpEventIds = new Set(
-        this.rsvps()
-          .filter(r => r.pubkey === this.accountState.pubkey())
-          .map(r => r.eventId)
-      );
-      events = events.filter(e => myRsvpEventIds.has(e.id));
-    } else if (enabledCals.size > 0) {
-      // Filter by calendar collection (only when RSVP filter is not active)
+    const hasCalendarFilter = enabledCals.size > 0 || !otherEnabled;
+
+    if (hasCalendarFilter || rsvpEnabled) {
       const calendars = this.calendars();
+
+      // Build set of RSVP'd event coordinates (kind:pubkey:dtag) for the current user.
+      // RSVPs are published with only an 'a' tag coordinate, so we match on those.
+      const myRsvpCoords = rsvpEnabled
+        ? new Set(
+            this.rsvps()
+              .filter(r => r.pubkey === this.accountState.pubkey())
+              .map(r => r.eventId) // stored as 'a' coordinate (kind:pubkey:dtag) or 'e' hex id
+          )
+        : null;
+
       events = events.filter(event => {
+        // RSVP match: check NIP-33 coordinate AND raw event ID for compatibility
+        if (rsvpEnabled && myRsvpCoords) {
+          const coord = `${event.kind}:${event.pubkey}:${this.getEventDTag(event)}`;
+          if (myRsvpCoords.has(coord) || myRsvpCoords.has(event.id)) return true;
+        }
+
+        // If no calendar filter active, include by default
+        if (!hasCalendarFilter) return true;
+
+        // Calendar collection filter
         const eventCalendar = calendars.find(cal =>
           cal.events.some(eventCoord => eventCoord.includes(event.id))
         );
-        return eventCalendar ? enabledCals.has(eventCalendar.id) : true;
+        return eventCalendar ? enabledCals.has(eventCalendar.id) : otherEnabled;
       });
     }
 
@@ -412,6 +432,17 @@ export class Calendar implements OnInit, OnDestroy, AfterViewInit {
       const date = this.selectedDate();
       if (!this.accountRelay.initialized()) return;
       await this.loadEventsForMonth(date);
+    });
+
+    // Auto-scroll to selected date when in agenda view
+    effect(() => {
+      const mode = this.viewMode();
+      const date = this.selectedDate();
+      if (mode !== 'agenda' || !isPlatformBrowser(this.platformId)) return;
+      const dateStr = this.getDateKey(date);
+      setTimeout(() => {
+        document.querySelector(`[data-date="${dateStr}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 50);
     });
 
     // Wait for relay to be ready before loading data
@@ -587,13 +618,14 @@ export class Calendar implements OnInit, OnDestroy, AfterViewInit {
 
   allPublicCalendarsEnabled = computed(() => {
     const pub = this.publicCalendars();
-    if (pub.length === 0) return false;
-    return pub.every(c => this.enabledCalendars().has(c.id));
+    if (pub.length === 0) return this.otherCalendarEnabled();
+    return this.otherCalendarEnabled() && pub.every(c => this.enabledCalendars().has(c.id));
   });
 
   toggleAllPublicCalendars(): void {
     const pub = this.publicCalendars();
     const enableAll = !this.allPublicCalendarsEnabled();
+    this.otherCalendarEnabled.set(enableAll);
     this.enabledCalendars.update(enabled => {
       const newEnabled = new Set(enabled);
       pub.forEach(c => enableAll ? newEnabled.add(c.id) : newEnabled.delete(c.id));
@@ -603,13 +635,14 @@ export class Calendar implements OnInit, OnDestroy, AfterViewInit {
 
   allMyCalendarsEnabled = computed(() => {
     const mine = this.myCalendars();
-    if (mine.length === 0) return false;
-    return mine.every(c => this.enabledCalendars().has(c.id));
+    if (mine.length === 0) return this.rsvpCalendarEnabled();
+    return this.rsvpCalendarEnabled() && mine.every(c => this.enabledCalendars().has(c.id));
   });
 
   toggleAllMyCalendars(): void {
     const mine = this.myCalendars();
     const enableAll = !this.allMyCalendarsEnabled();
+    this.rsvpCalendarEnabled.set(enableAll);
     this.enabledCalendars.update(enabled => {
       const newEnabled = new Set(enabled);
       mine.forEach(c => enableAll ? newEnabled.add(c.id) : newEnabled.delete(c.id));
@@ -712,6 +745,10 @@ export class Calendar implements OnInit, OnDestroy, AfterViewInit {
 
   selectDate(date: Date): void {
     this.selectedDate.set(date);
+  }
+
+  getDateKey(date: Date): string {
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
   }
 
   // People list filter handlers
