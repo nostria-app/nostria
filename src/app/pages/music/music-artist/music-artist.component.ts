@@ -708,6 +708,11 @@ export class MusicArtistComponent implements OnInit, OnDestroy {
       const uniqueId = this.getTrackUniqueId(event);
       this.trackMap.set(uniqueId, event);
       this.updateTracks();
+      // Persist the updated event to the local database so it survives reloads
+      const dTag = event.tags.find(t => t[0] === 'd')?.[1] || '';
+      this.database.saveEvent({ ...event, dTag }).catch((err: unknown) => {
+        this.logger.warn('[MusicArtist] Failed to save updated track to database:', err);
+      });
       this.snackBar.open('Track updated', 'Close', { duration: 2000 });
     }
   }

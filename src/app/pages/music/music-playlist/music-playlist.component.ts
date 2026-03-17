@@ -186,7 +186,7 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
 
   artistName = computed(() => {
     const profile = this.authorProfile();
-    return profile?.data?.name || profile?.data?.display_name || 'Unknown';
+    return profile?.data?.display_name || profile?.data?.name || 'Unknown';
   });
 
   artistAvatar = computed(() => {
@@ -903,6 +903,10 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
       const uniqueId = `${event.pubkey}:${dTag}`;
       this.trackMap.set(uniqueId, event);
       this.updateTracks(this.trackRefs());
+      // Persist the updated event to the local database so it survives reloads
+      this.database.saveEvent({ ...event, dTag }).catch((err: unknown) => {
+        this.logger.warn('[MusicPlaylist] Failed to save updated track to database:', err);
+      });
       this.snackBar.open('Track updated', 'Close', { duration: 2000 });
     }
   }
@@ -972,13 +976,14 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
   }
 
   getTrackArtist(track: Event): string {
-    const profile = this.artistProfiles().get(track.pubkey);
-    if (profile) {
-      return profile.data?.name || profile.data?.display_name || 'Unknown Artist';
-    }
+    // The explicit 'artist' tag on the track takes priority over the profile name
     const artistTag = this.utilities.getMusicArtist(track);
     if (artistTag) {
       return artistTag;
+    }
+    const profile = this.artistProfiles().get(track.pubkey);
+    if (profile) {
+      return profile.data?.display_name || profile.data?.name || 'Unknown Artist';
     }
     return 'Unknown Artist';
   }

@@ -27,6 +27,7 @@ import { ZapService } from '../../../services/zap.service';
 import { SharedRelayService } from '../../../services/relays/shared-relay';
 import { LoggerService } from '../../../services/logger.service';
 import { MusicPlaylistService, MusicPlaylist } from '../../../services/music-playlist.service';
+import { DatabaseService } from '../../../services/database.service';
 import { LayoutService } from '../../../services/layout.service';
 import { PanelNavigationService } from '../../../services/panel-navigation.service';
 import { OfflineMusicService } from '../../../services/offline-music.service';
@@ -100,6 +101,7 @@ export class SongDetailComponent implements OnInit, OnDestroy {
   private customDialog = inject(CustomDialogService);
   private clipboard = inject(Clipboard);
   private userRelaysService = inject(UserRelaysService);
+  private database = inject(DatabaseService);
 
   // Inputs for when opened via RightPanelService
   pubkeyInput = input<string | undefined>(undefined);
@@ -857,6 +859,12 @@ export class SongDetailComponent implements OnInit, OnDestroy {
     if (result?.updated && result?.event) {
       // Reload the track data
       this.song.set(result.event);
+      // Persist the updated event to the local database so it survives reloads
+      const event = result.event;
+      const dTag = event.tags.find(t => t[0] === 'd')?.[1] || '';
+      this.database.saveEvent({ ...event, dTag }).catch((err: unknown) => {
+        this.logger.warn('[SongDetail] Failed to save updated track to database:', err);
+      });
       this.snackBar.open('Track updated', 'Close', { duration: 2000 });
     }
   }
