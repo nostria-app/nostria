@@ -73,3 +73,41 @@ mat-card-header {
   opacity: 0.8;
   cursor: default;
 }
+
+.header-pow {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  opacity: 0.6;
+  cursor: default;
+
+  mat-icon {
+    font-size: 14px;
+    width: 14px;
+    height: 14px;
+    color: var(--mat-sys-tertiary);
+
+    &.pow-strong {
+      color: var(--mat-sys-primary);
+    }
+  }
+
+  .pow-val {
+    font-size: 10px;
+    color: var(--mat-sys-on-surface-variant);
+  }
+}
+
+.header-client {
+  display: inline-flex;
+  align-items: center;
+  opacity: 0.5;
+  cursor: default;
+
+  .client-logo {
+    width: 14px;
+    height: 14px;
+    object-fit: contain;
+    border-radius: 2px;
+  }
+}

@@ -12,6 +12,17 @@
           (edited)
         </span>
         }
+        @if (hasPoW()) {
+        <span class="header-pow" [matTooltip]="powTooltip()" matTooltipPosition="below">
+          <mat-icon [class.pow-strong]="powDifficulty() >= 20">verified</mat-icon>
+          <span class="pow-val">{{ powDifficulty() }}</span>
+        </span>
+        }
+        @if (clientLogo()) {
+        <span class="header-client" [matTooltip]="'Published with ' + clientName()" matTooltipPosition="below">
+          <img [src]="clientLogo()!" [alt]="clientName() + ' logo'" title="Client" class="client-logo" />
+        </span>
+        }
       </div>
       @if (hasExpiration()) {
       <div class="event-metadata-row secondary expiration-label">

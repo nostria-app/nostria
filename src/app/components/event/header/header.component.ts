@@ -8,6 +8,8 @@ import { MatMenuModule } from '@angular/material/menu';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { Router, RouterLink } from '@angular/router';
+import { LocalSettingsService } from '../../../services/local-settings.service';
+import { PowService } from '../../../services/pow.service';
 import { Event, nip19 } from 'nostr-tools';
 import { EventPointer } from 'nostr-tools/nip19';
 import { firstValueFrom } from 'rxjs';
@@ -58,6 +60,8 @@ export class EventHeaderComponent {
   utilities = inject(UtilitiesService);
   private logger = inject(LoggerService);
   private userRelaysService = inject(UserRelaysService);
+  private powService = inject(PowService);
+  private localSettings = inject(LocalSettingsService);
   event = input.required<Event>();
   compact = input<boolean>(false);
   /** Whether this event has been edited (NIP-41) */
@@ -91,6 +95,67 @@ export class EventHeaderComponent {
     }
 
     return `Expires in ${this.formatExpirationDistance(expirationTimestamp)}`;
+  });
+
+  private readonly CLIENT_LOGO_MAP: Record<string, string> = {
+    'nostria': 'logos/clients/nostria.png',
+    'nosotros': 'logos/clients/nosotros.png',
+    'damus deck': 'logos/clients/damus.png',
+    'damus': 'logos/clients/damus.png',
+    'amethyst': 'logos/clients/amethyst.png',
+    'primal': 'logos/clients/primal.png',
+    'snort': 'logos/clients/snort.png',
+    'iris': 'logos/clients/iris.png',
+    'coracle': 'logos/clients/coracle.png',
+    'nos': 'logos/clients/nos.png',
+    'current': 'logos/clients/current.png',
+    'satellite': 'logos/clients/satellite.png',
+    'habla': 'logos/clients/habla.png',
+    'gossip': 'logos/clients/gossip.png',
+    'freefrom': 'logos/clients/freefrom.png',
+    'habla.news': 'logos/clients/habla.png',
+    'nostrudel': 'logos/clients/nostrudel.svg',
+    'yakihonne': 'logos/clients/yakihonne.png',
+    'lume': 'logos/clients/lume.png',
+    'nostur': 'logos/clients/nostur.png',
+    'nostore': 'logos/clients/nostore.png',
+  };
+
+  hasPoW = computed<boolean>(() => {
+    const event = this.event();
+    return !!event?.tags?.some(tag => tag[0] === 'nonce');
+  });
+
+  powDifficulty = computed<number>(() => {
+    if (!this.hasPoW()) return 0;
+    return this.powService.countLeadingZeroBits(this.event().id);
+  });
+
+  powTooltip = computed<string>(() => {
+    const difficulty = this.powDifficulty();
+    const event = this.event();
+    const nonceTag = event?.tags?.find(tag => tag[0] === 'nonce');
+    const committed = nonceTag?.[2] ? parseInt(nonceTag[2], 10) || 0 : 0;
+    const label = difficulty < 10 ? 'Minimal' : difficulty < 15 ? 'Low' : difficulty < 20 ? 'Moderate' : difficulty < 25 ? 'Strong' : difficulty < 30 ? 'Very Strong' : 'Extreme';
+    if (committed > 0 && committed !== difficulty) {
+      return `PoW: ${difficulty} bits (${label}) | Target: ${committed} bits`;
+    }
+    return `PoW: ${difficulty} bits (${label})`;
+  });
+
+  clientLogo = computed<string | null>(() => {
+    if (!this.localSettings.showClientTag()) return null;
+    const event = this.event();
+    const clientTag = event?.tags?.find(tag => tag[0] === 'client' && tag[1]);
+    if (!clientTag) return null;
+    const normalizedClient = clientTag[1].toLowerCase().trim();
+    return this.CLIENT_LOGO_MAP[normalizedClient] || null;
+  });
+
+  clientName = computed<string>(() => {
+    const event = this.event();
+    const clientTag = event?.tags?.find(tag => tag[0] === 'client' && tag[1]);
+    return clientTag?.[1] || '';
   });
 
   isOurEvent = computed<boolean>(() => {
