@@ -326,6 +326,7 @@ export class CollectionSetsService {
       // Build event tags
       const eventTags: string[][] = [
         ['d', identifier],
+        ['title', name],
         ['name', name],
       ];
 

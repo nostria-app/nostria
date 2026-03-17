@@ -143,6 +143,13 @@ interface GifSet {
           </div>
           }
 
+          @if (isLoadingMore()) {
+          <div class="loading-more-indicator" aria-live="polite">
+            <mat-spinner diameter="14"></mat-spinner>
+            <span>Looking for more GIF sets...</span>
+          </div>
+          }
+
           @if (!isLoading() && gifSets().length === 0 && favorites().length === 0) {
           <div class="empty-state">
             <mat-icon>gif_box</mat-icon>
@@ -364,6 +371,17 @@ interface GifSet {
         height: 32px;
       }
     }
+
+    .loading-more-indicator {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 6px 12px 14px;
+      color: var(--mat-sys-on-surface-variant);
+      font-size: 12px;
+      opacity: 0.8;
+    }
   `],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -382,6 +400,7 @@ export class GifPickerComponent implements OnDestroy {
   searchQuery = signal('');
   gifSource = signal<GifSource>('public');
   isLoading = signal(false);
+  isLoadingMore = signal(false);
   ownGifSets = signal<GifSet[]>([]);
   publicGifSets = signal<GifSet[]>([]);
   favorites = signal<FavoriteGif[]>([]);
@@ -499,6 +518,7 @@ export class GifPickerComponent implements OnDestroy {
   private async loadPublicGifSets(pubkey: string): Promise<void> {
     if (this.publicLoaded) return;
     this.isLoading.set(true);
+    this.isLoadingMore.set(false);
     try {
       const ownIds = this.ownGifSets().map(s => s.id);
       const ownIdSet = new Set(ownIds);
@@ -508,6 +528,7 @@ export class GifPickerComponent implements OnDestroy {
       if (cachedSets.length > 0) {
         this.publicGifSets.set(cachedSets);
         this.isLoading.set(false);
+        this.isLoadingMore.set(true);
       }
 
       // 2. Fetch from relays in background to pick up new sets
@@ -523,8 +544,16 @@ export class GifPickerComponent implements OnDestroy {
     } catch (error) {
       this.logger.error('Error loading public GIF sets:', error);
     } finally {
+      this.isLoadingMore.set(false);
       this.isLoading.set(false);
     }
+  }
+
+  private getGifSetTitle(event: NostrEvent): string {
+    return event.tags.find((tag: string[]) => tag[0] === 'title')?.[1]
+      || event.tags.find((tag: string[]) => tag[0] === 'name')?.[1]
+      || event.tags.find((tag: string[]) => tag[0] === 'd')?.[1]
+      || 'Untitled';
   }
 
   private async loadCachedPublicGifSets(existingIdSet: Set<string>): Promise<GifSet[]> {
@@ -548,8 +577,7 @@ export class GifPickerComponent implements OnDestroy {
       }
       for (const [key, event] of seen) {
         if (existingIdSet.has(key)) continue;
-        const title = event.tags.find((t: string[]) => t[0] === 'title')?.[1] ||
-          event.tags.find((t: string[]) => t[0] === 'd')?.[1] || 'Untitled';
+        const title = this.getGifSetTitle(event);
         const gifs: { shortcode: string; url: string }[] = [];
         for (const tag of event.tags) {
           if (tag[0] === 'emoji' && tag[1] && tag[2]) {
@@ -638,8 +666,7 @@ export class GifPickerComponent implements OnDestroy {
       for (const [key, event] of seen) {
         if (existingIdSet.has(key)) continue;
 
-        const title = event.tags.find((t: string[]) => t[0] === 'title')?.[1] ||
-          event.tags.find((t: string[]) => t[0] === 'd')?.[1] || 'Untitled';
+        const title = this.getGifSetTitle(event);
 
         const gifs: { shortcode: string; url: string }[] = [];
         for (const tag of event.tags) {
