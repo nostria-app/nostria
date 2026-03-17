@@ -16,10 +16,13 @@
     </button>
     <span class="panel-header-spacer"></span>
     <div class="panel-actions">
-      <!-- List Filter -->
-      <app-list-filter-menu storageKey="summary" [showPublicOption]="false" defaultFilter="following"
-        [initialFilter]="urlListFilter()" (filterChanged)="onFilterChanged($event)"
-        (followSetChanged)="onFollowSetChanged($event)" />
+      <button mat-stroked-button cdkOverlayOrigin #filterOrigin="cdkOverlayOrigin" class="combined-filter-btn"
+        [class.active]="hasActiveCombinedFilter()" matTooltip="Filter summary content and lists"
+        (click)="toggleFilterPanel()">
+        <mat-icon>tune</mat-icon>
+        <span class="filter-button-label">Filters</span>
+        <span class="filter-summary-text">{{ currentListFilterLabel() }}</span>
+      </button>
 
       @if (isFetching()) {
       <mat-spinner diameter="20" strokeWidth="3"></mat-spinner>
@@ -30,6 +33,108 @@
       }
     </div>
   </div>
+
+  <ng-template cdkConnectedOverlay [cdkConnectedOverlayOrigin]="filterOrigin"
+    [cdkConnectedOverlayOpen]="filterPanelOpen()" [cdkConnectedOverlayHasBackdrop]="true"
+    [cdkConnectedOverlayBackdropClass]="'cdk-overlay-transparent-backdrop'"
+    [cdkConnectedOverlayPositions]="filterPanelPositions" [cdkConnectedOverlayPush]="true"
+    (backdropClick)="closeFilterPanel()">
+    <div class="combined-filter-panel" (click)="$event.stopPropagation()">
+      <div class="combined-filter-column content-filter-column">
+        <div class="combined-filter-header">
+          <span class="combined-filter-title">Content types</span>
+          @if (hasActiveContentFilter()) {
+          <span class="combined-filter-status">Custom</span>
+          }
+        </div>
+
+        <div class="content-types-grid">
+          @for (type of summaryContentTypes; track type.id) {
+          <button class="content-type-chip" [class.selected]="isContentTypeSelected(type)"
+            (click)="toggleContentType(type)">
+            <mat-icon class="chip-icon">{{ type.icon }}</mat-icon>
+            <div class="chip-text">
+              <span class="chip-label">{{ type.label }}</span>
+              <span class="chip-description">{{ type.description }}</span>
+            </div>
+          </button>
+          }
+        </div>
+
+        <button class="content-type-chip full-width" [class.selected]="currentShowReplies()"
+          (click)="toggleShowReplies()">
+          <mat-icon class="chip-icon">reply</mat-icon>
+          <div class="chip-text">
+            <span class="chip-label">Show Replies</span>
+            <span class="chip-description">Comments on other posts</span>
+          </div>
+        </button>
+
+        <div class="filter-actions-row">
+          <button mat-stroked-button class="action-btn" (click)="selectAllContentTypes()">
+            Select All
+          </button>
+          <button mat-stroked-button class="action-btn" (click)="clearContentTypes()">
+            Clear All
+          </button>
+          <button mat-stroked-button class="action-btn" (click)="resetContentFilter()">
+            Reset
+          </button>
+        </div>
+      </div>
+
+      <div class="combined-filter-divider"></div>
+
+      <div class="combined-filter-column list-filter-column">
+        <div class="combined-filter-header">
+          <span class="combined-filter-title">List filter</span>
+          @if (hasActiveListFilter()) {
+          <span class="combined-filter-status">Active</span>
+          }
+        </div>
+
+        <button class="filter-option-chip" [class.selected]="currentListFilter() === 'following'"
+          (click)="selectListFilter('following')">
+          <mat-icon class="chip-icon">people</mat-icon>
+          <div class="chip-text">
+            <span class="chip-label">Following</span>
+            <span class="chip-description">People you follow</span>
+          </div>
+        </button>
+
+        @if (favoritesSet(); as favorites) {
+        <button class="filter-option-chip" [class.selected]="currentListFilter() === 'nostria-favorites'"
+          (click)="selectListFilter('nostria-favorites')">
+          <mat-icon class="chip-icon">star</mat-icon>
+          <div class="chip-text">
+            <span class="chip-label">Favorites</span>
+            <span class="chip-description">{{ favorites.pubkeys.length }} people</span>
+          </div>
+        </button>
+        }
+
+        @if (otherFollowSets().length > 0) {
+        <mat-divider></mat-divider>
+        @for (set of otherFollowSets(); track set.id) {
+        <button class="filter-option-chip" [class.selected]="currentListFilter() === set.dTag"
+          (click)="selectListFilter(set.dTag)">
+          <mat-icon class="chip-icon">{{ set.isPrivate ? 'lock' : 'group' }}</mat-icon>
+          <div class="chip-text">
+            <span class="chip-label">{{ set.title }}</span>
+            <span class="chip-description">{{ set.pubkeys.length }} people</span>
+          </div>
+        </button>
+        }
+        }
+
+        <div class="filter-actions-row single-action-row">
+          <button mat-stroked-button class="action-btn" (click)="clearListFilter()">
+            Reset
+          </button>
+        </div>
+      </div>
+    </div>
+  </ng-template>
 
   <!-- Time Range Panel Overlay -->
   <ng-template cdkConnectedOverlay [cdkConnectedOverlayOrigin]="timeOrigin" [cdkConnectedOverlayOpen]="timePanelOpen()"
@@ -113,8 +218,8 @@
           @for (poster of activePosters(); track poster.pubkey) {
           <div class="poster-card" [class.selected]="isPosterSelected(poster.pubkey)"
             (click)="togglePosterSelection(poster.pubkey)" (keydown.enter)="togglePosterSelection(poster.pubkey)"
-            (keydown.space)="togglePosterSelection(poster.pubkey); $event.preventDefault()" role="checkbox" tabindex="0"
-            [attr.aria-checked]="isPosterSelected(poster.pubkey)">
+            (keydown.space)="togglePosterSelection(poster.pubkey); $event.preventDefault()" role="button" tabindex="0"
+            [attr.aria-pressed]="isPosterSelected(poster.pubkey) ? 'true' : 'false'">
             <div class="poster-avatar">
               <app-user-profile [pubkey]="poster.pubkey" view="icon" [disableLink]="true"
                 [disableHoverCard]="true"></app-user-profile>
@@ -132,6 +237,12 @@
                 <mat-icon>chat</mat-icon>
                 {{ poster.notesCount }}
               </span>
+              @if (poster.repostsCount > 0) {
+              <span class="stat-item" matTooltip="Reposts">
+                <mat-icon>repeat</mat-icon>
+                {{ poster.repostsCount }}
+              </span>
+              }
               @if (poster.articlesCount > 0) {
               <span class="stat-item" matTooltip="Articles">
                 <mat-icon>article</mat-icon>
