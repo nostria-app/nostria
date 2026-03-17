@@ -93,6 +93,34 @@ export class WalletComponent implements OnDestroy {
     '7e2b09f951ed9be483284e7469ac20ac427d3264633d250c9d01e4265c99ed42',
   ];
   bitcoinDonationAddress = 'bc1p733wvkgpew822jwdwxdps46uqr4zpsnt0c8splhln965mtsf0mls4z3yxr';
+
+  nwcProviders = [
+    {
+      name: 'Rizful',
+      url: 'https://rizful.com',
+      description: 'Nostr-native custodial wallet with NWC support',
+    },
+    {
+      name: 'Alby',
+      url: 'https://getalby.com',
+      description: 'Browser extension and hub for Lightning payments',
+    },
+    {
+      name: 'Cashu.me',
+      url: 'https://cashu.me',
+      description: 'Ecash wallet with Nostr Wallet Connect integration',
+    },
+    {
+      name: 'Minibits',
+      url: 'https://www.minibits.cash',
+      description: 'Mobile Cashu wallet with NWC support',
+    },
+    {
+      name: 'Coinos',
+      url: 'https://coinos.io',
+      description: 'Web-based Bitcoin and Lightning wallet',
+    },
+  ];
   selectedConnectionString = signal<string | null>(null);
   selectedDonationAmount = signal<number | null>(5);
   customDonationAmount = new FormControl<number | null>(null, [Validators.min(0.01)]);
