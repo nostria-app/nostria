@@ -1113,7 +1113,7 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
     event.stopPropagation();
     try {
       const npub = nip19.npubEncode(track.pubkey);
-      this.router.navigate(['/music/artist', npub]);
+      this.layout.openMusicArtist(npub);
     } catch {
       // Ignore
     }
