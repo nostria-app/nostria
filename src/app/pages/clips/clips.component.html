@@ -139,6 +139,12 @@
       @let clip = currentFollowingClip();
       @if (clip) {
       <div class="swipe-stack" #followingSwipeStack>
+        @if (!isAtLatest('following')) {
+        <button mat-mini-fab class="mobile-jump-latest-btn" aria-label="Jump to latest"
+          (click)="jumpToLatest('following')">
+          <mat-icon>vertical_align_top</mat-icon>
+        </button>
+        }
         <div class="swipe-card swipe-card-current" [class.animating]="isCardAnimating('following')"
           [style.transform]="getCardTransform('following')">
           <app-clips-video-card [event]="clip" [active]="selectedTabIndex() === 1"
@@ -190,6 +196,12 @@
       @let clip = currentForYouClip();
       @if (clip) {
       <div class="swipe-stack" #forYouSwipeStack>
+        @if (!isAtLatest('foryou')) {
+        <button mat-mini-fab class="mobile-jump-latest-btn" aria-label="Jump to latest"
+          (click)="jumpToLatest('foryou')">
+          <mat-icon>vertical_align_top</mat-icon>
+        </button>
+        }
         <div class="swipe-card swipe-card-current" [class.animating]="isCardAnimating('foryou')"
           [style.transform]="getCardTransform('foryou')">
           <app-clips-video-card [event]="clip" [active]="selectedTabIndex() === 2"

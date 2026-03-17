@@ -252,6 +252,16 @@
   z-index: 40;
 }
 
+.mobile-jump-latest-btn {
+  display: none;
+  position: absolute;
+  top: calc(env(safe-area-inset-top, 0px) + 0.25rem);
+  right: 0.5rem;
+  z-index: 50;
+  background: color-mix(in srgb, var(--mat-sys-surface-container-high) 80%, transparent);
+  color: var(--mat-sys-on-surface);
+}
+
 .desktop-nav-btn {
   background: var(--mat-sys-surface-container-high);
   color: var(--mat-sys-on-surface);
@@ -414,6 +424,10 @@
 
   .desktop-nav-buttons {
     display: none;
+  }
+
+  .mobile-jump-latest-btn {
+    display: flex;
   }
 
   .fullscreen-loading,
