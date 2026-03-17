@@ -116,8 +116,8 @@
 // List filter menu styles - must be at root level for overlay targeting
 ::ng-deep .mat-mdc-menu-panel.list-filter-menu {
   min-width: 240px;
-  // Keep the menu below the trigger without shifting its hitbox and let the content scroll.
-  max-height: calc(100dvh - var(--toolbar-height, 64px) - env(safe-area-inset-bottom, 0px) - 16px);
+  // Reserve space for the sticky people header so the menu can stay below the trigger on short screens.
+  max-height: calc(100dvh - var(--toolbar-height, 64px) - 56px - env(safe-area-inset-bottom, 0px) - 16px);
   overflow: hidden;
   box-sizing: border-box;
 
