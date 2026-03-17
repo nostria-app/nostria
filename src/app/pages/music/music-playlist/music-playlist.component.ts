@@ -900,7 +900,7 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
       // Update the track in the local map
       const event = result.event;
       const dTag = event.tags.find(t => t[0] === 'd')?.[1] || '';
-      const uniqueId = `${event.pubkey}:${dTag}`;
+      const uniqueId = `${event.kind}:${event.pubkey}:${dTag}`;
       this.trackMap.set(uniqueId, event);
       this.updateTracks(this.trackRefs());
       // Persist the updated event to the local database so it survives reloads
