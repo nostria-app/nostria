@@ -340,6 +340,21 @@ export class ClipsComponent implements OnInit, OnDestroy {
     this.advanceByKeyboard(mode, -1);
   }
 
+  jumpToLatest(mode: SwipeMode): void {
+    if (mode === 'following') {
+      this.followingIndex.set(0);
+      this.persistFollowingPosition();
+    } else {
+      this.forYouIndex.set(0);
+      this.persistForYouPosition();
+    }
+    this.prefetchActiveAndNextInteractions();
+  }
+
+  isAtLatest(mode: SwipeMode): boolean {
+    return mode === 'following' ? this.followingIndex() === 0 : this.forYouIndex() === 0;
+  }
+
   canNavigate(mode: SwipeMode, delta: number): boolean {
     const clips = mode === 'following' ? this.followingClips() : this.forYouClips();
     const currentIndex = mode === 'following' ? this.followingIndex() : this.forYouIndex();

@@ -152,6 +152,12 @@
         }
       </div>
       <div class="desktop-nav-buttons">
+        @if (!isAtLatest('following')) {
+        <button mat-mini-fab class="desktop-nav-btn" aria-label="Jump to latest" matTooltip="Jump to latest"
+          (click)="jumpToLatest('following')">
+          <mat-icon>vertical_align_top</mat-icon>
+        </button>
+        }
         <button mat-mini-fab class="desktop-nav-btn" aria-label="Previous clip" matTooltip="Previous (↑ / k)"
           (click)="previousClip('following')" [disabled]="!canNavigate('following', -1)">
           <mat-icon>keyboard_arrow_up</mat-icon>
@@ -197,6 +203,12 @@
         }
       </div>
       <div class="desktop-nav-buttons">
+        @if (!isAtLatest('foryou')) {
+        <button mat-mini-fab class="desktop-nav-btn" aria-label="Jump to latest" matTooltip="Jump to latest"
+          (click)="jumpToLatest('foryou')">
+          <mat-icon>vertical_align_top</mat-icon>
+        </button>
+        }
         <button mat-mini-fab class="desktop-nav-btn" aria-label="Previous clip" matTooltip="Previous (↑ / k)"
           (click)="previousClip('foryou')" [disabled]="!canNavigate('foryou', -1)">
           <mat-icon>keyboard_arrow_up</mat-icon>
