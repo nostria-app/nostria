@@ -35,6 +35,9 @@ import { RightPanelHeaderService } from '../../../services/right-panel-header.se
 import { LeftPanelHeaderService } from '../../../services/left-panel-header.service';
 import { AccountRelayService } from '../../../services/relays/account-relay';
 import { NostrService } from '../../../services/nostr.service';
+import { CustomDialogService } from '../../../services/custom-dialog.service';
+import { UserRelaysService } from '../../../services/relays/user-relays';
+import { ShareArticleDialogComponent, ShareArticleDialogData } from '../../../components/share-article-dialog/share-article-dialog.component';
 
 @Component({
   selector: 'app-calendar-event-detail',
@@ -73,6 +76,8 @@ export class CalendarEventDetailComponent implements AfterViewInit, OnDestroy {
   private leftPanelHeader = inject(LeftPanelHeaderService);
   private accountRelay = inject(AccountRelayService);
   private nostrService = inject(NostrService);
+  private customDialog = inject(CustomDialogService);
+  private userRelaysService = inject(UserRelaysService);
 
   event = signal<Event | null>(null);
   isLoading = signal(true);
@@ -367,27 +372,49 @@ export class CalendarEventDetailComponent implements AfterViewInit, OnDestroy {
     }
   }
 
-  shareEvent(): void {
+  async shareEvent(): Promise<void> {
     const ev = this.event();
     if (!ev) return;
 
     const dTag = this.getTagValue('d', ev.tags);
-    const naddr = nip19.naddrEncode({
-      identifier: dTag,
-      pubkey: ev.pubkey,
-      kind: ev.kind,
-    });
 
-    const shareUrl = `https://nostria.app/a/${naddr}`;
+    try {
+      await this.userRelaysService.ensureRelaysForPubkey(ev.pubkey);
+      const authorRelays = this.userRelaysService.getRelaysForPubkey(ev.pubkey);
 
-    if (navigator.share) {
-      navigator.share({
+      const naddr = nip19.naddrEncode({
+        identifier: dTag,
+        pubkey: ev.pubkey,
+        kind: ev.kind,
+        relays: authorRelays?.length ? authorRelays : undefined,
+      });
+
+      const shareUrl = `https://nostria.app/a/${naddr}`;
+
+      const dialogData: ShareArticleDialogData = {
         title: this.title(),
-        text: this.summary() || this.description(),
+        summary: this.summary() || this.description() || undefined,
+        image: this.image() || undefined,
         url: shareUrl,
-      }).catch(() => this.copyToClipboard(shareUrl));
-    } else {
-      this.copyToClipboard(shareUrl);
+        eventId: ev.id,
+        pubkey: ev.pubkey,
+        identifier: dTag,
+        kind: ev.kind,
+        encodedId: naddr,
+        naddr,
+        event: ev,
+      };
+
+      this.customDialog.open(ShareArticleDialogComponent, {
+        title: '',
+        showCloseButton: false,
+        panelClass: 'share-sheet-dialog',
+        data: dialogData,
+        width: '450px',
+        maxWidth: '95vw',
+      });
+    } catch {
+      this.snackBar.open('Failed to generate share link', 'Close', { duration: 3000 });
     }
   }
 
