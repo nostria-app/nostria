@@ -21,6 +21,11 @@ mat-card-header {
     .edited-indicator {
       font-size: 0.7rem;
     }
+
+    .header-pow,
+    .header-client {
+      display: none;
+    }
   }
 }
 
