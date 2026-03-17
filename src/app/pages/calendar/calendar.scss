@@ -1,52 +1,20 @@
-// Calendar toolbar (above the calendar views, inside calendar-main)
-.calendar-toolbar {
+// Pane header styles (rendered via LeftPanelHeaderService)
+.today-btn {
+  border-radius: 20px;
+  font-size: 0.875rem;
+  flex-shrink: 0;
+}
+
+.calendar-nav {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 8px 16px;
-  border-bottom: 1px solid var(--mat-sys-outline-variant);
-  flex-shrink: 0;
-  gap: 8px;
+}
 
-  .toolbar-left {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-
-    .today-btn {
-      border-radius: 20px;
-      font-size: 0.875rem;
-    }
-  }
-
-  .toolbar-right {
-    display: flex;
-    align-items: center;
-  }
-
-  .month-navigation {
-    display: flex;
-    align-items: center;
-  }
-
-  .current-month {
-    font-size: 1.1rem;
-    color: var(--mat-sys-on-surface);
-    margin-left: 8px;
-    white-space: nowrap;
-  }
-
-  .view-toggles {
-
-    // Remove checkmark indicator from selected toggle
-    ::ng-deep .mat-pseudo-checkbox {
-      display: none !important;
-    }
-
-    ::ng-deep .mat-button-toggle-checked .mat-pseudo-checkbox {
-      display: none !important;
-    }
-  }
+.current-month-label {
+  font-size: 1.1rem;
+  color: var(--mat-sys-on-surface);
+  margin-left: 4px;
+  white-space: nowrap;
 }
 
 // Left sidebar (Outlook-style)
@@ -150,7 +118,7 @@
 .calendar-container {
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 56px);
+  height: 100%;
   padding: 0;
 }
 

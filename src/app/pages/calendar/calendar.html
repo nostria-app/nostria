@@ -1,3 +1,35 @@
+<!-- Pane toolbar injected into the left panel header via LeftPanelHeaderService -->
+<ng-template #calendarHeaderTemplate>
+  <div class="panel-header">
+    @if (app.authenticated() && isPremium()) {
+    <button mat-stroked-button (click)="goToToday()" class="today-btn">Today</button>
+    <div class="calendar-nav">
+      <button mat-icon-button (click)="previousMonth()" matTooltip="Previous">
+        <mat-icon>chevron_left</mat-icon>
+      </button>
+      <button mat-icon-button (click)="nextMonth()" matTooltip="Next">
+        <mat-icon>chevron_right</mat-icon>
+      </button>
+    </div>
+    <span class="current-month-label">{{ currentMonth().name }}</span>
+    } @else {
+    <h2 class="panel-title title-font">Calendar</h2>
+    }
+    <span class="panel-header-spacer"></span>
+    @if (app.authenticated() && isPremium()) {
+    <app-list-filter-menu storageKey="calendar" [showPublicOption]="true" defaultFilter="all"
+      (filterChanged)="onListFilterChanged($event)" (followSetChanged)="onFollowSetChanged($event)">
+    </app-list-filter-menu>
+    <mat-button-toggle-group [value]="viewMode()" (change)="onViewModeChange($event.value)" appearance="standard"
+      [hideSingleSelectionIndicator]="true">
+      <mat-button-toggle value="month">Month</mat-button-toggle>
+      <mat-button-toggle value="week">Week</mat-button-toggle>
+      <mat-button-toggle value="agenda">Agenda</mat-button-toggle>
+    </mat-button-toggle-group>
+    }
+  </div>
+</ng-template>
+
 @if (!app.authenticated()) {
 <div class="unauthenticated-state">
   <mat-icon>account_circle</mat-icon>
@@ -140,31 +172,6 @@
 
     <!-- Main calendar area -->
     <div class="calendar-main">
-
-      <!-- Calendar toolbar -->
-      <div class="calendar-toolbar">
-        <div class="toolbar-left">
-          <button mat-stroked-button (click)="goToToday()" class="today-btn">Today</button>
-          <div class="month-navigation">
-            <button mat-icon-button (click)="previousMonth()" matTooltip="Previous">
-              <mat-icon>chevron_left</mat-icon>
-            </button>
-            <button mat-icon-button (click)="nextMonth()" matTooltip="Next">
-              <mat-icon>chevron_right</mat-icon>
-            </button>
-          </div>
-          <span class="current-month">{{ currentMonth().name }}</span>
-        </div>
-
-        <div class="toolbar-right">
-          <mat-button-toggle-group class="view-toggles" [value]="viewMode()" (change)="onViewModeChange($event.value)"
-            appearance="standard">
-            <mat-button-toggle value="month">Month</mat-button-toggle>
-            <mat-button-toggle value="week">Week</mat-button-toggle>
-            <mat-button-toggle value="agenda">Agenda</mat-button-toggle>
-          </mat-button-toggle-group>
-        </div>
-      </div>
 
       <!-- Loading indicator -->
       @if (isLoading()) {

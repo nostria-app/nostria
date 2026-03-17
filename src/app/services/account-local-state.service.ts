@@ -122,6 +122,7 @@ interface AccountLocalState {
   summaryListFilter?: string; // Filter for summary: 'following' or follow set d-tag
   musicListFilter?: string; // Filter for music: 'all', 'following', or follow set d-tag
   musicTrackSort?: string; // Track sort for music: 'released' or 'published'
+  calendarListFilter?: string; // Filter for calendar: 'all', 'following', or follow set d-tag
   recentShareRecipients?: string[]; // Pubkeys of recent share recipients, most recent first
   signingCount?: number; // Number of signing operations performed with nsec
   boardsViewMode?: string; // View mode for boards: 'compact' or 'standard'
@@ -1635,6 +1636,16 @@ export class AccountLocalStateService {
   setMusicTrackSort(pubkey: string, sort: string): void {
     const value = sort === 'released' ? undefined : sort;
     this.updateAccountState(pubkey, { musicTrackSort: value });
+  }
+
+  getCalendarListFilter(pubkey: string): string {
+    const state = this.getAccountState(pubkey);
+    return state.calendarListFilter || 'all';
+  }
+
+  setCalendarListFilter(pubkey: string, filter: string): void {
+    const value = filter === 'all' ? undefined : filter;
+    this.updateAccountState(pubkey, { calendarListFilter: value });
   }
 
   /**

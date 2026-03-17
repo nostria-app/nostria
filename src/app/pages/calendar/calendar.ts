@@ -1,13 +1,10 @@
-import { ChangeDetectionStrategy, Component, computed, DestroyRef, effect, inject, OnDestroy, OnInit, signal } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { ChangeDetectionStrategy, Component, AfterViewInit, ViewChild, TemplateRef, computed, effect, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDatepickerModule } from '@angular/material/datepicker';
-import { MatInputModule } from '@angular/material/input';
-import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatNativeDateModule } from '@angular/material/core';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatChipsModule } from '@angular/material/chips';
@@ -17,7 +14,6 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatBadgeModule } from '@angular/material/badge';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatDividerModule } from '@angular/material/divider';
-import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { Event, nip19 } from 'nostr-tools';
 import { Router } from '@angular/router';
 import { LoggerService } from '../../services/logger.service';
@@ -41,8 +37,10 @@ import { AccountRelayService } from '../../services/relays/account-relay';
 import { UtilitiesService } from '../../services/utilities.service';
 import { UserRelaysService } from '../../services/relays/user-relays';
 import { TwoColumnLayoutService } from '../../services/two-column-layout.service';
-import { PanelActionsService } from '../../services/panel-actions.service';
 import { LayoutService } from '../../services/layout.service';
+import { LeftPanelHeaderService } from '../../services/left-panel-header.service';
+import { ListFilterMenuComponent, ListFilterValue } from '../../components/list-filter-menu/list-filter-menu.component';
+import { FollowSetsService, FollowSet } from '../../services/follow-sets.service';
 
 // Calendar event interfaces based on NIP-52
 interface CalendarEvent {
@@ -98,8 +96,6 @@ interface CalendarCollection {
     MatButtonModule,
     MatIconModule,
     MatDatepickerModule,
-    MatInputModule,
-    MatFormFieldModule,
     MatNativeDateModule,
     MatButtonToggleModule,
     MatChipsModule,
@@ -109,13 +105,15 @@ interface CalendarCollection {
     MatBadgeModule,
     MatProgressBarModule,
     MatDividerModule,
-    ReactiveFormsModule,
+    ListFilterMenuComponent,
   ],
   templateUrl: './calendar.html',
   styleUrl: './calendar.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class Calendar implements OnInit, OnDestroy {
+export class Calendar implements OnInit, OnDestroy, AfterViewInit {
+  @ViewChild('calendarHeaderTemplate', { static: true }) calendarHeaderTemplateRef!: TemplateRef<unknown>;
+
   private accountRelay = inject(AccountRelayService);
   private utilities = inject(UtilitiesService);
   private userRelaysService = inject(UserRelaysService);
@@ -128,10 +126,10 @@ export class Calendar implements OnInit, OnDestroy {
   private gregorianService = inject(GregorianCalendarService);
   private ethiopianService = inject(EthiopianCalendarService);
   public accountState = inject(AccountStateService);
-  private destroyRef = inject(DestroyRef);
   private twoColumnLayout = inject(TwoColumnLayoutService);
-  private panelActions = inject(PanelActionsService);
+  private leftPanelHeader = inject(LeftPanelHeaderService);
   protected layout = inject(LayoutService);
+  private followSetsService = inject(FollowSetsService);
 
   // Premium check
   isPremium = computed(() => {
@@ -142,7 +140,6 @@ export class Calendar implements OnInit, OnDestroy {
   // Current view state
   selectedDate = signal<Date>(new Date());
   viewMode = signal<'month' | 'week' | 'agenda'>('month');
-  selectedDateControl = new FormControl(new Date());
 
   // Calendar events state
   events = signal<CalendarEvent[]>([]);
@@ -153,6 +150,10 @@ export class Calendar implements OnInit, OnDestroy {
   calendars = signal<CalendarCollection[]>([]);
   enabledCalendars = signal<Set<string>>(new Set());
   isLoadingCalendars = signal<boolean>(false);
+
+  // People list filter
+  calendarListFilter = signal<ListFilterValue>('all');
+  private calendarFollowSet = signal<FollowSet | null>(null);
 
   // Separated calendar views
   myCalendars = computed(() => {
@@ -310,26 +311,35 @@ export class Calendar implements OnInit, OnDestroy {
       .sort((a, b) => a.date.getTime() - b.date.getTime());
   });
 
-  // Filtered events based on enabled calendars
+  // Filtered events based on enabled calendars and people list filter
   filteredEvents = computed(() => {
     const allEvents = this.events();
     const enabledCals = this.enabledCalendars();
+    const listFilter = this.calendarListFilter();
+    const followSet = this.calendarFollowSet();
 
-    // If no calendars are specifically enabled, show all events
-    if (enabledCals.size === 0) {
-      return allEvents;
+    // Filter by calendar collection
+    let events = allEvents;
+    if (enabledCals.size > 0) {
+      const calendars = this.calendars();
+      events = events.filter(event => {
+        const eventCalendar = calendars.find(cal =>
+          cal.events.some(eventCoord => eventCoord.includes(event.id))
+        );
+        return eventCalendar ? enabledCals.has(eventCalendar.id) : true;
+      });
     }
 
-    // Filter events based on enabled calendars
-    return allEvents.filter(event => {
-      // Check if event belongs to an enabled calendar
-      const calendars = this.calendars();
-      const eventCalendar = calendars.find(cal =>
-        cal.events.some(eventCoord => eventCoord.includes(event.id))
-      );
+    // Filter by people list
+    if (listFilter === 'following') {
+      const following = new Set(this.accountState.followingList());
+      events = events.filter(e => following.has(e.pubkey));
+    } else if (listFilter !== 'all' && followSet) {
+      const pubkeys = new Set(followSet.pubkeys);
+      events = events.filter(e => pubkeys.has(e.pubkey));
+    }
 
-      return eventCalendar ? enabledCals.has(eventCalendar.id) : true;
-    });
+    return events;
   });
 
   // Override existing computed values to use filtered events
@@ -371,56 +381,39 @@ export class Calendar implements OnInit, OnDestroy {
   });
 
   constructor() {
-    // Effect to load events when date changes
+    // Effect to load events when date changes — also tracks relay init so it
+    // re-fires as soon as the account relay becomes ready after a page reload.
     effect(async () => {
       const date = this.selectedDate();
+      if (!this.accountRelay.initialized()) return;
       await this.loadEventsForMonth(date);
     });
 
-    // Handle date picker changes with proper cleanup
-    this.selectedDateControl.valueChanges.pipe(
-      takeUntilDestroyed(this.destroyRef)
-    ).subscribe(date => {
-      if (date) {
-        this.selectedDate.set(date);
-      }
-    });
+    // Wait for relay to be ready before loading data
+    this.accountRelay.waitUntilInitialized(10000)
+      .then(() => {
+        this.loadCurrentUserEvents();
+        this.loadCalendars();
+        this.checkForEventInUrl();
+      })
+      .catch(() => {
+        this.logger.warn('[Calendar] Account relay init timed out, attempting load anyway');
+        this.loadCurrentUserEvents();
+        this.loadCalendars();
+        this.checkForEventInUrl();
+      });
+  }
 
-    // Check for event parameter in URL on load
-    this.checkForEventInUrl();
-
-    // Initial load
-    this.loadCurrentUserEvents();
-    this.loadCalendars();
-
-    // Add some demo events for testing
-    // this.addDemoEvents();
+  ngAfterViewInit(): void {
+    this.leftPanelHeader.setHeaderTemplate(this.calendarHeaderTemplateRef);
   }
 
   ngOnInit(): void {
     this.twoColumnLayout.setWideLeft();
-
-    this.panelActions.setBreadcrumbs([{ label: 'Calendar' }]);
-    this.panelActions.setLeftPanelActions([
-      {
-        id: 'calendar-today',
-        icon: 'today',
-        label: 'Today',
-        tooltip: 'Go to today',
-        action: () => this.goToToday(),
-      },
-      {
-        id: 'calendar-create',
-        icon: 'add',
-        label: 'New Event',
-        tooltip: 'Create new event',
-        action: () => this.createEvent(),
-      },
-    ]);
   }
 
   ngOnDestroy(): void {
-    this.panelActions.clearLeftPanelActions();
+    this.leftPanelHeader.clear();
     this.twoColumnLayout.setSplitView();
   }
 
@@ -662,6 +655,15 @@ export class Calendar implements OnInit, OnDestroy {
 
   selectDate(date: Date): void {
     this.selectedDate.set(date);
+  }
+
+  // People list filter handlers
+  onListFilterChanged(filter: ListFilterValue): void {
+    this.calendarListFilter.set(filter);
+  }
+
+  onFollowSetChanged(followSet: FollowSet | null): void {
+    this.calendarFollowSet.set(followSet);
   }
 
   // View mode management
