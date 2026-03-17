@@ -118,10 +118,20 @@
 
     <!-- Left sidebar (Outlook-style) -->
     <div class="calendar-sidebar">
-      <button mat-flat-button (click)="createEvent()" class="new-event-btn">
+      <button mat-flat-button [matMenuTriggerFor]="createMenu" class="new-event-btn">
         <mat-icon>add</mat-icon>
-        New event
+        Create
       </button>
+      <mat-menu #createMenu>
+        <button mat-menu-item (click)="createEvent()">
+          <mat-icon>event</mat-icon>
+          Event
+        </button>
+        <button mat-menu-item (click)="openCreateCalendar()">
+          <mat-icon>calendar_month</mat-icon>
+          Calendar
+        </button>
+      </mat-menu>
 
       <mat-calendar [selected]="selectedDate()" (selectedChange)="$event && selectDate($event)"
         class="mini-calendar"></mat-calendar>
@@ -142,6 +152,10 @@
             {{ isCalendarEnabled(calendar.id) ? 'check_box' : 'check_box_outline_blank' }}
           </mat-icon>
           <span class="calendar-name">{{ calendar.title }}</span>
+          <button mat-icon-button class="calendar-edit-btn" matTooltip="Edit calendar"
+            (click)="$event.stopPropagation(); openEditCalendar(calendar)">
+            <mat-icon>edit</mat-icon>
+          </button>
         </div>
         }
       </div>
@@ -406,4 +420,9 @@
 
   </div>
 </div>
+
+@if (showCreateCalendarDialog()) {
+<app-create-calendar-dialog [data]="editingCalendar() ? { isEdit: true, calendar: editingCalendar()! } : {}"
+  (closed)="onCalendarDialogClosed($event)" />
+}
 }

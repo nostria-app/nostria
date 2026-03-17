@@ -1,0 +1,37 @@
+<app-custom-dialog [title]="dialogTitle" [showCloseButton]="true" [disableClose]="isLoading()" [width]="'480px'"
+  [maxWidth]="'95vw'" (closed)="onCancel()">
+
+  <div dialog-content>
+    <form [formGroup]="calendarForm" class="calendar-form">
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Calendar Name</mat-label>
+        <input matInput formControlName="title" placeholder="My Calendar" autocomplete="off" maxlength="200" required />
+        <mat-hint>{{ calendarForm.get('title')?.value?.length || 0 }}/200</mat-hint>
+        @if (calendarForm.get('title')?.hasError('required')) {
+        <mat-error>Calendar name is required</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Description (Optional)</mat-label>
+        <textarea matInput formControlName="description" placeholder="Describe this calendar" maxlength="500"
+          style="field-sizing: content; min-height: 80px;"></textarea>
+        <mat-hint>{{ calendarForm.get('description')?.value?.length || 0 }}/500</mat-hint>
+      </mat-form-field>
+    </form>
+  </div>
+
+  <div dialog-actions>
+    <button mat-button type="button" (click)="onCancel()" [disabled]="isLoading()">
+      Cancel
+    </button>
+    <button mat-flat-button type="button" (click)="save()" [disabled]="!calendarForm.valid || isLoading()">
+      @if (isLoading()) {
+      <mat-progress-spinner diameter="18" mode="indeterminate" />
+      } @else {
+      <mat-icon>{{ data().isEdit ? 'save' : 'add' }}</mat-icon>
+      }
+      {{ data().isEdit ? 'Save' : 'Create' }}
+    </button>
+  </div>
+</app-custom-dialog>

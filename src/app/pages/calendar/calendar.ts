@@ -41,6 +41,11 @@ import { LayoutService } from '../../services/layout.service';
 import { LeftPanelHeaderService } from '../../services/left-panel-header.service';
 import { ListFilterMenuComponent, ListFilterValue } from '../../components/list-filter-menu/list-filter-menu.component';
 import { FollowSetsService, FollowSet } from '../../services/follow-sets.service';
+import {
+  CreateCalendarDialogComponent,
+  CreateCalendarDialogData,
+  CreateCalendarDialogResult,
+} from './create-calendar-dialog/create-calendar-dialog.component';
 
 // Calendar event interfaces based on NIP-52
 interface CalendarEvent {
@@ -106,6 +111,7 @@ interface CalendarCollection {
     MatProgressBarModule,
     MatDividerModule,
     ListFilterMenuComponent,
+    CreateCalendarDialogComponent,
   ],
   templateUrl: './calendar.html',
   styleUrl: './calendar.scss',
@@ -154,6 +160,10 @@ export class Calendar implements OnInit, OnDestroy, AfterViewInit {
   // People list filter
   calendarListFilter = signal<ListFilterValue>('all');
   private calendarFollowSet = signal<FollowSet | null>(null);
+
+  // Calendar dialog state
+  showCreateCalendarDialog = signal<boolean>(false);
+  editingCalendar = signal<CalendarCollection | null>(null);
 
   // Separated calendar views
   myCalendars = computed(() => {
@@ -841,6 +851,27 @@ export class Calendar implements OnInit, OnDestroy, AfterViewInit {
       if (calendarEvent) {
         this.addEvent(calendarEvent);
       }
+    }
+  }
+
+  openCreateCalendar(): void {
+    this.editingCalendar.set(null);
+    this.showCreateCalendarDialog.set(true);
+  }
+
+  openEditCalendar(calendar: CalendarCollection): void {
+    this.editingCalendar.set(calendar);
+    this.showCreateCalendarDialog.set(true);
+  }
+
+  onCalendarDialogClosed(result: CreateCalendarDialogResult | null): void {
+    this.showCreateCalendarDialog.set(false);
+    this.editingCalendar.set(null);
+
+    if (result?.event) {
+      this.logger.info('Calendar saved:', result.event);
+      // Reload calendars to reflect the new/updated collection
+      this.loadCalendars();
     }
   }
 
