@@ -1,94 +1,148 @@
-// Calendar toolbar (below panel header breadcrumbs)
+// Calendar toolbar (above the calendar views, inside calendar-main)
 .calendar-toolbar {
   display: flex;
   align-items: center;
-  gap: 8px;
+  justify-content: space-between;
   padding: 8px 16px;
+  border-bottom: 1px solid var(--mat-sys-outline-variant);
   flex-shrink: 0;
+  gap: 8px;
 
-  .month-navigation {
+  .toolbar-left {
     display: flex;
     align-items: center;
     gap: 4px;
 
-    .current-month {
-      font-size: 1rem;
-      color: var(--mat-sys-on-surface);
-      min-width: 180px;
-      text-align: center;
+    .today-btn {
+      border-radius: 20px;
+      font-size: 0.875rem;
     }
   }
 
-  .date-picker-field {
-    width: 140px;
-    font-size: 0.875rem;
+  .toolbar-right {
+    display: flex;
+    align-items: center;
+  }
 
-    ::ng-deep .mat-mdc-form-field-subscript-wrapper {
-      display: none;
-    }
+  .month-navigation {
+    display: flex;
+    align-items: center;
+  }
+
+  .current-month {
+    font-size: 1.1rem;
+    color: var(--mat-sys-on-surface);
+    margin-left: 8px;
+    white-space: nowrap;
   }
 
   .view-toggles {
-    .mat-button-toggle {
-      mat-icon {
-        font-size: 1.25rem;
-        width: 1.25rem;
-        height: 1.25rem;
-      }
+
+    // Remove checkmark indicator from selected toggle
+    ::ng-deep .mat-pseudo-checkbox {
+      display: none !important;
+    }
+
+    ::ng-deep .mat-button-toggle-checked .mat-pseudo-checkbox {
+      display: none !important;
     }
   }
 }
 
-// Calendars section at the top
-.calendars-section {
-  padding: 0 16px 8px;
+// Left sidebar (Outlook-style)
+.calendar-sidebar {
+  width: 240px;
+  min-width: 240px;
+  display: flex;
+  flex-direction: column;
+  background: var(--mat-sys-surface-container-low);
+  border-right: 1px solid var(--mat-sys-outline-variant);
+  overflow-y: auto;
   flex-shrink: 0;
 
-  .calendars-group {
-    margin-bottom: 8px;
+  .new-event-btn {
+    margin: 12px;
+    border-radius: 20px;
+    align-self: flex-start;
+  }
 
-    .calendars-group-title {
-      font-size: 0.8rem;
+  .mini-calendar {
+
+    // Constrain the mat-calendar to fit in sidebar
+    ::ng-deep .mat-calendar {
+      width: 100%;
+    }
+  }
+
+  mat-divider {
+    margin: 8px 0;
+  }
+
+  .sidebar-calendars-group {
+    padding: 4px 8px 8px;
+
+    .sidebar-group-title {
+      font-size: 0.7rem;
       color: var(--mat-sys-on-surface-variant);
       text-transform: uppercase;
-      letter-spacing: 0.05em;
-      margin: 0 0 6px;
+      letter-spacing: 0.08em;
+      margin: 12px 8px 4px;
     }
 
-    .calendars-chips {
+    .sidebar-calendar-item {
       display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 8px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.875rem;
+      color: var(--mat-sys-on-surface);
+      transition: background-color 0.15s ease;
 
-      mat-chip-row {
-        cursor: pointer;
+      &:hover {
+        background: var(--mat-sys-surface-container);
+      }
 
-        &.selected {
-          background-color: var(--mat-sys-primary-container);
-          color: var(--mat-sys-on-primary-container);
-        }
+      .calendar-enabled {
+        color: var(--mat-sys-primary);
+        font-size: 20px;
+        width: 20px;
+        height: 20px;
+        flex-shrink: 0;
+      }
 
-        .calendar-event-count {
-          font-size: 0.7rem;
-          margin-left: 4px;
-          opacity: 0.7;
-        }
+      .calendar-disabled {
+        color: var(--mat-sys-on-surface-variant);
+        font-size: 20px;
+        width: 20px;
+        height: 20px;
+        flex-shrink: 0;
+      }
+
+      .calendar-name {
+        flex: 1;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
       }
     }
   }
 
   .no-calendars-hint {
     display: flex;
-    align-items: center;
-    gap: 8px;
+    align-items: flex-start;
+    gap: 6px;
     color: var(--mat-sys-on-surface-variant);
-    font-size: 0.85rem;
-    padding: 8px 0;
+    font-size: 0.8rem;
+    padding: 8px 16px;
 
     mat-icon {
-      font-size: 18px;
-      width: 18px;
-      height: 18px;
+      font-size: 16px;
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
+      margin-top: 1px;
     }
   }
 }
@@ -98,6 +152,21 @@
   flex-direction: column;
   height: calc(100vh - 56px);
   padding: 0;
+}
+
+.calendar-layout {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.calendar-main {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .loading-bar {
@@ -113,6 +182,7 @@
   flex: 1;
   min-height: 0;
   overflow: hidden;
+  padding: 16px;
 
   .calendar-views {
     flex: 1;
@@ -684,29 +754,41 @@
 
 // Responsive Design
 @media (max-width: 1200px) {
-  .calendar-container {
-    padding: 0 16px;
-  }
-
-  .calendar-toolbar {
-    flex-wrap: wrap;
+  .calendar-sidebar {
+    width: 200px;
+    min-width: 200px;
   }
 }
 
 @media (max-width: 960px) {
+  .calendar-layout {
+    flex-direction: column;
+  }
+
+  .calendar-sidebar {
+    width: 100%;
+    min-width: unset;
+    border-right: none;
+    border-bottom: 1px solid var(--mat-sys-outline-variant);
+
+    // Hide mini calendar on small screens to save space
+    .mini-calendar {
+      display: none;
+    }
+
+    // Show calendars horizontally on small screens
+    .sidebar-calendars-group .sidebar-calendar-item {
+      display: inline-flex;
+      margin-right: 4px;
+    }
+  }
+
   .calendar-toolbar {
     padding: 8px;
     gap: 4px;
 
-    .month-navigation {
-      .current-month {
-        font-size: 0.9rem;
-        min-width: 140px;
-      }
-    }
-
-    .date-picker-field {
-      width: 120px;
+    .current-month {
+      font-size: 0.9rem;
     }
   }
 
