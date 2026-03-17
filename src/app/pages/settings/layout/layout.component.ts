@@ -155,7 +155,7 @@ const REACTION_EMOJI_OPTIONS = ['❤️', '👍', '🔥', '😂', '🎉', '👏'
 
         <div class="setting-item">
           <span i18n="@@settings.layout.right-sidebar">Show Right Sidebar</span>
-          <mat-slide-toggle [checked]="settings.settings().rightSidebarEnabled !== false"
+          <mat-slide-toggle [checked]="settings.settings().rightSidebarEnabled === true"
             (change)="toggleRightSidebar()">
           </mat-slide-toggle>
         </div>
@@ -233,7 +233,7 @@ export class LayoutSettingsComponent implements OnInit, OnDestroy {
   }
 
   toggleRightSidebar(): void {
-    const currentValue = this.settings.settings().rightSidebarEnabled !== false;
+    const currentValue = this.settings.settings().rightSidebarEnabled === true;
     void this.settings.updateSettings({ rightSidebarEnabled: !currentValue });
   }
 

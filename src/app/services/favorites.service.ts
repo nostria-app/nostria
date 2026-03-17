@@ -4,6 +4,7 @@ import { LocalStorageService } from './local-storage.service';
 import { LoggerService } from './logger.service';
 import { AccountLocalStateService } from './account-local-state.service';
 import { FollowSetsService } from './follow-sets.service';
+import { SettingsService } from './settings.service';
 
 type FavoritesData = Record<string, string[]>;
 
@@ -15,6 +16,7 @@ export class FavoritesService {
   private readonly localStorage = inject(LocalStorageService);
   private readonly accountLocalState = inject(AccountLocalStateService);
   private readonly followSetsService = inject(FollowSetsService);
+  private readonly settingsService = inject(SettingsService);
   private readonly logger = inject(LoggerService);
   readonly STORAGE_KEY = 'nostria-favorites';
 
@@ -256,6 +258,13 @@ export class FavoritesService {
 
     // Trigger reactivity
     this.favoritesVersion.update(v => v + 1);
+
+    // Auto-enable right sidebar when user adds their first favorite
+    // Only if the setting has never been explicitly set (undefined means new user)
+    if (this.settingsService.settings().rightSidebarEnabled === undefined) {
+      void this.settingsService.updateSettings({ rightSidebarEnabled: true });
+      this.logger.info('[Favorites] Auto-enabled right sidebar on first favorite');
+    }
 
     this.logger.debug('Added user to favorites', {
       userPubkey,

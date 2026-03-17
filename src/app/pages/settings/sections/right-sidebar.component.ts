@@ -10,7 +10,7 @@ import { SettingsService } from '../../../services/settings.service';
     <div class="setting-section">
       <div class="setting-item">
         <span i18n="@@settings.layout.right-sidebar">Show Right Sidebar</span>
-        <mat-slide-toggle [checked]="settings.settings().rightSidebarEnabled !== false" (change)="toggleRightSidebar()">
+        <mat-slide-toggle [checked]="settings.settings().rightSidebarEnabled === true" (change)="toggleRightSidebar()">
         </mat-slide-toggle>
       </div>
       <p class="setting-description" i18n="@@settings.layout.right-sidebar.description">
@@ -40,7 +40,7 @@ export class SettingRightSidebarComponent {
   readonly settings = inject(SettingsService);
 
   toggleRightSidebar(): void {
-    const currentValue = this.settings.settings().rightSidebarEnabled !== false;
+    const currentValue = this.settings.settings().rightSidebarEnabled === true;
     void this.settings.updateSettings({ rightSidebarEnabled: !currentValue });
   }
 }

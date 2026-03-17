@@ -86,7 +86,7 @@ export interface UserSettings {
 const DEFAULT_SETTINGS: UserSettings = {
   socialSharingPreview: true,
   postToXByDefault: false,
-  rightSidebarEnabled: true,
+  rightSidebarEnabled: undefined,
   relayDiscoveryMode: 'outbox',
   imageCacheEnabled: true,
   // By default, hide all reported content

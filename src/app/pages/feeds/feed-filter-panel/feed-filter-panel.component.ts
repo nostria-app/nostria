@@ -260,6 +260,8 @@ function isStandardKindsSelection(kinds: number[]): boolean {
       cursor: pointer;
       transition: all 0.15s ease;
       text-align: left;
+      width: 100%;
+      box-sizing: border-box;
     }
 
     .content-type-chip:hover:not(:disabled) {
