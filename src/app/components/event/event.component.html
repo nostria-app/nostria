@@ -955,11 +955,16 @@
 
 </mat-card>
 } @else if (id() && !isLoadingEvent()) {
-<div class="event-content">
+<div class="event-not-found">
+  <mat-icon>link_off</mat-icon>
   @if (loadingError()) {
   <p class="error-message">{{ loadingError() }}</p>
   } @else {
   <p>Event not found</p>
   }
+  <button mat-stroked-button (click)="retryLoadEvent()">
+    <mat-icon>refresh</mat-icon>
+    Retry
+  </button>
 </div>
 }

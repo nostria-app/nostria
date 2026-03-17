@@ -394,6 +394,9 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     return false;
   });
 
+  // Retry trigger: bump to re-trigger the event load effect
+  private retryCounter = signal(0);
+
   // Loading states
   isLoadingEvent = signal<boolean>(false);
   isLoadingThread = signal<boolean>(false);
@@ -1320,6 +1323,8 @@ export class EventComponent implements AfterViewInit, OnDestroy {
         const rawId = this.id();
         const type = this.type();
         const existingEvent = this.event();
+        // Read retryCounter so bumping it re-triggers this effect
+        const _retry = this.retryCounter();
 
         // Only load by ID if no event is provided directly
         if (!rawId || !type || existingEvent) {
@@ -1558,6 +1563,12 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     } finally {
       this.isLoadingEdit.set(false);
     }
+  }
+
+  retryLoadEvent(): void {
+    this.record.set(null);
+    this.loadingError.set(null);
+    this.retryCounter.update(c => c + 1);
   }
 
   private hasLoadedEdit = false;

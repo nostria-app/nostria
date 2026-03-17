@@ -155,8 +155,12 @@ export class TrendingColumnComponent implements OnDestroy {
   hasEvents = computed(() => this.displayedEventIds().length > 0);
   hasMore = computed(() => this.displayCount() < this.allEventIds().length);
 
-  // Expose anonymous relays for the template to pass to EventComponent
-  readonly trendingRelays = this.utilities.anonymousRelays;
+  // Expose relays for the template to pass to EventComponent
+  // Include nostr.wine relay since trending data comes from api.nostr.wine
+  readonly trendingRelays = [
+    'wss://relay.nostr.wine',
+    ...this.utilities.anonymousRelays,
+  ];
 
   private abortController: AbortController | null = null;
   private intersectionObserver?: IntersectionObserver;
