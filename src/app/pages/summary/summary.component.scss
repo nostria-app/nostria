@@ -87,8 +87,18 @@
     white-space: nowrap;
   }
 
+  .filter-button-label {
+    padding-right: 4px;
+  }
+
   .filter-summary-text {
+    display: inline-flex;
+    align-items: center;
+    min-width: 0;
     max-width: 110px;
+    margin-left: 2px;
+    padding-left: 8px;
+    border-left: 1px solid var(--mat-sys-outline-variant);
     color: var(--mat-sys-on-surface-variant);
   }
 
@@ -109,6 +119,7 @@
     .filter-summary-text {
       color: inherit;
       opacity: 0.85;
+      border-left-color: var(--mat-sys-on-primary-container);
     }
   }
 }
