@@ -1,4 +1,5 @@
 import { Component, ChangeDetectionStrategy, input, computed, signal, effect, inject } from '@angular/core';
+import { MatDialog } from '@angular/material/dialog';
 import { MatRippleModule } from '@angular/material/core';
 import { Event } from 'nostr-tools';
 import { NostrRecord } from '../../../interfaces';
@@ -33,6 +34,7 @@ export interface ZapInfo {
 })
 export class ReactionSummaryComponent {
   private layout = inject(LayoutService);
+  private dialog = inject(MatDialog);
 
   reactions = input<NostrRecord[]>([]);
   replyCount = input<number>(0);
@@ -143,6 +145,30 @@ export class ReactionSummaryComponent {
   formatAmount(amount: number | null): string {
     if (!amount) return '0';
     return amount.toLocaleString();
+  }
+
+  isImageUrl(text: string): boolean {
+    if (!text) return false;
+    const trimmed = text.trim();
+    return /^https?:\/\/\S+\.(jpe?g|png|gif|webp|svg|bmp|avif)(\?\S*)?$/i.test(trimmed);
+  }
+
+  openImagePreview(imageUrl: string, event: MouseEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    import('../../media-preview-dialog/media-preview.component').then(m => {
+      this.dialog.open(m.MediaPreviewDialogComponent, {
+        data: {
+          mediaItems: [{ url: imageUrl, type: 'image', title: 'Zap image' }],
+          initialIndex: 0,
+        },
+        maxWidth: '100vw',
+        maxHeight: '100vh',
+        width: '100vw',
+        height: '100vh',
+        panelClass: 'image-dialog-panel',
+      });
+    });
   }
 
   getQuoteDisplayText(content: string): string {

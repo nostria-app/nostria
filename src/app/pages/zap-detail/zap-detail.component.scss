@@ -225,6 +225,19 @@
     white-space: pre-wrap;
     word-break: break-word;
   }
+
+  .zap-message-image-container {
+    display: flex;
+    align-items: center;
+  }
+
+  .zap-message-image {
+    max-width: 100%;
+    max-height: 300px;
+    border-radius: 8px;
+    object-fit: contain;
+    cursor: pointer;
+  }
 }
 
 // Timestamp section

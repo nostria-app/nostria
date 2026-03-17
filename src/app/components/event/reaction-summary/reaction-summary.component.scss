@@ -130,6 +130,16 @@
   flex: 1;
 }
 
+.zap-comment-image {
+  height: 24px;
+  width: auto;
+  max-width: 80px;
+  object-fit: contain;
+  border-radius: 4px;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
 // Quotes list styles
 .quotes-list {
   max-height: 400px;

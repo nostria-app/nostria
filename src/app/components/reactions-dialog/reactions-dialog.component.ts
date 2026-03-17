@@ -4,7 +4,7 @@ import { filter } from 'rxjs/operators';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { nip19 } from 'nostr-tools';
 
-import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
+import { MatDialogModule, MatDialogRef, MatDialog, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTabsModule } from '@angular/material/tabs';
@@ -134,7 +134,11 @@ export interface ReactionsDialogData {
                       @if (zap.comment) {
                         <div class="zap-comment">
                           <mat-icon class="comment-icon">format_quote</mat-icon>
-                          <div class="comment-text">{{ zap.comment }}</div>
+                          @if (isImageUrl(zap.comment)) {
+                            <img [src]="zap.comment" class="zap-comment-image" alt="Zap image" loading="lazy" (click)="openImagePreview(zap.comment, $event)" />
+                          } @else {
+                            <div class="comment-text">{{ zap.comment }}</div>
+                          }
                         </div>
                       }
                     </div>
@@ -414,6 +418,14 @@ export interface ReactionsDialogData {
         font-size: 14px;
       }
 
+      .zap-comment-image {
+        max-width: 100%;
+        max-height: 200px;
+        border-radius: 6px;
+        object-fit: contain;
+        cursor: pointer;
+      }
+
       .dialog-actions {
         padding: 8px 24px 16px;
         justify-content: flex-end;
@@ -446,6 +458,7 @@ export interface ReactionsDialogData {
 })
 export class ReactionsDialogComponent {
   private dialogRef = inject(MatDialogRef<ReactionsDialogComponent>);
+  private dialog = inject(MatDialog);
   private router = inject(Router);
   private layout = inject(LayoutService);
   private emojiSetService = inject(EmojiSetService);
@@ -574,6 +587,30 @@ export class ReactionsDialogComponent {
   openQuote(event: { id: string; pubkey: string; kind: number }): void {
     const nevent = this.getNevent(event);
     this.layout.openGenericEvent(nevent);
+  }
+
+  isImageUrl(text: string): boolean {
+    if (!text) return false;
+    const trimmed = text.trim();
+    return /^https?:\/\/\S+\.(jpe?g|png|gif|webp|svg|bmp|avif)(\?\S*)?$/i.test(trimmed);
+  }
+
+  openImagePreview(imageUrl: string, event: MouseEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    import('../media-preview-dialog/media-preview.component').then(m => {
+      this.dialog.open(m.MediaPreviewDialogComponent, {
+        data: {
+          mediaItems: [{ url: imageUrl, type: 'image', title: 'Zap image' }],
+          initialIndex: 0,
+        },
+        maxWidth: '100vw',
+        maxHeight: '100vh',
+        width: '100vw',
+        height: '100vh',
+        panelClass: 'image-dialog-panel',
+      });
+    });
   }
 
   close(): void {

@@ -66,7 +66,13 @@
     @if (zapComment()) {
       <div class="zap-message-section">
         <div class="section-label">Message</div>
-        <div class="zap-message">{{ zapComment() }}</div>
+        @if (isImageUrl(zapComment())) {
+          <div class="zap-message zap-message-image-container">
+            <img [src]="zapComment()" class="zap-message-image" alt="Zap image" loading="lazy" (click)="openImagePreview(zapComment())" />
+          </div>
+        } @else {
+          <div class="zap-message">{{ zapComment() }}</div>
+        }
       </div>
     }
 

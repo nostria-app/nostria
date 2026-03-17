@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, input, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, input, OnInit, output, signal } from '@angular/core';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -45,7 +45,7 @@ export interface CreateCalendarDialogResult {
   styleUrl: './create-calendar-dialog.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class CreateCalendarDialogComponent {
+export class CreateCalendarDialogComponent implements OnInit {
   data = input<CreateCalendarDialogData>({});
   closed = output<CreateCalendarDialogResult | null>();
 
@@ -62,8 +62,7 @@ export class CreateCalendarDialogComponent {
     description: ['', Validators.maxLength(500)],
   });
 
-  constructor() {
-    // Populate form when editing
+  ngOnInit(): void {
     const d = this.data();
     if (d.isEdit && d.calendar) {
       this.calendarForm.patchValue({

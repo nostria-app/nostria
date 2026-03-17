@@ -15,6 +15,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatDialog } from '@angular/material/dialog';
 
 import { LayoutService } from '../../services/layout.service';
 import { ZapService } from '../../services/zap.service';
@@ -59,6 +60,7 @@ export class ZapDetailComponent {
   private panelNav = inject(PanelNavigationService);
   private app = inject(ApplicationService);
   private accountRelay = inject(AccountRelayService);
+  private dialog = inject(MatDialog);
 
   private routeParams = toSignal(this.route.paramMap);
 
@@ -284,6 +286,34 @@ export class ZapDetailComponent {
     if (event && eventId) {
       this.layout.openEvent(eventId, event);
     }
+  }
+
+  /**
+   * Check if a string is an image URL
+   */
+  isImageUrl(text: string): boolean {
+    if (!text) return false;
+    const trimmed = text.trim();
+    return /^https?:\/\/\S+\.(jpe?g|png|gif|webp|svg|bmp|avif)(\?\S*)?$/i.test(trimmed);
+  }
+
+  /**
+   * Open image preview dialog
+   */
+  openImagePreview(imageUrl: string): void {
+    import('../../components/media-preview-dialog/media-preview.component').then(m => {
+      this.dialog.open(m.MediaPreviewDialogComponent, {
+        data: {
+          mediaItems: [{ url: imageUrl, type: 'image', title: 'Zap image' }],
+          initialIndex: 0,
+        },
+        maxWidth: '100vw',
+        maxHeight: '100vh',
+        width: '100vw',
+        height: '100vh',
+        panelClass: 'image-dialog-panel',
+      });
+    });
   }
 
   /**
