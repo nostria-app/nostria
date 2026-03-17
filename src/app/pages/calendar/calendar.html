@@ -81,51 +81,86 @@
   </div>
 </div>
 } @else {
-<div class="panel-header">
-  <h2 class="panel-title title-font">Calendar</h2>
-  <span class="beta-badge">Beta</span>
-  <span class="panel-header-spacer"></span>
+<div class="calendar-container">
 
-  <button mat-icon-button (click)="goToToday()" matTooltip="Go to today">
-    <mat-icon>today</mat-icon>
-  </button>
+  <!-- Calendar toolbar -->
+  <div class="calendar-toolbar">
+    <div class="month-navigation">
+      <button mat-icon-button (click)="previousMonth()" matTooltip="Previous month">
+        <mat-icon>chevron_left</mat-icon>
+      </button>
+      <span class="current-month">{{ currentMonth().name }}</span>
+      <button mat-icon-button (click)="nextMonth()" matTooltip="Next month">
+        <mat-icon>chevron_right</mat-icon>
+      </button>
+    </div>
 
-  <div class="month-navigation">
-    <button mat-icon-button (click)="previousMonth()" matTooltip="Previous month">
-      <mat-icon>chevron_left</mat-icon>
-    </button>
-    <span class="current-month">{{ currentMonth().name }}</span>
-    <button mat-icon-button (click)="nextMonth()" matTooltip="Next month">
-      <mat-icon>chevron_right</mat-icon>
-    </button>
+    <mat-form-field appearance="outline" class="date-picker-field" subscriptSizing="dynamic">
+      <mat-label>Select date</mat-label>
+      <input matInput [matDatepicker]="picker" [formControl]="selectedDateControl" placeholder="Select a date" />
+      <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle>
+      <mat-datepicker #picker></mat-datepicker>
+    </mat-form-field>
+
+    <mat-button-toggle-group class="view-toggles" [value]="viewMode()" (change)="onViewModeChange($event.value)"
+      appearance="standard">
+      <mat-button-toggle value="month" matTooltip="Month view">
+        <mat-icon>view_module</mat-icon>
+      </mat-button-toggle>
+      <mat-button-toggle value="week" matTooltip="Week view">
+        <mat-icon>view_week</mat-icon>
+      </mat-button-toggle>
+      <mat-button-toggle value="agenda" matTooltip="Agenda view">
+        <mat-icon>view_agenda</mat-icon>
+      </mat-button-toggle>
+    </mat-button-toggle-group>
   </div>
 
-  <mat-form-field appearance="outline" class="date-picker-field" subscriptSizing="dynamic">
-    <mat-label>Select date</mat-label>
-    <input matInput [matDatepicker]="picker" [formControl]="selectedDateControl" placeholder="Select a date" />
-    <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle>
-    <mat-datepicker #picker></mat-datepicker>
-  </mat-form-field>
+  <!-- Calendars section -->
+  <div class="calendars-section">
+    @if (isLoadingCalendars()) {
+    <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+    }
 
-  <mat-button-toggle-group class="view-toggles" [value]="viewMode()" (change)="onViewModeChange($event.value)"
-    appearance="standard">
-    <mat-button-toggle value="month" matTooltip="Month view">
-      <mat-icon>view_module</mat-icon>
-    </mat-button-toggle>
-    <mat-button-toggle value="week" matTooltip="Week view">
-      <mat-icon>view_week</mat-icon>
-    </mat-button-toggle>
-    <mat-button-toggle value="agenda" matTooltip="Agenda view">
-      <mat-icon>view_agenda</mat-icon>
-    </mat-button-toggle>
-  </mat-button-toggle-group>
+    @if (myCalendars().length > 0) {
+    <div class="calendars-group">
+      <h3 class="calendars-group-title">My Calendars</h3>
+      <div class="calendars-chips">
+        @for (calendar of myCalendars(); track calendar.id) {
+        <mat-chip-row [class.selected]="isCalendarEnabled(calendar.id)"
+          (click)="toggleCalendar(calendar.id)">
+          <mat-icon matChipAvatar>calendar_today</mat-icon>
+          {{ calendar.title }}
+          <span class="calendar-event-count">{{ calendar.events.length }}</span>
+        </mat-chip-row>
+        }
+      </div>
+    </div>
+    }
 
-  <button mat-icon-button (click)="createEvent()" matTooltip="New Event">
-    <mat-icon>add</mat-icon>
-  </button>
-</div>
+    @if (publicCalendars().length > 0) {
+    <div class="calendars-group">
+      <h3 class="calendars-group-title">Public Calendars</h3>
+      <div class="calendars-chips">
+        @for (calendar of publicCalendars(); track calendar.id) {
+        <mat-chip-row [class.selected]="isCalendarEnabled(calendar.id)"
+          (click)="toggleCalendar(calendar.id)">
+          <mat-icon matChipAvatar>public</mat-icon>
+          {{ calendar.title }}
+          <span class="calendar-event-count">{{ calendar.events.length }}</span>
+        </mat-chip-row>
+        }
+      </div>
+    </div>
+    }
 
-<div class="calendar-container">
+    @if (myCalendars().length === 0 && publicCalendars().length === 0 && !isLoadingCalendars()) {
+    <div class="no-calendars-hint">
+      <mat-icon>info_outline</mat-icon>
+      <span>No calendars found. Events from the network will appear in the calendar below.</span>
+    </div>
+    }
+  </div>
 
   <!-- Loading indicator -->
   @if (isLoading()) {
@@ -134,48 +169,6 @@
 
   <!-- Main calendar content -->
   <div class="calendar-content">
-    <!-- Calendars sidebar (left) -->
-    <div class="calendars-sidebar">
-      <mat-card class="sidebar-card">
-        <mat-card-header>
-          <mat-card-title>
-            <mat-icon>calendar_today</mat-icon>
-            My Calendars
-          </mat-card-title>
-        </mat-card-header>
-
-        <mat-card-content>
-          @if (isLoadingCalendars()) {
-          <div class="loading-calendars">
-            <mat-icon>refresh</mat-icon>
-            Loading calendars...
-          </div>
-          }
-          @if (calendars().length === 0 && !isLoadingCalendars()) {
-          <div class="no-calendars">
-            <mat-icon>info</mat-icon>
-            No calendars available
-          </div>
-          }
-
-          <div class="calendars-list">
-            @for (calendar of calendars(); track calendar.id) {
-            <div class="calendar-item">
-              <label class="calendar-checkbox">
-                <input type="checkbox" [checked]="isCalendarEnabled(calendar.id)"
-                  (change)="toggleCalendar(calendar.id)" />
-                <span class="calendar-name">{{ calendar.title }}</span>
-              </label>
-              <div class="calendar-info">
-                <span class="event-count">{{ calendar.events.length }} events</span>
-              </div>
-            </div>
-            }
-          </div>
-        </mat-card-content>
-      </mat-card>
-    </div>
-
     <!-- Calendar views container -->
     <div class="calendar-views">
       <!-- Month view -->
@@ -399,46 +392,6 @@
     </div>
 
     <!-- Selected date sidebar (right) -->
-    @if (selectedDateEventsFiltered().length > 0 && viewMode() === 'month') {
-    <div class="selected-date-sidebar">
-      <mat-card class="sidebar-card">
-        <mat-card-header>
-          <mat-card-title>
-            {{ formatDateMedium(selectedDate()) }}
-          </mat-card-title>
-          @if (isToday(selectedDate())) {
-          <mat-card-subtitle>
-            <mat-chip color="primary">Today</mat-chip>
-          </mat-card-subtitle>
-          }
-        </mat-card-header>
-
-        <mat-card-content>
-          @for (event of selectedDateEventsFiltered(); track event.id) {
-          <div class="sidebar-event" (click)="onEventClick(event, $event)">
-            <div class="event-time-badge" [class.all-day]="event.isAllDay">
-              @if (event.isAllDay) {
-              <span>All day</span>
-              } @else {
-              <span>{{ formatTime(event.start) }}</span>
-              }
-            </div>
-
-            <div class="event-details">
-              <h4>{{ event.title }}</h4>
-              @if (event.location) {
-              <div class="event-location">
-                <mat-icon>location_on</mat-icon>
-                <span>{{ event.location }}</span>
-              </div>
-              }
-            </div>
-          </div>
-          }
-        </mat-card-content>
-      </mat-card>
-    </div>
-    }
   </div>
 </div>
 }

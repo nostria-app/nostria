@@ -856,6 +856,13 @@ export const routes: Routes = [
     title: 'Badge',
   },
   {
+    path: 'calendar/event/:id',
+    outlet: 'right',
+    loadComponent: () =>
+      import('./pages/calendar/calendar-event-detail/calendar-event-detail.component').then(m => m.CalendarEventDetailComponent),
+    title: 'Calendar Event',
+  },
+  {
     path: 'user-following/:pubkey',
     outlet: 'right',
     loadComponent: () =>

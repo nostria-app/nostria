@@ -223,6 +223,7 @@ export class PanelNavigationService {
     'badges/details': { type: 'detail', title: 'Badge Details' },
     'badges/create': { type: 'detail', title: 'Create Badge' },
     'badges/edit': { type: 'detail', title: 'Edit Badge' },
+    'calendar/event': { type: 'detail', title: 'Calendar Event' },
     'profile-edit': { type: 'detail', title: 'Edit Profile' },
     'youtube/channel': { type: 'detail', title: 'YouTube Channel' },
     'user-badges': { type: 'detail', title: 'User Badges' },

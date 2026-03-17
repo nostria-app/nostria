@@ -57,6 +57,10 @@ export class UserRelaysComponent {
   // Relay list
   relayList = signal<string[]>([]);
 
+  // DM relay list (kind 10050)
+  dmRelayList = signal<string[]>([]);
+  dmRelaysLoading = signal(true);
+
   // Track expanded relays for details view
   expandedRelays = signal<Set<string>>(new Set());
 
@@ -129,6 +133,26 @@ export class UserRelaysComponent {
       this.relayList.set(Array.from(new Set(relays)));
 
       this.isLoading.set(false);
+
+      // Load DM relay list (kind 10050) - done after main relays to not block display
+      this.dmRelaysLoading.set(true);
+      try {
+        const dmRelayEvent = await this.dataService.getDmRelayListEvent(pubkey);
+        if (dmRelayEvent) {
+          const dmRelays = dmRelayEvent.tags
+            .filter((tag: string[]) => tag[0] === 'relay')
+            .map((tag: string[]) => tag[1])
+            .filter((url: string | undefined) => url && url.startsWith('wss://'));
+          this.dmRelayList.set(Array.from(new Set(dmRelays)));
+        } else {
+          this.dmRelayList.set([]);
+        }
+      } catch (dmErr) {
+        this.logger.error('Error loading DM relay data', dmErr);
+        this.dmRelayList.set([]);
+      } finally {
+        this.dmRelaysLoading.set(false);
+      }
     } catch (err) {
       if (!this.hasInitialRelays()) {
         this.error.set('Failed to load relay list');

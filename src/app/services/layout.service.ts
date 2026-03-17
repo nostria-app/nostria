@@ -1365,6 +1365,19 @@ export class LayoutService implements OnDestroy {
       return;
     }
 
+    // Calendar events (NIP-52: date-based 31922, time-based 31923)
+    if (event.kind === 31922 || event.kind === 31923) {
+      const relayHintsForAddr = this.userRelayService.getRelaysForPubkey(event.pubkey).slice(0, 3);
+      const naddr = nip19.naddrEncode({
+        kind: event.kind,
+        pubkey: event.pubkey,
+        identifier: dTag,
+        relays: relayHintsForAddr,
+      });
+      this.openCalendarEvent(naddr, event);
+      return;
+    }
+
     const encoded = this.utilities.encodeEventForUrl(event, relayHints.length > 0 ? relayHints : undefined);
 
     if (encoded.startsWith('naddr')) {
@@ -1389,6 +1402,11 @@ export class LayoutService implements OnDestroy {
           }
           if (kind === 34139) {
             this.openMusicPlaylist(npub, identifier, event);
+            return;
+          }
+          // Calendar events (NIP-52: date-based 31922, time-based 31923)
+          if (kind === 31922 || kind === 31923) {
+            this.openCalendarEvent(eventId, event);
             return;
           }
         }
@@ -1422,6 +1440,11 @@ export class LayoutService implements OnDestroy {
           }
           if (kind === 34139) {
             this.openMusicPlaylist(npub, identifier, event);
+            return;
+          }
+          // Calendar events (NIP-52: date-based 31922, time-based 31923)
+          if (kind === 31922 || kind === 31923) {
+            this.openCalendarEvent(eventId, event);
             return;
           }
         }
@@ -1492,6 +1515,12 @@ export class LayoutService implements OnDestroy {
         this.location.replaceState(previousUrl);
       }
       this.currentEventDialogRef = null;
+    });
+  }
+
+  openCalendarEvent(naddr: string, event?: Event): void {
+    this.navigateToRightPanel(`calendar/event/${naddr}`, {
+      state: { calendarEvent: event }
     });
   }
 

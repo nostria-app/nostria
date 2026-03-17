@@ -307,6 +307,31 @@
             </button>
           </mat-card-actions>
         </mat-card>
+
+        <!-- On-chain Bitcoin Donation Card -->
+        <mat-card class="bitcoin-donation-card">
+          <mat-card-header>
+            <mat-card-title>
+              <mat-icon>currency_bitcoin</mat-icon>
+              <span i18n="@@wallet.bitcoin-donation.title">On-chain Bitcoin Donation</span>
+            </mat-card-title>
+            <mat-card-subtitle i18n="@@wallet.bitcoin-donation.subtitle">Support Nostria development with an on-chain Bitcoin donation</mat-card-subtitle>
+          </mat-card-header>
+
+          <mat-card-content>
+            <div class="bitcoin-donation-content">
+              <div class="bitcoin-qr-container">
+                <qr-code [qrdata]="'bitcoin:' + bitcoinDonationAddress" [width]="200" errorCorrectionLevel="medium"></qr-code>
+              </div>
+              <div class="bitcoin-address-container">
+                <code class="bitcoin-address">{{ bitcoinDonationAddress }}</code>
+                <button mat-icon-button matTooltip="Copy address" i18n-matTooltip="@@wallet.copy-btc-address" (click)="copyToClipboard(bitcoinDonationAddress, 'Bitcoin address')">
+                  <mat-icon>content_copy</mat-icon>
+                </button>
+              </div>
+            </div>
+          </mat-card-content>
+        </mat-card>
         } @else {
         <div class="empty-state">
           <mat-icon class="empty-icon">account_balance_wallet</mat-icon>

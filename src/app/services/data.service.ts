@@ -850,6 +850,30 @@ export class DataService implements OnDestroy {
   }
 
   /**
+   * Get the DM relay list event for a user.
+   * @param pubkey The user's pubkey
+   * @returns The DM relay list event (kind 10050) or null if not found
+   */
+  async getDmRelayListEvent(pubkey: string): Promise<Event | null> {
+    // Try storage first
+    let event = await this.database.getEventByPubkeyAndKind(pubkey, kinds.DirectMessageRelaysList);
+
+    if (!event) {
+      // Try to get from relays
+      event = await this.sharedRelayEx.get(pubkey, {
+        authors: [pubkey],
+        kinds: [kinds.DirectMessageRelaysList],
+      });
+
+      if (event) {
+        await this.database.saveEvent(event);
+      }
+    }
+
+    return event;
+  }
+
+  /**
    * Attempt deep resolution by searching batches of observed relays for profile metadata.
    * This is a fallback mechanism when normal profile loading fails.
    * @param pubkey The hex pubkey to search for

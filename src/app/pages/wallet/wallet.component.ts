@@ -26,6 +26,7 @@ import { AddWalletDialogComponent } from './add-wallet-dialog/add-wallet-dialog.
 import { SettingsService } from '../../services/settings.service';
 import { LoggerService } from '../../services/logger.service';
 import { ZapHistoryComponent } from '../../components/zap-history/zap-history.component';
+import { QrCodeComponent } from '../../components/qr-code/qr-code.component';
 
 @Component({
   selector: 'app-wallet',
@@ -47,6 +48,7 @@ import { ZapHistoryComponent } from '../../components/zap-history/zap-history.co
     UserProfileComponent,
     DatePipe,
     ZapHistoryComponent,
+    QrCodeComponent,
   ],
   templateUrl: './wallet.component.html',
   styleUrl: './wallet.component.scss',
@@ -90,6 +92,7 @@ export class WalletComponent implements OnDestroy {
     '5f432a9f39b58ff132fc0a4c8af10d42efd917d8076f68bb7f2f91ed7d4f6a41',
     '7e2b09f951ed9be483284e7469ac20ac427d3264633d250c9d01e4265c99ed42',
   ];
+  bitcoinDonationAddress = 'bc1p733wvkgpew822jwdwxdps46uqr4zpsnt0c8splhln965mtsf0mls4z3yxr';
   selectedConnectionString = signal<string | null>(null);
   selectedDonationAmount = signal<number | null>(5);
   customDonationAmount = new FormControl<number | null>(null, [Validators.min(0.01)]);

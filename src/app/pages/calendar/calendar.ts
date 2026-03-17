@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, DestroyRef, effect, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, DestroyRef, effect, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
@@ -40,6 +40,9 @@ import {
 import { AccountRelayService } from '../../services/relays/account-relay';
 import { UtilitiesService } from '../../services/utilities.service';
 import { UserRelaysService } from '../../services/relays/user-relays';
+import { TwoColumnLayoutService } from '../../services/two-column-layout.service';
+import { PanelActionsService } from '../../services/panel-actions.service';
+import { LayoutService } from '../../services/layout.service';
 
 // Calendar event interfaces based on NIP-52
 interface CalendarEvent {
@@ -112,20 +115,23 @@ interface CalendarCollection {
   styleUrl: './calendar.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class Calendar {
+export class Calendar implements OnInit, OnDestroy {
   private accountRelay = inject(AccountRelayService);
   private utilities = inject(UtilitiesService);
   private userRelaysService = inject(UserRelaysService);
   private logger = inject(LoggerService);
-  public app = inject(ApplicationService); // Made public for template access
+  public app = inject(ApplicationService);
   private dialog = inject(MatDialog);
   private router = inject(Router);
-  public localSettings = inject(LocalSettingsService); // For calendar type
+  public localSettings = inject(LocalSettingsService);
   private chroniaService = inject(ChroniaCalendarService);
   private gregorianService = inject(GregorianCalendarService);
   private ethiopianService = inject(EthiopianCalendarService);
   public accountState = inject(AccountStateService);
   private destroyRef = inject(DestroyRef);
+  private twoColumnLayout = inject(TwoColumnLayoutService);
+  private panelActions = inject(PanelActionsService);
+  protected layout = inject(LayoutService);
 
   // Premium check
   isPremium = computed(() => {
@@ -145,8 +151,19 @@ export class Calendar {
 
   // Calendar collections state (kind 31924)
   calendars = signal<CalendarCollection[]>([]);
-  enabledCalendars = signal<Set<string>>(new Set()); // Calendar IDs that are enabled
+  enabledCalendars = signal<Set<string>>(new Set());
   isLoadingCalendars = signal<boolean>(false);
+
+  // Separated calendar views
+  myCalendars = computed(() => {
+    const pubkey = this.accountState.pubkey();
+    return this.calendars().filter(c => c.pubkey === pubkey);
+  });
+
+  publicCalendars = computed(() => {
+    const pubkey = this.accountState.pubkey();
+    return this.calendars().filter(c => c.pubkey !== pubkey);
+  });
 
   // Helper arrays for template
   dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -378,6 +395,33 @@ export class Calendar {
 
     // Add some demo events for testing
     // this.addDemoEvents();
+  }
+
+  ngOnInit(): void {
+    this.twoColumnLayout.setWideLeft();
+
+    this.panelActions.setBreadcrumbs([{ label: 'Calendar' }]);
+    this.panelActions.setLeftPanelActions([
+      {
+        id: 'calendar-today',
+        icon: 'today',
+        label: 'Today',
+        tooltip: 'Go to today',
+        action: () => this.goToToday(),
+      },
+      {
+        id: 'calendar-create',
+        icon: 'add',
+        label: 'New Event',
+        tooltip: 'Create new event',
+        action: () => this.createEvent(),
+      },
+    ]);
+  }
+
+  ngOnDestroy(): void {
+    this.panelActions.clearLeftPanelActions();
+    this.twoColumnLayout.setSplitView();
   }
 
   // Check if there's an event parameter in the URL and open the event details
@@ -1022,53 +1066,18 @@ export class Calendar {
   }
 
   async openEventDetails(event: CalendarEvent): Promise<void> {
-    // Update URL to reflect the selected event
     const eventDTag = this.getEventDTag(event);
-    this.router.navigate([], {
-      queryParams: { event: `${event.kind}:${event.pubkey}:${eventDTag}` },
-      queryParamsHandling: 'merge',
+    await this.userRelaysService.ensureRelaysForPubkey(event.pubkey);
+    const authorRelays = this.userRelaysService.getRelaysForPubkey(event.pubkey);
+    const relayHint = authorRelays[0];
+    const relayHints = this.utilities.normalizeRelayUrls(relayHint ? [relayHint] : []);
+    const naddr = nip19.naddrEncode({
+      identifier: eventDTag,
+      pubkey: event.pubkey,
+      kind: event.kind,
+      relays: relayHints,
     });
-
-    const dialogRef = this.dialog.open(EventDetailsDialogComponent, {
-      data: {
-        event,
-        canEdit: event.pubkey === this.app.accountState.pubkey(),
-        canDelete: event.pubkey === this.app.accountState.pubkey(),
-        currentUserPubkey: this.app.accountState.pubkey(),
-      } as EventDetailsDialogData,
-      width: '600px',
-      maxWidth: '90vw',
-      autoFocus: false,
-    });
-
-    const result = (await dialogRef.afterClosed().toPromise()) as EventDetailsResult;
-
-    // Clear event from URL when dialog closes
-    this.router.navigate([], {
-      queryParams: { event: null },
-      queryParamsHandling: 'merge',
-    });
-
-    if (!result || result.action === 'close') {
-      return;
-    }
-
-    switch (result.action) {
-      case 'rsvp':
-        if (result.rsvpStatus) {
-          await this.respondToEvent(event, result.rsvpStatus);
-        }
-        break;
-      case 'edit':
-        // TODO: Implement edit functionality
-        break;
-      case 'delete':
-        await this.deleteEvent(event);
-        break;
-      case 'share':
-        this.shareEvent(event);
-        break;
-    }
+    this.layout.openGenericEvent(naddr);
   }
 
   async shareEvent(event: CalendarEvent): Promise<void> {

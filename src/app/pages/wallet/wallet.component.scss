@@ -520,6 +520,53 @@
   }
 }
 
+// On-chain Bitcoin Donation card styles
+.bitcoin-donation-card {
+  margin-bottom: 16px;
+}
+
+.bitcoin-donation-card mat-card-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.bitcoin-donation-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-top: 1rem;
+}
+
+.bitcoin-qr-container {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 16px;
+
+  qr-code {
+    border-radius: 8px;
+    overflow: hidden;
+  }
+}
+
+.bitcoin-address-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background-color: var(--mat-sys-surface-container);
+  border-radius: 8px;
+  border: 1px solid var(--mat-sys-outline-variant);
+}
+
+.bitcoin-address {
+  flex: 1;
+  font-size: 12px;
+  word-break: break-all;
+  color: var(--mat-sys-on-surface);
+  user-select: all;
+}
+
 // Transactions List (for Transactions tab)
 .transactions-list {
   display: flex;

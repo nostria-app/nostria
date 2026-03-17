@@ -1,0 +1,162 @@
+<!-- Header template - used by RightPanelHeaderService when in right panel -->
+<ng-template #headerTemplate>
+  <div class="panel-header">
+    <button mat-icon-button (click)="goBack()" matTooltip="Back">
+      <mat-icon>arrow_back</mat-icon>
+    </button>
+    <mat-icon class="header-event-icon">event</mat-icon>
+    <h2 class="panel-title title-font">{{ title() || 'Calendar Event' }}</h2>
+    <span class="panel-header-spacer"></span>
+
+    <button mat-icon-button [matMenuTriggerFor]="actionsMenu" matTooltip="More options">
+      <mat-icon>more_vert</mat-icon>
+    </button>
+
+    <mat-menu #actionsMenu="matMenu">
+      <button mat-menu-item (click)="shareEvent()">
+        <mat-icon>share</mat-icon>
+        <span>Share Event</span>
+      </button>
+      <button mat-menu-item (click)="copyEventData()">
+        <mat-icon>content_copy</mat-icon>
+        <span>Copy Event Data</span>
+      </button>
+    </mat-menu>
+  </div>
+</ng-template>
+
+@if (isLoading()) {
+<div class="loading-state">
+  <mat-spinner diameter="40"></mat-spinner>
+  <p>Loading calendar event...</p>
+</div>
+} @else if (error()) {
+<div class="error-state">
+  <mat-icon>error_outline</mat-icon>
+  <h3>Could not load event</h3>
+  <p>{{ error() }}</p>
+  <button mat-stroked-button (click)="goBack()">
+    <mat-icon>arrow_back</mat-icon>
+    Go Back
+  </button>
+</div>
+} @else if (event()) {
+<div class="event-detail-container">
+
+  <!-- Event Image Banner -->
+  @if (image()) {
+  <div class="event-banner">
+    <img [src]="image()" [alt]="title()" class="banner-image" (error)="onImageError($event)" />
+  </div>
+  }
+
+  <!-- Event Title Section -->
+  <div class="event-title-section">
+    <h1 class="event-title">{{ title() }}</h1>
+    @if (summary()) {
+    <p class="event-summary">{{ summary() }}</p>
+    }
+  </div>
+
+  <!-- Event Details Card -->
+  <mat-card class="event-details-card" appearance="outlined">
+
+    <!-- Date & Time -->
+    <div class="detail-row time-row">
+      <mat-icon class="detail-icon">schedule</mat-icon>
+      <div class="detail-content">
+        @if (isAllDay()) {
+        <div class="detail-primary">All Day</div>
+        @if (startDate()) {
+        <div class="detail-secondary">{{ formatDate(startDate()!) }}</div>
+        }
+        } @else {
+        @if (startDate()) {
+        <div class="detail-primary">{{ formatTime(startDate()!) }}</div>
+        @if (endDate()) {
+        <span class="time-separator">–</span>
+        <div class="detail-primary">{{ formatTime(endDate()!) }}</div>
+        }
+        <div class="detail-secondary">{{ formatDate(startDate()!) }}</div>
+        }
+        }
+      </div>
+    </div>
+
+    <!-- Location -->
+    @if (location()) {
+    <div class="detail-row">
+      <mat-icon class="detail-icon">location_on</mat-icon>
+      <div class="detail-content">
+        @if (isLocationUrl(location())) {
+        <a [href]="location()" target="_blank" rel="noopener noreferrer" class="location-link">
+          {{ location() }}
+        </a>
+        } @else {
+        <div class="detail-primary">{{ location() }}</div>
+        }
+      </div>
+    </div>
+    }
+
+    <!-- Host -->
+    <div class="detail-row host-row">
+      <mat-icon class="detail-icon">person</mat-icon>
+      <div class="detail-content">
+        <div class="host-label">Hosted by</div>
+        <app-user-profile [pubkey]="authorPubkey()" view="thread"></app-user-profile>
+      </div>
+    </div>
+
+    <!-- Participants -->
+    @if (participants().length > 0) {
+    <div class="detail-row">
+      <mat-icon class="detail-icon">people</mat-icon>
+      <div class="detail-content">
+        <div class="detail-primary">
+          {{ participants().length }} participant{{ participants().length !== 1 ? 's' : '' }}
+        </div>
+      </div>
+    </div>
+    }
+  </mat-card>
+
+  <!-- Description -->
+  @if (description()) {
+  <div class="event-description-section">
+    <h3 class="section-title">About this event</h3>
+    <p class="description-text">{{ description() }}</p>
+  </div>
+  }
+
+  <!-- Hashtags -->
+  @if (hashtags().length > 0) {
+  <div class="event-tags-section">
+    <div class="tags-list">
+      @for (tag of hashtags(); track tag) {
+      <mat-chip>{{ tag }}</mat-chip>
+      }
+    </div>
+  </div>
+  }
+
+  <!-- RSVP Actions -->
+  <div class="rsvp-section">
+    <h3 class="section-title">Respond</h3>
+    <div class="rsvp-buttons">
+      <button mat-stroked-button (click)="respondToEvent('declined')">
+        <mat-icon>cancel</mat-icon>
+        Decline
+      </button>
+      <button mat-stroked-button (click)="respondToEvent('tentative')">
+        <mat-icon>help_outline</mat-icon>
+        Maybe
+      </button>
+      <button mat-flat-button (click)="respondToEvent('accepted')">
+        <mat-icon>check_circle</mat-icon>
+        Accept
+      </button>
+    </div>
+  </div>
+</div>
+}
