@@ -6,7 +6,6 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { LocalSettingsService, DEFAULT_CONTENT_FILTER } from '../../../services/local-settings.service';
 import { FeedConfig, FeedService } from '../../../services/feed.service';
-import { TrustProviderService } from '../../../services/trust-provider.service';
 
 /**
  * Content type definition for filter options
@@ -349,7 +348,6 @@ function isStandardKindsSelection(kinds: number[]): boolean {
 export class FeedFilterPanelComponent {
   readonly localSettings = inject(LocalSettingsService);
   readonly feedService = inject(FeedService);
-  private readonly trustProvider = inject(TrustProviderService);
 
   // Input: the feed to configure (if provided, saves to feed; otherwise uses global)
   feed = input<FeedConfig | undefined>(undefined);
