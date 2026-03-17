@@ -19,7 +19,7 @@ import { DebugLogsDialogComponent } from '../debug-logs-dialog/debug-logs-dialog
 import { IgnoredRelayAuditDialogComponent } from '../ignored-relay-audit-dialog/ignored-relay-audit-dialog.component';
 import { RunesSettingsService } from '../../services/runes-settings.service';
 import { MediaPlayerService } from '../../services/media-player.service';
-import { LocalSettingsService } from '../../services/local-settings.service';
+import { LocalSettingsService, getEffectiveWotMinRank, isWotFilterEnabled } from '../../services/local-settings.service';
 
 export interface Command {
   id: string;
@@ -406,8 +406,9 @@ export class CommandPaletteDialogComponent implements AfterViewInit, OnDestroy {
       label: 'Toggle Web of Trust Feed Filter',
       icon: 'shield',
       action: () => {
-        const current = this.localSettings.contentFilter().wotFilter ?? false;
-        this.localSettings.setContentFilterWotFilter(!current);
+        const currentFilter = this.localSettings.contentFilter();
+        const current = isWotFilterEnabled(currentFilter);
+        this.localSettings.setContentFilterWotMinRank(current ? undefined : Math.max(getEffectiveWotMinRank(currentFilter), 0));
         this.snackBar.open(`Web of Trust filter ${!current ? 'enabled' : 'disabled'}`, 'OK', { duration: 3000 });
         this.dialogRef.close();
       },

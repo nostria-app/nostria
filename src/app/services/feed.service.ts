@@ -78,7 +78,8 @@ export interface FeedConfig {
   filters?: Record<string, unknown>;
   showReplies?: boolean; // Whether to show replies in the feed (default: false)
   showReposts?: boolean; // Whether to show reposts in the feed (default: true)
-  wotFilter?: boolean; // Whether to filter by Web of Trust (only show events from trusted users)
+  wotFilter?: boolean; // Legacy toggle for Web of Trust filtering
+  wotMinRank?: number; // Minimum Web of Trust rank to include (0 = any positive rank)
   createdAt: number;
   updatedAt: number;
   lastRetrieved?: number; // Timestamp (seconds) of when data was last successfully retrieved from relays
@@ -4085,6 +4086,8 @@ export class FeedService {
       filters: feed.filters,
       showReplies: feed.showReplies,
       showReposts: feed.showReposts,
+      wotFilter: feed.wotFilter,
+      wotMinRank: feed.wotMinRank,
       createdAt: feed.createdAt,
       updatedAt: feed.updatedAt,
       isSystem: feed.isSystem,

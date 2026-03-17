@@ -23,7 +23,7 @@ import { MatBadgeModule } from '@angular/material/badge';
 import { NostrService } from '../../services/nostr.service';
 import { NotificationService } from '../../services/notification.service';
 import { LayoutService } from '../../services/layout.service';
-import { LocalSettingsService, DEFAULT_CONTENT_FILTER } from '../../services/local-settings.service';
+import { LocalSettingsService, DEFAULT_CONTENT_FILTER, getEffectiveWotMinRank, isWotFilterEnabled } from '../../services/local-settings.service';
 import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
 import { NewFeedDialogComponent } from './new-feed-dialog/new-feed-dialog.component';
 
@@ -240,14 +240,19 @@ export class FeedsComponent implements OnDestroy {
       const kindsMatch = kinds.length === defaultKinds.length && kinds.every(k => defaultKinds.includes(k));
       const showReplies = feed.showReplies ?? false;
       const showReposts = feed.showReposts ?? true;
-      const wotFilter = feed.wotFilter ?? false;
-      return !kindsMatch || showReplies !== DEFAULT_CONTENT_FILTER.showReplies || showReposts !== DEFAULT_CONTENT_FILTER.showReposts || wotFilter;
+      return !kindsMatch
+        || showReplies !== DEFAULT_CONTENT_FILTER.showReplies
+        || showReposts !== DEFAULT_CONTENT_FILTER.showReposts
+        || isWotFilterEnabled(feed);
     }
     // Global filter
     const filter = this.localSettings.contentFilter();
     const kindsMatch = filter.kinds.length === DEFAULT_CONTENT_FILTER.kinds.length
       && filter.kinds.every(k => DEFAULT_CONTENT_FILTER.kinds.includes(k));
-    return !kindsMatch || filter.showReplies !== DEFAULT_CONTENT_FILTER.showReplies || filter.showReposts !== DEFAULT_CONTENT_FILTER.showReposts || (filter.wotFilter ?? false);
+    return !kindsMatch
+      || filter.showReplies !== DEFAULT_CONTENT_FILTER.showReplies
+      || filter.showReposts !== DEFAULT_CONTENT_FILTER.showReposts
+      || isWotFilterEnabled(filter);
   });
 
   // Horizontal scrollbar tracking
@@ -501,13 +506,19 @@ export class FeedsComponent implements OnDestroy {
     const showReplies = feed.showReplies ?? false;
     const showReposts = feed.showReposts ?? true;
     const allowedKinds = feed.kinds || [];
-    const wotFilter = feed.wotFilter ?? this.localSettings.contentFilter().wotFilter ?? false;
+    const wotMinRank = typeof feed.wotMinRank === 'number' || typeof feed.wotFilter === 'boolean'
+      ? getEffectiveWotMinRank(feed)
+      : getEffectiveWotMinRank(this.localSettings.contentFilter());
 
     return events.filter(event => {
-      // WoT filtering: only show events from users with a positive trust rank
-      if (wotFilter) {
+      // WoT filtering: 0 means any positive rank, higher values are minimum rank thresholds.
+      if (wotMinRank >= 0) {
         const rank = this.trustService.getRankSignal(event.pubkey);
-        if (typeof rank !== 'number' || rank <= 0) {
+        const passesRank = wotMinRank === 0
+          ? typeof rank === 'number' && rank > 0
+          : typeof rank === 'number' && rank >= wotMinRank;
+
+        if (!passesRank) {
           return false;
         }
       }

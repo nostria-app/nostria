@@ -30,6 +30,8 @@ export interface SyncedFeedConfig {
   filters?: Record<string, unknown>;
   showReplies?: boolean;
   showReposts?: boolean;
+  wotFilter?: boolean;
+  wotMinRank?: number;
   createdAt: number;
   updatedAt: number;
   isSystem?: boolean;
