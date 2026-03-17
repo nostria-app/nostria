@@ -167,6 +167,10 @@ export class Calendar implements OnInit, OnDestroy, AfterViewInit {
   showCreateCalendarDialog = signal<boolean>(false);
   editingCalendar = signal<CalendarCollection | null>(null);
 
+  // Virtual RSVP calendar — not a real kind-31924, just a filter toggle
+  readonly RSVP_VIRTUAL_CALENDAR_ID = '__rsvp__';
+  rsvpCalendarEnabled = signal<boolean>(false);
+
   // Separated calendar views
   myCalendars = computed(() => {
     const pubkey = this.accountState.pubkey();
@@ -329,10 +333,19 @@ export class Calendar implements OnInit, OnDestroy, AfterViewInit {
     const enabledCals = this.enabledCalendars();
     const listFilter = this.calendarListFilter();
     const followSet = this.calendarFollowSet();
+    const rsvpOnly = this.rsvpCalendarEnabled();
 
-    // Filter by calendar collection
+    // Filter by RSVP virtual calendar
     let events = allEvents;
-    if (enabledCals.size > 0) {
+    if (rsvpOnly) {
+      const myRsvpEventIds = new Set(
+        this.rsvps()
+          .filter(r => r.pubkey === this.accountState.pubkey())
+          .map(r => r.eventId)
+      );
+      events = events.filter(e => myRsvpEventIds.has(e.id));
+    } else if (enabledCals.size > 0) {
+      // Filter by calendar collection (only when RSVP filter is not active)
       const calendars = this.calendars();
       events = events.filter(event => {
         const eventCalendar = calendars.find(cal =>
@@ -747,7 +760,45 @@ export class Calendar implements OnInit, OnDestroy, AfterViewInit {
   }
 
   private async loadRSVPs(): Promise<void> {
-    // Implementation for loading RSVPs (kind 31925)
+    const pubkey = this.app.accountState.pubkey();
+    if (!pubkey) return;
+
+    this.accountRelay.subscribe(
+      {
+        kinds: [31925],
+        authors: [pubkey],
+        limit: 200,
+      },
+      (event: Event) => {
+        const status = event.tags.find(t => t[0] === 'status')?.[1] as
+          | 'accepted' | 'declined' | 'tentative' | undefined;
+        if (!status) return;
+
+        // Resolve the referenced event id from the 'a' tag coordinate
+        const aTag = event.tags.find(t => t[0] === 'a')?.[1] ?? '';
+        // Use the event id derived from the 'e' tag if present, otherwise match by 'a' coord later
+        const eTag = event.tags.find(t => t[0] === 'e')?.[1] ?? '';
+        const eventId = eTag || aTag; // used for deduplication; we match against CalendarEvent.id
+
+        const rsvp: CalendarEventRSVP = {
+          id: event.id,
+          pubkey: event.pubkey,
+          created_at: event.created_at,
+          kind: 31925,
+          content: event.content,
+          tags: event.tags,
+          eventId,
+          status,
+          freeBusy: event.tags.find(t => t[0] === 'fb')?.[1] as 'free' | 'busy' | undefined,
+        };
+
+        this.rsvps.update(list => {
+          // Replace older RSVP from same author for same event coord
+          const filtered = list.filter(r => !(r.pubkey === event.pubkey && r.eventId === eventId));
+          return [...filtered, rsvp];
+        });
+      },
+    );
   }
 
   // Event parsing methods

@@ -145,6 +145,13 @@
       @if (myCalendars().length > 0) {
       <div class="sidebar-calendars-group">
         <h3 class="sidebar-group-title">My Calendars</h3>
+        <!-- Virtual RSVP calendar -->
+        <div class="sidebar-calendar-item" (click)="rsvpCalendarEnabled.set(!rsvpCalendarEnabled())">
+          <mat-icon [class.calendar-enabled]="rsvpCalendarEnabled()" [class.calendar-disabled]="!rsvpCalendarEnabled()">
+            {{ rsvpCalendarEnabled() ? 'check_box' : 'check_box_outline_blank' }}
+          </mat-icon>
+          <span class="calendar-name">My RSVPs</span>
+        </div>
         @for (calendar of myCalendars(); track calendar.id) {
         <div class="sidebar-calendar-item" (click)="toggleCalendar(calendar.id)">
           <mat-icon [class.calendar-enabled]="isCalendarEnabled(calendar.id)"
@@ -176,10 +183,22 @@
       </div>
       }
 
-      @if (myCalendars().length === 0 && publicCalendars().length === 0 && !isLoadingCalendars()) {
+      @if (myCalendars().length === 0 && !isLoadingCalendars()) {
+      <div class="sidebar-calendars-group">
+        <h3 class="sidebar-group-title">My Calendars</h3>
+        <div class="sidebar-calendar-item" (click)="rsvpCalendarEnabled.set(!rsvpCalendarEnabled())">
+          <mat-icon [class.calendar-enabled]="rsvpCalendarEnabled()" [class.calendar-disabled]="!rsvpCalendarEnabled()">
+            {{ rsvpCalendarEnabled() ? 'check_box' : 'check_box_outline_blank' }}
+          </mat-icon>
+          <span class="calendar-name">My RSVPs</span>
+        </div>
+      </div>
+      }
+
+      @if (publicCalendars().length === 0 && myCalendars().length === 0 && !isLoadingCalendars()) {
       <div class="no-calendars-hint">
         <mat-icon>info_outline</mat-icon>
-        <span>No calendars found.</span>
+        <span>No other calendars found.</span>
       </div>
       }
     </div>
@@ -326,7 +345,8 @@
                   </div>
 
                   <div class="event-actions">
-                    <button mat-icon-button [matMenuTriggerFor]="eventMenu" matTooltip="Event options">
+                    <button mat-icon-button [matMenuTriggerFor]="eventMenu" matTooltip="Event options"
+                      (click)="$event.stopPropagation()">
                       <mat-icon>more_vert</mat-icon>
                     </button>
 

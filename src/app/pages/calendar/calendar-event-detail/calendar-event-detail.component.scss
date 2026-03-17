@@ -246,6 +246,48 @@
     text-transform: uppercase;
     letter-spacing: 0.05em;
     margin: 0 0 12px;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .current-rsvp-label {
+    text-transform: none;
+    letter-spacing: 0;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .rsvp-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: var(--mat-sys-corner-full);
+    font-size: 0.8rem;
+
+    mat-icon {
+      font-size: 1rem;
+      width: 1rem;
+      height: 1rem;
+    }
+
+    &.accepted {
+      background: color-mix(in srgb, var(--mat-success-color) 20%, transparent);
+      color: var(--mat-success-color);
+    }
+
+    &.tentative {
+      background: color-mix(in srgb, var(--mat-sys-secondary) 20%, transparent);
+      color: var(--mat-sys-secondary);
+    }
+
+    &.declined {
+      background: color-mix(in srgb, var(--mat-sys-error) 20%, transparent);
+      color: var(--mat-sys-error);
+    }
   }
 
   .rsvp-buttons {
@@ -261,6 +303,10 @@
         font-size: 1.1rem;
         width: 1.1rem;
         height: 1.1rem;
+      }
+
+      &.rsvp-active {
+        outline: 2px solid var(--mat-sys-primary);
       }
     }
   }

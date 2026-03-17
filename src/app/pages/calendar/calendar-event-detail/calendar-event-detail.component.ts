@@ -77,6 +77,7 @@ export class CalendarEventDetailComponent implements AfterViewInit, OnDestroy {
   event = signal<Event | null>(null);
   isLoading = signal(true);
   error = signal<string | null>(null);
+  currentRsvpStatus = signal<'accepted' | 'declined' | 'tentative' | null>(null);
 
   title = computed(() => {
     const ev = this.event();
@@ -195,6 +196,7 @@ export class CalendarEventDetailComponent implements AfterViewInit, OnDestroy {
     if (stateEvent) {
       this.event.set(stateEvent);
       this.isLoading.set(false);
+      void this.loadMyRsvp(stateEvent);
       return;
     }
 
@@ -224,6 +226,7 @@ export class CalendarEventDetailComponent implements AfterViewInit, OnDestroy {
           if (relayEvent) {
             this.event.set(relayEvent);
             this.isLoading.set(false);
+            void this.loadMyRsvp(relayEvent);
             return;
           }
         } catch {
@@ -243,6 +246,7 @@ export class CalendarEventDetailComponent implements AfterViewInit, OnDestroy {
           if (eventDTag === identifier) {
             this.event.set(event);
             this.isLoading.set(false);
+            void this.loadMyRsvp(event);
           }
         },
       );
@@ -266,6 +270,34 @@ export class CalendarEventDetailComponent implements AfterViewInit, OnDestroy {
   private getTagValue(tagName: string, tags: string[][]): string {
     const tag = tags.find(t => t[0] === tagName);
     return tag ? tag[1] : '';
+  }
+
+  private async loadMyRsvp(calendarEvent: Event): Promise<void> {
+    const myPubkey = this.accountState.pubkey();
+    if (!myPubkey) return;
+
+    const dTag = this.getTagValue('d', calendarEvent.tags);
+    const aCoord = `${calendarEvent.kind}:${calendarEvent.pubkey}:${dTag}`;
+
+    this.accountRelay.subscribe(
+      {
+        kinds: [31925],
+        authors: [myPubkey],
+        limit: 20,
+      },
+      (rsvpEvent: Event) => {
+        const aCoordTag = rsvpEvent.tags.find(t => t[0] === 'a')?.[1];
+        if (!aCoordTag || aCoordTag !== aCoord) return;
+        const status = rsvpEvent.tags.find(t => t[0] === 'status')?.[1] as
+          | 'accepted'
+          | 'declined'
+          | 'tentative'
+          | undefined;
+        if (status) {
+          this.currentRsvpStatus.set(status);
+        }
+      },
+    );
   }
 
   isLocationUrl(location: string): boolean {
@@ -327,6 +359,7 @@ export class CalendarEventDetailComponent implements AfterViewInit, OnDestroy {
       const signed = await this.nostrService.signEvent(unsigned);
       await this.accountRelay.publish(signed);
 
+      this.currentRsvpStatus.set(status);
       this.snackBar.open(`RSVP sent: ${status}`, 'Close', { duration: 3000 });
     } catch (error) {
       this.logger.error('Error sending RSVP', error);

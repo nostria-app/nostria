@@ -142,17 +142,32 @@
 
   <!-- RSVP Actions -->
   <div class="rsvp-section">
-    <h3 class="section-title">Respond</h3>
+    <h3 class="section-title">
+      Respond
+      @if (currentRsvpStatus()) {
+      <span class="current-rsvp-label">
+        – currently
+        @switch (currentRsvpStatus()) {
+        @case ('accepted') { <span class="rsvp-badge accepted"><mat-icon>check_circle</mat-icon>Going</span> }
+        @case ('tentative') { <span class="rsvp-badge tentative"><mat-icon>help_outline</mat-icon>Maybe</span> }
+        @case ('declined') { <span class="rsvp-badge declined"><mat-icon>cancel</mat-icon>Not going</span> }
+        }
+      </span>
+      }
+    </h3>
     <div class="rsvp-buttons">
-      <button mat-stroked-button (click)="respondToEvent('declined')">
+      <button mat-stroked-button (click)="respondToEvent('declined')"
+        [class.rsvp-active]="currentRsvpStatus() === 'declined'">
         <mat-icon>cancel</mat-icon>
         Decline
       </button>
-      <button mat-stroked-button (click)="respondToEvent('tentative')">
+      <button mat-stroked-button (click)="respondToEvent('tentative')"
+        [class.rsvp-active]="currentRsvpStatus() === 'tentative'">
         <mat-icon>help_outline</mat-icon>
         Maybe
       </button>
-      <button mat-flat-button (click)="respondToEvent('accepted')">
+      <button mat-flat-button (click)="respondToEvent('accepted')"
+        [class.rsvp-active]="currentRsvpStatus() === 'accepted'">
         <mat-icon>check_circle</mat-icon>
         Accept
       </button>
