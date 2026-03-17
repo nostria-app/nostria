@@ -8,6 +8,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatDividerModule } from '@angular/material/divider';
+import { MatExpansionModule } from '@angular/material/expansion';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
@@ -28,6 +29,7 @@ import { NostrService } from '../../../services/nostr.service';
 import { DatabaseService } from '../../../services/database.service';
 import { PublishService } from '../../../services/publish.service';
 import { RelayPoolService } from '../../../services/relays/relay-pool';
+import { ClipboardService } from '../../../services/clipboard.service';
 
 interface SuggestedEmojiPackDef {
   pubkey: string;
@@ -72,6 +74,7 @@ interface EditableEmojiRow {
     MatInputModule,
     MatFormFieldModule,
     MatDividerModule,
+    MatExpansionModule,
     MatProgressSpinnerModule,
     MatTooltipModule,
     MatSnackBarModule,
@@ -97,6 +100,7 @@ export class EmojiSetsComponent implements OnInit, OnDestroy {
   private database = inject(DatabaseService);
   private publishService = inject(PublishService);
   private relayPool = inject(RelayPoolService);
+  private clipboard = inject(ClipboardService);
   private nextEditingRowId = 0;
 
   // State
@@ -118,9 +122,12 @@ export class EmojiSetsComponent implements OnInit, OnDestroy {
   isEmojiDropTargetActive = signal(false);
 
   hasMediaServers = computed(() => this.media.mediaServers().length > 0);
+  isEditingGifCollection = computed(() => this.editingSetTags().includes('gifs'));
 
   // Suggested emoji packs
   suggestedPacks = signal<SuggestedEmojiPack[]>([]);
+
+  readonly gifFfmpegCommand = 'for %i in (*.mp4) do ffmpeg -i "%i" -vf "fps=10,scale=320:-1:flags=lanczos,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse" -loop 0 "%~ni.gif"';
 
   // Suggested emoji pack definitions
   private readonly SUGGESTED_PACKS: SuggestedEmojiPackDef[] = [
@@ -336,6 +343,10 @@ export class EmojiSetsComponent implements OnInit, OnDestroy {
     } finally {
       this.isLoading.set(false);
     }
+  }
+
+  async copyGifFfmpegCommand(): Promise<void> {
+    await this.clipboard.copyText(this.gifFfmpegCommand, 'FFmpeg command copied to clipboard');
   }
 
   addEmojiRow(afterIndex?: number): void {

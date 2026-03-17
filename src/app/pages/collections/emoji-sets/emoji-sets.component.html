@@ -49,7 +49,8 @@
             <mat-icon>gif_box</mat-icon>
             <span class="set-type-option-copy">
               <span class="set-type-option-title">Gifs</span>
-              <span class="set-type-option-description">Animated collections for the gif picker. The <strong>gifs</strong> tag is added automatically.</span>
+              <span class="set-type-option-description">Animated collections for the gif picker. The
+                <strong>gifs</strong> tag is added automatically.</span>
             </span>
           </button>
         </div>
@@ -88,7 +89,8 @@
 
             <div class="emoji-rows-actions">
               <input #emojiFilesInput type="file" accept="image/*" multiple class="hidden-file-input"
-                title="Add emoji image files" aria-label="Add emoji image files" (change)="onEmojiFilesSelected($event)" />
+                title="Add emoji image files" aria-label="Add emoji image files"
+                (change)="onEmojiFilesSelected($event)" />
               <button mat-stroked-button type="button" (click)="emojiFilesInput.click()">
                 <mat-icon>upload_file</mat-icon>
                 Add Files
@@ -100,8 +102,9 @@
             </div>
           </div>
 
-          <div class="emoji-drop-zone" [class.drag-over]="isEmojiDropTargetActive()" (dragenter)="onEmojiDropEnter($event)"
-            (dragover)="onEmojiDropOver($event)" (dragleave)="onEmojiDropLeave($event)" (drop)="onEmojiDrop($event)">
+          <div class="emoji-drop-zone" [class.drag-over]="isEmojiDropTargetActive()"
+            (dragenter)="onEmojiDropEnter($event)" (dragover)="onEmojiDropOver($event)"
+            (dragleave)="onEmojiDropLeave($event)" (drop)="onEmojiDrop($event)">
             <mat-icon>drag_indicator</mat-icon>
             <span>Drag and drop emoji files here to upload them and create rows automatically</span>
           </div>
@@ -111,8 +114,9 @@
             <div class="emoji-row" [class.uploading]="row.isUploading" [class.has-error]="!!row.uploadError">
               <mat-form-field appearance="outline" class="emoji-row-field shortcode-field">
                 <mat-label>Filename</mat-label>
-                <input matInput [ngModel]="row.shortcode" (ngModelChange)="updateEmojiRowValue(row.id, 'shortcode', $event)"
-                  placeholder="party-parrot" autocomplete="off" (keydown.enter)="onEmojiRowEnter($event, index)" />
+                <input matInput [ngModel]="row.shortcode"
+                  (ngModelChange)="updateEmojiRowValue(row.id, 'shortcode', $event)" placeholder="party-parrot"
+                  autocomplete="off" (keydown.enter)="onEmojiRowEnter($event, index)" />
               </mat-form-field>
 
               <mat-form-field appearance="outline" class="emoji-row-field url-field">
@@ -130,10 +134,10 @@
                 <mat-spinner diameter="24"></mat-spinner>
                 } @else if (row.previewUrl || row.url) {
                 <button mat-icon-button type="button" class="preview-button"
-                  [attr.aria-label]="'Preview ' + (row.shortcode || 'emoji')"
-                  title="Preview emoji" (click)="openEditingEmojiPreview(row, $event)">
-                  <img [src]="row.previewUrl || row.url" [alt]="row.shortcode || 'Emoji preview'"
-                    title="Emoji preview" class="emoji-row-thumbnail">
+                  [attr.aria-label]="'Preview ' + (row.shortcode || 'emoji')" title="Preview emoji"
+                  (click)="openEditingEmojiPreview(row, $event)">
+                  <img [src]="row.previewUrl || row.url" [alt]="row.shortcode || 'Emoji preview'" title="Emoji preview"
+                    class="emoji-row-thumbnail">
                 </button>
                 } @else {
                 <div class="preview-placeholder" aria-hidden="true">
@@ -143,11 +147,12 @@
               </div>
 
               <div class="emoji-row-actions">
-                <button mat-icon-button type="button" [attr.aria-label]="'Add row after ' + (index + 1)"
-                  title="Add row" (click)="addEmojiRow(index)">
+                <button mat-icon-button type="button" [attr.aria-label]="'Add row after ' + (index + 1)" title="Add row"
+                  (click)="addEmojiRow(index)">
                   <mat-icon>add</mat-icon>
                 </button>
-                <button mat-icon-button type="button" [disabled]="editingSetRows().length === 1 && !row.shortcode && !row.url"
+                <button mat-icon-button type="button"
+                  [disabled]="editingSetRows().length === 1 && !row.shortcode && !row.url"
                   [attr.aria-label]="'Remove row ' + (index + 1)" title="Remove row" (click)="removeEmojiRow(row.id)">
                   <mat-icon>delete</mat-icon>
                 </button>
@@ -181,6 +186,36 @@
           }
           <p class="tags-hint">If your emoji set should be used for gif picker, add "gifs" tag.</p>
         </div>
+
+        @if (isEditingGifCollection()) {
+        <mat-expansion-panel class="gif-helper-panel">
+          <mat-expansion-panel-header>
+            <mat-panel-title>
+              <mat-icon>movie</mat-icon>
+              <span>FFmpeg Help</span>
+            </mat-panel-title>
+            <mat-panel-description>
+              Copy a starter command for converting a video (mp4) into a gif.
+            </mat-panel-description>
+          </mat-expansion-panel-header>
+
+          <div class="gif-helper-content">
+            <p class="gif-helper-text">
+              Run this command in a folder with video (mp4) files to generate gif. The generated gifs will loop
+              infinitely.
+            </p>
+
+            <pre class="gif-helper-command">{{ gifFfmpegCommand }}</pre>
+
+            <div class="gif-helper-actions">
+              <button mat-stroked-button type="button" (click)="copyGifFfmpegCommand()">
+                <mat-icon>content_copy</mat-icon>
+                Copy FFmpeg Command
+              </button>
+            </div>
+          </div>
+        </mat-expansion-panel>
+        }
 
         <div class="form-actions">
           <button mat-button (click)="cancelEditingSet()" i18n="@@emoji-sets.cancel">Cancel</button>
@@ -227,9 +262,8 @@
             }
             <div class="emoji-grid">
               @for (emoji of set.emojis; track $index) {
-              <button mat-icon-button class="emoji-item" [matTooltip]="emoji.shortcode" [attr.aria-label]="emoji.shortcode"
-                title="Emoji preview"
-                (click)="openEmojiPreview(emoji, $event)">
+              <button mat-icon-button class="emoji-item" [matTooltip]="emoji.shortcode"
+                [attr.aria-label]="emoji.shortcode" title="Emoji preview" (click)="openEmojiPreview(emoji, $event)">
                 <img [src]="emoji.url" [alt]="emoji.shortcode" title="Emoji preview" class="emoji-image">
               </button>
               }
@@ -327,9 +361,8 @@
         <div class="emoji-grid">
           @for (emoji of emojiSet.emojis; track $index) {
           <button mat-icon-button class="emoji-item"
-            [matTooltip]="copiedEmoji === emoji.shortcode ? 'Copied!' : emoji.shortcode" [attr.aria-label]="emoji.shortcode"
-            title="Emoji preview"
-            (click)="openEmojiPreview(emoji, $event)">
+            [matTooltip]="copiedEmoji === emoji.shortcode ? 'Copied!' : emoji.shortcode"
+            [attr.aria-label]="emoji.shortcode" title="Emoji preview" (click)="openEmojiPreview(emoji, $event)">
             <img [src]="emoji.url" [alt]="emoji.shortcode" title="Emoji preview" class="emoji-image">
           </button>
           }

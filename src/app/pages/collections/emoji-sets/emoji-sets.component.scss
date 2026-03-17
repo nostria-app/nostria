@@ -422,6 +422,61 @@
   }
 }
 
+.gif-helper-panel {
+  margin-top: 16px;
+  background: var(--mat-sys-surface-container-low);
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: var(--mat-sys-corner-medium);
+  overflow: hidden;
+
+  .mat-expansion-panel-header {
+    padding: 0 16px;
+    min-height: 56px;
+  }
+
+  .mat-expansion-panel-header-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--mat-sys-on-surface);
+  }
+
+  .mat-expansion-panel-header-description {
+    color: var(--mat-sys-on-surface-variant);
+  }
+
+  .gif-helper-content {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    color: var(--mat-sys-on-surface);
+  }
+
+  .gif-helper-text {
+    margin: 0;
+    font-size: 14px;
+    color: var(--mat-sys-on-surface-variant);
+  }
+
+  .gif-helper-command {
+    margin: 0;
+    padding: 14px 16px;
+    border-radius: var(--mat-sys-corner-small);
+    background: var(--mat-sys-surface-container);
+    color: var(--mat-sys-on-surface);
+    font-family: monospace;
+    font-size: 13px;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  .gif-helper-actions {
+    display: flex;
+    justify-content: flex-end;
+  }
+}
+
 .sets-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
