@@ -9,6 +9,7 @@ import { Event } from 'nostr-tools';
 import { CustomDialogComponent } from '../../../components/custom-dialog/custom-dialog.component';
 import { ApplicationService } from '../../../services/application.service';
 import { AccountRelayService } from '../../../services/relays/account-relay';
+import { NostrService } from '../../../services/nostr.service';
 import { LoggerService } from '../../../services/logger.service';
 
 export interface CreateCalendarDialogData {
@@ -51,6 +52,7 @@ export class CreateCalendarDialogComponent {
   private fb = inject(FormBuilder);
   private app = inject(ApplicationService);
   private accountRelay = inject(AccountRelayService);
+  private nostrService = inject(NostrService);
   private logger = inject(LoggerService);
 
   isLoading = signal(false);
@@ -100,17 +102,12 @@ export class CreateCalendarDialogComponent {
         ...eventTags,
       ];
 
-      const eventToPublish = {
-        kind: 31924 as const,
-        content: description?.trim() || '',
-        tags,
-        created_at: Math.floor(Date.now() / 1000),
-        pubkey: this.app.accountState.pubkey()!,
-      };
+      const unsignedEvent = this.nostrService.createEvent(31924, description?.trim() || '', tags);
+      const signedEvent = await this.nostrService.signEvent(unsignedEvent);
 
-      await this.accountRelay.publish(eventToPublish as unknown as Event);
+      await this.accountRelay.publish(signedEvent);
 
-      this.closed.emit({ event: eventToPublish as unknown as Event });
+      this.closed.emit({ event: signedEvent });
     } catch (error) {
       this.logger.error('Error saving calendar:', error);
     } finally {

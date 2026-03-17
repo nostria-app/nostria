@@ -870,8 +870,11 @@ export class Calendar implements OnInit, OnDestroy, AfterViewInit {
 
     if (result?.event) {
       this.logger.info('Calendar saved:', result.event);
-      // Reload calendars to reflect the new/updated collection
-      this.loadCalendars();
+      // Immediately reflect the new/updated calendar in the list without waiting for relay round-trip
+      const calendar = this.parseCalendar(result.event);
+      if (calendar) {
+        this.addCalendar(calendar);
+      }
     }
   }
 
