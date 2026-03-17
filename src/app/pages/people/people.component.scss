@@ -113,7 +113,7 @@
 // List filter menu styles - must be at root level for overlay targeting
 ::ng-deep .list-filter-menu {
   min-width: 240px;
-  max-height: 400px;
+  max-height: calc(100vh - var(--toolbar-height, 64px) - 16px);
 
   .menu-section-header {
     display: flex;
