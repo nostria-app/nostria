@@ -15,11 +15,6 @@
   </button>
 
   <mat-menu #followSetsMenu="matMenu" class="list-filter-menu" yPosition="below" [overlapTrigger]="false">
-    <div class="menu-section-header" role="presentation">
-      <mat-icon>filter_list</mat-icon>
-      <span>Filter</span>
-    </div>
-    <mat-divider></mat-divider>
     <button mat-menu-item (click)="selectFollowSet(null)" [class.active]="!selectedFollowSet()">
       <mat-icon>people</mat-icon>
       <span class="menu-item-label">Following</span>
