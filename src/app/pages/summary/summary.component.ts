@@ -38,9 +38,13 @@ import { OnDemandUserDataService } from '../../services/on-demand-user-data.serv
 import { MediaPreviewDialogComponent } from '../../components/media-preview-dialog/media-preview.component';
 import { LayoutService } from '../../services/layout.service';
 import { ListFilterMenuComponent, ListFilterValue } from '../../components/list-filter-menu/list-filter-menu.component';
+import { LocalSettingsService, DEFAULT_CONTENT_FILTER } from '../../services/local-settings.service';
+import { FilterButtonComponent } from '../../components/filter-button/filter-button.component';
+import { FeedFilterPanelComponent } from '../feeds/feed-filter-panel/feed-filter-panel.component';
 
 interface ActivitySummary {
   notesCount: number;
+  repostsCount: number;
   articlesCount: number;
   mediaCount: number;
   profileUpdatesCount: number;
@@ -49,6 +53,7 @@ interface ActivitySummary {
 interface PosterStats {
   pubkey: string;
   notesCount: number;
+  repostsCount: number;
   articlesCount: number;
   mediaCount: number;
   totalCount: number;
@@ -89,7 +94,9 @@ const SAVE_INTERVAL_MS = 5000; // Save timestamp every 5 seconds
     OverlayModule,
     UserProfileComponent,
     AgoPipe,
-    ListFilterMenuComponent
+    ListFilterMenuComponent,
+    FilterButtonComponent,
+    FeedFilterPanelComponent,
   ],
   templateUrl: './summary.component.html',
   styleUrl: './summary.component.scss',
@@ -110,6 +117,7 @@ export class SummaryComponent implements OnInit, OnDestroy {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   protected readonly layout = inject(LayoutService);
+  protected readonly localSettings = inject(LocalSettingsService);
 
   // ViewChild for load more sentinel
   loadMoreSentinel = viewChild<ElementRef<HTMLDivElement>>('loadMoreSentinel');
@@ -164,6 +172,7 @@ export class SummaryComponent implements OnInit, OnDestroy {
   // Activity summary
   activitySummary = signal<ActivitySummary>({
     notesCount: 0,
+    repostsCount: 0,
     articlesCount: 0,
     mediaCount: 0,
     profileUpdatesCount: 0,
@@ -197,6 +206,14 @@ export class SummaryComponent implements OnInit, OnDestroy {
   // URL query param for list filter (for passing to ListFilterMenuComponent)
   // Set from route snapshot at construction time
   urlListFilter = signal<string | undefined>(this.route.snapshot.queryParams['list']);
+
+  // Content filter: whether the filter has been modified from defaults
+  hasActiveContentFilter = computed(() => {
+    const filter = this.localSettings.contentFilter();
+    const kindsMatch = filter.kinds.length === DEFAULT_CONTENT_FILTER.kinds.length
+      && filter.kinds.every(k => DEFAULT_CONTENT_FILTER.kinds.includes(k));
+    return !kindsMatch || filter.showReplies !== DEFAULT_CONTENT_FILTER.showReplies || filter.showReposts !== DEFAULT_CONTENT_FILTER.showReposts;
+  });
 
   // Expose follow sets from service
   followSets = this.followSetsService.followSets;
@@ -250,6 +267,7 @@ export class SummaryComponent implements OnInit, OnDestroy {
 
   // Raw events for timeline and drill-down
   noteEvents = signal<TimelineEvent[]>([]);
+  repostEvents = signal<TimelineEvent[]>([]);
   articleEventsRaw = signal<TimelineEvent[]>([]);
   mediaEventsRaw = signal<TimelineEvent[]>([]);
 
@@ -274,13 +292,38 @@ export class SummaryComponent implements OnInit, OnDestroy {
   // Timeline pagination
   timelinePage = signal(1);
 
-  // All timeline events (combined, filtered by selected posters and list, and sorted)
+  // All timeline events (combined, filtered by content filter, selected posters and list, and sorted)
   allTimelineEvents = computed(() => {
+    const contentFilter = this.localSettings.contentFilter();
+    const allowedKinds = contentFilter.kinds;
+    const showReposts = contentFilter.showReposts;
+    const showReplies = contentFilter.showReplies;
+
     const notes = this.noteEvents().map(e => ({ ...e, type: 'note' as const }));
+    const reposts = this.repostEvents().map(e => ({ ...e, type: 'repost' as const }));
     const articles = this.articleEventsRaw().map(e => ({ ...e, type: 'article' as const }));
     const media = this.mediaEventsRaw().map(e => ({ ...e, type: 'media' as const }));
-    let allEvents = [...notes, ...articles, ...media]
+    let allEvents = [...notes, ...reposts, ...articles, ...media]
       .sort((a, b) => b.created_at - a.created_at);
+
+    // Apply content filter - filter by allowed kinds
+    if (allowedKinds.length > 0) {
+      allEvents = allEvents.filter(e => allowedKinds.includes(e.kind));
+    }
+
+    // Filter reposts based on showReposts setting
+    if (!showReposts) {
+      allEvents = allEvents.filter(e => e.kind !== 6 && e.kind !== 16);
+    }
+
+    // Filter replies based on showReplies setting
+    if (!showReplies) {
+      allEvents = allEvents.filter(e => {
+        if (e.kind !== 1) return true;
+        // Check if note is a reply (has 'e' tags)
+        return !e.tags?.some(tag => tag[0] === 'e');
+      });
+    }
 
     // Filter by selected posters if any are selected
     const selected = this.selectedPosters();
@@ -332,7 +375,7 @@ export class SummaryComponent implements OnInit, OnDestroy {
   // Check if there's any activity
   hasActivity = computed(() => {
     const summary = this.activitySummary();
-    return summary.notesCount > 0 || summary.articlesCount > 0 ||
+    return summary.notesCount > 0 || summary.repostsCount > 0 || summary.articlesCount > 0 ||
       summary.mediaCount > 0 || summary.profileUpdatesCount > 0;
   });
 
@@ -529,7 +572,7 @@ export class SummaryComponent implements OnInit, OnDestroy {
 
       // Use the FollowingDataService with the user's selected time range
       const events = await this.followingData.ensureFollowingData(
-        [1, 20, 30023], // Notes, Media, Articles
+        [1, 6, 16, 20, 30023], // Notes, Reposts, Generic Reposts, Media, Articles
         forceRefresh, // Force fetch if doing manual refresh
         // Progress callback for new events from relays
         (newEvents: Event[]) => {
@@ -559,6 +602,7 @@ export class SummaryComponent implements OnInit, OnDestroy {
       if (following.length === 0) {
         this.activitySummary.set({
           notesCount: 0,
+          repostsCount: 0,
           articlesCount: 0,
           mediaCount: 0,
           profileUpdatesCount: 0,
@@ -567,6 +611,7 @@ export class SummaryComponent implements OnInit, OnDestroy {
         this.postersPage.set(1);
         this.profileUpdatesRaw.set([]);
         this.noteEvents.set([]);
+        this.repostEvents.set([]);
         this.articleEventsRaw.set([]);
         this.mediaEventsRaw.set([]);
         return;
@@ -578,20 +623,25 @@ export class SummaryComponent implements OnInit, OnDestroy {
       if (!accountPubkey) return;
 
       // Get events from database
-      const [notes, articles, media, profiles] = await Promise.all([
+      const [notes, reposts6, reposts16, articles, media, profiles] = await Promise.all([
         this.database.getAllEventsByPubkeyKindSince(accountPubkey, following, 1, sinceTimestamp),
+        this.database.getAllEventsByPubkeyKindSince(accountPubkey, following, 6, sinceTimestamp),
+        this.database.getAllEventsByPubkeyKindSince(accountPubkey, following, 16, sinceTimestamp),
         this.database.getAllEventsByPubkeyKindSince(accountPubkey, following, 30023, sinceTimestamp),
         this.database.getAllEventsByPubkeyKindSince(accountPubkey, following, 20, sinceTimestamp),
         this.database.getAllEventsByPubkeyKindSince(accountPubkey, following, 0, sinceTimestamp),
       ]);
 
+      const reposts = [...reposts6, ...reposts16];
+
       this.logger.debug(`[Summary] Queried since timestamp: ${sinceTimestamp} (${new Date(sinceTimestamp * 1000).toISOString()})`);
-      this.logger.debug(`[Summary] Found ${notes.length} notes, ${articles.length} articles, ${media.length} media, ${profiles.length} profile updates`);
+      this.logger.debug(`[Summary] Found ${notes.length} notes, ${reposts.length} reposts, ${articles.length} articles, ${media.length} media, ${profiles.length} profile updates`);
 
       const profileUpdatePubkeys = [...new Set(profiles.map(p => p.pubkey))];
 
       this.activitySummary.set({
         notesCount: notes.length,
+        repostsCount: reposts.length,
         articlesCount: articles.length,
         mediaCount: media.length,
         profileUpdatesCount: profileUpdatePubkeys.length,
@@ -604,6 +654,15 @@ export class SummaryComponent implements OnInit, OnDestroy {
         kind: e.kind,
         created_at: e.created_at,
         content: e.content,
+        tags: e.tags,
+      })));
+      this.repostEvents.set(reposts.map(e => ({
+        id: e.id,
+        pubkey: e.pubkey,
+        kind: e.kind,
+        created_at: e.created_at,
+        content: e.content,
+        tags: e.tags,
       })));
       this.articleEventsRaw.set(articles.map(e => ({
         id: e.id,
@@ -622,7 +681,7 @@ export class SummaryComponent implements OnInit, OnDestroy {
         tags: e.tags, // Include tags for media URL extraction
       })));
 
-      this.calculatePosterStats(notes, articles, media);
+      this.calculatePosterStats(notes, reposts, articles, media);
       this.profileUpdatesRaw.set(profileUpdatePubkeys.slice(0, MAX_PROFILE_UPDATES));
 
     } catch (error) {
@@ -630,13 +689,14 @@ export class SummaryComponent implements OnInit, OnDestroy {
     }
   }
 
-  private calculatePosterStats(notes: Event[], articles: Event[], media: Event[]): void {
+  private calculatePosterStats(notes: Event[], reposts: Event[], articles: Event[], media: Event[]): void {
     const statsMap = new Map<string, PosterStats>();
 
     for (const event of notes) {
       const existing = statsMap.get(event.pubkey) || {
         pubkey: event.pubkey,
         notesCount: 0,
+        repostsCount: 0,
         articlesCount: 0,
         mediaCount: 0,
         totalCount: 0,
@@ -646,10 +706,25 @@ export class SummaryComponent implements OnInit, OnDestroy {
       statsMap.set(event.pubkey, existing);
     }
 
+    for (const event of reposts) {
+      const existing = statsMap.get(event.pubkey) || {
+        pubkey: event.pubkey,
+        notesCount: 0,
+        repostsCount: 0,
+        articlesCount: 0,
+        mediaCount: 0,
+        totalCount: 0,
+      };
+      existing.repostsCount++;
+      existing.totalCount++;
+      statsMap.set(event.pubkey, existing);
+    }
+
     for (const event of articles) {
       const existing = statsMap.get(event.pubkey) || {
         pubkey: event.pubkey,
         notesCount: 0,
+        repostsCount: 0,
         articlesCount: 0,
         mediaCount: 0,
         totalCount: 0,
@@ -663,6 +738,7 @@ export class SummaryComponent implements OnInit, OnDestroy {
       const existing = statsMap.get(event.pubkey) || {
         pubkey: event.pubkey,
         notesCount: 0,
+        repostsCount: 0,
         articlesCount: 0,
         mediaCount: 0,
         totalCount: 0,
@@ -855,6 +931,8 @@ export class SummaryComponent implements OnInit, OnDestroy {
   getEventKindIcon(kind: number): string {
     switch (kind) {
       case 1: return 'chat';
+      case 6: return 'repeat';
+      case 16: return 'repeat';
       case 30023: return 'article';
       case 20: return 'perm_media';
       default: return 'event';
@@ -864,6 +942,8 @@ export class SummaryComponent implements OnInit, OnDestroy {
   getEventKindLabel(kind: number): string {
     switch (kind) {
       case 1: return 'Note';
+      case 6: return 'Repost';
+      case 16: return 'Repost';
       case 30023: return 'Article';
       case 20: return 'Media';
       default: return 'Event';
@@ -932,6 +1012,21 @@ export class SummaryComponent implements OnInit, OnDestroy {
       // For articles, get title from tags
       const title = event.tags.find(t => t[0] === 'title')?.[1];
       if (title) return title;
+    }
+    // For reposts, try to extract content from embedded event or show referenced event info
+    if (event.kind === 6 || event.kind === 16) {
+      if (event.content) {
+        try {
+          const embedded = JSON.parse(event.content);
+          if (embedded.content) {
+            const content = embedded.content;
+            return content.length > 100 ? content.substring(0, 100) + '...' : content;
+          }
+        } catch {
+          // Not valid JSON, use content directly
+        }
+      }
+      return 'Reposted a note';
     }
     // Truncate content for preview
     const content = event.content || '';

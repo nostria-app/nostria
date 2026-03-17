@@ -16,6 +16,14 @@
     </button>
     <span class="panel-header-spacer"></span>
     <div class="panel-actions">
+      <!-- Content Filter -->
+      <app-filter-button [active]="hasActiveContentFilter()" tooltip="Filter content types">
+        <app-feed-filter-panel
+          (kindsChanged)="timelinePage.set(1)"
+          (showRepliesChanged)="timelinePage.set(1)"
+          (showRepostsChanged)="timelinePage.set(1)" />
+      </app-filter-button>
+
       <!-- List Filter -->
       <app-list-filter-menu storageKey="summary" [showPublicOption]="false" defaultFilter="following"
         [initialFilter]="urlListFilter()" (filterChanged)="onFilterChanged($event)"
@@ -129,6 +137,12 @@
                 <mat-icon>chat</mat-icon>
                 {{ poster.notesCount }}
               </span>
+              @if (poster.repostsCount > 0) {
+              <span class="stat-item" matTooltip="Reposts">
+                <mat-icon>repeat</mat-icon>
+                {{ poster.repostsCount }}
+              </span>
+              }
               @if (poster.articlesCount > 0) {
               <span class="stat-item" matTooltip="Articles">
                 <mat-icon>article</mat-icon>
