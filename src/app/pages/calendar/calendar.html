@@ -138,6 +138,16 @@
 
       <mat-divider></mat-divider>
 
+      <!-- Collapseable calendar list header (toggle visible on small screens) -->
+      <div class="sidebar-section-toggle" (click)="calendarListCollapsed.set(!calendarListCollapsed())">
+        <span class="toggle-label">Calendars</span>
+        <mat-icon class="toggle-icon" [class.expanded]="!calendarListCollapsed()">
+          expand_more
+        </mat-icon>
+      </div>
+
+      @if (!calendarListCollapsed()) {
+
       @if (isLoadingCalendars()) {
       <mat-progress-bar mode="indeterminate"></mat-progress-bar>
       }
@@ -215,9 +225,9 @@
       </div>
       }
 
-    </div>
+      } <!-- end collapseable calendar list -->
 
-    <!-- Main calendar area -->
+    </div>
     <div class="calendar-main">
 
       <!-- Loading indicator -->

@@ -176,6 +176,9 @@ export class Calendar implements OnInit, OnDestroy, AfterViewInit {
   readonly OTHER_VIRTUAL_CALENDAR_ID = '__other__';
   otherCalendarEnabled = signal<boolean>(true);
 
+  // Collapseable calendar list on small screens
+  calendarListCollapsed = signal<boolean>(this.layout.isHandset());
+
   // Separated calendar views
   myCalendars = computed(() => {
     const pubkey = this.accountState.pubkey();
