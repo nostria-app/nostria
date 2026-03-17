@@ -429,6 +429,13 @@ export class Calendar implements OnInit, OnDestroy, AfterViewInit {
   });
 
   constructor() {
+    // When switching from mobile to desktop, always expand the calendar list.
+    effect(() => {
+      if (!this.layout.isHandset()) {
+        this.calendarListCollapsed.set(false);
+      }
+    });
+
     // Effect to load events when date changes — also tracks relay init so it
     // re-fires as soon as the account relay becomes ready after a page reload.
     effect(async () => {
