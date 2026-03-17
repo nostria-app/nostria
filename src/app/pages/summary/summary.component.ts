@@ -23,6 +23,7 @@ import { MatExpansionModule } from '@angular/material/expansion';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatMenuModule } from '@angular/material/menu';
 import { OverlayModule, ConnectedPosition } from '@angular/cdk/overlay';
+import { CommonModule } from '@angular/common';
 import { AccountStateService } from '../../services/account-state.service';
 import { AccountLocalStateService } from '../../services/account-local-state.service';
 import { DatabaseService } from '../../services/database.service';
@@ -37,10 +38,8 @@ import { CustomDialogService } from '../../services/custom-dialog.service';
 import { OnDemandUserDataService } from '../../services/on-demand-user-data.service';
 import { MediaPreviewDialogComponent } from '../../components/media-preview-dialog/media-preview.component';
 import { LayoutService } from '../../services/layout.service';
-import { ListFilterMenuComponent, ListFilterValue } from '../../components/list-filter-menu/list-filter-menu.component';
+import { ListFilterValue } from '../../components/list-filter-menu/list-filter-menu.component';
 import { LocalSettingsService, DEFAULT_CONTENT_FILTER } from '../../services/local-settings.service';
-import { FilterButtonComponent } from '../../components/filter-button/filter-button.component';
-import { FeedFilterPanelComponent } from '../feeds/feed-filter-panel/feed-filter-panel.component';
 
 interface ActivitySummary {
   notesCount: number;
@@ -70,6 +69,22 @@ interface TimelineEvent {
 
 type GmFilterMode = 'all' | 'only' | 'exclude';
 
+interface ContentTypeOption {
+  id: 'posts' | 'reposts' | 'voicePosts' | 'photoPosts' | 'videoPosts';
+  label: string;
+  description: string;
+  kinds: number[];
+  icon: string;
+}
+
+const SUMMARY_CONTENT_TYPES: ContentTypeOption[] = [
+  { id: 'posts', label: 'Posts', description: 'Short text posts', kinds: [1, 1111], icon: 'description' },
+  { id: 'reposts', label: 'Reposts', description: 'Shared content from others', kinds: [6, 16], icon: 'repeat' },
+  { id: 'voicePosts', label: 'Audio Posts', description: 'Audio posts and music', kinds: [1222, 1244], icon: 'audiotrack' },
+  { id: 'photoPosts', label: 'Photo Posts', description: 'Image galleries', kinds: [20], icon: 'image' },
+  { id: 'videoPosts', label: 'Video Posts', description: 'Video posts and clips', kinds: [21, 22, 34235, 34236], icon: 'movie' },
+];
+
 // Constants for configurable limits
 const DEFAULT_DAYS_LOOKBACK = 1; // 1 day lookback for first-time users
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
@@ -81,6 +96,7 @@ const SAVE_INTERVAL_MS = 5000; // Save timestamp every 5 seconds
 @Component({
   selector: 'app-summary',
   imports: [
+    CommonModule,
     RouterModule,
     MatButtonModule,
     MatIconModule,
@@ -94,9 +110,6 @@ const SAVE_INTERVAL_MS = 5000; // Save timestamp every 5 seconds
     OverlayModule,
     UserProfileComponent,
     AgoPipe,
-    ListFilterMenuComponent,
-    FilterButtonComponent,
-    FeedFilterPanelComponent,
   ],
   templateUrl: './summary.component.html',
   styleUrl: './summary.component.scss',
@@ -119,6 +132,8 @@ export class SummaryComponent implements OnInit, OnDestroy {
   protected readonly layout = inject(LayoutService);
   protected readonly localSettings = inject(LocalSettingsService);
 
+  readonly summaryContentTypes = SUMMARY_CONTENT_TYPES;
+
   // ViewChild for load more sentinel
   loadMoreSentinel = viewChild<ElementRef<HTMLDivElement>>('loadMoreSentinel');
 
@@ -133,7 +148,13 @@ export class SummaryComponent implements OnInit, OnDestroy {
 
   // Time panel state
   timePanelOpen = signal(false);
+  filterPanelOpen = signal(false);
   timePanelPositions: ConnectedPosition[] = [
+    { originX: 'end', originY: 'bottom', overlayX: 'end', overlayY: 'top', offsetY: 8 },
+    { originX: 'start', originY: 'bottom', overlayX: 'start', overlayY: 'top', offsetY: 8 },
+    { originX: 'end', originY: 'top', overlayX: 'end', overlayY: 'bottom', offsetY: -8 },
+  ];
+  filterPanelPositions: ConnectedPosition[] = [
     { originX: 'end', originY: 'bottom', overlayX: 'end', overlayY: 'top', offsetY: 8 },
     { originX: 'start', originY: 'bottom', overlayX: 'start', overlayY: 'top', offsetY: 8 },
     { originX: 'end', originY: 'top', overlayX: 'end', overlayY: 'bottom', offsetY: -8 },
@@ -213,6 +234,33 @@ export class SummaryComponent implements OnInit, OnDestroy {
     const kindsMatch = filter.kinds.length === DEFAULT_CONTENT_FILTER.kinds.length
       && filter.kinds.every(k => DEFAULT_CONTENT_FILTER.kinds.includes(k));
     return !kindsMatch || filter.showReplies !== DEFAULT_CONTENT_FILTER.showReplies || filter.showReposts !== DEFAULT_CONTENT_FILTER.showReposts;
+  });
+
+  hasActiveListFilter = computed(() => !!this.selectedList() || this.currentListFilter() !== 'following');
+
+  hasActiveCombinedFilter = computed(() => this.hasActiveContentFilter() || this.hasActiveListFilter());
+
+  currentListFilter = signal<ListFilterValue>('following');
+
+  favoritesSet = computed(() => this.followSets().find(set => set.dTag === 'nostria-favorites') ?? null);
+
+  otherFollowSets = computed(() =>
+    this.followSets()
+      .filter(set => set.dTag !== 'nostria-favorites')
+      .sort((a, b) => a.title.localeCompare(b.title))
+  );
+
+  currentContentKinds = computed(() => this.localSettings.contentFilter().kinds);
+  currentShowReplies = computed(() => this.localSettings.contentFilter().showReplies);
+  currentShowReposts = computed(() => this.localSettings.contentFilter().showReposts);
+
+  currentListFilterLabel = computed(() => {
+    const filter = this.currentListFilter();
+    if (filter === 'following') {
+      return 'Following';
+    }
+    const selectedSet = this.selectedList();
+    return selectedSet?.title ?? 'List filter';
   });
 
   // Expose follow sets from service
@@ -412,7 +460,11 @@ export class SummaryComponent implements OnInit, OnDestroy {
       if (pubkey) {
         // Restore saved time selection
         this.restoreTimeSelection(pubkey);
+        this.restoreListSelection(pubkey);
         this.loadSummaryData();
+      } else {
+        this.currentListFilter.set('following');
+        this.selectedList.set(null);
       }
     });
 
@@ -438,6 +490,11 @@ export class SummaryComponent implements OnInit, OnDestroy {
       // Default to last visit
       this.selectedPreset.set(null);
     }
+  }
+
+  private restoreListSelection(pubkey: string): void {
+    const initialFilter = this.urlListFilter() ?? this.accountLocalState.getSummaryListFilter(pubkey);
+    this.selectListFilter(initialFilter, false);
   }
 
   ngOnInit(): void {
@@ -764,6 +821,82 @@ export class SummaryComponent implements OnInit, OnDestroy {
     this.timePanelOpen.set(false);
   }
 
+  toggleFilterPanel(): void {
+    this.filterPanelOpen.update(isOpen => !isOpen);
+  }
+
+  closeFilterPanel(): void {
+    this.filterPanelOpen.set(false);
+  }
+
+  isContentTypeSelected(type: ContentTypeOption): boolean {
+    return type.kinds.some(kind => this.currentContentKinds().includes(kind));
+  }
+
+  toggleContentType(type: ContentTypeOption): void {
+    const currentKinds = this.currentContentKinds();
+    const isSelected = this.isContentTypeSelected(type);
+
+    let nextKinds: number[];
+    if (isSelected) {
+      nextKinds = currentKinds.filter(kind => !type.kinds.includes(kind));
+      if (nextKinds.length === 0) {
+        return;
+      }
+    } else {
+      nextKinds = [...new Set([...currentKinds, ...type.kinds])];
+    }
+
+    this.localSettings.setContentFilterKinds(nextKinds);
+    if (type.id === 'reposts') {
+      this.localSettings.setContentFilterShowReposts(!isSelected);
+    }
+    this.timelinePage.set(1);
+  }
+
+  toggleShowReplies(): void {
+    this.localSettings.setContentFilterShowReplies(!this.currentShowReplies());
+    this.timelinePage.set(1);
+  }
+
+  selectAllContentTypes(): void {
+    const allKinds = [...new Set(this.summaryContentTypes.flatMap(type => type.kinds))];
+    this.localSettings.setContentFilterKinds(allKinds);
+    this.localSettings.setContentFilterShowReposts(true);
+    this.timelinePage.set(1);
+  }
+
+  clearContentTypes(): void {
+    this.localSettings.setContentFilterKinds([1]);
+    this.localSettings.setContentFilterShowReposts(false);
+    this.timelinePage.set(1);
+  }
+
+  resetContentFilter(): void {
+    this.localSettings.resetContentFilter();
+    this.timelinePage.set(1);
+  }
+
+  selectListFilter(filter: ListFilterValue, persist = true): void {
+    this.currentListFilter.set(filter);
+
+    const followSet = filter === 'following'
+      ? null
+      : this.followSets().find(set => set.dTag === filter) ?? null;
+
+    this.selectedList.set(followSet);
+
+    if (persist) {
+      const pubkey = this.accountState.pubkey();
+      if (pubkey) {
+        this.accountLocalState.setSummaryListFilter(pubkey, filter);
+      }
+    }
+
+    this.postersPage.set(1);
+    this.timelinePage.set(1);
+  }
+
   selectPreset(hours: number): void {
     this.selectedPreset.set(hours);
     // Reset timeline pagination when changing time range
@@ -831,15 +964,11 @@ export class SummaryComponent implements OnInit, OnDestroy {
   }
 
   clearListFilter(): void {
-    this.selectedList.set(null);
-    this.postersPage.set(1);
-    this.timelinePage.set(1);
+    this.selectListFilter('following');
   }
 
   onFilterChanged(filter: ListFilterValue): void {
-    // Filter change is handled by followSetChanged
-    this.postersPage.set(1);
-    this.timelinePage.set(1);
+    this.selectListFilter(filter);
   }
 
   onFollowSetChanged(followSet: FollowSet | null): void {
