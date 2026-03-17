@@ -1049,6 +1049,18 @@
     }
   }
 
+  .poster-name {
+    display: block;
+    text-align: center;
+    font-size: 0.65rem;
+    color: var(--mat-sys-on-surface-variant);
+    margin-top: 0.25rem;
+    max-width: 64px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
   .poster-stats-badge {
     display: flex;
     flex-wrap: wrap;
@@ -1583,9 +1595,8 @@ mat-divider {
     }
 
     .timeline-content {
-      .timeline-type {
-        font-size: 0.6rem;
-        padding: 1px 4px;
+      .timeline-header {
+        display: none;
       }
 
       .timeline-preview {

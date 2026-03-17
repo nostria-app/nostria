@@ -28,6 +28,7 @@ import { AccountLocalStateService } from '../../services/account-local-state.ser
 import { DatabaseService } from '../../services/database.service';
 import { LoggerService } from '../../services/logger.service';
 import { UserProfileComponent } from '../../components/user-profile/user-profile.component';
+import { ProfileDisplayNameComponent } from '../../components/user-profile/display-name/profile-display-name.component';
 import { Event, nip19 } from 'nostr-tools';
 import { ApplicationService } from '../../services/application.service';
 import { AgoPipe } from '../../pipes/ago.pipe';
@@ -88,6 +89,7 @@ const SAVE_INTERVAL_MS = 5000; // Save timestamp every 5 seconds
     MatMenuModule,
     OverlayModule,
     UserProfileComponent,
+    ProfileDisplayNameComponent,
     AgoPipe,
     ListFilterMenuComponent
   ],
