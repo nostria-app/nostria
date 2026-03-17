@@ -111,9 +111,17 @@
 }
 
 // List filter menu styles - must be at root level for overlay targeting
-::ng-deep .list-filter-menu {
+::ng-deep .mat-mdc-menu-panel.list-filter-menu {
   min-width: 240px;
-  max-height: calc(100vh - var(--toolbar-height, 64px) - 16px);
+  // Keep the menu anchored near the trigger (below toolbar area) and scroll internally.
+  max-height: calc(100dvh - var(--toolbar-height, 64px) - 36px);
+  transform: translateY(12px);
+  overflow-y: auto;
+
+  .mat-mdc-menu-content {
+    max-height: inherit;
+    overflow-y: auto;
+  }
 
   .menu-section-header {
     display: flex;

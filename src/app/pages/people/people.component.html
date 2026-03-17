@@ -14,7 +14,7 @@
     <mat-icon class="selector-arrow">expand_more</mat-icon>
   </button>
 
-  <mat-menu #followSetsMenu="matMenu" class="list-filter-menu">
+  <mat-menu #followSetsMenu="matMenu" class="list-filter-menu" yPosition="below" [overlapTrigger]="false">
     <div class="menu-section-header" role="presentation">
       <mat-icon>filter_list</mat-icon>
       <span>Filter</span>
