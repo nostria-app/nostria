@@ -14,12 +14,7 @@
     <mat-icon class="selector-arrow">expand_more</mat-icon>
   </button>
 
-  <mat-menu #followSetsMenu="matMenu" class="list-filter-menu">
-    <div class="menu-section-header" role="presentation">
-      <mat-icon>filter_list</mat-icon>
-      <span>Filter</span>
-    </div>
-    <mat-divider></mat-divider>
+  <mat-menu #followSetsMenu="matMenu" class="list-filter-menu" yPosition="below" [overlapTrigger]="false">
     <button mat-menu-item (click)="selectFollowSet(null)" [class.active]="!selectedFollowSet()">
       <mat-icon>people</mat-icon>
       <span class="menu-item-label">Following</span>
