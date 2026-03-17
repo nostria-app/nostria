@@ -127,8 +127,7 @@
       <h3 class="calendars-group-title">My Calendars</h3>
       <div class="calendars-chips">
         @for (calendar of myCalendars(); track calendar.id) {
-        <mat-chip-row [class.selected]="isCalendarEnabled(calendar.id)"
-          (click)="toggleCalendar(calendar.id)">
+        <mat-chip-row [class.selected]="isCalendarEnabled(calendar.id)" (click)="toggleCalendar(calendar.id)">
           <mat-icon matChipAvatar>calendar_today</mat-icon>
           {{ calendar.title }}
           <span class="calendar-event-count">{{ calendar.events.length }}</span>
@@ -143,8 +142,7 @@
       <h3 class="calendars-group-title">Public Calendars</h3>
       <div class="calendars-chips">
         @for (calendar of publicCalendars(); track calendar.id) {
-        <mat-chip-row [class.selected]="isCalendarEnabled(calendar.id)"
-          (click)="toggleCalendar(calendar.id)">
+        <mat-chip-row [class.selected]="isCalendarEnabled(calendar.id)" (click)="toggleCalendar(calendar.id)">
           <mat-icon matChipAvatar>public</mat-icon>
           {{ calendar.title }}
           <span class="calendar-event-count">{{ calendar.events.length }}</span>

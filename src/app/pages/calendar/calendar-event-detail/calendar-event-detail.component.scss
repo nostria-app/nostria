@@ -172,11 +172,9 @@
   }
 
   .time-row {
-    background: linear-gradient(
-      135deg,
-      var(--mat-sys-primary-container) 0%,
-      var(--mat-sys-secondary-container) 100%
-    );
+    background: linear-gradient(135deg,
+        var(--mat-sys-primary-container) 0%,
+        var(--mat-sys-secondary-container) 100%);
     color: var(--mat-sys-on-primary-container);
     border-radius: 16px 16px 0 0;
 
