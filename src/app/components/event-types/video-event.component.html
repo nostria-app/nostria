@@ -9,6 +9,12 @@
 <h3 class="media-title">{{ title() }}</h3>
 }
 
+@if (description() && !showOverlay()) {
+<p class="video-description">
+  {{ description() }}
+</p>
+}
+
 @if (hasValidVideo()) {
 @let videoInfo = videoData()!;
 @let blurhashUrl = blurhashDataUrl();
@@ -108,12 +114,6 @@
   <mat-icon>videocam_off</mat-icon>
   <p>No video available</p>
 </div>
-}
-
-@if (description() && !showOverlay()) {
-<p class="video-description">
-  {{ description() }}
-</p>
 }
 
 @if (!hideComments()) {
