@@ -69,3 +69,4 @@ src-android/*
 # Ralphy
 .ralphy-worktrees/
 .ralphy-sandboxes/
+node_modules/

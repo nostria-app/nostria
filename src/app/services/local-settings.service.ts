@@ -21,6 +21,8 @@ export interface ContentFilterSettings {
   showReplies: boolean;
   /** Whether to show reposts */
   showReposts: boolean;
+  /** Whether to filter by Web of Trust (only show events from trusted users) */
+  wotFilter?: boolean;
 }
 
 /** Default content filter: show posts and reposts */
@@ -555,6 +557,14 @@ export class LocalSettingsService {
   setContentFilterShowReposts(showReposts: boolean): void {
     const current = this.contentFilter();
     this.setContentFilter({ ...current, showReposts });
+  }
+
+  /**
+   * Set content filter Web of Trust filter setting
+   */
+  setContentFilterWotFilter(wotFilter: boolean): void {
+    const current = this.contentFilter();
+    this.setContentFilter({ ...current, wotFilter });
   }
 
   /**

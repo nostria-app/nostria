@@ -6,6 +6,7 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { LocalSettingsService, DEFAULT_CONTENT_FILTER } from '../../../services/local-settings.service';
 import { FeedConfig, FeedService } from '../../../services/feed.service';
+import { TrustProviderService } from '../../../services/trust-provider.service';
 
 /**
  * Content type definition for filter options
@@ -122,6 +123,22 @@ function isStandardKindsSelection(kinds: number[]): boolean {
           </div>
         </button>
       </div>
+
+      <!-- Web of Trust Filter Toggle -->
+      @if (trustProviderEnabled()) {
+      <div class="toggle-option">
+        <button
+          class="content-type-chip full-width"
+          [class.selected]="currentWotFilter()"
+          (click)="onWotFilterChange(!currentWotFilter())">
+          <mat-icon class="chip-icon">shield</mat-icon>
+          <div class="chip-text">
+            <span class="chip-label">Web of Trust</span>
+            <span class="chip-description">Only show events from trusted users</span>
+          </div>
+        </button>
+      </div>
+      }
 
       <!-- Actions Row -->
       <div class="actions-row">
@@ -332,6 +349,7 @@ function isStandardKindsSelection(kinds: number[]): boolean {
 export class FeedFilterPanelComponent {
   readonly localSettings = inject(LocalSettingsService);
   readonly feedService = inject(FeedService);
+  private readonly trustProvider = inject(TrustProviderService);
 
   // Input: the feed to configure (if provided, saves to feed; otherwise uses global)
   feed = input<FeedConfig | undefined>(undefined);
@@ -347,6 +365,7 @@ export class FeedFilterPanelComponent {
   showRepliesChanged = output<boolean>();
   showRepostsChanged = output<boolean>();
   mentionedModeChanged = output<boolean>();
+  wotFilterChanged = output<boolean>();
 
   // Compute the current mentioned mode from input
   currentMentionedMode = computed(() => this.mentionedMode());
@@ -380,6 +399,18 @@ export class FeedFilterPanelComponent {
     }
     return this.localSettings.contentFilter().showReposts;
   });
+
+  // Track the current WoT filter setting - from feed config if available
+  currentWotFilter = computed(() => {
+    const feedConfig = this.feed();
+    if (feedConfig) {
+      return feedConfig.wotFilter ?? false;
+    }
+    return this.localSettings.contentFilter().wotFilter ?? false;
+  });
+
+  // Whether trust provider is enabled (show WoT filter only when trust service is available)
+  trustProviderEnabled = computed(() => this.localSettings.trustEnabled());
 
   /**
    * Check if the feed has a custom filter (non-standard kinds selection)
@@ -449,6 +480,13 @@ export class FeedFilterPanelComponent {
    */
   onShowRepliesChange(checked: boolean): void {
     this.updateShowReplies(checked);
+  }
+
+  /**
+   * Handle WoT filter toggle
+   */
+  onWotFilterChange(enabled: boolean): void {
+    this.updateWotFilter(enabled);
   }
 
   /**
@@ -532,12 +570,14 @@ export class FeedFilterPanelComponent {
       this.updateKinds(defaultKinds);
       this.updateShowReplies(false);
       this.updateShowReposts(true);
+      this.updateWotFilter(false);
     } else {
       // Reset global settings
       this.localSettings.resetContentFilter();
       this.kindsChanged.emit([...DEFAULT_CONTENT_FILTER.kinds]);
       this.showRepostsChanged.emit(DEFAULT_CONTENT_FILTER.showReposts);
       this.showRepliesChanged.emit(DEFAULT_CONTENT_FILTER.showReplies);
+      this.wotFilterChanged.emit(false);
     }
   }
 
@@ -584,5 +624,20 @@ export class FeedFilterPanelComponent {
       this.localSettings.setContentFilterShowReposts(showReposts);
     }
     this.showRepostsChanged.emit(showReposts);
+  }
+
+  /**
+   * Update wotFilter - saves to feed config if available, otherwise to global settings
+   */
+  private updateWotFilter(wotFilter: boolean): void {
+    const feedConfig = this.feed();
+    if (feedConfig) {
+      // Update feed configuration
+      this.feedService.updateFeed(feedConfig.id, { wotFilter });
+    } else {
+      // Update global settings
+      this.localSettings.setContentFilterWotFilter(wotFilter);
+    }
+    this.wotFilterChanged.emit(wotFilter);
   }
 }

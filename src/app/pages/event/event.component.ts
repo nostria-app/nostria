@@ -40,6 +40,7 @@ import { FollowSetsService, FollowSet } from '../../services/follow-sets.service
 import { AccountStateService } from '../../services/account-state.service';
 import { AccountLocalStateService } from '../../services/account-local-state.service';
 import { EventFocusService } from '../../services/event-focus.service';
+import { TrustService } from '../../services/trust.service';
 import { PublishEventBus, PublishRelayResultEvent } from '../../services/publish-event-bus.service';
 
 /** Description of the EventPageComponent
@@ -64,6 +65,7 @@ import { PublishEventBus, PublishRelayResultEvent } from '../../services/publish
 // Constants for follow set filter types
 export const REPLY_FILTER_EVERYONE = 'everyone';
 export const REPLY_FILTER_FOLLOWING = 'following';
+export const REPLY_FILTER_WOT = 'wot';
 
 @Component({
   selector: 'app-event-page',
@@ -132,6 +134,7 @@ export class EventPageComponent {
   private elementRef = inject(ElementRef);
   private readonly eventFocus = inject(EventFocusService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly trustService = inject(TrustService);
   private publishEventBus = inject(PublishEventBus);
   id = signal<string | null>(null);
   userRelays: string[] = [];
@@ -201,6 +204,7 @@ export class EventPageComponent {
     const filter = this.selectedReplyFilter();
     if (filter === REPLY_FILTER_EVERYONE) return 'Everyone';
     if (filter === REPLY_FILTER_FOLLOWING) return 'Following';
+    if (filter === REPLY_FILTER_WOT) return 'Web of Trust';
     const set = this.availableFollowSets().find(s => s.dTag === filter);
     return set?.title || 'Custom List';
   });
@@ -223,6 +227,13 @@ export class EventPageComponent {
     // No filter - show all replies
     if (filter === REPLY_FILTER_EVERYONE) {
       return replies;
+    }
+
+    // WoT filter - filter by trust rank
+    if (filter === REPLY_FILTER_WOT) {
+      // Also include the main event author so their replies are always shown
+      const mainEventPubkey = this.event()?.pubkey;
+      return this.filterThreadedRepliesByWot(replies, mainEventPubkey);
     }
 
     // Get the set of pubkeys to filter by
@@ -279,6 +290,37 @@ export class EventPageComponent {
         });
       }
       // If not allowed and no matching children, skip entirely
+    }
+
+    return result;
+  }
+
+  /**
+   * Recursively filter threaded replies by Web of Trust rank.
+   * Only include replies from users with a positive trust rank or the main event author.
+   */
+  private filterThreadedRepliesByWot(replies: ThreadedEvent[], mainEventPubkey?: string): ThreadedEvent[] {
+    const result: ThreadedEvent[] = [];
+
+    for (const reply of replies) {
+      const rank = this.trustService.getRankSignal(reply.event.pubkey);
+      const isAllowed = reply.event.pubkey === mainEventPubkey || (typeof rank === 'number' && rank > 0);
+
+      // Recursively filter child replies
+      const filteredChildren = this.filterThreadedRepliesByWot(reply.replies, mainEventPubkey);
+
+      if (isAllowed) {
+        result.push({
+          ...reply,
+          replies: filteredChildren,
+        });
+      } else if (filteredChildren.length > 0) {
+        // Keep non-trusted connector replies when they have trusted descendants
+        result.push({
+          ...reply,
+          replies: filteredChildren,
+        });
+      }
     }
 
     return result;

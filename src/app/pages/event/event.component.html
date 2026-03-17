@@ -35,6 +35,10 @@
     <mat-icon>people</mat-icon>
     <span>Following</span>
   </button>
+  <button mat-menu-item (click)="setReplyFilter('wot')" [class.selected]="selectedReplyFilter() === 'wot'">
+    <mat-icon>shield</mat-icon>
+    <span>Web of Trust</span>
+  </button>
   @if (availableFollowSets().length > 0) {
   <mat-divider></mat-divider>
   @for (followSet of availableFollowSets(); track followSet.dTag) {
