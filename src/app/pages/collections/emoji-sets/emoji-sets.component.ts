@@ -1,6 +1,7 @@
-import { Component, OnInit, inject, signal, computed } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnDestroy, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
@@ -22,6 +23,7 @@ import { MediaPreviewDialogComponent } from '../../../components/media-preview-d
 import { LayoutService } from '../../../services/layout.service';
 import { TwoColumnLayoutService } from '../../../services/two-column-layout.service';
 import { EmojiSetService } from '../../../services/emoji-set.service';
+import { MediaService } from '../../../services/media.service';
 import { NostrService } from '../../../services/nostr.service';
 import { DatabaseService } from '../../../services/database.service';
 import { PublishService } from '../../../services/publish.service';
@@ -50,6 +52,15 @@ interface InstalledEmojiSetRef {
   previewEmojis: { shortcode: string; url: string }[];
 }
 
+interface EditableEmojiRow {
+  id: string;
+  shortcode: string;
+  url: string;
+  previewUrl: string | null;
+  isUploading: boolean;
+  uploadError: string | null;
+}
+
 @Component({
   selector: 'app-emoji-sets',
   imports: [
@@ -69,20 +80,24 @@ interface InstalledEmojiSetRef {
   ],
   templateUrl: './emoji-sets.component.html',
   styleUrl: './emoji-sets.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class EmojiSetsComponent implements OnInit {
+export class EmojiSetsComponent implements OnInit, OnDestroy {
   private collectionSetsService = inject(CollectionSetsService);
   private accountState = inject(AccountStateService);
   private logger = inject(LoggerService);
   private snackBar = inject(MatSnackBar);
   private dialog = inject(MatDialog);
+  private router = inject(Router);
   private layout = inject(LayoutService);
   private twoColumnLayout = inject(TwoColumnLayoutService);
   private emojiSetService = inject(EmojiSetService);
+  private media = inject(MediaService);
   private nostrService = inject(NostrService);
   private database = inject(DatabaseService);
   private publishService = inject(PublishService);
   private relayPool = inject(RelayPoolService);
+  private nextEditingRowId = 0;
 
   // State
   isLoading = signal(false);
@@ -92,13 +107,17 @@ export class EmojiSetsComponent implements OnInit {
   copiedEmoji: string | null = null;
 
   // Editing state
+  isChoosingSetType = signal(false);
   isEditingSet = signal(false);
   isEditingExisting = signal(false);
   editingSetId = signal('');
   editingSetName = signal('');
-  editingSetEmojis = signal('');
+  editingSetRows = signal<EditableEmojiRow[]>([]);
   editingSetTags = signal<string[]>([]);
   newTagInput = signal('');
+  isEmojiDropTargetActive = signal(false);
+
+  hasMediaServers = computed(() => this.media.mediaServers().length > 0);
 
   // Suggested emoji packs
   suggestedPacks = signal<SuggestedEmojiPack[]>([]);
@@ -135,6 +154,10 @@ export class EmojiSetsComponent implements OnInit {
     this.loadSuggestedPacks();
   }
 
+  ngOnDestroy(): void {
+    this.releasePreviewUrls(this.editingSetRows());
+  }
+
   async loadData() {
     this.isLoading.set(true);
     try {
@@ -165,13 +188,30 @@ export class EmojiSetsComponent implements OnInit {
   }
 
   startCreatingSet() {
+    this.releasePreviewUrls(this.editingSetRows());
+    this.isChoosingSetType.set(true);
+    this.isEditingSet.set(false);
+    this.isEditingExisting.set(false);
+    this.editingSetRows.set([]);
+    this.editingSetTags.set([]);
+    this.newTagInput.set('');
+    this.isEmojiDropTargetActive.set(false);
+  }
+
+  chooseNewSetType(type: 'emojis' | 'gifs') {
+    this.isChoosingSetType.set(false);
     this.isEditingExisting.set(false);
     this.editingSetId.set(this.generateRandomId());
     this.editingSetName.set('');
-    this.editingSetEmojis.set('');
-    this.editingSetTags.set([]);
+    this.setEditingRows([this.createEmptyEmojiRow()]);
+    this.editingSetTags.set(type === 'gifs' ? ['gifs'] : []);
     this.newTagInput.set('');
+    this.isEmojiDropTargetActive.set(false);
     this.isEditingSet.set(true);
+  }
+
+  cancelSetTypeSelection() {
+    this.isChoosingSetType.set(false);
   }
 
   private generateRandomId(): string {
@@ -190,23 +230,36 @@ export class EmojiSetsComponent implements OnInit {
   }
 
   startEditingSet(set: EmojiSet) {
+    this.isChoosingSetType.set(false);
     this.isEditingExisting.set(true);
     this.editingSetId.set(set.identifier);
     this.editingSetName.set(set.name);
-    this.editingSetEmojis.set(set.emojis.map(e => `${e.shortcode} ${e.url}`).join('\n'));
+    this.setEditingRows(
+      set.emojis.length > 0
+        ? set.emojis.map(emoji => this.createEmptyEmojiRow({
+          shortcode: emoji.shortcode,
+          url: emoji.url,
+          previewUrl: emoji.url,
+        }))
+        : [this.createEmptyEmojiRow()]
+    );
     this.editingSetTags.set([...set.tags]);
     this.newTagInput.set('');
+    this.isEmojiDropTargetActive.set(false);
     this.isEditingSet.set(true);
   }
 
   cancelEditingSet() {
+    this.releasePreviewUrls(this.editingSetRows());
+    this.isChoosingSetType.set(false);
     this.isEditingSet.set(false);
     this.isEditingExisting.set(false);
     this.editingSetId.set('');
     this.editingSetName.set('');
-    this.editingSetEmojis.set('');
+    this.editingSetRows.set([]);
     this.editingSetTags.set([]);
     this.newTagInput.set('');
+    this.isEmojiDropTargetActive.set(false);
   }
 
   addTag() {
@@ -230,33 +283,34 @@ export class EmojiSetsComponent implements OnInit {
 
   async saveSetEdit() {
     const name = this.editingSetName().trim();
-    const emojisInput = this.editingSetEmojis().trim();
+    const rows = this.editingSetRows().map(row => ({
+      shortcode: row.shortcode.trim(),
+      url: row.url.trim(),
+    }));
 
     if (!name) {
       this.snackBar.open('Please enter a set name', 'Close', { duration: 3000 });
       return;
     }
 
-    if (!emojisInput) {
-      this.snackBar.open('Please enter at least one emoji', 'Close', { duration: 3000 });
+    const firstUploadingRow = this.editingSetRows().find(row => row.isUploading);
+    if (firstUploadingRow) {
+      this.snackBar.open('Please wait for uploads to finish before saving', 'Close', { duration: 3000 });
       return;
     }
 
-    // Parse emojis - one per line, format: shortcode url
     const emojis: EmojiEntry[] = [];
-    const lines = emojisInput.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+    for (const [index, row] of rows.entries()) {
+      if (!row.shortcode && !row.url) {
+        continue;
+      }
 
-    for (const line of lines) {
-      const spaceIndex = line.indexOf(' ');
-      if (spaceIndex === -1) {
-        this.snackBar.open(`Invalid format on line: "${line}". Expected: shortcode url`, 'Close', { duration: 5000 });
+      if (!row.shortcode || !row.url) {
+        this.snackBar.open(`Row ${index + 1} needs both a filename and a file URL`, 'Close', { duration: 5000 });
         return;
       }
-      const shortcode = line.substring(0, spaceIndex).trim();
-      const url = line.substring(spaceIndex + 1).trim();
-      if (shortcode && url) {
-        emojis.push({ shortcode, url });
-      }
+
+      emojis.push(row);
     }
 
     if (emojis.length === 0) {
@@ -281,6 +335,260 @@ export class EmojiSetsComponent implements OnInit {
       this.snackBar.open('Error saving emoji set', 'Close', { duration: 3000 });
     } finally {
       this.isLoading.set(false);
+    }
+  }
+
+  addEmojiRow(afterIndex?: number): void {
+    const rows = [...this.editingSetRows()];
+    const newRow = this.createEmptyEmojiRow();
+
+    if (afterIndex === undefined || afterIndex < 0 || afterIndex >= rows.length) {
+      rows.push(newRow);
+    } else {
+      rows.splice(afterIndex + 1, 0, newRow);
+    }
+
+    this.editingSetRows.set(rows);
+  }
+
+  removeEmojiRow(rowId: string): void {
+    const rows = this.editingSetRows();
+    const rowToRemove = rows.find(row => row.id === rowId);
+    if (rowToRemove) {
+      this.releasePreviewUrl(rowToRemove.previewUrl);
+    }
+
+    const nextRows = rows.filter(row => row.id !== rowId);
+    this.editingSetRows.set(nextRows.length > 0 ? nextRows : [this.createEmptyEmojiRow()]);
+  }
+
+  updateEmojiRowValue(rowId: string, field: 'shortcode' | 'url', value: string): void {
+    this.editingSetRows.update(rows => rows.map(row => {
+      if (row.id !== rowId) {
+        return row;
+      }
+
+      const nextRow = { ...row, [field]: value };
+      if (field === 'url' && value.trim() && !row.previewUrl?.startsWith('blob:')) {
+        nextRow.previewUrl = value.trim();
+      }
+      if (field === 'url' && !value.trim() && !row.previewUrl?.startsWith('blob:')) {
+        nextRow.previewUrl = null;
+      }
+      if (field === 'url') {
+        nextRow.uploadError = null;
+      }
+      return nextRow;
+    }));
+  }
+
+  onEmojiRowEnter(event: Event, index: number): void {
+    const keyboardEvent = event as KeyboardEvent;
+    keyboardEvent.preventDefault();
+    this.addEmojiRow(index);
+  }
+
+  onEmojiFilesSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const files = Array.from(input.files ?? []);
+    if (files.length === 0) {
+      return;
+    }
+
+    void this.addFilesToEmojiRows(files);
+    input.value = '';
+  }
+
+  onEmojiDropEnter(event: DragEvent): void {
+    event.preventDefault();
+    this.isEmojiDropTargetActive.set(true);
+  }
+
+  onEmojiDropOver(event: DragEvent): void {
+    event.preventDefault();
+    this.isEmojiDropTargetActive.set(true);
+  }
+
+  onEmojiDropLeave(event: DragEvent): void {
+    event.preventDefault();
+
+    const currentTarget = event.currentTarget as HTMLElement | null;
+    const relatedTarget = event.relatedTarget as Node | null;
+    if (currentTarget && relatedTarget && currentTarget.contains(relatedTarget)) {
+      return;
+    }
+
+    this.isEmojiDropTargetActive.set(false);
+  }
+
+  onEmojiDrop(event: DragEvent): void {
+    event.preventDefault();
+    this.isEmojiDropTargetActive.set(false);
+
+    const files = Array.from(event.dataTransfer?.files ?? []);
+    if (files.length === 0) {
+      return;
+    }
+
+    void this.addFilesToEmojiRows(files);
+  }
+
+  openEditingEmojiPreview(row: EditableEmojiRow, event: MouseEvent): void {
+    event.stopPropagation();
+
+    const mediaUrl = row.url.trim() || row.previewUrl;
+    if (!mediaUrl) {
+      return;
+    }
+
+    this.dialog.open(MediaPreviewDialogComponent, {
+      data: {
+        mediaUrl,
+        mediaType: 'image',
+        mediaTitle: row.shortcode ? `:${row.shortcode}:` : 'Emoji preview',
+      },
+      maxWidth: '100vw',
+      maxHeight: '100vh',
+      width: '100vw',
+      height: '100vh',
+      panelClass: 'image-dialog-panel',
+    });
+  }
+
+  private async addFilesToEmojiRows(files: File[]): Promise<void> {
+    const validFiles = files.filter(file => this.isSupportedEmojiFile(file));
+    const invalidCount = files.length - validFiles.length;
+
+    if (validFiles.length === 0) {
+      this.snackBar.open('Only image files can be added to emoji collections', 'Close', { duration: 4000 });
+      return;
+    }
+
+    if (!this.hasMediaServers()) {
+      this.promptMediaServerSetup();
+      return;
+    }
+
+    const newRows = validFiles.map(file => {
+      const previewUrl = URL.createObjectURL(file);
+      return this.createEmptyEmojiRow({
+        shortcode: this.getEmojiShortcodeFromFileName(file.name),
+        previewUrl,
+        isUploading: true,
+      });
+    });
+
+    this.editingSetRows.update(rows => {
+      const filledRows = rows.filter(row => row.shortcode.trim() || row.url.trim() || row.previewUrl);
+      return [...filledRows, ...newRows];
+    });
+
+    if (invalidCount > 0) {
+      this.snackBar.open(`${invalidCount} file${invalidCount === 1 ? '' : 's'} skipped because they are not images`, 'Close', {
+        duration: 4000,
+      });
+    }
+
+    const mediaServers = this.media.mediaServers();
+
+    for (const [index, file] of validFiles.entries()) {
+      const rowId = newRows[index].id;
+
+      try {
+        const uploadResult = await this.media.uploadFile(file, false, mediaServers);
+        if (!uploadResult.item) {
+          throw new Error(uploadResult.message || 'Upload failed');
+        }
+
+        this.editingSetRows.update(rows => rows.map(row => {
+          if (row.id !== rowId) {
+            return row;
+          }
+
+          this.releasePreviewUrl(row.previewUrl);
+          return {
+            ...row,
+            url: uploadResult.item!.url,
+            previewUrl: uploadResult.item!.url,
+            isUploading: false,
+            uploadError: null,
+          };
+        }));
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Upload failed';
+        this.logger.error('Error uploading emoji file:', error);
+        this.editingSetRows.update(rows => rows.map(row => row.id === rowId
+          ? {
+            ...row,
+            isUploading: false,
+            uploadError: message,
+          }
+          : row));
+      }
+    }
+
+    this.ensureTrailingEmptyRow();
+  }
+
+  private promptMediaServerSetup(): void {
+    this.snackBar
+      .open('You need to configure a media server before uploading emoji files.', 'Configure Now', {
+        duration: 8000,
+      })
+      .onAction()
+      .subscribe(() => {
+        void this.router.navigate(['/collections/media'], { queryParams: { tab: 'servers' } });
+      });
+  }
+
+  private isSupportedEmojiFile(file: File): boolean {
+    if (file.type.startsWith('image/')) {
+      return true;
+    }
+
+    return /\.(png|jpg|jpeg|gif|webp|svg|avif)$/i.test(file.name);
+  }
+
+  private getEmojiShortcodeFromFileName(fileName: string): string {
+    const withoutExtension = fileName.replace(/\.[^.]+$/, '').trim();
+    return withoutExtension || 'emoji';
+  }
+
+  private ensureTrailingEmptyRow(): void {
+    const rows = this.editingSetRows();
+    const hasEmptyRow = rows.some(row => !row.shortcode.trim() && !row.url.trim() && !row.isUploading);
+    if (!hasEmptyRow) {
+      this.editingSetRows.set([...rows, this.createEmptyEmojiRow()]);
+    }
+  }
+
+  private setEditingRows(rows: EditableEmojiRow[]): void {
+    this.releasePreviewUrls(this.editingSetRows());
+    this.editingSetRows.set(rows);
+    this.ensureTrailingEmptyRow();
+  }
+
+  private createEmptyEmojiRow(overrides: Partial<EditableEmojiRow> = {}): EditableEmojiRow {
+    return {
+      id: `emoji-row-${this.nextEditingRowId++}`,
+      shortcode: '',
+      url: '',
+      previewUrl: null,
+      isUploading: false,
+      uploadError: null,
+      ...overrides,
+    };
+  }
+
+  private releasePreviewUrls(rows: EditableEmojiRow[]): void {
+    for (const row of rows) {
+      this.releasePreviewUrl(row.previewUrl);
+    }
+  }
+
+  private releasePreviewUrl(previewUrl: string | null): void {
+    if (previewUrl?.startsWith('blob:')) {
+      URL.revokeObjectURL(previewUrl);
     }
   }
 

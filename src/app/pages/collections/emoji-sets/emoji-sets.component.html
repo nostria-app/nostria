@@ -29,7 +29,36 @@
     <mat-divider></mat-divider>
 
     <div class="section-content">
-      @if (isEditingSet()) {
+      @if (isChoosingSetType()) {
+      <div class="set-type-selector">
+        <div class="set-type-selector-header">
+          <h3>Create New Emoji Collection</h3>
+          <p>Choose what kind of collection you want to create.</p>
+        </div>
+
+        <div class="set-type-options">
+          <button mat-stroked-button type="button" class="set-type-option" (click)="chooseNewSetType('emojis')">
+            <mat-icon>emoji_emotions</mat-icon>
+            <span class="set-type-option-copy">
+              <span class="set-type-option-title">Emojis</span>
+              <span class="set-type-option-description">Standard emoji packs with image uploads and URLs.</span>
+            </span>
+          </button>
+
+          <button mat-stroked-button type="button" class="set-type-option" (click)="chooseNewSetType('gifs')">
+            <mat-icon>gif_box</mat-icon>
+            <span class="set-type-option-copy">
+              <span class="set-type-option-title">Gifs</span>
+              <span class="set-type-option-description">Animated collections for the gif picker. The <strong>gifs</strong> tag is added automatically.</span>
+            </span>
+          </button>
+        </div>
+
+        <div class="form-actions">
+          <button mat-button type="button" (click)="cancelSetTypeSelection()">Cancel</button>
+        </div>
+      </div>
+      } @else if (isEditingSet()) {
       <div class="edit-form">
         <mat-form-field appearance="outline" class="full-width">
           <mat-label i18n="@@emoji-sets.name-label">Collection Name</mat-label>
@@ -50,12 +79,83 @@
           }
         </div>
 
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label i18n="@@emoji-sets.emojis-label">Emojis</mat-label>
-          <textarea matInput [(ngModel)]="editingSetEmojis"
-            placeholder="LUL https://example.com/lul.png&#10;catJAM https://example.com/catjam.webp&#10;..."></textarea>
-          <mat-hint i18n="@@emoji-sets.emojis-hint">One emoji per line: shortcode url</mat-hint>
-        </mat-form-field>
+        <div class="emoji-rows-section">
+          <div class="emoji-rows-header">
+            <div>
+              <h3 i18n="@@emoji-sets.emojis-label">Emojis</h3>
+              <p class="emoji-rows-hint">Add one emoji per row. Press Enter in a row to insert the next one.</p>
+            </div>
+
+            <div class="emoji-rows-actions">
+              <input #emojiFilesInput type="file" accept="image/*" multiple class="hidden-file-input"
+                title="Add emoji image files" aria-label="Add emoji image files" (change)="onEmojiFilesSelected($event)" />
+              <button mat-stroked-button type="button" (click)="emojiFilesInput.click()">
+                <mat-icon>upload_file</mat-icon>
+                Add Files
+              </button>
+              <button mat-stroked-button type="button" (click)="addEmojiRow()">
+                <mat-icon>add</mat-icon>
+                Add Row
+              </button>
+            </div>
+          </div>
+
+          <div class="emoji-drop-zone" [class.drag-over]="isEmojiDropTargetActive()" (dragenter)="onEmojiDropEnter($event)"
+            (dragover)="onEmojiDropOver($event)" (dragleave)="onEmojiDropLeave($event)" (drop)="onEmojiDrop($event)">
+            <mat-icon>drag_indicator</mat-icon>
+            <span>Drag and drop emoji files here to upload them and create rows automatically</span>
+          </div>
+
+          <div class="emoji-rows-list">
+            @for (row of editingSetRows(); track row.id; let index = $index) {
+            <div class="emoji-row" [class.uploading]="row.isUploading" [class.has-error]="!!row.uploadError">
+              <mat-form-field appearance="outline" class="emoji-row-field shortcode-field">
+                <mat-label>Filename</mat-label>
+                <input matInput [ngModel]="row.shortcode" (ngModelChange)="updateEmojiRowValue(row.id, 'shortcode', $event)"
+                  placeholder="party-parrot" autocomplete="off" (keydown.enter)="onEmojiRowEnter($event, index)" />
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="emoji-row-field url-field">
+                <mat-label>File URL</mat-label>
+                <input matInput [ngModel]="row.url" (ngModelChange)="updateEmojiRowValue(row.id, 'url', $event)"
+                  placeholder="https://example.com/party-parrot.webp" autocomplete="off"
+                  (keydown.enter)="onEmojiRowEnter($event, index)" />
+                @if (row.uploadError) {
+                <mat-hint>{{ row.uploadError }}</mat-hint>
+                }
+              </mat-form-field>
+
+              <div class="emoji-row-preview">
+                @if (row.isUploading) {
+                <mat-spinner diameter="24"></mat-spinner>
+                } @else if (row.previewUrl || row.url) {
+                <button mat-icon-button type="button" class="preview-button"
+                  [attr.aria-label]="'Preview ' + (row.shortcode || 'emoji')"
+                  title="Preview emoji" (click)="openEditingEmojiPreview(row, $event)">
+                  <img [src]="row.previewUrl || row.url" [alt]="row.shortcode || 'Emoji preview'"
+                    title="Emoji preview" class="emoji-row-thumbnail">
+                </button>
+                } @else {
+                <div class="preview-placeholder" aria-hidden="true">
+                  <mat-icon>image</mat-icon>
+                </div>
+                }
+              </div>
+
+              <div class="emoji-row-actions">
+                <button mat-icon-button type="button" [attr.aria-label]="'Add row after ' + (index + 1)"
+                  title="Add row" (click)="addEmojiRow(index)">
+                  <mat-icon>add</mat-icon>
+                </button>
+                <button mat-icon-button type="button" [disabled]="editingSetRows().length === 1 && !row.shortcode && !row.url"
+                  [attr.aria-label]="'Remove row ' + (index + 1)" title="Remove row" (click)="removeEmojiRow(row.id)">
+                  <mat-icon>delete</mat-icon>
+                </button>
+              </div>
+            </div>
+            }
+          </div>
+        </div>
 
         <div class="tags-section">
           <h3>Tags</h3>
@@ -84,7 +184,7 @@
 
         <div class="form-actions">
           <button mat-button (click)="cancelEditingSet()" i18n="@@emoji-sets.cancel">Cancel</button>
-          <button mat-flat-button color="primary" (click)="saveSetEdit()" [disabled]="isLoading()"
+          <button mat-flat-button (click)="saveSetEdit()" [disabled]="isLoading()"
             i18n="@@emoji-sets.save">Save</button>
         </div>
       </div>
@@ -127,9 +227,10 @@
             }
             <div class="emoji-grid">
               @for (emoji of set.emojis; track $index) {
-              <button mat-icon-button class="emoji-item" [matTooltip]="emoji.shortcode"
+              <button mat-icon-button class="emoji-item" [matTooltip]="emoji.shortcode" [attr.aria-label]="emoji.shortcode"
+                title="Emoji preview"
                 (click)="openEmojiPreview(emoji, $event)">
-                <img [src]="emoji.url" [alt]="emoji.shortcode" class="emoji-image">
+                <img [src]="emoji.url" [alt]="emoji.shortcode" title="Emoji preview" class="emoji-image">
               </button>
               }
             </div>
@@ -188,7 +289,7 @@
             <span class="no-preview">No preview available</span>
             } @else {
             @for (emoji of pack.previewEmojis; track emoji.shortcode) {
-            <img [src]="emoji.url" [alt]="emoji.shortcode" class="preview-emoji">
+            <img [src]="emoji.url" [alt]="emoji.shortcode" title="Emoji preview" class="preview-emoji">
             }
             }
           </div>
@@ -226,9 +327,10 @@
         <div class="emoji-grid">
           @for (emoji of emojiSet.emojis; track $index) {
           <button mat-icon-button class="emoji-item"
-            [matTooltip]="copiedEmoji === emoji.shortcode ? 'Copied!' : emoji.shortcode"
+            [matTooltip]="copiedEmoji === emoji.shortcode ? 'Copied!' : emoji.shortcode" [attr.aria-label]="emoji.shortcode"
+            title="Emoji preview"
             (click)="openEmojiPreview(emoji, $event)">
-            <img [src]="emoji.url" [alt]="emoji.shortcode" class="emoji-image">
+            <img [src]="emoji.url" [alt]="emoji.shortcode" title="Emoji preview" class="emoji-image">
           </button>
           }
         </div>
