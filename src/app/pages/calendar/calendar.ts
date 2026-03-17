@@ -41,6 +41,7 @@ import { LayoutService } from '../../services/layout.service';
 import { LeftPanelHeaderService } from '../../services/left-panel-header.service';
 import { ListFilterMenuComponent, ListFilterValue } from '../../components/list-filter-menu/list-filter-menu.component';
 import { FollowSetsService, FollowSet } from '../../services/follow-sets.service';
+import { NostrService } from '../../services/nostr.service';
 import {
   CreateCalendarDialogComponent,
   CreateCalendarDialogData,
@@ -136,6 +137,7 @@ export class Calendar implements OnInit, OnDestroy, AfterViewInit {
   private leftPanelHeader = inject(LeftPanelHeaderService);
   protected layout = inject(LayoutService);
   private followSetsService = inject(FollowSetsService);
+  private nostrService = inject(NostrService);
 
   // Premium check
   isPremium = computed(() => {
@@ -888,23 +890,40 @@ export class Calendar implements OnInit, OnDestroy, AfterViewInit {
     }
 
     try {
-      // Create RSVP event (kind 31925)
-      const rsvpEvent = {
+      const tags: string[][] = [
+        ['a', `${event.kind}:${event.pubkey}:${this.getEventDTag(event)}`],
+        ['d', this.generateRandomId()],
+        ['status', status],
+        ['p', event.pubkey],
+      ];
+
+      if (status !== 'declined') {
+        tags.push(['fb', 'busy']);
+      }
+
+      const unsigned = this.nostrService.createEvent(31925, '', tags);
+      const signed = await this.nostrService.signEvent(unsigned);
+      await this.accountRelay.publish(signed);
+
+      // Update local RSVP state
+      const rsvp: CalendarEventRSVP = {
+        id: signed.id,
+        pubkey: signed.pubkey,
+        created_at: signed.created_at,
         kind: 31925,
         content: '',
-        tags: [
-          ['a', `${event.kind}:${event.pubkey}:${this.getEventDTag(event)}`],
-          ['e', event.id],
-          ['d', this.generateRandomId()],
-          ['status', status],
-          ['p', event.pubkey],
-        ],
-        created_at: Math.floor(Date.now() / 1000),
-        pubkey: this.app.accountState.pubkey()!,
+        tags: signed.tags,
+        eventId: event.id,
+        status,
+        freeBusy: status !== 'declined' ? 'busy' : undefined,
       };
+      this.rsvps.update(list => {
+        const filtered = list.filter(r => r.eventId !== event.id || r.pubkey !== signed.pubkey);
+        return [...filtered, rsvp];
+      });
 
-      // Sign and publish the RSVP
-      // TODO: Implement signing with user's private key
+      event.status = status;
+      this.events.update(list => [...list]);
     } catch (error) {
       this.logger.error('Error responding to event', error);
     }
@@ -930,8 +949,13 @@ export class Calendar implements OnInit, OnDestroy, AfterViewInit {
         pubkey: this.app.accountState.pubkey()!,
       };
 
-      // Sign and publish the deletion
-      // TODO: Implement signing with user's private key
+      const unsigned = this.nostrService.createEvent(5, 'Calendar event deleted', [
+        ['e', event.id],
+        ['a', `${event.kind}:${event.pubkey}:${this.getEventDTag(event)}`],
+        ['k', event.kind.toString()],
+      ]);
+      const signed = await this.nostrService.signEvent(unsigned);
+      await this.accountRelay.publish(signed);
 
       // Remove from local state
       const updatedEvents = this.events().filter(e => e.id !== event.id);

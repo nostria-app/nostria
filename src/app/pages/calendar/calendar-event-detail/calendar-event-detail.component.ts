@@ -34,6 +34,7 @@ import { PanelNavigationService } from '../../../services/panel-navigation.servi
 import { RightPanelHeaderService } from '../../../services/right-panel-header.service';
 import { LeftPanelHeaderService } from '../../../services/left-panel-header.service';
 import { AccountRelayService } from '../../../services/relays/account-relay';
+import { NostrService } from '../../../services/nostr.service';
 
 @Component({
   selector: 'app-calendar-event-detail',
@@ -71,6 +72,7 @@ export class CalendarEventDetailComponent implements AfterViewInit, OnDestroy {
   private rightPanelHeader = inject(RightPanelHeaderService);
   private leftPanelHeader = inject(LeftPanelHeaderService);
   private accountRelay = inject(AccountRelayService);
+  private nostrService = inject(NostrService);
 
   event = signal<Event | null>(null);
   isLoading = signal(true);
@@ -304,11 +306,32 @@ export class CalendarEventDetailComponent implements AfterViewInit, OnDestroy {
     });
   }
 
-  respondToEvent(status: 'accepted' | 'declined' | 'tentative'): void {
-    // TODO: Publish RSVP (kind 31925) to relays
-    this.snackBar.open(`RSVP: ${status}`, 'Close', {
-      duration: 3000,
-    });
+  async respondToEvent(status: 'accepted' | 'declined' | 'tentative'): Promise<void> {
+    const ev = this.event();
+    if (!ev) return;
+
+    try {
+      const dTag = this.getTagValue('d', ev.tags);
+      const tags: string[][] = [
+        ['a', `${ev.kind}:${ev.pubkey}:${dTag}`],
+        ['d', Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)],
+        ['status', status],
+        ['p', ev.pubkey],
+      ];
+
+      if (status !== 'declined') {
+        tags.push(['fb', 'busy']);
+      }
+
+      const unsigned = this.nostrService.createEvent(31925, '', tags);
+      const signed = await this.nostrService.signEvent(unsigned);
+      await this.accountRelay.publish(signed);
+
+      this.snackBar.open(`RSVP sent: ${status}`, 'Close', { duration: 3000 });
+    } catch (error) {
+      this.logger.error('Error sending RSVP', error);
+      this.snackBar.open('Failed to send RSVP', 'Close', { duration: 3000 });
+    }
   }
 
   shareEvent(): void {
