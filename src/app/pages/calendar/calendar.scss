@@ -68,6 +68,18 @@
       color: var(--mat-sys-on-surface);
       transition: background-color 0.15s ease;
 
+      &.group-header-item {
+        margin-top: 8px;
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--mat-sys-on-surface-variant);
+
+        .group-header-label {
+          flex: 1;
+        }
+      }
+
       &:hover {
         background: var(--mat-sys-surface-container);
       }

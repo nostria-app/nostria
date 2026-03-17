@@ -144,7 +144,13 @@
 
       @if (myCalendars().length > 0) {
       <div class="sidebar-calendars-group">
-        <h3 class="sidebar-group-title">My Calendars</h3>
+        <div class="sidebar-calendar-item group-header-item" (click)="toggleAllMyCalendars()">
+          <mat-icon [class.calendar-enabled]="allMyCalendarsEnabled()"
+            [class.calendar-disabled]="!allMyCalendarsEnabled()">
+            {{ allMyCalendarsEnabled() ? 'check_box' : 'check_box_outline_blank' }}
+          </mat-icon>
+          <span class="group-header-label">My Calendars</span>
+        </div>
         <!-- Virtual RSVP calendar -->
         <div class="sidebar-calendar-item" (click)="rsvpCalendarEnabled.set(!rsvpCalendarEnabled())">
           <mat-icon [class.calendar-enabled]="rsvpCalendarEnabled()" [class.calendar-disabled]="!rsvpCalendarEnabled()">
@@ -170,7 +176,13 @@
 
       @if (publicCalendars().length > 0) {
       <div class="sidebar-calendars-group">
-        <h3 class="sidebar-group-title">Other Calendars</h3>
+        <div class="sidebar-calendar-item group-header-item" (click)="toggleAllPublicCalendars()">
+          <mat-icon [class.calendar-enabled]="allPublicCalendarsEnabled()"
+            [class.calendar-disabled]="!allPublicCalendarsEnabled()">
+            {{ allPublicCalendarsEnabled() ? 'check_box' : 'check_box_outline_blank' }}
+          </mat-icon>
+          <span class="group-header-label">Other Calendars</span>
+        </div>
         @for (calendar of publicCalendars(); track calendar.id) {
         <div class="sidebar-calendar-item" (click)="toggleCalendar(calendar.id)">
           <mat-icon [class.calendar-enabled]="isCalendarEnabled(calendar.id)"
@@ -185,7 +197,9 @@
 
       @if (myCalendars().length === 0 && !isLoadingCalendars()) {
       <div class="sidebar-calendars-group">
-        <h3 class="sidebar-group-title">My Calendars</h3>
+        <div class="sidebar-calendar-item group-header-item">
+          <span class="group-header-label">My Calendars</span>
+        </div>
         <div class="sidebar-calendar-item" (click)="rsvpCalendarEnabled.set(!rsvpCalendarEnabled())">
           <mat-icon [class.calendar-enabled]="rsvpCalendarEnabled()" [class.calendar-disabled]="!rsvpCalendarEnabled()">
             {{ rsvpCalendarEnabled() ? 'check_box' : 'check_box_outline_blank' }}

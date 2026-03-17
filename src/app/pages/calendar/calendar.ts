@@ -585,6 +585,38 @@ export class Calendar implements OnInit, OnDestroy, AfterViewInit {
     return this.enabledCalendars().has(calendarId);
   }
 
+  allPublicCalendarsEnabled = computed(() => {
+    const pub = this.publicCalendars();
+    if (pub.length === 0) return false;
+    return pub.every(c => this.enabledCalendars().has(c.id));
+  });
+
+  toggleAllPublicCalendars(): void {
+    const pub = this.publicCalendars();
+    const enableAll = !this.allPublicCalendarsEnabled();
+    this.enabledCalendars.update(enabled => {
+      const newEnabled = new Set(enabled);
+      pub.forEach(c => enableAll ? newEnabled.add(c.id) : newEnabled.delete(c.id));
+      return newEnabled;
+    });
+  }
+
+  allMyCalendarsEnabled = computed(() => {
+    const mine = this.myCalendars();
+    if (mine.length === 0) return false;
+    return mine.every(c => this.enabledCalendars().has(c.id));
+  });
+
+  toggleAllMyCalendars(): void {
+    const mine = this.myCalendars();
+    const enableAll = !this.allMyCalendarsEnabled();
+    this.enabledCalendars.update(enabled => {
+      const newEnabled = new Set(enabled);
+      mine.forEach(c => enableAll ? newEnabled.add(c.id) : newEnabled.delete(c.id));
+      return newEnabled;
+    });
+  }
+
   // Demo events for testing the calendar UI
   private addDemoEvents(): void {
     const today = new Date();
