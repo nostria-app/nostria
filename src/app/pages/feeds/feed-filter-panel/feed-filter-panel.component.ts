@@ -4,7 +4,8 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
-import { LocalSettingsService, DEFAULT_CONTENT_FILTER } from '../../../services/local-settings.service';
+import { MatSliderModule } from '@angular/material/slider';
+import { LocalSettingsService, DEFAULT_CONTENT_FILTER, getEffectiveWotMinRank, isWotFilterEnabled } from '../../../services/local-settings.service';
 import { FeedConfig, FeedService } from '../../../services/feed.service';
 
 /**
@@ -53,6 +54,7 @@ function isStandardKindsSelection(kinds: number[]): boolean {
     MatButtonModule,
     MatDividerModule,
     MatButtonToggleModule,
+    MatSliderModule,
   ],
   template: `
     <div class="filter-panel" (click)="$event.stopPropagation()">
@@ -122,6 +124,40 @@ function isStandardKindsSelection(kinds: number[]): boolean {
           </div>
         </button>
       </div>
+
+      <!-- Web of Trust Filter Toggle -->
+      @if (trustProviderEnabled()) {
+      <div class="toggle-option">
+        <button
+          class="content-type-chip full-width"
+          [class.selected]="currentWotEnabled()"
+          (click)="onWotFilterChange(!currentWotEnabled())">
+          <mat-icon class="chip-icon">shield</mat-icon>
+          <div class="chip-text">
+            <span class="chip-label">Web of Trust</span>
+            <span class="chip-description">Only show events from trusted users</span>
+          </div>
+        </button>
+
+        @if (currentWotEnabled()) {
+        <div class="wot-slider-panel">
+          <div class="wot-slider-header">
+            <span class="section-label">Min WoT rank</span>
+            <span class="wot-slider-value">{{ currentWotMinRankLabel() }}</span>
+          </div>
+          <mat-slider min="0" max="100" step="1" discrete>
+            <input
+              matSliderThumb
+              [value]="currentWotMinRank()"
+              title="Minimum Web of Trust rank"
+              aria-label="Minimum Web of Trust rank"
+              (valueChange)="onWotMinRankChange($any($event))" />
+          </mat-slider>
+          <p class="wot-slider-hint">0 includes authors with a positive trust rank.</p>
+        </div>
+        }
+      </div>
+      }
 
       <!-- Actions Row -->
       <div class="actions-row">
@@ -286,6 +322,35 @@ function isStandardKindsSelection(kinds: number[]): boolean {
       padding: 0.25rem 0;
     }
 
+    .wot-slider-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 0.375rem;
+      margin-top: 0.625rem;
+      padding: 0.875rem 0.875rem 0.5rem;
+      border-radius: 8px;
+      background: var(--mat-sys-surface);
+      border: 1px solid var(--mat-sys-outline-variant);
+    }
+
+    .wot-slider-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+    }
+
+    .wot-slider-value {
+      font-size: 0.8125rem;
+      color: var(--mat-sys-on-surface);
+    }
+
+    .wot-slider-hint {
+      margin: 0;
+      font-size: 0.75rem;
+      color: var(--mat-sys-on-surface-variant);
+    }
+
     .actions-row {
       display: flex;
       gap: 0.5rem;
@@ -347,6 +412,7 @@ export class FeedFilterPanelComponent {
   showRepliesChanged = output<boolean>();
   showRepostsChanged = output<boolean>();
   mentionedModeChanged = output<boolean>();
+  wotFilterChanged = output<boolean>();
 
   // Compute the current mentioned mode from input
   currentMentionedMode = computed(() => this.mentionedMode());
@@ -381,6 +447,27 @@ export class FeedFilterPanelComponent {
     return this.localSettings.contentFilter().showReposts;
   });
 
+  // Track whether WoT filtering is enabled - from feed config if available
+  currentWotEnabled = computed(() => {
+    const feedConfig = this.feed();
+    if (feedConfig && (typeof feedConfig.wotMinRank === 'number' || typeof feedConfig.wotFilter === 'boolean')) {
+      return isWotFilterEnabled(feedConfig);
+    }
+    return isWotFilterEnabled(this.localSettings.contentFilter());
+  });
+
+  currentWotMinRank = computed(() => {
+    const feedConfig = this.feed();
+    if (feedConfig && (typeof feedConfig.wotMinRank === 'number' || typeof feedConfig.wotFilter === 'boolean')) {
+      return Math.max(getEffectiveWotMinRank(feedConfig), 0);
+    }
+
+    return Math.max(getEffectiveWotMinRank(this.localSettings.contentFilter()), 0);
+  });
+
+  // Whether trust provider is enabled (show WoT filter only when trust service is available)
+  trustProviderEnabled = computed(() => this.localSettings.trustEnabled());
+
   /**
    * Check if the feed has a custom filter (non-standard kinds selection)
    * A custom filter is detected when:
@@ -397,7 +484,7 @@ export class FeedFilterPanelComponent {
     }
 
     const kinds = feedConfig.kinds || [];
-    
+
     // A feed has a custom filter if its kinds are NOT all from the standard quick-toggle content types
     // This means the user configured specific event kinds in the feed edit dialog
     return !isStandardKindsSelection(kinds);
@@ -449,6 +536,22 @@ export class FeedFilterPanelComponent {
    */
   onShowRepliesChange(checked: boolean): void {
     this.updateShowReplies(checked);
+  }
+
+  /**
+   * Handle WoT filter toggle
+   */
+  onWotFilterChange(enabled: boolean): void {
+    this.updateWotMinRank(enabled ? this.currentWotMinRank() : undefined);
+  }
+
+  onWotMinRankChange(value: number): void {
+    const nextValue = Number(value);
+    this.updateWotMinRank(Number.isFinite(nextValue) ? Math.max(0, nextValue) : 0);
+  }
+
+  currentWotMinRankLabel(): string {
+    return String(this.currentWotMinRank());
   }
 
   /**
@@ -532,12 +635,14 @@ export class FeedFilterPanelComponent {
       this.updateKinds(defaultKinds);
       this.updateShowReplies(false);
       this.updateShowReposts(true);
+      this.updateWotMinRank(undefined);
     } else {
       // Reset global settings
       this.localSettings.resetContentFilter();
       this.kindsChanged.emit([...DEFAULT_CONTENT_FILTER.kinds]);
       this.showRepostsChanged.emit(DEFAULT_CONTENT_FILTER.showReposts);
       this.showRepliesChanged.emit(DEFAULT_CONTENT_FILTER.showReplies);
+      this.wotFilterChanged.emit(false);
     }
   }
 
@@ -584,5 +689,20 @@ export class FeedFilterPanelComponent {
       this.localSettings.setContentFilterShowReposts(showReposts);
     }
     this.showRepostsChanged.emit(showReposts);
+  }
+
+  /**
+   * Update wotFilter - saves to feed config if available, otherwise to global settings
+   */
+  private updateWotMinRank(wotMinRank: number | undefined): void {
+    const feedConfig = this.feed();
+    const wotFilter = wotMinRank !== undefined;
+
+    if (feedConfig) {
+      this.feedService.updateFeed(feedConfig.id, { wotFilter, wotMinRank });
+    } else {
+      this.localSettings.setContentFilterWotMinRank(wotMinRank);
+    }
+    this.wotFilterChanged.emit(wotFilter);
   }
 }

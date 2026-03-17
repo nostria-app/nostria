@@ -10,6 +10,23 @@ export type TimeFormat = '12h' | '24h';
 export type HomeDestination = 'feeds' | 'home' | 'first-menu-item';
 export type RelayDiscoveryMode = 'outbox' | 'hybrid';
 
+export interface WotFilterSettings {
+  wotFilter?: boolean;
+  wotMinRank?: number;
+}
+
+export function getEffectiveWotMinRank(settings?: WotFilterSettings | null): number {
+  if (typeof settings?.wotMinRank === 'number') {
+    return settings.wotMinRank;
+  }
+
+  return settings?.wotFilter ? 0 : -1;
+}
+
+export function isWotFilterEnabled(settings?: WotFilterSettings | null): boolean {
+  return getEffectiveWotMinRank(settings) >= 0;
+}
+
 /**
  * Global content filter settings for feeds
  * These settings apply to ALL feeds, not per-feed
@@ -21,6 +38,10 @@ export interface ContentFilterSettings {
   showReplies: boolean;
   /** Whether to show reposts */
   showReposts: boolean;
+  /** Legacy boolean toggle for Web of Trust filtering. Prefer wotMinRank for new code. */
+  wotFilter?: boolean;
+  /** Minimum Web of Trust rank to include. 0 means any positive rank. */
+  wotMinRank?: number;
 }
 
 /** Default content filter: show posts and reposts */
@@ -555,6 +576,31 @@ export class LocalSettingsService {
   setContentFilterShowReposts(showReposts: boolean): void {
     const current = this.contentFilter();
     this.setContentFilter({ ...current, showReposts });
+  }
+
+  /**
+   * Set content filter Web of Trust filter setting
+   */
+  setContentFilterWotFilter(wotFilter: boolean): void {
+    const current = this.contentFilter();
+    this.setContentFilter({
+      ...current,
+      wotFilter,
+      wotMinRank: wotFilter ? Math.max(getEffectiveWotMinRank(current), 0) : undefined,
+    });
+  }
+
+  /**
+   * Set content filter minimum Web of Trust rank.
+   * Use undefined to disable WoT filtering.
+   */
+  setContentFilterWotMinRank(wotMinRank: number | undefined): void {
+    const current = this.contentFilter();
+    this.setContentFilter({
+      ...current,
+      wotFilter: wotMinRank !== undefined,
+      wotMinRank,
+    });
   }
 
   /**

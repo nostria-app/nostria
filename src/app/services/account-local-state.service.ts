@@ -32,6 +32,8 @@ export interface StoredFeedConfig {
   filters?: Record<string, unknown>;
   showReplies?: boolean;
   showReposts?: boolean;
+  wotFilter?: boolean;
+  wotMinRank?: number;
   createdAt: number;
   updatedAt: number;
   lastRetrieved?: number;

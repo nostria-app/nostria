@@ -19,6 +19,7 @@ import { DebugLogsDialogComponent } from '../debug-logs-dialog/debug-logs-dialog
 import { IgnoredRelayAuditDialogComponent } from '../ignored-relay-audit-dialog/ignored-relay-audit-dialog.component';
 import { RunesSettingsService } from '../../services/runes-settings.service';
 import { MediaPlayerService } from '../../services/media-player.service';
+import { LocalSettingsService, getEffectiveWotMinRank, isWotFilterEnabled } from '../../services/local-settings.service';
 
 export interface Command {
   id: string;
@@ -53,6 +54,7 @@ export class CommandPaletteDialogComponent implements AfterViewInit, OnDestroy {
   private customDialog = inject(CustomDialogService);
   private runesSettings = inject(RunesSettingsService);
   private mediaPlayer = inject(MediaPlayerService);
+  private localSettings = inject(LocalSettingsService);
 
   @ViewChild('searchInput') searchInput!: ElementRef<HTMLInputElement>;
   @ViewChildren('listItem', { read: ElementRef }) listItems!: QueryList<ElementRef>;
@@ -398,6 +400,19 @@ export class CommandPaletteDialogComponent implements AfterViewInit, OnDestroy {
       icon: 'verified_user',
       action: () => this.router.navigate(['/settings/web-of-trust']),
       keywords: ['trust', 'verify', 'web of trust', 'reputation', 'nip-85', 'providers', 'brainstorm']
+    },
+    {
+      id: 'toggle-wot-filter',
+      label: 'Toggle Web of Trust Feed Filter',
+      icon: 'shield',
+      action: () => {
+        const currentFilter = this.localSettings.contentFilter();
+        const current = isWotFilterEnabled(currentFilter);
+        this.localSettings.setContentFilterWotMinRank(current ? undefined : Math.max(getEffectiveWotMinRank(currentFilter), 0));
+        this.snackBar.open(`Web of Trust filter ${!current ? 'enabled' : 'disabled'}`, 'OK', { duration: 3000 });
+        this.dialogRef.close();
+      },
+      keywords: ['wot', 'web of trust', 'filter', 'trust', 'trusted', 'spam']
     },
     {
       id: 'nav-wallet',

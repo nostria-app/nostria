@@ -23,7 +23,7 @@ import { MatBadgeModule } from '@angular/material/badge';
 import { NostrService } from '../../services/nostr.service';
 import { NotificationService } from '../../services/notification.service';
 import { LayoutService } from '../../services/layout.service';
-import { LocalSettingsService, DEFAULT_CONTENT_FILTER } from '../../services/local-settings.service';
+import { LocalSettingsService, DEFAULT_CONTENT_FILTER, getEffectiveWotMinRank, isWotFilterEnabled } from '../../services/local-settings.service';
 import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
 import { NewFeedDialogComponent } from './new-feed-dialog/new-feed-dialog.component';
 
@@ -63,6 +63,7 @@ import { FilterButtonComponent } from '../../components/filter-button/filter-but
 import { VideoPlaybackService } from '../../services/video-playback.service';
 import { PanelNavigationService } from '../../services/panel-navigation.service';
 import { FollowSetsService } from '../../services/follow-sets.service';
+import { TrustService } from '../../services/trust.service';
 import { formatDuration } from '../../utils/format-duration';
 
 // NavLink interface removed because it was unused.
@@ -121,6 +122,7 @@ export class FeedsComponent implements OnDestroy {
   private videoPlayback = inject(VideoPlaybackService);
   private panelNav = inject(PanelNavigationService);
   private followSetsService = inject(FollowSetsService);
+  private trustService = inject(TrustService);
 
   // Dialog State Signals
   showNewFeedDialog = signal(false);
@@ -238,13 +240,19 @@ export class FeedsComponent implements OnDestroy {
       const kindsMatch = kinds.length === defaultKinds.length && kinds.every(k => defaultKinds.includes(k));
       const showReplies = feed.showReplies ?? false;
       const showReposts = feed.showReposts ?? true;
-      return !kindsMatch || showReplies !== DEFAULT_CONTENT_FILTER.showReplies || showReposts !== DEFAULT_CONTENT_FILTER.showReposts;
+      return !kindsMatch
+        || showReplies !== DEFAULT_CONTENT_FILTER.showReplies
+        || showReposts !== DEFAULT_CONTENT_FILTER.showReposts
+        || isWotFilterEnabled(feed);
     }
     // Global filter
     const filter = this.localSettings.contentFilter();
     const kindsMatch = filter.kinds.length === DEFAULT_CONTENT_FILTER.kinds.length
       && filter.kinds.every(k => DEFAULT_CONTENT_FILTER.kinds.includes(k));
-    return !kindsMatch || filter.showReplies !== DEFAULT_CONTENT_FILTER.showReplies || filter.showReposts !== DEFAULT_CONTENT_FILTER.showReposts;
+    return !kindsMatch
+      || filter.showReplies !== DEFAULT_CONTENT_FILTER.showReplies
+      || filter.showReposts !== DEFAULT_CONTENT_FILTER.showReposts
+      || isWotFilterEnabled(filter);
   });
 
   // Horizontal scrollbar tracking
@@ -498,8 +506,23 @@ export class FeedsComponent implements OnDestroy {
     const showReplies = feed.showReplies ?? false;
     const showReposts = feed.showReposts ?? true;
     const allowedKinds = feed.kinds || [];
+    const wotMinRank = typeof feed.wotMinRank === 'number' || typeof feed.wotFilter === 'boolean'
+      ? getEffectiveWotMinRank(feed)
+      : getEffectiveWotMinRank(this.localSettings.contentFilter());
 
     return events.filter(event => {
+      // WoT filtering: 0 means any positive rank, higher values are minimum rank thresholds.
+      if (wotMinRank >= 0) {
+        const rank = this.trustService.getRankSignal(event.pubkey);
+        const passesRank = wotMinRank === 0
+          ? typeof rank === 'number' && rank > 0
+          : typeof rank === 'number' && rank >= wotMinRank;
+
+        if (!passesRank) {
+          return false;
+        }
+      }
+
       // Filter by kinds if specified
       if (allowedKinds && allowedKinds.length > 0) {
         if (!allowedKinds.includes(event.kind)) {
@@ -1783,6 +1806,15 @@ export class FeedsComponent implements OnDestroy {
    * Note: The filter panel now manages global settings directly via LocalSettingsService.
    */
   onShowRepostsChanged(_showReposts: boolean): void {
+    // Global filter is now managed by FeedFilterPanelComponent via LocalSettingsService
+    // No per-feed update needed
+  }
+
+  /**
+   * Handle WoT filter changed from filter panel
+   * Note: The filter panel now manages global settings directly via LocalSettingsService.
+   */
+  onWotFilterChanged(_wotFilter: boolean): void {
     // Global filter is now managed by FeedFilterPanelComponent via LocalSettingsService
     // No per-feed update needed
   }

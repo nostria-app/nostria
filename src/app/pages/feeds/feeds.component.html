@@ -71,7 +71,7 @@
           <app-feed-filter-panel [feed]="activeFeed() ?? undefined" [isListFeed]="showListFeed()"
             [mentionedMode]="listMentionedMode()" (kindsChanged)="onKindsChanged($event)"
             (showRepliesChanged)="onShowRepliesChanged($event)" (showRepostsChanged)="onShowRepostsChanged($event)"
-            (mentionedModeChanged)="onMentionedModeChanged($event)">
+            (mentionedModeChanged)="onMentionedModeChanged($event)" (wotFilterChanged)="onWotFilterChanged($event)">
           </app-feed-filter-panel>
         </app-filter-button>
         }
