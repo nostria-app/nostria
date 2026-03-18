@@ -42,7 +42,10 @@ export class TrustService {
   private notFoundCache = new Map<string, number>();
 
   /** How long a "not found" entry stays valid before retrying the relay */
-  private readonly NOT_FOUND_TTL_MS = 5 * 60 * 1000; // 5 minutes
+  private readonly NOT_FOUND_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+
+  /** How long cached metrics are considered fresh before background refresh */
+  private readonly METRICS_REFRESH_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
   // Signal for tracking loaded pubkeys
   private loadedPubkeys = signal<Set<string>>(new Set());
@@ -85,6 +88,7 @@ export class TrustService {
     if (forceRefresh) {
       this.metricsCache.delete(pubkey);
       this.notFoundCache.delete(pubkey);
+      this.database.deleteInfoByKeyAndType(pubkey, 'trust-notfound').catch(() => { });
       return this.fetchMetricsFromRelay(pubkey);
     }
 
@@ -95,10 +99,8 @@ export class TrustService {
         if (!this.isMetricsCompatibleWithCurrentProviders(cached)) {
           this.metricsCache.delete(pubkey);
         } else {
-          // Check if data is older than 24 hours
           const age = Date.now() - (cached.lastUpdated || 0);
-          const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
-          if (age > TWENTY_FOUR_HOURS) {
+          if (age > this.METRICS_REFRESH_MS) {
             // Refresh in background but return cached data immediately
             this.refreshMetricsInBackground(pubkey);
           }
@@ -134,6 +136,18 @@ export class TrustService {
       return null;
     }
 
+    // Check database for persisted not-found record
+    try {
+      const notFoundRecord = await this.database.getInfo(pubkey, 'trust-notfound');
+      if (notFoundRecord) {
+        const checkedAt = notFoundRecord['lastChecked'] as number;
+        if (checkedAt && (Date.now() - checkedAt) < this.NOT_FOUND_TTL_MS) {
+          this.notFoundCache.set(pubkey, checkedAt);
+          return null;
+        }
+      }
+    } catch { /* fall through */ }
+
     // Check database cache
     try {
       const cachedMetrics = await this.database.getTrustMetrics(pubkey);
@@ -147,10 +161,8 @@ export class TrustService {
           this.metricsCache.set(pubkey, cachedMetrics);
           this.loadedPubkeys.update(set => new Set(set).add(pubkey));
 
-          // Check if data is older than 24 hours
           const age = Date.now() - (cachedMetrics.lastUpdated || 0);
-          const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
-          if (age > TWENTY_FOUR_HOURS) {
+          if (age > this.METRICS_REFRESH_MS) {
             this.refreshMetricsInBackground(pubkey);
           }
 
@@ -299,15 +311,20 @@ export class TrustService {
         try {
           const event = eventByPubkey.get(req.pubkey);
           if (!event) {
-            this.notFoundCache.set(req.pubkey, Date.now());
+            const now = Date.now();
+            this.notFoundCache.set(req.pubkey, now);
+            // Persist to database so not-found survives page reloads
+            this.database.saveInfo(req.pubkey, 'trust-notfound', { lastChecked: now }).catch(() => { });
             req.resolve(null);
             continue;
           }
 
           const metrics = this.parseMetrics(event);
 
-          // Save to database
+          // Save to database and clear any stale not-found record
           await this.database.saveTrustMetrics(req.pubkey, metrics);
+          this.notFoundCache.delete(req.pubkey);
+          this.database.deleteInfoByKeyAndType(req.pubkey, 'trust-notfound').catch(() => { });
 
           // Cache in memory
           this.metricsCache.set(req.pubkey, metrics);
@@ -360,6 +377,7 @@ export class TrustService {
       for (const pubkey of pubkeys) {
         this.metricsCache.delete(pubkey);
         this.notFoundCache.delete(pubkey);
+        this.database.deleteInfoByKeyAndType(pubkey, 'trust-notfound').catch(() => { });
       }
     }
 
@@ -381,6 +399,19 @@ export class TrustService {
     const stillNeedRelay: string[] = [];
     if (!forceRefresh) {
       for (const pubkey of toFetch) {
+        // Check DB for persisted not-found record
+        try {
+          const notFoundRecord = await this.database.getInfo(pubkey, 'trust-notfound');
+          if (notFoundRecord) {
+            const checkedAt = notFoundRecord['lastChecked'] as number;
+            if (checkedAt && (Date.now() - checkedAt) < this.NOT_FOUND_TTL_MS) {
+              this.notFoundCache.set(pubkey, checkedAt);
+              results.set(pubkey, null);
+              continue;
+            }
+          }
+        } catch { /* fall through */ }
+
         try {
           const cached = await this.database.getTrustMetrics(pubkey);
           if (cached && this.isMetricsCompatibleWithCurrentProviders(cached)) {
