@@ -971,6 +971,30 @@ export class EventService {
   }
 
   /**
+   * Load replies from local IndexedDB only (no relay fetch).
+   * Returns instantly with whatever is cached locally.
+   */
+  async loadRepliesFromDb(eventId: string): Promise<Event[]> {
+    try {
+      const dbEvents = await this.database.getEventsByKindAndEventTag(kinds.ShortTextNote, eventId);
+      if (dbEvents.length === 0) return [];
+
+      return dbEvents.filter((event: Event) => {
+        if (!event.content || !event.content.trim()) return false;
+        const eventTags = this.getEventTags(event);
+        const { rootId, replyId, mentionIds } = eventTags;
+        if (mentionIds.includes(eventId) && rootId !== eventId && replyId !== eventId) {
+          return false;
+        }
+        return rootId === eventId || replyId === eventId;
+      });
+    } catch (error) {
+      this.logger.error('Error loading replies from DB:', error);
+      return [];
+    }
+  }
+
+  /**
    * Load replies for an event
    * Uses both the profile's relays and the current account's relays to ensure
    * we discover all replies, even if the profile has private relays.
@@ -1046,8 +1070,8 @@ export class EventService {
 
       // Query for kind 1111 events referencing this event via both E and e tags
       const [uppercaseResults, lowercaseResults] = await Promise.all([
-        this.relayPool.query(allRelays, { kinds: [1111], '#E': [eventId] }, 8000),
-        this.relayPool.query(allRelays, { kinds: [1111], '#e': [eventId] }, 8000),
+        this.relayPool.query(allRelays, { kinds: [1111], '#E': [eventId] }, 3000),
+        this.relayPool.query(allRelays, { kinds: [1111], '#e': [eventId] }, 3000),
       ]);
 
       // Deduplicate by event ID
@@ -1854,7 +1878,11 @@ export class EventService {
   }
 
   /**
-   * Load a thread progressively, yielding data as it becomes available
+   * Load a thread progressively, yielding data as it becomes available.
+   *
+   * Uses a race-based approach: parents and replies load in parallel and
+   * whichever finishes first is yielded immediately. This ensures cached
+   * replies render instantly instead of waiting for slow parent resolution.
    */
   async *loadThreadProgressively(
     nevent: string,
@@ -1905,6 +1933,29 @@ export class EventService {
       rootEvent: null,
     };
 
+    // Fast path: check local DB for cached replies and yield them instantly
+    // before any relay fetches begin. This makes previously-seen threads render
+    // in milliseconds instead of waiting 5-10s for relay timeouts.
+    const dbReplies = await this.loadRepliesFromDb(targetEventId);
+    if (dbReplies.length > 0) {
+      const excludeIds = new Set([event.id]);
+      if (isRepost) excludeIds.add(targetEventId);
+      const fastReplies = dbReplies.filter((r) => !excludeIds.has(r.id));
+      if (fastReplies.length > 0) {
+        const fastThreaded = this.buildThreadTree(fastReplies, targetEventId, isRepost || isThreadRoot);
+        yield {
+          event,
+          replies: fastReplies,
+          threadedReplies: fastThreaded,
+          reactions: [],
+          parents: [],
+          isThreadRoot,
+          rootEvent: null,
+          repliesLoaded: true,
+        };
+      }
+    }
+
     // Load parent events in the background (pass eventTags to avoid parsing twice)
     const parentsPromise = this.loadParentEvents(event, eventTags);
 
@@ -1913,104 +1964,144 @@ export class EventService {
     const currentEventNip22CommentsPromise = this.loadNip22Comments(targetEventId, targetEventPubkey);
     const currentEventReactionsPromise = this.loadReactions(targetEventId, targetEventPubkey);
 
-    // Wait for parents first and yield updated data
+    // Race parents and replies so whichever finishes first gets yielded immediately.
+    // This prevents slow parent resolution from blocking cached replies.
     try {
-      const parents = await parentsPromise;
-      const rootEvent = parents.length > 0 ? parents[0] : isThreadRoot ? event : null;
-      const threadRootId = rootEvent?.id || event.id;
+      // Shared mutable state updated as results arrive
+      let parents: Event[] = [];
+      let rootEvent: Event | null = isThreadRoot ? event : null;
+      let threadRootId = event.id;
+      let repliesYielded = false;
+      let parentsResolved = false;
 
-      // Yield with parent events
-      yield {
-        event,
-        replies: [],
-        threadedReplies: [],
-        reactions: [],
-        parents,
-        isThreadRoot,
-        rootEvent,
+      // Wrap parents resolution
+      const resolveParents = parentsPromise.then((p) => {
+        parents = p;
+        rootEvent = p.length > 0 ? p[0] : isThreadRoot ? event : null;
+        threadRootId = rootEvent?.id || event.id;
+        return 'parents' as const;
+      });
+
+      // Collect current-event replies (NIP-10 + NIP-22) in parallel
+      const resolveCurrentReplies = Promise.all([
+        currentEventRepliesPromise,
+        currentEventNip22CommentsPromise,
+      ]).then(([nip10, nip22]) => {
+        return { nip10, nip22 };
+      });
+
+      // Helper: build and yield replies with whatever parent state we have so far
+      const buildAndYieldReplies = (allReplies: Event[]): Partial<ThreadData> => {
+        const parentEventIds = new Set(parents.map((p) => p.id));
+        parentEventIds.add(event.id);
+        if (isRepost) {
+          parentEventIds.add(targetEventId);
+        }
+        const filteredReplies = allReplies.filter((reply) => !parentEventIds.has(reply.id));
+
+        this.deferReplyProfilePrefetch(filteredReplies, parents);
+
+        const threadedReplies = this.buildThreadTree(filteredReplies, targetEventId, isRepost || isThreadRoot);
+
+        return {
+          event,
+          replies: filteredReplies,
+          threadedReplies,
+          reactions: [],
+          parents,
+          isThreadRoot,
+          rootEvent,
+          repliesLoaded: true,
+        };
       };
 
-      // Determine which replies to load:
-      // - For reposts: just load replies for the reposted content (targetEventId)
-      // - If this is the thread root, just load direct replies
-      // - If this is a nested event, load replies from BOTH the thread root AND the current event
-      //   This ensures we catch:
-      //   1. Proper NIP-10 replies (with root marker pointing to thread root)
-      //   2. Simple replies (with just an e-tag pointing to current event, no root marker)
+      // Wrap current-event replies into a race candidate
+      const resolveCurrentRepliesTagged = resolveCurrentReplies.then(() => 'replies' as const);
+
+      // Phase 1: Race parents vs current-event replies — yield whichever arrives first
+      const first = await Promise.race([resolveParents, resolveCurrentRepliesTagged]);
+
+      if (first === 'parents') {
+        parentsResolved = true;
+        // Yield parent data immediately
+        yield {
+          event,
+          replies: [],
+          threadedReplies: [],
+          reactions: [],
+          parents,
+          isThreadRoot,
+          rootEvent,
+        };
+      } else {
+        // Replies arrived first — yield them right away with empty parents
+        const { nip10, nip22 } = await resolveCurrentReplies;
+        const seenIds = new Set<string>();
+        const currentReplies = [...nip10, ...nip22].filter((r) => {
+          if (seenIds.has(r.id)) return false;
+          seenIds.add(r.id);
+          return true;
+        });
+        repliesYielded = true;
+        yield buildAndYieldReplies(currentReplies);
+      }
+
+      // Phase 2: Await the other result
+      if (!parentsResolved) {
+        await resolveParents;
+        parentsResolved = true;
+        // Yield parents (replies may or may not have been yielded already)
+        yield {
+          event,
+          replies: [],
+          threadedReplies: [],
+          reactions: [],
+          parents,
+          isThreadRoot,
+          rootEvent,
+        };
+      }
+
+      // Phase 3: Determine if we need additional thread-root replies (nested events only)
       let finalReactionsPromise = currentEventReactionsPromise;
-      let replies: Event[] = [];
+      let allReplies: Event[];
+
+      const { nip10, nip22 } = await resolveCurrentReplies;
 
       if (isRepost) {
-        // For reposts, just load replies for the reposted content
-        const [nip10Replies, nip22Comments] = await Promise.all([
-          currentEventRepliesPromise,
-          currentEventNip22CommentsPromise,
-        ]);
-        replies = [...nip10Replies, ...nip22Comments];
+        allReplies = [...nip10, ...nip22];
       } else if (!isThreadRoot && threadRootId !== event.id) {
-        // Load replies from both thread root and current event in parallel
-        const [threadRootReplies, currentEventReplies, nip22Comments] = await Promise.all([
-          this.loadReplies(threadRootId, rootEvent?.pubkey || event.pubkey),
-          currentEventRepliesPromise,
-          currentEventNip22CommentsPromise,
-        ]);
-
-        // Merge and deduplicate replies by event ID
+        // Nested event: also load replies from the thread root
+        const threadRootReplies = await this.loadReplies(threadRootId, rootEvent?.pubkey || event.pubkey);
         const seenIds = new Set<string>();
-        replies = [...threadRootReplies, ...currentEventReplies, ...nip22Comments].filter((reply) => {
+        allReplies = [...threadRootReplies, ...nip10, ...nip22].filter((reply) => {
           if (seenIds.has(reply.id)) return false;
           seenIds.add(reply.id);
           return true;
         });
-
         finalReactionsPromise = this.loadReactions(threadRootId, rootEvent?.pubkey || event.pubkey);
       } else {
-        // Thread root - load direct replies and NIP-22 comments
-        const [nip10Replies, nip22Comments] = await Promise.all([
-          currentEventRepliesPromise,
-          currentEventNip22CommentsPromise,
-        ]);
-
-        // Merge and deduplicate
         const seenIds = new Set<string>();
-        replies = [...nip10Replies, ...nip22Comments].filter((reply) => {
+        allReplies = [...nip10, ...nip22].filter((reply) => {
           if (seenIds.has(reply.id)) return false;
           seenIds.add(reply.id);
           return true;
         });
       }
 
-      // Only filter out parent events and current event from the flat replies list
-      const parentEventIds = new Set(parents.map((p) => p.id));
-      parentEventIds.add(event.id);
-      // For reposts, also filter out the repost event itself from replies
-      if (isRepost) {
-        parentEventIds.add(targetEventId);
-      }
-
-      const filteredReplies = replies.filter((reply) => !parentEventIds.has(reply.id));
-
-      // Prefetch profiles for reply authors in the background to prioritize thread loading.
-      this.deferReplyProfilePrefetch(filteredReplies, parents);
-
-      // Build thread tree starting from the target event (reposted content for reposts)
-      // This will only include downstream descendants of the target event
-      // Pass isThreadRoot so sorting is correct: newest first only for OP's direct replies
-      const threadedReplies = this.buildThreadTree(filteredReplies, targetEventId, isRepost || isThreadRoot);
-
-      yield {
-        event,
-        replies: filteredReplies,
-        threadedReplies,
-        reactions: [],
-        parents,
-        isThreadRoot,
-        rootEvent,
-        repliesLoaded: true,
-      };
+      // Always yield the full reply set (may include thread-root replies for nested events)
+      yield buildAndYieldReplies(allReplies);
 
       // Finally wait for reactions and yield complete data
       const reactions = await finalReactionsPromise;
+      const parentEventIds = new Set(parents.map((p) => p.id));
+      parentEventIds.add(event.id);
+      if (isRepost) {
+        parentEventIds.add(targetEventId);
+      }
+      const filteredReplies = allReplies.filter((reply) => !parentEventIds.has(reply.id));
+      const threadedReplies = this.buildThreadTree(filteredReplies, targetEventId, isRepost || isThreadRoot);
+
       const finalData: ThreadData = {
         event,
         replies: filteredReplies,
