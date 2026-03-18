@@ -97,8 +97,11 @@ export class DiscoveryRelayService extends RelayServiceBase implements NostriaSe
     // Query the Discovery Relays for user relay URLs.
     // Instead of doing duplicate kinds, we will query in order to get the user relay URLs. When the global network has moved
     // away from kind 3 relay lists, this will be more optimal.
+    // Use a short timeout (2s) since discovery/indexer relays should respond quickly
+    // for simple replaceable-event lookups.
+    const discoveryTimeout = { timeout: 2000 };
     let relayUrls: string[] = [];
-    let event = await this.getEventByPubkeyAndKind(pubkey, kinds.RelayList);
+    let event = await this.getEventByPubkeyAndKind(pubkey, kinds.RelayList, discoveryTimeout);
 
     if (event) {
       // Use getOptimalRelayUrlsForFetching to prioritize WRITE relays per NIP-65
@@ -113,7 +116,7 @@ export class DiscoveryRelayService extends RelayServiceBase implements NostriaSe
         this.logger.warn(`Failed to save relay list event for pubkey ${pubkey}:`, error);
       }
     } else {
-      event = await this.getEventByPubkeyAndKind(pubkey, kinds.Contacts);
+      event = await this.getEventByPubkeyAndKind(pubkey, kinds.Contacts, discoveryTimeout);
 
       if (event) {
         relayUrls = this.utilities.getRelayUrlsFromFollowing(event);
@@ -180,35 +183,45 @@ export class DiscoveryRelayService extends RelayServiceBase implements NostriaSe
 
     this.logger.debug(`[DiscoveryRelay] getUserDmRelayUrls called for pubkey: ${pubkey.slice(0, 16)}...`);
 
-    // First try to get DM relays (kind 10050)
-    const dmRelayEvent = await this.getEventByPubkeyAndKind(pubkey, kinds.DirectMessageRelaysList);
+    // Discovery/indexer relays only serve kind 10002 and kind 3, NOT kind 10050.
+    // To find a user's DM relay list (kind 10050), we must first resolve the user's
+    // regular relays via discovery (kind 10002), then query those user relays for kind 10050.
+    const userRelayUrls = await this.getUserRelayUrls(pubkey);
 
-    this.logger.debug(`[DiscoveryRelay] DM relay event (kind 10050) found: ${!!dmRelayEvent}`);
+    if (userRelayUrls.length > 0) {
+      // Query the user's own relays for kind 10050
+      const dmRelayEvent = await this.getWithRelays<Event>(
+        { authors: [pubkey], kinds: [kinds.DirectMessageRelaysList] },
+        userRelayUrls,
+      );
 
-    if (dmRelayEvent) {
-      // Save the DM relay event to the database for offline/cached access
-      try {
-        await this.database.saveReplaceableEvent(dmRelayEvent);
-      } catch (error) {
-        this.logger.warn(`Failed to save DM relay list event for pubkey ${pubkey}:`, error);
-      }
+      this.logger.debug(`[DiscoveryRelay] DM relay event (kind 10050) found: ${!!dmRelayEvent}`);
 
-      // Extract relay URLs from the event tags
-      // Format: ["relay", "wss://relay.example.com"]
-      const relayUrls = dmRelayEvent.tags
-        .filter((tag: string[]) => tag[0] === 'relay')
-        .map((tag: string[]) => tag[1])
-        .filter((url: string | undefined) => url && url.startsWith('wss://')); // Only allow secure wss:// relays
+      if (dmRelayEvent) {
+        // Save the DM relay event to the database for offline/cached access
+        try {
+          await this.database.saveReplaceableEvent(dmRelayEvent);
+        } catch (error) {
+          this.logger.warn(`Failed to save DM relay list event for pubkey ${pubkey}:`, error);
+        }
 
-      if (relayUrls.length > 0) {
-        this.logger.debug(`[DiscoveryRelay] Found ${relayUrls.length} DM relays (kind 10050) for pubkey ${pubkey.slice(0, 16)}:`, relayUrls);
-        return this.setCachedRelayUrls(this.dmRelayCache, pubkey, relayUrls, this.dmRelayCacheTtlMs);
+        // Extract relay URLs from the event tags
+        // Format: ["relay", "wss://relay.example.com"]
+        const relayUrls = dmRelayEvent.tags
+          .filter((tag: string[]) => tag[0] === 'relay')
+          .map((tag: string[]) => tag[1])
+          .filter((url: string | undefined) => url && url.startsWith('wss://')); // Only allow secure wss:// relays
+
+        if (relayUrls.length > 0) {
+          this.logger.debug(`[DiscoveryRelay] Found ${relayUrls.length} DM relays (kind 10050) for pubkey ${pubkey.slice(0, 16)}:`, relayUrls);
+          return this.setCachedRelayUrls(this.dmRelayCache, pubkey, relayUrls, this.dmRelayCacheTtlMs);
+        }
       }
     }
 
     // Fallback to regular relay list
     this.logger.debug(`[DiscoveryRelay] No DM relays found for pubkey ${pubkey.slice(0, 16)}, falling back to regular relays`);
-    const fallbackRelays = await this.getUserRelayUrls(pubkey);
+    const fallbackRelays = userRelayUrls.length > 0 ? userRelayUrls : await this.getUserRelayUrls(pubkey);
     this.logger.debug(`[DiscoveryRelay] Fallback relays for pubkey ${pubkey.slice(0, 16)}:`, fallbackRelays);
     return this.setCachedRelayUrls(this.dmRelayCache, pubkey, fallbackRelays, this.dmRelayCacheTtlMs);
   }

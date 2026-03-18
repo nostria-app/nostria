@@ -329,10 +329,10 @@ export class ZapService {
         kinds: [10002], // NIP-65 relay list
         authors: [recipientPubkey],
         limit: 1,
-      });
+      }, { timeout: 2000 });
 
       const timeoutPromise = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('Timeout fetching relay list')), 3000)
+        setTimeout(() => reject(new Error('Timeout fetching relay list')), 2000)
       );
 
       let relayListEvents: Event[] = [];
@@ -357,12 +357,12 @@ export class ZapService {
         kinds: [3], // Contacts list
         authors: [recipientPubkey],
         limit: 1,
-      });
+      }, { timeout: 2000 });
 
       let contactsEvents: Event[] = [];
       try {
         contactsEvents = await Promise.race([contactsPromise,
-          new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Timeout')), 3000))
+          new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Timeout')), 2000))
         ]);
       } catch {
         contactsEvents = [];

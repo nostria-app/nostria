@@ -512,15 +512,20 @@ export abstract class RelayServiceBase {
     }
   }
 
-  async getEventsByPubkeyAndKind(pubkey: string | string[], kind: number): Promise<Event[]> {
+  async getEventsByPubkeyAndKind(pubkey: string | string[], kind: number, options: { timeout?: number } = {}): Promise<Event[]> {
     // Check if pubkey is already an array or a single string
     const authors = Array.isArray(pubkey) ? pubkey : [pubkey];
+
+    // Replaceable events (kind 0, 3, and 10000-19999) have at most one event per author,
+    // so cap the limit to the number of authors to avoid requesting more than can exist.
+    const isReplaceable = kind === 0 || kind === 3 || (kind >= 10000 && kind < 20000);
+    const limit = isReplaceable ? authors.length : 500;
 
     return this.getMany({
       authors,
       kinds: [kind],
-      limit: 500, // Max limit allowed by most relays
-    });
+      limit,
+    }, options);
   }
 
   async getEventsByKindAndEventTag(kind: number, eventTag: string | string[]): Promise<Event[]> {
@@ -532,7 +537,7 @@ export abstract class RelayServiceBase {
     });
   }
 
-  async getEventByPubkeyAndKind(pubkey: string | string[], kind: number): Promise<Event | null> {
+  async getEventByPubkeyAndKind(pubkey: string | string[], kind: number, options: { timeout?: number } = {}): Promise<Event | null> {
     // Check if pubkey is already an array or a single string
     const pubkeys = Array.isArray(pubkey) ? pubkey : [pubkey];
     // Filter out any undefined or invalid values
@@ -546,7 +551,7 @@ export abstract class RelayServiceBase {
     return this.get({
       authors,
       kinds: [kind],
-    });
+    }, options);
   }
 
   async getEventById(id: string): Promise<Event | null> {

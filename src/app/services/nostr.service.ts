@@ -40,6 +40,7 @@ import { RelayAuthService } from './relays/relay-auth.service';
 import { AccountLocalStateService } from './account-local-state.service';
 import { FollowSetsService } from './follow-sets.service';
 import { TrustProviderService, TRUST_PROVIDER_LIST_KIND } from './trust-provider.service';
+import { UserRelayService } from './relays/user-relay';
 
 export interface NostrUser {
   pubkey: string;
@@ -132,6 +133,7 @@ export class NostrService implements NostriaService {
   private readonly followSetsService = inject(FollowSetsService);
   private readonly ngZone = inject(NgZone);
   private readonly injector = inject(Injector);
+  private readonly userRelayService = inject(UserRelayService);
   private encryptionServiceInstance?: import('./encryption.service').EncryptionService;
 
   initialized = signal(false);
@@ -475,13 +477,13 @@ export class NostrService implements NostriaService {
 
     const fetchPromises: Promise<void>[] = [];
 
-    // Fetch missing metadata
+    // Fetch missing metadata via user relays (kind 0 is not stored on discovery/indexer relays)
     if (missingMetadataPubkeys.length > 0) {
       fetchPromises.push((async () => {
         try {
-          const fetchedMetadata = await this.discoveryRelay.getEventsByPubkeyAndKind(missingMetadataPubkeys, kinds.Metadata);
+          const fetchedMetadata = await this.userRelayService.getEventsByPubkeyAndKind(missingMetadataPubkeys, kinds.Metadata);
           if (fetchedMetadata.length > 0) {
-            this.logger.info(`[NostrService] Fetched ${fetchedMetadata.length} profiles from discovery relays`);
+            this.logger.info(`[NostrService] Fetched ${fetchedMetadata.length} profiles from user relays`);
             const records = this.data.toRecords(fetchedMetadata);
             for (const metadata of records) {
               this.accountState.addToAccounts(metadata.event.pubkey, metadata);
@@ -499,7 +501,7 @@ export class NostrService implements NostriaService {
     if (missingRelaysPubkeys.length > 0) {
       fetchPromises.push((async () => {
         try {
-          const fetchedRelays = await this.discoveryRelay.getEventsByPubkeyAndKind(missingRelaysPubkeys, kinds.RelayList);
+          const fetchedRelays = await this.discoveryRelay.getEventsByPubkeyAndKind(missingRelaysPubkeys, kinds.RelayList, { timeout: 2000 });
           if (fetchedRelays.length > 0) {
             this.logger.info(`[NostrService] Fetched ${fetchedRelays.length} relay lists from discovery relays`);
             const currentRelays = this.accountsRelays();
@@ -1994,19 +1996,16 @@ export class NostrService implements NostriaService {
     const foundPubkeys = new Set(events.map(e => e.pubkey));
     const missingPubkeys = pubkeys.filter(pk => !foundPubkeys.has(pk));
 
-    // If some profiles are missing (e.g., after cache wipe), fetch from discovery relays in batch
+    // If some profiles are missing (e.g., after cache wipe), fetch from user relays in batch
     if (missingPubkeys.length > 0) {
-      this.logger.info(`[NostrService] Batch fetching ${missingPubkeys.length} missing account profiles from discovery relays`);
-
-      // Ensure discovery relay is initialized
-      await this.discoveryRelay.load();
+      this.logger.info(`[NostrService] Batch fetching ${missingPubkeys.length} missing account profiles from user relays`);
 
       try {
-        // Batch fetch all missing profiles in a single query
-        const fetchedEvents = await this.discoveryRelay.getEventsByPubkeyAndKind(missingPubkeys, kinds.Metadata);
+        // Batch fetch all missing profiles via user relays (kind 0 is not stored on discovery/indexer relays)
+        const fetchedEvents = await this.userRelayService.getEventsByPubkeyAndKind(missingPubkeys, kinds.Metadata);
 
         if (fetchedEvents.length > 0) {
-          this.logger.info(`[NostrService] Fetched ${fetchedEvents.length} profiles from discovery relays`);
+          this.logger.info(`[NostrService] Fetched ${fetchedEvents.length} profiles from user relays`);
 
           // Save all fetched events to database in parallel
           await Promise.all(fetchedEvents.map(async (metadata) => {
@@ -2042,7 +2041,7 @@ export class NostrService implements NostriaService {
 
       try {
         // Batch fetch all missing relay lists in a single query
-        const fetchedEvents = await this.discoveryRelay.getEventsByPubkeyAndKind(missingPubkeys, kinds.RelayList);
+        const fetchedEvents = await this.discoveryRelay.getEventsByPubkeyAndKind(missingPubkeys, kinds.RelayList, { timeout: 2000 });
 
         if (fetchedEvents.length > 0) {
           this.logger.info(`[NostrService] Fetched ${fetchedEvents.length} relay lists from discovery relays`);

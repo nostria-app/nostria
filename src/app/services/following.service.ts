@@ -7,7 +7,7 @@ import { Metrics } from './metrics';
 import { LoggerService } from './logger.service';
 import { NostrRecord } from '../interfaces';
 import { UserMetric } from '../interfaces/metrics';
-import { DiscoveryRelayService } from './relays/discovery-relay';
+import { UserRelayService } from './relays/user-relay';
 import { EventFocusService } from './event-focus.service';
 
 // Define InfoRecord locally for type compatibility
@@ -44,7 +44,7 @@ export class FollowingService {
   private readonly userData = inject(UserDataService);
   private readonly metrics = inject(Metrics);
   private readonly logger = inject(LoggerService);
-  private readonly discoveryRelay = inject(DiscoveryRelayService);
+  private readonly userRelayService = inject(UserRelayService);
   private readonly eventFocus = inject(EventFocusService);
 
   // In-memory cache of all following profiles
@@ -173,11 +173,9 @@ export class FollowingService {
 
       this.logger.info(`[FollowingService] Found ${cachedProfiles.size} profiles in cache/storage, ${missingPubkeys.length} need fetching`);
 
-      // PHASE 2: Batch fetch missing profiles from discovery relays
+      // PHASE 2: Batch fetch missing profiles from user relays
       if (missingPubkeys.length > 0) {
-        this.logger.info(`[FollowingService] Batch fetching ${missingPubkeys.length} profiles from discovery relays...`);
-
-        await this.discoveryRelay.load();
+        this.logger.info(`[FollowingService] Batch fetching ${missingPubkeys.length} profiles from user relays...`);
 
         // Fetch in batches of 100 with limited concurrency to reduce CPU spikes
         const fetchBatchSize = 100;
@@ -190,7 +188,7 @@ export class FollowingService {
 
           const batchPromise = (async () => {
             try {
-              const fetchedEvents = await this.discoveryRelay.getEventsByPubkeyAndKind(batch, kinds.Metadata);
+              const fetchedEvents = await this.userRelayService.getEventsByPubkeyAndKind(batch, kinds.Metadata);
 
               // Process fetched events
               for (const event of fetchedEvents) {
@@ -340,9 +338,7 @@ export class FollowingService {
       const missingPubkeys = pubkeys.filter(pk => !cachedProfiles.has(pk));
 
       if (missingPubkeys.length > 0) {
-        this.logger.debug(`[FollowingService] Batch fetching ${missingPubkeys.length} new profiles from discovery relays...`);
-
-        await this.discoveryRelay.load();
+        this.logger.debug(`[FollowingService] Batch fetching ${missingPubkeys.length} new profiles from user relays...`);
 
         // Fetch in batches of 100, but run all batches in parallel
         const fetchBatchSize = 100;
@@ -354,7 +350,7 @@ export class FollowingService {
 
           const batchPromise = (async () => {
             try {
-              const fetchedEvents = await this.discoveryRelay.getEventsByPubkeyAndKind(batch, kinds.Metadata);
+              const fetchedEvents = await this.userRelayService.getEventsByPubkeyAndKind(batch, kinds.Metadata);
 
               for (const event of fetchedEvents) {
                 const record = this.userData.toRecord(event);
@@ -789,11 +785,9 @@ export class FollowingService {
 
       this.logger.debug(`[FollowingService] loadProfilesForPubkeys: ${results.length} from following cache, ${cachedProfiles.size} from profile cache/db, ${missingPubkeys.length} need fetching`);
 
-      // PHASE 2: Batch fetch missing profiles from discovery relays
+      // PHASE 2: Batch fetch missing profiles from user relays
       if (missingPubkeys.length > 0) {
-        this.logger.debug(`[FollowingService] Batch fetching ${missingPubkeys.length} profiles from discovery relays...`);
-
-        await this.discoveryRelay.load();
+        this.logger.debug(`[FollowingService] Batch fetching ${missingPubkeys.length} profiles from user relays...`);
 
         // Fetch in batches of 100, but run all batches in parallel
         const fetchBatchSize = 100;
@@ -805,7 +799,7 @@ export class FollowingService {
 
           const batchPromise = (async () => {
             try {
-              const fetchedEvents = await this.discoveryRelay.getEventsByPubkeyAndKind(batch, kinds.Metadata);
+              const fetchedEvents = await this.userRelayService.getEventsByPubkeyAndKind(batch, kinds.Metadata);
 
               // Process fetched events
               for (const event of fetchedEvents) {
