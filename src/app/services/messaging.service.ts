@@ -1066,18 +1066,15 @@ export class MessagingService implements NostriaService {
 
     try {
       // Collect all relays to query
-      // Include: DM relays, account relays, AND discovery relays
-      // Discovery relays are popular relays where messages might be published by senders
-      // who couldn't discover our DM relays
+      // Include: DM relays and account relays only
+      // Discovery/indexer relays are only for kind 10002/3 lookups, not for DM content
       const dmRelayUrls = await this.getDmRelayUrls(myPubkey);
       const accountRelays = this.relay.getRelayUrls();
-      const discoveryRelays = this.discoveryRelay.getRelayUrls();
-      const allRelays = [...new Set([...dmRelayUrls, ...accountRelays, ...discoveryRelays])];
+      const allRelays = [...new Set([...dmRelayUrls, ...accountRelays])];
 
       this.logger.debug('refreshChats relay setup:', {
         dmRelayUrls,
         accountRelays,
-        discoveryRelays,
         allRelays,
       });
 
@@ -1478,11 +1475,8 @@ export class MessagingService implements NostriaService {
         .filter(t => t[0] === 'relay' && t[1])
         .map(t => t[1]) || [];
 
-      // Get discovery relay URLs
-      const discoveryRelays = this.discoveryRelay.getRelayUrls();
-
-      // Combine all relays
-      const allAdditionalRelays = [...new Set([...dmRelayUrls, ...discoveryRelays])];
+      // DM relays only — discovery/indexer relays are not for DM content
+      const allAdditionalRelays = [...new Set([...dmRelayUrls])];
 
       if (allAdditionalRelays.length === 0) {
         this.logger.debug('No additional relays (DM or discovery) to query');
@@ -1683,17 +1677,15 @@ export class MessagingService implements NostriaService {
       this.liveSubscription = null;
     }
 
-    // Get all relay URLs (combine DM relays, account relays, and discovery relays)
-    // Discovery relays ensure we catch messages from senders who couldn't find our DM relays
+    // Get all relay URLs (combine DM relays and account relays)
+    // Discovery/indexer relays are only for kind 10002/3 lookups, not for DM content
     const dmRelayUrls = await this.getDmRelayUrls(myPubkey);
     const accountRelays = this.relay.getRelayUrls();
-    const discoveryRelays = this.discoveryRelay.getRelayUrls();
-    const allRelays = [...new Set([...dmRelayUrls, ...accountRelays, ...discoveryRelays])];
+    const allRelays = [...new Set([...dmRelayUrls, ...accountRelays])];
 
     this.logger.debug('subscribeToIncomingMessages relay setup:', {
       dmRelayUrls,
       accountRelays,
-      discoveryRelays,
       allRelays,
     });
 
@@ -2140,11 +2132,11 @@ export class MessagingService implements NostriaService {
       `query window: since=${new Date(since * 1000).toISOString()} until=${new Date(until * 1000).toISOString()}`
     );
 
-    // Build combined relay list: DM relays (kind 10050) + account relays + discovery relays
+    // Build combined relay list: DM relays (kind 10050) + account relays
+    // Discovery/indexer relays are only for kind 10002/3 lookups, not for DM content
     const dmRelayUrls = await this.getDmRelayUrls(myPubkey);
     const accountRelays = this.relay.getRelayUrls();
-    const discoveryRelays = this.discoveryRelay.getRelayUrls();
-    const allRelays = [...new Set([...dmRelayUrls, ...accountRelays, ...discoveryRelays])];
+    const allRelays = [...new Set([...dmRelayUrls, ...accountRelays])];
 
     // Create filters — use `since` to narrow the window and avoid pulling everything
     const filterReceived: Filter = {
@@ -3199,15 +3191,6 @@ export class MessagingService implements NostriaService {
         if (userRelayService) {
           publishPromises.push(userRelayService.publishToDmRelays(receiverPubkey, signedGiftWrap));
           publishPromises.push(userRelayService.publishToDmRelays(myPubkey, signedGiftWrap2));
-        }
-
-        // Publish to discovery relays as additional fallback for delivery
-        const discoveryRelayUrls = this.discoveryRelay.getRelayUrls();
-        if (discoveryRelayUrls.length > 0) {
-          const pool = this.discoveryRelay.getPool();
-          if (pool) {
-            publishPromises.push(...pool.publish(discoveryRelayUrls, signedGiftWrap));
-          }
         }
 
         await this.awaitDirectMessagePublishes(publishPromises, 'direct-message');

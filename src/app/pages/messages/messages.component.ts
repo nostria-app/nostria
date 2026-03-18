@@ -71,7 +71,6 @@ import { LayoutService } from '../../services/layout.service';
 import { NamePipe } from '../../pipes/name.pipe';
 import { AccountRelayService } from '../../services/relays/account-relay';
 import { UserRelayService } from '../../services/relays/user-relay';
-import { DiscoveryRelayService } from '../../services/relays/discovery-relay';
 import { RelayPoolService } from '../../services/relays/relay-pool';
 import { DatabaseService } from '../../services/database.service';
 import { AccountLocalStateService } from '../../services/account-local-state.service';
@@ -235,7 +234,6 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   // a profile or event from the messages, as the left panel shrinks to 700px
   isSinglePaneView = computed(() => this.layout.isHandset() || this.layout.hasNavigationItems());
   private accountRelay = inject(AccountRelayService);
-  private discoveryRelay = inject(DiscoveryRelayService);
   private relayPool = inject(RelayPoolService);
   private trustService = inject(TrustService);
 
@@ -2682,7 +2680,6 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     return [
       ...new Set([
         ...this.accountRelay.getRelayUrls(),
-        ...this.discoveryRelay.getRelayUrls(),
         ...chatRelays,
         ...userRelays,
       ]),
