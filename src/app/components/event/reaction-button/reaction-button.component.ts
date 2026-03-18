@@ -16,10 +16,9 @@ import { AccountLocalStateService, RecentEmoji } from '../../../services/account
 import { EventService, ReactionEvents } from '../../../services/event';
 import { ReactionService } from '../../../services/reaction.service';
 import { LayoutService } from '../../../services/layout.service';
-import { EmojiSetService } from '../../../services/emoji-set.service';
+import { EmojiSetGroup, EmojiSetService } from '../../../services/emoji-set.service';
 import { DataService } from '../../../services/data.service';
 import { DatabaseService } from '../../../services/database.service';
-import { UserDataService } from '../../../services/user-data.service';
 import { LoggerService } from '../../../services/logger.service';
 import { LocalSettingsService } from '../../../services/local-settings.service';
 import { CustomDialogComponent } from '../../custom-dialog/custom-dialog.component';
@@ -276,12 +275,6 @@ interface ReactionGroup {
   userReacted: boolean;
 }
 
-interface EmojiSetGroup {
-  id: string;
-  title: string;
-  emojis: { shortcode: string; url: string }[];
-}
-
 @Component({
   selector: 'app-reaction-button',
   imports: [
@@ -308,7 +301,6 @@ export class ReactionButtonComponent {
   private readonly emojiSetService = inject(EmojiSetService);
   private readonly data = inject(DataService);
   private readonly database = inject(DatabaseService);
-  private readonly userData = inject(UserDataService);
   private readonly logger = inject(LoggerService);
   private readonly localSettings = inject(LocalSettingsService);
   private readonly platformId = inject(PLATFORM_ID);
@@ -502,8 +494,11 @@ export class ReactionButtonComponent {
 
   constructor() {
     // Load user's custom emojis and emoji sets
+    // Also reloads when emojiSetService.preferencesChanged signal updates (e.g. after installing a set)
     effect(() => {
       const pubkey = this.accountState.pubkey();
+      // Track the preferencesChanged signal so this effect re-runs when emoji sets are installed/uninstalled
+      const _version = this.emojiSetService.preferencesChanged();
       if (!pubkey) {
         this.customEmojis.set([]);
         this.emojiSets.set([]);
@@ -523,7 +518,8 @@ export class ReactionButtonComponent {
           this.customEmojis.set(emojiArray);
 
           // Load emoji sets grouped by set for tabbed display
-          await this.loadEmojiSetsGrouped(pubkey);
+          const sets = await this.emojiSetService.getUserEmojiSetsGrouped(pubkey);
+          this.emojiSets.set(sets);
         } catch (error) {
           this.logger.error('Failed to load custom emojis for reactions:', error);
           this.customEmojis.set([]);
@@ -946,63 +942,6 @@ export class ReactionButtonComponent {
       events: updatedEvents,
       data: updatedData,
     });
-  }
-
-  /**
-   * Load emoji sets grouped by their set for tabbed display
-   */
-  private async loadEmojiSetsGrouped(pubkey: string): Promise<void> {
-    try {
-      // Get user's preferred emojis list (kind 10030)
-      // Use UserDataService to fetch from database first, then from relays if not found
-      const emojiListRecord = await this.userData.getEventByPubkeyAndKind(pubkey, 10030, { save: true });
-
-      if (!emojiListRecord) {
-        this.emojiSets.set([]);
-        return;
-      }
-
-      const emojiListEvent = emojiListRecord.event;
-      const sets: EmojiSetGroup[] = [];
-
-      // First, add inline emojis as "My Emojis" set
-      const inlineEmojis: { shortcode: string; url: string }[] = [];
-      for (const tag of emojiListEvent.tags) {
-        if (tag[0] === 'emoji' && tag[1] && tag[2]) {
-          inlineEmojis.push({ shortcode: tag[1], url: tag[2] });
-        }
-      }
-      if (inlineEmojis.length > 0) {
-        sets.push({
-          id: 'inline',
-          title: 'My Emojis',
-          emojis: inlineEmojis
-        });
-      }
-
-      // Process emoji set references (a tags pointing to kind 30030)
-      const emojiSetRefs = emojiListEvent.tags.filter(tag => tag[0] === 'a' && tag[1]?.startsWith('30030:'));
-
-      for (const ref of emojiSetRefs) {
-        const [kind, refPubkey, identifier] = ref[1].split(':');
-        if (kind === '30030' && refPubkey && identifier) {
-          const emojiSet = await this.emojiSetService.getEmojiSet(refPubkey, identifier);
-          if (emojiSet) {
-            const emojis = Array.from(emojiSet.emojis.entries()).map(([shortcode, url]) => ({ shortcode, url }));
-            sets.push({
-              id: emojiSet.id,
-              title: emojiSet.title,
-              emojis
-            });
-          }
-        }
-      }
-
-      this.emojiSets.set(sets);
-    } catch (error) {
-      this.logger.error('Failed to load emoji sets grouped:', error);
-      this.emojiSets.set([]);
-    }
   }
 
   /**

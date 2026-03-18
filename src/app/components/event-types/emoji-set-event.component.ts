@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, input, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, input, inject, signal, untracked } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
@@ -34,6 +34,32 @@ export class EmojiSetEventComponent {
   isInstalling = signal(false);
   isInstalled = signal(false);
 
+  // Computed: the 'a' tag value for this emoji set (e.g. '30030:<pubkey>:<d-tag>')
+  private aTagValue = computed(() => {
+    const ev = this.event();
+    if (!ev) return '';
+    const dTag = ev.tags.find(tag => tag[0] === 'd')?.[1] || '';
+    return `30030:${ev.pubkey}:${dTag}`;
+  });
+
+  constructor() {
+    // Check if this emoji set is already installed whenever the event or user changes
+    effect(() => {
+      const pubkey = this.accountState.pubkey();
+      const aTag = this.aTagValue();
+
+      if (!pubkey || !aTag) {
+        untracked(() => this.isInstalled.set(false));
+        return;
+      }
+
+      untracked(async () => {
+        const installed = await this.emojiSetService.isEmojiSetInstalled(pubkey, aTag);
+        this.isInstalled.set(installed);
+      });
+    });
+  }
+
   // Extract the title from tags
   title = computed(() => {
     const event = this.event();
@@ -65,7 +91,6 @@ export class EmojiSetEventComponent {
   // Extract all emojis from the set
   emojis = computed(() => {
     const event = this.event();
-    console.log('EmojiSetEventComponent: Computing emojis from event', event);
     if (!event) return [];
 
     const emojiItems: EmojiItem[] = [];
@@ -79,7 +104,6 @@ export class EmojiSetEventComponent {
       }
     }
 
-    console.log('EmojiSetEventComponent: Extracted emojis', emojiItems);
     return emojiItems;
   });
 

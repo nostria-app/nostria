@@ -1,4 +1,4 @@
-import { inject, Injectable, OnDestroy } from '@angular/core';
+import { inject, Injectable, OnDestroy, signal } from '@angular/core';
 import { DataService } from './data.service';
 import { DatabaseService } from './database.service';
 import { UserDataService } from './user-data.service';
@@ -11,6 +11,12 @@ interface EmojiSet {
   title: string;
   emojis: Map<string, string>; // shortcode -> URL
   event: NostrEvent;
+}
+
+export interface EmojiSetGroup {
+  id: string;
+  title: string;
+  emojis: { shortcode: string; url: string }[];
 }
 
 @Injectable({
@@ -34,6 +40,12 @@ export class EmojiSetService implements OnDestroy {
 
   // Store interval handle for cleanup
   private cacheCleanupIntervalHandle: ReturnType<typeof setInterval> | null = null;
+
+  /**
+   * Signal that increments whenever the user's emoji preferences change.
+   * Components can use this in an effect() to reload emoji data.
+   */
+  readonly preferencesChanged = signal(0);
 
   constructor() {
     // Clean up cache periodically
@@ -192,10 +204,57 @@ export class EmojiSetService implements OnDestroy {
   }
 
   /**
-   * Clear emoji set cache for a specific user
+   * Get user's emoji sets grouped by set for tabbed display.
+   * Returns inline emojis as "My Emojis" plus each referenced kind 30030 set.
+   */
+  async getUserEmojiSetsGrouped(pubkey: string): Promise<EmojiSetGroup[]> {
+    try {
+      const emojiListRecord = await this.userData.getEventByPubkeyAndKind(pubkey, 10030, { save: true });
+
+      if (!emojiListRecord) {
+        return [];
+      }
+
+      const emojiListEvent = emojiListRecord.event;
+      const sets: EmojiSetGroup[] = [];
+
+      // Inline emojis as "My Emojis"
+      const inlineEmojis: { shortcode: string; url: string }[] = [];
+      for (const tag of emojiListEvent.tags) {
+        if (tag[0] === 'emoji' && tag[1] && tag[2]) {
+          inlineEmojis.push({ shortcode: tag[1], url: tag[2] });
+        }
+      }
+      if (inlineEmojis.length > 0) {
+        sets.push({ id: 'inline', title: 'My Emojis', emojis: inlineEmojis });
+      }
+
+      // Emoji set references (a tags pointing to kind 30030)
+      const emojiSetRefs = emojiListEvent.tags.filter(tag => tag[0] === 'a' && tag[1]?.startsWith('30030:'));
+      for (const ref of emojiSetRefs) {
+        const [kind, refPubkey, identifier] = ref[1].split(':');
+        if (kind === '30030' && refPubkey && identifier) {
+          const emojiSet = await this.getEmojiSet(refPubkey, identifier);
+          if (emojiSet) {
+            const emojis = Array.from(emojiSet.emojis.entries()).map(([shortcode, url]) => ({ shortcode, url }));
+            sets.push({ id: emojiSet.id, title: emojiSet.title, emojis });
+          }
+        }
+      }
+
+      return sets;
+    } catch (error) {
+      this.logger.error('Failed to load emoji sets grouped:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Clear emoji set cache for a specific user and notify listeners
    */
   clearUserCache(pubkey: string): void {
     this.userEmojiPreferences.delete(pubkey);
+    this.preferencesChanged.update(v => v + 1);
   }
 
   /**
@@ -204,6 +263,26 @@ export class EmojiSetService implements OnDestroy {
   clearAllCaches(): void {
     this.emojiSetCache.clear();
     this.userEmojiPreferences.clear();
+    this.preferencesChanged.update(v => v + 1);
+  }
+
+  /**
+   * Check if a specific emoji set is installed in the user's kind 10030 preferences.
+   * @param pubkey The user's pubkey
+   * @param setATagValue The 'a' tag value, e.g. '30030:<author>:<d-tag>'
+   */
+  async isEmojiSetInstalled(pubkey: string, setATagValue: string): Promise<boolean> {
+    try {
+      const emojiListRecord = await this.database.getEventByPubkeyAndKind(pubkey, 10030);
+      if (!emojiListRecord) return false;
+
+      return emojiListRecord.tags.some(
+        tag => tag[0] === 'a' && tag[1] === setATagValue
+      );
+    } catch (error) {
+      this.logger.error('Error checking emoji set installation:', error);
+      return false;
+    }
   }
 
   /**

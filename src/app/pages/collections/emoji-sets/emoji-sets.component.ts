@@ -143,6 +143,12 @@ export class EmojiSetsComponent implements OnInit, OnDestroy {
       title: 'Top Collection',
       relayHints: ['wss://nos.lol', 'wss://relay.damus.io'],
     },
+    {
+      pubkey: '7fa56f5d6962ab1e3cd424e758c3002b8665f7b0d8dcee9fe9e288d7751ac194',
+      identifier: 'GitHub',
+      title: 'GitHub',
+      relayHints: ['wss://lightning.red/', 'wss://theforest.nostr1.com/'],
+    },
   ];
 
   // Compute installed set references for checking if a pack is already installed
@@ -826,8 +832,12 @@ export class EmojiSetsComponent implements OnInit, OnDestroy {
         return;
       }
 
-      // Add the new a tag reference
-      tags.push(['a', aTagValue]);
+      // Add the new a tag reference with relay hint for discoverability
+      const aTag = ['a', aTagValue];
+      if (pack.relayHints && pack.relayHints.length > 0) {
+        aTag.push(pack.relayHints[0]);
+      }
+      tags.push(aTag);
 
       // Create and sign the new event
       const event = this.nostrService.createEvent(10030, '', tags);

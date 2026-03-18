@@ -14,15 +14,8 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { AccountLocalStateService, RecentEmoji } from '../../services/account-local-state.service';
 import { AccountStateService } from '../../services/account-state.service';
-import { EmojiSetService } from '../../services/emoji-set.service';
-import { UserDataService } from '../../services/user-data.service';
+import { EmojiSetGroup, EmojiSetService } from '../../services/emoji-set.service';
 import { LoggerService } from '../../services/logger.service';
-
-interface EmojiSetGroup {
-  id: string;
-  title: string;
-  emojis: { shortcode: string; url: string }[];
-}
 
 const EMOJI_CATEGORIES = [
   { id: 'smileys', label: 'Smileys', icon: '😀', emojis: ['😀', '😃', '😄', '😁', '😆', '😅', '🤣', '😂', '🙂', '🙃', '😉', '😊', '😇', '🥰', '😍', '🤩', '😘', '😗', '😚', '😋', '😛', '😜', '🤪', '😝', '🤑', '🤗', '🤭', '🤫', '🤔', '🤐', '🤨', '😐', '😑', '😶', '😏', '😒', '🙄', '😬', '🤥', '😌', '😔', '😪', '🤤', '😴', '😮', '😯', '😲', '😳', '😷', '🤒', '🤕', '🤢', '🤮', '🤧', '🥵', '🥶', '🥴', '😵', '🤯', '🤠', '🥳', '😎', '🤓', '🧐'] },
@@ -431,7 +424,6 @@ export class EmojiPickerComponent {
   private readonly accountLocalState = inject(AccountLocalStateService);
   private readonly accountState = inject(AccountStateService);
   private readonly emojiSetService = inject(EmojiSetService);
-  private readonly userData = inject(UserDataService);
   private readonly logger = inject(LoggerService);
 
   /** Emitted when an emoji is selected */
@@ -444,59 +436,20 @@ export class EmojiPickerComponent {
 
   constructor() {
     // Load recent emojis and custom emoji sets
+    // Also reloads when emojiSetService.preferencesChanged signal updates (e.g. after installing a set)
     effect(() => {
       const pubkey = this.accountState.pubkey();
+      // Track the preferencesChanged signal so this effect re-runs when emoji sets are installed/uninstalled
+      const _version = this.emojiSetService.preferencesChanged();
       if (!pubkey) return;
 
-      untracked(() => {
+      untracked(async () => {
         const recent = this.accountLocalState.getRecentEmojis(pubkey);
         this.recentEmojis.set(recent);
-        this.loadEmojiSetsGrouped(pubkey);
+        const sets = await this.emojiSetService.getUserEmojiSetsGrouped(pubkey);
+        this.emojiSets.set(sets);
       });
     });
-  }
-
-  private async loadEmojiSetsGrouped(pubkey: string): Promise<void> {
-    try {
-      const emojiListRecord = await this.userData.getEventByPubkeyAndKind(pubkey, 10030, { save: true });
-
-      if (!emojiListRecord) {
-        this.emojiSets.set([]);
-        return;
-      }
-
-      const emojiListEvent = emojiListRecord.event;
-      const sets: EmojiSetGroup[] = [];
-
-      // Inline emojis as "My Emojis"
-      const inlineEmojis: { shortcode: string; url: string }[] = [];
-      for (const tag of emojiListEvent.tags) {
-        if (tag[0] === 'emoji' && tag[1] && tag[2]) {
-          inlineEmojis.push({ shortcode: tag[1], url: tag[2] });
-        }
-      }
-      if (inlineEmojis.length > 0) {
-        sets.push({ id: 'inline', title: 'My Emojis', emojis: inlineEmojis });
-      }
-
-      // Emoji set references (kind 30030)
-      const emojiSetRefs = emojiListEvent.tags.filter(tag => tag[0] === 'a' && tag[1]?.startsWith('30030:'));
-      for (const ref of emojiSetRefs) {
-        const [kind, refPubkey, identifier] = ref[1].split(':');
-        if (kind === '30030' && refPubkey && identifier) {
-          const emojiSet = await this.emojiSetService.getEmojiSet(refPubkey, identifier);
-          if (emojiSet) {
-            const emojis = Array.from(emojiSet.emojis.entries()).map(([shortcode, url]) => ({ shortcode, url }));
-            sets.push({ id: emojiSet.id, title: emojiSet.title, emojis });
-          }
-        }
-      }
-
-      this.emojiSets.set(sets);
-    } catch (error) {
-      this.logger.error('Failed to load emoji sets:', error);
-      this.emojiSets.set([]);
-    }
   }
 
   filteredEmojis = computed(() => {

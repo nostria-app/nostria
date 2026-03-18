@@ -427,10 +427,16 @@ export class GifPickerComponent implements OnDestroy {
   });
 
   constructor() {
+    // Also reloads when emojiSetService.preferencesChanged signal updates (e.g. after installing a set)
     effect(() => {
       const pubkey = this.accountState.pubkey();
+      // Track the preferencesChanged signal so this effect re-runs when emoji sets are installed/uninstalled
+      const _version = this.emojiSetService.preferencesChanged();
       if (!pubkey) return;
       untracked(() => {
+        // Reset loaded flags so sets are re-fetched with updated preferences
+        this.ownLoaded = false;
+        this.publicLoaded = false;
         this.loadFavorites(pubkey);
         this.loadPublicGifSets(pubkey);
       });
