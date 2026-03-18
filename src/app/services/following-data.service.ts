@@ -119,12 +119,18 @@ export class FollowingDataService {
     return now - lastFetch < this.STALE_THRESHOLD_MS;
   }
 
+  // Safety overlap so events missed in a previous fetch (due to relay timeouts or
+  // per-subscription limits cutting off delivery early) get a second chance on the
+  // next fetch. Without this, any event not returned within the 2-second relay
+  // timeout would be permanently lost once `since` advances past its `created_at`.
+  private readonly FETCH_OVERLAP_SECONDS = 10 * 60; // 10 minutes
+
   /**
    * Calculate the 'since' timestamp for RELAY fetching.
-   * Uses the last fetch timestamp when available so subsequent fetches only
-   * retrieve events newer than the previous query, avoiding redundant re-fetching
-   * of the same events on every reload. Falls back to the 6-hour window when
-   * there is no prior fetch or it happened more than 6 hours ago.
+   * Uses the last fetch timestamp (minus an overlap buffer) so subsequent fetches
+   * only retrieve recently-new events while still re-covering a short window where
+   * relay timeouts may have caused events to be missed. Falls back to the 6-hour
+   * window when there is no prior fetch or it happened more than 6 hours ago.
    */
   private calculateRelayFetchSinceTimestamp(): number {
     const now = Math.floor(Date.now() / 1000);
@@ -133,8 +139,9 @@ export class FollowingDataService {
     const lastFetchMs = this.getLastFetchTimestamp();
     if (lastFetchMs) {
       const lastFetchSec = Math.floor(lastFetchMs / 1000);
-      // Use whichever is more recent: last fetch or the 6-hour window boundary
-      return Math.max(lastFetchSec, windowStart);
+      // Subtract the overlap so events that weren't delivered within the relay's
+      // timeout on the previous fetch get included in this one.
+      return Math.max(lastFetchSec - this.FETCH_OVERLAP_SECONDS, windowStart);
     }
 
     return windowStart;
