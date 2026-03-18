@@ -839,24 +839,6 @@ export class EventService {
         this.logger.error('Error loading addressable event from account relays:', error);
       }
 
-      // Step 4: Try discovery relays
-      try {
-        await this.discoveryRelay.load();
-        const discoveryEvent = await this.discoveryRelay.getEventByPubkeyAndKindAndTag(
-          pubkey,
-          kind,
-          { key: 'd', value: identifier }
-        );
-
-        if (discoveryEvent) {
-          this.logger.info('Loaded addressable event from discovery relays:', discoveryEvent.id);
-          await this.database.saveEvent(discoveryEvent);
-          return discoveryEvent;
-        }
-      } catch (error) {
-        this.logger.error('Error loading addressable event from discovery relays:', error);
-      }
-
       this.logger.warn('Addressable event not found:', { kind, pubkey, identifier });
       return null;
     }
@@ -942,23 +924,6 @@ export class EventService {
         }
       } catch (error) {
         this.logger.error('Error loading event from account relays:', error);
-      }
-
-      // Final fallback: Try discovery relays
-      // This provides broad coverage when all other methods fail
-      try {
-        // Ensure discovery relay is loaded (it lazy-loads on first use)
-        await this.discoveryRelay.load();
-        const discoveryEvent = await this.discoveryRelay.getEventById(hex);
-
-        if (discoveryEvent) {
-          this.logger.info('Loaded event from discovery relays:', discoveryEvent.id);
-          // Save to database for future lookups
-          await this.database.saveEvent(discoveryEvent);
-          return discoveryEvent;
-        }
-      } catch (error) {
-        this.logger.error('Error loading event from discovery relays:', error);
       }
 
       // If event not found through normal means, we return null.

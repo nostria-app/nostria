@@ -611,17 +611,9 @@ export class DetailsComponent {
     this.isLoadingModerationSignals.set(true);
 
     try {
-      const [accountReports, discoveryReports, accountMuteLists, discoveryMuteLists] = await Promise.all([
+      const [reports, muteLists] = await Promise.all([
         this.accountRelay.getEventsByKindAndPubKeyTag(pubkey, kinds.Report),
-        this.discoveryRelay.getEventsByKindAndPubKeyTag(pubkey, kinds.Report),
         this.accountRelay.getEventsByKindAndPubKeyTag(pubkey, kinds.Mutelist),
-        this.discoveryRelay.getEventsByKindAndPubKeyTag(pubkey, kinds.Mutelist),
-      ]);
-
-      const reports = this.deduplicateEventsById([...accountReports, ...discoveryReports]);
-      const muteLists = this.deduplicateReplaceableByAuthor([
-        ...accountMuteLists,
-        ...discoveryMuteLists,
       ]);
 
       await Promise.all([
@@ -683,30 +675,6 @@ export class DetailsComponent {
     } finally {
       this.isLoadingModerationSignals.set(false);
     }
-  }
-
-  private deduplicateEventsById(events: NostrEvent[]): NostrEvent[] {
-    const unique = new Map<string, NostrEvent>();
-
-    for (const event of events) {
-      if (!event.id) continue;
-      unique.set(event.id, event);
-    }
-
-    return Array.from(unique.values());
-  }
-
-  private deduplicateReplaceableByAuthor(events: NostrEvent[]): NostrEvent[] {
-    const latestByAuthor = new Map<string, NostrEvent>();
-
-    for (const event of events) {
-      const existing = latestByAuthor.get(event.pubkey);
-      if (!existing || event.created_at > existing.created_at) {
-        latestByAuthor.set(event.pubkey, event);
-      }
-    }
-
-    return Array.from(latestByAuthor.values());
   }
 
   private extractReportTypesForTarget(reportEvent: NostrEvent, targetPubkey: string): string[] {
