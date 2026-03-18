@@ -163,6 +163,13 @@ export class AccountStateService implements OnDestroy {
 
   muteList = signal<Event | undefined>(undefined);
 
+  /**
+   * Set of BOLT-11 invoice strings that have been verified as paid.
+   * Persisted per-account in localStorage so we can instantly show paid status
+   * without re-querying the lightning wallet provider on every render.
+   */
+  private paidInvoices = signal<Set<string>>(new Set());
+
   // Processing state for toolbar indicator
   profileProcessingState = signal<ProfileProcessingState>({
     isProcessing: false,
@@ -351,6 +358,7 @@ export class AccountStateService implements OnDestroy {
 
   async load() {
     this.loadSubscriptions();
+    this.loadPaidInvoices();
 
     const account = this.account();
 
@@ -404,6 +412,7 @@ export class AccountStateService implements OnDestroy {
     this.accountProfiles.set(new Map()); // Clear pre-loaded account profiles
     this.lastPreloadedAccountPubkeys.clear(); // Clear tracking set
     this.muteList.set(undefined); // Clear mute list
+    this.paidInvoices.set(new Set()); // Clear paid invoices cache
     // Note: We don't clear subscriptions as they are persistent across account changes
   }
 
@@ -625,6 +634,72 @@ export class AccountStateService implements OnDestroy {
 
     this.localStorage.setObject(this.appState.SUBSCRIPTIONS_STORAGE_KEY, updatedSubscriptions);
     this.subscriptions.set(updatedSubscriptions);
+  }
+
+  /**
+   * Load the set of paid invoices for the current account from localStorage.
+   */
+  loadPaidInvoices(): void {
+    const pubkey = this.pubkey();
+    if (!pubkey) {
+      this.paidInvoices.set(new Set());
+      return;
+    }
+    const allPaid = this.localStorage.getObject<Record<string, string[]>>(
+      this.appState.PAID_INVOICES_STORAGE_KEY
+    ) || {};
+    const invoicesForAccount = allPaid[pubkey] || [];
+    this.paidInvoices.set(new Set(invoicesForAccount));
+  }
+
+  /**
+   * Check if an invoice has been previously verified as paid.
+   * Uses a normalized key (last 40 chars) to avoid storing huge BOLT-11 strings.
+   */
+  isInvoicePaid(invoice: string): boolean {
+    return this.paidInvoices().has(this.invoiceKey(invoice));
+  }
+
+  /**
+   * Mark an invoice as paid in local persistent cache.
+   * Should be called when an invoice is confirmed settled via NWC lookup or after paying.
+   */
+  markInvoicePaid(invoice: string): void {
+    const pubkey = this.pubkey();
+    if (!pubkey) return;
+
+    const key = this.invoiceKey(invoice);
+    const current = this.paidInvoices();
+    if (current.has(key)) return; // Already recorded
+
+    // Update in-memory signal
+    const updated = new Set(current);
+    updated.add(key);
+    this.paidInvoices.set(updated);
+
+    // Persist to localStorage (per-account)
+    const allPaid = this.localStorage.getObject<Record<string, string[]>>(
+      this.appState.PAID_INVOICES_STORAGE_KEY
+    ) || {};
+    const accountInvoices = allPaid[pubkey] || [];
+    accountInvoices.push(key);
+
+    // Cap at 500 entries per account to prevent unbounded storage growth
+    if (accountInvoices.length > 500) {
+      accountInvoices.splice(0, accountInvoices.length - 500);
+    }
+
+    allPaid[pubkey] = accountInvoices;
+    this.localStorage.setObject(this.appState.PAID_INVOICES_STORAGE_KEY, allPaid);
+  }
+
+  /**
+   * Derive a short key from a BOLT-11 invoice string.
+   * Uses the last 40 characters which contain the signature and are unique per invoice.
+   */
+  private invoiceKey(invoice: string): string {
+    const normalized = invoice.toLowerCase();
+    return normalized.length > 40 ? normalized.slice(-40) : normalized;
   }
 
   /**

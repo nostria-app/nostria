@@ -13,6 +13,7 @@ import { CustomDialogService } from '../../services/custom-dialog.service';
 import { PayInvoiceDialogComponent, PayInvoiceDialogData, PayInvoiceDialogResult } from '../pay-invoice-dialog/pay-invoice-dialog.component';
 import { Wallets } from '../../services/wallets';
 import { NwcService } from '../../services/nwc.service';
+import { AccountStateService } from '../../services/account-state.service';
 
 type InvoiceState = 'pending' | 'settled' | 'failed' | 'accepted' | 'expired' | 'unknown';
 
@@ -39,6 +40,7 @@ export class Bolt11InvoiceComponent implements OnInit, OnDestroy {
   private customDialog = inject(CustomDialogService);
   private wallets = inject(Wallets);
   private nwcService = inject(NwcService);
+  private accountState = inject(AccountStateService);
   private isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
 
   showQrCode = signal(false);
@@ -57,7 +59,10 @@ export class Bolt11InvoiceComponent implements OnInit, OnDestroy {
   private pollingStopped = false;
   // Count consecutive "not recognized" results to stop after a reasonable limit
   private notRecognizedCount = 0;
-  private readonly maxNotRecognized = 3;
+  private readonly maxNotRecognized = 5;
+  // Count consecutive errors to apply backoff
+  private consecutiveErrors = 0;
+  private readonly maxConsecutiveErrors = 5;
 
   // Terminal states that stop polling
   private readonly terminalStates: InvoiceState[] = ['settled', 'failed', 'accepted', 'expired'];
@@ -83,9 +88,25 @@ export class Bolt11InvoiceComponent implements OnInit, OnDestroy {
   /**
    * Decode the invoice on initialization.
    * Uses dynamic import so @getalby/lightning-tools is not in the main bundle.
-   * After decoding, starts polling for payment status if wallet is connected.
+   * After decoding, checks local paid cache first, then starts polling if needed.
    */
   async ngOnInit(): Promise<void> {
+    // Check local paid invoices cache immediately — no wallet query needed
+    if (this.isBrowser && this.accountState.isInvoicePaid(this.invoice())) {
+      this.invoiceState.set('settled');
+      this.decodeAttempted.set(true);
+
+      // Still decode for display purposes (amount, description) but skip polling
+      try {
+        const { decodeInvoice } = await import('@getalby/lightning-tools');
+        const result = decodeInvoice(this.invoice());
+        this.decoded.set(result);
+      } catch {
+        // Decode failed silently
+      }
+      return;
+    }
+
     try {
       const { decodeInvoice } = await import('@getalby/lightning-tools');
       const result = decodeInvoice(this.invoice());
@@ -96,8 +117,14 @@ export class Bolt11InvoiceComponent implements OnInit, OnDestroy {
       this.decodeAttempted.set(true);
     }
 
-    // Start polling for payment status if we have a wallet and the invoice isn't already expired
-    if (this.isBrowser && this.wallets.hasWallets() && !this.isExpired()) {
+    // Check if already expired before starting polling
+    if (this.isExpired()) {
+      this.invoiceState.set('expired');
+      return;
+    }
+
+    // Start polling for payment status if we have a wallet
+    if (this.isBrowser && this.wallets.hasWallets()) {
       this.startPolling();
     }
   }
@@ -107,9 +134,9 @@ export class Bolt11InvoiceComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Start polling lookupInvoice every 7 seconds via NwcService.
+   * Start polling lookupInvoice every 5 seconds via NwcService.
    * Uses NwcService's cached NWC clients to avoid creating new relay connections.
-   * Stops on terminal states or when no wallet recognizes the invoice.
+   * Stops on terminal states or after repeated failures.
    */
   private startPolling(): void {
     // Do an immediate lookup first
@@ -126,7 +153,7 @@ export class Bolt11InvoiceComponent implements OnInit, OnDestroy {
         return;
       }
       this.lookupInvoiceStatus();
-    }, 7000);
+    }, 5000);
   }
 
   private stopPolling(): void {
@@ -143,7 +170,8 @@ export class Bolt11InvoiceComponent implements OnInit, OnDestroy {
    * creating ephemeral clients that open new relay connections each time.
    *
    * On first successful lookup, caches the wallet pubkey for efficient future polls.
-   * If no wallet recognizes the invoice, stops polling immediately.
+   * If no wallet recognizes the invoice after maxNotRecognized attempts, stops polling.
+   * On repeated errors, stops polling to avoid wasting resources.
    */
   private async lookupInvoiceStatus(): Promise<void> {
     if (this.isPolling || this.pollingStopped) return;
@@ -159,25 +187,31 @@ export class Bolt11InvoiceComponent implements OnInit, OnDestroy {
         // Cache the owning wallet for future polls
         this.ownerWalletPubkey = result.walletPubkey;
         this.notRecognizedCount = 0;
+        this.consecutiveErrors = 0;
 
         const state = (result.transaction.state as InvoiceState) ?? 'unknown';
         this.invoiceState.set(state);
 
         if (this.terminalStates.includes(state)) {
+          // Persist settled status so we never have to poll for this invoice again
+          if (state === 'settled') {
+            this.accountState.markInvoicePaid(invoiceStr);
+          }
           this.stopPolling();
         }
       } else {
         // No wallet recognized this invoice yet — keep trying up to a limit.
-        // The wallet may not have indexed the invoice yet, or the component
-        // may have been recreated after the invoice was already created.
         this.notRecognizedCount++;
         if (this.notRecognizedCount >= this.maxNotRecognized) {
           this.stopPolling();
         }
       }
-    } catch (err) {
-      // Fatal error — stop polling
-      this.stopPolling();
+    } catch {
+      // Track consecutive errors — stop after too many to avoid infinite retry
+      this.consecutiveErrors++;
+      if (this.consecutiveErrors >= this.maxConsecutiveErrors) {
+        this.stopPolling();
+      }
     } finally {
       this.isPolling = false;
     }
@@ -258,6 +292,7 @@ export class Bolt11InvoiceComponent implements OnInit, OnDestroy {
       if (payResult?.success) {
         this.invoiceState.set('settled');
         this.stopPolling();
+        this.accountState.markInvoicePaid(this.invoice());
       }
     });
   }

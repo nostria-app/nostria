@@ -565,8 +565,8 @@ export class NwcService {
    * Normalize transaction data from various response formats.
    *
    * Note: lookupInvoice responses may NOT include a `state` field (unlike
-   * listTransactions). When `state` is absent, we infer it from `settled_at`
-   * and `expires_at` timestamps.
+   * listTransactions). When `state` is absent, we infer it from available
+   * fields: `settled_at`, `preimage`, and `expires_at` timestamps.
    */
   private normalizeTransaction = (tx: unknown): NwcTransaction => {
     const transaction = tx as Record<string, unknown>;
@@ -575,6 +575,9 @@ export class NwcService {
     let state = transaction['state'] as NwcTransaction['state'] | undefined;
     if (!state) {
       if (transaction['settled_at']) {
+        state = 'settled';
+      } else if (transaction['preimage'] && typeof transaction['preimage'] === 'string' && transaction['preimage'].length > 0) {
+        // Some wallets return a preimage but no settled_at — preimage proves payment
         state = 'settled';
       } else if (
         transaction['expires_at'] &&
