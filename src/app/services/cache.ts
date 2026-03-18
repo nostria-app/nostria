@@ -60,6 +60,13 @@ export class Cache implements OnDestroy {
   public readonly stats = computed(() => this._stats());
 
   private cleanupIntervalHandle: ReturnType<typeof setInterval> | null = null;
+  private statsFlushHandle: ReturnType<typeof setTimeout> | null = null;
+  private pendingStatsPatch: Partial<CacheStats> = {};
+  private pendingCounterDeltas: Pick<CacheStats, 'hits' | 'misses' | 'evictions'> = {
+    hits: 0,
+    misses: 0,
+    evictions: 0,
+  };
 
   constructor() {
     // Cleanup expired entries every minute
@@ -70,6 +77,11 @@ export class Cache implements OnDestroy {
     if (this.cleanupIntervalHandle) {
       clearInterval(this.cleanupIntervalHandle);
       this.cleanupIntervalHandle = null;
+    }
+
+    if (this.statsFlushHandle) {
+      clearTimeout(this.statsFlushHandle);
+      this.statsFlushHandle = null;
     }
   }
 
@@ -121,7 +133,7 @@ export class Cache implements OnDestroy {
     const entry = this.cache.get(key) as CacheEntry<T> | undefined;
 
     if (!entry) {
-      this.scheduleStatsUpdate({ misses: this._stats().misses + 1 });
+      this.scheduleStatsIncrement('misses');
       return undefined;
     }
 
@@ -131,15 +143,15 @@ export class Cache implements OnDestroy {
       this.cache.delete(key);
       this.scheduleStatsUpdate({
         size: this.cache.size,
-        misses: this._stats().misses + 1,
       });
+      this.scheduleStatsIncrement('misses');
       return undefined;
     }
 
     // Update last accessed time and move to front of LRU list
     entry.lastAccessed = Date.now();
     this.moveToHead(entry.lruNode);
-    this.scheduleStatsUpdate({ hits: this._stats().hits + 1 });
+    this.scheduleStatsIncrement('hits');
 
     return entry.value;
   }
@@ -300,8 +312,8 @@ export class Cache implements OnDestroy {
     this.cache.delete(lruKey);
     this.scheduleStatsUpdate({
       size: this.cache.size,
-      evictions: this._stats().evictions + 1,
     });
+    this.scheduleStatsIncrement('evictions');
   }
 
   /**
@@ -360,9 +372,39 @@ export class Cache implements OnDestroy {
   }
 
   private scheduleStatsUpdate(updates: Partial<CacheStats>): void {
-    // Use setTimeout to defer the signal update until after the current rendering cycle
-    setTimeout(() => {
-      this.updateStats(updates);
+    this.pendingStatsPatch = {
+      ...this.pendingStatsPatch,
+      ...updates,
+    };
+    this.scheduleStatsFlush();
+  }
+
+  private scheduleStatsIncrement(field: 'hits' | 'misses' | 'evictions', amount = 1): void {
+    this.pendingCounterDeltas[field] += amount;
+    this.scheduleStatsFlush();
+  }
+
+  private scheduleStatsFlush(): void {
+    if (this.statsFlushHandle) {
+      return;
+    }
+
+    // Coalesce frequent cache updates into a single signal write per tick.
+    this.statsFlushHandle = setTimeout(() => {
+      this.statsFlushHandle = null;
+
+      const patch = this.pendingStatsPatch;
+      const deltas = this.pendingCounterDeltas;
+      this.pendingStatsPatch = {};
+      this.pendingCounterDeltas = { hits: 0, misses: 0, evictions: 0 };
+
+      this._stats.update(current => ({
+        ...current,
+        ...patch,
+        hits: current.hits + deltas.hits,
+        misses: current.misses + deltas.misses,
+        evictions: current.evictions + deltas.evictions,
+      }));
     }, 0);
   }
 

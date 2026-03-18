@@ -10,6 +10,8 @@ import { PoolService } from './pool.service';
 // Forward reference to avoid circular dependency
 let EventProcessorServiceRef: any;
 
+type RelayRequestPriority = 0 | 1 | 2 | 3;
+
 @Injectable({
   providedIn: 'root'
 })
@@ -44,11 +46,39 @@ export class RelayPoolService {
     id: string;
     type: 'get' | 'query';
     relayUrls: string[];
+    priority: RelayRequestPriority;
     enqueuedAt: number;
     execute: () => Promise<unknown>;
     resolve: (value: unknown) => void;
     reject: (reason?: unknown) => void;
   }[] = [];
+
+  private getEffectivePriority(priority: RelayRequestPriority, enqueuedAt: number): number {
+    const waitedMs = Date.now() - enqueuedAt;
+    const agingBoost = Math.min(2, Math.floor(waitedMs / 1500));
+    return Math.max(0, priority - agingBoost);
+  }
+
+  private inferRequestPriority(type: 'get' | 'query', filter: Filter): RelayRequestPriority {
+    const kinds = filter.kinds || [];
+
+    // Direct lookups and note/thread content should bypass lower-value background fetches.
+    if ((filter.ids && filter.ids.length > 0) || kinds.includes(1)) {
+      return 0;
+    }
+
+    // Reactions/reposts/zaps are still user-visible interactions and should stay responsive.
+    if (kinds.some(kind => kind === 6 || kind === 7 || kind === 20 || kind === 9735)) {
+      return 1;
+    }
+
+    // Metadata/profile refreshes are less urgent during feed bootstrap.
+    if (kinds.includes(0)) {
+      return 3;
+    }
+
+    return type === 'get' ? 1 : 2;
+  }
 
   private canStartRequest(relayUrls: string[]): boolean {
     if (this.activeRequestCount >= this.maxConcurrentRequests) {
@@ -81,7 +111,25 @@ export class RelayPoolService {
 
   private processRequestQueue(): void {
     while (this.activeRequestCount < this.maxConcurrentRequests && this.requestQueue.length > 0) {
-      const nextIndex = this.requestQueue.findIndex(entry => this.canStartRequest(entry.relayUrls));
+      const runnableEntries = this.requestQueue
+        .map((entry, index) => ({ entry, index }))
+        .filter(({ entry }) => this.canStartRequest(entry.relayUrls));
+
+      if (runnableEntries.length === 0) {
+        return;
+      }
+
+      runnableEntries.sort((a, b) => {
+        const priorityDelta = this.getEffectivePriority(a.entry.priority, a.entry.enqueuedAt)
+          - this.getEffectivePriority(b.entry.priority, b.entry.enqueuedAt);
+        if (priorityDelta !== 0) {
+          return priorityDelta;
+        }
+
+        return a.entry.enqueuedAt - b.entry.enqueuedAt;
+      });
+
+      const nextIndex = runnableEntries[0].index;
       if (nextIndex === -1) {
         return;
       }
@@ -94,6 +142,7 @@ export class RelayPoolService {
         this.logger.debug('[RelayPoolService] Dequeued relay request', {
           requestId: entry.id,
           type: entry.type,
+          priority: entry.priority,
           relayCount: entry.relayUrls.length,
           queueWaitMs,
           remainingQueueLength: this.requestQueue.length,
@@ -111,12 +160,19 @@ export class RelayPoolService {
     }
   }
 
-  private enqueueRequest<T>(requestId: string, type: 'get' | 'query', relayUrls: string[], operation: () => Promise<T>): Promise<T> {
+  private enqueueRequest<T>(
+    requestId: string,
+    type: 'get' | 'query',
+    relayUrls: string[],
+    priority: RelayRequestPriority,
+    operation: () => Promise<T>
+  ): Promise<T> {
     return new Promise<T>((resolve, reject) => {
       this.requestQueue.push({
         id: requestId,
         type,
         relayUrls,
+        priority,
         enqueuedAt: Date.now(),
         execute: operation,
         resolve: value => resolve(value as T),
@@ -127,6 +183,7 @@ export class RelayPoolService {
         this.logger.debug('[RelayPoolService] Queued relay request', {
           requestId,
           type,
+          priority,
           relayCount: relayUrls.length,
           queueLength: this.requestQueue.length,
           activeRequestCount: this.activeRequestCount,
@@ -206,9 +263,11 @@ export class RelayPoolService {
       this.poolInstanceId
     );
 
-    return this.enqueueRequest(requestId, 'get', filteredUrls, async () => {
+    const priority = this.inferRequestPriority('get', filter);
+    return this.enqueueRequest(requestId, 'get', filteredUrls, priority, async () => {
       this.logger.debug('[RelayPoolService] Executing get request', {
         requestId,
+        priority,
         relayCount: filteredUrls.length,
         filter,
         timeout: timeoutMs,
@@ -283,9 +342,11 @@ export class RelayPoolService {
       this.poolInstanceId
     );
 
-    return this.enqueueRequest(requestId, 'query', filteredUrls, async () => {
+    const priority = this.inferRequestPriority('query', filter);
+    return this.enqueueRequest(requestId, 'query', filteredUrls, priority, async () => {
       this.logger.debug('[RelayPoolService] Executing query request', {
         requestId,
+        priority,
         relayCount: filteredUrls.length,
         filter: JSON.stringify(filter),
         timeout: timeoutMs,

@@ -755,23 +755,10 @@ export class FeedsComponent implements OnDestroy {
     // Initialize data loading
     // this.loadTrendingContent();
 
-    effect(async () => {
-      // Whenever account is changed, make sure we reload this data.
-      if (this.accountState.account()) {
-        // Set loading state while initializing
-        this.isLoading.set(true);
-
-        untracked(async () => {
-          try {
-            // Re-establish subscriptions when component loads
-            await this.feedService.subscribe();
-            this.isLoading.set(false);
-          } catch (error) {
-            this.logger.error('Error initializing feeds:', error);
-            this.isLoading.set(false);
-          }
-        });
-      }
+    effect(() => {
+      const hasAccount = !!this.accountState.account();
+      const hasInitialContent = this.feedService.hasInitialContent();
+      this.isLoading.set(hasAccount && !hasInitialContent);
     });
 
     // NOTE: URL synchronization logic has been disabled since Feeds is now embedded in HomeComponent

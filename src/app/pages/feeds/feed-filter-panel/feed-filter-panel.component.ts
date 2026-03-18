@@ -700,8 +700,14 @@ export class FeedFilterPanelComponent {
     const feedConfig = this.feed();
     const wotFilter = wotMinRank !== undefined;
 
-    if (feedConfig) {
-      this.feedService.updateFeed(feedConfig.id, { wotFilter, wotMinRank });
+    if (feedConfig && feedConfig.source !== 'trending') {
+      void this.feedService.updateFeed(feedConfig.id, { wotFilter, wotMinRank }).then(updated => {
+        if (!updated) {
+          this.localSettings.setContentFilterWotMinRank(wotMinRank);
+        }
+      }).catch(() => {
+        this.localSettings.setContentFilterWotMinRank(wotMinRank);
+      });
     } else {
       this.localSettings.setContentFilterWotMinRank(wotMinRank);
     }
