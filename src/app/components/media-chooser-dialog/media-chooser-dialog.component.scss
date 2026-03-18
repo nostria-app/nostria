@@ -39,6 +39,10 @@ mat-tab-group {
   display: flex;
   flex-direction: column;
 
+  ::ng-deep .mat-mdc-tab-header {
+    border-bottom: none;
+  }
+
   ::ng-deep .mat-mdc-tab-body-wrapper {
     flex: 1;
   }
@@ -46,6 +50,16 @@ mat-tab-group {
 
 .tab-icon {
   margin-right: 8px;
+
+  @media (max-width: 600px) {
+    margin-right: 0;
+  }
+}
+
+@media (max-width: 600px) {
+  ::ng-deep .mdc-tab__text-label span {
+    display: none;
+  }
 }
 
 .tab-content {
