@@ -10,27 +10,6 @@
   }
 }
 
-.chooser-toolbar {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 0 0 12px 0;
-  flex-shrink: 0;
-}
-
-.search-field {
-  flex: 1;
-
-  mat-icon {
-    color: var(--mat-sys-on-surface-variant);
-  }
-}
-
-.toolbar-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
 
 mat-tab-group {
   flex: 1;

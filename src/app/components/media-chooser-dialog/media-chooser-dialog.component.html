@@ -1,22 +1,4 @@
 <div dialog-content class="media-chooser-dialog">
-  <!-- Search and actions bar -->
-  <div class="chooser-toolbar">
-    <mat-form-field appearance="outline" class="search-field">
-      <mat-icon matPrefix>search</mat-icon>
-      <input matInput [ngModel]="searchQuery()" (ngModelChange)="searchQuery.set($event)" placeholder="Search media...">
-    </mat-form-field>
-
-    <div class="toolbar-actions">
-      @if (isLoading() || isMediaServiceLoading()) {
-      <mat-spinner diameter="24"></mat-spinner>
-      } @else {
-      <button mat-icon-button (click)="refreshMedia()" matTooltip="Refresh">
-        <mat-icon>refresh</mat-icon>
-      </button>
-      }
-    </div>
-  </div>
-
   <!-- Tabs for media types -->
   <mat-tab-group [selectedIndex]="getTabIndex()" (selectedIndexChange)="onTabChange($event)">
     <mat-tab>
