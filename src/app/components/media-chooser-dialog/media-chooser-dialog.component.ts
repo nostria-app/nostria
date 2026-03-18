@@ -175,6 +175,25 @@ export class MediaChooserDialogComponent {
     this.toggleItemSelection(item);
   }
 
+  onSpaceKey(event: Event, item: MediaItem): void {
+    event.preventDefault();
+    this.selectItem(item);
+  }
+
+  onEnterKey(event: Event, item: MediaItem): void {
+    event.preventDefault();
+    if (!this.allowMultiple()) {
+      // Single selection mode - immediately confirm
+      this.selectItem(item);
+    } else {
+      // Multi-select: select the item if not already selected, then confirm
+      if (!this.isSelected(item.sha256)) {
+        this.toggleItemSelection(item);
+      }
+      this.confirm();
+    }
+  }
+
   getFileName(url: string): string {
     try {
       const pathname = new URL(url).pathname;

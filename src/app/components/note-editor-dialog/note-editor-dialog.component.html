@@ -143,7 +143,7 @@
           <textarea matInput [value]="content()" (input)="onContentInput($event)" (focus)="onContentFocus()"
             (blur)="onContentBlur()" (keydown)="onContentKeyDown($event)" (keyup)="onContentKeyUp($event)"
             (click)="onContentClick($event)" (select)="onContentSelectionChange($event)"
-            placeholder="{{ inlineMode() ? 'Write your reply... Use @ to mention someone' : 'Write your note... Use @ to mention someone' }}"
+            placeholder="{{ inlineMode() ? 'Write your reply... Use @ to mention, / for commands' : 'Write your note... Use @ to mention, / for commands' }}"
             title="{{ inlineMode() ? 'Reply content' : 'Note content' }}"
             aria-label="{{ inlineMode() ? 'Reply content' : 'Note content' }}" class="content-textarea"
             #contentTextarea>
@@ -184,6 +184,13 @@
         <app-mention-autocomplete [config]="mentionConfig()" [position]="mentionPosition()" [maxResults]="100"
           [maxHeight]="400" (mentionSelected)="onMentionSelected($event)"
           (dismissed)="onMentionDismissed()"></app-mention-autocomplete>
+        }
+
+        <!-- Slash Command Menu positioned relative to textarea -->
+        @if (slashCommandConfig()) {
+        <app-slash-command-menu [config]="slashCommandConfig()" [position]="slashCommandPosition()"
+          (commandSelected)="onSlashCommandSelected($event)"
+          (dismissed)="onSlashCommandDismissed()"></app-slash-command-menu>
         }
       </div>
 
@@ -477,7 +484,7 @@
         <span>Back</span>
       </button>
       } @else if (showPreview() && !inlineMode()) {
-      <button mat-button type="button" class="back-from-overlay" (click)="togglePreview()">
+      <button mat-button type="button" class="back-from-overlay" (click)="togglePreview()" #backFromPreviewBtn>
         <mat-icon>arrow_back</mat-icon>
         <span>Back</span>
       </button>

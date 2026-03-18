@@ -16,7 +16,7 @@
         <div class="media-grid">
           @for (item of images(); track item.sha256) {
           <div class="media-card" [class.selected]="isSelected(item.sha256)" (click)="selectItem(item)"
-            (keydown.enter)="selectItem(item)" (keydown.space)="selectItem(item)" tabindex="0" role="button">
+            (keydown.enter)="onEnterKey($event, item)" (keydown.space)="onSpaceKey($event, item)" tabindex="0" role="button">
             <div class="media-thumbnail">
               <div class="selection-indicator">
                 <mat-icon>check_circle</mat-icon>
@@ -49,7 +49,7 @@
         <div class="media-grid">
           @for (item of videos(); track item.sha256) {
           <div class="media-card" [class.selected]="isSelected(item.sha256)" (click)="selectItem(item)"
-            (keydown.enter)="selectItem(item)" (keydown.space)="selectItem(item)" tabindex="0" role="button">
+            (keydown.enter)="onEnterKey($event, item)" (keydown.space)="onSpaceKey($event, item)" tabindex="0" role="button">
             <div class="media-thumbnail video-thumbnail">
               <div class="selection-indicator">
                 <mat-icon>check_circle</mat-icon>
@@ -83,7 +83,7 @@
         <div class="files-list">
           @for (item of files(); track item.sha256) {
           <div class="file-item" [class.selected]="isSelected(item.sha256)" (click)="selectItem(item)"
-            (keydown.enter)="selectItem(item)" (keydown.space)="selectItem(item)" tabindex="0" role="button">
+            (keydown.enter)="onEnterKey($event, item)" (keydown.space)="onSpaceKey($event, item)" tabindex="0" role="button">
             <div class="selection-indicator">
               <mat-icon>check_circle</mat-icon>
             </div>

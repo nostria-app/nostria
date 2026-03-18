@@ -48,6 +48,7 @@ import { getEventHash } from 'nostr-tools/pure';
 import { AccountRelayService } from '../../services/relays/account-relay';
 import { PowService, PowProgress } from '../../services/pow.service';
 import { MentionAutocompleteComponent, MentionSelection, MentionAutocompleteConfig } from '../mention-autocomplete/mention-autocomplete.component';
+import { SlashCommandMenuComponent, SlashCommandConfig, SlashCommandOption } from '../slash-command-menu/slash-command-menu.component';
 import { MentionInputService, MentionDetectionResult } from '../../services/mention-input.service';
 import { UtilitiesService } from '../../services/utilities.service';
 import { PublishEventBus, PublishRelayResultEvent } from '../../services/publish-event-bus.service';
@@ -137,6 +138,7 @@ interface PreparedXPost {
     MatSliderModule,
     ContentComponent,
     MentionAutocompleteComponent,
+    SlashCommandMenuComponent,
     MatMenuModule,
     DragDropModule,
     TextFieldModule,
@@ -225,8 +227,10 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   @ViewChild('noteEditorLayout') noteEditorLayout?: ElementRef<HTMLElement>;
   @ViewChild('dialogContentWrapper') dialogContentWrapper?: ElementRef<HTMLElement>;
   @ViewChild('composerActions') composerActions?: ElementRef<HTMLElement>;
+  @ViewChild('backFromPreviewBtn', { read: ElementRef }) backFromPreviewBtn?: ElementRef<HTMLElement>;
   @ViewChild('fileInput') fileInput!: ElementRef<HTMLInputElement>;
   @ViewChild(MentionAutocompleteComponent) mentionAutocomplete?: MentionAutocompleteComponent;
+  @ViewChild(SlashCommandMenuComponent) slashCommandMenu?: SlashCommandMenuComponent;
 
   // Auto-save configuration
   private readonly AUTO_SAVE_INTERVAL = 2000; // Save every 2 seconds
@@ -289,6 +293,10 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   mentionConfig = signal<MentionAutocompleteConfig | null>(null);
   mentionPosition = signal<{ top: number; left: number }>({ top: 0, left: 0 });
   mentionDetection = signal<MentionDetectionResult | null>(null);
+
+  // Slash command menu state
+  slashCommandConfig = signal<SlashCommandConfig | null>(null);
+  slashCommandPosition = signal<{ top: number; left: number }>({ top: 0, left: 0 });
 
   // Advanced options
   expirationEnabled = signal(false);
@@ -846,11 +854,13 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     if (this.isPublishing() || this.isUploading() || this.content().trim()) return;
 
     const clickedInside = this.elementRef.nativeElement.contains(event.target);
-    // Also check if clicking on mention autocomplete (which may be outside component)
+    // Also check if clicking on mention autocomplete or slash command menu (which may be outside component)
     const mentionAutocomplete = document.querySelector('app-mention-autocomplete');
     const clickedOnMentionAutocomplete = mentionAutocomplete?.contains(event.target as Node);
+    const slashCommandMenu = document.querySelector('app-slash-command-menu');
+    const clickedOnSlashCommandMenu = slashCommandMenu?.contains(event.target as Node);
 
-    if (!clickedInside && !clickedOnMentionAutocomplete) {
+    if (!clickedInside && !clickedOnMentionAutocomplete && !clickedOnSlashCommandMenu) {
       this.isExpanded.set(false);
     }
   };
@@ -2347,8 +2357,12 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     // Check for removed mentions and sync with mentions list
     this.syncMentionsWithContent(newContent);
 
-    // Check for mention trigger
-    this.handleMentionInput(newContent, target.selectionStart || 0);
+    // Check for slash command trigger first, then mention trigger
+    const cursorPos = target.selectionStart || 0;
+    this.handleSlashCommandInput(newContent, cursorPos);
+    if (!this.slashCommandConfig()) {
+      this.handleMentionInput(newContent, cursorPos);
+    }
   }
 
   onContentFocus(): void {
@@ -2504,19 +2518,25 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       }
     }
 
-    // Close dialog on Escape if not in mention autocomplete or other overlays
+    // Close dialog on Escape if not in mention autocomplete, slash command menu, or other overlays
     if (event.key === 'Escape') {
+      // Check if slash command menu is open
+      const slashConfig = this.slashCommandConfig();
+      if (slashConfig) {
+        event.preventDefault();
+        event.stopPropagation();
+        this.onSlashCommandDismissed();
+        return;
+      }
+
       // Check if mention autocomplete is open
       const mentionConfig = this.mentionConfig();
       if (mentionConfig) {
-        // Prevent default behavior and stop propagation
         event.preventDefault();
         event.stopPropagation();
-
-        // Dismiss the mention autocomplete
         this.onMentionDismissed();
       } else {
-        // Mention autocomplete is not open, close the dialog
+        // Nothing is open, close the dialog
         this.cancel();
       }
     }
@@ -2533,6 +2553,15 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   };
 
   onContentKeyDown(event: KeyboardEvent): void {
+    // If slash command menu is open, handle navigation keys
+    const slashConfig = this.slashCommandConfig();
+    if (slashConfig && this.slashCommandMenu) {
+      if (['ArrowDown', 'ArrowUp', 'Enter', 'Tab', 'Escape'].includes(event.key)) {
+        this.slashCommandMenu.onKeyDown(event);
+        return;
+      }
+    }
+
     const mentionConfig = this.mentionConfig();
 
     // If mention autocomplete is open, handle navigation keys
@@ -2586,32 +2615,39 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   }
 
   onContentKeyUp(event: KeyboardEvent): void {
-    // Ignore navigation keys that are handled in keydown to prevent resetting mention state
-    if (['ArrowDown', 'ArrowUp', 'Enter', 'Escape'].includes(event.key)) {
+    // Ignore navigation keys that are handled in keydown to prevent resetting state
+    if (['ArrowDown', 'ArrowUp', 'Enter', 'Escape', 'Tab'].includes(event.key)) {
       return;
     }
 
     const target = event.target as HTMLTextAreaElement;
-    this.syncMentionStateFromSelection(target);
+    this.syncSlashAndMentionStateFromSelection(target);
   }
 
   onContentClick(event: MouseEvent): void {
     const target = event.target as HTMLTextAreaElement;
-    this.syncMentionStateFromSelection(target);
+    this.syncSlashAndMentionStateFromSelection(target);
   }
 
   onContentSelectionChange(event: Event): void {
     const target = event.target as HTMLTextAreaElement;
-    this.syncMentionStateFromSelection(target);
+    this.syncSlashAndMentionStateFromSelection(target);
   }
 
-  private syncMentionStateFromSelection(textarea: HTMLTextAreaElement): void {
+  private syncSlashAndMentionStateFromSelection(textarea: HTMLTextAreaElement): void {
     if (textarea.selectionStart !== textarea.selectionEnd) {
       this.onMentionDismissed();
+      this.onSlashCommandDismissed();
       return;
     }
 
-    this.handleMentionInput(this.content(), textarea.selectionStart || 0);
+    const cursorPos = textarea.selectionStart || 0;
+    this.handleSlashCommandInput(this.content(), cursorPos);
+    if (!this.slashCommandConfig()) {
+      this.handleMentionInput(this.content(), cursorPos);
+    } else {
+      this.mentionConfig.set(null);
+    }
   }
 
   private handleMentionInput(content: string, cursorPosition: number): void {
@@ -2763,6 +2799,117 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     this.mentionConfig.set(null);
   }
 
+  // --- Slash command menu ---
+
+  /**
+   * Detect if the user is typing a slash command.
+   * A slash command is triggered by `/` at position 0 or preceded by a newline.
+   */
+  private handleSlashCommandInput(content: string, cursorPosition: number): void {
+    // Walk backwards from cursor to find `/`
+    let slashPos = -1;
+    for (let i = cursorPosition - 1; i >= 0; i--) {
+      const ch = content[i];
+      if (ch === '/') {
+        // `/` must be at position 0 or preceded by a newline or space
+        if (i === 0 || content[i - 1] === '\n' || content[i - 1] === ' ') {
+          slashPos = i;
+        }
+        break;
+      }
+      // Stop scanning if we hit a space, newline, or non-word char
+      if (ch === ' ' || ch === '\n') break;
+    }
+
+    if (slashPos === -1) {
+      this.slashCommandConfig.set(null);
+      return;
+    }
+
+    const query = content.substring(slashPos + 1, cursorPosition);
+
+    // Don't trigger if query contains spaces (user is typing normal text after /)
+    if (query.includes(' ') || query.includes('\n')) {
+      this.slashCommandConfig.set(null);
+      return;
+    }
+
+    // Calculate position
+    const textareaElement = this.contentTextarea?.nativeElement;
+    if (textareaElement) {
+      const position = this.calculateMentionPosition(textareaElement);
+      this.slashCommandPosition.set(position);
+
+      this.slashCommandConfig.set({
+        cursorPosition,
+        query,
+        commandStart: slashPos,
+      });
+
+      // When slash menu is active, dismiss mention autocomplete
+      this.mentionConfig.set(null);
+    }
+  }
+
+  onSlashCommandSelected(option: SlashCommandOption): void {
+    const config = this.slashCommandConfig();
+    if (!config) return;
+
+    // Remove the typed `/query` from content
+    const currentContent = this.content();
+    const before = currentContent.substring(0, config.commandStart);
+    const after = currentContent.substring(config.cursorPosition);
+    const newContent = before + after;
+    this.content.set(newContent);
+    this.scheduleTextareaRefresh(config.commandStart, true);
+
+    // Dismiss the menu
+    this.slashCommandConfig.set(null);
+
+    // Execute the command
+    switch (option.id) {
+      case 'upload':
+        this.openFileDialog();
+        break;
+      case 'library':
+        this.openMediaChooser();
+        break;
+      case 'emoji':
+        if (this.layout.isHandset()) {
+          this.openEmojiPickerDialog();
+        } else {
+          this.openEmojiPickerDialog();
+        }
+        break;
+      case 'gif':
+        this.openGifPickerDialog();
+        break;
+      case 'mention':
+        // Insert @ at cursor position to trigger mention autocomplete
+        {
+          const contentNow = this.content();
+          const pos = config.commandStart;
+          const updatedContent = contentNow.substring(0, pos) + '@' + contentNow.substring(pos);
+          this.content.set(updatedContent);
+          const newCursorPos = pos + 1;
+          this.scheduleTextareaRefresh(newCursorPos, true);
+          // Trigger mention detection at next tick
+          setTimeout(() => this.handleMentionInput(this.content(), newCursorPos), 0);
+        }
+        break;
+      case 'reference':
+        this.openReferencePicker();
+        break;
+      case 'dictate':
+        this.toggleRecording();
+        break;
+    }
+  }
+
+  onSlashCommandDismissed(): void {
+    this.slashCommandConfig.set(null);
+  }
+
   cancel(forceCloseAttempt = false): void {
     if (this.isPublishing() && !forceCloseAttempt) {
       return;
@@ -2860,10 +3007,15 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     const wasInPreview = this.showPreview();
     this.showPreview.update(current => !current);
 
-    // If coming back from preview, re-trigger textarea auto-resize after it renders
     if (wasInPreview) {
+      // Coming back from preview, re-trigger textarea auto-resize after it renders
       setTimeout(() => {
         this.scheduleTextareaRefresh();
+      }, 0);
+    } else {
+      // Entering preview, focus the Back button after it renders
+      setTimeout(() => {
+        this.backFromPreviewBtn?.nativeElement?.focus();
       }, 0);
     }
   }
