@@ -141,6 +141,12 @@ export class FeedsCollectionService {
 
         const savedFeedId = this.getSavedActiveFeedId(pubkey);
         this._activeFeedId.set(savedFeedId);
+
+        // Pre-warm cached events for the saved feed so IndexedDB read
+        // overlaps with the rest of initialization for faster first render.
+        if (savedFeedId) {
+          this.feedService.preWarmCachedEvents(savedFeedId);
+        }
       });
     });
 

@@ -236,6 +236,10 @@ export class FeedService {
   // New event checking
   private newEventCheckInterval: ReturnType<typeof setInterval> | null = null;
 
+  // Pre-warmed cache: stores promises for cached events that were eagerly loaded
+  // before the full subscription pipeline starts, keyed by `${pubkey}::${feedId}`
+  private preWarmedCache = new Map<string, Promise<Event[]>>();
+
   // Public computed signals
   // Append Trending feed at the end ONLY after feeds have been loaded from storage
   // This prevents Trending from being auto-selected during startup when it's temporarily the only feed
@@ -291,18 +295,27 @@ export class FeedService {
 
           this.logger.debug(`🔄 [FeedService] pubkey=${pubkey.slice(0, 8)}... initialized=${initialized} settingsLoaded=${settingsLoaded} isFirstTimeUser=${isFirstTimeUser}`);
 
-          // For first-time users with local feeds: Can load immediately
-          // For users with synced feeds or returning users: Wait for settings to be loaded
-          // This ensures cross-device sync works by waiting for kind 30078 settings event
+          // FAST PATH: Returning users with local feeds load IMMEDIATELY from localStorage.
+          // Don't wait for initialized or settingsLoaded — the settings sync effect
+          // will handle cross-device sync updates after settings are loaded.
+          if (!isFirstTimeUser && storedFeeds && storedFeeds.length > 0) {
+            this.logger.debug(`🚀 [FeedService] FAST PATH: Loading ${storedFeeds.length} local feeds immediately for returning user`);
+            loadingForPubkey = pubkey;
+            this._hasInitialContent.set(false);
+            this.appState.feedHasInitialContent.set(false);
+            await this.loadFeedsLocal(pubkey, storedFeeds);
+            return;
+          }
+
+          // SLOW PATH: First-time users or users with no local feeds need to wait
+          // for settings to check for synced feeds from another device
           if (isFirstTimeUser && !settingsLoaded) {
-            // First-time user but settings not loaded yet - wait for settings
-            // to check if there are synced feeds from another device
             this.logger.debug(`⏳ [FeedService] First-time user, waiting for settings to load to check for synced feeds`);
             return;
           }
 
           if (!isFirstTimeUser && !initialized) {
-            // Returning user but not initialized yet - wait for relay data
+            // Returning user with empty feeds but not initialized yet
             this.logger.debug(`⏳ [FeedService] Returning user, waiting for initialization`);
             return;
           }
@@ -394,13 +407,45 @@ export class FeedService {
   }
 
   /**
-   * Load cached events for a feed - async operation using IndexedDB
+   * Pre-warm the cache for a feed by starting the IndexedDB read early.
+   * The promise is stored and reused by loadCachedEvents when the subscription starts.
+   */
+  preWarmCachedEvents(feedId: string): void {
+    const pubkey = this.accountState.pubkey();
+    if (!pubkey) return;
+
+    const cacheKey = `${pubkey}::${feedId}`;
+    if (this.preWarmedCache.has(cacheKey)) return;
+
+    this.logger.debug(`🔥 Pre-warming cache for feed ${feedId}`);
+    const promise = this.loadCachedEventsFromDb(pubkey, feedId);
+    this.preWarmedCache.set(cacheKey, promise);
+  }
+
+  /**
+   * Load cached events for a feed - uses pre-warmed cache if available, otherwise reads from IndexedDB
    * @param feedId The feed ID (or legacy column ID for backward compatibility)
    */
   private async loadCachedEvents(feedId: string): Promise<Event[]> {
     const pubkey = this.accountState.pubkey();
     if (!pubkey) return [];
 
+    // Check for pre-warmed cache first
+    const cacheKey = `${pubkey}::${feedId}`;
+    const preWarmed = this.preWarmedCache.get(cacheKey);
+    if (preWarmed) {
+      this.preWarmedCache.delete(cacheKey);
+      this.logger.debug(`⚡ Using pre-warmed cache for feed ${feedId}`);
+      return preWarmed;
+    }
+
+    return this.loadCachedEventsFromDb(pubkey, feedId);
+  }
+
+  /**
+   * Internal method to load cached events from IndexedDB
+   */
+  private async loadCachedEventsFromDb(pubkey: string, feedId: string): Promise<Event[]> {
     try {
       await this.database.init();
       const cachedEvents = await this.database.loadCachedEvents(pubkey, feedId);
@@ -743,32 +788,7 @@ export class FeedService {
       return newMap;
     });
 
-    // Load cached events (skip for dynamic feeds - they should always fetch fresh data)
-    const isDynamicFeed = feed.id === this.DYNAMIC_FEED_ID;
-    let cachedEvents: Event[] = [];
-
-    if (!isDynamicFeed) {
-      cachedEvents = await this.loadCachedEvents(feed.id);
-
-      if (cachedEvents.length > 0) {
-        // Filter cached events through mute filters (muted words, users, hashtags, etc.)
-        cachedEvents = this.eventProcessor.filterEvents(cachedEvents);
-        item.events.set(cachedEvents);
-        const mostRecentTimestamp = Math.max(...cachedEvents.map(e => e.created_at));
-        item.lastCheckTimestamp = mostRecentTimestamp;
-
-        // Mark initial load as complete so all relay events go to pending queue.
-        // This prevents UI jumps by keeping cached events stable on screen.
-        item.initialLoadComplete = true;
-        item.isRefreshing?.set(false);
-        this.logger.info(`🚀 Rendered ${cachedEvents.length} cached events for feed ${feed.id} - relay events will be queued`);
-
-        // Prefetch profiles for cached events in background
-        this.prefetchProfilesForEvents(cachedEvents);
-      }
-    }
-
-    // Build filter based on feed configuration
+    // Build filter based on feed configuration FIRST (non-blocking)
     if (feed.filters) {
       item.filter = {
         limit: 60,
@@ -782,12 +802,48 @@ export class FeedService {
       };
     }
 
-    // Set since filter if we have lastRetrieved and cached events
-    if (feed.lastRetrieved && item.filter && cachedEvents.length > 0) {
+    // Use lastRetrieved to set 'since' filter for relay subscriptions.
+    // This works even before cache is loaded — if lastRetrieved is set, the feed
+    // has been used before and likely has cached events.
+    if (feed.lastRetrieved && item.filter) {
       item.filter.since = feed.lastRetrieved;
       this.logger.info(`📅 Feed ${feed.id}: Using since=${feed.lastRetrieved} (lastRetrieved) to fetch only new events`);
-    } else if (feed.lastRetrieved && cachedEvents.length === 0) {
-      this.logger.info(`📅 Feed ${feed.id}: No cached events, ignoring lastRetrieved=${feed.lastRetrieved} to fetch historical events`);
+    }
+
+    // Load cached events NON-BLOCKING — start the IndexedDB read and proceed
+    // with relay subscriptions in parallel for faster time-to-first-render.
+    const isDynamicFeed = feed.id === this.DYNAMIC_FEED_ID;
+
+    if (!isDynamicFeed) {
+      // Fire-and-forget: load cache and update the signal when ready
+      this.loadCachedEvents(feed.id).then(cachedEvents => {
+        if (cachedEvents.length > 0) {
+          // Filter cached events through mute filters (muted words, users, hashtags, etc.)
+          cachedEvents = this.eventProcessor.filterEvents(cachedEvents);
+          item.events.set(cachedEvents);
+          const mostRecentTimestamp = Math.max(...cachedEvents.map(e => e.created_at));
+          item.lastCheckTimestamp = mostRecentTimestamp;
+
+          // Mark initial load as complete so all relay events go to pending queue.
+          // This prevents UI jumps by keeping cached events stable on screen.
+          item.initialLoadComplete = true;
+          item.isRefreshing?.set(false);
+          this.logger.info(`🚀 Rendered ${cachedEvents.length} cached events for feed ${feed.id} - relay events will be queued`);
+
+          // If we didn't have lastRetrieved but have cached events, we're likely in
+          // a fresh-fetch scenario — no need to adjust the since filter retroactively
+          // since the relay subscription is already running.
+
+          // Prefetch profiles for cached events in background
+          this.prefetchProfilesForEvents(cachedEvents);
+        } else if (!feed.lastRetrieved && item.filter) {
+          // No cached events and no lastRetrieved — ensure 'since' is not set
+          // so relays fetch historical events (already the default)
+          this.logger.info(`📅 Feed ${feed.id}: No cached events, fetching historical events from relays`);
+        }
+      }).catch(err => {
+        this.logger.error(`Error loading cached events for feed ${feed.id}:`, err);
+      });
     }
 
     // Load feed data based on source type
@@ -983,30 +1039,7 @@ export class FeedService {
       return newMap;
     });
 
-    // NOW load cached events asynchronously and update the signal
-    let cachedEventsForDyn = await this.loadCachedEvents(feed.id);
-
-    if (cachedEventsForDyn.length > 0) {
-      // Filter cached events through mute filters (muted words, users, hashtags, etc.)
-      cachedEventsForDyn = this.eventProcessor.filterEvents(cachedEventsForDyn);
-      // Update the events signal with cached events
-      item.events.set(cachedEventsForDyn);
-
-      // Update lastCheckTimestamp based on most recent cached event
-      const mostRecentTimestamp = Math.max(...cachedEventsForDyn.map(e => e.created_at));
-      item.lastCheckTimestamp = mostRecentTimestamp;
-
-      // Mark initial load as complete so all relay events go to pending queue.
-      // This prevents UI jumps by keeping cached events stable on screen.
-      item.initialLoadComplete = true;
-      item.isRefreshing?.set(false);
-      this.logger.info(`🚀 Rendered ${cachedEventsForDyn.length} cached events for feed ${feed.id} - relay events will be queued`);
-
-      // Prefetch profiles for cached events in background
-      this.prefetchProfilesForEvents(cachedEventsForDyn);
-    }
-
-    // Build filter based on feed configuration
+    // Build filter based on feed configuration FIRST (non-blocking)
     if (feed.filters) {
       item.filter = {
         limit: 6,
@@ -1020,18 +1053,28 @@ export class FeedService {
       };
     }
 
-    // Add 'since' parameter based on lastRetrieved timestamp to prevent re-fetching old events
-    // Use lastRetrieved instead of event.created_at since users can set arbitrary timestamps
-    // IMPORTANT: Only use lastRetrieved if we have cached events to display.
-    // If there are very few cached events (< 5), also ignore lastRetrieved to fetch more historical data.
-    // This helps when a feed was created but only fetched a few recent events.
-    const hasSubstantialCache = cachedEventsForDyn.length >= 5;
-    if (feed.lastRetrieved && item.filter && hasSubstantialCache) {
+    // Use lastRetrieved to set 'since' filter for relay subscriptions.
+    if (feed.lastRetrieved && item.filter) {
       item.filter.since = feed.lastRetrieved;
-      this.logger.info(`📅 Feed ${feed.id}: Using since=${feed.lastRetrieved} (lastRetrieved) to fetch only new events (${cachedEventsForDyn.length} cached)`);
-    } else if (feed.lastRetrieved && !hasSubstantialCache) {
-      this.logger.info(`📅 Feed ${feed.id}: Only ${cachedEventsForDyn.length} cached events, ignoring lastRetrieved=${feed.lastRetrieved} to fetch historical events`);
+      this.logger.info(`📅 Feed ${feed.id}: Using since=${feed.lastRetrieved} (lastRetrieved) to fetch only new events`);
     }
+
+    // Load cached events NON-BLOCKING — start IndexedDB read and proceed
+    // with relay subscriptions in parallel for faster time-to-first-render.
+    this.loadCachedEvents(feed.id).then(cachedEvents => {
+      if (cachedEvents.length > 0) {
+        cachedEvents = this.eventProcessor.filterEvents(cachedEvents);
+        item.events.set(cachedEvents);
+        const mostRecentTimestamp = Math.max(...cachedEvents.map(e => e.created_at));
+        item.lastCheckTimestamp = mostRecentTimestamp;
+        item.initialLoadComplete = true;
+        item.isRefreshing?.set(false);
+        this.logger.info(`🚀 Rendered ${cachedEvents.length} cached events for feed ${feed.id} - relay events will be queued`);
+        this.prefetchProfilesForEvents(cachedEvents);
+      }
+    }).catch(err => {
+      this.logger.error(`Error loading cached events for feed ${feed.id}:`, err);
+    });
 
     // Now start loading fresh events in the BACKGROUND (don't await)
     // This allows cached events to display immediately while fresh data loads
@@ -3921,6 +3964,62 @@ export class FeedService {
     }
 
     return true;
+  }
+
+  /**
+   * Fast-path feed loading: loads feeds directly from pre-fetched localStorage data
+   * without waiting for settings sync or account initialization.
+   * The settings sync effect will handle cross-device updates later.
+   */
+  private async loadFeedsLocal(pubkey: string, storedFeeds: FeedConfig[]): Promise<void> {
+    try {
+      const filteredFeeds = storedFeeds.filter(f => f.id !== TRENDING_FEED_ID);
+
+      // Handle edge case: all stored feeds were trending-only
+      if (storedFeeds.length > 0 && filteredFeeds.length === 0) {
+        this.logger.info('Detected legacy trending-only feed storage, deferring to full loadFeeds');
+        // Fall back to the full loadFeeds path which will initialize defaults
+        this._feedsLoaded.set(false);
+        return;
+      }
+
+      // Run migration on stored feeds
+      let migrationOccurred = false;
+      const migratedFeeds: FeedConfig[] = [];
+      filteredFeeds.forEach(feed => {
+        const result = this.migrateLegacyFeed(feed);
+        if (result.length !== 1 || result[0] !== feed) {
+          migrationOccurred = true;
+        }
+        migratedFeeds.push(...result);
+      });
+
+      this._feeds.set(migratedFeeds);
+      this._feedsLoaded.set(true);
+
+      if (migrationOccurred) {
+        this.saveFeeds();
+      }
+
+      this.logger.info(`⚡ [FeedService] FAST PATH: Loaded ${migratedFeeds.length} feeds from localStorage`);
+
+      // Pre-warm cached events for the active feed so they're ready when subscription starts.
+      // This overlaps the IndexedDB read with the subscription setup for faster first render.
+      const activeFeedId = this._activeFeedId();
+      if (activeFeedId && migratedFeeds.some(f => f.id === activeFeedId)) {
+        this.preWarmCachedEvents(activeFeedId);
+      }
+
+      // Subscribe if there's an active account and feeds page is active
+      if (this.accountState.account()) {
+        await this.subscribe();
+      }
+    } catch (error) {
+      this.logger.error('Error in fast-path feed loading:', error);
+      this._feeds.set(DEFAULT_FEEDS);
+      this._feedsLoaded.set(true);
+      this.saveFeeds({ preserveBackup: true });
+    }
   }
 
   private async loadFeeds(pubkey: string): Promise<void> {

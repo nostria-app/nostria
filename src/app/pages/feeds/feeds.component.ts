@@ -651,7 +651,11 @@ export class FeedsComponent implements OnDestroy {
       return true;
     }
 
-    return this.accountState.initialized();
+    // For authenticated users: don't block on full account initialization.
+    // If feeds are loaded (fast-path from localStorage) and an active feed is set,
+    // we can render cached content immediately while relays are still connecting.
+    // accountState.initialized() waits for relay data which is too slow for first render.
+    return true;
   });
 
   // Check if the active feed is paused (no active subscription)
