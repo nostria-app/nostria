@@ -62,7 +62,7 @@
 
 .mention-item:hover,
 .mention-item.focused {
-  background: var(--mat-sys-surface-container-highest);
+  background: color-mix(in srgb, var(--mat-sys-primary) 15%, var(--mat-sys-surface-container-highest));
 }
 
 .mention-item:focus-visible {
