@@ -12,6 +12,7 @@ import { CustomDialogRef } from '../../services/custom-dialog.service';
 import { ZapService } from '../../services/zap.service';
 import { Wallets, Wallet } from '../../services/wallets';
 import { DataService } from '../../services/data.service';
+import { MessagingService } from '../../services/messaging.service';
 import { UserProfileComponent } from '../user-profile/user-profile.component';
 
 interface LnurlPayInfo {
@@ -59,6 +60,7 @@ export class SendMoneyDialogComponent {
   private zapService = inject(ZapService);
   private wallets = inject(Wallets);
   private dataService = inject(DataService);
+  private messagingService = inject(MessagingService);
   dialogRef = inject(CustomDialogRef);
 
   data!: SendMoneyDialogData;
@@ -341,6 +343,19 @@ export class SendMoneyDialogComponent {
         await ln.pay(invoiceData.pr);
       } finally {
         ln.close();
+      }
+
+      // Send payment notification DMs (different content for sender vs receiver)
+      const formattedAmount = sats.toLocaleString();
+      const senderBase = `You sent ${formattedAmount} sats.`;
+      const receiverBase = `You received ${formattedAmount} sats.`;
+      const senderText = comment ? `${senderBase} ${comment}` : senderBase;
+      const receiverText = comment ? `${receiverBase} ${comment}` : receiverBase;
+
+      try {
+        await this.messagingService.sendPaymentNotification(senderText, receiverText, this.data.recipientPubkey);
+      } catch {
+        // Payment succeeded but DM notification failed — don't block the success flow
       }
 
       this.paymentSuccess.set(true);
