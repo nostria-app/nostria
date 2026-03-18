@@ -722,6 +722,31 @@ export class App implements OnInit, OnDestroy {
     this.logger.debug('[App] - ApplicationService injected:', !!this.app);
     this.logger.debug('[App] - LoggerService injected:', !!this.logger);
 
+    // EARLY ROUTE RESTORATION: Check synchronously from localStorage before Angular
+    // processes the initial navigation to '/'. This prevents the Home→Feeds flash
+    // by navigating to the saved route BEFORE the first render completes.
+    if (this.initialUrl === '/' || this.initialUrl.startsWith('/?') || this.initialUrl === '') {
+      try {
+        const accountJson = localStorage.getItem(this.appState.ACCOUNT_STORAGE_KEY);
+        if (accountJson) {
+          const account = JSON.parse(accountJson);
+          const pubkey = account?.pubkey;
+          if (pubkey && this.localSettings.startOnLastRoute()) {
+            const lastRoute = this.accountLocalState.getLastRoute(pubkey);
+            if (lastRoute && lastRoute !== '/' && lastRoute !== this.initialUrl) {
+              this.logger.info(`[App] Early route restoration: navigating to ${lastRoute}`);
+              this.hasRestoredRoute = true;
+              // Navigate immediately — Angular hasn't completed initial navigation yet,
+              // so this replaces the default '/' navigation rather than adding a second one.
+              this.router.navigateByUrl(lastRoute, { replaceUrl: true });
+            }
+          }
+        }
+      } catch (err) {
+        this.logger.error('[App] Early route restoration failed:', err);
+      }
+    }
+
     // Wire up route reuse cache clearing with panel navigation
     if (this.customReuseStrategy && typeof this.customReuseStrategy.clearCache === 'function') {
       this.panelNav.setClearCacheCallback(() => this.customReuseStrategy.clearCache());
