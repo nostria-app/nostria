@@ -1971,7 +1971,6 @@ export class EventService {
       let parents: Event[] = [];
       let rootEvent: Event | null = isThreadRoot ? event : null;
       let threadRootId = event.id;
-      let repliesYielded = false;
       let parentsResolved = false;
 
       // Wrap parents resolution
@@ -2042,7 +2041,6 @@ export class EventService {
           seenIds.add(r.id);
           return true;
         });
-        repliesYielded = true;
         yield buildAndYieldReplies(currentReplies);
       }
 
