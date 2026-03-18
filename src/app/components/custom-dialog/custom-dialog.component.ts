@@ -109,7 +109,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
         </div>
         
         <!-- Content -->
-        <div class="dialog-content" #dialogContent>
+        <div class="dialog-content" cdkFocusInitial tabindex="-1" #dialogContent>
           <ng-content select="[dialog-content]"></ng-content>
         </div>
         
