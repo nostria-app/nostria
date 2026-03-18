@@ -87,26 +87,16 @@ export interface MentionAutocompleteConfig {
               <div class="mention-item-details">
                 <div class="mention-item-name">
                   {{ getDisplayName(profile) }}
+                  @if (isFollowing(profile.event.pubkey)) {
+                    <span class="mention-item-following">
+                      <mat-icon class="following-icon">person_check</mat-icon>
+                      Following
+                    </span>
+                  }
                 </div>
-                @if (profile.data.nip05) {
-                  <div class="mention-item-nip05">
-                    {{ utilities.parseNip05(profile.data.nip05) }}
-                  </div>
-                }
-                @if (profile.data.about) {
-                  <div class="mention-item-about">
-                    {{ getTruncatedAbout(profile.data.about) }}
-                  </div>
-                }
-              </div>
-              <div class="mention-item-meta">
-                <div class="mention-item-pubkey">
-                  {{ utilities.getTruncatedNpub(profile.event.pubkey) }}
-                </div>
-                @if (isFollowing(profile.event.pubkey)) {
-                  <div class="mention-item-following">
-                    <mat-icon class="following-icon">person_check</mat-icon>
-                    <span>Following</span>
+                @if (getIdentifier(profile); as identifier) {
+                  <div class="mention-item-identifier">
+                    {{ identifier }}
                   </div>
                 }
               </div>
@@ -354,9 +344,14 @@ export class MentionAutocompleteComponent {
     );
   }
 
-  getTruncatedAbout(about: string): string {
-    if (!about) return '';
-    return about.length > 80 ? about.substring(0, 80) + '...' : about;
+  getIdentifier(profile: NostrRecord): string | null {
+    if (profile.data?.nip05) {
+      return this.utilities.parseNip05(profile.data.nip05);
+    }
+    if (profile.data?.lud16) {
+      return profile.data.lud16;
+    }
+    return null;
   }
 
   isFollowing(pubkey: string): boolean {
