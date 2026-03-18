@@ -134,6 +134,7 @@ interface AccountLocalState {
   favoriteGifs?: FavoriteGif[]; // Favorite GIFs for quick access in GIF picker
   accountMetadataLastSync?: number; // Unix timestamp (seconds) when account metadata subscription last completed (EOSE)
   followSetsLastSync?: number; // Unix timestamp (seconds) when follow sets subscription last completed (EOSE)
+  metricsLastScan?: number; // Unix timestamp (seconds) when metrics historical scan last completed
 }
 
 /**
@@ -384,6 +385,23 @@ export class AccountLocalStateService {
    */
   setFollowSetsLastSync(pubkey: string, timestamp: number): void {
     this.updateAccountState(pubkey, { followSetsLastSync: timestamp });
+  }
+
+  /**
+   * Get the timestamp when metrics historical scan last completed.
+   * Used to add `since` filter on subsequent scans to avoid re-fetching old data.
+   * Returns 0 if never scanned.
+   */
+  getMetricsLastScan(pubkey: string): number {
+    const state = this.getAccountState(pubkey);
+    return state.metricsLastScan || 0;
+  }
+
+  /**
+   * Set the timestamp when metrics historical scan completed.
+   */
+  setMetricsLastScan(pubkey: string, timestamp: number): void {
+    this.updateAccountState(pubkey, { metricsLastScan: timestamp });
   }
 
   /**

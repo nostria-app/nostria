@@ -3,6 +3,7 @@ import { kinds, Event } from 'nostr-tools';
 import { PublishEventBus } from './publish-event-bus.service';
 import { Metrics } from './metrics';
 import { AccountStateService } from './account-state.service';
+import { AccountLocalStateService } from './account-local-state.service';
 import { LoggerService } from './logger.service';
 import { UtilitiesService } from './utilities.service';
 import { AccountRelayService } from './relays/account-relay';
@@ -13,7 +14,6 @@ import { AccountRelayService } from './relays/account-relay';
  *
  * Supported event kinds:
  * - Reaction (kind 7): Like/reaction to kind 1 notes - 1 point
- * - External reaction (kind 17): Reaction to non-Nostr content (NIP-25) - 1 point
  * - Repost (kind 6): Repost of kind 1 notes - 3 points
  * - Generic repost (kind 16): Repost of non-kind-1 events (NIP-18) - 3 points
  * - Zap request (kind 9734): Zap to a user - 5 points
@@ -26,14 +26,13 @@ export class MetricsTrackingService {
   private readonly eventBus = inject(PublishEventBus);
   private readonly metrics = inject(Metrics);
   private readonly accountState = inject(AccountStateService);
+  private readonly accountLocalState = inject(AccountLocalStateService);
   private readonly logger = inject(LoggerService);
   private readonly utilities = inject(UtilitiesService);
   private readonly accountRelay = inject(AccountRelayService);
 
   private initialized = false;
   private historicalScanInProgress = false;
-  /** Track which accounts have already been scanned in this session */
-  private scannedAccounts = new Set<string>();
   /** Track the pending scan timeout so it can be cancelled */
   private pendingScanTimeout: ReturnType<typeof setTimeout> | null = null;
 
@@ -91,18 +90,12 @@ export class MetricsTrackingService {
    * Scan historical events from relays for the current account and calculate metrics.
    * This should be called when a user logs in to process their existing interactions.
    * Events that have already been processed will be skipped (duplicate prevention).
-   * Each account is only scanned once per session.
+   * Uses a persistent `since` filter to avoid re-fetching old data on subsequent sessions.
    */
   async scanHistoricalEvents(): Promise<void> {
     const currentPubkey = this.accountState.pubkey();
     if (!currentPubkey) {
       this.logger.warn('No current account, cannot scan historical events');
-      return;
-    }
-
-    // Check if this account has already been scanned in this session
-    if (this.scannedAccounts.has(currentPubkey)) {
-      this.logger.debug(`Account ${currentPubkey.substring(0, 8)} already scanned in this session, skipping`);
       return;
     }
 
@@ -112,14 +105,36 @@ export class MetricsTrackingService {
     }
 
     this.historicalScanInProgress = true;
-    this.logger.info(`Starting historical metrics scan for account ${currentPubkey.substring(0, 8)}...`);
+
+    // Read persisted last-scan timestamp for `since` filter
+    const lastScan = this.accountLocalState.getMetricsLastScan(currentPubkey);
+    const nowSeconds = Math.floor(Date.now() / 1000);
+
+    // Apply 60-second overlap buffer to avoid missing events near the boundary
+    const OVERLAP_BUFFER_SECONDS = 60;
+    const sinceTimestamp = lastScan > OVERLAP_BUFFER_SECONDS ? lastScan - OVERLAP_BUFFER_SECONDS : 0;
+
+    // Cap at 7 days maximum to avoid overly broad queries on first-time loads
+    const SEVEN_DAYS_SECONDS = 7 * 24 * 60 * 60;
+    const maxSince = nowSeconds - SEVEN_DAYS_SECONDS;
+    const effectiveSince = sinceTimestamp > 0 ? Math.max(sinceTimestamp, maxSince) : maxSince;
+
+    const isIncremental = lastScan > 0;
+    this.logger.info(
+      `Starting ${isIncremental ? 'incremental' : 'initial'} historical metrics scan for account ${currentPubkey.substring(0, 8)}...` +
+        (isIncremental ? ` (since ${new Date(effectiveSince * 1000).toISOString()})` : '')
+    );
 
     try {
-      // Fetch reactions (kind 7 and 17)
+      // Build shared filter options
+      const sinceFilter = effectiveSince > 0 ? { since: effectiveSince } : {};
+
+      // Fetch reactions (kind 7 only — kind 17 is external/website reactions, not useful for metrics)
       const reactions = await this.accountRelay.getMany({
-        kinds: [kinds.Reaction, 17],
+        kinds: [kinds.Reaction],
         authors: [currentPubkey],
         limit: 500,
+        ...sinceFilter,
       });
       this.logger.debug(`Found ${reactions.length} historical reactions`);
 
@@ -128,6 +143,7 @@ export class MetricsTrackingService {
         kinds: [kinds.Repost, 16],
         authors: [currentPubkey],
         limit: 500,
+        ...sinceFilter,
       });
       this.logger.debug(`Found ${reposts.length} historical reposts`);
 
@@ -136,6 +152,7 @@ export class MetricsTrackingService {
         kinds: [9734],
         authors: [currentPubkey],
         limit: 500,
+        ...sinceFilter,
       });
       this.logger.debug(`Found ${zapRequests.length} historical zap requests`);
 
@@ -144,6 +161,7 @@ export class MetricsTrackingService {
         kinds: [kinds.ShortTextNote],
         authors: [currentPubkey],
         limit: 500,
+        ...sinceFilter,
       });
       // Filter to only replies (have e tag with reply/root marker)
       const replies = notes.filter(event =>
@@ -165,8 +183,8 @@ export class MetricsTrackingService {
         }
       }
 
-      // Mark this account as scanned so we don't scan again in this session
-      this.scannedAccounts.add(currentPubkey);
+      // Persist scan timestamp so next session only fetches newer events
+      this.accountLocalState.setMetricsLastScan(currentPubkey, nowSeconds);
 
       this.logger.info(
         `Historical metrics scan complete: ${processedCount} events processed, ${skippedCount} skipped (already processed or invalid)`
