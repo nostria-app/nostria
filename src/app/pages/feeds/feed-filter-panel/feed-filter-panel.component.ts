@@ -179,7 +179,7 @@ function isStandardKindsSelection(kinds: number[]): boolean {
       flex-direction: column;
       gap: 1rem;
       padding: 1rem;
-      width: calc(100vw - 2rem);
+      width: 100%;
       max-width: 340px;
       background: var(--mat-sys-surface-container);
       border-radius: 12px;
@@ -242,7 +242,7 @@ function isStandardKindsSelection(kinds: number[]): boolean {
       pointer-events: none;
     }
 
-    @media (max-width: 360px) {
+    @media (max-width: 480px) {
       .content-types-grid {
         grid-template-columns: 1fr;
       }

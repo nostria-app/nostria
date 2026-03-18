@@ -614,12 +614,12 @@
         }
 
         <div class="message-input-row">
-          <!-- Media menu button -->
-          <button mat-icon-button type="button" [matMenuTriggerFor]="mediaMenu" class="media-button"
-            [disabled]="isUploading() || isSending()" matTooltip="Add media">
-            <mat-icon>perm_media</mat-icon>
+          <!-- Plus menu button -->
+          <button mat-icon-button type="button" [matMenuTriggerFor]="plusMenu" class="plus-button"
+            [disabled]="isUploading() || isSending()" matTooltip="More options">
+            <mat-icon>add</mat-icon>
           </button>
-          <mat-menu #mediaMenu="matMenu">
+          <mat-menu #plusMenu="matMenu">
             <button mat-menu-item (click)="openFileDialog()">
               <mat-icon>upload</mat-icon>
               <span>Upload media</span>
@@ -627,6 +627,10 @@
             <button mat-menu-item (click)="openMediaChooser()">
               <mat-icon>photo_library</mat-icon>
               <span>Choose from library</span>
+            </button>
+            <button mat-menu-item (click)="openSendMoneyDialog()">
+              <mat-icon>bolt</mat-icon>
+              <span>Send Money</span>
             </button>
           </mat-menu>
 

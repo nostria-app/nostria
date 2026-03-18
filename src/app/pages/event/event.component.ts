@@ -716,6 +716,9 @@ export class EventPageComponent {
             }
             this.collapsedThreads.set(collapsedIds);
           }
+        } else if (partialData.repliesLoaded) {
+          // Replies were fetched but none were found — clear the loading state
+          this.isLoadingReplies.set(false);
         }
 
         if (partialData.reactions !== undefined) {

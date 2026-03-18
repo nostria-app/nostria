@@ -1445,6 +1445,36 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   /**
+   * Open Send Money dialog to send a Lightning payment to the chat recipient
+   */
+  async openSendMoneyDialog(): Promise<void> {
+    const recipientPubkey = this.selectedChat()?.pubkey;
+    if (!recipientPubkey) {
+      this.snackBar.open('No chat selected', 'Dismiss', {
+        duration: 3000,
+        horizontalPosition: 'center',
+        verticalPosition: 'bottom',
+      });
+      return;
+    }
+
+    const { SendMoneyDialogComponent } = await import('../../components/send-money-dialog/send-money-dialog.component');
+    type SendMoneyDialogResult = import('../../components/send-money-dialog/send-money-dialog.component').SendMoneyDialogResult;
+
+    const dialogRef = this.customDialog.open<typeof SendMoneyDialogComponent.prototype, SendMoneyDialogResult>(SendMoneyDialogComponent, {
+      title: 'Send Money',
+      width: '450px',
+      maxWidth: '95vw',
+      data: {
+        recipientPubkey,
+      },
+    });
+
+    // Initialize the dialog after it's created
+    dialogRef.componentInstance.initialize();
+  }
+
+  /**
    * Handle file selection from the file input
    */
   onMediaFileSelected(event: Event): void {

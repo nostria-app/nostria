@@ -1,0 +1,123 @@
+<div class="send-money-dialog">
+  <div class="recipient-section">
+    <app-user-profile [pubkey]="data.recipientPubkey" />
+
+    @if (isResolvingLnAddress()) {
+    <div class="resolving-address">
+      <mat-spinner diameter="16"></mat-spinner>
+      <span>Resolving Lightning address...</span>
+    </div>
+    } @else if (lightningAddress()) {
+    <div class="lightning-address">
+      <mat-icon>bolt</mat-icon>
+      <span>{{ lightningAddress() }}</span>
+    </div>
+    } @else {
+    <div class="no-address-warning">
+      <mat-icon>warning</mat-icon>
+      <span>This user has no Lightning address configured</span>
+    </div>
+    }
+  </div>
+
+  <mat-divider></mat-divider>
+
+  @if (!paymentSuccess()) {
+  <div class="amount-section">
+    <div class="quick-amounts">
+      @for (amount of quickAmounts; track amount) {
+      <button mat-stroked-button type="button" class="quick-amount-btn"
+        [class.selected]="satsControl.value === amount" (click)="selectQuickAmount(amount)">
+        <span class="quick-amount-content">
+          <span class="quick-amount-sats">{{ formatSats(amount) }} sats</span>
+          @if (satsToUsd(amount); as usd) {
+          <span class="quick-amount-usd">{{ usd }}</span>
+          }
+        </span>
+      </button>
+      }
+    </div>
+
+    <div class="input-fields">
+      <mat-form-field appearance="outline" class="amount-field">
+        <mat-label>Amount in sats</mat-label>
+        <input matInput type="number" [formControl]="satsControl" placeholder="0" min="1"
+          (focus)="setInputMode('sats')" (input)="onSatsChanged()" />
+        <span matSuffix class="input-suffix">sats</span>
+      </mat-form-field>
+
+      <div class="conversion-indicator">
+        @if (isConverting()) {
+        <mat-spinner diameter="14"></mat-spinner>
+        } @else {
+        <mat-icon>swap_vert</mat-icon>
+        }
+      </div>
+
+      <mat-form-field appearance="outline" class="amount-field">
+        <mat-label>Amount in USD</mat-label>
+        <input matInput type="number" [formControl]="dollarsControl" placeholder="0.00" min="0.01" step="0.01"
+          (focus)="setInputMode('dollars')" (input)="onDollarsChanged()" />
+        <span matSuffix class="input-suffix">USD</span>
+      </mat-form-field>
+    </div>
+
+    @if (commentAllowed() > 0) {
+    <mat-form-field appearance="outline" class="comment-field">
+      <mat-label>Message (optional)</mat-label>
+      <input matInput [formControl]="commentControl" [maxlength]="commentAllowed()"
+        placeholder="Add a note..." />
+      <mat-hint align="end">{{ commentControl.value?.length || 0 }} / {{ commentAllowed() }}</mat-hint>
+    </mat-form-field>
+    }
+  </div>
+
+  @if (hasMultipleWallets()) {
+  <mat-form-field appearance="outline" class="wallet-field">
+    <mat-label>Pay from wallet</mat-label>
+    <mat-select [value]="selectedWallet()?.pubkey" (valueChange)="onWalletSelected($event)">
+      @for (wallet of walletOptions(); track wallet.pubkey) {
+      <mat-option [value]="wallet.pubkey">
+        {{ wallet.name }}@if (wallet.isPrimary) { (primary)}
+      </mat-option>
+      }
+    </mat-select>
+  </mat-form-field>
+  }
+
+  @if (paymentError()) {
+  <div class="error-message">
+    <mat-icon>error_outline</mat-icon>
+    <span>{{ paymentError() }}</span>
+  </div>
+  }
+
+  <div class="dialog-actions">
+    <button mat-button type="button" (click)="cancel()">Cancel</button>
+    <button mat-flat-button type="button" (click)="sendPayment()"
+      [disabled]="!satsControl.value || satsControl.invalid || isSending() || !lightningAddress() || !hasWallet()">
+      @if (isSending()) {
+      <mat-spinner diameter="18"></mat-spinner>
+      <span>Sending...</span>
+      } @else {
+      <ng-container>
+        <mat-icon>bolt</mat-icon>
+        <span>Send Payment</span>
+      </ng-container>
+      }
+    </button>
+  </div>
+  } @else {
+  <div class="success-state">
+    <mat-icon class="success-icon">check_circle</mat-icon>
+    <span class="success-text">Payment sent!</span>
+  </div>
+  }
+
+  @if (!hasWallet()) {
+  <div class="no-wallet-hint">
+    <mat-icon>info_outline</mat-icon>
+    <span>Connect a wallet in Settings to send payments</span>
+  </div>
+  }
+</div>

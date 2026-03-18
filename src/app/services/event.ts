@@ -95,6 +95,8 @@ export interface ThreadData {
   parents: Event[];
   isThreadRoot: boolean;
   rootEvent: Event | null;
+  /** True once reply fetching is complete (even if no replies were found) */
+  repliesLoaded?: boolean;
 }
 
 export interface DeepResolutionResult {
@@ -2004,6 +2006,7 @@ export class EventService {
         parents,
         isThreadRoot,
         rootEvent,
+        repliesLoaded: true,
       };
 
       // Finally wait for reactions and yield complete data
@@ -2016,6 +2019,7 @@ export class EventService {
         parents,
         isThreadRoot,
         rootEvent,
+        repliesLoaded: true,
       };
 
       return finalData;
@@ -2054,6 +2058,7 @@ export class EventService {
           parents: [],
           isThreadRoot,
           rootEvent: isThreadRoot ? event : null,
+          repliesLoaded: true,
         };
 
         return finalData;
@@ -2067,6 +2072,7 @@ export class EventService {
           parents: [],
           isThreadRoot,
           rootEvent: isThreadRoot ? event : null,
+          repliesLoaded: true,
         };
 
         return finalData;

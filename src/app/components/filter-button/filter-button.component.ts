@@ -2,8 +2,11 @@ import {
   Component,
   input,
   signal,
+  inject,
+  PLATFORM_ID,
   ChangeDetectionStrategy,
 } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
@@ -49,7 +52,8 @@ import { OverlayModule, ConnectedPosition } from '@angular/cdk/overlay';
       [cdkConnectedOverlayBackdropClass]="'cdk-overlay-transparent-backdrop'"
       (backdropClick)="closePanel()"
       [cdkConnectedOverlayPositions]="panelPositions"
-      [cdkConnectedOverlayPush]="true">
+      [cdkConnectedOverlayPush]="true"
+      [cdkConnectedOverlayWidth]="overlayWidth()">
       <ng-content></ng-content>
     </ng-template>
   `,
@@ -67,6 +71,8 @@ import { OverlayModule, ConnectedPosition } from '@angular/cdk/overlay';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class FilterButtonComponent {
+  private isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
+
   /** Whether the filter is in an active (non-default) state */
   active = input(false);
 
@@ -76,6 +82,9 @@ export class FilterButtonComponent {
   /** Whether the overlay panel is open */
   panelOpen = signal(false);
 
+  /** Overlay pane width - full width on small screens, unset on larger */
+  overlayWidth = signal<string | number>('');
+
   /** CDK overlay positioning */
   panelPositions: ConnectedPosition[] = [
     { originX: 'end', originY: 'bottom', overlayX: 'end', overlayY: 'top', offsetY: 8 },
@@ -84,6 +93,10 @@ export class FilterButtonComponent {
   ];
 
   togglePanel(): void {
+    if (this.isBrowser) {
+      const vw = window.innerWidth;
+      this.overlayWidth.set(vw <= 480 ? vw - 32 : '');
+    }
     this.panelOpen.update(v => !v);
   }
 
