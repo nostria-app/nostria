@@ -170,6 +170,14 @@ export class InlineReplyEditorComponent implements AfterViewInit, OnDestroy {
   });
 
   constructor() {
+    // Hide mobile nav when mention picker is visible so it doesn't overlap
+    effect(() => {
+      const isVisible = this.mentionConfig() !== null;
+      if (this.layout.isHandset()) {
+        this.layout.hideMobileNav.set(isVisible);
+      }
+    });
+
     // React to replyToEvent changes (when navigating between events)
     effect(() => {
       const event = this.replyToEvent();
@@ -204,6 +212,8 @@ export class InlineReplyEditorComponent implements AfterViewInit, OnDestroy {
     if (this.publishSubscription) {
       this.publishSubscription.unsubscribe();
     }
+    // Restore mobile nav if it was hidden by mention picker
+    this.layout.hideMobileNav.set(false);
   }
 
   // ===============================
