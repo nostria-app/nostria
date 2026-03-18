@@ -371,6 +371,34 @@ export class NwcService {
   }
 
   /**
+   * Pay a BOLT-11 invoice using a specific wallet's cached NWC client.
+   *
+   * @param invoice - BOLT-11 invoice string
+   * @param walletPubkey - The wallet to pay with
+   * @returns Payment result with preimage
+   */
+  async payInvoice(
+    invoice: string,
+    walletPubkey: string
+  ): Promise<{ preimage?: string }> {
+    const walletsMap = this.walletsService.wallets();
+    const wallet = walletsMap[walletPubkey];
+    if (!wallet) {
+      throw new Error('Wallet not found');
+    }
+
+    const client = await this.getNwcClient(wallet);
+    if (!client) {
+      throw new Error('No wallet connection available');
+    }
+
+    const result = await client.payInvoice({ invoice });
+    return {
+      preimage: typeof result.preimage === 'string' ? result.preimage : undefined,
+    };
+  }
+
+  /**
    * Lookup a specific invoice across all connected wallets.
    * Returns the transaction state from whichever wallet recognizes the invoice.
    * Also returns the wallet pubkey that owns the invoice for efficient future lookups.

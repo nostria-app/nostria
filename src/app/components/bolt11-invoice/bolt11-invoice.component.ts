@@ -54,8 +54,10 @@ export class Bolt11InvoiceComponent implements OnInit, OnDestroy {
   private isPolling = false;
   // Once a wallet recognizes the invoice, cache its pubkey for efficient subsequent lookups
   private ownerWalletPubkey: string | null = null;
-  // If no wallet recognizes the invoice on the first lookup, don't poll again
   private pollingStopped = false;
+  // Count consecutive "not recognized" results to stop after a reasonable limit
+  private notRecognizedCount = 0;
+  private readonly maxNotRecognized = 3;
 
   // Terminal states that stop polling
   private readonly terminalStates: InvoiceState[] = ['settled', 'failed', 'accepted', 'expired'];
@@ -156,6 +158,7 @@ export class Bolt11InvoiceComponent implements OnInit, OnDestroy {
       if (result) {
         // Cache the owning wallet for future polls
         this.ownerWalletPubkey = result.walletPubkey;
+        this.notRecognizedCount = 0;
 
         const state = (result.transaction.state as InvoiceState) ?? 'unknown';
         this.invoiceState.set(state);
@@ -164,9 +167,13 @@ export class Bolt11InvoiceComponent implements OnInit, OnDestroy {
           this.stopPolling();
         }
       } else {
-        // No wallet recognized this invoice — stop polling.
-        // Sender-side gets instant feedback via the Pay dialog's afterClosed$.
-        this.stopPolling();
+        // No wallet recognized this invoice yet — keep trying up to a limit.
+        // The wallet may not have indexed the invoice yet, or the component
+        // may have been recreated after the invoice was already created.
+        this.notRecognizedCount++;
+        if (this.notRecognizedCount >= this.maxNotRecognized) {
+          this.stopPolling();
+        }
       }
     } catch (err) {
       // Fatal error — stop polling

@@ -7,6 +7,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { CustomDialogRef } from '../../services/custom-dialog.service';
 import { Wallets } from '../../services/wallets';
+import { NwcService } from '../../services/nwc.service';
 
 export interface PayInvoiceDialogData {
   invoice: string;
@@ -24,7 +25,6 @@ export interface PayInvoiceDialogResult {
 interface WalletOption {
   pubkey: string;
   name: string;
-  connectionString: string;
   isPrimary: boolean;
 }
 
@@ -44,6 +44,7 @@ interface WalletOption {
 export class PayInvoiceDialogComponent {
   private snackBar = inject(MatSnackBar);
   private wallets = inject(Wallets);
+  private nwcService = inject(NwcService);
   dialogRef = inject(CustomDialogRef);
 
   data!: PayInvoiceDialogData;
@@ -59,7 +60,6 @@ export class PayInvoiceDialogComponent {
     return Object.entries(walletsMap).map(([pubkey, wallet]) => ({
       pubkey,
       name: wallet.name || pubkey.substring(0, 8) + '...',
-      connectionString: wallet.connections[0],
       isPrimary: wallet.isPrimary ?? false,
     }));
   });
@@ -134,16 +134,11 @@ export class PayInvoiceDialogComponent {
 
     try {
       const wallet = this.selectedWallet();
-      if (!wallet?.connectionString) {
+      if (!wallet) {
         throw new Error('No wallet connection available');
       }
 
-      const { NWCClient } = await import('@getalby/sdk');
-      const nwcClient = new NWCClient({
-        nostrWalletConnectUrl: wallet.connectionString,
-      });
-
-      const result = await nwcClient.payInvoice({ invoice: this.data.invoice });
+      const result = await this.nwcService.payInvoice(this.data.invoice, wallet.pubkey);
 
       this.paymentSuccess.set(true);
       this.snackBar.open(
@@ -160,11 +155,23 @@ export class PayInvoiceDialogComponent {
       setTimeout(() => {
         this.dialogRef.close({
           success: true,
-          preimage: typeof result.preimage === 'string' ? result.preimage : undefined,
+          preimage: result.preimage,
         } as PayInvoiceDialogResult);
       }, 1500);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Payment failed. Please try again.';
+
+      // If the invoice was already paid, treat it as success
+      if (message.toLowerCase().includes('already been paid') || message.toLowerCase().includes('already paid')) {
+        this.paymentSuccess.set(true);
+        setTimeout(() => {
+          this.dialogRef.close({
+            success: true,
+          } as PayInvoiceDialogResult);
+        }, 1500);
+        return;
+      }
+
       this.paymentError.set(message);
       this.snackBar.open(message, 'Dismiss', {
         duration: 5000,
