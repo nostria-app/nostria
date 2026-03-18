@@ -607,6 +607,8 @@ export class EventPageComponent {
   async loadEvent(nevent: string) {
     // this.logger.info('loadEvent called with nevent:', nevent);
 
+    let repliesLoadingTimeout: ReturnType<typeof setTimeout> | null = null;
+
     try {
       // Increment load generation to cancel any stale auto-scroll operations
       this.currentLoadGeneration++;
@@ -618,6 +620,9 @@ export class EventPageComponent {
       this.isLoading.set(true);
       this.isLoadingParents.set(true);
       this.isLoadingReplies.set(true);
+
+      // Cap the replies loading indicator at 3 seconds — don't make users wait forever
+      repliesLoadingTimeout = setTimeout(() => this.isLoadingReplies.set(false), 3000);
       this.error.set(null);
       this.showCompletionStatus.set(false);
       this.deepResolutionProgress.set('');
@@ -750,6 +755,7 @@ export class EventPageComponent {
       }
     } finally {
       // Ensure all loading states are cleared
+      if (repliesLoadingTimeout) clearTimeout(repliesLoadingTimeout);
       this.isLoading.set(false);
       this.isLoadingParents.set(false);
       this.isLoadingReplies.set(false);

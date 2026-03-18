@@ -100,17 +100,12 @@
 
 .loading-status {
   display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 16px;
-  margin: 16px 0;
-  background-color: var(--mat-sys-surface-container-low);
-  border-radius: 8px;
-  font-size: var(--text-sm);
-  color: var(--mat-sys-on-surface-variant);
+  justify-content: center;
+  padding: 12px 0;
+  margin: 8px 0;
 
   mat-spinner {
-    opacity: 0.7;
+    opacity: 0.4;
   }
 }
 
