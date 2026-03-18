@@ -206,7 +206,17 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   private destroyRef = inject(DestroyRef);
 
   private shouldNavigateAfterPublish(): boolean {
-    return this.data?.navigateOnPublish !== false;
+    if (this.data?.navigateOnPublish === false) {
+      return false;
+    }
+
+    // Don't navigate away when posting a reply — the thread view's
+    // publishEventBus subscription will add the reply in-place.
+    if (this.data?.replyTo) {
+      return false;
+    }
+
+    return true;
   }
 
   @ViewChild('contentTextarea')
