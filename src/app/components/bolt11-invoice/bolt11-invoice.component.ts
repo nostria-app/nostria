@@ -1,4 +1,5 @@
-import { Component, input, signal, inject } from '@angular/core';
+import { Component, input, signal, inject, computed, PLATFORM_ID } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -8,6 +9,16 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { OverlayModule, Overlay, OverlayRef } from '@angular/cdk/overlay';
 import { ComponentPortal } from '@angular/cdk/portal';
 import { QrCodeComponent } from '../qr-code/qr-code.component';
+import { CustomDialogService } from '../../services/custom-dialog.service';
+import { PayInvoiceDialogComponent, PayInvoiceDialogData } from '../pay-invoice-dialog/pay-invoice-dialog.component';
+
+interface DecodedInvoiceData {
+  paymentHash: string;
+  satoshi: number;
+  timestamp: number;
+  expiry: number | undefined;
+  description: string | undefined;
+}
 
 @Component({
   selector: 'app-bolt11-invoice',
@@ -21,9 +32,46 @@ export class Bolt11InvoiceComponent {
   private clipboard = inject(Clipboard);
   private snackBar = inject(MatSnackBar);
   private overlay = inject(Overlay);
+  private customDialog = inject(CustomDialogService);
+  private isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
 
   showQrCode = signal(false);
   private overlayRef: OverlayRef | null = null;
+
+  // Decoded invoice data
+  decoded = signal<DecodedInvoiceData | null>(null);
+  decodeAttempted = signal(false);
+
+  // Computed properties from decoded data
+  amountSats = computed(() => this.decoded()?.satoshi ?? 0);
+  description = computed(() => this.decoded()?.description);
+  isExpired = computed(() => {
+    const d = this.decoded();
+    if (!d || !d.expiry) return false;
+    const expiryTime = d.timestamp + d.expiry;
+    return Math.floor(Date.now() / 1000) > expiryTime;
+  });
+  expiryDate = computed(() => {
+    const d = this.decoded();
+    if (!d || !d.expiry) return null;
+    return new Date((d.timestamp + d.expiry) * 1000);
+  });
+
+  /**
+   * Decode the invoice on initialization.
+   * Uses dynamic import so @getalby/lightning-tools is not in the main bundle.
+   */
+  async ngOnInit(): Promise<void> {
+    try {
+      const { decodeInvoice } = await import('@getalby/lightning-tools');
+      const result = decodeInvoice(this.invoice());
+      this.decoded.set(result);
+    } catch {
+      // Decode failed silently — the component will show the truncated invoice string
+    } finally {
+      this.decodeAttempted.set(true);
+    }
+  }
 
   /**
    * Get truncated invoice string for display
@@ -42,6 +90,13 @@ export class Bolt11InvoiceComponent {
   }
 
   /**
+   * Format sats for display
+   */
+  formatSats(sats: number): string {
+    return sats.toLocaleString();
+  }
+
+  /**
    * Copy invoice to clipboard
    */
   copyInvoice(): void {
@@ -57,10 +112,35 @@ export class Bolt11InvoiceComponent {
   }
 
   /**
-   * Open invoice in lightning wallet
+   * Open invoice in lightning wallet via lightning: URL scheme
    */
   openInWallet(): void {
-    window.location.href = this.getLightningUrl();
+    if (this.isBrowser) {
+      window.location.href = this.getLightningUrl();
+    }
+  }
+
+  /**
+   * Open the Pay Invoice dialog
+   */
+  openPayDialog(): void {
+    const d = this.decoded();
+    const dialogRef = this.customDialog.open(PayInvoiceDialogComponent, {
+      title: 'Pay Invoice',
+      width: '450px',
+      data: {
+        invoice: this.invoice(),
+        amountSats: d?.satoshi ?? 0,
+        description: d?.description,
+        expiry: d?.expiry,
+        timestamp: d?.timestamp,
+      } as PayInvoiceDialogData,
+    });
+
+    // The dialog component has an initialize() method
+    if (dialogRef.componentInstance && typeof dialogRef.componentInstance.initialize === 'function') {
+      dialogRef.componentInstance.initialize();
+    }
   }
 
   /**
@@ -170,20 +250,7 @@ export class Bolt11InvoiceComponent {
    * Check if device is touch-enabled
    */
   private isTouchDevice(): boolean {
+    if (!this.isBrowser) return false;
     return 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-  }
-
-  /**
-   * Get display label
-   */
-  getTypeLabel(): string {
-    return 'BOLT11 Invoice';
-  }
-
-  /**
-   * Get icon
-   */
-  getTypeIcon(): string {
-    return 'bolt';
   }
 }

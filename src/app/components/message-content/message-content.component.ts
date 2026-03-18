@@ -32,6 +32,7 @@ import { NoteContentComponent } from '../content/note-content/note-content.compo
 import { PhotoEventComponent } from '../event-types/photo-event.component';
 import { EventHeaderComponent } from '../event/header/header.component';
 import { InlineVideoPlayerComponent } from '../inline-video-player/inline-video-player.component';
+import { Bolt11InvoiceComponent } from '../bolt11-invoice/bolt11-invoice.component';
 import { AgoPipe } from '../../pipes/ago.pipe';
 import { TimestampPipe } from '../../pipes/timestamp.pipe';
 import { NostrRecord } from '../../interfaces';
@@ -42,7 +43,7 @@ const MUSIC_PLAYLIST_KIND = 34139;
 const EMOJI_SET_KIND = 30030;
 
 interface ContentPart {
-  type: 'text' | 'url' | 'image' | 'video' | 'npub' | 'nprofile' | 'note' | 'nevent' | 'naddr' | 'linebreak' | 'emoji';
+  type: 'text' | 'url' | 'image' | 'video' | 'npub' | 'nprofile' | 'note' | 'nevent' | 'naddr' | 'linebreak' | 'emoji' | 'bolt11';
   content: string;
   pubkey?: string;
   eventId?: string;
@@ -83,6 +84,7 @@ interface EventMention {
     PhotoEventComponent,
     EventHeaderComponent,
     InlineVideoPlayerComponent,
+    Bolt11InvoiceComponent,
     AgoPipe,
     TimestampPipe,
   ],
@@ -102,6 +104,10 @@ interface EventMention {
         </div>
       } @else if (part.type === 'url') {
         <a class="message-link" [href]="part.content" target="_blank" rel="noopener noreferrer">{{ getDisplayUrl(part.content) }}</a>
+      } @else if (part.type === 'bolt11') {
+        <div class="bolt11-container">
+          <app-bolt11-invoice [invoice]="part.content"></app-bolt11-invoice>
+        </div>
       } @else if (part.type === 'npub' || part.type === 'nprofile') {
         <a class="nostr-mention" (click)="onProfileClick($event, part.pubkey!)">&#64;<app-profile-display-name [pubkey]="part.pubkey!" /></a>
       } @else if (part.type === 'note' || part.type === 'nevent') {
@@ -246,6 +252,12 @@ interface EventMention {
         display: block;
         max-height: 400px;
       }
+    }
+
+    .bolt11-container {
+      display: block;
+      margin: 4px 0;
+      max-width: 100%;
     }
     
     .nostr-mention {
@@ -595,8 +607,8 @@ export class MessageContentComponent {
 
     const parts: ContentPart[] = [];
 
-    // Split by nostr URIs and URLs
-    const combinedRegex = /((?:nostr:)?(?:npub|nprofile|note|nevent|naddr)1(?:(?!(?:npub|nprofile|note|nevent|naddr)1)[a-zA-Z0-9])+)|(https?:\/\/[^\s<>"{}|\\^`\[\]]+)/g;
+    // Split by nostr URIs, URLs, and BOLT-11 invoices
+    const combinedRegex = /((?:nostr:)?(?:npub|nprofile|note|nevent|naddr)1(?:(?!(?:npub|nprofile|note|nevent|naddr)1)[a-zA-Z0-9])+)|(https?:\/\/[^\s<>"{}|\\^`\[\]]+)|((?:lnbc|lntb|lnbcrt)[a-z0-9]+)/gi;
 
     let lastIndex = 0;
     let match: RegExpExecArray | null;
@@ -647,6 +659,13 @@ export class MessageContentComponent {
           lastIndex = match.index + cleanUrl.length;
           continue;
         }
+      } else if (match[3]) {
+        // It's a BOLT-11 invoice
+        parts.push({
+          type: 'bolt11',
+          content: fullMatch.toLowerCase(),
+          id: this.partIdCounter++,
+        });
       }
 
       lastIndex = match.index + fullMatch.length;

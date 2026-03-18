@@ -1,0 +1,86 @@
+<div dialog-content class="pay-invoice-dialog">
+  @if (!paymentSuccess()) {
+  <div class="invoice-details">
+    <div class="amount-display">
+      <mat-icon class="amount-icon">bolt</mat-icon>
+      <span class="amount-value">{{ formatSats(data.amountSats) }}</span>
+      <span class="amount-unit">sats</span>
+    </div>
+
+    @if (data.description) {
+    <div class="detail-row">
+      <mat-icon>description</mat-icon>
+      <span class="detail-label">Memo</span>
+      <span class="detail-value">{{ data.description }}</span>
+    </div>
+    }
+
+    @if (expiryDate()) {
+    <div class="detail-row" [class.expired]="isExpired()">
+      <mat-icon>{{ isExpired() ? 'timer_off' : 'timer' }}</mat-icon>
+      <span class="detail-label">{{ isExpired() ? 'Expired' : 'Expires' }}</span>
+      <span class="detail-value">{{ expiryDate()!.toLocaleString() }}</span>
+    </div>
+    }
+
+    @if (isExpired()) {
+    <div class="expired-warning">
+      <mat-icon>warning</mat-icon>
+      <span>This invoice has expired and can no longer be paid.</span>
+    </div>
+    }
+  </div>
+
+  @if (hasMultipleWallets()) {
+  <mat-form-field appearance="outline" class="wallet-field">
+    <mat-label>Pay from wallet</mat-label>
+    <mat-select [value]="selectedWallet()?.pubkey" (valueChange)="onWalletSelected($event)">
+      @for (wallet of walletOptions(); track wallet.pubkey) {
+      <mat-option [value]="wallet.pubkey">
+        {{ wallet.name }}@if (wallet.isPrimary) { (primary)}
+      </mat-option>
+      }
+    </mat-select>
+  </mat-form-field>
+  }
+
+  @if (paymentError()) {
+  <div class="error-message">
+    <mat-icon>error_outline</mat-icon>
+    <span>{{ paymentError() }}</span>
+  </div>
+  }
+
+  @if (!hasWallet()) {
+  <div class="no-wallet-hint">
+    <mat-icon>info_outline</mat-icon>
+    <span>Connect a wallet in Settings to pay invoices</span>
+  </div>
+  }
+  } @else {
+  <div class="success-state">
+    <mat-icon class="success-icon">check_circle</mat-icon>
+    <span class="success-text">Payment sent!</span>
+  </div>
+  }
+</div>
+
+<div dialog-actions>
+  @if (!paymentSuccess()) {
+  <button mat-button type="button" (click)="cancel()">Cancel</button>
+  <button mat-flat-button type="button" (click)="payInvoice()"
+    [disabled]="isPaying() || isExpired() || !hasWallet()">
+    @if (isPaying()) {
+    <mat-spinner diameter="18"></mat-spinner>
+    <span>Paying...</span>
+    } @else {
+    <ng-container>
+      <mat-icon>bolt</mat-icon>
+      <span>Pay {{ formatSats(data.amountSats) }} sats</span>
+    </ng-container>
+    }
+  </button>
+  } @else {
+  <button mat-button type="button" (click)="cancel()">Close</button>
+  }
+</div>

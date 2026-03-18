@@ -1,0 +1,118 @@
+<div dialog-content class="request-money-dialog">
+  <div class="recipient-section">
+    <app-user-profile [pubkey]="data.recipientPubkey" />
+  </div>
+
+  <mat-divider></mat-divider>
+
+  @if (!invoiceGenerated()) {
+  <div class="amount-section">
+    <div class="quick-amounts">
+      @for (amount of quickAmounts; track amount) {
+      <button mat-stroked-button type="button" class="quick-amount-btn"
+        [class.selected]="satsControl.value === amount" (click)="selectQuickAmount(amount)">
+        <span class="quick-amount-content">
+          <span class="quick-amount-sats">{{ formatSats(amount) }} sats</span>
+          @if (satsToUsd(amount); as usd) {
+          <span class="quick-amount-usd">{{ usd }}</span>
+          }
+        </span>
+      </button>
+      }
+    </div>
+
+    <div class="input-fields">
+      <mat-form-field appearance="outline" class="amount-field">
+        <mat-label>Amount in sats</mat-label>
+        <input matInput type="number" [formControl]="satsControl" placeholder="0" min="1"
+          (focus)="setInputMode('sats')" (input)="onSatsChanged()" />
+        <span matSuffix class="input-suffix">sats</span>
+      </mat-form-field>
+
+      <div class="conversion-indicator">
+        @if (isConverting()) {
+        <mat-spinner diameter="14"></mat-spinner>
+        } @else {
+        <mat-icon>swap_vert</mat-icon>
+        }
+      </div>
+
+      <mat-form-field appearance="outline" class="amount-field">
+        <mat-label>Amount in USD</mat-label>
+        <input matInput type="number" [formControl]="dollarsControl" placeholder="0.00" min="0.01" step="0.01"
+          (focus)="setInputMode('dollars')" (input)="onDollarsChanged()" />
+        <span matSuffix class="input-suffix">USD</span>
+      </mat-form-field>
+    </div>
+
+    <mat-form-field appearance="outline" class="memo-field">
+      <mat-label>Memo (optional)</mat-label>
+      <input matInput [formControl]="memoControl" placeholder="What is this for?" />
+    </mat-form-field>
+
+    <div class="expiry-section">
+      <span class="expiry-label">Invoice expires in</span>
+      <div class="expiry-options">
+        @for (option of expiryOptions; track option.seconds) {
+        <button mat-stroked-button type="button" class="expiry-btn"
+          [class.selected]="selectedExpiry() === option.seconds" (click)="onExpirySelected(option.seconds)">
+          {{ option.label }}
+        </button>
+        }
+      </div>
+    </div>
+  </div>
+
+  @if (hasMultipleWallets()) {
+  <mat-form-field appearance="outline" class="wallet-field">
+    <mat-label>Receive to wallet</mat-label>
+    <mat-select [value]="selectedWallet()?.pubkey" (valueChange)="onWalletSelected($event)">
+      @for (wallet of walletOptions(); track wallet.pubkey) {
+      <mat-option [value]="wallet.pubkey">
+        {{ wallet.name }}@if (wallet.isPrimary) { (primary)}
+      </mat-option>
+      }
+    </mat-select>
+  </mat-form-field>
+  }
+
+  @if (generationError()) {
+  <div class="error-message">
+    <mat-icon>error_outline</mat-icon>
+    <span>{{ generationError() }}</span>
+  </div>
+  }
+  } @else {
+  <div class="success-state">
+    <mat-icon class="success-icon">check_circle</mat-icon>
+    <span class="success-text">Invoice sent!</span>
+  </div>
+  }
+
+  @if (!hasWallet()) {
+  <div class="no-wallet-hint">
+    <mat-icon>info_outline</mat-icon>
+    <span>Connect a wallet in Settings to request payments</span>
+  </div>
+  }
+</div>
+
+<div dialog-actions>
+  @if (!invoiceGenerated()) {
+  <button mat-button type="button" (click)="cancel()">Cancel</button>
+  <button mat-flat-button type="button" (click)="generateInvoice()"
+    [disabled]="!satsControl.value || satsControl.invalid || isGenerating() || !hasWallet()">
+    @if (isGenerating()) {
+    <mat-spinner diameter="18"></mat-spinner>
+    <span>Generating...</span>
+    } @else {
+    <ng-container>
+      <mat-icon>receipt_long</mat-icon>
+      <span>Request Payment</span>
+    </ng-container>
+    }
+  </button>
+  } @else {
+  <button mat-button type="button" (click)="cancel()">Close</button>
+  }
+</div>

@@ -1475,6 +1475,36 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   /**
+   * Open Request Money dialog to generate a BOLT-11 invoice and send it to the chat recipient
+   */
+  async openRequestMoneyDialog(): Promise<void> {
+    const recipientPubkey = this.selectedChat()?.pubkey;
+    if (!recipientPubkey) {
+      this.snackBar.open('No chat selected', 'Dismiss', {
+        duration: 3000,
+        horizontalPosition: 'center',
+        verticalPosition: 'bottom',
+      });
+      return;
+    }
+
+    const { RequestMoneyDialogComponent } = await import('../../components/request-money-dialog/request-money-dialog.component');
+    type RequestMoneyDialogResult = import('../../components/request-money-dialog/request-money-dialog.component').RequestMoneyDialogResult;
+
+    const dialogRef = this.customDialog.open<typeof RequestMoneyDialogComponent.prototype, RequestMoneyDialogResult>(RequestMoneyDialogComponent, {
+      title: 'Request Payment',
+      width: '450px',
+      maxWidth: '95vw',
+      data: {
+        recipientPubkey,
+      },
+    });
+
+    // Initialize the dialog after it's created
+    dialogRef.componentInstance.initialize();
+  }
+
+  /**
    * Handle file selection from the file input
    */
   onMediaFileSelected(event: Event): void {

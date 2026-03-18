@@ -4,11 +4,17 @@
   background: linear-gradient(135deg, #fff9c4 0%, var(--mat-sys-surface-container, #f5f5f5) 100%);
   border: 2px solid #fdd835;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+
+  &.expired {
+    opacity: 0.7;
+    border-color: var(--mat-sys-outline-variant, rgba(0, 0, 0, 0.12));
+    background: linear-gradient(135deg, var(--mat-sys-surface-container, #f5f5f5) 0%, var(--mat-sys-surface-container, #f5f5f5) 100%);
+  }
 }
 
 .bolt11-header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 16px;
   padding: 16px;
   border-bottom: 1px solid var(--mat-sys-outline-variant, rgba(0, 0, 0, 0.12));
@@ -23,6 +29,7 @@
   border-radius: 50%;
   background: #fdd835;
   color: #000000;
+  flex-shrink: 0;
 
   mat-icon {
     font-size: 28px;
@@ -36,7 +43,41 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
-  min-width: 0; // Allow text truncation
+  min-width: 0;
+}
+
+.bolt11-amount {
+  font-size: 1.25rem;
+  color: var(--mat-sys-on-surface, #000000);
+}
+
+.bolt11-description {
+  font-size: 0.85rem;
+  color: var(--mat-sys-on-surface-variant, #666666);
+  word-break: break-word;
+}
+
+.bolt11-expiry {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.75rem;
+  color: var(--mat-sys-on-surface-variant, #666666);
+  margin-top: 2px;
+
+  mat-icon {
+    font-size: 14px;
+    width: 14px;
+    height: 14px;
+  }
+
+  &.expired {
+    color: var(--mat-sys-error, #b00020);
+
+    mat-icon {
+      color: var(--mat-sys-error, #b00020);
+    }
+  }
 }
 
 .bolt11-title {
@@ -47,13 +88,9 @@
 .bolt11-link {
   font-size: 0.875rem;
   color: #f9a825;
-  text-decoration: none;
   word-break: break-all;
   font-family: monospace;
-
-  &:hover {
-    text-decoration: underline;
-  }
+  cursor: default;
 }
 
 .bolt11-actions {
@@ -77,8 +114,21 @@
       height: 18px;
     }
 
-    &:hover {
+    &:hover:not(:disabled) {
       background: #f9a825;
+    }
+
+    &:disabled {
+      opacity: 0.5;
+    }
+  }
+
+  .open-wallet-button {
+    color: var(--mat-sys-on-surface-variant, #666666);
+
+    &:hover {
+      color: #f9a825;
+      background: rgba(253, 216, 53, 0.1);
     }
   }
 
@@ -106,6 +156,11 @@
   .bolt11-card {
     background: linear-gradient(135deg, #3e3a1f 0%, var(--mat-sys-surface-container, #2e2e2e) 100%);
     border-color: #fdd835;
+
+    &.expired {
+      border-color: var(--mat-sys-outline-variant, rgba(255, 255, 255, 0.12));
+      background: linear-gradient(135deg, var(--mat-sys-surface-container, #2e2e2e) 0%, var(--mat-sys-surface-container, #2e2e2e) 100%);
+    }
   }
 
   .bolt11-icon {
@@ -125,7 +180,7 @@
     background: #fdd835;
     color: #000000;
 
-    &:hover {
+    &:hover:not(:disabled) {
       background: #f9a825;
     }
   }

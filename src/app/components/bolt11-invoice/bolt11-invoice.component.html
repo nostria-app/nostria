@@ -1,21 +1,43 @@
-<mat-card class="bolt11-card">
+<mat-card class="bolt11-card" [class.expired]="isExpired()">
   <div class="bolt11-header">
     <div class="bolt11-icon">
-      <mat-icon>{{ getTypeIcon() }}</mat-icon>
+      <mat-icon>bolt</mat-icon>
     </div>
     <div class="bolt11-info">
-      <div class="bolt11-title">{{ getTypeLabel() }}</div>
-      <a class="bolt11-link" [href]="getLightningUrl()" [matTooltip]="invoice()">
+      @if (decoded(); as d) {
+      <div class="bolt11-amount">{{ formatSats(d.satoshi) }} sats</div>
+      @if (d.description) {
+      <div class="bolt11-description">{{ d.description }}</div>
+      }
+      @if (isExpired()) {
+      <div class="bolt11-expiry expired">
+        <mat-icon>timer_off</mat-icon>
+        <span>Expired</span>
+      </div>
+      } @else if (expiryDate(); as expDate) {
+      <div class="bolt11-expiry">
+        <mat-icon>timer</mat-icon>
+        <span>Expires {{ expDate.toLocaleString() }}</span>
+      </div>
+      }
+      } @else {
+      <div class="bolt11-title">BOLT11 Invoice</div>
+      <div class="bolt11-link" [matTooltip]="invoice()">
         {{ getTruncatedInvoice() }}
-      </a>
+      </div>
+      }
     </div>
   </div>
 
   <div class="bolt11-actions">
-    <a mat-raised-button [href]="getLightningUrl()" class="pay-button" matTooltip="Pay with Lightning wallet">
+    <button mat-raised-button class="pay-button" (click)="openPayDialog()" [disabled]="isExpired()"
+      matTooltip="Pay with connected wallet">
       <mat-icon>bolt</mat-icon>
       <span>Pay Invoice</span>
-    </a>
+    </button>
+    <button mat-icon-button (click)="openInWallet()" matTooltip="Open in external wallet" class="open-wallet-button">
+      <mat-icon>open_in_new</mat-icon>
+    </button>
     <button
       mat-icon-button
       class="qr-button"
