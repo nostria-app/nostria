@@ -199,6 +199,10 @@
       <div class="advanced-options-header">
         <mat-icon class="options-icon">settings</mat-icon>
         <span class="options-title">Advanced Options</span>
+        <span class="spacer"></span>
+        <button mat-icon-button type="button" class="close-advanced-options" (click)="toggleAdvancedOptions()" matTooltip="Close advanced options">
+          <mat-icon>close</mat-icon>
+        </button>
       </div>
 
       <!-- Upload Original Option -->
@@ -467,15 +471,19 @@
     (drop)="!showPreview() && !showAdvancedOptions() && onDrop($event)">
     <!-- Left side: Action buttons -->
     <div class="left-actions">
+      @if (showAdvancedOptions() && !inlineMode()) {
+      <button mat-button type="button" class="back-from-advanced" (click)="toggleAdvancedOptions()">
+        <mat-icon>arrow_back</mat-icon>
+        <span>Back</span>
+      </button>
+      } @else {
       @if (!inlineMode()) {
       <button mat-icon-button type="button" class="desktop-action action-priority-high" (click)="togglePreview()"
-        [color]="showPreview() ? 'primary' : ''" [disabled]="showAdvancedOptions()"
-        [class.button-disabled-visible]="showAdvancedOptions()" matTooltip="Toggle preview">
+        [color]="showPreview() ? 'primary' : ''" matTooltip="Toggle preview">
         <mat-icon>{{ showPreview() ? 'visibility_off' : 'visibility' }}</mat-icon>
       </button>
       <button mat-icon-button type="button" class="desktop-action action-priority-low" (click)="clearDraft()"
-        [disabled]="!isDirty() || showAdvancedOptions()"
-        [class.button-disabled-visible]="!isDirty() || showAdvancedOptions()" matTooltip="Clear draft">
+        [disabled]="!isDirty()" matTooltip="Clear draft">
         <mat-icon>delete_sweep</mat-icon>
       </button>
       }
@@ -638,13 +646,15 @@
 
         <button mat-menu-item (click)="toggleAdvancedOptions()">
           <mat-icon>settings</mat-icon>
-          <span>{{ showAdvancedOptions() ? 'Hide advanced options' : 'Advanced options' }}</span>
+          <span>Advanced options</span>
         </button>
       </mat-menu>
+      }
       }
     </div>
 
     <!-- Right side: PoW indicator and primary actions -->
+    @if (!showAdvancedOptions()) {
     <div class="right-actions">
       @if (powEnabled() && isPowMining()) {
       <div class="pow-progress-indicator">
@@ -670,12 +680,12 @@
           Reply
           } @else {
           <span>Publish</span>
-          <span class="publish-note-word"> Note</span>
           }
         </ng-container>
         }
       </button>
     </div>
+    }
   </div>
 </div>
 }

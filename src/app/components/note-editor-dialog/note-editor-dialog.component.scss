@@ -597,11 +597,6 @@
       .right-actions {
         gap: 6px;
 
-        .publish-button {
-          .publish-note-word {
-            display: none;
-          }
-        }
       }
     }
 
@@ -1066,6 +1061,14 @@
       font-size: 16px;
       font-weight: 500;
       color: var(--mat-sys-on-surface);
+    }
+
+    .spacer {
+      flex: 1;
+    }
+
+    .close-advanced-options {
+      margin: -8px -8px -8px 0;
     }
   }
 
@@ -1580,6 +1583,12 @@
       align-items: center;
       gap: 4px;
       flex: 0 0 auto; // Don't grow, just fit content
+    }
+
+    .back-from-advanced {
+      mat-icon {
+        margin-right: 4px;
+      }
     }
 
     .right-actions {
