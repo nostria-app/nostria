@@ -121,11 +121,23 @@ export class FollowingDataService {
 
   /**
    * Calculate the 'since' timestamp for RELAY fetching.
-   * Returns the start of the current 6-hour time window.
+   * Uses the last fetch timestamp when available so subsequent fetches only
+   * retrieve events newer than the previous query, avoiding redundant re-fetching
+   * of the same events on every reload. Falls back to the 6-hour window when
+   * there is no prior fetch or it happened more than 6 hours ago.
    */
   private calculateRelayFetchSinceTimestamp(): number {
     const now = Math.floor(Date.now() / 1000);
-    return now - this.TIME_WINDOW_SECONDS;
+    const windowStart = now - this.TIME_WINDOW_SECONDS;
+
+    const lastFetchMs = this.getLastFetchTimestamp();
+    if (lastFetchMs) {
+      const lastFetchSec = Math.floor(lastFetchMs / 1000);
+      // Use whichever is more recent: last fetch or the 6-hour window boundary
+      return Math.max(lastFetchSec, windowStart);
+    }
+
+    return windowStart;
   }
 
   /**
