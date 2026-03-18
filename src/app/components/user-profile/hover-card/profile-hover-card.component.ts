@@ -121,6 +121,11 @@ export class ProfileHoverCardComponent {
     return this.favoritesService.isFavorite(this.pubkey());
   });
 
+  isOwnProfile = computed(() => {
+    const myPubkey = this.accountState.pubkey();
+    return !!myPubkey && myPubkey === this.pubkey();
+  });
+
   trustEnabled = computed(() => this.trustService.isEnabled());
 
   // Computed to get available follow sets (sorted alphabetically)
@@ -388,6 +393,11 @@ export class ProfileHoverCardComponent {
       console.error('Failed to block user:', error);
       this.layout.toast('Failed to block user', 3000, 'error-snackbar');
     }
+  }
+
+  sendMessage(): void {
+    this.layout.openSendMessage(this.pubkey());
+    this.hoverCardService.closeHoverCard();
   }
 
   toggleFavorite(): void {

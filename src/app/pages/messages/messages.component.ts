@@ -1786,8 +1786,12 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
         throw new Error('You need to be logged in to send messages');
       }
 
-      // Ensure relays are discovered for the receiver
-      await this.userRelayService.ensureRelaysForPubkey(receiverPubkey);
+      // Ensure DM relays (kind 10050) are discovered for the receiver.
+      // This is critical for first-time conversations where relays haven't been cached yet.
+      await Promise.all([
+        this.userRelayService.ensureRelaysForPubkey(receiverPubkey),
+        this.userRelayService.ensureDmRelaysForPubkey(receiverPubkey),
+      ]);
 
       // Scroll to bottom for new outgoing messages
       this.scrollToBottom();
@@ -3574,40 +3578,33 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       // Uses kind 10050 DM relays only — does NOT fall back to all account relays (10002).
       // Returns true if at least one relay accepted the recipient's gift wrap.
       const publish = async (): Promise<{ success: boolean; failureReason?: string }> => {
-        const errors: string[] = [];
-
         if (isNoteToSelf) {
-          const results = await Promise.allSettled([
-            this.publishToUserDmRelays(signedGiftWrap, myPubkey),
-          ]);
-          const success = results.some(r => r.status === 'fulfilled');
-          if (!success) {
-            errors.push(...results.filter(r => r.status === 'rejected').map(r => (r as PromiseRejectedResult).reason?.message || 'Relay rejected'));
-            return { success: false, failureReason: errors.join('; ') || 'Failed to publish to DM relays' };
+          const dmSuccess = await this.publishToUserDmRelays(signedGiftWrap, myPubkey);
+          if (!dmSuccess) {
+            return { success: false, failureReason: 'Failed to publish to DM relays' };
           }
           return { success: true };
         } else {
           // Publish recipient's gift wrap to their DM relays (kind 10050)
-          // and to discovery relays as fallback
-          const recipientResults = await Promise.allSettled([
+          // and to discovery relays as fallback — run in parallel
+          const [dmSuccess, discoverySuccess] = await Promise.all([
             this.publishToUserDmRelays(signedGiftWrap, receiverPubkey),
             this.publishToDiscoveryRelays(signedGiftWrap),
           ]);
-          const recipientSuccess = recipientResults.some(r => r.status === 'fulfilled');
+          const recipientSuccess = dmSuccess || discoverySuccess;
 
-          // Publish sender's self-copy to own DM relays (kind 10050)
-          const selfResults = await Promise.allSettled([
+          // Publish sender's self-copy to own DM relays and discovery relays — fire and forget
+          Promise.all([
             this.publishToUserDmRelays(signedGiftWrap2!, myPubkey),
-          ]);
+            this.publishToDiscoveryRelays(signedGiftWrap2!),
+          ]).then(([selfDmSuccess, selfDiscoverySuccess]) => {
+            if (!selfDmSuccess && !selfDiscoverySuccess) {
+              this.logger.warn('Self-copy gift wrap failed to publish to any relay');
+            }
+          });
 
           if (!recipientSuccess) {
-            errors.push(...recipientResults.filter(r => r.status === 'rejected').map(r => (r as PromiseRejectedResult).reason?.message || 'Relay rejected'));
-            return { success: false, failureReason: errors.join('; ') || 'Failed to deliver to recipient\'s relays' };
-          }
-
-          // Log self-copy failures but don't treat as overall failure
-          if (selfResults.every(r => r.status === 'rejected')) {
-            this.logger.warn('Self-copy gift wrap failed to publish to own DM relays');
+            return { success: false, failureReason: 'Failed to deliver to recipient\'s DM relays and discovery relays' };
           }
 
           return { success: true };
@@ -3636,13 +3633,17 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
 
   /**
    * Publish a gift-wrapped DM to the recipient's DM relays (NIP-17)
-   * Uses kind 10050 relays if available, falls back to regular relays
+   * Uses kind 10050 relays if available, falls back to regular relays.
+   * Returns true if at least one relay accepted the event.
    */
-  private async publishToUserDmRelays(event: NostrEvent, pubkey: string): Promise<void> {
-    const promisesUser = this.userRelayService.publishToDmRelays(pubkey, event);
-
-    // Wait for all publish attempts to complete
-    await Promise.allSettled([promisesUser]);
+  private async publishToUserDmRelays(event: NostrEvent, pubkey: string): Promise<boolean> {
+    try {
+      const accepted = await this.userRelayService.publishToDmRelays(pubkey, event);
+      return accepted;
+    } catch (err) {
+      this.logger.error('publishToUserDmRelays failed:', err);
+      return false;
+    }
   }
 
   private async publishToUserRelays(event: NostrEvent, pubkey: string): Promise<void> {
@@ -3660,14 +3661,15 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   /**
-   * Publish to discovery relays as a fallback
-   * Discovery relays are popular relays that both sender and recipient might use
+   * Publish to discovery relays as a fallback.
+   * Discovery relays are popular relays that both sender and recipient might use.
+   * Returns true if at least one relay accepted the event.
    */
-  private async publishToDiscoveryRelays(event: NostrEvent): Promise<void> {
+  private async publishToDiscoveryRelays(event: NostrEvent): Promise<boolean> {
     const discoveryRelayUrls = this.discoveryRelay.getRelayUrls();
     if (discoveryRelayUrls.length === 0) {
       this.logger.debug('No discovery relays available for publishing');
-      return;
+      return false;
     }
 
     this.logger.debug('[MessagesComponent] Publishing to discovery relays:', discoveryRelayUrls);
@@ -3676,8 +3678,12 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     const pool = this.discoveryRelay.getPool();
     if (pool) {
       const publishResults = pool.publish(discoveryRelayUrls, event);
-      await Promise.allSettled(publishResults);
+      const results = await Promise.allSettled(publishResults);
+      const successCount = results.filter(r => r.status === 'fulfilled').length;
+      this.logger.debug(`[MessagesComponent] Discovery relay publish: ${successCount}/${results.length} succeeded`);
+      return successCount > 0;
     }
+    return false;
   }
 
   /**
@@ -3715,6 +3721,12 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       this.logger.debug('Creating new temporary chat');
       // For now, just switch to the chat view and let the user send the first message
       // The chat will be created when the first message is sent
+
+      // Pre-discover DM relays (kind 10050) for this new contact so sending is fast.
+      // This runs in the background — don't block the UI.
+      this.userRelayService.ensureDmRelaysForPubkey(pubkey).catch(err => {
+        this.logger.warn('Failed to pre-discover DM relays for new chat:', err);
+      });
 
       // Create a temporary chat object for UI purposes
       // New messages always use modern encryption (NIP-44)

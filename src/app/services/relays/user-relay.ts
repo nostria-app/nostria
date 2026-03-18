@@ -693,8 +693,9 @@ export class UserRelayService {
   /**
    * Publish an event to a user's DM relays (kind 10050 - NIP-17)
    * Use this when publishing gift-wrapped direct messages.
+   * Returns true if at least one relay accepted the event.
    */
-  async publishToDmRelays(pubkey: string, event: Event): Promise<void> {
+  async publishToDmRelays(pubkey: string, event: Event): Promise<boolean> {
     this.logger.debug(`[UserRelayService] publishToDmRelays called for pubkey: ${pubkey.slice(0, 16)}...`);
 
     // Use getUserDmRelaysForPublishing to get DM relays (kind 10050, falls back to regular)
@@ -704,7 +705,7 @@ export class UserRelayService {
 
     if (relayUrls.length === 0) {
       this.logger.warn(`[UserRelayService] No DM relays available for publishing for pubkey: ${pubkey.slice(0, 16)}...`);
-      return;
+      return false;
     }
 
     this.logger.info(`[UserRelayService] Publishing DM to ${relayUrls.length} relays for pubkey: ${pubkey.slice(0, 16)}...`, relayUrls);
@@ -751,6 +752,8 @@ export class UserRelayService {
     const successCount = results.filter(r => r.status === 'fulfilled').length;
     const failCount = results.filter(r => r.status === 'rejected').length;
     this.logger.debug(`[UserRelayService] DM publish results: ${successCount} succeeded, ${failCount} failed`);
+
+    return successCount > 0;
   }
 
   /**

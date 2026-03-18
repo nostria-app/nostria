@@ -37,6 +37,12 @@
       </button>
 
       <mat-menu #menu="matMenu">
+        @if (!isOwnProfile()) {
+        <button mat-menu-item (click)="sendMessage()">
+          <mat-icon>message</mat-icon>
+          <span>Send private message</span>
+        </button>
+        }
         <button mat-menu-item (click)="toggleFavorite()">
           <mat-icon>{{ isFavorite() ? 'heart_minus' : 'heart_plus' }}</mat-icon>
           <span>{{ isFavorite() ? 'Unfavorite' : 'Favorite' }}</span>
@@ -46,6 +52,7 @@
           <span>Add to list</span>
         </button>
         <mat-divider></mat-divider>
+        @if (!isOwnProfile()) {
         <button mat-menu-item (click)="reportProfile()">
           <mat-icon>flag</mat-icon>
           <span>Report profile</span>
@@ -54,6 +61,7 @@
           <mat-icon>block</mat-icon>
           <span>Block user</span>
         </button>
+        }
       </mat-menu>
 
       <!-- Submenu for Lists -->
