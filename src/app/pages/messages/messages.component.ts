@@ -3575,7 +3575,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       };
 
       // Return a publish function that handles all relay publishing in the background.
-      // Uses kind 10050 DM relays only — does NOT fall back to all account relays (10002).
+      // Uses kind 10050 DM relays only — discovery relays only accept kind 10002/3.
       // Returns true if at least one relay accepted the recipient's gift wrap.
       const publish = async (): Promise<{ success: boolean; failureReason?: string }> => {
         if (isNoteToSelf) {
@@ -3586,25 +3586,17 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
           return { success: true };
         } else {
           // Publish recipient's gift wrap to their DM relays (kind 10050)
-          // and to discovery relays as fallback — run in parallel
-          const [dmSuccess, discoverySuccess] = await Promise.all([
-            this.publishToUserDmRelays(signedGiftWrap, receiverPubkey),
-            this.publishToDiscoveryRelays(signedGiftWrap),
-          ]);
-          const recipientSuccess = dmSuccess || discoverySuccess;
+          const recipientSuccess = await this.publishToUserDmRelays(signedGiftWrap, receiverPubkey);
 
-          // Publish sender's self-copy to own DM relays and discovery relays — fire and forget
-          Promise.all([
-            this.publishToUserDmRelays(signedGiftWrap2!, myPubkey),
-            this.publishToDiscoveryRelays(signedGiftWrap2!),
-          ]).then(([selfDmSuccess, selfDiscoverySuccess]) => {
-            if (!selfDmSuccess && !selfDiscoverySuccess) {
-              this.logger.warn('Self-copy gift wrap failed to publish to any relay');
+          // Publish sender's self-copy to own DM relays — fire and forget
+          this.publishToUserDmRelays(signedGiftWrap2!, myPubkey).then(selfSuccess => {
+            if (!selfSuccess) {
+              this.logger.warn('Self-copy gift wrap failed to publish to own DM relays');
             }
           });
 
           if (!recipientSuccess) {
-            return { success: false, failureReason: 'Failed to deliver to recipient\'s DM relays and discovery relays' };
+            return { success: false, failureReason: 'Failed to deliver to recipient\'s DM relays' };
           }
 
           return { success: true };
@@ -3658,32 +3650,6 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
 
     // Wait for all publish attempts to complete
     await Promise.allSettled([promisesAccount]);
-  }
-
-  /**
-   * Publish to discovery relays as a fallback.
-   * Discovery relays are popular relays that both sender and recipient might use.
-   * Returns true if at least one relay accepted the event.
-   */
-  private async publishToDiscoveryRelays(event: NostrEvent): Promise<boolean> {
-    const discoveryRelayUrls = this.discoveryRelay.getRelayUrls();
-    if (discoveryRelayUrls.length === 0) {
-      this.logger.debug('No discovery relays available for publishing');
-      return false;
-    }
-
-    this.logger.debug('[MessagesComponent] Publishing to discovery relays:', discoveryRelayUrls);
-
-    // Use the SimplePool to publish directly to discovery relays
-    const pool = this.discoveryRelay.getPool();
-    if (pool) {
-      const publishResults = pool.publish(discoveryRelayUrls, event);
-      const results = await Promise.allSettled(publishResults);
-      const successCount = results.filter(r => r.status === 'fulfilled').length;
-      this.logger.debug(`[MessagesComponent] Discovery relay publish: ${successCount}/${results.length} succeeded`);
-      return successCount > 0;
-    }
-    return false;
   }
 
   /**
