@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal, computed } from '@angular/core';
+import { Component, OnInit, inject, signal, computed, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -59,6 +59,15 @@ export class RelaySetsComponent implements OnInit {
   editingSetDescription = signal('');
   editingSetRelays = signal('');
 
+  constructor() {
+    // React to background relay set updates from the service
+    effect(() => {
+      const sets = this.relayFeedsService.relaySets();
+      if (sets.length > 0) {
+        this.relaySets.set(sets);
+      }
+    });
+  }
   async ngOnInit() {
     this.twoColumnLayout.setSplitView();
     await this.loadData();

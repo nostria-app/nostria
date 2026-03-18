@@ -317,6 +317,14 @@ export class RelayFeedMenuComponent {
       }
     });
 
+    // React to background relay set updates from the service
+    effect(() => {
+      const sets = this.relayFeedsService.relaySets();
+      if (sets.length > 0) {
+        this.relaySets.set(sets);
+      }
+    });
+
     // Fetch info for relays only once on initialization, with a delay
     effect(() => {
       const relays = this.savedRelays();

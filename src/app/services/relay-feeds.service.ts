@@ -194,40 +194,95 @@ export class RelayFeedsService {
     return this.saveRelayFeeds([...DEFAULT_RELAYS]);
   }
 
+  // Signal for relay sets, updated from database and then from relays
+  relaySets = signal<RelaySet[]>([]);
+
   /**
    * Get relay sets for the current user (kind 30002)
+   * Returns cached results from database first, then updates from relays in the background.
    */
   async getRelaySets(pubkey: string): Promise<RelaySet[]> {
     try {
-      // Query for all kind 30002 events
-      const events = await this.accountRelay.getEventsByPubkeyAndKind(pubkey, RELAY_SET_KIND);
+      // Try to get from database first (fast, non-blocking)
+      const dbEvents = await this.database.getEventsByPubkeyAndKind(pubkey, RELAY_SET_KIND);
 
-      const sets: RelaySet[] = [];
+      if (dbEvents.length > 0) {
+        this.logger.debug('Found kind 30002 relay sets in database');
+        const sets = this.parseRelaySets(dbEvents);
+        this.relaySets.set(sets);
 
-      for (const event of events) {
-        const dTag = event.tags.find(tag => tag[0] === 'd')?.[1];
-        if (!dTag) continue;
+        // Update from relays in the background (non-blocking)
+        this.updateRelaySetsFromRelays(pubkey);
 
-        const name = event.tags.find(tag => tag[0] === 'title' || tag[0] === 'name')?.[1] || dTag;
-        const description = event.tags.find(tag => tag[0] === 'description')?.[1];
-        const relays = event.tags
-          .filter(tag => tag[0] === 'relay' && tag[1])
-          .map(tag => this.normalizeRelayUrl(tag[1]));
-
-        sets.push({
-          identifier: dTag,
-          name,
-          description,
-          relays,
-          eventId: event.id,
-          created_at: event.created_at,
-        });
+        return sets;
       }
 
+      // No cached events, must fetch from relays
+      const events = await this.accountRelay.getEventsByPubkeyAndKind(pubkey, RELAY_SET_KIND);
+
+      // Save fetched events to database for next time
+      for (const event of events) {
+        await this.database.saveEvent(event);
+      }
+
+      const sets = this.parseRelaySets(events);
+      this.relaySets.set(sets);
       return sets;
     } catch (error) {
       this.logger.error('Error loading relay sets:', error);
       return [];
+    }
+  }
+
+  /**
+   * Parse relay set events into RelaySet objects
+   */
+  private parseRelaySets(events: import('nostr-tools').Event[]): RelaySet[] {
+    const sets: RelaySet[] = [];
+
+    for (const event of events) {
+      const dTag = event.tags.find(tag => tag[0] === 'd')?.[1];
+      if (!dTag) continue;
+
+      const name = event.tags.find(tag => tag[0] === 'title' || tag[0] === 'name')?.[1] || dTag;
+      const description = event.tags.find(tag => tag[0] === 'description')?.[1];
+      const relays = event.tags
+        .filter(tag => tag[0] === 'relay' && tag[1])
+        .map(tag => this.normalizeRelayUrl(tag[1]));
+
+      sets.push({
+        identifier: dTag,
+        name,
+        description,
+        relays,
+        eventId: event.id,
+        created_at: event.created_at,
+      });
+    }
+
+    return sets;
+  }
+
+  /**
+   * Fetch relay sets from relays in the background and update the database.
+   * This runs without blocking the caller. Updates the relaySets signal
+   * if newer data is found.
+   */
+  private async updateRelaySetsFromRelays(pubkey: string): Promise<void> {
+    try {
+      const events = await this.accountRelay.getEventsByPubkeyAndKind(pubkey, RELAY_SET_KIND);
+
+      for (const event of events) {
+        await this.database.saveEvent(event);
+      }
+
+      // Update the signal if relay data differs from what we had
+      if (events.length > 0) {
+        const sets = this.parseRelaySets(events);
+        this.relaySets.set(sets);
+      }
+    } catch (error) {
+      this.logger.error('Error updating relay sets from relays:', error);
     }
   }
 
