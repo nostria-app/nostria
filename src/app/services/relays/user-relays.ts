@@ -392,7 +392,10 @@ export class UserRelaysService {
 
   /**
    * Load DM relays from local database (kind 10050 event) and cache them.
-   * Returns the relay URLs found, or empty array if none stored.
+   * If the user has a kind 10050 event with relay entries, returns ONLY those relays
+   * (no mixing with fallback/account relays). If no kind 10050 event exists or it's
+   * empty, returns empty array so the caller can fall through to network fetch or
+   * account relay fallback.
    */
   private async loadDmRelaysFromDatabase(pubkey: string): Promise<string[]> {
     try {
@@ -404,10 +407,8 @@ export class UserRelaysService {
           .filter((url: string | undefined) => url && url.startsWith('wss://'));
 
         if (relayUrls.length > 0) {
-          // Also get fallback relays to combine
-          const fallbackRelays = await this.relaysService.getFallbackRelaysForPubkey(pubkey);
-          const allRelays = [...relayUrls, ...fallbackRelays];
-          const uniqueNormalizedRelays = this.utilitiesService.getUniqueNormalizedRelayUrls(allRelays);
+          // User has explicit DM relays — use only those, do NOT mix in fallback relays
+          const uniqueNormalizedRelays = this.utilitiesService.getUniqueNormalizedRelayUrls(relayUrls);
 
           // Cache immediately
           this.cachedDmRelays.set(pubkey, uniqueNormalizedRelays);
@@ -416,6 +417,9 @@ export class UserRelaysService {
           this.logger.debug(`[UserRelaysService] Loaded ${uniqueNormalizedRelays.length} DM relays from database for pubkey: ${pubkey.slice(0, 16)}...`);
           return uniqueNormalizedRelays;
         }
+
+        // kind 10050 event exists but has no relay entries — fall through to return empty
+        this.logger.debug(`[UserRelaysService] Kind 10050 event found but empty for pubkey: ${pubkey.slice(0, 16)}...`);
       }
     } catch (error) {
       this.logger.warn(`[UserRelaysService] Error loading DM relays from database:`, error);
@@ -426,27 +430,33 @@ export class UserRelaysService {
   /**
    * Fetch DM relays from the network (discovery relays) and cache the result.
    * Also saves the kind 10050 event to the database for future offline use.
+   *
+   * The discovery service already handles fallback: if no kind 10050 exists,
+   * it falls back to kind 10002 (account relays). We do NOT mix in additional
+   * fallback relays on top — this keeps the relay list focused and avoids
+   * sending DMs to relays that won't accept them (e.g., discovery relays).
    */
   private async fetchDmRelaysFromNetwork(pubkey: string): Promise<string[]> {
     try {
-      // Get DM relays from discovery service (kind 10050, falls back to kind 10002)
+      // Get DM relays from discovery service (kind 10050, falls back to kind 10002 internally)
       const dmRelays = await this.discoveryRelayService.getUserDmRelayUrls(pubkey);
       this.logger.debug(`[UserRelaysService] discoveryRelayService.getUserDmRelayUrls returned:`, dmRelays);
 
-      // Also get fallback relays in case DM relays are not set
-      const fallbackRelays = await this.relaysService.getFallbackRelaysForPubkey(pubkey);
+      if (dmRelays.length > 0) {
+        const uniqueNormalizedRelays = this.utilitiesService.getUniqueNormalizedRelayUrls(dmRelays);
 
-      // Combine and deduplicate
-      const allRelays = [...dmRelays, ...fallbackRelays];
-      const uniqueNormalizedRelays = this.utilitiesService.getUniqueNormalizedRelayUrls(allRelays);
+        this.logger.debug(`[UserRelaysService] Final DM relays for ${pubkey.slice(0, 16)}:`, uniqueNormalizedRelays);
 
-      this.logger.debug(`[UserRelaysService] Final DM relays for ${pubkey.slice(0, 16)}:`, uniqueNormalizedRelays);
+        // Cache the result
+        this.cachedDmRelays.set(pubkey, uniqueNormalizedRelays);
+        this.dmRelayCacheTimestamps.set(pubkey, Date.now());
 
-      // Cache the result
-      this.cachedDmRelays.set(pubkey, uniqueNormalizedRelays);
-      this.dmRelayCacheTimestamps.set(pubkey, Date.now());
+        return uniqueNormalizedRelays;
+      }
 
-      return uniqueNormalizedRelays;
+      // Discovery service returned nothing — fall back to account relays
+      this.logger.debug(`[UserRelaysService] No DM relays from network for ${pubkey.slice(0, 16)}, falling back to account relays`);
+      return this.getUserRelaysForPublishing(pubkey);
     } catch (error) {
       this.logger.error('[UserRelaysService] Error fetching DM relays from network:', error);
       // Fall back to regular relay list
