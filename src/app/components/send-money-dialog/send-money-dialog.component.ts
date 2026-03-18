@@ -348,8 +348,8 @@ export class SendMoneyDialogComponent {
       // Send payment notification DM (same content for both parties to preserve reaction compatibility)
       const formattedAmount = sats.toLocaleString();
       const messageText = comment
-        ? `Sent ${formattedAmount} sats: ${comment}`
-        : `Sent ${formattedAmount} sats.`;
+        ? `${formattedAmount} sats was transferred: ${comment}`
+        : `${formattedAmount} sats was transferred.`;
 
       try {
         await this.messagingService.sendPaymentNotification(messageText, this.data.recipientPubkey);
