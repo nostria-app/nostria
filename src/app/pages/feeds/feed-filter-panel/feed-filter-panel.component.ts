@@ -452,7 +452,7 @@ export class FeedFilterPanelComponent {
   // Track whether WoT filtering is enabled - from feed config if available
   currentWotEnabled = computed(() => {
     const feedConfig = this.feed();
-    if (feedConfig && (typeof feedConfig.wotMinRank === 'number' || typeof feedConfig.wotFilter === 'boolean')) {
+    if (feedConfig) {
       return isWotFilterEnabled(feedConfig);
     }
     return isWotFilterEnabled(this.localSettings.contentFilter());
@@ -460,7 +460,7 @@ export class FeedFilterPanelComponent {
 
   currentWotMinRank = computed(() => {
     const feedConfig = this.feed();
-    if (feedConfig && (typeof feedConfig.wotMinRank === 'number' || typeof feedConfig.wotFilter === 'boolean')) {
+    if (feedConfig) {
       return Math.max(getEffectiveWotMinRank(feedConfig), 0);
     }
 

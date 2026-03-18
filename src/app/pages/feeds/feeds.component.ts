@@ -506,9 +506,7 @@ export class FeedsComponent implements OnDestroy {
     const showReplies = feed.showReplies ?? false;
     const showReposts = feed.showReposts ?? true;
     const allowedKinds = feed.kinds || [];
-    const wotMinRank = typeof feed.wotMinRank === 'number' || typeof feed.wotFilter === 'boolean'
-      ? getEffectiveWotMinRank(feed)
-      : getEffectiveWotMinRank(this.localSettings.contentFilter());
+    const wotMinRank = getEffectiveWotMinRank(feed);
 
     return events.filter(event => {
       // WoT filtering: 0 means any positive rank, higher values are minimum rank thresholds.
