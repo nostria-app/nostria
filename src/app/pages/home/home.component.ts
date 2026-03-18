@@ -1,4 +1,4 @@
-import { Component, inject, ChangeDetectionStrategy, signal } from '@angular/core';
+import { Component, inject, ChangeDetectionStrategy, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -6,6 +6,7 @@ import { MatCardModule } from '@angular/material/card';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatBottomSheet, MatBottomSheetModule } from '@angular/material/bottom-sheet';
 import { MatRippleModule } from '@angular/material/core';
+import { MatBadgeModule } from '@angular/material/badge';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { RouterLink } from '@angular/router';
@@ -20,6 +21,7 @@ import { InstallService } from '../../services/install.service';
 import { WhatsNewDialogComponent } from '../../components/whats-new-dialog/whats-new-dialog.component';
 import { Introduction } from '../../components/introduction/introduction';
 import { MediaPlayerService } from '../../services/media-player.service';
+import { MessagingService } from '../../services/messaging.service';
 
 /**
  * Home component - Serves as the landing page and navigation hub.
@@ -40,6 +42,7 @@ import { MediaPlayerService } from '../../services/media-player.service';
     RouterLink,
     MatBottomSheetModule,
     MatRippleModule,
+    MatBadgeModule,
     Introduction,
   ],
   templateUrl: './home.component.html',
@@ -55,9 +58,19 @@ export class HomeComponent {
   settings = inject(SettingsService);
   installService = inject(InstallService);
   media = inject(MediaPlayerService);
+  private messaging = inject(MessagingService);
   private bottomSheet = inject(MatBottomSheet);
   private dialog = inject(MatDialog);
   private snackBar = inject(MatSnackBar);
+
+  /**
+   * Unread messages count for the Messages tile badge.
+   * Returns the count when > 0, or null to hide the badge.
+   */
+  unreadMessagesCount = computed(() => {
+    const count = this.messaging.unreadBadgeCount();
+    return count > 0 ? count : null;
+  });
 
   /**
    * Greeting based on time of day - signal for better change detection.

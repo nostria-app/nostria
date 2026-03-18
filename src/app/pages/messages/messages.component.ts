@@ -841,6 +841,9 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
    * This allows the message list to auto-update when new DMs arrive.
    */
   private async startLiveSubscription(): Promise<void> {
+    // Cancel the startup delay if still pending — user wants messages now
+    this.messaging.requestImmediateDmStart();
+
     if (this.messaging.hasLiveSubscription()) {
       this.logger.debug('Live DM subscription already active');
       return;

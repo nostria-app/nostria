@@ -22,7 +22,7 @@ const NOTIFICATION_QUERY_LIMITS = {
   REPOSTS: 300,     // Reposts/quotes
   REPLIES: 500,     // Replies to your posts
   REACTIONS: 500,   // Likes/reactions
-  ZAPS: 1000,       // Zap receipts (often the highest volume)
+  ZAPS: 500,        // Zap receipts (often the highest volume, some relays reject limit >500)
 };
 
 /**

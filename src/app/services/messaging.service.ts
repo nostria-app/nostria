@@ -112,6 +112,13 @@ export class MessagingService implements NostriaService {
   private readonly deadLetterInfoType = 'dead-letter-list';
   private readonly maxDeadLetterEventIds = 2000;
   private readonly directMessagePublishTimeoutMs = 5000;
+  private readonly DM_STARTUP_DELAY_MS = 4000;
+
+  /**
+   * Resolve callback to cancel the DM startup delay early.
+   * Set when the 4-second delay is active; called by requestImmediateDmStart().
+   */
+  private dmStartupDelayResolve: (() => void) | null = null;
 
   MESSAGE_SIZE = 400;
 
@@ -191,6 +198,11 @@ export class MessagingService implements NostriaService {
         untracked(() => {
           this.bootstrapUnreadCount.set(null);
           this.bootstrappedPubkey = null;
+          // Cancel any pending startup delay to prevent stale subscription
+          if (this.dmStartupDelayResolve) {
+            this.dmStartupDelayResolve();
+            this.dmStartupDelayResolve = null;
+          }
           if (this.liveSubscription) {
             this.logger.info('Closing DM subscription - user logged out');
             this.closeLiveSubscription();
@@ -202,7 +214,8 @@ export class MessagingService implements NostriaService {
 
   /**
    * Start the DM subscription with retry logic to wait for relay initialization.
-   * Retries up to 10 times with 2-second intervals.
+   * Includes a startup delay to prioritize more important queries (metadata, follow lists, etc.).
+   * The delay is skipped if the user navigates to Messages before it elapses.
    */
   private async startDmSubscriptionWithRetry(): Promise<void> {
     this.logger.debug('[MessagingService] Waiting for relay initialization before starting DM subscription');
@@ -214,6 +227,23 @@ export class MessagingService implements NostriaService {
     }
 
     await this.bootstrapFromStorage();
+
+    // Delay DM subscription to let higher-priority queries (metadata, contacts, follow sets) complete first.
+    // This delay is cancelled immediately if the user navigates to the Messages page.
+    this.logger.debug(`[MessagingService] Delaying DM subscription by ${this.DM_STARTUP_DELAY_MS}ms to prioritize other queries`);
+    await new Promise<void>(resolve => {
+      this.dmStartupDelayResolve = resolve;
+      setTimeout(() => {
+        this.dmStartupDelayResolve = null;
+        resolve();
+      }, this.DM_STARTUP_DELAY_MS);
+    });
+
+    // If subscription was already started by the Messages page during the delay, skip
+    if (this.liveSubscription) {
+      this.logger.debug('[MessagingService] DM subscription already active (started by Messages page), skipping');
+      return;
+    }
 
     this.logger.debug('Starting DM subscription...');
     const sub = await this.subscribeToIncomingMessages();
@@ -838,6 +868,18 @@ export class MessagingService implements NostriaService {
 
   hasLiveSubscription(): boolean {
     return !!this.liveSubscription;
+  }
+
+  /**
+   * Cancel the DM startup delay and start the subscription immediately.
+   * Called when the user navigates to the Messages page before the delay elapses.
+   */
+  requestImmediateDmStart(): void {
+    if (this.dmStartupDelayResolve) {
+      this.logger.info('[MessagingService] Cancelling DM startup delay — user navigated to Messages');
+      this.dmStartupDelayResolve();
+      this.dmStartupDelayResolve = null;
+    }
   }
 
   private async bootstrapFromStorage(): Promise<void> {
