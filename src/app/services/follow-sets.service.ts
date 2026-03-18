@@ -1,12 +1,11 @@
-import { Injectable, inject, signal, computed, effect, untracked } from '@angular/core';
+import { Injectable, inject, signal, effect, untracked } from '@angular/core';
 import { Event, UnsignedEvent, kinds } from 'nostr-tools';
-import { DataService } from './data.service';
 import { LoggerService } from './logger.service';
 import { AccountStateService } from './account-state.service';
+import { AccountLocalStateService } from './account-local-state.service';
 import { DatabaseService } from './database.service';
 import { PublishService } from './publish.service';
 import { EncryptionService } from './encryption.service';
-import { UtilitiesService } from './utilities.service';
 import { DeletionFilterService } from './deletion-filter.service';
 import { AccountRelayService } from './relays/account-relay';
 
@@ -44,14 +43,13 @@ const FAVORITES_D_TAG = 'nostria-favorites';
   providedIn: 'root',
 })
 export class FollowSetsService {
-  private readonly dataService = inject(DataService);
   private readonly logger = inject(LoggerService);
   private readonly accountState = inject(AccountStateService);
+  private readonly accountLocalState = inject(AccountLocalStateService);
   private readonly accountRelay = inject(AccountRelayService);
   private readonly database = inject(DatabaseService);
   private readonly publishService = inject(PublishService);
   private readonly encryption = inject(EncryptionService);
-  private readonly utilities = inject(UtilitiesService);
   private readonly deletionFilter = inject(DeletionFilterService);
 
   // Signals for reactive state
@@ -61,8 +59,6 @@ export class FollowSetsService {
   hasInitiallyLoaded = signal<boolean>(false);
 
   // Track ongoing load to prevent concurrent loads
-  private loadingPromise: Promise<void> | null = null;
-  private lastLoadedPubkey: string | null = null;
   private lastEffectPubkey: string | null = null;
   // Track the pubkey we last loaded data for, to avoid clearing on re-initialization
   private lastDataPubkey: string | null = null;
@@ -80,11 +76,9 @@ export class FollowSetsService {
   }
 
   constructor() {
-    // Load follow sets when account changes
+    // Load follow sets from cache when account changes
     effect(() => {
       const pubkey = this.accountState.pubkey();
-      const account = this.accountState.account();
-      const initialized = this.accountState.initialized();
 
       // Only load if pubkey actually changed
       if (pubkey === this.lastEffectPubkey) {
@@ -92,15 +86,10 @@ export class FollowSetsService {
       }
 
       this.lastEffectPubkey = pubkey;
-      this.logger.debug('[FollowSets] Effect triggered, pubkey:', pubkey?.substring(0, 8), 'initialized:', initialized);
+      this.logger.debug('[FollowSets] Effect triggered, pubkey:', pubkey?.substring(0, 8));
 
       if (pubkey) {
         this.hasInitiallyLoaded.set(false);
-
-        // Clear any existing loading promise when switching accounts
-        // This ensures we don't skip loading due to stale promise state
-        this.loadingPromise = null;
-        this.lastLoadedPubkey = null;
 
         // Only clear follow sets when switching to a DIFFERENT account
         // to prevent showing the old account's data.
@@ -113,32 +102,8 @@ export class FollowSetsService {
 
         // FAST PATH: Load from database immediately, don't wait for initialized
         // This makes follow sets available faster for UI rendering
-        // Relay fetch will happen when initialized becomes true
+        // Relay fetch is handled by the live subscription (startLiveFollowSetsSubscription)
         this.loadFollowSetsFromCache(pubkey);
-
-        // For relay fetch, we need to wait for initialization
-        if (!initialized) {
-          this.logger.debug('[FollowSets] Account not yet initialized, cached data loaded, will fetch from relays when ready');
-          // Reset lastEffectPubkey so the effect will re-run when initialized changes
-          this.lastEffectPubkey = null;
-          return;
-        }
-
-        // For extension accounts, wait for the extension to be available before loading from relays
-        // since decryption of private follow sets requires the extension
-        if (account?.source === 'extension') {
-          this.utilities.waitForNostrExtension().then(available => {
-            if (available) {
-              this.logger.debug('[FollowSets] Extension available, fetching follow sets from relays');
-              this.loadFollowSetsFromRelays(pubkey);
-            } else {
-              this.logger.warn('[FollowSets] Extension not available, fetching from relays anyway (private sets may fail to decrypt)');
-              this.loadFollowSetsFromRelays(pubkey);
-            }
-          });
-        } else {
-          this.loadFollowSetsFromRelays(pubkey);
-        }
       } else {
         this.followSets.set([]);
         this.hasInitiallyLoaded.set(false);
@@ -219,80 +184,6 @@ export class FollowSetsService {
     }
   }
 
-  /**
-   * Load follow sets from relays (network operation).
-   * This is called after account is initialized and relays are ready.
-   */
-  async loadFollowSetsFromRelays(pubkey: string): Promise<void> {
-    // If already loading for the same pubkey, return existing promise
-    if (this.loadingPromise && this.lastLoadedPubkey === pubkey) {
-      this.logger.debug('[FollowSets] Already loading from relays for this pubkey, reusing existing load');
-      return this.loadingPromise;
-    }
-
-    this.lastLoadedPubkey = pubkey;
-    this.isLoading.set(true);
-    this.error.set(null);
-
-    // Remember if we had cached data
-    const hadCachedData = this.followSets().length > 0;
-
-    this.loadingPromise = (async () => {
-      try {
-        const startTime = Date.now();
-        this.logger.debug('[FollowSets] Fetching follow sets from relays for pubkey:', pubkey?.substring(0, 8));
-
-        // Fetch from relays to get any updates
-        const events = await this.dataService.getEventsByPubkeyAndKind(
-          pubkey,
-          30000,
-          {
-            cache: false,
-            save: true,
-          }
-        );
-
-        // Convert all events to FollowSet objects (without decryption), filtering out deleted events
-        const filteredEvents = await this.deletionFilter.filterDeletedEventsFromDatabase(
-          events.map(record => record.event)
-        );
-        const sets = filteredEvents
-          .map(event => this.parseFollowSetEventSync(event))
-          .filter((set): set is FollowSet => set !== null);
-
-        // Deduplicate by dTag, preferring the relay variant seen most often
-        const deduplicatedSets = this.deduplicateByDTag(sets);
-        await this.persistPreferredFollowSetVersions(filteredEvents, deduplicatedSets);
-
-        // Only update from relay if we got results, or if we had no cached data
-        // This prevents overwriting good cached data with empty relay response
-        if (deduplicatedSets.length > 0 || !hadCachedData) {
-          // Skip update if data hasn't actually changed to prevent UI flickering
-          const currentSets = this.followSets();
-          if (!this.followSetsEqual(currentSets, deduplicatedSets)) {
-            this.followSets.set(deduplicatedSets);
-            this.logger.info(`[FollowSets] Loaded ${deduplicatedSets.length} follow sets from relays in ${Date.now() - startTime}ms`);
-
-            // Start background decryption for private lists (don't await)
-            this.decryptPrivateListsInBackground(deduplicatedSets);
-          } else {
-            this.logger.debug(`[FollowSets] Relay data unchanged in ${Date.now() - startTime}ms, skipping update`);
-          }
-        } else {
-          this.logger.debug(`[FollowSets] Relay returned empty results in ${Date.now() - startTime}ms, keeping cached data`);
-        }
-      } catch (error) {
-        this.logger.error('[FollowSets] Failed to load follow sets from relays:', error);
-        this.error.set('Failed to load follow sets');
-      } finally {
-        this.isLoading.set(false);
-        this.hasInitiallyLoaded.set(true);
-        this.loadingPromise = null;
-      }
-    })();
-
-    return this.loadingPromise;
-  }
 
   /**
    * Compare two FollowSet arrays to see if they have the same content.
@@ -403,11 +294,28 @@ export class FollowSetsService {
   }
 
   private startLiveFollowSetsSubscription(pubkey: string): void {
-    const filter = {
+    // Calculate since filter: use last sync timestamp with 60-second overlap buffer, capped at 7 days
+    const lastSync = this.accountLocalState.getFollowSetsLastSync(pubkey);
+    const now = Math.floor(Date.now() / 1000);
+    const OVERLAP_BUFFER = 60; // 60 seconds overlap to avoid missing events near boundary
+    const MAX_CAP = 7 * 24 * 60 * 60; // 7 days maximum lookback
+
+    const filter: {
+      kinds: number[];
+      authors: string[];
+      limit: number;
+      since?: number;
+    } = {
       kinds: [30000, kinds.EventDeletion],
       authors: [pubkey],
       limit: 200,
     };
+
+    if (lastSync > 0) {
+      const sinceValue = Math.max(lastSync - OVERLAP_BUFFER, now - MAX_CAP);
+      filter.since = sinceValue;
+      this.logger.debug('[FollowSets] Using since filter for follow sets subscription:', sinceValue);
+    }
 
     this.liveFollowSetsSubscriptionPubkey = pubkey;
     this.liveFollowSetsSubscription = this.accountRelay.subscribe(
@@ -416,7 +324,13 @@ export class FollowSetsService {
         void this.handleLiveFollowSetEvent(event);
       },
       () => {
+        // On EOSE: mark initial load complete and save sync timestamp
         this.logger.debug('[FollowSets] Live follow sets subscription reached EOSE');
+        this.isLoading.set(false);
+        this.hasInitiallyLoaded.set(true);
+
+        // Save the current timestamp for subsequent since-filtered loads
+        this.accountLocalState.setFollowSetsLastSync(pubkey, now);
       }
     );
   }
@@ -439,11 +353,10 @@ export class FollowSetsService {
    * Uses a two-phase approach:
    * 1. First phase: Parse events quickly without waiting for decryption (shows public content immediately)
    * 2. Second phase: Attempt decryption in background and update follow sets when complete
-   * @deprecated Use loadFollowSetsFromCache() and loadFollowSetsFromRelays() for better startup performance
+   * @deprecated Use loadFollowSetsFromCache() for cache loading; relay fetching is handled by the live subscription
    */
   async loadFollowSets(pubkey: string): Promise<void> {
     await this.loadFollowSetsFromCache(pubkey);
-    await this.loadFollowSetsFromRelays(pubkey);
   }
 
   /**

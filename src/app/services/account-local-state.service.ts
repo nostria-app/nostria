@@ -132,6 +132,8 @@ interface AccountLocalState {
   clipsLastFollowingEventId?: string; // Last viewed clip event id in Clips Following
   followerCheckLastTimestamp?: number; // Unix timestamp (seconds) when follower events were last fetched from relays
   favoriteGifs?: FavoriteGif[]; // Favorite GIFs for quick access in GIF picker
+  accountMetadataLastSync?: number; // Unix timestamp (seconds) when account metadata subscription last completed (EOSE)
+  followSetsLastSync?: number; // Unix timestamp (seconds) when follow sets subscription last completed (EOSE)
 }
 
 /**
@@ -348,6 +350,40 @@ export class AccountLocalStateService {
    */
   setFollowerCheckLastTimestamp(pubkey: string, timestamp: number): void {
     this.updateAccountState(pubkey, { followerCheckLastTimestamp: timestamp });
+  }
+
+  /**
+   * Get the timestamp when account metadata subscription last completed (EOSE).
+   * Used to add `since` filter on subsequent loads to reduce relay bandwidth.
+   * Returns 0 if never synced (first-time user).
+   */
+  getAccountMetadataLastSync(pubkey: string): number {
+    const state = this.getAccountState(pubkey);
+    return state.accountMetadataLastSync || 0;
+  }
+
+  /**
+   * Set the timestamp when account metadata subscription completed (EOSE).
+   */
+  setAccountMetadataLastSync(pubkey: string, timestamp: number): void {
+    this.updateAccountState(pubkey, { accountMetadataLastSync: timestamp });
+  }
+
+  /**
+   * Get the timestamp when follow sets subscription last completed (EOSE).
+   * Used to add `since` filter on subsequent loads to reduce relay bandwidth.
+   * Returns 0 if never synced (first-time user).
+   */
+  getFollowSetsLastSync(pubkey: string): number {
+    const state = this.getAccountState(pubkey);
+    return state.followSetsLastSync || 0;
+  }
+
+  /**
+   * Set the timestamp when follow sets subscription completed (EOSE).
+   */
+  setFollowSetsLastSync(pubkey: string, timestamp: number): void {
+    this.updateAccountState(pubkey, { followSetsLastSync: timestamp });
   }
 
   /**

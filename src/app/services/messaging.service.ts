@@ -1604,6 +1604,8 @@ export class MessagingService implements NostriaService {
     const relayUrls = new Set<string>();
 
     // Try to get DM relay list (kind 10050) from local storage first.
+    // For the current account, the account metadata subscription (subscribeToAccountMetadata)
+    // already fetches and caches kind 10050, so the database should have the latest data.
     const dmRelayEvent = await this.database.getEventByPubkeyAndKind(pubkey, kinds.DirectMessageRelaysList);
 
     if (dmRelayEvent) {
@@ -1621,20 +1623,23 @@ export class MessagingService implements NostriaService {
       }
     }
 
-    // Refresh from discovery relays as well so the live subscription can join
-    // the actual DM inbox relays even when local cache is missing or stale.
-    try {
-      const discoveredDmRelayUrls = await this.discoveryRelay.getUserDmRelayUrls(pubkey);
-      discoveredDmRelayUrls.forEach(url => relayUrls.add(url));
+    // Only query discovery relays for DM relay list if we don't have cached data.
+    // For the current account, the account metadata subscription already fetches kind 10050
+    // and saves it to the database, so an extra discovery query would be redundant.
+    if (relayUrls.size === 0) {
+      try {
+        const discoveredDmRelayUrls = await this.discoveryRelay.getUserDmRelayUrls(pubkey);
+        discoveredDmRelayUrls.forEach(url => relayUrls.add(url));
 
-      if (discoveredDmRelayUrls.length > 0) {
-        this.logger.info('Loaded DM relays from discovery for live subscription', {
-          count: discoveredDmRelayUrls.length,
-          relays: discoveredDmRelayUrls,
-        });
+        if (discoveredDmRelayUrls.length > 0) {
+          this.logger.info('Loaded DM relays from discovery for live subscription', {
+            count: discoveredDmRelayUrls.length,
+            relays: discoveredDmRelayUrls,
+          });
+        }
+      } catch (error) {
+        this.logger.warn('Failed to refresh DM relays from discovery, continuing with cached/account relays', error);
       }
-    } catch (error) {
-      this.logger.warn('Failed to refresh DM relays from discovery, continuing with cached/account relays', error);
     }
 
     const accountRelays = this.relay.getRelayUrls();

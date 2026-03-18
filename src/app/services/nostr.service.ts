@@ -607,14 +607,12 @@ export class NostrService implements NostriaService {
       this.logger.info('[NostrService] Starting relay subscriptions for account', { pubkey });
 
       // Start live subscription - this will fetch fresh data from relays
-      // and keep us updated with any changes in real-time (runs in background)
+      // and keep us updated with any changes in real-time.
+      // This single subscription handles ALL account metadata kinds (0, 3, 10000, etc.)
+      // and saves events to the database, sets signals, and marks followingListLoaded on EOSE.
+      // No separate one-shot queries are needed since the subscription already delivers
+      // the latest replaceable events and compares timestamps before updating.
       this.subscribeToAccountMetadata(pubkey);
-
-      // Actively fetch fresh data from relays to ensure we have the latest
-      // This is important for syncing data across multiple devices
-      // Note: These run in background - UI is already showing with cached data
-      this.loadAccountFollowing(pubkey);
-      this.loadAccountMuteList(pubkey);
 
       // The subscription will handle setting loading state in its EOSE handler
     } catch (error) {
@@ -707,8 +705,13 @@ export class NostrService implements NostriaService {
   private async subscribeToAccountMetadata(pubkey: string) {
     this.logger.info('subscribeToAccountMetadata', { pubkey });
 
+    // Check if we have a previous sync timestamp to use as `since` filter.
+    // This avoids re-fetching all replaceable events on every app load.
+    const lastSync = this.accountLocalState.getAccountMetadataLastSync(pubkey);
+    const now = Math.floor(Date.now() / 1000);
+
     // Subscribe to all account metadata kinds for both initial data and real-time updates
-    const filter = {
+    const filter: Record<string, unknown> = {
       kinds: [
         kinds.Metadata,      // 0 - profile
         kinds.Contacts,      // 3 - following list
@@ -724,6 +727,19 @@ export class NostrService implements NostriaService {
       ],
       authors: [pubkey],
     };
+
+    if (lastSync > 0) {
+      // Apply a 60-second overlap buffer to catch relay-delayed events.
+      // Cap at 7 days ago to avoid unbounded queries after long absence.
+      const OVERLAP_BUFFER_SECONDS = 60;
+      const SEVEN_DAYS_AGO = now - 7 * 24 * 60 * 60;
+      filter['since'] = Math.max(lastSync - OVERLAP_BUFFER_SECONDS, SEVEN_DAYS_AGO);
+      this.logger.info('Using since filter for account metadata subscription', {
+        since: filter['since'],
+        lastSync,
+        ageSeconds: now - lastSync,
+      });
+    }
 
     const onEvent = async (event: Event) => {
       this.logger.debug('Received event on account subscription:', event);
@@ -869,76 +885,17 @@ export class NostrService implements NostriaService {
       this.logger.debug('EOSE on account subscription - initial data loaded');
       this.logger.info('Account subscription EOSE - fresh data loaded from relays');
 
+      // Save the current timestamp so next app load can use `since` to reduce bandwidth
+      this.accountLocalState.setAccountMetadataLastSync(pubkey, now);
+
+      // Mark following list as loaded - the subscription has delivered all cached events
+      this.accountState.followingListLoaded.set(true);
+
       // Mark as initialized without showing loading overlay
       this.accountState.initialized.set(true);
     };
 
     this.accountSubscription = this.accountRelay.subscribe(filter, onEvent, onEose);
-  }
-
-  private async loadAccountFollowing(pubkey: string) {
-    // CRITICAL: Always fetch from relay first to get the latest following list
-    // This prevents overwriting changes made in other Nostria instances
-    const followingEvent = await this.accountRelay.getEventByPubkeyAndKind(pubkey, kinds.Contacts);
-    const storedEvent = await this.database.getEventByPubkeyAndKind(pubkey, kinds.Contacts);
-
-    // Use the newer event (compare timestamps)
-    let newestEvent = followingEvent;
-    if (storedEvent && (!followingEvent || storedEvent.created_at > followingEvent.created_at)) {
-      newestEvent = storedEvent;
-    }
-
-    if (followingEvent && (!storedEvent || followingEvent.created_at >= storedEvent.created_at)) {
-      // Save the relay event to storage only if it's newer or equal
-      await this.database.saveEvent(followingEvent);
-      this.logger.info('Loaded fresh following list from relay', {
-        pubkey,
-        followingCount: followingEvent.tags.filter(t => t[0] === 'p').length,
-      });
-    } else if (!followingEvent && storedEvent) {
-      this.logger.warn('Could not fetch following list from relay, using stored data');
-    }
-
-    if (newestEvent) {
-      const followingTags = this.getTags(newestEvent, 'p');
-      this.accountState.followingList.set(followingTags);
-    }
-
-    // Mark following list as loaded regardless of whether data was found
-    // This allows UI to distinguish between "still loading" and "loaded but empty"
-    this.accountState.followingListLoaded.set(true);
-  }
-
-  private async loadAccountMuteList(pubkey: string) {
-    // CRITICAL: Always fetch from relay first to get the latest mute list
-    // This prevents overwriting changes made in other Nostria instances
-    const muteListEvent = await this.accountRelay.getEventByPubkeyAndKind(pubkey, kinds.Mutelist);
-    const storedEvent = await this.database.getEventByPubkeyAndKind(pubkey, kinds.Mutelist);
-
-    // Use the newer event (compare timestamps)
-    let newestEvent = muteListEvent;
-    if (storedEvent && (!muteListEvent || storedEvent.created_at > muteListEvent.created_at)) {
-      newestEvent = storedEvent;
-    }
-
-    if (muteListEvent && (!storedEvent || muteListEvent.created_at >= storedEvent.created_at)) {
-      // Save the relay event to storage only if it's newer or equal
-      await this.database.saveEvent(muteListEvent);
-      this.logger.info('Loaded fresh mute list from relay', {
-        pubkey,
-        mutedCount: muteListEvent.tags.filter(t => t[0] === 'p').length,
-      });
-    } else if (!muteListEvent && storedEvent) {
-      this.logger.warn('Could not fetch mute list from relay, using stored data');
-    }
-
-    if (newestEvent) {
-      // Only update if different from current to avoid redundant signal updates
-      const currentMuteList = this.accountState.muteList();
-      if (!currentMuteList || currentMuteList.id !== newestEvent.id) {
-        this.accountState.muteList.set(newestEvent);
-      }
-    }
   }
 
   /**
