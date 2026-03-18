@@ -250,6 +250,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   showPreview = signal(false);
   showAdvancedOptions = signal(false);
   isContentFocused = signal(false);
+  private lastCursorPosition: number | null = null;
   isDragOver = signal(false);
   isUploading = signal(false);
   uploadStatus = signal(''); // Detailed upload status message
@@ -2209,14 +2210,16 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   insertEmoji(emoji: string): void {
     const textarea = this.contentTextarea?.nativeElement;
     if (textarea) {
-      const start = textarea.selectionStart ?? textarea.value.length;
-      const end = textarea.selectionEnd ?? start;
+      const isFocused = document.activeElement === textarea;
+      const start = isFocused ? (textarea.selectionStart ?? textarea.value.length) : (this.lastCursorPosition ?? textarea.value.length);
+      const end = isFocused ? (textarea.selectionEnd ?? start) : start;
       const currentContent = this.content();
       const newContent = currentContent.substring(0, start) + emoji + currentContent.substring(end);
       this.content.set(newContent);
 
       const newPos = start + emoji.length;
-      this.scheduleTextareaRefresh(newPos, true);
+      this.lastCursorPosition = newPos;
+      this.setCursorAfterRender(newPos);
     } else {
       this.content.update(text => text + emoji);
     }
@@ -2228,7 +2231,8 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   insertGifUrl(url: string): void {
     const textarea = this.contentTextarea?.nativeElement;
     const currentContent = this.content();
-    const start = textarea?.selectionStart ?? currentContent.length;
+    const isFocused = textarea && document.activeElement === textarea;
+    const start = isFocused ? (textarea.selectionStart ?? currentContent.length) : (this.lastCursorPosition ?? currentContent.length);
     const needsNewlineBefore = start > 0 && currentContent[start - 1] !== '\n';
     this.insertEmoji((needsNewlineBefore ? '\n' : '') + url + '\n');
   }
@@ -2247,8 +2251,9 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     dialogRef.afterClosed$.subscribe(result => {
       if (result.result) {
         this.insertGifUrl(result.result);
+      } else {
+        this.scheduleTextareaRefresh(undefined, true);
       }
-      this.scheduleTextareaRefresh(undefined, true);
     });
   }
 
@@ -2266,8 +2271,9 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     dialogRef.afterClosed$.subscribe(result => {
       if (result.result) {
         this.insertEmoji(result.result);
+      } else {
+        this.scheduleTextareaRefresh(undefined, true);
       }
-      this.scheduleTextareaRefresh(undefined, true);
     });
   }
 
@@ -2296,9 +2302,10 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       const references = result?.references ?? [];
       if (references.length > 0) {
         this.insertReferences(references);
+      } else {
+        // Return focus to the textarea after the dialog closes
+        this.scheduleTextareaRefresh(undefined, true);
       }
-      // Return focus to the textarea after the dialog closes
-      this.scheduleTextareaRefresh(undefined, true);
     });
   }
 
@@ -2315,8 +2322,9 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     const textarea = this.contentTextarea?.nativeElement;
 
     if (textarea) {
-      const start = textarea.selectionStart ?? textarea.value.length;
-      const end = textarea.selectionEnd ?? start;
+      const isFocused = document.activeElement === textarea;
+      const start = isFocused ? (textarea.selectionStart ?? textarea.value.length) : (this.lastCursorPosition ?? textarea.value.length);
+      const end = isFocused ? (textarea.selectionEnd ?? start) : start;
       const currentContent = this.content();
 
       // Add spacing around the insertion if needed
@@ -2332,7 +2340,8 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
 
       // Position cursor after the inserted text
       const newPos = start + textToInsert.length;
-      this.scheduleTextareaRefresh(newPos, true);
+      this.lastCursorPosition = newPos;
+      this.setCursorAfterRender(newPos);
     } else {
       // Fallback: append to end
       const currentContent = this.content();
@@ -2356,6 +2365,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     const target = event.target as HTMLTextAreaElement;
     const newContent = target.value;
     this.content.set(newContent);
+    this.lastCursorPosition = target.selectionStart || 0;
     this.scheduleTextareaRefresh(target.selectionStart || 0);
 
     // Check for removed mentions and sync with mentions list
@@ -2421,6 +2431,25 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
         dialogContentWrapper.scrollTop = dialogScrollTop;
       }
     });
+  }
+
+  /**
+   * Focus the textarea and set cursor position after Angular's change detection
+   * has updated the textarea value via [value] binding.
+   */
+  private setCursorAfterRender(position: number): void {
+    // Use setTimeout to run after Angular's change detection updates the textarea value.
+    // requestAnimationFrame can fire before CD, causing the cursor to be reset.
+    setTimeout(() => {
+      const textarea = this.contentTextarea?.nativeElement;
+      if (!textarea) return;
+
+      if (document.activeElement !== textarea) {
+        textarea.focus({ preventScroll: true });
+      }
+      textarea.setSelectionRange(position, position);
+      this.syncTextareaHeight(textarea);
+    }, 0);
   }
 
   private syncTextareaHeight(textarea: HTMLTextAreaElement): void {
@@ -2639,6 +2668,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   }
 
   private syncSlashAndMentionStateFromSelection(textarea: HTMLTextAreaElement): void {
+    this.lastCursorPosition = textarea.selectionStart;
     if (textarea.selectionStart !== textarea.selectionEnd) {
       this.onMentionDismissed();
       this.onSlashCommandDismissed();
@@ -2865,6 +2895,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     const after = currentContent.substring(config.cursorPosition);
     const newContent = before + after;
     this.content.set(newContent);
+    this.lastCursorPosition = config.commandStart;
     this.scheduleTextareaRefresh(config.commandStart, true);
 
     // Dismiss the menu
@@ -3210,7 +3241,12 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
 
     // Append URL to content
     const separator = currentContent.trim() ? '\n\n' : '';
-    this.content.set(currentContent + separator + urlToAdd);
+    const newContent = currentContent + separator + urlToAdd;
+    this.content.set(newContent);
+
+    const newPos = newContent.length;
+    this.lastCursorPosition = newPos;
+    this.setCursorAfterRender(newPos);
 
     this.snackBar.open('Media added to note', 'Dismiss', { duration: 2000 });
   }
@@ -3447,7 +3483,8 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   private insertFileUrl(url: string): void {
     const currentContent = this.content();
     const textarea = this.contentTextarea.nativeElement;
-    const cursorPosition = textarea.selectionStart;
+    const isFocused = document.activeElement === textarea;
+    const cursorPosition = isFocused ? textarea.selectionStart : (this.lastCursorPosition ?? textarea.value.length);
 
     // Insert URL at cursor position with some spacing
     const beforeCursor = currentContent.substring(0, cursorPosition);
@@ -3466,7 +3503,8 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     this.content.set(newContent);
 
     const newCursorPosition = cursorPosition + prefix.length + url.length + suffix.length;
-    this.scheduleTextareaRefresh(newCursorPosition, true);
+    this.lastCursorPosition = newCursorPosition;
+    this.setCursorAfterRender(newCursorPosition);
   }
 
   private setupPasteHandler(): void {

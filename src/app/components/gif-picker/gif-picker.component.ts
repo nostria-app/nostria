@@ -8,6 +8,9 @@ import {
   effect,
   untracked,
   OnDestroy,
+  AfterViewInit,
+  ElementRef,
+  viewChild,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
@@ -56,7 +59,8 @@ interface GifSet {
           <input type="text" placeholder="Search GIFs..."
             [value]="searchQuery()"
             (input)="searchQuery.set($any($event.target).value)"
-            (keydown.escape)="searchQuery.set('')" />
+            (keydown.escape)="searchQuery.set('')"
+            #searchInput />
           @if (searchQuery()) {
           <button class="clear-btn" (click)="searchQuery.set('')">
             <mat-icon>close</mat-icon>
@@ -385,7 +389,7 @@ interface GifSet {
   `],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class GifPickerComponent implements OnDestroy {
+export class GifPickerComponent implements OnDestroy, AfterViewInit {
   private readonly accountState = inject(AccountStateService);
   private readonly accountLocalState = inject(AccountLocalStateService);
   private readonly emojiSetService = inject(EmojiSetService);
@@ -396,6 +400,7 @@ export class GifPickerComponent implements OnDestroy {
   private readonly logger = inject(LoggerService);
 
   gifSelected = output<string>();
+  searchInput = viewChild<ElementRef>('searchInput');
 
   searchQuery = signal('');
   gifSource = signal<GifSource>('public');
@@ -441,6 +446,12 @@ export class GifPickerComponent implements OnDestroy {
         this.loadPublicGifSets(pubkey);
       });
     });
+  }
+
+  ngAfterViewInit(): void {
+    setTimeout(() => {
+      this.searchInput()?.nativeElement?.focus();
+    }, 100);
   }
 
   ngOnDestroy(): void { }
