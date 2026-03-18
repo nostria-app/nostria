@@ -1357,9 +1357,12 @@ export class ContentNotificationService implements OnDestroy {
 
   /**
    * Refresh recent notifications by re-fetching from relays
-   * This does NOT reset the last check timestamp - it just re-checks recent activity
-   * to catch any notifications that may have been missed due to relay issues.
-   * @param days Number of days to look back (default: 7 days)
+   * Uses the persisted lastCheckTimestamp (with overlap buffer) when available,
+   * so repeated refreshes only fetch events since the last successful check.
+   * Falls back to the `days` lookback window when no stored timestamp exists
+   * (e.g. first time or after clearing notifications).
+   * Updates the lastCheckTimestamp on success.
+   * @param days Number of days to look back as fallback (default: 7 days)
    */
   async refreshRecentNotifications(days = 7): Promise<void> {
     if (this.isChecking()) {
@@ -1376,9 +1379,22 @@ export class ContentNotificationService implements OnDestroy {
     this.isChecking.set(true);
 
     try {
-      this.logger.info(`Refreshing notifications for the last ${days} days`);
       const now = Math.floor(Date.now() / 1000); // Nostr uses seconds
-      const since = now - (days * 24 * 60 * 60);
+      const fallbackSince = now - (days * 24 * 60 * 60);
+
+      // Use the persisted lastCheckTimestamp when available, so manual refreshes
+      // only fetch events since the last successful check instead of always
+      // re-fetching the full lookback window.
+      let since = await this.getLastCheckTimestamp();
+      if (since > 0) {
+        // Apply overlap buffer to catch events missed due to relay delays
+        since = since - this.OVERLAP_BUFFER_SECONDS;
+        this.logger.info(`Refreshing notifications since last check: ${new Date(since * 1000).toISOString()}`);
+      } else {
+        // No stored timestamp (first time or after clear) — fall back to days lookback
+        since = fallbackSince;
+        this.logger.info(`Refreshing notifications for the last ${days} days (no stored timestamp)`);
+      }
 
       this.logger.debug(`Fetching notifications from ${new Date(since * 1000).toISOString()} to now`);
 
@@ -1392,9 +1408,9 @@ export class ContentNotificationService implements OnDestroy {
         this.checkForZaps(pubkey, since),
       ]);
 
-      // Note: We deliberately do NOT update the lastCheckTimestamp here
-      // This is a refresh operation, not a regular check
-      // The regular checkForNewNotifications will still work normally
+      // Update the last check timestamp so the next refresh/poll starts from here
+      await this.updateLastCheckTimestamp(now);
+      this._lastCheckTimestamp.set(now);
 
       this.logger.info('Completed refreshing recent notifications');
     } catch (error) {
