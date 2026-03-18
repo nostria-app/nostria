@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, input, output, effect, ElementRef, inject, viewChild, AfterViewInit, OnDestroy } from '@angular/core';
 import { CommonModule, DOCUMENT } from '@angular/common';
+import { A11yModule } from '@angular/cdk/a11y';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
@@ -40,7 +41,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
  */
 @Component({
   selector: 'app-custom-dialog',
-  imports: [CommonModule, MatIconModule, MatButtonModule, MatTooltipModule],
+  imports: [CommonModule, A11yModule, MatIconModule, MatButtonModule, MatTooltipModule],
   template: `
     <div 
       class="dialog-backdrop" 
@@ -48,12 +49,14 @@ import { MatTooltipModule } from '@angular/material/tooltip';
       (click)="onBackdropClick()"
       role="presentation">
       
-      <div 
-        class="dialog-container" 
+      <div
+        class="dialog-container"
         [ngClass]="panelClass()"
         (click)="$event.stopPropagation()"
         role="dialog"
         [attr.aria-labelledby]="getTitle() ? 'dialog-title' : null"
+        cdkTrapFocus
+        [cdkTrapFocusAutoCapture]="true"
         tabindex="-1"
         #dialogContainer>
         

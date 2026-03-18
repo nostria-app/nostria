@@ -2248,6 +2248,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       if (result.result) {
         this.insertGifUrl(result.result);
       }
+      this.scheduleTextareaRefresh(undefined, true);
     });
   }
 
@@ -2266,6 +2267,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       if (result.result) {
         this.insertEmoji(result.result);
       }
+      this.scheduleTextareaRefresh(undefined, true);
     });
   }
 
@@ -2295,6 +2297,8 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       if (references.length > 0) {
         this.insertReferences(references);
       }
+      // Return focus to the textarea after the dialog closes
+      this.scheduleTextareaRefresh(undefined, true);
     });
   }
 
