@@ -287,16 +287,13 @@ export class RequestMoneyDialogComponent {
 
       this.generatedInvoice.set(invoice);
 
-      // Send the invoice as a DM with different content for sender/receiver
+      // Send the invoice as a DM (same content for both parties to preserve reaction compatibility)
       const formattedAmount = sats.toLocaleString();
-      const senderText = memo
-        ? `You requested ${formattedAmount} sats: ${memo}\n\n${invoice}`
-        : `You requested ${formattedAmount} sats.\n\n${invoice}`;
-      const receiverText = memo
+      const messageText = memo
         ? `Payment request for ${formattedAmount} sats: ${memo}\n\n${invoice}`
         : `Payment request for ${formattedAmount} sats.\n\n${invoice}`;
 
-      await this.messagingService.sendPaymentNotification(senderText, receiverText, this.data.recipientPubkey);
+      await this.messagingService.sendPaymentNotification(messageText, this.data.recipientPubkey);
 
       this.invoiceGenerated.set(true);
       this.snackBar.open('Invoice sent!', 'Dismiss', {

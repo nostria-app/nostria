@@ -1,7 +1,7 @@
-<mat-card class="bolt11-card" [class.expired]="isExpired()">
+<mat-card class="bolt11-card" [class.expired]="isExpired()" [class.paid]="isPaid()">
   <div class="bolt11-header">
-    <div class="bolt11-icon">
-      <mat-icon>bolt</mat-icon>
+    <div class="bolt11-icon" [class.paid-icon]="isPaid()">
+      <mat-icon>{{ isPaid() ? 'check_circle' : 'bolt' }}</mat-icon>
     </div>
     <div class="bolt11-info">
       @if (decoded(); as d) {
@@ -9,7 +9,17 @@
       @if (d.description) {
       <div class="bolt11-description">{{ d.description }}</div>
       }
-      @if (isExpired()) {
+      @if (isPaid()) {
+      <div class="bolt11-status paid">
+        <mat-icon>check_circle</mat-icon>
+        <span>Paid</span>
+      </div>
+      } @else if (isFailed()) {
+      <div class="bolt11-status failed">
+        <mat-icon>error_outline</mat-icon>
+        <span>Failed</span>
+      </div>
+      } @else if (isExpired()) {
       <div class="bolt11-expiry expired">
         <mat-icon>timer_off</mat-icon>
         <span>Expired</span>
@@ -29,6 +39,7 @@
     </div>
   </div>
 
+  @if (!isPaid()) {
   <div class="bolt11-actions">
     <button mat-raised-button class="pay-button" (click)="openPayDialog()" [disabled]="isExpired()"
       matTooltip="Pay with connected wallet">
@@ -51,4 +62,5 @@
       <mat-icon>content_copy</mat-icon>
     </button>
   </div>
+  }
 </mat-card>

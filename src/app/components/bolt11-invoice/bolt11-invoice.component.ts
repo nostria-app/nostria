@@ -1,4 +1,4 @@
-import { Component, input, signal, inject, computed, PLATFORM_ID } from '@angular/core';
+import { Component, input, signal, inject, computed, PLATFORM_ID, OnInit, OnDestroy } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
@@ -10,7 +10,11 @@ import { OverlayModule, Overlay, OverlayRef } from '@angular/cdk/overlay';
 import { ComponentPortal } from '@angular/cdk/portal';
 import { QrCodeComponent } from '../qr-code/qr-code.component';
 import { CustomDialogService } from '../../services/custom-dialog.service';
-import { PayInvoiceDialogComponent, PayInvoiceDialogData } from '../pay-invoice-dialog/pay-invoice-dialog.component';
+import { PayInvoiceDialogComponent, PayInvoiceDialogData, PayInvoiceDialogResult } from '../pay-invoice-dialog/pay-invoice-dialog.component';
+import { Wallets } from '../../services/wallets';
+import { NwcService } from '../../services/nwc.service';
+
+type InvoiceState = 'pending' | 'settled' | 'failed' | 'accepted' | 'expired' | 'unknown';
 
 interface DecodedInvoiceData {
   paymentHash: string;
@@ -26,13 +30,15 @@ interface DecodedInvoiceData {
   templateUrl: './bolt11-invoice.component.html',
   styleUrl: './bolt11-invoice.component.scss',
 })
-export class Bolt11InvoiceComponent {
+export class Bolt11InvoiceComponent implements OnInit, OnDestroy {
   invoice = input.required<string>();
 
   private clipboard = inject(Clipboard);
   private snackBar = inject(MatSnackBar);
   private overlay = inject(Overlay);
   private customDialog = inject(CustomDialogService);
+  private wallets = inject(Wallets);
+  private nwcService = inject(NwcService);
   private isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
 
   showQrCode = signal(false);
@@ -41,6 +47,21 @@ export class Bolt11InvoiceComponent {
   // Decoded invoice data
   decoded = signal<DecodedInvoiceData | null>(null);
   decodeAttempted = signal(false);
+
+  // Invoice payment status (from lookupInvoice polling)
+  invoiceState = signal<InvoiceState>('unknown');
+  private pollingInterval: ReturnType<typeof setInterval> | null = null;
+  private isPolling = false;
+  // Once a wallet recognizes the invoice, cache its pubkey for efficient subsequent lookups
+  private ownerWalletPubkey: string | null = null;
+  // If no wallet recognizes the invoice on the first lookup, don't poll again
+  private pollingStopped = false;
+
+  // Terminal states that stop polling
+  private readonly terminalStates: InvoiceState[] = ['settled', 'failed', 'accepted', 'expired'];
+
+  isPaid = computed(() => this.invoiceState() === 'settled');
+  isFailed = computed(() => this.invoiceState() === 'failed');
 
   // Computed properties from decoded data
   amountSats = computed(() => this.decoded()?.satoshi ?? 0);
@@ -60,6 +81,7 @@ export class Bolt11InvoiceComponent {
   /**
    * Decode the invoice on initialization.
    * Uses dynamic import so @getalby/lightning-tools is not in the main bundle.
+   * After decoding, starts polling for payment status if wallet is connected.
    */
   async ngOnInit(): Promise<void> {
     try {
@@ -70,6 +92,87 @@ export class Bolt11InvoiceComponent {
       // Decode failed silently — the component will show the truncated invoice string
     } finally {
       this.decodeAttempted.set(true);
+    }
+
+    // Start polling for payment status if we have a wallet and the invoice isn't already expired
+    if (this.isBrowser && this.wallets.hasWallets() && !this.isExpired()) {
+      this.startPolling();
+    }
+  }
+
+  ngOnDestroy(): void {
+    this.stopPolling();
+  }
+
+  /**
+   * Start polling lookupInvoice every 7 seconds via NwcService.
+   * Uses NwcService's cached NWC clients to avoid creating new relay connections.
+   * Stops on terminal states or when no wallet recognizes the invoice.
+   */
+  private startPolling(): void {
+    // Do an immediate lookup first
+    this.lookupInvoiceStatus();
+
+    this.pollingInterval = setInterval(() => {
+      if (this.pollingStopped) {
+        this.stopPolling();
+        return;
+      }
+      const currentState = this.invoiceState();
+      if (this.terminalStates.includes(currentState)) {
+        this.stopPolling();
+        return;
+      }
+      this.lookupInvoiceStatus();
+    }, 7000);
+  }
+
+  private stopPolling(): void {
+    this.pollingStopped = true;
+    if (this.pollingInterval) {
+      clearInterval(this.pollingInterval);
+      this.pollingInterval = null;
+    }
+  }
+
+  /**
+   * Lookup invoice status via NwcService.lookupInvoice().
+   * Uses NwcService's cached, properly managed NWC clients instead of
+   * creating ephemeral clients that open new relay connections each time.
+   *
+   * On first successful lookup, caches the wallet pubkey for efficient future polls.
+   * If no wallet recognizes the invoice, stops polling immediately.
+   */
+  private async lookupInvoiceStatus(): Promise<void> {
+    if (this.isPolling || this.pollingStopped) return;
+    this.isPolling = true;
+
+    try {
+      const invoiceStr = this.invoice();
+      // Use NwcService which manages cached NWC clients properly.
+      // If we already know which wallet owns the invoice, pass its pubkey for efficiency.
+      const result = await this.nwcService.lookupInvoice(invoiceStr, this.ownerWalletPubkey ?? undefined);
+
+      if (result) {
+        // Cache the owning wallet for future polls
+        this.ownerWalletPubkey = result.walletPubkey;
+
+        const state = (result.transaction.state as InvoiceState) ?? 'unknown';
+        this.invoiceState.set(state);
+
+        if (this.terminalStates.includes(state)) {
+          this.stopPolling();
+        }
+      } else {
+        // No wallet recognized this invoice — stop polling.
+        // Sender-side gets instant feedback via the Pay dialog's afterClosed$.
+        this.stopPolling();
+      }
+    } catch (err) {
+      // Fatal error — stop polling
+      this.stopPolling();
+    } finally {
+      this.isPolling = false;
     }
   }
 
@@ -141,6 +244,15 @@ export class Bolt11InvoiceComponent {
     if (dialogRef.componentInstance && typeof dialogRef.componentInstance.initialize === 'function') {
       dialogRef.componentInstance.initialize();
     }
+
+    // Listen for dialog close — if payment succeeded, mark invoice as settled
+    dialogRef.afterClosed$.subscribe(({ result }) => {
+      const payResult = result as PayInvoiceDialogResult | undefined;
+      if (payResult?.success) {
+        this.invoiceState.set('settled');
+        this.stopPolling();
+      }
+    });
   }
 
   /**

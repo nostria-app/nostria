@@ -345,15 +345,14 @@ export class SendMoneyDialogComponent {
         ln.close();
       }
 
-      // Send payment notification DMs (different content for sender vs receiver)
+      // Send payment notification DM (same content for both parties to preserve reaction compatibility)
       const formattedAmount = sats.toLocaleString();
-      const senderBase = `You sent ${formattedAmount} sats.`;
-      const receiverBase = `You received ${formattedAmount} sats.`;
-      const senderText = comment ? `${senderBase} ${comment}` : senderBase;
-      const receiverText = comment ? `${receiverBase} ${comment}` : receiverBase;
+      const messageText = comment
+        ? `Sent ${formattedAmount} sats: ${comment}`
+        : `Sent ${formattedAmount} sats.`;
 
       try {
-        await this.messagingService.sendPaymentNotification(senderText, receiverText, this.data.recipientPubkey);
+        await this.messagingService.sendPaymentNotification(messageText, this.data.recipientPubkey);
       } catch {
         // Payment succeeded but DM notification failed — don't block the success flow
       }

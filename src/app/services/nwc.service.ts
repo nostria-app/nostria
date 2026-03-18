@@ -371,6 +371,80 @@ export class NwcService {
   }
 
   /**
+   * Lookup a specific invoice across all connected wallets.
+   * Returns the transaction state from whichever wallet recognizes the invoice.
+   * Also returns the wallet pubkey that owns the invoice for efficient future lookups.
+   *
+   * NIP-47: lookup_invoice method
+   *
+   * @param invoice - BOLT-11 invoice string
+   * @param walletPubkey - Optional: specific wallet to check (skips trying all wallets)
+   * @returns The transaction info and owning wallet pubkey, or null if no wallet recognizes it
+   */
+  async lookupInvoice(
+    invoice: string,
+    walletPubkey?: string
+  ): Promise<{ transaction: NwcTransaction; walletPubkey: string } | null> {
+    const walletsMap = this.walletsService.wallets();
+
+    // If a specific wallet is requested, only check that one
+    if (walletPubkey) {
+      const wallet = walletsMap[walletPubkey];
+      if (!wallet) {
+        return null;
+      }
+
+      const client = await this.getNwcClient(wallet);
+      if (!client) {
+        return null;
+      }
+
+      try {
+        const result = await client.lookupInvoice({ invoice });
+        const tx = this.normalizeTransaction(result);
+        return {
+          transaction: tx,
+          walletPubkey,
+        };
+      } catch (err) {
+        return null;
+      }
+    }
+
+    // Try each wallet until one recognizes the invoice
+    for (const [pubkey, wallet] of Object.entries(walletsMap)) {
+      if (!wallet.connections || wallet.connections.length === 0) continue;
+
+      const client = await this.getNwcClient(wallet);
+      if (!client) continue;
+
+      try {
+        const result = await client.lookupInvoice({ invoice });
+        const tx = this.normalizeTransaction(result);
+        return {
+          transaction: tx,
+          walletPubkey: pubkey,
+        };
+      } catch (err: unknown) {
+        // NOT_FOUND is expected for wallets that didn't create the invoice — skip
+        if (err && typeof err === 'object' && 'code' in err && (err as { code: string }).code === 'NOT_FOUND') {
+          continue;
+        }
+        // Fallback string check for older SDK versions
+        const message = err instanceof Error ? err.message : String(err);
+        if (message.includes('not found') || message.includes('NOT_FOUND')) {
+          continue;
+        }
+        // Other errors (method not supported, etc.) — skip this wallet
+        continue;
+      }
+    }
+
+    // No wallet recognized this invoice
+    return null;
+  }
+
+  /**
    * Refresh all data for a wallet (balance, transactions, info)
    */
   async refreshWalletData(walletPubkey: string): Promise<void> {
@@ -460,13 +534,34 @@ export class NwcService {
   }
 
   /**
-   * Normalize transaction data from various response formats
+   * Normalize transaction data from various response formats.
+   *
+   * Note: lookupInvoice responses may NOT include a `state` field (unlike
+   * listTransactions). When `state` is absent, we infer it from `settled_at`
+   * and `expires_at` timestamps.
    */
   private normalizeTransaction = (tx: unknown): NwcTransaction => {
     const transaction = tx as Record<string, unknown>;
+
+    // Infer state when the response doesn't include it (e.g. lookupInvoice)
+    let state = transaction['state'] as NwcTransaction['state'] | undefined;
+    if (!state) {
+      if (transaction['settled_at']) {
+        state = 'settled';
+      } else if (
+        transaction['expires_at'] &&
+        typeof transaction['expires_at'] === 'number' &&
+        Math.floor(Date.now() / 1000) > transaction['expires_at']
+      ) {
+        state = 'expired';
+      } else {
+        state = 'pending';
+      }
+    }
+
     return {
       type: (transaction['type'] as 'incoming' | 'outgoing') || 'incoming',
-      state: transaction['state'] as NwcTransaction['state'],
+      state,
       invoice: transaction['invoice'] as string | undefined,
       description: transaction['description'] as string | undefined,
       description_hash: transaction['description_hash'] as string | undefined,

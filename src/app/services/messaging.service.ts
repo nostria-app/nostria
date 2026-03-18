@@ -3235,147 +3235,15 @@ export class MessagingService implements NostriaService {
   }
 
   /**
-   * Send a payment notification as a DM with different content for sender and receiver.
-   * Since gift wrapping already creates two separate wraps (one for each party),
-   * this method creates two distinct rumors so each party sees their own perspective:
-   * - Sender sees: "You sent X sats." or "You sent X sats: message"
-   * - Receiver sees: "You received X sats." or "You received X sats: message"
+   * Send a payment notification as a DM.
+   * Uses sendDirectMessage() so both sender and receiver see the same rumor content
+   * (same event ID), which preserves reaction compatibility.
    *
-   * @param senderText The message content the sender will see in their chat history
-   * @param receiverText The message content the receiver will see in their chat history
+   * @param messageText The message content both parties will see
    * @param receiverPubkey The recipient's public key
    */
-  async sendPaymentNotification(senderText: string, receiverText: string, receiverPubkey: string): Promise<void> {
-    const myPubkey = this.accountState.pubkey();
-    if (!myPubkey) {
-      throw new Error('You need to be logged in to send messages');
-    }
-
-    try {
-      const tags: string[][] = [['p', receiverPubkey]];
-      const now = Math.floor(Date.now() / 1000);
-
-      // --- Rumor for the RECEIVER (what they see) ---
-      const receiverRumor = {
-        kind: kinds.PrivateDirectMessage,
-        pubkey: myPubkey,
-        created_at: now,
-        tags: tags,
-        content: receiverText,
-      };
-      const receiverRumorId = getEventHash(receiverRumor);
-      const receiverRumorWithId = { ...receiverRumor, id: receiverRumorId };
-      const receiverEventText = JSON.stringify(receiverRumorWithId);
-
-      // --- Rumor for the SENDER (what they see in their own history) ---
-      const senderRumor = {
-        kind: kinds.PrivateDirectMessage,
-        pubkey: myPubkey,
-        created_at: now,
-        tags: tags,
-        content: senderText,
-      };
-      const senderRumorId = getEventHash(senderRumor);
-      const senderRumorWithId = { ...senderRumor, id: senderRumorId };
-      const senderEventText = JSON.stringify(senderRumorWithId);
-
-      // --- Seal + Gift Wrap for the RECEIVER ---
-      const sealedContent = await this.encryption.encryptNip44(receiverEventText, receiverPubkey);
-      const sealedMessage = {
-        kind: kinds.Seal,
-        pubkey: myPubkey,
-        created_at: now - Math.floor(Math.random() * 172800),
-        tags: [],
-        content: sealedContent,
-      };
-      const signedSealedMessage = await this.nostr.signEvent(sealedMessage);
-
-      const ephemeralKey = generateSecretKey();
-      const ephemeralPubkey = getPublicKey(ephemeralKey);
-
-      const giftWrapContent = await this.encryption.encryptNip44WithKey(
-        JSON.stringify(signedSealedMessage),
-        bytesToHex(ephemeralKey),
-        receiverPubkey
-      );
-      const giftWrap = {
-        kind: kinds.GiftWrap,
-        pubkey: ephemeralPubkey,
-        created_at: now - Math.floor(Math.random() * 172800),
-        tags: [['p', receiverPubkey]],
-        content: giftWrapContent,
-      };
-      const signedGiftWrap = finalizeEvent(giftWrap, ephemeralKey);
-
-      // --- Seal + Gift Wrap for the SENDER (self-copy with sender's text) ---
-      const sealedContent2 = await this.encryption.encryptNip44(senderEventText, myPubkey);
-      const sealedMessage2 = {
-        kind: kinds.Seal,
-        pubkey: myPubkey,
-        created_at: now - Math.floor(Math.random() * 172800),
-        tags: [],
-        content: sealedContent2,
-      };
-      const signedSealedMessage2 = await this.nostr.signEvent(sealedMessage2);
-
-      const giftWrapContent2 = await this.encryption.encryptNip44WithKey(
-        JSON.stringify(signedSealedMessage2),
-        bytesToHex(ephemeralKey),
-        myPubkey
-      );
-      const giftWrap2 = {
-        kind: kinds.GiftWrap,
-        pubkey: ephemeralPubkey,
-        created_at: now - Math.floor(Math.random() * 172800),
-        tags: [['p', myPubkey]],
-        content: giftWrapContent2,
-      };
-      const signedGiftWrap2 = finalizeEvent(giftWrap2, ephemeralKey);
-
-      // --- Publish both gift wraps ---
-      const userRelayService = await this.getUserRelayService();
-      const publishPromises: Promise<unknown>[] = [];
-
-      const accountPublish1 = await this.relay.publish(signedGiftWrap);
-      if (accountPublish1) {
-        publishPromises.push(...accountPublish1);
-      }
-      const accountPublish2 = await this.relay.publish(signedGiftWrap2);
-      if (accountPublish2) {
-        publishPromises.push(...accountPublish2);
-      }
-
-      if (userRelayService) {
-        publishPromises.push(userRelayService.publishToDmRelays(receiverPubkey, signedGiftWrap));
-        publishPromises.push(userRelayService.publishToDmRelays(myPubkey, signedGiftWrap2));
-      }
-
-      const discoveryRelayUrls = this.discoveryRelay.getRelayUrls();
-      if (discoveryRelayUrls.length > 0) {
-        const pool = this.discoveryRelay.getPool();
-        if (pool) {
-          publishPromises.push(...pool.publish(discoveryRelayUrls, signedGiftWrap));
-        }
-      }
-
-      await this.awaitDirectMessagePublishes(publishPromises, 'direct-message');
-
-      // Add the sender's version to local chat state
-      const message: DirectMessage = {
-        id: senderRumorId,
-        pubkey: myPubkey,
-        created_at: now,
-        content: senderText,
-        isOutgoing: true,
-        tags: tags,
-        encryptionType: 'nip44',
-      };
-
-      this.addMessageToChat(receiverPubkey, message);
-    } catch (error) {
-      this.logger.error('Failed to send payment notification DMs', error);
-      throw error;
-    }
+  async sendPaymentNotification(messageText: string, receiverPubkey: string): Promise<void> {
+    await this.sendDirectMessage(messageText, receiverPubkey);
   }
 
   private async awaitDirectMessagePublishes(
