@@ -1899,6 +1899,7 @@ export class EventService {
     const isRepost = this.repostService.isRepostEvent(event);
     let targetEventId = event.id;
     let targetEventPubkey = event.pubkey;
+    let targetEventKind = event.kind;
 
     if (isRepost) {
       // Try to get the reposted event from embedded content first
@@ -1906,6 +1907,7 @@ export class EventService {
       if (repostedRecord?.event) {
         targetEventId = repostedRecord.event.id;
         targetEventPubkey = repostedRecord.event.pubkey;
+        targetEventKind = repostedRecord.event.kind;
       } else {
         // Fallback to e-tag reference
         const reference = this.repostService.getRepostReference(event);
@@ -1914,6 +1916,10 @@ export class EventService {
           if (reference.pubkey) {
             targetEventPubkey = reference.pubkey;
           }
+        }
+        // Kind 6 reposts are always kind 1 content; kind 16 is unknown without the embedded event
+        if (event.kind === kinds.Repost) {
+          targetEventKind = kinds.ShortTextNote;
         }
       }
     }
@@ -1961,7 +1967,11 @@ export class EventService {
 
     // Start loading replies and reactions for the target event (reposted content for reposts)
     const currentEventRepliesPromise = this.loadReplies(targetEventId, targetEventPubkey);
-    const currentEventNip22CommentsPromise = this.loadNip22Comments(targetEventId, targetEventPubkey);
+    // NIP-22 comments (kind 1111) only apply to non-kind-1 content (articles, videos, etc.)
+    // Kind 1 events use NIP-10 replies exclusively, so skip the unnecessary relay query.
+    const currentEventNip22CommentsPromise = targetEventKind === kinds.ShortTextNote
+      ? Promise.resolve([] as Event[])
+      : this.loadNip22Comments(targetEventId, targetEventPubkey);
     const currentEventReactionsPromise = this.loadReactions(targetEventId, targetEventPubkey);
 
     // Race parents and replies so whichever finishes first gets yielded immediately.
