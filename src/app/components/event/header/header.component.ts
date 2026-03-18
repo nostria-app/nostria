@@ -155,7 +155,8 @@ export class EventHeaderComponent {
   clientName = computed<string>(() => {
     const event = this.event();
     const clientTag = event?.tags?.find(tag => tag[0] === 'client' && tag[1]);
-    return clientTag?.[1] || '';
+    const clientName = clientTag?.[1]?.trim() || '';
+    return clientName.replace(/\b\w/g, char => char.toUpperCase());
   });
 
   isOurEvent = computed<boolean>(() => {
