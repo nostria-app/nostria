@@ -712,7 +712,41 @@ export class UserRelayService {
     // Use RelayPoolService.publishWithTracking to get per-relay promises
     const publishResults = this.pool.publishWithTracking(relayUrls, event);
 
-    // Wait for all publish attempts to complete and log results
+    // Create notifications for tracking (same pattern as publish())
+    try {
+      const { NotificationService } = await import('../notification.service');
+      const notificationService = this.injector.get(NotificationService);
+
+      const relayPromises = new Map<Promise<string>, string>();
+
+      this.logger.debug(`[UserRelayService] Creating DM notification for ${publishResults.length} relay promises`);
+
+      publishResults.forEach((promise: Promise<string>, index: number) => {
+        const relayUrl = relayUrls[index];
+        this.logger.debug(`[UserRelayService] Adding DM relay promise for: ${relayUrl}`);
+        const wrappedPromise = promise
+          .then((result) => {
+            this.logger.debug(`[UserRelayService] DM relay ${relayUrl} resolved successfully with: ${result}`);
+            return relayUrl;
+          })
+          .catch((error: unknown) => {
+            const errorMsg = error instanceof Error ? error.message : 'Failed';
+            this.logger.error(`[UserRelayService] DM relay ${relayUrl} failed: ${errorMsg}`);
+            throw new Error(`${relayUrl}: ${errorMsg}`);
+          });
+        relayPromises.set(wrappedPromise, relayUrl);
+      });
+
+      this.logger.debug(`[UserRelayService] Created DM relay promises map with ${relayPromises.size} entries`);
+
+      notificationService.addRelayPublishingNotification(event, relayPromises).catch(err => {
+        this.logger.warn('[UserRelayService] Failed to create DM publish notification', err);
+      });
+    } catch (notifError) {
+      this.logger.debug('[UserRelayService] Could not create DM publish notification', notifError);
+    }
+
+    // Wait for all publish attempts to complete (but notifications are already tracking them)
     const results = await Promise.allSettled(publishResults);
     const successCount = results.filter(r => r.status === 'fulfilled').length;
     const failCount = results.filter(r => r.status === 'rejected').length;
