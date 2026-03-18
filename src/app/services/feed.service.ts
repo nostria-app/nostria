@@ -1595,6 +1595,10 @@ export class FeedService {
         this.logger.debug('Following list is empty, no users to fetch from');
         feedData.initialLoadComplete = true;
         feedData.isRefreshing?.set(false);
+        if (!this._hasInitialContent()) {
+          this._hasInitialContent.set(true);
+          this.appState.feedHasInitialContent.set(true);
+        }
         return;
       }
 
@@ -1895,6 +1899,12 @@ export class FeedService {
     // Mark initial load as complete
     feedData.initialLoadComplete = true;
     feedData.isRefreshing?.set(false);
+
+    // Even when no events are returned, the initial load is complete.
+    if (!this._hasInitialContent()) {
+      this._hasInitialContent.set(true);
+      this.appState.feedHasInitialContent.set(true);
+    }
 
     // Update lastRetrieved timestamp
     this.updateColumnLastRetrieved(feedData.feed.id);
