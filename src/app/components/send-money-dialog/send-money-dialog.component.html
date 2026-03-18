@@ -1,4 +1,4 @@
-<div class="send-money-dialog">
+<div dialog-content class="send-money-dialog">
   <div class="recipient-section">
     <app-user-profile [pubkey]="data.recipientPubkey" />
 
@@ -91,22 +91,6 @@
     <span>{{ paymentError() }}</span>
   </div>
   }
-
-  <div class="dialog-actions">
-    <button mat-button type="button" (click)="cancel()">Cancel</button>
-    <button mat-flat-button type="button" (click)="sendPayment()"
-      [disabled]="!satsControl.value || satsControl.invalid || isSending() || !lightningAddress() || !hasWallet()">
-      @if (isSending()) {
-      <mat-spinner diameter="18"></mat-spinner>
-      <span>Sending...</span>
-      } @else {
-      <ng-container>
-        <mat-icon>bolt</mat-icon>
-        <span>Send Payment</span>
-      </ng-container>
-      }
-    </button>
-  </div>
   } @else {
   <div class="success-state">
     <mat-icon class="success-icon">check_circle</mat-icon>
@@ -119,5 +103,25 @@
     <mat-icon>info_outline</mat-icon>
     <span>Connect a wallet in Settings to send payments</span>
   </div>
+  }
+</div>
+
+<div dialog-actions>
+  @if (!paymentSuccess()) {
+  <button mat-button type="button" (click)="cancel()">Cancel</button>
+  <button mat-flat-button type="button" (click)="sendPayment()"
+    [disabled]="!satsControl.value || satsControl.invalid || isSending() || !lightningAddress() || !hasWallet()">
+    @if (isSending()) {
+    <mat-spinner diameter="18"></mat-spinner>
+    <span>Sending...</span>
+    } @else {
+    <ng-container>
+      <mat-icon>bolt</mat-icon>
+      <span>Send Payment</span>
+    </ng-container>
+    }
+  </button>
+  } @else {
+  <button mat-button type="button" (click)="cancel()">Close</button>
   }
 </div>
