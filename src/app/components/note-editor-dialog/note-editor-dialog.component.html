@@ -434,9 +434,9 @@
           <mat-icon class="preview-icon">visibility</mat-icon>
           <span class="preview-title">Preview</span>
         </div>
-        <button mat-button type="button" class="preview-exit-button" (click)="togglePreview()">
-          <mat-icon>visibility_off</mat-icon>
-          Hide preview
+        <span class="spacer"></span>
+        <button mat-icon-button type="button" class="close-preview" (click)="togglePreview()" matTooltip="Close preview">
+          <mat-icon>close</mat-icon>
         </button>
       </div>
       <app-content class="preview-content" [content]="previewContent()"
@@ -472,7 +472,12 @@
     <!-- Left side: Action buttons -->
     <div class="left-actions">
       @if (showAdvancedOptions() && !inlineMode()) {
-      <button mat-button type="button" class="back-from-advanced" (click)="toggleAdvancedOptions()">
+      <button mat-button type="button" class="back-from-overlay" (click)="toggleAdvancedOptions()">
+        <mat-icon>arrow_back</mat-icon>
+        <span>Back</span>
+      </button>
+      } @else if (showPreview() && !inlineMode()) {
+      <button mat-button type="button" class="back-from-overlay" (click)="togglePreview()">
         <mat-icon>arrow_back</mat-icon>
         <span>Back</span>
       </button>
@@ -654,7 +659,7 @@
     </div>
 
     <!-- Right side: PoW indicator and primary actions -->
-    @if (!showAdvancedOptions()) {
+    @if (!showAdvancedOptions() && !showPreview()) {
     <div class="right-actions">
       @if (powEnabled() && isPowMining()) {
       <div class="pow-progress-indicator">

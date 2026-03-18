@@ -945,19 +945,12 @@
       }
     }
 
-    .preview-exit-button {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      min-width: 0;
-      flex-shrink: 0;
-      color: var(--mat-sys-primary);
+    .spacer {
+      flex: 1;
+    }
 
-      mat-icon {
-        width: 18px;
-        height: 18px;
-        font-size: 18px;
-      }
+    .close-preview {
+      margin: -8px -8px -8px 0;
     }
   }
 
@@ -1585,7 +1578,7 @@
       flex: 0 0 auto; // Don't grow, just fit content
     }
 
-    .back-from-advanced {
+    .back-from-overlay {
       mat-icon {
         margin-right: 4px;
       }
