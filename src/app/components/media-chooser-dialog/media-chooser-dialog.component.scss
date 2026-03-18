@@ -4,6 +4,10 @@
   height: 100%;
   max-height: 70vh;
   overflow: hidden;
+
+  @media (max-width: 600px) {
+    max-height: none;
+  }
 }
 
 .chooser-toolbar {
@@ -30,9 +34,14 @@
 
 mat-tab-group {
   flex: 1;
+  min-height: 0;
   overflow: hidden;
   display: flex;
   flex-direction: column;
+
+  ::ng-deep .mat-mdc-tab-body-wrapper {
+    flex: 1;
+  }
 }
 
 .tab-icon {
@@ -43,6 +52,11 @@ mat-tab-group {
   padding: 16px 0;
   overflow-y: auto;
   max-height: calc(70vh - 200px);
+
+  @media (max-width: 600px) {
+    max-height: none;
+    flex: 1;
+  }
 }
 
 .empty-state {
@@ -253,8 +267,6 @@ mat-tab-group {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding-top: 16px;
-  border-top: 1px solid var(--mat-sys-outline-variant);
 }
 
 .selection-info {
@@ -279,10 +291,6 @@ mat-tab-group {
   .media-grid {
     grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
     gap: 8px;
-  }
-
-  .tab-content {
-    max-height: calc(60vh - 180px);
   }
 
   .chooser-actions {
