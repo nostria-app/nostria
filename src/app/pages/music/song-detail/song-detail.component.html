@@ -231,8 +231,8 @@
       } @else {
       <div class="albums-grid">
         @for (album of containingAlbums(); track album.dTag) {
-        <div class="album-card" (click)="openAlbum(album)" (keydown.enter)="openAlbum(album)" tabindex="0"
-          role="button" [attr.aria-label]="'Open album: ' + album.title">
+        <div class="album-card" (click)="openAlbum(album)" (keydown.enter)="openAlbum(album)" tabindex="0" role="button"
+          [attr.aria-label]="'Open album: ' + album.title">
           <div class="album-cover">
             @if (album.image) {
             <img [src]="album.image" [alt]="album.title" title="Album cover" />
@@ -269,8 +269,8 @@
       } @else {
       <div class="albums-grid">
         @for (album of moreByArtist(); track album.dTag) {
-        <div class="album-card" (click)="openAlbum(album)" (keydown.enter)="openAlbum(album)" tabindex="0"
-          role="button" [attr.aria-label]="'Open album: ' + album.title">
+        <div class="album-card" (click)="openAlbum(album)" (keydown.enter)="openAlbum(album)" tabindex="0" role="button"
+          [attr.aria-label]="'Open album: ' + album.title">
           <div class="album-cover">
             @if (album.image) {
             <img [src]="album.image" [alt]="album.title" title="Album cover" />

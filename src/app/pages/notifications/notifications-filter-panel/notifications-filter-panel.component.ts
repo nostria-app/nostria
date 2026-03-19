@@ -19,6 +19,7 @@ export interface NotificationFilters {
   [NotificationType.REPLY]: boolean;
   [NotificationType.REACTION]: boolean;
   [NotificationType.ZAP]: boolean;
+  [NotificationType.WALLET]: boolean;
 }
 
 /**
@@ -40,6 +41,7 @@ const FILTER_OPTIONS: FilterOption[] = [
   { type: NotificationType.REPLY, label: 'Replies', icon: 'reply' },
   { type: NotificationType.REACTION, label: 'Reactions', icon: 'favorite' },
   { type: NotificationType.ZAP, label: 'Zaps', icon: 'bolt' },
+  { type: NotificationType.WALLET, label: 'Wallet', icon: 'account_balance_wallet' },
 ];
 
 @Component({
@@ -239,6 +241,7 @@ export class NotificationsFilterPanelComponent {
       [NotificationType.REPLY]: true,
       [NotificationType.REACTION]: true,
       [NotificationType.ZAP]: true,
+      [NotificationType.WALLET]: true,
     });
     this.showSystemNotificationsChanged.emit(false);
     this.showUnreadOnlyChanged.emit(false);

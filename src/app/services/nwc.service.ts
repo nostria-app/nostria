@@ -1,8 +1,17 @@
-import { inject, Injectable, signal, computed, effect } from '@angular/core';
+import { inject, Injectable, signal, computed, effect, PLATFORM_ID } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { NWCClient } from '@getalby/sdk';
+import { MatSnackBar } from '@angular/material/snack-bar';
+import { hexToBytes } from '@noble/hashes/utils.js';
+import { v2 } from 'nostr-tools/nip44';
+import { nip04, Event } from 'nostr-tools';
 import { LoggerService } from './logger.service';
 import { Wallets, Wallet } from './wallets';
 import { AccountStateService } from './account-state.service';
+import { NwcRelayService } from './relays/nwc-relay';
+import { NotificationService } from './notification.service';
+import { ContentNotification, NotificationType } from './database.service';
+import { DatabaseService } from './database.service';
 
 /**
  * NIP-47 Transaction type
@@ -64,6 +73,22 @@ export interface WalletTransferResult {
 }
 
 /**
+ * NIP-47 Wallet Service Notification event kinds
+ * Kind 23196 uses NIP-04 encryption (backwards compatibility)
+ * Kind 23197 uses NIP-44 encryption (preferred)
+ */
+export const NWC_NOTIFICATION_KIND_NIP04 = 23196;
+export const NWC_NOTIFICATION_KIND_NIP44 = 23197;
+
+/**
+ * Parsed NWC notification content
+ */
+export interface NwcNotificationContent {
+  notification_type: string;
+  notification: Record<string, unknown>;
+}
+
+/**
  * NWC Service - Implements NIP-47 Nostr Wallet Connect
  * Provides balance checking and transaction history
  */
@@ -74,6 +99,11 @@ export class NwcService {
   private logger = inject(LoggerService);
   private walletsService = inject(Wallets);
   private accountState = inject(AccountStateService);
+  private nwcRelay = inject(NwcRelayService);
+  private notificationService = inject(NotificationService);
+  private database = inject(DatabaseService);
+  private snackBar = inject(MatSnackBar);
+  private platformId = inject(PLATFORM_ID);
 
   // Track the current account pubkey to detect changes
   private currentAccountPubkey = signal<string | null>(null);
@@ -83,6 +113,11 @@ export class NwcService {
 
   // Cache NWC clients to avoid reconnecting
   private nwcClients = new Map<string, NWCClient>();
+
+  // Active NWC notification subscriptions
+  private notificationSubscriptions: { unsubscribe: () => void }[] = [];
+  // Track processed notification event IDs to avoid duplicates
+  private processedNotificationIds = new Set<string>();
 
   // Currently selected wallet pubkey for operations
   selectedWalletPubkey = signal<string | null>(null);
@@ -107,6 +142,24 @@ export class NwcService {
         this.logger.debug('NWC cache cleared due to account change');
       }
     });
+
+    // Effect to subscribe to NWC notifications when wallets change
+    effect(() => {
+      const wallets = this.walletsService.wallets();
+      const accountPubkey = this.accountState.pubkey();
+
+      if (!isPlatformBrowser(this.platformId) || !accountPubkey) {
+        return;
+      }
+
+      // Unsubscribe from previous subscriptions
+      this.unsubscribeNotifications();
+
+      // Subscribe to notifications for each wallet
+      for (const wallet of Object.values(wallets)) {
+        this.subscribeToWalletNotifications(wallet, accountPubkey);
+      }
+    });
   }
 
   /**
@@ -122,6 +175,9 @@ export class NwcService {
       }
     }
     this.nwcClients.clear();
+
+    // Clear notification subscriptions
+    this.unsubscribeNotifications();
 
     // Clear wallet data cache
     this.walletDataCache.set({});
@@ -606,4 +662,194 @@ export class NwcService {
       metadata: transaction['metadata'] as Record<string, unknown> | undefined,
     };
   };
+
+  /**
+   * Unsubscribe from all active NWC notification subscriptions
+   */
+  private unsubscribeNotifications(): void {
+    for (const sub of this.notificationSubscriptions) {
+      try {
+        sub.unsubscribe();
+      } catch {
+        // Ignore errors during cleanup
+      }
+    }
+    this.notificationSubscriptions = [];
+    this.processedNotificationIds.clear();
+  }
+
+  /**
+   * Subscribe to NIP-47 wallet notifications (kind 23196/23197) for a specific wallet
+   */
+  private subscribeToWalletNotifications(wallet: Wallet, accountPubkey: string): void {
+    if (!wallet.connections || wallet.connections.length === 0) {
+      return;
+    }
+
+    try {
+      const parsed = this.walletsService.parseConnectionString(wallet.connections[0]);
+      const walletServicePubkey = parsed.pubkey;
+      const relayUrls = parsed.relay;
+      const secret = parsed.secret;
+
+      if (!walletServicePubkey || !relayUrls.length || !secret) {
+        return;
+      }
+
+      const filter = {
+        kinds: [NWC_NOTIFICATION_KIND_NIP04, NWC_NOTIFICATION_KIND_NIP44],
+        authors: [walletServicePubkey],
+        '#p': [accountPubkey],
+        since: Math.floor(Date.now() / 1000) - 86400, // Last 24 hours
+      };
+
+      const subscription = this.nwcRelay.subscribeToNwcResponse(
+        filter,
+        relayUrls,
+        (event: Event) => {
+          this.handleNwcNotificationEvent(event, secret, walletServicePubkey, wallet.name || 'Wallet');
+        }
+      );
+
+      this.notificationSubscriptions.push(subscription);
+      this.logger.debug(`[NWC] Subscribed to notifications for wallet ${wallet.name || wallet.pubkey.substring(0, 8)}`);
+    } catch (error) {
+      this.logger.error('[NWC] Failed to subscribe to wallet notifications', error);
+    }
+  }
+
+  /**
+   * Handle an incoming NWC notification event (kind 23196/23197)
+   * Decrypts using NIP-04 or NIP-44 with the wallet secret and creates a notification
+   */
+  private async handleNwcNotificationEvent(
+    event: Event,
+    secret: string,
+    walletServicePubkey: string,
+    walletName: string
+  ): Promise<void> {
+    // Skip if already processed
+    if (this.processedNotificationIds.has(event.id)) {
+      return;
+    }
+    this.processedNotificationIds.add(event.id);
+
+    try {
+      // Decrypt content based on event kind
+      const secretBytes = hexToBytes(secret);
+      let decryptedContent: string;
+
+      if (event.kind === NWC_NOTIFICATION_KIND_NIP44) {
+        // NIP-44 decryption
+        const conversationKey = v2.utils.getConversationKey(secretBytes, walletServicePubkey);
+        decryptedContent = v2.decrypt(event.content, conversationKey);
+      } else {
+        // NIP-04 decryption (kind 23196)
+        decryptedContent = await nip04.decrypt(secretBytes, walletServicePubkey, event.content);
+      }
+
+      // Parse the notification JSON
+      const parsed = JSON.parse(decryptedContent) as unknown;
+      if (!parsed || typeof parsed !== 'object') {
+        this.logger.warn('[NWC] Invalid notification content format');
+        return;
+      }
+
+      const notification = parsed as NwcNotificationContent;
+      const notificationType = notification.notification_type || 'unknown';
+      const notificationData = notification.notification || {};
+
+      // Build a human-readable title and message
+      const { title, message } = this.formatWalletNotification(notificationType, notificationData, walletName);
+
+      // Show toast
+      this.snackBar.open(title, 'Close', { duration: 5000 });
+
+      // Create content notification for history
+      const notificationId = `content-wallet-${event.id}`;
+
+      // Check if already exists in memory or storage
+      const existingInMemory = this.notificationService.notifications().find(n => n.id === notificationId);
+      if (existingInMemory) {
+        return;
+      }
+
+      const existingInStorage = await this.database.getNotification(notificationId);
+      if (existingInStorage) {
+        return;
+      }
+
+      const pubkey = this.accountState.pubkey();
+      const contentNotification: ContentNotification = {
+        id: notificationId,
+        type: NotificationType.WALLET,
+        title,
+        message,
+        timestamp: event.created_at * 1000, // Convert to ms for internal use
+        read: false,
+        recipientPubkey: pubkey,
+        authorPubkey: walletServicePubkey,
+        eventId: event.id,
+        kind: event.kind,
+      };
+
+      this.notificationService.addNotification(contentNotification);
+      await this.notificationService.persistNotificationToStorage(contentNotification);
+
+      this.logger.debug(`[NWC] Created wallet notification: ${notificationId} (${notificationType})`);
+    } catch (error) {
+      this.logger.error('[NWC] Failed to process wallet notification event', error);
+    }
+  }
+
+  /**
+   * Format a wallet notification into a human-readable title and message
+   */
+  private formatWalletNotification(
+    notificationType: string,
+    data: Record<string, unknown>,
+    walletName: string
+  ): { title: string; message: string } {
+    const amount = typeof data['amount'] === 'number' ? data['amount'] : 0;
+    const amountSats = Math.floor(amount / 1000);
+    const description = typeof data['description'] === 'string' ? data['description'] : '';
+
+    switch (notificationType) {
+      case 'payment_received': {
+        const title = `Payment received: ${amountSats.toLocaleString()} sats`;
+        const message = description
+          ? `${walletName}: ${description}`
+          : walletName;
+        return { title, message };
+      }
+      case 'payment_sent': {
+        const title = `Payment sent: ${amountSats.toLocaleString()} sats`;
+        const message = description
+          ? `${walletName}: ${description}`
+          : walletName;
+        return { title, message };
+      }
+      case 'balance_updated': {
+        const balance = typeof data['balance'] === 'number' ? Math.floor(data['balance'] / 1000) : null;
+        const title = balance !== null
+          ? `Balance updated: ${balance.toLocaleString()} sats`
+          : 'Balance updated';
+        return { title, message: walletName };
+      }
+      case 'hold_invoice_accepted': {
+        const title = `Hold invoice accepted: ${amountSats.toLocaleString()} sats`;
+        const message = description
+          ? `${walletName}: ${description}`
+          : walletName;
+        return { title, message };
+      }
+      default: {
+        const title = `Wallet notification: ${notificationType.replace(/_/g, ' ')}`;
+        const message = description
+          ? `${walletName}: ${description}`
+          : walletName;
+        return { title, message };
+      }
+    }
+  }
 }

@@ -140,6 +140,7 @@ export class NotificationsComponent implements OnInit, OnDestroy {
       NotificationType.REPLY,
       NotificationType.REACTION,
       NotificationType.ZAP,
+      NotificationType.WALLET,
     ];
     // Return true if any content filter is disabled OR if showing system notifications OR if showing unread only
     return contentTypes.some(type => !filters[type])
@@ -174,6 +175,7 @@ export class NotificationsComponent implements OnInit, OnDestroy {
     [NotificationType.REPLY]: true,
     [NotificationType.REACTION]: true,
     [NotificationType.ZAP]: true,
+    [NotificationType.WALLET]: true,
     // System notifications are not filtered
     [NotificationType.RELAY_PUBLISHING]: true,
     [NotificationType.GENERAL]: true,
@@ -196,6 +198,7 @@ export class NotificationsComponent implements OnInit, OnDestroy {
     [NotificationType.REPLY]: true,
     [NotificationType.REACTION]: true,
     [NotificationType.ZAP]: true,
+    [NotificationType.WALLET]: true,
     [NotificationType.RELAY_PUBLISHING]: true,
     [NotificationType.GENERAL]: true,
     [NotificationType.ERROR]: true,
@@ -403,6 +406,7 @@ export class NotificationsComponent implements OnInit, OnDestroy {
       NotificationType.REPLY,
       NotificationType.REACTION,
       NotificationType.ZAP,
+      NotificationType.WALLET,
     ].includes(type);
   }
 
@@ -443,15 +447,19 @@ export class NotificationsComponent implements OnInit, OnDestroy {
 
         // CRITICAL: Filter out notifications from muted/blocked accounts
         // Skip muted-account filtering for follower summary (it aggregates many users)
+        // Skip muted-account filtering for wallet notifications (user configured wallets are trusted)
         const contentNotif = n as ContentNotification;
         if (contentNotif.type !== NotificationType.FOLLOWER_SUMMARY
+          && contentNotif.type !== NotificationType.WALLET
           && contentNotif.authorPubkey && mutedAccountsSet.has(contentNotif.authorPubkey)) {
           return false;
         }
 
         // Skip WoT filtering for follower summary (authorPubkey is just the first follower)
+        // Skip WoT filtering for wallet notifications (user configured wallets are trusted)
         if (
           contentNotif.type !== NotificationType.FOLLOWER_SUMMARY
+          && contentNotif.type !== NotificationType.WALLET
           && contentNotif.authorPubkey
           && !this.passesWotRankFilter(
             trustRanks.get(contentNotif.authorPubkey),
@@ -1030,6 +1038,7 @@ export class NotificationsComponent implements OnInit, OnDestroy {
       [NotificationType.REPLY]: 'Replies',
       [NotificationType.REACTION]: 'Reactions',
       [NotificationType.ZAP]: 'Zaps',
+      [NotificationType.WALLET]: 'Wallet',
       [NotificationType.RELAY_PUBLISHING]: 'Relay Publishing',
       [NotificationType.GENERAL]: 'General',
       [NotificationType.ERROR]: 'Errors',
@@ -1051,6 +1060,7 @@ export class NotificationsComponent implements OnInit, OnDestroy {
       [NotificationType.REPLY]: 'reply',
       [NotificationType.REACTION]: 'favorite',
       [NotificationType.ZAP]: 'bolt',
+      [NotificationType.WALLET]: 'account_balance_wallet',
       [NotificationType.RELAY_PUBLISHING]: 'sync',
       [NotificationType.GENERAL]: 'info',
       [NotificationType.ERROR]: 'error',
@@ -1071,6 +1081,7 @@ export class NotificationsComponent implements OnInit, OnDestroy {
       NotificationType.REPLY,
       NotificationType.REACTION,
       NotificationType.ZAP,
+      NotificationType.WALLET,
     ];
   }
 

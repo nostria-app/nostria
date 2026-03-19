@@ -95,6 +95,7 @@ export enum NotificationType {
   REPLY = 'reply',
   REACTION = 'reaction',
   ZAP = 'zap',
+  WALLET = 'wallet',
 }
 
 // User-facing notification types for push notifications
