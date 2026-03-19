@@ -349,6 +349,18 @@ export class EventService {
         }
       }
 
+      // Correlate q tag with nostr:nevent/naddr references in content to aggregate relay hints.
+      // The q tag relay hint may be a private relay, but the content naddr/nevent often has
+      // additional public relay hints. Aggregate them together for better fetch reliability.
+      if (quoteId && event.content) {
+        const contentRelays = this.extractContentRelayHintsForQuote(event.content, quoteId);
+        for (const relay of contentRelays) {
+          if (!quoteRelays.includes(relay)) {
+            quoteRelays.push(relay);
+          }
+        }
+      }
+
       // NOTE: We intentionally do NOT treat quotes as parent/root events.
       // Per NIP-18, quotes (q tags) are inline embeds, not thread relationships.
       // The quoted event is rendered inline in the content, so it should not
@@ -356,6 +368,57 @@ export class EventService {
     }
 
     return { author, replyAuthor, rootId, replyId, pTags, rootRelays, replyRelays, pTagRelays, mentionIds, intermediates, quoteId, quoteAuthor, quoteRelays };
+  }
+
+  /**
+   * Extract relay hints from nostr:nevent/naddr references in content that correlate
+   * with a q tag's target identifier. This allows aggregating relay hints from the
+   * content-embedded reference with the (potentially private/limited) q tag relay hint.
+   *
+   * For addressable events (kind:pubkey:d-tag), matches naddr references by kind+pubkey+identifier.
+   * For regular events (hex event ID), matches nevent references by event ID.
+   */
+  private extractContentRelayHintsForQuote(content: string, quoteId: string): string[] {
+    const relays: string[] = [];
+
+    // Match nostr:nevent and nostr:naddr references in content
+    const nostrUriRegex = /nostr:(nevent1[a-z0-9]+|naddr1[a-z0-9]+)/gi;
+    const matches = content.matchAll(nostrUriRegex);
+
+    // Check if quoteId is an addressable event format (kind:pubkey:d-tag)
+    const addressableMatch = quoteId.match(/^(\d+):([0-9a-f]{64}):(.+)$/);
+
+    for (const match of matches) {
+      try {
+        const decoded = nip19.decode(match[1]);
+
+        if (addressableMatch && decoded.type === 'naddr') {
+          // Compare addressable event: kind:pubkey:identifier
+          const data = decoded.data;
+          if (
+            String(data.kind) === addressableMatch[1] &&
+            data.pubkey === addressableMatch[2] &&
+            data.identifier === addressableMatch[3]
+          ) {
+            // Match found - extract relay hints
+            if (data.relays && data.relays.length > 0) {
+              relays.push(...data.relays);
+            }
+          }
+        } else if (!addressableMatch && decoded.type === 'nevent') {
+          // Compare by event ID
+          if (decoded.data.id === quoteId) {
+            if (decoded.data.relays && decoded.data.relays.length > 0) {
+              relays.push(...decoded.data.relays);
+            }
+          }
+        }
+      } catch {
+        // Ignore malformed nostr URIs
+      }
+    }
+
+    return relays;
   }
 
   /**

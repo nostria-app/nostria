@@ -100,6 +100,9 @@ export class TaggedReferencesComponent {
   });
 
   // Parse a tags (article references) from the event
+  // NOTE: naddr references found in content are rendered inline by note-content component
+  // (as music embeds, emoji sets, starter packs, live events, articles, etc.)
+  // so we must NOT render them again here to avoid duplicate cards.
   articles = computed<ParsedArticle[]>(() => {
     const event = this.event();
     if (!event) return [];
@@ -107,29 +110,30 @@ export class TaggedReferencesComponent {
     const tagArticles = this.parseTaggedArticles(event.tags || []);
     const contentArticles = this.parseNaddrArticlesFromContent(event.content);
 
-    // If content contains naddr references matching an a-tag by kind+identifier,
-    // prefer naddr coordinates because they often carry canonical pubkey/relays.
-    for (const contentArticle of contentArticles) {
-      const matchingTagIndex = tagArticles.findIndex(tagArticle =>
-        tagArticle.kind === contentArticle.kind &&
-        tagArticle.identifier === contentArticle.identifier
-      );
+    // Build a set of content naddr references (kind:pubkey:identifier) so we can
+    // skip any a-tag that duplicates an inline-rendered naddr from the content.
+    const contentNaddrKeys = new Set(
+      contentArticles.map(a => `${a.kind}:${a.pubkey}:${a.identifier}`)
+    );
 
-      if (matchingTagIndex === -1) {
-        tagArticles.push(contentArticle);
-        continue;
+    // Also check for q tags that reference addressable events matching content naddr.
+    // When a q tag's addressable identifier matches a content naddr, the content naddr
+    // is already rendered inline, so the q tag reference should not create a duplicate card.
+    const qTags = (event.tags || []).filter(tag => tag[0] === 'q' && tag[1]);
+    for (const qTag of qTags) {
+      const addressableMatch = qTag[1].match(/^(\d+):([0-9a-f]{64}):(.+)$/);
+      if (addressableMatch) {
+        const qKey = `${addressableMatch[1]}:${addressableMatch[2]}:${addressableMatch[3]}`;
+        contentNaddrKeys.add(qKey);
       }
-
-      const existing = tagArticles[matchingTagIndex];
-      tagArticles[matchingTagIndex] = {
-        ...existing,
-        ...contentArticle,
-        marker: existing.marker,
-        relay: contentArticle.relay || existing.relay,
-      };
     }
 
-    return tagArticles.filter((article, index, array) =>
+    // Filter out a-tags that match content naddr references (already rendered inline)
+    const filteredTagArticles = tagArticles.filter(
+      tagArticle => !contentNaddrKeys.has(`${tagArticle.kind}:${tagArticle.pubkey}:${tagArticle.identifier}`)
+    );
+
+    return filteredTagArticles.filter((article, index, array) =>
       array.findIndex(a =>
         a.kind === article.kind &&
         a.pubkey === article.pubkey &&

@@ -548,7 +548,8 @@ interface PlaylistTrackReference {
   `],
 })
 export class MusicEmbedComponent {
-  private static readonly MAX_CONCURRENT_LOOKUPS = 4;
+  private static readonly MAX_CONCURRENT_LOOKUPS = 8;
+  private static readonly MAX_QUEUE_WAIT_MS = 15000;
   private static readonly PLAYLIST_TRACK_FALLBACK_CONCURRENCY = 6;
   private static activeLookups = 0;
   private static lookupQueue: (() => void)[] = [];
@@ -707,9 +708,19 @@ export class MusicEmbedComponent {
 
   private async runLookupWithLimit<T>(task: () => Promise<T>): Promise<T> {
     if (MusicEmbedComponent.activeLookups >= MusicEmbedComponent.MAX_CONCURRENT_LOOKUPS) {
-      await new Promise<void>(resolve => {
-        MusicEmbedComponent.lookupQueue.push(resolve);
-      });
+      const gotSlot = await Promise.race([
+        new Promise<true>(resolve => {
+          MusicEmbedComponent.lookupQueue.push(() => resolve(true));
+        }),
+        new Promise<false>(resolve =>
+          setTimeout(() => resolve(false), MusicEmbedComponent.MAX_QUEUE_WAIT_MS)
+        ),
+      ]);
+
+      if (!gotSlot) {
+        // Timed out waiting for a slot — run the task anyway to avoid permanent stall
+        console.debug('[MusicEmbed] Queue wait timed out, proceeding without slot');
+      }
     }
 
     MusicEmbedComponent.activeLookups++;
@@ -745,99 +756,83 @@ export class MusicEmbedComponent {
   }
 
   private async fetchAddressableEvent(): Promise<NostrRecord | null> {
-    let event: NostrRecord | null = null;
+    const filter = {
+      authors: [this.pubkey()],
+      kinds: [this.kind()],
+      '#d': [this.identifier()],
+    };
+
+    // Phase 1: Run relay hints + user data service lookup in parallel.
+    // These query different relay sets, so parallelism reduces latency.
+    const parallelTasks: Promise<NostrRecord | null>[] = [];
 
     const validRelayHints = this.getValidRelayHints();
     if (validRelayHints.length > 0) {
-      try {
-        const filter = {
-          authors: [this.pubkey()],
-          kinds: [this.kind()],
-          '#d': [this.identifier()],
-        };
-        const relayEvent = await this.withTimeout(
-          this.relayPool.get(validRelayHints, filter, 10000),
-          6000
+      parallelTasks.push(
+        this.relayPool.get(validRelayHints, filter, 8000)
+          .then(ev => ev ? this.data.toRecord(ev) : null)
+          .catch(() => {
+            console.debug(`Relay hints fetch failed for music item ${this.identifier()}`);
+            return null;
+          })
+      );
+    }
+
+    const isNotCurrentUser = !this.accountState.isCurrentUser(this.pubkey());
+    const userDataLookup = isNotCurrentUser
+      ? this.userDataService.getEventByPubkeyAndKindAndReplaceableEvent(
+          this.pubkey(),
+          this.kind(),
+          this.identifier(),
+          { save: false, cache: true }
+        )
+      : this.data.getEventByPubkeyAndKindAndReplaceableEvent(
+          this.pubkey(),
+          this.kind(),
+          this.identifier(),
+          { save: false, cache: true }
         );
+
+    parallelTasks.push(
+      this.withTimeout(userDataLookup, 8000)
+    );
+
+    // Resolve all parallel tasks and take the first non-null result
+    if (parallelTasks.length > 0) {
+      const results = await Promise.all(parallelTasks);
+      const event = results.find(r => r !== null) ?? null;
+      if (event) {
+        return event;
+      }
+    }
+
+    // Phase 2: Fallback to discovery relays
+    try {
+      const discoveryRelayUrls = this.discoveryRelay.getRelayUrls();
+      if (discoveryRelayUrls.length > 0) {
+        const relayEvent = await this.relayPool.get(discoveryRelayUrls, filter, 8000);
         if (relayEvent) {
-          event = this.data.toRecord(relayEvent);
+          return this.data.toRecord(relayEvent);
         }
-      } catch {
-        console.debug(`Relay hints fetch failed for music item ${this.identifier()}`);
       }
+    } catch {
+      console.debug(`Discovery relay fetch failed for music item ${this.identifier()}`);
     }
 
-    if (!event) {
-      const isNotCurrentUser = !this.accountState.isCurrentUser(this.pubkey());
-
-      if (isNotCurrentUser) {
-        event = await this.withTimeout(
-          this.userDataService.getEventByPubkeyAndKindAndReplaceableEvent(
-            this.pubkey(),
-            this.kind(),
-            this.identifier(),
-            { save: false, cache: false }
-          ),
-          5000
-        );
-      } else {
-        event = await this.withTimeout(
-          this.data.getEventByPubkeyAndKindAndReplaceableEvent(
-            this.pubkey(),
-            this.kind(),
-            this.identifier(),
-            { save: false, cache: false }
-          ),
-          5000
-        );
-      }
-    }
-
-    if (!event) {
-      try {
-        const filter = {
-          authors: [this.pubkey()],
-          kinds: [this.kind()],
-          '#d': [this.identifier()],
-        };
-        const discoveryRelayUrls = this.discoveryRelay.getRelayUrls();
-        if (discoveryRelayUrls.length > 0) {
-          const relayEvent = await this.withTimeout(
-            this.relayPool.get(discoveryRelayUrls, filter, 10000),
-            6000
-          );
-          if (relayEvent) {
-            event = this.data.toRecord(relayEvent);
-          }
+    // Phase 3: Fallback to preferred relays
+    try {
+      const preferredRelays = this.utilities.preferredRelays.slice(0, 5);
+      if (preferredRelays.length > 0) {
+        const relayEvent = await this.relayPool.get(preferredRelays, filter, 8000);
+        if (relayEvent) {
+          return this.data.toRecord(relayEvent);
         }
-      } catch {
-        console.debug(`Discovery relay fetch failed for music item ${this.identifier()}`);
       }
+    } catch {
+      console.debug(`Preferred relay fetch failed for music item ${this.identifier()}`);
     }
 
-    if (!event) {
-      try {
-        const filter = {
-          authors: [this.pubkey()],
-          kinds: [this.kind()],
-          '#d': [this.identifier()],
-        };
-        const preferredRelays = this.utilities.preferredRelays.slice(0, 5);
-        if (preferredRelays.length > 0) {
-          const relayEvent = await this.withTimeout(
-            this.relayPool.get(preferredRelays, filter, 10000),
-            6000
-          );
-          if (relayEvent) {
-            event = this.data.toRecord(relayEvent);
-          }
-        }
-      } catch {
-        console.debug(`Preferred relay fetch failed for music item ${this.identifier()}`);
-      }
-    }
-
-    return event;
+    return null;
   }
 
   private async loadItem(): Promise<void> {
