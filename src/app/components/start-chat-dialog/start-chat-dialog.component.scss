@@ -3,6 +3,10 @@
   flex-direction: column;
   gap: 24px;
 
+  .mode-tabs {
+    margin-bottom: -8px;
+  }
+
   .selected-profile {
     display: flex;
     align-items: center;
@@ -62,6 +66,15 @@
         font-size: 18px;
         width: 18px;
         height: 18px;
+      }
+
+      &.clickable {
+        cursor: pointer;
+        transition: opacity 0.2s;
+
+        &:hover {
+          opacity: 0.85;
+        }
       }
     }
 
@@ -165,6 +178,86 @@
           color: var(--mat-sys-on-primary-container);
         }
       }
+    }
+  }
+
+  .group-members-section {
+    .members-label {
+      font-size: 12px;
+      color: var(--mat-sys-on-surface-variant);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+    }
+
+    .group-members-list {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      max-height: 200px;
+      overflow-y: auto;
+
+      .group-member-chip {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 6px 12px;
+        background-color: var(--mat-sys-surface-container-high);
+        border-radius: 8px;
+
+        .remove-member-btn {
+          width: 28px;
+          height: 28px;
+          padding: 0 !important;
+          display: flex !important;
+          align-items: center;
+          justify-content: center;
+
+          mat-icon {
+            font-size: 16px;
+            width: 16px;
+            height: 16px;
+          }
+        }
+      }
+    }
+  }
+
+  .group-subject-section {
+    .full-width {
+      width: 100%;
+    }
+  }
+
+  .group-info-section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+
+    .modern-info,
+    .group-min-info {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      padding: 8px 12px;
+      border-radius: 6px;
+
+      mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+      }
+    }
+
+    .modern-info {
+      background-color: var(--mat-sys-primary-container);
+      color: var(--mat-sys-on-primary-container);
+    }
+
+    .group-min-info {
+      background-color: var(--mat-sys-surface-container);
+      color: var(--mat-sys-on-surface-variant);
     }
   }
 }

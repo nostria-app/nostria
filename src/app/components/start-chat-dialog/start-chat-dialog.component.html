@@ -1,5 +1,12 @@
 <div dialog-content class="start-chat-content">
-  <!-- Selected profile display -->
+  <!-- Mode tabs: Direct Message vs Group -->
+  <mat-tab-group [selectedIndex]="mode()" (selectedIndexChange)="onModeChange($event)" class="mode-tabs">
+    <mat-tab label="Direct Message"></mat-tab>
+    <mat-tab label="Group"></mat-tab>
+  </mat-tab-group>
+
+  @if (mode() === 0) {
+  <!-- DIRECT MESSAGE MODE -->
   @if (selectedProfile()) {
   <div class="selected-profile">
     <div class="profile-info">
@@ -96,12 +103,117 @@
       </div>
     </div>
   </div>
+  } @else {
+  <!-- GROUP MODE -->
+
+  <!-- Selected group members -->
+  @if (selectedGroupMembers().length > 0) {
+  <div class="group-members-section">
+    <div class="members-label">Members ({{ selectedGroupMembers().length }})</div>
+    <div class="group-members-list">
+      @for (member of selectedGroupMembers(); track member.event.pubkey) {
+      <div class="group-member-chip">
+        <app-user-profile [pubkey]="member.event.pubkey" view="small"></app-user-profile>
+        <button mat-icon-button class="remove-member-btn" (click)="removeGroupMember(member.event.pubkey)" matTooltip="Remove">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+      }
+    </div>
+  </div>
+
+  <mat-divider></mat-divider>
+  }
+
+  <!-- Group subject (optional) -->
+  <div class="group-subject-section">
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Group name (optional)</mat-label>
+      <input matInput [(ngModel)]="groupSubject" placeholder="e.g. Project Discussion" autocomplete="off" />
+      <mat-icon matSuffix>group</mat-icon>
+    </mat-form-field>
+  </div>
+
+  <!-- Search to add members -->
+  <div class="search-section">
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Add members</mat-label>
+      <input matInput [(ngModel)]="searchInput" placeholder="Search by name or paste npub1..." autocomplete="off" />
+      @if (isNpubInput()) {
+      <mat-icon matSuffix>key</mat-icon>
+      } @else {
+      <mat-icon matSuffix>person_add</mat-icon>
+      }
+      @if (npubError()) {
+      <mat-error>{{ npubError() }}</mat-error>
+      }
+    </mat-form-field>
+
+    <!-- Show npub validation + add button -->
+    @if (isNpubInput() && hasValidNpub()) {
+    <div class="npub-valid-indicator clickable" (click)="addGroupMemberFromNpub()">
+      <mat-icon>check_circle</mat-icon>
+      <span>Valid npub detected - click to add</span>
+    </div>
+    }
+
+    <!-- Search results / Following list -->
+    @if (!isNpubInput()) {
+    <div class="search-results">
+      @if (searchResults().length > 0) {
+      <div class="results-header">
+        @if (searchInput()) {
+        <span>Search results</span>
+        } @else {
+        <span>People you follow</span>
+        }
+      </div>
+      <div class="results-list">
+        @for (profile of searchResults(); track profile.event.pubkey) {
+        <div class="search-result-item" tabindex="0" (click)="selectProfile(profile)"
+          (keydown.enter)="selectProfile(profile)" (keydown.space)="selectProfile(profile)">
+          <app-user-profile [pubkey]="profile.event.pubkey" view="list"></app-user-profile>
+        </div>
+        }
+      </div>
+      } @else if (searchInput()) {
+      <div class="no-results">
+        <mat-icon>person_search</mat-icon>
+        <p>No profiles found</p>
+        <small>Try entering their npub directly (starts with npub1...)</small>
+      </div>
+      }
+    </div>
+    }
+  </div>
+
+  <!-- Group info -->
+  <div class="group-info-section">
+    <div class="modern-info">
+      <mat-icon>security</mat-icon>
+      <span>Groups use end-to-end encryption (NIP-44). Each member receives messages individually.</span>
+    </div>
+    @if (selectedGroupMembers().length > 0 && selectedGroupMembers().length < 2) {
+    <div class="group-min-info">
+      <mat-icon>info</mat-icon>
+      <span>Add at least 2 members to create a group.</span>
+    </div>
+    }
+  </div>
+  }
 </div>
 
 <div dialog-actions class="dialog-actions">
   <button mat-button (click)="close()">Cancel</button>
+  @if (mode() === 0) {
   <button mat-flat-button (click)="startChat()" [disabled]="!canStartChat()">
     <mat-icon>chat</mat-icon>
     Start Chat
   </button>
+  } @else {
+  <button mat-flat-button (click)="startChat()" [disabled]="!canStartChat()">
+    <mat-icon>group_add</mat-icon>
+    Create Group
+  </button>
+  }
 </div>

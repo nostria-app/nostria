@@ -7,6 +7,8 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatChipsModule } from '@angular/material/chips';
+import { MatTabsModule } from '@angular/material/tabs';
 
 import { nip19 } from 'nostr-tools';
 
@@ -20,6 +22,9 @@ import { NPubPipe } from '../../pipes/npub.pipe';
 export interface StartChatDialogResult {
   pubkey: string;
   isLegacy: boolean;
+  isGroup?: boolean;
+  participants?: string[];
+  subject?: string;
 }
 
 @Component({
@@ -33,6 +38,8 @@ export interface StartChatDialogResult {
     MatSlideToggleModule,
     MatDividerModule,
     MatTooltipModule,
+    MatChipsModule,
+    MatTabsModule,
     UserProfileComponent,
     NPubPipe,
   ],
@@ -44,9 +51,16 @@ export class StartChatDialogComponent {
   private readonly accountState = inject(AccountStateService);
   private readonly followingService = inject(FollowingService);
 
+  // Mode: 0 = direct message, 1 = group
+  mode = signal<number>(0);
+
   // Form state - single unified input
   searchInput = signal<string>('');
   isLegacy = signal<boolean>(false);
+
+  // Group-specific state
+  groupSubject = signal<string>('');
+  selectedGroupMembers = signal<NostrRecord[]>([]);
 
   // UI state
   isDiscoveringRelays = signal<boolean>(false);
@@ -83,7 +97,7 @@ export class StartChatDialogComponent {
     return '';
   });
 
-  // Computed: Search results based on input
+  // Computed: Search results based on input (excludes already-selected group members)
   searchResults = computed(() => {
     const input = this.searchInput().trim().toLowerCase();
 
@@ -93,16 +107,29 @@ export class StartChatDialogComponent {
     }
 
     // If no input, show initial following list
+    let results: NostrRecord[];
     if (!input) {
-      return this.initialFollowingList;
+      results = this.initialFollowingList;
+    } else {
+      // Filter following list by search query
+      const followingResults = this.followingService.searchProfiles(input);
+      results = this.followingService.toNostrRecords(followingResults);
     }
 
-    // Filter following list by search query
-    const followingResults = this.followingService.searchProfiles(input);
-    return this.followingService.toNostrRecords(followingResults);
+    // In group mode, exclude already-selected members
+    if (this.mode() === 1) {
+      const selectedPubkeys = new Set(this.selectedGroupMembers().map(m => m.event.pubkey));
+      results = results.filter(r => !selectedPubkeys.has(r.event.pubkey));
+    }
+
+    return results;
   });
 
   canStartChat = computed(() => {
+    if (this.mode() === 1) {
+      // Group mode: need at least 2 other participants
+      return this.selectedGroupMembers().length >= 2;
+    }
     return this.selectedProfile() !== null || this.hasValidNpub();
   });
 
@@ -117,9 +144,57 @@ export class StartChatDialogComponent {
     this.initialFollowingList = this.followingService.toNostrRecords(allProfiles).slice(0, 50);
   }
 
-  selectProfile(profile: NostrRecord): void {
-    this.selectedProfile.set(profile);
+  onModeChange(index: number): void {
+    this.mode.set(index);
+    // Reset state when switching modes
+    this.selectedProfile.set(null);
+    this.selectedGroupMembers.set([]);
     this.searchInput.set('');
+    this.groupSubject.set('');
+    this.isLegacy.set(false);
+  }
+
+  selectProfile(profile: NostrRecord): void {
+    if (this.mode() === 1) {
+      // Group mode: add to members list
+      this.addGroupMember(profile);
+    } else {
+      this.selectedProfile.set(profile);
+      this.searchInput.set('');
+    }
+  }
+
+  addGroupMember(profile: NostrRecord): void {
+    const current = this.selectedGroupMembers();
+    if (!current.some(m => m.event.pubkey === profile.event.pubkey)) {
+      this.selectedGroupMembers.set([...current, profile]);
+    }
+    this.searchInput.set('');
+  }
+
+  addGroupMemberFromNpub(): void {
+    if (!this.hasValidNpub()) return;
+    const decoded = nip19.decode(this.searchInput().trim());
+    const pubkey = decoded.data as string;
+
+    // Check if already added
+    const current = this.selectedGroupMembers();
+    if (current.some(m => m.event.pubkey === pubkey)) {
+      this.searchInput.set('');
+      return;
+    }
+
+    // Create a minimal NostrRecord for the npub
+    const record: NostrRecord = {
+      event: { pubkey, id: '', sig: '', kind: 0, created_at: 0, tags: [], content: '' },
+      data: {},
+    };
+    this.selectedGroupMembers.set([...current, record]);
+    this.searchInput.set('');
+  }
+
+  removeGroupMember(pubkey: string): void {
+    this.selectedGroupMembers.update(members => members.filter(m => m.event.pubkey !== pubkey));
   }
 
   clearSelection(): void {
@@ -127,23 +202,40 @@ export class StartChatDialogComponent {
   }
 
   startChat(): void {
-    let pubkey: string;
+    if (this.mode() === 1) {
+      // Group mode
+      const members = this.selectedGroupMembers();
+      if (members.length < 2) return;
 
-    if (this.selectedProfile()) {
-      pubkey = this.selectedProfile()!.event.pubkey;
-    } else if (this.hasValidNpub()) {
-      const decoded = nip19.decode(this.searchInput().trim());
-      pubkey = decoded.data as string;
+      const result: StartChatDialogResult = {
+        pubkey: members[0].event.pubkey, // Primary pubkey (not very meaningful for groups)
+        isLegacy: false, // Groups always use NIP-44
+        isGroup: true,
+        participants: members.map(m => m.event.pubkey),
+        subject: this.groupSubject().trim() || undefined,
+      };
+
+      this.dialogRef.close(result);
     } else {
-      return;
+      // Direct message mode
+      let pubkey: string;
+
+      if (this.selectedProfile()) {
+        pubkey = this.selectedProfile()!.event.pubkey;
+      } else if (this.hasValidNpub()) {
+        const decoded = nip19.decode(this.searchInput().trim());
+        pubkey = decoded.data as string;
+      } else {
+        return;
+      }
+
+      const result: StartChatDialogResult = {
+        pubkey,
+        isLegacy: this.isLegacy(),
+      };
+
+      this.dialogRef.close(result);
     }
-
-    const result: StartChatDialogResult = {
-      pubkey,
-      isLegacy: this.isLegacy(),
-    };
-
-    this.dialogRef.close(result);
   }
 
   close(): void {

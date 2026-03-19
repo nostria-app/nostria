@@ -66,7 +66,7 @@ import { AccountStateService } from '../../services/account-state.service';
 import { EncryptionService } from '../../services/encryption.service';
 import { EncryptionPermissionService } from '../../services/encryption-permission.service';
 import { DataService } from '../../services/data.service';
-import { MessagingService } from '../../services/messaging.service';
+import { MessagingService, computeGroupChatId } from '../../services/messaging.service';
 import { LayoutService } from '../../services/layout.service';
 import { NamePipe } from '../../pipes/name.pipe';
 import { AccountRelayService } from '../../services/relays/account-relay';
@@ -99,6 +99,10 @@ interface Chat {
   encryptionType?: 'nip04' | 'nip44';
   hasLegacyMessages?: boolean; // true if chat contains any NIP-04 messages
   messages: Map<string, DirectMessage>;
+  isGroup?: boolean;
+  participants?: string[];
+  subject?: string;
+  subjectUpdatedAt?: number;
 }
 
 interface DirectMessage {
@@ -280,6 +284,15 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
 
       // Check if message is for this chat (based on tags for outgoing messages)
       const pTags = m.tags.filter(tag => tag[0] === 'p');
+
+      if (chat.isGroup && chat.participants) {
+        // For group chats, match if the p-tags cover all other participants
+        const pTagPubkeys = new Set(pTags.map(tag => tag[1]));
+        const myPubkey = this.accountState.pubkey();
+        const otherParticipants = chat.participants.filter(p => p !== myPubkey);
+        return otherParticipants.length > 0 && otherParticipants.every(p => pTagPubkeys.has(p));
+      }
+
       return pTags.some(tag => tag[1] === chat.pubkey);
     });
 
@@ -432,6 +445,25 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       return true;
     }
 
+    // Check group subject and participant names
+    if (chat.isGroup) {
+      if (chat.subject?.toLowerCase().includes(lowerQuery)) {
+        return true;
+      }
+      if (chat.participants) {
+        for (const p of chat.participants) {
+          const pProfile = this.data.getCachedProfile(p);
+          if (pProfile?.data) {
+            const pName = pProfile.data.name?.toLowerCase() || '';
+            const pDisplayName = pProfile.data.display_name?.toLowerCase() || '';
+            if (pName.includes(lowerQuery) || pDisplayName.includes(lowerQuery)) {
+              return true;
+            }
+          }
+        }
+      }
+    }
+
     // Check all messages in the chat
     for (const message of chat.messages.values()) {
       if (message.content?.toLowerCase().includes(lowerQuery)) {
@@ -451,9 +483,54 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
 
   // Helper to check if a chat is "Note to Self"
   isChatNoteToSelf(chat: Chat): boolean {
+    if (chat.isGroup) return false;
     const myPubkey = this.accountState.pubkey();
     return chat.pubkey === myPubkey;
   }
+
+  /**
+   * Get the display name for a group chat.
+   * Uses subject if available, otherwise lists participant names.
+   */
+  getGroupDisplayName(chat: Chat): string {
+    if (chat.subject) {
+      return chat.subject;
+    }
+    const myPubkey = this.accountState.pubkey();
+    const others = (chat.participants || []).filter(p => p !== myPubkey);
+    if (others.length === 0) return 'Group';
+    const names = others.map(p => this.getParticipantName(p));
+    if (names.length <= 3) {
+      return names.join(', ');
+    }
+    return `${names.slice(0, 3).join(', ')} +${names.length - 3}`;
+  }
+
+  /**
+   * Get a short display name for a pubkey (for group chat list and message sender labels).
+   */
+  getParticipantName(pubkey: string): string {
+    const profile = this.data.getCachedProfile(pubkey);
+    if (profile?.data) {
+      return profile.data.display_name || profile.data.name || pubkey.slice(0, 8) + '...';
+    }
+    return pubkey.slice(0, 8) + '...';
+  }
+
+  /**
+   * Get participant pubkeys for a group chat, excluding self.
+   */
+  getGroupOtherParticipants(chat: Chat): string[] {
+    const myPubkey = this.accountState.pubkey();
+    return (chat.participants || []).filter(p => p !== myPubkey);
+  }
+
+  /**
+   * Check if the selected chat is a group chat.
+   */
+  isGroupChat = computed(() => {
+    return !!this.selectedChat()?.isGroup;
+  });
 
   // Computed signal for "Note to Self" chat (shown separately at top)
   noteToSelfChat = computed(() => {
@@ -482,8 +559,14 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     const query = this.chatSearchQuery();
     const showHidden = this.showHiddenChats();
     return this.messaging.sortedChats()
-      .filter(item => item.chat.pubkey !== myPubkey) // Exclude Note to Self
-      .filter(item => followingSet.has(item.chat.pubkey))
+      .filter(item => item.chat.pubkey !== myPubkey || item.chat.isGroup) // Exclude Note to Self (but include groups)
+      .filter(item => {
+        if (item.chat.isGroup && item.chat.participants) {
+          // Group chat: include if any participant is followed
+          return item.chat.participants.some(p => p !== myPubkey && followingSet.has(p));
+        }
+        return followingSet.has(item.chat.pubkey);
+      })
       .filter(item => this.chatMatchesSearch(item.chat, query))
       .filter(item => showHidden || !this.isChatHidden(item.chat.id));
   });
@@ -496,9 +579,18 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     const showHidden = this.showHiddenChats();
     const minTrustRank = this.othersMinTrustRank();
     return this.messaging.sortedChats()
-      .filter(item => item.chat.pubkey !== myPubkey) // Exclude Note to Self
-      .filter(item => !followingSet.has(item.chat.pubkey))
+      .filter(item => item.chat.pubkey !== myPubkey || item.chat.isGroup) // Exclude Note to Self (but include groups)
       .filter(item => {
+        if (item.chat.isGroup && item.chat.participants) {
+          // Group chat: include in Others if NO participant is followed
+          return !item.chat.participants.some(p => p !== myPubkey && followingSet.has(p));
+        }
+        return !followingSet.has(item.chat.pubkey);
+      })
+      .filter(item => {
+        // Group chats bypass WoT rank filtering
+        if (item.chat.isGroup) return true;
+
         const chat = item.chat;
         const rank = this.trustService.getRankSignal(item.chat.pubkey);
 
@@ -1286,13 +1378,24 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
 
     // Resolve any messages stuck in "pending" state from a previous session.
     // These were likely sent but the publish callback was lost (e.g. page refresh).
-    this.resolveStalePendingMessages(chat.pubkey);
+    this.resolveStalePendingMessages(chat.id);
 
-    // Preload DM relays (kind 10050) for this contact so sending is instant.
+    // Preload DM relays (kind 10050) so sending is instant.
     // Loads from database first, refreshes from network in the background.
-    this.userRelayService.ensureDmRelaysForPubkey(chat.pubkey).catch(err => {
-      this.logger.warn('Failed to preload DM relays for chat:', err);
-    });
+    if (chat.isGroup && chat.participants) {
+      const myPubkey = this.accountState.pubkey();
+      for (const participant of chat.participants) {
+        if (participant !== myPubkey) {
+          this.userRelayService.ensureDmRelaysForPubkey(participant).catch(err => {
+            this.logger.warn('Failed to preload DM relays for group member:', err);
+          });
+        }
+      }
+    } else {
+      this.userRelayService.ensureDmRelaysForPubkey(chat.pubkey).catch(err => {
+        this.logger.warn('Failed to preload DM relays for chat:', err);
+      });
+    }
 
     // Navigate to the chat, clearing any query params
     this.logger.debug('Navigating to /messages/' + chat.id);
@@ -1312,8 +1415,8 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
    * Only resolves messages that are NOT in the current in-memory pendingMessages
    * signal (those are actively being published right now).
    */
-  private resolveStalePendingMessages(chatPubkey: string): void {
-    const persistedMessages = this.messaging.getChatMessages(chatPubkey);
+  private resolveStalePendingMessages(chatId: string): void {
+    const persistedMessages = this.messaging.getChatMessages(chatId);
     const activePendingIds = new Set(this.pendingMessages().map(m => m.id));
 
     const staleMessages = persistedMessages.filter(
@@ -1323,11 +1426,11 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     if (staleMessages.length === 0) return;
 
     this.logger.info(
-      `[MessagesComponent] Resolving ${staleMessages.length} stale pending message(s) in chat ${chatPubkey.slice(0, 16)}...`
+      `[MessagesComponent] Resolving ${staleMessages.length} stale pending message(s) in chat ${chatId.slice(0, 16)}...`
     );
 
     for (const msg of staleMessages) {
-      this.messaging.updateMessageInChat(chatPubkey, msg.id, {
+      this.messaging.updateMessageInChat(chatId, msg.id, {
         pending: false,
         received: true,
         failed: false,
@@ -1449,7 +1552,16 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
    * Open Send Money dialog to send a Lightning payment to the chat recipient
    */
   async openSendMoneyDialog(): Promise<void> {
-    const recipientPubkey = this.selectedChat()?.pubkey;
+    const selectedChat = this.selectedChat();
+    if (selectedChat?.isGroup) {
+      this.snackBar.open('Send Money is not available for group chats', 'Dismiss', {
+        duration: 3000,
+        horizontalPosition: 'center',
+        verticalPosition: 'bottom',
+      });
+      return;
+    }
+    const recipientPubkey = selectedChat?.pubkey;
     if (!recipientPubkey) {
       this.snackBar.open('No chat selected', 'Dismiss', {
         duration: 3000,
@@ -1479,7 +1591,16 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
    * Open Request Money dialog to generate a BOLT-11 invoice and send it to the chat recipient
    */
   async openRequestMoneyDialog(): Promise<void> {
-    const recipientPubkey = this.selectedChat()?.pubkey;
+    const selectedChat = this.selectedChat();
+    if (selectedChat?.isGroup) {
+      this.snackBar.open('Request Payment is not available for group chats', 'Dismiss', {
+        duration: 3000,
+        horizontalPosition: 'center',
+        verticalPosition: 'bottom',
+      });
+      return;
+    }
+    const recipientPubkey = selectedChat?.pubkey;
     if (!recipientPubkey) {
       this.snackBar.open('No chat selected', 'Dismiss', {
         duration: 3000,
@@ -1711,6 +1832,34 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   /**
+   * Insert a GIF URL into the message text
+   */
+  insertGifUrl(url: string): void {
+    const currentText = this.newMessageText();
+    const separator = currentText && !currentText.endsWith('\n') && currentText.length > 0 ? '\n' : '';
+    this.newMessageText.set(currentText + separator + url);
+    this.messageInput?.nativeElement?.focus();
+  }
+
+  /**
+   * Open GIF picker in a fullscreen dialog on small screens
+   */
+  async openGifPickerDialog(): Promise<void> {
+    const { GifPickerDialogComponent } = await import('../../components/gif-picker/gif-picker-dialog.component');
+    const dialogRef = this.customDialog.open<typeof GifPickerDialogComponent.prototype, string>(GifPickerDialogComponent, {
+      title: 'GIFs',
+      width: '400px',
+      panelClass: 'gif-picker-dialog',
+    });
+
+    dialogRef.afterClosed$.subscribe(result => {
+      if (result.result) {
+        this.insertGifUrl(result.result);
+      }
+    });
+  }
+
+  /**
    * Remove a specific media preview by index
    */
   removeMediaPreview(index: number): void {
@@ -1776,8 +1925,14 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     const messageText = this.newMessageText().trim();
     if (!messageText || this.isSending()) return;
 
-    const receiverPubkey = this.selectedChat()?.pubkey;
-    if (!receiverPubkey) return;
+    const selectedChat = this.selectedChat();
+    if (!selectedChat) return;
+
+    const isGroup = !!selectedChat.isGroup;
+    const chatId = selectedChat.id;
+
+    // For 1-on-1 chats, we need a receiver pubkey
+    if (!isGroup && !selectedChat.pubkey) return;
 
     this.isSending.set(true);
 
@@ -1787,12 +1942,22 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
         throw new Error('You need to be logged in to send messages');
       }
 
-      // Ensure DM relays (kind 10050) are discovered for the receiver.
+      // Ensure DM relays (kind 10050) are discovered for all recipients.
       // This is critical for first-time conversations where relays haven't been cached yet.
-      await Promise.all([
-        this.userRelayService.ensureRelaysForPubkey(receiverPubkey),
-        this.userRelayService.ensureDmRelaysForPubkey(receiverPubkey),
-      ]);
+      if (isGroup && selectedChat.participants) {
+        const otherParticipants = selectedChat.participants.filter(p => p !== myPubkey);
+        await Promise.all(
+          otherParticipants.flatMap(p => [
+            this.userRelayService.ensureRelaysForPubkey(p),
+            this.userRelayService.ensureDmRelaysForPubkey(p),
+          ])
+        );
+      } else {
+        await Promise.all([
+          this.userRelayService.ensureRelaysForPubkey(selectedChat.pubkey),
+          this.userRelayService.ensureDmRelaysForPubkey(selectedChat.pubkey),
+        ]);
+      }
 
       // Scroll to bottom for new outgoing messages
       this.scrollToBottom();
@@ -1805,27 +1970,37 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       this.replyingToMessage.set(null);
       this.mediaPreviews.set([]);
 
-      // Determine which encryption to use based on chat and client capabilities
-      const selectedChat = this.selectedChat()!;
-      const useModernEncryption = this.supportsModernEncryption(selectedChat);
-
       // Create the message (encrypts + signs, but does NOT publish yet)
       let result: { message: DirectMessage; publish: () => Promise<{ success: boolean; failureReason?: string }> };
 
-      if (useModernEncryption) {
-        result = await this.createNip44Message(
+      if (isGroup && selectedChat.participants) {
+        // Group chat: use NIP-44 group message flow
+        result = await this.createNip44GroupMessage(
           messageText,
-          receiverPubkey,
+          selectedChat.participants,
           myPubkey,
-          replyToMessage?.id
+          replyToMessage?.id,
+          selectedChat.subject
         );
       } else {
-        result = await this.createNip04Message(
-          messageText,
-          receiverPubkey,
-          myPubkey,
-          replyToMessage?.id
-        );
+        // 1-on-1 chat
+        const useModernEncryption = this.supportsModernEncryption(selectedChat);
+
+        if (useModernEncryption) {
+          result = await this.createNip44Message(
+            messageText,
+            selectedChat.pubkey,
+            myPubkey,
+            replyToMessage?.id
+          );
+        } else {
+          result = await this.createNip04Message(
+            messageText,
+            selectedChat.pubkey,
+            myPubkey,
+            replyToMessage?.id
+          );
+        }
       }
 
       const finalMessage = result.message;
@@ -1839,7 +2014,17 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       };
 
       // Add to messaging service (persists to DB as pending)
-      this.messaging.addMessageToChat(receiverPubkey, pendingMessage);
+      // For groups, pass groupInfo so the chat is created/updated correctly
+      if (isGroup && selectedChat.participants) {
+        this.messaging.addMessageToChat(chatId, pendingMessage, {
+          isGroup: true,
+          participants: selectedChat.participants,
+          subject: selectedChat.subject,
+          subjectUpdatedAt: selectedChat.subjectUpdatedAt,
+        });
+      } else {
+        this.messaging.addMessageToChat(selectedChat.pubkey, pendingMessage);
+      }
 
       // Also add to local pending signal for immediate UI feedback
       this.pendingMessages.update(msgs => [...msgs, pendingMessage]);
@@ -1852,7 +2037,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       result.publish().then(publishResult => {
         if (publishResult.success) {
           // At least one relay accepted — mark as delivered
-          this.messaging.updateMessageInChat(receiverPubkey, finalMessage.id, {
+          this.messaging.updateMessageInChat(chatId, finalMessage.id, {
             pending: false,
             received: true,
             failed: false,
@@ -1864,7 +2049,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
           // All relays rejected — mark as failed with reason
           const reason = publishResult.failureReason || 'All relays rejected the message';
           this.logger.error('Message delivery failed:', reason);
-          this.messaging.updateMessageInChat(receiverPubkey, finalMessage.id, {
+          this.messaging.updateMessageInChat(chatId, finalMessage.id, {
             pending: false,
             received: false,
             failed: true,
@@ -1885,7 +2070,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
         this.logger.error('Background relay publishing failed', err);
         const reason = err?.message || 'Failed to publish message to relays';
         // Mark as failed so user can see and retry
-        this.messaging.updateMessageInChat(receiverPubkey, finalMessage.id, {
+        this.messaging.updateMessageInChat(chatId, finalMessage.id, {
           pending: false,
           received: false,
           failed: true,
@@ -1934,14 +2119,16 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
    * with the same content and reply context.
    */
   async retryMessage(message: DirectMessage): Promise<void> {
-    const receiverPubkey = this.selectedChat()?.pubkey;
-    if (!receiverPubkey) return;
+    const selectedChat = this.selectedChat();
+    if (!selectedChat) return;
+
+    const chatId = selectedChat.id;
 
     // Remove the failed message from pending list
     this.pendingMessages.update(msgs => msgs.filter(msg => msg.id !== message.id));
 
     // Remove from persisted chat state (it was saved as failed)
-    this.messaging.removeMessageFromChat(receiverPubkey, message.id);
+    this.messaging.removeMessageFromChat(chatId, message.id);
 
     // Re-send: put the content into the input field and trigger send
     this.newMessageText.set(message.content);
@@ -2190,15 +2377,16 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       return;
     }
 
-    const receiverPubkey = this.selectedChat()?.pubkey;
+    const selectedChat = this.selectedChat();
     const myPubkey = this.accountState.pubkey();
-    if (!receiverPubkey || !myPubkey) {
+    if (!selectedChat || !myPubkey) {
       return;
     }
 
-    try {
-      await this.userRelayService.ensureRelaysForPubkey(receiverPubkey);
+    const chatId = selectedChat.id;
+    const isGroup = !!selectedChat.isGroup;
 
+    try {
       const extraRumorTags: string[][] = [
         ['e', message.id],
         ['k', String(kinds.PrivateDirectMessage)],
@@ -2221,38 +2409,72 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
         }
       }
 
-      const result = await this.createNip44Message(
-        reaction,
-        receiverPubkey,
-        myPubkey,
-        undefined,
-        {
-          rumorKind: kinds.Reaction,
-          extraRumorTags,
-          eventKind: 'reaction',
-          reactionTo: message.id,
-          reactionContent: reaction,
-        }
-      );
+      let result: { message: DirectMessage; publish: () => Promise<{ success: boolean; failureReason?: string }> };
 
-      this.messaging.addMessageToChat(receiverPubkey, {
+      if (isGroup && selectedChat.participants) {
+        // Ensure DM relays for all participants
+        for (const p of selectedChat.participants) {
+          await this.userRelayService.ensureRelaysForPubkey(p);
+        }
+
+        result = await this.createNip44GroupMessage(
+          reaction,
+          selectedChat.participants,
+          myPubkey,
+          undefined,
+          undefined,
+          {
+            rumorKind: kinds.Reaction,
+            extraRumorTags,
+            eventKind: 'reaction',
+            reactionTo: message.id,
+            reactionContent: reaction,
+          }
+        );
+      } else {
+        const receiverPubkey = selectedChat.pubkey;
+        if (!receiverPubkey) return;
+
+        await this.userRelayService.ensureRelaysForPubkey(receiverPubkey);
+
+        result = await this.createNip44Message(
+          reaction,
+          receiverPubkey,
+          myPubkey,
+          undefined,
+          {
+            rumorKind: kinds.Reaction,
+            extraRumorTags,
+            eventKind: 'reaction',
+            reactionTo: message.id,
+            reactionContent: reaction,
+          }
+        );
+      }
+
+      this.messaging.addMessageToChat(chatId, {
         ...result.message,
         pending: true,
-      });
+      }, isGroup ? {
+        isGroup: true,
+        participants: selectedChat.participants || [],
+        subject: selectedChat.subject,
+        subjectUpdatedAt: selectedChat.subjectUpdatedAt,
+      } : undefined);
 
       result.publish().then(publishResult => {
         if (publishResult.success) {
-          this.messaging.updateMessageInChat(receiverPubkey, result.message.id, {
+          this.messaging.updateMessageInChat(chatId, result.message.id, {
             pending: false,
             received: true,
             failed: false,
           });
         } else {
-          this.messaging.removeMessageFromChat(receiverPubkey, result.message.id);
+          this.messaging.removeMessageFromChat(chatId, result.message.id);
           this.snackBar.open(publishResult.failureReason || 'Failed to send reaction', 'Close', { duration: 3000 });
         }
       }).catch(err => {
-        this.messaging.removeMessageFromChat(receiverPubkey, result.message.id);
+        this.messaging.removeMessageFromChat(chatId, result.message.id);
         this.logger.error('Failed to publish DM reaction', err);
         this.snackBar.open('Failed to send reaction', 'Close', { duration: 3000 });
       });
@@ -2802,13 +3024,13 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   /**
-   * Start a new chat with a user
+   * Start a new chat with a user or group
    */
   startNewChat(): void {
     const dialogRef = this.customDialog.open<StartChatDialogComponent, StartChatDialogResult | undefined>(
       StartChatDialogComponent,
       {
-        title: 'Start New Chat',
+        title: 'New Conversation',
         width: '500px',
         maxWidth: '90vw',
       }
@@ -2816,7 +3038,12 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
 
     dialogRef.afterClosed$.subscribe(({ result }) => {
       if (result) {
-        this.startChatWithUser((result as StartChatDialogResult).pubkey, (result as StartChatDialogResult).isLegacy);
+        const chatResult = result as StartChatDialogResult;
+        if (chatResult.isGroup && chatResult.participants) {
+          this.startGroupChatWithUsers(chatResult.participants, chatResult.subject);
+        } else {
+          this.startChatWithUser(chatResult.pubkey, chatResult.isLegacy);
+        }
       }
     });
   }
@@ -3264,11 +3491,13 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   async reportSelectedChatUser(): Promise<void> {
-    const pubkey = this.selectedChat()?.pubkey;
-    if (!pubkey) {
+    const chat = this.selectedChat();
+    if (!chat || chat.isGroup) {
+      // Report/block is not applicable to group chats
       return;
     }
 
+    const pubkey = chat.pubkey;
     const profile = this.data.getCachedProfile(pubkey);
     const displayName = profile?.data.display_name || profile?.data.name || undefined;
     const reportTarget: ReportTarget = {
@@ -3302,6 +3531,12 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   async blockSelectedChatUser(): Promise<void> {
+    const chat = this.selectedChat();
+    if (chat?.isGroup) {
+      // Block is not applicable to group chats (use delete instead)
+      return;
+    }
+
     await this.removeSelectedChatLocally({
       hideChat: true,
       deadLetterReason: 'User blocked from messages',
@@ -3318,6 +3553,34 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   }): Promise<void> {
     const chat = this.selectedChat();
     if (!chat) {
+      return;
+    }
+
+    // For group chats, delete by chatId directly (not by pubkey)
+    // since chat.pubkey for groups is just participants[0] and would
+    // incorrectly match other chats with the same pubkey.
+    if (chat.isGroup) {
+      if (options.hideChat) {
+        const accountPubkey = this.accountState.pubkey();
+        if (accountPubkey) {
+          this.accountLocalState.hideChat(accountPubkey, chat.id);
+        }
+      }
+
+      const success = await this.messaging.deleteChatLocally(chat.id, {
+        addToDeadLetter: true,
+        deadLetterReason: options.deadLetterReason,
+      });
+
+      this.selectedChatId.set(null);
+
+      if (success) {
+        this.showMobileList.set(true);
+        this.showChatDetails.set(false);
+        this.layout.toast(options.successMessage);
+      } else {
+        this.layout.toast(options.failureMessage, 3000, 'error-snackbar');
+      }
       return;
     }
 
@@ -3611,6 +3874,149 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   /**
+   * Create a NIP-44 group message (kind 14 rumor with multiple p-tags).
+   * Per NIP-17, each participant gets an individually gift-wrapped copy.
+   * Returns the message for immediate UI display and a publish function for background delivery.
+   */
+  private async createNip44GroupMessage(
+    messageText: string,
+    participants: string[],
+    myPubkey: string,
+    replyToId?: string,
+    subject?: string,
+    options?: {
+      rumorKind?: number;
+      extraRumorTags?: string[][];
+      eventKind?: 'message' | 'reaction';
+      reactionTo?: string;
+      reactionContent?: string;
+    }
+  ): Promise<{ message: DirectMessage; publish: () => Promise<{ success: boolean; failureReason?: string }> }> {
+    try {
+      const allParticipants = [...new Set([myPubkey, ...participants])].sort();
+      const otherParticipants = allParticipants.filter(p => p !== myPubkey);
+      const rumorKind = options?.rumorKind ?? kinds.PrivateDirectMessage;
+
+      // Step 1: Create the rumor (unsigned kind 14) with p-tags for all recipients
+      const tags: string[][] = otherParticipants.map(p => ['p', p]);
+
+      if (replyToId) {
+        tags.push(['e', replyToId]);
+      }
+      if (subject) {
+        tags.push(['subject', subject]);
+      }
+      if (options?.extraRumorTags?.length) {
+        tags.push(...options.extraRumorTags);
+      }
+
+      const unsignedMessage = {
+        kind: rumorKind,
+        pubkey: myPubkey,
+        created_at: Math.floor(Date.now() / 1000),
+        tags: tags,
+        content: messageText,
+      };
+
+      const rumorId = getEventHash(unsignedMessage);
+      const rumorWithId = { ...unsignedMessage, id: rumorId };
+      const rumorJson = JSON.stringify(rumorWithId);
+
+      // Step 2: Pre-create sealed + gift-wrapped copies for each participant
+      const giftWraps: { recipientPubkey: string; signedGiftWrap: NostrEvent }[] = [];
+
+      for (const recipientPubkey of allParticipants) {
+        // Create the seal - encrypt the rumor for this specific recipient
+        const sealedContent = await this.encryption.encryptNip44(rumorJson, recipientPubkey);
+
+        const sealedMessage = {
+          kind: kinds.Seal,
+          pubkey: myPubkey,
+          created_at: Math.floor(Date.now() / 1000) - Math.floor(Math.random() * 172800),
+          tags: [],
+          content: sealedContent,
+        };
+
+        const signedSeal = await this.nostr.signEvent(sealedMessage);
+
+        // Create gift wrap with ephemeral key
+        const ephemeralKey = generateSecretKey();
+        const ephemeralPubkey = getPublicKey(ephemeralKey);
+
+        const giftWrapContent = await this.encryption.encryptNip44WithKey(
+          JSON.stringify(signedSeal),
+          bytesToHex(ephemeralKey),
+          recipientPubkey
+        );
+
+        const giftWrap = {
+          kind: kinds.GiftWrap,
+          pubkey: ephemeralPubkey,
+          created_at: Math.floor(Date.now() / 1000) - Math.floor(Math.random() * 172800),
+          tags: [['p', recipientPubkey]],
+          content: giftWrapContent,
+        };
+
+        const signedGiftWrap = finalizeEvent(giftWrap, ephemeralKey);
+        giftWraps.push({ recipientPubkey, signedGiftWrap });
+      }
+
+      // Return message for immediate UI display
+      const message: DirectMessage = {
+        id: rumorId,
+        pubkey: myPubkey,
+        created_at: unsignedMessage.created_at,
+        content: messageText,
+        isOutgoing: true,
+        tags: unsignedMessage.tags,
+        replyTo: replyToId,
+        encryptionType: 'nip44',
+        eventKind: options?.eventKind || 'message',
+        reactionTo: options?.reactionTo,
+        reactionContent: options?.reactionContent,
+      };
+
+      // Publish function: sends each gift wrap to the corresponding participant's DM relays
+      const publish = async (): Promise<{ success: boolean; failureReason?: string }> => {
+        let anySuccess = false;
+        const failures: string[] = [];
+
+        for (const { recipientPubkey, signedGiftWrap } of giftWraps) {
+          try {
+            const success = await this.publishToUserDmRelays(signedGiftWrap, recipientPubkey);
+            if (success) {
+              anySuccess = true;
+            } else if (recipientPubkey !== myPubkey) {
+              // Only track failures for other participants, not self-copy
+              failures.push(recipientPubkey.substring(0, 8));
+            }
+          } catch (err) {
+            this.logger.error(`Failed to publish group gift wrap to ${recipientPubkey.substring(0, 8)}`, err);
+            if (recipientPubkey !== myPubkey) {
+              failures.push(recipientPubkey.substring(0, 8));
+            }
+          }
+        }
+
+        if (!anySuccess) {
+          return { success: false, failureReason: 'Failed to deliver to any participant\'s DM relays' };
+        }
+
+        if (failures.length > 0) {
+          this.logger.warn(`Group message partially delivered. Failed for: ${failures.join(', ')}`);
+        }
+
+        return { success: true };
+      };
+
+      return { message, publish };
+    } catch (error) {
+      this.logger.error('Failed to create NIP-44 group message', error);
+      throw error;
+    }
+  }
+
+  /**
    * Publish an event to multiple relays.
    * Returns true if at least one relay accepted the event.
    */
@@ -3721,6 +4127,67 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     } catch (error) {
       this.logger.error('Error starting chat:', error);
       this.snackBar.open('Failed to start chat', 'Close', { duration: 3000 });
+    }
+  }
+
+  /**
+   * Start or open a group chat with the given participants.
+   * Creates a temporary group chat object and selects it.
+   */
+  private async startGroupChatWithUsers(participantPubkeys: string[], subject?: string): Promise<void> {
+    try {
+      const myPubkey = this.accountState.pubkey();
+      if (!myPubkey) {
+        this.snackBar.open('Please log in first', 'Close', { duration: 3000 });
+        return;
+      }
+
+      // Include self in the participant list
+      const allParticipants = [...new Set([myPubkey, ...participantPubkeys])].sort();
+      const chatId = computeGroupChatId(allParticipants);
+
+      this.logger.debug('startGroupChatWithUsers - chatId:', chatId, 'participants:', allParticipants.length);
+
+      // Check if group chat already exists
+      const existingChat = this.messaging.getChat(chatId);
+      if (existingChat) {
+        this.logger.debug('Group chat already exists, selecting it');
+        this.selectChat(existingChat);
+        return;
+      }
+
+      // Pre-discover DM relays for all participants in the background
+      const otherParticipants = allParticipants.filter(p => p !== myPubkey);
+      for (const pubkey of otherParticipants) {
+        this.userRelayService.ensureDmRelaysForPubkey(pubkey).catch(err => {
+          this.logger.warn(`Failed to pre-discover DM relays for group member ${pubkey.substring(0, 8)}:`, err);
+        });
+      }
+
+      // Create a temporary group chat object
+      const tempChat: Chat = {
+        id: chatId,
+        pubkey: '', // For groups, pubkey is empty (use participants instead)
+        unreadCount: 0,
+        lastMessage: null,
+        relays: [],
+        encryptionType: 'nip44',
+        hasLegacyMessages: false,
+        messages: new Map(),
+        isGroup: true,
+        participants: allParticipants,
+        subject,
+        subjectUpdatedAt: subject ? Math.floor(Date.now() / 1000) : undefined,
+      };
+
+      // Add to messaging service
+      this.messaging.addChat(tempChat);
+
+      // Select the group chat
+      this.selectChat(tempChat);
+    } catch (error) {
+      this.logger.error('Error starting group chat:', error);
+      this.snackBar.open('Failed to create group', 'Close', { duration: 3000 });
     }
   }
 

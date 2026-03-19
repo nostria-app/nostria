@@ -146,6 +146,40 @@
                 (click)="selectChat(chat)">
                 <div class="chat-item-content">
                   <div class="chat-avatar">
+                    @if (chat.isGroup) {
+                    <!-- Group chat item -->
+                    <div class="group-avatar">
+                      <mat-icon>group</mat-icon>
+                    </div>
+                    <div class="chat-info">
+                      <div class="chat-name-row">
+                        <span class="chat-name">{{ getGroupDisplayName(chat) }}</span>
+                        @if (chat.unreadCount > 0) {
+                        <span class="unread-badge" matBadge="{{ chat.unreadCount }}" matBadgeOverlap="false"></span>
+                        }
+                        @if (chat.lastMessage?.created_at) {
+                        <span class="message-time-chats">{{ chat.lastMessage?.created_at | ago }}</span>
+                        }
+                      </div>
+                      <div class="chat-preview">
+                        <span class="group-member-count">{{ getGroupOtherParticipants(chat).length + 1 }} members</span>
+                        @if (chat.lastMessage) {
+                        <span class="message-preview">
+                          @if (chat.lastMessage.isOutgoing) {
+                          <span class="outgoing-prefix">You: </span>
+                          } @else {
+                          <span class="outgoing-prefix">{{ getParticipantName(chat.lastMessage.pubkey) }}: </span>
+                          }
+                          {{ getChatPreviewText(chat.lastMessage) }}@if (getChatPreviewEmojiUrl(chat.lastMessage); as
+                          emojiUrl) { <img class="chat-preview-emoji" [src]="emojiUrl" alt="emoji" loading="lazy" />}
+                        </span>
+                        } @else {
+                        <span class="message-preview empty-message">New group</span>
+                        }
+                      </div>
+                    </div>
+                    } @else {
+                    <!-- Regular 1-on-1 chat item -->
                     @if (chat.hasLegacyMessages) {
                     <mat-icon inline="true" class="chat-encryption-icon mixed"
                       matTooltip="Contains legacy messages (NIP-04)">shield</mat-icon>
@@ -186,6 +220,7 @@
                         </div>
                       </div>
                     </app-user-profile>
+                    }
                   </div>
                 </div>
               </a>
@@ -245,6 +280,40 @@
                 (click)="selectChat(chat)">
                 <div class="chat-item-content">
                   <div class="chat-avatar">
+                    @if (chat.isGroup) {
+                    <!-- Group chat item -->
+                    <div class="group-avatar">
+                      <mat-icon>group</mat-icon>
+                    </div>
+                    <div class="chat-info">
+                      <div class="chat-name-row">
+                        <span class="chat-name">{{ getGroupDisplayName(chat) }}</span>
+                        @if (chat.unreadCount > 0) {
+                        <span class="unread-badge" matBadge="{{ chat.unreadCount }}" matBadgeOverlap="false"></span>
+                        }
+                        @if (chat.lastMessage?.created_at) {
+                        <span class="message-time-chats">{{ chat.lastMessage?.created_at | ago }}</span>
+                        }
+                      </div>
+                      <div class="chat-preview">
+                        <span class="group-member-count">{{ getGroupOtherParticipants(chat).length + 1 }} members</span>
+                        @if (chat.lastMessage) {
+                        <span class="message-preview">
+                          @if (chat.lastMessage.isOutgoing) {
+                          <span class="outgoing-prefix">You: </span>
+                          } @else {
+                          <span class="outgoing-prefix">{{ getParticipantName(chat.lastMessage.pubkey) }}: </span>
+                          }
+                          {{ getChatPreviewText(chat.lastMessage) }}@if (getChatPreviewEmojiUrl(chat.lastMessage); as
+                          emojiUrl) { <img class="chat-preview-emoji" [src]="emojiUrl" alt="emoji" loading="lazy" />}
+                        </span>
+                        } @else {
+                        <span class="message-preview empty-message">New group</span>
+                        }
+                      </div>
+                    </div>
+                    } @else {
+                    <!-- Regular 1-on-1 chat item -->
                     @if (chat.hasLegacyMessages) {
                     <mat-icon inline="true" class="chat-encryption-icon mixed"
                       matTooltip="Contains legacy messages (NIP-04)">shield</mat-icon>
@@ -282,6 +351,7 @@
                         </div>
                       </div>
                     </app-user-profile>
+                    }
                   </div>
                 </div>
               </a>
@@ -350,6 +420,16 @@
             </div>
             <span class="note-to-self-title">Note to Self</span>
           </div>
+          } @else if (isGroupChat()) {
+          <div class="group-chat-header">
+            <div class="group-avatar header-avatar">
+              <mat-icon>group</mat-icon>
+            </div>
+            <div class="group-header-info">
+              <span class="group-header-name">{{ getGroupDisplayName(selectedChat()!) }}</span>
+              <span class="group-header-members">{{ (selectedChat()!.participants?.length || 0) }} members</span>
+            </div>
+          </div>
           } @else {
           <app-user-profile [pubkey]="selectedChat()!.pubkey" view="thread"></app-user-profile>
           }
@@ -363,6 +443,7 @@
             <mat-icon>more_vert</mat-icon>
           </button>
           <mat-menu #chatOptionsMenu="matMenu">
+            @if (!isGroupChat()) {
             <button mat-menu-item (click)="viewProfile()">
               <mat-icon>person</mat-icon>
               <span>View Profile</span>
@@ -375,6 +456,7 @@
               <mat-icon>block</mat-icon>
               <span>Block User</span>
             </button>
+            }
             <button mat-menu-item (click)="deleteSelectedChat()">
               <mat-icon>delete</mat-icon>
               <span>Delete Chat</span>
@@ -422,8 +504,14 @@
         </div>
         @for (message of group.messages; track message.id) {
         <div class="message-bubble-container" [class.outgoing]="message.isOutgoing"
+          [class.group-message]="isGroupChat()"
           (touchstart)="onMessageTouchStart($event, message)" (touchend)="onMessageTouchEnd()"
           (touchmove)="onMessageTouchEnd()" (contextmenu)="onMessageContextMenu($event, message)">
+          @if (isGroupChat() && !message.isOutgoing) {
+          <div class="group-message-sender">
+            <span class="group-sender-name">{{ getParticipantName(message.pubkey) }}</span>
+          </div>
+          }
           <div class="message-bubble" [class.outgoing]="message.isOutgoing" [class.pending]="message.pending"
             [class.failed]="message.failed" [class.long-press-active]="longPressedMessage()?.id === message.id">
             @if (getReplyPreviewText(message); as replyPreviewText) {
@@ -628,6 +716,11 @@
               <mat-icon>photo_library</mat-icon>
               <span>Choose from library</span>
             </button>
+            <button mat-menu-item (click)="openGifPickerDialog()">
+              <mat-icon>gif_box</mat-icon>
+              <span>GIFs</span>
+            </button>
+            @if (!isGroupChat()) {
             <button mat-menu-item (click)="openSendMoneyDialog()">
               <mat-icon>bolt</mat-icon>
               <span>Send Money</span>
@@ -636,6 +729,7 @@
               <mat-icon>receipt_long</mat-icon>
               <span>Request Payment</span>
             </button>
+            }
           </mat-menu>
 
           <!-- Hidden file input -->
@@ -704,6 +798,25 @@
           </div>
           }
         </div>
+
+        <!-- Group Members -->
+        @if (isGroupChat() && selectedChat()?.participants) {
+        <div class="chat-section">
+          <div class="section-header">
+            <mat-icon>people</mat-icon>
+            <span>Members</span>
+            <span class="section-count">{{ selectedChat()!.participants!.length }}</span>
+          </div>
+          <div class="group-members-list">
+            @for (pubkey of selectedChat()!.participants!; track pubkey) {
+            <div class="group-member-item" (click)="layout.openProfile(pubkey)">
+              <app-user-profile [pubkey]="pubkey" view="icon"></app-user-profile>
+              <span class="group-member-name">{{ getParticipantName(pubkey) }}</span>
+            </div>
+            }
+          </div>
+        </div>
+        }
 
         <!-- Shared Images (Thumbnail Grid) -->
         @if (sharedImages().length > 0) {
