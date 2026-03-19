@@ -1,24 +1,54 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatIconModule } from '@angular/material/icon';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { Event, nip19 } from 'nostr-tools';
 import { UserProfileComponent } from '../user-profile/user-profile.component';
 import { LayoutService } from '../../services/layout.service';
+import { DataService } from '../../services/data.service';
+import { NostrRecord } from '../../interfaces';
+import { AgoPipe } from '../../pipes/ago.pipe';
+import { TimestampPipe } from '../../pipes/timestamp.pipe';
+
+interface ReferencedEventRef {
+  id: string;
+  relay: string;
+  nevent: string;
+}
+
+interface LoadedEvent {
+  record: NostrRecord | null;
+  loading: boolean;
+}
 
 @Component({
   selector: 'app-wot-event',
-  imports: [CommonModule, MatCardModule, MatChipsModule, MatIconModule, MatTooltipModule, UserProfileComponent],
+  imports: [
+    CommonModule,
+    MatCardModule,
+    MatChipsModule,
+    MatIconModule,
+    MatProgressSpinnerModule,
+    MatTooltipModule,
+    UserProfileComponent,
+    AgoPipe,
+    TimestampPipe,
+  ],
   templateUrl: './wot-event.component.html',
   styleUrl: './wot-event.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class WotEventComponent {
   private layout = inject(LayoutService);
+  private data = inject(DataService);
 
   event = input.required<Event>();
+
+  /** Map of event ID -> loaded event data */
+  loadedEvents = signal<Map<string, LoadedEvent>>(new Map());
 
   /** The d-tag identifier for this parameterized replaceable event */
   identifier = computed(() => {
@@ -42,8 +72,24 @@ export class WotEventComponent {
         } catch {
           nevent = '';
         }
-        return { id, relay, nevent, shortId: id.substring(0, 12) + '...' };
+        return { id, relay, nevent } as ReferencedEventRef;
       });
+  });
+
+  /** Fetch referenced events when the event input changes */
+  private loadEventsEffect = effect(() => {
+    const refs = this.referencedEvents();
+    if (refs.length === 0) return;
+
+    // Set all to loading state immediately
+    const initial = new Map<string, LoadedEvent>();
+    for (const ref of refs) {
+      initial.set(ref.id, { record: null, loading: true });
+    }
+    this.loadedEvents.set(initial);
+
+    // Fetch each event
+    this.fetchReferencedEvents(refs);
   });
 
   /** Referenced pubkeys from p-tags */
@@ -109,8 +155,19 @@ export class WotEventComponent {
       .map(t => ({ key: t[0], value: t[1] }));
   });
 
+  /** Get the loaded event data for a given event ID */
+  getLoadedEvent(id: string): LoadedEvent | undefined {
+    return this.loadedEvents().get(id);
+  }
+
+  /** Truncate text to a max length for display */
+  truncateContent(text: string, maxLength = 200): string {
+    if (text.length <= maxLength) return text;
+    return text.substring(0, maxLength) + '...';
+  }
+
   /** Navigate to a referenced event */
-  navigateToEvent(ref: { id: string; nevent: string }): void {
+  navigateToEvent(ref: ReferencedEventRef): void {
     if (ref.nevent) {
       this.layout.openEventAsPrimary(ref.nevent);
     }
@@ -125,5 +182,22 @@ export class WotEventComponent {
   private capitalize(value: string): string {
     if (!value) return '';
     return value.replace(/\b\w/g, char => char.toUpperCase());
+  }
+
+  /** Fetch referenced events asynchronously and update the loadedEvents signal */
+  private async fetchReferencedEvents(refs: ReferencedEventRef[]): Promise<void> {
+    for (const ref of refs) {
+      try {
+        const record = await this.data.getEventById(ref.id, { save: true });
+        const current = new Map(this.loadedEvents());
+        current.set(ref.id, { record, loading: false });
+        this.loadedEvents.set(current);
+      } catch (error) {
+        console.warn(`[WotEvent] Failed to load referenced event ${ref.id}:`, error);
+        const current = new Map(this.loadedEvents());
+        current.set(ref.id, { record: null, loading: false });
+        this.loadedEvents.set(current);
+      }
+    }
   }
 }

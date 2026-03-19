@@ -93,47 +93,71 @@
     .referenced-items {
       display: flex;
       flex-direction: column;
-      gap: 6px;
+      gap: 8px;
 
-      .ref-item {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        padding: 8px 12px;
-        border-radius: 8px;
-        background: var(--mat-sys-surface-container);
+      .embedded-event-card {
+        cursor: pointer;
+        transition: background 0.15s ease;
 
-        mat-icon {
-          font-size: 16px;
-          width: 16px;
-          height: 16px;
-          color: var(--mat-sys-on-surface-variant);
+        &:hover {
+          background: var(--mat-sys-surface-container-high);
         }
 
-        .ref-id {
-          font-family: monospace;
-          font-size: 0.85rem;
-          color: var(--mat-sys-on-surface);
+        &:focus-visible {
+          outline: 2px solid var(--mat-sys-primary);
+          outline-offset: 2px;
         }
 
-        .ref-relay {
-          font-size: 0.75rem;
-          color: var(--mat-sys-on-surface-variant);
-          margin-left: auto;
+        mat-card-header {
+          .date-link {
+            font-size: 0.8rem;
+            color: var(--mat-sys-on-surface-variant);
+            white-space: nowrap;
+          }
         }
 
-        &.ref-event-item {
-          cursor: pointer;
-          transition: background 0.15s ease;
+        mat-card-content {
+          .embedded-content {
+            font-size: 0.9rem;
+            color: var(--mat-sys-on-surface);
+            line-height: 1.5;
+            word-break: break-word;
+          }
+        }
+
+        &.loading-card {
+          cursor: default;
 
           &:hover {
-            background: var(--mat-sys-surface-container-high);
+            background: initial;
           }
+        }
 
-          &:focus-visible {
-            outline: 2px solid var(--mat-sys-primary);
-            outline-offset: 2px;
+        &.not-found-card {
+          .event-not-found-placeholder {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--mat-sys-on-surface-variant);
+
+            mat-icon {
+              font-size: 18px;
+              width: 18px;
+              height: 18px;
+            }
+
+            .not-found-text {
+              font-size: 0.85rem;
+            }
           }
+        }
+
+        .event-loading-placeholder {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          color: var(--mat-sys-on-surface-variant);
+          font-size: 0.85rem;
         }
       }
     }

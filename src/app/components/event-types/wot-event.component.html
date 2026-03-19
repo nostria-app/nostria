@@ -51,14 +51,51 @@
     </div>
     <div class="referenced-items">
       @for (ref of referencedEvents(); track ref.id) {
-      <div class="ref-item ref-event-item" [matTooltip]="ref.id" (click)="navigateToEvent(ref)"
-        (keyup.enter)="navigateToEvent(ref)" (keyup.space)="navigateToEvent(ref)" tabindex="0" role="button">
-        <mat-icon>open_in_new</mat-icon>
-        <span class="ref-id">{{ ref.shortId }}</span>
-        @if (ref.relay) {
-        <span class="ref-relay">{{ ref.relay }}</span>
+        @let loaded = getLoadedEvent(ref.id);
+        @if (loaded?.loading) {
+          <!-- Loading state -->
+          <mat-card appearance="outlined" class="embedded-event-card loading-card">
+            <mat-card-content>
+              <div class="event-loading-placeholder">
+                <mat-progress-spinner diameter="20" mode="indeterminate"></mat-progress-spinner>
+                <span>Loading event...</span>
+              </div>
+            </mat-card-content>
+          </mat-card>
+        } @else if (loaded?.record) {
+          <!-- Loaded event card -->
+          <mat-card appearance="outlined" class="embedded-event-card" tabindex="0" role="button"
+            (click)="navigateToEvent(ref)"
+            (keyup.enter)="navigateToEvent(ref)"
+            (keyup.space)="navigateToEvent(ref)">
+            <mat-card-header>
+              <app-user-profile [pubkey]="loaded!.record!.event.pubkey" view="compact">
+                <span class="date-link" [matTooltip]="loaded!.record!.event.created_at | timestamp: 'medium'"
+                  matTooltipPosition="below">
+                  {{ loaded!.record!.event.created_at | ago }}
+                </span>
+              </app-user-profile>
+            </mat-card-header>
+            @if (loaded!.record!.event.content) {
+            <mat-card-content>
+              <div class="embedded-content">{{ truncateContent(loaded!.record!.event.content) }}</div>
+            </mat-card-content>
+            }
+          </mat-card>
+        } @else {
+          <!-- Event not found -->
+          <mat-card appearance="outlined" class="embedded-event-card not-found-card" tabindex="0" role="button"
+            (click)="navigateToEvent(ref)"
+            (keyup.enter)="navigateToEvent(ref)"
+            (keyup.space)="navigateToEvent(ref)">
+            <mat-card-content>
+              <div class="event-not-found-placeholder">
+                <mat-icon>link_off</mat-icon>
+                <span class="not-found-text">Referenced event not found</span>
+              </div>
+            </mat-card-content>
+          </mat-card>
         }
-      </div>
       }
     </div>
   </div>
