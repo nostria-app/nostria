@@ -50,6 +50,7 @@ import {
   StartChatDialogComponent,
   StartChatDialogResult,
 } from '../../components/start-chat-dialog/start-chat-dialog.component';
+import { RenameChatDialogComponent } from '../../components/rename-chat-dialog/rename-chat-dialog.component';
 import {
   kinds,
   getPublicKey,
@@ -1975,12 +1976,12 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
 
       if (isGroup && selectedChat.participants) {
         // Group chat: use NIP-44 group message flow
+        // Don't include subject on regular messages - only when changing the subject
         result = await this.createNip44GroupMessage(
           messageText,
           selectedChat.participants,
           myPubkey,
           replyToMessage?.id,
-          selectedChat.subject
         );
       } else {
         // 1-on-1 chat
@@ -3519,6 +3520,91 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
         failureMessage: 'Failed to remove blocked user chat',
       });
     });
+  }
+
+  async renameGroupChat(): Promise<void> {
+    const selectedChat = this.selectedChat();
+    if (!selectedChat?.isGroup || !selectedChat.participants) return;
+
+    const myPubkey = this.accountState.pubkey();
+    if (!myPubkey) return;
+
+    const dialogRef = this.customDialog.open<RenameChatDialogComponent, string>(RenameChatDialogComponent, {
+      title: 'Rename Chat',
+      width: '400px',
+      data: { currentName: selectedChat.subject || '' },
+    });
+
+    dialogRef.afterClosed$.subscribe(({ result: newName }) => {
+      if (newName) {
+        this.sendSubjectChangeMessage(selectedChat, newName, myPubkey);
+      }
+    });
+  }
+
+  private async sendSubjectChangeMessage(chat: Chat, newSubject: string, myPubkey: string): Promise<void> {
+    try {
+      const myName = this.getParticipantName(myPubkey);
+      const messageText = `${myName} changed chat name to ${newSubject}`;
+
+      // Ensure DM relays for all participants
+      const otherParticipants = chat.participants!.filter(p => p !== myPubkey);
+      await Promise.all(
+        otherParticipants.flatMap(p => [
+          this.userRelayService.ensureRelaysForPubkey(p),
+          this.userRelayService.ensureDmRelaysForPubkey(p),
+        ])
+      );
+
+      const result = await this.createNip44GroupMessage(
+        messageText,
+        chat.participants!,
+        myPubkey,
+        undefined,
+        newSubject,
+      );
+
+      const pendingMessage: DirectMessage = {
+        ...result.message,
+        pending: true,
+        received: false,
+      };
+
+      this.messaging.addMessageToChat(chat.id, pendingMessage, {
+        isGroup: true,
+        participants: chat.participants!,
+        subject: newSubject,
+        subjectUpdatedAt: result.message.created_at,
+      });
+
+      this.pendingMessages.update(msgs => [...msgs, pendingMessage]);
+      this.scrollToBottom();
+
+      const publishResult = await result.publish();
+      if (publishResult.success) {
+        this.messaging.updateMessageInChat(chat.id, result.message.id, {
+          pending: false,
+          received: true,
+          failed: false,
+          failureReason: undefined,
+        });
+        this.pendingMessages.update(msgs => msgs.filter(m => m.id !== result.message.id));
+        this.snackBar.open(`Chat renamed to "${newSubject}"`, 'Dismiss', { duration: 3000 });
+      } else {
+        const reason = publishResult.failureReason || 'All relays rejected the message';
+        this.messaging.updateMessageInChat(chat.id, result.message.id, {
+          pending: false,
+          received: false,
+          failed: true,
+          failureReason: reason,
+        });
+        this.pendingMessages.update(msgs => msgs.filter(m => m.id !== result.message.id));
+        this.snackBar.open('Failed to rename chat', 'Dismiss', { duration: 5000 });
+      }
+    } catch (err) {
+      this.logger.error('Failed to rename group chat', err);
+      this.snackBar.open('Failed to rename chat', 'Dismiss', { duration: 5000 });
+    }
   }
 
   async deleteSelectedChat(): Promise<void> {

@@ -457,6 +457,12 @@
               <span>Block User</span>
             </button>
             }
+            @if (isGroupChat()) {
+            <button mat-menu-item (click)="renameGroupChat()">
+              <mat-icon>edit</mat-icon>
+              <span>Rename Chat</span>
+            </button>
+            }
             <button mat-menu-item (click)="deleteSelectedChat()">
               <mat-icon>delete</mat-icon>
               <span>Delete Chat</span>
@@ -504,9 +510,9 @@
         </div>
         @for (message of group.messages; track message.id) {
         <div class="message-bubble-container" [class.outgoing]="message.isOutgoing"
-          [class.group-message]="isGroupChat()"
-          (touchstart)="onMessageTouchStart($event, message)" (touchend)="onMessageTouchEnd()"
-          (touchmove)="onMessageTouchEnd()" (contextmenu)="onMessageContextMenu($event, message)">
+          [class.group-message]="isGroupChat()" (touchstart)="onMessageTouchStart($event, message)"
+          (touchend)="onMessageTouchEnd()" (touchmove)="onMessageTouchEnd()"
+          (contextmenu)="onMessageContextMenu($event, message)">
           @if (isGroupChat() && !message.isOutgoing) {
           <div class="group-message-sender">
             <span class="group-sender-name">{{ getParticipantName(message.pubkey) }}</span>
