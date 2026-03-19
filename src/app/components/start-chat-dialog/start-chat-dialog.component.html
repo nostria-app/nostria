@@ -113,8 +113,9 @@
     <div class="group-members-list">
       @for (member of selectedGroupMembers(); track member.event.pubkey) {
       <div class="group-member-chip">
-        <app-user-profile [pubkey]="member.event.pubkey" view="small"></app-user-profile>
-        <button mat-icon-button class="remove-member-btn" (click)="removeGroupMember(member.event.pubkey)" matTooltip="Remove">
+        <app-user-profile [pubkey]="member.event.pubkey" view="list" [disableLink]="true"></app-user-profile>
+        <button mat-icon-button class="remove-member-btn" (click)="removeGroupMember(member.event.pubkey)"
+          matTooltip="Remove">
           <mat-icon>close</mat-icon>
         </button>
       </div>
@@ -193,14 +194,13 @@
       <mat-icon>security</mat-icon>
       <span>Groups use end-to-end encryption (NIP-44). Each member receives messages individually.</span>
     </div>
-    @if (selectedGroupMembers().length > 0 && selectedGroupMembers().length < 2) {
-    <div class="group-min-info">
+    @if (selectedGroupMembers().length > 0 && selectedGroupMembers().length < 2) { <div class="group-min-info">
       <mat-icon>info</mat-icon>
       <span>Add at least 2 members to create a group.</span>
-    </div>
-    }
   </div>
   }
+</div>
+}
 </div>
 
 <div dialog-actions class="dialog-actions">

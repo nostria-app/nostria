@@ -205,6 +205,12 @@
         background-color: var(--mat-sys-surface-container-high);
         border-radius: 8px;
 
+        app-user-profile {
+          flex: 1;
+          min-width: 0;
+          overflow: hidden;
+        }
+
         .remove-member-btn {
           width: 28px;
           height: 28px;
