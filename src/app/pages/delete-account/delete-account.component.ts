@@ -231,6 +231,7 @@ export class DeleteAccountComponent implements OnInit {
       30000: 'People Lists',
       30001: 'Bookmark Lists',
       [kinds.LongFormArticle]: 'Long-form Articles',
+      31871: 'Web of Trust Attestations',
     };
 
     return kindNames[kind] || `Event Kind ${kind}`;

@@ -29,6 +29,7 @@ import {
 } from '../../confirm-dialog/confirm-dialog.component';
 import { UserProfileComponent } from '../../user-profile/user-profile.component';
 import { EventMenuComponent } from '../event-menu/event-menu.component';
+import { CLIENT_LOGO_MAP } from '../../../utils/client-logo-map';
 
 @Component({
   selector: 'app-event-header',
@@ -97,30 +98,6 @@ export class EventHeaderComponent {
     return `Expires in ${this.formatExpirationDistance(expirationTimestamp)}`;
   });
 
-  private readonly CLIENT_LOGO_MAP: Record<string, string> = {
-    'nostria': 'logos/clients/nostria.png',
-    'nosotros': 'logos/clients/nosotros.png',
-    'damus deck': 'logos/clients/damus.png',
-    'damus': 'logos/clients/damus.png',
-    'amethyst': 'logos/clients/amethyst.png',
-    'primal': 'logos/clients/primal.png',
-    'snort': 'logos/clients/snort.png',
-    'iris': 'logos/clients/iris.png',
-    'coracle': 'logos/clients/coracle.png',
-    'nos': 'logos/clients/nos.png',
-    'current': 'logos/clients/current.png',
-    'satellite': 'logos/clients/satellite.png',
-    'habla': 'logos/clients/habla.png',
-    'gossip': 'logos/clients/gossip.png',
-    'freefrom': 'logos/clients/freefrom.png',
-    'habla.news': 'logos/clients/habla.png',
-    'nostrudel': 'logos/clients/nostrudel.svg',
-    'yakihonne': 'logos/clients/yakihonne.png',
-    'lume': 'logos/clients/lume.png',
-    'nostur': 'logos/clients/nostur.png',
-    'nostore': 'logos/clients/nostore.png',
-  };
-
   hasPoW = computed<boolean>(() => {
     const event = this.event();
     return !!event?.tags?.some(tag => tag[0] === 'nonce');
@@ -149,7 +126,7 @@ export class EventHeaderComponent {
     const clientTag = event?.tags?.find(tag => tag[0] === 'client' && tag[1]);
     if (!clientTag) return null;
     const normalizedClient = clientTag[1].toLowerCase().trim();
-    return this.CLIENT_LOGO_MAP[normalizedClient] || null;
+    return CLIENT_LOGO_MAP[normalizedClient] || null;
   });
 
   clientName = computed<string>(() => {

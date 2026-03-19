@@ -140,6 +140,10 @@
     @else if (targetItem.event.kind === 9802) {
     <app-highlight-event [event]="targetItem.event" [trustedByPubkey]="trustedByPubkey() || item.event.pubkey"
       [inFeedsPanel]="inFeedsPanel()"></app-highlight-event>
+    }
+    <!-- Web of Trust Attestations (kind 31871) -->
+    @else if (targetItem.event.kind === 31871) {
+    <app-wot-event [event]="targetItem.event"></app-wot-event>
     } @else {
     <div class="main-content-wrapper" [class.collapsed]="isMainContentCollapsed()">
       <app-content [content]="displayedRecord()?.data" [event]="targetItem.event"
@@ -291,6 +295,10 @@
           <!-- Relay lists (kind 10086) -->
           @else if (rootRecordData.event.kind === 10086) {
           <app-relay-list-event [event]="rootRecordData.event"></app-relay-list-event>
+          }
+          <!-- Web of Trust Attestations (kind 31871) -->
+          @else if (rootRecordData.event.kind === 31871) {
+          <app-wot-event [event]="rootRecordData.event"></app-wot-event>
           } @else {
           <app-content [content]="rootRecordData.data" [event]="rootRecordData.event"
             [trustedByPubkey]="trustedByPubkey() || item.event.pubkey" [disableExpansion]="navigationDisabled()"
@@ -432,6 +440,10 @@
           <!-- Relay lists (kind 10086) -->
           @else if (parentRecordData.event.kind === 10086) {
           <app-relay-list-event [event]="parentRecordData.event"></app-relay-list-event>
+          }
+          <!-- Web of Trust Attestations (kind 31871) -->
+          @else if (parentRecordData.event.kind === 31871) {
+          <app-wot-event [event]="parentRecordData.event"></app-wot-event>
           } @else {
           <app-content [content]="parentRecordData.data" [event]="parentRecordData.event"
             [trustedByPubkey]="trustedByPubkey() || item.event.pubkey" [disableExpansion]="navigationDisabled()"
@@ -572,6 +584,10 @@
     @else if (item.event.kind === 9802) {
     <app-highlight-event [event]="item.event" [trustedByPubkey]="trustedByPubkey() || item.event.pubkey"
       [inFeedsPanel]="inFeedsPanel()"></app-highlight-event>
+    }
+    <!-- Web of Trust Attestations (kind 31871) -->
+    @else if (item.event.kind === 31871) {
+    <app-wot-event [event]="item.event"></app-wot-event>
     } @else {
     <div class="main-content-wrapper" [class.collapsed]="isMainContentCollapsed()">
       <app-content [content]="displayedRecord()?.data" [event]="item.event"
@@ -717,6 +733,10 @@
     @else if (item.event.kind === 9802) {
     <app-highlight-event [event]="item.event" [trustedByPubkey]="trustedByPubkey() || item.event.pubkey"
       [inFeedsPanel]="inFeedsPanel()"></app-highlight-event>
+    }
+    <!-- Web of Trust Attestations (kind 31871) -->
+    @else if (item.event.kind === 31871) {
+    <app-wot-event [event]="item.event"></app-wot-event>
     } @else {
     <div class="main-content-wrapper" [class.collapsed]="isMainContentCollapsed()">
       <app-content [content]="displayedRecord()?.data" [event]="item.event"

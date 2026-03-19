@@ -423,6 +423,7 @@ export class DebugPanelComponent implements OnInit, OnDestroy {
       30001: 'list',
       30023: 'article',
       30078: 'app-data',
+      31871: 'wot-attestation',
     };
     return kindNames[kind] || kind.toString();
   }

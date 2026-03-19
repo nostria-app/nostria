@@ -46,6 +46,7 @@ import {
   SettingsEventComponent,
   RelayListEventComponent,
   HighlightEventComponent,
+  WotEventComponent,
 } from '../event-types';
 import { UserProfileComponent } from '../user-profile/user-profile.component';
 import { BadgeComponent } from '../../pages/badges/badge/badge.component';
@@ -72,6 +73,7 @@ import { SocialPreviewComponent } from '../social-preview/social-preview.compone
 import { MediaPreviewDialogComponent } from '../media-preview-dialog/media-preview.component';
 import { InlineVideoPlayerComponent } from '../inline-video-player/inline-video-player.component';
 import { HapticsService } from '../../services/haptics.service';
+import { CLIENT_LOGO_MAP } from '../../utils/client-logo-map';
 
 type EventCardAppearance = 'card' | 'plain';
 
@@ -140,6 +142,7 @@ export function getTaggedXUrl(event?: Event | null): string | undefined {
     SettingsEventComponent,
     RelayListEventComponent,
     HighlightEventComponent,
+    WotEventComponent,
     UserProfileComponent,
     BadgeComponent,
     ReportedContentComponent,
@@ -651,6 +654,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     36787,  // Music track (kind 36787) - opens song detail page
     1311,   // Live event comment (kind 1311) - opens referenced stream
     9802,   // Highlight (kind 9802) - opens thread
+    31871,  // Web of Trust attestation (kind 31871) - opens event detail
   ]);
 
   isCardClickable = computed<boolean>(() => {
@@ -699,6 +703,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     34236,  // Short video (kind 34236) - NIP-71 addressable vertical video
     36787,  // Music track (kind 36787)
     39089,  // Starter pack (kind 39089)
+    31871,  // Web of Trust attestation (kind 31871)
   ]);
 
   // Check if the current event kind supports reactions
@@ -2493,31 +2498,6 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     });
   }
 
-  // Client logo mapping - maps client names to logo image paths
-  private readonly CLIENT_LOGO_MAP: Record<string, string> = {
-    'nostria': 'logos/clients/nostria.png',
-    'nosotros': 'logos/clients/nosotros.png',
-    'damus deck': 'logos/clients/damus.png',
-    'damus': 'logos/clients/damus.png',
-    'amethyst': 'logos/clients/amethyst.png',
-    'primal': 'logos/clients/primal.png',
-    'snort': 'logos/clients/snort.png',
-    'iris': 'logos/clients/iris.png',
-    'coracle': 'logos/clients/coracle.png',
-    'nos': 'logos/clients/nos.png',
-    'current': 'logos/clients/current.png',
-    'satellite': 'logos/clients/satellite.png',
-    'habla': 'logos/clients/habla.png',
-    'gossip': 'logos/clients/gossip.png',
-    'freefrom': 'logos/clients/freefrom.png',
-    'habla.news': 'logos/clients/habla.png',
-    'nostrudel': 'logos/clients/nostrudel.svg',
-    'yakihonne': 'logos/clients/yakihonne.png',
-    'lume': 'logos/clients/lume.png',
-    'nostur': 'logos/clients/nostur.png',
-    'nostore': 'logos/clients/nostore.png',
-  };
-
   /**
    * Get the client tag value from an event
    */
@@ -2535,7 +2515,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     if (!clientName) return null;
 
     const normalizedClient = clientName.toLowerCase().trim();
-    return this.CLIENT_LOGO_MAP[normalizedClient] || null;
+    return CLIENT_LOGO_MAP[normalizedClient] || null;
   }
 
   /**

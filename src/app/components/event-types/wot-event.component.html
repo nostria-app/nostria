@@ -1,0 +1,106 @@
+<div class="wot-event-container">
+  <div class="wot-header">
+    <mat-icon class="wot-icon" [class.positive]="isPositive()" [class.negative]="isNegative()">{{ statusIcon() }}</mat-icon>
+    <div class="wot-title-section">
+      <h3 class="wot-title">Web of Trust Attestation</h3>
+      @if (client()) {
+      <span class="wot-client">via {{ client() }}</span>
+      }
+    </div>
+  </div>
+
+  @if (content()) {
+  <div class="wot-content">
+    <p>{{ content() }}</p>
+  </div>
+  }
+
+  <div class="wot-tags">
+    @if (status()) {
+    <mat-chip-set>
+      <mat-chip class="status-chip" [class.positive]="isPositive()" [class.negative]="isNegative()"
+        [matTooltip]="'Status: ' + status()">
+        <mat-icon matChipAvatar>{{ statusIcon() }}</mat-icon>
+        {{ statusDisplay() }}
+      </mat-chip>
+    </mat-chip-set>
+    }
+
+    @if (validity()) {
+    <mat-chip-set>
+      <mat-chip class="validity-chip" [class.positive]="isPositive()" [class.negative]="isNegative()"
+        [matTooltip]="'Validity: ' + validity()">
+        @if (isPositive()) {
+        <mat-icon matChipAvatar>check_circle</mat-icon>
+        } @else if (isNegative()) {
+        <mat-icon matChipAvatar>cancel</mat-icon>
+        } @else {
+        <mat-icon matChipAvatar>help</mat-icon>
+        }
+        {{ validityDisplay() }}
+      </mat-chip>
+    </mat-chip-set>
+    }
+  </div>
+
+  @if (referencedEvents().length > 0) {
+  <div class="wot-section">
+    <div class="section-label">
+      <mat-icon>link</mat-icon>
+      <span>Referenced Events</span>
+    </div>
+    <div class="referenced-items">
+      @for (ref of referencedEvents(); track ref.id) {
+      <div class="ref-item ref-event-item" [matTooltip]="ref.id" (click)="navigateToEvent(ref)"
+        (keyup.enter)="navigateToEvent(ref)" (keyup.space)="navigateToEvent(ref)" tabindex="0" role="button">
+        <mat-icon>open_in_new</mat-icon>
+        <span class="ref-id">{{ ref.shortId }}</span>
+        @if (ref.relay) {
+        <span class="ref-relay">{{ ref.relay }}</span>
+        }
+      </div>
+      }
+    </div>
+  </div>
+  }
+
+  @if (referencedPubkeys().length > 0) {
+  <div class="wot-section">
+    <div class="section-label">
+      <mat-icon>person</mat-icon>
+      <span>Referenced Users</span>
+    </div>
+    <div class="users-grid">
+      @for (pubkey of referencedPubkeys(); track pubkey) {
+      <div class="user-item" (click)="navigateToProfile(pubkey)" (keyup.enter)="navigateToProfile(pubkey)"
+        (keyup.space)="navigateToProfile(pubkey)" tabindex="0" role="button">
+        <app-user-profile [pubkey]="pubkey" [view]="'compact'"></app-user-profile>
+      </div>
+      }
+    </div>
+  </div>
+  }
+
+  @if (extraTags().length > 0) {
+  <div class="wot-section">
+    <div class="section-label">
+      <mat-icon>label</mat-icon>
+      <span>Additional Tags</span>
+    </div>
+    <mat-chip-set class="extra-tags">
+      @for (tag of extraTags(); track tag.key + tag.value) {
+      <mat-chip [matTooltip]="tag.key + ': ' + tag.value">
+        {{ tag.key }}: {{ tag.value }}
+      </mat-chip>
+      }
+    </mat-chip-set>
+  </div>
+  }
+
+  @if (identifier()) {
+  <div class="wot-identifier" [matTooltip]="identifier()">
+    <mat-icon>fingerprint</mat-icon>
+    <span class="identifier-value">{{ identifier() }}</span>
+  </div>
+  }
+</div>

@@ -1,0 +1,204 @@
+.wot-event-container {
+  padding: 16px;
+
+  .wot-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+
+    .wot-icon {
+      font-size: 28px;
+      width: 28px;
+      height: 28px;
+      color: var(--mat-sys-on-surface-variant);
+
+      &.positive {
+        color: #2e7d32;
+      }
+
+      &.negative {
+        color: var(--mat-sys-error);
+      }
+    }
+
+    .wot-title-section {
+      display: flex;
+      flex-direction: column;
+
+      .wot-title {
+        margin: 0;
+        font-size: 1.1rem;
+        color: var(--mat-sys-on-surface);
+      }
+
+      .wot-client {
+        font-size: 0.8rem;
+        color: var(--mat-sys-on-surface-variant);
+      }
+    }
+  }
+
+  .wot-content {
+    margin-bottom: 12px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: var(--mat-sys-surface-container);
+
+    p {
+      margin: 0;
+      color: var(--mat-sys-on-surface);
+      line-height: 1.5;
+    }
+  }
+
+  .wot-tags {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+
+    .status-chip,
+    .validity-chip {
+      &.positive {
+        --mdc-chip-elevated-container-color: color-mix(in srgb, #4caf50 15%, transparent);
+        --mdc-chip-label-text-color: #2e7d32;
+      }
+
+      &.negative {
+        --mdc-chip-elevated-container-color: color-mix(in srgb, var(--mat-sys-error) 15%, transparent);
+        --mdc-chip-label-text-color: var(--mat-sys-error);
+      }
+    }
+  }
+
+  .wot-section {
+    margin-bottom: 12px;
+
+    .section-label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 8px;
+      font-size: 0.85rem;
+      color: var(--mat-sys-on-surface-variant);
+
+      mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+      }
+    }
+
+    .referenced-items {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+
+      .ref-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        border-radius: 8px;
+        background: var(--mat-sys-surface-container);
+
+        mat-icon {
+          font-size: 16px;
+          width: 16px;
+          height: 16px;
+          color: var(--mat-sys-on-surface-variant);
+        }
+
+        .ref-id {
+          font-family: monospace;
+          font-size: 0.85rem;
+          color: var(--mat-sys-on-surface);
+        }
+
+        .ref-relay {
+          font-size: 0.75rem;
+          color: var(--mat-sys-on-surface-variant);
+          margin-left: auto;
+        }
+
+        &.ref-event-item {
+          cursor: pointer;
+          transition: background 0.15s ease;
+
+          &:hover {
+            background: var(--mat-sys-surface-container-high);
+          }
+
+          &:focus-visible {
+            outline: 2px solid var(--mat-sys-primary);
+            outline-offset: 2px;
+          }
+        }
+      }
+    }
+
+    .users-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+
+      .user-item {
+        cursor: pointer;
+        border-radius: 8px;
+        padding: 4px 8px;
+        transition: background 0.15s ease;
+
+        &:hover {
+          background: var(--mat-sys-surface-container-high);
+        }
+
+        &:focus-visible {
+          outline: 2px solid var(--mat-sys-primary);
+          outline-offset: 2px;
+        }
+      }
+    }
+
+    .extra-tags {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+  }
+
+  .wot-identifier {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding-top: 8px;
+    border-top: 1px solid var(--mat-sys-outline-variant);
+    font-size: 0.75rem;
+    color: var(--mat-sys-on-surface-variant);
+
+    mat-icon {
+      font-size: 16px;
+      width: 16px;
+      height: 16px;
+    }
+
+    .identifier-value {
+      font-family: monospace;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+}
+
+:host-context(.dark) {
+  .wot-icon.positive {
+    color: #66bb6a;
+  }
+
+  .status-chip.positive,
+  .validity-chip.positive {
+    --mdc-chip-elevated-container-color: color-mix(in srgb, #66bb6a 15%, transparent);
+    --mdc-chip-label-text-color: #66bb6a;
+  }
+}
