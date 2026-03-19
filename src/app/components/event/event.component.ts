@@ -74,6 +74,7 @@ import { MediaPreviewDialogComponent } from '../media-preview-dialog/media-previ
 import { InlineVideoPlayerComponent } from '../inline-video-player/inline-video-player.component';
 import { HapticsService } from '../../services/haptics.service';
 import { CLIENT_LOGO_MAP } from '../../utils/client-logo-map';
+import { visualContentLength } from '../../utils/visual-content-length';
 
 type EventCardAppearance = 'card' | 'plain';
 
@@ -461,7 +462,8 @@ export class EventComponent implements AfterViewInit, OnDestroy {
 
     // If content has media AND is short (under threshold), it's a media post
     // If content has media but is long, it's a text post with embedded media (should be collapsible)
-    return content.length <= this.CONTENT_LENGTH_THRESHOLD;
+    // Use visual length to account for nostr: references rendering as short display names
+    return visualContentLength(content) <= this.CONTENT_LENGTH_THRESHOLD;
   }
 
   /**
@@ -560,7 +562,8 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     // Don't collapse primary media posts (short posts with images/videos)
     // but DO collapse long text posts that happen to include media
     if (this.isPrimaryMediaPost(content)) return false;
-    return content.length > this.CONTENT_LENGTH_THRESHOLD;
+    // Use visual length to account for nostr: references rendering as short display names
+    return visualContentLength(content) > this.CONTENT_LENGTH_THRESHOLD;
   });
 
   // Check if parent event content should be collapsible (content is long enough)
@@ -575,7 +578,8 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     // Don't collapse primary media posts (short posts with images/videos)
     // but DO collapse long text posts that happen to include media
     if (this.isPrimaryMediaPost(content)) return false;
-    return content.length > this.CONTENT_LENGTH_THRESHOLD;
+    // Use visual length to account for nostr: references rendering as short display names
+    return visualContentLength(content) > this.CONTENT_LENGTH_THRESHOLD;
   });
 
   // Check if main content should be collapsible (content is long enough)
@@ -590,7 +594,8 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     // Don't collapse primary media posts (short posts with images/videos)
     // but DO collapse long text posts that happen to include media
     if (this.isPrimaryMediaPost(content)) return false;
-    return content.length > this.CONTENT_LENGTH_THRESHOLD;
+    // Use visual length to account for nostr: references rendering as short display names
+    return visualContentLength(content) > this.CONTENT_LENGTH_THRESHOLD;
   });
 
   // Check if root content should show collapsed state

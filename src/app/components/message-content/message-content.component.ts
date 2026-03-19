@@ -38,6 +38,7 @@ import { Bolt11InvoiceComponent } from '../bolt11-invoice/bolt11-invoice.compone
 import { AgoPipe } from '../../pipes/ago.pipe';
 import { TimestampPipe } from '../../pipes/timestamp.pipe';
 import { NostrRecord } from '../../interfaces';
+import { visualContentLength } from '../../utils/visual-content-length';
 
 // Music event kinds
 const MUSIC_TRACK_KIND = 36787;
@@ -918,7 +919,8 @@ export class MessageContentComponent {
     // Only apply to text notes (kind 1)
     if (mention.event.event.kind !== 1) return false;
     const content = mention.event.event.content || '';
-    return content.length > this.CONTENT_LENGTH_THRESHOLD;
+    // Use visual length to account for nostr: references rendering as short display names
+    return visualContentLength(content) > this.CONTENT_LENGTH_THRESHOLD;
   }
 
   toggleMentionExpand(partId: number, event: Event): void {
