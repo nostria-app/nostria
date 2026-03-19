@@ -11,7 +11,7 @@ import {
   untracked,
   ChangeDetectionStrategy,
 } from '@angular/core';
-import { SlicePipe } from '@angular/common';
+import { SlicePipe, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -60,6 +60,7 @@ import {
     UserProfileComponent,
     AgoPipe,
     SlicePipe,
+    DatePipe,
     ListFilterMenuComponent,
   ],
   templateUrl: './chats.component.html',
@@ -103,6 +104,9 @@ export class ChatsComponent implements OnInit, OnDestroy {
 
   /** Message being replied to */
   readonly replyingToMessage = signal<ChannelMessage | null>(null);
+
+  /** Whether the chat details panel is open */
+  readonly showChatDetails = signal<boolean>(false);
 
   /** People list filter state */
   readonly selectedListFilter = signal<string>('following');
@@ -204,6 +208,52 @@ export class ChatsComponent implements OnInit, OnDestroy {
     return !!channel && channel.updatedAt > channel.createdAt;
   });
 
+  /** Unique participant pubkeys from current messages */
+  readonly chatParticipants = computed(() => {
+    const messages = this.currentMessages();
+    const seen = new Set<string>();
+    const participants: string[] = [];
+    for (const msg of messages) {
+      if (!seen.has(msg.pubkey)) {
+        seen.add(msg.pubkey);
+        participants.push(msg.pubkey);
+      }
+    }
+    return participants;
+  });
+
+  /** Image URLs extracted from message content */
+  readonly sharedImages = computed(() => {
+    const messages = this.currentMessages();
+    const images: string[] = [];
+    const imageExtensions = /\.(jpg|jpeg|png|gif|webp|svg|bmp|avif)(\?[^\s]*)?$/i;
+    for (const msg of messages) {
+      const urls = msg.content.match(/https?:\/\/[^\s]+/g) ?? [];
+      for (const url of urls) {
+        if (imageExtensions.test(url)) {
+          images.push(url);
+        }
+      }
+    }
+    return images;
+  });
+
+  /** Video URLs extracted from message content */
+  readonly sharedVideos = computed(() => {
+    const messages = this.currentMessages();
+    const videos: string[] = [];
+    const videoExtensions = /\.(mp4|webm|mov|avi|mkv|m4v|ogv)(\?[^\s]*)?$/i;
+    for (const msg of messages) {
+      const urls = msg.content.match(/https?:\/\/[^\s]+/g) ?? [];
+      for (const url of urls) {
+        if (videoExtensions.test(url)) {
+          videos.push(url);
+        }
+      }
+    }
+    return videos;
+  });
+
   @ViewChild('messagesWrapper', { static: false })
   messagesWrapper?: ElementRef<HTMLDivElement>;
 
@@ -283,6 +333,7 @@ export class ChatsComponent implements OnInit, OnDestroy {
     this.showMobileList.set(false);
     this.replyingToMessage.set(null);
     this.newMessageText.set('');
+    this.showChatDetails.set(false);
 
     // Load messages and subscribe
     await this.chatChannels.loadChannelMessages(channel.id);
@@ -530,6 +581,16 @@ export class ChatsComponent implements OnInit, OnDestroy {
     } catch {
       this.snackBar.open('Failed to copy channel metadata', 'OK', { duration: 3000 });
     }
+  }
+
+  /** Toggle chat details panel */
+  toggleChatDetails(): void {
+    this.showChatDetails.update(v => !v);
+  }
+
+  /** Close chat details panel */
+  closeChatDetails(): void {
+    this.showChatDetails.set(false);
   }
 
   /** Get channel initials for avatar placeholder */

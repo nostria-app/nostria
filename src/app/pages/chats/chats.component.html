@@ -73,13 +73,6 @@
                 <span class="channel-about empty">No description</span>
                 }
               </div>
-              @if (channel.tags.length > 0) {
-              <div class="channel-tags">
-                @for (tag of channel.tags; track tag) {
-                <span class="channel-tag">{{ tag }}</span>
-                }
-              </div>
-              }
             </div>
           </div>
         </a>
@@ -125,6 +118,9 @@
           }
         </div>
         <div class="channel-header-actions">
+          <button mat-icon-button (click)="toggleChatDetails()" matTooltip="Chat details">
+            <mat-icon>info_outline</mat-icon>
+          </button>
           @if (isChannelCreator()) {
           <button mat-icon-button (click)="openEditChannel()" matTooltip="Edit channel">
             <mat-icon>edit</mat-icon>
@@ -155,15 +151,24 @@
       </div>
 
       @if (selectedChannel(); as channel) {
-        @if (channel.metadata.about) {
+        @if (channel.metadata.about || channel.tags.length > 0) {
         <div class="channel-description-bar">
+          @if (channel.metadata.about) {
           <span class="channel-description-text">{{ channel.metadata.about }}</span>
+          }
+          @if (channel.tags.length > 0) {
+          <span class="channel-description-tags">
+            @for (tag of channel.tags; track tag) {
+            <span class="channel-description-tag">#{{ tag }}</span>
+            }
+          </span>
+          }
         </div>
         }
       }
 
       <!-- Messages area -->
-      <div class="message-list" [class.has-description]="selectedChannel()?.metadata?.about" #messagesWrapper>
+      <div class="message-list" [class.has-description]="selectedChannel()?.metadata?.about || selectedChannel()?.tags?.length" #messagesWrapper>
         @if (isLoadingMessages()) {
         <div class="loading-messages">
           <mat-spinner diameter="24"></mat-spinner>
@@ -266,6 +271,89 @@
         </div>
       </div>
     </div>
+
+    <!-- Chat Details Panel -->
+    @if (showChatDetails() && selectedChannel(); as channel) {
+    <div class="chat-details-panel">
+      <div class="chat-details-header">
+        <h3 class="title-font">Chat Details</h3>
+        <button mat-icon-button (click)="closeChatDetails()">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+
+      <div class="chat-details-content">
+        <div class="chat-details-stat">
+          <mat-icon>chat</mat-icon>
+          <div class="chat-details-stat-text">
+            <span class="chat-details-stat-value">{{ channel.messageCount }}</span>
+            <span class="chat-details-stat-label">Messages</span>
+          </div>
+        </div>
+
+        <div class="chat-details-stat">
+          <mat-icon>calendar_today</mat-icon>
+          <div class="chat-details-stat-text">
+            <span class="chat-details-stat-value">{{ channel.createdAt * 1000 | date:'MMMM d, y, HH:mm:ss' }}</span>
+            <span class="chat-details-stat-label">Chat Started</span>
+          </div>
+        </div>
+
+        <div class="chat-details-section">
+          <div class="chat-details-section-header">
+            <mat-icon>people</mat-icon>
+            <span>Members</span>
+            <span class="chat-details-badge">{{ chatParticipants().length }}</span>
+          </div>
+          <div class="chat-details-members-list">
+            @for (pubkey of chatParticipants(); track pubkey) {
+            <div class="chat-details-member">
+              <app-user-profile [pubkey]="pubkey" view="list" />
+            </div>
+            }
+            @if (chatParticipants().length === 0) {
+            <div class="chat-details-empty">No participants yet</div>
+            }
+          </div>
+        </div>
+
+        @if (sharedImages().length > 0) {
+        <div class="chat-details-section">
+          <div class="chat-details-section-header">
+            <mat-icon>image</mat-icon>
+            <span>Shared Images</span>
+            <span class="chat-details-badge">{{ sharedImages().length }}</span>
+          </div>
+          <div class="chat-details-media-grid">
+            @for (url of sharedImages(); track url) {
+            <a [href]="url" target="_blank" rel="noopener noreferrer" class="chat-details-media-thumb">
+              <img [src]="url" alt="Shared image" />
+            </a>
+            }
+          </div>
+        </div>
+        }
+
+        @if (sharedVideos().length > 0) {
+        <div class="chat-details-section">
+          <div class="chat-details-section-header">
+            <mat-icon>videocam</mat-icon>
+            <span>Shared Videos</span>
+            <span class="chat-details-badge">{{ sharedVideos().length }}</span>
+          </div>
+          <div class="chat-details-video-list">
+            @for (url of sharedVideos(); track url) {
+            <a [href]="url" target="_blank" rel="noopener noreferrer" class="chat-details-video-item">
+              <mat-icon>play_circle</mat-icon>
+              <span class="chat-details-video-url">{{ url }}</span>
+            </a>
+            }
+          </div>
+        </div>
+        }
+      </div>
+    </div>
+    }
     }
   </div>
 </div>
