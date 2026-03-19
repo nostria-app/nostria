@@ -142,6 +142,26 @@
   }
 }
 
+.already-paid-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 24px 0;
+
+  .already-paid-icon {
+    font-size: 48px;
+    width: 48px;
+    height: 48px;
+    color: var(--mat-sys-error);
+  }
+
+  .already-paid-text {
+    font-size: 1.1rem;
+    color: var(--mat-sys-error);
+  }
+}
+
 .no-wallet-hint {
   display: flex;
   align-items: center;

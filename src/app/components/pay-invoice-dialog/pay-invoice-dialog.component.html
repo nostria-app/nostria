@@ -1,5 +1,5 @@
 <div dialog-content class="pay-invoice-dialog">
-  @if (!paymentSuccess()) {
+  @if (!paymentSuccess() && !alreadyPaid()) {
   <div class="invoice-details">
     <div class="amount-display">
       <mat-icon class="amount-icon">bolt</mat-icon>
@@ -57,6 +57,11 @@
     <span>Connect a wallet in Settings to pay invoices</span>
   </div>
   }
+  } @else if (alreadyPaid()) {
+  <div class="already-paid-state">
+    <mat-icon class="already-paid-icon">info</mat-icon>
+    <span class="already-paid-text">This invoice has already been paid.</span>
+  </div>
   } @else {
   <div class="success-state">
     <mat-icon class="success-icon">check_circle</mat-icon>
@@ -66,10 +71,9 @@
 </div>
 
 <div dialog-actions>
-  @if (!paymentSuccess()) {
+  @if (!paymentSuccess() && !alreadyPaid()) {
   <button mat-button type="button" (click)="cancel()">Cancel</button>
-  <button mat-flat-button type="button" (click)="payInvoice()"
-    [disabled]="isPaying() || isExpired() || !hasWallet()">
+  <button mat-flat-button type="button" (click)="payInvoice()" [disabled]="isPaying() || isExpired() || !hasWallet()">
     @if (isPaying()) {
     <mat-spinner diameter="18"></mat-spinner>
     <span>Paying...</span>

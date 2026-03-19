@@ -52,6 +52,7 @@ export class PayInvoiceDialogComponent {
   // State signals
   isPaying = signal(false);
   paymentSuccess = signal(false);
+  alreadyPaid = signal(false);
   paymentError = signal<string | null>(null);
 
   // Wallet selection
@@ -161,14 +162,9 @@ export class PayInvoiceDialogComponent {
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Payment failed. Please try again.';
 
-      // If the invoice was already paid, treat it as success
+      // If the invoice was already paid, show as already paid (not a new successful payment)
       if (message.toLowerCase().includes('already been paid') || message.toLowerCase().includes('already paid')) {
-        this.paymentSuccess.set(true);
-        setTimeout(() => {
-          this.dialogRef.close({
-            success: true,
-          } as PayInvoiceDialogResult);
-        }, 1500);
+        this.alreadyPaid.set(true);
         return;
       }
 
