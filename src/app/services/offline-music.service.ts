@@ -1,4 +1,4 @@
-import { Injectable, inject, signal, computed } from '@angular/core';
+import { Injectable, inject, signal, computed, effect } from '@angular/core';
 import { Event } from 'nostr-tools';
 import { LoggerService } from './logger.service';
 import { DatabaseService } from './database.service';
@@ -55,11 +55,23 @@ export class OfflineMusicService {
     }, 0);
   });
 
+  private initPromise: Promise<void> | null = null;
+  private hasLoadedFromStorage = false;
+
   constructor() {
-    // Initialize when app is ready
-    if (this.app.isBrowser()) {
-      this.initialize();
+    if (!this.app.isBrowser()) {
+      return;
     }
+
+    // Initialize once the app/database is ready.
+    effect(() => {
+      const appReady = this.app.initialized();
+      if (!appReady || this.hasLoadedFromStorage) {
+        return;
+      }
+
+      void this.initialize();
+    });
   }
 
   /**
@@ -68,8 +80,26 @@ export class OfflineMusicService {
   async initialize(): Promise<void> {
     if (!this.app.isBrowser()) return;
 
+    if (this.initPromise) {
+      return this.initPromise;
+    }
+
+    this.initPromise = this.initializeInternal();
+    try {
+      await this.initPromise;
+    } finally {
+      this.initPromise = null;
+    }
+  }
+
+  private async initializeInternal(): Promise<void> {
+    if (this.hasLoadedFromStorage) {
+      return;
+    }
+
     try {
       await this.loadOfflineTracks();
+      this.hasLoadedFromStorage = true;
       this.logger.info(`Offline music service initialized with ${this._offlineTracks().length} tracks`);
     } catch (err) {
       this.logger.error('Failed to initialize offline music service:', err);
