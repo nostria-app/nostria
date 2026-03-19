@@ -18,6 +18,9 @@ export const CHANNEL_MESSAGE_KIND = 42;
 export const CHANNEL_HIDE_MESSAGE_KIND = 43;
 export const CHANNEL_MUTE_USER_KIND = 44;
 
+/** Channel name prefixes that should be filtered out and never persisted */
+const BLOCKED_CHANNEL_PREFIXES = ['openclaw-world-'];
+
 /**
  * Metadata for a public chat channel
  */
@@ -149,7 +152,7 @@ export class ChatChannelsService implements NostriaService {
 
       for (const event of channelEvents) {
         const channel = this.parseChannelCreateEvent(event);
-        if (channel) {
+        if (channel && !this.isBlockedChannelName(channel.metadata.name)) {
           channelMap.set(channel.id, channel);
         }
       }
@@ -158,6 +161,8 @@ export class ChatChannelsService implements NostriaService {
       if (channelMap.size > 0) {
         const metadataEvents = await this.database.getEventsByKind(CHANNEL_METADATA_KIND);
         for (const event of metadataEvents) {
+          // Skip metadata events for blocked channel names
+          if (this.isBlockedChannelEvent(event)) continue;
           this.applyMetadataUpdate(channelMap, event);
         }
       }
@@ -189,10 +194,13 @@ export class ChatChannelsService implements NostriaService {
       this.logger.info('[ChatChannels] Loading channels from relays:', relayUrls.length);
 
       // Fetch kind 40 channel creation events
-      const channelEvents = await this.accountRelay.getMany<Event>(
+      const rawChannelEvents = await this.accountRelay.getMany<Event>(
         { kinds: [CHANNEL_CREATE_KIND], limit: 100 },
         { timeout: 10000 }
       );
+
+      // Filter out blocked channel names before persisting or processing
+      const channelEvents = rawChannelEvents.filter(e => !this.isBlockedChannelEvent(e));
 
       // Persist channel creation events to local DB
       if (channelEvents.length > 0) {
@@ -214,10 +222,13 @@ export class ChatChannelsService implements NostriaService {
       // Fetch kind 41 metadata updates for all discovered channels
       if (channelMap.size > 0) {
         const channelIds = Array.from(channelMap.keys());
-        const metadataEvents = await this.accountRelay.getMany<Event>(
+        const rawMetadataEvents = await this.accountRelay.getMany<Event>(
           { kinds: [CHANNEL_METADATA_KIND], '#e': channelIds, limit: 500 },
           { timeout: 10000 }
         );
+
+        // Filter out blocked channel names before persisting or processing
+        const metadataEvents = rawMetadataEvents.filter(e => !this.isBlockedChannelEvent(e));
 
         // Persist metadata events to local DB
         if (metadataEvents.length > 0) {
@@ -254,6 +265,9 @@ export class ChatChannelsService implements NostriaService {
     const sub = this.accountRelay.subscribe<Event>(
       { kinds: [CHANNEL_CREATE_KIND, CHANNEL_METADATA_KIND], since: now },
       (event: Event) => {
+        // Skip blocked channel names entirely - don't persist or process
+        if (this.isBlockedChannelEvent(event)) return;
+
         // Persist live events to local DB
         this.database.saveEvent(event as Event & { dTag?: string }).catch(err =>
           this.logger.error('[ChatChannels] Failed to cache live channel event', err)
@@ -666,6 +680,26 @@ export class ChatChannelsService implements NostriaService {
   }
 
   // --- Private helpers ---
+
+  /**
+   * Check if a channel name matches a blocked prefix.
+   * Used to filter out unwanted channels from both in-memory state and database persistence.
+   */
+  private isBlockedChannelName(name: string): boolean {
+    return BLOCKED_CHANNEL_PREFIXES.some(prefix => name.startsWith(prefix));
+  }
+
+  /**
+   * Check if a raw kind 40/41 event has a blocked channel name in its content.
+   */
+  private isBlockedChannelEvent(event: Event): boolean {
+    try {
+      const metadata = JSON.parse(event.content) as Partial<ChannelMetadata>;
+      return !!metadata.name && this.isBlockedChannelName(metadata.name);
+    } catch {
+      return false;
+    }
+  }
 
   /**
    * Load user's moderation events from local database cache

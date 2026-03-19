@@ -332,12 +332,11 @@ export class FeedsCollectionService {
     // Only include properties that are actually being updated to avoid overwriting with undefined
     const feedConfig: Partial<Omit<FeedConfig, 'id' | 'createdAt'>> = {};
 
-    if (updates.label !== undefined) feedConfig.label = updates.label;
-    if (updates.icon !== undefined) feedConfig.icon = updates.icon;
-    if (updates.showReplies !== undefined) feedConfig.showReplies = updates.showReplies;
-    if (updates.showReposts !== undefined) feedConfig.showReposts = updates.showReposts;
-    if (updates.kinds !== undefined) feedConfig.kinds = updates.kinds;
-    if (updates.updatedAt !== undefined) feedConfig.updatedAt = updates.updatedAt;
+    for (const [key, value] of Object.entries(updates)) {
+      if (value !== undefined) {
+        (feedConfig as Record<string, unknown>)[key] = value;
+      }
+    }
 
     return await this.feedService.updateFeed(id, feedConfig);
   }

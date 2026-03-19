@@ -465,6 +465,33 @@ export class ChatsComponent implements OnInit, OnDestroy {
     this.scrollToBottom();
   }
 
+  /** Copy channel event data to clipboard */
+  async copyChannelData(): Promise<void> {
+    const channel = this.selectedChannel();
+    if (!channel) return;
+
+    const eventData = {
+      id: channel.id,
+      kind: 40,
+      pubkey: channel.creator,
+      created_at: channel.createdAt,
+      content: JSON.stringify({
+        name: channel.metadata.name,
+        about: channel.metadata.about,
+        picture: channel.metadata.picture,
+        relays: channel.metadata.relays ?? [],
+      }),
+      tags: channel.tags.map(t => ['t', t]),
+    };
+
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(eventData, null, 2));
+      this.snackBar.open('Channel data copied to clipboard', 'OK', { duration: 3000 });
+    } catch {
+      this.snackBar.open('Failed to copy channel data', 'OK', { duration: 3000 });
+    }
+  }
+
   /** Get channel initials for avatar placeholder */
   getChannelInitials(channel: ChatChannel): string {
     const name = channel.metadata.name || '?';
