@@ -214,7 +214,7 @@ export class ListFilterMenuComponent implements OnInit {
   showPublicOption = input<boolean>(false);
   compact = input<boolean>(false);
   defaultFilter = input<ListFilterValue>('following');
-  storageKey = input.required<'streams' | 'articles' | 'summary' | 'music' | 'calendar'>();
+  storageKey = input.required<'streams' | 'articles' | 'summary' | 'music' | 'calendar' | 'chats'>();
   initialFilter = input<ListFilterValue | undefined>(undefined); // Override from URL query params
 
   // Outputs
@@ -307,6 +307,9 @@ export class ListFilterMenuComponent implements OnInit {
         case 'calendar':
           savedFilter = this.accountLocalState.getCalendarListFilter(pubkey);
           break;
+        case 'chats':
+          savedFilter = this.accountLocalState.getChatsListFilter(pubkey);
+          break;
         default:
           savedFilter = this.defaultFilter();
           break;
@@ -342,6 +345,9 @@ export class ListFilterMenuComponent implements OnInit {
           break;
         case 'calendar':
           this.accountLocalState.setCalendarListFilter(pubkey, filter);
+          break;
+        case 'chats':
+          this.accountLocalState.setChatsListFilter(pubkey, filter);
           break;
       }
     }

@@ -1434,10 +1434,15 @@ export class MessagingService implements NostriaService {
         this.logger.info('Extension user - decryption requests will be queued for permission');
       }
 
-      // Get the last check timestamp to only fetch new messages
-      const since = lastCheck || undefined;
+      // Get the last check timestamp to only fetch new messages.
+      // NIP-17 gift wraps have randomized outer timestamps up to 2 days (172800s) in the past
+      // for privacy. When doing an incremental sync we must look further back to catch
+      // messages whose outer (relay-indexed) timestamp falls before lastCheck even though
+      // the real inner message was created recently.
+      const NIP17_TIMESTAMP_BUFFER = 259200; // 3 days in seconds (same buffer used in refreshChats/subscribeToIncomingMessages)
+      const since = lastCheck ? Math.max(0, lastCheck - NIP17_TIMESTAMP_BUFFER) : undefined;
 
-      this.logger.info(`Loading messages since: ${since ? new Date(since * 1000).toISOString() : 'beginning'} (incremental: ${isIncrementalSync})`);
+      this.logger.info(`Loading messages since: ${since ? new Date(since * 1000).toISOString() : 'beginning'} (incremental: ${isIncrementalSync}, lastCheck: ${lastCheck ? new Date(lastCheck * 1000).toISOString() : 'none'})`);
 
       // This contains both incoming and outgoing messages for Giftwrapped messages.
       const filterReceived: Filter = {

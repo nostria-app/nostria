@@ -201,6 +201,13 @@ export const routes: Routes = [
     ],
   },
   {
+    path: 'chats',
+    loadComponent: () =>
+      import('./pages/chats/chats.component').then(m => m.ChatsComponent),
+    data: { isRoot: true },
+    title: 'Chats',
+  },
+  {
     path: 'settings',
     loadComponent: () =>
       import('./pages/settings/settings.component').then(m => m.SettingsComponent),

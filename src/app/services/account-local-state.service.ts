@@ -123,6 +123,7 @@ interface AccountLocalState {
   musicListFilter?: string; // Filter for music: 'all', 'following', or follow set d-tag
   musicTrackSort?: string; // Track sort for music: 'released' or 'published'
   calendarListFilter?: string; // Filter for calendar: 'all', 'following', or follow set d-tag
+  chatsListFilter?: string; // Filter for chats: 'all', 'following', or follow set d-tag
   recentShareRecipients?: string[]; // Pubkeys of recent share recipients, most recent first
   signingCount?: number; // Number of signing operations performed with nsec
   boardsViewMode?: string; // View mode for boards: 'compact' or 'standard'
@@ -1700,6 +1701,24 @@ export class AccountLocalStateService {
   setCalendarListFilter(pubkey: string, filter: string): void {
     const value = filter === 'all' ? undefined : filter;
     this.updateAccountState(pubkey, { calendarListFilter: value });
+  }
+
+  /**
+   * Get chats list filter for an account
+   * Returns 'all' if not set (shows all public chats)
+   */
+  getChatsListFilter(pubkey: string): string {
+    const state = this.getAccountState(pubkey);
+    return state.chatsListFilter || 'all';
+  }
+
+  /**
+   * Set chats list filter for an account
+   * @param filter - 'all', 'following', or a follow set d-tag
+   */
+  setChatsListFilter(pubkey: string, filter: string): void {
+    const value = filter === 'all' ? undefined : filter;
+    this.updateAccountState(pubkey, { chatsListFilter: value });
   }
 
   /**

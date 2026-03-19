@@ -697,6 +697,7 @@ export class App implements OnInit, OnDestroy {
     { path: 'calendar', label: $localize`:@@menu.calendar:Calendar`, icon: 'calendar_month', authenticated: true },
     { path: 'analytics', label: $localize`:@@menu.analytics:Analytics`, icon: 'bar_chart', authenticated: true },
     { path: 'newsletter', label: $localize`:@@menu.newsletter:Newsletter`, icon: 'campaign', authenticated: true },
+    { path: 'chats', label: $localize`:@@menu.chats:Chats`, icon: 'forum', authenticated: true },
     { path: 'settings', label: $localize`:@@menu.settings:Settings`, icon: 'settings', authenticated: false },
     { path: 'wallet', label: $localize`:@@menu.wallet:Wallet`, icon: 'account_balance_wallet', authenticated: true },
   ];
@@ -708,6 +709,7 @@ export class App implements OnInit, OnDestroy {
     'articles',
     'summary',
     'messages',
+    'chats',
     'people',
     'collections',
     'clips',

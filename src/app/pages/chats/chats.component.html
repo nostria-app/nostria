@@ -1,0 +1,269 @@
+<div class="chats">
+  @if (isLoading() && !selectedChannel()) {
+  <div class="loading-container">
+    <app-loading-overlay message="Loading channels..."></app-loading-overlay>
+  </div>
+  } @else {
+  <div class="chats-left" [class.mobile-hidden]="isSinglePaneView() && !showMobileList()">
+    <!-- Panel Header -->
+    <div class="panel-header">
+      <h2 class="panel-title title-font">Chats</h2>
+      <span class="panel-header-spacer"></span>
+      @if (isLoading()) {
+      <mat-spinner diameter="20" matTooltip="Loading channels..."></mat-spinner>
+      }
+      @if (isAuthenticated()) {
+      <app-list-filter-menu
+        storageKey="chats"
+        [showPublicOption]="true"
+        defaultFilter="all"
+        [initialFilter]="urlListFilter()"
+        (filterChanged)="onListFilterChanged($event)" />
+      }
+      <button mat-icon-button (click)="toggleSearch()" matTooltip="Search channels">
+        <mat-icon>search</mat-icon>
+      </button>
+      <button mat-icon-button (click)="openCreateChannel()" matTooltip="Create channel">
+        <mat-icon>add</mat-icon>
+      </button>
+    </div>
+
+    @if (showSearch()) {
+    <div class="channel-search-header">
+      <input class="channel-search-input" type="text" placeholder="Search channels..."
+        [ngModel]="channelSearchQuery()" (ngModelChange)="channelSearchQuery.set($event)" />
+      <button mat-icon-button class="clear-search-button" (click)="toggleSearch()" aria-label="Close search">
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
+    }
+
+    <div class="channel-list-container">
+      @if (channels().length === 0 && !isLoading()) {
+      <div class="empty-channels">
+        <mat-icon>forum</mat-icon>
+        <p>No public channels yet</p>
+        <button mat-flat-button (click)="openCreateChannel()">
+          <mat-icon>add</mat-icon>
+          Create a channel
+        </button>
+      </div>
+      } @else {
+      <mat-nav-list class="channel-list">
+        @for (channel of channels(); track channel.id) {
+        <a mat-list-item class="channel-item" [class.active]="selectedChannel()?.id === channel.id"
+          (click)="selectChannel(channel)">
+          <div class="channel-item-content">
+            <div class="channel-avatar">
+              @if (channel.metadata.picture) {
+              <img [src]="channel.metadata.picture" [alt]="channel.metadata.name" class="channel-avatar-img" />
+              } @else {
+              <div class="channel-avatar-placeholder">
+                <span>{{ getChannelInitials(channel) }}</span>
+              </div>
+              }
+            </div>
+            <div class="channel-info">
+              <div class="channel-name-row">
+                <span class="channel-name">{{ channel.metadata.name }}</span>
+                @if (channel.updatedAt) {
+                <span class="channel-time">{{ channel.updatedAt | ago }}</span>
+                }
+              </div>
+              <div class="channel-preview">
+                @if (channel.metadata.about) {
+                <span class="channel-about">{{ channel.metadata.about }}</span>
+                } @else {
+                <span class="channel-about empty">No description</span>
+                }
+              </div>
+              @if (channel.tags.length > 0) {
+              <div class="channel-tags">
+                @for (tag of channel.tags; track tag) {
+                <span class="channel-tag">{{ tag }}</span>
+                }
+              </div>
+              }
+            </div>
+          </div>
+        </a>
+        }
+      </mat-nav-list>
+      }
+    </div>
+  </div>
+
+  <div class="chats-right" [class.mobile-hidden]="isSinglePaneView() && showMobileList()">
+    @if (!selectedChannel() && !selectedChannelId()) {
+    <div class="no-channel-selected">
+      <h2>Select a channel</h2>
+      <p>Choose from existing public channels or create a new one.</p>
+      <button mat-flat-button (click)="openCreateChannel()">
+        Create channel
+      </button>
+    </div>
+    } @else {
+    <div class="chat-content-wrapper">
+      <!-- Channel header -->
+      <div class="channel-detail-header">
+        <div class="channel-header-left">
+          @if (isSinglePaneView() && !showMobileList()) {
+          <button mat-icon-button class="back-button" (click)="backToList()">
+            <mat-icon>arrow_back</mat-icon>
+          </button>
+          }
+          @if (selectedChannel(); as channel) {
+          <div class="channel-header-info">
+            @if (channel.metadata.picture) {
+            <img [src]="channel.metadata.picture" [alt]="channel.metadata.name"
+              class="channel-header-avatar" />
+            } @else {
+            <div class="channel-header-avatar-placeholder">
+              <span>{{ getChannelInitials(channel) }}</span>
+            </div>
+            }
+            <div class="channel-header-text">
+              <span class="channel-header-name">{{ channel.metadata.name }}</span>
+              <span class="channel-header-members">{{ channel.messageCount }} messages</span>
+            </div>
+          </div>
+          }
+        </div>
+        <div class="channel-header-actions">
+          @if (isChannelCreator()) {
+          <button mat-icon-button (click)="openEditChannel()" matTooltip="Edit channel">
+            <mat-icon>edit</mat-icon>
+          </button>
+          }
+          <button mat-icon-button [matMenuTriggerFor]="channelMenu" matTooltip="Channel options">
+            <mat-icon>more_vert</mat-icon>
+          </button>
+          <mat-menu #channelMenu="matMenu">
+            @if (selectedChannel(); as channel) {
+            <button mat-menu-item disabled>
+              <mat-icon>info</mat-icon>
+              <span>{{ channel.metadata.about || 'No description' }}</span>
+            </button>
+            <mat-divider></mat-divider>
+            }
+            @if (isChannelCreator()) {
+            <button mat-menu-item (click)="openEditChannel()">
+              <mat-icon>edit</mat-icon>
+              <span>Edit Channel</span>
+            </button>
+            }
+          </mat-menu>
+        </div>
+      </div>
+
+      <!-- Messages area -->
+      <div class="message-list" #messagesWrapper>
+        @if (isLoadingMessages()) {
+        <div class="loading-messages">
+          <mat-spinner diameter="24"></mat-spinner>
+          <p>Loading messages...</p>
+        </div>
+        }
+
+        @for (message of currentMessages(); track message.id) {
+        <div class="message-bubble-container"
+          [class.outgoing]="message.pubkey === currentPubkey()">
+          <div class="message-sender-row">
+            @if (message.pubkey !== currentPubkey()) {
+            <app-user-profile [pubkey]="message.pubkey" view="icon" #msgProfile>
+              <span class="message-sender-name">
+                @if (msgProfile.profile()) {
+                {{ msgProfile.profile().data?.display_name || msgProfile.profile().data?.name || 'Unknown' }}
+                } @else {
+                {{ message.pubkey | slice:0:8 }}...
+                }
+              </span>
+            </app-user-profile>
+            }
+          </div>
+          <div class="message-bubble"
+            [class.outgoing]="message.pubkey === currentPubkey()">
+            @if (message.replyTo) {
+            <div class="reply-context">
+              <mat-icon>reply</mat-icon>
+              <span class="reply-text">Reply</span>
+            </div>
+            }
+            <div class="message-text">{{ message.content }}</div>
+            <span class="message-inline-meta">
+              <span class="message-time">{{ message.createdAt | ago }}</span>
+            </span>
+          </div>
+          <div class="message-actions">
+            <button mat-icon-button class="more-button" [matMenuTriggerFor]="msgMenu"
+              (click)="$event.stopPropagation()" matTooltip="More options">
+              <mat-icon>more_vert</mat-icon>
+            </button>
+            <mat-menu #msgMenu="matMenu">
+              <button mat-menu-item (click)="setReplyTo(message)">
+                <mat-icon>reply</mat-icon>
+                <span>Reply</span>
+              </button>
+              @if (message.pubkey !== currentPubkey()) {
+              <button mat-menu-item (click)="hideMessage(message)">
+                <mat-icon>visibility_off</mat-icon>
+                <span>Hide Message</span>
+              </button>
+              <button mat-menu-item (click)="muteUser(message.pubkey)">
+                <mat-icon>block</mat-icon>
+                <span>Mute User</span>
+              </button>
+              }
+            </mat-menu>
+          </div>
+        </div>
+        }
+
+        @if (currentMessages().length === 0 && !isLoadingMessages()) {
+        <div class="empty-messages">
+          <mat-icon>chat_bubble_outline</mat-icon>
+          <p>No messages yet. Be the first to say something!</p>
+        </div>
+        }
+      </div>
+
+      @if (showScrollToLatestButton()) {
+      <button mat-mini-fab class="scroll-latest-button" (click)="scrollToLatestMessage()"
+        matTooltip="Scroll to latest message" aria-label="Scroll to latest message">
+        <mat-icon>keyboard_arrow_down</mat-icon>
+      </button>
+      }
+
+      <!-- Message input -->
+      <div class="message-input-container" [class.has-reply]="replyingToMessage()">
+        @if (replyingToMessage()) {
+        <div class="reply-preview">
+          <div class="reply-preview-content">
+            <mat-icon>reply</mat-icon>
+            <span class="reply-preview-text">{{ replyingToMessage()!.content }}</span>
+          </div>
+          <button mat-icon-button class="cancel-reply-button" (click)="clearReply()" matTooltip="Cancel reply">
+            <mat-icon>close</mat-icon>
+          </button>
+        </div>
+        }
+        <div class="message-input-row">
+          <textarea #messageInput class="message-input" [ngModel]="newMessageText()"
+            (ngModelChange)="newMessageText.set($event)" placeholder="Message this channel"
+            [disabled]="isSending()" (keydown)="onMessageKeydown($event)" rows="1"></textarea>
+          <button mat-icon-button type="button" class="send-button"
+            [disabled]="!newMessageText().trim() || isSending()" (click)="sendMessage()"
+            matTooltip="Send message">
+            @if (isSending()) {
+            <mat-spinner diameter="24"></mat-spinner>
+            } @else {
+            <mat-icon>send</mat-icon>
+            }
+          </button>
+        </div>
+      </div>
+    </div>
+    }
+  </div>
+  }
+</div>

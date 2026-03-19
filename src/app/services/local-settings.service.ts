@@ -200,6 +200,7 @@ export class LocalSettingsService {
     'articles',
     'summary',
     'messages',
+    'chats',
     'people',
     'collections',
     'clips',
