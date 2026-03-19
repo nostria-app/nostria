@@ -216,6 +216,82 @@
     </div>
     }
 
+    <!-- Albums containing this track -->
+    @if (containingAlbumsLoading() || containingAlbums().length > 0) {
+    <div class="albums-section">
+      <h3 class="section-title title-font">
+        <mat-icon>album</mat-icon>
+        Appears on
+      </h3>
+      @if (containingAlbumsLoading() && containingAlbums().length === 0) {
+      <div class="albums-loading">
+        <mat-spinner diameter="24"></mat-spinner>
+        <span>Looking for albums...</span>
+      </div>
+      } @else {
+      <div class="albums-grid">
+        @for (album of containingAlbums(); track album.dTag) {
+        <div class="album-card" (click)="openAlbum(album)" (keydown.enter)="openAlbum(album)" tabindex="0"
+          role="button" [attr.aria-label]="'Open album: ' + album.title">
+          <div class="album-cover">
+            @if (album.image) {
+            <img [src]="album.image" [alt]="album.title" title="Album cover" />
+            } @else if (album.gradient) {
+            <div class="album-gradient" [style.background]="album.gradient">
+              <mat-icon>queue_music</mat-icon>
+            </div>
+            } @else {
+            <div class="album-placeholder">
+              <mat-icon>queue_music</mat-icon>
+            </div>
+            }
+          </div>
+          <span class="album-title">{{ album.title }}</span>
+        </div>
+        }
+      </div>
+      }
+    </div>
+    }
+
+    <!-- More by artist -->
+    @if (moreByArtistLoading() || moreByArtist().length > 0) {
+    <div class="albums-section">
+      <h3 class="section-title title-font">
+        <mat-icon>person</mat-icon>
+        More by {{ artistName() }}
+      </h3>
+      @if (moreByArtistLoading() && moreByArtist().length === 0) {
+      <div class="albums-loading">
+        <mat-spinner diameter="24"></mat-spinner>
+        <span>Loading...</span>
+      </div>
+      } @else {
+      <div class="albums-grid">
+        @for (album of moreByArtist(); track album.dTag) {
+        <div class="album-card" (click)="openAlbum(album)" (keydown.enter)="openAlbum(album)" tabindex="0"
+          role="button" [attr.aria-label]="'Open album: ' + album.title">
+          <div class="album-cover">
+            @if (album.image) {
+            <img [src]="album.image" [alt]="album.title" title="Album cover" />
+            } @else if (album.gradient) {
+            <div class="album-gradient" [style.background]="album.gradient">
+              <mat-icon>queue_music</mat-icon>
+            </div>
+            } @else {
+            <div class="album-placeholder">
+              <mat-icon>queue_music</mat-icon>
+            </div>
+            }
+          </div>
+          <span class="album-title">{{ album.title }}</span>
+        </div>
+        }
+      </div>
+      }
+    </div>
+    }
+
     @for (section of contentSections(); track section.title) {
     <mat-card class="content-section-card">
       <mat-card-header>

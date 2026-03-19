@@ -51,7 +51,17 @@ interface TopZapper {
   amount: number;
 }
 
+interface AlbumInfo {
+  event: Event;
+  title: string;
+  image: string | null;
+  gradient: string | null;
+  pubkey: string;
+  dTag: string;
+}
+
 const MUSIC_KINDS = [...UtilitiesService.MUSIC_KINDS];
+const MUSIC_PLAYLIST_KIND = 34139;
 
 @Component({
   selector: 'app-song-detail',
@@ -146,11 +156,22 @@ export class SongDetailComponent implements OnInit, OnDestroy {
   topZappers = signal<TopZapper[]>([]);
   engagementLoading = signal<boolean>(false);
 
+  // Albums containing this track
+  containingAlbums = signal<AlbumInfo[]>([]);
+  containingAlbumsLoading = signal(false);
+
+  // More by artist
+  moreByArtist = signal<AlbumInfo[]>([]);
+  moreByArtistLoading = signal(false);
+
 
   private subscription: { close: () => void } | null = null;
+  private albumSubscription: { close: () => void } | null = null;
+  private moreByArtistSubscription: { close: () => void } | null = null;
   private likeSubscription: { close: () => void } | null = null;
   private likeChecked = false;
   private engagementLoaded = false;
+  private albumsLoaded = false;
 
   // Extracted song data
   title = computed(() => {
@@ -388,6 +409,18 @@ export class SongDetailComponent implements OnInit, OnDestroy {
         });
       }
     });
+
+    // Load albums containing this track
+    effect(() => {
+      const ev = this.song();
+      if (ev && !this.albumsLoaded) {
+        this.albumsLoaded = true;
+        untracked(() => {
+          this.loadContainingAlbums(ev);
+          this.loadMoreByArtist(ev);
+        });
+      }
+    });
   }
 
   private async loadEngagementMetrics(event: Event): Promise<void> {
@@ -562,12 +595,10 @@ export class SongDetailComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    if (this.subscription) {
-      this.subscription.close();
-    }
-    if (this.likeSubscription) {
-      this.likeSubscription.close();
-    }
+    this.subscription?.close();
+    this.likeSubscription?.close();
+    this.albumSubscription?.close();
+    this.moreByArtistSubscription?.close();
   }
 
   private loadSong(pubkey: string, identifier: string): void {
@@ -1019,6 +1050,182 @@ export class SongDetailComponent implements OnInit, OnDestroy {
       } finally {
         this.isSavingOffline.set(false);
       }
+    }
+  }
+
+  /**
+   * Load albums (kind 34139) that contain this track.
+   * Checks local DB first, then queries relays.
+   */
+  private async loadContainingAlbums(event: Event): Promise<void> {
+    const dTag = event.tags.find(t => t[0] === 'd')?.[1] || '';
+    const trackCoordinate = `${event.kind}:${event.pubkey}:${dTag}`;
+
+    this.containingAlbumsLoading.set(true);
+    const albumMap = new Map<string, AlbumInfo>();
+
+    // 1. Search local DB first
+    try {
+      const localPlaylists = await this.database.getEventsByKind(MUSIC_PLAYLIST_KIND);
+      for (const pl of localPlaylists) {
+        const hasTrack = pl.tags.some(t => t[0] === 'a' && t[1] === trackCoordinate);
+        if (hasTrack) {
+          const info = this.parseAlbumEvent(pl);
+          if (info) {
+            albumMap.set(`${info.pubkey}:${info.dTag}`, info);
+          }
+        }
+      }
+      this.containingAlbums.set(Array.from(albumMap.values()));
+    } catch (err) {
+      this.logger.warn('[SongDetail] Failed to search local albums:', err);
+    }
+
+    // 2. Query relays for albums referencing this track
+    const relayUrls = this.relaysService.getOptimalRelays(this.utilities.preferredRelays);
+    if (relayUrls.length === 0) {
+      this.containingAlbumsLoading.set(false);
+      return;
+    }
+
+    const filter: Filter = {
+      kinds: [MUSIC_PLAYLIST_KIND],
+      '#a': [trackCoordinate],
+      limit: 20,
+    };
+
+    const timeout = setTimeout(() => {
+      this.containingAlbumsLoading.set(false);
+      this.albumSubscription?.close();
+    }, 5000);
+
+    this.albumSubscription = this.pool.subscribe(relayUrls, filter, (pl: Event) => {
+      const info = this.parseAlbumEvent(pl);
+      if (info) {
+        const key = `${info.pubkey}:${info.dTag}`;
+        const existing = albumMap.get(key);
+        if (!existing || existing.event.created_at < info.event.created_at) {
+          albumMap.set(key, info);
+          this.containingAlbums.set(Array.from(albumMap.values()));
+        }
+      }
+    });
+
+    // Close after collecting results
+    setTimeout(() => {
+      clearTimeout(timeout);
+      this.albumSubscription?.close();
+      this.containingAlbumsLoading.set(false);
+    }, 3000);
+  }
+
+  /**
+   * Load other albums by the same artist.
+   */
+  private async loadMoreByArtist(event: Event): Promise<void> {
+    const artistPubkey = event.pubkey;
+    const trackDTag = event.tags.find(t => t[0] === 'd')?.[1] || '';
+    const trackCoordinate = `${event.kind}:${event.pubkey}:${trackDTag}`;
+
+    this.moreByArtistLoading.set(true);
+    const albumMap = new Map<string, AlbumInfo>();
+
+    // 1. Search local DB first
+    try {
+      const localPlaylists = await this.database.getEventsByKind(MUSIC_PLAYLIST_KIND);
+      for (const pl of localPlaylists) {
+        if (pl.pubkey !== artistPubkey) continue;
+        // Exclude albums that contain this specific track (those are shown in "containing albums")
+        const hasThisTrack = pl.tags.some(t => t[0] === 'a' && t[1] === trackCoordinate);
+        if (hasThisTrack) continue;
+        const info = this.parseAlbumEvent(pl);
+        if (info) {
+          albumMap.set(`${info.pubkey}:${info.dTag}`, info);
+        }
+      }
+      this.moreByArtist.set(Array.from(albumMap.values()));
+    } catch (err) {
+      this.logger.warn('[SongDetail] Failed to search local artist albums:', err);
+    }
+
+    // 2. Query relays
+    const relayUrls = this.relaysService.getOptimalRelays(this.utilities.preferredRelays);
+    if (relayUrls.length === 0) {
+      this.moreByArtistLoading.set(false);
+      return;
+    }
+
+    const filter: Filter = {
+      kinds: [MUSIC_PLAYLIST_KIND],
+      authors: [artistPubkey],
+      limit: 20,
+    };
+
+    const timeout = setTimeout(() => {
+      this.moreByArtistLoading.set(false);
+      this.moreByArtistSubscription?.close();
+    }, 5000);
+
+    this.moreByArtistSubscription = this.pool.subscribe(relayUrls, filter, (pl: Event) => {
+      // Exclude albums that contain this track
+      const hasThisTrack = pl.tags.some(t => t[0] === 'a' && t[1] === trackCoordinate);
+      if (hasThisTrack) {
+        // But still add to containingAlbums if not already there
+        const info = this.parseAlbumEvent(pl);
+        if (info) {
+          const albums = this.containingAlbums();
+          const exists = albums.some(a => a.pubkey === info.pubkey && a.dTag === info.dTag);
+          if (!exists) {
+            this.containingAlbums.set([...albums, info]);
+          }
+        }
+        return;
+      }
+
+      if (pl.pubkey !== artistPubkey) return;
+
+      const info = this.parseAlbumEvent(pl);
+      if (info) {
+        const key = `${info.pubkey}:${info.dTag}`;
+        const existing = albumMap.get(key);
+        if (!existing || existing.event.created_at < info.event.created_at) {
+          albumMap.set(key, info);
+          this.moreByArtist.set(Array.from(albumMap.values()));
+        }
+      }
+    });
+
+    // Close after collecting results
+    setTimeout(() => {
+      clearTimeout(timeout);
+      this.moreByArtistSubscription?.close();
+      this.moreByArtistLoading.set(false);
+    }, 3000);
+  }
+
+  private parseAlbumEvent(event: Event): AlbumInfo | null {
+    const dTag = event.tags.find(t => t[0] === 'd')?.[1];
+    if (!dTag) return null;
+
+    const titleTag = event.tags.find(t => t[0] === 'title');
+    const imageTag = event.tags.find(t => t[0] === 'image');
+
+    return {
+      event,
+      title: titleTag?.[1] || 'Untitled Album',
+      image: imageTag?.[1] || null,
+      gradient: this.utilities.getMusicGradient(event),
+      pubkey: event.pubkey,
+      dTag,
+    };
+  }
+
+  openAlbum(album: AlbumInfo): void {
+    try {
+      const npub = nip19.npubEncode(album.pubkey);
+      this.layout.openMusicPlaylist(npub, album.dTag, album.event);
+    } catch {
+      this.logger.error('[SongDetail] Failed to encode npub for album navigation');
     }
   }
 
