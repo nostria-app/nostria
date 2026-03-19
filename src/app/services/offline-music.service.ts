@@ -390,169 +390,56 @@ export class OfflineMusicService {
    * Save track metadata to IndexedDB
    */
   private async saveTrackMetadata(track: OfflineMusicTrack): Promise<void> {
-    await this.database.init();
-
-    return new Promise((resolve, reject) => {
-      const db = (this.database as unknown as { db: IDBDatabase }).db;
-      if (!db) {
-        reject(new Error('Database not initialized'));
-        return;
-      }
-
-      // Check if store exists, if not we need to handle this differently
-      if (!db.objectStoreNames.contains(this.STORE_NAME)) {
-        // Store in info store with a special type
-        const transaction = db.transaction(['info'], 'readwrite');
-        const store = transaction.objectStore('info');
-
-        const record = {
-          compositeKey: `offlineMusic::${track.id}`,
-          key: track.id,
-          type: 'offlineMusic',
-          updated: track.cachedAt,
-          ...track,
-        };
-
-        const request = store.put(record);
-        request.onsuccess = () => resolve();
-        request.onerror = () => reject(request.error);
-        return;
-      }
-
-      const transaction = db.transaction([this.STORE_NAME], 'readwrite');
-      const store = transaction.objectStore(this.STORE_NAME);
-
-      const request = store.put(track);
-      request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error);
-    });
+    await this.database.saveInfo(track.id, this.STORE_NAME, { ...track });
   }
 
   /**
    * Delete track metadata from IndexedDB
    */
   private async deleteTrackMetadata(trackId: string): Promise<void> {
-    await this.database.init();
-
-    return new Promise((resolve, reject) => {
-      const db = (this.database as unknown as { db: IDBDatabase }).db;
-      if (!db) {
-        reject(new Error('Database not initialized'));
-        return;
-      }
-
-      // Check if dedicated store exists
-      if (!db.objectStoreNames.contains(this.STORE_NAME)) {
-        // Delete from info store
-        const transaction = db.transaction(['info'], 'readwrite');
-        const store = transaction.objectStore('info');
-        const request = store.delete(`offlineMusic::${trackId}`);
-        request.onsuccess = () => resolve();
-        request.onerror = () => reject(request.error);
-        return;
-      }
-
-      const transaction = db.transaction([this.STORE_NAME], 'readwrite');
-      const store = transaction.objectStore(this.STORE_NAME);
-
-      const request = store.delete(trackId);
-      request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error);
-    });
+    await this.database.deleteInfoByKeyAndType(trackId, this.STORE_NAME);
   }
 
   /**
    * Get all track metadata from IndexedDB
    */
   private async getAllTrackMetadata(): Promise<OfflineMusicTrack[]> {
-    await this.database.init();
+    const records = await this.database.getInfoByType(this.STORE_NAME);
 
-    return new Promise((resolve, reject) => {
-      const db = (this.database as unknown as { db: IDBDatabase }).db;
-      if (!db) {
-        resolve([]);
-        return;
-      }
-
-      // Check if dedicated store exists
-      if (!db.objectStoreNames.contains(this.STORE_NAME)) {
-        // Query from info store by type
-        const transaction = db.transaction(['info'], 'readonly');
-        const store = transaction.objectStore('info');
-        const index = store.index('by-type');
-        const request = index.getAll('offlineMusic');
-
-        request.onsuccess = () => {
-          const records = request.result || [];
-          // Convert info records back to OfflineMusicTrack format
-          const tracks: OfflineMusicTrack[] = records.map(r => ({
-            id: r.id || r.key,
-            pubkey: r.pubkey,
-            dTag: r.dTag,
-            event: r.event,
-            title: r.title,
-            artist: r.artist,
-            audioUrl: r.audioUrl,
-            imageUrl: r.imageUrl,
-            cachedAt: r.cachedAt || r.updated,
-            audioSize: r.audioSize,
-            imageSize: r.imageSize,
-          }));
-          resolve(tracks);
-        };
-        request.onerror = () => reject(request.error);
-        return;
-      }
-
-      const transaction = db.transaction([this.STORE_NAME], 'readonly');
-      const store = transaction.objectStore(this.STORE_NAME);
-
-      const request = store.getAll();
-      request.onsuccess = () => resolve(request.result || []);
-      request.onerror = () => reject(request.error);
-    });
+    return records
+      .filter(record =>
+        typeof record['id'] === 'string' &&
+        typeof record['pubkey'] === 'string' &&
+        typeof record['dTag'] === 'string' &&
+        typeof record['title'] === 'string' &&
+        typeof record['artist'] === 'string' &&
+        typeof record['audioUrl'] === 'string'
+      )
+      .map(record => ({
+        id: record['id'] as string,
+        pubkey: record['pubkey'] as string,
+        dTag: record['dTag'] as string,
+        event: record['event'] as Event,
+        title: record['title'] as string,
+        artist: record['artist'] as string,
+        audioUrl: record['audioUrl'] as string,
+        imageUrl: typeof record['imageUrl'] === 'string' ? record['imageUrl'] : undefined,
+        cachedAt: typeof record['cachedAt'] === 'number' ? record['cachedAt'] : Math.floor(Date.now() / 1000),
+        audioSize: typeof record['audioSize'] === 'number' ? record['audioSize'] : undefined,
+        imageSize: typeof record['imageSize'] === 'number' ? record['imageSize'] : undefined,
+      }));
   }
 
   /**
    * Clear all track metadata from IndexedDB
    */
   private async clearAllTrackMetadata(): Promise<void> {
-    await this.database.init();
-
-    return new Promise((resolve, reject) => {
-      const db = (this.database as unknown as { db: IDBDatabase }).db;
-      if (!db) {
-        resolve();
-        return;
-      }
-
-      // Check if dedicated store exists
-      if (!db.objectStoreNames.contains(this.STORE_NAME)) {
-        // Clear from info store by type
-        const transaction = db.transaction(['info'], 'readwrite');
-        const store = transaction.objectStore('info');
-        const index = store.index('by-type');
-        const request = index.openCursor(IDBKeyRange.only('offlineMusic'));
-
-        request.onsuccess = (event) => {
-          const cursor = (event.target as IDBRequest<IDBCursorWithValue>).result;
-          if (cursor) {
-            cursor.delete();
-            cursor.continue();
-          } else {
-            resolve();
-          }
-        };
-        request.onerror = () => reject(request.error);
-        return;
-      }
-
-      const transaction = db.transaction([this.STORE_NAME], 'readwrite');
-      const store = transaction.objectStore(this.STORE_NAME);
-
-      const request = store.clear();
-      request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error);
-    });
+    const records = await this.database.getInfoByType(this.STORE_NAME);
+    await Promise.all(
+      records
+        .map(record => record['key'])
+        .filter((key): key is string => typeof key === 'string')
+        .map(key => this.database.deleteInfoByKeyAndType(key, this.STORE_NAME))
+    );
   }
 }

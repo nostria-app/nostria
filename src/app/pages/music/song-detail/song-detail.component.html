@@ -158,18 +158,6 @@
           <span class="date">{{ publishedDate() }}</span>
         </div>
 
-        <div class="action-buttons">
-          <button mat-stroked-button (click)="downloadTrack()" [disabled]="!audioUrl() || isDownloading()"
-            aria-label="Download track">
-            @if (isDownloading()) {
-            <mat-spinner diameter="18"></mat-spinner>
-            } @else {
-            <mat-icon>download</mat-icon>
-            }
-            Download
-          </button>
-        </div>
-
         <!-- Offline availability toggle -->
         <div class="offline-toggle-container">
           <mat-slide-toggle [checked]="isOffline()" [disabled]="!audioUrl() || isSavingOffline()"
