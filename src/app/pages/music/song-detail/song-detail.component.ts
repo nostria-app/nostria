@@ -1014,7 +1014,35 @@ export class SongDetailComponent implements OnInit, OnDestroy {
     const trackCoordinate = `${event.kind}:${event.pubkey}:${dTag}`;
 
     this.containingAlbumsLoading.set(true);
-    const albumMap = new Map<string, AlbumInfo>();
+    const albumEventMap = new Map<string, Event>();
+
+    const syncContainingAlbums = (): void => {
+      const albums: AlbumInfo[] = [];
+      for (const albumEvent of albumEventMap.values()) {
+        if (this.utilities.isMusicPlaylistPrivate(albumEvent)) {
+          continue;
+        }
+        const info = this.parseAlbumEvent(albumEvent);
+        if (info) {
+          albums.push(info);
+        }
+      }
+      this.containingAlbums.set(albums);
+    };
+
+    const upsertContainingAlbumEvent = (playlistEvent: Event): void => {
+      const playlistDTag = playlistEvent.tags.find(t => t[0] === 'd')?.[1];
+      if (!playlistDTag) {
+        return;
+      }
+
+      const key = `${playlistEvent.pubkey}:${playlistDTag}`;
+      const existing = albumEventMap.get(key);
+      if (!existing || existing.created_at < playlistEvent.created_at) {
+        albumEventMap.set(key, playlistEvent);
+        syncContainingAlbums();
+      }
+    };
 
     // 1. Search local DB first
     try {
@@ -1022,13 +1050,9 @@ export class SongDetailComponent implements OnInit, OnDestroy {
       for (const pl of localPlaylists) {
         const hasTrack = pl.tags.some(t => t[0] === 'a' && t[1] === trackCoordinate);
         if (hasTrack) {
-          const info = this.parseAlbumEvent(pl);
-          if (info) {
-            albumMap.set(`${info.pubkey}:${info.dTag}`, info);
-          }
+          upsertContainingAlbumEvent(pl);
         }
       }
-      this.containingAlbums.set(Array.from(albumMap.values()));
     } catch (err) {
       this.logger.warn('[SongDetail] Failed to search local albums:', err);
     }
@@ -1052,15 +1076,7 @@ export class SongDetailComponent implements OnInit, OnDestroy {
     }, 5000);
 
     this.albumSubscription = this.pool.subscribe(relayUrls, filter, (pl: Event) => {
-      const info = this.parseAlbumEvent(pl);
-      if (info) {
-        const key = `${info.pubkey}:${info.dTag}`;
-        const existing = albumMap.get(key);
-        if (!existing || existing.event.created_at < info.event.created_at) {
-          albumMap.set(key, info);
-          this.containingAlbums.set(Array.from(albumMap.values()));
-        }
-      }
+      upsertContainingAlbumEvent(pl);
     });
 
     // Close after collecting results
@@ -1146,13 +1162,29 @@ export class SongDetailComponent implements OnInit, OnDestroy {
       // Exclude albums that contain this track
       const hasThisTrack = pl.tags.some(t => t[0] === 'a' && t[1] === trackCoordinate);
       if (hasThisTrack) {
-        // But still add to containingAlbums if not already there
+        // Keep containing albums synced with author feed results.
         const info = this.parseAlbumEvent(pl);
         if (info) {
           const albums = this.containingAlbums();
-          const exists = albums.some(a => a.pubkey === info.pubkey && a.dTag === info.dTag);
-          if (!exists) {
+          const existingIndex = albums.findIndex(a => a.pubkey === info.pubkey && a.dTag === info.dTag);
+          const isPrivate = this.utilities.isMusicPlaylistPrivate(pl);
+
+          if (isPrivate) {
+            if (existingIndex !== -1 && albums[existingIndex].event.created_at <= pl.created_at) {
+              this.containingAlbums.set(albums.filter((_, index) => index !== existingIndex));
+            }
+            return;
+          }
+
+          if (existingIndex === -1) {
             this.containingAlbums.set([...albums, info]);
+            return;
+          }
+
+          if (albums[existingIndex].event.created_at < info.event.created_at) {
+            const updated = [...albums];
+            updated[existingIndex] = info;
+            this.containingAlbums.set(updated);
           }
         }
         return;
