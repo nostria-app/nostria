@@ -4,7 +4,7 @@ import { NWCClient } from '@getalby/sdk';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { hexToBytes } from '@noble/hashes/utils.js';
 import { v2 } from 'nostr-tools/nip44';
-import { nip04, Event } from 'nostr-tools';
+import { nip04, getPublicKey, Event } from 'nostr-tools';
 import { LoggerService } from './logger.service';
 import { Wallets, Wallet } from './wallets';
 import { AccountStateService } from './account-state.service';
@@ -147,8 +147,12 @@ export class NwcService {
     effect(() => {
       const wallets = this.walletsService.wallets();
       const accountPubkey = this.accountState.pubkey();
+      const walletCount = Object.keys(wallets).length;
+
+      this.logger.info(`[NWC-NOTIF] Effect triggered: ${walletCount} wallet(s), accountPubkey=${accountPubkey ? accountPubkey.substring(0, 8) + '...' : 'none'}, isBrowser=${isPlatformBrowser(this.platformId)}`);
 
       if (!isPlatformBrowser(this.platformId) || !accountPubkey) {
+        this.logger.info('[NWC-NOTIF] Skipping subscription: not browser or no account');
         return;
       }
 
@@ -159,6 +163,8 @@ export class NwcService {
       for (const wallet of Object.values(wallets)) {
         this.subscribeToWalletNotifications(wallet, accountPubkey);
       }
+
+      this.logger.info(`[NWC-NOTIF] Subscribed to ${this.notificationSubscriptions.length} wallet notification stream(s)`);
     });
   }
 
@@ -683,6 +689,7 @@ export class NwcService {
    */
   private subscribeToWalletNotifications(wallet: Wallet, accountPubkey: string): void {
     if (!wallet.connections || wallet.connections.length === 0) {
+      this.logger.info(`[NWC-NOTIF] Wallet ${wallet.name || wallet.pubkey.substring(0, 8)} has no connections, skipping`);
       return;
     }
 
@@ -692,29 +699,40 @@ export class NwcService {
       const relayUrls = parsed.relay;
       const secret = parsed.secret;
 
+      this.logger.info(`[NWC-NOTIF] Parsed wallet "${wallet.name || 'unnamed'}": servicePubkey=${walletServicePubkey.substring(0, 8)}..., relays=[${relayUrls.join(', ')}], hasSecret=${!!secret}`);
+
       if (!walletServicePubkey || !relayUrls.length || !secret) {
+        this.logger.warn('[NWC-NOTIF] Missing required fields, skipping subscription');
         return;
       }
 
+      // NIP-47: The wallet service tags notifications with the public key
+      // corresponding to the client's secret, NOT the user's account pubkey
+      const clientPubkey = getPublicKey(hexToBytes(secret));
+
+      const sinceTimestamp = Math.floor(Date.now() / 1000) - 86400;
       const filter = {
         kinds: [NWC_NOTIFICATION_KIND_NIP04, NWC_NOTIFICATION_KIND_NIP44],
         authors: [walletServicePubkey],
-        '#p': [accountPubkey],
-        since: Math.floor(Date.now() / 1000) - 86400, // Last 24 hours
+        '#p': [clientPubkey],
+        since: sinceTimestamp,
       };
+
+      this.logger.info(`[NWC-NOTIF] Subscribing with filter: kinds=[${filter.kinds}], authors=[${walletServicePubkey.substring(0, 8)}...], #p=[${clientPubkey.substring(0, 8)}... (client pubkey from secret)], since=${sinceTimestamp} (${new Date(sinceTimestamp * 1000).toISOString()})`);
 
       const subscription = this.nwcRelay.subscribeToNwcResponse(
         filter,
         relayUrls,
         (event: Event) => {
+          this.logger.info(`[NWC-NOTIF] Received event! kind=${event.kind}, id=${event.id.substring(0, 12)}..., author=${event.pubkey.substring(0, 8)}..., created_at=${event.created_at}`);
           this.handleNwcNotificationEvent(event, secret, walletServicePubkey, wallet.name || 'Wallet');
         }
       );
 
       this.notificationSubscriptions.push(subscription);
-      this.logger.debug(`[NWC] Subscribed to notifications for wallet ${wallet.name || wallet.pubkey.substring(0, 8)}`);
+      this.logger.info(`[NWC-NOTIF] Successfully subscribed for wallet "${wallet.name || wallet.pubkey.substring(0, 8)}"`);
     } catch (error) {
-      this.logger.error('[NWC] Failed to subscribe to wallet notifications', error);
+      this.logger.error('[NWC-NOTIF] Failed to subscribe to wallet notifications', error);
     }
   }
 
@@ -728,8 +746,11 @@ export class NwcService {
     walletServicePubkey: string,
     walletName: string
   ): Promise<void> {
+    this.logger.info(`[NWC-NOTIF] handleNwcNotificationEvent called: kind=${event.kind}, id=${event.id.substring(0, 12)}...`);
+
     // Skip if already processed
     if (this.processedNotificationIds.has(event.id)) {
+      this.logger.info(`[NWC-NOTIF] Skipping duplicate event: ${event.id.substring(0, 12)}...`);
       return;
     }
     this.processedNotificationIds.add(event.id);
@@ -740,18 +761,20 @@ export class NwcService {
       let decryptedContent: string;
 
       if (event.kind === NWC_NOTIFICATION_KIND_NIP44) {
-        // NIP-44 decryption
+        this.logger.info('[NWC-NOTIF] Decrypting with NIP-44...');
         const conversationKey = v2.utils.getConversationKey(secretBytes, walletServicePubkey);
         decryptedContent = v2.decrypt(event.content, conversationKey);
       } else {
-        // NIP-04 decryption (kind 23196)
+        this.logger.info('[NWC-NOTIF] Decrypting with NIP-04...');
         decryptedContent = await nip04.decrypt(secretBytes, walletServicePubkey, event.content);
       }
+
+      this.logger.info(`[NWC-NOTIF] Decrypted content (${decryptedContent.length} chars): ${decryptedContent.substring(0, 200)}`);
 
       // Parse the notification JSON
       const parsed = JSON.parse(decryptedContent) as unknown;
       if (!parsed || typeof parsed !== 'object') {
-        this.logger.warn('[NWC] Invalid notification content format');
+        this.logger.warn('[NWC-NOTIF] Invalid notification content format');
         return;
       }
 
@@ -759,8 +782,12 @@ export class NwcService {
       const notificationType = notification.notification_type || 'unknown';
       const notificationData = notification.notification || {};
 
+      this.logger.info(`[NWC-NOTIF] Parsed notification: type=${notificationType}, data keys=[${Object.keys(notificationData).join(', ')}]`);
+
       // Build a human-readable title and message
       const { title, message } = this.formatWalletNotification(notificationType, notificationData, walletName);
+
+      this.logger.info(`[NWC-NOTIF] Formatted: title="${title}", message="${message}"`);
 
       // Show toast
       this.snackBar.open(title, 'Close', { duration: 5000 });
@@ -796,9 +823,9 @@ export class NwcService {
       this.notificationService.addNotification(contentNotification);
       await this.notificationService.persistNotificationToStorage(contentNotification);
 
-      this.logger.debug(`[NWC] Created wallet notification: ${notificationId} (${notificationType})`);
+      this.logger.info(`[NWC-NOTIF] Created wallet notification: ${notificationId} (${notificationType})`);
     } catch (error) {
-      this.logger.error('[NWC] Failed to process wallet notification event', error);
+      this.logger.error('[NWC-NOTIF] Failed to process wallet notification event', error);
     }
   }
 
