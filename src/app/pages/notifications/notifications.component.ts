@@ -867,6 +867,12 @@ export class NotificationsComponent implements OnInit, OnDestroy {
       return;
     }
 
+    // For wallet notifications without an event, navigate to the sender's profile
+    if (contentNotif.type === NotificationType.WALLET && !contentNotif.eventId && contentNotif.authorPubkey) {
+      this.layout.openProfile(contentNotif.authorPubkey);
+      return;
+    }
+
     // Handle navigation based on notification type
     if (contentNotif.eventId) {
       // Determine the correct author for the nevent encoding
@@ -997,6 +1003,11 @@ export class NotificationsComponent implements OnInit, OnDestroy {
       // For new follower notifications, always clickable (navigate to follower's profile)
       if (contentNotif.type === NotificationType.NEW_FOLLOWER && contentNotif.authorPubkey) {
         return 'new-follower'; // Placeholder to indicate clickable
+      }
+
+      // For wallet notifications without an eventId, still clickable (navigate to sender's profile)
+      if (contentNotif.type === NotificationType.WALLET && contentNotif.authorPubkey) {
+        return 'wallet-sender'; // Placeholder to indicate clickable
       }
 
       // For follower summary, always clickable (navigate to followers page)

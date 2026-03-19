@@ -782,10 +782,33 @@ export class NwcService {
       const notificationType = notification.notification_type || 'unknown';
       const notificationData = notification.notification || {};
 
-      this.logger.info(`[NWC-NOTIF] Parsed notification: type=${notificationType}, data keys=[${Object.keys(notificationData).join(', ')}]`);
+      this.logger.info(`[NWC-NOTIF] Parsed notification: type=${notificationType}, data=${JSON.stringify(notificationData)}`);
+
+      // Extract nostr metadata from the zap request (kind 9734) embedded in the notification
+      const nostrMetadata = notificationData['metadata'] as Record<string, unknown> | undefined;
+      const nostrEvent = nostrMetadata?.['nostr'] as Record<string, unknown> | undefined;
+
+      // Sender pubkey from the embedded zap request
+      const senderPubkey = typeof nostrEvent?.['pubkey'] === 'string' ? nostrEvent['pubkey'] as string : undefined;
+      // Zap comment from zap request content
+      const zapComment = typeof nostrEvent?.['content'] === 'string' && (nostrEvent['content'] as string).length > 0
+        ? nostrEvent['content'] as string : undefined;
+      // Extract tags from the embedded zap request
+      const nostrTags = Array.isArray(nostrEvent?.['tags']) ? nostrEvent['tags'] as string[][] : [];
+      // Zapped event ID (e tag)
+      const zappedEventTag = nostrTags.find(t => t[0] === 'e');
+      const zappedEventId = zappedEventTag?.[1];
+      // Zapped event kind (k tag)
+      const zappedKindTag = nostrTags.find(t => t[0] === 'k');
+      const zappedEventKind = zappedKindTag?.[1] ? parseInt(zappedKindTag[1], 10) : undefined;
+      // Relay hints from the relays tag
+      const relaysTag = nostrTags.find(t => t[0] === 'relays');
+      const relayHints = relaysTag ? relaysTag.slice(1) : undefined;
+
+      this.logger.info(`[NWC-NOTIF] Nostr metadata: sender=${senderPubkey?.substring(0, 8) ?? 'none'}, zappedEvent=${zappedEventId?.substring(0, 12) ?? 'none'}, kind=${zappedEventKind ?? 'none'}, zapComment="${zapComment ?? ''}", relayHints=${relayHints?.length ?? 0}`);
 
       // Build a human-readable title and message
-      const { title, message } = this.formatWalletNotification(notificationType, notificationData, walletName);
+      const { title, message } = this.formatWalletNotification(notificationType, notificationData, walletName, zapComment);
 
       this.logger.info(`[NWC-NOTIF] Formatted: title="${title}", message="${message}"`);
 
@@ -815,9 +838,14 @@ export class NwcService {
         timestamp: event.created_at * 1000, // Convert to ms for internal use
         read: false,
         recipientPubkey: pubkey,
-        authorPubkey: walletServicePubkey,
-        eventId: event.id,
-        kind: event.kind,
+        authorPubkey: senderPubkey || walletServicePubkey,
+        eventId: zappedEventId,
+        kind: zappedEventKind,
+        metadata: {
+          relayHints: relayHints,
+          content: zapComment,
+          zapAmount: typeof notificationData['amount'] === 'number' ? notificationData['amount'] as number : undefined,
+        },
       };
 
       this.notificationService.addNotification(contentNotification);
@@ -835,11 +863,12 @@ export class NwcService {
   private formatWalletNotification(
     notificationType: string,
     data: Record<string, unknown>,
-    walletName: string
+    walletName: string,
+    zapComment?: string
   ): { title: string; message: string } {
     const amount = typeof data['amount'] === 'number' ? data['amount'] : 0;
     const amountSats = Math.floor(amount / 1000);
-    const description = typeof data['description'] === 'string' ? data['description'] : '';
+    const description = zapComment || (typeof data['description'] === 'string' ? data['description'] : '');
 
     switch (notificationType) {
       case 'payment_received': {
