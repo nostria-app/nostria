@@ -1301,7 +1301,6 @@
 .group-member-item {
   display: flex;
   align-items: center;
-  gap: 10px;
   padding: 6px 8px;
   border-radius: 8px;
   cursor: pointer;
@@ -1312,14 +1311,6 @@
   }
 
   app-user-profile {
-    flex-shrink: 0;
-  }
-
-  .group-member-name {
-    font-size: var(--text-sm);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
     flex: 1;
     min-width: 0;
   }

@@ -816,8 +816,7 @@
           <div class="group-members-list">
             @for (pubkey of selectedChat()!.participants!; track pubkey) {
             <div class="group-member-item" (click)="layout.openProfile(pubkey)">
-              <app-user-profile [pubkey]="pubkey" view="icon"></app-user-profile>
-              <span class="group-member-name">{{ getParticipantName(pubkey) }}</span>
+              <app-user-profile [pubkey]="pubkey" view="list" [disableLink]="true"></app-user-profile>
             </div>
             }
           </div>
