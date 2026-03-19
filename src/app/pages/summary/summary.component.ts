@@ -214,6 +214,9 @@ export class SummaryComponent implements OnInit, OnDestroy {
   articlesCollapsed = signal(true); // Collapsed by default
   profilesCollapsed = signal(true); // Collapsed by default
 
+  // Track which timeline events have been opened (local, non-persisted)
+  readEventIds = signal<Set<string>>(new Set());
+
   // Selected posters for filtering the timeline (empty means show all)
   selectedPosters = signal<Set<string>>(new Set());
 
@@ -1032,6 +1035,13 @@ export class SummaryComponent implements OnInit, OnDestroy {
   openEventDialog(event: MouseEvent, timelineEvent: TimelineEvent & { type: string }): void {
     event.preventDefault();
     event.stopPropagation();
+
+    // Mark event as read
+    this.readEventIds.update(ids => {
+      const next = new Set(ids);
+      next.add(timelineEvent.id);
+      return next;
+    });
 
     // For articles (kind 30023), use layout service to open in right panel
     if (timelineEvent.kind === 30023) {

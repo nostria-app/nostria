@@ -1549,6 +1549,18 @@ mat-divider {
     outline-offset: 1px;
   }
 
+  &.read {
+    opacity: 0.55;
+
+    .timeline-preview {
+      color: var(--mat-sys-outline);
+    }
+
+    .timeline-type {
+      opacity: 0.7;
+    }
+  }
+
   .timeline-author {
     width: 28px;
     height: 28px;

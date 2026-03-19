@@ -1,9 +1,4 @@
 <div class="chats">
-  @if (isLoading() && !selectedChannel()) {
-  <div class="loading-container">
-    <app-loading-overlay message="Loading channels..."></app-loading-overlay>
-  </div>
-  } @else {
   <div class="chats-left" [class.mobile-hidden]="isSinglePaneView() && !showMobileList()">
     <!-- Panel Header -->
     <div class="panel-header">
@@ -16,7 +11,8 @@
       <app-list-filter-menu
         storageKey="chats"
         [showPublicOption]="true"
-        defaultFilter="all"
+        [showWotOption]="trustEnabled()"
+        defaultFilter="following"
         [initialFilter]="urlListFilter()"
         (filterChanged)="onListFilterChanged($event)" />
       }
@@ -39,7 +35,12 @@
     }
 
     <div class="channel-list-container">
-      @if (channels().length === 0 && !isLoading()) {
+      @if (isLoading() && channels().length === 0) {
+      <div class="inline-loading">
+        <mat-spinner diameter="32"></mat-spinner>
+        <p>Loading channels...</p>
+      </div>
+      } @else if (channels().length === 0 && !isLoading()) {
       <div class="empty-channels">
         <mat-icon>forum</mat-icon>
         <p>No public channels yet</p>
@@ -265,5 +266,4 @@
     </div>
     }
   </div>
-  }
 </div>

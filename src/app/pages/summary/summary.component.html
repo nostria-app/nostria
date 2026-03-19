@@ -419,7 +419,7 @@
         @if (timelineEvents().length > 0) {
         <div class="timeline">
           @for (event of timelineEvents(); track event.id) {
-          <div class="timeline-item" (click)="openEventDialog($event, event)"
+          <div class="timeline-item" [class.read]="readEventIds().has(event.id)" (click)="openEventDialog($event, event)"
             (keydown.enter)="openEventDialog($any($event), event)" tabindex="0" role="button">
             <app-user-profile [pubkey]="event.pubkey" view="icon" class="timeline-author"></app-user-profile>
             <div class="timeline-content">

@@ -1,0 +1,50 @@
+@let item = record();
+
+@if (loading()) {
+<div class="live-embed-loading">
+  <p>Loading...</p>
+</div>
+} @else if (item) {
+<div class="live-embed-container" [class.clickable]="clickable()" [attr.tabindex]="clickable() ? '0' : null"
+  [attr.role]="clickable() ? 'button' : null" (click)="openStream($event)" (keydown.enter)="openStream($event)"
+  (keydown.space)="openStream($event)">
+  @if (thumbnail() && !thumbnailError()) {
+  <div class="live-embed-thumbnail">
+    <img [src]="thumbnail()" alt="{{ title() }}" loading="lazy" (error)="onThumbnailError()" />
+    <div class="status-badge" [class]="status()">
+      <mat-icon class="status-icon">{{ statusIcon() }}</mat-icon>
+      <span class="status-text">{{ status() | uppercase }}</span>
+    </div>
+  </div>
+  }
+  <div class="live-embed-content">
+    <div class="live-embed-title-row">
+      <mat-icon class="live-icon">sensors</mat-icon>
+      <h3 class="live-embed-title">{{ title() || 'Untitled Live Event' }}</h3>
+    </div>
+    @if (summary()) {
+    <p class="live-embed-summary">{{ summary() }}</p>
+    }
+    <div class="live-embed-meta">
+      <app-user-profile [pubkey]="authorPubkey()" [view]="'compact'" [showRank]="false"
+        [hostWidthAuto]="true"></app-user-profile>
+      @if (!thumbnail() || thumbnailError()) {
+      <div class="status-badge-inline" [class]="status()">
+        <mat-icon class="status-icon">{{ statusIcon() }}</mat-icon>
+        <span class="status-text">{{ status() | uppercase }}</span>
+      </div>
+      }
+      @let startsTime = starts();
+      @if (startsTime && status() === 'planned') {
+      <span class="meta-separator">&#183;</span>
+      <span class="starts-at">Starts: {{ startsTime | timestamp: 'medium' }}</span>
+      }
+    </div>
+  </div>
+</div>
+} @else {
+<div class="live-embed-error">
+  <mat-icon>sensors_off</mat-icon>
+  <p>Live event not found</p>
+</div>
+}

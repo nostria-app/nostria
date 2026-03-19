@@ -33,74 +33,90 @@ export type MusicTrackSortValue = 'released' | 'published';
   template: `
     <app-filter-button [active]="isFilterActive()" [tooltip]="'Filter by: ' + filterTitle()">
       <div class="filter-panel" [class.compact]="compact()" (click)="$event.stopPropagation()">
-        <div class="section-title">List filter</div>
+        <div class="filter-panel-left">
+          <div class="section-title">List filter</div>
 
-        @if (showPublicOption()) {
-        <button
-          class="filter-option-chip"
-          [class.selected]="selectedFilter() === 'all'"
-          (click)="selectFilter('all')">
-          <mat-icon class="chip-icon">public</mat-icon>
-          <div class="chip-text">
-            <span class="chip-label">Public</span>
-            <span class="chip-description">All public content</span>
-          </div>
-        </button>
-        }
-
-        <button
-          class="filter-option-chip"
-          [class.selected]="selectedFilter() === 'following'"
-          (click)="selectFilter('following')">
-          <mat-icon class="chip-icon">people</mat-icon>
-          <div class="chip-text">
-            <span class="chip-label">Following</span>
-            <span class="chip-description">People you follow</span>
-          </div>
-        </button>
-
-        @if (favoritesSet(); as favorites) {
-        <button
-          class="filter-option-chip"
-          [class.selected]="selectedFilter() === 'nostria-favorites'"
-          (click)="selectFilter('nostria-favorites')">
-          <mat-icon class="chip-icon">star</mat-icon>
-          <div class="chip-text">
-            <span class="chip-label">Favorites</span>
-            <span class="chip-description">{{ favorites.pubkeys.length }} people</span>
-          </div>
-        </button>
-        }
-
-        @if (otherFollowSets().length > 0) {
-        <mat-divider></mat-divider>
-        @for (set of otherFollowSets(); track set.id) {
-        <button
-          class="filter-option-chip"
-          [class.selected]="selectedFilter() === set.dTag"
-          (click)="selectFilter(set.dTag)">
-          <mat-icon class="chip-icon">{{ set.isPrivate ? 'lock' : 'group' }}</mat-icon>
-          <div class="chip-text">
-            <span class="chip-label">{{ set.title }}</span>
-            <span class="chip-description">{{ set.pubkeys.length }} people</span>
-          </div>
-        </button>
-        }
-        }
-
-        <div class="actions-row">
-          <button mat-stroked-button class="action-btn" (click)="resetSelections()">
-            Reset
+          @if (showPublicOption()) {
+          <button
+            class="filter-option-chip"
+            [class.selected]="selectedFilter() === 'all'"
+            (click)="selectFilter('all')">
+            <mat-icon class="chip-icon">public</mat-icon>
+            <div class="chip-text">
+              <span class="chip-label">Public</span>
+              <span class="chip-description">All public content</span>
+            </div>
           </button>
+          }
+
+          <button
+            class="filter-option-chip"
+            [class.selected]="selectedFilter() === 'following'"
+            (click)="selectFilter('following')">
+            <mat-icon class="chip-icon">people</mat-icon>
+            <div class="chip-text">
+              <span class="chip-label">Following</span>
+              <span class="chip-description">People you follow</span>
+            </div>
+          </button>
+
+          @if (showWotOption()) {
+          <button
+            class="filter-option-chip"
+            [class.selected]="selectedFilter() === 'wot'"
+            (click)="selectFilter('wot')">
+            <mat-icon class="chip-icon">shield</mat-icon>
+            <div class="chip-text">
+              <span class="chip-label">Web of Trust</span>
+              <span class="chip-description">Only trusted users</span>
+            </div>
+          </button>
+          }
+
+          @if (favoritesSet(); as favorites) {
+          <button
+            class="filter-option-chip"
+            [class.selected]="selectedFilter() === 'nostria-favorites'"
+            (click)="selectFilter('nostria-favorites')">
+            <mat-icon class="chip-icon">star</mat-icon>
+            <div class="chip-text">
+              <span class="chip-label">Favorites</span>
+              <span class="chip-description">{{ favorites.pubkeys.length }} people</span>
+            </div>
+          </button>
+          }
+
+          @if (otherFollowSets().length > 0) {
+          <mat-divider></mat-divider>
+          @for (set of otherFollowSets(); track set.id) {
+          <button
+            class="filter-option-chip"
+            [class.selected]="selectedFilter() === set.dTag"
+            (click)="selectFilter(set.dTag)">
+            <mat-icon class="chip-icon">{{ set.isPrivate ? 'lock' : 'group' }}</mat-icon>
+            <div class="chip-text">
+              <span class="chip-label">{{ set.title }}</span>
+              <span class="chip-description">{{ set.pubkeys.length }} people</span>
+            </div>
+          </button>
+          }
+          }
+
+          <div class="actions-row">
+            <button mat-stroked-button class="action-btn" (click)="resetSelections()">
+              Reset
+            </button>
+          </div>
         </div>
+
       </div>
     </app-filter-button>
   `,
   styles: [`
     .filter-panel {
       display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
+      flex-direction: row;
+      gap: 1rem;
       padding: 1rem;
       width: min(320px, calc(100vw - 2rem));
       max-width: calc(100vw - 2rem);
@@ -114,6 +130,14 @@ export type MusicTrackSortValue = 'released' | 'published';
 
     .filter-panel.compact {
       width: min(280px, calc(100vw - 2rem));
+    }
+
+    .filter-panel-left {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      flex: 1;
+      min-width: 0;
     }
 
     .filter-option-chip {
@@ -212,6 +236,7 @@ export class ListFilterMenuComponent implements OnInit {
 
   // Inputs
   showPublicOption = input<boolean>(false);
+  showWotOption = input<boolean>(false);
   compact = input<boolean>(false);
   defaultFilter = input<ListFilterValue>('following');
   storageKey = input.required<'streams' | 'articles' | 'summary' | 'music' | 'calendar' | 'chats'>();
@@ -237,10 +262,10 @@ export class ListFilterMenuComponent implements OnInit {
       .sort((a, b) => a.title.localeCompare(b.title))
   );
 
-  // Computed: selected follow set (null for 'all' or 'following')
+  // Computed: selected follow set (null for 'all', 'following', or 'wot')
   selectedFollowSet = computed(() => {
     const filter = this.selectedFilter();
-    if (filter === 'all' || filter === 'following') {
+    if (filter === 'all' || filter === 'following' || filter === 'wot') {
       return null;
     }
     return this.allFollowSets().find(set => set.dTag === filter) || null;
@@ -260,6 +285,8 @@ export class ListFilterMenuComponent implements OnInit {
       title = 'Public';
     } else if (filter === 'following') {
       title = 'Following';
+    } else if (filter === 'wot') {
+      title = 'Web of Trust';
     } else {
       const followSet = this.selectedFollowSet();
       title = followSet?.title || 'Filter';

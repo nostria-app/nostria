@@ -34,6 +34,7 @@ import { LayoutService } from '../../../services/layout.service';
 import { RssParserService } from '../../../services/rss-parser.service';
 import { MediaPlayerService } from '../../../services/media-player.service';
 import { ArticleComponent } from '../../article/article.component';
+import { LiveEventEmbedComponent } from '../../live-event-embed/live-event-embed.component';
 import { MusicEmbedComponent } from '../../music-embed/music-embed.component';
 import { EmojiSetMentionComponent } from '../../emoji-set-mention/emoji-set-mention.component';
 import { StarterPackEventComponent } from '../../event-types/starter-pack-event.component';
@@ -54,6 +55,7 @@ const MUSIC_TRACK_KIND = 36787;
 const MUSIC_PLAYLIST_KIND = 34139;
 const EMOJI_SET_KIND = 30030;
 const STARTER_PACK_KIND = 39089;
+const LIVE_EVENT_KIND = 30311;
 
 // Type for grouped display items - either single token or image group
 export interface DisplayItem {
@@ -81,6 +83,7 @@ export interface DisplayItem {
     EventHeaderComponent,
     RouterLink,
     ArticleComponent,
+    LiveEventEmbedComponent,
     MusicEmbedComponent,
     EmojiSetMentionComponent,
     StarterPackEventComponent,
@@ -877,6 +880,14 @@ export class NoteContentComponent implements OnDestroy {
   isStarterPackMention(token: ContentToken): boolean {
     const data = this.getNaddrData(token);
     return data !== null && data.kind === STARTER_PACK_KIND;
+  }
+
+  /**
+   * Check if an naddr token is a live event mention (kind 30311)
+   */
+  isLiveEventMention(token: ContentToken): boolean {
+    const data = this.getNaddrData(token);
+    return data !== null && data.kind === LIVE_EVENT_KIND;
   }
 
   /**

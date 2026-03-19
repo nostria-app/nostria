@@ -1,4 +1,4 @@
-import { Injectable, inject, signal, computed, effect } from '@angular/core';
+import { Injectable, inject, signal, computed } from '@angular/core';
 import { Event } from 'nostr-tools';
 import { NostrService } from './nostr.service';
 import { LoggerService } from './logger.service';
@@ -6,6 +6,7 @@ import { AccountStateService } from './account-state.service';
 import { AccountRelayService } from './relays/account-relay';
 import { DiscoveryRelayService } from './relays/discovery-relay';
 import { UtilitiesService } from './utilities.service';
+import { DatabaseService } from './database.service';
 import { NostriaService } from '../interfaces';
 
 /**
@@ -87,6 +88,7 @@ export class ChatChannelsService implements NostriaService {
   private readonly accountRelay = inject(AccountRelayService);
   private readonly discoveryRelay = inject(DiscoveryRelayService);
   private readonly utilities = inject(UtilitiesService);
+  private readonly database = inject(DatabaseService);
 
   /** All known channels keyed by channel ID */
   private readonly channelsMap = signal<Map<string, ChatChannel>>(new Map());
@@ -132,7 +134,51 @@ export class ChatChannelsService implements NostriaService {
   }
 
   /**
-   * Load channels from relays
+   * Load channels from local database cache for instant display.
+   * Returns true if cached channels were found.
+   */
+  async loadChannelsFromCache(): Promise<boolean> {
+    try {
+      await this.database.init();
+
+      // Load kind 40 channel creation events from local DB
+      const channelEvents = await this.database.getEventsByKind(CHANNEL_CREATE_KIND);
+      if (channelEvents.length === 0) return false;
+
+      const channelMap = new Map<string, ChatChannel>();
+
+      for (const event of channelEvents) {
+        const channel = this.parseChannelCreateEvent(event);
+        if (channel) {
+          channelMap.set(channel.id, channel);
+        }
+      }
+
+      // Load kind 41 metadata updates from local DB
+      if (channelMap.size > 0) {
+        const metadataEvents = await this.database.getEventsByKind(CHANNEL_METADATA_KIND);
+        for (const event of metadataEvents) {
+          this.applyMetadataUpdate(channelMap, event);
+        }
+      }
+
+      if (channelMap.size > 0) {
+        this.channelsMap.set(channelMap);
+        this.logger.info('[ChatChannels] Loaded channels from cache:', channelMap.size);
+      }
+
+      // Load cached moderation data
+      await this.loadModerationDataFromCache();
+
+      return channelMap.size > 0;
+    } catch (error) {
+      this.logger.error('[ChatChannels] Failed to load channels from cache', error);
+      return false;
+    }
+  }
+
+  /**
+   * Load channels from relays and persist to local database
    */
   async load(): Promise<void> {
     if (this.isLoading()) return;
@@ -148,7 +194,15 @@ export class ChatChannelsService implements NostriaService {
         { timeout: 10000 }
       );
 
-      const channelMap = new Map<string, ChatChannel>();
+      // Persist channel creation events to local DB
+      if (channelEvents.length > 0) {
+        this.database.saveEvents(channelEvents as (Event & { dTag?: string })[]).catch(err =>
+          this.logger.error('[ChatChannels] Failed to cache channel events', err)
+        );
+      }
+
+      // Start from the current cached channels so we merge rather than replace
+      const channelMap = new Map(this.channelsMap());
 
       for (const event of channelEvents) {
         const channel = this.parseChannelCreateEvent(event);
@@ -164,6 +218,13 @@ export class ChatChannelsService implements NostriaService {
           { kinds: [CHANNEL_METADATA_KIND], '#e': channelIds, limit: 500 },
           { timeout: 10000 }
         );
+
+        // Persist metadata events to local DB
+        if (metadataEvents.length > 0) {
+          this.database.saveEvents(metadataEvents as (Event & { dTag?: string })[]).catch(err =>
+            this.logger.error('[ChatChannels] Failed to cache metadata events', err)
+          );
+        }
 
         // Apply metadata updates - only from the channel creator
         for (const event of metadataEvents) {
@@ -193,6 +254,11 @@ export class ChatChannelsService implements NostriaService {
     const sub = this.accountRelay.subscribe<Event>(
       { kinds: [CHANNEL_CREATE_KIND, CHANNEL_METADATA_KIND], since: now },
       (event: Event) => {
+        // Persist live events to local DB
+        this.database.saveEvent(event as Event & { dTag?: string }).catch(err =>
+          this.logger.error('[ChatChannels] Failed to cache live channel event', err)
+        );
+
         if (event.kind === CHANNEL_CREATE_KIND) {
           const channel = this.parseChannelCreateEvent(event);
           if (channel) {
@@ -602,6 +668,51 @@ export class ChatChannelsService implements NostriaService {
   // --- Private helpers ---
 
   /**
+   * Load user's moderation events from local database cache
+   */
+  private async loadModerationDataFromCache(): Promise<void> {
+    const pubkey = this.accountState.pubkey();
+    if (!pubkey) return;
+
+    try {
+      // Load cached hidden messages
+      const hideEvents = await this.database.getEventsByKind(CHANNEL_HIDE_MESSAGE_KIND);
+      const hiddenIds = new Set<string>();
+      for (const event of hideEvents) {
+        if (event.pubkey !== pubkey) continue;
+        const eTag = event.tags.find(t => t[0] === 'e');
+        if (eTag?.[1]) {
+          hiddenIds.add(eTag[1]);
+        }
+      }
+      if (hiddenIds.size > 0) {
+        this.hiddenMessageIds.set(hiddenIds);
+      }
+
+      // Load cached muted users
+      const muteEvents = await this.database.getEventsByKind(CHANNEL_MUTE_USER_KIND);
+      const mutedPubkeys = new Set<string>();
+      for (const event of muteEvents) {
+        if (event.pubkey !== pubkey) continue;
+        const pTag = event.tags.find(t => t[0] === 'p');
+        if (pTag?.[1]) {
+          mutedPubkeys.add(pTag[1]);
+        }
+      }
+      if (mutedPubkeys.size > 0) {
+        this.mutedUserPubkeys.set(mutedPubkeys);
+      }
+
+      this.logger.info('[ChatChannels] Loaded moderation data from cache:', {
+        hiddenMessages: hiddenIds.size,
+        mutedUsers: mutedPubkeys.size,
+      });
+    } catch (error) {
+      this.logger.error('[ChatChannels] Failed to load moderation data from cache', error);
+    }
+  }
+
+  /**
    * Load user's moderation events (hide messages + mute users)
    */
   private async loadModerationData(): Promise<void> {
@@ -609,11 +720,18 @@ export class ChatChannelsService implements NostriaService {
     if (!pubkey) return;
 
     try {
-      // Load hidden messages
+      // Load hidden messages from relays
       const hideEvents = await this.accountRelay.getMany<Event>(
         { kinds: [CHANNEL_HIDE_MESSAGE_KIND], authors: [pubkey], limit: 500 },
         { timeout: 8000 }
       );
+
+      // Persist to local DB
+      if (hideEvents.length > 0) {
+        this.database.saveEvents(hideEvents as (Event & { dTag?: string })[]).catch(err =>
+          this.logger.error('[ChatChannels] Failed to cache hide events', err)
+        );
+      }
 
       const hiddenIds = new Set<string>();
       for (const event of hideEvents) {
@@ -624,11 +742,18 @@ export class ChatChannelsService implements NostriaService {
       }
       this.hiddenMessageIds.set(hiddenIds);
 
-      // Load muted users
+      // Load muted users from relays
       const muteEvents = await this.accountRelay.getMany<Event>(
         { kinds: [CHANNEL_MUTE_USER_KIND], authors: [pubkey], limit: 500 },
         { timeout: 8000 }
       );
+
+      // Persist to local DB
+      if (muteEvents.length > 0) {
+        this.database.saveEvents(muteEvents as (Event & { dTag?: string })[]).catch(err =>
+          this.logger.error('[ChatChannels] Failed to cache mute events', err)
+        );
+      }
 
       const mutedPubkeys = new Set<string>();
       for (const event of muteEvents) {

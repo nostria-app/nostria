@@ -28,6 +28,7 @@ import { UserProfileComponent } from '../user-profile/user-profile.component';
 import { MusicEmbedComponent } from '../music-embed/music-embed.component';
 import { ArticleComponent } from '../article/article.component';
 import { EmojiSetMentionComponent } from '../emoji-set-mention/emoji-set-mention.component';
+import { LiveEventEmbedComponent } from '../live-event-embed/live-event-embed.component';
 import { NoteContentComponent } from '../content/note-content/note-content.component';
 import { PhotoEventComponent } from '../event-types/photo-event.component';
 import { EventHeaderComponent } from '../event/header/header.component';
@@ -42,6 +43,7 @@ import { NostrRecord } from '../../interfaces';
 const MUSIC_TRACK_KIND = 36787;
 const MUSIC_PLAYLIST_KIND = 34139;
 const EMOJI_SET_KIND = 30030;
+const LIVE_EVENT_KIND = 30311;
 
 interface ContentPart {
   type: 'text' | 'url' | 'image' | 'video' | 'npub' | 'nprofile' | 'note' | 'nevent' | 'naddr' | 'linebreak' | 'emoji' | 'bolt11';
@@ -81,6 +83,7 @@ interface EventMention {
     MusicEmbedComponent,
     ArticleComponent,
     EmojiSetMentionComponent,
+    LiveEventEmbedComponent,
     NoteContentComponent,
     PhotoEventComponent,
     EventHeaderComponent,
@@ -191,6 +194,10 @@ interface EventMention {
         } @else if (isEmojiSetMention(part)) {
           <!-- Emoji set -->
           <app-emoji-set-mention [identifier]="part.naddrData!.identifier" [pubkey]="part.naddrData!.pubkey"></app-emoji-set-mention>
+        } @else if (isLiveEventMention(part)) {
+          <!-- Live event -->
+          <app-live-event-embed [identifier]="part.naddrData!.identifier" [pubkey]="part.naddrData!.pubkey"
+            [kind]="part.naddrData!.kind" [relayHints]="part.naddrData!.relays" [clickable]="true"></app-live-event-embed>
         } @else {
           <!-- Article -->
           <app-article [slug]="part.naddrData!.identifier" [pubkey]="part.naddrData!.pubkey" [kind]="part.naddrData!.kind"
@@ -934,6 +941,11 @@ export class MessageContentComponent {
   isEmojiSetMention(part: ContentPart): boolean {
     if (!part.naddrData) return false;
     return part.naddrData.kind === EMOJI_SET_KIND;
+  }
+
+  isLiveEventMention(part: ContentPart): boolean {
+    if (!part.naddrData) return false;
+    return part.naddrData.kind === LIVE_EVENT_KIND;
   }
 
   getDisplayUrl(url: string, maxLength = 50): string {

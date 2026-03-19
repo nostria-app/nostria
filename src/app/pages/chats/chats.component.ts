@@ -27,7 +27,6 @@ import { LayoutService } from '../../services/layout.service';
 import { LoggerService } from '../../services/logger.service';
 import { AccountStateService } from '../../services/account-state.service';
 import { UtilitiesService } from '../../services/utilities.service';
-import { LoadingOverlayComponent } from '../../components/loading-overlay/loading-overlay.component';
 import { UserProfileComponent } from '../../components/user-profile/user-profile.component';
 import { AgoPipe } from '../../pipes/ago.pipe';
 import {
@@ -38,6 +37,7 @@ import {
 } from '../../services/chat-channels.service';
 import { ApplicationService } from '../../services/application.service';
 import { FollowSetsService } from '../../services/follow-sets.service';
+import { TrustService } from '../../services/trust.service';
 import { ListFilterMenuComponent, ListFilterValue } from '../../components/list-filter-menu/list-filter-menu.component';
 import {
   CreateChannelDialogComponent,
@@ -57,7 +57,6 @@ import {
     MatSnackBarModule,
     MatDividerModule,
     RouterModule,
-    LoadingOverlayComponent,
     UserProfileComponent,
     AgoPipe,
     SlicePipe,
@@ -73,6 +72,7 @@ export class ChatsComponent implements OnInit, OnDestroy {
   private readonly accountState = inject(AccountStateService);
   private readonly app = inject(ApplicationService);
   private readonly followSetsService = inject(FollowSetsService);
+  private readonly trustService = inject(TrustService);
   readonly utilities = inject(UtilitiesService);
   readonly layout = inject(LayoutService);
   private readonly router = inject(Router);
@@ -105,7 +105,7 @@ export class ChatsComponent implements OnInit, OnDestroy {
   readonly replyingToMessage = signal<ChannelMessage | null>(null);
 
   /** People list filter state */
-  readonly selectedListFilter = signal<string>('all');
+  readonly selectedListFilter = signal<string>('following');
 
   /** URL query param for list filter */
   readonly urlListFilter = signal<string | undefined>(this.route.snapshot.queryParams['list']);
@@ -122,11 +122,17 @@ export class ChatsComponent implements OnInit, OnDestroy {
   /** Loading messages state from service */
   readonly isLoadingMessages = computed(() => this.chatChannels.isLoadingMessages());
 
+  /** Whether trust provider is enabled */
+  readonly trustEnabled = computed(() => this.trustService.isEnabled());
+
   /** Pubkeys to filter channels by based on current list filter selection */
   private readonly filterPubkeys = computed(() => {
     const filter = this.selectedListFilter();
     if (filter === 'all') {
       return null; // No filtering
+    }
+    if (filter === 'wot') {
+      return 'wot' as const; // Special marker for WoT filtering
     }
     if (filter === 'following') {
       return this.accountState.followingList();
@@ -145,7 +151,12 @@ export class ChatsComponent implements OnInit, OnDestroy {
     let filtered = allChannels;
 
     // Apply list filter
-    if (pubkeys !== null) {
+    if (pubkeys === 'wot') {
+      filtered = filtered.filter(ch => {
+        const rank = this.trustService.getRankSignal(ch.creator);
+        return typeof rank === 'number' && rank > 0;
+      });
+    } else if (pubkeys !== null) {
       const pubkeySet = new Set(pubkeys);
       filtered = filtered.filter(ch => pubkeySet.has(ch.creator));
     }
@@ -233,8 +244,11 @@ export class ChatsComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    this.chatChannels.load().then(() => {
-      this.chatChannels.subscribeToChannels();
+    // Load cached channels first for instant display, then fetch from relays
+    this.chatChannels.loadChannelsFromCache().then(() => {
+      this.chatChannels.load().then(() => {
+        this.chatChannels.subscribeToChannels();
+      });
     });
 
     // Check route params for a channel ID
@@ -307,7 +321,7 @@ export class ChatsComponent implements OnInit, OnDestroy {
     this.selectedListFilter.set(filter);
 
     // Update URL with list param or clear it
-    if (filter !== 'all') {
+    if (filter !== 'following') {
       this.router.navigate([], {
         relativeTo: this.route,
         queryParams: { list: filter },

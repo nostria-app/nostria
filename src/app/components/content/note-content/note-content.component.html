@@ -383,7 +383,7 @@
 </mat-card>
 }
 } @else if (token.type === 'nostr-mention' && token.nostrData?.type === 'naddr') {
-<!-- Inline naddr mention (articles, music, emoji sets) -->
+<!-- Inline naddr mention (articles, music, emoji sets, live events) -->
 @let naddrData = getNaddrData(token);
 @if (naddrData) {
 @if (isMusicMention(token)) {
@@ -397,6 +397,10 @@
 <!-- Starter pack -->
 <app-starter-pack-event [pubkey]="naddrData.pubkey" [identifierInput]="naddrData.identifier"
   [relayHints]="naddrData.relayHints" mode="compact"></app-starter-pack-event>
+} @else if (isLiveEventMention(token)) {
+<!-- Live event -->
+<app-live-event-embed [identifier]="naddrData.identifier" [pubkey]="naddrData.pubkey" [kind]="naddrData.kind"
+  [relayHints]="naddrData.relayHints" [clickable]="true"></app-live-event-embed>
 } @else {
 <!-- Article -->
 <app-article [slug]="naddrData.identifier" [pubkey]="naddrData.pubkey" [kind]="naddrData.kind"
