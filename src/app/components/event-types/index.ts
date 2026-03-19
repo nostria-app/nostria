@@ -12,3 +12,4 @@ export { PeopleSetEventComponent } from './people-set-event.component';
 export { ProfileUpdateEventComponent } from './profile-update-event.component';
 export { SettingsEventComponent } from './settings-event.component';
 export { RelayListEventComponent } from './relay-list-event.component';
+export { HighlightEventComponent } from './highlight-event.component';

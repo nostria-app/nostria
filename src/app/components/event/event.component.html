@@ -135,6 +135,11 @@
     <!-- Relay lists (kind 10086) -->
     @else if (targetItem.event.kind === 10086) {
     <app-relay-list-event [event]="targetItem.event"></app-relay-list-event>
+    }
+    <!-- Highlights (kind 9802) - NIP-84 -->
+    @else if (targetItem.event.kind === 9802) {
+    <app-highlight-event [event]="targetItem.event" [trustedByPubkey]="trustedByPubkey() || item.event.pubkey"
+      [inFeedsPanel]="inFeedsPanel()"></app-highlight-event>
     } @else {
     <div class="main-content-wrapper" [class.collapsed]="isMainContentCollapsed()">
       <app-content [content]="displayedRecord()?.data" [event]="targetItem.event"
@@ -562,6 +567,11 @@
     <!-- Relay lists (kind 10086) -->
     @else if (item.event.kind === 10086) {
     <app-relay-list-event [event]="item.event"></app-relay-list-event>
+    }
+    <!-- Highlights (kind 9802) - NIP-84 -->
+    @else if (item.event.kind === 9802) {
+    <app-highlight-event [event]="item.event" [trustedByPubkey]="trustedByPubkey() || item.event.pubkey"
+      [inFeedsPanel]="inFeedsPanel()"></app-highlight-event>
     } @else {
     <div class="main-content-wrapper" [class.collapsed]="isMainContentCollapsed()">
       <app-content [content]="displayedRecord()?.data" [event]="item.event"
@@ -702,6 +712,11 @@
     <!-- Relay lists (kind 10086) -->
     @else if (item.event.kind === 10086) {
     <app-relay-list-event [event]="item.event"></app-relay-list-event>
+    }
+    <!-- Highlights (kind 9802) - NIP-84 -->
+    @else if (item.event.kind === 9802) {
+    <app-highlight-event [event]="item.event" [trustedByPubkey]="trustedByPubkey() || item.event.pubkey"
+      [inFeedsPanel]="inFeedsPanel()"></app-highlight-event>
     } @else {
     <div class="main-content-wrapper" [class.collapsed]="isMainContentCollapsed()">
       <app-content [content]="displayedRecord()?.data" [event]="item.event"

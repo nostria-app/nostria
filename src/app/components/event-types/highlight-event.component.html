@@ -1,0 +1,29 @@
+<div class="highlight-event-container">
+  @if (hasComment()) {
+  <!-- Quote highlight: comment text with the highlight as quoted content -->
+  <div class="highlight-comment">
+    <app-content [content]="comment()" [event]="event()"
+      [trustedByPubkey]="trustedByPubkey()" [inFeedsPanel]="inFeedsPanel()"
+      [hideSocialPreviews]="true" [hideTaggedReferences]="true"></app-content>
+  </div>
+  }
+
+  <div class="highlight-blockquote">
+    <mat-icon class="highlight-icon">format_quote</mat-icon>
+    <blockquote class="highlight-text">{{ highlightText() }}</blockquote>
+  </div>
+
+  @if (context()) {
+  <div class="highlight-context">
+    <span class="context-label">Context:</span>
+    <span class="context-text">{{ context() }}</span>
+  </div>
+  }
+
+  @if (sourceUrl()) {
+  <a class="highlight-source" [href]="sourceUrl()" target="_blank" rel="noopener noreferrer">
+    <mat-icon>link</mat-icon>
+    <span>{{ sourceHostname() }}</span>
+  </a>
+  }
+</div>

@@ -8,13 +8,8 @@
       <mat-spinner diameter="20" matTooltip="Loading channels..."></mat-spinner>
       }
       @if (isAuthenticated()) {
-      <app-list-filter-menu
-        storageKey="chats"
-        [showPublicOption]="true"
-        [showWotOption]="trustEnabled()"
-        defaultFilter="following"
-        [initialFilter]="urlListFilter()"
-        (filterChanged)="onListFilterChanged($event)" />
+      <app-list-filter-menu storageKey="chats" [showPublicOption]="true" [showWotOption]="trustEnabled()"
+        defaultFilter="following" [initialFilter]="urlListFilter()" (filterChanged)="onListFilterChanged($event)" />
       }
       <button mat-icon-button (click)="toggleSearch()" matTooltip="Search channels">
         <mat-icon>search</mat-icon>
@@ -26,8 +21,8 @@
 
     @if (showSearch()) {
     <div class="channel-search-header">
-      <input class="channel-search-input" type="text" placeholder="Search channels..."
-        [ngModel]="channelSearchQuery()" (ngModelChange)="channelSearchQuery.set($event)" />
+      <input class="channel-search-input" type="text" placeholder="Search channels..." [ngModel]="channelSearchQuery()"
+        (ngModelChange)="channelSearchQuery.set($event)" />
       <button mat-icon-button class="clear-search-button" (click)="toggleSearch()" aria-label="Close search">
         <mat-icon>close</mat-icon>
       </button>
@@ -116,8 +111,7 @@
           @if (selectedChannel(); as channel) {
           <div class="channel-header-info">
             @if (channel.metadata.picture) {
-            <img [src]="channel.metadata.picture" [alt]="channel.metadata.name"
-              class="channel-header-avatar" />
+            <img [src]="channel.metadata.picture" [alt]="channel.metadata.name" class="channel-header-avatar" />
             } @else {
             <div class="channel-header-avatar-placeholder">
               <span>{{ getChannelInitials(channel) }}</span>
@@ -167,8 +161,7 @@
         }
 
         @for (message of currentMessages(); track message.id) {
-        <div class="message-bubble-container"
-          [class.outgoing]="message.pubkey === currentPubkey()">
+        <div class="message-bubble-container" [class.outgoing]="message.pubkey === currentPubkey()">
           <div class="message-sender-row">
             @if (message.pubkey !== currentPubkey()) {
             <app-user-profile [pubkey]="message.pubkey" view="icon" #msgProfile>
@@ -182,8 +175,7 @@
             </app-user-profile>
             }
           </div>
-          <div class="message-bubble"
-            [class.outgoing]="message.pubkey === currentPubkey()">
+          <div class="message-bubble" [class.outgoing]="message.pubkey === currentPubkey()">
             @if (message.replyTo) {
             <div class="reply-context">
               <mat-icon>reply</mat-icon>
@@ -196,8 +188,8 @@
             </span>
           </div>
           <div class="message-actions">
-            <button mat-icon-button class="more-button" [matMenuTriggerFor]="msgMenu"
-              (click)="$event.stopPropagation()" matTooltip="More options">
+            <button mat-icon-button class="more-button" [matMenuTriggerFor]="msgMenu" (click)="$event.stopPropagation()"
+              matTooltip="More options">
               <mat-icon>more_vert</mat-icon>
             </button>
             <mat-menu #msgMenu="matMenu">
@@ -250,11 +242,10 @@
         }
         <div class="message-input-row">
           <textarea #messageInput class="message-input" [ngModel]="newMessageText()"
-            (ngModelChange)="newMessageText.set($event)" placeholder="Message this channel"
-            [disabled]="isSending()" (keydown)="onMessageKeydown($event)" rows="1"></textarea>
-          <button mat-icon-button type="button" class="send-button"
-            [disabled]="!newMessageText().trim() || isSending()" (click)="sendMessage()"
-            matTooltip="Send message">
+            (ngModelChange)="newMessageText.set($event)" placeholder="Message this channel" [disabled]="isSending()"
+            (keydown)="onMessageKeydown($event)" rows="1"></textarea>
+          <button mat-icon-button type="button" class="send-button" [disabled]="!newMessageText().trim() || isSending()"
+            (click)="sendMessage()" matTooltip="Send message">
             @if (isSending()) {
             <mat-spinner diameter="24"></mat-spinner>
             } @else {

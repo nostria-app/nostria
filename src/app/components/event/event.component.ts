@@ -45,6 +45,7 @@ import {
   ProfileUpdateEventComponent,
   SettingsEventComponent,
   RelayListEventComponent,
+  HighlightEventComponent,
 } from '../event-types';
 import { UserProfileComponent } from '../user-profile/user-profile.component';
 import { BadgeComponent } from '../../pages/badges/badge/badge.component';
@@ -138,6 +139,7 @@ export function getTaggedXUrl(event?: Event | null): string | undefined {
     ProfileUpdateEventComponent,
     SettingsEventComponent,
     RelayListEventComponent,
+    HighlightEventComponent,
     UserProfileComponent,
     BadgeComponent,
     ReportedContentComponent,
@@ -648,6 +650,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     34139,  // Nostr/Music Playlist (kind 34139) - opens playlist page
     36787,  // Music track (kind 36787) - opens song detail page
     1311,   // Live event comment (kind 1311) - opens referenced stream
+    9802,   // Highlight (kind 9802) - opens thread
   ]);
 
   isCardClickable = computed<boolean>(() => {
@@ -687,6 +690,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     1111,   // Comment (kind 1111) - NIP-22
     1222,   // Audio track (kind 1222)
     1244,   // Audio file (kind 1244)
+    9802,   // Highlight (kind 9802) - NIP-84
     30023,  // Long-form article (kind 30023)
     30030,  // Emoji set (kind 30030)
     30311,  // Live event (kind 30311)
