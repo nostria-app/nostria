@@ -684,8 +684,7 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
     if (!ev) return;
 
     try {
-      await this.userRelaysService.ensureRelaysForPubkey(ev.pubkey);
-      const authorRelays = this.userRelaysService.getRelaysForPubkey(ev.pubkey);
+      const authorRelays = await this.userRelaysService.getUserRelaysForPublishing(ev.pubkey);
       const dTag = ev.tags.find(t => t[0] === 'd')?.[1] || '';
       const naddr = nip19.naddrEncode({
         kind: ev.kind,
@@ -709,8 +708,7 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
     if (!ev) return;
 
     try {
-      await this.userRelaysService.ensureRelaysForPubkey(ev.pubkey);
-      const authorRelays = this.userRelaysService.getRelaysForPubkey(ev.pubkey);
+      const authorRelays = await this.userRelaysService.getUserRelaysForPublishing(ev.pubkey);
       const dTag = ev.tags.find(t => t[0] === 'd')?.[1] || '';
       const npub = nip19.npubEncode(ev.pubkey);
       const link = `https://nostria.app/music/playlist/${npub}/${encodeURIComponent(dTag)}`;
@@ -1138,8 +1136,7 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
 
   async copyTrackLink(track: Event): Promise<void> {
     try {
-      await this.userRelaysService.ensureRelaysForPubkey(track.pubkey);
-      const authorRelays = this.userRelaysService.getRelaysForPubkey(track.pubkey);
+      const authorRelays = await this.userRelaysService.getUserRelaysForPublishing(track.pubkey);
       const dTag = track.tags.find(t => t[0] === 'd')?.[1] || '';
       const naddr = nip19.naddrEncode({
         kind: track.kind,

@@ -313,8 +313,7 @@ export class LiveStreamPlayerComponent implements OnDestroy {
       // Expanding to fullscreen - silently update URL without navigation
       const liveEvent = this.liveEvent()!;
       const authorRelays = this.userRelaysService.getRelaysForPubkey(liveEvent.pubkey);
-      const relayHint = authorRelays[0];
-      const relayHints = this.utilities.normalizeRelayUrls(relayHint ? [relayHint] : []);
+      const relayHints = this.utilities.normalizeRelayUrls(authorRelays);
       const encoded = this.utilities.encodeEventForUrl(liveEvent, relayHints.length > 0 ? relayHints : undefined);
       this.location.replaceState(`/stream/${encoded}`);
     } else if (!isExpanding && isInFullscreen(this.videoElement?.nativeElement)) {
@@ -350,8 +349,7 @@ export class LiveStreamPlayerComponent implements OnDestroy {
     if (this.liveEvent()) {
       const liveEvent = this.liveEvent()!;
       const authorRelays = this.userRelaysService.getRelaysForPubkey(liveEvent.pubkey);
-      const relayHint = authorRelays[0];
-      const relayHints = this.utilities.normalizeRelayUrls(relayHint ? [relayHint] : []);
+      const relayHints = this.utilities.normalizeRelayUrls(authorRelays);
       const encoded = this.utilities.encodeEventForUrl(liveEvent, relayHints.length > 0 ? relayHints : undefined);
       navigator.clipboard.writeText(`https://nostria.app/stream/${encoded}`);
     }

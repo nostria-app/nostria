@@ -267,6 +267,9 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     const chatId = this.selectedChatId();
     if (!chatId) return [];
 
+    const chat = this.selectedChat();
+    if (!chat) return [];
+
     const persistedMessages = this.messaging.getChatMessages(chatId);
 
     // Get the IDs of all persisted messages
@@ -278,10 +281,6 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       if (persistedIds.has(m.id)) {
         return false;
       }
-
-      // Filter pending messages for this chat
-      const chat = this.selectedChat();
-      if (!chat) return false;
 
       // Check if message is for this chat (based on tags for outgoing messages)
       const pTags = m.tags.filter(tag => tag[0] === 'p');
@@ -300,6 +299,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     // Merge, filter hidden, and sort by timestamp
     return [...persistedMessages, ...pending]
       .filter(m => !this.messaging.isMessageHidden(chatId, m.id, true))
+      .filter(m => !(chat.isGroup && m.content === ''))
       .sort((a, b) => a.created_at - b.created_at);
   });
 

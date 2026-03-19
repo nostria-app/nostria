@@ -380,8 +380,7 @@ export class MusicTrackMenuComponent {
     const ev = this.track();
     const dTag = this.getIdentifier();
     try {
-      await this.userRelaysService.ensureRelaysForPubkey(ev.pubkey);
-      const authorRelays = this.userRelaysService.getRelaysForPubkey(ev.pubkey);
+      const authorRelays = await this.userRelaysService.getUserRelaysForPublishing(ev.pubkey);
       const naddr = nip19.naddrEncode({
         kind: ev.kind,
         pubkey: ev.pubkey,
@@ -410,8 +409,7 @@ export class MusicTrackMenuComponent {
     const link = `https://nostria.app/music/song/${npub}/${encodeURIComponent(id)}`;
 
     try {
-      await this.userRelaysService.ensureRelaysForPubkey(ev.pubkey);
-      const authorRelays = this.userRelaysService.getRelaysForPubkey(ev.pubkey);
+      const authorRelays = await this.userRelaysService.getUserRelaysForPublishing(ev.pubkey);
       const naddr = nip19.naddrEncode({
         kind: ev.kind,
         pubkey: ev.pubkey,

@@ -1886,8 +1886,7 @@ export class MusicEventComponent {
     }
 
     try {
-      await this.userRelaysService.ensureRelaysForPubkey(ev.pubkey);
-      const authorRelays = this.userRelaysService.getRelaysForPubkey(ev.pubkey);
+      const authorRelays = await this.userRelaysService.getUserRelaysForPublishing(ev.pubkey);
       const naddr = nip19.naddrEncode({
         kind: ev.kind,
         pubkey: ev.pubkey,

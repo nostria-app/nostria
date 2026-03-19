@@ -770,8 +770,7 @@ export class SongDetailComponent implements OnInit, OnDestroy {
     if (!ev) return;
 
     try {
-      await this.userRelaysService.ensureRelaysForPubkey(ev.pubkey);
-      const authorRelays = this.userRelaysService.getRelaysForPubkey(ev.pubkey);
+      const authorRelays = await this.userRelaysService.getUserRelaysForPublishing(ev.pubkey);
       const dTag = ev.tags.find(t => t[0] === 'd')?.[1] || '';
       const naddr = nip19.naddrEncode({
         kind: ev.kind,
@@ -792,8 +791,7 @@ export class SongDetailComponent implements OnInit, OnDestroy {
     if (!ev) return;
 
     try {
-      await this.userRelaysService.ensureRelaysForPubkey(ev.pubkey);
-      const authorRelays = this.userRelaysService.getRelaysForPubkey(ev.pubkey);
+      const authorRelays = await this.userRelaysService.getUserRelaysForPublishing(ev.pubkey);
       const dTag = ev.tags.find(t => t[0] === 'd')?.[1] || '';
       const naddr = nip19.naddrEncode({
         kind: ev.kind,

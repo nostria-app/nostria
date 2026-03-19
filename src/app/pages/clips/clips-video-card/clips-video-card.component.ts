@@ -251,11 +251,8 @@ export class ClipsVideoCardComponent implements OnDestroy {
 
     try {
       const clipEvent = this.event();
-      await this.userRelaysService.ensureRelaysForPubkey(clipEvent.pubkey);
-
-      const authorRelays = this.userRelaysService.getRelaysForPubkey(clipEvent.pubkey);
-      const relayHint = authorRelays[0];
-      const relayHints = this.utilities.normalizeRelayUrls(relayHint ? [relayHint] : []);
+      const authorRelays = await this.userRelaysService.getUserRelaysForPublishing(clipEvent.pubkey);
+      const relayHints = this.utilities.normalizeRelayUrls(authorRelays);
       const encodedId = this.utilities.encodeEventForUrl(clipEvent, relayHints.length > 0 ? relayHints : undefined);
 
       const dialogData: ShareArticleDialogData = {

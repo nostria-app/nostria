@@ -290,10 +290,8 @@ export class ProfileReadsComponent {
     const title = this.getArticleTitle(event);
 
     if (slug) {
-      await this.userRelaysService.ensureRelaysForPubkey(event.pubkey);
-      const authorRelays = this.userRelaysService.getRelaysForPubkey(event.pubkey);
-      const relayHint = authorRelays[0];
-      const relayHints = this.utilities.normalizeRelayUrls(relayHint ? [relayHint] : []);
+      const authorRelays = await this.userRelaysService.getUserRelaysForPublishing(event.pubkey);
+      const relayHints = this.utilities.normalizeRelayUrls(authorRelays);
       const naddr = nip19.naddrEncode({
         identifier: slug,
         pubkey: event.pubkey,

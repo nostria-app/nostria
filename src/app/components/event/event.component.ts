@@ -2245,10 +2245,8 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     if (!targetItem) return;
 
     const ev = targetItem.event;
-    await this.userRelaysService.ensureRelaysForPubkey(ev.pubkey);
-    const authorRelays = this.userRelaysService.getRelaysForPubkey(ev.pubkey);
-    const relayHint = authorRelays[0];
-    const relayHints = this.utilities.normalizeRelayUrls(relayHint ? [relayHint] : []);
+    const authorRelays = await this.userRelaysService.getUserRelaysForPublishing(ev.pubkey);
+    const relayHints = this.utilities.normalizeRelayUrls(authorRelays);
     const encodedId = this.utilities.encodeEventForUrl(ev, relayHints.length > 0 ? relayHints : undefined);
 
     const dialogData: ShareArticleDialogData = {

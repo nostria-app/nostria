@@ -307,10 +307,8 @@ export class EventMenuComponent {
       return;
     }
 
-    await this.userRelaysService.ensureRelaysForPubkey(ev.pubkey);
-    const authorRelays = this.userRelaysService.getRelaysForPubkey(ev.pubkey);
-    const relayHint = authorRelays[0];
-    const relayHints = this.utilities.normalizeRelayUrls(relayHint ? [relayHint] : []);
+    const authorRelays = await this.userRelaysService.getUserRelaysForPublishing(ev.pubkey);
+    const relayHints = this.utilities.normalizeRelayUrls(authorRelays);
     const encodedId = this.utilities.encodeEventForUrl(ev, relayHints.length > 0 ? relayHints : undefined);
 
     const dialogData: ShareArticleDialogData = {
@@ -384,8 +382,7 @@ export class EventMenuComponent {
 
     // Use encodeEventForUrl which handles addressable events (naddr) vs regular events (nevent)
     const authorRelays = this.userRelaysService.getRelaysForPubkey(event.pubkey);
-    const relayHint = authorRelays[0];
-    const relayHints = this.utilities.normalizeRelayUrls(relayHint ? [relayHint] : []);
+    const relayHints = this.utilities.normalizeRelayUrls(authorRelays);
     const encoded = this.utilities.encodeEventForUrl(event, relayHints.length > 0 ? relayHints : undefined);
 
     const url = new URL('https://nostria.app/');
@@ -407,8 +404,7 @@ export class EventMenuComponent {
       return '';
     }
     const authorRelays = this.userRelaysService.getRelaysForPubkey(event.pubkey);
-    const relayHint = authorRelays[0];
-    const relayHints = this.utilities.normalizeRelayUrls(relayHint ? [relayHint] : []);
+    const relayHints = this.utilities.normalizeRelayUrls(authorRelays);
     return this.utilities.encodeEventForUrl(event, relayHints.length > 0 ? relayHints : undefined);
   });
 
