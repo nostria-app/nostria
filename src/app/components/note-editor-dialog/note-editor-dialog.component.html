@@ -666,7 +666,7 @@
     </div>
 
     <!-- Right side: PoW indicator and primary actions -->
-    @if (!showAdvancedOptions() && !showPreview()) {
+    @if (!showAdvancedOptions()) {
     <div class="right-actions">
       @if (powEnabled() && isPowMining()) {
       <div class="pow-progress-indicator">
