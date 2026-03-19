@@ -32,6 +32,7 @@ import { NoteContentComponent } from '../content/note-content/note-content.compo
 import { PhotoEventComponent } from '../event-types/photo-event.component';
 import { EventHeaderComponent } from '../event/header/header.component';
 import { InlineVideoPlayerComponent } from '../inline-video-player/inline-video-player.component';
+import { VideoControlsConfig } from '../video-controls/video-controls.component';
 import { Bolt11InvoiceComponent } from '../bolt11-invoice/bolt11-invoice.component';
 import { AgoPipe } from '../../pipes/ago.pipe';
 import { TimestampPipe } from '../../pipes/timestamp.pipe';
@@ -100,7 +101,7 @@ interface EventMention {
         <img class="message-image" [src]="part.content" alt="Image" loading="lazy" (click)="onImageClick($event, part.content)" />
       } @else if (part.type === 'video') {
         <div class="message-video-container">
-          <app-inline-video-player [src]="part.content" />
+          <app-inline-video-player [src]="part.content" [controlsConfig]="messageVideoControlsConfig" />
         </div>
       } @else if (part.type === 'url') {
         <a class="message-link" [href]="part.content" target="_blank" rel="noopener noreferrer">{{ getDisplayUrl(part.content) }}</a>
@@ -510,6 +511,16 @@ export class MessageContentComponent {
   content = input.required<string>();
   tags = input<string[][]>([]);
   authorPubkey = input<string>();
+
+  readonly messageVideoControlsConfig: VideoControlsConfig = {
+    showVolumeControl: true,
+    showVolumeSlider: false,
+    showTimeDisplay: false,
+    showPlaybackRate: false,
+    showQuality: false,
+    showPiP: false,
+    showCast: false,
+  };
 
   // Content length threshold for showing "Show more" button
   private readonly CONTENT_LENGTH_THRESHOLD = 300;

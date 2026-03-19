@@ -35,6 +35,7 @@ export interface VideoControlsConfig {
   showPlaybackRate?: boolean;
   showCast?: boolean;
   showVolumeControl?: boolean;
+  showVolumeSlider?: boolean;
   showTimeDisplay?: boolean;
   showControlsRow?: boolean;
   progressPosition?: 'top' | 'bottom';
@@ -53,6 +54,7 @@ const DEFAULT_CONFIG: VideoControlsConfig = {
   showPlaybackRate: true,
   showCast: true,
   showVolumeControl: true,
+  showVolumeSlider: true,
   showTimeDisplay: true,
   showControlsRow: true,
   progressPosition: 'top',

@@ -25,8 +25,7 @@
         Auto
       </button>
       @for (level of qualityLevels(); track level.index) {
-      <button mat-menu-item (click)="onQualityChange(level.index)"
-        [class.active]="currentQuality() === level.index">
+      <button mat-menu-item (click)="onQualityChange(level.index)" [class.active]="currentQuality() === level.index">
         {{ level.label }}
       </button>
       }
@@ -65,14 +64,8 @@
           <mat-icon>remove</mat-icon>
         </button>
         <div class="speed-slider-track-wrapper">
-          <input type="range"
-            class="speed-slider"
-            [min]="speedMin"
-            [max]="speedMax"
-            [step]="speedStep"
-            [value]="playbackRate()"
-            (input)="onSpeedSliderInput($event)"
-            aria-label="Playback speed" />
+          <input type="range" class="speed-slider" [min]="speedMin" [max]="speedMax" [step]="speedStep"
+            [value]="playbackRate()" (input)="onSpeedSliderInput($event)" aria-label="Playback speed" />
           <div class="speed-slider-track-fill" [style.width.%]="speedSliderPercent()"></div>
         </div>
         <button class="speed-adjust-btn" (click)="incrementSpeed()" [class.disabled]="playbackRate() >= speedMax">
@@ -83,9 +76,7 @@
       <!-- Preset buttons -->
       <div class="speed-presets">
         @for (preset of speedPresets; track preset) {
-        <button class="speed-preset-btn"
-          [class.active]="isActivePreset(preset)"
-          (click)="setSpeedPreset(preset)">
+        <button class="speed-preset-btn" [class.active]="isActivePreset(preset)" (click)="setSpeedPreset(preset)">
           {{ speedPresetLabel(preset) }}
         </button>
         }
@@ -160,7 +151,7 @@
             appVolumeGesture (volumeChange)="onVolumeGestureChange($event)" (tap)="onMuteToggle()">
             <mat-icon>{{ volumeIcon() }}</mat-icon>
           </button>
-          @if (volumeSliderVisible()) {
+          @if (volumeSliderVisible() && !isSmallScreen() && mergedConfig().showVolumeSlider) {
           <div class="volume-slider-container">
             <mat-slider [min]="0" [max]="100" [step]="1" class="volume-slider">
               <input matSliderThumb [value]="volume() * 100" (valueChange)="onVolumeSliderChange($event)"
@@ -172,7 +163,7 @@
         }
 
         <!-- Time display -->
-        @if (mergedConfig().showTimeDisplay && !mergedConfig().isLiveStream) {
+        @if (mergedConfig().showTimeDisplay && !mergedConfig().isLiveStream && !isSmallScreen()) {
         <span class="time-display">
           {{ formattedCurrentTime() }} / {{ formattedDuration() }}
         </span>
