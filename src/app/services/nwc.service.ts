@@ -161,12 +161,8 @@ export class NwcService {
     effect(() => {
       const wallets = this.walletsService.wallets();
       const accountPubkey = this.accountState.pubkey();
-      const walletCount = Object.keys(wallets).length;
-
-      this.logger.info(`[NWC-NOTIF] Effect triggered: ${walletCount} wallet(s), accountPubkey=${accountPubkey ? accountPubkey.substring(0, 8) + '...' : 'none'}, isBrowser=${isPlatformBrowser(this.platformId)}`);
 
       if (!isPlatformBrowser(this.platformId) || !accountPubkey) {
-        this.logger.info('[NWC-NOTIF] Skipping subscription: not browser or no account');
         return;
       }
 
@@ -177,8 +173,6 @@ export class NwcService {
       for (const wallet of Object.values(wallets)) {
         this.subscribeToWalletNotifications(wallet, accountPubkey);
       }
-
-      this.logger.info(`[NWC-NOTIF] Subscribed to ${this.notificationSubscriptions.length} wallet notification stream(s)`);
     });
   }
 
@@ -694,7 +688,6 @@ export class NwcService {
       ...context,
       timestamp: Date.now(),
     });
-    this.logger.info(`[NWC-NOTIF] Registered payment context for hash=${paymentHash.substring(0, 12)}..., recipient=${context.recipientPubkey.substring(0, 8)}...`);
 
     // Prune old entries (older than 1 hour) to prevent memory leaks
     const oneHourAgo = Date.now() - 3600000;
@@ -725,7 +718,6 @@ export class NwcService {
    */
   private subscribeToWalletNotifications(wallet: Wallet, accountPubkey: string): void {
     if (!wallet.connections || wallet.connections.length === 0) {
-      this.logger.info(`[NWC-NOTIF] Wallet ${wallet.name || wallet.pubkey.substring(0, 8)} has no connections, skipping`);
       return;
     }
 
@@ -735,10 +727,7 @@ export class NwcService {
       const relayUrls = parsed.relay;
       const secret = parsed.secret;
 
-      this.logger.info(`[NWC-NOTIF] Parsed wallet "${wallet.name || 'unnamed'}": servicePubkey=${walletServicePubkey.substring(0, 8)}..., relays=[${relayUrls.join(', ')}], hasSecret=${!!secret}`);
-
       if (!walletServicePubkey || !relayUrls.length || !secret) {
-        this.logger.warn('[NWC-NOTIF] Missing required fields, skipping subscription');
         return;
       }
 
@@ -754,21 +743,17 @@ export class NwcService {
         since: sinceTimestamp,
       };
 
-      this.logger.info(`[NWC-NOTIF] Subscribing with filter: kinds=[${filter.kinds}], authors=[${walletServicePubkey.substring(0, 8)}...], #p=[${clientPubkey.substring(0, 8)}... (client pubkey from secret)], since=${sinceTimestamp} (${new Date(sinceTimestamp * 1000).toISOString()})`);
-
       const subscription = this.nwcRelay.subscribeToNwcResponse(
         filter,
         relayUrls,
         (event: Event) => {
-          this.logger.info(`[NWC-NOTIF] Received event! kind=${event.kind}, id=${event.id.substring(0, 12)}..., author=${event.pubkey.substring(0, 8)}..., created_at=${event.created_at}`);
           this.handleNwcNotificationEvent(event, secret, walletServicePubkey, wallet.name || 'Wallet');
         }
       );
 
       this.notificationSubscriptions.push(subscription);
-      this.logger.info(`[NWC-NOTIF] Successfully subscribed for wallet "${wallet.name || wallet.pubkey.substring(0, 8)}"`);
     } catch (error) {
-      this.logger.error('[NWC-NOTIF] Failed to subscribe to wallet notifications', error);
+      this.logger.error('Failed to subscribe to wallet notifications', error);
     }
   }
 
@@ -782,11 +767,8 @@ export class NwcService {
     walletServicePubkey: string,
     walletName: string
   ): Promise<void> {
-    this.logger.info(`[NWC-NOTIF] handleNwcNotificationEvent called: kind=${event.kind}, id=${event.id.substring(0, 12)}...`);
-
     // Skip if already processed
     if (this.processedNotificationIds.has(event.id)) {
-      this.logger.info(`[NWC-NOTIF] Skipping duplicate event: ${event.id.substring(0, 12)}...`);
       return;
     }
     this.processedNotificationIds.add(event.id);
@@ -797,28 +779,21 @@ export class NwcService {
       let decryptedContent: string;
 
       if (event.kind === NWC_NOTIFICATION_KIND_NIP44) {
-        this.logger.info('[NWC-NOTIF] Decrypting with NIP-44...');
         const conversationKey = v2.utils.getConversationKey(secretBytes, walletServicePubkey);
         decryptedContent = v2.decrypt(event.content, conversationKey);
       } else {
-        this.logger.info('[NWC-NOTIF] Decrypting with NIP-04...');
         decryptedContent = await nip04.decrypt(secretBytes, walletServicePubkey, event.content);
       }
-
-      this.logger.info(`[NWC-NOTIF] Decrypted content (${decryptedContent.length} chars): ${decryptedContent.substring(0, 200)}`);
 
       // Parse the notification JSON
       const parsed = JSON.parse(decryptedContent) as unknown;
       if (!parsed || typeof parsed !== 'object') {
-        this.logger.warn('[NWC-NOTIF] Invalid notification content format');
         return;
       }
 
       const notification = parsed as NwcNotificationContent;
       const notificationType = notification.notification_type || 'unknown';
       const notificationData = notification.notification || {};
-
-      this.logger.info(`[NWC-NOTIF] Parsed notification: type=${notificationType}, data=${JSON.stringify(notificationData)}`);
 
       // Extract nostr metadata from the zap request (kind 9734) embedded in the notification
       const nostrMetadata = notificationData['metadata'] as Record<string, unknown> | undefined;
@@ -846,7 +821,6 @@ export class NwcService {
       if (paymentHash && !senderPubkey) {
         const ctx = this.paymentContexts.get(paymentHash);
         if (ctx) {
-          this.logger.info(`[NWC-NOTIF] Found payment context for hash=${paymentHash.substring(0, 12)}...: recipient=${ctx.recipientPubkey.substring(0, 8)}..., eventId=${ctx.eventId ?? 'none'}`);
           senderPubkey = ctx.recipientPubkey;
           zappedEventId = zappedEventId || ctx.eventId;
           zappedEventKind = zappedEventKind ?? ctx.eventKind;
@@ -855,12 +829,8 @@ export class NwcService {
         }
       }
 
-      this.logger.info(`[NWC-NOTIF] Nostr metadata: sender=${senderPubkey?.substring(0, 8) ?? 'none'}, zappedEvent=${zappedEventId?.substring(0, 12) ?? 'none'}, kind=${zappedEventKind ?? 'none'}, zapComment="${zapComment ?? ''}", relayHints=${relayHints?.length ?? 0}`);
-
       // Build a human-readable title and message
       const { title, message } = this.formatWalletNotification(notificationType, notificationData, walletName, zapComment);
-
-      this.logger.info(`[NWC-NOTIF] Formatted: title="${title}", message="${message}"`);
 
       // Show toast
       this.snackBar.open(title, 'Close', { duration: 5000 });
@@ -900,10 +870,8 @@ export class NwcService {
 
       this.notificationService.addNotification(contentNotification);
       await this.notificationService.persistNotificationToStorage(contentNotification);
-
-      this.logger.info(`[NWC-NOTIF] Created wallet notification: ${notificationId} (${notificationType})`);
     } catch (error) {
-      this.logger.error('[NWC-NOTIF] Failed to process wallet notification event', error);
+      this.logger.error('Failed to process wallet notification event', error);
     }
   }
 
