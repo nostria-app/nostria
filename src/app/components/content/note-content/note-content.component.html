@@ -321,6 +321,11 @@
 <div class="embedded-poll-event">
   <app-poll-event [event]="mention!.event!.event"></app-poll-event>
 </div>
+} @else if (mention!.event!.event.kind === 6969) {
+<!-- Zap Poll Event (kind 6969) -->
+<div class="embedded-poll-event">
+  <app-zap-poll-event [event]="mention!.event!.event"></app-zap-poll-event>
+</div>
 } @else if (mention!.event!.event.kind === 30023) {
 <!-- Article Event (kind 30023, NIP-23) -->
 <div class="embedded-article-event">

@@ -104,7 +104,10 @@
     @else if (targetItem.event.kind === 1068) {
     <app-poll-event [event]="targetItem.event"></app-poll-event>
     }
-    <!-- M3U Playlists (kind 32100) & Nostr Playlists (kind 34139) -->
+    <!-- Zap Polls (kind 6969) -->
+    @else if (targetItem.event.kind === 6969) {
+    <app-zap-poll-event [event]="targetItem.event"></app-zap-poll-event>
+    }
     @else if (targetItem.event.kind === 32100 || targetItem.event.kind === 34139) {
     <app-playlist-event [event]="targetItem.event"></app-playlist-event>
     }
@@ -264,11 +267,14 @@
           @else if (rootRecordData.event.kind === 30023) {
           <app-article-event [event]="rootRecordData.event"></app-article-event>
           }
-          <!-- Polls (kind 1068) -->
-          @else if (rootRecordData.event.kind === 1068) {
-          <app-poll-event [event]="rootRecordData.event"></app-poll-event>
-          }
-          <!-- M3U Playlists (kind 32100) & Nostr Playlists (kind 34139) -->
+           <!-- Polls (kind 1068) -->
+           @else if (rootRecordData.event.kind === 1068) {
+           <app-poll-event [event]="rootRecordData.event"></app-poll-event>
+           }
+           <!-- Zap Polls (kind 6969) -->
+           @else if (rootRecordData.event.kind === 6969) {
+           <app-zap-poll-event [event]="rootRecordData.event"></app-zap-poll-event>
+           }
           @else if (rootRecordData.event.kind === 32100 || rootRecordData.event.kind === 34139) {
           <app-playlist-event [event]="rootRecordData.event"></app-playlist-event>
           }
@@ -409,11 +415,14 @@
           @else if (parentRecordData.event.kind === 30023) {
           <app-article-event [event]="parentRecordData.event"></app-article-event>
           }
-          <!-- Polls (kind 1068) -->
-          @else if (parentRecordData.event.kind === 1068) {
-          <app-poll-event [event]="parentRecordData.event"></app-poll-event>
-          }
-          <!-- M3U Playlists (kind 32100) & Nostr Playlists (kind 34139) -->
+           <!-- Polls (kind 1068) -->
+           @else if (parentRecordData.event.kind === 1068) {
+           <app-poll-event [event]="parentRecordData.event"></app-poll-event>
+           }
+           <!-- Zap Polls (kind 6969) -->
+           @else if (parentRecordData.event.kind === 6969) {
+           <app-zap-poll-event [event]="parentRecordData.event"></app-zap-poll-event>
+           }
           @else if (parentRecordData.event.kind === 32100 || parentRecordData.event.kind === 34139) {
           <app-playlist-event [event]="parentRecordData.event"></app-playlist-event>
           }
@@ -545,6 +554,10 @@
     <!-- Polls (kind 1068) -->
     @else if (item.event.kind === 1068) {
     <app-poll-event [event]="item.event"></app-poll-event>
+    }
+    <!-- Zap Polls (kind 6969) -->
+    @else if (item.event.kind === 6969) {
+    <app-zap-poll-event [event]="item.event"></app-zap-poll-event>
     }
     <!-- Emoji Sets (kind 30030) -->
     @else if (item.event.kind === 30030) {
@@ -691,6 +704,10 @@
     <!-- Polls (kind 1068) -->
     @else if (item.event.kind === 1068) {
     <app-poll-event [event]="item.event"></app-poll-event>
+    }
+    <!-- Zap Polls (kind 6969) -->
+    @else if (item.event.kind === 6969) {
+    <app-zap-poll-event [event]="item.event"></app-zap-poll-event>
     }
     <!-- Emoji Sets (kind 30030) -->
     @else if (item.event.kind === 30030) {

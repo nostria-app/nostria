@@ -1,0 +1,98 @@
+<div class="zap-poll-event">
+  <div class="poll-header">
+    <mat-icon>bolt</mat-icon>
+    <h3>{{ poll().content }}</h3>
+  </div>
+
+  @if (poll().valueMinimum || poll().valueMaximum) {
+  <div class="poll-constraints">
+    @if (poll().valueMinimum) {
+    <span class="constraint">
+      <mat-icon>arrow_downward</mat-icon>
+      Min: {{ poll().valueMinimum }} sats
+    </span>
+    }
+    @if (poll().valueMaximum) {
+    <span class="constraint">
+      <mat-icon>arrow_upward</mat-icon>
+      Max: {{ poll().valueMaximum }} sats
+    </span>
+    }
+  </div>
+  }
+
+  @if (isLoading()) {
+  <div class="loading-state">
+    <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+  </div>
+  }
+
+  <div class="poll-options">
+    @for (option of poll().options; track option.id) {
+    <div class="poll-option" [class.selected]="selectedOption() === option.id"
+      role="button"
+      tabindex="0"
+      (click)="selectOption(option.id)"
+      (keydown.enter)="selectOption(option.id)"
+      (keydown.space)="selectOption(option.id)">
+
+      @if (hasResults()) {
+      <!-- Show results alongside voting -->
+      <div class="option-result">
+        <div class="option-label">
+          <mat-icon class="option-icon">radio_button_{{ selectedOption() === option.id ? 'checked' : 'unchecked'
+            }}</mat-icon>
+          <span>{{ option.label }}</span>
+        </div>
+        <div class="option-stats">
+          <span class="zap-count">
+            <mat-icon>bolt</mat-icon>
+            {{ getZapCount(option.id) }} zap{{ getZapCount(option.id) !== 1 ? 's' : '' }}
+            ({{ formatSats(getZapAmount(option.id)) }})
+          </span>
+          <span class="percentage">{{ getPercentage(option.id) }}%</span>
+        </div>
+        <mat-progress-bar mode="determinate" [value]="getPercentage(option.id)" class="vote-bar">
+        </mat-progress-bar>
+      </div>
+      } @else {
+      <!-- Show voting interface only -->
+      <div class="option-vote">
+        <mat-icon class="option-icon">radio_button_{{ selectedOption() === option.id ? 'checked' : 'unchecked'
+          }}</mat-icon>
+        <span class="option-label">{{ option.label }}</span>
+      </div>
+      }
+    </div>
+    }
+  </div>
+
+  <div class="poll-footer">
+    <div class="poll-info">
+      @if (totalZaps() > 0) {
+      <span class="total-zaps">
+        <mat-icon>bolt</mat-icon>
+        {{ totalZaps() }} zap{{ totalZaps() !== 1 ? 's' : '' }}
+        ({{ formatSats(totalSats()) }})
+      </span>
+      }
+      @if (poll().closedAt) {
+      <span class="poll-status" [class.expired]="isExpired()">
+        <mat-icon>schedule</mat-icon>
+        @if (isExpired()) {
+        Closed
+        } @else {
+        Closes {{ poll().closedAt! | timestamp:'short' }}
+        }
+      </span>
+      }
+    </div>
+
+    @if (!isExpired() && selectedOption()) {
+    <button mat-flat-button (click)="voteWithZap()" [disabled]="isLoading()">
+      <mat-icon>bolt</mat-icon>
+      Zap to vote
+    </button>
+    }
+  </div>
+</div>

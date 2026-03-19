@@ -619,7 +619,7 @@ export class FeedFilterPanelComponent {
       case 'music':
         return [32100, 36787, 34139]; // Music
       case 'polls':
-        return [1068]; // Polls
+        return [1068, 6969]; // Polls + Zap Polls
       case 'custom':
       default:
         return [...DEFAULT_CONTENT_FILTER.kinds]; // Default: all standard kinds

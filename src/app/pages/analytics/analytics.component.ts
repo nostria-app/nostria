@@ -1002,6 +1002,8 @@ export class AnalyticsComponent implements OnInit, OnDestroy {
         return 'Video';
       case 1068:
         return 'Poll';
+      case 6969:
+        return 'Zap Poll';
       default:
         return 'Post';
     }
@@ -1020,6 +1022,8 @@ export class AnalyticsComponent implements OnInit, OnDestroy {
         return 'videocam';
       case 1068:
         return 'poll';
+      case 6969:
+        return 'bolt';
       default:
         return 'note';
     }

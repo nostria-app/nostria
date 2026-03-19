@@ -46,7 +46,7 @@ export interface ContentFilterSettings {
 
 /** Default content filter: show posts and reposts */
 export const DEFAULT_CONTENT_FILTER: ContentFilterSettings = {
-  kinds: [1, 1111, 6, 16, 30023, 1068, 1222, 1244, 20, 21, 22, 34235, 34236],
+  kinds: [1, 1111, 6, 16, 30023, 1068, 6969, 1222, 1244, 20, 21, 22, 34235, 34236],
   showReplies: false,
   showReposts: true,
 };

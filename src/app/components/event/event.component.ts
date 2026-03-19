@@ -36,8 +36,9 @@ import {
   PlaylistEventComponent,
   StarterPackEventComponent,
   VideoEventComponent,
-  PollEventComponent,
-  LiveEventComponent,
+    PollEventComponent,
+    ZapPollEventComponent,
+    LiveEventComponent,
   AudioEventComponent,
   MusicEventComponent,
   EmojiSetEventComponent,
@@ -133,7 +134,8 @@ export function getTaggedXUrl(event?: Event | null): string | undefined {
     ArticleEventComponent,
     PlaylistEventComponent,
     StarterPackEventComponent,
-    PollEventComponent,
+  PollEventComponent,
+  ZapPollEventComponent,
     LiveEventComponent,
     AudioEventComponent,
     MusicEventComponent,
@@ -696,6 +698,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     21,     // Video (kind 21) - NIP-71 horizontal video
     22,     // Short video (kind 22) - NIP-71 vertical video
     1068,   // Poll (kind 1068)
+    6969,   // Zap Poll (kind 6969)
     1111,   // Comment (kind 1111) - NIP-22
     1222,   // Audio track (kind 1222)
     1244,   // Audio file (kind 1244)
