@@ -12,6 +12,7 @@ import { ZapMetricsService } from './zap-metrics.service';
 import { UtilitiesService } from './utilities.service';
 import { DataService } from './data.service';
 import { NostrRecord } from '../interfaces';
+import { NwcService } from './nwc.service';
 
 interface LnurlPayResponse {
   callback: string;
@@ -58,6 +59,7 @@ export class ZapService {
   private relayService = inject(RelaysService);
   private wallets = inject(Wallets);
   private logger = inject(LoggerService);
+  private nwcService = inject(NwcService);
   private accountRelay = inject(AccountRelayService);
   private discoveryRelay = inject(DiscoveryRelayService);
   private zapMetrics = inject(ZapMetricsService);
@@ -988,6 +990,22 @@ export class ZapService {
         { maxRetries: 2 },
         'request zap invoice'
       );
+
+      // Register payment context so outgoing NWC notifications can be correlated
+      try {
+        const { decodeInvoice } = await import('@getalby/lightning-tools');
+        const decoded = decodeInvoice(zapPayment.pr);
+        if (decoded?.paymentHash) {
+          this.nwcService.registerPaymentContext(decoded.paymentHash, {
+            recipientPubkey,
+            eventId,
+            eventKind,
+            message,
+          });
+        }
+      } catch {
+        // Non-critical — notification will just lack context
+      }
 
       // Pay the invoice - NO automatic retry to prevent duplicate payments
       // If payment fails, the error will be surfaced to the user who can manually retry

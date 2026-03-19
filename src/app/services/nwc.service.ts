@@ -89,6 +89,18 @@ export interface NwcNotificationContent {
 }
 
 /**
+ * Context stored when the app initiates a payment, keyed by payment_hash.
+ * Used to correlate outgoing payment_sent notifications with the original zap.
+ */
+export interface PaymentContext {
+  recipientPubkey: string;
+  eventId?: string;
+  eventKind?: number;
+  message?: string;
+  timestamp: number;
+}
+
+/**
  * NWC Service - Implements NIP-47 Nostr Wallet Connect
  * Provides balance checking and transaction history
  */
@@ -118,6 +130,8 @@ export class NwcService {
   private notificationSubscriptions: { unsubscribe: () => void }[] = [];
   // Track processed notification event IDs to avoid duplicates
   private processedNotificationIds = new Set<string>();
+  // Payment context map: payment_hash → context from when the payment was initiated
+  private paymentContexts = new Map<string, PaymentContext>();
 
   // Currently selected wallet pubkey for operations
   selectedWalletPubkey = signal<string | null>(null);
@@ -670,6 +684,28 @@ export class NwcService {
   };
 
   /**
+   * Register payment context for an outgoing payment.
+   * Call this before paying an invoice so the notification handler can correlate it.
+   * @param paymentHash - The payment hash from the BOLT-11 invoice
+   * @param context - The zap/payment context (recipient, event, message)
+   */
+  registerPaymentContext(paymentHash: string, context: Omit<PaymentContext, 'timestamp'>): void {
+    this.paymentContexts.set(paymentHash, {
+      ...context,
+      timestamp: Date.now(),
+    });
+    this.logger.info(`[NWC-NOTIF] Registered payment context for hash=${paymentHash.substring(0, 12)}..., recipient=${context.recipientPubkey.substring(0, 8)}...`);
+
+    // Prune old entries (older than 1 hour) to prevent memory leaks
+    const oneHourAgo = Date.now() - 3600000;
+    for (const [hash, ctx] of this.paymentContexts) {
+      if (ctx.timestamp < oneHourAgo) {
+        this.paymentContexts.delete(hash);
+      }
+    }
+  }
+
+  /**
    * Unsubscribe from all active NWC notification subscriptions
    */
   private unsubscribeNotifications(): void {
@@ -789,21 +825,35 @@ export class NwcService {
       const nostrEvent = nostrMetadata?.['nostr'] as Record<string, unknown> | undefined;
 
       // Sender pubkey from the embedded zap request
-      const senderPubkey = typeof nostrEvent?.['pubkey'] === 'string' ? nostrEvent['pubkey'] as string : undefined;
+      let senderPubkey = typeof nostrEvent?.['pubkey'] === 'string' ? nostrEvent['pubkey'] as string : undefined;
       // Zap comment from zap request content
-      const zapComment = typeof nostrEvent?.['content'] === 'string' && (nostrEvent['content'] as string).length > 0
+      let zapComment = typeof nostrEvent?.['content'] === 'string' && (nostrEvent['content'] as string).length > 0
         ? nostrEvent['content'] as string : undefined;
       // Extract tags from the embedded zap request
       const nostrTags = Array.isArray(nostrEvent?.['tags']) ? nostrEvent['tags'] as string[][] : [];
       // Zapped event ID (e tag)
-      const zappedEventTag = nostrTags.find(t => t[0] === 'e');
-      const zappedEventId = zappedEventTag?.[1];
+      let zappedEventId = nostrTags.find(t => t[0] === 'e')?.[1];
       // Zapped event kind (k tag)
       const zappedKindTag = nostrTags.find(t => t[0] === 'k');
-      const zappedEventKind = zappedKindTag?.[1] ? parseInt(zappedKindTag[1], 10) : undefined;
+      let zappedEventKind = zappedKindTag?.[1] ? parseInt(zappedKindTag[1], 10) : undefined;
       // Relay hints from the relays tag
       const relaysTag = nostrTags.find(t => t[0] === 'relays');
       const relayHints = relaysTag ? relaysTag.slice(1) : undefined;
+
+      // For outgoing payments without nostr metadata, look up stored payment context
+      const paymentHash = typeof notificationData['payment_hash'] === 'string'
+        ? notificationData['payment_hash'] as string : undefined;
+      if (paymentHash && !senderPubkey) {
+        const ctx = this.paymentContexts.get(paymentHash);
+        if (ctx) {
+          this.logger.info(`[NWC-NOTIF] Found payment context for hash=${paymentHash.substring(0, 12)}...: recipient=${ctx.recipientPubkey.substring(0, 8)}..., eventId=${ctx.eventId ?? 'none'}`);
+          senderPubkey = ctx.recipientPubkey;
+          zappedEventId = zappedEventId || ctx.eventId;
+          zappedEventKind = zappedEventKind ?? ctx.eventKind;
+          zapComment = zapComment || ctx.message || undefined;
+          this.paymentContexts.delete(paymentHash);
+        }
+      }
 
       this.logger.info(`[NWC-NOTIF] Nostr metadata: sender=${senderPubkey?.substring(0, 8) ?? 'none'}, zappedEvent=${zappedEventId?.substring(0, 12) ?? 'none'}, kind=${zappedEventKind ?? 'none'}, zapComment="${zapComment ?? ''}", relayHints=${relayHints?.length ?? 0}`);
 
