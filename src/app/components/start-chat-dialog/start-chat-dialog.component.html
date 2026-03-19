@@ -10,7 +10,7 @@
   @if (selectedProfile()) {
   <div class="selected-profile">
     <div class="profile-info">
-      <app-user-profile [pubkey]="selectedProfile()!.event.pubkey" view="small"></app-user-profile>
+      <app-user-profile [pubkey]="selectedProfile()!.event.pubkey" view="small" [disableLink]="true"></app-user-profile>
       <div class="profile-details">
         @if (selectedProfile()!.data.display_name || selectedProfile()!.data.name) {
         <span class="profile-display-name">{{ selectedProfile()!.data.display_name || selectedProfile()!.data.name
@@ -64,7 +64,7 @@
         @for (profile of searchResults(); track profile.event.pubkey) {
         <div class="search-result-item" tabindex="0" (click)="selectProfile(profile)"
           (keydown.enter)="selectProfile(profile)" (keydown.space)="selectProfile(profile)">
-          <app-user-profile [pubkey]="profile.event.pubkey" view="list"></app-user-profile>
+          <app-user-profile [pubkey]="profile.event.pubkey" view="list" [disableLink]="true"></app-user-profile>
         </div>
         }
       </div>
@@ -173,7 +173,7 @@
         @for (profile of searchResults(); track profile.event.pubkey) {
         <div class="search-result-item" tabindex="0" (click)="selectProfile(profile)"
           (keydown.enter)="selectProfile(profile)" (keydown.space)="selectProfile(profile)">
-          <app-user-profile [pubkey]="profile.event.pubkey" view="list"></app-user-profile>
+          <app-user-profile [pubkey]="profile.event.pubkey" view="list" [disableLink]="true"></app-user-profile>
         </div>
         }
       </div>
