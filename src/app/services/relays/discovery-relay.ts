@@ -28,7 +28,11 @@ export class DiscoveryRelayService extends RelayServiceBase implements NostriaSe
   private readonly inflightRelayRequests = new Map<string, Promise<string[]>>();
   private readonly inflightDmRelayRequests = new Map<string, Promise<string[]>>();
 
-  private readonly DEFAULT_BOOTSTRAP_RELAYS = ['wss://discovery.eu.nostria.app/', 'wss://indexer.coracle.social/', 'wss://purplepag.es/'];
+  private readonly DEFAULT_BOOTSTRAP_RELAYS = [
+    'wss://discovery.eu.nostria.app/',
+    'wss://indexer.coracle.social/',
+    'wss://purplepag.es/',
+  ];
 
   constructor() {
     // Use the application-wide shared pool so that connections to discovery/indexer
@@ -376,8 +380,8 @@ export class DiscoveryRelayService extends RelayServiceBase implements NostriaSe
         return;
       }
 
-      // Ensure the required relay is always included
-      const relaysWithRequired = this.ensureRequiredRelay(validRelays);
+      // Ensure required relays are always included
+      const relaysWithRequired = this.ensureRequiredRelays(validRelays);
 
       this.save(relaysWithRequired);
 
@@ -391,7 +395,7 @@ export class DiscoveryRelayService extends RelayServiceBase implements NostriaSe
   }
 
   // This relay MUST always be included for profile discovery to work well
-  private readonly REQUIRED_DISCOVERY_RELAY = 'wss://indexer.coracle.social/';
+  private readonly REQUIRED_DISCOVERY_RELAYS = ['wss://indexer.coracle.social/'];
 
   /**
    * Loads bootstrap relays from local storage
@@ -403,8 +407,8 @@ export class DiscoveryRelayService extends RelayServiceBase implements NostriaSe
         const parsedRelays = JSON.parse(storedRelays);
         if (Array.isArray(parsedRelays) && parsedRelays.length > 0) {
           this.logger.debug(`Loaded ${parsedRelays.length} discovery relays from storage`);
-          // Always ensure indexer.coracle.social is included for profile discovery
-          return this.ensureRequiredRelay(parsedRelays);
+          // Always ensure required relays are included for profile discovery
+          return this.ensureRequiredRelays(parsedRelays);
         }
       }
     } catch (error) {
@@ -414,18 +418,18 @@ export class DiscoveryRelayService extends RelayServiceBase implements NostriaSe
   }
 
   /**
-   * Ensures the required discovery relay (indexer.coracle.social) is always included
-   * This relay is essential for profile discovery to work well
-   */
-  private ensureRequiredRelay(relays: string[]): string[] {
-    const normalizedRequired = this.REQUIRED_DISCOVERY_RELAY.replace(/\/$/, '');
-    const hasRequired = relays.some(relay =>
-      relay.replace(/\/$/, '') === normalizedRequired
+    * Ensures required discovery relays are always included.
+    * These relays are essential for profile discovery to work well.
+    */
+  private ensureRequiredRelays(relays: string[]): string[] {
+    const normalizedExisting = new Set(relays.map(relay => relay.replace(/\/$/, '')));
+    const missingRequired = this.REQUIRED_DISCOVERY_RELAYS.filter(
+      relay => !normalizedExisting.has(relay.replace(/\/$/, ''))
     );
 
-    if (!hasRequired) {
-      this.logger.debug(`Adding required discovery relay: ${this.REQUIRED_DISCOVERY_RELAY}`);
-      return [...relays, this.REQUIRED_DISCOVERY_RELAY];
+    if (missingRequired.length > 0) {
+      this.logger.debug(`Adding required discovery relays: ${missingRequired.join(', ')}`);
+      return [...relays, ...missingRequired];
     }
 
     return relays;
@@ -438,8 +442,12 @@ export class DiscoveryRelayService extends RelayServiceBase implements NostriaSe
   getDefaultDiscoveryRelays(region = 'eu'): string[] {
     const regionalDiscoveryRelay = this.region.getDiscoveryRelay(region);
 
-    // Always include both regional relay and indexer.coracle.social for best profile discovery
-    const defaultRelays = [regionalDiscoveryRelay, 'wss://indexer.coracle.social/', 'wss://purplepag.es/'];
+    // Always include regional relay + required profile discovery relays
+    const defaultRelays = [
+      regionalDiscoveryRelay,
+      'wss://indexer.coracle.social/',
+      'wss://purplepag.es/',
+    ];
 
     this.logger.debug(`Generated default discovery relays for region ${region}:`, defaultRelays);
     return defaultRelays;

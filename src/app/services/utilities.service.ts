@@ -993,7 +993,14 @@ export class UtilitiesService {
       .replace(/,+$/g, '')
       .replace(/,/g, '.');
 
-    return `wss://${sanitizedAuthority}${suffix}`;
+    // Known typo correction: ditto.pub.relay -> relay.ditto.pub
+    const canonicalAuthority = sanitizedAuthority
+      .replace(/^ditto\.pub\.relay(?::\d+)?$/i, (match) => {
+        const portMatch = match.match(/(:\d+)$/);
+        return `relay.ditto.pub${portMatch?.[1] ?? ''}`;
+      });
+
+    return `wss://${canonicalAuthority}${suffix}`;
   }
 
   private logInvalidRelayUrl(

@@ -51,6 +51,7 @@ export interface MalformedEventsInspectorSnapshot {
   providedIn: 'root',
 })
 export class DataService implements OnDestroy {
+  private readonly MASTODON_GATEWAY_RELAY = 'wss://relay.ditto.pub';
   private readonly database = inject(DatabaseService);
   private readonly accountRelay = inject(AccountRelayService);
   private readonly userRelayEx = inject(UserRelayService);
@@ -926,7 +927,11 @@ export class DataService implements OnDestroy {
 
     // If we have user relay URLs, try them first with a longer timeout
     if (userRelayUrls.length > 0) {
-      const optimalRelays = this.relaysService.getOptimalRelays(userRelayUrls, 15);
+      const relayCandidates = this.utilities.getUniqueNormalizedRelayUrls([
+        this.MASTODON_GATEWAY_RELAY,
+        ...userRelayUrls,
+      ]);
+      const optimalRelays = this.relaysService.getOptimalRelays(relayCandidates, 15);
       this.logger.info(`[Profile Deep Resolution] Trying ${optimalRelays.length} user relays first`);
 
       this.deepDiscoveryStatus.set({
@@ -970,7 +975,10 @@ export class DataService implements OnDestroy {
     }
 
     // Filter out ignored/malformed/insecure relays before deep discovery.
-    const relayUrls = this.utilities.getUniqueNormalizedRelayUrls(observedRelays.map(r => r.url));
+    const relayUrls = this.utilities.getUniqueNormalizedRelayUrls([
+      this.MASTODON_GATEWAY_RELAY,
+      ...observedRelays.map(r => r.url),
+    ]);
 
     if (relayUrls.length === 0) {
       this.logger.info('[Profile Deep Resolution] No eligible observed relays available after filtering ignored domains');
