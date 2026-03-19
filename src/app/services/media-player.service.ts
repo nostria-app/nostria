@@ -48,6 +48,8 @@ export class MediaPlayerService implements OnInitialized {
   private podcastPositions = signal<Record<string, PodcastProgress>>({});
   // Track current blob URL for cleanup to prevent memory leaks
   private currentBlobUrl?: string;
+  // Track current artwork blob URL for cleanup
+  private currentArtworkBlobUrl?: string;
   // Track sources where we've already retried without CORS to avoid loops
   private audioCorsFallbackRetriedSources = new Set<string>();
   // make index a signal-backed property so computed signals can react to changes
@@ -1264,8 +1266,13 @@ export class MediaPlayerService implements OnInitialized {
     // Clean up previous media before starting new one
     this.cleanupCurrentMedia();
 
+    const resolvedArtwork = await this.resolveArtworkUrl(file);
+    const currentFile = resolvedArtwork !== file.artwork
+      ? { ...file, artwork: resolvedArtwork }
+      : file;
+
     const previousFile = this.current();
-    this.current.set(file);
+    this.current.set(currentFile);
 
     // Reset video playback initialization flag for new media
     this.videoPlaybackInitialized = false;
@@ -1389,11 +1396,12 @@ export class MediaPlayerService implements OnInitialized {
     this.initializeMediaSession();
 
     if (this.isMediaSessionSupported) {
+      const metadataFile = this.current() ?? currentFile;
       navigator.mediaSession.metadata = new MediaMetadata({
-        title: file.title,
-        artist: file.artist,
+        title: metadataFile.title,
+        artist: metadataFile.artist,
         album: 'Nostria',
-        artwork: [{ src: file.artwork }],
+        artwork: [{ src: metadataFile.artwork }],
       });
 
       navigator.mediaSession.playbackState = 'playing';
@@ -1403,6 +1411,25 @@ export class MediaPlayerService implements OnInitialized {
     // (Audio tracks publish in handleLoadedMetadata for accurate duration)
     if (file.type === 'Music' && file.video?.trim()) {
       this.publishMusicStatusForItem(file);
+    }
+  }
+
+  private async resolveArtworkUrl(file: MediaItem): Promise<string> {
+    if (file.type !== 'Music' || !file.artwork) {
+      return file.artwork;
+    }
+
+    try {
+      const cachedArtwork = await this.offlineMusicService.getCachedImageUrl(file.artwork);
+
+      if (cachedArtwork.startsWith('blob:')) {
+        this.currentArtworkBlobUrl = cachedArtwork;
+      }
+
+      return cachedArtwork;
+    } catch (error) {
+      console.warn('Failed to resolve cached artwork, using original artwork:', error);
+      return file.artwork;
     }
   }
 
@@ -1571,6 +1598,12 @@ export class MediaPlayerService implements OnInitialized {
     if (this.currentBlobUrl) {
       URL.revokeObjectURL(this.currentBlobUrl);
       this.currentBlobUrl = undefined;
+    }
+
+    // Cleanup artwork blob URL to prevent memory leaks
+    if (this.currentArtworkBlobUrl) {
+      URL.revokeObjectURL(this.currentArtworkBlobUrl);
+      this.currentArtworkBlobUrl = undefined;
     }
 
     // Stop and cleanup audio

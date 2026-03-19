@@ -324,6 +324,11 @@ export class SongDetailComponent implements OnInit, OnDestroy {
     return profile?.data?.name || profile?.data?.display_name || 'Unknown Artist';
   });
 
+  moreByArtistName = computed(() => {
+    const profile = this.authorProfile();
+    return profile?.data?.display_name || profile?.data?.name || this.artistName();
+  });
+
   artistAvatar = computed(() => {
     const profile = this.authorProfile();
     const rawUrl = profile?.data?.picture || null;
@@ -1075,7 +1080,35 @@ export class SongDetailComponent implements OnInit, OnDestroy {
     const trackCoordinate = `${event.kind}:${event.pubkey}:${trackDTag}`;
 
     this.moreByArtistLoading.set(true);
-    const albumMap = new Map<string, AlbumInfo>();
+    const albumEventMap = new Map<string, Event>();
+
+    const syncMoreByArtist = (): void => {
+      const albums: AlbumInfo[] = [];
+      for (const albumEvent of albumEventMap.values()) {
+        if (this.utilities.isMusicPlaylistPrivate(albumEvent)) {
+          continue;
+        }
+        const info = this.parseAlbumEvent(albumEvent);
+        if (info) {
+          albums.push(info);
+        }
+      }
+      this.moreByArtist.set(albums);
+    };
+
+    const upsertAlbumEvent = (playlistEvent: Event): void => {
+      const dTag = playlistEvent.tags.find(t => t[0] === 'd')?.[1];
+      if (!dTag) {
+        return;
+      }
+
+      const key = `${playlistEvent.pubkey}:${dTag}`;
+      const existing = albumEventMap.get(key);
+      if (!existing || existing.created_at < playlistEvent.created_at) {
+        albumEventMap.set(key, playlistEvent);
+        syncMoreByArtist();
+      }
+    };
 
     // 1. Search local DB first
     try {
@@ -1085,12 +1118,8 @@ export class SongDetailComponent implements OnInit, OnDestroy {
         // Exclude albums that contain this specific track (those are shown in "containing albums")
         const hasThisTrack = pl.tags.some(t => t[0] === 'a' && t[1] === trackCoordinate);
         if (hasThisTrack) continue;
-        const info = this.parseAlbumEvent(pl);
-        if (info) {
-          albumMap.set(`${info.pubkey}:${info.dTag}`, info);
-        }
+        upsertAlbumEvent(pl);
       }
-      this.moreByArtist.set(Array.from(albumMap.values()));
     } catch (err) {
       this.logger.warn('[SongDetail] Failed to search local artist albums:', err);
     }
@@ -1131,15 +1160,7 @@ export class SongDetailComponent implements OnInit, OnDestroy {
 
       if (pl.pubkey !== artistPubkey) return;
 
-      const info = this.parseAlbumEvent(pl);
-      if (info) {
-        const key = `${info.pubkey}:${info.dTag}`;
-        const existing = albumMap.get(key);
-        if (!existing || existing.event.created_at < info.event.created_at) {
-          albumMap.set(key, info);
-          this.moreByArtist.set(Array.from(albumMap.values()));
-        }
-      }
+      upsertAlbumEvent(pl);
     });
 
     // Close after collecting results
