@@ -112,7 +112,7 @@
             }
             <div class="channel-header-text">
               <span class="channel-header-name">{{ channel.metadata.name }}</span>
-              <span class="channel-header-members">{{ channel.messageCount }} messages</span>
+              <span class="channel-header-members">{{ chatParticipants().length }} members · {{ currentMessages().length }} messages</span>
             </div>
           </div>
           }
