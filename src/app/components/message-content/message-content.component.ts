@@ -247,10 +247,10 @@ interface EventMention {
       border-radius: 8px;
       margin: 4px 0;
       overflow: hidden;
+      --inline-video-max-height: 400px;
 
       app-inline-video-player {
         display: block;
-        max-height: 400px;
       }
     }
 

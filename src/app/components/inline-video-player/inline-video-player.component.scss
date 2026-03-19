@@ -7,10 +7,10 @@
 }
 
 .inline-video-container {
-  --inline-video-max-height: calc(100dvh - var(--toolbar-height, 64px) - 56px - env(safe-area-inset-top, 0px) - 16px);
+  --_default-video-max-height: calc(100dvh - var(--toolbar-height, 64px) - 56px - env(safe-area-inset-top, 0px) - 16px);
   position: relative;
   width: 100%;
-  max-height: var(--inline-video-max-height);
+  max-height: var(--inline-video-max-height, var(--_default-video-max-height));
   background: #000;
   overflow: hidden;
   border-radius: 12px;
@@ -24,7 +24,7 @@
   display: block;
   width: 100%;
   height: auto;
-  max-height: min(70vh, var(--inline-video-max-height));
+  max-height: min(70vh, var(--inline-video-max-height, var(--_default-video-max-height)));
   object-fit: contain;
 
   &.portrait-fit {
