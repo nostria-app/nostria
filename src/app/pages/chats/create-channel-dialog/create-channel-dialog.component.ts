@@ -1,15 +1,17 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { MatChipsModule } from '@angular/material/chips';
 
 export interface CreateChannelDialogData {
   name?: string;
   about?: string;
   picture?: string;
+  tags?: string[];
   isEdit?: boolean;
 }
 
@@ -17,6 +19,7 @@ export interface CreateChannelDialogResult {
   name: string;
   about: string;
   picture: string;
+  tags: string[];
 }
 
 @Component({
@@ -27,6 +30,7 @@ export interface CreateChannelDialogResult {
     MatInputModule,
     MatButtonModule,
     MatIconModule,
+    MatChipsModule,
     ReactiveFormsModule,
   ],
   template: `
@@ -76,6 +80,32 @@ export interface CreateChannelDialogResult {
         />
         <mat-icon matPrefix>image</mat-icon>
       </mat-form-field>
+
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Tags</mat-label>
+        <input
+          matInput
+          [formControl]="tagInputControl"
+          placeholder="Type a tag and press Enter"
+          (keydown.enter)="addTag($event)"
+          autocomplete="off"
+        />
+        <mat-icon matPrefix>label</mat-icon>
+        <mat-hint>Press Enter to add a tag</mat-hint>
+      </mat-form-field>
+
+      @if (tags().length > 0) {
+        <mat-chip-set class="tags-chip-set">
+          @for (tag of tags(); track tag) {
+            <mat-chip (removed)="removeTag(tag)">
+              {{ tag }}
+              <button matChipRemove>
+                <mat-icon>cancel</mat-icon>
+              </button>
+            </mat-chip>
+          }
+        </mat-chip-set>
+      }
     </mat-dialog-content>
     <mat-dialog-actions align="end">
       <button mat-button (click)="onCancel()">Cancel</button>
@@ -111,6 +141,10 @@ export interface CreateChannelDialogResult {
       color: var(--mat-sys-on-surface-variant);
     }
 
+    .tags-chip-set {
+      margin-bottom: 8px;
+    }
+
     @media (max-width: 500px) {
       mat-dialog-content {
         min-width: unset;
@@ -133,12 +167,30 @@ export class CreateChannelDialogComponent {
 
   pictureControl = new FormControl(this.data?.picture ?? '');
 
+  tagInputControl = new FormControl('');
+
+  tags = signal<string[]>(this.data?.tags ?? []);
+
+  addTag(event: Event): void {
+    event.preventDefault();
+    const value = this.tagInputControl.value?.trim().toLowerCase();
+    if (value && !this.tags().includes(value)) {
+      this.tags.update(tags => [...tags, value]);
+    }
+    this.tagInputControl.setValue('');
+  }
+
+  removeTag(tag: string): void {
+    this.tags.update(tags => tags.filter(t => t !== tag));
+  }
+
   onSubmit(): void {
     if (this.nameControl.valid) {
       const result: CreateChannelDialogResult = {
         name: this.nameControl.value!.trim(),
         about: this.aboutControl.value?.trim() ?? '',
         picture: this.pictureControl.value?.trim() ?? '',
+        tags: this.tags(),
       };
       this.dialogRef.close(result);
     }

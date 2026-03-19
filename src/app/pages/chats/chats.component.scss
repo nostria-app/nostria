@@ -468,6 +468,40 @@
   gap: 4px;
 }
 
+// Channel description bar - below the floating header
+.channel-description-bar {
+  position: absolute;
+  top: 88px;
+  left: 12px;
+  right: 12px;
+  z-index: 15;
+  padding: 6px 16px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  opacity: 0.85;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+  background-color: rgba(255, 255, 255, 0.75);
+  -webkit-backdrop-filter: blur(16px) saturate(1.6);
+  backdrop-filter: blur(16px) saturate(1.6);
+  box-shadow:
+    0px 1px 4px rgba(17, 17, 26, 0.05),
+    0px 2px 8px rgba(17, 17, 26, 0.04);
+}
+
+:host-context(.dark) .channel-description-bar {
+  background-color: rgba(0, 0, 0, 0.45);
+  box-shadow:
+    0px 1px 4px rgba(0, 0, 0, 0.2),
+    0px 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.channel-description-text {
+  color: var(--mat-sys-on-surface-variant);
+}
+
 // Message list
 .message-list {
   flex: 1;
@@ -477,6 +511,10 @@
   padding-top: 88px;
   padding-bottom: 64px;
   min-height: 0;
+
+  &.has-description {
+    padding-top: 120px;
+  }
 
   @media (max-width: 699px) {
     padding-left: 4px;

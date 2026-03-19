@@ -49,6 +49,8 @@ export interface ChatChannel {
   messageCount: number;
   /** Tags/categories from kind 41 "t" tags */
   tags: string[];
+  /** Event ID of the latest kind 41 metadata update (if any) */
+  metadataEventId?: string;
 }
 
 /**
@@ -379,7 +381,7 @@ export class ChatChannelsService implements NostriaService {
   /**
    * Create a new public chat channel (kind 40)
    */
-  async createChannel(metadata: ChannelMetadata): Promise<{ success: boolean; channelId?: string }> {
+  async createChannel(metadata: ChannelMetadata, tags: string[] = []): Promise<{ success: boolean; channelId?: string }> {
     const pubkey = this.accountState.pubkey();
     if (!pubkey) {
       this.logger.error('[ChatChannels] Cannot create channel - no account');
@@ -394,7 +396,9 @@ export class ChatChannelsService implements NostriaService {
         relays: metadata.relays ?? [],
       });
 
-      const event = this.nostrService.createEvent(CHANNEL_CREATE_KIND, content, []);
+      const eventTags: string[][] = tags.map(t => ['t', t]);
+
+      const event = this.nostrService.createEvent(CHANNEL_CREATE_KIND, content, eventTags);
       const result = await this.nostrService.signAndPublish(event);
 
       if (result.success && result.event) {
@@ -405,7 +409,7 @@ export class ChatChannelsService implements NostriaService {
           createdAt: result.event.created_at,
           updatedAt: result.event.created_at,
           messageCount: 0,
-          tags: [],
+          tags,
         };
 
         this.channelsMap.update(map => {
@@ -867,6 +871,7 @@ export class ChatChannelsService implements NostriaService {
         },
         updatedAt: event.created_at,
         tags,
+        metadataEventId: event.id,
       });
     } catch {
       this.logger.warn('[ChatChannels] Failed to parse channel metadata event:', event.id);

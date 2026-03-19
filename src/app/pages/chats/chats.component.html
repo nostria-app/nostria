@@ -134,13 +134,6 @@
             <mat-icon>more_vert</mat-icon>
           </button>
           <mat-menu #channelMenu="matMenu">
-            @if (selectedChannel(); as channel) {
-            <button mat-menu-item disabled>
-              <mat-icon>info</mat-icon>
-              <span>{{ channel.metadata.about || 'No description' }}</span>
-            </button>
-            <mat-divider></mat-divider>
-            }
             @if (isChannelCreator()) {
             <button mat-menu-item (click)="openEditChannel()">
               <mat-icon>edit</mat-icon>
@@ -151,12 +144,26 @@
               <mat-icon>content_copy</mat-icon>
               <span>Copy Data</span>
             </button>
+            @if (hasMetadataUpdate()) {
+            <button mat-menu-item (click)="copyChannelMetadata()">
+              <mat-icon>content_copy</mat-icon>
+              <span>Copy Data (Metadata)</span>
+            </button>
+            }
           </mat-menu>
         </div>
       </div>
 
+      @if (selectedChannel(); as channel) {
+        @if (channel.metadata.about) {
+        <div class="channel-description-bar">
+          <span class="channel-description-text">{{ channel.metadata.about }}</span>
+        </div>
+        }
+      }
+
       <!-- Messages area -->
-      <div class="message-list" #messagesWrapper>
+      <div class="message-list" [class.has-description]="selectedChannel()?.metadata?.about" #messagesWrapper>
         @if (isLoadingMessages()) {
         <div class="loading-messages">
           <mat-spinner diameter="24"></mat-spinner>

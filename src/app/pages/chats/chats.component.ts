@@ -198,6 +198,12 @@ export class ChatsComponent implements OnInit, OnDestroy {
     return !!channel && !!pubkey && channel.creator === pubkey;
   });
 
+  /** Whether selected channel has a kind 41 metadata update */
+  readonly hasMetadataUpdate = computed(() => {
+    const channel = this.selectedChannel();
+    return !!channel && channel.updatedAt > channel.createdAt;
+  });
+
   @ViewChild('messagesWrapper', { static: false })
   messagesWrapper?: ElementRef<HTMLDivElement>;
 
@@ -350,7 +356,7 @@ export class ChatsComponent implements OnInit, OnDestroy {
           about: result.about,
           picture: result.picture,
         };
-        const createResult = await this.chatChannels.createChannel(metadata);
+        const createResult = await this.chatChannels.createChannel(metadata, result.tags);
         if (createResult.success && createResult.channelId) {
           this.snackBar.open('Channel created', 'OK', { duration: 3000 });
           await this.selectChannelById(createResult.channelId);
@@ -373,6 +379,7 @@ export class ChatsComponent implements OnInit, OnDestroy {
         name: channel.metadata.name,
         about: channel.metadata.about,
         picture: channel.metadata.picture,
+        tags: channel.tags,
         isEdit: true,
       },
     });
@@ -384,7 +391,7 @@ export class ChatsComponent implements OnInit, OnDestroy {
           about: result.about,
           picture: result.picture,
         };
-        const success = await this.chatChannels.updateChannelMetadata(channel.id, metadata);
+        const success = await this.chatChannels.updateChannelMetadata(channel.id, metadata, result.tags);
         if (success) {
           this.snackBar.open('Channel updated', 'OK', { duration: 3000 });
         } else {
@@ -489,6 +496,39 @@ export class ChatsComponent implements OnInit, OnDestroy {
       this.snackBar.open('Channel data copied to clipboard', 'OK', { duration: 3000 });
     } catch {
       this.snackBar.open('Failed to copy channel data', 'OK', { duration: 3000 });
+    }
+  }
+
+  /** Copy channel metadata (kind 41) event data to clipboard */
+  async copyChannelMetadata(): Promise<void> {
+    const channel = this.selectedChannel();
+    if (!channel || channel.updatedAt <= channel.createdAt) return;
+
+    const eventData: Record<string, unknown> = {
+      kind: 41,
+      pubkey: channel.creator,
+      created_at: channel.updatedAt,
+      content: JSON.stringify({
+        name: channel.metadata.name,
+        about: channel.metadata.about,
+        picture: channel.metadata.picture,
+        relays: channel.metadata.relays ?? [],
+      }),
+      tags: [
+        ['e', channel.id, '', 'root'],
+        ...channel.tags.map(t => ['t', t]),
+      ],
+    };
+
+    if (channel.metadataEventId) {
+      eventData['id'] = channel.metadataEventId;
+    }
+
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(eventData, null, 2));
+      this.snackBar.open('Channel metadata copied to clipboard', 'OK', { duration: 3000 });
+    } catch {
+      this.snackBar.open('Failed to copy channel metadata', 'OK', { duration: 3000 });
     }
   }
 
