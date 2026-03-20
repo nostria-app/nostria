@@ -634,9 +634,8 @@
       border-radius: 18px 18px 4px 18px;
     }
 
-    .message-actions-column {
-      margin-right: 0;
-      margin-left: 0;
+    .message-bubble-row {
+      flex-direction: row-reverse;
     }
   }
 
@@ -652,8 +651,8 @@
   }
 
   // Show actions on hover
-  &:hover .message-actions-column {
-    opacity: 1;
+  &:hover .message-actions {
+    display: flex;
   }
 }
 
@@ -827,26 +826,38 @@
   white-space: nowrap;
 }
 
-// Actions column - appears on hover, on opposite side of bubble
-.message-actions-column {
-  flex-shrink: 0;
+// Bubble + actions row
+.message-bubble-row {
   display: flex;
   align-items: center;
-  opacity: 0;
-  transition: opacity 0.15s ease;
+  gap: 0;
+  min-width: 0;
+}
+
+.message-actions {
+  display: none;
+  flex-shrink: 0;
+  align-items: center;
 
   .more-button {
-    width: 28px;
-    height: 28px;
-    padding: 0 !important;
-    display: flex !important;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
+    opacity: 0.7;
+    transition: opacity 0.2s ease;
+    width: 32px;
+    height: 32px;
+    padding: 0 !important;
 
     mat-icon {
+      display: block;
       font-size: 18px;
       width: 18px;
       height: 18px;
+    }
+
+    &:hover {
+      opacity: 1;
     }
   }
 }

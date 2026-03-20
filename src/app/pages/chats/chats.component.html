@@ -202,49 +202,50 @@
             </div>
             }
 
-            <div class="message-bubble">
-              @if (message.replyTo) {
-              <div class="reply-context">
-                <mat-icon>reply</mat-icon>
-                <span class="reply-text">Reply</span>
+            <div class="message-bubble-row">
+              <div class="message-bubble">
+                @if (message.replyTo) {
+                <div class="reply-context">
+                  <mat-icon>reply</mat-icon>
+                  <span class="reply-text">Reply</span>
+                </div>
+                }
+                <div class="message-text">
+                  <app-message-content [content]="message.content" [tags]="message.event.tags"
+                    [authorPubkey]="message.pubkey"></app-message-content>
+                </div>
+                <span class="message-inline-meta">
+                  <span class="message-time">{{ message.createdAt | ago }}</span>
+                </span>
               </div>
-              }
-              <div class="message-text">
-                <app-message-content [content]="message.content" [tags]="message.event.tags"
-                  [authorPubkey]="message.pubkey"></app-message-content>
-              </div>
-              <span class="message-inline-meta">
-                <span class="message-time">{{ message.createdAt | ago }}</span>
-              </span>
-            </div>
-          </div>
 
-          <!-- Actions column (opposite side of bubble) -->
-          <div class="message-actions-column">
-            <button mat-icon-button class="more-button" [matMenuTriggerFor]="msgMenu" (click)="$event.stopPropagation()"
-              matTooltip="More options">
-              <mat-icon>more_horiz</mat-icon>
-            </button>
-            <mat-menu #msgMenu="matMenu">
-              <button mat-menu-item (click)="setReplyTo(message)">
-                <mat-icon>reply</mat-icon>
-                <span>Reply</span>
-              </button>
-              <button mat-menu-item (click)="copyMessageData(message)">
-                <mat-icon>content_copy</mat-icon>
-                <span>Copy Data</span>
-              </button>
-              @if (message.pubkey !== currentPubkey()) {
-              <button mat-menu-item (click)="hideMessage(message)">
-                <mat-icon>visibility_off</mat-icon>
-                <span>Hide Message</span>
-              </button>
-              <button mat-menu-item (click)="muteUser(message.pubkey)">
-                <mat-icon>block</mat-icon>
-                <span>Mute User</span>
-              </button>
-              }
-            </mat-menu>
+              <div class="message-actions">
+                <button mat-icon-button class="more-button" [matMenuTriggerFor]="msgMenu" (click)="$event.stopPropagation()"
+                  matTooltip="More options">
+                  <mat-icon>more_vert</mat-icon>
+                </button>
+                <mat-menu #msgMenu="matMenu">
+                  <button mat-menu-item (click)="setReplyTo(message)">
+                    <mat-icon>reply</mat-icon>
+                    <span>Reply</span>
+                  </button>
+                  <button mat-menu-item (click)="copyMessageData(message)">
+                    <mat-icon>content_copy</mat-icon>
+                    <span>Copy Data</span>
+                  </button>
+                  @if (message.pubkey !== currentPubkey()) {
+                  <button mat-menu-item (click)="hideMessage(message)">
+                    <mat-icon>visibility_off</mat-icon>
+                    <span>Hide Message</span>
+                  </button>
+                  <button mat-menu-item (click)="muteUser(message.pubkey)">
+                    <mat-icon>block</mat-icon>
+                    <span>Mute User</span>
+                  </button>
+                  }
+                </mat-menu>
+              </div>
+            </div>
           </div>
         </div>
         }
