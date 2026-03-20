@@ -597,6 +597,11 @@
   align-items: flex-end;
   padding: 0 12px;
   position: relative;
+  overflow: hidden;
+
+  @media (max-width: 699px) {
+    padding: 0 6px;
+  }
 
   // Spacing between groups vs continuation messages
   &.group-start {
@@ -623,6 +628,7 @@
       background-color: var(--mat-sys-primary-container);
       color: var(--mat-sys-on-primary-container);
       border-radius: 18px 18px 4px 18px;
+      text-align: right;
     }
 
     // For group continuations, use tighter rounding on the outgoing side
@@ -664,6 +670,10 @@
   align-items: flex-end;
   justify-content: center;
 
+  @media (max-width: 699px) {
+    width: 32px;
+  }
+
   app-user-profile {
     ::ng-deep {
       .user-profile-avatar {
@@ -689,9 +699,15 @@
   flex-direction: column;
   align-items: flex-start;
   min-width: 0;
-  max-width: calc(100% - 90px);
+  max-width: calc(100% - 56px);
   flex: 1;
   margin: 0 6px;
+  overflow: hidden;
+
+  @media (max-width: 699px) {
+    max-width: calc(100% - 48px);
+    margin: 0 4px;
+  }
 }
 
 // Sender name above bubble
@@ -704,11 +720,14 @@
 
 // Bubble
 .message-bubble {
-  max-width: 100%;
+  max-width: min(600px, 100%);
   padding: 8px 14px;
   border-radius: 18px 18px 18px 4px;
   word-break: break-word;
+  overflow-wrap: break-word;
   position: relative;
+  overflow: hidden;
+  min-width: 0;
 
   // Glass effect - light mode
   background-color: rgba(255, 255, 255, 0.7);
@@ -745,6 +764,9 @@
   border-radius: 4px;
   cursor: pointer;
   transition: background-color 0.15s ease;
+  min-width: 0;
+  overflow: hidden;
+  text-align: left;
 
   &:hover {
     background-color: rgba(0, 0, 0, 0.1);
@@ -876,6 +898,7 @@
   align-items: center;
   gap: 0;
   min-width: 0;
+  max-width: 100%;
 }
 
 .message-actions {
