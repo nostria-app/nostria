@@ -1839,6 +1839,10 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     const currentText = this.newMessageText();
     const separator = currentText && !currentText.endsWith('\n') && currentText.length > 0 ? '\n' : '';
     this.newMessageText.set(currentText + separator + url);
+
+    // Add preview (GIFs are images)
+    this.mediaPreviews.update(previews => [...previews, { url, type: 'image' as const }]);
+
     this.messageInput?.nativeElement?.focus();
   }
 
@@ -1858,6 +1862,36 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
         this.insertGifUrl(result.result);
       }
     });
+  }
+
+  /**
+   * Open music chooser dialog to share music tracks or albums
+   */
+  async openMusicChooser(): Promise<void> {
+    const { MusicChooserDialogComponent } = await import('../../components/music-chooser-dialog/music-chooser-dialog.component');
+    type MusicChooserResult = import('../../components/music-chooser-dialog/music-chooser-dialog.component').MusicChooserResult;
+
+    const dialogRef = this.customDialog.open<typeof MusicChooserDialogComponent.prototype, MusicChooserResult>(MusicChooserDialogComponent, {
+      title: 'Choose Music',
+      width: '500px',
+      maxWidth: '95vw',
+    });
+
+    dialogRef.afterClosed$.subscribe(({ result }) => {
+      if (result?.naddr) {
+        this.insertMusicReference(result.naddr);
+      }
+    });
+  }
+
+  /**
+   * Insert a music reference (naddr) into the message text
+   */
+  private insertMusicReference(naddr: string): void {
+    const currentText = this.newMessageText();
+    const separator = currentText && !currentText.endsWith('\n') && currentText.length > 0 ? '\n' : '';
+    this.newMessageText.set(currentText + separator + 'nostr:' + naddr);
+    this.messageInput?.nativeElement?.focus();
   }
 
   /**

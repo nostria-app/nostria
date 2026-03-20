@@ -726,6 +726,10 @@
               <mat-icon>gif_box</mat-icon>
               <span>GIFs</span>
             </button>
+            <button mat-menu-item (click)="openMusicChooser()">
+              <mat-icon>music_note</mat-icon>
+              <span>Music</span>
+            </button>
             @if (!isGroupChat()) {
             <button mat-menu-item (click)="openSendMoneyDialog()">
               <mat-icon>bolt</mat-icon>

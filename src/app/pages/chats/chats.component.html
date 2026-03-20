@@ -308,7 +308,7 @@
             class="hidden-file-input" aria-label="Upload media files" />
 
           <textarea #messageInput class="message-input" [ngModel]="newMessageText()"
-            (ngModelChange)="newMessageText.set($event)" placeholder="Message this channel"
+            (ngModelChange)="newMessageText.set($event)" placeholder="Message this public chat"
             [disabled]="isSending() || isUploading()" (keydown)="onMessageKeydown($event)" rows="1"></textarea>
           <button mat-icon-button type="button" class="send-button"
             [disabled]="!newMessageText().trim() || isSending() || isUploading()" (click)="sendMessage()"

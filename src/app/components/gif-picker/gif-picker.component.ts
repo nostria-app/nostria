@@ -425,10 +425,23 @@ export class GifPickerComponent implements OnDestroy, AfterViewInit {
     return entries;
   });
 
+  private normalizeSearchTerm(value: string): string {
+    return value
+      .toLowerCase()
+      .replace(/[-_]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
   filteredGifs = computed(() => {
-    const query = this.searchQuery().toLowerCase().trim();
+    const rawQuery = this.searchQuery();
+    const query = this.normalizeSearchTerm(rawQuery);
     if (!query) return [];
-    return this.allGifs().filter(g => g.shortcode.toLowerCase().includes(query));
+
+    return this.allGifs().filter((gif) => {
+      const shortcode = this.normalizeSearchTerm(gif.shortcode);
+      return shortcode.includes(query);
+    });
   });
 
   constructor() {

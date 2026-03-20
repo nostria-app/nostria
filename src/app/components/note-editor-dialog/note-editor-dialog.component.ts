@@ -2235,6 +2235,19 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     const start = isFocused ? (textarea.selectionStart ?? currentContent.length) : (this.lastCursorPosition ?? currentContent.length);
     const needsNewlineBefore = start > 0 && currentContent[start - 1] !== '\n';
     this.insertEmoji((needsNewlineBefore ? '\n' : '') + url + '\n');
+
+    // Add preview (GIFs are images)
+    const currentMetadata = this.mediaMetadata();
+    const alreadyAdded = currentMetadata.some(m => m.url === url);
+    if (!alreadyAdded) {
+      this.mediaMetadata.set([
+        ...currentMetadata,
+        {
+          url,
+          mimeType: 'image/gif',
+        },
+      ]);
+    }
   }
 
   /**

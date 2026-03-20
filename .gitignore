@@ -1,5 +1,7 @@
 # See https://docs.github.com/get-started/getting-started-with-git/ignoring-files for more about ignoring files.
 
+/.claude/settings.local.json
+build_output.txt
 beta-social-preview-check.ps1
 .codenomad
 null

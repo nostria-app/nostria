@@ -20,7 +20,6 @@ import { MatMenuModule } from '@angular/material/menu';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { MatDialog } from '@angular/material/dialog';
 import { MatDividerModule } from '@angular/material/divider';
 import { Router, ActivatedRoute, RouterModule } from '@angular/router';
 import { LayoutService } from '../../services/layout.service';
@@ -83,7 +82,6 @@ export class ChatsComponent implements OnInit, OnDestroy {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly snackBar = inject(MatSnackBar);
-  private readonly dialog = inject(MatDialog);
   private readonly customDialog = inject(CustomDialogService);
   readonly mediaService = inject(MediaService);
 
@@ -414,12 +412,13 @@ export class ChatsComponent implements OnInit, OnDestroy {
 
   /** Open create channel dialog */
   openCreateChannel(): void {
-    const dialogRef = this.dialog.open(CreateChannelDialogComponent, {
+    const dialogRef = this.customDialog.open<CreateChannelDialogComponent, CreateChannelDialogResult>(CreateChannelDialogComponent, {
+      title: 'Create Channel',
       width: '480px',
       maxWidth: '95vw',
     });
 
-    dialogRef.afterClosed().subscribe(async (result: CreateChannelDialogResult | undefined) => {
+    dialogRef.afterClosed$.subscribe(async ({ result }) => {
       if (result) {
         const metadata: ChannelMetadata = {
           name: result.name,
@@ -442,7 +441,8 @@ export class ChatsComponent implements OnInit, OnDestroy {
     const channel = this.selectedChannel();
     if (!channel || !this.isChannelCreator()) return;
 
-    const dialogRef = this.dialog.open(CreateChannelDialogComponent, {
+    const dialogRef = this.customDialog.open<CreateChannelDialogComponent, CreateChannelDialogResult>(CreateChannelDialogComponent, {
+      title: 'Edit Channel',
       width: '480px',
       maxWidth: '95vw',
       data: {
@@ -454,7 +454,7 @@ export class ChatsComponent implements OnInit, OnDestroy {
       },
     });
 
-    dialogRef.afterClosed().subscribe(async (result: CreateChannelDialogResult | undefined) => {
+    dialogRef.afterClosed$.subscribe(async ({ result }) => {
       if (result) {
         const metadata: ChannelMetadata = {
           name: result.name,
@@ -790,6 +790,10 @@ export class ChatsComponent implements OnInit, OnDestroy {
     const currentText = this.newMessageText();
     const separator = currentText && !currentText.endsWith('\n') && currentText.length > 0 ? '\n' : '';
     this.newMessageText.set(currentText + separator + url);
+
+    // Add preview (GIFs are images)
+    this.mediaPreviews.update(previews => [...previews, { url, type: 'image' as const }]);
+
     this.messageInput?.nativeElement?.focus();
   }
 
