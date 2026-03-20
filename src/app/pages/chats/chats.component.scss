@@ -591,17 +591,33 @@
   }
 }
 
-// Message bubbles
-.message-bubble-container {
+// Message group container - horizontal row: [avatar] [bubble] [actions]
+.message-group-container {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  margin-bottom: 4px;
-  padding: 4px 12px;
+  align-items: flex-end;
+  padding: 0 12px;
   position: relative;
 
+  // Spacing between groups vs continuation messages
+  &.group-start {
+    margin-top: 16px;
+
+    &:first-child {
+      margin-top: 0;
+    }
+  }
+
+  &.group-continuation {
+    margin-top: 2px;
+  }
+
+  // Outgoing messages: reverse the row order (bubble on right, avatar on far right)
   &.outgoing {
-    align-items: flex-end;
+    flex-direction: row-reverse;
+
+    .message-content-column {
+      align-items: flex-end;
+    }
 
     .message-bubble {
       background-color: var(--mat-sys-primary-container);
@@ -609,32 +625,87 @@
       border-radius: 18px 18px 4px 18px;
     }
 
-    .message-actions {
-      left: auto;
-      right: 100%;
+    // For group continuations, use tighter rounding on the outgoing side
+    &.group-continuation .message-bubble {
+      border-radius: 18px 4px 4px 18px;
+    }
+
+    &.group-start .message-bubble {
+      border-radius: 18px 18px 4px 18px;
+    }
+
+    .message-actions-column {
+      margin-right: 0;
+      margin-left: 0;
     }
   }
 
-  &:hover .message-actions {
+  // Incoming group continuation: tighter top-left radius
+  &:not(.outgoing) {
+    &.group-continuation .message-bubble {
+      border-radius: 4px 18px 18px 4px;
+    }
+
+    &.group-start .message-bubble {
+      border-radius: 18px 18px 18px 4px;
+    }
+  }
+
+  // Show actions on hover
+  &:hover .message-actions-column {
     opacity: 1;
   }
 }
 
-.message-sender-row {
+// Avatar column
+.message-avatar-column {
+  flex-shrink: 0;
+  width: 40px;
   display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-bottom: 2px;
-  padding-left: 4px;
+  align-items: flex-end;
+  justify-content: center;
+
+  app-user-profile {
+    ::ng-deep {
+      .user-profile-avatar {
+        width: 36px !important;
+        height: 36px !important;
+      }
+
+      img {
+        width: 36px !important;
+        height: 36px !important;
+      }
+
+      .default-user-avatar {
+        font-size: 36px !important;
+      }
+    }
+  }
 }
 
+// Content column (name + bubble)
+.message-content-column {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+  max-width: calc(100% - 90px);
+  flex: 1;
+  margin: 0 6px;
+}
+
+// Sender name above bubble
 .message-sender-name {
   font-size: 0.8rem;
   opacity: 0.8;
+  margin-bottom: 2px;
+  padding-left: 8px;
 }
 
+// Bubble
 .message-bubble {
-  max-width: 75%;
+  max-width: 100%;
   padding: 8px 14px;
   border-radius: 18px 18px 18px 4px;
   word-break: break-word;
@@ -660,7 +731,7 @@
     0px 2px 8px rgba(0, 0, 0, 0.15);
 }
 
-:host-context(.dark) .message-bubble-container.outgoing .message-bubble {
+:host-context(.dark) .message-group-container.outgoing .message-bubble {
   background-color: var(--mat-sys-primary-container);
 }
 
@@ -756,11 +827,11 @@
   white-space: nowrap;
 }
 
-.message-actions {
-  position: absolute;
-  top: 50%;
-  left: 100%;
-  transform: translateY(-50%);
+// Actions column - appears on hover, on opposite side of bubble
+.message-actions-column {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
   opacity: 0;
   transition: opacity 0.15s ease;
 

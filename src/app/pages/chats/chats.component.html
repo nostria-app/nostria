@@ -180,45 +180,59 @@
         </div>
         }
 
-        @for (message of currentMessages(); track message.id) {
-        <div class="message-bubble-container" [class.outgoing]="message.pubkey === currentPubkey()">
-          <div class="message-sender-row">
-            @if (message.pubkey !== currentPubkey()) {
-            <app-user-profile [pubkey]="message.pubkey" view="icon" #msgProfile>
-              <span class="message-sender-name">
-                @if (msgProfile.profile()) {
-                {{ msgProfile.profile().data?.display_name || msgProfile.profile().data?.name || 'Unknown' }}
-                } @else {
-                {{ message.pubkey | slice:0:8 }}...
-                }
+        @for (message of currentMessages(); track message.id; let i = $index) {
+        <div class="message-group-container"
+          [class.outgoing]="message.pubkey === currentPubkey()"
+          [class.group-start]="isGroupStart(i)"
+          [class.group-continuation]="!isGroupStart(i)">
+
+          <!-- Avatar column (visible only on group start) -->
+          <div class="message-avatar-column">
+            @if (isGroupStart(i)) {
+            <app-user-profile [pubkey]="message.pubkey" view="icon" />
+            }
+          </div>
+
+          <!-- Message content column -->
+          <div class="message-content-column">
+            <!-- Sender name (only on group start, only for other users) -->
+            @if (isGroupStart(i) && message.pubkey !== currentPubkey()) {
+            <div class="message-sender-name">
+              <app-user-profile [pubkey]="message.pubkey" view="name" [disableLink]="true" />
+            </div>
+            }
+
+            <div class="message-bubble">
+              @if (message.replyTo) {
+              <div class="reply-context">
+                <mat-icon>reply</mat-icon>
+                <span class="reply-text">Reply</span>
+              </div>
+              }
+              <div class="message-text">
+                <app-message-content [content]="message.content" [tags]="message.event.tags"
+                  [authorPubkey]="message.pubkey"></app-message-content>
+              </div>
+              <span class="message-inline-meta">
+                <span class="message-time">{{ message.createdAt | ago }}</span>
               </span>
-            </app-user-profile>
-            }
-          </div>
-          <div class="message-bubble" [class.outgoing]="message.pubkey === currentPubkey()">
-            @if (message.replyTo) {
-            <div class="reply-context">
-              <mat-icon>reply</mat-icon>
-              <span class="reply-text">Reply</span>
             </div>
-            }
-            <div class="message-text">
-              <app-message-content [content]="message.content" [tags]="message.event.tags"
-                [authorPubkey]="message.pubkey"></app-message-content>
-            </div>
-            <span class="message-inline-meta">
-              <span class="message-time">{{ message.createdAt | ago }}</span>
-            </span>
           </div>
-          <div class="message-actions">
+
+          <!-- Actions column (opposite side of bubble) -->
+          <div class="message-actions-column">
             <button mat-icon-button class="more-button" [matMenuTriggerFor]="msgMenu" (click)="$event.stopPropagation()"
               matTooltip="More options">
-              <mat-icon>more_vert</mat-icon>
+              <mat-icon>more_horiz</mat-icon>
             </button>
             <mat-menu #msgMenu="matMenu">
               <button mat-menu-item (click)="setReplyTo(message)">
                 <mat-icon>reply</mat-icon>
                 <span>Reply</span>
+              </button>
+              <button mat-menu-item (click)="copyMessageData(message)">
+                <mat-icon>content_copy</mat-icon>
+                <span>Copy Data</span>
               </button>
               @if (message.pubkey !== currentPubkey()) {
               <button mat-menu-item (click)="hideMessage(message)">

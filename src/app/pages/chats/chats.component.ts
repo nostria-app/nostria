@@ -11,7 +11,7 @@ import {
   untracked,
   ChangeDetectionStrategy,
 } from '@angular/core';
-import { SlicePipe, DatePipe } from '@angular/common';
+import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -65,7 +65,6 @@ import {
     UserProfileComponent,
     MessageContentComponent,
     AgoPipe,
-    SlicePipe,
     DatePipe,
     ListFilterMenuComponent,
   ],
@@ -540,6 +539,23 @@ export class ChatsComponent implements OnInit, OnDestroy {
   /** Check if a user is muted */
   isUserMuted(pubkey: string): boolean {
     return this.chatChannels.isUserMuted(pubkey);
+  }
+
+  /** Determine if a message starts a new visual group (different author from previous) */
+  isGroupStart(index: number): boolean {
+    if (index === 0) return true;
+    const messages = this.currentMessages();
+    return messages[index].pubkey !== messages[index - 1].pubkey;
+  }
+
+  /** Copy a message's raw event data to clipboard */
+  async copyMessageData(message: ChannelMessage): Promise<void> {
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(message.event, null, 2));
+      this.snackBar.open('Message data copied to clipboard', 'OK', { duration: 3000 });
+    } catch {
+      this.snackBar.open('Failed to copy message data', 'OK', { duration: 3000 });
+    }
   }
 
   /** Scroll to bottom */
