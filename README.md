@@ -204,52 +204,6 @@ Make browser config 1024x1366 with 2x pixel density.
 
 https://vscode.dev/redirect/mcp/install?name=io.github.ChromeDevTools%2Fchrome-devtools-mcp&config=%7B%22command%22%3A%22npx%22%2C%22args%22%3A%5B%22-y%22%2C%22chrome-devtools-mcp%22%5D%2C%22env%22%3A%7B%7D%7D
 
-## Token for Loop
-
-https://github.com/settings/personal-access-tokens
-
-Specific to the repo. Issues (read/write).
-
-setx GITHUB_TOKEN "ghp_yourTokenHere"
-
-echo %GITHUB_TOKEN%
-
-## Loop
-
-```
-# Process all tasks labeled "ready" in the GitHub repository, and create a branch and PR for each task.
-ralphy --opencode --model github-copilot/claude-opus-4.6 --github nostria-app/nostria --github-label "ready"
-
-
-ralphy --opencode --model opencode/glm-4.7-free "task"
-
-ralphy --github owner/repo
-ralphy --github owner/repo --github-label "ready"
-
-ralphy --parallel                  # 3 agents default
-ralphy --parallel --max-parallel 5 # 5 agents
-
-ralphy --branch-per-task                # branch per task
-ralphy --branch-per-task --create-pr    # + create PRs
-ralphy --branch-per-task --draft-pr     # + draft PRs
-ralphy --base-branch main               # branch from main
-
-ralphy "test the login flow" --browser    # force enable
-ralphy "add checkout" --no-browser        # force disable
-ralphy "build feature"                    # auto-detect (default)
-
-When enabled, the AI gets browser commands:
-
-agent-browser open <url> - navigate to URL
-agent-browser snapshot - get element refs (@e1, @e2)
-agent-browser click @e1 - click element
-agent-browser type @e1 "text" - type into input
-agent-browser screenshot <file> - capture screenshot
-
-
-ralphy --copilot --model "claude-opus-4.5" --prd PRD.md -- --allow-all-tools --allow-all-urls --stream on
-```
-
 ## License
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
