@@ -117,10 +117,10 @@ export class ChatChannelsService implements NostriaService {
   /** Messages keyed by channel ID */
   private readonly messagesMap = signal<Map<string, ChannelMessage[]>>(new Map());
 
-  /** IDs of hidden messages (kind 43 from current user) */
+  /** IDs of hidden messages (kind 43 from current user + channel owners) */
   private readonly hiddenMessageIds = signal<Set<string>>(new Set());
 
-  /** Pubkeys of muted users (kind 44 from current user) */
+  /** Pubkeys of muted users (kind 44 from current user + channel owners) */
   private readonly mutedUserPubkeys = signal<Set<string>>(new Set());
 
   /** Channel IDs where the current user has sent messages (kind 42) */
@@ -492,24 +492,86 @@ export class ChatChannelsService implements NostriaService {
   }
 
   /**
-   * Load messages for a specific channel
+   * Load cached messages for a specific channel from IndexedDB.
+   * Returns the loaded messages and the latest cached timestamp (or 0 if none).
+   */
+  private async loadChannelMessagesFromCache(channelId: string): Promise<{ messages: ChannelMessage[]; latestTimestamp: number }> {
+    try {
+      const cachedEvents = await this.database.getEventsByKindAndEventTag(CHANNEL_MESSAGE_KIND, channelId);
+      const messages: ChannelMessage[] = [];
+      let latestTimestamp = 0;
+
+      for (const event of cachedEvents) {
+        const msg = this.parseChannelMessage(event, channelId);
+        if (msg) {
+          messages.push(msg);
+          if (msg.createdAt > latestTimestamp) {
+            latestTimestamp = msg.createdAt;
+          }
+        }
+      }
+
+      this.logger.info('[ChatChannels] Loaded cached messages for channel:', channelId, messages.length);
+      return { messages, latestTimestamp };
+    } catch (error) {
+      this.logger.error('[ChatChannels] Failed to load cached messages for channel:', channelId, error);
+      return { messages: [], latestTimestamp: 0 };
+    }
+  }
+
+  /**
+   * Load messages for a specific channel.
+   * First loads cached messages from IndexedDB for instant display,
+   * then fetches newer messages from relays using a `since` filter
+   * (last cached timestamp minus 10 minutes to handle clock drift).
    */
   async loadChannelMessages(channelId: string, limit = 50): Promise<void> {
     this.isLoadingMessages.set(true);
 
     try {
+      // Step 1: Load cached messages from IndexedDB for instant display
+      const { messages: cachedMessages, latestTimestamp } = await this.loadChannelMessagesFromCache(channelId);
+
+      // Display cached messages immediately
+      if (cachedMessages.length > 0) {
+        this.messagesMap.update(map => {
+          const updated = new Map(map);
+          updated.set(channelId, cachedMessages);
+          return updated;
+        });
+      }
+
+      // Step 2: Build relay filter with `since` based on latest cached timestamp
+      const filter: Filter = { kinds: [CHANNEL_MESSAGE_KIND], '#e': [channelId], limit };
+      if (latestTimestamp > 0) {
+        // Subtract 10 minutes (600 seconds) to handle clock drift between devices/relays
+        filter.since = latestTimestamp - 600;
+      }
+
       const events = await this.accountRelay.getMany<Event>(
-        { kinds: [CHANNEL_MESSAGE_KIND], '#e': [channelId], limit },
+        filter,
         { timeout: 10000 }
       );
 
-      const messages: ChannelMessage[] = [];
+      // Step 3: Cache fetched messages to IndexedDB
+      if (events.length > 0) {
+        this.database.saveEvents(events as (Event & { dTag?: string })[]).catch(err =>
+          this.logger.error('[ChatChannels] Failed to cache channel messages', err)
+        );
+      }
+
+      // Step 4: Merge relay messages with cached messages (dedup by event ID)
+      const messageMap = new Map<string, ChannelMessage>();
+      for (const msg of cachedMessages) {
+        messageMap.set(msg.id, msg);
+      }
       for (const event of events) {
         const msg = this.parseChannelMessage(event, channelId);
         if (msg) {
-          messages.push(msg);
+          messageMap.set(msg.id, msg);
         }
       }
+      const messages = Array.from(messageMap.values());
 
       this.messagesMap.update(map => {
         const updated = new Map(map);
@@ -551,6 +613,11 @@ export class ChatChannelsService implements NostriaService {
       (event: Event) => {
         const msg = this.parseChannelMessage(event, channelId);
         if (msg) {
+          // Cache live message to IndexedDB
+          this.database.saveEvents([event as Event & { dTag?: string }]).catch(err =>
+            this.logger.error('[ChatChannels] Failed to cache live message', err)
+          );
+
           this.messagesMap.update(map => {
             const updated = new Map(map);
             const existing = updated.get(channelId) ?? [];
@@ -1012,18 +1079,31 @@ export class ChatChannelsService implements NostriaService {
   }
 
   /**
-   * Load user's moderation events from local database cache
+   * Get the set of unique channel owner pubkeys from all known channels.
+   */
+  private getChannelOwnerPubkeys(): Set<string> {
+    const owners = new Set<string>();
+    for (const channel of this.channelsMap().values()) {
+      owners.add(channel.creator);
+    }
+    return owners;
+  }
+
+  /**
+   * Load user's and channel owners' moderation events from local database cache
    */
   private async loadModerationDataFromCache(): Promise<void> {
     const pubkey = this.accountState.pubkey();
     if (!pubkey) return;
 
+    const ownerPubkeys = this.getChannelOwnerPubkeys();
+
     try {
-      // Load cached hidden messages
+      // Load cached hidden messages from current user + channel owners
       const hideEvents = await this.database.getEventsByKind(CHANNEL_HIDE_MESSAGE_KIND);
       const hiddenIds = new Set<string>();
       for (const event of hideEvents) {
-        if (event.pubkey !== pubkey) continue;
+        if (event.pubkey !== pubkey && !ownerPubkeys.has(event.pubkey)) continue;
         const eTag = event.tags.find(t => t[0] === 'e');
         if (eTag?.[1]) {
           hiddenIds.add(eTag[1]);
@@ -1033,11 +1113,11 @@ export class ChatChannelsService implements NostriaService {
         this.hiddenMessageIds.set(hiddenIds);
       }
 
-      // Load cached muted users
+      // Load cached muted users from current user + channel owners
       const muteEvents = await this.database.getEventsByKind(CHANNEL_MUTE_USER_KIND);
       const mutedPubkeys = new Set<string>();
       for (const event of muteEvents) {
-        if (event.pubkey !== pubkey) continue;
+        if (event.pubkey !== pubkey && !ownerPubkeys.has(event.pubkey)) continue;
         const pTag = event.tags.find(t => t[0] === 'p');
         if (pTag?.[1]) {
           mutedPubkeys.add(pTag[1]);
@@ -1057,16 +1137,20 @@ export class ChatChannelsService implements NostriaService {
   }
 
   /**
-   * Load user's moderation events (hide messages + mute users)
+   * Load moderation events (hide messages + mute users) from current user AND channel owners.
    */
   private async loadModerationData(): Promise<void> {
     const pubkey = this.accountState.pubkey();
     if (!pubkey) return;
 
+    // Collect all unique author pubkeys: current user + all channel owners
+    const ownerPubkeys = this.getChannelOwnerPubkeys();
+    const authors = [pubkey, ...Array.from(ownerPubkeys).filter(pk => pk !== pubkey)];
+
     try {
-      // Load hidden messages from relays
+      // Load hidden messages from relays (current user + channel owners)
       const hideEvents = await this.accountRelay.getMany<Event>(
-        { kinds: [CHANNEL_HIDE_MESSAGE_KIND], authors: [pubkey], limit: 500 },
+        { kinds: [CHANNEL_HIDE_MESSAGE_KIND], authors, limit: 500 },
         { timeout: 8000 }
       );
 
@@ -1086,9 +1170,9 @@ export class ChatChannelsService implements NostriaService {
       }
       this.hiddenMessageIds.set(hiddenIds);
 
-      // Load muted users from relays
+      // Load muted users from relays (current user + channel owners)
       const muteEvents = await this.accountRelay.getMany<Event>(
-        { kinds: [CHANNEL_MUTE_USER_KIND], authors: [pubkey], limit: 500 },
+        { kinds: [CHANNEL_MUTE_USER_KIND], authors, limit: 500 },
         { timeout: 8000 }
       );
 
@@ -1111,6 +1195,7 @@ export class ChatChannelsService implements NostriaService {
       this.logger.info('[ChatChannels] Loaded moderation data:', {
         hiddenMessages: hiddenIds.size,
         mutedUsers: mutedPubkeys.size,
+        authors: authors.length,
       });
     } catch (error) {
       this.logger.error('[ChatChannels] Failed to load moderation data', error);
