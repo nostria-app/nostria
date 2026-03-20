@@ -46,6 +46,86 @@
       </div>
       } @else {
       <mat-nav-list class="channel-list">
+        @if (participatedChannels().length > 0 && !channelSearchQuery()) {
+        <!-- Participated channels section -->
+        @for (channel of participatedChannels(); track channel.id) {
+        <a mat-list-item class="channel-item" [class.active]="selectedChannel()?.id === channel.id"
+          (click)="selectChannel(channel)">
+          <div class="channel-item-content">
+            <div class="channel-avatar">
+              @if (channel.metadata.picture) {
+              <img [src]="channel.metadata.picture" [alt]="channel.metadata.name" class="channel-avatar-img" />
+              } @else {
+              <div class="channel-avatar-placeholder">
+                <span>{{ getChannelInitials(channel) }}</span>
+              </div>
+              }
+            </div>
+            <div class="channel-info">
+              <div class="channel-name-row">
+                <span class="channel-name">{{ channel.metadata.name }}</span>
+                @if (channel.updatedAt) {
+                <span class="channel-time">{{ channel.updatedAt | ago }}</span>
+                }
+              </div>
+              <div class="channel-preview">
+                @if (channel.metadata.about) {
+                <span class="channel-about">{{ channel.metadata.about }}</span>
+                } @else {
+                <span class="channel-about empty">No description</span>
+                }
+              </div>
+            </div>
+          </div>
+        </a>
+        }
+
+        <!-- Show more / Show less button -->
+        @if (discoveredChannels().length > 0) {
+        <div class="show-more-divider">
+          <button mat-button class="show-more-button" (click)="toggleShowMore()">
+            <mat-icon>{{ showMoreChannels() ? 'expand_less' : 'expand_more' }}</mat-icon>
+            {{ showMoreChannels() ? 'Show less' : 'Show more (' + discoveredChannels().length + ')' }}
+          </button>
+        </div>
+        }
+
+        <!-- Discovered channels section (expandable) -->
+        @if (showMoreChannels()) {
+        @for (channel of discoveredChannels(); track channel.id) {
+        <a mat-list-item class="channel-item" [class.active]="selectedChannel()?.id === channel.id"
+          (click)="selectChannel(channel)">
+          <div class="channel-item-content">
+            <div class="channel-avatar">
+              @if (channel.metadata.picture) {
+              <img [src]="channel.metadata.picture" [alt]="channel.metadata.name" class="channel-avatar-img" />
+              } @else {
+              <div class="channel-avatar-placeholder">
+                <span>{{ getChannelInitials(channel) }}</span>
+              </div>
+              }
+            </div>
+            <div class="channel-info">
+              <div class="channel-name-row">
+                <span class="channel-name">{{ channel.metadata.name }}</span>
+                @if (channel.updatedAt) {
+                <span class="channel-time">{{ channel.updatedAt | ago }}</span>
+                }
+              </div>
+              <div class="channel-preview">
+                @if (channel.metadata.about) {
+                <span class="channel-about">{{ channel.metadata.about }}</span>
+                } @else {
+                <span class="channel-about empty">No description</span>
+                }
+              </div>
+            </div>
+          </div>
+        </a>
+        }
+        }
+        } @else {
+        <!-- No participated channels or search active: show all channels flat -->
         @for (channel of channels(); track channel.id) {
         <a mat-list-item class="channel-item" [class.active]="selectedChannel()?.id === channel.id"
           (click)="selectChannel(channel)">
@@ -76,6 +156,7 @@
             </div>
           </div>
         </a>
+        }
         }
       </mat-nav-list>
       }
@@ -122,9 +203,6 @@
           }
         </div>
         <div class="channel-header-actions">
-          <button mat-icon-button (click)="toggleChatDetails()" matTooltip="Chat details">
-            <mat-icon>info_outline</mat-icon>
-          </button>
           @if (isChannelCreator()) {
           <button mat-icon-button (click)="openEditChannel()" matTooltip="Edit channel">
             <mat-icon>edit</mat-icon>
@@ -134,6 +212,10 @@
             <mat-icon>more_vert</mat-icon>
           </button>
           <mat-menu #channelMenu="matMenu">
+            <button mat-menu-item (click)="toggleChatDetails()">
+              <mat-icon>info_outline</mat-icon>
+              <span>Chat Details</span>
+            </button>
             <button mat-menu-item (click)="copyChannelLink()">
               <mat-icon>link</mat-icon>
               <span>Copy Link</span>
@@ -420,6 +502,18 @@
           <div class="chat-details-stat-text">
             <span class="chat-details-stat-value">{{ channel.createdAt * 1000 | date:'MMMM d, y, HH:mm:ss' }}</span>
             <span class="chat-details-stat-label">Chat Started</span>
+          </div>
+        </div>
+
+        <div class="chat-details-section">
+          <div class="chat-details-section-header">
+            <mat-icon>shield</mat-icon>
+            <span>Owner</span>
+          </div>
+          <div class="chat-details-members-list">
+            <div class="chat-details-member">
+              <app-user-profile [pubkey]="channel.creator" view="list" />
+            </div>
           </div>
         </div>
 

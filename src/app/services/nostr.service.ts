@@ -1221,7 +1221,7 @@ export class NostrService implements NostriaService {
     return signedEvent as Event;
   }
 
-  async signAndPublish(event: UnsignedEvent): Promise<{ success: boolean; event?: Event; error?: string }> {
+  async signAndPublish(event: UnsignedEvent, relayUrls?: string[]): Promise<{ success: boolean; event?: Event; error?: string }> {
     if (!event) {
       throw new Error('Event parameter must not be null or undefined.');
     }
@@ -1238,8 +1238,8 @@ export class NostrService implements NostriaService {
       // IMPORTANT: ALL events must go to ALL configured relays to prevent data fragmentation
       // For replies, reactions, and reposts, we also publish to mentioned users' relays
       const options = signedEvent.kind === kinds.Contacts
-        ? { notifyFollowed: true, useOptimizedRelays: false } // For follows, notify all
-        : { notifyMentioned: true, useOptimizedRelays: false }; // For all other events, notify mentioned users
+        ? { notifyFollowed: true, useOptimizedRelays: false, relayUrls } // For follows, notify all
+        : { notifyMentioned: true, useOptimizedRelays: false, relayUrls }; // For all other events, notify mentioned users
 
       const result = await this.publishService.publish(signedEvent, options);
 

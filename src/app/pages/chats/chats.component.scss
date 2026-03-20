@@ -280,6 +280,26 @@
   }
 }
 
+// Show more divider and button
+.show-more-divider {
+  display: flex;
+  justify-content: center;
+  padding: 4px 16px;
+}
+
+.show-more-button {
+  font-size: 0.8rem;
+  opacity: 0.7;
+  border-radius: 16px;
+  width: 100%;
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+  }
+}
+
 .channel-tags {
   display: flex;
   gap: 4px;

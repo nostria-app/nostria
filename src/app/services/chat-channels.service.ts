@@ -121,6 +121,9 @@ export class ChatChannelsService implements NostriaService {
   /** Pubkeys of muted users (kind 44 from current user) */
   private readonly mutedUserPubkeys = signal<Set<string>>(new Set());
 
+  /** Channel IDs where the current user has sent messages (kind 42) */
+  readonly participatedChannelIds = signal<Set<string>>(new Set());
+
   /** Loading state */
   readonly isLoading = signal(false);
 
@@ -282,6 +285,39 @@ export class ChatChannelsService implements NostriaService {
       this.logger.error('[ChatChannels] Failed to load channels', error);
     } finally {
       this.isLoading.set(false);
+    }
+  }
+
+  /**
+   * Load channel IDs where the current user has sent messages (kind 42).
+   * This allows showing participated channels at the top of the list.
+   */
+  async loadParticipatedChannels(): Promise<void> {
+    const pubkey = this.accountState.pubkey();
+    if (!pubkey) return;
+
+    try {
+      // Query relays for kind 42 events authored by the current user
+      const events = await this.accountRelay.getMany<Event>(
+        { kinds: [CHANNEL_MESSAGE_KIND], authors: [pubkey], limit: 500 },
+        { timeout: 10000 }
+      );
+
+      const channelIds = new Set<string>();
+      for (const event of events) {
+        // Extract the root channel ID from the 'e' tag with 'root' marker
+        const rootTag = event.tags.find(
+          t => t[0] === 'e' && (t[3] === 'root' || (!t[3] && t === event.tags.find(tag => tag[0] === 'e')))
+        );
+        if (rootTag?.[1]) {
+          channelIds.add(rootTag[1]);
+        }
+      }
+
+      this.participatedChannelIds.set(channelIds);
+      this.logger.info('[ChatChannels] Loaded participated channels:', channelIds.size);
+    } catch (error) {
+      this.logger.error('[ChatChannels] Failed to load participated channels', error);
     }
   }
 
@@ -453,7 +489,9 @@ export class ChatChannelsService implements NostriaService {
 
     try {
       const deleteEvent = this.nostrService.createRetractionEvent(message.event);
-      const result = await this.nostrService.signAndPublish(deleteEvent);
+      const channel = this.channelsMap().get(message.channelId);
+      const publishRelays = this.getPublishRelayUrls(channel?.metadata.relays);
+      const result = await this.nostrService.signAndPublish(deleteEvent, publishRelays);
 
       if (result.success) {
         this.deletedMessageIds.update(set => {
@@ -499,7 +537,8 @@ export class ChatChannelsService implements NostriaService {
       const eventTags: string[][] = tags.map(t => ['t', t]);
 
       const event = this.nostrService.createEvent(CHANNEL_CREATE_KIND, content, eventTags);
-      const result = await this.nostrService.signAndPublish(event);
+      const publishRelays = this.getPublishRelayUrls(metadata.relays);
+      const result = await this.nostrService.signAndPublish(event, publishRelays);
 
       if (result.success && result.event) {
         const channel: ChatChannel = {
@@ -562,7 +601,8 @@ export class ChatChannelsService implements NostriaService {
       ];
 
       const event = this.nostrService.createEvent(CHANNEL_METADATA_KIND, content, eventTags);
-      const result = await this.nostrService.signAndPublish(event);
+      const publishRelays = this.getPublishRelayUrls(metadata.relays);
+      const result = await this.nostrService.signAndPublish(event, publishRelays);
 
       if (result.success) {
         this.channelsMap.update(map => {
@@ -606,8 +646,13 @@ export class ChatChannelsService implements NostriaService {
         }
       }
 
+      // Look up channel relays for publishing
+      const channel = this.channelsMap().get(channelId);
+      const channelRelays = channel?.metadata.relays;
+
       const event = this.nostrService.createEvent(CHANNEL_MESSAGE_KIND, content, tags);
-      const result = await this.nostrService.signAndPublish(event);
+      const publishRelays = this.getPublishRelayUrls(channelRelays);
+      const result = await this.nostrService.signAndPublish(event, publishRelays);
 
       if (result.success && result.event) {
         // Add message to local state immediately
@@ -629,6 +674,15 @@ export class ChatChannelsService implements NostriaService {
           }
           return updated;
         });
+
+        // Track participation
+        if (!this.participatedChannelIds().has(channelId)) {
+          this.participatedChannelIds.update(set => {
+            const updated = new Set(set);
+            updated.add(channelId);
+            return updated;
+          });
+        }
 
         return true;
       }
@@ -754,6 +808,7 @@ export class ChatChannelsService implements NostriaService {
     this.messagesMap.set(new Map());
     this.hiddenMessageIds.set(new Set());
     this.mutedUserPubkeys.set(new Set());
+    this.participatedChannelIds.set(new Set());
     this.deletedMessageIds.set(new Set());
     this.reactionIds.clear();
     this.deletionIds.clear();
@@ -935,6 +990,10 @@ export class ChatChannelsService implements NostriaService {
   private parseChannelCreateEvent(event: Event): ChatChannel | null {
     try {
       const metadata = JSON.parse(event.content) as Partial<ChannelMetadata>;
+      const tags = event.tags
+        .filter(t => t[0] === 't' && t[1])
+        .map(t => t[1]);
+
       return {
         id: event.id,
         creator: event.pubkey,
@@ -947,7 +1006,7 @@ export class ChatChannelsService implements NostriaService {
         createdAt: event.created_at,
         updatedAt: event.created_at,
         messageCount: 0,
-        tags: [],
+        tags,
       };
     } catch {
       this.logger.warn('[ChatChannels] Failed to parse channel create event:', event.id);
@@ -1175,5 +1234,28 @@ export class ChatChannelsService implements NostriaService {
    */
   private getRelayUrls(): string[] {
     return this.accountRelay.getRelayUrls();
+  }
+
+  /**
+   * Get the combined relay URLs for publishing a channel event.
+   * Merges the channel's specified relays with the user's account relays
+   * to ensure the user always has a backup on their own relays.
+   */
+  private getPublishRelayUrls(channelRelays?: string[]): string[] {
+    const relaySet = new Set<string>();
+
+    // Always include account relays for backup
+    for (const url of this.accountRelay.getRelayUrls()) {
+      relaySet.add(url);
+    }
+
+    // Include channel-specific relays
+    if (channelRelays && channelRelays.length > 0) {
+      for (const url of channelRelays) {
+        relaySet.add(url);
+      }
+    }
+
+    return Array.from(relaySet);
   }
 }

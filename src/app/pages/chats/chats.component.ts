@@ -141,6 +141,9 @@ export class ChatsComponent implements OnInit, OnDestroy {
   /** URL-based initial list filter */
   readonly urlListFilter = signal<string | undefined>(this.route.snapshot.queryParams['list']);
 
+  /** Whether the "Show more" section is expanded */
+  readonly showMoreChannels = signal<boolean>(false);
+
   /** Long-press support for touch devices */
   readonly longPressedMessageId = signal<string | null>(null);
   private longPressTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -208,6 +211,20 @@ export class ChatsComponent implements OnInit, OnDestroy {
     }
 
     return filtered;
+  });
+
+  /** Channels the user has participated in (sent messages to), from the filtered list */
+  readonly participatedChannels = computed(() => {
+    const participated = this.chatChannels.participatedChannelIds();
+    if (participated.size === 0) return [];
+    return this.channels().filter(ch => participated.has(ch.id));
+  });
+
+  /** Channels the user has NOT participated in, from the filtered list */
+  readonly discoveredChannels = computed(() => {
+    const participated = this.chatChannels.participatedChannelIds();
+    if (participated.size === 0) return this.channels();
+    return this.channels().filter(ch => !participated.has(ch.id));
   });
 
   /** Selected channel */
@@ -345,6 +362,9 @@ export class ChatsComponent implements OnInit, OnDestroy {
       });
     });
 
+    // Load participated channels for the current user
+    this.chatChannels.loadParticipatedChannels();
+
     // Check route params for a channel ID (nevent-encoded or hex)
     this.route.params.subscribe(params => {
       const id = params['id'];
@@ -421,9 +441,15 @@ export class ChatsComponent implements OnInit, OnDestroy {
     }
   }
 
+  /** Toggle show more channels */
+  toggleShowMore(): void {
+    this.showMoreChannels.update(v => !v);
+  }
+
   /** Handle filter change from ListFilterMenuComponent */
   onListFilterChanged(filter: ListFilterValue): void {
     this.selectedListFilter.set(filter);
+    this.showMoreChannels.set(false);
 
     // Update URL with list param or clear it
     if (filter !== 'following') {
@@ -455,6 +481,7 @@ export class ChatsComponent implements OnInit, OnDestroy {
           name: result.name,
           about: result.about,
           picture: result.picture,
+          relays: result.relays,
         };
         const createResult = await this.chatChannels.createChannel(metadata, result.tags);
         if (createResult.success && createResult.channelId) {
@@ -481,6 +508,7 @@ export class ChatsComponent implements OnInit, OnDestroy {
         about: channel.metadata.about,
         picture: channel.metadata.picture,
         tags: channel.tags,
+        relays: channel.metadata.relays,
         isEdit: true,
       },
     });
@@ -491,6 +519,7 @@ export class ChatsComponent implements OnInit, OnDestroy {
           name: result.name,
           about: result.about,
           picture: result.picture,
+          relays: result.relays,
         };
         const success = await this.chatChannels.updateChannelMetadata(channel.id, metadata, result.tags);
         if (success) {

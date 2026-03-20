@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed } from '@angular/core';
+import { Component, inject, signal, computed, OnInit } from '@angular/core';
 import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -9,12 +9,14 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MediaService } from '../../../services/media.service';
 import { CustomDialogRef, CustomDialogService } from '../../../services/custom-dialog.service';
+import { AccountRelayService } from '../../../services/relays/account-relay';
 
 export interface CreateChannelDialogData {
   name?: string;
   about?: string;
   picture?: string;
   tags?: string[];
+  relays?: string[];
   isEdit?: boolean;
 }
 
@@ -23,6 +25,7 @@ export interface CreateChannelDialogResult {
   about: string;
   picture: string;
   tags: string[];
+  relays: string[];
 }
 
 @Component({
@@ -147,6 +150,44 @@ export interface CreateChannelDialogResult {
           }
         </mat-chip-set>
       }
+
+      <div class="relays-section">
+        <label class="relays-label">
+          <mat-icon>wifi</mat-icon>
+          Channel Relays
+        </label>
+        <p class="relays-description">
+          Relays where this channel's events will be published and discovered.
+        </p>
+
+        @if (relays().length > 0) {
+          <div class="relay-chips">
+            @for (relay of relays(); track relay) {
+              <div class="relay-chip">
+                <span class="relay-url">{{ formatRelayUrl(relay) }}</span>
+                <button mat-icon-button class="remove-relay-btn" (click)="removeRelay(relay)">
+                  <mat-icon>close</mat-icon>
+                </button>
+              </div>
+            }
+          </div>
+        } @else {
+          <p class="no-relays-hint">No relays configured. Add at least one relay.</p>
+        }
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Add relay</mat-label>
+          <input
+            matInput
+            [formControl]="relayInputControl"
+            placeholder="wss://relay.example.com"
+            (keydown.enter)="addRelay($event)"
+            autocomplete="off"
+          />
+          <mat-icon matPrefix>dns</mat-icon>
+          <mat-hint>Press Enter to add a relay</mat-hint>
+        </mat-form-field>
+      </div>
     </div>
     <div dialog-actions class="channel-dialog-actions">
       <span></span>
@@ -245,6 +286,79 @@ export interface CreateChannelDialogResult {
       margin-bottom: 8px;
     }
 
+    .relays-section {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .relays-label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 14px;
+      color: var(--mat-sys-on-surface-variant);
+
+      mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+      }
+    }
+
+    .relays-description {
+      font-size: 12px;
+      color: var(--mat-sys-on-surface-variant);
+      margin: 0;
+    }
+
+    .relay-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .relay-chip {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 4px 4px 12px;
+      border-radius: 16px;
+      font-size: 0.875rem;
+      background: var(--mat-sys-primary-container);
+      color: var(--mat-sys-on-primary-container);
+
+      .relay-url {
+        max-width: 220px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .remove-relay-btn {
+        width: 24px;
+        height: 24px;
+        padding: 0 !important;
+        display: flex !important;
+        align-items: center;
+        justify-content: center;
+
+        mat-icon {
+          font-size: 14px;
+          width: 14px;
+          height: 14px;
+        }
+      }
+    }
+
+    .no-relays-hint {
+      font-size: 12px;
+      color: var(--mat-sys-error);
+      margin: 0;
+      font-style: italic;
+    }
+
     .channel-dialog-actions {
       display: flex;
       justify-content: flex-end;
@@ -257,7 +371,7 @@ export interface CreateChannelDialogResult {
     }
   `],
 })
-export class CreateChannelDialogComponent {
+export class CreateChannelDialogComponent implements OnInit {
   dialogRef?: CustomDialogRef<CreateChannelDialogComponent, CreateChannelDialogResult>;
 
   private _data: CreateChannelDialogData = {};
@@ -270,12 +384,20 @@ export class CreateChannelDialogComponent {
       this.pictureControl.setValue(value.picture ?? '');
       this.tags.set(value.tags ?? []);
       this.previewImage.set(value.picture || null);
+      if (value.relays && value.relays.length > 0) {
+        this.relays.set([...value.relays]);
+      } else {
+        // Pre-populate with user's account relays
+        this.relays.set([...this.accountRelay.getRelayUrls()]);
+      }
+      this.relaysInitialized = true;
     }
   }
 
   private mediaService = inject(MediaService);
   private customDialog = inject(CustomDialogService);
   private snackBar = inject(MatSnackBar);
+  private accountRelay = inject(AccountRelayService);
 
   nameControl = new FormControl('', [
     Validators.required,
@@ -290,12 +412,23 @@ export class CreateChannelDialogComponent {
 
   tagInputControl = new FormControl('');
 
+  relayInputControl = new FormControl('');
+
   tags = signal<string[]>([]);
+  relays = signal<string[]>([]);
+  relaysInitialized = false;
   previewImage = signal<string | null>(null);
   showUrlInput = signal(false);
   uploading = signal(false);
 
   hasMediaServers = computed(() => this.mediaService.mediaServers().length > 0);
+
+  ngOnInit(): void {
+    // For the create case (no data set), pre-populate relays with account relays
+    if (!this.relaysInitialized) {
+      this.relays.set([...this.accountRelay.getRelayUrls()]);
+    }
+  }
 
   addTag(event: Event): void {
     event.preventDefault();
@@ -308,6 +441,47 @@ export class CreateChannelDialogComponent {
 
   removeTag(tag: string): void {
     this.tags.update(tags => tags.filter(t => t !== tag));
+  }
+
+  addRelay(event: Event): void {
+    event.preventDefault();
+    let url = this.relayInputControl.value?.trim() ?? '';
+    if (!url) return;
+
+    // Add wss:// if missing
+    if (!url.startsWith('wss://') && !url.startsWith('ws://')) {
+      url = 'wss://' + url;
+    }
+
+    // Validate URL
+    try {
+      new URL(url);
+    } catch {
+      this.snackBar.open('Invalid relay URL', 'Close', { duration: 3000 });
+      return;
+    }
+
+    // Normalize: ensure trailing slash for comparison
+    const normalized = url.endsWith('/') ? url : url + '/';
+
+    // Check if already exists (compare with and without trailing slash)
+    const exists = this.relays().some(r => {
+      const rNorm = r.endsWith('/') ? r : r + '/';
+      return rNorm === normalized;
+    });
+
+    if (!exists) {
+      this.relays.update(relays => [...relays, url]);
+    }
+    this.relayInputControl.setValue('');
+  }
+
+  removeRelay(relay: string): void {
+    this.relays.update(relays => relays.filter(r => r !== relay));
+  }
+
+  formatRelayUrl(url: string): string {
+    return url.replace(/^wss?:\/\//, '').replace(/\/$/, '');
   }
 
   onFileSelected(event: Event): void {
@@ -388,6 +562,7 @@ export class CreateChannelDialogComponent {
         about: this.aboutControl.value?.trim() ?? '',
         picture: this.pictureControl.value?.trim() ?? '',
         tags: this.tags(),
+        relays: this.relays(),
       };
       this.dialogRef?.close(result);
     }

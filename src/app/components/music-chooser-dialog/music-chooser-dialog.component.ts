@@ -77,7 +77,7 @@ export class MusicChooserDialogComponent implements OnDestroy {
   /** All tracks fetched from relays */
   readonly allTracks = signal<Event[]>([]);
   private trackMap = new Map<string, Event>();
-  private trackSubscription: { close?: () => void; unsubscribe?: () => void } | null = null;
+  private trackSubscription: { close?: () => void } | null = null;
 
   /** Standalone audio element for preview playback (does not affect the main media player) */
   private previewAudio: HTMLAudioElement | null = null;
@@ -206,10 +206,14 @@ export class MusicChooserDialogComponent implements OnDestroy {
     this.dialogRef?.close(undefined);
   }
 
+  /**
+   * Load tracks from relays. Relay resolution includes a fast async step
+   * (IndexedDB lookup for the user's music relay set) so we set isLoading
+   * immediately and start the subscription as soon as relays are resolved.
+   */
   private async loadTracks(): Promise<void> {
     this.isLoading.set(true);
 
-    // Resolve music relays: account relays + music relay set (or defaults)
     const relayUrls = await this.resolveMusicRelays();
 
     if (relayUrls.length === 0) {
@@ -217,6 +221,7 @@ export class MusicChooserDialogComponent implements OnDestroy {
       return;
     }
 
+    // Safety timeout – stop the spinner even if no events arrive
     const timeout = setTimeout(() => {
       this.isLoading.set(false);
     }, 6000);
@@ -248,18 +253,17 @@ export class MusicChooserDialogComponent implements OnDestroy {
   /**
    * Resolve the best set of relays for fetching music tracks.
    *
-   * Strategy (mirrors the Music page):
-   * 1. Start with the user's account relays
-   * 2. Check for a saved music relay set (kind 30002, d:"music") in the local DB
-   * 3. If no music relay set exists, use DEFAULT_MUSIC_RELAYS as fallback
-   * 4. Merge all together and deduplicate
-   * 5. For anonymous users with no relays at all, fall back to anonymousRelays + DEFAULT_MUSIC_RELAYS
+   * 1. Start with the user's account relays (synchronous)
+   * 2. Check IndexedDB for a saved music relay set (kind 30002, d:"music")
+   * 3. If no custom set exists, use DEFAULT_MUSIC_RELAYS as fallback
+   * 4. Merge, deduplicate, and pick optimal relays
+   * 5. For anonymous users with no relays, fall back to anonymousRelays + defaults
    */
   private async resolveMusicRelays(): Promise<string[]> {
     const accountRelays = this.accountRelay.getRelayUrls();
     let musicRelays: string[] = [];
 
-    // Try to load the user's music relay set from the database
+    // Fast IndexedDB lookup for the user's custom music relay set
     const pubkey = this.accountState.pubkey();
     if (pubkey) {
       try {
@@ -280,7 +284,7 @@ export class MusicChooserDialogComponent implements OnDestroy {
       }
     }
 
-    // If no music relay set found, use the default music relays
+    // If no custom music relay set found, use the default music relays
     if (musicRelays.length === 0) {
       musicRelays = [...DEFAULT_MUSIC_RELAYS];
     }
@@ -305,11 +309,7 @@ export class MusicChooserDialogComponent implements OnDestroy {
 
   private closeTrackSubscription(): void {
     if (this.trackSubscription) {
-      if (this.trackSubscription.close) {
-        this.trackSubscription.close();
-      } else if (this.trackSubscription.unsubscribe) {
-        this.trackSubscription.unsubscribe();
-      }
+      this.trackSubscription.close?.();
       this.trackSubscription = null;
     }
   }
