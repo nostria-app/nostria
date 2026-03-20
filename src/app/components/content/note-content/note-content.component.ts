@@ -41,6 +41,7 @@ import { EmojiSetMentionComponent } from '../../emoji-set-mention/emoji-set-ment
 import { StarterPackEventComponent } from '../../event-types/starter-pack-event.component';
 import { SettingsEventComponent } from '../../event-types/settings-event.component';
 import { RelayListEventComponent } from '../../event-types/relay-list-event.component';
+import { ChannelEmbedComponent } from '../../channel-embed/channel-embed.component';
 import { UserProfileComponent } from '../../user-profile/user-profile.component';
 import { DataService } from '../../../services/data.service';
 import { RelayPoolService } from '../../../services/relays/relay-pool';
@@ -92,6 +93,7 @@ export interface DisplayItem {
     StarterPackEventComponent,
     SettingsEventComponent,
     RelayListEventComponent,
+    ChannelEmbedComponent,
     UserProfileComponent,
     AgoPipe,
     TimestampPipe,

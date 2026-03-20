@@ -49,6 +49,7 @@ import {
   HighlightEventComponent,
   WotEventComponent,
 } from '../event-types';
+import { ChannelEmbedComponent } from '../channel-embed/channel-embed.component';
 import { UserProfileComponent } from '../user-profile/user-profile.component';
 import { BadgeComponent } from '../../pages/badges/badge/badge.component';
 import { ProfileDisplayNameComponent } from '../user-profile/display-name/profile-display-name.component';
@@ -146,6 +147,7 @@ export function getTaggedXUrl(event?: Event | null): string | undefined {
     RelayListEventComponent,
     HighlightEventComponent,
     WotEventComponent,
+    ChannelEmbedComponent,
     UserProfileComponent,
     BadgeComponent,
     ReportedContentComponent,

@@ -663,6 +663,19 @@
   }
 }
 
+.tile-chats {
+  background: linear-gradient(160deg, rgba(0, 150, 136, 0.12) 0%, transparent 100%);
+  border: 1px solid rgba(0, 150, 136, 0.15);
+
+  .tile-icon {
+    color: #009688;
+  }
+
+  &:hover {
+    border-color: rgba(0, 150, 136, 0.4);
+  }
+}
+
 // AI Section tiles
 .tile-ai-models {
   background: linear-gradient(135deg, rgba(103, 58, 183, 0.12) 0%, rgba(156, 39, 176, 0.08) 100%);
@@ -1819,6 +1832,20 @@
 
     &:hover {
       border-color: rgba(76, 175, 80, 0.6);
+    }
+  }
+
+  .tile-chats {
+    background: linear-gradient(160deg, rgba(0, 150, 136, 0.28) 0%, rgba(0, 150, 136, 0.06) 100%);
+    border-color: rgba(0, 150, 136, 0.4);
+
+    .tile-icon {
+      color: #26A69A;
+    }
+
+    &:hover {
+      border-color: rgba(0, 150, 136, 0.6);
+      box-shadow: 0 12px 32px rgba(0, 150, 136, 0.18);
     }
   }
 

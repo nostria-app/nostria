@@ -208,6 +208,13 @@ export const routes: Routes = [
     title: 'Chats',
   },
   {
+    path: 'chats/:id',
+    loadComponent: () =>
+      import('./pages/chats/chats.component').then(m => m.ChatsComponent),
+    data: { isRoot: true },
+    title: 'Chat Channel',
+  },
+  {
     path: 'settings',
     loadComponent: () =>
       import('./pages/settings/settings.component').then(m => m.SettingsComponent),

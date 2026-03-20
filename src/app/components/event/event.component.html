@@ -139,6 +139,10 @@
     @else if (targetItem.event.kind === 10086) {
     <app-relay-list-event [event]="targetItem.event"></app-relay-list-event>
     }
+    <!-- Channel events (kind 40/42, NIP-28) -->
+    @else if (targetItem.event.kind === 40 || targetItem.event.kind === 42) {
+    <app-channel-embed [event]="targetItem.event"></app-channel-embed>
+    }
     <!-- Highlights (kind 9802) - NIP-84 -->
     @else if (targetItem.event.kind === 9802) {
     <app-highlight-event [event]="targetItem.event" [trustedByPubkey]="trustedByPubkey() || item.event.pubkey"
@@ -302,6 +306,10 @@
           @else if (rootRecordData.event.kind === 10086) {
           <app-relay-list-event [event]="rootRecordData.event"></app-relay-list-event>
           }
+          <!-- Channel events (kind 40/42, NIP-28) -->
+          @else if (rootRecordData.event.kind === 40 || rootRecordData.event.kind === 42) {
+          <app-channel-embed [event]="rootRecordData.event"></app-channel-embed>
+          }
           <!-- Web of Trust Attestations (kind 31871) -->
           @else if (rootRecordData.event.kind === 31871) {
           <app-wot-event [event]="rootRecordData.event"></app-wot-event>
@@ -450,6 +458,10 @@
           @else if (parentRecordData.event.kind === 10086) {
           <app-relay-list-event [event]="parentRecordData.event"></app-relay-list-event>
           }
+          <!-- Channel events (kind 40/42, NIP-28) -->
+          @else if (parentRecordData.event.kind === 40 || parentRecordData.event.kind === 42) {
+          <app-channel-embed [event]="parentRecordData.event"></app-channel-embed>
+          }
           <!-- Web of Trust Attestations (kind 31871) -->
           @else if (parentRecordData.event.kind === 31871) {
           <app-wot-event [event]="parentRecordData.event"></app-wot-event>
@@ -592,6 +604,10 @@
     <!-- Relay lists (kind 10086) -->
     @else if (item.event.kind === 10086) {
     <app-relay-list-event [event]="item.event"></app-relay-list-event>
+    }
+    <!-- Channel events (kind 40/42, NIP-28) -->
+    @else if (item.event.kind === 40 || item.event.kind === 42) {
+    <app-channel-embed [event]="item.event"></app-channel-embed>
     }
     <!-- Highlights (kind 9802) - NIP-84 -->
     @else if (item.event.kind === 9802) {
@@ -745,6 +761,10 @@
     <!-- Relay lists (kind 10086) -->
     @else if (item.event.kind === 10086) {
     <app-relay-list-event [event]="item.event"></app-relay-list-event>
+    }
+    <!-- Channel events (kind 40/42, NIP-28) -->
+    @else if (item.event.kind === 40 || item.event.kind === 42) {
+    <app-channel-embed [event]="item.event"></app-channel-embed>
     }
     <!-- Highlights (kind 9802) - NIP-84 -->
     @else if (item.event.kind === 9802) {

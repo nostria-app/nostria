@@ -17,12 +17,23 @@ import { CustomDialogRef } from '../../services/custom-dialog.service';
 import { UtilitiesService } from '../../services/utilities.service';
 import { RelayPoolService } from '../../services/relays/relay-pool';
 import { RelaysService } from '../../services/relays/relays';
+import { AccountRelayService } from '../../services/relays/account-relay';
+import { DatabaseService } from '../../services/database.service';
 import { MusicPlaylistService, MusicPlaylist } from '../../services/music-playlist.service';
 import { AccountStateService } from '../../services/account-state.service';
 import { LoggerService } from '../../services/logger.service';
 
 const MUSIC_KIND = UtilitiesService.PRIMARY_MUSIC_KIND;
 const MUSIC_PLAYLIST_KIND = 34139;
+const RELAY_SET_KIND = 30002;
+const MUSIC_RELAY_SET_D_TAG = 'music';
+
+/** Default music relays used when user has no configured music relay set */
+const DEFAULT_MUSIC_RELAYS = [
+  'wss://nos.lol/',
+  'wss://relay.damus.io/',
+  'wss://drops.basspistol.org',
+];
 
 export interface MusicChooserResult {
   /** The naddr-encoded reference to the selected music event */
@@ -53,6 +64,8 @@ export class MusicChooserDialogComponent implements OnDestroy {
   private readonly utilities = inject(UtilitiesService);
   private readonly pool = inject(RelayPoolService);
   private readonly relaysService = inject(RelaysService);
+  private readonly accountRelay = inject(AccountRelayService);
+  private readonly database = inject(DatabaseService);
   private readonly playlistService = inject(MusicPlaylistService);
   private readonly accountState = inject(AccountStateService);
   private readonly logger = inject(LoggerService);
@@ -193,13 +206,16 @@ export class MusicChooserDialogComponent implements OnDestroy {
     this.dialogRef?.close(undefined);
   }
 
-  private loadTracks(): void {
-    const relayUrls = this.relaysService.getOptimalRelays(this.utilities.preferredRelays);
+  private async loadTracks(): Promise<void> {
+    this.isLoading.set(true);
+
+    // Resolve music relays: account relays + music relay set (or defaults)
+    const relayUrls = await this.resolveMusicRelays();
+
     if (relayUrls.length === 0) {
+      this.isLoading.set(false);
       return;
     }
-
-    this.isLoading.set(true);
 
     const timeout = setTimeout(() => {
       this.isLoading.set(false);
@@ -227,6 +243,57 @@ export class MusicChooserDialogComponent implements OnDestroy {
         this.isLoading.set(false);
       }
     });
+  }
+
+  /**
+   * Resolve the best set of relays for fetching music tracks.
+   *
+   * Strategy (mirrors the Music page):
+   * 1. Start with the user's account relays
+   * 2. Check for a saved music relay set (kind 30002, d:"music") in the local DB
+   * 3. If no music relay set exists, use DEFAULT_MUSIC_RELAYS as fallback
+   * 4. Merge all together and deduplicate
+   * 5. For anonymous users with no relays at all, fall back to anonymousRelays + DEFAULT_MUSIC_RELAYS
+   */
+  private async resolveMusicRelays(): Promise<string[]> {
+    const accountRelays = this.accountRelay.getRelayUrls();
+    let musicRelays: string[] = [];
+
+    // Try to load the user's music relay set from the database
+    const pubkey = this.accountState.pubkey();
+    if (pubkey) {
+      try {
+        const cachedEvent = await this.database.getParameterizedReplaceableEvent(
+          pubkey,
+          RELAY_SET_KIND,
+          MUSIC_RELAY_SET_D_TAG
+        );
+
+        if (cachedEvent) {
+          musicRelays = cachedEvent.tags
+            .filter((tag: string[]) => tag[0] === 'relay' && tag[1])
+            .map((tag: string[]) => tag[1]);
+          this.logger.debug('[MusicChooser] Loaded music relay set from DB:', musicRelays);
+        }
+      } catch (error) {
+        this.logger.warn('[MusicChooser] Failed to load music relay set from DB:', error);
+      }
+    }
+
+    // If no music relay set found, use the default music relays
+    if (musicRelays.length === 0) {
+      musicRelays = [...DEFAULT_MUSIC_RELAYS];
+    }
+
+    // Merge account relays with music relays
+    let allRelayUrls = [...new Set([...accountRelays, ...musicRelays])];
+
+    // For anonymous users or users with no relays, add anonymous relays as base
+    if (allRelayUrls.length === 0) {
+      allRelayUrls = [...new Set([...this.utilities.anonymousRelays, ...DEFAULT_MUSIC_RELAYS])];
+    }
+
+    return this.relaysService.getOptimalRelays(allRelayUrls);
   }
 
   private async loadAlbums(): Promise<void> {

@@ -23,6 +23,8 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatDialog } from '@angular/material/dialog';
 import { Router, ActivatedRoute, RouterModule } from '@angular/router';
+import { nip19 } from 'nostr-tools';
+import { firstValueFrom } from 'rxjs';
 import { LayoutService } from '../../services/layout.service';
 import { LoggerService } from '../../services/logger.service';
 import { AccountStateService } from '../../services/account-state.service';
@@ -39,6 +41,7 @@ import {
   ChatChannel,
   ChannelMessage,
   ChannelMetadata,
+  ChatReaction,
 } from '../../services/chat-channels.service';
 import { ApplicationService } from '../../services/application.service';
 import { FollowSetsService } from '../../services/follow-sets.service';
@@ -50,6 +53,10 @@ import {
   CreateChannelDialogComponent,
   CreateChannelDialogResult,
 } from './create-channel-dialog/create-channel-dialog.component';
+import {
+  ConfirmDialogComponent,
+  type ConfirmDialogData,
+} from '../../components/confirm-dialog/confirm-dialog.component';
 
 @Component({
   selector: 'app-chats',
@@ -220,6 +227,9 @@ export class ChatsComponent implements OnInit, OnDestroy {
   /** Current user pubkey */
   readonly currentPubkey = computed(() => this.accountState.pubkey());
 
+  /** Quick reactions for the picker */
+  readonly quickReactions = this.chatChannels.quickReactions;
+
   /** Whether current user is the creator of the selected channel */
   readonly isChannelCreator = computed(() => {
     const channel = this.selectedChannel();
@@ -335,11 +345,14 @@ export class ChatsComponent implements OnInit, OnDestroy {
       });
     });
 
-    // Check route params for a channel ID
-    this.route.firstChild?.params.subscribe(params => {
+    // Check route params for a channel ID (nevent-encoded or hex)
+    this.route.params.subscribe(params => {
       const id = params['id'];
       if (id) {
-        this.selectChannelById(id);
+        const channelId = this.decodeChannelParam(id);
+        if (channelId) {
+          this.selectChannelById(channelId);
+        }
       }
     });
   }
@@ -348,6 +361,7 @@ export class ChatsComponent implements OnInit, OnDestroy {
     this.layout.hideMobileNav.set(false);
     this.chatChannels.closeChannelSubscription();
     this.chatChannels.closeMessageSubscription();
+    this.chatChannels.closeReactionSubscription();
 
     if (this.scrollThrottleTimeout) {
       clearTimeout(this.scrollThrottleTimeout);
@@ -363,6 +377,10 @@ export class ChatsComponent implements OnInit, OnDestroy {
     this.newMessageText.set('');
     this.showChatDetails.set(false);
     this.mediaPreviews.set([]);
+
+    // Update URL to reflect selected channel
+    const nevent = this.encodeChannelNevent(channel);
+    this.router.navigate(['/chats', nevent], { replaceUrl: false });
 
     // Load messages and subscribe
     await this.chatChannels.loadChannelMessages(channel.id);
@@ -392,6 +410,7 @@ export class ChatsComponent implements OnInit, OnDestroy {
     this.showMobileList.set(true);
     this.selectedChannelId.set(null);
     this.chatChannels.closeMessageSubscription();
+    this.router.navigate(['/chats']);
   }
 
   /** Toggle search */
@@ -594,6 +613,42 @@ export class ChatsComponent implements OnInit, OnDestroy {
     }
   }
 
+  /** Add a reaction to a message */
+  async addReaction(message: ChannelMessage, emoji: string): Promise<void> {
+    const success = await this.chatChannels.addReaction(message, emoji);
+    if (!success) {
+      // Silently fail - user may have already reacted
+    }
+  }
+
+  /** Get reactions array for a message */
+  getReactionsArray(message: ChannelMessage): ChatReaction[] {
+    return this.chatChannels.getReactionsArray(message);
+  }
+
+  /** Delete a message (NIP-09 retraction, own messages only) */
+  async deleteMessage(message: ChannelMessage): Promise<void> {
+    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
+      data: {
+        title: 'Delete message',
+        message: 'Are you sure you want to delete this message?',
+        confirmText: 'Delete',
+        cancelText: 'Cancel',
+        confirmColor: 'warn',
+      } as ConfirmDialogData,
+    });
+
+    const confirmed = await firstValueFrom(dialogRef.afterClosed());
+    if (confirmed) {
+      const success = await this.chatChannels.deleteMessage(message);
+      if (success) {
+        this.snackBar.open('Message deleted', 'OK', { duration: 3000 });
+      } else {
+        this.snackBar.open('Failed to delete message', 'OK', { duration: 3000 });
+      }
+    }
+  }
+
   /** Check if a user is muted */
   isUserMuted(pubkey: string): boolean {
     return this.chatChannels.isUserMuted(pubkey);
@@ -678,6 +733,22 @@ export class ChatsComponent implements OnInit, OnDestroy {
       this.snackBar.open('Channel metadata copied to clipboard', 'OK', { duration: 3000 });
     } catch {
       this.snackBar.open('Failed to copy channel metadata', 'OK', { duration: 3000 });
+    }
+  }
+
+  /** Copy the shareable channel link to clipboard */
+  async copyChannelLink(): Promise<void> {
+    const channel = this.selectedChannel();
+    if (!channel) return;
+
+    const nevent = this.encodeChannelNevent(channel);
+    const url = `https://nostria.app/chats/${nevent}`;
+
+    try {
+      await navigator.clipboard.writeText(url);
+      this.snackBar.open('Channel link copied to clipboard', 'OK', { duration: 3000 });
+    } catch {
+      this.snackBar.open('Failed to copy channel link', 'OK', { duration: 3000 });
     }
   }
 
@@ -817,6 +888,42 @@ export class ChatsComponent implements OnInit, OnDestroy {
   }
 
   // --- Private helpers ---
+
+  /** Encode a ChatChannel to a NIP-19 nevent string */
+  private encodeChannelNevent(channel: ChatChannel): string {
+    return nip19.neventEncode({
+      id: channel.id,
+      author: channel.creator,
+      kind: 40,
+      relays: channel.metadata.relays?.slice(0, 2),
+    });
+  }
+
+  /** Decode a route param (nevent or hex ID) into a channel hex ID */
+  private decodeChannelParam(param: string): string | null {
+    try {
+      if (param.startsWith('nevent')) {
+        const decoded = nip19.decode(param);
+        if (decoded.type === 'nevent') {
+          return decoded.data.id;
+        }
+      }
+      // Fall back to treating as hex ID
+      if (/^[0-9a-f]{64}$/i.test(param)) {
+        return param;
+      }
+      // Try decoding as note ID
+      if (param.startsWith('note')) {
+        const decoded = nip19.decode(param);
+        if (decoded.type === 'note') {
+          return decoded.data;
+        }
+      }
+    } catch {
+      this.logger.warn('[Chats] Failed to decode channel param:', param);
+    }
+    return null;
+  }
 
   private async uploadMediaFiles(files: File[]): Promise<void> {
     if (files.length === 0) {

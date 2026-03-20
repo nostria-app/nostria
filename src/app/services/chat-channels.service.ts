@@ -1,5 +1,5 @@
 import { Injectable, inject, signal, computed } from '@angular/core';
-import { Event } from 'nostr-tools';
+import { Event, Filter } from 'nostr-tools';
 import { NostrService } from './nostr.service';
 import { LoggerService } from './logger.service';
 import { AccountStateService } from './account-state.service';
@@ -7,6 +7,7 @@ import { AccountRelayService } from './relays/account-relay';
 import { DiscoveryRelayService } from './relays/discovery-relay';
 import { UtilitiesService } from './utilities.service';
 import { DatabaseService } from './database.service';
+import { ReactionService } from './reaction.service';
 import { NostriaService } from '../interfaces';
 
 /**
@@ -54,6 +55,16 @@ export interface ChatChannel {
 }
 
 /**
+ * Reaction data for a channel message
+ */
+export interface ChatReaction {
+  content: string;
+  count: number;
+  pubkeys: string[];
+  userReacted: boolean;
+}
+
+/**
  * Represents a message in a public chat channel
  */
 export interface ChannelMessage {
@@ -71,6 +82,8 @@ export interface ChannelMessage {
   replyTo?: string;
   /** The raw nostr event */
   event: Event;
+  /** Reactions on this message */
+  reactions?: Map<string, ChatReaction>;
 }
 
 /**
@@ -94,6 +107,7 @@ export class ChatChannelsService implements NostriaService {
   private readonly discoveryRelay = inject(DiscoveryRelayService);
   private readonly utilities = inject(UtilitiesService);
   private readonly database = inject(DatabaseService);
+  private readonly reactionService = inject(ReactionService);
 
   /** All known channels keyed by channel ID */
   private readonly channelsMap = signal<Map<string, ChatChannel>>(new Map());
@@ -119,6 +133,19 @@ export class ChatChannelsService implements NostriaService {
   /** Currently active channel message subscription */
   private messageSubscription: { close?: () => void; unsubscribe?: () => void } | null = null;
 
+  /** Currently active reaction subscription */
+  private reactionSubscription: { close?: () => void; unsubscribe?: () => void } | null = null;
+
+  /** IDs of deleted messages (kind 5 deletion events) */
+  private readonly deletedMessageIds = signal<Set<string>>(new Set());
+
+  /** Dedup sets for reactions and deletions */
+  private reactionIds = new Set<string>();
+  private deletionIds = new Set<string>();
+
+  /** Quick reactions for the picker */
+  readonly quickReactions = ['👍', '❤️', '😂', '🔥', '🎉', '👏'];
+
   /** Sorted list of all channels */
   readonly channels = computed(() => {
     const map = this.channelsMap();
@@ -132,8 +159,9 @@ export class ChatChannelsService implements NostriaService {
       const messages = this.messagesMap().get(channelId) ?? [];
       const hidden = this.hiddenMessageIds();
       const muted = this.mutedUserPubkeys();
+      const deleted = this.deletedMessageIds();
       return messages
-        .filter(m => !hidden.has(m.id) && !muted.has(m.pubkey))
+        .filter(m => !hidden.has(m.id) && !muted.has(m.pubkey) && !deleted.has(m.id))
         .sort((a, b) => a.createdAt - b.createdAt);
     });
   }
@@ -333,6 +361,10 @@ export class ChatChannelsService implements NostriaService {
       });
 
       this.logger.info('[ChatChannels] Loaded messages for channel:', channelId, messages.length);
+
+      // Load reactions and deletions for this channel's messages
+      await this.loadReactionsForChannel(channelId);
+      await this.loadDeletionsForChannel(channelId);
     } catch (error) {
       this.logger.error('[ChatChannels] Failed to load messages for channel:', channelId, error);
     } finally {
@@ -376,6 +408,74 @@ export class ChatChannelsService implements NostriaService {
       }
     );
     this.messageSubscription = msgSub;
+
+    // Also subscribe to reactions for this channel
+    this.subscribeToReactions(channelId);
+  }
+
+  /**
+   * Add a reaction to a channel message
+   */
+  async addReaction(message: ChannelMessage, emoji: string): Promise<boolean> {
+    const currentUserPubkey = this.accountState.pubkey();
+    if (!currentUserPubkey) return false;
+
+    // Check if user already reacted with this emoji
+    const existingReaction = message.reactions?.get(emoji);
+    if (existingReaction?.pubkeys.includes(currentUserPubkey)) {
+      return false; // Already reacted
+    }
+
+    try {
+      const result = await this.reactionService.addReaction(emoji, message.event);
+      if (result.success) {
+        // Optimistic UI update
+        this.updateMessageReaction(message.channelId, message.id, emoji, currentUserPubkey);
+        return true;
+      }
+      return false;
+    } catch (error) {
+      this.logger.error('[ChatChannels] Failed to add reaction', error);
+      return false;
+    }
+  }
+
+  /**
+   * Delete a channel message (kind 5 NIP-09 retraction)
+   * Only the message author can delete their own messages.
+   */
+  async deleteMessage(message: ChannelMessage): Promise<boolean> {
+    const currentUserPubkey = this.accountState.pubkey();
+    if (!currentUserPubkey || message.pubkey !== currentUserPubkey) {
+      this.logger.warn('[ChatChannels] Cannot delete message - not the author');
+      return false;
+    }
+
+    try {
+      const deleteEvent = this.nostrService.createRetractionEvent(message.event);
+      const result = await this.nostrService.signAndPublish(deleteEvent);
+
+      if (result.success) {
+        this.deletedMessageIds.update(set => {
+          const updated = new Set(set);
+          updated.add(message.id);
+          return updated;
+        });
+        return true;
+      }
+      return false;
+    } catch (error) {
+      this.logger.error('[ChatChannels] Failed to delete message', error);
+      return false;
+    }
+  }
+
+  /**
+   * Get reactions array for a message (for template iteration)
+   */
+  getReactionsArray(message: ChannelMessage): ChatReaction[] {
+    if (!message.reactions) return [];
+    return Array.from(message.reactions.values()).sort((a, b) => b.count - a.count);
   }
 
   /**
@@ -649,10 +749,14 @@ export class ChatChannelsService implements NostriaService {
   clear(): void {
     this.closeChannelSubscription();
     this.closeMessageSubscription();
+    this.closeReactionSubscription();
     this.channelsMap.set(new Map());
     this.messagesMap.set(new Map());
     this.hiddenMessageIds.set(new Set());
     this.mutedUserPubkeys.set(new Set());
+    this.deletedMessageIds.set(new Set());
+    this.reactionIds.clear();
+    this.deletionIds.clear();
   }
 
   /**
@@ -680,6 +784,20 @@ export class ChatChannelsService implements NostriaService {
         this.messageSubscription.unsubscribe();
       }
       this.messageSubscription = null;
+    }
+  }
+
+  /**
+   * Close live reaction subscription
+   */
+  closeReactionSubscription(): void {
+    if (this.reactionSubscription) {
+      if (this.reactionSubscription.close) {
+        this.reactionSubscription.close();
+      } else if (this.reactionSubscription.unsubscribe) {
+        this.reactionSubscription.unsubscribe();
+      }
+      this.reactionSubscription = null;
     }
   }
 
@@ -902,6 +1020,154 @@ export class ChatChannelsService implements NostriaService {
       replyTo: replyTag?.[1],
       event,
     };
+  }
+
+  /**
+   * Load reactions for messages in a channel
+   */
+  private async loadReactionsForChannel(channelId: string): Promise<void> {
+    try {
+      const messages = this.messagesMap().get(channelId) ?? [];
+      if (messages.length === 0) return;
+
+      const messageIds = messages.map(m => m.id);
+
+      const reactionEvents = await this.accountRelay.getMany<Event>(
+        { kinds: [7], '#e': messageIds, '#k': [String(CHANNEL_MESSAGE_KIND)], limit: 500 } as Filter,
+        { timeout: 8000 }
+      );
+
+      for (const event of reactionEvents) {
+        this.handleReactionEvent(event, channelId);
+      }
+
+      this.logger.info('[ChatChannels] Loaded reactions for channel:', channelId, reactionEvents.length);
+    } catch (error) {
+      this.logger.error('[ChatChannels] Failed to load reactions for channel:', channelId, error);
+    }
+  }
+
+  /**
+   * Load deletion events for messages in a channel
+   */
+  private async loadDeletionsForChannel(channelId: string): Promise<void> {
+    try {
+      const messages = this.messagesMap().get(channelId) ?? [];
+      if (messages.length === 0) return;
+
+      const messageIds = messages.map(m => m.id);
+
+      const deletionEvents = await this.accountRelay.getMany<Event>(
+        { kinds: [5], '#e': messageIds, '#k': [String(CHANNEL_MESSAGE_KIND)], limit: 500 } as Filter,
+        { timeout: 8000 }
+      );
+
+      for (const event of deletionEvents) {
+        this.handleDeletionEvent(event, channelId);
+      }
+
+      this.logger.info('[ChatChannels] Loaded deletions for channel:', channelId, deletionEvents.length);
+    } catch (error) {
+      this.logger.error('[ChatChannels] Failed to load deletions for channel:', channelId, error);
+    }
+  }
+
+  /**
+   * Subscribe to live reactions for a channel
+   */
+  private subscribeToReactions(channelId: string): void {
+    this.closeReactionSubscription();
+
+    const reactionSub = this.accountRelay.subscribe<Event>(
+      { kinds: [7, 5], '#k': [String(CHANNEL_MESSAGE_KIND)] } as Filter,
+      (event: Event) => {
+        if (event.kind === 7) {
+          this.handleReactionEvent(event, channelId);
+        } else if (event.kind === 5) {
+          this.handleDeletionEvent(event, channelId);
+        }
+      }
+    );
+    this.reactionSubscription = reactionSub;
+  }
+
+  /**
+   * Handle a kind 7 reaction event
+   */
+  private handleReactionEvent(event: Event, channelId: string): void {
+    if (this.reactionIds.has(event.id)) return;
+    this.reactionIds.add(event.id);
+
+    const targetEventId = event.tags.find(tag => tag[0] === 'e')?.[1];
+    if (!targetEventId) return;
+
+    const reactionContent = event.content || '+';
+    const reactorPubkey = event.pubkey;
+
+    this.updateMessageReaction(channelId, targetEventId, reactionContent, reactorPubkey);
+  }
+
+  /**
+   * Handle a kind 5 deletion event
+   */
+  private handleDeletionEvent(event: Event, channelId: string): void {
+    if (this.deletionIds.has(event.id)) return;
+    this.deletionIds.add(event.id);
+
+    const targetEventId = event.tags.find(tag => tag[0] === 'e')?.[1];
+    if (!targetEventId) return;
+
+    // Verify the deletion author matches the message author (NIP-09)
+    const messages = this.messagesMap().get(channelId) ?? [];
+    const targetMessage = messages.find(m => m.id === targetEventId);
+    if (!targetMessage || targetMessage.pubkey !== event.pubkey) return;
+
+    this.deletedMessageIds.update(set => {
+      const updated = new Set(set);
+      updated.add(targetEventId);
+      return updated;
+    });
+  }
+
+  /**
+   * Update a message's reaction map
+   */
+  private updateMessageReaction(channelId: string, messageId: string, emoji: string, reactorPubkey: string): void {
+    const currentUserPubkey = this.accountState.pubkey();
+
+    this.messagesMap.update(map => {
+      const updated = new Map(map);
+      const messages = updated.get(channelId);
+      if (!messages) return map;
+
+      const updatedMessages = messages.map(msg => {
+        if (msg.id !== messageId) return msg;
+
+        const reactions = new Map(msg.reactions || []);
+        const existing = reactions.get(emoji);
+
+        if (existing) {
+          if (existing.pubkeys.includes(reactorPubkey)) return msg;
+          existing.count++;
+          existing.pubkeys.push(reactorPubkey);
+          if (reactorPubkey === currentUserPubkey) {
+            existing.userReacted = true;
+          }
+        } else {
+          reactions.set(emoji, {
+            content: emoji,
+            count: 1,
+            pubkeys: [reactorPubkey],
+            userReacted: reactorPubkey === currentUserPubkey,
+          });
+        }
+
+        return { ...msg, reactions };
+      });
+
+      updated.set(channelId, updatedMessages);
+      return updated;
+    });
   }
 
   /**

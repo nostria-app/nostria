@@ -1,0 +1,58 @@
+@if (isChannelCreate()) {
+<!-- Kind 40: Channel Creation Event -->
+<div class="channel-embed-container clickable" tabindex="0" role="button"
+  (click)="openChannel($event)" (keydown.enter)="openChannel($event)" (keydown.space)="openChannel($event)">
+  <div class="channel-embed-header">
+    @if (channelPicture() && !onPictureError()) {
+    <img class="channel-picture" [src]="channelPicture()" [alt]="channelName()"
+      loading="lazy" (error)="onPictureLoadError()" />
+    } @else {
+    <div class="channel-picture-placeholder">
+      <mat-icon>forum</mat-icon>
+    </div>
+    }
+    <div class="channel-info">
+      <div class="channel-title-row">
+        <mat-icon class="channel-icon">forum</mat-icon>
+        <h3 class="channel-name">{{ channelName() }}</h3>
+      </div>
+      <div class="channel-meta">
+        <app-user-profile [pubkey]="authorPubkey()" view="compact" [showRank]="false"
+          [hostWidthAuto]="true"></app-user-profile>
+        <span class="meta-separator">&#183;</span>
+        <span class="channel-date">{{ event().created_at | ago }}</span>
+      </div>
+    </div>
+  </div>
+  @if (channelAbout()) {
+  <p class="channel-about">{{ channelAbout() }}</p>
+  }
+  <div class="channel-action-hint">
+    <mat-icon>arrow_forward</mat-icon>
+    <span>Open chat</span>
+  </div>
+</div>
+} @else if (isChannelMessage()) {
+<!-- Kind 42: Channel Message Event -->
+<div class="channel-embed-container message-embed clickable" tabindex="0" role="button"
+  (click)="openChannel($event)" (keydown.enter)="openChannel($event)" (keydown.space)="openChannel($event)">
+  <div class="message-channel-bar">
+    <mat-icon class="channel-icon-small">forum</mat-icon>
+    @if (channelLoading()) {
+    <span class="channel-name-small">Loading channel...</span>
+    } @else {
+    <span class="channel-name-small">{{ channelName() }}</span>
+    }
+  </div>
+  <div class="message-content-area">
+    <div class="message-header">
+      <app-user-profile [pubkey]="authorPubkey()" view="compact" [showRank]="false"
+        [hostWidthAuto]="true"></app-user-profile>
+      <span class="message-date">{{ event().created_at | ago }}</span>
+    </div>
+    <div class="message-body">
+      <span class="message-text">{{ event().content }}</span>
+    </div>
+  </div>
+</div>
+}

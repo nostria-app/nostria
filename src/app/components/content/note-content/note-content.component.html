@@ -341,6 +341,11 @@
 <div class="embedded-relay-list-event">
   <app-relay-list-event [event]="mention!.event!.event"></app-relay-list-event>
 </div>
+} @else if (mention!.event!.event.kind === 40 || mention!.event!.event.kind === 42) {
+<!-- Channel Event (kind 40 creation / kind 42 message, NIP-28) -->
+<div class="embedded-channel-event">
+  <app-channel-embed [event]="mention!.event!.event"></app-channel-embed>
+</div>
 } @else {
 <!-- Regular event mention (kind 1, etc.) -->
 <mat-card appearance="outlined" class="event-mention-card" tabindex="0" role="button"

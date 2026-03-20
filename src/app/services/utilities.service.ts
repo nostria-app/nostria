@@ -197,7 +197,7 @@ export class UtilitiesService {
     'nproxy.kristapsk.lv',
     'nostr.extrabits.io',
     'r.kojira.io',
-    'relay.0xchat.com',
+    // 'relay.0xchat.com', // back from the dead
     'relay.austrich.net',
     'nostr.fmt.wiz.biz',
     'relay.coindebit.io',

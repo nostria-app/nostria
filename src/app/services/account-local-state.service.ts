@@ -1705,11 +1705,11 @@ export class AccountLocalStateService {
 
   /**
    * Get chats list filter for an account
-   * Returns 'all' if not set (shows all public chats)
+   * Returns 'following' if not set (shows only chats from people you follow)
    */
   getChatsListFilter(pubkey: string): string {
     const state = this.getAccountState(pubkey);
-    return state.chatsListFilter || 'all';
+    return state.chatsListFilter || 'following';
   }
 
   /**
@@ -1717,7 +1717,7 @@ export class AccountLocalStateService {
    * @param filter - 'all', 'following', or a follow set d-tag
    */
   setChatsListFilter(pubkey: string, filter: string): void {
-    const value = filter === 'all' ? undefined : filter;
+    const value = filter === 'following' ? undefined : filter;
     this.updateAccountState(pubkey, { chatsListFilter: value });
   }
 

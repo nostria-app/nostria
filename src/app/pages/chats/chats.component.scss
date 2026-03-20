@@ -598,7 +598,6 @@
   gap: 4px;
   padding: 0 12px;
   position: relative;
-  overflow: hidden;
 
   @media (max-width: 699px) {
     padding: 0 6px;
@@ -651,11 +650,6 @@
 
     .message-bubble-row {
       flex-direction: row-reverse;
-
-      .message-actions {
-        right: auto;
-        left: -32px;
-      }
     }
   }
 
@@ -924,12 +918,9 @@
 }
 
 .message-actions {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  right: -32px;
   display: flex;
   align-items: center;
+  flex-shrink: 0;
   opacity: 0;
   transition: opacity 0.15s ease;
   pointer-events: none;
@@ -955,6 +946,103 @@
       opacity: 1;
     }
   }
+}
+
+// Reaction button in message actions
+.reaction-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.7;
+  transition: opacity 0.2s ease;
+  width: 32px;
+  height: 32px;
+  padding: 0 !important;
+
+  mat-icon {
+    display: block;
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+  }
+
+  &:hover {
+    opacity: 1;
+  }
+}
+
+// Reaction picker dropdown
+.reaction-picker {
+  display: flex;
+  gap: 4px;
+  padding: 8px;
+
+  .emoji-button {
+    width: 36px;
+    height: 36px;
+    font-size: 1.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: background-color 0.2s ease, transform 0.15s ease;
+
+    &:hover {
+      background: var(--mat-sys-surface-container-highest);
+      transform: scale(1.15);
+    }
+  }
+}
+
+// Reaction chips below messages
+.message-reactions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+  padding-left: 2px;
+}
+
+.reaction-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  background: var(--mat-sys-surface-container-highest);
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0;
+
+  &:hover {
+    background: var(--mat-sys-surface-container-high);
+    border-color: var(--mat-sys-primary);
+  }
+
+  &.user-reacted {
+    background: var(--mat-sys-primary-container);
+    border-color: var(--mat-sys-primary);
+  }
+
+  .reaction-emoji {
+    font-size: 0.875rem;
+    line-height: 1;
+  }
+
+  .reaction-count {
+    font-size: 0.75rem;
+    color: var(--mat-sys-on-surface-variant);
+  }
+
+  &.user-reacted .reaction-count {
+    color: var(--mat-sys-on-primary-container);
+  }
+}
+
+// Outgoing messages: align reactions to the right
+.message-group-container.outgoing .message-reactions {
+  justify-content: flex-end;
 }
 
 // Scroll to latest button
