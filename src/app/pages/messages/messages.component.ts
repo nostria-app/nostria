@@ -218,7 +218,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   isUploading = signal<boolean>(false);
   isDragOverMessageInput = signal<boolean>(false);
   uploadStatus = signal<string>('');
-  mediaPreviews = signal<{ url: string; type: 'image' | 'video' }[]>([]);
+  mediaPreviews = signal<{ url: string; type: 'image' | 'video' | 'music'; label?: string }[]>([]);
   error = signal<string | null>(null);
   showMobileList = signal<boolean>(true);
   selectedTabIndex = signal<number>(0); // 0 = Following, 1 = Others
@@ -1879,7 +1879,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
 
     dialogRef.afterClosed$.subscribe(({ result }) => {
       if (result?.naddr) {
-        this.insertMusicReference(result.naddr);
+        this.insertMusicReference(result.naddr, result.title, result.type);
       }
     });
   }
@@ -1887,10 +1887,16 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   /**
    * Insert a music reference (naddr) into the message text
    */
-  private insertMusicReference(naddr: string): void {
+  private insertMusicReference(naddr: string, title: string, musicType: 'track' | 'playlist'): void {
+    const nostrUrl = 'nostr:' + naddr;
     const currentText = this.newMessageText();
     const separator = currentText && !currentText.endsWith('\n') && currentText.length > 0 ? '\n' : '';
-    this.newMessageText.set(currentText + separator + 'nostr:' + naddr);
+    this.newMessageText.set(currentText + separator + nostrUrl);
+
+    // Add preview
+    const label = musicType === 'playlist' ? `Album: ${title}` : title;
+    this.mediaPreviews.update(previews => [...previews, { url: nostrUrl, type: 'music' as const, label }]);
+
     this.messageInput?.nativeElement?.focus();
   }
 

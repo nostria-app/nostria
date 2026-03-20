@@ -104,7 +104,11 @@
           @if (selectedChannel(); as channel) {
           <div class="channel-header-info">
             @if (channel.metadata.picture) {
-            <img [src]="channel.metadata.picture" [alt]="channel.metadata.name" class="channel-header-avatar" />
+            <img [src]="channel.metadata.picture" [alt]="channel.metadata.name" class="channel-header-avatar"
+              (click)="openChannelAvatarPreview(channel.metadata.picture, channel.metadata.name, $event)"
+              (keydown.enter)="openChannelAvatarPreview(channel.metadata.picture, channel.metadata.name, $event)"
+              (keydown.space)="openChannelAvatarPreview(channel.metadata.picture, channel.metadata.name, $event)"
+              tabindex="0" role="button" aria-label="Open channel avatar" />
             } @else {
             <div class="channel-header-avatar-placeholder">
               <span>{{ getChannelInitials(channel) }}</span>
@@ -268,6 +272,11 @@
             <img [src]="preview.url" class="media-preview-thumb" alt="Media preview">
             } @else if (preview.type === 'video') {
             <video [src]="preview.url" class="media-preview-thumb" muted></video>
+            } @else if (preview.type === 'music') {
+            <div class="reference-preview-thumb">
+              <mat-icon>music_note</mat-icon>
+              <span class="reference-preview-label">{{ preview.label }}</span>
+            </div>
             }
             <button mat-icon-button class="remove-media-preview-btn" (click)="removeMediaPreview(i)"
               matTooltip="Remove media">

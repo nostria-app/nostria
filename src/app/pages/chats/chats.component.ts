@@ -21,6 +21,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDividerModule } from '@angular/material/divider';
+import { MatDialog } from '@angular/material/dialog';
 import { Router, ActivatedRoute, RouterModule } from '@angular/router';
 import { LayoutService } from '../../services/layout.service';
 import { LoggerService } from '../../services/logger.service';
@@ -41,6 +42,8 @@ import { ApplicationService } from '../../services/application.service';
 import { FollowSetsService } from '../../services/follow-sets.service';
 import { TrustService } from '../../services/trust.service';
 import { ListFilterMenuComponent, ListFilterValue } from '../../components/list-filter-menu/list-filter-menu.component';
+import { MediaPreviewDialogComponent } from '../../components/media-preview-dialog/media-preview.component';
+import { stripImageProxy } from '../../utils/strip-image-proxy';
 import {
   CreateChannelDialogComponent,
   CreateChannelDialogResult,
@@ -82,6 +85,7 @@ export class ChatsComponent implements OnInit, OnDestroy {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly snackBar = inject(MatSnackBar);
+  private readonly dialog = inject(MatDialog);
   private readonly customDialog = inject(CustomDialogService);
   readonly mediaService = inject(MediaService);
 
@@ -119,7 +123,7 @@ export class ChatsComponent implements OnInit, OnDestroy {
   readonly uploadStatus = signal<string>('');
 
   /** Media previews for the current message */
-  readonly mediaPreviews = signal<{ url: string; type: 'image' | 'video' }[]>([]);
+  readonly mediaPreviews = signal<{ url: string; type: 'image' | 'video' | 'music'; label?: string }[]>([]);
 
   /** People list filter state */
   readonly selectedListFilter = signal<string>('following');
@@ -659,7 +663,7 @@ export class ChatsComponent implements OnInit, OnDestroy {
 
     dialogRef.afterClosed$.subscribe(({ result }) => {
       if (result?.naddr) {
-        this.insertMusicReference(result.naddr);
+        this.insertMusicReference(result.naddr, result.title, result.type);
       }
     });
   }
@@ -717,6 +721,25 @@ export class ChatsComponent implements OnInit, OnDestroy {
   getChannelInitials(channel: ChatChannel): string {
     const name = channel.metadata.name || '?';
     return name.charAt(0).toUpperCase();
+  }
+
+  /** Open a larger preview of a channel avatar image */
+  openChannelAvatarPreview(imageUrl: string, channelName: string, event?: Event): void {
+    event?.preventDefault();
+    event?.stopPropagation();
+
+    this.dialog.open(MediaPreviewDialogComponent, {
+      data: {
+        mediaUrl: stripImageProxy(imageUrl),
+        mediaType: 'image',
+        mediaTitle: `${channelName} Avatar`,
+      },
+      maxWidth: '100vw',
+      maxHeight: '100vh',
+      width: '100vw',
+      height: '100vh',
+      panelClass: 'image-dialog-panel',
+    });
   }
 
   // --- Private helpers ---
@@ -779,10 +802,16 @@ export class ChatsComponent implements OnInit, OnDestroy {
     this.messageInput?.nativeElement?.focus();
   }
 
-  private insertMusicReference(naddr: string): void {
+  private insertMusicReference(naddr: string, title: string, musicType: 'track' | 'playlist'): void {
+    const nostrUrl = 'nostr:' + naddr;
     const currentText = this.newMessageText();
     const separator = currentText && !currentText.endsWith('\n') && currentText.length > 0 ? '\n' : '';
-    this.newMessageText.set(currentText + separator + 'nostr:' + naddr);
+    this.newMessageText.set(currentText + separator + nostrUrl);
+
+    // Add preview
+    const label = musicType === 'playlist' ? `Album: ${title}` : title;
+    this.mediaPreviews.update(previews => [...previews, { url: nostrUrl, type: 'music' as const, label }]);
+
     this.messageInput?.nativeElement?.focus();
   }
 
