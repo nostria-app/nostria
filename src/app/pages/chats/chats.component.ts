@@ -213,14 +213,27 @@ export class ChatsComponent implements OnInit, OnDestroy {
     return filtered;
   });
 
-  /** Channels the user has participated in (sent messages to), from the filtered list */
+  /** All channels from service (unfiltered by list filter, but filtered by search query) */
+  private readonly allSearchFilteredChannels = computed(() => {
+    const query = this.channelSearchQuery().toLowerCase();
+    const allChannels = this.chatChannels.channels();
+    if (!query) return allChannels;
+    return allChannels.filter(
+      ch =>
+        ch.metadata.name.toLowerCase().includes(query) ||
+        ch.metadata.about.toLowerCase().includes(query) ||
+        ch.tags.some(t => t.toLowerCase().includes(query))
+    );
+  });
+
+  /** Channels the user has participated in (sent messages to) — NOT filtered by list filter */
   readonly participatedChannels = computed(() => {
     const participated = this.chatChannels.participatedChannelIds();
     if (participated.size === 0) return [];
-    return this.channels().filter(ch => participated.has(ch.id));
+    return this.allSearchFilteredChannels().filter(ch => participated.has(ch.id));
   });
 
-  /** Channels the user has NOT participated in, from the filtered list */
+  /** Channels the user has NOT participated in, from the list-filtered set */
   readonly discoveredChannels = computed(() => {
     const participated = this.chatChannels.participatedChannelIds();
     if (participated.size === 0) return this.channels();
