@@ -1269,6 +1269,11 @@ mat-sidenav-content {
         padding-bottom: 0;
       }
 
+      // Chats manages its own mobile bottom spacing for the message composer.
+      &:has(app-chats) {
+        padding-bottom: 0;
+      }
+
       .panel-content-wrapper {
         max-width: 700px;
         margin-left: auto;
@@ -1352,6 +1357,13 @@ mat-sidenav-content {
   // Disable panel scrolling when virtual-scroll components are present
   // These components manage their own scrolling
   &:has(app-notifications) {
+    overflow-y: hidden;
+  }
+
+  // Disable panel scrolling when chat pages are present
+  // Chats/messages manage their own scrolling via .message-list
+  &:has(app-chats),
+  &:has(app-messages) {
     overflow-y: hidden;
   }
 
