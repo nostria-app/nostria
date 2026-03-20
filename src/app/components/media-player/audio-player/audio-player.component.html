@@ -259,6 +259,12 @@
             <mat-icon>open_in_full</mat-icon>
             <span>Fullscreen</span>
           </button>
+          @if (canDockToSidebar()) {
+          <button mat-menu-item (click)="toggleSidebarDock()">
+            <mat-icon>{{ layout.mediaPlayerInSidebar() ? 'pip_exit' : 'dock_to_right' }}</mat-icon>
+            <span>{{ layout.mediaPlayerInSidebar() ? 'Move to footer' : 'Move to sidebar' }}</span>
+          </button>
+          }
 
           <mat-menu #speedMenuDesktop="matMenu">
             <button mat-menu-item (click)="media.setPlaybackRate(0.5)">0.5x</button>

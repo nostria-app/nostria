@@ -22,6 +22,7 @@ import { LayoutService } from '../../../services/layout.service';
 import { AccountStateService } from '../../../services/account-state.service';
 import { AccountLocalStateService } from '../../../services/account-local-state.service';
 import { ImageCacheService } from '../../../services/image-cache.service';
+import { SettingsService } from '../../../services/settings.service';
 import { UserProfileComponent } from '../../user-profile/user-profile.component';
 import { ModernPlayerViewComponent } from './modern-player-view/modern-player-view.component';
 import { CardsPlayerViewComponent } from './cards-player-view/cards-player-view.component';
@@ -70,6 +71,9 @@ export class AudioPlayerComponent {
   private accountState = inject(AccountStateService);
   private accountLocalState = inject(AccountLocalStateService);
   private imageCache = inject(ImageCacheService);
+  private settings = inject(SettingsService);
+
+  canDockToSidebar = computed(() => !this.layout.isHandset() && this.settings.settings().rightSidebarEnabled === true);
 
   footer = input<boolean>(false);
   miniMediaToggleRequested = output<MouseEvent>();
@@ -221,6 +225,10 @@ export class AudioPlayerComponent {
 
   toggleFullscreen(): void {
     this.layout.fullscreenMediaPlayer.set(!this.layout.fullscreenMediaPlayer());
+  }
+
+  toggleSidebarDock(): void {
+    this.layout.mediaPlayerInSidebar.update(v => !v);
   }
 
   toggleExpanded(): void {

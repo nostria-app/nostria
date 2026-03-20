@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, OnDestroy, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnDestroy, computed, effect, inject, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
@@ -120,14 +120,14 @@ export class RunesSidebarComponent implements OnDestroy {
   private readonly WEATHER_REFRESH_INTERVAL_MS = 15 * 60_000;
   private readonly BITCOIN_REFRESH_INTERVAL_MS = 5 * 60_000;
 
-  private readonly layout = inject(LayoutService);
+  protected readonly layout = inject(LayoutService);
   private readonly router = inject(Router);
   private readonly pool = inject(RelayPoolService);
   private readonly accountRelay = inject(AccountRelayService);
   private readonly relaysService = inject(RelaysService);
   private readonly accountState = inject(AccountStateService);
   private readonly data = inject(DataService);
-  private readonly mediaPlayer = inject(MediaPlayerService);
+  protected readonly mediaPlayer = inject(MediaPlayerService);
   private readonly logger = inject(LoggerService);
   private readonly utilities = inject(UtilitiesService);
   private readonly runesSettings = inject(RunesSettingsService);
@@ -257,6 +257,17 @@ export class RunesSidebarComponent implements OnDestroy {
 
   protected readonly settingsPreviewVisible = computed(() => this.settingsOpen() || this.hoveredSettings());
   protected readonly weatherManualLocation = this.runesSettings.weatherManualLocation;
+
+  // Sidebar media player state
+  protected readonly sidebarPlayerHovered = signal(false);
+  protected readonly sidebarPlayerIntro = signal(false);
+  protected readonly sidebarPlayerFlyoutPosition = signal<{ top: number; right: number } | null>(null);
+  private sidebarPlayerHoverTimer: ReturnType<typeof setTimeout> | null = null;
+  private sidebarPlayerIntroTimer: ReturnType<typeof setTimeout> | null = null;
+  private sidebarPlayerFlyoutHovered = false;
+  private sidebarPlayerWasDocked = false; // Track previous dock state to only show intro on transition
+
+  protected readonly sidebarPlayerArtwork = computed(() => this.mediaPlayer.current()?.artwork ?? null);
   protected readonly weatherUsingManualLocation = computed(() => !!this.weatherManualLocation());
 
   protected readonly bitcoinPriceLabel = computed(() => {
@@ -408,10 +419,38 @@ export class RunesSidebarComponent implements OnDestroy {
     if (this.runesSettings.isRuneEnabled('weather')) {
       void this.loadWeather();
     }
+
+    // Show a 1-second intro flyout when the media player is docked to the sidebar
+    // so the user can see where it went. Only on the false→true transition.
+    effect(() => {
+      const docked = this.layout.mediaPlayerInSidebar();
+      const hasQueue = this.mediaPlayer.hasQueue();
+      const wasDocked = this.sidebarPlayerWasDocked;
+      this.sidebarPlayerWasDocked = docked;
+
+      if (docked && hasQueue && !wasDocked) {
+        // Use setTimeout so the button element has rendered before we position the flyout
+        setTimeout(() => {
+          this.sidebarPlayerFlyoutPosition.set({ top: 72, right: 72 });
+          this.sidebarPlayerIntro.set(true);
+
+          this.sidebarPlayerIntroTimer = setTimeout(() => {
+            this.sidebarPlayerIntro.set(false);
+          }, 1200);
+        });
+      } else if (!docked) {
+        this.sidebarPlayerIntro.set(false);
+        if (this.sidebarPlayerIntroTimer) {
+          clearTimeout(this.sidebarPlayerIntroTimer);
+          this.sidebarPlayerIntroTimer = null;
+        }
+      }
+    });
   }
 
   ngOnDestroy(): void {
     this.clearHoverHideTimer();
+    this.clearSidebarPlayerTimers();
     clearInterval(this.refreshTimer);
     clearInterval(this.weatherRefreshTimer);
   }
@@ -535,6 +574,112 @@ export class RunesSidebarComponent implements OnDestroy {
     this.isFlyoutHovered.set(false);
     this.hoveredRuneId.set(null);
     this.hoverPreviewPosition.set(null);
+  }
+
+  // --- Sidebar media player methods ---
+
+  protected togglePlayPause(): void {
+    if (this.mediaPlayer.paused) {
+      this.mediaPlayer.resume();
+    } else {
+      this.mediaPlayer.pause();
+    }
+  }
+
+  protected undockFromSidebar(): void {
+    this.layout.mediaPlayerInSidebar.set(false);
+    this.sidebarPlayerHovered.set(false);
+  }
+
+  protected openFullscreenPlayer(): void {
+    this.layout.mediaPlayerInSidebar.set(false);
+    this.layout.fullscreenMediaPlayer.set(true);
+    this.sidebarPlayerHovered.set(false);
+  }
+
+  protected readonly hasSongLink = computed(() => {
+    const current = this.mediaPlayer.current();
+    return !!(current?.eventPubkey && current?.eventIdentifier);
+  });
+
+  protected readonly hasArtistLink = computed(() => {
+    const current = this.mediaPlayer.current();
+    return !!current?.eventPubkey;
+  });
+
+  protected goToSong(): void {
+    const current = this.mediaPlayer.current();
+    if (current?.eventPubkey && current?.eventIdentifier) {
+      this.router.navigate(['/music/song', current.eventPubkey, current.eventIdentifier]);
+      this.sidebarPlayerHovered.set(false);
+    }
+  }
+
+  protected goToArtist(): void {
+    const current = this.mediaPlayer.current();
+    if (current?.eventPubkey) {
+      this.router.navigate(['/music/artist', current.eventPubkey]);
+      this.sidebarPlayerHovered.set(false);
+    }
+  }
+
+  protected onSidebarPlayerEnter(event: MouseEvent): void {
+    if (this.sidebarPlayerHoverTimer) {
+      clearTimeout(this.sidebarPlayerHoverTimer);
+      this.sidebarPlayerHoverTimer = null;
+    }
+    // Cancel intro auto-dismiss on hover
+    if (this.sidebarPlayerIntroTimer) {
+      clearTimeout(this.sidebarPlayerIntroTimer);
+      this.sidebarPlayerIntroTimer = null;
+    }
+    this.sidebarPlayerIntro.set(false);
+
+    const button = event.currentTarget as HTMLElement;
+    const rect = button.getBoundingClientRect();
+    const viewportHeight = window.innerHeight;
+
+    let top = rect.top;
+    const estimatedHeight = 180;
+    if (top + estimatedHeight > viewportHeight - 24) {
+      top = viewportHeight - estimatedHeight - 24;
+    }
+    if (top < 72) {
+      top = 72;
+    }
+
+    this.sidebarPlayerFlyoutPosition.set({ top, right: 72 });
+    this.sidebarPlayerHovered.set(true);
+  }
+
+  protected onSidebarPlayerLeave(): void {
+    this.sidebarPlayerHoverTimer = setTimeout(() => {
+      if (!this.sidebarPlayerFlyoutHovered) {
+        this.sidebarPlayerHovered.set(false);
+      }
+    }, this.HOVER_HIDE_DELAY_MS);
+  }
+
+  protected onSidebarPlayerFlyoutEnter(): void {
+    this.sidebarPlayerFlyoutHovered = true;
+    if (this.sidebarPlayerHoverTimer) {
+      clearTimeout(this.sidebarPlayerHoverTimer);
+      this.sidebarPlayerHoverTimer = null;
+    }
+    // Cancel intro auto-dismiss if user hovers the flyout
+    if (this.sidebarPlayerIntroTimer) {
+      clearTimeout(this.sidebarPlayerIntroTimer);
+      this.sidebarPlayerIntroTimer = null;
+    }
+    this.sidebarPlayerIntro.set(false);
+    this.sidebarPlayerHovered.set(true);
+  }
+
+  protected onSidebarPlayerFlyoutLeave(): void {
+    this.sidebarPlayerFlyoutHovered = false;
+    this.sidebarPlayerHoverTimer = setTimeout(() => {
+      this.sidebarPlayerHovered.set(false);
+    }, this.HOVER_HIDE_DELAY_MS);
   }
 
   protected isRuneActive(runeId: RuneId): boolean {
@@ -1224,6 +1369,17 @@ export class RunesSidebarComponent implements OnDestroy {
     if (this.hoverHideTimer) {
       clearTimeout(this.hoverHideTimer);
       this.hoverHideTimer = null;
+    }
+  }
+
+  private clearSidebarPlayerTimers(): void {
+    if (this.sidebarPlayerHoverTimer) {
+      clearTimeout(this.sidebarPlayerHoverTimer);
+      this.sidebarPlayerHoverTimer = null;
+    }
+    if (this.sidebarPlayerIntroTimer) {
+      clearTimeout(this.sidebarPlayerIntroTimer);
+      this.sidebarPlayerIntroTimer = null;
     }
   }
 

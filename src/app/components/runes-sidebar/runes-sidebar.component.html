@@ -1,4 +1,21 @@
 <div class="runes-sidebar" (mouseenter)="onSidebarEnter()" (mouseleave)="onSidebarLeave()">
+  @if (layout.mediaPlayerInSidebar() && mediaPlayer.hasQueue()) {
+  <button mat-icon-button class="rune-button sidebar-player-button"
+    [class.rune-active]="sidebarPlayerHovered()"
+    (mouseenter)="onSidebarPlayerEnter($event)"
+    (mouseleave)="onSidebarPlayerLeave()"
+    (click)="togglePlayPause()"
+    [attr.aria-label]="mediaPlayer.paused ? 'Play' : 'Pause'">
+    @if (sidebarPlayerArtwork()) {
+    <img class="sidebar-player-art" [src]="sidebarPlayerArtwork()!" alt="Now playing" />
+    <div class="sidebar-player-overlay">
+      <mat-icon>{{ mediaPlayer.paused ? 'play_arrow' : 'pause' }}</mat-icon>
+    </div>
+    } @else {
+    <mat-icon>{{ mediaPlayer.paused ? 'play_arrow' : 'pause' }}</mat-icon>
+    }
+  </button>
+  }
   @for (rune of visibleRunes(); track rune.id) {
   <button mat-icon-button class="rune-button" [class.rune-active]="isRuneActive(rune.id)"
     (mouseenter)="onRuneEnter($event, rune.id)" (mouseleave)="onRuneLeave(rune.id)" (click)="toggleRuneOpen(rune.id)"
@@ -27,6 +44,47 @@
     <mat-icon>tune</mat-icon>
   </button>
 </div>
+
+@if ((sidebarPlayerHovered() || sidebarPlayerIntro()) && layout.mediaPlayerInSidebar() && mediaPlayer.hasQueue()) {
+<div class="rune-flyout rune-hover-preview sidebar-player-flyout"
+  [class.sidebar-player-intro]="sidebarPlayerIntro() && !sidebarPlayerHovered()"
+  [style.top.px]="sidebarPlayerFlyoutPosition()?.top"
+  [style.right.px]="sidebarPlayerFlyoutPosition()?.right"
+  (mouseenter)="onSidebarPlayerFlyoutEnter()"
+  (mouseleave)="onSidebarPlayerFlyoutLeave()">
+  <div class="sidebar-player-info">
+    @if (mediaPlayer.current()?.artwork) {
+    <img class="sidebar-player-flyout-art" [src]="mediaPlayer.current()!.artwork!" alt="Now playing artwork" />
+    }
+    <div class="sidebar-player-flyout-text">
+      <div class="sidebar-player-title" [class.clickable]="hasSongLink()" (click)="goToSong()">{{ mediaPlayer.current()?.title || 'Unknown Track' }}</div>
+      <div class="sidebar-player-artist" [class.clickable]="hasArtistLink()" (click)="goToArtist()">{{ mediaPlayer.current()?.artist || 'Unknown Artist' }}</div>
+    </div>
+  </div>
+  <div class="sidebar-player-controls">
+    <button mat-icon-button [disabled]="!mediaPlayer.canPrevious()" (click)="mediaPlayer.previous()" aria-label="Previous">
+      <mat-icon>skip_previous</mat-icon>
+    </button>
+    <button mat-icon-button (click)="togglePlayPause()" [attr.aria-label]="mediaPlayer.paused ? 'Play' : 'Pause'">
+      <mat-icon>{{ mediaPlayer.paused ? 'play_arrow' : 'pause' }}</mat-icon>
+    </button>
+    <button mat-icon-button [disabled]="!mediaPlayer.canNext()" (click)="mediaPlayer.next()" aria-label="Next">
+      <mat-icon>skip_next</mat-icon>
+    </button>
+  </div>
+  <div class="sidebar-player-actions">
+    <button mat-icon-button matTooltip="Show player" (click)="undockFromSidebar()" aria-label="Move player to footer">
+      <mat-icon>pip_exit</mat-icon>
+    </button>
+    <button mat-icon-button matTooltip="Fullscreen" (click)="openFullscreenPlayer()" aria-label="Open fullscreen player">
+      <mat-icon>open_in_full</mat-icon>
+    </button>
+    <button mat-icon-button matTooltip="Close player" (click)="mediaPlayer.exit()" aria-label="Close player">
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
+</div>
+}
 
 @if (hoverPreviewRuneId(); as previewRuneId) {
 <div class="rune-flyout rune-hover-preview" [style.top.px]="hoverPreviewPosition()?.top"

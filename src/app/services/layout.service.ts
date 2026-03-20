@@ -86,6 +86,13 @@ export class LayoutService implements OnDestroy {
   showMediaPlayer = signal(false);
   fullscreenMediaPlayer = signal(false);
   expandedMediaPlayer = signal(false);
+
+  /**
+   * When true, the media player is docked into the right sidebar (runes area)
+   * as a compact play/pause button instead of the floating footer pill.
+   * Only applicable on desktop (non-handset) screens.
+   */
+  mediaPlayerInSidebar = signal(false);
   private readonly platformId = inject(PLATFORM_ID);
   readonly isBrowser = signal(isPlatformBrowser(this.platformId));
   localStorage = inject(LocalStorageService);
@@ -232,6 +239,24 @@ export class LayoutService implements OnDestroy {
       takeUntilDestroyed(this.destroyRef)
     ).subscribe(result => {
       this.isWideScreen.set(result.matches);
+    });
+
+    // Reset sidebar-docked media player when switching to mobile
+    // (sidebar is not visible on handset screens)
+    effect(() => {
+      if (this.isHandset() && this.mediaPlayerInSidebar()) {
+        this.mediaPlayerInSidebar.set(false);
+      }
+    });
+
+    // When the media player becomes visible (e.g. playback starts), reset the
+    // scroll-hidden state so the mobile cube slides back into view.
+    // Also clear scroll anchors so the next scroll event starts fresh.
+    effect(() => {
+      if (this.showMediaPlayer()) {
+        this.mobileNavScrollHidden.set(false);
+        this.mobileNavScrollState.clear();
+      }
     });
 
     // Handle browser back button when event dialog is open

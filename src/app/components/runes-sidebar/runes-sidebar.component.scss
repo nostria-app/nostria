@@ -548,3 +548,150 @@
     right: 68px;
   }
 }
+
+// ============================================
+// Sidebar media player widget
+// ============================================
+
+.sidebar-player-button {
+  position: relative;
+  overflow: hidden;
+
+  &.rune-active {
+    border-color: var(--mat-sys-primary);
+  }
+}
+
+.sidebar-player-art {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: inherit;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.sidebar-player-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.4);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  border-radius: inherit;
+
+  .mat-icon {
+    color: #fff;
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+  }
+}
+
+.sidebar-player-button:hover .sidebar-player-overlay {
+  opacity: 1;
+}
+
+.sidebar-player-flyout {
+  width: 280px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sidebar-player-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sidebar-player-flyout-art {
+  width: 44px;
+  height: 44px;
+  border-radius: 6px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.sidebar-player-flyout-text {
+  min-width: 0;
+  flex: 1;
+}
+
+.sidebar-player-title {
+  font-size: 0.85rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--mat-sys-on-surface);
+
+  &.clickable {
+    cursor: pointer;
+
+    &:hover {
+      color: var(--mat-sys-primary);
+      text-decoration: underline;
+    }
+  }
+}
+
+.sidebar-player-artist {
+  font-size: 0.75rem;
+  color: var(--mat-sys-on-surface-variant);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  &.clickable {
+    cursor: pointer;
+
+    &:hover {
+      color: var(--mat-sys-primary);
+      text-decoration: underline;
+    }
+  }
+}
+
+.sidebar-player-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.sidebar-player-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  border-top: 1px solid var(--mat-sys-outline-variant);
+  padding-top: 8px;
+}
+
+// ============================================
+// Sidebar player intro animation
+// When docking to sidebar, show flyout briefly
+// so the user sees where the player went.
+// ============================================
+
+.sidebar-player-intro {
+  animation: sidebar-intro-enter 0.35s ease-out;
+}
+
+@keyframes sidebar-intro-enter {
+  0% {
+    opacity: 0;
+    transform: translateX(8px) scale(0.96);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}

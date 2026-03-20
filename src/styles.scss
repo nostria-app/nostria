@@ -177,6 +177,7 @@ mat-nav-list,
 .mdc-list-item__secondary-text,
 .mobile-nav,
 .mobile-nav-label,
+.mobile-bottom-cube,
 .mat-mdc-button,
 .mat-mdc-icon-button,
 .mat-mdc-fab,
@@ -269,7 +270,8 @@ html.locale-fa {
   }
 
   // Mobile navigation should stay LTR
-  .mobile-nav {
+  .mobile-nav,
+  .mobile-bottom-cube {
     direction: ltr;
   }
 
@@ -1919,13 +1921,15 @@ app-media-queue {
 
 // Android-specific safe area fix for mobile navigation
 // Android often doesn't report safe-area-inset-bottom correctly for gesture navigation
-html[data-platform="android"][data-display-mode="standalone"] .mobile-nav {
+html[data-platform="android"][data-display-mode="standalone"] .mobile-nav,
+html[data-platform="android"][data-display-mode="standalone"] .mobile-bottom-cube {
   bottom: 8px !important;
 }
 
 // iOS standalone/PWA: some WebView wrappers report an inflated safe-area inset,
 // which pushes the fixed bottom nav too far up.
-html[data-platform="ios"][data-display-mode="standalone"] .mobile-nav {
+html[data-platform="ios"][data-display-mode="standalone"] .mobile-nav,
+html[data-platform="ios"][data-display-mode="standalone"] .mobile-bottom-cube {
   bottom: 22px !important;
 }
 

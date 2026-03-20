@@ -1840,6 +1840,49 @@ export class App implements OnInit, OnDestroy {
     this.twoColumnLayout.resetNavigation(path);
   }
 
+  // --- Mobile cube swipe handling ---
+  private cubeTouchStartX = 0;
+  private cubeTouchStartY = 0;
+  private cubeSwiping = false;
+
+  onCubeTouchStart(event: TouchEvent): void {
+    if (event.touches.length !== 1) return;
+    this.cubeTouchStartX = event.touches[0].clientX;
+    this.cubeTouchStartY = event.touches[0].clientY;
+    this.cubeSwiping = false;
+  }
+
+  onCubeTouchMove(event: TouchEvent): void {
+    if (event.touches.length !== 1) return;
+    const deltaX = event.touches[0].clientX - this.cubeTouchStartX;
+    const deltaY = Math.abs(event.touches[0].clientY - this.cubeTouchStartY);
+
+    // Only consider horizontal swipes (more horizontal than vertical)
+    if (Math.abs(deltaX) > 20 && Math.abs(deltaX) > deltaY) {
+      this.cubeSwiping = true;
+    }
+  }
+
+  onCubeTouchEnd(event: TouchEvent): void {
+    if (!this.cubeSwiping) return;
+    const deltaX = event.changedTouches[0].clientX - this.cubeTouchStartX;
+    const threshold = 50;
+
+    if (Math.abs(deltaX) < threshold) return;
+
+    const showingPlayer = this.layout.showMediaPlayer();
+
+    if (deltaX < -threshold && !showingPlayer && this.media.hasQueue()) {
+      // Swipe left → show media player
+      this.layout.showMediaPlayer.set(true);
+    } else if (deltaX > threshold && showingPlayer && !this.layout.fullscreenMediaPlayer()) {
+      // Swipe right → show nav (hide media player footer, keep playing)
+      this.layout.showMediaPlayer.set(false);
+    }
+
+    this.cubeSwiping = false;
+  }
+
   async addAccount() {
     this.layout.showLoginDialog();
   }
