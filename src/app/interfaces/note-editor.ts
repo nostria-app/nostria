@@ -24,6 +24,8 @@ export interface NoteEditorDialogData {
     kind?: number;
     identifier?: string;
     relays?: string[];
+    /** NIP-40: Expiration timestamp (in seconds) from the quoted event, if still active */
+    expiration?: number;
   };
   mentions?: string[]; // Array of pubkeys to mention
   content?: string; // Initial content

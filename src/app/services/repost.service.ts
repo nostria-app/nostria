@@ -20,7 +20,7 @@ export class RepostService {
   private snackBar = inject(MatSnackBar);
   private utilities = inject(UtilitiesService);
 
-  async repostNote(event: Event): Promise<boolean> {
+  async repostNote(event: Event, options?: { expiration?: number }): Promise<boolean> {
     if (this.isProtectedEvent(event)) {
       this.snackBar.open('Protected events cannot be reposted', 'Dismiss', {
         duration: 3000,
@@ -28,7 +28,7 @@ export class RepostService {
       return false;
     }
 
-    const repostEvent = this.createRepostEvent(event);
+    const repostEvent = this.createRepostEvent(event, options?.expiration);
 
     const result = await this.nostrService.signAndPublish(repostEvent);
     if (result.success) {
@@ -111,11 +111,24 @@ export class RepostService {
     return result.success;
   }
 
-  private createRepostEvent(event: Event): UnsignedEvent {
-    const tags = [
+  /**
+   * Get the expiration timestamp from an event (NIP-40)
+   * Returns the expiration timestamp in seconds, or null if no expiration set
+   */
+  getEventExpiration(event: Event): number | null {
+    return this.utilities.getEventExpiration(event);
+  }
+
+  private createRepostEvent(event: Event, expiration?: number): UnsignedEvent {
+    const tags: string[][] = [
       ['e', event.id],
       ['p', event.pubkey],
     ];
+
+    // Add expiration tag if provided (NIP-40)
+    if (expiration !== undefined) {
+      tags.push(['expiration', expiration.toString()]);
+    }
 
     // NIP-18 specification: kind:1 events (ShortTextNote) must use kind:6 reposts,
     // while all other event kinds use kind:16 generic reposts.

@@ -1066,6 +1066,16 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
           this.content.set(quoteText);
         }
       }
+
+      // Pre-populate expiration if the quoted event has an active expiration (NIP-40)
+      if (this.data.quote.expiration && this.data.quote.expiration > Math.floor(Date.now() / 1000)) {
+        const expirationDate = new Date(this.data.quote.expiration * 1000);
+        this.expirationEnabled.set(true);
+        this.expirationDate.set(expirationDate);
+        const hours = expirationDate.getHours().toString().padStart(2, '0');
+        const minutes = expirationDate.getMinutes().toString().padStart(2, '0');
+        this.expirationTime.set(`${hours}:${minutes}`);
+      }
     }
 
     // Initialize content if provided (e.g. from Share Target or Edit)

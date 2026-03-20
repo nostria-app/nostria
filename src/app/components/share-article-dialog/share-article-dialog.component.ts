@@ -1,7 +1,7 @@
 import { ApplicationRef, Component, EnvironmentInjector, PLATFORM_ID, ViewRef, computed, createComponent, inject, signal } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { MAT_DIALOG_DATA } from '@angular/material/dialog';
+import { MAT_DIALOG_DATA, MatDialog } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar } from '@angular/material/snack-bar';
@@ -10,6 +10,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { firstValueFrom } from 'rxjs';
 import { CustomDialogService, CustomDialogRef } from '../../services/custom-dialog.service';
 import type { NoteEditorDialogData } from '../../interfaces/note-editor';
 import { kinds, nip19, type Event } from 'nostr-tools';
@@ -26,6 +27,7 @@ import { AccountLocalStateService } from '../../services/account-local-state.ser
 import { UserProfileComponent } from '../user-profile/user-profile.component';
 import type { NostrRecord } from '../../interfaces';
 import { EventImageService } from '../../services/event-image.service';
+import { ConfirmDialogComponent, type ConfirmDialogData } from '../confirm-dialog/confirm-dialog.component';
 
 export interface ShareArticleDialogData {
   title: string;
@@ -630,6 +632,7 @@ export class ShareArticleDialogComponent {
   private favoritesService = inject(FavoritesService);
   private accountLocalState = inject(AccountLocalStateService);
   private eventImageService = inject(EventImageService);
+  private matDialog = inject(MatDialog);
   private appRef = inject(ApplicationRef);
   private environmentInjector = inject(EnvironmentInjector);
   private platformId = inject(PLATFORM_ID);
@@ -951,7 +954,20 @@ export class ShareArticleDialogComponent {
           }
         }
       } else {
-        const reposted = await this.repostService.repostNote(ev);
+        // Check if the original event has an expiration tag (NIP-40)
+        const expiration = this.repostService.getEventExpiration(ev);
+        let repostExpiration: number | undefined;
+
+        if (expiration !== null && expiration > Math.floor(Date.now() / 1000)) {
+          const confirmed = await this.promptExpirationCopy(expiration);
+          if (confirmed === undefined) {
+            // User dismissed the dialog, cancel the repost
+            return;
+          }
+          repostExpiration = confirmed ? expiration : undefined;
+        }
+
+        const reposted = await this.repostService.repostNote(ev, { expiration: repostExpiration });
         if (reposted) {
           this.hasReposted.set(true);
           this.snackBar.open('Reposted', 'Close', { duration: 2000 });
@@ -1006,9 +1022,82 @@ export class ShareArticleDialogComponent {
       quoteData.identifier = identifier;
     }
 
+    // Pass expiration from the original event if it's still in the future
+    const expiration = this.repostService.getEventExpiration(ev);
+    if (expiration !== null && expiration > Math.floor(Date.now() / 1000)) {
+      quoteData.expiration = expiration;
+    }
+
     this.eventService.createNote({
       quote: quoteData,
     });
+  }
+
+  // --- Expiration helpers ---
+
+  /**
+   * Prompt the user whether to copy the expiration from the original event to the repost.
+   * Returns true if the user wants to copy, false if not, and undefined if they dismissed.
+   */
+  private async promptExpirationCopy(expiration: number): Promise<boolean | undefined> {
+    const expirationLabel = this.formatExpirationDistance(expiration);
+    const dialogRef = this.matDialog.open(ConfirmDialogComponent, {
+      data: {
+        title: 'Expiring Post',
+        message: `This post expires in ${expirationLabel}. Apply the same expiration to your repost?`,
+        confirmText: 'Apply Expiration',
+        cancelText: 'Repost Without',
+      } satisfies ConfirmDialogData,
+    });
+
+    return firstValueFrom(dialogRef.afterClosed());
+  }
+
+  private formatExpirationDistance(expirationTimestamp: number): string {
+    const diff = Math.max(0, expirationTimestamp - Math.floor(Date.now() / 1000));
+
+    if (diff < 5) {
+      return 'a few seconds';
+    }
+
+    const minute = 60;
+    const hour = minute * 60;
+    const day = hour * 24;
+    const week = day * 7;
+    const month = day * 30;
+
+    if (diff < minute) {
+      return `${Math.floor(diff)} seconds`;
+    }
+    if (diff < minute * 2) {
+      return 'a minute';
+    }
+    if (diff < hour) {
+      return `${Math.floor(diff / minute)} minutes`;
+    }
+    if (diff < hour * 2) {
+      return 'an hour';
+    }
+    if (diff < day) {
+      return `${Math.floor(diff / hour)} hours`;
+    }
+    if (diff < day * 2) {
+      return 'a day';
+    }
+    if (diff < week) {
+      return `${Math.floor(diff / day)} days`;
+    }
+    if (diff < week * 2) {
+      return 'a week';
+    }
+    if (diff < month) {
+      return `${Math.floor(diff / week)} weeks`;
+    }
+    if (diff < month * 2) {
+      return 'a month';
+    }
+
+    return `${Math.floor(diff / month)} months`;
   }
 
   // --- Share actions ---
