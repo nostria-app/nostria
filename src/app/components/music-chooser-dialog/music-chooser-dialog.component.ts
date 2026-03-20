@@ -212,10 +212,33 @@ export class MusicChooserDialogComponent implements OnDestroy {
    * subscription limit (MAX_CONCURRENT_SUBS_PER_RELAY = 10) and gets
    * rejected when all slots are occupied. query() uses a separate
    * "request" tracking path that is not subject to subscription limits.
+   *
+   * For fast rendering we first load cached tracks from IndexedDB, then
+   * fetch fresh data from relays and persist any new tracks back to the DB.
    */
   private async loadTracks(): Promise<void> {
     this.isLoading.set(true);
 
+    // Phase 1: Load cached tracks from IndexedDB for instant display
+    try {
+      const cachedEvents = await this.database.getEventsByKind(MUSIC_KIND);
+      if (cachedEvents.length > 0) {
+        for (const event of cachedEvents) {
+          const dTag = event.tags.find(t => t[0] === 'd')?.[1] || event.id;
+          const uniqueId = `${event.pubkey}:${dTag}`;
+          this.trackMap.set(uniqueId, event);
+        }
+        this.allTracks.set(
+          Array.from(this.trackMap.values()).sort((a, b) => b.created_at - a.created_at)
+        );
+        this.isLoading.set(false);
+        this.logger.debug(`[MusicChooser] Loaded ${cachedEvents.length} cached tracks from DB`);
+      }
+    } catch (error) {
+      this.logger.warn('[MusicChooser] Failed to load cached tracks from DB:', error);
+    }
+
+    // Phase 2: Fetch fresh tracks from relays
     const relayUrls = await this.resolveMusicRelays();
 
     if (relayUrls.length === 0) {
@@ -230,6 +253,7 @@ export class MusicChooserDialogComponent implements OnDestroy {
 
     try {
       const events = await this.pool.query(relayUrls, filter, 8000);
+      const newEvents: Event[] = [];
 
       for (const event of events) {
         const dTag = event.tags.find(t => t[0] === 'd')?.[1] || event.id;
@@ -239,11 +263,19 @@ export class MusicChooserDialogComponent implements OnDestroy {
         if (existing && existing.created_at >= event.created_at) continue;
 
         this.trackMap.set(uniqueId, event);
+        newEvents.push(event);
       }
 
-      this.allTracks.set(
-        Array.from(this.trackMap.values()).sort((a, b) => b.created_at - a.created_at)
-      );
+      if (newEvents.length > 0) {
+        this.allTracks.set(
+          Array.from(this.trackMap.values()).sort((a, b) => b.created_at - a.created_at)
+        );
+
+        // Persist new/updated tracks to IndexedDB for future cache hits
+        this.database.saveEvents(newEvents).catch(err =>
+          this.logger.warn('[MusicChooser] Failed to save tracks to DB:', err)
+        );
+      }
     } catch (error) {
       this.logger.error('[MusicChooser] Failed to query tracks from relays:', error);
     } finally {

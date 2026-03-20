@@ -1141,8 +1141,12 @@ export class ChatChannelsService implements NostriaService {
         messageCount: 0,
         tags,
       };
-    } catch {
-      this.logger.warn('[ChatChannels] Failed to parse channel create event:', event.id);
+    } catch (err) {
+      this.logger.warn(
+        `[ChatChannels] Failed to parse channel create event:`,
+        `error: ${err instanceof Error ? err.message : String(err)}`,
+        event,
+      );
       return null;
     }
   }
