@@ -157,7 +157,7 @@ export interface CreateChannelDialogResult {
           Channel Relays
         </label>
         <p class="relays-description">
-          Relays where this channel's events will be published and discovered.
+          Make sure the first relay in the list is a publicly accessible relay, it will be used as relay hint for messages.
         </p>
 
         @if (relays().length > 0) {

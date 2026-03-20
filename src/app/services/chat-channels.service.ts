@@ -595,8 +595,9 @@ export class ChatChannelsService implements NostriaService {
         relays: metadata.relays ?? [],
       });
 
+      const relayHint = this.getRelayHint(metadata.relays);
       const eventTags: string[][] = [
-        ['e', channelId, '', 'root'],
+        ['e', channelId, relayHint, 'root'],
         ...tags.map(t => ['t', t]),
       ];
 
@@ -633,22 +634,23 @@ export class ChatChannelsService implements NostriaService {
     if (!pubkey) return false;
 
     try {
-      const tags: string[][] = [['e', channelId, '', 'root']];
+      // Look up channel relays for publishing and relay hint
+      const channel = this.channelsMap().get(channelId);
+      const channelRelays = channel?.metadata.relays;
+      const relayHint = this.getRelayHint(channelRelays);
+
+      const tags: string[][] = [['e', channelId, relayHint, 'root']];
 
       if (replyToId) {
         // Find the original message to get the author pubkey for the p tag
         const messages = this.messagesMap().get(channelId) ?? [];
         const replyMessage = messages.find(m => m.id === replyToId);
 
-        tags.push(['e', replyToId, '', 'reply']);
+        tags.push(['e', replyToId, relayHint, 'reply']);
         if (replyMessage) {
           tags.push(['p', replyMessage.pubkey]);
         }
       }
-
-      // Look up channel relays for publishing
-      const channel = this.channelsMap().get(channelId);
-      const channelRelays = channel?.metadata.relays;
 
       const event = this.nostrService.createEvent(CHANNEL_MESSAGE_KIND, content, tags);
       const publishRelays = this.getPublishRelayUrls(channelRelays);
@@ -1234,6 +1236,14 @@ export class ChatChannelsService implements NostriaService {
    */
   private getRelayUrls(): string[] {
     return this.accountRelay.getRelayUrls();
+  }
+
+  /**
+   * Get the first relay URL from a channel's relay list, for use as a relay hint
+   * in "e" tags. Returns empty string if no channel relays are configured.
+   */
+  private getRelayHint(channelRelays?: string[]): string {
+    return channelRelays && channelRelays.length > 0 ? channelRelays[0] : '';
   }
 
   /**
