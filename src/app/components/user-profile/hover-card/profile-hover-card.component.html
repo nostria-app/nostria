@@ -16,6 +16,13 @@
 
     <!-- Profile Header -->
     <div class="profile-header">
+      <!-- Zap button (left side) -->
+      @if (!isOwnProfile() && hasLightningAddress()) {
+      <button mat-icon-button class="zap-button" (click)="zapUser()">
+        <mat-icon>bolt</mat-icon>
+      </button>
+      }
+
       <a [attr.href]="profileUrl()" (click)="onProfileClick($event)" class="avatar-link">
         @if (profile()?.data?.picture && !imageLoadError()) {
         @if (settingsService.settings().imageCacheEnabled && profile()?.data?.picture) {

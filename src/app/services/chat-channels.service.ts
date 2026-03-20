@@ -1294,14 +1294,10 @@ export class ChatChannelsService implements NostriaService {
           return updated;
         });
 
-        // Track participation
-        if (!this.participatedChannelIds().has(channelId)) {
-          this.participatedChannelIds.update(set => {
-            const updated = new Set(set);
-            updated.add(channelId);
-            return updated;
-          });
-        }
+        // Cache to IndexedDB so the `since` optimization works correctly on reload
+        this.database.saveEvents([result.event as Event & { dTag?: string }]).catch(err =>
+          this.logger.error('[ChatChannels] Failed to cache sent message', err)
+        );
 
         return true;
       }
@@ -1801,7 +1797,9 @@ export class ChatChannelsService implements NostriaService {
       if (messages.length === 0) return;
 
       const messageIds = messages.map(m => m.id);
-      const filter = { kinds: [7], '#e': messageIds, '#k': [String(CHANNEL_MESSAGE_KIND)], limit: 500 } as Filter;
+      // Don't filter by #k tag — many reaction events in the wild don't include it,
+      // and filtering by #e (message IDs) is sufficient to scope reactions to this channel.
+      const filter = { kinds: [7], '#e': messageIds, limit: 500 } as Filter;
 
       const reactionEvents = await this.accountRelay.getMany<Event>(filter, { timeout: 8000 });
 
@@ -1838,7 +1836,9 @@ export class ChatChannelsService implements NostriaService {
       if (messages.length === 0) return;
 
       const messageIds = messages.map(m => m.id);
-      const filter = { kinds: [5], '#e': messageIds, '#k': [String(CHANNEL_MESSAGE_KIND)], limit: 500 } as Filter;
+      // Don't filter by #k tag — many deletion events don't include it,
+      // and filtering by #e (message IDs) is sufficient to scope deletions to this channel.
+      const filter = { kinds: [5], '#e': messageIds, limit: 500 } as Filter;
 
       const deletionEvents = await this.accountRelay.getMany<Event>(filter, { timeout: 8000 });
 
@@ -1867,24 +1867,31 @@ export class ChatChannelsService implements NostriaService {
   }
 
   /**
-   * Subscribe to live reactions for a channel
+   * Subscribe to live reactions for a channel.
+   * Scoped to the channel's current message IDs via '#e' filter.
+   * Falls back to a broader filter if no messages are loaded yet.
    */
   private subscribeToReactions(channelId: string): void {
     this.closeReactionSubscription();
 
-    const pubkey = this.accountState.pubkey();
+    const messages = this.messagesMap().get(channelId) ?? [];
+    const messageIds = messages.map(m => m.id);
+
+    // If there are no messages loaded, there's nothing to subscribe reactions for
+    if (messageIds.length === 0) return;
+
     const now = Math.floor(Date.now() / 1000);
 
-    // Calculate since filter: use last sync timestamp with 60-second overlap buffer, capped at 7 days
-    const lastSync = pubkey ? this.accountLocalState.getChannelReactionsLastSync(pubkey) : 0;
-    const OVERLAP_BUFFER = 60; // 60 seconds overlap to avoid missing events near boundary
-    const MAX_CAP = 7 * 24 * 60 * 60; // 7 days maximum lookback
+    // Scope the subscription to reactions/deletions targeting this channel's messages.
+    // Don't filter by #k tag — many reactions don't include it.
+    const filter: Filter = { kinds: [7, 5], '#e': messageIds } as Filter;
 
-    const filter: Filter = { kinds: [7, 5], '#k': [String(CHANNEL_MESSAGE_KIND)] } as Filter;
-    if (lastSync > 0) {
-      const sinceValue = Math.max(lastSync - OVERLAP_BUFFER, now - MAX_CAP);
-      (filter as Record<string, unknown>)['since'] = sinceValue;
-      this.logger.debug('[ChatChannels] Using since filter for reactions subscription:', sinceValue);
+    // Use a since filter based on the oldest message in the current view
+    // to avoid fetching ancient reactions we've already processed
+    const oldestMessage = messages.reduce((oldest, m) =>
+      m.createdAt < oldest.createdAt ? m : oldest, messages[0]);
+    if (oldestMessage) {
+      (filter as Record<string, unknown>)['since'] = oldestMessage.createdAt;
     }
 
     const handleReactionOrDeletion = (event: Event) => {
@@ -1899,11 +1906,7 @@ export class ChatChannelsService implements NostriaService {
       filter,
       handleReactionOrDeletion,
       () => {
-        // On EOSE: save the current timestamp for subsequent since-filtered loads
-        if (pubkey) {
-          this.accountLocalState.setChannelReactionsLastSync(pubkey, now);
-          this.logger.debug('[ChatChannels] Reactions subscription reached EOSE, saved sync timestamp');
-        }
+        this.logger.debug('[ChatChannels] Reactions subscription reached EOSE for channel:', channelId);
       }
     );
     this.reactionSubscription = reactionSub;

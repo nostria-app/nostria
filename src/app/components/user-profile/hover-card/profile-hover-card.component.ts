@@ -40,6 +40,7 @@ import { firstValueFrom } from 'rxjs';
 import { stripImageProxy } from '../../../utils/strip-image-proxy';
 import { Nip05VerificationService, Nip05VerificationResult } from '../../../services/nip05-verification.service';
 import { UserStatusService, UserStatus } from '../../../services/user-status.service';
+import { ZapDialogComponent, ZapDialogData } from '../../zap-dialog/zap-dialog.component';
 
 interface ProfileData {
   data?: {
@@ -127,6 +128,11 @@ export class ProfileHoverCardComponent {
   });
 
   trustEnabled = computed(() => this.trustService.isEnabled());
+
+  hasLightningAddress = computed(() => {
+    const profile = this.profile();
+    return !!(profile?.data?.lud16 || profile?.data?.lud06);
+  });
 
   // Computed to get available follow sets (sorted alphabetically)
   availableFollowSets = computed(() => {
@@ -398,6 +404,38 @@ export class ProfileHoverCardComponent {
   sendMessage(): void {
     this.layout.openSendMessage(this.pubkey());
     this.hoverCardService.closeHoverCard();
+  }
+
+  async zapUser(): Promise<void> {
+    // Check if user is logged in with a real account
+    const currentAccount = this.accountState.account();
+    if (!currentAccount || currentAccount.source === 'preview') {
+      await this.layout.showLoginDialog();
+      return;
+    }
+
+    const profile = this.profile();
+    if (!profile?.data || !this.hasLightningAddress()) {
+      this.snackBar.open('This user has no lightning address configured for zaps', 'Dismiss', {
+        duration: 4000,
+      });
+      return;
+    }
+
+    const dialogData: ZapDialogData = {
+      recipientPubkey: this.pubkey(),
+      recipientName: profile.data.display_name || profile.data.name || undefined,
+      recipientMetadata: profile.data as Record<string, unknown>,
+    };
+
+    this.hoverCardService.hideHoverCard();
+
+    this.dialog.open(ZapDialogComponent, {
+      data: dialogData,
+      width: '500px',
+      disableClose: true,
+      panelClass: 'responsive-dialog',
+    });
   }
 
   toggleFavorite(): void {
