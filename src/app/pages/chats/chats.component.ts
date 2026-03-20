@@ -27,7 +27,10 @@ import { LayoutService } from '../../services/layout.service';
 import { LoggerService } from '../../services/logger.service';
 import { AccountStateService } from '../../services/account-state.service';
 import { UtilitiesService } from '../../services/utilities.service';
+import { CustomDialogService } from '../../services/custom-dialog.service';
+import { MediaService } from '../../services/media.service';
 import { UserProfileComponent } from '../../components/user-profile/user-profile.component';
+import { MessageContentComponent } from '../../components/message-content/message-content.component';
 import { AgoPipe } from '../../pipes/ago.pipe';
 import {
   ChatChannelsService,
@@ -58,6 +61,7 @@ import {
     MatDividerModule,
     RouterModule,
     UserProfileComponent,
+    MessageContentComponent,
     AgoPipe,
     SlicePipe,
     DatePipe,
@@ -80,6 +84,8 @@ export class ChatsComponent implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly snackBar = inject(MatSnackBar);
   private readonly dialog = inject(MatDialog);
+  private readonly customDialog = inject(CustomDialogService);
+  readonly mediaService = inject(MediaService);
 
   /** Currently selected channel ID */
   readonly selectedChannelId = signal<string | null>(null);
@@ -107,6 +113,15 @@ export class ChatsComponent implements OnInit, OnDestroy {
 
   /** Whether the chat details panel is open */
   readonly showChatDetails = signal<boolean>(false);
+
+  /** Whether a media file is currently uploading */
+  readonly isUploading = signal<boolean>(false);
+
+  /** Upload status text */
+  readonly uploadStatus = signal<string>('');
+
+  /** Media previews for the current message */
+  readonly mediaPreviews = signal<{ url: string; type: 'image' | 'video' }[]>([]);
 
   /** People list filter state */
   readonly selectedListFilter = signal<string>('following');
@@ -260,6 +275,9 @@ export class ChatsComponent implements OnInit, OnDestroy {
   @ViewChild('messageInput', { static: false })
   messageInput?: ElementRef<HTMLTextAreaElement>;
 
+  @ViewChild('mediaFileInput', { static: false })
+  mediaFileInput?: ElementRef<HTMLInputElement>;
+
   private scrollThrottleTimeout: ReturnType<typeof setTimeout> | null = null;
   private userScrolledUp = false;
   private lastScrollHeight = 0;
@@ -334,6 +352,7 @@ export class ChatsComponent implements OnInit, OnDestroy {
     this.replyingToMessage.set(null);
     this.newMessageText.set('');
     this.showChatDetails.set(false);
+    this.mediaPreviews.set([]);
 
     // Load messages and subscribe
     await this.chatChannels.loadChannelMessages(channel.id);
@@ -465,6 +484,7 @@ export class ChatsComponent implements OnInit, OnDestroy {
       if (success) {
         this.newMessageText.set('');
         this.replyingToMessage.set(null);
+        this.mediaPreviews.set([]);
         this.scrollToBottom();
       } else {
         this.snackBar.open('Failed to send message', 'OK', { duration: 3000 });
@@ -583,6 +603,106 @@ export class ChatsComponent implements OnInit, OnDestroy {
     }
   }
 
+  /** Open file dialog for uploading media */
+  openFileDialog(): void {
+    if (!this.mediaFileInput?.nativeElement) {
+      return;
+    }
+
+    if (!this.hasConfiguredMediaServers()) {
+      this.showMediaServerWarning();
+      return;
+    }
+
+    this.mediaFileInput.nativeElement.click();
+  }
+
+  /** Open media library chooser dialog */
+  async openMediaChooser(): Promise<void> {
+    if (!this.hasConfiguredMediaServers()) {
+      this.showMediaServerWarning();
+      return;
+    }
+
+    const { MediaChooserDialogComponent } = await import('../../components/media-chooser-dialog/media-chooser-dialog.component');
+    type MediaChooserResult = import('../../components/media-chooser-dialog/media-chooser-dialog.component').MediaChooserResult;
+
+    const dialogRef = this.customDialog.open<typeof MediaChooserDialogComponent.prototype, MediaChooserResult>(MediaChooserDialogComponent, {
+      title: 'Choose from Library',
+      width: '700px',
+      maxWidth: '95vw',
+      data: {
+        multiple: true,
+        mediaType: 'all',
+      },
+    });
+
+    dialogRef.afterClosed$.subscribe(({ result }) => {
+      if (result?.items?.length) {
+        for (const item of result.items) {
+          this.insertMediaUrl(item.url, item.type);
+        }
+      }
+    });
+  }
+
+  /** Open music chooser dialog */
+  async openMusicChooser(): Promise<void> {
+    const { MusicChooserDialogComponent } = await import('../../components/music-chooser-dialog/music-chooser-dialog.component');
+    type MusicChooserResult = import('../../components/music-chooser-dialog/music-chooser-dialog.component').MusicChooserResult;
+
+    const dialogRef = this.customDialog.open<typeof MusicChooserDialogComponent.prototype, MusicChooserResult>(MusicChooserDialogComponent, {
+      title: 'Choose Music',
+      width: '500px',
+      maxWidth: '95vw',
+    });
+
+    dialogRef.afterClosed$.subscribe(({ result }) => {
+      if (result?.naddr) {
+        this.insertMusicReference(result.naddr);
+      }
+    });
+  }
+
+  /** Open GIF picker dialog */
+  async openGifPickerDialog(): Promise<void> {
+    const { GifPickerDialogComponent } = await import('../../components/gif-picker/gif-picker-dialog.component');
+    const dialogRef = this.customDialog.open<typeof GifPickerDialogComponent.prototype, string>(GifPickerDialogComponent, {
+      title: 'GIFs',
+      width: '400px',
+      panelClass: 'gif-picker-dialog',
+    });
+
+    dialogRef.afterClosed$.subscribe(result => {
+      if (result.result) {
+        this.insertGifUrl(result.result);
+      }
+    });
+  }
+
+  /** Handle media file selection from file input */
+  onMediaFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (input.files && input.files.length > 0) {
+      void this.uploadMediaFiles([input.files[0]]);
+    }
+    input.value = '';
+  }
+
+  /** Remove a specific media preview by index */
+  removeMediaPreview(index: number): void {
+    const preview = this.mediaPreviews()[index];
+    if (preview) {
+      const currentText = this.newMessageText();
+      const newText = currentText
+        .split('\n')
+        .filter(line => line.trim() !== preview.url)
+        .join('\n');
+      this.newMessageText.set(newText);
+    }
+    this.mediaPreviews.update(previews => previews.filter((_, i) => i !== index));
+  }
+
   /** Toggle chat details panel */
   toggleChatDetails(): void {
     this.showChatDetails.update(v => !v);
@@ -600,6 +720,89 @@ export class ChatsComponent implements OnInit, OnDestroy {
   }
 
   // --- Private helpers ---
+
+  private async uploadMediaFiles(files: File[]): Promise<void> {
+    if (files.length === 0) {
+      return;
+    }
+
+    if (!this.hasConfiguredMediaServers()) {
+      this.showMediaServerWarning();
+      return;
+    }
+
+    this.isUploading.set(true);
+
+    try {
+      await this.mediaService.load();
+
+      for (let index = 0; index < files.length; index++) {
+        this.uploadStatus.set(files.length > 1 ? `Uploading ${index + 1}/${files.length}...` : 'Uploading...');
+        await this.uploadMediaFile(files[index]);
+      }
+    } finally {
+      this.isUploading.set(false);
+      this.uploadStatus.set('');
+    }
+  }
+
+  private async uploadMediaFile(file: File): Promise<void> {
+    try {
+      const result = await this.mediaService.uploadFile(
+        file,
+        false,
+        this.mediaService.mediaServers()
+      );
+
+      if (result.status === 'success' && result.item) {
+        this.insertMediaUrl(result.item.url, result.item.type);
+      } else {
+        this.snackBar.open(result.message || 'Upload failed', 'Dismiss', { duration: 5000 });
+      }
+    } catch (err) {
+      this.logger.error('[Chats] Failed to upload media file', err);
+      this.snackBar.open('Failed to upload media', 'Dismiss', { duration: 5000 });
+    }
+  }
+
+  private insertMediaUrl(url: string, mimeType: string): void {
+    const currentText = this.newMessageText();
+    const separator = currentText && !currentText.endsWith('\n') && currentText.length > 0 ? '\n' : '';
+    this.newMessageText.set(currentText + separator + url);
+
+    if (mimeType.startsWith('image/')) {
+      this.mediaPreviews.update(previews => [...previews, { url, type: 'image' }]);
+    } else if (mimeType.startsWith('video/')) {
+      this.mediaPreviews.update(previews => [...previews, { url, type: 'video' }]);
+    }
+
+    this.messageInput?.nativeElement?.focus();
+  }
+
+  private insertMusicReference(naddr: string): void {
+    const currentText = this.newMessageText();
+    const separator = currentText && !currentText.endsWith('\n') && currentText.length > 0 ? '\n' : '';
+    this.newMessageText.set(currentText + separator + 'nostr:' + naddr);
+    this.messageInput?.nativeElement?.focus();
+  }
+
+  private insertGifUrl(url: string): void {
+    const currentText = this.newMessageText();
+    const separator = currentText && !currentText.endsWith('\n') && currentText.length > 0 ? '\n' : '';
+    this.newMessageText.set(currentText + separator + url);
+    this.messageInput?.nativeElement?.focus();
+  }
+
+  private hasConfiguredMediaServers(): boolean {
+    return this.mediaService.mediaServers().length > 0;
+  }
+
+  private showMediaServerWarning(): void {
+    this.snackBar.open('You need to configure a media server before uploading files.', 'Setup', { duration: 5000 })
+      .onAction().subscribe(() => {
+        this.router.navigate(['/collections/media'], { queryParams: { tab: 'servers' } });
+      });
+  }
 
   private scrollToBottom(): void {
     this.userScrolledUp = false;

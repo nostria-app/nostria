@@ -1,0 +1,116 @@
+<div dialog-content class="music-chooser-dialog">
+  <!-- Search bar -->
+  <div class="music-search-bar">
+    <mat-icon class="search-icon">search</mat-icon>
+    <input type="text" class="search-input" placeholder="Search music..."
+      [ngModel]="searchQuery()" (ngModelChange)="searchQuery.set($event)" />
+    @if (searchQuery()) {
+    <button mat-icon-button class="clear-search-btn" (click)="searchQuery.set('')" aria-label="Clear search">
+      <mat-icon>close</mat-icon>
+    </button>
+    }
+  </div>
+
+  <!-- Tabs -->
+  <mat-tab-group [selectedIndex]="getTabIndex()" (selectedIndexChange)="onTabChange($event)">
+    <mat-tab>
+      <ng-template mat-tab-label>
+        <mat-icon class="tab-icon">music_note</mat-icon>
+        <span>Tracks ({{ filteredTracks().length }})</span>
+      </ng-template>
+      <div class="tab-content">
+        @if (isLoading() && allTracks().length === 0) {
+        <div class="loading-state">
+          <mat-spinner diameter="32"></mat-spinner>
+          <p>Loading tracks...</p>
+        </div>
+        } @else if (filteredTracks().length === 0) {
+        <div class="empty-state">
+          <mat-icon>music_off</mat-icon>
+          @if (searchQuery()) {
+          <p>No tracks matching "{{ searchQuery() }}"</p>
+          } @else {
+          <p>No music tracks found</p>
+          }
+        </div>
+        } @else {
+        <div class="music-list">
+          @for (track of filteredTracks(); track track.id) {
+          <div class="music-item" (click)="selectTrack(track)" tabindex="0" role="button"
+            (keydown.enter)="selectTrack(track)" (keydown.space)="$event.preventDefault(); selectTrack(track)">
+            <div class="music-item-cover">
+              @if (getTrackImage(track)) {
+              <img [src]="getTrackImage(track)" [alt]="getTrackTitle(track)" loading="lazy" />
+              } @else {
+              <div class="cover-placeholder">
+                <mat-icon>music_note</mat-icon>
+              </div>
+              }
+              <button mat-icon-button class="play-preview-btn" (click)="togglePreview(track, $event)"
+                [matTooltip]="isTrackPreviewing(track) ? 'Stop' : 'Preview'" aria-label="Preview track">
+                <mat-icon>{{ isTrackPreviewing(track) ? 'pause' : 'play_arrow' }}</mat-icon>
+              </button>
+            </div>
+            <div class="music-item-info">
+              <span class="music-item-title">{{ getTrackTitle(track) }}</span>
+              <span class="music-item-artist">{{ getTrackArtist(track) }}</span>
+            </div>
+          </div>
+          }
+        </div>
+        }
+      </div>
+    </mat-tab>
+
+    <mat-tab>
+      <ng-template mat-tab-label>
+        <mat-icon class="tab-icon">album</mat-icon>
+        <span>Albums ({{ filteredAlbums().length }})</span>
+      </ng-template>
+      <div class="tab-content">
+        @if (isAlbumsLoading() && allAlbums().length === 0) {
+        <div class="loading-state">
+          <mat-spinner diameter="32"></mat-spinner>
+          <p>Loading albums...</p>
+        </div>
+        } @else if (filteredAlbums().length === 0) {
+        <div class="empty-state">
+          <mat-icon>album</mat-icon>
+          @if (searchQuery()) {
+          <p>No albums matching "{{ searchQuery() }}"</p>
+          } @else {
+          <p>No albums found</p>
+          }
+        </div>
+        } @else {
+        <div class="music-list">
+          @for (album of filteredAlbums(); track album.id) {
+          <div class="music-item" (click)="selectAlbum(album)" tabindex="0" role="button"
+            (keydown.enter)="selectAlbum(album)"
+            (keydown.space)="$event.preventDefault(); selectAlbum(album)">
+            <div class="music-item-cover">
+              @if (album.image) {
+              <img [src]="album.image" [alt]="album.title" loading="lazy" />
+              } @else {
+              <div class="cover-placeholder album-placeholder">
+                <mat-icon>album</mat-icon>
+              </div>
+              }
+            </div>
+            <div class="music-item-info">
+              <span class="music-item-title">{{ album.title || 'Untitled Album' }}</span>
+              <span class="music-item-artist">{{ album.trackRefs.length }} track{{ album.trackRefs.length === 1 ? '' : 's' }}</span>
+            </div>
+          </div>
+          }
+        </div>
+        }
+      </div>
+    </mat-tab>
+  </mat-tab-group>
+</div>
+
+<div dialog-actions class="chooser-actions">
+  <span></span>
+  <button mat-button (click)="cancel()">Cancel</button>
+</div>

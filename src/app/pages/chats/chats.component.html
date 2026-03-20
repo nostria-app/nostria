@@ -198,7 +198,10 @@
               <span class="reply-text">Reply</span>
             </div>
             }
-            <div class="message-text">{{ message.content }}</div>
+            <div class="message-text">
+              <app-message-content [content]="message.content" [tags]="message.event.tags"
+                [authorPubkey]="message.pubkey"></app-message-content>
+            </div>
             <span class="message-inline-meta">
               <span class="message-time">{{ message.createdAt | ago }}</span>
             </span>
@@ -256,19 +259,74 @@
           </button>
         </div>
         }
+
+        @if (mediaPreviews().length > 0) {
+        <div class="media-previews">
+          @for (preview of mediaPreviews(); track preview.url; let i = $index) {
+          <div class="media-preview-item">
+            @if (preview.type === 'image') {
+            <img [src]="preview.url" class="media-preview-thumb" alt="Media preview">
+            } @else if (preview.type === 'video') {
+            <video [src]="preview.url" class="media-preview-thumb" muted></video>
+            }
+            <button mat-icon-button class="remove-media-preview-btn" (click)="removeMediaPreview(i)"
+              matTooltip="Remove media">
+              <mat-icon>close</mat-icon>
+            </button>
+          </div>
+          }
+        </div>
+        }
+
         <div class="message-input-row">
+          <!-- Plus menu button -->
+          <button mat-icon-button type="button" [matMenuTriggerFor]="plusMenu" class="plus-button"
+            [disabled]="isUploading() || isSending()" matTooltip="More options">
+            <mat-icon>add</mat-icon>
+          </button>
+          <mat-menu #plusMenu="matMenu">
+            <button mat-menu-item (click)="openFileDialog()">
+              <mat-icon>upload</mat-icon>
+              <span>Upload media</span>
+            </button>
+            <button mat-menu-item (click)="openMediaChooser()">
+              <mat-icon>photo_library</mat-icon>
+              <span>Choose from library</span>
+            </button>
+            <button mat-menu-item (click)="openGifPickerDialog()">
+              <mat-icon>gif_box</mat-icon>
+              <span>GIFs</span>
+            </button>
+            <button mat-menu-item (click)="openMusicChooser()">
+              <mat-icon>music_note</mat-icon>
+              <span>Music</span>
+            </button>
+          </mat-menu>
+
+          <!-- Hidden file input -->
+          <input type="file" #mediaFileInput (change)="onMediaFileSelected($event)" accept="image/*,video/*"
+            class="hidden-file-input" aria-label="Upload media files" />
+
           <textarea #messageInput class="message-input" [ngModel]="newMessageText()"
-            (ngModelChange)="newMessageText.set($event)" placeholder="Message this channel" [disabled]="isSending()"
-            (keydown)="onMessageKeydown($event)" rows="1"></textarea>
-          <button mat-icon-button type="button" class="send-button" [disabled]="!newMessageText().trim() || isSending()"
-            (click)="sendMessage()" matTooltip="Send message">
-            @if (isSending()) {
+            (ngModelChange)="newMessageText.set($event)" placeholder="Message this channel"
+            [disabled]="isSending() || isUploading()" (keydown)="onMessageKeydown($event)" rows="1"></textarea>
+          <button mat-icon-button type="button" class="send-button"
+            [disabled]="!newMessageText().trim() || isSending() || isUploading()" (click)="sendMessage()"
+            matTooltip="Send message">
+            @if (isSending() || isUploading()) {
             <mat-spinner diameter="24"></mat-spinner>
             } @else {
             <mat-icon>send</mat-icon>
             }
           </button>
         </div>
+
+        @if (uploadStatus()) {
+        <div class="upload-status">
+          <mat-spinner diameter="14"></mat-spinner>
+          <span>{{ uploadStatus() }}</span>
+        </div>
+        }
       </div>
     </div>
 
