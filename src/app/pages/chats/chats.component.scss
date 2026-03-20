@@ -252,6 +252,15 @@
   text-overflow: ellipsis;
 }
 
+.pinned-icon {
+  flex-shrink: 0;
+  font-size: 14px;
+  width: 14px;
+  height: 14px;
+  color: var(--mat-sys-outline);
+  transform: rotate(45deg);
+}
+
 .channel-time {
   flex-shrink: 0;
   margin-left: auto;
@@ -1530,6 +1539,7 @@
   border-radius: 8px;
   overflow: hidden;
   display: block;
+  cursor: pointer;
 
   img {
     width: 100%;
@@ -1602,5 +1612,296 @@
 
   p {
     margin: 0;
+  }
+}
+
+// Manage Channel Panel items
+.manage-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: 8px;
+  transition: background-color 0.15s ease;
+
+  &:hover {
+    background-color: var(--mat-sys-surface-variant);
+  }
+}
+
+.manage-item-content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.manage-item-action {
+  flex-shrink: 0;
+  opacity: 0.6;
+
+  &:hover {
+    opacity: 1;
+  }
+}
+
+.manage-item-icon {
+  flex-shrink: 0;
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+  opacity: 0.6;
+}
+
+.manage-item-id {
+  font-size: 0.8rem;
+  opacity: 0.8;
+  font-family: monospace;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.manage-hidden-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+// Migration section styles
+.migration-description {
+  font-size: 0.82rem;
+  opacity: 0.7;
+  line-height: 1.45;
+  margin: 0;
+}
+
+.migration-button {
+  align-self: flex-start;
+}
+
+.migration-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  mat-progress-bar {
+    border-radius: 4px;
+  }
+}
+
+.migration-status {
+  font-size: 0.8rem;
+  opacity: 0.7;
+  line-height: 1.4;
+}
+
+// Channel creation card (kind 40) - displayed at top of message timeline
+.channel-creation-card {
+  display: flex;
+  gap: 16px;
+  padding: 24px 16px;
+  margin: 0 12px 8px;
+  border-radius: 16px;
+  background: var(--mat-sys-surface-container-low);
+  border: 1px solid var(--mat-sys-outline-variant);
+
+  @media (max-width: 699px) {
+    margin: 0 6px 8px;
+    padding: 16px 12px;
+    gap: 12px;
+  }
+}
+
+.channel-creation-picture {
+  width: 64px;
+  height: 64px;
+  border-radius: 12px;
+  object-fit: cover;
+  flex-shrink: 0;
+
+  @media (max-width: 699px) {
+    width: 48px;
+    height: 48px;
+    border-radius: 8px;
+  }
+}
+
+.channel-creation-picture-placeholder {
+  width: 64px;
+  height: 64px;
+  border-radius: 12px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--mat-sys-surface-container);
+
+  mat-icon {
+    font-size: 32px;
+    width: 32px;
+    height: 32px;
+    opacity: 0.5;
+  }
+
+  @media (max-width: 699px) {
+    width: 48px;
+    height: 48px;
+    border-radius: 8px;
+
+    mat-icon {
+      font-size: 24px;
+      width: 24px;
+      height: 24px;
+    }
+  }
+}
+
+.channel-creation-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.channel-creation-name {
+  margin: 0;
+  font-size: 1.1rem;
+  line-height: 1.3;
+}
+
+.channel-creation-about {
+  margin: 0;
+  font-size: 0.875rem;
+  opacity: 0.8;
+  line-height: 1.4;
+}
+
+.channel-creation-meta {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.8rem;
+  opacity: 0.6;
+  flex-wrap: wrap;
+}
+
+.channel-creation-date {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.channel-creation-time {
+  opacity: 0.8;
+
+  &::before {
+    content: '\00b7';
+    margin: 0 2px;
+  }
+}
+
+.channel-creation-relays {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.channel-relay-chip {
+  font-size: 0.75rem;
+  padding: 2px 8px;
+  border-radius: 8px;
+  background: var(--mat-sys-surface-container);
+  color: var(--mat-sys-on-surface-variant);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
+}
+
+.channel-creation-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.channel-tag-chip {
+  font-size: 0.75rem;
+  padding: 2px 8px;
+  border-radius: 8px;
+  background: var(--mat-sys-primary-container);
+  color: var(--mat-sys-on-primary-container);
+}
+
+:host-context(.dark) .channel-creation-card {
+  background: var(--mat-sys-surface-container-low);
+  border-color: var(--mat-sys-outline-variant);
+}
+
+// Kind 41 metadata update inline entries
+.metadata-update-entry {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 16px;
+  margin: 8px 12px;
+
+  @media (max-width: 699px) {
+    padding: 6px 8px;
+    margin: 6px 6px;
+    gap: 8px;
+  }
+}
+
+.metadata-update-line {
+  flex: 1;
+  height: 1px;
+  background: var(--mat-sys-outline-variant);
+  opacity: 0.5;
+}
+
+.metadata-update-content {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  font-size: 0.8rem;
+  opacity: 0.7;
+  white-space: nowrap;
+}
+
+.metadata-update-icon {
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+  opacity: 0.7;
+  color: var(--mat-sys-primary);
+}
+
+.metadata-update-text {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.metadata-change {
+  opacity: 0.8;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.metadata-update-time {
+  opacity: 0.5;
+  font-size: 0.75rem;
+
+  &::before {
+    content: '\00b7';
+    margin: 0 4px;
   }
 }

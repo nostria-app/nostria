@@ -64,6 +64,9 @@
             <div class="channel-info">
               <div class="channel-name-row">
                 <span class="channel-name">{{ channel.metadata.name }}</span>
+                @if (isChannelPinned(channel.id)) {
+                <mat-icon class="pinned-icon" matTooltip="Pinned">push_pin</mat-icon>
+                }
                 @if (channel.updatedAt) {
                 <span class="channel-time">{{ channel.updatedAt | ago }}</span>
                 }
@@ -108,6 +111,9 @@
             <div class="channel-info">
               <div class="channel-name-row">
                 <span class="channel-name">{{ channel.metadata.name }}</span>
+                @if (isChannelPinned(channel.id)) {
+                <mat-icon class="pinned-icon" matTooltip="Pinned">push_pin</mat-icon>
+                }
                 @if (channel.updatedAt) {
                 <span class="channel-time">{{ channel.updatedAt | ago }}</span>
                 }
@@ -142,6 +148,9 @@
             <div class="channel-info">
               <div class="channel-name-row">
                 <span class="channel-name">{{ channel.metadata.name }}</span>
+                @if (isChannelPinned(channel.id)) {
+                <mat-icon class="pinned-icon" matTooltip="Pinned">push_pin</mat-icon>
+                }
                 @if (channel.updatedAt) {
                 <span class="channel-time">{{ channel.updatedAt | ago }}</span>
                 }
@@ -220,10 +229,18 @@
               <mat-icon>link</mat-icon>
               <span>Copy Link</span>
             </button>
+            <button mat-menu-item (click)="refreshChannel()">
+              <mat-icon>refresh</mat-icon>
+              <span>Refresh</span>
+            </button>
             @if (isChannelCreator()) {
             <button mat-menu-item (click)="openEditChannel()">
               <mat-icon>edit</mat-icon>
               <span>Edit Channel</span>
+            </button>
+            <button mat-menu-item (click)="toggleManagePanel()">
+              <mat-icon>admin_panel_settings</mat-icon>
+              <span>Manage</span>
             </button>
             }
             <button mat-menu-item (click)="copyChannelData()">
@@ -234,6 +251,18 @@
             <button mat-menu-item (click)="copyChannelMetadata()">
               <mat-icon>content_copy</mat-icon>
               <span>Copy Data (Metadata)</span>
+            </button>
+            }
+            <mat-divider></mat-divider>
+            @if (isSelectedChannelPinned()) {
+            <button mat-menu-item (click)="unpinChannel()">
+              <mat-icon>push_pin</mat-icon>
+              <span>Unpin</span>
+            </button>
+            } @else {
+            <button mat-menu-item (click)="pinChannel()">
+              <mat-icon>push_pin</mat-icon>
+              <span>Pin</span>
             </button>
             }
           </mat-menu>
@@ -266,107 +295,39 @@
         </div>
         }
 
-        @for (message of currentMessages(); track message.id; let i = $index) {
-        <div class="message-group-container"
-          [class.outgoing]="message.pubkey === currentPubkey()"
-          [class.group-start]="isGroupStart(i)"
-          [class.group-continuation]="!isGroupStart(i)"
-          [attr.data-message-id]="message.id">
-
-          <!-- Avatar column (visible only on group start) -->
-          <div class="message-avatar-column">
-            @if (isGroupStart(i)) {
-            <app-user-profile [pubkey]="message.pubkey" view="icon" />
-            }
+        <!-- Channel creation card (kind 40) -->
+        @if (selectedChannel(); as channel) {
+        <div class="channel-creation-card">
+          @if (channel.originalMetadata.picture) {
+          <img class="channel-creation-picture" [src]="channel.originalMetadata.picture" [alt]="channel.originalMetadata.name" />
+          } @else {
+          <div class="channel-creation-picture-placeholder">
+            <mat-icon>forum</mat-icon>
           </div>
-
-          <!-- Message content column -->
-          <div class="message-content-column">
-            <div class="message-bubble-row">
-              <div class="message-bubble" [class.long-press-active]="longPressedMessageId() === message.id"
-                (touchstart)="onMessageTouchStart($event, message, msgMenuTrigger)"
-                (touchend)="onMessageTouchEnd()" (touchmove)="onMessageTouchEnd()">
-                @if (isGroupStart(i) && message.pubkey !== currentPubkey()) {
-                <div class="message-sender-name">
-                  <app-profile-display-name [pubkey]="message.pubkey" />
-                </div>
-                }
-                @if (message.replyTo) {
-                <div class="reply-context" (click)="scrollToReply(message.replyTo)" (keydown.enter)="scrollToReply(message.replyTo)" tabindex="0" role="button">
-                  <mat-icon>reply</mat-icon>
-                  <div class="reply-content">
-                    @if (getReplyPreviewText(message); as replyText) {
-                    <span class="reply-text">{{ replyText }}</span>
-                    } @else {
-                    <span class="reply-text">Original message</span>
-                    }
-                  </div>
-                </div>
-                }
-                <div class="message-text">
-                  <app-message-content [content]="message.content" [tags]="message.event.tags"
-                    [authorPubkey]="message.pubkey"></app-message-content>
-                </div>
-                <span class="message-inline-meta">
-                  <span class="message-time">{{ message.createdAt | ago }}</span>
-                </span>
-              </div>
-
-              <div class="message-actions">
-                <button mat-icon-button class="reaction-button" #reactionMenuTrigger="matMenuTrigger" [matMenuTriggerFor]="reactionMenu" (click)="$event.stopPropagation()"
-                  matTooltip="Add reaction">
-                  <mat-icon>add_reaction</mat-icon>
-                </button>
-                <mat-menu #reactionMenu="matMenu" class="reaction-picker-menu">
-                  <div class="reaction-picker" (click)="$event.stopPropagation()">
-                    @for (emoji of quickReactions; track emoji) {
-                    <button mat-icon-button class="emoji-button" (click)="addReaction(message, emoji)">
-                      {{ emoji }}
-                    </button>
-                    }
-                  </div>
-                </mat-menu>
-                <button mat-icon-button class="more-button" #msgMenuTrigger="matMenuTrigger" [matMenuTriggerFor]="msgMenu" (click)="$event.stopPropagation()"
-                  matTooltip="More options">
-                  <mat-icon>more_vert</mat-icon>
-                </button>
-                <mat-menu #msgMenu="matMenu">
-                  <button mat-menu-item (click)="setReplyTo(message)">
-                    <mat-icon>reply</mat-icon>
-                    <span>Reply</span>
-                  </button>
-                  <button mat-menu-item (click)="copyMessageData(message)">
-                    <mat-icon>content_copy</mat-icon>
-                    <span>Copy Data</span>
-                  </button>
-                  @if (message.pubkey === currentPubkey()) {
-                  <button mat-menu-item (click)="deleteMessage(message)">
-                    <mat-icon>delete</mat-icon>
-                    <span>Delete Message</span>
-                  </button>
-                  }
-                  @if (message.pubkey !== currentPubkey()) {
-                  <button mat-menu-item (click)="hideMessage(message)">
-                    <mat-icon>visibility_off</mat-icon>
-                    <span>Hide Message</span>
-                  </button>
-                  <button mat-menu-item (click)="muteUser(message.pubkey)">
-                    <mat-icon>block</mat-icon>
-                    <span>Mute User</span>
-                  </button>
-                  }
-                </mat-menu>
-              </div>
+          }
+          <div class="channel-creation-info">
+            <h3 class="channel-creation-name">{{ channel.originalMetadata.name }}</h3>
+            @if (channel.originalMetadata.about) {
+            <p class="channel-creation-about">{{ channel.originalMetadata.about }}</p>
+            }
+            <div class="channel-creation-meta">
+              <span class="channel-creation-date">
+                Created by
+                <app-profile-display-name [pubkey]="channel.creator" />
+                <span class="channel-creation-time">{{ channel.createdAt | ago }}</span>
+              </span>
             </div>
-
-            @if (getReactionsArray(message).length > 0) {
-            <div class="message-reactions">
-              @for (reaction of getReactionsArray(message); track reaction.content) {
-              <button class="reaction-chip" [class.user-reacted]="reaction.userReacted"
-                [matTooltip]="reaction.pubkeys.length + ' reaction' + (reaction.pubkeys.length > 1 ? 's' : '')" (click)="addReaction(message, reaction.content)">
-                <span class="reaction-emoji">{{ reaction.content }}</span>
-                <span class="reaction-count">{{ reaction.count }}</span>
-              </button>
+            @if (channel.originalMetadata.relays && channel.originalMetadata.relays.length > 0) {
+            <div class="channel-creation-relays">
+              @for (relay of channel.originalMetadata.relays; track relay) {
+              <span class="channel-relay-chip">{{ relay }}</span>
+              }
+            </div>
+            }
+            @if (channel.originalTags.length > 0) {
+            <div class="channel-creation-tags">
+              @for (tag of channel.originalTags; track tag) {
+              <span class="channel-tag-chip">#{{ tag }}</span>
               }
             </div>
             }
@@ -374,7 +335,134 @@
         </div>
         }
 
-        @if (currentMessages().length === 0 && !isLoadingMessages()) {
+        <!-- Timeline: messages + metadata updates -->
+        @for (entry of currentTimeline(); track entry.data.id; let i = $index) {
+          @if (entry.type === 'metadata-update') {
+          <!-- Kind 41 metadata update inline -->
+          <div class="metadata-update-entry">
+            <div class="metadata-update-line"></div>
+            <div class="metadata-update-content">
+              <mat-icon class="metadata-update-icon">edit_note</mat-icon>
+              <span class="metadata-update-text">
+                <app-profile-display-name [pubkey]="entry.data.pubkey" />
+                updated the channel
+                <span class="metadata-change"> &mdash; {{ entry.data.metadata.name }}</span>
+              </span>
+              <span class="metadata-update-time">{{ entry.data.createdAt | ago }}</span>
+            </div>
+            <div class="metadata-update-line"></div>
+          </div>
+          } @else {
+          <!-- Kind 42 message -->
+          <div class="message-group-container"
+            [class.outgoing]="entry.data.pubkey === currentPubkey()"
+            [class.group-start]="isGroupStart(i)"
+            [class.group-continuation]="!isGroupStart(i)"
+            [attr.data-message-id]="entry.data.id">
+
+            <!-- Avatar column (visible only on group start) -->
+            <div class="message-avatar-column">
+              @if (isGroupStart(i)) {
+              <app-user-profile [pubkey]="entry.data.pubkey" view="icon" />
+              }
+            </div>
+
+            <!-- Message content column -->
+            <div class="message-content-column">
+              <div class="message-bubble-row">
+                <div class="message-bubble" [class.long-press-active]="longPressedMessageId() === entry.data.id"
+                  (touchstart)="onMessageTouchStart($event, entry.data, msgMenuTrigger)"
+                  (touchend)="onMessageTouchEnd()" (touchmove)="onMessageTouchEnd()">
+                  @if (isGroupStart(i) && entry.data.pubkey !== currentPubkey()) {
+                  <div class="message-sender-name">
+                    <app-profile-display-name [pubkey]="entry.data.pubkey" />
+                  </div>
+                  }
+                  @if (entry.data.replyTo) {
+                  <div class="reply-context" (click)="scrollToReply(entry.data.replyTo)" (keydown.enter)="scrollToReply(entry.data.replyTo)" tabindex="0" role="button">
+                    <mat-icon>reply</mat-icon>
+                    <div class="reply-content">
+                      @if (getReplyPreviewText(entry.data); as replyText) {
+                      <span class="reply-text">{{ replyText }}</span>
+                      } @else {
+                      <span class="reply-text">Original message</span>
+                      }
+                    </div>
+                  </div>
+                  }
+                  <div class="message-text">
+                    <app-message-content [content]="entry.data.content" [tags]="entry.data.event.tags"
+                      [authorPubkey]="entry.data.pubkey"></app-message-content>
+                  </div>
+                  <span class="message-inline-meta">
+                    <span class="message-time">{{ entry.data.createdAt | ago }}</span>
+                  </span>
+                </div>
+
+                <div class="message-actions">
+                  <button mat-icon-button class="reaction-button" #reactionMenuTrigger="matMenuTrigger" [matMenuTriggerFor]="reactionMenu" (click)="$event.stopPropagation()"
+                    matTooltip="Add reaction">
+                    <mat-icon>add_reaction</mat-icon>
+                  </button>
+                  <mat-menu #reactionMenu="matMenu" class="reaction-picker-menu">
+                    <div class="reaction-picker" (click)="$event.stopPropagation()">
+                      @for (emoji of quickReactions; track emoji) {
+                      <button mat-icon-button class="emoji-button" (click)="addReaction(entry.data, emoji)">
+                        {{ emoji }}
+                      </button>
+                      }
+                    </div>
+                  </mat-menu>
+                  <button mat-icon-button class="more-button" #msgMenuTrigger="matMenuTrigger" [matMenuTriggerFor]="msgMenu" (click)="$event.stopPropagation()"
+                    matTooltip="More options">
+                    <mat-icon>more_vert</mat-icon>
+                  </button>
+                  <mat-menu #msgMenu="matMenu">
+                    <button mat-menu-item (click)="setReplyTo(entry.data)">
+                      <mat-icon>reply</mat-icon>
+                      <span>Reply</span>
+                    </button>
+                    <button mat-menu-item (click)="copyMessageData(entry.data)">
+                      <mat-icon>content_copy</mat-icon>
+                      <span>Copy Data</span>
+                    </button>
+                    @if (entry.data.pubkey === currentPubkey()) {
+                    <button mat-menu-item (click)="deleteMessage(entry.data)">
+                      <mat-icon>delete</mat-icon>
+                      <span>Delete Message</span>
+                    </button>
+                    }
+                    @if (entry.data.pubkey !== currentPubkey()) {
+                    <button mat-menu-item (click)="hideMessage(entry.data)">
+                      <mat-icon>visibility_off</mat-icon>
+                      <span>Hide Message</span>
+                    </button>
+                    <button mat-menu-item (click)="muteUser(entry.data.pubkey)">
+                      <mat-icon>block</mat-icon>
+                      <span>Mute User</span>
+                    </button>
+                    }
+                  </mat-menu>
+                </div>
+              </div>
+
+              @if (getReactionsArray(entry.data).length > 0) {
+              <div class="message-reactions">
+                @for (reaction of getReactionsArray(entry.data); track reaction.content) {
+                <button class="reaction-chip" [class.user-reacted]="reaction.userReacted"
+                  [matTooltip]="reaction.pubkeys.length + ' reaction' + (reaction.pubkeys.length > 1 ? 's' : '')" (click)="addReaction(entry.data, reaction.content)">
+                  <span class="reaction-emoji">{{ reaction.content }}</span>
+                  <span class="reaction-count">{{ reaction.count }}</span>
+                </button>
+                }
+              </div>
+              }
+            </div>
+          </div>
+          }
+        }
+
+        @if (currentTimeline().length === 0 && !isLoadingMessages()) {
         <div class="empty-messages">
           <mat-icon>chat_bubble_outline</mat-icon>
           <p>No messages yet. Be the first to say something!</p>
@@ -561,10 +649,10 @@
             <span class="chat-details-badge">{{ sharedImages().length }}</span>
           </div>
           <div class="chat-details-media-grid">
-            @for (url of sharedImages(); track url) {
-            <a [href]="url" target="_blank" rel="noopener noreferrer" class="chat-details-media-thumb">
-              <img [src]="url" alt="Shared image" />
-            </a>
+            @for (url of sharedImages(); track url; let i = $index) {
+            <div class="chat-details-media-thumb" (click)="openImagePreview(i, $event)">
+              <img [src]="url" alt="Shared image" loading="lazy" />
+            </div>
             }
           </div>
         </div>
@@ -587,6 +675,92 @@
           </div>
         </div>
         }
+
+        <div class="chat-details-section">
+          <div class="chat-details-section-header">
+            <mat-icon>sync_alt</mat-icon>
+            <span>Migration</span>
+          </div>
+          <p class="migration-description">
+            Republish all chat messages to the chat's current relay list.
+            This discovers each author's relays, fetches their messages, and
+            re-broadcasts them so no messages are lost after a relay change.
+          </p>
+          @if (chatChannels.isMigrating()) {
+          <div class="migration-progress">
+            <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+            <span class="migration-status">{{ chatChannels.migrationProgress() }}</span>
+          </div>
+          } @else {
+          <button mat-flat-button (click)="migrateChannel()" class="migration-button">
+            <mat-icon>sync_alt</mat-icon>
+            Migrate Messages
+          </button>
+          @if (migrationResult()) {
+          <span class="migration-status">{{ migrationResult() }}</span>
+          }
+          }
+        </div>
+      </div>
+    </div>
+    }
+    @if (showManagePanel() && selectedChannel(); as channel) {
+    <div class="chat-details-panel">
+      <div class="chat-details-header">
+        <h3 class="title-font">Manage Chat</h3>
+        <button mat-icon-button (click)="closeManagePanel()">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+
+      <div class="chat-details-content">
+        <div class="chat-details-section">
+          <div class="chat-details-section-header">
+            <mat-icon>block</mat-icon>
+            <span>Muted Users</span>
+            <span class="chat-details-badge">{{ mutedUsersList().length }}</span>
+          </div>
+          <div class="chat-details-members-list">
+            @for (pubkey of mutedUsersList(); track pubkey) {
+            <div class="manage-item">
+              <div class="manage-item-content">
+                <app-user-profile [pubkey]="pubkey" view="list" />
+              </div>
+              <button mat-icon-button (click)="unmuteUser(pubkey)" matTooltip="Unmute user" class="manage-item-action">
+                <mat-icon>delete</mat-icon>
+              </button>
+            </div>
+            }
+            @if (mutedUsersList().length === 0) {
+            <div class="chat-details-empty">No muted users</div>
+            }
+          </div>
+        </div>
+
+        <div class="chat-details-section">
+          <div class="chat-details-section-header">
+            <mat-icon>visibility_off</mat-icon>
+            <span>Hidden Messages</span>
+            <span class="chat-details-badge">{{ hiddenMessagesList().length }}</span>
+          </div>
+          <div class="manage-hidden-list">
+            @for (messageId of hiddenMessagesList(); track messageId) {
+            <div class="manage-item">
+              <div class="manage-item-content">
+                <mat-icon class="manage-item-icon">chat_bubble_outline</mat-icon>
+                <span class="manage-item-id">{{ messageId.substring(0, 8) }}...{{ messageId.substring(messageId.length - 8) }}</span>
+              </div>
+              <button mat-icon-button (click)="unhideMessage(messageId)" matTooltip="Unhide message" class="manage-item-action">
+                <mat-icon>delete</mat-icon>
+              </button>
+            </div>
+            }
+            @if (hiddenMessagesList().length === 0) {
+            <div class="chat-details-empty">No hidden messages</div>
+            }
+          </div>
+        </div>
+
       </div>
     </div>
     }

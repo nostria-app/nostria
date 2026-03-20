@@ -76,6 +76,7 @@ import { RelayPoolService } from '../../services/relays/relay-pool';
 import { DatabaseService } from '../../services/database.service';
 import { AccountLocalStateService } from '../../services/account-local-state.service';
 import { LocalSettingsService } from '../../services/local-settings.service';
+import { SettingsService } from '../../services/settings.service';
 import { MediaService } from '../../services/media.service';
 import { TrustService } from '../../services/trust.service';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
@@ -196,6 +197,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   private readonly database = inject(DatabaseService);
   private readonly accountLocalState = inject(AccountLocalStateService);
   readonly localSettings = inject(LocalSettingsService);
+  private readonly settingsService = inject(SettingsService);
   readonly mediaService = inject(MediaService);
   private readonly haptics = inject(HapticsService);
   private readonly openGraph = inject(OpenGraphService);
@@ -559,6 +561,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     const myPubkey = this.accountState.pubkey();
     const query = this.chatSearchQuery();
     const showHidden = this.showHiddenChats();
+    const pinnedSet = new Set(this.settingsService.settings().pinnedChatPubkeys ?? []);
     return this.messaging.sortedChats()
       .filter(item => item.chat.pubkey !== myPubkey || item.chat.isGroup) // Exclude Note to Self (but include groups)
       .filter(item => {
@@ -569,7 +572,12 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
         return followingSet.has(item.chat.pubkey);
       })
       .filter(item => this.chatMatchesSearch(item.chat, query))
-      .filter(item => showHidden || !this.isChatHidden(item.chat.id));
+      .filter(item => showHidden || !this.isChatHidden(item.chat.id))
+      .sort((a, b) => {
+        const aPinned = pinnedSet.has(a.chat.id) ? 1 : 0;
+        const bPinned = pinnedSet.has(b.chat.id) ? 1 : 0;
+        return bPinned - aPinned; // Pinned chats first, then original order (most recent)
+      });
   });
 
   otherChats = computed(() => {
@@ -579,6 +587,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     const query = this.chatSearchQuery();
     const showHidden = this.showHiddenChats();
     const minTrustRank = this.othersMinTrustRank();
+    const pinnedSet = new Set(this.settingsService.settings().pinnedChatPubkeys ?? []);
     return this.messaging.sortedChats()
       .filter(item => item.chat.pubkey !== myPubkey || item.chat.isGroup) // Exclude Note to Self (but include groups)
       .filter(item => {
@@ -611,7 +620,12 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
         return typeof rank === 'number' && rank >= minTrustRank;
       })
       .filter(item => this.chatMatchesSearch(item.chat, query))
-      .filter(item => showHidden || !this.isChatHidden(item.chat.id));
+      .filter(item => showHidden || !this.isChatHidden(item.chat.id))
+      .sort((a, b) => {
+        const aPinned = pinnedSet.has(a.chat.id) ? 1 : 0;
+        const bPinned = pinnedSet.has(b.chat.id) ? 1 : 0;
+        return bPinned - aPinned; // Pinned chats first, then original order (most recent)
+      });
   });
 
   getTrustRank(pubkey: string): number {
@@ -3430,6 +3444,44 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
    */
   toggleShowHiddenChats(): void {
     this.showHiddenChats.update(v => !v);
+  }
+
+  /**
+   * Check if a chat is pinned (by chat ID)
+   */
+  isChatPinned(chatId: string): boolean {
+    return this.settingsService.isChatPinned(chatId);
+  }
+
+  /**
+   * Check if the currently selected chat is pinned
+   */
+  isSelectedChatPinned(): boolean {
+    const chat = this.selectedChat();
+    if (!chat) return false;
+    return this.settingsService.isChatPinned(chat.id);
+  }
+
+  /**
+   * Pin the currently selected chat
+   */
+  async pinChat(): Promise<void> {
+    const chat = this.selectedChat();
+    if (!chat) return;
+
+    await this.settingsService.pinChat(chat.id);
+    this.snackBar.open('Chat pinned', 'Close', { duration: 3000 });
+  }
+
+  /**
+   * Unpin the currently selected chat
+   */
+  async unpinChat(): Promise<void> {
+    const chat = this.selectedChat();
+    if (!chat) return;
+
+    await this.settingsService.unpinChat(chat.id);
+    this.snackBar.open('Chat unpinned', 'Close', { duration: 3000 });
   }
 
   /**

@@ -9,6 +9,8 @@ import { RelayPoolService } from './relays/relay-pool';
 import { UtilitiesService } from './utilities.service';
 import { DatabaseService } from './database.service';
 import { ReactionService } from './reaction.service';
+import { UserRelaysService } from './relays/user-relays';
+import { AccountLocalStateService } from './account-local-state.service';
 import { NostriaService } from '../interfaces';
 
 /**
@@ -34,6 +36,22 @@ export interface ChannelMetadata {
 }
 
 /**
+ * A kind 41 metadata update event parsed for display
+ */
+export interface ChannelMetadataUpdate {
+  /** Event ID of the kind 41 event */
+  id: string;
+  /** Pubkey of the updater (channel creator) */
+  pubkey: string;
+  /** Updated metadata */
+  metadata: ChannelMetadata;
+  /** Timestamp (seconds) */
+  createdAt: number;
+  /** Tags from the event */
+  tags: string[];
+}
+
+/**
  * Represents a public chat channel
  */
 export interface ChatChannel {
@@ -43,6 +61,8 @@ export interface ChatChannel {
   creator: string;
   /** Channel metadata (from kind 40 or latest kind 41) */
   metadata: ChannelMetadata;
+  /** Original metadata from the kind 40 creation event */
+  originalMetadata: ChannelMetadata;
   /** Timestamp of channel creation (seconds) */
   createdAt: number;
   /** Timestamp of last metadata update (seconds) */
@@ -51,8 +71,12 @@ export interface ChatChannel {
   messageCount: number;
   /** Tags/categories from kind 41 "t" tags */
   tags: string[];
+  /** Original tags from the kind 40 creation event */
+  originalTags: string[];
   /** Event ID of the latest kind 41 metadata update (if any) */
   metadataEventId?: string;
+  /** All kind 41 metadata update events, sorted by timestamp */
+  metadataUpdates: ChannelMetadataUpdate[];
 }
 
 /**
@@ -110,6 +134,8 @@ export class ChatChannelsService implements NostriaService {
   private readonly utilities = inject(UtilitiesService);
   private readonly database = inject(DatabaseService);
   private readonly reactionService = inject(ReactionService);
+  private readonly userRelaysService = inject(UserRelaysService);
+  private readonly accountLocalState = inject(AccountLocalStateService);
 
   /** All known channels keyed by channel ID */
   private readonly channelsMap = signal<Map<string, ChatChannel>>(new Map());
@@ -132,14 +158,24 @@ export class ChatChannelsService implements NostriaService {
   /** Loading state for messages in a specific channel */
   readonly isLoadingMessages = signal(false);
 
+  /** Migration progress state */
+  readonly isMigrating = signal(false);
+  readonly migrationProgress = signal<string>('');
+
   /** Currently active channel subscription */
   private liveSubscription: { close?: () => void; unsubscribe?: () => void } | null = null;
 
-  /** Currently active channel message subscription */
+  /** Currently active channel message subscription (account relays) */
   private messageSubscription: { close?: () => void; unsubscribe?: () => void } | null = null;
+
+  /** Currently active channel message subscription (channel-specific relays) */
+  private channelRelayMessageSubscription: { close: () => void } | null = null;
 
   /** Currently active reaction subscription */
   private reactionSubscription: { close?: () => void; unsubscribe?: () => void } | null = null;
+
+  /** Currently active reaction subscription (channel-specific relays) */
+  private channelRelayReactionSubscription: { close: () => void } | null = null;
 
   /** IDs of deleted messages (kind 5 deletion events) */
   private readonly deletedMessageIds = signal<Set<string>>(new Set());
@@ -276,6 +312,31 @@ export class ChatChannelsService implements NostriaService {
         for (const event of metadataEvents) {
           this.applyMetadataUpdate(channelMap, event);
         }
+
+        // Also fetch kind 41 from channel-specific relays that aren't in account relays
+        const channelOnlyRelays = this.getChannelOnlyRelayUrls(this.getAllChannelRelayUrls());
+        if (channelOnlyRelays.length > 0) {
+          try {
+            const channelRelayMetadata = await this.relayPool.query(
+              channelOnlyRelays,
+              { kinds: [CHANNEL_METADATA_KIND], '#e': channelIds, limit: 500 },
+              10000
+            );
+
+            const filteredChannelMetadata = channelRelayMetadata.filter(e => !this.isBlockedChannelEvent(e));
+            if (filteredChannelMetadata.length > 0) {
+              this.database.saveEvents(filteredChannelMetadata as (Event & { dTag?: string })[]).catch(err =>
+                this.logger.error('[ChatChannels] Failed to cache channel-relay metadata events', err)
+              );
+            }
+
+            for (const event of filteredChannelMetadata) {
+              this.applyMetadataUpdate(channelMap, event);
+            }
+          } catch (err) {
+            this.logger.warn('[ChatChannels] Failed to fetch metadata from channel-specific relays', err);
+          }
+        }
       }
 
       this.channelsMap.set(channelMap);
@@ -287,6 +348,72 @@ export class ChatChannelsService implements NostriaService {
       this.logger.error('[ChatChannels] Failed to load channels', error);
     } finally {
       this.isLoading.set(false);
+    }
+  }
+
+  /**
+   * Refresh channel metadata (kind 41) for all known channels.
+   * Fetches the latest kind 41 events from both account relays and
+   * each channel's own designated relays (from metadata.relays).
+   * This ensures we always have the most up-to-date metadata,
+   * even when the creator published updates only to the channel's relays.
+   */
+  async refreshChannelMetadata(): Promise<void> {
+    const channelMap = new Map(this.channelsMap());
+    if (channelMap.size === 0) return;
+
+    const channelIds = Array.from(channelMap.keys());
+    this.logger.info('[ChatChannels] Refreshing metadata for channels:', channelIds.length);
+
+    try {
+      // Step 1: Fetch kind 41 from account relays
+      const accountMetadataEvents = await this.accountRelay.getMany<Event>(
+        { kinds: [CHANNEL_METADATA_KIND], '#e': channelIds, limit: 500 },
+        { timeout: 10000 }
+      );
+
+      for (const event of accountMetadataEvents) {
+        if (this.isBlockedChannelEvent(event)) continue;
+        this.applyMetadataUpdate(channelMap, event);
+      }
+
+      // Persist to DB
+      if (accountMetadataEvents.length > 0) {
+        this.database.saveEvents(accountMetadataEvents as (Event & { dTag?: string })[]).catch(err =>
+          this.logger.error('[ChatChannels] Failed to cache refreshed metadata events', err)
+        );
+      }
+
+      // Step 2: Fetch kind 41 from channel-specific relays (those not in account relays)
+      const channelOnlyRelays = this.getChannelOnlyRelayUrls(this.getAllChannelRelayUrls());
+      if (channelOnlyRelays.length > 0) {
+        try {
+          const channelRelayMetadataEvents = await this.relayPool.query(
+            channelOnlyRelays,
+            { kinds: [CHANNEL_METADATA_KIND], '#e': channelIds, limit: 500 },
+            10000
+          );
+
+          for (const event of channelRelayMetadataEvents) {
+            if (this.isBlockedChannelEvent(event)) continue;
+            this.applyMetadataUpdate(channelMap, event);
+          }
+
+          // Persist to DB
+          if (channelRelayMetadataEvents.length > 0) {
+            this.database.saveEvents(channelRelayMetadataEvents as (Event & { dTag?: string })[]).catch(err =>
+              this.logger.error('[ChatChannels] Failed to cache channel-relay metadata events', err)
+            );
+          }
+        } catch (err) {
+          this.logger.warn('[ChatChannels] Failed to fetch metadata from channel relays', err);
+        }
+      }
+
+      this.channelsMap.set(channelMap);
+      this.logger.info('[ChatChannels] Refreshed metadata for channels:', channelMap.size);
+    } catch (error) {
+      this.logger.error('[ChatChannels] Failed to refresh channel metadata', error);
     }
   }
 
@@ -386,6 +513,15 @@ export class ChatChannelsService implements NostriaService {
     } catch (error) {
       this.logger.error('[ChatChannels] Failed to load participated channels', error);
     }
+  }
+
+  /**
+   * Fetch a channel's kind 40/41 events from the given relay URLs.
+   * Public wrapper around fetchChannelsFromRelay for use when navigating
+   * to a channel via nevent that includes relay hints.
+   */
+  async fetchChannelFromRelays(relayUrls: string[], channelId: string): Promise<void> {
+    await this.fetchChannelsFromRelay(relayUrls, [channelId]);
   }
 
   /**
@@ -548,14 +684,29 @@ export class ChatChannelsService implements NostriaService {
         filter.since = latestTimestamp - 600;
       }
 
+      // Query account relays
       const events = await this.accountRelay.getMany<Event>(
         filter,
         { timeout: 10000 }
       );
 
+      // Also query channel-specific relays (relays from channel metadata not in account relays)
+      const channel = this.channelsMap().get(channelId);
+      const channelOnlyRelays = this.getChannelOnlyRelayUrls(channel?.metadata.relays);
+      let channelRelayEvents: Event[] = [];
+      if (channelOnlyRelays.length > 0) {
+        try {
+          channelRelayEvents = await this.relayPool.query(channelOnlyRelays, filter, 10000);
+        } catch (err) {
+          this.logger.warn('[ChatChannels] Failed to fetch messages from channel relays', err);
+        }
+      }
+
+      const allEvents = [...events, ...channelRelayEvents];
+
       // Step 3: Cache fetched messages to IndexedDB
-      if (events.length > 0) {
-        this.database.saveEvents(events as (Event & { dTag?: string })[]).catch(err =>
+      if (allEvents.length > 0) {
+        this.database.saveEvents(allEvents as (Event & { dTag?: string })[]).catch(err =>
           this.logger.error('[ChatChannels] Failed to cache channel messages', err)
         );
       }
@@ -565,7 +716,7 @@ export class ChatChannelsService implements NostriaService {
       for (const msg of cachedMessages) {
         messageMap.set(msg.id, msg);
       }
-      for (const event of events) {
+      for (const event of allEvents) {
         const msg = this.parseChannelMessage(event, channelId);
         if (msg) {
           messageMap.set(msg.id, msg);
@@ -602,46 +753,295 @@ export class ChatChannelsService implements NostriaService {
   }
 
   /**
+   * Refresh messages for a channel WITHOUT using the cached `since` value.
+   * This forces a full query (up to `limit`) from relays, which can recover
+   * messages that were missed due to clock drift or relay gaps.
+   */
+  async refreshChannelMessages(channelId: string, limit = 200): Promise<void> {
+    this.isLoadingMessages.set(true);
+
+    try {
+      // Load cached messages for merging, but ignore the latestTimestamp
+      const { messages: cachedMessages } = await this.loadChannelMessagesFromCache(channelId);
+
+      // Build filter WITHOUT a `since` value — fetch everything up to limit
+      const filter: Filter = { kinds: [CHANNEL_MESSAGE_KIND], '#e': [channelId], limit };
+
+      // Query account relays
+      const events = await this.accountRelay.getMany<Event>(
+        filter,
+        { timeout: 15000 }
+      );
+
+      // Also query channel-specific relays
+      const channel = this.channelsMap().get(channelId);
+      const channelOnlyRelays = this.getChannelOnlyRelayUrls(channel?.metadata.relays);
+      let channelRelayEvents: Event[] = [];
+      if (channelOnlyRelays.length > 0) {
+        try {
+          channelRelayEvents = await this.relayPool.query(channelOnlyRelays, filter, 15000);
+        } catch (err) {
+          this.logger.warn('[ChatChannels] Refresh: Failed to fetch from channel relays', err);
+        }
+      }
+
+      const allEvents = [...events, ...channelRelayEvents];
+
+      // Cache fetched messages to IndexedDB
+      if (allEvents.length > 0) {
+        this.database.saveEvents(allEvents as (Event & { dTag?: string })[]).catch(err =>
+          this.logger.error('[ChatChannels] Refresh: Failed to cache channel messages', err)
+        );
+      }
+
+      // Merge relay messages with cached messages (dedup by event ID)
+      const messageMap = new Map<string, ChannelMessage>();
+      for (const msg of cachedMessages) {
+        messageMap.set(msg.id, msg);
+      }
+      for (const event of allEvents) {
+        const msg = this.parseChannelMessage(event, channelId);
+        if (msg) {
+          messageMap.set(msg.id, msg);
+        }
+      }
+      const messages = Array.from(messageMap.values());
+
+      this.messagesMap.update(map => {
+        const updated = new Map(map);
+        updated.set(channelId, messages);
+        return updated;
+      });
+
+      // Update message count on channel
+      this.channelsMap.update(map => {
+        const updated = new Map(map);
+        const ch = updated.get(channelId);
+        if (ch) {
+          updated.set(channelId, { ...ch, messageCount: messages.length });
+        }
+        return updated;
+      });
+
+      this.logger.info('[ChatChannels] Refreshed messages for channel:', channelId, 'total:', messages.length, 'new from relays:', allEvents.length);
+
+      // Reload reactions and deletions
+      await this.loadReactionsForChannel(channelId);
+      await this.loadDeletionsForChannel(channelId);
+    } catch (error) {
+      this.logger.error('[ChatChannels] Failed to refresh messages for channel:', channelId, error);
+    } finally {
+      this.isLoadingMessages.set(false);
+    }
+  }
+
+  /**
+   * Migrate channel messages to the channel's current relay list.
+   *
+   * This aggregates all unique pubkeys from messages in the channel,
+   * discovers each user's relay list (kind 10002), queries those relays
+   * for kind 42 messages tagged with this channel, and republishes all
+   * found events to the channel's current relay list.
+   *
+   * This is useful when the channel owner changes the relay list and
+   * wants all historical messages to be available on the new relays.
+   */
+  async migrateChannelMessages(channelId: string): Promise<{ found: number; published: number }> {
+    this.isMigrating.set(true);
+    this.migrationProgress.set('Starting migration...');
+
+    let totalFound = 0;
+    let totalPublished = 0;
+
+    try {
+      const channel = this.channelsMap().get(channelId);
+      if (!channel) {
+        throw new Error('Channel not found');
+      }
+
+      // Determine the target relay list (the channel's current relays + account relays)
+      const targetRelays = this.getPublishRelayUrls(channel.metadata.relays);
+      if (targetRelays.length === 0) {
+        throw new Error('No target relays configured for this channel');
+      }
+
+      // Step 1: Collect all unique pubkeys from existing messages
+      this.migrationProgress.set('Collecting message authors...');
+      const messages = this.messagesMap().get(channelId) || [];
+      const pubkeys = new Set<string>();
+      for (const msg of messages) {
+        pubkeys.add(msg.pubkey);
+      }
+
+      // Also include the channel creator
+      pubkeys.add(channel.creator);
+
+      this.migrationProgress.set(`Found ${pubkeys.size} unique authors. Discovering relays...`);
+
+      // Step 2: Discover relay lists (kind 10002) for all authors
+      const userRelayMap = new Map<string, string[]>();
+      const pubkeyArray = Array.from(pubkeys);
+      const batchSize = 10;
+      for (let i = 0; i < pubkeyArray.length; i += batchSize) {
+        const batch = pubkeyArray.slice(i, i + batchSize);
+        this.migrationProgress.set(`Discovering relays... (${Math.min(i + batchSize, pubkeyArray.length)}/${pubkeyArray.length} authors)`);
+        await Promise.allSettled(
+          batch.map(async (pubkey) => {
+            try {
+              const relays = await this.userRelaysService.getUserRelays(pubkey);
+              if (relays.length > 0) {
+                userRelayMap.set(pubkey, relays);
+              }
+            } catch (err) {
+              this.logger.warn(`[ChatChannels] Migration: failed to discover relays for ${pubkey.slice(0, 8)}`, err);
+            }
+          })
+        );
+      }
+
+      this.migrationProgress.set(`Discovered relays for ${userRelayMap.size}/${pubkeys.size} authors. Querying for messages...`);
+
+      // Step 3: Collect all unique relay URLs from all authors
+      const allUserRelays = new Set<string>();
+      for (const relays of userRelayMap.values()) {
+        for (const url of relays) {
+          allUserRelays.add(url);
+        }
+      }
+
+      // Remove relays that are already in the target set (no need to fetch from them
+      // since messages there are already accessible)
+      const sourceOnlyRelays = Array.from(allUserRelays).filter(url => !targetRelays.includes(url));
+
+      // Also include target relays as sources to collect all existing messages
+      const allSourceRelays = [...new Set([...sourceOnlyRelays, ...targetRelays])];
+
+      // Step 4: Query all source relays for messages in this channel
+      const allEvents = new Map<string, Event>();
+
+      // Query in batches of relay URLs to avoid overwhelming
+      const relayBatchSize = 15;
+      const relayArray = allSourceRelays;
+      for (let i = 0; i < relayArray.length; i += relayBatchSize) {
+        const relayBatch = relayArray.slice(i, i + relayBatchSize);
+        this.migrationProgress.set(`Querying relays for messages... (${Math.min(i + relayBatchSize, relayArray.length)}/${relayArray.length} relays)`);
+
+        try {
+          const filter: Filter = { kinds: [CHANNEL_MESSAGE_KIND], '#e': [channelId], limit: 500 };
+          const events = await this.relayPool.query(relayBatch, filter, 15000);
+          for (const event of events) {
+            allEvents.set(event.id, event);
+          }
+        } catch (err) {
+          this.logger.warn(`[ChatChannels] Migration: failed to query relay batch starting at index ${i}`, err);
+        }
+      }
+
+      totalFound = allEvents.size;
+      this.migrationProgress.set(`Found ${totalFound} messages. Publishing to chat relays...`);
+
+      if (totalFound === 0) {
+        this.migrationProgress.set('No messages found to migrate.');
+        return { found: 0, published: 0 };
+      }
+
+      // Step 5: Republish all events to the target relay list
+      const eventsArray = Array.from(allEvents.values());
+      const publishBatchSize = 20;
+      for (let i = 0; i < eventsArray.length; i += publishBatchSize) {
+        const batch = eventsArray.slice(i, i + publishBatchSize);
+        this.migrationProgress.set(`Publishing messages... (${Math.min(i + publishBatchSize, eventsArray.length)}/${eventsArray.length})`);
+
+        await Promise.allSettled(
+          batch.map(async (event) => {
+            try {
+              await this.relayPool.publish(targetRelays, event, 10000);
+              totalPublished++;
+            } catch (err) {
+              this.logger.warn(`[ChatChannels] Migration: failed to publish event ${event.id.slice(0, 8)}`, err);
+            }
+          })
+        );
+      }
+
+      // Step 6: Cache all events to IndexedDB
+      if (eventsArray.length > 0) {
+        this.database.saveEvents(eventsArray as (Event & { dTag?: string })[]).catch(err =>
+          this.logger.error('[ChatChannels] Migration: failed to cache events', err)
+        );
+      }
+
+      this.migrationProgress.set(`Migration complete. Found ${totalFound} messages, published ${totalPublished} to ${targetRelays.length} relays.`);
+      this.logger.info(`[ChatChannels] Migration complete for channel ${channelId}: found=${totalFound}, published=${totalPublished}`);
+
+      // Reload messages to show any newly discovered ones
+      await this.refreshChannelMessages(channelId);
+
+      return { found: totalFound, published: totalPublished };
+    } catch (error) {
+      this.logger.error('[ChatChannels] Migration failed for channel:', channelId, error);
+      this.migrationProgress.set(`Migration failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw error;
+    } finally {
+      this.isMigrating.set(false);
+    }
+  }
+
+  /**
    * Subscribe to new messages in a specific channel (live updates)
    */
   subscribeToChannelMessages(channelId: string): void {
     this.closeMessageSubscription();
 
     const now = this.utilities.currentDate();
+    const handleMessageEvent = (event: Event) => {
+      const msg = this.parseChannelMessage(event, channelId);
+      if (msg) {
+        // Cache live message to IndexedDB
+        this.database.saveEvents([event as Event & { dTag?: string }]).catch(err =>
+          this.logger.error('[ChatChannels] Failed to cache live message', err)
+        );
+
+        this.messagesMap.update(map => {
+          const updated = new Map(map);
+          const existing = updated.get(channelId) ?? [];
+          // Avoid duplicates
+          if (!existing.some(m => m.id === msg.id)) {
+            updated.set(channelId, [...existing, msg]);
+          }
+          return updated;
+        });
+
+        // Update message count
+        this.channelsMap.update(map => {
+          const updated = new Map(map);
+          const channel = updated.get(channelId);
+          if (channel) {
+            const messages = this.messagesMap().get(channelId) ?? [];
+            updated.set(channelId, { ...channel, messageCount: messages.length });
+          }
+          return updated;
+        });
+      }
+    };
+
+    // Subscribe on account relays
     const msgSub = this.accountRelay.subscribe<Event>(
       { kinds: [CHANNEL_MESSAGE_KIND], '#e': [channelId], since: now },
-      (event: Event) => {
-        const msg = this.parseChannelMessage(event, channelId);
-        if (msg) {
-          // Cache live message to IndexedDB
-          this.database.saveEvents([event as Event & { dTag?: string }]).catch(err =>
-            this.logger.error('[ChatChannels] Failed to cache live message', err)
-          );
-
-          this.messagesMap.update(map => {
-            const updated = new Map(map);
-            const existing = updated.get(channelId) ?? [];
-            // Avoid duplicates
-            if (!existing.some(m => m.id === msg.id)) {
-              updated.set(channelId, [...existing, msg]);
-            }
-            return updated;
-          });
-
-          // Update message count
-          this.channelsMap.update(map => {
-            const updated = new Map(map);
-            const channel = updated.get(channelId);
-            if (channel) {
-              const messages = this.messagesMap().get(channelId) ?? [];
-              updated.set(channelId, { ...channel, messageCount: messages.length });
-            }
-            return updated;
-          });
-        }
-      }
+      handleMessageEvent
     );
     this.messageSubscription = msgSub;
+
+    // Also subscribe on channel-specific relays (those not in account relays)
+    const channel = this.channelsMap().get(channelId);
+    const channelOnlyRelays = this.getChannelOnlyRelayUrls(channel?.metadata.relays);
+    if (channelOnlyRelays.length > 0) {
+      this.channelRelayMessageSubscription = this.relayPool.subscribe(
+        channelOnlyRelays,
+        { kinds: [CHANNEL_MESSAGE_KIND], '#e': [channelId], since: now },
+        handleMessageEvent
+      );
+    }
 
     // Also subscribe to reactions for this channel
     this.subscribeToReactions(channelId);
@@ -743,10 +1143,13 @@ export class ChatChannelsService implements NostriaService {
           id: result.event.id,
           creator: pubkey,
           metadata,
+          originalMetadata: { ...metadata },
           createdAt: result.event.created_at,
           updatedAt: result.event.created_at,
           messageCount: 0,
           tags,
+          originalTags: [...tags],
+          metadataUpdates: [],
         };
 
         this.channelsMap.update(map => {
@@ -803,14 +1206,30 @@ export class ChatChannelsService implements NostriaService {
       const publishRelays = this.getPublishRelayUrls(metadata.relays);
       const result = await this.nostrService.signAndPublish(event, publishRelays);
 
-      if (result.success) {
+      if (result.success && result.event) {
+        const updateEntry: ChannelMetadataUpdate = {
+          id: result.event.id,
+          pubkey,
+          metadata,
+          createdAt: result.event.created_at,
+          tags,
+        };
+
         this.channelsMap.update(map => {
           const updated = new Map(map);
+          const current = updated.get(channelId) ?? channel;
+          const existingUpdates = current.metadataUpdates || [];
+          // Dedup: only add if not already present
+          const alreadyExists = existingUpdates.some(u => u.id === updateEntry.id);
           updated.set(channelId, {
-            ...channel,
+            ...current,
             metadata,
-            updatedAt: this.utilities.currentDate(),
+            updatedAt: result.event!.created_at,
             tags,
+            metadataEventId: result.event!.id,
+            metadataUpdates: alreadyExists
+              ? existingUpdates
+              : [...existingUpdates, updateEntry].sort((a, b) => a.createdAt - b.createdAt),
           });
           return updated;
         });
@@ -991,6 +1410,44 @@ export class ChatChannelsService implements NostriaService {
   }
 
   /**
+   * Get all muted user pubkeys (read-only)
+   */
+  getMutedUserPubkeys(): ReadonlySet<string> {
+    return this.mutedUserPubkeys();
+  }
+
+  /**
+   * Get all hidden message IDs (read-only)
+   */
+  getHiddenMessageIds(): ReadonlySet<string> {
+    return this.hiddenMessageIds();
+  }
+
+  /**
+   * Get muted user pubkeys that are relevant to a specific channel.
+   * Only returns pubkeys that have actually sent messages in the given channel.
+   */
+  getMutedUserPubkeysForChannel(channelId: string): string[] {
+    const muted = this.mutedUserPubkeys();
+    if (muted.size === 0) return [];
+    const messages = this.messagesMap().get(channelId) ?? [];
+    const channelPubkeys = new Set(messages.map(m => m.pubkey));
+    return Array.from(muted).filter(pk => channelPubkeys.has(pk));
+  }
+
+  /**
+   * Get hidden message IDs that belong to a specific channel.
+   * Only returns IDs that exist in the channel's message list.
+   */
+  getHiddenMessageIdsForChannel(channelId: string): string[] {
+    const hidden = this.hiddenMessageIds();
+    if (hidden.size === 0) return [];
+    const messages = this.messagesMap().get(channelId) ?? [];
+    const channelMessageIds = new Set(messages.map(m => m.id));
+    return Array.from(hidden).filter(id => channelMessageIds.has(id));
+  }
+
+  /**
    * Get a channel by ID
    */
   getChannel(channelId: string): ChatChannel | undefined {
@@ -1040,6 +1497,10 @@ export class ChatChannelsService implements NostriaService {
       }
       this.messageSubscription = null;
     }
+    if (this.channelRelayMessageSubscription) {
+      this.channelRelayMessageSubscription.close();
+      this.channelRelayMessageSubscription = null;
+    }
   }
 
   /**
@@ -1053,6 +1514,10 @@ export class ChatChannelsService implements NostriaService {
         this.reactionSubscription.unsubscribe();
       }
       this.reactionSubscription = null;
+    }
+    if (this.channelRelayReactionSubscription) {
+      this.channelRelayReactionSubscription.close();
+      this.channelRelayReactionSubscription = null;
     }
   }
 
@@ -1212,19 +1677,24 @@ export class ChatChannelsService implements NostriaService {
         .filter(t => t[0] === 't' && t[1])
         .map(t => t[1]);
 
+      const parsedMetadata: ChannelMetadata = {
+        name: metadata.name || 'Unnamed Channel',
+        about: metadata.about || '',
+        picture: metadata.picture || '',
+        relays: metadata.relays || [],
+      };
+
       return {
         id: event.id,
         creator: event.pubkey,
-        metadata: {
-          name: metadata.name || 'Unnamed Channel',
-          about: metadata.about || '',
-          picture: metadata.picture || '',
-          relays: metadata.relays || [],
-        },
+        metadata: { ...parsedMetadata },
+        originalMetadata: { ...parsedMetadata },
         createdAt: event.created_at,
         updatedAt: event.created_at,
         messageCount: 0,
         tags,
+        originalTags: [...tags],
+        metadataUpdates: [],
       };
     } catch (err) {
       this.logger.warn(
@@ -1251,26 +1721,45 @@ export class ChatChannelsService implements NostriaService {
     // Only the creator can update metadata
     if (event.pubkey !== channel.creator) return;
 
-    // Only apply if this is newer than the current metadata
-    if (event.created_at <= channel.updatedAt) return;
-
     try {
       const metadata = JSON.parse(event.content) as Partial<ChannelMetadata>;
       const tags = event.tags
         .filter(t => t[0] === 't' && t[1])
         .map(t => t[1]);
 
+      const parsedMetadata: ChannelMetadata = {
+        name: metadata.name || channel.metadata.name,
+        about: metadata.about ?? channel.metadata.about,
+        picture: metadata.picture ?? channel.metadata.picture,
+        relays: metadata.relays ?? channel.metadata.relays,
+      };
+
+      // Build the metadata update entry for timeline display
+      const updateEntry: ChannelMetadataUpdate = {
+        id: event.id,
+        pubkey: event.pubkey,
+        metadata: parsedMetadata,
+        createdAt: event.created_at,
+        tags,
+      };
+
+      // Add to metadataUpdates if not already present (dedup by event ID)
+      const existingUpdates = channel.metadataUpdates || [];
+      const alreadyExists = existingUpdates.some(u => u.id === event.id);
+      const updatedList = alreadyExists
+        ? existingUpdates
+        : [...existingUpdates, updateEntry].sort((a, b) => a.createdAt - b.createdAt);
+
+      // Only update the current metadata/updatedAt if this event is newer
+      const isNewer = event.created_at > channel.updatedAt;
+
       channelMap.set(channelId, {
         ...channel,
-        metadata: {
-          name: metadata.name || channel.metadata.name,
-          about: metadata.about ?? channel.metadata.about,
-          picture: metadata.picture ?? channel.metadata.picture,
-          relays: metadata.relays ?? channel.metadata.relays,
-        },
-        updatedAt: event.created_at,
-        tags,
-        metadataEventId: event.id,
+        metadata: isNewer ? parsedMetadata : channel.metadata,
+        updatedAt: isNewer ? event.created_at : channel.updatedAt,
+        tags: isNewer ? tags : channel.tags,
+        metadataEventId: isNewer ? event.id : channel.metadataEventId,
+        metadataUpdates: updatedList,
       });
     } catch {
       this.logger.warn('[ChatChannels] Failed to parse channel metadata event:', event.id);
@@ -1312,11 +1801,23 @@ export class ChatChannelsService implements NostriaService {
       if (messages.length === 0) return;
 
       const messageIds = messages.map(m => m.id);
+      const filter = { kinds: [7], '#e': messageIds, '#k': [String(CHANNEL_MESSAGE_KIND)], limit: 500 } as Filter;
 
-      const reactionEvents = await this.accountRelay.getMany<Event>(
-        { kinds: [7], '#e': messageIds, '#k': [String(CHANNEL_MESSAGE_KIND)], limit: 500 } as Filter,
-        { timeout: 8000 }
-      );
+      const reactionEvents = await this.accountRelay.getMany<Event>(filter, { timeout: 8000 });
+
+      // Also query channel-specific relays
+      const channel = this.channelsMap().get(channelId);
+      const channelOnlyRelays = this.getChannelOnlyRelayUrls(channel?.metadata.relays);
+      if (channelOnlyRelays.length > 0) {
+        try {
+          const channelRelayReactions = await this.relayPool.query(channelOnlyRelays, filter, 8000);
+          for (const event of channelRelayReactions) {
+            this.handleReactionEvent(event, channelId);
+          }
+        } catch (err) {
+          this.logger.warn('[ChatChannels] Failed to load reactions from channel relays', err);
+        }
+      }
 
       for (const event of reactionEvents) {
         this.handleReactionEvent(event, channelId);
@@ -1337,11 +1838,23 @@ export class ChatChannelsService implements NostriaService {
       if (messages.length === 0) return;
 
       const messageIds = messages.map(m => m.id);
+      const filter = { kinds: [5], '#e': messageIds, '#k': [String(CHANNEL_MESSAGE_KIND)], limit: 500 } as Filter;
 
-      const deletionEvents = await this.accountRelay.getMany<Event>(
-        { kinds: [5], '#e': messageIds, '#k': [String(CHANNEL_MESSAGE_KIND)], limit: 500 } as Filter,
-        { timeout: 8000 }
-      );
+      const deletionEvents = await this.accountRelay.getMany<Event>(filter, { timeout: 8000 });
+
+      // Also query channel-specific relays
+      const channel = this.channelsMap().get(channelId);
+      const channelOnlyRelays = this.getChannelOnlyRelayUrls(channel?.metadata.relays);
+      if (channelOnlyRelays.length > 0) {
+        try {
+          const channelRelayDeletions = await this.relayPool.query(channelOnlyRelays, filter, 8000);
+          for (const event of channelRelayDeletions) {
+            this.handleDeletionEvent(event, channelId);
+          }
+        } catch (err) {
+          this.logger.warn('[ChatChannels] Failed to load deletions from channel relays', err);
+        }
+      }
 
       for (const event of deletionEvents) {
         this.handleDeletionEvent(event, channelId);
@@ -1359,17 +1872,52 @@ export class ChatChannelsService implements NostriaService {
   private subscribeToReactions(channelId: string): void {
     this.closeReactionSubscription();
 
+    const pubkey = this.accountState.pubkey();
+    const now = Math.floor(Date.now() / 1000);
+
+    // Calculate since filter: use last sync timestamp with 60-second overlap buffer, capped at 7 days
+    const lastSync = pubkey ? this.accountLocalState.getChannelReactionsLastSync(pubkey) : 0;
+    const OVERLAP_BUFFER = 60; // 60 seconds overlap to avoid missing events near boundary
+    const MAX_CAP = 7 * 24 * 60 * 60; // 7 days maximum lookback
+
+    const filter: Filter = { kinds: [7, 5], '#k': [String(CHANNEL_MESSAGE_KIND)] } as Filter;
+    if (lastSync > 0) {
+      const sinceValue = Math.max(lastSync - OVERLAP_BUFFER, now - MAX_CAP);
+      (filter as Record<string, unknown>)['since'] = sinceValue;
+      this.logger.debug('[ChatChannels] Using since filter for reactions subscription:', sinceValue);
+    }
+
+    const handleReactionOrDeletion = (event: Event) => {
+      if (event.kind === 7) {
+        this.handleReactionEvent(event, channelId);
+      } else if (event.kind === 5) {
+        this.handleDeletionEvent(event, channelId);
+      }
+    };
+
     const reactionSub = this.accountRelay.subscribe<Event>(
-      { kinds: [7, 5], '#k': [String(CHANNEL_MESSAGE_KIND)] } as Filter,
-      (event: Event) => {
-        if (event.kind === 7) {
-          this.handleReactionEvent(event, channelId);
-        } else if (event.kind === 5) {
-          this.handleDeletionEvent(event, channelId);
+      filter,
+      handleReactionOrDeletion,
+      () => {
+        // On EOSE: save the current timestamp for subsequent since-filtered loads
+        if (pubkey) {
+          this.accountLocalState.setChannelReactionsLastSync(pubkey, now);
+          this.logger.debug('[ChatChannels] Reactions subscription reached EOSE, saved sync timestamp');
         }
       }
     );
     this.reactionSubscription = reactionSub;
+
+    // Also subscribe on channel-specific relays
+    const channel = this.channelsMap().get(channelId);
+    const channelOnlyRelays = this.getChannelOnlyRelayUrls(channel?.metadata.relays);
+    if (channelOnlyRelays.length > 0) {
+      this.channelRelayReactionSubscription = this.relayPool.subscribe(
+        channelOnlyRelays,
+        filter,
+        handleReactionOrDeletion
+      );
+    }
   }
 
   /**
@@ -1486,6 +2034,40 @@ export class ChatChannelsService implements NostriaService {
       }
     }
 
+    return Array.from(relaySet);
+  }
+
+  /**
+   * Get the combined relay URLs for reading channel events.
+   * Merges the channel's specified relays with the user's account relays
+   * so messages from channel-designated relays are also fetched.
+   */
+  private getReadRelayUrls(channelRelays?: string[]): string[] {
+    return this.getPublishRelayUrls(channelRelays);
+  }
+
+  /**
+   * Get the channel-only relay URLs (relays not already in account relays).
+   * Used to make supplementary queries to channel-specific relays.
+   */
+  private getChannelOnlyRelayUrls(channelRelays?: string[]): string[] {
+    if (!channelRelays || channelRelays.length === 0) return [];
+    const accountRelays = new Set(this.accountRelay.getRelayUrls());
+    return channelRelays.filter(url => !accountRelays.has(url));
+  }
+
+  /**
+   * Collect all unique relay URLs from channel metadata across all known channels.
+   */
+  private getAllChannelRelayUrls(): string[] {
+    const relaySet = new Set<string>();
+    for (const channel of this.channelsMap().values()) {
+      if (channel.metadata.relays) {
+        for (const url of channel.metadata.relays) {
+          relaySet.add(url);
+        }
+      }
+    }
     return Array.from(relaySet);
   }
 }

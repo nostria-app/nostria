@@ -157,7 +157,7 @@ export interface CreateChannelDialogResult {
           Channel Relays
         </label>
         <p class="relays-description">
-          Make sure the first relay in the list is a publicly accessible relay, it will be used as relay hint for messages.
+          Make sure the first relay in the list is a publicly accessible relay, it will be used as relay hint for messages. Keep the list as low as possible, 3-5 is enough. If you add more, every user has to publish every message to all relays.
         </p>
 
         @if (relays().length > 0) {

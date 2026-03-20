@@ -136,6 +136,7 @@ interface AccountLocalState {
   accountMetadataLastSync?: number; // Unix timestamp (seconds) when account metadata subscription last completed (EOSE)
   followSetsLastSync?: number; // Unix timestamp (seconds) when follow sets subscription last completed (EOSE)
   metricsLastScan?: number; // Unix timestamp (seconds) when metrics historical scan last completed
+  channelReactionsLastSync?: number; // Unix timestamp (seconds) when channel reactions subscription last completed (EOSE)
 }
 
 /**
@@ -403,6 +404,23 @@ export class AccountLocalStateService {
    */
   setMetricsLastScan(pubkey: string, timestamp: number): void {
     this.updateAccountState(pubkey, { metricsLastScan: timestamp });
+  }
+
+  /**
+   * Get the timestamp when channel reactions subscription last completed (EOSE).
+   * Used to add `since` filter on subsequent loads to reduce relay bandwidth.
+   * Returns 0 if never synced (first-time user).
+   */
+  getChannelReactionsLastSync(pubkey: string): number {
+    const state = this.getAccountState(pubkey);
+    return state.channelReactionsLastSync || 0;
+  }
+
+  /**
+   * Set the timestamp when channel reactions subscription completed (EOSE).
+   */
+  setChannelReactionsLastSync(pubkey: string, timestamp: number): void {
+    this.updateAccountState(pubkey, { channelReactionsLastSync: timestamp });
   }
 
   /**

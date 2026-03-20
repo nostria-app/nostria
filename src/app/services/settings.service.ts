@@ -80,6 +80,8 @@ export interface UserSettings {
   customFeeds?: SyncedFeedConfig[];
   // Favicon settings
   googleFaviconEnabled?: boolean; // Use Google API for favicons (privacy tradeoff)
+  // Pinned chats - synced across devices via kind 30078
+  pinnedChatPubkeys?: string[]; // Array of chat pubkeys (or group chat IDs) pinned to top of messages list
   // Add more settings as needed
 }
 
@@ -494,5 +496,36 @@ export class SettingsService {
   hasSyncedFeeds(): boolean {
     const feeds = this.settings().customFeeds;
     return feeds !== undefined && feeds.length > 0;
+  }
+
+  /**
+   * Check if a chat is pinned.
+   * @param chatId - The chat pubkey or group chat ID
+   */
+  isChatPinned(chatId: string): boolean {
+    const pinned = this.settings().pinnedChatPubkeys;
+    return pinned !== undefined && pinned.includes(chatId);
+  }
+
+  /**
+   * Pin a chat so it appears at the top of the messages list.
+   * Publishes to relays for cross-device sync.
+   * @param chatId - The chat pubkey or group chat ID
+   */
+  async pinChat(chatId: string): Promise<void> {
+    const current = this.settings().pinnedChatPubkeys ?? [];
+    if (current.includes(chatId)) return;
+    await this.updateSettings({ pinnedChatPubkeys: [...current, chatId] });
+  }
+
+  /**
+   * Unpin a chat, removing it from the pinned list.
+   * Publishes to relays for cross-device sync.
+   * @param chatId - The chat pubkey or group chat ID
+   */
+  async unpinChat(chatId: string): Promise<void> {
+    const current = this.settings().pinnedChatPubkeys ?? [];
+    if (!current.includes(chatId)) return;
+    await this.updateSettings({ pinnedChatPubkeys: current.filter(id => id !== chatId) });
   }
 }

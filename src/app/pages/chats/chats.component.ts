@@ -19,6 +19,7 @@ import { MatListModule } from '@angular/material/list';
 import { MatMenuModule, MatMenuTrigger } from '@angular/material/menu';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatDialog } from '@angular/material/dialog';
@@ -41,6 +42,7 @@ import {
   ChatChannel,
   ChannelMessage,
   ChannelMetadata,
+  ChannelMetadataUpdate,
   ChatReaction,
 } from '../../services/chat-channels.service';
 import { ApplicationService } from '../../services/application.service';
@@ -48,6 +50,7 @@ import { FollowSetsService } from '../../services/follow-sets.service';
 import { TrustService } from '../../services/trust.service';
 import { ListFilterMenuComponent, ListFilterValue } from '../../components/list-filter-menu/list-filter-menu.component';
 import { MediaPreviewDialogComponent } from '../../components/media-preview-dialog/media-preview.component';
+import { SettingsService } from '../../services/settings.service';
 import { stripImageProxy } from '../../utils/strip-image-proxy';
 import {
   CreateChannelDialogComponent,
@@ -57,6 +60,14 @@ import {
   ConfirmDialogComponent,
   type ConfirmDialogData,
 } from '../../components/confirm-dialog/confirm-dialog.component';
+
+/**
+ * Discriminated union for timeline entries displayed in the chat.
+ * Allows interleaving kind 42 messages with kind 41 metadata updates.
+ */
+export type TimelineEntry =
+  | { type: 'message'; data: ChannelMessage }
+  | { type: 'metadata-update'; data: ChannelMetadataUpdate };
 
 @Component({
   selector: 'app-chats',
@@ -68,6 +79,7 @@ import {
     MatMenuModule,
     MatTooltipModule,
     MatProgressSpinnerModule,
+    MatProgressBarModule,
     MatSnackBarModule,
     MatDividerModule,
     RouterModule,
@@ -83,7 +95,7 @@ import {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ChatsComponent implements OnInit, OnDestroy {
-  private readonly chatChannels = inject(ChatChannelsService);
+  readonly chatChannels = inject(ChatChannelsService);
   private readonly logger = inject(LoggerService);
   private readonly accountState = inject(AccountStateService);
   private readonly app = inject(ApplicationService);
@@ -98,6 +110,7 @@ export class ChatsComponent implements OnInit, OnDestroy {
   private readonly customDialog = inject(CustomDialogService);
   readonly mediaService = inject(MediaService);
   private readonly haptics = inject(HapticsService);
+  private readonly settingsService = inject(SettingsService);
 
   /** Currently selected channel ID */
   readonly selectedChannelId = signal<string | null>(null);
@@ -125,6 +138,12 @@ export class ChatsComponent implements OnInit, OnDestroy {
 
   /** Whether the chat details panel is open */
   readonly showChatDetails = signal<boolean>(false);
+
+  /** Whether the manage channel panel is open */
+  readonly showManagePanel = signal<boolean>(false);
+
+  /** Migration result message */
+  readonly migrationResult = signal<string>('');
 
   /** Whether a media file is currently uploading */
   readonly isUploading = signal<boolean>(false);
@@ -186,6 +205,7 @@ export class ChatsComponent implements OnInit, OnDestroy {
     const query = this.channelSearchQuery().toLowerCase();
     const allChannels = this.chatChannels.channels();
     const pubkeys = this.filterPubkeys();
+    const pinnedSet = new Set(this.settingsService.settings().pinnedChatPubkeys ?? []);
 
     let filtered = allChannels;
 
@@ -210,7 +230,12 @@ export class ChatsComponent implements OnInit, OnDestroy {
       );
     }
 
-    return filtered;
+    // Sort pinned channels to top
+    return filtered.sort((a, b) => {
+      const aPinned = pinnedSet.has(a.id) ? 1 : 0;
+      const bPinned = pinnedSet.has(b.id) ? 1 : 0;
+      return bPinned - aPinned;
+    });
   });
 
   /** All channels from service (unfiltered by list filter, but filtered by search query) */
@@ -230,14 +255,26 @@ export class ChatsComponent implements OnInit, OnDestroy {
   readonly participatedChannels = computed(() => {
     const participated = this.chatChannels.participatedChannelIds();
     if (participated.size === 0) return [];
-    return this.allSearchFilteredChannels().filter(ch => participated.has(ch.id));
+    const pinnedSet = new Set(this.settingsService.settings().pinnedChatPubkeys ?? []);
+    return this.allSearchFilteredChannels().filter(ch => participated.has(ch.id))
+      .sort((a, b) => {
+        const aPinned = pinnedSet.has(a.id) ? 1 : 0;
+        const bPinned = pinnedSet.has(b.id) ? 1 : 0;
+        return bPinned - aPinned;
+      });
   });
 
   /** Channels the user has NOT participated in, from the list-filtered set */
   readonly discoveredChannels = computed(() => {
     const participated = this.chatChannels.participatedChannelIds();
     if (participated.size === 0) return this.channels();
-    return this.channels().filter(ch => !participated.has(ch.id));
+    const pinnedSet = new Set(this.settingsService.settings().pinnedChatPubkeys ?? []);
+    return this.channels().filter(ch => !participated.has(ch.id))
+      .sort((a, b) => {
+        const aPinned = pinnedSet.has(a.id) ? 1 : 0;
+        const bPinned = pinnedSet.has(b.id) ? 1 : 0;
+        return bPinned - aPinned;
+      });
   });
 
   /** Selected channel */
@@ -252,6 +289,26 @@ export class ChatsComponent implements OnInit, OnDestroy {
     const id = this.selectedChannelId();
     if (!id) return [];
     return this.chatChannels.getChannelMessages(id)();
+  });
+
+  /** Combined timeline of messages and metadata updates, sorted chronologically */
+  readonly currentTimeline = computed((): TimelineEntry[] => {
+    const messages = this.currentMessages();
+    const channel = this.selectedChannel();
+
+    const entries: TimelineEntry[] = messages.map(m => ({ type: 'message' as const, data: m }));
+
+    // Interleave kind 41 metadata updates if available
+    if (channel?.metadataUpdates?.length) {
+      for (const update of channel.metadataUpdates) {
+        entries.push({ type: 'metadata-update' as const, data: update });
+      }
+    }
+
+    // Sort by timestamp (ascending)
+    entries.sort((a, b) => a.data.createdAt - b.data.createdAt);
+
+    return entries;
   });
 
   /** Current user pubkey */
@@ -319,6 +376,20 @@ export class ChatsComponent implements OnInit, OnDestroy {
     return videos;
   });
 
+  /** Muted user pubkeys scoped to the selected channel (for the manage panel) */
+  readonly mutedUsersList = computed(() => {
+    const id = this.selectedChannelId();
+    if (!id) return [];
+    return this.chatChannels.getMutedUserPubkeysForChannel(id);
+  });
+
+  /** Hidden message IDs scoped to the selected channel (for the manage panel) */
+  readonly hiddenMessagesList = computed(() => {
+    const id = this.selectedChannelId();
+    if (!id) return [];
+    return this.chatChannels.getHiddenMessageIdsForChannel(id);
+  });
+
   @ViewChild('messagesWrapper', { static: false })
   messagesWrapper?: ElementRef<HTMLDivElement>;
 
@@ -372,6 +443,10 @@ export class ChatsComponent implements OnInit, OnDestroy {
     this.chatChannels.loadChannelsFromCache().then(() => {
       this.chatChannels.load().then(() => {
         this.chatChannels.subscribeToChannels();
+
+        // After loading channels, refresh metadata (kind 41) from all sources
+        // including channel-specific relays, to pick up any metadata changes
+        this.chatChannels.refreshChannelMetadata();
       });
     });
 
@@ -382,9 +457,9 @@ export class ChatsComponent implements OnInit, OnDestroy {
     this.route.params.subscribe(params => {
       const id = params['id'];
       if (id) {
-        const channelId = this.decodeChannelParam(id);
-        if (channelId) {
-          this.selectChannelById(channelId);
+        const decoded = this.decodeChannelParam(id);
+        if (decoded) {
+          this.selectChannelById(decoded.id, decoded.relays);
         }
       }
     });
@@ -409,7 +484,9 @@ export class ChatsComponent implements OnInit, OnDestroy {
     this.replyingToMessage.set(null);
     this.newMessageText.set('');
     this.showChatDetails.set(false);
+    this.showManagePanel.set(false);
     this.mediaPreviews.set([]);
+    this.migrationResult.set('');
 
     // Update URL to reflect selected channel
     const nevent = this.encodeChannelNevent(channel);
@@ -423,15 +500,21 @@ export class ChatsComponent implements OnInit, OnDestroy {
     setTimeout(() => this.setupScrollListener(), 100);
   }
 
-  /** Select a channel by ID (from route) */
-  async selectChannelById(channelId: string): Promise<void> {
+  /** Select a channel by ID (from route), with optional relay hints from nevent */
+  async selectChannelById(channelId: string, relayHints: string[] = []): Promise<void> {
     const channel = this.chatChannels.getChannel(channelId);
     if (channel) {
       await this.selectChannel(channel);
     } else {
-      // Channel not yet loaded - try loading messages anyway
+      // Channel not yet loaded - try fetching from relay hints first
       this.selectedChannelId.set(channelId);
       this.showMobileList.set(false);
+      this.migrationResult.set('');
+
+      if (relayHints.length > 0) {
+        await this.chatChannels.fetchChannelFromRelays(relayHints, channelId);
+      }
+
       await this.chatChannels.loadChannelMessages(channelId);
       this.chatChannels.subscribeToChannelMessages(channelId);
       setTimeout(() => this.setupScrollListener(), 100);
@@ -696,11 +779,27 @@ export class ChatsComponent implements OnInit, OnDestroy {
     return this.chatChannels.isUserMuted(pubkey);
   }
 
+  /** Unmute a user (from manage panel) */
+  unmuteUser(pubkey: string): void {
+    this.chatChannels.unmuteUser(pubkey);
+    this.snackBar.open('User unmuted', 'OK', { duration: 3000 });
+  }
+
+  /** Unhide a message (from manage panel) */
+  unhideMessage(messageId: string): void {
+    this.chatChannels.unhideMessage(messageId);
+    this.snackBar.open('Message unhidden', 'OK', { duration: 3000 });
+  }
+
   /** Determine if a message starts a new visual group (different author from previous) */
   isGroupStart(index: number): boolean {
     if (index === 0) return true;
-    const messages = this.currentMessages();
-    return messages[index].pubkey !== messages[index - 1].pubkey;
+    const timeline = this.currentTimeline();
+    const current = timeline[index];
+    const previous = timeline[index - 1];
+    // Metadata updates always break grouping
+    if (current.type !== 'message' || previous.type !== 'message') return true;
+    return current.data.pubkey !== previous.data.pubkey;
   }
 
   /** Copy a message's raw event data to clipboard */
@@ -896,6 +995,7 @@ export class ChatsComponent implements OnInit, OnDestroy {
 
   /** Toggle chat details panel */
   toggleChatDetails(): void {
+    this.showManagePanel.set(false);
     this.showChatDetails.update(v => !v);
   }
 
@@ -904,10 +1004,71 @@ export class ChatsComponent implements OnInit, OnDestroy {
     this.showChatDetails.set(false);
   }
 
+  /** Toggle manage channel panel */
+  toggleManagePanel(): void {
+    this.showChatDetails.set(false);
+    this.showManagePanel.update(v => !v);
+  }
+
+  /** Close manage channel panel */
+  closeManagePanel(): void {
+    this.showManagePanel.set(false);
+  }
+
   /** Get channel initials for avatar placeholder */
   getChannelInitials(channel: ChatChannel): string {
     const name = channel.metadata.name || '?';
     return name.charAt(0).toUpperCase();
+  }
+
+  /** Check if a channel is pinned */
+  isChannelPinned(channelId: string): boolean {
+    return this.settingsService.isChatPinned(channelId);
+  }
+
+  /** Check if the currently selected channel is pinned */
+  isSelectedChannelPinned(): boolean {
+    const channel = this.selectedChannel();
+    if (!channel) return false;
+    return this.settingsService.isChatPinned(channel.id);
+  }
+
+  /** Pin the currently selected channel */
+  async pinChannel(): Promise<void> {
+    const channel = this.selectedChannel();
+    if (!channel) return;
+    await this.settingsService.pinChat(channel.id);
+    this.snackBar.open('Channel pinned', 'Close', { duration: 3000 });
+  }
+
+  /** Unpin the currently selected channel */
+  async unpinChannel(): Promise<void> {
+    const channel = this.selectedChannel();
+    if (!channel) return;
+    await this.settingsService.unpinChat(channel.id);
+    this.snackBar.open('Channel unpinned', 'Close', { duration: 3000 });
+  }
+
+  /** Refresh messages for the selected channel without using the cached since value */
+  async refreshChannel(): Promise<void> {
+    const channel = this.selectedChannel();
+    if (!channel) return;
+    await this.chatChannels.refreshChannelMessages(channel.id);
+    this.snackBar.open('Messages refreshed', 'Close', { duration: 3000 });
+  }
+
+  /** Migrate all channel messages to the channel's current relay list */
+  async migrateChannel(): Promise<void> {
+    const channel = this.selectedChannel();
+    if (!channel) return;
+    this.migrationResult.set('');
+    try {
+      const result = await this.chatChannels.migrateChannelMessages(channel.id);
+      this.migrationResult.set(`Found ${result.found} messages, published ${result.published}.`);
+      this.snackBar.open('Migration complete', 'Close', { duration: 5000 });
+    } catch {
+      this.snackBar.open('Migration failed', 'Close', { duration: 5000 });
+    }
   }
 
   /** Open a larger preview of a channel avatar image */
@@ -941,24 +1102,27 @@ export class ChatsComponent implements OnInit, OnDestroy {
     });
   }
 
-  /** Decode a route param (nevent or hex ID) into a channel hex ID */
-  private decodeChannelParam(param: string): string | null {
+  /** Decode a route param (nevent or hex ID) into a channel hex ID and relay hints */
+  private decodeChannelParam(param: string): { id: string; relays: string[] } | null {
     try {
       if (param.startsWith('nevent')) {
         const decoded = nip19.decode(param);
         if (decoded.type === 'nevent') {
-          return decoded.data.id;
+          return {
+            id: decoded.data.id,
+            relays: decoded.data.relays ?? [],
+          };
         }
       }
       // Fall back to treating as hex ID
       if (/^[0-9a-f]{64}$/i.test(param)) {
-        return param;
+        return { id: param, relays: [] };
       }
       // Try decoding as note ID
       if (param.startsWith('note')) {
         const decoded = nip19.decode(param);
         if (decoded.type === 'note') {
-          return decoded.data;
+          return { id: decoded.data, relays: [] };
         }
       }
     } catch {
@@ -1107,4 +1271,28 @@ export class ChatsComponent implements OnInit, OnDestroy {
       this.showScrollToLatestButton.set(distFromBottom > 600);
     }, 100);
   };
+
+  /** Open image preview dialog for shared images */
+  async openImagePreview(index: number, event?: MouseEvent): Promise<void> {
+    event?.preventDefault();
+    event?.stopPropagation();
+
+    const images = this.sharedImages();
+    if (images.length === 0) return;
+
+    this.dialog.open(MediaPreviewDialogComponent, {
+      data: {
+        mediaItems: images.map(url => ({
+          url,
+          type: 'image',
+        })),
+        initialIndex: index,
+      },
+      maxWidth: '100vw',
+      maxHeight: '100vh',
+      width: '100vw',
+      height: '100vh',
+      panelClass: 'image-dialog-panel',
+    });
+  }
 }

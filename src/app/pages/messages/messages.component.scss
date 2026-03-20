@@ -1365,6 +1365,15 @@
   min-width: 0;
 }
 
+.pinned-icon {
+  flex-shrink: 0;
+  font-size: 14px;
+  width: 14px;
+  height: 14px;
+  color: var(--mat-sys-outline);
+  transform: rotate(45deg);
+}
+
 .chat-preview {
   display: flex;
   align-items: center;

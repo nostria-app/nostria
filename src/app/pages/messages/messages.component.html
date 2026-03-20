@@ -154,6 +154,9 @@
                     <div class="chat-info">
                       <div class="chat-name-row">
                         <span class="chat-name">{{ getGroupDisplayName(chat) }}</span>
+                        @if (isChatPinned(chat.id)) {
+                        <mat-icon class="pinned-icon" matTooltip="Pinned">push_pin</mat-icon>
+                        }
                         @if (chat.unreadCount > 0) {
                         <span class="unread-badge" matBadge="{{ chat.unreadCount }}" matBadgeOverlap="false"></span>
                         }
@@ -197,6 +200,9 @@
                             Unknown
                             }
                           </span>
+                          @if (isChatPinned(chat.id)) {
+                          <mat-icon class="pinned-icon" matTooltip="Pinned">push_pin</mat-icon>
+                          }
                           @if (chat.unreadCount > 0) {
                           <span class="unread-badge" matBadge="{{ chat.unreadCount }}" matBadgeOverlap="false"></span>
                           }
@@ -288,6 +294,9 @@
                     <div class="chat-info">
                       <div class="chat-name-row">
                         <span class="chat-name">{{ getGroupDisplayName(chat) }}</span>
+                        @if (isChatPinned(chat.id)) {
+                        <mat-icon class="pinned-icon" matTooltip="Pinned">push_pin</mat-icon>
+                        }
                         @if (chat.unreadCount > 0) {
                         <span class="unread-badge" matBadge="{{ chat.unreadCount }}" matBadgeOverlap="false"></span>
                         }
@@ -329,6 +338,9 @@
                             Unknown
                             }
                           </span>
+                          @if (isChatPinned(chat.id)) {
+                          <mat-icon class="pinned-icon" matTooltip="Pinned">push_pin</mat-icon>
+                          }
                           @if (chat.unreadCount > 0) {
                           <span class="unread-badge" matBadge="{{ chat.unreadCount }}" matBadgeOverlap="false"></span>
                           }
@@ -468,6 +480,17 @@
               <span>Delete Chat</span>
             </button>
             <mat-divider></mat-divider>
+            @if (isSelectedChatPinned()) {
+            <button mat-menu-item (click)="unpinChat()">
+              <mat-icon>push_pin</mat-icon>
+              <span>Unpin Chat</span>
+            </button>
+            } @else {
+            <button mat-menu-item (click)="pinChat()">
+              <mat-icon>push_pin</mat-icon>
+              <span>Pin Chat</span>
+            </button>
+            }
             @if (isSelectedChatHidden()) {
             <button mat-menu-item (click)="unhideChat()">
               <mat-icon>visibility</mat-icon>
