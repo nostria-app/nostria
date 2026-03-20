@@ -5,6 +5,7 @@ import { LoggerService } from './logger.service';
 import { AccountStateService } from './account-state.service';
 import { AccountRelayService } from './relays/account-relay';
 import { DiscoveryRelayService } from './relays/discovery-relay';
+import { RelayPoolService } from './relays/relay-pool';
 import { UtilitiesService } from './utilities.service';
 import { DatabaseService } from './database.service';
 import { ReactionService } from './reaction.service';
@@ -105,6 +106,7 @@ export class ChatChannelsService implements NostriaService {
   private readonly accountState = inject(AccountStateService);
   private readonly accountRelay = inject(AccountRelayService);
   private readonly discoveryRelay = inject(DiscoveryRelayService);
+  private readonly relayPool = inject(RelayPoolService);
   private readonly utilities = inject(UtilitiesService);
   private readonly database = inject(DatabaseService);
   private readonly reactionService = inject(ReactionService);
@@ -290,34 +292,163 @@ export class ChatChannelsService implements NostriaService {
 
   /**
    * Load channel IDs where the current user has sent messages (kind 42).
-   * This allows showing participated channels at the top of the list.
+   *
+   * Uses the outbox model:
+   * 1. Query the user's account relays for their kind 42 messages
+   * 2. Extract channel IDs and relay hints from the "e" tags
+   * 3. Connect to hinted relays to fetch the kind 40/41 channel events
+   * 4. Add discovered channels to channelsMap so they appear in the list
    */
   async loadParticipatedChannels(): Promise<void> {
     const pubkey = this.accountState.pubkey();
     if (!pubkey) return;
 
     try {
-      // Query relays for kind 42 events authored by the current user
+      // Step 1: Query account relays for user's kind 42 messages
       const events = await this.accountRelay.getMany<Event>(
         { kinds: [CHANNEL_MESSAGE_KIND], authors: [pubkey], limit: 500 },
         { timeout: 10000 }
       );
 
+      // Step 2: Extract channel IDs and relay hints from "e" tags
       const channelIds = new Set<string>();
+      // Map of channelId -> Set<relayHintUrl>
+      const channelRelayHints = new Map<string, Set<string>>();
+
       for (const event of events) {
-        // Extract the root channel ID from the 'e' tag with 'root' marker
+        // Find the root "e" tag (channel ID + relay hint)
         const rootTag = event.tags.find(
           t => t[0] === 'e' && (t[3] === 'root' || (!t[3] && t === event.tags.find(tag => tag[0] === 'e')))
         );
-        if (rootTag?.[1]) {
-          channelIds.add(rootTag[1]);
+        if (!rootTag?.[1]) continue;
+
+        const channelId = rootTag[1];
+        channelIds.add(channelId);
+
+        // Extract relay hint from position [2] of the "e" tag
+        const relayHint = rootTag[2];
+        if (relayHint) {
+          if (!channelRelayHints.has(channelId)) {
+            channelRelayHints.set(channelId, new Set());
+          }
+          channelRelayHints.get(channelId)!.add(relayHint);
         }
       }
 
       this.participatedChannelIds.set(channelIds);
       this.logger.info('[ChatChannels] Loaded participated channels:', channelIds.size);
+
+      // Step 3: Find channel IDs not yet in channelsMap
+      const missingChannelIds = Array.from(channelIds).filter(id => !this.channelsMap().has(id));
+      if (missingChannelIds.length === 0) return;
+
+      // Step 4: Group missing channels by relay hint and fetch kind 40/41 events
+      // Collect all unique relay hints for missing channels
+      const relayToChannelIds = new Map<string, string[]>();
+      const channelsWithoutHints: string[] = [];
+
+      for (const channelId of missingChannelIds) {
+        const hints = channelRelayHints.get(channelId);
+        if (hints && hints.size > 0) {
+          for (const relay of hints) {
+            if (!relayToChannelIds.has(relay)) {
+              relayToChannelIds.set(relay, []);
+            }
+            relayToChannelIds.get(relay)!.push(channelId);
+          }
+        } else {
+          channelsWithoutHints.push(channelId);
+        }
+      }
+
+      // Fetch from hinted relays (grouped by relay URL for efficiency)
+      const fetchPromises: Promise<void>[] = [];
+
+      for (const [relayUrl, ids] of relayToChannelIds) {
+        fetchPromises.push(this.fetchChannelsFromRelay([relayUrl], ids));
+      }
+
+      // For channels without relay hints, try account relays as fallback
+      if (channelsWithoutHints.length > 0) {
+        const accountRelayUrls = this.accountRelay.getRelayUrls();
+        if (accountRelayUrls.length > 0) {
+          fetchPromises.push(this.fetchChannelsFromRelay(accountRelayUrls, channelsWithoutHints));
+        }
+      }
+
+      await Promise.allSettled(fetchPromises);
+
+      this.logger.info(
+        '[ChatChannels] Finished fetching participated channel metadata.',
+        'Missing before:', missingChannelIds.length,
+        'Still missing:', missingChannelIds.filter(id => !this.channelsMap().has(id)).length
+      );
     } catch (error) {
       this.logger.error('[ChatChannels] Failed to load participated channels', error);
+    }
+  }
+
+  /**
+   * Fetch kind 40 (creation) and kind 41 (metadata) events for specific channel IDs
+   * from the given relay URLs, then add them to channelsMap.
+   */
+  private async fetchChannelsFromRelay(relayUrls: string[], channelIds: string[]): Promise<void> {
+    try {
+      // Fetch kind 40 creation events by their event IDs
+      const createEvents = await this.relayPool.query(
+        relayUrls,
+        { kinds: [CHANNEL_CREATE_KIND], ids: channelIds },
+        8000
+      );
+
+      if (createEvents.length === 0) return;
+
+      // Parse and add to channelsMap
+      const channelMap = new Map(this.channelsMap());
+      const foundIds: string[] = [];
+
+      for (const event of createEvents) {
+        if (this.isBlockedChannelEvent(event)) continue;
+        if (channelMap.has(event.id)) continue;
+
+        const channel = this.parseChannelCreateEvent(event);
+        if (channel) {
+          channelMap.set(channel.id, channel);
+          foundIds.push(channel.id);
+
+          // Cache the creation event locally
+          this.database.saveEvent(event as Event & { dTag?: string }).catch(err =>
+            this.logger.error('[ChatChannels] Failed to cache channel creation event', err)
+          );
+        }
+      }
+
+      if (foundIds.length > 0) {
+        // Fetch kind 41 metadata updates for the channels we found
+        const metadataFilter: Filter = {
+          kinds: [CHANNEL_METADATA_KIND],
+          '#e': foundIds,
+        };
+
+        try {
+          const metadataEvents = await this.relayPool.query(relayUrls, metadataFilter, 6000);
+          for (const event of metadataEvents) {
+            if (this.isBlockedChannelEvent(event)) continue;
+            this.applyMetadataUpdate(channelMap, event);
+
+            // Cache metadata events locally
+            this.database.saveEvent(event as Event & { dTag?: string }).catch(err =>
+              this.logger.error('[ChatChannels] Failed to cache channel metadata event', err)
+            );
+          }
+        } catch (err) {
+          this.logger.warn('[ChatChannels] Failed to fetch metadata updates from hinted relays', err);
+        }
+
+        this.channelsMap.set(channelMap);
+      }
+    } catch (error) {
+      this.logger.warn('[ChatChannels] Failed to fetch channels from relay', relayUrls, error);
     }
   }
 
