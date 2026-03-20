@@ -939,6 +939,7 @@
 
 .message-actions {
   display: flex;
+  flex-direction: column;
   align-items: center;
   flex-shrink: 0;
   opacity: 0;
@@ -1479,6 +1480,42 @@
   font-size: 0.85rem;
   opacity: 0.5;
   padding: 8px 0;
+}
+
+.chat-details-relay-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.chat-details-relay-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background-color: rgba(0, 0, 0, 0.04);
+
+  mat-icon {
+    flex-shrink: 0;
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+    opacity: 0.6;
+  }
+}
+
+:host-context(.dark) .chat-details-relay-item {
+  background-color: rgba(255, 255, 255, 0.06);
+}
+
+.chat-details-relay-url {
+  font-size: 0.8rem;
+  opacity: 0.8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
 }
 
 .chat-details-media-grid {

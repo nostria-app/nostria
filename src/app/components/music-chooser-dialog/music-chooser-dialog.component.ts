@@ -24,7 +24,6 @@ import { AccountStateService } from '../../services/account-state.service';
 import { LoggerService } from '../../services/logger.service';
 
 const MUSIC_KIND = UtilitiesService.PRIMARY_MUSIC_KIND;
-const MUSIC_PLAYLIST_KIND = 34139;
 const RELAY_SET_KIND = 30002;
 const MUSIC_RELAY_SET_D_TAG = 'music';
 
@@ -77,7 +76,6 @@ export class MusicChooserDialogComponent implements OnDestroy {
   /** All tracks fetched from relays */
   readonly allTracks = signal<Event[]>([]);
   private trackMap = new Map<string, Event>();
-  private trackSubscription: { close?: () => void } | null = null;
 
   /** Standalone audio element for preview playback (does not affect the main media player) */
   private previewAudio: HTMLAudioElement | null = null;
@@ -121,7 +119,6 @@ export class MusicChooserDialogComponent implements OnDestroy {
   }
 
   ngOnDestroy(): void {
-    this.closeTrackSubscription();
     this.stopPreview();
   }
 
@@ -207,9 +204,14 @@ export class MusicChooserDialogComponent implements OnDestroy {
   }
 
   /**
-   * Load tracks from relays. Relay resolution includes a fast async step
-   * (IndexedDB lookup for the user's music relay set) so we set isLoading
-   * immediately and start the subscription as soon as relays are resolved.
+   * Load tracks from relays using a one-time query.
+   *
+   * We use pool.query() (one-shot fetch) instead of pool.subscribe()
+   * because the dialog is opened from the chat page which already holds
+   * many active subscriptions. subscribe() counts against the per-relay
+   * subscription limit (MAX_CONCURRENT_SUBS_PER_RELAY = 10) and gets
+   * rejected when all slots are occupied. query() uses a separate
+   * "request" tracking path that is not subject to subscription limits.
    */
   private async loadTracks(): Promise<void> {
     this.isLoading.set(true);
@@ -221,33 +223,32 @@ export class MusicChooserDialogComponent implements OnDestroy {
       return;
     }
 
-    // Safety timeout – stop the spinner even if no events arrive
-    const timeout = setTimeout(() => {
-      this.isLoading.set(false);
-    }, 6000);
-
     const filter: Filter = {
       kinds: [MUSIC_KIND],
       limit: 300,
     };
 
-    this.trackSubscription = this.pool.subscribe(relayUrls, filter, (event: Event) => {
-      const dTag = event.tags.find(t => t[0] === 'd')?.[1] || event.id;
-      const uniqueId = `${event.pubkey}:${dTag}`;
+    try {
+      const events = await this.pool.query(relayUrls, filter, 8000);
 
-      const existing = this.trackMap.get(uniqueId);
-      if (existing && existing.created_at >= event.created_at) return;
+      for (const event of events) {
+        const dTag = event.tags.find(t => t[0] === 'd')?.[1] || event.id;
+        const uniqueId = `${event.pubkey}:${dTag}`;
 
-      this.trackMap.set(uniqueId, event);
+        const existing = this.trackMap.get(uniqueId);
+        if (existing && existing.created_at >= event.created_at) continue;
+
+        this.trackMap.set(uniqueId, event);
+      }
+
       this.allTracks.set(
         Array.from(this.trackMap.values()).sort((a, b) => b.created_at - a.created_at)
       );
-
-      if (this.isLoading()) {
-        clearTimeout(timeout);
-        this.isLoading.set(false);
-      }
-    });
+    } catch (error) {
+      this.logger.error('[MusicChooser] Failed to query tracks from relays:', error);
+    } finally {
+      this.isLoading.set(false);
+    }
   }
 
   /**
@@ -304,13 +305,6 @@ export class MusicChooserDialogComponent implements OnDestroy {
     const pubkey = this.accountState.pubkey();
     if (pubkey) {
       await this.playlistService.fetchUserPlaylists(pubkey);
-    }
-  }
-
-  private closeTrackSubscription(): void {
-    if (this.trackSubscription) {
-      this.trackSubscription.close?.();
-      this.trackSubscription = null;
     }
   }
 }

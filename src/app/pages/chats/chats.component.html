@@ -517,6 +517,24 @@
           </div>
         </div>
 
+        @if (channel.metadata.relays && channel.metadata.relays.length > 0) {
+        <div class="chat-details-section">
+          <div class="chat-details-section-header">
+            <mat-icon>dns</mat-icon>
+            <span>Relays</span>
+            <span class="chat-details-badge">{{ channel.metadata.relays.length }}</span>
+          </div>
+          <div class="chat-details-relay-list">
+            @for (relay of channel.metadata.relays; track relay) {
+            <div class="chat-details-relay-item">
+              <mat-icon>link</mat-icon>
+              <span class="chat-details-relay-url">{{ relay }}</span>
+            </div>
+            }
+          </div>
+        </div>
+        }
+
         <div class="chat-details-section">
           <div class="chat-details-section-header">
             <mat-icon>people</mat-icon>
