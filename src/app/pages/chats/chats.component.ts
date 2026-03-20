@@ -154,8 +154,8 @@ export class ChatsComponent implements OnInit, OnDestroy {
   /** Media previews for the current message */
   readonly mediaPreviews = signal<{ url: string; type: 'image' | 'video' | 'music'; label?: string }[]>([]);
 
-  /** People list filter state */
-  readonly selectedListFilter = signal<string>('following');
+  /** People list filter state — defaults to 'all' for anonymous users since they have no following list */
+  readonly selectedListFilter = signal<string>(this.app.authenticated() ? 'following' : 'all');
 
   /** URL-based initial list filter */
   readonly urlListFilter = signal<string | undefined>(this.route.snapshot.queryParams['list']);
@@ -188,6 +188,10 @@ export class ChatsComponent implements OnInit, OnDestroy {
     const filter = this.selectedListFilter();
     if (filter === 'all') {
       return null; // No filtering
+    }
+    // For anonymous users, skip any people-based filtering since there's no following list
+    if (!this.app.authenticated()) {
+      return null;
     }
     if (filter === 'wot') {
       return 'wot' as const; // Special marker for WoT filtering
