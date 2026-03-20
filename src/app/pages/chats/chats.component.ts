@@ -16,7 +16,7 @@ import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
-import { MatMenuModule } from '@angular/material/menu';
+import { MatMenuModule, MatMenuTrigger } from '@angular/material/menu';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
@@ -29,6 +29,7 @@ import { AccountStateService } from '../../services/account-state.service';
 import { UtilitiesService } from '../../services/utilities.service';
 import { CustomDialogService } from '../../services/custom-dialog.service';
 import { MediaService } from '../../services/media.service';
+import { HapticsService } from '../../services/haptics.service';
 import { UserProfileComponent } from '../../components/user-profile/user-profile.component';
 import { ProfileDisplayNameComponent } from '../../components/user-profile/display-name/profile-display-name.component';
 import { MessageContentComponent } from '../../components/message-content/message-content.component';
@@ -89,6 +90,7 @@ export class ChatsComponent implements OnInit, OnDestroy {
   private readonly dialog = inject(MatDialog);
   private readonly customDialog = inject(CustomDialogService);
   readonly mediaService = inject(MediaService);
+  private readonly haptics = inject(HapticsService);
 
   /** Currently selected channel ID */
   readonly selectedChannelId = signal<string | null>(null);
@@ -129,8 +131,13 @@ export class ChatsComponent implements OnInit, OnDestroy {
   /** People list filter state */
   readonly selectedListFilter = signal<string>('following');
 
-  /** URL query param for list filter */
+  /** URL-based initial list filter */
   readonly urlListFilter = signal<string | undefined>(this.route.snapshot.queryParams['list']);
+
+  /** Long-press support for touch devices */
+  readonly longPressedMessageId = signal<string | null>(null);
+  private longPressTimeout: ReturnType<typeof setTimeout> | null = null;
+  private readonly LONG_PRESS_DURATION = 500;
 
   /** Whether user is authenticated */
   readonly isAuthenticated = computed(() => this.app.authenticated());
@@ -520,6 +527,29 @@ export class ChatsComponent implements OnInit, OnDestroy {
   /** Clear reply-to */
   clearReply(): void {
     this.replyingToMessage.set(null);
+  }
+
+  /** Handle touch start on message bubble (long press detection) */
+  onMessageTouchStart(event: TouchEvent, message: ChannelMessage, menuTrigger: MatMenuTrigger): void {
+    this.onMessageTouchEnd();
+
+    this.longPressTimeout = setTimeout(() => {
+      event.preventDefault();
+      this.haptics.triggerMedium();
+      this.longPressedMessageId.set(message.id);
+      menuTrigger.openMenu();
+    }, this.LONG_PRESS_DURATION);
+  }
+
+  /** Handle touch end/move (cancel long press) */
+  onMessageTouchEnd(): void {
+    if (this.longPressTimeout) {
+      clearTimeout(this.longPressTimeout);
+      this.longPressTimeout = null;
+    }
+    setTimeout(() => {
+      this.longPressedMessageId.set(null);
+    }, 300);
   }
 
   /** Get the preview text of the message being replied to */
