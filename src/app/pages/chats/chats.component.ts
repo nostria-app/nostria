@@ -931,13 +931,13 @@ export class ChatsComponent implements OnInit, OnDestroy {
 
   // --- Private helpers ---
 
-  /** Encode a ChatChannel to a NIP-19 nevent string */
+  /** Encode a ChatChannel to a NIP-19 nevent string, including all relay hints from the latest metadata */
   private encodeChannelNevent(channel: ChatChannel): string {
     return nip19.neventEncode({
       id: channel.id,
       author: channel.creator,
       kind: 40,
-      relays: channel.metadata.relays?.slice(0, 2),
+      relays: channel.metadata.relays ?? [],
     });
   }
 
