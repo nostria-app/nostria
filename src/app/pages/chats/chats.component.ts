@@ -30,6 +30,7 @@ import { UtilitiesService } from '../../services/utilities.service';
 import { CustomDialogService } from '../../services/custom-dialog.service';
 import { MediaService } from '../../services/media.service';
 import { UserProfileComponent } from '../../components/user-profile/user-profile.component';
+import { ProfileDisplayNameComponent } from '../../components/user-profile/display-name/profile-display-name.component';
 import { MessageContentComponent } from '../../components/message-content/message-content.component';
 import { AgoPipe } from '../../pipes/ago.pipe';
 import {
@@ -63,6 +64,7 @@ import {
     MatDividerModule,
     RouterModule,
     UserProfileComponent,
+    ProfileDisplayNameComponent,
     MessageContentComponent,
     AgoPipe,
     DatePipe,

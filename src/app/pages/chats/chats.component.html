@@ -198,7 +198,7 @@
             <!-- Sender name (only on group start, only for other users) -->
             @if (isGroupStart(i) && message.pubkey !== currentPubkey()) {
             <div class="message-sender-name">
-              <app-user-profile [pubkey]="message.pubkey" view="name" [disableLink]="true" />
+              <app-profile-display-name [pubkey]="message.pubkey" />
             </div>
             }
 
