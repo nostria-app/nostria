@@ -184,7 +184,8 @@
         <div class="message-group-container"
           [class.outgoing]="message.pubkey === currentPubkey()"
           [class.group-start]="isGroupStart(i)"
-          [class.group-continuation]="!isGroupStart(i)">
+          [class.group-continuation]="!isGroupStart(i)"
+          [attr.data-message-id]="message.id">
 
           <!-- Avatar column (visible only on group start) -->
           <div class="message-avatar-column">
@@ -205,9 +206,15 @@
             <div class="message-bubble-row">
               <div class="message-bubble">
                 @if (message.replyTo) {
-                <div class="reply-context">
+                <div class="reply-context" (click)="scrollToReply(message.replyTo)" (keydown.enter)="scrollToReply(message.replyTo)" tabindex="0" role="button">
                   <mat-icon>reply</mat-icon>
-                  <span class="reply-text">Reply</span>
+                  <div class="reply-content">
+                    @if (getReplyPreviewText(message); as replyText) {
+                    <span class="reply-text">{{ replyText }}</span>
+                    } @else {
+                    <span class="reply-text">Original message</span>
+                    }
+                  </div>
                 </div>
                 }
                 <div class="message-text">

@@ -652,7 +652,7 @@
 
   // Show actions on hover
   &:hover .message-actions {
-    display: flex;
+    opacity: 1;
   }
 }
 
@@ -736,19 +736,63 @@
 
 .reply-context {
   display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px 8px;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 6px 8px;
   margin-bottom: 4px;
-  border-left: 2px solid var(--mat-sys-primary);
-  border-radius: 2px;
-  font-size: 0.8rem;
-  opacity: 0.7;
+  border-left: 3px solid var(--mat-sys-primary);
+  background-color: rgba(0, 0, 0, 0.05);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+
+  &:hover {
+    background-color: rgba(0, 0, 0, 0.1);
+  }
 
   mat-icon {
     font-size: 14px;
     width: 14px;
     height: 14px;
+    opacity: 0.7;
+    margin-top: 1px;
+  }
+
+  .reply-content {
+    flex: 1;
+    min-width: 0;
+
+    .reply-text {
+      display: block;
+      font-size: var(--text-sm, 0.8rem);
+      opacity: 0.8;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+}
+
+:host-context(.dark) .reply-context {
+  background-color: rgba(255, 255, 255, 0.05);
+
+  &:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+  }
+}
+
+// Highlight animation when scrolling to a replied-to message
+.message-group-container.highlight-message {
+  animation: highlight-flash 1.5s ease;
+}
+
+@keyframes highlight-flash {
+  0%, 100% {
+    background-color: transparent;
+  }
+  20%, 50% {
+    background-color: rgba(var(--mat-sys-primary-rgb), 0.15);
+    border-radius: 12px;
   }
 }
 
@@ -835,9 +879,11 @@
 }
 
 .message-actions {
-  display: none;
+  display: flex;
   flex-shrink: 0;
   align-items: center;
+  opacity: 0;
+  transition: opacity 0.15s ease;
 
   .more-button {
     display: inline-flex;

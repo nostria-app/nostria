@@ -522,6 +522,32 @@ export class ChatsComponent implements OnInit, OnDestroy {
     this.replyingToMessage.set(null);
   }
 
+  /** Get the preview text of the message being replied to */
+  getReplyPreviewText(message: ChannelMessage): string | null {
+    if (!message.replyTo) return null;
+    const messages = this.currentMessages();
+    const repliedMessage = messages.find(m => m.id === message.replyTo);
+    if (repliedMessage) {
+      const text = repliedMessage.content.trim();
+      return text.length > 120 ? text.substring(0, 120) + '...' : text;
+    }
+    return null;
+  }
+
+  /** Scroll to a specific message by ID and briefly highlight it */
+  scrollToReply(messageId: string | undefined): void {
+    if (!messageId) return;
+    const wrapper = this.messagesWrapper?.nativeElement;
+    if (!wrapper) return;
+
+    const messageEl = wrapper.querySelector(`[data-message-id="${messageId}"]`) as HTMLElement;
+    if (messageEl) {
+      messageEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      messageEl.classList.add('highlight-message');
+      setTimeout(() => messageEl.classList.remove('highlight-message'), 1500);
+    }
+  }
+
   /** Hide a message */
   async hideMessage(message: ChannelMessage): Promise<void> {
     const success = await this.chatChannels.hideMessage(message.id);
