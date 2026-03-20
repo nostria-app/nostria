@@ -723,12 +723,12 @@
   }
 }
 
-// Sender name above bubble
+// Sender name inside bubble
 .message-sender-name {
-  font-size: 0.8rem;
-  opacity: 0.8;
+  font-size: 0.75rem;
+  opacity: 0.7;
   margin-bottom: 2px;
-  padding-left: 8px;
+  color: var(--mat-sys-primary);
 }
 
 // Bubble
