@@ -582,8 +582,8 @@
               [disabled]="reaction.userReacted"
               (click)="sendReaction(message, reaction.content, reaction.customEmojiUrl)">
               @if (reaction.customEmojiUrl) {
-              <img class="reaction-custom-emoji" [src]="reaction.customEmojiUrl" [alt]="reaction.content"
-                title="Custom reaction emoji" loading="lazy" />
+              <app-custom-emoji [src]="reaction.customEmojiUrl" [alt]="reaction.content"
+                cssClass="reaction-custom-emoji" [emojiSetAddress]="reaction.emojiSetAddress" />
               } @else {
               <span class="reaction-emoji">{{ getReactionDisplay(reaction.content) }}</span>
               }

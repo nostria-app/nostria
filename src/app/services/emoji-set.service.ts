@@ -250,6 +250,31 @@ export class EmojiSetService implements OnDestroy {
   }
 
   /**
+   * Look up the emoji-set-address (kind:pubkey:d-tag) for a given shortcode in the user's installed sets.
+   * Returns the address string if the emoji belongs to a known set, or undefined.
+   */
+  async getEmojiSetAddressForShortcode(userPubkey: string, shortcode: string): Promise<string | undefined> {
+    try {
+      const emojiListRecord = await this.userData.getEventByPubkeyAndKind(userPubkey, 10030, { save: true });
+      if (!emojiListRecord) return undefined;
+
+      const emojiSetRefs = emojiListRecord.event.tags.filter(tag => tag[0] === 'a' && tag[1]?.startsWith('30030:'));
+      for (const ref of emojiSetRefs) {
+        const [kind, refPubkey, identifier] = ref[1].split(':');
+        if (kind === '30030' && refPubkey && identifier) {
+          const emojiSet = await this.getEmojiSet(refPubkey, identifier);
+          if (emojiSet?.emojis.has(shortcode)) {
+            return ref[1];
+          }
+        }
+      }
+      return undefined;
+    } catch {
+      return undefined;
+    }
+  }
+
+  /**
    * Clear emoji set cache for a specific user and notify listeners
    */
   clearUserCache(pubkey: string): void {

@@ -81,6 +81,7 @@ import { MediaService } from '../../services/media.service';
 import { TrustService } from '../../services/trust.service';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { EmojiPickerComponent } from '../../components/emoji-picker/emoji-picker.component';
+import { CustomEmojiComponent } from '../../components/custom-emoji/custom-emoji.component';
 import { OpenGraphService, OpenGraphData } from '../../services/opengraph.service';
 import { isImageUrl } from '../../services/format/utils';
 import { HiddenChatInfoPromptComponent } from '../../components/hidden-chat-info-prompt/hidden-chat-info-prompt.component';
@@ -134,6 +135,7 @@ interface MessageReactionSummary {
   count: number;
   userReacted: boolean;
   customEmojiUrl?: string;
+  emojiSetAddress?: string;
 }
 
 interface MessageGroup {
@@ -170,6 +172,7 @@ interface MessageGroup {
     MessageContentComponent,
     NamePipe,
     EmojiPickerComponent,
+    CustomEmojiComponent,
   ],
   templateUrl: './messages.component.html',
   styleUrl: './messages.component.scss',
@@ -2409,6 +2412,13 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     return this.resolvedEmojiUrls().get(content);
   }
 
+  getReactionEmojiSetAddress(content: string, tags: string[][]): string | undefined {
+    const shortcode = this.getEmojiShortcode(content);
+    if (!shortcode) return undefined;
+    const emojiTag = tags.find(tag => tag[0] === 'emoji' && tag[1] === shortcode && !!tag[2]);
+    return emojiTag?.[3] || undefined;
+  }
+
   private getEmojiShortcode(content: string): string | undefined {
     if (!content || !content.startsWith(':') || !content.endsWith(':')) {
       return undefined;
@@ -2468,6 +2478,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     for (const reaction of latestReactionByPubkey.values()) {
       const content = reaction.reactionContent || reaction.content;
       const customEmojiUrl = this.getReactionCustomEmojiUrl(content, reaction.tags || []);
+      const emojiSetAddress = this.getReactionEmojiSetAddress(content, reaction.tags || []);
 
       // Trigger async resolution for unresolved custom emoji shortcodes
       if (!customEmojiUrl && this.getEmojiShortcode(content)) {
@@ -2486,12 +2497,16 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
         if (!existingSummary.customEmojiUrl && customEmojiUrl) {
           existingSummary.customEmojiUrl = customEmojiUrl;
         }
+        if (!existingSummary.emojiSetAddress && emojiSetAddress) {
+          existingSummary.emojiSetAddress = emojiSetAddress;
+        }
       } else {
         groupedReactions.set(content, {
           content,
           count: 1,
           userReacted: myPubkey === reaction.pubkey,
           customEmojiUrl,
+          emojiSetAddress,
         });
       }
     }

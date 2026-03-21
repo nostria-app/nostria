@@ -6,7 +6,8 @@
     (pointerleave)="onPointerLeave()" (click)="$event.stopPropagation(); $event.preventDefault()">
     @if (userReaction()) {
     @if (getCustomEmojiUrl(userReaction()!.event)) {
-    <img [src]="getCustomEmojiUrl(userReaction()!.event)!" [alt]="userReaction()!.event.content" class="emoji-icon-img">
+    <app-custom-emoji [src]="getCustomEmojiUrl(userReaction()!.event)!" [alt]="userReaction()!.event.content"
+      cssClass="emoji-icon-img" [emojiSetAddress]="getEmojiSetAddress(userReaction()!.event)" />
     } @else {
     <span class="emoji-icon">{{ getReactionDisplay(userReaction()!.event.content) }}</span>
     }
@@ -155,8 +156,8 @@
       (click)="$event.stopPropagation()">
       @if (userReaction()) {
       @if (getCustomEmojiUrl(userReaction()!.event)) {
-      <img [src]="getCustomEmojiUrl(userReaction()!.event)!" [alt]="userReaction()!.event.content"
-        class="emoji-icon-img">
+      <app-custom-emoji [src]="getCustomEmojiUrl(userReaction()!.event)!" [alt]="userReaction()!.event.content"
+        cssClass="emoji-icon-img" [emojiSetAddress]="getEmojiSetAddress(userReaction()!.event)" />
       } @else {
       <span class="emoji-icon">{{ getReactionDisplay(userReaction()!.event.content) }}</span>
       }
@@ -308,7 +309,8 @@
       (click)="addReaction(group.content); $event.stopPropagation()">
       @if (group.content.startsWith(':') && group.content.endsWith(':')) {
       @if (getCustomEmojiUrlForGroup(group.content); as emojiUrl) {
-      <img [src]="emojiUrl" [alt]="group.content" class="reaction-emoji-img">
+      <app-custom-emoji [src]="emojiUrl" [alt]="group.content" cssClass="reaction-emoji-img"
+        [emojiSetAddress]="getEmojiSetAddressForGroup(group.content)" />
       } @else {
       <span class="reaction-emoji">{{ group.content }}</span>
       }

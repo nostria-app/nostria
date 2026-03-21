@@ -110,8 +110,9 @@
 <br />
 } @else if (token.type === 'emoji') {
 @if (token.customEmoji) {
-<!-- NIP-30 custom emoji rendered as image -->
-<img class="custom-emoji" [src]="token.customEmoji" [alt]="token.content" [title]="token.content" loading="lazy" />
+<!-- NIP-30 custom emoji rendered as image with optional emoji set context menu -->
+<app-custom-emoji [src]="token.customEmoji" [alt]="token.content" cssClass="custom-emoji"
+  [emojiSetAddress]="token.emojiSetAddress" />
 } @else {
 <span class="emoji-token" [title]="token.content">{{ token.emoji }}</span>
 }

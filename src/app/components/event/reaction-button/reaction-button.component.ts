@@ -22,6 +22,7 @@ import { DatabaseService } from '../../../services/database.service';
 import { LoggerService } from '../../../services/logger.service';
 import { LocalSettingsService } from '../../../services/local-settings.service';
 import { CustomDialogComponent } from '../../custom-dialog/custom-dialog.component';
+import { CustomEmojiComponent } from '../../custom-emoji/custom-emoji.component';
 
 // Emoji categories with icons
 const EMOJI_CATEGORIES = [
@@ -285,7 +286,8 @@ interface ReactionGroup {
     MatMenuModule,
     MatProgressSpinnerModule,
     RouterLink,
-    CustomDialogComponent
+    CustomDialogComponent,
+    CustomEmojiComponent,
   ],
   templateUrl: './reaction-button.component.html',
   styleUrls: ['./reaction-button.component.scss'],
@@ -978,7 +980,6 @@ export class ReactionButtonComponent {
       return null;
     }
 
-    // First, try to find a reaction event with the emoji tag
     const reactionWithTag = this.reactions().events.find(
       r => r.event.content === content && this.getCustomEmojiUrl(r.event)
     );
@@ -986,8 +987,38 @@ export class ReactionButtonComponent {
       return this.getCustomEmojiUrl(reactionWithTag.event);
     }
 
-    // Fall back to user's emoji sets
     const shortcode = content.slice(1, -1);
     return this.lookupEmojiUrlByShortcode(shortcode, content);
+  }
+
+  /**
+   * Get the emoji-set-address (NIP-30) from a reaction event's emoji tag.
+   */
+  getEmojiSetAddress(event: Event): string | undefined {
+    if (!event.content || !event.content.startsWith(':') || !event.content.endsWith(':')) {
+      return undefined;
+    }
+
+    const shortcode = event.content.slice(1, -1);
+    const emojiTag = event.tags.find(tag => tag[0] === 'emoji' && tag[1] === shortcode);
+    return emojiTag?.[3] || undefined;
+  }
+
+  /**
+   * Get the emoji-set-address for a reaction group's custom emoji.
+   */
+  getEmojiSetAddressForGroup(content: string): string | undefined {
+    if (!content.startsWith(':') || !content.endsWith(':')) {
+      return undefined;
+    }
+
+    const reactionWithTag = this.reactions().events.find(
+      r => r.event.content === content && this.getCustomEmojiUrl(r.event)
+    );
+    if (reactionWithTag) {
+      return this.getEmojiSetAddress(reactionWithTag.event);
+    }
+
+    return undefined;
   }
 }

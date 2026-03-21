@@ -45,6 +45,7 @@ export interface ContentToken {
   nostrData?: NostrData;
   emoji?: string;
   customEmoji?: string; // NIP-30: URL to custom emoji image
+  emojiSetAddress?: string; // NIP-30: optional kind:pubkey:d-tag address to emoji set
   processedUrl?: SafeResourceUrl; // For YouTube embed URLs that are pre-processed
   waveform?: number[];
   duration?: number;
@@ -425,13 +426,13 @@ export class ParsingService implements OnDestroy {
     let lastIndex = 0;
 
     // Extract custom emojis from tags according to NIP-30
-    // Format: ["emoji", <shortcode>, <image-url>]
-    const customEmojiMap = new Map<string, string>();
+    // Format: ["emoji", <shortcode>, <image-url>, <emoji-set-address>]
+    const customEmojiMap = new Map<string, { url: string; emojiSetAddress?: string }>();
     if (tags) {
       for (const tag of tags) {
         if (tag[0] === 'emoji' && tag[1] && tag[2]) {
-          // Store as :shortcode: -> image-url
-          customEmojiMap.set(`:${tag[1]}:`, tag[2]);
+          // Store as :shortcode: -> {url, emojiSetAddress}
+          customEmojiMap.set(`:${tag[1]}:`, { url: tag[2], emojiSetAddress: tag[3] || undefined });
         }
       }
     }
@@ -464,7 +465,7 @@ export class ParsingService implements OnDestroy {
             // Don't override inline emoji tags from the event
             const shortcodeWithColons = `:${shortcode}:`;
             if (!customEmojiMap.has(shortcodeWithColons)) {
-              customEmojiMap.set(shortcodeWithColons, url);
+              customEmojiMap.set(shortcodeWithColons, { url });
             }
           }
         }
@@ -482,6 +483,7 @@ export class ParsingService implements OnDestroy {
       nostrData?: NostrData;
       emoji?: string;
       customEmoji?: string; // NIP-30: URL to custom emoji image
+      emojiSetAddress?: string; // NIP-30: optional emoji set address
       processedUrl?: SafeResourceUrl;
       waveform?: number[];
       duration?: number;
@@ -511,17 +513,18 @@ export class ParsingService implements OnDestroy {
     while ((match = emojiRegex.exec(processedContent)) !== null) {
       const emojiCode = match[0];
       // Check custom emoji from tags first (NIP-30)
-      const customEmojiUrl = customEmojiMap.get(emojiCode);
+      const customEmojiData = customEmojiMap.get(emojiCode);
       // Fallback to built-in emoji map
       const emoji = this.emojiMap[emojiCode];
-      if (customEmojiUrl || emoji) {
+      if (customEmojiData || emoji) {
         matches.push({
           start: match.index,
           end: match.index + match[0].length,
           content: emojiCode,
           type: 'emoji',
           emoji: emoji, // Unicode emoji (if available)
-          customEmoji: customEmojiUrl, // Custom emoji URL (NIP-30)
+          customEmoji: customEmojiData?.url, // Custom emoji URL (NIP-30)
+          emojiSetAddress: customEmojiData?.emojiSetAddress, // NIP-30: emoji set address
         });
       }
     }
@@ -1061,6 +1064,10 @@ export class ParsingService implements OnDestroy {
 
       if (match.customEmoji) {
         token.customEmoji = match.customEmoji;
+      }
+
+      if (match.emojiSetAddress) {
+        token.emojiSetAddress = match.emojiSetAddress;
       }
 
       if (match.processedUrl) {

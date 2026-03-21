@@ -40,7 +40,14 @@ export class ReactionService {
     // NIP-30: Add emoji tag for custom emoji reactions
     if (customEmojiUrl) {
       const shortcode = content.replace(/:/g, ''); // Remove colons
-      tags.push(['emoji', shortcode, customEmojiUrl]);
+      // Look up the emoji-set-address
+      const pubkey = this.accountState.pubkey();
+      const emojiSetAddress = pubkey ? await this.emojiSetService.getEmojiSetAddressForShortcode(pubkey, shortcode) : undefined;
+      if (emojiSetAddress) {
+        tags.push(['emoji', shortcode, customEmojiUrl, emojiSetAddress]);
+      } else {
+        tags.push(['emoji', shortcode, customEmojiUrl]);
+      }
     } else if (content.startsWith(':') && content.endsWith(':')) {
       // Try to find the emoji URL from user's preferences
       const shortcode = content.slice(1, -1);
@@ -49,7 +56,12 @@ export class ReactionService {
         const userEmojis = await this.emojiSetService.getUserEmojiSets(pubkey);
         const emojiUrl = userEmojis.get(shortcode);
         if (emojiUrl) {
-          tags.push(['emoji', shortcode, emojiUrl]);
+          const emojiSetAddress = await this.emojiSetService.getEmojiSetAddressForShortcode(pubkey, shortcode);
+          if (emojiSetAddress) {
+            tags.push(['emoji', shortcode, emojiUrl, emojiSetAddress]);
+          } else {
+            tags.push(['emoji', shortcode, emojiUrl]);
+          }
         }
       }
     }

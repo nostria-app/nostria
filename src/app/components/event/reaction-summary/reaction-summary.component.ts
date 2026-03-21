@@ -7,6 +7,7 @@ import { UserProfileComponent } from '../../user-profile/user-profile.component'
 import { AgoPipe } from '../../../pipes/ago.pipe';
 import { EventHeaderComponent } from '../header/header.component';
 import { LayoutService } from '../../../services/layout.service';
+import { CustomEmojiComponent } from '../../custom-emoji/custom-emoji.component';
 
 export type ReactionSummaryTab = 'reactions' | 'reposts' | 'quotes' | 'zaps';
 
@@ -27,6 +28,7 @@ export interface ZapInfo {
     UserProfileComponent,
     AgoPipe,
     EventHeaderComponent,
+    CustomEmojiComponent,
   ],
   templateUrl: './reaction-summary.component.html',
   styleUrl: './reaction-summary.component.scss',
@@ -140,6 +142,19 @@ export class ReactionSummaryComponent {
     const shortcode = event.content.slice(1, -1);
     const emojiTag = event.tags.find(tag => tag[0] === 'emoji' && tag[1] === shortcode);
     return emojiTag?.[2] || null;
+  }
+
+  /**
+   * Get the emoji-set-address (NIP-30) from a reaction event's emoji tag.
+   */
+  getEmojiSetAddress(event: Event): string | undefined {
+    if (!event.content || !event.content.startsWith(':') || !event.content.endsWith(':')) {
+      return undefined;
+    }
+
+    const shortcode = event.content.slice(1, -1);
+    const emojiTag = event.tags.find(tag => tag[0] === 'emoji' && tag[1] === shortcode);
+    return emojiTag?.[3] || undefined;
   }
 
   formatAmount(amount: number | null): string {

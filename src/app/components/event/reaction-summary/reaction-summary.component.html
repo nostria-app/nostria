@@ -23,8 +23,8 @@
         <div class="item-meta">
           <span class="item-time">{{ reaction.event.created_at | ago }}</span>
           @if (getCustomEmojiUrl(reaction.event)) {
-          <img [src]="getCustomEmojiUrl(reaction.event)!" [alt]="reaction.event.content" class="reaction-emoji-img"
-            [title]="reaction.event.content">
+          <app-custom-emoji [src]="getCustomEmojiUrl(reaction.event)!" [alt]="reaction.event.content"
+            cssClass="reaction-emoji-img" [emojiSetAddress]="getEmojiSetAddress(reaction.event)" />
           } @else {
           <span class="reaction-emoji">{{ getReactionDisplay(reaction.event.content) }}</span>
           }
@@ -78,11 +78,12 @@
       <div class="list-item zap-item">
         <app-user-profile [pubkey]="zap.senderPubkey" view="compact"></app-user-profile>
         @if (zap.comment) {
-          @if (isImageUrl(zap.comment)) {
-            <img [src]="zap.comment" class="zap-comment-image" alt="Zap image" loading="lazy" (click)="openImagePreview(zap.comment, $event)" />
-          } @else {
-            <span class="zap-comment-inline">{{ zap.comment }}</span>
-          }
+        @if (isImageUrl(zap.comment)) {
+        <img [src]="zap.comment" class="zap-comment-image" alt="Zap image" loading="lazy"
+          (click)="openImagePreview(zap.comment, $event)" />
+        } @else {
+        <span class="zap-comment-inline">{{ zap.comment }}</span>
+        }
         }
         <div class="item-meta">
           <span class="item-time">{{ zap.timestamp | ago }}</span>

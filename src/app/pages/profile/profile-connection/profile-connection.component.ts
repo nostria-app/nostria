@@ -23,6 +23,7 @@ import { ZapService } from '../../../services/zap.service';
 import { LayoutService } from '../../../services/layout.service';
 import { AgoPipe } from '../../../pipes/ago.pipe';
 import { TimestampPipe } from '../../../pipes/timestamp.pipe';
+import { CustomEmojiComponent } from '../../../components/custom-emoji/custom-emoji.component';
 import { cleanWebsiteValue, normalizeWebsiteUrl } from '../../../utils/website-url';
 
 // Interfaces
@@ -90,6 +91,7 @@ interface ZapHistoryEntry {
     MatMenuModule,
     AgoPipe,
     TimestampPipe,
+    CustomEmojiComponent,
   ],
   templateUrl: './profile-connection.component.html',
   styleUrl: './profile-connection.component.scss',
@@ -616,6 +618,17 @@ export class ProfileConnectionComponent {
     const emojiTag = event.tags.find(tag => tag[0] === 'emoji' && tag[1] === shortcode);
 
     return emojiTag?.[2] || null;
+  }
+
+  getEmojiSetAddress(interaction: Interaction): string | undefined {
+    const event = interaction.event;
+    if (!event.content || !event.content.startsWith(':') || !event.content.endsWith(':')) {
+      return undefined;
+    }
+
+    const shortcode = event.content.slice(1, -1);
+    const emojiTag = event.tags.find(tag => tag[0] === 'emoji' && tag[1] === shortcode);
+    return emojiTag?.[3] || undefined;
   }
 
   navigateToEvent(interaction: Interaction): void {

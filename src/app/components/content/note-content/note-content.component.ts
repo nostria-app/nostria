@@ -38,6 +38,7 @@ import { ArticleComponent } from '../../article/article.component';
 import { LiveEventEmbedComponent } from '../../live-event-embed/live-event-embed.component';
 import { MusicEmbedComponent } from '../../music-embed/music-embed.component';
 import { EmojiSetMentionComponent } from '../../emoji-set-mention/emoji-set-mention.component';
+import { CustomEmojiComponent } from '../../custom-emoji/custom-emoji.component';
 import { StarterPackEventComponent } from '../../event-types/starter-pack-event.component';
 import { SettingsEventComponent } from '../../event-types/settings-event.component';
 import { RelayListEventComponent } from '../../event-types/relay-list-event.component';
@@ -90,6 +91,7 @@ export interface DisplayItem {
     LiveEventEmbedComponent,
     MusicEmbedComponent,
     EmojiSetMentionComponent,
+    CustomEmojiComponent,
     StarterPackEventComponent,
     SettingsEventComponent,
     RelayListEventComponent,
