@@ -47,6 +47,9 @@ import { NoteEditorDialogData } from '../../../interfaces/note-editor';
 import { UserRelaysService } from '../../../services/relays/user-relays';
 import { LoggerService } from '../../../services/logger.service';
 import { CreateListDialogComponent, type CreateListDialogResult } from '../../create-list-dialog/create-list-dialog.component';
+import { isImageUrl } from '../../../services/format/utils';
+import { CollectionSetsService, EmojiSet } from '../../../services/collection-sets.service';
+import { SaveToGifsDialogComponent, SaveToGifsDialogData } from '../../save-to-gifs-dialog/save-to-gifs-dialog.component';
 
 @Component({
   selector: 'app-event-menu',
@@ -88,6 +91,7 @@ export class EventMenuComponent {
   private environmentInjector = inject(EnvironmentInjector);
   private platformId = inject(PLATFORM_ID);
   private logger = inject(LoggerService);
+  private collectionSets = inject(CollectionSetsService);
 
   event = input.required<Event>();
   view = input<'icon' | 'full'>('icon');
@@ -226,6 +230,43 @@ export class EventMenuComponent {
 
   // Check if event has media
   hasMedia = computed<boolean>(() => this.mediaUrls().length > 0);
+
+  // Extract image URLs from event content
+  private imageRegex = /(https?:\/\/[^\s##]+\.(jpe?g|png|gif|webp|avif)(\?[^\s##]*)?(?=\s|##|$|[A-Z]))/gi;
+
+  imageUrls = computed<string[]>(() => {
+    const event = this.event();
+    if (!event?.content) return [];
+
+    const urls: string[] = [];
+    const content = event.content;
+
+    this.imageRegex.lastIndex = 0;
+    let match;
+    while ((match = this.imageRegex.exec(content)) !== null) {
+      urls.push(match[0]);
+    }
+
+    // Also check imeta tags for image URLs
+    if (event.tags) {
+      for (const tag of event.tags) {
+        if (tag[0] === 'imeta') {
+          for (let i = 1; i < tag.length; i++) {
+            if (tag[i].startsWith('url ')) {
+              const url = tag[i].substring(4);
+              if (isImageUrl(url) && !urls.includes(url)) {
+                urls.push(url);
+              }
+            }
+          }
+        }
+      }
+    }
+
+    return [...new Set(urls)];
+  });
+
+  hasImages = computed<boolean>(() => this.imageUrls().length > 0);
 
   async ensureModelLoaded(task: string, model: string): Promise<boolean> {
     // 1. Check if model is already loaded
@@ -651,6 +692,17 @@ export class EventMenuComponent {
     } catch {
       this.layout.toast('Failed to create list');
     }
+  }
+
+  openSaveToGifsDialog(): void {
+    const urls = this.imageUrls();
+    if (urls.length === 0) return;
+
+    this.dialog.open(SaveToGifsDialogComponent, {
+      data: { imageUrls: urls } as SaveToGifsDialogData,
+      width: '450px',
+      panelClass: 'responsive-dialog',
+    });
   }
 
   openEventDetails() {

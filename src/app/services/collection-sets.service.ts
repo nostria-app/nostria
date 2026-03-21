@@ -369,6 +369,36 @@ export class CollectionSetsService {
   }
 
   /**
+   * Get the user's gifs sets (emoji sets tagged with "gifs")
+   */
+  async getGifsSets(pubkey: string): Promise<EmojiSet[]> {
+    const allSets = await this.getEmojiSets(pubkey);
+    return allSets.filter(set => set.tags.includes('gifs'));
+  }
+
+  /**
+   * Add an emoji entry to an existing emoji set.
+   * Fetches the current set, appends the new entry, and republishes.
+   */
+  async addEmojiToSet(identifier: string, entry: EmojiEntry): Promise<boolean> {
+    const pubkey = this.accountState.pubkey();
+    if (!pubkey) {
+      this.logger.error('No authenticated user');
+      return false;
+    }
+
+    const sets = await this.getEmojiSets(pubkey);
+    const existing = sets.find(s => s.identifier === identifier);
+    if (!existing) {
+      this.logger.error('Emoji set not found:', identifier);
+      return false;
+    }
+
+    const updatedEmojis = [...existing.emojis, entry];
+    return this.saveEmojiSet(identifier, existing.name, updatedEmojis, existing.tags);
+  }
+
+  /**
    * Delete an emoji set (publishes kind 5 deletion event)
    */
   async deleteEmojiSet(identifier: string): Promise<boolean> {

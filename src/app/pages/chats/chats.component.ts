@@ -806,6 +806,33 @@ export class ChatsComponent implements OnInit, OnDestroy {
     return current.data.pubkey !== previous.data.pubkey;
   }
 
+  private imageUrlRegex = /(https?:\/\/[^\s##]+\.(jpe?g|png|gif|webp|avif)(\?[^\s##]*)?)/gi;
+
+  getMessageImageUrls(message: ChannelMessage): string[] {
+    if (!message.content) return [];
+    this.imageUrlRegex.lastIndex = 0;
+    const urls: string[] = [];
+    let match;
+    while ((match = this.imageUrlRegex.exec(message.content)) !== null) {
+      urls.push(match[0]);
+    }
+    return [...new Set(urls)];
+  }
+
+  async openSaveToGifsDialog(message: ChannelMessage): Promise<void> {
+    const urls = this.getMessageImageUrls(message);
+    if (urls.length === 0) return;
+
+    const { SaveToGifsDialogComponent } = await import('../../components/save-to-gifs-dialog/save-to-gifs-dialog.component');
+    type SaveToGifsDialogData = import('../../components/save-to-gifs-dialog/save-to-gifs-dialog.component').SaveToGifsDialogData;
+
+    this.dialog.open(SaveToGifsDialogComponent, {
+      data: { imageUrls: urls } as SaveToGifsDialogData,
+      width: '450px',
+      panelClass: 'responsive-dialog',
+    });
+  }
+
   /** Copy a message's raw event data to clipboard */
   async copyMessageData(message: ChannelMessage): Promise<void> {
     try {

@@ -1,0 +1,295 @@
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
+import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
+import { MatSelectModule } from '@angular/material/select';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { CollectionSetsService, EmojiSet } from '../../services/collection-sets.service';
+import { AccountStateService } from '../../services/account-state.service';
+
+export interface SaveToGifsDialogData {
+  imageUrls: string[];
+}
+
+export interface SaveToGifsDialogResult {
+  shortcode: string;
+  imageUrl: string;
+  setIdentifier: string;
+  isNewSet: boolean;
+  newSetName?: string;
+}
+
+@Component({
+  selector: 'app-save-to-gifs-dialog',
+  imports: [
+    MatDialogModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatButtonModule,
+    MatIconModule,
+    MatSelectModule,
+    MatProgressSpinnerModule,
+    MatSnackBarModule,
+    ReactiveFormsModule,
+  ],
+  template: `
+    <h2 mat-dialog-title>Save to Gifs Set</h2>
+    <mat-dialog-content>
+      @if (imageUrls().length > 1) {
+        <p class="subtitle">Select an image to save</p>
+        <div class="image-grid">
+          @for (url of imageUrls(); track url) {
+            <button class="image-option" [class.selected]="selectedImageUrl() === url" (click)="selectImage(url)">
+              <img [src]="url" alt="Meme" />
+            </button>
+          }
+        </div>
+      } @else if (imageUrls().length === 1) {
+        <div class="image-preview">
+          <img [src]="imageUrls()[0]" alt="Meme" />
+        </div>
+      }
+
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Meme name (shortcode)</mat-label>
+        <input
+          matInput
+          [formControl]="shortcodeControl"
+          placeholder="e.g., laughing_cat, deal_with_it"
+          (keyup.enter)="onSave()"
+          autocomplete="off"
+        />
+        <mat-hint>Used as :name: in messages</mat-hint>
+        @if (shortcodeControl.hasError('required')) {
+          <mat-error>Name is required</mat-error>
+        }
+        @if (shortcodeControl.hasError('pattern')) {
+          <mat-error>Only letters, numbers, underscores and hyphens</mat-error>
+        }
+      </mat-form-field>
+
+      @if (!creatingNewSet()) {
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Gifs Set</mat-label>
+          <mat-select [formControl]="setControl">
+            @for (set of gifsSets(); track set.identifier) {
+              <mat-option [value]="set.identifier">{{ set.name }} ({{ set.emojis.length }})</mat-option>
+            }
+            <mat-option value="__new__">
+              <mat-icon>add_circle</mat-icon> Create new gifs set
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+      }
+
+      @if (creatingNewSet()) {
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>New gifs set name</mat-label>
+          <input
+            matInput
+            [formControl]="newSetNameControl"
+            placeholder="e.g., My Memes, Reaction Gifs"
+            autocomplete="off"
+          />
+          @if (newSetNameControl.hasError('required')) {
+            <mat-error>Set name is required</mat-error>
+          }
+        </mat-form-field>
+        <button mat-button (click)="cancelNewSet()">
+          <mat-icon>arrow_back</mat-icon> Choose existing set
+        </button>
+      }
+    </mat-dialog-content>
+    <mat-dialog-actions align="end">
+      <button mat-button (click)="onCancel()">Cancel</button>
+      <button
+        mat-flat-button
+        (click)="onSave()"
+        [disabled]="!canSave() || saving()"
+      >
+        @if (saving()) {
+          <mat-spinner diameter="20"></mat-spinner>
+        } @else {
+          Save
+        }
+      </button>
+    </mat-dialog-actions>
+  `,
+  styles: [`
+    .subtitle {
+      margin-bottom: 12px;
+      color: var(--mat-sys-on-surface-variant);
+    }
+
+    .image-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .image-option {
+      border: 2px solid transparent;
+      border-radius: var(--mat-sys-corner-small);
+      padding: 2px;
+      cursor: pointer;
+      background: none;
+      max-width: 120px;
+
+      &.selected {
+        border-color: var(--mat-sys-primary);
+      }
+
+      img {
+        max-width: 100%;
+        max-height: 80px;
+        border-radius: var(--mat-sys-corner-extra-small);
+        object-fit: cover;
+      }
+    }
+
+    .image-preview {
+      text-align: center;
+      margin-bottom: 16px;
+
+      img {
+        max-width: 100%;
+        max-height: 150px;
+        border-radius: var(--mat-sys-corner-small);
+        object-fit: contain;
+      }
+    }
+
+    .full-width {
+      width: 100%;
+    }
+
+    mat-dialog-content {
+      min-width: 300px;
+    }
+  `],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+export class SaveToGifsDialogComponent {
+  private dialogRef = inject(MatDialogRef<SaveToGifsDialogComponent>);
+  private dialogData = inject<SaveToGifsDialogData>(MAT_DIALOG_DATA);
+  private collectionSets = inject(CollectionSetsService);
+  private accountState = inject(AccountStateService);
+  private snackBar = inject(MatSnackBar);
+
+  imageUrls = signal<string[]>(this.dialogData.imageUrls);
+  selectedImageUrl = signal<string>(this.dialogData.imageUrls[0] ?? '');
+  gifsSets = signal<EmojiSet[]>([]);
+  saving = signal(false);
+
+  shortcodeControl = new FormControl('', [Validators.required, Validators.pattern(/^[a-zA-Z0-9_-]+$/)]);
+  setControl = new FormControl('', Validators.required);
+  newSetNameControl = new FormControl('', Validators.required);
+
+  creatingNewSet = signal(false);
+
+  constructor() {
+    this.loadGifsSets();
+
+    this.setControl.valueChanges.subscribe(value => {
+      if (value === '__new__') {
+        this.creatingNewSet.set(true);
+        this.setControl.reset('', { emitEvent: false });
+      }
+    });
+  }
+
+  private async loadGifsSets(): Promise<void> {
+    const pubkey = this.accountState.pubkey();
+    if (!pubkey) return;
+
+    const sets = await this.collectionSets.getGifsSets(pubkey);
+    this.gifsSets.set(sets);
+
+    // If no sets exist, default to creating a new one
+    if (sets.length === 0) {
+      this.creatingNewSet.set(true);
+    }
+  }
+
+  selectImage(url: string): void {
+    this.selectedImageUrl.set(url);
+  }
+
+  cancelNewSet(): void {
+    if (this.gifsSets().length > 0) {
+      this.creatingNewSet.set(false);
+      this.newSetNameControl.reset('');
+    }
+  }
+
+  canSave(): boolean {
+    if (!this.shortcodeControl.valid) return false;
+    if (!this.selectedImageUrl()) return false;
+    if (this.creatingNewSet()) return this.newSetNameControl.valid;
+    return this.setControl.valid;
+  }
+
+  onCancel(): void {
+    this.dialogRef.close(undefined);
+  }
+
+  async onSave(): Promise<void> {
+    if (!this.canSave() || this.saving()) return;
+
+    this.saving.set(true);
+
+    try {
+      const shortcode = this.shortcodeControl.value!.trim();
+      const imageUrl = this.selectedImageUrl();
+
+      if (this.creatingNewSet()) {
+        const newSetName = this.newSetNameControl.value!.trim();
+        const identifier = this.generateRandomId();
+        const success = await this.collectionSets.saveEmojiSet(
+          identifier,
+          newSetName,
+          [{ shortcode, url: imageUrl }],
+          ['gifs']
+        );
+
+        if (success) {
+          this.snackBar.open(`Saved to new gifs set "${newSetName}"`, 'Close', { duration: 3000 });
+          this.dialogRef.close({ shortcode, imageUrl, setIdentifier: identifier, isNewSet: true, newSetName });
+        } else {
+          this.snackBar.open('Failed to create gifs set', 'Close', { duration: 3000 });
+        }
+      } else {
+        const setIdentifier = this.setControl.value!;
+        const success = await this.collectionSets.addEmojiToSet(setIdentifier, { shortcode, url: imageUrl });
+
+        if (success) {
+          const set = this.gifsSets().find(s => s.identifier === setIdentifier);
+          this.snackBar.open(`Saved to "${set?.name ?? 'gifs set'}"`, 'Close', { duration: 3000 });
+          this.dialogRef.close({ shortcode, imageUrl, setIdentifier, isNewSet: false });
+        } else {
+          this.snackBar.open('Failed to save to gifs set', 'Close', { duration: 3000 });
+        }
+      }
+    } catch {
+      this.snackBar.open('Error saving to gifs set', 'Close', { duration: 3000 });
+    } finally {
+      this.saving.set(false);
+    }
+  }
+
+  private generateRandomId(): string {
+    const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+    let result = '';
+    const array = new Uint8Array(12);
+    crypto.getRandomValues(array);
+    for (const byte of array) {
+      result += chars[byte % chars.length];
+    }
+    return result;
+  }
+}

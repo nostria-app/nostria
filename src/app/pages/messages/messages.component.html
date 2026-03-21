@@ -630,6 +630,12 @@
                 <mat-icon>info</mat-icon>
                 <span>Details</span>
               </button>
+              @if (getMessageImageUrls(message).length > 0) {
+              <button mat-menu-item (click)="openSaveMessageToGifsDialog(message)">
+                <mat-icon>gif_box</mat-icon>
+                <span>Save to Gifs Set</span>
+              </button>
+              }
               @if (message.isOutgoing && message.failed) {
               <mat-divider></mat-divider>
               <button mat-menu-item (click)="retryMessage(message)">

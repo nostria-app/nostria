@@ -3078,6 +3078,33 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     this.snackBar.open('Message hidden', 'Close', { duration: 2000 });
   }
 
+  private imageUrlRegex = /(https?:\/\/[^\s##]+\.(jpe?g|png|gif|webp|avif)(\?[^\s##]*)?)/gi;
+
+  getMessageImageUrls(message: DirectMessage): string[] {
+    if (!message.content) return [];
+    this.imageUrlRegex.lastIndex = 0;
+    const urls: string[] = [];
+    let match;
+    while ((match = this.imageUrlRegex.exec(message.content)) !== null) {
+      urls.push(match[0]);
+    }
+    return [...new Set(urls)];
+  }
+
+  async openSaveMessageToGifsDialog(message: DirectMessage): Promise<void> {
+    const urls = this.getMessageImageUrls(message);
+    if (urls.length === 0) return;
+
+    const { SaveToGifsDialogComponent } = await import('../../components/save-to-gifs-dialog/save-to-gifs-dialog.component');
+    type SaveToGifsDialogData = import('../../components/save-to-gifs-dialog/save-to-gifs-dialog.component').SaveToGifsDialogData;
+
+    this.dialog.open(SaveToGifsDialogComponent, {
+      data: { imageUrls: urls } as SaveToGifsDialogData,
+      width: '450px',
+      panelClass: 'responsive-dialog',
+    });
+  }
+
   /**
    * Start a new chat with a user or group
    */
