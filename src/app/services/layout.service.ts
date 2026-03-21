@@ -3211,6 +3211,10 @@ export class LayoutService implements OnDestroy {
         // Only process on mobile
         if (!this.isHandset()) return;
 
+        // Don't auto-hide the cube when the media player is expanded or fullscreen —
+        // the user is actively interacting with the player UI.
+        if (this.expandedMediaPlayer() || this.fullscreenMediaPlayer()) return;
+
         const target = event.target;
         if (!target || !(target instanceof Element)) return;
 

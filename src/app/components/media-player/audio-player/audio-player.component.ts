@@ -237,6 +237,13 @@ export class AudioPlayerComponent {
       return;
     }
 
+    // On mobile (handset), the media player lives inside the 56px cube which
+    // cannot accommodate the expanded playlist height. Go fullscreen instead.
+    if (this.layout.isHandset()) {
+      this.toggleFullscreen();
+      return;
+    }
+
     this.layout.expandedMediaPlayer.set(!this.layout.expandedMediaPlayer());
   }
 
