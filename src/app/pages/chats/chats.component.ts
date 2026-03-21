@@ -570,7 +570,7 @@ export class ChatsComponent implements OnInit, OnDestroy {
   /** Open create channel dialog */
   openCreateChannel(): void {
     const dialogRef = this.customDialog.open<CreateChannelDialogComponent, CreateChannelDialogResult>(CreateChannelDialogComponent, {
-      title: 'Create Channel',
+      title: 'Create Chat',
       width: '480px',
       maxWidth: '95vw',
     });
@@ -585,10 +585,10 @@ export class ChatsComponent implements OnInit, OnDestroy {
         };
         const createResult = await this.chatChannels.createChannel(metadata, result.tags);
         if (createResult.success && createResult.channelId) {
-          this.snackBar.open('Channel created', 'OK', { duration: 3000 });
+          this.snackBar.open('Chat created', 'OK', { duration: 3000 });
           await this.selectChannelById(createResult.channelId);
         } else {
-          this.snackBar.open('Failed to create channel', 'OK', { duration: 3000 });
+          this.snackBar.open('Failed to create chat', 'OK', { duration: 3000 });
         }
       }
     });
@@ -600,7 +600,7 @@ export class ChatsComponent implements OnInit, OnDestroy {
     if (!channel || !this.isChannelCreator()) return;
 
     const dialogRef = this.customDialog.open<CreateChannelDialogComponent, CreateChannelDialogResult>(CreateChannelDialogComponent, {
-      title: 'Edit Channel',
+      title: 'Edit Chat',
       width: '480px',
       maxWidth: '95vw',
       data: {
@@ -623,9 +623,9 @@ export class ChatsComponent implements OnInit, OnDestroy {
         };
         const success = await this.chatChannels.updateChannelMetadata(channel.id, metadata, result.tags);
         if (success) {
-          this.snackBar.open('Channel updated', 'OK', { duration: 3000 });
+          this.snackBar.open('Chat updated', 'OK', { duration: 3000 });
         } else {
-          this.snackBar.open('Failed to update channel', 'OK', { duration: 3000 });
+          this.snackBar.open('Failed to update chat', 'OK', { duration: 3000 });
         }
       }
     });
@@ -890,9 +890,9 @@ export class ChatsComponent implements OnInit, OnDestroy {
 
     try {
       await navigator.clipboard.writeText(JSON.stringify(eventData, null, 2));
-      this.snackBar.open('Channel data copied to clipboard', 'OK', { duration: 3000 });
+      this.snackBar.open('Chat data copied to clipboard', 'OK', { duration: 3000 });
     } catch {
-      this.snackBar.open('Failed to copy channel data', 'OK', { duration: 3000 });
+      this.snackBar.open('Failed to copy chat data', 'OK', { duration: 3000 });
     }
   }
 
@@ -923,9 +923,9 @@ export class ChatsComponent implements OnInit, OnDestroy {
 
     try {
       await navigator.clipboard.writeText(JSON.stringify(eventData, null, 2));
-      this.snackBar.open('Channel metadata copied to clipboard', 'OK', { duration: 3000 });
+      this.snackBar.open('Chat metadata copied to clipboard', 'OK', { duration: 3000 });
     } catch {
-      this.snackBar.open('Failed to copy channel metadata', 'OK', { duration: 3000 });
+      this.snackBar.open('Failed to copy chat metadata', 'OK', { duration: 3000 });
     }
   }
 
@@ -939,9 +939,9 @@ export class ChatsComponent implements OnInit, OnDestroy {
 
     try {
       await navigator.clipboard.writeText(url);
-      this.snackBar.open('Channel link copied to clipboard', 'OK', { duration: 3000 });
+      this.snackBar.open('Chat link copied to clipboard', 'OK', { duration: 3000 });
     } catch {
-      this.snackBar.open('Failed to copy channel link', 'OK', { duration: 3000 });
+      this.snackBar.open('Failed to copy chat link', 'OK', { duration: 3000 });
     }
   }
 

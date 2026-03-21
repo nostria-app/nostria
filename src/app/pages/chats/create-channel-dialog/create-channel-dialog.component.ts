@@ -42,11 +42,11 @@ export interface CreateChannelDialogResult {
   template: `
     <div dialog-content class="channel-dialog-content">
       <p class="dialog-description">
-        {{ data?.isEdit ? 'Update your channel details.' : 'Create a new public chat channel.' }}
+        {{ data?.isEdit ? 'Update your chat details.' : 'Create a new public chat.' }}
       </p>
 
       <mat-form-field appearance="outline" class="full-width">
-        <mat-label>Channel Name</mat-label>
+        <mat-label>Chat Name</mat-label>
         <input
           matInput
           [formControl]="nameControl"
@@ -55,7 +55,7 @@ export interface CreateChannelDialogResult {
           autocomplete="off"
         />
         @if (nameControl.hasError('required')) {
-          <mat-error>Channel name is required</mat-error>
+          <mat-error>Chat name is required</mat-error>
         }
         @if (nameControl.hasError('maxlength')) {
           <mat-error>Must not exceed 100 characters</mat-error>
@@ -67,7 +67,7 @@ export interface CreateChannelDialogResult {
         <textarea
           matInput
           [formControl]="aboutControl"
-          placeholder="What is this channel about?"
+          placeholder="What is this chat about?"
           rows="3"
         ></textarea>
         @if (aboutControl.hasError('maxlength')) {
@@ -76,11 +76,11 @@ export interface CreateChannelDialogResult {
       </mat-form-field>
 
       <div class="picture-section">
-        <label class="picture-label">Channel Picture</label>
+        <label class="picture-label">Chat Picture</label>
 
         @if (previewImage()) {
           <div class="preview-container">
-            <img [src]="previewImage()" class="picture-preview" alt="Channel picture preview" />
+            <img [src]="previewImage()" class="picture-preview" alt="Chat picture preview" />
             <button mat-icon-button class="remove-preview" (click)="removeImage()">
               <mat-icon>close</mat-icon>
             </button>
@@ -154,7 +154,7 @@ export interface CreateChannelDialogResult {
       <div class="relays-section">
         <label class="relays-label">
           <mat-icon>wifi</mat-icon>
-          Channel Relays
+          Chat Relays
         </label>
         <p class="relays-description">
           Make sure the first relay in the list is a publicly accessible relay, it will be used as relay hint for messages. Keep the list as low as possible, 3-5 is enough. If you add more, every user has to publish every message to all relays.

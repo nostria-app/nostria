@@ -5,23 +5,23 @@
       <h2 class="panel-title title-font">Chats</h2>
       <span class="panel-header-spacer"></span>
       @if (isLoading()) {
-      <mat-spinner diameter="20" matTooltip="Loading channels..."></mat-spinner>
+      <mat-spinner diameter="20" matTooltip="Loading chats..."></mat-spinner>
       }
       @if (isAuthenticated()) {
       <app-list-filter-menu storageKey="chats" [showPublicOption]="true" [showWotOption]="trustEnabled()"
         defaultFilter="following" [initialFilter]="urlListFilter()" (filterChanged)="onListFilterChanged($event)" />
       }
-      <button mat-icon-button (click)="toggleSearch()" matTooltip="Search channels">
+      <button mat-icon-button (click)="toggleSearch()" matTooltip="Search chats">
         <mat-icon>search</mat-icon>
       </button>
-      <button mat-icon-button (click)="openCreateChannel()" matTooltip="Create channel">
+      <button mat-icon-button (click)="openCreateChannel()" matTooltip="Create chat">
         <mat-icon>add</mat-icon>
       </button>
     </div>
 
     @if (showSearch()) {
     <div class="channel-search-header">
-      <input class="channel-search-input" type="text" placeholder="Search channels..." [ngModel]="channelSearchQuery()"
+      <input class="channel-search-input" type="text" placeholder="Search chats..." [ngModel]="channelSearchQuery()"
         (ngModelChange)="channelSearchQuery.set($event)" />
       <button mat-icon-button class="clear-search-button" (click)="toggleSearch()" aria-label="Close search">
         <mat-icon>close</mat-icon>
@@ -33,15 +33,15 @@
       @if (isLoading() && channels().length === 0) {
       <div class="inline-loading">
         <mat-spinner diameter="32"></mat-spinner>
-        <p>Loading channels...</p>
+        <p>Loading chats...</p>
       </div>
       } @else if (channels().length === 0 && !isLoading()) {
       <div class="empty-channels">
         <mat-icon>forum</mat-icon>
-        <p>No public channels yet</p>
+        <p>No public chats yet</p>
         <button mat-flat-button (click)="openCreateChannel()">
           <mat-icon>add</mat-icon>
-          Create a channel
+          Create a chat
         </button>
       </div>
       } @else {
@@ -175,10 +175,10 @@
   <div class="chats-right" [class.mobile-hidden]="isSinglePaneView() && showMobileList()">
     @if (!selectedChannel() && !selectedChannelId()) {
     <div class="no-channel-selected">
-      <h2>Select a channel</h2>
-      <p>Choose from existing public channels or create a new one.</p>
+      <h2>Select a chat</h2>
+      <p>Choose from existing public chats or create a new one.</p>
       <button mat-flat-button (click)="openCreateChannel()">
-        Create channel
+        Create chat
       </button>
     </div>
     } @else {
@@ -214,11 +214,11 @@
         </div>
         <div class="channel-header-actions">
           @if (isChannelCreator()) {
-          <button mat-icon-button (click)="openEditChannel()" matTooltip="Edit channel">
+          <button mat-icon-button (click)="openEditChannel()" matTooltip="Edit chat">
             <mat-icon>edit</mat-icon>
           </button>
           }
-          <button mat-icon-button [matMenuTriggerFor]="channelMenu" matTooltip="Channel options">
+          <button mat-icon-button [matMenuTriggerFor]="channelMenu" matTooltip="Chat options">
             <mat-icon>more_vert</mat-icon>
           </button>
           <mat-menu #channelMenu="matMenu">
@@ -237,7 +237,7 @@
             @if (isChannelCreator()) {
             <button mat-menu-item (click)="openEditChannel()">
               <mat-icon>edit</mat-icon>
-              <span>Edit Channel</span>
+              <span>Edit Chat</span>
             </button>
             <button mat-menu-item (click)="toggleManagePanel()">
               <mat-icon>admin_panel_settings</mat-icon>
