@@ -1960,13 +1960,12 @@ mat-sidenav-content {
   // After the 3D rotation transition completes, flatten the transforms so the active
   // face is in normal 2D layout. Mobile browsers can't reliably hit-test 3D-transformed
   // elements, so this ensures buttons/controls actually receive pointer events.
+  // IMPORTANT: Keep the same sizing/positioning as during animation to avoid visual jumps.
   &.cube-settled {
-    // Remove perspective so children aren't in 3D space
-    perspective: none;
-
     .cube-inner {
+      // Disable 3D context so children are in flat 2D space for hit-testing
       transform-style: flat;
-      // Remove the rotation — we'll just show/hide faces directly
+      // Remove the rotation — active face is shown via display toggling
       transform: none !important;
     }
 
@@ -1976,9 +1975,9 @@ mat-sidenav-content {
       }
 
       .cube-face-player {
+        // Remove 3D transform but keep position: absolute (from .cube-face base)
         transform: none;
         backface-visibility: visible;
-        position: relative;
       }
     }
 
@@ -1988,17 +1987,32 @@ mat-sidenav-content {
       }
 
       .cube-face-nav {
+        // Remove 3D transform but keep position: absolute (from .cube-face base)
         transform: none;
         backface-visibility: visible;
-        position: relative;
       }
     }
   }
 }
 
-// Hide mobile cube completely when fullscreen is active
+// When fullscreen is active, hide the mobile cube BUT let the fullscreen player break out.
+// We use visibility:hidden instead of display:none so the fixed-position child can still render.
 .app-container[data-fullscreen="true"] .mobile-bottom-cube {
-  display: none !important;
+  visibility: hidden;
+  pointer-events: none;
+
+  // Propagate visibility through the chain so the fullscreen player can render
+  .cube-inner,
+  .cube-face-player {
+    visibility: hidden;
+  }
+
+  // The fullscreen player breaks out of the cube with position:fixed,
+  // so it needs to be visible even though the cube wrapper is hidden.
+  .cube-face-player app-media-player.fullscreen-mode {
+    visibility: visible;
+    pointer-events: auto;
+  }
 }
 
 .cube-inner {
@@ -2095,6 +2109,31 @@ mat-sidenav-content {
   background-color: color-mix(in srgb, var(--mat-sys-surface-container) 40%, transparent);
   border-color: color-mix(in srgb, var(--mat-sys-outline-variant) 60%, transparent);
   box-shadow: var(--mat-sys-level1);
+}
+
+// "Browse Music" button shown on the player face when no music is queued
+.cube-music-browse {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  height: 100%;
+  text-decoration: none;
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 14px;
+  cursor: pointer;
+  transition: color 0.2s ease;
+
+  .mat-icon {
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+  }
+
+  &:hover {
+    color: var(--mat-sys-primary);
+  }
 }
 
 // Mobile nav buttons inside cube face reuse existing styles

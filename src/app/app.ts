@@ -1870,13 +1870,13 @@ export class App implements OnInit, OnDestroy {
 
     if (Math.abs(deltaX) < threshold) return;
 
-    const showingPlayer = this.layout.showMediaPlayer();
+    const showingPlayerFace = this.layout.showCubePlayerFace();
 
-    // Any horizontal swipe toggles between nav and media player faces
-    if (showingPlayer && !this.layout.fullscreenMediaPlayer()) {
-      this.layout.showMediaPlayer.set(false);
-    } else if (!showingPlayer && this.media.hasQueue()) {
-      this.layout.showMediaPlayer.set(true);
+    // Any horizontal swipe toggles between nav and player/music faces
+    if (showingPlayerFace && !this.layout.fullscreenMediaPlayer()) {
+      this.layout.showCubePlayerFace.set(false);
+    } else if (!showingPlayerFace) {
+      this.layout.showCubePlayerFace.set(true);
     }
 
     this.cubeSwiping = false;

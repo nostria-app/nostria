@@ -167,6 +167,12 @@
   /* Add simple fade-in animation when returning to footer mode */
   animation: footerFadeIn 0.4s ease-out forwards;
 
+  /* Suppress the fade-in animation when inside the mobile cube —
+     the cube rotation already provides a transition effect */
+  :host-context(.cube-face-player) & {
+    animation: none;
+  }
+
   /* Ensure child elements also fade smoothly */
   .media-info,
   .media-controls,

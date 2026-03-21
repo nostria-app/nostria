@@ -512,11 +512,11 @@
   <!-- Mobile: cube container with nav + media player faces -->
   @if (layout.isHandset() && app.authenticated() && !isClipsMode()) {
   <div class="mobile-bottom-cube no-print"
-    [class.show-player]="layout.showMediaPlayer()"
+    [class.show-player]="layout.showCubePlayerFace()"
     [class.cube-settled]="layout.cubeSettled()"
     [class.scroll-hidden]="layout.mobileNavScrollHidden()"
     [class.sidenav-open]="opened()"
-    [class.hide-nav]="layout.hideMobileNav() && !layout.showMediaPlayer()"
+    [class.hide-nav]="layout.hideMobileNav() && !layout.showCubePlayerFace()"
     (touchstart)="onCubeTouchStart($event)"
     (touchmove)="onCubeTouchMove($event)"
     (touchend)="onCubeTouchEnd($event)">
@@ -558,10 +558,15 @@
         </a>
       </div>
 
-      <!-- Face 2: Media player -->
+      <!-- Face 2: Media player or Music browse -->
       <div class="cube-face cube-face-player">
         @if (layout.showMediaPlayer()) {
         <app-media-player></app-media-player>
+        } @else {
+        <a class="cube-music-browse" routerLink="/music" (click)="layout.showCubePlayerFace.set(false)">
+          <mat-icon>library_music</mat-icon>
+          <span i18n="@@app.mobile.browseMusic">Browse Music</span>
+        </a>
         }
       </div>
     </div>

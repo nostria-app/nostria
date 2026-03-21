@@ -88,6 +88,13 @@ export class LayoutService implements OnDestroy {
   expandedMediaPlayer = signal(false);
 
   /**
+   * Controls whether the mobile cube is rotated to show the player/music face.
+   * Separate from showMediaPlayer so the cube can show the music face even
+   * when no music is queued (e.g. to show a "Browse Music" button).
+   */
+  showCubePlayerFace = signal(false);
+
+  /**
    * Set to true after the mobile cube 3D rotation transition completes (~500ms).
    * When settled, the CSS flattens the 3D transforms so the active face
    * reliably receives pointer events (3D hit-testing is broken on mobile browsers).
@@ -259,11 +266,12 @@ export class LayoutService implements OnDestroy {
 
     // When the media player becomes visible (e.g. playback starts), reset the
     // scroll-hidden state so the mobile cube slides back into view.
-    // Also clear scroll anchors so the next scroll event starts fresh.
+    // Also sync the cube face to show the player.
     effect(() => {
       if (this.showMediaPlayer()) {
         this.mobileNavScrollHidden.set(false);
         this.mobileNavScrollState.clear();
+        this.showCubePlayerFace.set(true);
       }
     });
 
@@ -271,8 +279,8 @@ export class LayoutService implements OnDestroy {
     // so CSS can flatten transforms for reliable pointer event hit-testing.
     if (isPlatformBrowser(this.platformId)) {
       effect(() => {
-        // Read the signal to track it
-        this.showMediaPlayer();
+        // Read the signal to track it — cube face changes trigger re-settle
+        this.showCubePlayerFace();
         // Transition starting — un-settle so 3D animation plays
         this.cubeSettled.set(false);
         if (this.cubeSettledTimer) {
