@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal, computed } from '@angular/core';
 import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -8,8 +8,11 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatSelectModule } from '@angular/material/select';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatCheckboxModule } from '@angular/material/checkbox';
 import { CollectionSetsService, EmojiSet } from '../../services/collection-sets.service';
 import { AccountStateService } from '../../services/account-state.service';
+import { MediaService } from '../../services/media.service';
+import { LoggerService } from '../../services/logger.service';
 
 export interface SaveToGifsDialogData {
   imageUrls: string[];
@@ -34,6 +37,7 @@ export interface SaveToGifsDialogResult {
     MatSelectModule,
     MatProgressSpinnerModule,
     MatSnackBarModule,
+    MatCheckboxModule,
     ReactiveFormsModule,
   ],
   template: `
@@ -54,6 +58,21 @@ export interface SaveToGifsDialogResult {
         </div>
       }
 
+      <div class="source-url">
+        <mat-icon class="source-url-icon">link</mat-icon>
+        <span class="source-url-text">{{ selectedImageUrl() }}</span>
+      </div>
+
+      <mat-checkbox [formControl]="uploadCopyControl" class="upload-checkbox">
+        Upload a copy to my media server
+      </mat-checkbox>
+      @if (uploadCopyControl.value && !hasMediaServers()) {
+        <p class="no-server-warning">
+          <mat-icon>warning</mat-icon>
+          No media servers configured. Go to Settings to add one.
+        </p>
+      }
+
       <mat-form-field appearance="outline" class="full-width">
         <mat-label>Meme name (shortcode)</mat-label>
         <input
@@ -63,7 +82,6 @@ export interface SaveToGifsDialogResult {
           (keyup.enter)="onSave()"
           autocomplete="off"
         />
-        <mat-hint>Used as :name: in messages</mat-hint>
         @if (shortcodeControl.hasError('required')) {
           <mat-error>Name is required</mat-error>
         }
@@ -164,6 +182,53 @@ export interface SaveToGifsDialogResult {
       }
     }
 
+    .source-url {
+      display: flex;
+      align-items: flex-start;
+      gap: 6px;
+      padding: 8px 10px;
+      margin-bottom: 12px;
+      border-radius: var(--mat-sys-corner-small);
+      background: var(--mat-sys-surface-container);
+      border: 1px solid var(--mat-sys-outline-variant);
+
+      .source-url-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+        flex-shrink: 0;
+        margin-top: 1px;
+        color: var(--mat-sys-on-surface-variant);
+      }
+
+      .source-url-text {
+        font-size: 12px;
+        word-break: break-all;
+        color: var(--mat-sys-on-surface-variant);
+        line-height: 1.4;
+      }
+    }
+
+    .upload-checkbox {
+      display: block;
+      margin-bottom: 16px;
+    }
+
+    .no-server-warning {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--mat-sys-error);
+      margin: -8px 0 12px 0;
+
+      mat-icon {
+        font-size: 16px;
+        width: 16px;
+        height: 16px;
+      }
+    }
+
     .full-width {
       width: 100%;
     }
@@ -180,6 +245,8 @@ export class SaveToGifsDialogComponent {
   private collectionSets = inject(CollectionSetsService);
   private accountState = inject(AccountStateService);
   private snackBar = inject(MatSnackBar);
+  private media = inject(MediaService);
+  private logger = inject(LoggerService);
 
   imageUrls = signal<string[]>(this.dialogData.imageUrls);
   selectedImageUrl = signal<string>(this.dialogData.imageUrls[0] ?? '');
@@ -189,8 +256,10 @@ export class SaveToGifsDialogComponent {
   shortcodeControl = new FormControl('', [Validators.required, Validators.pattern(/^[a-zA-Z0-9_-]+$/)]);
   setControl = new FormControl('', Validators.required);
   newSetNameControl = new FormControl('', Validators.required);
+  uploadCopyControl = new FormControl(false);
 
   creatingNewSet = signal(false);
+  hasMediaServers = computed(() => this.media.mediaServers().length > 0);
 
   constructor() {
     this.loadGifsSets();
@@ -210,9 +279,11 @@ export class SaveToGifsDialogComponent {
     const sets = await this.collectionSets.getGifsSets(pubkey);
     this.gifsSets.set(sets);
 
-    // If no sets exist, default to creating a new one
+    // If no sets exist, default to creating a new one; otherwise auto-select the first
     if (sets.length === 0) {
       this.creatingNewSet.set(true);
+    } else {
+      this.setControl.setValue(sets[0].identifier);
     }
   }
 
@@ -245,7 +316,17 @@ export class SaveToGifsDialogComponent {
 
     try {
       const shortcode = this.shortcodeControl.value!.trim();
-      const imageUrl = this.selectedImageUrl();
+      let imageUrl = this.selectedImageUrl();
+
+      // Upload a copy to media server if requested
+      if (this.uploadCopyControl.value) {
+        const uploadedUrl = await this.uploadImageCopy(imageUrl);
+        if (uploadedUrl) {
+          imageUrl = uploadedUrl;
+        } else {
+          this.snackBar.open('Failed to upload copy, using original URL', 'Close', { duration: 3000 });
+        }
+      }
 
       if (this.creatingNewSet()) {
         const newSetName = this.newSetNameControl.value!.trim();
@@ -279,6 +360,30 @@ export class SaveToGifsDialogComponent {
       this.snackBar.open('Error saving to gifs set', 'Close', { duration: 3000 });
     } finally {
       this.saving.set(false);
+    }
+  }
+
+  private async uploadImageCopy(url: string): Promise<string | null> {
+    try {
+      await this.media.load();
+      const servers = this.media.mediaServers();
+      if (servers.length === 0) return null;
+
+      const response = await fetch(url);
+      if (!response.ok) return null;
+
+      const blob = await response.blob();
+      const extension = url.split('?')[0].split('.').pop() || 'jpg';
+      const file = new File([blob], `meme.${extension}`, { type: blob.type || 'image/jpeg' });
+
+      const result = await this.media.uploadFile(file, false, servers);
+      if ((result.status === 'success' || result.status === 'duplicate') && result.item) {
+        return result.item.url;
+      }
+      return null;
+    } catch (err) {
+      this.logger.error('Failed to upload image copy:', err);
+      return null;
     }
   }
 
