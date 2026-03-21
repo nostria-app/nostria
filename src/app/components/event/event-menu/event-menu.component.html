@@ -25,12 +25,6 @@
     Media
   </button>
   }
-  @if (hasImages()) {
-  <button mat-menu-item (click)="openSaveToGifsDialog()">
-    <mat-icon>gif_box</mat-icon>
-    Save to Gifs Set
-  </button>
-  }
   <mat-divider></mat-divider>
   @if (showPinOptions()) {
   <button mat-menu-item (click)="onPinClick($event)">
@@ -206,6 +200,12 @@
     <mat-icon>cell_tower</mat-icon>
     Republish
   </button>
+  @if (hasImages()) {
+  <button mat-menu-item (click)="openSaveToGifsDialog()">
+    <mat-icon>gif_box</mat-icon>
+    Save to Gifs Set
+  </button>
+  }
   @if (isOurEvent() && isPremium()) {
   <button mat-menu-item (click)="goToNewsletter()">
     <mat-icon>mail</mat-icon>
