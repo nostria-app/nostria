@@ -665,6 +665,27 @@ export class ChatsComponent implements OnInit, OnDestroy {
     }
   }
 
+  /** Handle paste events – upload pasted images/videos */
+  onMessagePaste(event: ClipboardEvent): void {
+    const items = event.clipboardData?.items;
+    if (!items) return;
+
+    const mediaFiles: File[] = [];
+    for (const item of Array.from(items)) {
+      if (item.kind !== 'file') continue;
+      const file = item.getAsFile();
+      if (file && (file.type.startsWith('image/') || file.type.startsWith('video/'))) {
+        mediaFiles.push(file);
+      }
+    }
+
+    if (mediaFiles.length === 0) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+    void this.uploadMediaFiles(mediaFiles);
+  }
+
   /** Set reply-to message */
   setReplyTo(message: ChannelMessage): void {
     this.replyingToMessage.set(message);
