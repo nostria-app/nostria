@@ -764,6 +764,15 @@
               <mat-icon>music_note</mat-icon>
               <span>Music</span>
             </button>
+            <mat-divider></mat-divider>
+            <button mat-menu-item (click)="recordAudioClip()">
+              <mat-icon>mic</mat-icon>
+              <span>Audio Clip</span>
+            </button>
+            <button mat-menu-item (click)="recordVideoClip()">
+              <mat-icon>videocam</mat-icon>
+              <span>Video Clip</span>
+            </button>
             @if (!isGroupChat()) {
             <button mat-menu-item (click)="openSendMoneyDialog()">
               <mat-icon>bolt</mat-icon>

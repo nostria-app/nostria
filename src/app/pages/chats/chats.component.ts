@@ -1045,6 +1045,94 @@ export class ChatsComponent implements OnInit, OnDestroy {
     this.mediaPreviews.update(previews => previews.filter((_, i) => i !== index));
   }
 
+  /** Record an audio clip and attach it to the message */
+  async recordAudioClip(): Promise<void> {
+    if (!this.hasConfiguredMediaServers()) {
+      this.showMediaServerWarning();
+      return;
+    }
+
+    const { AudioRecordDialogComponent } = await import('../../pages/media/audio-record-dialog/audio-record-dialog.component');
+
+    const dialogRef = this.dialog.open(AudioRecordDialogComponent, {
+      width: '400px',
+      maxWidth: '90vw',
+      panelClass: 'responsive-dialog',
+      disableClose: true,
+    });
+
+    dialogRef.afterClosed().subscribe(async (result: { blob: Blob; waveform: number[]; duration: number } | undefined) => {
+      if (result?.blob) {
+        try {
+          this.isUploading.set(true);
+          this.uploadStatus.set('Uploading audio clip...');
+
+          const file = new File([result.blob], 'voice-message.mp4', { type: result.blob.type });
+          const uploadResult = await this.mediaService.uploadFile(file, false, this.mediaService.mediaServers());
+
+          if (uploadResult.status === 'success' && uploadResult.item) {
+            this.insertMediaUrl(uploadResult.item.url, uploadResult.item.type);
+          } else {
+            this.snackBar.open('Failed to upload audio clip', 'Dismiss', { duration: 5000 });
+          }
+        } catch {
+          this.snackBar.open('Failed to upload audio clip', 'Dismiss', { duration: 5000 });
+        } finally {
+          this.isUploading.set(false);
+          this.uploadStatus.set('');
+        }
+      }
+    });
+  }
+
+  /** Record a video clip and attach it to the message */
+  async recordVideoClip(): Promise<void> {
+    if (!this.hasConfiguredMediaServers()) {
+      this.showMediaServerWarning();
+      return;
+    }
+
+    const { VideoRecordDialogComponent } = await import('../../pages/media/video-record-dialog/video-record-dialog.component');
+
+    const dialogRef = this.customDialog.open<typeof VideoRecordDialogComponent.prototype, { file: File; uploadOriginal: boolean } | null>(
+      VideoRecordDialogComponent,
+      {
+        title: 'Record Video Clip',
+        width: '600px',
+        maxWidth: '90vw',
+        disableClose: true,
+        showCloseButton: true,
+        panelClass: 'video-record-dialog-panel',
+      }
+    );
+
+    dialogRef.afterClosed$.subscribe(async ({ result }) => {
+      if (result?.file) {
+        try {
+          this.isUploading.set(true);
+          this.uploadStatus.set('Uploading video clip...');
+
+          const uploadResult = await this.mediaService.uploadFile(
+            result.file,
+            result.uploadOriginal ?? false,
+            this.mediaService.mediaServers()
+          );
+
+          if (uploadResult.status === 'success' && uploadResult.item) {
+            this.insertMediaUrl(uploadResult.item.url, uploadResult.item.type);
+          } else {
+            this.snackBar.open('Failed to upload video clip', 'Dismiss', { duration: 5000 });
+          }
+        } catch {
+          this.snackBar.open('Failed to upload video clip', 'Dismiss', { duration: 5000 });
+        } finally {
+          this.isUploading.set(false);
+          this.uploadStatus.set('');
+        }
+      }
+    });
+  }
+
   /** Toggle chat details panel */
   toggleChatDetails(): void {
     this.showManagePanel.set(false);
