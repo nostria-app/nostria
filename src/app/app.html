@@ -279,7 +279,8 @@
         <div class="toolbar-center" [class.mobile-search-expanded]="searchFocused() && layout.isHandset()">
           <div class="search-container toolbar-section" [class.search-active]="layout.search()"
             [class.has-results]="search.hasVisibleResults()" (focusout)="onSearchBlur($event)">
-            <button mat-icon-button class="search-icon-button" (click)="twoColumnLayout.resetNavigation('/search')" matTooltip="Advanced search" i18n-matTooltip="@@app.search.advanced-search">
+            <button mat-icon-button class="search-icon-button" (click)="twoColumnLayout.resetNavigation('/search')"
+              matTooltip="Advanced search" i18n-matTooltip="@@app.search.advanced-search">
               <mat-icon class="search-icon">search</mat-icon>
             </button>
             <input type="search" class="search-input" #searchInputElement [(ngModel)]="layout.searchInput"
@@ -511,16 +512,11 @@
 
   <!-- Mobile: cube container with nav + media player faces -->
   @if (layout.isHandset() && app.authenticated() && !isClipsMode()) {
-  <div class="mobile-bottom-cube no-print"
-    [class.show-player]="layout.showCubePlayerFace()"
-    [class.cube-settled]="layout.cubeSettled()"
-    [class.cube-no-transition]="layout.cubeTransitionDisabled()"
-    [class.scroll-hidden]="layout.mobileNavScrollHidden()"
-    [class.sidenav-open]="opened()"
-    [class.hide-nav]="layout.hideMobileNav() && !layout.showCubePlayerFace()"
-    (touchstart)="onCubeTouchStart($event)"
-    (touchmove)="onCubeTouchMove($event)"
-    (touchend)="onCubeTouchEnd($event)">
+  <div class="mobile-bottom-cube no-print" [class.show-player]="layout.showCubePlayerFace()"
+    [class.player-expanded]="layout.expandedMediaPlayer()" [class.cube-settled]="layout.cubeSettled()"
+    [class.cube-no-transition]="layout.cubeTransitionDisabled()" [class.scroll-hidden]="layout.mobileNavScrollHidden()"
+    [class.sidenav-open]="opened()" [class.hide-nav]="layout.hideMobileNav() && !layout.showCubePlayerFace()"
+    (touchstart)="onCubeTouchStart($event)" (touchmove)="onCubeTouchMove($event)" (touchend)="onCubeTouchEnd($event)">
     <div class="cube-inner">
       <!-- Face 1: Mobile navigation -->
       <div class="cube-face cube-face-nav">

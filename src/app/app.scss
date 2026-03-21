@@ -2003,6 +2003,19 @@ mat-sidenav-content {
       }
     }
   }
+
+  // When the media player is expanded inside the settled mobile cube,
+  // grow the cube to accommodate the expanded queue panel.
+  &.show-player.cube-settled.player-expanded {
+    height: 320px;
+    transition: height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+    .cube-face-player {
+      // Remove scale compensation — the parent height change handles sizing
+      transform: none !important;
+      border-radius: 16px 16px 28px 28px;
+    }
+  }
 }
 
 // When fullscreen is active, hide the mobile cube BUT let the fullscreen player break out.
@@ -2013,8 +2026,9 @@ mat-sidenav-content {
 .app-container[data-fullscreen="true"] .mobile-bottom-cube {
   visibility: hidden;
   pointer-events: none;
-  // Remove perspective so position:fixed on the player can escape to the viewport
+  // Remove perspective and transform so position:fixed on the player can escape to the viewport
   perspective: none;
+  transform: none !important;
 
   // Propagate visibility through the chain so the fullscreen player can render.
   // Also strip all transforms that would trap position:fixed.
@@ -2028,6 +2042,9 @@ mat-sidenav-content {
   .cube-face-player {
     visibility: hidden;
     transform: none !important;
+    // Clear backdrop-filter which also creates a containing block for position:fixed
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
   }
 
   // The fullscreen player breaks out of the cube with position:fixed,
@@ -2079,7 +2096,8 @@ mat-sidenav-content {
   border: 1px solid color-mix(in srgb, var(--mat-sys-outline-variant) 52%, transparent);
   box-shadow: var(--mat-sys-level1);
 
-  a, button {
+  a,
+  button {
     color: var(--mat-sys-on-surface-variant);
   }
 }
@@ -2089,7 +2107,8 @@ mat-sidenav-content {
   border-color: color-mix(in srgb, var(--mat-sys-outline-variant) 60%, transparent);
   box-shadow: var(--mat-sys-level1);
 
-  a, button {
+  a,
+  button {
     color: var(--mat-sys-on-surface-variant);
   }
 }
