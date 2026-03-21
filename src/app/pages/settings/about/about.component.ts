@@ -12,6 +12,8 @@ import { LoggerService } from '../../../services/logger.service';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { RightPanelService } from '../../../services/right-panel.service';
+import { ZapSoundService, ZapTier } from '../../../services/zap-sound.service';
+import { HapticsService } from '../../../services/haptics.service';
 
 interface WebManifest {
   version?: string;
@@ -38,11 +40,20 @@ export class AboutComponent implements OnInit, OnDestroy {
   private readonly layout = inject(LayoutService);
   private readonly logger = inject(LoggerService);
   private readonly rightPanel = inject(RightPanelService);
+  private readonly zapSound = inject(ZapSoundService);
+  private readonly haptics = inject(HapticsService);
   version = signal('Loading...');
   videoFailed = signal(false);
   commitSha = signal<string | undefined>(undefined);
   commitShort = signal<string | undefined>(undefined);
   buildDate = signal<string | undefined>(undefined);
+
+  /** Current demo tier being shown (0 = not active). */
+  demoTier = signal<number>(0);
+  /** Whether a demo sequence is currently running. */
+  private demoRunning = false;
+  /** Timers for the demo sequence so we can clean up. */
+  private demoTimers: ReturnType<typeof setTimeout>[] = [];
 
   constructor() {
     effect(() => {
@@ -84,7 +95,57 @@ export class AboutComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy() {
-    // No cleanup needed
+    this.clearDemoTimers();
+  }
+
+  /** Easter egg: click the logo to cycle through all 5 zap celebration tiers. */
+  playZapDemo(): void {
+    if (this.demoRunning) {
+      return;
+    }
+    this.demoRunning = true;
+    this.clearDemoTimers();
+
+    // Representative amounts for each tier
+    const tiers: { tier: ZapTier; amount: number; delay: number; duration: number }[] = [
+      { tier: 1, amount: 21,    delay: 0,    duration: 800 },
+      { tier: 2, amount: 210,   delay: 1200, duration: 1200 },
+      { tier: 3, amount: 500,   delay: 2800, duration: 1400 },
+      { tier: 4, amount: 5000,  delay: 4600, duration: 1600 },
+      { tier: 5, amount: 21000, delay: 6600, duration: 2200 },
+    ];
+
+    for (const t of tiers) {
+      // Start this tier
+      const startTimer = setTimeout(() => {
+        this.demoTier.set(t.tier);
+        this.zapSound.playZapSound(t.amount);
+        this.haptics.triggerZapBuzz();
+      }, t.delay);
+      this.demoTimers.push(startTimer);
+
+      // End this tier
+      const endTimer = setTimeout(() => {
+        this.demoTier.set(0);
+      }, t.delay + t.duration);
+      this.demoTimers.push(endTimer);
+    }
+
+    // Mark demo as finished after all tiers complete
+    const lastTier = tiers[tiers.length - 1];
+    const finishTimer = setTimeout(() => {
+      this.demoRunning = false;
+    }, lastTier.delay + lastTier.duration);
+    this.demoTimers.push(finishTimer);
+  }
+
+  private clearDemoTimers(): void {
+    for (const timer of this.demoTimers) {
+      clearTimeout(timer);
+    }
+    this.demoTimers = [];
+    this.demoTier.set(0);
+    this.demoRunning = false;
   }
 
   goBack(): void {

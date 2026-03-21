@@ -2007,14 +2007,27 @@ mat-sidenav-content {
 
 // When fullscreen is active, hide the mobile cube BUT let the fullscreen player break out.
 // We use visibility:hidden instead of display:none so the fixed-position child can still render.
+// CRITICAL: We must also remove perspective/transform from ancestors because
+// CSS spec says transform/perspective/filter on an ancestor creates a new
+// containing block for position:fixed children, trapping them inside.
 .app-container[data-fullscreen="true"] .mobile-bottom-cube {
   visibility: hidden;
   pointer-events: none;
+  // Remove perspective so position:fixed on the player can escape to the viewport
+  perspective: none;
 
-  // Propagate visibility through the chain so the fullscreen player can render
-  .cube-inner,
+  // Propagate visibility through the chain so the fullscreen player can render.
+  // Also strip all transforms that would trap position:fixed.
+  .cube-inner {
+    visibility: hidden;
+    transform-style: flat;
+    transform: none !important;
+    transition: none;
+  }
+
   .cube-face-player {
     visibility: hidden;
+    transform: none !important;
   }
 
   // The fullscreen player breaks out of the cube with position:fixed,
