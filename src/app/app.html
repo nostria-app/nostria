@@ -513,6 +513,7 @@
   @if (layout.isHandset() && app.authenticated() && !isClipsMode()) {
   <div class="mobile-bottom-cube no-print"
     [class.show-player]="layout.showMediaPlayer()"
+    [class.cube-settled]="layout.cubeSettled()"
     [class.scroll-hidden]="layout.mobileNavScrollHidden()"
     [class.sidenav-open]="opened()"
     [class.hide-nav]="layout.hideMobileNav() && !layout.showMediaPlayer()"

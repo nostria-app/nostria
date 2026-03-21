@@ -1935,6 +1935,64 @@ mat-sidenav-content {
     .cube-inner {
       transform: rotateX(90deg);
     }
+
+    // Disable pointer events on the hidden nav face
+    .cube-face-nav {
+      pointer-events: none;
+    }
+
+    .cube-face-player {
+      pointer-events: auto;
+    }
+  }
+
+  // When showing the nav face (default), disable pointer events on the hidden player face
+  &:not(.show-player) {
+    .cube-face-player {
+      pointer-events: none;
+    }
+
+    .cube-face-nav {
+      pointer-events: auto;
+    }
+  }
+
+  // After the 3D rotation transition completes, flatten the transforms so the active
+  // face is in normal 2D layout. Mobile browsers can't reliably hit-test 3D-transformed
+  // elements, so this ensures buttons/controls actually receive pointer events.
+  &.cube-settled {
+    // Remove perspective so children aren't in 3D space
+    perspective: none;
+
+    .cube-inner {
+      transform-style: flat;
+      // Remove the rotation — we'll just show/hide faces directly
+      transform: none !important;
+    }
+
+    &.show-player {
+      .cube-face-nav {
+        display: none;
+      }
+
+      .cube-face-player {
+        transform: none;
+        backface-visibility: visible;
+        position: relative;
+      }
+    }
+
+    &:not(.show-player) {
+      .cube-face-player {
+        display: none;
+      }
+
+      .cube-face-nav {
+        transform: none;
+        backface-visibility: visible;
+        position: relative;
+      }
+    }
   }
 }
 

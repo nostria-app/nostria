@@ -88,6 +88,14 @@ export class LayoutService implements OnDestroy {
   expandedMediaPlayer = signal(false);
 
   /**
+   * Set to true after the mobile cube 3D rotation transition completes (~500ms).
+   * When settled, the CSS flattens the 3D transforms so the active face
+   * reliably receives pointer events (3D hit-testing is broken on mobile browsers).
+   */
+  cubeSettled = signal(false);
+  private cubeSettledTimer: ReturnType<typeof setTimeout> | null = null;
+
+  /**
    * When true, the media player is docked into the right sidebar (runes area)
    * as a compact play/pause button instead of the floating footer pill.
    * Only applicable on desktop (non-handset) screens.
@@ -258,6 +266,24 @@ export class LayoutService implements OnDestroy {
         this.mobileNavScrollState.clear();
       }
     });
+
+    // After the cube 3D rotation transition finishes (~500ms), set cubeSettled
+    // so CSS can flatten transforms for reliable pointer event hit-testing.
+    if (isPlatformBrowser(this.platformId)) {
+      effect(() => {
+        // Read the signal to track it
+        this.showMediaPlayer();
+        // Transition starting — un-settle so 3D animation plays
+        this.cubeSettled.set(false);
+        if (this.cubeSettledTimer) {
+          clearTimeout(this.cubeSettledTimer);
+        }
+        // After the 500ms CSS transition, flatten
+        this.cubeSettledTimer = setTimeout(() => {
+          this.cubeSettled.set(true);
+        }, 550);
+      });
+    }
 
     // Handle browser back button when event dialog is open
     if (isPlatformBrowser(this.platformId)) {

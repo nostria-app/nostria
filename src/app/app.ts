@@ -1872,12 +1872,11 @@ export class App implements OnInit, OnDestroy {
 
     const showingPlayer = this.layout.showMediaPlayer();
 
-    if (deltaX < -threshold && !showingPlayer && this.media.hasQueue()) {
-      // Swipe left → show media player
-      this.layout.showMediaPlayer.set(true);
-    } else if (deltaX > threshold && showingPlayer && !this.layout.fullscreenMediaPlayer()) {
-      // Swipe right → show nav (hide media player footer, keep playing)
+    // Any horizontal swipe toggles between nav and media player faces
+    if (showingPlayer && !this.layout.fullscreenMediaPlayer()) {
       this.layout.showMediaPlayer.set(false);
+    } else if (!showingPlayer && this.media.hasQueue()) {
+      this.layout.showMediaPlayer.set(true);
     }
 
     this.cubeSwiping = false;
