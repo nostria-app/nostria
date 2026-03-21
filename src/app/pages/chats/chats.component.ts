@@ -50,7 +50,7 @@ import { FollowSetsService } from '../../services/follow-sets.service';
 import { TrustService } from '../../services/trust.service';
 import { ListFilterMenuComponent, ListFilterValue } from '../../components/list-filter-menu/list-filter-menu.component';
 import { MediaPreviewDialogComponent } from '../../components/media-preview-dialog/media-preview.component';
-import { SettingsService } from '../../services/settings.service';
+import { PublicChatsListService } from '../../services/public-chats-list.service';
 import { stripImageProxy } from '../../utils/strip-image-proxy';
 import {
   CreateChannelDialogComponent,
@@ -110,7 +110,7 @@ export class ChatsComponent implements OnInit, OnDestroy {
   private readonly customDialog = inject(CustomDialogService);
   readonly mediaService = inject(MediaService);
   private readonly haptics = inject(HapticsService);
-  private readonly settingsService = inject(SettingsService);
+  private readonly publicChatsListService = inject(PublicChatsListService);
 
   /** Currently selected channel ID */
   readonly selectedChannelId = signal<string | null>(null);
@@ -209,7 +209,7 @@ export class ChatsComponent implements OnInit, OnDestroy {
     const query = this.channelSearchQuery().toLowerCase();
     const allChannels = this.chatChannels.channels();
     const pubkeys = this.filterPubkeys();
-    const pinnedSet = new Set(this.settingsService.settings().pinnedChatPubkeys ?? []);
+    const pinnedSet = this.publicChatsListService.channelIdSet();
 
     let filtered = allChannels;
 
@@ -259,7 +259,7 @@ export class ChatsComponent implements OnInit, OnDestroy {
   readonly participatedChannels = computed(() => {
     const participated = this.chatChannels.participatedChannelIds();
     if (participated.size === 0) return [];
-    const pinnedSet = new Set(this.settingsService.settings().pinnedChatPubkeys ?? []);
+    const pinnedSet = this.publicChatsListService.channelIdSet();
     return this.allSearchFilteredChannels().filter(ch => participated.has(ch.id))
       .sort((a, b) => {
         const aPinned = pinnedSet.has(a.id) ? 1 : 0;
@@ -272,7 +272,7 @@ export class ChatsComponent implements OnInit, OnDestroy {
   readonly discoveredChannels = computed(() => {
     const participated = this.chatChannels.participatedChannelIds();
     if (participated.size === 0) return this.channels();
-    const pinnedSet = new Set(this.settingsService.settings().pinnedChatPubkeys ?? []);
+    const pinnedSet = this.publicChatsListService.channelIdSet();
     return this.channels().filter(ch => !participated.has(ch.id))
       .sort((a, b) => {
         const aPinned = pinnedSet.has(a.id) ? 1 : 0;
@@ -1163,21 +1163,21 @@ export class ChatsComponent implements OnInit, OnDestroy {
 
   /** Check if a channel is pinned */
   isChannelPinned(channelId: string): boolean {
-    return this.settingsService.isChatPinned(channelId);
+    return this.publicChatsListService.isChannelInList(channelId);
   }
 
   /** Check if the currently selected channel is pinned */
   isSelectedChannelPinned(): boolean {
     const channel = this.selectedChannel();
     if (!channel) return false;
-    return this.settingsService.isChatPinned(channel.id);
+    return this.publicChatsListService.isChannelInList(channel.id);
   }
 
   /** Pin the currently selected channel */
   async pinChannel(): Promise<void> {
     const channel = this.selectedChannel();
     if (!channel) return;
-    await this.settingsService.pinChat(channel.id);
+    await this.publicChatsListService.addChannel(channel.id);
     this.snackBar.open('Channel pinned', 'Close', { duration: 3000 });
   }
 
@@ -1185,7 +1185,7 @@ export class ChatsComponent implements OnInit, OnDestroy {
   async unpinChannel(): Promise<void> {
     const channel = this.selectedChannel();
     if (!channel) return;
-    await this.settingsService.unpinChat(channel.id);
+    await this.publicChatsListService.removeChannel(channel.id);
     this.snackBar.open('Channel unpinned', 'Close', { duration: 3000 });
   }
 

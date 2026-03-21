@@ -719,6 +719,7 @@ export class NostrService implements NostriaService {
         10001,               // 10001 - pinned notes
         kinds.RelayList,     // 10002 - relay configuration
         kinds.BookmarkList,  // 10003 - bookmarks
+        10005,               // 10005 - public chats list (NIP-51)
         10007,               // Search relay list
         TRUST_PROVIDER_LIST_KIND, // 10040 - NIP-85 Trusted Service Providers
         kinds.DirectMessageRelaysList, // 10050 - DM relays

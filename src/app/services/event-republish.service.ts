@@ -18,6 +18,7 @@ export const IMPORTANT_EVENT_KINDS = [
   kinds.Mutelist,            // 10000 - Mute list
   kinds.RelayList,           // 10002 - Relay list
   kinds.BookmarkList,        // 10003 - Bookmark list
+  10005,                     // 10005 - Public chats list (NIP-51)
   SearchRelayListKind,       // 10007 - Search relays list
   TRUST_PROVIDER_LIST_KIND,  // 10040 - NIP-85 Trusted Service Providers
   kinds.DirectMessageRelaysList, // 10050 - DM Relays list
