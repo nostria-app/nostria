@@ -1178,7 +1178,7 @@ export class ChatsComponent implements OnInit, OnDestroy {
     const channel = this.selectedChannel();
     if (!channel) return;
     await this.publicChatsListService.addChannel(channel.id);
-    this.snackBar.open('Channel pinned', 'Close', { duration: 3000 });
+    this.snackBar.open('Chat pinned', 'Close', { duration: 3000 });
   }
 
   /** Unpin the currently selected channel */
@@ -1186,7 +1186,7 @@ export class ChatsComponent implements OnInit, OnDestroy {
     const channel = this.selectedChannel();
     if (!channel) return;
     await this.publicChatsListService.removeChannel(channel.id);
-    this.snackBar.open('Channel unpinned', 'Close', { duration: 3000 });
+    this.snackBar.open('Chat unpinned', 'Close', { duration: 3000 });
   }
 
   /** Refresh messages for the selected channel without using the cached since value */
