@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { inject, Injectable, signal, computed, OnDestroy, effect, PLATFORM_ID, Injector, runInInjectionContext, NgZone, DestroyRef } from '@angular/core';
+import { inject, Injectable, signal, computed, OnDestroy, effect, untracked, PLATFORM_ID, Injector, runInInjectionContext, NgZone, DestroyRef } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NavigationEnd, NavigationExtras, Router } from '@angular/router';
 import { Location } from '@angular/common';
@@ -91,6 +91,10 @@ export class LayoutService implements OnDestroy {
    * Controls whether the mobile cube is rotated to show the player/music face.
    * Separate from showMediaPlayer so the cube can show the music face even
    * when no music is queued (e.g. to show a "Browse Music" button).
+   *
+   * Do NOT set this signal directly — use setCubePlayerFace() instead,
+   * which handles un-settling the cube before reversing the rotation
+   * so the CSS transition can play.
    */
   showCubePlayerFace = signal(false);
 
@@ -101,6 +105,61 @@ export class LayoutService implements OnDestroy {
    */
   cubeSettled = signal(false);
   private cubeSettledTimer: ReturnType<typeof setTimeout> | null = null;
+
+  /**
+   * When true, the cube-inner transition is temporarily suppressed.
+   * Used during the reverse animation stagger to prevent the un-settle
+   * from animating the snap back to rotateX(90deg).
+   */
+  cubeTransitionDisabled = signal(false);
+
+  /**
+   * Change the mobile cube face with proper animation staggering.
+   *
+   * When showing the player face (forward): un-settle and show in the same frame
+   * — the CSS transition goes from `transform: none` → `rotateX(90deg)`.
+   *
+   * When hiding the player face (reverse): first un-settle to restore the 3D
+   * `rotateX(90deg)` state (since the cube was flattened while settled), then
+   * in the next animation frame remove `show-player` so the CSS transition
+   * actually has a start→end delta to animate.
+   */
+  setCubePlayerFace(show: boolean): void {
+    if (show === this.showCubePlayerFace()) return;
+
+    // Clear any pending settle timer
+    if (this.cubeSettledTimer) {
+      clearTimeout(this.cubeSettledTimer);
+      this.cubeSettledTimer = null;
+    }
+
+    if (show) {
+      // Forward: un-settle and show in the same frame
+      this.cubeSettled.set(false);
+      this.showCubePlayerFace.set(true);
+      // Schedule re-settle after the 500ms CSS transition
+      this.cubeSettledTimer = setTimeout(() => this.cubeSettled.set(true), 550);
+    } else {
+      // Reverse: un-settle with transition disabled so the snap to rotateX(90deg)
+      // is instant, then re-enable transition and remove show-player to animate.
+      this.cubeTransitionDisabled.set(true);
+      this.cubeSettled.set(false);
+      // Frame 1: browser applies rotateX(90deg) instantly (transition disabled)
+      requestAnimationFrame(() => {
+        this.ngZone.run(() => {
+          // Frame 2: re-enable transition and remove show-player
+          this.cubeTransitionDisabled.set(false);
+          requestAnimationFrame(() => {
+            this.ngZone.run(() => {
+              this.showCubePlayerFace.set(false);
+              // Schedule re-settle after the 500ms CSS transition
+              this.cubeSettledTimer = setTimeout(() => this.cubeSettled.set(true), 550);
+            });
+          });
+        });
+      });
+    }
+  }
 
   /**
    * When true, the media player is docked into the right sidebar (runes area)
@@ -267,31 +326,17 @@ export class LayoutService implements OnDestroy {
     // When the media player becomes visible (e.g. playback starts), reset the
     // scroll-hidden state so the mobile cube slides back into view.
     // Also sync the cube face to show the player.
+    // IMPORTANT: setCubePlayerFace reads showCubePlayerFace() internally,
+    // so we must call it inside untracked() to prevent this effect from
+    // also tracking showCubePlayerFace — otherwise the user swiping to
+    // nav would re-trigger this effect and snap back to the player face.
     effect(() => {
       if (this.showMediaPlayer()) {
         this.mobileNavScrollHidden.set(false);
         this.mobileNavScrollState.clear();
-        this.showCubePlayerFace.set(true);
+        untracked(() => this.setCubePlayerFace(true));
       }
     });
-
-    // After the cube 3D rotation transition finishes (~500ms), set cubeSettled
-    // so CSS can flatten transforms for reliable pointer event hit-testing.
-    if (isPlatformBrowser(this.platformId)) {
-      effect(() => {
-        // Read the signal to track it — cube face changes trigger re-settle
-        this.showCubePlayerFace();
-        // Transition starting — un-settle so 3D animation plays
-        this.cubeSettled.set(false);
-        if (this.cubeSettledTimer) {
-          clearTimeout(this.cubeSettledTimer);
-        }
-        // After the 500ms CSS transition, flatten
-        this.cubeSettledTimer = setTimeout(() => {
-          this.cubeSettled.set(true);
-        }, 550);
-      });
-    }
 
     // Handle browser back button when event dialog is open
     if (isPlatformBrowser(this.platformId)) {

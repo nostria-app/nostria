@@ -13,6 +13,7 @@ import { AccountStateService } from '../../services/account-state.service';
 import { LayoutService } from '../../services/layout.service';
 import { SettingsService } from '../../services/settings.service';
 import { HapticsService } from '../../services/haptics.service';
+import { ZapSoundService, getZapTier, ZapTier } from '../../services/zap-sound.service';
 
 /**
  * Unified Zap Button - Supports both quick zap and custom zap.
@@ -31,8 +32,13 @@ import { HapticsService } from '../../services/haptics.service';
   imports: [CommonModule, MatButtonModule, MatIconModule, MatTooltipModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="zap-button-container" 
+    <div class="zap-button-container"
          [class.hover-active]="showHoverMenu()"
+         [class.zap-tier-1]="celebrationTier() === 1"
+         [class.zap-tier-2]="celebrationTier() === 2"
+         [class.zap-tier-3]="celebrationTier() === 3"
+         [class.zap-tier-4]="celebrationTier() === 4"
+         [class.zap-tier-5]="celebrationTier() === 5"
          (mouseenter)="onMouseEnter()"
          (mouseleave)="onMouseLeave()">
       @if (quickZapEnabled()) {
@@ -42,6 +48,7 @@ import { HapticsService } from '../../services/haptics.service';
           class="zap-button"
           [class.zapped]="hasZapped()"
           [class.loading]="isLoading()"
+          [class.celebrating]="celebrationTier() > 0"
           [disabled]="isLoading()"
           (click)="sendQuickZap($event)"
           (touchstart)="onTouchStart($event)"
@@ -73,6 +80,7 @@ import { HapticsService } from '../../services/haptics.service';
           mat-icon-button
           class="zap-button"
           [class.zapped]="hasZapped()"
+          [class.celebrating]="celebrationTier() > 0"
           [disabled]="isLoading()"
           (click)="openZapDialog($event)"
           [matTooltip]="tooltip()"
@@ -80,6 +88,63 @@ import { HapticsService } from '../../services/haptics.service';
         >
           <mat-icon>bolt</mat-icon>
         </button>
+      }
+      <!-- Celebration overlay -->
+      @if (celebrationTier() > 0) {
+        <div class="celebration-overlay">
+          <!-- Glow rings -->
+          <div class="glow-ring ring-1"></div>
+          @if (celebrationTier() >= 3) {
+            <div class="glow-ring ring-2"></div>
+          }
+          @if (celebrationTier() >= 4) {
+            <div class="glow-ring ring-3"></div>
+          }
+          @if (celebrationTier() >= 5) {
+            <div class="glow-ring ring-4"></div>
+          }
+          <!-- Tier 1: 4 bolt particles -->
+          <span class="particle p1">⚡</span>
+          <span class="particle p2">⚡</span>
+          <span class="particle p3">⚡</span>
+          <span class="particle p4">⚡</span>
+          <!-- Tier 2+: additional bolts and stars -->
+          @if (celebrationTier() >= 2) {
+            <span class="particle p5">⚡</span>
+            <span class="particle p6">✦</span>
+            <span class="particle p7">⚡</span>
+            <span class="particle p8">✦</span>
+          }
+          <!-- Tier 3+: sparkles and extra bolts -->
+          @if (celebrationTier() >= 3) {
+            <span class="particle p9">✨</span>
+            <span class="particle p10">⚡</span>
+            <span class="particle p11">✨</span>
+            <span class="particle p12">⚡</span>
+          }
+          <!-- Tier 4+: coins and fire -->
+          @if (celebrationTier() >= 4) {
+            <span class="particle p13">🪙</span>
+            <span class="particle p14">🔥</span>
+            <span class="particle p15">🪙</span>
+            <span class="particle p16">🔥</span>
+            <span class="particle p17">⭐</span>
+            <span class="particle p18">⚡</span>
+          }
+          <!-- Tier 5: rockets, explosions, crown, diamond -->
+          @if (celebrationTier() >= 5) {
+            <span class="particle p19">🚀</span>
+            <span class="particle p20">💥</span>
+            <span class="particle p21">👑</span>
+            <span class="particle p22">💎</span>
+            <span class="particle p23">🚀</span>
+            <span class="particle p24">💥</span>
+            <span class="particle p25">⚡</span>
+            <span class="particle p26">✨</span>
+            <span class="particle p27">⚡</span>
+            <span class="particle p28">✨</span>
+          }
+        </div>
       }
     </div>
   `,
@@ -194,6 +259,7 @@ export class ZapButtonComponent {
   private layout = inject(LayoutService);
   private settings = inject(SettingsService);
   private haptics = inject(HapticsService);
+  private zapSound = inject(ZapSoundService);
   private ngZone = inject(NgZone);
   private platformId = inject(PLATFORM_ID);
 
@@ -202,6 +268,10 @@ export class ZapButtonComponent {
   totalZaps = signal(0);
   hasZapped = signal(false);
   showHoverMenu = signal(false);
+  celebrationTier = signal<number>(0); // 0 = not celebrating, 1-5 = tier
+
+  // Celebration timer
+  private celebrationTimer: ReturnType<typeof setTimeout> | null = null;
 
   // Long-press state for mobile
   private longPressTimer: ReturnType<typeof setTimeout> | null = null;
@@ -567,6 +637,33 @@ export class ZapButtonComponent {
     this.totalZaps.update(current => current + amount);
     this.hasZapped.set(true);
     this.haptics.triggerZapBuzz();
+    this.zapSound.playZapSound(amount);
+    this.triggerCelebration(amount);
     this.zapSent.emit(amount);
+  }
+
+  private triggerCelebration(amount: number): void {
+    const tier = getZapTier(amount);
+
+    // Clear any existing celebration
+    if (this.celebrationTimer) {
+      clearTimeout(this.celebrationTimer);
+    }
+
+    this.celebrationTier.set(tier);
+
+    // Tier-appropriate duration
+    const durations: Record<ZapTier, number> = {
+      1: 600,
+      2: 1000,
+      3: 1100,
+      4: 1300,
+      5: 1800,
+    };
+
+    this.celebrationTimer = setTimeout(() => {
+      this.celebrationTier.set(0);
+      this.celebrationTimer = null;
+    }, durations[tier]);
   }
 }

@@ -1960,12 +1960,20 @@ mat-sidenav-content {
   // After the 3D rotation transition completes, flatten the transforms so the active
   // face is in normal 2D layout. Mobile browsers can't reliably hit-test 3D-transformed
   // elements, so this ensures buttons/controls actually receive pointer events.
-  // IMPORTANT: Keep the same sizing/positioning as during animation to avoid visual jumps.
+  //
+  // Perspective magnification compensation:
+  // During 3D animation, faces at translateZ(28px) with perspective(600px) appear
+  // scaled by p/(p-d) = 600/572 ≈ 1.04895. When we flatten to 2D, we must apply
+  // the same scale factor so the face doesn't visibly shrink.
   &.cube-settled {
     .cube-inner {
       // Disable 3D context so children are in flat 2D space for hit-testing
       transform-style: flat;
-      // Remove the rotation — active face is shown via display toggling
+      // Remove the rotation — active face is shown via display toggling.
+      // IMPORTANT: also kill the transition so this change is instant,
+      // otherwise the 0.5s transform transition causes a visible
+      // "expand from center" effect as the 3D context collapses to flat.
+      transition: none;
       transform: none !important;
     }
 
@@ -1975,8 +1983,10 @@ mat-sidenav-content {
       }
 
       .cube-face-player {
-        // Remove 3D transform but keep position: absolute (from .cube-face base)
-        transform: none;
+        // Flatten 3D transform but compensate for perspective magnification
+        // so the face doesn't visibly shrink when settling.
+        // Scale factor: perspective / (perspective - translateZ) = 600 / 572
+        transform: scale(calc(600 / 572));
         backface-visibility: visible;
       }
     }
@@ -1987,8 +1997,8 @@ mat-sidenav-content {
       }
 
       .cube-face-nav {
-        // Remove 3D transform but keep position: absolute (from .cube-face base)
-        transform: none;
+        // Flatten 3D transform but compensate for perspective magnification
+        transform: scale(calc(600 / 572));
         backface-visibility: visible;
       }
     }
@@ -2021,6 +2031,13 @@ mat-sidenav-content {
   position: relative;
   transform-style: preserve-3d;
   transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+
+  // Temporarily disable the transition during the reverse-animation stagger.
+  // This prevents the un-settle snap (from flat to rotateX(90deg)) from being
+  // animated — only the subsequent show-player removal should be animated.
+  .cube-no-transition & {
+    transition: none;
+  }
 }
 
 .cube-face {

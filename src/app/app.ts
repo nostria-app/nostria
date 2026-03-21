@@ -1874,9 +1874,9 @@ export class App implements OnInit, OnDestroy {
 
     // Any horizontal swipe toggles between nav and player/music faces
     if (showingPlayerFace && !this.layout.fullscreenMediaPlayer()) {
-      this.layout.showCubePlayerFace.set(false);
+      this.layout.setCubePlayerFace(false);
     } else if (!showingPlayerFace) {
-      this.layout.showCubePlayerFace.set(true);
+      this.layout.setCubePlayerFace(true);
     }
 
     this.cubeSwiping = false;

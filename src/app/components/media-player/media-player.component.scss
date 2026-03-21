@@ -14,6 +14,13 @@
     transition: opacity 0.3s ease-out, border-radius 0.3s ease-out;
     cursor: grab;
 
+    // Suppress opacity/border-radius transitions when inside the mobile cube —
+    // the cube rotation already provides a transition effect, and these cause
+    // an unwanted fade-in when the player face becomes visible.
+    :host-context(.cube-face-player) & {
+      transition: none;
+    }
+
     // Floating pill layout
     bottom: 8px;
     left: 0;
@@ -167,13 +174,27 @@
   /* Add simple fade-in animation when returning to footer mode */
   animation: footerFadeIn 0.4s ease-out forwards;
 
-  /* Suppress the fade-in animation when inside the mobile cube —
+  /* Suppress all fade-in animation and opacity transitions when inside the mobile cube —
      the cube rotation already provides a transition effect */
   :host-context(.cube-face-player) & {
     animation: none;
+    transition: none;
+
+    .media-info,
+    .media-controls,
+    .media-audio,
+    .youtube-video,
+    .event-video,
+    .music-album,
+    .media-info-text,
+    .music-title,
+    .music-artist,
+    .media-controls-container button {
+      transition: none;
+    }
   }
 
-  /* Ensure child elements also fade smoothly */
+  /* Ensure child elements also fade smoothly (outside cube context) */
   .media-info,
   .media-controls,
   .media-audio,
