@@ -1246,7 +1246,7 @@ export class ChatChannelsService implements NostriaService {
   /**
    * Send a message to a channel (kind 42)
    */
-  async sendMessage(channelId: string, content: string, replyToId?: string): Promise<boolean> {
+  async sendMessage(channelId: string, content: string, replyToId?: string, extraTags?: string[][]): Promise<boolean> {
     const pubkey = this.accountState.pubkey();
     if (!pubkey) return false;
 
@@ -1267,6 +1267,10 @@ export class ChatChannelsService implements NostriaService {
         if (replyMessage) {
           tags.push(['p', replyMessage.pubkey]);
         }
+      }
+
+      if (extraTags?.length) {
+        tags.push(...extraTags);
       }
 
       const event = this.nostrService.createEvent(CHANNEL_MESSAGE_KIND, content, tags);

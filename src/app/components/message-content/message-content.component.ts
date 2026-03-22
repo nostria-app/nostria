@@ -54,6 +54,8 @@ interface ContentPart {
   eventId?: string;
   encodedEvent?: string;
   customEmojiUrl?: string;
+  waveform?: number[];
+  duration?: number;
   naddrData?: {
     pubkey: string;
     identifier: string;
@@ -111,7 +113,7 @@ interface EventMention {
         </div>
       } @else if (part.type === 'audio') {
         <div class="message-audio-container">
-          <app-audio-player [src]="part.content" [waveform]="[]" [duration]="0"></app-audio-player>
+          <app-audio-player [src]="part.content" [waveform]="part.waveform || []" [duration]="part.duration || 0"></app-audio-player>
         </div>
       } @else if (part.type === 'url') {
         <a class="message-link" [href]="part.content" target="_blank" rel="noopener noreferrer">{{ getDisplayUrl(part.content) }}</a>
@@ -677,6 +679,7 @@ export class MessageContentComponent {
         parts.push({
           type: this.getUrlMediaType(cleanUrl),
           content: cleanUrl,
+          ...this.getImetaData(cleanUrl),
           id: this.partIdCounter++,
         });
 
@@ -1031,5 +1034,23 @@ export class MessageContentComponent {
       }
     }
     return 'url';
+  }
+
+  /** Look up imeta tag for a URL to extract waveform/duration metadata */
+  private getImetaData(url: string): { waveform?: number[]; duration?: number } {
+    const tags = this.tags();
+    if (!tags?.length) return {};
+    const imeta = tags.find(t => t[0] === 'imeta' && t.some(v => v === `url ${url}`));
+    if (!imeta) return {};
+    const result: { waveform?: number[]; duration?: number } = {};
+    const waveformTag = imeta.find(v => v.startsWith('waveform '));
+    if (waveformTag) {
+      result.waveform = waveformTag.substring(9).split(' ').map(Number);
+    }
+    const durationTag = imeta.find(v => v.startsWith('duration '));
+    if (durationTag) {
+      result.duration = Number(durationTag.substring(9));
+    }
+    return result;
   }
 }

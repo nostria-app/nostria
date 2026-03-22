@@ -174,6 +174,9 @@ export class ChatsComponent implements OnInit, OnDestroy {
   /** Media previews for the current message */
   readonly mediaPreviews = signal<{ url: string; type: 'image' | 'video' | 'music'; label?: string }[]>([]);
 
+  /** Pending extra tags (e.g. imeta with waveform) for the next message */
+  readonly pendingTags = signal<string[][]>([]);
+
   /** Zap receipts for the current channel */
   readonly channelZaps = signal<ChatZapEntry[]>([]);
 
@@ -684,11 +687,13 @@ export class ChatsComponent implements OnInit, OnDestroy {
     this.isSending.set(true);
     try {
       const replyTo = this.replyingToMessage();
-      const success = await this.chatChannels.sendMessage(channelId, text, replyTo?.id);
+      const extraTags = this.pendingTags();
+      const success = await this.chatChannels.sendMessage(channelId, text, replyTo?.id, extraTags.length ? extraTags : undefined);
       if (success) {
         this.newMessageText.set('');
         this.replyingToMessage.set(null);
         this.mediaPreviews.set([]);
+        this.pendingTags.set([]);
         this.scrollToBottom();
       } else {
         this.snackBar.open('Failed to send message', 'OK', { duration: 3000 });
@@ -1285,6 +1290,16 @@ export class ChatsComponent implements OnInit, OnDestroy {
 
           if (uploadResult.status === 'success' && uploadResult.item) {
             this.insertMediaUrl(uploadResult.item.url, uploadResult.item.type);
+
+            // Add imeta tag with waveform and duration for audio player rendering
+            const imetaTag = ['imeta', `url ${uploadResult.item.url}`, `m ${uploadResult.item.type}`];
+            if (result.waveform?.length) {
+              imetaTag.push(`waveform ${result.waveform.join(' ')}`);
+            }
+            if (result.duration) {
+              imetaTag.push(`duration ${result.duration}`);
+            }
+            this.pendingTags.update(tags => [...tags, imetaTag]);
           } else {
             this.snackBar.open('Failed to upload audio clip', 'Dismiss', { duration: 5000 });
           }
