@@ -99,6 +99,20 @@
     </div>
     }
 
+    <!-- Geohash -->
+    @if (geohash()) {
+    <div class="detail-row">
+      <mat-icon class="detail-icon">location_on</mat-icon>
+      <div class="detail-content">
+        <a [href]="geohashUrl()" target="_blank" rel="noopener noreferrer" class="geohash-link"
+          [matTooltip]="'Location: ' + geohash()" matTooltipPosition="above">
+          <mat-icon>location_on</mat-icon>
+          <span>View location</span>
+        </a>
+      </div>
+    </div>
+    }
+
     <!-- Host -->
     <div class="detail-row host-row">
       <mat-icon class="detail-icon">person</mat-icon>

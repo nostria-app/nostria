@@ -144,6 +144,18 @@ export class CalendarEventDetailComponent implements AfterViewInit, OnDestroy {
     return ev.tags.filter(t => t[0] === 'p').map(t => t[1]);
   });
 
+  geohash = computed(() => {
+    const ev = this.event();
+    if (!ev?.tags) return '';
+    const tag = ev.tags.find(t => t[0] === 'g');
+    return tag?.[1] || '';
+  });
+
+  geohashUrl = computed(() => {
+    const hash = this.geohash();
+    return hash ? `https://geohash.softeng.co/${hash}` : '';
+  });
+
   authorPubkey = computed(() => this.event()?.pubkey || '');
 
   isOwnEvent = computed(() => {
