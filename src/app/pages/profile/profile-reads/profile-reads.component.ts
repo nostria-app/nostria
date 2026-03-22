@@ -18,6 +18,8 @@ import { Event, nip19 } from 'nostr-tools';
 import { UserRelaysService } from '../../../services/relays/user-relays';
 import { ShareArticleDialogComponent, ShareArticleDialogData } from '../../../components/share-article-dialog/share-article-dialog.component';
 import { CustomDialogService } from '../../../services/custom-dialog.service';
+import { PinnedService } from '../../../services/pinned.service';
+import { NostrRecord } from '../../../interfaces';
 
 @Component({
   selector: 'app-profile-reads',
@@ -51,11 +53,14 @@ export class ProfileReadsComponent {
   private layoutService = inject(LayoutService);
   private userRelaysService = inject(UserRelaysService);
   private customDialog = inject(CustomDialogService);
+  pinned = inject(PinnedService);
 
   // Use sorted articles from profile state
   sortedArticles = computed(() => this.profileState.sortedArticles());
   renderCount = signal(this.INITIAL_RENDER_COUNT);
   visibleArticles = computed(() => this.sortedArticles().slice(0, this.renderCount()));
+
+  pinnedArticles = signal<NostrRecord[]>([]);
 
   isLoading = signal(true);
   error = signal<string | null>(null);
@@ -65,6 +70,30 @@ export class ProfileReadsComponent {
   private readonly LOAD_COOLDOWN_MS = 2000;
 
   constructor() {
+    // Effect to load pinned articles when profile changes
+    effect(async () => {
+      const currentPubkey = this.profileState.pubkey();
+
+      if (currentPubkey) {
+        await this.loadPinnedArticles(currentPubkey);
+      } else {
+        this.pinnedArticles.set([]);
+      }
+    });
+
+    // Effect to reload pinned articles when the pinned service updates
+    effect(async () => {
+      const pinnedArticlesEvent = this.pinned.pinnedArticlesEvent();
+      const currentPubkey = this.profileState.pubkey();
+
+      if (currentPubkey && pinnedArticlesEvent && pinnedArticlesEvent.pubkey === currentPubkey) {
+        this.logger.info('Pinned articles event changed, reloading pinned articles');
+        setTimeout(async () => {
+          await this.loadPinnedArticles(currentPubkey);
+        }, 100);
+      }
+    });
+
     // Effect to load initial articles if none are present and profile is loaded
     effect(() => {
       const currentPubkey = this.profileState.pubkey();
@@ -148,30 +177,69 @@ export class ProfileReadsComponent {
   }
 
   async loadReads(): Promise<void> {
-    // Don't load if not visible (unless it's the initial load)
-    // if (!this.isVisible && this.reads().length > 0) {
-    //   return;
-    // }
-    // const pubkey = this.getPubkey();
-    // if (!pubkey) {
-    //   this.error.set('No pubkey provided');
-    //   this.isLoading.set(false);
-    //   return;
-    // }
-    // try {
-    //   this.isLoading.set(true);
-    //   this.error.set(null);
-    //   // Mock data for now - would be replaced with actual fetch from NostrService
-    //   await new Promise(resolve => setTimeout(resolve, 500));
-    //   // Set empty array for now
-    //   this.reads.set([]);
-    //   this.logger.debug('Loaded reads for pubkey:', pubkey);
-    // } catch (err) {
-    //   this.logger.error('Error loading reads:', err);
-    //   this.error.set('Failed to load reads');
-    // } finally {
-    //   this.isLoading.set(false);
-    // }
+  }
+
+  /**
+   * Load pinned articles for the current profile.
+   * Matches pinned article coordinates against loaded articles.
+   */
+  async loadPinnedArticles(pubkey: string): Promise<void> {
+    try {
+      const pinnedCoordinates = await this.pinned.getPinnedArticlesForUser(pubkey);
+      this.logger.info(`Found ${pinnedCoordinates.length} pinned articles for ${pubkey}`, pinnedCoordinates);
+
+      if (pinnedCoordinates.length === 0) {
+        this.pinnedArticles.set([]);
+        return;
+      }
+
+      // Match pinned coordinates against loaded articles
+      const allArticles = this.profileState.articles();
+      const matched = this.matchPinnedArticles(pinnedCoordinates, allArticles);
+      this.pinnedArticles.set(matched);
+      this.logger.debug(`Matched ${matched.length} pinned articles from ${allArticles.length} loaded articles`);
+    } catch (err) {
+      this.logger.error('Failed to load pinned articles', err);
+    }
+  }
+
+  /**
+   * Match pinned article coordinates against a list of article records.
+   * Returns records in the order of the pinned coordinates.
+   */
+  private matchPinnedArticles(coordinates: string[], articles: NostrRecord[]): NostrRecord[] {
+    return coordinates
+      .map(coord => {
+        // coord format: "30023:pubkey:d-tag"
+        const parts = coord.split(':');
+        if (parts.length < 3) return undefined;
+        const kind = parseInt(parts[0], 10);
+        const pubkey = parts[1];
+        const dTag = parts.slice(2).join(':'); // d-tag may contain colons
+
+        return articles.find(a => {
+          if (a.event.kind !== kind || a.event.pubkey !== pubkey) return false;
+          const articleDTag = this.utilities.getTagValues('d', a.event.tags)[0] || '';
+          return articleDTag === dTag;
+        });
+      })
+      .filter((r): r is NostrRecord => r !== undefined);
+  }
+
+  /**
+   * Get the article coordinate (kind:pubkey:d-tag) for an event
+   */
+  getArticleCoordinate(event: Event): string {
+    const dTag = this.utilities.getTagValues('d', event.tags)[0] || '';
+    return `${event.kind}:${event.pubkey}:${dTag}`;
+  }
+
+  /**
+   * Check if an article is pinned
+   */
+  isArticlePinned(event: Event): boolean {
+    const coordinate = this.getArticleCoordinate(event);
+    return this.pinnedArticles().some(r => this.getArticleCoordinate(r.event) === coordinate);
   }
 
   /**

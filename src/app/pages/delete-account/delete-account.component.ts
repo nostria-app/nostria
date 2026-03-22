@@ -233,6 +233,7 @@ export class DeleteAccountComponent implements OnInit {
       [kinds.RelayList]: 'Your relay configuration',
       [kinds.Mutelist]: 'Users and content you\'ve muted',
       [kinds.Pinlist]: 'Content you\'ve pinned',
+      10023: 'Articles you\'ve pinned',
       30000: 'Organized lists of people',
       30001: 'Organized bookmarks',
       [kinds.LongFormArticle]: 'Blog posts and articles',

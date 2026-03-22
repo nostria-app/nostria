@@ -55,6 +55,7 @@ export const DEEP_EVENT_KINDS = [
   // Lists (NIP-51)
   10000,  // Mute list
   10001,  // Pin list
+  10023,  // Pin articles list
   30000,  // Follow sets
   30001,  // Generic lists
   30003,  // Bookmark sets

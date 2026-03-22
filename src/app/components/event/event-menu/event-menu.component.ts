@@ -151,6 +151,11 @@ export class EventMenuComponent {
     return this.isOnOwnProfile() && this.isTextNote() && this.isOurEvent();
   });
 
+  // Check if article pin/unpin options should be shown
+  showArticlePinOptions = computed<boolean>(() => {
+    return this.isOnOwnProfile() && this.isArticle() && this.isOurEvent();
+  });
+
   // Check if AI options should be shown
   showAiOptions = computed<boolean>(() => {
     return !!this.settings.settings().aiEnabled && this.isTextNote();
@@ -562,6 +567,27 @@ export class EventMenuComponent {
     } else {
       await this.pinned.pinNote(targetEvent.id);
       this.snackBar.open('Note pinned to profile', 'Close', { duration: 3000 });
+    }
+  }
+
+  async onArticlePinClick(event: MouseEvent) {
+    event.stopPropagation();
+    const targetEvent = this.event();
+    if (!targetEvent) {
+      return;
+    }
+
+    const coordinate = this.articleId();
+    if (!coordinate) {
+      return;
+    }
+
+    if (this.pinned.isArticlePinned(coordinate)) {
+      await this.pinned.unpinArticle(coordinate);
+      this.snackBar.open('Article unpinned', 'Close', { duration: 3000 });
+    } else {
+      await this.pinned.pinArticle(coordinate);
+      this.snackBar.open('Article pinned to profile', 'Close', { duration: 3000 });
     }
   }
 

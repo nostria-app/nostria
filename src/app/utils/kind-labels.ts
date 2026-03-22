@@ -48,6 +48,7 @@ const KIND_LABELS: Record<number, string> = {
   10003: 'Bookmark List',
   10005: 'Public Chats List',
   10007: 'Search Relay List',
+  10023: 'Pinned Articles List',
   10040: 'Trust Provider List',
   10050: 'DM Relay List',
   10063: 'Media Server List',

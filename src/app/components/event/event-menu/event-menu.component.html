@@ -38,6 +38,18 @@
     }
   </button>
   }
+  @if (showArticlePinOptions()) {
+  <button mat-menu-item (click)="onArticlePinClick($event)">
+    <mat-icon [matTooltip]="pinned.getArticlePinTooltip(articleId())" matTooltipPosition="below">
+      push_pin
+    </mat-icon>
+    @if (pinned.isArticlePinned(articleId())) {
+    Unpin
+    } @else {
+    Pin
+    }
+  </button>
+  }
   <button mat-menu-item (click)="shareEventDialog()">
     <mat-icon>share</mat-icon>
     Share

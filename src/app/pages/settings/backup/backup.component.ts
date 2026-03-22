@@ -45,6 +45,7 @@ const BACKUP_RELAY_EVENT_KINDS = [
   kinds.Contacts,
   kinds.Mutelist,
   10001, // Pin list
+  10023, // Pin articles list
   kinds.RelayList,
   10012, // Relay feeds
   30000, // Follow sets

@@ -25,11 +25,20 @@ export class PinnedService {
   database = inject(DatabaseService);
 
   pinnedEvent = signal<Event | null>(null);
+  pinnedArticlesEvent = signal<Event | null>(null);
 
   pinnedNotes = computed<string[]>(() => {
     return (
       this.pinnedEvent()
         ?.tags.filter(tag => tag[0] === 'e')
+        .map(tag => tag[1]) || []
+    );
+  });
+
+  pinnedArticles = computed<string[]>(() => {
+    return (
+      this.pinnedArticlesEvent()
+        ?.tags.filter(tag => tag[0] === 'a')
         .map(tag => tag[1]) || []
     );
   });
@@ -42,17 +51,21 @@ export class PinnedService {
         await this.initialize();
       } else {
         this.pinnedEvent.set(null);
+        this.pinnedArticlesEvent.set(null);
       }
     });
   }
 
   async initialize() {
+    const pubkey = this.accountState.pubkey()!;
+
     // Pinned list (kind 10001) should be fetched from storage
-    const pinnedEvent = await this.database.getEventByPubkeyAndKind(
-      this.accountState.pubkey()!,
-      10001
-    );
+    const pinnedEvent = await this.database.getEventByPubkeyAndKind(pubkey, 10001);
     this.pinnedEvent.set(pinnedEvent);
+
+    // Pinned articles (kind 10023) should be fetched from storage
+    const pinnedArticlesEvent = await this.database.getEventByPubkeyAndKind(pubkey, 10023);
+    this.pinnedArticlesEvent.set(pinnedArticlesEvent);
   }
 
   /**
@@ -84,6 +97,36 @@ export class PinnedService {
 
     // Return last 3 items (most recent pins)
     return eventTags.slice(-3).reverse();
+  }
+
+  /**
+   * Get pinned article coordinates for a specific user.
+   * Returns all pinned article "a" tag values (kind:pubkey:d-tag).
+   */
+  async getPinnedArticlesForUser(pubkey: string): Promise<string[]> {
+    // Try to get from storage first
+    let pinnedArticlesEvent = await this.database.getEventByPubkeyAndKind(pubkey, 10023);
+
+    // If not in storage, try to fetch from user relays
+    if (!pinnedArticlesEvent) {
+      pinnedArticlesEvent = await this.userRelay.getEventByPubkeyAndKind(pubkey, 10023);
+
+      // If found, save to storage for future use
+      if (pinnedArticlesEvent) {
+        await this.database.saveEvent(pinnedArticlesEvent);
+      }
+    }
+
+    if (!pinnedArticlesEvent) {
+      return [];
+    }
+
+    // Return all pinned article coordinates (no limit)
+    const articleTags = pinnedArticlesEvent.tags
+      .filter(tag => tag[0] === 'a')
+      .map(tag => tag[1]);
+
+    return articleTags.reverse();
   }
 
   /**
@@ -126,7 +169,7 @@ export class PinnedService {
     event.tags.push(['e', eventId]);
 
     // Publish the updated event
-    await this.publish(event);
+    await this.publish(event, 'notes');
   }
 
   /**
@@ -147,7 +190,71 @@ export class PinnedService {
     };
 
     // Publish the updated event
-    await this.publish(event);
+    await this.publish(event, 'notes');
+  }
+
+  /**
+   * Pin an article (add to the end of the list)
+   * @param articleCoordinate The article coordinate (kind:pubkey:d-tag) to pin
+   */
+  async pinArticle(articleCoordinate: string) {
+    let event = this.pinnedArticlesEvent();
+
+    if (!event) {
+      // Create a new pinned articles event if none exists
+      event = {
+        kind: 10023,
+        pubkey: this.accountState.pubkey(),
+        created_at: Math.floor(Date.now() / 1000),
+        content: '',
+        tags: [],
+        id: '',
+        sig: '',
+      };
+    } else {
+      // Create a copy to avoid mutating the existing event
+      event = {
+        ...event,
+        tags: [...event.tags],
+      };
+    }
+
+    // Check if the article is already pinned
+    const existingPin = event.tags.find(tag => tag[0] === 'a' && tag[1] === articleCoordinate);
+
+    if (existingPin) {
+      this.snackBar.open('This article is already pinned', 'Close', {
+        duration: 3000,
+      });
+      return;
+    }
+
+    // According to NIP-51, new items should be appended to the end
+    event.tags.push(['a', articleCoordinate]);
+
+    // Publish the updated event
+    await this.publish(event, 'articles');
+  }
+
+  /**
+   * Unpin an article
+   * @param articleCoordinate The article coordinate (kind:pubkey:d-tag) to unpin
+   */
+  async unpinArticle(articleCoordinate: string) {
+    const existingEvent = this.pinnedArticlesEvent();
+
+    if (!existingEvent) {
+      return;
+    }
+
+    // Create a copy to avoid mutating the existing event
+    const event = {
+      ...existingEvent,
+      tags: existingEvent.tags.filter(tag => !(tag[0] === 'a' && tag[1] === articleCoordinate)),
+    };
+
+    // Publish the updated event
+    await this.publish(event, 'articles');
   }
 
   /**
@@ -159,10 +266,25 @@ export class PinnedService {
   }
 
   /**
+   * Check if an article is pinned
+   * @param articleCoordinate The article coordinate (kind:pubkey:d-tag) to check
+   */
+  isArticlePinned(articleCoordinate: string): boolean {
+    return this.pinnedArticles().includes(articleCoordinate);
+  }
+
+  /**
    * Get tooltip text based on pin status
    */
   getPinTooltip(eventId: string): string {
     return this.isPinned(eventId) ? 'Unpin note' : 'Pin note';
+  }
+
+  /**
+   * Get tooltip text based on article pin status
+   */
+  getArticlePinTooltip(articleCoordinate: string): string {
+    return this.isArticlePinned(articleCoordinate) ? 'Unpin article' : 'Pin article';
   }
 
   /**
@@ -172,10 +294,12 @@ export class PinnedService {
     return this.isPinned(eventId) ? 'push_pin' : 'push_pin';
   }
 
-  async publish(event: Event) {
+  async publish(event: Event, type: 'notes' | 'articles' = 'notes') {
     if (!event) {
       return;
     }
+
+    const label = type === 'articles' ? 'Pinned Articles' : 'Pinned Notes';
 
     event.id = '';
     event.sig = '';
@@ -188,12 +312,16 @@ export class PinnedService {
     await this.database.saveEvent(signedEvent);
 
     // Update the local pinned event with the signed event
-    this.pinnedEvent.set(signedEvent);
+    if (type === 'articles') {
+      this.pinnedArticlesEvent.set(signedEvent);
+    } else {
+      this.pinnedEvent.set(signedEvent);
+    }
 
     // Publish to relays and get array of promises
     const publishPromises = await this.accountRelay.publish(signedEvent);
 
-    await this.layout.showPublishResults(publishPromises, 'Pinned Notes');
+    await this.layout.showPublishResults(publishPromises, label);
 
     try {
       // Wait for all publishing results
@@ -206,7 +334,7 @@ export class PinnedService {
       // Display appropriate notification
       if (failed === 0) {
         this.snackBar.open(
-          `Pinned notes saved successfully to ${successful} ${successful === 1 ? 'relay' : 'relays'}`,
+          `${label} saved successfully to ${successful} ${successful === 1 ? 'relay' : 'relays'}`,
           'Close',
           {
             duration: 3000,
@@ -217,7 +345,7 @@ export class PinnedService {
         );
       } else if (successful > 0) {
         this.snackBar.open(
-          `Pinned notes saved to ${successful} ${successful === 1 ? 'relay' : 'relays'}, failed on ${failed}`,
+          `${label} saved to ${successful} ${successful === 1 ? 'relay' : 'relays'}, failed on ${failed}`,
           'Close',
           {
             duration: 5000,
@@ -227,7 +355,7 @@ export class PinnedService {
           }
         );
       } else {
-        this.snackBar.open('Failed to save pinned notes to any relay', 'Close', {
+        this.snackBar.open(`Failed to save ${label.toLowerCase()} to any relay`, 'Close', {
           duration: 5000,
           horizontalPosition: 'center',
           verticalPosition: 'bottom',
@@ -235,8 +363,8 @@ export class PinnedService {
         });
       }
     } catch (error) {
-      console.error('Error publishing pinned notes:', error);
-      this.snackBar.open('Error publishing pinned notes', 'Close', {
+      console.error(`Error publishing ${label.toLowerCase()}:`, error);
+      this.snackBar.open(`Error publishing ${label.toLowerCase()}`, 'Close', {
         duration: 5000,
         horizontalPosition: 'center',
         verticalPosition: 'bottom',

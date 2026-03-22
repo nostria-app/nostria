@@ -148,6 +148,7 @@ export class LoginDialogComponent implements OnDestroy {
     'sign_event:10000',
     'sign_event:10001',
     'sign_event:10002',
+    'sign_event:10023',
     'sign_event:10050',
     'sign_event:10086',
     'sign_event:24242',

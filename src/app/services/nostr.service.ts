@@ -718,6 +718,7 @@ export class NostrService implements NostriaService {
         kinds.Mutelist,      // 10000 - mute list
         10001,               // 10001 - pinned notes
         kinds.RelayList,     // 10002 - relay configuration
+        10023,               // 10023 - pinned articles
         kinds.BookmarkList,  // 10003 - bookmarks
         10005,               // 10005 - public chats list (NIP-51)
         10007,               // Search relay list

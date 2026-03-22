@@ -4,14 +4,60 @@
     <mat-spinner [diameter]="40"></mat-spinner>
     <p>Loading articles...</p>
   </div>
-  } @else if (visibleArticles().length === 0 && !profileState.isLoadingMoreArticles()) {
+  } @else if (visibleArticles().length === 0 && pinnedArticles().length === 0 && !profileState.isLoadingMoreArticles()) {
   <div class="empty-state">
     <mat-icon>article</mat-icon>
     <p>No articles to display yet</p>
   </div>
   } @else {
+
+  <!-- Pinned Articles Section -->
+  @if (pinnedArticles().length > 0) {
+  <div class="pinned-articles-section">
+    <div class="pinned-articles-header">
+      <mat-icon class="pin-icon">push_pin</mat-icon>
+      <h3>Pinned</h3>
+    </div>
+    <div class="articles-grid">
+      @for (note of pinnedArticles(); track note.event.id) {
+      <div class="article-card pinned" (click)="openArticle(note.event)" (keydown.enter)="openArticle(note.event)"
+        (keydown.space)="openArticle(note.event); $event.preventDefault()" tabindex="0">
+        <div class="article-image-container">
+          @if (getArticleImage(note.event); as image) {
+          <img [src]="image" [alt]="getArticleTitle(note.event) || 'Article image'" title="Article image"
+            loading="lazy" />
+          } @else {
+          <div class="image-placeholder">
+            <mat-icon>article</mat-icon>
+          </div>
+          }
+        </div>
+        <div class="article-content">
+          <div class="article-author-row">
+            <app-user-profile [pubkey]="note.event.pubkey" view="compact" [showRank]="false"></app-user-profile>
+            <span class="article-date">{{ note.event.created_at | ago }}</span>
+          </div>
+          <h3 class="article-title">{{ getArticleTitle(note.event) || 'Untitled' }}</h3>
+          @if (getArticleSummary(note.event); as summary) {
+          <p class="article-summary">{{ summary }}</p>
+          }
+          <div class="article-footer">
+            <span class="read-time">{{ getReadTime(note.event) }}</span>
+            <button mat-icon-button class="action-btn" (click)="shareArticle(note.event); $event.stopPropagation()"
+              matTooltip="Share">
+              <mat-icon>share</mat-icon>
+            </button>
+          </div>
+        </div>
+      </div>
+      }
+    </div>
+  </div>
+  }
+
   <div class="articles-grid">
     @for (note of visibleArticles(); track note.event.id) {
+    @if (!isArticlePinned(note.event)) {
     <div class="article-card" (click)="openArticle(note.event)" (keydown.enter)="openArticle(note.event)"
       (keydown.space)="openArticle(note.event); $event.preventDefault()" tabindex="0">
       <div class="article-image-container">
@@ -42,6 +88,7 @@
         </div>
       </div>
     </div>
+    }
     }
   </div>
 
