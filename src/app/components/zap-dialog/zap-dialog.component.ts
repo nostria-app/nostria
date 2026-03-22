@@ -35,6 +35,7 @@ export interface ZapDialogData {
   goalEventId?: string; // For NIP-75 zap goals
   zapSplits?: { pubkey: string; relay: string; weight: number }[];
   event?: Event; // The actual event object for split zaps
+  customRelays?: string[]; // Optional: extra relays to include in the zap request
 }
 
 export interface ZapDialogResult {
@@ -698,7 +699,7 @@ export class ZapDialogComponent {
           message,
           this.data.eventId,
           this.data.recipientMetadata,
-          undefined, // customRelays
+          this.data.customRelays, // customRelays
           this.data.goalEventId, // goalEventId
           this.data.eventKind, // eventKind
           this.data.eventAddress // eventAddress

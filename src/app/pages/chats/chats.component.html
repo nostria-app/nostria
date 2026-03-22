@@ -368,7 +368,8 @@
           <div class="zap-entry-content">
             <mat-icon class="zap-entry-icon">bolt</mat-icon>
             <app-profile-display-name [pubkey]="entry.data.senderPubkey" />
-            <span class="zap-entry-text">zapped <span class="zap-entry-amount">{{ entry.data.amount | number }}</span> sats</span>
+            <span class="zap-entry-text">zapped <span class="zap-entry-amount">{{ entry.data.amount | number }}</span>
+              sats</span>
             @if (entry.data.comment) {
             <span class="zap-entry-comment">&mdash; {{ entry.data.comment }}</span>
             }

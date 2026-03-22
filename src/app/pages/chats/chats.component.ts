@@ -855,6 +855,7 @@ export class ChatsComponent implements OnInit, OnDestroy {
       eventId: channel.id,
       eventKind: 40,
       initialMessage: `Zap for ${chatName} chat`,
+      customRelays: channel.metadata.relays,
     };
 
     const dialogRef = this.dialog.open(ZapDialogComponent, {
@@ -904,6 +905,7 @@ export class ChatsComponent implements OnInit, OnDestroy {
       eventId: message.id,
       eventKind: 42,
       eventContent: message.content.length > 100 ? message.content.substring(0, 100) + '...' : message.content,
+      customRelays: this.selectedChannel()?.metadata.relays,
     };
 
     const dialogRef = this.dialog.open(ZapDialogComponent, {
