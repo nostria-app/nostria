@@ -11,7 +11,7 @@ import {
   untracked,
   ChangeDetectionStrategy,
 } from '@angular/core';
-import { DatePipe } from '@angular/common';
+import { DatePipe, DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -33,6 +33,9 @@ import { UtilitiesService } from '../../services/utilities.service';
 import { CustomDialogService } from '../../services/custom-dialog.service';
 import { MediaService } from '../../services/media.service';
 import { HapticsService } from '../../services/haptics.service';
+import { ZapService } from '../../services/zap.service';
+import { ZapSoundService } from '../../services/zap-sound.service';
+import { Event as NostrEvent } from 'nostr-tools';
 import { UserProfileComponent } from '../../components/user-profile/user-profile.component';
 import { ProfileDisplayNameComponent } from '../../components/user-profile/display-name/profile-display-name.component';
 import { MessageContentComponent } from '../../components/message-content/message-content.component';
@@ -51,6 +54,7 @@ import { TrustService } from '../../services/trust.service';
 import { ListFilterMenuComponent, ListFilterValue } from '../../components/list-filter-menu/list-filter-menu.component';
 import { MediaPreviewDialogComponent } from '../../components/media-preview-dialog/media-preview.component';
 import { PublicChatsListService } from '../../services/public-chats-list.service';
+import { DataService } from '../../services/data.service';
 import { stripImageProxy } from '../../utils/strip-image-proxy';
 import {
   CreateChannelDialogComponent,
@@ -62,12 +66,24 @@ import {
 } from '../../components/confirm-dialog/confirm-dialog.component';
 
 /**
+ * Represents a zap receipt shown inline in the chat timeline.
+ */
+export interface ChatZapEntry {
+  id: string;
+  senderPubkey: string;
+  amount: number;
+  comment: string;
+  createdAt: number;
+}
+
+/**
  * Discriminated union for timeline entries displayed in the chat.
- * Allows interleaving kind 42 messages with kind 41 metadata updates.
+ * Allows interleaving kind 42 messages, kind 41 metadata updates, and zap receipts.
  */
 export type TimelineEntry =
   | { type: 'message'; data: ChannelMessage }
-  | { type: 'metadata-update'; data: ChannelMetadataUpdate };
+  | { type: 'metadata-update'; data: ChannelMetadataUpdate }
+  | { type: 'zap'; data: ChatZapEntry };
 
 @Component({
   selector: 'app-chats',
@@ -88,6 +104,7 @@ export type TimelineEntry =
     MessageContentComponent,
     AgoPipe,
     DatePipe,
+    DecimalPipe,
     ListFilterMenuComponent,
   ],
   templateUrl: './chats.component.html',
@@ -111,6 +128,9 @@ export class ChatsComponent implements OnInit, OnDestroy {
   readonly mediaService = inject(MediaService);
   private readonly haptics = inject(HapticsService);
   private readonly publicChatsListService = inject(PublicChatsListService);
+  private readonly zapService = inject(ZapService);
+  private readonly zapSound = inject(ZapSoundService);
+  private readonly dataService = inject(DataService);
 
   /** Currently selected channel ID */
   readonly selectedChannelId = signal<string | null>(null);
@@ -153,6 +173,18 @@ export class ChatsComponent implements OnInit, OnDestroy {
 
   /** Media previews for the current message */
   readonly mediaPreviews = signal<{ url: string; type: 'image' | 'video' | 'music'; label?: string }[]>([]);
+
+  /** Zap receipts for the current channel */
+  readonly channelZaps = signal<ChatZapEntry[]>([]);
+
+  /** Whether to show the zap celebration animation */
+  readonly showZapCelebration = signal<{ amount: number; senderPubkey: string } | null>(null);
+
+  /** Unsubscribe function for the current zap subscription */
+  private zapUnsubscribe: (() => void) | null = null;
+
+  /** Set of seen zap receipt IDs to prevent duplicates */
+  private seenZapIds = new Set<string>();
 
   /** People list filter state — defaults to 'all' for anonymous users since they have no following list */
   readonly selectedListFilter = signal<string>(this.app.authenticated() ? 'following' : 'all');
@@ -295,10 +327,11 @@ export class ChatsComponent implements OnInit, OnDestroy {
     return this.chatChannels.getChannelMessages(id)();
   });
 
-  /** Combined timeline of messages and metadata updates, sorted chronologically */
+  /** Combined timeline of messages, metadata updates, and zaps, sorted chronologically */
   readonly currentTimeline = computed((): TimelineEntry[] => {
     const messages = this.currentMessages();
     const channel = this.selectedChannel();
+    const zaps = this.channelZaps();
 
     const entries: TimelineEntry[] = messages.map(m => ({ type: 'message' as const, data: m }));
 
@@ -307,6 +340,11 @@ export class ChatsComponent implements OnInit, OnDestroy {
       for (const update of channel.metadataUpdates) {
         entries.push({ type: 'metadata-update' as const, data: update });
       }
+    }
+
+    // Interleave zap receipts
+    for (const zap of zaps) {
+      entries.push({ type: 'zap' as const, data: zap });
     }
 
     // Sort by timestamp (ascending)
@@ -474,6 +512,7 @@ export class ChatsComponent implements OnInit, OnDestroy {
     this.chatChannels.closeChannelSubscription();
     this.chatChannels.closeMessageSubscription();
     this.chatChannels.closeReactionSubscription();
+    this.cleanupZapSubscription();
 
     if (this.scrollThrottleTimeout) {
       clearTimeout(this.scrollThrottleTimeout);
@@ -500,6 +539,9 @@ export class ChatsComponent implements OnInit, OnDestroy {
     await this.chatChannels.loadChannelMessages(channel.id);
     this.chatChannels.subscribeToChannelMessages(channel.id);
 
+    // Subscribe to zap receipts for this channel
+    this.subscribeToChannelZaps(channel.id);
+
     // Set up scroll listener
     setTimeout(() => this.setupScrollListener(), 100);
   }
@@ -521,6 +563,7 @@ export class ChatsComponent implements OnInit, OnDestroy {
 
       await this.chatChannels.loadChannelMessages(channelId);
       this.chatChannels.subscribeToChannelMessages(channelId);
+      this.subscribeToChannelZaps(channelId);
       setTimeout(() => this.setupScrollListener(), 100);
     }
   }
@@ -530,6 +573,7 @@ export class ChatsComponent implements OnInit, OnDestroy {
     this.showMobileList.set(true);
     this.selectedChannelId.set(null);
     this.chatChannels.closeMessageSubscription();
+    this.cleanupZapSubscription();
     this.router.navigate(['/chats']);
   }
 
@@ -774,6 +818,173 @@ export class ChatsComponent implements OnInit, OnDestroy {
   /** Get reactions array for a message */
   getReactionsArray(message: ChannelMessage): ChatReaction[] {
     return this.chatChannels.getReactionsArray(message);
+  }
+
+  /** Open zap dialog to zap the chat channel (kind 40 event) */
+  async zapChat(): Promise<void> {
+    const channel = this.selectedChannel();
+    if (!channel) return;
+
+    // Fetch creator metadata for lightning address
+    let metadata: Record<string, unknown> | undefined;
+    try {
+      const profile = await this.dataService.getProfile(channel.creator);
+      if (profile?.data) {
+        metadata = profile.data;
+      }
+    } catch {
+      // Will be caught by the dialog
+    }
+
+    if (!metadata) {
+      this.snackBar.open('Unable to get recipient information for zap', 'Dismiss', { duration: 4000 });
+      return;
+    }
+
+    const chatName = channel.metadata.name || 'chat';
+
+    const { ZapDialogComponent } = await import('../../components/zap-dialog/zap-dialog.component');
+    type ZapDialogData = import('../../components/zap-dialog/zap-dialog.component').ZapDialogData;
+
+    const dialogData: ZapDialogData = {
+      recipientPubkey: channel.creator,
+      recipientMetadata: metadata,
+      recipientName:
+        (typeof metadata['name'] === 'string' ? metadata['name'] : undefined) ||
+        (typeof metadata['display_name'] === 'string' ? metadata['display_name'] : undefined),
+      eventId: channel.id,
+      eventKind: 40,
+      initialMessage: `Zap for ${chatName} chat`,
+    };
+
+    const dialogRef = this.dialog.open(ZapDialogComponent, {
+      width: '500px',
+      data: dialogData,
+      disableClose: true,
+      panelClass: 'responsive-dialog',
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result?.amount) {
+        this.haptics.triggerZapBuzz();
+        this.zapSound.playZapSound(result.amount);
+        this.showZapCelebration.set({ amount: result.amount, senderPubkey: this.currentPubkey() || '' });
+        setTimeout(() => this.showZapCelebration.set(null), 2000);
+      }
+    });
+  }
+
+  /** Open zap dialog to zap an individual chat message */
+  async zapMessage(message: ChannelMessage): Promise<void> {
+    // Fetch message author metadata for lightning address
+    let metadata: Record<string, unknown> | undefined;
+    try {
+      const profile = await this.dataService.getProfile(message.pubkey);
+      if (profile?.data) {
+        metadata = profile.data;
+      }
+    } catch {
+      // Will be caught by the dialog
+    }
+
+    if (!metadata) {
+      this.snackBar.open('Unable to get recipient information for zap', 'Dismiss', { duration: 4000 });
+      return;
+    }
+
+    const { ZapDialogComponent } = await import('../../components/zap-dialog/zap-dialog.component');
+    type ZapDialogData = import('../../components/zap-dialog/zap-dialog.component').ZapDialogData;
+
+    const dialogData: ZapDialogData = {
+      recipientPubkey: message.pubkey,
+      recipientMetadata: metadata,
+      recipientName:
+        (typeof metadata['name'] === 'string' ? metadata['name'] : undefined) ||
+        (typeof metadata['display_name'] === 'string' ? metadata['display_name'] : undefined),
+      eventId: message.id,
+      eventKind: 42,
+      eventContent: message.content.length > 100 ? message.content.substring(0, 100) + '...' : message.content,
+    };
+
+    const dialogRef = this.dialog.open(ZapDialogComponent, {
+      width: '500px',
+      data: dialogData,
+      disableClose: true,
+      panelClass: 'responsive-dialog',
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result?.amount) {
+        this.haptics.triggerZapBuzz();
+        this.zapSound.playZapSound(result.amount);
+        this.showZapCelebration.set({ amount: result.amount, senderPubkey: this.currentPubkey() || '' });
+        setTimeout(() => this.showZapCelebration.set(null), 2000);
+      }
+    });
+  }
+
+  /** Subscribe to zap receipts for a channel */
+  private subscribeToChannelZaps(channelId: string): void {
+    this.cleanupZapSubscription();
+    this.channelZaps.set([]);
+    this.seenZapIds.clear();
+
+    // Load existing zaps
+    this.zapService.getZapsForEvent(channelId, 50).then(receipts => {
+      const entries: ChatZapEntry[] = [];
+      for (const receipt of receipts) {
+        const entry = this.parseZapToEntry(receipt);
+        if (entry && !this.seenZapIds.has(receipt.id)) {
+          this.seenZapIds.add(receipt.id);
+          entries.push(entry);
+        }
+      }
+      if (entries.length > 0) {
+        this.channelZaps.set(entries);
+      }
+    });
+
+    // Subscribe to new zaps in real-time
+    this.zapUnsubscribe = this.zapService.subscribeToEventZaps(channelId, (zapReceipt: NostrEvent) => {
+      if (this.seenZapIds.has(zapReceipt.id)) return;
+      this.seenZapIds.add(zapReceipt.id);
+
+      const entry = this.parseZapToEntry(zapReceipt);
+      if (entry) {
+        this.channelZaps.update(zaps => [...zaps, entry]);
+
+        // Trigger celebration animation and sound for all viewers
+        this.haptics.triggerZapBuzz();
+        this.zapSound.playZapSound(entry.amount);
+        this.showZapCelebration.set({ amount: entry.amount, senderPubkey: entry.senderPubkey });
+        setTimeout(() => this.showZapCelebration.set(null), 2000);
+
+        // Auto-scroll to show the new zap
+        this.scrollToBottomIfNotScrolledUp();
+      }
+    });
+  }
+
+  /** Parse a zap receipt event into a ChatZapEntry */
+  private parseZapToEntry(receipt: NostrEvent): ChatZapEntry | null {
+    const parsed = this.zapService.parseZapReceipt(receipt);
+    if (!parsed.zapRequest || !parsed.amount) return null;
+
+    return {
+      id: receipt.id,
+      senderPubkey: parsed.zapRequest.pubkey,
+      amount: parsed.amount,
+      comment: parsed.comment,
+      createdAt: receipt.created_at,
+    };
+  }
+
+  /** Clean up the current zap subscription */
+  private cleanupZapSubscription(): void {
+    if (this.zapUnsubscribe) {
+      this.zapUnsubscribe();
+      this.zapUnsubscribe = null;
+    }
   }
 
   /** Delete a message (NIP-09 retraction, own messages only) */

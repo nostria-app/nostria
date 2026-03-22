@@ -1904,3 +1904,157 @@
     margin: 0 4px;
   }
 }
+
+// Zap the Chat button
+.zap-chat-button {
+  color: #ff9800;
+}
+
+// Zap entry in timeline
+.zap-entry {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 16px;
+  margin: 8px 12px;
+
+  @media (max-width: 699px) {
+    padding: 6px 8px;
+    margin: 6px 6px;
+    gap: 8px;
+  }
+}
+
+.zap-entry-line {
+  flex: 1;
+  height: 1px;
+  background: #ff9800;
+  opacity: 0.3;
+}
+
+.zap-entry-content {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  font-size: 0.8rem;
+  white-space: nowrap;
+  animation: zapEntryAppear 0.4s ease-out;
+}
+
+.zap-entry-icon {
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+  color: #ff9800;
+}
+
+.zap-entry-text {
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.zap-entry-amount {
+  color: #ff9800;
+}
+
+.zap-entry-comment {
+  color: var(--mat-sys-on-surface-variant);
+  opacity: 0.8;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.zap-entry-time {
+  opacity: 0.5;
+  font-size: 0.75rem;
+
+  &::before {
+    content: '\00b7';
+    margin: 0 4px;
+  }
+}
+
+// Zap celebration overlay
+.zap-celebration-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 100;
+  animation: zapOverlayFade 2s ease-out forwards;
+}
+
+.zap-celebration-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  animation: zapCelebrationPop 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.zap-celebration-icon {
+  font-size: 64px;
+  width: 64px;
+  height: 64px;
+  color: #ff9800;
+  filter: drop-shadow(0 0 20px rgba(255, 152, 0, 0.6));
+  animation: zapIconPulse 0.5s ease-in-out 3;
+}
+
+.zap-celebration-amount {
+  font-size: 1.5rem;
+  color: #ff9800;
+  text-shadow: 0 0 10px rgba(255, 152, 0, 0.4);
+}
+
+@keyframes zapEntryAppear {
+  0% {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes zapOverlayFade {
+  0% {
+    opacity: 1;
+  }
+  70% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes zapCelebrationPop {
+  0% {
+    transform: scale(0.3);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes zapIconPulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+}

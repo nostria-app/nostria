@@ -213,6 +213,11 @@
           }
         </div>
         <div class="channel-header-actions">
+          @if (isAuthenticated()) {
+          <button mat-icon-button (click)="zapChat()" matTooltip="Zap the Chat" class="zap-chat-button">
+            <mat-icon>bolt</mat-icon>
+          </button>
+          }
           @if (isChannelCreator()) {
           <button mat-icon-button (click)="openEditChannel()" matTooltip="Edit chat">
             <mat-icon>edit</mat-icon>
@@ -356,6 +361,21 @@
           </div>
           <div class="metadata-update-line"></div>
         </div>
+        } @else if (entry.type === 'zap') {
+        <!-- Zap receipt inline -->
+        <div class="zap-entry" [attr.data-message-id]="entry.data.id">
+          <div class="zap-entry-line"></div>
+          <div class="zap-entry-content">
+            <mat-icon class="zap-entry-icon">bolt</mat-icon>
+            <app-profile-display-name [pubkey]="entry.data.senderPubkey" />
+            <span class="zap-entry-text">zapped <span class="zap-entry-amount">{{ entry.data.amount | number }}</span> sats</span>
+            @if (entry.data.comment) {
+            <span class="zap-entry-comment">&mdash; {{ entry.data.comment }}</span>
+            }
+            <span class="zap-entry-time">{{ entry.data.createdAt | ago }}</span>
+          </div>
+          <div class="zap-entry-line"></div>
+        </div>
         } @else {
         <!-- Kind 42 message -->
         <div class="message-group-container" [class.outgoing]="entry.data.pubkey === currentPubkey()"
@@ -425,6 +445,12 @@
                     <mat-icon>reply</mat-icon>
                     <span>Reply</span>
                   </button>
+                  @if (isAuthenticated()) {
+                  <button mat-menu-item (click)="zapMessage(entry.data)">
+                    <mat-icon>bolt</mat-icon>
+                    <span>Zap</span>
+                  </button>
+                  }
                   <button mat-menu-item (click)="copyMessageData(entry.data)">
                     <mat-icon>content_copy</mat-icon>
                     <span>Copy Data</span>
@@ -485,6 +511,15 @@
         matTooltip="Scroll to latest message" aria-label="Scroll to latest message">
         <mat-icon>keyboard_arrow_down</mat-icon>
       </button>
+      }
+
+      @if (showZapCelebration(); as zapInfo) {
+      <div class="zap-celebration-overlay">
+        <div class="zap-celebration-content">
+          <mat-icon class="zap-celebration-icon">bolt</mat-icon>
+          <span class="zap-celebration-amount">{{ zapInfo.amount | number }} sats</span>
+        </div>
+      </div>
       }
 
       <!-- Message input -->
