@@ -33,6 +33,7 @@ import { NoteContentComponent } from '../content/note-content/note-content.compo
 import { PhotoEventComponent } from '../event-types/photo-event.component';
 import { EventHeaderComponent } from '../event/header/header.component';
 import { InlineVideoPlayerComponent } from '../inline-video-player/inline-video-player.component';
+import { AudioPlayerComponent } from '../audio-player/audio-player.component';
 import { VideoControlsConfig } from '../video-controls/video-controls.component';
 import { Bolt11InvoiceComponent } from '../bolt11-invoice/bolt11-invoice.component';
 import { AgoPipe } from '../../pipes/ago.pipe';
@@ -47,7 +48,7 @@ const EMOJI_SET_KIND = 30030;
 const LIVE_EVENT_KIND = 30311;
 
 interface ContentPart {
-  type: 'text' | 'url' | 'image' | 'video' | 'npub' | 'nprofile' | 'note' | 'nevent' | 'naddr' | 'linebreak' | 'emoji' | 'bolt11';
+  type: 'text' | 'url' | 'image' | 'video' | 'audio' | 'npub' | 'nprofile' | 'note' | 'nevent' | 'naddr' | 'linebreak' | 'emoji' | 'bolt11';
   content: string;
   pubkey?: string;
   eventId?: string;
@@ -89,6 +90,7 @@ interface EventMention {
     PhotoEventComponent,
     EventHeaderComponent,
     InlineVideoPlayerComponent,
+    AudioPlayerComponent,
     Bolt11InvoiceComponent,
     AgoPipe,
     TimestampPipe,
@@ -106,6 +108,10 @@ interface EventMention {
       } @else if (part.type === 'video') {
         <div class="message-video-container">
           <app-inline-video-player [src]="part.content" [controlsConfig]="messageVideoControlsConfig" />
+        </div>
+      } @else if (part.type === 'audio') {
+        <div class="message-audio-container">
+          <app-audio-player [src]="part.content" [waveform]="[]" [duration]="0"></app-audio-player>
         </div>
       } @else if (part.type === 'url') {
         <a class="message-link" [href]="part.content" target="_blank" rel="noopener noreferrer">{{ getDisplayUrl(part.content) }}</a>
@@ -541,7 +547,9 @@ export class MessageContentComponent {
   // Image extensions for URL detection
   private readonly imageExtensions = /\.(jpg|jpeg|png|gif|webp|svg|bmp|avif)(\?.*)?$/i;
   // Video extensions for URL detection
-  private readonly videoExtensions = /\.(mp4|webm|ogg|mov)(\?.*)?$/i;
+  private readonly videoExtensions = /\.(mp4|webm|mov)(\?.*)?$/i;
+  // Audio extensions for URL detection
+  private readonly audioExtensions = /\.(mp3|mpga|mp2|wav|ogg|oga|opus|m4a|aac|flac|weba)(\?.*)?$/i;
   // Known image hosting patterns (e.g., giphy)
   private readonly imageHostPatterns = [
     /\.giphy\.com\/.+/i,
@@ -1006,9 +1014,12 @@ export class MessageContentComponent {
   /**
    * Determine if a URL points to an image, video, or is a regular link.
    */
-  private getUrlMediaType(url: string): 'image' | 'video' | 'url' {
+  private getUrlMediaType(url: string): 'image' | 'video' | 'audio' | 'url' {
     if (this.imageExtensions.test(url)) {
       return 'image';
+    }
+    if (this.audioExtensions.test(url)) {
+      return 'audio';
     }
     if (this.videoExtensions.test(url)) {
       return 'video';
