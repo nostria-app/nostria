@@ -9,6 +9,7 @@ import { RelayPoolService } from './relays/relay-pool';
 import { UtilitiesService } from './utilities.service';
 import { DatabaseService } from './database.service';
 import { ReactionService } from './reaction.service';
+import { ZapService } from './zap.service';
 import { UserRelaysService } from './relays/user-relays';
 import { AccountLocalStateService } from './account-local-state.service';
 import { NostriaService } from '../interfaces';
@@ -109,6 +110,10 @@ export interface ChannelMessage {
   event: Event;
   /** Reactions on this message */
   reactions?: Map<string, ChatReaction>;
+  /** Total zap amount in sats */
+  zapTotal?: number;
+  /** Number of zaps received */
+  zapCount?: number;
 }
 
 /**
@@ -134,6 +139,7 @@ export class ChatChannelsService implements NostriaService {
   private readonly utilities = inject(UtilitiesService);
   private readonly database = inject(DatabaseService);
   private readonly reactionService = inject(ReactionService);
+  private readonly zapService = inject(ZapService);
   private readonly userRelaysService = inject(UserRelaysService);
   private readonly accountLocalState = inject(AccountLocalStateService);
 
@@ -183,6 +189,7 @@ export class ChatChannelsService implements NostriaService {
   /** Dedup sets for reactions and deletions */
   private reactionIds = new Set<string>();
   private deletionIds = new Set<string>();
+  private zapReceiptIds = new Set<string>();
 
   /** Quick reactions for the picker */
   readonly quickReactions = ['👍', '❤️', '😂', '🔥', '🎉', '👏'];
@@ -1115,6 +1122,29 @@ export class ChatChannelsService implements NostriaService {
   }
 
   /**
+   * Update a message's zap totals
+   */
+  private updateMessageZaps(channelId: string, messageId: string, amount: number): void {
+    this.messagesMap.update(map => {
+      const updated = new Map(map);
+      const messages = updated.get(channelId);
+      if (!messages) return map;
+
+      const updatedMessages = messages.map(msg => {
+        if (msg.id !== messageId) return msg;
+        return {
+          ...msg,
+          zapTotal: (msg.zapTotal ?? 0) + amount,
+          zapCount: (msg.zapCount ?? 0) + 1,
+        };
+      });
+
+      updated.set(channelId, updatedMessages);
+      return updated;
+    });
+  }
+
+  /**
    * Create a new public chat channel (kind 40)
    */
   async createChannel(metadata: ChannelMetadata, tags: string[] = []): Promise<{ success: boolean; channelId?: string }> {
@@ -1888,7 +1918,7 @@ export class ChatChannelsService implements NostriaService {
 
     // Scope the subscription to reactions/deletions targeting this channel's messages.
     // Don't filter by #k tag — many reactions don't include it.
-    const filter: Filter = { kinds: [7, 5], '#e': messageIds } as Filter;
+    const filter: Filter = { kinds: [7, 5, 9735], '#e': messageIds } as Filter;
 
     // Use a since filter based on the oldest message in the current view
     // to avoid fetching ancient reactions we've already processed
@@ -1903,6 +1933,8 @@ export class ChatChannelsService implements NostriaService {
         this.handleReactionEvent(event, channelId);
       } else if (event.kind === 5) {
         this.handleDeletionEvent(event, channelId);
+      } else if (event.kind === 9735) {
+        this.handleZapReceiptEvent(event, channelId);
       }
     };
 
@@ -1963,6 +1995,22 @@ export class ChatChannelsService implements NostriaService {
       updated.add(targetEventId);
       return updated;
     });
+  }
+
+  /**
+   * Handle a kind 9735 zap receipt event
+   */
+  private handleZapReceiptEvent(event: Event, channelId: string): void {
+    if (this.zapReceiptIds.has(event.id)) return;
+    this.zapReceiptIds.add(event.id);
+
+    const targetEventId = event.tags.find(tag => tag[0] === 'e')?.[1];
+    if (!targetEventId) return;
+
+    const parsed = this.zapService.parseZapReceipt(event);
+    if (!parsed.amount || parsed.amount <= 0) return;
+
+    this.updateMessageZaps(channelId, targetEventId, parsed.amount);
   }
 
   /**

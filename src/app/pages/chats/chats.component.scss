@@ -1070,6 +1070,28 @@
   &.user-reacted .reaction-count {
     color: var(--mat-sys-on-primary-container);
   }
+
+  &.zap-chip {
+    cursor: default;
+    color: #f7931a;
+    border-color: rgba(247, 147, 26, 0.3);
+    background: rgba(247, 147, 26, 0.08);
+
+    .zap-chip-icon {
+      font-size: 14px;
+      width: 14px;
+      height: 14px;
+      color: #f7931a;
+    }
+
+    .reaction-count {
+      color: #f7931a;
+    }
+
+    &:hover {
+      background: rgba(247, 147, 26, 0.15);
+    }
+  }
 }
 
 // Outgoing messages: align reactions to the right
