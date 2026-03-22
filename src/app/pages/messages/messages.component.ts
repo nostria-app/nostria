@@ -41,6 +41,7 @@ import { NotificationType } from '../../services/database.service';
 import { ApplicationStateService } from '../../services/application-state.service';
 import { LoadingOverlayComponent } from '../../components/loading-overlay/loading-overlay.component';
 import { UserProfileComponent } from '../../components/user-profile/user-profile.component';
+import { ProfileDisplayNameComponent } from '../../components/user-profile/display-name/profile-display-name.component';
 import { CustomDialogService } from '../../services/custom-dialog.service';
 import { NPubPipe } from '../../pipes/npub.pipe';
 import { TimestampPipe } from '../../pipes/timestamp.pipe';
@@ -167,6 +168,7 @@ interface MessageGroup {
     RouterModule,
     LoadingOverlayComponent,
     UserProfileComponent,
+    ProfileDisplayNameComponent,
     TimestampPipe,
     AgoPipe,
     MessageContentComponent,
@@ -540,6 +542,12 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   isGroupChat = computed(() => {
     return !!this.selectedChat()?.isGroup;
   });
+
+  /** Check if a message starts a new sender group (different sender than previous message) */
+  isMessageGroupStart(messages: DirectMessage[], index: number): boolean {
+    if (index === 0) return true;
+    return messages[index].pubkey !== messages[index - 1].pubkey;
+  }
 
   // Computed signal for "Note to Self" chat (shown separately at top)
   noteToSelfChat = computed(() => {

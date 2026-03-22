@@ -531,16 +531,168 @@
         <div class="date-header">
           <span class="date-label">{{ group.dateLabel }}</span>
         </div>
-        @for (message of group.messages; track message.id) {
-        <div class="message-bubble-container" [class.outgoing]="message.isOutgoing"
-          [class.group-message]="isGroupChat()" (touchstart)="onMessageTouchStart($event, message)"
+        @for (message of group.messages; track message.id; let msgIdx = $index) {
+        @if (isGroupChat()) {
+        <!-- Group chat layout with avatar column (matches public chat) -->
+        <div class="message-group-container" [class.outgoing]="message.isOutgoing"
+          [class.group-start]="isMessageGroupStart(group.messages, msgIdx)"
+          [class.group-continuation]="!isMessageGroupStart(group.messages, msgIdx)"
+          (touchstart)="onMessageTouchStart($event, message)"
           (touchend)="onMessageTouchEnd()" (touchmove)="onMessageTouchEnd()"
           (contextmenu)="onMessageContextMenu($event, message)">
-          @if (isGroupChat() && !message.isOutgoing) {
-          <div class="group-message-sender">
-            <span class="group-sender-name">{{ getParticipantName(message.pubkey) }}</span>
+
+          <!-- Avatar column (visible only on group start) -->
+          <div class="message-avatar-column">
+            @if (isMessageGroupStart(group.messages, msgIdx)) {
+            <app-user-profile [pubkey]="message.pubkey" view="icon" />
+            }
           </div>
-          }
+
+          <!-- Message content column -->
+          <div class="message-content-column">
+            <div class="message-bubble-row">
+              <div class="message-bubble" [class.pending]="message.pending"
+                [class.failed]="message.failed" [class.long-press-active]="longPressedMessage()?.id === message.id">
+                @if (isMessageGroupStart(group.messages, msgIdx) && !message.isOutgoing) {
+                <div class="message-sender-name">
+                  <app-profile-display-name [pubkey]="message.pubkey" />
+                </div>
+                }
+                @if (getReplyPreviewText(message); as replyPreviewText) {
+                <div class="reply-context">
+                  <mat-icon>reply</mat-icon>
+                  <div class="reply-content">
+                    <span class="reply-text">{{ replyPreviewText }}</span>
+                  </div>
+                </div>
+                }
+                <app-message-content [content]="message.content" [tags]="message.tags"
+                  [authorPubkey]="message.pubkey"></app-message-content>
+                <span class="message-inline-meta">
+                  <span class="message-time">{{ formatMessageTime(message.created_at) }}</span>
+                  @if (message.encryptionType === 'nip04') {
+                  <mat-icon class="encryption-icon insecure" matTooltip="Legacy encryption (NIP-04)">block</mat-icon>
+                  }
+                  @if (message.pending) {
+                  <span class="sending-indicator">
+                    <mat-spinner diameter="10" class="pending-spinner"></mat-spinner>
+                    <span class="sending-text">Sending</span>
+                  </span>
+                  } @else if (message.failed) {
+                  <mat-icon class="status-icon failed-icon"
+                    [matTooltip]="message.failureReason || 'Message delivery failed'">error_outline</mat-icon>
+                  }
+                </span>
+              </div>
+
+              <div class="message-actions">
+                <button mat-icon-button class="more-button" [matMenuTriggerFor]="messageMenu"
+                  (click)="$event.stopPropagation()" matTooltip="More options">
+                  <mat-icon>more_vert</mat-icon>
+                </button>
+                <mat-menu #messageMenu="matMenu">
+                  @if (!message.isOutgoing && !isReactionMessage(message)) {
+                  <button mat-menu-item [matMenuTriggerFor]="reactionMenu">
+                    <mat-icon>sentiment_satisfied</mat-icon>
+                    <span>React</span>
+                  </button>
+                  }
+                  <button mat-menu-item (click)="setReplyTo(message)">
+                    <mat-icon>reply</mat-icon>
+                    <span>Reply</span>
+                  </button>
+                  <button mat-menu-item (click)="forwardMessage(message)">
+                    <mat-icon>forward</mat-icon>
+                    <span>Forward</span>
+                  </button>
+                  <button mat-menu-item (click)="copyMessageContent(message)">
+                    <mat-icon>content_copy</mat-icon>
+                    <span>Copy</span>
+                  </button>
+                  <button mat-menu-item (click)="showMessageDetails(message)">
+                    <mat-icon>info</mat-icon>
+                    <span>Details</span>
+                  </button>
+                  @if (getMessageImageUrls(message).length > 0) {
+                  <button mat-menu-item (click)="openSaveMessageToGifsDialog(message)">
+                    <mat-icon>gif_box</mat-icon>
+                    <span>Save to Gifs Set</span>
+                  </button>
+                  }
+                  @if (message.isOutgoing && message.failed) {
+                  <mat-divider></mat-divider>
+                  <button mat-menu-item (click)="retryMessage(message)">
+                    <mat-icon>refresh</mat-icon>
+                    <span>Retry</span>
+                  </button>
+                  }
+                  <mat-divider></mat-divider>
+                  @if (message.isOutgoing) {
+                  <button mat-menu-item class="delete-menu-item" (click)="confirmDeleteMessage(message)">
+                    <mat-icon>delete</mat-icon>
+                    <span>Delete</span>
+                  </button>
+                  } @else {
+                  <button mat-menu-item class="hide-menu-item" (click)="hideMessage(message)">
+                    <mat-icon>visibility_off</mat-icon>
+                    <span>Hide</span>
+                  </button>
+                  }
+                </mat-menu>
+
+                <mat-menu #reactionMenu="matMenu">
+                  <button mat-menu-item (click)="sendReaction(message, '+')">
+                    <span class="reaction-menu-emoji">{{ getReactionDisplay('+') }}</span>
+                    <span>Like</span>
+                  </button>
+                  <button mat-menu-item (click)="sendReaction(message, '😂')">
+                    <span class="reaction-menu-emoji">😂</span>
+                    <span>Laugh</span>
+                  </button>
+                  <button mat-menu-item (click)="sendReaction(message, '😮')">
+                    <span class="reaction-menu-emoji">😮</span>
+                    <span>Surprised</span>
+                  </button>
+                  <button mat-menu-item (click)="sendReaction(message, '😢')">
+                    <span class="reaction-menu-emoji">😢</span>
+                    <span>Sad</span>
+                  </button>
+                  <mat-divider></mat-divider>
+                  <button mat-menu-item (click)="openReactionPickerDialog(message)">
+                    <mat-icon>add_reaction</mat-icon>
+                    <span>More reactions...</span>
+                  </button>
+                </mat-menu>
+              </div>
+            </div>
+
+            @if (getMessageReactions(message.id).length > 0) {
+            <div class="message-reactions">
+              @for (reaction of getMessageReactions(message.id); track reaction.content) {
+              <button type="button" class="reaction-chip" [class.user-reacted]="reaction.userReacted"
+                [disabled]="reaction.userReacted"
+                (click)="sendReaction(message, reaction.content, reaction.customEmojiUrl)">
+                @if (reaction.customEmojiUrl) {
+                <app-custom-emoji [src]="reaction.customEmojiUrl" [alt]="reaction.content"
+                  cssClass="reaction-custom-emoji" [emojiSetAddress]="reaction.emojiSetAddress" />
+                } @else {
+                <span class="reaction-emoji">{{ getReactionDisplay(reaction.content) }}</span>
+                }
+                @if (reaction.count > 1) {
+                <span class="reaction-count">{{ reaction.count }}</span>
+                }
+              </button>
+              }
+            </div>
+            }
+          </div>
+        </div>
+        } @else {
+        <!-- 1-on-1 / note-to-self layout -->
+        <div class="message-bubble-container" [class.outgoing]="message.isOutgoing"
+          (touchstart)="onMessageTouchStart($event, message)"
+          (touchend)="onMessageTouchEnd()" (touchmove)="onMessageTouchEnd()"
+          (contextmenu)="onMessageContextMenu($event, message)">
           <div class="message-bubble" [class.outgoing]="message.isOutgoing" [class.pending]="message.pending"
             [class.failed]="message.failed" [class.long-press-active]="longPressedMessage()?.id === message.id">
             @if (getReplyPreviewText(message); as replyPreviewText) {
@@ -683,6 +835,7 @@
           </div>
           }
         </div>
+        }
         }
         }
       </div>
