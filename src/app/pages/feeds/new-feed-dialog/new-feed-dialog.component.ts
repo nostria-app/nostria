@@ -31,6 +31,7 @@ import { AccountRelayService } from '../../../services/relays/account-relay';
 import { CustomDialogComponent } from '../../../components/custom-dialog/custom-dialog.component';
 import { MultiSelectDialogComponent, SelectableItem } from '../../../components/multi-select-dialog/multi-select-dialog.component';
 import { CollectionSetsService } from '../../../services/collection-sets.service';
+import { getKindLabel } from '../../../utils/kind-labels';
 
 export interface FollowSet {
   id: string;
@@ -41,46 +42,18 @@ export interface FollowSet {
   created: number;
 }
 
-const NOSTR_KINDS = [
-  { value: 0, label: 'Metadata (0)' },
-  { value: 1, label: 'Text Note (1)' },
-  { value: 2, label: 'Recommend Relay (2)' },
-  { value: 3, label: 'Contacts (3)' },
-  { value: 4, label: 'Encrypted Direct Messages (4)' },
-  { value: 5, label: 'Event Deletion (5)' },
-  { value: 6, label: 'Repost (6)' },
-  { value: 7, label: 'Reaction (7)' },
-  { value: 8, label: 'Badge Award (8)' },
-  { value: 16, label: 'Generic Repost (16)' },
-  { value: 20, label: 'Picture (20)' },
-  { value: 21, label: 'Video Event (21)' },
-  { value: 40, label: 'Channel Creation (40)' },
-  { value: 41, label: 'Channel Metadata (41)' },
-  { value: 42, label: 'Channel Message (42)' },
-  { value: 43, label: 'Channel Hide Message (43)' },
-  { value: 44, label: 'Channel Mute User (44)' },
-  { value: 1063, label: 'File Metadata (1063)' },
-  { value: 1068, label: 'Poll (1068)' },
-  { value: 6969, label: 'Zap Poll (6969)' },
-  { value: 1222, label: 'Voice Message (1222)' },
-  { value: 1311, label: 'Live Chat Message (1311)' },
-  { value: 1984, label: 'Reporting (1984)' },
-  { value: 9734, label: 'Zap Request (9734)' },
-  { value: 9735, label: 'Zap (9735)' },
-  { value: 10000, label: 'Mute List (10000)' },
-  { value: 10001, label: 'Pin List (10001)' },
-  { value: 10002, label: 'Relay List Metadata (10002)' },
-  { value: 30000, label: 'Categorized People List (30000)' },
-  { value: 30001, label: 'Categorized Bookmark List (30001)' },
-  { value: 30023, label: 'Long-form Content (30023)' },
-  { value: 30024, label: 'Draft Long-form Content (30024)' },
-  { value: 30078, label: 'Application-specific Data (30078)' },
-  { value: 32100, label: 'M3U Playlist (32100)' },
-  { value: 34139, label: 'Playlist (34139)' },
-  { value: 34235, label: 'Addressable Video (34235)' },
-  { value: 34236, label: 'Addressable Short Video (34236)' },
-  { value: 36787, label: 'Music Tracks (36787)' },
+/** Kind numbers available for feed filtering, with labels from centralized utility. */
+const NOSTR_KIND_VALUES = [
+  0, 1, 2, 3, 4, 5, 6, 7, 8, 16, 20, 21, 40, 41, 42, 43, 44,
+  1063, 1068, 6969, 1222, 1311, 1984, 9734, 9735,
+  10000, 10001, 10002,
+  30000, 30001, 30023, 30024, 30078, 32100, 34139, 34235, 34236, 36787,
 ];
+
+const NOSTR_KINDS = NOSTR_KIND_VALUES.map(value => ({
+  value,
+  label: `${getKindLabel(value)} (${value})`,
+}));
 
 @Component({
   selector: 'app-new-feed-dialog',

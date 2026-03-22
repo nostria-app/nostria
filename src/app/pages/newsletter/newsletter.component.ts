@@ -28,6 +28,7 @@ import { LoggerService } from '../../services/logger.service';
 import { AccountRelayService } from '../../services/relays/account-relay';
 import { RelayPoolService } from '../../services/relays/relay-pool';
 import { DatabaseService } from '../../services/database.service';
+import { getKindLabel } from '../../utils/kind-labels';
 import { ZapService } from '../../services/zap.service';
 import { UtilitiesService } from '../../services/utilities.service';
 import { MessagingService } from '../../services/messaging.service';
@@ -496,14 +497,6 @@ export class NewsletterComponent implements OnInit {
   getEventKindLabel(): string {
     const event = this.targetEvent();
     if (!event) return '';
-
-    switch (event.kind) {
-      case kinds.ShortTextNote:
-        return 'Note';
-      case kinds.LongFormArticle:
-        return 'Article';
-      default:
-        return `Kind ${event.kind}`;
-    }
+    return getKindLabel(event.kind);
   }
 }

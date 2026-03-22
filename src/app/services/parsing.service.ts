@@ -40,13 +40,14 @@ export interface ContentToken {
   | 'hashtag'
   | 'rss-feed'
   | 'bolt11'
-  | 'bolt12';
+  | 'bolt12'
+  | 'tidal';
   content: string;
   nostrData?: NostrData;
   emoji?: string;
   customEmoji?: string; // NIP-30: URL to custom emoji image
   emojiSetAddress?: string; // NIP-30: optional kind:pubkey:d-tag address to emoji set
-  processedUrl?: SafeResourceUrl; // For YouTube embed URLs that are pre-processed
+  processedUrl?: SafeResourceUrl; // For YouTube/Tidal embed URLs that are pre-processed
   waveform?: number[];
   duration?: number;
   // Media metadata from imeta tags
@@ -377,6 +378,12 @@ export class ParsingService implements OnDestroy {
     // Captures the video ID and allows additional parameters like &list=, &t=, &si=, etc.
     const youtubeRegex =
       /(https?:\/\/)?(?:[a-zA-Z0-9-]+\.)?(youtube\.com\/watch\?v=|youtube\.com\/shorts\/|youtube\.com\/live\/|youtu\.be\/)([a-zA-Z0-9_-]{11})([&?][^\s##]*)?(?=\s|##LINEBREAK##|$)/g;
+    // Tidal regex: matches tidal.com URLs for tracks, albums, videos, and playlists
+    // Supports: tidal.com/track/ID, tidal.com/browse/track/ID, listen.tidal.com/track/ID
+    // Captures the resource type (track, album, video, playlist) and ID
+    // Allows optional trailing /u or other path segments
+    const tidalRegex =
+      /(https?:\/\/)?(?:listen\.)?tidal\.com\/(?:browse\/)?(track|album|video|playlist)\/([a-zA-Z0-9-]+)(?:\/[^\s##]*)?(?=\s|##LINEBREAK##|$)/g;
     // Media regexes: lookahead also matches uppercase letter (start of new word without space)
     // This handles cases like "...file.mp4Curious about..." where text follows without whitespace
     const imageRegex =
@@ -731,6 +738,25 @@ export class ParsingService implements OnDestroy {
         type: 'youtube',
         processedUrl: processedUrl,
         isYouTubeShort: isYouTubeShort,
+      });
+    }
+
+    // Find Tidal URLs
+    tidalRegex.lastIndex = 0;
+    while ((match = tidalRegex.exec(processedContent)) !== null) {
+      const tidalUrl = match[0];
+      const resourceType = match[2]; // track, album, video, playlist
+      const resourceId = match[3];
+      // Tidal embed uses plural form: track -> tracks, album -> albums, etc.
+      const embedPath = `${resourceType}s`;
+      const processedUrl = this.media.getTidalEmbedUrl()(`https://embed.tidal.com/${embedPath}/${resourceId}`);
+
+      matches.push({
+        start: match.index,
+        end: match.index + match[0].length,
+        content: tidalUrl,
+        type: 'tidal',
+        processedUrl: processedUrl,
       });
     }
 

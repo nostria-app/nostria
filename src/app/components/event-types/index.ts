@@ -15,3 +15,4 @@ export { SettingsEventComponent } from './settings-event.component';
 export { RelayListEventComponent } from './relay-list-event.component';
 export { HighlightEventComponent } from './highlight-event.component';
 export { WotEventComponent } from './wot-event.component';
+export { UnknownEventComponent } from './unknown-event.component';

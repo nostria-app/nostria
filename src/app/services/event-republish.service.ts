@@ -7,6 +7,7 @@ import { AccountStateService } from './account-state.service';
 import { SearchRelayListKind } from './relays/search-relay';
 import { DiscoveryRelayListKind } from './relays/discovery-relay';
 import { TRUST_PROVIDER_LIST_KIND } from './trust-provider.service';
+import { getKindLabel } from '../utils/kind-labels';
 
 /**
  * Important event kinds that should be republished when user edits their relays
@@ -131,29 +132,6 @@ export class EventRepublishService {
    * Get a human-readable name for an event kind
    */
   getEventKindName(kind: number): string {
-    switch (kind) {
-      case kinds.Metadata:
-        return 'Profile';
-      case kinds.Contacts:
-        return 'Following List';
-      case kinds.Mutelist:
-        return 'Mute List';
-      case kinds.RelayList:
-        return 'Relay List';
-      case kinds.BookmarkList:
-        return 'Bookmark List';
-      case SearchRelayListKind:
-        return 'Search Relays';
-      case TRUST_PROVIDER_LIST_KIND:
-        return 'Trust Providers';
-      case kinds.DirectMessageRelaysList:
-        return 'DM Relays';
-      case 10063:
-        return 'Media Servers';
-      case DiscoveryRelayListKind:
-        return 'Discovery Relays';
-      default:
-        return `Kind ${kind}`;
-    }
+    return getKindLabel(kind);
   }
 }

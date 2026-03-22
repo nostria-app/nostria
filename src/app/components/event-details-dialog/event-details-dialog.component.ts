@@ -13,6 +13,7 @@ import { standardizedTag } from '../../standardized-tags';
 import { LayoutService } from '../../services/layout.service';
 import { CustomDialogRef } from '../../services/custom-dialog.service';
 import { LocalSettingsService } from '../../services/local-settings.service';
+import { getKindLabel } from '../../utils/kind-labels';
 import { ChroniaCalendarService } from '../../services/chronia-calendar.service';
 import { EthiopianCalendarService } from '../../services/ethiopian-calendar.service';
 
@@ -142,52 +143,7 @@ export class EventDetailsDialogComponent {
   }
 
   getKindDescription(kind: number): string {
-    const kindDescriptions: Record<number, string> = {
-      0: 'User Metadata',
-      1: 'Short Text Note',
-      2: 'Relay Recommendation',
-      3: 'Contacts',
-      4: 'Encrypted Direct Message',
-      5: 'Event Deletion',
-      6: 'Repost',
-      7: 'Reaction',
-      8: 'Badge Award',
-      9: 'Group Chat Message',
-      10: 'Group Chat Thread Reply',
-      11: 'Group Thread',
-      12: 'Group Thread Reply',
-      40: 'Channel Creation',
-      41: 'Channel Metadata',
-      42: 'Channel Message',
-      43: 'Channel Hide Message',
-      44: 'Channel Mute User',
-      1063: 'File Metadata',
-      1311: 'Live Chat Message',
-      1040: 'OpenTimestamps',
-      9734: 'Zap Request',
-      9735: 'Zap',
-      10000: 'Mute List',
-      10001: 'Pin List',
-      10002: 'Relay List Metadata',
-      30000: 'Categorized People List',
-      30001: 'Categorized Bookmark List',
-      30008: 'Profile Badges',
-      30009: 'Badge Definition',
-      30017: 'Create or update a stall',
-      30018: 'Create or update a product',
-      30023: 'Long-form Content',
-      30024: 'Draft Long-form Content',
-      30078: 'Application-specific Data',
-      30311: 'Live Event',
-      30315: 'User Statuses',
-      30402: 'Classified Listing',
-      30403: 'Draft Classified Listing',
-      31989: 'App Recommendation',
-      31990: 'App Handler',
-      34235: 'Video Event'
-    };
-
-    return kindDescriptions[kind] || `Unknown Kind (${kind})`;
+    return getKindLabel(kind);
   }
 
   formatCreatedAt(): string {

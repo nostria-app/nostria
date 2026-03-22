@@ -21,6 +21,7 @@ import { DataService } from '../../services/data.service';
 import { RelayPoolService } from '../../services/relays/relay-pool';
 import { UserRelayService } from '../../services/relays/user-relay';
 import { ParsingService, ContentToken } from '../../services/parsing.service';
+import { MediaPlayerService } from '../../services/media-player.service';
 import { EmojiSetService } from '../../services/emoji-set.service';
 import { LoggerService } from '../../services/logger.service';
 import { ProfileDisplayNameComponent } from '../user-profile/display-name/profile-display-name.component';
@@ -39,6 +40,7 @@ import { Bolt11InvoiceComponent } from '../bolt11-invoice/bolt11-invoice.compone
 import { AgoPipe } from '../../pipes/ago.pipe';
 import { TimestampPipe } from '../../pipes/timestamp.pipe';
 import { NostrRecord } from '../../interfaces';
+import { SafeResourceUrl } from '@angular/platform-browser';
 import { visualContentLength } from '../../utils/visual-content-length';
 
 // Music event kinds
@@ -48,7 +50,7 @@ const EMOJI_SET_KIND = 30030;
 const LIVE_EVENT_KIND = 30311;
 
 interface ContentPart {
-  type: 'text' | 'url' | 'image' | 'video' | 'audio' | 'npub' | 'nprofile' | 'note' | 'nevent' | 'naddr' | 'linebreak' | 'emoji' | 'bolt11';
+  type: 'text' | 'url' | 'image' | 'video' | 'audio' | 'npub' | 'nprofile' | 'note' | 'nevent' | 'naddr' | 'linebreak' | 'emoji' | 'bolt11' | 'tidal';
   content: string;
   pubkey?: string;
   eventId?: string;
@@ -56,6 +58,7 @@ interface ContentPart {
   customEmojiUrl?: string;
   waveform?: number[];
   duration?: number;
+  processedUrl?: SafeResourceUrl;
   naddrData?: {
     pubkey: string;
     identifier: string;
@@ -117,6 +120,15 @@ interface EventMention {
         </div>
       } @else if (part.type === 'url') {
         <a class="message-link" [href]="part.content" target="_blank" rel="noopener noreferrer">{{ getDisplayUrl(part.content) }}</a>
+      } @else if (part.type === 'tidal') {
+        <div class="tidal-container">
+          @if (part.processedUrl) {
+          <iframe [src]="part.processedUrl" frameborder="0"
+            allow="encrypted-media" title="Tidal music embed"
+            sandbox="allow-same-origin allow-scripts allow-forms allow-popups"
+            loading="lazy"></iframe>
+          }
+        </div>
       } @else if (part.type === 'bolt11') {
         <div class="bolt11-container">
           <app-bolt11-invoice [invoice]="part.content"></app-bolt11-invoice>
@@ -510,6 +522,29 @@ interface EventMention {
       display: block;
       margin: 0.5rem 0;
     }
+
+    .tidal-container {
+      display: block;
+      width: 100%;
+      max-width: 100%;
+      border-radius: 8px;
+      overflow: hidden;
+      background: #000;
+      margin: 4px 0;
+
+      iframe {
+        display: block;
+        width: 100%;
+        height: 130px;
+        border: 0;
+      }
+
+      @media (max-width: 480px) {
+        iframe {
+          height: 130px;
+        }
+      }
+    }
   `],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -523,6 +558,7 @@ export class MessageContentComponent {
   private readonly logger = inject(LoggerService);
   private readonly dialog = inject(MatDialog);
   private readonly emojiSetService = inject(EmojiSetService);
+  private readonly media = inject(MediaPlayerService);
 
   content = input.required<string>();
   tags = input<string[][]>([]);
@@ -563,6 +599,9 @@ export class MessageContentComponent {
 
   // NIP-30 emoji shortcode regex
   private readonly emojiRegex = /(:[a-zA-Z0-9_]+:)/g;
+
+  // Tidal URL regex
+  private readonly tidalUrlRegex = /^https?:\/\/(?:listen\.)?tidal\.com\/(?:browse\/)?(track|album|video|playlist)\/([a-zA-Z0-9-]+)/i;
 
   // Store event mentions data
   eventMentionsMap = signal<Map<number, EventMention>>(new Map());
@@ -680,6 +719,7 @@ export class MessageContentComponent {
           type: this.getUrlMediaType(cleanUrl),
           content: cleanUrl,
           ...this.getImetaData(cleanUrl),
+          ...this.getTidalEmbedData(cleanUrl),
           id: this.partIdCounter++,
         });
 
@@ -1017,7 +1057,7 @@ export class MessageContentComponent {
   /**
    * Determine if a URL points to an image, video, or is a regular link.
    */
-  private getUrlMediaType(url: string): 'image' | 'video' | 'audio' | 'url' {
+  private getUrlMediaType(url: string): 'image' | 'video' | 'audio' | 'url' | 'tidal' {
     if (this.imageExtensions.test(url)) {
       return 'image';
     }
@@ -1032,6 +1072,11 @@ export class MessageContentComponent {
       if (pattern.test(url)) {
         return 'image';
       }
+    }
+    // Check for Tidal URLs
+    if (this.tidalUrlRegex.test(url)) {
+      this.tidalUrlRegex.lastIndex = 0;
+      return 'tidal';
     }
     return 'url';
   }
@@ -1052,5 +1097,18 @@ export class MessageContentComponent {
       result.duration = Number(durationTag.substring(9));
     }
     return result;
+  }
+
+  /** Build Tidal embed data if URL matches tidal.com */
+  private getTidalEmbedData(url: string): { processedUrl?: SafeResourceUrl } {
+    this.tidalUrlRegex.lastIndex = 0;
+    const match = this.tidalUrlRegex.exec(url);
+    if (!match) return {};
+    const resourceType = match[1]; // track, album, video, playlist
+    const resourceId = match[2];
+    const embedPath = `${resourceType}s`;
+    return {
+      processedUrl: this.media.getTidalEmbedUrl()(`https://embed.tidal.com/${embedPath}/${resourceId}`),
+    };
   }
 }

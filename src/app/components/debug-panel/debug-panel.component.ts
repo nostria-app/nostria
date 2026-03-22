@@ -8,6 +8,7 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { SubscriptionManagerService, SubscriptionInfo, ConnectionInfo, QueryInfo } from '../../services/relays/subscription-manager';
 import { CustomDialogRef } from '../../services/custom-dialog.service';
 import { MatTabsModule } from '@angular/material/tabs';
+import { getKindLabel } from '../../utils/kind-labels';
 
 interface RelayStatus {
   url: string;
@@ -399,33 +400,7 @@ export class DebugPanelComponent implements OnInit, OnDestroy {
   }
 
   private getKindName(kind: number): string {
-    const kindNames: Record<number, string> = {
-      0: 'meta',
-      1: 'note',
-      2: 'relay',
-      3: 'contacts',
-      4: 'dm',
-      5: 'delete',
-      6: 'repost',
-      7: 'reaction',
-      8: 'badge',
-      10: 'mute',
-      30: 'profile',
-      40: 'ch-create',
-      41: 'ch-meta',
-      42: 'ch-msg',
-      1984: 'report',
-      9735: 'zap',
-      10000: 'mute-list',
-      10001: 'pin-list',
-      10002: 'relay-list',
-      30000: 'list',
-      30001: 'list',
-      30023: 'article',
-      30078: 'app-data',
-      31871: 'wot-attestation',
-    };
-    return kindNames[kind] || kind.toString();
+    return getKindLabel(kind);
   }
 
   formatFilterFull(filter: object): string {

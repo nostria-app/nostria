@@ -152,66 +152,10 @@
     @else if (targetItem.event.kind === 31871) {
     <app-wot-event [event]="targetItem.event"></app-wot-event>
     } @else {
-    <div class="main-content-wrapper" [class.collapsed]="isMainContentCollapsed()">
-      <app-content [content]="displayedRecord()?.data" [event]="targetItem.event"
-        [trustedByPubkey]="trustedByPubkey() || item.event.pubkey" [disableExpansion]="navigationDisabled()"
-        [inFeedsPanel]="inFeedsPanel()" [hideSocialPreviews]="isMainContentCollapsed()"
-        [hideInlineMediaAndLinks]="isMainContentCollapsed()"></app-content>
-    </div>
-    @if (isMainContentLong()) {
-    <!-- Images and URLs for collapsed content -->
-    @if (!isMainContentExpanded()) {
-    <button mat-button class="show-more-btn" (click)="onExpandClick($event, isMainContentExpanded, true)">
-      <mat-icon>expand_more</mat-icon>
-      Show more
-    </button>
-    @if (mainCollapsedMedia().images.length > 0) {
-    <div class="collapsed-images">
-      @if (mainCollapsedMedia().images.length === 1) {
-      <img [src]="mainCollapsedMedia().images[0]" alt="Image" loading="lazy"
-        (click)="onCollapsedImageClick($event, mainCollapsedMedia().images[0], mainCollapsedMedia().images)" />
-      } @else {
-      <div class="image-grid">
-        @for (image of mainCollapsedMedia().images; track image) {
-        <img [src]="image" alt="Image" loading="lazy"
-          (click)="onCollapsedImageClick($event, image, mainCollapsedMedia().images)" />
-        }
-      </div>
-      }
-    </div>
-    }
-    @if (mainCollapsedMedia().videos.length > 0) {
-    <div class="collapsed-videos" (click)="$event.stopPropagation()">
-      <app-inline-video-player [src]="mainCollapsedMedia().videos[0].url"
-        [poster]="mainCollapsedMedia().videos[0].poster"
-        [style.aspect-ratio]="!isPortraitAspectRatio(mainCollapsedMedia().videos[0].aspectRatio) ? mainCollapsedMedia().videos[0].aspectRatio : null"
-        [fillContainer]="!!mainCollapsedMedia().videos[0].aspectRatio && !isPortraitAspectRatio(mainCollapsedMedia().videos[0].aspectRatio)"
-        [inFeedsPanel]="inFeedsPanel()"></app-inline-video-player>
-      @if (mainCollapsedMedia().videos.length > 1 && !collapsedVideosExpanded()) {
-      <button mat-button class="show-more-videos-btn" (click)="toggleCollapsedVideos($event)">
-        +{{ mainCollapsedMedia().videos.length - 1 }} more {{ mainCollapsedMedia().videos.length - 1 === 1 ? 'video' :
-        'videos' }}
-      </button>
-      }
-      @if (collapsedVideosExpanded()) {
-      @for (video of mainCollapsedMedia().videos.slice(1); track video.url) {
-      <app-inline-video-player [src]="video.url" [poster]="video.poster"
-        [style.aspect-ratio]="!isPortraitAspectRatio(video.aspectRatio) ? video.aspectRatio : null"
-        [fillContainer]="!!video.aspectRatio && !isPortraitAspectRatio(video.aspectRatio)"
-        [inFeedsPanel]="inFeedsPanel()"></app-inline-video-player>
-      }
-      }
-    </div>
-    }
-    @if (mainCollapsedMedia().urls.length > 0) {
-    <div class="collapsed-urls">
-      @for (url of mainCollapsedMedia().urls; track url) {
-      <app-social-preview [url]="url" [compact]="true"></app-social-preview>
-      }
-    </div>
-    }
-    }
-    }
+    <!-- Unknown event kind (NIP-31 alt text + NIP-89 app handlers) -->
+    <app-unknown-event [event]="targetItem.event" [content]="displayedRecord()?.data"
+      [trustedByPubkey]="trustedByPubkey() || item.event.pubkey"
+      [inFeedsPanel]="inFeedsPanel()"></app-unknown-event>
     }
   </mat-card-content>
 
@@ -314,10 +258,10 @@
           @else if (rootRecordData.event.kind === 31871) {
           <app-wot-event [event]="rootRecordData.event"></app-wot-event>
           } @else {
-          <app-content [content]="rootRecordData.data" [event]="rootRecordData.event"
-            [trustedByPubkey]="trustedByPubkey() || item.event.pubkey" [disableExpansion]="navigationDisabled()"
-            [inFeedsPanel]="inFeedsPanel()" [hideSocialPreviews]="isRootContentCollapsed()"
-            [hideInlineMediaAndLinks]="isRootContentCollapsed()"></app-content>
+          <!-- Unknown event kind (NIP-31 + NIP-89) -->
+          <app-unknown-event [event]="rootRecordData.event" [content]="rootRecordData.data"
+            [trustedByPubkey]="trustedByPubkey() || item.event.pubkey"
+            [inFeedsPanel]="inFeedsPanel()"></app-unknown-event>
           }
         </mat-card-content>
         @if (isRootContentLong()) {
@@ -466,10 +410,10 @@
           @else if (parentRecordData.event.kind === 31871) {
           <app-wot-event [event]="parentRecordData.event"></app-wot-event>
           } @else {
-          <app-content [content]="parentRecordData.data" [event]="parentRecordData.event"
-            [trustedByPubkey]="trustedByPubkey() || item.event.pubkey" [disableExpansion]="navigationDisabled()"
-            [inFeedsPanel]="inFeedsPanel()" [hideSocialPreviews]="isParentContentCollapsed()"
-            [hideInlineMediaAndLinks]="isParentContentCollapsed()"></app-content>
+          <!-- Unknown event kind (NIP-31 + NIP-89) -->
+          <app-unknown-event [event]="parentRecordData.event" [content]="parentRecordData.data"
+            [trustedByPubkey]="trustedByPubkey() || item.event.pubkey"
+            [inFeedsPanel]="inFeedsPanel()"></app-unknown-event>
           }
         </mat-card-content>
         @if (isParentContentLong()) {
@@ -618,65 +562,10 @@
     @else if (item.event.kind === 31871) {
     <app-wot-event [event]="item.event"></app-wot-event>
     } @else {
-    <div class="main-content-wrapper" [class.collapsed]="isMainContentCollapsed()">
-      <app-content [content]="displayedRecord()?.data" [event]="item.event"
-        [trustedByPubkey]="trustedByPubkey() || item.event.pubkey" [disableExpansion]="navigationDisabled()"
-        [inFeedsPanel]="inFeedsPanel()" [hideSocialPreviews]="isMainContentCollapsed()"
-        [hideInlineMediaAndLinks]="isMainContentCollapsed()"></app-content>
-    </div>
-    @if (isMainContentLong()) {
-    @if (!isMainContentExpanded()) {
-    <button mat-button class="show-more-btn" (click)="onExpandClick($event, isMainContentExpanded, true)">
-      <mat-icon>expand_more</mat-icon>
-      Show more
-    </button>
-    @if (mainCollapsedMedia().images.length > 0) {
-    <div class="collapsed-images">
-      @if (mainCollapsedMedia().images.length === 1) {
-      <img [src]="mainCollapsedMedia().images[0]" alt="Image" loading="lazy"
-        (click)="onCollapsedImageClick($event, mainCollapsedMedia().images[0], mainCollapsedMedia().images)" />
-      } @else {
-      <div class="image-grid">
-        @for (image of mainCollapsedMedia().images; track image) {
-        <img [src]="image" alt="Image" loading="lazy"
-          (click)="onCollapsedImageClick($event, image, mainCollapsedMedia().images)" />
-        }
-      </div>
-      }
-    </div>
-    }
-    @if (mainCollapsedMedia().videos.length > 0) {
-    <div class="collapsed-videos" (click)="$event.stopPropagation()">
-      <app-inline-video-player [src]="mainCollapsedMedia().videos[0].url"
-        [poster]="mainCollapsedMedia().videos[0].poster"
-        [style.aspect-ratio]="!isPortraitAspectRatio(mainCollapsedMedia().videos[0].aspectRatio) ? mainCollapsedMedia().videos[0].aspectRatio : null"
-        [fillContainer]="!!mainCollapsedMedia().videos[0].aspectRatio && !isPortraitAspectRatio(mainCollapsedMedia().videos[0].aspectRatio)"
-        [inFeedsPanel]="inFeedsPanel()"></app-inline-video-player>
-      @if (mainCollapsedMedia().videos.length > 1 && !collapsedVideosExpanded()) {
-      <button mat-button class="show-more-videos-btn" (click)="toggleCollapsedVideos($event)">
-        +{{ mainCollapsedMedia().videos.length - 1 }} more {{ mainCollapsedMedia().videos.length - 1 === 1 ? 'video' :
-        'videos' }}
-      </button>
-      }
-      @if (collapsedVideosExpanded()) {
-      @for (video of mainCollapsedMedia().videos.slice(1); track video.url) {
-      <app-inline-video-player [src]="video.url" [poster]="video.poster"
-        [style.aspect-ratio]="!isPortraitAspectRatio(video.aspectRatio) ? video.aspectRatio : null"
-        [fillContainer]="!!video.aspectRatio && !isPortraitAspectRatio(video.aspectRatio)"
-        [inFeedsPanel]="inFeedsPanel()"></app-inline-video-player>
-      }
-      }
-    </div>
-    }
-    @if (mainCollapsedMedia().urls.length > 0) {
-    <div class="collapsed-urls">
-      @for (url of mainCollapsedMedia().urls; track url) {
-      <app-social-preview [url]="url" [compact]="true"></app-social-preview>
-      }
-    </div>
-    }
-    }
-    }
+    <!-- Unknown event kind (NIP-31 + NIP-89) -->
+    <app-unknown-event [event]="item.event" [content]="displayedRecord()?.data"
+      [trustedByPubkey]="trustedByPubkey() || item.event.pubkey"
+      [inFeedsPanel]="inFeedsPanel()"></app-unknown-event>
     }
     }
   </mat-card-content>
@@ -775,66 +664,10 @@
     @else if (item.event.kind === 31871) {
     <app-wot-event [event]="item.event"></app-wot-event>
     } @else {
-    <div class="main-content-wrapper" [class.collapsed]="isMainContentCollapsed()">
-      <app-content [content]="displayedRecord()?.data" [event]="item.event"
-        [trustedByPubkey]="trustedByPubkey() || item.event.pubkey" [disableExpansion]="navigationDisabled()"
-        [inFeedsPanel]="inFeedsPanel()" [hideSocialPreviews]="isMainContentCollapsed()"
-        [hideInlineMediaAndLinks]="isMainContentCollapsed()"></app-content>
-    </div>
-    @if (isMainContentLong()) {
-    <!-- Images and URLs for collapsed content (normal event) -->
-    @if (!isMainContentExpanded()) {
-    <button mat-button class="show-more-btn" (click)="onExpandClick($event, isMainContentExpanded, true)">
-      <mat-icon>expand_more</mat-icon>
-      Show more
-    </button>
-    @if (mainCollapsedMedia().images.length > 0) {
-    <div class="collapsed-images">
-      @if (mainCollapsedMedia().images.length === 1) {
-      <img [src]="mainCollapsedMedia().images[0]" alt="Image" loading="lazy"
-        (click)="onCollapsedImageClick($event, mainCollapsedMedia().images[0], mainCollapsedMedia().images)" />
-      } @else {
-      <div class="image-grid">
-        @for (image of mainCollapsedMedia().images; track image) {
-        <img [src]="image" alt="Image" loading="lazy"
-          (click)="onCollapsedImageClick($event, image, mainCollapsedMedia().images)" />
-        }
-      </div>
-      }
-    </div>
-    }
-    @if (mainCollapsedMedia().videos.length > 0) {
-    <div class="collapsed-videos" (click)="$event.stopPropagation()">
-      <app-inline-video-player [src]="mainCollapsedMedia().videos[0].url"
-        [poster]="mainCollapsedMedia().videos[0].poster"
-        [style.aspect-ratio]="!isPortraitAspectRatio(mainCollapsedMedia().videos[0].aspectRatio) ? mainCollapsedMedia().videos[0].aspectRatio : null"
-        [fillContainer]="!!mainCollapsedMedia().videos[0].aspectRatio && !isPortraitAspectRatio(mainCollapsedMedia().videos[0].aspectRatio)"
-        [inFeedsPanel]="inFeedsPanel()"></app-inline-video-player>
-      @if (mainCollapsedMedia().videos.length > 1 && !collapsedVideosExpanded()) {
-      <button mat-button class="show-more-videos-btn" (click)="toggleCollapsedVideos($event)">
-        +{{ mainCollapsedMedia().videos.length - 1 }} more {{ mainCollapsedMedia().videos.length - 1 === 1 ? 'video' :
-        'videos' }}
-      </button>
-      }
-      @if (collapsedVideosExpanded()) {
-      @for (video of mainCollapsedMedia().videos.slice(1); track video.url) {
-      <app-inline-video-player [src]="video.url" [poster]="video.poster"
-        [style.aspect-ratio]="!isPortraitAspectRatio(video.aspectRatio) ? video.aspectRatio : null"
-        [fillContainer]="!!video.aspectRatio && !isPortraitAspectRatio(video.aspectRatio)"
-        [inFeedsPanel]="inFeedsPanel()"></app-inline-video-player>
-      }
-      }
-    </div>
-    }
-    @if (mainCollapsedMedia().urls.length > 0) {
-    <div class="collapsed-urls">
-      @for (url of mainCollapsedMedia().urls; track url) {
-      <app-social-preview [url]="url" [compact]="true"></app-social-preview>
-      }
-    </div>
-    }
-    }
-    }
+    <!-- Unknown event kind (NIP-31 + NIP-89) -->
+    <app-unknown-event [event]="item.event" [content]="displayedRecord()?.data"
+      [trustedByPubkey]="trustedByPubkey() || item.event.pubkey"
+      [inFeedsPanel]="inFeedsPanel()"></app-unknown-event>
     }
     }
   </mat-card-content>

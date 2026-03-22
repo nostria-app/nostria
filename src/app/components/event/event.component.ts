@@ -48,7 +48,9 @@ import {
   RelayListEventComponent,
   HighlightEventComponent,
   WotEventComponent,
+  UnknownEventComponent,
 } from '../event-types';
+import { isKnownRenderableKind } from '../../utils/kind-labels';
 import { ChannelEmbedComponent } from '../channel-embed/channel-embed.component';
 import { UserProfileComponent } from '../user-profile/user-profile.component';
 import { BadgeComponent } from '../../pages/badges/badge/badge.component';
@@ -147,6 +149,7 @@ export function getTaggedXUrl(event?: Event | null): string | undefined {
     RelayListEventComponent,
     HighlightEventComponent,
     WotEventComponent,
+    UnknownEventComponent,
     ChannelEmbedComponent,
     UserProfileComponent,
     BadgeComponent,
@@ -669,7 +672,10 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   isCardClickable = computed<boolean>(() => {
     // Use targetRecord to get the actual event (reposted event for reposts)
     const targetEvent = this.targetRecord()?.event;
-    if (!targetEvent || !this.NAVIGABLE_KINDS.has(targetEvent.kind)) return false;
+    if (!targetEvent) return false;
+
+    // Navigable if it's a known navigable kind OR an unknown kind (open thread)
+    if (!this.NAVIGABLE_KINDS.has(targetEvent.kind) && isKnownRenderableKind(targetEvent.kind)) return false;
 
     // For reposts, the reposted content should always be clickable to navigate to it
     // even when viewing the repost directly
@@ -718,10 +724,11 @@ export class EventComponent implements AfterViewInit, OnDestroy {
 
   // Check if the current event kind supports reactions
   // For reposts, check the reposted event's kind, not the repost kind itself
+  // Unknown kinds (not natively rendered) also support reactions
   supportsReactions = computed<boolean>(() => {
     const targetEvent = this.targetRecord()?.event;
     if (!targetEvent) return false;
-    return this.REACTABLE_KINDS.has(targetEvent.kind);
+    return this.REACTABLE_KINDS.has(targetEvent.kind) || !isKnownRenderableKind(targetEvent.kind);
   });
 
   // Check if this event is currently the one being displayed on the event page

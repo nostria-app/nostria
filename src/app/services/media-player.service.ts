@@ -1253,6 +1253,20 @@ export class MediaPlayerService implements OnInitialized {
     };
   });
 
+  private _tidalUrlCache = new Map<string, SafeResourceUrl>();
+
+  getTidalEmbedUrl = computed(() => {
+    return (embedUrl: string): SafeResourceUrl => {
+      if (this._tidalUrlCache.has(embedUrl)) {
+        return this._tidalUrlCache.get(embedUrl)!;
+      }
+
+      const safeUrl = this.sanitizer.bypassSecurityTrustResourceUrl(embedUrl);
+      this._tidalUrlCache.set(embedUrl, safeUrl);
+      return safeUrl;
+    };
+  });
+
   async start() {
     if (this.index === -1) {
       this.index = 0;

@@ -392,6 +392,32 @@
   }
 }
 
+// Tidal embed container
+.tidal-container {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #000;
+  margin: 12px 0;
+
+  iframe {
+    display: block;
+    width: 100%;
+    height: 130px;
+    border: 0;
+  }
+
+  @media (max-width: 480px) {
+    border-radius: 8px;
+
+    iframe {
+      height: 130px;
+    }
+  }
+}
+
 // Video container - needs different handling for proper sizing
 // Don't use aspect-ratio on container as it conflicts with max-height constraints
 // Let the video element itself handle aspect ratio naturally

@@ -215,6 +215,16 @@
     referrerpolicy="strict-origin-when-cross-origin" allowfullscreen loading="lazy"></iframe>
   }
 </div>
+} @else if (token.type === 'tidal') {
+<!-- Tidal Embed -->
+<div class="media-container tidal-container">
+  @if (token.processedUrl) {
+  <iframe [src]="token.processedUrl" frameborder="0"
+    allow="encrypted-media" title="Tidal music embed"
+    sandbox="allow-same-origin allow-scripts allow-forms allow-popups"
+    loading="lazy"></iframe>
+  }
+</div>
 } @else if (token.type === 'nostr-mention' && (token.nostrData?.type === 'npub' || token.nostrData?.type ===
 'nprofile')) {
 <a class="nostr-mention" (click)="onNostrMentionClick(token)" (mouseenter)="onMentionMouseEnter($event, token)"

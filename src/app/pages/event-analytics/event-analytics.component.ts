@@ -24,6 +24,7 @@ import { ZapService } from '../../services/zap.service';
 import { UtilitiesService } from '../../services/utilities.service';
 import { LayoutService } from '../../services/layout.service';
 import { UserProfileComponent } from '../../components/user-profile/user-profile.component';
+import { getKindLabel } from '../../utils/kind-labels';
 
 interface EventStats {
   reactions: number;
@@ -408,15 +409,7 @@ export class EventAnalyticsComponent implements OnInit {
   getEventKindLabel(): string {
     const event = this.targetEvent();
     if (!event) return '';
-
-    switch (event.kind) {
-      case kinds.ShortTextNote:
-        return 'Note';
-      case kinds.LongFormArticle:
-        return 'Article';
-      default:
-        return `Kind ${event.kind}`;
-    }
+    return getKindLabel(event.kind);
   }
 
   formatSats(sats: number): string {

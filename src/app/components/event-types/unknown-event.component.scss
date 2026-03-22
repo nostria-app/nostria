@@ -1,0 +1,122 @@
+.unknown-event-container {
+  padding: 16px;
+
+  .unknown-event-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+
+    .kind-icon {
+      font-size: 24px;
+      width: 24px;
+      height: 24px;
+      color: var(--mat-sys-on-surface-variant);
+    }
+
+    .kind-info {
+      display: flex;
+      flex-direction: column;
+
+      .kind-label {
+        font-size: 0.95rem;
+        color: var(--mat-sys-on-surface);
+      }
+
+      .kind-number {
+        font-size: 0.75rem;
+        color: var(--mat-sys-on-surface-variant);
+        font-family: monospace;
+      }
+    }
+  }
+
+  .alt-description {
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: var(--mat-sys-surface-container);
+    margin-bottom: 12px;
+
+    p {
+      margin: 0;
+      color: var(--mat-sys-on-surface);
+      line-height: 1.5;
+    }
+  }
+
+  .content-section {
+    margin-bottom: 8px;
+  }
+
+  .toggle-content-btn {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.8rem;
+    color: var(--mat-sys-on-surface-variant);
+    margin-bottom: 8px;
+  }
+
+  .handlers-loading {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.8rem;
+    color: var(--mat-sys-on-surface-variant);
+    padding: 8px 0;
+  }
+
+  .app-handlers {
+    padding-top: 8px;
+    border-top: 1px solid var(--mat-sys-outline-variant);
+
+    .handlers-label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 8px;
+      font-size: 0.85rem;
+      color: var(--mat-sys-on-surface-variant);
+
+      mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+      }
+    }
+
+    .handlers-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+
+      .handler-button {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+
+        .handler-icon {
+          width: 20px;
+          height: 20px;
+          border-radius: 4px;
+          object-fit: cover;
+        }
+
+        .handler-icon-fallback {
+          font-size: 20px;
+          width: 20px;
+          height: 20px;
+          color: var(--mat-sys-on-surface-variant);
+        }
+
+        .handler-name {
+          font-size: 0.85rem;
+          max-width: 150px;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+      }
+    }
+  }
+}

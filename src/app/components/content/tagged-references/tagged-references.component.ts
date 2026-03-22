@@ -18,6 +18,7 @@ import { AccountStateService } from '../../../services/account-state.service';
 import { AccountLocalStateService, ANONYMOUS_PUBKEY } from '../../../services/account-local-state.service';
 import { Router } from '@angular/router';
 import { LocalStorageService } from '../../../services/local-storage.service';
+import { getKindLabel } from '../../../utils/kind-labels';
 
 const RELAY_SET_KIND = 30002;
 const CLIPS_RELAY_SET_D_TAG = 'clips';
@@ -317,20 +318,7 @@ export class TaggedReferencesComponent {
   }
 
   getKindDisplayName(kind: number): string {
-    switch (kind) {
-      case 30023:
-        return 'Article';
-      case 30311:
-        return 'Live Event';
-      case 32100:
-        return 'Playlist';
-      case 34236:
-        return 'Short Video';
-      case 39089:
-        return 'Starter Pack';
-      default:
-        return `Kind ${kind}`;
-    }
+    return getKindLabel(kind);
   }
 
   getArticleImage(article: ParsedArticle): string | null {

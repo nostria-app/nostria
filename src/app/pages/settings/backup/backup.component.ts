@@ -31,6 +31,7 @@ import { MigrationService, MigrationResult } from '../../../services/migration.s
 import { Subscription } from 'rxjs';
 import { RelayInfoDialogComponent, RelayDialogData } from '../relays/relay-info-dialog.component';
 import { Event as NostrEvent } from 'nostr-tools';
+import { getKindLabel } from '../../../utils/kind-labels';
 
 interface BackupStats {
   eventsCount: number;
@@ -542,36 +543,7 @@ export class BackupComponent implements OnInit, OnDestroy {
   }
 
   getKindDescription(kind: number): string {
-    const descriptions: Record<number, string> = {
-      1: 'Notes',
-      6: 'Reposts',
-      7: 'Reactions',
-      16: 'Generic reposts',
-      20: 'Pictures',
-      21: 'Videos',
-      22: 'Audio',
-      1063: 'File metadata',
-      1111: 'Comments',
-      9802: 'Highlights',
-      30023: 'Articles',
-      30024: 'Draft articles',
-      31922: 'Calendar events (date)',
-      31923: 'Calendar events (time)',
-      31924: 'Calendars',
-      31925: 'RSVPs',
-      10000: 'Mute list',
-      10001: 'Pin list',
-      30000: 'Follow sets',
-      30001: 'Lists',
-      30003: 'Bookmarks',
-      30008: 'Profile badges',
-      30009: 'Badge definitions',
-      8: 'Badge awards',
-      1984: 'Reports',
-      9735: 'Zap receipts',
-      30078: 'App data',
-    };
-    return descriptions[kind] || `Kind ${kind}`;
+    return getKindLabel(kind);
   }
 
   getDepthKinds(depth: 'basic' | 'extended' | 'deep'): number[] {

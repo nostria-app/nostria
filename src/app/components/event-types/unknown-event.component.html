@@ -1,0 +1,62 @@
+<div class="unknown-event-container">
+  <!-- Kind badge header -->
+  <div class="unknown-event-header">
+    <mat-icon class="kind-icon">help_outline</mat-icon>
+    <div class="kind-info">
+      <span class="kind-label">{{ kindLabel() }}</span>
+      <span class="kind-number">Kind {{ kindNumber() }}</span>
+    </div>
+  </div>
+
+  <!-- NIP-31: Alt tag description -->
+  @if (altText()) {
+  <div class="alt-description">
+    <p>{{ altText() }}</p>
+  </div>
+  }
+
+  <!-- Content section (text/JSON fallback) -->
+  @if (hasContent()) {
+    @if (!altText() || showContent()) {
+    <div class="content-section">
+      <app-content [content]="content()" [event]="event()"
+        [trustedByPubkey]="trustedByPubkey()"
+        [inFeedsPanel]="inFeedsPanel()"></app-content>
+    </div>
+    }
+    @if (altText() && hasContent()) {
+    <button mat-button class="toggle-content-btn" (click)="toggleContent(); $event.stopPropagation()">
+      <mat-icon>{{ showContent() ? 'expand_less' : 'expand_more' }}</mat-icon>
+      {{ showContent() ? 'Hide raw content' : 'Show raw content' }}
+    </button>
+    }
+  }
+
+  <!-- NIP-89: App handler suggestions -->
+  @if (handlersLoading()) {
+  <div class="handlers-loading">
+    <mat-progress-spinner diameter="16" mode="indeterminate"></mat-progress-spinner>
+    <span>Looking for compatible apps...</span>
+  </div>
+  } @else if (appHandlers().length > 0) {
+  <div class="app-handlers">
+    <div class="handlers-label">
+      <mat-icon>open_in_new</mat-icon>
+      <span>Open with</span>
+    </div>
+    <div class="handlers-list">
+      @for (handler of appHandlers(); track handler.pubkey) {
+      <button mat-stroked-button class="handler-button" (click)="openInApp(handler); $event.stopPropagation()"
+        [matTooltip]="'Open in ' + handler.name">
+        @if (handler.picture) {
+        <img [src]="handler.picture" [alt]="handler.name" class="handler-icon" />
+        } @else {
+        <mat-icon class="handler-icon-fallback">apps</mat-icon>
+        }
+        <span class="handler-name">{{ handler.name }}</span>
+      </button>
+      }
+    </div>
+  </div>
+  }
+</div>

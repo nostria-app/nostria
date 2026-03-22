@@ -41,6 +41,7 @@ import { MediaPreviewDialogComponent } from '../../components/media-preview-dial
 import { LayoutService } from '../../services/layout.service';
 import { ListFilterValue } from '../../components/list-filter-menu/list-filter-menu.component';
 import { LocalSettingsService, DEFAULT_CONTENT_FILTER } from '../../services/local-settings.service';
+import { getKindLabel } from '../../utils/kind-labels';
 
 interface ActivitySummary {
   notesCount: number;
@@ -1081,14 +1082,7 @@ export class SummaryComponent implements OnInit, OnDestroy {
   }
 
   getEventKindLabel(kind: number): string {
-    switch (kind) {
-      case 1: return 'Note';
-      case 6: return 'Repost';
-      case 16: return 'Repost';
-      case 30023: return 'Article';
-      case 20: return 'Media';
-      default: return 'Event';
-    }
+    return getKindLabel(kind);
   }
 
   // Open article in the right panel

@@ -26,6 +26,7 @@ import { RightPanelService } from '../../services/right-panel.service';
 import { ConfirmDialogComponent, ConfirmDialogData } from '../../components/confirm-dialog/confirm-dialog.component';
 import { NPubPipe } from '../../pipes/npub.pipe';
 import { UserProfileComponent } from '../../components/user-profile/user-profile.component';
+import { getKindLabel } from '../../utils/kind-labels';
 
 interface EventKindInfo {
   kind: number;
@@ -212,29 +213,7 @@ export class DeleteAccountComponent implements OnInit {
   }
 
   private getKindName(kind: number): string {
-    const kindNames: Record<number, string> = {
-      [kinds.Metadata]: 'Profile Metadata',
-      [kinds.ShortTextNote]: 'Text Notes',
-      [kinds.RecommendRelay]: 'Recommend Relay',
-      [kinds.Contacts]: 'Contact List',
-      [kinds.EncryptedDirectMessage]: 'Direct Messages',
-      [kinds.EventDeletion]: 'Event Deletions',
-      [kinds.Repost]: 'Reposts',
-      [kinds.Reaction]: 'Reactions',
-      [kinds.BadgeAward]: 'Badge Awards',
-      [kinds.Reporting]: 'Reports',
-      [kinds.ZapRequest]: 'Zap Requests',
-      [kinds.Zap]: 'Zaps',
-      [kinds.RelayList]: 'Relay List',
-      [kinds.Mutelist]: 'Mute List',
-      [kinds.Pinlist]: 'Pin List',
-      30000: 'People Lists',
-      30001: 'Bookmark Lists',
-      [kinds.LongFormArticle]: 'Long-form Articles',
-      31871: 'Web of Trust Attestations',
-    };
-
-    return kindNames[kind] || `Event Kind ${kind}`;
+    return getKindLabel(kind);
   }
 
   private getKindDescription(kind: number): string {
