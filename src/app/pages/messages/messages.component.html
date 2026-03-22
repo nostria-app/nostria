@@ -537,9 +537,8 @@
         <div class="message-group-container" [class.outgoing]="message.isOutgoing"
           [class.group-start]="isMessageGroupStart(group.messages, msgIdx)"
           [class.group-continuation]="!isMessageGroupStart(group.messages, msgIdx)"
-          (touchstart)="onMessageTouchStart($event, message)"
-          (touchend)="onMessageTouchEnd()" (touchmove)="onMessageTouchEnd()"
-          (contextmenu)="onMessageContextMenu($event, message)">
+          (touchstart)="onMessageTouchStart($event, message)" (touchend)="onMessageTouchEnd()"
+          (touchmove)="onMessageTouchEnd()" (contextmenu)="onMessageContextMenu($event, message)">
 
           <!-- Avatar column (visible only on group start) -->
           <div class="message-avatar-column">
@@ -551,8 +550,8 @@
           <!-- Message content column -->
           <div class="message-content-column">
             <div class="message-bubble-row">
-              <div class="message-bubble" [class.pending]="message.pending"
-                [class.failed]="message.failed" [class.long-press-active]="longPressedMessage()?.id === message.id">
+              <div class="message-bubble" [class.pending]="message.pending" [class.failed]="message.failed"
+                [class.long-press-active]="longPressedMessage()?.id === message.id">
                 @if (isMessageGroupStart(group.messages, msgIdx) && !message.isOutgoing) {
                 <div class="message-sender-name">
                   <app-profile-display-name [pubkey]="message.pubkey" />
@@ -690,9 +689,8 @@
         } @else {
         <!-- 1-on-1 / note-to-self layout -->
         <div class="message-bubble-container" [class.outgoing]="message.isOutgoing"
-          (touchstart)="onMessageTouchStart($event, message)"
-          (touchend)="onMessageTouchEnd()" (touchmove)="onMessageTouchEnd()"
-          (contextmenu)="onMessageContextMenu($event, message)">
+          (touchstart)="onMessageTouchStart($event, message)" (touchend)="onMessageTouchEnd()"
+          (touchmove)="onMessageTouchEnd()" (contextmenu)="onMessageContextMenu($event, message)">
           <div class="message-bubble" [class.outgoing]="message.isOutgoing" [class.pending]="message.pending"
             [class.failed]="message.failed" [class.long-press-active]="longPressedMessage()?.id === message.id">
             @if (getReplyPreviewText(message); as replyPreviewText) {
