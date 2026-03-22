@@ -224,6 +224,9 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   isDragOverMessageInput = signal<boolean>(false);
   uploadStatus = signal<string>('');
   mediaPreviews = signal<{ url: string; type: 'image' | 'video' | 'music'; label?: string }[]>([]);
+
+  /** Pending extra tags (e.g. imeta with waveform) for the next message */
+  pendingTags = signal<string[][]>([]);
   error = signal<string | null>(null);
   showMobileList = signal<boolean>(true);
   selectedTabIndex = signal<number>(0); // 0 = Following, 1 = Others
@@ -1946,6 +1949,16 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
 
           if (uploadResult.status === 'success' && uploadResult.item) {
             this.insertMediaUrl(uploadResult.item.url, uploadResult.item.type);
+
+            // Add imeta tag with waveform and duration for audio player rendering
+            const imetaTag = ['imeta', `url ${uploadResult.item.url}`, `m ${uploadResult.item.type}`];
+            if (result.waveform?.length) {
+              imetaTag.push(`waveform ${result.waveform.join(' ')}`);
+            }
+            if (result.duration) {
+              imetaTag.push(`duration ${result.duration}`);
+            }
+            this.pendingTags.update(tags => [...tags, imetaTag]);
           } else {
             this.snackBar.open('Failed to upload audio clip', 'Dismiss', { duration: 5000 });
           }
@@ -2119,6 +2132,8 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       this.newMessageText.set('');
       this.replyingToMessage.set(null);
       this.mediaPreviews.set([]);
+      const extraRumorTags = this.pendingTags();
+      this.pendingTags.set([]);
 
       // Create the message (encrypts + signs, but does NOT publish yet)
       let result: { message: DirectMessage; publish: () => Promise<{ success: boolean; failureReason?: string }> };
@@ -2131,6 +2146,8 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
           selectedChat.participants,
           myPubkey,
           replyToMessage?.id,
+          undefined,
+          extraRumorTags.length ? { extraRumorTags } : undefined,
         );
       } else {
         // 1-on-1 chat
@@ -2141,7 +2158,8 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
             messageText,
             selectedChat.pubkey,
             myPubkey,
-            replyToMessage?.id
+            replyToMessage?.id,
+            extraRumorTags.length ? { extraRumorTags } : undefined,
           );
         } else {
           result = await this.createNip04Message(
