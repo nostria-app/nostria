@@ -219,9 +219,8 @@
 <!-- Tidal Embed -->
 <div class="media-container tidal-container">
   @if (token.processedUrl) {
-  <iframe [src]="token.processedUrl" frameborder="0"
-    allow="encrypted-media" title="Tidal music embed"
-    sandbox="allow-same-origin allow-scripts allow-forms allow-popups"
+  <iframe [src]="token.processedUrl" frameborder="0" allow="encrypted-media; clipboard-write" title="Tidal music embed"
+    sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"
     loading="lazy"></iframe>
   }
 </div>

@@ -124,8 +124,8 @@ interface EventMention {
         <div class="tidal-container">
           @if (part.processedUrl) {
           <iframe [src]="part.processedUrl" frameborder="0"
-            allow="encrypted-media" title="Tidal music embed"
-            sandbox="allow-same-origin allow-scripts allow-forms allow-popups"
+            allow="encrypted-media; clipboard-write" title="Tidal music embed"
+            sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"
             loading="lazy"></iframe>
           }
         </div>
