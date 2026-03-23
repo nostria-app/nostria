@@ -17,7 +17,7 @@ export class LinkifyPipe implements PipeTransform {
     if (!text) return '';
 
     // URL regex pattern - matches http/https URLs
-    const urlRegex = /(https?:\/\/[^\s<>"{}|\\^`[\]]+)/g;
+    const urlRegex = /(https?:\/\/[^\s<>"{}|\\^`[\]]+)/gi;
 
     // Escape HTML entities first to prevent XSS
     const escaped = this.utilities.escapeHtml(text);

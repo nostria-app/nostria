@@ -366,7 +366,8 @@ export class ParsingService implements OnDestroy {
     // Parentheses are allowed to support URL-encoded text fragments and Wikipedia-style URLs
     // Trailing punctuation (including unbalanced parens) is handled by post-processing cleanup
     // Stops at whitespace, LINEBREAK markers, quotes, or common trailing punctuation
-    const urlRegex = /(https?:\/\/[^\s}\]>"]+?)(?=\s|##LINEBREAK##|$|[,;!?]\s|[,;!?]$|")/g;
+    // Case-insensitive to match Https://, HTTP://, etc.
+    const urlRegex = /(https?:\/\/[^\s}\]>"]+?)(?=\s|##LINEBREAK##|$|[,;!?]\s|[,;!?]$|")/gi;
     // Bare-domain URL regex (no protocol), e.g. app.social, mywebsite.com/path
     // Captures a leading boundary in group 1 and the domain/path in group 2
     // to avoid matching inside words and to preserve correct token start index.
@@ -559,7 +560,7 @@ export class ParsingService implements OnDestroy {
         // Check if there's an unclosed URL before this match
         // Look for https:// or http:// without whitespace/linebreak after it
         // Must also treat ##LINEBREAK## markers as boundaries (they replace \n during preprocessing)
-        const urlStartMatch = textBefore.match(/https?:\/\/(?:(?!##LINEBREAK##)[^\s])*$/);
+        const urlStartMatch = textBefore.match(/https?:\/\/(?:(?!##LINEBREAK##)[^\s])*$/i);
         if (urlStartMatch) {
           // There's a URL that extends to this match position - we're inside a URL
           isInsideUrl = true;
