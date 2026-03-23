@@ -232,6 +232,10 @@ export class NavigationComponent {
   undockFromToolbar(): void {
     this.layout.mediaPlayerInToolbar.set(false);
     this.toolbarPlayerHovered.set(false);
+    // On mobile, flip the cube to show the player face
+    if (this.layout.isHandset()) {
+      this.layout.setCubePlayerFace(true);
+    }
   }
 
   openFullscreenPlayer(): void {
