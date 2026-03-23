@@ -1,6 +1,7 @@
 .code-snippet-container {
   display: flex;
   flex-direction: column;
+  margin-top: 8px;
   border-radius: var(--mat-sys-corner-medium);
   overflow: hidden;
   border: 1px solid var(--mat-sys-outline-variant);
