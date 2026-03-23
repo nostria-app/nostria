@@ -1,0 +1,32 @@
+.form-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.form-row {
+  display: flex;
+  gap: 12px;
+
+  @media (max-width: 480px) {
+    flex-direction: column;
+    gap: 4px;
+  }
+}
+
+.half-field {
+  flex: 1;
+}
+
+.code-field {
+  .code-textarea {
+    font-family: 'Fira Code', 'Cascadia Code', 'JetBrains Mono', 'SF Mono', 'Consolas', 'Liberation Mono', monospace;
+    font-size: 13px;
+    line-height: 1.5;
+    tab-size: 2;
+    -moz-tab-size: 2;
+    field-sizing: content;
+    min-height: 120px;
+    max-height: 400px;
+  }
+}

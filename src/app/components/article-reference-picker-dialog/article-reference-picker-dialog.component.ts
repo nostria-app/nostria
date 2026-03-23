@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Event, nip19 } from 'nostr-tools';
+import { Event, kinds, nip19 } from 'nostr-tools';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTabsModule } from '@angular/material/tabs';
@@ -9,13 +9,22 @@ import { MatInputModule } from '@angular/material/input';
 import { MatListModule } from '@angular/material/list';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatChipsModule } from '@angular/material/chips';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { BookmarkList, BookmarkService } from '../../services/bookmark.service';
 import { CustomDialogRef } from '../../services/custom-dialog.service';
 import { DatabaseService } from '../../services/database.service';
+import { AccountStateService } from '../../services/account-state.service';
+import { UserRelayService } from '../../services/relays/user-relay';
+import { UserProfileComponent } from '../user-profile/user-profile.component';
+import { AgoPipe } from '../../pipes/ago.pipe';
+import { getKindLabel } from '../../utils/kind-labels';
 
 export interface ArticleReferencePickerResult {
   references: string[];
 }
+
+type EventKindFilter = 'all' | 'articles' | 'notes' | 'media' | 'other';
 
 @Component({
   selector: 'app-article-reference-picker-dialog',
@@ -29,6 +38,10 @@ export interface ArticleReferencePickerResult {
     MatListModule,
     MatSnackBarModule,
     MatProgressSpinnerModule,
+    MatChipsModule,
+    MatTooltipModule,
+    UserProfileComponent,
+    AgoPipe,
   ],
   templateUrl: './article-reference-picker-dialog.component.html',
   styleUrl: './article-reference-picker-dialog.component.scss',
@@ -40,15 +53,21 @@ export class ArticleReferencePickerDialogComponent {
   private readonly database = inject(DatabaseService);
   private readonly snackBar = inject(MatSnackBar);
   private readonly bookmarkService = inject(BookmarkService);
+  private readonly accountState = inject(AccountStateService);
+  private readonly userRelayService = inject(UserRelayService);
 
   readonly query = signal('');
   readonly pastedReference = signal('');
   readonly activeTabIndex = signal(0);
   readonly profilesLoading = signal(false);
   readonly eventsLoading = signal(false);
+  readonly myArticlesLoading = signal(false);
+  readonly eventKindFilter = signal<EventKindFilter>('all');
 
   private readonly profileSearchResults = signal<Event[]>([]);
   private readonly eventSearchResults = signal<Event[]>([]);
+  private readonly myArticleResults = signal<Event[]>([]);
+  private readonly authorNameCache = new Map<string, string>();
   private readonly SEARCH_DEBOUNCE_MS = 250;
   private readonly MAX_SEARCH_RESULTS = 200;
   private searchDebounceTimer?: ReturnType<typeof setTimeout>;
@@ -58,7 +77,18 @@ export class ArticleReferencePickerDialogComponent {
 
   readonly filteredProfiles = computed(() => this.profileSearchResults());
 
-  readonly filteredEvents = computed(() => this.eventSearchResults());
+  readonly filteredEvents = computed(() => {
+    const events = this.eventSearchResults();
+    const filter = this.eventKindFilter();
+    if (filter === 'all') {
+      return events;
+    }
+    return events.filter((event) => this.matchesKindFilter(event, filter));
+  });
+
+  readonly myArticles = computed(() => this.myArticleResults());
+
+  readonly isLoggedIn = computed(() => !!this.accountState.pubkey());
 
   onSearchQueryChange(value: string): void {
     this.query.set(value);
@@ -67,7 +97,111 @@ export class ArticleReferencePickerDialogComponent {
 
   onTabIndexChange(index: number): void {
     this.activeTabIndex.set(index);
-    this.scheduleSearchForActiveTab();
+    if (index === 1) {
+      this.loadMyArticles();
+    } else {
+      this.scheduleSearchForActiveTab();
+    }
+  }
+
+  onEventKindFilterChange(filter: EventKindFilter): void {
+    this.eventKindFilter.set(filter);
+  }
+
+  private loadMyArticles(): void {
+    const pubkey = this.accountState.pubkey();
+    if (!pubkey) {
+      return;
+    }
+    if (this.myArticleResults().length > 0) {
+      return;
+    }
+    this.myArticlesLoading.set(true);
+    const token = ++this.activeSearchToken;
+
+    void (async () => {
+      try {
+        // First, load from local DB for instant results
+        const dbEvents = await this.database.getEventsByKind(kinds.LongFormArticle);
+        if (token !== this.activeSearchToken) {
+          return;
+        }
+
+        for (const event of dbEvents) {
+          if (event.pubkey === pubkey) {
+            const dTag = event.tags.find((t) => t[0] === 'd')?.[1] || event.id;
+            const existing = this.allMyArticles.get(dTag);
+            if (!existing || event.created_at > existing.created_at) {
+              this.allMyArticles.set(dTag, event);
+            }
+          }
+        }
+
+        this.setMyArticleResults(Array.from(this.allMyArticles.values()), token);
+
+        // Then, fetch from relays to get latest articles
+        try {
+          const relayEvents = await this.userRelayService.query(pubkey, {
+            kinds: [kinds.LongFormArticle],
+            authors: [pubkey],
+            limit: 50,
+          });
+
+          if (token !== this.activeSearchToken || !relayEvents) {
+            return;
+          }
+
+          // Merge relay results with DB results
+          for (const event of relayEvents) {
+            if (event.pubkey === pubkey) {
+              const dTag = event.tags.find((t) => t[0] === 'd')?.[1] || event.id;
+              const existing = this.allMyArticles.get(dTag);
+              if (!existing || event.created_at > existing.created_at) {
+                this.allMyArticles.set(dTag, event);
+              }
+            }
+          }
+
+          this.setMyArticleResults(Array.from(this.allMyArticles.values()), token);
+        } catch {
+          // Relay fetch failed - that's fine, we already have DB results
+        }
+      } catch (error) {
+        if (token === this.activeSearchToken) {
+          this.myArticleResults.set([]);
+          this.snackBar.open('Failed to load your articles', 'Close', { duration: 3000 });
+          console.error('Failed to load articles:', error);
+        }
+      } finally {
+        if (token === this.activeSearchToken) {
+          this.myArticlesLoading.set(false);
+        }
+      }
+    })();
+  }
+
+  private setMyArticleResults(articles: Event[], token: number): void {
+    if (token !== this.activeSearchToken) {
+      return;
+    }
+
+    const sorted = articles
+      .sort((a, b) => b.created_at - a.created_at)
+      .slice(0, this.MAX_SEARCH_RESULTS);
+
+    const q = this.query().trim().toLowerCase();
+    if (q) {
+      this.myArticleResults.set(
+        sorted.filter((event) => {
+          const title = this.getEventTitle(event).toLowerCase();
+          const content = (event.content || '').slice(0, 500).toLowerCase();
+          const summary = this.getEventSummary(event).toLowerCase();
+          return title.includes(q) || content.includes(q) || summary.includes(q);
+        }),
+      );
+    } else {
+      this.myArticleResults.set(sorted);
+    }
   }
 
   private scheduleSearchForActiveTab(): void {
@@ -79,16 +213,26 @@ export class ArticleReferencePickerDialogComponent {
     const tabIndex = this.activeTabIndex();
     const q = this.query().trim();
 
-    if (tabIndex !== 1 && tabIndex !== 2) {
+    // My Articles tab: re-filter loaded articles
+    if (tabIndex === 1) {
+      if (this.myArticleResults().length > 0 || this.myArticlesLoading()) {
+        this.loadMyArticlesFiltered();
+      } else {
+        this.loadMyArticles();
+      }
+      return;
+    }
+
+    if (tabIndex !== 2 && tabIndex !== 3) {
       return;
     }
 
     if (!q) {
-      if (tabIndex === 1) {
+      if (tabIndex === 2) {
         this.profileSearchResults.set([]);
         this.profilesLoading.set(false);
       }
-      if (tabIndex === 2) {
+      if (tabIndex === 3) {
         this.eventSearchResults.set([]);
         this.eventsLoading.set(false);
       }
@@ -100,10 +244,29 @@ export class ArticleReferencePickerDialogComponent {
     }, this.SEARCH_DEBOUNCE_MS);
   }
 
+  private readonly allMyArticles = new Map<string, Event>();
+
+  private loadMyArticlesFiltered(): void {
+    const pubkey = this.accountState.pubkey();
+    if (!pubkey) {
+      return;
+    }
+
+    // If we already have cached articles, just re-filter
+    if (this.allMyArticles.size > 0) {
+      const token = this.activeSearchToken;
+      this.setMyArticleResults(Array.from(this.allMyArticles.values()), token);
+      return;
+    }
+
+    // Otherwise, do a full load
+    this.loadMyArticles();
+  }
+
   private async searchActiveTab(query: string, tabIndex: number): Promise<void> {
     const token = ++this.activeSearchToken;
 
-    if (tabIndex === 1) {
+    if (tabIndex === 2) {
       this.profilesLoading.set(true);
 
       try {
@@ -127,7 +290,7 @@ export class ArticleReferencePickerDialogComponent {
       return;
     }
 
-    if (tabIndex === 2) {
+    if (tabIndex === 3) {
       this.eventsLoading.set(true);
 
       try {
@@ -136,7 +299,11 @@ export class ArticleReferencePickerDialogComponent {
           return;
         }
 
-        this.eventSearchResults.set(this.filterEvents(allEvents, query));
+        const filtered = this.filterEvents(allEvents, query);
+        this.eventSearchResults.set(filtered);
+
+        // Resolve author names in the background
+        void this.resolveAuthorNames(filtered.map((e) => e.pubkey));
       } catch (error) {
         if (token === this.activeSearchToken) {
           this.eventSearchResults.set([]);
@@ -197,12 +364,14 @@ export class ArticleReferencePickerDialogComponent {
       .filter((event) => {
         const title = this.getEventTitle(event).toLowerCase();
         const kind = String(event.kind);
+        const kindLabel = getKindLabel(event.kind).toLowerCase();
         const id = event.id.toLowerCase();
         const pubkey = event.pubkey.toLowerCase();
         const content = (event.content || '').slice(0, 500).toLowerCase();
         return (
           title.includes(q) ||
           kind.includes(q) ||
+          kindLabel.includes(q) ||
           id.includes(q) ||
           pubkey.includes(q) ||
           content.includes(q)
@@ -210,6 +379,63 @@ export class ArticleReferencePickerDialogComponent {
       })
       .sort((a, b) => b.created_at - a.created_at)
       .slice(0, this.MAX_SEARCH_RESULTS);
+  }
+
+  private matchesKindFilter(event: Event, filter: EventKindFilter): boolean {
+    switch (filter) {
+      case 'articles':
+        return event.kind === kinds.LongFormArticle || event.kind === 30024;
+      case 'notes':
+        return event.kind === kinds.ShortTextNote || event.kind === 1111;
+      case 'media':
+        return event.kind === 20 || event.kind === 21 || event.kind === 22 ||
+          event.kind === 1063 || event.kind === 1222 || event.kind === 1244 ||
+          event.kind === 34235 || event.kind === 34236 || event.kind === 36787;
+      case 'other':
+        return !this.matchesKindFilter(event, 'articles') &&
+          !this.matchesKindFilter(event, 'notes') &&
+          !this.matchesKindFilter(event, 'media');
+      default:
+        return true;
+    }
+  }
+
+  private async resolveAuthorNames(pubkeys: string[]): Promise<void> {
+    const uniquePubkeys = [...new Set(pubkeys)].filter((pk) => !this.authorNameCache.has(pk));
+    if (uniquePubkeys.length === 0) {
+      return;
+    }
+
+    try {
+      const profileEvents = await this.database.getEventsByKind(0);
+      const latestByPubkey = new Map<string, Event>();
+      for (const event of profileEvents) {
+        const current = latestByPubkey.get(event.pubkey);
+        if (!current || event.created_at > current.created_at) {
+          latestByPubkey.set(event.pubkey, event);
+        }
+      }
+
+      for (const pk of uniquePubkeys) {
+        const profileEvent = latestByPubkey.get(pk);
+        if (profileEvent) {
+          const metadata = this.parseProfileMetadata(profileEvent.content);
+          const name = metadata.display_name || metadata.name || '';
+          if (name) {
+            this.authorNameCache.set(pk, name);
+          }
+        }
+      }
+
+      // Trigger change detection by re-setting the signal
+      this.eventSearchResults.set([...this.eventSearchResults()]);
+    } catch {
+      // Silently fail - names are optional
+    }
+  }
+
+  getAuthorName(pubkey: string): string {
+    return this.authorNameCache.get(pubkey) || `${pubkey.slice(0, 12)}...`;
   }
 
   addPastedReference(): void {
@@ -282,6 +508,17 @@ export class ArticleReferencePickerDialogComponent {
     return metadata.nip05 || event.pubkey;
   }
 
+  getProfileAbout(event: Event): string {
+    const metadata = this.parseProfileMetadata(event.content);
+    const about = (metadata.about || '').replace(/\s+/g, ' ').trim();
+    return about.length > 120 ? about.slice(0, 120) + '...' : about;
+  }
+
+  getProfilePicture(event: Event): string {
+    const metadata = this.parseProfileMetadata(event.content);
+    return metadata.picture || '';
+  }
+
   getEventTitle(event: Event): string {
     const title = event.tags.find((tag) => tag[0] === 'title')?.[1];
     const subject = event.tags.find((tag) => tag[0] === 'subject')?.[1];
@@ -289,6 +526,66 @@ export class ArticleReferencePickerDialogComponent {
     const fallbackContent = (event.content || '').replace(/\s+/g, ' ').trim().slice(0, 90);
 
     return title || subject || identifier || fallbackContent || `Event ${event.id.slice(0, 12)}...`;
+  }
+
+  getEventSummary(event: Event): string {
+    const summary = event.tags.find((tag) => tag[0] === 'summary')?.[1];
+    if (summary) {
+      const trimmed = summary.replace(/\s+/g, ' ').trim();
+      return trimmed.length > 160 ? trimmed.slice(0, 160) + '...' : trimmed;
+    }
+    const content = (event.content || '').replace(/[#*_~`>[\]()!]/g, '').replace(/\s+/g, ' ').trim();
+    return content.length > 160 ? content.slice(0, 160) + '...' : content;
+  }
+
+  getEventImage(event: Event): string {
+    return event.tags.find((tag) => tag[0] === 'image')?.[1] || '';
+  }
+
+  getEventHashtags(event: Event): string[] {
+    return event.tags
+      .filter((tag) => tag[0] === 't' && tag[1])
+      .map((tag) => tag[1])
+      .slice(0, 5);
+  }
+
+  getKindLabel(kind: number): string {
+    return getKindLabel(kind);
+  }
+
+  getKindIcon(kind: number): string {
+    switch (kind) {
+      case kinds.ShortTextNote:
+        return 'short_text';
+      case kinds.LongFormArticle:
+        return 'article';
+      case 30024:
+        return 'edit_note';
+      case 20:
+        return 'photo';
+      case 21:
+      case 34235:
+        return 'videocam';
+      case 22:
+      case 34236:
+        return 'play_circle';
+      case 1068:
+        return 'poll';
+      case 1111:
+        return 'comment';
+      case 1222:
+      case 1244:
+      case 36787:
+        return 'music_note';
+      case 30311:
+        return 'live_tv';
+      case 9802:
+        return 'format_quote';
+      case 34139:
+        return 'queue_music';
+      default:
+        return 'event';
+    }
   }
 
   getBookmarkListEntryLabel(list: BookmarkList): string {
@@ -397,6 +694,7 @@ export class ArticleReferencePickerDialogComponent {
     display_name?: string;
     about?: string;
     nip05?: string;
+    picture?: string;
   } {
     try {
       const metadata = JSON.parse(content || '{}') as {
@@ -404,6 +702,7 @@ export class ArticleReferencePickerDialogComponent {
         display_name?: string;
         about?: string;
         nip05?: string | string[];
+        picture?: string;
       };
 
       const nip05 = Array.isArray(metadata.nip05) ? metadata.nip05[0] : metadata.nip05;
@@ -413,6 +712,7 @@ export class ArticleReferencePickerDialogComponent {
         display_name: metadata.display_name,
         about: metadata.about,
         nip05,
+        picture: metadata.picture,
       };
     } catch {
       return {};

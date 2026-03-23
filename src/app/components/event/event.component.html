@@ -148,6 +148,10 @@
     <app-highlight-event [event]="targetItem.event" [trustedByPubkey]="trustedByPubkey() || item.event.pubkey"
       [inFeedsPanel]="inFeedsPanel()"></app-highlight-event>
     }
+    <!-- Code Snippets (kind 1337) - NIP-C0 -->
+    @else if (targetItem.event.kind === 1337) {
+    <app-code-snippet-event [event]="targetItem.event"></app-code-snippet-event>
+    }
     <!-- Web of Trust Attestations (kind 31871) -->
     @else if (targetItem.event.kind === 31871) {
     <app-wot-event [event]="targetItem.event"></app-wot-event>
@@ -215,8 +219,7 @@
     } @else {
     <!-- Unknown event kind (NIP-31 alt text + NIP-89 app handlers) -->
     <app-unknown-event [event]="targetItem.event" [content]="displayedRecord()?.data"
-      [trustedByPubkey]="trustedByPubkey() || item.event.pubkey"
-      [inFeedsPanel]="inFeedsPanel()"></app-unknown-event>
+      [trustedByPubkey]="trustedByPubkey() || item.event.pubkey" [inFeedsPanel]="inFeedsPanel()"></app-unknown-event>
     }
     }
   </mat-card-content>
@@ -315,6 +318,10 @@
           <!-- Channel events (kind 40/42, NIP-28) -->
           @else if (rootRecordData.event.kind === 40 || rootRecordData.event.kind === 42) {
           <app-channel-embed [event]="rootRecordData.event"></app-channel-embed>
+          }
+          <!-- Code Snippets (kind 1337) - NIP-C0 -->
+          @else if (rootRecordData.event.kind === 1337) {
+          <app-code-snippet-event [event]="rootRecordData.event"></app-code-snippet-event>
           }
           <!-- Web of Trust Attestations (kind 31871) -->
           @else if (rootRecordData.event.kind === 31871) {
@@ -475,6 +482,10 @@
           @else if (parentRecordData.event.kind === 40 || parentRecordData.event.kind === 42) {
           <app-channel-embed [event]="parentRecordData.event"></app-channel-embed>
           }
+          <!-- Code Snippets (kind 1337) - NIP-C0 -->
+          @else if (parentRecordData.event.kind === 1337) {
+          <app-code-snippet-event [event]="parentRecordData.event"></app-code-snippet-event>
+          }
           <!-- Web of Trust Attestations (kind 31871) -->
           @else if (parentRecordData.event.kind === 31871) {
           <app-wot-event [event]="parentRecordData.event"></app-wot-event>
@@ -634,6 +645,10 @@
     <app-highlight-event [event]="item.event" [trustedByPubkey]="trustedByPubkey() || item.event.pubkey"
       [inFeedsPanel]="inFeedsPanel()"></app-highlight-event>
     }
+    <!-- Code Snippets (kind 1337) - NIP-C0 -->
+    @else if (item.event.kind === 1337) {
+    <app-code-snippet-event [event]="item.event"></app-code-snippet-event>
+    }
     <!-- Web of Trust Attestations (kind 31871) -->
     @else if (item.event.kind === 31871) {
     <app-wot-event [event]="item.event"></app-wot-event>
@@ -701,8 +716,7 @@
     } @else {
     <!-- Unknown event kind (NIP-31 + NIP-89) -->
     <app-unknown-event [event]="item.event" [content]="displayedRecord()?.data"
-      [trustedByPubkey]="trustedByPubkey() || item.event.pubkey"
-      [inFeedsPanel]="inFeedsPanel()"></app-unknown-event>
+      [trustedByPubkey]="trustedByPubkey() || item.event.pubkey" [inFeedsPanel]="inFeedsPanel()"></app-unknown-event>
     }
     }
     }
@@ -798,6 +812,10 @@
     <app-highlight-event [event]="item.event" [trustedByPubkey]="trustedByPubkey() || item.event.pubkey"
       [inFeedsPanel]="inFeedsPanel()"></app-highlight-event>
     }
+    <!-- Code Snippets (kind 1337) - NIP-C0 -->
+    @else if (item.event.kind === 1337) {
+    <app-code-snippet-event [event]="item.event"></app-code-snippet-event>
+    }
     <!-- Web of Trust Attestations (kind 31871) -->
     @else if (item.event.kind === 31871) {
     <app-wot-event [event]="item.event"></app-wot-event>
@@ -866,8 +884,7 @@
     } @else {
     <!-- Unknown event kind (NIP-31 + NIP-89) -->
     <app-unknown-event [event]="item.event" [content]="displayedRecord()?.data"
-      [trustedByPubkey]="trustedByPubkey() || item.event.pubkey"
-      [inFeedsPanel]="inFeedsPanel()"></app-unknown-event>
+      [trustedByPubkey]="trustedByPubkey() || item.event.pubkey" [inFeedsPanel]="inFeedsPanel()"></app-unknown-event>
     }
     }
     }

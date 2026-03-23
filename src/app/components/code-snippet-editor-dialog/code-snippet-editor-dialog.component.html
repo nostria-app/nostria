@@ -1,0 +1,68 @@
+<div dialog-content>
+  <div class="form-layout">
+    <!-- Code input (main field) -->
+    <mat-form-field appearance="outline" class="code-field">
+      <mat-label>Code</mat-label>
+      <textarea matInput [ngModel]="code()" (ngModelChange)="code.set($event)" rows="12"
+        placeholder="Paste or type your code here..." class="code-textarea"></textarea>
+    </mat-form-field>
+
+    <div class="form-row">
+      <!-- Language select -->
+      <mat-form-field appearance="outline" class="half-field">
+        <mat-label>Language</mat-label>
+        <mat-select [ngModel]="language()" (ngModelChange)="language.set($event)">
+          <mat-option value="">None</mat-option>
+          @for (lang of languages; track lang) {
+          <mat-option [value]="lang">{{ lang }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      <!-- Filename -->
+      <mat-form-field appearance="outline" class="half-field">
+        <mat-label>Filename</mat-label>
+        <input matInput [ngModel]="name()" (ngModelChange)="name.set($event)" placeholder="e.g. hello-world.js" />
+      </mat-form-field>
+    </div>
+
+    <!-- Description -->
+    <mat-form-field appearance="outline">
+      <mat-label>Description</mat-label>
+      <input matInput [ngModel]="description()" (ngModelChange)="description.set($event)"
+        placeholder="Brief description of what the code does" />
+    </mat-form-field>
+
+    <div class="form-row">
+      <!-- Runtime -->
+      <mat-form-field appearance="outline" class="half-field">
+        <mat-label>Runtime</mat-label>
+        <input matInput [ngModel]="runtime()" (ngModelChange)="runtime.set($event)" placeholder="e.g. node v18.15.0" />
+      </mat-form-field>
+
+      <!-- License -->
+      <mat-form-field appearance="outline" class="half-field">
+        <mat-label>License</mat-label>
+        <input matInput [ngModel]="license()" (ngModelChange)="license.set($event)" placeholder="e.g. MIT" />
+      </mat-form-field>
+    </div>
+
+    <!-- Repository -->
+    <mat-form-field appearance="outline">
+      <mat-label>Repository</mat-label>
+      <input matInput [ngModel]="repo()" (ngModelChange)="repo.set($event)"
+        placeholder="e.g. https://github.com/user/repo" />
+    </mat-form-field>
+  </div>
+</div>
+
+<div dialog-actions>
+  <button mat-button (click)="cancel()">Cancel</button>
+  <button mat-flat-button (click)="publish()" [disabled]="isPublishing() || !code()">
+    @if (isPublishing()) {
+    Publishing...
+    } @else {
+    Publish Snippet
+    }
+  </button>
+</div>

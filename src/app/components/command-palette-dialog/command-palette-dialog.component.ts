@@ -653,6 +653,13 @@ export class CommandPaletteDialogComponent implements AfterViewInit, OnDestroy {
       icon: 'post_add',
       action: () => this.layoutService.createArticle(),
       keywords: ['create article', 'write article', 'new article', 'blog', 'long-form']
+    },
+    {
+      id: 'act-create-code-snippet',
+      label: 'Create Code Snippet',
+      icon: 'code',
+      action: () => this.openCodeSnippetEditor(),
+      keywords: ['create code', 'code snippet', 'paste code', 'share code', 'snippet', 'programming', '1337']
     }
   ];
 
@@ -718,6 +725,16 @@ export class CommandPaletteDialogComponent implements AfterViewInit, OnDestroy {
 
   openNoteEditor() {
     this.eventService.createNote();
+  }
+
+  openCodeSnippetEditor() {
+    import('../code-snippet-editor-dialog/code-snippet-editor-dialog.component').then(m => {
+      this.customDialog.open(m.CodeSnippetEditorDialogComponent, {
+        title: 'Create Code Snippet',
+        width: '700px',
+        maxWidth: '95vw',
+      });
+    });
   }
 
   openDebugPanel() {

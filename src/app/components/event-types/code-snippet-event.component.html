@@ -1,0 +1,60 @@
+<div class="code-snippet-container">
+  <!-- Header bar with language/filename and actions -->
+  <div class="snippet-header">
+    <div class="snippet-info">
+      <mat-icon class="snippet-icon">code</mat-icon>
+      <span class="snippet-label">{{ displayLabel() }}</span>
+      @if (language() && name()) {
+      <span class="snippet-language">{{ language() }}</span>
+      }
+    </div>
+    <div class="snippet-actions">
+      <button mat-icon-button (click)="copyCode(); $event.stopPropagation()"
+        [matTooltip]="copied() ? 'Copied!' : 'Copy code'" class="snippet-action-btn">
+        <mat-icon>{{ copied() ? 'check' : 'content_copy' }}</mat-icon>
+      </button>
+      <button mat-icon-button (click)="downloadSnippet(); $event.stopPropagation()" matTooltip="Download file"
+        class="snippet-action-btn">
+        <mat-icon>download</mat-icon>
+      </button>
+    </div>
+  </div>
+
+  @if (description()) {
+  <div class="snippet-description">{{ description() }}</div>
+  }
+
+  <!-- Code block -->
+  <pre class="snippet-code"><code>{{ code() }}</code></pre>
+
+  <!-- Metadata footer -->
+  @if (hasMetadata()) {
+  <div class="snippet-metadata">
+    @if (runtime()) {
+    <span class="metadata-item" matTooltip="Runtime">
+      <mat-icon>terminal</mat-icon>
+      {{ runtime() }}
+    </span>
+    }
+    @if (licenses().length) {
+    <span class="metadata-item" matTooltip="License">
+      <mat-icon>gavel</mat-icon>
+      {{ licenses().join(', ') }}
+    </span>
+    }
+    @if (dependencies().length) {
+    <span class="metadata-item" matTooltip="Dependencies">
+      <mat-icon>inventory_2</mat-icon>
+      {{ dependencies().join(', ') }}
+    </span>
+    }
+    @if (repo()) {
+    <a class="metadata-item metadata-link" [href]="repo()" target="_blank" rel="noopener noreferrer"
+      matTooltip="Repository" (click)="$event.stopPropagation()">
+      <mat-icon>folder_open</mat-icon>
+      Repository
+    </a>
+    }
+  </div>
+  }
+</div>

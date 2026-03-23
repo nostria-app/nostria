@@ -122,6 +122,11 @@ const COLUMN_TYPES = {
     icon: 'music_note',
     kinds: [32100, 36787, 34139], // Kind 32100 (Music), Kind 36787 (Music Tracks), Kind 34139 (Playlist)
   },
+  code: {
+    label: 'Code',
+    icon: 'code',
+    kinds: [1337], // Code Snippets (NIP-C0)
+  },
   custom: {
     label: 'Custom',
     icon: 'tune',

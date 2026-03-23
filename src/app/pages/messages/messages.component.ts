@@ -1929,6 +1929,54 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   /**
+   * Open the reference picker dialog to insert Nostr references (profiles, events, articles)
+   */
+  async openReferencePicker(): Promise<void> {
+    const { ArticleReferencePickerDialogComponent } = await import(
+      '../../components/article-reference-picker-dialog/article-reference-picker-dialog.component'
+    );
+    type ArticleReferencePickerResult = import(
+      '../../components/article-reference-picker-dialog/article-reference-picker-dialog.component'
+    ).ArticleReferencePickerResult;
+
+    const dialogRef = this.customDialog.open<
+      typeof ArticleReferencePickerDialogComponent.prototype,
+      ArticleReferencePickerResult
+    >(ArticleReferencePickerDialogComponent, {
+      title: 'Insert Reference',
+      width: '760px',
+      maxWidth: '96vw',
+      showCloseButton: true,
+    });
+
+    dialogRef.afterClosed$.subscribe(({ result }) => {
+      const references = result?.references ?? [];
+      if (references.length > 0) {
+        this.insertNostrReferences(references);
+      }
+    });
+  }
+
+  private insertNostrReferences(references: string[]): void {
+    const unique = Array.from(new Set(references.filter(ref => !!ref?.trim())));
+    if (unique.length === 0) {
+      return;
+    }
+
+    const insertionText = unique.join('\n');
+    const currentText = this.newMessageText();
+    const separator = currentText && !currentText.endsWith('\n') && currentText.length > 0 ? '\n' : '';
+    this.newMessageText.set(currentText + separator + insertionText);
+
+    this.messageInput?.nativeElement?.focus();
+    this.snackBar.open(
+      unique.length === 1 ? 'Reference inserted' : `${unique.length} references inserted`,
+      'Close',
+      { duration: 2500 },
+    );
+  }
+
+  /**
    * Record an audio clip and attach it to the message
    */
   async recordAudioClip(): Promise<void> {

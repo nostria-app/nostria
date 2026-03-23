@@ -37,6 +37,7 @@ const KIND_LABELS: Record<number, string> = {
   1222: 'Audio Track',
   1244: 'Audio File',
   1311: 'Live Chat Message',
+  1337: 'Code Snippet',
   1984: 'Reporting',
   6969: 'Zap Poll',
   9734: 'Zap Request',
@@ -121,6 +122,7 @@ const KNOWN_RENDERABLE_KINDS = new Set([
   1111,   // Comment (rendered by <app-content>)
   1222,   // Audio Track
   1244,   // Audio File
+  1337,   // Code Snippet
   6969,   // Zap Poll
   9802,   // Highlight
   10086,  // Discovery Relay List
