@@ -1164,6 +1164,53 @@ export class ChatsComponent implements OnInit, OnDestroy {
     }
   }
 
+  /** Copy the nevent-encoded channel ID to clipboard */
+  async copyChannelId(): Promise<void> {
+    const channel = this.selectedChannel();
+    if (!channel) return;
+
+    const nevent = this.encodeChannelNevent(channel);
+
+    try {
+      await navigator.clipboard.writeText(nevent);
+      this.snackBar.open('Chat ID copied to clipboard', 'OK', { duration: 3000 });
+    } catch {
+      this.snackBar.open('Failed to copy chat ID', 'OK', { duration: 3000 });
+    }
+  }
+
+  /** Share the channel using the Web Share API, with clipboard fallback */
+  async shareChannel(): Promise<void> {
+    const channel = this.selectedChannel();
+    if (!channel) return;
+
+    const nevent = this.encodeChannelNevent(channel);
+    const url = `https://nostria.app/chats/${nevent}`;
+    const chatName = channel.metadata.name || 'Chat';
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: chatName,
+          text: `Check out ${chatName} on Nostria`,
+          url,
+        });
+      } catch (error) {
+        // User cancelled or share failed — ignore AbortError
+        if (error instanceof Error && error.name !== 'AbortError') {
+          this.snackBar.open('Failed to share chat', 'OK', { duration: 3000 });
+        }
+      }
+    } else {
+      try {
+        await navigator.clipboard.writeText(url);
+        this.snackBar.open('Chat link copied to clipboard', 'OK', { duration: 3000 });
+      } catch {
+        this.snackBar.open('Failed to copy chat link', 'OK', { duration: 3000 });
+      }
+    }
+  }
+
   /** Copy the shareable channel link to clipboard */
   async copyChannelLink(): Promise<void> {
     const channel = this.selectedChannel();

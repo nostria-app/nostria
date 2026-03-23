@@ -731,6 +731,12 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     return this.REACTABLE_KINDS.has(targetEvent.kind) || !isKnownRenderableKind(targetEvent.kind);
   });
 
+  // Expose isKnownRenderableKind to the template so @else blocks can distinguish
+  // known text kinds (1, 1111, etc.) from truly unknown kinds
+  isKnownRenderable(kind: number): boolean {
+    return isKnownRenderableKind(kind);
+  }
+
   // Check if this event is currently the one being displayed on the event page
   isCurrentlySelected = computed<boolean>(() => {
     // If navigation is disabled, treat as selected (e.g., in thread view or dialog)

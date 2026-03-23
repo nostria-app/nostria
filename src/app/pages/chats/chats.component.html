@@ -235,6 +235,14 @@
               <mat-icon>link</mat-icon>
               <span>Copy Link</span>
             </button>
+            <button mat-menu-item (click)="copyChannelId()">
+              <mat-icon>fingerprint</mat-icon>
+              <span>Copy ID</span>
+            </button>
+            <button mat-menu-item (click)="shareChannel()">
+              <mat-icon>share</mat-icon>
+              <span>Share</span>
+            </button>
             <button mat-menu-item (click)="refreshChannel()">
               <mat-icon>refresh</mat-icon>
               <span>Refresh</span>
