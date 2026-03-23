@@ -1,0 +1,238 @@
+@if (loading()) {
+<div class="loading-container">
+  <mat-spinner diameter="50"></mat-spinner>
+  <p>Loading community...</p>
+</div>
+} @else if (!community()) {
+<div class="empty-state">
+  <mat-icon>diversity_3</mat-icon>
+  <h2>Community not found</h2>
+  <p>This community could not be found. It may have been deleted or the link may be incorrect.</p>
+  <a mat-flat-button routerLink="/communities">
+    <mat-icon>arrow_back</mat-icon>
+    <span>Browse Communities</span>
+  </a>
+</div>
+} @else {
+<!-- Community Header -->
+<div class="community-header">
+  @if (community()!.image) {
+  <div class="community-banner">
+    <img [src]="community()!.image" [alt]="community()!.name" class="banner-image" />
+  </div>
+  }
+  <div class="community-header-content">
+    <div class="community-header-top">
+      <a mat-icon-button routerLink="/communities" matTooltip="Back to Communities">
+        <mat-icon>arrow_back</mat-icon>
+      </a>
+      <h1 class="community-title title-font">{{ community()!.name }}</h1>
+      <span class="header-spacer"></span>
+      <button mat-icon-button (click)="refresh()" matTooltip="Refresh">
+        <mat-icon>refresh</mat-icon>
+      </button>
+    </div>
+
+    @if (community()!.description) {
+    <p class="community-description">{{ community()!.description }}</p>
+    }
+
+    @if (community()!.rules) {
+    <div class="community-rules">
+      <mat-icon>gavel</mat-icon>
+      <span>{{ community()!.rules }}</span>
+    </div>
+    }
+
+    <div class="community-info-row">
+      <div class="community-creator-row">
+        <span class="info-label">Created by</span>
+        <app-user-profile [pubkey]="community()!.creatorPubkey" view="compact" [showRank]="false"></app-user-profile>
+      </div>
+
+      @if (community()!.moderators.length > 0) {
+      <mat-chip-set>
+        <mat-chip>
+          <mat-icon matChipAvatar>shield</mat-icon>
+          {{ community()!.moderators.length }} moderator{{ community()!.moderators.length !== 1 ? 's' : '' }}
+        </mat-chip>
+      </mat-chip-set>
+      }
+    </div>
+  </div>
+</div>
+
+<mat-divider></mat-divider>
+
+<!-- Tabs: Posts / Moderators -->
+<mat-tab-group [(selectedIndex)]="selectedTab" class="community-tabs">
+  <!-- Posts Tab -->
+  <mat-tab label="Posts">
+    <div class="tab-content">
+      <!-- Post Composer -->
+      @if (isAuthenticated()) {
+      <div class="post-composer">
+        <textarea class="post-textarea"
+                  [value]="newPostContent()"
+                  (input)="newPostContent.set($any($event.target).value)"
+                  placeholder="Write something to this community..."
+                  rows="3"></textarea>
+        <div class="post-actions">
+          <span class="post-count">{{ sortedPosts().length }} posts</span>
+          <span class="post-actions-spacer"></span>
+          @if (isModerator()) {
+          <button mat-button (click)="toggleApprovedFilter()">
+            <mat-icon>{{ showApprovedOnly() ? 'filter_alt' : 'filter_alt_off' }}</mat-icon>
+            {{ showApprovedOnly() ? 'Approved Only' : 'All Posts' }}
+          </button>
+          }
+          <button mat-flat-button
+                  [disabled]="!newPostContent().trim() || isPublishing()"
+                  (click)="submitPost()">
+            @if (isPublishing()) {
+            <mat-spinner diameter="18"></mat-spinner>
+            } @else {
+            <mat-icon>send</mat-icon>
+            }
+            Post
+          </button>
+        </div>
+      </div>
+      } @else {
+      <div class="post-actions">
+        <span class="post-count">{{ sortedPosts().length }} posts</span>
+        <span class="post-actions-spacer"></span>
+        @if (isModerator()) {
+        <button mat-button (click)="toggleApprovedFilter()">
+          <mat-icon>{{ showApprovedOnly() ? 'filter_alt' : 'filter_alt_off' }}</mat-icon>
+          {{ showApprovedOnly() ? 'Approved Only' : 'All Posts' }}
+        </button>
+        }
+      </div>
+      }
+
+      <!-- Posts List -->
+      @if (loadingPosts()) {
+      <div class="loading-container small">
+        <mat-spinner diameter="32"></mat-spinner>
+        <p>Loading posts...</p>
+      </div>
+      } @else if (sortedPosts().length === 0) {
+      <div class="empty-state small">
+        <mat-icon>forum</mat-icon>
+        <h3>No posts yet</h3>
+        <p>Be the first to post in this community!</p>
+      </div>
+      } @else {
+      <div class="posts-list">
+        @for (post of sortedPosts(); track post.id) {
+        <div class="post-wrapper">
+          <app-event [event]="post"></app-event>
+          @if (isModerator() && !isPostApproved(post)) {
+          <div class="moderation-actions">
+            <button mat-button (click)="approvePost(post)" matTooltip="Approve this post">
+              <mat-icon>check_circle</mat-icon>
+              Approve
+            </button>
+          </div>
+          }
+          @if (isModerator() && isPostApproved(post)) {
+          <div class="approved-badge">
+            <mat-icon>verified</mat-icon>
+            <span>Approved</span>
+          </div>
+          }
+        </div>
+        }
+      </div>
+      }
+    </div>
+  </mat-tab>
+
+  <!-- Moderators Tab -->
+  <mat-tab label="Moderators">
+    <div class="tab-content">
+      <div class="moderators-list">
+        <!-- Community creator is always listed first -->
+        <div class="moderator-item">
+          <app-user-profile [pubkey]="community()!.creatorPubkey" view="compact" [showRank]="false"></app-user-profile>
+          <mat-chip-set>
+            <mat-chip>Owner</mat-chip>
+          </mat-chip-set>
+        </div>
+
+        @for (mod of community()!.moderators; track mod.pubkey) {
+        <div class="moderator-item">
+          <app-user-profile [pubkey]="mod.pubkey" view="compact" [showRank]="false"></app-user-profile>
+          <mat-chip-set>
+            <mat-chip>Moderator</mat-chip>
+          </mat-chip-set>
+        </div>
+        }
+
+        @if (community()!.moderators.length === 0) {
+        <div class="empty-state small">
+          <p>No additional moderators have been added to this community.</p>
+        </div>
+        }
+      </div>
+    </div>
+  </mat-tab>
+
+  <!-- About Tab -->
+  <mat-tab label="About">
+    <div class="tab-content">
+      <div class="about-section">
+        @if (community()!.description) {
+        <div class="about-item">
+          <h3>Description</h3>
+          <p>{{ community()!.description }}</p>
+        </div>
+        }
+
+        @if (community()!.rules) {
+        <div class="about-item">
+          <h3>Rules</h3>
+          <p>{{ community()!.rules }}</p>
+        </div>
+        }
+
+        @if (community()!.relays.length > 0) {
+        <div class="about-item">
+          <h3>Relays</h3>
+          <div class="relay-list">
+            @for (relay of community()!.relays; track relay.url) {
+            <div class="relay-item">
+              <mat-icon>dns</mat-icon>
+              <span class="relay-url">{{ relay.url }}</span>
+              @if (relay.marker) {
+              <mat-chip>{{ relay.marker }}</mat-chip>
+              }
+            </div>
+            }
+          </div>
+        </div>
+        }
+
+        <div class="about-item">
+          <h3>Statistics</h3>
+          <div class="stats-row">
+            <div class="stat">
+              <span class="stat-value">{{ allPosts().length }}</span>
+              <span class="stat-label">Posts</span>
+            </div>
+            <div class="stat">
+              <span class="stat-value">{{ approvedCount() }}</span>
+              <span class="stat-label">Approved</span>
+            </div>
+            <div class="stat">
+              <span class="stat-value">{{ community()!.moderators.length + 1 }}</span>
+              <span class="stat-label">Moderators</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </mat-tab>
+</mat-tab-group>
+}

@@ -370,6 +370,30 @@ export const routes: Routes = [
     title: 'Live Streams',
   },
   {
+    path: 'communities',
+    data: { isRoot: true },
+    title: 'Communities',
+    children: [
+      {
+        path: '',
+        loadComponent: () =>
+          import('./pages/communities/communities.component').then(m => m.CommunitiesComponent),
+      },
+      {
+        path: 'create',
+        loadComponent: () =>
+          import('./pages/communities/create-community/create-community.component').then(m => m.CreateCommunityComponent),
+        title: 'Create Community',
+      },
+      {
+        path: ':naddr',
+        loadComponent: () =>
+          import('./pages/community/community.component').then(m => m.CommunityComponent),
+        title: 'Community',
+      },
+    ],
+  },
+  {
     path: 'clips',
     loadComponent: () =>
       import('./pages/clips/clips.component').then(m => m.ClipsComponent),
