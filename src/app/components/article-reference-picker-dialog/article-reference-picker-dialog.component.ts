@@ -16,6 +16,7 @@ import { CustomDialogRef } from '../../services/custom-dialog.service';
 import { DatabaseService } from '../../services/database.service';
 import { AccountStateService } from '../../services/account-state.service';
 import { UserRelayService } from '../../services/relays/user-relay';
+import { AccountRelayService } from '../../services/relays/account-relay';
 import { UserProfileComponent } from '../user-profile/user-profile.component';
 import { AgoPipe } from '../../pipes/ago.pipe';
 import { getKindLabel } from '../../utils/kind-labels';
@@ -55,6 +56,7 @@ export class ArticleReferencePickerDialogComponent {
   private readonly bookmarkService = inject(BookmarkService);
   private readonly accountState = inject(AccountStateService);
   private readonly userRelayService = inject(UserRelayService);
+  private readonly accountRelay = inject(AccountRelayService);
 
   readonly query = signal('');
   readonly pastedReference = signal('');
@@ -609,12 +611,14 @@ export class ArticleReferencePickerDialogComponent {
     try {
       const dTag = event.tags.find((tag) => tag[0] === 'd')?.[1];
       const isAddressable = event.kind >= 30000 && event.kind < 40000 && !!dTag;
+      const relays = this.accountRelay.getRelayUrls();
 
       if (isAddressable && dTag) {
         const naddr = nip19.naddrEncode({
           kind: event.kind,
           pubkey: event.pubkey,
           identifier: dTag,
+          relays,
         });
         return `nostr:${naddr}`;
       }
@@ -622,6 +626,7 @@ export class ArticleReferencePickerDialogComponent {
       const nevent = nip19.neventEncode({
         id: event.id,
         author: event.pubkey,
+        relays,
       });
       return `nostr:${nevent}`;
     } catch {
