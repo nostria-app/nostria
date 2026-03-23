@@ -497,6 +497,29 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  flex-shrink: 0;
+}
+
+.channel-header-name-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.channel-header-description {
+  font-size: 0.8rem;
+  opacity: 0.6;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+  display: none;
+
+  @media (min-width: 900px) {
+    display: inline;
+  }
 }
 
 .channel-header-members {
@@ -1429,6 +1452,23 @@
   display: flex;
   flex-direction: column;
   gap: 20px;
+}
+
+.chat-details-description {
+  font-size: 0.875rem;
+  line-height: 1.5;
+  opacity: 0.85;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background-color: rgba(0, 0, 0, 0.04);
+}
+
+:host-context(.dark) .chat-details-description {
+  background-color: rgba(255, 255, 255, 0.06);
+}
+
+.chat-details-description-text {
+  color: var(--mat-sys-on-surface-variant);
 }
 
 .chat-details-stat {
