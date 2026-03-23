@@ -7,16 +7,22 @@
       @if (isLoading()) {
       <mat-spinner diameter="20" matTooltip="Loading chats..."></mat-spinner>
       }
-      @if (isAuthenticated()) {
-      <app-list-filter-menu storageKey="chats" [showPublicOption]="true" [showWotOption]="trustEnabled()"
-        defaultFilter="following" [initialFilter]="urlListFilter()" (filterChanged)="onListFilterChanged($event)" />
-      }
+
       <button mat-icon-button (click)="toggleSearch()" matTooltip="Search chats">
         <mat-icon>search</mat-icon>
       </button>
+      @if (isAuthenticated()) {
       <button mat-icon-button (click)="openCreateChannel()" matTooltip="Create chat">
         <mat-icon>add</mat-icon>
       </button>
+      <app-list-filter-menu storageKey="chats" [showPublicOption]="true" [showWotOption]="trustEnabled()"
+        defaultFilter="following" [initialFilter]="urlListFilter()" (filterChanged)="onListFilterChanged($event)" />
+      <button mat-icon-button (click)="openSettings()" matTooltip="Chats relay settings">
+        <mat-icon>settings</mat-icon>
+      </button>
+      }
+
+
     </div>
 
     @if (showSearch()) {
@@ -840,3 +846,7 @@
     }
   </div>
 </div>
+
+@if (showSettingsDialog()) {
+<app-chats-settings-dialog (closed)="onSettingsDialogClosed($event)" />
+}

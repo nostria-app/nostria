@@ -69,6 +69,9 @@ import {
   type ShareArticleDialogData,
 } from '../../components/share-article-dialog/share-article-dialog.component';
 import { AccountRelayService } from '../../services/relays/account-relay';
+import {
+  ChatsSettingsDialogComponent,
+} from './chats-settings-dialog/chats-settings-dialog.component';
 
 /**
  * Represents a zap receipt shown inline in the chat timeline.
@@ -111,6 +114,7 @@ export type TimelineEntry =
     DatePipe,
     DecimalPipe,
     ListFilterMenuComponent,
+    ChatsSettingsDialogComponent,
   ],
   templateUrl: './chats.component.html',
   styleUrl: './chats.component.scss',
@@ -188,6 +192,9 @@ export class ChatsComponent implements OnInit, OnDestroy {
 
   /** Whether to show the zap celebration animation */
   readonly showZapCelebration = signal<{ amount: number; senderPubkey: string } | null>(null);
+
+  /** Whether the chats settings dialog is open */
+  readonly showSettingsDialog = signal(false);
 
   /** Unsubscribe function for the current zap subscription */
   private zapUnsubscribe: (() => void) | null = null;
@@ -1732,5 +1739,13 @@ export class ChatsComponent implements OnInit, OnDestroy {
       height: '100vh',
       panelClass: 'image-dialog-panel',
     });
+  }
+
+  openSettings(): void {
+    this.showSettingsDialog.set(true);
+  }
+
+  onSettingsDialogClosed(result: { saved: boolean } | null): void {
+    this.showSettingsDialog.set(false);
   }
 }
