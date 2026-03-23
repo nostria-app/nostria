@@ -484,14 +484,23 @@ export class ChatsComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    // Load cached channels first for instant display, then fetch from relays
-    this.chatChannels.loadChannelsFromCache().then(() => {
-      this.chatChannels.load().then(() => {
-        this.chatChannels.subscribeToChannels();
+    // Ensure pinned chats list is loaded from DB before rendering channels.
+    // This prevents the flash where all channels appear unsorted before
+    // the pinned set is available.
+    const pinnedReady = this.publicChatsListService.initialized()
+      ? Promise.resolve()
+      : this.publicChatsListService.initialize();
 
-        // After loading channels, refresh metadata (kind 41) from all sources
-        // including channel-specific relays, to pick up any metadata changes
-        this.chatChannels.refreshChannelMetadata();
+    pinnedReady.then(() => {
+      // Load cached channels first for instant display, then fetch from relays
+      this.chatChannels.loadChannelsFromCache().then(() => {
+        this.chatChannels.load().then(() => {
+          this.chatChannels.subscribeToChannels();
+
+          // After loading channels, refresh metadata (kind 41) from all sources
+          // including channel-specific relays, to pick up any metadata changes
+          this.chatChannels.refreshChannelMetadata();
+        });
       });
     });
 
@@ -940,7 +949,7 @@ export class ChatsComponent implements OnInit, OnDestroy {
     this.zapService.getZapsForEvent(channelId, 50).then(receipts => {
       const entries: ChatZapEntry[] = [];
       for (const receipt of receipts) {
-        const entry = this.parseZapToEntry(receipt);
+        const entry = this.parseZapToEntry(receipt, channelId);
         if (entry && !this.seenZapIds.has(receipt.id)) {
           this.seenZapIds.add(receipt.id);
           entries.push(entry);
@@ -956,7 +965,7 @@ export class ChatsComponent implements OnInit, OnDestroy {
       if (this.seenZapIds.has(zapReceipt.id)) return;
       this.seenZapIds.add(zapReceipt.id);
 
-      const entry = this.parseZapToEntry(zapReceipt);
+      const entry = this.parseZapToEntry(zapReceipt, channelId);
       if (entry) {
         this.channelZaps.update(zaps => [...zaps, entry]);
 
@@ -972,10 +981,18 @@ export class ChatsComponent implements OnInit, OnDestroy {
     });
   }
 
-  /** Parse a zap receipt event into a ChatZapEntry */
-  private parseZapToEntry(receipt: NostrEvent): ChatZapEntry | null {
+  /** Parse a zap receipt event into a ChatZapEntry, validating it targets the expected channel */
+  private parseZapToEntry(receipt: NostrEvent, expectedChannelId: string): ChatZapEntry | null {
     const parsed = this.zapService.parseZapReceipt(receipt);
     if (!parsed.zapRequest || !parsed.amount) return null;
+
+    // Verify the zap request's e tag actually targets this channel.
+    // Relays may return zap receipts that match on any e tag, so a zap
+    // intended for a different channel can leak into this one.
+    const zapRequestETag = parsed.zapRequest.tags.find(t => t[0] === 'e');
+    if (zapRequestETag?.[1] !== expectedChannelId) {
+      return null;
+    }
 
     return {
       id: receipt.id,

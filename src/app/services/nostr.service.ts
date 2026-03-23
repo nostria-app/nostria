@@ -40,6 +40,7 @@ import { RelayAuthService } from './relays/relay-auth.service';
 import { AccountLocalStateService } from './account-local-state.service';
 import { FollowSetsService } from './follow-sets.service';
 import { TrustProviderService, TRUST_PROVIDER_LIST_KIND } from './trust-provider.service';
+import { PublicChatsListService } from './public-chats-list.service';
 import { UserRelayService } from './relays/user-relay';
 
 export interface NostrUser {
@@ -860,6 +861,16 @@ export class NostrService implements NostriaService {
           this.logger.info('Updated media server list from subscription', {
             pubkey,
             serverCount: event.tags.filter(t => t[0] === 'server').length,
+          });
+          break;
+        }
+
+        case 10005: {
+          const publicChatsListService = this.injector.get(PublicChatsListService);
+          publicChatsListService.updateFromEvent(event);
+          this.logger.info('Updated public chats list from subscription', {
+            pubkey,
+            channelCount: event.tags.filter(t => t[0] === 'e').length,
           });
           break;
         }

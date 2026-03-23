@@ -27,6 +27,9 @@ export class PublicChatsListService {
 
   listEvent = signal<Event | null>(null);
 
+  /** Whether the initial load from IndexedDB has completed */
+  readonly initialized = signal<boolean>(false);
+
   /** Channel IDs (kind:40 event IDs) in the public chats list */
   channelIds = computed<string[]>(() => {
     return (
@@ -47,6 +50,7 @@ export class PublicChatsListService {
         await this.initialize();
       } else {
         this.listEvent.set(null);
+        this.initialized.set(false);
       }
     });
   }
@@ -57,6 +61,19 @@ export class PublicChatsListService {
       10005
     );
     this.listEvent.set(event);
+    this.initialized.set(true);
+  }
+
+  /**
+   * Update the list from a relay event. Only applies if the event is newer
+   * than the current one. Called by NostrService when a kind 10005 event
+   * arrives on the account subscription.
+   */
+  updateFromEvent(event: Event): void {
+    const current = this.listEvent();
+    if (!current || event.created_at >= current.created_at) {
+      this.listEvent.set(event);
+    }
   }
 
   /** Check if a channel is in the public chats list */
