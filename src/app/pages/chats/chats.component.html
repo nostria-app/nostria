@@ -294,26 +294,8 @@
         </div>
       </div>
 
-      @if (selectedChannel(); as channel) {
-      @if (channel.metadata.about || channel.tags.length > 0) {
-      <div class="channel-description-bar">
-        @if (channel.metadata.about) {
-        <span class="channel-description-text">{{ channel.metadata.about }}</span>
-        }
-        @if (channel.tags.length > 0) {
-        <span class="channel-description-tags">
-          @for (tag of channel.tags; track tag) {
-          <span class="channel-description-tag">#{{ tag }}</span>
-          }
-        </span>
-        }
-      </div>
-      }
-      }
-
       <!-- Messages area -->
       <div class="message-list"
-        [class.has-description]="selectedChannel()?.metadata?.about || selectedChannel()?.tags?.length"
         #messagesWrapper>
         @if (isLoadingMessages()) {
         <div class="loading-messages">
