@@ -386,6 +386,12 @@ export const routes: Routes = [
         title: 'Create Community',
       },
       {
+        path: 'edit/:naddr',
+        loadComponent: () =>
+          import('./pages/communities/create-community/create-community.component').then(m => m.CreateCommunityComponent),
+        title: 'Edit Community',
+      },
+      {
         path: ':naddr',
         loadComponent: () =>
           import('./pages/community/community.component').then(m => m.CommunityComponent),

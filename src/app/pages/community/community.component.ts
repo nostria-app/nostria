@@ -99,6 +99,14 @@ export class CommunityComponent implements OnInit, OnDestroy {
   isAuthenticated = computed(() => this.app.authenticated());
   currentPubkey = computed(() => this.accountState.pubkey());
 
+  // Check if current user is the owner
+  isOwner = computed(() => {
+    const comm = this.community();
+    const pubkey = this.currentPubkey();
+    if (!comm || !pubkey) return false;
+    return comm.creatorPubkey === pubkey;
+  });
+
   // Check if current user is a moderator
   isModerator = computed(() => {
     const comm = this.community();
@@ -366,6 +374,21 @@ export class CommunityComponent implements OnInit, OnDestroy {
       this.snackBar.open('Event data copied to clipboard', 'Close', { duration: 3000 });
     }).catch(() => {
       this.snackBar.open('Failed to copy event data', 'Close', { duration: 3000 });
+    });
+  }
+
+  editCommunity(): void {
+    const comm = this.community();
+    if (!comm) return;
+
+    const naddr = nip19.naddrEncode({
+      kind: COMMUNITY_DEFINITION_KIND,
+      pubkey: comm.creatorPubkey,
+      identifier: comm.id,
+    });
+
+    this.router.navigate(['/communities', 'edit', naddr], {
+      state: { communityEvent: comm.event },
     });
   }
 

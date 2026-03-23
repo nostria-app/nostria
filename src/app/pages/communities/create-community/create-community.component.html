@@ -3,7 +3,7 @@
   <a mat-icon-button routerLink="/communities" matTooltip="Back to Communities">
     <mat-icon>arrow_back</mat-icon>
   </a>
-  <h2 class="panel-title title-font">Create Community</h2>
+  <h2 class="panel-title title-font">{{ isEditMode() ? 'Edit Community' : 'Create Community' }}</h2>
 </div>
 
 <div class="create-community-container">
@@ -16,8 +16,13 @@
                  [value]="name()"
                  (input)="name.set($any($event.target).value)"
                  placeholder="e.g., Nostr Developers"
+                 [readonly]="isEditMode()"
                  required />
+          @if (isEditMode()) {
+          <mat-hint>Name cannot be changed after creation (it determines the community ID)</mat-hint>
+          } @else {
           <mat-hint>Choose a descriptive name for your community</mat-hint>
+          }
         </mat-form-field>
 
         <mat-form-field appearance="outline">
@@ -30,19 +35,48 @@
           <mat-hint>Optional description shown to visitors</mat-hint>
         </mat-form-field>
 
-        <mat-form-field appearance="outline">
-          <mat-label>Banner Image URL</mat-label>
-          <input matInput
-                 [value]="image()"
-                 (input)="image.set($any($event.target).value)"
-                 placeholder="https://example.com/banner.jpg" />
-          <mat-hint>Optional banner image for the community</mat-hint>
-        </mat-form-field>
+        <!-- Banner Image Section -->
+        <div class="section-header">
+          <mat-icon>image</mat-icon>
+          <h3>Banner Image</h3>
+        </div>
 
         @if (image()) {
         <div class="image-preview">
           <img [src]="image()" alt="Preview" loading="lazy" />
+          <button mat-icon-button class="remove-image-btn" (click)="removeImage()" matTooltip="Remove image">
+            <mat-icon>close</mat-icon>
+          </button>
         </div>
+        }
+
+        <div class="image-input-row">
+          <mat-form-field appearance="outline" class="flex-field">
+            <mat-label>Banner Image URL</mat-label>
+            <input matInput
+                   [value]="image()"
+                   (input)="image.set($any($event.target).value)"
+                   placeholder="https://example.com/banner.jpg" />
+          </mat-form-field>
+          <input #imageFileInput type="file" hidden (change)="onImageFileSelected($event)" accept="image/*" />
+          <button mat-stroked-button
+                  (click)="imageFileInput.click()"
+                  [disabled]="!hasMediaServers() || isUploadingImage()"
+                  [matTooltip]="hasMediaServers() ? 'Upload image to your media server' : 'No media servers configured'"
+                  class="upload-btn">
+            @if (isUploadingImage()) {
+            <mat-spinner diameter="18"></mat-spinner>
+            } @else {
+            <mat-icon>upload</mat-icon>
+            }
+            Upload
+          </button>
+        </div>
+        @if (isUploadingImage()) {
+        <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+        }
+        @if (!hasMediaServers()) {
+        <p class="section-hint">Configure media servers in Settings to enable image upload.</p>
         }
 
         <mat-form-field appearance="outline">
@@ -62,36 +96,89 @@
           <mat-icon>shield</mat-icon>
           <h3>Moderators</h3>
         </div>
-        <p class="section-description">You will be added as a moderator automatically. Add additional moderators by their hex pubkey.</p>
+        <p class="section-description">You will be added as a moderator automatically. Search for users to add as additional moderators.</p>
 
+        <!-- Selected moderators -->
         @if (moderatorPubkeys().length > 0) {
-        <div class="tag-list">
+        <div class="moderator-list">
           @for (pubkey of moderatorPubkeys(); track pubkey) {
-          <mat-chip-set>
-            <mat-chip (removed)="removeModerator(pubkey)">
-              <mat-icon matChipAvatar>person</mat-icon>
-              {{ pubkey.substring(0, 8) }}...{{ pubkey.substring(56) }}
-              <button matChipRemove>
-                <mat-icon>cancel</mat-icon>
-              </button>
-            </mat-chip>
-          </mat-chip-set>
+          <div class="moderator-item">
+            <app-user-profile [pubkey]="pubkey" view="list" [disableLink]="true"></app-user-profile>
+            <button mat-icon-button class="remove-member-btn" (click)="removeModerator(pubkey)" matTooltip="Remove moderator">
+              <mat-icon>close</mat-icon>
+            </button>
+          </div>
           }
         </div>
         }
 
-        <div class="add-item-row">
-          <mat-form-field appearance="outline" class="flex-field">
-            <mat-label>Moderator Pubkey (hex)</mat-label>
-            <input matInput
-                   [value]="newModeratorPubkey()"
-                   (input)="newModeratorPubkey.set($any($event.target).value)"
-                   (keydown.enter)="addModerator()"
-                   placeholder="64-character hex pubkey" />
-          </mat-form-field>
-          <button mat-icon-button (click)="addModerator()" matTooltip="Add moderator" [disabled]="!newModeratorPubkey().trim()">
-            <mat-icon>add_circle</mat-icon>
+        <!-- Moderator search -->
+        <div class="moderator-search-section">
+          @if (!showModeratorSearch()) {
+          <button mat-stroked-button (click)="toggleModeratorSearch()">
+            <mat-icon>person_add</mat-icon>
+            Add Moderator
           </button>
+          } @else {
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Search or enter npub/hex pubkey</mat-label>
+            <input matInput
+                   [value]="moderatorSearchInput()"
+                   (input)="moderatorSearchInput.set($any($event.target).value)"
+                   (keydown.enter)="addModeratorFromNpub()"
+                   placeholder="Search by name or paste npub1... / hex pubkey"
+                   autocomplete="off" />
+            @if (isNpubInput() || isHexInput()) {
+            <mat-icon matSuffix>key</mat-icon>
+            } @else {
+            <mat-icon matSuffix>search</mat-icon>
+            }
+          </mat-form-field>
+
+          <!-- Npub/hex add indicator -->
+          @if ((isNpubInput() && hasValidNpub()) || isHexInput()) {
+          <div class="npub-valid-indicator" (click)="addModeratorFromNpub()">
+            <mat-icon>check_circle</mat-icon>
+            <span>{{ isNpubInput() ? 'Valid npub detected' : 'Valid hex pubkey detected' }} — click to add</span>
+          </div>
+          }
+
+          <!-- Search results / Following list -->
+          @if (!isNpubInput() && !isHexInput()) {
+          <div class="search-results">
+            @if (moderatorSearchResults().length > 0) {
+            <div class="results-header">
+              @if (moderatorSearchInput()) {
+              <span>Search results</span>
+              } @else {
+              <span>People you follow</span>
+              }
+            </div>
+            <div class="results-list">
+              @for (profile of moderatorSearchResults(); track profile.event.pubkey) {
+              <div class="search-result-item" tabindex="0"
+                   (click)="selectModerator(profile)"
+                   (keydown.enter)="selectModerator(profile)"
+                   (keydown.space)="selectModerator(profile)">
+                <app-user-profile [pubkey]="profile.event.pubkey" view="list" [disableLink]="true"></app-user-profile>
+              </div>
+              }
+            </div>
+            } @else if (moderatorSearchInput()) {
+            <div class="no-results">
+              <mat-icon>person_search</mat-icon>
+              <p>No profiles found</p>
+              <small>Try entering their npub directly (starts with npub1...)</small>
+            </div>
+            }
+          </div>
+          }
+
+          <button mat-button (click)="toggleModeratorSearch()">
+            <mat-icon>close</mat-icon>
+            Close Search
+          </button>
+          }
         </div>
 
         <mat-divider></mat-divider>
@@ -142,9 +229,9 @@
           @if (isPublishing()) {
           <mat-spinner diameter="18"></mat-spinner>
           } @else {
-          <mat-icon>add</mat-icon>
+          <mat-icon>{{ isEditMode() ? 'save' : 'add' }}</mat-icon>
           }
-          Create Community
+          {{ isEditMode() ? 'Save Changes' : 'Create Community' }}
         </button>
       </div>
     </mat-card-content>

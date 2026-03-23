@@ -34,6 +34,12 @@
     <mat-icon>more_vert</mat-icon>
   </button>
   <mat-menu #headerMenu="matMenu">
+    @if (isOwner()) {
+    <button mat-menu-item (click)="editCommunity()">
+      <mat-icon>edit</mat-icon>
+      <span>Edit Community</span>
+    </button>
+    }
     <button mat-menu-item (click)="copyEventData()">
       <mat-icon>data_object</mat-icon>
       <span>Copy Data</span>
