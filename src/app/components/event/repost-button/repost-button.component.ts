@@ -50,8 +50,7 @@ export class RepostButtonComponent {
   // If not provided, component will load independently
   repostsFromParent = input<NostrRecord[] | null>(null);
   canRepostOrQuote = computed(() => {
-    const event = this.event();
-    return !!event && !this.repostService.isProtectedEvent(event);
+    return !!this.event();
   });
 
   repostByCurrentAccount = computed<NostrRecord | undefined>(() => {

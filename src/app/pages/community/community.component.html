@@ -14,6 +14,33 @@
   </a>
 </div>
 } @else {
+<!-- Panel Header -->
+<div class="panel-header">
+  <a mat-icon-button routerLink="/communities" matTooltip="Back to Communities">
+    <mat-icon>arrow_back</mat-icon>
+  </a>
+  <h2 class="panel-title title-font">{{ community()!.name }}</h2>
+  <span class="panel-header-spacer"></span>
+  @if (isAuthenticated()) {
+  <button mat-button (click)="isJoined() ? leaveCommunity() : joinCommunity()">
+    <mat-icon>{{ isJoined() ? 'remove_circle_outline' : 'add_circle_outline' }}</mat-icon>
+    {{ isJoined() ? 'Leave' : 'Join' }}
+  </button>
+  }
+  <button mat-icon-button (click)="refresh()" matTooltip="Refresh">
+    <mat-icon>refresh</mat-icon>
+  </button>
+  <button mat-icon-button [matMenuTriggerFor]="headerMenu" matTooltip="More options">
+    <mat-icon>more_vert</mat-icon>
+  </button>
+  <mat-menu #headerMenu="matMenu">
+    <button mat-menu-item (click)="copyEventData()">
+      <mat-icon>data_object</mat-icon>
+      <span>Copy Data</span>
+    </button>
+  </mat-menu>
+</div>
+
 <!-- Community Header -->
 <div class="community-header">
   @if (community()!.image) {
@@ -22,17 +49,6 @@
   </div>
   }
   <div class="community-header-content">
-    <div class="community-header-top">
-      <a mat-icon-button routerLink="/communities" matTooltip="Back to Communities">
-        <mat-icon>arrow_back</mat-icon>
-      </a>
-      <h1 class="community-title title-font">{{ community()!.name }}</h1>
-      <span class="header-spacer"></span>
-      <button mat-icon-button (click)="refresh()" matTooltip="Refresh">
-        <mat-icon>refresh</mat-icon>
-      </button>
-    </div>
-
     @if (community()!.description) {
     <p class="community-description">{{ community()!.description }}</p>
     }

@@ -41,6 +41,7 @@ import { AccountLocalStateService } from './account-local-state.service';
 import { FollowSetsService } from './follow-sets.service';
 import { TrustProviderService, TRUST_PROVIDER_LIST_KIND } from './trust-provider.service';
 import { PublicChatsListService } from './public-chats-list.service';
+import { CommunityListService } from './community-list.service';
 import { UserRelayService } from './relays/user-relay';
 
 export interface NostrUser {
@@ -722,6 +723,7 @@ export class NostrService implements NostriaService {
         10023,               // 10023 - pinned articles
         kinds.BookmarkList,  // 10003 - bookmarks
         10005,               // 10005 - public chats list (NIP-51)
+        10004,               // 10004 - communities list (NIP-72)
         10007,               // Search relay list
         TRUST_PROVIDER_LIST_KIND, // 10040 - NIP-85 Trusted Service Providers
         kinds.DirectMessageRelaysList, // 10050 - DM relays
@@ -871,6 +873,16 @@ export class NostrService implements NostriaService {
           this.logger.info('Updated public chats list from subscription', {
             pubkey,
             channelCount: event.tags.filter(t => t[0] === 'e').length,
+          });
+          break;
+        }
+
+        case 10004: {
+          const communityListService = this.injector.get(CommunityListService);
+          communityListService.updateFromEvent(event);
+          this.logger.info('Updated communities list from subscription', {
+            pubkey,
+            communityCount: event.tags.filter(t => t[0] === 'a').length,
           });
           break;
         }

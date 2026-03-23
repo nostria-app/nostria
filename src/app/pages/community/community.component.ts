@@ -8,11 +8,13 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatDividerModule } from '@angular/material/divider';
+import { MatMenuModule } from '@angular/material/menu';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { Event, nip19 } from 'nostr-tools';
 import { CommunityService, Community, CommunityPost, COMMUNITY_DEFINITION_KIND } from '../../services/community.service';
+import { CommunityListService } from '../../services/community-list.service';
 import { ApplicationService } from '../../services/application.service';
 import { AccountStateService } from '../../services/account-state.service';
 import { NostrService } from '../../services/nostr.service';
@@ -33,6 +35,7 @@ import { LoggerService } from '../../services/logger.service';
     MatChipsModule,
     MatTabsModule,
     MatDividerModule,
+    MatMenuModule,
     RouterLink,
     FormsModule,
     UserProfileComponent,
@@ -47,6 +50,7 @@ export class CommunityComponent implements OnInit, OnDestroy {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private communityService = inject(CommunityService);
+  private communityListService = inject(CommunityListService);
   private app = inject(ApplicationService);
   private accountState = inject(AccountStateService);
   private nostrService = inject(NostrService);
@@ -102,6 +106,13 @@ export class CommunityComponent implements OnInit, OnDestroy {
     if (!comm || !pubkey) return false;
     return comm.creatorPubkey === pubkey ||
       comm.moderators.some(m => m.pubkey === pubkey);
+  });
+
+  // Check if current user has joined this community
+  isJoined = computed(() => {
+    const comm = this.community();
+    if (!comm) return false;
+    return this.communityListService.isCommunityInList(comm.coordinate);
   });
 
   // Sorted posts (newest first), optionally filtered by approval status
@@ -319,6 +330,43 @@ export class CommunityComponent implements OnInit, OnDestroy {
 
   toggleApprovedFilter(): void {
     this.showApprovedOnly.update(v => !v);
+  }
+
+  async joinCommunity(): Promise<void> {
+    const comm = this.community();
+    if (!comm) return;
+
+    try {
+      await this.communityListService.addCommunity(comm.coordinate);
+      this.snackBar.open('Joined community', 'Close', { duration: 3000 });
+    } catch (error) {
+      this.logger.error('[Community] Error joining community:', error);
+      this.snackBar.open('Failed to join community', 'Close', { duration: 3000 });
+    }
+  }
+
+  async leaveCommunity(): Promise<void> {
+    const comm = this.community();
+    if (!comm) return;
+
+    try {
+      await this.communityListService.removeCommunity(comm.coordinate);
+      this.snackBar.open('Left community', 'Close', { duration: 3000 });
+    } catch (error) {
+      this.logger.error('[Community] Error leaving community:', error);
+      this.snackBar.open('Failed to leave community', 'Close', { duration: 3000 });
+    }
+  }
+
+  copyEventData(): void {
+    const comm = this.community();
+    if (!comm?.event) return;
+
+    navigator.clipboard.writeText(JSON.stringify(comm.event, null, 2)).then(() => {
+      this.snackBar.open('Event data copied to clipboard', 'Close', { duration: 3000 });
+    }).catch(() => {
+      this.snackBar.open('Failed to copy event data', 'Close', { duration: 3000 });
+    });
   }
 
   refresh(): void {

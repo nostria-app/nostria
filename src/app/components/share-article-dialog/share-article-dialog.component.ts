@@ -757,7 +757,7 @@ export class ShareArticleDialogComponent {
   });
 
   canSend = computed(() => this.selectedRecipients().length > 0 && !this.isSending());
-  canRepostOrQuote = computed(() => !!this.data.event && !this.repostService.isProtectedEvent(this.data.event));
+  canRepostOrQuote = computed(() => !!this.data.event);
   isArticleShare = computed(() => {
     const shareUrl = (this.data.url || '').toLowerCase();
     const encodedId = (this.data.encodedId || '').toLowerCase();

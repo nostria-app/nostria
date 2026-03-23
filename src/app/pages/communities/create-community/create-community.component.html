@@ -54,6 +54,84 @@
                     rows="3"></textarea>
           <mat-hint>Optional rules for community members</mat-hint>
         </mat-form-field>
+
+        <mat-divider></mat-divider>
+
+        <!-- Moderators Section -->
+        <div class="section-header">
+          <mat-icon>shield</mat-icon>
+          <h3>Moderators</h3>
+        </div>
+        <p class="section-description">You will be added as a moderator automatically. Add additional moderators by their hex pubkey.</p>
+
+        @if (moderatorPubkeys().length > 0) {
+        <div class="tag-list">
+          @for (pubkey of moderatorPubkeys(); track pubkey) {
+          <mat-chip-set>
+            <mat-chip (removed)="removeModerator(pubkey)">
+              <mat-icon matChipAvatar>person</mat-icon>
+              {{ pubkey.substring(0, 8) }}...{{ pubkey.substring(56) }}
+              <button matChipRemove>
+                <mat-icon>cancel</mat-icon>
+              </button>
+            </mat-chip>
+          </mat-chip-set>
+          }
+        </div>
+        }
+
+        <div class="add-item-row">
+          <mat-form-field appearance="outline" class="flex-field">
+            <mat-label>Moderator Pubkey (hex)</mat-label>
+            <input matInput
+                   [value]="newModeratorPubkey()"
+                   (input)="newModeratorPubkey.set($any($event.target).value)"
+                   (keydown.enter)="addModerator()"
+                   placeholder="64-character hex pubkey" />
+          </mat-form-field>
+          <button mat-icon-button (click)="addModerator()" matTooltip="Add moderator" [disabled]="!newModeratorPubkey().trim()">
+            <mat-icon>add_circle</mat-icon>
+          </button>
+        </div>
+
+        <mat-divider></mat-divider>
+
+        <!-- Relays Section -->
+        <div class="section-header">
+          <mat-icon>dns</mat-icon>
+          <h3>Relays</h3>
+        </div>
+        <p class="section-description">Pre-populated from your account relays. These are relay hints for where this community's events can be found.</p>
+
+        @if (relayUrls().length > 0) {
+        <div class="tag-list">
+          @for (url of relayUrls(); track url) {
+          <mat-chip-set>
+            <mat-chip (removed)="removeRelay(url)">
+              <mat-icon matChipAvatar>dns</mat-icon>
+              {{ url }}
+              <button matChipRemove>
+                <mat-icon>cancel</mat-icon>
+              </button>
+            </mat-chip>
+          </mat-chip-set>
+          }
+        </div>
+        }
+
+        <div class="add-item-row">
+          <mat-form-field appearance="outline" class="flex-field">
+            <mat-label>Relay URL</mat-label>
+            <input matInput
+                   [value]="newRelayUrl()"
+                   (input)="newRelayUrl.set($any($event.target).value)"
+                   (keydown.enter)="addRelay()"
+                   placeholder="wss://relay.example.com" />
+          </mat-form-field>
+          <button mat-icon-button (click)="addRelay()" matTooltip="Add relay" [disabled]="!newRelayUrl().trim()">
+            <mat-icon>add_circle</mat-icon>
+          </button>
+        </div>
       </div>
 
       <div class="form-actions">

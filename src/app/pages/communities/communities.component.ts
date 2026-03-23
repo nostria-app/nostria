@@ -8,6 +8,7 @@ import { MatChipsModule } from '@angular/material/chips';
 import { Router, RouterLink } from '@angular/router';
 import { nip19 } from 'nostr-tools';
 import { CommunityService, Community, COMMUNITY_DEFINITION_KIND } from '../../services/community.service';
+import { CommunityListService } from '../../services/community-list.service';
 import { ApplicationService } from '../../services/application.service';
 import { LayoutService } from '../../services/layout.service';
 import { AccountStateService } from '../../services/account-state.service';
@@ -34,6 +35,7 @@ const PAGE_SIZE = 30;
 })
 export class CommunitiesComponent implements OnInit, OnDestroy {
   private communityService = inject(CommunityService);
+  private communityListService = inject(CommunityListService);
   private app = inject(ApplicationService);
   private layout = inject(LayoutService);
   private accountState = inject(AccountStateService);
@@ -50,10 +52,16 @@ export class CommunitiesComponent implements OnInit, OnDestroy {
   // Pagination
   displayCount = signal(PAGE_SIZE);
 
-  // Sorted communities (newest first)
+  // Sorted communities (joined first, then newest first)
   sortedCommunities = computed(() => {
+    const joinedSet = this.communityListService.communityCoordinateSet();
     return this.allCommunities()
-      .sort((a, b) => b.event.created_at - a.event.created_at);
+      .sort((a, b) => {
+        const aJoined = joinedSet.has(a.coordinate) ? 1 : 0;
+        const bJoined = joinedSet.has(b.coordinate) ? 1 : 0;
+        if (aJoined !== bJoined) return bJoined - aJoined;
+        return b.event.created_at - a.event.created_at;
+      });
   });
 
   // Paginated communities for display
@@ -70,6 +78,11 @@ export class CommunitiesComponent implements OnInit, OnDestroy {
   });
 
   isAuthenticated = computed(() => this.app.authenticated());
+
+  /** Check if a community is in the user's joined list */
+  isCommunityJoined(coordinate: string): boolean {
+    return this.communityListService.isCommunityInList(coordinate);
+  }
 
   private subscription: { close: () => void } | null = null;
 

@@ -74,3 +74,50 @@
   padding-top: 1rem;
   border-top: 1px solid var(--mat-sys-outline-variant);
 }
+
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+
+  mat-icon {
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+    color: var(--mat-sys-on-surface-variant);
+  }
+
+  h3 {
+    margin: 0;
+    font-size: 1rem;
+    color: var(--mat-sys-on-surface);
+  }
+}
+
+.section-description {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--mat-sys-on-surface-variant);
+  line-height: 1.4;
+}
+
+.tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.add-item-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+
+  .flex-field {
+    flex: 1;
+  }
+
+  button {
+    margin-top: 4px;
+  }
+}

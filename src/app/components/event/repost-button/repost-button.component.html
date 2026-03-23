@@ -1,6 +1,6 @@
 <button mat-icon-button [class.active]="!!repostByCurrentAccount()" [matMenuTriggerFor]="menu"
-  [disabled]="isLoadingReposts() || !canRepostOrQuote()" (click)="$event.stopPropagation()"
-  [matTooltip]="canRepostOrQuote() ? 'Repost' : 'Protected events cannot be reposted'" matTooltipPosition="below">
+  [disabled]="isLoadingReposts() || !canRepostOrQuote()" (click)="$event.stopPropagation()" matTooltip="Repost"
+  matTooltipPosition="below">
   <mat-icon>repeat</mat-icon>
 </button>
 

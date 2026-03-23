@@ -21,13 +21,6 @@ export class RepostService {
   private utilities = inject(UtilitiesService);
 
   async repostNote(event: Event, options?: { expiration?: number }): Promise<boolean> {
-    if (this.isProtectedEvent(event)) {
-      this.snackBar.open('Protected events cannot be reposted', 'Dismiss', {
-        duration: 3000,
-      });
-      return false;
-    }
-
     const repostEvent = this.createRepostEvent(event, options?.expiration);
 
     const result = await this.nostrService.signAndPublish(repostEvent);
@@ -44,10 +37,6 @@ export class RepostService {
    */
   isRepostEvent(event: Event): boolean {
     return event.kind === kinds.Repost || event.kind === kinds.GenericRepost;
-  }
-
-  isProtectedEvent(event: Event): boolean {
-    return event.tags.some(tag => tag[0] === '-');
   }
 
   /**

@@ -36,7 +36,7 @@
     <div class="communities-grid">
       @for (community of currentCommunities(); track community.coordinate) {
       <a class="community-card-link" [routerLink]="getCommunityLink(community)" (click)="navigateToCommunity(community, $event)">
-        <mat-card class="community-card">
+        <mat-card class="community-card" [class.joined]="isCommunityJoined(community.coordinate)">
           @if (community.image) {
           <div class="community-image-container">
             <img [src]="community.image" [alt]="community.name" class="community-image" loading="lazy" />
@@ -56,6 +56,14 @@
                 <mat-chip>
                   <mat-icon matChipAvatar>shield</mat-icon>
                   {{ community.moderators.length }} moderator{{ community.moderators.length !== 1 ? 's' : '' }}
+                </mat-chip>
+              </mat-chip-set>
+              }
+              @if (isCommunityJoined(community.coordinate)) {
+              <mat-chip-set class="community-chips">
+                <mat-chip class="joined-chip">
+                  <mat-icon matChipAvatar>check_circle</mat-icon>
+                  Joined
                 </mat-chip>
               </mat-chip-set>
               }
