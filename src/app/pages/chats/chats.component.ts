@@ -64,6 +64,11 @@ import {
   ConfirmDialogComponent,
   type ConfirmDialogData,
 } from '../../components/confirm-dialog/confirm-dialog.component';
+import {
+  ShareArticleDialogComponent,
+  type ShareArticleDialogData,
+} from '../../components/share-article-dialog/share-article-dialog.component';
+import { AccountRelayService } from '../../services/relays/account-relay';
 
 /**
  * Represents a zap receipt shown inline in the chat timeline.
@@ -131,6 +136,7 @@ export class ChatsComponent implements OnInit, OnDestroy {
   private readonly zapService = inject(ZapService);
   private readonly zapSound = inject(ZapSoundService);
   private readonly dataService = inject(DataService);
+  private readonly accountRelay = inject(AccountRelayService);
 
   /** Currently selected channel ID */
   readonly selectedChannelId = signal<string | null>(null);
@@ -1179,7 +1185,7 @@ export class ChatsComponent implements OnInit, OnDestroy {
     }
   }
 
-  /** Share the channel using the Web Share API, with clipboard fallback */
+  /** Share the channel using the app's sharing dialog */
   async shareChannel(): Promise<void> {
     const channel = this.selectedChannel();
     if (!channel) return;
@@ -1188,27 +1194,22 @@ export class ChatsComponent implements OnInit, OnDestroy {
     const url = `https://nostria.app/chats/${nevent}`;
     const chatName = channel.metadata.name || 'Chat';
 
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: chatName,
-          text: `Check out ${chatName} on Nostria`,
-          url,
-        });
-      } catch (error) {
-        // User cancelled or share failed — ignore AbortError
-        if (error instanceof Error && error.name !== 'AbortError') {
-          this.snackBar.open('Failed to share chat', 'OK', { duration: 3000 });
-        }
-      }
-    } else {
-      try {
-        await navigator.clipboard.writeText(url);
-        this.snackBar.open('Chat link copied to clipboard', 'OK', { duration: 3000 });
-      } catch {
-        this.snackBar.open('Failed to copy chat link', 'OK', { duration: 3000 });
-      }
-    }
+    const dialogData: ShareArticleDialogData = {
+      title: chatName,
+      summary: channel.metadata.about || undefined,
+      image: channel.metadata.picture || undefined,
+      url,
+      eventId: channel.id,
+      pubkey: channel.creator,
+      kind: 40,
+      encodedId: nevent,
+    };
+
+    this.customDialog.open(ShareArticleDialogComponent, {
+      title: '',
+      showCloseButton: false,
+      data: dialogData,
+    });
   }
 
   /** Copy the shareable channel link to clipboard */
@@ -1524,13 +1525,18 @@ export class ChatsComponent implements OnInit, OnDestroy {
 
   // --- Private helpers ---
 
-  /** Encode a ChatChannel to a NIP-19 nevent string, including all relay hints from the latest metadata */
+  /** Encode a ChatChannel to a NIP-19 nevent string, including relay hints from the latest metadata */
   private encodeChannelNevent(channel: ChatChannel): string {
+    const metadataRelays = channel.metadata.relays ?? [];
+    const relays = metadataRelays.length > 0
+      ? metadataRelays
+      : this.accountRelay.getRelayUrls();
+
     return nip19.neventEncode({
       id: channel.id,
       author: channel.creator,
       kind: 40,
-      relays: channel.metadata.relays ?? [],
+      relays,
     });
   }
 
