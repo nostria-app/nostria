@@ -130,11 +130,16 @@ export class RepostService {
       tags.push(['expiration', expiration.toString()]);
     }
 
+    // Strip non-protocol properties (e.g. dTag added by database indexing)
+    // before embedding the event JSON in the repost content.
+    const { id, pubkey, created_at, kind, tags: eventTags, content, sig } = event;
+    const cleanEvent = { id, pubkey, created_at, kind, tags: eventTags, content, sig };
+
     // NIP-18 specification: kind:1 events (ShortTextNote) must use kind:6 reposts,
     // while all other event kinds use kind:16 generic reposts.
     // See: https://github.com/nostria-app/nips/blob/master/18.md
     if (event.kind === kinds.ShortTextNote) {
-      return this.nostrService.createEvent(kinds.Repost, JSON.stringify(event), tags);
+      return this.nostrService.createEvent(kinds.Repost, JSON.stringify(cleanEvent), tags);
     }
 
     const genericTags: string[][] = [
@@ -147,7 +152,7 @@ export class RepostService {
       genericTags.push(['a', coordinateTag]);
     }
 
-    return this.nostrService.createEvent(kinds.GenericRepost, JSON.stringify(event), genericTags);
+    return this.nostrService.createEvent(kinds.GenericRepost, JSON.stringify(cleanEvent), genericTags);
   }
 
   private getReplaceableCoordinateTag(event: Event): string | null {
