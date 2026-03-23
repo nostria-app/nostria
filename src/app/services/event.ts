@@ -459,7 +459,7 @@ export class EventService {
     events.forEach((event) => {
       let parentId: string | null = null;
 
-      if (event.kind === 1111) {
+      if (event.kind === 1111 || event.kind === 1244) {
         // NIP-22 comment: use uppercase E for root scope, lowercase e for parent scope
         parentId = this.getNip22ParentId(event, rootEventId);
       } else {
@@ -523,8 +523,8 @@ export class EventService {
     const parentKindTag = tags.find(t => t[0] === 'k');
     const parentKind = parentKindTag?.[1];
 
-    // If parent kind is a comment kind (1111), this is a reply to another comment
-    if (parentKind === '1111' && parentETag?.[1] && parentETag[1] !== rootEventId) {
+    // If parent kind is a comment kind (1111 or 1244), this is a reply to another comment
+    if ((parentKind === '1111' || parentKind === '1244') && parentETag?.[1] && parentETag[1] !== rootEventId) {
       return parentETag[1];
     }
 
@@ -1004,10 +1004,14 @@ export class EventService {
    */
   async loadRepliesFromDb(eventId: string): Promise<Event[]> {
     try {
-      const dbEvents = await this.database.getEventsByKindAndEventTag(kinds.ShortTextNote, eventId);
+      // Load both NIP-10 replies (kind 1) and NIP-22 comments (kind 1111, 1244)
+      const dbEvents = await this.database.getEventsByKindsAndEventTag([kinds.ShortTextNote, 1111, 1244], eventId);
       if (dbEvents.length === 0) return [];
 
       return dbEvents.filter((event: Event) => {
+        // NIP-22 comments (kind 1111/1244) are already filtered by e-tag in the query
+        if (event.kind === 1111 || event.kind === 1244) return true;
+        // NIP-10 replies (kind 1) need additional validation
         if (!event.content || !event.content.trim()) return false;
         const eventTags = this.getEventTags(event);
         const { rootId, replyId, mentionIds } = eventTags;
@@ -1096,16 +1100,16 @@ export class EventService {
         return [];
       }
 
-      // Query for kind 1111 events referencing this event via both E and e tags
+      // Query for kind 1111/1244 events referencing this event via both E and e tags
       const [uppercaseResults, lowercaseResults] = await Promise.all([
-        this.relayPool.query(allRelays, { kinds: [1111], '#E': [eventId] }, 3000),
-        this.relayPool.query(allRelays, { kinds: [1111], '#e': [eventId] }, 3000),
+        this.relayPool.query(allRelays, { kinds: [1111, 1244], '#E': [eventId] }, 3000),
+        this.relayPool.query(allRelays, { kinds: [1111, 1244], '#e': [eventId] }, 3000),
       ]);
 
       // Deduplicate by event ID
       const seen = new Map<string, Event>();
       for (const event of [...(uppercaseResults || []), ...(lowercaseResults || [])]) {
-        if (event.content?.trim()) {
+        if (event.content?.trim() || event.kind === 1244) {
           seen.set(event.id, event);
         }
       }
@@ -1223,7 +1227,7 @@ export class EventService {
       ),
       !skipReplies
         ? this.userDataService.getEventsByKindsAndEventTag(
-          pubkey, [kinds.ShortTextNote], eventId,
+          pubkey, [kinds.ShortTextNote, 1111, 1244], eventId,
           { ...queryOptions, limit },
         )
         : null,
@@ -1246,6 +1250,11 @@ export class EventService {
     let hasMoreReplies = false;
     if (!skipReplies) {
       const replyRecords = replyRecordsRaw.filter((r) => {
+        // NIP-22 comments (kind 1111/1244) reference events via E/e tags
+        if (r.event.kind === 1111 || r.event.kind === 1244) {
+          return true; // Already filtered by #e tag in the query
+        }
+        // NIP-10 replies (kind 1)
         if (r.event.kind !== kinds.ShortTextNote) return false;
         if (!r.event.content || !r.event.content.trim()) return false;
         const eventTags = this.getEventTags(r.event);
@@ -1328,7 +1337,7 @@ export class EventService {
     // Build the list of kinds to query
     const kindsToQuery = skipReplies
       ? [kinds.Reaction, repostKind, kinds.Report]
-      : [kinds.Reaction, repostKind, kinds.Report, kinds.ShortTextNote];
+      : [kinds.Reaction, repostKind, kinds.Report, kinds.ShortTextNote, 1111, 1244];
 
     // Fetch all interaction types in a single query
     const allRecords = await this.userDataService.getEventsByKindsAndEventTag(
@@ -1354,6 +1363,11 @@ export class EventService {
     let replyEventsResult: Event[] = [];
     if (!skipReplies) {
       const replyRecords = allRecords.filter((r) => {
+        // NIP-22 comments (kind 1111/1244) reference events via E/e tags
+        if (r.event.kind === 1111 || r.event.kind === 1244) {
+          return true; // Already filtered by #e tag in the query
+        }
+        // NIP-10 replies (kind 1)
         if (r.event.kind !== kinds.ShortTextNote) return false;
         if (!r.event.content || !r.event.content.trim()) return false;
         const eventTags = this.getEventTags(r.event);

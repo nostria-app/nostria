@@ -45,6 +45,7 @@ import { RelayListEventComponent } from '../../event-types/relay-list-event.comp
 import { ChannelEmbedComponent } from '../../channel-embed/channel-embed.component';
 import { UserProfileComponent } from '../../user-profile/user-profile.component';
 import { DataService } from '../../../services/data.service';
+import { DatabaseService } from '../../../services/database.service';
 import { RelayPoolService } from '../../../services/relays/relay-pool';
 import { UserRelayService } from '../../../services/relays/user-relay';
 import { NostrRecord } from '../../../interfaces';
@@ -129,6 +130,7 @@ export class NoteContentComponent implements OnDestroy {
   private rssParser = inject(RssParserService);
   private mediaPlayer = inject(MediaPlayerService);
   private data = inject(DataService);
+  private database = inject(DatabaseService);
   private relayPool = inject(RelayPoolService);
   private userRelayService = inject(UserRelayService);
   private parsing = inject(ParsingService);
@@ -431,36 +433,7 @@ export class NoteContentComponent implements OnDestroy {
             const authorPubkey = type === 'nevent' ? (data.author || data.pubkey) : undefined;
             const relayHints = type === 'nevent' ? data.relays : undefined;
 
-            let eventData: NostrRecord | null = null;
-
-            // Try relay hints first
-            if (relayHints && relayHints.length > 0) {
-              try {
-                const relayEvent = await this.relayPool.getEventById(relayHints, eventId, 10000);
-                if (relayEvent) {
-                  eventData = this.data.toRecord(relayEvent);
-                }
-              } catch {
-                console.debug(`Relay hints fetch failed for ${eventId}, trying regular fetch`);
-              }
-            }
-
-            // If relay hints didn't work, fall back to regular fetch
-            if (!eventData) {
-              eventData = await this.data.getEventById(eventId, { save: true });
-            }
-
-            // If still not found, try fetching from author's relays
-            if (!eventData && authorPubkey) {
-              try {
-                const authorEvent = await this.userRelayService.getEventById(authorPubkey, eventId);
-                if (authorEvent) {
-                  eventData = this.data.toRecord(authorEvent);
-                }
-              } catch (err) {
-                console.warn(`Failed to fetch event ${eventId} from author ${authorPubkey} relays`, err);
-              }
-            }
+            const eventData = await this.fetchReferencedEvent(eventId as string, relayHints, authorPubkey);
 
             if (eventData) {
               // Clear the timeout timer - event loaded successfully
@@ -522,6 +495,76 @@ export class NoteContentComponent implements OnDestroy {
         }
       }
     }
+  }
+
+  /**
+   * Fetch a referenced event using multiple strategies:
+   * 1. Local database (instant, no network)
+   * 2. Relay hints from the nevent bech32
+   * 3. Account relays
+   * 4. Author's discovered relays
+   * 5. Discovery/global relays as last resort
+   */
+  private async fetchReferencedEvent(
+    eventId: string,
+    relayHints?: string[],
+    authorPubkey?: string,
+  ): Promise<NostrRecord | null> {
+    // 1. Check local database first (no network needed)
+    try {
+      const cachedEvent = await this.database.getEventById(eventId);
+      if (cachedEvent) {
+        return this.data.toRecord(cachedEvent);
+      }
+    } catch {
+      // Database not available, continue to relay fetches
+    }
+
+    // 2. Try relay hints from the nevent bech32
+    if (relayHints && relayHints.length > 0) {
+      try {
+        const relayEvent = await this.relayPool.getEventById(relayHints, eventId, 10000);
+        if (relayEvent) {
+          return this.data.toRecord(relayEvent);
+        }
+      } catch {
+        console.debug(`Relay hints fetch failed for ${eventId}, trying regular fetch`);
+      }
+    }
+
+    // 3. Try account relays
+    try {
+      const accountResult = await this.data.getEventById(eventId, { save: true });
+      if (accountResult) {
+        return accountResult;
+      }
+    } catch {
+      // Continue to next fallback
+    }
+
+    // 4. Try fetching from author's relays
+    if (authorPubkey) {
+      try {
+        const authorEvent = await this.userRelayService.getEventById(authorPubkey, eventId);
+        if (authorEvent) {
+          return this.data.toRecord(authorEvent);
+        }
+      } catch {
+        // Continue to next fallback
+      }
+    }
+
+    // 5. Try discovery/global relays as last resort
+    try {
+      const globalResult = await this.data.getEventById(eventId, { save: true }, true);
+      if (globalResult) {
+        return globalResult;
+      }
+    } catch {
+      // All strategies exhausted
+    }
+
+    return null;
   }
 
   /**
@@ -620,36 +663,7 @@ export class NoteContentComponent implements OnDestroy {
     this.startEventLoadTimer(tokenId);
 
     try {
-      let eventData: NostrRecord | null = null;
-
-      // Try relay hints first
-      if (relayHints && relayHints.length > 0) {
-        try {
-          const relayEvent = await this.relayPool.getEventById(relayHints, eventId, 10000);
-          if (relayEvent) {
-            eventData = this.data.toRecord(relayEvent);
-          }
-        } catch {
-          console.debug(`Retry: Relay hints fetch failed for ${eventId}`);
-        }
-      }
-
-      // Fall back to regular fetch
-      if (!eventData) {
-        eventData = await this.data.getEventById(eventId, { save: true });
-      }
-
-      // Try author's relays
-      if (!eventData && authorPubkey) {
-        try {
-          const authorEvent = await this.userRelayService.getEventById(authorPubkey, eventId);
-          if (authorEvent) {
-            eventData = this.data.toRecord(authorEvent);
-          }
-        } catch (err) {
-          console.warn(`Retry: Failed to fetch event ${eventId} from author relays`, err);
-        }
-      }
+      const eventData = await this.fetchReferencedEvent(eventId as string, relayHints, authorPubkey);
 
       // Clear timeout timer
       this.clearEventLoadTimer(tokenId);

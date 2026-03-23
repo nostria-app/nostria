@@ -50,6 +50,9 @@ export class ReplyButtonComponent {
           event: this.event(), // Pass the full event for complete tag analysis
         },
       });
+    } else if (this.event().kind === 1222 || this.event().kind === 1244) {
+      // Voice events can only be replied to with voice replies (kind 1244)
+      this.eventService.createAudioReply(this.event());
     } else {
       // Create kind:1111 comment (NIP-22)
       this.eventService.createComment(this.event());

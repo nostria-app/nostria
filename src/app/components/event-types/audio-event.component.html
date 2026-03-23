@@ -9,9 +9,4 @@
   <div class="audio-player-wrapper">
     <app-audio-player [src]="audioUrl()" [waveform]="waveform()" [duration]="duration()"></app-audio-player>
   </div>
-
-  @if (!hideComments()) {
-  <app-comments-list [event]="event()" [label]="'Replies'" [singularLabel]="'Reply'" [replyType]="'audio'"
-    [allowedKinds]="[1111, 1244]"></app-comments-list>
-  }
 </div>

@@ -2393,6 +2393,9 @@ export class EventComponent implements AfterViewInit, OnDestroy {
       } as Event;
 
       this.eventService.createCommentReply(rootEvent, ev);
+    } else if (ev.kind === 1222 || ev.kind === 1244) {
+      // Voice events can only be replied to with voice replies (kind 1244)
+      this.eventService.createAudioReply(ev);
     } else {
       this.eventService.createComment(ev);
     }

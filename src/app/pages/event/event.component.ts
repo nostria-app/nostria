@@ -513,7 +513,7 @@ export class EventPageComponent {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((publishEvent) => {
         const relayEvent = publishEvent as PublishRelayResultEvent;
-        if (!relayEvent.success || (relayEvent.event.kind !== 1 && relayEvent.event.kind !== 1111)) {
+        if (!relayEvent.success || (relayEvent.event.kind !== 1 && relayEvent.event.kind !== 1111 && relayEvent.event.kind !== 1244)) {
           return;
         }
         this.onReplyPublished(relayEvent.event);

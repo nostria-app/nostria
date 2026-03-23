@@ -3,14 +3,12 @@ import { ChangeDetectionStrategy, Component, computed, input } from '@angular/co
 import { MatIconModule } from '@angular/material/icon';
 import { Event } from 'nostr-tools';
 import { AudioPlayerComponent } from '../audio-player/audio-player.component';
-import { CommentsListComponent } from '../comments-list/comments-list.component';
 
 @Component({
   selector: 'app-audio-event',
   imports: [
     MatIconModule,
     AudioPlayerComponent,
-    CommentsListComponent
 ],
   templateUrl: './audio-event.component.html',
   styleUrl: './audio-event.component.scss',
@@ -18,7 +16,6 @@ import { CommentsListComponent } from '../comments-list/comments-list.component'
 })
 export class AudioEventComponent {
   event = input.required<Event>();
-  hideComments = input<boolean>(false);
 
   // Extract audio URL from content
   audioUrl = computed(() => {

@@ -75,11 +75,13 @@
       [trustedByPubkey]="trustedByPubkey()" [replyCountFromParent]="totalReplyCount()"></app-event>
   </div>
 
-  <!-- Inline Reply Editor -->
+  <!-- Inline Reply Editor (not shown for voice events - voice replies use the actions button) -->
+  @if (event()!.kind !== 1222 && event()!.kind !== 1244) {
   <div class="inline-reply-editor-wrapper" [style.margin-left.px]="maxParentIndent()">
     <app-inline-reply-editor [replyToEvent]="event()!" [navigateOnPublish]="false"
       (replyPublished)="onReplyPublished($event)"></app-inline-reply-editor>
   </div>
+  }
   }
 
   <!-- Unified loading indicator for thread context (parents/replies) -->

@@ -90,7 +90,7 @@
     }
     <!-- Audio (kind 1222, 1244) -->
     @else if (targetItem.event.kind === 1222 || targetItem.event.kind === 1244) {
-    <app-audio-event [event]="targetItem.event" [hideComments]="hideComments()"></app-audio-event>
+    <app-audio-event [event]="targetItem.event"></app-audio-event>
     }
     <!-- Music Track (kind 36787) -->
     @else if (targetItem.event.kind === 36787) {
@@ -270,7 +270,7 @@
           }
           <!-- Audio (kind 1222, 1244) -->
           @else if (rootRecordData.event.kind === 1222 || rootRecordData.event.kind === 1244) {
-          <app-audio-event [event]="rootRecordData.event" [hideComments]="hideComments()"></app-audio-event>
+          <app-audio-event [event]="rootRecordData.event"></app-audio-event>
           }
           <!-- Music Track (kind 36787) -->
           @else if (rootRecordData.event.kind === 36787) {
@@ -433,7 +433,7 @@
           }
           <!-- Audio (kind 1222, 1244) -->
           @else if (parentRecordData.event.kind === 1222 || parentRecordData.event.kind === 1244) {
-          <app-audio-event [event]="parentRecordData.event" [hideComments]="hideComments()"></app-audio-event>
+          <app-audio-event [event]="parentRecordData.event"></app-audio-event>
           }
           <!-- Music Track (kind 36787) -->
           @else if (parentRecordData.event.kind === 36787) {
@@ -584,7 +584,7 @@
     }
     <!-- Audio (kind 1222, 1244) -->
     @else if (item.event.kind === 1222 || item.event.kind === 1244) {
-    <app-audio-event [event]="item.event" [hideComments]="hideComments()"></app-audio-event>
+    <app-audio-event [event]="item.event"></app-audio-event>
     }
     <!-- Music Track (kind 36787) -->
     @else if (item.event.kind === 36787) {
@@ -748,7 +748,7 @@
     }
     <!-- Audio (kind 1222, 1244) -->
     @else if (item.event.kind === 1222 || item.event.kind === 1244) {
-    <app-audio-event [event]="item.event" [hideComments]="hideComments()"></app-audio-event>
+    <app-audio-event [event]="item.event"></app-audio-event>
     }
     <!-- Music Track (kind 36787) -->
     @else if (item.event.kind === 36787) {
