@@ -699,7 +699,6 @@ export class LiveChatComponent implements AfterViewInit, OnDestroy {
       // Build tags array
       const tags: string[][] = [
         ['a', address, relayHint, 'root'],
-        ['client', 'nostria'],
       ];
 
       // Add reply tag if replying to a message

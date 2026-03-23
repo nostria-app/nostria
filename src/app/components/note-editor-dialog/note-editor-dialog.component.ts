@@ -541,10 +541,6 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     this.mentions().forEach(pubkey => {
       mediaTags.push(['p', pubkey]);
     });
-    // Client
-    if (this.addClientTag()) {
-      mediaTags.push(['client', 'nostria']);
-    }
     // Alt tag
     mediaTags.push(['alt', `Media post: ${this.title() || 'Untitled'}`]);
 
@@ -764,11 +760,6 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
           tags.push(['p', mentionPubkey]);
         }
       });
-
-      // Add client tag if enabled
-      if (this.addClientTag()) {
-        tags.push(['client', 'nostria']);
-      }
 
       const unsignedEvent = {
         kind: 1010,
@@ -1424,10 +1415,6 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     this.mentions().forEach(pubkey => {
       mediaTags.push(['p', pubkey]);
     });
-    // Client
-    if (this.addClientTag()) {
-      mediaTags.push(['client', 'nostria']);
-    }
     // Alt tag
     mediaTags.push(['alt', `Media post: ${this.title() || 'Untitled'}`]);
 
@@ -1512,11 +1499,6 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
         tags.push(['p', pubkey]);
       }
     });
-
-    // Add client tag if enabled
-    if (this.addClientTag()) {
-      tags.push(['client', 'nostria']);
-    }
 
     // Create and publish the kind:1010 edit event
     const unsignedEvent = this.nostrService.createEvent(1010, content, tags);
@@ -1947,11 +1929,6 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
         const expirationTimestamp = Math.floor(expirationDateTime.getTime() / 1000);
         tags.push(['expiration', expirationTimestamp.toString()]);
       }
-    }
-
-    // Add client tag if enabled
-    if (this.addClientTag()) {
-      tags.push(['client', 'nostria']);
     }
 
     // Add imeta tags for uploaded media (NIP-92)

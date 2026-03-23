@@ -197,7 +197,6 @@ export class MusicPlaylistService {
       tags.push(['private', 'true']);
     }
     tags.push(['collaborative', data.isCollaborative ? 'true' : 'false']);
-    tags.push(['client', 'nostria']);
 
     const content = data.description || '';
 
@@ -358,7 +357,6 @@ export class MusicPlaylistService {
       newTags.push(['private', 'true']);
     }
     newTags.push(['collaborative', isCollaborative ? 'true' : 'false']);
-    newTags.push(['client', 'nostria']);
 
     // Track refs (use new order if provided, otherwise keep existing)
     const trackRefs = updates.trackRefs ?? playlist.trackRefs;

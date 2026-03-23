@@ -904,8 +904,6 @@ export class MediaComponent {
         tags.push(['g', options.geohash]);
       }
 
-      tags.push(['client', 'nostria']);
-
       return this.nostr.createEvent(1, content, tags);
     }
 
@@ -1035,7 +1033,6 @@ export class MediaComponent {
     }
 
     tags.push(['x', item.sha256]);
-    tags.push(['client', 'nostria']);
 
     const event = this.nostr.createEvent(
       options.kind,

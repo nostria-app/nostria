@@ -603,7 +603,6 @@ export class InlineReplyEditorComponent implements AfterViewInit, OnDestroy {
         mentions: this.mentions(),
         content,
         mediaMetadata: this.mediaMetadata(),
-        addClientTag: true,
       });
 
       await this.publishEvent(content, tags);

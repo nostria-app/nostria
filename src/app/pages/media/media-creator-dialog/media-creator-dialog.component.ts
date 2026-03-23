@@ -962,7 +962,6 @@ export class MediaCreatorDialogComponent implements AfterViewInit, OnDestroy {
 
     // Add metadata tags
     tags.push(['published_at', Math.floor(Date.now() / 1000).toString()]);
-    tags.push(['client', 'nostria']);
 
     // Add x tags for all media hashes
     uploadedItems.forEach(({ item }) => {
@@ -1019,9 +1018,6 @@ export class MediaCreatorDialogComponent implements AfterViewInit, OnDestroy {
     if (this.contentWarning().trim()) {
       tags.push(['content-warning', this.contentWarning().trim()]);
     }
-
-    // Add client tag
-    tags.push(['client', 'nostria']);
 
     // Create and publish
     const event = this.nostrService.createEvent(1, noteContent, tags);

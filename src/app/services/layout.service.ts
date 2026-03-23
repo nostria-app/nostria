@@ -2340,9 +2340,6 @@ export class LayoutService implements OnDestroy {
         tags.push(['g', options.geohash]);
       }
 
-      // Add client tag (Nostria)
-      tags.push(['client', 'nostria']);
-
       // Create the event
       return this.nostrService.createEvent(1, content, tags);
     }
@@ -2502,9 +2499,6 @@ export class LayoutService implements OnDestroy {
 
     // Add x tag with hash for queryability
     tags.push(['x', item.sha256]);
-
-    // Add client tag (Nostria)
-    tags.push(['client', 'nostria']);
 
     // Create the event
     const event = this.nostrService.createEvent(

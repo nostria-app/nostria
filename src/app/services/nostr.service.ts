@@ -1101,6 +1101,16 @@ export class NostrService implements NostriaService {
       };
     }
 
+    // Add client tag if enabled and not already present.
+    // Skip for HTTP auth tokens (NIP-98 kind 27235, Blossom kind 24242) which are not published to relays.
+    const AUTH_EVENT_KINDS = [27235, 24242];
+    if (this.settings.addClientTag() && !AUTH_EVENT_KINDS.includes(event.kind) && !event.tags.some(tag => tag[0] === 'client')) {
+      event = {
+        ...event,
+        tags: [...event.tags, ['client', 'nostria']],
+      };
+    }
+
     let signedEvent: Event | EventTemplate | null = null;
 
     // Get the pubkey - either from the event if it's an Event, or use current user's

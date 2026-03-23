@@ -554,7 +554,6 @@ export class ImportRssDialogComponent {
         ['d', dTag],
         ['title', track.title],
         ['url', track.audioUrl],
-        ['client', 'nostria'],
       ];
 
       if (track.imageUrl) {
@@ -630,7 +629,6 @@ export class ImportRssDialogComponent {
       const albumTags: string[][] = [
         ['d', albumDTag],
         ['title', album.title],
-        ['client', 'nostria'],
       ];
 
       if (album.imageUrl) {

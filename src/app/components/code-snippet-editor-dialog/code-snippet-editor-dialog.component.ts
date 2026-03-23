@@ -79,7 +79,6 @@ export class CodeSnippetEditorDialogComponent {
       if (this.license()) tags.push(['license', this.license()]);
       if (this.repo()) tags.push(['repo', this.repo()]);
       tags.push(['alt', `Code snippet: ${this.name() || this.description() || 'Untitled'}`]);
-      tags.push(['client', 'nostria']);
 
       const event = this.nostrService.createEvent(1337, codeContent, tags);
       const result = await this.nostrService.signAndPublish(event);

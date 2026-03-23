@@ -1233,7 +1233,6 @@ export class MusicTrackDialogComponent {
         ['title', formValue.title],
         ['url', this.audioUrl()!],
         ['t', 'music'],
-        ['client', 'nostria'],
       ];
 
       // Add image or gradient

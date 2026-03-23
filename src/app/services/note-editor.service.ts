@@ -52,7 +52,6 @@ export interface BuildTagsConfig {
   content: string;
   mediaMetadata?: MediaMetadata[];
   expirationTimestamp?: number;
-  addClientTag?: boolean;
   zapSplit?: {
     enabled: boolean;
     originalPercent: number;
@@ -103,7 +102,6 @@ export class NoteEditorService {
       content,
       mediaMetadata,
       expirationTimestamp,
-      addClientTag,
       zapSplit,
     } = config;
 
@@ -134,11 +132,6 @@ export class NoteEditorService {
     // Add expiration tag if provided
     if (expirationTimestamp) {
       tags.push(['expiration', expirationTimestamp.toString()]);
-    }
-
-    // Add client tag if enabled
-    if (addClientTag) {
-      tags.push(['client', 'nostria']);
     }
 
     // Add imeta tags for uploaded media (NIP-92)
