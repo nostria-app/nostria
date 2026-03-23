@@ -505,8 +505,8 @@
   </div>
   }
 
-  <!-- Media player - desktop: normal footer (unless docked to sidebar) -->
-  @if (layout.showMediaPlayer() && !layout.isHandset() && !layout.mediaPlayerInSidebar()) {
+  <!-- Media player - desktop: normal footer (unless docked to sidebar or toolbar) -->
+  @if (layout.showMediaPlayer() && !layout.isHandset() && !layout.mediaPlayerInSidebar() && !layout.mediaPlayerInToolbar()) {
   <app-media-player></app-media-player>
   }
 
@@ -557,7 +557,7 @@
 
       <!-- Face 2: Media player or Music browse -->
       <div class="cube-face cube-face-player">
-        @if (layout.showMediaPlayer()) {
+        @if (layout.showMediaPlayer() && !layout.mediaPlayerInToolbar()) {
         <app-media-player></app-media-player>
         } @else {
         <a class="cube-music-browse" routerLink="/music" (click)="layout.setCubePlayerFace(false)">

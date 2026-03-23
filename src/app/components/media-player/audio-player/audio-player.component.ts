@@ -231,6 +231,19 @@ export class AudioPlayerComponent {
     this.layout.mediaPlayerInSidebar.update(v => !v);
   }
 
+  toggleToolbarDock(): void {
+    const docking = !this.layout.mediaPlayerInToolbar();
+    this.layout.mediaPlayerInToolbar.set(docking);
+    // When docking to toolbar, undock from sidebar
+    if (docking) {
+      this.layout.mediaPlayerInSidebar.set(false);
+      // On mobile, flip the cube back to nav face since player is now in toolbar
+      if (this.layout.isHandset()) {
+        this.layout.setCubePlayerFace(false);
+      }
+    }
+  }
+
   toggleExpanded(): void {
     if (!this.footer() || !this.isMusicTrack()) {
       this.toggleFullscreen();

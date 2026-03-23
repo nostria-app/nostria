@@ -5,6 +5,65 @@
   <mat-icon>arrow_back</mat-icon>
 </button> -->
 }
+
+@if (showToolbarPlayer()) {
+<button type="button" class="icon-button toolbar-player-button"
+  (click)="togglePlayPause()"
+  (mouseenter)="onToolbarPlayerEnter($event)"
+  (mouseleave)="onToolbarPlayerLeave()"
+  [attr.aria-label]="media.paused ? 'Play' : 'Pause'">
+  @if (toolbarPlayerArtwork()) {
+  <img class="toolbar-player-art" [src]="toolbarPlayerArtwork()!" alt="Now playing" draggable="false" />
+  <div class="toolbar-player-overlay">
+    <mat-icon>{{ media.paused ? 'play_arrow' : 'pause' }}</mat-icon>
+  </div>
+  } @else {
+  <mat-icon>{{ media.paused ? 'play_arrow' : 'pause' }}</mat-icon>
+  }
+</button>
+} @else {
 <button type="button" class="icon-button" [class.hide-small]="false" (click)="navigateToHome()" title="Go to home">
   <img src="icons/icon-192x192.png" class="app-icon" alt="Nostria icon" />
 </button>
+}
+
+@if (toolbarPlayerShowFlyout()) {
+<div class="toolbar-player-flyout"
+  [class.toolbar-player-intro]="toolbarPlayerIntro() && !toolbarPlayerHovered()"
+  [style.top.px]="toolbarPlayerFlyoutPosition()?.top"
+  [style.left.px]="toolbarPlayerFlyoutPosition()?.left"
+  (mouseenter)="onToolbarPlayerFlyoutEnter()"
+  (mouseleave)="onToolbarPlayerFlyoutLeave()">
+  <div class="toolbar-player-info">
+    @if (media.current()?.artwork) {
+    <img class="toolbar-player-flyout-art" [src]="media.current()!.artwork!" alt="Now playing artwork" />
+    }
+    <div class="toolbar-player-flyout-text">
+      <div class="toolbar-player-title" [class.clickable]="hasSongLink()" (click)="goToSong()">{{ media.current()?.title || 'Unknown Track' }}</div>
+      <div class="toolbar-player-artist" [class.clickable]="hasArtistLink()" (click)="goToArtist()">{{ media.current()?.artist || 'Unknown Artist' }}</div>
+    </div>
+  </div>
+  <div class="toolbar-player-controls">
+    <button mat-icon-button [disabled]="!media.canPrevious()" (click)="media.previous()" aria-label="Previous">
+      <mat-icon>skip_previous</mat-icon>
+    </button>
+    <button mat-icon-button (click)="togglePlayPause()" [attr.aria-label]="media.paused ? 'Play' : 'Pause'">
+      <mat-icon>{{ media.paused ? 'play_arrow' : 'pause' }}</mat-icon>
+    </button>
+    <button mat-icon-button [disabled]="!media.canNext()" (click)="media.next()" aria-label="Next">
+      <mat-icon>skip_next</mat-icon>
+    </button>
+  </div>
+  <div class="toolbar-player-actions">
+    <button mat-icon-button matTooltip="Show player" (click)="undockFromToolbar()" aria-label="Move player to footer">
+      <mat-icon>pip_exit</mat-icon>
+    </button>
+    <button mat-icon-button matTooltip="Fullscreen" (click)="openFullscreenPlayer()" aria-label="Open fullscreen player">
+      <mat-icon>open_in_full</mat-icon>
+    </button>
+    <button mat-icon-button matTooltip="Close player" (click)="media.exit()" aria-label="Close player">
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
+</div>
+}

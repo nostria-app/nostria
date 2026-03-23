@@ -193,6 +193,10 @@
                 <mat-icon>open_in_full</mat-icon>
                 <span>Fullscreen</span>
               </button>
+              <button mat-menu-item (click)="toggleToolbarDock()">
+                <mat-icon>{{ layout.mediaPlayerInToolbar() ? 'pip_exit' : 'web_asset' }}</mat-icon>
+                <span>{{ layout.mediaPlayerInToolbar() ? 'Move to footer' : 'Move to toolbar' }}</span>
+              </button>
               <button mat-menu-item (click)="media.exit()">
                 <mat-icon>close</mat-icon>
                 <span>Close Player</span>
@@ -265,6 +269,10 @@
             <span>{{ layout.mediaPlayerInSidebar() ? 'Move to footer' : 'Move to sidebar' }}</span>
           </button>
           }
+          <button mat-menu-item (click)="toggleToolbarDock()">
+            <mat-icon>{{ layout.mediaPlayerInToolbar() ? 'pip_exit' : 'web_asset' }}</mat-icon>
+            <span>{{ layout.mediaPlayerInToolbar() ? 'Move to footer' : 'Move to toolbar' }}</span>
+          </button>
 
           <mat-menu #speedMenuDesktop="matMenu">
             <button mat-menu-item (click)="media.setPlaybackRate(0.5)">0.5x</button>

@@ -167,6 +167,13 @@ export class LayoutService implements OnDestroy {
    * Only applicable on desktop (non-handset) screens.
    */
   mediaPlayerInSidebar = signal(false);
+
+  /**
+   * When true, the media player is docked into the toolbar, replacing the
+   * app icon button with a compact play/pause button.
+   * Works on all screen sizes (including mobile).
+   */
+  mediaPlayerInToolbar = signal(false);
   private readonly platformId = inject(PLATFORM_ID);
   readonly isBrowser = signal(isPlatformBrowser(this.platformId));
   localStorage = inject(LocalStorageService);

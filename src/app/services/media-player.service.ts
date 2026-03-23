@@ -466,6 +466,12 @@ export class MediaPlayerService implements OnInitialized {
     this.layout.showMediaPlayer.set(false);
     this.layout.fullscreenMediaPlayer.set(false);
     this.layout.mediaPlayerInSidebar.set(false);
+    this.layout.mediaPlayerInToolbar.set(false);
+
+    // On mobile, flip the cube back to the nav face
+    if (this.layout.isHandset()) {
+      this.layout.setCubePlayerFace(false);
+    }
 
     // Clear saved queue from localStorage
     // this.localStorage.removeItem(this.MEDIA_STORAGE_KEY);
