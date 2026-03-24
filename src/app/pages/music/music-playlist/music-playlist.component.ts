@@ -33,6 +33,7 @@ import { NostrService } from '../../../services/nostr.service';
 import { NostrRecord, MediaItem } from '../../../interfaces';
 import { UserRelaysService } from '../../../services/relays/user-relays';
 import { ColorExtractionService, ExtractedColors } from '../../../services/color-extraction.service';
+import { ThemeService } from '../../../services/theme.service';
 import {
   EditMusicPlaylistDialogComponent,
   EditMusicPlaylistDialogData,
@@ -98,6 +99,7 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
   private userRelaysService = inject(UserRelaysService);
   private nostrService = inject(NostrService);
   private colorExtraction = inject(ColorExtractionService);
+  private themeService = inject(ThemeService);
 
   // Template for playlist menu (used in panel header)
   @ViewChild('playlistMenuTemplate') playlistMenuTemplate!: TemplateRef<unknown>;
@@ -328,12 +330,22 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
           this.colorExtraction.extractColors(image).then(colors => {
             this.extractedColors.set(colors);
             this.colorExtraction.activeBackground.set(colors);
+            if (colors) {
+              const isDark = this.themeService.darkMode();
+              const hex = ThemeService.hslToHex(
+                colors.hue,
+                colors.saturation,
+                isDark ? 14 : 90
+              );
+              this.themeService.setThemeColorOverride(hex);
+            }
           });
         });
       } else {
         untracked(() => {
           this.extractedColors.set(null);
           this.colorExtraction.activeBackground.set(null);
+          this.themeService.clearThemeColorOverride();
         });
       }
     });
@@ -351,6 +363,7 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
     this.subscriptions.forEach(sub => sub.close());
     this.likeSubscription?.close();
     this.colorExtraction.activeBackground.set(null);
+    this.themeService.clearThemeColorOverride();
   }
 
   /**

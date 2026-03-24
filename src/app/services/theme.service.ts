@@ -20,6 +20,9 @@ export class ThemeService {
   private readonly LIGHT_THEME_COLOR = '#fafafa';
   private readonly DARK_THEME_COLOR = '#1a1a1a';
 
+  /** When non-null, overrides the default theme-color meta tag value. */
+  private themeColorOverride = signal<string | null>(null);
+
   darkMode = signal<boolean>(this.getInitialThemePreference());
 
   constructor() {
@@ -39,6 +42,19 @@ export class ThemeService {
     } else {
       this.logger.debug('Running in SSR mode, skipping browser-specific initialization');
     }
+
+    // React to override changes — update meta tag when override is set or cleared
+    effect(() => {
+      const override = this.themeColorOverride();
+      if (override !== null) {
+        this.updateAllThemeMetaTags(override);
+      } else {
+        // Restore default theme color
+        const isDark = this.darkMode();
+        const defaultColor = isDark ? this.DARK_THEME_COLOR : this.LIGHT_THEME_COLOR;
+        this.updateAllThemeMetaTags(defaultColor);
+      }
+    });
 
     this.logger.debug(`Initial theme set to: ${this.darkMode() ? 'dark' : 'light'}`);
   }
@@ -101,12 +117,47 @@ export class ThemeService {
     return systemPrefersDark;
   }
 
+  /**
+   * Set an override theme-color for the PWA chrome (address bar, status bar).
+   * This is used by immersive pages (e.g. music album/track) to tint the
+   * browser chrome to match the extracted artwork color.
+   *
+   * @param color A CSS hex color string, e.g. '#2a1a3b'
+   */
+  setThemeColorOverride(color: string): void {
+    this.logger.debug(`Setting theme-color override: ${color}`);
+    this.themeColorOverride.set(color);
+  }
+
+  /**
+   * Clear the theme-color override, restoring the default theme color.
+   * Call this when leaving immersive pages.
+   */
+  clearThemeColorOverride(): void {
+    this.logger.debug('Clearing theme-color override');
+    this.themeColorOverride.set(null);
+  }
+
+  /**
+   * Convert HSL values to a hex color string.
+   * Useful for converting extracted artwork colors to a format suitable for the meta tag.
+   */
+  static hslToHex(h: number, s: number, l: number): string {
+    s /= 100;
+    l /= 100;
+    const a = s * Math.min(l, 1 - l);
+    const f = (n: number) => {
+      const k = (n + h / 30) % 12;
+      const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+      return Math.round(255 * color).toString(16).padStart(2, '0');
+    };
+    return `#${f(0)}${f(8)}${f(4)}`;
+  }
+
   private applyTheme(isDark: boolean): void {
     if (!isPlatformBrowser(this.platformId)) {
       return; // Don't try to modify DOM during SSR
     }
-
-    const themeColor = isDark ? this.DARK_THEME_COLOR : this.LIGHT_THEME_COLOR;
 
     if (isDark) {
       this.document.documentElement.classList.add('dark');
@@ -114,19 +165,29 @@ export class ThemeService {
       this.document.documentElement.classList.remove('dark');
     }
 
-    this.updateThemeMetaTag(themeColor);
+    // Only update meta tags here if there's no active override
+    // (the override effect handles it when an override is set)
+    if (this.themeColorOverride() === null) {
+      const themeColor = isDark ? this.DARK_THEME_COLOR : this.LIGHT_THEME_COLOR;
+      this.updateAllThemeMetaTags(themeColor);
+    }
   }
 
-  private updateThemeMetaTag(color: string): void {
+  /**
+   * Update ALL theme-color meta tags in the document.
+   * The document has three: two with media queries (light/dark) and one fallback with id.
+   */
+  private updateAllThemeMetaTags(color: string): void {
     if (!isPlatformBrowser(this.platformId)) {
       return; // Don't try to modify DOM during SSR
     }
 
-    // Find the theme-color meta tag
-    const metaThemeColor = this.document.querySelector('meta[name="theme-color"]');
+    this.logger.debug(`Setting all theme-color meta tags to: ${color}`);
 
-    // Set the color
-    this.logger.debug(`Setting theme-color to: ${color}`);
-    metaThemeColor?.setAttribute('content', color);
+    // Update all meta[name="theme-color"] tags
+    const metaTags = this.document.querySelectorAll('meta[name="theme-color"]');
+    metaTags.forEach((tag: Element) => {
+      tag.setAttribute('content', color);
+    });
   }
 }

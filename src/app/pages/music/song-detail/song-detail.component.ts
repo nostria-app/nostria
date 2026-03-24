@@ -36,6 +36,7 @@ import { ImageCacheService } from '../../../services/image-cache.service';
 import { NostrRecord, MediaItem } from '../../../interfaces';
 import { UserRelaysService } from '../../../services/relays/user-relays';
 import { ColorExtractionService, ExtractedColors } from '../../../services/color-extraction.service';
+import { ThemeService } from '../../../services/theme.service';
 import { ConfirmDialogComponent, ConfirmDialogData } from '../../../components/confirm-dialog/confirm-dialog.component';
 import { ZapDialogComponent, ZapDialogData } from '../../../components/zap-dialog/zap-dialog.component';
 import { ZapChipsComponent } from '../../../components/zap-chips/zap-chips.component';
@@ -116,6 +117,7 @@ export class SongDetailComponent implements OnInit, OnDestroy {
   private userRelaysService = inject(UserRelaysService);
   private database = inject(DatabaseService);
   private colorExtraction = inject(ColorExtractionService);
+  private themeService = inject(ThemeService);
 
   // Inputs for when opened via RightPanelService
   pubkeyInput = input<string | undefined>(undefined);
@@ -448,12 +450,22 @@ export class SongDetailComponent implements OnInit, OnDestroy {
           this.colorExtraction.extractColors(img).then(colors => {
             this.extractedColors.set(colors);
             this.colorExtraction.activeBackground.set(colors);
+            if (colors) {
+              const isDark = this.themeService.darkMode();
+              const hex = ThemeService.hslToHex(
+                colors.hue,
+                colors.saturation,
+                isDark ? 14 : 90
+              );
+              this.themeService.setThemeColorOverride(hex);
+            }
           });
         });
       } else {
         untracked(() => {
           this.extractedColors.set(null);
           this.colorExtraction.activeBackground.set(null);
+          this.themeService.clearThemeColorOverride();
         });
       }
     });
@@ -636,6 +648,7 @@ export class SongDetailComponent implements OnInit, OnDestroy {
     this.albumSubscription?.close();
     this.moreByArtistSubscription?.close();
     this.colorExtraction.activeBackground.set(null);
+    this.themeService.clearThemeColorOverride();
   }
 
   private loadSong(pubkey: string, identifier: string): void {
