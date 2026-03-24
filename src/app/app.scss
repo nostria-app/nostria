@@ -2089,11 +2089,14 @@ mat-sidenav-content {
   gap: 0;
 
   // Glass effect (same as .mobile-nav)
-  background-color: color-mix(in srgb, var(--mat-sys-surface-container) 34%, transparent);
-  -webkit-backdrop-filter: blur(28px) saturate(1.9);
-  backdrop-filter: blur(28px) saturate(1.9);
-  border: 1px solid color-mix(in srgb, var(--mat-sys-outline-variant) 52%, transparent);
-  box-shadow: var(--mat-sys-level1);
+  background-color: color-mix(in srgb, var(--mat-sys-surface-container) 22%, transparent);
+  -webkit-backdrop-filter: blur(42px) saturate(2.2);
+  backdrop-filter: blur(42px) saturate(2.2);
+  border: 1px solid color-mix(in srgb, var(--mat-sys-outline-variant) 68%, transparent);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.08),
+    0 10px 28px rgba(0, 0, 0, 0.22);
 
   a,
   button {
@@ -2102,9 +2105,12 @@ mat-sidenav-content {
 }
 
 :host-context(.dark) .cube-face-nav {
-  background-color: color-mix(in srgb, var(--mat-sys-surface-container) 40%, transparent);
-  border-color: color-mix(in srgb, var(--mat-sys-outline-variant) 60%, transparent);
-  box-shadow: var(--mat-sys-level1);
+  background-color: color-mix(in srgb, var(--mat-sys-surface-container) 28%, transparent);
+  border-color: color-mix(in srgb, var(--mat-sys-outline-variant) 72%, transparent);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.06),
+    0 10px 28px rgba(0, 0, 0, 0.38);
 
   a,
   button {
@@ -2120,11 +2126,14 @@ mat-sidenav-content {
   align-items: stretch;
 
   // Glass background — matches .cube-face-nav so the player face isn't transparent
-  background-color: color-mix(in srgb, var(--mat-sys-surface-container) 34%, transparent);
-  -webkit-backdrop-filter: blur(28px) saturate(1.9);
-  backdrop-filter: blur(28px) saturate(1.9);
-  border: 1px solid color-mix(in srgb, var(--mat-sys-outline-variant) 52%, transparent);
-  box-shadow: var(--mat-sys-level1);
+  background-color: color-mix(in srgb, var(--mat-sys-surface-container) 22%, transparent);
+  -webkit-backdrop-filter: blur(42px) saturate(2.2);
+  backdrop-filter: blur(42px) saturate(2.2);
+  border: 1px solid color-mix(in srgb, var(--mat-sys-outline-variant) 68%, transparent);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.08),
+    0 10px 28px rgba(0, 0, 0, 0.22);
 
   // Override the media player's fixed positioning when inside cube
   .cube-player-main app-media-player {
@@ -2156,9 +2165,12 @@ mat-sidenav-content {
 }
 
 :host-context(.dark) .cube-face-player {
-  background-color: color-mix(in srgb, var(--mat-sys-surface-container) 40%, transparent);
-  border-color: color-mix(in srgb, var(--mat-sys-outline-variant) 60%, transparent);
-  box-shadow: var(--mat-sys-level1);
+  background-color: color-mix(in srgb, var(--mat-sys-surface-container) 28%, transparent);
+  border-color: color-mix(in srgb, var(--mat-sys-outline-variant) 72%, transparent);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.06),
+    0 10px 28px rgba(0, 0, 0, 0.38);
 }
 
 // "Browse Music" button shown on the player face when no music is queued
@@ -2217,7 +2229,7 @@ mat-sidenav-content {
   }
 
   &.active-link {
-    background-color: rgba(0, 0, 0, 0.08);
+    background-color: transparent;
 
     .mat-icon {
       color: var(--mat-sys-primary);
@@ -2236,7 +2248,7 @@ mat-sidenav-content {
   }
 
   &.active-link {
-    background-color: rgba(255, 255, 255, 0.15);
+    background-color: transparent;
   }
 }
 
@@ -2923,8 +2935,8 @@ mat-sidenav-content.clips-mobile-mode {
 .cube-player-home-button {
   flex: 0 0 auto;
   height: 100%;
-  min-width: 62px;
-  padding: 0 10px;
+  min-width: 60px;
+  padding: 0 !important;
   border-radius: 28px 0 0 28px;
   display: flex;
   flex-direction: column;
@@ -2932,11 +2944,22 @@ mat-sidenav-content.clips-mobile-mode {
   justify-content: center;
   gap: 2px;
   color: var(--mat-sys-on-surface-variant);
+  border-right: 1px solid color-mix(in srgb, var(--mat-sys-outline-variant) 45%, transparent);
+
+  .mdc-button__label {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    width: 100%;
+  }
 
   .mat-icon {
     font-size: 22px;
     width: 22px;
     height: 22px;
+    margin: 0;
   }
 
   span {

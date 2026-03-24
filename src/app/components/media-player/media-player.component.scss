@@ -19,6 +19,12 @@
     // an unwanted fade-in when the player face becomes visible.
     :host-context(.cube-face-player) & {
       transition: none;
+      background: transparent !important;
+      background-color: transparent !important;
+      -webkit-backdrop-filter: none !important;
+      backdrop-filter: none !important;
+      border: 0 !important;
+      box-shadow: none !important;
     }
 
     // Floating pill layout
@@ -41,13 +47,13 @@
     border: none;
 
     box-shadow: // Inner white highlight (sharp edge)
-      inset 0 0 0 1px rgba(255, 255, 255, 0.4),
-      // Inner glow
-      inset 0 0 10px 4px rgba(255, 255, 255, 0.15),
-      // Drop shadows
-      0px 4px 16px rgba(17, 17, 26, 0.1),
-      0px 8px 24px rgba(17, 17, 26, 0.1),
-      0px 16px 56px rgba(17, 17, 26, 0.1);
+    inset 0 0 0 1px rgba(255, 255, 255, 0.4),
+    // Inner glow
+    inset 0 0 10px 4px rgba(255, 255, 255, 0.15),
+    // Drop shadows
+    0px 4px 16px rgba(17, 17, 26, 0.1),
+    0px 8px 24px rgba(17, 17, 26, 0.1),
+    0px 16px 56px rgba(17, 17, 26, 0.1);
 
     &.podcast-mode {
       height: 84px;
