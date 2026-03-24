@@ -118,6 +118,7 @@ import { TextScaleService } from './services/text-scale.service';
 import { UtilitiesService } from './services/utilities.service';
 import { AccountRelayService } from './services/relays/account-relay';
 import { SettingsQuickCardComponent } from './components/settings-quick-card/settings-quick-card.component';
+import { ColorExtractionService } from './services/color-extraction.service';
 
 interface NavItem {
   path: string;
@@ -247,6 +248,23 @@ export class App implements OnInit, OnDestroy {
   private readonly textScale = inject(TextScaleService);
   private readonly utilities = inject(UtilitiesService);
   private readonly accountRelay = inject(AccountRelayService);
+  private readonly colorExtraction = inject(ColorExtractionService);
+
+  /**
+   * Computed toolbar background style when an immersive music page is active.
+   * Blends the extracted album/track color into the toolbar's glass effect.
+   * Returns null when no immersive background is active (default toolbar style applies via CSS).
+   */
+  toolbarBackground = computed(() => {
+    const colors = this.colorExtraction.activeBackground();
+    if (!colors) return null;
+    const isDark = this.themeService.darkMode();
+    if (isDark) {
+      return `hsla(${colors.hue}, ${Math.min(colors.saturation, 40)}%, 12%, 0.9)`;
+    } else {
+      return `hsla(${colors.hue}, ${Math.min(colors.saturation, 40)}%, 92%, 0.85)`;
+    }
+  });
 
   // Two-column layout services
   twoColumnLayout = inject(TwoColumnLayoutService);
@@ -1861,10 +1879,15 @@ export class App implements OnInit, OnDestroy {
   onCubeTouchMove(event: TouchEvent): void {
     if (event.touches.length !== 1) return;
     const deltaX = event.touches[0].clientX - this.cubeTouchStartX;
-    const deltaY = Math.abs(event.touches[0].clientY - this.cubeTouchStartY);
+    const deltaY = event.touches[0].clientY - this.cubeTouchStartY;
 
-    // Only consider horizontal swipes (more horizontal than vertical)
-    if (Math.abs(deltaX) > 20 && Math.abs(deltaX) > deltaY) {
+    // Consider horizontal swipes (more horizontal than vertical)
+    if (Math.abs(deltaX) > 20 && Math.abs(deltaX) > Math.abs(deltaY)) {
+      this.cubeSwiping = true;
+    }
+
+    // Consider vertical swipes (more vertical than horizontal)
+    if (Math.abs(deltaY) > 20 && Math.abs(deltaY) > Math.abs(deltaX)) {
       this.cubeSwiping = true;
     }
   }
@@ -1872,9 +1895,23 @@ export class App implements OnInit, OnDestroy {
   onCubeTouchEnd(event: TouchEvent): void {
     if (!this.cubeSwiping) return;
     const deltaX = event.changedTouches[0].clientX - this.cubeTouchStartX;
+    const deltaY = event.changedTouches[0].clientY - this.cubeTouchStartY;
     const threshold = 50;
 
-    if (Math.abs(deltaX) < threshold) return;
+    // Vertical swipe-up on player face opens fullscreen
+    if (-deltaY > threshold && Math.abs(deltaY) > Math.abs(deltaX)) {
+      const showingPlayerFace = this.layout.showCubePlayerFace();
+      if (showingPlayerFace && this.layout.showMediaPlayer() && !this.layout.fullscreenMediaPlayer()) {
+        this.layout.fullscreenMediaPlayer.set(true);
+        this.cubeSwiping = false;
+        return;
+      }
+    }
+
+    if (Math.abs(deltaX) < threshold) {
+      this.cubeSwiping = false;
+      return;
+    }
 
     const showingPlayerFace = this.layout.showCubePlayerFace();
 

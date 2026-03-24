@@ -447,11 +447,13 @@ export class SongDetailComponent implements OnInit, OnDestroy {
         untracked(() => {
           this.colorExtraction.extractColors(img).then(colors => {
             this.extractedColors.set(colors);
+            this.colorExtraction.activeBackground.set(colors);
           });
         });
       } else {
         untracked(() => {
           this.extractedColors.set(null);
+          this.colorExtraction.activeBackground.set(null);
         });
       }
     });
@@ -633,6 +635,7 @@ export class SongDetailComponent implements OnInit, OnDestroy {
     this.likeSubscription?.close();
     this.albumSubscription?.close();
     this.moreByArtistSubscription?.close();
+    this.colorExtraction.activeBackground.set(null);
   }
 
   private loadSong(pubkey: string, identifier: string): void {

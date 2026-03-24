@@ -50,6 +50,9 @@ nav {
   backdrop-filter: blur(20px) saturate(1.8);
   border-bottom: 1px solid rgba(0, 0, 0, 0.08);
 
+  // Smooth transition for immersive music page color changes
+  transition: background-color 0.4s ease, border-bottom-color 0.4s ease;
+
   // Enable pointer events on toolbar
   pointer-events: auto;
 
@@ -58,12 +61,21 @@ nav {
     padding: 8px 8px;
     gap: 8px;
   }
+
+  // Immersive mode: tinted by extracted album/track color
+  &.immersive-toolbar {
+    border-bottom-color: transparent;
+  }
 }
 
 // Dark mode toolbar
 :host-context(.dark) .app-toolbar {
   background-color: rgba(26, 26, 26, 0.9);
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+
+  &.immersive-toolbar {
+    border-bottom-color: transparent;
+  }
 }
 
 // Glass section mixin for toolbar sections
@@ -2973,7 +2985,7 @@ mat-sidenav-content.clips-mobile-mode {
   flex: 0 0 auto;
   height: 100%;
   min-width: 60px;
-  padding: 0 !important;
+  padding: 0 0 0 6px !important;
   border-radius: 32px 0 0 32px;
   display: flex;
   flex-direction: column;
@@ -2981,7 +2993,6 @@ mat-sidenav-content.clips-mobile-mode {
   justify-content: center;
   gap: 2px;
   color: var(--mat-sys-on-surface-variant);
-  border-right: 1px solid color-mix(in srgb, white 30%, transparent);
 
   .mdc-button__label {
     display: flex;
@@ -2997,12 +3008,14 @@ mat-sidenav-content.clips-mobile-mode {
     width: 22px;
     height: 22px;
     margin: 0;
+    color: var(--mat-sys-on-surface-variant) !important;
   }
 
   span {
     font-size: var(--text-2xs-capped-ui);
     line-height: 1;
     opacity: 0.8;
+    color: var(--mat-sys-on-surface-variant);
   }
 
   &:hover {

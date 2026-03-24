@@ -246,7 +246,9 @@
       [class.media-player-shown]="layout.showMediaPlayer()" [class.clips-mobile-mode]="isClipsMode()">
 
       <!-- Top toolbar - beside sidenav -->
-      <mat-toolbar class="app-toolbar no-print no-select" [class.hidden-for-clips]="isClipsMode()">
+      <mat-toolbar class="app-toolbar no-print no-select" [class.hidden-for-clips]="isClipsMode()"
+        [class.immersive-toolbar]="!!toolbarBackground()"
+        [style.background-color]="toolbarBackground()">
 
 
 

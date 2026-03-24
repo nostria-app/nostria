@@ -327,11 +327,13 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
         untracked(() => {
           this.colorExtraction.extractColors(image).then(colors => {
             this.extractedColors.set(colors);
+            this.colorExtraction.activeBackground.set(colors);
           });
         });
       } else {
         untracked(() => {
           this.extractedColors.set(null);
+          this.colorExtraction.activeBackground.set(null);
         });
       }
     });
@@ -348,6 +350,7 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.subscriptions.forEach(sub => sub.close());
     this.likeSubscription?.close();
+    this.colorExtraction.activeBackground.set(null);
   }
 
   /**

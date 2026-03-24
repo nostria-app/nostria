@@ -1,4 +1,4 @@
-import { Injectable, PLATFORM_ID, inject } from '@angular/core';
+import { Injectable, PLATFORM_ID, inject, signal } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { LoggerService } from './logger.service';
 import { ThemeService } from './theme.service';
@@ -23,6 +23,13 @@ export class ColorExtractionService {
   private readonly logger = inject(LoggerService);
   private readonly theme = inject(ThemeService);
   private readonly cache = new Map<string, ExtractedColors>();
+
+  /**
+   * Shared signal that immersive music pages set when they have an active
+   * extracted background color. The app shell reads this to tint the toolbar.
+   * When null, the toolbar uses its default glass-effect background.
+   */
+  activeBackground = signal<ExtractedColors | null>(null);
 
   /**
    * Extract a dominant color from an image URL and return theme-appropriate
