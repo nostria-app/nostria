@@ -9,6 +9,7 @@ import { MatTabsModule } from '@angular/material/tabs';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { MatDialog } from '@angular/material/dialog';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Event, nip19 } from 'nostr-tools';
 import { CommunityService, Community, COMMUNITY_DEFINITION_KIND } from '../../services/community.service';
@@ -55,6 +56,7 @@ export class CommunityComponent implements OnInit, OnDestroy {
   private accountState = inject(AccountStateService);
   private nostrService = inject(NostrService);
   private snackBar = inject(MatSnackBar);
+  private dialog = inject(MatDialog);
   private readonly logger = inject(LoggerService);
   private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
   private reactionService = inject(ReactionService);
@@ -234,9 +236,46 @@ export class CommunityComponent implements OnInit, OnDestroy {
     return post.tags.find(t => t[0] === 'r')?.[1] || null;
   }
 
+  /** Open image in the full-screen media preview dialog */
+  async openImagePreview(post: Event, clickedIndex: number): Promise<void> {
+    const images = this.getPostImages(post);
+    if (images.length === 0) return;
+
+    const { MediaPreviewDialogComponent } = await import(
+      '../../components/media-preview-dialog/media-preview.component'
+    );
+
+    const mediaItems = images.map(url => ({
+      url,
+      type: 'image' as string,
+    }));
+
+    this.dialog.open(MediaPreviewDialogComponent, {
+      data: {
+        mediaItems,
+        initialIndex: clickedIndex,
+      },
+      maxWidth: '100vw',
+      maxHeight: '100vh',
+      width: '100vw',
+      height: '100vh',
+      panelClass: 'image-dialog-panel',
+    });
+  }
+
   /** Navigate to create post page */
   navigateToCreatePost(): void {
     this.router.navigate(['/n', this.currentNaddr(), 'post']);
+  }
+
+  /** Handle click on post card — open the post in the event detail view */
+  onPostCardClick(post: Event, event: MouseEvent): void {
+    // Don't navigate if the user clicked on an interactive element
+    const target = event.target as HTMLElement;
+    if (target.closest('a, button, app-event-actions-toolbar, .vote-pill, .post-edit-form, .post-moderation-row, textarea, input')) {
+      return;
+    }
+    this.layout.openEvent(post.id, post);
   }
 
   /** Start editing a post */
@@ -538,6 +577,25 @@ export class CommunityComponent implements OnInit, OnDestroy {
       [...comm.moderators, { pubkey: comm.creatorPubkey }],
       post.id
     );
+  }
+
+  /** Check if the current user has personally approved this post */
+  hasCurrentUserApproved(post: Event): boolean {
+    const pubkey = this.currentPubkey();
+    if (!pubkey) return false;
+    return this.allApprovals().some(
+      approval => approval.pubkey === pubkey && approval.tags.some(t => t[0] === 'e' && t[1] === post.id)
+    );
+  }
+
+  /** Get the number of moderator approvals for a post */
+  getApprovalCount(post: Event): number {
+    const comm = this.community();
+    if (!comm) return 0;
+    const moderatorPubkeys = new Set([comm.creatorPubkey, ...comm.moderators.map(m => m.pubkey)]);
+    return this.allApprovals().filter(
+      approval => moderatorPubkeys.has(approval.pubkey) && approval.tags.some(t => t[0] === 'e' && t[1] === post.id)
+    ).length;
   }
 
   toggleApprovedFilter(): void {

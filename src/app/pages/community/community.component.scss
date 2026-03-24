@@ -229,6 +229,12 @@
   gap: 0.5rem;
   border-bottom: 1px solid var(--mat-sys-outline-variant);
   padding: 0.75rem 0;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+
+  &:hover {
+    background-color: var(--mat-sys-surface-container);
+  }
 
   &:last-child {
     border-bottom: none;
@@ -239,6 +245,7 @@
 .post-moderation-row {
   display: flex;
   align-items: center;
+  gap: 0.5rem;
 
   .approve-btn {
     color: var(--mat-sys-primary);
@@ -256,6 +263,11 @@
       width: 14px;
       height: 14px;
     }
+  }
+
+  .approval-count {
+    font-size: 0.75rem;
+    color: var(--mat-sys-on-surface-variant);
   }
 }
 
@@ -285,6 +297,12 @@
     border-radius: 8px;
     object-fit: cover;
     background-color: var(--mat-sys-surface-container);
+    cursor: pointer;
+    transition: opacity 0.15s ease;
+
+    &:hover {
+      opacity: 0.9;
+    }
   }
 }
 

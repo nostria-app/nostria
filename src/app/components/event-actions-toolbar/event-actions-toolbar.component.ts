@@ -80,6 +80,12 @@ export class EventActionsToolbarComponent {
    */
   isReply = input<boolean>(false);
 
+  /**
+   * Whether to hide the Like/reaction button.
+   * Useful when a parent component provides its own voting UI (e.g., community vote pills).
+   */
+  hideLike = input<boolean>(false);
+
   // Services
   bookmark = inject(BookmarkService);
   private eventService = inject(EventService);

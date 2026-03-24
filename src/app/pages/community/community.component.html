@@ -127,15 +127,15 @@
       } @else {
       <div class="posts-list">
         @for (post of sortedPosts(); track post.id) {
-        <div class="post-card">
+        <div class="post-card" (click)="onPostCardClick(post, $event)">
           <!-- Post Header: author info + timestamp -->
           <app-event-header [event]="post" [compact]="true"></app-event-header>
 
           <!-- Moderation badge -->
           @if (isModerator()) {
           <div class="post-moderation-row">
-            @if (!isPostApproved(post)) {
-            <button mat-button class="approve-btn" (click)="approvePost(post)" matTooltip="Approve this post">
+            @if (!hasCurrentUserApproved(post)) {
+            <button mat-button class="approve-btn" (click)="approvePost(post); $event.stopPropagation()" matTooltip="Approve this post">
               <mat-icon>check_circle</mat-icon>
               Approve
             </button>
@@ -143,6 +143,11 @@
             <span class="approved-badge">
               <mat-icon>verified</mat-icon>
               Approved
+            </span>
+            }
+            @if (getApprovalCount(post) > 0) {
+            <span class="approval-count" matTooltip="Number of moderator approvals">
+              {{ getApprovalCount(post) }} approval{{ getApprovalCount(post) !== 1 ? 's' : '' }}
             </span>
             }
           </div>
@@ -163,8 +168,8 @@
           <!-- Post Images -->
           @if (getPostImages(post).length > 0) {
           <div class="post-images">
-            @for (img of getPostImages(post); track img) {
-            <img [src]="img" alt="Post image" class="post-image" loading="lazy" />
+            @for (img of getPostImages(post); track img; let i = $index) {
+            <img [src]="img" alt="Post image" class="post-image" loading="lazy" (click)="openImagePreview(post, i); $event.stopPropagation()" />
             }
           </div>
           }
@@ -199,21 +204,21 @@
             <!-- Inline vote pill (Reddit-style) -->
             <div class="vote-pill" [class.user-voted]="getUserVote(post) !== null">
               <button class="vote-pill-btn upvote" [class.active]="getUserVote(post) === 'up'" [disabled]="isVoting(post)"
-                (click)="upvote(post)">
+                (click)="upvote(post); $event.stopPropagation()">
                 <mat-icon>arrow_upward</mat-icon>
               </button>
               <span class="vote-pill-score" [class.positive]="getVoteScore(post) > 0" [class.negative]="getVoteScore(post) < 0">{{ getVoteScore(post) }}</span>
               <button class="vote-pill-btn downvote" [class.active]="getUserVote(post) === 'down'" [disabled]="isVoting(post)"
-                (click)="downvote(post)">
+                (click)="downvote(post); $event.stopPropagation()">
                 <mat-icon>arrow_downward</mat-icon>
               </button>
             </div>
 
-            <app-event-actions-toolbar [event]="post" bookmarkType="e" [autoLoad]="true"></app-event-actions-toolbar>
+            <app-event-actions-toolbar [event]="post" bookmarkType="e" [autoLoad]="true" [hideLike]="true"></app-event-actions-toolbar>
 
             <!-- Edit button for own posts -->
             @if (isAuthenticated() && post.pubkey === currentPubkey() && editingPostId() !== post.id) {
-            <button mat-icon-button class="edit-post-btn" (click)="startEdit(post)" matTooltip="Edit post">
+            <button mat-icon-button class="edit-post-btn" (click)="startEdit(post); $event.stopPropagation()" matTooltip="Edit post">
               <mat-icon>edit</mat-icon>
             </button>
             }
