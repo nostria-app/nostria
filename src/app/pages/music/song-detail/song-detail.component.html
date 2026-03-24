@@ -28,6 +28,12 @@
 
   <mat-divider></mat-divider>
 
+  <!-- Offline availability in menu -->
+  <button mat-menu-item (click)="toggleOffline()" [disabled]="!audioUrl() || isSavingOffline()">
+    <mat-icon>{{ isOffline() ? 'offline_pin' : 'cloud_download' }}</mat-icon>
+    <span>{{ isOffline() ? 'Remove offline copy' : 'Make available offline' }}</span>
+  </button>
+
   @if (isAuthenticated()) {
   <button mat-menu-item (click)="likeTrack()" [disabled]="isLiked() || isLiking()">
     <mat-icon>{{ isLiked() ? 'favorite' : 'favorite_border' }}</mat-icon>
@@ -117,30 +123,28 @@
   </div>
   } @else {
   <div class="song-content">
-    <div class="song-header">
-      <div class="cover-section">
+    <!-- Immersive Hero Header -->
+    <div class="hero-header" [style.background]="extractedColors() ? 'linear-gradient(180deg, ' + extractedColors()!.background + ' 0%, ' + extractedColors()!.backgroundEnd + ' 100%)' : null">
+      <div class="hero-art-container">
         @if (isAiGenerated()) {
         <div class="ai-art-badge" aria-label="AI generated artwork">
           AI
         </div>
         }
         @if (image()) {
-        <img [src]="image()" [alt]="title()" title="Track cover" class="cover-image" />
+        <img [src]="image()" [alt]="title()" title="Track cover" class="hero-art" />
         } @else if (gradient()) {
-        <div class="cover-gradient" [style.background]="gradient()">
+        <div class="hero-art hero-art-gradient" [style.background]="gradient()">
           <mat-icon>music_note</mat-icon>
         </div>
         } @else {
-        <div class="cover-placeholder">
+        <div class="hero-art hero-art-placeholder">
           <mat-icon>music_note</mat-icon>
         </div>
         }
-        <button mat-fab class="play-button" (click)="playTrack()" [disabled]="!audioUrl()" aria-label="Play track">
-          <mat-icon>play_arrow</mat-icon>
-        </button>
       </div>
 
-      <div class="info-section">
+      <div class="hero-info">
         <h1 class="song-title">{{ title() }}</h1>
 
         <div class="artist-row" (click)="goToArtist()" (keydown.enter)="goToArtist()" tabindex="0" role="button"
@@ -156,26 +160,12 @@
 
         <div class="meta-row">
           <span class="date">{{ publishedDate() }}</span>
-        </div>
-
-        <!-- Offline availability toggle -->
-        <div class="offline-toggle-container">
-          <mat-slide-toggle [checked]="isOffline()" [disabled]="!audioUrl() || isSavingOffline()"
-            (change)="toggleOffline()" aria-label="Make available offline">
-            <div class="offline-toggle-label">
-              @if (isSavingOffline()) {
-              <mat-spinner diameter="16"></mat-spinner>
-              @if (offlineDownloadProgress() !== null) {
-              <span>Downloading... {{ offlineDownloadProgress() }}%</span>
-              } @else {
-              <span>Saving...</span>
-              }
-              } @else {
-              <mat-icon>{{ isOffline() ? 'offline_pin' : 'cloud_download' }}</mat-icon>
-              <span>{{ isOffline() ? 'Available offline' : 'Make available offline' }}</span>
-              }
-            </div>
-          </mat-slide-toggle>
+          @if (isOffline()) {
+          <span class="offline-badge">
+            <mat-icon>offline_pin</mat-icon>
+            Offline
+          </span>
+          }
         </div>
 
         @if (genres().length > 0) {
@@ -189,6 +179,19 @@
         @if (description()) {
         <p class="description">{{ description() }}</p>
         }
+
+        <!-- Action Buttons -->
+        <div class="hero-actions">
+          <button mat-fab extended class="play-btn" (click)="playTrack()" [disabled]="!audioUrl()"
+            aria-label="Play track">
+            <mat-icon>play_arrow</mat-icon>
+            Play
+          </button>
+          <button mat-icon-button class="queue-btn" (click)="addToQueue()" [disabled]="!audioUrl()"
+            matTooltip="Add to queue" aria-label="Add to queue">
+            <mat-icon>add</mat-icon>
+          </button>
+        </div>
       </div>
     </div>
 

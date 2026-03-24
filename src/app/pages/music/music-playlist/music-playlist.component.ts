@@ -32,6 +32,7 @@ import { PanelNavigationService } from '../../../services/panel-navigation.servi
 import { NostrService } from '../../../services/nostr.service';
 import { NostrRecord, MediaItem } from '../../../interfaces';
 import { UserRelaysService } from '../../../services/relays/user-relays';
+import { ColorExtractionService, ExtractedColors } from '../../../services/color-extraction.service';
 import {
   EditMusicPlaylistDialogComponent,
   EditMusicPlaylistDialogData,
@@ -93,9 +94,13 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
   private panelNav = inject(PanelNavigationService);
   private userRelaysService = inject(UserRelaysService);
   private nostrService = inject(NostrService);
+  private colorExtraction = inject(ColorExtractionService);
 
   // Template for playlist menu (used in panel header)
   @ViewChild('playlistMenuTemplate') playlistMenuTemplate!: TemplateRef<unknown>;
+
+  // Extracted background colors from album art
+  extractedColors = signal<ExtractedColors | null>(null);
 
   // Inputs for when opened via RightPanelService
   pubkeyInput = input<string | undefined>(undefined);
@@ -301,6 +306,22 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
       if (event && userPubkey) {
         untracked(() => {
           this.checkExistingLike(event, userPubkey);
+        });
+      }
+    });
+
+    // Extract colors from album art
+    effect(() => {
+      const image = this.coverImage();
+      if (image) {
+        untracked(() => {
+          this.colorExtraction.extractColors(image).then(colors => {
+            this.extractedColors.set(colors);
+          });
+        });
+      } else {
+        untracked(() => {
+          this.extractedColors.set(null);
         });
       }
     });
@@ -645,6 +666,41 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
 
     for (let i = 1; i < mediaItems.length; i++) {
       this.mediaPlayer.enque(mediaItems[i]);
+    }
+  }
+
+  addAllToQueue(): void {
+    const allTracks = this.tracks();
+    if (allTracks.length === 0) return;
+    const playlistSourceKey = this.getCurrentPlaylistSourceKey();
+    let addedCount = 0;
+
+    for (const track of allTracks) {
+      const url = this.utilities.getUrlWithImetaFallback(track);
+      if (!url) continue;
+
+      const titleTag = track.tags.find(t => t[0] === 'title');
+      const imageTag = track.tags.find(t => t[0] === 'image');
+      const videoTag = track.tags.find(t => t[0] === 'video');
+      const dTag = track.tags.find(t => t[0] === 'd')?.[1] || '';
+
+      this.mediaPlayer.enque({
+        source: url,
+        title: titleTag?.[1] || 'Untitled Track',
+        artist: this.getTrackArtist(track),
+        artwork: imageTag?.[1] || '/icons/icon-192x192.png',
+        video: videoTag?.[1] || undefined,
+        type: 'Music',
+        playlistSourceKey,
+        eventPubkey: track.pubkey,
+        eventIdentifier: dTag,
+        lyrics: this.utilities.extractLyricsFromEvent(track),
+      });
+      addedCount++;
+    }
+
+    if (addedCount > 0) {
+      this.snackBar.open(`Added ${addedCount} tracks to queue`, 'Close', { duration: 2000 });
     }
   }
 

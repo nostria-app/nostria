@@ -2088,15 +2088,41 @@ mat-sidenav-content {
   align-items: center;
   gap: 0;
 
-  // Glass effect (same as .mobile-nav)
-  background-color: color-mix(in srgb, var(--mat-sys-surface-container) 22%, transparent);
-  -webkit-backdrop-filter: blur(42px) saturate(2.2);
-  backdrop-filter: blur(42px) saturate(2.2);
-  border: 1px solid color-mix(in srgb, var(--mat-sys-outline-variant) 68%, transparent);
+  // Glossy glass effect (less haze, more lens/specular feel)
+  background-color: color-mix(in srgb, var(--mat-sys-surface-container) 12%, transparent);
+  background-image: none;
+  -webkit-backdrop-filter: blur(22px) saturate(1.2) contrast(1.03);
+  backdrop-filter: blur(22px) saturate(1.2) contrast(1.03);
+  border: 1px solid color-mix(in srgb, var(--mat-sys-outline-variant) 80%, transparent);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.35),
-    inset 0 -1px 0 rgba(255, 255, 255, 0.08),
-    0 10px 28px rgba(0, 0, 0, 0.22);
+    inset 0 1px 0 rgba(255, 255, 255, 0.45),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.16),
+    0 8px 20px rgba(0, 0, 0, 0.22);
+
+  &::before,
+  &::after {
+    content: '';
+    position: absolute;
+    pointer-events: none;
+    inset: 0;
+  }
+
+  &::before {
+    background: linear-gradient(180deg,
+        rgba(255, 255, 255, 0.32) 0%,
+        rgba(255, 255, 255, 0.12) 24%,
+        rgba(255, 255, 255, 0.03) 44%,
+        rgba(255, 255, 255, 0) 62%);
+    opacity: 0.9;
+  }
+
+  &::after {
+    // Subtle edge refraction ring
+    box-shadow:
+      inset 0 0 0 1px rgba(255, 255, 255, 0.2),
+      inset 0 8px 14px -10px rgba(255, 255, 255, 0.34);
+    border-radius: inherit;
+  }
 
   a,
   button {
@@ -2105,12 +2131,13 @@ mat-sidenav-content {
 }
 
 :host-context(.dark) .cube-face-nav {
-  background-color: color-mix(in srgb, var(--mat-sys-surface-container) 28%, transparent);
-  border-color: color-mix(in srgb, var(--mat-sys-outline-variant) 72%, transparent);
+  background-color: color-mix(in srgb, var(--mat-sys-surface-container) 16%, transparent);
+  background-image: none;
+  border-color: color-mix(in srgb, var(--mat-sys-outline-variant) 78%, transparent);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.2),
-    inset 0 -1px 0 rgba(255, 255, 255, 0.06),
-    0 10px 28px rgba(0, 0, 0, 0.38);
+    inset 0 1px 0 rgba(255, 255, 255, 0.24),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.1),
+    0 8px 20px rgba(0, 0, 0, 0.44);
 
   a,
   button {
@@ -2125,15 +2152,41 @@ mat-sidenav-content {
   display: flex;
   align-items: stretch;
 
-  // Glass background — matches .cube-face-nav so the player face isn't transparent
-  background-color: color-mix(in srgb, var(--mat-sys-surface-container) 22%, transparent);
-  -webkit-backdrop-filter: blur(42px) saturate(2.2);
-  backdrop-filter: blur(42px) saturate(2.2);
-  border: 1px solid color-mix(in srgb, var(--mat-sys-outline-variant) 68%, transparent);
+  // Glass background — same recipe as nav face
+  background-color: color-mix(in srgb, var(--mat-sys-surface-container) 12%, transparent);
+  background-image: none;
+  -webkit-backdrop-filter: blur(22px) saturate(1.2) contrast(1.03);
+  backdrop-filter: blur(22px) saturate(1.2) contrast(1.03);
+  border: 1px solid color-mix(in srgb, var(--mat-sys-outline-variant) 80%, transparent);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.35),
-    inset 0 -1px 0 rgba(255, 255, 255, 0.08),
-    0 10px 28px rgba(0, 0, 0, 0.22);
+    inset 0 1px 0 rgba(255, 255, 255, 0.45),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.16),
+    0 8px 20px rgba(0, 0, 0, 0.22);
+
+  &::before,
+  &::after {
+    content: '';
+    position: absolute;
+    pointer-events: none;
+    inset: 0;
+  }
+
+  &::before {
+    background:
+      linear-gradient(180deg,
+        rgba(255, 255, 255, 0.32) 0%,
+        rgba(255, 255, 255, 0.12) 24%,
+        rgba(255, 255, 255, 0.03) 44%,
+        rgba(255, 255, 255, 0) 62%);
+    opacity: 0.9;
+  }
+
+  &::after {
+    box-shadow:
+      inset 0 0 0 1px rgba(255, 255, 255, 0.2),
+      inset 0 8px 14px -10px rgba(255, 255, 255, 0.34);
+    border-radius: inherit;
+  }
 
   // Override the media player's fixed positioning when inside cube
   .cube-player-main app-media-player {
@@ -2165,12 +2218,13 @@ mat-sidenav-content {
 }
 
 :host-context(.dark) .cube-face-player {
-  background-color: color-mix(in srgb, var(--mat-sys-surface-container) 28%, transparent);
-  border-color: color-mix(in srgb, var(--mat-sys-outline-variant) 72%, transparent);
+  background-color: color-mix(in srgb, var(--mat-sys-surface-container) 16%, transparent);
+  background-image: none;
+  border-color: color-mix(in srgb, var(--mat-sys-outline-variant) 78%, transparent);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.2),
-    inset 0 -1px 0 rgba(255, 255, 255, 0.06),
-    0 10px 28px rgba(0, 0, 0, 0.38);
+    inset 0 1px 0 rgba(255, 255, 255, 0.24),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.1),
+    0 8px 20px rgba(0, 0, 0, 0.44);
 }
 
 // "Browse Music" button shown on the player face when no music is queued

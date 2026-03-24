@@ -71,26 +71,23 @@
   </div>
   } @else {
   <div class="playlist-content">
-    <!-- Playlist Header (Spotify-style) -->
-    <div class="playlist-header">
-      <div class="cover-section">
+    <!-- Immersive Hero Header -->
+    <div class="hero-header" [style.background]="extractedColors() ? 'linear-gradient(180deg, ' + extractedColors()!.background + ' 0%, ' + extractedColors()!.backgroundEnd + ' 100%)' : null">
+      <div class="hero-art-container">
         @if (coverImage()) {
-        <img [src]="coverImage()" [alt]="title()" title="Album cover" class="cover-image" />
+        <img [src]="coverImage()" [alt]="title()" title="Album cover" class="hero-art" />
         } @else if (gradient()) {
-        <div class="cover-gradient" [style.background]="gradient()">
+        <div class="hero-art hero-art-gradient" [style.background]="gradient()">
           <mat-icon>queue_music</mat-icon>
         </div>
         } @else {
-        <div class="cover-placeholder">
+        <div class="hero-art hero-art-placeholder">
           <mat-icon>queue_music</mat-icon>
         </div>
         }
-        <button mat-fab class="play-fab" (click)="playAll()" [disabled]="tracks().length === 0" aria-label="Play all">
-          <mat-icon>play_arrow</mat-icon>
-        </button>
       </div>
 
-      <div class="info-section">
+      <div class="hero-info">
         <span class="playlist-label">ALBUM</span>
         <h1 class="playlist-title">{{ title() }}</h1>
 
@@ -119,6 +116,19 @@
             Private
           </mat-chip>
           }
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="hero-actions">
+          <button mat-fab extended class="play-btn" (click)="playAll()" [disabled]="tracks().length === 0"
+            aria-label="Play all">
+            <mat-icon>play_arrow</mat-icon>
+            Play
+          </button>
+          <button mat-icon-button class="queue-btn" (click)="addAllToQueue()" [disabled]="tracks().length === 0"
+            matTooltip="Add all to queue" aria-label="Add all to queue">
+            <mat-icon>add</mat-icon>
+          </button>
         </div>
       </div>
     </div>
