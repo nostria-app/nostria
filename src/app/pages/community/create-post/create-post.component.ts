@@ -13,6 +13,7 @@ import { FormsModule } from '@angular/forms';
 import { Router, RouterLink, ActivatedRoute } from '@angular/router';
 import { nip19, Event as NostrEvent } from 'nostr-tools';
 import { CommunityService, Community, COMMUNITY_DEFINITION_KIND } from '../../../services/community.service';
+import { NostrService } from '../../../services/nostr.service';
 import { ApplicationService } from '../../../services/application.service';
 import { MediaService } from '../../../services/media.service';
 import { LoggerService } from '../../../services/logger.service';
@@ -49,11 +50,23 @@ export class CreatePostComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private communityService = inject(CommunityService);
+  private nostrService = inject(NostrService);
   private app = inject(ApplicationService);
   private mediaService = inject(MediaService);
   private snackBar = inject(MatSnackBar);
   private readonly logger = inject(LoggerService);
   private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
+
+  /** Edit event passed via router state — captured in constructor before Angular discards it */
+  private routerStateEditEvent: NostrEvent | undefined;
+
+  constructor() {
+    const navigation = this.router.getCurrentNavigation();
+    const stateEdit = navigation?.extras?.state?.['editEvent'] as NostrEvent | undefined;
+    if (stateEdit) {
+      this.routerStateEditEvent = stateEdit;
+    }
+  }
 
   /** The naddr parameter from the route */
   currentNaddr = signal('');
@@ -62,6 +75,10 @@ export class CreatePostComponent implements OnInit {
   community = signal<Community | null>(null);
   loading = signal(true);
   submitting = signal(false);
+
+  /** Edit mode: the original event being edited */
+  editEvent = signal<NostrEvent | null>(null);
+  isEditMode = computed(() => this.editEvent() !== null);
 
   /** Post type tab */
   postType = signal<PostType>('text');
@@ -84,6 +101,9 @@ export class CreatePostComponent implements OnInit {
     const t = this.title().trim();
     if (!t) return false;
     if (this.submitting()) return false;
+
+    // Edit mode: title is sufficient
+    if (this.isEditMode()) return true;
 
     const type = this.postType();
     if (type === 'text') {
@@ -110,6 +130,25 @@ export class CreatePostComponent implements OnInit {
       this.loadCommunity(naddrParam);
     } else {
       this.loading.set(false);
+    }
+
+    // Check for edit mode via router state
+    const stateEditEvent = this.routerStateEditEvent
+      ?? (this.isBrowser ? (history.state?.editEvent as NostrEvent | undefined) : undefined);
+
+    if (stateEditEvent) {
+      this.editEvent.set(stateEditEvent);
+      // Pre-fill title from 'subject' tag
+      const subject = stateEditEvent.tags.find((t: string[]) => t[0] === 'subject')?.[1];
+      if (subject) {
+        this.title.set(subject);
+        this.body.set(stateEditEvent.content);
+      } else {
+        // No subject tag: first line is title, rest is body
+        const lines = stateEditEvent.content.split('\n');
+        this.title.set(lines[0] || '');
+        this.body.set(lines.slice(1).join('\n').trim());
+      }
     }
   }
 
@@ -175,17 +214,41 @@ export class CreatePostComponent implements OnInit {
     });
   }
 
-  /** Submit the post */
+  /** Submit the post (create new or save edit) */
   async submitPost(): Promise<void> {
     const comm = this.community();
     if (!comm || !this.canSubmit()) return;
 
     this.submitting.set(true);
     try {
-      const type = this.postType();
       const titleVal = this.title().trim();
       const bodyVal = this.body().trim();
 
+      // Edit mode: publish a kind 1010 edit event
+      const original = this.editEvent();
+      if (original) {
+        // Build content: if there's a body, combine title + body for content,
+        // but the title will be in the 'subject' tag
+        const content = bodyVal;
+        const tags: string[][] = [
+          ['e', original.id],
+          ['subject', titleVal],
+        ];
+
+        const unsignedEvent = this.nostrService.createEvent(1010, content, tags);
+        const result = await this.nostrService.signAndPublish(unsignedEvent);
+
+        if (result.success) {
+          this.snackBar.open('Post updated!', 'Close', { duration: 3000 });
+          this.router.navigate(['/n', this.currentNaddr()]);
+        } else {
+          this.snackBar.open(result.error || 'Failed to update post', 'Close', { duration: 5000 });
+        }
+        return;
+      }
+
+      // Create mode: publish a new community post
+      const type = this.postType();
       let content = '';
       const urls: string[] = [];
       let link: string | undefined;

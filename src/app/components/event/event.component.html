@@ -921,6 +921,20 @@
       [class.mode-labels-only]="actionsDisplayMode() === 'labels-only'"
       [class.mode-icons-only]="actionsDisplayMode() === 'icons-only'"
       [class.mode-icons-and-labels]="actionsDisplayMode() === 'icons-and-labels'">
+      <!-- Vote pill for community events (Reddit new-style: ↑ score ↓) -->
+      @if (isCommunityEvent()) {
+      <div class="vote-pill" [class.user-voted]="userVote() !== null">
+        <button class="vote-pill-btn upvote" [class.active]="userVote() === 'up'" [disabled]="communityVoting()"
+          (click)="onCommunityUpvote($event)">
+          <mat-icon>arrow_upward</mat-icon>
+        </button>
+        <span class="vote-pill-score" [class.positive]="voteScore() > 0" [class.negative]="voteScore() < 0">{{ voteScore() }}</span>
+        <button class="vote-pill-btn downvote" [class.active]="userVote() === 'down'" [disabled]="communityVoting()"
+          (click)="onCommunityDownvote($event)">
+          <mat-icon>arrow_downward</mat-icon>
+        </button>
+      </div>
+      } @else {
       <!-- Like with count -->
       <div class="action-button like-action like-hover-container"
         (click)="reactionBtn.sendDefaultReaction(); $event.stopPropagation()" (mouseenter)="onLikeHoverEnter()"
@@ -952,6 +966,7 @@
           </button>
         </div>
       </div>
+      }
 
       <!-- Reply (opens note editor) -->
       <div class="action-button comment-action" role="button" [attr.tabindex]="requiresSpamConfirmation() ? -1 : 0"

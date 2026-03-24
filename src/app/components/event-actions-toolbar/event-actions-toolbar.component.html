@@ -1,8 +1,22 @@
 <div class="actions-row" [class.mode-labels-only]="actionsDisplayMode() === 'labels-only'"
   [class.mode-icons-only]="actionsDisplayMode() === 'icons-only'"
   [class.mode-icons-and-labels]="actionsDisplayMode() === 'icons-and-labels'">
-  <!-- Like with count -->
-  @if (!hideLike()) {
+
+  <!-- Vote pill (community up/down voting) — replaces Like when active -->
+  @if (showVotePill()) {
+  <div class="vote-pill" [class.user-voted]="userVote() !== null">
+    <button class="vote-pill-btn upvote" [class.active]="userVote() === 'up'" [disabled]="voting()"
+      (click)="onUpvote($event)">
+      <mat-icon>arrow_upward</mat-icon>
+    </button>
+    <span class="vote-pill-score" [class.positive]="voteScore() > 0" [class.negative]="voteScore() < 0">{{ voteScore() }}</span>
+    <button class="vote-pill-btn downvote" [class.active]="userVote() === 'down'" [disabled]="voting()"
+      (click)="onDownvote($event)">
+      <mat-icon>arrow_downward</mat-icon>
+    </button>
+  </div>
+  } @else if (!hideLike()) {
+  <!-- Standard Like with count -->
   <div class="action-button like-action like-hover-container"
     (click)="reactionBtn.sendDefaultReaction(); $event.stopPropagation()">
     <app-reaction-button class="action-icon" #reactionBtn [event]="event()" [reactionsFromParent]="effectiveReactions()"

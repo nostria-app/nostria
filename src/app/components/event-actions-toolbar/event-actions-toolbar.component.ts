@@ -15,6 +15,8 @@ import { SharedRelayService } from '../../services/relays/shared-relay';
 import { LoggerService } from '../../services/logger.service';
 import { AccountStateService } from '../../services/account-state.service';
 import { AccountLocalStateService } from '../../services/account-local-state.service';
+import { ReactionService } from '../../services/reaction.service';
+import { LayoutService } from '../../services/layout.service';
 
 @Component({
   selector: 'app-event-actions-toolbar',
@@ -86,6 +88,14 @@ export class EventActionsToolbarComponent {
    */
   hideLike = input<boolean>(false);
 
+  /**
+   * Explicit vote mode override.
+   * - 'auto' (default): auto-detect from event tags (community posts get vote pill)
+   * - true: force vote pill mode
+   * - false: force standard Like mode
+   */
+  voteMode = input<boolean | 'auto'>('auto');
+
   // Services
   bookmark = inject(BookmarkService);
   private eventService = inject(EventService);
@@ -94,6 +104,8 @@ export class EventActionsToolbarComponent {
   private logger = inject(LoggerService);
   private accountState = inject(AccountStateService);
   private accountLocalState = inject(AccountLocalStateService);
+  private reactionService = inject(ReactionService);
+  private layout = inject(LayoutService);
 
   // Display mode for action buttons: 'labels-only', 'icons-and-labels', 'icons-only'
   actionsDisplayMode = computed<string>(() => {
@@ -244,6 +256,149 @@ export class EventActionsToolbarComponent {
   });
 
   bookmarkIcon = computed(() => (this.isBookmarked() ? 'bookmark_remove' : 'bookmark_add'));
+
+  // ─── Vote pill (community up/down voting) ───
+
+  /**
+   * Whether this event is a community post/reply.
+   * Detected by checking for 'a' or 'A' tags starting with '34550:'.
+   */
+  isCommunityEvent = computed<boolean>(() => {
+    const ev = this.event();
+    return ev.tags.some(
+      t => (t[0] === 'a' || t[0] === 'A') && t[1]?.startsWith('34550:')
+    );
+  });
+
+  /**
+   * Resolved vote mode: true when the vote pill should be shown instead of Like.
+   */
+  showVotePill = computed<boolean>(() => {
+    const mode = this.voteMode();
+    if (mode === 'auto') return this.isCommunityEvent();
+    return mode;
+  });
+
+  /** Vote score: upvotes minus downvotes from effective reactions */
+  voteScore = computed<number>(() => {
+    const reactions = this.effectiveReactions();
+    let score = 0;
+    for (const record of reactions.events) {
+      if (record.event.content === '+') score++;
+      else if (record.event.content === '-') score--;
+    }
+    return score;
+  });
+
+  /** Current user's vote on this event: 'up', 'down', or null */
+  userVote = computed<'up' | 'down' | null>(() => {
+    const pubkey = this.accountState.pubkey();
+    if (!pubkey) return null;
+    const reactions = this.effectiveReactions();
+    const userReaction = reactions.events.find(r => r.event.pubkey === pubkey);
+    if (!userReaction) return null;
+    if (userReaction.event.content === '+') return 'up';
+    if (userReaction.event.content === '-') return 'down';
+    return null;
+  });
+
+  /** Whether a vote operation is in progress */
+  voting = signal(false);
+
+  /** Upvote: toggle on/off, or switch from downvote */
+  async onUpvote(ev: globalThis.Event): Promise<void> {
+    ev.stopPropagation();
+    const pubkey = this.accountState.pubkey();
+    if (!pubkey) {
+      await this.layout.showLoginDialog();
+      return;
+    }
+
+    const currentVote = this.userVote();
+    const event = this.event();
+    this.voting.set(true);
+
+    try {
+      if (currentVote === 'up') {
+        // Toggle off existing upvote
+        const userReaction = this.effectiveReactions().events.find(
+          r => r.event.pubkey === pubkey && r.event.content === '+'
+        );
+        if (userReaction) {
+          await this.reactionService.deleteReaction(userReaction.event);
+        }
+      } else {
+        if (currentVote === 'down') {
+          // Remove existing downvote first
+          const userReaction = this.effectiveReactions().events.find(
+            r => r.event.pubkey === pubkey && r.event.content === '-'
+          );
+          if (userReaction) {
+            await this.reactionService.deleteReaction(userReaction.event);
+          }
+        }
+        await this.reactionService.addLike(event);
+      }
+      // Reload to get fresh state
+      await this.reloadReactions();
+    } catch (error) {
+      this.logger.error('Failed to upvote:', error);
+    } finally {
+      this.voting.set(false);
+    }
+  }
+
+  /** Downvote: toggle on/off, or switch from upvote */
+  async onDownvote(ev: globalThis.Event): Promise<void> {
+    ev.stopPropagation();
+    const pubkey = this.accountState.pubkey();
+    if (!pubkey) {
+      await this.layout.showLoginDialog();
+      return;
+    }
+
+    const currentVote = this.userVote();
+    const event = this.event();
+    this.voting.set(true);
+
+    try {
+      if (currentVote === 'down') {
+        // Toggle off existing downvote
+        const userReaction = this.effectiveReactions().events.find(
+          r => r.event.pubkey === pubkey && r.event.content === '-'
+        );
+        if (userReaction) {
+          await this.reactionService.deleteReaction(userReaction.event);
+        }
+      } else {
+        if (currentVote === 'up') {
+          // Remove existing upvote first
+          const userReaction = this.effectiveReactions().events.find(
+            r => r.event.pubkey === pubkey && r.event.content === '+'
+          );
+          if (userReaction) {
+            await this.reactionService.deleteReaction(userReaction.event);
+          }
+        }
+        await this.reactionService.addDislike(event);
+      }
+      // Reload to get fresh state
+      await this.reloadReactions();
+    } catch (error) {
+      this.logger.error('Failed to downvote:', error);
+    } finally {
+      this.voting.set(false);
+    }
+  }
+
+  /** Reload reactions after a vote change */
+  private async reloadReactions(): Promise<void> {
+    const currentEvent = this.event();
+    if (currentEvent && this.autoLoad()) {
+      await this.loadEngagementMetrics(currentEvent);
+    }
+    this.reactionChanged.emit();
+  }
 
   // Reactions summary panel state
   showReactionsSummary = signal<boolean>(false);

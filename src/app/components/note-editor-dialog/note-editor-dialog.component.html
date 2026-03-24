@@ -88,8 +88,8 @@
     @if (!showPreview() && !showAdvancedOptions()) {
     <div class="content-editor-section">
 
-      <!-- Media Mode Toggle Banner (not in inline mode) -->
-      @if (isMediaModeAvailable() && !inlineMode()) {
+      <!-- Media Mode Toggle Banner (hidden until future change) -->
+      @if (false && isMediaModeAvailable() && !inlineMode()) {
       <div class="media-mode-banner" [class.active]="isMediaMode()">
         <div class="media-mode-info">
           <mat-icon class="media-icon">perm_media</mat-icon>
@@ -111,28 +111,6 @@
       </mat-form-field>
       }
 
-      <!-- Media Thumbnails (shown in both regular and media modes) -->
-      @if (mediaMetadata().length > 0) {
-      <div class="media-thumbnails" cdkDropList cdkDropListOrientation="horizontal" (cdkDropListDropped)="drop($event)">
-        @for (media of mediaMetadata(); track media.url; let i = $index) {
-        <div class="media-thumbnail" cdkDrag>
-          <button mat-icon-button class="remove-media-btn" (click)="removeMedia(i)" matTooltip="Remove media">
-            <mat-icon>close</mat-icon>
-          </button>
-          @if (media.mimeType?.startsWith('video/')) {
-          <mat-icon class="video-icon">videocam</mat-icon>
-          <!-- Use image preview if available -->
-          @if (media.image) {
-          <img [src]="media.image" class="thumbnail-img" alt="Video thumbnail">
-          }
-          } @else {
-          <img [src]="media.url" class="thumbnail-img" alt="Image thumbnail">
-          }
-        </div>
-        }
-      </div>
-      }
-
       <div class="textarea-container">
         <mat-form-field appearance="outline" class="content-field" [class.focused]="isContentFocused()"
           subscriptSizing="dynamic">
@@ -148,36 +126,7 @@
             aria-label="{{ inlineMode() ? 'Reply content' : 'Note content' }}" class="content-textarea"
             #contentTextarea>
           </textarea>
-          <mat-hint align="end">{{ characterCount() }} characters</mat-hint>
         </mat-form-field>
-
-        <!-- Mentions (kept directly below text input) -->
-        @if (visibleMentions().length > 0 && !showAdvancedOptions()) {
-        <div class="mentions-section">
-          <mat-chip-set class="mentions-chips">
-            @for (mention of visibleMentions(); track mention) {
-            <mat-chip [removable]="true" (removed)="removeMention(mention)">
-              {{ getMentionDisplayName(mention) }}
-              <mat-icon matChipRemove>cancel</mat-icon>
-            </mat-chip>
-            }
-          </mat-chip-set>
-        </div>
-        }
-
-        <!-- Hashtags -->
-        @if (hashtags().length > 0 && !showAdvancedOptions()) {
-        <div class="hashtags-section">
-          <span class="hashtags-label">Tags:</span>
-          <mat-chip-set class="hashtags-chips">
-            @for (hashtag of hashtags(); track hashtag) {
-            <mat-chip>
-              #{{ hashtag }}
-            </mat-chip>
-            }
-          </mat-chip-set>
-        </div>
-        }
 
         <!-- Mention Autocomplete positioned relative to textarea -->
         @if (mentionConfig()) {
@@ -471,11 +420,34 @@
     } -->
   </div>
 
-  <div class="action-container composer-actions" [class.inline-actions]="inlineMode()" #composerActions
+  <div class="action-container composer-actions" [class.inline-actions]="inlineMode()" [class.has-media]="mediaMetadata().length > 0 && !showPreview() && !showAdvancedOptions()" #composerActions
     (dragenter)="!showPreview() && !showAdvancedOptions() && onDragEnter($event)"
     (dragover)="!showPreview() && !showAdvancedOptions() && onDragOver($event)"
     (dragleave)="!showPreview() && !showAdvancedOptions() && onDragLeave($event)"
     (drop)="!showPreview() && !showAdvancedOptions() && onDrop($event)">
+
+    <!-- Media Thumbnails (shown above action buttons in footer) -->
+    @if (mediaMetadata().length > 0 && !showPreview() && !showAdvancedOptions()) {
+    <div class="media-thumbnails" cdkDropList cdkDropListOrientation="horizontal" (cdkDropListDropped)="drop($event)">
+      @for (media of mediaMetadata(); track media.url; let i = $index) {
+      <div class="media-thumbnail" cdkDrag>
+        <button mat-icon-button class="remove-media-btn" (click)="removeMedia(i)" matTooltip="Remove media">
+          <mat-icon>close</mat-icon>
+        </button>
+        @if (media.mimeType?.startsWith('video/')) {
+        <mat-icon class="video-icon">videocam</mat-icon>
+        <!-- Use image preview if available -->
+        @if (media.image) {
+        <img [src]="media.image" class="thumbnail-img" alt="Video thumbnail">
+        }
+        } @else {
+        <img [src]="media.url" class="thumbnail-img" alt="Image thumbnail">
+        }
+      </div>
+      }
+    </div>
+    }
+
     <!-- Left side: Action buttons -->
     <div class="left-actions">
       @if (showAdvancedOptions() && !inlineMode()) {

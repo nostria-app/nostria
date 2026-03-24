@@ -393,23 +393,24 @@
 // Note Editor Dialog Override
 .dialog-container.note-editor-dialog-panel {
   min-height: 0;
-  height: auto;
+  // Use a definite height so grid 1fr can expand the textarea
+  height: min(560px, calc(100dvh - 32px));
   max-height: calc(100dvh - 32px);
 
   .dialog-content {
-    display: block;
+    display: flex;
+    flex-direction: column;
     min-height: 0;
     overflow: hidden;
     padding: 0 18px;
-    height: auto;
   }
 
   .dialog-content>.note-editor-dialog {
     display: grid;
-    grid-template-rows: auto auto;
+    grid-template-rows: minmax(0, 1fr) auto;
     min-height: 0;
-    height: auto;
     max-height: 100%;
+    flex: 1 1 auto;
   }
 
   @media (max-width: 600px),
@@ -556,6 +557,16 @@
   align-items: center;
   gap: 16px;
   flex-shrink: 0;
+
+  // When media thumbnails are present, switch to column layout
+  &.has-media {
+    flex-wrap: wrap;
+
+    .media-thumbnails {
+      flex: 0 0 100%;
+      order: -1;
+    }
+  }
 
   .mobile-actions-trigger {
     display: none;

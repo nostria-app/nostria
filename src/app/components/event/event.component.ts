@@ -859,6 +859,129 @@ export class EventComponent implements AfterViewInit, OnDestroy {
       .slice(0, 3);
   });
 
+  // ─── Community vote pill (auto-detect from event tags) ───
+
+  /** Whether the target event is a community post/reply (has 'a'/'A' tag with 34550:) */
+  isCommunityEvent = computed<boolean>(() => {
+    const item = this.targetRecord();
+    if (!item?.event) return false;
+    return item.event.tags.some(
+      (t: string[]) => (t[0] === 'a' || t[0] === 'A') && t[1]?.startsWith('34550:')
+    );
+  });
+
+  /** Vote score: upvotes minus downvotes */
+  voteScore = computed<number>(() => {
+    if (!this.isCommunityEvent()) return 0;
+    const reactions = this.reactions();
+    let score = 0;
+    for (const record of reactions.events) {
+      if (record.event.content === '+') score++;
+      else if (record.event.content === '-') score--;
+    }
+    return score;
+  });
+
+  /** Current user's vote: 'up', 'down', or null */
+  userVote = computed<'up' | 'down' | null>(() => {
+    if (!this.isCommunityEvent()) return null;
+    const pubkey = this.accountState.pubkey();
+    if (!pubkey) return null;
+    const reactions = this.reactions();
+    const userReaction = reactions.events.find((r: NostrRecord) => r.event.pubkey === pubkey);
+    if (!userReaction) return null;
+    if (userReaction.event.content === '+') return 'up';
+    if (userReaction.event.content === '-') return 'down';
+    return null;
+  });
+
+  /** Whether a vote operation is in progress */
+  communityVoting = signal(false);
+
+  /** Upvote: toggle on/off, or switch from downvote */
+  async onCommunityUpvote(ev: globalThis.Event): Promise<void> {
+    ev.stopPropagation();
+    const pubkey = this.accountState.pubkey();
+    if (!pubkey) {
+      await this.layout.showLoginDialog();
+      return;
+    }
+
+    const targetEvent = this.targetRecord()?.event;
+    if (!targetEvent) return;
+
+    const currentVote = this.userVote();
+    this.communityVoting.set(true);
+
+    try {
+      if (currentVote === 'up') {
+        const userReaction = this.reactions().events.find(
+          (r: NostrRecord) => r.event.pubkey === pubkey && r.event.content === '+'
+        );
+        if (userReaction) {
+          await this.reactionService.deleteReaction(userReaction.event);
+        }
+      } else {
+        if (currentVote === 'down') {
+          const userReaction = this.reactions().events.find(
+            (r: NostrRecord) => r.event.pubkey === pubkey && r.event.content === '-'
+          );
+          if (userReaction) {
+            await this.reactionService.deleteReaction(userReaction.event);
+          }
+        }
+        await this.reactionService.addLike(targetEvent);
+      }
+      await this.loadReactions(true);
+    } catch (error) {
+      this.logger.error('Failed to upvote:', error);
+    } finally {
+      this.communityVoting.set(false);
+    }
+  }
+
+  /** Downvote: toggle on/off, or switch from upvote */
+  async onCommunityDownvote(ev: globalThis.Event): Promise<void> {
+    ev.stopPropagation();
+    const pubkey = this.accountState.pubkey();
+    if (!pubkey) {
+      await this.layout.showLoginDialog();
+      return;
+    }
+
+    const targetEvent = this.targetRecord()?.event;
+    if (!targetEvent) return;
+
+    const currentVote = this.userVote();
+    this.communityVoting.set(true);
+
+    try {
+      if (currentVote === 'down') {
+        const userReaction = this.reactions().events.find(
+          (r: NostrRecord) => r.event.pubkey === pubkey && r.event.content === '-'
+        );
+        if (userReaction) {
+          await this.reactionService.deleteReaction(userReaction.event);
+        }
+      } else {
+        if (currentVote === 'up') {
+          const userReaction = this.reactions().events.find(
+            (r: NostrRecord) => r.event.pubkey === pubkey && r.event.content === '+'
+          );
+          if (userReaction) {
+            await this.reactionService.deleteReaction(userReaction.event);
+          }
+        }
+        await this.reactionService.addDislike(targetEvent);
+      }
+      await this.loadReactions(true);
+    } catch (error) {
+      this.logger.error('Failed to downvote:', error);
+    } finally {
+      this.communityVoting.set(false);
+    }
+  }
+
   // Zap-related state
   zaps = signal<
     {

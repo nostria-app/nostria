@@ -337,40 +337,7 @@
   }
 }
 
-// Editing UI
-.post-edit-form {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.edit-textarea {
-  width: 100%;
-  min-height: 100px;
-  padding: 0.75rem;
-  border: 1px solid var(--mat-sys-outline-variant);
-  border-radius: 8px;
-  background-color: var(--mat-sys-surface-container);
-  color: var(--mat-sys-on-surface);
-  font-family: inherit;
-  font-size: 0.875rem;
-  line-height: 1.5;
-  resize: vertical;
-  field-sizing: content;
-
-  &:focus {
-    outline: none;
-    border-color: var(--mat-sys-primary);
-  }
-}
-
-.edit-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.5rem;
-}
-
-// Actions row with vote pill + toolbar + edit button
+// Actions row with toolbar + edit button
 .post-actions-row {
   display: flex;
   align-items: center;
@@ -394,72 +361,6 @@
     &:hover {
       opacity: 1;
     }
-  }
-}
-
-// Inline vote pill (Reddit new-style: ↑ score ↓ in a rounded pill)
-.vote-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 0;
-  border-radius: 20px;
-  background-color: var(--mat-sys-surface-container);
-  flex-shrink: 0;
-  height: 32px;
-}
-
-.vote-pill-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  padding: 0;
-  border: none;
-  border-radius: 50%;
-  background: transparent;
-  color: var(--mat-sys-on-surface-variant);
-  cursor: pointer;
-  transition: color 0.15s ease, background-color 0.15s ease;
-
-  mat-icon {
-    font-size: 18px;
-    width: 18px;
-    height: 18px;
-  }
-
-  &:hover:not(:disabled) {
-    background-color: var(--mat-sys-surface-container-high);
-  }
-
-  &:disabled {
-    opacity: 0.5;
-    cursor: default;
-  }
-
-  &.upvote.active {
-    color: var(--mat-sys-primary);
-  }
-
-  &.downvote.active {
-    color: var(--mat-sys-error, #b00020);
-  }
-}
-
-.vote-pill-score {
-  font-size: 0.75rem;
-  color: var(--mat-sys-on-surface-variant);
-  line-height: 1;
-  min-width: 12px;
-  text-align: center;
-  user-select: none;
-
-  &.positive {
-    color: var(--mat-sys-primary);
-  }
-
-  &.negative {
-    color: var(--mat-sys-error, #b00020);
   }
 }
 

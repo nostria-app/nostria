@@ -19,12 +19,26 @@
   <button mat-icon-button (click)="goBack()" matTooltip="Back to Community">
     <mat-icon>arrow_back</mat-icon>
   </button>
-  <h2 class="panel-title title-font">Create Post in n/{{ community()!.name }}</h2>
+  <h2 class="panel-title title-font">{{ isEditMode() ? 'Edit Post in' : 'Create Post in' }} n/{{ community()!.name }}</h2>
 </div>
 
 <div class="create-post-layout">
   <!-- Main Form -->
   <div class="form-section">
+    <!-- Edit mode: simplified text-only form -->
+    @if (isEditMode()) {
+    <div class="tab-body">
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Title</mat-label>
+        <input matInput [ngModel]="title()" (ngModelChange)="title.set($event)" placeholder="Post title" maxlength="300" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Body (optional)</mat-label>
+        <textarea matInput [ngModel]="body()" (ngModelChange)="body.set($event)" placeholder="Write your post content..." rows="8" style="field-sizing: content; min-height: 120px;"></textarea>
+      </mat-form-field>
+    </div>
+    } @else {
     <!-- Post Type Tabs -->
     <mat-tab-group [selectedIndex]="selectedTabIndex()" (selectedIndexChange)="onTabChange($event)" class="post-type-tabs">
       <!-- Text Tab -->
@@ -133,6 +147,7 @@
         </div>
       </mat-tab>
     </mat-tab-group>
+    }
 
     <!-- Submit row -->
     <div class="submit-row">
@@ -140,6 +155,9 @@
       <button mat-flat-button [disabled]="!canSubmit()" (click)="submitPost()">
         @if (submitting()) {
         <mat-spinner diameter="20"></mat-spinner>
+        } @else if (isEditMode()) {
+        <mat-icon>save</mat-icon>
+        Save
         } @else {
         <mat-icon>send</mat-icon>
         Post
