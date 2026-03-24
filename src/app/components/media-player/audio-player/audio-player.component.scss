@@ -54,8 +54,16 @@
     .album-art {
       border-radius: 0 0 0 32px;
 
+      :host-context(.cube-face-player) & {
+        border-radius: 6px;
+      }
+
       :host-context(.podcast-mode) & {
         border-radius: 0 0 0 42px;
+      }
+
+      :host-context(.podcast-mode.cube-face-player) & {
+        border-radius: 6px;
       }
     }
 
@@ -123,10 +131,20 @@
   pointer-events: auto;
   border-right: 1px solid rgba(255, 255, 255, 0.1);
 
+  // Inside mobile cube: album art is no longer at the pill edge (Home button is),
+  // so use a square shape with small rounded corners
+  :host-context(.cube-face-player) & {
+    border-radius: 6px;
+  }
+
   :host-context(.podcast-mode) & {
     width: 84px;
     height: 84px;
     border-radius: 42px 0 0 42px;
+  }
+
+  :host-context(.podcast-mode.cube-face-player) & {
+    border-radius: 6px;
   }
 
   @media (max-width: 699px) {
