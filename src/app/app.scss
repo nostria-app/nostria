@@ -1900,24 +1900,18 @@ mat-sidenav-content {
   transform: translateX(-50%);
   right: auto;
 
-  // Shared glass tokens for both cube faces
-  --cube-glass-bg: color-mix(in srgb, var(--mat-sys-surface) 55%, transparent);
-  --cube-glass-border: color-mix(in srgb, white 22%, transparent);
-  --cube-glass-inner-edge: rgba(255, 255, 255, 0.28);
-  --cube-glass-specular: rgba(255, 255, 255, 0.12);
-  --cube-glass-shadow:
-    0 8px 32px rgba(0, 0, 0, 0.25),
-    0 2px 8px rgba(0, 0, 0, 0.15);
-  --cube-glass-hover: color-mix(in srgb, white 12%, transparent);
+  // Shared glass tokens — matched to desktop media player
+  --cube-glass-bg: rgba(255, 255, 255, 0.05);
+  --cube-glass-hover: color-mix(in srgb, white 10%, transparent);
   --cube-glass-active: color-mix(in srgb, var(--mat-sys-primary) 28%, transparent);
   --cube-glass-active-border: color-mix(in srgb, white 30%, transparent);
   --cube-glass-active-shadow: 0 0 16px color-mix(in srgb, var(--mat-sys-primary) 25%, transparent);
 
-  width: calc(100% - 36px);
+  width: calc(100% - 32px);
   min-width: 0;
-  max-width: calc(100% - 36px);
+  max-width: min(600px, calc(100% - 32px));
 
-  height: 56px;
+  height: 64px;
   z-index: 1000;
   perspective: 600px;
 
@@ -1997,8 +1991,8 @@ mat-sidenav-content {
       .cube-face-player {
         // Flatten 3D transform but compensate for perspective magnification
         // so the face doesn't visibly shrink when settling.
-        // Scale factor: perspective / (perspective - translateZ) = 600 / 572
-        transform: scale(calc(600 / 572));
+        // Scale factor: perspective / (perspective - translateZ) = 600 / 568
+        transform: scale(calc(600 / 568));
         backface-visibility: visible;
       }
     }
@@ -2010,7 +2004,7 @@ mat-sidenav-content {
 
       .cube-face-nav {
         // Flatten 3D transform but compensate for perspective magnification
-        transform: scale(calc(600 / 572));
+        transform: scale(calc(600 / 568));
         backface-visibility: visible;
       }
     }
@@ -2025,20 +2019,14 @@ mat-sidenav-content {
     .cube-face-player {
       // Remove scale compensation — the parent height change handles sizing
       transform: none !important;
-      border-radius: 16px 16px 28px 28px;
+      border-radius: 16px 16px 32px 32px;
     }
   }
 }
 
 :host-context(.dark) .mobile-bottom-cube {
-  --cube-glass-bg: color-mix(in srgb, var(--mat-sys-surface) 60%, transparent);
-  --cube-glass-border: color-mix(in srgb, white 14%, transparent);
-  --cube-glass-inner-edge: rgba(255, 255, 255, 0.14);
-  --cube-glass-specular: rgba(255, 255, 255, 0.08);
-  --cube-glass-shadow:
-    0 8px 32px rgba(0, 0, 0, 0.5),
-    0 2px 8px rgba(0, 0, 0, 0.3);
-  --cube-glass-hover: color-mix(in srgb, white 10%, transparent);
+  --cube-glass-bg: rgba(0, 0, 0, 0.1);
+  --cube-glass-hover: color-mix(in srgb, white 8%, transparent);
   --cube-glass-active: color-mix(in srgb, var(--mat-sys-primary) 32%, transparent);
   --cube-glass-active-border: color-mix(in srgb, var(--mat-sys-primary-fixed) 22%, transparent);
   --cube-glass-active-shadow: 0 0 20px color-mix(in srgb, var(--mat-sys-primary) 30%, transparent);
@@ -2101,14 +2089,14 @@ mat-sidenav-content {
   width: 100%;
   height: 100%;
   backface-visibility: hidden;
-  border-radius: 28px;
+  border-radius: 32px;
   overflow: hidden;
 }
 
 // Face 1: Navigation (front face - default visible)
 .cube-face-nav {
   // Positioned at translateZ(+half height) — front face
-  transform: rotateX(0deg) translateZ(28px);
+  transform: rotateX(0deg) translateZ(32px);
 
   display: flex;
   justify-content: center;
@@ -2116,40 +2104,19 @@ mat-sidenav-content {
   gap: 0;
   padding: 2px;
 
-  // Glass shell — deep blur with rich tint for premium glassmorphism
+  // Glass effect — matched to desktop media player
+  background: initial;
   background-color: var(--cube-glass-bg);
-  background-image: none;
-  -webkit-backdrop-filter: blur(40px) saturate(1.6);
-  backdrop-filter: blur(40px) saturate(1.6);
-  border: 1px solid var(--cube-glass-border);
+  -webkit-backdrop-filter: blur(20px) saturate(1.8);
+  backdrop-filter: blur(20px) saturate(1.8);
+  border: none;
+
   box-shadow:
-    inset 0 1px 0 var(--cube-glass-inner-edge),
-    inset 0 -1px 0 rgba(255, 255, 255, 0.05),
-    var(--cube-glass-shadow);
-
-  &::before,
-  &::after {
-    content: '';
-    position: absolute;
-    pointer-events: none;
-    inset: 0;
-    border-radius: inherit;
-  }
-
-  // Top highlight — very subtle specular band
-  &::before {
-    background: linear-gradient(180deg,
-        rgba(255, 255, 255, 0.10) 0%,
-        rgba(255, 255, 255, 0.03) 30%,
-        transparent 50%);
-  }
-
-  // Inner edge refraction glow
-  &::after {
-    box-shadow:
-      inset 0 0 0 0.5px rgba(255, 255, 255, 0.08),
-      inset 0 6px 12px -6px var(--cube-glass-specular);
-  }
+    inset 0 0 0 1px rgba(255, 255, 255, 0.4),
+    inset 0 0 10px 4px rgba(255, 255, 255, 0.15),
+    0px 4px 16px rgba(17, 17, 26, 0.1),
+    0px 8px 24px rgba(17, 17, 26, 0.1),
+    0px 16px 56px rgba(17, 17, 26, 0.1);
 
   a,
   button {
@@ -2158,13 +2125,15 @@ mat-sidenav-content {
 }
 
 :host-context(.dark) .cube-face-nav {
+  background: initial;
   background-color: var(--cube-glass-bg);
-  background-image: none;
-  border-color: var(--cube-glass-border);
+
   box-shadow:
-    inset 0 1px 0 var(--cube-glass-inner-edge),
-    inset 0 -1px 0 rgba(255, 255, 255, 0.04),
-    var(--cube-glass-shadow);
+    inset 0 0 0 1px rgba(255, 255, 255, 0.2),
+    inset 0 0 10px 4px rgba(255, 255, 255, 0.05),
+    0px 4px 16px rgba(0, 0, 0, 0.4),
+    0px 8px 24px rgba(0, 0, 0, 0.4),
+    0px 16px 56px rgba(0, 0, 0, 0.4);
 
   a,
   button {
@@ -2174,43 +2143,24 @@ mat-sidenav-content {
 
 // Face 2: Media player (bottom face — rotated down, revealed by cube rotateX(90deg))
 .cube-face-player {
-  transform: rotateX(-90deg) translateZ(28px);
-  border-radius: 28px;
+  transform: rotateX(-90deg) translateZ(32px);
+  border-radius: 32px;
   display: flex;
   align-items: stretch;
 
-  // Glass background — same recipe as nav face
+  // Glass effect — matched to desktop media player
+  background: initial;
   background-color: var(--cube-glass-bg);
-  background-image: none;
-  -webkit-backdrop-filter: blur(40px) saturate(1.6);
-  backdrop-filter: blur(40px) saturate(1.6);
-  border: 1px solid var(--cube-glass-border);
+  -webkit-backdrop-filter: blur(20px) saturate(1.8);
+  backdrop-filter: blur(20px) saturate(1.8);
+  border: none;
+
   box-shadow:
-    inset 0 1px 0 var(--cube-glass-inner-edge),
-    inset 0 -1px 0 rgba(255, 255, 255, 0.05),
-    var(--cube-glass-shadow);
-
-  &::before,
-  &::after {
-    content: '';
-    position: absolute;
-    pointer-events: none;
-    inset: 0;
-    border-radius: inherit;
-  }
-
-  &::before {
-    background: linear-gradient(180deg,
-        rgba(255, 255, 255, 0.10) 0%,
-        rgba(255, 255, 255, 0.03) 30%,
-        transparent 50%);
-  }
-
-  &::after {
-    box-shadow:
-      inset 0 0 0 0.5px rgba(255, 255, 255, 0.08),
-      inset 0 6px 12px -6px var(--cube-glass-specular);
-  }
+    inset 0 0 0 1px rgba(255, 255, 255, 0.4),
+    inset 0 0 10px 4px rgba(255, 255, 255, 0.15),
+    0px 4px 16px rgba(17, 17, 26, 0.1),
+    0px 8px 24px rgba(17, 17, 26, 0.1),
+    0px 16px 56px rgba(17, 17, 26, 0.1);
 
   // Override the media player's fixed positioning when inside cube
   .cube-player-main app-media-player {
@@ -2242,13 +2192,15 @@ mat-sidenav-content {
 }
 
 :host-context(.dark) .cube-face-player {
+  background: initial;
   background-color: var(--cube-glass-bg);
-  background-image: none;
-  border-color: var(--cube-glass-border);
+
   box-shadow:
-    inset 0 1px 0 var(--cube-glass-inner-edge),
-    inset 0 -1px 0 rgba(255, 255, 255, 0.04),
-    var(--cube-glass-shadow);
+    inset 0 0 0 1px rgba(255, 255, 255, 0.2),
+    inset 0 0 10px 4px rgba(255, 255, 255, 0.05),
+    0px 4px 16px rgba(0, 0, 0, 0.4),
+    0px 8px 24px rgba(0, 0, 0, 0.4),
+    0px 16px 56px rgba(0, 0, 0, 0.4);
 }
 
 // "Browse Music" button shown on the player face when no music is queued
@@ -2293,13 +2245,13 @@ mat-sidenav-content {
   transition: background-color 0.2s ease;
 
   &:first-child {
-    border-top-left-radius: 28px;
-    border-bottom-left-radius: 28px;
+    border-top-left-radius: 32px;
+    border-bottom-left-radius: 32px;
   }
 
   &:last-child {
-    border-top-right-radius: 28px;
-    border-bottom-right-radius: 28px;
+    border-top-right-radius: 32px;
+    border-bottom-right-radius: 32px;
   }
 
   &:hover {
@@ -2309,7 +2261,7 @@ mat-sidenav-content {
   &.active-link {
     background-color: var(--cube-glass-active);
     border: 1px solid var(--cube-glass-active-border);
-    border-radius: 24px;
+    border-radius: 28px;
     margin: 0;
     box-shadow:
       inset 0 1px 0 rgba(255, 255, 255, 0.2),
