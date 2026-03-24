@@ -439,21 +439,31 @@ export class NoteContentComponent implements OnDestroy {
               // Clear the timeout timer - event loaded successfully
               this.clearEventLoadTimer(token.id);
 
+              // For kind 6 (repost) events, unwrap the inner event from the JSON content
+              let displayRecord = eventData;
+              if (eventData.event.kind === 6 && eventData.data && typeof eventData.data === 'object' && eventData.data.id && eventData.data.kind !== undefined) {
+                const innerEvent = eventData.data as NostrEvent;
+                displayRecord = {
+                  event: innerEvent,
+                  data: this.utilities.parseContent(innerEvent.content),
+                };
+              }
+
               // Store raw event for kind 20 photo events
-              if (eventData.event.kind === 20) {
-                eventDataMap.set(token.id, eventData.event);
+              if (displayRecord.event.kind === 20) {
+                eventDataMap.set(token.id, displayRecord.event);
               }
 
               // Parse content tokens for the nested event
               const parseResult = await this.parsing.parseContent(
-                eventData.data,
-                eventData.event.tags,
-                eventData.event.pubkey
+                displayRecord.data,
+                displayRecord.event.tags,
+                displayRecord.event.pubkey
               );
 
               loadingMap.set(token.id, 'loaded');
               eventMentionsMap.set(token.id, {
-                event: eventData,
+                event: displayRecord,
                 contentTokens: parseResult.tokens,
                 loading: false,
                 eventId: eventId as string,
@@ -669,19 +679,29 @@ export class NoteContentComponent implements OnDestroy {
       this.clearEventLoadTimer(tokenId);
 
       if (eventData) {
+        // For kind 6 (repost) events, unwrap the inner event from the JSON content
+        let displayRecord = eventData;
+        if (eventData.event.kind === 6 && eventData.data && typeof eventData.data === 'object' && eventData.data.id && eventData.data.kind !== undefined) {
+          const innerEvent = eventData.data as NostrEvent;
+          displayRecord = {
+            event: innerEvent,
+            data: this.utilities.parseContent(innerEvent.content),
+          };
+        }
+
         // Store raw event for kind 20 photo events
-        if (eventData.event.kind === 20) {
+        if (displayRecord.event.kind === 20) {
           this.eventDataMap.update(map => {
             const newMap = new Map(map);
-            newMap.set(tokenId, eventData!.event);
+            newMap.set(tokenId, displayRecord!.event);
             return newMap;
           });
         }
 
         const parseResult = await this.parsing.parseContent(
-          eventData.data,
-          eventData.event.tags,
-          eventData.event.pubkey
+          displayRecord.data,
+          displayRecord.event.tags,
+          displayRecord.event.pubkey
         );
 
         this.eventLoadingMap.update(map => {
@@ -692,7 +712,7 @@ export class NoteContentComponent implements OnDestroy {
         this.eventMentionsMap.update(map => {
           const newMap = new Map(map);
           newMap.set(tokenId, {
-            event: eventData,
+            event: displayRecord,
             contentTokens: parseResult.tokens,
             loading: false,
             eventId: eventId as string,
