@@ -2055,6 +2055,8 @@ mat-sidenav-content {
   // Remove perspective and transform so position:fixed on the player can escape to the viewport
   perspective: none;
   transform: none !important;
+  // Suppress transitions on the cube shell during fullscreen state changes
+  transition: none !important;
 
   // Propagate visibility through the chain so the fullscreen player can render.
   // Also strip all transforms that would trap position:fixed.
@@ -2068,6 +2070,7 @@ mat-sidenav-content {
   .cube-face-player {
     visibility: hidden;
     transform: none !important;
+    transition: none !important;
     // Clear backdrop-filter which also creates a containing block for position:fixed
     -webkit-backdrop-filter: none !important;
     backdrop-filter: none !important;
@@ -2078,6 +2081,8 @@ mat-sidenav-content {
   .cube-face-player app-media-player.fullscreen-mode {
     visibility: visible;
     pointer-events: auto;
+    transition: none !important;
+    animation: none !important;
   }
 }
 
@@ -2186,6 +2191,10 @@ mat-sidenav-content {
     height: 100% !important;
     border-radius: inherit !important;
     z-index: auto !important;
+    // Suppress all transitions inside the cube — the cube's 3D transform
+    // context distorts CSS animations/transitions causing visual glitches.
+    transition: none !important;
+    animation: none !important;
 
     // When fullscreen, let the player break out of the cube
     &.fullscreen-mode {
@@ -2199,6 +2208,8 @@ mat-sidenav-content {
       max-width: 100% !important;
       border-radius: 0 !important;
       z-index: 2000 !important;
+      transition: none !important;
+      animation: none !important;
     }
   }
 }

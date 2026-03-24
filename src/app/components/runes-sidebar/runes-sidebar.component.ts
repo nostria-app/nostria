@@ -593,7 +593,7 @@ export class RunesSidebarComponent implements OnDestroy {
 
   protected openFullscreenPlayer(): void {
     this.layout.mediaPlayerInSidebar.set(false);
-    this.layout.fullscreenMediaPlayer.set(true);
+    this.layout.openFullscreenMediaPlayer();
     this.sidebarPlayerHovered.set(false);
   }
 

@@ -1902,7 +1902,7 @@ export class App implements OnInit, OnDestroy {
     if (-deltaY > threshold && Math.abs(deltaY) > Math.abs(deltaX)) {
       const showingPlayerFace = this.layout.showCubePlayerFace();
       if (showingPlayerFace && this.layout.showMediaPlayer() && !this.layout.fullscreenMediaPlayer()) {
-        this.layout.fullscreenMediaPlayer.set(true);
+        this.layout.openFullscreenMediaPlayer();
         this.cubeSwiping = false;
         return;
       }

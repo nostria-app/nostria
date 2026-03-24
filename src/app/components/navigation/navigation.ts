@@ -240,7 +240,7 @@ export class NavigationComponent {
 
   openFullscreenPlayer(): void {
     this.layout.mediaPlayerInToolbar.set(false);
-    this.layout.fullscreenMediaPlayer.set(true);
+    this.layout.openFullscreenMediaPlayer();
     this.toolbarPlayerHovered.set(false);
   }
 

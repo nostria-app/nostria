@@ -164,6 +164,29 @@ export class LayoutService implements OnDestroy {
   }
 
   /**
+   * Open fullscreen mode.  On mobile (handset), the cube's base CSS has
+   * `transition: transform 0.3s` for scroll-hide.  When `data-fullscreen`
+   * strips the cube's `transform: translateX(-50%)`, that transition would
+   * animate the cube horizontally.  Suppress it by setting an inline override
+   * before the signal change and cleaning up after the frame.
+   */
+  openFullscreenMediaPlayer(): void {
+    if (this.fullscreenMediaPlayer()) return;
+
+    if (this.isBrowser() && this.isHandset()) {
+      const cube = document.querySelector('.mobile-bottom-cube') as HTMLElement | null;
+      if (cube) {
+        cube.style.transition = 'none';
+        this.fullscreenMediaPlayer.set(true);
+        requestAnimationFrame(() => cube.style.removeProperty('transition'));
+        return;
+      }
+    }
+
+    this.fullscreenMediaPlayer.set(true);
+  }
+
+  /**
    * Animate the fullscreen media player closed (slide-down), then toggle the signal.
    * For hard exits (stopping playback), set fullscreenMediaPlayer directly instead.
    */
@@ -183,10 +206,17 @@ export class LayoutService implements OnDestroy {
     // On mobile (inside cube), skip the animation entirely — the cube's 3D
     // transform context (perspective, scale compensation) distorts CSS
     // translateY animations causing unwanted horizontal movement.  Just snap.
+    // Also suppress the cube shell's scroll-hide transition so its transform
+    // change (from none back to translateX(-50%)) doesn't animate.
     if (this.isHandset()) {
+      const cube = document.querySelector('.mobile-bottom-cube') as HTMLElement | null;
+      if (cube) cube.style.transition = 'none';
       el.style.transition = 'none';
       this.fullscreenMediaPlayer.set(false);
-      requestAnimationFrame(() => el.style.removeProperty('transition'));
+      requestAnimationFrame(() => {
+        el.style.removeProperty('transition');
+        if (cube) cube.style.removeProperty('transition');
+      });
       return;
     }
 

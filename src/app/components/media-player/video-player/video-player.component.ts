@@ -201,7 +201,7 @@ export class VideoPlayerComponent implements OnDestroy {
   toggleFullscreen(): void {
     const nextFullscreen = !this.layout.fullscreenMediaPlayer();
     if (nextFullscreen) {
-      this.layout.fullscreenMediaPlayer.set(true);
+      this.layout.openFullscreenMediaPlayer();
     } else {
       this.layout.closeFullscreenMediaPlayer();
     }

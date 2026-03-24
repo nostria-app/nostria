@@ -227,7 +227,7 @@ export class AudioPlayerComponent {
     if (this.layout.fullscreenMediaPlayer()) {
       this.layout.closeFullscreenMediaPlayer();
     } else {
-      this.layout.fullscreenMediaPlayer.set(true);
+      this.layout.openFullscreenMediaPlayer();
     }
   }
 
