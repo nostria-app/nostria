@@ -27,7 +27,7 @@ import { FormsModule } from '@angular/forms';
 import { NostrService } from '../../services/nostr.service';
 import { MediaService } from '../../services/media.service';
 import { AccountStateService } from '../../services/account-state.service';
-import { nip19, Event as NostrEvent } from 'nostr-tools';
+import { nip19, Event as NostrEvent, kinds } from 'nostr-tools';
 import { LayoutService } from '../../services/layout.service';
 import { MentionAutocompleteComponent, MentionSelection, MentionAutocompleteConfig } from '../mention-autocomplete/mention-autocomplete.component';
 import { MentionDetectionResult } from '../../services/mention-input.service';
@@ -38,6 +38,7 @@ import { PlatformService } from '../../services/platform.service';
 import { UserProfileComponent } from '../user-profile/user-profile.component';
 import { EmojiPickerComponent } from '../emoji-picker/emoji-picker.component';
 import { NoteEditorService, ReplyToInfo } from '../../services/note-editor.service';
+import { EventService } from '../../services/event';
 import { CustomDialogService } from '../../services/custom-dialog.service';
 import { ConfirmDialogComponent } from '../confirm-dialog/confirm-dialog.component';
 import { MatDialog } from '@angular/material/dialog';
@@ -138,6 +139,7 @@ export class InlineReplyEditorComponent implements AfterViewInit, OnDestroy {
   private speechService = inject(SpeechService);
   private platformService = inject(PlatformService);
   private noteEditorService = inject(NoteEditorService);
+  private eventService = inject(EventService);
   private customDialog = inject(CustomDialogService);
   private dialog = inject(MatDialog);
   private router = inject(Router);
@@ -592,20 +594,26 @@ export class InlineReplyEditorComponent implements AfterViewInit, OnDestroy {
       const content = this.noteEditorService.processContentForPublishing(this.content().trim(), this.mentionMap);
       const event = this.replyToEvent();
 
-      const replyTo: ReplyToInfo = {
-        id: event.id,
-        pubkey: event.pubkey,
-        event: event,
-      };
+      if (event.kind === kinds.ShortTextNote) {
+        // Standard NIP-10 reply for kind 1
+        const replyTo: ReplyToInfo = {
+          id: event.id,
+          pubkey: event.pubkey,
+          event: event,
+        };
 
-      const tags = this.noteEditorService.buildTags({
-        replyTo,
-        mentions: this.mentions(),
-        content,
-        mediaMetadata: this.mediaMetadata(),
-      });
+        const tags = this.noteEditorService.buildTags({
+          replyTo,
+          mentions: this.mentions(),
+          content,
+          mediaMetadata: this.mediaMetadata(),
+        });
 
-      await this.publishEvent(content, tags);
+        await this.publishEvent(content, tags, 1);
+      } else {
+        // NIP-22 comment reply for kind 1111 and all other non-kind-1 events
+        await this.publishCommentReply(event, content);
+      }
     } catch (error) {
       console.error('Error publishing reply:', error);
       this.snackBar.open('Failed to publish reply. Please try again.', 'Close', { duration: 5000 });
@@ -615,8 +623,104 @@ export class InlineReplyEditorComponent implements AfterViewInit, OnDestroy {
     }
   }
 
-  private async publishEvent(contentToPublish: string, tags: string[][]): Promise<void> {
-    const eventToSign = this.nostrService.createEvent(1, contentToPublish, tags);
+  /**
+   * Build and publish a NIP-22 comment reply (kind 1111).
+   * Used when replying to kind 1111 community posts or any non-kind-1 event.
+   */
+  private async publishCommentReply(parentEvent: NostrEvent, content: string): Promise<void> {
+    const pubkey = this.accountState.pubkey();
+    if (!pubkey) throw new Error('Not logged in');
+
+    let rootEvent: NostrEvent;
+
+    if (parentEvent.kind === 1111) {
+      // Replying to a kind 1111 comment — extract root event from NIP-22 uppercase tags
+      rootEvent = this.reconstructRootEventFromComment(parentEvent);
+    } else {
+      // Replying directly to a non-kind-1 event (e.g., article, community def, etc.)
+      // The parent IS the root
+      rootEvent = parentEvent;
+    }
+
+    // Build the NIP-22 comment event
+    const parentComment = parentEvent.kind === 1111 ? parentEvent : undefined;
+    const unsignedEvent = this.eventService.buildCommentEvent(
+      rootEvent,
+      content,
+      pubkey,
+      parentComment,
+    );
+
+    // Add mention p-tags that aren't already present
+    const existingPubkeys = new Set(unsignedEvent.tags.filter(t => t[0] === 'p').map(t => t[1]));
+    for (const mentionPubkey of this.mentions()) {
+      if (!existingPubkeys.has(mentionPubkey)) {
+        unsignedEvent.tags.push(['p', mentionPubkey]);
+      }
+    }
+
+    // Add hashtag t-tags from content
+    this.noteEditorService.extractHashtags(content, unsignedEvent.tags);
+
+    // Add imeta tags for uploaded media (NIP-92)
+    const mediaMetadata = this.mediaMetadata();
+    if (mediaMetadata.length > 0) {
+      for (const metadata of mediaMetadata) {
+        const imetaTag = this.utilities.buildImetaTag(metadata);
+        if (imetaTag) {
+          unsignedEvent.tags.push(imetaTag);
+        }
+      }
+    }
+
+    await this.publishUnsignedEvent(unsignedEvent, content);
+  }
+
+  /**
+   * Reconstruct a minimal root event from a kind 1111 comment's NIP-22 uppercase tags.
+   * This extracts the root scope (A/E, K, P) to build the root event reference.
+   */
+  private reconstructRootEventFromComment(commentEvent: NostrEvent): NostrEvent {
+    const rootETag = commentEvent.tags.find(t => t[0] === 'E');
+    const rootATag = commentEvent.tags.find(t => t[0] === 'A');
+    const rootKTag = commentEvent.tags.find(t => t[0] === 'K');
+    const rootPTag = commentEvent.tags.find(t => t[0] === 'P');
+
+    const rootKind = rootKTag ? parseInt(rootKTag[1]) : 1;
+    const rootPubkey = rootPTag?.[1] || rootETag?.[3] || '';
+
+    let rootTags: string[][] = [];
+    let rootId = '';
+
+    if (rootATag) {
+      // Addressable root — extract d-tag from A tag value (kind:pubkey:d-tag)
+      const parts = rootATag[1].split(':');
+      rootTags = [['d', parts.slice(2).join(':')]];
+    }
+    if (rootETag) {
+      rootId = rootETag[1];
+    }
+
+    return {
+      id: rootId,
+      pubkey: rootPubkey,
+      kind: rootKind,
+      content: '',
+      tags: rootTags,
+      created_at: 0,
+      sig: '',
+    } as NostrEvent;
+  }
+
+  private async publishEvent(contentToPublish: string, tags: string[][], eventKind: number = 1): Promise<void> {
+    const eventToSign = this.nostrService.createEvent(eventKind, contentToPublish, tags);
+    await this.publishUnsignedEvent(eventToSign, contentToPublish);
+  }
+
+  /**
+   * Sign, publish, and handle relay confirmations for an unsigned event.
+   */
+  private async publishUnsignedEvent(eventToSign: import('nostr-tools').UnsignedEvent, contentToPublish: string): Promise<void> {
     let dialogClosed = false;
     let publishedEventId: string | undefined;
     let relayTimeoutHandle: ReturnType<typeof setTimeout> | undefined;

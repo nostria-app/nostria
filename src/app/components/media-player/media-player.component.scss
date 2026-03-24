@@ -141,13 +141,13 @@
       animation: fullscreen-slide-down 0.3s cubic-bezier(0.4, 0, 1, 1) both;
     }
 
-    // On mobile (inside cube), skip the slide-up animation since the player
-    // is already visible at the bottom — just fade in instantly.
+    // On mobile (inside cube), skip ALL animations — the cube's 3D
+    // transform context distorts translateY into horizontal movement.
     :host-context(.cube-face-player) & {
       animation: none;
 
       &.fullscreen-closing {
-        animation: fullscreen-slide-down 0.3s cubic-bezier(0.4, 0, 1, 1) both;
+        animation: none;
       }
     }
   }

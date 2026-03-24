@@ -180,13 +180,36 @@ export class LayoutService implements OnDestroy {
       return;
     }
 
+    // On mobile (inside cube), skip the animation entirely — the cube's 3D
+    // transform context (perspective, scale compensation) distorts CSS
+    // translateY animations causing unwanted horizontal movement.  Just snap.
+    if (this.isHandset()) {
+      el.style.transition = 'none';
+      this.fullscreenMediaPlayer.set(false);
+      requestAnimationFrame(() => el.style.removeProperty('transition'));
+      return;
+    }
+
     this.fullscreenClosing = true;
     el.classList.add('fullscreen-closing');
 
+    let done = false;
     const onDone = () => {
-      el.classList.remove('fullscreen-closing');
+      if (done) return;
+      done = true;
       this.fullscreenClosing = false;
+      // Keep fullscreen-closing on the element so the animation's fill-mode
+      // (translateY(100%)) keeps the player hidden off-screen.  Suppress
+      // transitions so the mode switch to footer-mode is instant.
+      el.style.transition = 'none';
       this.ngZone.run(() => this.fullscreenMediaPlayer.set(false));
+      // Clean up in the next frame: Angular has already removed fullscreen-mode,
+      // so fullscreen-closing is now inert (its animation CSS is nested under
+      // fullscreen-mode).  Restore natural transitions.
+      requestAnimationFrame(() => {
+        el.classList.remove('fullscreen-closing');
+        el.style.removeProperty('transition');
+      });
     };
 
     el.addEventListener('animationend', onDone, { once: true });
