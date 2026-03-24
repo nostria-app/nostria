@@ -8,7 +8,7 @@
 
   // Mobile: grid layout with 1fr+auto to fill viewport and anchor action bar at bottom.
   @media (max-width: 600px),
-  (max-height: 700px) {
+  (max-height: 600px) {
     display: grid;
     grid-template-rows: minmax(0, 1fr) auto;
     position: relative;
@@ -27,7 +27,7 @@
     box-sizing: border-box;
 
     @media (max-width: 600px),
-    (max-height: 700px) {
+    (max-height: 600px) {
       padding: 2px 6px 6px;
       overflow-y: auto;
       -webkit-overflow-scrolling: touch;
@@ -68,7 +68,7 @@
         gap: 8px;
 
         @media (max-width: 600px),
-        (max-height: 700px) {
+        (max-height: 600px) {
           gap: 6px;
         }
 
@@ -79,7 +79,7 @@
     }
 
     @media (max-width: 600px),
-    (max-height: 700px) {
+    (max-height: 600px) {
       position: relative;
       z-index: 1;
       padding: 12px 2px calc(8px + env(safe-area-inset-bottom));
@@ -93,7 +93,7 @@
     gap: 8px;
 
     @media (max-width: 600px),
-    (max-height: 700px) {
+    (max-height: 600px) {
       gap: 6px;
     }
 
@@ -178,7 +178,7 @@
     border-radius: 8px;
 
     @media (max-width: 600px),
-    (max-height: 700px) {
+    (max-height: 600px) {
       margin-bottom: 12px;
       padding: 6px 10px;
     }
@@ -338,7 +338,7 @@
     transition: all 0.2s ease;
 
     @media (max-width: 600px),
-    (max-height: 700px) {
+    (max-height: 600px) {
       padding: 10px 12px;
       margin-bottom: 12px;
     }
@@ -410,7 +410,7 @@
   }
 
   @media (max-width: 600px),
-  (max-height: 700px) {
+  (max-height: 600px) {
     .action-container:not(.inline-actions) {
       gap: 8px;
 
@@ -502,20 +502,14 @@
   .note-editor-dialog {
     min-width: 320px;
     max-width: 100%;
-    max-height: 95vh;
+    // No max-height cap here — mobile uses grid with height: 100% to fill the viewport.
 
-    .dialog-content {
-      .content-field {
-        .content-textarea {}
-      }
+    .upload-actions {
+      flex-wrap: wrap;
 
-      .upload-actions {
-        flex-wrap: wrap;
-
-        .upload-hint {
-          flex-basis: 100%;
-          margin-top: 4px;
-        }
+      .upload-hint {
+        flex-basis: 100%;
+        margin-top: 4px;
       }
     }
   }
@@ -570,7 +564,7 @@
   margin-bottom: 16px;
 
   @media (max-width: 600px),
-  (max-height: 700px) {
+  (max-height: 600px) {
     margin-bottom: 12px;
   }
 
@@ -586,7 +580,7 @@
     text-align: center;
 
     @media (max-width: 600px),
-    (max-height: 700px) {
+    (max-height: 600px) {
       margin-top: 6px;
       font-size: 13px;
     }
@@ -612,7 +606,7 @@
   border: 1px solid var(--mat-sys-error);
 
   @media (max-width: 600px),
-  (max-height: 700px) {
+  (max-height: 600px) {
     padding: 12px;
     margin-bottom: 12px;
     gap: 6px;
@@ -654,7 +648,7 @@
 
   // Mobile: fill available grid space
   @media (max-width: 600px),
-  (max-height: 700px) {
+  (max-height: 600px) {
     flex: 1 1 auto;
   }
 
@@ -669,7 +663,7 @@
 
     // Mobile: fill available space
     @media (max-width: 600px),
-    (max-height: 700px) {
+    (max-height: 600px) {
       flex: 1 1 auto;
     }
 
@@ -683,7 +677,7 @@
 
       // Mobile: fill available space
       @media (max-width: 600px),
-      (max-height: 700px) {
+      (max-height: 600px) {
         flex: 1 1 auto;
       }
 
@@ -729,7 +723,7 @@
 
       // Mobile: Material wrappers fill available space
       @media (max-width: 600px),
-      (max-height: 700px) {
+      (max-height: 600px) {
         ::ng-deep .mat-mdc-text-field-wrapper,
         ::ng-deep .mat-mdc-form-field-flex,
         ::ng-deep .mat-mdc-form-field-infix,
@@ -760,7 +754,7 @@
 
         // Mobile: fill available flex space, always allow scroll
         @media (max-width: 600px),
-        (max-height: 700px) {
+        (max-height: 600px) {
           flex: 1 1 auto;
           overflow-y: auto;
           min-height: 96px;
@@ -802,7 +796,7 @@
   border-radius: 8px;
 
   @media (max-width: 600px),
-  (max-height: 700px) {
+  (max-height: 600px) {
     margin-bottom: 12px;
   }
 
@@ -820,7 +814,7 @@
     border-bottom: 1px solid var(--mat-sys-outline-variant);
 
     @media (max-width: 600px),
-    (max-height: 700px) {
+    (max-height: 600px) {
       padding: 10px 12px;
       gap: 6px;
     }
@@ -872,7 +866,7 @@
     word-break: break-word;
 
     @media (max-width: 600px),
-    (max-height: 700px) {
+    (max-height: 600px) {
       padding: 12px;
     }
 
@@ -917,7 +911,7 @@
   border: 1px solid var(--mat-sys-outline-variant);
 
   @media (max-width: 600px),
-  (max-height: 700px) {
+  (max-height: 600px) {
     margin-top: 12px;
     padding: 12px;
   }
@@ -936,7 +930,7 @@
     border-bottom: 1px solid var(--mat-sys-outline-variant);
 
     @media (max-width: 600px),
-    (max-height: 700px) {
+    (max-height: 600px) {
       margin-bottom: 12px;
       padding-bottom: 6px;
       gap: 6px;
@@ -973,7 +967,7 @@
     margin-bottom: 16px;
 
     @media (max-width: 600px),
-    (max-height: 700px) {
+    (max-height: 600px) {
       margin-bottom: 12px;
     }
 
@@ -992,7 +986,7 @@
       margin-bottom: 12px;
 
       @media (max-width: 600px),
-      (max-height: 700px) {
+      (max-height: 600px) {
         margin-bottom: 10px;
       }
 
@@ -1047,7 +1041,7 @@
       margin-left: 16px;
 
       @media (max-width: 600px),
-      (max-height: 700px) {
+      (max-height: 600px) {
         margin-left: 12px;
       }
 

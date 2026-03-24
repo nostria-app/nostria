@@ -2468,8 +2468,8 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       textarea.style.height = `${targetHeight}px`;
       textarea.style.maxHeight = `${maxHeight}px`;
       textarea.style.overflowY = nextHeight > maxHeight ? 'auto' : 'hidden';
-    } else if (this.layout.isHandset()) {
-      // Mobile dialog mode: textarea fills available space via CSS grid 1fr.
+    } else if (this.isCompactDialogLayout()) {
+      // Mobile/compact dialog mode: textarea fills available space via CSS grid 1fr.
       // Clear any manual height so flex/grid layout controls sizing.
       textarea.style.height = '';
       textarea.style.maxHeight = '';
@@ -2491,6 +2491,15 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       textarea.style.maxHeight = `${maxHeight}px`;
       textarea.style.overflowY = nextHeight > maxHeight ? 'auto' : 'hidden';
     }
+  }
+
+  /**
+   * Check if the dialog is in compact/mobile CSS layout mode.
+   * Must match the CSS media query: (max-width: 600px) or (max-height: 600px).
+   * This is broader than layout.isHandset() which only checks width.
+   */
+  private isCompactDialogLayout(): boolean {
+    return this.layout.isHandset() || window.innerWidth <= 600 || window.innerHeight <= 600;
   }
 
   /**

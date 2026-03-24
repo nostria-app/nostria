@@ -41,7 +41,7 @@
   }
 
   @media (max-width: 600px),
-  (max-height: 700px) {
+  (max-height: 600px) {
     padding: 0;
     align-items: stretch;
     justify-content: flex-start;
@@ -67,7 +67,7 @@
 
   // Mobile: full screen
   @media (max-width: 600px),
-  (max-height: 700px) {
+  (max-height: 600px) {
     width: 100%;
     max-width: 100%;
     max-height: 100%;
@@ -88,7 +88,7 @@
   min-height: 64px;
 
   @media (max-width: 600px),
-  (max-height: 700px) {
+  (max-height: 600px) {
     padding: 10px 12px 8px;
     gap: 6px;
     min-height: 56px;
@@ -128,7 +128,7 @@
   min-width: 0;
 
   @media (max-width: 600px),
-  (max-height: 700px) {
+  (max-height: 600px) {
     font-size: 20px;
   }
 
@@ -145,7 +145,7 @@
   flex-shrink: 0;
 
   @media (max-width: 600px),
-  (max-height: 700px) {
+  (max-height: 600px) {
     width: 36px;
     height: 36px;
   }
@@ -191,7 +191,7 @@
   }
 
   @media (max-width: 600px),
-  (max-height: 700px) {
+  (max-height: 600px) {
     width: 24px;
     height: 24px;
   }
@@ -275,7 +275,7 @@
 
   // Smaller on mobile
   @media (max-width: 600px),
-  (max-height: 700px) {
+  (max-height: 600px) {
     width: 36px;
     height: 36px;
 
@@ -307,7 +307,7 @@
   padding: 10px 14px 14px;
 
   @media (max-width: 600px),
-  (max-height: 700px) {
+  (max-height: 600px) {
     padding: 4px 8px calc(8px + var(--mobile-dialog-footer-space) + env(safe-area-inset-bottom));
   }
 
@@ -404,7 +404,9 @@
     padding: 0 18px;
   }
 
-  .dialog-content>.note-editor-dialog {
+  // Use ::ng-deep because .note-editor-dialog is inside projected content
+  // (it has note-editor-dialog component's view encapsulation, not custom-dialog's)
+  ::ng-deep .dialog-content>.note-editor-dialog {
     display: flex;
     flex-direction: column;
     min-height: 0;
@@ -414,7 +416,7 @@
 
   // Mobile: full-screen with footer anchored at bottom
   @media (max-width: 600px),
-  (max-height: 700px) {
+  (max-height: 600px) {
     height: 100%;
     max-height: 100%;
 
@@ -427,7 +429,7 @@
       overflow: hidden;
     }
 
-    .dialog-content>.note-editor-dialog {
+    ::ng-deep .dialog-content>.note-editor-dialog {
       display: grid;
       grid-template-rows: minmax(0, 1fr) auto;
       height: 100%;
@@ -476,7 +478,7 @@
   }
 
   @media (max-width: 600px),
-  (max-height: 700px) {
+  (max-height: 600px) {
     position: absolute;
     left: 0;
     right: 0;
@@ -535,7 +537,7 @@
 
 // Mobile: slide up from bottom
 @media (max-width: 600px),
-(max-height: 700px) {
+(max-height: 600px) {
   @keyframes slideIn {
     from {
       opacity: 0;
@@ -580,7 +582,7 @@
   }
 
   @media (max-width: 600px),
-  (max-height: 700px) {
+  (max-height: 600px) {
     gap: 8px;
   }
 
