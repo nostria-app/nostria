@@ -72,7 +72,7 @@
   } @else {
   <div class="playlist-content">
     <!-- Immersive Hero Header -->
-    <div class="hero-header" [style.background]="extractedColors() ? 'linear-gradient(180deg, ' + extractedColors()!.background + ' 0%, ' + extractedColors()!.backgroundEnd + ' 100%)' : null">
+    <div class="hero-header">
       <div class="hero-art-container">
         @if (coverImage()) {
         <img [src]="coverImage()" [alt]="title()" title="Album cover" class="hero-art" />

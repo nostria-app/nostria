@@ -84,6 +84,9 @@ const MUSIC_PLAYLIST_KIND = 34139;
   ],
   templateUrl: './song-detail.component.html',
   styleUrls: ['./song-detail.component.scss'],
+  host: {
+    '[style.background]': 'hostBackground()',
+  },
 })
 export class SongDetailComponent implements OnInit, OnDestroy {
   private route = inject(ActivatedRoute);
@@ -128,6 +131,13 @@ export class SongDetailComponent implements OnInit, OnDestroy {
 
   // Extracted background colors from track art
   extractedColors = signal<ExtractedColors | null>(null);
+
+  // Host background gradient derived from extracted colors
+  hostBackground = computed(() => {
+    const colors = this.extractedColors();
+    if (!colors) return null;
+    return `linear-gradient(180deg, ${colors.background} 0%, ${colors.backgroundEnd} 100%)`;
+  });
 
   // Offline music signals
   isOffline = computed(() => {
