@@ -156,7 +156,8 @@
         <mat-icon class="options-icon">settings</mat-icon>
         <span class="options-title">Advanced Options</span>
         <span class="spacer"></span>
-        <button mat-icon-button type="button" class="close-advanced-options" (click)="toggleAdvancedOptions()" matTooltip="Close advanced options">
+        <button mat-icon-button type="button" class="close-advanced-options" (click)="toggleAdvancedOptions()"
+          matTooltip="Close advanced options">
           <mat-icon>close</mat-icon>
         </button>
       </div>
@@ -391,7 +392,8 @@
           <span class="preview-title">Preview</span>
         </div>
         <span class="spacer"></span>
-        <button mat-icon-button type="button" class="close-preview" (click)="togglePreview()" matTooltip="Close preview">
+        <button mat-icon-button type="button" class="close-preview" (click)="togglePreview()"
+          matTooltip="Close preview">
           <mat-icon>close</mat-icon>
         </button>
       </div>
@@ -420,7 +422,8 @@
     } -->
   </div>
 
-  <div class="action-container composer-actions" [class.inline-actions]="inlineMode()" [class.has-media]="mediaMetadata().length > 0 && !showPreview() && !showAdvancedOptions()" #composerActions
+  <div class="action-container composer-actions" [class.inline-actions]="inlineMode()"
+    [class.has-media]="mediaMetadata().length > 0 && !showPreview() && !showAdvancedOptions()" #composerActions
     (dragenter)="!showPreview() && !showAdvancedOptions() && onDragEnter($event)"
     (dragover)="!showPreview() && !showAdvancedOptions() && onDragOver($event)"
     (dragleave)="!showPreview() && !showAdvancedOptions() && onDragLeave($event)"
