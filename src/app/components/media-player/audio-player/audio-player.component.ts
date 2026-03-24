@@ -224,7 +224,11 @@ export class AudioPlayerComponent {
   }
 
   toggleFullscreen(): void {
-    this.layout.fullscreenMediaPlayer.set(!this.layout.fullscreenMediaPlayer());
+    if (this.layout.fullscreenMediaPlayer()) {
+      this.layout.closeFullscreenMediaPlayer();
+    } else {
+      this.layout.fullscreenMediaPlayer.set(true);
+    }
   }
 
   toggleSidebarDock(): void {

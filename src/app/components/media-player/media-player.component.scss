@@ -135,6 +135,35 @@
     background: #000;
     max-width: 100%;
     border-radius: 0;
+    animation: fullscreen-slide-up 0.35s cubic-bezier(0.25, 0.1, 0.25, 1) both;
+
+    &.fullscreen-closing {
+      animation: fullscreen-slide-down 0.3s cubic-bezier(0.4, 0, 1, 1) both;
+    }
+  }
+}
+
+@keyframes fullscreen-slide-up {
+  from {
+    transform: translateY(100%);
+    opacity: 0.5;
+  }
+
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes fullscreen-slide-down {
+  from {
+    transform: translateY(0);
+    opacity: 1;
+  }
+
+  to {
+    transform: translateY(100%);
+    opacity: 0.5;
   }
 }
 

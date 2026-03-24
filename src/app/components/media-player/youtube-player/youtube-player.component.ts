@@ -44,7 +44,11 @@ export class YouTubePlayerComponent {
   readonly isFullscreen = computed(() => this.layout.fullscreenMediaPlayer());
 
   toggleFullscreen(): void {
-    this.layout.fullscreenMediaPlayer.set(!this.layout.fullscreenMediaPlayer());
+    if (this.layout.fullscreenMediaPlayer()) {
+      this.layout.closeFullscreenMediaPlayer();
+    } else {
+      this.layout.fullscreenMediaPlayer.set(true);
+    }
   }
 
   toggleExpand(): void {

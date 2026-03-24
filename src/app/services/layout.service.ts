@@ -86,6 +86,8 @@ export class LayoutService implements OnDestroy {
   showMediaPlayer = signal(false);
   fullscreenMediaPlayer = signal(false);
   expandedMediaPlayer = signal(false);
+  /** True while the fullscreen-closing animation is in progress */
+  private fullscreenClosing = false;
 
   /**
    * Controls whether the mobile cube is rotated to show the player/music face.
@@ -159,6 +161,37 @@ export class LayoutService implements OnDestroy {
         });
       });
     }
+  }
+
+  /**
+   * Animate the fullscreen media player closed (slide-down), then toggle the signal.
+   * For hard exits (stopping playback), set fullscreenMediaPlayer directly instead.
+   */
+  closeFullscreenMediaPlayer(): void {
+    if (!this.fullscreenMediaPlayer() || this.fullscreenClosing) return;
+    if (!this.isBrowser()) {
+      this.fullscreenMediaPlayer.set(false);
+      return;
+    }
+
+    const el = document.querySelector('app-media-player') as HTMLElement | null;
+    if (!el) {
+      this.fullscreenMediaPlayer.set(false);
+      return;
+    }
+
+    this.fullscreenClosing = true;
+    el.classList.add('fullscreen-closing');
+
+    const onDone = () => {
+      el.classList.remove('fullscreen-closing');
+      this.fullscreenClosing = false;
+      this.ngZone.run(() => this.fullscreenMediaPlayer.set(false));
+    };
+
+    el.addEventListener('animationend', onDone, { once: true });
+    // Safety timeout in case the animation event doesn't fire
+    setTimeout(onDone, 400);
   }
 
   /**

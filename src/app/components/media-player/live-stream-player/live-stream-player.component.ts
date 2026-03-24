@@ -169,7 +169,7 @@ export class LiveStreamPlayerComponent implements OnDestroy {
     ).subscribe(event => {
       if (event instanceof NavigationStart) {
         if (this.layout.fullscreenMediaPlayer()) {
-          this.layout.fullscreenMediaPlayer.set(false);
+          this.layout.closeFullscreenMediaPlayer();
         }
       }
     });

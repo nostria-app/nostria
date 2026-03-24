@@ -107,8 +107,8 @@ export class MediaPlayerComponent implements OnDestroy {
           el.style.maxWidth = width !== null ? `${width}px` : '';
           el.style.height = height !== null ? `${height}px` : '';
         } else {
-          // In fullscreen mode, always clear the transform and resize overrides
-          el.style.transform = 'none';
+          // In fullscreen mode, remove inline overrides so CSS animation can take over
+          el.style.removeProperty('transform');
           el.style.maxWidth = '';
           el.style.height = '';
         }

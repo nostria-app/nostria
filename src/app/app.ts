@@ -2511,9 +2511,9 @@ export class App implements OnInit, OnDestroy {
     this.logger.debug('[App] exitFullscreen called, currentUrl:', currentUrl, 'isStreamRoute:', isStreamRoute);
 
     this.media.exitFullscreen();
-    // Also turn off fullscreen media player mode so it doesn't auto-open next time
+    // Animate close of fullscreen media player
     if (this.layout.fullscreenMediaPlayer()) {
-      this.layout.fullscreenMediaPlayer.set(false);
+      this.layout.closeFullscreenMediaPlayer();
     }
 
     // Navigate to streams page if we were on a stream route
