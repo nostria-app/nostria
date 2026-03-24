@@ -695,6 +695,12 @@
         .mdc-text-field--outlined {
           padding-left: 0 !important;
           padding-right: 0 !important;
+          align-items: stretch !important;
+          overflow: hidden;
+        }
+
+        .mat-mdc-form-field-flex {
+          align-items: stretch !important;
         }
 
         .mat-mdc-form-field-infix {
@@ -703,6 +709,7 @@
           width: 100% !important;
           display: flex;
           flex-direction: column;
+          overflow: hidden;
         }
       }
 
@@ -717,6 +724,7 @@
         overflow-y: hidden;
         min-height: 120px;
         box-sizing: border-box;
+        margin: 0 !important;
         word-wrap: break-word;
         word-break: normal;
         white-space: pre-wrap;
@@ -1470,4 +1478,3 @@
     height: 52px;
   }
 }
-
