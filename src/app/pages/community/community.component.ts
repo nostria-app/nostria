@@ -3,7 +3,6 @@ import { isPlatformBrowser } from '@angular/common';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { MatCardModule } from '@angular/material/card';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatTabsModule } from '@angular/material/tabs';
@@ -11,17 +10,19 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { FormsModule } from '@angular/forms';
 import { Event, nip19 } from 'nostr-tools';
-import { CommunityService, Community, CommunityPost, COMMUNITY_DEFINITION_KIND } from '../../services/community.service';
+import { CommunityService, Community, COMMUNITY_DEFINITION_KIND } from '../../services/community.service';
 import { CommunityListService } from '../../services/community-list.service';
 import { ApplicationService } from '../../services/application.service';
 import { AccountStateService } from '../../services/account-state.service';
 import { NostrService } from '../../services/nostr.service';
+import { ReactionService } from '../../services/reaction.service';
+import { EventService, type ReactionEvents } from '../../services/event';
 import { LayoutService } from '../../services/layout.service';
+import { EventActionsToolbarComponent } from '../../components/event-actions-toolbar/event-actions-toolbar.component';
+import { EventHeaderComponent } from '../../components/event/header/header.component';
+import { ContentComponent } from '../../components/content/content.component';
 import { UserProfileComponent } from '../../components/user-profile/user-profile.component';
-import { EventComponent } from '../../components/event/event.component';
-import { AgoPipe } from '../../pipes/ago.pipe';
 import { LoggerService } from '../../services/logger.service';
 
 @Component({
@@ -30,17 +31,16 @@ import { LoggerService } from '../../services/logger.service';
     MatProgressSpinnerModule,
     MatButtonModule,
     MatIconModule,
-    MatCardModule,
     MatTooltipModule,
     MatChipsModule,
     MatTabsModule,
     MatDividerModule,
     MatMenuModule,
     RouterLink,
-    FormsModule,
+    EventActionsToolbarComponent,
+    EventHeaderComponent,
+    ContentComponent,
     UserProfileComponent,
-    EventComponent,
-    AgoPipe,
   ],
   templateUrl: './community.component.html',
   styleUrls: ['./community.component.scss'],
@@ -54,13 +54,17 @@ export class CommunityComponent implements OnInit, OnDestroy {
   private app = inject(ApplicationService);
   private accountState = inject(AccountStateService);
   private nostrService = inject(NostrService);
-  private layout = inject(LayoutService);
   private snackBar = inject(MatSnackBar);
   private readonly logger = inject(LoggerService);
   private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
+  private reactionService = inject(ReactionService);
+  private eventService = inject(EventService);
+  private layout = inject(LayoutService);
 
   /** Community event passed via router state for instant rendering */
   private routerStateEvent: Event | undefined;
+  /** Current naddr for building links */
+  currentNaddr = signal('');
 
   community = signal<Community | null>(null);
   loading = signal(true);
@@ -74,15 +78,20 @@ export class CommunityComponent implements OnInit, OnDestroy {
   allApprovals = signal<Event[]>([]);
   private approvalMap = new Map<string, Event>();
 
-  // Post compose
-  newPostContent = signal('');
-  isPublishing = signal(false);
-
   // Tab state
   selectedTab = signal(0);
 
   // Show approved only filter
   showApprovedOnly = signal(false);
+
+  // Post editing state
+  editingPostId = signal<string | null>(null);
+  editContent = signal('');
+  savingEdit = signal(false);
+
+  // Vote state per post
+  postReactions = signal<Map<string, ReactionEvents>>(new Map());
+  votingPostIds = signal<Set<string>>(new Set());
 
   private postsSub: { close: () => void } | null = null;
   private approvalsSub: { close: () => void } | null = null;
@@ -182,6 +191,7 @@ export class CommunityComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     const naddrParam = this.route.snapshot.paramMap.get('naddr');
     if (naddrParam) {
+      this.currentNaddr.set(naddrParam);
       this.loadCommunityFromNaddr(naddrParam);
     }
   }
@@ -189,6 +199,224 @@ export class CommunityComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.postsSub?.close();
     this.approvalsSub?.close();
+  }
+
+  /** Get the title of a post from its subject tag or first line of content */
+  getPostTitle(post: Event): string {
+    const subject = post.tags.find(t => t[0] === 'subject')?.[1];
+    if (subject) return subject;
+    // Use first line of content as fallback title
+    const firstLine = post.content.split('\n')[0];
+    if (firstLine.length > 120) return firstLine.substring(0, 120) + '...';
+    return firstLine;
+  }
+
+  /** Get the body text of a post (content after first line if no subject tag) */
+  getPostBody(post: Event): string {
+    const subject = post.tags.find(t => t[0] === 'subject')?.[1];
+    if (subject) return post.content;
+    // If no subject, the first line is used as title, return rest
+    const lines = post.content.split('\n');
+    if (lines.length <= 1) return '';
+    return lines.slice(1).join('\n').trim();
+  }
+
+  /** Get URL images from url tags */
+  getPostImages(post: Event): string[] {
+    return post.tags
+      .filter(t => t[0] === 'url' && t[1])
+      .map(t => t[1])
+      .filter(url => /\.(jpg|jpeg|png|gif|webp|svg|avif)(\?|$)/i.test(url));
+  }
+
+  /** Get the link URL from r tag */
+  getPostLink(post: Event): string | null {
+    return post.tags.find(t => t[0] === 'r')?.[1] || null;
+  }
+
+  /** Navigate to create post page */
+  navigateToCreatePost(): void {
+    this.router.navigate(['/n', this.currentNaddr(), 'post']);
+  }
+
+  /** Start editing a post */
+  startEdit(post: Event): void {
+    this.editingPostId.set(post.id);
+    this.editContent.set(post.content);
+  }
+
+  /** Cancel editing */
+  cancelEdit(): void {
+    this.editingPostId.set(null);
+    this.editContent.set('');
+  }
+
+  /** Get the vote score (upvotes minus downvotes) for a post */
+  getVoteScore(post: Event): number {
+    const reactions = this.postReactions().get(post.id);
+    if (!reactions) return 0;
+    let score = 0;
+    for (const record of reactions.events) {
+      if (record.event.content === '+') score++;
+      else if (record.event.content === '-') score--;
+    }
+    return score;
+  }
+
+  /** Get the current user's vote on a post: 'up', 'down', or null */
+  getUserVote(post: Event): 'up' | 'down' | null {
+    const pubkey = this.currentPubkey();
+    if (!pubkey) return null;
+    const reactions = this.postReactions().get(post.id);
+    if (!reactions) return null;
+    const userReaction = reactions.events.find(r => r.event.pubkey === pubkey);
+    if (!userReaction) return null;
+    if (userReaction.event.content === '+') return 'up';
+    if (userReaction.event.content === '-') return 'down';
+    return null;
+  }
+
+  /** Check if a post vote is in progress */
+  isVoting(post: Event): boolean {
+    return this.votingPostIds().has(post.id);
+  }
+
+  /** Load reactions for a post */
+  async loadPostReactions(post: Event): Promise<void> {
+    try {
+      const reactions = await this.eventService.loadReactions(post.id, post.pubkey);
+      const current = new Map(this.postReactions());
+      current.set(post.id, reactions);
+      this.postReactions.set(current);
+    } catch (error) {
+      this.logger.error('[Community] Error loading post reactions:', error);
+    }
+  }
+
+  /** Upvote a post (NIP-25 '+' reaction) */
+  async upvote(post: Event): Promise<void> {
+    const pubkey = this.currentPubkey();
+    if (!pubkey) {
+      await this.layout.showLoginDialog();
+      return;
+    }
+
+    const currentVote = this.getUserVote(post);
+    this.setVoting(post.id, true);
+
+    try {
+      if (currentVote === 'up') {
+        // Toggle off: delete the existing upvote
+        const reactions = this.postReactions().get(post.id);
+        const userReaction = reactions?.events.find(r => r.event.pubkey === pubkey && r.event.content === '+');
+        if (userReaction) {
+          await this.reactionService.deleteReaction(userReaction.event);
+        }
+      } else {
+        if (currentVote === 'down') {
+          // Remove existing downvote first
+          const reactions = this.postReactions().get(post.id);
+          const userReaction = reactions?.events.find(r => r.event.pubkey === pubkey && r.event.content === '-');
+          if (userReaction) {
+            await this.reactionService.deleteReaction(userReaction.event);
+          }
+        }
+        await this.reactionService.addLike(post);
+      }
+      // Reload reactions to get fresh state
+      await this.loadPostReactions(post);
+    } catch (error) {
+      this.logger.error('[Community] Error voting:', error);
+      this.snackBar.open('Failed to vote', 'Close', { duration: 3000 });
+    } finally {
+      this.setVoting(post.id, false);
+    }
+  }
+
+  /** Downvote a post (NIP-25 '-' reaction) */
+  async downvote(post: Event): Promise<void> {
+    const pubkey = this.currentPubkey();
+    if (!pubkey) {
+      await this.layout.showLoginDialog();
+      return;
+    }
+
+    const currentVote = this.getUserVote(post);
+    this.setVoting(post.id, true);
+
+    try {
+      if (currentVote === 'down') {
+        // Toggle off: delete the existing downvote
+        const reactions = this.postReactions().get(post.id);
+        const userReaction = reactions?.events.find(r => r.event.pubkey === pubkey && r.event.content === '-');
+        if (userReaction) {
+          await this.reactionService.deleteReaction(userReaction.event);
+        }
+      } else {
+        if (currentVote === 'up') {
+          // Remove existing upvote first
+          const reactions = this.postReactions().get(post.id);
+          const userReaction = reactions?.events.find(r => r.event.pubkey === pubkey && r.event.content === '+');
+          if (userReaction) {
+            await this.reactionService.deleteReaction(userReaction.event);
+          }
+        }
+        await this.reactionService.addDislike(post);
+      }
+      // Reload reactions to get fresh state
+      await this.loadPostReactions(post);
+    } catch (error) {
+      this.logger.error('[Community] Error voting:', error);
+      this.snackBar.open('Failed to vote', 'Close', { duration: 3000 });
+    } finally {
+      this.setVoting(post.id, false);
+    }
+  }
+
+  private setVoting(postId: string, isVoting: boolean): void {
+    const current = new Set(this.votingPostIds());
+    if (isVoting) {
+      current.add(postId);
+    } else {
+      current.delete(postId);
+    }
+    this.votingPostIds.set(current);
+  }
+
+  /** Save edited post — publishes a new kind 1111 post referencing the original */
+  async saveEdit(post: Event): Promise<void> {
+    const comm = this.community();
+    if (!comm) return;
+
+    const newContent = this.editContent().trim();
+    if (!newContent) return;
+
+    this.savingEdit.set(true);
+    try {
+      // Create an edit event (kind 1010-style) pointing to the original post
+      // For community posts, we create a kind 1010 edit event with the 'e' tag
+      const tags: string[][] = [
+        ['e', post.id],
+      ];
+
+      const unsignedEvent = this.nostrService.createEvent(1010, newContent, tags);
+      const result = await this.nostrService.signAndPublish(unsignedEvent);
+
+      if (result.success) {
+        // Optimistically update the post content in-place
+        this.postMap.set(post.id, { ...post, content: newContent } as Event);
+        this.allPosts.set(Array.from(this.postMap.values()));
+        this.snackBar.open('Post updated', 'Close', { duration: 3000 });
+        this.cancelEdit();
+      } else {
+        this.snackBar.open('Failed to update post', 'Close', { duration: 3000 });
+      }
+    } catch (error) {
+      this.logger.error('[Community] Error saving edit:', error);
+      this.snackBar.open('Failed to update post', 'Close', { duration: 3000 });
+    } finally {
+      this.savingEdit.set(false);
+    }
   }
 
   private async loadCommunityFromNaddr(naddrStr: string): Promise<void> {
@@ -253,6 +481,9 @@ export class CommunityComponent implements OnInit, OnDestroy {
         this.postMap.set(event.id, event);
         this.allPosts.set(Array.from(this.postMap.values()));
 
+        // Load reactions for the post (for vote counts)
+        void this.loadPostReactions(event);
+
         if (this.loadingPosts()) {
           clearTimeout(loadingTimeout);
           this.loadingPosts.set(false);
@@ -276,33 +507,6 @@ export class CommunityComponent implements OnInit, OnDestroy {
       },
       { limit: 500 }
     );
-  }
-
-  async submitPost(): Promise<void> {
-    const content = this.newPostContent().trim();
-    const comm = this.community();
-    if (!content || !comm) return;
-
-    this.isPublishing.set(true);
-    try {
-      const result = await this.communityService.publishCommunityPost(
-        comm.coordinate,
-        comm.creatorPubkey,
-        content,
-      );
-
-      if (result.success) {
-        this.newPostContent.set('');
-        this.snackBar.open('Post published to community', 'Close', { duration: 3000 });
-      } else {
-        this.snackBar.open('Failed to publish post', 'Close', { duration: 3000 });
-      }
-    } catch (error) {
-      this.logger.error('[Community] Error publishing post:', error);
-      this.snackBar.open('Error publishing post', 'Close', { duration: 3000 });
-    } finally {
-      this.isPublishing.set(false);
-    }
   }
 
   async approvePost(post: Event): Promise<void> {
@@ -387,7 +591,7 @@ export class CommunityComponent implements OnInit, OnDestroy {
       identifier: comm.id,
     });
 
-    this.router.navigate(['/communities', 'edit', naddr], {
+    this.router.navigate(['/n', 'edit', naddr], {
       state: { communityEvent: comm.event },
     });
   }

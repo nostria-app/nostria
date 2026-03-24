@@ -8,7 +8,7 @@
   <mat-icon>diversity_3</mat-icon>
   <h2>Community not found</h2>
   <p>This community could not be found. It may have been deleted or the link may be incorrect.</p>
-  <a mat-flat-button routerLink="/communities">
+  <a mat-flat-button routerLink="/n">
     <mat-icon>arrow_back</mat-icon>
     <span>Browse Communities</span>
   </a>
@@ -16,12 +16,16 @@
 } @else {
 <!-- Panel Header -->
 <div class="panel-header">
-  <a mat-icon-button routerLink="/communities" matTooltip="Back to Communities">
+  <a mat-icon-button routerLink="/n" matTooltip="Back to Communities">
     <mat-icon>arrow_back</mat-icon>
   </a>
-  <h2 class="panel-title title-font">{{ community()!.name }}</h2>
+  <h2 class="panel-title title-font">n/{{ community()!.name }}</h2>
   <span class="panel-header-spacer"></span>
   @if (isAuthenticated()) {
+  <button mat-flat-button (click)="navigateToCreatePost()" class="create-post-btn">
+    <mat-icon>add</mat-icon>
+    Create Post
+  </button>
   <button mat-button (click)="isJoined() ? leaveCommunity() : joinCommunity()">
     <mat-icon>{{ isJoined() ? 'remove_circle_outline' : 'add_circle_outline' }}</mat-icon>
     {{ isJoined() ? 'Leave' : 'Join' }}
@@ -54,7 +58,12 @@
     <img [src]="community()!.image" [alt]="community()!.name" class="banner-image" />
   </div>
   }
-  <div class="community-header-content">
+  <div class="community-header-content" [class.has-avatar]="community()!.avatar">
+    @if (community()!.avatar) {
+    <div class="community-avatar-wrapper">
+      <img [src]="community()!.avatar" [alt]="community()!.name" class="community-avatar" loading="lazy" />
+    </div>
+    }
     @if (community()!.description) {
     <p class="community-description">{{ community()!.description }}</p>
     }
@@ -91,39 +100,10 @@
   <!-- Posts Tab -->
   <mat-tab label="Posts">
     <div class="tab-content">
-      <!-- Post Composer -->
-      @if (isAuthenticated()) {
-      <div class="post-composer">
-        <textarea class="post-textarea"
-                  [value]="newPostContent()"
-                  (input)="newPostContent.set($any($event.target).value)"
-                  placeholder="Write something to this community..."
-                  rows="3"></textarea>
-        <div class="post-actions">
-          <span class="post-count">{{ sortedPosts().length }} posts</span>
-          <span class="post-actions-spacer"></span>
-          @if (isModerator()) {
-          <button mat-button (click)="toggleApprovedFilter()">
-            <mat-icon>{{ showApprovedOnly() ? 'filter_alt' : 'filter_alt_off' }}</mat-icon>
-            {{ showApprovedOnly() ? 'Approved Only' : 'All Posts' }}
-          </button>
-          }
-          <button mat-flat-button
-                  [disabled]="!newPostContent().trim() || isPublishing()"
-                  (click)="submitPost()">
-            @if (isPublishing()) {
-            <mat-spinner diameter="18"></mat-spinner>
-            } @else {
-            <mat-icon>send</mat-icon>
-            }
-            Post
-          </button>
-        </div>
-      </div>
-      } @else {
-      <div class="post-actions">
+      <!-- Post toolbar -->
+      <div class="post-toolbar">
         <span class="post-count">{{ sortedPosts().length }} posts</span>
-        <span class="post-actions-spacer"></span>
+        <span class="post-toolbar-spacer"></span>
         @if (isModerator()) {
         <button mat-button (click)="toggleApprovedFilter()">
           <mat-icon>{{ showApprovedOnly() ? 'filter_alt' : 'filter_alt_off' }}</mat-icon>
@@ -131,7 +111,6 @@
         </button>
         }
       </div>
-      }
 
       <!-- Posts List -->
       @if (loadingPosts()) {
@@ -148,22 +127,97 @@
       } @else {
       <div class="posts-list">
         @for (post of sortedPosts(); track post.id) {
-        <div class="post-wrapper">
-          <app-event [event]="post"></app-event>
-          @if (isModerator() && !isPostApproved(post)) {
-          <div class="moderation-actions">
-            <button mat-button (click)="approvePost(post)" matTooltip="Approve this post">
+        <div class="post-card">
+          <!-- Post Header: author info + timestamp -->
+          <app-event-header [event]="post" [compact]="true"></app-event-header>
+
+          <!-- Moderation badge -->
+          @if (isModerator()) {
+          <div class="post-moderation-row">
+            @if (!isPostApproved(post)) {
+            <button mat-button class="approve-btn" (click)="approvePost(post)" matTooltip="Approve this post">
               <mat-icon>check_circle</mat-icon>
               Approve
             </button>
+            } @else {
+            <span class="approved-badge">
+              <mat-icon>verified</mat-icon>
+              Approved
+            </span>
+            }
           </div>
           }
-          @if (isModerator() && isPostApproved(post)) {
-          <div class="approved-badge">
-            <mat-icon>verified</mat-icon>
-            <span>Approved</span>
+
+          <!-- Post Title -->
+          @if (getPostTitle(post); as title) {
+          <h3 class="post-title">{{ title }}</h3>
+          }
+
+          <!-- Post Body rendered with app-content -->
+          @if (getPostBody(post)) {
+          <div class="post-body-wrap">
+            <app-content [content]="getPostBody(post)" [event]="post" [disableExpansion]="false"></app-content>
           </div>
           }
+
+          <!-- Post Images -->
+          @if (getPostImages(post).length > 0) {
+          <div class="post-images">
+            @for (img of getPostImages(post); track img) {
+            <img [src]="img" alt="Post image" class="post-image" loading="lazy" />
+            }
+          </div>
+          }
+
+          <!-- Post Link -->
+          @if (getPostLink(post); as link) {
+          <a [href]="link" target="_blank" rel="noopener noreferrer" class="post-link">
+            <mat-icon>link</mat-icon>
+            <span>{{ link }}</span>
+          </a>
+          }
+
+          <!-- Editing UI -->
+          @if (editingPostId() === post.id) {
+          <div class="post-edit-form">
+            <textarea class="edit-textarea" [value]="editContent()" (input)="editContent.set($any($event.target).value)" placeholder="Edit your post..."></textarea>
+            <div class="edit-actions">
+              <button mat-button (click)="cancelEdit()">Cancel</button>
+              <button mat-flat-button (click)="saveEdit(post)" [disabled]="!editContent().trim() || savingEdit()">
+                @if (savingEdit()) {
+                <mat-spinner diameter="18"></mat-spinner>
+                } @else {
+                Save
+                }
+              </button>
+            </div>
+          </div>
+          }
+
+          <!-- Actions row: vote pill + toolbar + edit -->
+          <div class="post-actions-row">
+            <!-- Inline vote pill (Reddit-style) -->
+            <div class="vote-pill" [class.user-voted]="getUserVote(post) !== null">
+              <button class="vote-pill-btn upvote" [class.active]="getUserVote(post) === 'up'" [disabled]="isVoting(post)"
+                (click)="upvote(post)">
+                <mat-icon>arrow_upward</mat-icon>
+              </button>
+              <span class="vote-pill-score" [class.positive]="getVoteScore(post) > 0" [class.negative]="getVoteScore(post) < 0">{{ getVoteScore(post) }}</span>
+              <button class="vote-pill-btn downvote" [class.active]="getUserVote(post) === 'down'" [disabled]="isVoting(post)"
+                (click)="downvote(post)">
+                <mat-icon>arrow_downward</mat-icon>
+              </button>
+            </div>
+
+            <app-event-actions-toolbar [event]="post" bookmarkType="e" [autoLoad]="true"></app-event-actions-toolbar>
+
+            <!-- Edit button for own posts -->
+            @if (isAuthenticated() && post.pubkey === currentPubkey() && editingPostId() !== post.id) {
+            <button mat-icon-button class="edit-post-btn" (click)="startEdit(post)" matTooltip="Edit post">
+              <mat-icon>edit</mat-icon>
+            </button>
+            }
+          </div>
         </div>
         }
       </div>

@@ -64,6 +64,7 @@ export class CreateCommunityComponent implements OnInit {
   name = signal('');
   description = signal('');
   image = signal('');
+  avatar = signal('');
   rules = signal('');
   isPublishing = signal(false);
 
@@ -73,6 +74,7 @@ export class CreateCommunityComponent implements OnInit {
 
   // Image upload
   isUploadingImage = signal(false);
+  isUploadingAvatar = signal(false);
   hasMediaServers = computed(() => this.mediaService.mediaServers().length > 0);
 
   // Moderators: list of pubkeys (hex) with optional profile data
@@ -175,7 +177,7 @@ export class CreateCommunityComponent implements OnInit {
       const currentPubkey = this.accountState.pubkey();
       if (currentPubkey !== pubkey) {
         this.snackBar.open('You can only edit communities you created', 'Close', { duration: 3000 });
-        this.router.navigate(['/communities']);
+        this.router.navigate(['/n']);
         return;
       }
 
@@ -202,7 +204,7 @@ export class CreateCommunityComponent implements OnInit {
 
       if (!community) {
         this.snackBar.open('Community not found', 'Close', { duration: 3000 });
-        this.router.navigate(['/communities']);
+        this.router.navigate(['/n']);
         return;
       }
 
@@ -212,6 +214,7 @@ export class CreateCommunityComponent implements OnInit {
       this.name.set(community.name);
       this.description.set(community.description || '');
       this.image.set(community.image || '');
+      this.avatar.set(community.avatar || '');
       this.rules.set(community.rules || '');
 
       // Set moderators (exclude creator - they're auto-added)
@@ -318,6 +321,40 @@ export class CreateCommunityComponent implements OnInit {
     this.image.set('');
   }
 
+  async onAvatarFileSelected(evt: globalThis.Event): Promise<void> {
+    const input = evt.target as HTMLInputElement;
+    if (!input.files || !input.files[0]) return;
+
+    const file = input.files[0];
+    if (!file.type.startsWith('image/')) {
+      this.snackBar.open('Please select a valid image file', 'Close', { duration: 3000 });
+      return;
+    }
+
+    this.isUploadingAvatar.set(true);
+    try {
+      const result = await this.mediaService.uploadFile(file, false, []);
+      if (result.status === 'success' || result.status === 'duplicate') {
+        if (result.item?.url) {
+          this.avatar.set(result.item.url);
+          this.snackBar.open('Avatar uploaded', 'Close', { duration: 3000 });
+        }
+      } else {
+        this.snackBar.open(result.message || 'Failed to upload avatar', 'Close', { duration: 3000 });
+      }
+    } catch (error) {
+      this.logger.error('[CreateCommunity] Error uploading avatar:', error);
+      this.snackBar.open('Error uploading avatar', 'Close', { duration: 3000 });
+    } finally {
+      this.isUploadingAvatar.set(false);
+      input.value = '';
+    }
+  }
+
+  removeAvatar(): void {
+    this.avatar.set('');
+  }
+
   // -- Relay methods --
 
   addRelay(): void {
@@ -393,6 +430,7 @@ export class CreateCommunityComponent implements OnInit {
         name,
         description: this.description().trim() || undefined,
         image: this.image().trim() || undefined,
+        avatar: this.avatar().trim() || undefined,
         rules: this.rules().trim() || undefined,
         moderators: moderators.length > 0 ? moderators : undefined,
         relays: relays.length > 0 ? relays : undefined,
@@ -406,7 +444,7 @@ export class CreateCommunityComponent implements OnInit {
           pubkey: result.event.pubkey,
           identifier: dTag,
         });
-        this.router.navigate(['/communities', naddr], {
+        this.router.navigate(['/n', naddr], {
           state: { communityEvent: result.event },
         });
       } else {

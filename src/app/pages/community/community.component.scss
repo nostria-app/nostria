@@ -33,6 +33,10 @@
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
+.create-post-btn {
+  white-space: nowrap;
+}
+
 .loading-container {
   display: flex;
   flex-direction: column;
@@ -114,6 +118,29 @@
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
+
+  &.has-avatar {
+    padding-top: 0;
+    margin-top: -32px;
+    position: relative;
+    z-index: 1;
+  }
+}
+
+.community-avatar-wrapper {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 3px solid var(--mat-sys-surface);
+  background-color: var(--mat-sys-surface-container);
+  flex-shrink: 0;
+
+  .community-avatar {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
 }
 
 .community-description {
@@ -170,53 +197,20 @@
   padding: 1rem 1.5rem;
 }
 
-// Post Composer
-.post-composer {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  margin-bottom: 1.5rem;
-  padding: 1rem;
-  border-radius: 12px;
-  background-color: var(--mat-sys-surface-container);
-}
-
-.post-textarea {
-  width: 100%;
-  padding: 0.75rem;
-  border: 1px solid var(--mat-sys-outline-variant);
-  border-radius: 8px;
-  background-color: var(--mat-sys-surface);
-  color: var(--mat-sys-on-surface);
-  font-family: inherit;
-  font-size: 0.925rem;
-  resize: vertical;
-  field-sizing: content;
-  min-height: 60px;
-
-  &:focus {
-    outline: 2px solid var(--mat-sys-primary);
-    outline-offset: -1px;
-    border-color: transparent;
-  }
-
-  &::placeholder {
-    color: var(--mat-sys-on-surface-variant);
-  }
-}
-
-.post-actions {
+// Post Toolbar (replaces inline composer)
+.post-toolbar {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0 0.25rem;
+  padding: 0.5rem 0;
+  margin-bottom: 0.5rem;
 
   .post-count {
     font-size: 0.85rem;
     color: var(--mat-sys-on-surface-variant);
   }
 
-  .post-actions-spacer {
+  .post-toolbar-spacer {
     flex: 1;
   }
 }
@@ -228,38 +222,226 @@
   gap: 0;
 }
 
-.post-wrapper {
-  position: relative;
+// Post Card — vertical stack layout
+.post-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
   border-bottom: 1px solid var(--mat-sys-outline-variant);
+  padding: 0.75rem 0;
 
   &:last-child {
     border-bottom: none;
   }
 }
 
-.moderation-actions {
+// Moderation badge row
+.post-moderation-row {
   display: flex;
-  justify-content: flex-end;
-  padding: 0.25rem 0.5rem 0.5rem;
+  align-items: center;
 
-  button {
+  .approve-btn {
     color: var(--mat-sys-primary);
+  }
+
+  .approved-badge {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.75rem;
+    color: var(--mat-sys-tertiary);
+
+    mat-icon {
+      font-size: 14px;
+      width: 14px;
+      height: 14px;
+    }
   }
 }
 
-.approved-badge {
+.post-title {
+  margin: 0;
+  font-size: 1.05rem;
+  color: var(--mat-sys-on-surface);
+  line-height: 1.3;
+  word-break: break-word;
+}
+
+.post-body-wrap {
+  font-size: 0.875rem;
+  color: var(--mat-sys-on-surface-variant);
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+.post-images {
   display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+
+  .post-image {
+    max-width: 100%;
+    max-height: 300px;
+    border-radius: 8px;
+    object-fit: cover;
+    background-color: var(--mat-sys-surface-container);
+  }
+}
+
+.post-link {
+  display: inline-flex;
   align-items: center;
   gap: 0.25rem;
-  padding: 0.25rem 0.5rem 0.5rem;
-  justify-content: flex-end;
-  font-size: 0.8rem;
-  color: var(--mat-sys-tertiary);
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  background-color: var(--mat-sys-surface-container);
+  color: var(--mat-sys-primary);
+  text-decoration: none;
+  font-size: 0.85rem;
+  overflow: hidden;
+  max-width: 100%;
 
   mat-icon {
     font-size: 16px;
     width: 16px;
     height: 16px;
+    flex-shrink: 0;
+  }
+
+  span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &:hover {
+    background-color: var(--mat-sys-surface-container-high);
+  }
+}
+
+// Editing UI
+.post-edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.edit-textarea {
+  width: 100%;
+  min-height: 100px;
+  padding: 0.75rem;
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: 8px;
+  background-color: var(--mat-sys-surface-container);
+  color: var(--mat-sys-on-surface);
+  font-family: inherit;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  resize: vertical;
+  field-sizing: content;
+
+  &:focus {
+    outline: none;
+    border-color: var(--mat-sys-primary);
+  }
+}
+
+.edit-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+// Actions row with vote pill + toolbar + edit button
+.post-actions-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+
+  app-event-actions-toolbar {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .edit-post-btn {
+    flex-shrink: 0;
+    opacity: 0.6;
+
+    mat-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+    }
+
+    &:hover {
+      opacity: 1;
+    }
+  }
+}
+
+// Inline vote pill (Reddit new-style: ↑ score ↓ in a rounded pill)
+.vote-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  border-radius: 20px;
+  background-color: var(--mat-sys-surface-container);
+  flex-shrink: 0;
+  height: 32px;
+}
+
+.vote-pill-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--mat-sys-on-surface-variant);
+  cursor: pointer;
+  transition: color 0.15s ease, background-color 0.15s ease;
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+  }
+
+  &:hover:not(:disabled) {
+    background-color: var(--mat-sys-surface-container-high);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+
+  &.upvote.active {
+    color: var(--mat-sys-primary);
+  }
+
+  &.downvote.active {
+    color: var(--mat-sys-error, #b00020);
+  }
+}
+
+.vote-pill-score {
+  font-size: 0.75rem;
+  color: var(--mat-sys-on-surface-variant);
+  line-height: 1;
+  min-width: 12px;
+  text-align: center;
+  user-select: none;
+
+  &.positive {
+    color: var(--mat-sys-primary);
+  }
+
+  &.negative {
+    color: var(--mat-sys-error, #b00020);
   }
 }
 

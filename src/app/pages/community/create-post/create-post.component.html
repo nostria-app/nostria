@@ -1,0 +1,164 @@
+@if (loading()) {
+<div class="loading-container">
+  <mat-spinner diameter="50"></mat-spinner>
+  <p>Loading community...</p>
+</div>
+} @else if (!community()) {
+<div class="empty-state">
+  <mat-icon>diversity_3</mat-icon>
+  <h2>Community not found</h2>
+  <p>This community could not be found.</p>
+  <a mat-flat-button routerLink="/n">
+    <mat-icon>arrow_back</mat-icon>
+    <span>Browse Communities</span>
+  </a>
+</div>
+} @else {
+<!-- Panel Header -->
+<div class="panel-header">
+  <button mat-icon-button (click)="goBack()" matTooltip="Back to Community">
+    <mat-icon>arrow_back</mat-icon>
+  </button>
+  <h2 class="panel-title title-font">Create Post in n/{{ community()!.name }}</h2>
+</div>
+
+<div class="create-post-layout">
+  <!-- Main Form -->
+  <div class="form-section">
+    <!-- Post Type Tabs -->
+    <mat-tab-group [selectedIndex]="selectedTabIndex()" (selectedIndexChange)="onTabChange($event)" class="post-type-tabs">
+      <!-- Text Tab -->
+      <mat-tab>
+        <ng-template mat-tab-label>
+          <mat-icon>article</mat-icon>
+          <span>Text</span>
+        </ng-template>
+
+        <div class="tab-body">
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Title</mat-label>
+            <input matInput [ngModel]="title()" (ngModelChange)="title.set($event)" placeholder="Post title" maxlength="300" />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Body (optional)</mat-label>
+            <textarea matInput [ngModel]="body()" (ngModelChange)="body.set($event)" placeholder="Write your post content..." rows="8" style="field-sizing: content; min-height: 120px;"></textarea>
+          </mat-form-field>
+        </div>
+      </mat-tab>
+
+      <!-- Images & Video Tab -->
+      <mat-tab>
+        <ng-template mat-tab-label>
+          <mat-icon>image</mat-icon>
+          <span>Images &amp; Video</span>
+        </ng-template>
+
+        <div class="tab-body">
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Title</mat-label>
+            <input matInput [ngModel]="title()" (ngModelChange)="title.set($event)" placeholder="Post title" maxlength="300" />
+          </mat-form-field>
+
+          <!-- Drop zone -->
+          <div class="drop-zone"
+               [class.drag-over]="isDragOver()"
+               (dragenter)="onDragEnter($event)"
+               (dragover)="onDragOver($event)"
+               (dragleave)="onDragLeave($event)"
+               (drop)="onDrop($event)">
+            <mat-icon>cloud_upload</mat-icon>
+            <p>Drag and drop files here, or click to browse</p>
+            <button mat-flat-button (click)="fileInput.click()">
+              <mat-icon>attach_file</mat-icon>
+              Choose Files
+            </button>
+            <input #fileInput type="file" accept="image/*,video/*" multiple hidden (change)="onFileSelected($event)" />
+          </div>
+
+          <!-- Uploaded files preview -->
+          @if (uploadedFiles().length > 0) {
+          <div class="uploaded-files">
+            @for (file of uploadedFiles(); track $index) {
+            <div class="uploaded-file-item" [class.error]="file.error">
+              <img [src]="file.previewUrl" [alt]="file.file.name" class="file-preview" />
+              <div class="file-info">
+                <span class="file-name">{{ file.file.name }}</span>
+                @if (file.uploading) {
+                <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+                } @else if (file.error) {
+                <span class="file-error">{{ file.error }}</span>
+                } @else {
+                <span class="file-success">Uploaded</span>
+                }
+              </div>
+              <button mat-icon-button (click)="removeFile($index)" matTooltip="Remove" class="remove-file-btn">
+                <mat-icon>close</mat-icon>
+              </button>
+            </div>
+            }
+          </div>
+          }
+
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Description (optional)</mat-label>
+            <textarea matInput [ngModel]="body()" (ngModelChange)="body.set($event)" placeholder="Add a description..." rows="3" style="field-sizing: content; min-height: 60px;"></textarea>
+          </mat-form-field>
+        </div>
+      </mat-tab>
+
+      <!-- Link Tab -->
+      <mat-tab>
+        <ng-template mat-tab-label>
+          <mat-icon>link</mat-icon>
+          <span>Link</span>
+        </ng-template>
+
+        <div class="tab-body">
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Title</mat-label>
+            <input matInput [ngModel]="title()" (ngModelChange)="title.set($event)" placeholder="Post title" maxlength="300" />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>URL</mat-label>
+            <input matInput [ngModel]="linkUrl()" (ngModelChange)="linkUrl.set($event)" placeholder="https://..." type="url" />
+            <mat-icon matPrefix>link</mat-icon>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Description (optional)</mat-label>
+            <textarea matInput [ngModel]="body()" (ngModelChange)="body.set($event)" placeholder="Add context about this link..." rows="3" style="field-sizing: content; min-height: 60px;"></textarea>
+          </mat-form-field>
+        </div>
+      </mat-tab>
+    </mat-tab-group>
+
+    <!-- Submit row -->
+    <div class="submit-row">
+      <button mat-button (click)="goBack()">Cancel</button>
+      <button mat-flat-button [disabled]="!canSubmit()" (click)="submitPost()">
+        @if (submitting()) {
+        <mat-spinner diameter="20"></mat-spinner>
+        } @else {
+        <mat-icon>send</mat-icon>
+        Post
+        }
+      </button>
+    </div>
+  </div>
+
+  <!-- Community Rules Sidebar -->
+  @if (community()!.rules) {
+  <div class="rules-sidebar">
+    <div class="rules-card">
+      <div class="rules-header">
+        <mat-icon>gavel</mat-icon>
+        <h3>Community Rules</h3>
+      </div>
+      <p class="rules-text">{{ community()!.rules }}</p>
+    </div>
+  </div>
+  }
+</div>
+}

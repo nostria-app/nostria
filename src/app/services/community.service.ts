@@ -28,10 +28,14 @@ export interface Community {
   name: string;
   /** Community description */
   description: string;
-  /** Community image URL */
+  /** Community banner image URL (first image tag) */
   image: string;
-  /** Image dimensions (e.g., '1024x768') */
+  /** Banner image dimensions (e.g., '1024x768') */
   imageDimensions: string;
+  /** Community avatar image URL (second image tag) */
+  avatar: string;
+  /** Avatar image dimensions */
+  avatarDimensions: string;
   /** Community moderator pubkeys */
   moderators: { pubkey: string; relay?: string }[];
   /** Community relays with optional markers */
@@ -77,9 +81,13 @@ export class CommunityService {
     const dTag = event.tags.find(t => t[0] === 'd')?.[1] || '';
     const name = event.tags.find(t => t[0] === 'name')?.[1] || dTag;
     const description = event.tags.find(t => t[0] === 'description')?.[1] || '';
-    const imageTag = event.tags.find(t => t[0] === 'image');
-    const image = imageTag?.[1] || '';
-    const imageDimensions = imageTag?.[2] || '';
+    const imageTags = event.tags.filter(t => t[0] === 'image');
+    const bannerTag = imageTags[0];
+    const avatarTag = imageTags[1];
+    const image = bannerTag?.[1] || '';
+    const imageDimensions = bannerTag?.[2] || '';
+    const avatar = avatarTag?.[1] || '';
+    const avatarDimensions = avatarTag?.[2] || '';
     const rules = event.tags.find(t => t[0] === 'rules')?.[1] || '';
 
     const moderators = event.tags
@@ -97,6 +105,8 @@ export class CommunityService {
       description,
       image,
       imageDimensions,
+      avatar,
+      avatarDimensions,
       moderators,
       relays,
       creatorPubkey: event.pubkey,
@@ -284,6 +294,8 @@ export class CommunityService {
     description?: string;
     image?: string;
     imageDimensions?: string;
+    avatar?: string;
+    avatarDimensions?: string;
     rules?: string;
     moderators?: { pubkey: string; relay?: string }[];
     relays?: { url: string; marker?: string }[];
@@ -298,12 +310,21 @@ export class CommunityService {
     if (params.description) {
       tags.push(['description', params.description]);
     }
+    // First image tag = banner
     if (params.image) {
       const imageTag = ['image', params.image];
       if (params.imageDimensions) {
         imageTag.push(params.imageDimensions);
       }
       tags.push(imageTag);
+    }
+    // Second image tag = avatar
+    if (params.avatar) {
+      const avatarTag = ['image', params.avatar];
+      if (params.avatarDimensions) {
+        avatarTag.push(params.avatarDimensions);
+      }
+      tags.push(avatarTag);
     }
     if (params.rules) {
       tags.push(['rules', params.rules]);
@@ -330,21 +351,42 @@ export class CommunityService {
 
   /**
    * Create a top-level post in a community (kind 1111 per NIP-22).
+   * Supports title (subject tag), URL tags for media/links, and link posts.
    */
   createCommunityPost(
     communityCoordinate: string,
     communityPubkey: string,
     content: string,
-    relayHint?: string,
+    options?: {
+      relayHint?: string;
+      title?: string;
+      urls?: string[];
+      link?: string;
+    },
   ): UnsignedEvent {
+    const relayHint = options?.relayHint || '';
     const tags: string[][] = [
-      ['A', communityCoordinate, relayHint || ''],
-      ['a', communityCoordinate, relayHint || ''],
-      ['P', communityPubkey, relayHint || ''],
-      ['p', communityPubkey, relayHint || ''],
+      ['A', communityCoordinate, relayHint],
+      ['a', communityCoordinate, relayHint],
+      ['P', communityPubkey, relayHint],
+      ['p', communityPubkey, relayHint],
       ['K', String(COMMUNITY_DEFINITION_KIND)],
       ['k', String(COMMUNITY_DEFINITION_KIND)],
     ];
+
+    if (options?.title) {
+      tags.push(['subject', options.title]);
+    }
+
+    if (options?.urls) {
+      for (const url of options.urls) {
+        tags.push(['url', url]);
+      }
+    }
+
+    if (options?.link) {
+      tags.push(['r', options.link]);
+    }
 
     return this.nostrService.createEvent(COMMUNITY_POST_KIND, content, tags);
   }
@@ -405,6 +447,8 @@ export class CommunityService {
     description?: string;
     image?: string;
     imageDimensions?: string;
+    avatar?: string;
+    avatarDimensions?: string;
     rules?: string;
     moderators?: { pubkey: string; relay?: string }[];
     relays?: { url: string; marker?: string }[];
@@ -420,13 +464,18 @@ export class CommunityService {
     communityCoordinate: string,
     communityPubkey: string,
     content: string,
-    relayHint?: string,
+    options?: {
+      relayHint?: string;
+      title?: string;
+      urls?: string[];
+      link?: string;
+    },
   ): Promise<{ success: boolean; event?: Event; error?: string }> {
     const unsignedEvent = this.createCommunityPost(
       communityCoordinate,
       communityPubkey,
       content,
-      relayHint,
+      options,
     );
     return this.nostrService.signAndPublish(unsignedEvent);
   }

@@ -3,7 +3,7 @@
   <h2 class="panel-title title-font">Communities</h2>
   <span class="panel-header-spacer"></span>
   @if (isAuthenticated()) {
-  <a mat-icon-button routerLink="/communities/create" matTooltip="Create Community">
+  <a mat-icon-button routerLink="/n/create" matTooltip="Create Community">
     <mat-icon>add</mat-icon>
   </a>
   }
@@ -40,10 +40,15 @@
           @if (community.image) {
           <div class="community-image-container">
             <img [src]="community.image" [alt]="community.name" class="community-image" loading="lazy" />
+            @if (community.avatar) {
+            <div class="community-avatar-overlay">
+              <img [src]="community.avatar" [alt]="community.name" class="community-avatar" loading="lazy" />
+            </div>
+            }
           </div>
           }
           <mat-card-content>
-            <h3 class="community-name">{{ community.name }}</h3>
+            <h3 class="community-name">n/{{ community.name }}</h3>
             @if (community.description) {
             <p class="community-description">{{ community.description }}</p>
             }

@@ -1,6 +1,6 @@
 <!-- Panel Header -->
 <div class="panel-header">
-  <a mat-icon-button routerLink="/communities" matTooltip="Back to Communities">
+  <a mat-icon-button routerLink="/n" matTooltip="Back to Communities">
     <mat-icon>arrow_back</mat-icon>
   </a>
   <h2 class="panel-title title-font">{{ isEditMode() ? 'Edit Community' : 'Create Community' }}</h2>
@@ -77,6 +77,47 @@
         }
         @if (!hasMediaServers()) {
         <p class="section-hint">Configure media servers in Settings to enable image upload.</p>
+        }
+
+        <!-- Avatar Image Section -->
+        <div class="section-header">
+          <mat-icon>account_circle</mat-icon>
+          <h3>Avatar Image</h3>
+        </div>
+
+        @if (avatar()) {
+        <div class="avatar-preview">
+          <img [src]="avatar()" alt="Avatar preview" loading="lazy" />
+          <button mat-icon-button class="remove-image-btn" (click)="removeAvatar()" matTooltip="Remove avatar">
+            <mat-icon>close</mat-icon>
+          </button>
+        </div>
+        }
+
+        <div class="image-input-row">
+          <mat-form-field appearance="outline" class="flex-field">
+            <mat-label>Avatar Image URL</mat-label>
+            <input matInput
+                   [value]="avatar()"
+                   (input)="avatar.set($any($event.target).value)"
+                   placeholder="https://example.com/avatar.jpg" />
+          </mat-form-field>
+          <input #avatarFileInput type="file" hidden (change)="onAvatarFileSelected($event)" accept="image/*" />
+          <button mat-stroked-button
+                  (click)="avatarFileInput.click()"
+                  [disabled]="!hasMediaServers() || isUploadingAvatar()"
+                  [matTooltip]="hasMediaServers() ? 'Upload avatar to your media server' : 'No media servers configured'"
+                  class="upload-btn">
+            @if (isUploadingAvatar()) {
+            <mat-spinner diameter="18"></mat-spinner>
+            } @else {
+            <mat-icon>upload</mat-icon>
+            }
+            Upload
+          </button>
+        </div>
+        @if (isUploadingAvatar()) {
+        <mat-progress-bar mode="indeterminate"></mat-progress-bar>
         }
 
         <mat-form-field appearance="outline">
@@ -222,7 +263,7 @@
       </div>
 
       <div class="form-actions">
-        <a mat-button routerLink="/communities">Cancel</a>
+        <a mat-button routerLink="/n">Cancel</a>
         <button mat-flat-button
                 [disabled]="!name().trim() || isPublishing()"
                 (click)="createCommunity()">

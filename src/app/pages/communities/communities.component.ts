@@ -150,7 +150,7 @@ export class CommunitiesComponent implements OnInit, OnDestroy {
       pubkey: community.creatorPubkey,
       identifier: community.id,
     });
-    return `/communities/${naddr}`;
+    return `/n/${naddr}`;
   }
 
   navigateToCommunity(community: Community, event: MouseEvent): void {
@@ -160,7 +160,7 @@ export class CommunitiesComponent implements OnInit, OnDestroy {
       pubkey: community.creatorPubkey,
       identifier: community.id,
     });
-    this.router.navigate(['/communities', naddr], {
+    this.router.navigate(['/n', naddr], {
       state: { communityEvent: community.event },
     });
   }
