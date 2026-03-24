@@ -1901,14 +1901,17 @@ mat-sidenav-content {
   right: auto;
 
   // Shared glass tokens for both cube faces
-  --cube-glass-bg: color-mix(in srgb, var(--mat-sys-primary) 14%, transparent);
-  --cube-glass-border: color-mix(in srgb, white 34%, transparent);
-  --cube-glass-inner-edge: rgba(255, 255, 255, 0.36);
-  --cube-glass-specular: rgba(255, 255, 255, 0.2);
-  --cube-glass-shadow: 0 10px 22px rgba(0, 0, 0, 0.22);
-  --cube-glass-hover: color-mix(in srgb, white 14%, transparent);
-  --cube-glass-active: color-mix(in srgb, white 24%, transparent);
-  --cube-glass-active-border: color-mix(in srgb, white 44%, transparent);
+  --cube-glass-bg: color-mix(in srgb, var(--mat-sys-primary) 18%, transparent);
+  --cube-glass-border: color-mix(in srgb, white 22%, transparent);
+  --cube-glass-inner-edge: rgba(255, 255, 255, 0.32);
+  --cube-glass-specular: rgba(255, 255, 255, 0.18);
+  --cube-glass-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.25),
+    0 2px 8px rgba(0, 0, 0, 0.15);
+  --cube-glass-hover: color-mix(in srgb, white 12%, transparent);
+  --cube-glass-active: color-mix(in srgb, var(--mat-sys-primary) 28%, transparent);
+  --cube-glass-active-border: color-mix(in srgb, white 30%, transparent);
+  --cube-glass-active-shadow: 0 0 16px color-mix(in srgb, var(--mat-sys-primary) 25%, transparent);
 
   width: calc(100% - 36px);
   min-width: 0;
@@ -2028,14 +2031,17 @@ mat-sidenav-content {
 }
 
 :host-context(.dark) .mobile-bottom-cube {
-  --cube-glass-bg: color-mix(in srgb, var(--mat-sys-primary-container) 20%, transparent);
-  --cube-glass-border: color-mix(in srgb, var(--mat-sys-primary-fixed) 30%, transparent);
-  --cube-glass-inner-edge: rgba(255, 255, 255, 0.24);
-  --cube-glass-specular: rgba(255, 255, 255, 0.15);
-  --cube-glass-shadow: 0 12px 24px rgba(0, 0, 0, 0.4);
-  --cube-glass-hover: color-mix(in srgb, white 18%, transparent);
-  --cube-glass-active: color-mix(in srgb, white 22%, transparent);
-  --cube-glass-active-border: color-mix(in srgb, white 40%, transparent);
+  --cube-glass-bg: color-mix(in srgb, var(--mat-sys-primary-container) 22%, transparent);
+  --cube-glass-border: color-mix(in srgb, var(--mat-sys-primary-fixed) 18%, transparent);
+  --cube-glass-inner-edge: rgba(255, 255, 255, 0.18);
+  --cube-glass-specular: rgba(255, 255, 255, 0.12);
+  --cube-glass-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.5),
+    0 2px 8px rgba(0, 0, 0, 0.3);
+  --cube-glass-hover: color-mix(in srgb, white 10%, transparent);
+  --cube-glass-active: color-mix(in srgb, var(--mat-sys-primary) 32%, transparent);
+  --cube-glass-active-border: color-mix(in srgb, var(--mat-sys-primary-fixed) 28%, transparent);
+  --cube-glass-active-shadow: 0 0 20px color-mix(in srgb, var(--mat-sys-primary) 30%, transparent);
 }
 
 // When fullscreen is active, hide the mobile cube BUT let the fullscreen player break out.
@@ -2110,15 +2116,15 @@ mat-sidenav-content {
   gap: 0;
   padding: 2px;
 
-  // Keep shell highly translucent so page content remains visible through it
+  // Glass shell — deep blur with rich tint for premium glassmorphism
   background-color: var(--cube-glass-bg);
   background-image: none;
-  -webkit-backdrop-filter: blur(22px) saturate(1.8) contrast(1.03);
-  backdrop-filter: blur(22px) saturate(1.8) contrast(1.03);
+  -webkit-backdrop-filter: blur(40px) saturate(1.6);
+  backdrop-filter: blur(40px) saturate(1.6);
   border: 1px solid var(--cube-glass-border);
   box-shadow:
     inset 0 1px 0 var(--cube-glass-inner-edge),
-    inset 0 -1px 0 rgba(255, 255, 255, 0.08),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.05),
     var(--cube-glass-shadow);
 
   &::before,
@@ -2127,23 +2133,22 @@ mat-sidenav-content {
     position: absolute;
     pointer-events: none;
     inset: 0;
+    border-radius: inherit;
   }
 
+  // Top highlight — subtle specular band like real glass
   &::before {
     background: linear-gradient(180deg,
-        rgba(255, 255, 255, 0.3) 0%,
-        rgba(255, 255, 255, 0.11) 22%,
-        rgba(255, 255, 255, 0.02) 42%,
-        rgba(255, 255, 255, 0) 62%);
-    opacity: 0.75;
+        rgba(255, 255, 255, 0.22) 0%,
+        rgba(255, 255, 255, 0.06) 30%,
+        transparent 55%);
   }
 
+  // Inner edge refraction glow
   &::after {
-    // Subtle edge refraction ring
     box-shadow:
-      inset 0 0 0 1px rgba(255, 255, 255, 0.14),
-      inset 0 10px 14px -10px var(--cube-glass-specular);
-    border-radius: inherit;
+      inset 0 0 0 0.5px rgba(255, 255, 255, 0.12),
+      inset 0 8px 16px -8px var(--cube-glass-specular);
   }
 
   a,
@@ -2158,7 +2163,7 @@ mat-sidenav-content {
   border-color: var(--cube-glass-border);
   box-shadow:
     inset 0 1px 0 var(--cube-glass-inner-edge),
-    inset 0 -1px 0 rgba(255, 255, 255, 0.08),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.04),
     var(--cube-glass-shadow);
 
   a,
@@ -2177,12 +2182,12 @@ mat-sidenav-content {
   // Glass background — same recipe as nav face
   background-color: var(--cube-glass-bg);
   background-image: none;
-  -webkit-backdrop-filter: blur(22px) saturate(1.8) contrast(1.03);
-  backdrop-filter: blur(22px) saturate(1.8) contrast(1.03);
+  -webkit-backdrop-filter: blur(40px) saturate(1.6);
+  backdrop-filter: blur(40px) saturate(1.6);
   border: 1px solid var(--cube-glass-border);
   box-shadow:
     inset 0 1px 0 var(--cube-glass-inner-edge),
-    inset 0 -1px 0 rgba(255, 255, 255, 0.08),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.05),
     var(--cube-glass-shadow);
 
   &::before,
@@ -2191,23 +2196,20 @@ mat-sidenav-content {
     position: absolute;
     pointer-events: none;
     inset: 0;
+    border-radius: inherit;
   }
 
   &::before {
-    background:
-      linear-gradient(180deg,
-        rgba(255, 255, 255, 0.28) 0%,
-        rgba(255, 255, 255, 0.1) 24%,
-        rgba(255, 255, 255, 0.02) 44%,
-        rgba(255, 255, 255, 0) 62%);
-    opacity: 0.72;
+    background: linear-gradient(180deg,
+        rgba(255, 255, 255, 0.22) 0%,
+        rgba(255, 255, 255, 0.06) 30%,
+        transparent 55%);
   }
 
   &::after {
     box-shadow:
-      inset 0 0 0 1px rgba(255, 255, 255, 0.14),
-      inset 0 10px 14px -10px var(--cube-glass-specular);
-    border-radius: inherit;
+      inset 0 0 0 0.5px rgba(255, 255, 255, 0.12),
+      inset 0 8px 16px -8px var(--cube-glass-specular);
   }
 
   // Override the media player's fixed positioning when inside cube
@@ -2245,7 +2247,7 @@ mat-sidenav-content {
   border-color: var(--cube-glass-border);
   box-shadow:
     inset 0 1px 0 var(--cube-glass-inner-edge),
-    inset 0 -1px 0 rgba(255, 255, 255, 0.08),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.04),
     var(--cube-glass-shadow);
 }
 
@@ -2310,8 +2312,9 @@ mat-sidenav-content {
     border-radius: 24px;
     margin: 0;
     box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.28),
-      inset 0 -1px 0 rgba(255, 255, 255, 0.08);
+      inset 0 1px 0 rgba(255, 255, 255, 0.2),
+      inset 0 -1px 0 rgba(255, 255, 255, 0.05),
+      var(--cube-glass-active-shadow);
 
     .mat-icon {
       color: var(--mat-sys-primary);
