@@ -2468,12 +2468,28 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       textarea.style.height = `${targetHeight}px`;
       textarea.style.maxHeight = `${maxHeight}px`;
       textarea.style.overflowY = nextHeight > maxHeight ? 'auto' : 'hidden';
-    } else {
-      // Dialog mode: textarea fills available space via flex, no manual height needed.
-      // Just ensure overflow is always auto so content scrolls within the flex container.
+    } else if (this.layout.isHandset()) {
+      // Mobile dialog mode: textarea fills available space via CSS grid 1fr.
+      // Clear any manual height so flex/grid layout controls sizing.
       textarea.style.height = '';
       textarea.style.maxHeight = '';
       textarea.style.overflowY = 'auto';
+    } else {
+      // Desktop dialog mode: auto-grow from min-height up to a max-height, then scroll.
+      // This keeps the dialog compact when content is short and grows naturally.
+      const minHeight = 120;
+      const viewportCap = Math.max(minHeight, window.innerHeight - 280);
+      const maxHeight = Math.min(400, viewportCap);
+
+      textarea.style.maxHeight = 'none';
+      textarea.style.height = 'auto';
+
+      const nextHeight = Math.max(minHeight, textarea.scrollHeight);
+      const targetHeight = Math.min(nextHeight, maxHeight);
+
+      textarea.style.height = `${targetHeight}px`;
+      textarea.style.maxHeight = `${maxHeight}px`;
+      textarea.style.overflowY = nextHeight > maxHeight ? 'auto' : 'hidden';
     }
   }
 

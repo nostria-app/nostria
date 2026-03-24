@@ -12,14 +12,15 @@
 
   <div class="poll-options">
     @for (option of poll().options; track option.id) {
-    <div class="poll-option" [class.selected]="selectedOptions().includes(option.id)" [class.voted]="hasVoted()"
-      [attr.role]="!hasVoted() && !isExpired() ? 'button' : null"
-      [attr.tabindex]="!hasVoted() && !isExpired() ? 0 : null"
-      (click)="!hasVoted() && !isExpired() ? toggleOption(option.id) : null"
-      (keydown.enter)="!hasVoted() && !isExpired() ? toggleOption(option.id) : null"
-      (keydown.space)="!hasVoted() && !isExpired() ? toggleOption(option.id) : null">
+    <div class="poll-option" [class.selected]="selectedOptions().includes(option.id)" [class.voted]="hasVoted() || (showResults() && !canVote())"
+      [class.previewing]="showResults() && canVote()"
+      [attr.role]="canVote() && !showResults() ? 'button' : null"
+      [attr.tabindex]="canVote() && !showResults() ? 0 : null"
+      (click)="canVote() && !showResults() ? toggleOption(option.id) : null"
+      (keydown.enter)="canVote() && !showResults() ? toggleOption(option.id) : null"
+      (keydown.space)="canVote() && !showResults() ? toggleOption(option.id) : null">
 
-      @if (hasVoted() || isExpired()) {
+      @if (displayResults()) {
       <!-- Show results -->
       <div class="option-result">
         <div class="option-label">
@@ -80,10 +81,25 @@
         }
       </span>
       }
+      @if (canVote()) {
+      <button class="show-results-toggle" (click)="toggleShowResults()">
+        @if (showResults()) {
+        Hide results
+        } @else {
+        Show results
+        }
+      </button>
+      }
     </div>
 
-    @if (canVote() && selectedOptions().length > 0) {
+    @if (canVote() && !showResults() && selectedOptions().length > 0) {
     <button mat-flat-button (click)="submitVote()" [disabled]="isLoading()">
+      <mat-icon>how_to_vote</mat-icon>
+      Vote
+    </button>
+    }
+    @if (showResults() && canVote()) {
+    <button mat-flat-button (click)="toggleShowResults()">
       <mat-icon>how_to_vote</mat-icon>
       Vote
     </button>

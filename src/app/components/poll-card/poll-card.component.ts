@@ -38,6 +38,7 @@ export class PollCardComponent {
 
   // Local state
   selectedOptions = signal<string[]>([]);
+  showResults = signal(false);
 
   // Computed
   isExpired = computed(() => {
@@ -48,6 +49,10 @@ export class PollCardComponent {
 
   isSingleChoice = computed(() => {
     return this.poll().pollType === 'singlechoice';
+  });
+
+  displayResults = computed(() => {
+    return this.hasVoted() || this.isExpired() || !this.canVote() || this.showResults();
   });
 
   canSubmit = computed(() => {
@@ -103,6 +108,11 @@ export class PollCardComponent {
       this.vote.emit(selected);
       this.selectedOptions.set([]);
     }
+  }
+
+  // Toggle results preview
+  toggleShowResults(): void {
+    this.showResults.update(v => !v);
   }
 
   // View poll details

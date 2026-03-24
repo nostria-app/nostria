@@ -36,7 +36,7 @@
       (keydown.enter)="selectOption(option.id)"
       (keydown.space)="selectOption(option.id)">
 
-      @if (hasResults()) {
+      @if (displayResults()) {
       <!-- Show results alongside voting -->
       <div class="option-result">
         <div class="option-label">
@@ -85,6 +85,15 @@
         Closes {{ poll().closedAt! | timestamp:'short' }}
         }
       </span>
+      }
+      @if (!isExpired() && !hasResults()) {
+      <button class="show-results-toggle" (click)="toggleShowResults()">
+        @if (showResults()) {
+        Hide results
+        } @else {
+        Show results
+        }
+      </button>
       }
     </div>
 

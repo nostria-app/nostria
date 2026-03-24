@@ -60,6 +60,11 @@
     &.voted {
       cursor: default;
     }
+
+    &.previewing {
+      cursor: default;
+      opacity: 0.85;
+    }
   }
 
   .option-vote {
@@ -149,6 +154,19 @@
 
       .poll-status.expired {
         color: var(--error-color);
+      }
+
+      .show-results-toggle {
+        background: none;
+        border: none;
+        color: var(--primary-color);
+        cursor: pointer;
+        font-size: 0.875rem;
+        padding: 0;
+
+        &:hover {
+          text-decoration: underline;
+        }
       }
     }
 

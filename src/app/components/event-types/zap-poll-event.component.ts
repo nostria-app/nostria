@@ -58,6 +58,7 @@ export class ZapPollEventComponent {
   selectedOption = signal<string | null>(null);
   isLoading = signal(false);
   results = signal<ZapPollResult[]>([]);
+  showResults = signal(false);
 
   // Parse the event into a ZapPoll object
   poll = computed<ZapPoll>(() => {
@@ -73,6 +74,10 @@ export class ZapPollEventComponent {
 
   hasResults = computed(() => {
     return this.results().some(r => r.zapCount > 0);
+  });
+
+  displayResults = computed(() => {
+    return this.hasResults() || this.showResults();
   });
 
   totalZaps = computed(() => {
@@ -221,6 +226,10 @@ export class ZapPollEventComponent {
     } else {
       this.selectedOption.set(optionId);
     }
+  }
+
+  toggleShowResults(): void {
+    this.showResults.update(v => !v);
   }
 
   async voteWithZap(): Promise<void> {

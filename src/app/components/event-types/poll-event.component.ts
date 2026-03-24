@@ -41,6 +41,7 @@ export class PollEventComponent {
   isLoading = signal(false);
   results = signal<PollResults | null>(null);
   responses = signal<PollResponse[]>([]);
+  showResults = signal(false);
 
   // Parse the event into a Poll object
   poll = computed<Poll>(() => {
@@ -70,6 +71,10 @@ export class PollEventComponent {
 
   canVote = computed(() => {
     return !this.isExpired() && !this.hasVoted();
+  });
+
+  displayResults = computed(() => {
+    return this.hasVoted() || this.isExpired() || this.showResults();
   });
 
   constructor() {
@@ -175,6 +180,10 @@ export class PollEventComponent {
         this.selectedOptions.set([...currentSelection, optionId]);
       }
     }
+  }
+
+  toggleShowResults(): void {
+    this.showResults.update(v => !v);
   }
 
   getPercentage(optionId: string): number {

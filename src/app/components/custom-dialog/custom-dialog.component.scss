@@ -393,8 +393,7 @@
 // Note Editor Dialog Override
 .dialog-container.note-editor-dialog-panel {
   min-height: 0;
-  // Use a definite height so grid 1fr can expand the textarea
-  height: min(560px, calc(100dvh - 32px));
+  height: auto;
   max-height: calc(100dvh - 32px);
 
   .dialog-content {
@@ -406,24 +405,30 @@
   }
 
   .dialog-content>.note-editor-dialog {
-    display: grid;
-    grid-template-rows: minmax(0, 1fr) auto;
+    display: flex;
+    flex-direction: column;
     min-height: 0;
     max-height: 100%;
     flex: 1 1 auto;
   }
 
+  // Mobile: full-screen with footer anchored at bottom
   @media (max-width: 600px),
   (max-height: 700px) {
     height: 100%;
     max-height: 100%;
 
     .dialog-content {
+      flex: 1 1 0;
       padding: 0 10px;
-      height: 100%;
+      // Remove bottom padding since action-container is inside the grid, not dialog-actions
+      padding-bottom: 0 !important;
+      min-height: 0;
+      overflow: hidden;
     }
 
     .dialog-content>.note-editor-dialog {
+      display: grid;
       grid-template-rows: minmax(0, 1fr) auto;
       height: 100%;
     }
@@ -565,6 +570,8 @@
     .media-thumbnails {
       flex: 0 0 100%;
       order: -1;
+      max-height: 160px;
+      overflow-y: auto;
     }
   }
 
@@ -653,8 +660,12 @@
 
   @media (max-width: 600px) {
     gap: 8px;
-    flex-wrap: nowrap;
     min-width: 0;
+
+    // Only nowrap when NO media thumbnails; .has-media keeps flex-wrap: wrap
+    &:not(.has-media) {
+      flex-wrap: nowrap;
+    }
 
     .left-actions {
       flex: 1 1 auto;

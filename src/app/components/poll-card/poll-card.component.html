@@ -39,7 +39,7 @@
 
     <!-- Poll Options -->
     <div class="poll-options">
-      @if (hasVoted() || isExpired() || !canVote()) {
+      @if (displayResults()) {
       <!-- Show Results -->
       @for (option of poll().options; track option.id) {
       <div class="poll-option-result">
@@ -99,10 +99,23 @@
   </mat-card-content>
 
   <mat-card-actions>
-    @if (!hasVoted() && !isExpired() && canVote()) {
+    @if (!hasVoted() && !isExpired() && canVote() && !showResults()) {
     <button mat-raised-button color="primary" [disabled]="!canSubmit()" (click)="submitVote()">
       <mat-icon>how_to_vote</mat-icon>
       Submit Vote
+    </button>
+    }
+
+    @if (showResults() && canVote() && !hasVoted()) {
+    <button mat-raised-button color="primary" (click)="toggleShowResults()">
+      <mat-icon>how_to_vote</mat-icon>
+      Vote
+    </button>
+    }
+
+    @if (canVote() && !hasVoted()) {
+    <button class="show-results-toggle" (click)="toggleShowResults()">
+      {{ showResults() ? 'Hide results' : 'Show results' }}
     </button>
     }
 

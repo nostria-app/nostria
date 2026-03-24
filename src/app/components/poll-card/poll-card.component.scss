@@ -115,6 +115,19 @@
     gap: 0.5rem;
     padding: 1rem;
 
+    .show-results-toggle {
+      background: none;
+      border: none;
+      color: var(--primary-color);
+      cursor: pointer;
+      font-size: 0.875rem;
+      padding: 0 0.5rem;
+
+      &:hover {
+        text-decoration: underline;
+      }
+    }
+
     button {
       display: flex;
       align-items: center;

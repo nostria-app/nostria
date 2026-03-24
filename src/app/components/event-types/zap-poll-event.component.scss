@@ -179,6 +179,19 @@
       .poll-status.expired {
         color: var(--mat-sys-error);
       }
+
+      .show-results-toggle {
+        background: none;
+        border: none;
+        color: var(--mat-sys-tertiary);
+        cursor: pointer;
+        font-size: 0.875rem;
+        padding: 0;
+
+        &:hover {
+          text-decoration: underline;
+        }
+      }
     }
 
     button {
