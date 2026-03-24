@@ -2495,7 +2495,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       textarea.style.overflowY = nextHeight > maxHeight ? 'auto' : 'hidden';
     } else {
       // Desktop dialog mode: auto-grow from min-height up to a max-height, then scroll.
-      // Keep a stable max-height for all non-compact layouts (>600px height/width)
+      // Keep a stable max-height for all non-compact layouts (width > 700px and height > 700px)
       // so the editor does not shrink between medium-height desktop viewports.
       const minHeight = 120;
       const maxHeight = 400;
@@ -2514,11 +2514,11 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
 
   /**
    * Check if the dialog is in compact/mobile CSS layout mode.
-   * Must match the CSS media query: (max-width: 600px) or (max-height: 600px).
+   * Must match the CSS media query: (max-width: 700px) or (max-height: 700px).
    * This is broader than layout.isHandset() which only checks width.
    */
   private isCompactDialogLayout(): boolean {
-    return this.layout.isHandset() || window.innerWidth <= 600 || window.innerHeight <= 600;
+    return this.layout.isHandset() || window.innerWidth <= 700 || window.innerHeight <= 700;
   }
 
   /**
@@ -4069,3 +4069,4 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     }
   }
 }
+

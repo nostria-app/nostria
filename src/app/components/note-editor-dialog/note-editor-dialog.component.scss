@@ -7,8 +7,8 @@
   overflow: hidden;
 
   // Mobile: grid layout with 1fr+auto to fill viewport and anchor action bar at bottom.
-  @media (max-width: 600px),
-  (max-height: 600px) {
+  @media (max-width: 700px),
+  (max-height: 700px) {
     display: flex;
     flex-direction: column;
     position: relative;
@@ -27,8 +27,8 @@
     width: 100%;
     box-sizing: border-box;
 
-    @media (max-width: 600px),
-    (max-height: 600px) {
+    @media (max-width: 700px),
+    (max-height: 700px) {
       flex: 1 1 auto;
       min-height: 0;
       padding: 2px 6px 6px;
@@ -70,8 +70,8 @@
         flex-wrap: wrap;
         gap: 8px;
 
-        @media (max-width: 600px),
-        (max-height: 600px) {
+        @media (max-width: 700px),
+        (max-height: 700px) {
           gap: 6px;
         }
 
@@ -81,8 +81,8 @@
       }
     }
 
-    @media (max-width: 600px),
-    (max-height: 600px) {
+    @media (max-width: 700px),
+    (max-height: 700px) {
       margin-top: auto;
       position: relative;
       z-index: 1;
@@ -96,8 +96,8 @@
     flex-wrap: wrap;
     gap: 8px;
 
-    @media (max-width: 600px),
-    (max-height: 600px) {
+    @media (max-width: 700px),
+    (max-height: 700px) {
       gap: 6px;
     }
 
@@ -181,8 +181,8 @@
     background-color: var(--mat-sys-surface-variant);
     border-radius: 8px;
 
-    @media (max-width: 600px),
-    (max-height: 600px) {
+    @media (max-width: 700px),
+    (max-height: 700px) {
       margin-bottom: 12px;
       padding: 6px 10px;
     }
@@ -341,8 +341,8 @@
     border: 1px solid var(--mat-sys-outline-variant);
     transition: all 0.2s ease;
 
-    @media (max-width: 600px),
-    (max-height: 600px) {
+    @media (max-width: 700px),
+    (max-height: 700px) {
       padding: 10px 12px;
       margin-bottom: 12px;
     }
@@ -413,8 +413,8 @@
     }
   }
 
-  @media (max-width: 600px),
-  (max-height: 600px) {
+  @media (max-width: 700px),
+  (max-height: 700px) {
     .action-container:not(.inline-actions) {
       gap: 8px;
 
@@ -502,7 +502,7 @@
 }
 
 // Responsive design
-@media (max-width: 600px) {
+@media (max-width: 700px) {
   .note-editor-dialog {
     min-width: 320px;
     max-width: 100%;
@@ -567,8 +567,8 @@
 .upload-progress {
   margin-bottom: 16px;
 
-  @media (max-width: 600px),
-  (max-height: 600px) {
+  @media (max-width: 700px),
+  (max-height: 700px) {
     margin-bottom: 12px;
   }
 
@@ -583,8 +583,8 @@
     color: var(--mat-sys-on-surface-variant);
     text-align: center;
 
-    @media (max-width: 600px),
-    (max-height: 600px) {
+    @media (max-width: 700px),
+    (max-height: 700px) {
       margin-top: 6px;
       font-size: 13px;
     }
@@ -609,8 +609,8 @@
   background-color: rgba(255, 0, 0, 0.05);
   border: 1px solid var(--mat-sys-error);
 
-  @media (max-width: 600px),
-  (max-height: 600px) {
+  @media (max-width: 700px),
+  (max-height: 700px) {
     padding: 12px;
     margin-bottom: 12px;
     gap: 6px;
@@ -651,8 +651,8 @@
   overflow: hidden;
 
   // Mobile: fill available grid space
-  @media (max-width: 600px),
-  (max-height: 600px) {
+  @media (max-width: 700px),
+  (max-height: 700px) {
     flex: 1 1 auto;
   }
 
@@ -666,8 +666,8 @@
     overflow: hidden;
 
     // Mobile: fill available space
-    @media (max-width: 600px),
-    (max-height: 600px) {
+    @media (max-width: 700px),
+    (max-height: 700px) {
       flex: 1 1 auto;
     }
 
@@ -680,8 +680,8 @@
       min-height: 0;
 
       // Mobile: fill available space
-      @media (max-width: 600px),
-      (max-height: 600px) {
+      @media (max-width: 700px),
+      (max-height: 700px) {
         flex: 1 1 auto;
       }
 
@@ -729,8 +729,8 @@
         }
 
         // Mobile: fill available flex space, always allow scroll
-        @media (max-width: 600px),
-        (max-height: 600px) {
+        @media (max-width: 700px),
+        (max-height: 700px) {
           flex: 1 1 auto;
           overflow-y: auto;
           min-height: 96px;
@@ -772,8 +772,8 @@
   border: 1px solid var(--mat-sys-outline-variant);
   border-radius: 8px;
 
-  @media (max-width: 600px),
-  (max-height: 600px) {
+  @media (max-width: 700px),
+  (max-height: 700px) {
     margin-bottom: 12px;
   }
 
@@ -790,8 +790,8 @@
     background-color: var(--mat-sys-surface-variant);
     border-bottom: 1px solid var(--mat-sys-outline-variant);
 
-    @media (max-width: 600px),
-    (max-height: 600px) {
+    @media (max-width: 700px),
+    (max-height: 700px) {
       padding: 10px 12px;
       gap: 6px;
     }
@@ -842,8 +842,8 @@
     line-height: 1.5;
     word-break: break-word;
 
-    @media (max-width: 600px),
-    (max-height: 600px) {
+    @media (max-width: 700px),
+    (max-height: 700px) {
       padding: 12px;
     }
 
@@ -887,8 +887,8 @@
   border-radius: 8px;
   border: 1px solid var(--mat-sys-outline-variant);
 
-  @media (max-width: 600px),
-  (max-height: 600px) {
+  @media (max-width: 700px),
+  (max-height: 700px) {
     margin-top: 12px;
     padding: 12px;
   }
@@ -906,8 +906,8 @@
     padding-bottom: 8px;
     border-bottom: 1px solid var(--mat-sys-outline-variant);
 
-    @media (max-width: 600px),
-    (max-height: 600px) {
+    @media (max-width: 700px),
+    (max-height: 700px) {
       margin-bottom: 12px;
       padding-bottom: 6px;
       gap: 6px;
@@ -943,8 +943,8 @@
   .option-row {
     margin-bottom: 16px;
 
-    @media (max-width: 600px),
-    (max-height: 600px) {
+    @media (max-width: 700px),
+    (max-height: 700px) {
       margin-bottom: 12px;
     }
 
@@ -962,8 +962,8 @@
       gap: 4px;
       margin-bottom: 12px;
 
-      @media (max-width: 600px),
-      (max-height: 600px) {
+      @media (max-width: 700px),
+      (max-height: 700px) {
         margin-bottom: 10px;
       }
 
@@ -1017,8 +1017,8 @@
     .option-content {
       margin-left: 16px;
 
-      @media (max-width: 600px),
-      (max-height: 600px) {
+      @media (max-width: 700px),
+      (max-height: 700px) {
         margin-left: 12px;
       }
 
@@ -1228,7 +1228,7 @@
 }
 
 // Responsive design for advanced options
-@media (max-width: 600px) {
+@media (max-width: 700px) {
   .advanced-options-section {
     .option-content {
       .expiration-inputs {
@@ -1470,3 +1470,4 @@
     height: 52px;
   }
 }
+

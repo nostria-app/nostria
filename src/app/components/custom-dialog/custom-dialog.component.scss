@@ -40,8 +40,8 @@
     background-color: rgba(0, 0, 0, 0.4);
   }
 
-  @media (max-width: 600px),
-  (max-height: 600px) {
+  @media (max-width: 700px),
+  (max-height: 700px) {
     padding: 0;
     align-items: stretch;
     justify-content: flex-start;
@@ -66,8 +66,8 @@
   outline: none;
 
   // Mobile: full screen
-  @media (max-width: 600px),
-  (max-height: 600px) {
+  @media (max-width: 700px),
+  (max-height: 700px) {
     width: 100%;
     max-width: 100%;
     max-height: 100%;
@@ -87,14 +87,14 @@
   gap: 12px;
   min-height: 64px;
 
-  @media (max-width: 600px),
-  (max-height: 600px) {
+  @media (max-width: 700px),
+  (max-height: 700px) {
     padding: 10px 12px 8px;
     gap: 6px;
     min-height: 56px;
   }
 
-  @media (max-height: 600px) {
+  @media (max-height: 700px) {
     padding: 8px 10px 6px;
     gap: 4px;
     min-height: 48px;
@@ -127,12 +127,12 @@
   text-align: center;
   min-width: 0;
 
-  @media (max-width: 600px),
-  (max-height: 600px) {
+  @media (max-width: 700px),
+  (max-height: 700px) {
     font-size: 20px;
   }
 
-  @media (max-height: 600px) {
+  @media (max-height: 700px) {
     font-size: 18px;
   }
 }
@@ -144,13 +144,13 @@
   object-fit: cover;
   flex-shrink: 0;
 
-  @media (max-width: 600px),
-  (max-height: 600px) {
+  @media (max-width: 700px),
+  (max-height: 700px) {
     width: 36px;
     height: 36px;
   }
 
-  @media (max-height: 600px) {
+  @media (max-height: 700px) {
     width: 32px;
     height: 32px;
   }
@@ -190,13 +190,13 @@
     cursor: default;
   }
 
-  @media (max-width: 600px),
-  (max-height: 600px) {
+  @media (max-width: 700px),
+  (max-height: 700px) {
     width: 24px;
     height: 24px;
   }
 
-  @media (max-height: 600px) {
+  @media (max-height: 700px) {
     width: 22px;
     height: 22px;
   }
@@ -274,8 +274,8 @@
   }
 
   // Smaller on mobile
-  @media (max-width: 600px),
-  (max-height: 600px) {
+  @media (max-width: 700px),
+  (max-height: 700px) {
     width: 36px;
     height: 36px;
 
@@ -286,7 +286,7 @@
     }
   }
 
-  @media (max-height: 600px) {
+  @media (max-height: 700px) {
     width: 32px;
     height: 32px;
 
@@ -306,8 +306,8 @@
   overflow-x: hidden;
   padding: 10px 14px 14px;
 
-  @media (max-width: 600px),
-  (max-height: 600px) {
+  @media (max-width: 700px),
+  (max-height: 700px) {
     padding: 4px 8px calc(8px + var(--mobile-dialog-footer-space) + env(safe-area-inset-bottom));
   }
 
@@ -315,7 +315,7 @@
     padding: 2px 6px calc(4px + var(--mobile-dialog-footer-space) + env(safe-area-inset-bottom));
   }
 
-  @media (max-height: 600px) {
+  @media (max-height: 700px) {
     padding: 4px 10px calc(8px + var(--mobile-dialog-footer-space) + env(safe-area-inset-bottom));
   }
 
@@ -344,7 +344,7 @@
   .dialog-content {
     padding: 16px;
 
-    @media (max-width: 600px) {
+    @media (max-width: 700px) {
       padding: 12px;
     }
   }
@@ -415,8 +415,8 @@
   }
 
   // Mobile: full-screen with footer anchored at bottom
-  @media (max-width: 600px),
-  (max-height: 600px) {
+  @media (max-width: 700px),
+  (max-height: 700px) {
     height: 100%;
     max-height: 100%;
 
@@ -481,8 +481,8 @@
     }
   }
 
-  @media (max-width: 600px),
-  (max-height: 600px) {
+  @media (max-width: 700px),
+  (max-height: 700px) {
     position: absolute;
     left: 0;
     right: 0;
@@ -502,7 +502,7 @@
     }
   }
 
-  @media (max-height: 600px) {
+  @media (max-height: 700px) {
     &:has([dialog-actions]) {
       padding: 8px 12px calc(8px + env(safe-area-inset-bottom));
     }
@@ -540,8 +540,8 @@
 }
 
 // Mobile: slide up from bottom
-@media (max-width: 600px),
-(max-height: 600px) {
+@media (max-width: 700px),
+(max-height: 700px) {
   @keyframes slideIn {
     from {
       opacity: 0;
@@ -585,8 +585,8 @@
     display: none;
   }
 
-  @media (max-width: 600px),
-  (max-height: 600px) {
+  @media (max-width: 700px),
+  (max-height: 700px) {
     gap: 8px;
   }
 
@@ -664,7 +664,7 @@
     }
   }
 
-  @media (max-width: 600px) {
+  @media (max-width: 700px) {
     gap: 8px;
     min-width: 0;
 
@@ -739,3 +739,4 @@
     page-break-inside: avoid;
   }
 }
+
