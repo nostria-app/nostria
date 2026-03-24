@@ -9,11 +9,12 @@
   // Mobile: grid layout with 1fr+auto to fill viewport and anchor action bar at bottom.
   @media (max-width: 600px),
   (max-height: 600px) {
-    display: grid;
-    grid-template-rows: minmax(0, 1fr) auto;
+    display: flex;
+    flex-direction: column;
     position: relative;
-    height: 100%;
-    max-height: 100%;
+    height: calc(100dvh - 72px - env(safe-area-inset-top));
+    min-height: calc(100dvh - 72px - env(safe-area-inset-top));
+    max-height: calc(100dvh - 72px - env(safe-area-inset-top));
   }
 
   .dialog-content-wrapper {
@@ -28,6 +29,8 @@
 
     @media (max-width: 600px),
     (max-height: 600px) {
+      flex: 1 1 auto;
+      min-height: 0;
       padding: 2px 6px 6px;
       overflow-y: auto;
       -webkit-overflow-scrolling: touch;
@@ -80,6 +83,7 @@
 
     @media (max-width: 600px),
     (max-height: 600px) {
+      margin-top: auto;
       position: relative;
       z-index: 1;
       padding: 12px 2px calc(8px + env(safe-area-inset-bottom));
@@ -681,54 +685,24 @@
         flex: 1 1 auto;
       }
 
-      &.mat-mdc-form-field {
-        width: 100% !important;
-        max-width: 100% !important;
-      }
+      ::ng-deep {
+        .mat-mdc-text-field-wrapper {
+          height: auto !important;
+          max-height: none !important;
+          min-height: 0 !important;
+        }
 
-      // Material wrappers: ensure full width and proper flex behavior
-      ::ng-deep .mat-mdc-text-field-wrapper {
-        flex: 0 0 auto;
-        display: flex;
-        flex-direction: column;
-        min-height: 0;
-        width: 100%;
-      }
+        .mdc-text-field--outlined {
+          padding-left: 0 !important;
+          padding-right: 0 !important;
+        }
 
-      ::ng-deep .mat-mdc-form-field-flex {
-        flex: 0 0 auto;
-        display: flex;
-        flex-direction: column;
-        min-height: 0;
-        width: 100%;
-      }
-
-      ::ng-deep .mat-mdc-form-field-infix {
-        flex: 0 0 auto;
-        display: flex;
-        flex-direction: column;
-        min-height: 0;
-        width: 100%;
-        padding-top: 16px !important;
-        padding-bottom: 4px !important;
-      }
-
-      ::ng-deep .mdc-text-field {
-        flex: 0 0 auto;
-        display: flex;
-        flex-direction: column;
-        min-height: 0;
-        width: 100%;
-      }
-
-      // Mobile: Material wrappers fill available space
-      @media (max-width: 600px),
-      (max-height: 600px) {
-        ::ng-deep .mat-mdc-text-field-wrapper,
-        ::ng-deep .mat-mdc-form-field-flex,
-        ::ng-deep .mat-mdc-form-field-infix,
-        ::ng-deep .mdc-text-field {
-          flex: 1 1 auto;
+        .mat-mdc-form-field-infix {
+          min-height: 0 !important;
+          padding: 0 !important;
+          width: 100% !important;
+          display: flex;
+          flex-direction: column;
         }
       }
 
@@ -737,6 +711,8 @@
         flex: 0 0 auto;
         display: block;
         width: 100%;
+        border: 0;
+        background: transparent;
         resize: none;
         overflow-y: hidden;
         min-height: 120px;
@@ -744,7 +720,7 @@
         word-wrap: break-word;
         word-break: normal;
         white-space: pre-wrap;
-        padding: 4px 0 8px !important;
+        padding: 12px 0 12px 12px !important;
         // Use -webkit-overflow-scrolling for smooth scrolling on iOS
         -webkit-overflow-scrolling: touch;
 
@@ -758,6 +734,7 @@
           flex: 1 1 auto;
           overflow-y: auto;
           min-height: 96px;
+          padding: 10px 0 10px 10px !important;
         }
 
         @media (max-width: 400px) {
@@ -1418,29 +1395,6 @@
       // Ensure full width for inline mode too
       width: 100% !important;
 
-      ::ng-deep {
-
-        .mat-mdc-text-field-wrapper,
-        .mat-mdc-form-field-flex,
-        .mat-mdc-form-field-infix,
-        .mdc-text-field {
-          width: 100% !important;
-          max-width: 100% !important;
-        }
-
-        .mat-mdc-form-field-infix {
-          padding-top: 14px !important;
-          padding-bottom: 4px !important;
-        }
-
-        textarea {
-          width: 100% !important;
-          max-width: 100% !important;
-          min-width: 100% !important;
-          padding: 2px 0 !important;
-        }
-      }
-
       .content-textarea {
         min-height: 60px;
         max-height: 200px;
@@ -1449,13 +1403,8 @@
         width: 100% !important;
         max-width: 100% !important;
         min-width: 100% !important;
-        padding: 2px 0 !important;
+        padding: 10px 0 10px 10px !important;
       }
-    }
-
-    // No margin on form field in inline mode
-    .mat-mdc-form-field-subscript-wrapper {
-      margin-bottom: 0;
     }
   }
 

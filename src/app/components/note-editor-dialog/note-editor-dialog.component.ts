@@ -2469,17 +2469,36 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       textarea.style.maxHeight = `${maxHeight}px`;
       textarea.style.overflowY = nextHeight > maxHeight ? 'auto' : 'hidden';
     } else if (this.isCompactDialogLayout()) {
-      // Mobile/compact dialog mode: textarea fills available space via CSS grid 1fr.
-      // Clear any manual height so flex/grid layout controls sizing.
-      textarea.style.height = '';
-      textarea.style.maxHeight = '';
-      textarea.style.overflowY = 'auto';
+      // Compact/mobile dialog mode: auto-grow until the available space above
+      // the action row is filled, then keep scrolling inside the textarea.
+      const minHeight = 96;
+      let maxHeight = Math.max(minHeight, window.innerHeight - 240);
+
+      const layoutEl = this.noteEditorLayout?.nativeElement;
+      const actionsEl = this.composerActions?.nativeElement;
+      if (layoutEl && actionsEl) {
+        const layoutRect = layoutEl.getBoundingClientRect();
+        const actionsRect = actionsEl.getBoundingClientRect();
+        const verticalChrome = 20; // Wrapper paddings/gaps to keep action row visible
+        const availableHeight = layoutRect.height - actionsRect.height - verticalChrome;
+        maxHeight = Math.max(minHeight, Math.floor(availableHeight));
+      }
+
+      textarea.style.maxHeight = 'none';
+      textarea.style.height = 'auto';
+
+      const nextHeight = Math.max(minHeight, textarea.scrollHeight);
+      const targetHeight = Math.min(nextHeight, maxHeight);
+
+      textarea.style.height = `${targetHeight}px`;
+      textarea.style.maxHeight = `${maxHeight}px`;
+      textarea.style.overflowY = nextHeight > maxHeight ? 'auto' : 'hidden';
     } else {
       // Desktop dialog mode: auto-grow from min-height up to a max-height, then scroll.
-      // This keeps the dialog compact when content is short and grows naturally.
+      // Keep a stable max-height for all non-compact layouts (>600px height/width)
+      // so the editor does not shrink between medium-height desktop viewports.
       const minHeight = 120;
-      const viewportCap = Math.max(minHeight, window.innerHeight - 280);
-      const maxHeight = Math.min(400, viewportCap);
+      const maxHeight = 400;
 
       textarea.style.maxHeight = 'none';
       textarea.style.height = 'auto';
