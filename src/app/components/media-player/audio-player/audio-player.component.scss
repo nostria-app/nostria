@@ -474,6 +474,12 @@
   @media (max-width: 699px) {
     display: flex;
   }
+
+  .expand-queue-button {
+    @media (max-width: 400px) {
+      display: none;
+    }
+  }
 }
 
 @media (max-width: 699px) {

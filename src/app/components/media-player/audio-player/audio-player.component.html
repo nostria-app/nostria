@@ -147,7 +147,7 @@
               <mat-icon>skip_next</mat-icon>
             </button>
 
-            <button mat-icon-button
+            <button mat-icon-button class="expand-queue-button"
               [matTooltip]="isMusicTrack() ? (layout.expandedMediaPlayer() ? 'Collapse playlist' : 'Expand playlist') : 'Expand'"
               (click)="toggleExpanded()">
               <mat-icon>{{ isMusicTrack() ? (layout.expandedMediaPlayer() ? 'expand_more' : 'expand_less') :
