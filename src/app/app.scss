@@ -1901,10 +1901,10 @@ mat-sidenav-content {
   right: auto;
 
   // Shared glass tokens for both cube faces
-  --cube-glass-bg: color-mix(in srgb, var(--mat-sys-primary) 18%, transparent);
+  --cube-glass-bg: color-mix(in srgb, var(--mat-sys-surface) 55%, transparent);
   --cube-glass-border: color-mix(in srgb, white 22%, transparent);
-  --cube-glass-inner-edge: rgba(255, 255, 255, 0.32);
-  --cube-glass-specular: rgba(255, 255, 255, 0.18);
+  --cube-glass-inner-edge: rgba(255, 255, 255, 0.28);
+  --cube-glass-specular: rgba(255, 255, 255, 0.12);
   --cube-glass-shadow:
     0 8px 32px rgba(0, 0, 0, 0.25),
     0 2px 8px rgba(0, 0, 0, 0.15);
@@ -2031,16 +2031,16 @@ mat-sidenav-content {
 }
 
 :host-context(.dark) .mobile-bottom-cube {
-  --cube-glass-bg: color-mix(in srgb, var(--mat-sys-primary-container) 22%, transparent);
-  --cube-glass-border: color-mix(in srgb, var(--mat-sys-primary-fixed) 18%, transparent);
-  --cube-glass-inner-edge: rgba(255, 255, 255, 0.18);
-  --cube-glass-specular: rgba(255, 255, 255, 0.12);
+  --cube-glass-bg: color-mix(in srgb, var(--mat-sys-surface) 60%, transparent);
+  --cube-glass-border: color-mix(in srgb, white 14%, transparent);
+  --cube-glass-inner-edge: rgba(255, 255, 255, 0.14);
+  --cube-glass-specular: rgba(255, 255, 255, 0.08);
   --cube-glass-shadow:
     0 8px 32px rgba(0, 0, 0, 0.5),
     0 2px 8px rgba(0, 0, 0, 0.3);
   --cube-glass-hover: color-mix(in srgb, white 10%, transparent);
   --cube-glass-active: color-mix(in srgb, var(--mat-sys-primary) 32%, transparent);
-  --cube-glass-active-border: color-mix(in srgb, var(--mat-sys-primary-fixed) 28%, transparent);
+  --cube-glass-active-border: color-mix(in srgb, var(--mat-sys-primary-fixed) 22%, transparent);
   --cube-glass-active-shadow: 0 0 20px color-mix(in srgb, var(--mat-sys-primary) 30%, transparent);
 }
 
@@ -2136,24 +2136,24 @@ mat-sidenav-content {
     border-radius: inherit;
   }
 
-  // Top highlight — subtle specular band like real glass
+  // Top highlight — very subtle specular band
   &::before {
     background: linear-gradient(180deg,
-        rgba(255, 255, 255, 0.22) 0%,
-        rgba(255, 255, 255, 0.06) 30%,
-        transparent 55%);
+        rgba(255, 255, 255, 0.10) 0%,
+        rgba(255, 255, 255, 0.03) 30%,
+        transparent 50%);
   }
 
   // Inner edge refraction glow
   &::after {
     box-shadow:
-      inset 0 0 0 0.5px rgba(255, 255, 255, 0.12),
-      inset 0 8px 16px -8px var(--cube-glass-specular);
+      inset 0 0 0 0.5px rgba(255, 255, 255, 0.08),
+      inset 0 6px 12px -6px var(--cube-glass-specular);
   }
 
   a,
   button {
-    color: var(--mat-sys-on-surface-variant);
+    color: var(--mat-sys-on-surface);
   }
 }
 
@@ -2168,7 +2168,7 @@ mat-sidenav-content {
 
   a,
   button {
-    color: var(--mat-sys-on-surface-variant);
+    color: var(--mat-sys-on-surface);
   }
 }
 
@@ -2201,15 +2201,15 @@ mat-sidenav-content {
 
   &::before {
     background: linear-gradient(180deg,
-        rgba(255, 255, 255, 0.22) 0%,
-        rgba(255, 255, 255, 0.06) 30%,
-        transparent 55%);
+        rgba(255, 255, 255, 0.10) 0%,
+        rgba(255, 255, 255, 0.03) 30%,
+        transparent 50%);
   }
 
   &::after {
     box-shadow:
-      inset 0 0 0 0.5px rgba(255, 255, 255, 0.12),
-      inset 0 8px 16px -8px var(--cube-glass-specular);
+      inset 0 0 0 0.5px rgba(255, 255, 255, 0.08),
+      inset 0 6px 12px -6px var(--cube-glass-specular);
   }
 
   // Override the media player's fixed positioning when inside cube
