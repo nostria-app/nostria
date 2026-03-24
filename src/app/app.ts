@@ -1841,6 +1841,11 @@ export class App implements OnInit, OnDestroy {
     this.twoColumnLayout.resetNavigation(path);
   }
 
+  onMobilePlayerHomeClick(): void {
+    this.layout.setCubePlayerFace(false);
+    this.twoColumnLayout.resetNavigation('/');
+  }
+
   // --- Mobile cube swipe handling ---
   private cubeTouchStartX = 0;
   private cubeTouchStartY = 0;

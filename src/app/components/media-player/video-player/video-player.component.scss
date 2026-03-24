@@ -389,6 +389,12 @@
   }
 }
 
+@media (max-width: 699px) {
+  .mobile-prev-button {
+    display: none;
+  }
+}
+
 .play-button {
   &.mat-mdc-icon-button {
     width: 40px !important;

@@ -166,6 +166,12 @@
   flex-shrink: 0;
 }
 
+@media (max-width: 699px) {
+  .mobile-prev-button {
+    display: none;
+  }
+}
+
 .control-actions {
   display: flex;
   align-items: center;

@@ -506,7 +506,8 @@
   }
 
   <!-- Media player - desktop: normal footer (unless docked to sidebar or toolbar) -->
-  @if (layout.showMediaPlayer() && !layout.isHandset() && !layout.mediaPlayerInSidebar() && !layout.mediaPlayerInToolbar()) {
+  @if (layout.showMediaPlayer() && !layout.isHandset() && !layout.mediaPlayerInSidebar() &&
+  !layout.mediaPlayerInToolbar()) {
   <app-media-player></app-media-player>
   }
 
@@ -558,7 +559,17 @@
       <!-- Face 2: Media player or Music browse -->
       <div class="cube-face cube-face-player">
         @if (layout.showMediaPlayer() && !layout.mediaPlayerInToolbar()) {
-        <app-media-player></app-media-player>
+        <div class="cube-player-shell">
+          <button mat-button class="cube-player-home-button" (click)="onMobilePlayerHomeClick()"
+            i18n-aria-label="@@app.mobile.home" aria-label="Home">
+            <mat-icon>home</mat-icon>
+            <span i18n="@@app.mobile.home">Home</span>
+          </button>
+
+          <div class="cube-player-main">
+            <app-media-player></app-media-player>
+          </div>
+        </div>
         } @else {
         <a class="cube-music-browse" routerLink="/music" (click)="layout.setCubePlayerFace(false)">
           <mat-icon>library_music</mat-icon>

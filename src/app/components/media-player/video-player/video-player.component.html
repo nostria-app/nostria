@@ -95,7 +95,8 @@
 
     <div class="media-controls">
       <div class="control-buttons">
-        <button [disabled]="!media.canPrevious()" (click)="media.previous()" mat-icon-button matTooltip="Previous">
+        <button class="mobile-prev-button" [disabled]="!media.canPrevious()" (click)="media.previous()" mat-icon-button
+          matTooltip="Previous">
           <mat-icon>skip_previous</mat-icon>
         </button>
 

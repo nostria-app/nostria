@@ -1,4 +1,5 @@
-<div class="youtube-player-container" [class.footer-mode]="!isFullscreen() && !layout.expandedMediaPlayer()" [class.footer-expanded-mode]="!isFullscreen() && layout.expandedMediaPlayer()" [class.expanded-mode]="isFullscreen()">
+<div class="youtube-player-container" [class.footer-mode]="!isFullscreen() && !layout.expandedMediaPlayer()"
+  [class.footer-expanded-mode]="!isFullscreen() && layout.expandedMediaPlayer()" [class.expanded-mode]="isFullscreen()">
   <!-- Header (Fullscreen Mode Only) -->
   <div class="youtube-header" [class.hidden]="!isFullscreen()">
     <div class="youtube-title">
@@ -37,7 +38,8 @@
     </div>
 
     <div class="control-buttons">
-      <button matTooltip="Previous" [disabled]="!media.canPrevious()" (click)="media.previous()" mat-icon-button>
+      <button class="mobile-prev-button" matTooltip="Previous" [disabled]="!media.canPrevious()"
+        (click)="media.previous()" mat-icon-button>
         <mat-icon>skip_previous</mat-icon>
       </button>
 
@@ -61,7 +63,8 @@
     </div>
 
     <div class="control-actions">
-      <button mat-icon-button [matTooltip]="layout.expandedMediaPlayer() ? 'Collapse video' : 'Expand video'" (click)="toggleExpand()">
+      <button mat-icon-button [matTooltip]="layout.expandedMediaPlayer() ? 'Collapse video' : 'Expand video'"
+        (click)="toggleExpand()">
         <mat-icon>{{ layout.expandedMediaPlayer() ? 'expand_more' : 'expand_less' }}</mat-icon>
       </button>
       <button mat-icon-button matTooltip="Fullscreen" (click)="toggleFullscreen()">

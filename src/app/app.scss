@@ -1900,8 +1900,8 @@ mat-sidenav-content {
   transform: translateX(-50%);
   right: auto;
 
-  width: auto;
-  min-width: 280px;
+  width: calc(100% - 12px);
+  min-width: 0;
   max-width: calc(100% - 12px);
 
   height: 56px;
@@ -2116,6 +2116,8 @@ mat-sidenav-content {
 .cube-face-player {
   transform: rotateX(-90deg) translateZ(28px);
   border-radius: 28px;
+  display: flex;
+  align-items: stretch;
 
   // Glass background — matches .cube-face-nav so the player face isn't transparent
   background-color: color-mix(in srgb, var(--mat-sys-surface-container) 34%, transparent);
@@ -2125,7 +2127,7 @@ mat-sidenav-content {
   box-shadow: var(--mat-sys-level1);
 
   // Override the media player's fixed positioning when inside cube
-  app-media-player {
+  .cube-player-main app-media-player {
     position: relative !important;
     bottom: auto !important;
     left: auto !important;
@@ -2186,8 +2188,8 @@ mat-sidenav-content {
 
 // Mobile nav buttons inside cube face reuse existing styles
 .cube-face-nav .mobile-nav-button {
-  flex: 0 1 auto;
-  width: clamp(56px, 18vw, 64px);
+  flex: 1 1 0;
+  width: auto;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -2197,7 +2199,7 @@ mat-sidenav-content {
   border-radius: 0;
   text-align: center;
   margin: 0;
-  padding: 4px 8px;
+  padding: 4px clamp(6px, 2vw, 12px);
   transition: background-color 0.2s ease;
 
   &:first-child {
@@ -2908,4 +2910,52 @@ mat-sidenav-content.clips-mobile-mode {
   .main-content-area {
     height: 100%;
   }
+}
+
+.cube-player-shell {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+}
+
+.cube-player-home-button {
+  flex: 0 0 auto;
+  height: 100%;
+  min-width: 62px;
+  padding: 0 10px;
+  border-radius: 28px 0 0 28px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  color: var(--mat-sys-on-surface-variant);
+
+  .mat-icon {
+    font-size: 22px;
+    width: 22px;
+    height: 22px;
+  }
+
+  span {
+    font-size: var(--text-2xs-capped-ui);
+    line-height: 1;
+    opacity: 0.8;
+  }
+
+  &:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+  }
+}
+
+:host-context(.dark) .cube-player-home-button:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.cube-player-main {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 100%;
 }
