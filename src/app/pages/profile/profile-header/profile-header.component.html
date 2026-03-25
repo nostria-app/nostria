@@ -166,7 +166,7 @@
         <span (mouseenter)="showProfileQrCodeHandler()" (mouseleave)="hideProfileQrCodeHandler()"
           (click)="copyNpubToClipboard()" (keydown.enter)="copyNpubToClipboard()"
           (keydown.space)="copyNpubToClipboard()" tabindex="0" role="button"
-          [attr.aria-label]="'Copy ' + npub() + ' to clipboard'">{{ npub() }}</span>
+          [attr.aria-label]="'Copy ' + npub() + ' to clipboard'">{{ shortenedNpub() }}</span>
       </div>
 
       @if (showProfileQrCode()) {

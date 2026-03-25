@@ -94,6 +94,10 @@ export class ProfileHeaderComponent implements OnDestroy {
   layout = inject(LayoutService);
   nostr = inject(NostrService);
   npub = signal<string | undefined>(undefined);
+  shortenedNpub = computed(() => {
+    const npub = this.npub();
+    return npub ? this.utilities.truncateString(npub, 8, 8) : undefined;
+  });
   logger = inject(LoggerService);
   profileState = inject(PROFILE_STATE);
   accountState = inject(AccountStateService);

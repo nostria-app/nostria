@@ -535,7 +535,7 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
     const profile = this.profile();
 
     if (!profile || !profile.data) {
-      return this.npub();
+      return this.truncateNpub(this.npub());
     }
 
     // Show NIP-05 if available (first priority)
@@ -547,12 +547,17 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
     // Show LUD16 if available and no NIP-05 (second priority)
     if (profile.data.lud16) {
       const lud16 = profile.data.lud16;
-      return Array.isArray(lud16) ? lud16[0] || this.npub() : lud16;
+      return Array.isArray(lud16) ? lud16[0] || this.truncateNpub(this.npub()) : lud16;
     }
 
-    // Fallback to npub if neither NIP-05 nor LUD16 is available
-    return this.npub();
+    // Fallback to truncated npub if neither NIP-05 nor LUD16 is available
+    return this.truncateNpub(this.npub());
   });
+
+  private truncateNpub(npub: string | undefined): string | undefined {
+    if (!npub) return npub;
+    return this.utilities.truncateString(npub, 8, 8);
+  }
 
   /**
    * Cached NIP-05 verification result. Only reads from the in-memory cache,
