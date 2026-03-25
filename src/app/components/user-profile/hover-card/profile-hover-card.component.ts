@@ -595,16 +595,10 @@ export class ProfileHoverCardComponent {
     const parts = aTag.split(':');
     if (parts.length < 3) return;
 
-    const kind = parseInt(parts[0], 10);
     const pubkey = parts[1];
     const identifier = parts.slice(2).join(':');
 
-    try {
-      const naddr = nip19.naddrEncode({ kind, pubkey, identifier });
-      this.router.navigate(['/a', naddr]);
-      this.hoverCardService.closeHoverCard();
-    } catch (err) {
-      console.warn('[HoverCard] Failed to navigate to music track:', err);
-    }
+    this.router.navigate(['/music/song', pubkey, identifier]);
+    this.hoverCardService.closeHoverCard();
   }
 }
