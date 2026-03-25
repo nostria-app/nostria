@@ -523,6 +523,7 @@
 // Reply filter panel (rendered in overlay, needs ::ng-deep)
 ::ng-deep .reply-filter-menu .mat-mdc-menu-panel {
   max-width: min(520px, 90vw);
+  min-width: min(460px, 90vw);
   overflow: hidden;
 }
 
@@ -645,7 +646,8 @@
   }
 
   ::ng-deep .reply-filter-menu .mat-mdc-menu-panel {
-    max-width: 300px;
+    max-width: 90vw;
+    min-width: auto;
   }
 }
 

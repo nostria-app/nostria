@@ -1114,14 +1114,19 @@
   }
 
   .poster-avatar {
-    width: 64px;
-    height: 64px;
     position: relative;
+    line-height: 0;
 
     ::ng-deep {
       app-user-profile {
-        width: 64px;
-        height: 64px;
+        display: block;
+        line-height: 0;
+
+        .user-profile,
+        .user-profile-container,
+        .user-profile-avatar-container {
+          line-height: 0;
+        }
 
         .avatar-container,
         .avatar-image,
@@ -1135,14 +1140,8 @@
     }
 
     @media (max-width: 599px) {
-      width: 72px;
-      height: 72px;
-
       ::ng-deep {
         app-user-profile {
-          width: 72px;
-          height: 72px;
-
           .avatar-container,
           .avatar-image,
           img {
@@ -1180,7 +1179,7 @@
     font-size: 0.6rem;
     line-height: 1.2;
     color: var(--mat-sys-on-surface-variant);
-    margin-top: 8px;
+    margin-top: 2px;
     width: 100%;
     overflow: hidden;
     text-overflow: ellipsis;
