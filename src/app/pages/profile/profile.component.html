@@ -263,8 +263,13 @@
   <div class="blocked-profile-overlay">
     <div class="blocked-profile-content">
       <mat-icon class="blocked-icon">block</mat-icon>
+      @if (isProfileBlockedByPubkey()) {
       <h2>Profile Blocked</h2>
       <p>You have blocked this user. Their profile and content are hidden from view.</p>
+      } @else {
+      <h2>Profile Hidden</h2>
+      <p>This profile matches a word in your muted words list. Their content is hidden from view.</p>
+      }
       <div class="blocked-profile-actions">
         <button mat-raised-button color="primary" (click)="revealBlockedProfile()">
           <mat-icon>visibility</mat-icon>

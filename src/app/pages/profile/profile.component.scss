@@ -749,16 +749,11 @@
 
 /* Blocked Profile Overlay Styles */
 .blocked-profile-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: var(--mat-sys-surface-container-low);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 100;
+  min-height: 60vh;
+  background-color: var(--mat-sys-surface-container-low);
   -webkit-backdrop-filter: blur(4px);
   backdrop-filter: blur(4px);
 }

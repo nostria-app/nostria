@@ -197,6 +197,13 @@ export class ProfileComponent implements OnDestroy, AfterViewInit {
     return this.accountState.pubkey() === this.pubkey();
   });
 
+  // Check if the user is blocked by pubkey (explicit block)
+  isProfileBlockedByPubkey = computed(() => {
+    const currentPubkey = this.pubkey();
+    if (!currentPubkey || this.isOwnProfile()) return false;
+    return this.reportingService.isUserBlocked(currentPubkey);
+  });
+
   // Check if current profile user is blocked
   // Checks both pubkey-based muting AND profile muted words (name, display_name, nip05)
   isProfileBlocked = computed(() => {
@@ -204,8 +211,7 @@ export class ProfileComponent implements OnDestroy, AfterViewInit {
     if (!currentPubkey || this.isOwnProfile()) return false;
 
     // Check pubkey-based blocking
-    const isBlocked = this.reportingService.isUserBlocked(currentPubkey);
-    if (isBlocked) {
+    if (this.isProfileBlockedByPubkey()) {
       this.logger.debug('Profile blocked (pubkey):', { currentPubkey });
       return true;
     }
