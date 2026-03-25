@@ -33,9 +33,10 @@ import { LoggerService } from '../../services/logger.service';
 const PAGE_SIZE = 10;
 const RELAY_SET_KIND = 30002;
 const ARTICLES_RELAY_SET_D_TAG = 'articles';
-const RELAY_QUERY_TIMEOUT_MS = 5000;
+const RELAY_QUERY_TIMEOUT_MS = 3000;
 const BATCH_DELAY_MS = 500;
-const MAX_RELAY_SUBSCRIPTIONS = 5;
+const MAX_RELAY_SUBSCRIPTIONS = 3;
+const MAX_ADDITIONAL_RELAYS = 6;
 
 @Component({
   selector: 'app-articles-discover',
@@ -79,6 +80,7 @@ export class ArticlesDiscoverComponent implements OnInit, OnDestroy {
   allArticles = signal<Event[]>([]);
   loading = signal(true);
   loadingMore = signal(false);
+  private cacheLoaded = signal(false);
 
   // Filter signals for which articles to show
   showFollowing = signal(true);
@@ -305,8 +307,11 @@ export class ArticlesDiscoverComponent implements OnInit, OnDestroy {
     // Load cached articles from database first
     this.loadCachedArticles();
 
-    // Start subscriptions based on filter settings
+    // Start subscriptions after cache is loaded
     effect(() => {
+      const cacheReady = this.cacheLoaded();
+      if (!cacheReady) return;
+
       const showFollowing = this.showFollowing();
       const showPublic = this.showPublic();
 
@@ -595,44 +600,44 @@ export class ArticlesDiscoverComponent implements OnInit, OnDestroy {
    */
   private async loadCachedArticles(): Promise<void> {
     try {
-      const pubkey = this.currentPubkey();
-      if (!pubkey) {
-        this.loading.set(false);
-        return;
-      }
-
       const following = this.followingPubkeys();
-      if (following.length === 0) {
-        this.loading.set(false);
-        return;
+
+      if (following.length > 0) {
+        // Load articles from database for following users
+        const cachedArticles = await this.database.getEventsByPubkeyAndKind(
+          following,
+          kinds.LongFormArticle
+        );
+
+        if (cachedArticles.length > 0) {
+          this.logger.debug('[Articles] Loaded', cachedArticles.length, 'cached articles from database');
+
+          // Update event map with cached articles
+          cachedArticles.forEach(article => {
+            const dTag = article.tags.find((tag: string[]) => tag[0] === 'd')?.[1] || '';
+            const uniqueId = `${article.pubkey}:${dTag}`;
+
+            // Skip if blocked
+            if (this.reporting.isUserBlocked(article.pubkey) || this.reporting.isContentBlocked(article)) {
+              return;
+            }
+
+            this.eventMap.set(uniqueId, article);
+          });
+
+          this.updateArticlesList();
+        }
       }
 
-      // Load articles from database for following users
-      const cachedArticles = await this.database.getEventsByPubkeyAndKind(
-        following,
-        kinds.LongFormArticle
-      );
-
-      if (cachedArticles.length > 0) {
-        this.logger.debug('[Articles] Loaded', cachedArticles.length, 'cached articles from database');
-
-        // Update event map with cached articles
-        cachedArticles.forEach(article => {
-          const dTag = article.tags.find((tag: string[]) => tag[0] === 'd')?.[1] || '';
-          const uniqueId = `${article.pubkey}:${dTag}`;
-
-          // Skip if blocked
-          if (this.reporting.isUserBlocked(article.pubkey) || this.reporting.isContentBlocked(article)) {
-            return;
-          }
-
-          this.eventMap.set(uniqueId, article);
-        });
-
-        this.updateArticlesList();
+      // Show cached articles immediately if we have any, relay subscriptions will update in background
+      if (this.allArticles().length > 0) {
+        this.loading.set(false);
       }
     } catch (error) {
       this.logger.error('[Articles] Error loading cached articles:', error);
+    } finally {
+      // Signal that cache loading is complete so subscriptions can start
+      this.cacheLoaded.set(true);
     }
   }
 
@@ -759,13 +764,16 @@ export class ArticlesDiscoverComponent implements OnInit, OnDestroy {
       limit: 20,
     };
 
+    // Only show loading if we don't have cached articles already displayed
+    const hasCachedContent = this.allArticles().length > 0;
+
     // Set a timeout to stop loading even if no events arrive
     const loadingTimeout = setTimeout(() => {
       if (this.loading()) {
         this.logger.debug('[Articles] No events received within timeout, stopping loading state');
         this.loading.set(false);
       }
-    }, 5000);
+    }, hasCachedContent ? 2000 : 5000);
 
     this.followingSubscription = this.pool.subscribe(
       baseRelays,
@@ -781,8 +789,10 @@ export class ArticlesDiscoverComponent implements OnInit, OnDestroy {
       }
     );
 
-    // Also query individual relay lists for each user in batches
-    this.queryIndividualRelays(following);
+    // Skip individual relay queries if we already have content — reduces subscription pressure
+    if (!hasCachedContent) {
+      this.queryIndividualRelays(following);
+    }
   }
 
   /**
@@ -823,10 +833,12 @@ export class ArticlesDiscoverComponent implements OnInit, OnDestroy {
     }
 
     // Sort relays by number of users (most users first = most useful)
+    // Only query the top relays to avoid subscription pressure
     const sortedRelays = Array.from(relayToPubkeys.entries())
-      .sort((a, b) => b[1].size - a[1].size);
+      .sort((a, b) => b[1].size - a[1].size)
+      .slice(0, MAX_ADDITIONAL_RELAYS);
 
-    this.logger.debug('[Articles] Grouped users into', sortedRelays.length, 'additional relays');
+    this.logger.debug('[Articles] Grouped users into', relayToPubkeys.size, 'additional relays, querying top', sortedRelays.length);
 
     // Query in batches of MAX_RELAY_SUBSCRIPTIONS relays at a time
     for (let i = 0; i < sortedRelays.length; i += MAX_RELAY_SUBSCRIPTIONS) {
@@ -980,13 +992,9 @@ export class ArticlesDiscoverComponent implements OnInit, OnDestroy {
       this.publicSubscription = null;
     }
 
-    // Start subscriptions based on what's enabled
-    if (this.showFollowing()) {
-      this.startFollowingSubscription();
-    }
-    if (this.showPublic()) {
-      this.startPublicSubscription();
-    }
+    // Reset cacheLoaded to re-trigger the subscription effect after cache loads
+    this.cacheLoaded.set(false);
+    this.loadCachedArticles();
 
     // If nothing is enabled, stop loading
     if (!this.showFollowing() && !this.showPublic()) {
