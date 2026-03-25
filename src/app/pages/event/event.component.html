@@ -20,35 +20,61 @@
 
   <!-- Reply Filter Button -->
   <button mat-icon-button [matMenuTriggerFor]="replyFilterMenu"
-    [matTooltip]="'Filter replies: ' + selectedFollowSetName()" [class.filter-active]="isReplyFilterActive()">
+    [matTooltip]="'Filter replies: ' + selectedFollowSetName() + (wotMinRank() > 0 ? ' (WoT ' + wotMinRank() + '+)' : '')"
+    [class.filter-active]="isReplyFilterActive()">
     <mat-icon>{{ isReplyFilterActive() ? 'filter_alt' : 'filter_alt_off' }}</mat-icon>
   </button>
 </div>
 
 <!-- Reply Filter Menu -->
-<mat-menu #replyFilterMenu="matMenu">
-  <button mat-menu-item (click)="setReplyFilter('everyone')" [class.selected]="selectedReplyFilter() === 'everyone'">
-    <mat-icon>public</mat-icon>
-    <span>Everyone</span>
-  </button>
-  <button mat-menu-item (click)="setReplyFilter('following')" [class.selected]="selectedReplyFilter() === 'following'">
-    <mat-icon>people</mat-icon>
-    <span>Following</span>
-  </button>
-  <button mat-menu-item (click)="setReplyFilter('wot')" [class.selected]="selectedReplyFilter() === 'wot'">
-    <mat-icon>shield</mat-icon>
-    <span>Web of Trust</span>
-  </button>
-  @if (availableFollowSets().length > 0) {
-  <mat-divider></mat-divider>
-  @for (followSet of availableFollowSets(); track followSet.dTag) {
-  <button mat-menu-item (click)="setReplyFilter(followSet.dTag)"
-    [class.selected]="selectedReplyFilter() === followSet.dTag">
-    <mat-icon>{{ followSet.isPrivate ? 'lock' : 'group' }}</mat-icon>
-    <span>{{ followSet.title }}</span>
-  </button>
-  }
-  }
+<mat-menu #replyFilterMenu="matMenu" class="reply-filter-menu">
+  <div class="reply-filter-panel" (click)="$event.stopPropagation()">
+    <!-- Left side: Web of Trust slider -->
+    <div class="reply-filter-wot">
+      <div class="reply-filter-section-title">
+        <mat-icon>shield</mat-icon>
+        <span>Web of Trust</span>
+      </div>
+      <div class="wot-slider-container">
+        <mat-slider min="0" max="100" step="5" discrete>
+          <input matSliderThumb [value]="wotMinRank()" (valueChange)="setWotMinRank($event)"
+            aria-label="Minimum Web of Trust rank">
+        </mat-slider>
+        <span class="wot-value">{{ wotMinRank() === 0 ? 'Off' : wotMinRank() + '+' }}</span>
+      </div>
+      <span class="wot-hint">Minimum trust rank to show replies</span>
+    </div>
+
+    <!-- Right side: People lists -->
+    <div class="reply-filter-people">
+      <div class="reply-filter-section-title reply-filter-section-title-sticky">
+        <mat-icon>people</mat-icon>
+        <span>People</span>
+      </div>
+      <div class="reply-filter-people-list">
+        <button mat-menu-item (click)="setReplyFilter('everyone')"
+          [class.selected]="selectedReplyFilter() === 'everyone'">
+          <mat-icon>public</mat-icon>
+          <span>Everyone</span>
+        </button>
+        <button mat-menu-item (click)="setReplyFilter('following')"
+          [class.selected]="selectedReplyFilter() === 'following'">
+          <mat-icon>people</mat-icon>
+          <span>Following</span>
+        </button>
+        @if (availableFollowSets().length > 0) {
+        <mat-divider></mat-divider>
+        @for (followSet of availableFollowSets(); track followSet.dTag) {
+        <button mat-menu-item (click)="setReplyFilter(followSet.dTag)"
+          [class.selected]="selectedReplyFilter() === followSet.dTag">
+          <mat-icon>{{ followSet.isPrivate ? 'lock' : 'group' }}</mat-icon>
+          <span>{{ followSet.title }}</span>
+        </button>
+        }
+        }
+      </div>
+    </div>
+  </div>
 </mat-menu>
 
 <!-- Scrollable Content -->

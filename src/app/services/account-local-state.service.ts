@@ -116,6 +116,7 @@ interface AccountLocalState {
   leftPanelCollapsed?: boolean; // Whether the left panel is collapsed when viewing right panel content
   zapHistoryLastTimestamp?: number; // Timestamp of the most recent zap in history (for incremental fetching)
   threadReplyFilter?: string; // Global filter for thread replies: 'everyone', 'following', or follow set d-tag
+  threadWotMinRank?: number; // Minimum WoT rank for thread reply filter (0-100)
   recentEmojis?: RecentEmoji[]; // Recently used emojis for quick access in emoji picker
   streamsListFilter?: string; // Filter for streams: 'all', 'following', or follow set d-tag
   articlesListFilter?: string; // Filter for articles: 'following', 'public', or follow set d-tag
@@ -500,6 +501,23 @@ export class AccountLocalStateService {
     // Only store non-default values
     const value = filter === 'everyone' ? undefined : filter;
     this.updateAccountState(pubkey, { threadReplyFilter: value });
+  }
+
+  /**
+   * Get thread WoT minimum rank for an account
+   * Returns 0 if not set (no minimum)
+   */
+  getThreadWotMinRank(pubkey: string): number {
+    const state = this.getAccountState(pubkey);
+    return state.threadWotMinRank ?? 0;
+  }
+
+  /**
+   * Set thread WoT minimum rank for an account
+   */
+  setThreadWotMinRank(pubkey: string, minRank: number): void {
+    const value = minRank === 0 ? undefined : minRank;
+    this.updateAccountState(pubkey, { threadWotMinRank: value });
   }
 
   /**

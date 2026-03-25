@@ -27,6 +27,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
+import { MatSliderModule } from '@angular/material/slider';
 import { ApplicationService } from '../../services/application.service';
 import { toSignal, takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { EVENT_STATE_KEY, EventData } from '../../data-resolver';
@@ -69,7 +70,7 @@ export const REPLY_FILTER_WOT = 'wot';
 
 @Component({
   selector: 'app-event-page',
-  imports: [CommonModule, EventComponent, MatIconModule, MatButtonModule, MatProgressSpinnerModule, MatTooltipModule, MatMenuModule, MatDividerModule, MatButtonToggleModule, InlineReplyEditorComponent],
+  imports: [CommonModule, EventComponent, MatIconModule, MatButtonModule, MatProgressSpinnerModule, MatTooltipModule, MatMenuModule, MatDividerModule, MatButtonToggleModule, MatSliderModule, InlineReplyEditorComponent],
   templateUrl: './event.component.html',
   styleUrl: './event.component.scss',
   host: {
@@ -196,6 +197,9 @@ export class EventPageComponent {
   // 'everyone' = no filter, 'following' = main contact list, or d-tag of a custom follow set
   selectedReplyFilter = signal<string>(REPLY_FILTER_EVERYONE);
 
+  // WoT minimum rank threshold (0 = no minimum, 100 = maximum trust required)
+  wotMinRank = signal<number>(0);
+
   // Available follow sets for the filter menu
   availableFollowSets = computed<FollowSet[]>(() => this.followSetsService.followSets());
 
@@ -204,18 +208,20 @@ export class EventPageComponent {
     const filter = this.selectedReplyFilter();
     if (filter === REPLY_FILTER_EVERYONE) return 'Everyone';
     if (filter === REPLY_FILTER_FOLLOWING) return 'Following';
-    if (filter === REPLY_FILTER_WOT) return 'Web of Trust';
+    // Legacy WoT-only filter: treat as Everyone with WoT slider
+    if (filter === REPLY_FILTER_WOT) return 'Everyone';
     const set = this.availableFollowSets().find(s => s.dTag === filter);
     return set?.title || 'Custom List';
   });
 
   // Check if a reply filter is active
-  isReplyFilterActive = computed<boolean>(() => this.selectedReplyFilter() !== REPLY_FILTER_EVERYONE);
+  isReplyFilterActive = computed<boolean>(() => this.selectedReplyFilter() !== REPLY_FILTER_EVERYONE || this.wotMinRank() > 0);
 
-  // Filtered threaded replies based on selected follow set
+  // Filtered threaded replies based on selected follow set and WoT threshold
   filteredThreadedReplies = computed<ThreadedEvent[]>(() => {
     const filter = this.selectedReplyFilter();
     const kindFilter = this.commentKindFilter();
+    const minRank = this.wotMinRank();
     let replies = this.threadedReplies();
 
     // Apply kind filter first
@@ -224,42 +230,29 @@ export class EventPageComponent {
       replies = this.filterByKind(replies, allowedKind);
     }
 
-    // No filter - show all replies
-    if (filter === REPLY_FILTER_EVERYONE) {
-      return replies;
-    }
-
-    // WoT filter - filter by trust rank
-    if (filter === REPLY_FILTER_WOT) {
-      // Also include the main event author so their replies are always shown
-      const mainEventPubkey = this.event()?.pubkey;
-      return this.filterThreadedRepliesByWot(replies, mainEventPubkey);
-    }
-
-    // Get the set of pubkeys to filter by
-    let allowedPubkeys: Set<string>;
-
-    if (filter === REPLY_FILTER_FOLLOWING) {
-      // Use main following list
-      allowedPubkeys = new Set(this.accountState.followingList());
-    } else {
-      // Use custom follow set
-      const followSet = this.availableFollowSets().find(s => s.dTag === filter);
-      if (!followSet) {
-        // Follow set not found, show all
-        return replies;
-      }
-      allowedPubkeys = new Set(followSet.pubkeys);
-    }
-
-    // Also include the main event author so their replies are always shown
     const mainEventPubkey = this.event()?.pubkey;
-    if (mainEventPubkey) {
-      allowedPubkeys.add(mainEventPubkey);
+
+    // Apply people filter first (if not 'everyone')
+    if (filter === REPLY_FILTER_FOLLOWING) {
+      const allowedPubkeys = new Set(this.accountState.followingList());
+      if (mainEventPubkey) allowedPubkeys.add(mainEventPubkey);
+      replies = this.filterThreadedReplies(replies, allowedPubkeys);
+    } else if (filter !== REPLY_FILTER_EVERYONE && filter !== REPLY_FILTER_WOT) {
+      // Custom follow set
+      const followSet = this.availableFollowSets().find(s => s.dTag === filter);
+      if (followSet) {
+        const allowedPubkeys = new Set(followSet.pubkeys);
+        if (mainEventPubkey) allowedPubkeys.add(mainEventPubkey);
+        replies = this.filterThreadedReplies(replies, allowedPubkeys);
+      }
     }
 
-    // Filter the threaded replies recursively
-    return this.filterThreadedReplies(replies, allowedPubkeys);
+    // Apply WoT rank filter (either standalone WoT filter or combined with people filter via slider)
+    if (filter === REPLY_FILTER_WOT || minRank > 0) {
+      replies = this.filterThreadedRepliesByWot(replies, mainEventPubkey, minRank);
+    }
+
+    return replies;
   });
 
   /**
@@ -297,17 +290,18 @@ export class EventPageComponent {
 
   /**
    * Recursively filter threaded replies by Web of Trust rank.
-   * Only include replies from users with a positive trust rank or the main event author.
+   * Only include replies from users with a trust rank >= minRank or the main event author.
    */
-  private filterThreadedRepliesByWot(replies: ThreadedEvent[], mainEventPubkey?: string): ThreadedEvent[] {
+  private filterThreadedRepliesByWot(replies: ThreadedEvent[], mainEventPubkey?: string, minRank: number = 1): ThreadedEvent[] {
     const result: ThreadedEvent[] = [];
+    const effectiveMinRank = minRank > 0 ? minRank : 1;
 
     for (const reply of replies) {
       const rank = this.trustService.getRankSignal(reply.event.pubkey);
-      const isAllowed = reply.event.pubkey === mainEventPubkey || (typeof rank === 'number' && rank > 0);
+      const isAllowed = reply.event.pubkey === mainEventPubkey || (typeof rank === 'number' && rank >= effectiveMinRank);
 
       // Recursively filter child replies
-      const filteredChildren = this.filterThreadedRepliesByWot(reply.replies, mainEventPubkey);
+      const filteredChildren = this.filterThreadedRepliesByWot(reply.replies, mainEventPubkey, minRank);
 
       if (isAllowed) {
         result.push({
@@ -357,14 +351,32 @@ export class EventPageComponent {
     }
   }
 
+  setWotMinRank(rank: number): void {
+    this.wotMinRank.set(rank);
+    const pubkey = this.accountState.pubkey();
+    if (pubkey) {
+      this.accountLocalState.setThreadWotMinRank(pubkey, rank);
+    }
+  }
+
   /**
    * Load saved reply filter from storage
    */
   private loadSavedReplyFilter(): void {
     const pubkey = this.accountState.pubkey();
     if (pubkey) {
-      const savedFilter = this.accountLocalState.getThreadReplyFilter(pubkey);
+      let savedFilter = this.accountLocalState.getThreadReplyFilter(pubkey);
+      // Migrate legacy WoT-only filter to everyone + wotMinRank
+      if (savedFilter === REPLY_FILTER_WOT) {
+        savedFilter = REPLY_FILTER_EVERYONE;
+        this.accountLocalState.setThreadReplyFilter(pubkey, savedFilter);
+        if (this.accountLocalState.getThreadWotMinRank(pubkey) === 0) {
+          this.accountLocalState.setThreadWotMinRank(pubkey, 1);
+        }
+      }
       this.selectedReplyFilter.set(savedFilter);
+      const savedMinRank = this.accountLocalState.getThreadWotMinRank(pubkey);
+      this.wotMinRank.set(savedMinRank);
     }
   }
 
