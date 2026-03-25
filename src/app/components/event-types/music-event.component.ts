@@ -1517,7 +1517,7 @@ export class MusicEventComponent {
   }
 
   // Play track in media player
-  playTrack(event: MouseEvent | KeyboardEvent): void {
+  async playTrack(event: MouseEvent | KeyboardEvent): Promise<void> {
     if (event instanceof KeyboardEvent) {
       event.preventDefault();
     }
@@ -1549,13 +1549,13 @@ export class MusicEventComponent {
       return;
     }
 
-    const queuedPlayback = this.buildQueuedPlayback();
+    const queuedPlayback = await this.buildQueuedPlayback();
     if (queuedPlayback) {
       this.mediaPlayer.replaceQueue(queuedPlayback.items, queuedPlayback.startIndex);
       return;
     }
 
-    const mediaItem = this.buildMediaItem(this.event());
+    const mediaItem = await this.buildMediaItem(this.event());
     if (!mediaItem) {
       this.logger.warn('No audio URL found for track');
       return;
@@ -1564,7 +1564,7 @@ export class MusicEventComponent {
     this.mediaPlayer.play(mediaItem);
   }
 
-  private buildQueuedPlayback(): { items: MediaItem[]; startIndex: number } | null {
+  private async buildQueuedPlayback(): Promise<{ items: MediaItem[]; startIndex: number } | null> {
     const queueTracks = this.queueTracks();
     const queueTrackIndex = this.queueTrackIndex();
 
@@ -1572,11 +1572,14 @@ export class MusicEventComponent {
       return null;
     }
 
-    const queueEntries = queueTracks
-      .map((track, originalIndex) => ({
+    const results = await Promise.all(
+      queueTracks.map(async (track, originalIndex) => ({
         originalIndex,
-        mediaItem: this.buildMediaItem(track),
+        mediaItem: await this.buildMediaItem(track),
       }))
+    );
+
+    const queueEntries = results
       .filter((entry): entry is { originalIndex: number; mediaItem: MediaItem } => !!entry.mediaItem);
 
     const startIndex = queueEntries.findIndex(entry => entry.originalIndex === queueTrackIndex);
@@ -1590,7 +1593,7 @@ export class MusicEventComponent {
     };
   }
 
-  private buildMediaItem(track: Event): MediaItem | null {
+  private async buildMediaItem(track: Event): Promise<MediaItem | null> {
     const url = this.utilities.getMusicAudioUrl(track);
     if (!url) {
       return null;
@@ -1598,10 +1601,20 @@ export class MusicEventComponent {
 
     const dTag = track.tags.find(tag => tag[0] === 'd')?.[1] || '';
 
+    let artist = this.utilities.getMusicArtist(track);
+    if (!artist) {
+      try {
+        const profile = await this.data.getProfile(track.pubkey);
+        artist = profile?.data?.display_name || profile?.data?.name || 'Unknown Artist';
+      } catch {
+        artist = 'Unknown Artist';
+      }
+    }
+
     return {
       source: url,
       title: this.utilities.getMusicTitle(track) || 'Untitled Track',
-      artist: this.utilities.getMusicArtist(track) || this.artistName(),
+      artist: artist || 'Unknown Artist',
       artwork: this.utilities.getMusicImage(track) || '/icons/icon-192x192.png',
       video: track.tags.find(tag => tag[0] === 'video')?.[1] || undefined,
       type: 'Music',
@@ -1613,8 +1626,8 @@ export class MusicEventComponent {
   }
 
   // Add track to queue
-  addToQueue(): void {
-    const mediaItem = this.buildMediaItem(this.event());
+  async addToQueue(): Promise<void> {
+    const mediaItem = await this.buildMediaItem(this.event());
     if (!mediaItem) {
       this.snackBar.open('No audio URL found', 'Close', { duration: 3000 });
       return;

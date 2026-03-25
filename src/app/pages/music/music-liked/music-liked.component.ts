@@ -664,17 +664,17 @@ export class MusicLikedComponent implements OnDestroy, AfterViewInit {
       const videoTag = track.tags.find(t => t[0] === 'video');
       const dTag = track.tags.find(t => t[0] === 'd')?.[1] || '';
 
-      // Get artist name
-      let artistName = 'Unknown Artist';
-      const profile = await this.dataService.getProfile(track.pubkey);
-      if (profile) {
-        artistName = profile.data?.name || profile.data?.display_name || 'Unknown Artist';
+      // Get artist name - check artist tag first, then fall back to profile
+      let artistName = this.utilities.getMusicArtist(track);
+      if (!artistName) {
+        const profile = await this.dataService.getProfile(track.pubkey);
+        artistName = profile?.data?.display_name || profile?.data?.name || 'Unknown Artist';
       }
 
       const mediaItem: MediaItem = {
         source: url,
         title,
-        artist: artistName,
+        artist: artistName || 'Unknown Artist',
         artwork: imageTag || '/icons/icon-192x192.png',
         video: videoTag?.[1] || undefined,
         type: 'Music',

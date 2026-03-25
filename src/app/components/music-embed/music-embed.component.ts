@@ -934,7 +934,7 @@ export class MusicEmbedComponent {
       return;
     }
 
-    const mediaItems = this.tracksToMediaItems(tracks);
+    const mediaItems = await this.tracksToMediaItems(tracks);
 
     // Clear queue and play first track
     this.mediaPlayer.clearQueue();
@@ -956,7 +956,7 @@ export class MusicEmbedComponent {
       return;
     }
 
-    const mediaItems = this.tracksToMediaItems(tracks);
+    const mediaItems = await this.tracksToMediaItems(tracks);
 
     for (const item of mediaItems) {
       this.mediaPlayer.enque(item);
@@ -1132,9 +1132,9 @@ export class MusicEmbedComponent {
     }
   }
 
-  private tracksToMediaItems(tracks: Event[]): MediaItem[] {
-    return tracks
-      .map(track => {
+  private async tracksToMediaItems(tracks: Event[]): Promise<MediaItem[]> {
+    const results = await Promise.all(
+      tracks.map(async track => {
         const url = this.utilities.getUrlWithImetaFallback(track);
         const titleTag = track.tags.find(t => t[0] === 'title');
         const artistTag = track.tags.find(t => t[0] === 'artist');
@@ -1144,10 +1144,20 @@ export class MusicEmbedComponent {
 
         if (!url) return null;
 
+        let artist = artistTag?.[1];
+        if (!artist) {
+          try {
+            const profile = await this.data.getProfile(track.pubkey);
+            artist = profile?.data?.display_name || profile?.data?.name || 'Unknown Artist';
+          } catch {
+            artist = 'Unknown Artist';
+          }
+        }
+
         const item: MediaItem = {
           source: url,
           title: titleTag?.[1] || 'Untitled',
-          artist: artistTag?.[1] || 'Unknown Artist',
+          artist: artist || 'Unknown Artist',
           artwork: imageTag?.[1] || '/icons/icon-192x192.png',
           video: videoTag?.[1] || undefined,
           type: 'Music',
@@ -1157,7 +1167,8 @@ export class MusicEmbedComponent {
         };
         return item;
       })
-      .filter((item): item is MediaItem => item !== null);
+    );
+    return results.filter((item): item is MediaItem => item !== null);
   }
 
   openItem(): void {

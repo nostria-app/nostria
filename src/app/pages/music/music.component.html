@@ -280,6 +280,17 @@
               aria-label="Play this song" matTooltip="Play this song">
               <mat-icon>play_arrow</mat-icon>
             </button>
+            @if (listeningPartyPubkey() === entry.pubkey) {
+            <button mat-icon-button class="listening-party-button active" (click)="stopListeningParty($event)"
+              aria-label="Stop listening party" matTooltip="Stop listening party">
+              <mat-icon>group_off</mat-icon>
+            </button>
+            } @else {
+            <button mat-icon-button class="listening-party-button" (click)="startListeningParty(entry, $event)"
+              aria-label="Listening party" matTooltip="Listening party – auto-follow track changes">
+              <mat-icon>group</mat-icon>
+            </button>
+            }
             }
           </div>
 

@@ -478,6 +478,14 @@
   flex-shrink: 0;
 }
 
+.listening-party-button {
+  flex-shrink: 0;
+
+  &.active {
+    color: var(--mat-sys-primary);
+  }
+}
+
 .listening-avatar {
   display: flex;
   align-items: center;

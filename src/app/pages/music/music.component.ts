@@ -118,6 +118,9 @@ export class MusicComponent implements OnDestroy {
   // Offline music track count
   offlineTrackCount = computed(() => this.offlineMusicService.offlineTracks().length);
 
+  // Listening party: auto-follow another user's track changes
+  listeningPartyPubkey = signal<string | null>(null);
+
   // Dialog visibility
   showUploadDialog = signal(false);
   showCreatePlaylistDialog = signal(false);
@@ -506,6 +509,14 @@ export class MusicComponent implements OnDestroy {
       void this.prefetchProfiles([...artistPubkeys, ...listeningPubkeys]);
     });
 
+    // Stop listening party when media player is closed
+    effect(() => {
+      const isOpen = this.layout.showMediaPlayer();
+      if (!isOpen) {
+        untracked(() => this.listeningPartyPubkey.set(null));
+      }
+    });
+
     // Load like/zap state when preview tracks/playlists change or user changes
     effect(() => {
       const userPubkey = this.currentPubkey();
@@ -758,6 +769,7 @@ export class MusicComponent implements OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.listeningPartyPubkey.set(null);
     this.trackSubscription?.close();
     this.playlistSubscription?.close();
     this.listeningSubscription?.close();
@@ -1058,6 +1070,11 @@ export class MusicComponent implements OnDestroy {
     }
 
     this.syncListeningSignal();
+
+    // Auto-play if this user is our listening party target
+    if (entry && event.pubkey === this.listeningPartyPubkey() && entry.trackPubkey && entry.trackIdentifier) {
+      void this.playListeningEntry(entry);
+    }
   }
 
   private parseListeningEvent(event: Event): ListeningEntry | null {
@@ -1152,6 +1169,17 @@ export class MusicComponent implements OnDestroy {
     }
 
     this.mediaPlayer.play(mediaItem);
+  }
+
+  async startListeningParty(entry: ListeningEntry, event?: MouseEvent): Promise<void> {
+    event?.stopPropagation();
+    this.listeningPartyPubkey.set(entry.pubkey);
+    await this.playListeningEntry(entry);
+  }
+
+  stopListeningParty(event?: MouseEvent): void {
+    event?.stopPropagation();
+    this.listeningPartyPubkey.set(null);
   }
 
   openListeningProfile(pubkey: string): void {
