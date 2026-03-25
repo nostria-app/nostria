@@ -520,14 +520,8 @@
   }
 }
 
-// Reply filter panel (rendered in overlay, needs ::ng-deep)
-// Material menus default to max-width: 280px; override with !important
-::ng-deep .reply-filter-menu .mat-mdc-menu-panel {
-  max-width: min(520px, 90vw) !important;
-  min-width: min(460px, 90vw) !important;
-  overflow: hidden;
-}
-
+// Reply filter panel inner layout (rendered in overlay, needs ::ng-deep)
+// Panel sizing is handled in global styles.scss via panelClass
 ::ng-deep .reply-filter-panel {
   display: flex;
   gap: 1px;
@@ -645,11 +639,6 @@
     .reply-filter-people-list {
       max-height: 200px;
     }
-  }
-
-  ::ng-deep .reply-filter-menu .mat-mdc-menu-panel {
-    max-width: 90vw !important;
-    min-width: auto !important;
   }
 }
 

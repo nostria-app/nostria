@@ -1976,3 +1976,21 @@ html[data-font='sora'] {
     font-size: calc(1rem / var(--nostria-font-scale, 1)) !important;
   }
 }
+
+// Reply filter menu panel on event/thread page
+// Must be global because mat-menu renders in the CDK overlay outside the component DOM
+.reply-filter-menu-panel.mat-mdc-menu-panel,
+.reply-filter-menu.mat-mdc-menu-panel {
+  max-width: min(520px, 90vw);
+  min-width: min(460px, 90vw);
+  width: min(460px, 90vw);
+}
+
+@media (max-width: 499px) {
+  .reply-filter-menu-panel.mat-mdc-menu-panel,
+  .reply-filter-menu.mat-mdc-menu-panel {
+    max-width: 90vw;
+    min-width: auto;
+    width: auto;
+  }
+}
