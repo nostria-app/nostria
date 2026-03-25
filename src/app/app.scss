@@ -2262,6 +2262,7 @@ mat-sidenav-content {
   min-width: 0;
   height: calc(100% - 4px);
   border-radius: 0;
+  border: 1px solid transparent;
   text-align: center;
   margin: 0;
   padding: 4px clamp(6px, 2vw, 12px);
