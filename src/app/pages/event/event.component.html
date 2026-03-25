@@ -170,7 +170,7 @@
     @if (isReplyFilterActive() && !isLoadingReplies()) {
     <div class="filter-indicator">
       <mat-icon>filter_alt</mat-icon>
-      <span>Showing replies from: {{ selectedFollowSetName() }}</span>
+      <span>Showing replies from: {{ selectedFollowSetName() }}@if (hiddenReplyCount() > 0) { ({{ hiddenReplyCount() }} hidden)}</span>
       <button mat-icon-button (click)="setReplyFilter('everyone')" matTooltip="Clear filter">
         <mat-icon>close</mat-icon>
       </button>

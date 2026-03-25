@@ -255,6 +255,13 @@ export class EventPageComponent {
     return replies;
   });
 
+  // Number of replies hidden by the active filter
+  hiddenReplyCount = computed<number>(() => {
+    const total = this.countAllReplies(this.threadedReplies());
+    const visible = this.countAllReplies(this.filteredThreadedReplies());
+    return total - visible;
+  });
+
   /**
    * Recursively filter threaded replies to only include those from allowed pubkeys
    */
