@@ -25,22 +25,6 @@
       </mat-chip>
     </mat-chip-set>
     }
-
-    @if (validity()) {
-    <mat-chip-set>
-      <mat-chip class="validity-chip" [class.positive]="isPositive()" [class.negative]="isNegative()"
-        [matTooltip]="'Validity: ' + validity()">
-        @if (isPositive()) {
-        <mat-icon matChipAvatar>check_circle</mat-icon>
-        } @else if (isNegative()) {
-        <mat-icon matChipAvatar>cancel</mat-icon>
-        } @else {
-        <mat-icon matChipAvatar>help</mat-icon>
-        }
-        {{ validityDisplay() }}
-      </mat-chip>
-    </mat-chip-set>
-    }
   </div>
 
   @if (referencedEvents().length > 0) {
@@ -96,23 +80,6 @@
             </mat-card-content>
           </mat-card>
         }
-      }
-    </div>
-  </div>
-  }
-
-  @if (referencedPubkeys().length > 0) {
-  <div class="wot-section">
-    <div class="section-label">
-      <mat-icon>person</mat-icon>
-      <span>Referenced Users</span>
-    </div>
-    <div class="users-grid">
-      @for (pubkey of referencedPubkeys(); track pubkey) {
-      <div class="user-item" (click)="navigateToProfile(pubkey)" (keyup.enter)="navigateToProfile(pubkey)"
-        (keyup.space)="navigateToProfile(pubkey)" tabindex="0" role="button">
-        <app-user-profile [pubkey]="pubkey" [view]="'compact'"></app-user-profile>
-      </div>
       }
     </div>
   </div>

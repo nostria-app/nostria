@@ -92,13 +92,6 @@ export class WotEventComponent {
     this.fetchReferencedEvents(refs);
   });
 
-  /** Referenced pubkeys from p-tags */
-  referencedPubkeys = computed(() => {
-    return this.event().tags
-      .filter(t => t[0] === 'p' && !!t[1])
-      .map(t => t[1]);
-  });
-
   /** Status tag (s) - e.g., "verified", "spam", "trusted" */
   status = computed(() => {
     const tag = this.event().tags.find(t => t[0] === 's');
@@ -107,15 +100,6 @@ export class WotEventComponent {
 
   /** Capitalized status for display */
   statusDisplay = computed(() => this.capitalize(this.status()));
-
-  /** Validity tag (v) - e.g., "valid", "invalid" */
-  validity = computed(() => {
-    const tag = this.event().tags.find(t => t[0] === 'v');
-    return tag?.[1] || '';
-  });
-
-  /** Capitalized validity for display */
-  validityDisplay = computed(() => this.capitalize(this.validity()));
 
   /** Client that created this attestation */
   client = computed(() => {
@@ -129,15 +113,13 @@ export class WotEventComponent {
   /** Whether this is a positive/trust attestation */
   isPositive = computed(() => {
     const s = this.status().toLowerCase();
-    const v = this.validity().toLowerCase();
-    return s === 'verified' || s === 'trusted' || s === 'safe' || v === 'valid' || v === 'trusted';
+    return s === 'verified' || s === 'trusted' || s === 'safe' || s === 'valid';
   });
 
   /** Whether this is a negative/distrust attestation */
   isNegative = computed(() => {
     const s = this.status().toLowerCase();
-    const v = this.validity().toLowerCase();
-    return s === 'spam' || s === 'bot' || s === 'malicious' || s === 'blocked' || v === 'invalid' || v === 'spam';
+    return s === 'spam' || s === 'bot' || s === 'malicious' || s === 'blocked' || s === 'invalid';
   });
 
   /** Icon to display based on status */
@@ -147,9 +129,9 @@ export class WotEventComponent {
     return 'shield';
   });
 
-  /** All custom tags that aren't standard structural ones (d, e, p, s, v, client) */
+  /** All custom tags that aren't standard structural ones (d, e, s, client) */
   extraTags = computed(() => {
-    const knownTags = new Set(['d', 'e', 'p', 's', 'v', 'client']);
+    const knownTags = new Set(['d', 'e', 's', 'client']);
     return this.event().tags
       .filter(t => !knownTags.has(t[0]) && !!t[1])
       .map(t => ({ key: t[0], value: t[1] }));
@@ -171,11 +153,6 @@ export class WotEventComponent {
     if (ref.nevent) {
       this.layout.openEventAsPrimary(ref.nevent);
     }
-  }
-
-  /** Navigate to a user profile */
-  navigateToProfile(pubkey: string): void {
-    this.layout.navigateToProfile(pubkey);
   }
 
   /** Capitalize the first letter of each word */
