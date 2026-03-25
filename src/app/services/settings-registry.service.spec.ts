@@ -6,7 +6,7 @@ describe('SettingsRegistryService', () => {
   let service: SettingsRegistryService;
 
   beforeEach(() => {
-    globalThis.$localize = ((strings: TemplateStringsArray, ...values: unknown[]) =>
+    (globalThis as any).$localize = ((strings: TemplateStringsArray, ...values: unknown[]) =>
       strings.reduce((result, string, index) => result + string + (values[index] ?? ''), '')) as typeof $localize;
     service = new SettingsRegistryService();
   });
