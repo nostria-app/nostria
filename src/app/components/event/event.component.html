@@ -24,7 +24,7 @@
       <app-profile-display-name [pubkey]="item!.event.pubkey"></app-profile-display-name>
       reposted
       <span [matTooltip]="item!.event.created_at | timestamp: 'medium'" matTooltipPosition="below">
-        {{ item!.event.created_at | ago }}
+        {{ item!.event.created_at | ago: 'short' }}
       </span>
     </span>
     <app-event-menu [event]="item!.event" class="note-footer-right"></app-event-menu>
@@ -45,7 +45,7 @@
       <app-profile-display-name [pubkey]="item!.event.pubkey"></app-profile-display-name>
       reposted
       <span [matTooltip]="item!.event.created_at | timestamp: 'medium'" matTooltipPosition="below">
-        {{ item!.event.created_at | ago }}
+        {{ item!.event.created_at | ago: 'short' }}
       </span>
     </span>
     <app-event-menu [event]="item!.event" class="note-footer-right"></app-event-menu>
@@ -66,7 +66,7 @@
       <app-profile-display-name [pubkey]="item.event.pubkey"></app-profile-display-name>
       reposted
       <span [matTooltip]="item.event.created_at | timestamp: 'medium'" matTooltipPosition="below">
-        {{ item.event.created_at | ago }}
+        {{ item.event.created_at | ago: 'short' }}
       </span>
     </span>
     <app-event-menu [event]="item.event" class="note-footer-right"></app-event-menu>

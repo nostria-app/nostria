@@ -7,7 +7,7 @@ export class AgoPipe implements PipeTransform {
   private localSettings = inject(LocalSettingsService);
   private chroniaService = inject(ChroniaCalendarService);
 
-  transform(value: number | null | undefined): string {
+  transform(value: number | null | undefined, format?: 'short'): string {
     if (value === null || value === undefined || value === 0) {
       return '';
     }
@@ -17,7 +17,7 @@ export class AgoPipe implements PipeTransform {
     const diff = now - timestamp; // Difference in seconds
 
     if (diff < 0) {
-      return 'in the future';
+      return format === 'short' ? 'now' : 'in the future';
     }
 
     // Time intervals in seconds
@@ -27,6 +27,27 @@ export class AgoPipe implements PipeTransform {
     const week = day * 7;
     const month = day * 30;
     const year = day * 365;
+
+    if (format === 'short') {
+      switch (true) {
+        case diff < 5:
+          return 'now';
+        case diff < minute:
+          return `${Math.floor(diff)}s`;
+        case diff < hour:
+          return `${Math.floor(diff / minute)}m`;
+        case diff < day:
+          return `${Math.floor(diff / hour)}h`;
+        case diff < week:
+          return `${Math.floor(diff / day)}d`;
+        case diff < month:
+          return `${Math.floor(diff / week)}w`;
+        case diff < year:
+          return `${Math.floor(diff / month)}mo`;
+        default:
+          return `${Math.floor(diff / year)}y`;
+      }
+    }
 
     // Return the appropriate time ago string
     switch (true) {
