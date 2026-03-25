@@ -418,6 +418,11 @@
   }
 }
 
+// Media container base spacing - ensures consistent gap between text and all media types
+.media-container {
+  margin: 12px 0;
+}
+
 // Video container - needs different handling for proper sizing
 // Don't use aspect-ratio on container as it conflicts with max-height constraints
 // Let the video element itself handle aspect ratio naturally
