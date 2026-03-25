@@ -46,7 +46,8 @@
     "check:social-preview:prod": "powershell -ExecutionPolicy Bypass -File scripts/prod-social-preview-check.ps1",
     "lint": "ng lint",
     "lint-fix": "eslint . --ext .ts,.html --fix",
-    "lint:check": "eslint . --ext .ts,.html --fix"
+    "lint:check": "eslint . --ext .ts,.html --fix",
+    "schemas": "npx vitest run schemata-validation.spec.ts --config vitest.config.ts"
   },
   "prettier": {
     "printWidth": 100,

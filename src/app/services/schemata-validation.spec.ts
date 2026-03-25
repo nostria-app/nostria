@@ -12,6 +12,7 @@
 import '@angular/compiler';
 import { describe, expect, it, vi, beforeAll, beforeEach } from 'vitest';
 import { createRequire } from 'node:module';
+import { dirname, resolve } from 'node:path';
 import Ajv from 'ajv';
 import ajvErrors from 'ajv-errors';
 import { kinds, type Event, type UnsignedEvent } from 'nostr-tools';
@@ -28,10 +29,11 @@ import { MessagingService } from './messaging.service';
 // Load schemas via createRequire to bypass ESM JSON import attribute issue (Node 22+).
 // The schemata bundle uses ESM imports for JSON without { type: "json" }, which breaks.
 const require = createRequire(import.meta.url);
-const schemataBase = require.resolve('@nostrability/schemata').replace(/\/dist\/.*/, '/dist/nips');
+const schemataBundleDir = dirname(require.resolve('@nostrability/schemata/dist/bundle/schemas.js'));
+const schemataBase = resolve(schemataBundleDir, '../nips');
 
 function loadSchema(path: string): object {
-  return require(`${schemataBase}/${path}`);
+  return require(resolve(schemataBase, path));
 }
 
 const kind0Schema = loadSchema('nip-01/kind-0/schema.json');
