@@ -1298,11 +1298,12 @@ export class ChatsComponent implements OnInit, OnDestroy {
 
   /** Open GIF picker dialog */
   async openGifPickerDialog(): Promise<void> {
-    const { GifPickerDialogComponent } = await import('../../components/gif-picker/gif-picker-dialog.component');
-    const dialogRef = this.customDialog.open<typeof GifPickerDialogComponent.prototype, string>(GifPickerDialogComponent, {
+    const { EmojiPickerDialogComponent } = await import('../../components/emoji-picker/emoji-picker-dialog.component');
+    const dialogRef = this.customDialog.open<typeof EmojiPickerDialogComponent.prototype, string>(EmojiPickerDialogComponent, {
       title: 'GIFs',
       width: '400px',
-      panelClass: 'gif-picker-dialog',
+      panelClass: 'emoji-picker-dialog',
+      data: { mode: 'content', activeTab: 'gifs' },
     });
 
     dialogRef.afterClosed$.subscribe(result => {

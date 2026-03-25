@@ -1851,11 +1851,17 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       title: 'Emoji',
       width: '400px',
       panelClass: 'emoji-picker-dialog',
+      data: { mode: 'content', activeTab: 'emoji' },
     });
 
     dialogRef.afterClosed$.subscribe(result => {
       if (result.result) {
-        this.insertEmoji(result.result);
+        // Check if it's a GIF URL (starts with http)
+        if (result.result.startsWith('http')) {
+          this.insertGifUrl(result.result);
+        } else {
+          this.insertEmoji(result.result);
+        }
       }
     });
   }
@@ -1878,11 +1884,12 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
    * Open GIF picker in a fullscreen dialog on small screens
    */
   async openGifPickerDialog(): Promise<void> {
-    const { GifPickerDialogComponent } = await import('../../components/gif-picker/gif-picker-dialog.component');
-    const dialogRef = this.customDialog.open<typeof GifPickerDialogComponent.prototype, string>(GifPickerDialogComponent, {
+    const { EmojiPickerDialogComponent } = await import('../../components/emoji-picker/emoji-picker-dialog.component');
+    const dialogRef = this.customDialog.open<typeof EmojiPickerDialogComponent.prototype, string>(EmojiPickerDialogComponent, {
       title: 'GIFs',
       width: '400px',
-      panelClass: 'gif-picker-dialog',
+      panelClass: 'emoji-picker-dialog',
+      data: { mode: 'content', activeTab: 'gifs' },
     });
 
     dialogRef.afterClosed$.subscribe(result => {
@@ -2594,6 +2601,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       title: 'React',
       width: '400px',
       panelClass: 'emoji-picker-dialog',
+      data: { mode: 'reaction' },
     });
 
     dialogRef.afterClosed$.subscribe(({ result }) => {

@@ -307,21 +307,6 @@ html.locale-fa {
   height: 10px;
 }
 
-// GIF picker menu panel - single scrollbar inside gif-content only
-.mat-mdc-menu-panel.gif-picker-menu {
-  width: min(360px, calc(100vw - 24px)) !important;
-  min-width: min(360px, calc(100vw - 24px)) !important;
-  max-width: min(360px, calc(100vw - 24px)) !important;
-}
-
-.mat-mdc-menu-panel.gif-picker-menu .mat-mdc-menu-content {
-  padding: 0 !important;
-  overflow: hidden !important;
-  display: flex;
-  flex-direction: column;
-  max-height: inherit;
-}
-
 // Emoji picker menu panel - needs wider max-width
 .mat-mdc-menu-panel.emoji-picker-menu {
   max-width: none;
@@ -331,13 +316,21 @@ html.locale-fa {
 .mat-mdc-menu-panel.emoji-picker-menu .mat-mdc-menu-content {
   padding: 0 !important;
   overflow-x: hidden !important;
+  overflow-y: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
+  height: 100% !important;
 }
 
 .mat-mdc-menu-panel.emoji-picker-menu {
   width: min(360px, calc(100vw - 24px)) !important;
   min-width: min(360px, calc(100vw - 24px)) !important;
   max-width: min(360px, calc(100vw - 24px)) !important;
+  max-height: min(420px, calc(100vh - 100px)) !important;
   overflow-x: hidden !important;
+  overflow-y: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
 }
 
 // Event reaction picker: keep a clearly visible vertical scrollbar

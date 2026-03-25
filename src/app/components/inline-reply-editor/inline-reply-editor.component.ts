@@ -511,13 +511,25 @@ export class InlineReplyEditorComponent implements AfterViewInit, OnDestroy {
       title: 'Emoji',
       width: '400px',
       panelClass: 'emoji-picker-dialog',
+      data: { mode: 'content', activeTab: 'emoji' },
     });
 
     dialogRef.afterClosed$.subscribe(result => {
       if (result.result) {
-        this.insertEmoji(result.result);
+        // Check if it's a GIF URL (starts with http)
+        if (result.result.startsWith('http')) {
+          this.insertGifUrl(result.result);
+        } else {
+          this.insertEmoji(result.result);
+        }
       }
     });
+  }
+
+  insertGifUrl(url: string): void {
+    const currentContent = this.content();
+    const needsNewlineBefore = currentContent.length > 0 && !currentContent.endsWith('\n');
+    this.insertEmoji((needsNewlineBefore ? '\n' : '') + url + '\n');
   }
 
   addMention(pubkey: string): void {

@@ -174,9 +174,12 @@ interface GifSet {
       overflow: hidden;
     }
 
-    :host-context(.gif-picker-dialog) .gif-picker {
+    :host-context(.gif-picker-dialog) .gif-picker,
+    :host-context(.emoji-picker-dialog) .gif-picker,
+    :host-context(.emoji-picker-menu) .gif-picker {
       max-height: none;
-      height: 100%;
+      flex: 1;
+      min-height: 0;
     }
 
     .gif-toolbar {
@@ -266,7 +269,9 @@ interface GifSet {
       scrollbar-color: var(--scrollbar-thumb, var(--mat-sys-outline)) var(--scrollbar-track, transparent);
     }
 
-    :host-context(.gif-picker-dialog) .gif-content {
+    :host-context(.gif-picker-dialog) .gif-content,
+    :host-context(.emoji-picker-dialog) .gif-content,
+    :host-context(.emoji-picker-menu) .gif-content {
       max-height: none;
       flex: 1;
       overflow-y: auto;

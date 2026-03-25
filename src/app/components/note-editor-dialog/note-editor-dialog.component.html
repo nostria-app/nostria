@@ -503,12 +503,13 @@
       } @else {
       <button mat-icon-button type="button" class="desktop-action action-priority-medium"
         [matMenuTriggerFor]="emojiMenu"
+        (menuOpened)="emojiPickerInMenu?.resetTab()"
         [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions()"
         [class.button-disabled-visible]="showPreview() || showAdvancedOptions()" matTooltip="Emoji">
         <mat-icon>sentiment_satisfied</mat-icon>
       </button>
       <mat-menu #emojiMenu="matMenu" class="emoji-picker-menu">
-        <app-emoji-picker (emojiSelected)="insertEmoji($event)"></app-emoji-picker>
+        <app-emoji-picker #emojiPickerInMenu mode="content" (emojiSelected)="insertEmoji($event)" (gifSelected)="insertGifUrl($event)"></app-emoji-picker>
       </mat-menu>
       }
 
@@ -522,12 +523,13 @@
       </button>
       } @else {
       <button mat-icon-button type="button" class="desktop-action action-priority-medium" [matMenuTriggerFor]="gifMenu"
+        (menuOpened)="gifPickerInMenu?.resetTab()"
         [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions()"
         [class.button-disabled-visible]="showPreview() || showAdvancedOptions()" matTooltip="GIFs">
         <mat-icon>gif_box</mat-icon>
       </button>
-      <mat-menu #gifMenu="matMenu" class="gif-picker-menu">
-        <app-gif-picker (gifSelected)="insertGifUrl($event)"></app-gif-picker>
+      <mat-menu #gifMenu="matMenu" class="emoji-picker-menu">
+        <app-emoji-picker #gifPickerInMenu mode="content" initialTab="gifs" (emojiSelected)="insertEmoji($event)" (gifSelected)="insertGifUrl($event)"></app-emoji-picker>
       </mat-menu>
       }
 

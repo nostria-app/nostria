@@ -6,6 +6,7 @@ import {
   inject,
   effect,
   untracked,
+  input,
   ChangeDetectionStrategy,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -16,6 +17,7 @@ import { AccountLocalStateService, RecentEmoji } from '../../services/account-lo
 import { AccountStateService } from '../../services/account-state.service';
 import { EmojiSetGroup, EmojiSetService } from '../../services/emoji-set.service';
 import { LoggerService } from '../../services/logger.service';
+import { GifPickerComponent } from '../gif-picker/gif-picker.component';
 
 const EMOJI_CATEGORIES = [
   { id: 'smileys', label: 'Smileys', icon: '😀', emojis: ['😀', '😃', '😄', '😁', '😆', '😅', '🤣', '😂', '🙂', '🙃', '😉', '😊', '😇', '🥰', '😍', '🤩', '😘', '😗', '😚', '😋', '😛', '😜', '🤪', '😝', '🤑', '🤗', '🤭', '🤫', '🤔', '🤐', '🤨', '😐', '😑', '😶', '😏', '😒', '🙄', '😬', '🤥', '😌', '😔', '😪', '🤤', '😴', '😮', '😯', '😲', '😳', '😷', '🤒', '🤕', '🤢', '🤮', '🤧', '🥵', '🥶', '🥴', '😵', '🤯', '🤠', '🥳', '😎', '🤓', '🧐'] },
@@ -64,9 +66,26 @@ const EMOJI_KEYWORDS: Record<string, string[]> = {
     MatIconModule,
     MatButtonModule,
     MatTooltipModule,
+    GifPickerComponent,
   ],
   template: `
     <div class="emoji-picker" (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()">
+      <!-- Tabs (only in content mode) -->
+      @if (mode() === 'content') {
+      <div class="picker-tabs">
+        <button class="tab-btn" [class.active]="activeTab() === 'emoji'" (click)="activeTab.set('emoji')">
+          <mat-icon>sentiment_satisfied</mat-icon>
+          <span>Emoji</span>
+        </button>
+        <button class="tab-btn" [class.active]="activeTab() === 'gifs'" (click)="activeTab.set('gifs')">
+          <mat-icon>gif_box</mat-icon>
+          <span>GIFs</span>
+        </button>
+      </div>
+      }
+
+      @if (activeTab() === 'emoji') {
+      <!-- Emoji tab content -->
       <!-- Search -->
       <div class="emoji-search">
         <mat-icon class="search-icon">search</mat-icon>
@@ -167,6 +186,12 @@ const EMOJI_KEYWORDS: Record<string, string[]> = {
           }
         </div>
       }
+      } @else {
+      <!-- GIFs tab content -->
+      <div class="gif-tab-content">
+        <app-gif-picker (gifSelected)="onGifSelected($event)"></app-gif-picker>
+      </div>
+      }
     </div>
   `,
   styles: [`
@@ -177,7 +202,21 @@ const EMOJI_KEYWORDS: Record<string, string[]> = {
       min-height: 0;
     }
 
+    :host-context(.emoji-picker-menu) {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-height: 0;
+    }
+
     :host-context(.emoji-picker-dialog) .emoji-picker {
+      width: 100%;
+      max-height: none;
+      flex: 1;
+      min-height: 0;
+    }
+
+    :host-context(.emoji-picker-menu) .emoji-picker {
       width: 100%;
       max-height: none;
       flex: 1;
@@ -198,6 +237,59 @@ const EMOJI_KEYWORDS: Record<string, string[]> = {
 
     .emoji-picker * {
       box-sizing: border-box;
+    }
+
+    .picker-tabs {
+      display: flex;
+      border-bottom: 1px solid var(--mat-sys-outline-variant);
+      flex-shrink: 0;
+
+      .tab-btn {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        padding: 8px 12px;
+        background: transparent;
+        border: none;
+        border-bottom: 2px solid transparent;
+        cursor: pointer;
+        font-size: 0.8rem;
+        color: var(--mat-sys-on-surface-variant);
+        transition: all 0.15s;
+
+        mat-icon {
+          font-size: 18px;
+          width: 18px;
+          height: 18px;
+        }
+
+        &.active {
+          color: var(--mat-sys-primary);
+          border-bottom-color: var(--mat-sys-primary);
+        }
+
+        &:hover:not(.active) {
+          background: var(--mat-sys-surface-container-high);
+        }
+      }
+    }
+
+    .gif-tab-content {
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+
+      app-gif-picker {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+        min-height: 0;
+        overflow: hidden;
+      }
     }
 
     .emoji-search {
@@ -237,7 +329,8 @@ const EMOJI_KEYWORDS: Record<string, string[]> = {
       }
     }
 
-    :host-context(.emoji-picker-dialog) .emoji-grid-container {
+    :host-context(.emoji-picker-dialog) .emoji-grid-container,
+    :host-context(.emoji-picker-menu) .emoji-grid-container {
       max-height: none;
       flex: 1;
       overflow-y: auto;
@@ -253,7 +346,8 @@ const EMOJI_KEYWORDS: Record<string, string[]> = {
       scrollbar-color: var(--scrollbar-thumb, var(--mat-sys-outline)) var(--scrollbar-track, transparent);
     }
 
-    :host-context(.emoji-picker-dialog) .emoji-list-scroll {
+    :host-context(.emoji-picker-dialog) .emoji-list-scroll,
+    :host-context(.emoji-picker-menu) .emoji-list-scroll {
       max-height: none;
       flex: 1;
       overflow-y: auto;
@@ -426,15 +520,39 @@ export class EmojiPickerComponent {
   private readonly emojiSetService = inject(EmojiSetService);
   private readonly logger = inject(LoggerService);
 
+  /** 'reaction' = emoji only (no GIF tab), 'content' = emoji + GIF tabs */
+  mode = input<'reaction' | 'content'>('content');
+
+  /** Which tab to show initially */
+  initialTab = input<'emoji' | 'gifs'>('emoji');
+
   /** Emitted when an emoji is selected */
   emojiSelected = output<string>();
+
+  /** Emitted when a GIF is selected (URL) */
+  gifSelected = output<string>();
+
+  activeTab = signal<'emoji' | 'gifs'>('emoji');
 
   readonly categories = EMOJI_CATEGORIES;
   searchQuery = signal('');
   recentEmojis = signal<RecentEmoji[]>([]);
   emojiSets = signal<EmojiSetGroup[]>([]);
 
+  /** Reset the active tab to the initialTab value. Call this when re-opening the picker (e.g. mat-menu opened). */
+  resetTab(): void {
+    this.activeTab.set(this.initialTab());
+  }
+
   constructor() {
+    // Set initial tab from input whenever it changes
+    effect(() => {
+      const tab = this.initialTab();
+      untracked(() => {
+        this.activeTab.set(tab);
+      });
+    });
+
     // Load recent emojis and custom emoji sets
     // Also reloads when emojiSetService.preferencesChanged signal updates (e.g. after installing a set)
     effect(() => {
@@ -519,5 +637,9 @@ export class EmojiPickerComponent {
       this.accountLocalState.addRecentEmoji(pubkey, emoji, url);
       this.recentEmojis.set(this.accountLocalState.getRecentEmojis(pubkey));
     }
+  }
+
+  onGifSelected(url: string): void {
+    this.gifSelected.emit(url);
   }
 }

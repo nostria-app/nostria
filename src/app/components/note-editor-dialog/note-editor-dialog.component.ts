@@ -66,7 +66,6 @@ import { SpeechService } from '../../services/speech.service';
 import { PlatformService } from '../../services/platform.service';
 import { UserProfileComponent } from '../user-profile/user-profile.component';
 import { EmojiPickerComponent } from '../emoji-picker/emoji-picker.component';
-import { GifPickerComponent } from '../gif-picker/gif-picker.component';
 import { HapticsService } from '../../services/haptics.service';
 import { SettingsService } from '../../services/settings.service';
 import { XDualPostService, XPostMediaItem } from '../../services/x-dual-post.service';
@@ -144,7 +143,6 @@ interface PreparedXPost {
     TextFieldModule,
     UserProfileComponent,
     EmojiPickerComponent,
-    GifPickerComponent,
   ],
   providers: [provideNativeDateAdapter()],
   templateUrl: './note-editor-dialog.component.html',
@@ -2241,11 +2239,12 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
    * Open GIF picker in a fullscreen dialog on small screens
    */
   async openGifPickerDialog(): Promise<void> {
-    const { GifPickerDialogComponent } = await import('../gif-picker/gif-picker-dialog.component');
-    const dialogRef = this.customDialog.open<typeof GifPickerDialogComponent.prototype, string>(GifPickerDialogComponent, {
+    const { EmojiPickerDialogComponent } = await import('../emoji-picker/emoji-picker-dialog.component');
+    const dialogRef = this.customDialog.open<typeof EmojiPickerDialogComponent.prototype, string>(EmojiPickerDialogComponent, {
       title: 'GIFs',
       width: '400px',
-      panelClass: 'gif-picker-dialog',
+      panelClass: 'emoji-picker-dialog',
+      data: { mode: 'content', activeTab: 'gifs' },
     });
 
     dialogRef.afterClosed$.subscribe(result => {
@@ -2266,11 +2265,17 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       title: 'Emoji',
       width: '400px',
       panelClass: 'emoji-picker-dialog',
+      data: { mode: 'content', activeTab: 'emoji' },
     });
 
     dialogRef.afterClosed$.subscribe(result => {
       if (result.result) {
-        this.insertEmoji(result.result);
+        // Check if it's a GIF URL (starts with http)
+        if (result.result.startsWith('http')) {
+          this.insertGifUrl(result.result);
+        } else {
+          this.insertEmoji(result.result);
+        }
       } else {
         this.scheduleTextareaRefresh(undefined, true);
       }

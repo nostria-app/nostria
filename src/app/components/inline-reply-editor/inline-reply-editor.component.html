@@ -216,12 +216,13 @@
       } @else {
       <button mat-icon-button type="button"
         [matMenuTriggerFor]="emojiMenu"
+        (menuOpened)="emojiPickerRef?.resetTab()"
         [disabled]="isUploading() || isPublishing()"
         matTooltip="Emoji">
         <mat-icon>sentiment_satisfied</mat-icon>
       </button>
       <mat-menu #emojiMenu="matMenu" class="emoji-picker-menu">
-        <app-emoji-picker (emojiSelected)="insertEmoji($event)"></app-emoji-picker>
+        <app-emoji-picker #emojiPickerRef mode="content" (emojiSelected)="insertEmoji($event)" (gifSelected)="insertGifUrl($event)"></app-emoji-picker>
       </mat-menu>
       }
     </div>
