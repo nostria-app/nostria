@@ -201,6 +201,31 @@ async function fetchProfileFromRelays(pubkey: string, relayHints?: string[], tim
 }
 
 /**
+ * Strip nostr: references (npub, nprofile, nevent, naddr, note) from text
+ * for use in social preview titles and descriptions.
+ * For npub/nprofile, replaces with a short @pubkey identifier.
+ * For other types, removes the reference entirely.
+ */
+function stripNostrReferences(content: string, tags?: string[][]): string {
+  return content
+    .replace(/nostr:(npub|nprofile|nevent|naddr|note)1[a-z0-9]+/gi, (match) => {
+      // Try to decode and get a short identifier
+      try {
+        const decoded = nip19.decode(match.replace('nostr:', ''));
+        if (decoded.type === 'npub' || decoded.type === 'nprofile') {
+          const pubkey = decoded.type === 'npub' ? decoded.data : decoded.data.pubkey;
+          return `@${pubkey.slice(0, 8)}`;
+        }
+      } catch {
+        // Ignore decode errors
+      }
+      return '';
+    })
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+}
+
+/**
  * Extract pubkey and relay hints from an npub or nprofile identifier.
  * Returns null if the id is not a profile identifier.
  */
@@ -894,10 +919,11 @@ export class DataResolver implements Resolve<EventData | null> {
 
         // Determine the best source for content
         if (directEvent) {
-          // Use content from direct relay fetch
-          const description = directEvent.content?.length > 200
-            ? directEvent.content.substring(0, 200) + '...'
-            : directEvent.content || 'Open this Nostr post on Nostria, the decentralized social app.';
+          // Use content from direct relay fetch, stripping nostr: references for clean previews
+          const cleanContent = stripNostrReferences(directEvent.content || '', directEvent.tags);
+          const description = cleanContent.length > 200
+            ? cleanContent.substring(0, 200) + '...'
+            : cleanContent || 'Open this Nostr post on Nostria, the decentralized social app.';
 
           const authorName =
             data.metadata?.profile?.display_name ||
@@ -905,7 +931,7 @@ export class DataResolver implements Resolve<EventData | null> {
             undefined;
           const titleTag = directEvent.tags?.find((tag: string[]) => tag[0] === 'title');
           const titleFromTag = typeof titleTag?.[1] === 'string' ? titleTag[1].trim() : '';
-          const titleFromContent = (directEvent.content || '').trim().slice(0, 80);
+          const titleFromContent = cleanContent.slice(0, 80);
           const fallbackTitle = authorName
             ? `${authorName} on Nostria`
             : `Nostr Note ${directEvent.id.slice(0, 8)} on Nostria`;

@@ -346,10 +346,6 @@
 
 .volume-slider {
   width: 80px;
-
-  @media (max-width: 1100px) {
-    display: none;
-  }
 }
 
 .audio-player-compact {

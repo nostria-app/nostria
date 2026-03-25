@@ -289,35 +289,57 @@ function stripSocialImageMetaTags(html: string): string {
     .replace(/\s*<meta\s+name=["']twitter:image["']\s+content=["'][\s\S]*?["'][^>]*>/ig, '');
 }
 
+/**
+ * Strip all social meta tags that will be re-injected by the priority block,
+ * preventing duplicates in the final HTML.
+ */
+function stripAllSocialMetaTags(html: string): string {
+  return html
+    // Strip existing <title> tag (priority block will add its own)
+    .replace(/<title[^>]*>[\s\S]*?<\/title>/i, '')
+    // Strip existing description meta tag
+    .replace(/\s*<meta\s+name=["']description["'][^>]*>/ig, '')
+    .replace(/\s*<meta\s+content=["'][^"']*["']\s+name=["']description["'][^>]*>/ig, '')
+    // OG tags (property attribute)
+    .replace(/\s*<meta\s+property=["']og:(title|description|site_name|type|url|image|image:secure_url)["'][^>]*>/ig, '')
+    // Twitter tags (name attribute)
+    .replace(/\s*<meta\s+name=["']twitter:(card|site|title|description|image)["'][^>]*>/ig, '')
+    // Also handle reversed attribute order (content before property/name)
+    .replace(/\s*<meta\s+content=["'][^"']*["']\s+property=["']og:(title|description|site_name|type|url|image|image:secure_url)["'][^>]*>/ig, '')
+    .replace(/\s*<meta\s+content=["'][^"']*["']\s+name=["']twitter:(card|site|title|description|image)["'][^>]*>/ig, '');
+}
+
 function injectPrioritySocialTags(html: string, path: string, userAgent: string | undefined): string {
   if (!/<head[\s>]/i.test(html)) {
     return html;
   }
 
-  const sanitizedHtml = stripSocialImageMetaTags(html);
-
-  const ogTitle = extractMetaContent(sanitizedHtml, 'og:title').trim();
-  const twitterTitle = extractMetaContent(sanitizedHtml, 'twitter:title').trim();
-  const pageTitle = extractTitleContent(sanitizedHtml).trim();
+  // Extract values before stripping tags
+  const ogTitle = extractMetaContent(html, 'og:title').trim();
+  const twitterTitle = extractMetaContent(html, 'twitter:title').trim();
+  const pageTitle = extractTitleContent(html).trim();
   const title = ogTitle || twitterTitle || pageTitle || 'Nostria - Your Social Network';
 
-  const ogDescription = extractMetaContent(sanitizedHtml, 'og:description').trim();
-  const twitterDescription = extractMetaContent(sanitizedHtml, 'twitter:description').trim();
-  const descriptionTag = extractMetaContent(sanitizedHtml, 'description').trim();
+  const ogDescription = extractMetaContent(html, 'og:description').trim();
+  const twitterDescription = extractMetaContent(html, 'twitter:description').trim();
+  const descriptionTag = extractMetaContent(html, 'description').trim();
   const description =
     ogDescription ||
     twitterDescription ||
     descriptionTag ||
     'Nostria: Built for human connections. See your friends again. Nostria is social without the noise.';
 
-  const ogUrl = extractMetaContent(sanitizedHtml, 'og:url').trim() || `https://nostria.app${path}`;
-  const twitterCard = extractMetaContent(sanitizedHtml, 'twitter:card').trim() || 'summary_large_image';
+  const ogUrl = extractMetaContent(html, 'og:url').trim() || `https://nostria.app${path}`;
+  const twitterCard = extractMetaContent(html, 'twitter:card').trim() || 'summary_large_image';
   const rawImages = [
     ...extractMetaContents(html, 'og:image'),
     ...extractMetaContents(html, 'twitter:image'),
   ];
   const images = normalizePreviewImageUrls(rawImages, userAgent);
   const image = images[0];
+
+  // Strip all existing social meta tags to prevent duplicates
+  const strippedHtml = stripAllSocialMetaTags(html);
 
   const ogImageTags = images
     .map((img) => `<meta property="og:image" content="${escapeHtmlAttribute(img)}">`)
@@ -346,11 +368,11 @@ function injectPrioritySocialTags(html: string, path: string, userAgent: string 
   ].join('\n');
 
   const markerRegex = /<!-- SSR_PRIORITY_SOCIAL_TAGS -->[\s\S]*?<!-- \/SSR_PRIORITY_SOCIAL_TAGS -->\n?/i;
-  if (markerRegex.test(sanitizedHtml)) {
-    return sanitizedHtml.replace(markerRegex, `${priorityBlock}\n`);
+  if (markerRegex.test(strippedHtml)) {
+    return strippedHtml.replace(markerRegex, `${priorityBlock}\n`);
   }
 
-  return sanitizedHtml.replace(/<head([^>]*)>/i, `<head$1>\n${priorityBlock}\n`);
+  return strippedHtml.replace(/<head([^>]*)>/i, `<head$1>\n${priorityBlock}\n`);
 }
 
 function upsertMetaTag(html: string, attr: 'property' | 'name', key: string, content: string): string {
