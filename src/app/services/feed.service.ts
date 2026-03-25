@@ -2166,7 +2166,7 @@ export class FeedService {
           } = {
             authors: batchPubkeys,
             kinds: feedData.filter?.kinds,
-            limit: isArticlesFeed ? 10 : 5, // Limit per batch
+            limit: isArticlesFeed ? 3 : 5, // Limit per batch
           };
 
           if (useSince) {
@@ -2276,8 +2276,8 @@ export class FeedService {
     const BATCH_SIZE = 10;
     const TIMEOUT_MS = 2500;
     const isArticlesFeed = feedData.filter?.kinds?.includes(30023);
-    const PER_BATCH_LIMIT = isArticlesFeed ? 20 : 25;
-    const TARGET_EVENT_COUNT = isArticlesFeed ? 20 : 40;
+    const PER_BATCH_LIMIT = isArticlesFeed ? 10 : 25;
+    const TARGET_EVENT_COUNT = isArticlesFeed ? 10 : 40;
     const MAX_PAGINATION_ROUNDS = 3;
 
     try {
@@ -2433,7 +2433,7 @@ export class FeedService {
   private async fetchEventsFromUsers(pubkeys: string[], feedData: FeedItem) {
     const isArticlesFeed = feedData.filter?.kinds?.includes(30023);
     // Increase limit for better initial load experience, especially for custom feeds
-    const eventsPerUser = isArticlesFeed ? 10 : 20;
+    const eventsPerUser = isArticlesFeed ? 5 : 20;
 
     this.logger.info(`[fetchEventsFromUsers] 🔍 Fetching ${eventsPerUser} events per user from ${pubkeys.length} users`);
 
@@ -3035,7 +3035,7 @@ export class FeedService {
     const BATCH_SIZE = 10;
     const TIMEOUT_MS = 3000;
     const isArticlesFeed = feedData.filter?.kinds?.includes(30023);
-    const limit = isArticlesFeed ? 20 : 25;
+    const limit = isArticlesFeed ? 10 : 25;
 
     const existingEvents = feedData.events();
     const oldestTimestamp = existingEvents.length > 0

@@ -30,7 +30,7 @@ import { ArticlesSettingsDialogComponent } from './articles-settings-dialog/arti
 import { ListFilterMenuComponent, ListFilterValue } from '../../components/list-filter-menu/list-filter-menu.component';
 import { LoggerService } from '../../services/logger.service';
 
-const PAGE_SIZE = 30;
+const PAGE_SIZE = 10;
 const RELAY_SET_KIND = 30002;
 const ARTICLES_RELAY_SET_D_TAG = 'articles';
 const RELAY_QUERY_TIMEOUT_MS = 5000;
@@ -756,7 +756,7 @@ export class ArticlesDiscoverComponent implements OnInit, OnDestroy {
     const filter: Filter = {
       kinds: [kinds.LongFormArticle], // kind 30023
       authors: following,
-      limit: 100,
+      limit: 20,
     };
 
     // Set a timeout to stop loading even if no events arrive
@@ -839,7 +839,7 @@ export class ArticlesDiscoverComponent implements OnInit, OnDestroy {
         const filter: Filter = {
           kinds: [kinds.LongFormArticle],
           authors,
-          limit: 50,
+          limit: 15,
         };
 
         const sub = this.pool.subscribe([relayUrl], filter, (event: Event) => {
@@ -902,7 +902,7 @@ export class ArticlesDiscoverComponent implements OnInit, OnDestroy {
 
     const filter: Filter = {
       kinds: [kinds.LongFormArticle],
-      limit: 100,
+      limit: 20,
     };
 
     this.publicSubscription = this.pool.subscribe(
