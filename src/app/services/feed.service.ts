@@ -4023,7 +4023,9 @@ export class FeedService {
       this.logger.error('Error in fast-path feed loading:', error);
       this._feeds.set(DEFAULT_FEEDS);
       this._feedsLoaded.set(true);
-      this.saveFeeds({ preserveBackup: true });
+      // Error fallback to defaults — don't sync to relay settings to avoid
+      // overwriting valid synced feeds with an empty/default set.
+      this.saveFeeds({ syncToSettings: false, preserveBackup: true });
     }
   }
 
@@ -4080,7 +4082,9 @@ export class FeedService {
           const defaultFeeds = await this.initializeDefaultFeeds();
           this._feeds.set(defaultFeeds);
           this._feedsLoaded.set(true);
-          this.saveFeeds({ preserveBackup: true });
+          // Restoring defaults after a legacy repair — don't sync to relay settings
+          // because the default feeds contain no custom feeds worth publishing.
+          this.saveFeeds({ syncToSettings: false, preserveBackup: true });
 
           if (this.accountState.account()) {
             await this.subscribe();
@@ -4155,7 +4159,9 @@ export class FeedService {
       this.logger.error('Error loading feeds from storage:', error);
       this._feeds.set(DEFAULT_FEEDS);
       this._feedsLoaded.set(true);
-      this.saveFeeds({ preserveBackup: true });
+      // Error fallback to defaults — don't sync to relay settings to avoid
+      // overwriting valid synced feeds with an empty/default set.
+      this.saveFeeds({ syncToSettings: false, preserveBackup: true });
     }
 
     // Only subscribe if there's an active account
@@ -4255,8 +4261,9 @@ export class FeedService {
           return updatedFeeds;
         });
 
-        // Save the updated feeds
-        this.saveFeeds();
+        // Save locally only — starter packs populate default feeds which are
+        // filtered out by getCustomFeeds and would not change the synced payload.
+        this.saveFeeds({ syncToSettings: false });
       }
     } catch (error) {
       this.logger.warn('Background starter pack population failed:', error);
@@ -4352,6 +4359,15 @@ export class FeedService {
       // Prevent sync loops
       if (this.syncInProgress) {
         this.logger.debug('Sync already in progress, skipping');
+        return;
+      }
+
+      // Don't sync until settings have been loaded from cache/relay.
+      // Without this guard, getSyncedFeeds() returns undefined (the default),
+      // causing areFeedsEqual to return false and triggering an unnecessary
+      // signing request on every page reload.
+      if (!this.settingsService.settingsLoaded()) {
+        this.logger.debug('Settings not loaded yet, deferring feed sync to settings');
         return;
       }
 
@@ -4494,7 +4510,10 @@ export class FeedService {
       }
 
       if (updated) {
-        this.saveFeeds();
+        // lastRetrieved is a runtime property stripped by convertFeedConfigToSynced,
+        // so there is no reason to trigger a sync to settings (which would attempt
+        // to sign and publish the kind 30078 event). Save locally only.
+        this.saveFeeds({ syncToSettings: false });
       } else {
         // This can happen if a background fetch finishes after a feed was removed,
         // or if legacy/ephemeral feed ids are used.
