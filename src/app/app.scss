@@ -1983,6 +1983,11 @@ mat-sidenav-content {
   // scaled by p/(p-d) = 600/572 ≈ 1.04895. When we flatten to 2D, we must apply
   // the same scale factor so the face doesn't visibly shrink.
   &.cube-settled {
+    // Shrink container to compensate for the perspective magnification scale
+    // applied to the active face (scale(600/568) ≈ 1.056). This ensures the
+    // visually-scaled face doesn't overflow the viewport margins.
+    width: calc((100% - 32px) * 568 / 600);
+
     .cube-inner {
       // Disable 3D context so children are in flat 2D space for hit-testing
       transform-style: flat;
