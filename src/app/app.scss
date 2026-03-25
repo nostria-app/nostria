@@ -2265,7 +2265,7 @@ mat-sidenav-content {
   text-align: center;
   margin: 0;
   padding: 4px clamp(6px, 2vw, 12px);
-  transition: background-color 0.2s ease;
+  transition: background-color 0.2s ease, border-radius 0.2s ease;
 
   &:first-child {
     border-top-left-radius: 32px;
@@ -2277,8 +2277,10 @@ mat-sidenav-content {
     border-bottom-right-radius: 32px;
   }
 
-  &:hover {
+  &:hover,
+  &:active {
     background-color: var(--cube-glass-hover);
+    border-radius: 28px;
   }
 
   &.active-link {
@@ -2303,7 +2305,8 @@ mat-sidenav-content {
 }
 
 :host-context(.dark) .cube-face-nav .mobile-nav-button {
-  &:hover {
+  &:hover,
+  &:active {
     background-color: var(--cube-glass-hover);
   }
 

@@ -431,6 +431,7 @@
   max-height: var(--note-video-max-height);
   border-radius: 12px;
   background: var(--mat-sys-surface-container);
+  margin: 12px 0;
 
   // Ensure any direct <video> (e.g., base64-video) stays proportional and responsive.
   // Native video keeps its intrinsic ratio
@@ -481,6 +482,7 @@
   display: inline-block;
   max-width: 100%;
   border-radius: 12px;
+  margin: 12px 0;
 
   img {
     display: block;
@@ -640,7 +642,7 @@
 .image-carousel-container {
   position: relative;
   width: 100%;
-  margin: 8px 0;
+  margin: 12px 0;
   touch-action: pan-y pinch-zoom;
 }
 
