@@ -190,36 +190,32 @@ export class UserStatusService {
     let general: UserStatus | null = null;
     let music: UserStatus | null = null;
 
-    try {
-      // Fetch general status
-      const generalRecord = await this.userDataService.getEventByPubkeyAndKindAndReplaceableEvent(
+    // Fetch both statuses in parallel to avoid sequential delays
+    const [generalResult, musicResult] = await Promise.allSettled([
+      this.userDataService.getEventByPubkeyAndKindAndReplaceableEvent(
         pubkey,
         USER_STATUS_KIND,
         'general',
         { cache: true },
-      );
-
-      if (generalRecord?.event) {
-        general = this.parseStatusEvent(generalRecord.event as NostrEvent);
-      }
-    } catch (error) {
-      this.logger.warn('[UserStatus] Failed to fetch general status for', pubkey, error);
-    }
-
-    try {
-      // Fetch music status
-      const musicRecord = await this.userDataService.getEventByPubkeyAndKindAndReplaceableEvent(
+      ),
+      this.userDataService.getEventByPubkeyAndKindAndReplaceableEvent(
         pubkey,
         USER_STATUS_KIND,
         'music',
         { cache: true },
-      );
+      ),
+    ]);
 
-      if (musicRecord?.event) {
-        music = this.parseStatusEvent(musicRecord.event as NostrEvent);
-      }
-    } catch (error) {
-      this.logger.warn('[UserStatus] Failed to fetch music status for', pubkey, error);
+    if (generalResult.status === 'fulfilled' && generalResult.value?.event) {
+      general = this.parseStatusEvent(generalResult.value.event as NostrEvent);
+    } else if (generalResult.status === 'rejected') {
+      this.logger.warn('[UserStatus] Failed to fetch general status for', pubkey, generalResult.reason);
+    }
+
+    if (musicResult.status === 'fulfilled' && musicResult.value?.event) {
+      music = this.parseStatusEvent(musicResult.value.event as NostrEvent);
+    } else if (musicResult.status === 'rejected') {
+      this.logger.warn('[UserStatus] Failed to fetch music status for', pubkey, musicResult.reason);
     }
 
     const result = { general, music, fetchedAt: now };
@@ -311,6 +307,11 @@ export class UserStatusService {
       return () => { };
     }
 
+    // Seed from cache so that early events for one type don't null out the other
+    const cached = this.statusCache.get(pubkey);
+    let currentGeneral: UserStatus | null = cached?.general ?? null;
+    let currentMusic: UserStatus | null = cached?.music ?? null;
+
     // Track the latest status events so we can resolve updates correctly
     let latestGeneral: NostrEvent | null = null;
     let latestMusic: NostrEvent | null = null;
@@ -335,8 +336,13 @@ export class UserStatusService {
         }
       }
 
-      const general = latestGeneral ? this.parseStatusEvent(latestGeneral) : null;
-      const music = latestMusic ? this.parseStatusEvent(latestMusic) : null;
+      // Use subscription event data when available, fall back to cached values
+      const general = latestGeneral ? this.parseStatusEvent(latestGeneral) : currentGeneral;
+      const music = latestMusic ? this.parseStatusEvent(latestMusic) : currentMusic;
+
+      // Update tracked values
+      currentGeneral = general;
+      currentMusic = music;
 
       // Update cache
       this.statusCache.set(pubkey, { general, music, fetchedAt: Date.now() });

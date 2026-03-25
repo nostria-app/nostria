@@ -564,9 +564,13 @@ export class ProfileHeaderComponent implements OnDestroy {
         const statuses = await this.userStatusService.getUserStatuses(currentPubkey);
         untracked(() => {
           this.generalStatus.set(statuses.general);
-          this.musicStatus.set(statuses.music);
+          // Don't overwrite music status with null if it's already set
+          // (e.g., own-profile effect already set it from the media player)
+          if (statuses.music || !this.musicStatus()) {
+            this.musicStatus.set(statuses.music);
+          }
           // Auto-show fly-out if user has a status
-          if (statuses.general || statuses.music) {
+          if (statuses.general || statuses.music || this.musicStatus()) {
             this.showStatusFlyout.set(true);
           }
         });
@@ -583,8 +587,12 @@ export class ProfileHeaderComponent implements OnDestroy {
           currentPubkey,
           (statuses) => {
             this.generalStatus.set(statuses.general);
-            this.musicStatus.set(statuses.music);
-            if (statuses.general || statuses.music) {
+            // Don't overwrite music status with null from subscription
+            // (subscription starts with latestMusic=null, so early general events would clear music)
+            if (statuses.music || !this.musicStatus()) {
+              this.musicStatus.set(statuses.music);
+            }
+            if (statuses.general || statuses.music || this.musicStatus()) {
               this.showStatusFlyout.set(true);
             } else {
               this.showStatusFlyout.set(false);
