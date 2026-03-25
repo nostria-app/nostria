@@ -312,6 +312,12 @@
   max-width: 700px;
   width: 100%;
   margin: 0 auto;
+
+  @media (max-width: 599px) {
+    padding: 8px 0;
+    padding-bottom: 80px;
+    gap: 0.5rem;
+  }
 }
 
 // Common Summary Panel Styles (expansion panels)
@@ -322,6 +328,15 @@
   &.mat-expansion-panel {
     box-shadow: none;
     border: 1px solid var(--mat-sys-outline-variant);
+  }
+
+  @media (max-width: 599px) {
+    border-radius: 0;
+
+    &.mat-expansion-panel {
+      border-left: none;
+      border-right: none;
+    }
   }
 
   ::ng-deep {
@@ -1001,9 +1016,14 @@
 // Poster Grid
 .poster-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, 72px);
+  grid-template-columns: repeat(auto-fill, 80px);
   gap: 0.5rem;
   justify-content: start;
+
+  @media (max-width: 599px) {
+    grid-template-columns: repeat(auto-fill, 88px);
+    gap: 0.375rem;
+  }
 }
 
 // Section header with filter actions
@@ -1056,8 +1076,12 @@
   border-radius: var(--mat-sys-corner-medium);
   border: 2px solid transparent;
   position: relative;
-  width: 72px;
+  width: 80px;
   overflow: hidden;
+
+  @media (max-width: 599px) {
+    width: 88px;
+  }
 
   &:hover {
     transform: scale(1.08);
@@ -1090,22 +1114,41 @@
   }
 
   .poster-avatar {
-    width: 40px;
-    height: 40px;
+    width: 52px;
+    height: 52px;
     position: relative;
 
     ::ng-deep {
       app-user-profile {
-        width: 40px;
-        height: 40px;
+        width: 52px;
+        height: 52px;
 
         .avatar-container,
         .avatar-image,
         img {
-          width: 40px !important;
-          height: 40px !important;
+          width: 52px !important;
+          height: 52px !important;
           border-radius: 50%;
           transition: box-shadow 0.2s ease;
+        }
+      }
+    }
+
+    @media (max-width: 599px) {
+      width: 60px;
+      height: 60px;
+
+      ::ng-deep {
+        app-user-profile {
+          width: 60px;
+          height: 60px;
+
+          .avatar-container,
+          .avatar-image,
+          img {
+            width: 60px !important;
+            height: 60px !important;
+          }
         }
       }
     }

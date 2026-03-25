@@ -1919,7 +1919,7 @@ mat-sidenav-content {
   --cube-glass-active-border: color-mix(in srgb, white 30%, transparent);
   --cube-glass-active-shadow: 0 0 16px color-mix(in srgb, var(--mat-sys-primary) 25%, transparent);
 
-  width: calc(100% - 32px);
+  width: calc(100% - 48px);
   min-width: 0;
 
   height: 64px;
@@ -1986,7 +1986,7 @@ mat-sidenav-content {
     // Shrink container to compensate for the perspective magnification scale
     // applied to the active face (scale(600/568) ≈ 1.056). This ensures the
     // visually-scaled face doesn't overflow the viewport margins.
-    width: calc((100% - 32px) * 568 / 600);
+    width: calc((100% - 48px) * 568 / 600);
 
     .cube-inner {
       // Disable 3D context so children are in flat 2D space for hit-testing

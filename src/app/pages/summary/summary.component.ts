@@ -260,6 +260,12 @@ export class SummaryComponent implements OnInit, OnDestroy {
   currentShowReplies = computed(() => this.localSettings.contentFilter().showReplies);
   currentShowReposts = computed(() => this.localSettings.contentFilter().showReposts);
 
+  // Determine which poster stat categories are visible based on content filter
+  showNotesStats = computed(() => this.currentContentKinds().some(k => [1, 1111].includes(k)));
+  showRepostsStats = computed(() => this.currentShowReposts() || this.currentContentKinds().some(k => [6, 16].includes(k)));
+  showArticlesStats = computed(() => this.currentContentKinds().includes(30023) || !this.hasActiveContentFilter());
+  showMediaStats = computed(() => this.currentContentKinds().some(k => [20, 21, 22, 34235, 34236].includes(k)));
+
   currentListFilterLabel = computed(() => {
     const filter = this.currentListFilter();
     if (filter === 'following') {
@@ -273,18 +279,41 @@ export class SummaryComponent implements OnInit, OnDestroy {
   followSets = this.followSetsService.followSets;
   followSetsLoading = this.followSetsService.isLoading;
 
-  // Filtered active posters (by list filter, then paginated)
+  // Filtered active posters (by list filter, then by content filter, then paginated)
   filteredActivePosters = computed(() => {
     const all = this.allActivePosters();
     const list = this.selectedList();
 
-    if (!list) {
-      return all;
+    let filtered = all;
+
+    if (list) {
+      // Filter by pubkeys in the selected list
+      const listPubkeys = new Set(list.pubkeys);
+      filtered = filtered.filter(poster => listPubkeys.has(poster.pubkey));
     }
 
-    // Filter by pubkeys in the selected list
-    const listPubkeys = new Set(list.pubkeys);
-    return all.filter(poster => listPubkeys.has(poster.pubkey));
+    // Apply content filter: recalculate totalCount based on visible stat categories
+    const showNotes = this.showNotesStats();
+    const showReposts = this.showRepostsStats();
+    const showArticles = this.showArticlesStats();
+    const showMedia = this.showMediaStats();
+    const hasFilter = this.hasActiveContentFilter();
+
+    if (hasFilter) {
+      filtered = filtered
+        .map(poster => {
+          const filteredTotal =
+            (showNotes ? poster.notesCount : 0) +
+            (showReposts ? poster.repostsCount : 0) +
+            (showArticles ? poster.articlesCount : 0) +
+            (showMedia ? poster.mediaCount : 0);
+          return { ...poster, totalCount: filteredTotal };
+        })
+        .filter(poster => poster.totalCount > 0)
+        .sort((a, b) => b.totalCount - a.totalCount);
+    }
+
+    return filtered;
   });
 
   // Paginated active posters (from filtered list)

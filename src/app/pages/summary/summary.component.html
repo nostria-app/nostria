@@ -233,23 +233,25 @@
               <app-profile-display-name [pubkey]="poster.pubkey" [disableLink]="true"></app-profile-display-name>
             </span>
             <div class="poster-stats-badge">
+              @if (showNotesStats() && poster.notesCount > 0) {
               <span class="stat-item" matTooltip="Notes">
                 <mat-icon>chat</mat-icon>
                 {{ poster.notesCount }}
               </span>
-              @if (poster.repostsCount > 0) {
+              }
+              @if (showRepostsStats() && poster.repostsCount > 0) {
               <span class="stat-item" matTooltip="Reposts">
                 <mat-icon>repeat</mat-icon>
                 {{ poster.repostsCount }}
               </span>
               }
-              @if (poster.articlesCount > 0) {
+              @if (showArticlesStats() && poster.articlesCount > 0) {
               <span class="stat-item" matTooltip="Articles">
                 <mat-icon>article</mat-icon>
                 {{ poster.articlesCount }}
               </span>
               }
-              @if (poster.mediaCount > 0) {
+              @if (showMediaStats() && poster.mediaCount > 0) {
               <span class="stat-item" matTooltip="Media">
                 <mat-icon>perm_media</mat-icon>
                 {{ poster.mediaCount }}
