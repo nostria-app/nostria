@@ -386,6 +386,17 @@ export class SettingsService {
   }
 
   async updateSettings(updatedSettings: Partial<UserSettings>): Promise<void> {
+    // Guard: don't sign and publish settings before the persisted copy has
+    // been loaded.  Publishing at this point would merge the partial update
+    // with DEFAULT_SETTINGS (which lack the user's real values) and
+    // overwrite the relay event – causing things like rightSidebarEnabled
+    // to be lost across devices.
+    if (!this.settingsLoaded()) {
+      this.logger.warn('updateSettings called before settings were loaded – updating local signal only, skipping publish');
+      this.settings.update(current => ({ ...current, ...updatedSettings }));
+      return;
+    }
+
     // Update the local settings
     const newSettings = {
       ...this.settings(),
