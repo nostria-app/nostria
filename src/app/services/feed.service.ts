@@ -796,13 +796,13 @@ export class FeedService {
     // Build filter based on feed configuration FIRST (non-blocking)
     if (feed.filters) {
       item.filter = {
-        limit: 60,
+        limit: 20,
         kinds: feed.kinds,
         ...feed.filters,
       };
     } else {
       item.filter = {
-        limit: 60,
+        limit: 20,
         kinds: feed.kinds,
       };
     }
@@ -3308,7 +3308,7 @@ export class FeedService {
     feedData.filter = {
       ...feedData.filter,
       kinds: newKinds,
-      limit: feedData.filter?.limit || 60,
+      limit: feedData.filter?.limit || 20,
     };
 
     // Clear existing events since they may not match the new filter

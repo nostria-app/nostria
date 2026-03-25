@@ -483,8 +483,8 @@ export class FeedsComponent implements OnDestroy {
   private _eventCache = new Map<string, Event[]>();
 
   // Virtual list configuration
-  INITIAL_RENDER_COUNT = 30;
-  RENDER_BATCH_SIZE = 15;
+  INITIAL_RENDER_COUNT = 5;
+  RENDER_BATCH_SIZE = 5;
 
   // Track rendered event counts per feed (virtual list)
   renderedEventCounts = signal<Record<string, number>>({});
