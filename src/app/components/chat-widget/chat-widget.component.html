@@ -1,0 +1,75 @@
+@if (visible()) {
+<div class="chat-widget" [class.expanded]="state() === 'list'">
+
+  <!-- Collapsed pill -->
+  @if (state() === 'collapsed') {
+  <button class="chat-pill" (click)="toggleOpen()">
+    <div class="pill-left">
+      <mat-icon class="pill-icon">send</mat-icon>
+      <span class="pill-label">Messages</span>
+      @if (unreadCount() > 0) {
+      <span class="pill-badge">{{ unreadCount() > 99 ? '99+' : unreadCount() }}</span>
+      }
+    </div>
+    <div class="pill-avatars">
+      @for (pubkey of recentAvatarPubkeys(); track pubkey) {
+      <app-user-profile [pubkey]="pubkey" view="icon" [disableLink]="true" [disableHoverCard]="true" />
+      }
+    </div>
+  </button>
+  }
+
+  <!-- Expanded messages list -->
+  @if (state() === 'list') {
+  <div class="chat-panel">
+    <div class="chat-panel-header">
+      <span class="chat-panel-title">Messages</span>
+      <span class="header-spacer"></span>
+      <button mat-icon-button class="header-action" (click)="openFullMessages()" matTooltip="Open full view">
+        <mat-icon>open_in_new</mat-icon>
+      </button>
+      <button mat-icon-button class="header-action" (click)="close()" matTooltip="Close">
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
+
+    <div class="chat-list">
+      @if (chatList().length === 0) {
+      <div class="chat-list-empty">
+        <mat-icon>forum</mat-icon>
+        <p>No messages yet</p>
+      </div>
+      } @else {
+      @for (item of chatList(); track item.chatId) {
+      <button class="chat-list-item" (click)="openChat(item.chat.pubkey)">
+        <div class="chat-item-avatar">
+          <app-user-profile [pubkey]="item.chat.pubkey" view="icon" [disableLink]="true" [disableHoverCard]="true" />
+        </div>
+        <div class="chat-item-info">
+          <div class="chat-item-top">
+            <app-profile-display-name [pubkey]="item.chat.pubkey" [disableLink]="true" />
+            @if (item.chat.lastMessage?.created_at) {
+            <span class="chat-item-time">{{ item.chat.lastMessage?.created_at | ago }}</span>
+            }
+          </div>
+          <div class="chat-item-preview">
+            {{ getChatPreviewText(item.chat.lastMessage) }}
+          </div>
+        </div>
+        @if (item.chat.unreadCount > 0) {
+        <div class="chat-item-unread">{{ item.chat.unreadCount > 99 ? '99+' : item.chat.unreadCount }}</div>
+        }
+      </button>
+      }
+      }
+    </div>
+
+    <!-- Compose FAB -->
+    <button class="compose-fab" mat-fab (click)="startNewChat()" matTooltip="New message">
+      <mat-icon>edit</mat-icon>
+    </button>
+  </div>
+  }
+
+</div>
+}

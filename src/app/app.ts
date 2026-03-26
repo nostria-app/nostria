@@ -119,6 +119,7 @@ import { UtilitiesService } from './services/utilities.service';
 import { AccountRelayService } from './services/relays/account-relay';
 import { SettingsQuickCardComponent } from './components/settings-quick-card/settings-quick-card.component';
 import { ColorExtractionService } from './services/color-extraction.service';
+import { ChatWidgetComponent } from './components/chat-widget/chat-widget.component';
 
 interface NavItem {
   path: string;
@@ -174,6 +175,7 @@ interface NavItem {
     FeedsComponent,
     RightPanelContainerComponent,
     SettingsQuickCardComponent,
+    ChatWidgetComponent,
   ],
   templateUrl: './app.html',
   styleUrl: './app.scss',

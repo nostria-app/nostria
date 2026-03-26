@@ -1,0 +1,300 @@
+:host {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 1000;
+
+  @media (max-width: 700px) {
+    display: none;
+  }
+}
+
+.chat-widget {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+// ── Collapsed pill ──────────────────────────────────────────────────────
+
+.chat-pill {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px 10px 20px;
+  border-radius: 999px;
+  border: none;
+  cursor: pointer;
+  background: rgba(40, 40, 40, 0.95);
+  backdrop-filter: blur(12px);
+  color: #e4e4e4;
+  transition: background 0.2s, box-shadow 0.2s;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+
+  &:hover {
+    background: rgba(55, 55, 55, 0.95);
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5);
+  }
+
+  .pill-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .pill-icon {
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+    opacity: 0.9;
+    transform: rotate(-35deg);
+  }
+
+  .pill-label {
+    font-size: 15px;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+
+  .pill-badge {
+    background: #e53935;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 1px 6px;
+    border-radius: 10px;
+    min-width: 18px;
+    text-align: center;
+    line-height: 16px;
+  }
+
+  .pill-avatars {
+    display: flex;
+    align-items: center;
+
+    ::ng-deep {
+      app-user-profile {
+        margin-left: -8px;
+
+        &:first-child {
+          margin-left: 0;
+        }
+
+        .profile-icon-image,
+        img {
+          width: 34px !important;
+          height: 34px !important;
+          border-radius: 50%;
+          border: 2px solid rgba(40, 40, 40, 0.95);
+          object-fit: cover;
+        }
+      }
+    }
+  }
+}
+
+// ── Expanded panel ──────────────────────────────────────────────────────
+
+.chat-panel {
+  width: 380px;
+  max-height: 520px;
+  border-radius: 16px;
+  background: rgba(30, 30, 30, 0.98);
+  backdrop-filter: blur(16px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+}
+
+.chat-panel-header {
+  display: flex;
+  align-items: center;
+  padding: 14px 8px 14px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  flex-shrink: 0;
+
+  .chat-panel-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #e4e4e4;
+  }
+
+  .header-spacer {
+    flex: 1;
+  }
+
+  .header-action {
+    color: rgba(255, 255, 255, 0.7);
+
+    &:hover {
+      color: #fff;
+    }
+
+    mat-icon {
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
+    }
+  }
+}
+
+// ── Chat list ───────────────────────────────────────────────────────────
+
+.chat-list {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 4px 0;
+  min-height: 0;
+  max-height: 420px;
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 3px;
+  }
+}
+
+.chat-list-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  color: rgba(255, 255, 255, 0.4);
+
+  mat-icon {
+    font-size: 40px;
+    width: 40px;
+    height: 40px;
+    margin-bottom: 12px;
+  }
+
+  p {
+    font-size: 14px;
+    margin: 0;
+  }
+}
+
+.chat-list-item {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 10px 16px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  transition: background 0.15s;
+  text-align: left;
+  color: #e4e4e4;
+  gap: 12px;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.06);
+  }
+
+  .chat-item-avatar {
+    flex-shrink: 0;
+    width: 44px;
+    height: 44px;
+
+    ::ng-deep {
+      .profile-icon-image,
+      img {
+        width: 44px !important;
+        height: 44px !important;
+        border-radius: 50%;
+        object-fit: cover;
+      }
+    }
+  }
+
+  .chat-item-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .chat-item-top {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+
+    ::ng-deep app-profile-display-name {
+      flex: 1;
+      min-width: 0;
+
+      a, span, .display-name {
+        font-size: 14px;
+        font-weight: 500;
+        color: #e4e4e4;
+        text-decoration: none;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        display: block;
+      }
+    }
+
+    .chat-item-time {
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.4);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+  }
+
+  .chat-item-preview {
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.45);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 250px;
+  }
+
+  .chat-item-unread {
+    flex-shrink: 0;
+    background: #e53935;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 7px;
+    border-radius: 10px;
+    min-width: 20px;
+    text-align: center;
+    line-height: 16px;
+  }
+}
+
+// ── Compose FAB ─────────────────────────────────────────────────────────
+
+.compose-fab {
+  position: absolute;
+  bottom: 16px;
+  right: 16px;
+  width: 48px !important;
+  height: 48px !important;
+  background: rgba(80, 80, 80, 0.9) !important;
+  color: #e4e4e4 !important;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.4) !important;
+
+  &:hover {
+    background: rgba(100, 100, 100, 0.9) !important;
+  }
+
+  mat-icon {
+    font-size: 22px;
+  }
+}
