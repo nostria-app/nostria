@@ -1,5 +1,6 @@
-import { Component, inject, signal, computed, effect, ChangeDetectionStrategy, ElementRef, ViewChild, HostListener } from '@angular/core';
-import { Router } from '@angular/router';
+import { Component, inject, signal, computed, effect, ChangeDetectionStrategy, ElementRef, ViewChild, HostListener, DestroyRef } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { NavigationEnd, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -49,6 +50,10 @@ export class ChatWidgetComponent {
   private userRelayService = inject(UserRelayService);
   private customDialog = inject(CustomDialogService);
   private hostEl = inject(ElementRef<HTMLElement>);
+  private destroyRef = inject(DestroyRef);
+
+  /** Tracks whether the user is on the /messages route */
+  private isMessagesRoute = signal(false);
 
   @ViewChild('chatMessagesContainer') chatMessagesContainer?: ElementRef<HTMLDivElement>;
   @ViewChild('widgetMessageInput') widgetMessageInput?: ElementRef<HTMLTextAreaElement>;
@@ -81,24 +86,35 @@ export class ChatWidgetComponent {
     return `translate(${x}px, ${y}px)`;
   });
 
-  /** Show widget only on desktop when authenticated and enabled */
+  /** Show widget only on desktop when authenticated, enabled, and not on the Messages page */
   visible = computed(() => {
     return !this.layout.isHandset()
       && this.app.authenticated()
-      && this.localSettings.settings().chatWidgetEnabled !== false;
+      && this.localSettings.settings().chatWidgetEnabled !== false
+      && !this.isMessagesRoute();
   });
 
-  /** Top 3 recent chat pubkeys for the collapsed pill avatars */
+  /** Top 3 recent chat pubkeys for the collapsed pill avatars (following only) */
   recentAvatarPubkeys = computed(() => {
-    return this.messaging.sortedChats()
+    return this.chatList()
       .filter(c => !c.chat.isGroup && c.chat.pubkey)
       .slice(0, 3)
       .map(c => c.chat.pubkey);
   });
 
-  /** Chat list for the expanded view (includes groups) */
+  /** Chat list for the expanded view — only following contacts and group chats with followed participants */
   chatList = computed(() => {
-    return this.messaging.sortedChats().slice(0, 20);
+    const followingSet = new Set(this.accountState.followingList());
+    const myPubkey = this.accountState.pubkey();
+
+    return this.messaging.sortedChats()
+      .filter(item => {
+        if (item.chat.isGroup && item.chat.participants) {
+          return item.chat.participants.some(p => p !== myPubkey && followingSet.has(p));
+        }
+        return followingSet.has(item.chat.pubkey);
+      })
+      .slice(0, 20);
   });
 
   unreadCount = computed(() => this.messaging.unreadBadgeCount());
@@ -132,6 +148,16 @@ export class ChatWidgetComponent {
   private chatsLoaded = false;
 
   constructor() {
+    // Track whether the Messages page is active so the widget hides itself
+    this.isMessagesRoute.set(this.router.url.startsWith('/messages'));
+    this.router.events.pipe(
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe(event => {
+      if (event instanceof NavigationEnd) {
+        this.isMessagesRoute.set(event.urlAfterRedirects.startsWith('/messages'));
+      }
+    });
+
     // Eagerly load chats from storage when the widget is enabled
     // so the chat list is populated without visiting the Messages page first.
     effect(() => {
