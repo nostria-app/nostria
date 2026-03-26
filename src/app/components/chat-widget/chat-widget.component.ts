@@ -59,20 +59,24 @@ export class ChatWidgetComponent {
   newMessageText = signal('');
   isSending = signal(false);
 
-  // Drag state
+  // Drag state — dragOffset is the user's chosen position;
+  // clampAdjustment is a temporary shift applied only while expanded
+  // so the panel stays on-screen without permanently altering the drag position.
   dragOffset = signal<{ x: number; y: number }>({ x: 0, y: 0 });
+  private clampAdjustment = signal<{ x: number; y: number }>({ x: 0, y: 0 });
   isDragging = false;
   private dragStarted = false;
   private dragStartPos = { x: 0, y: 0 };
   private dragStartOffset = { x: 0, y: 0 };
   private readonly DRAG_THRESHOLD = 5;
 
-  /** Combined transform: drag offset + sidebar shift */
+  /** Combined transform: drag offset + clamp adjustment + sidebar shift */
   widgetTransform = computed(() => {
     const offset = this.dragOffset();
+    const clamp = this.clampAdjustment();
     const sidebarShift = this.rightSidebarOpen() ? -68 : 0;
-    const x = offset.x + sidebarShift;
-    const y = offset.y;
+    const x = offset.x + clamp.x + sidebarShift;
+    const y = offset.y + clamp.y;
     if (x === 0 && y === 0) return '';
     return `translate(${x}px, ${y}px)`;
   });
@@ -149,7 +153,11 @@ export class ChatWidgetComponent {
 
   toggleOpen() {
     this.state.update(s => s === 'collapsed' ? 'list' : 'collapsed');
-    if (this.state() === 'list') this.clampToViewport();
+    if (this.state() === 'list') {
+      this.clampToViewport();
+    } else {
+      this.clampAdjustment.set({ x: 0, y: 0 });
+    }
   }
 
   close() {
@@ -157,6 +165,7 @@ export class ChatWidgetComponent {
     this.activeChatId.set(null);
     this.activeChatIsGroup.set(false);
     this.newMessageText.set('');
+    this.clampAdjustment.set({ x: 0, y: 0 });
   }
 
   openFullMessages() {
@@ -333,7 +342,10 @@ export class ChatWidgetComponent {
     this.isDragging = false;
     // dragStarted stays true briefly to suppress the click
     if (this.dragStarted) {
-      this.clampToViewport();
+      // Re-clamp when dragging while expanded
+      if (this.state() !== 'collapsed') {
+        this.clampToViewport();
+      }
       setTimeout(() => { this.dragStarted = false; }, 0);
     }
   }
@@ -344,11 +356,14 @@ export class ChatWidgetComponent {
   }
 
   /**
-   * Clamp the drag offset so the widget stays fully within the viewport.
-   * The widget is anchored at bottom-right (bottom: 24px, right: 24px),
-   * so the offset shifts it from there.
+   * Compute a temporary clamp adjustment so the expanded panel stays within the viewport.
+   * This does NOT modify dragOffset — the user's chosen position is preserved,
+   * so collapsing restores the widget to where it was dragged.
    */
   private clampToViewport(): void {
+    // Reset any previous adjustment before measuring
+    this.clampAdjustment.set({ x: 0, y: 0 });
+
     const el = this.hostEl.nativeElement.querySelector('.chat-widget') as HTMLElement;
     if (!el) return;
 
@@ -357,17 +372,16 @@ export class ChatWidgetComponent {
       const rect = el.getBoundingClientRect();
       const vw = window.innerWidth;
       const vh = window.innerHeight;
-      const offset = this.dragOffset();
-      let { x, y } = offset;
+      let ax = 0;
+      let ay = 0;
 
-      // Clamp: keep the widget fully visible
-      if (rect.left < 0) x -= rect.left;
-      if (rect.top < 0) y -= rect.top;
-      if (rect.right > vw) x -= (rect.right - vw);
-      if (rect.bottom > vh) y -= (rect.bottom - vh);
+      if (rect.left < 0) ax -= rect.left;
+      if (rect.top < 0) ay -= rect.top;
+      if (rect.right > vw) ax -= (rect.right - vw);
+      if (rect.bottom > vh) ay -= (rect.bottom - vh);
 
-      if (x !== offset.x || y !== offset.y) {
-        this.dragOffset.set({ x, y });
+      if (ax !== 0 || ay !== 0) {
+        this.clampAdjustment.set({ x: ax, y: ay });
       }
     });
   }

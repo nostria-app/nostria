@@ -57,6 +57,9 @@ import { TrustService } from '../../../services/trust.service';
 import { FollowSetsService } from '../../../services/follow-sets.service';
 import { CreateListDialogComponent, CreateListDialogResult } from '../../../components/create-list-dialog/create-list-dialog.component';
 import { RelayPoolService } from '../../../services/relays/relay-pool';
+import { MediaService } from '../../../services/media.service';
+import { Profile } from '../../../services/profile';
+import { CustomDialogService } from '../../../services/custom-dialog.service';
 import { TrustMetrics } from '../../../services/database.service';
 
 interface MutualFollowProfile {
@@ -123,6 +126,9 @@ export class ProfileHeaderComponent implements OnDestroy {
   private imageCacheService = inject(ImageCacheService);
   readonly settingsService = inject(SettingsService);
   private userStatusService = inject(UserStatusService);
+  private mediaService = inject(MediaService);
+  private profileService = inject(Profile);
+  private customDialog = inject(CustomDialogService);
 
   // User status (NIP-38)
   generalStatus = signal<UserStatus | null>(null);
@@ -1676,6 +1682,110 @@ export class ProfileHeaderComponent implements OnDestroy {
 
     if (currentPubkey) {
       this.layout.openLinksPage(currentPubkey, this.profile());
+    }
+  }
+
+  /**
+   * Handle file selection for profile image or banner quick change
+   */
+  onFileSelected(event: Event, type: 'profile' | 'banner'): void {
+    const input = event.target as HTMLInputElement;
+    if (!input.files?.[0]) return;
+
+    const file = input.files[0];
+    input.value = '';
+
+    if (this.mediaService.mediaServers().length === 0) {
+      this.snackBar.open('You need to configure a media server first', 'Close', { duration: 5000 });
+      return;
+    }
+
+    if (!file.type.startsWith('image/')) {
+      this.snackBar.open('Please select a valid image file', 'Close', { duration: 3000 });
+      return;
+    }
+
+    this.uploadAndUpdateProfile(type, file);
+  }
+
+  /**
+   * Open media chooser dialog for profile image or banner quick change
+   */
+  async openMediaChooser(type: 'profile' | 'banner'): Promise<void> {
+    if (this.mediaService.mediaServers().length === 0) {
+      this.snackBar.open('You need to configure a media server first', 'Close', { duration: 5000 });
+      return;
+    }
+
+    const { MediaChooserDialogComponent } = await import('../../../components/media-chooser-dialog/media-chooser-dialog.component');
+    type MediaChooserResult = import('../../../components/media-chooser-dialog/media-chooser-dialog.component').MediaChooserResult;
+
+    const dialogRef = this.customDialog.open<typeof MediaChooserDialogComponent.prototype, MediaChooserResult>(MediaChooserDialogComponent, {
+      title: 'Choose from Library',
+      width: '700px',
+      maxWidth: '95vw',
+      data: {
+        multiple: false,
+        mediaType: 'images',
+      },
+    });
+
+    dialogRef.afterClosed$.subscribe(({ result }) => {
+      const selected = result?.items?.[0];
+      if (!selected) return;
+
+      this.updateProfileImage(type, selected.url);
+    });
+  }
+
+  /**
+   * Upload a file and update the profile image or banner
+   */
+  private async uploadAndUpdateProfile(type: 'profile' | 'banner', file: File): Promise<void> {
+    this.snackBar.open('Uploading...', undefined, { duration: 0 });
+
+    try {
+      const currentProfile = this.accountState.profile();
+      const profileData = currentProfile?.data ? { ...currentProfile.data } : {};
+
+      const result = await this.profileService.updateProfile({
+        profileData,
+        ...(type === 'profile' ? { profileImageFile: file } : { bannerImageFile: file }),
+      });
+
+      if (result.success) {
+        this.snackBar.open(type === 'profile' ? 'Profile picture updated' : 'Banner updated', 'Close', { duration: 3000 });
+      } else {
+        this.snackBar.open(result.error || 'Failed to update', 'Close', { duration: 5000 });
+      }
+    } catch (e: any) {
+      this.snackBar.open(e.message || 'Upload failed', 'Close', { duration: 5000 });
+    }
+  }
+
+  /**
+   * Update profile with a selected media library URL
+   */
+  private async updateProfileImage(type: 'profile' | 'banner', url: string): Promise<void> {
+    try {
+      const currentProfile = this.accountState.profile();
+      const profileData = currentProfile?.data ? { ...currentProfile.data } : {};
+
+      if (type === 'profile') {
+        profileData.picture = url;
+      } else {
+        profileData.banner = url;
+      }
+
+      const result = await this.profileService.updateProfile({ profileData });
+
+      if (result.success) {
+        this.snackBar.open(type === 'profile' ? 'Profile picture updated' : 'Banner updated', 'Close', { duration: 3000 });
+      } else {
+        this.snackBar.open(result.error || 'Failed to update', 'Close', { duration: 5000 });
+      }
+    } catch (e: any) {
+      this.snackBar.open(e.message || 'Update failed', 'Close', { duration: 5000 });
     }
   }
 

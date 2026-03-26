@@ -14,7 +14,7 @@
     </button>
     <div class="pill-avatars">
       @for (pubkey of recentAvatarPubkeys(); track pubkey) {
-      <button class="pill-avatar-button" (click)="!wasDragged() && openChat(pubkey, false)" matTooltip="Open chat">
+      <button class="pill-avatar-button" (click)="!wasDragged() && openChat(pubkey, false)" [matTooltip]="'Open ' + getParticipantName(pubkey) + ' chat'">
         <app-user-profile [pubkey]="pubkey" view="icon" [disableLink]="true" [disableHoverCard]="true" />
       </button>
       }

@@ -5,7 +5,25 @@
     (keydown.enter)="profile()?.data.banner && layout.openProfileBanner(profile()!)"
     (keydown.space)="profile()?.data.banner && layout.openProfileBanner(profile()!)"
     [tabindex]="profile()?.data.banner ? 0 : -1" [attr.role]="profile()?.data.banner ? 'button' : null"
-    [attr.aria-label]="profile()?.data.banner ? 'View full size banner image' : null"></div>
+    [attr.aria-label]="profile()?.data.banner ? 'View full size banner image' : null">
+    @if (isOwnProfile()) {
+    <button mat-icon-button class="banner-edit-btn" [matMenuTriggerFor]="bannerImageMenu"
+      (click)="$event.stopPropagation()" matTooltip="Change banner">
+      <mat-icon>photo_camera</mat-icon>
+    </button>
+    <input #bannerImageInput type="file" accept="image/*" hidden (change)="onFileSelected($event, 'banner')" />
+    <mat-menu #bannerImageMenu="matMenu">
+      <button mat-menu-item (click)="bannerImageInput.click()">
+        <mat-icon>upload</mat-icon>
+        <span>Upload Media</span>
+      </button>
+      <button mat-menu-item (click)="openMediaChooser('banner')">
+        <mat-icon>photo_library</mat-icon>
+        <span>Media Library</span>
+      </button>
+    </mat-menu>
+    }
+  </div>
   <div class="profile-info-container" [class.mobile]="layoutService.isHandset()">
     <div class="profile-avatar-wrapper">
       <!-- Muted you label - shown to left of avatar on mobile -->
@@ -28,6 +46,24 @@
           <mat-icon class="default-avatar">account_circle</mat-icon>
           }
         </div>
+
+        @if (isOwnProfile()) {
+        <button mat-icon-button class="avatar-edit-btn" [matMenuTriggerFor]="avatarImageMenu"
+          (click)="$event.stopPropagation()" matTooltip="Change profile picture">
+          <mat-icon>photo_camera</mat-icon>
+        </button>
+        <input #profileImageInput type="file" accept="image/*" hidden (change)="onFileSelected($event, 'profile')" />
+        <mat-menu #avatarImageMenu="matMenu">
+          <button mat-menu-item (click)="profileImageInput.click()">
+            <mat-icon>upload</mat-icon>
+            <span>Upload Media</span>
+          </button>
+          <button mat-menu-item (click)="openMediaChooser('profile')">
+            <mat-icon>photo_library</mat-icon>
+            <span>Media Library</span>
+          </button>
+        </mat-menu>
+        }
 
         <!-- Status fly-out from avatar -->
         @if (activeStatus(); as status) {
