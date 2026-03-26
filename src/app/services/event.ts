@@ -26,6 +26,7 @@ import { UnsignedEvent } from 'nostr-tools';
 import { DatabaseService } from './database.service';
 import { ConfirmDialogComponent } from '../components/confirm-dialog/confirm-dialog.component';
 import { RepostService } from './repost.service';
+import { ImageCacheService } from './image-cache.service';
 
 export interface Reaction {
   emoji: string;
@@ -125,6 +126,7 @@ export class EventService {
   private readonly relayPool = inject(RelayPoolService);
   private readonly mediaService = inject(MediaService);
   private readonly accountRelay = inject(AccountRelayService);
+  private readonly imageCacheService = inject(ImageCacheService);
   private readonly repostService = inject(RepostService);
   private readonly locallyDeletedEventIds = signal<Set<string>>(new Set());
 
@@ -2438,12 +2440,15 @@ export class EventService {
       title = 'Quote Note';
     }
 
+    const profilePicture = this.accountState.profile()?.data?.picture;
+    const headerIcon = profilePicture ? this.imageCacheService.getOptimizedImageUrl(profilePicture) : '';
+
     // Open note editor dialog using custom dialog service
     const dialogRef = this.customDialog.open<typeof NoteEditorDialogComponent.prototype, { published: boolean; event?: Event }>(
       NoteEditorDialogComponent,
       {
         title,
-        headerIcon: this.accountState.profile()?.data?.picture || '',
+        headerIcon,
         panelClass: 'note-editor-dialog-panel',
         width: '680px',
         maxWidth: '95vw',

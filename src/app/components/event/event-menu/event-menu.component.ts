@@ -50,6 +50,7 @@ import { CreateListDialogComponent, type CreateListDialogResult } from '../../cr
 import { isImageUrl } from '../../../services/format/utils';
 import { CollectionSetsService, EmojiSet } from '../../../services/collection-sets.service';
 import { SaveToGifsDialogComponent, SaveToGifsDialogData } from '../../save-to-gifs-dialog/save-to-gifs-dialog.component';
+import { ImageCacheService } from '../../../services/image-cache.service';
 
 @Component({
   selector: 'app-event-menu',
@@ -92,6 +93,7 @@ export class EventMenuComponent {
   private platformId = inject(PLATFORM_ID);
   private logger = inject(LoggerService);
   private collectionSets = inject(CollectionSetsService);
+  private imageCacheService = inject(ImageCacheService);
 
   event = input.required<Event>();
   view = input<'icon' | 'full'>('icon');
@@ -1038,10 +1040,13 @@ export class EventMenuComponent {
       content: ev.content,
     };
 
+    const profilePicture = this.accountState.profile()?.data?.picture;
+    const headerIcon = profilePicture ? this.imageCacheService.getOptimizedImageUrl(profilePicture) : '';
+
     const dialogRef = this.customDialog.open<typeof NoteEditorDialogComponent.prototype, { published: boolean; event?: Event }>(
       NoteEditorDialogComponent, {
       title: 'Edit Note',
-      headerIcon: this.accountState.profile()?.data?.picture || '',
+      headerIcon,
       width: '680px',
       maxWidth: '95vw',
       disableClose: true,

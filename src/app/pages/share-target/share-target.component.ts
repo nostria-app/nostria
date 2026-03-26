@@ -5,6 +5,7 @@ import { CustomDialogService } from '../../services/custom-dialog.service';
 import { AccountStateService } from '../../services/account-state.service';
 import { ApplicationService } from '../../services/application.service';
 import { take } from 'rxjs/operators';
+import { ImageCacheService } from '../../services/image-cache.service';
 
 @Component({
   selector: 'app-share-target',
@@ -17,6 +18,7 @@ export class ShareTargetComponent {
   private customDialog = inject(CustomDialogService);
   private accountState = inject(AccountStateService);
   private app = inject(ApplicationService);
+  private imageCacheService = inject(ImageCacheService);
   private isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
 
   constructor() {
@@ -148,9 +150,12 @@ export class ShareTargetComponent {
       // Dynamically import NoteEditorDialogComponent to avoid circular dependency
       const { NoteEditorDialogComponent } = await import('../../components/note-editor-dialog/note-editor-dialog.component');
 
+      const profilePicture = this.accountState.profile()?.data?.picture;
+      const headerIcon = profilePicture ? this.imageCacheService.getOptimizedImageUrl(profilePicture) : '';
+
       this.customDialog.open(NoteEditorDialogComponent, {
         title: 'Create Note',
-        headerIcon: this.accountState.profile()?.data?.picture || '',
+        headerIcon,
         data: { content, files },
         panelClass: 'note-editor-dialog-panel',
         width: '680px',

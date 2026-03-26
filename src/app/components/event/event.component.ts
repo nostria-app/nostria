@@ -80,6 +80,7 @@ import { InlineVideoPlayerComponent } from '../inline-video-player/inline-video-
 import { HapticsService } from '../../services/haptics.service';
 import { CLIENT_LOGO_MAP } from '../../utils/client-logo-map';
 import { visualContentLength } from '../../utils/visual-content-length';
+import { DatabaseService } from '../../services/database.service';
 
 type EventCardAppearance = 'card' | 'plain';
 
@@ -261,6 +262,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   playlistService = inject(PlaylistService);
   relayPool = inject(RelayPoolService);
   parsingService = inject(ParsingService);
+  database = inject(DatabaseService);
   private utilities = inject(UtilitiesService);
   private userRelaysService = inject(UserRelaysService);
   private readonly logger = inject(LoggerService);
@@ -2190,6 +2192,12 @@ export class EventComponent implements AfterViewInit, OnDestroy {
 
     this.isLoadingParent.set(true);
     try {
+      const localParentEvent = await this.getContextEventFromDatabase(parentId);
+      if (localParentEvent) {
+        this.parentEvent.set(localParentEvent);
+        return;
+      }
+
       // Create nevent with author for outbox discovery if we have the author pubkey
       // Use eventTags.author if available, otherwise fall back to first p-tag
       const authorPubkey = eventTags.author || (eventTags.pTags.length > 0 ? eventTags.pTags[0] : null);
@@ -2219,6 +2227,12 @@ export class EventComponent implements AfterViewInit, OnDestroy {
 
     this.isLoadingRoot.set(true);
     try {
+      const localRootEvent = await this.getContextEventFromDatabase(rootId);
+      if (localRootEvent) {
+        this.rootEvent.set(localRootEvent);
+        return;
+      }
+
       // Create nevent with author for outbox discovery if we have the author pubkey
       // Use eventTags.author if available, otherwise fall back to first p-tag
       const authorPubkey = eventTags.author || (eventTags.pTags.length > 0 ? eventTags.pTags[0] : null);
@@ -2241,6 +2255,22 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     } finally {
       this.isLoadingRoot.set(false);
     }
+  }
+
+  private async getContextEventFromDatabase(eventRef: string): Promise<Event | null> {
+    const addressableMatch = eventRef.match(/^(\d+):([0-9a-f]{64}):(.+)$/);
+
+    if (addressableMatch) {
+      const [, kindStr, pubkey, dTag] = addressableMatch;
+      const kind = parseInt(kindStr, 10);
+      return this.database.getParameterizedReplaceableEvent(pubkey, kind, dTag);
+    }
+
+    if (/^[a-f0-9]{64}$/i.test(eventRef)) {
+      return this.database.getEventById(eventRef);
+    }
+
+    return null;
   }
 
   /**
