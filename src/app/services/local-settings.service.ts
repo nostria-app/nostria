@@ -105,6 +105,8 @@ export interface LocalSettings {
   articleEditorShowToolbar: boolean;
   /** Lock app screen orientation to portrait mode when supported. */
   lockScreenRotation: boolean;
+  /** Show the floating chat widget on desktop. */
+  chatWidgetEnabled: boolean;
 }
 
 const DEFAULT_LOCAL_SETTINGS: LocalSettings = {
@@ -132,6 +134,7 @@ const DEFAULT_LOCAL_SETTINGS: LocalSettings = {
   defaultReactionEmoji: '❤️', // Default reaction sent on single-tap
   articleEditorShowToolbar: true,
   lockScreenRotation: false,
+  chatWidgetEnabled: true,
 };
 
 /**

@@ -3371,6 +3371,13 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   /**
    * Reset messages cache - clears all decrypted messages from IndexedDB
    */
+  chatWidgetEnabled = computed(() => this.localSettings.settings().chatWidgetEnabled !== false);
+
+  toggleChatWidget(): void {
+    const current = this.localSettings.settings().chatWidgetEnabled !== false;
+    this.localSettings.updateSettings({ chatWidgetEnabled: !current });
+  }
+
   async resetLocalMessagesCache(): Promise<void> {
     try {
       // Clear any pending bunker operations first

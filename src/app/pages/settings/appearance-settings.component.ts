@@ -8,6 +8,7 @@ import { SettingDarkModeComponent } from './sections/dark-mode.component';
 import { SettingFontSelectorComponent } from './sections/font-selector.component';
 import { SettingLockScreenRotationComponent } from './sections/lock-screen-rotation.component';
 import { SettingTextSizeComponent } from './sections/text-size.component';
+import { SettingChatWidgetComponent } from './sections/chat-widget.component';
 
 @Component({
   selector: 'app-appearance-settings',
@@ -19,6 +20,7 @@ import { SettingTextSizeComponent } from './sections/text-size.component';
     SettingFontSelectorComponent,
     SettingLockScreenRotationComponent,
     SettingTextSizeComponent,
+    SettingChatWidgetComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'panel-with-sticky-header' },
@@ -36,6 +38,7 @@ import { SettingTextSizeComponent } from './sections/text-size.component';
       <app-setting-text-size />
       <app-setting-font-selector />
       <app-setting-lock-screen-rotation />
+      <app-setting-chat-widget />
     </div>
   `,
   styles: [`

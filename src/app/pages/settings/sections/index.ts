@@ -19,3 +19,4 @@ export { SettingActionButtonsComponent } from './action-buttons.component';
 export { SettingLockScreenRotationComponent } from './lock-screen-rotation.component';
 export { SettingRightSidebarComponent } from './right-sidebar.component';
 export { SettingRelayModeComponent } from './relay-mode.component';
+export { SettingChatWidgetComponent } from './chat-widget.component';

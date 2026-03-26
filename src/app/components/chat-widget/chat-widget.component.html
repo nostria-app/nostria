@@ -1,5 +1,5 @@
 @if (visible()) {
-<div class="chat-widget" [class.expanded]="state() === 'list'">
+<div class="chat-widget" [class.expanded]="state() !== 'collapsed'">
 
   <!-- Collapsed pill -->
   @if (state() === 'collapsed') {
@@ -41,9 +41,33 @@
       </div>
       } @else {
       @for (item of chatList(); track item.chatId) {
-      <button class="chat-list-item" (click)="openChat(item.chat.pubkey)">
+      <button class="chat-list-item" (click)="openChat(item.chatId, !!item.chat.isGroup)">
+        @if (item.chat.isGroup) {
+        <!-- Group chat item -->
+        <div class="chat-item-avatar group-avatar-icon">
+          <mat-icon>group</mat-icon>
+        </div>
+        <div class="chat-item-info">
+          <div class="chat-item-top">
+            <span class="chat-item-name">{{ getGroupDisplayName(item.chat) }}</span>
+            @if (item.chat.lastMessage?.created_at) {
+            <span class="chat-item-time">{{ item.chat.lastMessage?.created_at | ago }}</span>
+            }
+          </div>
+          <div class="chat-item-preview">
+            @if (item.chat.lastMessage) {
+            @if (item.chat.lastMessage.isOutgoing) {
+            <span class="outgoing-prefix">You: </span>
+            }
+            {{ getChatPreviewText(item.chat.lastMessage) }}
+            }
+          </div>
+        </div>
+        } @else {
+        <!-- 1-on-1 chat item -->
         <div class="chat-item-avatar">
-          <app-user-profile [pubkey]="item.chat.pubkey" view="icon" [disableLink]="true" [disableHoverCard]="true" />
+          <app-user-profile [pubkey]="item.chat.pubkey" view="icon" [disableLink]="true"
+            [disableHoverCard]="true" />
         </div>
         <div class="chat-item-info">
           <div class="chat-item-top">
@@ -56,6 +80,7 @@
             {{ getChatPreviewText(item.chat.lastMessage) }}
           </div>
         </div>
+        }
         @if (item.chat.unreadCount > 0) {
         <div class="chat-item-unread">{{ item.chat.unreadCount > 99 ? '99+' : item.chat.unreadCount }}</div>
         }
@@ -64,10 +89,88 @@
       }
     </div>
 
-    <!-- Compose FAB -->
-    <button class="compose-fab" mat-fab (click)="startNewChat()" matTooltip="New message">
-      <mat-icon>edit</mat-icon>
-    </button>
+    <!-- Bottom bar with disable + compose -->
+    <div class="chat-panel-footer">
+      <button mat-button class="disable-widget-button" (click)="disableWidget()">
+        <mat-icon>visibility_off</mat-icon>
+        <span>Disable widget</span>
+      </button>
+      <span class="footer-spacer"></span>
+      <button class="compose-fab" mat-mini-fab (click)="startNewChat()" matTooltip="New message">
+        <mat-icon>edit</mat-icon>
+      </button>
+    </div>
+  </div>
+  }
+
+  <!-- Inline chat view -->
+  @if (state() === 'chat') {
+  <div class="chat-panel chat-view">
+    <div class="chat-panel-header chat-header">
+      <button mat-icon-button class="header-action" (click)="backToList()" matTooltip="Back to list">
+        <mat-icon>arrow_back</mat-icon>
+      </button>
+      @if (activeChatIsGroup()) {
+      <div class="chat-header-user">
+        <div class="group-avatar-header">
+          <mat-icon>group</mat-icon>
+        </div>
+        <span class="chat-header-name">{{ getGroupDisplayName(activeChat()) }}</span>
+      </div>
+      } @else {
+      <div class="chat-header-user">
+        <app-user-profile [pubkey]="activeChatId()!" view="icon" [disableLink]="true"
+          [disableHoverCard]="true" />
+        <app-profile-display-name [pubkey]="activeChatId()!" [disableLink]="true" />
+      </div>
+      }
+      <span class="header-spacer"></span>
+      <button mat-icon-button class="header-action" (click)="openFullMessages()" matTooltip="Open full view">
+        <mat-icon>open_in_new</mat-icon>
+      </button>
+      <button mat-icon-button class="header-action" (click)="close()" matTooltip="Close">
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
+
+    <div class="chat-messages" #chatMessagesContainer>
+      @for (message of activeChatMessages(); track message.id) {
+      <div class="chat-message" [class.outgoing]="message.isOutgoing">
+        @if (activeChatIsGroup() && !message.isOutgoing) {
+        <div class="message-sender-label">{{ getParticipantName(message.pubkey) }}</div>
+        }
+        <div class="message-bubble" [class.outgoing]="message.isOutgoing" [class.pending]="message.pending">
+          <app-message-content [content]="message.content" [tags]="message.tags"
+            [authorPubkey]="message.pubkey"></app-message-content>
+          <span class="message-meta">
+            <span class="message-time">{{ formatMessageTime(message.created_at) }}</span>
+            @if (message.pending) {
+            <mat-icon class="status-icon">schedule</mat-icon>
+            } @else if (message.failed) {
+            <mat-icon class="status-icon failed">error_outline</mat-icon>
+            }
+          </span>
+        </div>
+      </div>
+      }
+      @if (activeChatMessages().length === 0) {
+      <div class="chat-messages-empty">
+        <p>No messages yet. Say hello!</p>
+      </div>
+      }
+    </div>
+
+    <div class="chat-input-container">
+      <div class="chat-input-row">
+        <textarea #widgetMessageInput class="chat-input" [ngModel]="newMessageText()"
+          (ngModelChange)="newMessageText.set($event)" placeholder="Message..." [disabled]="isSending()"
+          (keydown)="onMessageKeydown($event)" rows="1"></textarea>
+        <button mat-icon-button class="send-button" [disabled]="!newMessageText().trim() || isSending()"
+          (click)="sendMessage()">
+          <mat-icon>send</mat-icon>
+        </button>
+      </div>
+    </div>
   </div>
   }
 

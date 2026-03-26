@@ -63,6 +63,11 @@
           <mat-icon>delete_sweep</mat-icon>
           <span>Reset Messages Cache</span>
         </button>
+        <mat-divider></mat-divider>
+        <button mat-menu-item (click)="toggleChatWidget()">
+          <mat-icon>{{ chatWidgetEnabled() ? 'visibility_off' : 'chat_bubble' }}</mat-icon>
+          <span>{{ chatWidgetEnabled() ? 'Disable Chat Widget' : 'Enable Chat Widget' }}</span>
+        </button>
       </mat-menu>
     </div>
 

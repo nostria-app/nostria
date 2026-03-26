@@ -252,6 +252,17 @@ export class SettingsRegistryService {
       priority: 2,
     },
     {
+      id: 'chat-widget',
+      title: 'Chat Widget',
+      description: 'Show a floating chat widget in the bottom-right corner for quick access to messages on desktop.',
+      keywords: ['chat', 'widget', 'messages', 'floating', 'bubble', 'dm', 'direct', 'messenger'],
+      section: 'appearance',
+      sectionTitle: $localize`:@@settings.sections.appearance:Appearance`,
+      icon: 'chat_bubble',
+      route: '/settings/appearance',
+      priority: 3,
+    },
+    {
       id: 'menu-customization',
       title: $localize`:@@settings.menu.title:Menu Customization`,
       description: $localize`:@@settings.menu.description:Drag items to reorder. Move items between lists to show or hide them.`,

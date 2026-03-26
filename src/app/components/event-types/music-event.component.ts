@@ -134,18 +134,14 @@ import { MatDividerModule } from '@angular/material/divider';
         </div>
 
         <div class="track-row-meta">
-          @if (album()) {
-            <span class="track-row-album">
-              @if (isLiked()) {
-                <span class="track-row-liked" title="Liked">
-                  <mat-icon>favorite</mat-icon>
-                </span>
-              }
-              <span class="track-row-album-text">{{ album() }}</span>
-            </span>
-          } @else if (isLiked()) {
+          @if (isLiked()) {
             <span class="track-row-liked" title="Liked">
               <mat-icon>favorite</mat-icon>
+            </span>
+          }
+          @if (album()) {
+            <span class="track-row-album">
+              <span class="track-row-album-text">{{ album() }}</span>
             </span>
           }
           <span class="track-row-duration" [class.is-empty]="!duration()">{{ duration() || '' }}</span>
@@ -848,10 +844,6 @@ import { MatDividerModule } from '@angular/material/divider';
 
       .track-row-meta {
         flex: 0 0 3.25rem;
-      }
-
-      .track-row-album {
-        display: none;
       }
     }
 
