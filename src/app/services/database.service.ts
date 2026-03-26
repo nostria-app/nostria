@@ -3870,6 +3870,124 @@ export class DatabaseService {
     this.logger.info('Cleared all shared database stores');
   }
 
+  // ============================================================================
+  // DECRYPTED FOLLOW SET CACHE METHODS
+  // ============================================================================
+
+  /**
+   * Cache decrypted follow set data for a specific dTag.
+   * Keyed by eventId so we can detect when the underlying event changes and
+   * a re-decryption is needed.
+   */
+  async saveDecryptedFollowSetCache(
+    dTag: string,
+    eventId: string,
+    pubkeys: string[],
+    title: string | null
+  ): Promise<void> {
+    try {
+      await this.saveInfo(dTag, 'decrypted-follow-set', {
+        eventId,
+        pubkeys,
+        title: title || '',
+      });
+    } catch (error) {
+      this.logger.warn('[DatabaseService] Failed to cache decrypted follow set:', error);
+    }
+  }
+
+  /**
+   * Load cached decrypted follow set data.
+   * Returns null if no cache exists or if the eventId doesn't match (event was updated).
+   */
+  async getDecryptedFollowSetCache(
+    dTag: string,
+    eventId: string
+  ): Promise<{ pubkeys: string[]; title: string | null } | null> {
+    try {
+      const record = await this.getInfo(dTag, 'decrypted-follow-set');
+      if (!record) {
+        return null;
+      }
+
+      // Cache miss: event has been updated since we cached
+      if (record['eventId'] !== eventId) {
+        return null;
+      }
+
+      const pubkeys = record['pubkeys'];
+      const title = record['title'];
+
+      return {
+        pubkeys: Array.isArray(pubkeys) ? pubkeys as string[] : [],
+        title: (typeof title === 'string' && title !== '') ? title : null,
+      };
+    } catch (error) {
+      this.logger.warn('[DatabaseService] Failed to load decrypted follow set cache:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Delete cached decrypted follow set data for a specific dTag.
+   */
+  async deleteDecryptedFollowSetCache(dTag: string): Promise<void> {
+    try {
+      await this.deleteInfoByKeyAndType(dTag, 'decrypted-follow-set');
+    } catch (error) {
+      this.logger.warn('[DatabaseService] Failed to delete decrypted follow set cache:', error);
+    }
+  }
+
+  // ============================================================================
+  // DECRYPTED TRUST PROVIDER CACHE METHODS
+  // ============================================================================
+
+  /**
+   * Cache decrypted private trust provider tags for a specific event.
+   * Keyed by eventId so we can detect when the underlying event changes.
+   */
+  async saveDecryptedTrustProviderCache(
+    eventId: string,
+    privateTags: string[][]
+  ): Promise<void> {
+    try {
+      await this.saveInfo('trust-providers', 'decrypted-trust-providers', {
+        eventId,
+        privateTags,
+      });
+    } catch (error) {
+      this.logger.warn('[DatabaseService] Failed to cache decrypted trust providers:', error);
+    }
+  }
+
+  /**
+   * Load cached decrypted trust provider tags.
+   * Returns null if no cache exists or if the eventId doesn't match (event was updated).
+   */
+  async getDecryptedTrustProviderCache(
+    eventId: string
+  ): Promise<{ privateTags: string[][] } | null> {
+    try {
+      const record = await this.getInfo('trust-providers', 'decrypted-trust-providers');
+      if (!record) {
+        return null;
+      }
+
+      if (record['eventId'] !== eventId) {
+        return null;
+      }
+
+      const privateTags = record['privateTags'];
+      return {
+        privateTags: Array.isArray(privateTags) ? privateTags as string[][] : [],
+      };
+    } catch (error) {
+      this.logger.warn('[DatabaseService] Failed to load decrypted trust provider cache:', error);
+      return null;
+    }
+  }
+
   /**
    * Clear only the account database stores
    */

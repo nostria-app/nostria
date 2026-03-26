@@ -183,6 +183,7 @@ export class TrustProviderService {
 
   /**
    * Parse a kind 10040 event into public and private provider lists.
+   * Uses a persistent cache to avoid redundant decryption on every startup.
    */
   private async parseProviderEvent(event: NostrEvent): Promise<void> {
     this.currentEvent = event;
@@ -195,11 +196,29 @@ export class TrustProviderService {
     // Parse private providers from encrypted content
     if (event.content && event.content.trim() !== '') {
       try {
-        const decrypted = await this.encryption.decryptNip44(
-          event.content,
-          event.pubkey /* self-decryption */,
-        );
-        const privateTags: string[][] = JSON.parse(decrypted);
+        // Check decryption cache first
+        const cached = await this.database.getDecryptedTrustProviderCache(event.id);
+
+        let privateTags: string[][];
+        if (cached) {
+          privateTags = cached.privateTags;
+          this.logger.debug('Restored cached decrypted trust providers', {
+            providerCount: privateTags.length,
+          });
+        } else {
+          const decrypted = await this.encryption.decryptNip44(
+            event.content,
+            event.pubkey /* self-decryption */,
+          );
+          privateTags = JSON.parse(decrypted);
+
+          // Persist to cache for next startup
+          await this.database.saveDecryptedTrustProviderCache(event.id, privateTags);
+          this.logger.debug('Decrypted and cached trust providers', {
+            providerCount: privateTags.length,
+          });
+        }
+
         const privateProviders = this.parseProviderTags(privateTags);
         this.privateProviders.set(privateProviders);
       } catch (error) {
@@ -414,6 +433,12 @@ export class TrustProviderService {
           publicCount: this.publicProviders().length,
           privateCount: privProviders.length,
         });
+
+        // Pre-populate decryption cache so next startup won't need to decrypt
+        if (privProviders.length > 0 && result.event) {
+          const privateTags = privProviders.map(p => [p.kindTag, p.pubkey, p.relayUrl]);
+          await this.database.saveDecryptedTrustProviderCache(result.event.id, privateTags);
+        }
       }
 
       return result;

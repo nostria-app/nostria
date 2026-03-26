@@ -731,6 +731,7 @@ export class App implements OnInit, OnDestroy {
     'summary',
     'messages',
     'chats',
+    'n',
     'people',
     'collections',
     'clips',

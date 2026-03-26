@@ -161,14 +161,21 @@ export class FollowSetsService {
         const deduplicatedDbSets = this.deduplicateByDTag(dbSets);
 
         if (deduplicatedDbSets.length > 0) {
+          // Apply decrypted cache to private sets so they are fully resolved
+          // without needing background decryption on every startup
+          const resolvedSets = await this.applyCachedDecryption(deduplicatedDbSets);
+
           // Only update if data has actually changed to prevent UI flickering
           const currentSets = this.followSets();
-          if (!this.followSetsEqual(currentSets, deduplicatedDbSets)) {
-            this.followSets.set(deduplicatedDbSets);
-            this.logger.info(`[FollowSets] Loaded ${deduplicatedDbSets.length} follow sets from cache in ${Date.now() - startTime}ms`);
+          if (!this.followSetsEqual(currentSets, resolvedSets)) {
+            this.followSets.set(resolvedSets);
+            this.logger.info(`[FollowSets] Loaded ${resolvedSets.length} follow sets from cache in ${Date.now() - startTime}ms`);
 
-            // Start background decryption for private lists (don't await)
-            this.decryptPrivateListsInBackground(deduplicatedDbSets);
+            // Only start background decryption for sets that still need it (cache misses)
+            const uncachedSets = resolvedSets.filter(set => set.isPrivate && set.decryptionPending && set.event);
+            if (uncachedSets.length > 0) {
+              this.decryptPrivateListsInBackground(resolvedSets);
+            }
           } else {
             this.logger.debug(`[FollowSets] Cache data unchanged in ${Date.now() - startTime}ms, skipping update`);
           }
@@ -360,8 +367,44 @@ export class FollowSetsService {
   }
 
   /**
-   * Decrypt private lists in background and update the follow sets when done
-   * This runs asynchronously and doesn't block the initial load
+   * Apply cached decrypted data to private follow sets during initial load.
+   * For each private set with encrypted content, checks the persistent cache
+   * for previously decrypted data. On cache hit, merges the decrypted pubkeys
+   * and title into the set and marks it as resolved (decryptionPending: false).
+   * Sets with cache misses are returned unchanged for background decryption.
+   */
+  private async applyCachedDecryption(sets: FollowSet[]): Promise<FollowSet[]> {
+    const result: FollowSet[] = [];
+
+    for (const set of sets) {
+      if (!set.isPrivate || !set.decryptionPending || !set.event) {
+        result.push(set);
+        continue;
+      }
+
+      const cached = await this.database.getDecryptedFollowSetCache(set.dTag, set.event.id);
+      if (cached) {
+        this.logger.debug(`[FollowSets] Restored cached decrypted data for "${cached.title || set.title}" (${cached.pubkeys.length} private pubkeys)`);
+        result.push({
+          ...set,
+          title: cached.title || set.title,
+          pubkeys: [...set.pubkeys, ...cached.pubkeys],
+          decryptionPending: false,
+        });
+      } else {
+        // No cache or event changed — needs real decryption
+        result.push(set);
+      }
+    }
+
+    return result;
+  }
+
+  /**
+   * Decrypt private lists in background and update the follow sets when done.
+   * Uses a persistent cache (IndexedDB info store) keyed by event ID to avoid
+   * redundant decryption requests on every startup. Only performs actual
+   * decryption when the underlying event has changed (different event ID).
    */
   private async decryptPrivateListsInBackground(sets: FollowSet[]): Promise<void> {
     const privateSets = sets.filter(set => set.isPrivate && set.decryptionPending && set.event);
@@ -376,9 +419,32 @@ export class FollowSetsService {
       // Process each private set one at a time to avoid overwhelming the extension
       for (const set of privateSets) {
         try {
-          const privateData = await this.parsePrivateFollowSetData(set.event!.content);
-          const privatePubkeys = privateData.pubkeys;
-          const decryptedTitle = privateData.title;
+          // Try loading from decrypted cache first (avoids extension/bunker decryption calls)
+          const cached = await this.database.getDecryptedFollowSetCache(set.dTag, set.event!.id);
+
+          let privatePubkeys: string[];
+          let decryptedTitle: string | null;
+
+          if (cached) {
+            // Cache hit: use cached decrypted data without asking the extension
+            privatePubkeys = cached.pubkeys;
+            decryptedTitle = cached.title;
+            this.logger.debug(`[FollowSets] Using cached decrypted data for "${decryptedTitle || set.title}" (${privatePubkeys.length} private pubkeys)`);
+          } else {
+            // Cache miss: decrypt and then persist the result
+            const privateData = await this.parsePrivateFollowSetData(set.event!.content);
+            privatePubkeys = privateData.pubkeys;
+            decryptedTitle = privateData.title;
+
+            // Persist decrypted data to cache for next startup
+            await this.database.saveDecryptedFollowSetCache(
+              set.dTag,
+              set.event!.id,
+              privatePubkeys,
+              decryptedTitle
+            );
+            this.logger.debug(`[FollowSets] Decrypted and cached private follow set data for "${decryptedTitle || set.title}"`);
+          }
 
           if (privatePubkeys.length > 0 || decryptedTitle) {
             // Update the follow set with decrypted data
@@ -395,8 +461,6 @@ export class FollowSetsService {
                 return s;
               });
             });
-
-            this.logger.debug(`[FollowSets] Decrypted private follow set data for "${decryptedTitle || set.title}"`);
           } else {
             // No private pubkeys found, just mark as not pending
             this.followSets.update(currentSets => {
@@ -811,6 +875,11 @@ export class FollowSetsService {
       try {
         await this.database.saveEvent(signedEvent);
         this.logger.debug('[FollowSets] Saved follow set event to database');
+
+        // Update decrypted cache so the next startup won't need to decrypt again
+        if (isPrivate) {
+          await this.database.saveDecryptedFollowSetCache(dTag, signedEvent.id, pubkeys, title);
+        }
       } catch (dbError) {
         this.logger.warn('[FollowSets] Failed to save follow set to database:', dbError);
         // Continue anyway - event was published successfully
@@ -923,6 +992,9 @@ export class FollowSetsService {
         await this.database.deleteEvent(followSet.id);
         this.logger.debug(`[FollowSets] Deleted event ${followSet.id} from local database`);
       }
+
+      // Clean up decrypted cache for this follow set
+      await this.database.deleteDecryptedFollowSetCache(dTag);
 
       // Remove from local state
       this.followSets.update(sets => sets.filter(set => set.dTag !== dTag));

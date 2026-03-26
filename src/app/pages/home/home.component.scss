@@ -611,6 +611,19 @@
   }
 }
 
+.tile-communities {
+  background: linear-gradient(160deg, rgba(0, 150, 136, 0.12) 0%, transparent 100%);
+  border: 1px solid rgba(0, 150, 136, 0.15);
+
+  mat-icon {
+    color: #009688;
+  }
+
+  &:hover {
+    border-color: rgba(0, 150, 136, 0.35);
+  }
+}
+
 .tile-playlists {
   background: linear-gradient(160deg, rgba(156, 39, 176, 0.12) 0%, transparent 100%);
   border: 1px solid rgba(156, 39, 176, 0.15);
@@ -1779,6 +1792,19 @@
 
     &:hover {
       border-color: rgba(76, 175, 80, 0.6);
+    }
+  }
+
+  .tile-communities {
+    background: linear-gradient(160deg, rgba(0, 150, 136, 0.28) 0%, rgba(0, 150, 136, 0.06) 100%);
+    border-color: rgba(0, 150, 136, 0.4);
+
+    mat-icon {
+      color: #4DB6AC;
+    }
+
+    &:hover {
+      border-color: rgba(0, 150, 136, 0.6);
     }
   }
 

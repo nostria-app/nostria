@@ -204,6 +204,7 @@ export class LocalSettingsService {
     'summary',
     'messages',
     'chats',
+    'n',
     'people',
     'collections',
     'clips',

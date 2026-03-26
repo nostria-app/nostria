@@ -145,6 +145,7 @@ export class MessagingService implements NostriaService {
   private chatsMap = signal<Map<string, Chat>>(new Map());
   private oldestChatTimestamp = signal<number | null>(null);
   private bootstrappedPubkey: string | null = null;
+  private bootstrapPromise: Promise<void> | null = null;
 
   /**
    * Fast in-memory lookup of all known outer event IDs (gift wrap IDs for NIP-44,
@@ -685,6 +686,19 @@ export class MessagingService implements NostriaService {
       // Message already exists in this chat, don't add it again.
       this.logger.debug(`Message ${normalizedMessage.id} already exists in chat ${chatId}, skipping to prevent duplicate`);
 
+      // Even though we're not adding the message, if the incoming copy has a
+      // giftWrapId that the existing message lacks, persist it so that future
+      // reloads can skip decryption for this gift-wrap event entirely.
+      if (normalizedMessage.giftWrapId) {
+        this.knownEventIds.add(normalizedMessage.giftWrapId);
+
+        if (!existingMessage.giftWrapId) {
+          this.updateMessageInChat(chatId, normalizedMessage.id, {
+            giftWrapId: normalizedMessage.giftWrapId,
+          });
+        }
+      }
+
       // Even if the message is a duplicate, update subject if this message has a newer one
       if (groupInfo?.subject && existingChat.isGroup) {
         this.maybeUpdateGroupSubject(chatId, groupInfo.subject, groupInfo.subjectUpdatedAt);
@@ -1070,6 +1084,21 @@ export class MessagingService implements NostriaService {
       return;
     }
 
+    // If another caller is already bootstrapping, wait for it to finish
+    if (this.bootstrapPromise) {
+      await this.bootstrapPromise;
+      return;
+    }
+
+    this.bootstrapPromise = this.bootstrapFromStorageInternal(myPubkey);
+    try {
+      await this.bootstrapPromise;
+    } finally {
+      this.bootstrapPromise = null;
+    }
+  }
+
+  private async bootstrapFromStorageInternal(myPubkey: string): Promise<void> {
     try {
       await this.database.init();
       await this.loadDeadLetterListFromStorage();
@@ -1098,6 +1127,7 @@ export class MessagingService implements NostriaService {
         unreadCount,
         storedMessages: storedMessages.length,
         storedChats: storedChats.length,
+        knownEventIdsSize: this.knownEventIds.size,
       });
     } catch (error) {
       this.logger.warn('Failed to bootstrap DM state from storage', error);
@@ -1381,7 +1411,12 @@ export class MessagingService implements NostriaService {
 
         // Use resolveChatTarget to handle both 1-on-1 and group chats
         const target = resolveChatTarget(unwrappedMessage, myPubkey);
-        if (!target) return;
+        if (!target) {
+          this.markEventAsDeadLetter(event.id, 'No valid chat target (missing p-tags)', {
+            innerEventId: unwrappedMessage.id,
+          });
+          return;
+        }
 
         // Check if message already exists to prevent duplicates
         if (this.hasMessage(target.chatId, unwrappedMessage.id)) {
@@ -1564,7 +1599,9 @@ export class MessagingService implements NostriaService {
                 // Use resolveChatTarget for both 1-on-1 and group chats
                 const target = resolveChatTarget(wrappedevent, myPubkey);
                 if (!target) {
-                  this.logger.warn('NIP-44 message has no valid chat target, skipping', { eventId: wrappedevent.id });
+                  this.markEventAsDeadLetter(event.id, 'No valid chat target (missing p-tags)', {
+                    innerEventId: wrappedevent.id,
+                  });
                   return;
                 }
 
@@ -1762,7 +1799,12 @@ export class MessagingService implements NostriaService {
 
             // Use resolveChatTarget for both 1-on-1 and group chats
             const target = resolveChatTarget(unwrappedMessage, myPubkey);
-            if (!target) continue;
+            if (!target) {
+              this.markEventAsDeadLetter(event.id, 'No valid chat target (missing p-tags)', {
+                innerEventId: unwrappedMessage.id,
+              });
+              continue;
+            }
 
             const directMessage: DirectMessage = {
               id: unwrappedMessage.id,
@@ -1908,6 +1950,11 @@ export class MessagingService implements NostriaService {
       return null;
     }
 
+    // Ensure known event IDs are loaded from storage before opening relay subscriptions.
+    // Without this, events from the 3-day lookback window arrive before knownEventIds is populated,
+    // causing unnecessary NIP-44 decryption prompts for already-stored messages.
+    await this.bootstrapFromStorage();
+
     // Close any existing live subscription before creating a new one
     if (this.liveSubscription) {
       this.logger.info('Closing existing live message subscription');
@@ -1988,7 +2035,9 @@ export class MessagingService implements NostriaService {
           // Determine the chat target (1-on-1 or group)
           const target = resolveChatTarget(unwrappedMessage, myPubkey);
           if (!target) {
-            this.logger.warn('Live subscription: Could not determine target from gift wrap');
+            this.markEventAsDeadLetter(event.id, 'No valid chat target (missing p-tags)', {
+              innerEventId: unwrappedMessage.id,
+            });
             return;
           }
 
@@ -2214,7 +2263,10 @@ export class MessagingService implements NostriaService {
         );
         wrappedContent = JSON.parse(decryptionResult.content);
       } catch (err) {
-        if (this.isPermanentDecryptFailure(err, { allowGenericDecryptFailure: true })) {
+        // Dead-letter any decrypt failure that isn't clearly transient (e.g.
+        // extension unavailable, user cancelled, timeout). This prevents
+        // repeatedly prompting the user to decrypt spam/corrupted events.
+        if (!this.isTransientDecryptFailure(err)) {
           this.markEventAsDeadLetter(wrappedEvent.id, this.getDecryptFailureReason(err), {
             encryptionType: 'nip44',
             stage: 'wrapped-content',
@@ -2247,7 +2299,7 @@ export class MessagingService implements NostriaService {
         try {
           sealedEvent = await this.unwrapSealedContent(wrappedContent, wrappedEvent);
         } catch (err) {
-          if (this.isPermanentDecryptFailure(err, { allowGenericDecryptFailure: true })) {
+          if (!this.isTransientDecryptFailure(err)) {
             this.markEventAsDeadLetter(wrappedEvent.id, this.getDecryptFailureReason(err), {
               encryptionType: 'nip44',
               stage: 'sealed-content',
@@ -2258,8 +2310,6 @@ export class MessagingService implements NostriaService {
             error: err,
             giftWrapId: wrappedEvent.id,
             wrappedKind: wrappedContent?.kind,
-            originalEvent: wrappedEvent,
-            decryptedWrappedContent: wrappedContent,
           });
           return null;
         }
@@ -2297,6 +2347,11 @@ export class MessagingService implements NostriaService {
       throw err;
     } finally {
       this.inFlightGiftWrapIds.delete(wrappedEvent.id);
+      // Always mark the outer gift wrap as known after any attempt (success or
+      // failure) so it is never re-decrypted within this session. For permanent
+      // failures the dead-letter list handles cross-reload persistence; for
+      // transient failures we accept a single retry on next app start.
+      this.knownEventIds.add(wrappedEvent.id);
     }
   }
 
@@ -2412,7 +2467,12 @@ export class MessagingService implements NostriaService {
 
           // Use resolveChatTarget to determine the correct chat
           const target = resolveChatTarget(unwrappedMessage, myPubkey);
-          if (!target) return;
+          if (!target) {
+            this.markEventAsDeadLetter(event.id, 'No valid chat target (missing p-tags)', {
+              innerEventId: unwrappedMessage.id,
+            });
+            return;
+          }
 
           // Only process messages belonging to THIS chat
           if (target.chatId !== chatId) {
@@ -2650,7 +2710,9 @@ export class MessagingService implements NostriaService {
               // Determine target chat using resolveChatTarget
               const target = resolveChatTarget(wrappedevent, myPubkey);
               if (!target) {
-                this.logger.warn('NIP-44 message has no valid chat target, skipping (loadMoreChats sub1)', { eventId: wrappedevent.id });
+                this.markEventAsDeadLetter(event.id, 'No valid chat target (missing p-tags)', {
+                  innerEventId: wrappedevent.id,
+                });
                 completedDecryptions++;
                 checkCompletion();
                 return;
@@ -2791,7 +2853,9 @@ export class MessagingService implements NostriaService {
               // Determine target chat using resolveChatTarget
               const target = resolveChatTarget(wrappedevent, myPubkey);
               if (!target) {
-                this.logger.warn('NIP-44 message has no valid chat target, skipping (loadMoreChats sub2)', { eventId: wrappedevent.id });
+                this.markEventAsDeadLetter(event.id, 'No valid chat target (missing p-tags)', {
+                  innerEventId: wrappedevent.id,
+                });
                 completedDecryptions++;
                 checkCompletion();
                 return;

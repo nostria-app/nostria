@@ -28,8 +28,9 @@ import { DiscoveryRelayService } from './relays/discovery-relay';
 import { RelayPoolService } from './relays/relay-pool';
 import { SearchRelayService } from './relays/search-relay';
 import { Followset } from './followset';
+import { FollowSetsService } from './follow-sets.service';
 import { RegionService } from './region.service';
-import { EncryptionService } from './encryption.service';
+
 import { LocalSettingsService } from './local-settings.service';
 import { FollowingDataService } from './following-data.service';
 import { SettingsService, SyncedFeedConfig } from './settings.service';
@@ -203,8 +204,8 @@ export class FeedService {
   // On-demand access for one-shot per-user fetches to avoid lingering sockets
   private readonly onDemandUserData = inject(OnDemandUserDataService);
   private readonly followset = inject(Followset);
+  private readonly followSetsService = inject(FollowSetsService);
   private readonly regionService = inject(RegionService);
-  private readonly encryption = inject(EncryptionService);
   private readonly localSettings = inject(LocalSettingsService);
   private readonly followingData = inject(FollowingDataService);
   private readonly settingsService = inject(SettingsService);
@@ -1242,6 +1243,24 @@ export class FeedService {
   }
 
   /**
+   * Collect pubkeys from follow sets using the FollowSetsService which
+   * already has decrypted data (from persistent cache or background decryption).
+   * This avoids triggering independent decryption calls to the browser extension.
+   */
+  private collectFollowSetPubkeys(dTags: string[], allPubkeys: Set<string>): void {
+    const followSets = this.followSetsService.followSets();
+    for (const dTag of dTags) {
+      const followSet = followSets.find(s => s.dTag === dTag);
+      if (followSet) {
+        followSet.pubkeys.forEach(pk => allPubkeys.add(pk));
+        this.logger.debug(`[Feed] Follow set "${followSet.title}" contributed ${followSet.pubkeys.length} pubkeys`);
+      } else {
+        this.logger.debug(`[Feed] Follow set with dTag "${dTag}" not found in FollowSetsService`);
+      }
+    }
+  }
+
+  /**
    * Load custom feed using specified users and starter packs
    *
    * This method:
@@ -1286,88 +1305,9 @@ export class FeedService {
         }
       }
 
-      // Add pubkeys from follow sets (kind 30000)
+      // Add pubkeys from follow sets using FollowSetsService (already decrypted & cached)
       if (feed.customFollowSets && feed.customFollowSets.length > 0) {
-        try {
-          const pubkey = this.accountState.pubkey();
-          if (!pubkey) {
-            this.logger.warn('No pubkey available for fetching follow sets');
-          } else {
-            // Fetch kind 30000 events
-            const records = await this.dataService.getEventsByPubkeyAndKind(pubkey, 30000, {
-              save: true,
-              cache: true,
-            });
-
-            if (records && records.length > 0) {
-              for (const record of records) {
-                if (!record.event) continue;
-
-                const event = record.event;
-                const dTag = event.tags.find((t: string[]) => t[0] === 'd')?.[1];
-
-                // Check if this follow set is selected
-                if (dTag && feed.customFollowSets.includes(dTag)) {
-                  // Extract public pubkeys from p tags
-                  const publicPubkeys = event.tags
-                    .filter((t: string[]) => t[0] === 'p' && t[1])
-                    .map((t: string[]) => t[1]);
-
-                  publicPubkeys.forEach((pk: string) => allPubkeys.add(pk));
-                  this.logger.info(`[loadCustomFeed] Follow set "${dTag}" has ${publicPubkeys.length} public pubkeys`);
-
-                  // Extract private pubkeys from encrypted content
-                  let privatePubkeysCount = 0;
-                  if (event.content && event.content.trim() !== '') {
-                    try {
-                      const isEncrypted = this.encryption.isContentEncrypted(event.content);
-                      this.logger.info(`[loadCustomFeed] Follow set "${dTag}" content is encrypted: ${isEncrypted}`);
-
-                      if (isEncrypted) {
-                        const decrypted = await this.encryption.autoDecrypt(event.content, pubkey, event);
-                        this.logger.info(`[loadCustomFeed] Decryption result: ${decrypted ? 'success' : 'failed'}`);
-
-                        if (decrypted && decrypted.content) {
-                          this.logger.info(`[loadCustomFeed] Decrypted content (first 200 chars): ${decrypted.content.substring(0, 200)}`);
-
-                          try {
-                            const privateData = JSON.parse(decrypted.content);
-                            this.logger.info(`[loadCustomFeed] Decrypted data type: ${typeof privateData}, is array: ${Array.isArray(privateData)}, length: ${Array.isArray(privateData) ? privateData.length : 'N/A'}`);
-
-                            if (Array.isArray(privateData)) {
-                              this.logger.info(`[loadCustomFeed] First tag in privateData: ${JSON.stringify(privateData[0])}`);
-                              const privatePubkeys = privateData
-                                .filter((tag: string[]) => tag[0] === 'p' && tag[1])
-                                .map((tag: string[]) => tag[1]);
-                              privatePubkeys.forEach(pk => allPubkeys.add(pk));
-                              privatePubkeysCount = privatePubkeys.length;
-                              this.logger.info(`[loadCustomFeed] Follow set "${dTag}" has ${privatePubkeysCount} private (encrypted) pubkeys: ${privatePubkeys.map(pk => pk.slice(0, 8)).join(', ')}`);
-                            }
-                          } catch (parseError) {
-                            this.logger.error(`[loadCustomFeed] Failed to parse decrypted content as JSON:`, parseError);
-                          }
-                        } else {
-                          this.logger.warn(`[loadCustomFeed] Decryption succeeded but no content returned`);
-                        }
-                      }
-                    } catch (error) {
-                      this.logger.error(`Failed to decrypt follow set ${dTag}:`, error);
-                    }
-                  }
-
-                  this.logger.info(`[loadCustomFeed] ✅ Added follow set "${dTag}" with ${publicPubkeys.length} public + ${privatePubkeysCount} private users = ${publicPubkeys.length + privatePubkeysCount} total`);
-                }
-              }
-
-              const totalPubkeysFromFollowSets = allPubkeys.size - (feed.customUsers?.length || 0);
-              this.logger.debug(`[loadCustomFeed] Processed ${feed.customFollowSets.length} follow sets, added ${totalPubkeysFromFollowSets} pubkeys`);
-            } else {
-              this.logger.warn(`[loadCustomFeed] No follow set events found for selected dTags:`, feed.customFollowSets);
-            }
-          }
-        } catch (error) {
-          this.logger.error('Error fetching follow set data:', error);
-        }
+        this.collectFollowSetPubkeys(feed.customFollowSets, allPubkeys);
       }
 
       const pubkeysArray = Array.from(allPubkeys);
@@ -2816,57 +2756,9 @@ export class FeedService {
           }
         }
 
-        // Add pubkeys from follow sets (kind 30000)
+        // Add pubkeys from follow sets using FollowSetsService (already decrypted & cached)
         if (feed.customFollowSets && feed.customFollowSets.length > 0) {
-          try {
-            const pubkey = this.accountState.pubkey();
-            if (pubkey) {
-              const records = await this.dataService.getEventsByPubkeyAndKind(pubkey, 30000, {
-                save: true,
-                cache: true,
-              });
-
-              if (records && records.length > 0) {
-                for (const record of records) {
-                  if (!record.event) continue;
-
-                  const event = record.event;
-                  const dTag = event.tags.find((t: string[]) => t[0] === 'd')?.[1];
-
-                  if (dTag && feed.customFollowSets.includes(dTag)) {
-                    // Extract public pubkeys
-                    const publicPubkeys = event.tags
-                      .filter((t: string[]) => t[0] === 'p' && t[1])
-                      .map((t: string[]) => t[1]);
-                    publicPubkeys.forEach((pk: string) => allPubkeys.add(pk));
-
-                    // Extract private pubkeys
-                    if (event.content && event.content.trim() !== '') {
-                      try {
-                        const isEncrypted = this.encryption.isContentEncrypted(event.content);
-                        if (isEncrypted) {
-                          const decrypted = await this.encryption.autoDecrypt(event.content, pubkey, event);
-                          if (decrypted && decrypted.content) {
-                            const privateData = JSON.parse(decrypted.content);
-                            if (Array.isArray(privateData)) {
-                              const privatePubkeys = privateData
-                                .filter((tag: string[]) => tag[0] === 'p' && tag[1])
-                                .map((tag: string[]) => tag[1]);
-                              privatePubkeys.forEach((pk: string) => allPubkeys.add(pk));
-                            }
-                          }
-                        }
-                      } catch (error) {
-                        this.logger.error(`Failed to decrypt follow set ${dTag} during pagination:`, error);
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          } catch (error) {
-            this.logger.error('Error fetching follow set data for pagination:', error);
-          }
+          this.collectFollowSetPubkeys(feed.customFollowSets, allPubkeys);
         }
 
         const pubkeysArray = Array.from(allPubkeys);
@@ -3551,57 +3443,9 @@ export class FeedService {
       }
     }
 
-    // Add pubkeys from follow sets (kind 30000)
+    // Add pubkeys from follow sets using FollowSetsService (already decrypted & cached)
     if (feed.customFollowSets && feed.customFollowSets.length > 0) {
-      try {
-        const pubkey = this.accountState.pubkey();
-        if (pubkey) {
-          const records = await this.dataService.getEventsByPubkeyAndKind(pubkey, 30000, {
-            save: true,
-            cache: true,
-          });
-
-          if (records && records.length > 0) {
-            for (const record of records) {
-              if (!record.event) continue;
-
-              const event = record.event;
-              const dTag = event.tags.find((t: string[]) => t[0] === 'd')?.[1];
-
-              if (dTag && feed.customFollowSets.includes(dTag)) {
-                // Extract public pubkeys
-                const publicPubkeys = event.tags
-                  .filter((t: string[]) => t[0] === 'p' && t[1])
-                  .map((t: string[]) => t[1]);
-                publicPubkeys.forEach((pk: string) => allPubkeys.add(pk));
-
-                // Extract private pubkeys
-                if (event.content && event.content.trim() !== '') {
-                  try {
-                    const isEncrypted = this.encryption.isContentEncrypted(event.content);
-                    if (isEncrypted) {
-                      const decrypted = await this.encryption.autoDecrypt(event.content, pubkey, event);
-                      if (decrypted && decrypted.content) {
-                        const privateData = JSON.parse(decrypted.content);
-                        if (Array.isArray(privateData)) {
-                          const privatePubkeys = privateData
-                            .filter((tag: string[]) => tag[0] === 'p' && tag[1])
-                            .map((tag: string[]) => tag[1]);
-                          privatePubkeys.forEach((pk: string) => allPubkeys.add(pk));
-                        }
-                      }
-                    }
-                  } catch (error) {
-                    this.logger.error(`Failed to decrypt follow set ${dTag} for new events:`, error);
-                  }
-                }
-              }
-            }
-          }
-        }
-      } catch (error) {
-        this.logger.error('Error fetching follow set data for new events:', error);
-      }
+      this.collectFollowSetPubkeys(feed.customFollowSets, allPubkeys);
     }
 
     const pubkeysArray = Array.from(allPubkeys);
