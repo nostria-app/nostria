@@ -13,6 +13,7 @@ import { ZapDialogComponent, ZapDialogData } from '../zap-dialog/zap-dialog.comp
 import { DataService } from '../../services/data.service';
 import { PollOption } from '../../interfaces';
 import { PollContentComponent } from './poll-content.component';
+import { type ZapInfo } from '../event/reaction-summary/reaction-summary.component';
 
 export interface ZapPoll {
   id: string;
@@ -54,9 +55,12 @@ export class ZapPollEventComponent {
   private destroyRef = inject(DestroyRef);
 
   event = input.required<NostrEvent>();
+  zaps = input<ZapInfo[] | null>(null);
+  zapsLoaded = input(false);
   fallbackZapCount = input(0);
   fallbackTotalSats = input(0);
   showZapsRequested = output<void>();
+  refreshZapsRequested = output<void>();
 
   // Local state
   selectedOption = signal<string | null>(null);
@@ -118,7 +122,16 @@ export class ZapPollEventComponent {
   constructor() {
     effect(() => {
       const event = this.event();
+      const sharedZaps = this.zaps();
+      const sharedZapsLoaded = this.zapsLoaded();
+
       untracked(() => {
+        if (sharedZaps !== null) {
+          this.isLoading.set(!sharedZapsLoaded);
+          this.results.set(this.buildResultsFromZaps(this.parseZapPollEvent(event), sharedZaps));
+          return;
+        }
+
         void this.loadZapResults(event);
       });
     });
@@ -161,35 +174,22 @@ export class ZapPollEventComponent {
 
       const zapReceipts = await this.pool.query(relayUrls, filter, 5000);
 
-      // Parse zap receipts into per-option results
-      const optionResults = new Map<string, { zapCount: number; totalSats: number }>();
-
-      // Initialize all options
-      for (const option of poll.options) {
-        optionResults.set(option.id, { zapCount: 0, totalSats: 0 });
-      }
-
+      const parsedZaps: ZapInfo[] = [];
       for (const receipt of zapReceipts) {
-        const parsed = this.parseZapReceiptForPoll(receipt, poll);
-        if (parsed) {
-          const existing = optionResults.get(parsed.optionId);
-          if (existing) {
-            existing.zapCount++;
-            existing.totalSats += parsed.amountSats;
-          }
+        const parsed = this.zapService.parseZapReceipt(receipt);
+        if (parsed.zapRequest && parsed.amount) {
+          parsedZaps.push({
+            receipt,
+            zapRequest: parsed.zapRequest,
+            amount: parsed.amount,
+            comment: parsed.comment,
+            senderPubkey: parsed.zapRequest.pubkey,
+            timestamp: receipt.created_at,
+          });
         }
       }
 
-      const resultArray: ZapPollResult[] = [];
-      for (const [optionId, data] of optionResults) {
-        resultArray.push({
-          optionId,
-          zapCount: data.zapCount,
-          totalSats: data.totalSats,
-        });
-      }
-
-      this.results.set(resultArray);
+      this.results.set(this.buildResultsFromZaps(poll, parsedZaps));
     } catch (error) {
       console.error('Failed to load zap poll results:', error);
     } finally {
@@ -197,67 +197,37 @@ export class ZapPollEventComponent {
     }
   }
 
-  /**
-   * Parse a kind 9735 zap receipt to extract which poll option was voted for.
-   * The zap request (kind 9734) embedded in the receipt's `description` tag
-   * should contain a `poll_option` tag indicating the chosen option.
-   */
-  private parseZapReceiptForPoll(receipt: NostrEvent, poll: ZapPoll): { optionId: string; amountSats: number } | null {
-    try {
-      // Get the embedded zap request from the description tag
-      const descriptionTag = receipt.tags.find(t => t[0] === 'description');
-      if (!descriptionTag?.[1]) return null;
+  private buildResultsFromZaps(poll: ZapPoll, zaps: ZapInfo[]): ZapPollResult[] {
+    const optionResults = new Map<string, { zapCount: number; totalSats: number }>();
 
-      const zapRequest: NostrEvent = JSON.parse(descriptionTag[1]);
+    for (const option of poll.options) {
+      optionResults.set(option.id, { zapCount: 0, totalSats: 0 });
+    }
 
-      // Extract the poll_option tag from the zap request
-      const pollOptionTag = zapRequest.tags.find(t => t[0] === 'poll_option');
-      if (!pollOptionTag?.[1]) return null;
-
-      const optionId = pollOptionTag[1];
-
-      // Validate the option exists in this poll
-      if (!poll.options.some(o => o.id === optionId)) return null;
-
-      // Extract amount from bolt11 invoice
-      const bolt11Tag = receipt.tags.find(t => t[0] === 'bolt11');
-      let amountSats = 0;
-      if (bolt11Tag?.[1]) {
-        amountSats = this.decodeBolt11Amount(bolt11Tag[1]);
+    for (const zap of zaps) {
+      if (poll.closedAt && zap.timestamp > poll.closedAt) {
+        continue;
       }
 
-      return { optionId, amountSats };
-    } catch {
-      return null;
-    }
-  }
-
-  /**
-   * Decode the amount from a bolt11 invoice string.
-   * The amount is encoded after 'lnbc' as a number followed by a multiplier.
-   */
-  private decodeBolt11Amount(bolt11: string): number {
-    try {
-      const lower = bolt11.toLowerCase();
-      // Match the amount part: lnbc<amount><multiplier>
-      const match = lower.match(/^lnbc(\d+)([munp]?)/);
-      if (!match) return 0;
-
-      const amount = parseInt(match[1], 10);
-      const multiplier = match[2];
-
-      // Convert to sats based on multiplier
-      // lnbc amounts are in BTC by default
-      switch (multiplier) {
-        case 'm': return amount * 100000; // milli-BTC = 0.001 BTC = 100,000 sats
-        case 'u': return amount * 100;    // micro-BTC = 0.000001 BTC = 100 sats
-        case 'n': return Math.floor(amount / 10); // nano-BTC = 0.1 sat
-        case 'p': return Math.floor(amount / 10000); // pico-BTC = 0.0001 sat
-        default: return amount * 100000000; // BTC = 100,000,000 sats
+      const optionId = zap.zapRequest?.tags.find(tag => tag[0] === 'poll_option')?.[1];
+      if (!optionId || !poll.options.some(option => option.id === optionId)) {
+        continue;
       }
-    } catch {
-      return 0;
+
+      const existing = optionResults.get(optionId);
+      if (!existing) {
+        continue;
+      }
+
+      existing.zapCount++;
+      existing.totalSats += zap.amount || 0;
     }
+
+    return Array.from(optionResults.entries()).map(([optionId, data]) => ({
+      optionId,
+      zapCount: data.zapCount,
+      totalSats: data.totalSats,
+    }));
   }
 
   selectOption(optionId: string): void {
@@ -315,8 +285,12 @@ export class ZapPollEventComponent {
     });
 
     dialogRef.afterClosed().subscribe(() => {
-      // Reload results after dialog closes (zap may have been sent)
       setTimeout(() => {
+        if (this.zaps() !== null) {
+          this.refreshZapsRequested.emit();
+          return;
+        }
+
         void this.loadZapResults(this.event());
       }, 2000);
     });
