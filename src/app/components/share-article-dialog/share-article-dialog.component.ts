@@ -967,7 +967,11 @@ export class ShareArticleDialogComponent {
           repostExpiration = confirmed ? expiration : undefined;
         }
 
-        const reposted = await this.repostService.repostNote(ev, { expiration: repostExpiration });
+        const authorRelays = await this.userRelaysService.getUserRelaysForPublishing(ev.pubkey);
+        const relayHints = this.utilities.normalizeRelayUrls(authorRelays);
+        const relayUrl = relayHints[0];
+
+        const reposted = await this.repostService.repostNote(ev, { expiration: repostExpiration, relayUrl });
         if (reposted) {
           this.hasReposted.set(true);
           this.snackBar.open('Reposted', 'Close', { duration: 2000 });
