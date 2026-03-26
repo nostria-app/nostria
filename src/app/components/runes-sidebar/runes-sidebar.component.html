@@ -1,10 +1,7 @@
 <div class="runes-sidebar" (mouseenter)="onSidebarEnter()" (mouseleave)="onSidebarLeave()">
   @if (layout.mediaPlayerInSidebar() && mediaPlayer.hasQueue()) {
-  <button mat-icon-button class="rune-button sidebar-player-button"
-    [class.rune-active]="sidebarPlayerHovered()"
-    (mouseenter)="onSidebarPlayerEnter($event)"
-    (mouseleave)="onSidebarPlayerLeave()"
-    (click)="togglePlayPause()"
+  <button mat-icon-button class="rune-button sidebar-player-button" [class.rune-active]="sidebarPlayerHovered()"
+    (mouseenter)="onSidebarPlayerEnter($event)" (mouseleave)="onSidebarPlayerLeave()" (click)="togglePlayPause()"
     [attr.aria-label]="mediaPlayer.paused ? 'Play' : 'Pause'">
     @if (sidebarPlayerArtwork()) {
     <img class="sidebar-player-art" [src]="sidebarPlayerArtwork()!" alt="Now playing" />
@@ -48,21 +45,22 @@
 @if ((sidebarPlayerHovered() || sidebarPlayerIntro()) && layout.mediaPlayerInSidebar() && mediaPlayer.hasQueue()) {
 <div class="rune-flyout rune-hover-preview sidebar-player-flyout"
   [class.sidebar-player-intro]="sidebarPlayerIntro() && !sidebarPlayerHovered()"
-  [style.top.px]="sidebarPlayerFlyoutPosition()?.top"
-  [style.right.px]="sidebarPlayerFlyoutPosition()?.right"
-  (mouseenter)="onSidebarPlayerFlyoutEnter()"
-  (mouseleave)="onSidebarPlayerFlyoutLeave()">
+  [style.top.px]="sidebarPlayerFlyoutPosition()?.top" [style.right.px]="sidebarPlayerFlyoutPosition()?.right"
+  (mouseenter)="onSidebarPlayerFlyoutEnter()" (mouseleave)="onSidebarPlayerFlyoutLeave()">
   <div class="sidebar-player-info">
     @if (mediaPlayer.current()?.artwork) {
     <img class="sidebar-player-flyout-art" [src]="mediaPlayer.current()!.artwork!" alt="Now playing artwork" />
     }
     <div class="sidebar-player-flyout-text">
-      <div class="sidebar-player-title" [class.clickable]="hasSongLink()" (click)="goToSong()">{{ mediaPlayer.current()?.title || 'Unknown Track' }}</div>
-      <div class="sidebar-player-artist" [class.clickable]="hasArtistLink()" (click)="goToArtist()">{{ mediaPlayer.current()?.artist || 'Unknown Artist' }}</div>
+      <div class="sidebar-player-title" [class.clickable]="hasSongLink()" (click)="goToSong()">{{
+        mediaPlayer.current()?.title || 'Unknown Track' }}</div>
+      <div class="sidebar-player-artist" [class.clickable]="hasArtistLink()" (click)="goToArtist()">{{
+        mediaPlayer.current()?.artist || 'Unknown Artist' }}</div>
     </div>
   </div>
   <div class="sidebar-player-controls">
-    <button mat-icon-button [disabled]="!mediaPlayer.canPrevious()" (click)="mediaPlayer.previous()" aria-label="Previous">
+    <button mat-icon-button [disabled]="!mediaPlayer.canPrevious()" (click)="mediaPlayer.previous()"
+      aria-label="Previous">
       <mat-icon>skip_previous</mat-icon>
     </button>
     <button mat-icon-button (click)="togglePlayPause()" [attr.aria-label]="mediaPlayer.paused ? 'Play' : 'Pause'">
@@ -76,7 +74,8 @@
     <button mat-icon-button matTooltip="Show player" (click)="undockFromSidebar()" aria-label="Move player to footer">
       <mat-icon>pip_exit</mat-icon>
     </button>
-    <button mat-icon-button matTooltip="Fullscreen" (click)="openFullscreenPlayer()" aria-label="Open fullscreen player">
+    <button mat-icon-button matTooltip="Fullscreen" (click)="openFullscreenPlayer()"
+      aria-label="Open fullscreen player">
       <mat-icon>open_in_full</mat-icon>
     </button>
     <button mat-icon-button matTooltip="Close player" (click)="mediaPlayer.exit()" aria-label="Close player">
