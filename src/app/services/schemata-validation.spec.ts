@@ -672,7 +672,8 @@ describe('Schemata Schema Validation', () => {
     it('kind 6 (Repost of text note) via repostNote', async () => {
       signAndPublishSpy.mockClear();
       const original = makeEvent(1, 'original note');
-      await repostService.repostNote(original);
+      const relayUrl = 'wss://relay.nostr.example';
+      await repostService.repostNote(original, { relayUrl });
 
       expect(signAndPublishSpy).toHaveBeenCalledOnce();
       const event = capturedEvent();
@@ -685,7 +686,10 @@ describe('Schemata Schema Validation', () => {
       // Structural checks (the schemata kind6Schema requires relay hints in
       // e/p tags, but NIP-18 spec makes them optional — so we validate
       // structure here rather than strict schema compliance)
-      expect(event.tags.some((t) => t[0] === 'e')).toBe(true);
+      const eTag = event.tags.find((t) => t[0] === 'e');
+      expect(eTag).toBeTruthy();
+      expect(eTag![1]).toBe(original.id);
+      expect(eTag![2]).toBe(relayUrl);
       expect(event.tags.some((t) => t[0] === 'p')).toBe(true);
     });
 
@@ -695,7 +699,8 @@ describe('Schemata Schema Validation', () => {
         ['d', 'article-slug'],
       ]);
       article.kind = 30023;
-      await repostService.repostNote(article);
+      const relayUrl = 'wss://relay.nostr.example';
+      await repostService.repostNote(article, { relayUrl });
 
       expect(signAndPublishSpy).toHaveBeenCalledOnce();
       const event = capturedEvent();
@@ -709,6 +714,11 @@ describe('Schemata Schema Validation', () => {
       // Should have a tag for addressable event
       const aTag = event.tags.find((t) => t[0] === 'a');
       expect(aTag).toBeTruthy();
+
+      const eTag = event.tags.find((t) => t[0] === 'e');
+      expect(eTag).toBeTruthy();
+      expect(eTag![1]).toBe(article.id);
+      expect(eTag![2]).toBe(relayUrl);
 
       const result = validateEvent(event, schemaRegistry);
       expect(result.errors).toEqual([]);

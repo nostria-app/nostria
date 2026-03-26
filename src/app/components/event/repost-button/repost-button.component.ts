@@ -13,6 +13,7 @@ import { EventService } from '../../../services/event';
 import { RepostService } from '../../../services/repost.service';
 import { LayoutService } from '../../../services/layout.service';
 import { AccountRelayService } from '../../../services/relays/account-relay';
+import { UserRelaysService } from '../../../services/relays/user-relays';
 import { UtilitiesService } from '../../../services/utilities.service';
 import type { NoteEditorDialogData } from '../../../interfaces/note-editor';
 import { ConfirmDialogComponent, type ConfirmDialogData } from '../../confirm-dialog/confirm-dialog.component';
@@ -38,6 +39,7 @@ export class RepostButtonComponent {
   private readonly repostService = inject(RepostService);
   private readonly layout = inject(LayoutService);
   private readonly accountRelay = inject(AccountRelayService);
+  private readonly userRelaysService = inject(UserRelaysService);
   private readonly utilities = inject(UtilitiesService);
   private readonly dialog = inject(MatDialog);
 
@@ -116,7 +118,11 @@ export class RepostButtonComponent {
       repostExpiration = confirmed ? expiration : undefined;
     }
 
-    await this.repostService.repostNote(event, { expiration: repostExpiration });
+    const authorRelays = await this.userRelaysService.getUserRelaysForPublishing(event.pubkey);
+    const relayHints = this.utilities.normalizeRelayUrls(authorRelays);
+    const relayUrl = relayHints[0];
+
+    await this.repostService.repostNote(event, { expiration: repostExpiration, relayUrl });
     await this.loadReposts(true);
   }
 

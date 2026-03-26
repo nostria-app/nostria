@@ -20,8 +20,8 @@ export class RepostService {
   private snackBar = inject(MatSnackBar);
   private utilities = inject(UtilitiesService);
 
-  async repostNote(event: Event, options?: { expiration?: number }): Promise<boolean> {
-    const repostEvent = this.createRepostEvent(event, options?.expiration);
+  async repostNote(event: Event, options?: { expiration?: number; relayUrl?: string }): Promise<boolean> {
+    const repostEvent = this.createRepostEvent(event, options?.expiration, options?.relayUrl);
 
     const result = await this.nostrService.signAndPublish(repostEvent);
     if (result.success) {
@@ -108,9 +108,11 @@ export class RepostService {
     return this.utilities.getEventExpiration(event);
   }
 
-  private createRepostEvent(event: Event, expiration?: number): UnsignedEvent {
+  private createRepostEvent(event: Event, expiration?: number, relayUrl?: string): UnsignedEvent {
+    const normalizedRelayUrl = relayUrl?.trim() || '';
+    const eTag = normalizedRelayUrl ? ['e', event.id, normalizedRelayUrl] : ['e', event.id];
     const tags: string[][] = [
-      ['e', event.id],
+      eTag,
       ['p', event.pubkey],
     ];
 
