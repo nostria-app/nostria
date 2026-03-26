@@ -594,10 +594,25 @@ export abstract class RelayServiceBase {
    * Get effective relay URLs (with optimization if enabled)
    */
   private getEffectiveRelayUrls(): string[] {
-    if (this.useOptimizedRelays) {
-      return this.relaysService.getOptimalRelays(this.relayUrls);
+    const relayUrls = this.useOptimizedRelays
+      ? this.relaysService.getOptimalRelays(this.relayUrls)
+      : this.relayUrls;
+
+    return this.getConnectableRelayUrls(relayUrls, 'effective-relays');
+  }
+
+  private getConnectableRelayUrls(relayUrls: string[], operation: string): string[] {
+    const connectableRelayUrls = this.utilities.getUniqueNormalizedRelayUrls(relayUrls);
+
+    if (connectableRelayUrls.length < relayUrls.length) {
+      this.logger.debug(`[${this.constructor.name}] Filtered non-connectable relay URL(s)`, {
+        operation,
+        requestedCount: relayUrls.length,
+        connectableCount: connectableRelayUrls.length,
+      });
     }
-    return this.relayUrls;
+
+    return connectableRelayUrls;
   }
 
   /**
@@ -647,7 +662,7 @@ export abstract class RelayServiceBase {
     relayUrls: string[],
     options: { timeout?: number } = {},
   ): Promise<T | null> {
-    const urls = relayUrls;
+    const urls = this.getConnectableRelayUrls(relayUrls, 'getWithRelays');
 
     if (urls.length === 0) {
       this.logger.warn(`[${this.constructor.name}] No relays available for query`);
@@ -843,6 +858,13 @@ export abstract class RelayServiceBase {
     relayUrls: string[],
     options: { timeout?: number } = {},
   ): Promise<T[]> {
+    relayUrls = this.getConnectableRelayUrls(relayUrls, 'getManyWithRelays');
+
+    if (relayUrls.length === 0) {
+      this.logger.warn('No relays available for query');
+      return [];
+    }
+
     // Filter out relays that have failed authentication
     const authResult = this.filterAuthFailedRelays(relayUrls);
     if (!authResult.shouldProceed) {
@@ -935,8 +957,15 @@ export abstract class RelayServiceBase {
       return null;
     }
 
+    const connectableRelayUrls = this.getConnectableRelayUrls(this.relayUrls, 'publish');
+
+    if (connectableRelayUrls.length === 0) {
+      this.logger.warn('No relays available for publish');
+      return null;
+    }
+
     // Filter out relays that have failed authentication
-    const authResult = this.filterAuthFailedRelays(this.relayUrls);
+    const authResult = this.filterAuthFailedRelays(connectableRelayUrls);
     if (!authResult.shouldProceed) {
       return null;
     }
@@ -1028,9 +1057,15 @@ export abstract class RelayServiceBase {
     }
 
     const inputUrls = Array.isArray(relayUrls) ? relayUrls : [relayUrls];
+    const connectableRelayUrls = this.getConnectableRelayUrls(inputUrls, 'publishToRelay');
+
+    if (connectableRelayUrls.length === 0) {
+      this.logger.warn('No relays available for publish');
+      return null;
+    }
 
     // Filter out relays that have failed authentication
-    const authResult = this.filterAuthFailedRelays(inputUrls);
+    const authResult = this.filterAuthFailedRelays(connectableRelayUrls);
     if (!authResult.shouldProceed) {
       return null;
     }
@@ -1089,11 +1124,7 @@ export abstract class RelayServiceBase {
   ) {
     this.logger.debug(`[${this.constructor.name}] Creating subscription with filters:`, filter);
 
-    let urls = this.relayUrls;
-
-    if (this.useOptimizedRelays) {
-      urls = this.relaysService.getOptimalRelays(this.relayUrls);
-    }
+    let urls = this.getEffectiveRelayUrls();
 
     // Filter out relays that have failed authentication or are temporarily blocked
     const authResult = this.filterAuthFailedRelays(urls);
@@ -1295,11 +1326,7 @@ export abstract class RelayServiceBase {
   ) {
     this.logger.debug('Creating subscription with filters:', filter);
 
-    let urls = this.relayUrls;
-
-    if (this.useOptimizedRelays) {
-      urls = this.relaysService.getOptimalRelays(this.relayUrls);
-    }
+    let urls = this.getEffectiveRelayUrls();
 
     if (!this.#pool) {
       this.logger.error('Cannot subscribe: user pool is not initialized');

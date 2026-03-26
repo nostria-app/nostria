@@ -6,6 +6,7 @@ import { LoggerService } from '../logger.service';
 import { RelayAuthService } from './relay-auth.service';
 import { LocalSettingsService } from '../local-settings.service';
 import { PoolService } from './pool.service';
+import { UtilitiesService } from '../utilities.service';
 
 // Forward reference to avoid circular dependency
 let EventProcessorServiceRef: any;
@@ -23,6 +24,7 @@ export class RelayPoolService {
   private readonly logger = inject(LoggerService);
   private readonly relayAuth = inject(RelayAuthService);
   private readonly localSettings = inject(LocalSettingsService);
+  private readonly utilities = inject(UtilitiesService);
   private readonly injector = inject(Injector);
   // Lazy-loaded to avoid circular dependency
   private _eventProcessor?: any;
@@ -231,16 +233,32 @@ export class RelayPoolService {
     }
   }
 
+  private getConnectableRelayUrls(relayUrls: string[], operation: string): string[] {
+    const normalizedRelayUrls = this.utilities.getUniqueNormalizedRelayUrls(relayUrls);
+
+    if (normalizedRelayUrls.length < relayUrls.length) {
+      this.logger.debug('[RelayPoolService] Filtered non-connectable relay URL(s)', {
+        operation,
+        requestedCount: relayUrls.length,
+        connectableCount: normalizedRelayUrls.length,
+      });
+    }
+
+    return normalizedRelayUrls;
+  }
+
   /**
    * Get event from relays
    */
   async get(relayUrls: string[], filter: Filter, timeoutMs = 5000): Promise<Event | null> {
-    if (relayUrls.length === 0) {
+    const connectableRelayUrls = this.getConnectableRelayUrls(relayUrls, 'get');
+
+    if (connectableRelayUrls.length === 0) {
       return null;
     }
 
     // Filter out insecure ws:// relays - they cannot be used from secure context
-    const secureUrls = relayUrls.filter(url => !url.startsWith('ws://'));
+    const secureUrls = connectableRelayUrls.filter(url => !url.startsWith('ws://'));
     if (secureUrls.length === 0) {
       this.logger.warn('[RelayPoolService] All relays are insecure (ws://), cannot connect from secure context');
       return null;
@@ -314,12 +332,14 @@ export class RelayPoolService {
  * Get events from relays
  */
   async query(relayUrls: string[], filter: Filter, timeoutMs = 5000): Promise<Event[]> {
-    if (relayUrls.length === 0) {
+    const connectableRelayUrls = this.getConnectableRelayUrls(relayUrls, 'query');
+
+    if (connectableRelayUrls.length === 0) {
       return [];
     }
 
     // Filter out insecure ws:// relays - they cannot be used from secure context
-    const secureUrls = relayUrls.filter(url => !url.startsWith('ws://'));
+    const secureUrls = connectableRelayUrls.filter(url => !url.startsWith('ws://'));
     if (secureUrls.length === 0) {
       this.logger.warn('[RelayPoolService] All relays are insecure (ws://), cannot connect from secure context');
       return [];
@@ -402,8 +422,10 @@ export class RelayPoolService {
    * Subscribe to events
    */
   subscribe(relayUrls: string[], filter: Filter, onEvent: (event: Event) => void) {
+    const connectableRelayUrls = this.getConnectableRelayUrls(relayUrls, 'subscribe');
+
     // Filter out insecure ws:// relays - they cannot be used from secure context
-    const secureUrls = relayUrls.filter(url => !url.startsWith('ws://'));
+    const secureUrls = connectableRelayUrls.filter(url => !url.startsWith('ws://'));
     if (secureUrls.length === 0) {
       this.logger.warn('[RelayPoolService] All relays are insecure (ws://), cannot connect from secure context');
       return {
@@ -536,15 +558,17 @@ export class RelayPoolService {
    * @param timeoutMs Timeout in milliseconds (default: 10000)
    */
   async publish(relayUrls: string[], event: Event, timeoutMs = 10000): Promise<void> {
-    if (relayUrls.length === 0) {
+    const connectableRelayUrls = this.getConnectableRelayUrls(relayUrls, 'publish');
+
+    if (connectableRelayUrls.length === 0) {
       throw new Error('No relays provided');
     }
 
     // Filter out relays that have failed authentication
-    const filteredUrls = this.relayAuth.filterAuthFailedRelays(relayUrls);
+    const filteredUrls = this.relayAuth.filterAuthFailedRelays(connectableRelayUrls);
     if (filteredUrls.length === 0) {
-      if (relayUrls.length === 1) {
-        throw new Error(`${relayUrls[0]}: relay unavailable for publishing at the moment`);
+      if (connectableRelayUrls.length === 1) {
+        throw new Error(`${connectableRelayUrls[0]}: relay unavailable for publishing at the moment`);
       }
 
       throw new Error('No available relays for this publish attempt');
@@ -627,7 +651,8 @@ export class RelayPoolService {
    * promises and is responsible for handling rejections.
    */
   publishWithTracking(relayUrls: string[], event: Event): Promise<string>[] {
-    const secureUrls = relayUrls.filter(url => !url.startsWith('ws://'));
+    const connectableRelayUrls = this.getConnectableRelayUrls(relayUrls, 'publishWithTracking');
+    const secureUrls = connectableRelayUrls.filter(url => !url.startsWith('ws://'));
     if (secureUrls.length === 0) {
       return [];
     }

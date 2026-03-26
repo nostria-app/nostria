@@ -8,6 +8,7 @@ import { LoggerService } from '../logger.service';
 import { RelayAuthService } from './relay-auth.service';
 import { LocalSettingsService } from '../local-settings.service';
 import { PoolService } from './pool.service';
+import { UtilitiesService } from '../utilities.service';
 
 describe('RelayPoolService request queue', () => {
   let service: RelayPoolService;
@@ -52,6 +53,12 @@ describe('RelayPoolService request queue', () => {
           provide: RelayAuthService,
           useValue: {
             filterAuthFailedRelays: vi.fn((relayUrls: string[]) => relayUrls),
+          },
+        },
+        {
+          provide: UtilitiesService,
+          useValue: {
+            getUniqueNormalizedRelayUrls: vi.fn((relayUrls: string[]) => relayUrls.filter(url => !url.includes('relay.nostr.band'))),
           },
         },
         { provide: LocalSettingsService, useValue: {} },
@@ -150,5 +157,18 @@ describe('RelayPoolService request queue', () => {
 
     releaseThird!();
     await expect(lowPriority).resolves.toBeNull();
+  });
+
+  it('never connects to ignored relay domains', async () => {
+    poolGetMock.mockResolvedValueOnce(null);
+
+    await service.get(['wss://relay.nostr.band', 'wss://nos.lol'], { kinds: [1], authors: ['alice'] });
+
+    expect(poolGetMock).toHaveBeenCalledTimes(1);
+    expect(poolGetMock).toHaveBeenCalledWith(
+      ['wss://nos.lol'],
+      { kinds: [1], authors: ['alice'] },
+      { maxWait: 5000 }
+    );
   });
 });
