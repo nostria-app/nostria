@@ -210,7 +210,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   isPlain = computed<boolean>(() => this.appearance() === 'plain');
 
   // IntersectionObserver for lazy loading interactions
-  private hasLoadedInteractions = signal<boolean>(false);
+  readonly hasLoadedInteractions = signal<boolean>(false);
   private elementRef = inject(ElementRef);
   private observedEventId?: string; // Track which event we're observing for
   private readonly intersectionObserverService = inject(IntersectionObserverService);
