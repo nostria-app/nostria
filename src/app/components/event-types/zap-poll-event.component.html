@@ -28,11 +28,8 @@
 
   <div class="poll-options">
     @for (option of poll().options; track option.id) {
-    <div class="poll-option" [class.selected]="selectedOption() === option.id"
-      role="button"
-      tabindex="0"
-      (click)="selectOption(option.id)"
-      (keydown.enter)="selectOption(option.id)"
+    <div class="poll-option" [class.selected]="selectedOption() === option.id" role="button" tabindex="0"
+      (click)="selectOption(option.id)" (keydown.enter)="selectOption(option.id)"
       (keydown.space)="selectOption(option.id)">
 
       @if (displayResults()) {
@@ -69,13 +66,8 @@
   <div class="poll-footer">
     <div class="poll-info">
       @if (summaryZapCount() > 0) {
-      <span
-        class="total-zaps total-zaps-clickable"
-        role="button"
-        tabindex="0"
-        (click)="onTotalZapsClick($event)"
-        (keydown.enter)="onTotalZapsClick($event)"
-        (keydown.space)="onTotalZapsClick($event)">
+      <span class="total-zaps total-zaps-clickable" role="button" tabindex="0" (click)="onTotalZapsClick($event)"
+        (keydown.enter)="onTotalZapsClick($event)" (keydown.space)="onTotalZapsClick($event)">
         <mat-icon>bolt</mat-icon>
         {{ summaryZapCount() }} zap{{ summaryZapCount() !== 1 ? 's' : '' }}
         ({{ formatSats(summaryTotalSats()) }})
