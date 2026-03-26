@@ -1,22 +1,24 @@
 @if (visible()) {
-<div class="chat-widget" [class.expanded]="state() !== 'collapsed'">
+<div class="chat-widget" [class.expanded]="state() !== 'collapsed'" [class.sidebar-offset]="rightSidebarOpen()">
 
   <!-- Collapsed pill -->
   @if (state() === 'collapsed') {
-  <button class="chat-pill" (click)="toggleOpen()">
-    <div class="pill-left">
+  <div class="chat-pill">
+    <button class="pill-left" (click)="toggleOpen()">
       <mat-icon class="pill-icon">send</mat-icon>
       <span class="pill-label">Messages</span>
       @if (unreadCount() > 0) {
       <span class="pill-badge">{{ unreadCount() > 99 ? '99+' : unreadCount() }}</span>
       }
-    </div>
+    </button>
     <div class="pill-avatars">
       @for (pubkey of recentAvatarPubkeys(); track pubkey) {
-      <app-user-profile [pubkey]="pubkey" view="icon" [disableLink]="true" [disableHoverCard]="true" />
+      <button class="pill-avatar-button" (click)="openChat(pubkey, false)" matTooltip="Open chat">
+        <app-user-profile [pubkey]="pubkey" view="icon" [disableLink]="true" [disableHoverCard]="true" />
+      </button>
       }
     </div>
-  </button>
+  </div>
   }
 
   <!-- Expanded messages list -->
@@ -121,7 +123,7 @@
       <div class="chat-header-user">
         <app-user-profile [pubkey]="activeChatId()!" view="icon" [disableLink]="true"
           [disableHoverCard]="true" />
-        <app-profile-display-name [pubkey]="activeChatId()!" [disableLink]="true" />
+        <span class="chat-header-name">{{ activeChatDisplayName() }}</span>
       </div>
       }
       <span class="header-spacer"></span>

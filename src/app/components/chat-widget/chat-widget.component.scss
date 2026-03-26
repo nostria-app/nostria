@@ -13,6 +13,11 @@
   display: flex;
   flex-direction: column;
   align-items: flex-end;
+  transition: transform 0.2s ease;
+
+  &.sidebar-offset {
+    transform: translateX(-68px);
+  }
 }
 
 // ── Collapsed pill ──────────────────────────────────────────────────────
@@ -20,16 +25,14 @@
 .chat-pill {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 10px 12px 10px 20px;
+  gap: 0;
   border-radius: 999px;
-  border: none;
-  cursor: pointer;
   background: rgba(40, 40, 40, 0.95);
   backdrop-filter: blur(12px);
   color: #e4e4e4;
-  transition: background 0.2s, box-shadow 0.2s;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  transition: background 0.2s, box-shadow 0.2s;
+  cursor: pointer;
 
   &:hover {
     background: rgba(55, 55, 55, 0.95);
@@ -40,6 +43,11 @@
     display: flex;
     align-items: center;
     gap: 8px;
+    padding: 12px 14px 12px 22px;
+    border: none;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
   }
 
   .pill-icon {
@@ -51,7 +59,7 @@
   }
 
   .pill-label {
-    font-size: 15px;
+    font-size: 16px;
     font-weight: 500;
     white-space: nowrap;
   }
@@ -71,22 +79,63 @@
   .pill-avatars {
     display: flex;
     align-items: center;
+    padding: 8px 12px 8px 4px;
+
+    .pill-avatar-button {
+      margin-left: -4px;
+      padding: 0;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      border-radius: 50%;
+      transition: transform 0.15s;
+      position: relative;
+      z-index: 1;
+      line-height: 0;
+
+      &:first-child {
+        margin-left: 0;
+      }
+
+      &:hover {
+        transform: scale(1.12);
+        z-index: 2;
+      }
+    }
 
     ::ng-deep {
       app-user-profile {
-        margin-left: -8px;
+        display: block;
 
-        &:first-child {
-          margin-left: 0;
+        .user-profile,
+        .user-profile-container {
+          width: auto !important;
+          padding: 0 !important;
         }
 
-        .profile-icon-image,
-        img {
+        .user-profile-avatar-container {
+          display: block;
+        }
+
+        .user-profile-avatar {
           width: 34px !important;
           height: 34px !important;
+          border-width: 2px !important;
+          border-color: rgba(40, 40, 40, 0.95) !important;
+        }
+
+        .user-avatar,
+        img {
+          width: 100% !important;
+          height: 100% !important;
           border-radius: 50%;
-          border: 2px solid rgba(40, 40, 40, 0.95);
           object-fit: cover;
+        }
+
+        .default-user-avatar {
+          font-size: 30px !important;
+          width: 30px !important;
+          height: 30px !important;
         }
       }
     }
@@ -223,12 +272,31 @@
     }
 
     ::ng-deep {
-      .profile-icon-image,
-      img {
-        width: 44px !important;
-        height: 44px !important;
-        border-radius: 50%;
-        object-fit: cover;
+      app-user-profile {
+        display: block;
+
+        .user-profile,
+        .user-profile-container {
+          width: auto !important;
+          padding: 0 !important;
+        }
+
+        .user-profile-avatar-container {
+          display: block;
+        }
+
+        .user-profile-avatar {
+          width: 44px !important;
+          height: 44px !important;
+        }
+
+        .user-avatar,
+        img {
+          width: 100% !important;
+          height: 100% !important;
+          border-radius: 50%;
+          object-fit: cover;
+        }
       }
     }
   }
@@ -398,30 +466,32 @@
     ::ng-deep {
       app-user-profile {
         flex-shrink: 0;
+        display: block;
 
-        .profile-icon-image,
-        img {
+        .user-profile,
+        .user-profile-container {
+          width: auto !important;
+          padding: 0 !important;
+        }
+
+        .user-profile-avatar-container {
+          display: block;
+        }
+
+        .user-profile-avatar {
           width: 32px !important;
           height: 32px !important;
+        }
+
+        .user-avatar,
+        img {
+          width: 100% !important;
+          height: 100% !important;
           border-radius: 50%;
           object-fit: cover;
         }
       }
 
-      app-profile-display-name {
-        min-width: 0;
-
-        a, span, .display-name {
-          font-size: 14px;
-          font-weight: 600;
-          color: #e4e4e4;
-          text-decoration: none;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          display: block;
-        }
-      }
     }
   }
 }

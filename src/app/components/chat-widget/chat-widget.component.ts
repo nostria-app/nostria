@@ -8,9 +8,12 @@ import { MessagingService } from '../../services/messaging.service';
 import { LayoutService } from '../../services/layout.service';
 import { ApplicationService } from '../../services/application.service';
 import { LocalSettingsService } from '../../services/local-settings.service';
+import { SettingsService } from '../../services/settings.service';
 import { AccountStateService } from '../../services/account-state.service';
 import { DataService } from '../../services/data.service';
 import { UserRelayService } from '../../services/relays/user-relay';
+import { CustomDialogService } from '../../services/custom-dialog.service';
+import { StartChatDialogComponent, StartChatDialogResult } from '../start-chat-dialog/start-chat-dialog.component';
 import { UserProfileComponent } from '../user-profile/user-profile.component';
 import { ProfileDisplayNameComponent } from '../user-profile/display-name/profile-display-name.component';
 import { MessageContentComponent } from '../message-content/message-content.component';
@@ -40,9 +43,11 @@ export class ChatWidgetComponent {
   private layout = inject(LayoutService);
   private app = inject(ApplicationService);
   private localSettings = inject(LocalSettingsService);
+  private settings = inject(SettingsService);
   private accountState = inject(AccountStateService);
   private data = inject(DataService);
   private userRelayService = inject(UserRelayService);
+  private customDialog = inject(CustomDialogService);
 
   @ViewChild('chatMessagesContainer') chatMessagesContainer?: ElementRef<HTMLDivElement>;
   @ViewChild('widgetMessageInput') widgetMessageInput?: ElementRef<HTMLTextAreaElement>;
@@ -75,11 +80,23 @@ export class ChatWidgetComponent {
 
   unreadCount = computed(() => this.messaging.unreadBadgeCount());
 
+  /** Whether the right sidebar is visible (shifts widget left) */
+  rightSidebarOpen = computed(() => {
+    return !this.layout.isHandset() && this.settings.settings().rightSidebarEnabled === true;
+  });
+
   /** The active chat object */
   activeChat = computed(() => {
     const chatId = this.activeChatId();
     if (!chatId) return null;
     return this.messaging.getChat(chatId);
+  });
+
+  /** Display name for the active 1-on-1 chat */
+  activeChatDisplayName = computed(() => {
+    const chatId = this.activeChatId();
+    if (!chatId || this.activeChatIsGroup()) return '';
+    return this.getParticipantName(chatId);
   });
 
   /** Messages for the active chat */
@@ -152,8 +169,27 @@ export class ChatWidgetComponent {
   }
 
   startNewChat() {
-    this.router.navigate(['/messages'], { queryParams: { newChat: true } });
-    this.close();
+    const dialogRef = this.customDialog.open<StartChatDialogComponent, StartChatDialogResult | undefined>(
+      StartChatDialogComponent,
+      {
+        title: 'New Conversation',
+        width: '500px',
+        maxWidth: '90vw',
+      }
+    );
+
+    dialogRef.afterClosed$.subscribe(({ result }) => {
+      if (result) {
+        const chatResult = result as StartChatDialogResult;
+        if (chatResult.isGroup && chatResult.participants) {
+          // Group chat creation - redirect to full messages page
+          this.router.navigate(['/messages'], { queryParams: { newChat: true } });
+          this.close();
+        } else if (chatResult.pubkey) {
+          this.openChat(chatResult.pubkey, false);
+        }
+      }
+    });
   }
 
   disableWidget() {
