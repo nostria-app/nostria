@@ -415,11 +415,16 @@
     [class.sidepanel-open]="showChatDetails()">
     @if (!selectedChat()) {
     <div class="no-chat-selected">
+      @if (isOpeningChat()) {
+      <mat-spinner diameter="32"></mat-spinner>
+      <p>Opening conversation...</p>
+      } @else {
       <h2>Select a message</h2>
       <p>Choose from your existing conversations or start a new one.</p>
       <button mat-flat-button (click)="startNewChat()">
         New message
       </button>
+      }
     </div>
     } @else {
     <div class="chat-content-wrapper">

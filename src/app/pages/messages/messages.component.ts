@@ -220,6 +220,8 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   @ViewChild('chatSearchInput') chatSearchInput?: ElementRef<HTMLInputElement>;
 
   isLoading = signal<boolean>(false);
+  /** True while navigating to a chat via pubkey query param, before the chat renders */
+  isOpeningChat = signal<boolean>(false);
   isLoadingMore = signal<boolean>(false);
   isSending = signal<boolean>(false);
   isUploading = signal<boolean>(false);
@@ -895,53 +897,25 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       if (pubkey) {
         this.logger.debug('Query param pubkey detected:', pubkey);
 
-        // Ensure chats are loaded before attempting to start the chat
-        // Check if we need to trigger initial load
+        // Show a loading indicator immediately so the user gets visual feedback
+        this.isOpeningChat.set(true);
+
+        // Start the chat IMMEDIATELY — don't wait for chat loading to finish.
+        // startChatWithPubkey will find an existing chat or create a temp one,
+        // so the user sees the chat window right away.
+        this.startChatWithPubkey(pubkey);
+        this.isOpeningChat.set(false);
+
+        // Load/refresh chats in the background so the chat list populates
         if (!this.messaging.isLoading() && this.messaging.sortedChats().length === 0) {
-          this.logger.debug('Chats not loaded yet, starting load process for DM link...');
-          // Start loading and wait for completion before starting chat
-          this.messaging.loadChats().then(() => {
-            this.logger.debug('Chat loading completed, now starting chat');
-            this.startChatWithPubkey(pubkey);
-          }).catch(error => {
+          this.logger.debug('Loading chats in background after opening DM link...');
+          this.messaging.loadChats().catch(error => {
             this.logger.error('Failed to load chats for DM link:', error);
-            // Try to start chat anyway - it will create a temp chat
-            this.startChatWithPubkey(pubkey);
           });
-        } else if (this.messaging.isLoading()) {
-          this.logger.debug('Chats are currently loading, waiting for completion...');
-
-          // Use an effect to wait for loading to complete with a timeout fallback
-          let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
-          const waitEffect = effect(() => {
-            if (!this.messaging.isLoading()) {
-              this.logger.debug('Chats finished loading, now starting chat with pubkey');
-              if (timeoutHandle) {
-                clearTimeout(timeoutHandle);
-              }
-              untracked(() => {
-                this.startChatWithPubkey(pubkey);
-                waitEffect.destroy(); // Clean up the effect
-              });
-            }
-          });
-
-          // Add a timeout fallback in case loading never completes
-          timeoutHandle = setTimeout(() => {
-            this.logger.warn('Chat loading timeout reached, attempting to start chat anyway');
-            untracked(() => {
-              waitEffect.destroy();
-              this.startChatWithPubkey(pubkey);
-            });
-          }, this.CHAT_LOAD_TIMEOUT_MS);
-        } else {
-          // Chats already loaded - refresh to get any missed messages, then start chat
-          this.logger.debug('Chats already loaded, refreshing and starting chat');
-          this.messaging.refreshChats().then(() => {
-            this.startChatWithPubkey(pubkey);
-          }).catch(() => {
-            // Still start the chat even if refresh fails
-            this.startChatWithPubkey(pubkey);
+        } else if (!this.messaging.isLoading()) {
+          this.logger.debug('Refreshing chats in background after opening DM link...');
+          this.messaging.refreshChats().catch(error => {
+            this.logger.warn('Failed to refresh chats:', error);
           });
         }
       } else {

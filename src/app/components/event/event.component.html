@@ -224,24 +224,56 @@
     }
   </mat-card-content>
 
-  } @else if (isReply() && (parentRecordData || rootRecordData)) {
+  } @else if (isReply() && shouldShowReplyHeader()) {
   <!-- Reply structure with thread context -->
   @if (mode() === 'timeline') {
   <mat-card-header class="reply-header">
     <mat-icon>reply</mat-icon>
     <span>
       <app-profile-display-name [pubkey]="item.event.pubkey"></app-profile-display-name>
-      @if (isThreadedReply()) {
-      replied in thread
-      } @else {
       replied to
-      }
     </span>
   </mat-card-header>
   }
   <!-- Show thread context only in timeline mode -->
   @if (mode() === 'timeline' && !hideParentEvent()) {
   <mat-card-content>
+    @if (isThreadedReply() && !rootRecordData && rootEventId()) {
+    <div class="thread-context">
+      <mat-card appearance="outlined" class="root-event reply-context-placeholder">
+        <mat-card-content>
+          <div class="reply-placeholder-content">
+            @if (isLoadingRoot()) {
+            <mat-progress-spinner diameter="18" mode="indeterminate"></mat-progress-spinner>
+            <span>Loading original post...</span>
+            } @else {
+            <mat-icon>error_outline</mat-icon>
+            <span>Original post could not be loaded</span>
+            }
+          </div>
+        </mat-card-content>
+      </mat-card>
+    </div>
+    }
+
+    @if (!isThreadedReply() && !rootRecordData && !parentRecordData && hasReplyContextTargets()) {
+    <div class="thread-context">
+      <mat-card appearance="outlined" class="root-event reply-context-placeholder">
+        <mat-card-content>
+          <div class="reply-placeholder-content">
+            @if (isLoadingParent() || isLoadingRoot()) {
+            <mat-progress-spinner diameter="18" mode="indeterminate"></mat-progress-spinner>
+            <span>Loading replied post...</span>
+            } @else {
+            <mat-icon>error_outline</mat-icon>
+            <span>Replied post could not be loaded</span>
+            }
+          </div>
+        </mat-card-content>
+      </mat-card>
+    </div>
+    }
+
     <!-- Show root event if this is a threaded reply OR a direct reply to root -->
     @if ((isThreadedReply() && rootRecordData && parentRecordData) || (!isThreadedReply() && rootRecordData)) {
     <!-- Root event (original post) -->
@@ -406,7 +438,25 @@
 
     <!-- Immediate parent event (what this is replying to) -->
     <!-- Only show parent if it exists and is different from root -->
-    @if (parentRecordData && isThreadedReply() && !hideParentEvent()) {
+    @if (isThreadedReply() && !parentRecordData && replyEventId()) {
+    <div class="reply-context">
+      <mat-card appearance="outlined" class="parent-event reply-context-placeholder">
+        <mat-card-content>
+          <div class="reply-placeholder-content">
+            @if (isLoadingParent()) {
+            <mat-progress-spinner diameter="18" mode="indeterminate"></mat-progress-spinner>
+            <span>Loading immediate reply...</span>
+            } @else {
+            <mat-icon>error_outline</mat-icon>
+            <span>Immediate reply could not be loaded</span>
+            }
+          </div>
+        </mat-card-content>
+      </mat-card>
+    </div>
+    }
+
+    @if (parentRecordData && !hideParentEvent() && (isThreadedReply() || !rootRecordData)) {
     <div class="reply-context">
       @if (isThreadedReply()) {
       <!-- <h4 class="thread-label">Replying to</h4> -->
@@ -928,7 +978,8 @@
           (click)="onCommunityUpvote($event)">
           <mat-icon>arrow_upward</mat-icon>
         </button>
-        <span class="vote-pill-score" [class.positive]="voteScore() > 0" [class.negative]="voteScore() < 0">{{ voteScore() }}</span>
+        <span class="vote-pill-score" [class.positive]="voteScore() > 0" [class.negative]="voteScore() < 0">{{
+          voteScore() }}</span>
         <button class="vote-pill-btn downvote" [class.active]="userVote() === 'down'" [disabled]="communityVoting()"
           (click)="onCommunityDownvote($event)">
           <mat-icon>arrow_downward</mat-icon>

@@ -977,6 +977,17 @@
   margin-bottom: 16px;
 }
 
+.reply-context-placeholder {
+  min-height: 72px;
+
+  .reply-placeholder-content {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--mat-sys-on-surface-variant);
+  }
+}
+
 .thread-label {
   color: var(--mat-sys-on-surface-variant);
   font-size: 0.75rem;

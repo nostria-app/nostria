@@ -417,6 +417,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   isLoadingThread = signal<boolean>(false);
   isLoadingReactions = signal<boolean>(false);
   isLoadingParent = signal<boolean>(false);
+  isLoadingRoot = signal<boolean>(false);
   isLoadingZaps = signal<boolean>(false);
   isLoadingRepostedEvent = signal<boolean>(false);
   loadingError = signal<string | null>(null);
@@ -1332,6 +1333,24 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     return !!(rootId && replyId && rootId !== replyId);
   });
 
+  hasReplyContextTargets = computed<boolean>(() => {
+    return !!(this.rootEventId() || this.replyEventId());
+  });
+
+  shouldShowReplyHeader = computed<boolean>(() => {
+    if (!this.isReply()) {
+      return false;
+    }
+
+    return !!(
+      this.parentRecord()
+      || this.rootRecord()
+      || this.isLoadingParent()
+      || this.isLoadingRoot()
+      || this.hasReplyContextTargets()
+    );
+  });
+
   // Get parent record for display (immediate parent)
   // Filter out muted accounts
   parentRecord = computed<NostrRecord | null>(() => {
@@ -1590,19 +1609,27 @@ export class EventComponent implements AfterViewInit, OnDestroy {
           // Get event tags which includes author and relay information
           const eventTags = this.eventService.getEventTags(currentEvent);
 
+          const loadTasks: Promise<void>[] = [];
+
           // Load immediate parent (reply)
           if (replyId) {
-            await this.loadParentEvent(replyId, eventTags);
+            loadTasks.push(this.loadParentEvent(replyId, eventTags));
           }
 
           // Load root event if it's different from reply
           if (rootId && rootId !== replyId) {
-            await this.loadRootEvent(rootId, eventTags);
+            loadTasks.push(this.loadRootEvent(rootId, eventTags));
+          }
+
+          if (loadTasks.length > 0) {
+            await Promise.all(loadTasks);
           }
         });
       } else {
         this.parentEvent.set(null);
         this.rootEvent.set(null);
+        this.isLoadingParent.set(false);
+        this.isLoadingRoot.set(false);
       }
     });
 
@@ -2190,6 +2217,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   async loadRootEvent(rootId: string, eventTags: ReturnType<typeof this.eventService.getEventTags>) {
     if (!rootId) return;
 
+    this.isLoadingRoot.set(true);
     try {
       // Create nevent with author for outbox discovery if we have the author pubkey
       // Use eventTags.author if available, otherwise fall back to first p-tag
@@ -2210,6 +2238,8 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     } catch (error) {
       this.logger.error('Error loading root event:', error);
       this.rootEvent.set(null);
+    } finally {
+      this.isLoadingRoot.set(false);
     }
   }
 
