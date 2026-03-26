@@ -764,7 +764,8 @@ import { MatDividerModule } from '@angular/material/divider';
     }
 
     .track-row-meta {
-      flex: 0 1 min(38vw, 440px);
+      flex: 0 1 auto;
+      max-width: min(32vw, 340px);
       display: flex;
       align-items: center;
       justify-content: flex-end;
@@ -772,6 +773,10 @@ import { MatDividerModule } from '@angular/material/divider';
       min-width: 0;
       color: var(--mat-sys-on-surface-variant);
       font-size: 0.8125rem;
+    }
+
+    :host-context(.dual-panel-layout.has-right-content) .track-row-meta {
+      max-width: 10.5rem;
     }
 
     .track-row-album {
