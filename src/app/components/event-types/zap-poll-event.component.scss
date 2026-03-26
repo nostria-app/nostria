@@ -191,22 +191,24 @@
       }
 
       .show-results-toggle {
-        background: var(--mat-sys-secondary-container);
-        border: 1px solid var(--mat-sys-secondary);
+        background: var(--mat-sys-tertiary-container) !important;
+        border: 1px solid var(--mat-sys-tertiary) !important;
         border-radius: 9999px;
-        color: var(--mat-sys-on-secondary-container);
+        color: var(--mat-sys-on-tertiary-container) !important;
         cursor: pointer;
         font-size: 0.875rem;
-        padding: 0.2rem 0.6rem;
+        padding: 0.25rem 0.7rem;
+        display: inline-flex;
+        align-items: center;
         transition: background-color 0.2s ease;
 
         &:hover {
-          background: var(--mat-sys-secondary);
-          color: var(--mat-sys-on-secondary);
+          background: var(--mat-sys-tertiary) !important;
+          color: var(--mat-sys-on-tertiary) !important;
         }
 
         &:focus {
-          outline: 2px solid var(--mat-sys-secondary);
+          outline: 2px solid var(--mat-sys-tertiary);
           outline-offset: 2px;
         }
       }
