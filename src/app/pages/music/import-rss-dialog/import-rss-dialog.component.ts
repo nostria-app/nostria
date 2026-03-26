@@ -25,6 +25,7 @@ import { LoggerService } from '../../../services/logger.service';
 import { CustomDialogComponent } from '../../../components/custom-dialog/custom-dialog.component';
 import { MentionAutocompleteComponent, MentionAutocompleteConfig, MentionSelection } from '../../../components/mention-autocomplete/mention-autocomplete.component';
 import { MentionInputService } from '../../../services/mention-input.service';
+import { CorsProxyService } from '../../../services/cors-proxy.service';
 
 const MUSIC_KIND = 36787;
 
@@ -111,6 +112,7 @@ export class ImportRssDialogComponent {
   private readonly logger = inject(LoggerService);
   private snackBar = inject(MatSnackBar);
   private mentionInputService = inject(MentionInputService);
+  private corsProxy = inject(CorsProxyService);
 
   // Form state
   rssUrl = signal('');
@@ -206,13 +208,26 @@ export class ImportRssDialogComponent {
     this.isFetching.set(true);
 
     try {
-      // Fetch the RSS feed
-      const response = await fetch(url);
-      if (!response.ok) {
-        throw new Error(`Failed to fetch RSS: ${response.statusText}`);
+      // Use shared CORS-aware fetch (direct first, then proxy fallback).
+      const text = await this.corsProxy.fetchText(url);
+
+      // The proxy can return JSON errors; surface those instead of generic XML parse failures.
+      const trimmedText = text.trim();
+      if (trimmedText.startsWith('{')) {
+        try {
+          const jsonResponse = JSON.parse(trimmedText) as { error?: string; timeout?: number };
+          if (jsonResponse.error) {
+            throw new Error(
+              `Failed to fetch RSS feed: ${jsonResponse.error}${jsonResponse.timeout ? ` (timeout: ${jsonResponse.timeout}ms)` : ''}`
+            );
+          }
+        } catch (err) {
+          if (!(err instanceof SyntaxError)) {
+            throw err;
+          }
+        }
       }
 
-      const text = await response.text();
       const parser = new DOMParser();
       const doc = parser.parseFromString(text, 'application/xml');
 
