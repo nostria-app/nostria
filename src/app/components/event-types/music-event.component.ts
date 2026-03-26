@@ -75,7 +75,7 @@ import { MatDividerModule } from '@angular/material/divider';
         <div class="card-info" (click)="openDetails($any($event))" (keydown.enter)="openDetails($any($event))"
           (keydown.space)="openDetails($any($event))" tabindex="0" role="button" [attr.aria-label]="'View ' + title()">
           <div class="card-title-row">
-            <h4 class="card-title">{{ title() || 'Untitled Track' }}</h4>
+            <span class="card-title">{{ title() || 'Untitled Track' }}</span>
             <button mat-icon-button class="menu-btn" [matMenuTriggerFor]="menu" (click)="$event.stopPropagation()" aria-label="More options">
               <mat-icon>more_vert</mat-icon>
             </button>
@@ -113,7 +113,7 @@ import { MatDividerModule } from '@angular/material/divider';
           <div class="track-row-heading">
             <button type="button" class="track-row-title-link" (click)="openDetails($any($event))"
               (keydown.enter)="openDetails($any($event))">
-              <h4 class="track-row-title">{{ title() || 'Untitled Track' }}</h4>
+              <span class="track-row-title">{{ title() || 'Untitled Track' }}</span>
             </button>
             @if (isAiGenerated()) {
               <span class="track-row-badge">AI</span>
@@ -169,7 +169,7 @@ import { MatDividerModule } from '@angular/material/divider';
         <!-- Info section -->
         <div class="music-info">
           <app-user-profile [pubkey]="event().pubkey" mode="list"></app-user-profile>
-          <h4 class="music-title">{{ title() || 'Untitled Track' }}</h4>
+          <span class="music-title">{{ title() || 'Untitled Track' }}</span>
           <div class="music-meta">
             <app-date-toggle [date]="event().created_at"></app-date-toggle>
             @if (duration()) {
@@ -499,6 +499,7 @@ import { MatDividerModule } from '@angular/material/divider';
         min-width: 0;
         
         .card-title {
+          display: block;
           flex: 1;
           margin: 0;
           font-size: 0.875rem;
@@ -703,6 +704,7 @@ import { MatDividerModule } from '@angular/material/divider';
     }
 
     .track-row-title {
+      display: block;
       margin: 0;
       font-size: 1rem;
       line-height: 1.2;
@@ -941,6 +943,7 @@ import { MatDividerModule } from '@angular/material/divider';
       }
       
       .music-title {
+        display: block;
         margin: 0;
         font-size: 1rem;
         line-height: 1.3;
