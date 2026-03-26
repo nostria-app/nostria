@@ -34,10 +34,11 @@
   align-items: center;
   gap: 0;
   border-radius: 999px;
-  background: rgba(40, 40, 40, 0.95);
+  background: color-mix(in srgb, var(--mat-sys-surface-container-high) 95%, transparent);
   backdrop-filter: blur(12px);
-  color: #e4e4e4;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  color: var(--mat-sys-on-surface);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--mat-sys-outline-variant);
   transition: background 0.2s, box-shadow 0.2s;
   cursor: grab;
 
@@ -46,8 +47,8 @@
   }
 
   &:hover {
-    background: rgba(55, 55, 55, 0.95);
-    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5);
+    background: color-mix(in srgb, var(--mat-sys-surface-container-highest) 95%, transparent);
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35);
   }
 
   .pill-left {
@@ -76,8 +77,8 @@
   }
 
   .pill-badge {
-    background: #e53935;
-    color: #fff;
+    background: var(--mat-sys-error);
+    color: var(--mat-sys-on-error);
     font-size: 11px;
     font-weight: 600;
     padding: 1px 6px;
@@ -132,7 +133,7 @@
           width: 34px !important;
           height: 34px !important;
           border-width: 2px !important;
-          border-color: rgba(40, 40, 40, 0.95) !important;
+          border-color: var(--mat-sys-surface-container-high) !important;
         }
 
         .user-avatar,
@@ -159,9 +160,10 @@
   width: 380px;
   max-height: 520px;
   border-radius: 16px;
-  background: rgba(30, 30, 30, 0.98);
+  background: color-mix(in srgb, var(--mat-sys-surface-container) 98%, transparent);
   backdrop-filter: blur(16px);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--mat-sys-outline-variant);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -176,13 +178,13 @@
   display: flex;
   align-items: center;
   padding: 14px 8px 14px 20px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid var(--mat-sys-outline-variant);
   flex-shrink: 0;
 
   .chat-panel-title {
     font-size: 16px;
     font-weight: 600;
-    color: #e4e4e4;
+    color: var(--mat-sys-on-surface);
   }
 
   .header-spacer {
@@ -190,10 +192,10 @@
   }
 
   .header-action {
-    color: rgba(255, 255, 255, 0.7);
+    color: var(--mat-sys-on-surface-variant);
 
     &:hover {
-      color: #fff;
+      color: var(--mat-sys-on-surface);
     }
 
     mat-icon {
@@ -222,7 +224,7 @@
   }
 
   &::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.15);
+    background: var(--scrollbar-thumb);
     border-radius: 3px;
   }
 }
@@ -233,7 +235,7 @@
   align-items: center;
   justify-content: center;
   padding: 48px 24px;
-  color: rgba(255, 255, 255, 0.4);
+  color: var(--mat-sys-on-surface-variant);
 
   mat-icon {
     font-size: 40px;
@@ -258,11 +260,11 @@
   cursor: pointer;
   transition: background 0.15s;
   text-align: left;
-  color: #e4e4e4;
+  color: var(--mat-sys-on-surface);
   gap: 12px;
 
   &:hover {
-    background: rgba(255, 255, 255, 0.06);
+    background: var(--mat-sys-surface-container-high);
   }
 
   .chat-item-avatar {
@@ -274,11 +276,11 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      background: rgba(255, 255, 255, 0.1);
+      background: var(--mat-sys-surface-container-highest);
       border-radius: 50%;
 
       mat-icon {
-        color: rgba(255, 255, 255, 0.7);
+        color: var(--mat-sys-on-surface-variant);
       }
     }
 
@@ -332,7 +334,7 @@
       a, span, .display-name {
         font-size: 14px;
         font-weight: 500;
-        color: #e4e4e4;
+        color: var(--mat-sys-on-surface);
         text-decoration: none;
         white-space: nowrap;
         overflow: hidden;
@@ -344,7 +346,7 @@
     .chat-item-name {
       font-size: 14px;
       font-weight: 500;
-      color: #e4e4e4;
+      color: var(--mat-sys-on-surface);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -354,7 +356,7 @@
 
     .chat-item-time {
       font-size: 12px;
-      color: rgba(255, 255, 255, 0.4);
+      color: var(--mat-sys-on-surface-variant);
       white-space: nowrap;
       flex-shrink: 0;
     }
@@ -362,21 +364,22 @@
 
   .chat-item-preview {
     font-size: 13px;
-    color: rgba(255, 255, 255, 0.45);
+    color: var(--mat-sys-on-surface-variant);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     max-width: 250px;
 
     .outgoing-prefix {
-      color: rgba(255, 255, 255, 0.55);
+      color: var(--mat-sys-on-surface);
+      opacity: 0.65;
     }
   }
 
   .chat-item-unread {
     flex-shrink: 0;
-    background: #e53935;
-    color: #fff;
+    background: var(--mat-sys-error);
+    color: var(--mat-sys-on-error);
     font-size: 11px;
     font-weight: 600;
     padding: 2px 7px;
@@ -393,11 +396,11 @@
   display: flex;
   align-items: center;
   padding: 8px 12px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid var(--mat-sys-outline-variant);
   flex-shrink: 0;
 
   .disable-widget-button {
-    color: rgba(255, 255, 255, 0.4);
+    color: var(--mat-sys-on-surface-variant);
     font-size: 12px;
     padding: 0 8px;
     min-height: 32px;
@@ -410,7 +413,7 @@
     }
 
     &:hover {
-      color: rgba(255, 255, 255, 0.7);
+      color: var(--mat-sys-on-surface);
     }
   }
 
@@ -421,12 +424,12 @@
   .compose-fab {
     width: 40px !important;
     height: 40px !important;
-    background: rgba(80, 80, 80, 0.9) !important;
-    color: #e4e4e4 !important;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+    background: var(--mat-sys-surface-container-highest) !important;
+    color: var(--mat-sys-on-surface) !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2) !important;
 
     &:hover {
-      background: rgba(100, 100, 100, 0.9) !important;
+      background: var(--mat-sys-surface-container-high) !important;
     }
 
     mat-icon {
@@ -453,7 +456,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      background: rgba(255, 255, 255, 0.1);
+      background: var(--mat-sys-surface-container-highest);
       border-radius: 50%;
       flex-shrink: 0;
 
@@ -461,7 +464,7 @@
         font-size: 20px;
         width: 20px;
         height: 20px;
-        color: rgba(255, 255, 255, 0.7);
+        color: var(--mat-sys-on-surface-variant);
       }
     }
 
@@ -470,7 +473,7 @@
       min-width: 0;
       font-size: 14px;
       font-weight: 600;
-      color: #e4e4e4;
+      color: var(--mat-sys-on-surface);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -531,7 +534,7 @@
   }
 
   &::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.15);
+    background: var(--scrollbar-thumb);
     border-radius: 3px;
   }
 }
@@ -541,7 +544,7 @@
   align-items: center;
   justify-content: center;
   flex: 1;
-  color: rgba(255, 255, 255, 0.35);
+  color: var(--mat-sys-on-surface-variant);
   font-size: 13px;
 
   p {
@@ -560,7 +563,7 @@
   .message-sender-label {
     font-size: 11px;
     font-weight: 600;
-    color: rgba(255, 255, 255, 0.55);
+    color: var(--mat-sys-on-surface-variant);
     margin-bottom: 2px;
     padding-left: 12px;
   }
@@ -572,11 +575,12 @@
     font-size: 13px;
     line-height: 1.4;
     word-break: break-word;
-    background: rgba(255, 255, 255, 0.08);
-    color: #e4e4e4;
+    background: var(--mat-sys-surface-container-high);
+    color: var(--mat-sys-on-surface);
 
     &.outgoing {
-      background: rgba(99, 91, 255, 0.25);
+      background: var(--mat-sys-primary-container);
+      color: var(--mat-sys-on-primary-container);
     }
 
     &.pending {
@@ -605,17 +609,17 @@
 
       .message-time {
         font-size: 10px;
-        color: rgba(255, 255, 255, 0.35);
+        color: var(--mat-sys-on-surface-variant);
       }
 
       .status-icon {
         font-size: 12px;
         width: 12px;
         height: 12px;
-        color: rgba(255, 255, 255, 0.35);
+        color: var(--mat-sys-on-surface-variant);
 
         &.failed {
-          color: #e53935;
+          color: var(--mat-sys-error);
         }
       }
     }
@@ -626,7 +630,7 @@
 
 .chat-input-container {
   padding: 8px 12px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid var(--mat-sys-outline-variant);
   flex-shrink: 0;
 }
 
@@ -634,7 +638,7 @@
   display: flex;
   align-items: flex-end;
   gap: 4px;
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--mat-sys-surface-container-high);
   border-radius: 24px;
   padding: 4px 4px 4px 16px;
 
@@ -643,7 +647,7 @@
     background: transparent;
     border: none;
     outline: none;
-    color: #e4e4e4;
+    color: var(--mat-sys-on-surface);
     font-size: 14px;
     resize: none;
     max-height: 80px;
@@ -652,7 +656,7 @@
     line-height: 1.4;
 
     &::placeholder {
-      color: rgba(255, 255, 255, 0.35);
+      color: var(--mat-sys-on-surface-variant);
     }
 
     &:disabled {
@@ -661,15 +665,16 @@
   }
 
   .send-button {
-    color: rgba(255, 255, 255, 0.7);
+    color: var(--mat-sys-on-surface-variant);
     flex-shrink: 0;
 
     &:hover:not([disabled]) {
-      color: #fff;
+      color: var(--mat-sys-primary);
     }
 
     &[disabled] {
-      color: rgba(255, 255, 255, 0.2);
+      color: var(--mat-sys-on-surface-variant);
+      opacity: 0.35;
     }
 
     mat-icon {
