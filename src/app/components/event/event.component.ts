@@ -2354,6 +2354,10 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     }
   }
 
+  refreshZapsFromPoll(): void {
+    void this.onZapSent(0);
+  }
+
   /**
    * Load reposts for an event
    * Note: For initial loads, prefer using loadAllInteractions() which is more efficient.
