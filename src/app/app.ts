@@ -1637,6 +1637,7 @@ export class App implements OnInit, OnDestroy {
   /** Close sidenav on mobile (overlay mode) after navigation */
   closeSidenavOnMobile() {
     if (this.layout.isHandset() && this.sidenav?.opened) {
+      this.localSettings.setMenuOpen(false);
       this.sidenav.close();
     }
   }
