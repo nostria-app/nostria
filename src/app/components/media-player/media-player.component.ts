@@ -177,7 +177,6 @@ export class MediaPlayerComponent implements OnDestroy {
   private getOffsetBounds(): { minX: number; maxX: number; minY: number; maxY: number } {
     const vw = window.innerWidth;
     const vh = window.innerHeight;
-    const minVisible = 48;
 
     const el = document.querySelector('app-media-player') as HTMLElement;
     if (!el) {
@@ -191,24 +190,19 @@ export class MediaPlayerComponent implements OnDestroy {
     // The rect includes the current transform. Subtract to get the base position.
     const baseLeft = rect.left - currentOffsetX;
     const baseTop = rect.top - currentOffsetY;
-    const pillWidth = rect.width;
-    const pillHeight = rect.height;
+    const elWidth = rect.width;
+    const elHeight = rect.height;
 
-    // With offset, the pill's actual position is:
-    //   left = baseLeft + offsetX
-    //   top  = baseTop + offsetY
-    //
-    // Constraints: at least minVisible pixels of the pill must remain visible on each edge.
+    // Keep the entire element within the viewport.
+    // left edge: baseLeft + offsetX >= 0
+    const minX = -baseLeft;
+    // right edge: baseLeft + offsetX + elWidth <= vw
+    const maxX = vw - elWidth - baseLeft;
 
-    // Left edge: pill right edge (baseLeft + offsetX + pillWidth) >= minVisible
-    const minX = minVisible - pillWidth - baseLeft;
-    // Right edge: pill left edge (baseLeft + offsetX) <= vw - minVisible
-    const maxX = vw - minVisible - baseLeft;
-
-    // Top edge: pill bottom edge (baseTop + offsetY + pillHeight) >= minVisible
-    const minY = minVisible - pillHeight - baseTop;
-    // Bottom edge: pill top edge (baseTop + offsetY) <= vh - minVisible
-    const maxY = vh - minVisible - baseTop;
+    // top edge: baseTop + offsetY >= 0
+    const minY = -baseTop;
+    // bottom edge: baseTop + offsetY + elHeight <= vh
+    const maxY = vh - elHeight - baseTop;
 
     return { minX, maxX, minY, maxY };
   }
