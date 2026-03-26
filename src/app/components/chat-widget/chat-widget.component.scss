@@ -13,10 +13,17 @@
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  transition: transform 0.2s ease;
 
-  &.sidebar-offset {
-    transform: translateX(-68px);
+  &.dragging {
+    user-select: none;
+  }
+}
+
+.drag-handle {
+  cursor: grab;
+
+  .dragging & {
+    cursor: grabbing;
   }
 }
 
@@ -32,7 +39,11 @@
   color: #e4e4e4;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
   transition: background 0.2s, box-shadow 0.2s;
-  cursor: pointer;
+  cursor: grab;
+
+  .dragging & {
+    cursor: grabbing;
+  }
 
   &:hover {
     background: rgba(55, 55, 55, 0.95);
@@ -47,7 +58,7 @@
     border: none;
     background: transparent;
     color: inherit;
-    cursor: pointer;
+    cursor: inherit;
   }
 
   .pill-icon {

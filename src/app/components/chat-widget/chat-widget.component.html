@@ -1,10 +1,11 @@
 @if (visible()) {
-<div class="chat-widget" [class.expanded]="state() !== 'collapsed'" [class.sidebar-offset]="rightSidebarOpen()">
+<div class="chat-widget" [class.expanded]="state() !== 'collapsed'" [class.dragging]="isDragging"
+  [style.transform]="widgetTransform()">
 
   <!-- Collapsed pill -->
   @if (state() === 'collapsed') {
-  <div class="chat-pill">
-    <button class="pill-left" (click)="toggleOpen()">
+  <div class="chat-pill" (mousedown)="onDragStart($event, true)">
+    <button class="pill-left" (click)="!wasDragged() && toggleOpen()">
       <mat-icon class="pill-icon">send</mat-icon>
       <span class="pill-label">Messages</span>
       @if (unreadCount() > 0) {
@@ -13,7 +14,7 @@
     </button>
     <div class="pill-avatars">
       @for (pubkey of recentAvatarPubkeys(); track pubkey) {
-      <button class="pill-avatar-button" (click)="openChat(pubkey, false)" matTooltip="Open chat">
+      <button class="pill-avatar-button" (click)="!wasDragged() && openChat(pubkey, false)" matTooltip="Open chat">
         <app-user-profile [pubkey]="pubkey" view="icon" [disableLink]="true" [disableHoverCard]="true" />
       </button>
       }
@@ -24,7 +25,7 @@
   <!-- Expanded messages list -->
   @if (state() === 'list') {
   <div class="chat-panel">
-    <div class="chat-panel-header">
+    <div class="chat-panel-header drag-handle" (mousedown)="onDragStart($event)">
       <span class="chat-panel-title">Messages</span>
       <span class="header-spacer"></span>
       <button mat-icon-button class="header-action" (click)="openFullMessages()" matTooltip="Open full view">
@@ -108,8 +109,8 @@
   <!-- Inline chat view -->
   @if (state() === 'chat') {
   <div class="chat-panel chat-view">
-    <div class="chat-panel-header chat-header">
-      <button mat-icon-button class="header-action" (click)="backToList()" matTooltip="Back to list">
+    <div class="chat-panel-header chat-header drag-handle" (mousedown)="onDragStart($event)">
+      <button mat-icon-button class="header-action" (click)="!wasDragged() && backToList()" matTooltip="Back to list">
         <mat-icon>arrow_back</mat-icon>
       </button>
       @if (activeChatIsGroup()) {

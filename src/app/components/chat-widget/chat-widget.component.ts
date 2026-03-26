@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, effect, ChangeDetectionStrategy, ElementRef, ViewChild } from '@angular/core';
+import { Component, inject, signal, computed, effect, ChangeDetectionStrategy, ElementRef, ViewChild, HostListener } from '@angular/core';
 import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
@@ -48,6 +48,7 @@ export class ChatWidgetComponent {
   private data = inject(DataService);
   private userRelayService = inject(UserRelayService);
   private customDialog = inject(CustomDialogService);
+  private hostEl = inject(ElementRef<HTMLElement>);
 
   @ViewChild('chatMessagesContainer') chatMessagesContainer?: ElementRef<HTMLDivElement>;
   @ViewChild('widgetMessageInput') widgetMessageInput?: ElementRef<HTMLTextAreaElement>;
@@ -57,6 +58,24 @@ export class ChatWidgetComponent {
   activeChatIsGroup = signal(false);
   newMessageText = signal('');
   isSending = signal(false);
+
+  // Drag state
+  dragOffset = signal<{ x: number; y: number }>({ x: 0, y: 0 });
+  isDragging = false;
+  private dragStarted = false;
+  private dragStartPos = { x: 0, y: 0 };
+  private dragStartOffset = { x: 0, y: 0 };
+  private readonly DRAG_THRESHOLD = 5;
+
+  /** Combined transform: drag offset + sidebar shift */
+  widgetTransform = computed(() => {
+    const offset = this.dragOffset();
+    const sidebarShift = this.rightSidebarOpen() ? -68 : 0;
+    const x = offset.x + sidebarShift;
+    const y = offset.y;
+    if (x === 0 && y === 0) return '';
+    return `translate(${x}px, ${y}px)`;
+  });
 
   /** Show widget only on desktop when authenticated and enabled */
   visible = computed(() => {
@@ -130,6 +149,7 @@ export class ChatWidgetComponent {
 
   toggleOpen() {
     this.state.update(s => s === 'collapsed' ? 'list' : 'collapsed');
+    if (this.state() === 'list') this.clampToViewport();
   }
 
   close() {
@@ -155,6 +175,7 @@ export class ChatWidgetComponent {
     this.state.set('chat');
     this.newMessageText.set('');
     this.messaging.markChatAsRead(chatId);
+    this.clampToViewport();
     setTimeout(() => {
       this.scrollChatToBottom();
       this.widgetMessageInput?.nativeElement?.focus();
@@ -166,6 +187,7 @@ export class ChatWidgetComponent {
     this.activeChatId.set(null);
     this.activeChatIsGroup.set(false);
     this.newMessageText.set('');
+    this.clampToViewport();
   }
 
   startNewChat() {
@@ -268,6 +290,86 @@ export class ChatWidgetComponent {
       event.preventDefault();
       this.sendMessage();
     }
+  }
+
+  // ── Drag handling ──────────────────────────────────────────────────────
+
+  onDragStart(event: MouseEvent, skipButtonCheck = false) {
+    // Only left mouse button
+    if (event.button !== 0) return;
+    // Don't initiate drag from interactive elements inside panel headers
+    if (!skipButtonCheck) {
+      const target = event.target as HTMLElement;
+      if (target.closest('button, a, input, textarea')) return;
+    }
+    this.isDragging = true;
+    this.dragStarted = false;
+    this.dragStartPos = { x: event.clientX, y: event.clientY };
+    this.dragStartOffset = { ...this.dragOffset() };
+    event.preventDefault();
+  }
+
+  @HostListener('document:mousemove', ['$event'])
+  onDragMove(event: MouseEvent) {
+    if (!this.isDragging) return;
+
+    const dx = event.clientX - this.dragStartPos.x;
+    const dy = event.clientY - this.dragStartPos.y;
+
+    if (!this.dragStarted) {
+      if (Math.abs(dx) < this.DRAG_THRESHOLD && Math.abs(dy) < this.DRAG_THRESHOLD) return;
+      this.dragStarted = true;
+    }
+
+    this.dragOffset.set({
+      x: this.dragStartOffset.x + dx,
+      y: this.dragStartOffset.y + dy,
+    });
+  }
+
+  @HostListener('document:mouseup')
+  onDragEnd() {
+    if (!this.isDragging) return;
+    this.isDragging = false;
+    // dragStarted stays true briefly to suppress the click
+    if (this.dragStarted) {
+      this.clampToViewport();
+      setTimeout(() => { this.dragStarted = false; }, 0);
+    }
+  }
+
+  /** Returns true if a drag just finished (used to suppress click) */
+  wasDragged(): boolean {
+    return this.dragStarted;
+  }
+
+  /**
+   * Clamp the drag offset so the widget stays fully within the viewport.
+   * The widget is anchored at bottom-right (bottom: 24px, right: 24px),
+   * so the offset shifts it from there.
+   */
+  private clampToViewport(): void {
+    const el = this.hostEl.nativeElement.querySelector('.chat-widget') as HTMLElement;
+    if (!el) return;
+
+    // Use requestAnimationFrame to let the DOM update first (e.g. after state change)
+    requestAnimationFrame(() => {
+      const rect = el.getBoundingClientRect();
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      const offset = this.dragOffset();
+      let { x, y } = offset;
+
+      // Clamp: keep the widget fully visible
+      if (rect.left < 0) x -= rect.left;
+      if (rect.top < 0) y -= rect.top;
+      if (rect.right > vw) x -= (rect.right - vw);
+      if (rect.bottom > vh) y -= (rect.bottom - vh);
+
+      if (x !== offset.x || y !== offset.y) {
+        this.dragOffset.set({ x, y });
+      }
+    });
   }
 
   private scrollChatToBottom() {
