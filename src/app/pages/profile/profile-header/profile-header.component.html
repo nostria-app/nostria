@@ -126,6 +126,9 @@
     <div class="profile-info">
       <div class="profile-menu-actions">
         @if (isOwnProfile()) {
+        <button mat-icon-button (click)="navigateToEditProfile()" class="show-small" matTooltip="Edit">
+          <mat-icon>edit</mat-icon>
+        </button>
         <button mat-flat-button (click)="navigateToEditProfile()" class="hide-small">
           <mat-icon>edit</mat-icon> Edit Profile
         </button>
