@@ -502,6 +502,7 @@ export class VideoControlsComponent implements OnDestroy {
       this.closeSettingsPanel();
       return;
     }
+    this.showControlsAndStartTimer();
     (this.hostElement.nativeElement as HTMLElement).focus();
     this.playPause.emit();
   }

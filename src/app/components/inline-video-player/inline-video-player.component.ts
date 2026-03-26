@@ -341,11 +341,22 @@ export class InlineVideoPlayerComponent implements AfterViewInit, OnDestroy {
     }
   }
 
-  onVideoElementReady(): void {
-    if (this.videoElement?.nativeElement) {
-      this.videoElementSignal.set(this.videoElement.nativeElement);
-      this.attachVideoListeners(this.videoElement.nativeElement);
+  onVideoElementReady(event?: Event): void {
+    const eventVideo = event?.target instanceof HTMLVideoElement ? event.target : undefined;
+    const video = eventVideo ?? this.videoElement?.nativeElement;
+    if (!video) {
+      return;
     }
+
+    this.videoElementSignal.set(video);
+
+    // loadedmetadata can fire before listener wiring settles.
+    // Emit metadata immediately to ensure parent can update actual dimensions
+    // and reflow aspect ratio using the true video dimensions.
+    this.videoLoadedMetadata.emit(event ?? new Event('loadedmetadata'));
+    this.updateVideoOrientation(video);
+
+    this.attachVideoListeners(video);
   }
 
   private attachVideoListeners(video: HTMLVideoElement): void {
@@ -622,6 +633,7 @@ export class InlineVideoPlayerComponent implements AfterViewInit, OnDestroy {
   }
 
   onVideoClick(): void {
+    this.videoControlsRef?.showControlsAndStartTimer();
     // Toggle play/pause when clicking on video
     this.togglePlay();
   }

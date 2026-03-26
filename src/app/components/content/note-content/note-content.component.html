@@ -144,8 +144,9 @@
 </div>
 } @else if (token.type === 'video') {
 @let videoPlaceholder = getVideoPlaceholderUrl(token);
+@let videoAspectRatio = getVideoAspectRatio(token);
 <div class="media-container video-container" [class.portrait-video]="isPortraitVideo(token)"
-  [class.has-aspect-ratio]="false" [style.aspect-ratio]="null"
+  [class.has-aspect-ratio]="!!videoAspectRatio" [style.aspect-ratio]="videoAspectRatio"
   [class.blurred]="shouldBlurImages() && !isImageRevealed(token.content)"
   [class.revealing]="shouldBlurImages() && isImageRevealed(token.content)"
   [class.needs-rotation]="needsRotationCorrection(token)">
