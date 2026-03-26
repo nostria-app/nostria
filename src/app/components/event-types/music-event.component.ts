@@ -1075,9 +1075,11 @@ export class MusicEventComponent implements OnDestroy {
   private customDialog = inject(CustomDialogService);
   private userRelaysService = inject(UserRelaysService);
 
-  private likeLookupSubscription: { close: () => void } | null = null;
+  private likeLookupRequestId = 0;
+  private destroyed = false;
 
   private static readonly likedReactionCache = new Map<string, Event | null>();
+  private static readonly likedReactionLookupInFlight = new Map<string, Promise<Event | null>>();
 
   event = input.required<Event>();
   mode = input<'card' | 'list' | 'track-list'>('list');
@@ -1144,7 +1146,8 @@ export class MusicEventComponent implements OnDestroy {
   }
 
   ngOnDestroy(): void {
-    this.likeLookupSubscription?.close();
+    this.destroyed = true;
+    this.likeLookupRequestId++;
   }
 
   // Extract d-tag identifier
@@ -1244,7 +1247,7 @@ export class MusicEventComponent implements OnDestroy {
     return `${userPubkey}:${track.kind}:${track.pubkey}:${dTag}`;
   }
 
-  private checkExistingLike(track: Event, userPubkey: string): void {
+  private async checkExistingLike(track: Event, userPubkey: string): Promise<void> {
     const cacheKey = this.getReactionCacheKey(track, userPubkey);
     const cachedReaction = MusicEventComponent.likedReactionCache.get(cacheKey);
     if (cachedReaction !== undefined) {
@@ -1252,7 +1255,7 @@ export class MusicEventComponent implements OnDestroy {
       return;
     }
 
-    this.likeLookupSubscription?.close();
+    const requestId = ++this.likeLookupRequestId;
 
     const dTag = track.tags.find(tag => tag[0] === 'd')?.[1] || '';
     if (!dTag) {
@@ -1277,27 +1280,45 @@ export class MusicEventComponent implements OnDestroy {
       limit: 10,
     };
 
-    let matchedLike: Event | null = null;
-    const timeout = setTimeout(() => {
-      this.likeLookupSubscription?.close();
-      this.likedReaction.set(matchedLike);
-      MusicEventComponent.likedReactionCache.set(cacheKey, matchedLike);
-    }, 2500);
+    const lookupPromise = MusicEventComponent.likedReactionLookupInFlight.get(cacheKey)
+      ?? this.pool.query(relayUrls, filter, 2500)
+        .then((events) => {
+          let matchedLike: Event | null = null;
+          for (const reaction of events) {
+            if (reaction.content !== '+') {
+              continue;
+            }
 
-    this.likeLookupSubscription = this.pool.subscribe(relayUrls, filter, (reaction: Event) => {
-      if (reaction.content !== '+') {
-        return;
-      }
+            if (!matchedLike || reaction.created_at > matchedLike.created_at) {
+              matchedLike = reaction;
+            }
+          }
 
-      if (!matchedLike || reaction.created_at > matchedLike.created_at) {
-        matchedLike = reaction;
-      }
+          return matchedLike;
+        })
+        .catch(() => null)
+        .finally(() => {
+          MusicEventComponent.likedReactionLookupInFlight.delete(cacheKey);
+        });
 
-      clearTimeout(timeout);
-      this.likeLookupSubscription?.close();
-      this.likedReaction.set(matchedLike);
-      MusicEventComponent.likedReactionCache.set(cacheKey, matchedLike);
-    });
+    if (!MusicEventComponent.likedReactionLookupInFlight.has(cacheKey)) {
+      MusicEventComponent.likedReactionLookupInFlight.set(cacheKey, lookupPromise);
+    }
+
+    const matchedLike = await lookupPromise;
+    MusicEventComponent.likedReactionCache.set(cacheKey, matchedLike);
+
+    const currentTrack = this.event();
+    const currentUserPubkey = this.accountState.pubkey();
+    const currentCacheKey = currentTrack && currentUserPubkey
+      ? this.getReactionCacheKey(currentTrack, currentUserPubkey)
+      : '';
+
+    if (this.destroyed || requestId !== this.likeLookupRequestId || currentCacheKey !== cacheKey) {
+      return;
+    }
+
+    this.likedReaction.set(matchedLike);
   }
 
   isCurrentTrackPlaying = computed(() => {

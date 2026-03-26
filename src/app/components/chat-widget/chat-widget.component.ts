@@ -89,7 +89,19 @@ export class ChatWidgetComponent {
     return this.messaging.getChatMessages(chatId);
   });
 
+  private chatsLoaded = false;
+
   constructor() {
+    // Eagerly load chats from storage when the widget is enabled
+    // so the chat list is populated without visiting the Messages page first.
+    effect(() => {
+      if (this.visible() && !this.chatsLoaded && this.messaging.sortedChats().length === 0) {
+        this.chatsLoaded = true;
+        // Load from storage in background - don't block rendering
+        this.messaging.loadChats();
+      }
+    });
+
     // Auto-scroll to bottom when entering a chat or when new messages arrive
     effect(() => {
       const msgs = this.activeChatMessages();
