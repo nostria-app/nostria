@@ -130,6 +130,12 @@ export class MessagingService implements NostriaService {
   private readonly accountLocalState = inject(AccountLocalStateService);
   private readonly injector = inject(Injector);
   private userRelayService: any = null; // Lazy-initialized to control load timing
+
+  /** Audio element for new-message notification sound */
+  private notificationAudio: HTMLAudioElement | null = null;
+  /** Prevents rapid-fire notification sounds */
+  private lastNotificationSoundTime = 0;
+
   isLoading = signal<boolean>(false);
   isLoadingMoreChats = signal<boolean>(false);
   hasMoreChats = signal<boolean>(true);
@@ -174,6 +180,39 @@ export class MessagingService implements NostriaService {
   private dmStartupDelayResolve: (() => void) | null = null;
 
   MESSAGE_SIZE = 400;
+  private readonly NOTIFICATION_SOUND_COOLDOWN_MS = 2000;
+
+  /** Play a short notification chime using the Web Audio API */
+  private playNotificationSound(): void {
+    const now = Date.now();
+    if (now - this.lastNotificationSoundTime < this.NOTIFICATION_SOUND_COOLDOWN_MS) return;
+    this.lastNotificationSoundTime = now;
+
+    try {
+      const ctx = new AudioContext();
+      const playTone = (frequency: number, startTime: number, duration: number) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = frequency;
+        gain.gain.setValueAtTime(0.15, startTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(startTime);
+        osc.stop(startTime + duration);
+      };
+
+      const t = ctx.currentTime;
+      playTone(880, t, 0.15);       // A5
+      playTone(1174.66, t + 0.12, 0.18); // D6
+
+      // Clean up context after sounds finish
+      setTimeout(() => ctx.close(), 500);
+    } catch {
+      // AudioContext not available (e.g. SSR or denied) – silently ignore
+    }
+  }
 
   getChat(chatId: string): Chat | null {
     const chat = this.chatsMap().get(chatId);
@@ -735,6 +774,11 @@ export class MessagingService implements NostriaService {
 
     // Set the new map to trigger signal reactivity
     this.chatsMap.set(newMap);
+
+    // Play notification sound for incoming unread messages
+    if (!normalizedMessage.isOutgoing && !normalizedMessage.read) {
+      this.playNotificationSound();
+    }
 
     // Save message to storage asynchronously
     this.saveMessageToStorage(normalizedMessage, chatId);
