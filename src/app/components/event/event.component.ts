@@ -2498,6 +2498,15 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     }
   }
 
+  openZapsFromPoll(): void {
+    if (this.compact()) {
+      this.openReactionsDialog('zaps');
+      return;
+    }
+
+    this.toggleReactionsSummary('zaps');
+  }
+
   private resolveTabWithData(preferredTab: 'reactions' | 'reposts' | 'quotes' | 'zaps'): 'reactions' | 'reposts' | 'quotes' | 'zaps' {
     const tabHasData: Record<string, () => boolean> = {
       reactions: () => this.likes().length > 0,

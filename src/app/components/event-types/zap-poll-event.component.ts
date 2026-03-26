@@ -1,17 +1,16 @@
-import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, computed, effect, inject, input, output, signal, untracked } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatDialog } from '@angular/material/dialog';
-import { Event } from 'nostr-tools';
+import { Event as NostrEvent } from 'nostr-tools';
 import { ZapService } from '../../services/zap.service';
 import { ApplicationService } from '../../services/application.service';
 import { RelayPoolService } from '../../services/relays/relay-pool';
 import { AccountRelayService } from '../../services/relays/account-relay';
 import { ZapDialogComponent, ZapDialogData } from '../zap-dialog/zap-dialog.component';
 import { DataService } from '../../services/data.service';
-import { TimestampPipe } from '../../pipes/timestamp.pipe';
 import { PollOption } from '../../interfaces';
 import { PollContentComponent } from './poll-content.component';
 
@@ -39,7 +38,6 @@ interface ZapPollResult {
     MatButtonModule,
     MatIconModule,
     MatProgressBarModule,
-    TimestampPipe,
     PollContentComponent,
   ],
   templateUrl: './zap-poll-event.component.html',
@@ -53,14 +51,19 @@ export class ZapPollEventComponent {
   private accountRelay = inject(AccountRelayService);
   private dialog = inject(MatDialog);
   private dataService = inject(DataService);
+  private destroyRef = inject(DestroyRef);
 
-  event = input.required<Event>();
+  event = input.required<NostrEvent>();
+  fallbackZapCount = input(0);
+  fallbackTotalSats = input(0);
+  showZapsRequested = output<void>();
 
   // Local state
   selectedOption = signal<string | null>(null);
   isLoading = signal(false);
   results = signal<ZapPollResult[]>([]);
   showResults = signal(false);
+  nowTimestamp = signal(Math.floor(Date.now() / 1000));
 
   // Parse the event into a ZapPoll object
   poll = computed<ZapPoll>(() => {
@@ -71,7 +74,19 @@ export class ZapPollEventComponent {
   isExpired = computed(() => {
     const poll = this.poll();
     if (!poll.closedAt) return false;
-    return Date.now() / 1000 > poll.closedAt;
+    return this.nowTimestamp() > poll.closedAt;
+  });
+
+  timeLeftLabel = computed(() => {
+    const closedAt = this.poll().closedAt;
+    if (!closedAt) return '';
+
+    const remainingSeconds = closedAt - this.nowTimestamp();
+    if (remainingSeconds <= 0) return '';
+
+    const hours = Math.floor(remainingSeconds / 3600);
+    const minutes = Math.floor((remainingSeconds % 3600) / 60);
+    return `${hours}h and ${minutes}m left`;
   });
 
   hasResults = computed(() => {
@@ -90,6 +105,16 @@ export class ZapPollEventComponent {
     return this.results().reduce((sum, r) => sum + r.totalSats, 0);
   });
 
+  summaryZapCount = computed(() => {
+    const parsedCount = this.totalZaps();
+    return parsedCount > 0 ? parsedCount : this.fallbackZapCount();
+  });
+
+  summaryTotalSats = computed(() => {
+    const parsedSats = this.totalSats();
+    return parsedSats > 0 ? parsedSats : this.fallbackTotalSats();
+  });
+
   constructor() {
     effect(() => {
       const event = this.event();
@@ -97,9 +122,22 @@ export class ZapPollEventComponent {
         void this.loadZapResults(event);
       });
     });
+
+    const intervalId = setInterval(() => {
+      this.nowTimestamp.set(Math.floor(Date.now() / 1000));
+    }, 60000);
+
+    this.destroyRef.onDestroy(() => {
+      clearInterval(intervalId);
+    });
   }
 
-  private async loadZapResults(event: Event): Promise<void> {
+  onTotalZapsClick(event: Event): void {
+    event.stopPropagation();
+    this.showZapsRequested.emit();
+  }
+
+  private async loadZapResults(event: NostrEvent): Promise<void> {
     this.isLoading.set(true);
 
     try {
@@ -164,13 +202,13 @@ export class ZapPollEventComponent {
    * The zap request (kind 9734) embedded in the receipt's `description` tag
    * should contain a `poll_option` tag indicating the chosen option.
    */
-  private parseZapReceiptForPoll(receipt: Event, poll: ZapPoll): { optionId: string; amountSats: number } | null {
+  private parseZapReceiptForPoll(receipt: NostrEvent, poll: ZapPoll): { optionId: string; amountSats: number } | null {
     try {
       // Get the embedded zap request from the description tag
       const descriptionTag = receipt.tags.find(t => t[0] === 'description');
       if (!descriptionTag?.[1]) return null;
 
-      const zapRequest: Event = JSON.parse(descriptionTag[1]);
+      const zapRequest: NostrEvent = JSON.parse(descriptionTag[1]);
 
       // Extract the poll_option tag from the zap request
       const pollOptionTag = zapRequest.tags.find(t => t[0] === 'poll_option');
@@ -312,7 +350,7 @@ export class ZapPollEventComponent {
     return `${sats} sats`;
   }
 
-  private parseZapPollEvent(event: Event): ZapPoll {
+  private parseZapPollEvent(event: NostrEvent): ZapPoll {
     const options: PollOption[] = event.tags
       .filter(tag => tag[0] === 'poll_option')
       .map(tag => ({

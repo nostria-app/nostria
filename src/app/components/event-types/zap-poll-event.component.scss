@@ -10,10 +10,6 @@
     gap: 0.5rem;
     margin-bottom: 0.5rem;
 
-    mat-icon {
-      color: var(--mat-sys-tertiary);
-    }
-
     h3, .poll-content {
       margin: 0;
       font-size: 1rem;
@@ -170,6 +166,19 @@
           width: 1rem;
           height: 1rem;
         }
+      }
+
+      .total-zaps-clickable {
+        cursor: pointer;
+      }
+
+      .total-zaps-clickable:hover {
+        text-decoration: underline;
+      }
+
+      .total-zaps-clickable:focus {
+        outline: 2px solid var(--mat-sys-tertiary);
+        outline-offset: 2px;
       }
 
       .total-zaps mat-icon {

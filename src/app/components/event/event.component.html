@@ -106,7 +106,7 @@
     }
     <!-- Zap Polls (kind 6969) -->
     @else if (targetItem.event.kind === 6969) {
-    <app-zap-poll-event [event]="targetItem.event"></app-zap-poll-event>
+    <app-zap-poll-event [event]="targetItem.event" [fallbackZapCount]="zapCount()" [fallbackTotalSats]="totalZapAmount()" (showZapsRequested)="openZapsFromPoll()"></app-zap-poll-event>
     }
     @else if (targetItem.event.kind === 32100 || targetItem.event.kind === 34139) {
     <app-playlist-event [event]="targetItem.event"></app-playlist-event>
@@ -318,7 +318,7 @@
           }
           <!-- Zap Polls (kind 6969) -->
           @else if (rootRecordData.event.kind === 6969) {
-          <app-zap-poll-event [event]="rootRecordData.event"></app-zap-poll-event>
+          <app-zap-poll-event [event]="rootRecordData.event" [fallbackZapCount]="zapCount()" [fallbackTotalSats]="totalZapAmount()" (showZapsRequested)="openZapsFromPoll()"></app-zap-poll-event>
           }
           @else if (rootRecordData.event.kind === 32100 || rootRecordData.event.kind === 34139) {
           <app-playlist-event [event]="rootRecordData.event"></app-playlist-event>
@@ -499,7 +499,7 @@
           }
           <!-- Zap Polls (kind 6969) -->
           @else if (parentRecordData.event.kind === 6969) {
-          <app-zap-poll-event [event]="parentRecordData.event"></app-zap-poll-event>
+          <app-zap-poll-event [event]="parentRecordData.event" [fallbackZapCount]="zapCount()" [fallbackTotalSats]="totalZapAmount()" (showZapsRequested)="openZapsFromPoll()"></app-zap-poll-event>
           }
           @else if (parentRecordData.event.kind === 32100 || parentRecordData.event.kind === 34139) {
           <app-playlist-event [event]="parentRecordData.event"></app-playlist-event>
@@ -650,7 +650,7 @@
     }
     <!-- Zap Polls (kind 6969) -->
     @else if (item.event.kind === 6969) {
-    <app-zap-poll-event [event]="item.event"></app-zap-poll-event>
+    <app-zap-poll-event [event]="item.event" [fallbackZapCount]="zapCount()" [fallbackTotalSats]="totalZapAmount()" (showZapsRequested)="openZapsFromPoll()"></app-zap-poll-event>
     }
     <!-- Emoji Sets (kind 30030) -->
     @else if (item.event.kind === 30030) {
@@ -814,7 +814,7 @@
     }
     <!-- Zap Polls (kind 6969) -->
     @else if (item.event.kind === 6969) {
-    <app-zap-poll-event [event]="item.event"></app-zap-poll-event>
+    <app-zap-poll-event [event]="item.event" [fallbackZapCount]="zapCount()" [fallbackTotalSats]="totalZapAmount()" (showZapsRequested)="openZapsFromPoll()"></app-zap-poll-event>
     }
     <!-- Emoji Sets (kind 30030) -->
     @else if (item.event.kind === 30030) {

@@ -1,6 +1,5 @@
 <div class="zap-poll-event">
   <div class="poll-header">
-    <mat-icon>bolt</mat-icon>
     <div class="poll-content"><app-poll-content [content]="poll().content" [event]="event()"></app-poll-content></div>
   </div>
 
@@ -69,11 +68,17 @@
 
   <div class="poll-footer">
     <div class="poll-info">
-      @if (totalZaps() > 0) {
-      <span class="total-zaps">
+      @if (summaryZapCount() > 0) {
+      <span
+        class="total-zaps total-zaps-clickable"
+        role="button"
+        tabindex="0"
+        (click)="onTotalZapsClick($event)"
+        (keydown.enter)="onTotalZapsClick($event)"
+        (keydown.space)="onTotalZapsClick($event)">
         <mat-icon>bolt</mat-icon>
-        {{ totalZaps() }} zap{{ totalZaps() !== 1 ? 's' : '' }}
-        ({{ formatSats(totalSats()) }})
+        {{ summaryZapCount() }} zap{{ summaryZapCount() !== 1 ? 's' : '' }}
+        ({{ formatSats(summaryTotalSats()) }})
       </span>
       }
       @if (poll().closedAt) {
@@ -82,7 +87,7 @@
         @if (isExpired()) {
         Closed
         } @else {
-        Closes {{ poll().closedAt! | timestamp:'short' }}
+        {{ timeLeftLabel() }}
         }
       </span>
       }
