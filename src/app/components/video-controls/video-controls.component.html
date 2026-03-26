@@ -1,12 +1,12 @@
 <!-- Settings Panel Overlay (YouTube-style, outside controls-overlay for true glass effect) -->
 @if (settingsPanel() !== 'closed') {
-<div class="settings-panel-backdrop" (click)="closeSettingsPanel()"></div>
+<div class="settings-panel-backdrop" (click)="closeSettingsPanel($event)"></div>
 <div class="settings-panel" (click)="$event.stopPropagation()">
   @if (settingsPanel() === 'main') {
   <!-- Main settings menu -->
   <div class="settings-panel-content">
     @if (mergedConfig().showPlaybackRate && !mergedConfig().isLiveStream) {
-    <button class="settings-item" (click)="openSpeedPanel()">
+    <button class="settings-item" (click)="openSpeedPanel($event)">
       <mat-icon>speed</mat-icon>
       <span class="settings-item-label">Playback speed</span>
       <span class="settings-item-value">{{ playbackRate() === 1 ? 'Normal' : speedDisplayText() }}</span>
@@ -32,13 +32,13 @@
     </mat-menu>
     }
     @if ((isSmallScreen() || mergedConfig().forceCastPiPInSettingsMenu) && mergedConfig().showCast) {
-    <button class="settings-item" (click)="onCastToggle(); closeSettingsPanel()">
+    <button class="settings-item" (click)="onCastToggle(); closeSettingsPanel($event)">
       <mat-icon>cast</mat-icon>
       <span class="settings-item-label">Play on TV</span>
     </button>
     }
     @if ((isSmallScreen() || mergedConfig().forceCastPiPInSettingsMenu) && mergedConfig().showPiP) {
-    <button class="settings-item" (click)="onPipToggle(); closeSettingsPanel()">
+    <button class="settings-item" (click)="onPipToggle(); closeSettingsPanel($event)">
       <mat-icon>picture_in_picture_alt</mat-icon>
       <span class="settings-item-label">Picture-in-picture</span>
     </button>
@@ -48,7 +48,7 @@
   <!-- YouTube-style speed panel -->
   <div class="speed-panel">
     <div class="speed-panel-header">
-      <button class="speed-panel-back" (click)="backToSettingsMain()">
+      <button class="speed-panel-back" (click)="backToSettingsMain($event)">
         <mat-icon>chevron_left</mat-icon>
       </button>
       <span class="speed-panel-title">Playback speed</span>
@@ -60,7 +60,7 @@
 
       <!-- Slider row: minus button, range slider, plus button -->
       <div class="speed-slider-row">
-        <button class="speed-adjust-btn" (click)="decrementSpeed()" [class.disabled]="playbackRate() <= speedMin">
+        <button class="speed-adjust-btn" (click)="decrementSpeed(); $event.stopPropagation()" [class.disabled]="playbackRate() <= speedMin">
           <mat-icon>remove</mat-icon>
         </button>
         <div class="speed-slider-track-wrapper">
@@ -68,7 +68,7 @@
             [value]="playbackRate()" (input)="onSpeedSliderInput($event)" aria-label="Playback speed" />
           <div class="speed-slider-track-fill" [style.width.%]="speedSliderPercent()"></div>
         </div>
-        <button class="speed-adjust-btn" (click)="incrementSpeed()" [class.disabled]="playbackRate() >= speedMax">
+        <button class="speed-adjust-btn" (click)="incrementSpeed(); $event.stopPropagation()" [class.disabled]="playbackRate() >= speedMax">
           <mat-icon>add</mat-icon>
         </button>
       </div>
@@ -76,7 +76,7 @@
       <!-- Preset buttons -->
       <div class="speed-presets">
         @for (preset of speedPresets; track preset) {
-        <button class="speed-preset-btn" [class.active]="isActivePreset(preset)" (click)="setSpeedPreset(preset)">
+        <button class="speed-preset-btn" [class.active]="isActivePreset(preset)" (click)="setSpeedPreset(preset); $event.stopPropagation()">
           {{ speedPresetLabel(preset) }}
         </button>
         }
@@ -176,7 +176,7 @@
         @if (mergedConfig().showQuality || mergedConfig().showPlaybackRate || (isSmallScreen() &&
         (mergedConfig().showCast || mergedConfig().showPiP)) || (mergedConfig().forceCastPiPInSettingsMenu &&
         (mergedConfig().showCast || mergedConfig().showPiP))) {
-        <button mat-icon-button matTooltip="Settings" class="control-btn" (click)="openSettingsPanel()">
+        <button mat-icon-button matTooltip="Settings" class="control-btn" (click)="openSettingsPanel($event)">
           <mat-icon>settings</mat-icon>
         </button>
         }

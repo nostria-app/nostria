@@ -495,6 +495,11 @@ export class VideoControlsComponent implements OnDestroy {
 
   /** Called when clicking on the overlay (not on controls) to toggle play/pause */
   onOverlayClick(event: MouseEvent): void {
+    const target = event.target;
+    if (target instanceof Element && target.closest('.settings-panel, .settings-panel-backdrop')) {
+      return;
+    }
+
     // Don't toggle if click was on controls-bar or center play button (they stop propagation)
     // This method is only reached when clicking on the overlay area
     // If settings panel is open, close it instead of toggling play/pause
@@ -767,20 +772,29 @@ export class VideoControlsComponent implements OnDestroy {
   }
 
   // Settings panel methods
-  openSettingsPanel(): void {
+  openSettingsPanel(event?: Event): void {
+    this.consumeInteraction(event);
     this.settingsPanel.set('main');
   }
 
-  closeSettingsPanel(): void {
+  closeSettingsPanel(event?: Event): void {
+    this.consumeInteraction(event);
     this.settingsPanel.set('closed');
   }
 
-  openSpeedPanel(): void {
+  openSpeedPanel(event?: Event): void {
+    this.consumeInteraction(event);
     this.settingsPanel.set('speed');
   }
 
-  backToSettingsMain(): void {
+  backToSettingsMain(event?: Event): void {
+    this.consumeInteraction(event);
     this.settingsPanel.set('main');
+  }
+
+  private consumeInteraction(event?: Event): void {
+    event?.preventDefault();
+    event?.stopPropagation();
   }
 
   // Speed adjustment methods

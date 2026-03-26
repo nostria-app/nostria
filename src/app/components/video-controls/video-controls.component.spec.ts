@@ -45,6 +45,51 @@ describe('VideoControlsComponent', () => {
         expect(component).toBeTruthy();
     });
 
+    describe('settings panel interactions', () => {
+        it('should consume event when opening settings panel', () => {
+            const event = {
+                preventDefault: vi.fn(),
+                stopPropagation: vi.fn(),
+            } as unknown as Event;
+
+            component.openSettingsPanel(event);
+
+            expect(component.settingsPanel()).toBe('main');
+            expect(event.preventDefault).toHaveBeenCalled();
+            expect(event.stopPropagation).toHaveBeenCalled();
+        });
+
+        it('should not emit playPause when clicking settings backdrop', () => {
+            component.settingsPanel.set('main');
+            vi.spyOn(component.playPause, 'emit');
+
+            const backdrop = document.createElement('div');
+            backdrop.className = 'settings-panel-backdrop';
+            const clickEvent = {
+                target: backdrop,
+            } as MouseEvent;
+
+            component.onOverlayClick(clickEvent);
+
+            expect(component.settingsPanel()).toBe('main');
+            expect(component.playPause.emit).not.toHaveBeenCalled();
+        });
+
+        it('should close settings panel without toggling playback on overlay click', () => {
+            component.settingsPanel.set('main');
+            vi.spyOn(component.playPause, 'emit');
+
+            const clickEvent = {
+                target: document.createElement('div'),
+            } as MouseEvent;
+
+            component.onOverlayClick(clickEvent);
+
+            expect(component.settingsPanel()).toBe('closed');
+            expect(component.playPause.emit).not.toHaveBeenCalled();
+        });
+    });
+
     describe('document:keydown handler', () => {
         it('should not handle keys when no video element is set', () => {
             vi.spyOn(component.playPause, 'emit');
