@@ -23,7 +23,6 @@ import { AccountRelayService } from '../../../services/relays/account-relay';
 import { LoggerService } from '../../../services/logger.service';
 import { PanelNavigationService } from '../../../services/panel-navigation.service';
 import { CustomDialogService } from '../../../services/custom-dialog.service';
-import { MatButtonToggleModule } from '@angular/material/button-toggle';
 
 interface ExternalIdentity {
   platform: string;
@@ -45,7 +44,6 @@ interface ExternalIdentity {
     MatProgressSpinnerModule,
     MatMenuModule,
     MatTooltipModule,
-    MatButtonToggleModule,
     CdkDropList,
     CdkDrag,
     CdkDragHandle,
@@ -350,6 +348,13 @@ export class ProfileEditComponent implements OnInit, OnDestroy {
     if (input.files && input.files[0]) {
       const file = input.files[0];
 
+      if (!this.hasMediaServers()) {
+        this.snackBar.open('You need to configure a media server first', 'Configure', { duration: 5000 })
+          .onAction().subscribe(() => this.navigateToMediaSettings());
+        input.value = '';
+        return;
+      }
+
       // Simple file type validation
       if (!file.type.includes('image/')) {
         this.snackBar.open('Please select a valid image file', 'Close', {
@@ -364,10 +369,12 @@ export class ProfileEditComponent implements OnInit, OnDestroy {
 
         if (type === 'profile') {
           this.previewProfileImage.set(result);
+          this.profileImageMode.set('upload');
           // Store the file for later upload
           this.profile.update(p => ({ ...p, selectedProfileFile: file }));
         } else {
           this.previewBanner.set(result);
+          this.bannerMode.set('upload');
           // Store the file for later upload
           this.profile.update(p => ({ ...p, selectedBannerFile: file }));
         }
@@ -422,6 +429,7 @@ export class ProfileEditComponent implements OnInit, OnDestroy {
       if (!selected) return;
 
       if (type === 'profile') {
+        this.profileImageMode.set('upload');
         this.previewProfileImage.set(selected.url);
         this.profile.update(p => ({
           ...p,
@@ -430,6 +438,7 @@ export class ProfileEditComponent implements OnInit, OnDestroy {
           selectedProfileFile: null,
         }));
       } else {
+        this.bannerMode.set('upload');
         this.previewBanner.set(selected.url);
         this.profile.update(p => ({
           ...p,

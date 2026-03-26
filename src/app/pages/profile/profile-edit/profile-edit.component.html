@@ -20,10 +20,10 @@
   <mat-card>
     <mat-card-content>
       <div class="file-upload-section">
-        @if (previewProfileImage()) {
         <div class="section-header">
           <h3>Profile Image</h3>
         </div>
+        @if (previewProfileImage()) {
         <div class="preview-container">
           <div class="preview-wrapper">
             <img [src]="previewProfileImage()" class="profile-preview" alt="Profile Preview" />
@@ -33,76 +33,44 @@
             </button>
           </div>
         </div>
-        } @else {
-        <div class="section-header">
-          <h3>Profile Image</h3>
-        </div>
-
-        <mat-button-toggle-group [value]="profileImageMode()" (change)="profileImageMode.set($event.value)"
-          class="image-mode-toggle">
-          <mat-button-toggle value="upload">
-            <mat-icon>upload</mat-icon> Upload
-          </mat-button-toggle>
-          <mat-button-toggle value="url">
-            <mat-icon>link</mat-icon> URL
-          </mat-button-toggle>
-          <mat-button-toggle value="library">
-            <mat-icon>photo_library</mat-icon> Library
-          </mat-button-toggle>
-        </mat-button-toggle-group>
-
-        @if (profileImageMode() === 'upload') {
-        @if (!hasMediaServers()) {
-        <div class="media-server-warning">
-          <mat-icon color="warn">warning</mat-icon>
-          <span>You need to configure a media server to upload image files</span>
-          <button mat-flat-button type="button" (click)="navigateToMediaSettings()">
-            Configure Media Server
-          </button>
-        </div>
-        } @else {
-        <div class="file-upload">
-          <button mat-stroked-button type="button" (click)="profileImageInput.click()">
-            <mat-icon>upload</mat-icon>
-            Choose profile image
+        }
+        <div class="image-actions">
+          <button mat-stroked-button type="button" [matMenuTriggerFor]="profileImageMenu">
+            <mat-icon>image</mat-icon>
+            {{ previewProfileImage() ? 'Change profile image' : 'Set profile image' }}
           </button>
           <input #profileImageInput type="file" hidden (change)="onFileSelected($event, 'profile')" accept="image/*" />
         </div>
-        }
-        } @else if (profileImageMode() === 'url') {
-        <mat-form-field appearance="outline" class="input-full-width">
+        <mat-menu #profileImageMenu="matMenu">
+          <button mat-menu-item (click)="profileImageInput.click()">
+            <mat-icon>upload</mat-icon>
+            <span>Upload</span>
+          </button>
+          <button mat-menu-item (click)="profileImageMode.set('url')">
+            <mat-icon>link</mat-icon>
+            <span>URL</span>
+          </button>
+          <button mat-menu-item (click)="openMediaChooser('profile')">
+            <mat-icon>photo_library</mat-icon>
+            <span>Media Library</span>
+          </button>
+        </mat-menu>
+        @if (profileImageMode() === 'url') {
+        <mat-form-field appearance="outline" class="input-full-width url-input">
           <mat-icon matPrefix>image</mat-icon>
           <mat-label>Profile Image URL</mat-label>
           <input matInput type="text" [(ngModel)]="pictureUrl" (blur)="onImageUrlChange('profile')"
             placeholder="https://example.com/image.png" />
           <mat-icon matSuffix>link</mat-icon>
         </mat-form-field>
-        } @else if (profileImageMode() === 'library') {
-        @if (!hasMediaServers()) {
-        <div class="media-server-warning">
-          <mat-icon color="warn">warning</mat-icon>
-          <span>You need to configure a media server to browse your library</span>
-          <button mat-flat-button type="button" (click)="navigateToMediaSettings()">
-            Configure Media Server
-          </button>
-        </div>
-        } @else {
-        <div class="file-upload">
-          <button mat-stroked-button type="button" (click)="openMediaChooser('profile')">
-            <mat-icon>photo_library</mat-icon>
-            Choose from library
-          </button>
-        </div>
-        }
-        }
         }
       </div>
 
       <div class="file-upload-section">
-        @if (previewBanner()) {
         <div class="section-header">
           <h3>Profile Banner</h3>
         </div>
+        @if (previewBanner()) {
         <div class="preview-container">
           <div class="preview-wrapper">
             <img [src]="previewBanner()" class="banner-preview" alt="Banner Preview" />
@@ -112,68 +80,36 @@
             </button>
           </div>
         </div>
-        } @else {
-        <div class="section-header">
-          <h3>Profile Banner</h3>
-        </div>
-
-        <mat-button-toggle-group [value]="bannerMode()" (change)="bannerMode.set($event.value)"
-          class="image-mode-toggle">
-          <mat-button-toggle value="upload">
-            <mat-icon>upload</mat-icon> Upload
-          </mat-button-toggle>
-          <mat-button-toggle value="url">
-            <mat-icon>link</mat-icon> URL
-          </mat-button-toggle>
-          <mat-button-toggle value="library">
-            <mat-icon>photo_library</mat-icon> Library
-          </mat-button-toggle>
-        </mat-button-toggle-group>
-
-        @if (bannerMode() === 'upload') {
-        @if (!hasMediaServers()) {
-        <div class="media-server-warning">
-          <mat-icon color="warn">warning</mat-icon>
-          <span>You need to configure a media server to upload banner files</span>
-          <button mat-flat-button type="button" (click)="navigateToMediaSettings()">
-            Configure Media Server
-          </button>
-        </div>
-        } @else {
-        <div class="file-upload">
-          <button mat-stroked-button type="button" (click)="profileBannerInput.click()">
-            <mat-icon>upload</mat-icon>
-            Choose profile banner
+        }
+        <div class="image-actions">
+          <button mat-stroked-button type="button" [matMenuTriggerFor]="bannerMenu">
+            <mat-icon>image</mat-icon>
+            {{ previewBanner() ? 'Change banner' : 'Set banner' }}
           </button>
           <input #profileBannerInput type="file" hidden (change)="onFileSelected($event, 'banner')" accept="image/*" />
         </div>
-        }
-        } @else if (bannerMode() === 'url') {
-        <mat-form-field class="input-full-width">
+        <mat-menu #bannerMenu="matMenu">
+          <button mat-menu-item (click)="profileBannerInput.click()">
+            <mat-icon>upload</mat-icon>
+            <span>Upload</span>
+          </button>
+          <button mat-menu-item (click)="bannerMode.set('url')">
+            <mat-icon>link</mat-icon>
+            <span>URL</span>
+          </button>
+          <button mat-menu-item (click)="openMediaChooser('banner')">
+            <mat-icon>photo_library</mat-icon>
+            <span>Media Library</span>
+          </button>
+        </mat-menu>
+        @if (bannerMode() === 'url') {
+        <mat-form-field class="input-full-width url-input">
           <mat-icon matPrefix>image</mat-icon>
           <mat-label>Profile Banner URL</mat-label>
           <input matInput type="text" [(ngModel)]="bannerUrl" (blur)="onImageUrlChange('banner')"
             placeholder="https://example.com/banner.png" />
           <mat-icon matSuffix>link</mat-icon>
         </mat-form-field>
-        } @else if (bannerMode() === 'library') {
-        @if (!hasMediaServers()) {
-        <div class="media-server-warning">
-          <mat-icon color="warn">warning</mat-icon>
-          <span>You need to configure a media server to browse your library</span>
-          <button mat-flat-button type="button" (click)="navigateToMediaSettings()">
-            Configure Media Server
-          </button>
-        </div>
-        } @else {
-        <div class="file-upload">
-          <button mat-stroked-button type="button" (click)="openMediaChooser('banner')">
-            <mat-icon>photo_library</mat-icon>
-            Choose from library
-          </button>
-        </div>
-        }
-        }
         }
       </div>
 

@@ -57,24 +57,16 @@
     }
   }
 
-  .image-mode-toggle {
-    margin-bottom: 16px;
-
-    mat-icon {
-      font-size: 18px;
-      width: 18px;
-      height: 18px;
-      margin-right: 4px;
-      vertical-align: middle;
-    }
-  }
-
-  .file-upload {
+  .image-actions {
     display: flex;
     align-items: center;
     gap: 16px;
-    margin-top: 20px;
-    margin-bottom: 44px;
+    margin-top: 8px;
+    margin-bottom: 16px;
+  }
+
+  .url-input {
+    margin-top: 12px;
   }
 }
 
