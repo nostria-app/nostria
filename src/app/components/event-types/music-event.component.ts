@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, input, inject, signal, effect, untracked } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, inject, signal, effect, untracked, OnDestroy } from '@angular/core';
 import { Router } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -8,7 +8,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatChipsModule } from '@angular/material/chips';
 import { Clipboard } from '@angular/cdk/clipboard';
-import { Event, nip19 } from 'nostr-tools';
+import { Event, Filter, kinds, nip19 } from 'nostr-tools';
 import { DataService } from '../../services/data.service';
 import { MediaPlayerService } from '../../services/media-player.service';
 import { ReactionService } from '../../services/reaction.service';
@@ -24,6 +24,8 @@ import { LayoutService } from '../../services/layout.service';
 import { LoggerService } from '../../services/logger.service';
 import { CustomDialogService } from '../../services/custom-dialog.service';
 import { UserRelaysService } from '../../services/relays/user-relays';
+import { RelayPoolService } from '../../services/relays/relay-pool';
+import { RelaysService } from '../../services/relays/relays';
 import { NostrRecord, MediaItem } from '../../interfaces';
 import { ZapDialogComponent, ZapDialogData } from '../zap-dialog/zap-dialog.component';
 import { ShareArticleDialogComponent, ShareArticleDialogData } from '../share-article-dialog/share-article-dialog.component';
@@ -134,6 +136,11 @@ import { MatDividerModule } from '@angular/material/divider';
         <div class="track-row-meta">
           @if (album()) {
             <span class="track-row-album">{{ album() }}</span>
+          }
+          @if (isLiked()) {
+            <span class="track-row-liked" title="Liked">
+              <mat-icon>favorite</mat-icon>
+            </span>
           }
           <span class="track-row-duration" [class.is-empty]="!duration()">{{ duration() || '' }}</span>
         </div>
@@ -799,6 +806,22 @@ import { MatDividerModule } from '@angular/material/divider';
       }
     }
 
+    .track-row-liked {
+      flex-shrink: 0;
+      width: 1rem;
+      height: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--mat-sys-error);
+
+      mat-icon {
+        font-size: 0.95rem;
+        width: 0.95rem;
+        height: 0.95rem;
+      }
+    }
+
     .track-row-menu {
       color: var(--mat-sys-on-surface-variant);
     }
@@ -1022,12 +1045,14 @@ import { MatDividerModule } from '@angular/material/divider';
   `],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class MusicEventComponent {
+export class MusicEventComponent implements OnDestroy {
   private router = inject(Router);
   private layout = inject(LayoutService);
   private data = inject(DataService);
   private mediaPlayer = inject(MediaPlayerService);
   private reactionService = inject(ReactionService);
+  private pool = inject(RelayPoolService);
+  private relaysService = inject(RelaysService);
   private musicPlaylistService = inject(MusicPlaylistService);
   private app = inject(ApplicationService);
   private accountState = inject(AccountStateService);
@@ -1042,6 +1067,10 @@ export class MusicEventComponent {
   private logger = inject(LoggerService);
   private customDialog = inject(CustomDialogService);
   private userRelaysService = inject(UserRelaysService);
+
+  private likeLookupSubscription: { close: () => void } | null = null;
+
+  private static readonly likedReactionCache = new Map<string, Event | null>();
 
   event = input.required<Event>();
   mode = input<'card' | 'list' | 'track-list'>('list');
@@ -1091,6 +1120,24 @@ export class MusicEventComponent {
         });
       }
     });
+
+    // Keep per-track like state synced so menu can render Like/Unlike correctly.
+    effect(() => {
+      const ev = this.event();
+      const userPubkey = this.accountState.pubkey();
+      if (!ev || !userPubkey) {
+        this.likedReaction.set(null);
+        return;
+      }
+
+      untracked(() => {
+        this.checkExistingLike(ev, userPubkey);
+      });
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.likeLookupSubscription?.close();
   }
 
   // Extract d-tag identifier
@@ -1181,9 +1228,70 @@ export class MusicEventComponent {
     }
   });
 
-  // Track liked state - local signal set by likeTrack() action
-  private likedReactionOverride = signal<Event | null>(null);
-  isLiked = computed(() => !!this.likedReactionOverride());
+  // Track liked state hydrated from relays and updated locally on like/unlike.
+  private likedReaction = signal<Event | null>(null);
+  isLiked = computed(() => !!this.likedReaction());
+
+  private getReactionCacheKey(track: Event, userPubkey: string): string {
+    const dTag = track.tags.find(tag => tag[0] === 'd')?.[1] || '';
+    return `${userPubkey}:${track.kind}:${track.pubkey}:${dTag}`;
+  }
+
+  private checkExistingLike(track: Event, userPubkey: string): void {
+    const cacheKey = this.getReactionCacheKey(track, userPubkey);
+    const cachedReaction = MusicEventComponent.likedReactionCache.get(cacheKey);
+    if (cachedReaction !== undefined) {
+      this.likedReaction.set(cachedReaction);
+      return;
+    }
+
+    this.likeLookupSubscription?.close();
+
+    const dTag = track.tags.find(tag => tag[0] === 'd')?.[1] || '';
+    if (!dTag) {
+      this.likedReaction.set(null);
+      MusicEventComponent.likedReactionCache.set(cacheKey, null);
+      return;
+    }
+
+    const aTagValue = `${track.kind}:${track.pubkey}:${dTag}`;
+    const relayUrls = this.relaysService.getOptimalRelays(this.utilities.preferredRelays);
+
+    if (relayUrls.length === 0) {
+      this.likedReaction.set(null);
+      MusicEventComponent.likedReactionCache.set(cacheKey, null);
+      return;
+    }
+
+    const filter: Filter = {
+      kinds: [kinds.Reaction],
+      authors: [userPubkey],
+      '#a': [aTagValue],
+      limit: 10,
+    };
+
+    let matchedLike: Event | null = null;
+    const timeout = setTimeout(() => {
+      this.likeLookupSubscription?.close();
+      this.likedReaction.set(matchedLike);
+      MusicEventComponent.likedReactionCache.set(cacheKey, matchedLike);
+    }, 2500);
+
+    this.likeLookupSubscription = this.pool.subscribe(relayUrls, filter, (reaction: Event) => {
+      if (reaction.content !== '+') {
+        return;
+      }
+
+      if (!matchedLike || reaction.created_at > matchedLike.created_at) {
+        matchedLike = reaction;
+      }
+
+      clearTimeout(timeout);
+      this.likeLookupSubscription?.close();
+      this.likedReaction.set(matchedLike);
+      MusicEventComponent.likedReactionCache.set(cacheKey, matchedLike);
+    });
+  }
 
   isCurrentTrackPlaying = computed(() => {
     const currentItem = this.mediaPlayer.current();
@@ -1386,9 +1494,10 @@ export class MusicEventComponent {
     }
 
     const ev = this.event();
+    const cacheKey = this.getReactionCacheKey(ev, userPubkey);
 
     if (this.isLiked()) {
-      const existingReaction = this.likedReactionOverride();
+      const existingReaction = this.likedReaction();
       if (!existingReaction) {
         this.snackBar.open('Like is still syncing. Try again in a moment.', 'Close', { duration: 2500 });
         return;
@@ -1396,7 +1505,8 @@ export class MusicEventComponent {
 
       const result = await this.reactionService.deleteReaction(existingReaction);
       if (result.success) {
-        this.likedReactionOverride.set(null);
+        this.likedReaction.set(null);
+        MusicEventComponent.likedReactionCache.set(cacheKey, null);
         this.snackBar.open('Like removed', 'Close', { duration: 2000 });
       } else {
         this.snackBar.open('Failed to remove like', 'Close', { duration: 3000 });
@@ -1406,7 +1516,9 @@ export class MusicEventComponent {
 
     const result = await this.reactionService.addLike(ev);
     if (result.success) {
-      this.likedReactionOverride.set(result.event ?? null);
+      const reactionEvent = result.event ?? null;
+      this.likedReaction.set(reactionEvent);
+      MusicEventComponent.likedReactionCache.set(cacheKey, reactionEvent);
       this.snackBar.open('Liked!', 'Close', { duration: 2000 });
     } else {
       this.snackBar.open('Failed to like', 'Close', { duration: 3000 });

@@ -302,7 +302,7 @@ export const routes: Routes = [
     path: 'music/liked-playlists',
     loadComponent: () =>
       import('./pages/music/music-liked-playlists/music-liked-playlists.component').then(m => m.MusicLikedPlaylistsComponent),
-    title: 'Liked Playlists',
+    title: 'Liked Albums',
   },
   {
     path: 'music/tracks',
@@ -861,7 +861,7 @@ export const routes: Routes = [
     outlet: 'right',
     loadComponent: () =>
       import('./pages/music/music-liked-playlists/music-liked-playlists.component').then(m => m.MusicLikedPlaylistsComponent),
-    title: 'Liked Playlists',
+    title: 'Liked Albums',
   },
   {
     path: 'collections/media/details/:id',

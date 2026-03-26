@@ -35,7 +35,7 @@ const PAGE_SIZE = 24;
       <button mat-icon-button (click)="goBack()" matTooltip="Back to Music">
         <mat-icon>arrow_back</mat-icon>
       </button>
-      <h2 class="panel-title title-font">Liked Playlists</h2>
+      <h2 class="panel-title title-font">Liked Albums</h2>
       <button mat-icon-button (click)="toggleSearch()" [matTooltip]="showSearch() ? 'Close search' : 'Search music'" class="hide-small">
         <mat-icon>{{ showSearch() ? 'search_off' : 'search' }}</mat-icon>
       </button>
@@ -54,7 +54,7 @@ const PAGE_SIZE = 24;
     <div class="music-liked-playlists-container">
       <div class="search-bar" [class.hidden]="!showSearch()">
         <mat-icon class="search-icon">search</mat-icon>
-        <input #searchInput type="text" class="search-input" placeholder="Search liked playlists..."
+        <input #searchInput type="text" class="search-input" placeholder="Search liked albums..."
           [value]="searchQuery()" (input)="onSearchInput($any($event))" />
         <button mat-icon-button class="clear-search-btn" [class.invisible]="!searchQuery()" (click)="clearSearch()"
           aria-label="Clear search">
@@ -77,8 +77,8 @@ const PAGE_SIZE = 24;
             <mat-icon>playlist_play</mat-icon>
           </div>
           <div class="header-text">
-            <h1>Liked Playlists</h1>
-            <p class="subtitle">{{ playlistsCount() }} playlists</p>
+            <h1>Liked Albums</h1>
+            <p class="subtitle">{{ playlistsCount() }} albums</p>
           </div>
         </div>
       </div>
@@ -92,8 +92,8 @@ const PAGE_SIZE = 24;
         } @else if (displayedPlaylists().length === 0) {
           <div class="empty-state">
             <mat-icon>playlist_add</mat-icon>
-            <h2>No liked playlists yet</h2>
-            <p>Playlists you like will appear here. Start exploring and tap the heart icon on playlists you enjoy!</p>
+            <h2>No liked albums yet</h2>
+            <p>Albums you like will appear here. Start exploring and tap the heart icon on albums you enjoy!</p>
             <button mat-flat-button (click)="goBack()">
               <mat-icon>queue_music</mat-icon>
               <span>Browse Music</span>
@@ -102,7 +102,10 @@ const PAGE_SIZE = 24;
         } @else {
           <div class="playlist-grid">
             @for (playlist of displayedPlaylists(); track playlist.id) {
-              <app-music-playlist-card [event]="playlist"></app-music-playlist-card>
+              <app-music-playlist-card
+                [event]="playlist"
+                [likedReaction]="playlistLikedReactionByKey().get(getPlaylistUniqueKey(playlist)) ?? null"
+                (likedReactionChange)="onPlaylistLikedReactionChange(playlist, $event)"></app-music-playlist-card>
             }
           </div>
 
@@ -379,6 +382,7 @@ export class MusicLikedPlaylistsComponent implements OnDestroy, AfterViewInit {
   private playlistSubscriptions: { close: () => void }[] = [];
   private likedPlaylistIds = new Set<string>();
   private playlistMap = new Map<string, Event>();
+  private likedReactionByTargetKey = signal(new Map<string, Event>());
   private intersectionObserver: IntersectionObserver | null = null;
 
   loadMoreSentinel = viewChild<ElementRef>('loadMoreSentinel');
@@ -411,6 +415,20 @@ export class MusicLikedPlaylistsComponent implements OnDestroy, AfterViewInit {
 
   hasMore = computed(() => {
     return this.filteredPlaylists().length > this.displayLimit();
+  });
+
+  playlistLikedReactionByKey = computed(() => {
+    const likeMap = this.likedReactionByTargetKey();
+    const result = new Map<string, Event>();
+    for (const playlist of this.allPlaylists()) {
+      const target = this.getReactionTarget(playlist);
+      if (!target) continue;
+      const reaction = likeMap.get(`${target.type}:${target.value}`);
+      if (reaction) {
+        result.set(this.getPlaylistUniqueKey(playlist), reaction);
+      }
+    }
+    return result;
   });
 
   constructor() {
@@ -492,8 +510,26 @@ export class MusicLikedPlaylistsComponent implements OnDestroy, AfterViewInit {
 
       if (aTag) {
         this.likedPlaylistIds.add(aTag);
+        const key = `a:${aTag}`;
+        this.likedReactionByTargetKey.update(existing => {
+          const next = new Map(existing);
+          const current = next.get(key);
+          if (!current || current.created_at < event.created_at) {
+            next.set(key, event);
+          }
+          return next;
+        });
       } else if (eTag) {
         this.likedPlaylistIds.add(eTag);
+        const key = `e:${eTag}`;
+        this.likedReactionByTargetKey.update(existing => {
+          const next = new Map(existing);
+          const current = next.get(key);
+          if (!current || current.created_at < event.created_at) {
+            next.set(key, event);
+          }
+          return next;
+        });
       }
 
       if (!reactionsLoaded) {
@@ -503,6 +539,43 @@ export class MusicLikedPlaylistsComponent implements OnDestroy, AfterViewInit {
         setTimeout(() => this.fetchLikedPlaylists(relayUrls), 500);
       }
     });
+  }
+
+  getPlaylistUniqueKey(playlist: Event): string {
+    const dTag = playlist.tags.find((tag: string[]) => tag[0] === 'd')?.[1] || '';
+    return `${playlist.pubkey}:${dTag}`;
+  }
+
+  private getReactionTarget(playlist: Event): { type: 'a' | 'e'; value: string } | null {
+    if (this.utilities.isParameterizedReplaceableEvent(playlist.kind)) {
+      const dTag = playlist.tags.find((tag: string[]) => tag[0] === 'd')?.[1] || '';
+      return { type: 'a', value: `${playlist.kind}:${playlist.pubkey}:${dTag}` };
+    }
+    if (!playlist.id) return null;
+    return { type: 'e', value: playlist.id };
+  }
+
+  onPlaylistLikedReactionChange(playlist: Event, reaction: Event | null): void {
+    const target = this.getReactionTarget(playlist);
+    if (!target) return;
+
+    const targetKey = `${target.type}:${target.value}`;
+    this.likedReactionByTargetKey.update(existing => {
+      const next = new Map(existing);
+      if (reaction) {
+        next.set(targetKey, reaction);
+      } else {
+        next.delete(targetKey);
+      }
+      return next;
+    });
+
+    // Liked Albums page should only show currently liked albums.
+    if (!reaction) {
+      this.likedPlaylistIds.delete(target.value);
+      this.playlistMap.delete(this.getPlaylistUniqueKey(playlist));
+      this.allPlaylists.set(Array.from(this.playlistMap.values()).sort((a, b) => b.created_at - a.created_at));
+    }
   }
 
   private fetchLikedPlaylists(relayUrls: string[]): void {

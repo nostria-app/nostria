@@ -64,7 +64,7 @@ import { MatDividerModule } from '@angular/material/divider';
         }
         <div class="hover-action-row">
           <button mat-icon-button class="media-action-button like-action" [class.is-liked]="isLiked()" (click)="likePlaylist($event)"
-            [attr.aria-label]="isLiked() ? 'Liked playlist' : 'Like playlist'" [title]="isLiked() ? 'Liked' : 'Like'">
+            [attr.aria-label]="isLiked() ? 'Unlike playlist' : 'Like playlist'" [title]="isLiked() ? 'Unlike' : 'Like'">
             <mat-icon [class.is-liked]="isLiked()">{{ isLiked() ? 'favorite' : 'favorite_border' }}</mat-icon>
           </button>
           <button mat-icon-button class="media-action-button share-action" (click)="sharePlaylist(); $event.stopPropagation()"
@@ -105,9 +105,9 @@ import { MatDividerModule } from '@angular/material/divider';
             <span>Play All</span>
           </button>
           <mat-divider></mat-divider>
-          <button mat-menu-item (click)="likePlaylist($event)" [disabled]="isLiked()">
+          <button mat-menu-item (click)="likePlaylist($event)">
             <mat-icon>{{ isLiked() ? 'favorite' : 'favorite_border' }}</mat-icon>
-            <span>{{ isLiked() ? 'Liked' : 'Like' }}</span>
+            <span>{{ isLiked() ? 'Unlike' : 'Like' }}</span>
           </button>
 
           <button mat-menu-item (click)="sharePlaylist()">
@@ -717,10 +717,10 @@ export class MusicPlaylistCardComponent {
   });
 
   // Track liked state - prefer parent input, keep local override until parent catches up
-  private _likedOverride = signal<boolean | undefined>(undefined);
+  private _likedOverride = signal<Event | null | undefined>(undefined);
   isLiked = computed(() => {
     const override = this._likedOverride();
-    if (override !== undefined) return override;
+    if (override !== undefined) return !!override;
     return !!this.likedReaction();
   });
 
@@ -755,13 +755,32 @@ export class MusicPlaylistCardComponent {
   // Like the playlist
   likePlaylist(event: MouseEvent | KeyboardEvent): void {
     event.stopPropagation();
-    if (this.isLiked()) return;
 
     const ev = this.event();
+    if (this.isLiked()) {
+      const existingReaction = this._likedOverride() ?? this.likedReaction();
+      if (!existingReaction) {
+        this.snackBar.open('Like is still syncing. Try again in a moment.', 'Close', { duration: 2500 });
+        return;
+      }
+
+      this.reactionService.deleteReaction(existingReaction).then(result => {
+        if (result.success) {
+          this._likedOverride.set(null);
+          this.likedReactionChange.emit(null);
+          this.snackBar.open('Like removed', 'Close', { duration: 2000 });
+        } else {
+          this.snackBar.open('Failed to remove like', 'Close', { duration: 3000 });
+        }
+      });
+      return;
+    }
+
     this.reactionService.addLike(ev).then(result => {
       if (result.success) {
-        this._likedOverride.set(true);
-        this.likedReactionChange.emit(result.event ?? null);
+        const reactionEvent = result.event ?? null;
+        this._likedOverride.set(reactionEvent);
+        this.likedReactionChange.emit(reactionEvent);
         this.snackBar.open('Liked!', 'Close', { duration: 2000 });
       } else {
         this.snackBar.open('Failed to like', 'Close', { duration: 3000 });
