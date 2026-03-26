@@ -330,10 +330,27 @@ export class ChatWidgetComponent {
       this.dragStarted = true;
     }
 
-    this.dragOffset.set({
-      x: this.dragStartOffset.x + dx,
-      y: this.dragStartOffset.y + dy,
-    });
+    let newX = this.dragStartOffset.x + dx;
+    let newY = this.dragStartOffset.y + dy;
+
+    // Clamp to viewport so the widget can't be dragged off-screen
+    const el = this.hostEl.nativeElement.querySelector('.chat-widget') as HTMLElement;
+    if (el) {
+      const rect = el.getBoundingClientRect();
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      // Current offset already applied in rect, so compute how much further we can go
+      const currentOffset = this.dragOffset();
+      const deltaX = newX - currentOffset.x;
+      const deltaY = newY - currentOffset.y;
+
+      if (rect.left + deltaX < 0) newX -= (rect.left + deltaX);
+      if (rect.top + deltaY < 0) newY -= (rect.top + deltaY);
+      if (rect.right + deltaX > vw) newX -= (rect.right + deltaX - vw);
+      if (rect.bottom + deltaY > vh) newY -= (rect.bottom + deltaY - vh);
+    }
+
+    this.dragOffset.set({ x: newX, y: newY });
   }
 
   @HostListener('document:mouseup')
