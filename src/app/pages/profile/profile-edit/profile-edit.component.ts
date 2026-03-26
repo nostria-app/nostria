@@ -6,7 +6,6 @@ import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
-import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { AgoPipe } from '../../../pipes/ago.pipe';
 import { NostrService } from '../../../services/nostr.service';
@@ -23,6 +22,8 @@ import { Profile, ProfileData, ProfileUpdateOptions } from '../../../services/pr
 import { AccountRelayService } from '../../../services/relays/account-relay';
 import { LoggerService } from '../../../services/logger.service';
 import { PanelNavigationService } from '../../../services/panel-navigation.service';
+import { CustomDialogService } from '../../../services/custom-dialog.service';
+import { MatButtonToggleModule } from '@angular/material/button-toggle';
 
 interface ExternalIdentity {
   platform: string;
@@ -42,9 +43,9 @@ interface ExternalIdentity {
     FormsModule,
     AgoPipe,
     MatProgressSpinnerModule,
-    MatSlideToggleModule,
     MatMenuModule,
     MatTooltipModule,
+    MatButtonToggleModule,
     CdkDropList,
     CdkDrag,
     CdkDragHandle,
@@ -61,6 +62,7 @@ export class ProfileEditComponent implements OnInit, OnDestroy {
   media = inject(MediaService);
   private panelNav = inject(PanelNavigationService);
   private snackBar = inject(MatSnackBar);
+  private customDialog = inject(CustomDialogService);
   private readonly logger = inject(LoggerService);
   private profileService = inject(Profile);
   profile = signal<ProfileData | null>(null);
@@ -72,9 +74,9 @@ export class ProfileEditComponent implements OnInit, OnDestroy {
   //   return this.accountState.pubkey() === this.pubkey();
   // });
 
-  // Toggle states for profile image and banner
-  useProfileImageUrl = signal<boolean>(false);
-  useBannerUrl = signal<boolean>(false);
+  // Image input mode: 'upload' | 'url' | 'library'
+  profileImageMode = signal<'upload' | 'url' | 'library'>('upload');
+  bannerMode = signal<'upload' | 'url' | 'library'>('upload');
 
   // Preview states
   previewProfileImage = signal<string | null>(null);
@@ -307,7 +309,7 @@ export class ProfileEditComponent implements OnInit, OnDestroy {
       // Add profile image file if selected
       if (currentProfile['selectedProfileFile']) {
         updateOptions.profileImageFile = currentProfile['selectedProfileFile'] as File;
-      } else if (this.useProfileImageUrl() && currentProfile['pictureUrl']) {
+      } else if (this.profileImageMode() === 'url' && currentProfile['pictureUrl']) {
         // If using URL, set it directly in profileData
         profileData.picture = currentProfile['pictureUrl'] as string;
       }
@@ -315,7 +317,7 @@ export class ProfileEditComponent implements OnInit, OnDestroy {
       // Add banner image file if selected
       if (currentProfile['selectedBannerFile']) {
         updateOptions.bannerImageFile = currentProfile['selectedBannerFile'] as File;
-      } else if (this.useBannerUrl() && currentProfile['bannerUrl']) {
+      } else if (this.bannerMode() === 'url' && currentProfile['bannerUrl']) {
         // If using URL, set it directly in profileData
         profileData.banner = currentProfile['bannerUrl'] as string;
       }
@@ -395,53 +397,48 @@ export class ProfileEditComponent implements OnInit, OnDestroy {
     }
   }
 
-  // Toggle image input method
-  toggleImageInputMethod(type: 'profile' | 'banner'): void {
-    if (type === 'profile') {
-      const currentUrl = this.profile()?.picture || '';
-      this.useProfileImageUrl.update(current => !current);
-
-      if (this.useProfileImageUrl()) {
-        // Switching to URL mode - preserve existing URL
-        this.profile.update(p => ({
-          ...p,
-          pictureUrl: currentUrl,
-          selectedProfileFile: null,
-        }));
-        if (currentUrl) {
-          this.previewProfileImage.set(currentUrl);
-        }
-      } else {
-        // Switching to file mode - clear file selection but keep URL for potential switch back
-        this.profile.update(p => ({
-          ...p,
-          selectedProfileFile: null,
-        }));
-        this.previewProfileImage.set(currentUrl || null);
-      }
-    } else {
-      const currentUrl = this.profile()?.banner || '';
-      this.useBannerUrl.update(current => !current);
-
-      if (this.useBannerUrl()) {
-        // Switching to URL mode - preserve existing URL
-        this.profile.update(p => ({
-          ...p,
-          bannerUrl: currentUrl,
-          selectedBannerFile: null,
-        }));
-        if (currentUrl) {
-          this.previewBanner.set(currentUrl);
-        }
-      } else {
-        // Switching to file mode - clear file selection but keep URL for potential switch back
-        this.profile.update(p => ({
-          ...p,
-          selectedBannerFile: null,
-        }));
-        this.previewBanner.set(currentUrl || null);
-      }
+  async openMediaChooser(type: 'profile' | 'banner'): Promise<void> {
+    if (!this.hasMediaServers()) {
+      this.snackBar.open('You need to configure a media server first', 'Configure', { duration: 5000 })
+        .onAction().subscribe(() => this.navigateToMediaSettings());
+      return;
     }
+
+    const { MediaChooserDialogComponent } = await import('../../../components/media-chooser-dialog/media-chooser-dialog.component');
+    type MediaChooserResult = import('../../../components/media-chooser-dialog/media-chooser-dialog.component').MediaChooserResult;
+
+    const dialogRef = this.customDialog.open<typeof MediaChooserDialogComponent.prototype, MediaChooserResult>(MediaChooserDialogComponent, {
+      title: 'Choose from Library',
+      width: '700px',
+      maxWidth: '95vw',
+      data: {
+        multiple: false,
+        mediaType: 'images',
+      },
+    });
+
+    dialogRef.afterClosed$.subscribe(({ result }) => {
+      const selected = result?.items?.[0];
+      if (!selected) return;
+
+      if (type === 'profile') {
+        this.previewProfileImage.set(selected.url);
+        this.profile.update(p => ({
+          ...p,
+          picture: selected.url,
+          pictureUrl: selected.url,
+          selectedProfileFile: null,
+        }));
+      } else {
+        this.previewBanner.set(selected.url);
+        this.profile.update(p => ({
+          ...p,
+          banner: selected.url,
+          bannerUrl: selected.url,
+          selectedBannerFile: null,
+        }));
+      }
+    });
   }
 
   // Navigate to media settings - specifically to the Media Servers tab

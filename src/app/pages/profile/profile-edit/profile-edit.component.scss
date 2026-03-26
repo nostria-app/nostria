@@ -55,15 +55,17 @@
     h3 {
       margin: 0;
     }
+  }
 
-    .toggle-container {
-      display: flex;
-      align-items: center;
-      gap: 8px;
+  .image-mode-toggle {
+    margin-bottom: 16px;
 
-      span {
-        font-size: 14px;
-      }
+    mat-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+      margin-right: 4px;
+      vertical-align: middle;
     }
   }
 
