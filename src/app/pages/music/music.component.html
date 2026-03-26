@@ -178,10 +178,7 @@
       </div>
       <div class="music-grid">
         @for (track of listFilteredTracksPreview(); track track.id) {
-        <app-music-event [event]="track" mode="card" [likedReaction]="trackLikedReactionById().get(track.id) ?? null"
-          [hasZapped]="trackHasZappedById().has(track.id)"
-          (likedReactionChange)="onTrackLikedReactionChange(track, $event)"
-          (hasZappedChange)="onTrackHasZappedChange(track, $event)"></app-music-event>
+        <app-music-event [event]="track" mode="card"></app-music-event>
         }
       </div>
     </section>

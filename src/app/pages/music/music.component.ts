@@ -151,33 +151,6 @@ export class MusicComponent implements OnDestroy {
   private likeZapLoaded = false;
   private likeZapLoading = false;
 
-  // Computed signals that map event IDs to liked reaction / zap state
-  // Using computed signals instead of template method calls ensures reliable OnPush CD tracking
-  trackLikedReactionById = computed(() => {
-    const likeMap = this.likedReactionByTargetKey();
-    const tracks = this.listFilteredTracksPreview();
-    const result = new Map<string, Event>();
-    for (const track of tracks) {
-      const target = this.getTrackReactionTarget(track);
-      if (!target) continue;
-      const reaction = likeMap.get(`${target.type}:${target.value}`);
-      if (reaction) result.set(track.id, reaction);
-    }
-    return result;
-  });
-
-  trackHasZappedById = computed(() => {
-    const zapSet = this.zappedTargetKeys();
-    const tracks = this.listFilteredTracksPreview();
-    const result = new Set<string>();
-    for (const track of tracks) {
-      const target = this.getTrackReactionTarget(track);
-      if (!target) continue;
-      if (zapSet.has(`${target.type}:${target.value}`)) result.add(track.id);
-    }
-    return result;
-  });
-
   playlistLikedReactionById = computed(() => {
     const likeMap = this.likedReactionByTargetKey();
     const playlists = this.listFilteredPlaylistsPreview();
@@ -1709,35 +1682,6 @@ export class MusicComponent implements OnDestroy {
   }
 
   // === Like/Zap state for home page tracks ===
-
-  onTrackLikedReactionChange(track: Event, reaction: Event | null): void {
-    const target = this.getTrackReactionTarget(track);
-    if (!target) return;
-
-    const targetKey = `${target.type}:${target.value}`;
-    this.likedReactionByTargetKey.update(existing => {
-      const next = new Map(existing);
-      if (reaction) {
-        next.set(targetKey, reaction);
-      } else {
-        next.delete(targetKey);
-      }
-      return next;
-    });
-  }
-
-  onTrackHasZappedChange(track: Event, hasZapped: boolean): void {
-    const target = this.getTrackReactionTarget(track);
-    if (!target || !hasZapped) return;
-
-    const targetKey = `${target.type}:${target.value}`;
-    this.zappedTargetKeys.update(existing => {
-      if (existing.has(targetKey)) return existing;
-      const next = new Set(existing);
-      next.add(targetKey);
-      return next;
-    });
-  }
 
   onPlaylistLikedReactionChange(playlist: Event, reaction: Event | null): void {
     const target = this.getTrackReactionTarget(playlist);

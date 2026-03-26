@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, input, inject, signal, effect, untracked, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, inject, signal, effect, untracked } from '@angular/core';
 import { Router } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -24,8 +24,6 @@ import { LayoutService } from '../../services/layout.service';
 import { LoggerService } from '../../services/logger.service';
 import { CustomDialogService } from '../../services/custom-dialog.service';
 import { UserRelaysService } from '../../services/relays/user-relays';
-import { SettingsService } from '../../services/settings.service';
-import { HapticsService } from '../../services/haptics.service';
 import { NostrRecord, MediaItem } from '../../interfaces';
 import { ZapDialogComponent, ZapDialogData } from '../zap-dialog/zap-dialog.component';
 import { ShareArticleDialogComponent, ShareArticleDialogData } from '../share-article-dialog/share-article-dialog.component';
@@ -70,23 +68,7 @@ import { MatDividerModule } from '@angular/material/divider';
             <mat-icon>{{ isCurrentTrackPlaying() ? 'pause' : 'play_arrow' }}</mat-icon>
           </button>
 
-          <div class="hover-action-row">
-            <button mat-icon-button class="media-action-button like-action" [class.is-liked]="isLiked()" (click)="likeTrack($any($event))"
-              [attr.aria-label]="isLiked() ? 'Unlike track' : 'Like track'" [title]="isLiked() ? 'Unlike' : 'Like'">
-              <mat-icon [class.is-liked]="isLiked()">{{ isLiked() ? 'favorite' : 'favorite_border' }}</mat-icon>
-            </button>
-            <button mat-icon-button class="media-action-button share-action" (click)="shareTrack(); $event.stopPropagation()"
-              aria-label="Share track" title="Share track">
-              <mat-icon>share</mat-icon>
-            </button>
-            <button mat-icon-button class="media-action-button zap-action" [class.is-zapped]="hasZappedState()" (click)="onZapButtonClick($any($event))"
-              (pointerdown)="onZapButtonPointerDown($any($event))" (pointerup)="onZapButtonPointerUp($any($event))"
-              (pointerleave)="onZapButtonPointerCancel()" (pointercancel)="onZapButtonPointerCancel()"
-              (contextmenu)="onZapButtonContextMenu($any($event))"
-              aria-label="Zap creator" title="Zap creator">
-              <mat-icon [class.is-zapped]="hasZappedState()">bolt</mat-icon>
-            </button>
-          </div>
+
         </div>
         
         <!-- Info section -->
@@ -154,24 +136,6 @@ import { MatDividerModule } from '@angular/material/divider';
             <span class="track-row-album">{{ album() }}</span>
           }
           <span class="track-row-duration" [class.is-empty]="!duration()">{{ duration() || '' }}</span>
-        </div>
-
-        <div class="track-row-actions">
-          <button mat-icon-button class="track-row-action like-action" [class.is-liked]="isLiked()" (click)="likeTrack($any($event))"
-            [attr.aria-label]="isLiked() ? 'Unlike track' : 'Like track'" [title]="isLiked() ? 'Unlike' : 'Like'">
-            <mat-icon [class.is-liked]="isLiked()">{{ isLiked() ? 'favorite' : 'favorite_border' }}</mat-icon>
-          </button>
-          <button mat-icon-button class="track-row-action share-action" (click)="shareTrack(); $event.stopPropagation()"
-            aria-label="Share track" title="Share track">
-            <mat-icon>share</mat-icon>
-          </button>
-          <button mat-icon-button class="track-row-action zap-action" [class.is-zapped]="hasZappedState()" (click)="onZapButtonClick($any($event))"
-            (pointerdown)="onZapButtonPointerDown($any($event))" (pointerup)="onZapButtonPointerUp($any($event))"
-            (pointerleave)="onZapButtonPointerCancel()" (pointercancel)="onZapButtonPointerCancel()"
-            (contextmenu)="onZapButtonContextMenu($any($event))"
-            aria-label="Zap creator" title="Zap creator">
-            <mat-icon [class.is-zapped]="hasZappedState()">bolt</mat-icon>
-          </button>
         </div>
 
         <button mat-icon-button class="track-row-menu" [matMenuTriggerFor]="menu" (click)="$event.stopPropagation()" aria-label="More options">
@@ -340,32 +304,16 @@ import { MatDividerModule } from '@angular/material/divider';
       &:hover {
         background-color: var(--mat-sys-surface-container);
         
-        .play-overlay,
-        .hover-action-row {
-          opacity: 1;
-        }
-
         .play-overlay {
+          opacity: 1;
           transform: translate(-50%, -50%) scale(1);
-        }
-
-        .hover-action-row {
-          transform: translate(-50%, 0);
         }
       }
 
       &:focus-within {
-        .play-overlay,
-        .hover-action-row {
-          opacity: 1;
-        }
-
         .play-overlay {
+          opacity: 1;
           transform: translate(-50%, -50%) scale(1);
-        }
-
-        .hover-action-row {
-          transform: translate(-50%, 0);
         }
       }
 
@@ -524,113 +472,6 @@ import { MatDividerModule } from '@angular/material/divider';
           }
         }
       }
-
-      .hover-action-row {
-        position: absolute;
-        left: 50%;
-        bottom: 12px;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        opacity: 0;
-        transform: translate(-50%, 8px);
-        transition: opacity 0.2s ease, transform 0.2s ease;
-        z-index: 2;
-
-        @media (max-width: 600px) {
-          bottom: 10px;
-          gap: 6px;
-        }
-      }
-
-      .media-action-button {
-        width: 40px;
-        height: 40px;
-        padding: 0 !important;
-        display: flex !important;
-        align-items: center;
-        justify-content: center;
-        background: color-mix(in srgb, var(--mat-sys-scrim) 42%, transparent);
-        color: var(--mat-sys-on-surface);
-        border: 1px solid color-mix(in srgb, var(--mat-sys-outline) 32%, transparent);
-        backdrop-filter: blur(14px);
-        box-shadow: var(--mat-sys-level2);
-        transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
-
-        @media (max-width: 600px) {
-          width: 36px;
-          height: 36px;
-        }
-
-        &:not(.media-primary-action):hover:not(:disabled) {
-          background: color-mix(in srgb, var(--mat-sys-scrim) 56%, transparent);
-          transform: translateY(-1px);
-        }
-
-        &:disabled {
-          opacity: 0.7;
-        }
-
-        mat-icon {
-          font-size: 20px;
-          width: 20px;
-          height: 20px;
-        }
-      }
-
-      .media-primary-action {
-        background: color-mix(in srgb, var(--mat-sys-surface-container-highest) 68%, transparent);
-        color: var(--mat-sys-on-surface);
-        border-color: color-mix(in srgb, var(--mat-sys-outline) 40%, transparent);
-
-        &:hover {
-          background: color-mix(in srgb, var(--mat-sys-surface-container-highest) 82%, transparent);
-        }
-      }
-
-      .like-action {
-        &.is-liked {
-          background: color-mix(in srgb, var(--mat-sys-error-container) 34%, transparent);
-          color: color-mix(in srgb, var(--mat-sys-error) 68%, var(--mat-sys-on-surface) 32%);
-          border-color: color-mix(in srgb, var(--mat-sys-error) 20%, transparent);
-        }
-
-        &:hover:not(:disabled) {
-          background: color-mix(in srgb, var(--mat-sys-error-container) 58%, transparent);
-          color: color-mix(in srgb, var(--mat-sys-error) 76%, var(--mat-sys-on-surface) 24%);
-          border-color: color-mix(in srgb, var(--mat-sys-error) 34%, transparent);
-        }
-
-        mat-icon.is-liked {
-          font-variation-settings: 'FILL' 1;
-        }
-      }
-
-      .share-action {
-        &:hover:not(:disabled) {
-          background: color-mix(in srgb, #2f6dff 26%, transparent);
-          color: color-mix(in srgb, #8ab4ff 78%, var(--mat-sys-on-surface) 22%);
-          border-color: color-mix(in srgb, #6ea0ff 38%, transparent);
-        }
-      }
-
-      .zap-action {
-        &.is-zapped {
-          background: color-mix(in srgb, #ff9800 16%, transparent);
-          color: color-mix(in srgb, #ffbf66 70%, var(--mat-sys-on-surface) 30%);
-          border-color: color-mix(in srgb, #ffb74d 18%, transparent);
-        }
-
-        &:hover:not(:disabled) {
-          background: color-mix(in srgb, #ff9800 24%, transparent);
-          color: color-mix(in srgb, #ffbf66 78%, var(--mat-sys-on-surface) 22%);
-          border-color: color-mix(in srgb, #ffb74d 34%, transparent);
-        }
-
-        mat-icon.is-zapped {
-          font-variation-settings: 'FILL' 1;
-        }
-      }
     }
     
     .card-info {
@@ -765,7 +606,6 @@ import { MatDividerModule } from '@angular/material/divider';
     }
 
     .track-row-play,
-    .track-row-action,
     .track-row-menu {
       flex-shrink: 0;
       width: 34px;
@@ -782,16 +622,12 @@ import { MatDividerModule } from '@angular/material/divider';
       }
     }
 
-    .track-row-play,
-    .track-row-action {
-      background: var(--mat-sys-surface-container);
-      border: 1px solid color-mix(in srgb, var(--mat-sys-outline) 26%, transparent);
-      transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
-    }
-
     .track-row-play {
       width: 30px;
       height: 30px;
+      background: var(--mat-sys-surface-container);
+      border: 1px solid color-mix(in srgb, var(--mat-sys-outline) 26%, transparent);
+      transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
       color: var(--mat-sys-on-surface);
 
       &:hover {
@@ -868,7 +704,7 @@ import { MatDividerModule } from '@angular/material/divider';
 
     .track-row-title {
       margin: 0;
-      font-size: 0.875rem;
+      font-size: 1rem;
       line-height: 1.2;
       color: var(--mat-sys-on-surface);
       white-space: nowrap;
@@ -912,7 +748,7 @@ import { MatDividerModule } from '@angular/material/divider';
       border: 0;
       background: transparent;
       color: var(--mat-sys-on-surface-variant);
-      font-size: 0.75rem;
+      font-size: 0.875rem;
       text-align: left;
       white-space: nowrap;
       overflow: hidden;
@@ -933,7 +769,7 @@ import { MatDividerModule } from '@angular/material/divider';
       gap: 0.75rem;
       min-width: 0;
       color: var(--mat-sys-on-surface-variant);
-      font-size: 0.6875rem;
+      font-size: 0.8125rem;
     }
 
     .track-row-album {
@@ -956,55 +792,8 @@ import { MatDividerModule } from '@angular/material/divider';
       }
     }
 
-    .track-row-actions {
-      display: flex;
-      align-items: center;
-      gap: 0.25rem;
-      flex-shrink: 0;
-    }
-
     .track-row-menu {
       color: var(--mat-sys-on-surface-variant);
-    }
-
-    .like-action {
-      &.is-liked {
-        background: color-mix(in srgb, var(--mat-sys-error-container) 34%, transparent);
-        color: color-mix(in srgb, var(--mat-sys-error) 68%, var(--mat-sys-on-surface) 32%);
-        border-color: color-mix(in srgb, var(--mat-sys-error) 20%, transparent);
-      }
-
-      &:hover:not(:disabled) {
-        background: color-mix(in srgb, var(--mat-sys-error-container) 58%, transparent);
-        color: color-mix(in srgb, var(--mat-sys-error) 76%, var(--mat-sys-on-surface) 24%);
-        border-color: color-mix(in srgb, var(--mat-sys-error) 34%, transparent);
-      }
-
-      mat-icon.is-liked {
-        font-variation-settings: 'FILL' 1;
-      }
-    }
-
-    .share-action:hover:not(:disabled) {
-      background: color-mix(in srgb, #2f6dff 26%, transparent);
-      color: color-mix(in srgb, #8ab4ff 78%, var(--mat-sys-on-surface) 22%);
-      border-color: color-mix(in srgb, #6ea0ff 38%, transparent);
-    }
-
-    .zap-action:hover:not(:disabled) {
-      background: color-mix(in srgb, #ff9800 24%, transparent);
-      color: color-mix(in srgb, #ffbf66 78%, var(--mat-sys-on-surface) 22%);
-      border-color: color-mix(in srgb, #ffb74d 34%, transparent);
-    }
-
-    .zap-action.is-zapped {
-      background: color-mix(in srgb, #ff9800 16%, transparent);
-      color: color-mix(in srgb, #ffbf66 70%, var(--mat-sys-on-surface) 30%);
-      border-color: color-mix(in srgb, #ffb74d 18%, transparent);
-
-      mat-icon.is-zapped {
-        font-variation-settings: 'FILL' 1;
-      }
     }
 
     @media (max-width: 780px) {
@@ -1245,25 +1034,17 @@ export class MusicEventComponent {
   private logger = inject(LoggerService);
   private customDialog = inject(CustomDialogService);
   private userRelaysService = inject(UserRelaysService);
-  private settingsService = inject(SettingsService);
-  private haptics = inject(HapticsService);
 
   event = input.required<Event>();
   mode = input<'card' | 'list' | 'track-list'>('list');
   trackNumber = input<string | null>(null);
   queueTracks = input<Event[] | null>(null);
   queueTrackIndex = input<number | null>(null);
-  likedReaction = input<Event | null>(null);
-  hasZapped = input(false);
-  likedReactionChange = output<Event | null>();
-  hasZappedChange = output<boolean>();
 
   authorProfile = signal<NostrRecord | undefined>(undefined);
   userPlaylists = this.musicPlaylistService.userPlaylists;
   playlistsLoading = this.musicPlaylistService.loading;
   isAuthenticated = computed(() => this.app.authenticated());
-  quickZapEnabled = computed(() => this.settingsService.settings().quickZapEnabled ?? false);
-  quickZapAmount = computed(() => this.settingsService.settings().quickZapAmount ?? 21);
 
   // Edit dialog state
   showEditDialog = signal(false);
@@ -1288,11 +1069,6 @@ export class MusicEventComponent {
   });
 
   private profileLoaded = false;
-  private lastLikedStateEventId: string | null = null;
-  private lastZappedStateEventId: string | null = null;
-  private zapLongPressTimer: ReturnType<typeof setTimeout> | null = null;
-  private zapLongPressTriggered = false;
-  private readonly ZAP_LONG_PRESS_DURATION = 500;
 
   constructor() {
     // Load author profile - use untracked to prevent re-triggers from cache updates
@@ -1306,43 +1082,6 @@ export class MusicEventComponent {
           });
         });
       }
-    });
-
-    effect(() => {
-      const eventId = this.event().id;
-      if (eventId === this.lastLikedStateEventId) {
-        return;
-      }
-
-      this.lastLikedStateEventId = eventId;
-      this.likedReactionOverride.set(undefined);
-    });
-
-    effect(() => {
-      const inputReaction = this.likedReaction();
-      const override = this.likedReactionOverride();
-      if (override === undefined) {
-        return;
-      }
-
-      if (override === null && inputReaction === null) {
-        this.likedReactionOverride.set(undefined);
-        return;
-      }
-
-      if (override && inputReaction?.id === override.id) {
-        this.likedReactionOverride.set(undefined);
-      }
-    });
-
-    effect(() => {
-      const eventId = this.event().id;
-      if (eventId === this.lastZappedStateEventId) {
-        return;
-      }
-
-      this.lastZappedStateEventId = eventId;
-      this.hasZappedOverride.set(undefined);
     });
   }
 
@@ -1434,19 +1173,9 @@ export class MusicEventComponent {
     }
   });
 
-  // Track liked state - prefer parent input, but keep a local override until parent catches up
-  private likedReactionOverride = signal<Event | null | undefined>(undefined);
-  effectiveLikedReaction = computed(() => {
-    const override = this.likedReactionOverride();
-    if (override !== undefined) {
-      return override;
-    }
-
-    return this.likedReaction();
-  });
-  isLiked = computed(() => !!this.effectiveLikedReaction());
-  private hasZappedOverride = signal<boolean | undefined>(undefined);
-  hasZappedState = computed(() => this.hasZappedOverride() ?? this.hasZapped());
+  // Track liked state - local signal set by likeTrack() action
+  private likedReactionOverride = signal<Event | null>(null);
+  isLiked = computed(() => !!this.likedReactionOverride());
 
   isCurrentTrackPlaying = computed(() => {
     const currentItem = this.mediaPlayer.current();
@@ -1651,7 +1380,7 @@ export class MusicEventComponent {
     const ev = this.event();
 
     if (this.isLiked()) {
-      const existingReaction = this.effectiveLikedReaction();
+      const existingReaction = this.likedReactionOverride();
       if (!existingReaction) {
         this.snackBar.open('Like is still syncing. Try again in a moment.', 'Close', { duration: 2500 });
         return;
@@ -1660,7 +1389,6 @@ export class MusicEventComponent {
       const result = await this.reactionService.deleteReaction(existingReaction);
       if (result.success) {
         this.likedReactionOverride.set(null);
-        this.likedReactionChange.emit(null);
         this.snackBar.open('Like removed', 'Close', { duration: 2000 });
       } else {
         this.snackBar.open('Failed to remove like', 'Close', { duration: 3000 });
@@ -1671,9 +1399,6 @@ export class MusicEventComponent {
     const result = await this.reactionService.addLike(ev);
     if (result.success) {
       this.likedReactionOverride.set(result.event ?? null);
-      if (result.event) {
-        this.likedReactionChange.emit(result.event);
-      }
       this.snackBar.open('Liked!', 'Close', { duration: 2000 });
     } else {
       this.snackBar.open('Failed to like', 'Close', { duration: 3000 });
@@ -1683,69 +1408,6 @@ export class MusicEventComponent {
   // Zap the artist
   zapArtist(event: MouseEvent | KeyboardEvent): void {
     void this.openZapDialogForArtist(event);
-  }
-
-  onZapButtonPointerDown(event: PointerEvent): void {
-    if (!this.quickZapEnabled()) {
-      return;
-    }
-
-    if (event.pointerType === 'mouse' && event.button !== 0) {
-      return;
-    }
-
-    this.clearZapLongPressTimer();
-    this.zapLongPressTriggered = false;
-    this.zapLongPressTimer = setTimeout(() => {
-      this.zapLongPressTriggered = true;
-      this.haptics.triggerMedium();
-      void this.openZapDialogForArtist(event as unknown as MouseEvent);
-    }, this.ZAP_LONG_PRESS_DURATION);
-  }
-
-  onZapButtonPointerUp(event: PointerEvent): void {
-    this.clearZapLongPressTimer();
-
-    if (this.zapLongPressTriggered) {
-      event.preventDefault();
-      event.stopPropagation();
-    }
-  }
-
-  onZapButtonPointerCancel(): void {
-    this.clearZapLongPressTimer();
-  }
-
-  onZapButtonContextMenu(event: MouseEvent): void {
-    event.preventDefault();
-    event.stopPropagation();
-    this.clearZapLongPressTimer();
-    this.zapLongPressTriggered = false;
-    void this.openZapDialogForArtist(event);
-  }
-
-  onZapButtonClick(event: MouseEvent): void {
-    event.stopPropagation();
-    event.preventDefault();
-
-    if (this.zapLongPressTriggered) {
-      this.zapLongPressTriggered = false;
-      return;
-    }
-
-    if (this.quickZapEnabled()) {
-      void this.sendQuickZap();
-      return;
-    }
-
-    void this.openZapDialogForArtist(event);
-  }
-
-  private clearZapLongPressTimer(): void {
-    if (this.zapLongPressTimer) {
-      clearTimeout(this.zapLongPressTimer);
-      this.zapLongPressTimer = null;
-    }
   }
 
   private async openZapDialogForArtist(event: MouseEvent | KeyboardEvent): Promise<void> {
@@ -1775,96 +1437,11 @@ export class MusicEventComponent {
       zapSplits: zapSplits.length > 0 ? zapSplits : undefined,
     };
 
-    const dialogRef = this.dialog.open(ZapDialogComponent, {
+    this.dialog.open(ZapDialogComponent, {
       data,
       width: '400px',
       maxWidth: '95vw',
     });
-
-    dialogRef.afterClosed().subscribe(result => {
-      if (!result?.amount) {
-        return;
-      }
-
-      this.hasZappedOverride.set(true);
-      this.hasZappedChange.emit(true);
-    });
-  }
-
-  private async sendQuickZap(): Promise<void> {
-    const ev = this.event();
-    const dTag = ev.tags.find(t => t[0] === 'd')?.[1] || '';
-    const userPubkey = this.accountState.pubkey();
-    const currentAccount = this.accountState.account();
-
-    if (!userPubkey || currentAccount?.source === 'preview') {
-      await this.layout.showLoginDialog();
-      return;
-    }
-
-    const amount = this.quickZapAmount();
-    if (amount <= 0) {
-      this.snackBar.open('Quick zap amount not configured. Go to Settings > Wallet.', 'Dismiss', {
-        duration: 4000,
-      });
-      return;
-    }
-
-    let recipientMetadata = this.authorProfile()?.data;
-    if (!recipientMetadata) {
-      try {
-        const userProfile = await this.data.getProfile(ev.pubkey);
-        recipientMetadata = userProfile?.data;
-      } catch (error) {
-        this.logger.warn('Failed to get user profile for quick zap', { error, pubkey: ev.pubkey });
-      }
-    }
-
-    if (!recipientMetadata) {
-      this.snackBar.open('Unable to get recipient information for zap', 'Dismiss', { duration: 4000 });
-      return;
-    }
-
-    const lightningAddress = this.zapService.getLightningAddress(recipientMetadata);
-    if (!lightningAddress) {
-      this.snackBar.open('This user has no lightning address configured for zaps', 'Dismiss', {
-        duration: 4000,
-      });
-      return;
-    }
-
-    try {
-      const zapSplits = this.zapService.parseZapSplits(ev);
-      if (zapSplits.length > 0) {
-        await this.zapService.sendSplitZap(ev, amount, '');
-      } else {
-        await this.zapService.sendZap(
-          ev.pubkey,
-          amount,
-          '',
-          ev.id,
-          recipientMetadata,
-          undefined,
-          undefined,
-          ev.kind,
-          `${ev.kind}:${ev.pubkey}:${dTag}`
-        );
-      }
-
-      this.haptics.triggerZapBuzz();
-      this.hasZappedOverride.set(true);
-      this.hasZappedChange.emit(true);
-      this.snackBar.open(`⚡ Zapped ${amount} sats to ${this.artistName()}!`, 'Dismiss', {
-        duration: 3000,
-      });
-    } catch (error) {
-      this.logger.error('Failed to send quick zap for music track', { error, eventId: ev.id });
-      this.snackBar.open(
-        `Failed to send zap: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        'Dismiss',
-        { duration: 5000 }
-      );
-    }
   }
 
   // Copy event link (music song URL)
