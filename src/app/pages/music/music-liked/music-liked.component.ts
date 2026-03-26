@@ -109,9 +109,18 @@ const PAGE_SIZE = 24;
             </button>
           </div>
         } @else {
-          <div class="music-grid">
-            @for (track of displayedTracks(); track track.id) {
-              <app-music-event [event]="track" mode="card"></app-music-event>
+          <div class="track-list-header hide-small">
+            <span class="track-list-header-number">#</span>
+            <span class="track-list-header-title">Title</span>
+            <span class="track-list-header-album">Album</span>
+            <span class="track-list-header-duration">
+              <mat-icon>schedule</mat-icon>
+            </span>
+          </div>
+          <div class="track-list">
+            @for (track of displayedTracks(); track track.id; let i = $index) {
+              <app-music-event [event]="track" mode="track-list" [trackNumber]="null"
+                [queueTracks]="filteredTracks()" [queueTrackIndex]="i"></app-music-event>
             }
           </div>
 
@@ -347,16 +356,57 @@ const PAGE_SIZE = 24;
       }
     }
 
-    .music-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-      gap: 1rem;
-      padding: 0.5rem 0;
-      max-width: 100%;
+    .track-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      padding: 0;
+    }
 
-      @media (max-width: 600px) {
-        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-        gap: 0.75rem;
+    .track-list-header {
+      display: grid;
+      grid-template-columns: 2rem minmax(0, 1fr) minmax(8rem, 20vw) 3.25rem;
+      align-items: center;
+      gap: 0.625rem;
+      padding: 0 0.75rem 0.35rem;
+      border-bottom: 1px solid color-mix(in srgb, var(--mat-sys-outline-variant) 78%, transparent);
+      color: var(--mat-sys-on-surface-variant);
+      font-size: 0.75rem;
+    }
+
+    .track-list-header-number,
+    .track-list-header-duration {
+      text-align: right;
+    }
+
+    .track-list-header-duration {
+      display: flex;
+      justify-content: flex-end;
+
+      mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+      }
+    }
+
+    @media (max-width: 780px) {
+      .track-list-header {
+        grid-template-columns: minmax(0, 1fr) 3.25rem;
+      }
+
+      .track-list-header-number,
+      .track-list-header-album {
+        display: none;
+      }
+    }
+
+    @media (max-width: 520px) {
+      .track-list-header {
+        grid-template-columns: minmax(0, 1fr) 3rem;
+        gap: 0.5rem;
+        padding-left: 0.5rem;
+        padding-right: 0.5rem;
       }
     }
 
