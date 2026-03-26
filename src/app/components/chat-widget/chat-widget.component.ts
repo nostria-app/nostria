@@ -337,6 +337,11 @@ export class ChatWidgetComponent {
       const target = event.target as HTMLElement;
       if (target.closest('button, a, input, textarea')) return;
     }
+
+    if (this.state() !== 'collapsed') {
+      this.absorbClampAdjustmentIntoDragOffset();
+    }
+
     this.isDragging = true;
     this.dragStarted = false;
     this.dragStartPos = { x: event.clientX, y: event.clientY };
@@ -427,6 +432,17 @@ export class ChatWidgetComponent {
         this.clampAdjustment.set({ x: ax, y: ay });
       }
     });
+  }
+
+  private absorbClampAdjustmentIntoDragOffset(): void {
+    const clamp = this.clampAdjustment();
+    if (clamp.x === 0 && clamp.y === 0) return;
+
+    this.dragOffset.update(offset => ({
+      x: offset.x + clamp.x,
+      y: offset.y + clamp.y,
+    }));
+    this.clampAdjustment.set({ x: 0, y: 0 });
   }
 
   private scrollChatToBottom() {
