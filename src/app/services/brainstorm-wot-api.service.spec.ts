@@ -8,7 +8,7 @@ describe('BrainstormWotApiService', () => {
     vi.restoreAllMocks();
   });
 
-  it('creates NIP-98 compliant kind 27235 auth event with u and method tags', async () => {
+  it('should authenticate with a NIP-98 compliant HTTP auth event', async () => {
     const createEvent = vi.fn().mockReturnValue({ kind: 27235, content: '', tags: [] });
     const signEvent = vi.fn().mockResolvedValue({ id: 'signed-event-id' });
 
@@ -29,13 +29,17 @@ describe('BrainstormWotApiService', () => {
       .mockResolvedValueOnce({
         ok: true,
         json: async () => ({ data: { token: 'token-abc' } }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ data: { private_id: 1 } }),
       });
 
     vi.stubGlobal('fetch', fetchMock);
 
-    const token = await (service as any).ensureAuthToken('pubkey123');
+    const result = await service.getLatestGraperank('pubkey123');
 
-    expect(token).toBe('token-abc');
+    expect(result).toEqual({ private_id: 1 });
     expect(createEvent).toHaveBeenCalledWith(27235, '', [
       ['u', 'https://brainstormserver.nosfabrica.com/authChallenge/pubkey123/verify'],
       ['method', 'POST'],
@@ -47,6 +51,14 @@ describe('BrainstormWotApiService', () => {
       'https://brainstormserver.nosfabrica.com/authChallenge/pubkey123/verify',
       expect.objectContaining({
         method: 'POST',
+      }),
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(3,
+      'https://brainstormserver.nosfabrica.com/user/graperankResult',
+      expect.objectContaining({
+        headers: {
+          access_token: 'token-abc',
+        },
       }),
     );
   });
