@@ -455,6 +455,8 @@
     }
 
     .chat-header-name {
+      flex: 1;
+      min-width: 0;
       font-size: 14px;
       font-weight: 600;
       color: #e4e4e4;
@@ -467,6 +469,9 @@
       app-user-profile {
         flex-shrink: 0;
         display: block;
+        width: 32px;
+        max-width: 32px;
+        overflow: hidden;
 
         .user-profile,
         .user-profile-container {
