@@ -7,6 +7,8 @@ import { AccountStateService } from '../../../services/account-state.service';
 import { EventService } from '../../../services/event';
 import { RepostService } from '../../../services/repost.service';
 import { LayoutService } from '../../../services/layout.service';
+import { UserRelaysService } from '../../../services/relays/user-relays';
+import { UtilitiesService } from '../../../services/utilities.service';
 import type { NostrRecord } from '../../../interfaces';
 
 const mockEvent = {
@@ -54,6 +56,12 @@ describe('RepostButtonComponent', () => {
     let mockLayoutService: {
         showLoginDialog: Mock;
     };
+    let mockUserRelaysService: {
+        getUserRelaysForPublishing: Mock;
+    };
+    let mockUtilitiesService: {
+        normalizeRelayUrls: Mock;
+    };
 
     beforeEach(async () => {
         mockAccountState = {
@@ -82,6 +90,12 @@ describe('RepostButtonComponent', () => {
         mockLayoutService = {
             showLoginDialog: vi.fn().mockReturnValue(Promise.resolve()),
         };
+        mockUserRelaysService = {
+            getUserRelaysForPublishing: vi.fn().mockReturnValue(Promise.resolve(['wss://relay.example'])),
+        };
+        mockUtilitiesService = {
+            normalizeRelayUrls: vi.fn((relays: string[]) => relays),
+        };
 
         await TestBed.configureTestingModule({
             imports: [RepostButtonComponent],
@@ -92,6 +106,8 @@ describe('RepostButtonComponent', () => {
                 { provide: EventService, useValue: mockEventService },
                 { provide: RepostService, useValue: mockRepostService },
                 { provide: LayoutService, useValue: mockLayoutService },
+                { provide: UserRelaysService, useValue: mockUserRelaysService },
+                { provide: UtilitiesService, useValue: mockUtilitiesService },
             ],
         }).compileComponents();
 
@@ -171,8 +187,20 @@ describe('RepostButtonComponent', () => {
 
         it('should call repostNote and reload reposts for authenticated users', async () => {
             await component.createRepost();
-            expect(mockRepostService.repostNote).toHaveBeenCalledWith(mockEvent);
+            expect(mockRepostService.repostNote).toHaveBeenCalledWith(mockEvent, {
+                expiration: undefined,
+                relayUrl: 'wss://relay.example',
+            });
             expect(mockEventService.loadReposts).toHaveBeenCalledWith(mockEvent.id, mockEvent.kind, 'current-user-pubkey', true);
+        });
+
+        it('should call repostNote without relayUrl when no author relays are available', async () => {
+            mockUserRelaysService.getUserRelaysForPublishing.mockResolvedValueOnce([]);
+            await component.createRepost();
+            expect(mockRepostService.repostNote).toHaveBeenCalledWith(mockEvent, {
+                expiration: undefined,
+                relayUrl: undefined,
+            });
         });
     });
 

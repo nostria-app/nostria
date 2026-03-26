@@ -122,15 +122,18 @@ export class BrainstormWotApiService {
       `${this.baseUrl}/authChallenge/${pubkey}`,
     );
 
+    const verificationUrl = `${this.baseUrl}/authChallenge/${pubkey}/verify`;
     const challenge = challengeResponse.data.challenge;
     const unsignedEvent = this.nostr.createEvent(27235, '', [
+      ['u', verificationUrl],
+      ['method', 'POST'],
       ['challenge', challenge],
       ['t', 'brainstorm_login'],
     ]);
     const signedEvent = await this.nostr.signEvent(unsignedEvent);
 
     const verificationResponse = await this.fetchJson<ApiEnvelope<AuthTokenResponse>>(
-      `${this.baseUrl}/authChallenge/${pubkey}/verify`,
+      verificationUrl,
       {
         method: 'POST',
         headers: {
