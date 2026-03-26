@@ -110,8 +110,9 @@ export class RepostService {
 
   private createRepostEvent(event: Event, expiration?: number, relayUrl?: string): UnsignedEvent {
     const normalizedRelayUrl = relayUrl?.trim() || '';
+    const eTag = normalizedRelayUrl ? ['e', event.id, normalizedRelayUrl] : ['e', event.id];
     const tags: string[][] = [
-      ['e', event.id, normalizedRelayUrl],
+      eTag,
       ['p', event.pubkey],
     ];
 

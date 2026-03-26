@@ -193,6 +193,15 @@ describe('RepostButtonComponent', () => {
             });
             expect(mockEventService.loadReposts).toHaveBeenCalledWith(mockEvent.id, mockEvent.kind, 'current-user-pubkey', true);
         });
+
+        it('should call repostNote without relayUrl when no author relays are available', async () => {
+            mockUserRelaysService.getUserRelaysForPublishing.mockResolvedValueOnce([]);
+            await component.createRepost();
+            expect(mockRepostService.repostNote).toHaveBeenCalledWith(mockEvent, {
+                expiration: undefined,
+                relayUrl: undefined,
+            });
+        });
     });
 
     describe('deleteRepost', () => {
