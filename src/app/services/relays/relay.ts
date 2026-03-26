@@ -1326,7 +1326,7 @@ export abstract class RelayServiceBase {
   ) {
     this.logger.debug('Creating subscription with filters:', filter);
 
-    let urls = this.getEffectiveRelayUrls();
+    const urls = this.getEffectiveRelayUrls();
 
     if (!this.#pool) {
       this.logger.error('Cannot subscribe: user pool is not initialized');
