@@ -1,7 +1,7 @@
 <div class="zap-poll-event">
   <div class="poll-header">
     <mat-icon>bolt</mat-icon>
-    <h3>{{ poll().content }}</h3>
+    <div class="poll-content"><app-poll-content [content]="poll().content" [event]="event()"></app-poll-content></div>
   </div>
 
   @if (poll().valueMinimum || poll().valueMaximum) {

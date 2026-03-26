@@ -13,6 +13,7 @@ import { ZapDialogComponent, ZapDialogData } from '../zap-dialog/zap-dialog.comp
 import { DataService } from '../../services/data.service';
 import { TimestampPipe } from '../../pipes/timestamp.pipe';
 import { PollOption } from '../../interfaces';
+import { PollContentComponent } from './poll-content.component';
 
 export interface ZapPoll {
   id: string;
@@ -39,6 +40,7 @@ interface ZapPollResult {
     MatIconModule,
     MatProgressBarModule,
     TimestampPipe,
+    PollContentComponent,
   ],
   templateUrl: './zap-poll-event.component.html',
   styleUrl: './zap-poll-event.component.scss',

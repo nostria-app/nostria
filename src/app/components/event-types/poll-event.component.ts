@@ -12,6 +12,7 @@ import { PollService } from '../../services/poll.service';
 import { Poll, PollResults, PollResponse } from '../../interfaces';
 import { ApplicationService } from '../../services/application.service';
 import { TimestampPipe } from '../../pipes/timestamp.pipe';
+import { PollContentComponent } from './poll-content.component';
 
 @Component({
   selector: 'app-poll-event',
@@ -25,6 +26,7 @@ import { TimestampPipe } from '../../pipes/timestamp.pipe';
     MatCheckboxModule,
     FormsModule,
     TimestampPipe,
+    PollContentComponent,
   ],
   templateUrl: './poll-event.component.html',
   styleUrl: './poll-event.component.scss',
