@@ -83,7 +83,7 @@
         }
       </span>
       }
-      @if (!isExpired() && !hasResults()) {
+      @if (!isExpired()) {
       <button class="show-results-toggle" (click)="toggleShowResults()">
         @if (showResults()) {
         Hide results

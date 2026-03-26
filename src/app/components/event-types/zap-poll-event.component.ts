@@ -94,7 +94,7 @@ export class ZapPollEventComponent {
   });
 
   displayResults = computed(() => {
-    return this.hasResults() || this.showResults();
+    return this.isExpired() || this.showResults();
   });
 
   totalZaps = computed(() => {

@@ -191,15 +191,23 @@
       }
 
       .show-results-toggle {
-        background: none;
-        border: none;
-        color: var(--mat-sys-tertiary);
+        background: var(--mat-sys-secondary-container);
+        border: 1px solid var(--mat-sys-secondary);
+        border-radius: 9999px;
+        color: var(--mat-sys-on-secondary-container);
         cursor: pointer;
         font-size: 0.875rem;
-        padding: 0;
+        padding: 0.2rem 0.6rem;
+        transition: background-color 0.2s ease;
 
         &:hover {
-          text-decoration: underline;
+          background: var(--mat-sys-secondary);
+          color: var(--mat-sys-on-secondary);
+        }
+
+        &:focus {
+          outline: 2px solid var(--mat-sys-secondary);
+          outline-offset: 2px;
         }
       }
     }
