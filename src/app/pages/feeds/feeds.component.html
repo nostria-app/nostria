@@ -175,7 +175,7 @@
           </div>
 
           <!-- Feed Content -->
-          <div class="column-content" #columnContent (scroll)="onColumnContentScroll($event)">
+          <div class="column-content" #columnContent>
             @let dynamicEvents = columnEvents().get(dynFeed.id);
             @let dynamicFeedHasEvents = dynamicEvents && dynamicEvents.length > 0;
             @let dynamicInitialLoadComplete = feedService.getColumnInitialLoadComplete(dynFeed.id);
@@ -280,7 +280,7 @@
           }
 
           <!-- Feed Content with Individual Scrolling -->
-          <div class="column-content" #columnContent (scroll)="onColumnContentScroll($event)">
+          <div class="column-content" #columnContent>
 
             <!-- Empty following state message -->
             @if (shouldShowEmptyFollowingMessage().get(feed.id)) {

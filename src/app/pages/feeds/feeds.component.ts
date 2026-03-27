@@ -503,6 +503,9 @@ export class FeedsComponent implements OnDestroy {
   scrollCheckCleanup: (() => void) | null = null;
   private autoLoadRecheckTimeout: ReturnType<typeof setTimeout> | null = null;
   private lastNetworkLoadScrollTop = Number.NEGATIVE_INFINITY;
+  // Debounce handle for the post-scroll fill pass (catches fast/drag scrolls)
+  private fillDebounceTimeout: ReturnType<typeof setTimeout> | null = null;
+
 
   /**
    * Helper method to filter events based on feed-specific settings
@@ -1103,14 +1106,6 @@ export class FeedsComponent implements OnDestroy {
       }
     });
 
-    // Set up scroll listener for header auto-hide
-    effect(() => {
-      if (this.layoutService.isBrowser()) {
-        setTimeout(() => {
-          this.setupHeaderScrollListener();
-        }, 500);
-      }
-    });
 
     // When the total event count grows (new events arrive from the network),
     // run a fill pass so the feed renders more content without requiring a scroll.
@@ -1142,57 +1137,14 @@ export class FeedsComponent implements OnDestroy {
       }
 
       if (this.layoutService.isBrowser()) {
-        // Wait for feed content to be rendered
+        // Wait for feed content to be rendered before setting up observers
         setTimeout(() => {
-          this.setupFeedScrollListener(activeFeed);
-          // Set up IntersectionObserver for infinite scroll
+          this.cleanupScrollListener();
+          // Set up IntersectionObserver for network-page fetches at end of list
           this.setupIntersectionObserver();
         }, 500);
       }
     });
-  }
-
-  /**
-   * Set up scroll listener for the active feed to detect when user scrolls to bottom
-   * Simplified from the old multi-column architecture
-   */
-  private setupFeedScrollListener(feed: FeedConfig) {
-    // Clean up existing listeners
-    this.cleanupScrollListener();
-
-    // Find the active feed scroll container
-    const contentWrapper = document.querySelector('.column-content') as HTMLElement;
-
-    if (!contentWrapper) {
-      return;
-    }
-
-    // Create scroll check function
-    const checkScrollPosition = () => {
-      void this.maybeAutoLoadMore(feed.id, contentWrapper);
-    };
-
-    // Throttled scroll handler
-    const scrollHandler = () => {
-      requestAnimationFrame(checkScrollPosition);
-    };
-
-    // Add scroll listener
-    contentWrapper.addEventListener('scroll', scrollHandler, { passive: true });
-
-    // Store cleanup function
-    this.scrollCheckCleanup = () => {
-      contentWrapper.removeEventListener('scroll', scrollHandler);
-    };
-
-    // Do initial check in case we're already scrolled down
-    setTimeout(() => {
-      checkScrollPosition();
-    }, 100);
-
-    setTimeout(() => {
-      checkScrollPosition();
-    }, 1000);
   }
 
   /**
@@ -1208,6 +1160,11 @@ export class FeedsComponent implements OnDestroy {
       clearTimeout(this.autoLoadRecheckTimeout);
       this.autoLoadRecheckTimeout = null;
     }
+
+    if (this.fillDebounceTimeout) {
+      clearTimeout(this.fillDebounceTimeout);
+      this.fillDebounceTimeout = null;
+    }
   }
 
   /**
@@ -1219,13 +1176,16 @@ export class FeedsComponent implements OnDestroy {
     // Clean up existing observer
     this.intersectionObserver?.disconnect();
 
-    const contentWrapper = document.querySelector('.column-content') as HTMLElement | null;
-    if (!contentWrapper) {
+    // columnsContainer is the real scroll container (overflow-y: auto).
+    // Using it as root ensures the IntersectionObserver fires relative to the
+    // actual scrollport, not the document viewport.
+    const scrollRoot = this.columnsContainer?.nativeElement ?? null;
+    if (!scrollRoot) {
       return;
     }
 
     const options: IntersectionObserverInit = {
-      root: contentWrapper,
+      root: scrollRoot,
       rootMargin: '0px 0px 400px 0px',
       threshold: 0,
     };
@@ -1237,7 +1197,7 @@ export class FeedsComponent implements OnDestroy {
         }
         const activeFeed = this.currentScrollableFeed();
         if (activeFeed) {
-          void this.maybeAutoLoadMore(activeFeed.id, contentWrapper, true);
+          void this.maybeAutoLoadMore(activeFeed.id, scrollRoot, true);
         }
       });
     }, options);
@@ -1256,106 +1216,62 @@ export class FeedsComponent implements OnDestroy {
   }
 
   /**
-   * Fill rendered events until there is at least RENDER_AHEAD_PX of content
-   * below the current scroll position, or until all cached events are rendered.
+   * Load one more batch of rendered events if the scroll position is close
+   * enough to the bottom of the already-rendered content.
    *
-   * This is called on every scroll event and whenever new events arrive.
-   * It is the sole mechanism that advances the virtual-list render window.
+   * We intentionally load only ONE batch per call.  The DOM does not update
+   * synchronously after a signal write with OnPush change detection, so
+   * looping until distanceFromBottom > RENDER_AHEAD_PX would spin forever on
+   * a stale scrollHeight and hang the browser.  Instead we rely on:
+   *   - the scroll event firing again after the new batch is painted, and
+   *   - scheduleFillCheck() firing a deferred pass after the browser has
+   *     laid out the newly-rendered items.
+   *
+   * NOTE: Only runs after the user has scrolled at least once.
    */
   private fillRenderedEvents(feedId: string, container: HTMLElement): void {
-    if (!this.userHasScrolledFeedContent() && container.scrollTop <= 0) {
+    if (!this.userHasScrolledFeedContent()) {
       return;
     }
 
-    // Keep rendering batches synchronously until we have enough runway ahead.
-    while (this.hasMoreEventsToRender(feedId)) {
-      const distanceFromBottom = this.getDistanceFromBottom(container);
-      if (distanceFromBottom > this.RENDER_AHEAD_PX) {
-        break;
-      }
+    if (!this.hasMoreEventsToRender(feedId)) {
+      return;
+    }
+
+    const distanceFromBottom = this.getDistanceFromBottom(container);
+    if (distanceFromBottom <= this.RENDER_AHEAD_PX) {
       this.loadMoreRenderedEvents(feedId);
     }
   }
 
   /**
-   * Set up scroll listener on column-content to auto-hide/show header
+   * Schedule a fill pass after the scroll settles.
+   *
+   * During fast scrolls or scrollbar drags, the synchronous while-loop in
+   * fillRenderedEvents reads stale scrollHeight values (Angular hasn't re-rendered
+   * the new batches yet), so it may under-fill. This deferred pass runs after the
+   * browser has had a chance to lay out the newly-rendered events and gives an
+   * accurate distance-from-bottom reading.
    */
-  private setupHeaderScrollListener(): void {
-    // Scrolling happens on column-content (the scrollable feed area)
-    const container = document.querySelector('.column-content') as HTMLElement;
-
-    if (!container) {
-      return;
+  private scheduleFillCheck(feedId: string): void {
+    if (this.fillDebounceTimeout) {
+      clearTimeout(this.fillDebounceTimeout);
     }
-
-    // Remove existing listener if any
-    const existingListener = (container as HTMLElement & { __headerScrollListener?: () => void }).__headerScrollListener;
-    if (existingListener) {
-      container.removeEventListener('scroll', existingListener);
-    }
-
-    const scrollListener = () => {
-      const scrollTop = container.scrollTop;
-      const scrollDelta = scrollTop - this.lastScrollTop;
-
-      // Scrolling down - hide header after scrolling down past threshold
-      if (scrollDelta > 10 && scrollTop > 100) {
-        this.headerHidden.set(true);
+    this.fillDebounceTimeout = setTimeout(() => {
+      this.fillDebounceTimeout = null;
+      const activeFeed = this.currentScrollableFeed();
+      if (!activeFeed || activeFeed.id !== feedId) return;
+      const container = this.getFeedContentContainer();
+      if (container) {
+        this.fillRenderedEvents(feedId, container);
       }
-      // Scrolling up - show header immediately
-      else if (scrollDelta < -10) {
-        this.headerHidden.set(false);
-      }
-      // At the very top - always show header
-      else if (scrollTop <= 50) {
-        this.headerHidden.set(false);
-      }
-
-      this.lastScrollTop = scrollTop;
-    };
-
-    // Store listener reference for cleanup
-    (container as HTMLElement & { __headerScrollListener?: () => void }).__headerScrollListener = scrollListener;
-    container.addEventListener('scroll', scrollListener, { passive: true });
+    }, 100);
   }
 
-  /**
-   * Handle scroll on column-content to auto-hide/show header
-   */
-  onColumnContentScroll(event: globalThis.Event): void {
-    const container = event.target as HTMLElement;
-    const scrollTop = container.scrollTop;
-    const scrollDelta = scrollTop - this.lastScrollTop;
 
-    if (scrollTop > 24 && !this.userHasScrolledFeedContent()) {
-      this.userHasScrolledFeedContent.set(true);
-    }
-
-    // Scrolling down - hide header after scrolling down past threshold
-    if (scrollDelta > 10 && scrollTop > 100) {
-      this.headerHidden.set(true);
-    }
-    // Scrolling up - show header immediately
-    else if (scrollDelta < -10) {
-      this.headerHidden.set(false);
-    }
-    // At the very top - always show header
-    else if (scrollTop <= 50) {
-      this.headerHidden.set(false);
-    }
-
-    const activeFeed = this.currentScrollableFeed();
-    if (activeFeed) {
-      // Fill rendered events first (cached → DOM), then check if a network fetch is needed.
-      this.fillRenderedEvents(activeFeed.id, container);
-      void this.maybeAutoLoadMore(activeFeed.id, container);
-    }
-
-    this.lastScrollTop = scrollTop;
-  }
 
   private getFeedContentContainer(): HTMLElement | null {
-    return document.querySelector('.column-content') as HTMLElement | null;
+    return this.columnsContainer?.nativeElement ?? null;
   }
 
   private getDistanceFromBottom(container: HTMLElement): number {
@@ -1450,14 +1366,40 @@ export class FeedsComponent implements OnDestroy {
     const container = event.target as HTMLElement | null;
     if (!container) return;
 
+    const scrollTop = container.scrollTop;
+    const scrollDelta = scrollTop - this.lastScrollTop;
+
     // Track feeds' own scroll position for scroll-to-top button
-    this.feedsScrollTop.set(container.scrollTop);
+    this.feedsScrollTop.set(scrollTop);
 
     // Mark that the user has scrolled away from top at least once.
-    // This enables auto-loading pending events when they scroll back to top.
-    if (container.scrollTop >= 100 && !this.userHasScrolledAway()) {
+    if (scrollTop >= 100 && !this.userHasScrolledAway()) {
       this.userHasScrolledAway.set(true);
     }
+
+    // Gate for fill/network logic
+    if (scrollTop > 24 && !this.userHasScrolledFeedContent()) {
+      this.userHasScrolledFeedContent.set(true);
+    }
+
+    // Header auto-hide
+    if (scrollDelta > 10 && scrollTop > 100) {
+      this.headerHidden.set(true);
+    } else if (scrollDelta < -10) {
+      this.headerHidden.set(false);
+    } else if (scrollTop <= 50) {
+      this.headerHidden.set(false);
+    }
+
+    // Fill rendered events and check for network fetch
+    const activeFeed = this.currentScrollableFeed();
+    if (activeFeed) {
+      this.fillRenderedEvents(activeFeed.id, container);
+      this.scheduleFillCheck(activeFeed.id);
+      void this.maybeAutoLoadMore(activeFeed.id, container);
+    }
+
+    this.lastScrollTop = scrollTop;
 
     // Update scroll position for horizontal scrollbar syncing
     this.columnsScrollLeft.set(container.scrollLeft);
