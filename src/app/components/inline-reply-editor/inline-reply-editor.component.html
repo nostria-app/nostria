@@ -1,16 +1,11 @@
 <!-- Collapsed State -->
 @if (!isExpanded()) {
-<div class="inline-collapsed-state"
-  [class.disabled]="interactionDisabled()"
+<div class="inline-collapsed-state" [class.disabled]="interactionDisabled()"
   [matTooltip]="interactionDisabled() ? interactionDisabledReason() || 'Only accounts followed by the original poster can reply in this thread.' : ''"
-  [matTooltipDisabled]="!interactionDisabled()"
-  (click)="interactionDisabled() ? null : expandEditor()"
+  [matTooltipDisabled]="!interactionDisabled()" (click)="interactionDisabled() ? null : expandEditor()"
   (keydown.enter)="interactionDisabled() ? null : expandEditor()"
-  (keydown.space)="interactionDisabled() ? null : expandEditor()"
-  [tabindex]="interactionDisabled() ? -1 : 0"
-  role="button"
-  [attr.aria-disabled]="interactionDisabled()"
-  aria-label="Expand reply editor">
+  (keydown.space)="interactionDisabled() ? null : expandEditor()" [tabindex]="interactionDisabled() ? -1 : 0"
+  role="button" [attr.aria-disabled]="interactionDisabled()" aria-label="Expand reply editor">
   <div class="avatar-wrapper">
     @if (currentAccountPubkey()) {
     <app-user-profile [pubkey]="currentAccountPubkey()!" view="icon" [disableLink]="true"></app-user-profile>
@@ -18,7 +13,8 @@
     <mat-icon class="default-avatar">account_circle</mat-icon>
     }
   </div>
-  <span class="placeholder-text">{{ interactionDisabled() ? 'Replies are limited to accounts followed by the author' : 'Post your reply' }}</span>
+  <span class="placeholder-text">{{ interactionDisabled() ? 'Replies are limited to accounts followed by the author' :
+    'Post your reply' }}</span>
   <span class="reply-button" aria-hidden="true">
     Reply
   </span>
@@ -28,12 +24,8 @@
 <!-- Expanded Editor -->
 @if (isExpanded()) {
 <div class="inline-editor">
-  <div class="editor-content"
-    [attr.data-drag-enabled]="true"
-    (dragenter)="onDragEnter($event)"
-    (dragover)="onDragOver($event)"
-    (dragleave)="onDragLeave($event)"
-    (drop)="onDrop($event)"
+  <div class="editor-content" [attr.data-drag-enabled]="true" (dragenter)="onDragEnter($event)"
+    (dragover)="onDragOver($event)" (dragleave)="onDragLeave($event)" (drop)="onDrop($event)"
     [class.drag-over]="isDragOver()">
 
     <!-- Error display -->
@@ -84,30 +76,17 @@
     <div class="textarea-container">
       <mat-form-field appearance="outline" class="content-field">
         <mat-label>Post your reply</mat-label>
-        <textarea matInput
-          [value]="content()"
-          [disabled]="interactionDisabled()"
-          (input)="onContentInput($event)"
-          (keydown)="onContentKeyDown($event)"
-          (keyup)="onContentKeyUp($event)"
-          (click)="onContentClick($event)"
-          placeholder="Write your reply... Use @ to mention someone"
-          rows="3"
-          class="content-textarea"
-          #contentTextarea>
+        <textarea matInput [value]="content()" [disabled]="interactionDisabled()" (input)="onContentInput($event)"
+          (keydown)="onContentKeyDown($event)" (keyup)="onContentKeyUp($event)" (click)="onContentClick($event)"
+          placeholder="Write your reply... Use @ to mention someone" rows="3" class="content-textarea" #contentTextarea>
         </textarea>
         <mat-hint align="end">{{ characterCount() }} characters</mat-hint>
       </mat-form-field>
 
       <!-- Mention Autocomplete -->
       @if (mentionConfig()) {
-      <app-mention-autocomplete
-        [config]="mentionConfig()"
-        [position]="mentionPosition()"
-        [maxResults]="100"
-        [maxHeight]="400"
-        (mentionSelected)="onMentionSelected($event)"
-        (dismissed)="onMentionDismissed()">
+      <app-mention-autocomplete [config]="mentionConfig()" [position]="mentionPosition()" [maxResults]="100"
+        [maxHeight]="400" (mentionSelected)="onMentionSelected($event)" (dismissed)="onMentionDismissed()">
       </app-mention-autocomplete>
       }
     </div>
@@ -159,18 +138,13 @@
   </div>
 
   <!-- Action bar -->
-  <div class="action-container"
-    (dragenter)="onDragEnter($event)"
-    (dragover)="onDragOver($event)"
-    (dragleave)="onDragLeave($event)"
-    (drop)="onDrop($event)">
+  <div class="action-container" (dragenter)="onDragEnter($event)" (dragover)="onDragOver($event)"
+    (dragleave)="onDragLeave($event)" (drop)="onDrop($event)">
 
     <!-- Left side: Action buttons -->
     <div class="left-actions">
       <!-- Dictation button -->
-      <button mat-icon-button type="button"
-        (click)="toggleRecording()"
-        [color]="isRecording() ? 'warn' : ''"
+      <button mat-icon-button type="button" (click)="toggleRecording()" [color]="isRecording() ? 'warn' : ''"
         [disabled]="interactionDisabled() || isUploading() || isPublishing() || isTranscribing()"
         [matTooltip]="isRecording() ? 'Stop listening' : 'Dictate reply'">
         @if (isTranscribing()) {
@@ -184,8 +158,7 @@
 
       <!-- Undo recording button -->
       @if (recordingHistory().length > 0) {
-      <button mat-icon-button type="button"
-        (click)="undoLastRecording()"
+      <button mat-icon-button type="button" (click)="undoLastRecording()"
         [disabled]="interactionDisabled() || isUploading() || isPublishing() || isTranscribing()"
         matTooltip="Undo last recording">
         <mat-icon>undo</mat-icon>
@@ -193,10 +166,8 @@
       }
 
       <!-- Media button -->
-      <button mat-icon-button type="button"
-        [matMenuTriggerFor]="mediaMenu"
-        [disabled]="interactionDisabled() || isUploading() || isPublishing()"
-        matTooltip="Add media">
+      <button mat-icon-button type="button" [matMenuTriggerFor]="mediaMenu"
+        [disabled]="interactionDisabled() || isUploading() || isPublishing()" matTooltip="Add media">
         <mat-icon>perm_media</mat-icon>
       </button>
       <mat-menu #mediaMenu="matMenu">
@@ -212,38 +183,29 @@
 
       <!-- Emoji picker button -->
       @if (layout.isHandset()) {
-      <button mat-icon-button type="button"
-        [disabled]="interactionDisabled() || isUploading() || isPublishing()"
-        matTooltip="Emoji"
-        (click)="openEmojiPickerDialog()">
+      <button mat-icon-button type="button" [disabled]="interactionDisabled() || isUploading() || isPublishing()"
+        matTooltip="Emoji" (click)="openEmojiPickerDialog()">
         <mat-icon>sentiment_satisfied</mat-icon>
       </button>
       } @else {
-      <button mat-icon-button type="button"
-        [matMenuTriggerFor]="emojiMenu"
-        (menuOpened)="emojiPickerRef?.resetTab()"
-        [disabled]="interactionDisabled() || isUploading() || isPublishing()"
-        matTooltip="Emoji">
+      <button mat-icon-button type="button" [matMenuTriggerFor]="emojiMenu" (menuOpened)="emojiPickerRef?.resetTab()"
+        [disabled]="interactionDisabled() || isUploading() || isPublishing()" matTooltip="Emoji">
         <mat-icon>sentiment_satisfied</mat-icon>
       </button>
       <mat-menu #emojiMenu="matMenu" class="emoji-picker-menu">
-        <app-emoji-picker #emojiPickerRef mode="content" (emojiSelected)="insertEmoji($event)" (gifSelected)="insertGifUrl($event)"></app-emoji-picker>
+        <app-emoji-picker #emojiPickerRef mode="content" (emojiSelected)="insertEmoji($event)"
+          (gifSelected)="insertGifUrl($event)"></app-emoji-picker>
       </mat-menu>
       }
     </div>
 
     <!-- Right side: Primary actions -->
     <div class="right-actions">
-      <button mat-button
-        (click)="cancel()"
-        [disabled]="isPublishing()">
+      <button mat-button (click)="cancel()" [disabled]="isPublishing()">
         Cancel
       </button>
-      <button mat-flat-button
-        (click)="publishReply()"
-        [disabled]="!canPublish() || isPublishing()"
-        class="publish-button"
-        matTooltip="Ctrl+Enter">
+      <button mat-flat-button (click)="publishReply()" [disabled]="!canPublish() || isPublishing()"
+        class="publish-button" matTooltip="Ctrl+Enter">
         @if (isPublishing()) {
         <ng-container>
           <mat-icon class="spinning">hourglass_empty</mat-icon>

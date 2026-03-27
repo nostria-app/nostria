@@ -50,8 +50,8 @@
           <button mat-icon-button class="emoji-button custom-emoji"
             [class.selected]="userReaction()?.event?.content === ':' + emoji.shortcode + ':'"
             (click)="addReaction(':' + emoji.shortcode + ':'); $event.stopPropagation()"
-            [disabled]="isLoadingReactions() || disabled()" [matTooltip]="emoji.shortcode" [attr.aria-label]="emoji.shortcode"
-            title="{{ emoji.shortcode }}">
+            [disabled]="isLoadingReactions() || disabled()" [matTooltip]="emoji.shortcode"
+            [attr.aria-label]="emoji.shortcode" title="{{ emoji.shortcode }}">
             <img [src]="emoji.url" alt="{{ emoji.shortcode }}" title="{{ emoji.shortcode }}" class="custom-emoji-img">
           </button>
           }
@@ -69,7 +69,8 @@
             @for (recent of recentEmojis(); track recent.emoji) {
             <button mat-icon-button class="emoji-button"
               [class.selected]="userReaction()?.event?.content === recent.emoji"
-              (click)="addReaction(recent.emoji); $event.stopPropagation()" [disabled]="isLoadingReactions() || disabled()"
+              (click)="addReaction(recent.emoji); $event.stopPropagation()"
+              [disabled]="isLoadingReactions() || disabled()"
               [matTooltip]="recent.emoji.startsWith(':') ? recent.emoji.slice(1, -1) : ''"
               [attr.aria-label]="recent.emoji" title="{{ recent.emoji }}">
               @if (recent.url) {
@@ -116,8 +117,8 @@
               <button mat-icon-button class="emoji-button custom-emoji"
                 [class.selected]="userReaction()?.event?.content === ':' + emoji.shortcode + ':'"
                 (click)="addReaction(':' + emoji.shortcode + ':'); $event.stopPropagation()"
-                [disabled]="isLoadingReactions() || disabled()" [matTooltip]="emoji.shortcode" [attr.aria-label]="emoji.shortcode"
-                title="{{ emoji.shortcode }}">
+                [disabled]="isLoadingReactions() || disabled()" [matTooltip]="emoji.shortcode"
+                [attr.aria-label]="emoji.shortcode" title="{{ emoji.shortcode }}">
                 <img [src]="emoji.url" alt="{{ emoji.shortcode }}" title="{{ emoji.shortcode }}"
                   class="custom-emoji-img">
               </button>
@@ -218,8 +219,8 @@
             <button mat-icon-button class="emoji-button custom-emoji"
               [class.selected]="userReaction()?.event?.content === ':' + emoji.shortcode + ':'"
               (click)="addReaction(':' + emoji.shortcode + ':'); $event.stopPropagation()"
-              [disabled]="isLoadingReactions() || disabled()" [matTooltip]="emoji.shortcode" [attr.aria-label]="emoji.shortcode"
-              title="{{ emoji.shortcode }}">
+              [disabled]="isLoadingReactions() || disabled()" [matTooltip]="emoji.shortcode"
+              [attr.aria-label]="emoji.shortcode" title="{{ emoji.shortcode }}">
               <img [src]="emoji.url" alt="{{ emoji.shortcode }}" title="{{ emoji.shortcode }}" class="custom-emoji-img">
             </button>
             }
@@ -237,7 +238,8 @@
               @for (recent of recentEmojis(); track recent.emoji) {
               <button mat-icon-button class="emoji-button"
                 [class.selected]="userReaction()?.event?.content === recent.emoji"
-                (click)="addReaction(recent.emoji); $event.stopPropagation()" [disabled]="isLoadingReactions() || disabled()"
+                (click)="addReaction(recent.emoji); $event.stopPropagation()"
+                [disabled]="isLoadingReactions() || disabled()"
                 [matTooltip]="recent.emoji.startsWith(':') ? recent.emoji.slice(1, -1) : ''"
                 [attr.aria-label]="recent.emoji" title="{{ recent.emoji }}">
                 @if (recent.url) {
@@ -284,8 +286,8 @@
                 <button mat-icon-button class="emoji-button custom-emoji"
                   [class.selected]="userReaction()?.event?.content === ':' + emoji.shortcode + ':'"
                   (click)="addReaction(':' + emoji.shortcode + ':'); $event.stopPropagation()"
-                  [disabled]="isLoadingReactions() || disabled()" [matTooltip]="emoji.shortcode" [attr.aria-label]="emoji.shortcode"
-                  title="{{ emoji.shortcode }}">
+                  [disabled]="isLoadingReactions() || disabled()" [matTooltip]="emoji.shortcode"
+                  [attr.aria-label]="emoji.shortcode" title="{{ emoji.shortcode }}">
                   <img [src]="emoji.url" alt="{{ emoji.shortcode }}" title="{{ emoji.shortcode }}"
                     class="custom-emoji-img">
                 </button>

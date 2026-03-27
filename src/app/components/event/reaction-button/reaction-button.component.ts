@@ -781,9 +781,9 @@ export class ReactionButtonComponent {
         this.handleReactionError(result.error, 'Failed to add reaction. Please try again.');
       } else {
         if (result.event) {
-              if (this.disabled()) {
-                return;
-              }
+          if (this.disabled()) {
+            return;
+          }
 
         }
         // Track emoji usage for recent emojis

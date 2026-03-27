@@ -996,8 +996,8 @@
       </div>
       } @else {
       <!-- Like with count -->
-      <div class="action-button like-action like-hover-container"
-        [class.disabled]="isThreadInteractionBlocked()" [attr.aria-disabled]="isThreadInteractionBlocked()"
+      <div class="action-button like-action like-hover-container" [class.disabled]="isThreadInteractionBlocked()"
+        [attr.aria-disabled]="isThreadInteractionBlocked()"
         [matTooltip]="isThreadInteractionBlocked() ? threadInteractionBlockedTooltip() : ''"
         [matTooltipDisabled]="!isThreadInteractionBlocked()" (click)="onLikeActionClick(reactionBtn, $event)"
         (mouseenter)="onLikeHoverEnter()" (mouseleave)="onLikeHoverLeave()">
@@ -1010,8 +1010,8 @@
         <span class="action-text">Like</span>
 
         <!-- Quick reaction hover popup -->
-        <div class="quick-reaction-popup" [class.visible]="showQuickReactions() && !isThreadInteractionBlocked()" (mouseenter)="onLikeHoverEnter()"
-          (mouseleave)="onLikeHoverLeave()">
+        <div class="quick-reaction-popup" [class.visible]="showQuickReactions() && !isThreadInteractionBlocked()"
+          (mouseenter)="onLikeHoverEnter()" (mouseleave)="onLikeHoverLeave()">
           @for (item of quickReactionEmojis(); track item.emoji) {
           <button class="quick-emoji-btn" (click)="onQuickReaction(item.emoji, reactionBtn, $event)" type="button">
             @if (item.url) {
@@ -1032,12 +1032,11 @@
       }
 
       <!-- Reply (opens note editor) -->
-      <div class="action-button comment-action" role="button"
-        [class.disabled]="isThreadInteractionBlocked()" [attr.aria-disabled]="isThreadInteractionBlocked()"
+      <div class="action-button comment-action" role="button" [class.disabled]="isThreadInteractionBlocked()"
+        [attr.aria-disabled]="isThreadInteractionBlocked()"
         [attr.tabindex]="requiresSpamConfirmation() || isThreadInteractionBlocked() ? -1 : 0"
         [matTooltip]="isThreadInteractionBlocked() ? threadInteractionBlockedTooltip() : ''"
-        [matTooltipDisabled]="!isThreadInteractionBlocked()"
-        (click)="openReplyEditor($event)">
+        [matTooltipDisabled]="!isThreadInteractionBlocked()" (click)="openReplyEditor($event)">
         <mat-icon class="action-icon">mode_comment</mat-icon>
         @if (replyCount() > 0) {
         <span class="action-count">{{ replyCountDisplay() }}</span>
@@ -1046,8 +1045,8 @@
       </div>
 
       <!-- Share with count (reposts + quotes) -->
-      <div class="action-button share-action" role="button"
-        [class.disabled]="isThreadInteractionBlocked()" [attr.aria-disabled]="isThreadInteractionBlocked()"
+      <div class="action-button share-action" role="button" [class.disabled]="isThreadInteractionBlocked()"
+        [attr.aria-disabled]="isThreadInteractionBlocked()"
         [attr.tabindex]="requiresSpamConfirmation() || isThreadInteractionBlocked() ? -1 : 0"
         [matTooltip]="isThreadInteractionBlocked() ? threadInteractionBlockedTooltip() : ''"
         [matTooltipDisabled]="!isThreadInteractionBlocked()" (click)="openShareDialog($event)">

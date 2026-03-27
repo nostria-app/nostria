@@ -24,7 +24,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { MatMenuModule } from '@angular/material/menu';
+import { MatMenuModule, MatMenuTrigger } from '@angular/material/menu';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatSliderModule } from '@angular/material/slider';
@@ -365,7 +365,7 @@ export class EventPageComponent {
    * Recursively filter threaded replies by Web of Trust rank.
    * Only include replies from users with a trust rank >= minRank or the main event author.
    */
-  private filterThreadedRepliesByWot(replies: ThreadedEvent[], mainEventPubkey?: string, minRank: number = 1): ThreadedEvent[] {
+  private filterThreadedRepliesByWot(replies: ThreadedEvent[], mainEventPubkey?: string, minRank = 1): ThreadedEvent[] {
     const result: ThreadedEvent[] = [];
     const effectiveMinRank = minRank > 0 ? minRank : 1;
 
@@ -422,6 +422,11 @@ export class EventPageComponent {
     if (pubkey) {
       this.accountLocalState.setThreadReplyFilter(pubkey, filter);
     }
+  }
+
+  setReplyFilterAndClose(filter: string, menuTrigger: MatMenuTrigger): void {
+    this.setReplyFilter(filter);
+    menuTrigger.closeMenu();
   }
 
   setWotMinRank(rank: number): void {

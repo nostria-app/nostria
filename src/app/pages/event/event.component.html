@@ -19,7 +19,7 @@
   }
 
   <!-- Reply Filter Button -->
-  <button mat-icon-button [matMenuTriggerFor]="replyFilterMenu"
+  <button mat-icon-button [matMenuTriggerFor]="replyFilterMenu" #replyFilterTrigger="matMenuTrigger"
     [matTooltip]="'Filter replies: ' + selectedFollowSetName() + (wotMinRank() > 0 ? ' (WoT ' + wotMinRank() + '+)' : '')"
     [class.filter-active]="isReplyFilterActive()">
     <mat-icon>{{ isReplyFilterActive() ? 'filter_alt' : 'filter_alt_off' }}</mat-icon>
@@ -52,18 +52,18 @@
         <span>People</span>
       </div>
       <div class="reply-filter-people-list">
-        <button mat-menu-item (click)="setReplyFilter(replyFilterEveryone)"
+        <button mat-menu-item (click)="setReplyFilterAndClose(replyFilterEveryone, replyFilterTrigger)"
           [class.selected]="activeReplyFilter() === replyFilterEveryone">
           <mat-icon>public</mat-icon>
           <span>Everyone</span>
         </button>
-        <button mat-menu-item (click)="setReplyFilter(replyFilterFollowing)"
+        <button mat-menu-item (click)="setReplyFilterAndClose(replyFilterFollowing, replyFilterTrigger)"
           [class.selected]="activeReplyFilter() === replyFilterFollowing">
           <mat-icon>people</mat-icon>
           <span>Your Following</span>
         </button>
         @if (supportsAuthorFollowingFilter()) {
-        <button mat-menu-item (click)="setReplyFilter(replyFilterAuthorFollowing)"
+        <button mat-menu-item (click)="setReplyFilterAndClose(replyFilterAuthorFollowing, replyFilterTrigger)"
           [class.selected]="activeReplyFilter() === replyFilterAuthorFollowing">
           <mat-icon>person_add</mat-icon>
           <span>Author Following</span>
@@ -72,7 +72,7 @@
         @if (availableFollowSets().length > 0) {
         <mat-divider></mat-divider>
         @for (followSet of availableFollowSets(); track followSet.dTag) {
-        <button mat-menu-item (click)="setReplyFilter(followSet.dTag)"
+        <button mat-menu-item (click)="setReplyFilterAndClose(followSet.dTag, replyFilterTrigger)"
           [class.selected]="activeReplyFilter() === followSet.dTag">
           <mat-icon>{{ followSet.isPrivate ? 'lock' : 'group' }}</mat-icon>
           <span>{{ followSet.title }}</span>
@@ -235,8 +235,7 @@
     </div>
     <div class="thread-content">
       <app-event [event]="threadedEvent.event" mode="thread" [replyCountFromParent]="countReplies(threadedEvent)"
-        [repliesFromParent]="threadedEvent.replies"
-        [threadInteractionDisabled]="isAuthorFollowingInteractionLocked()"
+        [repliesFromParent]="threadedEvent.replies" [threadInteractionDisabled]="isAuthorFollowingInteractionLocked()"
         [threadInteractionDisabledReason]="authorFollowingInteractionDisabledReason()"></app-event>
 
       @if (isThreadCollapsed(threadedEvent.event.id) && threadedEvent.replies.length > 0) {
