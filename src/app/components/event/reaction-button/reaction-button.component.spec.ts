@@ -35,7 +35,7 @@ describe('ReactionButtonComponent', () => {
     it('should have correct label and icon for nature category', () => {
       const natureCategory = component.emojiCategories.find(c => c.id === 'nature');
       expect(natureCategory!.label).toBe('Nature');
-      expect(natureCategory!.icon).toBe('eco');
+      expect(natureCategory!.icon).toBe('🌿');
     });
 
     it('should have nature emojis in the nature category', () => {
@@ -69,6 +69,7 @@ describe('ReactionButtonComponent', () => {
       expect(categoryIds).toContain('smileys');
       expect(categoryIds).toContain('gestures');
       expect(categoryIds).toContain('hearts');
+      expect(categoryIds).toContain('people');
       expect(categoryIds).toContain('animals');
       expect(categoryIds).toContain('nature');
       expect(categoryIds).toContain('food');
@@ -77,6 +78,13 @@ describe('ReactionButtonComponent', () => {
       expect(categoryIds).toContain('objects');
       expect(categoryIds).toContain('symbols');
       expect(categoryIds).toContain('flags');
+    });
+
+    it('should include Unicode 17 additions across the shared catalog', () => {
+      const allEmojis = component.emojiCategories.flatMap(category => category.emojis);
+      expect(allEmojis).toContain('🫩');
+      expect(allEmojis).toContain('🪿');
+      expect(allEmojis).toContain('🫟');
     });
   });
 
