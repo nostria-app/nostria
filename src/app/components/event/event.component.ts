@@ -179,8 +179,10 @@ export function getTaggedXUrl(event?: Event | null): string | undefined {
 })
 export class EventComponent implements AfterViewInit, OnDestroy {
   private static readonly interactionPreloadConcurrency = 4;
+  private static readonly interactionPreloadBoostConcurrency = 2;
+  private static readonly interactionPreloadUrgentThresholdPx = 500;
   private static readonly queuedInteractionPreloads = new Map<EventComponent, number>();
-  private static readonly activeInteractionPreloads = new Set<EventComponent>();
+  private static readonly activeInteractionPreloads = new Map<EventComponent, number>();
 
   id = input<string | null | undefined>();
   type = input<'e' | 'a' | 'r' | 't'>('e');
@@ -1855,15 +1857,25 @@ export class EventComponent implements AfterViewInit, OnDestroy {
 
   private hasLoadedEdit = false;
   private readonly interactionPreloadDelayMs = 0;
-  private readonly interactionViewportPreloadMarginPx = 1800;
-  private readonly timelineInteractionRootMargin = '2200px 0px 3200px 0px';
-  private readonly viewportInteractionRootMargin = '1800px 0px 2400px 0px';
-  private readonly immediateDomPreloadAheadPx = 1400;
+  private readonly interactionViewportPreloadMarginPx = 1400;
+  private readonly timelineInteractionRootMargin = '1600px 0px 2200px 0px';
+  private readonly viewportInteractionRootMargin = '1400px 0px 1800px 0px';
+  private readonly immediateDomPreloadAheadPx = 900;
   private readonly immediateDomPreloadBehindPx = 250;
   private readonly actualVisibilityObserverOptions = {
     rootMargin: '0px',
     threshold: 0.01,
   } as const;
+
+  private static startInteractionPreload(component: EventComponent, priority: number): void {
+    EventComponent.queuedInteractionPreloads.delete(component);
+    EventComponent.activeInteractionPreloads.set(component, priority);
+
+    void component.startQueuedInteractionLoad().finally(() => {
+      EventComponent.activeInteractionPreloads.delete(component);
+      EventComponent.processInteractionPreloadQueue();
+    });
+  }
 
   private static processInteractionPreloadQueue(): void {
     while (
@@ -1878,13 +1890,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
       }
 
       const [component] = nextEntry;
-      EventComponent.queuedInteractionPreloads.delete(component);
-      EventComponent.activeInteractionPreloads.add(component);
-
-      void component.startQueuedInteractionLoad().finally(() => {
-        EventComponent.activeInteractionPreloads.delete(component);
-        EventComponent.processInteractionPreloadQueue();
-      });
+      EventComponent.startInteractionPreload(component, nextEntry[1]);
     }
   }
 
@@ -1894,6 +1900,15 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     }
 
     EventComponent.queuedInteractionPreloads.set(component, priority);
+
+    const canUseBoostSlot = priority <= EventComponent.interactionPreloadUrgentThresholdPx
+      && EventComponent.activeInteractionPreloads.size < (EventComponent.interactionPreloadConcurrency + EventComponent.interactionPreloadBoostConcurrency);
+
+    if (canUseBoostSlot) {
+      EventComponent.startInteractionPreload(component, priority);
+      return;
+    }
+
     EventComponent.processInteractionPreloadQueue();
   }
 
@@ -2038,6 +2053,10 @@ export class EventComponent implements AfterViewInit, OnDestroy {
               }, 200);
             }
           }
+
+          if (!this.hasLoadedInteractions()) {
+            this.maybePreloadInteractionsImmediately();
+          }
         }
       },
       {
@@ -2087,6 +2106,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
 
     const observerRoot = this.resolveObserverRoot(element);
     const priority = this.getInteractionPreloadPriority(observerRoot);
+    this.logger.debug('[Lazy Load] Queueing immediate preload for event:', currentEventId.substring(0, 8), 'priority:', priority);
     EventComponent.enqueueInteractionPreload(this, priority);
   }
 
