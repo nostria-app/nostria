@@ -21,6 +21,7 @@ import { DataService } from '../../../services/data.service';
 import { DatabaseService } from '../../../services/database.service';
 import { LoggerService } from '../../../services/logger.service';
 import { LocalSettingsService } from '../../../services/local-settings.service';
+import { CustomDialogService } from '../../../services/custom-dialog.service';
 import { CustomDialogComponent } from '../../custom-dialog/custom-dialog.component';
 import { CustomEmojiComponent } from '../../custom-emoji/custom-emoji.component';
 
@@ -305,16 +306,34 @@ export class ReactionButtonComponent {
   private readonly database = inject(DatabaseService);
   private readonly logger = inject(LoggerService);
   private readonly localSettings = inject(LocalSettingsService);
+  private readonly customDialog = inject(CustomDialogService);
   private readonly platformId = inject(PLATFORM_ID);
   private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
 
   // Menu trigger references to close the menu after reaction
   private readonly menuTrigger = viewChild<MatMenuTrigger>('menuTrigger');
   private readonly menuTriggerFull = viewChild<MatMenuTrigger>('menuTriggerFull');
+  protected readonly isHandset = this.layout.isHandset.asReadonly();
 
   /** Opens the reaction picker menu. Called from parent when label is clicked. */
   openMenu(): void {
+    if (this.isHandset()) {
+      void this.openReactionPickerDialog();
+      return;
+    }
+
     this.menuTrigger()?.openMenu();
+  }
+
+  openFullReactionPicker(event: globalThis.MouseEvent): void {
+    event.stopPropagation();
+
+    if (this.isHandset()) {
+      void this.openReactionPickerDialog();
+      return;
+    }
+
+    this.menuTriggerFull()?.openMenu();
   }
 
   // Long-press detection state
@@ -597,6 +616,24 @@ export class ReactionButtonComponent {
   closeMenu() {
     this.menuTrigger()?.closeMenu();
     this.menuTriggerFull()?.closeMenu();
+  }
+
+  private async openReactionPickerDialog(): Promise<void> {
+    this.closeMenu();
+
+    const { EmojiPickerDialogComponent } = await import('../../emoji-picker/emoji-picker-dialog.component');
+    const dialogRef = this.customDialog.open<typeof EmojiPickerDialogComponent.prototype, string>(EmojiPickerDialogComponent, {
+      title: 'React',
+      width: '400px',
+      panelClass: 'emoji-picker-dialog',
+      data: { mode: 'reaction', activeTab: 'emoji' },
+    });
+
+    dialogRef.afterClosed$.subscribe(async result => {
+      if (result.result) {
+        await this.addReaction(result.result, false);
+      }
+    });
   }
 
   private async removeReaction(reaction: NostrRecord, emoji: string) {

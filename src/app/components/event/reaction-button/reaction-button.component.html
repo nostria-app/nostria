@@ -40,22 +40,23 @@
       @if (emojiSearchQuery()) {
       <div class="search-results">
         <div class="emoji-grid">
-          @for (emoji of searchResults()?.unicode || []; track emoji) {
+          @for (emoji of searchResults().unicode; track emoji) {
           <button mat-icon-button class="emoji-button" [class.selected]="userReaction()?.event?.content === emoji"
             (click)="addReaction(emoji); $event.stopPropagation()" [disabled]="isLoadingReactions()">
             {{ emoji }}
           </button>
           }
-          @for (emoji of searchResults()?.custom || []; track emoji.shortcode) {
+          @for (emoji of searchResults().custom; track emoji.shortcode) {
           <button mat-icon-button class="emoji-button custom-emoji"
             [class.selected]="userReaction()?.event?.content === ':' + emoji.shortcode + ':'"
             (click)="addReaction(':' + emoji.shortcode + ':'); $event.stopPropagation()"
-            [disabled]="isLoadingReactions()" [matTooltip]="emoji.shortcode">
-            <img [src]="emoji.url" [alt]="emoji.shortcode" class="custom-emoji-img">
+            [disabled]="isLoadingReactions()" [matTooltip]="emoji.shortcode" [attr.aria-label]="emoji.shortcode"
+            [attr.title]="emoji.shortcode">
+            <img [src]="emoji.url" [alt]="emoji.shortcode" [title]="emoji.shortcode" class="custom-emoji-img">
           </button>
           }
         </div>
-        @if (!searchResults()?.unicode?.length && !searchResults()?.custom?.length) {
+        @if (!searchResults().unicode.length && !searchResults().custom.length) {
         <div class="no-results">No emojis found</div>
         }
       </div>
@@ -71,9 +72,10 @@
               (click)="addReaction(recent.emoji); $event.stopPropagation()" [disabled]="isLoadingReactions()"
               [matTooltip]="recent.emoji.startsWith(':') ? recent.emoji.slice(1, -1) : ''">
               @if (recent.url) {
-              <img [src]="recent.url" [alt]="recent.emoji" class="custom-emoji-img">
+              <img [src]="recent.url" [alt]="recent.emoji" [title]="recent.emoji" class="custom-emoji-img">
               } @else if (getCustomEmojiUrlByShortcode(recent.emoji)) {
-              <img [src]="getCustomEmojiUrlByShortcode(recent.emoji)!" [alt]="recent.emoji" class="custom-emoji-img">
+              <img [src]="getCustomEmojiUrlByShortcode(recent.emoji)!" [alt]="recent.emoji" [title]="recent.emoji"
+                class="custom-emoji-img">
               } @else {
               {{ recent.emoji }}
               }
@@ -113,8 +115,9 @@
               <button mat-icon-button class="emoji-button custom-emoji"
                 [class.selected]="userReaction()?.event?.content === ':' + emoji.shortcode + ':'"
                 (click)="addReaction(':' + emoji.shortcode + ':'); $event.stopPropagation()"
-                [disabled]="isLoadingReactions()" [matTooltip]="emoji.shortcode">
-                <img [src]="emoji.url" [alt]="emoji.shortcode" class="custom-emoji-img">
+                [disabled]="isLoadingReactions()" [matTooltip]="emoji.shortcode" [attr.aria-label]="emoji.shortcode"
+                [attr.title]="emoji.shortcode">
+                <img [src]="emoji.url" [alt]="emoji.shortcode" [title]="emoji.shortcode" class="custom-emoji-img">
               </button>
               }
             </div>
@@ -152,8 +155,8 @@
   <div class="reaction-full-view">
     <!-- Main reaction button -->
     <button mat-button [class.active]="!!userReaction()" [class.reacted]="!!userReaction()"
-      [disabled]="isLoadingReactions()" [matMenuTriggerFor]="reactionMenuFull" #menuTriggerFull="matMenuTrigger"
-      (click)="$event.stopPropagation()">
+      [disabled]="isLoadingReactions()" [matMenuTriggerFor]="isHandset() ? null : reactionMenuFull"
+      #menuTriggerFull="matMenuTrigger" (click)="openFullReactionPicker($event)">
       @if (userReaction()) {
       @if (getCustomEmojiUrl(userReaction()!.event)) {
       <app-custom-emoji [src]="getCustomEmojiUrl(userReaction()!.event)!" [alt]="userReaction()!.event.content"
@@ -191,22 +194,23 @@
         @if (emojiSearchQuery()) {
         <div class="search-results">
           <div class="emoji-grid">
-            @for (emoji of searchResults()?.unicode || []; track emoji) {
+            @for (emoji of searchResults().unicode; track emoji) {
             <button mat-icon-button class="emoji-button" [class.selected]="userReaction()?.event?.content === emoji"
               (click)="addReaction(emoji); $event.stopPropagation()" [disabled]="isLoadingReactions()">
               {{ emoji }}
             </button>
             }
-            @for (emoji of searchResults()?.custom || []; track emoji.shortcode) {
+            @for (emoji of searchResults().custom; track emoji.shortcode) {
             <button mat-icon-button class="emoji-button custom-emoji"
               [class.selected]="userReaction()?.event?.content === ':' + emoji.shortcode + ':'"
               (click)="addReaction(':' + emoji.shortcode + ':'); $event.stopPropagation()"
-              [disabled]="isLoadingReactions()" [matTooltip]="emoji.shortcode">
-              <img [src]="emoji.url" [alt]="emoji.shortcode" class="custom-emoji-img">
+              [disabled]="isLoadingReactions()" [matTooltip]="emoji.shortcode" [attr.aria-label]="emoji.shortcode"
+              [attr.title]="emoji.shortcode">
+              <img [src]="emoji.url" [alt]="emoji.shortcode" [title]="emoji.shortcode" class="custom-emoji-img">
             </button>
             }
           </div>
-          @if (!searchResults()?.unicode?.length && !searchResults()?.custom?.length) {
+          @if (!searchResults().unicode.length && !searchResults().custom.length) {
           <div class="no-results">No emojis found</div>
           }
         </div>
@@ -222,9 +226,10 @@
                 (click)="addReaction(recent.emoji); $event.stopPropagation()" [disabled]="isLoadingReactions()"
                 [matTooltip]="recent.emoji.startsWith(':') ? recent.emoji.slice(1, -1) : ''">
                 @if (recent.url) {
-                <img [src]="recent.url" [alt]="recent.emoji" class="custom-emoji-img">
+                <img [src]="recent.url" [alt]="recent.emoji" [title]="recent.emoji" class="custom-emoji-img">
                 } @else if (getCustomEmojiUrlByShortcode(recent.emoji)) {
-                <img [src]="getCustomEmojiUrlByShortcode(recent.emoji)!" [alt]="recent.emoji" class="custom-emoji-img">
+                <img [src]="getCustomEmojiUrlByShortcode(recent.emoji)!" [alt]="recent.emoji" [title]="recent.emoji"
+                  class="custom-emoji-img">
                 } @else {
                 {{ recent.emoji }}
                 }
@@ -264,8 +269,9 @@
                 <button mat-icon-button class="emoji-button custom-emoji"
                   [class.selected]="userReaction()?.event?.content === ':' + emoji.shortcode + ':'"
                   (click)="addReaction(':' + emoji.shortcode + ':'); $event.stopPropagation()"
-                  [disabled]="isLoadingReactions()" [matTooltip]="emoji.shortcode">
-                  <img [src]="emoji.url" [alt]="emoji.shortcode" class="custom-emoji-img">
+                  [disabled]="isLoadingReactions()" [matTooltip]="emoji.shortcode" [attr.aria-label]="emoji.shortcode"
+                  [attr.title]="emoji.shortcode">
+                  <img [src]="emoji.url" [alt]="emoji.shortcode" [title]="emoji.shortcode" class="custom-emoji-img">
                 </button>
                 }
               </div>
