@@ -178,7 +178,7 @@ export function getTaggedXUrl(event?: Event | null): string | undefined {
   ],
 })
 export class EventComponent implements AfterViewInit, OnDestroy {
-  private static readonly interactionPreloadConcurrency = 3;
+  private static readonly interactionPreloadConcurrency = 4;
   private static readonly queuedInteractionPreloads = new Map<EventComponent, number>();
   private static readonly activeInteractionPreloads = new Set<EventComponent>();
 
@@ -1858,6 +1858,8 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   private readonly interactionViewportPreloadMarginPx = 1800;
   private readonly timelineInteractionRootMargin = '2200px 0px 3200px 0px';
   private readonly viewportInteractionRootMargin = '1800px 0px 2400px 0px';
+  private readonly immediateDomPreloadAheadPx = 1400;
+  private readonly immediateDomPreloadBehindPx = 250;
   private readonly actualVisibilityObserverOptions = {
     rootMargin: '0px',
     threshold: 0.01,
@@ -2076,6 +2078,10 @@ export class EventComponent implements AfterViewInit, OnDestroy {
       return;
     }
 
+    if (!this.isWithinImmediatePreloadBounds(element)) {
+      return;
+    }
+
     const currentEventId = currentRecord.event.id;
     this.observedEventId = currentEventId;
 
@@ -2089,11 +2095,43 @@ export class EventComponent implements AfterViewInit, OnDestroy {
 
     if (observerRoot) {
       const rootRect = observerRoot.getBoundingClientRect();
-      const distanceToViewport = Math.max(elementRect.top - rootRect.top, 0);
-      return Math.round(distanceToViewport);
+      if (elementRect.bottom < rootRect.top) {
+        return 100000 + Math.round(rootRect.top - elementRect.bottom);
+      }
+
+      if (elementRect.top > rootRect.bottom) {
+        return Math.round(elementRect.top - rootRect.bottom);
+      }
+
+      return 0;
     }
 
-    return Math.round(Math.max(elementRect.top, 0));
+    const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+
+    if (elementRect.bottom < 0) {
+      return 100000 + Math.round(-elementRect.bottom);
+    }
+
+    if (elementRect.top > viewportHeight) {
+      return Math.round(elementRect.top - viewportHeight);
+    }
+
+    return 0;
+  }
+
+  private isWithinImmediatePreloadBounds(element: HTMLElement): boolean {
+    const rect = element.getBoundingClientRect();
+    const observerRoot = this.resolveObserverRoot(element);
+
+    if (observerRoot) {
+      const rootRect = observerRoot.getBoundingClientRect();
+      return rect.top < rootRect.bottom + this.immediateDomPreloadAheadPx
+        && rect.bottom > rootRect.top - this.immediateDomPreloadBehindPx;
+    }
+
+    const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+    return rect.top < viewportHeight + this.immediateDomPreloadAheadPx
+      && rect.bottom > -this.immediateDomPreloadBehindPx;
   }
 
   private async startQueuedInteractionLoad(): Promise<void> {

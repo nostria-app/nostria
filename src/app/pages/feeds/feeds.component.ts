@@ -1172,11 +1172,11 @@ export class FeedsComponent implements OnDestroy {
       return;
     }
 
-    const options: IntersectionObserverInit = {
-      root: scrollRoot,
-      rootMargin: '0px 0px 400px 0px',
-      threshold: 0,
-    };
+      const options: IntersectionObserverInit = {
+        root: scrollRoot,
+        rootMargin: '0px 0px 400px 0px',
+        threshold: 0,
+      };
 
     this.intersectionObserver = new IntersectionObserver((entries) => {
       entries.forEach((entry) => {
