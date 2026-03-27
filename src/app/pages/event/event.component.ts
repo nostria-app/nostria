@@ -680,6 +680,8 @@ export class EventPageComponent {
   item!: EventData;
   reactions = signal<Reaction[]>([]);
   private handledPublishedReplyIds = new Set<string>();
+  /** Events that were optimistically injected via onReplyPublished while progressive loading may still be running */
+  private optimisticallyPublishedReplies: Event[] = [];
 
   // Computed signal to track if anything is still loading
   isAnyLoading = computed(
@@ -845,6 +847,7 @@ export class EventPageComponent {
       this.showCompletionStatus.set(false);
       this.deepResolutionProgress.set('');
       this.handledPublishedReplyIds.clear();
+      this.optimisticallyPublishedReplies = [];
 
       // Reset state
       const preloadedEvent = this.getPreloadedEvent(nevent);
@@ -917,14 +920,38 @@ export class EventPageComponent {
           this.isLoadingParents.set(false);
         }
 
-        if (partialData.replies !== undefined) {
-          this.replies.set(partialData.replies);
+        // Merge any optimistically published replies into progressive data so they
+        // are not overwritten by relay data that hasn't indexed them yet.
+        let mergedReplies = partialData.replies;
+        let mergedThreadedReplies = partialData.threadedReplies;
+
+        if (this.optimisticallyPublishedReplies.length > 0 && mergedReplies !== undefined) {
+          const existingIds = new Set(mergedReplies.map(r => r.id));
+          const missing = this.optimisticallyPublishedReplies.filter(r => !existingIds.has(r.id));
+          if (missing.length > 0) {
+            mergedReplies = [...mergedReplies, ...missing];
+
+            // Rebuild the thread tree with the merged replies
+            const currentEvent = this.event();
+            if (currentEvent) {
+              const parentEventIds = new Set(this.parentEvents().map(p => p.id));
+              parentEventIds.add(currentEvent.id);
+              const filteredMerged = mergedReplies.filter(r => !parentEventIds.has(r.id));
+              mergedReplies = filteredMerged;
+              const isViewingThreadRoot = partialData.isThreadRoot ?? this.parentEvents().length === 0;
+              mergedThreadedReplies = this.eventService.buildThreadTree(filteredMerged, currentEvent.id, isViewingThreadRoot);
+            }
+          }
+        }
+
+        if (mergedReplies !== undefined) {
+          this.replies.set(mergedReplies);
         }
 
         // Only update threadedReplies when we actually have replies to show
         // This prevents flickering from multiple empty array updates during progressive loading
-        if (partialData.threadedReplies !== undefined && partialData.threadedReplies.length > 0) {
-          this.threadedReplies.set(partialData.threadedReplies);
+        if (mergedThreadedReplies !== undefined && mergedThreadedReplies.length > 0) {
+          this.threadedReplies.set(mergedThreadedReplies);
           this.isLoadingReplies.set(false);
           // Clear initial reply count since we now have actual data
           this.initialReplyCount.set(undefined);
@@ -932,7 +959,7 @@ export class EventPageComponent {
           // If openThreadsExpanded is false, collapse top-level replies by default
           if (!this.localSettings.openThreadsExpanded()) {
             const collapsedIds = new Set<string>();
-            for (const reply of partialData.threadedReplies) {
+            for (const reply of mergedThreadedReplies) {
               if (reply.replies.length > 0) {
                 collapsedIds.add(reply.event.id);
               }
@@ -951,8 +978,8 @@ export class EventPageComponent {
         // Update threadData with current state
         this.threadData.set({
           event: partialData.event!,
-          replies: partialData.replies || [],
-          threadedReplies: partialData.threadedReplies || [],
+          replies: mergedReplies || partialData.replies || [],
+          threadedReplies: mergedThreadedReplies || partialData.threadedReplies || [],
           reactions: partialData.reactions || [],
           parents: partialData.parentsLoaded ? (partialData.parents ?? []) : this.parentEvents(),
           isThreadRoot: partialData.isThreadRoot || false,
@@ -1113,6 +1140,7 @@ export class EventPageComponent {
     }
 
     this.handledPublishedReplyIds.add(event.id);
+    this.optimisticallyPublishedReplies.push(event);
 
     const mergedReplies = [...this.replies(), event];
     const dedupedById = new Map<string, Event>();

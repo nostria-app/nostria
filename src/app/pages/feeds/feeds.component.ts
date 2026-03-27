@@ -483,15 +483,16 @@ export class FeedsComponent implements OnDestroy {
   private _eventCache = new Map<string, Event[]>();
 
   // Virtual list configuration
-  INITIAL_RENDER_COUNT = 5;
-  RENDER_BATCH_SIZE = 5;
+  INITIAL_RENDER_COUNT = 8;
+  RENDER_BATCH_SIZE = 8;
 
   // Track rendered event counts per feed (virtual list)
   renderedEventCounts = signal<Record<string, number>>({});
 
   // Scroll detection for auto-loading more content
   lastLoadTime = 0;
-  LOAD_MORE_COOLDOWN_MS = 500;
+  LOAD_MORE_COOLDOWN_MS = 250;
+  private readonly LOAD_MORE_BUFFER_PX = 1600;
   scrollCheckCleanup: (() => void) | null = null;
 
   /**
@@ -640,6 +641,7 @@ export class FeedsComponent implements OnDestroy {
   // }  // Replace the old columns signal with columns from active feed
   feeds = computed(() => this.feedsCollectionService.feeds());
   activeFeed = computed(() => this.feedsCollectionService.activeFeed());
+  currentScrollableFeed = computed(() => this.dynamicFeed() || this.activeFeed());
 
   feedViewReady = computed(() => {
     if (!this.app.initialized() || !this.feedService.feedsLoaded() || !this.activeFeed()) {
@@ -1101,7 +1103,7 @@ export class FeedsComponent implements OnDestroy {
 
     // Set up scroll listeners for the active feed
     effect(() => {
-      const activeFeed = this.activeFeed();
+      const activeFeed = this.currentScrollableFeed();
 
       // Set up scroll listeners whenever an active feed exists (also in guest mode)
       if (!activeFeed) {
@@ -1147,10 +1149,10 @@ export class FeedsComponent implements OnDestroy {
       const scrollHeight = contentWrapper.scrollHeight;
       const clientHeight = contentWrapper.clientHeight;
 
-      // Trigger when within 1200px of bottom for smoother continuous loading
+      // Trigger well before the bottom so the next batch is rendered in time.
       const distanceFromBottom = scrollHeight - (scrollTop + clientHeight);
 
-      if (distanceFromBottom < 1200) {
+      if (distanceFromBottom < this.LOAD_MORE_BUFFER_PX) {
         this.lastLoadTime = now;
 
         // Render more events from cache if available
@@ -1205,18 +1207,27 @@ export class FeedsComponent implements OnDestroy {
     // Clean up existing observer
     this.intersectionObserver?.disconnect();
 
+    const contentWrapper = document.querySelector('.column-content') as HTMLElement | null;
+    if (!contentWrapper) {
+      return;
+    }
+
     const options: IntersectionObserverInit = {
-      root: null, // Use viewport as root
-      rootMargin: '400px', // Trigger 400px before element comes into view
-      threshold: 0.01,
+      root: contentWrapper,
+      rootMargin: `${this.LOAD_MORE_BUFFER_PX}px 0px`,
+      threshold: 0,
     };
 
     this.intersectionObserver = new IntersectionObserver((entries) => {
       entries.forEach((entry) => {
         if (entry.isIntersecting) {
-          const activeFeed = this.activeFeed();
+          const activeFeed = this.currentScrollableFeed();
           if (activeFeed && this.hasMoreEventsToRender(activeFeed.id)) {
             this.loadMoreRenderedEvents(activeFeed.id);
+          }
+
+          if (activeFeed) {
+            void this.loadMoreForFeed(activeFeed.id);
           }
         }
       });
@@ -1300,13 +1311,13 @@ export class FeedsComponent implements OnDestroy {
       this.headerHidden.set(false);
     }
 
-    const activeFeed = this.activeFeed();
+    const activeFeed = this.currentScrollableFeed();
     if (activeFeed && now - this.lastLoadTime >= this.LOAD_MORE_COOLDOWN_MS) {
       const scrollHeight = container.scrollHeight;
       const clientHeight = container.clientHeight;
       const distanceFromBottom = scrollHeight - (scrollTop + clientHeight);
 
-      if (distanceFromBottom < 1200) {
+      if (distanceFromBottom < this.LOAD_MORE_BUFFER_PX) {
         this.lastLoadTime = now;
 
         if (this.hasMoreEventsToRender(activeFeed.id)) {
