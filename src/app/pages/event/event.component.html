@@ -87,6 +87,16 @@
   } @else {
 
   <!-- Display parent events in thread (if any) with proper indentation -->
+  @if (shouldShowMissingParentPlaceholder()) {
+  <div class="missing-parent-placeholder" [style.margin-left.px]="maxParentIndent()">
+    <mat-icon>account_tree</mat-icon>
+    <div class="missing-parent-copy">
+      <p class="missing-parent-title">Missing thread context</p>
+      <p class="missing-parent-text">{{ missingParentPlaceholderText() }}</p>
+    </div>
+  </div>
+  }
+
   @if (threadedParents()) {
   <div class="parent-events">
     <ng-container [ngTemplateOutlet]="parentTemplate"
@@ -170,7 +180,8 @@
     @if (isReplyFilterActive() && !isLoadingReplies()) {
     <div class="filter-indicator">
       <mat-icon>filter_alt</mat-icon>
-      <span>Showing replies from: {{ selectedFollowSetName() }}@if (hiddenReplyCount() > 0) { ({{ hiddenReplyCount() }} hidden)}</span>
+      <span>Showing replies from: {{ selectedFollowSetName() }}@if (hiddenReplyCount() > 0) { ({{ hiddenReplyCount() }}
+        hidden)}</span>
       <button mat-icon-button (click)="setReplyFilter('everyone')" matTooltip="Clear filter">
         <mat-icon>close</mat-icon>
       </button>

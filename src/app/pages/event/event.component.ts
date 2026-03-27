@@ -482,6 +482,45 @@ export class EventPageComponent {
     return result;
   });
 
+  missingKnownParentIds = computed<string[]>(() => {
+    const currentEvent = this.event();
+    if (!currentEvent) {
+      return [];
+    }
+
+    const tags = this.eventService.getEventTags(currentEvent);
+    const expectedParentIds: string[] = [];
+
+    if (tags.rootId) {
+      expectedParentIds.push(tags.rootId);
+    }
+
+    for (const intermediate of tags.intermediates) {
+      expectedParentIds.push(intermediate.id);
+    }
+
+    if (tags.replyId) {
+      expectedParentIds.push(tags.replyId);
+    }
+
+    const loadedParentIds = new Set(this.parentEvents().map((parent) => parent.id));
+    const uniqueExpectedIds = Array.from(new Set(expectedParentIds)).filter((id) => id !== currentEvent.id);
+
+    return uniqueExpectedIds.filter((id) => !loadedParentIds.has(id));
+  });
+
+  missingKnownParentCount = computed<number>(() => this.missingKnownParentIds().length);
+
+  shouldShowMissingParentPlaceholder = computed<boolean>(() => {
+    return !this.isLoadingParents() && this.missingKnownParentCount() > 0;
+  });
+
+  missingParentPlaceholderText = computed<string>(() => {
+    return this.missingKnownParentCount() === 1
+      ? 'A parent event is referenced in this thread, but it could not be loaded.'
+      : 'Some parent events are referenced in this thread, but they could not be loaded.';
+  });
+
   /**
    * True when any parent in the thread chain is collapsed.
    * In that state, descendant content (main event, inline reply editor, and replies)

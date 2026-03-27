@@ -181,6 +181,40 @@
   animation: fadeIn 0.3s ease-out;
 }
 
+.missing-parent-placeholder {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding: 12px 14px;
+  border: 1px dashed var(--mat-sys-outline-variant);
+  border-radius: var(--mat-sys-corner-medium);
+  background: color-mix(in srgb, var(--mat-sys-surface-container-high) 72%, transparent);
+  color: var(--mat-sys-on-surface-variant);
+  animation: fadeIn 0.3s ease-out;
+
+  mat-icon {
+    flex-shrink: 0;
+    color: var(--mat-sys-outline);
+  }
+}
+
+.missing-parent-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.missing-parent-title,
+.missing-parent-text {
+  margin: 0;
+}
+
+.missing-parent-title {
+  color: var(--mat-sys-on-surface);
+}
+
 .replies-section {
   animation: fadeIn 0.3s ease-out;
 }

@@ -1798,7 +1798,7 @@ export class EventService {
    * @param author The author pubkey to use for discovering relays
    * @param relayHints Optional relay hints from event tags to try first
    */
-  private async loadParentEvent(eventRef: string, author: string, relayHints?: string[]): Promise<Event | null> {
+  private async loadParentEvent(eventRef: string, author: string | null, relayHints?: string[]): Promise<Event | null> {
     // Check if this is an addressable event reference (kind:pubkey:d-tag)
     const addressableMatch = eventRef.match(/^(\d+):([0-9a-f]{64}):(.+)$/);
 
@@ -1819,6 +1819,12 @@ export class EventService {
       return record?.event || null;
     } else {
       // This is a regular event ID
+      const cachedEvent = await this.database.getEventById(eventRef);
+      if (cachedEvent) {
+        this.logger.info(`[loadParentEvent] Found event ${eventRef.slice(0, 16)} in local database`);
+        return cachedEvent;
+      }
+
       // First, try relay hints if provided (these are from e-tag and p-tag relay hints)
       if (relayHints && relayHints.length > 0) {
         this.logger.info(`[loadParentEvent] Trying relay hints first for event ${eventRef.slice(0, 16)}:`, relayHints);
@@ -1835,20 +1841,41 @@ export class EventService {
       }
 
       // Fall back to using author's relays
-      this.logger.info(`[loadParentEvent] Trying author ${author?.slice(0, 8)} relays for event ${eventRef.slice(0, 16)}`);
-      const record = await this.userDataService.getEventById(author, eventRef, {
-        cache: true,
-        ttl: minutes.five,
-        save: true,  // This enables checking the local database first
-      });
+      if (author) {
+        this.logger.info(`[loadParentEvent] Trying author ${author.slice(0, 8)} relays for event ${eventRef.slice(0, 16)}`);
+        const record = await this.userDataService.getEventById(author, eventRef, {
+          cache: true,
+          ttl: minutes.five,
+          save: true,
+        });
 
-      if (record) {
-        this.logger.info(`[loadParentEvent] Found event ${eventRef.slice(0, 16)} via author relays or database`);
+        if (record) {
+          this.logger.info(`[loadParentEvent] Found event ${eventRef.slice(0, 16)} via author relays or database`);
+          return record.event;
+        }
+
+        this.logger.warn(`[loadParentEvent] Event ${eventRef.slice(0, 16)} NOT FOUND via author ${author.slice(0, 8)} relays or database`);
       } else {
-        this.logger.warn(`[loadParentEvent] Event ${eventRef.slice(0, 16)} NOT FOUND via author ${author?.slice(0, 8)} relays or database`);
+        this.logger.warn(`[loadParentEvent] No author available for event ${eventRef.slice(0, 16)}; skipping author relay lookup`);
       }
 
-      return record?.event || null;
+      try {
+        const fallbackRecord = await this.data.getEventById(eventRef, {
+          cache: true,
+          ttl: minutes.five,
+          save: true,
+        });
+
+        if (fallbackRecord) {
+          this.logger.info(`[loadParentEvent] Found event ${eventRef.slice(0, 16)} via account relays fallback`);
+          return fallbackRecord.event;
+        }
+      } catch (error) {
+        this.logger.warn(`[loadParentEvent] Account relay fallback failed for event ${eventRef.slice(0, 16)}:`, error);
+      }
+
+      this.logger.warn(`[loadParentEvent] Event ${eventRef.slice(0, 16)} could not be loaded from any parent lookup strategy`);
+      return null;
     }
   }
 
