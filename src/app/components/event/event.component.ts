@@ -1846,6 +1846,10 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   }
 
   private hasLoadedEdit = false;
+  private readonly interactionPreloadDelayMs = 90;
+  private readonly interactionViewportPreloadMarginPx = 1000;
+  private readonly timelineInteractionRootMargin = '1600px 0px 2400px 0px';
+  private readonly viewportInteractionRootMargin = '1200px';
   private readonly actualVisibilityObserverOptions = {
     rootMargin: '0px',
     threshold: 0.01,
@@ -1862,7 +1866,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
    * out of the viewport (plus buffer), it is replaced with a height-preserving placeholder to
    * reduce DOM size and change detection cost.
    *
-   * Uses a large rootMargin (600px) so events begin rendering well before they scroll into view.
+   * Uses a generous rootMargin so interactions start loading before the card reaches the viewport.
    * Virtualization on leave is debounced (200ms) to prevent rapid toggling during fast scrolls
    * or programmatic scroll-to-top (e.g. "new posts" button).
    */
@@ -1964,7 +1968,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
                   this.logger.warn('[Lazy Load] Event changed between intersection and loading, skipping:', currentEventId.substring(0, 8));
                 }
               }
-            }, 150);
+            }, this.interactionPreloadDelayMs);
           }
         } else {
           // --- Leaving viewport (and buffer zone) ---
@@ -2028,7 +2032,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
       },
       {
         root: observerRoot,
-        rootMargin: observerRoot ? '1100px 0px 1800px 0px' : '800px',
+        rootMargin: observerRoot ? this.timelineInteractionRootMargin : this.viewportInteractionRootMargin,
         threshold: 0.01, // Trigger when at least 1% is visible
       }
     );
@@ -2066,8 +2070,9 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     // Use getBoundingClientRect to check if element is in viewport
     const rect = element.getBoundingClientRect();
     const isVisible = (
-      rect.top < (window.innerHeight || document.documentElement.clientHeight) + 600 && // Add 600px margin like observer
-      rect.bottom > -600 &&
+      rect.top < (window.innerHeight || document.documentElement.clientHeight) + this.interactionViewportPreloadMarginPx
+      && rect.bottom > -this.interactionViewportPreloadMarginPx
+      &&
       rect.left < (window.innerWidth || document.documentElement.clientWidth) &&
       rect.right > 0
     );
