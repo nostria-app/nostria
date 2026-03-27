@@ -203,6 +203,7 @@ export class FeedsComponent implements OnDestroy {
   // Track if user has scrolled away from top at least once since feed was activated.
   // Prevents auto-loading pending events immediately on startup when scroll is at 0.
   private userHasScrolledAway = signal(false);
+  private userHasScrolledFeedContent = signal(false);
   // Show scroll-to-top button when scrolled down - uses feeds' own scroll state
   showScrollToTop = computed(() => !this.feedsScrolledToTop());
   // Feed expanded state - use layoutService signal for cross-component communication
@@ -495,6 +496,7 @@ export class FeedsComponent implements OnDestroy {
   private readonly LOAD_MORE_BUFFER_PX = 1600;
   private readonly NETWORK_LOAD_BUFFER_PX = 300;
   private readonly NETWORK_LOAD_SCROLL_DELTA_PX = 500;
+  private readonly STICKY_RENDER_BOTTOM_PX = 96;
   scrollCheckCleanup: (() => void) | null = null;
   private autoLoadRecheckTimeout: ReturnType<typeof setTimeout> | null = null;
   private lastNetworkLoadScrollTop = Number.NEGATIVE_INFINITY;
@@ -1028,6 +1030,7 @@ export class FeedsComponent implements OnDestroy {
 
           // Reset scroll tracking so auto-load doesn't fire immediately on the new feed
           this.userHasScrolledAway.set(false);
+          this.userHasScrolledFeedContent.set(false);
           this.lastNetworkLoadScrollTop = Number.NEGATIVE_INFINITY;
         });
       }
@@ -1063,6 +1066,33 @@ export class FeedsComponent implements OnDestroy {
           });
         });
       }
+    });
+
+    effect(() => {
+      const feed = this.currentScrollableFeed();
+      if (!feed || !this.layoutService.isBrowser()) {
+        return;
+      }
+
+      const renderedCount = this.getRenderedEventCount(feed.id);
+      const totalCount = this.getTotalEventCount(feed.id);
+
+      if (!this.userHasScrolledFeedContent() || renderedCount === 0 || renderedCount >= totalCount) {
+        return;
+      }
+
+      untracked(() => {
+        requestAnimationFrame(() => {
+          const container = this.getFeedContentContainer();
+          if (!container) {
+            return;
+          }
+
+          if (this.getDistanceFromBottom(container) <= this.STICKY_RENDER_BOTTOM_PX && this.hasMoreEventsToRender(feed.id)) {
+            this.loadMoreRenderedEvents(feed.id);
+          }
+        });
+      });
     });
 
     // Auto-load new posts when user is scrolled to top
@@ -1279,6 +1309,10 @@ export class FeedsComponent implements OnDestroy {
     const scrollTop = container.scrollTop;
     const scrollDelta = scrollTop - this.lastScrollTop;
 
+    if (scrollTop > 24 && !this.userHasScrolledFeedContent()) {
+      this.userHasScrolledFeedContent.set(true);
+    }
+
     // Scrolling down - hide header after scrolling down past threshold
     if (scrollDelta > 10 && scrollTop > 100) {
       this.headerHidden.set(true);
@@ -1345,6 +1379,10 @@ export class FeedsComponent implements OnDestroy {
   private async maybeAutoLoadMore(feedId: string, container?: HTMLElement, ignoreCooldown = false): Promise<void> {
     const contentContainer = container ?? this.getFeedContentContainer();
     if (!contentContainer) {
+      return;
+    }
+
+    if (!this.userHasScrolledFeedContent() && contentContainer.scrollTop <= 0) {
       return;
     }
 
