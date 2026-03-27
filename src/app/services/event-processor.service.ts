@@ -263,7 +263,7 @@ export class EventProcessorService {
 
   /**
    * Check if an author's profile contains any muted words.
-    * Checks name, display_name, nip05, and lud16 fields using word boundary matching.
+    * Checks name and display_name as whole words, and nip05/lud16 as identifier substrings.
    * Only checks cached profiles to keep the operation synchronous.
    * 
    * @param pubkey The author's pubkey

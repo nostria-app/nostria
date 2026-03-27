@@ -31,6 +31,11 @@ export interface MuteListItem {
   value: string;
 }
 
+type ProfileMutedWordField = {
+  value: string;
+  matchMode: 'word' | 'substring';
+};
+
 /**
  * Service to handle NIP-56 reporting and NIP-51 mute list management
  */
@@ -154,7 +159,7 @@ export class ReportingService {
 
   /**
    * Check if an author's profile contains any muted words.
-    * Checks name, display_name, nip05, and lud16 fields using word boundary matching.
+    * Checks name and display_name as whole words, and nip05/lud16 as identifier substrings.
    * Only checks cached profiles to keep the operation synchronous.
    * 
    * @param pubkey The author's pubkey
@@ -177,27 +182,34 @@ export class ReportingService {
     const profileData = profile.data;
     const fieldsToCheck = ReportingService.collectProfileFieldsForMutedWordCheck(profileData as Record<string, unknown>);
 
-    // Check if any muted word appears as a whole word in any of the profile fields
+    // Check profile text fields as whole words and identifier fields as substrings
     return ReportingService.fieldsContainMutedWord(fieldsToCheck, mutedWords);
   }
 
-  static collectProfileFieldsForMutedWordCheck(profileData: Record<string, unknown>): string[] {
-    const fieldsToCheck: string[] = [];
+  static collectProfileFieldsForMutedWordCheck(profileData: Record<string, unknown>): ProfileMutedWordField[] {
+    const fieldsToCheck: ProfileMutedWordField[] = [];
 
-    ReportingService.appendLowerCaseProfileValues(fieldsToCheck, profileData['name']);
-    ReportingService.appendLowerCaseProfileValues(fieldsToCheck, profileData['display_name']);
-    ReportingService.appendLowerCaseProfileValues(fieldsToCheck, profileData['nip05']);
-    ReportingService.appendLowerCaseProfileValues(fieldsToCheck, profileData['lud16']);
+    ReportingService.appendLowerCaseProfileValues(fieldsToCheck, profileData['name'], 'word');
+    ReportingService.appendLowerCaseProfileValues(fieldsToCheck, profileData['display_name'], 'word');
+    ReportingService.appendLowerCaseProfileValues(fieldsToCheck, profileData['nip05'], 'substring');
+    ReportingService.appendLowerCaseProfileValues(fieldsToCheck, profileData['lud16'], 'substring');
 
     return fieldsToCheck;
   }
 
-  private static appendLowerCaseProfileValues(fieldsToCheck: string[], value: unknown): void {
+  private static appendLowerCaseProfileValues(
+    fieldsToCheck: ProfileMutedWordField[],
+    value: unknown,
+    matchMode: ProfileMutedWordField['matchMode']
+  ): void {
     const values = Array.isArray(value) ? value : [value];
 
     values.forEach(entry => {
       if (entry && typeof entry === 'string') {
-        fieldsToCheck.push(entry.toLowerCase());
+        fieldsToCheck.push({
+          value: entry.toLowerCase(),
+          matchMode,
+        });
       }
     });
   }
@@ -229,6 +241,10 @@ export class ReportingService {
     return regex.test(text);
   }
 
+  static identifierContainsMutedWord(text: string, mutedWord: string): boolean {
+    return text.toLowerCase().includes(mutedWord.toLowerCase());
+  }
+
   /**
    * Check if event content contains any muted word as a whole word.
    * Strips nostr URIs and URLs first to prevent false positives
@@ -241,13 +257,25 @@ export class ReportingService {
   }
 
   /**
-   * Check if any of the given text fields contain a muted word as a whole word.
-   * Used for profile field matching (name, display_name, nip05).
+   * Check if any of the given profile fields contain a muted word.
+   * Plain text fields use whole-word matching, while identifier fields such
+   * as nip05 and lud16 use substring matching.
    */
-  static fieldsContainMutedWord(fields: string[], mutedWords: string[]): boolean {
+  static fieldsContainMutedWord(fields: Array<string | ProfileMutedWordField>, mutedWords: string[]): boolean {
     if (fields.length === 0 || mutedWords.length === 0) return false;
+
     return mutedWords.some(word =>
-      fields.some(field => ReportingService.wordMatchesMutedWord(field, word))
+      fields.some(field => {
+        const normalizedField = typeof field === 'string'
+          ? { value: field, matchMode: 'word' as const }
+          : field;
+
+        if (normalizedField.matchMode === 'substring') {
+          return ReportingService.identifierContainsMutedWord(normalizedField.value, word);
+        }
+
+        return ReportingService.wordMatchesMutedWord(normalizedField.value, word);
+      })
     );
   }
 
@@ -263,7 +291,7 @@ export class ReportingService {
    * Check if a user's profile is blocked by muted words.
    * This is a public method that can be called from components to check
    * if a profile should be hidden based on muted words matching the
-   * user's name, display_name, or nip05 fields.
+    * user's name, display_name, nip05, or lud16 fields.
    * 
    * @param pubkey The user's pubkey to check
    * @returns true if any muted word matches the user's profile
