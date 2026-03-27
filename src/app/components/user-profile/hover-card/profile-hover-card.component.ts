@@ -106,6 +106,7 @@ export class ProfileHoverCardComponent {
   });
 
   pubkey = input.required<string>();
+  normalizedPubkey = computed(() => this.utilities.safeGetHexPubkey(this.pubkey()) || '');
   profile = signal<ProfileData | null>(null);
   isLoading = signal(false);
   imageLoadError = signal(false);
@@ -119,12 +120,14 @@ export class ProfileHoverCardComponent {
   hasTrustRank = computed(() => this.trustRank() !== undefined && this.trustRank() !== null);
 
   isFavorite = computed(() => {
-    return this.favoritesService.isFavorite(this.pubkey());
+    const pubkey = this.normalizedPubkey();
+    return !!pubkey && this.favoritesService.isFavorite(pubkey);
   });
 
   isOwnProfile = computed(() => {
     const myPubkey = this.accountState.pubkey();
-    return !!myPubkey && myPubkey === this.pubkey();
+    const pubkey = this.normalizedPubkey();
+    return !!myPubkey && !!pubkey && myPubkey === pubkey;
   });
 
   trustEnabled = computed(() => this.trustService.isEnabled());
@@ -140,7 +143,7 @@ export class ProfileHoverCardComponent {
   });
 
   npubValue = computed<string>(() => {
-    const pubkey = this.pubkey();
+    const pubkey = this.normalizedPubkey();
     if (!pubkey) {
       return '';
     }
@@ -172,7 +175,7 @@ export class ProfileHoverCardComponent {
 
   constructor() {
     effect(() => {
-      const pubkey = this.pubkey();
+      const pubkey = this.normalizedPubkey();
 
       if (pubkey) {
         untracked(() => {
@@ -292,7 +295,10 @@ export class ProfileHoverCardComponent {
   }
 
   async toggleFollow(): Promise<void> {
-    const pubkey = this.pubkey();
+    const pubkey = this.normalizedPubkey();
+    if (!pubkey) {
+      return;
+    }
 
     // Check if user is logged in with a real account
     const currentAccount = this.accountState.account();
@@ -327,8 +333,12 @@ export class ProfileHoverCardComponent {
   onProfileClick(event: MouseEvent): void {
     event.preventDefault();
     event.stopPropagation();
+    const pubkey = this.normalizedPubkey();
+    if (!pubkey) {
+      return;
+    }
     this.hoverCardService.hideHoverCard();
-    this.layout.openProfile(this.pubkey());
+    this.layout.openProfile(pubkey);
   }
 
   async reportProfile(): Promise<void> {
@@ -339,9 +349,14 @@ export class ProfileHoverCardComponent {
       return;
     }
 
+    const pubkey = this.normalizedPubkey();
+    if (!pubkey) {
+      return;
+    }
+
     try {
       const reportEvent = this.reportingService.createReportEvent(
-        { type: 'user', pubkey: this.pubkey() },
+        { type: 'user', pubkey },
         'spam',
         'Reported from profile hover card'
       );
@@ -367,7 +382,10 @@ export class ProfileHoverCardComponent {
     }
 
     try {
-      const pubkey = this.pubkey();
+      const pubkey = this.normalizedPubkey();
+      if (!pubkey) {
+        return;
+      }
 
       // Check if we're currently following this user
       if (this.isFollowing()) {
@@ -402,7 +420,11 @@ export class ProfileHoverCardComponent {
   }
 
   sendMessage(): void {
-    this.layout.openSendMessage(this.pubkey());
+    const pubkey = this.normalizedPubkey();
+    if (!pubkey) {
+      return;
+    }
+    this.layout.openSendMessage(pubkey);
     this.hoverCardService.closeHoverCard();
   }
 
@@ -423,7 +445,7 @@ export class ProfileHoverCardComponent {
     }
 
     const dialogData: ZapDialogData = {
-      recipientPubkey: this.pubkey(),
+      recipientPubkey: this.normalizedPubkey(),
       recipientName: profile.data.display_name || profile.data.name || undefined,
       recipientMetadata: profile.data as Record<string, unknown>,
     };
@@ -439,7 +461,10 @@ export class ProfileHoverCardComponent {
   }
 
   toggleFavorite(): void {
-    const pubkey = this.pubkey();
+    const pubkey = this.normalizedPubkey();
+    if (!pubkey) {
+      return;
+    }
     // Check state BEFORE toggling to show correct message
     const wasFavorite = this.favoritesService.isFavorite(pubkey);
     const success = this.favoritesService.toggleFavorite(pubkey);
@@ -455,11 +480,15 @@ export class ProfileHoverCardComponent {
 
   isInFollowSet(dTag: string): boolean {
     const set = this.followSetsService.getFollowSetByDTag(dTag);
-    return set ? set.pubkeys.includes(this.pubkey()) : false;
+    const pubkey = this.normalizedPubkey();
+    return !!pubkey && !!set && set.pubkeys.includes(pubkey);
   }
 
   async addToFollowSet(dTag: string): Promise<void> {
-    const pubkey = this.pubkey();
+    const pubkey = this.normalizedPubkey();
+    if (!pubkey) {
+      return;
+    }
     const isCurrentlyInSet = this.isInFollowSet(dTag);
 
     try {
@@ -492,7 +521,11 @@ export class ProfileHoverCardComponent {
     }
 
     try {
-      const pubkey = this.pubkey();
+      const pubkey = this.normalizedPubkey();
+      if (!pubkey) {
+        this.layout.toast('Failed to create list');
+        return;
+      }
       const newSet = await this.followSetsService.createFollowSet(
         result.title.trim(),
         [pubkey],

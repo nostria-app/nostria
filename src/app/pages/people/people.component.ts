@@ -654,8 +654,10 @@ export class PeopleComponent implements OnDestroy {
     this.logger.info(`[People] Downloading trust ranks for ${pubkeys.length} people (force: ${forceRefresh})`);
 
     try {
-      // Use batch fetch from TrustService for efficiency
-      await this.trustService.fetchMetricsBatch(pubkeys, forceRefresh);
+      await this.trustService.preloadTrustRanks(pubkeys, {
+        forceRefresh,
+        chunkSize: 50,
+      });
       this.logger.info(`[People] Trust ranks download completed for ${pubkeys.length} people`);
     } catch (error) {
       this.logger.error('[People] Failed to download trust ranks:', error);

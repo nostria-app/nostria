@@ -446,6 +446,44 @@ export class TrustService {
   }
 
   /**
+   * Force or warm-load trust metrics for a list of pubkeys in bounded chunks.
+   * Reuses the same batch relay path as normal profile and hover-card lookups.
+   */
+  async preloadTrustRanks(
+    pubkeys: string[],
+    options?: {
+      forceRefresh?: boolean;
+      chunkSize?: number;
+      onProgress?: (completed: number, total: number) => void;
+      shouldAbort?: () => boolean;
+    },
+  ): Promise<void> {
+    const uniquePubkeys = [...new Set(pubkeys.filter(Boolean))];
+    if (uniquePubkeys.length === 0) {
+      options?.onProgress?.(0, 0);
+      return;
+    }
+
+    const total = uniquePubkeys.length;
+    const forceRefresh = options?.forceRefresh ?? false;
+    const chunkSize = Math.max(1, options?.chunkSize ?? this.QUEUE_BATCH_SIZE);
+    let completed = 0;
+
+    options?.onProgress?.(completed, total);
+
+    for (let index = 0; index < total; index += chunkSize) {
+      if (options?.shouldAbort?.()) {
+        break;
+      }
+
+      const chunk = uniquePubkeys.slice(index, index + chunkSize);
+      await this.fetchMetricsBatch(chunk, forceRefresh);
+      completed += chunk.length;
+      options?.onProgress?.(completed, total);
+    }
+  }
+
+  /**
    * Refresh metrics in background without blocking
    */
   private refreshMetricsInBackground(pubkey: string): void {

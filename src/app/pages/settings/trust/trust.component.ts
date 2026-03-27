@@ -61,6 +61,15 @@ export class TrustSettingsComponent implements OnInit, OnDestroy {
   /** Available scoring services */
   knownProviders = KNOWN_PROVIDERS;
 
+  followingListLoaded = computed(() => this.accountState.followingListLoaded());
+  followingCount = computed(() => this.accountState.followingList().length);
+  canRefreshTrustRanks = computed(() => {
+    return this.trustService.isEnabled()
+      && this.followingListLoaded()
+      && this.followingCount() > 0
+      && this.refreshStatus() !== 'refreshing';
+  });
+
   /** Trust rank refresh state */
   refreshStatus = signal<'idle' | 'refreshing' | 'done'>('idle');
   refreshTotal = signal(0);
@@ -547,13 +556,15 @@ export class TrustSettingsComponent implements OnInit, OnDestroy {
       this.refreshAborted = true;
     });
 
-    const CHUNK_SIZE = 50;
-    for (let i = 0; i < pubkeys.length; i += CHUNK_SIZE) {
-      if (this.refreshAborted) break;
-      const chunk = pubkeys.slice(i, i + CHUNK_SIZE);
-      await this.trustService.fetchMetricsBatch(chunk, true);
-      this.refreshCompleted.update(n => n + chunk.length);
-    }
+    await this.trustService.preloadTrustRanks(pubkeys, {
+      forceRefresh: true,
+      chunkSize: 50,
+      shouldAbort: () => this.refreshAborted,
+      onProgress: (completed, total) => {
+        this.refreshTotal.set(total);
+        this.refreshCompleted.set(completed);
+      },
+    });
 
     this.refreshStatus.set('done');
     setTimeout(() => this.refreshStatus.set('idle'), 3000);
