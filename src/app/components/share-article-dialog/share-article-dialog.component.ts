@@ -179,6 +179,11 @@ export interface ShareArticleDialogData {
           <span class="action-label">Copy Link</span>
         </button>
 
+        <button class="share-action-item" (click)="copyId()">
+          <span class="action-icon-circle"><mat-icon>tag</mat-icon></span>
+          <span class="action-label">Copy ID</span>
+        </button>
+
         <button class="share-action-item" (click)="shareAsNote()">
           <span class="action-icon-circle"><mat-icon>edit_note</mat-icon></span>
           <span class="action-label">Post on Nostr</span>
@@ -1157,6 +1162,17 @@ export class ShareArticleDialogComponent {
     } catch (error) {
       console.error('Failed to copy link:', error);
       this.snackBar.open('Failed to copy link', 'Close', { duration: 3000 });
+    }
+  }
+
+  async copyId() {
+    try {
+      await navigator.clipboard.writeText(this.getEncodedId());
+      this.snackBar.open('ID copied to clipboard', 'Close', { duration: 2000 });
+      this.dialogRef?.close();
+    } catch (error) {
+      console.error('Failed to copy ID:', error);
+      this.snackBar.open('Failed to copy ID', 'Close', { duration: 3000 });
     }
   }
 

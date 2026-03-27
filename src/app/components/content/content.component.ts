@@ -9,7 +9,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { LayoutService } from '../../services/layout.service';
 import { TaggedReferencesComponent } from './tagged-references/tagged-references.component';
 import { Event as NostrEvent, nip19 } from 'nostr-tools';
-import { isXStatusUrl, normalizePreviewUrl } from '../../utils/url-cleaner';
+import { normalizePreviewUrl } from '../../utils/url-cleaner';
 
 interface SocialPreview {
   url: string;
@@ -110,7 +110,16 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
     let tokens = this.contentTokens();
 
     if (!this.hideSocialPreviews() && this.settings.settings().socialSharingPreview) {
-      tokens = tokens.filter(token => token.type !== 'url' || !isXStatusUrl(token.content));
+      const previewedUrls = new Set(this.socialPreviews().map(preview => normalizePreviewUrl(preview.url)));
+
+      tokens = tokens.filter(token => {
+        if (token.type !== 'url') {
+          return true;
+        }
+
+        const normalizedUrl = normalizePreviewUrl(token.content);
+        return !previewedUrls.has(normalizedUrl);
+      });
     }
 
     if (!this.hideInlineMediaAndLinks()) {

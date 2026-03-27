@@ -249,12 +249,54 @@ describe('ContentComponent', () => {
       { id: 4, type: 'url', content: 'https://example.com' } as ContentToken,
     ]);
 
+    component.socialPreviews.set([
+      {
+        url: 'https://x.com/user/status/1234567890',
+        loading: false,
+        error: false,
+      },
+    ]);
+
     fixture.detectChanges();
 
     expect(component.displayContentTokens().map(token => token.content)).toEqual([
       'Before ',
       ' after',
       'https://example.com',
+    ]);
+  });
+
+  it('should hide inline generic URLs when a social preview is rendered', () => {
+    mockSettingsService.settings.set({ socialSharingPreview: true });
+
+    (component as unknown as {
+      _hasBeenVisible: { set: (value: boolean) => void };
+      _cachedTokens: { set: (value: ContentToken[]) => void };
+    })._hasBeenVisible.set(true);
+
+    (component as unknown as {
+      _cachedTokens: { set: (value: ContentToken[]) => void };
+    })._cachedTokens.set([
+      { id: 1, type: 'text', content: 'Song link\n' } as ContentToken,
+      { id: 2, type: 'url', content: 'https://lnbeats.com/album/123?utm_source=test' } as ContentToken,
+      { id: 3, type: 'linebreak', content: '\n' } as ContentToken,
+      { id: 4, type: 'text', content: 'More text' } as ContentToken,
+    ]);
+
+    component.socialPreviews.set([
+      {
+        url: 'https://lnbeats.com/album/123',
+        loading: false,
+        error: false,
+      },
+    ]);
+
+    fixture.detectChanges();
+
+    expect(component.displayContentTokens().map(token => token.content)).toEqual([
+      'Song link\n',
+      '\n',
+      'More text',
     ]);
   });
 
