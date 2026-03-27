@@ -487,16 +487,19 @@ export class FeedsComponent implements OnDestroy {
   INITIAL_RENDER_COUNT = 8;
   RENDER_BATCH_SIZE = 8;
 
+  // How much content to keep rendered below the current viewport bottom.
+  // While there are cached events and the rendered content does not extend at
+  // least this far past the visible area, we keep loading more batches.
+  private readonly RENDER_AHEAD_PX = 1200;
+
   // Track rendered event counts per feed (virtual list)
   renderedEventCounts = signal<Record<string, number>>({});
 
-  // Scroll detection for auto-loading more content
+  // Scroll detection for network loading more content
   lastLoadTime = 0;
   LOAD_MORE_COOLDOWN_MS = 250;
-  private readonly LOAD_MORE_BUFFER_PX = 1600;
   private readonly NETWORK_LOAD_BUFFER_PX = 300;
   private readonly NETWORK_LOAD_SCROLL_DELTA_PX = 500;
-  private readonly STICKY_RENDER_BOTTOM_PX = 96;
   scrollCheckCleanup: (() => void) | null = null;
   private autoLoadRecheckTimeout: ReturnType<typeof setTimeout> | null = null;
   private lastNetworkLoadScrollTop = Number.NEGATIVE_INFINITY;
@@ -1068,33 +1071,6 @@ export class FeedsComponent implements OnDestroy {
       }
     });
 
-    effect(() => {
-      const feed = this.currentScrollableFeed();
-      if (!feed || !this.layoutService.isBrowser()) {
-        return;
-      }
-
-      const renderedCount = this.getRenderedEventCount(feed.id);
-      const totalCount = this.getTotalEventCount(feed.id);
-
-      if (!this.userHasScrolledFeedContent() || renderedCount === 0 || renderedCount >= totalCount) {
-        return;
-      }
-
-      untracked(() => {
-        requestAnimationFrame(() => {
-          const container = this.getFeedContentContainer();
-          if (!container) {
-            return;
-          }
-
-          if (this.getDistanceFromBottom(container) <= this.STICKY_RENDER_BOTTOM_PX && this.hasMoreEventsToRender(feed.id)) {
-            this.loadMoreRenderedEvents(feed.id);
-          }
-        });
-      });
-    });
-
     // Auto-load new posts when user is scrolled to top
     // This eliminates the need to click the "X new posts" button when already at the top
     effect(() => {
@@ -1134,6 +1110,26 @@ export class FeedsComponent implements OnDestroy {
           this.setupHeaderScrollListener();
         }, 500);
       }
+    });
+
+    // When the total event count grows (new events arrive from the network),
+    // run a fill pass so the feed renders more content without requiring a scroll.
+    // Gated on userHasScrolledFeedContent to avoid a loading storm on startup.
+    effect(() => {
+      const feed = this.currentScrollableFeed();
+      if (!feed) return;
+
+      // Read total count reactively so this effect re-runs when events arrive.
+      const totalCount = this.getTotalEventCount(feed.id);
+      if (totalCount === 0) return;
+
+      untracked(() => {
+        if (!this.userHasScrolledFeedContent()) return;
+        const container = this.getFeedContentContainer();
+        if (container) {
+          this.fillRenderedEvents(feed.id, container);
+        }
+      });
     });
 
     // Set up scroll listeners for the active feed
@@ -1215,9 +1211,9 @@ export class FeedsComponent implements OnDestroy {
   }
 
   /**
-   * Set up IntersectionObserver for infinite scroll functionality.
-   * This observes the loadMoreTrigger element and automatically loads more
-   * events when it becomes visible (user scrolled near the bottom).
+   * Set up IntersectionObserver to trigger network page fetches when the
+   * end-of-list sentinel comes into view.  Rendering of cached events is
+   * handled purely by the scroll listener via fillRenderedEvents().
    */
   private setupIntersectionObserver(): void {
     // Clean up existing observer
@@ -1230,32 +1226,54 @@ export class FeedsComponent implements OnDestroy {
 
     const options: IntersectionObserverInit = {
       root: contentWrapper,
-      rootMargin: `${this.LOAD_MORE_BUFFER_PX}px 0px`,
+      rootMargin: '0px 0px 400px 0px',
       threshold: 0,
     };
 
     this.intersectionObserver = new IntersectionObserver((entries) => {
       entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          const activeFeed = this.currentScrollableFeed();
-          if (activeFeed) {
-            void this.maybeAutoLoadMore(activeFeed.id, contentWrapper, true);
-          }
+        if (!entry.isIntersecting) {
+          return;
+        }
+        const activeFeed = this.currentScrollableFeed();
+        if (activeFeed) {
+          void this.maybeAutoLoadMore(activeFeed.id, contentWrapper, true);
         }
       });
     }, options);
 
-    // Start observing the trigger element if it exists
     this.observeLoadMoreTrigger();
   }
 
   /**
    * Start observing the load more trigger element.
-   * Called after view init and when feed changes.
    */
   private observeLoadMoreTrigger(): void {
     if (this.intersectionObserver && this.loadMoreTrigger?.nativeElement) {
+      this.intersectionObserver.unobserve(this.loadMoreTrigger.nativeElement);
       this.intersectionObserver.observe(this.loadMoreTrigger.nativeElement);
+    }
+  }
+
+  /**
+   * Fill rendered events until there is at least RENDER_AHEAD_PX of content
+   * below the current scroll position, or until all cached events are rendered.
+   *
+   * This is called on every scroll event and whenever new events arrive.
+   * It is the sole mechanism that advances the virtual-list render window.
+   */
+  private fillRenderedEvents(feedId: string, container: HTMLElement): void {
+    if (!this.userHasScrolledFeedContent() && container.scrollTop <= 0) {
+      return;
+    }
+
+    // Keep rendering batches synchronously until we have enough runway ahead.
+    while (this.hasMoreEventsToRender(feedId)) {
+      const distanceFromBottom = this.getDistanceFromBottom(container);
+      if (distanceFromBottom > this.RENDER_AHEAD_PX) {
+        break;
+      }
+      this.loadMoreRenderedEvents(feedId);
     }
   }
 
@@ -1328,6 +1346,8 @@ export class FeedsComponent implements OnDestroy {
 
     const activeFeed = this.currentScrollableFeed();
     if (activeFeed) {
+      // Fill rendered events first (cached → DOM), then check if a network fetch is needed.
+      this.fillRenderedEvents(activeFeed.id, container);
       void this.maybeAutoLoadMore(activeFeed.id, container);
     }
 
@@ -1340,10 +1360,6 @@ export class FeedsComponent implements OnDestroy {
 
   private getDistanceFromBottom(container: HTMLElement): number {
     return container.scrollHeight - (container.scrollTop + container.clientHeight);
-  }
-
-  private isWithinRenderLoadBuffer(container: HTMLElement): boolean {
-    return this.getDistanceFromBottom(container) < this.LOAD_MORE_BUFFER_PX;
   }
 
   private isWithinNetworkLoadBuffer(container: HTMLElement): boolean {
@@ -1368,14 +1384,22 @@ export class FeedsComponent implements OnDestroy {
       }
 
       const container = this.getFeedContentContainer();
-      if (!container || !this.isWithinRenderLoadBuffer(container)) {
+      if (!container) {
+        return;
+      }
+
+      if (!this.isWithinNetworkLoadBuffer(container)) {
         return;
       }
 
       void this.maybeAutoLoadMore(feedId, container, true);
-    }, 75);
+     }, 150);
   }
 
+  /**
+   * Handles network page fetching only.  Rendering of already-cached events is driven
+   * entirely by the IntersectionObserver in setupIntersectionObserver().
+   */
   private async maybeAutoLoadMore(feedId: string, container?: HTMLElement, ignoreCooldown = false): Promise<void> {
     const contentContainer = container ?? this.getFeedContentContainer();
     if (!contentContainer) {
@@ -1386,34 +1410,20 @@ export class FeedsComponent implements OnDestroy {
       return;
     }
 
-    const withinRenderBuffer = this.isWithinRenderLoadBuffer(contentContainer);
     const withinNetworkBuffer = this.isWithinNetworkLoadBuffer(contentContainer);
-    if (!withinRenderBuffer && !withinNetworkBuffer) {
+    if (!withinNetworkBuffer) {
       return;
     }
 
     const now = Date.now();
-    if (!ignoreCooldown && now - this.lastLoadTime < this.LOAD_MORE_COOLDOWN_MS) {
-      return;
-    }
-
-    this.lastLoadTime = now;
-
-    let advancedRenderedEvents = false;
-    const hasMoreRenderedEvents = this.hasMoreEventsToRender(feedId);
-    if (withinRenderBuffer && hasMoreRenderedEvents) {
-      this.loadMoreRenderedEvents(feedId);
-      advancedRenderedEvents = true;
-    }
-
-    let requestedMoreFromNetwork = false;
-    if (!hasMoreRenderedEvents && withinNetworkBuffer && this.canLoadAnotherNetworkPage(contentContainer)) {
+    const canAttemptNetworkLoad = ignoreCooldown || now - this.lastLoadTime >= this.LOAD_MORE_COOLDOWN_MS;
+    if (canAttemptNetworkLoad && this.canLoadAnotherNetworkPage(contentContainer)) {
+      this.lastLoadTime = now;
       this.lastNetworkLoadScrollTop = contentContainer.scrollTop;
-      requestedMoreFromNetwork = await this.loadMoreForFeed(feedId);
-    }
-
-    if (advancedRenderedEvents || requestedMoreFromNetwork) {
-      this.scheduleAutoLoadRecheck(feedId);
+      const requestedMoreFromNetwork = await this.loadMoreForFeed(feedId);
+      if (requestedMoreFromNetwork) {
+        this.scheduleAutoLoadRecheck(feedId);
+      }
     }
   }
 

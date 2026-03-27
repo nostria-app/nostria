@@ -364,7 +364,8 @@
               <app-event [event]="event" [inFeedsPanel]="true"></app-event>
               }
 
-              <!-- Show "Load More" button when there are more events in memory to render -->
+              <!-- "Show more" manual fallback. Auto-rendering keeps this out of view during
+                   normal scrolling, but it's visible if the user reaches the bottom. -->
               @if (hasMoreEventsToRender(feed.id)) {
               <div class="load-more-rendered-events">
                 <button mat-stroked-button (click)="loadMoreRenderedEvents(feed.id)" class="load-more-button">
@@ -374,7 +375,7 @@
               </div>
               }
 
-              <!-- Invisible trigger for Intersection Observer to detect scroll-to-bottom -->
+              <!-- Intersection Observer target -->
               <div #loadMoreTrigger class="load-more-trigger" aria-hidden="true"></div>
               }
               <!-- @else {
