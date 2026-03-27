@@ -112,14 +112,7 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
     if (!this.hideSocialPreviews() && this.settings.settings().socialSharingPreview) {
       const previewedUrls = new Set(this.socialPreviews().map(preview => normalizePreviewUrl(preview.url)));
 
-      tokens = tokens.filter(token => {
-        if (token.type !== 'url') {
-          return true;
-        }
-
-        const normalizedUrl = normalizePreviewUrl(token.content);
-        return !previewedUrls.has(normalizedUrl);
-      });
+      tokens = this.filterPreviewedUrlTokens(tokens, previewedUrls);
     }
 
     if (!this.hideInlineMediaAndLinks()) {
@@ -279,6 +272,83 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
     } catch {
       return String(content);
     }
+  }
+
+  private filterPreviewedUrlTokens(tokens: ContentToken[], previewedUrls: Set<string>): ContentToken[] {
+    const filteredTokens: ContentToken[] = [];
+
+    for (let index = 0; index < tokens.length; index++) {
+      const token = tokens[index];
+
+      if (!this.isPreviewedUrlToken(token, previewedUrls)) {
+        filteredTokens.push(token);
+        continue;
+      }
+
+      const linebreaksBefore: ContentToken[] = [];
+      while (filteredTokens.length > 0 && filteredTokens[filteredTokens.length - 1].type === 'linebreak') {
+        linebreaksBefore.unshift(filteredTokens.pop()!);
+      }
+
+      const linebreaksAfter: ContentToken[] = [];
+      let nextIndex = index + 1;
+
+      while (nextIndex < tokens.length && tokens[nextIndex].type === 'linebreak') {
+        linebreaksAfter.push(tokens[nextIndex]);
+        nextIndex++;
+      }
+
+      const hasContentBefore = filteredTokens.length > 0;
+      const nextVisibleIndex = this.findNextVisibleTokenIndex(tokens, nextIndex, previewedUrls);
+      const hasContentAfter = nextVisibleIndex !== -1;
+
+      if (hasContentBefore && hasContentAfter) {
+        const desiredLinebreakCount = Math.max(linebreaksBefore.length, linebreaksAfter.length);
+        const retainedLinebreaks = [...linebreaksBefore, ...linebreaksAfter].slice(0, desiredLinebreakCount);
+        filteredTokens.push(...retainedLinebreaks);
+      }
+
+      index = nextIndex - 1;
+    }
+
+    return this.trimEdgeLinebreaks(filteredTokens);
+  }
+
+  private findNextVisibleTokenIndex(tokens: ContentToken[], startIndex: number, previewedUrls: Set<string>): number {
+    for (let index = startIndex; index < tokens.length; index++) {
+      const token = tokens[index];
+
+      if (token.type === 'linebreak') {
+        continue;
+      }
+
+      if (this.isPreviewedUrlToken(token, previewedUrls)) {
+        continue;
+      }
+
+      return index;
+    }
+
+    return -1;
+  }
+
+  private isPreviewedUrlToken(token: ContentToken, previewedUrls: Set<string>): boolean {
+    return token.type === 'url' && previewedUrls.has(normalizePreviewUrl(token.content));
+  }
+
+  private trimEdgeLinebreaks(tokens: ContentToken[]): ContentToken[] {
+    let startIndex = 0;
+    let endIndex = tokens.length;
+
+    while (startIndex < endIndex && tokens[startIndex].type === 'linebreak') {
+      startIndex++;
+    }
+
+    while (endIndex > startIndex && tokens[endIndex - 1].type === 'linebreak') {
+      endIndex--;
+    }
+
+    return tokens.slice(startIndex, endIndex);
   }
 
   /**

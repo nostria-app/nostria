@@ -300,6 +300,73 @@ describe('ContentComponent', () => {
     ]);
   });
 
+  it('should trim leading blank lines left by a removed preview URL', () => {
+    mockSettingsService.settings.set({ socialSharingPreview: true });
+
+    (component as unknown as {
+      _hasBeenVisible: { set: (value: boolean) => void };
+      _cachedTokens: { set: (value: ContentToken[]) => void };
+    })._hasBeenVisible.set(true);
+
+    (component as unknown as {
+      _cachedTokens: { set: (value: ContentToken[]) => void };
+    })._cachedTokens.set([
+      { id: 1, type: 'url', content: 'https://zap.stream/' } as ContentToken,
+      { id: 2, type: 'linebreak', content: '\n' } as ContentToken,
+      { id: 3, type: 'linebreak', content: '\n' } as ContentToken,
+      { id: 4, type: 'text', content: 'Then use OBS software which uploads the stream to Zap Stream.' } as ContentToken,
+    ]);
+
+    component.socialPreviews.set([
+      {
+        url: 'https://zap.stream/',
+        loading: false,
+        error: false,
+      },
+    ]);
+
+    fixture.detectChanges();
+
+    expect(component.displayContentTokens().map(token => token.content)).toEqual([
+      'Then use OBS software which uploads the stream to Zap Stream.',
+    ]);
+  });
+
+  it('should collapse duplicate linebreak groups when a preview URL is removed between text blocks', () => {
+    mockSettingsService.settings.set({ socialSharingPreview: true });
+
+    (component as unknown as {
+      _hasBeenVisible: { set: (value: boolean) => void };
+      _cachedTokens: { set: (value: ContentToken[]) => void };
+    })._hasBeenVisible.set(true);
+
+    (component as unknown as {
+      _cachedTokens: { set: (value: ContentToken[]) => void };
+    })._cachedTokens.set([
+      { id: 1, type: 'text', content: 'Before' } as ContentToken,
+      { id: 2, type: 'linebreak', content: '\n' } as ContentToken,
+      { id: 3, type: 'url', content: 'https://zap.stream/' } as ContentToken,
+      { id: 4, type: 'linebreak', content: '\n' } as ContentToken,
+      { id: 5, type: 'text', content: 'After' } as ContentToken,
+    ]);
+
+    component.socialPreviews.set([
+      {
+        url: 'https://zap.stream/',
+        loading: false,
+        error: false,
+      },
+    ]);
+
+    fixture.detectChanges();
+
+    expect(component.displayContentTokens().map(token => token.content)).toEqual([
+      'Before',
+      '\n',
+      'After',
+    ]);
+  });
+
   it('should keep inline X status URLs when social previews are disabled', () => {
     mockSettingsService.settings.set({ socialSharingPreview: false });
 
