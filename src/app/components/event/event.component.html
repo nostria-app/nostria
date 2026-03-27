@@ -214,7 +214,8 @@
       <div class="collapsed-urls">
         @for (url of mainCollapsedMedia().urls; track url) {
       <app-social-preview [url]="url" [compact]="true"
-        [prominentImage]="mainCollapsedMedia().urls.length <= 3"></app-social-preview>
+        [prominentImage]="mainCollapsedMedia().urls.length <= 3"
+        [singleLinkLayout]="mainCollapsedMedia().urls.length === 1"></app-social-preview>
       }
     </div>
     }
@@ -423,7 +424,8 @@
         <div class="collapsed-urls">
           @for (url of rootCollapsedMedia().urls; track url) {
           <app-social-preview [url]="url" [compact]="true"
-            [prominentImage]="rootCollapsedMedia().urls.length <= 3"></app-social-preview>
+            [prominentImage]="rootCollapsedMedia().urls.length <= 3"
+            [singleLinkLayout]="rootCollapsedMedia().urls.length === 1"></app-social-preview>
           }
         </div>
         }
@@ -606,7 +608,8 @@
         <div class="collapsed-urls">
           @for (url of parentCollapsedMedia().urls; track url) {
           <app-social-preview [url]="url" [compact]="true"
-            [prominentImage]="parentCollapsedMedia().urls.length <= 3"></app-social-preview>
+            [prominentImage]="parentCollapsedMedia().urls.length <= 3"
+            [singleLinkLayout]="parentCollapsedMedia().urls.length === 1"></app-social-preview>
           }
         </div>
         }
@@ -768,7 +771,8 @@
     <div class="collapsed-urls">
       @for (url of mainCollapsedMedia().urls; track url) {
       <app-social-preview [url]="url" [compact]="true"
-        [prominentImage]="mainCollapsedMedia().urls.length <= 3"></app-social-preview>
+        [prominentImage]="mainCollapsedMedia().urls.length <= 3"
+        [singleLinkLayout]="mainCollapsedMedia().urls.length === 1"></app-social-preview>
       }
     </div>
     }
@@ -939,7 +943,8 @@
     <div class="collapsed-urls">
       @for (url of mainCollapsedMedia().urls; track url) {
       <app-social-preview [url]="url" [compact]="true"
-        [prominentImage]="mainCollapsedMedia().urls.length <= 3"></app-social-preview>
+        [prominentImage]="mainCollapsedMedia().urls.length <= 3"
+        [singleLinkLayout]="mainCollapsedMedia().urls.length === 1"></app-social-preview>
       }
     </div>
     }

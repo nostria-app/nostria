@@ -125,6 +125,8 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
     return previewCount > 0 && previewCount <= 3;
   });
 
+  useSingleSocialPreviewLayout = computed(() => this.socialPreviews().length === 1);
+
   // Proxy web URL from bridged content (e.g., ActivityPub/Mastodon via momostr)
   proxyWebUrl = computed<string | null>(() => {
     const currentEvent = this.event();

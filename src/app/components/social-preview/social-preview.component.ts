@@ -29,6 +29,7 @@ export class SocialPreviewComponent {
   /** When true, renders a smaller preview with thumbnail + title + URL only (no description). */
   compact = input<boolean>(false);
   prominentImage = input<boolean>(false);
+  singleLinkLayout = input<boolean>(false);
 
   url = input<string>('');
   previewData = input<OpenGraphData | null>(null);

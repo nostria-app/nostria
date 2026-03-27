@@ -9,7 +9,8 @@
 <a class="social-preview-card" [href]="preview.url" [attr.data-url]="preview.url" target="_blank"
   rel="noopener noreferrer">
   <mat-card [class.compact-preview]="compact() || (!preview.title && !preview.image)"
-    [class.prominent-image-preview]="prominentImage() && compact() && !!preview.image && !preview.loading && !preview.error">
+    [class.prominent-image-preview]="prominentImage() && compact() && !!preview.image && !preview.loading && !preview.error"
+    [class.single-link-preview]="singleLinkLayout() && !preview.loading && !preview.error">
     <div class="preview-content">
       <div class="thumbnail-container">
         @if (preview.loading) {
@@ -36,7 +37,7 @@
         @if (preview.loading) {
         <div class="loading-text">
           <div class="loading-placeholder title-placeholder"></div>
-          @if (!compact() || prominentImage()) {
+          @if (!compact() || prominentImage() || singleLinkLayout()) {
           <div class="loading-placeholder description-placeholder"></div>
           }
           <div class="loading-placeholder url-placeholder"></div>
@@ -47,15 +48,20 @@
           <div class="preview-url">{{ preview.url }}</div>
         </div>
         } @else {
+        @if (singleLinkLayout()) {
+        <div class="preview-url">{{ preview.url }}</div>
+        }
         <div class="preview-title">
           {{ preview.title || 'No title available' }}
         </div>
-        @if (!compact() || prominentImage()) {
+        @if (!compact() || prominentImage() || singleLinkLayout()) {
         <div class="preview-description">
           {{ preview.description || 'No description available' }}
         </div>
         }
+        @if (!singleLinkLayout()) {
         <div class="preview-url">{{ preview.url }}</div>
+        }
         }
       </div>
     </div>
