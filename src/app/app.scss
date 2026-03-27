@@ -1912,6 +1912,10 @@ mat-sidenav-content {
   transform: translateX(-50%);
   right: auto;
 
+  --mobile-bottom-cube-side-margin: 12px;
+  --mobile-bottom-cube-visible-width: calc(100% - (var(--mobile-bottom-cube-side-margin) * 2));
+  --mobile-bottom-cube-perspective-scale: calc(568 / 600);
+
   // Shared glass tokens — matched to desktop media player
   --cube-glass-bg: rgba(255, 255, 255, 0.05);
   --cube-glass-hover: color-mix(in srgb, white 10%, transparent);
@@ -1919,7 +1923,8 @@ mat-sidenav-content {
   --cube-glass-active-border: color-mix(in srgb, white 30%, transparent);
   --cube-glass-active-shadow: 0 0 16px color-mix(in srgb, var(--mat-sys-primary) 25%, transparent);
 
-  width: calc(100% - 48px);
+  // Keep the animated 3D cube at the same visual width as the settled 2D faces.
+  width: calc(var(--mobile-bottom-cube-visible-width) * var(--mobile-bottom-cube-perspective-scale));
   min-width: 0;
 
   height: 64px;
@@ -1979,15 +1984,10 @@ mat-sidenav-content {
   // elements, so this ensures buttons/controls actually receive pointer events.
   //
   // Perspective magnification compensation:
-  // During 3D animation, faces at translateZ(28px) with perspective(600px) appear
-  // scaled by p/(p-d) = 600/572 ≈ 1.04895. When we flatten to 2D, we must apply
-  // the same scale factor so the face doesn't visibly shrink.
+  // During 3D animation, faces at translateZ(32px) with perspective(600px) appear
+  // scaled by p/(p-d) = 600/568 ≈ 1.056. The base cube width is pre-compensated
+  // so the rotating 3D state and flattened 2D state stay visually aligned.
   &.cube-settled {
-    // Shrink container to compensate for the perspective magnification scale
-    // applied to the active face (scale(600/568) ≈ 1.056). This ensures the
-    // visually-scaled face doesn't overflow the viewport margins.
-    width: calc((100% - 48px) * 568 / 600);
-
     .cube-inner {
       // Disable 3D context so children are in flat 2D space for hit-testing
       transform-style: flat;
@@ -2029,11 +2029,12 @@ mat-sidenav-content {
   // When the media player is expanded inside the settled mobile cube,
   // grow the cube to accommodate the expanded queue panel.
   &.show-player.cube-settled.player-expanded {
+    width: var(--mobile-bottom-cube-visible-width);
     height: 320px;
     transition: height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
     .cube-face-player {
-      // Remove scale compensation — the parent height change handles sizing
+      // The expanded player uses the final visible width directly.
       transform: none !important;
       border-radius: 16px 16px 32px 32px;
     }
@@ -2310,6 +2311,7 @@ mat-sidenav-content {
 }
 
 :host-context(.dark) .cube-face-nav .mobile-nav-button {
+
   &:hover,
   &:active {
     background-color: var(--cube-glass-hover);
