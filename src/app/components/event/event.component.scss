@@ -116,17 +116,6 @@
   }
 }
 
-@keyframes engagementPulse {
-  0%,
-  100% {
-    opacity: 0.45;
-  }
-
-  50% {
-    opacity: 0.8;
-  }
-}
-
 .event-tagged-users-warning {
   display: flex;
   flex-direction: row;
@@ -338,6 +327,7 @@
   font-family: inherit;
   outline: none;
   -webkit-tap-highlight-color: transparent;
+  --engagement-reveal-delay: 0ms;
 
   &.engagement-loading {
     .action-icon,
@@ -346,16 +336,8 @@
     >mat-icon,
     ::ng-deep mat-icon,
     ::ng-deep .emoji-icon {
-      opacity: 0.5;
-      transition: opacity 0.22s ease, transform 0.22s ease;
-    }
-
-    .action-text,
-    .action-count,
-    >mat-icon,
-    ::ng-deep mat-icon,
-    ::ng-deep .emoji-icon {
-      animation: engagementPulse 1.2s ease-in-out infinite;
+      opacity: 0.56;
+      transition: opacity 0.18s ease, transform 0.24s ease;
     }
   }
 
@@ -366,10 +348,10 @@
     >mat-icon,
     ::ng-deep mat-icon,
     ::ng-deep .emoji-icon {
-      animation: none;
       opacity: 1;
       transform: translateY(0);
-      transition: opacity 0.22s ease, transform 0.22s ease;
+      transition: opacity 0.28s ease, transform 0.28s ease;
+      transition-delay: var(--engagement-reveal-delay);
     }
   }
 
@@ -415,7 +397,6 @@
       border-radius: 999px;
       color: transparent !important;
       background: color-mix(in srgb, var(--mat-sys-on-surface-variant) 18%, transparent);
-      animation: engagementPulse 1.2s ease-in-out infinite;
     }
   }
 
@@ -512,6 +493,8 @@
 }
 
 .like-action {
+  --engagement-reveal-delay: 0ms;
+
   &:hover {
     color: #e91e63;
 
@@ -612,6 +595,8 @@
 }
 
 .comment-action {
+  --engagement-reveal-delay: 45ms;
+
   &:hover {
     color: var(--mat-sys-primary);
 
@@ -628,6 +613,8 @@
 }
 
 .share-action {
+  --engagement-reveal-delay: 135ms;
+
   &:hover {
     color: var(--mat-sys-primary);
 
@@ -663,6 +650,7 @@
 }
 
 .zap-action {
+  --engagement-reveal-delay: 90ms;
   color: var(--nostria-bitcoin);
 
   .action-count,
@@ -724,17 +712,13 @@
   cursor: pointer;
   transition: background-color 0.15s ease;
   user-select: none;
+  --engagement-reveal-delay: 180ms;
 
   &.engagement-loading {
     .aggregated-emojis,
     .emoji-more {
-      opacity: 0.55;
-      transition: opacity 0.22s ease, transform 0.22s ease;
-    }
-
-    .aggregated-emojis,
-    .emoji-more {
-      animation: engagementPulse 1.2s ease-in-out infinite;
+      opacity: 0.58;
+      transition: opacity 0.18s ease, transform 0.24s ease;
     }
   }
 
@@ -742,8 +726,8 @@
     .aggregated-emojis,
     .emoji-more {
       opacity: 1;
-      animation: none;
-      transition: opacity 0.22s ease, transform 0.22s ease;
+      transition: opacity 0.28s ease, transform 0.28s ease;
+      transition-delay: var(--engagement-reveal-delay);
     }
   }
 
