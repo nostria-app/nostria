@@ -211,6 +211,7 @@ const EMOJI_KEYWORDS: Record<string, string[]> = {
 
     :host-context(.emoji-picker-dialog) .emoji-picker {
       width: 100%;
+      max-width: none;
       max-height: none;
       flex: 1;
       min-height: 0;
@@ -340,7 +341,7 @@ const EMOJI_KEYWORDS: Record<string, string[]> = {
       overflow-y: auto;
       overflow-x: hidden;
       max-height: 280px;
-      padding: 6px;
+      padding: 4px;
       scrollbar-gutter: stable both-edges;
       scrollbar-width: auto;
       scrollbar-color: var(--scrollbar-thumb, var(--mat-sys-outline)) var(--scrollbar-track, transparent);
@@ -357,7 +358,7 @@ const EMOJI_KEYWORDS: Record<string, string[]> = {
       overflow-y: auto;
       overflow-x: hidden;
       max-height: 280px;
-      padding: 6px;
+      padding: 4px;
       scrollbar-gutter: stable both-edges;
       scrollbar-width: auto;
       scrollbar-color: var(--scrollbar-thumb, var(--mat-sys-outline)) var(--scrollbar-track, transparent);
@@ -390,12 +391,12 @@ const EMOJI_KEYWORDS: Record<string, string[]> = {
 
     :host-context(.emoji-picker-dialog) .emoji-btn {
       width: 100%;
-      height: 52px;
-      font-size: 1.75rem;
+      height: 58px;
+      font-size: 1.95rem;
 
       .custom-emoji-img {
-        width: 32px;
-        height: 32px;
+        width: 36px;
+        height: 36px;
       }
     }
 
@@ -416,7 +417,7 @@ const EMOJI_KEYWORDS: Record<string, string[]> = {
     .emoji-grid {
       display: grid;
       grid-template-columns: repeat(6, minmax(0, 1fr));
-      gap: 2px;
+      gap: 1px;
       width: 100%;
       max-width: 100%;
       min-width: 0;
@@ -442,8 +443,8 @@ const EMOJI_KEYWORDS: Record<string, string[]> = {
       justify-content: center;
       width: 100%;
       min-width: 0;
-      height: 36px;
-      font-size: 1.25rem;
+      height: 40px;
+      font-size: 1.45rem;
       border: none;
       background: transparent;
       border-radius: 6px;
@@ -456,14 +457,14 @@ const EMOJI_KEYWORDS: Record<string, string[]> = {
       }
 
       .custom-emoji-img {
-        width: 24px;
-        height: 24px;
+        width: 28px;
+        height: 28px;
         object-fit: contain;
       }
     }
 
     .emoji-section {
-      margin-bottom: 10px;
+      margin-bottom: 8px;
       overflow-x: hidden;
     }
 
@@ -471,7 +472,7 @@ const EMOJI_KEYWORDS: Record<string, string[]> = {
       display: flex;
       align-items: center;
       gap: 6px;
-      padding: 4px 6px;
+      padding: 4px 4px;
       font-size: 0.78rem;
       text-transform: uppercase;
       letter-spacing: 0.4px;
@@ -504,11 +505,45 @@ const EMOJI_KEYWORDS: Record<string, string[]> = {
       margin-bottom: 8px;
 
       .set-title {
-        padding: 4px 6px 2px;
+        padding: 4px 4px 2px;
         font-size: 0.75rem;
         opacity: 0.6;
         text-transform: uppercase;
         letter-spacing: 0.5px;
+      }
+    }
+
+    @media (max-width: 700px),
+    (max-height: 700px) {
+      :host-context(.emoji-picker-dialog) .emoji-picker {
+        height: 100%;
+      }
+
+      :host-context(.emoji-picker-dialog) .emoji-search {
+        padding: 8px 10px;
+      }
+
+      :host-context(.emoji-picker-dialog) .emoji-grid-container,
+      :host-context(.emoji-picker-dialog) .emoji-list-scroll {
+        padding: 2px 4px 4px;
+      }
+
+      :host-context(.emoji-picker-dialog) .emoji-grid {
+        gap: 0;
+      }
+
+      :host-context(.emoji-picker-dialog) .emoji-btn {
+        height: 60px;
+        font-size: 2.05rem;
+
+        .custom-emoji-img {
+          width: 38px;
+          height: 38px;
+        }
+      }
+
+      :host-context(.emoji-picker-dialog) .emoji-section {
+        margin-bottom: 6px;
       }
     }
   `],

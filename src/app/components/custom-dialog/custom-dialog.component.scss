@@ -371,11 +371,29 @@
 
 // Emoji Picker Dialog Override
 .dialog-container.emoji-picker-dialog {
+  width: min(420px, calc(100vw - 32px));
+  max-width: min(420px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+
   .dialog-content {
     display: flex;
     flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
     overflow: hidden;
     padding: 0;
+  }
+
+  @media (max-width: 700px),
+  (max-height: 700px) {
+    width: 100dvw;
+    max-width: 100dvw;
+    height: 100dvh;
+    max-height: 100dvh;
+
+    .dialog-content {
+      padding: 0;
+    }
   }
 }
 
@@ -739,4 +757,3 @@
     page-break-inside: avoid;
   }
 }
-
