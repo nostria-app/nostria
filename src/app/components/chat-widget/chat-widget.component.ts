@@ -40,6 +40,7 @@ type WidgetState = 'collapsed' | 'list' | 'chat';
   host: {
     '[style.display]': 'visible() ? "block" : "none"',
     '[style.pointer-events]': 'visible() ? "auto" : "none"',
+    '[style.transform]': 'visible() ? widgetTransform() : null',
     '[attr.aria-hidden]': 'visible() ? null : "true"',
   },
 })

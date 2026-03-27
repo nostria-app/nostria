@@ -1,6 +1,5 @@
 @if (visible()) {
-<div class="chat-widget" [class.expanded]="state() !== 'collapsed'" [class.dragging]="isDragging"
-  [style.transform]="widgetTransform()">
+<div class="chat-widget" [class.expanded]="state() !== 'collapsed'" [class.dragging]="isDragging">
 
   <!-- Collapsed pill -->
   @if (state() === 'collapsed') {
@@ -14,7 +13,9 @@
     </button>
     <div class="pill-avatars">
       @for (pubkey of recentAvatarPubkeys(); track pubkey) {
-      <button class="pill-avatar-button" (click)="!wasDragged() && openChat(pubkey, false)" [matTooltip]="'Open ' + getParticipantName(pubkey) + ' chat'">
+      <button class="pill-avatar-button" (click)="!wasDragged() && openChat(pubkey, false)"
+        aria-label="Open {{ getParticipantName(pubkey) }} chat" title="Open {{ getParticipantName(pubkey) }} chat"
+        [matTooltip]="'Open ' + getParticipantName(pubkey) + ' chat'">
         <app-user-profile [pubkey]="pubkey" view="icon" [disableLink]="true" [disableHoverCard]="true" />
       </button>
       }
@@ -69,8 +70,7 @@
         } @else {
         <!-- 1-on-1 chat item -->
         <div class="chat-item-avatar">
-          <app-user-profile [pubkey]="item.chat.pubkey" view="icon" [disableLink]="true"
-            [disableHoverCard]="true" />
+          <app-user-profile [pubkey]="item.chat.pubkey" view="icon" [disableLink]="true" [disableHoverCard]="true" />
         </div>
         <div class="chat-item-info">
           <div class="chat-item-top">
@@ -122,8 +122,7 @@
       </div>
       } @else {
       <div class="chat-header-user">
-        <app-user-profile [pubkey]="activeChatId()!" view="icon" [disableLink]="true"
-          [disableHoverCard]="true" />
+        <app-user-profile [pubkey]="activeChatId()!" view="icon" [disableLink]="true" [disableHoverCard]="true" />
         <span class="chat-header-name">{{ activeChatDisplayName() }}</span>
       </div>
       }
