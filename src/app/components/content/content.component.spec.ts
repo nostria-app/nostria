@@ -89,6 +89,29 @@ describe('ContentComponent', () => {
     expect(component.contentTokens()).toEqual([]);
   });
 
+  it('should treat feed content as visible when preloaded', () => {
+    fixture.componentRef.setInput('inFeedsPanel', true);
+    fixture.componentRef.setInput('content', 'Test content');
+
+    const contentElement = fixture.nativeElement.querySelector('.content-container') as HTMLDivElement;
+    vi.spyOn(contentElement, 'getBoundingClientRect').mockReturnValue({
+      top: 1500,
+      bottom: 1600,
+      left: 0,
+      right: 300,
+      width: 300,
+      height: 100,
+      x: 0,
+      y: 1500,
+      toJSON: () => ({}),
+    } as DOMRect);
+
+    vi.spyOn(document.documentElement, 'clientHeight', 'get').mockReturnValue(900);
+    fixture.detectChanges();
+
+    expect(component.shouldShowContent()).toBe(true);
+  });
+
   it('should accept event input', () => {
     expect(component.event()).toBeNull();
   });

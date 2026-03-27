@@ -482,12 +482,12 @@ export class FeedsComponent implements OnDestroy {
 
   // Virtual list configuration
   INITIAL_RENDER_COUNT = 8;
-  RENDER_BATCH_SIZE = 8;
+  RENDER_BATCH_SIZE = 6;
 
   // How much content to keep rendered below the current viewport bottom.
   // While there are cached events and the rendered content does not extend at
   // least this far past the visible area, we keep loading more batches.
-  private readonly RENDER_AHEAD_PX = 1200;
+  private readonly RENDER_AHEAD_PX = 1800;
 
   // Track rendered event counts per feed (virtual list)
   renderedEventCounts = signal<Record<string, number>>({});

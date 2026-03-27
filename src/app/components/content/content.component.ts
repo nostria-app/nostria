@@ -11,6 +11,7 @@ import { TaggedReferencesComponent } from './tagged-references/tagged-references
 import { Event as NostrEvent, nip19 } from 'nostr-tools';
 import { normalizePreviewUrl } from '../../utils/url-cleaner';
 import { OpenGraphService } from '../../services/opengraph.service';
+import { IntersectionObserverService } from '../../services/intersection-observer.service';
 
 interface SocialPreview {
   url: string;
@@ -39,6 +40,7 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
   settings = inject(SettingsService);
   private parsing = inject(ParsingService);
   private openGraphService = inject(OpenGraphService);
+  private intersectionObserverService = inject(IntersectionObserverService);
   layoutService = inject(LayoutService);
   private socialPreviewRequestId = 0;
 
@@ -83,9 +85,6 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
   private _isVisible = signal<boolean>(false);
   private _hasBeenVisible = signal<boolean>(false);
   isVisible = computed(() => this._isVisible());
-
-  // Observer for intersection
-  private intersectionObserver: IntersectionObserver | null = null;
 
   // Cached parsed tokens - managed outside of computed
   private _cachedTokens = signal<ContentToken[]>([]);
@@ -199,9 +198,8 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
     this.setupIntersectionObserver();
   }
   ngOnDestroy() {
-    if (this.intersectionObserver) {
-      this.intersectionObserver.disconnect();
-      this.intersectionObserver = null;
+    if (this.contentContainer?.nativeElement) {
+      this.intersectionObserverService.unobserve(this.contentContainer.nativeElement);
     }
 
     // Clear debounce timer
@@ -350,42 +348,59 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
 
     const element = this.contentContainer.nativeElement;
 
-    // Options for the observer (which part of item visible, etc)
-    // Using rootMargin to trigger slightly before element enters viewport for seamless UX
-    const options = {
-      root: null, // Use viewport as root
-      rootMargin: '200px', // Start loading 200px before entering viewport
-      threshold: 0, // Trigger as soon as any part is visible
-    };
+    const observerRoot = this.resolveObserverRoot(element);
+    const rootMargin = this.inFeedsPanel() ? '1400px 0px 2200px 0px' : '200px';
 
-    this.intersectionObserver = new IntersectionObserver(entries => {
-      entries.forEach(entry => {
-        const isIntersecting = entry.isIntersecting;
+    this.intersectionObserverService.observe(
+      element,
+      (isIntersecting) => {
         this._isVisible.set(isIntersecting);
 
         // Once visible, mark as having been visible (to keep content loaded)
         if (isIntersecting) {
           this._hasBeenVisible.set(true);
         }
-      });
-    }, options);
+      },
+      {
+        root: observerRoot,
+        rootMargin,
+        threshold: 0,
+      }
+    );
 
-    // Start observing the element
-    this.intersectionObserver.observe(element);
-
-    // Check if element is already visible in viewport immediately
-    // This handles the case where content is already on screen when observer attaches
-    const rect = element.getBoundingClientRect();
-    const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
-    const margin = 200; // Match rootMargin
-
-    // Element is considered visible if it's within viewport + margin
-    const isAlreadyVisible = rect.top < viewportHeight + margin && rect.bottom > -margin;
+    const isAlreadyVisible = this.isWithinPreloadBounds(element, observerRoot, rootMargin);
 
     if (isAlreadyVisible) {
       this._isVisible.set(true);
       this._hasBeenVisible.set(true);
     }
+  }
+
+  private resolveObserverRoot(element: HTMLElement): HTMLElement | null {
+    if (!this.inFeedsPanel()) {
+      return null;
+    }
+
+    return element.closest('.columns-container');
+  }
+
+  private isWithinPreloadBounds(
+    element: HTMLElement,
+    root: HTMLElement | null,
+    rootMargin: string
+  ): boolean {
+    const [topMarginToken = '0px', , bottomMarginToken = topMarginToken] = rootMargin.split(/\s+/);
+    const topMargin = Math.abs(parseInt(topMarginToken, 10) || 0);
+    const bottomMargin = Math.abs(parseInt(bottomMarginToken, 10) || 0);
+    const rect = element.getBoundingClientRect();
+
+    if (root) {
+      const rootRect = root.getBoundingClientRect();
+      return rect.top < rootRect.bottom + bottomMargin && rect.bottom > rootRect.top - topMargin;
+    }
+
+    const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+    return rect.top < viewportHeight + bottomMargin && rect.bottom > -topMargin;
   }
 
   private async loadSocialPreviews(urls: string[]): Promise<void> {
