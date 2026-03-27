@@ -142,4 +142,11 @@ describe('UtilitiesService Event Classification', () => {
       ]);
     });
   });
+
+  describe('normalizeRenderedEventContent', () => {
+    it('preserves up to two consecutive line breaks', () => {
+      expect(service.normalizeRenderedEventContent('first\n\nsecond')).toBe('first\n\nsecond');
+      expect(service.normalizeRenderedEventContent('first\n\n\n\nsecond')).toBe('first\n\nsecond');
+    });
+  });
 });

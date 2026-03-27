@@ -1599,7 +1599,7 @@ export class UtilitiesService {
 
     return content
       .replace(/\r\n?/g, '\n')
-      .replace(/\n(?:[ \t]*\n)+/g, '\n');
+      .replace(/\n(?:[ \t]*\n){2,}/g, '\n\n');
   }
 
   /**
