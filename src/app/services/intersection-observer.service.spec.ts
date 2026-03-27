@@ -65,4 +65,15 @@ describe('IntersectionObserverService', () => {
 
     expect(MockIntersectionObserver.instances).toHaveLength(2);
   });
+
+  it('supports multiple observer registrations for the same element', () => {
+    const root = {} as Element;
+    const element = {} as Element;
+
+    service.observe(element, vi.fn(), { root, rootMargin: '0px' });
+    service.observe(element, vi.fn(), { root, rootMargin: '1200px 0px 1800px 0px' });
+
+    expect(MockIntersectionObserver.instances).toHaveLength(2);
+    expect(service.getObservedCount()).toBe(2);
+  });
 });

@@ -225,7 +225,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   // for events that scroll far off-screen, without removing them from the DOM.
   // This avoids layout shifts that occur with @if/@else DOM swapping.
   private isOffScreen = false;
-  private hasEnteredViewport = false;
+  private hasBeenActuallyVisible = false;
   private lastHeight = 0;
   private virtualizeTimer?: ReturnType<typeof setTimeout>;
 
@@ -1822,6 +1822,10 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   }
 
   private hasLoadedEdit = false;
+  private readonly actualVisibilityObserverOptions = {
+    rootMargin: '0px',
+    threshold: 0.01,
+  } as const;
 
   ngAfterViewInit(): void {
     // Set up IntersectionObserver for lazy loading
@@ -1845,14 +1849,25 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     const eventElement = this.elementRef.nativeElement as HTMLElement;
     const observerRoot = this.resolveObserverRoot(eventElement);
 
+    this.intersectionObserverService.observe(
+      eventElement,
+      (isIntersecting) => {
+        if (isIntersecting) {
+          this.hasBeenActuallyVisible = true;
+        }
+      },
+      {
+        root: observerRoot,
+        ...this.actualVisibilityObserverOptions,
+      }
+    );
+
     // Use shared IntersectionObserver service instead of per-component observer
     this.intersectionObserverService.observe(
       eventElement,
       (isIntersecting) => {
         if (isIntersecting) {
           // --- Entering viewport (or buffer zone) ---
-          this.hasEnteredViewport = true;
-
           // Cancel any pending virtualization — the event is back in view
           if (this.virtualizeTimer) {
             clearTimeout(this.virtualizeTimer);
@@ -1951,11 +1966,11 @@ export class EventComponent implements AfterViewInit, OnDestroy {
             this.hasLoadedInteractions.set(false);
           }
 
-          // Only virtualize if the event has entered the viewport/buffer at least once,
-          // and virtualization is appropriate for this usage context.
-          // Do not couple this to interaction loading: an event can be painted on screen
-          // during fast scroll without ever starting its interaction fetch.
-          if (this.hasEnteredViewport && this.shouldVirtualize()) {
+          // Only virtualize if the event has actually been visible inside the real
+          // scrollport at least once, and virtualization is appropriate for this
+          // usage context. This avoids hiding items that only touched the preload
+          // buffer below the viewport but were never truly seen.
+          if (this.hasBeenActuallyVisible && this.shouldVirtualize()) {
             // Capture height immediately while the DOM is still rendered.
             // Use getBoundingClientRect for sub-pixel accuracy with flex layouts.
             const el = this.elementRef.nativeElement as HTMLElement;

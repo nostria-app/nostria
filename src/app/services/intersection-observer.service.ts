@@ -32,6 +32,7 @@ export interface ObserveOptions {
  * Internal tracking for observed elements
  */
 interface ObservedEntry {
+  observerKey: string;
   callback: IntersectionCallback;
   options: Required<ObserveOptions>;
 }
@@ -84,7 +85,7 @@ export class IntersectionObserverService implements OnDestroy {
    * Map of element -> observed entry data
    * Tracks all observed elements and their callbacks
    */
-  private observedElements = new Map<Element, ObservedEntry>();
+  private observedElements = new Map<Element, ObservedEntry[]>();
   
   /**
    * Default options for observation
@@ -118,14 +119,20 @@ export class IntersectionObserverService implements OnDestroy {
       threshold: options?.threshold ?? this.defaultOptions.threshold
     };
     
+    const observerKey = this.getObserverKey(resolvedOptions);
+
     // Get or create the observer for these options
     const observer = this.getOrCreateObserver(resolvedOptions);
-    
-    // Store the callback for this element
-    this.observedElements.set(element, {
+
+    // Store or replace the callback for this element + observer key
+    const existingEntries = this.observedElements.get(element) ?? [];
+    const filteredEntries = existingEntries.filter(entry => entry.observerKey !== observerKey);
+    filteredEntries.push({
+      observerKey,
       callback,
       options: resolvedOptions
     });
+    this.observedElements.set(element, filteredEntries);
     
     // Start observing
     observer.observe(element);
@@ -136,25 +143,46 @@ export class IntersectionObserverService implements OnDestroy {
    * 
    * @param element The DOM element to stop observing
    */
-  unobserve(element: Element): void {
+  unobserve(element: Element, options?: ObserveOptions): void {
     if (!isPlatformBrowser(this.platformId)) {
       return;
     }
-    
-    const entry = this.observedElements.get(element);
-    if (!entry) {
+
+    const entries = this.observedElements.get(element);
+    if (!entries || entries.length === 0) {
       return;
     }
-    
-    // Get the observer for this element's options
-    const observerKey = this.getObserverKey(entry.options);
-    const observer = this.observers.get(observerKey);
-    
-    if (observer) {
-      observer.unobserve(element);
+
+    if (options) {
+      const resolvedOptions: Required<ObserveOptions> = {
+        root: options.root ?? this.defaultOptions.root,
+        rootMargin: options.rootMargin ?? this.defaultOptions.rootMargin,
+        threshold: options.threshold ?? this.defaultOptions.threshold
+      };
+      const observerKey = this.getObserverKey(resolvedOptions);
+      const remainingEntries = entries.filter(entry => entry.observerKey !== observerKey);
+      const observer = this.observers.get(observerKey);
+
+      if (observer) {
+        observer.unobserve(element);
+      }
+
+      if (remainingEntries.length > 0) {
+        this.observedElements.set(element, remainingEntries);
+      } else {
+        this.observedElements.delete(element);
+      }
+
+      return;
     }
-    
-    // Remove from tracked elements
+
+    for (const entry of entries) {
+      const observer = this.observers.get(entry.observerKey);
+      if (observer) {
+        observer.unobserve(element);
+      }
+    }
+
     this.observedElements.delete(element);
   }
   
@@ -162,14 +190,18 @@ export class IntersectionObserverService implements OnDestroy {
    * Check if an element is currently being observed
    */
   isObserving(element: Element): boolean {
-    return this.observedElements.has(element);
+    return (this.observedElements.get(element)?.length ?? 0) > 0;
   }
   
   /**
    * Get the number of currently observed elements
    */
   getObservedCount(): number {
-    return this.observedElements.size;
+    let count = 0;
+    for (const entries of this.observedElements.values()) {
+      count += entries.length;
+    }
+    return count;
   }
   
   /**
@@ -199,7 +231,7 @@ export class IntersectionObserverService implements OnDestroy {
       // Create observer outside Angular zone to avoid unnecessary change detection
       observer = this.ngZone.runOutsideAngular(() => {
         return new IntersectionObserver(
-          (entries) => this.handleIntersection(entries),
+          (entries) => this.handleIntersection(key, entries),
           {
             root: options.root,
             rootMargin: options.rootMargin,
@@ -242,9 +274,10 @@ export class IntersectionObserverService implements OnDestroy {
   /**
    * Handle intersection changes for all observed elements
    */
-  private handleIntersection(entries: IntersectionObserverEntry[]): void {
+  private handleIntersection(observerKey: string, entries: IntersectionObserverEntry[]): void {
     for (const entry of entries) {
-      const observedEntry = this.observedElements.get(entry.target);
+      const observedEntries = this.observedElements.get(entry.target);
+      const observedEntry = observedEntries?.find(candidate => candidate.observerKey === observerKey);
       if (observedEntry) {
         // Run callback inside Angular zone to trigger change detection
         this.ngZone.run(() => {
