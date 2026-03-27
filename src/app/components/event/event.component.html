@@ -1044,19 +1044,6 @@
         <span class="action-text">Reply</span>
       </div>
 
-      <!-- Share with count (reposts + quotes) -->
-      <div class="action-button share-action" role="button" [class.disabled]="isThreadInteractionBlocked()"
-        [attr.aria-disabled]="isThreadInteractionBlocked()"
-        [attr.tabindex]="requiresSpamConfirmation() || isThreadInteractionBlocked() ? -1 : 0"
-        [matTooltip]="isThreadInteractionBlocked() ? threadInteractionBlockedTooltip() : ''"
-        [matTooltipDisabled]="!isThreadInteractionBlocked()" (click)="openShareDialog($event)">
-        <mat-icon class="action-icon">share</mat-icon>
-        @if (shareCount() > 0) {
-        <span class="action-count">{{ shareCountDisplay() }}</span>
-        }
-        <span class="action-text">Share</span>
-      </div>
-
       @if (xLinkedPost(); as linkedPost) {
       <a class="action-button x-action" [href]="linkedPost.url" target="_blank" rel="noopener noreferrer"
         [attr.tabindex]="requiresSpamConfirmation() ? -1 : 0" matTooltip="View linked X post"
@@ -1079,6 +1066,19 @@
         <span class="action-count">{{ formatZapAmount(totalZapAmount()) }}{{ hasMoreZaps() ? '+' : '' }}</span>
         }
         <span class="action-text">Zap</span>
+      </div>
+
+      <!-- Share with count (reposts + quotes) -->
+      <div class="action-button share-action" role="button" [class.disabled]="isThreadInteractionBlocked()"
+        [attr.aria-disabled]="isThreadInteractionBlocked()"
+        [attr.tabindex]="requiresSpamConfirmation() || isThreadInteractionBlocked() ? -1 : 0"
+        [matTooltip]="isThreadInteractionBlocked() ? threadInteractionBlockedTooltip() : ''"
+        [matTooltipDisabled]="!isThreadInteractionBlocked()" (click)="openShareDialog($event)">
+        <mat-icon class="action-icon">share</mat-icon>
+        @if (shareCount() > 0) {
+        <span class="action-count">{{ shareCountDisplay() }}</span>
+        }
+        <span class="action-text">Share</span>
       </div>
 
       <!-- Bookmark (inline) -->

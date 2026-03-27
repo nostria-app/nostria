@@ -89,15 +89,6 @@
               <span class="action-text">Reply</span>
             </div>
 
-            <div class="action-button share-action" role="button" [attr.tabindex]="requiresSpamConfirmation() ? -1 : 0"
-              (click)="share.emit(); $event.stopPropagation()">
-              <mat-icon class="action-icon">share</mat-icon>
-              @if (shareCount() > 0) {
-              <span class="action-count">{{ shareCount() }}</span>
-              }
-              <span class="action-text">Share</span>
-            </div>
-
             <div class="action-button zap-action" (click)="topZapBtn.onClick($event); $event.stopPropagation()">
               <app-zap-button class="action-icon" #topZapBtn [event]="event()!" [recipientPubkey]="event()!.pubkey"
                 (zapSent)="onZapSent($event)">
@@ -106,6 +97,15 @@
               <span class="action-count">{{ formatZapAmount(totalZapAmount()) }}</span>
               }
               <span class="action-text">Zap</span>
+            </div>
+
+            <div class="action-button share-action" role="button" [attr.tabindex]="requiresSpamConfirmation() ? -1 : 0"
+              (click)="share.emit(); $event.stopPropagation()">
+              <mat-icon class="action-icon">share</mat-icon>
+              @if (shareCount() > 0) {
+              <span class="action-count">{{ shareCount() }}</span>
+              }
+              <span class="action-text">Share</span>
             </div>
 
             <div class="action-button bookmark-action" role="button"
@@ -339,16 +339,6 @@
         <span class="action-text">Reply</span>
       </div>
 
-      <!-- Share with count (reposts + quotes) -->
-      <div class="action-button share-action" role="button" [attr.tabindex]="requiresSpamConfirmation() ? -1 : 0"
-        (click)="share.emit(); $event.stopPropagation()">
-        <mat-icon class="action-icon">share</mat-icon>
-        @if (shareCount() > 0) {
-        <span class="action-count">{{ shareCount() }}</span>
-        }
-        <span class="action-text">Share</span>
-      </div>
-
       <!-- Zap with sats -->
       <div class="action-button zap-action" (click)="zapBtn.onClick($event); $event.stopPropagation()">
         <app-zap-button class="action-icon" #zapBtn [event]="event()!" [recipientPubkey]="event()!.pubkey"
@@ -358,6 +348,16 @@
         <span class="action-count">{{ formatZapAmount(totalZapAmount()) }}</span>
         }
         <span class="action-text">Zap</span>
+      </div>
+
+      <!-- Share with count (reposts + quotes) -->
+      <div class="action-button share-action" role="button" [attr.tabindex]="requiresSpamConfirmation() ? -1 : 0"
+        (click)="share.emit(); $event.stopPropagation()">
+        <mat-icon class="action-icon">share</mat-icon>
+        @if (shareCount() > 0) {
+        <span class="action-count">{{ shareCount() }}</span>
+        }
+        <span class="action-text">Share</span>
       </div>
 
       <!-- Bookmark -->
