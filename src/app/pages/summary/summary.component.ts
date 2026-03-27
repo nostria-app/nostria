@@ -87,6 +87,22 @@ const SUMMARY_CONTENT_TYPES: ContentTypeOption[] = [
   { id: 'videoPosts', label: 'Video Posts', description: 'Video posts and clips', kinds: [21, 22, 34235, 34236], icon: 'movie' },
 ];
 
+const SUMMARY_TIMELINE_KIND_LABELS: Record<number, string> = {
+  0: 'Profile',
+  1: 'Note',
+  6: 'Repost',
+  16: 'Repost',
+  20: 'Photo',
+  21: 'Video',
+  22: 'Video',
+  1111: 'Reply',
+  1222: 'Audio',
+  1244: 'Audio',
+  30023: 'Article',
+  34235: 'Video',
+  34236: 'Video',
+};
+
 // Constants for configurable limits
 const DEFAULT_DAYS_LOOKBACK = 1; // 1 day lookback for first-time users
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
@@ -1111,7 +1127,7 @@ export class SummaryComponent implements OnInit, OnDestroy {
   }
 
   getEventKindLabel(kind: number): string {
-    return getKindLabel(kind);
+    return SUMMARY_TIMELINE_KIND_LABELS[kind] ?? getKindLabel(kind);
   }
 
   // Open article in the right panel
