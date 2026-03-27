@@ -65,6 +65,15 @@ export class UserDataService {
     });
   }
 
+  private buildEventTagCacheKey(
+    keyPrefix: string,
+    options?: Pick<DataOptions, 'includeAccountRelays'> & { limit?: number },
+  ): string {
+    const relayScope = options?.includeAccountRelays ? 'with-account-relays' : 'author-relays-only';
+    const limitScope = options?.limit === undefined ? 'all' : `limit-${options.limit}`;
+    return `${keyPrefix}-${relayScope}-${limitScope}`;
+  }
+
   toRecord(event: Event) {
     return this.utilities.toRecord(event);
   }
@@ -765,7 +774,7 @@ export class UserDataService {
     eventTag: string,
     options?: CacheOptions & DataOptions,
   ): Promise<NostrRecord[]> {
-    const cacheKey = `${kind}-${eventTag}-all`;
+    const cacheKey = this.buildEventTagCacheKey(`${kind}-${eventTag}`, options);
     let events: Event[] = [];
     let records: NostrRecord[] = [];
 
@@ -779,29 +788,29 @@ export class UserDataService {
 
     // Check if this kind is replaceable - if so, we need to fetch from relays for latest version
     const isReplaceable = this.utilities.shouldAlwaysFetchFromRelay(kind);
-    let dbEvents: Event[] = [];
+    const shouldReadDatabase = options?.save && !options?.invalidateCache && !isReplaceable;
 
-    // Load from database first if save option is enabled and event is not replaceable
-    // (replaceable events need latest version from relays)
-    if (options?.save && !options?.invalidateCache && !isReplaceable) {
-      // Use efficient cursor-based query that filters by e-tag without loading all events
-      dbEvents = await this.database.getEventsByKindAndEventTag(kind, eventTag);
+    const dbEventsPromise = shouldReadDatabase
+      ? this.database.getEventsByKindAndEventTag(kind, eventTag)
+      : Promise.resolve([] as Event[]);
 
-      if (dbEvents.length > 0) {
-        console.log(`📀 [DB Cache] Loaded ${dbEvents.length} events from database for kind ${kind} with tag ${eventTag.substring(0, 8)}...`);
-        this.logger.debug(`Found ${dbEvents.length} cached events for non-replaceable kind ${kind} with tag ${eventTag}`);
-      }
-    }
-
-    // Always fetch from relays to get potentially newer events
-    // Database results supplement relay results but don't replace them
-    console.log(`🌐 [Relay] Fetching kind ${kind} with tag ${eventTag.substring(0, 8)}... from relays (db had ${dbEvents.length})`);
-    const relayEvents = await this.userRelayEx.getEventsByKindAndEventTag(
+    // Always fetch from relays to get potentially newer events.
+    // Run relay and database lookups in parallel so slow IndexedDB scans do not delay relay results.
+    const relayEventsPromise = this.userRelayEx.getEventsByKindAndEventTag(
       pubkey,
       kind,
       eventTag,
       options?.includeAccountRelays
     );
+
+    const [dbEvents, relayEvents] = await Promise.all([dbEventsPromise, relayEventsPromise]);
+
+    if (dbEvents.length > 0) {
+      console.log(`📀 [DB Cache] Loaded ${dbEvents.length} events from database for kind ${kind} with tag ${eventTag.substring(0, 8)}...`);
+      this.logger.debug(`Found ${dbEvents.length} cached events for non-replaceable kind ${kind} with tag ${eventTag}`);
+    }
+
+    console.log(`🌐 [Relay] Fetching kind ${kind} with tag ${eventTag.substring(0, 8)}... from relays (db had ${dbEvents.length})`);
 
     // Merge database and relay events, deduplicated by event ID
     const eventMap = new Map<string, Event>();
@@ -854,7 +863,7 @@ export class UserDataService {
     eventTag: string,
     options?: CacheOptions & DataOptions & { limit?: number },
   ): Promise<NostrRecord[]> {
-    const cacheKey = `${kinds.join(',')}-${eventTag}-all`;
+    const cacheKey = this.buildEventTagCacheKey(`${kinds.join(',')}-${eventTag}`, options);
     let events: Event[] = [];
     let records: NostrRecord[] = [];
 
@@ -868,30 +877,30 @@ export class UserDataService {
 
     // Check if any of these kinds are replaceable
     const hasReplaceableKind = kinds.some(kind => this.utilities.shouldAlwaysFetchFromRelay(kind));
-    let dbEvents: Event[] = [];
+    const shouldReadDatabase = options?.save && !options?.invalidateCache && !hasReplaceableKind;
 
-    // Load from database first if save option is enabled and no kinds are replaceable
-    // (replaceable events need latest version from relays)
-    if (options?.save && !options?.invalidateCache && !hasReplaceableKind) {
-      // Use efficient cursor-based query that filters by e-tag without loading all events
-      dbEvents = await this.database.getEventsByKindsAndEventTag(kinds, eventTag);
+    const dbEventsPromise = shouldReadDatabase
+      ? this.database.getEventsByKindsAndEventTag(kinds, eventTag)
+      : Promise.resolve([] as Event[]);
 
-      if (dbEvents.length > 0) {
-        console.log(`📀 [DB Cache] Loaded ${dbEvents.length} events from database for kinds [${kinds.join(',')}] with tag ${eventTag.substring(0, 8)}...`);
-        this.logger.debug(`Found ${dbEvents.length} cached events for non-replaceable kinds [${kinds.join(',')}] with tag ${eventTag}`);
-      }
-    }
-
-    // Always fetch from relays to get potentially newer events
-    // Database results supplement relay results but don't replace them
-    console.log(`🌐 [Relay] Fetching kinds [${kinds.join(',')}] with tag ${eventTag.substring(0, 8)}... from relays (db had ${dbEvents.length})`);
-    const relayEvents = await this.userRelayEx.getEventsByKindsAndEventTag(
+    // Always fetch from relays to get potentially newer events.
+    // Run relay and database lookups in parallel so slow IndexedDB scans do not block interaction counts.
+    const relayEventsPromise = this.userRelayEx.getEventsByKindsAndEventTag(
       pubkey,
       kinds,
       eventTag,
       options?.includeAccountRelays,
       options?.limit
     );
+
+    const [dbEvents, relayEvents] = await Promise.all([dbEventsPromise, relayEventsPromise]);
+
+    if (dbEvents.length > 0) {
+      console.log(`📀 [DB Cache] Loaded ${dbEvents.length} events from database for kinds [${kinds.join(',')}] with tag ${eventTag.substring(0, 8)}...`);
+      this.logger.debug(`Found ${dbEvents.length} cached events for non-replaceable kinds [${kinds.join(',')}] with tag ${eventTag}`);
+    }
+
+    console.log(`🌐 [Relay] Fetching kinds [${kinds.join(',')}] with tag ${eventTag.substring(0, 8)}... from relays (db had ${dbEvents.length})`);
 
     // Merge database and relay events, deduplicated by event ID
     const eventMap = new Map<string, Event>();
@@ -944,7 +953,7 @@ export class UserDataService {
     quoteEventId: string,
     options?: CacheOptions & DataOptions & { limit?: number },
   ): Promise<NostrRecord[]> {
-    const cacheKey = `quotes-${kinds.join(',')}-${quoteEventId}`;
+    const cacheKey = this.buildEventTagCacheKey(`quotes-${kinds.join(',')}-${quoteEventId}`, options);
     let events: Event[] = [];
     let records: NostrRecord[] = [];
 
