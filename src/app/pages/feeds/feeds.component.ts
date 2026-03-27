@@ -493,7 +493,11 @@ export class FeedsComponent implements OnDestroy {
   lastLoadTime = 0;
   LOAD_MORE_COOLDOWN_MS = 250;
   private readonly LOAD_MORE_BUFFER_PX = 1600;
+  private readonly NETWORK_LOAD_BUFFER_PX = 300;
+  private readonly NETWORK_LOAD_SCROLL_DELTA_PX = 500;
   scrollCheckCleanup: (() => void) | null = null;
+  private autoLoadRecheckTimeout: ReturnType<typeof setTimeout> | null = null;
+  private lastNetworkLoadScrollTop = Number.NEGATIVE_INFINITY;
 
   /**
    * Helper method to filter events based on feed-specific settings
@@ -1024,6 +1028,7 @@ export class FeedsComponent implements OnDestroy {
 
           // Reset scroll tracking so auto-load doesn't fire immediately on the new feed
           this.userHasScrolledAway.set(false);
+          this.lastNetworkLoadScrollTop = Number.NEGATIVE_INFINITY;
         });
       }
 
@@ -1138,31 +1143,7 @@ export class FeedsComponent implements OnDestroy {
 
     // Create scroll check function
     const checkScrollPosition = () => {
-      const now = Date.now();
-
-      // Check cooldown for load more
-      if (now - this.lastLoadTime < this.LOAD_MORE_COOLDOWN_MS) {
-        return;
-      }
-
-      const scrollTop = contentWrapper.scrollTop;
-      const scrollHeight = contentWrapper.scrollHeight;
-      const clientHeight = contentWrapper.clientHeight;
-
-      // Trigger well before the bottom so the next batch is rendered in time.
-      const distanceFromBottom = scrollHeight - (scrollTop + clientHeight);
-
-      if (distanceFromBottom < this.LOAD_MORE_BUFFER_PX) {
-        this.lastLoadTime = now;
-
-        // Render more events from cache if available
-        if (this.hasMoreEventsToRender(feed.id)) {
-          this.loadMoreRenderedEvents(feed.id);
-        }
-
-        // Also fetch more events from network if needed
-        this.loadMoreForFeed(feed.id);
-      }
+      void this.maybeAutoLoadMore(feed.id, contentWrapper);
     };
 
     // Throttled scroll handler
@@ -1196,6 +1177,11 @@ export class FeedsComponent implements OnDestroy {
       this.scrollCheckCleanup();
       this.scrollCheckCleanup = null;
     }
+
+    if (this.autoLoadRecheckTimeout) {
+      clearTimeout(this.autoLoadRecheckTimeout);
+      this.autoLoadRecheckTimeout = null;
+    }
   }
 
   /**
@@ -1222,12 +1208,8 @@ export class FeedsComponent implements OnDestroy {
       entries.forEach((entry) => {
         if (entry.isIntersecting) {
           const activeFeed = this.currentScrollableFeed();
-          if (activeFeed && this.hasMoreEventsToRender(activeFeed.id)) {
-            this.loadMoreRenderedEvents(activeFeed.id);
-          }
-
           if (activeFeed) {
-            void this.loadMoreForFeed(activeFeed.id);
+            void this.maybeAutoLoadMore(activeFeed.id, contentWrapper, true);
           }
         }
       });
@@ -1296,7 +1278,6 @@ export class FeedsComponent implements OnDestroy {
     const container = event.target as HTMLElement;
     const scrollTop = container.scrollTop;
     const scrollDelta = scrollTop - this.lastScrollTop;
-    const now = Date.now();
 
     // Scrolling down - hide header after scrolling down past threshold
     if (scrollDelta > 10 && scrollTop > 100) {
@@ -1312,23 +1293,90 @@ export class FeedsComponent implements OnDestroy {
     }
 
     const activeFeed = this.currentScrollableFeed();
-    if (activeFeed && now - this.lastLoadTime >= this.LOAD_MORE_COOLDOWN_MS) {
-      const scrollHeight = container.scrollHeight;
-      const clientHeight = container.clientHeight;
-      const distanceFromBottom = scrollHeight - (scrollTop + clientHeight);
-
-      if (distanceFromBottom < this.LOAD_MORE_BUFFER_PX) {
-        this.lastLoadTime = now;
-
-        if (this.hasMoreEventsToRender(activeFeed.id)) {
-          this.loadMoreRenderedEvents(activeFeed.id);
-        }
-
-        void this.loadMoreForFeed(activeFeed.id);
-      }
+    if (activeFeed) {
+      void this.maybeAutoLoadMore(activeFeed.id, container);
     }
 
     this.lastScrollTop = scrollTop;
+  }
+
+  private getFeedContentContainer(): HTMLElement | null {
+    return document.querySelector('.column-content') as HTMLElement | null;
+  }
+
+  private getDistanceFromBottom(container: HTMLElement): number {
+    return container.scrollHeight - (container.scrollTop + container.clientHeight);
+  }
+
+  private isWithinRenderLoadBuffer(container: HTMLElement): boolean {
+    return this.getDistanceFromBottom(container) < this.LOAD_MORE_BUFFER_PX;
+  }
+
+  private isWithinNetworkLoadBuffer(container: HTMLElement): boolean {
+    return this.getDistanceFromBottom(container) < this.NETWORK_LOAD_BUFFER_PX;
+  }
+
+  private canLoadAnotherNetworkPage(container: HTMLElement): boolean {
+    return Math.abs(container.scrollTop - this.lastNetworkLoadScrollTop) >= this.NETWORK_LOAD_SCROLL_DELTA_PX;
+  }
+
+  private scheduleAutoLoadRecheck(feedId: string): void {
+    if (this.autoLoadRecheckTimeout) {
+      clearTimeout(this.autoLoadRecheckTimeout);
+    }
+
+    this.autoLoadRecheckTimeout = setTimeout(() => {
+      this.autoLoadRecheckTimeout = null;
+
+      const activeFeed = this.currentScrollableFeed();
+      if (!activeFeed || activeFeed.id !== feedId) {
+        return;
+      }
+
+      const container = this.getFeedContentContainer();
+      if (!container || !this.isWithinRenderLoadBuffer(container)) {
+        return;
+      }
+
+      void this.maybeAutoLoadMore(feedId, container, true);
+    }, 75);
+  }
+
+  private async maybeAutoLoadMore(feedId: string, container?: HTMLElement, ignoreCooldown = false): Promise<void> {
+    const contentContainer = container ?? this.getFeedContentContainer();
+    if (!contentContainer) {
+      return;
+    }
+
+    const withinRenderBuffer = this.isWithinRenderLoadBuffer(contentContainer);
+    const withinNetworkBuffer = this.isWithinNetworkLoadBuffer(contentContainer);
+    if (!withinRenderBuffer && !withinNetworkBuffer) {
+      return;
+    }
+
+    const now = Date.now();
+    if (!ignoreCooldown && now - this.lastLoadTime < this.LOAD_MORE_COOLDOWN_MS) {
+      return;
+    }
+
+    this.lastLoadTime = now;
+
+    let advancedRenderedEvents = false;
+    const hasMoreRenderedEvents = this.hasMoreEventsToRender(feedId);
+    if (withinRenderBuffer && hasMoreRenderedEvents) {
+      this.loadMoreRenderedEvents(feedId);
+      advancedRenderedEvents = true;
+    }
+
+    let requestedMoreFromNetwork = false;
+    if (!hasMoreRenderedEvents && withinNetworkBuffer && this.canLoadAnotherNetworkPage(contentContainer)) {
+      this.lastNetworkLoadScrollTop = contentContainer.scrollTop;
+      requestedMoreFromNetwork = await this.loadMoreForFeed(feedId);
+    }
+
+    if (advancedRenderedEvents || requestedMoreFromNetwork) {
+      this.scheduleAutoLoadRecheck(feedId);
+    }
   }
 
   /**
@@ -1508,7 +1556,7 @@ export class FeedsComponent implements OnDestroy {
   /**
    * Load more content for a specific feed
    */
-  private async loadMoreForFeed(feedId: string) {
+  private async loadMoreForFeed(feedId: string): Promise<boolean> {
     try {
       // Check if already loading or no more content
       const isLoadingSignal = this.feedService.getColumnLoadingState(feedId);
@@ -1516,18 +1564,20 @@ export class FeedsComponent implements OnDestroy {
 
       // Guard: Ensure signals exist and check their values
       if (!isLoadingSignal || !hasMoreSignal) {
-        return;
+        return false;
       }
 
       // Guard: Don't load if already loading or no more data available
       if (isLoadingSignal() || !hasMoreSignal()) {
-        return;
+        return false;
       }
 
       this.logger.debug(`Loading more content for feed: ${feedId}`);
       await this.feedService.loadMoreEventsForColumn(feedId);
+      return true;
     } catch (error) {
       this.logger.error(`Failed to load more content for feed ${feedId}:`, error);
+      return false;
     }
   }
 
