@@ -11,6 +11,11 @@ export type IntersectionCallback = (isIntersecting: boolean, entry: Intersection
  */
 export interface ObserveOptions {
   /**
+   * Scroll root for the observer (default: null = browser viewport)
+   */
+  root?: Element | Document | null;
+
+  /**
    * Root margin for the observer (default: '200px')
    * Positive values trigger observation before element enters viewport
    */
@@ -37,7 +42,7 @@ interface ObservedEntry {
  * 
  * Instead of each component creating its own IntersectionObserver (which is expensive
  * when you have hundreds of components), this service creates a small number of
- * shared observers grouped by their options (rootMargin + threshold).
+ * shared observers grouped by their options (root + rootMargin + threshold).
  * 
  * Usage:
  * ```typescript
@@ -66,12 +71,14 @@ interface ObservedEntry {
 export class IntersectionObserverService implements OnDestroy {
   private readonly platformId = inject(PLATFORM_ID);
   private readonly ngZone = inject(NgZone);
+  private nextRootId = 0;
   
   /**
    * Map of observer key -> IntersectionObserver
-   * Key format: `${rootMargin}:${threshold}`
+   * Key format: `${rootId}:${rootMargin}:${threshold}`
    */
   private observers = new Map<string, IntersectionObserver>();
+  private rootIds = new WeakMap<object, number>();
   
   /**
    * Map of element -> observed entry data
@@ -83,6 +90,7 @@ export class IntersectionObserverService implements OnDestroy {
    * Default options for observation
    */
   private readonly defaultOptions: Required<ObserveOptions> = {
+    root: null,
     rootMargin: '200px',
     threshold: 0.01
   };
@@ -105,6 +113,7 @@ export class IntersectionObserverService implements OnDestroy {
     
     // Merge with defaults
     const resolvedOptions: Required<ObserveOptions> = {
+      root: options?.root ?? this.defaultOptions.root,
       rootMargin: options?.rootMargin ?? this.defaultOptions.rootMargin,
       threshold: options?.threshold ?? this.defaultOptions.threshold
     };
@@ -192,7 +201,7 @@ export class IntersectionObserverService implements OnDestroy {
         return new IntersectionObserver(
           (entries) => this.handleIntersection(entries),
           {
-            root: null, // Use viewport as root
+            root: options.root,
             rootMargin: options.rootMargin,
             threshold: options.threshold
           }
@@ -209,7 +218,25 @@ export class IntersectionObserverService implements OnDestroy {
    * Generate a unique key for an observer based on its options
    */
   private getObserverKey(options: Required<ObserveOptions>): string {
-    return `${options.rootMargin}:${options.threshold}`;
+    return `${this.getRootKey(options.root)}:${options.rootMargin}:${options.threshold}`;
+  }
+
+  /**
+   * Generate a stable key for an observer root.
+   */
+  private getRootKey(root: Element | Document | null): string {
+    if (!root) {
+      return 'viewport';
+    }
+
+    const existingId = this.rootIds.get(root);
+    if (existingId !== undefined) {
+      return `root-${existingId}`;
+    }
+
+    const newId = ++this.nextRootId;
+    this.rootIds.set(root, newId);
+    return `root-${newId}`;
   }
   
   /**

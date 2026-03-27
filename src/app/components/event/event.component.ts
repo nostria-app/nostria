@@ -1841,9 +1841,12 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     // Unregister from shared observer first (in case this is a re-setup)
     this.intersectionObserverService.unobserve(this.elementRef.nativeElement);
 
+    const eventElement = this.elementRef.nativeElement as HTMLElement;
+    const observerRoot = this.resolveObserverRoot(eventElement);
+
     // Use shared IntersectionObserver service instead of per-component observer
     this.intersectionObserverService.observe(
-      this.elementRef.nativeElement,
+      eventElement,
       (isIntersecting) => {
         if (isIntersecting) {
           // --- Entering viewport (or buffer zone) ---
@@ -1981,10 +1984,19 @@ export class EventComponent implements AfterViewInit, OnDestroy {
         }
       },
       {
-        rootMargin: '600px', // Large buffer: start rendering 600px before entering viewport
+        root: observerRoot,
+        rootMargin: observerRoot ? '900px 0px 1400px 0px' : '600px',
         threshold: 0.01, // Trigger when at least 1% is visible
       }
     );
+  }
+
+  private resolveObserverRoot(element: HTMLElement): HTMLElement | null {
+    if (!this.inFeedsPanel()) {
+      return null;
+    }
+
+    return element.closest('.columns-container');
   }
 
   /**
