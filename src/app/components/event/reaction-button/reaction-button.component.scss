@@ -552,6 +552,76 @@
   }
 }
 
+// Touch quick-select emoji bar
+.touch-quick-select-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  // Transparent backdrop to capture pointer events
+}
+
+.touch-quick-select-bar {
+  position: absolute;
+  z-index: 1001;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 6px;
+  background: var(--mat-sys-surface-container-high, #2c2c2c);
+  border-radius: 28px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3), 0 0 0 1px var(--mat-sys-outline-variant, rgba(255, 255, 255, 0.1));
+  pointer-events: none; // Pointer events go through backdrop
+  opacity: 0;
+  transform: scale(0.6) translateY(8px);
+  transform-origin: center bottom;
+  transition: opacity 0.2s cubic-bezier(0.2, 0, 0, 1),
+              transform 0.2s cubic-bezier(0.2, 0, 0, 1);
+
+  &.animating-in {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.touch-quick-emoji {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  font-size: 1.5rem;
+  border-radius: 50%;
+  transition: transform 0.15s cubic-bezier(0.2, 0, 0, 1),
+              background-color 0.15s ease;
+  user-select: none;
+  -webkit-user-select: none;
+
+  &.highlighted {
+    background: var(--mat-sys-primary-container, rgba(255, 255, 255, 0.15));
+    z-index: 1;
+  }
+
+  .touch-quick-emoji-img {
+    width: 28px;
+    height: 28px;
+    object-fit: contain;
+    pointer-events: none;
+  }
+
+  &.touch-quick-more {
+    mat-icon {
+      font-size: 22px;
+      width: 22px;
+      height: 22px;
+      color: var(--mat-sys-on-surface-variant, #aaa);
+    }
+
+    &.highlighted mat-icon {
+      color: var(--mat-sys-on-primary-container, #fff);
+    }
+  }
+}
+
 // Signing error dialog content
 .signing-error-content {
   display: flex;

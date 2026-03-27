@@ -1,4 +1,4 @@
-import { Component, computed, effect, inject, input, output, signal, untracked, viewChild, ChangeDetectionStrategy, PLATFORM_ID } from '@angular/core';
+import { Component, computed, effect, ElementRef, inject, input, output, signal, untracked, viewChild, ChangeDetectionStrategy, PLATFORM_ID } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -304,6 +304,7 @@ export class ReactionButtonComponent {
   private readonly customDialog = inject(CustomDialogService);
   private readonly platformId = inject(PLATFORM_ID);
   private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
+  private readonly elRef = inject(ElementRef);
 
   // Menu trigger references to close the menu after reaction
   private readonly menuTrigger = viewChild<MatMenuTrigger>('menuTrigger');
@@ -364,25 +365,36 @@ export class ReactionButtonComponent {
 
   /**
    * Handle pointer down for long-press detection.
-   * Starts a timer; if held long enough, opens the emoji picker menu.
+   * Starts a timer; if held long enough, opens the emoji picker (or touch quick-select on touch).
    */
-  onPointerDown(): void {
+  onPointerDown(event: PointerEvent): void {
     if (!this.isBrowser || this.disabled()) return;
     this.longPressTriggered = false;
+    const isTouch = event.pointerType === 'touch';
+    const pointerId = event.pointerId;
     this.longPressTimer = setTimeout(() => {
       this.longPressTriggered = true;
-      this.openMenu();
+      if (isTouch) {
+        this.openTouchQuickSelect(pointerId);
+      } else {
+        this.openMenu();
+      }
     }, this.LONG_PRESS_DURATION);
   }
 
   /**
    * Handle pointer up: if long-press was not triggered, send the default reaction.
+   * If touch quick-select is active, delegate to its handler.
    */
   onPointerUp(event: PointerEvent): void {
     if (!this.isBrowser || this.disabled()) return;
     if (this.longPressTimer) {
       clearTimeout(this.longPressTimer);
       this.longPressTimer = null;
+    }
+    // If touch quick-select is active, the global pointerup listener handles it
+    if (this.touchQuickSelectVisible()) {
+      return;
     }
     if (!this.longPressTriggered) {
       event.preventDefault();
@@ -400,6 +412,155 @@ export class ReactionButtonComponent {
       clearTimeout(this.longPressTimer);
       this.longPressTimer = null;
     }
+    // Don't reset longPressTriggered if touch quick-select is active
+    if (!this.touchQuickSelectVisible()) {
+      this.longPressTriggered = false;
+    }
+  }
+
+  // --- Touch quick-select emoji bar ---
+  touchQuickSelectVisible = signal(false);
+  touchQuickSelectAnimating = signal(false);
+  touchQuickSelectIndex = signal<number>(-1);
+  touchQuickSelectLeft = signal(0);
+  touchQuickSelectBottom = signal(0);
+  private touchQuickSelectPointerId: number | null = null;
+  /** Cached bar screen-space rect so we don't depend on DOM queries during move. */
+  private touchQuickBarScreenLeft = 0;
+  private touchQuickBarScreenTop = 0;
+  private touchQuickBarScreenWidth = 0;
+  private touchQuickBarItemCount = 0;
+  /** Bound listener refs for cleanup. */
+  private boundTouchMove: ((e: PointerEvent) => void) | null = null;
+  private boundTouchUp: ((e: PointerEvent) => void) | null = null;
+  private boundTouchCancel: ((e: PointerEvent) => void) | null = null;
+
+  /** Items shown in the touch quick-select bar (recent emojis or popular fallbacks). */
+  touchQuickSelectItems = computed<{ emoji: string; url?: string }[]>(() => {
+    const recent = this.recentEmojis();
+    if (recent.length > 0) {
+      return recent.slice(0, 6).map(r => ({ emoji: r.emoji, url: r.url }));
+    }
+    return this.quickReactions.map(e => ({ emoji: e }));
+  });
+
+  /**
+   * Open the touch quick-select bar above the button.
+   * Called instead of openMenu() when pointer type is touch.
+   */
+  private openTouchQuickSelect(pointerId: number): void {
+    this.touchQuickSelectPointerId = pointerId;
+    this.touchQuickSelectIndex.set(-1);
+
+    const itemCount = this.touchQuickSelectItems().length + 1; // +1 for "+" button
+    this.touchQuickBarItemCount = itemCount;
+    const barWidth = itemCount * 48 + 12; // ~48px per item + padding
+
+    // Position the bar centered above the button
+    const container = this.elRef.nativeElement.querySelector('.reaction-container') as HTMLElement | null;
+    const buttonEl = this.elRef.nativeElement.querySelector('button') as HTMLElement | null;
+    if (buttonEl && container) {
+      const buttonRect = buttonEl.getBoundingClientRect();
+      const containerRect = container.getBoundingClientRect();
+      // Center bar over the button
+      let left = buttonRect.left + buttonRect.width / 2 - containerRect.left - barWidth / 2;
+      // Clamp so bar doesn't go off screen
+      const leftEdge = -containerRect.left + 8;
+      const rightEdge = window.innerWidth - containerRect.left - barWidth - 8;
+      left = Math.max(leftEdge, Math.min(rightEdge, left));
+      this.touchQuickSelectLeft.set(left);
+      this.touchQuickSelectBottom.set(buttonRect.height + 8);
+
+      // Cache the bar's expected screen position for hit-testing during moves
+      this.touchQuickBarScreenLeft = containerRect.left + left;
+      this.touchQuickBarScreenTop = buttonRect.top - buttonRect.height - 8 - 60; // generous top bound
+      this.touchQuickBarScreenWidth = barWidth;
+    }
+
+    this.touchQuickSelectVisible.set(true);
+    // Haptic feedback when bar appears
+    navigator.vibrate?.(15);
+
+    // Attach global listeners so we get events regardless of which element the touch is over.
+    this.boundTouchMove = (e: PointerEvent) => {
+      this.onTouchQuickSelectMove(e);
+    };
+    this.boundTouchUp = (e: PointerEvent) => this.onTouchQuickSelectUp(e);
+    this.boundTouchCancel = () => this.closeTouchQuickSelect();
+    document.addEventListener('pointermove', this.boundTouchMove);
+    document.addEventListener('pointerup', this.boundTouchUp);
+    document.addEventListener('pointercancel', this.boundTouchCancel);
+
+    // Trigger animation on next frame
+    requestAnimationFrame(() => {
+      this.touchQuickSelectAnimating.set(true);
+    });
+  }
+
+  /** Track finger movement and highlight the emoji under the finger. */
+  onTouchQuickSelectMove(event: PointerEvent): void {
+    if (!this.touchQuickSelectVisible()) return;
+
+    // Use cached screen-space position instead of querying the DOM
+    const x = event.clientX - this.touchQuickBarScreenLeft;
+    const itemCount = this.touchQuickBarItemCount;
+    const barWidth = this.touchQuickBarScreenWidth;
+    const itemWidth = barWidth / itemCount;
+
+    // Allow generous vertical tolerance
+    if (x < -20 || x > barWidth + 20) {
+      this.touchQuickSelectIndex.set(-1);
+      return;
+    }
+
+    const clamped = Math.max(0, Math.min(x, barWidth - 1));
+    const index = Math.min(Math.floor(clamped / itemWidth), itemCount - 1);
+    const prev = this.touchQuickSelectIndex();
+    if (index !== prev) {
+      this.touchQuickSelectIndex.set(index);
+      navigator.vibrate?.(8);
+    }
+  }
+
+  /** Handle finger release — send the selected reaction or open full picker. */
+  onTouchQuickSelectUp(_event: PointerEvent): void {
+    const selectedIndex = this.touchQuickSelectIndex();
+    const items = this.touchQuickSelectItems();
+
+    this.closeTouchQuickSelect();
+
+    if (selectedIndex >= 0 && selectedIndex < items.length) {
+      // Selected an emoji — send it as reaction
+      this.addReaction(items[selectedIndex].emoji, false);
+    } else if (selectedIndex === items.length) {
+      // Selected the "+" button — open full picker
+      setTimeout(() => this.openMenu(), 50);
+    }
+    // If selectedIndex is -1 (no selection), do nothing
+  }
+
+  /** Cancel the touch quick-select without selecting. */
+  onTouchQuickSelectCancel(): void {
+    this.closeTouchQuickSelect();
+  }
+
+  private closeTouchQuickSelect(): void {
+    // Remove global listeners
+    if (this.boundTouchMove) {
+      document.removeEventListener('pointermove', this.boundTouchMove);
+      this.boundTouchMove = null;
+    }
+    if (this.boundTouchUp) {
+      document.removeEventListener('pointerup', this.boundTouchUp);
+      this.boundTouchUp = null;
+    }
+    if (this.boundTouchCancel) {
+      document.removeEventListener('pointercancel', this.boundTouchCancel);
+      this.boundTouchCancel = null;
+    }
+    this.touchQuickSelectVisible.set(false);
+    this.touchQuickSelectAnimating.set(false);
+    this.touchQuickSelectPointerId = null;
     this.longPressTriggered = false;
   }
 

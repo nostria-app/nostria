@@ -2,8 +2,9 @@
   @if (view() === 'icon') {
   <!-- Icon view: single-tap sends default reaction, long-press opens picker -->
   <button mat-icon-button [class.active]="!!userReaction()" [class.reacted]="!!userReaction()"
-    [disabled]="isLoadingReactions() || disabled()" (pointerdown)="onPointerDown()" (pointerup)="onPointerUp($event)"
-    (pointerleave)="onPointerLeave()" (click)="$event.stopPropagation(); $event.preventDefault()">
+    [disabled]="isLoadingReactions() || disabled()" (pointerdown)="onPointerDown($event)" (pointerup)="onPointerUp($event)"
+    (pointerleave)="onPointerLeave()" (contextmenu)="$event.preventDefault()"
+    (click)="$event.stopPropagation(); $event.preventDefault()" style="touch-action: none">
     @if (userReaction()) {
     @if (getCustomEmojiUrl(userReaction()!.event)) {
     <app-custom-emoji [src]="getCustomEmojiUrl(userReaction()!.event)!" [alt]="userReaction()!.event.content"
@@ -15,6 +16,28 @@
     <mat-icon>favorite_border</mat-icon>
     }
   </button>
+
+  <!-- Touch quick-select emoji bar (shown on long-press for touch devices) -->
+  @if (touchQuickSelectVisible()) {
+  <div class="touch-quick-select-backdrop"></div>
+  <div class="touch-quick-select-bar" [class.animating-in]="touchQuickSelectAnimating()"
+    [style.left.px]="touchQuickSelectLeft()" [style.bottom.px]="touchQuickSelectBottom()">
+    @for (item of touchQuickSelectItems(); track item.emoji; let i = $index) {
+    <div class="touch-quick-emoji" [class.highlighted]="touchQuickSelectIndex() === i"
+      [style.transform]="touchQuickSelectIndex() === i ? 'scale(1.65) translateY(-10px)' : 'scale(1)'">
+      @if (item.url) {
+      <img [src]="item.url" [alt]="item.emoji" class="touch-quick-emoji-img">
+      } @else {
+      {{ item.emoji }}
+      }
+    </div>
+    }
+    <div class="touch-quick-emoji touch-quick-more" [class.highlighted]="touchQuickSelectIndex() === touchQuickSelectItems().length"
+      [style.transform]="touchQuickSelectIndex() === touchQuickSelectItems().length ? 'scale(1.65) translateY(-10px)' : 'scale(1)'">
+      <mat-icon>add</mat-icon>
+    </div>
+  </div>
+  }
 
   <!-- Hidden menu trigger for programmatic opening -->
   <div class="hidden-menu-trigger" [matMenuTriggerFor]="reactionMenu" #menuTrigger="matMenuTrigger"></div>
