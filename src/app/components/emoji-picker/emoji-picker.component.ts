@@ -184,7 +184,10 @@ interface EmojiSectionNavItem {
           }
         </div>
 
-        <div class="emoji-section-nav">
+        <div class="emoji-section-nav" (wheel)="onSectionNavWheel($event)"
+          (pointerdown)="startSectionNavDrag($event)" (pointermove)="moveSectionNavDrag($event)"
+          (pointerup)="endSectionNavDrag($event)" (pointercancel)="endSectionNavDrag($event)"
+          (pointerleave)="endSectionNavDrag()">
           @for (section of sectionNavItems(); track section.id) {
           <button class="section-nav-btn" type="button" [matTooltip]="section.label"
             [attr.aria-label]="section.label" (click)="scrollToSection(section.id); $event.stopPropagation()">
@@ -345,9 +348,11 @@ interface EmojiSectionNavItem {
     }
 
     .emoji-grid-container {
+      flex: 1;
+      min-height: 0;
       overflow-y: auto;
       overflow-x: hidden;
-      max-height: 280px;
+      max-height: none;
       padding: 4px;
       scrollbar-gutter: stable both-edges;
       scrollbar-width: auto;
@@ -362,9 +367,11 @@ interface EmojiSectionNavItem {
     }
 
     .emoji-list-scroll {
+      flex: 1;
+      min-height: 0;
       overflow-y: auto;
       overflow-x: hidden;
-      max-height: 280px;
+      max-height: none;
       padding: 4px;
       scrollbar-gutter: stable both-edges;
       scrollbar-width: auto;
@@ -396,13 +403,24 @@ interface EmojiSectionNavItem {
       display: flex;
       align-items: center;
       gap: 4px;
+      width: 100%;
+      min-width: 0;
       padding: 6px 4px 4px;
       border-top: 1px solid var(--mat-sys-outline-variant);
       background: var(--mat-sys-surface-container-low);
       flex-shrink: 0;
       overflow-x: auto;
       overflow-y: hidden;
+      overscroll-behavior-x: contain;
+      -webkit-overflow-scrolling: touch;
       scrollbar-width: none;
+      touch-action: pan-x;
+      scroll-snap-type: x proximity;
+      cursor: grab;
+
+      &:active {
+        cursor: grabbing;
+      }
 
       &::-webkit-scrollbar {
         display: none;
@@ -416,6 +434,7 @@ interface EmojiSectionNavItem {
       flex: 0 0 auto;
       width: 30px;
       height: 30px;
+      scroll-snap-align: center;
       border: none;
       border-radius: 8px;
       background: transparent;
@@ -625,6 +644,11 @@ export class EmojiPickerComponent {
   gifSelected = output<string>();
 
   private readonly emojiScrollContainer = viewChild<ElementRef<HTMLDivElement>>('emojiScrollContainer');
+  private sectionNavDragStrip: HTMLDivElement | null = null;
+  private sectionNavPointerId: number | null = null;
+  private sectionNavDragStartX = 0;
+  private sectionNavStartScrollLeft = 0;
+  private sectionNavDragMoved = false;
 
   activeTab = signal<'emoji' | 'gifs'>('emoji');
 
@@ -749,6 +773,11 @@ export class EmojiPickerComponent {
   }
 
   scrollToSection(sectionId: string): void {
+    if (this.sectionNavDragMoved) {
+      this.sectionNavDragMoved = false;
+      return;
+    }
+
     const scrollContainer = this.emojiScrollContainer()?.nativeElement;
     if (!scrollContainer) return;
 
@@ -757,6 +786,52 @@ export class EmojiPickerComponent {
 
     const offsetTop = section.offsetTop - scrollContainer.offsetTop - 4;
     scrollContainer.scrollTo({ top: Math.max(0, offsetTop), behavior: 'smooth' });
+  }
+
+  onSectionNavWheel(event: WheelEvent): void {
+    const nav = event.currentTarget as HTMLDivElement | null;
+    if (!nav || Math.abs(event.deltaY) <= Math.abs(event.deltaX)) return;
+
+    nav.scrollBy({ left: event.deltaY, behavior: 'auto' });
+    event.preventDefault();
+  }
+
+  startSectionNavDrag(event: PointerEvent): void {
+    if (event.pointerType !== 'mouse') return;
+
+    const nav = event.currentTarget as HTMLDivElement | null;
+    if (!nav) return;
+
+    this.sectionNavDragStrip = nav;
+    this.sectionNavPointerId = event.pointerId;
+    this.sectionNavDragStartX = event.clientX;
+    this.sectionNavStartScrollLeft = nav.scrollLeft;
+    this.sectionNavDragMoved = false;
+    nav.setPointerCapture(event.pointerId);
+  }
+
+  moveSectionNavDrag(event: PointerEvent): void {
+    if (!this.sectionNavDragStrip || this.sectionNavPointerId !== event.pointerId) return;
+
+    const deltaX = event.clientX - this.sectionNavDragStartX;
+    if (Math.abs(deltaX) > 4) {
+      this.sectionNavDragMoved = true;
+    }
+
+    this.sectionNavDragStrip.scrollLeft = this.sectionNavStartScrollLeft - deltaX;
+    event.preventDefault();
+  }
+
+  endSectionNavDrag(event?: PointerEvent): void {
+    if (this.sectionNavDragStrip && event && this.sectionNavPointerId === event.pointerId) {
+      this.sectionNavDragStrip.releasePointerCapture(event.pointerId);
+    }
+
+    this.sectionNavDragStrip = null;
+    this.sectionNavPointerId = null;
+    setTimeout(() => {
+      this.sectionNavDragMoved = false;
+    }, 0);
   }
 
   onGifSelected(url: string): void {

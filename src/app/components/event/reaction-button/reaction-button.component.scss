@@ -223,9 +223,6 @@
   overflow-y: auto;
   overflow-x: hidden;
   padding: 8px 8px 8px 12px;
-  scrollbar-gutter: stable both-edges;
-  scrollbar-width: auto;
-  scrollbar-color: var(--scrollbar-thumb, var(--mat-sys-outline)) var(--scrollbar-track, transparent);
 
   &::-webkit-scrollbar {
     width: 10px;
@@ -242,6 +239,56 @@
     &:hover {
       background: var(--scrollbar-thumb-hover, var(--mat-sys-on-surface-variant));
     }
+  }
+}
+
+.emoji-section-nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  min-width: 0;
+  padding: 6px 4px 4px;
+  border-top: 1px solid var(--mat-sys-outline-variant);
+  background: var(--mat-sys-surface-container-low);
+  flex-shrink: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  touch-action: pan-x;
+  scroll-snap-type: x proximity;
+  cursor: grab;
+
+  &:active {
+    cursor: grabbing;
+  }
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+.section-nav-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  scroll-snap-align: center;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: background-color 0.15s ease, transform 0.15s ease;
+
+  &:hover {
+    background: var(--mat-sys-surface-container-high);
+  }
+
+  &:active {
+    transform: scale(0.96);
   }
 }
 
@@ -394,7 +441,6 @@
       .mat-mdc-tab-labels {
         overflow-x: auto;
         overflow-y: hidden;
-        scrollbar-width: none; // Hide scrollbar on Firefox
 
         &::-webkit-scrollbar {
           display: none; // Hide scrollbar on Chrome/Safari

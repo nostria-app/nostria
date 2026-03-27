@@ -51,8 +51,8 @@
             [class.selected]="userReaction()?.event?.content === ':' + emoji.shortcode + ':'"
             (click)="addReaction(':' + emoji.shortcode + ':'); $event.stopPropagation()"
             [disabled]="isLoadingReactions()" [matTooltip]="emoji.shortcode" [attr.aria-label]="emoji.shortcode"
-            [attr.title]="emoji.shortcode">
-            <img [src]="emoji.url" [alt]="emoji.shortcode" [title]="emoji.shortcode" class="custom-emoji-img">
+            title="{{ emoji.shortcode }}">
+            <img [src]="emoji.url" alt="{{ emoji.shortcode }}" title="{{ emoji.shortcode }}" class="custom-emoji-img">
           </button>
           }
         </div>
@@ -61,8 +61,8 @@
         }
       </div>
       } @else {
-      <div class="emoji-list-scroll">
-        <div class="emoji-section-block">
+      <div class="emoji-list-scroll" #emojiScrollContainer>
+        <div class="emoji-section-block" data-section-id="recent">
           <div class="section-title">Recent</div>
           @if (recentEmojis().length > 0) {
           <div class="emoji-grid">
@@ -70,12 +70,13 @@
             <button mat-icon-button class="emoji-button"
               [class.selected]="userReaction()?.event?.content === recent.emoji"
               (click)="addReaction(recent.emoji); $event.stopPropagation()" [disabled]="isLoadingReactions()"
-              [matTooltip]="recent.emoji.startsWith(':') ? recent.emoji.slice(1, -1) : ''">
+              [matTooltip]="recent.emoji.startsWith(':') ? recent.emoji.slice(1, -1) : ''"
+              [attr.aria-label]="recent.emoji" title="{{ recent.emoji }}">
               @if (recent.url) {
-              <img [src]="recent.url" [alt]="recent.emoji" [title]="recent.emoji" class="custom-emoji-img">
+              <img [src]="recent.url" alt="{{ recent.emoji }}" title="{{ recent.emoji }}" class="custom-emoji-img">
               } @else if (getCustomEmojiUrlByShortcode(recent.emoji)) {
-              <img [src]="getCustomEmojiUrlByShortcode(recent.emoji)!" [alt]="recent.emoji" [title]="recent.emoji"
-                class="custom-emoji-img">
+              <img [src]="getCustomEmojiUrlByShortcode(recent.emoji)!" alt="{{ recent.emoji }}"
+                title="{{ recent.emoji }}" class="custom-emoji-img">
               } @else {
               {{ recent.emoji }}
               }
@@ -105,7 +106,7 @@
         </div>
 
         @if (emojiSets().length > 0) {
-        <div class="emoji-section-block">
+        <div class="emoji-section-block" data-section-id="custom-emojis">
           <div class="section-title">Custom Emojis</div>
           @for (set of emojiSets(); track set.id) {
           <div class="emoji-set-section">
@@ -116,8 +117,9 @@
                 [class.selected]="userReaction()?.event?.content === ':' + emoji.shortcode + ':'"
                 (click)="addReaction(':' + emoji.shortcode + ':'); $event.stopPropagation()"
                 [disabled]="isLoadingReactions()" [matTooltip]="emoji.shortcode" [attr.aria-label]="emoji.shortcode"
-                [attr.title]="emoji.shortcode">
-                <img [src]="emoji.url" [alt]="emoji.shortcode" [title]="emoji.shortcode" class="custom-emoji-img">
+                title="{{ emoji.shortcode }}">
+                <img [src]="emoji.url" alt="{{ emoji.shortcode }}" title="{{ emoji.shortcode }}"
+                  class="custom-emoji-img">
               </button>
               }
             </div>
@@ -127,7 +129,7 @@
         }
 
         @for (category of emojiCategories; track category.id) {
-        <div class="emoji-section-block">
+        <div class="emoji-section-block" [attr.data-section-id]="category.id">
           <div class="section-title">{{ category.label }}</div>
           <div class="emoji-grid">
             @for (emoji of category.emojis; track emoji) {
@@ -146,6 +148,18 @@
             <span i18n="@@reaction-button.get-more-emojis">Get more emojis</span>
           </a>
         </div>
+      </div>
+
+      <div class="emoji-section-nav" (wheel)="onReactionSectionNavWheel($event)"
+        (pointerdown)="startReactionSectionNavDrag($event)" (pointermove)="moveReactionSectionNavDrag($event)"
+        (pointerup)="endReactionSectionNavDrag($event)" (pointercancel)="endReactionSectionNavDrag($event)"
+        (pointerleave)="endReactionSectionNavDrag()">
+        @for (section of sectionNavItems(); track section.id) {
+        <button class="section-nav-btn" type="button" [matTooltip]="section.label" [attr.aria-label]="section.label"
+          (click)="scrollToReactionSection(emojiScrollContainer, section.id); $event.stopPropagation()">
+          {{ section.icon }}
+        </button>
+        }
       </div>
       }
     </div>
@@ -205,8 +219,8 @@
               [class.selected]="userReaction()?.event?.content === ':' + emoji.shortcode + ':'"
               (click)="addReaction(':' + emoji.shortcode + ':'); $event.stopPropagation()"
               [disabled]="isLoadingReactions()" [matTooltip]="emoji.shortcode" [attr.aria-label]="emoji.shortcode"
-              [attr.title]="emoji.shortcode">
-              <img [src]="emoji.url" [alt]="emoji.shortcode" [title]="emoji.shortcode" class="custom-emoji-img">
+              title="{{ emoji.shortcode }}">
+              <img [src]="emoji.url" alt="{{ emoji.shortcode }}" title="{{ emoji.shortcode }}" class="custom-emoji-img">
             </button>
             }
           </div>
@@ -215,8 +229,8 @@
           }
         </div>
         } @else {
-        <div class="emoji-list-scroll">
-          <div class="emoji-section-block">
+        <div class="emoji-list-scroll" #emojiScrollContainerFull>
+          <div class="emoji-section-block" data-section-id="recent">
             <div class="section-title">Recent</div>
             @if (recentEmojis().length > 0) {
             <div class="emoji-grid">
@@ -224,12 +238,13 @@
               <button mat-icon-button class="emoji-button"
                 [class.selected]="userReaction()?.event?.content === recent.emoji"
                 (click)="addReaction(recent.emoji); $event.stopPropagation()" [disabled]="isLoadingReactions()"
-                [matTooltip]="recent.emoji.startsWith(':') ? recent.emoji.slice(1, -1) : ''">
+                [matTooltip]="recent.emoji.startsWith(':') ? recent.emoji.slice(1, -1) : ''"
+                [attr.aria-label]="recent.emoji" title="{{ recent.emoji }}">
                 @if (recent.url) {
-                <img [src]="recent.url" [alt]="recent.emoji" [title]="recent.emoji" class="custom-emoji-img">
+                <img [src]="recent.url" alt="{{ recent.emoji }}" title="{{ recent.emoji }}" class="custom-emoji-img">
                 } @else if (getCustomEmojiUrlByShortcode(recent.emoji)) {
-                <img [src]="getCustomEmojiUrlByShortcode(recent.emoji)!" [alt]="recent.emoji" [title]="recent.emoji"
-                  class="custom-emoji-img">
+                <img [src]="getCustomEmojiUrlByShortcode(recent.emoji)!" alt="{{ recent.emoji }}"
+                  title="{{ recent.emoji }}" class="custom-emoji-img">
                 } @else {
                 {{ recent.emoji }}
                 }
@@ -259,7 +274,7 @@
           </div>
 
           @if (emojiSets().length > 0) {
-          <div class="emoji-section-block">
+          <div class="emoji-section-block" data-section-id="custom-emojis">
             <div class="section-title">Custom Emojis</div>
             @for (set of emojiSets(); track set.id) {
             <div class="emoji-set-section">
@@ -270,8 +285,9 @@
                   [class.selected]="userReaction()?.event?.content === ':' + emoji.shortcode + ':'"
                   (click)="addReaction(':' + emoji.shortcode + ':'); $event.stopPropagation()"
                   [disabled]="isLoadingReactions()" [matTooltip]="emoji.shortcode" [attr.aria-label]="emoji.shortcode"
-                  [attr.title]="emoji.shortcode">
-                  <img [src]="emoji.url" [alt]="emoji.shortcode" [title]="emoji.shortcode" class="custom-emoji-img">
+                  title="{{ emoji.shortcode }}">
+                  <img [src]="emoji.url" alt="{{ emoji.shortcode }}" title="{{ emoji.shortcode }}"
+                    class="custom-emoji-img">
                 </button>
                 }
               </div>
@@ -281,7 +297,7 @@
           }
 
           @for (category of emojiCategories; track category.id) {
-          <div class="emoji-section-block">
+          <div class="emoji-section-block" [attr.data-section-id]="category.id">
             <div class="section-title">{{ category.label }}</div>
             <div class="emoji-grid">
               @for (emoji of category.emojis; track emoji) {
@@ -300,6 +316,18 @@
               <span i18n="@@reaction-button.get-more-emojis">Get more emojis</span>
             </a>
           </div>
+        </div>
+
+        <div class="emoji-section-nav" (wheel)="onReactionSectionNavWheel($event)"
+          (pointerdown)="startReactionSectionNavDrag($event)" (pointermove)="moveReactionSectionNavDrag($event)"
+          (pointerup)="endReactionSectionNavDrag($event)" (pointercancel)="endReactionSectionNavDrag($event)"
+          (pointerleave)="endReactionSectionNavDrag()">
+          @for (section of sectionNavItems(); track section.id) {
+          <button class="section-nav-btn" type="button" [matTooltip]="section.label" [attr.aria-label]="section.label"
+            (click)="scrollToReactionSection(emojiScrollContainerFull, section.id); $event.stopPropagation()">
+            {{ section.icon }}
+          </button>
+          }
         </div>
         }
       </div>

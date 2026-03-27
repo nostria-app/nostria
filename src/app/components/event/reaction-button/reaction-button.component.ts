@@ -266,6 +266,12 @@ interface ReactionGroup {
   userReacted: boolean;
 }
 
+interface ReactionEmojiSectionNavItem {
+  id: string;
+  label: string;
+  icon: string;
+}
+
 @Component({
   selector: 'app-reaction-button',
   imports: [
@@ -393,9 +399,29 @@ export class ReactionButtonComponent {
   emojiSearchQuery = signal<string>('');
   showSigningErrorDialog = signal<boolean>(false);
   signingErrorMessage = signal<string>('');
+  private sectionNavDragStrip: HTMLDivElement | null = null;
+  private sectionNavPointerId: number | null = null;
+  private sectionNavDragStartX = 0;
+  private sectionNavStartScrollLeft = 0;
+  private sectionNavDragMoved = false;
 
   // Emoji categories for sectioned display
   readonly emojiCategories = EMOJI_CATEGORIES;
+  readonly sectionNavItems = computed<ReactionEmojiSectionNavItem[]>(() => {
+    const sections: ReactionEmojiSectionNavItem[] = [
+      { id: 'recent', label: 'Recent', icon: '🕘' },
+    ];
+
+    if (this.emojiSets().length > 0) {
+      sections.push({ id: 'custom-emojis', label: 'Custom Emojis', icon: '🧩' });
+    }
+
+    return sections.concat(this.emojiCategories.map(category => ({
+      id: category.id,
+      label: category.label,
+      icon: category.icon,
+    })));
+  });
 
   // Quick reactions for the picker
   readonly quickReactions = ['❤️', '👍', '😂', '😮', '😢', '🔥'];
@@ -605,6 +631,65 @@ export class ReactionButtonComponent {
   closeMenu() {
     this.menuTrigger()?.closeMenu();
     this.menuTriggerFull()?.closeMenu();
+  }
+
+  scrollToReactionSection(scrollContainer: HTMLDivElement, sectionId: string): void {
+    if (this.sectionNavDragMoved) {
+      this.sectionNavDragMoved = false;
+      return;
+    }
+
+    const section = scrollContainer.querySelector<HTMLElement>(`[data-section-id="${sectionId}"]`);
+    if (!section) return;
+
+    const offsetTop = section.offsetTop - scrollContainer.offsetTop - 8;
+    scrollContainer.scrollTo({ top: Math.max(0, offsetTop), behavior: 'smooth' });
+  }
+
+  onReactionSectionNavWheel(event: WheelEvent): void {
+    const nav = event.currentTarget as HTMLDivElement | null;
+    if (!nav || Math.abs(event.deltaY) <= Math.abs(event.deltaX)) return;
+
+    nav.scrollBy({ left: event.deltaY, behavior: 'auto' });
+    event.preventDefault();
+  }
+
+  startReactionSectionNavDrag(event: PointerEvent): void {
+    if (event.pointerType !== 'mouse') return;
+
+    const nav = event.currentTarget as HTMLDivElement | null;
+    if (!nav) return;
+
+    this.sectionNavDragStrip = nav;
+    this.sectionNavPointerId = event.pointerId;
+    this.sectionNavDragStartX = event.clientX;
+    this.sectionNavStartScrollLeft = nav.scrollLeft;
+    this.sectionNavDragMoved = false;
+    nav.setPointerCapture(event.pointerId);
+  }
+
+  moveReactionSectionNavDrag(event: PointerEvent): void {
+    if (!this.sectionNavDragStrip || this.sectionNavPointerId !== event.pointerId) return;
+
+    const deltaX = event.clientX - this.sectionNavDragStartX;
+    if (Math.abs(deltaX) > 4) {
+      this.sectionNavDragMoved = true;
+    }
+
+    this.sectionNavDragStrip.scrollLeft = this.sectionNavStartScrollLeft - deltaX;
+    event.preventDefault();
+  }
+
+  endReactionSectionNavDrag(event?: PointerEvent): void {
+    if (this.sectionNavDragStrip && event && this.sectionNavPointerId === event.pointerId) {
+      this.sectionNavDragStrip.releasePointerCapture(event.pointerId);
+    }
+
+    this.sectionNavDragStrip = null;
+    this.sectionNavPointerId = null;
+    setTimeout(() => {
+      this.sectionNavDragMoved = false;
+    }, 0);
   }
 
   private async openReactionPickerDialog(): Promise<void> {
