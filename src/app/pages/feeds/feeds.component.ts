@@ -840,10 +840,13 @@ export class FeedsComponent implements OnDestroy {
           // This prevents unnecessary recreation when opening events in the right panel
           const currentDynamicFeed = this.dynamicFeed();
           const currentHashtags = currentDynamicFeed?.customInterestHashtags || [];
+          const currentDynamicFeedData = currentDynamicFeed
+            ? this.feedService.feedDataReactive().get(currentDynamicFeed.id)
+            : null;
           const hashtagsMatch = hashtags.length === currentHashtags.length &&
             hashtags.every((h: string) => currentHashtags.includes(h));
 
-          if (hashtagsMatch) {
+          if (hashtagsMatch && currentDynamicFeedData) {
             // Same hashtags, no need to recreate the feed
             this.logger.debug(`Dynamic hashtag feed already active for: ${hashtags.join(', ')}`);
             return;

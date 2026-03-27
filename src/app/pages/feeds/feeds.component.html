@@ -179,8 +179,9 @@
             @let dynamicEvents = columnEvents().get(dynFeed.id);
             @let dynamicFeedHasEvents = dynamicEvents && dynamicEvents.length > 0;
             @let dynamicInitialLoadComplete = feedService.getColumnInitialLoadComplete(dynFeed.id);
+            @let dynamicIsRefreshing = feedService.getColumnRefreshingState(dynFeed.id)?.() ?? false;
 
-            @if (dynamicInitialLoadComplete && !dynamicFeedHasEvents) {
+            @if (dynamicInitialLoadComplete && !dynamicIsRefreshing && !dynamicFeedHasEvents) {
             <!-- No results for hashtag search -->
             <div class="no-results-state">
               <div class="no-results-content">

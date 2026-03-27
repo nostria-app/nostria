@@ -766,9 +766,11 @@ export class FeedService {
       return;
     }
 
+    const isDynamicFeed = feed.id === this.DYNAMIC_FEED_ID;
+
     // Check if we should start feeds on last event (queue new events instead of auto-merging)
     const startFeedsOnLastEvent = this.localSettings.startFeedsOnLastEvent();
-    const initialLoadComplete = startFeedsOnLastEvent;
+    const initialLoadComplete = isDynamicFeed ? false : startFeedsOnLastEvent;
 
     // Create item with empty events FIRST to ensure feedDataReactive has entry immediately
     const item: FeedItem = {
@@ -818,8 +820,6 @@ export class FeedService {
 
     // Load cached events NON-BLOCKING — start the IndexedDB read and proceed
     // with relay subscriptions in parallel for faster time-to-first-render.
-    const isDynamicFeed = feed.id === this.DYNAMIC_FEED_ID;
-
     if (!isDynamicFeed) {
       // Fire-and-forget: load cache and update the signal when ready
       this.loadCachedEvents(feed.id).then(cachedEvents => {
