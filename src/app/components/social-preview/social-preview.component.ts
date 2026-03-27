@@ -4,13 +4,14 @@ import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import DOMPurify from 'dompurify';
 import { OpenGraphData, OpenGraphService } from '../../services/opengraph.service';
 import { MatCardModule } from '@angular/material/card';
+import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { ThemeService } from '../../services/theme.service';
 import { isXStatusUrl } from '../../utils/url-cleaner';
 
 @Component({
   selector: 'app-social-preview',
-  imports: [MatCardModule, MatProgressSpinnerModule],
+  imports: [MatCardModule, MatIconModule, MatProgressSpinnerModule],
   templateUrl: './social-preview.component.html',
   styleUrl: './social-preview.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -27,13 +28,22 @@ export class SocialPreviewComponent {
 
   /** When true, renders a smaller preview with thumbnail + title + URL only (no description). */
   compact = input<boolean>(false);
+  prominentImage = input<boolean>(false);
 
   url = input<string>('');
+  previewData = input<OpenGraphData | null>(null);
   preview = signal<OpenGraphData>({ url: '', loading: false, error: false });
   safeEmbedHtml = signal<SafeHtml | null>(null);
 
   constructor() {
     effect(() => {
+      const providedPreview = this.previewData();
+
+      if (providedPreview) {
+        this.setPreviewData(providedPreview);
+        return;
+      }
+
       const url = this.url();
       const isXUrl = isXStatusUrl(url);
 
@@ -59,6 +69,14 @@ export class SocialPreviewComponent {
     });
   }
 
+  private setPreviewData(data: OpenGraphData): void {
+    this.safeEmbedHtml.set(this.buildSafeEmbedHtml(data.embedHtml));
+    this.preview.set({
+      ...data,
+      loading: false,
+    });
+  }
+
   async loadSocialPreview(url: string): Promise<void> {
     if (!url) {
       this.preview.set({ url: '', loading: false, error: false });
@@ -75,12 +93,7 @@ export class SocialPreviewComponent {
 
     try {
       const data = await this.openGraphService.getOpenGraphData(url);
-      this.safeEmbedHtml.set(this.buildSafeEmbedHtml(data.embedHtml));
-      this.preview.update(prev => ({
-        ...prev,
-        ...data,
-        loading: false,
-      }));
+      this.setPreviewData(data);
     } catch (error) {
       this.safeEmbedHtml.set(null);
       this.preview.update(prev => ({ ...prev, loading: false, error: true }));

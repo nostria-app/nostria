@@ -10,18 +10,8 @@ import { LayoutService } from '../../services/layout.service';
 import { TaggedReferencesComponent } from './tagged-references/tagged-references.component';
 import { Event as NostrEvent, nip19 } from 'nostr-tools';
 import { normalizePreviewUrl } from '../../utils/url-cleaner';
-import { OpenGraphService } from '../../services/opengraph.service';
+import { OpenGraphData, OpenGraphService } from '../../services/opengraph.service';
 import { IntersectionObserverService } from '../../services/intersection-observer.service';
-
-interface SocialPreview {
-  url: string;
-  title?: string;
-  description?: string;
-  image?: string;
-  siteName?: string;
-  loading: boolean;
-  error: boolean;
-}
 
 @Component({
   selector: 'app-content',
@@ -128,7 +118,12 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
   });
 
   // Social previews for URLs
-  socialPreviews = signal<SocialPreview[]>([]);
+  socialPreviews = signal<OpenGraphData[]>([]);
+
+  useProminentSocialPreviewImages = computed(() => {
+    const previewCount = this.socialPreviews().length;
+    return previewCount > 0 && previewCount <= 3;
+  });
 
   // Proxy web URL from bridged content (e.g., ActivityPub/Mastodon via momostr)
   proxyWebUrl = computed<string | null>(() => {
@@ -278,7 +273,7 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
     }
   }
 
-  private decoratePreviewedUrlTokens(tokens: ContentToken[], previewsByUrl: Map<string, SocialPreview>): ContentToken[] {
+  private decoratePreviewedUrlTokens(tokens: ContentToken[], previewsByUrl: Map<string, OpenGraphData>): ContentToken[] {
     return tokens.map(token => {
       if (token.type !== 'url') {
         return token;

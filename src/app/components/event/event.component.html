@@ -211,9 +211,10 @@
     </div>
     }
     @if (mainCollapsedMedia().urls.length > 0) {
-    <div class="collapsed-urls">
-      @for (url of mainCollapsedMedia().urls; track url) {
-      <app-social-preview [url]="url" [compact]="true"></app-social-preview>
+      <div class="collapsed-urls">
+        @for (url of mainCollapsedMedia().urls; track url) {
+      <app-social-preview [url]="url" [compact]="true"
+        [prominentImage]="mainCollapsedMedia().urls.length <= 3"></app-social-preview>
       }
     </div>
     }
@@ -421,7 +422,8 @@
         @if (rootCollapsedMedia().urls.length > 0) {
         <div class="collapsed-urls">
           @for (url of rootCollapsedMedia().urls; track url) {
-          <app-social-preview [url]="url" [compact]="true"></app-social-preview>
+          <app-social-preview [url]="url" [compact]="true"
+            [prominentImage]="rootCollapsedMedia().urls.length <= 3"></app-social-preview>
           }
         </div>
         }
@@ -603,7 +605,8 @@
         @if (parentCollapsedMedia().urls.length > 0) {
         <div class="collapsed-urls">
           @for (url of parentCollapsedMedia().urls; track url) {
-          <app-social-preview [url]="url" [compact]="true"></app-social-preview>
+          <app-social-preview [url]="url" [compact]="true"
+            [prominentImage]="parentCollapsedMedia().urls.length <= 3"></app-social-preview>
           }
         </div>
         }
@@ -764,7 +767,8 @@
     @if (mainCollapsedMedia().urls.length > 0) {
     <div class="collapsed-urls">
       @for (url of mainCollapsedMedia().urls; track url) {
-      <app-social-preview [url]="url" [compact]="true"></app-social-preview>
+      <app-social-preview [url]="url" [compact]="true"
+        [prominentImage]="mainCollapsedMedia().urls.length <= 3"></app-social-preview>
       }
     </div>
     }
@@ -934,7 +938,8 @@
     @if (mainCollapsedMedia().urls.length > 0) {
     <div class="collapsed-urls">
       @for (url of mainCollapsedMedia().urls; track url) {
-      <app-social-preview [url]="url" [compact]="true"></app-social-preview>
+      <app-social-preview [url]="url" [compact]="true"
+        [prominentImage]="mainCollapsedMedia().urls.length <= 3"></app-social-preview>
       }
     </div>
     }

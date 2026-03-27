@@ -442,7 +442,7 @@
 <a class="hashtag-link" [routerLink]="['/f']" [queryParams]="{t: token.content.toLowerCase()}">#{{ token.content }}</a>
 } @else if (token.type === 'url') {
 @if (token.previewTitle || token.previewSiteName || token.previewLoading || token.previewError) {
-<a class="preview-link-button" [href]="token.content" target="_blank" rel="noopener noreferrer"
+<a class="preview-link" [href]="token.content" target="_blank" rel="noopener noreferrer"
   [matTooltip]="token.content" [attr.aria-label]="getUrlButtonAriaLabel(token)">
   <span class="preview-link-label">{{ getUrlButtonLabel(token) }}</span>
   <mat-icon class="preview-link-icon">open_in_new</mat-icon>

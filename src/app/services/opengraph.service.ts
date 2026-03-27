@@ -91,16 +91,24 @@ export class OpenGraphService {
         error: false,
       };
 
+      const enrichedMetadata = this.enrichYouTubePreview(metadata, normalizedUrl);
+
       // Ensure image URLs are absolute
-      if (metadata.image && !metadata.image.match(/^https?:\/\//)) {
-        metadata.image = this.resolveUrl(metadata.image, normalizedUrl);
+      if (enrichedMetadata.image && !enrichedMetadata.image.match(/^https?:\/\//)) {
+        enrichedMetadata.image = this.resolveUrl(enrichedMetadata.image, normalizedUrl);
       }
 
       // Cache the result
-      this.cache.set(cacheKey, metadata);
-      return metadata;
+      this.cache.set(cacheKey, enrichedMetadata);
+      return enrichedMetadata;
     } catch (error) {
       console.error(`Error fetching OpenGraph data for ${normalizedUrl}:`, error);
+
+      const youtubeFallback = this.createYouTubeFallbackPreview(normalizedUrl);
+      if (youtubeFallback) {
+        this.cache.set(cacheKey, youtubeFallback);
+        return youtubeFallback;
+      }
 
       const errorData: OpenGraphData = {
         url: normalizedUrl,
@@ -113,6 +121,67 @@ export class OpenGraphService {
       this.cache.set(cacheKey, errorData);
       return errorData;
     }
+  }
+
+  private enrichYouTubePreview(metadata: OpenGraphData, normalizedUrl: string): OpenGraphData {
+    if (!this.isYouTubeUrl(normalizedUrl)) {
+      return metadata;
+    }
+
+    const youtubeId = this.extractYouTubeVideoId(normalizedUrl);
+    if (!youtubeId) {
+      return metadata;
+    }
+
+    return {
+      ...metadata,
+      image: metadata.image || this.getYouTubeThumbnailUrl(youtubeId),
+      siteName: metadata.siteName || 'YouTube',
+      providerName: metadata.providerName || 'YouTube',
+      title: metadata.title || 'YouTube video',
+      description: metadata.description || 'Watch on YouTube',
+    };
+  }
+
+  private createYouTubeFallbackPreview(url: string): OpenGraphData | null {
+    if (!this.isYouTubeUrl(url)) {
+      return null;
+    }
+
+    const youtubeId = this.extractYouTubeVideoId(url);
+    if (!youtubeId) {
+      return null;
+    }
+
+    return {
+      url,
+      title: 'YouTube video',
+      description: 'Watch on YouTube',
+      image: this.getYouTubeThumbnailUrl(youtubeId),
+      siteName: 'YouTube',
+      providerName: 'YouTube',
+      previewType: 'generic',
+      loading: false,
+      error: false,
+    };
+  }
+
+  private isYouTubeUrl(url: string): boolean {
+    try {
+      const hostname = new URL(url).hostname.toLowerCase();
+      return hostname === 'youtu.be' || hostname.endsWith('.youtu.be') || hostname === 'youtube.com' || hostname.endsWith('.youtube.com');
+    } catch {
+      return false;
+    }
+  }
+
+  private extractYouTubeVideoId(url: string): string | null {
+    const match = url.match(/(?:(?:[a-zA-Z0-9-]+\.)?youtube\.com\/(?:watch\?v=|shorts\/|live\/|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+    return match?.[1] || null;
+  }
+
+  private getYouTubeThumbnailUrl(videoId: string): string {
+    return `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
   }
 
   private getCacheKey(url: string): string {

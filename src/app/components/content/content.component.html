@@ -6,7 +6,8 @@
   @if (!hideSocialPreviews()) {
   @for (preview of socialPreviews(); track preview.url) {
   @if (settings.settings().socialSharingPreview) {
-  <app-social-preview class="social-preview" [url]="preview.url" [compact]="true"></app-social-preview>
+  <app-social-preview class="social-preview" [url]="preview.url" [previewData]="preview" [compact]="true"
+    [prominentImage]="useProminentSocialPreviewImages()"></app-social-preview>
   }
   }
   }

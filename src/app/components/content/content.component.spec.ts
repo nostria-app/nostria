@@ -212,6 +212,25 @@ describe('ContentComponent', () => {
     expect(displayed.map(token => token.type)).toEqual(['text', 'linebreak', 'linebreak', 'text']);
   });
 
+  it('should use prominent social preview images when three or fewer previews are shown', () => {
+    component.socialPreviews.set([
+      { url: 'https://example.com/1', loading: false, error: false },
+      { url: 'https://example.com/2', loading: false, error: false },
+      { url: 'https://example.com/3', loading: false, error: false },
+    ]);
+
+    expect(component.useProminentSocialPreviewImages()).toBe(true);
+
+    component.socialPreviews.set([
+      { url: 'https://example.com/1', loading: false, error: false },
+      { url: 'https://example.com/2', loading: false, error: false },
+      { url: 'https://example.com/3', loading: false, error: false },
+      { url: 'https://example.com/4', loading: false, error: false },
+    ]);
+
+    expect(component.useProminentSocialPreviewImages()).toBe(false);
+  });
+
   it('should compute proxyWebUrl as null when no event', () => {
     expect(component.proxyWebUrl()).toBeNull();
   });

@@ -1,4 +1,4 @@
-import type { MockedObject } from "vitest";
+import { beforeEach, describe, expect, it, vi, type MockedObject } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideZonelessChangeDetection, signal } from '@angular/core';
 import { SocialPreviewComponent } from './social-preview.component';
@@ -57,6 +57,10 @@ describe('SocialPreviewComponent', () => {
     expect(component.compact()).toBe(true);
   });
 
+  it('should default prominentImage to false', () => {
+    expect(component.prominentImage()).toBe(false);
+  });
+
   it('should load preview when url is set', async () => {
     fixture.componentRef.setInput('url', 'https://example.com');
     fixture.detectChanges();
@@ -68,6 +72,22 @@ describe('SocialPreviewComponent', () => {
     expect(component.preview().image).toBe('https://example.com/image.jpg');
   });
 
+  it('should use provided preview data without fetching again', async () => {
+    fixture.componentRef.setInput('previewData', {
+      url: 'https://example.com/provided',
+      title: 'Provided Title',
+      description: 'Provided description',
+      image: 'https://example.com/provided.jpg',
+      loading: false,
+      error: false,
+    });
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(mockOpenGraphService.getOpenGraphData).not.toHaveBeenCalled();
+    expect(component.preview().title).toBe('Provided Title');
+  });
+
   it('should apply compact-preview class when compact input is true', async () => {
     fixture.componentRef.setInput('compact', true);
     fixture.componentRef.setInput('url', 'https://example.com');
@@ -77,6 +97,30 @@ describe('SocialPreviewComponent', () => {
     fixture.detectChanges();
     const card = fixture.nativeElement.querySelector('mat-card');
     expect(card.classList.contains('compact-preview')).toBe(true);
+  });
+
+  it('should apply prominent-image-preview when enabled for compact previews with images', async () => {
+    fixture.componentRef.setInput('compact', true);
+    fixture.componentRef.setInput('prominentImage', true);
+    fixture.componentRef.setInput('url', 'https://example.com');
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    fixture.detectChanges();
+    const card = fixture.nativeElement.querySelector('mat-card');
+    expect(card.classList.contains('prominent-image-preview')).toBe(true);
+  });
+
+  it('should render neutral failed preview styling', async () => {
+    mockOpenGraphService.getOpenGraphData.mockRejectedValue(new Error('Network error'));
+
+    fixture.componentRef.setInput('url', 'https://example.com/error');
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    fixture.detectChanges();
+    const icon = fixture.nativeElement.querySelector('.thumbnail-placeholder.error mat-icon');
+    expect(icon?.textContent).toContain('link_off');
   });
 
   it('should not apply compact-preview class when compact is false and preview has title and image', async () => {

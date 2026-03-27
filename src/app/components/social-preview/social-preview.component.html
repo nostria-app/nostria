@@ -8,7 +8,8 @@
 } @else {
 <a class="social-preview-card" [href]="preview.url" [attr.data-url]="preview.url" target="_blank"
   rel="noopener noreferrer">
-  <mat-card [class.compact-preview]="compact() || (!preview.title && !preview.image)">
+  <mat-card [class.compact-preview]="compact() || (!preview.title && !preview.image)"
+    [class.prominent-image-preview]="prominentImage() && compact() && !!preview.image && !preview.loading && !preview.error">
     <div class="preview-content">
       <div class="thumbnail-container">
         @if (preview.loading) {
@@ -17,7 +18,7 @@
         </div>
         } @else if (preview.error) {
         <div class="thumbnail-placeholder error">
-          <span class="error-icon">⚠️</span>
+          <mat-icon class="error-icon">link_off</mat-icon>
         </div>
         } @else {
         @if (preview.image) {
@@ -35,7 +36,7 @@
         @if (preview.loading) {
         <div class="loading-text">
           <div class="loading-placeholder title-placeholder"></div>
-          @if (!compact()) {
+          @if (!compact() || prominentImage()) {
           <div class="loading-placeholder description-placeholder"></div>
           }
           <div class="loading-placeholder url-placeholder"></div>
@@ -49,7 +50,7 @@
         <div class="preview-title">
           {{ preview.title || 'No title available' }}
         </div>
-        @if (!compact()) {
+        @if (!compact() || prominentImage()) {
         <div class="preview-description">
           {{ preview.description || 'No description available' }}
         </div>
