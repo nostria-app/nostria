@@ -38,6 +38,10 @@ const BATCH_DELAY_MS = 500;
 const MAX_RELAY_SUBSCRIPTIONS = 3;
 const MAX_ADDITIONAL_RELAYS = 6;
 
+export function filterVisibleArticles(articles: Event[], isBlocked: (event: Event) => boolean): Event[] {
+  return articles.filter(article => !isBlocked(article));
+}
+
 @Component({
   selector: 'app-articles-discover',
   imports: [
@@ -161,18 +165,23 @@ export class ArticlesDiscoverComponent implements OnInit, OnDestroy {
 
   private currentPubkey = computed(() => this.accountState.pubkey());
 
+  private visibleArticles = computed(() => filterVisibleArticles(
+    this.allArticles(),
+    article => this.reporting.isContentBlocked(article)
+  ));
+
   // All filtered articles sorted by date
   private allFollowingArticles = computed(() => {
     const pubkeys = this.filterPubkeys();
     if (pubkeys === null || pubkeys.length === 0) return [];
 
-    return this.allArticles()
+    return this.visibleArticles()
       .filter(article => pubkeys.includes(article.pubkey))
       .sort((a, b) => b.created_at - a.created_at);
   });
 
   private allPublicArticles = computed(() => {
-    return this.allArticles()
+    return this.visibleArticles()
       .filter(article => {
         // Don't include articles already in following
         const following = this.followingPubkeys();
