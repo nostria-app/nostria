@@ -100,6 +100,21 @@ describe('EventProcessorService', () => {
       expect(result.reason).toBe('muted_word');
     });
 
+    it('should reject events when author lud16 matches a muted word', () => {
+      mutedWordsSignal.set(['primal.net']);
+      vi.mocked(mockDataService.getCachedProfile).mockReturnValue({
+        data: {
+          lud16: 'alice@primal.net',
+        },
+      } as never);
+
+      const event = createMockEvent({ content: 'hello' });
+      const result = service.processEvent(event);
+
+      expect(result.accepted).toBe(false);
+      expect(result.reason).toBe('muted_word');
+    });
+
     it('should not reject events where muted word is a substring', () => {
       mutedWordsSignal.set(['gm']);
       const event = createMockEvent({ content: 'I love programming' });

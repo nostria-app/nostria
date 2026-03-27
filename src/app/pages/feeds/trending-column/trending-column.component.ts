@@ -57,6 +57,16 @@ interface SelectOption<T extends string | number> {
   label: string;
 }
 
+export function getDisplayedTrendingEventIds(
+  allEventIds: string[],
+  hiddenEventIds: Set<string>,
+  displayCount: number
+): string[] {
+  return allEventIds
+    .filter(eventId => !hiddenEventIds.has(eventId))
+    .slice(0, displayCount);
+}
+
 @Component({
   selector: 'app-trending-column',
   imports: [
@@ -111,6 +121,7 @@ export class TrendingColumnComponent implements OnDestroy {
 
   // All event IDs from the API
   private allEventIds = signal<string[]>([]);
+  private hiddenEventIds = signal<Set<string>>(new Set());
 
   // How many IDs to display
   private displayCount = signal(PAGE_SIZE);
@@ -151,9 +162,14 @@ export class TrendingColumnComponent implements OnDestroy {
   });
 
   // Computed signals
-  displayedEventIds = computed(() => this.allEventIds().slice(0, this.displayCount()));
+  private visibleEventIds = computed(() => getDisplayedTrendingEventIds(
+    this.allEventIds(),
+    this.hiddenEventIds(),
+    this.allEventIds().length
+  ));
+  displayedEventIds = computed(() => this.visibleEventIds().slice(0, this.displayCount()));
   hasEvents = computed(() => this.displayedEventIds().length > 0);
-  hasMore = computed(() => this.displayCount() < this.allEventIds().length);
+  hasMore = computed(() => this.displayCount() < this.visibleEventIds().length);
 
   // Expose relays for the template to pass to EventComponent
   // Include nostr.wine relay since trending data comes from api.nostr.wine
@@ -230,6 +246,7 @@ export class TrendingColumnComponent implements OnDestroy {
     this.isLoading.set(true);
     this.error.set(null);
     this.displayCount.set(PAGE_SIZE);
+    this.hiddenEventIds.set(new Set());
 
     try {
       if (source === 'cached') {
@@ -422,6 +439,20 @@ export class TrendingColumnComponent implements OnDestroy {
     }
     this.displayCount.update(count => count + PAGE_SIZE);
     this.logger.debug(`Showing ${this.displayCount()} of ${this.allEventIds().length} trending events`);
+  }
+
+  onEventHiddenChange(eventId: string, hidden: boolean): void {
+    this.hiddenEventIds.update(current => {
+      const next = new Set(current);
+
+      if (hidden) {
+        next.add(eventId);
+      } else {
+        next.delete(eventId);
+      }
+
+      return next;
+    });
   }
 
   refresh(): void {

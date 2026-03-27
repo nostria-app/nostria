@@ -263,7 +263,7 @@ export class EventProcessorService {
 
   /**
    * Check if an author's profile contains any muted words.
-   * Checks name, display_name, and nip05 fields using word boundary matching.
+    * Checks name, display_name, nip05, and lud16 fields using word boundary matching.
    * Only checks cached profiles to keep the operation synchronous.
    * 
    * @param pubkey The author's pubkey
@@ -281,26 +281,9 @@ export class EventProcessorService {
       return false;
     }
 
-    const profileData = profile.data;
-    
-    // Build a list of profile fields to check
-    const fieldsToCheck: string[] = [];
-    
-    if (profileData.name) {
-      fieldsToCheck.push(profileData.name.toLowerCase());
-    }
-    if (profileData.display_name) {
-      fieldsToCheck.push(profileData.display_name.toLowerCase());
-    }
-    if (profileData.nip05) {
-      const nip05Data = profileData.nip05;
-      const nip05Values = Array.isArray(nip05Data) ? nip05Data : [nip05Data];
-      nip05Values.forEach(v => {
-        if (v && typeof v === 'string') {
-          fieldsToCheck.push(v.toLowerCase());
-        }
-      });
-    }
+    const fieldsToCheck = ReportingService.collectProfileFieldsForMutedWordCheck(
+      profile.data as Record<string, unknown>
+    );
 
     // Check if any muted word appears as a whole word in any of the profile fields
     return ReportingService.fieldsContainMutedWord(fieldsToCheck, mutedWords);

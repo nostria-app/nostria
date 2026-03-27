@@ -82,6 +82,7 @@ export class DataService implements OnDestroy {
 
   // Signal to track deep discovery status for UI feedback
   readonly deepDiscoveryStatus = signal<DeepDiscoveryStatus | null>(null);
+  private readonly profileMetadataRevision = signal(0);
 
   // Interval handle for cleanup - stored for proper cleanup on destroy
   private cleanupIntervalHandle: ReturnType<typeof setInterval> | null = null;
@@ -453,7 +454,7 @@ export class DataService implements OnDestroy {
       for (const event of storageEvents) {
         const record = this.toRecord(event);
         const cacheKey = `metadata-${event.pubkey}`;
-        this.cache.set(cacheKey, record, { persistent: true });
+        this.setCachedProfileRecord(cacheKey, record, { persistent: true });
         results.set(event.pubkey, record);
       }
 
@@ -509,7 +510,7 @@ export class DataService implements OnDestroy {
         for (const event of events) {
           const record = this.toRecord(event);
           const cacheKey = `metadata-${event.pubkey}`;
-          this.cache.set(cacheKey, record, { persistent: true });
+          this.setCachedProfileRecord(cacheKey, record, { persistent: true });
           results.set(event.pubkey, record);
 
           await this.database.saveEvent(event);
@@ -555,7 +556,7 @@ export class DataService implements OnDestroy {
           for (const event of events) {
             const record = this.toRecord(event);
             const cacheKey = `metadata-${event.pubkey}`;
-            this.cache.set(cacheKey, record, { persistent: true });
+            this.setCachedProfileRecord(cacheKey, record, { persistent: true });
             loaded++;
 
             await this.database.saveEvent(event);
@@ -586,6 +587,10 @@ export class DataService implements OnDestroy {
   getCachedProfile(pubkey: string): NostrRecord | undefined {
     const cacheKey = `metadata-${pubkey}`;
     return this.cache.get<NostrRecord>(cacheKey);
+  }
+
+  getProfileMetadataRevision(): number {
+    return this.profileMetadataRevision();
   }
 
   async getProfile(pubkey: string, options?: boolean | { refresh?: boolean; forceRefresh?: boolean; deepResolve?: boolean; allowDeepResolve?: boolean }): Promise<NostrRecord | undefined> {
@@ -741,7 +746,7 @@ export class DataService implements OnDestroy {
         record = this.toRecord(metadata);
         // Store profile in persistent cache (never expires based on TTL)
         // We check staleness manually (24h) instead of using cache expiration
-        this.cache.set(cacheKey, record, { persistent: true });
+        this.setCachedProfileRecord(cacheKey, record, { persistent: true });
         await this.database.saveEvent(metadata);
         // Also save to new DatabaseService for Summary queries
         await this.saveEventToDatabase(metadata);
@@ -762,7 +767,7 @@ export class DataService implements OnDestroy {
 
       if (metadata) {
         record = this.toRecord(metadata);
-        this.cache.set(cacheKey, record, { persistent: true });
+        this.setCachedProfileRecord(cacheKey, record, { persistent: true });
       } else {
         // Try to get from relays - reduced logging to prevent console spam
         metadata = this.asValidNostrEvent(await this.sharedRelayEx.get(pubkey, {
@@ -784,7 +789,7 @@ export class DataService implements OnDestroy {
 
         if (metadata) {
           record = this.toRecord(metadata);
-          this.cache.set(cacheKey, record, { persistent: true });
+          this.setCachedProfileRecord(cacheKey, record, { persistent: true });
           await this.database.saveEvent(metadata);
           // Also save to new DatabaseService for Summary queries
           await this.saveEventToDatabase(metadata);
@@ -1211,7 +1216,7 @@ export class DataService implements OnDestroy {
 
         if (fresh) {
           const freshRecord = this.toRecord(fresh);
-          this.cache.set(cacheKey, freshRecord);
+          this.setCachedProfileRecord(cacheKey, freshRecord);
           await this.database.saveEvent(fresh);
           // Also save to new DatabaseService for Summary queries
           await this.saveEventToDatabase(fresh);
@@ -1222,6 +1227,11 @@ export class DataService implements OnDestroy {
         this.logger.warn(`Failed to refresh profile in background for ${pubkey}:`, error);
       }
     });
+  }
+
+  private setCachedProfileRecord(cacheKey: string, record: NostrRecord, options?: CacheOptions): void {
+    this.cache.set(cacheKey, record, options);
+    this.profileMetadataRevision.update(value => value + 1);
   }
 
   /**

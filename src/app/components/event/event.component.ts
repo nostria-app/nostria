@@ -1,4 +1,4 @@
-import { Component, computed, effect, inject, input, signal, untracked, ElementRef, AfterViewInit, OnDestroy, ChangeDetectionStrategy, PLATFORM_ID } from '@angular/core';
+import { Component, computed, effect, inject, input, output, signal, untracked, ElementRef, AfterViewInit, OnDestroy, ChangeDetectionStrategy, PLATFORM_ID } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { trigger, state, style, animate, transition } from '@angular/animations';
 import { MatButtonModule } from '@angular/material/button';
@@ -183,6 +183,8 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   id = input<string | null | undefined>();
   type = input<'e' | 'a' | 'r' | 't'>('e');
   event = input<Event | null | undefined>(null);
+  hiddenChange = output<boolean>();
+  suppressNotFoundState = input<boolean>(false);
   appearance = input<EventCardAppearance>('plain');
   navigationDisabled = input<boolean>(false);
   mode = input<'timeline' | 'thread'>('timeline');
@@ -409,6 +411,20 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     }
 
     return false;
+  });
+
+  isHiddenFromFeed = computed<boolean>(() => {
+    if (this.isLoadingEvent()) {
+      return false;
+    }
+
+    if (this.suppressNotFoundState() && this.id() && !this.record()) {
+      return true;
+    }
+
+    return this.isLocallyDeleted()
+      || this.isAuthorMuted()
+      || (this.isRepostEvent() && this.isRepostedContentFiltered());
   });
 
   // Retry trigger: bump to re-trigger the event load effect
@@ -1647,6 +1663,16 @@ export class EventComponent implements AfterViewInit, OnDestroy {
           await this.loadReports(true);
         });
       }
+    });
+
+    effect(() => {
+      const currentEventId = this.id() || this.event()?.id || this.record()?.event.id;
+
+      if (!currentEventId) {
+        return;
+      }
+
+      this.hiddenChange.emit(this.isHiddenFromFeed());
     });
 
     // Effect to load reposted event when repost has empty content

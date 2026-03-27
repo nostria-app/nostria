@@ -154,7 +154,7 @@ export class ReportingService {
 
   /**
    * Check if an author's profile contains any muted words.
-   * Checks name, display_name, and nip05 fields using word boundary matching.
+    * Checks name, display_name, nip05, and lud16 fields using word boundary matching.
    * Only checks cached profiles to keep the operation synchronous.
    * 
    * @param pubkey The author's pubkey
@@ -166,6 +166,8 @@ export class ReportingService {
       return false;
     }
 
+    this.data.getProfileMetadataRevision();
+
     // Get cached profile (synchronous, doesn't trigger async fetch)
     const profile = this.data.getCachedProfile(pubkey);
     if (!profile?.data) {
@@ -173,28 +175,31 @@ export class ReportingService {
     }
 
     const profileData = profile.data;
-
-    // Build a list of profile fields to check
-    const fieldsToCheck: string[] = [];
-
-    if (profileData.name) {
-      fieldsToCheck.push(profileData.name.toLowerCase());
-    }
-    if (profileData.display_name) {
-      fieldsToCheck.push(profileData.display_name.toLowerCase());
-    }
-    if (profileData.nip05) {
-      const nip05Data = profileData.nip05;
-      const nip05Values = Array.isArray(nip05Data) ? nip05Data : [nip05Data];
-      nip05Values.forEach(v => {
-        if (v && typeof v === 'string') {
-          fieldsToCheck.push(v.toLowerCase());
-        }
-      });
-    }
+    const fieldsToCheck = ReportingService.collectProfileFieldsForMutedWordCheck(profileData as Record<string, unknown>);
 
     // Check if any muted word appears as a whole word in any of the profile fields
     return ReportingService.fieldsContainMutedWord(fieldsToCheck, mutedWords);
+  }
+
+  static collectProfileFieldsForMutedWordCheck(profileData: Record<string, unknown>): string[] {
+    const fieldsToCheck: string[] = [];
+
+    ReportingService.appendLowerCaseProfileValues(fieldsToCheck, profileData['name']);
+    ReportingService.appendLowerCaseProfileValues(fieldsToCheck, profileData['display_name']);
+    ReportingService.appendLowerCaseProfileValues(fieldsToCheck, profileData['nip05']);
+    ReportingService.appendLowerCaseProfileValues(fieldsToCheck, profileData['lud16']);
+
+    return fieldsToCheck;
+  }
+
+  private static appendLowerCaseProfileValues(fieldsToCheck: string[], value: unknown): void {
+    const values = Array.isArray(value) ? value : [value];
+
+    values.forEach(entry => {
+      if (entry && typeof entry === 'string') {
+        fieldsToCheck.push(entry.toLowerCase());
+      }
+    });
   }
 
   /**

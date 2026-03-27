@@ -91,7 +91,8 @@
     } @else if (hasEvents()) {
     <!-- Events list - EventComponent loads each event lazily by ID -->
     @for (eventId of displayedEventIds(); track eventId) {
-    <app-event [id]="eventId" [relayHints]="trendingRelays"></app-event>
+    <app-event [id]="eventId" [relayHints]="trendingRelays" [suppressNotFoundState]="true"
+      (hiddenChange)="onEventHiddenChange(eventId, $event)"></app-event>
     }
 
     <!-- Load more trigger -->
