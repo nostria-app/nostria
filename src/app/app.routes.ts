@@ -212,6 +212,7 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./pages/chats/chats.component').then(m => m.ChatsComponent),
     data: { isRoot: true },
+    resolve: { data: DataResolver },
     title: 'Chat Channel',
   },
   {

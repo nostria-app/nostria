@@ -394,6 +394,31 @@ function extractProfilePictureFromEvent(profileEvent: Event): string | undefined
   }
 }
 
+interface ParsedChatMetadata {
+  name: string;
+  about: string;
+  picture?: string;
+  relays?: string[];
+}
+
+function parseChatMetadata(event: Event): ParsedChatMetadata | null {
+  if (event.kind !== 40 && event.kind !== 41) {
+    return null;
+  }
+
+  try {
+    const metadata = JSON.parse(event.content) as Partial<ParsedChatMetadata>;
+    return {
+      name: typeof metadata.name === 'string' && metadata.name.trim() ? metadata.name.trim() : 'Public Chat',
+      about: typeof metadata.about === 'string' ? metadata.about.trim() : '',
+      picture: typeof metadata.picture === 'string' && metadata.picture.trim() ? metadata.picture.trim() : undefined,
+      relays: Array.isArray(metadata.relays) ? metadata.relays.filter((relay): relay is string => typeof relay === 'string' && relay.trim().length > 0) : undefined,
+    };
+  } catch {
+    return null;
+  }
+}
+
 function canonicalizeNostrIdentifier(identifier: string): string {
   if (!identifier) {
     return identifier;
@@ -430,6 +455,14 @@ function canonicalizeNostrIdentifier(identifier: string): string {
 
 function buildFallbackSocialMetadata(routePath: string, id: string): { title: string; description: string; url: string } {
   const normalizedId = canonicalizeNostrIdentifier(id);
+
+  if (routePath.startsWith('chats/')) {
+    return {
+      title: 'Public Chat on Nostria',
+      description: 'Join this public chat on Nostria, the decentralized social app.',
+      url: `https://nostria.app/chats/${normalizedId}`,
+    };
+  }
 
   if (routePath.startsWith('e/')) {
     return {
@@ -660,6 +693,7 @@ export class DataResolver implements Resolve<EventData | null> {
       // because the outbox model is too slow for SSR social preview generation.
       const profileInfo = decodeProfileFromId(id);
       const isProfileRoute = routePath.startsWith('p/') || routePath.startsWith('u/') || routePath.startsWith('music/artist');
+      const isChatRoute = routePath.startsWith('chats/');
       const isHexPubkey = !profileInfo && isProfileRoute && this.utilities.isHex(id) && id.length === 64;
       const isHexEventId = !eventPointer && routePath.startsWith('e/') && this.utilities.isHex(id) && id.length === 64;
       const canFetchDirectRelayEvent =
@@ -919,39 +953,51 @@ export class DataResolver implements Resolve<EventData | null> {
 
         // Determine the best source for content
         if (directEvent) {
-          // Use content from direct relay fetch, stripping nostr: references for clean previews
-          const cleanContent = stripNostrReferences(directEvent.content || '', directEvent.tags);
-          const description = cleanContent.length > 200
-            ? cleanContent.substring(0, 200) + '...'
-            : cleanContent || 'Open this Nostr post on Nostria, the decentralized social app.';
-
           const authorName =
             data.metadata?.profile?.display_name ||
             data.metadata?.profile?.name ||
             undefined;
-          const titleTag = directEvent.tags?.find((tag: string[]) => tag[0] === 'title');
-          const titleFromTag = typeof titleTag?.[1] === 'string' ? titleTag[1].trim() : '';
-          const titleFromContent = cleanContent.slice(0, 80);
-          const fallbackTitle = authorName
-            ? `${authorName} on Nostria`
-            : `Nostr Note ${directEvent.id.slice(0, 8)} on Nostria`;
-          const title = titleFromTag || titleFromContent || fallbackTitle;
-
-          // Try to extract an image for the social preview from the relay-fetched event.
-          // Priority: image tag > imeta image > content image > YouTube thumbnail > author picture
           const authorPicture = relayProfilePicture;
-          const eventImages = extractImagesFromEvent(directEvent, authorPicture);
+          const chatMetadata = parseChatMetadata(directEvent);
+          const eventImages = chatMetadata?.picture
+            ? [chatMetadata.picture, ...extractImagesFromEvent(directEvent, authorPicture).filter(image => image !== chatMetadata.picture)]
+            : extractImagesFromEvent(directEvent, authorPicture);
           const eventImage = eventImages[0] || null;
+
+          let title: string;
+          let description: string;
+
+          if (isChatRoute && chatMetadata) {
+            title = chatMetadata.name;
+            description = chatMetadata.about || 'Join this public chat on Nostria, the decentralized social app.';
+          } else {
+            // Use content from direct relay fetch, stripping nostr: references for clean previews
+            const cleanContent = stripNostrReferences(directEvent.content || '', directEvent.tags);
+            description = cleanContent.length > 200
+              ? cleanContent.substring(0, 200) + '...'
+              : cleanContent || 'Open this Nostr post on Nostria, the decentralized social app.';
+
+            const titleTag = directEvent.tags?.find((tag: string[]) => tag[0] === 'title');
+            const titleFromTag = typeof titleTag?.[1] === 'string' ? titleTag[1].trim() : '';
+            const titleFromContent = cleanContent.slice(0, 80);
+            const fallbackTitle = authorName
+              ? `${authorName} on Nostria`
+              : `Nostr Note ${directEvent.id.slice(0, 8)} on Nostria`;
+            title = titleFromTag || titleFromContent || fallbackTitle;
+          }
 
           this.metaService.updateSocialMetadata({
             title,
             description,
             image: eventImage || 'https://nostria.app/assets/nostria-social.jpg',
             images: eventImages,
+            url: fallbackSocial.url,
             publishedAtSeconds: directEvent.created_at,
             author: authorName,
           });
 
+          data.title = title;
+          data.description = description;
           data.event = {
             content: directEvent.content,
             tags: directEvent.tags,
