@@ -225,6 +225,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   // for events that scroll far off-screen, without removing them from the DOM.
   // This avoids layout shifts that occur with @if/@else DOM swapping.
   private isOffScreen = false;
+  private hasEnteredViewport = false;
   private lastHeight = 0;
   private virtualizeTimer?: ReturnType<typeof setTimeout>;
 
@@ -1850,6 +1851,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
       (isIntersecting) => {
         if (isIntersecting) {
           // --- Entering viewport (or buffer zone) ---
+          this.hasEnteredViewport = true;
 
           // Cancel any pending virtualization — the event is back in view
           if (this.virtualizeTimer) {
@@ -1949,9 +1951,11 @@ export class EventComponent implements AfterViewInit, OnDestroy {
             this.hasLoadedInteractions.set(false);
           }
 
-          // Only virtualize if: the event has been fully rendered at least once,
+          // Only virtualize if the event has entered the viewport/buffer at least once,
           // and virtualization is appropriate for this usage context.
-          if (this.hasLoadedInteractions() && this.shouldVirtualize()) {
+          // Do not couple this to interaction loading: an event can be painted on screen
+          // during fast scroll without ever starting its interaction fetch.
+          if (this.hasEnteredViewport && this.shouldVirtualize()) {
             // Capture height immediately while the DOM is still rendered.
             // Use getBoundingClientRect for sub-pixel accuracy with flex layouts.
             const el = this.elementRef.nativeElement as HTMLElement;
@@ -1985,7 +1989,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
       },
       {
         root: observerRoot,
-        rootMargin: observerRoot ? '900px 0px 1400px 0px' : '600px',
+        rootMargin: observerRoot ? '1100px 0px 1800px 0px' : '800px',
         threshold: 0.01, // Trigger when at least 1% is visible
       }
     );
