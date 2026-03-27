@@ -37,6 +37,11 @@ type WidgetState = 'collapsed' | 'list' | 'chat';
   templateUrl: './chat-widget.component.html',
   styleUrl: './chat-widget.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: {
+    '[style.display]': 'visible() ? "block" : "none"',
+    '[style.pointer-events]': 'visible() ? "auto" : "none"',
+    '[attr.aria-hidden]': 'visible() ? null : "true"',
+  },
 })
 export class ChatWidgetComponent {
   private router = inject(Router);
@@ -52,8 +57,8 @@ export class ChatWidgetComponent {
   private hostEl = inject(ElementRef<HTMLElement>);
   private destroyRef = inject(DestroyRef);
 
-  /** Tracks whether the user is on the /messages route */
-  private isMessagesRoute = signal(false);
+  /** Tracks whether the current route should suppress the floating widget */
+  private isWidgetHiddenRoute = signal(false);
 
   @ViewChild('chatMessagesContainer') chatMessagesContainer?: ElementRef<HTMLDivElement>;
   @ViewChild('widgetMessageInput') widgetMessageInput?: ElementRef<HTMLTextAreaElement>;
@@ -86,12 +91,12 @@ export class ChatWidgetComponent {
     return `translate(${x}px, ${y}px)`;
   });
 
-  /** Show widget only on desktop when authenticated, enabled, and not on the Messages page */
+  /** Show widget only on desktop when authenticated, enabled, and not on chat-heavy routes */
   visible = computed(() => {
     return !this.layout.isHandset()
       && this.app.authenticated()
       && this.localSettings.settings().chatWidgetEnabled !== false
-      && !this.isMessagesRoute();
+      && !this.isWidgetHiddenRoute();
   });
 
   /** Top 3 recent chat pubkeys for the collapsed pill avatars (following only) */
@@ -148,13 +153,13 @@ export class ChatWidgetComponent {
   private chatsLoaded = false;
 
   constructor() {
-    // Track whether the Messages page is active so the widget hides itself
-    this.isMessagesRoute.set(this.router.url.startsWith('/messages'));
+    // Hide the widget on dedicated messaging pages so it cannot overlap their composers.
+    this.isWidgetHiddenRoute.set(this.shouldHideOnRoute(this.router.url));
     this.router.events.pipe(
       takeUntilDestroyed(this.destroyRef)
     ).subscribe(event => {
       if (event instanceof NavigationEnd) {
-        this.isMessagesRoute.set(event.urlAfterRedirects.startsWith('/messages'));
+        this.isWidgetHiddenRoute.set(this.shouldHideOnRoute(event.urlAfterRedirects));
       }
     });
 
@@ -175,6 +180,10 @@ export class ChatWidgetComponent {
         setTimeout(() => this.scrollChatToBottom(), 0);
       }
     });
+  }
+
+  private shouldHideOnRoute(url: string): boolean {
+    return url.startsWith('/messages') || url.startsWith('/chats');
   }
 
   toggleOpen() {
