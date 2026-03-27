@@ -115,7 +115,7 @@ interface AccountLocalState {
   favoritesMigrated?: boolean; // Whether favorites have been migrated to Nostr (kind 30000)
   leftPanelCollapsed?: boolean; // Whether the left panel is collapsed when viewing right panel content
   zapHistoryLastTimestamp?: number; // Timestamp of the most recent zap in history (for incremental fetching)
-  threadReplyFilter?: string; // Global filter for thread replies: 'everyone', 'following', or follow set d-tag
+  threadReplyFilter?: string; // Global filter for thread replies: 'everyone', 'following', 'author-following', or follow set d-tag
   threadWotMinRank?: number; // Minimum WoT rank for thread reply filter (0-100)
   recentEmojis?: RecentEmoji[]; // Recently used emojis for quick access in emoji picker
   streamsListFilter?: string; // Filter for streams: 'all', 'following', or follow set d-tag

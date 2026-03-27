@@ -1,11 +1,15 @@
 <!-- Collapsed State -->
 @if (!isExpanded()) {
 <div class="inline-collapsed-state"
-  (click)="expandEditor()"
-  (keydown.enter)="expandEditor()"
-  (keydown.space)="expandEditor()"
-  tabindex="0"
+  [class.disabled]="interactionDisabled()"
+  [matTooltip]="interactionDisabled() ? interactionDisabledReason() || 'Only accounts followed by the original poster can reply in this thread.' : ''"
+  [matTooltipDisabled]="!interactionDisabled()"
+  (click)="interactionDisabled() ? null : expandEditor()"
+  (keydown.enter)="interactionDisabled() ? null : expandEditor()"
+  (keydown.space)="interactionDisabled() ? null : expandEditor()"
+  [tabindex]="interactionDisabled() ? -1 : 0"
   role="button"
+  [attr.aria-disabled]="interactionDisabled()"
   aria-label="Expand reply editor">
   <div class="avatar-wrapper">
     @if (currentAccountPubkey()) {
@@ -14,10 +18,10 @@
     <mat-icon class="default-avatar">account_circle</mat-icon>
     }
   </div>
-  <span class="placeholder-text">Post your reply</span>
-  <button mat-flat-button class="reply-button" [disabled]="!isLoggedIn()">
+  <span class="placeholder-text">{{ interactionDisabled() ? 'Replies are limited to accounts followed by the author' : 'Post your reply' }}</span>
+  <span class="reply-button" aria-hidden="true">
     Reply
-  </button>
+  </span>
 </div>
 }
 
@@ -82,6 +86,7 @@
         <mat-label>Post your reply</mat-label>
         <textarea matInput
           [value]="content()"
+          [disabled]="interactionDisabled()"
           (input)="onContentInput($event)"
           (keydown)="onContentKeyDown($event)"
           (keyup)="onContentKeyUp($event)"
@@ -166,7 +171,7 @@
       <button mat-icon-button type="button"
         (click)="toggleRecording()"
         [color]="isRecording() ? 'warn' : ''"
-        [disabled]="isUploading() || isPublishing() || isTranscribing()"
+        [disabled]="interactionDisabled() || isUploading() || isPublishing() || isTranscribing()"
         [matTooltip]="isRecording() ? 'Stop listening' : 'Dictate reply'">
         @if (isTranscribing()) {
         <mat-icon class="spinning">sync</mat-icon>
@@ -181,7 +186,7 @@
       @if (recordingHistory().length > 0) {
       <button mat-icon-button type="button"
         (click)="undoLastRecording()"
-        [disabled]="isUploading() || isPublishing() || isTranscribing()"
+        [disabled]="interactionDisabled() || isUploading() || isPublishing() || isTranscribing()"
         matTooltip="Undo last recording">
         <mat-icon>undo</mat-icon>
       </button>
@@ -190,7 +195,7 @@
       <!-- Media button -->
       <button mat-icon-button type="button"
         [matMenuTriggerFor]="mediaMenu"
-        [disabled]="isUploading() || isPublishing()"
+        [disabled]="interactionDisabled() || isUploading() || isPublishing()"
         matTooltip="Add media">
         <mat-icon>perm_media</mat-icon>
       </button>
@@ -208,7 +213,7 @@
       <!-- Emoji picker button -->
       @if (layout.isHandset()) {
       <button mat-icon-button type="button"
-        [disabled]="isUploading() || isPublishing()"
+        [disabled]="interactionDisabled() || isUploading() || isPublishing()"
         matTooltip="Emoji"
         (click)="openEmojiPickerDialog()">
         <mat-icon>sentiment_satisfied</mat-icon>
@@ -217,7 +222,7 @@
       <button mat-icon-button type="button"
         [matMenuTriggerFor]="emojiMenu"
         (menuOpened)="emojiPickerRef?.resetTab()"
-        [disabled]="isUploading() || isPublishing()"
+        [disabled]="interactionDisabled() || isUploading() || isPublishing()"
         matTooltip="Emoji">
         <mat-icon>sentiment_satisfied</mat-icon>
       </button>

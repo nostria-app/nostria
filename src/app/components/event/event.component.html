@@ -997,17 +997,20 @@
       } @else {
       <!-- Like with count -->
       <div class="action-button like-action like-hover-container"
-        (click)="reactionBtn.sendDefaultReaction(); $event.stopPropagation()" (mouseenter)="onLikeHoverEnter()"
-        (mouseleave)="onLikeHoverLeave()">
+        [class.disabled]="isThreadInteractionBlocked()" [attr.aria-disabled]="isThreadInteractionBlocked()"
+        [matTooltip]="isThreadInteractionBlocked() ? threadInteractionBlockedTooltip() : ''"
+        [matTooltipDisabled]="!isThreadInteractionBlocked()" (click)="onLikeActionClick(reactionBtn, $event)"
+        (mouseenter)="onLikeHoverEnter()" (mouseleave)="onLikeHoverLeave()">
         <app-reaction-button class="action-icon" #reactionBtn [event]="targetItem.event"
-          [reactionsFromParent]="reactions()" (reactionChanged)="loadReactions(true)" view="icon"></app-reaction-button>
+          [reactionsFromParent]="reactions()" [disabled]="isThreadInteractionBlocked()"
+          (reactionChanged)="loadReactions(true)" view="icon"></app-reaction-button>
         @if (likes().length > 0) {
         <span class="action-count">{{ likesDisplay() }}</span>
         }
         <span class="action-text">Like</span>
 
         <!-- Quick reaction hover popup -->
-        <div class="quick-reaction-popup" [class.visible]="showQuickReactions()" (mouseenter)="onLikeHoverEnter()"
+        <div class="quick-reaction-popup" [class.visible]="showQuickReactions() && !isThreadInteractionBlocked()" (mouseenter)="onLikeHoverEnter()"
           (mouseleave)="onLikeHoverLeave()">
           @for (item of quickReactionEmojis(); track item.emoji) {
           <button class="quick-emoji-btn" (click)="onQuickReaction(item.emoji, reactionBtn, $event)" type="button">
@@ -1029,7 +1032,11 @@
       }
 
       <!-- Reply (opens note editor) -->
-      <div class="action-button comment-action" role="button" [attr.tabindex]="requiresSpamConfirmation() ? -1 : 0"
+      <div class="action-button comment-action" role="button"
+        [class.disabled]="isThreadInteractionBlocked()" [attr.aria-disabled]="isThreadInteractionBlocked()"
+        [attr.tabindex]="requiresSpamConfirmation() || isThreadInteractionBlocked() ? -1 : 0"
+        [matTooltip]="isThreadInteractionBlocked() ? threadInteractionBlockedTooltip() : ''"
+        [matTooltipDisabled]="!isThreadInteractionBlocked()"
         (click)="openReplyEditor($event)">
         <mat-icon class="action-icon">mode_comment</mat-icon>
         @if (replyCount() > 0) {
@@ -1039,8 +1046,11 @@
       </div>
 
       <!-- Share with count (reposts + quotes) -->
-      <div class="action-button share-action" role="button" [attr.tabindex]="requiresSpamConfirmation() ? -1 : 0"
-        (click)="openShareDialog(); $event.stopPropagation()">
+      <div class="action-button share-action" role="button"
+        [class.disabled]="isThreadInteractionBlocked()" [attr.aria-disabled]="isThreadInteractionBlocked()"
+        [attr.tabindex]="requiresSpamConfirmation() || isThreadInteractionBlocked() ? -1 : 0"
+        [matTooltip]="isThreadInteractionBlocked() ? threadInteractionBlockedTooltip() : ''"
+        [matTooltipDisabled]="!isThreadInteractionBlocked()" (click)="openShareDialog($event)">
         <mat-icon class="action-icon">share</mat-icon>
         @if (shareCount() > 0) {
         <span class="action-count">{{ shareCountDisplay() }}</span>
@@ -1058,9 +1068,13 @@
       }
 
       <!-- Zap with sats -->
-      <div class="action-button zap-action" (click)="zapBtn.onClick($event); $event.stopPropagation()">
+      <div class="action-button zap-action" [class.disabled]="isThreadInteractionBlocked()"
+        [attr.aria-disabled]="isThreadInteractionBlocked()"
+        [matTooltip]="isThreadInteractionBlocked() ? threadInteractionBlockedTooltip() : ''"
+        [matTooltipDisabled]="!isThreadInteractionBlocked()" (click)="onZapActionClick(zapBtn, $event)">
         <app-zap-button class="action-icon" #zapBtn [event]="targetItem.event"
-          [recipientPubkey]="targetItem.event.pubkey" (zapSent)="onZapSent($event)">
+          [recipientPubkey]="targetItem.event.pubkey" [disabled]="isThreadInteractionBlocked()"
+          (zapSent)="onZapSent($event)">
         </app-zap-button>
         @if (totalZapAmount() > 0) {
         <span class="action-count">{{ formatZapAmount(totalZapAmount()) }}{{ hasMoreZaps() ? '+' : '' }}</span>

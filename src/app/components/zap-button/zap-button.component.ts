@@ -49,7 +49,7 @@ import { ZapSoundService, getZapTier, ZapTier } from '../../services/zap-sound.s
           [class.zapped]="hasZapped()"
           [class.loading]="isLoading()"
           [class.celebrating]="celebrationTier() > 0"
-          [disabled]="isLoading()"
+          [disabled]="isLoading() || disabled()"
           (click)="sendQuickZap($event)"
           (touchstart)="onTouchStart($event)"
           (touchend)="onTouchEnd($event)"
@@ -66,6 +66,7 @@ import { ZapSoundService, getZapTier, ZapTier } from '../../services/zap-sound.s
             <button
               mat-icon-button
               class="custom-zap-button"
+              [disabled]="disabled()"
               (click)="openZapDialog($event)"
               matTooltip="Custom zap amount"
               matTooltipPosition="below"
@@ -81,7 +82,7 @@ import { ZapSoundService, getZapTier, ZapTier } from '../../services/zap-sound.s
           class="zap-button"
           [class.zapped]="hasZapped()"
           [class.celebrating]="celebrationTier() > 0"
-          [disabled]="isLoading()"
+          [disabled]="isLoading() || disabled()"
           (click)="openZapDialog($event)"
           [matTooltip]="tooltip()"
           matTooltipPosition="below"
@@ -811,6 +812,7 @@ export class ZapButtonComponent {
   recipientName = input<string | null>(null);
   recipientMetadata = input<Record<string, unknown> | null>(null);
   comment = input<string>('');
+  disabled = input<boolean>(false);
 
   // Outputs
   zapSent = output<number>();
@@ -883,7 +885,7 @@ export class ZapButtonComponent {
 
   // Desktop hover handlers
   onMouseEnter(): void {
-    if (!this.isHandset() && this.quickZapEnabled()) {
+    if (!this.disabled() && !this.isHandset() && this.quickZapEnabled()) {
       this.showHoverMenu.set(true);
     }
   }
@@ -894,7 +896,7 @@ export class ZapButtonComponent {
 
   // Mobile long-press handlers
   onTouchStart(event: TouchEvent): void {
-    if (!this.isHandset() || !isPlatformBrowser(this.platformId)) {
+    if (this.disabled() || !this.isHandset() || !isPlatformBrowser(this.platformId)) {
       return;
     }
 
@@ -944,6 +946,9 @@ export class ZapButtonComponent {
   /** Public method to trigger zap from parent (e.g., when label is clicked). */
   onClick(event: MouseEvent): void {
     event.stopPropagation();
+    if (this.disabled()) {
+      return;
+    }
     if (this.quickZapEnabled()) {
       this.sendQuickZap(event);
     } else {
@@ -956,7 +961,7 @@ export class ZapButtonComponent {
     event.stopPropagation();
     event.preventDefault();
 
-    if (this.isLoading()) {
+    if (this.disabled() || this.isLoading()) {
       return;
     }
 
@@ -1069,6 +1074,10 @@ export class ZapButtonComponent {
   // Custom zap dialog
   async openZapDialog(event: MouseEvent): Promise<void> {
     event.stopPropagation();
+
+    if (this.disabled()) {
+      return;
+    }
 
     const userPubkey = this.accountState.pubkey();
     const currentAccount = this.accountState.account();

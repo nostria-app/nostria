@@ -53,7 +53,6 @@ import {
 } from '../event-types';
 import { isKnownRenderableKind } from '../../utils/kind-labels';
 import { ChannelEmbedComponent } from '../channel-embed/channel-embed.component';
-import { UserProfileComponent } from '../user-profile/user-profile.component';
 import { BadgeComponent } from '../../pages/badges/badge/badge.component';
 import { ProfileDisplayNameComponent } from '../user-profile/display-name/profile-display-name.component';
 import { EventMenuComponent } from './event-menu/event-menu.component';
@@ -154,7 +153,6 @@ export function getTaggedXUrl(event?: Event | null): string | undefined {
     CodeSnippetEventComponent,
     UnknownEventComponent,
     ChannelEmbedComponent,
-    UserProfileComponent,
     BadgeComponent,
     ReportedContentComponent,
     ZapButtonComponent,
@@ -194,6 +192,8 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   hideParentEvent = input<boolean>(false);
   hideFooter = input<boolean>(false);
   hideHeader = input<boolean>(false);
+  threadInteractionDisabled = input<boolean>(false);
+  threadInteractionDisabledReason = input<string | null>(null);
   // Media navigation context (for Media tab grid)
   allMediaEvents = input<Event[]>([]);
   mediaEventIndex = input<number | undefined>(undefined);
@@ -210,6 +210,10 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   // When clicking this event, these replies are passed through router state for instant display
   repliesFromParent = input<ThreadedEvent[] | undefined>(undefined);
   isPlain = computed<boolean>(() => this.appearance() === 'plain');
+  isThreadInteractionBlocked = computed<boolean>(() => this.mode() === 'thread' && this.threadInteractionDisabled());
+  threadInteractionBlockedTooltip = computed<string>(() => {
+    return this.threadInteractionDisabledReason() || 'Only accounts followed by the original poster can interact in this thread.';
+  });
 
   // IntersectionObserver for lazy loading interactions
   readonly hasLoadedInteractions = signal<boolean>(false);
@@ -304,7 +308,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   onLikeHoverEnter(): void {
     // Don't show quick reaction popup on touch-only devices;
     // long-press opens the full emoji picker instead.
-    if (!this.canHover) return;
+    if (!this.canHover || this.isThreadInteractionBlocked()) return;
     if (this.quickReactionTimeout) {
       clearTimeout(this.quickReactionTimeout);
       this.quickReactionTimeout = null;
@@ -316,6 +320,39 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     this.quickReactionTimeout = setTimeout(() => {
       this.showQuickReactions.set(false);
     }, 100);
+  }
+
+  private consumeBlockedThreadInteraction(event?: globalThis.Event): boolean {
+    if (!this.isThreadInteractionBlocked()) {
+      return false;
+    }
+
+    event?.preventDefault();
+    event?.stopPropagation();
+    this.showQuickReactions.set(false);
+    return true;
+  }
+
+  onBlockedThreadInteraction(event: globalThis.Event): void {
+    this.consumeBlockedThreadInteraction(event);
+  }
+
+  onLikeActionClick(reactionBtn: ReactionButtonComponent, event: MouseEvent): void {
+    if (this.consumeBlockedThreadInteraction(event)) {
+      return;
+    }
+
+    reactionBtn.sendDefaultReaction();
+    event.stopPropagation();
+  }
+
+  onZapActionClick(zapBtn: ZapButtonComponent, event: MouseEvent): void {
+    if (this.consumeBlockedThreadInteraction(event)) {
+      return;
+    }
+
+    zapBtn.onClick(event);
+    event.stopPropagation();
   }
 
   onQuickReaction(emoji: string, reactionBtn: ReactionButtonComponent, event: MouseEvent): void {
@@ -2478,7 +2515,13 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     });
   }
 
-  async openShareDialog() {
+  async openShareDialog(event?: MouseEvent) {
+    if (this.consumeBlockedThreadInteraction(event)) {
+      return;
+    }
+
+    event?.stopPropagation();
+
     const targetItem = this.targetRecord();
     if (!targetItem) return;
 
@@ -2557,6 +2600,10 @@ export class EventComponent implements AfterViewInit, OnDestroy {
    * Open the note editor dialog to reply to this event
    */
   async openReplyEditor(event: MouseEvent) {
+    if (this.consumeBlockedThreadInteraction(event)) {
+      return;
+    }
+
     event.stopPropagation();
     const targetRecordData = this.targetRecord();
     if (!targetRecordData) return;
@@ -2632,6 +2679,10 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   }
 
   async toggleLike(event?: MouseEvent) {
+    if (this.consumeBlockedThreadInteraction(event)) {
+      return;
+    }
+
     if (event) {
       event.stopPropagation();
     }

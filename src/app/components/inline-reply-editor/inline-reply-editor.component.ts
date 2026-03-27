@@ -95,6 +95,10 @@ export class InlineReplyEditorComponent implements AfterViewInit, OnDestroy {
   /** The event being replied to */
   replyToEvent = input.required<NostrEvent>();
 
+  /** Disable interactions when the current thread is locked to author-followed accounts */
+  interactionDisabled = input<boolean>(false);
+  interactionDisabledReason = input<string | null>(null);
+
   /** When false, stay in the current view after publish instead of navigating to the new event */
   navigateOnPublish = input<boolean>(true);
 
@@ -168,7 +172,7 @@ export class InlineReplyEditorComponent implements AfterViewInit, OnDestroy {
     const hasContent = this.content().trim().length > 0;
     const notPublishing = !this.isPublishing();
     const notUploading = !this.isUploading();
-    return hasContent && notPublishing && notUploading;
+    return hasContent && notPublishing && notUploading && !this.interactionDisabled();
   });
 
   constructor() {
@@ -225,6 +229,9 @@ export class InlineReplyEditorComponent implements AfterViewInit, OnDestroy {
   expandEditor(): void {
     if (!this.isLoggedIn()) {
       this.snackBar.open('Please log in to reply', 'Close', { duration: 3000 });
+      return;
+    }
+    if (this.interactionDisabled()) {
       return;
     }
     this.isExpanded.set(true);

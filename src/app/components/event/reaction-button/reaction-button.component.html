@@ -2,7 +2,7 @@
   @if (view() === 'icon') {
   <!-- Icon view: single-tap sends default reaction, long-press opens picker -->
   <button mat-icon-button [class.active]="!!userReaction()" [class.reacted]="!!userReaction()"
-    [disabled]="isLoadingReactions()" (pointerdown)="onPointerDown()" (pointerup)="onPointerUp($event)"
+    [disabled]="isLoadingReactions() || disabled()" (pointerdown)="onPointerDown()" (pointerup)="onPointerUp($event)"
     (pointerleave)="onPointerLeave()" (click)="$event.stopPropagation(); $event.preventDefault()">
     @if (userReaction()) {
     @if (getCustomEmojiUrl(userReaction()!.event)) {
@@ -42,7 +42,7 @@
         <div class="emoji-grid">
           @for (emoji of searchResults().unicode; track emoji) {
           <button mat-icon-button class="emoji-button" [class.selected]="userReaction()?.event?.content === emoji"
-            (click)="addReaction(emoji); $event.stopPropagation()" [disabled]="isLoadingReactions()">
+            (click)="addReaction(emoji); $event.stopPropagation()" [disabled]="isLoadingReactions() || disabled()">
             {{ emoji }}
           </button>
           }
@@ -50,7 +50,7 @@
           <button mat-icon-button class="emoji-button custom-emoji"
             [class.selected]="userReaction()?.event?.content === ':' + emoji.shortcode + ':'"
             (click)="addReaction(':' + emoji.shortcode + ':'); $event.stopPropagation()"
-            [disabled]="isLoadingReactions()" [matTooltip]="emoji.shortcode" [attr.aria-label]="emoji.shortcode"
+            [disabled]="isLoadingReactions() || disabled()" [matTooltip]="emoji.shortcode" [attr.aria-label]="emoji.shortcode"
             title="{{ emoji.shortcode }}">
             <img [src]="emoji.url" alt="{{ emoji.shortcode }}" title="{{ emoji.shortcode }}" class="custom-emoji-img">
           </button>
@@ -69,7 +69,7 @@
             @for (recent of recentEmojis(); track recent.emoji) {
             <button mat-icon-button class="emoji-button"
               [class.selected]="userReaction()?.event?.content === recent.emoji"
-              (click)="addReaction(recent.emoji); $event.stopPropagation()" [disabled]="isLoadingReactions()"
+              (click)="addReaction(recent.emoji); $event.stopPropagation()" [disabled]="isLoadingReactions() || disabled()"
               [matTooltip]="recent.emoji.startsWith(':') ? recent.emoji.slice(1, -1) : ''"
               [attr.aria-label]="recent.emoji" title="{{ recent.emoji }}">
               @if (recent.url) {
@@ -96,7 +96,7 @@
             <div class="emoji-grid">
               @for (emoji of quickReactions; track emoji) {
               <button mat-icon-button class="emoji-button" (click)="addReaction(emoji); $event.stopPropagation()"
-                [disabled]="isLoadingReactions()">
+                [disabled]="isLoadingReactions() || disabled()">
                 {{ emoji }}
               </button>
               }
@@ -116,7 +116,7 @@
               <button mat-icon-button class="emoji-button custom-emoji"
                 [class.selected]="userReaction()?.event?.content === ':' + emoji.shortcode + ':'"
                 (click)="addReaction(':' + emoji.shortcode + ':'); $event.stopPropagation()"
-                [disabled]="isLoadingReactions()" [matTooltip]="emoji.shortcode" [attr.aria-label]="emoji.shortcode"
+                [disabled]="isLoadingReactions() || disabled()" [matTooltip]="emoji.shortcode" [attr.aria-label]="emoji.shortcode"
                 title="{{ emoji.shortcode }}">
                 <img [src]="emoji.url" alt="{{ emoji.shortcode }}" title="{{ emoji.shortcode }}"
                   class="custom-emoji-img">
@@ -134,7 +134,7 @@
           <div class="emoji-grid">
             @for (emoji of category.emojis; track emoji) {
             <button mat-icon-button class="emoji-button" [class.selected]="userReaction()?.event?.content === emoji"
-              (click)="addReaction(emoji); $event.stopPropagation()" [disabled]="isLoadingReactions()">
+              (click)="addReaction(emoji); $event.stopPropagation()" [disabled]="isLoadingReactions() || disabled()">
               {{ emoji }}
             </button>
             }
@@ -169,7 +169,7 @@
   <div class="reaction-full-view">
     <!-- Main reaction button -->
     <button mat-button [class.active]="!!userReaction()" [class.reacted]="!!userReaction()"
-      [disabled]="isLoadingReactions()" [matMenuTriggerFor]="isHandset() ? null : reactionMenuFull"
+      [disabled]="isLoadingReactions() || disabled()" [matMenuTriggerFor]="isHandset() ? null : reactionMenuFull"
       #menuTriggerFull="matMenuTrigger" (click)="openFullReactionPicker($event)">
       @if (userReaction()) {
       @if (getCustomEmojiUrl(userReaction()!.event)) {
@@ -210,7 +210,7 @@
           <div class="emoji-grid">
             @for (emoji of searchResults().unicode; track emoji) {
             <button mat-icon-button class="emoji-button" [class.selected]="userReaction()?.event?.content === emoji"
-              (click)="addReaction(emoji); $event.stopPropagation()" [disabled]="isLoadingReactions()">
+              (click)="addReaction(emoji); $event.stopPropagation()" [disabled]="isLoadingReactions() || disabled()">
               {{ emoji }}
             </button>
             }
@@ -218,7 +218,7 @@
             <button mat-icon-button class="emoji-button custom-emoji"
               [class.selected]="userReaction()?.event?.content === ':' + emoji.shortcode + ':'"
               (click)="addReaction(':' + emoji.shortcode + ':'); $event.stopPropagation()"
-              [disabled]="isLoadingReactions()" [matTooltip]="emoji.shortcode" [attr.aria-label]="emoji.shortcode"
+              [disabled]="isLoadingReactions() || disabled()" [matTooltip]="emoji.shortcode" [attr.aria-label]="emoji.shortcode"
               title="{{ emoji.shortcode }}">
               <img [src]="emoji.url" alt="{{ emoji.shortcode }}" title="{{ emoji.shortcode }}" class="custom-emoji-img">
             </button>
@@ -237,7 +237,7 @@
               @for (recent of recentEmojis(); track recent.emoji) {
               <button mat-icon-button class="emoji-button"
                 [class.selected]="userReaction()?.event?.content === recent.emoji"
-                (click)="addReaction(recent.emoji); $event.stopPropagation()" [disabled]="isLoadingReactions()"
+                (click)="addReaction(recent.emoji); $event.stopPropagation()" [disabled]="isLoadingReactions() || disabled()"
                 [matTooltip]="recent.emoji.startsWith(':') ? recent.emoji.slice(1, -1) : ''"
                 [attr.aria-label]="recent.emoji" title="{{ recent.emoji }}">
                 @if (recent.url) {
@@ -264,7 +264,7 @@
               <div class="emoji-grid">
                 @for (emoji of quickReactions; track emoji) {
                 <button mat-icon-button class="emoji-button" (click)="addReaction(emoji); $event.stopPropagation()"
-                  [disabled]="isLoadingReactions()">
+                  [disabled]="isLoadingReactions() || disabled()">
                   {{ emoji }}
                 </button>
                 }
@@ -284,7 +284,7 @@
                 <button mat-icon-button class="emoji-button custom-emoji"
                   [class.selected]="userReaction()?.event?.content === ':' + emoji.shortcode + ':'"
                   (click)="addReaction(':' + emoji.shortcode + ':'); $event.stopPropagation()"
-                  [disabled]="isLoadingReactions()" [matTooltip]="emoji.shortcode" [attr.aria-label]="emoji.shortcode"
+                  [disabled]="isLoadingReactions() || disabled()" [matTooltip]="emoji.shortcode" [attr.aria-label]="emoji.shortcode"
                   title="{{ emoji.shortcode }}">
                   <img [src]="emoji.url" alt="{{ emoji.shortcode }}" title="{{ emoji.shortcode }}"
                     class="custom-emoji-img">
@@ -302,7 +302,7 @@
             <div class="emoji-grid">
               @for (emoji of category.emojis; track emoji) {
               <button mat-icon-button class="emoji-button" [class.selected]="userReaction()?.event?.content === emoji"
-                (click)="addReaction(emoji); $event.stopPropagation()" [disabled]="isLoadingReactions()">
+                (click)="addReaction(emoji); $event.stopPropagation()" [disabled]="isLoadingReactions() || disabled()">
                 {{ emoji }}
               </button>
               }

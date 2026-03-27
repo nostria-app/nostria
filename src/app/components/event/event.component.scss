@@ -333,6 +333,22 @@
     outline-offset: -2px;
   }
 
+  &.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+
+    .action-count,
+    .action-text,
+    >mat-icon {
+      color: inherit;
+    }
+  }
+
+  &.disabled:hover {
+    background: none;
+    color: var(--mat-sys-on-surface-variant);
+  }
+
   // Direct mat-icon children (Share, Bookmark)
   >mat-icon {
     font-size: 22px;

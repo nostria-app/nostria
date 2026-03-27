@@ -312,6 +312,10 @@ export class ReactionButtonComponent {
 
   /** Opens the reaction picker menu. Called from parent when label is clicked. */
   openMenu(): void {
+    if (this.disabled()) {
+      return;
+    }
+
     if (this.isHandset()) {
       void this.openReactionPickerDialog();
       return;
@@ -322,6 +326,10 @@ export class ReactionButtonComponent {
 
   openFullReactionPicker(event: globalThis.MouseEvent): void {
     event.stopPropagation();
+
+    if (this.disabled()) {
+      return;
+    }
 
     if (this.isHandset()) {
       void this.openReactionPickerDialog();
@@ -342,6 +350,10 @@ export class ReactionButtonComponent {
    * If the user already reacted, toggle off their reaction instead.
    */
   sendDefaultReaction(): void {
+    if (this.disabled()) {
+      return;
+    }
+
     const defaultEmoji = this.localSettings.defaultReactionEmoji();
     if (!defaultEmoji) {
       this.openMenu();
@@ -355,7 +367,7 @@ export class ReactionButtonComponent {
    * Starts a timer; if held long enough, opens the emoji picker menu.
    */
   onPointerDown(): void {
-    if (!this.isBrowser) return;
+    if (!this.isBrowser || this.disabled()) return;
     this.longPressTriggered = false;
     this.longPressTimer = setTimeout(() => {
       this.longPressTriggered = true;
@@ -367,7 +379,7 @@ export class ReactionButtonComponent {
    * Handle pointer up: if long-press was not triggered, send the default reaction.
    */
   onPointerUp(event: PointerEvent): void {
-    if (!this.isBrowser) return;
+    if (!this.isBrowser || this.disabled()) return;
     if (this.longPressTimer) {
       clearTimeout(this.longPressTimer);
       this.longPressTimer = null;
@@ -428,6 +440,7 @@ export class ReactionButtonComponent {
 
   event = input.required<Event>();
   view = input<ViewMode>('icon');
+  disabled = input<boolean>(false);
   // Accept reactions from parent to avoid duplicate queries
   // If not provided, component will load independently
   reactionsFromParent = input<ReactionEvents | null>(null);
@@ -768,7 +781,10 @@ export class ReactionButtonComponent {
         this.handleReactionError(result.error, 'Failed to add reaction. Please try again.');
       } else {
         if (result.event) {
-          this.replaceOptimisticReactionWithSigned(this.accountState.pubkey()!, emoji, result.event);
+              if (this.disabled()) {
+                return;
+              }
+
         }
         // Track emoji usage for recent emojis
         this.trackEmojiUsage(emoji, emojiUrl);

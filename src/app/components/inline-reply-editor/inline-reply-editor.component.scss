@@ -23,6 +23,15 @@
     background-color: var(--mat-sys-surface-container-low);
   }
 
+  &.disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+
+    &:hover {
+      background-color: transparent;
+    }
+  }
+
   .avatar-wrapper {
     flex-shrink: 0;
     width: 40px;
@@ -73,6 +82,14 @@
   }
 
   .reply-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 36px;
+    padding: 0 16px;
+    border-radius: var(--mat-sys-corner-full);
+    background-color: var(--mat-sys-primary);
+    color: var(--mat-sys-on-primary);
     flex-shrink: 0;
     opacity: 0.6;
     pointer-events: none;

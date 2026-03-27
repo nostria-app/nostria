@@ -43,6 +43,8 @@ import { AccountLocalStateService } from '../../services/account-local-state.ser
 import { EventFocusService } from '../../services/event-focus.service';
 import { TrustService } from '../../services/trust.service';
 import { PublishEventBus, PublishRelayResultEvent } from '../../services/publish-event-bus.service';
+import { UserRelayService } from '../../services/relays/user-relay';
+import { DatabaseService } from '../../services/database.service';
 
 /** Description of the EventPageComponent
  *
@@ -66,6 +68,7 @@ import { PublishEventBus, PublishRelayResultEvent } from '../../services/publish
 // Constants for follow set filter types
 export const REPLY_FILTER_EVERYONE = 'everyone';
 export const REPLY_FILTER_FOLLOWING = 'following';
+export const REPLY_FILTER_AUTHOR_FOLLOWING = 'author-following';
 export const REPLY_FILTER_WOT = 'wot';
 
 @Component({
@@ -78,6 +81,10 @@ export const REPLY_FILTER_WOT = 'wot';
   }
 })
 export class EventPageComponent {
+  readonly replyFilterEveryone = REPLY_FILTER_EVERYONE;
+  readonly replyFilterFollowing = REPLY_FILTER_FOLLOWING;
+  readonly replyFilterAuthorFollowing = REPLY_FILTER_AUTHOR_FOLLOWING;
+
   // Unique instance ID for debugging
   private instanceId = Math.random().toString(36).substring(7);
 
@@ -137,6 +144,8 @@ export class EventPageComponent {
   private readonly destroyRef = inject(DestroyRef);
   private readonly trustService = inject(TrustService);
   private publishEventBus = inject(PublishEventBus);
+  private readonly userRelayService = inject(UserRelayService);
+  private readonly database = inject(DatabaseService);
   id = signal<string | null>(null);
   userRelays: string[] = [];
   app = inject(ApplicationService);
@@ -197,17 +206,71 @@ export class EventPageComponent {
   // 'everyone' = no filter, 'following' = main contact list, or d-tag of a custom follow set
   selectedReplyFilter = signal<string>(REPLY_FILTER_EVERYONE);
 
+  activeReplyFilter = computed<string>(() => {
+    const filter = this.selectedReplyFilter();
+    if (filter === REPLY_FILTER_AUTHOR_FOLLOWING && !this.supportsAuthorFollowingFilter()) {
+      return REPLY_FILTER_EVERYONE;
+    }
+
+    return filter;
+  });
+
   // WoT minimum rank threshold (0 = no minimum, 100 = maximum trust required)
   wotMinRank = signal<number>(0);
+
+  private authorFollowingPubkeys = signal<string[]>([]);
+  private authorFollowingTimestamp = signal<number>(0);
+  authorFollowingLoaded = signal(false);
+  private authorFollowingRequestId = 0;
+  private lastAuthorFollowingPubkey: string | null = null;
+
+  threadOriginalPoster = computed<string | undefined>(() => this.threadData()?.rootEvent?.pubkey ?? this.event()?.pubkey);
+
+  supportsAuthorFollowingFilter = computed<boolean>(() => {
+    const sourceEvent = this.threadData()?.rootEvent ?? this.event();
+    return sourceEvent?.kind === kinds.ShortTextNote;
+  });
+
+  authorFollowingAllowedPubkeys = computed<Set<string>>(() => {
+    const allowedPubkeys = new Set(this.authorFollowingPubkeys());
+    const originalPoster = this.threadOriginalPoster();
+    if (originalPoster) {
+      allowedPubkeys.add(originalPoster);
+    }
+    return allowedPubkeys;
+  });
+
+  isAuthorFollowingInteractionLocked = computed<boolean>(() => {
+    if (this.activeReplyFilter() !== REPLY_FILTER_AUTHOR_FOLLOWING) {
+      return false;
+    }
+
+    const viewerPubkey = this.accountState.pubkey();
+    const originalPoster = this.threadOriginalPoster();
+    if (!viewerPubkey || !originalPoster || viewerPubkey === originalPoster) {
+      return false;
+    }
+
+    return !this.authorFollowingAllowedPubkeys().has(viewerPubkey);
+  });
+
+  authorFollowingInteractionDisabledReason = computed<string | null>(() => {
+    if (!this.isAuthorFollowingInteractionLocked()) {
+      return null;
+    }
+
+    return 'Only accounts followed by the original poster can interact in this thread.';
+  });
 
   // Available follow sets for the filter menu
   availableFollowSets = computed<FollowSet[]>(() => this.followSetsService.followSets());
 
   // Get the currently selected follow set (for display)
   selectedFollowSetName = computed<string>(() => {
-    const filter = this.selectedReplyFilter();
+    const filter = this.activeReplyFilter();
     if (filter === REPLY_FILTER_EVERYONE) return 'Everyone';
-    if (filter === REPLY_FILTER_FOLLOWING) return 'Following';
+    if (filter === REPLY_FILTER_FOLLOWING) return 'Your Following';
+    if (filter === REPLY_FILTER_AUTHOR_FOLLOWING) return 'Author Following';
     // Legacy WoT-only filter: treat as Everyone with WoT slider
     if (filter === REPLY_FILTER_WOT) return 'Everyone';
     const set = this.availableFollowSets().find(s => s.dTag === filter);
@@ -215,11 +278,11 @@ export class EventPageComponent {
   });
 
   // Check if a reply filter is active
-  isReplyFilterActive = computed<boolean>(() => this.selectedReplyFilter() !== REPLY_FILTER_EVERYONE || this.wotMinRank() > 0);
+  isReplyFilterActive = computed<boolean>(() => this.activeReplyFilter() !== REPLY_FILTER_EVERYONE || this.wotMinRank() > 0);
 
   // Filtered threaded replies based on selected follow set and WoT threshold
   filteredThreadedReplies = computed<ThreadedEvent[]>(() => {
-    const filter = this.selectedReplyFilter();
+    const filter = this.activeReplyFilter();
     const kindFilter = this.commentKindFilter();
     const minRank = this.wotMinRank();
     let replies = this.threadedReplies();
@@ -231,12 +294,15 @@ export class EventPageComponent {
     }
 
     const mainEventPubkey = this.event()?.pubkey;
+    const originalPoster = this.threadOriginalPoster();
 
     // Apply people filter first (if not 'everyone')
     if (filter === REPLY_FILTER_FOLLOWING) {
       const allowedPubkeys = new Set(this.accountState.followingList());
       if (mainEventPubkey) allowedPubkeys.add(mainEventPubkey);
       replies = this.filterThreadedReplies(replies, allowedPubkeys);
+    } else if (filter === REPLY_FILTER_AUTHOR_FOLLOWING) {
+      replies = this.filterThreadedReplies(replies, this.authorFollowingAllowedPubkeys());
     } else if (filter !== REPLY_FILTER_EVERYONE && filter !== REPLY_FILTER_WOT) {
       // Custom follow set
       const followSet = this.availableFollowSets().find(s => s.dTag === filter);
@@ -249,7 +315,7 @@ export class EventPageComponent {
 
     // Apply WoT rank filter (either standalone WoT filter or combined with people filter via slider)
     if (filter === REPLY_FILTER_WOT || minRank > 0) {
-      replies = this.filterThreadedRepliesByWot(replies, mainEventPubkey, minRank);
+      replies = this.filterThreadedRepliesByWot(replies, originalPoster ?? mainEventPubkey, minRank);
     }
 
     return replies;
@@ -384,6 +450,69 @@ export class EventPageComponent {
       this.selectedReplyFilter.set(savedFilter);
       const savedMinRank = this.accountLocalState.getThreadWotMinRank(pubkey);
       this.wotMinRank.set(savedMinRank);
+    }
+  }
+
+  private resetAuthorFollowingList(): void {
+    this.authorFollowingRequestId++;
+    this.lastAuthorFollowingPubkey = null;
+    this.authorFollowingPubkeys.set([]);
+    this.authorFollowingTimestamp.set(0);
+    this.authorFollowingLoaded.set(false);
+  }
+
+  private applyAuthorFollowingEvent(event: Event): void {
+    if (event.kind !== kinds.Contacts) {
+      return;
+    }
+
+    const currentTimestamp = this.authorFollowingTimestamp();
+    if (event.created_at < currentTimestamp) {
+      return;
+    }
+
+    this.authorFollowingPubkeys.set(this.utilities.getPTagsValuesFromEvent(event));
+    this.authorFollowingTimestamp.set(event.created_at);
+  }
+
+  private async loadAuthorFollowingList(pubkey: string): Promise<void> {
+    const requestId = ++this.authorFollowingRequestId;
+    this.lastAuthorFollowingPubkey = pubkey;
+    this.authorFollowingPubkeys.set([]);
+    this.authorFollowingTimestamp.set(0);
+    this.authorFollowingLoaded.set(false);
+
+    try {
+      const cachedEvent = await this.database.getEventByPubkeyAndKind(pubkey, kinds.Contacts);
+      if (requestId !== this.authorFollowingRequestId) {
+        return;
+      }
+
+      if (cachedEvent) {
+        this.applyAuthorFollowingEvent(cachedEvent);
+      }
+
+      const relayEvent = await this.userRelayService.getEventByPubkeyAndKind(pubkey, kinds.Contacts);
+      if (requestId !== this.authorFollowingRequestId) {
+        return;
+      }
+
+      if (relayEvent) {
+        this.applyAuthorFollowingEvent(relayEvent);
+        this.database.saveReplaceableEvent(relayEvent).catch((error) => {
+          this.logger.debug('Failed to cache author following list:', error);
+        });
+      }
+    } catch (error) {
+      if (requestId !== this.authorFollowingRequestId) {
+        return;
+      }
+
+      this.logger.debug('Failed to load author following list for thread filter:', error);
+    } finally {
+      if (requestId === this.authorFollowingRequestId) {
+        this.authorFollowingLoaded.set(true);
+      }
     }
   }
 
@@ -585,6 +714,24 @@ export class EventPageComponent {
 
     // Load saved reply filter from local storage
     this.loadSavedReplyFilter();
+
+    effect(() => {
+      const originalPoster = this.threadOriginalPoster();
+      const supportsAuthorFilter = this.supportsAuthorFollowingFilter();
+
+      untracked(() => {
+        if (!supportsAuthorFilter || !originalPoster) {
+          this.resetAuthorFollowingList();
+          return;
+        }
+
+        if (this.lastAuthorFollowingPubkey === originalPoster && this.authorFollowingLoaded()) {
+          return;
+        }
+
+        void this.loadAuthorFollowingList(originalPoster);
+      });
+    });
 
     if (this.transferState.hasKey(EVENT_STATE_KEY)) {
       const data = this.transferState.get<EventData | null>(EVENT_STATE_KEY, null);
