@@ -361,9 +361,6 @@ export class FeedsComponent implements OnDestroy {
     return activeFeed ? activeFeed.label : 'Select Feed';
   });
 
-  // Track which feeds have loaded content
-  columnContentLoaded = signal<Record<string, boolean>>({});
-
   // Computed signal to check if a feed has actual events to display
   feedHasEvents = computed(() => {
     const eventMap = new Map<string, boolean>();
@@ -500,7 +497,6 @@ export class FeedsComponent implements OnDestroy {
   LOAD_MORE_COOLDOWN_MS = 250;
   private readonly NETWORK_LOAD_BUFFER_PX = 300;
   private readonly NETWORK_LOAD_SCROLL_DELTA_PX = 500;
-  scrollCheckCleanup: (() => void) | null = null;
   private autoLoadRecheckTimeout: ReturnType<typeof setTimeout> | null = null;
   private lastNetworkLoadScrollTop = Number.NEGATIVE_INFINITY;
   // Debounce handle for the post-scroll fill pass (catches fast/drag scrolls)
@@ -645,12 +641,6 @@ export class FeedsComponent implements OnDestroy {
     });
   }
 
-  // Remove the old getEventsForColumn method
-  // getEventsForColumn(columnId: string): Event[] {
-  //   console.log(`Fetching events for column: ${columnId}`);
-  //   console.log('Available feeds:', this.feedService.data.keys());
-  //   return this.feedService.data.get(columnId)?.events() || [];
-  // }  // Replace the old columns signal with columns from active feed
   feeds = computed(() => this.feedsCollectionService.feeds());
   activeFeed = computed(() => this.feedsCollectionService.activeFeed());
   currentScrollableFeed = computed(() => this.dynamicFeed() || this.activeFeed());
@@ -1151,11 +1141,6 @@ export class FeedsComponent implements OnDestroy {
    * Clean up scroll listeners
    */
   private cleanupScrollListener(): void {
-    if (this.scrollCheckCleanup) {
-      this.scrollCheckCleanup();
-      this.scrollCheckCleanup = null;
-    }
-
     if (this.autoLoadRecheckTimeout) {
       clearTimeout(this.autoLoadRecheckTimeout);
       this.autoLoadRecheckTimeout = null;
@@ -1314,7 +1299,7 @@ export class FeedsComponent implements OnDestroy {
 
   /**
    * Handles network page fetching only.  Rendering of already-cached events is driven
-   * entirely by the IntersectionObserver in setupIntersectionObserver().
+   * by fillRenderedEvents(), called from onColumnsScroll().
    */
   private async maybeAutoLoadMore(feedId: string, container?: HTMLElement, ignoreCooldown = false): Promise<void> {
     const contentContainer = container ?? this.getFeedContentContainer();
@@ -2223,12 +2208,6 @@ export class FeedsComponent implements OnDestroy {
           showReposts: result.showReposts,
           filters: result.filters || {},
         });
-
-        // Mark the new feed as content loaded BEFORE setting it active
-        this.columnContentLoaded.update(loaded => ({
-          ...loaded,
-          [newBoard.id]: true,
-        }));
 
         // Set as active board (skip validation since feed was just added)
         this.feedsCollectionService.setActiveFeed(newBoard.id, true);
