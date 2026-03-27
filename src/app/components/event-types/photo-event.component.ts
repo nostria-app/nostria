@@ -210,7 +210,8 @@ export class PhotoEventComponent {
 
     // Get image URLs to strip from content
     const urls = this.imageUrls();
-    return this.cleanContentForDisplay(event.content, urls);
+    const cleanedContent = this.cleanContentForDisplay(event.content, urls);
+    return cleanedContent ? this.utilities.normalizeRenderedEventContent(cleanedContent) : null;
   });
 
   // Alt text for accessibility (per image)

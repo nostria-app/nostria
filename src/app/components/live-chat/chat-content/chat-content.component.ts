@@ -2,6 +2,7 @@ import { Component, input, inject, computed, ChangeDetectionStrategy } from '@an
 import { nip19 } from 'nostr-tools';
 import { ProfileDisplayNameComponent } from '../../user-profile/display-name/profile-display-name.component';
 import { LayoutService } from '../../../services/layout.service';
+import { UtilitiesService } from '../../../services/utilities.service';
 
 interface ContentPart {
   type: 'text' | 'url' | 'npub' | 'nprofile' | 'note' | 'nevent' | 'naddr';
@@ -22,11 +23,11 @@ interface ContentPart {
       } @else if (part.type === 'url') {
         <a class="message-link" [href]="part.content" target="_blank" rel="noopener noreferrer">{{ part.displayUrl || part.content }}</a>
       } @else if (part.type === 'npub' || part.type === 'nprofile') {
-        <a class="nostr-mention" (click)="onProfileClick($event, part.pubkey!)">@<app-profile-display-name [pubkey]="part.pubkey!" /></a>
+        <a class="nostr-mention" href="" (click)="onProfileClick($event, part.pubkey!)">@<app-profile-display-name [pubkey]="part.pubkey!" /></a>
       } @else if (part.type === 'note' || part.type === 'nevent') {
-        <a class="nostr-event-link" (click)="onEventClick($event, part.eventId!)">📝 note</a>
+        <a class="nostr-event-link" href="" (click)="onEventClick($event, part.eventId!)">📝 note</a>
       } @else if (part.type === 'naddr') {
-        <a class="nostr-event-link" (click)="onArticleClick($event, part.encodedEvent!)">📄 article</a>
+        <a class="nostr-event-link" href="" (click)="onArticleClick($event, part.encodedEvent!)">📄 article</a>
       }
     }
   `,
@@ -77,6 +78,7 @@ interface ContentPart {
 })
 export class ChatContentComponent {
   private layout = inject(LayoutService);
+  private utilities = inject(UtilitiesService);
 
   content = input.required<string>();
 
@@ -87,7 +89,7 @@ export class ChatContentComponent {
   private readonly urlRegex = /(https?:\/\/[^\s<>"{}|\\^`[\]]+)/g;
 
   parsedContent = computed<ContentPart[]>(() => {
-    const text = this.content();
+    const text = this.utilities.normalizeRenderedEventContent(this.content());
     if (!text) return [];
 
     const parts: ContentPart[] = [];

@@ -12,6 +12,7 @@ import { DataService } from '../../services/data.service';
 import { NostrRecord } from '../../interfaces';
 import { AgoPipe } from '../../pipes/ago.pipe';
 import { TimestampPipe } from '../../pipes/timestamp.pipe';
+import { UtilitiesService } from '../../services/utilities.service';
 
 interface ReferencedEventRef {
   id: string;
@@ -44,6 +45,7 @@ interface LoadedEvent {
 export class WotEventComponent {
   private layout = inject(LayoutService);
   private data = inject(DataService);
+  private utilities = inject(UtilitiesService);
 
   event = input.required<Event>();
 
@@ -108,7 +110,7 @@ export class WotEventComponent {
   });
 
   /** Content text (attestation comment) */
-  content = computed(() => this.event().content || '');
+  content = computed(() => this.utilities.normalizeRenderedEventContent(this.event().content || ''));
 
   /** Whether this is a positive/trust attestation */
   isPositive = computed(() => {
@@ -144,6 +146,7 @@ export class WotEventComponent {
 
   /** Truncate text to a max length for display */
   truncateContent(text: string, maxLength = 200): string {
+    text = this.utilities.normalizeRenderedEventContent(text);
     if (text.length <= maxLength) return text;
     return text.substring(0, maxLength) + '...';
   }

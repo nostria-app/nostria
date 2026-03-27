@@ -47,7 +47,7 @@
         <app-user-profile [pubkey]="reportRecord.event.pubkey" [view]="'list'"></app-user-profile>
         <div class="report-details">
           @if (reportRecord.event.content) {
-          <p class="report-content">{{ reportRecord.event.content }}</p>
+          <p class="report-content">{{ normalizeReportContent(reportRecord.event.content) }}</p>
           }
           <small class="report-time">{{ reportRecord.event.created_at | ago }}</small>
         </div>

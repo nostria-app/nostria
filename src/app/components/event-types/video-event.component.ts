@@ -399,7 +399,7 @@ export class VideoEventComponent implements AfterViewInit, OnDestroy {
     // First try to get description from summary tag (NIP-71 standard)
     const summaryTag = event.tags.find(tag => tag[0] === 'summary');
     if (summaryTag?.[1]) {
-      return summaryTag[1];
+      return this.utilities.normalizeRenderedEventContent(summaryTag[1]);
     }
 
     // If content exists, check if it's JSON (malformed event)
@@ -411,7 +411,7 @@ export class VideoEventComponent implements AfterViewInit, OnDestroy {
         return null;
       }
       // Otherwise use cleaned content
-      return this.removeHashtagsFromContent(event.content);
+      return this.utilities.normalizeRenderedEventContent(this.removeHashtagsFromContent(event.content));
     }
 
     return null;

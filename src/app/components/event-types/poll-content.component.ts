@@ -164,6 +164,8 @@ export class PollContentComponent {
    * Uses regex to split content into basic token types.
    */
   private parseContentSimple(content: string): ContentToken[] {
+    content = this.utilities.normalizeRenderedEventContent(content);
+
     const tokens: ContentToken[] = [];
     let id = 0;
     const lines = content.split('\n');

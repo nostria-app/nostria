@@ -1217,6 +1217,10 @@ export class Calendar implements OnInit, OnDestroy, AfterViewInit {
     return `${weekday}, ${shortMonthName} ${date.getDate()}`;
   }
 
+  normalizeEventContent(content: string): string {
+    return this.utilities.normalizeRenderedEventContent(content);
+  }
+
   // Pre-computed week grid: Map<'dayIndex-hour', CalendarEvent[]> to avoid per-cell filtering in template
   weekEventGrid = computed(() => {
     const grid = new Map<string, CalendarEvent[]>();

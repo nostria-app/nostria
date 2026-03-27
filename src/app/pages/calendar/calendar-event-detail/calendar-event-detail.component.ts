@@ -163,7 +163,7 @@ export class CalendarEventDetailComponent implements AfterViewInit, OnDestroy {
     return pubkey === this.authorPubkey();
   });
 
-  description = computed(() => this.event()?.content || '');
+  description = computed(() => this.utilities.normalizeRenderedEventContent(this.event()?.content || ''));
 
   constructor() {
     this.route.paramMap.subscribe(params => {

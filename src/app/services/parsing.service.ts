@@ -1157,7 +1157,7 @@ export class ParsingService implements OnDestroy {
 
   private normalizeContent(content: unknown): string {
     if (typeof content === 'string') {
-      return content;
+      return this.utilities.normalizeRenderedEventContent(content);
     }
 
     if (content == null) {

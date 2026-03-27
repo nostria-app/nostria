@@ -7,6 +7,7 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatListModule } from '@angular/material/list';
 import { MatChipsModule } from '@angular/material/chips';
 import { Poll, PollResults, PollResponse } from '../../interfaces';
+import { UtilitiesService } from '../../services/utilities.service';
 
 interface PollDetailsData {
   poll: Poll;
@@ -33,7 +34,7 @@ interface PollDetailsData {
     <mat-dialog-content>
       <!-- Poll Question -->
       <div class="poll-question">
-        <h3>{{ data.poll.content }}</h3>
+        <h3>{{ normalizedPollQuestion() }}</h3>
       </div>
 
       <!-- Poll Metadata -->
@@ -171,6 +172,11 @@ interface PollDetailsData {
 })
 export class PollDetailsDialogComponent {
   data = inject<PollDetailsData>(MAT_DIALOG_DATA);
+  private utilities = inject(UtilitiesService);
+
+  normalizedPollQuestion(): string {
+    return this.utilities.normalizeRenderedEventContent(this.data.poll.content || '');
+  }
 
   getVoteCount(optionId: string): number {
     return this.data.results.optionCounts[optionId] || 0;

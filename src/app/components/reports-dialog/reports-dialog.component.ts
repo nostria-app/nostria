@@ -8,6 +8,7 @@ import { MatChipsModule } from '@angular/material/chips';
 import { EventService, ReportEvents } from '../../services/event';
 import { AgoPipe } from '../../pipes/ago.pipe';
 import { UserProfileComponent } from '../user-profile/user-profile.component';
+import { UtilitiesService } from '../../services/utilities.service';
 
 export interface ReportsDialogData {
   eventId: string;
@@ -33,6 +34,7 @@ export class ReportsDialogComponent {
   private dialogRef = inject(MatDialogRef<ReportsDialogComponent>);
   private data = inject<ReportsDialogData>(MAT_DIALOG_DATA);
   private eventService = inject(EventService);
+  private utilities = inject(UtilitiesService);
 
   reports = signal<ReportEvents>({ events: [], data: new Map() });
   isLoading = signal(true);
@@ -101,6 +103,10 @@ export class ReportsDialogComponent {
       type,
       count,
     }));
+  }
+
+  normalizeReportContent(content: string): string {
+    return this.utilities.normalizeRenderedEventContent(content);
   }
 
   close(): void {

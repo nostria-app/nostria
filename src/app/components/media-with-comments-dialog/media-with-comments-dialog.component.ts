@@ -211,7 +211,7 @@ export class MediaWithCommentsDialogComponent {
   description = computed(() => {
     const event = this.event();
     if (!event || !event.content) return null;
-    return event.content.replace(/#\w+/g, '').trim();
+    return this.utilities.normalizeRenderedEventContent(event.content.replace(/#\w+/g, '').trim());
   });
 
   // Hashtags

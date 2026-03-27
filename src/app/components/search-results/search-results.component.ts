@@ -633,7 +633,7 @@ export class SearchResultsComponent {
       return titleTag[1];
     }
     // Fallback to first line of content
-    const firstLine = event.content.split('\n')[0];
+    const firstLine = this.utilities.normalizeRenderedEventContent(event.content).split('\n')[0];
     return this.truncateContent(firstLine, 60) || 'Untitled Article';
   }
 

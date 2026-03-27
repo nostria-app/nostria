@@ -1592,6 +1592,16 @@ export class UtilitiesService {
     return str?.toLowerCase().trim() ?? '';
   }
 
+  normalizeRenderedEventContent(content: string): string {
+    if (!content) {
+      return '';
+    }
+
+    return content
+      .replace(/\r\n?/g, '\n')
+      .replace(/\n(?:[ \t]*\n)+/g, '\n');
+  }
+
   /**
    * Escape HTML special characters to prevent XSS.
    * Safe to use in both browser and SSR contexts.
@@ -2358,6 +2368,7 @@ export class UtilitiesService {
    */
   truncateContent(content: string, maxLength = 200): string {
     if (!content) return '';
+    content = this.normalizeRenderedEventContent(content);
     if (content.length <= maxLength) return content;
     return content.substring(0, maxLength) + '...';
   }

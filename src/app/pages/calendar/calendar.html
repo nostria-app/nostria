@@ -412,7 +412,7 @@
                   }
                   @if (event.content) {
                   <div class="event-description">
-                    <p>{{ event.content }}</p>
+                    <p>{{ normalizeEventContent(event.content) }}</p>
                   </div>
                   }
                   @if (event.hashtags.length > 0) {

@@ -282,7 +282,7 @@ export class TaggedReferencesComponent {
 
       // Fallback to identifier or first part of content
       if (eventData.event.content) {
-        const firstLine = eventData.event.content.split('\n')[0];
+        const firstLine = this.utilities.normalizeRenderedEventContent(eventData.event.content).split('\n')[0];
         if (firstLine.length > 0 && firstLine.length <= 100) {
           return firstLine;
         }
@@ -306,7 +306,7 @@ export class TaggedReferencesComponent {
 
       // Fallback to first part of content
       if (eventData.event.content) {
-        const content = eventData.event.content.trim();
+        const content = this.utilities.normalizeRenderedEventContent(eventData.event.content).trim();
         if (content.length > 150) {
           return content.substring(0, 150) + '...';
         }

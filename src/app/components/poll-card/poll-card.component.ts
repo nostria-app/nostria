@@ -1,4 +1,4 @@
-import { Component, input, output, computed, signal } from '@angular/core';
+import { Component, input, output, computed, signal, inject } from '@angular/core';
 
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -9,6 +9,7 @@ import { MatRadioModule } from '@angular/material/radio';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { FormsModule } from '@angular/forms';
 import { Poll, PollResults } from '../../interfaces';
+import { UtilitiesService } from '../../services/utilities.service';
 
 @Component({
   selector: 'app-poll-card',
@@ -26,6 +27,8 @@ import { Poll, PollResults } from '../../interfaces';
   styleUrl: './poll-card.component.scss',
 })
 export class PollCardComponent {
+  private utilities = inject(UtilitiesService);
+
   // Inputs
   poll = input.required<Poll>();
   results = input<PollResults | null>(null);
@@ -54,6 +57,8 @@ export class PollCardComponent {
   displayResults = computed(() => {
     return this.hasVoted() || this.isExpired() || !this.canVote() || this.showResults();
   });
+
+  pollQuestion = computed(() => this.utilities.normalizeRenderedEventContent(this.poll().content || ''));
 
   canSubmit = computed(() => {
     return this.selectedOptions().length > 0 && !this.hasVoted() && !this.isExpired();

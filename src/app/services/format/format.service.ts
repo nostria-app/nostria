@@ -137,7 +137,7 @@ export class FormatService {
 
       // Extract preview information from the event
       const author = event.pubkey;
-      const content = event.content || '';
+      const content = this.normalizeRenderedContent(event.content || '');
       const kind = event.kind;
       const createdAt = event.created_at;
 
@@ -155,9 +155,6 @@ export class FormatService {
       // Truncate text content for preview
       const maxContentLength = 380;
       let previewContent = textContent.trim();
-
-      // Collapse multiple newlines into single newline for cleaner display
-      previewContent = previewContent.replace(/\n{2,}/g, '\n');
 
       if (previewContent.length > maxContentLength) {
         previewContent = previewContent.substring(0, maxContentLength) + '…';
@@ -296,6 +293,10 @@ export class FormatService {
 
   private wrapEmbedBlock(html: string): string {
     return `\n\n${html}\n\n`;
+  }
+
+  private normalizeRenderedContent(content: string): string {
+    return this.utilities.normalizeRenderedEventContent(content);
   }
 
   private buildProfileMentionFallback(identifier: string): string | null {
@@ -876,6 +877,8 @@ export class FormatService {
 
   async markdownToHtml(rawMarkdown: string): Promise<SafeHtml> {
     try {
+      rawMarkdown = this.normalizeRenderedContent(rawMarkdown);
+
       // First, preprocess content to convert image URLs to markdown image syntax
       // Do this BEFORE any HTML sanitization since we're working with markdown
 
@@ -905,7 +908,7 @@ export class FormatService {
     } catch (error) {
       this.logger.error('Error parsing markdown:', error);
       // Fallback to plain text
-      const sanitizedHtmlContent = DOMPurify.sanitize(rawMarkdown.replace(/\n/g, '<br>'));
+      const sanitizedHtmlContent = DOMPurify.sanitize(this.normalizeRenderedContent(rawMarkdown).replace(/\n/g, '<br>'));
       return this.sanitizer.bypassSecurityTrustHtml(sanitizedHtmlContent);
     }
   }
@@ -958,6 +961,8 @@ export class FormatService {
     onUpdate?: (html: SafeHtml) => void
   ): SafeHtml {
     try {
+      rawMarkdown = this.normalizeRenderedContent(rawMarkdown);
+
       const updates = new Map<string, string>();
       let contentTemplate = rawMarkdown;
       let isTemplateReady = false;
@@ -1024,7 +1029,7 @@ export class FormatService {
       return this.sanitizer.bypassSecurityTrustHtml(sanitizedHtmlContent);
     } catch (error) {
       this.logger.error('Error parsing markdown:', error);
-      const sanitizedHtmlContent = DOMPurify.sanitize(rawMarkdown.replace(/\n/g, '<br>'));
+      const sanitizedHtmlContent = DOMPurify.sanitize(this.normalizeRenderedContent(rawMarkdown).replace(/\n/g, '<br>'));
       return this.sanitizer.bypassSecurityTrustHtml(sanitizedHtmlContent);
     }
   }

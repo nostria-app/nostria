@@ -145,6 +145,8 @@ export class BioContentComponent implements OnDestroy {
   }
 
   private async parseContent(content: string): Promise<BioToken[]> {
+    content = this.utilities.normalizeRenderedEventContent(content);
+
     const tokens: BioToken[] = [];
 
     // Replace line breaks with placeholders

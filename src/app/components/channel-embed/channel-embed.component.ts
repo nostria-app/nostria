@@ -10,6 +10,7 @@ import { RelayPoolService } from '../../services/relays/relay-pool';
 import { LoggerService } from '../../services/logger.service';
 import { ChannelMetadata, CHANNEL_CREATE_KIND, CHANNEL_MESSAGE_KIND } from '../../services/chat-channels.service';
 import { AgoPipe } from '../../pipes/ago.pipe';
+import { UtilitiesService } from '../../services/utilities.service';
 
 /**
  * Embeds a preview of a NIP-28 public chat channel or channel message.
@@ -42,6 +43,7 @@ export class ChannelEmbedComponent {
   private data = inject(DataService);
   private relayPool = inject(RelayPoolService);
   private logger = inject(LoggerService);
+  private utilities = inject(UtilitiesService);
 
   // State for kind 42 messages - we need to fetch the channel metadata
   channelMetadata = signal<ChannelMetadata | null>(null);
@@ -115,6 +117,8 @@ export class ChannelEmbedComponent {
 
   /** The pubkey of the event author */
   authorPubkey = computed(() => this.event().pubkey);
+
+  messageContent = computed(() => this.utilities.normalizeRenderedEventContent(this.event().content || ''));
 
   /** The channel ID for navigation */
   channelId = computed(() => {

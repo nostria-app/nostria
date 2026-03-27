@@ -12,6 +12,7 @@ import { UserProfileComponent } from '../../../components/user-profile/user-prof
 import { LocalSettingsService } from '../../../services/local-settings.service';
 import { ChroniaCalendarService } from '../../../services/chronia-calendar.service';
 import { EthiopianCalendarService } from '../../../services/ethiopian-calendar.service';
+import { UtilitiesService } from '../../../services/utilities.service';
 
 interface CalendarEvent {
   id: string;
@@ -202,7 +203,7 @@ export interface EventDetailsResult {
             <div class="event-description-section">
               <mat-icon class="section-icon">description</mat-icon>
               <div class="description-content">
-                <p>{{ data.event.content }}</p>
+                <p>{{ normalizeEventContent(data.event.content) }}</p>
               </div>
             </div>
           }
@@ -291,6 +292,7 @@ export class EventDetailsDialogComponent {
   private localSettings = inject(LocalSettingsService);
   private chroniaCalendar = inject(ChroniaCalendarService);
   private ethiopianCalendar = inject(EthiopianCalendarService);
+  private utilities = inject(UtilitiesService);
 
   private dialogRef = inject(MatDialogRef<EventDetailsDialogComponent>);
   data = inject<EventDetailsDialogData>(MAT_DIALOG_DATA);
@@ -318,6 +320,10 @@ export class EventDetailsDialogComponent {
       minute: '2-digit',
       hour12: true,
     });
+  }
+
+  normalizeEventContent(content: string): string {
+    return this.utilities.normalizeRenderedEventContent(content);
   }
 
   formatDate(date: Date): string {

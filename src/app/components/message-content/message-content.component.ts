@@ -613,10 +613,14 @@ export class MessageContentComponent {
   private lastProcessedContent = '';
   private partIdCounter = 0;
 
+  private normalizedContent = computed(() =>
+    this.utilities.normalizeRenderedEventContent(this.content() || '')
+  );
+
   constructor() {
     // Effect to load event previews when content changes
     effect(() => {
-      const content = this.content();
+      const content = this.normalizedContent();
       if (content !== this.lastProcessedContent) {
         this.lastProcessedContent = content;
         this.loadEventPreviews();
@@ -626,7 +630,7 @@ export class MessageContentComponent {
     // Effect to resolve custom emoji URLs from tags and author emoji sets
     effect(() => {
       const tags = this.tags();
-      const content = this.content();
+      const content = this.normalizedContent();
       const authorPubkey = this.authorPubkey();
 
       // Build emoji map from event tags (NIP-30)
@@ -667,7 +671,7 @@ export class MessageContentComponent {
   }
 
   parsedContent = computed<ContentPart[]>(() => {
-    const text = this.content();
+    const text = this.normalizedContent();
     if (!text) return [];
 
     // Reset part ID counter for each parse
