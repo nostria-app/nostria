@@ -12,22 +12,20 @@
 
   <div class="poll-options">
     @for (option of poll().options; track option.id) {
-    <div class="poll-option" [class.selected]="selectedOptions().includes(option.id)" [class.voted]="hasVoted() || (showResults() && !canVote())"
-      [class.previewing]="showResults() && canVote()"
-      [attr.role]="canVote() && !showResults() ? 'button' : null"
-      [attr.tabindex]="canVote() && !showResults() ? 0 : null"
-      (click)="canVote() && !showResults() ? toggleOption(option.id) : null"
-      (keydown.enter)="canVote() && !showResults() ? toggleOption(option.id) : null"
-      (keydown.space)="canVote() && !showResults() ? toggleOption(option.id) : null">
+    <div class="poll-option" [class.selected]="selectedOptions().includes(option.id)"
+      [class.voted]="hasVoted() || (showResults() && !canVote())" [class.previewing]="showResults() && canVote()"
+      [attr.role]="canVote() ? 'button' : null" [attr.tabindex]="canVote() ? 0 : null"
+      (click)="canVote() ? toggleOption(option.id) : null" (keydown.enter)="canVote() ? toggleOption(option.id) : null"
+      (keydown.space)="canVote() ? toggleOption(option.id) : null">
 
       @if (displayResults()) {
       <!-- Show results -->
       <div class="option-result">
         <div class="option-label">
-          @if (isSingleChoice()) {
+          @if (!isExpired() && isSingleChoice()) {
           <mat-icon class="option-icon">radio_button_{{ selectedOptions().includes(option.id) ? 'checked' : 'unchecked'
             }}</mat-icon>
-          } @else {
+          } @else if (!isExpired()) {
           <mat-icon class="option-icon">{{ selectedOptions().includes(option.id) ? 'check_box' :
             'check_box_outline_blank' }}</mat-icon>
           }

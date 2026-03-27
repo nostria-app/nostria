@@ -50,11 +50,20 @@
     margin: 1.5rem 0;
 
     .poll-option-result {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+
       .option-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
         margin-bottom: 0.5rem;
+
+        &.option-header-results {
+          justify-content: flex-end;
+          margin-bottom: 0;
+        }
 
         .option-label {
           font-weight: 500;

@@ -54,19 +54,23 @@
     transition: all 0.2s ease;
     cursor: pointer;
 
-    &:hover {
+    &:not(.closed):hover {
       background-color: var(--mat-sys-surface-container);
-      border-color: var(--mat-sys-tertiary);
+      border-color: var(--mat-sys-primary);
     }
 
-    &:focus {
-      outline: 2px solid var(--mat-sys-tertiary);
+    &:not(.closed):focus {
+      outline: 2px solid var(--mat-sys-primary);
       outline-offset: 2px;
     }
 
+    &.closed {
+      cursor: default;
+    }
+
     &.selected {
-      background-color: color-mix(in srgb, var(--mat-sys-tertiary) 12%, transparent);
-      border-color: var(--mat-sys-tertiary);
+      background-color: var(--mat-sys-primary-container);
+      border-color: var(--mat-sys-primary);
       border-width: 2px;
     }
   }
@@ -77,7 +81,7 @@
     gap: 0.5rem;
 
     .option-icon {
-      color: var(--mat-sys-tertiary);
+      color: var(--mat-sys-primary);
       flex-shrink: 0;
     }
 
@@ -97,7 +101,7 @@
       gap: 0.5rem;
 
       .option-icon {
-        color: var(--mat-sys-tertiary);
+        color: var(--mat-sys-primary);
         flex-shrink: 0;
       }
 
@@ -123,12 +127,12 @@
           font-size: 0.875rem;
           width: 0.875rem;
           height: 0.875rem;
-          color: var(--mat-sys-tertiary);
+          color: var(--mat-sys-primary);
         }
       }
 
       .percentage {
-        color: var(--mat-sys-tertiary);
+        color: var(--mat-sys-primary);
       }
     }
 
@@ -137,7 +141,7 @@
       border-radius: 3px;
 
       &::ng-deep .mdc-linear-progress__bar-inner {
-        border-color: var(--mat-sys-tertiary);
+        border-color: var(--mat-sys-primary);
       }
     }
   }
@@ -178,12 +182,12 @@
       }
 
       .total-zaps-clickable:focus {
-        outline: 2px solid var(--mat-sys-tertiary);
+        outline: 2px solid var(--mat-sys-primary);
         outline-offset: 2px;
       }
 
       .total-zaps mat-icon {
-        color: var(--mat-sys-tertiary);
+        color: var(--mat-sys-primary);
       }
 
       .poll-status.expired {
@@ -191,10 +195,10 @@
       }
 
       .show-results-toggle {
-        background: var(--mat-sys-tertiary-container) !important;
-        border: 1px solid var(--mat-sys-tertiary) !important;
+        background: var(--mat-sys-primary-container) !important;
+        border: 1px solid var(--mat-sys-primary) !important;
         border-radius: 9999px;
-        color: var(--mat-sys-on-tertiary-container) !important;
+        color: var(--mat-sys-on-primary-container) !important;
         cursor: pointer;
         font-size: 0.875rem;
         padding: 0.25rem 0.7rem;
@@ -203,12 +207,12 @@
         transition: background-color 0.2s ease;
 
         &:hover {
-          background: var(--mat-sys-tertiary) !important;
-          color: var(--mat-sys-on-tertiary) !important;
+          background: var(--mat-sys-primary) !important;
+          color: var(--mat-sys-on-primary) !important;
         }
 
         &:focus {
-          outline: 2px solid var(--mat-sys-tertiary);
+          outline: 2px solid var(--mat-sys-primary);
           outline-offset: 2px;
         }
       }

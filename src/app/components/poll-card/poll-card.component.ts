@@ -22,7 +22,7 @@ import { UtilitiesService } from '../../services/utilities.service';
     MatRadioModule,
     MatCheckboxModule,
     FormsModule
-],
+  ],
   templateUrl: './poll-card.component.html',
   styleUrl: './poll-card.component.scss',
 })
@@ -47,7 +47,7 @@ export class PollCardComponent {
   isExpired = computed(() => {
     const poll = this.poll();
     if (!poll.endsAt) return false;
-    return Date.now() / 1000 > poll.endsAt;
+    return Date.now() / 1000 >= poll.endsAt;
   });
 
   isSingleChoice = computed(() => {
@@ -68,7 +68,7 @@ export class PollCardComponent {
   getPercentage(optionId: string): number {
     const results = this.results();
     if (!results || results.totalVotes === 0) return 0;
-    
+
     const count = results.optionCounts[optionId] || 0;
     return Math.round((count / results.totalVotes) * 100);
   }
@@ -84,10 +84,10 @@ export class PollCardComponent {
   isWinningOption(optionId: string): boolean {
     const results = this.results();
     if (!results || results.totalVotes === 0) return false;
-    
+
     const thisCount = this.getVoteCount(optionId);
     const maxCount = Math.max(...Object.values(results.optionCounts));
-    
+
     return thisCount === maxCount && thisCount > 0;
   }
 
@@ -129,16 +129,16 @@ export class PollCardComponent {
   getTimeRemaining(): string {
     const poll = this.poll();
     if (!poll.endsAt) return 'No time limit';
-    
+
     const now = Date.now() / 1000;
     const remaining = poll.endsAt - now;
-    
+
     if (remaining <= 0) return 'Expired';
-    
+
     const days = Math.floor(remaining / 86400);
     const hours = Math.floor((remaining % 86400) / 3600);
     const minutes = Math.floor((remaining % 3600) / 60);
-    
+
     if (days > 0) return `${days} day${days > 1 ? 's' : ''} left`;
     if (hours > 0) return `${hours} hour${hours > 1 ? 's' : ''} left`;
     return `${minutes} minute${minutes > 1 ? 's' : ''} left`;

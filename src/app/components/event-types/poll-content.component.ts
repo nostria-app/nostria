@@ -1,9 +1,11 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { MatDialog } from '@angular/material/dialog';
 import { Event as NostrEvent, nip19 } from 'nostr-tools';
 import { ContentToken } from '../../services/parsing.service';
 import { DataService } from '../../services/data.service';
 import { UtilitiesService } from '../../services/utilities.service';
+import { MediaPreviewDialogComponent } from '../media-preview-dialog/media-preview.component';
 
 /**
  * Lightweight content renderer for poll descriptions.
@@ -27,7 +29,10 @@ import { UtilitiesService } from '../../services/utilities.service';
           <a [href]="token.content" target="_blank" rel="noopener noreferrer" class="url-link">{{ token.content }}</a>
         }
         @case ('image') {
-          <div class="poll-image-container">
+          <div class="poll-image-container" role="button" tabindex="0"
+            (click)="openImagePreview(token.content, $event)"
+            (keydown.enter)="openImagePreview(token.content, $event)"
+            (keydown.space)="openImagePreview(token.content, $event)">
             <img [src]="token.content" alt="Poll image" loading="lazy" class="poll-image" />
           </div>
         }
@@ -80,6 +85,12 @@ import { UtilitiesService } from '../../services/utilities.service';
     .poll-image-container {
       display: block;
       margin: 8px 0;
+      cursor: pointer;
+
+      &:focus {
+        outline: 2px solid var(--mat-sys-primary);
+        outline-offset: 2px;
+      }
     }
     .poll-image {
       max-width: 100%;
@@ -93,6 +104,7 @@ import { UtilitiesService } from '../../services/utilities.service';
 export class PollContentComponent {
   private data = inject(DataService);
   private utilities = inject(UtilitiesService);
+  private dialog = inject(MatDialog);
 
   content = input<string>('');
   event = input<NostrEvent | null>(null);
@@ -135,6 +147,23 @@ export class PollContentComponent {
   /** Get resolved display name for a pubkey, falling back to truncated npub */
   resolvedName(pubkey: string): string {
     return this.profileNames().get(pubkey) || this.utilities.getTruncatedNpub(pubkey);
+  }
+
+  openImagePreview(imageUrl: string, event?: Event): void {
+    event?.preventDefault();
+    event?.stopPropagation();
+
+    this.dialog.open(MediaPreviewDialogComponent, {
+      data: {
+        mediaItems: [{ url: imageUrl, type: 'image/jpeg', title: 'Poll image' }],
+        initialIndex: 0,
+      },
+      maxWidth: '100vw',
+      maxHeight: '100vh',
+      width: '100vw',
+      height: '100vh',
+      panelClass: 'image-dialog-panel',
+    });
   }
 
   private async resolveProfiles(pubkeys: string[]): Promise<void> {

@@ -78,7 +78,7 @@ export class ZapPollEventComponent {
   isExpired = computed(() => {
     const poll = this.poll();
     if (!poll.closedAt) return false;
-    return this.nowTimestamp() > poll.closedAt;
+    return this.nowTimestamp() >= poll.closedAt;
   });
 
   timeLeftLabel = computed(() => {
@@ -231,6 +231,10 @@ export class ZapPollEventComponent {
   }
 
   selectOption(optionId: string): void {
+    if (this.isExpired()) {
+      return;
+    }
+
     if (this.selectedOption() === optionId) {
       this.selectedOption.set(null);
     } else {

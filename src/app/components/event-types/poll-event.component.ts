@@ -54,7 +54,7 @@ export class PollEventComponent {
   isExpired = computed(() => {
     const poll = this.poll();
     if (!poll.endsAt) return false;
-    return Date.now() / 1000 > poll.endsAt;
+    return Date.now() / 1000 >= poll.endsAt;
   });
 
   isSingleChoice = computed(() => {

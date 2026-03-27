@@ -261,7 +261,7 @@ export class PollsComponent {
 
   isPollEnded(poll: Poll): boolean {
     if (!poll.endsAt) return false;
-    return Math.floor(Date.now() / 1000) > poll.endsAt;
+    return Math.floor(Date.now() / 1000) >= poll.endsAt;
   }
 
   hasUserVoted(poll: Poll): boolean {

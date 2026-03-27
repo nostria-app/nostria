@@ -28,16 +28,20 @@
 
   <div class="poll-options">
     @for (option of poll().options; track option.id) {
-    <div class="poll-option" [class.selected]="selectedOption() === option.id" role="button" tabindex="0"
-      (click)="selectOption(option.id)" (keydown.enter)="selectOption(option.id)"
-      (keydown.space)="selectOption(option.id)">
+    <div class="poll-option" [class.selected]="selectedOption() === option.id" [class.closed]="isExpired()"
+      [attr.role]="!isExpired() ? 'button' : null" [attr.tabindex]="!isExpired() ? 0 : null"
+      (click)="!isExpired() ? selectOption(option.id) : null"
+      (keydown.enter)="!isExpired() ? selectOption(option.id) : null"
+      (keydown.space)="!isExpired() ? selectOption(option.id) : null">
 
       @if (displayResults()) {
       <!-- Show results alongside voting -->
       <div class="option-result">
         <div class="option-label">
+          @if (!isExpired()) {
           <mat-icon class="option-icon">radio_button_{{ selectedOption() === option.id ? 'checked' : 'unchecked'
             }}</mat-icon>
+          }
           <span>{{ option.label }}</span>
         </div>
         <div class="option-stats">
