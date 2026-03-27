@@ -2402,10 +2402,14 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
 
     const dialogContentWrapper = this.dialogContentWrapper?.nativeElement;
     const shouldRestoreSelection = typeof cursorPosition === 'number' || document.activeElement === textarea;
+    const shouldScrollToBottom = this.shouldKeepTextareaScrolledToBottom(textarea, cursorPosition);
     const selectionStart = typeof cursorPosition === 'number' ? cursorPosition : textarea.selectionStart;
     const selectionEnd = typeof cursorPosition === 'number' ? cursorPosition : textarea.selectionEnd;
     const textareaScrollTop = textarea.scrollTop;
     const dialogScrollTop = dialogContentWrapper?.scrollTop ?? null;
+    const dialogWasAtBottom = dialogContentWrapper
+      ? dialogContentWrapper.scrollHeight - dialogContentWrapper.scrollTop <= dialogContentWrapper.clientHeight + 5
+      : false;
 
     if (this.textareaRefreshFrame !== null) {
       cancelAnimationFrame(this.textareaRefreshFrame);
@@ -2430,12 +2434,30 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
         textarea.setSelectionRange(selectionStart, selectionEnd);
       }
 
-      textarea.scrollTop = textareaScrollTop;
+      if (shouldScrollToBottom) {
+        textarea.scrollTop = textarea.scrollHeight;
+      } else {
+        textarea.scrollTop = textareaScrollTop;
+      }
 
       if (dialogContentWrapper && dialogScrollTop !== null) {
-        dialogContentWrapper.scrollTop = dialogScrollTop;
+        if (shouldScrollToBottom && dialogWasAtBottom) {
+          dialogContentWrapper.scrollTop = dialogContentWrapper.scrollHeight;
+        } else {
+          dialogContentWrapper.scrollTop = dialogScrollTop;
+        }
       }
     });
+  }
+
+  private shouldKeepTextareaScrolledToBottom(textarea: HTMLTextAreaElement, cursorPosition?: number): boolean {
+    if (typeof document === 'undefined' || document.activeElement !== textarea) {
+      return true;
+    }
+
+    const selectionStart = typeof cursorPosition === 'number' ? cursorPosition : (textarea.selectionStart ?? textarea.value.length);
+    const selectionEnd = typeof cursorPosition === 'number' ? cursorPosition : (textarea.selectionEnd ?? textarea.value.length);
+    return selectionStart === selectionEnd && selectionEnd === textarea.value.length;
   }
 
   /**

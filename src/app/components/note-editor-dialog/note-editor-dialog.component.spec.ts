@@ -1,4 +1,5 @@
-import type { Mock } from "vitest";
+import type { Mock } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideZonelessChangeDetection, signal } from '@angular/core';
 import { nip19 } from 'nostr-tools';
@@ -377,6 +378,60 @@ describe('NoteEditorDialogComponent', () => {
       } as unknown as Event);
 
       expect(handleMentionInputSpy).toHaveBeenCalledWith('hello @so', 9);
+    });
+  });
+
+  describe('textarea scrolling', () => {
+    it('should keep the editor scrolled to the bottom while typing at the end', async () => {
+      createComponent();
+      await fixture.whenStable();
+
+      const textarea = component.contentTextarea.nativeElement;
+      const wrapper = component.dialogContentWrapper?.nativeElement;
+
+      Object.defineProperty(textarea, 'scrollHeight', { configurable: true, value: 640 });
+      Object.defineProperty(textarea, 'clientHeight', { configurable: true, value: 200 });
+      textarea.scrollTop = 120;
+
+      if (wrapper) {
+        Object.defineProperty(wrapper, 'scrollHeight', { configurable: true, value: 900 });
+        Object.defineProperty(wrapper, 'clientHeight', { configurable: true, value: 300 });
+        wrapper.scrollTop = 600;
+      }
+
+      textarea.focus();
+      textarea.value = 'hello world';
+      textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+
+      component.onContentInput({ target: textarea } as unknown as Event);
+
+      await new Promise(resolve => requestAnimationFrame(resolve));
+
+      expect(textarea.scrollTop).toBe(640);
+      if (wrapper) {
+        expect(wrapper.scrollTop).toBe(900);
+      }
+    });
+
+    it('should preserve textarea scroll when editing older text', async () => {
+      createComponent();
+      await fixture.whenStable();
+
+      const textarea = component.contentTextarea.nativeElement;
+
+      Object.defineProperty(textarea, 'scrollHeight', { configurable: true, value: 640 });
+      Object.defineProperty(textarea, 'clientHeight', { configurable: true, value: 200 });
+      textarea.scrollTop = 120;
+
+      textarea.focus();
+      textarea.value = 'hello world';
+      textarea.setSelectionRange(5, 5);
+
+      component.onContentInput({ target: textarea } as unknown as Event);
+
+      await new Promise(resolve => requestAnimationFrame(resolve));
+
+      expect(textarea.scrollTop).toBe(120);
     });
   });
 
