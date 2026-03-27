@@ -9,7 +9,8 @@
       (click)="onUpvote($event)">
       <mat-icon>arrow_upward</mat-icon>
     </button>
-    <span class="vote-pill-score" [class.positive]="voteScore() > 0" [class.negative]="voteScore() < 0">{{ voteScore() }}</span>
+    <span class="vote-pill-score" [class.positive]="voteScore() > 0" [class.negative]="voteScore() < 0">{{ voteScore()
+      }}</span>
     <button class="vote-pill-btn downvote" [class.active]="userVote() === 'down'" [disabled]="voting()"
       (click)="onDownvote($event)">
       <mat-icon>arrow_downward</mat-icon>

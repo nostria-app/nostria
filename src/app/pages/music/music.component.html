@@ -1,9 +1,8 @@
 <!-- Panel Header -->
 <div class="panel-header">
   <h2 class="panel-title title-font" i18n="@@nav.music">Music</h2>
-  <!-- Search toggle - hidden on small screens -->
-  <button mat-icon-button (click)="toggleSearch()" [matTooltip]="showSearch() ? 'Close search' : 'Search music'"
-    class="hide-small">
+  <!-- Search toggle stays visible on all screen sizes -->
+  <button mat-icon-button (click)="toggleSearch()" [matTooltip]="showSearch() ? 'Close search' : 'Search music'">
     <mat-icon>{{ showSearch() ? 'search_off' : 'search' }}</mat-icon>
   </button>
   <span class="panel-header-spacer"></span>
@@ -31,10 +30,6 @@
     <mat-icon>more_vert</mat-icon>
   </button>
   <mat-menu #moreOptionsMenu="matMenu">
-    <button mat-menu-item (click)="toggleSearch()">
-      <mat-icon>{{ showSearch() ? 'search_off' : 'search' }}</mat-icon>
-      <span>{{ showSearch() ? 'Close Search' : 'Search' }}</span>
-    </button>
     <button mat-menu-item (click)="refresh()">
       <mat-icon>refresh</mat-icon>
       <span>Refresh</span>
