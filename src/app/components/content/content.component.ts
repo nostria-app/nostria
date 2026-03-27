@@ -10,12 +10,14 @@ import { LayoutService } from '../../services/layout.service';
 import { TaggedReferencesComponent } from './tagged-references/tagged-references.component';
 import { Event as NostrEvent, nip19 } from 'nostr-tools';
 import { normalizePreviewUrl } from '../../utils/url-cleaner';
+import { OpenGraphService } from '../../services/opengraph.service';
 
 interface SocialPreview {
   url: string;
   title?: string;
   description?: string;
   image?: string;
+  siteName?: string;
   loading: boolean;
   error: boolean;
 }
@@ -36,7 +38,9 @@ interface SocialPreview {
 export class ContentComponent implements AfterViewInit, OnDestroy {
   settings = inject(SettingsService);
   private parsing = inject(ParsingService);
+  private openGraphService = inject(OpenGraphService);
   layoutService = inject(LayoutService);
+  private socialPreviewRequestId = 0;
 
   @ViewChild('contentContainer') contentContainer!: ElementRef;
   // Input for raw content
@@ -110,9 +114,11 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
     let tokens = this.contentTokens();
 
     if (!this.hideSocialPreviews() && this.settings.settings().socialSharingPreview) {
-      const previewedUrls = new Set(this.socialPreviews().map(preview => normalizePreviewUrl(preview.url)));
+      const previewsByUrl = new Map(
+        this.socialPreviews().map(preview => [normalizePreviewUrl(preview.url), preview] as const)
+      );
 
-      tokens = this.filterPreviewedUrlTokens(tokens, previewedUrls);
+      tokens = this.decoratePreviewedUrlTokens(tokens, previewsByUrl);
     }
 
     if (!this.hideInlineMediaAndLinks()) {
@@ -274,81 +280,25 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
     }
   }
 
-  private filterPreviewedUrlTokens(tokens: ContentToken[], previewedUrls: Set<string>): ContentToken[] {
-    const filteredTokens: ContentToken[] = [];
-
-    for (let index = 0; index < tokens.length; index++) {
-      const token = tokens[index];
-
-      if (!this.isPreviewedUrlToken(token, previewedUrls)) {
-        filteredTokens.push(token);
-        continue;
+  private decoratePreviewedUrlTokens(tokens: ContentToken[], previewsByUrl: Map<string, SocialPreview>): ContentToken[] {
+    return tokens.map(token => {
+      if (token.type !== 'url') {
+        return token;
       }
 
-      const linebreaksBefore: ContentToken[] = [];
-      while (filteredTokens.length > 0 && filteredTokens[filteredTokens.length - 1].type === 'linebreak') {
-        linebreaksBefore.unshift(filteredTokens.pop()!);
+      const preview = previewsByUrl.get(normalizePreviewUrl(token.content));
+      if (!preview) {
+        return token;
       }
 
-      const linebreaksAfter: ContentToken[] = [];
-      let nextIndex = index + 1;
-
-      while (nextIndex < tokens.length && tokens[nextIndex].type === 'linebreak') {
-        linebreaksAfter.push(tokens[nextIndex]);
-        nextIndex++;
-      }
-
-      const hasContentBefore = filteredTokens.length > 0;
-      const nextVisibleIndex = this.findNextVisibleTokenIndex(tokens, nextIndex, previewedUrls);
-      const hasContentAfter = nextVisibleIndex !== -1;
-
-      if (hasContentBefore && hasContentAfter) {
-        const desiredLinebreakCount = Math.max(linebreaksBefore.length, linebreaksAfter.length);
-        const retainedLinebreaks = [...linebreaksBefore, ...linebreaksAfter].slice(0, desiredLinebreakCount);
-        filteredTokens.push(...retainedLinebreaks);
-      }
-
-      index = nextIndex - 1;
-    }
-
-    return this.trimEdgeLinebreaks(filteredTokens);
-  }
-
-  private findNextVisibleTokenIndex(tokens: ContentToken[], startIndex: number, previewedUrls: Set<string>): number {
-    for (let index = startIndex; index < tokens.length; index++) {
-      const token = tokens[index];
-
-      if (token.type === 'linebreak') {
-        continue;
-      }
-
-      if (this.isPreviewedUrlToken(token, previewedUrls)) {
-        continue;
-      }
-
-      return index;
-    }
-
-    return -1;
-  }
-
-  private isPreviewedUrlToken(token: ContentToken, previewedUrls: Set<string>): boolean {
-    return token.type === 'url' && previewedUrls.has(normalizePreviewUrl(token.content));
-  }
-
-  private trimEdgeLinebreaks(tokens: ContentToken[]): ContentToken[] {
-    let startIndex = 0;
-    let endIndex = tokens.length;
-
-    while (startIndex < endIndex && tokens[startIndex].type === 'linebreak') {
-      startIndex++;
-    }
-
-    while (endIndex > startIndex && tokens[endIndex - 1].type === 'linebreak') {
-      endIndex--;
-    }
-
-    return tokens.slice(startIndex, endIndex);
+      return {
+        ...token,
+        previewTitle: preview.title,
+        previewSiteName: preview.siteName,
+        previewLoading: preview.loading,
+        previewError: preview.error,
+      };
+    });
   }
 
   /**
@@ -439,11 +389,39 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
   }
 
   private async loadSocialPreviews(urls: string[]): Promise<void> {
+    const requestId = ++this.socialPreviewRequestId;
+
     this.socialPreviews.set(urls.map(url => ({
       url,
-      loading: false,
+      loading: true,
       error: false,
     })));
+
+    try {
+      const previews = await this.openGraphService.getMultipleOpenGraphData(urls);
+
+      if (requestId !== this.socialPreviewRequestId) {
+        return;
+      }
+
+      this.socialPreviews.set(previews.map(preview => ({
+        ...preview,
+        url: normalizePreviewUrl(preview.url),
+        loading: false,
+      })));
+    } catch (error) {
+      console.error('Failed to load social previews:', error);
+
+      if (requestId !== this.socialPreviewRequestId) {
+        return;
+      }
+
+      this.socialPreviews.set(urls.map(url => ({
+        url,
+        loading: false,
+        error: true,
+      })));
+    }
   }
 
   onNostrMentionClick(token: ContentToken) {

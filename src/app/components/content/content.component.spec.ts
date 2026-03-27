@@ -1,10 +1,11 @@
-import type { MockedObject } from "vitest";
+import { beforeEach, describe, expect, it, vi, type MockedObject } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideZonelessChangeDetection } from '@angular/core';
 import { ContentComponent } from './content.component';
 import { SettingsService } from '../../services/settings.service';
 import { ParsingService } from '../../services/parsing.service';
 import { LayoutService } from '../../services/layout.service';
+import { OpenGraphService } from '../../services/opengraph.service';
 import { signal } from '@angular/core';
 import type { ContentToken } from '../../services/parsing.service';
 
@@ -16,6 +17,7 @@ describe('ContentComponent', () => {
   };
   let mockParsingService: MockedObject<ParsingService>;
   let mockLayoutService: MockedObject<LayoutService>;
+  let mockOpenGraphService: MockedObject<OpenGraphService>;
 
   beforeEach(async () => {
     mockParsingService = {
@@ -34,6 +36,11 @@ describe('ContentComponent', () => {
       openArticle: vi.fn().mockName("LayoutService.openArticle")
     } as unknown as MockedObject<LayoutService>;
 
+    mockOpenGraphService = {
+      getMultipleOpenGraphData: vi.fn().mockName('OpenGraphService.getMultipleOpenGraphData')
+    } as unknown as MockedObject<OpenGraphService>;
+    mockOpenGraphService.getMultipleOpenGraphData.mockResolvedValue([]);
+
     mockSettingsService = {
       settings: signal({ socialSharingPreview: false }),
     } as unknown as MockedObject<SettingsService> & {
@@ -47,6 +54,7 @@ describe('ContentComponent', () => {
         { provide: SettingsService, useValue: mockSettingsService },
         { provide: ParsingService, useValue: mockParsingService },
         { provide: LayoutService, useValue: mockLayoutService },
+        { provide: OpenGraphService, useValue: mockOpenGraphService },
       ],
     }).compileComponents();
 
@@ -113,21 +121,21 @@ describe('ContentComponent', () => {
         set: (value: boolean) => void;
       };
       _cachedTokens: {
-        set: (value: Array<{
+        set: (value: {
           id: number;
           type: string;
           content: string;
-        }>) => void;
+        }[]) => void;
       };
     })._hasBeenVisible.set(true);
 
     (component as unknown as {
       _cachedTokens: {
-        set: (value: Array<{
+        set: (value: {
           id: number;
           type: string;
           content: string;
-        }>) => void;
+        }[]) => void;
       };
     })._cachedTokens.set([
       { id: 1, type: 'text', content: 'hello ' },
@@ -150,21 +158,21 @@ describe('ContentComponent', () => {
         set: (value: boolean) => void;
       };
       _cachedTokens: {
-        set: (value: Array<{
+        set: (value: {
           id: number;
           type: string;
           content: string;
-        }>) => void;
+        }[]) => void;
       };
     })._hasBeenVisible.set(true);
 
     (component as unknown as {
       _cachedTokens: {
-        set: (value: Array<{
+        set: (value: {
           id: number;
           type: string;
           content: string;
-        }>) => void;
+        }[]) => void;
       };
     })._cachedTokens.set([
       { id: 1, type: 'text', content: 'Top text' },
@@ -232,7 +240,7 @@ describe('ContentComponent', () => {
     expect(mockParsingService.clearNostrUriCache).toHaveBeenCalled();
   });
 
-  it('should hide inline X status URLs when social previews are enabled', () => {
+  it('should replace previewed URLs with inline preview token metadata', () => {
     mockSettingsService.settings.set({ socialSharingPreview: true });
 
     (component as unknown as {
@@ -259,14 +267,23 @@ describe('ContentComponent', () => {
 
     fixture.detectChanges();
 
-    expect(component.displayContentTokens().map(token => token.content)).toEqual([
-      'Before ',
-      ' after',
-      'https://example.com',
+    expect(component.displayContentTokens()).toEqual([
+      { id: 1, type: 'text', content: 'Before ' },
+      {
+        id: 2,
+        type: 'url',
+        content: 'https://x.com/user/status/1234567890',
+        previewLoading: false,
+        previewError: false,
+        previewSiteName: undefined,
+        previewTitle: undefined,
+      },
+      { id: 3, type: 'text', content: ' after' },
+      { id: 4, type: 'url', content: 'https://example.com' },
     ]);
   });
 
-  it('should hide inline generic URLs when a social preview is rendered', () => {
+  it('should use preview title metadata for generic URLs when available', () => {
     mockSettingsService.settings.set({ socialSharingPreview: true });
 
     (component as unknown as {
@@ -286,6 +303,8 @@ describe('ContentComponent', () => {
     component.socialPreviews.set([
       {
         url: 'https://lnbeats.com/album/123',
+        title: 'LN Beats Album',
+        siteName: 'LN Beats',
         loading: false,
         error: false,
       },
@@ -293,77 +312,19 @@ describe('ContentComponent', () => {
 
     fixture.detectChanges();
 
-    expect(component.displayContentTokens().map(token => token.content)).toEqual([
-      'Song link\n',
-      '\n',
-      'More text',
-    ]);
-  });
-
-  it('should trim leading blank lines left by a removed preview URL', () => {
-    mockSettingsService.settings.set({ socialSharingPreview: true });
-
-    (component as unknown as {
-      _hasBeenVisible: { set: (value: boolean) => void };
-      _cachedTokens: { set: (value: ContentToken[]) => void };
-    })._hasBeenVisible.set(true);
-
-    (component as unknown as {
-      _cachedTokens: { set: (value: ContentToken[]) => void };
-    })._cachedTokens.set([
-      { id: 1, type: 'url', content: 'https://zap.stream/' } as ContentToken,
-      { id: 2, type: 'linebreak', content: '\n' } as ContentToken,
-      { id: 3, type: 'linebreak', content: '\n' } as ContentToken,
-      { id: 4, type: 'text', content: 'Then use OBS software which uploads the stream to Zap Stream.' } as ContentToken,
-    ]);
-
-    component.socialPreviews.set([
+    expect(component.displayContentTokens()).toEqual([
+      { id: 1, type: 'text', content: 'Song link\n' },
       {
-        url: 'https://zap.stream/',
-        loading: false,
-        error: false,
+        id: 2,
+        type: 'url',
+        content: 'https://lnbeats.com/album/123?utm_source=test',
+        previewTitle: 'LN Beats Album',
+        previewSiteName: 'LN Beats',
+        previewLoading: false,
+        previewError: false,
       },
-    ]);
-
-    fixture.detectChanges();
-
-    expect(component.displayContentTokens().map(token => token.content)).toEqual([
-      'Then use OBS software which uploads the stream to Zap Stream.',
-    ]);
-  });
-
-  it('should collapse duplicate linebreak groups when a preview URL is removed between text blocks', () => {
-    mockSettingsService.settings.set({ socialSharingPreview: true });
-
-    (component as unknown as {
-      _hasBeenVisible: { set: (value: boolean) => void };
-      _cachedTokens: { set: (value: ContentToken[]) => void };
-    })._hasBeenVisible.set(true);
-
-    (component as unknown as {
-      _cachedTokens: { set: (value: ContentToken[]) => void };
-    })._cachedTokens.set([
-      { id: 1, type: 'text', content: 'Before' } as ContentToken,
-      { id: 2, type: 'linebreak', content: '\n' } as ContentToken,
-      { id: 3, type: 'url', content: 'https://zap.stream/' } as ContentToken,
-      { id: 4, type: 'linebreak', content: '\n' } as ContentToken,
-      { id: 5, type: 'text', content: 'After' } as ContentToken,
-    ]);
-
-    component.socialPreviews.set([
-      {
-        url: 'https://zap.stream/',
-        loading: false,
-        error: false,
-      },
-    ]);
-
-    fixture.detectChanges();
-
-    expect(component.displayContentTokens().map(token => token.content)).toEqual([
-      'Before',
-      '\n',
-      'After',
+      { id: 3, type: 'linebreak', content: '\n' },
+      { id: 4, type: 'text', content: 'More text' },
     ]);
   });
 

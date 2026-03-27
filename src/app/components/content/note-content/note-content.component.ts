@@ -1140,7 +1140,7 @@ export class NoteContentComponent implements OnDestroy {
    */
   goToPrevious(groupId: number, images: ContentToken[]): void {
     const currentIndex = this.getCarouselIndex(groupId);
-    if (currentIndex > 0) {
+    if (images.length > 0 && currentIndex > 0) {
       this.setCarouselIndex(groupId, currentIndex - 1);
     }
   }
@@ -1936,6 +1936,32 @@ export class NoteContentComponent implements OnDestroy {
     } catch {
       // If parsing fails, just return the original content
       return normalizedContent;
+    }
+  }
+
+  getUrlButtonLabel(token: ContentToken): string {
+    const title = token.previewTitle?.trim();
+    if (title) {
+      return title;
+    }
+
+    const siteName = token.previewSiteName?.trim();
+    if (siteName) {
+      return siteName;
+    }
+
+    return this.getUrlHostname(token.content) || 'Open link';
+  }
+
+  getUrlButtonAriaLabel(token: ContentToken): string {
+    return `Open link: ${this.getUrlButtonLabel(token)}`;
+  }
+
+  private getUrlHostname(url: string): string {
+    try {
+      return new URL(url).hostname.replace(/^www\./, '');
+    } catch {
+      return '';
     }
   }
 

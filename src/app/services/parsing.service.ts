@@ -69,6 +69,10 @@ export interface ContentToken {
     type: 'offer' | 'invoice';
   };
   isYouTubeShort?: boolean; // True if the YouTube URL is a Short (9:16 aspect ratio)
+  previewTitle?: string;
+  previewSiteName?: string;
+  previewLoading?: boolean;
+  previewError?: boolean;
 }
 
 interface ParsedDimensions {
