@@ -460,6 +460,13 @@
     position: relative;
   }
 
+  &.has-aspect-ratio {
+    .main-video {
+      height: 100%;
+      max-height: none;
+    }
+  }
+
   &.revealing {
     .main-video {
       opacity: 1;

@@ -1546,6 +1546,14 @@ export class NoteContentComponent implements OnDestroy {
     return null;
   }
 
+  getVideoExpectedDimensions(token: ContentToken): string {
+    if (!token.dimensions) {
+      return '';
+    }
+
+    return `${token.dimensions.width}x${token.dimensions.height}`;
+  }
+
   /**
    * Check if a video is portrait orientation (height > width)
    * Uses metadata dimensions as the source of truth for intended orientation
