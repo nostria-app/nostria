@@ -649,6 +649,10 @@ export class EventPageComponent {
 
   missingKnownParentCount = computed<number>(() => this.missingKnownParentIds().length);
 
+  shouldShowParentLoadingPlaceholder = computed<boolean>(() => {
+    return this.isLoadingParents() && this.parentEvents().length === 0 && this.missingKnownParentCount() > 0;
+  });
+
   shouldShowMissingParentPlaceholder = computed<boolean>(() => {
     return !this.isLoadingParents() && this.missingKnownParentCount() > 0;
   });
@@ -908,8 +912,8 @@ export class EventPageComponent {
           }
         }
 
-        if (partialData.parents !== undefined) {
-          this.parentEvents.set(partialData.parents);
+        if (partialData.parentsLoaded) {
+          this.parentEvents.set(partialData.parents ?? []);
           this.isLoadingParents.set(false);
         }
 
@@ -950,9 +954,10 @@ export class EventPageComponent {
           replies: partialData.replies || [],
           threadedReplies: partialData.threadedReplies || [],
           reactions: partialData.reactions || [],
-          parents: partialData.parents || [],
+          parents: partialData.parentsLoaded ? (partialData.parents ?? []) : this.parentEvents(),
           isThreadRoot: partialData.isThreadRoot || false,
           rootEvent: partialData.rootEvent || null,
+          parentsLoaded: partialData.parentsLoaded ?? false,
         });
       }
 

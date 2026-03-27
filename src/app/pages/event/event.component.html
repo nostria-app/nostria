@@ -94,6 +94,16 @@
   } @else {
 
   <!-- Display parent events in thread (if any) with proper indentation -->
+  @if (shouldShowParentLoadingPlaceholder()) {
+  <div class="missing-parent-placeholder thread-context-loading-placeholder" [style.margin-left.px]="maxParentIndent()">
+    <mat-spinner diameter="18"></mat-spinner>
+    <div class="missing-parent-copy">
+      <p class="missing-parent-title">Loading thread context</p>
+      <p class="missing-parent-text">Loading parent events referenced by this reply.</p>
+    </div>
+  </div>
+  }
+
   @if (shouldShowMissingParentPlaceholder()) {
   <div class="missing-parent-placeholder" [style.margin-left.px]="maxParentIndent()">
     <mat-icon>account_tree</mat-icon>

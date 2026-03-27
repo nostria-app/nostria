@@ -199,6 +199,15 @@
   }
 }
 
+.thread-context-loading-placeholder {
+  align-items: center;
+
+  mat-spinner {
+    flex-shrink: 0;
+    opacity: 0.7;
+  }
+}
+
 .missing-parent-copy {
   display: flex;
   flex-direction: column;

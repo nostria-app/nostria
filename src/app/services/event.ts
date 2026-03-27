@@ -96,6 +96,8 @@ export interface ThreadData {
   parents: Event[];
   isThreadRoot: boolean;
   rootEvent: Event | null;
+  /** True once parent resolution is complete (even if no parents were found) */
+  parentsLoaded?: boolean;
   /** True once reply fetching is complete (even if no replies were found) */
   repliesLoaded?: boolean;
 }
@@ -1945,6 +1947,7 @@ export class EventService {
       parents,
       isThreadRoot,
       rootEvent,
+      parentsLoaded: true,
     };
   }
 
@@ -2008,6 +2011,7 @@ export class EventService {
       parents: [],
       isThreadRoot,
       rootEvent: null,
+      parentsLoaded: false,
     };
 
     // Fast path: check local DB for cached replies and yield them instantly
@@ -2028,6 +2032,7 @@ export class EventService {
           parents: [],
           isThreadRoot,
           rootEvent: null,
+          parentsLoaded: false,
           repliesLoaded: true,
         };
       }
@@ -2091,6 +2096,7 @@ export class EventService {
           parents,
           isThreadRoot,
           rootEvent,
+          parentsLoaded: parentsResolved,
           repliesLoaded: true,
         };
       };
@@ -2112,6 +2118,7 @@ export class EventService {
           parents,
           isThreadRoot,
           rootEvent,
+          parentsLoaded: true,
         };
       } else {
         // Replies arrived first — yield them right away with empty parents
@@ -2138,6 +2145,7 @@ export class EventService {
           parents,
           isThreadRoot,
           rootEvent,
+          parentsLoaded: true,
         };
       }
 
@@ -2189,6 +2197,7 @@ export class EventService {
         parents,
         isThreadRoot,
         rootEvent,
+        parentsLoaded: true,
         repliesLoaded: true,
       };
 
@@ -2228,6 +2237,7 @@ export class EventService {
           parents: [],
           isThreadRoot,
           rootEvent: isThreadRoot ? event : null,
+          parentsLoaded: true,
           repliesLoaded: true,
         };
 
@@ -2242,6 +2252,7 @@ export class EventService {
           parents: [],
           isThreadRoot,
           rootEvent: isThreadRoot ? event : null,
+          parentsLoaded: true,
           repliesLoaded: true,
         };
 
