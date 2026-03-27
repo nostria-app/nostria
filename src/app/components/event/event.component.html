@@ -1007,6 +1007,7 @@
       } @else {
       <!-- Like with count -->
       <div class="action-button like-action like-hover-container" [class.disabled]="isThreadInteractionBlocked()"
+        [class.engagement-loading]="interactionsLoading()" [class.engagement-ready]="interactionsReady()"
         [attr.aria-disabled]="isThreadInteractionBlocked()"
         [matTooltip]="isThreadInteractionBlocked() ? threadInteractionBlockedTooltip() : ''"
         [matTooltipDisabled]="!isThreadInteractionBlocked()" (click)="onLikeActionClick(reactionBtn, $event)"
@@ -1014,8 +1015,9 @@
         <app-reaction-button class="action-icon" #reactionBtn [event]="targetItem.event"
           [reactionsFromParent]="reactions()" [disabled]="isThreadInteractionBlocked()"
           (reactionChanged)="loadReactions(true)" view="icon"></app-reaction-button>
-        @if (likes().length > 0) {
-        <span class="action-count">{{ likesDisplay() }}</span>
+        @if (likes().length > 0 || interactionsLoading()) {
+        <span class="action-count" [class.count-placeholder]="interactionsLoading() && likes().length === 0"
+          [attr.aria-hidden]="interactionsLoading() && likes().length === 0 ? 'true' : null">{{ likesDisplay() || '00' }}</span>
         }
         <span class="action-text">Like</span>
 
@@ -1043,13 +1045,15 @@
 
       <!-- Reply (opens note editor) -->
       <div class="action-button comment-action" role="button" [class.disabled]="isThreadInteractionBlocked()"
+        [class.engagement-loading]="interactionsLoading()" [class.engagement-ready]="interactionsReady()"
         [attr.aria-disabled]="isThreadInteractionBlocked()"
         [attr.tabindex]="requiresSpamConfirmation() || isThreadInteractionBlocked() ? -1 : 0"
         [matTooltip]="isThreadInteractionBlocked() ? threadInteractionBlockedTooltip() : ''"
         [matTooltipDisabled]="!isThreadInteractionBlocked()" (click)="openReplyEditor($event)">
         <mat-icon class="action-icon">mode_comment</mat-icon>
-        @if (replyCount() > 0) {
-        <span class="action-count">{{ replyCountDisplay() }}</span>
+        @if (replyCount() > 0 || interactionsLoading()) {
+        <span class="action-count" [class.count-placeholder]="interactionsLoading() && replyCount() === 0"
+          [attr.aria-hidden]="interactionsLoading() && replyCount() === 0 ? 'true' : null">{{ replyCountDisplay() || '00' }}</span>
         }
         <span class="action-text">Reply</span>
       </div>
@@ -1065,6 +1069,7 @@
 
       <!-- Zap with sats -->
       <div class="action-button zap-action" [class.disabled]="isThreadInteractionBlocked()"
+        [class.engagement-loading]="zapsLoading()" [class.engagement-ready]="zapsReady()"
         [attr.aria-disabled]="isThreadInteractionBlocked()"
         [matTooltip]="isThreadInteractionBlocked() ? threadInteractionBlockedTooltip() : ''"
         [matTooltipDisabled]="!isThreadInteractionBlocked()" (click)="onZapActionClick(zapBtn, $event)">
@@ -1072,21 +1077,24 @@
           [recipientPubkey]="targetItem.event.pubkey" [disabled]="isThreadInteractionBlocked()"
           (zapSent)="onZapSent($event)">
         </app-zap-button>
-        @if (totalZapAmount() > 0) {
-        <span class="action-count">{{ formatZapAmount(totalZapAmount()) }}{{ hasMoreZaps() ? '+' : '' }}</span>
+        @if (totalZapAmount() > 0 || zapsLoading()) {
+        <span class="action-count" [class.count-placeholder]="zapsLoading() && totalZapAmount() === 0"
+          [attr.aria-hidden]="zapsLoading() && totalZapAmount() === 0 ? 'true' : null">{{ totalZapAmount() > 0 ? formatZapAmount(totalZapAmount()) + (hasMoreZaps() ? '+' : '') : '00' }}</span>
         }
         <span class="action-text">Zap</span>
       </div>
 
       <!-- Share with count (reposts + quotes) -->
       <div class="action-button share-action" role="button" [class.disabled]="isThreadInteractionBlocked()"
+        [class.engagement-loading]="interactionsLoading()" [class.engagement-ready]="interactionsReady()"
         [attr.aria-disabled]="isThreadInteractionBlocked()"
         [attr.tabindex]="requiresSpamConfirmation() || isThreadInteractionBlocked() ? -1 : 0"
         [matTooltip]="isThreadInteractionBlocked() ? threadInteractionBlockedTooltip() : ''"
         [matTooltipDisabled]="!isThreadInteractionBlocked()" (click)="openShareDialog($event)">
         <mat-icon class="action-icon">share</mat-icon>
-        @if (shareCount() > 0) {
-        <span class="action-count">{{ shareCountDisplay() }}</span>
+        @if (shareCount() > 0 || interactionsLoading()) {
+        <span class="action-count" [class.count-placeholder]="interactionsLoading() && shareCount() === 0"
+          [attr.aria-hidden]="interactionsLoading() && shareCount() === 0 ? 'true' : null">{{ shareCountDisplay() || '00' }}</span>
         }
         <span class="action-text">Share</span>
       </div>
@@ -1101,8 +1109,9 @@
       </div>
 
       <!-- Top emojis indicator (right-aligned) -->
-      @if (!compact() && (likes().length > 0 || zapCount() > 0 || repostCount() > 0 || quoteCount() > 0)) {
+      @if (!compact() && (likes().length > 0 || zapCount() > 0 || repostCount() > 0 || quoteCount() > 0 || engagementLoading())) {
       <div class="emoji-indicators" (click)="toggleReactionsSummary(); $event.stopPropagation()"
+        [class.engagement-loading]="engagementLoading()" [class.engagement-ready]="engagementReady()"
         (contextmenu)="onActionsDisplayModeToggle($event); $event.stopPropagation()"
         (touchstart)="onBookmarkLongPressStart($event)" (touchend)="onBookmarkLongPressEnd()"
         (touchcancel)="onBookmarkLongPressEnd()">
@@ -1115,6 +1124,12 @@
           <span class="emoji-item">{{ emoji.emoji }}</span>
           }
           }
+        </span>
+        } @else if (engagementLoading()) {
+        <span class="aggregated-emojis aggregated-emojis-placeholder" aria-hidden="true">
+          <span class="emoji-item placeholder-dot"></span>
+          <span class="emoji-item placeholder-dot"></span>
+          <span class="emoji-item placeholder-dot"></span>
         </span>
         }
         <mat-icon class="emoji-more">{{ showReactionsSummary() ? 'expand_less' : 'expand_more' }}</mat-icon>

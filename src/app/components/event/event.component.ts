@@ -1131,6 +1131,30 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     return `${total}`;
   });
 
+  interactionsLoading = computed<boolean>(() => {
+    return this.hasLoadedInteractions() && this.isLoadingReactions();
+  });
+
+  interactionsReady = computed<boolean>(() => {
+    return this.hasLoadedInteractions() && !this.isLoadingReactions();
+  });
+
+  zapsLoading = computed<boolean>(() => {
+    return this.hasLoadedInteractions() && this.isLoadingZaps();
+  });
+
+  zapsReady = computed<boolean>(() => {
+    return this.hasLoadedInteractions() && !this.isLoadingZaps();
+  });
+
+  engagementLoading = computed<boolean>(() => {
+    return this.interactionsLoading() || this.zapsLoading();
+  });
+
+  engagementReady = computed<boolean>(() => {
+    return this.hasLoadedInteractions() && !this.isLoadingReactions() && !this.isLoadingZaps();
+  });
+
   // Reactions summary panel state
   showReactionsSummary = signal<boolean>(false);
   reactionsSummaryTab = signal<'reactions' | 'reposts' | 'quotes' | 'zaps'>('reactions');
@@ -2382,6 +2406,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
 
     this.logger.debug('[Loading Zaps] Starting load for event:', targetEventId.substring(0, 8));
 
+    this.isLoadingZaps.set(true);
     try {
       // Only apply limits in timeline (feed) mode; thread (detail) mode loads all zaps
       const queryLimit = this.mode() === 'timeline' ? EventService.INTERACTION_QUERY_LIMIT : undefined;
@@ -2424,6 +2449,8 @@ export class EventComponent implements AfterViewInit, OnDestroy {
       this.hasMoreZaps.set(queryLimit != null && zapReceipts.length >= queryLimit);
     } catch (error) {
       this.logger.error('Error loading zaps:', error);
+    } finally {
+      this.isLoadingZaps.set(false);
     }
   }
 

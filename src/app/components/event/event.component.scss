@@ -116,6 +116,17 @@
   }
 }
 
+@keyframes engagementPulse {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+
+  50% {
+    opacity: 0.8;
+  }
+}
+
 .event-tagged-users-warning {
   display: flex;
   flex-direction: row;
@@ -328,6 +339,40 @@
   outline: none;
   -webkit-tap-highlight-color: transparent;
 
+  &.engagement-loading {
+    .action-icon,
+    .action-text,
+    .action-count,
+    >mat-icon,
+    ::ng-deep mat-icon,
+    ::ng-deep .emoji-icon {
+      opacity: 0.5;
+      transition: opacity 0.22s ease, transform 0.22s ease;
+    }
+
+    .action-text,
+    .action-count,
+    >mat-icon,
+    ::ng-deep mat-icon,
+    ::ng-deep .emoji-icon {
+      animation: engagementPulse 1.2s ease-in-out infinite;
+    }
+  }
+
+  &.engagement-ready {
+    .action-icon,
+    .action-text,
+    .action-count,
+    >mat-icon,
+    ::ng-deep mat-icon,
+    ::ng-deep .emoji-icon {
+      animation: none;
+      opacity: 1;
+      transform: translateY(0);
+      transition: opacity 0.22s ease, transform 0.22s ease;
+    }
+  }
+
   &:focus-visible {
     outline: 2px solid var(--mat-sys-primary);
     outline-offset: -2px;
@@ -364,6 +409,14 @@
     letter-spacing: 0;
     line-height: 22px;
     white-space: nowrap;
+
+    &.count-placeholder {
+      min-width: 1.4em;
+      border-radius: 999px;
+      color: transparent !important;
+      background: color-mix(in srgb, var(--mat-sys-on-surface-variant) 18%, transparent);
+      animation: engagementPulse 1.2s ease-in-out infinite;
+    }
   }
 
   .action-text {
@@ -672,6 +725,28 @@
   transition: background-color 0.15s ease;
   user-select: none;
 
+  &.engagement-loading {
+    .aggregated-emojis,
+    .emoji-more {
+      opacity: 0.55;
+      transition: opacity 0.22s ease, transform 0.22s ease;
+    }
+
+    .aggregated-emojis,
+    .emoji-more {
+      animation: engagementPulse 1.2s ease-in-out infinite;
+    }
+  }
+
+  &.engagement-ready {
+    .aggregated-emojis,
+    .emoji-more {
+      opacity: 1;
+      animation: none;
+      transition: opacity 0.22s ease, transform 0.22s ease;
+    }
+  }
+
   &:hover {
     background-color: var(--mat-sys-surface-container-high);
   }
@@ -690,6 +765,18 @@
       width: 16px;
       height: 16px;
       object-fit: contain;
+    }
+  }
+
+  .aggregated-emojis-placeholder {
+    gap: 4px;
+
+    .placeholder-dot {
+      display: inline-flex;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: color-mix(in srgb, var(--mat-sys-on-surface-variant) 26%, transparent);
     }
   }
 
