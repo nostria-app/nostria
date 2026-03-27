@@ -23,7 +23,8 @@
         <div class="pinned-notes-container">
           @for (note of pinnedNotes(); track note.event.id) {
           <div class="pinned-note-wrapper">
-            <app-event [event]="note.event" appearance="plain" [compact]="true" [hideParentEvent]="true"></app-event>
+            <app-event [event]="note.event" appearance="plain" [compact]="true" [hideParentEvent]="true"
+              [inFeedsPanel]="true"></app-event>
           </div>
           }
         </div>
@@ -64,7 +65,7 @@
 
       <div class="notes-list">
         @for (item of profileState.displayedTimeline(); track item.event.id) {
-        <app-event [event]="item.event" appearance="plain"></app-event>
+        <app-event [event]="item.event" appearance="plain" [inFeedsPanel]="true"></app-event>
         }
 
         <!-- Loading more indicator -->

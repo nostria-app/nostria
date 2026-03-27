@@ -1846,10 +1846,10 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   }
 
   private hasLoadedEdit = false;
-  private readonly interactionPreloadDelayMs = 90;
-  private readonly interactionViewportPreloadMarginPx = 1000;
-  private readonly timelineInteractionRootMargin = '1600px 0px 2400px 0px';
-  private readonly viewportInteractionRootMargin = '1200px';
+  private readonly interactionPreloadDelayMs = 0;
+  private readonly interactionViewportPreloadMarginPx = 1800;
+  private readonly timelineInteractionRootMargin = '2200px 0px 3200px 0px';
+  private readonly viewportInteractionRootMargin = '1800px 0px 2400px 0px';
   private readonly actualVisibilityObserverOptions = {
     rootMargin: '0px',
     threshold: 0.01,
@@ -2039,11 +2039,26 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   }
 
   private resolveObserverRoot(element: HTMLElement): HTMLElement | null {
-    if (!this.inFeedsPanel()) {
-      return null;
+    let current: HTMLElement | null = element.parentElement;
+
+    while (current) {
+      if (current.classList.contains('columns-container') || current.classList.contains('right-panel') || current.classList.contains('left-panel')) {
+        return current;
+      }
+
+      const styles = window.getComputedStyle(current);
+      const overflowY = styles.overflowY;
+      const overflow = styles.overflow;
+      const isScrollable = ['auto', 'scroll', 'overlay'].includes(overflowY) || ['auto', 'scroll', 'overlay'].includes(overflow);
+
+      if (isScrollable && current.scrollHeight > current.clientHeight) {
+        return current;
+      }
+
+      current = current.parentElement;
     }
 
-    return element.closest('.columns-container');
+    return null;
   }
 
   /**
