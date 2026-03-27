@@ -235,6 +235,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   private lastHeight = 0;
   private virtualizeTimer?: ReturnType<typeof setTimeout>;
   private hasViewInitialized = false;
+  private visibleInteractionRetryTimer?: ReturnType<typeof setTimeout>;
 
   // Interaction loading: delay + abort support.
   // When an event enters the viewport, we wait a short period before starting
@@ -1558,11 +1559,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
 
         // CRITICAL: Clear all interaction state when event changes
         // This prevents interactions from the previous event being displayed on the new event
-        this.reactions.set({ events: [], data: new Map() });
-        this.reposts.set([]);
-        this.reports.set({ events: [], data: new Map() });
-        this.zaps.set([]);
-        this.quotes.set([]);
+        this.clearInteractionState();
         this.asyncRepostedEvent.set(null); // Clear async-loaded repost event
         this.latestEditEvent.set(null); // Clear NIP-41 edit event
 
@@ -1916,11 +1913,29 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     EventComponent.queuedInteractionPreloads.delete(component);
   }
 
+  private clearInteractionState(): void {
+    this.reactions.set({ events: [], data: new Map() });
+    this.reposts.set([]);
+    this.reports.set({ events: [], data: new Map() });
+    this.zaps.set([]);
+    this.quotes.set([]);
+    this.hasMoreReactions.set(false);
+    this.hasMoreReposts.set(false);
+    this.hasMoreReplies.set(false);
+    this.hasMoreQuotes.set(false);
+    this.hasMoreZaps.set(false);
+    this._replyCountInternal.set(0);
+    this._replyEventsInternal.set([]);
+    this.isLoadingReactions.set(false);
+    this.isLoadingZaps.set(false);
+  }
+
   ngAfterViewInit(): void {
     this.hasViewInitialized = true;
     // Set up IntersectionObserver for lazy loading
     this.setupIntersectionObserver();
     this.maybePreloadInteractionsImmediately();
+    this.scheduleVisibleInteractionRetry();
   }
 
   /**
@@ -1992,6 +2007,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
             this.observedEventId = currentEventId;
 
             this.scheduleInteractionPreload(currentEventId, observerRoot);
+            this.scheduleVisibleInteractionRetry();
           }
         } else {
           // --- Leaving viewport (and buffer zone) ---
@@ -2003,6 +2019,11 @@ export class EventComponent implements AfterViewInit, OnDestroy {
             this.interactionLoadTimer = undefined;
           }
 
+          if (this.visibleInteractionRetryTimer) {
+            clearTimeout(this.visibleInteractionRetryTimer);
+            this.visibleInteractionRetryTimer = undefined;
+          }
+
           EventComponent.cancelQueuedInteractionPreload(this);
 
           // Abort any in-flight interaction queries.
@@ -2010,6 +2031,8 @@ export class EventComponent implements AfterViewInit, OnDestroy {
           if (this.interactionAbortController) {
             this.interactionAbortController.abort();
             this.interactionAbortController = undefined;
+            this.isLoadingReactions.set(false);
+            this.isLoadingZaps.set(false);
           }
 
           // If interactions were marked as loading but results haven't been applied yet
@@ -2082,7 +2105,35 @@ export class EventComponent implements AfterViewInit, OnDestroy {
 
       const priority = this.getInteractionPreloadPriority(observerRoot);
       EventComponent.enqueueInteractionPreload(this, priority);
+      this.scheduleVisibleInteractionRetry();
     }, this.interactionPreloadDelayMs);
+  }
+
+  private scheduleVisibleInteractionRetry(): void {
+    if (this.visibleInteractionRetryTimer) {
+      clearTimeout(this.visibleInteractionRetryTimer);
+    }
+
+    this.visibleInteractionRetryTimer = setTimeout(() => {
+      this.visibleInteractionRetryTimer = undefined;
+
+      if (this.hasLoadedInteractions() || this.isLoadingReactions() || this.isLoadingZaps()) {
+        return;
+      }
+
+      const element = this.elementRef.nativeElement as HTMLElement | undefined;
+      const currentRecord = this.record();
+      if (!element?.isConnected || !currentRecord || !this.isWithinImmediatePreloadBounds(element) || !this.supportsReactions()) {
+        return;
+      }
+
+      const observerRoot = this.resolveObserverRoot(element);
+      const currentEventId = currentRecord.event.id;
+      this.observedEventId = currentEventId;
+      const priority = this.getInteractionPreloadPriority(observerRoot);
+      this.logger.debug('[Lazy Load] Retrying visible preload for event:', currentEventId.substring(0, 8), 'priority:', priority);
+      EventComponent.enqueueInteractionPreload(this, priority);
+    }, 900);
   }
 
   private maybePreloadInteractionsImmediately(): void {
@@ -2108,6 +2159,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     const priority = this.getInteractionPreloadPriority(observerRoot);
     this.logger.debug('[Lazy Load] Queueing immediate preload for event:', currentEventId.substring(0, 8), 'priority:', priority);
     EventComponent.enqueueInteractionPreload(this, priority);
+    this.scheduleVisibleInteractionRetry();
   }
 
   private getInteractionPreloadPriority(observerRoot: HTMLElement | null): number {
@@ -2161,6 +2213,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
       return;
     }
 
+    this.clearInteractionState();
     this.hasLoadedInteractions.set(true);
 
     this.interactionAbortController?.abort();
@@ -2247,7 +2300,6 @@ export class EventComponent implements AfterViewInit, OnDestroy {
       this.logger.debug('[Lazy Load] Event was already visible when loaded:', currentEventId.substring(0, 8));
 
       this.observedEventId = currentEventId;
-      this.hasLoadedInteractions.set(true);
 
       if (this.supportsReactions()) {
         this.scheduleInteractionPreload(currentEventId, this.resolveObserverRoot(element));
@@ -2265,6 +2317,10 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     if (this.interactionLoadTimer) {
       clearTimeout(this.interactionLoadTimer);
       this.interactionLoadTimer = undefined;
+    }
+    if (this.visibleInteractionRetryTimer) {
+      clearTimeout(this.visibleInteractionRetryTimer);
+      this.visibleInteractionRetryTimer = undefined;
     }
     EventComponent.cancelQueuedInteractionPreload(this);
     if (this.interactionAbortController) {

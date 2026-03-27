@@ -12,25 +12,27 @@
     [class.prominent-image-preview]="prominentImage() && compact() && !!preview.image && !preview.loading && !preview.error"
     [class.single-link-preview]="singleLinkLayout() && !preview.loading && !preview.error">
     <div class="preview-content">
-      <div class="thumbnail-container">
-        @if (preview.loading) {
-        <div class="thumbnail-placeholder">
-          <mat-progress-spinner mode="indeterminate" diameter="24"></mat-progress-spinner>
+      <div class="thumbnail-frame">
+        <div class="thumbnail-container">
+          @if (preview.loading) {
+          <div class="thumbnail-placeholder">
+            <mat-progress-spinner mode="indeterminate" diameter="24"></mat-progress-spinner>
+          </div>
+          } @else if (preview.error) {
+          <div class="thumbnail-placeholder error">
+            <mat-icon class="error-icon">link_off</mat-icon>
+          </div>
+          } @else {
+          @if (preview.image) {
+          <img class="thumbnail" [src]="preview.image" [alt]="preview.title || 'Link preview image'"
+            title="Link preview image" />
+          } @else {
+          <div class="thumbnail-placeholder">
+            <span class="link-icon">🔗</span>
+          </div>
+          }
+          }
         </div>
-        } @else if (preview.error) {
-        <div class="thumbnail-placeholder error">
-          <mat-icon class="error-icon">link_off</mat-icon>
-        </div>
-        } @else {
-        @if (preview.image) {
-        <img class="thumbnail" [src]="preview.image" [alt]="preview.title || 'Link preview image'"
-          title="Link preview image" />
-        } @else {
-        <div class="thumbnail-placeholder">
-          <span class="link-icon">🔗</span>
-        </div>
-        }
-        }
       </div>
 
       <div class="text-content">
@@ -44,13 +46,24 @@
         </div>
         } @else if (preview.error) {
         <div class="error-content">
+          <div class="preview-meta">
+            <span class="preview-source error-source">Link preview unavailable</span>
+          </div>
           <div class="error-title">Could not load preview</div>
-          <div class="preview-url">{{ preview.url }}</div>
+          <div class="preview-description">Open the original link to view the destination directly.</div>
+          <div class="preview-footer">
+            <span class="preview-url-chip">{{ getPreviewHostname(preview.url) }}</span>
+            <mat-icon class="preview-open-icon">north_east</mat-icon>
+          </div>
         </div>
         } @else {
-        @if (singleLinkLayout()) {
-        <div class="preview-url">{{ preview.url }}</div>
-        }
+        <div class="preview-meta">
+          <span class="preview-source">{{ getPreviewSourceLabel(preview) }}</span>
+          @if (singleLinkLayout()) {
+          <span class="preview-meta-dot"></span>
+          <span class="preview-kind">Website</span>
+          }
+        </div>
         <div class="preview-title">
           {{ preview.title || 'No title available' }}
         </div>
@@ -59,9 +72,10 @@
           {{ preview.description || 'No description available' }}
         </div>
         }
-        @if (!singleLinkLayout()) {
-        <div class="preview-url">{{ preview.url }}</div>
-        }
+        <div class="preview-footer">
+          <span class="preview-url-chip">{{ getPreviewHostname(preview.url) }}</span>
+          <mat-icon class="preview-open-icon">north_east</mat-icon>
+        </div>
         }
       </div>
     </div>

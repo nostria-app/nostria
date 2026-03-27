@@ -8,7 +8,14 @@
   mat-card {
     height: 120px;
     box-shadow: var(--mat-sys-level1);
-    transition: box-shadow 0.2s ease, height 0.2s ease;
+    transition: box-shadow 0.2s ease, height 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
+    border: 1px solid var(--mat-sys-outline-variant);
+    border-radius: 20px;
+    background:
+      linear-gradient(180deg,
+        color-mix(in srgb, var(--mat-sys-surface-container-low) 84%, var(--mat-sys-surface) 16%) 0%,
+        var(--mat-sys-surface-container-low) 100%);
+    overflow: hidden;
 
     &.compact-preview {
       height: 48px;
@@ -28,6 +35,8 @@
 
   &:hover mat-card {
     box-shadow: var(--mat-sys-level2);
+    border-color: var(--mat-sys-outline);
+    background: var(--mat-sys-surface-container);
   }
 }
 
@@ -43,6 +52,8 @@
     padding: 0.25rem 0;
     box-shadow: var(--mat-sys-level1);
     background: var(--mat-sys-surface-container-low);
+    border: 1px solid var(--mat-sys-outline-variant);
+    border-radius: 20px;
   }
 }
 
@@ -74,47 +85,80 @@
   display: flex;
   height: 100%;
   gap: 16px;
+  padding: 8px;
+  align-items: stretch;
 
   .compact-preview & {
     gap: 8px;
+    padding: 6px;
   }
 
   .single-link-preview & {
     flex-direction: column;
     gap: 0;
+    padding: 0;
+  }
+}
+
+.thumbnail-frame {
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  flex-shrink: 0;
+  padding: 4px;
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg,
+      color-mix(in srgb, var(--mat-sys-surface-container) 82%, var(--mat-sys-surface-bright) 18%) 0%,
+      var(--mat-sys-surface-container-low) 100%);
+  border: 1px solid color-mix(in srgb, var(--mat-sys-outline-variant) 74%, transparent 26%);
+
+  .compact-preview & {
+    padding: 3px;
+    border-radius: 14px;
+  }
+
+  .single-link-preview & {
+    padding: 6px 6px 0;
+    border-radius: 0;
+    border: 0;
+    background: transparent;
   }
 }
 
 .thumbnail-container {
-  flex-shrink: 0;
   width: 120px;
   height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
+  border-radius: 12px;
+  background: var(--mat-sys-surface-container-low);
 
   .compact-preview & {
     width: 48px;
   }
 
   .prominent-image-preview & {
-    width: 104px;
+    width: 132px;
   }
 
   .single-link-preview & {
     width: 100%;
-    height: 208px;
+    height: 248px;
   }
 }
 
 .thumbnail {
   width: 100%;
   height: 100%;
-  object-fit: cover;
-  border-radius: 4px;
+  object-fit: contain;
+  display: block;
+  border-radius: inherit;
 
   .single-link-preview & {
-    border-radius: 18px 18px 0 0;
+    border-radius: inherit;
   }
 }
 
@@ -154,12 +198,13 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  justify-content: flex-start;
   overflow: hidden;
-  padding: 8px 0;
+  padding: 10px 4px 10px 0;
+  gap: 6px;
 
   .compact-preview & {
-    padding: 4px 0;
+    padding: 4px 2px 4px 0;
     justify-content: center;
     gap: 2px;
   }
@@ -170,10 +215,43 @@
   }
 
   .single-link-preview & {
-    padding: 10px 14px 14px;
+    padding: 12px 16px 16px;
     justify-content: flex-start;
-    gap: 4px;
+    gap: 8px;
   }
+}
+
+.preview-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.preview-source,
+.preview-kind {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  line-height: 1.2;
+  color: var(--mat-sys-on-surface-variant);
+  background: color-mix(in srgb, var(--mat-sys-surface-container-high) 84%, transparent 16%);
+  border: 1px solid color-mix(in srgb, var(--mat-sys-outline-variant) 62%, transparent 38%);
+}
+
+.error-source {
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.preview-meta-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--mat-sys-outline);
+  flex-shrink: 0;
 }
 
 .preview-title,
@@ -202,6 +280,7 @@
     font-size: 20px;
     line-height: 1.2;
     margin-bottom: 2px;
+    white-space: normal;
   }
 }
 
@@ -258,6 +337,37 @@
     margin-bottom: 4px;
     opacity: 0.9;
   }
+}
+
+.preview-footer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: auto;
+}
+
+.preview-url-chip {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  min-width: 0;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--mat-sys-primary-container) 26%, var(--mat-sys-surface-container-high) 74%);
+  color: color-mix(in srgb, var(--mat-sys-on-surface) 80%, var(--mat-sys-primary) 20%);
+  font-size: 12px;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.preview-open-icon {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  font-size: 18px;
+  color: var(--mat-sys-on-surface-variant);
 }
 
 .loading-text {
