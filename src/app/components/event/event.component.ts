@@ -178,6 +178,10 @@ export function getTaggedXUrl(event?: Event | null): string | undefined {
   ],
 })
 export class EventComponent implements AfterViewInit, OnDestroy {
+  private static readonly interactionPreloadConcurrency = 3;
+  private static readonly queuedInteractionPreloads = new Map<EventComponent, number>();
+  private static readonly activeInteractionPreloads = new Set<EventComponent>();
+
   id = input<string | null | undefined>();
   type = input<'e' | 'a' | 'r' | 't'>('e');
   event = input<Event | null | undefined>(null);
@@ -1855,6 +1859,42 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     threshold: 0.01,
   } as const;
 
+  private static processInteractionPreloadQueue(): void {
+    while (
+      EventComponent.activeInteractionPreloads.size < EventComponent.interactionPreloadConcurrency
+      && EventComponent.queuedInteractionPreloads.size > 0
+    ) {
+      const nextEntry = [...EventComponent.queuedInteractionPreloads.entries()]
+        .sort(([, leftPriority], [, rightPriority]) => leftPriority - rightPriority)[0];
+
+      if (!nextEntry) {
+        return;
+      }
+
+      const [component] = nextEntry;
+      EventComponent.queuedInteractionPreloads.delete(component);
+      EventComponent.activeInteractionPreloads.add(component);
+
+      void component.startQueuedInteractionLoad().finally(() => {
+        EventComponent.activeInteractionPreloads.delete(component);
+        EventComponent.processInteractionPreloadQueue();
+      });
+    }
+  }
+
+  private static enqueueInteractionPreload(component: EventComponent, priority: number): void {
+    if (EventComponent.activeInteractionPreloads.has(component)) {
+      return;
+    }
+
+    EventComponent.queuedInteractionPreloads.set(component, priority);
+    EventComponent.processInteractionPreloadQueue();
+  }
+
+  private static cancelQueuedInteractionPreload(component: EventComponent): void {
+    EventComponent.queuedInteractionPreloads.delete(component);
+  }
+
   ngAfterViewInit(): void {
     // Set up IntersectionObserver for lazy loading
     this.setupIntersectionObserver();
@@ -1928,47 +1968,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
             // Store which event we're loading for to prevent cross-contamination
             this.observedEventId = currentEventId;
 
-            // Delay interaction loading: if the user scrolls past quickly,
-            // the timer is cancelled in the !isIntersecting path and no
-            // relay queries are ever started.
-            if (this.interactionLoadTimer) {
-              clearTimeout(this.interactionLoadTimer);
-            }
-            this.interactionLoadTimer = setTimeout(() => {
-              this.interactionLoadTimer = undefined;
-
-              // Re-verify the event hasn't changed during the delay
-              if (this.record()?.event.id !== currentEventId) {
-                this.logger.warn('[Lazy Load] Event changed during interaction delay, skipping:', currentEventId.substring(0, 8));
-                return;
-              }
-
-              this.hasLoadedInteractions.set(true);
-
-              // Create a fresh AbortController for this load cycle
-              this.interactionAbortController?.abort();
-              this.interactionAbortController = new AbortController();
-
-              // Load interactions for the specific event that became visible
-              // Use supportsReactions() which correctly checks the target event kind for reposts
-              if (this.supportsReactions()) {
-                // Get the target record (reposted event for reposts, regular event otherwise)
-                const targetRecordData = this.targetRecord();
-                this.logger.debug('[Lazy Load] Loading interactions for visible event:',
-                  targetRecordData?.event.id.substring(0, 8), 'kind:', targetRecordData?.event.kind);
-
-                // Double-check event ID before loading to prevent race conditions
-                if (this.record()?.event.id === currentEventId) {
-                  const signal = this.interactionAbortController.signal;
-                  // loadAllInteractions now also loads quotes
-                  this.loadAllInteractions(false, signal);
-                  this.loadZaps(signal);
-                  this.loadLatestEditForEvent();
-                } else {
-                  this.logger.warn('[Lazy Load] Event changed between intersection and loading, skipping:', currentEventId.substring(0, 8));
-                }
-              }
-            }, this.interactionPreloadDelayMs);
+            this.scheduleInteractionPreload(currentEventId, observerRoot);
           }
         } else {
           // --- Leaving viewport (and buffer zone) ---
@@ -1979,6 +1979,8 @@ export class EventComponent implements AfterViewInit, OnDestroy {
             clearTimeout(this.interactionLoadTimer);
             this.interactionLoadTimer = undefined;
           }
+
+          EventComponent.cancelQueuedInteractionPreload(this);
 
           // Abort any in-flight interaction queries.
           // The relay query itself will complete, but result processing is skipped.
@@ -2036,6 +2038,70 @@ export class EventComponent implements AfterViewInit, OnDestroy {
         threshold: 0.01, // Trigger when at least 1% is visible
       }
     );
+  }
+
+  private scheduleInteractionPreload(currentEventId: string, observerRoot: HTMLElement | null): void {
+    if (this.interactionLoadTimer) {
+      clearTimeout(this.interactionLoadTimer);
+    }
+
+    this.interactionLoadTimer = setTimeout(() => {
+      this.interactionLoadTimer = undefined;
+
+      if (this.record()?.event.id !== currentEventId) {
+        this.logger.warn('[Lazy Load] Event changed during interaction delay, skipping:', currentEventId.substring(0, 8));
+        return;
+      }
+
+      const priority = this.getInteractionPreloadPriority(observerRoot);
+      EventComponent.enqueueInteractionPreload(this, priority);
+    }, this.interactionPreloadDelayMs);
+  }
+
+  private getInteractionPreloadPriority(observerRoot: HTMLElement | null): number {
+    const elementRect = this.elementRef.nativeElement.getBoundingClientRect();
+
+    if (observerRoot) {
+      const rootRect = observerRoot.getBoundingClientRect();
+      const distanceToViewport = Math.max(elementRect.top - rootRect.top, 0);
+      return Math.round(distanceToViewport);
+    }
+
+    return Math.round(Math.max(elementRect.top, 0));
+  }
+
+  private async startQueuedInteractionLoad(): Promise<void> {
+    const currentEventId = this.observedEventId;
+
+    if (!currentEventId || this.record()?.event.id !== currentEventId || this.hasLoadedInteractions()) {
+      return;
+    }
+
+    this.hasLoadedInteractions.set(true);
+
+    this.interactionAbortController?.abort();
+    this.interactionAbortController = new AbortController();
+
+    if (!this.supportsReactions()) {
+      return;
+    }
+
+    const targetRecordData = this.targetRecord();
+    this.logger.debug('[Lazy Load] Loading prioritized interactions for event:',
+      targetRecordData?.event.id.substring(0, 8), 'kind:', targetRecordData?.event.kind);
+
+    if (this.record()?.event.id !== currentEventId) {
+      this.logger.warn('[Lazy Load] Event changed before prioritized loading, skipping:', currentEventId.substring(0, 8));
+      this.hasLoadedInteractions.set(false);
+      return;
+    }
+
+    const signal = this.interactionAbortController.signal;
+    await Promise.allSettled([
+      this.loadAllInteractions(false, signal),
+      this.loadZaps(signal),
+      this.loadLatestEditForEvent(),
+    ]);
   }
 
   private resolveObserverRoot(element: HTMLElement): HTMLElement | null {
@@ -2099,21 +2165,8 @@ export class EventComponent implements AfterViewInit, OnDestroy {
       this.observedEventId = currentEventId;
       this.hasLoadedInteractions.set(true);
 
-      // Load interactions for the event
       if (this.supportsReactions()) {
-        const targetRecordData = this.targetRecord();
-        this.logger.debug('[Lazy Load] Loading interactions for already-visible event:',
-          targetRecordData?.event.id.substring(0, 8), 'kind:', targetRecordData?.event.kind);
-
-        // Create an AbortController so these queries can be cancelled if the event
-        // goes off-screen before results arrive
-        this.interactionAbortController?.abort();
-        this.interactionAbortController = new AbortController();
-        const signal = this.interactionAbortController.signal;
-
-        this.loadAllInteractions(false, signal);
-        this.loadZaps(signal);
-        this.loadLatestEditForEvent();
+        this.scheduleInteractionPreload(currentEventId, this.resolveObserverRoot(element));
       }
     }
   }
@@ -2129,6 +2182,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
       clearTimeout(this.interactionLoadTimer);
       this.interactionLoadTimer = undefined;
     }
+    EventComponent.cancelQueuedInteractionPreload(this);
     if (this.interactionAbortController) {
       this.interactionAbortController.abort();
       this.interactionAbortController = undefined;
