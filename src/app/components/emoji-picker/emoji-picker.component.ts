@@ -802,6 +802,11 @@ export class EmojiPickerComponent {
     const nav = event.currentTarget as HTMLDivElement | null;
     if (!nav) return;
 
+    const target = event.target;
+    if (target instanceof HTMLElement && target.closest('.section-nav-btn')) {
+      return;
+    }
+
     this.sectionNavDragStrip = nav;
     this.sectionNavPointerId = event.pointerId;
     this.sectionNavDragStartX = event.clientX;
