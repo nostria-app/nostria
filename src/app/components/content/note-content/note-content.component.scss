@@ -568,6 +568,7 @@
   justify-content: center;
   background: rgba(0, 0, 0, 0.85);
   color: white;
+  -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
 
   .reveal-actions {
@@ -648,6 +649,7 @@
   position: relative;
   width: 100%;
   margin: 12px 0;
+  padding-inline: clamp(18px, 5vw, 34px);
   touch-action: pan-y pinch-zoom;
 }
 
@@ -655,8 +657,10 @@
   position: relative;
   width: 100%;
   background: var(--mat-sys-surface-container);
-  border-radius: 12px;
+  border-radius: 24px;
   overflow: hidden;
+  z-index: 2;
+  box-shadow: var(--mat-sys-level2);
 }
 
 .carousel-image-wrapper {
@@ -666,12 +670,10 @@
   align-items: center;
   justify-content: center;
   min-height: 200px;
-  // Constrain tall/vertical images in carousels to not exceed viewport height
   max-height: 80vh;
 
   img {
     max-width: 100%;
-    // Constrain tall/vertical images to not exceed viewport height
     max-height: 80vh;
     width: auto;
     height: auto;
@@ -683,12 +685,10 @@
       cursor: pointer;
     }
 
-    // Main image - starts hidden for progressive loading
     &.main-image {
       opacity: 0;
       visibility: hidden;
 
-      // Only show when loaded AND not hidden (not blurred)
       &.loaded:not(.hidden) {
         opacity: 1;
         visibility: visible;
@@ -703,12 +703,11 @@
     width: 100%;
     height: 100%;
     object-fit: contain;
-    opacity: 1; // Show by default
+    opacity: 1;
     pointer-events: none;
     filter: blur(1px);
   }
 
-  // Progressive loading - fade out placeholder when image loads
   &.image-loaded {
     .blurhash-placeholder {
       opacity: 0;
@@ -722,7 +721,6 @@
   &.blurred {
     .blurhash-placeholder {
       opacity: 1 !important;
-      // Cover entire container when blurred
       object-fit: cover !important;
     }
   }
@@ -753,6 +751,7 @@
     justify-content: center;
     background: rgba(0, 0, 0, 0.85);
     color: white;
+    -webkit-backdrop-filter: blur(10px);
     backdrop-filter: blur(10px);
 
     .reveal-actions {
@@ -797,7 +796,6 @@
 
       span {
         font-size: 14px;
-        font-weight: 500;
       }
 
       &.trust-btn {
@@ -811,36 +809,68 @@
   }
 }
 
-// Navigation buttons
-.carousel-nav-btn {
+.carousel-side-preview {
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
-  z-index: 10;
-  background: rgba(0, 0, 0, 0.5) !important;
-  color: white !important;
-  width: 40px;
-  height: 40px;
+  z-index: 1;
+  width: clamp(38px, 10vw, 74px);
+  height: calc(100% - 36px);
+  min-height: 168px;
+  padding: 0;
+  border: none;
+  border-radius: 20px;
+  overflow: hidden;
+  background: var(--mat-sys-surface-container-high);
+  box-shadow: var(--mat-sys-level1);
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
 
   &:hover {
-    background: rgba(0, 0, 0, 0.7) !important;
+    box-shadow: var(--mat-sys-level2);
   }
 
-  mat-icon {
-    font-size: 24px;
-    color: white;
+  &:focus-visible {
+    outline: 2px solid var(--mat-sys-primary);
+    outline-offset: 3px;
   }
 
-  &.carousel-prev {
-    left: 8px;
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transform: scale(1.08);
   }
 
-  &.carousel-next {
-    right: 8px;
+  &.blurred-preview img {
+    filter: blur(16px) saturate(0.8) brightness(0.75);
+    transform: scale(1.16);
+  }
+
+  &.carousel-side-preview-prev {
+    left: 0;
+  }
+
+  &.carousel-side-preview-next {
+    right: 0;
   }
 }
 
-// Indicator dots
+.carousel-side-preview-scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.14) 0%, rgba(0, 0, 0, 0.34) 100%);
+}
+
+.carousel-side-preview-prev .carousel-side-preview-scrim {
+  background: linear-gradient(90deg, rgba(0, 0, 0, 0.42) 0%, rgba(0, 0, 0, 0.12) 100%);
+}
+
+.carousel-side-preview-next .carousel-side-preview-scrim {
+  background: linear-gradient(270deg, rgba(0, 0, 0, 0.42) 0%, rgba(0, 0, 0, 0.12) 100%);
+}
+
 .carousel-indicators {
   position: absolute;
   bottom: 12px;
@@ -849,9 +879,9 @@
   display: flex;
   gap: 6px;
   z-index: 10;
-  padding: 4px 8px;
+  padding: 6px 10px;
   background: rgba(0, 0, 0, 0.3);
-  border-radius: 12px;
+  border-radius: 999px;
 }
 
 .carousel-dot {
@@ -874,33 +904,53 @@
   }
 }
 
-// Image counter
 .carousel-counter {
   position: absolute;
   top: 12px;
-  right: 12px;
+  left: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
   background: rgba(0, 0, 0, 0.5);
   color: white;
   padding: 4px 10px;
-  border-radius: 12px;
+  border-radius: 999px;
   font-size: var(--text-xs);
-  font-weight: 500;
   z-index: 10;
+
+  mat-icon {
+    width: 16px;
+    height: 16px;
+    font-size: 16px;
+  }
 }
 
-// Responsive adjustments
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
 @media (max-width: 600px) {
-  .carousel-nav-btn {
-    width: 36px;
-    height: 36px;
+  .image-carousel-container {
+    padding-inline: 14px;
+  }
 
-    &.carousel-prev {
-      left: 4px;
-    }
+  .image-carousel {
+    border-radius: 18px;
+  }
 
-    &.carousel-next {
-      right: 4px;
-    }
+  .carousel-side-preview {
+    width: 26px;
+    height: calc(100% - 28px);
+    min-height: 132px;
+    border-radius: 14px;
   }
 
   .carousel-indicators {
@@ -915,9 +965,15 @@
 
   .carousel-counter {
     top: 8px;
-    right: 8px;
+    left: 8px;
     font-size: var(--text-2xs);
     padding: 3px 8px;
+
+    mat-icon {
+      width: 14px;
+      height: 14px;
+      font-size: 14px;
+    }
   }
 }
 
