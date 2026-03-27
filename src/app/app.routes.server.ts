@@ -6,6 +6,10 @@ export const serverRoutes: ServerRoute[] = [
     renderMode: RenderMode.Server,
   },
   {
+    path: 'chats/**',
+    renderMode: RenderMode.Server,
+  },
+  {
     path: 'p/**',
     renderMode: RenderMode.Server,
   },
