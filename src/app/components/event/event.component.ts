@@ -232,6 +232,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   private hasBeenActuallyVisible = false;
   private lastHeight = 0;
   private virtualizeTimer?: ReturnType<typeof setTimeout>;
+  private hasViewInitialized = false;
 
   // Interaction loading: delay + abort support.
   // When an event enters the viewport, we wait a short period before starting
@@ -1567,13 +1568,15 @@ export class EventComponent implements AfterViewInit, OnDestroy {
         // This ensures each new event loads its own interactions
         this.hasLoadedInteractions.set(false);
         this.hasLoadedEdit = false;
+        this.interactionAbortController?.abort();
+        this.interactionAbortController = undefined;
+        EventComponent.cancelQueuedInteractionPreload(this);
 
         // Re-register with shared IntersectionObserver when event changes
         // This ensures we observe the correct event when component is reused
         this.setupIntersectionObserver();
 
-        // Interactions will be loaded lazily via IntersectionObserver in ngAfterViewInit
-        // No longer loading immediately to reduce relay requests for off-screen events
+        this.maybePreloadInteractionsImmediately();
       });
     });
 
@@ -1671,6 +1674,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
               // (e.g., trending posts) - the intersection observer won't re-trigger since the element
               // was already visible, so we need to manually trigger interaction loading
               this.checkAndLoadInteractionsIfVisible();
+              this.maybePreloadInteractionsImmediately();
             } catch (error) {
               this.logger.error('[EventComponent:Load] Error loading event:', error, '| eventId:', eventId);
               this.loadingError.set('Failed to load event');
@@ -1896,8 +1900,10 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   }
 
   ngAfterViewInit(): void {
+    this.hasViewInitialized = true;
     // Set up IntersectionObserver for lazy loading
     this.setupIntersectionObserver();
+    this.maybePreloadInteractionsImmediately();
   }
 
   /**
@@ -2056,6 +2062,26 @@ export class EventComponent implements AfterViewInit, OnDestroy {
       const priority = this.getInteractionPreloadPriority(observerRoot);
       EventComponent.enqueueInteractionPreload(this, priority);
     }, this.interactionPreloadDelayMs);
+  }
+
+  private maybePreloadInteractionsImmediately(): void {
+    if (!this.hasViewInitialized || this.hasLoadedInteractions() || !this.supportsReactions()) {
+      return;
+    }
+
+    const currentRecord = this.record();
+    const element = this.elementRef.nativeElement as HTMLElement | undefined;
+
+    if (!currentRecord || !element?.isConnected) {
+      return;
+    }
+
+    const currentEventId = currentRecord.event.id;
+    this.observedEventId = currentEventId;
+
+    const observerRoot = this.resolveObserverRoot(element);
+    const priority = this.getInteractionPreloadPriority(observerRoot);
+    EventComponent.enqueueInteractionPreload(this, priority);
   }
 
   private getInteractionPreloadPriority(observerRoot: HTMLElement | null): number {
