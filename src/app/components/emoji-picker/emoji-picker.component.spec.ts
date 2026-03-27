@@ -88,4 +88,10 @@ describe('EmojiPickerComponent', () => {
     const input = (fixture.nativeElement as HTMLElement).querySelector('.emoji-search input');
     expect(input).toBeTruthy();
   });
+
+  it('should render section jump buttons for each visible section', async () => {
+    await fixture.whenStable();
+    const buttons = (fixture.nativeElement as HTMLElement).querySelectorAll('.section-nav-btn');
+    expect(buttons.length).toBe(component.categories.length + 1);
+  });
 });

@@ -8,6 +8,8 @@ import {
   untracked,
   input,
   ChangeDetectionStrategy,
+  ElementRef,
+  viewChild,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
@@ -48,6 +50,12 @@ const EMOJI_KEYWORDS: Record<string, string[]> = {
   '😮': ['surprised', 'wow', 'open', 'mouth', 'shock'],
   '🚀': ['rocket', 'launch', 'space'],
 };
+
+interface EmojiSectionNavItem {
+  id: string;
+  label: string;
+  icon: string;
+}
 
 @Component({
   selector: 'app-emoji-picker',
@@ -111,8 +119,8 @@ const EMOJI_KEYWORDS: Record<string, string[]> = {
         }
       </div>
       } @else {
-        <div class="emoji-list-scroll">
-          <div class="emoji-section">
+        <div class="emoji-list-scroll" #emojiScrollContainer>
+          <div class="emoji-section" data-section-id="recent">
             <div class="section-title">
               <span class="section-icon">🕘</span>
               <span>Recent</span>
@@ -138,7 +146,7 @@ const EMOJI_KEYWORDS: Record<string, string[]> = {
           </div>
 
           @if (emojiSets().length > 0) {
-          <div class="emoji-section">
+          <div class="emoji-section" data-section-id="custom-emojis">
             <div class="section-title">
               <span class="section-icon">🧩</span>
               <span>Custom Emojis</span>
@@ -160,7 +168,7 @@ const EMOJI_KEYWORDS: Record<string, string[]> = {
           }
 
           @for (category of categories; track category.id) {
-          <div class="emoji-section">
+          <div class="emoji-section" [attr.data-section-id]="category.id">
             <div class="section-title">
               <span class="section-icon">{{ category.icon }}</span>
               <span>{{ category.label }}</span>
@@ -173,6 +181,15 @@ const EMOJI_KEYWORDS: Record<string, string[]> = {
               }
             </div>
           </div>
+          }
+        </div>
+
+        <div class="emoji-section-nav">
+          @for (section of sectionNavItems(); track section.id) {
+          <button class="section-nav-btn" type="button" [matTooltip]="section.label"
+            [attr.aria-label]="section.label" (click)="scrollToSection(section.id); $event.stopPropagation()">
+            {{ section.icon }}
+          </button>
           }
         </div>
       }
@@ -375,6 +392,46 @@ const EMOJI_KEYWORDS: Record<string, string[]> = {
       background: var(--scrollbar-thumb-hover, var(--mat-sys-on-surface-variant));
     }
 
+    .emoji-section-nav {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 6px 4px 4px;
+      border-top: 1px solid var(--mat-sys-outline-variant);
+      background: var(--mat-sys-surface-container-low);
+      flex-shrink: 0;
+      overflow-x: auto;
+      overflow-y: hidden;
+      scrollbar-width: none;
+
+      &::-webkit-scrollbar {
+        display: none;
+      }
+    }
+
+    .section-nav-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex: 0 0 auto;
+      width: 30px;
+      height: 30px;
+      border: none;
+      border-radius: 8px;
+      background: transparent;
+      cursor: pointer;
+      font-size: 1rem;
+      transition: background-color 0.15s ease, transform 0.15s ease;
+
+      &:hover {
+        background: var(--mat-sys-surface-container-high);
+      }
+
+      &:active {
+        transform: scale(0.96);
+      }
+    }
+
     :host-context(.emoji-picker-dialog) .emoji-grid {
       grid-template-columns: repeat(6, minmax(0, 1fr));
     }
@@ -535,6 +592,16 @@ const EMOJI_KEYWORDS: Record<string, string[]> = {
       :host-context(.emoji-picker-dialog) .emoji-section {
         margin-bottom: 6px;
       }
+
+      :host-context(.emoji-picker-dialog) .emoji-section-nav {
+        gap: 3px;
+        padding: 6px 4px max(4px, env(safe-area-inset-bottom));
+      }
+
+      :host-context(.emoji-picker-dialog) .section-nav-btn {
+        height: 36px;
+        font-size: 1.1rem;
+      }
     }
   `],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -557,12 +624,29 @@ export class EmojiPickerComponent {
   /** Emitted when a GIF is selected (URL) */
   gifSelected = output<string>();
 
+  private readonly emojiScrollContainer = viewChild<ElementRef<HTMLDivElement>>('emojiScrollContainer');
+
   activeTab = signal<'emoji' | 'gifs'>('emoji');
 
   readonly categories = EMOJI_CATEGORIES;
   searchQuery = signal('');
   recentEmojis = signal<RecentEmoji[]>([]);
   emojiSets = signal<EmojiSetGroup[]>([]);
+  sectionNavItems = computed<EmojiSectionNavItem[]>(() => {
+    const sections: EmojiSectionNavItem[] = [
+      { id: 'recent', label: 'Recent', icon: '🕘' },
+    ];
+
+    if (this.emojiSets().length > 0) {
+      sections.push({ id: 'custom-emojis', label: 'Custom Emojis', icon: '🧩' });
+    }
+
+    return sections.concat(this.categories.map(category => ({
+      id: category.id,
+      label: category.label,
+      icon: category.icon,
+    })));
+  });
 
   /** Reset the active tab to the initialTab value. Call this when re-opening the picker (e.g. mat-menu opened). */
   resetTab(): void {
@@ -662,6 +746,17 @@ export class EmojiPickerComponent {
       this.accountLocalState.addRecentEmoji(pubkey, emoji, url);
       this.recentEmojis.set(this.accountLocalState.getRecentEmojis(pubkey));
     }
+  }
+
+  scrollToSection(sectionId: string): void {
+    const scrollContainer = this.emojiScrollContainer()?.nativeElement;
+    if (!scrollContainer) return;
+
+    const section = scrollContainer.querySelector<HTMLElement>(`[data-section-id="${sectionId}"]`);
+    if (!section) return;
+
+    const offsetTop = section.offsetTop - scrollContainer.offsetTop - 4;
+    scrollContainer.scrollTo({ top: Math.max(0, offsetTop), behavior: 'smooth' });
   }
 
   onGifSelected(url: string): void {
