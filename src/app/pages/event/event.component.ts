@@ -14,7 +14,7 @@ import { LayoutService } from '../../services/layout.service';
 import { NostrService } from '../../services/nostr.service';
 import { LoggerService } from '../../services/logger.service';
 import { DataService } from '../../services/data.service';
-import { Event, nip19 } from 'nostr-tools';
+import { Event, kinds, nip19 } from 'nostr-tools';
 import { CommonModule, Location } from '@angular/common';
 import { ActivatedRoute, ParamMap, Router } from '@angular/router';
 import { UrlUpdateService } from '../../services/url-update.service';
@@ -485,6 +485,10 @@ export class EventPageComponent {
   missingKnownParentIds = computed<string[]>(() => {
     const currentEvent = this.event();
     if (!currentEvent) {
+      return [];
+    }
+
+    if (currentEvent.kind !== kinds.ShortTextNote) {
       return [];
     }
 
