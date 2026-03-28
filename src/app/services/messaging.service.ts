@@ -898,9 +898,12 @@ export class MessagingService implements NostriaService {
       reason.includes('private key not available') ||
       reason.includes('failed to decrypt private key') ||
       reason.includes('user may have cancelled') ||
+      reason.includes('decryption returned empty result') ||
       reason.includes('failed to establish remote signer session') ||
       reason.includes('reconnect your signer') ||
       reason.includes('timed out') ||
+      reason.includes('timeout') ||
+      reason.includes('queue cleared') ||
       reason.includes('missing ciphertext or pubkey');
   }
 
@@ -2247,6 +2250,7 @@ export class MessagingService implements NostriaService {
     }
 
     this.inFlightGiftWrapIds.add(wrappedEvent.id);
+    let shouldRememberWrappedEvent = false;
 
     try {
       // Check if this message is for us
@@ -2289,6 +2293,7 @@ export class MessagingService implements NostriaService {
       const rootWrappedEventId = typeof wrappedContent?.id === 'string' ? wrappedContent.id : null;
       if (rootWrappedEventId && this.shouldSkipDmEvent(rootWrappedEventId)) {
         this.knownEventIds.add(wrappedEvent.id);
+        shouldRememberWrappedEvent = true;
         this.logger.debug('Skipping NIP-44 unwrap: root wrapped event already known', {
           giftWrapId: wrappedEvent.id,
           rootWrappedEventId,
@@ -2337,6 +2342,8 @@ export class MessagingService implements NostriaService {
         this.knownEventIds.add(rootWrappedEventId);
       }
 
+       shouldRememberWrappedEvent = true;
+
       // Return the final decrypted message
       return {
         ...sealedEvent,
@@ -2355,11 +2362,9 @@ export class MessagingService implements NostriaService {
       throw err;
     } finally {
       this.inFlightGiftWrapIds.delete(wrappedEvent.id);
-      // Always mark the outer gift wrap as known after any attempt (success or
-      // failure) so it is never re-decrypted within this session. For permanent
-      // failures the dead-letter list handles cross-reload persistence; for
-      // transient failures we accept a single retry on next app start.
-      this.knownEventIds.add(wrappedEvent.id);
+      if (shouldRememberWrappedEvent) {
+        this.knownEventIds.add(wrappedEvent.id);
+      }
     }
   }
 

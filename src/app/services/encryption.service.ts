@@ -452,6 +452,9 @@ export class EncryptionService {
       return await nip04.decrypt(privateKeyBytes, pubkey, ciphertext);
     } catch (error) {
       this.logger.error('Failed to decrypt with NIP-04', error);
+      if (error instanceof Error) {
+        throw error;
+      }
       throw new Error('Decryption failed');
     }
   }
@@ -569,6 +572,9 @@ export class EncryptionService {
           ciphertext,
         });
       }
+      if (error instanceof Error) {
+        throw error;
+      }
       throw new Error('Decryption failed');
     }
   }
@@ -612,6 +618,8 @@ export class EncryptionService {
       throw new Error('Content does not appear to be encrypted');
     }
 
+    let lastError: Error | null = null;
+
     if (ciphertext.includes('?iv=')) {
       // Fallback to NIP-04 (legacy format with ?iv=)
       try {
@@ -622,6 +630,7 @@ export class EncryptionService {
         const content = await this.decryptNip04(ciphertext, senderPubkey, priority);
         return { content, algorithm: 'nip04' };
       } catch (error) {
+        lastError = error instanceof Error ? error : new Error('Decryption failed');
         this.logger.debug('NIP-04 decryption failed', error);
       }
     } else {
@@ -630,10 +639,12 @@ export class EncryptionService {
         const content = await this.decryptNip44(ciphertext, senderPubkey, priority, _event);
         return { content, algorithm: 'nip44' };
       } catch (error) {
+        lastError = error instanceof Error ? error : new Error('Decryption failed');
         this.logger.debug('NIP-44 decryption failed, trying NIP-04', error);
       }
     }
-    throw new Error('Unable to decrypt message with any supported algorithm');
+
+    throw lastError ?? new Error('Unable to decrypt message with any supported algorithm');
   }
 
   /**
