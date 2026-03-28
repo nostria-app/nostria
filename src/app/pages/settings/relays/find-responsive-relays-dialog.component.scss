@@ -3,8 +3,9 @@
   flex-direction: column;
   gap: 0.75rem;
   min-height: 360px;
-  max-height: none;
-  overflow: visible;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .summary-grid {
@@ -48,6 +49,9 @@
 }
 
 .state-panel {
+  flex: 1 1 auto;
+  min-height: 180px;
+  overflow: auto;
   min-height: 180px;
   border: 1px solid var(--mat-sys-outline-variant);
   border-radius: var(--mat-sys-corner-small);
@@ -71,11 +75,14 @@
 }
 
 .results {
-  overflow: visible;
-  min-height: 0;
   display: flex;
+  flex: 1 1 auto;
   flex-direction: column;
   gap: 0.5rem;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 2px;
 }
 
 .relay-card {
@@ -244,6 +251,18 @@
   justify-content: space-between;
   gap: 0.5rem;
   flex-wrap: wrap;
+}
+
+@media (max-width: 700px),
+(max-height: 700px) {
+  .find-relays-dialog {
+    gap: 0.5rem;
+  }
+
+  .results {
+    padding-bottom: 0.5rem;
+    -webkit-overflow-scrolling: touch;
+  }
 }
 
 .left-actions,
