@@ -1090,9 +1090,16 @@ export class NostrService implements NostriaService {
       throw new Error('No user account found. Please log in or create an account first.');
     }
 
+    // NIP-59 kind 13 seals must have empty tags, so skip any automatic tag injection.
+    const AUTO_TAG_EXCLUDED_KINDS = [kinds.Seal];
+
     // Apply global event expiration if enabled and no expiration tag already exists
     const globalExpiration = this.accountLocalState.getGlobalEventExpiration(currentUser.pubkey);
-    if (globalExpiration !== null && !event.tags.some(tag => tag[0] === 'expiration')) {
+    if (
+      globalExpiration !== null &&
+      !AUTO_TAG_EXCLUDED_KINDS.includes(event.kind) &&
+      !event.tags.some(tag => tag[0] === 'expiration')
+    ) {
       // Calculate expiration timestamp: current time + hours in seconds
       const expirationTimestamp = Math.floor(Date.now() / 1000) + (globalExpiration * 3600);
       event = {
@@ -1100,9 +1107,6 @@ export class NostrService implements NostriaService {
         tags: [...event.tags, ['expiration', expirationTimestamp.toString()]],
       };
     }
-
-    // NIP-59 kind 13 seals must have empty tags, so skip any automatic tag injection.
-    const AUTO_TAG_EXCLUDED_KINDS = [kinds.Seal];
 
     // Add client tag if enabled and not already present.
     // Skip for HTTP auth tokens (NIP-98 kind 27235, Blossom kind 24242) which are not published to relays.
