@@ -59,12 +59,21 @@ export class CreatePostComponent implements OnInit {
 
   /** Edit event passed via router state — captured in constructor before Angular discards it */
   private routerStateEditEvent: NostrEvent | undefined;
+  private routerStateCommunityEvent: NostrEvent | undefined;
 
   constructor() {
     const navigation = this.router.getCurrentNavigation();
     const stateEdit = navigation?.extras?.state?.['editEvent'] as NostrEvent | undefined;
+    const stateCommunity = navigation?.extras?.state?.['communityEvent'] as NostrEvent | undefined;
     if (stateEdit) {
       this.routerStateEditEvent = stateEdit;
+    }
+    if (stateCommunity) {
+      this.routerStateCommunityEvent = stateCommunity;
+      if (stateCommunity.kind === COMMUNITY_DEFINITION_KIND) {
+        this.community.set(this.communityService.parseCommunity(stateCommunity));
+        this.loading.set(false);
+      }
     }
   }
 
@@ -298,6 +307,25 @@ export class CreatePostComponent implements OnInit {
   }
 
   private async loadCommunity(naddrStr: string): Promise<void> {
+    const stateEvent = this.routerStateCommunityEvent
+      ?? (this.isBrowser ? (history.state?.communityEvent as NostrEvent | undefined) : undefined);
+
+    if (stateEvent) {
+      try {
+        const decoded = nip19.decode(naddrStr);
+        if (decoded.type === 'naddr' && stateEvent.pubkey === decoded.data.pubkey && stateEvent.kind === COMMUNITY_DEFINITION_KIND) {
+          const dTag = stateEvent.tags.find((t: string[]) => t[0] === 'd')?.[1] || '';
+          if (dTag === decoded.data.identifier) {
+            this.community.set(this.communityService.parseCommunity(stateEvent));
+            this.loading.set(false);
+            return;
+          }
+        }
+      } catch {
+        // Fall back to relay fetch below
+      }
+    }
+
     this.loading.set(true);
     try {
       const decoded = nip19.decode(naddrStr);
@@ -308,11 +336,6 @@ export class CreatePostComponent implements OnInit {
       }
 
       const { pubkey, identifier, relays } = decoded.data;
-
-      // Check router state first (passed from community page)
-      const stateEvent = this.isBrowser
-        ? (history.state?.communityEvent as NostrEvent | undefined)
-        : undefined;
 
       if (stateEvent && stateEvent.pubkey === pubkey && stateEvent.kind === COMMUNITY_DEFINITION_KIND) {
         const dTag = stateEvent.tags.find((t: string[]) => t[0] === 'd')?.[1] || '';

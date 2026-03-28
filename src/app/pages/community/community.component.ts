@@ -92,9 +92,14 @@ export class CommunityComponent implements OnInit, OnDestroy {
   constructor() {
     // Capture router state in constructor - it's only available during navigation
     const navigation = this.router.getCurrentNavigation();
-    const stateEvent = navigation?.extras?.state?.['communityEvent'] as Event | undefined;
+    const stateEvent = navigation?.extras?.state?.['communityEvent'] as Event | undefined
+      ?? (this.isBrowser ? (history.state?.communityEvent as Event | undefined) : undefined);
     if (stateEvent) {
       this.routerStateEvent = stateEvent;
+      if (stateEvent.kind === COMMUNITY_DEFINITION_KIND) {
+        this.community.set(this.communityService.parseCommunity(stateEvent));
+        this.loading.set(false);
+      }
     }
   }
 
@@ -185,6 +190,14 @@ export class CommunityComponent implements OnInit, OnDestroy {
     const naddrParam = this.route.snapshot.paramMap.get('naddr');
     if (naddrParam) {
       this.currentNaddr.set(naddrParam);
+      const preloadedCommunity = this.getPreloadedCommunity(naddrParam);
+      if (preloadedCommunity) {
+        this.community.set(preloadedCommunity);
+        this.loading.set(false);
+        this.startPostsSubscription(preloadedCommunity.coordinate);
+        this.startApprovalsSubscription(preloadedCommunity.coordinate);
+        return;
+      }
       this.loadCommunityFromNaddr(naddrParam);
     }
   }
@@ -256,7 +269,9 @@ export class CommunityComponent implements OnInit, OnDestroy {
 
   /** Navigate to create post page */
   navigateToCreatePost(): void {
-    this.router.navigate(['/n', this.currentNaddr(), 'post']);
+    this.router.navigate(['/n', this.currentNaddr(), 'post'], {
+      state: { communityEvent: this.community()?.event },
+    });
   }
 
   /** Handle click on post card — open the post in the event detail view */
@@ -272,8 +287,31 @@ export class CommunityComponent implements OnInit, OnDestroy {
   /** Navigate to create-post page in edit mode for an existing post */
   navigateToEditPost(post: Event): void {
     this.router.navigate(['/n', this.currentNaddr(), 'post'], {
-      state: { editEvent: post },
+      state: { editEvent: post, communityEvent: this.community()?.event },
     });
+  }
+
+  private getPreloadedCommunity(naddrStr: string): Community | null {
+    const stateEvent = this.routerStateEvent;
+    if (!stateEvent || stateEvent.kind !== COMMUNITY_DEFINITION_KIND) {
+      return null;
+    }
+
+    try {
+      const decoded = nip19.decode(naddrStr);
+      if (decoded.type !== 'naddr') {
+        return null;
+      }
+
+      const dTag = stateEvent.tags.find(t => t[0] === 'd')?.[1] || '';
+      if (stateEvent.pubkey !== decoded.data.pubkey || dTag !== decoded.data.identifier) {
+        return null;
+      }
+
+      return this.communityService.parseCommunity(stateEvent);
+    } catch {
+      return null;
+    }
   }
 
   private async loadCommunityFromNaddr(naddrStr: string): Promise<void> {
