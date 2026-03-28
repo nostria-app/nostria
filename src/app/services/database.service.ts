@@ -223,6 +223,7 @@ export interface StoredDirectMessage {
   accountPubkey: string; // The pubkey of the account that owns this message
   chatId: string; // The chat ID (format: otherPubkey, or legacy: otherPubkey-nip04 or otherPubkey-nip44)
   messageId: string; // The original event ID
+  rumorKind?: number; // The inner message kind (e.g. 14 message, 15 encrypted file)
   pubkey: string; // The author's pubkey
   created_at: number; // Timestamp in seconds
   content: string; // Decrypted message content

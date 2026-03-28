@@ -892,6 +892,14 @@
               <mat-icon>music_note</mat-icon>
               <span class="reference-preview-label">{{ preview.label }}</span>
             </div>
+            } @else if (preview.type === 'file') {
+            <div class="reference-preview-thumb">
+              <mat-icon>lock</mat-icon>
+              <span class="reference-preview-label">{{ preview.label }}</span>
+              @if (preview.meta) {
+              <span class="reference-preview-meta">{{ preview.meta }}</span>
+              }
+            </div>
             }
             <button mat-icon-button class="remove-media-preview-btn" (click)="removeMediaPreview(i)"
               matTooltip="Remove media">
@@ -913,6 +921,12 @@
               <mat-icon>upload</mat-icon>
               <span>Upload media</span>
             </button>
+            @if (!isGroupChat()) {
+            <button mat-menu-item (click)="openEncryptedFileDialog()">
+              <mat-icon>lock</mat-icon>
+              <span>File (Encrypted)</span>
+            </button>
+            }
             <button mat-menu-item (click)="openMediaChooser()">
               <mat-icon>photo_library</mat-icon>
               <span>Choose from library</span>
@@ -953,6 +967,8 @@
           <!-- Hidden file input -->
           <input type="file" #mediaFileInput (change)="onMediaFileSelected($event)" accept="image/*,video/*"
             class="hidden-file-input" aria-label="Upload media files" />
+          <input type="file" #encryptedFileInput (change)="onEncryptedFileSelected($event)" class="hidden-file-input"
+            aria-label="Upload encrypted file" />
 
           <!-- Emoji picker button -->
           @if (layout.isHandset()) {

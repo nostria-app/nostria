@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { signal } from '@angular/core';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { MessagesComponent } from './messages.component';
 
 /**
@@ -13,6 +14,7 @@ import { MessagesComponent } from './messages.component';
 // Minimal DirectMessage shape for testing
 interface DirectMessage {
     id: string;
+    rumorKind?: number;
     pubkey: string;
     created_at: number;
     content: string;
@@ -30,6 +32,9 @@ function createComponent(): MessagesComponent {
     // Initialize signals that sendMessage() reads/writes
     (component as any).newMessageText = signal('');
     (component as any).isSending = signal(false);
+    (component as any).isGroupChat = signal(false);
+    (component as any).uploadStatus = signal('');
+    (component as any).mediaPreviews = signal([]);
     (component as any).pendingMessages = signal<DirectMessage[]>([]);
     (component as any).replyingToMessage = signal(null);
 
@@ -51,6 +56,7 @@ function createComponent(): MessagesComponent {
 
     (component as any).userRelayService = {
         ensureRelaysForPubkey: vi.fn().mockResolvedValue(undefined),
+        ensureDmRelaysForPubkey: vi.fn().mockResolvedValue(undefined),
         publishToDmRelays: vi.fn().mockResolvedValue(undefined),
         publish: vi.fn().mockResolvedValue(undefined),
     };
@@ -97,8 +103,24 @@ function createComponent(): MessagesComponent {
         open: vi.fn(),
     };
 
+    (component as any).mediaService = {
+        load: vi.fn().mockResolvedValue(undefined),
+        mediaServers: vi.fn().mockReturnValue(['https://media.example/']),
+        uploadFile: vi.fn().mockResolvedValue({
+            status: 'success',
+            item: { url: 'https://media.example/encrypted.bin' },
+        }),
+        getFileBytes: vi.fn(),
+        getFileMimeType: vi.fn().mockReturnValue('application/pdf'),
+    };
+
+    (component as any).layout = {
+        toast: vi.fn(),
+    };
+
     // Stub methods not under test
     (component as any).scrollToBottom = vi.fn();
+    (component as any).focusMessageInput = vi.fn();
 
     return component;
 }
@@ -277,6 +299,20 @@ describe('MessagesComponent sendMessage', () => {
 
         // Error should be logged
         expect((component as any).logger.error).toHaveBeenCalledWith('Background relay publishing failed', expect.any(Error));
+    });
+
+    it('should show encrypted file preview text for file messages', () => {
+        const text = component.getChatPreviewText({
+            id: 'file-msg',
+            rumorKind: 15,
+            pubkey: 'receiver-pubkey',
+            created_at: 1,
+            content: 'https://example.com/file.bin',
+            isOutgoing: true,
+            tags: [],
+        } as DirectMessage);
+
+        expect(text).toBe('Encrypted file');
     });
 });
 

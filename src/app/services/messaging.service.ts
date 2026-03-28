@@ -89,6 +89,7 @@ function resolveChatTarget(
 
 interface DirectMessage {
   id: string;
+  rumorKind?: number;
   pubkey: string;
   created_at: number;
   content: string;
@@ -514,7 +515,10 @@ export class MessagingService implements NostriaService {
     const structuredPreview = this.extractStructuredReplyPreview(message.content || '');
     const normalizedContent = structuredPreview.content;
     const tags = [...(message.tags || [])].filter(tag => !tag[0]?.startsWith('_nostria_'));
-    const isReaction = message.eventKind === 'reaction' || this.isReactionFromTags(tags, normalizedContent);
+    const messageKind = message.rumorKind ?? kinds.PrivateDirectMessage;
+    const isReaction =
+      message.eventKind === 'reaction' ||
+      (messageKind !== kinds.FileMessage && this.isReactionFromTags(tags, normalizedContent));
 
     if (!isReaction) {
       return {
@@ -835,6 +839,7 @@ export class MessagingService implements NostriaService {
         accountPubkey: myPubkey,
         chatId: chatId,
         messageId: message.id,
+        rumorKind: message.rumorKind,
         pubkey: message.pubkey,
         created_at: message.created_at,
         content: message.content,
@@ -1200,6 +1205,7 @@ export class MessagingService implements NostriaService {
         for (const storedMsg of data.messages) {
           const dm: DirectMessage = {
             id: storedMsg.messageId,
+            rumorKind: storedMsg.rumorKind,
             pubkey: storedMsg.pubkey,
             created_at: storedMsg.created_at,
             content: storedMsg.content,
@@ -1426,6 +1432,7 @@ export class MessagingService implements NostriaService {
 
         const directMessage: DirectMessage = {
           id: unwrappedMessage.id,
+          rumorKind: unwrappedMessage.kind,
           pubkey: unwrappedMessage.pubkey,
           created_at: unwrappedMessage.created_at,
           content: unwrappedMessage.content,
@@ -1461,6 +1468,7 @@ export class MessagingService implements NostriaService {
 
         const directMessage: DirectMessage = {
           id: unwrappedMessage.id,
+          rumorKind: unwrappedMessage.kind,
           pubkey: unwrappedMessage.pubkey,
           created_at: unwrappedMessage.created_at,
           content: unwrappedMessage.content,
@@ -3467,6 +3475,7 @@ export class MessagingService implements NostriaService {
       // Create the message object
       const message: DirectMessage = {
         id: rumorId,
+        rumorKind: kinds.PrivateDirectMessage,
         pubkey: myPubkey,
         created_at: unsignedMessage.created_at,
         content: messageText,
@@ -3606,6 +3615,7 @@ export class MessagingService implements NostriaService {
       // Create the local message object
       const message: DirectMessage = {
         id: rumorId,
+        rumorKind: kinds.PrivateDirectMessage,
         pubkey: myPubkey,
         created_at: unsignedMessage.created_at,
         content: messageText,

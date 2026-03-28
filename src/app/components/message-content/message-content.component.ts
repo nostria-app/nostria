@@ -50,7 +50,7 @@ const EMOJI_SET_KIND = 30030;
 const LIVE_EVENT_KIND = 30311;
 
 interface ContentPart {
-  type: 'text' | 'url' | 'image' | 'video' | 'audio' | 'npub' | 'nprofile' | 'note' | 'nevent' | 'naddr' | 'linebreak' | 'emoji' | 'bolt11' | 'tidal' | 'spotify';
+  type: 'text' | 'url' | 'image' | 'video' | 'audio' | 'npub' | 'nprofile' | 'note' | 'nevent' | 'naddr' | 'linebreak' | 'emoji' | 'bolt11' | 'tidal' | 'spotify' | 'encrypted-file';
   content: string;
   pubkey?: string;
   eventId?: string;
@@ -59,6 +59,10 @@ interface ContentPart {
   waveform?: number[];
   duration?: number;
   processedUrl?: SafeResourceUrl;
+  fileName?: string;
+  fileType?: string;
+  fileSize?: number;
+  decrypting?: boolean;
   naddrData?: {
     pubkey: string;
     identifier: string;
@@ -120,6 +124,23 @@ interface EventMention {
         </div>
       } @else if (part.type === 'url') {
         <a class="message-link" [href]="part.content" target="_blank" rel="noopener noreferrer">{{ getDisplayUrl(part.content) }}</a>
+      } @else if (part.type === 'encrypted-file') {
+        <button type="button" class="encrypted-file-card" (click)="decryptEncryptedFile(part)">
+          <div class="encrypted-file-card-main">
+            <mat-icon>lock</mat-icon>
+            <div class="encrypted-file-copy">
+              <span class="encrypted-file-title">{{ part.fileName || 'Encrypted file' }}</span>
+              <span class="encrypted-file-meta">{{ getEncryptedFileMeta(part) }}</span>
+            </div>
+          </div>
+          <div class="encrypted-file-action">
+            @if (part.decrypting) {
+            <mat-spinner diameter="18"></mat-spinner>
+            } @else {
+            <mat-icon>download</mat-icon>
+            }
+          </div>
+        </button>
       } @else if (part.type === 'tidal') {
         <div class="tidal-container">
           @if (part.processedUrl) {
@@ -576,6 +597,63 @@ interface EventMention {
         }
       }
     }
+
+    .encrypted-file-card {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin: 4px 0;
+      padding: 12px;
+      border: 1px solid var(--mat-sys-outline-variant);
+      border-radius: 12px;
+      background: var(--mat-sys-surface-container-low);
+      color: inherit;
+      text-align: left;
+      cursor: pointer;
+
+      &:hover {
+        background: var(--mat-sys-surface-container);
+      }
+    }
+
+    .encrypted-file-card-main {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .encrypted-file-copy {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 0;
+    }
+
+    .encrypted-file-title,
+    .encrypted-file-meta {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .encrypted-file-title {
+      color: var(--mat-sys-on-surface);
+    }
+
+    .encrypted-file-meta {
+      font-size: 0.8rem;
+      color: var(--mat-sys-on-surface-variant);
+    }
+
+    .encrypted-file-action {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
   `],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -638,6 +716,7 @@ export class MessageContentComponent {
 
   // Store event mentions data
   eventMentionsMap = signal<Map<number, EventMention>>(new Map());
+  encryptedFileStates = signal<Map<string, boolean>>(new Map());
 
   // Resolved custom emoji map (built from tags + author emoji sets)
   private resolvedEmojiMap = signal<Map<string, string>>(new Map());
@@ -706,6 +785,11 @@ export class MessageContentComponent {
   parsedContent = computed<ContentPart[]>(() => {
     const text = this.normalizedContent();
     if (!text) return [];
+
+    const encryptedFilePart = this.buildEncryptedFilePart(text);
+    if (encryptedFilePart) {
+      return [encryptedFilePart];
+    }
 
     // Reset part ID counter for each parse
     this.partIdCounter = 0;
@@ -1091,6 +1175,55 @@ export class MessageContentComponent {
     });
   }
 
+  async decryptEncryptedFile(part: ContentPart): Promise<void> {
+    if (part.type !== 'encrypted-file' || part.decrypting) {
+      return;
+    }
+
+    this.setEncryptedFileDecrypting(part.content, true);
+
+    try {
+      const response = await fetch(part.content);
+      if (!response.ok) {
+        throw new Error(`Failed to download encrypted file (${response.status})`);
+      }
+
+      const encryptedBuffer = await response.arrayBuffer();
+      const keyTag = this.tags().find(tag => tag[0] === 'decryption-key')?.[1];
+      const nonceTag = this.tags().find(tag => tag[0] === 'decryption-nonce')?.[1];
+      if (!keyTag || !nonceTag) {
+        throw new Error('Missing decryption metadata');
+      }
+
+      const keyBytes = this.base64ToUint8Array(keyTag);
+      const nonceBytes = this.base64ToUint8Array(nonceTag);
+      const keyBuffer = new ArrayBuffer(keyBytes.byteLength);
+      new Uint8Array(keyBuffer).set(keyBytes);
+      const nonceBuffer = new ArrayBuffer(nonceBytes.byteLength);
+      new Uint8Array(nonceBuffer).set(nonceBytes);
+      const cryptoKey = await crypto.subtle.importKey('raw', keyBuffer, { name: 'AES-GCM' }, false, ['decrypt']);
+      const decryptedBuffer = await crypto.subtle.decrypt(
+        { name: 'AES-GCM', iv: nonceBuffer },
+        cryptoKey,
+        encryptedBuffer,
+      );
+
+      const blob = new Blob([decryptedBuffer], { type: part.fileType || 'application/octet-stream' });
+      const objectUrl = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = objectUrl;
+      anchor.download = part.fileName || 'encrypted-file';
+      anchor.rel = 'noopener';
+      anchor.click();
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+    } catch (error) {
+      this.logger.error('Failed to decrypt encrypted file', error);
+      this.layout.toast(error instanceof Error ? error.message : 'Failed to decrypt encrypted file', 4000, 'error-snackbar');
+    } finally {
+      this.setEncryptedFileDecrypting(part.content, false);
+    }
+  }
+
   /**
    * Determine if a URL points to an image, video, or is a regular link.
    */
@@ -1164,5 +1297,69 @@ export class MessageContentComponent {
     }
 
     return {};
+  }
+
+  private buildEncryptedFilePart(content: string): ContentPart | null {
+    const tags = this.tags();
+    const algorithm = tags.find(tag => tag[0] === 'encryption-algorithm')?.[1];
+    const fileType = tags.find(tag => tag[0] === 'file-type')?.[1];
+    const decryptionKey = tags.find(tag => tag[0] === 'decryption-key')?.[1];
+    const decryptionNonce = tags.find(tag => tag[0] === 'decryption-nonce')?.[1];
+
+    if (algorithm !== 'aes-gcm' || !fileType || !decryptionKey || !decryptionNonce) {
+      return null;
+    }
+
+    return {
+      type: 'encrypted-file',
+      content,
+      fileName: tags.find(tag => tag[0] === 'name')?.[1],
+      fileType,
+      fileSize: Number(tags.find(tag => tag[0] === 'size')?.[1] || 0) || undefined,
+      decrypting: this.encryptedFileStates().get(content) || false,
+      id: this.partIdCounter++,
+    };
+  }
+
+  private setEncryptedFileDecrypting(url: string, decrypting: boolean): void {
+    this.encryptedFileStates.update(current => {
+      const next = new Map(current);
+      next.set(url, decrypting);
+      return next;
+    });
+  }
+
+  getEncryptedFileMeta(part: ContentPart): string {
+    const bits = [part.fileType || 'application/octet-stream'];
+    if (part.fileSize) {
+      bits.push(this.formatFileSize(part.fileSize));
+    }
+    return bits.join(' - ');
+  }
+
+  private formatFileSize(bytes: number): string {
+    if (bytes < 1024) {
+      return `${bytes} B`;
+    }
+
+    const units = ['KB', 'MB', 'GB', 'TB'];
+    let value = bytes / 1024;
+    let unitIndex = 0;
+
+    while (value >= 1024 && unitIndex < units.length - 1) {
+      value /= 1024;
+      unitIndex += 1;
+    }
+
+    return `${value.toFixed(value >= 10 ? 0 : 1)} ${units[unitIndex]}`;
+  }
+
+  private base64ToUint8Array(base64: string): Uint8Array {
+    const binary = atob(base64);
+    const bytes = new Uint8Array(binary.length);
+    for (let index = 0; index < binary.length; index++) {
+      bytes[index] = binary.charCodeAt(index);
+    }
+    return bytes;
   }
 }

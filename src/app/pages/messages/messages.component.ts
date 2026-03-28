@@ -61,6 +61,7 @@ import {
   getEventHash,
   nip19,
 } from 'nostr-tools';
+import { sha256 } from '@noble/hashes/sha2.js';
 import { bytesToHex } from '@noble/hashes/utils.js';
 import { ApplicationService } from '../../services/application.service';
 import { UtilitiesService } from '../../services/utilities.service';
@@ -111,6 +112,7 @@ interface Chat {
 
 interface DirectMessage {
   id: string;
+  rumorKind?: number;
   pubkey: string;
   created_at: number;
   content: string;
@@ -227,7 +229,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   isUploading = signal<boolean>(false);
   isDragOverMessageInput = signal<boolean>(false);
   uploadStatus = signal<string>('');
-  mediaPreviews = signal<{ url: string; type: 'image' | 'video' | 'music'; label?: string }[]>([]);
+  mediaPreviews = signal<{ url: string; type: 'image' | 'video' | 'music' | 'file'; label?: string; meta?: string }[]>([]);
 
   /** Pending extra tags (e.g. imeta with waveform) for the next message */
   pendingTags = signal<string[][]>([]);
@@ -682,6 +684,9 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   // ViewChild for file upload input
   @ViewChild('mediaFileInput', { static: false })
   mediaFileInput?: ElementRef<HTMLInputElement>;
+
+  @ViewChild('encryptedFileInput', { static: false })
+  encryptedFileInput?: ElementRef<HTMLInputElement>;
 
   // Throttling for scroll handler
   private scrollThrottleTimeout: any = null;
@@ -1520,6 +1525,26 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     this.mediaFileInput.nativeElement.click();
   }
 
+  openEncryptedFileDialog(): void {
+    if (this.isGroupChat()) {
+      this.snackBar.open('Encrypted file messages are available in one-on-one chats only right now.', 'Dismiss', {
+        duration: 4000,
+      });
+      return;
+    }
+
+    if (!this.encryptedFileInput?.nativeElement) {
+      return;
+    }
+
+    if (!this.hasConfiguredMediaServers()) {
+      this.showMediaServerWarning();
+      return;
+    }
+
+    this.encryptedFileInput.nativeElement.click();
+  }
+
   /**
    * Open media library chooser dialog
    */
@@ -1636,6 +1661,14 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     const input = event.target as HTMLInputElement;
     if (input.files && input.files.length > 0) {
       void this.uploadMediaFiles([input.files[0]]);
+    }
+    input.value = '';
+  }
+
+  onEncryptedFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (input.files && input.files.length > 0) {
+      void this.sendEncryptedFileMessage(input.files[0]);
     }
     input.value = '';
   }
@@ -1773,6 +1806,192 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       this.logger.error('Failed to upload media file', err);
       this.snackBar.open('Failed to upload media', 'Dismiss', { duration: 5000 });
     }
+  }
+
+  private async sendEncryptedFileMessage(file: File): Promise<void> {
+    const selectedChat = this.selectedChat();
+    const myPubkey = this.accountState.pubkey();
+
+    if (!selectedChat?.pubkey || !myPubkey) {
+      return;
+    }
+
+    try {
+      this.isSending.set(true);
+      this.uploadStatus.set(`Encrypting ${file.name}...`);
+
+      await Promise.all([
+        this.userRelayService.ensureRelaysForPubkey(selectedChat.pubkey),
+        this.userRelayService.ensureDmRelaysForPubkey(selectedChat.pubkey),
+      ]);
+
+      const encryption = await this.encryptFileForMessage(file);
+      this.uploadStatus.set(`Uploading ${file.name}...`);
+
+      await this.mediaService.load();
+      const encryptedUploadBuffer = new ArrayBuffer(encryption.encryptedBytes.byteLength);
+      new Uint8Array(encryptedUploadBuffer).set(encryption.encryptedBytes);
+      const encryptedFile = new File([encryptedUploadBuffer], file.name, {
+        type: 'application/octet-stream',
+        lastModified: file.lastModified,
+      });
+      const uploadResult = await this.mediaService.uploadFile(
+        encryptedFile,
+        true,
+        this.mediaService.mediaServers()
+      );
+
+      if (uploadResult.status !== 'success' || !uploadResult.item) {
+        throw new Error(uploadResult.message || 'Upload failed');
+      }
+
+      const extraRumorTags: string[][] = [
+        ['file-type', encryption.mimeType],
+        ['encryption-algorithm', 'aes-gcm'],
+        ['decryption-key', encryption.keyBase64],
+        ['decryption-nonce', encryption.nonceBase64],
+        ['x', encryption.encryptedSha256],
+        ['ox', encryption.originalSha256],
+        ['size', String(encryption.encryptedSize)],
+        ['name', file.name],
+      ];
+
+      const result = await this.createNip44Message(
+        uploadResult.item.url,
+        selectedChat.pubkey,
+        myPubkey,
+        this.replyingToMessage()?.id,
+        {
+          rumorKind: kinds.FileMessage,
+          extraRumorTags,
+        },
+      );
+
+      const finalMessage = result.message;
+      const previewMessage: DirectMessage = {
+        ...finalMessage,
+        pending: true,
+        received: false,
+      };
+      this.mediaPreviews.set([
+        {
+          url: previewMessage.id,
+          type: 'file',
+          label: file.name,
+          meta: `${encryption.mimeType} - ${this.formatFileSize(encryption.encryptedSize)}`,
+        },
+      ]);
+      const chatId = selectedChat.id;
+      const pendingMessage = previewMessage;
+
+      this.newMessageText.set('');
+      this.replyingToMessage.set(null);
+      this.mediaPreviews.set([]);
+
+      this.messaging.addMessageToChat(chatId, pendingMessage);
+      this.pendingMessages.update(msgs => [...msgs, pendingMessage]);
+      this.scrollToBottom();
+      this.focusMessageInput();
+
+      result.publish().then(publishResult => {
+        if (publishResult.success) {
+          this.messaging.updateMessageInChat(chatId, finalMessage.id, {
+            pending: false,
+            received: true,
+            failed: false,
+            failureReason: undefined,
+          });
+          this.pendingMessages.update(msgs => msgs.filter(m => m.id !== finalMessage.id));
+          this.layout.toast('Encrypted file sent');
+        } else {
+          const reason = publishResult.failureReason || 'All relays rejected the encrypted file message';
+          this.messaging.updateMessageInChat(chatId, finalMessage.id, {
+            pending: false,
+            received: false,
+            failed: true,
+            failureReason: reason,
+          });
+          this.pendingMessages.update(msgs => msgs.filter(m => m.id !== finalMessage.id));
+          this.layout.toast(reason, 4000, 'error-snackbar');
+        }
+      }).catch(err => {
+        const reason = err?.message || 'Failed to publish encrypted file message';
+        this.logger.error('Encrypted file publish failed', err);
+        this.messaging.updateMessageInChat(chatId, finalMessage.id, {
+          pending: false,
+          received: false,
+          failed: true,
+          failureReason: reason,
+        });
+        this.pendingMessages.update(msgs => msgs.filter(m => m.id !== finalMessage.id));
+        this.layout.toast(reason, 4000, 'error-snackbar');
+      });
+    } catch (err) {
+      this.logger.error('Failed to send encrypted file message', err);
+      this.snackBar.open(err instanceof Error ? err.message : 'Failed to send encrypted file', 'Dismiss', {
+        duration: 5000,
+      });
+    } finally {
+      this.isSending.set(false);
+      this.uploadStatus.set('');
+    }
+  }
+
+  private async encryptFileForMessage(file: File): Promise<{
+    encryptedBytes: Uint8Array;
+    encryptedSha256: string;
+    originalSha256: string;
+    keyBase64: string;
+    nonceBase64: string;
+    encryptedSize: number;
+    mimeType: string;
+  }> {
+    const sourceBytes = await this.mediaService.getFileBytes(file);
+    const sourceBuffer = new Uint8Array(sourceBytes);
+    const keyBytes = crypto.getRandomValues(new Uint8Array(32));
+    const nonceBytes = crypto.getRandomValues(new Uint8Array(12));
+    const cryptoKey = await crypto.subtle.importKey('raw', keyBytes, { name: 'AES-GCM' }, false, ['encrypt']);
+    const encryptedBuffer = await crypto.subtle.encrypt(
+      { name: 'AES-GCM', iv: nonceBytes },
+      cryptoKey,
+      sourceBuffer,
+    );
+    const encryptedBytes = new Uint8Array(encryptedBuffer);
+
+    return {
+      encryptedBytes,
+      encryptedSha256: bytesToHex(sha256(encryptedBytes)),
+      originalSha256: bytesToHex(sha256(sourceBytes)),
+      keyBase64: this.bytesToBase64(keyBytes),
+      nonceBase64: this.bytesToBase64(nonceBytes),
+      encryptedSize: encryptedBytes.byteLength,
+      mimeType: this.mediaService.getFileMimeType(file),
+    };
+  }
+
+  private bytesToBase64(bytes: Uint8Array): string {
+    let binary = '';
+    for (const byte of bytes) {
+      binary += String.fromCharCode(byte);
+    }
+    return btoa(binary);
+  }
+
+  private formatFileSize(bytes: number): string {
+    if (bytes < 1024) {
+      return `${bytes} B`;
+    }
+
+    const units = ['KB', 'MB', 'GB', 'TB'];
+    let value = bytes / 1024;
+    let unitIndex = 0;
+
+    while (value >= 1024 && unitIndex < units.length - 1) {
+      value /= 1024;
+      unitIndex += 1;
+    }
+
+    return `${value.toFixed(value >= 10 ? 0 : 1)} ${units[unitIndex]}`;
   }
 
   /**
@@ -2324,6 +2543,11 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
    * with the same content and reply context.
    */
   async retryMessage(message: DirectMessage): Promise<void> {
+    if (message.rumorKind === kinds.FileMessage) {
+      this.layout.toast('Encrypted file messages cannot be retried after upload. Please send the file again.', 4000, 'error-snackbar');
+      return;
+    }
+
     const selectedChat = this.selectedChat();
     if (!selectedChat) return;
 
@@ -2440,6 +2664,9 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
         return 'Reacted';
       }
       return `Reacted ${content}`;
+    }
+    if (lastMessage.rumorKind === kinds.FileMessage) {
+      return 'Encrypted file';
     }
     return lastMessage.content;
   }
@@ -4061,6 +4288,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       // Return the message for immediate UI display and a publish function for background delivery
       const message: DirectMessage = {
         id: signedEvent.id,
+        rumorKind: kinds.EncryptedDirectMessage,
         pubkey: myPubkey,
         created_at: signedEvent.created_at,
         content: messageText, // Store decrypted content locally
@@ -4200,6 +4428,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       // Return the message for immediate UI display
       const message: DirectMessage = {
         id: rumorId,
+        rumorKind,
         pubkey: myPubkey,
         created_at: unsignedMessage.created_at,
         content: messageText,
@@ -4339,6 +4568,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       // Return message for immediate UI display
       const message: DirectMessage = {
         id: rumorId,
+        rumorKind,
         pubkey: myPubkey,
         created_at: unsignedMessage.created_at,
         content: messageText,
