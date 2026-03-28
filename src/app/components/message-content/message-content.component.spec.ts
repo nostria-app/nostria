@@ -126,6 +126,25 @@ describe('MessageContentComponent', () => {
             expect(link.getAttribute('href')).toBe('https://example.com/page');
         });
 
+        it('should render embedded YouTube player for watch URLs', () => {
+            hostComponent.content = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ';
+            fixture.detectChanges();
+
+            const iframe = fixture.nativeElement.querySelector('.youtube-container iframe');
+            const link = fixture.nativeElement.querySelector('.message-link');
+
+            expect(iframe).toBeTruthy();
+            expect(link).toBeNull();
+        });
+
+        it('should render embedded YouTube player for short links', () => {
+            hostComponent.content = 'https://youtu.be/dQw4w9WgXcQ';
+            fixture.detectChanges();
+
+            const iframe = fixture.nativeElement.querySelector('.youtube-container iframe');
+            expect(iframe).toBeTruthy();
+        });
+
         it('should render mixed content with video', () => {
             hostComponent.content = 'Check this video https://example.com/clip.mp4';
             fixture.detectChanges();

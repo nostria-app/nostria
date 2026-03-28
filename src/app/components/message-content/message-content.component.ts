@@ -50,7 +50,7 @@ const EMOJI_SET_KIND = 30030;
 const LIVE_EVENT_KIND = 30311;
 
 interface ContentPart {
-  type: 'text' | 'url' | 'image' | 'video' | 'audio' | 'npub' | 'nprofile' | 'note' | 'nevent' | 'naddr' | 'linebreak' | 'emoji' | 'bolt11' | 'tidal' | 'spotify' | 'encrypted-file';
+  type: 'text' | 'url' | 'image' | 'video' | 'audio' | 'npub' | 'nprofile' | 'note' | 'nevent' | 'naddr' | 'linebreak' | 'emoji' | 'bolt11' | 'tidal' | 'spotify' | 'youtube' | 'encrypted-file';
   content: string;
   pubkey?: string;
   eventId?: string;
@@ -156,6 +156,15 @@ interface EventMention {
           <iframe [src]="part.processedUrl" frameborder="0"
             allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
             loading="lazy" title="Spotify music embed"></iframe>
+          }
+        </div>
+      } @else if (part.type === 'youtube') {
+        <div class="youtube-container">
+          @if (part.processedUrl) {
+          <iframe [src]="part.processedUrl" frameborder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            referrerpolicy="strict-origin-when-cross-origin" allowfullscreen loading="lazy"
+            title="YouTube video embed"></iframe>
           }
         </div>
       } @else if (part.type === 'bolt11') {
@@ -598,6 +607,24 @@ interface EventMention {
       }
     }
 
+    .youtube-container {
+      display: block;
+      width: 100%;
+      max-width: min(100%, 560px);
+      margin: 8px 0;
+      border-radius: 12px;
+      overflow: hidden;
+      background: #000;
+      aspect-ratio: 16 / 9;
+
+      iframe {
+        display: block;
+        width: 100%;
+        height: 100%;
+        border: 0;
+      }
+    }
+
     .encrypted-file-card {
       width: 100%;
       display: flex;
@@ -713,6 +740,8 @@ export class MessageContentComponent {
   private readonly tidalUrlRegex = /^https?:\/\/(?:listen\.)?tidal\.com\/(?:browse\/)?(track|album|video|playlist)\/([a-zA-Z0-9-]+)/i;
   // Spotify URL regex
   private readonly spotifyUrlRegex = /^https?:\/\/open\.spotify\.com\/(track|album|playlist|artist|show|episode)\/([a-zA-Z0-9]+)/i;
+  // YouTube URL regex
+  private readonly youtubeUrlRegex = /^https?:\/\/(?:(?:www|m|music)\.)?(?:youtube\.com\/(?:watch\?v=|shorts\/|live\/|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})(?:[?&][^\s]*)?$/i;
 
   // Store event mentions data
   eventMentionsMap = signal<Map<number, EventMention>>(new Map());
@@ -841,6 +870,7 @@ export class MessageContentComponent {
           content: cleanUrl,
           ...this.getImetaData(cleanUrl),
           ...this.getMusicEmbedData(cleanUrl),
+          ...this.getYouTubeEmbedData(cleanUrl),
           id: this.partIdCounter++,
         });
 
@@ -1227,7 +1257,7 @@ export class MessageContentComponent {
   /**
    * Determine if a URL points to an image, video, or is a regular link.
    */
-  private getUrlMediaType(url: string): 'image' | 'video' | 'audio' | 'url' | 'tidal' | 'spotify' {
+  private getUrlMediaType(url: string): 'image' | 'video' | 'audio' | 'url' | 'tidal' | 'spotify' | 'youtube' {
     if (this.imageExtensions.test(url)) {
       return 'image';
     }
@@ -1251,6 +1281,10 @@ export class MessageContentComponent {
     if (this.spotifyUrlRegex.test(url)) {
       this.spotifyUrlRegex.lastIndex = 0;
       return 'spotify';
+    }
+    if (this.youtubeUrlRegex.test(url)) {
+      this.youtubeUrlRegex.lastIndex = 0;
+      return 'youtube';
     }
     return 'url';
   }
@@ -1297,6 +1331,17 @@ export class MessageContentComponent {
     }
 
     return {};
+  }
+
+  private getYouTubeEmbedData(url: string): { processedUrl?: SafeResourceUrl } {
+    this.youtubeUrlRegex.lastIndex = 0;
+    if (!this.youtubeUrlRegex.test(url)) {
+      return {};
+    }
+
+    return {
+      processedUrl: this.media.getYouTubeEmbedUrl()(url),
+    };
   }
 
   private buildEncryptedFilePart(content: string): ContentPart | null {

@@ -4483,17 +4483,17 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
           if (!dmSuccess) {
             return { success: false, failureReason: 'Failed to publish to DM relays' };
           }
+
           return { success: true };
         } else {
-          // Publish recipient's gift wrap to their DM relays (kind 10050)
-          const recipientSuccess = await this.publishToUserDmRelays(signedGiftWrap, receiverPubkey);
+          const [recipientSuccess, selfCopySuccess] = await Promise.all([
+            this.publishToUserDmRelays(signedGiftWrap, receiverPubkey),
+            this.publishToUserDmRelays(signedGiftWrap2!, myPubkey),
+          ]);
 
-          // Publish sender's self-copy to own DM relays — fire and forget
-          this.publishToUserDmRelays(signedGiftWrap2!, myPubkey).then(selfSuccess => {
-            if (!selfSuccess) {
-              this.logger.warn('Self-copy gift wrap failed to publish to own DM relays');
-            }
-          });
+          if (!selfCopySuccess) {
+            this.logger.warn('Self-copy gift wrap failed to publish to own DM relays');
+          }
 
           if (!recipientSuccess) {
             return { success: false, failureReason: 'Failed to deliver to recipient\'s DM relays' };
@@ -4622,11 +4622,14 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
         for (const { recipientPubkey, signedGiftWrap } of giftWraps) {
           try {
             const success = await this.publishToUserDmRelays(signedGiftWrap, recipientPubkey);
+
             if (success) {
               anySuccess = true;
             } else if (recipientPubkey !== myPubkey) {
               // Only track failures for other participants, not self-copy
               failures.push(recipientPubkey.substring(0, 8));
+            } else {
+              this.logger.warn('Group self-copy gift wrap failed to publish to own DM relays');
             }
           } catch (err) {
             this.logger.error(`Failed to publish group gift wrap to ${recipientPubkey.substring(0, 8)}`, err);
@@ -4659,12 +4662,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
    * Returns true if at least one relay accepted the event.
    */
   private async publishToRelays(event: NostrEvent, pubkey: string): Promise<boolean> {
-    const promisesUser = this.userRelayService.publish(pubkey, event);
-    const promisesAccount = this.accountRelay.publish(event);
-
-    // Wait for all publish attempts to complete
-    const results = await Promise.allSettled([promisesUser, promisesAccount]);
-    return results.some(r => r.status === 'fulfilled');
+    return this.publishToUserDmRelays(event, pubkey);
   }
 
   /**
@@ -4680,20 +4678,6 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       this.logger.error('publishToUserDmRelays failed:', err);
       return false;
     }
-  }
-
-  private async publishToUserRelays(event: NostrEvent, pubkey: string): Promise<void> {
-    const promisesUser = this.userRelayService.publish(pubkey, event);
-
-    // Wait for all publish attempts to complete
-    await Promise.allSettled([promisesUser]);
-  }
-
-  private async publishToAccountRelays(event: NostrEvent): Promise<void> {
-    const promisesAccount = this.accountRelay.publish(event);
-
-    // Wait for all publish attempts to complete
-    await Promise.allSettled([promisesAccount]);
   }
 
   /**

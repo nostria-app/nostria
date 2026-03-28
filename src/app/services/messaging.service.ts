@@ -3403,14 +3403,7 @@ export class MessagingService implements NostriaService {
       // For regular messages: Create and publish two gift wraps (one for recipient, one for self)
       if (isNoteToSelf) {
         // Note to Self: Only one gift wrap needed
-        // Publish to sender's DM relays (kind 10050) + account relays for sync
         const publishPromises: Promise<unknown>[] = [];
-
-        // Publish to account relays for sync across devices
-        const accountPublishResult = await this.relay.publish(signedGiftWrap);
-        if (accountPublishResult) {
-          publishPromises.push(...accountPublishResult);
-        }
 
         // Publish to sender's DM relays if UserRelayService is available
         if (userRelayService) {
@@ -3449,19 +3442,7 @@ export class MessagingService implements NostriaService {
         const signedGiftWrap2 = finalizeEvent(giftWrap2, ephemeralKey);
 
         // Publish both gift wraps to recipient's and sender's DM relays (NIP-17)
-        // Also publish to account relays for multi-device sync
-        // Also publish to discovery relays for delivery redundancy
         const publishPromises: Promise<unknown>[] = [];
-
-        // Publish to account relays (backup/sync)
-        const accountPublish1 = await this.relay.publish(signedGiftWrap);
-        if (accountPublish1) {
-          publishPromises.push(...accountPublish1);
-        }
-        const accountPublish2 = await this.relay.publish(signedGiftWrap2);
-        if (accountPublish2) {
-          publishPromises.push(...accountPublish2);
-        }
 
         // Publish to recipient's DM relays (kind 10050) - this is the primary delivery mechanism per NIP-17
         if (userRelayService) {
@@ -3563,8 +3544,8 @@ export class MessagingService implements NostriaService {
       const userRelayService = await this.getUserRelayService();
       const publishPromises: Promise<unknown>[] = [];
 
-      // Create gift wraps for all participants (including self)
-      for (const recipientPubkey of allParticipants) {
+        // Create gift wraps for all participants (including self)
+        for (const recipientPubkey of allParticipants) {
         // Create the seal - encrypt the rumor for this specific recipient
         const sealedContent = await this.encryption.encryptNip44(rumorJson, recipientPubkey);
 
@@ -3598,16 +3579,10 @@ export class MessagingService implements NostriaService {
 
         const signedGiftWrap = finalizeEvent(giftWrap, ephemeralKey);
 
-        // Publish to account relays for sync
-        const accountPublishResult = await this.relay.publish(signedGiftWrap);
-        if (accountPublishResult) {
-          publishPromises.push(...accountPublishResult);
-        }
-
-        // Publish to recipient's DM relays (primary NIP-17 delivery)
-        if (userRelayService) {
-          publishPromises.push(userRelayService.publishToDmRelays(recipientPubkey, signedGiftWrap));
-        }
+          // Publish to recipient's DM relays (primary NIP-17 delivery)
+          if (userRelayService) {
+            publishPromises.push(userRelayService.publishToDmRelays(recipientPubkey, signedGiftWrap));
+          }
       }
 
       await this.awaitDirectMessagePublishes(publishPromises, 'direct-message');
