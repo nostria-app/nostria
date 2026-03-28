@@ -52,7 +52,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
       
       <div dialog-actions>
         @if (viewInitialized() && loginComponent) {
-          @if (loginComponent.currentStep() === loginComponent.LoginStep.REGION_SELECTION && !loginComponent.isDetectingRegion()) {
+          @if (loginComponent.currentStep() === loginComponent.LoginStep.REGION_SELECTION) {
             <button mat-flat-button (click)="loginComponent.generateNewKey()" [disabled]="loginComponent.loading()">
               @if (loginComponent.loading()) {
                 <mat-spinner diameter="20" class="button-spinner"></mat-spinner>
@@ -144,7 +144,7 @@ export class StandaloneLoginDialogComponent implements AfterViewInit {
       case LoginStep.INITIAL:
         return 'Welcome to Nostria';
       case LoginStep.REGION_SELECTION:
-        return 'Select Your Region';
+        return 'Create Your Account';
       case LoginStep.LOGIN_OPTIONS:
         return 'Sign in to Nostria';
       case LoginStep.NSEC_LOGIN:

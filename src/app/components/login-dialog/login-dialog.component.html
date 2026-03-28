@@ -35,40 +35,8 @@
     </div>
     }
 
-    <!-- Step 2: Region selection with discovery (from location selection dialog) -->
+    <!-- Step 2: New account profile setup -->
     @if (currentStep() === LoginStep.REGION_SELECTION) {
-    @if (isDetectingRegion()) {
-    <div class="region-detection-container">
-      <div class="region-detection-loading">
-        <mat-icon class="spinning">autorenew</mat-icon>
-        <span>Finding closest region...</span>
-      </div>
-      <p>
-        Your account will be ready in seconds — no email, no phone number, no personal details required.
-      </p>
-    </div>
-    } @else {
-
-    <div class="region-info-container">
-      <button mat-button class="region-info-btn" (click)="toggleRegionSelector()">
-        Region: <strong>{{ detectedRegion() }}</strong>
-        <mat-icon>{{ showRegionSelector() ? 'expand_less' : 'expand_more' }}</mat-icon>
-      </button>
-
-      @if (showRegionSelector()) {
-      <div class="region-selector">
-        <h3>Choose your region:</h3>
-        @for (region of availableRegions(); track region.name) {
-        <button class="region-option" mat-button (click)="selectRegionManually(region)">
-          <mat-icon class="region-flag">travel_explore</mat-icon>
-          <span class="region-name">{{ region.name }}</span>&nbsp;
-          <span class="region-latency">{{ region.latency }}</span>
-        </button>
-        }
-      </div>
-      }
-    </div>
-
     <!-- Profile Setup Section -->
     <div class="profile-setup-section">
       <h3>Set up your profile (optional)</h3>
@@ -105,7 +73,6 @@
         </div>
       </div>
     </div>
-    }
     }
 
     <!-- Step 3: Login options (from login dialog) -->

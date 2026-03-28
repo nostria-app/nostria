@@ -20,8 +20,6 @@ import { QrcodeScanDialogComponent } from '../qrcode-scan-dialog/qrcode-scan-dia
 import { StandaloneTermsDialogComponent } from '../standalone-terms-dialog/standalone-terms-dialog.component';
 import { SetupNewAccountDialogComponent } from '../setup-new-account-dialog/setup-new-account-dialog.component';
 import { CustomDialogService } from '../../services/custom-dialog.service';
-import { Region, RegionService } from '../../services/region.service';
-import { DiscoveryRelayService, ServerInfo } from '../../services/discovery-relay.service';
 import { MatButtonModule } from '@angular/material/button';
 import { Profile } from '../../services/profile';
 import { AccountStateService } from '../../services/account-state.service';
@@ -70,8 +68,6 @@ export class LoginDialogComponent implements OnDestroy {
   nostrService = inject(NostrService);
   private logger = inject(LoggerService);
   private mnemonicService = inject(MnemonicService);
-  region = inject(RegionService);
-  private discoveryService = inject(DiscoveryRelayService);
   private profileService = inject(Profile);
   private accountState = inject(AccountStateService);
   private data = inject(DataService);
@@ -92,13 +88,6 @@ export class LoginDialogComponent implements OnDestroy {
   nostrConnectUrl = signal('');
   nostrConnectError = signal<string | null>(null);
   nostrConnectLoading = signal<boolean>(false);
-  selectedRegionId = signal<string | null>(null);
-
-  // Region discovery signals
-  isDetectingRegion = signal(true);
-  detectedRegion = signal('');
-  showRegionSelector = signal(false);
-  availableRegions = signal<{ name: string; latency: string; id: string }[]>([]);
 
   // Profile setup signals (similar to welcome component)
   displayName = signal('');
@@ -298,66 +287,6 @@ export class LoginDialogComponent implements OnDestroy {
   startNewAccountFlow(): void {
     this.logger.debug('Starting account creation flow');
     this.goToStep(LoginStep.REGION_SELECTION);
-    // Start region detection when entering region selection
-    this.startRegionDetection();
-  }
-
-  // Region detection and selection methods (similar to welcome component)
-  async startRegionDetection(): Promise<void> {
-    this.isDetectingRegion.set(true);
-    this.detectedRegion.set('');
-    this.showRegionSelector.set(false);
-
-    try {
-      // First trigger the latency check to populate the servers with latency data
-      await this.discoveryService.checkServerLatency();
-
-      // Get all servers sorted by latency
-      const serversWithLatency = this.discoveryService.getServersByLatency();
-
-      // Convert ServerInfo to our UI format
-      const regions = serversWithLatency.map((server: ServerInfo) => {
-        const regionId = this.getRegionIdFromServer(server);
-
-        return {
-          name: server.region,
-          latency: `${server.latency || 9999}ms`,
-          id: regionId,
-        };
-      });
-
-      this.availableRegions.set(regions);
-
-      // The first server should be the fastest since they're sorted by latency
-      const fastestRegion = regions[0];
-
-      if (fastestRegion) {
-        // Set the detected region and selected region
-        this.detectedRegion.set(fastestRegion.name);
-        this.selectedRegionId.set(fastestRegion.id);
-      }
-
-      // Simulate detection time for better UX (minimum display time)
-      await new Promise(resolve => setTimeout(resolve, 1500));
-
-      this.isDetectingRegion.set(false);
-    } catch (error) {
-      this.logger.error('Failed to detect region:', error);
-      // Fallback to manual selection
-      this.isDetectingRegion.set(false);
-      this.showRegionSelector.set(true);
-    }
-  }
-
-  toggleRegionSelector(): void {
-    this.showRegionSelector.set(!this.showRegionSelector());
-  }
-
-  selectRegionManually(region: { name: string; id: string }): void {
-    this.logger.debug('Manual region selection', { region });
-    this.detectedRegion.set(region.name);
-    this.selectedRegionId.set(region.id);
-    this.showRegionSelector.set(false);
   }
 
   // Profile setup methods (similar to welcome component)
@@ -387,65 +316,45 @@ export class LoginDialogComponent implements OnDestroy {
     this.profileImageFile.set(null);
   }
 
-  // Region selection methods
-  selectRegion(region: Region): void {
-    if (region.enabled) {
-      this.logger.debug('Region selected', { region: region.id });
-      this.selectedRegionId.set(region.id);
-      this.generateNewKey();
-    }
-  }
-
   // Account generation - now includes profile setup
   async generateNewKey(): Promise<void> {
     this.logger.debug('Generating new key', {
-      regionId: this.selectedRegionId(),
       displayName: this.displayName(),
       hasProfileImage: !!this.profileImage(),
     });
-    if (this.selectedRegionId()) {
-      this.loading.set(true);
+    this.loading.set(true);
 
-      try {
-        // First generate the new key and set up the account
-        const newUser = await this.nostrService.generateNewKey(this.selectedRegionId()!);
+    try {
+      const newUser = await this.nostrService.generateNewKey();
 
-        // If the user has set a display name and/or profile image, create the profile
-        const displayName = this.displayName();
-        const profileImageFile = this.profileImageFile();
+      const displayName = this.displayName();
+      const profileImageFile = this.profileImageFile();
 
-        if (displayName || profileImageFile) {
-          this.logger.debug('Creating initial profile for new user');
-          const result = await this.profileService.createInitialProfile(
-            newUser.pubkey,
-            displayName || undefined,
-            profileImageFile || undefined
-          );
+      if (displayName || profileImageFile) {
+        this.logger.debug('Creating initial profile for new user');
+        const result = await this.profileService.createInitialProfile(
+          newUser.pubkey,
+          displayName || undefined,
+          profileImageFile || undefined
+        );
 
-          if (!result.success) {
-            this.logger.error('Failed to create initial profile', result.error);
-            // Don't fail the entire process, just log the error
-            // The user can always edit their profile later
-          } else {
-            this.logger.debug('Initial profile created successfully');
-            if (result.profileEvent) {
-              const metadata = this.data.toRecord(result.profileEvent);
-              this.accountState.addToCache(metadata.event.pubkey, metadata);
-              this.accountState.profile.set(metadata);
-            }
+        if (!result.success) {
+          this.logger.error('Failed to create initial profile', result.error);
+        } else {
+          this.logger.debug('Initial profile created successfully');
+          if (result.profileEvent) {
+            const metadata = this.data.toRecord(result.profileEvent);
+            this.accountState.addToCache(metadata.event.pubkey, metadata);
+            this.accountState.profile.set(metadata);
           }
         }
-
-        // Perform the set account after we've uploaded the profile.
-        // await this.nostrService.setAccount(newUser);
-
-        this.loading.set(false);
-        this.closeDialog();
-      } catch (error) {
-        this.logger.error('Failed to generate new key', error);
-        // Handle error appropriately - you might want to show an error message to the user
-        this.loading.set(false);
       }
+
+      this.loading.set(false);
+      this.closeDialog();
+    } catch (error) {
+      this.logger.error('Failed to generate new key', error);
+      this.loading.set(false);
     }
   }
 
@@ -515,14 +424,14 @@ export class LoginDialogComponent implements OnDestroy {
    * Show the setup new account dialog and handle the user's response
    */
   private async showSetupNewAccountDialog(user: NostrUser): Promise<void> {
-    const setupDialogRef = this.customDialog.open<SetupNewAccountDialogComponent, { confirmed: boolean; region: string | null }>(SetupNewAccountDialogComponent, {
-      title: 'Setup New Account',
+    const setupDialogRef = this.customDialog.open<SetupNewAccountDialogComponent, { confirmed: boolean }>(SetupNewAccountDialogComponent, {
+      title: 'Set Up Account Relay Defaults',
       width: '600px',
       maxWidth: '90vw',
       disableClose: true,
     });
 
-    const result = await new Promise<{ confirmed: boolean; region: string | null } | undefined>(resolve => {
+    const result = await new Promise<{ confirmed: boolean } | undefined>(resolve => {
       const sub = setupDialogRef.afterClosed$.subscribe(closeResult => {
         resolve(closeResult.result ?? undefined);
         sub.unsubscribe();
@@ -530,11 +439,9 @@ export class LoginDialogComponent implements OnDestroy {
     });
 
     if (result && result.confirmed) {
-      this.logger.info('User confirmed new account setup', {
-        region: result.region,
-      });
+      this.logger.info('User confirmed new account setup');
       try {
-        await this.nostrService.setupNewAccountWithDefaults(user, result.region || undefined);
+        await this.nostrService.setupNewAccountWithDefaults(user);
         this.snackBar.open('Account setup completed successfully!', 'Dismiss', {
           duration: 3000,
           horizontalPosition: 'center',
@@ -1136,33 +1043,6 @@ export class LoginDialogComponent implements OnDestroy {
 
   closeTermsDialog(): void {
     this.layout.handleTermsDialogClose();
-  }
-
-  /**
-   * Maps a ServerInfo object to a region ID for the RegionService
-   */
-  private getRegionIdFromServer(server: ServerInfo): string {
-    // Extract region from the server URL or region property
-    const url = server.url.toLowerCase();
-
-    if (url.includes('.eu.') || server.region.toLowerCase().includes('europe')) {
-      return 'eu';
-    } else if (url.includes('.us.') || server.region.toLowerCase().includes('usa')) {
-      return 'us';
-    } else if (url.includes('.af.') || server.region.toLowerCase().includes('africa')) {
-      return 'af';
-    } else if (url.includes('.as.') || server.region.toLowerCase().includes('asia')) {
-      return 'as';
-    } else if (url.includes('.sa.') || server.region.toLowerCase().includes('south america')) {
-      return 'sa';
-    } else if (url.includes('.au.') || server.region.toLowerCase().includes('australia')) {
-      return 'au';
-    } else if (url.includes('.jp.') || server.region.toLowerCase().includes('japan')) {
-      return 'jp';
-    }
-
-    // Default fallback
-    return 'us';
   }
 
   closeDialog(): void {

@@ -1,13 +1,12 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideZonelessChangeDetection } from '@angular/core';
+import { describe, expect, it, vi } from 'vitest';
 import { MatDialogRef, MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { LoginDialogComponent } from './login-dialog.component';
 import { NostrService } from '../../services/nostr.service';
 import { LoggerService } from '../../services/logger.service';
 import { MnemonicService } from '../../services/mnemonic.service';
-import { RegionService } from '../../services/region.service';
-import { DiscoveryRelayService } from '../../services/discovery-relay.service';
 import { Profile } from '../../services/profile';
 import { AccountStateService } from '../../services/account-state.service';
 import { DataService } from '../../services/data.service';
@@ -46,13 +45,6 @@ describe('LoginDialogComponent', () => {
                     } },
                 { provide: MnemonicService, useValue: {
                         isMnemonic: vi.fn().mockReturnValue(false),
-                    } },
-                { provide: RegionService, useValue: {
-                        regions: vi.fn().mockReturnValue([]),
-                    } },
-                { provide: DiscoveryRelayService, useValue: {
-                        checkServerLatency: vi.fn(),
-                        getServersByLatency: vi.fn().mockReturnValue([]),
                     } },
                 { provide: Profile, useValue: {
                         createInitialProfile: vi.fn(),

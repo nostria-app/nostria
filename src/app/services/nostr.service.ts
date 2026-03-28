@@ -159,6 +159,11 @@ export class NostrService implements NostriaService {
     'wss://nos.lol/',
     'wss://relay.primal.net/',
   ];
+  private readonly DEFAULT_ACCOUNT_RELAY = 'wss://relay.openresist.com/';
+  private readonly DEFAULT_DISCOVERY_RELAYS = [
+    'wss://indexer.openresist.com/',
+    'wss://purplepag.es/',
+  ];
   publishQueue: any[] = [];
   accountSubscription: any = null;
 
@@ -2251,21 +2256,16 @@ export class NostrService implements NostriaService {
     // If region is not provided, try to get it from the user or use a default
     const accountRegion = region || user.region || 'us';
 
-    // Configure the discovery relays based on the user's region
-    // Use both regional Nostria relay and indexer.coracle.social for better lookup performance
-    const regionalDiscoveryRelay = this.region.getDiscoveryRelay(accountRegion);
-    const discoveryRelays = [regionalDiscoveryRelay, 'wss://indexer.coracle.social/', 'wss://purplepag.es/'];
-    this.logger.info('Setting discovery relays for new user based on region', {
-      region: accountRegion,
+    const discoveryRelays = [...this.DEFAULT_DISCOVERY_RELAYS];
+    this.logger.info('Setting discovery relays for new user', {
       discoveryRelays,
     });
     this.discoveryRelay.setDiscoveryRelays(discoveryRelays);
 
-    const relayServerUrl = this.region.getRelayServer(accountRegion, 0);
-    // Build the complete list of account relays (regional + defaults)
-    const allAccountRelays = [relayServerUrl!, ...this.DEFAULT_RELAYS];
+    const relayServerUrl = this.DEFAULT_ACCOUNT_RELAY;
+    const allAccountRelays = [relayServerUrl, ...this.DEFAULT_RELAYS];
 
-    const relayTags = this.createTags('r', [relayServerUrl!]);
+    const relayTags = this.createTags('r', [relayServerUrl]);
 
     // Add these 3 default relays, most popular ones.
     this.DEFAULT_RELAYS.forEach(relay => relayTags.push(['r', relay]));
@@ -2307,7 +2307,7 @@ export class NostrService implements NostriaService {
     await this.accountRelay.publish(signedMediaEvent);
 
     // Create and publish DM Relay List event
-    const relayDMTags = this.createTags('relay', [relayServerUrl!]);
+    const relayDMTags = this.createTags('relay', [relayServerUrl]);
 
     // Add these 3 default relays to match account relays
     this.DEFAULT_RELAYS.forEach(relay => relayDMTags.push(['relay', relay]));

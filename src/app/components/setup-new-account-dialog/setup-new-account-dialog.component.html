@@ -26,51 +26,8 @@
     </div>
   </div>
 
-  <!-- Region Selection -->
-  <div class="region-section">
-    <h3 class="section-title">Server Region</h3>
-
-    @if (isDetectingRegion()) {
-    <div class="detecting-region">
-      <mat-spinner diameter="24"></mat-spinner>
-      <span>Detecting best region based on latency...</span>
-    </div>
-    } @else {
-    <div class="region-selection">
-      <div class="detected-region" tabindex="0" role="button" (click)="toggleRegionSelector()"
-        (keyup.enter)="toggleRegionSelector()" (keyup.space)="toggleRegionSelector()">
-        <div class="region-info">
-          <mat-icon class="location-icon">location_on</mat-icon>
-          <span class="region-name">{{ detectedRegion() }}</span>
-          <span class="recommended-badge">Recommended</span>
-        </div>
-        <mat-icon class="expand-icon">
-          {{ showRegionSelector() ? 'expand_less' : 'expand_more' }}
-        </mat-icon>
-      </div>
-
-      @if (showRegionSelector()) {
-      <div class="region-list">
-        @for (region of availableRegions(); track region.id) {
-        <div class="region-item" tabindex="0" role="button" [class.selected]="selectedRegionId() === region.id"
-          (click)="selectRegion(region)" (keyup.enter)="selectRegion(region)" (keyup.space)="selectRegion(region)">
-          <div class="region-item-info">
-            <span class="region-item-name">{{ region.name }}</span>
-            <span class="region-item-latency">{{ region.latency }}</span>
-          </div>
-          @if (selectedRegionId() === region.id) {
-          <mat-icon class="check-icon">check_circle</mat-icon>
-          }
-        </div>
-        }
-      </div>
-      }
-    </div>
-    }
-  </div>
-
   <p class="question">
-    Would you like Nostria to set up this account with the selected region?
+    Would you like Nostria to set up this account with the default relay configuration?
   </p>
 </div>
 
@@ -78,7 +35,7 @@
   <button mat-button (click)="cancel()">
     Cancel
   </button>
-  <button mat-flat-button (click)="confirm()" [disabled]="isDetectingRegion()">
+  <button mat-flat-button (click)="confirm()">
     <mat-icon>check</mat-icon>
     Set Up Account
   </button>
