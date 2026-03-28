@@ -57,6 +57,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { ConfirmDialogComponent } from '../confirm-dialog/confirm-dialog.component';
 import { MatMenuModule } from '@angular/material/menu';
 import { AiService } from '../../services/ai.service';
+import { AiToolsDialogComponent } from '../ai-tools-dialog/ai-tools-dialog.component';
 import { cleanTrackingParametersFromText } from '../../utils/url-cleaner';
 import { DataService } from '../../services/data.service';
 import { ImagePlaceholderService } from '../../services/image-placeholder.service';
@@ -4102,11 +4103,20 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   }
 
   openAiDialog(action: 'generate' | 'translate'): void {
-    if (action === 'translate') {
-      this.snackBar.open('Translation from the note editor is temporarily unavailable.', 'Dismiss', {
-        duration: 3000,
-      });
-    }
+    const dialogRef = this.customDialog.open(AiToolsDialogComponent, {
+      title: 'AI Tools',
+      data: { content: this.content(), initialAction: action },
+      width: '500px'
+    });
+
+    effect(() => {
+      const result = dialogRef.afterClosed();
+      if (typeof result === 'string') {
+        this.content.set(result);
+        this.sentimentError.set('');
+        this.scheduleTextareaRefresh();
+      }
+    });
   }
 
   private formatSentimentLabel(label: string): string {

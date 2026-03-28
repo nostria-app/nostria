@@ -2108,13 +2108,15 @@ export class ArticleEditorDialogComponent implements OnDestroy, AfterViewInit {
   }
 
   openAiDialog(action: 'generate' | 'translate' | 'sentiment' = 'generate') {
-    const dialogRef = this.dialog.open(AiToolsDialogComponent, {
+    const dialogRef = this.customDialog.open(AiToolsDialogComponent, {
+      title: 'AI Tools',
       data: { content: this.article().content, initialAction: action },
       width: '500px'
     });
 
-    dialogRef.afterClosed().subscribe(result => {
-      if (result) {
+    effect(() => {
+      const result = dialogRef.afterClosed();
+      if (typeof result === 'string' && result) {
         this.updateContent(result);
       }
     });

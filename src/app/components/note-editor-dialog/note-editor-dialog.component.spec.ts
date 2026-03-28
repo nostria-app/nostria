@@ -569,6 +569,17 @@ describe('NoteEditorDialogComponent', () => {
     });
   });
 
+  describe('translation action', () => {
+    it('should open the AI tools dialog for translation', async () => {
+      createComponent();
+      component.content.set('Translate me');
+
+      component.openAiDialog('translate');
+
+      expect(mockCustomDialogService.open).toHaveBeenCalled();
+    });
+  });
+
   describe('quote references', () => {
     it('should insert nostr:naddr for parameterized replaceable quote events', async () => {
       const quotePubkey = 'a'.repeat(64);

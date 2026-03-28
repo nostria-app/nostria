@@ -1,16 +1,16 @@
-import { Component, inject, signal, computed } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { MatButtonModule } from '@angular/material/button';
-import { MatDialogRef, MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
-import { MatSelectModule } from '@angular/material/select';
-import { MatIconModule } from '@angular/material/icon';
-import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { FormsModule } from '@angular/forms';
+import { MatButtonModule } from '@angular/material/button';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatIconModule } from '@angular/material/icon';
+import { MatInputModule } from '@angular/material/input';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { MatSelectModule } from '@angular/material/select';
 import { AiService } from '../../services/ai.service';
 import { AccountLocalStateService } from '../../services/account-local-state.service';
 import { AccountStateService } from '../../services/account-state.service';
+import { CustomDialogRef } from '../../services/custom-dialog.service';
 
 export interface AiToolsDialogData {
   content: string;
@@ -21,18 +21,16 @@ export interface AiToolsDialogData {
   selector: 'app-ai-tools-dialog',
   imports: [
     CommonModule,
-    MatDialogModule,
+    FormsModule,
     MatButtonModule,
     MatFormFieldModule,
-    MatInputModule,
-    MatSelectModule,
     MatIconModule,
+    MatInputModule,
     MatProgressBarModule,
-    FormsModule
+    MatSelectModule,
   ],
   template: `
-    <h2 mat-dialog-title>AI Tools</h2>
-    <mat-dialog-content>
+    <div dialog-content class="tools-dialog-content">
       <div class="tools-container">
         <mat-form-field appearance="outline" class="full-width">
           <mat-label>Action</mat-label>
@@ -44,65 +42,66 @@ export interface AiToolsDialogData {
         </mat-form-field>
 
         @if (selectedAction() === 'generate') {
-            <p>Generates text based on the current content as prompt.</p>
-            @if (!aiService.textModelLoaded()) {
-                <button mat-stroked-button (click)="loadTextModel()" [disabled]="aiService.textModelLoaded()">
-                    {{ aiService.textModelLoaded() ? 'Model Loaded' : 'Load Model' }}
-                </button>
-            }
+        <p>Generates text based on the current content as prompt.</p>
+        @if (!aiService.textModelLoaded()) {
+        <button mat-stroked-button (click)="loadTextModel()" [disabled]="aiService.textModelLoaded()">
+          {{ aiService.textModelLoaded() ? 'Model Loaded' : 'Load Model' }}
+        </button>
+        }
         }
 
         @if (selectedAction() === 'translate') {
-            <p>Translates the current content.</p>
-            <div class="language-selectors">
-              <mat-form-field appearance="outline">
-                <mat-label>Source Language</mat-label>
-                <mat-select [ngModel]="sourceLang()" (ngModelChange)="setSourceLang($event)">
-                  @for (lang of availableLanguages(); track lang.code) {
-                    <mat-option [value]="lang.code">{{ lang.name }}</mat-option>
-                  }
-                </mat-select>
-              </mat-form-field>
+        <p>Translates the current content.</p>
+        <div class="language-selectors">
+          <mat-form-field appearance="outline">
+            <mat-label>Source Language</mat-label>
+            <mat-select [ngModel]="sourceLang()" (ngModelChange)="setSourceLang($event)">
+              @for (lang of availableLanguages(); track lang.code) {
+              <mat-option [value]="lang.code">{{ lang.name }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
 
-              <mat-icon>arrow_forward</mat-icon>
+          <mat-icon>arrow_forward</mat-icon>
 
-              <mat-form-field appearance="outline">
-                <mat-label>Target Language</mat-label>
-                <mat-select [ngModel]="targetLang()" (ngModelChange)="setTargetLang($event)">
-                  @for (lang of availableLanguages(); track lang.code) {
-                    <mat-option [value]="lang.code">{{ lang.name }}</mat-option>
-                  }
-                </mat-select>
-              </mat-form-field>
-            </div>
+          <mat-form-field appearance="outline">
+            <mat-label>Target Language</mat-label>
+            <mat-select [ngModel]="targetLang()" (ngModelChange)="setTargetLang($event)">
+              @for (lang of availableLanguages(); track lang.code) {
+              <mat-option [value]="lang.code">{{ lang.name }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+        </div>
 
-             @if (!aiService.isModelLoaded(selectedTranslationModel())) {
-                <button mat-stroked-button (click)="loadTranslationModel()" [disabled]="aiService.isModelLoaded(selectedTranslationModel())">
-                    {{ aiService.isModelLoaded(selectedTranslationModel()) ? 'Model Loaded' : 'Load Model' }}
-                </button>
-            }
+        @if (!aiService.isModelLoaded(selectedTranslationModel())) {
+        <button mat-stroked-button (click)="loadTranslationModel()"
+          [disabled]="aiService.isModelLoaded(selectedTranslationModel())">
+          {{ aiService.isModelLoaded(selectedTranslationModel()) ? 'Model Loaded' : 'Load Model' }}
+        </button>
+        }
 
-            @if (translationError()) {
-              <p class="error">{{ translationError() }}</p>
-            }
+        @if (translationError()) {
+        <p class="error">{{ translationError() }}</p>
+        }
         }
 
         @if (selectedAction() === 'sentiment') {
-            <p>Analyzes the sentiment of the content.</p>
-             @if (!aiService.sentimentModelLoaded()) {
-                <button mat-stroked-button (click)="loadSentimentModel()" [disabled]="aiService.sentimentModelLoaded()">
-                    {{ aiService.sentimentModelLoaded() ? 'Model Loaded' : 'Load Model' }}
-                </button>
-            }
+        <p>Analyzes the sentiment of the content.</p>
+        @if (!aiService.sentimentModelLoaded()) {
+        <button mat-stroked-button (click)="loadSentimentModel()" [disabled]="aiService.sentimentModelLoaded()">
+          {{ aiService.sentimentModelLoaded() ? 'Model Loaded' : 'Load Model' }}
+        </button>
+        }
 
-            @if (sentimentResult()) {
-              <div class="sentiment-result">
-                <mat-icon [class]="sentimentResult()?.label === 'POSITIVE' ? 'positive' : 'negative'">
-                  {{ sentimentIcon() }}
-                </mat-icon>
-                <span>{{ sentimentResult()?.label }} ({{ sentimentResult()?.score | percent:'1.0-2' }})</span>
-              </div>
-            }
+        @if (sentimentResult()) {
+        <div class="sentiment-result">
+          <mat-icon [class]="sentimentResult()?.label === 'POSITIVE' ? 'positive' : 'negative'">
+            {{ sentimentIcon() }}
+          </mat-icon>
+          <span>{{ sentimentResult()?.label }} ({{ sentimentResult()?.score | percent:'1.0-2' }})</span>
+        </div>
+        }
         }
 
         <mat-form-field appearance="outline" class="full-width">
@@ -111,31 +110,55 @@ export interface AiToolsDialogData {
         </mat-form-field>
 
         @if (isProcessing()) {
-            <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+        <mat-progress-bar mode="indeterminate"></mat-progress-bar>
         }
       </div>
-    </mat-dialog-content>
-    <mat-dialog-actions align="end">
-      <button mat-button mat-dialog-close>Cancel</button>
-      <button mat-flat-button color="primary" (click)="process()" [disabled]="isProcessing() || !canProcess()">
+    </div>
+
+    <div dialog-actions class="tools-dialog-actions">
+      <button mat-button type="button" (click)="cancel()">Cancel</button>
+      <button mat-flat-button type="button" (click)="process()" [disabled]="isProcessing() || !canProcess()">
         Process
       </button>
-      <button mat-button [mat-dialog-close]="content()" [disabled]="isProcessing()">
+      <button mat-button type="button" (click)="useResult()" [disabled]="isProcessing()">
         Use Result
       </button>
-    </mat-dialog-actions>
+    </div>
   `,
   styles: [`
+    :host {
+      display: contents;
+    }
+
+    .tools-dialog-content {
+      min-width: min(400px, 100%);
+    }
+
+    @media (max-width: 700px),
+    (max-height: 700px) {
+      .tools-dialog-content {
+        min-width: 0;
+      }
+    }
+
     .tools-container {
       display: flex;
       flex-direction: column;
       gap: 16px;
-      min-width: 400px;
       padding-top: 8px;
     }
+
+    .tools-dialog-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      width: 100%;
+    }
+
     .full-width {
       width: 100%;
     }
+
     .sentiment-result {
       display: flex;
       align-items: center;
@@ -146,30 +169,45 @@ export interface AiToolsDialogData {
       background: rgba(255, 255, 255, 0.05);
       border-radius: 8px;
     }
+
     .positive { color: var(--mat-success-color, #4caf50); }
     .negative { color: var(--mat-sys-error, #f44336); }
+
     .language-selectors {
       display: flex;
       align-items: center;
       gap: 16px;
+
       mat-form-field {
         flex: 1;
       }
     }
+
     .error {
       color: var(--mat-sys-error);
     }
-  `]
+  `],
 })
 export class AiToolsDialogComponent {
-  readonly dialogRef = inject(MatDialogRef<AiToolsDialogComponent>);
-  readonly data = inject<AiToolsDialogData>(MAT_DIALOG_DATA);
+  readonly dialogRef = inject(CustomDialogRef<AiToolsDialogComponent, string | undefined>);
   readonly aiService = inject(AiService);
   private accountLocalState = inject(AccountLocalStateService);
   private accountState = inject(AccountStateService);
 
-  content = signal(this.data.content);
-  selectedAction = signal<'generate' | 'translate' | 'sentiment'>(this.data.initialAction || 'generate');
+  private _data: AiToolsDialogData = { content: '' };
+
+  set data(value: AiToolsDialogData) {
+    this._data = value;
+    this.content.set(value.content);
+    this.selectedAction.set(value.initialAction || 'generate');
+  }
+
+  get data(): AiToolsDialogData {
+    return this._data;
+  }
+
+  content = signal('');
+  selectedAction = signal<'generate' | 'translate' | 'sentiment'>('generate');
   sourceLang = signal('en');
   targetLang = signal('es');
   translationError = signal('');
@@ -209,8 +247,18 @@ export class AiToolsDialogComponent {
     return model || 'Xenova/opus-mt-en-de';
   });
 
+  sentimentIcon = computed(() => {
+    const result = this.sentimentResult();
+    if (!result) return '';
+
+    if (result.label === 'POSITIVE') {
+      return result.score > 0.9 ? 'sentiment_very_satisfied' : 'sentiment_satisfied';
+    }
+
+    return result.score > 0.9 ? 'sentiment_very_dissatisfied' : 'sentiment_dissatisfied';
+  });
+
   constructor() {
-    // Load saved translation preferences and validate against available languages
     const pubkey = this.accountState.pubkey();
     const savedSourceLang = pubkey ? this.accountLocalState.getTranslationSourceLang(pubkey) : undefined;
     const savedTargetLang = pubkey ? this.accountLocalState.getTranslationTargetLang(pubkey) : undefined;
@@ -222,6 +270,14 @@ export class AiToolsDialogComponent {
     if (savedTargetLang && availableCodes.includes(savedTargetLang)) {
       this.targetLang.set(savedTargetLang);
     }
+  }
+
+  cancel(): void {
+    this.dialogRef.close();
+  }
+
+  useResult(): void {
+    this.dialogRef.close(this.content());
   }
 
   setSourceLang(lang: string): void {
@@ -241,17 +297,6 @@ export class AiToolsDialogComponent {
       this.accountLocalState.setTranslationTargetLang(pubkey, lang);
     }
   }
-
-  sentimentIcon = computed(() => {
-    const result = this.sentimentResult();
-    if (!result) return '';
-
-    if (result.label === 'POSITIVE') {
-      return result.score > 0.9 ? 'sentiment_very_satisfied' : 'sentiment_satisfied';
-    } else {
-      return result.score > 0.9 ? 'sentiment_very_dissatisfied' : 'sentiment_dissatisfied';
-    }
-  });
 
   async loadTextModel() {
     await this.aiService.loadModel('text-generation', 'Xenova/distilgpt2');
