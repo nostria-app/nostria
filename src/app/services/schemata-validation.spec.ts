@@ -169,8 +169,8 @@ function validateEvent(
   const errors = valid
     ? []
     : (validate.errors ?? []).map(
-        (e) => `${e.instancePath || '/'}: ${e.message}`,
-      );
+      (e) => `${e.instancePath || '/'}: ${e.message}`,
+    );
 
   return { valid, errors };
 }
@@ -205,8 +205,8 @@ function validateRumor(
   const errors = valid
     ? []
     : (validate.errors ?? []).map(
-        (e) => `${e.instancePath || '/'}: ${e.message}`,
-      );
+      (e) => `${e.instancePath || '/'}: ${e.message}`,
+    );
 
   return { valid, errors };
 }
@@ -267,6 +267,40 @@ function createNostrService(): NostrService {
       saveEvents: vi.fn().mockResolvedValue(undefined),
     },
     publishService: { publish: vi.fn().mockResolvedValue({ success: true, relayResults: new Map() }) },
+  });
+
+  return service;
+}
+
+function createSigningNostrService(options?: {
+  addClientTag?: boolean;
+  globalExpirationHours?: number | null;
+}): NostrService {
+  const service = Object.create(NostrService.prototype) as NostrService;
+
+  Object.assign(service, {
+    accountState: {
+      account: () => ({
+        pubkey: FAKE_PUBKEY,
+        source: 'remote',
+      }),
+    },
+    settings: {
+      addClientTag: () => options?.addClientTag ?? false,
+    },
+    accountLocalState: {
+      getGlobalEventExpiration: () => options?.globalExpirationHours ?? null,
+    },
+    encryptionServiceInstance: {
+      signRemoteEvent: vi.fn().mockImplementation(async (event: UnsignedEvent) => ({
+        ...event,
+        id: FAKE_ID,
+        sig: FAKE_SIG,
+      })),
+    },
+    currentDate: () => Math.floor(Date.now() / 1000),
+    logger: { debug: vi.fn(), error: vi.fn(), warn: vi.fn(), info: vi.fn() },
+    injector: { get: vi.fn() },
   });
 
   return service;
@@ -425,6 +459,27 @@ describe('Schemata Schema Validation', () => {
       const event = nostrService.createEvent(30003, '', tags);
       expect(event.kind).toBe(30003);
       const result = validateEvent(event, schemaRegistry);
+      expect(result.errors).toEqual([]);
+      expect(result.valid).toBe(true);
+    });
+
+    it('kind 13 (Seal) via signEvent keeps tags empty', async () => {
+      const signingService = createSigningNostrService({
+        addClientTag: true,
+        globalExpirationHours: 24,
+      });
+
+      const signedSeal = await signingService.signEvent({
+        kind: kinds.Seal,
+        pubkey: FAKE_PUBKEY,
+        created_at: Math.floor(Date.now() / 1000),
+        tags: [],
+        content: 'encrypted-seal-content',
+      });
+
+      expect(signedSeal.tags).toEqual([]);
+
+      const result = validateRawEvent(signedSeal, schemaRegistry);
       expect(result.errors).toEqual([]);
       expect(result.valid).toBe(true);
     });
