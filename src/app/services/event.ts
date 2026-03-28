@@ -50,12 +50,21 @@ export interface EventInteractions {
   replyCount: number;
   replyEvents: Event[];
   quotes: NostrRecord[];
+  totalReactionsCount?: number;
+  totalRepostsCount?: number;
+  totalRepliesCount?: number;
+  totalQuotesCount?: number;
   /** True when the number of reactions hit the query limit (more exist on relays) */
   hasMoreReactions?: boolean;
   /** True when the number of reposts hit the query limit */
   hasMoreReposts?: boolean;
   /** True when the number of replies hit the query limit */
   hasMoreReplies?: boolean;
+}
+
+export interface QuoteSummary {
+  records: NostrRecord[];
+  totalCount?: number;
 }
 
 export interface ThreadedEvent {
@@ -131,6 +140,7 @@ export class EventService {
   private readonly imageCacheService = inject(ImageCacheService);
   private readonly repostService = inject(RepostService);
   private readonly locallyDeletedEventIds = signal<Set<string>>(new Set());
+  private readonly countTimeoutMs = 1500;
 
   isEventLocallyDeleted(eventId: string): boolean {
     return this.locallyDeletedEventIds().has(eventId);
@@ -1133,6 +1143,21 @@ export class EventService {
    */
   static readonly INTERACTION_QUERY_LIMIT = 11;
 
+  private async getInteractionRelayUrls(pubkey: string, includeAccountRelays = true): Promise<string[]> {
+    const authorRelays = await this.discoveryRelay.getUserRelayUrls(pubkey);
+    const accountRelays = includeAccountRelays ? this.accountRelay.getRelayUrls() : [];
+    return this.utilities.getUniqueNormalizedRelayUrls([...authorRelays, ...accountRelays]);
+  }
+
+  private async tryCountInteractions(relayUrls: string[], filter: Filter): Promise<number | null> {
+    try {
+      return await this.relayPool.queryConsistentCount(relayUrls, filter, this.countTimeoutMs);
+    } catch (error) {
+      this.logger.debug('[EventService] COUNT query failed, falling back to event query', { filter, error });
+      return null;
+    }
+  }
+
   /**
    * Load event interactions (reactions, reposts, reports, replies) with optional limits.
    * When limits are provided, each interaction type is queried separately to respect per-kind limits.
@@ -1214,6 +1239,11 @@ export class EventService {
       save: true,
     };
 
+    const relayUrls = await this.getInteractionRelayUrls(pubkey, true);
+    const reactionCountFilter: Filter = { kinds: [kinds.Reaction], '#e': [eventId] };
+    const repostCountFilter: Filter = { kinds: [repostKind], '#e': [eventId] };
+    const replyCountFilter: Filter = { kinds: [kinds.ShortTextNote, 1111, 1244], '#e': [eventId] };
+
     // Query reactions, reposts, and reports in parallel (all with limits)
     // Reports are always small so no limit needed for them
     const queries: [Promise<NostrRecord[]>, Promise<NostrRecord[]>, Promise<NostrRecord[]>, Promise<NostrRecord[]> | null] = [
@@ -1237,16 +1267,27 @@ export class EventService {
         : null,
     ];
 
-    const [reactionRecords, repostRecords, reportRecords, replyRecordsRaw] = await Promise.all([
+    const countPromises = relayUrls.length > 0
+      ? Promise.all([
+        this.tryCountInteractions(relayUrls, reactionCountFilter),
+        this.tryCountInteractions(relayUrls, repostCountFilter),
+        skipReplies ? Promise.resolve<number | null>(0) : this.tryCountInteractions(relayUrls, replyCountFilter),
+      ])
+      : Promise.resolve<[number | null, number | null, number | null]>([null, null, skipReplies ? 0 : null]);
+
+    const [reactionRecords, repostRecords, reportRecords, replyRecordsRaw, countResults] = await Promise.all([
       queries[0],
       queries[1],
       queries[2],
       queries[3] ?? Promise.resolve([]),
+      countPromises,
     ]);
 
+    const [reactionCount, repostCount, replyCountFromCount] = countResults;
+
     // Track whether we hit the limit (meaning there are more on relays)
-    const hasMoreReactions = reactionRecords.length >= limit;
-    const hasMoreReposts = repostRecords.length >= limit;
+    const hasMoreReactions = reactionCount != null ? reactionCount > reactionRecords.length : reactionRecords.length >= limit;
+    const hasMoreReposts = repostCount != null ? repostCount > repostRecords.length : repostRecords.length >= limit;
 
     // Process replies
     let replyCount = 0;
@@ -1265,9 +1306,9 @@ export class EventService {
         const { rootId, replyId } = eventTags;
         return replyId === eventId || (rootId === eventId && !replyId);
       });
-      replyCount = replyRecords.length;
+      replyCount = replyCountFromCount ?? replyRecords.length;
       replyEventsResult = replyRecords.map((r: NostrRecord) => r.event);
-      hasMoreReplies = replyRecordsRaw.length >= limit;
+      hasMoreReplies = replyCountFromCount != null ? replyCountFromCount > replyEventsResult.length : replyRecordsRaw.length >= limit;
     }
 
     // Process reactions
@@ -1321,6 +1362,9 @@ export class EventService {
       replyCount,
       replyEvents: replyEventsResult,
       quotes: [], // Quotes are loaded separately
+      totalReactionsCount: reactionCount ?? reactionRecords.length,
+      totalRepostsCount: repostCount ?? repostRecords.length,
+      totalRepliesCount: skipReplies ? 0 : replyCount,
       hasMoreReactions,
       hasMoreReposts,
       hasMoreReplies,
@@ -2353,6 +2397,16 @@ export class EventService {
     invalidateCache = false,
     limit?: number,
   ): Promise<NostrRecord[]> {
+    const summary = await this.loadQuotesSummary(eventId, userPubkey, invalidateCache, limit);
+    return summary.records;
+  }
+
+  async loadQuotesSummary(
+    eventId: string,
+    userPubkey: string,
+    invalidateCache = false,
+    limit?: number,
+  ): Promise<QuoteSummary> {
     this.logger.info('loadQuotes called with eventId:', eventId, 'userPubkey:', userPubkey, 'limit:', limit);
 
     // Handle cache invalidation if requested
@@ -2362,20 +2416,28 @@ export class EventService {
 
     // Use subscription cache to prevent duplicate subscriptions
     const cacheKey = `quotes-${eventId}-${userPubkey}-${limit ?? 'all'}`;
-    const cachedResult = await this.subscriptionCache.getOrCreateSubscription<NostrRecord[]>(
+    const cachedResult = await this.subscriptionCache.getOrCreateSubscription<QuoteSummary>(
       cacheKey,
       [eventId], // eventIds array
       'quotes', // subscription type
       async () => {
         try {
+          const relayUrls = await this.getInteractionRelayUrls(userPubkey, true);
+          const quoteCountPromise = limit && relayUrls.length > 0
+            ? this.tryCountInteractions(relayUrls, { kinds: [kinds.ShortTextNote], '#q': [eventId] })
+            : Promise.resolve<number | null>(null);
+
           // Quotes are kind 1 events with a 'q' tag referencing this event
-          const quotes = await this.userDataService.getEventsByKindAndQuoteTag(userPubkey, [kinds.ShortTextNote], eventId, {
-            save: false,
-            cache: true,
-            invalidateCache,
-            includeAccountRelays: true,
-            limit,
-          });
+          const [quotes, quoteCount] = await Promise.all([
+            this.userDataService.getEventsByKindAndQuoteTag(userPubkey, [kinds.ShortTextNote], eventId, {
+              save: false,
+              cache: true,
+              invalidateCache,
+              includeAccountRelays: true,
+              limit,
+            }),
+            quoteCountPromise,
+          ]);
 
           this.logger.info(
             'Successfully loaded quotes for event:',
@@ -2383,10 +2445,13 @@ export class EventService {
             'count:',
             quotes.length,
           );
-          return quotes;
+          return {
+            records: quotes,
+            totalCount: quoteCount ?? quotes.length,
+          };
         } catch (error) {
           this.logger.error('Error loading quotes for event:', eventId, error);
-          return [];
+          return { records: [], totalCount: 0 };
         }
       },
     );

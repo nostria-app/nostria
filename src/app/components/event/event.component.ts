@@ -1072,6 +1072,10 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   // Reposts and quotes state
   reposts = signal<NostrRecord[]>([]);
   quotes = signal<NostrRecord[]>([]);
+  totalReactionCount = signal<number | null>(null);
+  totalRepostCount = signal<number | null>(null);
+  totalQuoteCount = signal<number | null>(null);
+  totalReplyCount = signal<number | null>(null);
   private _replyCountInternal = signal<number>(0);
   private _replyEventsInternal = signal<Event[]>([]);
 
@@ -1114,24 +1118,67 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     return this.repostCount() + this.quoteCount();
   });
 
+  preferExactInteractionTotals = computed<boolean>(() => {
+    return this.accountState.mutedAccounts().length === 0;
+  });
+
+  displayReactionCount = computed<number>(() => {
+    if (this.preferExactInteractionTotals()) {
+      return this.totalReactionCount() ?? this.likes().length;
+    }
+
+    return this.likes().length;
+  });
+
+  displayReplyCount = computed<number>(() => {
+    if (this.preferExactInteractionTotals()) {
+      return this.totalReplyCount() ?? this.replyCount();
+    }
+
+    return this.replyCount();
+  });
+
+  displayRepostCount = computed<number>(() => {
+    if (this.preferExactInteractionTotals()) {
+      return this.totalRepostCount() ?? this.repostCount();
+    }
+
+    return this.repostCount();
+  });
+
+  displayQuoteCount = computed<number>(() => {
+    if (this.preferExactInteractionTotals()) {
+      return this.totalQuoteCount() ?? this.quoteCount();
+    }
+
+    return this.quoteCount();
+  });
+
+  displayShareCount = computed<number>(() => {
+    return this.displayRepostCount() + this.displayQuoteCount();
+  });
+
   // Display-friendly counter strings that show "10+" when the query limit was hit
   likesDisplay = computed<string>(() => {
-    const count = this.likes().length;
+    const count = this.displayReactionCount();
     if (count === 0) return '';
+    if (this.preferExactInteractionTotals() && this.totalReactionCount() != null) return `${count}`;
     if (this.hasMoreReactions()) return `${count - 1}+`;
     return `${count}`;
   });
 
   replyCountDisplay = computed<string>(() => {
-    const count = this.replyCount();
+    const count = this.displayReplyCount();
     if (count === 0) return '';
+    if (this.preferExactInteractionTotals() && this.totalReplyCount() != null) return `${count}`;
     if (this.hasMoreReplies()) return `${count - 1}+`;
     return `${count}`;
   });
 
   shareCountDisplay = computed<string>(() => {
-    const total = this.shareCount();
+    const total = this.displayShareCount();
     if (total === 0) return '';
+    if (this.preferExactInteractionTotals() && (this.totalRepostCount() != null || this.totalQuoteCount() != null)) return `${total}`;
     const overflowCount = (this.hasMoreReposts() ? 1 : 0) + (this.hasMoreQuotes() ? 1 : 0);
     if (overflowCount > 0) {
       const displayCount = Math.max(total - overflowCount, 1);
@@ -1170,10 +1217,9 @@ export class EventComponent implements AfterViewInit, OnDestroy {
 
   // Check if there's any engagement to show stats row
   hasAnyEngagement = computed<boolean>(() => {
-    return this.likes().length > 0
-      || this.replyCount() > 0
-      || this.repostCount() > 0
-      || this.quoteCount() > 0
+    return this.displayReactionCount() > 0
+      || this.displayReplyCount() > 0
+      || this.displayShareCount() > 0
       || this.totalZapAmount() > 0;
   });
 
@@ -1926,6 +1972,10 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     this.reports.set({ events: [], data: new Map() });
     this.zaps.set([]);
     this.quotes.set([]);
+    this.totalReactionCount.set(null);
+    this.totalRepostCount.set(null);
+    this.totalQuoteCount.set(null);
+    this.totalReplyCount.set(null);
     this.hasMoreReactions.set(false);
     this.hasMoreReposts.set(false);
     this.hasMoreReplies.set(false);
@@ -2429,7 +2479,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     this.isLoadingReactions.set(true);
     try {
       // Load interactions with per-kind limits and quotes in parallel
-      const [interactions, quotesResult] = await Promise.all([
+      const [interactions, quotesSummary] = await Promise.all([
         this.eventService.loadEventInteractions(
           targetEventId,
           targetRecordData.event.kind,
@@ -2438,7 +2488,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
           skipReplies,
           queryLimit,  // Per-kind limit for feed optimization
         ),
-        this.eventService.loadQuotes(
+        this.eventService.loadQuotesSummary(
           targetEventId,
           eventAuthorPubkey,
           invalidateCache,
@@ -2483,7 +2533,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
       const filteredReposts = interactions.reposts.filter(r => !mutedAccounts.includes(r.event.pubkey));
 
       // Filter quotes
-      const filteredQuotes = quotesResult.filter(r => !mutedAccounts.includes(r.event.pubkey));
+      const filteredQuotes = quotesSummary.records.filter(r => !mutedAccounts.includes(r.event.pubkey));
 
       // Filter reports
       const filteredReportEvents = interactions.reports.events.filter(r => !mutedAccounts.includes(r.event.pubkey));
@@ -2500,6 +2550,9 @@ export class EventComponent implements AfterViewInit, OnDestroy {
       });
       this.reposts.set(filteredReposts);
       this.quotes.set(filteredQuotes);
+      this.totalReactionCount.set(interactions.totalReactionsCount ?? filteredReactionEvents.length);
+      this.totalRepostCount.set(interactions.totalRepostsCount ?? filteredReposts.length);
+      this.totalQuoteCount.set(quotesSummary.totalCount ?? filteredQuotes.length);
       this.reports.set({
         events: filteredReportEvents,
         data: filteredReportData
@@ -2509,11 +2562,15 @@ export class EventComponent implements AfterViewInit, OnDestroy {
       this.hasMoreReactions.set(interactions.hasMoreReactions ?? false);
       this.hasMoreReposts.set(interactions.hasMoreReposts ?? false);
       this.hasMoreReplies.set(interactions.hasMoreReplies ?? false);
-      this.hasMoreQuotes.set(queryLimit != null && quotesResult.length >= queryLimit);
+      this.hasMoreQuotes.set(
+        queryLimit != null
+        && (quotesSummary.totalCount != null ? quotesSummary.totalCount > filteredQuotes.length : quotesSummary.records.length >= queryLimit)
+      );
 
       // Only update internal reply count if we actually loaded it (not skipped)
       if (!skipReplies) {
-        this._replyCountInternal.set(interactions.replyCount);
+        this.totalReplyCount.set(interactions.totalRepliesCount ?? interactions.replyCount);
+        this._replyCountInternal.set(interactions.totalRepliesCount ?? interactions.replyCount);
         this._replyEventsInternal.set(interactions.replyEvents);
       }
     } catch (error) {
@@ -2917,9 +2974,9 @@ export class EventComponent implements AfterViewInit, OnDestroy {
 
   private resolveTabWithData(preferredTab: 'reactions' | 'reposts' | 'quotes' | 'zaps'): 'reactions' | 'reposts' | 'quotes' | 'zaps' {
     const tabHasData: Record<string, () => boolean> = {
-      reactions: () => this.likes().length > 0,
-      reposts: () => this.repostCount() > 0,
-      quotes: () => this.quoteCount() > 0,
+      reactions: () => this.displayReactionCount() > 0,
+      reposts: () => this.displayRepostCount() > 0,
+      quotes: () => this.displayQuoteCount() > 0,
       zaps: () => this.zapCount() > 0,
     };
 
@@ -3420,7 +3477,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     // Pass reply count, replies, and parent event for instant rendering in the thread view
     const threadedReplies = this.repliesFromParent() ?? this.threadedRepliesFromInteractions();
     this.layout.openEvent(targetEvent.id, targetEvent, undefined, {
-      replyCount: this.replyCount(),
+      replyCount: this.displayReplyCount(),
       parentEvent: this.parentEvent() ?? undefined,
       replies: threadedReplies.length > 0 ? threadedReplies : undefined,
     });

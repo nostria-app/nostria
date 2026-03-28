@@ -1051,9 +1051,9 @@
         [matTooltip]="isThreadInteractionBlocked() ? threadInteractionBlockedTooltip() : ''"
         [matTooltipDisabled]="!isThreadInteractionBlocked()" (click)="openReplyEditor($event)">
         <mat-icon class="action-icon">mode_comment</mat-icon>
-        @if (replyCount() > 0 || interactionsLoading()) {
-        <span class="action-count" [class.count-placeholder]="interactionsLoading() && replyCount() === 0"
-          [attr.aria-hidden]="interactionsLoading() && replyCount() === 0 ? 'true' : null">{{ replyCountDisplay() || '00' }}</span>
+        @if (displayReplyCount() > 0 || interactionsLoading()) {
+        <span class="action-count" [class.count-placeholder]="interactionsLoading() && displayReplyCount() === 0"
+          [attr.aria-hidden]="interactionsLoading() && displayReplyCount() === 0 ? 'true' : null">{{ replyCountDisplay() || '00' }}</span>
         }
         <span class="action-text">Reply</span>
       </div>
@@ -1092,9 +1092,9 @@
         [matTooltip]="isThreadInteractionBlocked() ? threadInteractionBlockedTooltip() : ''"
         [matTooltipDisabled]="!isThreadInteractionBlocked()" (click)="openShareDialog($event)">
         <mat-icon class="action-icon">share</mat-icon>
-        @if (shareCount() > 0 || interactionsLoading()) {
-        <span class="action-count" [class.count-placeholder]="interactionsLoading() && shareCount() === 0"
-          [attr.aria-hidden]="interactionsLoading() && shareCount() === 0 ? 'true' : null">{{ shareCountDisplay() || '00' }}</span>
+        @if (displayShareCount() > 0 || interactionsLoading()) {
+        <span class="action-count" [class.count-placeholder]="interactionsLoading() && displayShareCount() === 0"
+          [attr.aria-hidden]="interactionsLoading() && displayShareCount() === 0 ? 'true' : null">{{ shareCountDisplay() || '00' }}</span>
         }
         <span class="action-text">Share</span>
       </div>
@@ -1109,7 +1109,7 @@
       </div>
 
       <!-- Top emojis indicator (right-aligned) -->
-      @if (!compact() && (likes().length > 0 || zapCount() > 0 || repostCount() > 0 || quoteCount() > 0 || engagementLoading())) {
+      @if (!compact() && (displayReactionCount() > 0 || zapCount() > 0 || displayShareCount() > 0 || engagementLoading())) {
       <div class="emoji-indicators" (click)="toggleReactionsSummary(); $event.stopPropagation()"
         [class.engagement-loading]="engagementLoading()" [class.engagement-ready]="engagementReady()"
         (contextmenu)="onActionsDisplayModeToggle($event); $event.stopPropagation()"
@@ -1140,8 +1140,8 @@
     <!-- Expandable reactions summary panel (below the toolbar border) -->
     @if (showReactionsSummary()) {
     <div class="reactions-summary-container" [@expandCollapse]>
-      <app-reaction-summary [reactions]="likes()" [replyCount]="replyCount()" [repostCount]="repostCount()"
-        [quoteCount]="quoteCount()" [reposts]="reposts()" [quotes]="quotes()" [zaps]="zaps()"
+      <app-reaction-summary [reactions]="likes()" [replyCount]="displayReplyCount()" [repostCount]="displayRepostCount()"
+        [quoteCount]="displayQuoteCount()" [reposts]="reposts()" [quotes]="quotes()" [zaps]="zaps()"
         [totalZapAmount]="totalZapAmount()" [zapCount]="zapCount()" [initialTab]="reactionsSummaryTab()"
         [hideTabs]="false">
       </app-reaction-summary>

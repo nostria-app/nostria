@@ -46,7 +46,7 @@ export class RelayPoolService {
   private readonly activeRequestsByRelay = new Map<string, number>();
   private readonly requestQueue: {
     id: string;
-    type: 'get' | 'query';
+    type: 'get' | 'query' | 'count';
     relayUrls: string[];
     priority: RelayRequestPriority;
     enqueuedAt: number;
@@ -54,6 +54,9 @@ export class RelayPoolService {
     resolve: (value: unknown) => void;
     reject: (reason?: unknown) => void;
   }[] = [];
+  private readonly countCapabilityCache = new Map<string, { supported: boolean; expiresAt: number }>();
+  private readonly countSupportedTtlMs = 30 * 60 * 1000;
+  private readonly countUnsupportedTtlMs = 10 * 60 * 1000;
 
   private getEffectivePriority(priority: RelayRequestPriority, enqueuedAt: number): number {
     const waitedMs = Date.now() - enqueuedAt;
@@ -61,7 +64,7 @@ export class RelayPoolService {
     return Math.max(0, priority - agingBoost);
   }
 
-  private inferRequestPriority(type: 'get' | 'query', filter: Filter): RelayRequestPriority {
+  private inferRequestPriority(type: 'get' | 'query' | 'count', filter: Filter): RelayRequestPriority {
     const kinds = filter.kinds || [];
 
     // Direct lookups and note/thread content should bypass lower-value background fetches.
@@ -164,7 +167,7 @@ export class RelayPoolService {
 
   private enqueueRequest<T>(
     requestId: string,
-    type: 'get' | 'query',
+    type: 'get' | 'query' | 'count',
     relayUrls: string[],
     priority: RelayRequestPriority,
     operation: () => Promise<T>
@@ -415,6 +418,155 @@ export class RelayPoolService {
       } finally {
         this.subscriptionManager.unregisterRequest(requestId, filteredUrls);
       }
+    });
+  }
+
+  async queryConsistentCount(relayUrls: string[], filter: Filter, timeoutMs = 1500): Promise<number | null> {
+    const connectableRelayUrls = this.getConnectableRelayUrls(relayUrls, 'count');
+
+    if (connectableRelayUrls.length === 0) {
+      return null;
+    }
+
+    const secureUrls = connectableRelayUrls.filter(url => !url.startsWith('ws://'));
+    if (secureUrls.length === 0) {
+      this.logger.warn('[RelayPoolService] All relays are insecure (ws://), cannot connect from secure context');
+      return null;
+    }
+
+    const filteredUrls = this.relayAuth.filterAuthFailedRelays(secureUrls);
+    if (filteredUrls.length === 0) {
+      this.logger.warn('[RelayPoolService] All relays are unavailable, cannot execute count');
+      return null;
+    }
+
+    const cachedUnsupportedRelays = filteredUrls.filter(url => this.isCountKnownUnsupported(url));
+    if (cachedUnsupportedRelays.length > 0) {
+      this.logger.info('[COUNT VERIFY] Skipping COUNT because relay capability is cached unsupported', {
+        relayCount: cachedUnsupportedRelays.length,
+        relays: cachedUnsupportedRelays,
+        filter: JSON.stringify(filter),
+      });
+      return null;
+    }
+
+    this.addRelays(filteredUrls);
+
+    const results = await Promise.allSettled(
+      filteredUrls.map(url => this.queryRelayCount(url, filter, timeoutMs))
+    );
+
+    const successfulCounts: number[] = [];
+
+    for (const result of results) {
+      if (result.status !== 'fulfilled') {
+        return null;
+      }
+
+      successfulCounts.push(result.value);
+    }
+
+    if (successfulCounts.length === 0) {
+      return null;
+    }
+
+    const firstCount = successfulCounts[0];
+    const allCountsMatch = successfulCounts.every(count => count === firstCount);
+
+      if (!allCountsMatch) {
+      this.logger.warn('[COUNT VERIFY] COUNT results disagreed across relays, falling back to event query', {
+        filter,
+        relays: filteredUrls,
+        counts: successfulCounts,
+      });
+      return null;
+    }
+
+    this.logger.info('[COUNT VERIFY] COUNT succeeded across relays', {
+      filter: JSON.stringify(filter),
+      relays: filteredUrls,
+      count: firstCount,
+    });
+
+    return firstCount;
+  }
+
+  private async queryRelayCount(relayUrl: string, filter: Filter, timeoutMs: number): Promise<number> {
+    const requestId = this.subscriptionManager.registerRequest(
+      [relayUrl],
+      'RelayPoolService',
+      this.poolInstanceId
+    );
+
+    const priority = this.inferRequestPriority('count', filter);
+
+    return this.enqueueRequest(requestId, 'count', [relayUrl], priority, async () => {
+      this.logger.debug('[RelayPoolService] Executing count request', {
+        requestId,
+        priority,
+        relayUrl,
+        filter: JSON.stringify(filter),
+        timeout: timeoutMs,
+      });
+
+      try {
+        const relay = await this.#pool.ensureRelay(relayUrl, {
+          connectionTimeout: Math.max(Math.floor(timeoutMs * 0.8), timeoutMs - 250),
+        });
+
+        const count = await Promise.race<number>([
+          relay.count([filter], {}),
+          new Promise<number>((_, reject) => {
+            setTimeout(() => reject(new Error('COUNT request timed out')), timeoutMs);
+          }),
+        ]);
+
+        if (!Number.isFinite(count) || count < 0) {
+          throw new Error(`Invalid COUNT response: ${count}`);
+        }
+
+        this.recordCountCapability(relayUrl, true);
+        this.logger.info('[COUNT VERIFY] Relay COUNT succeeded', {
+          relayUrl,
+          filter: JSON.stringify(filter),
+          count,
+        });
+        this.subscriptionManager.updateConnectionStatus(relayUrl, true, this.poolInstanceId);
+        return count;
+      } catch (error) {
+        this.recordCountCapability(relayUrl, false);
+        this.logger.warn('[COUNT VERIFY] Relay COUNT failed', {
+          relayUrl,
+          filter: JSON.stringify(filter),
+          error: error instanceof Error ? error.message : String(error),
+        });
+        this.subscriptionManager.updateConnectionStatus(relayUrl, false, this.poolInstanceId);
+        throw error;
+      } finally {
+        this.subscriptionManager.unregisterRequest(requestId, [relayUrl]);
+      }
+    });
+  }
+
+  private isCountKnownUnsupported(relayUrl: string): boolean {
+    const cachedCapability = this.countCapabilityCache.get(relayUrl);
+
+    if (!cachedCapability) {
+      return false;
+    }
+
+    if (Date.now() > cachedCapability.expiresAt) {
+      this.countCapabilityCache.delete(relayUrl);
+      return false;
+    }
+
+    return !cachedCapability.supported;
+  }
+
+  private recordCountCapability(relayUrl: string, supported: boolean): void {
+    this.countCapabilityCache.set(relayUrl, {
+      supported,
+      expiresAt: Date.now() + (supported ? this.countSupportedTtlMs : this.countUnsupportedTtlMs),
     });
   }
 
