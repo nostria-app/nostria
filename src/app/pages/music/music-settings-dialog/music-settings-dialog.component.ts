@@ -20,16 +20,10 @@ import { NostrService } from '../../../services/nostr.service';
 import { LoggerService } from '../../../services/logger.service';
 import { DatabaseService } from '../../../services/database.service';
 import { SettingsService } from '../../../services/settings.service';
+import { DEFAULT_MUSIC_RELAYS } from '../../../utils/music-default-relays';
 
 const RELAY_SET_KIND = 30002;
 const MUSIC_RELAY_SET_D_TAG = 'music';
-
-// Default music relays to suggest when user has no relay set
-const DEFAULT_MUSIC_RELAYS = [
-  'wss://nos.lol/',
-  'wss://relay.damus.io/',
-  'wss://drops.basspistol.org',
-];
 
 interface MusicRelaySet {
   event: Event | null;
@@ -137,6 +131,10 @@ export class MusicSettingsDialogComponent implements OnInit {
       const relayUrls = this.relaysService.getOptimalRelays(accountRelays);
 
       if (relayUrls.length === 0) {
+        if (!cachedEvent) {
+          this.hasExistingRelaySet.set(false);
+          this.relays.set([...DEFAULT_MUSIC_RELAYS]);
+        }
         this.isLoading.set(false);
         return;
       }
@@ -235,6 +233,11 @@ export class MusicSettingsDialogComponent implements OnInit {
     if (!this.relays().includes(relay)) {
       this.relays.update(relays => [...relays, relay]);
     }
+  }
+
+  useDefaultRelays(): void {
+    this.relays.set([...DEFAULT_MUSIC_RELAYS]);
+    this.newRelayUrl.set('');
   }
 
   private parseRelayUrl(url: string): string | null {

@@ -60,6 +60,13 @@
         </button>
       </div>
 
+      <div class="relay-actions">
+        <button mat-stroked-button (click)="useDefaultRelays()" [disabled]="isSaving() || isLoading()">
+          <mat-icon>refresh</mat-icon>
+          <span>Use Defaults</span>
+        </button>
+      </div>
+
       <!-- Suggested relays -->
       @if (suggestedRelays.length > 0) {
       <div class="suggested-relays">

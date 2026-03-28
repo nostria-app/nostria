@@ -36,6 +36,7 @@ import { MusicDataService } from '../../services/music-data.service';
 import { ListFilterValue } from '../../components/list-filter-menu/list-filter-menu.component';
 import { MusicListFilterComponent } from '../../components/music-list-filter/music-list-filter.component';
 import { LoggerService } from '../../services/logger.service';
+import { DEFAULT_MUSIC_RELAYS } from '../../utils/music-default-relays';
 
 const MUSIC_KINDS = [...UtilitiesService.MUSIC_KINDS];
 const PLAYLIST_KIND = 34139;
@@ -781,7 +782,12 @@ export class MusicComponent implements OnDestroy {
       // Then fetch from relays to get the latest version
       const accountRelays = this.accountRelay.getRelayUrls();
       const relayUrls = this.relaysService.getOptimalRelays(accountRelays);
-      if (relayUrls.length === 0) return;
+      if (relayUrls.length === 0) {
+        if (!cachedEvent) {
+          this.musicRelays.set([...DEFAULT_MUSIC_RELAYS]);
+        }
+        return;
+      }
 
       const filter: Filter = {
         kinds: [this.RELAY_SET_KIND],
@@ -823,6 +829,8 @@ export class MusicComponent implements OnDestroy {
           await this.database.saveEvent({ ...event, dTag });
           this.logger.debug('[Music] Saved relay set to database');
         }
+      } else if (!cachedEvent) {
+        this.musicRelays.set([...DEFAULT_MUSIC_RELAYS]);
       }
     } catch (error) {
       this.logger.error('Error loading music relay set:', error);

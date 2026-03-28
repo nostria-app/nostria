@@ -130,6 +130,18 @@
   }
 }
 
+.relay-actions {
+  display: flex;
+  justify-content: flex-start;
+  margin-bottom: 16px;
+
+  button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+}
+
 .suggested-relays {
   .suggested-label {
     font-size: 14px;

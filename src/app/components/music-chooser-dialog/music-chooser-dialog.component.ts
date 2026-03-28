@@ -22,17 +22,11 @@ import { DatabaseService } from '../../services/database.service';
 import { MusicPlaylistService, MusicPlaylist } from '../../services/music-playlist.service';
 import { AccountStateService } from '../../services/account-state.service';
 import { LoggerService } from '../../services/logger.service';
+import { DEFAULT_MUSIC_RELAYS } from '../../utils/music-default-relays';
 
 const MUSIC_KIND = UtilitiesService.PRIMARY_MUSIC_KIND;
 const RELAY_SET_KIND = 30002;
 const MUSIC_RELAY_SET_D_TAG = 'music';
-
-/** Default music relays used when user has no configured music relay set */
-const DEFAULT_MUSIC_RELAYS = [
-  'wss://nos.lol/',
-  'wss://relay.damus.io/',
-  'wss://drops.basspistol.org',
-];
 
 export interface MusicChooserResult {
   /** The naddr-encoded reference to the selected music event */

@@ -14,7 +14,7 @@ import { LayoutService } from '../../services/layout.service';
 import { NostrService } from '../../services/nostr.service';
 import { LoggerService } from '../../services/logger.service';
 import { DataService } from '../../services/data.service';
-import { Event, kinds, nip19 } from 'nostr-tools';
+import { Event, kinds } from 'nostr-tools';
 import { CommonModule, Location } from '@angular/common';
 import { ActivatedRoute, ParamMap, Router } from '@angular/router';
 import { UrlUpdateService } from '../../services/url-update.service';
@@ -295,11 +295,13 @@ export class EventPageComponent {
 
     const mainEventPubkey = this.event()?.pubkey;
     const originalPoster = this.threadOriginalPoster();
+    const currentAccountPubkey = this.accountState.pubkey();
 
     // Apply people filter first (if not 'everyone')
     if (filter === REPLY_FILTER_FOLLOWING) {
       const allowedPubkeys = new Set(this.accountState.followingList());
       if (mainEventPubkey) allowedPubkeys.add(mainEventPubkey);
+      if (currentAccountPubkey) allowedPubkeys.add(currentAccountPubkey);
       replies = this.filterThreadedReplies(replies, allowedPubkeys);
     } else if (filter === REPLY_FILTER_AUTHOR_FOLLOWING) {
       replies = this.filterThreadedReplies(replies, this.authorFollowingAllowedPubkeys());
@@ -309,13 +311,14 @@ export class EventPageComponent {
       if (followSet) {
         const allowedPubkeys = new Set(followSet.pubkeys);
         if (mainEventPubkey) allowedPubkeys.add(mainEventPubkey);
+        if (currentAccountPubkey) allowedPubkeys.add(currentAccountPubkey);
         replies = this.filterThreadedReplies(replies, allowedPubkeys);
       }
     }
 
     // Apply WoT rank filter (either standalone WoT filter or combined with people filter via slider)
     if (filter === REPLY_FILTER_WOT || minRank > 0) {
-      replies = this.filterThreadedRepliesByWot(replies, originalPoster ?? mainEventPubkey, minRank);
+      replies = this.filterThreadedRepliesByWot(replies, originalPoster ?? mainEventPubkey, minRank, currentAccountPubkey);
     }
 
     return replies;
@@ -365,16 +368,23 @@ export class EventPageComponent {
    * Recursively filter threaded replies by Web of Trust rank.
    * Only include replies from users with a trust rank >= minRank or the main event author.
    */
-  private filterThreadedRepliesByWot(replies: ThreadedEvent[], mainEventPubkey?: string, minRank = 1): ThreadedEvent[] {
+  private filterThreadedRepliesByWot(
+    replies: ThreadedEvent[],
+    mainEventPubkey?: string,
+    minRank = 1,
+    currentAccountPubkey = this.accountState.pubkey(),
+  ): ThreadedEvent[] {
     const result: ThreadedEvent[] = [];
     const effectiveMinRank = minRank > 0 ? minRank : 1;
 
     for (const reply of replies) {
       const rank = this.trustService.getRankSignal(reply.event.pubkey);
-      const isAllowed = reply.event.pubkey === mainEventPubkey || (typeof rank === 'number' && rank >= effectiveMinRank);
+      const isAllowed = reply.event.pubkey === mainEventPubkey
+        || reply.event.pubkey === currentAccountPubkey
+        || (typeof rank === 'number' && rank >= effectiveMinRank);
 
       // Recursively filter child replies
-      const filteredChildren = this.filterThreadedRepliesByWot(reply.replies, mainEventPubkey, minRank);
+      const filteredChildren = this.filterThreadedRepliesByWot(reply.replies, mainEventPubkey, minRank, currentAccountPubkey);
 
       if (isAllowed) {
         result.push({
@@ -886,13 +896,11 @@ export class EventPageComponent {
 
       // Use progressive loading to show content as it becomes available
       const progressiveLoader = this.eventService.loadThreadProgressively(nevent, this.item);
-      let mainEvent: Event | undefined;
       let deletionCheckStarted = false;
 
       for await (const partialData of progressiveLoader) {
         // Update signals with partial data as it becomes available
         if (partialData.event) {
-          mainEvent = partialData.event;
           this.event.set(partialData.event);
           const hex = partialData.event.id;
           this.id.set(hex);
@@ -1157,6 +1165,7 @@ export class EventPageComponent {
     const isViewingThreadRoot = this.threadData()?.isThreadRoot ?? this.parentEvents().length === 0;
     const rebuiltThread = this.eventService.buildThreadTree(filteredReplies, currentEvent.id, isViewingThreadRoot);
     this.threadedReplies.set(rebuiltThread);
+    this.expandReplyPath(event.id, rebuiltThread);
     this.initialReplyCount.set(undefined);
 
     const currentThreadData = this.threadData();
@@ -1167,6 +1176,41 @@ export class EventPageComponent {
         threadedReplies: rebuiltThread,
       });
     }
+  }
+
+  private expandReplyPath(replyEventId: string, threadedReplies: ThreadedEvent[]): void {
+    const ancestorIds = this.findReplyAncestorIds(threadedReplies, replyEventId);
+    if (!ancestorIds || ancestorIds.length === 0) {
+      return;
+    }
+
+    this.collapsedThreads.update(existing => {
+      const next = new Set(existing);
+      let changed = false;
+
+      for (const ancestorId of ancestorIds) {
+        if (next.delete(ancestorId)) {
+          changed = true;
+        }
+      }
+
+      return changed ? next : existing;
+    });
+  }
+
+  private findReplyAncestorIds(threadedReplies: ThreadedEvent[], targetReplyId: string, ancestors: string[] = []): string[] | null {
+    for (const threadedReply of threadedReplies) {
+      if (threadedReply.event.id === targetReplyId) {
+        return ancestors;
+      }
+
+      const result = this.findReplyAncestorIds(threadedReply.replies, targetReplyId, [...ancestors, threadedReply.event.id]);
+      if (result) {
+        return result;
+      }
+    }
+
+    return null;
   }
 
   private collectKnownThreadEventIds(): Set<string> {
