@@ -410,3 +410,29 @@
     }
   }
 }
+
+@media (max-width: 420px) {
+  .actions-row,
+  .actions-row.mode-labels-only,
+  .actions-row.mode-icons-only,
+  .actions-row.mode-icons-and-labels {
+    .action-button {
+      gap: 4px;
+      padding: 8px;
+
+      .action-icon {
+        width: 22px;
+        height: 22px;
+        overflow: visible;
+      }
+
+      .action-count {
+        display: inline;
+      }
+
+      .action-text {
+        display: none;
+      }
+    }
+  }
+}
