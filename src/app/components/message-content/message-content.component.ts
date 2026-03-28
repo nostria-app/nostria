@@ -25,6 +25,7 @@ import { ParsingService, ContentToken } from '../../services/parsing.service';
 import { MediaPlayerService } from '../../services/media-player.service';
 import { EmojiSetService } from '../../services/emoji-set.service';
 import { LoggerService } from '../../services/logger.service';
+import { CorsProxyService } from '../../services/cors-proxy.service';
 import { ProfileDisplayNameComponent } from '../user-profile/display-name/profile-display-name.component';
 import { UserProfileComponent } from '../user-profile/user-profile.component';
 import { MusicEmbedComponent } from '../music-embed/music-embed.component';
@@ -696,6 +697,7 @@ export class MessageContentComponent {
   private readonly dialog = inject(MatDialog);
   private readonly emojiSetService = inject(EmojiSetService);
   private readonly media = inject(MediaPlayerService);
+  private readonly corsProxy = inject(CorsProxyService);
 
   content = input.required<string>();
   tags = input<string[][]>([]);
@@ -1214,7 +1216,7 @@ export class MessageContentComponent {
     this.setEncryptedFileDecrypting(part.content, true);
 
     try {
-      const response = await fetch(part.content);
+      const response = await this.corsProxy.fetch(part.content);
       if (!response.ok) {
         throw new Error(`Failed to download encrypted file (${response.status})`);
       }
