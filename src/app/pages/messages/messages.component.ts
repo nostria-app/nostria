@@ -1526,13 +1526,6 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   openEncryptedFileDialog(): void {
-    if (this.isGroupChat()) {
-      this.snackBar.open('Encrypted file messages are available in one-on-one chats only right now.', 'Dismiss', {
-        duration: 4000,
-      });
-      return;
-    }
-
     if (!this.encryptedFileInput?.nativeElement) {
       return;
     }
@@ -1811,8 +1804,17 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   private async sendEncryptedFileMessage(file: File): Promise<void> {
     const selectedChat = this.selectedChat();
     const myPubkey = this.accountState.pubkey();
+    const isGroup = !!selectedChat?.isGroup;
 
-    if (!selectedChat?.pubkey || !myPubkey) {
+    if (!selectedChat || !myPubkey) {
+      return;
+    }
+
+    if (isGroup && !selectedChat.participants) {
+      return;
+    }
+
+    if (!isGroup && !selectedChat.pubkey) {
       return;
     }
 
@@ -1820,10 +1822,20 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       this.isSending.set(true);
       this.uploadStatus.set(`Encrypting ${file.name}...`);
 
-      await Promise.all([
-        this.userRelayService.ensureRelaysForPubkey(selectedChat.pubkey),
-        this.userRelayService.ensureDmRelaysForPubkey(selectedChat.pubkey),
-      ]);
+      if (isGroup && selectedChat.participants) {
+        const otherParticipants = selectedChat.participants.filter(p => p !== myPubkey);
+        await Promise.all(
+          otherParticipants.flatMap(p => [
+            this.userRelayService.ensureRelaysForPubkey(p),
+            this.userRelayService.ensureDmRelaysForPubkey(p),
+          ])
+        );
+      } else {
+        await Promise.all([
+          this.userRelayService.ensureRelaysForPubkey(selectedChat.pubkey),
+          this.userRelayService.ensureDmRelaysForPubkey(selectedChat.pubkey),
+        ]);
+      }
 
       const encryption = await this.encryptFileForMessage(file);
       this.uploadStatus.set(`Uploading ${file.name}...`);
@@ -1856,16 +1868,28 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
         ['name', file.name],
       ];
 
-      const result = await this.createNip44Message(
-        uploadResult.item.url,
-        selectedChat.pubkey,
-        myPubkey,
-        this.replyingToMessage()?.id,
-        {
-          rumorKind: kinds.FileMessage,
-          extraRumorTags,
-        },
-      );
+      const result = isGroup && selectedChat.participants
+        ? await this.createNip44GroupMessage(
+          uploadResult.item.url,
+          selectedChat.participants,
+          myPubkey,
+          this.replyingToMessage()?.id,
+          undefined,
+          {
+            rumorKind: kinds.FileMessage,
+            extraRumorTags,
+          },
+        )
+        : await this.createNip44Message(
+          uploadResult.item.url,
+          selectedChat.pubkey,
+          myPubkey,
+          this.replyingToMessage()?.id,
+          {
+            rumorKind: kinds.FileMessage,
+            extraRumorTags,
+          },
+        );
 
       const finalMessage = result.message;
       const previewMessage: DirectMessage = {
@@ -1888,7 +1912,16 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       this.replyingToMessage.set(null);
       this.mediaPreviews.set([]);
 
-      this.messaging.addMessageToChat(chatId, pendingMessage);
+      if (isGroup && selectedChat.participants) {
+        this.messaging.addMessageToChat(chatId, pendingMessage, {
+          isGroup: true,
+          participants: selectedChat.participants,
+          subject: selectedChat.subject,
+          subjectUpdatedAt: selectedChat.subjectUpdatedAt,
+        });
+      } else {
+        this.messaging.addMessageToChat(chatId, pendingMessage);
+      }
       this.pendingMessages.update(msgs => [...msgs, pendingMessage]);
       this.scrollToBottom();
       this.focusMessageInput();

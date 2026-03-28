@@ -921,12 +921,10 @@
               <mat-icon>upload</mat-icon>
               <span>Upload media</span>
             </button>
-            @if (!isGroupChat()) {
             <button mat-menu-item (click)="openEncryptedFileDialog()">
               <mat-icon>lock</mat-icon>
               <span>File (Encrypted)</span>
             </button>
-            }
             <button mat-menu-item (click)="openMediaChooser()">
               <mat-icon>photo_library</mat-icon>
               <span>Choose from library</span>
