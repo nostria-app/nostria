@@ -62,6 +62,21 @@ export interface MenuItemConfig {
   visible: boolean;
 }
 
+export const DEFAULT_MENU_ITEM_IDS: string[] = [
+  '/',
+  '/f',
+  'articles',
+  'summary',
+  'messages',
+  'chats',
+  'n',
+  'people',
+  'collections',
+  'clips',
+  'music',
+  'streams',
+];
+
 /**
  * Threshold for filtering notifications from events with too many tagged accounts.
  * This helps prevent spam notifications from mass-tagging attacks.
@@ -197,20 +212,7 @@ export class LocalSettingsService {
   readonly lockScreenRotation = computed(() => this.settings().lockScreenRotation ?? false);
 
   /** Default menu item IDs in order (used when no custom config is set) */
-  private readonly defaultMenuIds = [
-    '/',
-    '/f',
-    'articles',
-    'summary',
-    'messages',
-    'chats',
-    'n',
-    'people',
-    'collections',
-    'clips',
-    'music',
-    'streams',
-  ];
+  private readonly defaultMenuIds = [...DEFAULT_MENU_ITEM_IDS];
 
   /**
    * Gets the path of the first visible menu item.

@@ -1,10 +1,15 @@
-import { Component, inject, signal, ChangeDetectionStrategy } from '@angular/core';
+import { ChangeDetectionStrategy, Component, effect, inject, signal } from '@angular/core';
 import { CdkDragDrop, CdkDrag, CdkDropList, CdkDragHandle, moveItemInArray } from '@angular/cdk/drag-drop';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatListModule } from '@angular/material/list';
 import { MatDividerModule } from '@angular/material/divider';
-import { LocalSettingsService, MenuItemConfig } from '../../../services/local-settings.service';
+import {
+  DEFAULT_MENU_ITEM_IDS,
+  LocalSettingsService,
+  MenuItemConfig,
+} from '../../../services/local-settings.service';
+import { SettingsService } from '../../../services/settings.service';
 
 /**
  * Available menu item definition with all metadata
@@ -54,19 +59,7 @@ const ALL_MENU_ITEMS: AvailableMenuItem[] = [
 /**
  * Default menu items (matches the default navItems in app.ts)
  */
-const DEFAULT_MENU_IDS = [
-  '/',
-  '/f',
-  'articles',
-  'summary',
-  'messages',
-  'chats',
-  'people',
-  'collections',
-  'clips',
-  'music',
-  'streams',
-];
+const DEFAULT_MENU_IDS = [...DEFAULT_MENU_ITEM_IDS];
 
 @Component({
   selector: 'app-setting-menu-editor',
@@ -329,6 +322,7 @@ const DEFAULT_MENU_IDS = [
 })
 export class SettingMenuEditorComponent {
   private readonly localSettings = inject(LocalSettingsService);
+  private readonly settings = inject(SettingsService);
 
   /**
    * Internal state for active (visible) items
@@ -351,15 +345,15 @@ export class SettingMenuEditorComponent {
   readonly hiddenItems = this._hiddenItems.asReadonly();
 
   constructor() {
-    this.loadCurrentConfig();
+    effect(() => {
+      this.loadCurrentConfig(this.localSettings.menuItems());
+    });
   }
 
   /**
    * Load current menu configuration from settings
    */
-  private loadCurrentConfig(): void {
-    const savedConfig = this.localSettings.menuItems();
-
+  private loadCurrentConfig(savedConfig: MenuItemConfig[]): void {
     if (savedConfig.length === 0) {
       // Use default configuration
       this.initializeFromDefaults();
@@ -510,8 +504,7 @@ export class SettingMenuEditorComponent {
    * Reset menu to default configuration
    */
   resetToDefault(): void {
-    this.localSettings.resetMenuItems();
-    this.initializeFromDefaults();
+    void this.settings.resetMenuItems();
   }
 
   /**
@@ -522,6 +515,6 @@ export class SettingMenuEditorComponent {
       ...this._activeItems().map(item => ({ id: item.id, visible: true })),
       ...this._hiddenItems().map(item => ({ id: item.id, visible: false })),
     ];
-    this.localSettings.setMenuItems(config);
+    void this.settings.updateMenuItems(config);
   }
 }

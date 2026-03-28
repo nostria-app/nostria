@@ -51,7 +51,7 @@ import { WelcomeComponent } from './components/welcome/welcome.component';
 import { SearchService } from './services/search.service';
 import { MediaPlayerComponent } from './components/media-player/media-player.component';
 import { MediaPlayerService } from './services/media-player.service';
-import { LocalSettingsService } from './services/local-settings.service';
+import { DEFAULT_MENU_ITEM_IDS, LocalSettingsService } from './services/local-settings.service';
 import { SettingsService } from './services/settings.service';
 import { AccountStateService } from './services/account-state.service';
 import { RelaysService } from './services/relays/relays';
@@ -724,20 +724,7 @@ export class App implements OnInit, OnDestroy {
   ];
 
   /** Default menu item IDs that show when no custom config is set */
-  private readonly defaultMenuIds = [
-    '/',
-    '/f',
-    'articles',
-    'summary',
-    'messages',
-    'chats',
-    'n',
-    'people',
-    'collections',
-    'clips',
-    'music',
-    'streams',
-  ];
+  private readonly defaultMenuIds = [...DEFAULT_MENU_ITEM_IDS];
 
   constructor() {
     this.logger.info('[App] ==> AppComponent constructor started');

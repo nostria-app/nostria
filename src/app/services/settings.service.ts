@@ -5,7 +5,7 @@ import { LoggerService } from './logger.service';
 import { AccountStateService } from './account-state.service';
 import { AccountRelayService } from './relays/account-relay';
 import { DatabaseService } from './database.service';
-import { LocalSettingsService, RelayDiscoveryMode } from './local-settings.service';
+import { LocalSettingsService, MenuItemConfig, RelayDiscoveryMode } from './local-settings.service';
 
 export type PlaceholderAlgorithm = 'blurhash' | 'thumbhash' | 'both';
 
@@ -42,6 +42,7 @@ export interface UserSettings {
   postToXByDefault?: boolean;
   rightSidebarEnabled?: boolean;
   relayDiscoveryMode?: RelayDiscoveryMode;
+  menuItems?: MenuItemConfig[];
   imageCacheEnabled?: boolean; // Optional setting for image cache
   // Report type visibility settings (NIP-56)
   hideNudity?: boolean;
@@ -221,6 +222,14 @@ export class SettingsService {
       this.hasPersistedSettingsEvent.set(true);
       this.currentSettingsEventCreatedAt = event.created_at;
       this.localSettings.setRelayDiscoveryMode(mergedSettings.relayDiscoveryMode ?? 'outbox');
+
+      if (Object.hasOwn(parsedContent, 'menuItems')) {
+        const menuItems = Array.isArray(parsedContent.menuItems)
+          ? parsedContent.menuItems as MenuItemConfig[]
+          : [];
+        this.localSettings.setMenuItems(menuItems);
+      }
+
       this.logger.info(`Settings ${source}`, this.settings());
       return true;
     } catch (error) {
@@ -437,6 +446,20 @@ export class SettingsService {
       this.logger.error('Failed to save settings', error);
       throw error;
     }
+  }
+
+  async updateMenuItems(menuItems: MenuItemConfig[]): Promise<void> {
+    this.localSettings.setMenuItems(menuItems);
+
+    if (!this.accountState.account()) {
+      return;
+    }
+
+    await this.updateSettings({ menuItems });
+  }
+
+  async resetMenuItems(): Promise<void> {
+    await this.updateMenuItems([]);
   }
 
   async toggleSocialSharingPreview(): Promise<void> {
