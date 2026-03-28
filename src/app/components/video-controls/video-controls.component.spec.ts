@@ -4,259 +4,259 @@ import { VideoControlsComponent } from './video-controls.component';
 import { UtilitiesService } from '../../services/utilities.service';
 
 describe('VideoControlsComponent', () => {
-    let component: VideoControlsComponent;
-    let fixture: ComponentFixture<VideoControlsComponent>;
+  let component: VideoControlsComponent;
+  let fixture: ComponentFixture<VideoControlsComponent>;
 
-    function createComponent() {
-        TestBed.configureTestingModule({
-            imports: [VideoControlsComponent],
-            providers: [
-                provideZonelessChangeDetection(),
-                { provide: UtilitiesService, useValue: {} },
-            ],
-        });
-
-        fixture = TestBed.createComponent(VideoControlsComponent);
-        component = fixture.componentInstance;
-        fixture.detectChanges();
-    }
-
-    function createKeyboardEvent(key: string, options: Partial<KeyboardEventInit> = {}): KeyboardEvent {
-        return new KeyboardEvent('keydown', { key, bubbles: true, ...options });
-    }
-
-    function createMockVideo(overrides: Partial<HTMLVideoElement> = {}): HTMLVideoElement {
-        const video = document.createElement('video');
-        Object.defineProperty(video, 'duration', { value: overrides.duration ?? 100, writable: true });
-        Object.defineProperty(video, 'currentTime', { value: overrides.currentTime ?? 50, writable: true });
-        return video;
-    }
-
-    function focusControlsHost(): void {
-        const host = fixture.nativeElement as HTMLElement;
-        host.focus();
-    }
-
-    beforeEach(() => {
-        createComponent();
+  function createComponent() {
+    TestBed.configureTestingModule({
+      imports: [VideoControlsComponent],
+      providers: [
+        provideZonelessChangeDetection(),
+        { provide: UtilitiesService, useValue: {} },
+      ],
     });
 
-    it('should create', () => {
-        expect(component).toBeTruthy();
+    fixture = TestBed.createComponent(VideoControlsComponent);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+  }
+
+  function createKeyboardEvent(key: string, options: Partial<KeyboardEventInit> = {}): KeyboardEvent {
+    return new KeyboardEvent('keydown', { key, bubbles: true, ...options });
+  }
+
+  function createMockVideo(overrides: Partial<HTMLVideoElement> = {}): HTMLVideoElement {
+    const video = document.createElement('video');
+    Object.defineProperty(video, 'duration', { value: overrides.duration ?? 100, writable: true });
+    Object.defineProperty(video, 'currentTime', { value: overrides.currentTime ?? 50, writable: true });
+    return video;
+  }
+
+  function focusControlsHost(): void {
+    const host = fixture.nativeElement as HTMLElement;
+    host.focus();
+  }
+
+  beforeEach(() => {
+    createComponent();
+  });
+
+  it('should create', () => {
+    expect(component).toBeTruthy();
+  });
+
+  describe('settings panel interactions', () => {
+    it('should consume event when opening settings panel', () => {
+      const event = {
+        preventDefault: vi.fn(),
+        stopPropagation: vi.fn(),
+      } as unknown as Event;
+
+      component.openSettingsPanel(event);
+
+      expect(component.settingsPanel()).toBe('main');
+      expect(event.preventDefault).toHaveBeenCalled();
+      expect(event.stopPropagation).toHaveBeenCalled();
     });
 
-    describe('settings panel interactions', () => {
-        it('should consume event when opening settings panel', () => {
-            const event = {
-                preventDefault: vi.fn(),
-                stopPropagation: vi.fn(),
-            } as unknown as Event;
+    it('should not emit playPause when clicking settings backdrop', () => {
+      component.settingsPanel.set('main');
+      vi.spyOn(component.playPause, 'emit');
 
-            component.openSettingsPanel(event);
+      const backdrop = document.createElement('div');
+      backdrop.className = 'settings-panel-backdrop';
+      const clickEvent = {
+        target: backdrop,
+      } as unknown as MouseEvent;
 
-            expect(component.settingsPanel()).toBe('main');
-            expect(event.preventDefault).toHaveBeenCalled();
-            expect(event.stopPropagation).toHaveBeenCalled();
-        });
+      component.onOverlayClick(clickEvent);
 
-        it('should not emit playPause when clicking settings backdrop', () => {
-            component.settingsPanel.set('main');
-            vi.spyOn(component.playPause, 'emit');
-
-            const backdrop = document.createElement('div');
-            backdrop.className = 'settings-panel-backdrop';
-            const clickEvent = {
-                target: backdrop,
-            } as MouseEvent;
-
-            component.onOverlayClick(clickEvent);
-
-            expect(component.settingsPanel()).toBe('main');
-            expect(component.playPause.emit).not.toHaveBeenCalled();
-        });
-
-        it('should close settings panel without toggling playback on overlay click', () => {
-            component.settingsPanel.set('main');
-            vi.spyOn(component.playPause, 'emit');
-
-            const clickEvent = {
-                target: document.createElement('div'),
-            } as MouseEvent;
-
-            component.onOverlayClick(clickEvent);
-
-            expect(component.settingsPanel()).toBe('closed');
-            expect(component.playPause.emit).not.toHaveBeenCalled();
-        });
+      expect(component.settingsPanel()).toBe('main');
+      expect(component.playPause.emit).not.toHaveBeenCalled();
     });
 
-    describe('document:keydown handler', () => {
-        it('should not handle keys when no video element is set', () => {
-            vi.spyOn(component.playPause, 'emit');
-            document.dispatchEvent(createKeyboardEvent(' '));
-            expect(component.playPause.emit).not.toHaveBeenCalled();
-        });
+    it('should close settings panel without toggling playback on overlay click', () => {
+      component.settingsPanel.set('main');
+      vi.spyOn(component.playPause, 'emit');
 
-        it('should emit playPause on Space key', async () => {
-            fixture.componentRef.setInput('videoElement', createMockVideo());
-            await fixture.whenStable();
-            focusControlsHost();
+      const clickEvent = {
+        target: document.createElement('div'),
+      } as unknown as MouseEvent;
 
-            vi.spyOn(component.playPause, 'emit');
-            document.dispatchEvent(createKeyboardEvent(' '));
-            expect(component.playPause.emit).toHaveBeenCalled();
-        });
+      component.onOverlayClick(clickEvent);
 
-        it('should emit playPause on k key', async () => {
-            fixture.componentRef.setInput('videoElement', createMockVideo());
-            await fixture.whenStable();
-            focusControlsHost();
-
-            vi.spyOn(component.playPause, 'emit');
-            document.dispatchEvent(createKeyboardEvent('k'));
-            expect(component.playPause.emit).toHaveBeenCalled();
-        });
-
-        it('should emit seek on ArrowLeft key (seek back 5s)', async () => {
-            fixture.componentRef.setInput('videoElement', createMockVideo());
-            await fixture.whenStable();
-            focusControlsHost();
-
-            vi.spyOn(component.seek, 'emit');
-            document.dispatchEvent(createKeyboardEvent('ArrowLeft'));
-            expect(component.seek.emit).toHaveBeenCalledWith(45);
-        });
-
-        it('should emit seek on ArrowRight key (seek forward 5s)', async () => {
-            fixture.componentRef.setInput('videoElement', createMockVideo());
-            await fixture.whenStable();
-            focusControlsHost();
-
-            vi.spyOn(component.seek, 'emit');
-            document.dispatchEvent(createKeyboardEvent('ArrowRight'));
-            expect(component.seek.emit).toHaveBeenCalledWith(55);
-        });
-
-        it('should emit volumeChange on ArrowUp key', async () => {
-            fixture.componentRef.setInput('videoElement', createMockVideo());
-            await fixture.whenStable();
-            focusControlsHost();
-
-            vi.spyOn(component.volumeChange, 'emit');
-            document.dispatchEvent(createKeyboardEvent('ArrowUp'));
-            expect(component.volumeChange.emit).toHaveBeenCalled();
-        });
-
-        it('should emit volumeChange on ArrowDown key', async () => {
-            fixture.componentRef.setInput('videoElement', createMockVideo());
-            await fixture.whenStable();
-            focusControlsHost();
-
-            vi.spyOn(component.volumeChange, 'emit');
-            document.dispatchEvent(createKeyboardEvent('ArrowDown'));
-            expect(component.volumeChange.emit).toHaveBeenCalled();
-        });
-
-        it('should emit muteToggle on m key', async () => {
-            fixture.componentRef.setInput('videoElement', createMockVideo());
-            await fixture.whenStable();
-            focusControlsHost();
-
-            vi.spyOn(component.muteToggle, 'emit');
-            document.dispatchEvent(createKeyboardEvent('m'));
-            expect(component.muteToggle.emit).toHaveBeenCalled();
-        });
-
-        it('should emit fullscreenToggle on f key', async () => {
-            fixture.componentRef.setInput('videoElement', createMockVideo());
-            await fixture.whenStable();
-            focusControlsHost();
-
-            vi.spyOn(component.fullscreenToggle, 'emit');
-            document.dispatchEvent(createKeyboardEvent('f'));
-            expect(component.fullscreenToggle.emit).toHaveBeenCalled();
-        });
-
-        it('should ignore keys when focus is outside video controls context', async () => {
-            fixture.componentRef.setInput('videoElement', createMockVideo());
-            await fixture.whenStable();
-
-            const outsideButton = document.createElement('button');
-            document.body.appendChild(outsideButton);
-            outsideButton.focus();
-
-            vi.spyOn(component.fullscreenToggle, 'emit');
-            document.dispatchEvent(createKeyboardEvent('f'));
-            expect(component.fullscreenToggle.emit).not.toHaveBeenCalled();
-
-            document.body.removeChild(outsideButton);
-        });
-
-        it('should ignore keys with ctrlKey modifier', async () => {
-            fixture.componentRef.setInput('videoElement', createMockVideo());
-            await fixture.whenStable();
-
-            vi.spyOn(component.playPause, 'emit');
-            document.dispatchEvent(createKeyboardEvent(' ', { ctrlKey: true }));
-            expect(component.playPause.emit).not.toHaveBeenCalled();
-        });
-
-        it('should ignore keys with altKey modifier', async () => {
-            fixture.componentRef.setInput('videoElement', createMockVideo());
-            await fixture.whenStable();
-
-            vi.spyOn(component.playPause, 'emit');
-            document.dispatchEvent(createKeyboardEvent(' ', { altKey: true }));
-            expect(component.playPause.emit).not.toHaveBeenCalled();
-        });
-
-        it('should ignore keys with metaKey modifier', async () => {
-            fixture.componentRef.setInput('videoElement', createMockVideo());
-            await fixture.whenStable();
-
-            vi.spyOn(component.playPause, 'emit');
-            document.dispatchEvent(createKeyboardEvent(' ', { metaKey: true }));
-            expect(component.playPause.emit).not.toHaveBeenCalled();
-        });
-
-        it('should ignore keys when an input element is focused', async () => {
-            fixture.componentRef.setInput('videoElement', createMockVideo());
-            await fixture.whenStable();
-
-            const input = document.createElement('input');
-            document.body.appendChild(input);
-            input.focus();
-
-            vi.spyOn(component.playPause, 'emit');
-            document.dispatchEvent(createKeyboardEvent(' '));
-            expect(component.playPause.emit).not.toHaveBeenCalled();
-
-            document.body.removeChild(input);
-        });
-
-        it('should ignore keys when a textarea element is focused', async () => {
-            fixture.componentRef.setInput('videoElement', createMockVideo());
-            await fixture.whenStable();
-
-            const textarea = document.createElement('textarea');
-            document.body.appendChild(textarea);
-            textarea.focus();
-
-            vi.spyOn(component.playPause, 'emit');
-            document.dispatchEvent(createKeyboardEvent(' '));
-            expect(component.playPause.emit).not.toHaveBeenCalled();
-
-            document.body.removeChild(textarea);
-        });
-
-        it('should stop handling keys after component is destroyed', async () => {
-            fixture.componentRef.setInput('videoElement', createMockVideo());
-            await fixture.whenStable();
-
-            vi.spyOn(component.playPause, 'emit');
-            fixture.destroy();
-            document.dispatchEvent(createKeyboardEvent(' '));
-            expect(component.playPause.emit).not.toHaveBeenCalled();
-        });
+      expect(component.settingsPanel()).toBe('closed');
+      expect(component.playPause.emit).not.toHaveBeenCalled();
     });
+  });
+
+  describe('document:keydown handler', () => {
+    it('should not handle keys when no video element is set', () => {
+      vi.spyOn(component.playPause, 'emit');
+      document.dispatchEvent(createKeyboardEvent(' '));
+      expect(component.playPause.emit).not.toHaveBeenCalled();
+    });
+
+    it('should emit playPause on Space key', async () => {
+      fixture.componentRef.setInput('videoElement', createMockVideo());
+      await fixture.whenStable();
+      focusControlsHost();
+
+      vi.spyOn(component.playPause, 'emit');
+      document.dispatchEvent(createKeyboardEvent(' '));
+      expect(component.playPause.emit).toHaveBeenCalled();
+    });
+
+    it('should emit playPause on k key', async () => {
+      fixture.componentRef.setInput('videoElement', createMockVideo());
+      await fixture.whenStable();
+      focusControlsHost();
+
+      vi.spyOn(component.playPause, 'emit');
+      document.dispatchEvent(createKeyboardEvent('k'));
+      expect(component.playPause.emit).toHaveBeenCalled();
+    });
+
+    it('should emit seek on ArrowLeft key (seek back 5s)', async () => {
+      fixture.componentRef.setInput('videoElement', createMockVideo());
+      await fixture.whenStable();
+      focusControlsHost();
+
+      vi.spyOn(component.seek, 'emit');
+      document.dispatchEvent(createKeyboardEvent('ArrowLeft'));
+      expect(component.seek.emit).toHaveBeenCalledWith(45);
+    });
+
+    it('should emit seek on ArrowRight key (seek forward 5s)', async () => {
+      fixture.componentRef.setInput('videoElement', createMockVideo());
+      await fixture.whenStable();
+      focusControlsHost();
+
+      vi.spyOn(component.seek, 'emit');
+      document.dispatchEvent(createKeyboardEvent('ArrowRight'));
+      expect(component.seek.emit).toHaveBeenCalledWith(55);
+    });
+
+    it('should emit volumeChange on ArrowUp key', async () => {
+      fixture.componentRef.setInput('videoElement', createMockVideo());
+      await fixture.whenStable();
+      focusControlsHost();
+
+      vi.spyOn(component.volumeChange, 'emit');
+      document.dispatchEvent(createKeyboardEvent('ArrowUp'));
+      expect(component.volumeChange.emit).toHaveBeenCalled();
+    });
+
+    it('should emit volumeChange on ArrowDown key', async () => {
+      fixture.componentRef.setInput('videoElement', createMockVideo());
+      await fixture.whenStable();
+      focusControlsHost();
+
+      vi.spyOn(component.volumeChange, 'emit');
+      document.dispatchEvent(createKeyboardEvent('ArrowDown'));
+      expect(component.volumeChange.emit).toHaveBeenCalled();
+    });
+
+    it('should emit muteToggle on m key', async () => {
+      fixture.componentRef.setInput('videoElement', createMockVideo());
+      await fixture.whenStable();
+      focusControlsHost();
+
+      vi.spyOn(component.muteToggle, 'emit');
+      document.dispatchEvent(createKeyboardEvent('m'));
+      expect(component.muteToggle.emit).toHaveBeenCalled();
+    });
+
+    it('should emit fullscreenToggle on f key', async () => {
+      fixture.componentRef.setInput('videoElement', createMockVideo());
+      await fixture.whenStable();
+      focusControlsHost();
+
+      vi.spyOn(component.fullscreenToggle, 'emit');
+      document.dispatchEvent(createKeyboardEvent('f'));
+      expect(component.fullscreenToggle.emit).toHaveBeenCalled();
+    });
+
+    it('should ignore keys when focus is outside video controls context', async () => {
+      fixture.componentRef.setInput('videoElement', createMockVideo());
+      await fixture.whenStable();
+
+      const outsideButton = document.createElement('button');
+      document.body.appendChild(outsideButton);
+      outsideButton.focus();
+
+      vi.spyOn(component.fullscreenToggle, 'emit');
+      document.dispatchEvent(createKeyboardEvent('f'));
+      expect(component.fullscreenToggle.emit).not.toHaveBeenCalled();
+
+      document.body.removeChild(outsideButton);
+    });
+
+    it('should ignore keys with ctrlKey modifier', async () => {
+      fixture.componentRef.setInput('videoElement', createMockVideo());
+      await fixture.whenStable();
+
+      vi.spyOn(component.playPause, 'emit');
+      document.dispatchEvent(createKeyboardEvent(' ', { ctrlKey: true }));
+      expect(component.playPause.emit).not.toHaveBeenCalled();
+    });
+
+    it('should ignore keys with altKey modifier', async () => {
+      fixture.componentRef.setInput('videoElement', createMockVideo());
+      await fixture.whenStable();
+
+      vi.spyOn(component.playPause, 'emit');
+      document.dispatchEvent(createKeyboardEvent(' ', { altKey: true }));
+      expect(component.playPause.emit).not.toHaveBeenCalled();
+    });
+
+    it('should ignore keys with metaKey modifier', async () => {
+      fixture.componentRef.setInput('videoElement', createMockVideo());
+      await fixture.whenStable();
+
+      vi.spyOn(component.playPause, 'emit');
+      document.dispatchEvent(createKeyboardEvent(' ', { metaKey: true }));
+      expect(component.playPause.emit).not.toHaveBeenCalled();
+    });
+
+    it('should ignore keys when an input element is focused', async () => {
+      fixture.componentRef.setInput('videoElement', createMockVideo());
+      await fixture.whenStable();
+
+      const input = document.createElement('input');
+      document.body.appendChild(input);
+      input.focus();
+
+      vi.spyOn(component.playPause, 'emit');
+      document.dispatchEvent(createKeyboardEvent(' '));
+      expect(component.playPause.emit).not.toHaveBeenCalled();
+
+      document.body.removeChild(input);
+    });
+
+    it('should ignore keys when a textarea element is focused', async () => {
+      fixture.componentRef.setInput('videoElement', createMockVideo());
+      await fixture.whenStable();
+
+      const textarea = document.createElement('textarea');
+      document.body.appendChild(textarea);
+      textarea.focus();
+
+      vi.spyOn(component.playPause, 'emit');
+      document.dispatchEvent(createKeyboardEvent(' '));
+      expect(component.playPause.emit).not.toHaveBeenCalled();
+
+      document.body.removeChild(textarea);
+    });
+
+    it('should stop handling keys after component is destroyed', async () => {
+      fixture.componentRef.setInput('videoElement', createMockVideo());
+      await fixture.whenStable();
+
+      vi.spyOn(component.playPause, 'emit');
+      fixture.destroy();
+      document.dispatchEvent(createKeyboardEvent(' '));
+      expect(component.playPause.emit).not.toHaveBeenCalled();
+    });
+  });
 });

@@ -1,13 +1,25 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideZonelessChangeDetection } from '@angular/core';
+import { provideZonelessChangeDetection, signal } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { ReactionButtonComponent } from './reaction-button.component';
+import { LayoutService } from '../../../services/layout.service';
 import { LocalSettingsService } from '../../../services/local-settings.service';
 
 describe('ReactionButtonComponent', () => {
   let component: ReactionButtonComponent;
   let fixture: ComponentFixture<ReactionButtonComponent>;
+  const isHandset = signal(false);
+
+  function createPointerEvent(type: string, init: PointerEventInit = {}): PointerEvent {
+    return new PointerEvent(type, {
+      bubbles: true,
+      cancelable: true,
+      pointerId: 1,
+      pointerType: 'mouse',
+      ...init,
+    });
+  }
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
@@ -15,11 +27,19 @@ describe('ReactionButtonComponent', () => {
       providers: [
         provideZonelessChangeDetection(),
         provideRouter([]),
+        {
+          provide: LayoutService,
+          useValue: {
+            isHandset,
+            showLoginDialog: vi.fn(),
+          },
+        },
       ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(ReactionButtonComponent);
     component = fixture.componentInstance;
+    isHandset.set(false);
   });
 
   it('should create', () => {
@@ -120,8 +140,9 @@ describe('ReactionButtonComponent', () => {
     });
 
     it('should open the shared mobile picker dialog on handset screens', () => {
-      component.isHandset.set(true);
-      const openDialogSpy = vi.spyOn(component as never, 'openReactionPickerDialog').mockResolvedValue(undefined);
+      isHandset.set(true);
+      const openDialogSpy = vi.spyOn(component as any, 'openReactionPickerDialog')
+        .mockResolvedValue(undefined);
 
       component.openMenu();
 
@@ -130,68 +151,71 @@ describe('ReactionButtonComponent', () => {
   });
 
   describe('long-press detection', () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
     it('should send default reaction on quick pointer up (no long press)', () => {
       const sendDefaultReactionSpy = vi.spyOn(component, 'sendDefaultReaction');
       const pointerEvent = new PointerEvent('pointerup', { cancelable: true });
 
       // Simulate pointer down then quick pointer up
-      component.onPointerDown();
+      component.onPointerDown(createPointerEvent('pointerdown'));
       component.onPointerUp(pointerEvent);
 
       expect(sendDefaultReactionSpy).toHaveBeenCalled();
     });
 
-    it('should open menu on long press', async () => {
+    it('should open menu on long press', () => {
       const openMenuSpy = vi.spyOn(component, 'openMenu');
 
-      component.onPointerDown();
+      component.onPointerDown(createPointerEvent('pointerdown'));
 
-      // Wait for long-press timer to fire (500ms + buffer)
-      setTimeout(() => {
-        expect(openMenuSpy).toHaveBeenCalled();
-        ;
-      }, 600);
+      vi.advanceTimersByTime(600);
+
+      expect(openMenuSpy).toHaveBeenCalled();
     });
 
-    it('should not send default reaction after long press completes', async () => {
+    it('should not send default reaction after long press completes', () => {
       const sendDefaultReactionSpy = vi.spyOn(component, 'sendDefaultReaction');
       vi.spyOn(component, 'openMenu');
 
-      component.onPointerDown();
+      component.onPointerDown(createPointerEvent('pointerdown'));
 
-      // Wait for long-press to trigger
-      setTimeout(() => {
-        const pointerEvent = new PointerEvent('pointerup', { cancelable: true });
-        component.onPointerUp(pointerEvent);
-        expect(sendDefaultReactionSpy).not.toHaveBeenCalled();
-        ;
-      }, 600);
+      vi.advanceTimersByTime(600);
+
+      const pointerEvent = new PointerEvent('pointerup', { cancelable: true });
+      component.onPointerUp(pointerEvent);
+
+      expect(sendDefaultReactionSpy).not.toHaveBeenCalled();
     });
 
-    it('should cancel long press on pointer leave', async () => {
+    it('should cancel long press on pointer leave', () => {
       const openMenuSpy = vi.spyOn(component, 'openMenu');
 
-      component.onPointerDown();
+      component.onPointerDown(createPointerEvent('pointerdown'));
       // Cancel immediately
       component.onPointerLeave();
 
-      // Wait past the long-press duration
-      setTimeout(() => {
-        expect(openMenuSpy).not.toHaveBeenCalled();
-        ;
-      }, 600);
+      vi.advanceTimersByTime(600);
+
+      expect(openMenuSpy).not.toHaveBeenCalled();
     });
 
     it('should reset longPressTriggered after pointer up', () => {
       const sendDefaultReactionSpy = vi.spyOn(component, 'sendDefaultReaction');
 
       // First interaction: quick tap
-      component.onPointerDown();
+      component.onPointerDown(createPointerEvent('pointerdown'));
       component.onPointerUp(new PointerEvent('pointerup', { cancelable: true }));
       expect(sendDefaultReactionSpy).toHaveBeenCalledTimes(1);
 
       // Second interaction: quick tap should also work
-      component.onPointerDown();
+      component.onPointerDown(createPointerEvent('pointerdown'));
       component.onPointerUp(new PointerEvent('pointerup', { cancelable: true }));
       expect(sendDefaultReactionSpy).toHaveBeenCalledTimes(2);
     });
