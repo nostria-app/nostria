@@ -276,8 +276,7 @@ export class StateService implements NostriaService {
       // Truly not found anywhere — create and publish defaults.
       this.logger.info('[StateService] User has no discovery relays (kind 10086) anywhere, creating defaults');
 
-      const region = this.accountState.account()?.region || 'eu';
-      const defaultRelays = this.discoveryRelay.getDefaultDiscoveryRelays(region);
+      const defaultRelays = this.discoveryRelay.getDefaultDiscoveryRelays();
 
       // Save to local storage so they're used immediately
       this.discoveryRelay.setDiscoveryRelays(defaultRelays);

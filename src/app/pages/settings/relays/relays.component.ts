@@ -171,20 +171,7 @@ export class RelaysComponent implements OnInit, OnDestroy {
   nip11Loading = signal<Set<string>>(new Set());
 
   knownDiscoveryRelays = [
-    'wss://discovery.eu.nostria.app/',
-    'wss://discovery.us.nostria.app/',
-    // 'wss://discovery.af.nostria.app/',
-  ];
-
-  // Secondary discovery relay - purplepag.es is a popular discovery relay
-  // that can be optionally included via a checkbox in the relay selection dialog
-  readonly PURPLEPAGES_RELAY = 'wss://purplepag.es/';
-
-  // Nostria relay regions for setup
-  nostriaRelayRegions = [
-    { id: 'eu', name: 'Europe', discoveryRelay: 'wss://discovery.eu.nostria.app/' },
-    { id: 'us', name: 'North America', discoveryRelay: 'wss://discovery.us.nostria.app/' },
-    // { id: 'af', name: 'Africa', discoveryRelay: 'wss://discovery.af.nostria.app/' },
+    'wss://indexer.openresist.com/',
   ];
 
   // Signal to track if user has zero account relays
@@ -1012,13 +999,12 @@ export class RelaysComponent implements OnInit, OnDestroy {
 
   async findClosestRelay(): Promise<void> {
     this.isCheckingRelays.set(true);
-    this.logger.info('Starting latency check to find closest discovery relay');
+    this.logger.info('Starting latency check to find best discovery relay');
 
     // Combine user's discovery relays with known ones, removing duplicates
-    // Filter out purplepag.es since it's handled separately via the toggle
     const relaysToCheck = [
       ...new Set([...this.discoveryRelay.getRelayUrls(), ...this.knownDiscoveryRelays]),
-    ].filter(url => url !== this.PURPLEPAGES_RELAY);
+    ];
 
     this.logger.debug('Checking relays for latency', {
       count: relaysToCheck.length,
@@ -1067,32 +1053,20 @@ export class RelaysComponent implements OnInit, OnDestroy {
       dialogRef.afterClosed().subscribe((result: RelayPingDialogResult | undefined) => {
         if (result?.selected) {
           const selectedRelay = result.selected;
-          const includePurplepages = result.includePurplepages;
 
           // Run in setTimeout to avoid the ExpressionChangedAfterItHasBeenCheckedError
           setTimeout(() => {
-            // Add the selected fastest relay
             this.discoveryRelay.addRelay(selectedRelay.url);
-
-            // If purplepag.es toggle is enabled, add it as a secondary relay
-            if (includePurplepages) {
-              this.discoveryRelay.addRelay(this.PURPLEPAGES_RELAY);
-            }
 
             this.discoveryRelay.setDiscoveryRelays(this.discoveryRelay.getRelayUrls());
             this.publishDiscoveryRelayList();
-
-            if (includePurplepages) {
-              this.showMessage(`Added ${this.formatRelayUrl(selectedRelay.url)} and purplepag.es to discovery relays`);
-            } else {
-              this.showMessage(`Added ${this.formatRelayUrl(selectedRelay.url)} to discovery relays`);
-            }
+            this.showMessage(`Added ${this.formatRelayUrl(selectedRelay.url)} to discovery relays`);
           }, 0);
         }
       });
     } catch (error) {
-      this.logger.error('Error finding closest relay', error);
-      this.showMessage('Error finding closest relay');
+      this.logger.error('Error finding discovery relay', error);
+      this.showMessage('Error finding discovery relay');
     } finally {
       this.isCheckingRelays.set(false);
     }
@@ -1300,153 +1274,58 @@ export class RelaysComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Setup Nostria relays for users with zero account relays.
-   * Pings all Nostria relay regions and lets user choose based on latency.
+   * Setup default relays for users with zero account relays.
    */
   async setupNostriaRelays(): Promise<void> {
     this.isSettingUpNostriaRelays.set(true);
-    this.logger.info('Starting Nostria relay setup for user with zero relays');
+    this.logger.info('Starting default relay setup for user with zero relays');
 
     // Track if user had zero relays at the start
     const hadZeroRelays = this.userRelays().length === 0;
     const hadZeroDiscoveryRelays = this.discoveryRelay.getRelayUrls().length === 0;
 
     try {
-      // Get relay URLs for each region (using first instance of each region)
-      const relaysToCheck = this.nostriaRelayRegions.map(region => ({
-        region: region.name,
-        regionId: region.id,
-        discoveryRelay: region.discoveryRelay,
-        relayUrl: `wss://ribo.${region.id}.nostria.app`,
-      }));
+      const accountRelayUrl = 'wss://relay.openresist.com/';
+      const discoveryRelayUrl = 'wss://indexer.openresist.com/';
+      const defaultRelays = [
+        accountRelayUrl,
+        'wss://relay.damus.io/',
+        'wss://nos.lol/',
+        'wss://relay.primal.net/',
+      ];
 
-      this.logger.debug('Checking Nostria relay latencies', { relaysToCheck });
-      this.showMessage(`Checking ${relaysToCheck.length} Nostria relay regions for latency...`);
+      this.logger.info('Adding default relays for automated setup', { defaultRelays, discoveryRelayUrl });
+      defaultRelays.forEach(relayUrl => {
+        this.accountRelay.addRelay(relayUrl);
+      });
 
-      // Check latency for all regions
-      const pingResults = await Promise.allSettled(
-        relaysToCheck.map(async relay => {
-          const pingTime = await this.checkRelayPing(relay.relayUrl);
-          return {
-            region: relay.region,
-            regionId: relay.regionId,
-            discoveryRelay: relay.discoveryRelay,
-            relayUrl: relay.relayUrl,
-            pingTime,
-          };
-        })
+      const normalizedDiscoveryUrl = this.utilities.normalizeRelayUrl(discoveryRelayUrl);
+      const existingDiscoveryRelays = this.discoveryRelay.getRelayUrls().map(url =>
+        this.utilities.normalizeRelayUrl(url)
       );
 
-      // Process results
-      const successfulPings = pingResults
-        .map(result => {
-          if (result.status === 'fulfilled') {
-            return result.value;
-          }
-          return null;
-        })
-        .filter(result => result !== null)
-        .sort((a, b) => a!.pingTime - b!.pingTime);
-
-      this.logger.debug('Nostria relay latency results', { successfulPings });
-
-      if (successfulPings.length === 0) {
-        this.showMessage('No reachable Nostria relays found. Please try again later.');
-        this.isSettingUpNostriaRelays.set(false);
-        return;
+      if (hadZeroRelays && !existingDiscoveryRelays.includes(normalizedDiscoveryUrl)) {
+        this.logger.info('Adding default discovery relay for new user', {
+          discoveryRelayUrl,
+          normalizedDiscoveryUrl,
+          hadZeroRelays,
+          hadZeroDiscoveryRelays,
+        });
+        this.discoveryRelay.addRelay(discoveryRelayUrl);
+        this.discoveryRelay.setDiscoveryRelays(this.discoveryRelay.getRelayUrls());
+        await this.publishDiscoveryRelayList();
       }
 
-      // Show dialog with results - format for the existing dialog component
-      const dialogResults = successfulPings.map(result => ({
-        url: `${result!.region} (${this.formatRelayUrl(result!.relayUrl)})`,
-        pingTime: result!.pingTime,
-        isAlreadyAdded: false,
-        regionData: result,
-      }));
+      await this.publish();
 
-      const dialogRef = this.dialog.open(RelayPingResultsDialogComponent, {
-        width: '500px',
-        data: {
-          results: dialogResults,
-        },
-      });
+      this.logger.info('Automatically setting DM relays to match account relays');
+      await this.updateDirectMessageRelayList();
 
-      dialogRef.afterClosed().subscribe(async result => {
-        if (result?.selected) {
-          const selectedRegion = result.selected.regionData;
-
-          this.logger.info('User selected Nostria region', {
-            region: selectedRegion.region,
-            regionId: selectedRegion.regionId,
-            pingTime: selectedRegion.pingTime,
-          });
-
-          try {
-            // Add the main relay to account relays
-            this.accountRelay.addRelay(selectedRegion.relayUrl);
-
-            // Add default relays (same as new user accounts)
-            const defaultRelays = [
-              'wss://relay.damus.io/',
-              'wss://nos.lol/',
-              'wss://relay.primal.net/',
-            ];
-
-            this.logger.info('Adding default relays for automated setup', { defaultRelays });
-            defaultRelays.forEach(relayUrl => {
-              this.accountRelay.addRelay(relayUrl);
-            });
-
-            // Only automatically add discovery relay if user had zero relays initially
-            // and doesn't already have this discovery relay (using normalized URL comparison)
-            const discoveryRelayUrl = selectedRegion.discoveryRelay;
-            const normalizedDiscoveryUrl = this.utilities.normalizeRelayUrl(discoveryRelayUrl);
-            const existingDiscoveryRelays = this.discoveryRelay.getRelayUrls().map(url =>
-              this.utilities.normalizeRelayUrl(url)
-            );
-
-            if (hadZeroRelays && !existingDiscoveryRelays.includes(normalizedDiscoveryUrl)) {
-              this.logger.info('Adding Nostria discovery relay for new user', {
-                discoveryRelayUrl,
-                normalizedDiscoveryUrl,
-                hadZeroRelays,
-                hadZeroDiscoveryRelays
-              });
-              this.discoveryRelay.addRelay(discoveryRelayUrl);
-              this.discoveryRelay.setDiscoveryRelays(this.discoveryRelay.getRelayUrls());
-              await this.publishDiscoveryRelayList();
-            } else if (existingDiscoveryRelays.includes(normalizedDiscoveryUrl)) {
-              this.logger.debug('Discovery relay already exists (normalized), skipping', {
-                discoveryRelayUrl,
-                normalizedDiscoveryUrl
-              });
-            } else {
-              this.logger.debug('User already had relays, not auto-adding discovery relay', {
-                hadZeroRelays
-              });
-            }
-
-            // Publish the relay list
-            await this.publish();
-
-            // Automatically set DM relays to match account relays for new users
-            this.logger.info('Automatically setting DM relays to match account relays');
-            await this.updateDirectMessageRelayList();
-
-            this.showMessage(
-              `Successfully added ${selectedRegion.region} Nostria relay (${selectedRegion.pingTime}ms latency)`
-            );
-          } catch (error) {
-            this.logger.error('Failed to setup Nostria relays', error);
-            this.showMessage('Error setting up Nostria relays. Please try again.');
-          }
-        }
-
-        this.isSettingUpNostriaRelays.set(false);
-      });
+      this.showMessage('Successfully added the default relay setup');
+      this.isSettingUpNostriaRelays.set(false);
     } catch (error) {
-      this.logger.error('Error during Nostria relay setup', error);
-      this.showMessage('Error checking relay latency. Please try again.');
+      this.logger.error('Error during default relay setup', error);
+      this.showMessage('Error setting up default relays. Please try again.');
       this.isSettingUpNostriaRelays.set(false);
     }
   }

@@ -1167,9 +1167,7 @@ export class UtilitiesService {
    */
   readonly excludedFromOptimalSelection: string[] = [
     'wss://purplepag.es/',
-    'wss://discovery.eu.nostria.app/',
-    'wss://discovery.us.nostria.app/',
-    'wss://indexer.coracle.social/',
+    'wss://indexer.openresist.com/',
   ];
 
   /** Used to optimize the selection of a few relays from the user's relay list. */

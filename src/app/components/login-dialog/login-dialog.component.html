@@ -222,13 +222,9 @@
             (click)="setNostrConnectRelayOption('nip46')">
             relay.nip46.com
           </button>
-          <button mat-stroked-button [class.selected]="nostrConnectRelayOption() === 'eu'"
-            (click)="setNostrConnectRelayOption('eu')">
-            🇪🇺 Nostria Europe
-          </button>
-          <button mat-stroked-button [class.selected]="nostrConnectRelayOption() === 'us'"
-            (click)="setNostrConnectRelayOption('us')">
-            🇺🇸 Nostria US
+          <button mat-stroked-button [class.selected]="nostrConnectRelayOption() === 'openresist'"
+            (click)="setNostrConnectRelayOption('openresist')">
+            relay.openresist.com
           </button>
         </div>
       </div>

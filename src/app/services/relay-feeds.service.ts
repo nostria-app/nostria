@@ -30,8 +30,7 @@ const DEFAULT_RELAYS: string[] = [
   'nostr.wine',
   'news.utxo.one',
   'nostr21.com',
-  'ribo.eu.nostria.app',
-  'ribo.us.nostria.app',
+  'relay.openresist.com',
 ];
 
 export interface RelaySet {

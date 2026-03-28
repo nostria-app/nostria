@@ -96,7 +96,7 @@ export class LoginDialogComponent implements OnDestroy {
 
   // Client-initiated nostrconnect signals
   nostrConnectQrUrl = signal<string>('');
-  nostrConnectRelayOption = signal<'nip46' | 'eu' | 'us'>('nip46');
+  nostrConnectRelayOption = signal<'nip46' | 'openresist'>('nip46');
   isWaitingForRemoteSigner = signal(false);
   private remoteSignerClientKey: Uint8Array | null = null;
   private remoteSignerPool: SimplePool | null = null;
@@ -105,12 +105,10 @@ export class LoginDialogComponent implements OnDestroy {
   private nostrConnectListenTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
   // Default relays for nostrconnect by option.
-  // 'nip46' is the default — relay.nip46.com is universally supported by Amber
-  // and other NIP-46 signers. The eu/us options use Nostria's own regional relays.
-  private readonly nostrConnectRelays: Record<'nip46' | 'eu' | 'us', string[]> = {
+  // 'nip46' remains the default because relay.nip46.com is broadly supported.
+  private readonly nostrConnectRelays: Record<'nip46' | 'openresist', string[]> = {
     nip46: ['wss://relay.nip46.com'],
-    eu: ['wss://ribo.eu.nostria.app'],
-    us: ['wss://ribo.us.nostria.app'],
+    openresist: ['wss://relay.openresist.com'],
   };
 
   // Future-proof signer permissions:
@@ -920,7 +918,7 @@ export class LoginDialogComponent implements OnDestroy {
     }
   }
 
-  setNostrConnectRelayOption(option: 'nip46' | 'eu' | 'us'): void {
+  setNostrConnectRelayOption(option: 'nip46' | 'openresist'): void {
     this.nostrConnectRelayOption.set(option);
     // Regenerate QR code with new relay
     this.generateNostrConnectQR();

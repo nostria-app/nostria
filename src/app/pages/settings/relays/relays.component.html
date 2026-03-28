@@ -30,7 +30,7 @@
               <button mat-flat-button color="primary" class="setup-nostria-button" (click)="setupNostriaRelays()"
                 [disabled]="isSettingUpNostriaRelays()">
                 <mat-icon>auto_awesome</mat-icon>
-                <span i18n="@@settings.relays.quick-setup">Quick Setup with Nostria</span>
+                <span i18n="@@settings.relays.quick-setup">Quick Setup</span>
                 @if (isSettingUpNostriaRelays()) {
                 <mat-icon class="spinning-icon">sync</mat-icon>
                 }
@@ -280,7 +280,7 @@
       <button mat-flat-button color="accent" class="find-closest-button" (click)="findClosestRelay()"
         [disabled]="isCheckingRelays()">
         <mat-icon>network_check</mat-icon>
-        <span i18n="@@settings.relays.find-closest">Find Closest Discovery Relay</span>
+        <span i18n="@@settings.relays.find-closest">Find Best Discovery Relay</span>
         @if (isCheckingRelays()) {
         <mat-icon class="spinning-icon">sync</mat-icon>
         }

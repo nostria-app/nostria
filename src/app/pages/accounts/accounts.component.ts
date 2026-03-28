@@ -41,7 +41,7 @@ import { SetUsernameDialogComponent, SetUsernameDialogData } from '../premium/se
 import { environment } from '../../../environments/environment';
 import { NostrUser } from '../../services/nostr.service';
 
-type RemoteRelayOption = 'nip46' | 'eu' | 'us' | 'custom';
+type RemoteRelayOption = 'nip46' | 'openresist' | 'custom';
 
 @Component({
   selector: 'app-accounts',
@@ -76,13 +76,9 @@ export class AccountsComponent implements OnInit, OnDestroy {
       label: 'relay.nip46.com',
       url: 'wss://relay.nip46.com/',
     },
-    eu: {
-      label: '🇪🇺 Nostria Europe',
-      url: 'wss://ribo.eu.nostria.app/',
-    },
-    us: {
-      label: '🇺🇸 Nostria US',
-      url: 'wss://ribo.us.nostria.app/',
+    openresist: {
+      label: 'relay.openresist.com',
+      url: 'wss://relay.openresist.com/',
     },
   } as const;
 

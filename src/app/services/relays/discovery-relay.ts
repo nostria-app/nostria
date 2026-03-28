@@ -4,7 +4,6 @@ import { NostriaService } from '../../interfaces';
 import { LocalStorageService } from '../local-storage.service';
 import { ApplicationStateService } from '../application-state.service';
 import { DatabaseService } from '../database.service';
-import { RegionService } from '../region.service';
 import { kinds, UnsignedEvent, Event } from 'nostr-tools';
 import { AccountRelayService } from './account-relay';
 import { PoolService } from './pool.service';
@@ -19,7 +18,6 @@ export class DiscoveryRelayService extends RelayServiceBase implements NostriaSe
   private localStorage = inject(LocalStorageService);
   private appState = inject(ApplicationStateService);
   private database = inject(DatabaseService);
-  private region = inject(RegionService);
   private poolLoaded = false;
   private readonly relayCacheTtlMs = 5 * 60 * 1000;
   private readonly dmRelayCacheTtlMs = 10 * 60 * 1000;
@@ -29,8 +27,7 @@ export class DiscoveryRelayService extends RelayServiceBase implements NostriaSe
   private readonly inflightDmRelayRequests = new Map<string, Promise<string[]>>();
 
   private readonly DEFAULT_BOOTSTRAP_RELAYS = [
-    'wss://discovery.eu.nostria.app/',
-    'wss://indexer.coracle.social/',
+    'wss://indexer.openresist.com/',
     'wss://purplepag.es/',
   ];
 
@@ -395,7 +392,7 @@ export class DiscoveryRelayService extends RelayServiceBase implements NostriaSe
   }
 
   // This relay MUST always be included for profile discovery to work well
-  private readonly REQUIRED_DISCOVERY_RELAYS = ['wss://indexer.coracle.social/'];
+  private readonly REQUIRED_DISCOVERY_RELAYS = ['wss://indexer.openresist.com/'];
 
   /**
    * Loads bootstrap relays from local storage
@@ -435,21 +432,10 @@ export class DiscoveryRelayService extends RelayServiceBase implements NostriaSe
     return relays;
   }
 
-  /**
-   * Get default discovery relays based on user's region
-   * Falls back to EU region if no region is provided
-   */
-  getDefaultDiscoveryRelays(region = 'eu'): string[] {
-    const regionalDiscoveryRelay = this.region.getDiscoveryRelay(region);
+  getDefaultDiscoveryRelays(): string[] {
+    const defaultRelays = [...this.DEFAULT_BOOTSTRAP_RELAYS];
 
-    // Always include regional relay + required profile discovery relays
-    const defaultRelays = [
-      regionalDiscoveryRelay,
-      'wss://indexer.coracle.social/',
-      'wss://purplepag.es/',
-    ];
-
-    this.logger.debug(`Generated default discovery relays for region ${region}:`, defaultRelays);
+    this.logger.debug('Generated default discovery relays', defaultRelays);
     return defaultRelays;
   }
 }
