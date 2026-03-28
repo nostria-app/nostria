@@ -7,6 +7,9 @@ const browserDistFolder = join(import.meta.dirname, '../browser');
 
 const app = express();
 
+const FRAME_ANCESTORS_DIRECTIVE = "frame-ancestors 'none'";
+const X_FRAME_OPTIONS_VALUE = 'DENY';
+
 const SSR_ALLOWED_HOST_PATTERNS = [
   'nostria.app',
   'www.nostria.app',
@@ -169,6 +172,44 @@ interface PreviewCacheabilityAnalysis {
   ogDescription: string;
   twitterTitle: string;
   twitterDescription: string;
+}
+
+function normalizeHeaderValue(value: number | string | string[] | undefined): string | undefined {
+  if (typeof value === 'string') {
+    return value;
+  }
+
+  if (Array.isArray(value)) {
+    return value.join(', ');
+  }
+
+  if (typeof value === 'number') {
+    return value.toString();
+  }
+
+  return undefined;
+}
+
+function mergeFrameAncestorsDirective(existingPolicy: string | null | undefined): string {
+  const directives = (existingPolicy ?? '')
+    .split(';')
+    .map(directive => directive.trim())
+    .filter(Boolean)
+    .filter(directive => !directive.toLowerCase().startsWith('frame-ancestors'));
+
+  directives.push(FRAME_ANCESTORS_DIRECTIVE);
+  return directives.join('; ');
+}
+
+function applyFrameProtectionHeaders(res: express.Response): void {
+  const existingPolicy = normalizeHeaderValue(res.getHeader('Content-Security-Policy'));
+  res.setHeader('Content-Security-Policy', mergeFrameAncestorsDirective(existingPolicy));
+  res.setHeader('X-Frame-Options', X_FRAME_OPTIONS_VALUE);
+}
+
+function applyFrameProtectionToResponseHeaders(headers: Headers): void {
+  headers.set('Content-Security-Policy', mergeFrameAncestorsDirective(headers.get('Content-Security-Policy')));
+  headers.set('X-Frame-Options', X_FRAME_OPTIONS_VALUE);
 }
 
 function setNoStoreHeaders(res: express.Response): void {
@@ -679,6 +720,11 @@ app.use(
   })
 );
 
+app.use((req, res, next) => {
+  applyFrameProtectionHeaders(res);
+  next();
+});
+
 // In-memory storage for shared files (with expiration)
 const sharedFilesCache = new Map<string, { files: { name: string; type: string; data: string }[]; title?: string; text?: string; url?: string; timestamp: number }>();
 
@@ -872,6 +918,8 @@ app.use(async (req, res, next) => {
     const response = await angularApp.handle(req);
 
     if (response) {
+      applyFrameProtectionToResponseHeaders(response.headers);
+
       // For bot requests on SSR routes, cache the response
       if (isBotRequest && isSSR) {
         // Read the response body
