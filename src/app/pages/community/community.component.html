@@ -22,14 +22,15 @@
   <h2 class="panel-title title-font">n/{{ community()!.name }}</h2>
   <span class="panel-header-spacer"></span>
   @if (isAuthenticated()) {
-  <button mat-flat-button (click)="navigateToCreatePost()" class="create-post-btn">
+  <button mat-icon-button (click)="navigateToCreatePost()" class="create-post-btn" matTooltip="Create post">
     <mat-icon>add</mat-icon>
-    Create Post
   </button>
-  <button mat-button (click)="isJoined() ? leaveCommunity() : joinCommunity()">
-    <mat-icon>{{ isJoined() ? 'remove_circle_outline' : 'add_circle_outline' }}</mat-icon>
-    {{ isJoined() ? 'Leave' : 'Join' }}
+  @if (!isJoined()) {
+  <button mat-button (click)="joinCommunity()">
+    <mat-icon>add_circle_outline</mat-icon>
+    Join
   </button>
+  }
   }
   <button mat-icon-button (click)="refresh()" matTooltip="Refresh">
     <mat-icon>refresh</mat-icon>
@@ -38,16 +39,26 @@
     <mat-icon>more_vert</mat-icon>
   </button>
   <mat-menu #headerMenu="matMenu">
+    <button mat-menu-item (click)="openShareDialog()">
+      <mat-icon>share</mat-icon>
+      <span>Share</span>
+    </button>
+    <button mat-menu-item (click)="copyEventData()">
+      <mat-icon>data_object</mat-icon>
+      <span>Copy Data</span>
+    </button>
     @if (isOwner()) {
     <button mat-menu-item (click)="editCommunity()">
       <mat-icon>edit</mat-icon>
       <span>Edit Community</span>
     </button>
     }
-    <button mat-menu-item (click)="copyEventData()">
-      <mat-icon>data_object</mat-icon>
-      <span>Copy Data</span>
+    @if (isAuthenticated() && isJoined()) {
+    <button mat-menu-item (click)="leaveCommunity()">
+      <mat-icon>remove_circle_outline</mat-icon>
+      <span>Leave</span>
     </button>
+    }
   </mat-menu>
 </div>
 
@@ -69,15 +80,23 @@
     }
 
     @if (community()!.rules) {
-    <div class="community-rules">
-      <mat-icon>gavel</mat-icon>
+    <button class="community-rules" type="button" (click)="toggleRulesExpanded()" [attr.aria-expanded]="rulesExpanded()">
+      <span class="community-rules-leading">
+        <mat-icon>gavel</mat-icon>
+        <span class="community-rules-label">Rules</span>
+      </span>
+      <mat-icon class="community-rules-toggle">{{ rulesExpanded() ? 'expand_less' : 'expand_more' }}</mat-icon>
+    </button>
+    @if (rulesExpanded()) {
+    <div class="community-rules-content">
       <span>{{ community()!.rules }}</span>
     </div>
+    }
     }
 
     <div class="community-info-row">
       <div class="community-creator-row">
-        <span class="info-label">Created by</span>
+        <span class="info-label">By</span>
         <app-user-profile [pubkey]="community()!.creatorPubkey" view="compact" [showRank]="false"></app-user-profile>
       </div>
 
@@ -99,7 +118,7 @@
 <mat-tab-group [(selectedIndex)]="selectedTab" class="community-tabs">
   <!-- Posts Tab -->
   <mat-tab label="Posts">
-    <div class="tab-content">
+    <div class="tab-content posts-tab-content">
       <!-- Post toolbar -->
       <div class="post-toolbar">
         <span class="post-count">{{ sortedPosts().length }} posts</span>
@@ -107,7 +126,7 @@
         @if (isModerator()) {
         <button mat-button (click)="toggleApprovedFilter()">
           <mat-icon>{{ showApprovedOnly() ? 'filter_alt' : 'filter_alt_off' }}</mat-icon>
-          {{ showApprovedOnly() ? 'Approved Only' : 'All Posts' }}
+          {{ showApprovedOnly() ? 'Approved Only' : 'Show All' }}
         </button>
         }
       </div>

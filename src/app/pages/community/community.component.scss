@@ -34,6 +34,11 @@
 }
 
 .create-post-btn {
+  min-width: 40px;
+  padding: 0 !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   white-space: nowrap;
 }
 
@@ -152,21 +157,48 @@
 
 .community-rules {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
+  justify-content: space-between;
   gap: 0.5rem;
+  width: 100%;
   padding: 0.75rem;
   border-radius: 8px;
+  border: 0;
   background-color: var(--mat-sys-surface-container);
   font-size: 0.875rem;
   color: var(--mat-sys-on-surface-variant);
+  text-align: left;
+  cursor: pointer;
 
   mat-icon {
     font-size: 18px;
     width: 18px;
     height: 18px;
     flex-shrink: 0;
-    margin-top: 2px;
   }
+}
+
+.community-rules-leading {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.community-rules-label {
+  color: var(--mat-sys-on-surface);
+}
+
+.community-rules-toggle {
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.community-rules-content {
+  padding: 0 0.75rem;
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 0.875rem;
+  line-height: 1.5;
+  word-break: break-word;
 }
 
 .community-info-row {
@@ -185,6 +217,7 @@
   .info-label {
     font-size: 0.8rem;
     color: var(--mat-sys-on-surface-variant);
+    white-space: nowrap;
   }
 }
 
@@ -197,12 +230,17 @@
   padding: 1rem 1.5rem;
 }
 
+.posts-tab-content {
+  padding-left: 0;
+  padding-right: 0;
+}
+
 // Post Toolbar (replaces inline composer)
 .post-toolbar {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.5rem 0;
+  padding: 0.5rem 1.5rem;
   margin-bottom: 0.5rem;
 
   .post-count {
@@ -219,7 +257,7 @@
 .posts-list {
   display: flex;
   flex-direction: column;
-  gap: 0;
+  gap: 0.75rem;
 }
 
 // Post Card — vertical stack layout
@@ -227,19 +265,40 @@
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  border-bottom: 1px solid var(--mat-sys-outline-variant);
-  padding: 0.75rem 0;
+  padding: 1rem;
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: 16px;
+  background-color: var(--mat-sys-surface-container-low);
   cursor: pointer;
-  transition: background-color 0.15s ease;
+  transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
 
   &:hover {
     background-color: var(--mat-sys-surface-container);
+    border-color: var(--mat-sys-outline);
+    transform: translateY(-1px);
   }
 
   &:last-child {
-    border-bottom: none;
+    margin-bottom: 0;
   }
 }
+
+@media (max-width: 600px) {
+  .tab-content {
+    padding: 1rem;
+  }
+
+  .post-card {
+    padding: 0.875rem;
+    border-radius: 14px;
+  }
+
+  .post-toolbar {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+}
+
 
 // Moderation badge row
 .post-moderation-row {

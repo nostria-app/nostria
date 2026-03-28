@@ -22,6 +22,9 @@ import { EventHeaderComponent } from '../../components/event/header/header.compo
 import { ContentComponent } from '../../components/content/content.component';
 import { UserProfileComponent } from '../../components/user-profile/user-profile.component';
 import { LoggerService } from '../../services/logger.service';
+import { CustomDialogService } from '../../services/custom-dialog.service';
+import { ShareArticleDialogComponent, ShareArticleDialogData } from '../../components/share-article-dialog/share-article-dialog.component';
+import { UtilitiesService } from '../../services/utilities.service';
 
 @Component({
   selector: 'app-community',
@@ -53,6 +56,8 @@ export class CommunityComponent implements OnInit, OnDestroy {
   private accountState = inject(AccountStateService);
   private snackBar = inject(MatSnackBar);
   private dialog = inject(MatDialog);
+  private customDialog = inject(CustomDialogService);
+  private utilities = inject(UtilitiesService);
   private readonly logger = inject(LoggerService);
   private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
   private layout = inject(LayoutService);
@@ -78,7 +83,8 @@ export class CommunityComponent implements OnInit, OnDestroy {
   selectedTab = signal(0);
 
   // Show approved only filter
-  showApprovedOnly = signal(false);
+  showApprovedOnly = signal(true);
+  rulesExpanded = signal(false);
 
   private postsSub: { close: () => void } | null = null;
   private approvalsSub: { close: () => void } | null = null;
@@ -435,6 +441,47 @@ export class CommunityComponent implements OnInit, OnDestroy {
       this.logger.error('[Community] Error leaving community:', error);
       this.snackBar.open('Failed to leave community', 'Close', { duration: 3000 });
     }
+  }
+
+  toggleRulesExpanded(): void {
+    this.rulesExpanded.update(expanded => !expanded);
+  }
+
+  openShareDialog(): void {
+    const comm = this.community();
+    if (!comm?.event) return;
+
+    const relayHints = this.utilities.normalizeRelayUrls(comm.relays.map(relay => relay.url));
+    const naddr = relayHints.length > 0
+      ? nip19.naddrEncode({
+        kind: comm.event.kind,
+        pubkey: comm.creatorPubkey,
+        identifier: comm.id,
+        relays: relayHints,
+      })
+      : this.currentNaddr();
+    const dialogData: ShareArticleDialogData = {
+      title: `n/${comm.name}`,
+      summary: comm.description || undefined,
+      image: comm.image || comm.avatar || undefined,
+      url: `https://nostria.app/n/${naddr}`,
+      eventId: comm.event.id,
+      pubkey: comm.creatorPubkey,
+      identifier: comm.id,
+      kind: comm.event.kind,
+      encodedId: naddr,
+      naddr,
+      event: comm.event,
+    };
+
+    this.customDialog.open(ShareArticleDialogComponent, {
+      title: '',
+      showCloseButton: false,
+      panelClass: 'share-sheet-dialog',
+      data: dialogData,
+      width: '450px',
+      maxWidth: '95vw',
+    });
   }
 
   copyEventData(): void {
