@@ -1860,8 +1860,8 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       const extraRumorTags: string[][] = [
         ['file-type', encryption.mimeType],
         ['encryption-algorithm', 'aes-gcm'],
-        ['decryption-key', encryption.keyBase64],
-        ['decryption-nonce', encryption.nonceBase64],
+        ['decryption-key', encryption.keyHex],
+        ['decryption-nonce', encryption.nonceHex],
         ['x', encryption.encryptedSha256],
         ['ox', encryption.originalSha256],
         ['size', String(encryption.encryptedSize)],
@@ -1974,8 +1974,8 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     encryptedBytes: Uint8Array;
     encryptedSha256: string;
     originalSha256: string;
-    keyBase64: string;
-    nonceBase64: string;
+    keyHex: string;
+    nonceHex: string;
     encryptedSize: number;
     mimeType: string;
   }> {
@@ -1995,19 +1995,11 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       encryptedBytes,
       encryptedSha256: bytesToHex(sha256(encryptedBytes)),
       originalSha256: bytesToHex(sha256(sourceBytes)),
-      keyBase64: this.bytesToBase64(keyBytes),
-      nonceBase64: this.bytesToBase64(nonceBytes),
+      keyHex: bytesToHex(keyBytes),
+      nonceHex: bytesToHex(nonceBytes),
       encryptedSize: encryptedBytes.byteLength,
       mimeType: this.mediaService.getFileMimeType(file),
     };
-  }
-
-  private bytesToBase64(bytes: Uint8Array): string {
-    let binary = '';
-    for (const byte of bytes) {
-      binary += String.fromCharCode(byte);
-    }
-    return btoa(binary);
   }
 
   private formatFileSize(bytes: number): string {

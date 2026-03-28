@@ -15,6 +15,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 import { nip19, Event as NostrEvent } from 'nostr-tools';
+import { hexToBytes } from '@noble/hashes/utils.js';
 import { UtilitiesService } from '../../services/utilities.service';
 import { LayoutService } from '../../services/layout.service';
 import { DataService } from '../../services/data.service';
@@ -1225,8 +1226,8 @@ export class MessageContentComponent {
         throw new Error('Missing decryption metadata');
       }
 
-      const keyBytes = this.base64ToUint8Array(keyTag);
-      const nonceBytes = this.base64ToUint8Array(nonceTag);
+      const keyBytes = this.parseKeyBytes(keyTag);
+      const nonceBytes = this.parseKeyBytes(nonceTag);
       const keyBuffer = new ArrayBuffer(keyBytes.byteLength);
       new Uint8Array(keyBuffer).set(keyBytes);
       const nonceBuffer = new ArrayBuffer(nonceBytes.byteLength);
@@ -1397,6 +1398,15 @@ export class MessageContentComponent {
     }
 
     return `${value.toFixed(value >= 10 ? 0 : 1)} ${units[unitIndex]}`;
+  }
+
+  private parseKeyBytes(value: string): Uint8Array {
+    const trimmedValue = value.trim();
+    if (/^[0-9a-fA-F]+$/.test(trimmedValue) && trimmedValue.length % 2 === 0) {
+      return hexToBytes(trimmedValue);
+    }
+
+    return this.base64ToUint8Array(trimmedValue);
   }
 
   private base64ToUint8Array(base64: string): Uint8Array {
