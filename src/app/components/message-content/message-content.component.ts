@@ -50,7 +50,7 @@ const EMOJI_SET_KIND = 30030;
 const LIVE_EVENT_KIND = 30311;
 
 interface ContentPart {
-  type: 'text' | 'url' | 'image' | 'video' | 'audio' | 'npub' | 'nprofile' | 'note' | 'nevent' | 'naddr' | 'linebreak' | 'emoji' | 'bolt11' | 'tidal';
+  type: 'text' | 'url' | 'image' | 'video' | 'audio' | 'npub' | 'nprofile' | 'note' | 'nevent' | 'naddr' | 'linebreak' | 'emoji' | 'bolt11' | 'tidal' | 'spotify';
   content: string;
   pubkey?: string;
   eventId?: string;
@@ -127,6 +127,14 @@ interface EventMention {
             allow="encrypted-media; clipboard-write" title="Tidal music embed"
             sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"
             loading="lazy"></iframe>
+          }
+        </div>
+      } @else if (part.type === 'spotify') {
+        <div class="spotify-container">
+          @if (part.processedUrl) {
+          <iframe [src]="part.processedUrl" frameborder="0"
+            allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+            loading="lazy" title="Spotify music embed"></iframe>
           }
         </div>
       } @else if (part.type === 'bolt11') {
@@ -545,6 +553,29 @@ interface EventMention {
         }
       }
     }
+
+    .spotify-container {
+      display: block;
+      width: 100%;
+      max-width: 100%;
+      border-radius: 8px;
+      overflow: hidden;
+      background: #121212;
+      margin: 4px 0;
+
+      iframe {
+        display: block;
+        width: 100%;
+        height: 152px;
+        border: 0;
+      }
+
+      @media (max-width: 480px) {
+        iframe {
+          height: 152px;
+        }
+      }
+    }
   `],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -602,6 +633,8 @@ export class MessageContentComponent {
 
   // Tidal URL regex
   private readonly tidalUrlRegex = /^https?:\/\/(?:listen\.)?tidal\.com\/(?:browse\/)?(track|album|video|playlist)\/([a-zA-Z0-9-]+)/i;
+  // Spotify URL regex
+  private readonly spotifyUrlRegex = /^https?:\/\/open\.spotify\.com\/(track|album|playlist|artist|show|episode)\/([a-zA-Z0-9]+)/i;
 
   // Store event mentions data
   eventMentionsMap = signal<Map<number, EventMention>>(new Map());
@@ -723,7 +756,7 @@ export class MessageContentComponent {
           type: this.getUrlMediaType(cleanUrl),
           content: cleanUrl,
           ...this.getImetaData(cleanUrl),
-          ...this.getTidalEmbedData(cleanUrl),
+          ...this.getMusicEmbedData(cleanUrl),
           id: this.partIdCounter++,
         });
 
@@ -1061,7 +1094,7 @@ export class MessageContentComponent {
   /**
    * Determine if a URL points to an image, video, or is a regular link.
    */
-  private getUrlMediaType(url: string): 'image' | 'video' | 'audio' | 'url' | 'tidal' {
+  private getUrlMediaType(url: string): 'image' | 'video' | 'audio' | 'url' | 'tidal' | 'spotify' {
     if (this.imageExtensions.test(url)) {
       return 'image';
     }
@@ -1081,6 +1114,10 @@ export class MessageContentComponent {
     if (this.tidalUrlRegex.test(url)) {
       this.tidalUrlRegex.lastIndex = 0;
       return 'tidal';
+    }
+    if (this.spotifyUrlRegex.test(url)) {
+      this.spotifyUrlRegex.lastIndex = 0;
+      return 'spotify';
     }
     return 'url';
   }
@@ -1103,16 +1140,29 @@ export class MessageContentComponent {
     return result;
   }
 
-  /** Build Tidal embed data if URL matches tidal.com */
-  private getTidalEmbedData(url: string): { processedUrl?: SafeResourceUrl } {
+  /** Build music embed data for supported providers */
+  private getMusicEmbedData(url: string): { processedUrl?: SafeResourceUrl } {
     this.tidalUrlRegex.lastIndex = 0;
     const match = this.tidalUrlRegex.exec(url);
-    if (!match) return {};
-    const resourceType = match[1]; // track, album, video, playlist
-    const resourceId = match[2];
-    const embedPath = `${resourceType}s`;
-    return {
-      processedUrl: this.media.getTidalEmbedUrl()(`https://embed.tidal.com/${embedPath}/${resourceId}`),
-    };
+    if (match) {
+      const resourceType = match[1];
+      const resourceId = match[2];
+      const embedPath = `${resourceType}s`;
+      return {
+        processedUrl: this.media.getTidalEmbedUrl()(`https://embed.tidal.com/${embedPath}/${resourceId}`),
+      };
+    }
+
+    this.spotifyUrlRegex.lastIndex = 0;
+    const spotifyMatch = this.spotifyUrlRegex.exec(url);
+    if (spotifyMatch) {
+      const resourceType = spotifyMatch[1];
+      const resourceId = spotifyMatch[2];
+      return {
+        processedUrl: this.media.getSpotifyEmbedUrl()(`https://open.spotify.com/embed/${resourceType}/${resourceId}`),
+      };
+    }
+
+    return {};
   }
 }

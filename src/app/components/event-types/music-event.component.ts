@@ -69,8 +69,21 @@ import { MatDividerModule } from '@angular/material/divider';
             [title]="isCurrentTrackPlaying() ? 'Pause' : 'Play Now'">
             <mat-icon>{{ isCurrentTrackPlaying() ? 'pause' : 'play_arrow' }}</mat-icon>
           </button>
-
-
+          <div class="hover-action-row">
+            <button mat-icon-button class="media-action-button like-action" [class.is-liked]="isLiked()"
+              (click)="likeTrack($any($event))" [attr.aria-label]="isLiked() ? 'Unlike track' : 'Like track'"
+              [title]="isLiked() ? 'Unlike' : 'Like'">
+              <mat-icon [class.is-liked]="isLiked()">{{ isLiked() ? 'favorite' : 'favorite_border' }}</mat-icon>
+            </button>
+            <button mat-icon-button class="media-action-button share-action" (click)="shareTrack(); $event.stopPropagation()"
+              aria-label="Share track" title="Share track">
+              <mat-icon>share</mat-icon>
+            </button>
+            <button mat-icon-button class="media-action-button zap-action" (click)="zapArtist($any($event))"
+              aria-label="Zap creator" title="Zap creator">
+              <mat-icon>bolt</mat-icon>
+            </button>
+          </div>
         </div>
         
         <!-- Info section -->
@@ -310,21 +323,37 @@ import { MatDividerModule } from '@angular/material/divider';
       min-width: 0;
       transition: background-color 0.2s ease, transform 0.2s ease;
       
-      &:hover {
-        background-color: var(--mat-sys-surface-container);
-        
-        .play-overlay {
-          opacity: 1;
-          transform: translate(-50%, -50%) scale(1);
-        }
-      }
+        &:hover {
+          background-color: var(--mat-sys-surface-container);
+          
+          .play-overlay,
+          .hover-action-row {
+            opacity: 1;
+          }
 
-      &:focus-within {
-        .play-overlay {
-          opacity: 1;
-          transform: translate(-50%, -50%) scale(1);
+          .play-overlay {
+            transform: translate(-50%, -50%) scale(1);
+          }
+
+          .hover-action-row {
+            transform: translate(-50%, 0);
+          }
         }
-      }
+
+        &:focus-within {
+          .play-overlay,
+          .hover-action-row {
+            opacity: 1;
+          }
+
+          .play-overlay {
+            transform: translate(-50%, -50%) scale(1);
+          }
+
+          .hover-action-row {
+            transform: translate(-50%, 0);
+          }
+        }
 
       @media (max-width: 600px) {
         border-radius: 8px;
@@ -479,6 +508,89 @@ import { MatDividerModule } from '@angular/material/divider';
             width: 28px;
             height: 28px;
           }
+        }
+      }
+
+      .hover-action-row {
+        position: absolute;
+        left: 50%;
+        bottom: 12px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        opacity: 0;
+        transform: translate(-50%, 8px);
+        transition: opacity 0.2s ease, transform 0.2s ease;
+        z-index: 2;
+      }
+
+      .media-action-button {
+        width: 40px;
+        height: 40px;
+        padding: 0 !important;
+        display: flex !important;
+        align-items: center;
+        justify-content: center;
+        background: color-mix(in srgb, var(--mat-sys-scrim) 42%, transparent);
+        color: var(--mat-sys-on-surface);
+        border: 1px solid color-mix(in srgb, var(--mat-sys-outline) 32%, transparent);
+        backdrop-filter: blur(14px);
+        box-shadow: var(--mat-sys-level2);
+        transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
+
+        &:not(.media-primary-action):hover:not(:disabled) {
+          background: color-mix(in srgb, var(--mat-sys-scrim) 56%, transparent);
+          transform: translateY(-1px);
+        }
+
+        mat-icon {
+          font-size: 20px;
+          width: 20px;
+          height: 20px;
+        }
+      }
+
+      .media-primary-action {
+        background: color-mix(in srgb, var(--mat-sys-surface-container-highest) 68%, transparent);
+        color: var(--mat-sys-on-surface);
+        border-color: color-mix(in srgb, var(--mat-sys-outline) 40%, transparent);
+
+        &:hover:not(:disabled) {
+          background: color-mix(in srgb, var(--mat-sys-surface-container-highest) 82%, transparent);
+        }
+      }
+
+      .like-action {
+        &.is-liked {
+          background: color-mix(in srgb, var(--mat-sys-error-container) 34%, transparent);
+          color: color-mix(in srgb, var(--mat-sys-error) 68%, var(--mat-sys-on-surface) 32%);
+          border-color: color-mix(in srgb, var(--mat-sys-error) 20%, transparent);
+        }
+
+        &:hover:not(:disabled) {
+          background: color-mix(in srgb, var(--mat-sys-error-container) 58%, transparent);
+          color: color-mix(in srgb, var(--mat-sys-error) 76%, var(--mat-sys-on-surface) 24%);
+          border-color: color-mix(in srgb, var(--mat-sys-error) 34%, transparent);
+        }
+
+        mat-icon.is-liked {
+          font-variation-settings: 'FILL' 1;
+        }
+      }
+
+      .share-action {
+        &:hover:not(:disabled) {
+          background: color-mix(in srgb, #2f6dff 26%, transparent);
+          color: color-mix(in srgb, #8ab4ff 78%, var(--mat-sys-on-surface) 22%);
+          border-color: color-mix(in srgb, #6ea0ff 38%, transparent);
+        }
+      }
+
+      .zap-action {
+        &:hover:not(:disabled) {
+          background: color-mix(in srgb, #ff9800 24%, transparent);
+          color: color-mix(in srgb, #ffbf66 78%, var(--mat-sys-on-surface) 22%);
+          border-color: color-mix(in srgb, #ffb74d 34%, transparent);
         }
       }
     }

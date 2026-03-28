@@ -1260,6 +1260,7 @@ export class MediaPlayerService implements OnInitialized {
   });
 
   private _tidalUrlCache = new Map<string, SafeResourceUrl>();
+  private _spotifyUrlCache = new Map<string, SafeResourceUrl>();
 
   getTidalEmbedUrl = computed(() => {
     return (embedUrl: string): SafeResourceUrl => {
@@ -1269,6 +1270,18 @@ export class MediaPlayerService implements OnInitialized {
 
       const safeUrl = this.sanitizer.bypassSecurityTrustResourceUrl(embedUrl);
       this._tidalUrlCache.set(embedUrl, safeUrl);
+      return safeUrl;
+    };
+  });
+
+  getSpotifyEmbedUrl = computed(() => {
+    return (embedUrl: string): SafeResourceUrl => {
+      if (this._spotifyUrlCache.has(embedUrl)) {
+        return this._spotifyUrlCache.get(embedUrl)!;
+      }
+
+      const safeUrl = this.sanitizer.bypassSecurityTrustResourceUrl(embedUrl);
+      this._spotifyUrlCache.set(embedUrl, safeUrl);
       return safeUrl;
     };
   });

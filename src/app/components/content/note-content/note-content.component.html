@@ -234,6 +234,15 @@
     loading="lazy"></iframe>
   }
 </div>
+} @else if (token.type === 'spotify') {
+<!-- Spotify Embed -->
+<div class="media-container spotify-container">
+  @if (token.processedUrl) {
+  <iframe [src]="token.processedUrl" frameborder="0"
+    allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+    loading="lazy" title="Spotify music embed"></iframe>
+  }
+</div>
 } @else if (token.type === 'nostr-mention' && (token.nostrData?.type === 'npub' || token.nostrData?.type ===
 'nprofile')) {
 <a class="nostr-mention" (click)="onNostrMentionClick(token)" (mouseenter)="onMentionMouseEnter($event, token)"

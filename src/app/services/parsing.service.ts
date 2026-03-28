@@ -41,13 +41,14 @@ export interface ContentToken {
   | 'rss-feed'
   | 'bolt11'
   | 'bolt12'
-  | 'tidal';
+  | 'tidal'
+  | 'spotify';
   content: string;
   nostrData?: NostrData;
   emoji?: string;
   customEmoji?: string; // NIP-30: URL to custom emoji image
   emojiSetAddress?: string; // NIP-30: optional kind:pubkey:d-tag address to emoji set
-  processedUrl?: SafeResourceUrl; // For YouTube/Tidal embed URLs that are pre-processed
+  processedUrl?: SafeResourceUrl; // For YouTube/Tidal/Spotify embed URLs that are pre-processed
   waveform?: number[];
   duration?: number;
   // Media metadata from imeta tags
@@ -389,6 +390,9 @@ export class ParsingService implements OnDestroy {
     // Allows optional trailing /u or other path segments
     const tidalRegex =
       /(https?:\/\/)?(?:listen\.)?tidal\.com\/(?:browse\/)?(track|album|video|playlist)\/([a-zA-Z0-9-]+)(?:\/[^\s##]*)?(?=\s|##LINEBREAK##|$)/g;
+    // Spotify regex: matches open.spotify.com URLs for tracks, albums, playlists, artists, shows, and episodes
+    const spotifyRegex =
+      /(https?:\/\/)?open\.spotify\.com\/(track|album|playlist|artist|show|episode)\/([a-zA-Z0-9]+)(?:\?[^\s##]*)?(?=\s|##LINEBREAK##|$)/g;
     // Media regexes: lookahead also matches uppercase letter (start of new word without space)
     // This handles cases like "...file.mp4Curious about..." where text follows without whitespace
     const imageRegex =
@@ -762,6 +766,23 @@ export class ParsingService implements OnDestroy {
         content: tidalUrl,
         type: 'tidal',
         processedUrl: processedUrl,
+      });
+    }
+
+    // Find Spotify URLs
+    spotifyRegex.lastIndex = 0;
+    while ((match = spotifyRegex.exec(processedContent)) !== null) {
+      const spotifyUrl = match[0];
+      const resourceType = match[2];
+      const resourceId = match[3];
+      const processedUrl = this.media.getSpotifyEmbedUrl()(`https://open.spotify.com/embed/${resourceType}/${resourceId}`);
+
+      matches.push({
+        start: match.index,
+        end: match.index + match[0].length,
+        content: spotifyUrl,
+        type: 'spotify',
+        processedUrl,
       });
     }
 

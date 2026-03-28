@@ -9,6 +9,11 @@
   mat-card {
     margin-top: 1rem;
   }
+
+  app-note-content,
+  app-tagged-references {
+    display: block;
+  }
 }
 
 .content-placeholder {
@@ -89,6 +94,8 @@
 }
 
 .social-preview {
+  display: block;
+  clear: both;
   margin-top: 1rem;
 }
 

@@ -1553,30 +1553,33 @@ export class EventComponent implements AfterViewInit, OnDestroy {
       }
 
       untracked(async () => {
+        const previousEventId = this.record()?.event.id;
+        const isSameEvent = previousEventId === event.id;
         const record = this.data.toRecord(event);
         this.record.set(record);
 
         // console.log('📝 [Event Setup] Record created for event:', event.id.substring(0, 8), '| Kind:', event.kind);
 
-        // CRITICAL: Clear all interaction state when event changes
-        // This prevents interactions from the previous event being displayed on the new event
-        this.clearInteractionState();
-        this.asyncRepostedEvent.set(null); // Clear async-loaded repost event
-        this.latestEditEvent.set(null); // Clear NIP-41 edit event
+        if (!isSameEvent) {
+          // CRITICAL: Clear all interaction state only when the component is reused
+          // for a different event ID. Feed/profile timelines can re-emit the same
+          // event object, and resetting here would wipe counters mid-load.
+          this.clearInteractionState();
+          this.asyncRepostedEvent.set(null);
+          this.latestEditEvent.set(null);
+          this.hasLoadedInteractions.set(false);
+          this.observedEventId = event.id;
+          this.hasLoadedEdit = false;
+          this.interactionLoadGeneration += 1;
+          this.interactionAbortController?.abort();
+          this.interactionAbortController = undefined;
+          EventComponent.cancelQueuedInteractionPreload(this);
+          this.hasBeenActuallyVisible = false;
 
-        // Reset the loaded interactions flag when event changes
-        // This ensures each new event loads its own interactions
-        this.hasLoadedInteractions.set(false);
-        this.observedEventId = event.id;
-        this.hasLoadedEdit = false;
-        this.interactionLoadGeneration += 1;
-        this.interactionAbortController?.abort();
-        this.interactionAbortController = undefined;
-        EventComponent.cancelQueuedInteractionPreload(this);
-
-        // Re-register with shared IntersectionObserver when event changes
-        // This ensures we observe the correct event when component is reused
-        this.setupIntersectionObserver();
+          // Re-register with shared IntersectionObserver when the component is reused
+          // for a different event.
+          this.setupIntersectionObserver();
+        }
 
         this.maybePreloadInteractionsImmediately();
       });
@@ -1863,6 +1866,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   private readonly immediateDomPreloadAheadPx = 900;
   private readonly immediateDomPreloadBehindPx = 250;
   private readonly initialBatchPreloadCount = 12;
+  private readonly interactionVerificationLimitMultiplier = 4;
   private readonly actualVisibilityObserverOptions = {
     rootMargin: '0px',
     threshold: 0.01,
@@ -2428,93 +2432,70 @@ export class EventComponent implements AfterViewInit, OnDestroy {
 
     this.isLoadingReactions.set(true);
     try {
-      // Load interactions with per-kind limits and quotes in parallel
-      const [interactions, quotesResult] = await Promise.all([
+      const loadInteractionBatch = (limitOverride = queryLimit) => Promise.all([
         this.eventService.loadEventInteractions(
           targetEventId,
           targetRecordData.event.kind,
           eventAuthorPubkey,
           invalidateCache,
           skipReplies,
-          queryLimit,  // Per-kind limit for feed optimization
+          limitOverride,
         ),
         this.eventService.loadQuotes(
           targetEventId,
           eventAuthorPubkey,
           invalidateCache,
-          queryLimit,  // Limit quotes too
+          limitOverride,
         )
       ]);
 
-      // If the load was aborted (event scrolled off-screen), skip result processing
-      if (signal?.aborted) {
-        this.logger.debug('[Loading Interactions] Aborted, discarding results for:', targetEventId.substring(0, 8));
-        if (loadGeneration === this.interactionLoadGeneration) {
-          this.hasLoadedInteractions.set(false);
-          this.scheduleVisibleInteractionRetry();
-        }
+      // Load interactions with per-kind limits and quotes in parallel
+      let [interactions, quotesResult] = await loadInteractionBatch();
+
+      if (this.shouldDiscardInteractionLoadResult(targetEventId, signal, loadGeneration)) {
         return;
       }
 
-      // CRITICAL: Verify we're still showing the same event before updating state
-      const currentTargetRecord = this.targetRecord();
-      if (currentTargetRecord?.event.id !== targetEventId) {
-        this.logger.warn('[Loading Interactions] Event changed during load, discarding results for:', targetEventId.substring(0, 8));
-        this.logger.warn('[Loading Interactions] Current event is now:', currentTargetRecord?.event.id.substring(0, 8));
-        if (loadGeneration === this.interactionLoadGeneration) {
-          this.hasLoadedInteractions.set(false);
-          this.scheduleVisibleInteractionRetry();
+      let normalizedInteractions = this.normalizeInteractionResults(interactions, quotesResult, queryLimit);
+
+      if (this.shouldVerifyTimelineInteractionCounts(normalizedInteractions, queryLimit)) {
+        const verifiedQueryLimit = queryLimit;
+        if (verifiedQueryLimit == null) {
+          return;
         }
-        return;
+        const verificationLimit = verifiedQueryLimit * this.interactionVerificationLimitMultiplier;
+        this.logger.debug(
+          '[Loading Interactions] Verifying timeline counters with broader query for:',
+          targetEventId.substring(0, 8),
+          'limit:',
+          verificationLimit,
+        );
+
+        [interactions, quotesResult] = await loadInteractionBatch(verificationLimit);
+
+        if (this.shouldDiscardInteractionLoadResult(targetEventId, signal, loadGeneration)) {
+          return;
+        }
+
+        normalizedInteractions = this.normalizeInteractionResults(interactions, quotesResult, verifiedQueryLimit);
       }
 
-      // CRITICAL: Filter out interactions from muted accounts
-      const mutedAccounts = this.accountState.mutedAccounts();
-
-      // Filter reactions
-      const filteredReactionEvents = interactions.reactions.events.filter(r => !mutedAccounts.includes(r.event.pubkey));
-      const filteredReactionData = new Map<string, number>();
-      for (const event of filteredReactionEvents) {
-        const emoji = event.event.content || '+';
-        filteredReactionData.set(emoji, (filteredReactionData.get(emoji) || 0) + 1);
-      }
-
-      // Filter reposts
-      const filteredReposts = interactions.reposts.filter(r => !mutedAccounts.includes(r.event.pubkey));
-
-      // Filter quotes
-      const filteredQuotes = quotesResult.filter(r => !mutedAccounts.includes(r.event.pubkey));
-
-      // Filter reports
-      const filteredReportEvents = interactions.reports.events.filter(r => !mutedAccounts.includes(r.event.pubkey));
-      const filteredReportData = new Map<string, number>();
-      for (const event of filteredReportEvents) {
-        const reportType = event.event.content || 'other';
-        filteredReportData.set(reportType, (filteredReportData.get(reportType) || 0) + 1);
-      }
-
-      // Update all states from the filtered results
-      this.reactions.set({
-        events: filteredReactionEvents,
-        data: filteredReactionData
-      });
-      this.reposts.set(filteredReposts);
-      this.quotes.set(filteredQuotes);
-      this.reports.set({
-        events: filteredReportEvents,
-        data: filteredReportData
-      });
+      // Update all states from the normalized results
+      this.reactions.set(normalizedInteractions.reactions);
+      this.reposts.set(normalizedInteractions.reposts);
+      this.quotes.set(normalizedInteractions.quotes);
+      this.reports.set(normalizedInteractions.reports);
 
       // Update overflow flags (only relevant when limits are applied)
-      this.hasMoreReactions.set(interactions.hasMoreReactions ?? false);
-      this.hasMoreReposts.set(interactions.hasMoreReposts ?? false);
-      this.hasMoreReplies.set(interactions.hasMoreReplies ?? false);
-      this.hasMoreQuotes.set(queryLimit != null && quotesResult.length >= queryLimit);
+      this.hasMoreReactions.set(normalizedInteractions.hasMoreReactions);
+      this.hasMoreReposts.set(normalizedInteractions.hasMoreReposts);
+      this.hasMoreReplies.set(normalizedInteractions.hasMoreReplies);
+      this.hasMoreQuotes.set(normalizedInteractions.hasMoreQuotes);
 
       // Only update internal reply count if we actually loaded it (not skipped)
       if (!skipReplies) {
-        this._replyCountInternal.set(interactions.replyCount);
-        this._replyEventsInternal.set(interactions.replyEvents);
+        this._replyCountInternal.set(normalizedInteractions.replyCount);
+        this._replyEventsInternal.set(normalizedInteractions.replyEvents);
       }
     } catch (error) {
       this.logger.error('Error loading event interactions:', error);
@@ -2525,6 +2506,93 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     } finally {
       this.isLoadingReactions.set(false);
     }
+  }
+
+  private shouldDiscardInteractionLoadResult(targetEventId: string, signal?: AbortSignal, loadGeneration?: number): boolean {
+    if (signal?.aborted) {
+      this.logger.debug('[Loading Interactions] Aborted, discarding results for:', targetEventId.substring(0, 8));
+      if (loadGeneration === this.interactionLoadGeneration) {
+        this.hasLoadedInteractions.set(false);
+        this.scheduleVisibleInteractionRetry();
+      }
+      return true;
+    }
+
+    const currentTargetRecord = this.targetRecord();
+    if (currentTargetRecord?.event.id !== targetEventId) {
+      this.logger.warn('[Loading Interactions] Event changed during load, discarding results for:', targetEventId.substring(0, 8));
+      this.logger.warn('[Loading Interactions] Current event is now:', currentTargetRecord?.event.id.substring(0, 8));
+      if (loadGeneration === this.interactionLoadGeneration) {
+        this.hasLoadedInteractions.set(false);
+        this.scheduleVisibleInteractionRetry();
+      }
+      return true;
+    }
+
+    return false;
+  }
+
+  private normalizeInteractionResults(
+    interactions: Awaited<ReturnType<EventService['loadEventInteractions']>>,
+    quotesResult: NostrRecord[],
+    queryLimit?: number,
+  ) {
+    const mutedAccounts = this.accountState.mutedAccounts();
+
+    const filteredReactionEvents = interactions.reactions.events.filter(r => !mutedAccounts.includes(r.event.pubkey));
+    const filteredReposts = interactions.reposts.filter(r => !mutedAccounts.includes(r.event.pubkey));
+    const filteredQuotes = quotesResult.filter(r => !mutedAccounts.includes(r.event.pubkey));
+    const filteredReportEvents = interactions.reports.events.filter(r => !mutedAccounts.includes(r.event.pubkey));
+
+    const visibleReactionEvents = queryLimit != null ? filteredReactionEvents.slice(0, queryLimit) : filteredReactionEvents;
+    const visibleReposts = queryLimit != null ? filteredReposts.slice(0, queryLimit) : filteredReposts;
+    const visibleQuotes = queryLimit != null ? filteredQuotes.slice(0, queryLimit) : filteredQuotes;
+    const visibleReplyEvents = queryLimit != null ? interactions.replyEvents.slice(0, queryLimit) : interactions.replyEvents;
+    const visibleReplyCount = queryLimit != null ? Math.min(interactions.replyCount, queryLimit) : interactions.replyCount;
+
+    const reactionData = new Map<string, number>();
+    for (const event of visibleReactionEvents) {
+      const emoji = event.event.content || '+';
+      reactionData.set(emoji, (reactionData.get(emoji) || 0) + 1);
+    }
+
+    const reportData = new Map<string, number>();
+    for (const event of filteredReportEvents) {
+      const reportType = event.event.content || 'other';
+      reportData.set(reportType, (reportData.get(reportType) || 0) + 1);
+    }
+
+    return {
+      reactions: {
+        events: visibleReactionEvents,
+        data: reactionData,
+      },
+      reposts: visibleReposts,
+      quotes: visibleQuotes,
+      reports: {
+        events: filteredReportEvents,
+        data: reportData,
+      },
+      replyCount: visibleReplyCount,
+      replyEvents: visibleReplyEvents,
+      hasMoreReactions: queryLimit != null ? filteredReactionEvents.length >= queryLimit : (interactions.hasMoreReactions ?? false),
+      hasMoreReposts: queryLimit != null ? filteredReposts.length >= queryLimit : (interactions.hasMoreReposts ?? false),
+      hasMoreReplies: queryLimit != null ? interactions.replyCount >= queryLimit : (interactions.hasMoreReplies ?? false),
+      hasMoreQuotes: queryLimit != null ? filteredQuotes.length >= queryLimit : false,
+      needsVerification: queryLimit != null && (
+        ((interactions.hasMoreReactions ?? false) && filteredReactionEvents.length < queryLimit)
+        || ((interactions.hasMoreReposts ?? false) && filteredReposts.length < queryLimit)
+        || ((interactions.hasMoreReplies ?? false) && interactions.replyCount < queryLimit)
+        || (quotesResult.length >= queryLimit && filteredQuotes.length < queryLimit)
+      ),
+    };
+  }
+
+  private shouldVerifyTimelineInteractionCounts(
+    normalizedInteractions: ReturnType<EventComponent['normalizeInteractionResults']>,
+    queryLimit?: number,
+  ): boolean {
+    return this.mode() === 'timeline' && queryLimit != null && normalizedInteractions.needsVerification;
   }
 
   /**
