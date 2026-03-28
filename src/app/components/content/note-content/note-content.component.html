@@ -12,10 +12,16 @@
   <img [src]="imagePlaceholder" alt="Blurred preview" class="blurhash-placeholder" aria-hidden="true"
     [style.aspect-ratio]="getImageAspectRatio(token)" />
   }
-  <img [src]="token.content" alt="Content image" loading="lazy" (click)="openImageDialog(token.content)"
+  @if (hasImageFailed(token.content)) {
+  <div class="media-load-failure" role="img" aria-label="Content image failed to load">
+    <mat-icon>broken_image</mat-icon>
+  </div>
+  }
+  <img [src]="getImageSrc(token.content)" alt="Content image" loading="lazy" (click)="openImageDialog(token.content)"
     [class.clickable-image]="!shouldBlurImages() || isImageRevealed(token.content)"
+    [class.failed]="hasImageFailed(token.content)"
     [class.hidden]="shouldBlurImages() && !isImageRevealed(token.content)" [class.loaded]="isImageLoaded(token.content)"
-    class="main-image" (load)="onImageLoaded(token.content)" />
+    class="main-image" (load)="onImageLoaded(token.content)" (error)="onImageError(token.content)" />
   @if (shouldBlurImages() && !isImageRevealed(token.content)) {
   <div class="reveal-overlay">
     <div class="reveal-actions">
@@ -43,7 +49,7 @@
   <button type="button" class="carousel-side-preview carousel-side-preview-prev"
     [class.blurred-preview]="shouldBlurImages() && !isImageRevealed(previousImage.content)"
     (click)="goToPrevious(item.id, item.images); $event.stopPropagation()" aria-label="Previous image preview">
-    <img [src]="previousImage.content" alt="" loading="lazy" />
+    <img [src]="getImageSrc(previousImage.content)" alt="" loading="lazy" (error)="onImageError(previousImage.content)" />
     <span class="carousel-side-preview-scrim"></span>
   </button>
   }
@@ -51,7 +57,7 @@
     class="carousel-side-preview carousel-side-preview-next"
     [class.blurred-preview]="shouldBlurImages() && !isImageRevealed(nextImage.content)"
     (click)="goToNext(item.id, item.images); $event.stopPropagation()" aria-label="Next image preview">
-    <img [src]="nextImage.content" alt="" loading="lazy" />
+    <img [src]="getImageSrc(nextImage.content)" alt="" loading="lazy" (error)="onImageError(nextImage.content)" />
     <span class="carousel-side-preview-scrim"></span>
     </button>
     }
@@ -63,12 +69,18 @@
         <img [src]="carouselPlaceholder" alt="Blurred preview" class="blurhash-placeholder" aria-hidden="true"
           [style.aspect-ratio]="getImageAspectRatio(currentImage)" />
         }
-        <img [src]="currentImage.content" alt="Image {{ currentIndex + 1 }} of {{ item.images.length }}" loading="lazy"
+        @if (hasImageFailed(currentImage.content)) {
+        <div class="media-load-failure" role="img" aria-label="Image failed to load">
+          <mat-icon>broken_image</mat-icon>
+        </div>
+        }
+        <img [src]="getImageSrc(currentImage.content)" alt="Image {{ currentIndex + 1 }} of {{ item.images.length }}" loading="lazy"
           (click)="openCarouselImageDialog(item.images, currentIndex)"
           [class.clickable-image]="!shouldBlurImages() || isImageRevealed(currentImage.content)"
+          [class.failed]="hasImageFailed(currentImage.content)"
           [class.hidden]="shouldBlurImages() && !isImageRevealed(currentImage.content)"
           [class.loaded]="isImageLoaded(currentImage.content)" class="main-image"
-          (load)="onImageLoaded(currentImage.content)" />
+          (load)="onImageLoaded(currentImage.content)" (error)="onImageError(currentImage.content)" />
         @if (shouldBlurImages() && !isImageRevealed(currentImage.content)) {
         <div class="reveal-overlay">
           <div class="reveal-actions">

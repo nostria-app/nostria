@@ -71,6 +71,7 @@ export class FollowingDataService {
 
   // Cached events from following (in memory)
   private cachedEvents = signal<Event[]>([]);
+  private readonly MAX_IN_MEMORY_EVENTS = 2400;
 
   // Current fetch promise to avoid duplicate requests
   private currentFetchPromise: Promise<Event[]> | null = null;
@@ -197,8 +198,7 @@ export class FollowingDataService {
         eventMap.set(event.id, event);
       }
 
-      return Array.from(eventMap.values())
-        .sort((a, b) => b.created_at - a.created_at);
+      return this.limitEvents(Array.from(eventMap.values()));
     } catch (error) {
       this.logger.error('[FollowingDataService] Error getting cached events:', error);
       return [];
@@ -300,8 +300,14 @@ export class FollowingDataService {
     }
 
     // Sort by timestamp descending
-    return Array.from(eventMap.values())
-      .sort((a, b) => b.created_at - a.created_at);
+    return this.limitEvents(Array.from(eventMap.values()));
+  }
+
+  private limitEvents(events: Event[]): Event[] {
+    const sortedEvents = [...events].sort((a, b) => b.created_at - a.created_at);
+    return sortedEvents.length > this.MAX_IN_MEMORY_EVENTS
+      ? sortedEvents.slice(0, this.MAX_IN_MEMORY_EVENTS)
+      : sortedEvents;
   }
 
   /**

@@ -1,12 +1,46 @@
-import { Event } from 'nostr-tools';
-import { EventService } from './event';
+import { Event, kinds } from 'nostr-tools';
+import { type NostrRecord } from '../interfaces';
+import { type EventInteractions, EventService } from './event';
+
+function createEventServicePrototype(): EventService {
+  return Object.create(EventService.prototype) as EventService;
+}
+
+function setPrivateField(target: object, key: string, value: unknown): void {
+  Object.defineProperty(target, key, {
+    value,
+    configurable: true,
+    writable: true,
+  });
+}
+
+function createRecord(event: Partial<Event> & Pick<Event, 'id' | 'pubkey' | 'kind'>): NostrRecord {
+  return {
+    event: {
+      created_at: Math.floor(Date.now() / 1000),
+      content: '',
+      sig: 'test-sig',
+      tags: [],
+      ...event,
+    },
+    data: null,
+  };
+}
+
+type LoadEventInteractionsWithLimits = (
+  eventId: string,
+  pubkey: string,
+  repostKind: number,
+  skipReplies: boolean,
+  limit: number,
+  invalidateCache: boolean,
+) => Promise<EventInteractions>;
 
 describe('EventService getEventTags', () => {
   let service: EventService;
 
   beforeEach(() => {
-    // Create a minimal service instance for testing the getEventTags method
-    service = new EventService();
+    service = createEventServicePrototype();
   });
 
   describe('getEventTags', () => {
@@ -269,5 +303,237 @@ describe('EventService getEventTags', () => {
       expect(result.replyId).toBe('intermediate-reply-id');
       expect(result.replyAuthor).toBe('intermediate-author-pubkey');
     });
+  });
+});
+
+describe('EventService limited interaction loading', () => {
+  let service: EventService;
+  let resolvedRecords: NostrRecord[];
+  let getEventsByKindsAndEventTagCalls: unknown[][];
+
+  beforeEach(() => {
+    service = createEventServicePrototype();
+    resolvedRecords = [];
+    getEventsByKindsAndEventTagCalls = [];
+    const userDataService = {
+      getEventsByKindsAndEventTag: (...args: unknown[]) => {
+        getEventsByKindsAndEventTagCalls.push(args);
+        return Promise.resolve(resolvedRecords);
+      },
+    };
+
+    setPrivateField(service, 'userDataService', userDataService);
+    setPrivateField(service, 'logger', {
+      info: () => undefined,
+      error: () => undefined,
+      warn: () => undefined,
+      debug: () => undefined,
+    });
+    setPrivateField(service, 'VALID_REPORT_TYPES', new Set(['spam', 'other']));
+  });
+
+  it('should use one widened combined query for timeline interaction loading', async () => {
+    resolvedRecords = [
+      createRecord({
+        id: 'reaction-1',
+        pubkey: 'alice',
+        kind: kinds.Reaction,
+        content: '+',
+      }),
+      createRecord({
+        id: 'repost-1',
+        pubkey: 'bob',
+        kind: kinds.Repost,
+      }),
+      createRecord({
+        id: 'reply-1',
+        pubkey: 'carol',
+        kind: kinds.ShortTextNote,
+        content: 'reply',
+        tags: [['e', 'target-event-id', '', 'reply']],
+      }),
+      createRecord({
+        id: 'report-1',
+        pubkey: 'dave',
+        kind: kinds.Report,
+        tags: [['e', 'target-event-id', 'spam']],
+      }),
+    ];
+
+    const loadWithLimits = (
+      service as unknown as { loadEventInteractionsWithLimits: LoadEventInteractionsWithLimits }
+    ).loadEventInteractionsWithLimits.bind(service);
+
+    const result = await loadWithLimits(
+      'target-event-id',
+      'target-pubkey',
+      kinds.Repost,
+      false,
+      11,
+      false,
+    );
+
+    expect(getEventsByKindsAndEventTagCalls.length).toBe(1);
+    const [calledPubkey, calledKinds, calledEventId, calledOptions] = getEventsByKindsAndEventTagCalls.at(-1) as [
+      string,
+      number[],
+      string,
+      {
+        limit?: number;
+        includeAccountRelays?: boolean;
+        cache?: boolean;
+        save?: boolean;
+        invalidateCache?: boolean;
+      },
+    ];
+
+    expect(calledPubkey).toBe('target-pubkey');
+    expect(calledKinds).toEqual([
+      kinds.Reaction,
+      kinds.Repost,
+      kinds.Report,
+      kinds.ShortTextNote,
+      1111,
+      1244,
+    ]);
+    expect(calledEventId).toBe('target-event-id');
+    expect(calledOptions.limit).toBe(44);
+    expect(calledOptions.includeAccountRelays).toBe(true);
+    expect(calledOptions.cache).toBe(true);
+    expect(calledOptions.save).toBe(true);
+    expect(calledOptions.invalidateCache).toBe(false);
+    expect(result.reactions.events.map((record) => record.event.id)).toEqual(['reaction-1']);
+    expect(result.reposts.map((record) => record.event.id)).toEqual(['repost-1']);
+    expect(result.replyCount).toBe(1);
+    expect(result.replyEvents.map((event) => event.id)).toEqual(['reply-1']);
+    expect(result.reports.events.map((record) => record.event.id)).toEqual(['report-1']);
+  });
+
+  it('should keep verification flags active when a widened combined query saturates', async () => {
+    resolvedRecords =
+      Array.from({ length: 8 }, (_, index) => createRecord({
+        id: `reaction-${index}`,
+        pubkey: `pubkey-${index}`,
+        kind: kinds.Reaction,
+        content: '+',
+      }))
+      ;
+
+    const loadWithLimits = (
+      service as unknown as { loadEventInteractionsWithLimits: LoadEventInteractionsWithLimits }
+    ).loadEventInteractionsWithLimits.bind(service);
+
+    const result = await loadWithLimits(
+      'target-event-id',
+      'target-pubkey',
+      kinds.Repost,
+      false,
+      2,
+      false,
+    );
+
+    expect(result.hasMoreReactions).toBe(true);
+    expect(result.hasMoreReposts).toBe(true);
+    expect(result.hasMoreReplies).toBe(true);
+  });
+
+  it('should count nested descendants when the target event is the thread root', async () => {
+    resolvedRecords = [
+      createRecord({
+        id: 'direct-reply',
+        pubkey: 'alice',
+        kind: kinds.ShortTextNote,
+        content: 'direct reply',
+        tags: [['e', 'target-event-id', '', 'reply']],
+      }),
+      createRecord({
+        id: 'nested-reply',
+        pubkey: 'bob',
+        kind: kinds.ShortTextNote,
+        content: 'nested reply',
+        tags: [
+          ['e', 'target-event-id', '', 'root'],
+          ['e', 'child-event-id', '', 'reply'],
+        ],
+      }),
+    ];
+
+    const loadWithLimits = (
+      service as unknown as { loadEventInteractionsWithLimits: LoadEventInteractionsWithLimits }
+    ).loadEventInteractionsWithLimits.bind(service);
+
+    const result = await loadWithLimits(
+      'target-event-id',
+      'target-pubkey',
+      kinds.Repost,
+      false,
+      11,
+      false,
+    );
+
+    expect(result.replyCount).toBe(2);
+    expect(result.replyEvents.map((event) => event.id)).toEqual(['direct-reply', 'nested-reply']);
+  });
+});
+
+describe('EventService interaction cache duration', () => {
+  let service: EventService;
+
+  beforeEach(() => {
+    service = createEventServicePrototype();
+  });
+
+  it('should keep full-detail interaction cache on the default ttl', () => {
+    const emptyInteractions: EventInteractions = {
+      reactions: { events: [], data: new Map() },
+      reposts: [],
+      reports: { events: [], data: new Map() },
+      replyCount: 0,
+      replyEvents: [],
+      quotes: [],
+    };
+
+    const cacheDuration = (
+      service as unknown as { getInteractionCacheDuration: (limit: number | undefined, result: EventInteractions) => number | undefined }
+    ).getInteractionCacheDuration(undefined, emptyInteractions);
+
+    expect(cacheDuration).toBeUndefined();
+  });
+
+  it('should short-cache empty timeline interaction results', () => {
+    const emptyInteractions: EventInteractions = {
+      reactions: { events: [], data: new Map() },
+      reposts: [],
+      reports: { events: [], data: new Map() },
+      replyCount: 0,
+      replyEvents: [],
+      quotes: [],
+    };
+
+    const cacheDuration = (
+      service as unknown as { getInteractionCacheDuration: (limit: number | undefined, result: EventInteractions) => number | undefined }
+    ).getInteractionCacheDuration(11, emptyInteractions);
+
+    expect(cacheDuration).toBe(5000);
+  });
+
+  it('should use a shorter ttl for non-empty timeline interaction results', () => {
+    const nonEmptyInteractions: EventInteractions = {
+      reactions: {
+        events: [createRecord({ id: 'reaction-1', pubkey: 'alice', kind: kinds.Reaction, content: '+' })],
+        data: new Map([['+', 1]]),
+      },
+      reposts: [],
+      reports: { events: [], data: new Map() },
+      replyCount: 0,
+      replyEvents: [],
+      quotes: [],
+    };
+
+    const cacheDuration = (
+      service as unknown as { getInteractionCacheDuration: (limit: number | undefined, result: EventInteractions) => number | undefined }
+    ).getInteractionCacheDuration(11, nonEmptyInteractions);
+
+    expect(cacheDuration).toBe(30000);
   });
 });

@@ -268,8 +268,10 @@ export class FeedService {
   // Feed type definitions
   readonly feedTypes = COLUMN_TYPES;
 
-  // Cache constants
-  private readonly CACHE_SIZE = 200; // Cache 200 events per column
+  // Feed memory/cache limits
+  private readonly MAX_EVENTS_PER_FEED = 2000;
+  private readonly MAX_PENDING_EVENTS_PER_FEED = 400;
+  private readonly MAX_FEED_CACHE_EVENTS = 2400;
 
   constructor() {
     // Track if we've already started loading for the current pubkey
@@ -455,14 +457,53 @@ export class FeedService {
     try {
       await this.database.init();
       const cachedEvents = await this.database.loadCachedEvents(pubkey, feedId);
+      const limitedEvents = this.limitDisplayedEvents(cachedEvents);
 
-      if (cachedEvents.length > 0) {
-        this.logger.info(`✅ Loaded ${cachedEvents.length} cached events for feed ${feedId}`);
+      if (limitedEvents.length > 0) {
+        const trimmedCount = cachedEvents.length - limitedEvents.length;
+        this.logger.info(
+          `✅ Loaded ${limitedEvents.length} cached events for feed ${feedId}` +
+          (trimmedCount > 0 ? ` (trimmed ${trimmedCount} older events from memory)` : '')
+        );
       }
-      return cachedEvents;
+      return limitedEvents;
     } catch (error) {
       this.logger.error('Error loading cached events:', error);
       return [];
+    }
+  }
+
+  private sortEventsByCreatedAt(events: Event[]): Event[] {
+    return [...events].sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
+  }
+
+  private dedupeSortAndLimitEvents(events: Event[], limit: number): Event[] {
+    if (events.length === 0) {
+      return [];
+    }
+
+    const uniqueEvents = Array.from(new Map(events.map(event => [event.id, event])).values());
+    const sortedEvents = this.sortEventsByCreatedAt(uniqueEvents);
+    return sortedEvents.length > limit ? sortedEvents.slice(0, limit) : sortedEvents;
+  }
+
+  private limitDisplayedEvents(events: Event[]): Event[] {
+    return this.dedupeSortAndLimitEvents(events, this.MAX_EVENTS_PER_FEED);
+  }
+
+  private limitPendingEvents(events: Event[]): Event[] {
+    return this.dedupeSortAndLimitEvents(events, this.MAX_PENDING_EVENTS_PER_FEED);
+  }
+
+  private trimFeedState(feedData: FeedItem): void {
+    const currentEvents = feedData.events();
+    if (currentEvents.length > this.MAX_EVENTS_PER_FEED) {
+      feedData.events.set(this.limitDisplayedEvents(currentEvents));
+    }
+
+    const currentPending = feedData.pendingEvents?.();
+    if (currentPending && currentPending.length > this.MAX_PENDING_EVENTS_PER_FEED) {
+      feedData.pendingEvents?.set(this.limitPendingEvents(currentPending));
     }
   }
 
@@ -534,9 +575,11 @@ export class FeedService {
       try {
         await this.database.init();
 
+        const eventsToCache = this.dedupeSortAndLimitEvents(events, this.MAX_FEED_CACHE_EVENTS);
+
         // Save to cache for instant loading
-        await this.database.saveCachedEvents(pubkey, feedId, events);
-        this.logger.debug(`💾 Saved ${events.length} events to cache for feed ${feedId}`);
+        await this.database.saveCachedEvents(pubkey, feedId, eventsToCache);
+        this.logger.debug(`💾 Saved ${eventsToCache.length} events to cache for feed ${feedId}`);
 
         // Also save each event to the main events store for Summary queries
         // This enables the Summary page to query events by pubkey and kind
@@ -914,8 +957,7 @@ export class FeedService {
               if (pending.some(e => e.id === event.id)) {
                 return pending;
               }
-              const newPending = [...pending, event];
-              return newPending.sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
+              return this.limitPendingEvents([...pending, event]);
             });
           } else {
             this.logger.debug(`➕ Adding relay event to feed ${feed.id}: ${event.id.substring(0, 8)}...`);
@@ -923,8 +965,7 @@ export class FeedService {
               if (events.some(e => e.id === event.id)) {
                 return events;
               }
-              const newEvents = [...events, event];
-              const sortedEvents = newEvents.sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
+              const sortedEvents = this.limitDisplayedEvents([...events, event]);
               this.saveCachedEvents(feed.id, sortedEvents);
               return sortedEvents;
             });
@@ -958,8 +999,7 @@ export class FeedService {
               if (pending.some(e => e.id === event.id)) {
                 return pending;
               }
-              const newPending = [...pending, event];
-              return newPending.sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
+              return this.limitPendingEvents([...pending, event]);
             });
           } else {
             this.logger.debug(`➕ Adding relay event to feed ${feed.id}: ${event.id.substring(0, 8)}...`);
@@ -967,8 +1007,7 @@ export class FeedService {
               if (events.some(e => e.id === event.id)) {
                 return events;
               }
-              const newEvents = [...events, event];
-              const sortedEvents = newEvents.sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
+              const sortedEvents = this.limitDisplayedEvents([...events, event]);
               this.saveCachedEvents(feed.id, sortedEvents);
               return sortedEvents;
             });
@@ -1148,8 +1187,7 @@ export class FeedService {
               if (pending.some(e => e.id === event.id)) {
                 return pending;
               }
-              const newPending = [...pending, event];
-              return newPending.sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
+              return this.limitPendingEvents([...pending, event]);
             });
           } else {
             // Initial load not complete OR no existing events - render relay events directly
@@ -1159,8 +1197,7 @@ export class FeedService {
               if (events.some(e => e.id === event.id)) {
                 return events;
               }
-              const newEvents = [...events, event];
-              const sortedEvents = newEvents.sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
+              const sortedEvents = this.limitDisplayedEvents([...events, event]);
               // Schedule cache save (debounced internally)
               this.saveCachedEvents(feed.id, sortedEvents);
               return sortedEvents;
@@ -1197,8 +1234,7 @@ export class FeedService {
               if (pending.some(e => e.id === event.id)) {
                 return pending;
               }
-              const newPending = [...pending, event];
-              return newPending.sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
+              return this.limitPendingEvents([...pending, event]);
             });
           } else {
             // Initial load not complete OR no existing events - render relay events directly
@@ -1208,8 +1244,7 @@ export class FeedService {
               if (events.some(e => e.id === event.id)) {
                 return events;
               }
-              const newEvents = [...events, event];
-              const sortedEvents = newEvents.sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
+              const sortedEvents = this.limitDisplayedEvents([...events, event]);
               // Schedule cache save (debounced internally)
               this.saveCachedEvents(feed.id, sortedEvents);
               return sortedEvents;
@@ -1516,8 +1551,7 @@ export class FeedService {
 
           if (trulyNewEvents.length > 0) {
             feedData.pendingEvents?.update((pending: Event[]) => {
-              const newPending = [...pending, ...trulyNewEvents];
-              return newPending.sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
+              return this.limitPendingEvents([...pending, ...trulyNewEvents]);
             });
 
             this._feedData.update(map => new Map(map));
@@ -1525,9 +1559,7 @@ export class FeedService {
           }
         } else {
           // No cached events - merge directly for initial load
-          const combinedEvents = [...currentEvents, ...newEvents].sort(
-            (a, b) => (b.created_at || 0) - (a.created_at || 0)
-          );
+          const combinedEvents = this.limitDisplayedEvents([...currentEvents, ...newEvents]);
 
           feedData.events.set(combinedEvents);
           this.logger.debug(`Added ${newEvents.length} new events from interests`);
@@ -1691,8 +1723,7 @@ export class FeedService {
 
     if (trulyNewEvents.length > 0) {
       // Add to the feed and re-sort (older events will naturally go to the end)
-      const mergedEvents = [...existingEvents, ...trulyNewEvents]
-        .sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
+      const mergedEvents = this.limitDisplayedEvents([...existingEvents, ...trulyNewEvents]);
 
       feedData.events.set(mergedEvents);
 
@@ -1745,8 +1776,7 @@ export class FeedService {
       const trulyNewEvents = filteredEvents.filter(e => !existingIds.has(e.id));
 
       if (trulyNewEvents.length > 0) {
-        const mergedEvents = [...existingEvents, ...trulyNewEvents]
-          .sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
+        const mergedEvents = this.limitDisplayedEvents([...existingEvents, ...trulyNewEvents]);
 
         feedData.events.set(mergedEvents);
 
@@ -1781,8 +1811,7 @@ export class FeedService {
 
       if (trulyNewEvents.length > 0) {
         feedData.pendingEvents?.update((pending: Event[]) => {
-          const newPending = [...pending, ...trulyNewEvents];
-          return newPending.sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
+          return this.limitPendingEvents([...pending, ...trulyNewEvents]);
         });
 
         // Trigger reactivity update for components to see the new pending count
@@ -1801,8 +1830,7 @@ export class FeedService {
       const trulyNewEvents = filteredEvents.filter(e => !existingIds.has(e.id));
 
       if (trulyNewEvents.length > 0) {
-        const mergedEvents = [...existingEvents, ...trulyNewEvents]
-          .sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
+        const mergedEvents = this.limitDisplayedEvents([...existingEvents, ...trulyNewEvents]);
 
         feedData.events.set(mergedEvents);
         this._feedData.update(map => new Map(map));
@@ -1852,7 +1880,7 @@ export class FeedService {
               newPending.push(event);
             }
           }
-          return newPending.sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
+          return this.limitPendingEvents(newPending);
         });
 
         // Save events to database for Summary page queries
@@ -1863,8 +1891,7 @@ export class FeedService {
         this.logger.debug(`📥 Final: Queued ${unprocessedEvents.length} events to pending (${existingEvents.length} cached events preserved)`);
       } else {
         // No existing events - merge all unprocessed events
-        const mergedEvents = [...existingEvents, ...unprocessedEvents]
-          .sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
+        const mergedEvents = this.limitDisplayedEvents([...existingEvents, ...unprocessedEvents]);
 
         feedData.events.set(mergedEvents);
 
@@ -1876,11 +1903,10 @@ export class FeedService {
     }
 
     // Save to cache - include both displayed and pending events
+    this.trimFeedState(feedData);
     const pendingEvents = feedData.pendingEvents?.() || [];
     const allEventsForCache = [...feedData.events(), ...pendingEvents];
-    const uniqueEventsForCache = Array.from(
-      new Map(allEventsForCache.map(e => [e.id, e])).values()
-    ).sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
+    const uniqueEventsForCache = this.dedupeSortAndLimitEvents(allEventsForCache, this.MAX_FEED_CACHE_EVENTS);
 
     this.saveCachedEvents(feedData.feed.id, uniqueEventsForCache);
 
@@ -2156,8 +2182,7 @@ export class FeedService {
 
             if (trulyNewEvents.length > 0) {
               feedData.pendingEvents?.update((pending: Event[]) => {
-                const newPending = [...pending, ...trulyNewEvents];
-                return newPending.sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
+                return this.limitPendingEvents([...pending, ...trulyNewEvents]);
               });
 
               // Trigger reactivity update for pending count in UI
@@ -2177,9 +2202,7 @@ export class FeedService {
             feedData.events.update((currentEvents: Event[]) => {
               const existingIds = new Set(currentEvents.map(e => e.id));
               const newEvents = validEvents.filter(e => !existingIds.has(e.id));
-              const combined = [...currentEvents, ...newEvents];
-              const sorted = combined.sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
-              return sorted;
+              return this.limitDisplayedEvents([...currentEvents, ...newEvents]);
             });
 
             // Save to cache
@@ -2288,8 +2311,7 @@ export class FeedService {
         event => !!this.eventProcessor.shouldAcceptEvent(event, { skipStats: true }) && allowedKinds.has(event.kind)
       );
 
-      const uniqueEvents = Array.from(new Map(validEvents.map(event => [event.id, event])).values())
-        .sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
+      const uniqueEvents = this.limitDisplayedEvents(validEvents);
 
       const existingEvents = feedData.events();
 
@@ -2301,8 +2323,7 @@ export class FeedService {
 
         if (trulyNewEvents.length > 0) {
           feedData.pendingEvents?.update((pending: Event[]) => {
-            const newPending = [...pending, ...trulyNewEvents];
-            return newPending.sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
+            return this.limitPendingEvents([...pending, ...trulyNewEvents]);
           });
           this._feedData.update(map => new Map(map));
           this.saveCachedEvents(feedData.feed.id, [...existingEvents, ...trulyNewEvents]);
@@ -2310,7 +2331,7 @@ export class FeedService {
         }
       } else {
         // No cached events - show directly
-        feedData.events.set(uniqueEvents);
+        feedData.events.set(this.limitDisplayedEvents(uniqueEvents));
         this._feedData.update(map => new Map(map));
 
         if (uniqueEvents.length > 0) {
@@ -2492,7 +2513,7 @@ export class FeedService {
                 newPending.push(event);
               }
             }
-            return newPending.sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
+            return this.limitPendingEvents(newPending);
           });
 
           // Trigger reactivity update so pending count is recalculated in UI
@@ -2504,7 +2525,7 @@ export class FeedService {
         }
       } else {
         // Initial load not complete OR no existing events - merge events directly
-        const mergedEvents = this.mergeEvents(existingEvents, newEvents);
+        const mergedEvents = this.limitDisplayedEvents(this.mergeEvents(existingEvents, newEvents));
 
         // Update the feed with merged events
         feedData.events.set(mergedEvents);
@@ -2555,7 +2576,7 @@ export class FeedService {
                 newPending.push(event);
               }
             }
-            return newPending.sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
+            return this.limitPendingEvents(newPending);
           });
 
           // Trigger reactivity update so pending count is recalculated in UI
@@ -2571,7 +2592,7 @@ export class FeedService {
         }
       } else {
         // Initial load not complete OR no existing events - merge events directly
-        const mergedEvents = this.mergeEvents(existingEvents, newEvents);
+        const mergedEvents = this.limitDisplayedEvents(this.mergeEvents(existingEvents, newEvents));
 
         // Update feed data with merged events
         feedData.events.set(mergedEvents);
@@ -2976,10 +2997,11 @@ export class FeedService {
           })
           .map(event => [event.id, event])
       ).values()
-    ).sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
+    );
+    const limitedOlderEvents = this.limitDisplayedEvents(uniqueOlderEvents);
 
     const feedId = feedData.feed.id;
-    if (uniqueOlderEvents.length === 0) {
+    if (limitedOlderEvents.length === 0) {
       const nextStreak = (this.emptyPaginationStreakByFeedId.get(feedId) || 0) + 1;
       this.emptyPaginationStreakByFeedId.set(feedId, nextStreak);
 
@@ -2991,13 +3013,13 @@ export class FeedService {
 
     this.emptyPaginationStreakByFeedId.set(feedId, 0);
 
-    const mergedEvents = this.mergeEvents(existingEvents, uniqueOlderEvents);
+    const mergedEvents = this.limitDisplayedEvents(this.mergeEvents(existingEvents, limitedOlderEvents));
     feedData.events.set(mergedEvents);
 
     feedData.lastTimestamp = Math.min(...mergedEvents.map(event => (event.created_at || 0) * 1000));
 
     this.saveCachedEvents(feedId, mergedEvents);
-    uniqueOlderEvents.forEach(event => this.saveEventToDatabase(event));
+    limitedOlderEvents.forEach(event => this.saveEventToDatabase(event));
   }
 
   /**
@@ -3022,7 +3044,7 @@ export class FeedService {
 
     if (olderEvents.length > 0) {
       // Merge with existing events (avoiding duplicates)
-      const updatedEvents = this.mergeEvents(existingEvents, olderEvents);
+      const updatedEvents = this.limitDisplayedEvents(this.mergeEvents(existingEvents, olderEvents));
       feedData.events.set(updatedEvents);
 
       // Update last timestamp
@@ -3048,7 +3070,7 @@ export class FeedService {
 
     // Merge with existing events if we have any (avoiding duplicates)
     if (finalOlderEvents.length > 0) {
-      const updatedEvents = this.mergeEvents(existingEvents, finalOlderEvents);
+      const updatedEvents = this.limitDisplayedEvents(this.mergeEvents(existingEvents, finalOlderEvents));
       feedData.events.set(updatedEvents);
 
       // Update last timestamp
@@ -3369,10 +3391,7 @@ export class FeedService {
         const currentPending = feedData.pendingEvents() || [];
         const allPending = [...filteredNewEvents, ...currentPending];
 
-        // Remove duplicates and sort by created_at descending
-        const uniquePending = Array.from(
-          new Map(allPending.map(event => [event.id, event])).values()
-        ).sort((a, b) => b.created_at - a.created_at);
+        const uniquePending = this.limitPendingEvents(allPending);
 
         feedData.pendingEvents.set(uniquePending);
 
@@ -3528,10 +3547,7 @@ export class FeedService {
     const currentEvents = feedData.events();
     const allEvents = [...pending, ...currentEvents];
 
-    // Remove duplicates and sort by created_at descending
-    const uniqueEvents = Array.from(
-      new Map(allEvents.map(event => [event.id, event])).values()
-    ).sort((a, b) => b.created_at - a.created_at);
+    const uniqueEvents = this.limitDisplayedEvents(allEvents);
 
     // Update events signal
     feedData.events.set(uniqueEvents);

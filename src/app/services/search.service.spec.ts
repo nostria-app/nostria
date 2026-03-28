@@ -1,20 +1,7 @@
-import { TestBed } from '@angular/core/testing';
-import { PLATFORM_ID, provideZonelessChangeDetection, signal } from '@angular/core';
+import '@angular/compiler';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { signal } from '@angular/core';
 import { SearchService, SearchResultProfile } from './search.service';
-import { LayoutService } from './layout.service';
-import { AccountStateService } from './account-state.service';
-import { FollowingService } from './following.service';
-import { UserDataService } from './user-data.service';
-import { RelaysService } from './relays/relays';
-import { RelayPoolService } from './relays/relay-pool';
-import { DatabaseService } from './database.service';
-import { MatDialog } from '@angular/material/dialog';
-import { EventService } from './event';
-import { MediaPlayerService } from './media-player.service';
-import { RssParserService } from './rss-parser.service';
-import { SearchRelayService } from './relays/search-relay';
-import { LoggerService } from './logger.service';
-import { TrustService } from './trust.service';
 
 /**
  * Helper to create a mock SearchResultProfile for testing.
@@ -59,93 +46,15 @@ describe('SearchService', () => {
     let service: SearchService;
 
     beforeEach(() => {
-        TestBed.configureTestingModule({
-            providers: [
-                provideZonelessChangeDetection(),
-                SearchService,
-                { provide: PLATFORM_ID, useValue: 'browser' },
-                {
-                    provide: LayoutService,
-                    useValue: {
-                        query: signal(''),
-                        searchInput: '',
-                        toggleSearch: vi.fn(),
-                        openProfile: vi.fn(),
-                        openProfileAsPrimary: vi.fn(),
-                        toast: vi.fn(),
-                        router: { navigate: vi.fn() },
-                    },
-                },
-                {
-                    provide: AccountStateService,
-                    useValue: { pubkey: signal(undefined) },
-                },
-                {
-                    provide: FollowingService,
-                    useValue: {
-                        searchProfiles: vi.fn().mockReturnValue([]),
-                        toNostrRecords: vi.fn().mockReturnValue([]),
-                    },
-                },
-                {
-                    provide: UserDataService,
-                    useValue: { getEventById: vi.fn() },
-                },
-                {
-                    provide: RelaysService,
-                    useValue: { getAllObservedRelays: vi.fn().mockReturnValue(Promise.resolve([])) },
-                },
-                {
-                    provide: RelayPoolService,
-                    useValue: { getEventById: vi.fn() },
-                },
-                {
-                    provide: DatabaseService,
-                    useValue: {
-                        searchCachedProfiles: vi.fn().mockReturnValue(Promise.resolve([])),
-                        saveEvent: vi.fn(),
-                    },
-                },
-                { provide: MatDialog, useValue: { open: vi.fn() } },
-                {
-                    provide: EventService,
-                    useValue: { createNote: vi.fn() },
-                },
-                {
-                    provide: MediaPlayerService,
-                    useValue: { media: signal([]), enque: vi.fn() },
-                },
-                {
-                    provide: RssParserService,
-                    useValue: { parse: vi.fn() },
-                },
-                {
-                    provide: SearchRelayService,
-                    useValue: {
-                        searchProfiles: vi.fn().mockReturnValue(Promise.resolve([])),
-                        search: vi.fn().mockReturnValue(Promise.resolve([])),
-                    },
-                },
-                {
-                    provide: LoggerService,
-                    useValue: {
-                        info: vi.fn(),
-                        warn: vi.fn(),
-                        error: vi.fn(),
-                        debug: vi.fn(),
-                    },
-                },
-                {
-                    provide: TrustService,
-                    useValue: {
-                        isEnabled: vi.fn().mockReturnValue(false),
-                        fetchMetricsBatch: vi.fn().mockReturnValue(Promise.resolve(new Map())),
-                    },
-                },
-            ],
-        });
-
-        service = TestBed.inject(SearchService);
+        service = Object.assign(Object.create(SearchService.prototype), {
+            searchResults: signal([]),
+            logger: {
+                info: vi.fn(),
+                warn: vi.fn(),
+                error: vi.fn(),
+                debug: vi.fn(),
+            },
+        }) as SearchService;
     });
 
     describe('getRelevanceScore', () => {
@@ -164,6 +73,11 @@ describe('SearchService', () => {
             expect(service.getRelevanceScore(profile, 'hus')).toBe(0);
         });
 
+        it('should return 0 for exact match on display_name', () => {
+            const profile = createProfile({ display_name: 'hus' });
+            expect(service.getRelevanceScore(profile, 'hus')).toBe(0);
+        });
+
         it('should return 1 for starts-with match on name', () => {
             const profile = createProfile({ name: 'hustle' });
             expect(service.getRelevanceScore(profile, 'hus')).toBe(1);
@@ -174,44 +88,39 @@ describe('SearchService', () => {
             expect(service.getRelevanceScore(profile, 'hus')).toBe(1);
         });
 
-        it('should return 2 for exact match on display_name', () => {
-            const profile = createProfile({ display_name: 'hus' });
+        it('should return 1 for starts-with match on display_name', () => {
+            const profile = createProfile({ display_name: 'Hustle King' });
+            expect(service.getRelevanceScore(profile, 'hus')).toBe(1);
+        });
+
+        it('should return 2 for contains match on name', () => {
+            const profile = createProfile({ name: 'xhus_dev' });
             expect(service.getRelevanceScore(profile, 'hus')).toBe(2);
         });
 
-        it('should return 3 for starts-with match on display_name', () => {
-            const profile = createProfile({ display_name: 'Hustle King' });
+        it('should return 2 for contains match on display_name', () => {
+            const profile = createProfile({ display_name: 'The Hustle' });
+            expect(service.getRelevanceScore(profile, 'hus')).toBe(2);
+        });
+
+        it('should return 2 for contains match on NIP-05', () => {
+            const profile = createProfile({ nip05: 'user@huskfire.com' });
+            expect(service.getRelevanceScore(profile, 'hus')).toBe(2);
+        });
+
+        it('should return 3 for match only in about', () => {
+            const profile = createProfile({ name: 'alice', about: 'I like huskies' });
             expect(service.getRelevanceScore(profile, 'hus')).toBe(3);
         });
 
-        it('should return 4 for contains match on name', () => {
-            const profile = createProfile({ name: 'xhus_dev' });
-            expect(service.getRelevanceScore(profile, 'hus')).toBe(4);
-        });
-
-        it('should return 4 for contains match on display_name', () => {
-            const profile = createProfile({ display_name: 'The Hustle' });
-            expect(service.getRelevanceScore(profile, 'hus')).toBe(4);
-        });
-
-        it('should return 4 for contains match on NIP-05', () => {
-            const profile = createProfile({ nip05: 'user@bushfire.com' });
-            expect(service.getRelevanceScore(profile, 'hus')).toBe(4);
-        });
-
-        it('should return 5 for match only in about', () => {
-            const profile = createProfile({ name: 'alice', about: 'I like huskies' });
-            expect(service.getRelevanceScore(profile, 'hus')).toBe(5);
-        });
-
-        it('should return 6 for no match', () => {
+        it('should return 4 for no match', () => {
             const profile = createProfile({ name: 'alice', about: 'Developer' });
-            expect(service.getRelevanceScore(profile, 'hus')).toBe(6);
+            expect(service.getRelevanceScore(profile, 'hus')).toBe(4);
         });
 
-        it('should return 6 for empty query', () => {
+        it('should return 4 for empty query', () => {
             const profile = createProfile({ name: 'hus' });
-            expect(service.getRelevanceScore(profile, '')).toBe(6);
+            expect(service.getRelevanceScore(profile, '')).toBe(4);
         });
 
         it('should prefer name exact match over NIP-05 starts-with', () => {
@@ -223,7 +132,7 @@ describe('SearchService', () => {
 
         it('should handle profiles with no data fields gracefully', () => {
             const profile = createProfile({});
-            expect(service.getRelevanceScore(profile, 'hus')).toBe(6);
+            expect(service.getRelevanceScore(profile, 'hus')).toBe(4);
         });
 
         it('should handle NIP-05 without @ (no domain)', () => {
@@ -234,7 +143,7 @@ describe('SearchService', () => {
         it('should correctly score NIP-05 domain-only match as contains', () => {
             // NIP-05 is user@domain, search matches domain part
             const profile = createProfile({ name: 'alice', nip05: 'alice@hus.app' });
-            expect(service.getRelevanceScore(profile, 'hus')).toBe(4);
+            expect(service.getRelevanceScore(profile, 'hus')).toBe(2);
         });
     });
 
@@ -261,17 +170,28 @@ describe('SearchService', () => {
                 .toBe(service.getRelevanceScore(nip05Exact, 'hus'));
         });
 
-        it('should still prioritize following source over cached with better relevance', () => {
+        it('should rank exact display_name match at same level as exact name match', () => {
+            const nameExact = createProfile({ name: 'meg', pubkey: 'a'.repeat(64) });
+            const displayNameExact = createProfile({ display_name: 'meg', pubkey: 'b'.repeat(64) });
+
+            expect(service.getRelevanceScore(nameExact, 'meg'))
+                .toBe(service.getRelevanceScore(displayNameExact, 'meg'));
+        });
+
+        it('should prioritize exact match over source priority in sorting', () => {
             const followingContains = createProfile({ name: 'enthused', source: 'following', pubkey: 'a'.repeat(64) });
             const cachedExact = createProfile({ name: 'hus', source: 'cached', pubkey: 'b'.repeat(64) });
+            const sorted = service['sortByRelevance']([followingContains, cachedExact], 'hus');
 
-            // Following should come first regardless of relevance (source priority is primary)
-            const followingScore = service.getRelevanceScore(followingContains, 'hus');
-            const cachedScore = service.getRelevanceScore(cachedExact, 'hus');
+            expect(sorted[0]).toBe(cachedExact);
+        });
 
-            // The relevance score itself doesn't include source - that's handled in the sort comparator
-            expect(followingScore).toBeGreaterThan(cachedScore);
-            // But in sorting, following always comes before cached
+        it('should put an exact match before a longer prefix match', () => {
+            const longerPrefix = createProfile({ name: 'Megan', source: 'following', pubkey: 'a'.repeat(64) });
+            const exact = createProfile({ name: 'meg', source: 'cached', pubkey: 'b'.repeat(64) });
+            const sorted = service['sortByRelevance']([longerPrefix, exact], 'meg');
+
+            expect(sorted[0]).toBe(exact);
         });
     });
 });

@@ -54,6 +54,7 @@ import { TimestampPipe } from '../../../pipes/timestamp.pipe';
 import { ParsingService } from '../../../services/parsing.service';
 import { ReportingService } from '../../../services/reporting.service';
 import { visualContentLength } from '../../../utils/visual-content-length';
+import { stripImageProxy } from '../../../utils/strip-image-proxy';
 
 // Music event kinds
 const MUSIC_TRACK_KIND = 36787;
@@ -183,6 +184,10 @@ export class NoteContentComponent implements OnDestroy {
 
   // Track loaded images for progressive loading
   private loadedImages = signal<Set<string>>(new Set());
+
+  // Track per-image fallback src and permanent failures
+  private imageSrcOverrides = signal<Map<string, string>>(new Map());
+  private failedImages = signal<Set<string>>(new Set());
 
   // Carousel state for image groups - maps group ID to current index
   private carouselIndices = signal<Map<number, number>>(new Map());
@@ -1625,11 +1630,49 @@ export class NoteContentComponent implements OnDestroy {
     return this.loadedImages().has(imageUrl);
   }
 
+  hasImageFailed(imageUrl: string): boolean {
+    return this.failedImages().has(imageUrl);
+  }
+
+  getImageSrc(imageUrl: string): string {
+    return this.imageSrcOverrides().get(imageUrl) || imageUrl;
+  }
+
   /**
    * Mark an image as loaded (for progressive loading transition)
    */
   onImageLoaded(imageUrl: string): void {
     this.loadedImages.update(set => {
+      const newSet = new Set(set);
+      newSet.add(imageUrl);
+      return newSet;
+    });
+
+    this.failedImages.update(set => {
+      if (!set.has(imageUrl)) {
+        return set;
+      }
+
+      const newSet = new Set(set);
+      newSet.delete(imageUrl);
+      return newSet;
+    });
+  }
+
+  onImageError(imageUrl: string): void {
+    const currentSrc = this.getImageSrc(imageUrl);
+    const fallbackSrc = stripImageProxy(currentSrc);
+
+    if (fallbackSrc && fallbackSrc !== currentSrc) {
+      this.imageSrcOverrides.update(map => {
+        const newMap = new Map(map);
+        newMap.set(imageUrl, fallbackSrc);
+        return newMap;
+      });
+      return;
+    }
+
+    this.failedImages.update(set => {
       const newSet = new Set(set);
       newSet.add(imageUrl);
       return newSet;

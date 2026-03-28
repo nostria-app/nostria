@@ -14,6 +14,7 @@ import { AccountLocalStateService } from '../../services/account-local-state.ser
 import { ImagePlaceholderService, PlaceholderData } from '../../services/image-placeholder.service';
 import { LayoutService } from '../../services/layout.service';
 import { UtilitiesService } from '../../services/utilities.service';
+import { stripImageProxy } from '../../utils/strip-image-proxy';
 
 @Component({
   selector: 'app-photo-event',
@@ -71,6 +72,10 @@ export class PhotoEventComponent {
 
   // Track which images have finished loading (for progressive loading)
   loadedImages = signal<Set<number>>(new Set());
+
+  // Track fallback src and hard failures per carousel item
+  imageSrcOverrides = signal<Map<number, string>>(new Map());
+  failedImages = signal<Set<number>>(new Set());
 
   // Computed: Should media be blurred based on privacy settings?
   shouldBlurMedia = computed(() => {
@@ -243,6 +248,11 @@ export class PhotoEventComponent {
     }
     const index = this.currentCarouselIndex();
     return urls[index] || urls[0];
+  });
+
+  currentDisplayImageUrl = computed(() => {
+    const index = this.currentCarouselIndex();
+    return this.getImageSrc(index);
   });
 
   currentAltText = computed(() => {
@@ -532,6 +542,45 @@ export class PhotoEventComponent {
     this.loadedImages.update(set => {
       const newSet = new Set(set);
       newSet.add(currentIndex);
+      return newSet;
+    });
+
+    this.failedImages.update(set => {
+      if (!set.has(currentIndex)) {
+        return set;
+      }
+
+      const newSet = new Set(set);
+      newSet.delete(currentIndex);
+      return newSet;
+    });
+  }
+
+  getImageSrc(index: number): string {
+    const urls = this.imageUrls();
+    return this.imageSrcOverrides().get(index) || urls[index] || '';
+  }
+
+  hasImageFailed(index: number): boolean {
+    return this.failedImages().has(index);
+  }
+
+  onImageError(index: number): void {
+    const currentSrc = this.getImageSrc(index);
+    const fallbackSrc = stripImageProxy(currentSrc);
+
+    if (fallbackSrc && fallbackSrc !== currentSrc) {
+      this.imageSrcOverrides.update(map => {
+        const newMap = new Map(map);
+        newMap.set(index, fallbackSrc);
+        return newMap;
+      });
+      return;
+    }
+
+    this.failedImages.update(set => {
+      const newSet = new Set(set);
+      newSet.add(index);
       return newSet;
     });
   }

@@ -563,6 +563,10 @@
     opacity: 0;
     visibility: hidden;
 
+    &.failed {
+      display: none;
+    }
+
     // Only show when loaded AND not hidden (not blurred)
     &.loaded:not(.hidden) {
       opacity: 1;
@@ -612,6 +616,24 @@
       visibility: visible;
       transition: opacity 0.6s ease-out;
     }
+  }
+}
+
+.media-load-failure {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: min(280px, 100%);
+  min-height: 180px;
+  max-width: 100%;
+  padding: 1rem;
+  background: var(--mat-sys-surface-container);
+  color: var(--mat-sys-on-surface-variant);
+
+  mat-icon {
+    width: 40px;
+    height: 40px;
+    font-size: 40px;
   }
 }
 
@@ -748,6 +770,10 @@
     &.main-image {
       opacity: 0;
       visibility: hidden;
+
+      &.failed {
+        display: none;
+      }
 
       &.loaded:not(.hidden) {
         opacity: 1;

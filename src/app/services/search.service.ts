@@ -576,58 +576,46 @@ export class SearchService {
    * Lower score = more relevant.
    *
    * Scoring tiers:
-   *   0 - Exact match on name or NIP-05 username (e.g. query "hus" matches name "hus")
-   *   1 - Starts-with match on name or NIP-05 username
-   *   2 - Exact match on display_name
-   *   3 - Starts-with match on display_name
-   *   4 - Contains match on name, display_name, or NIP-05
-   *   5 - Contains match only in about field
-   *   6 - No match (fallback)
+   *   0 - Exact match on name, display_name, or NIP-05 username
+   *   1 - Starts-with match on name, display_name, or NIP-05 username
+   *   2 - Contains match on name, display_name, or NIP-05
+   *   3 - Contains match only in about field
+   *   4 - No match (fallback)
    */
   getRelevanceScore(profile: SearchResultProfile, query: string): number {
     const searchTerm = query.toLowerCase().trim();
-    if (!searchTerm) return 6;
+    if (!searchTerm) return 4;
 
     const data = profile.data as Record<string, unknown>;
-    const name = (typeof data?.['name'] === 'string' ? data['name'] : '').toLowerCase();
-    const displayName = (typeof data?.['display_name'] === 'string' ? data['display_name'] : '').toLowerCase();
+    const name = (typeof data?.['name'] === 'string' ? data['name'] : '').trim().toLowerCase();
+    const displayName = (typeof data?.['display_name'] === 'string' ? data['display_name'] : '').trim().toLowerCase();
     const nip05Raw = data?.['nip05'];
-    const nip05Full = (typeof nip05Raw === 'string' ? nip05Raw : Array.isArray(nip05Raw) ? nip05Raw[0] : '').toLowerCase();
+    const nip05Full = (typeof nip05Raw === 'string' ? nip05Raw : Array.isArray(nip05Raw) ? nip05Raw[0] : '').trim().toLowerCase();
     // Extract NIP-05 username (part before @)
     const nip05User = nip05Full.includes('@') ? nip05Full.split('@')[0] : nip05Full;
     const about = (typeof data?.['about'] === 'string' ? data['about'] : '').toLowerCase();
 
-    // Tier 0: Exact match on name or NIP-05 username
-    if (name === searchTerm || (nip05User && nip05User === searchTerm)) {
+    // Tier 0: Exact match on name, display_name, or NIP-05 username
+    if (name === searchTerm || displayName === searchTerm || (nip05User && nip05User === searchTerm)) {
       return 0;
     }
 
-    // Tier 1: Starts-with match on name or NIP-05 username
-    if (name.startsWith(searchTerm) || (nip05User && nip05User.startsWith(searchTerm))) {
+    // Tier 1: Starts-with match on name, display_name, or NIP-05 username
+    if (name.startsWith(searchTerm) || displayName.startsWith(searchTerm) || (nip05User && nip05User.startsWith(searchTerm))) {
       return 1;
     }
 
-    // Tier 2: Exact match on display_name
-    if (displayName === searchTerm) {
+    // Tier 2: Contains match on name, display_name, or NIP-05
+    if (name.includes(searchTerm) || displayName.includes(searchTerm) || nip05Full.includes(searchTerm)) {
       return 2;
     }
 
-    // Tier 3: Starts-with match on display_name
-    if (displayName.startsWith(searchTerm)) {
+    // Tier 3: Contains match only in about
+    if (about.includes(searchTerm)) {
       return 3;
     }
 
-    // Tier 4: Contains match on name, display_name, or NIP-05
-    if (name.includes(searchTerm) || displayName.includes(searchTerm) || nip05Full.includes(searchTerm)) {
-      return 4;
-    }
-
-    // Tier 5: Contains match only in about
-    if (about.includes(searchTerm)) {
-      return 5;
-    }
-
-    return 6;
+    return 4;
   }
 
   /**
@@ -675,18 +663,18 @@ export class SearchService {
       // Sort by source priority, then relevance, then WoT rank
       const query = queryContext || '';
       enrichedResults.sort((a, b) => {
-        // Primary sort: source priority (following > cached > remote)
-        const sourcePriority = { following: 0, cached: 1, remote: 2 };
-        const sourceCompare = sourcePriority[a.source] - sourcePriority[b.source];
-        if (sourceCompare !== 0) {
-          return sourceCompare;
-        }
-
-        // Secondary sort: relevance score (lower is better)
+        // Primary sort: relevance score (lower is better)
         const relevanceA = this.getRelevanceScore(a, query);
         const relevanceB = this.getRelevanceScore(b, query);
         if (relevanceA !== relevanceB) {
           return relevanceA - relevanceB;
+        }
+
+        // Secondary sort: source priority (following > cached > remote)
+        const sourcePriority = { following: 0, cached: 1, remote: 2 };
+        const sourceCompare = sourcePriority[a.source] - sourcePriority[b.source];
+        if (sourceCompare !== 0) {
+          return sourceCompare;
         }
 
         // Tertiary sort: WoT rank (lower is better, undefined ranks at the end)
@@ -718,23 +706,26 @@ export class SearchService {
   }
 
   /**
-   * Sort results by source priority and relevance score.
-   * Within each source group, profiles with better relevance scores appear first.
+   * Sort results by relevance score and then source priority.
+   * Exact matches should always beat prefix matches, regardless of source.
    */
   private sortByRelevance(results: SearchResultProfile[], query?: string): SearchResultProfile[] {
     const sourcePriority: Record<string, number> = { following: 0, cached: 1, remote: 2 };
     const searchTerm = query || '';
     const sorted = [...results].sort((a, b) => {
+      const relevanceA = this.getRelevanceScore(a, searchTerm);
+      const relevanceB = this.getRelevanceScore(b, searchTerm);
+      if (relevanceA !== relevanceB) {
+        return relevanceA - relevanceB;
+      }
+
       const priorityA = sourcePriority[a.source] ?? 99;
       const priorityB = sourcePriority[b.source] ?? 99;
       if (priorityA !== priorityB) {
         return priorityA - priorityB;
       }
 
-      // Within same source group, sort by relevance
-      const relevanceA = this.getRelevanceScore(a, searchTerm);
-      const relevanceB = this.getRelevanceScore(b, searchTerm);
-      return relevanceA - relevanceB;
+      return 0;
     });
     return sorted;
   }

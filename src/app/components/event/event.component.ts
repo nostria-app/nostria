@@ -1,6 +1,6 @@
 import { Component, computed, effect, inject, input, output, signal, untracked, ElementRef, AfterViewInit, OnDestroy, ChangeDetectionStrategy, PLATFORM_ID } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
-import { trigger, state, style, animate, transition } from '@angular/animations';
+import { trigger, style, animate, transition } from '@angular/animations';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatDialog } from '@angular/material/dialog';
@@ -26,7 +26,7 @@ import { ReactionButtonComponent } from './reaction-button/reaction-button.compo
 import { EventHeaderComponent } from './header/header.component';
 import { CommonModule } from '@angular/common';
 import { AccountStateService } from '../../services/account-state.service';
-import { EventService, ReactionEvents, ThreadedEvent } from '../../services/event';
+import { EventService, ReactionEvents, SharedInteractionSnapshot, ThreadedEvent } from '../../services/event';
 import { AccountRelayService } from '../../services/relays/account-relay';
 import { RelayPoolService } from '../../services/relays/relay-pool';
 import { ReactionService } from '../../services/reaction.service';
@@ -237,6 +237,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   private hasViewInitialized = false;
   private visibleInteractionRetryTimer?: ReturnType<typeof setTimeout>;
   private interactionLoadGeneration = 0;
+  private lastAppliedSharedInteractionSnapshotAt = 0;
 
   // Interaction loading: delay + abort support.
   // When an event enters the viewport, we wait a short period before starting
@@ -1581,7 +1582,28 @@ export class EventComponent implements AfterViewInit, OnDestroy {
           this.setupIntersectionObserver();
         }
 
+        if (this.hasViewInitialized) {
+          this.checkAndLoadInteractionsIfVisible();
+        }
+
         this.maybePreloadInteractionsImmediately();
+      });
+    });
+
+    effect(() => {
+      const snapshot = this.eventService.latestInteractionSnapshot();
+      const targetRecordData = this.targetRecord();
+
+      if (!snapshot || !targetRecordData || this.mode() !== 'timeline') {
+        return;
+      }
+
+      if (snapshot.eventId !== targetRecordData.event.id || snapshot.publishedAt <= this.lastAppliedSharedInteractionSnapshotAt) {
+        return;
+      }
+
+      untracked(() => {
+        this.applySharedInteractionSnapshot(snapshot);
       });
     });
 
@@ -1592,7 +1614,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
         const type = this.type();
         const existingEvent = this.event();
         // Read retryCounter so bumping it re-triggers this effect
-        const _retry = this.retryCounter();
+        this.retryCounter();
 
         // Only load by ID if no event is provided directly
         if (!rawId || !type || existingEvent) {
@@ -1622,7 +1644,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
                   decodedRelayHints = decoded.data.relays;
                 }
               }
-            } catch (e) {
+            } catch {
               this.logger.warn('[EventComponent:Load] Failed to decode bech32 id, using as-is:', rawId.substring(0, 20));
             }
 
@@ -1867,10 +1889,12 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   private readonly immediateDomPreloadBehindPx = 250;
   private readonly initialBatchPreloadCount = 12;
   private readonly interactionVerificationLimitMultiplier = 4;
+  private readonly emptyInteractionRetryMinAgeSeconds = 600;
   private readonly actualVisibilityObserverOptions = {
     rootMargin: '0px',
     threshold: 0.01,
   } as const;
+  private retriedEmptyInteractionEventId?: string;
 
   private static startInteractionPreload(component: EventComponent, priority: number): void {
     EventComponent.queuedInteractionPreloads.delete(component);
@@ -1945,6 +1969,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     this.hasViewInitialized = true;
     // Set up IntersectionObserver for lazy loading
     this.setupIntersectionObserver();
+    this.checkAndLoadInteractionsIfVisible();
     this.maybePreloadInteractionsImmediately();
     this.scheduleVisibleInteractionRetry();
   }
@@ -2273,6 +2298,20 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     }
 
     const signal = this.interactionAbortController.signal;
+
+    if (this.mode() === 'timeline') {
+      await Promise.allSettled([
+        this.loadAllInteractions(false, signal, loadGeneration),
+        this.loadLatestEditForEvent(),
+      ]);
+
+      if (this.interactionLoadGeneration === loadGeneration && !signal.aborted) {
+        void this.loadDeferredTimelineEngagement(signal, loadGeneration);
+        this.scheduleVisibleInteractionRetry();
+      }
+      return;
+    }
+
     await Promise.allSettled([
       this.loadAllInteractions(false, signal, loadGeneration),
       this.loadZaps(signal, loadGeneration),
@@ -2282,6 +2321,25 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     if (this.interactionLoadGeneration === loadGeneration && !signal.aborted) {
       this.scheduleVisibleInteractionRetry();
     }
+  }
+
+  private async loadDeferredTimelineEngagement(signal?: AbortSignal, loadGeneration?: number): Promise<void> {
+    const targetRecordData = this.targetRecord();
+    if (!targetRecordData) {
+      return;
+    }
+
+    const targetEventId = targetRecordData.event.id;
+    const eventAuthorPubkey = targetRecordData.event.pubkey;
+    const queryLimit = EventService.INTERACTION_QUERY_LIMIT;
+
+    await this.loadTimelineQuotes(targetEventId, eventAuthorPubkey, false, queryLimit, signal, loadGeneration);
+
+    if (signal?.aborted || this.interactionLoadGeneration !== loadGeneration || this.targetRecord()?.event.id !== targetEventId) {
+      return;
+    }
+
+    await this.loadZaps(signal, loadGeneration);
   }
 
   private resolveObserverRoot(element: HTMLElement): HTMLElement | null {
@@ -2429,27 +2487,38 @@ export class EventComponent implements AfterViewInit, OnDestroy {
 
     // Only apply limits in timeline (feed) mode; thread (detail) mode loads all interactions
     const queryLimit = this.mode() === 'timeline' ? EventService.INTERACTION_QUERY_LIMIT : undefined;
+    const shouldDeferSecondaryTimelineEngagement = this.mode() === 'timeline' && queryLimit != null;
 
     this.isLoadingReactions.set(true);
     try {
-      const loadInteractionBatch = (limitOverride = queryLimit) => Promise.all([
-        this.eventService.loadEventInteractions(
+      const loadInteractionBatch = (limitOverride = queryLimit, invalidateCacheOverride = invalidateCache) => {
+        const interactionsPromise = this.eventService.loadEventInteractions(
           targetEventId,
           targetRecordData.event.kind,
           eventAuthorPubkey,
-          invalidateCache,
+          invalidateCacheOverride,
           skipReplies,
           limitOverride,
-        ),
-        this.eventService.loadQuotes(
-          targetEventId,
-          eventAuthorPubkey,
-          invalidateCache,
-          limitOverride,
-        )
-      ]);
+        );
 
-      // Load interactions with per-kind limits and quotes in parallel
+        if (shouldDeferSecondaryTimelineEngagement) {
+          return Promise.all([
+            interactionsPromise,
+            Promise.resolve([] as NostrRecord[]),
+          ]);
+        }
+
+        return Promise.all([
+          interactionsPromise,
+          this.eventService.loadQuotes(
+            targetEventId,
+            eventAuthorPubkey,
+            invalidateCacheOverride,
+            limitOverride,
+          ),
+        ]);
+      };
+
       let [interactions, quotesResult] = await loadInteractionBatch();
 
       if (this.shouldDiscardInteractionLoadResult(targetEventId, signal, loadGeneration)) {
@@ -2480,6 +2549,25 @@ export class EventComponent implements AfterViewInit, OnDestroy {
         normalizedInteractions = this.normalizeInteractionResults(interactions, quotesResult, verifiedQueryLimit);
       }
 
+      if (this.shouldRetryEmptyTimelineInteractions(targetRecordData.event, targetEventId, normalizedInteractions, queryLimit, invalidateCache)) {
+        const retryLimit = (queryLimit ?? EventService.INTERACTION_QUERY_LIMIT) * this.interactionVerificationLimitMultiplier;
+        this.retriedEmptyInteractionEventId = targetEventId;
+        this.logger.debug(
+          '[Loading Interactions] Retrying suspicious empty timeline counters for:',
+          targetEventId.substring(0, 8),
+          'limit:',
+          retryLimit,
+        );
+
+        [interactions, quotesResult] = await loadInteractionBatch(retryLimit, true);
+
+        if (this.shouldDiscardInteractionLoadResult(targetEventId, signal, loadGeneration)) {
+          return;
+        }
+
+        normalizedInteractions = this.normalizeInteractionResults(interactions, quotesResult, queryLimit);
+      }
+
       // Update all states from the normalized results
       this.reactions.set(normalizedInteractions.reactions);
       this.reposts.set(normalizedInteractions.reposts);
@@ -2497,6 +2585,23 @@ export class EventComponent implements AfterViewInit, OnDestroy {
         this._replyCountInternal.set(normalizedInteractions.replyCount);
         this._replyEventsInternal.set(normalizedInteractions.replyEvents);
       }
+
+      if (queryLimit == null) {
+        const sharedReplyCount = this.replyCountFromParent() ?? normalizedInteractions.replyCount;
+        this.eventService.publishInteractionSnapshot({
+          eventId: targetEventId,
+          reactions: normalizedInteractions.reactions,
+          reposts: normalizedInteractions.reposts,
+          reports: normalizedInteractions.reports,
+          quotes: normalizedInteractions.quotes,
+          replyCount: sharedReplyCount,
+          replyEvents: normalizedInteractions.replyEvents,
+          hasMoreReactions: normalizedInteractions.hasMoreReactions,
+          hasMoreReposts: normalizedInteractions.hasMoreReposts,
+          hasMoreReplies: sharedReplyCount >= EventService.INTERACTION_QUERY_LIMIT,
+          hasMoreQuotes: normalizedInteractions.hasMoreQuotes,
+        });
+      }
     } catch (error) {
       this.logger.error('Error loading event interactions:', error);
       if (loadGeneration === this.interactionLoadGeneration) {
@@ -2505,6 +2610,109 @@ export class EventComponent implements AfterViewInit, OnDestroy {
       }
     } finally {
       this.isLoadingReactions.set(false);
+    }
+  }
+
+  private applySharedInteractionSnapshot(snapshot: SharedInteractionSnapshot): void {
+    const normalizedInteractions = this.normalizeInteractionResults(
+      {
+        reactions: snapshot.reactions,
+        reposts: snapshot.reposts,
+        reports: snapshot.reports,
+        replyCount: snapshot.replyCount,
+        replyEvents: snapshot.replyEvents,
+        quotes: snapshot.quotes,
+        hasMoreReactions: snapshot.hasMoreReactions,
+        hasMoreReposts: snapshot.hasMoreReposts,
+        hasMoreReplies: snapshot.hasMoreReplies,
+      },
+      snapshot.quotes,
+      EventService.INTERACTION_QUERY_LIMIT,
+    );
+
+    this.lastAppliedSharedInteractionSnapshotAt = snapshot.publishedAt;
+    this.reactions.set(normalizedInteractions.reactions);
+    this.reposts.set(normalizedInteractions.reposts);
+    this.quotes.set(normalizedInteractions.quotes);
+    this.reports.set(normalizedInteractions.reports);
+    this.hasMoreReactions.set(normalizedInteractions.hasMoreReactions);
+    this.hasMoreReposts.set(normalizedInteractions.hasMoreReposts);
+    this.hasMoreReplies.set(normalizedInteractions.hasMoreReplies);
+    this.hasMoreQuotes.set(snapshot.hasMoreQuotes || normalizedInteractions.hasMoreQuotes);
+
+    if (this.replyCountFromParent() === undefined) {
+      this._replyCountInternal.set(normalizedInteractions.replyCount);
+      this._replyEventsInternal.set(normalizedInteractions.replyEvents);
+    }
+
+    this.hasLoadedInteractions.set(true);
+    this.isLoadingReactions.set(false);
+  }
+
+  private shouldRetryEmptyTimelineInteractions(
+    targetEvent: Event,
+    targetEventId: string,
+    normalizedInteractions: ReturnType<EventComponent['normalizeInteractionResults']>,
+    queryLimit: number | undefined,
+    invalidateCache: boolean,
+  ): boolean {
+    if (this.mode() !== 'timeline' || queryLimit == null || invalidateCache) {
+      return false;
+    }
+
+    if (this.retriedEmptyInteractionEventId === targetEventId) {
+      return false;
+    }
+
+    const element = this.elementRef.nativeElement as HTMLElement | undefined;
+    if (!element?.isConnected || !this.isWithinImmediatePreloadBounds(element)) {
+      return false;
+    }
+
+    const eventAgeSeconds = Math.floor(Date.now() / 1000) - targetEvent.created_at;
+    if (eventAgeSeconds < this.emptyInteractionRetryMinAgeSeconds) {
+      return false;
+    }
+
+    return normalizedInteractions.reactions.events.length === 0
+      && normalizedInteractions.reposts.length === 0
+      && normalizedInteractions.replyCount === 0
+      && normalizedInteractions.quotes.length === 0;
+  }
+
+  private async loadTimelineQuotes(
+    targetEventId: string,
+    eventAuthorPubkey: string,
+    invalidateCache: boolean,
+    queryLimit: number,
+    signal?: AbortSignal,
+    loadGeneration?: number,
+  ): Promise<void> {
+    try {
+      const quotes = await this.eventService.loadQuotes(
+        targetEventId,
+        eventAuthorPubkey,
+        invalidateCache,
+        queryLimit,
+      );
+
+      if (signal?.aborted || this.interactionLoadGeneration !== loadGeneration) {
+        return;
+      }
+
+      const currentTargetRecord = this.targetRecord();
+      if (currentTargetRecord?.event.id !== targetEventId) {
+        return;
+      }
+
+      const mutedAccounts = this.accountState.mutedAccounts();
+      const filteredQuotes = quotes.filter((record) => !mutedAccounts.includes(record.event.pubkey));
+      const visibleQuotes = filteredQuotes.slice(0, queryLimit);
+
+      this.quotes.set(visibleQuotes);
+      this.hasMoreQuotes.set(filteredQuotes.length >= queryLimit);
+    } catch (error) {
+      this.logger.error('Error loading timeline quotes:', error);
     }
   }
 

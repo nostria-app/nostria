@@ -40,8 +40,10 @@ export class RelayPoolService {
 
   // Pool instance identifier
   private readonly poolInstanceId = `RelayPoolService_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-  private readonly maxConcurrentRequests = 4;
-  private readonly maxConcurrentRequestsPerRelay = 2;
+  // Timeline cards now use fewer per-event queries, so we can allow a slightly wider
+  // one-shot request window without hitting the subscription caps that previously caused drops.
+  private readonly maxConcurrentRequests = 6;
+  private readonly maxConcurrentRequestsPerRelay = 3;
   private activeRequestCount = 0;
   private readonly activeRequestsByRelay = new Map<string, number>();
   private readonly requestQueue: {

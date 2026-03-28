@@ -14,6 +14,11 @@ interface CachedResult {
   expiresAt: number;
 }
 
+interface SubscriptionCacheOptions<T> {
+  shouldCacheResult?: (result: T) => boolean;
+  cacheDurationMs?: number | ((result: T) => number | undefined);
+}
+
 /**
  * Service to prevent duplicate subscriptions and cache results for event-related queries.
  * This helps reduce the number of concurrent relay subscriptions and prevents redundant requests.
@@ -56,6 +61,7 @@ export class SubscriptionCacheService implements OnDestroy {
     eventIds: string[],
     type: PendingSubscription['type'],
     subscriptionFactory: () => Promise<T>,
+    options?: SubscriptionCacheOptions<T>,
   ): Promise<T> {
     // Check if we have a cached result first
     const cachedResult = this.getCachedResult<T>(key);
@@ -92,8 +98,12 @@ export class SubscriptionCacheService implements OnDestroy {
     // Handle completion
     promise
       .then((result) => {
-        // Cache the result
-        this.setCachedResult(key, result);
+        if (options?.shouldCacheResult?.(result) !== false) {
+          const cacheDurationMs = typeof options?.cacheDurationMs === 'function'
+            ? options.cacheDurationMs(result)
+            : options?.cacheDurationMs;
+          this.setCachedResult(key, result, cacheDurationMs);
+        }
 
         // Remove from pending
         this.pendingSubscriptions.delete(pendingKey);
@@ -129,11 +139,12 @@ export class SubscriptionCacheService implements OnDestroy {
   /**
    * Store result in cache
    */
-  setCachedResult(key: string, data: unknown): void {
+  setCachedResult(key: string, data: unknown, cacheDurationMs?: number): void {
+    const ttl = cacheDurationMs ?? this.cacheTimeout;
     const cached: CachedResult = {
       data,
       timestamp: Date.now(),
-      expiresAt: Date.now() + this.cacheTimeout,
+      expiresAt: Date.now() + ttl,
     };
 
     this.resultCache.set(key, cached);

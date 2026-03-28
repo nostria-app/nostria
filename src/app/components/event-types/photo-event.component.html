@@ -22,9 +22,15 @@
         [title]="currentAltText()" aria-hidden="true" />
       }
       @if (currentImageUrl()) {
-      <img [src]="currentImageUrl()" [alt]="currentAltText()" [title]="currentAltText()" title="{{ currentAltText() }}"
+      @if (hasImageFailed(currentCarouselIndex())) {
+      <div class="photo-error-inline" role="img" aria-label="Photo failed to load">
+        <mat-icon>broken_image</mat-icon>
+      </div>
+      }
+      <img [src]="currentDisplayImageUrl()" [alt]="currentAltText()" [title]="currentAltText()" title="{{ currentAltText() }}"
         class="photo-item main-image" [class.hidden]="shouldBlurMedia()" [class.loaded]="isCurrentImageLoaded()"
-        loading="lazy" (load)="onImageLoad($event)"
+        [class.failed]="hasImageFailed(currentCarouselIndex())" loading="lazy" (load)="onImageLoad($event)"
+        (error)="onImageError(currentCarouselIndex())"
         (click)="!showOverlay() ? openImageDialog(currentImageUrl(), currentAltText(), $any($event)) : null"
         tabindex="0" role="button" (keyup.enter)="openImageDialog(currentImageUrl(), currentAltText(), $any($event))"
         (keyup.space)="openImageDialog(currentImageUrl(), currentAltText(), $any($event))" />

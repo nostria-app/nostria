@@ -175,6 +175,10 @@
     opacity: 0; // Start hidden, show when loaded
     visibility: hidden;
 
+    &.failed {
+      display: none;
+    }
+
     // Only show when loaded AND not hidden (not blurred)
     &.loaded:not(.hidden) {
       opacity: 1;
@@ -194,6 +198,23 @@
     // Use cover to fill container - blurhash shows full blurred preview,
     // then fades out to reveal the properly letterboxed image
     object-fit: cover;
+  }
+}
+
+.photo-error-inline {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--mat-sys-surface-container);
+  color: var(--mat-sys-on-surface-variant);
+
+  mat-icon {
+    width: 40px;
+    height: 40px;
+    font-size: 40px;
   }
 }
 

@@ -58,6 +58,21 @@ export interface EventInteractions {
   hasMoreReplies?: boolean;
 }
 
+export interface SharedInteractionSnapshot {
+  eventId: string;
+  reactions: ReactionEvents;
+  reposts: NostrRecord[];
+  reports: ReportEvents;
+  quotes: NostrRecord[];
+  replyCount: number;
+  replyEvents: Event[];
+  hasMoreReactions: boolean;
+  hasMoreReposts: boolean;
+  hasMoreReplies: boolean;
+  hasMoreQuotes: boolean;
+  publishedAt: number;
+}
+
 export interface ThreadedEvent {
   event: Event;
   replies: ThreadedEvent[];
@@ -131,6 +146,15 @@ export class EventService {
   private readonly imageCacheService = inject(ImageCacheService);
   private readonly repostService = inject(RepostService);
   private readonly locallyDeletedEventIds = signal<Set<string>>(new Set());
+  private readonly interactionSnapshot = signal<SharedInteractionSnapshot | null>(null);
+  readonly latestInteractionSnapshot = this.interactionSnapshot.asReadonly();
+
+  publishInteractionSnapshot(snapshot: Omit<SharedInteractionSnapshot, 'publishedAt'>): void {
+    this.interactionSnapshot.set({
+      ...snapshot,
+      publishedAt: Date.now(),
+    });
+  }
 
   isEventLocallyDeleted(eventId: string): boolean {
     return this.locallyDeletedEventIds().has(eventId);
@@ -1006,24 +1030,33 @@ export class EventService {
    * Load replies from local IndexedDB only (no relay fetch).
    * Returns instantly with whatever is cached locally.
    */
+  private isReplyInThread(event: Event, eventId: string): boolean {
+    // NIP-22 comments (kind 1111/1244) are already filtered by e-tag in the query.
+    if (event.kind === 1111 || event.kind === 1244) {
+      return true;
+    }
+
+    if (event.kind !== kinds.ShortTextNote || !event.content || !event.content.trim()) {
+      return false;
+    }
+
+    const eventTags = this.getEventTags(event);
+    const { rootId, replyId, mentionIds } = eventTags;
+
+    if (mentionIds.includes(eventId) && rootId !== eventId && replyId !== eventId) {
+      return false;
+    }
+
+    return rootId === eventId || replyId === eventId;
+  }
+
   async loadRepliesFromDb(eventId: string): Promise<Event[]> {
     try {
       // Load both NIP-10 replies (kind 1) and NIP-22 comments (kind 1111, 1244)
       const dbEvents = await this.database.getEventsByKindsAndEventTag([kinds.ShortTextNote, 1111, 1244], eventId);
       if (dbEvents.length === 0) return [];
 
-      return dbEvents.filter((event: Event) => {
-        // NIP-22 comments (kind 1111/1244) are already filtered by e-tag in the query
-        if (event.kind === 1111 || event.kind === 1244) return true;
-        // NIP-10 replies (kind 1) need additional validation
-        if (!event.content || !event.content.trim()) return false;
-        const eventTags = this.getEventTags(event);
-        const { rootId, replyId, mentionIds } = eventTags;
-        if (mentionIds.includes(eventId) && rootId !== eventId && replyId !== eventId) {
-          return false;
-        }
-        return rootId === eventId || replyId === eventId;
-      });
+      return dbEvents.filter((event: Event) => this.isReplyInThread(event, eventId));
     } catch (error) {
       this.logger.error('Error loading replies from DB:', error);
       return [];
@@ -1054,23 +1087,7 @@ export class EventService {
       // but we pre-filter here to improve performance and exclude obvious non-replies
       const replies = replyRecords
         .map((record: NostrRecord) => record.event)
-        .filter((event: Event) => {
-          // Filter out events with empty content
-          if (!event.content || !event.content.trim()) return false;
-
-          // Use getEventTags to properly parse the thread relationship
-          // Only include events that are actually part of the thread (not just mentions)
-          const eventTags = this.getEventTags(event);
-          const { rootId, replyId, mentionIds } = eventTags;
-
-          // If this event only mentions the target event (not a thread relationship), exclude it
-          if (mentionIds.includes(eventId) && rootId !== eventId && replyId !== eventId) {
-            return false;
-          }
-
-          // Include if it has any thread relationship to the target event
-          return rootId === eventId || replyId === eventId;
-        });
+        .filter((event: Event) => this.isReplyInThread(event, eventId));
 
       this.logger.info(
         'Successfully loaded replies for event:',
@@ -1132,6 +1149,8 @@ export class EventService {
    * We fetch limit+1 to detect overflow (e.g., fetch 11 to know if there are "10+").
    */
   static readonly INTERACTION_QUERY_LIMIT = 11;
+  private static readonly TIMELINE_INTERACTION_CACHE_TIMEOUT_MS = 30 * 1000;
+  private static readonly EMPTY_TIMELINE_INTERACTION_CACHE_TIMEOUT_MS = 5 * 1000;
 
   /**
    * Load event interactions (reactions, reposts, reports, replies) with optional limits.
@@ -1147,7 +1166,11 @@ export class EventService {
     pubkey: string,
     invalidateCache = false,
     skipReplies = false,
-    /** Per-kind limit for feed optimization. When set, each kind is queried separately with this limit. */
+    /**
+     * Per-kind limit for feed optimization.
+     * When set, we use a combined query sized to cover multiple interaction buckets
+     * while keeping relay subscription fan-out low for timeline views.
+     */
     limit?: number,
   ): Promise<EventInteractions> {
     this.logger.info('loadEventInteractions called with eventId:', eventId, 'pubkey:', pubkey, 'skipReplies:', skipReplies, 'limit:', limit);
@@ -1189,14 +1212,41 @@ export class EventService {
           };
         }
       },
+      {
+        cacheDurationMs: (result) => this.getInteractionCacheDuration(limit, result),
+      },
     );
 
     return cachedResult;
   }
 
+  private getInteractionCacheDuration(limit: number | undefined, result: EventInteractions): number | undefined {
+    if (!limit) {
+      return undefined;
+    }
+
+    if (this.isInteractionResultEmpty(result)) {
+      return EventService.EMPTY_TIMELINE_INTERACTION_CACHE_TIMEOUT_MS;
+    }
+
+    return EventService.TIMELINE_INTERACTION_CACHE_TIMEOUT_MS;
+  }
+
+  private isInteractionResultEmpty(result: EventInteractions): boolean {
+    return result.reactions.events.length === 0
+      && result.reposts.length === 0
+      && result.reports.events.length === 0
+      && result.replyCount === 0
+      && result.replyEvents.length === 0
+      && result.quotes.length === 0;
+  }
+
   /**
    * Load interactions with per-kind limits for feed optimization.
-   * Each kind is queried separately so limits apply independently.
+   * Uses a single combined relay query sized to cover multiple interaction buckets.
+   * This keeps feed interaction loading under relay subscription limits while still
+   * giving the timeline enough data to derive per-kind counters and trigger
+   * verification when a saturated combined query may have truncated a category.
    */
   private async loadEventInteractionsWithLimits(
     eventId: string,
@@ -1214,61 +1264,39 @@ export class EventService {
       save: true,
     };
 
-    // Query reactions, reposts, and reports in parallel (all with limits)
-    // Reports are always small so no limit needed for them
-    const queries: [Promise<NostrRecord[]>, Promise<NostrRecord[]>, Promise<NostrRecord[]>, Promise<NostrRecord[]> | null] = [
-      this.userDataService.getEventsByKindsAndEventTag(
-        pubkey, [kinds.Reaction], eventId,
-        { ...queryOptions, limit },
-      ),
-      this.userDataService.getEventsByKindsAndEventTag(
-        pubkey, [repostKind], eventId,
-        { ...queryOptions, limit },
-      ),
-      this.userDataService.getEventsByKindsAndEventTag(
-        pubkey, [kinds.Report], eventId,
-        queryOptions,
-      ),
-      !skipReplies
-        ? this.userDataService.getEventsByKindsAndEventTag(
-          pubkey, [kinds.ShortTextNote, 1111, 1244], eventId,
-          { ...queryOptions, limit },
-        )
-        : null,
-    ];
+    const interactionKinds = skipReplies
+      ? [kinds.Reaction, repostKind, kinds.Report]
+      : [kinds.Reaction, repostKind, kinds.Report, kinds.ShortTextNote, 1111, 1244];
+    const interactionBucketCount = skipReplies ? 3 : 4;
+    const combinedLimit = limit * interactionBucketCount;
+    const allRecords = await this.userDataService.getEventsByKindsAndEventTag(
+      pubkey,
+      interactionKinds,
+      eventId,
+      { ...queryOptions, limit: combinedLimit },
+    );
 
-    const [reactionRecords, repostRecords, reportRecords, replyRecordsRaw] = await Promise.all([
-      queries[0],
-      queries[1],
-      queries[2],
-      queries[3] ?? Promise.resolve([]),
-    ]);
-
-    // Track whether we hit the limit (meaning there are more on relays)
-    const hasMoreReactions = reactionRecords.length >= limit;
-    const hasMoreReposts = repostRecords.length >= limit;
+    const querySaturated = allRecords.length >= combinedLimit;
+    const reactionRecords = allRecords.filter((record) => record.event.kind === kinds.Reaction);
+    const repostRecords = allRecords.filter((record) => record.event.kind === repostKind);
+    const reportRecords = allRecords.filter((record) => record.event.kind === kinds.Report);
 
     // Process replies
     let replyCount = 0;
     let replyEventsResult: Event[] = [];
     let hasMoreReplies = false;
     if (!skipReplies) {
-      const replyRecords = replyRecordsRaw.filter((r) => {
-        // NIP-22 comments (kind 1111/1244) reference events via E/e tags
-        if (r.event.kind === 1111 || r.event.kind === 1244) {
-          return true; // Already filtered by #e tag in the query
-        }
-        // NIP-10 replies (kind 1)
-        if (r.event.kind !== kinds.ShortTextNote) return false;
-        if (!r.event.content || !r.event.content.trim()) return false;
-        const eventTags = this.getEventTags(r.event);
-        const { rootId, replyId } = eventTags;
-        return replyId === eventId || (rootId === eventId && !replyId);
-      });
+      const replyRecords = allRecords.filter((record) => this.isReplyInThread(record.event, eventId));
       replyCount = replyRecords.length;
       replyEventsResult = replyRecords.map((r: NostrRecord) => r.event);
-      hasMoreReplies = replyRecordsRaw.length >= limit;
+      hasMoreReplies = replyCount >= limit || querySaturated;
     }
+
+    // A saturated combined query means another interaction bucket may have consumed
+    // the relay-side limit before a smaller bucket was fully returned. Marking the
+    // per-kind flag keeps the timeline verification path active for those cases.
+    const hasMoreReactions = reactionRecords.length >= limit || querySaturated;
+    const hasMoreReposts = repostRecords.length >= limit || querySaturated;
 
     // Process reactions
     const reactionCounts = new Map<string, number>();
@@ -1300,8 +1328,9 @@ export class EventService {
     });
 
     this.logger.info(
-      'Successfully loaded event interactions (limited):',
+      'Successfully loaded event interactions (limited combined):',
       eventId,
+      'relayRecords:', allRecords.length, querySaturated ? '(saturated)' : '',
       'reactions:', reactionRecords.length, hasMoreReactions ? '(has more)' : '',
       'reposts:', repostRecords.length, hasMoreReposts ? '(has more)' : '',
       'reports:', validReportRecords.length,
@@ -1366,18 +1395,7 @@ export class EventService {
     let replyCount = 0;
     let replyEventsResult: Event[] = [];
     if (!skipReplies) {
-      const replyRecords = allRecords.filter((r) => {
-        // NIP-22 comments (kind 1111/1244) reference events via E/e tags
-        if (r.event.kind === 1111 || r.event.kind === 1244) {
-          return true; // Already filtered by #e tag in the query
-        }
-        // NIP-10 replies (kind 1)
-        if (r.event.kind !== kinds.ShortTextNote) return false;
-        if (!r.event.content || !r.event.content.trim()) return false;
-        const eventTags = this.getEventTags(r.event);
-        const { rootId, replyId } = eventTags;
-        return replyId === eventId || (rootId === eventId && !replyId);
-      });
+      const replyRecords = allRecords.filter((record) => this.isReplyInThread(record.event, eventId));
       replyCount = replyRecords.length;
       replyEventsResult = replyRecords.map((r: NostrRecord) => r.event);
     }
