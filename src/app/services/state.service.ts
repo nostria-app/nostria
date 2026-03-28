@@ -251,10 +251,7 @@ export class StateService implements NostriaService {
 
       if (existingDiscoveryEvent) {
         const relayUrls = this.discoveryRelay.getRelayUrlsFromDiscoveryEvent(existingDiscoveryEvent);
-
-        if (relayUrls.length > 0) {
-          this.discoveryRelay.setDiscoveryRelays(relayUrls);
-        }
+        this.discoveryRelay.setDiscoveryRelays(relayUrls);
 
         await this.discoveryRelay.saveEvent(existingDiscoveryEvent);
         this.logger.info('[StateService] Found existing discovery relays event (kind 10086) on account relays, saved locally');
@@ -266,9 +263,7 @@ export class StateService implements NostriaService {
       // event while we were waiting for the account relay query to complete.
       const relaysFromEvent = await this.discoveryRelay.loadFromEvent(pubkey);
       if (relaysFromEvent !== null) {
-        if (relaysFromEvent.length > 0) {
-          this.discoveryRelay.setDiscoveryRelays(relaysFromEvent);
-        }
+        this.discoveryRelay.setDiscoveryRelays(relaysFromEvent);
         this.logger.info('[StateService] Found kind 10086 event in local DB on re-check (delivered by subscription)');
         return;
       }

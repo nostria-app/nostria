@@ -116,6 +116,7 @@
 .dialog-header-trailing {
   justify-self: end;
   justify-content: flex-end;
+  flex-wrap: nowrap;
 }
 
 .dialog-title {
@@ -696,7 +697,7 @@
       min-width: 0;
       flex-wrap: nowrap;
 
-      .action-priority-low {
+      .action-priority-low:not(.persistent-action) {
         display: none;
       }
 

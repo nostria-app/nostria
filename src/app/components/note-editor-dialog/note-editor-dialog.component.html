@@ -84,6 +84,20 @@
     </div>
     }
 
+    @if (sentimentHeaderState(); as sentimentState) {
+    <div class="inline-status-row">
+      <span class="sentiment-status" [class.loading]="sentimentState.kind === 'loading'"
+        [class.error]="sentimentState.kind === 'error'" [class.result]="sentimentState.kind === 'result'">
+        <mat-icon [class.spinning]="sentimentState.kind === 'loading'">{{ sentimentState.icon }}</mat-icon>
+        <span>{{ sentimentState.text }}</span>
+        <button mat-icon-button type="button" class="close-inline-status" (click)="dismissSentimentStatus()"
+          matTooltip="Dismiss sentiment result">
+          <mat-icon>close</mat-icon>
+        </button>
+      </span>
+    </div>
+    }
+
     <!-- Content editor with upload actions -->
     @if (!showPreview() && !showAdvancedOptions()) {
     <div class="content-editor-section">
@@ -469,19 +483,23 @@
         [color]="showPreview() ? 'primary' : ''" matTooltip="Toggle preview">
         <mat-icon>{{ showPreview() ? 'visibility_off' : 'visibility' }}</mat-icon>
       </button>
-      <button mat-icon-button type="button" class="desktop-action action-priority-low" (click)="clearDraft()"
+      <button mat-icon-button type="button" class="desktop-action persistent-action" (click)="clearDraft()"
         [disabled]="!isDirty()" matTooltip="Clear draft">
         <mat-icon>delete_sweep</mat-icon>
       </button>
+      <button mat-icon-button type="button" class="desktop-action action-priority-high persistent-action"
+        (click)="toggleAdvancedOptions()" matTooltip="Advanced options">
+        <mat-icon>settings</mat-icon>
+      </button>
       }
 
-      <!-- Media button (shown in both dialog and inline modes) -->
-      <button mat-icon-button type="button" class="desktop-action action-priority-high" [matMenuTriggerFor]="mediaMenu"
+      <button mat-icon-button type="button" class="plus-button desktop-action action-priority-high"
+        [matMenuTriggerFor]="plusMenu"
         [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions()"
-        [class.button-disabled-visible]="showPreview() || showAdvancedOptions()" matTooltip="Add media">
-        <mat-icon>perm_media</mat-icon>
+        [class.button-disabled-visible]="showPreview() || showAdvancedOptions()" matTooltip="Add to post">
+        <mat-icon>add</mat-icon>
       </button>
-      <mat-menu #mediaMenu="matMenu">
+      <mat-menu #plusMenu="matMenu">
         <button mat-menu-item (click)="openFileDialog()">
           <mat-icon>upload</mat-icon>
           <span>Upload media</span>
@@ -490,58 +508,32 @@
           <mat-icon>photo_library</mat-icon>
           <span>Choose from library</span>
         </button>
-      </mat-menu>
+        <button mat-menu-item (click)="openEmojiPickerDialog()">
+          <mat-icon>sentiment_satisfied</mat-icon>
+          <span>Emoji</span>
+        </button>
+        <button mat-menu-item (click)="openGifPickerDialog()">
+          <mat-icon>gif_box</mat-icon>
+          <span>GIFs</span>
+        </button>
 
-      <!-- Emoji picker button (shown in both dialog and inline modes) -->
-      @if (layout.isHandset()) {
-      <button mat-icon-button type="button" class="desktop-action action-priority-medium"
-        [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions()"
-        [class.button-disabled-visible]="showPreview() || showAdvancedOptions()" matTooltip="Emoji"
-        (click)="openEmojiPickerDialog()">
-        <mat-icon>sentiment_satisfied</mat-icon>
-      </button>
-      } @else {
-      <button mat-icon-button type="button" class="desktop-action action-priority-medium"
-        [matMenuTriggerFor]="emojiMenu"
-        (menuOpened)="emojiPickerInMenu?.resetTab()"
-        [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions()"
-        [class.button-disabled-visible]="showPreview() || showAdvancedOptions()" matTooltip="Emoji">
-        <mat-icon>sentiment_satisfied</mat-icon>
-      </button>
-      <mat-menu #emojiMenu="matMenu" class="emoji-picker-menu">
-        <app-emoji-picker #emojiPickerInMenu mode="content" (emojiSelected)="insertEmoji($event)" (gifSelected)="insertGifUrl($event)"></app-emoji-picker>
-      </mat-menu>
-      }
+        <!-- Insert reference button (dialog mode only) -->
+        @if (!inlineMode()) {
+        <button mat-menu-item (click)="openReferencePicker()">
+          <mat-icon>bookmarks</mat-icon>
+          <span>Insert reference</span>
+        </button>
+        }
 
-      <!-- GIF picker button -->
-      @if (layout.isHandset()) {
-      <button mat-icon-button type="button" class="desktop-action action-priority-medium"
-        [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions()"
-        [class.button-disabled-visible]="showPreview() || showAdvancedOptions()" matTooltip="GIFs"
-        (click)="openGifPickerDialog()">
-        <mat-icon>gif_box</mat-icon>
-      </button>
-      } @else {
-      <button mat-icon-button type="button" class="desktop-action action-priority-medium" [matMenuTriggerFor]="gifMenu"
-        (menuOpened)="gifPickerInMenu?.resetTab()"
-        [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions()"
-        [class.button-disabled-visible]="showPreview() || showAdvancedOptions()" matTooltip="GIFs">
-        <mat-icon>gif_box</mat-icon>
-      </button>
-      <mat-menu #gifMenu="matMenu" class="emoji-picker-menu">
-        <app-emoji-picker #gifPickerInMenu mode="content" initialTab="gifs" (emojiSelected)="insertEmoji($event)" (gifSelected)="insertGifUrl($event)"></app-emoji-picker>
+        @if (!layout.isHandset()) {
+        <button mat-menu-item (click)="toggleRecording()"
+          [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions() || isTranscribing()">
+          <mat-icon [class.spinning]="isTranscribing()">{{ isTranscribing() ? 'sync' : (isRecording() ? 'stop' : 'mic')
+            }}</mat-icon>
+          <span>{{ isTranscribing() ? 'Transcribing...' : (isRecording() ? 'Stop listening' : 'Dictate note') }}</span>
+        </button>
+        }
       </mat-menu>
-      }
-
-      <!-- Insert reference button (dialog mode only) -->
-      @if (!inlineMode()) {
-      <button mat-icon-button type="button" class="desktop-action action-priority-medium"
-        (click)="openReferencePicker()"
-        [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions()"
-        [class.button-disabled-visible]="showPreview() || showAdvancedOptions()" matTooltip="Insert reference">
-        <mat-icon>bookmarks</mat-icon>
-      </button>
-      }
 
       @if (recordingHistory.length > 0) {
       <button mat-icon-button type="button" class="desktop-action action-priority-low" (click)="undoLastRecording()"
@@ -559,55 +551,6 @@
       </button>
 
       <mat-menu #mobileActionsMenu="matMenu">
-        <button mat-menu-item (click)="togglePreview()" [disabled]="showAdvancedOptions()">
-          <mat-icon>{{ showPreview() ? 'visibility_off' : 'visibility' }}</mat-icon>
-          <span>{{ showPreview() ? 'Hide preview' : 'Show preview' }}</span>
-        </button>
-
-        <button mat-menu-item (click)="clearDraft()" [disabled]="!isDirty() || showAdvancedOptions()">
-          <mat-icon>delete_sweep</mat-icon>
-          <span>Clear draft</span>
-        </button>
-
-        <button mat-menu-item (click)="openFileDialog()"
-          [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions()">
-          <mat-icon>upload</mat-icon>
-          <span>Upload media</span>
-        </button>
-
-        <button mat-menu-item (click)="openMediaChooser()"
-          [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions()">
-          <mat-icon>photo_library</mat-icon>
-          <span>Choose from library</span>
-        </button>
-
-        <button mat-menu-item (click)="openEmojiPickerDialog()"
-          [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions()">
-          <mat-icon>sentiment_satisfied</mat-icon>
-          <span>Emoji</span>
-        </button>
-
-        <button mat-menu-item (click)="openGifPickerDialog()"
-          [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions()">
-          <mat-icon>gif_box</mat-icon>
-          <span>GIFs</span>
-        </button>
-
-        <button mat-menu-item (click)="openReferencePicker()"
-          [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions()">
-          <mat-icon>bookmarks</mat-icon>
-          <span>Insert reference</span>
-        </button>
-
-        @if (!layout.isHandset()) {
-        <button mat-menu-item (click)="toggleRecording()"
-          [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions() || isTranscribing()">
-          <mat-icon [class.spinning]="isTranscribing()">{{ isTranscribing() ? 'sync' : (isRecording() ? 'stop' : 'mic')
-            }}</mat-icon>
-          <span>{{ isTranscribing() ? 'Transcribing...' : (isRecording() ? 'Stop listening' : 'Dictate note') }}</span>
-        </button>
-        }
-
         @if (recordingHistory.length > 0) {
         <button mat-menu-item (click)="undoLastRecording()"
           [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions() || isTranscribing()">
@@ -616,26 +559,16 @@
         </button>
         }
 
-        <button mat-menu-item (click)="openAiDialog('generate')" disabled matTooltip="Temporarily disabled">
-          <mat-icon>auto_awesome</mat-icon>
-          <span>Generate Text</span>
-        </button>
-
         <button mat-menu-item (click)="openAiDialog('translate')"
           [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions()">
           <mat-icon>translate</mat-icon>
           <span>Translate</span>
         </button>
 
-        <button mat-menu-item (click)="openAiDialog('sentiment')"
-          [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions()">
+        <button mat-menu-item (click)="analyzeSentimentInline()"
+          [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions() || !content().trim() || isSentimentAnalyzing()">
           <mat-icon>mood</mat-icon>
-          <span>Sentiment Analysis</span>
-        </button>
-
-        <button mat-menu-item (click)="toggleAdvancedOptions()">
-          <mat-icon>settings</mat-icon>
-          <span>Advanced options</span>
+          <span>{{ isSentimentAnalyzing() ? 'Analyzing sentiment...' : 'Sentiment Analysis' }}</span>
         </button>
       </mat-menu>
       }

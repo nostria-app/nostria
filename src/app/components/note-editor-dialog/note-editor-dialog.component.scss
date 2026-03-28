@@ -408,6 +408,19 @@
   // because they need to apply to projected content via ::ng-deep
 
   .action-container {
+    .plus-button {
+      opacity: 0.7;
+      transition: opacity 0.2s ease;
+
+      &:hover:not(:disabled) {
+        opacity: 1;
+      }
+
+      &:disabled {
+        opacity: 0.3;
+      }
+    }
+
     .mobile-actions-trigger {
       display: inline-flex;
     }
@@ -430,7 +443,7 @@
           display: none;
         }
 
-        .action-priority-low {
+        .action-priority-low:not(.persistent-action) {
           display: none;
         }
 
@@ -478,6 +491,76 @@
       .right-actions {
         gap: 4px;
       }
+    }
+  }
+}
+
+.inline-status-row {
+  display: flex;
+  justify-content: center;
+  padding: 2px 0 10px;
+
+  .sentiment-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 32px;
+    padding: 6px 8px 6px 10px;
+    border-radius: 999px;
+    background: var(--mat-sys-surface-container-high);
+    color: var(--mat-sys-on-surface-variant);
+    font-size: 12px;
+    line-height: 1.2;
+    max-width: min(320px, 100%);
+
+    mat-icon {
+      width: 16px;
+      height: 16px;
+      font-size: 16px;
+      flex: 0 0 auto;
+    }
+
+    span {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    &.result {
+      color: var(--mat-sys-primary);
+    }
+
+    &.error {
+      color: var(--mat-sys-error);
+    }
+
+    .close-inline-status {
+      width: 24px;
+      height: 24px;
+      padding: 0 !important;
+      display: flex !important;
+      align-items: center;
+      justify-content: center;
+      flex: 0 0 auto;
+      margin-right: -2px;
+
+      .mat-icon {
+        width: 16px;
+        height: 16px;
+        font-size: 16px;
+      }
+    }
+  }
+
+  @media (max-width: 700px),
+  (max-height: 700px) {
+    padding-bottom: 8px;
+
+    .sentiment-status {
+      max-width: min(220px, 100%);
+      padding: 4px 6px 4px 8px;
+      font-size: 11px;
     }
   }
 }
@@ -946,6 +1029,7 @@
     .close-advanced-options {
       margin: -8px -8px -8px 0;
     }
+
   }
 
   .option-row {

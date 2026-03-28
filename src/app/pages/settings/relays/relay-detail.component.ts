@@ -627,6 +627,5 @@ export class RelayDetailComponent {
     const relayListEvent = this.nostr.createEvent(kinds.RelayList, '', tags);
     const signedEvent = await this.nostr.signEvent(relayListEvent);
     await this.accountRelay.publish(signedEvent);
-    await this.discoveryRelay.publish(signedEvent);
   }
 }

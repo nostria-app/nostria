@@ -54,7 +54,6 @@ import { UtilitiesService } from '../../services/utilities.service';
 import { PublishEventBus, PublishRelayResultEvent } from '../../services/publish-event-bus.service';
 import { Subscription } from 'rxjs';
 import { MatDialog } from '@angular/material/dialog';
-import { AiToolsDialogComponent } from '../ai-tools-dialog/ai-tools-dialog.component';
 import { ConfirmDialogComponent } from '../confirm-dialog/confirm-dialog.component';
 import { MatMenuModule } from '@angular/material/menu';
 import { AiService } from '../../services/ai.service';
@@ -117,6 +116,18 @@ interface XPostValidation {
 interface PreparedXPost {
   id: string;
   url: string;
+}
+
+interface SentimentAnalysisResult {
+  label: string;
+  score: number;
+}
+
+interface SentimentHeaderState {
+  kind: 'loading' | 'result' | 'error';
+  icon: string;
+  text: string;
+  score?: number;
 }
 
 @Component({
@@ -256,6 +267,11 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   isPublishing = signal(false);
   isRecording = signal(false);
   isTranscribing = signal(false);
+  isSentimentAnalyzing = signal(false);
+  sentimentResult = signal<SentimentAnalysisResult | null>(null);
+  sentimentError = signal('');
+  private sentimentRequestedText = signal('');
+  private sentimentResultText = signal('');
 
   // Recording history for undo
   recordingHistory: string[] = [];
@@ -385,6 +401,44 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     }
 
     return hasContent && notPublishing && notUploading && expirationValid && xPostValid;
+  });
+
+  sentimentHeaderState = computed<SentimentHeaderState | null>(() => {
+    const currentContent = this.content().trim();
+    if (!currentContent) {
+      return null;
+    }
+
+    if (this.isSentimentAnalyzing() && this.sentimentRequestedText() === currentContent) {
+      return {
+        kind: 'loading',
+        icon: 'hourglass_empty',
+        text: 'Analyzing sentiment...',
+      };
+    }
+
+    if (this.sentimentError() && this.sentimentResultText() === currentContent) {
+      return {
+        kind: 'error',
+        icon: 'error',
+        text: this.sentimentError(),
+      };
+    }
+
+    const result = this.sentimentResult();
+    if (!result || this.sentimentResultText() !== currentContent) {
+      return null;
+    }
+
+    const label = this.formatSentimentLabel(result.label);
+    const score = Math.round(result.score * 100);
+
+    return {
+      kind: 'result',
+      icon: result.label === 'NEGATIVE' ? 'sentiment_dissatisfied' : 'sentiment_satisfied',
+      text: `${label} ${score}%`,
+      score,
+    };
   });
 
   xPostValidation = computed<XPostValidation>(() => {
@@ -1215,7 +1269,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       mentionMap: Array.from(this.mentionMap.entries()),
       pubkeyToNameMap: Array.from(this.pubkeyToNameMap.entries()),
       showPreview: this.showPreview(),
-      showAdvancedOptions: this.showAdvancedOptions(),
+      showAdvancedOptions: false,
       expirationEnabled: this.expirationEnabled(),
       expirationDate: this.expirationDate(),
       expirationTime: this.expirationTime(),
@@ -1293,7 +1347,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
           }
 
           this.showPreview.set(autoDraft.showPreview);
-          this.showAdvancedOptions.set(autoDraft.showAdvancedOptions);
+          this.showAdvancedOptions.set(false);
           this.expirationEnabled.set(autoDraft.expirationEnabled);
           this.expirationDate.set(autoDraft.expirationDate);
           this.expirationTime.set(autoDraft.expirationTime);
@@ -1310,11 +1364,13 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
             this.title.set(autoDraft.title);
           }
 
-          // Show restoration message
-          this.snackBar.open('Draft restored', 'Dismiss', {
-            duration: 3000,
-            panelClass: 'info-snackbar',
-          });
+          // Show restoration message after initial render settles
+          setTimeout(() => {
+            this.snackBar.open('Draft restored', 'Dismiss', {
+              duration: 3000,
+              panelClass: 'info-snackbar',
+            });
+          }, 0);
         }
       } else if (isExpired) {
         // Remove expired draft
@@ -2370,6 +2426,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     const target = event.target as HTMLTextAreaElement;
     const newContent = target.value;
     this.content.set(newContent);
+    this.sentimentError.set('');
     this.lastCursorPosition = target.selectionStart || 0;
     this.scheduleTextareaRefresh(target.selectionStart || 0);
 
@@ -2654,7 +2711,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     // Alt+D (Windows/Linux) or Cmd+D (Mac) shortcut to toggle dictation
     if (this.platformService.hasModifierKey(event) && (event.key.toLowerCase() === 'd' || event.code === 'KeyD')) {
       event.preventDefault();
-      if (!this.isUploading() && !this.isPublishing() && !this.showPreview() && !this.showAdvancedOptions() && !this.isTranscribing()) {
+      if (!this.isUploading() && !this.isPublishing() && !this.showPreview() && !this.isTranscribing()) {
         this.toggleRecording();
       }
     }
@@ -3050,7 +3107,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
           },
         });
 
-        dialogRef.afterClosed().subscribe(confirmed => {
+        dialogRef.afterClosed().subscribe((confirmed: boolean) => {
           if (confirmed) {
             this.content.set('');
             this.mentionMap.clear();
@@ -3101,6 +3158,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     this.showPreview.set(false);
     this.showAdvancedOptions.set(false);
     this.showEventJson.set(false);
+    this.clearSentimentAnalysis();
 
     // Clear auto-saved draft from storage
     this.clearAutoDraft();
@@ -3135,11 +3193,47 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     const wasInAdvancedOptions = this.showAdvancedOptions();
     this.showAdvancedOptions.update(current => !current);
 
-    // If coming back from advanced options, re-trigger textarea auto-resize after it renders
     if (wasInAdvancedOptions) {
       setTimeout(() => {
         this.scheduleTextareaRefresh();
       }, 0);
+    }
+  }
+
+  async analyzeSentimentInline(): Promise<void> {
+    const text = this.content().trim();
+    if (!text || this.isSentimentAnalyzing()) {
+      return;
+    }
+
+    this.isSentimentAnalyzing.set(true);
+    this.sentimentError.set('');
+    this.sentimentResult.set(null);
+    this.sentimentRequestedText.set(text);
+
+    try {
+      if (!this.aiService.sentimentModelLoaded()) {
+        await this.aiService.loadModel('sentiment-analysis', this.aiService.sentimentModelId);
+      }
+
+      const result = await this.aiService.analyzeSentiment(text) as SentimentAnalysisResult[];
+      if (Array.isArray(result) && result.length > 0) {
+        this.sentimentResult.set(result[0]);
+        this.sentimentResultText.set(text);
+      } else {
+        this.sentimentError.set('No sentiment result returned.');
+        this.sentimentResultText.set(text);
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Sentiment analysis failed';
+      if (message === 'AI Sentiment Analysis is disabled') {
+        this.sentimentError.set('Sentiment analysis is disabled in AI settings.');
+      } else {
+        this.sentimentError.set(message || 'Sentiment analysis failed');
+      }
+      this.sentimentResultText.set(text);
+    } finally {
+      this.isSentimentAnalyzing.set(false);
     }
   }
 
@@ -3247,7 +3341,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       },
     });
 
-    dialogRef.afterClosed().subscribe(result => {
+    dialogRef.afterClosed().subscribe((result: boolean) => {
       if (result) {
         // Navigate to media library servers tab
         this.router.navigate(['/collections/media'], { queryParams: { tab: 'servers' } });
@@ -3995,17 +4089,35 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     }
   }
 
-  openAiDialog(action: 'generate' | 'translate' | 'sentiment' = 'generate') {
-    const dialogRef = this.dialog.open(AiToolsDialogComponent, {
-      data: { content: this.content(), initialAction: action },
-      width: '500px'
-    });
+  private clearSentimentAnalysis(): void {
+    this.isSentimentAnalyzing.set(false);
+    this.sentimentResult.set(null);
+    this.sentimentError.set('');
+    this.sentimentRequestedText.set('');
+    this.sentimentResultText.set('');
+  }
 
-    dialogRef.afterClosed().subscribe(result => {
-      if (result) {
-        this.content.set(result);
-      }
-    });
+  dismissSentimentStatus(): void {
+    this.clearSentimentAnalysis();
+  }
+
+  openAiDialog(action: 'generate' | 'translate'): void {
+    if (action === 'translate') {
+      this.snackBar.open('Translation from the note editor is temporarily unavailable.', 'Dismiss', {
+        duration: 3000,
+      });
+    }
+  }
+
+  private formatSentimentLabel(label: string): string {
+    switch (label) {
+      case 'POSITIVE':
+        return 'Positive';
+      case 'NEGATIVE':
+        return 'Negative';
+      default:
+        return 'Neutral';
+    }
   }
 
   async toggleRecording() {

@@ -252,16 +252,8 @@ export class DiscoveryRelayService extends RelayServiceBase implements NostriaSe
     if (pubkey) {
       const relaysFromEvent = await this.loadFromEvent(pubkey);
       if (relaysFromEvent !== null) {
-        // User has a kind 10086 event, use those relays when available.
-        // If the event exists but has no usable relay tags, keep bootstrap relays
-        // but still treat it as existing so we don't overwrite the user's event.
-        if (relaysFromEvent.length > 0) {
-          this.logger.debug(`Loaded ${relaysFromEvent.length} discovery relays from kind 10086 event for user`);
-          this.init(relaysFromEvent);
-        } else {
-          this.logger.debug('Kind 10086 event exists but has no usable relay tags, keeping bootstrap relays');
-          this.init(bootstrapRelays);
-        }
+        this.logger.debug(`Loaded ${relaysFromEvent.length} discovery relays from kind 10086 event for user`);
+        this.init(relaysFromEvent);
 
         this.poolLoaded = true;
         return true; // Event found
@@ -371,28 +363,16 @@ export class DiscoveryRelayService extends RelayServiceBase implements NostriaSe
         }
       });
 
-      if (validRelays.length === 0) {
-        this.logger.warn('No valid relay URLs provided, using default relays');
-        this.localStorage.removeItem(this.appState.DISCOVERY_RELAYS_STORAGE_KEY);
-        return;
-      }
+      this.save(validRelays);
 
-      // Ensure required relays are always included
-      const relaysWithRequired = this.ensureRequiredRelays(validRelays);
-
-      this.save(relaysWithRequired);
-
-      this.logger.debug(`Saved ${relaysWithRequired.length} discovery relays to storage`);
+      this.logger.debug(`Saved ${validRelays.length} discovery relays to storage`);
 
       // Reinitialize the service with new relays
-      this.init(relaysWithRequired);
+      this.init(validRelays);
     } catch (error) {
       this.logger.error('Error saving discovery relays to storage', error);
     }
   }
-
-  // This relay MUST always be included for profile discovery to work well
-  private readonly REQUIRED_DISCOVERY_RELAYS = ['wss://indexer.openresist.com/'];
 
   /**
    * Loads bootstrap relays from local storage
@@ -402,34 +382,15 @@ export class DiscoveryRelayService extends RelayServiceBase implements NostriaSe
       const storedRelays = this.localStorage.getItem(this.appState.DISCOVERY_RELAYS_STORAGE_KEY);
       if (storedRelays) {
         const parsedRelays = JSON.parse(storedRelays);
-        if (Array.isArray(parsedRelays) && parsedRelays.length > 0) {
+        if (Array.isArray(parsedRelays)) {
           this.logger.debug(`Loaded ${parsedRelays.length} discovery relays from storage`);
-          // Always ensure required relays are included for profile discovery
-          return this.ensureRequiredRelays(parsedRelays);
+          return parsedRelays;
         }
       }
     } catch (error) {
       this.logger.error('Error loading discovery relays from storage', error);
     }
     return this.DEFAULT_BOOTSTRAP_RELAYS;
-  }
-
-  /**
-    * Ensures required discovery relays are always included.
-    * These relays are essential for profile discovery to work well.
-    */
-  private ensureRequiredRelays(relays: string[]): string[] {
-    const normalizedExisting = new Set(relays.map(relay => relay.replace(/\/$/, '')));
-    const missingRequired = this.REQUIRED_DISCOVERY_RELAYS.filter(
-      relay => !normalizedExisting.has(relay.replace(/\/$/, ''))
-    );
-
-    if (missingRequired.length > 0) {
-      this.logger.debug(`Adding required discovery relays: ${missingRequired.join(', ')}`);
-      return [...relays, ...missingRequired];
-    }
-
-    return relays;
   }
 
   getDefaultDiscoveryRelays(): string[] {

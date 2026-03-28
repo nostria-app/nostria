@@ -2335,7 +2335,6 @@ export class NostrService implements NostriaService {
 
     await this.discoveryRelay.saveEvent(signedDiscoveryRelayEvent);
     await this.accountRelay.publish(signedDiscoveryRelayEvent);
-    await this.discoveryRelay.publish(signedDiscoveryRelayEvent);
 
     // Update the user to mark as activated
     user.hasActivated = true;

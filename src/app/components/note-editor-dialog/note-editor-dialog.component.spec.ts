@@ -40,6 +40,12 @@ describe('NoteEditorDialogComponent', () => {
   let mockCustomDialogService: {
     open: Mock;
   };
+  let mockAiService: {
+    analyzeSentiment: Mock;
+    loadModel: Mock;
+    sentimentModelLoaded: Mock;
+    sentimentModelId: string;
+  };
   let mockXDualPostService: {
     status: ReturnType<typeof signal>;
     loading: ReturnType<typeof signal>;
@@ -67,6 +73,13 @@ describe('NoteEditorDialogComponent', () => {
 
     mockCustomDialogService = {
       open: vi.fn(),
+    };
+
+    mockAiService = {
+      analyzeSentiment: vi.fn().mockResolvedValue([{ label: 'POSITIVE', score: 0.99 }]),
+      loadModel: vi.fn().mockResolvedValue(undefined),
+      sentimentModelLoaded: vi.fn().mockReturnValue(false),
+      sentimentModelId: 'Xenova/distilbert-base-uncased-finetuned-sst-2-english',
     };
 
     mockXDualPostService = {
@@ -125,7 +138,7 @@ describe('NoteEditorDialogComponent', () => {
         { provide: MatDialog, useValue: { open: vi.fn() } },
         { provide: CustomDialogService, useValue: mockCustomDialogService },
         { provide: XDualPostService, useValue: mockXDualPostService },
-        { provide: AiService, useValue: {} },
+        { provide: AiService, useValue: mockAiService },
         { provide: SpeechService, useValue: { isRecording: signal(false), startRecording: vi.fn(), stopRecording: vi.fn() } },
         { provide: PlatformService, useValue: mockPlatformService },
       ],
@@ -506,26 +519,53 @@ describe('NoteEditorDialogComponent', () => {
     });
   });
 
-  describe('emoji picker button rendering', () => {
-    it('should render emoji button with mat-menu on desktop', async () => {
+  describe('composer add menu rendering', () => {
+    it('should render the plus button on desktop', async () => {
       createComponent();
       fixture.detectChanges();
       await fixture.whenStable();
 
-      const emojiButton = fixture.nativeElement.querySelector('button[mattooltip="Emoji"]');
-      expect(emojiButton).toBeTruthy();
+      const plusButton = fixture.nativeElement.querySelector('button[mattooltip="Add to post"]');
+      expect(plusButton).toBeTruthy();
     });
 
-    it('should render emoji picker inside mat-menu on desktop', async () => {
+    it('should include emoji and GIF actions in the add menu', async () => {
       createComponent();
       fixture.detectChanges();
       await fixture.whenStable();
 
-      // The mat-menu content is lazily rendered, but the app-emoji-picker should be in the template
       const compiled = fixture.nativeElement;
-      // Check that the emoji button exists (the mat-menu trigger)
-      const buttons = compiled.querySelectorAll('button[mattooltip="Emoji"]');
-      expect(buttons.length).toBeGreaterThan(0);
+      expect(compiled.textContent).toContain('Emoji');
+      expect(compiled.textContent).toContain('GIFs');
+    });
+  });
+
+  describe('advanced options visibility', () => {
+    it('should render the advanced options trigger by default', async () => {
+      createComponent();
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      const advancedTrigger = fixture.nativeElement.querySelector('button[mattooltip="Advanced options"]');
+      const advancedOptions = fixture.nativeElement.querySelector('.advanced-options-section');
+      expect(advancedTrigger).toBeTruthy();
+      expect(advancedOptions).toBeFalsy();
+    });
+
+  });
+
+  describe('inline sentiment analysis', () => {
+    it('should show sentiment result in the dialog header after analysis', async () => {
+      createComponent();
+      component.content.set('This is great');
+
+      await component.analyzeSentimentInline();
+      fixture.detectChanges();
+
+      const sentimentStatus = fixture.nativeElement.querySelector('.sentiment-status');
+      expect(mockAiService.loadModel).toHaveBeenCalledWith('sentiment-analysis', mockAiService.sentimentModelId);
+      expect(mockAiService.analyzeSentiment).toHaveBeenCalledWith('This is great');
+      expect(sentimentStatus?.textContent).toContain('Positive 99%');
     });
   });
 

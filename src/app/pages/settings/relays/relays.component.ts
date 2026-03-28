@@ -909,9 +909,8 @@ export class RelaysComponent implements OnInit, OnDestroy {
       const event = this.discoveryRelay.createDiscoveryRelayListEvent(pubkey, relayUrls);
       const signedEvent = await this.nostr.signEvent(event);
 
-      // Publish to both account relays and discovery relays
+      // Publish to account relays only. Discovery/indexer relays should not receive kind 10086.
       await this.accountRelay.publish(signedEvent);
-      await this.discoveryRelay.publish(signedEvent);
       await this.discoveryRelay.saveEvent(signedEvent);
 
       this.logger.info('Published discovery relay list (kind 10086)', {
