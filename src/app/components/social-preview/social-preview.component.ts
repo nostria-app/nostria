@@ -102,18 +102,6 @@ export class SocialPreviewComponent {
     }
   }
 
-  getPreviewSourceLabel(preview: OpenGraphData): string {
-    return preview.siteName?.trim() || preview.providerName?.trim() || this.getPreviewHostname(preview.url) || 'Link preview';
-  }
-
-  getPreviewHostname(url: string): string {
-    try {
-      return new URL(url).hostname.replace(/^www\./, '');
-    } catch {
-      return url;
-    }
-  }
-
   private buildSafeEmbedHtml(embedHtml?: string): SafeHtml | null {
     if (!embedHtml) {
       return null;

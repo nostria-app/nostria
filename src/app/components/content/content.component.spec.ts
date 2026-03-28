@@ -370,6 +370,80 @@ describe('ContentComponent', () => {
     ]);
   });
 
+  it('should hide a single previewed url when it is the last note content', () => {
+    mockSettingsService.settings.set({ socialSharingPreview: true });
+
+    (component as unknown as {
+      _hasBeenVisible: { set: (value: boolean) => void };
+      _cachedTokens: { set: (value: ContentToken[]) => void };
+    })._hasBeenVisible.set(true);
+
+    (component as unknown as {
+      _cachedTokens: { set: (value: ContentToken[]) => void };
+    })._cachedTokens.set([
+      { id: 1, type: 'text', content: 'Check this out' } as ContentToken,
+      { id: 2, type: 'linebreak', content: '\n' } as ContentToken,
+      { id: 3, type: 'url', content: 'https://nostria.app/settings' } as ContentToken,
+    ]);
+
+    component.socialPreviews.set([
+      {
+        url: 'https://nostria.app/settings',
+        title: 'Nostria Settings',
+        loading: false,
+        error: false,
+      },
+    ]);
+
+    fixture.detectChanges();
+
+    expect(component.displayContentTokens()).toEqual([
+      { id: 1, type: 'text', content: 'Check this out' },
+    ]);
+  });
+
+  it('should keep inline preview link when text follows the previewed url', () => {
+    mockSettingsService.settings.set({ socialSharingPreview: true });
+
+    (component as unknown as {
+      _hasBeenVisible: { set: (value: boolean) => void };
+      _cachedTokens: { set: (value: ContentToken[]) => void };
+    })._hasBeenVisible.set(true);
+
+    (component as unknown as {
+      _cachedTokens: { set: (value: ContentToken[]) => void };
+    })._cachedTokens.set([
+      { id: 1, type: 'text', content: 'My website is ' } as ContentToken,
+      { id: 2, type: 'url', content: 'https://nostria.app/settings' } as ContentToken,
+      { id: 3, type: 'text', content: ', please check it out.' } as ContentToken,
+    ]);
+
+    component.socialPreviews.set([
+      {
+        url: 'https://nostria.app/settings',
+        title: 'Nostria Settings',
+        loading: false,
+        error: false,
+      },
+    ]);
+
+    fixture.detectChanges();
+
+    expect(component.displayContentTokens()).toEqual([
+      { id: 1, type: 'text', content: 'My website is ' },
+      {
+        id: 2,
+        type: 'url',
+        content: 'https://nostria.app/settings',
+        previewTitle: 'Nostria Settings',
+        previewSiteName: undefined,
+        previewLoading: false,
+        previewError: false,
+      },
+      { id: 3, type: 'text', content: ', please check it out.' },
+    ]);
+  });
+
   it('should keep inline X status URLs when social previews are disabled', () => {
     mockSettingsService.settings.set({ socialSharingPreview: false });
 

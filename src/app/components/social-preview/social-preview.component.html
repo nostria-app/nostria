@@ -6,8 +6,8 @@
   </mat-card>
 </div>
 } @else {
-<a class="social-preview-card" [href]="preview.url" [attr.data-url]="preview.url" target="_blank"
-  rel="noopener noreferrer">
+<a class="social-preview-card" [class.single-link-card]="singleLinkLayout() && !preview.loading && !preview.error"
+  [href]="preview.url" [attr.data-url]="preview.url" target="_blank" rel="noopener noreferrer">
   <mat-card [class.compact-preview]="compact() || (!preview.title && !preview.image)"
     [class.prominent-image-preview]="prominentImage() && compact() && !!preview.image && !preview.loading && !preview.error"
     [class.single-link-preview]="singleLinkLayout() && !preview.loading && !preview.error">
@@ -46,24 +46,11 @@
         </div>
         } @else if (preview.error) {
         <div class="error-content">
-          <div class="preview-meta">
-            <span class="preview-source error-source">Link preview unavailable</span>
-          </div>
           <div class="error-title">Could not load preview</div>
           <div class="preview-description">Open the original link to view the destination directly.</div>
-          <div class="preview-footer">
-            <span class="preview-url-chip">{{ getPreviewHostname(preview.url) }}</span>
-            <mat-icon class="preview-open-icon">north_east</mat-icon>
-          </div>
+          <div class="preview-url">{{ preview.url }}</div>
         </div>
         } @else {
-        <div class="preview-meta">
-          <span class="preview-source">{{ getPreviewSourceLabel(preview) }}</span>
-          @if (singleLinkLayout()) {
-          <span class="preview-meta-dot"></span>
-          <span class="preview-kind">Website</span>
-          }
-        </div>
         <div class="preview-title">
           {{ preview.title || 'No title available' }}
         </div>
@@ -72,10 +59,7 @@
           {{ preview.description || 'No description available' }}
         </div>
         }
-        <div class="preview-footer">
-          <span class="preview-url-chip">{{ getPreviewHostname(preview.url) }}</span>
-          <mat-icon class="preview-open-icon">north_east</mat-icon>
-        </div>
+        <div class="preview-url">{{ preview.url }}</div>
         }
       </div>
     </div>

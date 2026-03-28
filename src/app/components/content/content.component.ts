@@ -108,6 +108,7 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
       );
 
       tokens = this.decoratePreviewedUrlTokens(tokens, previewsByUrl);
+      tokens = this.removeTrailingSinglePreviewUrlToken(tokens, previewsByUrl);
     }
 
     if (!this.hideInlineMediaAndLinks()) {
@@ -294,6 +295,59 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
         previewError: preview.error,
       };
     });
+  }
+
+  private removeTrailingSinglePreviewUrlToken(tokens: ContentToken[], previewsByUrl: Map<string, OpenGraphData>): ContentToken[] {
+    if (previewsByUrl.size !== 1) {
+      return tokens;
+    }
+
+    const trailingUrlIndex = this.findTrailingPreviewUrlIndex(tokens, previewsByUrl);
+    if (trailingUrlIndex === -1) {
+      return tokens;
+    }
+
+    const trimmedTokens = [...tokens];
+    trimmedTokens.splice(trailingUrlIndex, 1);
+
+    while (trimmedTokens.length > 0) {
+      const lastToken = trimmedTokens[trimmedTokens.length - 1];
+      if (lastToken.type === 'linebreak') {
+        trimmedTokens.pop();
+        continue;
+      }
+
+      if (lastToken.type === 'text' && !lastToken.content.trim()) {
+        trimmedTokens.pop();
+        continue;
+      }
+
+      break;
+    }
+
+    return trimmedTokens;
+  }
+
+  private findTrailingPreviewUrlIndex(tokens: ContentToken[], previewsByUrl: Map<string, OpenGraphData>): number {
+    for (let index = tokens.length - 1; index >= 0; index--) {
+      const token = tokens[index];
+
+      if (token.type === 'linebreak') {
+        continue;
+      }
+
+      if (token.type === 'text' && !token.content.trim()) {
+        continue;
+      }
+
+      if (token.type !== 'url') {
+        return -1;
+      }
+
+      return previewsByUrl.has(normalizePreviewUrl(token.content)) ? index : -1;
+    }
+
+    return -1;
   }
 
   /**

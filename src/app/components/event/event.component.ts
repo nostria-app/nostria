@@ -236,6 +236,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   private virtualizeTimer?: ReturnType<typeof setTimeout>;
   private hasViewInitialized = false;
   private visibleInteractionRetryTimer?: ReturnType<typeof setTimeout>;
+  private interactionLoadGeneration = 0;
 
   // Interaction loading: delay + abort support.
   // When an event enters the viewport, we wait a short period before starting
@@ -1566,7 +1567,9 @@ export class EventComponent implements AfterViewInit, OnDestroy {
         // Reset the loaded interactions flag when event changes
         // This ensures each new event loads its own interactions
         this.hasLoadedInteractions.set(false);
+        this.observedEventId = event.id;
         this.hasLoadedEdit = false;
+        this.interactionLoadGeneration += 1;
         this.interactionAbortController?.abort();
         this.interactionAbortController = undefined;
         EventComponent.cancelQueuedInteractionPreload(this);
@@ -1859,6 +1862,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   private readonly viewportInteractionRootMargin = '1400px 0px 1800px 0px';
   private readonly immediateDomPreloadAheadPx = 900;
   private readonly immediateDomPreloadBehindPx = 250;
+  private readonly initialBatchPreloadCount = 12;
   private readonly actualVisibilityObserverOptions = {
     rootMargin: '0px',
     threshold: 0.01,
@@ -1892,11 +1896,14 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   }
 
   private static enqueueInteractionPreload(component: EventComponent, priority: number): void {
+    const existingPriority = EventComponent.queuedInteractionPreloads.get(component);
+    if (existingPriority === undefined || priority < existingPriority) {
+      EventComponent.queuedInteractionPreloads.set(component, priority);
+    }
+
     if (EventComponent.activeInteractionPreloads.has(component)) {
       return;
     }
-
-    EventComponent.queuedInteractionPreloads.set(component, priority);
 
     const canUseBoostSlot = priority <= EventComponent.interactionPreloadUrgentThresholdPx
       && EventComponent.activeInteractionPreloads.size < (EventComponent.interactionPreloadConcurrency + EventComponent.interactionPreloadBoostConcurrency);
@@ -2033,6 +2040,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
             this.interactionAbortController = undefined;
             this.isLoadingReactions.set(false);
             this.isLoadingZaps.set(false);
+            this.interactionLoadGeneration += 1;
           }
 
           // If interactions were marked as loading but results haven't been applied yet
@@ -2148,7 +2156,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
       return;
     }
 
-    if (!this.isWithinImmediatePreloadBounds(element)) {
+    if (!this.shouldForceInitialBatchPreload(element) && !this.isWithinImmediatePreloadBounds(element)) {
       return;
     }
 
@@ -2206,6 +2214,32 @@ export class EventComponent implements AfterViewInit, OnDestroy {
       && rect.bottom > -this.immediateDomPreloadBehindPx;
   }
 
+  private shouldForceInitialBatchPreload(element: HTMLElement): boolean {
+    if (!this.inFeedsPanel()) {
+      return false;
+    }
+
+    const parent = element.parentElement;
+    if (!parent) {
+      return false;
+    }
+
+    let eventIndex = 0;
+    for (const child of Array.from(parent.children)) {
+      if (child.tagName.toLowerCase() !== 'app-event') {
+        continue;
+      }
+
+      if (child === element) {
+        return eventIndex < this.initialBatchPreloadCount;
+      }
+
+      eventIndex += 1;
+    }
+
+    return false;
+  }
+
   private async startQueuedInteractionLoad(): Promise<void> {
     const currentEventId = this.observedEventId;
 
@@ -2215,6 +2249,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
 
     this.clearInteractionState();
     this.hasLoadedInteractions.set(true);
+    const loadGeneration = ++this.interactionLoadGeneration;
 
     this.interactionAbortController?.abort();
     this.interactionAbortController = new AbortController();
@@ -2235,10 +2270,14 @@ export class EventComponent implements AfterViewInit, OnDestroy {
 
     const signal = this.interactionAbortController.signal;
     await Promise.allSettled([
-      this.loadAllInteractions(false, signal),
-      this.loadZaps(signal),
+      this.loadAllInteractions(false, signal, loadGeneration),
+      this.loadZaps(signal, loadGeneration),
       this.loadLatestEditForEvent(),
     ]);
+
+    if (this.interactionLoadGeneration === loadGeneration && !signal.aborted) {
+      this.scheduleVisibleInteractionRetry();
+    }
   }
 
   private resolveObserverRoot(element: HTMLElement): HTMLElement | null {
@@ -2366,7 +2405,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
    *
    * For reposts, loads interactions for the reposted event, not the repost itself.
    */
-  async loadAllInteractions(invalidateCache = false, signal?: AbortSignal) {
+  async loadAllInteractions(invalidateCache = false, signal?: AbortSignal, loadGeneration?: number) {
     // Use targetRecord to get the actual event for interactions
     // For reposts, this will be the reposted event, not the repost event
     const targetRecordData = this.targetRecord();
@@ -2410,6 +2449,10 @@ export class EventComponent implements AfterViewInit, OnDestroy {
       // If the load was aborted (event scrolled off-screen), skip result processing
       if (signal?.aborted) {
         this.logger.debug('[Loading Interactions] Aborted, discarding results for:', targetEventId.substring(0, 8));
+        if (loadGeneration === this.interactionLoadGeneration) {
+          this.hasLoadedInteractions.set(false);
+          this.scheduleVisibleInteractionRetry();
+        }
         return;
       }
 
@@ -2418,6 +2461,10 @@ export class EventComponent implements AfterViewInit, OnDestroy {
       if (currentTargetRecord?.event.id !== targetEventId) {
         this.logger.warn('[Loading Interactions] Event changed during load, discarding results for:', targetEventId.substring(0, 8));
         this.logger.warn('[Loading Interactions] Current event is now:', currentTargetRecord?.event.id.substring(0, 8));
+        if (loadGeneration === this.interactionLoadGeneration) {
+          this.hasLoadedInteractions.set(false);
+          this.scheduleVisibleInteractionRetry();
+        }
         return;
       }
 
@@ -2471,6 +2518,10 @@ export class EventComponent implements AfterViewInit, OnDestroy {
       }
     } catch (error) {
       this.logger.error('Error loading event interactions:', error);
+      if (loadGeneration === this.interactionLoadGeneration) {
+        this.hasLoadedInteractions.set(false);
+        this.scheduleVisibleInteractionRetry();
+      }
     } finally {
       this.isLoadingReactions.set(false);
     }
@@ -2609,7 +2660,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
    * Load zaps for an event
    * For reposts, loads zaps for the reposted event, not the repost itself
    */
-  async loadZaps(signal?: AbortSignal) {
+  async loadZaps(signal?: AbortSignal, loadGeneration?: number) {
     // Use targetRecord to get the actual event for zaps
     // For reposts, this will be the reposted event, not the repost event
     const targetRecordData = this.targetRecord();
@@ -2629,6 +2680,10 @@ export class EventComponent implements AfterViewInit, OnDestroy {
       // If the load was aborted (event scrolled off-screen), skip result processing
       if (signal?.aborted) {
         this.logger.debug('[Loading Zaps] Aborted, discarding results for:', targetEventId.substring(0, 8));
+        if (loadGeneration === this.interactionLoadGeneration && !this.isLoadingReactions()) {
+          this.hasLoadedInteractions.set(false);
+          this.scheduleVisibleInteractionRetry();
+        }
         return;
       }
 
@@ -2638,6 +2693,10 @@ export class EventComponent implements AfterViewInit, OnDestroy {
       if (currentTargetRecord?.event.id !== targetEventId) {
         this.logger.warn('[Loading Zaps] Event changed during load, discarding results for:', targetEventId.substring(0, 8));
         this.logger.warn('[Loading Zaps] Current event is now:', currentTargetRecord?.event.id.substring(0, 8));
+        if (loadGeneration === this.interactionLoadGeneration && !this.isLoadingReactions()) {
+          this.hasLoadedInteractions.set(false);
+          this.scheduleVisibleInteractionRetry();
+        }
         return;
       }
 
@@ -2663,6 +2722,10 @@ export class EventComponent implements AfterViewInit, OnDestroy {
       this.hasMoreZaps.set(queryLimit != null && zapReceipts.length >= queryLimit);
     } catch (error) {
       this.logger.error('Error loading zaps:', error);
+      if (loadGeneration === this.interactionLoadGeneration && !this.isLoadingReactions()) {
+        this.hasLoadedInteractions.set(false);
+        this.scheduleVisibleInteractionRetry();
+      }
     } finally {
       this.isLoadingZaps.set(false);
     }
