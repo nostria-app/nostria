@@ -1138,7 +1138,8 @@
       }
 
       &.compression-slider-block {
-        max-width: 360px;
+        width: 100%;
+        max-width: none;
       }
 
       .compression-slider-header {
@@ -1185,8 +1186,11 @@
       }
 
       .compression-description {
+        display: block;
+        width: 100%;
         font-size: 11px;
         line-height: 1.35;
+        color: var(--mat-sys-on-surface-variant);
       }
 
       .expiration-hint {
