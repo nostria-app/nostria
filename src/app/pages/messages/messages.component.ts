@@ -2782,6 +2782,32 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     }
   }
 
+  async openPendingCompressionPreview(previewId: string): Promise<void> {
+    const stagedPreview = this.pendingEncryptedMediaPreviews().find(item => item.id === previewId);
+    if (!stagedPreview || (stagedPreview.type !== 'image' && stagedPreview.type !== 'video')) {
+      return;
+    }
+
+    const { CompressionPreviewDialogComponent } = await import(
+      '../../components/compression-preview-dialog/compression-preview-dialog.component'
+    );
+
+    this.customDialog.open<typeof CompressionPreviewDialogComponent.prototype, void>(CompressionPreviewDialogComponent, {
+      title: 'Compression Preview',
+      width: '980px',
+      maxWidth: '96vw',
+      showCloseButton: true,
+      data: {
+        file: stagedPreview.file,
+        uploadSettings: {
+          mode: DEFAULT_DM_MEDIA_UPLOAD_SETTINGS.mode,
+          compressionStrength: this.dmCompressionStrength(),
+        },
+        contextLabel: 'Encrypted attachment',
+      },
+    });
+  }
+
   clearPendingEncryptedMediaPreviews(): void {
     for (const preview of this.pendingEncryptedMediaPreviews()) {
       URL.revokeObjectURL(preview.objectUrl);

@@ -12,7 +12,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { VideoFilterService } from '../../../services/video-filter.service';
 import { LoggerService } from '../../../services/logger.service';
 import { MatChipsModule } from '@angular/material/chips';
-import { CustomDialogRef } from '../../../services/custom-dialog.service';
+import { CustomDialogRef, CustomDialogService } from '../../../services/custom-dialog.service';
 import {
   DEFAULT_VIDEO_CLIP_UPLOAD_SETTINGS,
   getCompressionStrengthDescription,
@@ -46,6 +46,7 @@ export class VideoRecordDialogComponent implements OnDestroy, AfterViewInit {
   dialogRef = inject(CustomDialogRef<VideoRecordDialogComponent, VideoRecordDialogResult | null>);
   private snackBar = inject(MatSnackBar);
   private logger = inject(LoggerService);
+  private readonly customDialog = inject(CustomDialogService);
   filterService = inject(VideoFilterService);
   readonly uploadModeOptions = MEDIA_UPLOAD_MODE_OPTIONS.filter(option => option.value !== 'server');
 
@@ -423,13 +424,35 @@ export class VideoRecordDialogComponent implements OnDestroy, AfterViewInit {
     this.initializeFilters();
   }
 
+  async openCompressionPreview(): Promise<void> {
+    const file = this.createRecordedFile();
+    if (!file || !this.usesLocalCompression()) {
+      return;
+    }
+
+    const { CompressionPreviewDialogComponent } = await import(
+      '../../../components/compression-preview-dialog/compression-preview-dialog.component'
+    );
+
+    this.customDialog.open<typeof CompressionPreviewDialogComponent.prototype, void>(CompressionPreviewDialogComponent, {
+      title: 'Compression Preview',
+      width: '980px',
+      maxWidth: '96vw',
+      showCloseButton: true,
+      data: {
+        file,
+        uploadSettings: {
+          mode: this.uploadMode(),
+          compressionStrength: this.compressionStrength(),
+        },
+        contextLabel: 'Recorded video clip',
+      },
+    });
+  }
+
   useVideo(): void {
-    const blob = this.recordedBlob();
-    if (blob) {
-      // Create a File object from the blob
-      const file = new File([blob], `video-${Date.now()}.webm`, {
-        type: blob.type,
-      });
+    const file = this.createRecordedFile();
+    if (file) {
       this.dialogRef.close({
         file,
         uploadSettings: {
@@ -451,6 +474,17 @@ export class VideoRecordDialogComponent implements OnDestroy, AfterViewInit {
       a.click();
       document.body.removeChild(a);
     }
+  }
+
+  private createRecordedFile(): File | null {
+    const blob = this.recordedBlob();
+    if (!blob) {
+      return null;
+    }
+
+    return new File([blob], `video-${Date.now()}.webm`, {
+      type: blob.type,
+    });
   }
 
   cancel(): void {

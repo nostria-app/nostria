@@ -184,6 +184,13 @@
         color: var(--mat-sys-color-on-surface-variant);
       }
     }
+
+    .file-actions {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      flex-shrink: 0;
+    }
   }
 
   .files-summary {

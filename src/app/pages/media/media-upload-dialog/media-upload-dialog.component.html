@@ -26,9 +26,18 @@
           <span class="file-name">{{ entry.file.name }}</span>
           <span class="file-size">{{ formatFileSize(entry.file.size) }}</span>
         </div>
-        <button mat-icon-button (click)="removeFile($index)" [disabled]="isUploading()" matTooltip="Remove">
-          <mat-icon>close</mat-icon>
-        </button>
+        <div class="file-actions">
+          @if (usesLocalCompression() && (entry.isImage || entry.isVideo)) {
+          <button mat-icon-button type="button" (click)="openCompressionPreview(entry)" [disabled]="isUploading()"
+            matTooltip="Preview compression">
+            <mat-icon>compare</mat-icon>
+          </button>
+          }
+          <button mat-icon-button type="button" (click)="removeFile($index)" [disabled]="isUploading()"
+            matTooltip="Remove">
+            <mat-icon>close</mat-icon>
+          </button>
+        </div>
       </div>
       }
 

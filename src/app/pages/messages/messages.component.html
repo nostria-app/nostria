@@ -930,10 +930,19 @@
               }
             </div>
             }
-            <button mat-icon-button class="remove-media-preview-btn" (click)="removeMediaPreview(i)"
-              matTooltip="Remove media">
-              <mat-icon>close</mat-icon>
-            </button>
+            <div class="media-preview-actions">
+              @if (preview.pendingEncrypted && preview.pendingId && (preview.type === 'image' || preview.type ===
+              'video')) {
+              <button mat-icon-button type="button" class="preview-media-comparison-btn"
+                (click)="openPendingCompressionPreview(preview.pendingId)" matTooltip="Preview compression">
+                <mat-icon>compare</mat-icon>
+              </button>
+              }
+              <button mat-icon-button type="button" class="remove-media-preview-btn" (click)="removeMediaPreview(i)"
+                matTooltip="Remove media">
+                <mat-icon>close</mat-icon>
+              </button>
+            </div>
           </div>
           }
           @if (pendingEncryptedMediaPreviews().length > 0) {

@@ -13,6 +13,7 @@ import { MatSliderModule } from '@angular/material/slider';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MediaService } from '../../../services/media.service';
 import { LoggerService } from '../../../services/logger.service';
+import { CustomDialogService } from '../../../services/custom-dialog.service';
 import {
   DEFAULT_MEDIA_UPLOAD_SETTINGS,
   getCompressionStrengthDescription,
@@ -55,6 +56,7 @@ export class MediaUploadDialogComponent {
   private dialogRef = inject(MatDialogRef<MediaUploadDialogComponent, MediaUploadDialogResult | undefined>);
   private mediaService = inject(MediaService);
   private readonly logger = inject(LoggerService);
+  private readonly customDialog = inject(CustomDialogService);
 
   selectedFiles = signal<SelectedFileEntry[]>([]);
   hasFiles = computed(() => this.selectedFiles().length > 0);
@@ -129,6 +131,31 @@ export class MediaUploadDialogComponent {
 
   removeFile(index: number): void {
     this.selectedFiles.update(list => list.filter((_, i) => i !== index));
+  }
+
+  async openCompressionPreview(entry: SelectedFileEntry): Promise<void> {
+    if (!this.usesLocalCompression() || (!entry.isImage && !entry.isVideo)) {
+      return;
+    }
+
+    const { CompressionPreviewDialogComponent } = await import(
+      '../../../components/compression-preview-dialog/compression-preview-dialog.component'
+    );
+
+    this.customDialog.open<typeof CompressionPreviewDialogComponent.prototype, void>(CompressionPreviewDialogComponent, {
+      title: 'Compression Preview',
+      width: '980px',
+      maxWidth: '96vw',
+      showCloseButton: true,
+      data: {
+        file: entry.file,
+        uploadSettings: {
+          mode: this.uploadMode(),
+          compressionStrength: this.compressionStrength(),
+        },
+        contextLabel: 'Media upload',
+      },
+    });
   }
 
   clearAllFiles(): void {

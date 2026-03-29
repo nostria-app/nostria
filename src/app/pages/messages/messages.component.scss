@@ -750,13 +750,21 @@
   flex: 1 1 220px;
   min-width: 0;
 
+  .media-preview-actions {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    display: flex;
+    gap: 4px;
+  }
+
   .media-preview-media-card {
     display: flex;
     align-items: center;
     gap: 8px;
     width: 100%;
     min-width: 0;
-    padding: 0 26px 0 0;
+    padding: 0 52px 0 0;
   }
 
   .media-preview-thumb {
@@ -788,10 +796,8 @@
     color: var(--mat-sys-on-surface-variant);
   }
 
+  .preview-media-comparison-btn,
   .remove-media-preview-btn {
-    position: absolute;
-    top: -6px;
-    right: -6px;
     width: 20px;
     height: 20px;
     padding: 0;
@@ -861,7 +867,7 @@
   height: 48px;
   width: 100%;
   min-width: 0;
-  padding: 0 26px 0 6px;
+  padding: 0 52px 0 6px;
   border-radius: 6px;
   border: 1px solid var(--mat-sys-outline-variant);
   background: var(--mat-sys-surface-container);

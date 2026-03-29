@@ -26,6 +26,13 @@ export interface PreparedUploadFile {
   warningMessage?: string;
 }
 
+export interface CompressionPreviewResult {
+  originalFile: File;
+  compressedFile?: File;
+  willUploadCompressedFile: boolean;
+  warningMessage?: string;
+}
+
 interface VideoConversionPlan {
   extension: string;
   format: InstanceType<MediabunnyModule['Mp4OutputFormat']> | InstanceType<MediabunnyModule['WebMOutputFormat']>;
@@ -35,6 +42,11 @@ interface VideoConversionPlan {
   height: number;
   videoBitrate: number;
   audioBitrate: number;
+}
+
+interface CompressionCandidateResult {
+  file?: File;
+  failureReason?: string;
 }
 
 @Injectable({
@@ -67,11 +79,11 @@ export class MediaProcessingService {
 
     try {
       if (this.isProcessableImage(mimeType)) {
-        return await this.compressImage(file, settings, uploadOriginal, onProgress);
+        return await this.prepareCompressedImage(file, settings, uploadOriginal, onProgress);
       }
 
       if (mimeType.startsWith('video/')) {
-        return await this.compressVideo(file, settings, uploadOriginal, onProgress);
+        return await this.prepareCompressedVideo(file, settings, uploadOriginal, onProgress);
       }
 
       return {
@@ -91,6 +103,55 @@ export class MediaProcessingService {
     }
   }
 
+  async createCompressionPreview(
+    file: File,
+    settings: MediaUploadSettings,
+    onProgress?: (progress: MediaProcessingProgress) => void,
+  ): Promise<CompressionPreviewResult> {
+    if (!this.isBrowser) {
+      return {
+        originalFile: file,
+        willUploadCompressedFile: false,
+        warningMessage: 'Compression preview is only available in the browser.',
+      };
+    }
+
+    if (settings.mode !== 'local') {
+      return {
+        originalFile: file,
+        willUploadCompressedFile: false,
+        warningMessage: 'Switch to Local Compression to preview how the media will look after compression.',
+      };
+    }
+
+    const mimeType = this.mediaService.getFileMimeType(file);
+
+    try {
+      if (this.isProcessableImage(mimeType)) {
+        const candidate = await this.createCompressedImageCandidate(file, settings, onProgress);
+        return this.mapCompressionPreviewCandidate(file, candidate);
+      }
+
+      if (mimeType.startsWith('video/')) {
+        const candidate = await this.createCompressedVideoCandidate(file, settings, onProgress);
+        return this.mapCompressionPreviewCandidate(file, candidate);
+      }
+
+      return {
+        originalFile: file,
+        willUploadCompressedFile: false,
+        warningMessage: 'Compression preview is currently available for images and videos only.',
+      };
+    } catch (error) {
+      this.logger.warn('Failed to generate compression preview', error);
+      return {
+        originalFile: file,
+        willUploadCompressedFile: false,
+        warningMessage: `Could not generate a compression preview for ${file.name}.`,
+      };
+    }
+  }
+
   private isProcessableImage(mimeType: string): mimeType is SupportedImageMimeType {
     return mimeType === 'image/jpeg'
       || mimeType === 'image/png'
@@ -99,12 +160,44 @@ export class MediaProcessingService {
       || mimeType === 'image/heif';
   }
 
-  private async compressImage(
+  private async prepareCompressedImage(
     file: File,
     settings: MediaUploadSettings,
     uploadOriginal: boolean,
     onProgress?: (progress: MediaProcessingProgress) => void,
   ): Promise<PreparedUploadFile> {
+    const candidate = await this.createCompressedImageCandidate(file, settings, onProgress);
+
+    if (!candidate.file) {
+      return {
+        file,
+        uploadOriginal,
+        wasProcessed: false,
+        warningMessage: candidate.failureReason ?? `Local compression was not available for ${file.name}. Uploading the original file instead.`,
+      };
+    }
+
+    if (candidate.file.size >= file.size) {
+      return {
+        file,
+        uploadOriginal,
+        wasProcessed: false,
+        warningMessage: `Local compression did not reduce ${file.name}, so the original file will be uploaded.`,
+      };
+    }
+
+    return {
+      file: candidate.file,
+      uploadOriginal,
+      wasProcessed: true,
+    };
+  }
+
+  private async createCompressedImageCandidate(
+    file: File,
+    settings: MediaUploadSettings,
+    onProgress?: (progress: MediaProcessingProgress) => void,
+  ): Promise<CompressionCandidateResult> {
     onProgress?.({ message: `Compressing ${file.name}...`, progress: 0.1 });
 
     const imageSource = await this.loadImageSource(file);
@@ -126,33 +219,54 @@ export class MediaProcessingService {
 
       const blob = await this.canvasToBlob(canvas, outputMimeType, quality);
 
-      if (blob.size >= file.size) {
-        return {
-          file,
-          uploadOriginal,
-          wasProcessed: false,
-          warningMessage: `Local compression did not reduce ${file.name}, so the original file will be uploaded.`,
-        };
-      }
-
       onProgress?.({ message: `Compressed ${file.name}`, progress: 1 });
 
       return {
         file: this.createOutputFile(file, blob, outputMimeType),
-        uploadOriginal,
-        wasProcessed: true,
       };
     } finally {
       imageSource.dispose();
     }
   }
 
-  private async compressVideo(
+  private async prepareCompressedVideo(
     file: File,
     settings: MediaUploadSettings,
     uploadOriginal: boolean,
     onProgress?: (progress: MediaProcessingProgress) => void,
   ): Promise<PreparedUploadFile> {
+    const candidate = await this.createCompressedVideoCandidate(file, settings, onProgress);
+
+    if (!candidate.file) {
+      return {
+        file,
+        uploadOriginal,
+        wasProcessed: false,
+        warningMessage: candidate.failureReason ?? `Local compression was not available for ${file.name}. Uploading the original file instead.`,
+      };
+    }
+
+    if (candidate.file.size >= file.size) {
+      return {
+        file,
+        uploadOriginal,
+        wasProcessed: false,
+        warningMessage: `Local compression did not reduce ${file.name}, so the original file will be uploaded.`,
+      };
+    }
+
+    return {
+      file: candidate.file,
+      uploadOriginal,
+      wasProcessed: true,
+    };
+  }
+
+  private async createCompressedVideoCandidate(
+    file: File,
+    settings: MediaUploadSettings,
+    onProgress?: (progress: MediaProcessingProgress) => void,
+  ): Promise<CompressionCandidateResult> {
     onProgress?.({ message: `Preparing ${file.name} for local compression...`, progress: 0.05 });
 
     const mediabunny = await this.loadMediabunny();
@@ -165,10 +279,7 @@ export class MediaProcessingService {
       const videoTrack = await input.getPrimaryVideoTrack();
       if (!videoTrack) {
         return {
-          file,
-          uploadOriginal,
-          wasProcessed: false,
-          warningMessage: `No video track was found in ${file.name}, so the original file will be uploaded.`,
+          failureReason: `No video track was found in ${file.name}.`,
         };
       }
 
@@ -177,10 +288,7 @@ export class MediaProcessingService {
 
       if (!plan) {
         return {
-          file,
-          uploadOriginal,
-          wasProcessed: false,
-          warningMessage: `This browser cannot locally compress ${file.name}, so the original file will be uploaded.`,
+          failureReason: `This browser cannot locally compress ${file.name}.`,
         };
       }
 
@@ -214,10 +322,7 @@ export class MediaProcessingService {
 
       if (!conversion.isValid) {
         return {
-          file,
-          uploadOriginal,
-          wasProcessed: false,
-          warningMessage: `Local compression could not encode ${file.name}, so the original file will be uploaded.`,
+          failureReason: `Local compression could not encode ${file.name}.`,
         };
       }
 
@@ -238,25 +343,38 @@ export class MediaProcessingService {
       const mimeType = (await output.getMimeType()).split(';', 1)[0] || plan.format.mimeType;
       const blob = new Blob([buffer], { type: mimeType });
 
-      if (blob.size >= file.size) {
-        return {
-          file,
-          uploadOriginal,
-          wasProcessed: false,
-          warningMessage: `Local compression did not reduce ${file.name}, so the original file will be uploaded.`,
-        };
-      }
-
       onProgress?.({ message: `Compressed ${file.name}`, progress: 1 });
 
       return {
         file: this.createOutputFile(file, blob, mimeType, plan.extension),
-        uploadOriginal,
-        wasProcessed: true,
       };
     } finally {
       input.dispose();
     }
+  }
+
+  private mapCompressionPreviewCandidate(
+    originalFile: File,
+    candidate: CompressionCandidateResult,
+  ): CompressionPreviewResult {
+    if (!candidate.file) {
+      return {
+        originalFile,
+        willUploadCompressedFile: false,
+        warningMessage: candidate.failureReason ?? `Could not generate a compression preview for ${originalFile.name}.`,
+      };
+    }
+
+    const willUploadCompressedFile = candidate.file.size < originalFile.size;
+
+    return {
+      originalFile,
+      compressedFile: candidate.file,
+      willUploadCompressedFile,
+      warningMessage: willUploadCompressedFile
+        ? undefined
+        : `The compressed preview for ${originalFile.name} is larger than the original, so upload will keep the original file.`,
+    };
   }
 
   private async loadMediabunny(): Promise<MediabunnyModule> {
