@@ -9,7 +9,6 @@ import {
   OnDestroy,
 } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
-import { RouterLink } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { MatCardModule } from '@angular/material/card';
 import { MatTooltipModule } from '@angular/material/tooltip';
@@ -20,14 +19,12 @@ import { nip19, Event as NostrEvent } from 'nostr-tools';
 import { hexToBytes } from '@noble/hashes/utils.js';
 import { UtilitiesService } from '../../services/utilities.service';
 import { LayoutService } from '../../services/layout.service';
-import { DataService } from '../../services/data.service';
-import { RelayPoolService } from '../../services/relays/relay-pool';
-import { UserRelayService } from '../../services/relays/user-relay';
 import { ParsingService, ContentToken } from '../../services/parsing.service';
 import { MediaPlayerService } from '../../services/media-player.service';
 import { EmojiSetService } from '../../services/emoji-set.service';
 import { LoggerService } from '../../services/logger.service';
 import { CorsProxyService } from '../../services/cors-proxy.service';
+import { ReferencedEventService } from '../../services/referenced-event.service';
 import { ProfileDisplayNameComponent } from '../user-profile/display-name/profile-display-name.component';
 import { UserProfileComponent } from '../user-profile/user-profile.component';
 import { MusicEmbedComponent } from '../music-embed/music-embed.component';
@@ -100,7 +97,6 @@ interface DecryptedPreviewState {
 @Component({
   selector: 'app-message-content',
   imports: [
-    RouterLink,
     MatIconModule,
     MatCardModule,
     MatTooltipModule,
@@ -704,9 +700,7 @@ interface DecryptedPreviewState {
 export class MessageContentComponent implements OnDestroy {
   private utilities = inject(UtilitiesService);
   private layout = inject(LayoutService);
-  private data = inject(DataService);
-  private relayPool = inject(RelayPoolService);
-  private userRelayService = inject(UserRelayService);
+  private referencedEventService = inject(ReferencedEventService);
   private parsing = inject(ParsingService);
   private readonly logger = inject(LoggerService);
   private readonly dialog = inject(MatDialog);
@@ -1079,91 +1073,69 @@ export class MessageContentComponent implements OnDestroy {
     // Update state with loading indicators
     this.eventMentionsMap.set(new Map(eventMentionsMap));
 
-    // Now fetch the events
-    for (const part of parts) {
-      if ((part.type === 'note' || part.type === 'nevent') && part.eventId) {
-        try {
-          let eventData: NostrRecord | null = null;
+    await Promise.all(parts.map(async (part) => {
+      if ((part.type !== 'note' && part.type !== 'nevent') || !part.eventId) {
+        return;
+      }
 
-          // Try to get event by ID
-          eventData = await this.data.getEventById(part.eventId, { save: true });
+      try {
+        let relayHints: string[] | undefined;
+        let authorPubkey: string | undefined;
 
-          // If not found and we have relay hints from nevent, try those
-          if (!eventData && part.encodedEvent) {
-            try {
-              const decoded = nip19.decode(part.encodedEvent);
-              if (decoded.type === 'nevent') {
-                const eventPointer = decoded.data as nip19.EventPointer;
-                if (eventPointer.relays && eventPointer.relays.length > 0) {
-                  const relayEvent = await this.relayPool.getEventById(
-                    eventPointer.relays,
-                    part.eventId,
-                    10000
-                  );
-                  if (relayEvent) {
-                    eventData = this.data.toRecord(relayEvent);
-                  }
-                }
-
-                // Try author's relays as fallback
-                if (!eventData && eventPointer.author) {
-                  try {
-                    const authorEvent = await this.userRelayService.getEventById(
-                      eventPointer.author,
-                      part.eventId
-                    );
-                    if (authorEvent) {
-                      eventData = this.data.toRecord(authorEvent);
-                    }
-                  } catch {
-                    // Ignore errors from author relay fetch
-                  }
-                }
-              }
-            } catch {
-              // Ignore decode errors
+        if (part.type === 'nevent' && part.encodedEvent) {
+          try {
+            const decoded = nip19.decode(part.encodedEvent);
+            if (decoded.type === 'nevent') {
+              const eventPointer = decoded.data as nip19.EventPointer;
+              relayHints = eventPointer.relays;
+              authorPubkey = eventPointer.author;
             }
+          } catch {
+            // Ignore decode errors and continue with regular lookup.
           }
+        }
 
-          if (eventData) {
-            // Parse content tokens for the nested event
-            const parseResult = await this.parsing.parseContent(
-              eventData.data,
-              eventData.event.tags,
-              eventData.event.pubkey
-            );
+        const eventData = await this.referencedEventService.getReferencedEvent(part.eventId, {
+          relayHints,
+          authorPubkey,
+        });
 
-            eventMentionsMap.set(part.id, {
-              event: eventData,
-              contentTokens: parseResult.tokens,
-              loading: false,
-              eventId: part.eventId,
-              expanded: false,
-            });
-          } else {
-            eventMentionsMap.set(part.id, {
-              event: null,
-              contentTokens: [],
-              loading: false,
-              eventId: part.eventId,
-              expanded: false,
-            });
-          }
-        } catch (error) {
-          this.logger.error('Error loading event:', error);
+        if (eventData) {
+          const parseResult = await this.parsing.parseContent(
+            eventData.data,
+            eventData.event.tags,
+            eventData.event.pubkey
+          );
+
+          eventMentionsMap.set(part.id, {
+            event: eventData,
+            contentTokens: parseResult.tokens,
+            loading: false,
+            eventId: part.eventId,
+            expanded: false,
+          });
+        } else {
           eventMentionsMap.set(part.id, {
             event: null,
             contentTokens: [],
             loading: false,
-            eventId: part.eventId!,
+            eventId: part.eventId,
             expanded: false,
           });
         }
-
-        // Update state after each event
-        this.eventMentionsMap.set(new Map(eventMentionsMap));
+      } catch (error) {
+        this.logger.error('Error loading event:', error);
+        eventMentionsMap.set(part.id, {
+          event: null,
+          contentTokens: [],
+          loading: false,
+          eventId: part.eventId!,
+          expanded: false,
+        });
       }
-    }
+
+      this.eventMentionsMap.set(new Map(eventMentionsMap));
+    }));
   }
 
   getEventMention(partId: number): EventMention | undefined {

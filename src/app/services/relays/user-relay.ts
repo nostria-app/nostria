@@ -8,6 +8,10 @@ import { UserRelaysService } from './user-relays';
 import { AccountRelayService } from './account-relay';
 import { UtilitiesService } from '../utilities.service';
 
+interface LookupOptions {
+  bypassCache?: boolean;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -65,21 +69,26 @@ export class UserRelayService {
     inflightRequests: Map<string, Promise<T>>,
     cacheKey: string,
     operation: () => Promise<T>,
+    options: LookupOptions = {},
   ): Promise<T> {
-    const cached = this.getCachedLookupResult(cache as Map<string, { value: Event | null; expiresAt: number }>, cacheKey);
-    if (cached !== undefined) {
-      return cached as T;
-    }
+    if (!options.bypassCache) {
+      const cached = this.getCachedLookupResult(cache as Map<string, { value: Event | null; expiresAt: number }>, cacheKey);
+      if (cached !== undefined) {
+        return cached as T;
+      }
 
-    const existingRequest = inflightRequests.get(cacheKey);
-    if (existingRequest) {
-      return existingRequest;
+      const existingRequest = inflightRequests.get(cacheKey);
+      if (existingRequest) {
+        return existingRequest;
+      }
     }
 
     const requestPromise = operation()
       .then(result => this.setCachedLookupResult(cache as Map<string, { value: Event | null; expiresAt: number }>, cacheKey, result as Event | null) as T)
       .finally(() => {
-        inflightRequests.delete(cacheKey);
+        if (inflightRequests.get(cacheKey) === requestPromise) {
+          inflightRequests.delete(cacheKey);
+        }
       });
 
     inflightRequests.set(cacheKey, requestPromise);
@@ -158,7 +167,7 @@ export class UserRelayService {
     return this.pool.get(relayUrls, { ids: [id] });
   }
 
-  async getEventById(pubkey: string, id: string): Promise<Event | null> {
+  async getEventById(pubkey: string, id: string, options: LookupOptions = {}): Promise<Event | null> {
     const cacheKey = this.createEventByIdCacheKey(pubkey, id);
 
     return this.getOrCreateLookup(this.eventByIdCache, this.inflightEventByIdRequests, cacheKey, async () => {
@@ -171,7 +180,7 @@ export class UserRelayService {
       }
 
       return this.pool.get(relayUrls, { ids: [id] });
-    });
+    }, options);
   }
 
   /**

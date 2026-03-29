@@ -1,5 +1,8 @@
+import '@angular/compiler';
 import { TestBed } from '@angular/core/testing';
 import { provideZonelessChangeDetection } from '@angular/core';
+import { BrowserDynamicTestingModule, platformBrowserDynamicTesting } from '@angular/platform-browser-dynamic/testing';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { UserRelayService } from './user-relay';
 import { DiscoveryRelayService } from './discovery-relay';
@@ -15,7 +18,10 @@ describe('UserRelayService', () => {
   let poolGetMock: ReturnType<typeof vi.fn>;
   let ensureRelaysForPubkeyMock: ReturnType<typeof vi.fn>;
 
+  TestBed.initTestEnvironment(BrowserDynamicTestingModule, platformBrowserDynamicTesting());
+
   beforeEach(async () => {
+    TestBed.resetTestingModule();
     poolGetMock = vi.fn();
     ensureRelaysForPubkeyMock = vi.fn().mockResolvedValue(undefined);
 
@@ -104,5 +110,15 @@ describe('UserRelayService', () => {
     expect(second).toBeNull();
     expect(ensureRelaysForPubkeyMock).toHaveBeenCalledTimes(1);
     expect(poolGetMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('bypasses cached misses for getEventById when requested', async () => {
+    poolGetMock.mockResolvedValue(null);
+
+    await service.getEventById('author-pubkey', 'event-id');
+    await service.getEventById('author-pubkey', 'event-id', { bypassCache: true });
+
+    expect(ensureRelaysForPubkeyMock).toHaveBeenCalledTimes(2);
+    expect(poolGetMock).toHaveBeenCalledTimes(2);
   });
 });
