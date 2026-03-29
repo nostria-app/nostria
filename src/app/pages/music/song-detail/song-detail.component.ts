@@ -392,6 +392,11 @@ export class SongDetailComponent implements OnInit, OnDestroy {
     const stateEvent = navigation?.extras?.state?.['songEvent'] as Event | undefined;
     if (stateEvent) {
       this.routerStateEvent = stateEvent;
+    } else {
+      const historyStateEvent = history.state?.['songEvent'] as Event | undefined;
+      if (historyStateEvent) {
+        this.routerStateEvent = historyStateEvent;
+      }
     }
 
     // Load author profile when song loads
@@ -652,14 +657,6 @@ export class SongDetailComponent implements OnInit, OnDestroy {
   }
 
   private loadSong(pubkey: string, identifier: string): void {
-    const relayUrls = this.relaysService.getOptimalRelays(this.utilities.preferredRelays);
-
-    if (relayUrls.length === 0) {
-      this.logger.warn('No relays available');
-      this.loading.set(false);
-      return;
-    }
-
     // Decode pubkey if it's an npub
     let decodedPubkey = pubkey;
     if (pubkey.startsWith('npub')) {
@@ -673,15 +670,61 @@ export class SongDetailComponent implements OnInit, OnDestroy {
       }
     }
 
+    void this.resolveSongFromLocalSources(decodedPubkey, identifier).then(foundLocalSong => {
+      if (foundLocalSong) {
+        this.loading.set(false);
+      }
+
+      this.subscribeToSong(decodedPubkey, identifier, foundLocalSong);
+    });
+  }
+
+  private async resolveSongFromLocalSources(pubkey: string, identifier: string): Promise<boolean> {
+    const offlineTrack = this.offlineMusicService.getOfflineTrack(pubkey, identifier);
+    if (offlineTrack?.event) {
+      this.song.set(offlineTrack.event);
+      return true;
+    }
+
+    try {
+      const cachedEvents = await Promise.all(
+        MUSIC_KINDS.map(kind => this.database.getParameterizedReplaceableEvent(pubkey, kind, identifier))
+      );
+      const cachedEvent = cachedEvents
+        .filter((event): event is Event => !!event)
+        .sort((a, b) => b.created_at - a.created_at)[0];
+
+      if (cachedEvent) {
+        this.song.set(cachedEvent);
+        return true;
+      }
+    } catch (error) {
+      this.logger.warn('Failed to resolve song from local cache:', error);
+    }
+
+    return false;
+  }
+
+  private subscribeToSong(pubkey: string, identifier: string, alreadyResolvedLocally: boolean): void {
+    const relayUrls = this.relaysService.getOptimalRelays(this.utilities.preferredRelays);
+
+    if (relayUrls.length === 0) {
+      this.logger.warn('No relays available');
+      if (!alreadyResolvedLocally) {
+        this.loading.set(false);
+      }
+      return;
+    }
+
     const filter: Filter = {
       kinds: MUSIC_KINDS,
-      authors: [decodedPubkey],
+      authors: [pubkey],
       '#d': [identifier],
       limit: 1,
     };
 
     const timeout = setTimeout(() => {
-      if (this.loading()) {
+      if (!alreadyResolvedLocally && this.loading()) {
         this.loading.set(false);
       }
     }, 5000);

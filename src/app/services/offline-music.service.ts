@@ -115,6 +115,14 @@ export class OfflineMusicService {
   }
 
   /**
+   * Get offline track metadata if available.
+   */
+  getOfflineTrack(pubkey: string, dTag: string): OfflineMusicTrack | null {
+    const id = this.getTrackId(pubkey, dTag);
+    return this._offlineTracks().find(track => track.id === id) || null;
+  }
+
+  /**
    * Get a track ID from pubkey and dTag
    */
   private getTrackId(pubkey: string, dTag: string): string {
