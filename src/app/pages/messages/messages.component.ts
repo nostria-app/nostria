@@ -787,6 +787,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   private shouldStickToBottomOnKeyboardOpen = false;
   private composerViewportResizeHandler: (() => void) | null = null;
   private composerViewportResizeTimeout: ReturnType<typeof setTimeout> | null = null;
+  private suppressDraftPersistence = false;
 
   constructor() {
     // Initialize lastAccountPubkey with current account to avoid false "account changed" on first load
@@ -958,6 +959,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
             // Clear local state when account changes
             this.pendingMessages.set([]);
             this.selectedChatId.set(null);
+            this.restoreDraftForChat(null);
 
             // Clear the messaging service's in-memory state to prevent data from
             // previous account bleeding into the new account's view
@@ -992,6 +994,20 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
         setTimeout(() => {
           this.syncMessageInputLayout();
         }, 0);
+      });
+    });
+
+    effect(() => {
+      const chatId = this.selectedChatId();
+      const draftText = this.newMessageText();
+      const accountPubkey = this.accountState.pubkey();
+
+      if (!chatId || !accountPubkey || this.suppressDraftPersistence) {
+        return;
+      }
+
+      untracked(() => {
+        this.accountLocalState.setChatDraft(accountPubkey, chatId, draftText);
       });
     });
   }
@@ -1663,6 +1679,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     this.logger.debug('selectChat called with chat:', chat.id, 'pubkey:', chat.pubkey);
     this.logger.debug('Before set - selectedChatId:', this.selectedChatId());
     this.selectedChatId.set(chat.id);
+    this.restoreDraftForChat(chat.id);
     this.logger.debug('After set - selectedChatId:', this.selectedChatId());
     this.logger.debug('selectedChat computed:', this.selectedChat());
 
@@ -1704,6 +1721,16 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     this.router.navigate(['/messages', chat.id], {
       queryParams: {},
     });
+  }
+
+  private restoreDraftForChat(chatId: string | null): void {
+    const accountPubkey = this.accountState.pubkey();
+    const draftText = chatId && accountPubkey ? this.accountLocalState.getChatDraft(accountPubkey, chatId) : '';
+
+    this.suppressDraftPersistence = true;
+    this.newMessageText.set(draftText);
+    this.syncComposerMediaPreviews(draftText);
+    this.suppressDraftPersistence = false;
   }
 
   /**
@@ -2193,6 +2220,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
 
       if (!preserveComposer) {
         this.newMessageText.set('');
+        this.syncComposerMediaPreviews('');
         this.replyingToMessage.set(null);
         this.mediaPreviews.set([]);
       }
@@ -2379,7 +2407,9 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   private insertMediaUrl(url: string, mimeType: string): void {
     const currentText = this.newMessageText();
     const separator = currentText && !currentText.endsWith('\n') && currentText.length > 0 ? '\n' : '';
-    this.newMessageText.set(currentText + separator + url);
+    const updatedText = currentText + separator + url;
+    this.newMessageText.set(updatedText);
+    this.syncComposerMediaPreviews(updatedText);
 
     // Add preview
     if (mimeType.startsWith('image/')) {
@@ -2418,6 +2448,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       const currentText = this.newMessageText();
       const newText = currentText.substring(0, start) + emoji + currentText.substring(end);
       this.newMessageText.set(newText);
+      this.syncComposerMediaPreviews(newText);
 
       // Restore cursor position after emoji
       setTimeout(() => {
@@ -2427,6 +2458,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       });
     } else {
       this.newMessageText.update(text => text + emoji);
+      this.syncComposerMediaPreviews(this.newMessageText());
     }
   }
 
@@ -2460,7 +2492,9 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   insertGifUrl(url: string): void {
     const currentText = this.newMessageText();
     const separator = currentText && !currentText.endsWith('\n') && currentText.length > 0 ? '\n' : '';
-    this.newMessageText.set(currentText + separator + url);
+    const updatedText = currentText + separator + url;
+    this.newMessageText.set(updatedText);
+    this.syncComposerMediaPreviews(updatedText);
 
     // Add preview (GIFs are images)
     this.mediaPreviews.update(previews => [...previews, { url, type: 'image' as const }]);
@@ -2514,7 +2548,9 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     const nostrUrl = 'nostr:' + naddr;
     const currentText = this.newMessageText();
     const separator = currentText && !currentText.endsWith('\n') && currentText.length > 0 ? '\n' : '';
-    this.newMessageText.set(currentText + separator + nostrUrl);
+    const updatedText = currentText + separator + nostrUrl;
+    this.newMessageText.set(updatedText);
+    this.syncComposerMediaPreviews(updatedText);
 
     // Add preview
     const label = musicType === 'playlist' ? `Album: ${title}` : title;
@@ -2561,7 +2597,9 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     const insertionText = unique.join('\n');
     const currentText = this.newMessageText();
     const separator = currentText && !currentText.endsWith('\n') && currentText.length > 0 ? '\n' : '';
-    this.newMessageText.set(currentText + separator + insertionText);
+    const updatedText = currentText + separator + insertionText;
+    this.newMessageText.set(updatedText);
+    this.syncComposerMediaPreviews(updatedText);
 
     this.messageInput?.nativeElement?.focus();
     this.snackBar.open(
@@ -2773,6 +2811,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
 
       // Clear the input and reply context
       this.newMessageText.set('');
+      this.syncComposerMediaPreviews('');
       this.replyingToMessage.set(null);
       this.mediaPreviews.set([]);
       const extraRumorTags = this.pendingTags();
@@ -2948,6 +2987,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
 
     // Re-send: put the content into the input field and trigger send
     this.newMessageText.set(message.content);
+    this.syncComposerMediaPreviews(message.content);
 
     // Restore reply context if the original message was a reply
     if (message.replyTo) {
@@ -3993,6 +4033,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
 
       // Clear selection
       this.selectedChatId.set(null);
+      this.restoreDraftForChat(null);
       this.showMobileList.set(true);
 
       this.snackBar.open('Messages cache cleared. Reloading...', 'Close', { duration: 3000 });
@@ -4124,6 +4165,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
 
       if (this.selectedChatId() === chat.id) {
         this.selectedChatId.set(null);
+        this.restoreDraftForChat(null);
       }
     }
 
@@ -4218,6 +4260,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
 
     // Clear selection and go back to list
     this.selectedChatId.set(null);
+    this.restoreDraftForChat(null);
     this.showMobileList.set(true);
     this.showChatDetails.set(false);
 
@@ -4570,6 +4613,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       });
 
       this.selectedChatId.set(null);
+      this.restoreDraftForChat(null);
 
       if (success) {
         this.showMobileList.set(true);
@@ -4606,6 +4650,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
 
     if (this.selectedChat()?.pubkey === pubkey) {
       this.selectedChatId.set(null);
+      this.restoreDraftForChat(null);
     }
 
     if (result.failedCount === 0) {

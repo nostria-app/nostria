@@ -96,6 +96,7 @@ interface AccountLocalState {
   unreadMessagesCount?: number; // Cached count of unread direct messages
   hiddenChatIds?: string[]; // Chat IDs that user has hidden
   hiddenMessageIds?: Record<string, string[]>; // Hidden message IDs per chat (chatId -> messageId[])
+  chatDrafts?: Record<string, string>; // Draft message text per chat (chatId -> text)
   globalEventExpiration?: number | null; // Global expiration time in hours for all events created (null = disabled)
   musicTrackLicense?: string; // Last used license for music tracks
   musicTrackLicenseUrl?: string; // Last used license URL for music tracks (for custom licenses)
@@ -1228,6 +1229,36 @@ export class AccountLocalStateService {
       this.hiddenChatIdsVersion();
     }
     return this.getHiddenChatIds(pubkey).includes(chatId);
+  }
+
+  /**
+   * Get the locally stored draft text for a chat.
+   */
+  getChatDraft(pubkey: string, chatId: string): string {
+    return this.getAccountState(pubkey).chatDrafts?.[chatId] || '';
+  }
+
+  /**
+   * Store or clear the locally stored draft text for a chat.
+   */
+  setChatDraft(pubkey: string, chatId: string, text: string): void {
+    const state = this.getAccountState(pubkey);
+    const currentDrafts = state.chatDrafts || {};
+
+    if (!text) {
+      const { [chatId]: _, ...rest } = currentDrafts;
+      this.updateAccountState(pubkey, {
+        chatDrafts: Object.keys(rest).length > 0 ? rest : undefined,
+      });
+      return;
+    }
+
+    this.updateAccountState(pubkey, {
+      chatDrafts: {
+        ...currentDrafts,
+        [chatId]: text,
+      },
+    });
   }
 
   /**

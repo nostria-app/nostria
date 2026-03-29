@@ -37,6 +37,9 @@ function createComponent(): MessagesComponent {
     (component as any).mediaPreviews = signal([]);
     (component as any).pendingMessages = signal<DirectMessage[]>([]);
     (component as any).replyingToMessage = signal(null);
+    (component as any).showMobileList = signal(true);
+    (component as any).showChatDetails = signal(false);
+    (component as any).isSinglePaneView = signal(false);
 
     // Mock selectedChat
     const mockChat = {
@@ -52,6 +55,11 @@ function createComponent(): MessagesComponent {
     // Mock services
     (component as any).accountState = {
         pubkey: signal('my-pubkey'),
+    };
+
+    (component as any).accountLocalState = {
+        getChatDraft: vi.fn().mockReturnValue(''),
+        setChatDraft: vi.fn(),
     };
 
     (component as any).userRelayService = {
@@ -116,11 +124,18 @@ function createComponent(): MessagesComponent {
 
     (component as any).layout = {
         toast: vi.fn(),
+        hideMobileNav: signal(false),
+    };
+
+    (component as any).router = {
+        navigate: vi.fn(),
     };
 
     // Stub methods not under test
     (component as any).scrollToBottom = vi.fn();
     (component as any).focusMessageInput = vi.fn();
+    (component as any).markChatAsRead = vi.fn().mockResolvedValue(undefined);
+    (component as any).resolveStalePendingMessages = vi.fn();
 
     return component;
 }
@@ -471,6 +486,39 @@ describe('MessagesComponent message input layout', () => {
 
         expect((component as any).shouldStickToBottomOnKeyboardOpen).toBe(false);
         expect((component as any).scrollToBottomIfNotScrolledUp).not.toHaveBeenCalled();
+    });
+});
+
+describe('MessagesComponent chat drafts', () => {
+    let component: MessagesComponent;
+
+    beforeEach(() => {
+        component = createComponent();
+    });
+
+    it('should restore a saved draft when selecting a chat', async () => {
+        const draftChat = {
+            id: 'draft-chat',
+            pubkey: 'draft-pubkey',
+            unreadCount: 0,
+            messages: new Map(),
+            hasLegacyMessages: false,
+        };
+
+        (component as any).accountLocalState.getChatDraft.mockReturnValue('Saved draft');
+
+        await component.selectChat(draftChat as any);
+
+        expect((component as any).newMessageText()).toBe('Saved draft');
+        expect((component as any).accountLocalState.getChatDraft).toHaveBeenCalledWith('my-pubkey', 'draft-chat');
+    });
+
+    it('should clear composer text when restoring draft for null chat', () => {
+        (component as any).newMessageText.set('Existing draft');
+
+        (component as any).restoreDraftForChat(null);
+
+        expect((component as any).newMessageText()).toBe('');
     });
 });
 
