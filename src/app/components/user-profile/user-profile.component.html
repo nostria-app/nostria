@@ -112,7 +112,7 @@
 
       <!-- About section - shown in details and grid views -->
       @if ((view() === 'details' || view() === 'grid') && profile() && profile().data && profile().data.about) {
-      <div class="user-profile-about">{{ profile().data.about }}</div>
+      <div class="user-profile-about"><app-bio-content [content]="profile().data.about"></app-bio-content></div>
       }
 
       @if (view() === 'details' && profile() && profile().data) {

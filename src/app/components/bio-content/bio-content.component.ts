@@ -15,6 +15,7 @@ import type { ProfilePointer } from 'nostr-tools/nip19';
 import { Overlay, OverlayRef } from '@angular/cdk/overlay';
 import { ComponentPortal } from '@angular/cdk/portal';
 import { Subscription } from 'rxjs';
+import { RouterLink } from '@angular/router';
 import { ProfileHoverCardComponent } from '../user-profile/hover-card/profile-hover-card.component';
 import { UtilitiesService } from '../../services/utilities.service';
 import { DataService } from '../../services/data.service';
@@ -22,7 +23,7 @@ import { ExternalLinkHandlerService } from '../../services/external-link-handler
 import { LayoutService } from '../../services/layout.service';
 
 interface BioToken {
-  type: 'text' | 'nostr-mention' | 'url' | 'linebreak';
+  type: 'text' | 'nostr-mention' | 'url' | 'linebreak' | 'hashtag';
   content: string;
   pubkey?: string;
   displayName?: string;
@@ -30,7 +31,7 @@ interface BioToken {
 
 @Component({
   selector: 'app-bio-content',
-  imports: [],
+  imports: [RouterLink],
   template: `
     @for (token of tokens(); track $index) {
       @switch (token.type) {
@@ -43,6 +44,9 @@ interface BioToken {
         @case ('url') {
           <a class="bio-link" [href]="token.content" target="_blank" rel="noopener noreferrer"
              (click)="onUrlClick(token.content, $event)">{{ token.content }}</a>
+        }
+        @case ('hashtag') {
+          <a class="bio-hashtag" [routerLink]="['/f']" [queryParams]="{ t: token.content.toLowerCase() }">#{{ token.content }}</a>
         }
         @case ('nostr-mention') {
           <a class="nostr-mention" tabindex="0" role="link"
@@ -65,6 +69,16 @@ interface BioToken {
       color: var(--mat-sys-primary);
       text-decoration: none;
       word-break: break-all;
+
+      &:hover {
+        text-decoration: underline;
+      }
+    }
+
+    .bio-hashtag {
+      color: var(--mat-sys-primary);
+      cursor: pointer;
+      text-decoration: none;
 
       &:hover {
         text-decoration: underline;
@@ -157,13 +171,14 @@ export class BioContentComponent implements OnDestroy {
     // Uses word boundaries to ensure clean matching
     const nostrRegex = /\b(npub1[a-zA-Z0-9]+|nprofile1[a-zA-Z0-9]+)\b|nostr:(npub1[a-zA-Z0-9]+|nprofile1[a-zA-Z0-9]+)/g;
     const urlRegex = /(https?:\/\/[^\s)}\]>"]+?)(?=\s|##LINEBREAK##|$|[),;!?"']\s|[),;!?"']$|"|')/g;
+    const hashtagRegex = /(?:^|[\s]|##LINEBREAK##)#([a-zA-Z0-9_]+)/g;
 
     // Find all matches
     interface Match {
       start: number;
       end: number;
       content: string;
-      type: 'nostr-mention' | 'url';
+      type: 'nostr-mention' | 'url' | 'hashtag';
       pubkey?: string;
       displayName?: string;
     }
@@ -203,6 +218,27 @@ export class BioContentComponent implements OnDestroy {
           end: match.index + match[0].length,
           content: match[0],
           type: 'url',
+        });
+      }
+    }
+
+    // Find hashtags (skip if already matched as nostr URI or URL)
+    while ((match = hashtagRegex.exec(processedContent)) !== null) {
+      const fullMatch = match[0];
+      const hashtag = match[1];
+      const hashtagWithHash = `#${hashtag}`;
+      const hashtagStart = match.index + fullMatch.indexOf(hashtagWithHash);
+      const hashtagEnd = hashtagStart + hashtagWithHash.length;
+      const isOverlapping = matches.some(
+        m => hashtagStart < m.end && hashtagEnd > m.start
+      );
+
+      if (!isOverlapping) {
+        matches.push({
+          start: hashtagStart,
+          end: hashtagEnd,
+          content: hashtag,
+          type: 'hashtag',
         });
       }
     }

@@ -41,6 +41,7 @@ import { stripImageProxy } from '../../../utils/strip-image-proxy';
 import { Nip05VerificationService, Nip05VerificationResult } from '../../../services/nip05-verification.service';
 import { UserStatusService, UserStatus } from '../../../services/user-status.service';
 import { ZapDialogComponent, ZapDialogData } from '../../zap-dialog/zap-dialog.component';
+import { BioContentComponent } from '../../bio-content/bio-content.component';
 
 interface ProfileData {
   data?: {
@@ -60,6 +61,7 @@ interface ProfileData {
 @Component({
   selector: 'app-profile-hover-card',
   imports: [
+    BioContentComponent,
     MatCardModule,
     MatIconModule,
     MatButtonModule,

@@ -35,10 +35,12 @@ import { TrustService } from '../../services/trust.service';
 import { MatBadgeModule } from '@angular/material/badge';
 import { IntersectionObserverService } from '../../services/intersection-observer.service';
 import { Nip05VerificationService, Nip05VerificationResult } from '../../services/nip05-verification.service';
+import { BioContentComponent } from '../bio-content/bio-content.component';
 
 @Component({
   selector: 'app-user-profile',
   imports: [
+    BioContentComponent,
     ProfileDisplayNameComponent,
     MatIconModule,
     MatListModule,
