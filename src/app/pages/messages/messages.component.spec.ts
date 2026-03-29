@@ -442,6 +442,36 @@ describe('MessagesComponent message input layout', () => {
 
         textarea.remove();
     });
+
+    it('should stick to bottom on focus when already near the latest message', () => {
+        const wrapper = document.createElement('div');
+        Object.defineProperty(wrapper, 'scrollHeight', { configurable: true, value: 1000 });
+        Object.defineProperty(wrapper, 'clientHeight', { configurable: true, value: 500 });
+        wrapper.scrollTop = 380;
+
+        (component as any).messagesWrapper = { nativeElement: wrapper };
+        (component as any).scrollToBottomIfNotScrolledUp = vi.fn();
+
+        component.onMessageInputFocus();
+
+        expect((component as any).shouldStickToBottomOnKeyboardOpen).toBe(true);
+        expect((component as any).scrollToBottomIfNotScrolledUp).toHaveBeenCalled();
+    });
+
+    it('should not stick to bottom on focus when user has scrolled up', () => {
+        const wrapper = document.createElement('div');
+        Object.defineProperty(wrapper, 'scrollHeight', { configurable: true, value: 1000 });
+        Object.defineProperty(wrapper, 'clientHeight', { configurable: true, value: 500 });
+        wrapper.scrollTop = 200;
+
+        (component as any).messagesWrapper = { nativeElement: wrapper };
+        (component as any).scrollToBottomIfNotScrolledUp = vi.fn();
+
+        component.onMessageInputFocus();
+
+        expect((component as any).shouldStickToBottomOnKeyboardOpen).toBe(false);
+        expect((component as any).scrollToBottomIfNotScrolledUp).not.toHaveBeenCalled();
+    });
 });
 
 describe('MessagesComponent template structure', () => {

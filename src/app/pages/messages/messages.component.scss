@@ -481,13 +481,51 @@
   display: flex;
   align-items: center;
   gap: 8px;
+  flex: 1;
   min-width: 0;
+}
+
+.private-chat-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.private-chat-avatar {
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+}
+
+.private-chat-header-info {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  min-width: 0;
+}
+
+.private-chat-header-name {
+  display: block;
+  min-width: 0;
+  font-size: 1rem;
+  line-height: 1.2;
+  color: var(--mat-sys-on-surface);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.private-chat-header-name app-profile-display-name {
+  display: inline;
 }
 
 .chat-header-actions {
   display: flex;
   align-items: center;
   gap: 4px;
+  flex-shrink: 0;
   min-width: 0;
 }
 
@@ -499,6 +537,11 @@
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 130px;
+}
+
+.private-chat-header-info .chat-header-activity,
+.group-header-info .chat-header-activity {
+  max-width: none;
 }
 
 @media (max-width: 699px) {

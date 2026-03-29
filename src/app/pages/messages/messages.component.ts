@@ -588,6 +588,19 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     return `${names.slice(0, 3).join(', ')} +${names.length - 3}`;
   }
 
+  selectedChatDisplayName(): string {
+    const selectedChat = this.selectedChat();
+    if (!selectedChat) {
+      return '';
+    }
+
+    if (selectedChat.isGroup) {
+      return this.getGroupDisplayName(selectedChat);
+    }
+
+    return this.getParticipantName(selectedChat.pubkey);
+  }
+
   /**
    * Get a short display name for a pubkey (for group chat list and message sender labels).
    */
@@ -771,6 +784,9 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   private selectedChatActivityTrackedPubkey: string | null = null;
   private selectedChatActivitySubscription: { close: () => void } | null = null;
   private selectedChatActivityRequestToken = 0;
+  private shouldStickToBottomOnKeyboardOpen = false;
+  private composerViewportResizeHandler: (() => void) | null = null;
+  private composerViewportResizeTimeout: ReturnType<typeof setTimeout> | null = null;
 
   constructor() {
     // Initialize lastAccountPubkey with current account to avoid false "account changed" on first load
@@ -1059,6 +1075,8 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       this.setupScrollListener();
     }, 100);
 
+    this.setupComposerViewportListener();
+
     // Set up chat list scroll listener with longer delay to ensure tabs are rendered
     setTimeout(() => {
       this.setupChatListScrollListener();
@@ -1334,6 +1352,28 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     }
   }
 
+  private isMessagesViewNearBottom(threshold = 150): boolean {
+    const element = this.messagesWrapper?.nativeElement;
+    if (!element) {
+      return false;
+    }
+
+    const distanceFromBottom = element.scrollHeight - (element.scrollTop + element.clientHeight);
+    return distanceFromBottom <= threshold;
+  }
+
+  onMessageInputFocus(): void {
+    this.shouldStickToBottomOnKeyboardOpen = this.isMessagesViewNearBottom();
+
+    if (this.shouldStickToBottomOnKeyboardOpen) {
+      this.scrollToBottomIfNotScrolledUp();
+    }
+  }
+
+  onMessageInputBlur(): void {
+    this.shouldStickToBottomOnKeyboardOpen = false;
+  }
+
   scrollToLatestMessage(): void {
     this.scrollToBottom();
   }
@@ -1380,6 +1420,65 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     this.contentMutationObserver?.disconnect();
     this.contentMutationObserver = null;
 
+    this.teardownComposerViewportListener();
+
+    if (this.composerViewportResizeTimeout) {
+      clearTimeout(this.composerViewportResizeTimeout);
+      this.composerViewportResizeTimeout = null;
+    }
+
+  }
+
+  private setupComposerViewportListener(): void {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    this.teardownComposerViewportListener();
+
+    this.composerViewportResizeHandler = () => {
+      const textarea = this.messageInput?.nativeElement;
+      if (!textarea || document.activeElement !== textarea || !this.shouldStickToBottomOnKeyboardOpen) {
+        return;
+      }
+
+      this.scrollToBottomIfNotScrolledUp();
+
+      if (this.composerViewportResizeTimeout) {
+        clearTimeout(this.composerViewportResizeTimeout);
+      }
+
+      this.composerViewportResizeTimeout = setTimeout(() => {
+        if (document.activeElement === textarea && this.shouldStickToBottomOnKeyboardOpen) {
+          this.scrollToBottomIfNotScrolledUp();
+        }
+      }, 180);
+    };
+
+    const viewport = window.visualViewport;
+    if (viewport) {
+      viewport.addEventListener('resize', this.composerViewportResizeHandler);
+      viewport.addEventListener('scroll', this.composerViewportResizeHandler);
+      return;
+    }
+
+    window.addEventListener('resize', this.composerViewportResizeHandler);
+  }
+
+  private teardownComposerViewportListener(): void {
+    if (typeof window === 'undefined' || !this.composerViewportResizeHandler) {
+      return;
+    }
+
+    const viewport = window.visualViewport;
+    if (viewport) {
+      viewport.removeEventListener('resize', this.composerViewportResizeHandler);
+      viewport.removeEventListener('scroll', this.composerViewportResizeHandler);
+    } else {
+      window.removeEventListener('resize', this.composerViewportResizeHandler);
+    }
+
+    this.composerViewportResizeHandler = null;
   }
 
   private async startSelectedChatActivityTracking(pubkey: string | null): Promise<void> {

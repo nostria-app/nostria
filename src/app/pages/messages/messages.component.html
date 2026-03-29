@@ -449,25 +449,34 @@
             </div>
             <div class="group-header-info">
               <span class="group-header-name">{{ getGroupDisplayName(selectedChat()!) }}</span>
-              <span class="group-header-members">{{ (selectedChat()!.participants?.length || 0) }} members</span>
+              <span class="chat-header-activity group-header-members">{{ (selectedChat()!.participants?.length || 0) }} members</span>
             </div>
           </div>
           } @else {
-          <app-user-profile [pubkey]="selectedChat()!.pubkey" view="thread"></app-user-profile>
+          <div class="private-chat-header">
+            <div class="private-chat-avatar">
+              <app-user-profile [pubkey]="selectedChat()!.pubkey" view="avatar"></app-user-profile>
+            </div>
+            <div class="private-chat-header-info">
+              <span class="private-chat-header-name">{{ selectedChatDisplayName() }}</span>
+              @if (selectedChatLastActiveLabel()) {
+              <span class="chat-header-activity">{{ selectedChatLastActiveLabel() }}</span>
+              }
+            </div>
+          </div>
           }
         </div>
         <div class="chat-header-actions">
-          @if (!isNoteToSelf() && !isGroupChat() && selectedChatLastActiveLabel()) {
-          <span class="chat-header-activity">{{ selectedChatLastActiveLabel() }}</span>
-          }
-          <button mat-icon-button (click)="toggleChatDetails()" matTooltip="Chat details">
-            <mat-icon>info</mat-icon>
-          </button>
           @if (!isNoteToSelf()) {
           <button mat-icon-button [matMenuTriggerFor]="chatOptionsMenu" matTooltip="More options">
             <mat-icon>more_vert</mat-icon>
           </button>
           <mat-menu #chatOptionsMenu="matMenu">
+            <button mat-menu-item (click)="toggleChatDetails()">
+              <mat-icon>info</mat-icon>
+              <span>Chat Details</span>
+            </button>
+            <mat-divider></mat-divider>
             @if (!isGroupChat()) {
             <button mat-menu-item (click)="viewProfile()">
               <mat-icon>person</mat-icon>
@@ -1018,7 +1027,7 @@
 
           <textarea #messageInput class="message-input" [ngModel]="newMessageText()"
             (ngModelChange)="onMessageTextChanged($event)" placeholder="Your message" [disabled]="isSending() || pendingEncryptedMediaPreviews().length > 0"
-            (keydown)="onMessageKeydown($event)" (input)="autoResizeTextarea()" (paste)="onMessagePaste($event)"
+            (keydown)="onMessageKeydown($event)" (input)="autoResizeTextarea()" (paste)="onMessagePaste($event)" (focus)="onMessageInputFocus()" (blur)="onMessageInputBlur()"
             rows="1"></textarea>
           <button mat-icon-button type="button" class="send-button" [disabled]="!newMessageText().trim() || isSending() || pendingEncryptedMediaPreviews().length > 0"
             (click)="sendMessage()" matTooltip="Send message">
