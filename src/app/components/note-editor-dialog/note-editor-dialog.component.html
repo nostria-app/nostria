@@ -214,15 +214,57 @@
         }
       </div>
 
-      <!-- Add Client Tag Option -->
-      <div class="option-row">
-        <div class="option-header">
-          <mat-slide-toggle [checked]="addClientTag()" (change)="addClientTag.set($event.checked)" color="primary">
-            Add Client Tag
-          </mat-slide-toggle>
-          <span class="option-description">
-            Add the Nostria client tag to this event
-          </span>
+      <!-- Client Metadata Options -->
+      <div class="option-row option-grouped-row">
+        <div class="option-group-section">
+          <div class="option-header">
+            <mat-slide-toggle [checked]="addClientTag()" (change)="addClientTag.set($event.checked)" color="primary">
+              Add Client Tag
+            </mat-slide-toggle>
+            <span class="option-description">
+              Add the Nostria client tag to this event
+            </span>
+          </div>
+        </div>
+
+        <div class="option-group-section option-group-section-divider">
+          <div class="option-header">
+            <mat-slide-toggle [checked]="expirationEnabled()" (change)="onExpirationToggle($event.checked)"
+              color="primary">
+              Expiration
+            </mat-slide-toggle>
+            <span class="option-description">Set an expiration date and time for this note</span>
+          </div>
+
+          @if (expirationEnabled()) {
+          <div class="option-content">
+            <div class="expiration-inputs">
+              <mat-form-field appearance="outline" class="date-field">
+                <mat-label>Expiration Date</mat-label>
+                <input matInput [matDatepicker]="expirationPicker" [value]="expirationDate()"
+                  (dateInput)="onExpirationDateChange($event.value)" (dateChange)="onExpirationDateChange($event.value)"
+                  placeholder="Select date" [min]="minDate()" readonly />
+                <mat-datepicker-toggle matIconSuffix [for]="expirationPicker"></mat-datepicker-toggle>
+                <mat-datepicker #expirationPicker></mat-datepicker>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="time-field">
+                <mat-label>Expiration Time</mat-label>
+                <input matInput type="time" [value]="expirationTime()" (input)="onExpirationTimeChange($event)"
+                  placeholder="Select time" />
+              </mat-form-field>
+            </div>
+
+            @if (!expirationValidation().valid) {
+            <div class="expiration-error">
+              <mat-icon color="warn">warning</mat-icon>
+              <span>{{ expirationValidation().message }}</span>
+            </div>
+            }
+
+            <mat-hint class="expiration-hint">Note will be considered expired after this date and time</mat-hint>
+          </div>
+          }
         </div>
       </div>
 
@@ -293,52 +335,10 @@
         }
       </div>
 
-      <!-- Expiration Option -->
-      <div class="option-row">
-        <div class="option-header">
-          <mat-slide-toggle [checked]="expirationEnabled()" (change)="onExpirationToggle($event.checked)"
-            color="primary">
-            Expiration
-          </mat-slide-toggle>
-          <span class="option-description">Set an expiration date and time for this note</span>
-        </div>
-
-        @if (expirationEnabled()) {
-        <div class="option-content">
-          <div class="expiration-inputs">
-            <mat-form-field appearance="outline" class="date-field">
-              <mat-label>Expiration Date</mat-label>
-              <input matInput [matDatepicker]="expirationPicker" [value]="expirationDate()"
-                (dateInput)="onExpirationDateChange($event.value)" (dateChange)="onExpirationDateChange($event.value)"
-                placeholder="Select date" [min]="minDate()" readonly />
-              <mat-datepicker-toggle matIconSuffix [for]="expirationPicker"></mat-datepicker-toggle>
-              <mat-datepicker #expirationPicker></mat-datepicker>
-            </mat-form-field>
-
-            <mat-form-field appearance="outline" class="time-field">
-              <mat-label>Expiration Time</mat-label>
-              <input matInput type="time" [value]="expirationTime()" (input)="onExpirationTimeChange($event)"
-                placeholder="Select time" />
-            </mat-form-field>
-          </div>
-
-          @if (!expirationValidation().valid) {
-          <div class="expiration-error">
-            <mat-icon color="warn">warning</mat-icon>
-            <span>{{ expirationValidation().message }}</span>
-          </div>
-          }
-
-          <mat-hint class="expiration-hint">Note will be considered expired after this date and time</mat-hint>
-        </div>
-        }
-      </div>
-
       <!-- Proof of Work Option -->
       <div class="option-row">
         <div class="option-header">
           <div class="option-label">Proof of Work (Difficulty: {{ powTargetDifficulty() }})</div>
-          <span class="option-description">Add computational proof to deter spam (NIP-13)</span>
         </div>
 
         <div class="option-content pow-content">
@@ -346,12 +346,6 @@
             <input matSliderThumb [value]="powTargetDifficulty()" (valueChange)="onPowDifficultySliderChange($event)"
               aria-label="Proof of Work Difficulty">
           </mat-slider>
-
-          @if (powTargetDifficulty() > 0) {
-          <mat-hint class="pow-hint">
-            Mining will start automatically when you publish.
-          </mat-hint>
-          }
         </div>
       </div>
 
@@ -361,9 +355,6 @@
           <mat-slide-toggle [checked]="showEventJson()" (change)="showEventJson.set($event.checked)" color="primary">
             Show Event JSON
           </mat-slide-toggle>
-          <span class="option-description">
-            Display the raw JSON of the event being created (useful for debugging)
-          </span>
         </div>
 
         @if (showEventJson()) {
