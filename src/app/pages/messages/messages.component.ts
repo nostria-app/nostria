@@ -94,6 +94,27 @@ import type { ReportDialogResult } from '../../components/report-dialog/report-d
 import type { MessageDetailsDialogData } from '../../components/message-details-dialog/message-details-dialog.component';
 import type { ManageInboxDialogResult } from '../../components/manage-inbox-dialog/manage-inbox-dialog.component';
 
+const LAST_ACTIVE_EVENT_KINDS = [
+  0,
+  1,
+  3,
+  4,
+  5,
+  6,
+  7,
+  16,
+  20,
+  21,
+  22,
+  1111,
+  1984,
+  30023,
+  30078,
+  30315,
+  34235,
+  34236,
+];
+
 // Define interfaces for our DM data structures
 interface Chat {
   id: string;
@@ -145,6 +166,13 @@ interface MessageGroup {
   dateLabel: string;
   dateTimestamp: number;
   messages: DirectMessage[];
+}
+
+interface PendingEncryptedMediaPreview {
+  id: string;
+  objectUrl: string;
+  file: File;
+  type: 'image' | 'video' | 'file';
 }
 
 @Component({
@@ -229,7 +257,8 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   isUploading = signal<boolean>(false);
   isDragOverMessageInput = signal<boolean>(false);
   uploadStatus = signal<string>('');
-  mediaPreviews = signal<{ url: string; type: 'image' | 'video' | 'music' | 'file'; label?: string; meta?: string }[]>([]);
+  mediaPreviews = signal<{ url: string; type: 'image' | 'video' | 'music' | 'file'; label?: string; meta?: string; pendingEncrypted?: boolean; pendingId?: string }[]>([]);
+  pendingEncryptedMediaPreviews = signal<PendingEncryptedMediaPreview[]>([]);
 
   /** Pending extra tags (e.g. imeta with waveform) for the next message */
   pendingTags = signal<string[][]>([]);
@@ -270,6 +299,44 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     const chat = this.messaging.getChat(chatId);
     this.logger.debug('selectedChat computed - chat found:', chat ? 'yes' : 'no');
     return chat || null;
+  });
+
+  selectedChatRelayLastActiveAt = signal<number | null>(null);
+  selectedChatMessageLastActiveAt = computed(() => {
+    const chat = this.selectedChat();
+    if (!chat || chat.isGroup) {
+      return null;
+    }
+
+    const latestIncomingMessage = this.messages()
+      .filter(message => !message.isOutgoing)
+      .reduce<number | null>((latest, message) => {
+        if (latest === null || message.created_at > latest) {
+          return message.created_at;
+        }
+
+        return latest;
+      }, null);
+
+    return latestIncomingMessage;
+  });
+  selectedChatLastActiveAt = computed(() => {
+    const relayTimestamp = this.selectedChatRelayLastActiveAt();
+    const messageTimestamp = this.selectedChatMessageLastActiveAt();
+
+    if (relayTimestamp === null) {
+      return messageTimestamp;
+    }
+
+    if (messageTimestamp === null) {
+      return relayTimestamp;
+    }
+
+    return Math.max(relayTimestamp, messageTimestamp);
+  });
+  selectedChatLastActiveLabel = computed(() => {
+    const timestamp = this.selectedChatLastActiveAt();
+    return timestamp ? `Active ${this.utilities.getRelativeTime(timestamp)}` : '';
   });
 
   // activePubkey = computed(() => this.selectedChat()?.pubkey || '');
@@ -701,6 +768,9 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   private mediaLoadHandler: ((e: Event) => void) | null = null;
   /** MutationObserver that watches for new DOM nodes (e.g. Angular rendering new message bubbles). */
   private contentMutationObserver: MutationObserver | null = null;
+  private selectedChatActivityTrackedPubkey: string | null = null;
+  private selectedChatActivitySubscription: { close: () => void } | null = null;
+  private selectedChatActivityRequestToken = 0;
 
   constructor() {
     // Initialize lastAccountPubkey with current account to avoid false "account changed" on first load
@@ -821,6 +891,27 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
 
       untracked(() => {
         void this.messaging.markChatAsRead(chatId);
+      });
+    });
+
+    effect(() => {
+      const chatId = this.selectedChatId();
+      const accountPubkey = this.accountState.pubkey();
+
+      untracked(() => {
+        if (!chatId || !accountPubkey) {
+          this.resetSelectedChatActivityTracking();
+          return;
+        }
+
+        const chat = this.messaging.getChat(chatId);
+        const nextPubkey = chat && !chat.isGroup && chat.pubkey !== accountPubkey ? chat.pubkey : null;
+
+        if (nextPubkey === this.selectedChatActivityTrackedPubkey) {
+          return;
+        }
+
+        void this.startSelectedChatActivityTracking(nextPubkey);
       });
     });
 
@@ -1249,6 +1340,10 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
 
   ngOnDestroy(): void {
 
+    this.clearPendingEncryptedMediaPreviews();
+
+    this.resetSelectedChatActivityTracking();
+
     // Reset mobile nav visibility
     this.layout.hideMobileNav.set(false);
 
@@ -1285,6 +1380,106 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     this.contentMutationObserver?.disconnect();
     this.contentMutationObserver = null;
 
+  }
+
+  private async startSelectedChatActivityTracking(pubkey: string | null): Promise<void> {
+    this.resetSelectedChatActivityTracking();
+    this.selectedChatActivityTrackedPubkey = pubkey;
+
+    if (!pubkey) {
+      return;
+    }
+
+    const requestToken = ++this.selectedChatActivityRequestToken;
+    const liveSince = Math.floor(Date.now() / 1000);
+    const filter = {
+      authors: [pubkey],
+      kinds: LAST_ACTIVE_EVENT_KINDS,
+      limit: 1,
+    };
+
+    try {
+      const [subscription, events] = await Promise.all([
+        this.userRelayService.subscribe(
+          pubkey,
+          {
+            authors: [pubkey],
+            kinds: LAST_ACTIVE_EVENT_KINDS,
+            since: liveSince,
+          },
+          (event: NostrEvent) => {
+            if (this.selectedChatActivityTrackedPubkey !== pubkey) {
+              return;
+            }
+
+            this.applySelectedChatActivityEvent(event);
+          },
+        ),
+        this.userRelayService.query(pubkey, filter),
+      ]);
+
+      if (requestToken !== this.selectedChatActivityRequestToken || this.selectedChatActivityTrackedPubkey !== pubkey) {
+        this.closeSelectedChatActivitySubscription(subscription);
+        return;
+      }
+
+      this.selectedChatActivitySubscription = this.asClosableSubscription(subscription);
+      this.applySelectedChatActivityEvent(this.getLatestActivityEvent(events ?? []));
+    } catch (error) {
+      if (requestToken === this.selectedChatActivityRequestToken) {
+        this.logger.warn('[Messages] Failed to load selected chat activity', { pubkey, error });
+      }
+    }
+  }
+
+  private resetSelectedChatActivityTracking(): void {
+    this.selectedChatActivityRequestToken++;
+    this.selectedChatActivityTrackedPubkey = null;
+    this.selectedChatRelayLastActiveAt.set(null);
+
+    if (this.selectedChatActivitySubscription) {
+      this.selectedChatActivitySubscription.close();
+      this.selectedChatActivitySubscription = null;
+    }
+  }
+
+  private applySelectedChatActivityEvent(event: NostrEvent | null): void {
+    if (!event) {
+      this.selectedChatRelayLastActiveAt.set(null);
+      return;
+    }
+
+    const currentTimestamp = this.selectedChatRelayLastActiveAt() ?? 0;
+    if (event.created_at >= currentTimestamp) {
+      this.selectedChatRelayLastActiveAt.set(event.created_at);
+    }
+  }
+
+  private getLatestActivityEvent(events: NostrEvent[]): NostrEvent | null {
+    if (events.length === 0) {
+      return null;
+    }
+
+    return events.reduce((latest, event) => event.created_at > latest.created_at ? event : latest);
+  }
+
+  private asClosableSubscription(subscription: unknown): { close: () => void } | null {
+    if (!subscription || typeof subscription !== 'object' || !('close' in subscription)) {
+      return null;
+    }
+
+    const candidate = subscription as { close?: unknown };
+    if (typeof candidate.close !== 'function') {
+      return null;
+    }
+
+    const close = candidate.close as () => void;
+    return { close };
+  }
+
+  private closeSelectedChatActivitySubscription(subscription: unknown): void {
+    const closable = this.asClosableSubscription(subscription);
+    closable?.close();
   }
 
   /**
@@ -1653,7 +1848,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   onMediaFileSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
     if (input.files && input.files.length > 0) {
-      void this.uploadMediaFiles([input.files[0]]);
+      this.stageEncryptedFiles(Array.from(input.files));
     }
     input.value = '';
   }
@@ -1661,7 +1856,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   onEncryptedFileSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
     if (input.files && input.files.length > 0) {
-      void this.sendEncryptedFileMessage(input.files[0]);
+      this.stageEncryptedFiles(Array.from(input.files));
     }
     input.value = '';
   }
@@ -1678,7 +1873,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
 
     event.preventDefault();
     event.stopPropagation();
-    void this.uploadMediaFiles(mediaFiles);
+    this.stagePastedMediaFiles(mediaFiles);
   }
 
   onMessageDragOver(event: DragEvent): void {
@@ -1754,8 +1949,18 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     return file.type.startsWith('image/') || file.type.startsWith('video/');
   }
 
-  private async uploadMediaFiles(files: File[]): Promise<void> {
+  private async uploadMediaFiles(files: File[], options?: { fromPendingPreview?: boolean }): Promise<void> {
     if (files.length === 0) {
+      return;
+    }
+
+    if (this.newMessageText().trim()) {
+      this.layout.toast('Send the current text message first. Encrypted media is sent as a separate message.', 4000, 'error-snackbar');
+      return;
+    }
+
+    if (!options?.fromPendingPreview && this.pendingEncryptedMediaPreviews().length > 0) {
+      this.layout.toast('Confirm or remove the pasted media preview before adding more.', 4000, 'error-snackbar');
       return;
     }
 
@@ -1770,7 +1975,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       await this.mediaService.load();
 
       for (let index = 0; index < files.length; index++) {
-        this.uploadStatus.set(files.length > 1 ? `Uploading ${index + 1}/${files.length}...` : 'Uploading...');
+        this.uploadStatus.set(files.length > 1 ? `Encrypting ${index + 1}/${files.length}...` : 'Encrypting...');
         await this.uploadMediaFile(files[index]);
       }
     } finally {
@@ -1780,31 +1985,18 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   /**
-   * Upload a media file and insert the URL into the message
+   * Encrypt and send a media file as an encrypted file message
    */
   private async uploadMediaFile(file: File): Promise<void> {
-    try {
-      const result = await this.mediaService.uploadFile(
-        file,
-        false,
-        this.mediaService.mediaServers()
-      );
-
-      if (result.status === 'success' && result.item) {
-        this.insertMediaUrl(result.item.url, result.item.type);
-      } else {
-        this.snackBar.open(result.message || 'Upload failed', 'Dismiss', { duration: 5000 });
-      }
-    } catch (err) {
-      this.logger.error('Failed to upload media file', err);
-      this.snackBar.open('Failed to upload media', 'Dismiss', { duration: 5000 });
-    }
+    await this.sendEncryptedFileMessage(file, { preserveComposer: true });
   }
 
-  private async sendEncryptedFileMessage(file: File): Promise<void> {
+  private async sendEncryptedFileMessage(file: File, options?: { preserveComposer?: boolean }): Promise<void> {
     const selectedChat = this.selectedChat();
     const myPubkey = this.accountState.pubkey();
     const isGroup = !!selectedChat?.isGroup;
+    const preserveComposer = options?.preserveComposer ?? false;
+    const replyToMessageId = this.replyingToMessage()?.id;
 
     if (!selectedChat || !myPubkey) {
       return;
@@ -1858,6 +2050,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       }
 
       const extraRumorTags: string[][] = [
+        ['alt', file.name],
         ['file-type', encryption.mimeType],
         ['encryption-algorithm', 'aes-gcm'],
         ['decryption-key', encryption.keyHex],
@@ -1865,7 +2058,6 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
         ['x', encryption.encryptedSha256],
         ['ox', encryption.originalSha256],
         ['size', String(encryption.encryptedSize)],
-        ['name', file.name],
       ];
 
       const result = isGroup && selectedChat.participants
@@ -1873,7 +2065,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
           uploadResult.item.url,
           selectedChat.participants,
           myPubkey,
-          this.replyingToMessage()?.id,
+          replyToMessageId,
           undefined,
           {
             rumorKind: kinds.FileMessage,
@@ -1884,7 +2076,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
           uploadResult.item.url,
           selectedChat.pubkey,
           myPubkey,
-          this.replyingToMessage()?.id,
+          replyToMessageId,
           {
             rumorKind: kinds.FileMessage,
             extraRumorTags,
@@ -1897,20 +2089,14 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
         pending: true,
         received: false,
       };
-      this.mediaPreviews.set([
-        {
-          url: previewMessage.id,
-          type: 'file',
-          label: file.name,
-          meta: `${encryption.mimeType} - ${this.formatFileSize(encryption.encryptedSize)}`,
-        },
-      ]);
       const chatId = selectedChat.id;
       const pendingMessage = previewMessage;
 
-      this.newMessageText.set('');
-      this.replyingToMessage.set(null);
-      this.mediaPreviews.set([]);
+      if (!preserveComposer) {
+        this.newMessageText.set('');
+        this.replyingToMessage.set(null);
+        this.mediaPreviews.set([]);
+      }
 
       if (isGroup && selectedChat.participants) {
         this.messaging.addMessageToChat(chatId, pendingMessage, {
@@ -1968,6 +2154,75 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       this.isSending.set(false);
       this.uploadStatus.set('');
     }
+  }
+
+  private stagePastedMediaFiles(files: File[]): void {
+    if (files.length === 0) {
+      return;
+    }
+
+    if (this.newMessageText().trim()) {
+      this.layout.toast('Send the current text message first. Pasted media is sent as a separate encrypted message.', 4000, 'error-snackbar');
+      return;
+    }
+
+    if (this.pendingEncryptedMediaPreviews().length > 0 || this.mediaPreviews().some(preview => preview.pendingEncrypted)) {
+      this.layout.toast('Confirm or remove the existing pasted media preview first.', 4000, 'error-snackbar');
+      return;
+    }
+
+    const stagedPreviews = files.map((file, index) => {
+      const objectUrl = URL.createObjectURL(file);
+      return {
+        id: `${Date.now()}-${index}-${file.name}`,
+        objectUrl,
+        file,
+        type: file.type.startsWith('video/') ? 'video' as const : 'image' as const,
+      };
+    });
+
+    this.setPendingEncryptedFiles(stagedPreviews);
+  }
+
+  private stageEncryptedFiles(files: File[]): void {
+    if (files.length === 0) {
+      return;
+    }
+
+    if (this.newMessageText().trim()) {
+      this.layout.toast('Send the current text message first. Encrypted files are sent as separate messages.', 4000, 'error-snackbar');
+      return;
+    }
+
+    if (this.pendingEncryptedMediaPreviews().length > 0 || this.mediaPreviews().some(preview => preview.pendingEncrypted)) {
+      this.layout.toast('Confirm or remove the existing staged file preview first.', 4000, 'error-snackbar');
+      return;
+    }
+
+    const stagedPreviews = files.map((file, index) => ({
+      id: `${Date.now()}-${index}-${file.name}`,
+      objectUrl: URL.createObjectURL(file),
+      file,
+      type: this.isMediaFile(file)
+        ? (file.type.startsWith('video/') ? 'video' as const : 'image' as const)
+        : 'file' as const,
+    }));
+
+    this.setPendingEncryptedFiles(stagedPreviews);
+  }
+
+  private setPendingEncryptedFiles(stagedPreviews: PendingEncryptedMediaPreview[]): void {
+    this.clearPendingEncryptedMediaPreviews();
+
+    this.pendingEncryptedMediaPreviews.set(stagedPreviews);
+    this.mediaPreviews.set(stagedPreviews.map(preview => ({
+      url: preview.objectUrl,
+      type: preview.type,
+      label: preview.file.name,
+      meta: this.formatFileSize(preview.file.size),
+      pendingEncrypted: true,
+      pendingId: preview.id,
+    })));
   }
 
   private async encryptFileForMessage(file: File): Promise<{
@@ -2035,6 +2290,22 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     }
 
     this.messageInput?.nativeElement?.focus();
+  }
+
+  onMessageTextChanged(value: string): void {
+    this.newMessageText.set(value);
+    this.syncComposerMediaPreviews(value);
+  }
+
+  private syncComposerMediaPreviews(text: string): void {
+    const normalizedText = text.trim();
+    this.mediaPreviews.update(previews => previews.filter(preview => {
+      if (preview.pendingEncrypted) {
+        return true;
+      }
+
+      return normalizedText.includes(preview.url);
+    }));
   }
 
   /**
@@ -2222,32 +2493,10 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     dialogRef.afterClosed().subscribe(async (result: { blob: Blob; waveform: number[]; duration: number } | undefined) => {
       if (result?.blob) {
         try {
-          this.isUploading.set(true);
-          this.uploadStatus.set('Uploading audio clip...');
-
           const file = new File([result.blob], 'voice-message.mp4', { type: result.blob.type });
-          const uploadResult = await this.mediaService.uploadFile(file, false, this.mediaService.mediaServers());
-
-          if (uploadResult.status === 'success' && uploadResult.item) {
-            this.insertMediaUrl(uploadResult.item.url, uploadResult.item.type);
-
-            // Add imeta tag with waveform and duration for audio player rendering
-            const imetaTag = ['imeta', `url ${uploadResult.item.url}`, `m ${uploadResult.item.type}`];
-            if (result.waveform?.length) {
-              imetaTag.push(`waveform ${result.waveform.join(' ')}`);
-            }
-            if (result.duration) {
-              imetaTag.push(`duration ${result.duration}`);
-            }
-            this.pendingTags.update(tags => [...tags, imetaTag]);
-          } else {
-            this.snackBar.open('Failed to upload audio clip', 'Dismiss', { duration: 5000 });
-          }
+          await this.sendEncryptedFileMessage(file, { preserveComposer: true });
         } catch {
           this.snackBar.open('Failed to upload audio clip', 'Dismiss', { duration: 5000 });
-        } finally {
-          this.isUploading.set(false);
-          this.uploadStatus.set('');
         }
       }
     });
@@ -2279,25 +2528,9 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     dialogRef.afterClosed$.subscribe(async ({ result }) => {
       if (result?.file) {
         try {
-          this.isUploading.set(true);
-          this.uploadStatus.set('Uploading video clip...');
-
-          const uploadResult = await this.mediaService.uploadFile(
-            result.file,
-            result.uploadOriginal ?? false,
-            this.mediaService.mediaServers()
-          );
-
-          if (uploadResult.status === 'success' && uploadResult.item) {
-            this.insertMediaUrl(uploadResult.item.url, uploadResult.item.type);
-          } else {
-            this.snackBar.open('Failed to upload video clip', 'Dismiss', { duration: 5000 });
-          }
+          await this.sendEncryptedFileMessage(result.file, { preserveComposer: true });
         } catch {
           this.snackBar.open('Failed to upload video clip', 'Dismiss', { duration: 5000 });
-        } finally {
-          this.isUploading.set(false);
-          this.uploadStatus.set('');
         }
       }
     });
@@ -2309,6 +2542,14 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   removeMediaPreview(index: number): void {
     const preview = this.mediaPreviews()[index];
     if (preview) {
+      if (preview.pendingEncrypted && preview.pendingId) {
+        const stagedPreview = this.pendingEncryptedMediaPreviews().find(item => item.id === preview.pendingId);
+        if (stagedPreview) {
+          URL.revokeObjectURL(stagedPreview.objectUrl);
+        }
+        this.pendingEncryptedMediaPreviews.update(items => items.filter(item => item.id !== preview.pendingId));
+      }
+
       // Remove the URL from the message text
       const currentText = this.newMessageText();
       const newText = currentText
@@ -2318,6 +2559,28 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       this.newMessageText.set(newText);
     }
     this.mediaPreviews.update(previews => previews.filter((_, i) => i !== index));
+  }
+
+  async confirmPastedMedia(): Promise<void> {
+    const stagedPreviews = this.pendingEncryptedMediaPreviews();
+    if (stagedPreviews.length === 0 || this.isUploading()) {
+      return;
+    }
+
+    try {
+      await this.uploadMediaFiles(stagedPreviews.map(preview => preview.file), { fromPendingPreview: true });
+    } finally {
+      this.clearPendingEncryptedMediaPreviews();
+    }
+  }
+
+  clearPendingEncryptedMediaPreviews(): void {
+    for (const preview of this.pendingEncryptedMediaPreviews()) {
+      URL.revokeObjectURL(preview.objectUrl);
+    }
+
+    this.pendingEncryptedMediaPreviews.set([]);
+    this.mediaPreviews.update(previews => previews.filter(preview => !preview.pendingEncrypted));
   }
 
   private hasConfiguredMediaServers(): boolean {
@@ -2690,10 +2953,18 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       }
       return `Reacted ${content}`;
     }
+    const fileMessageTitle = this.getFileMessageTitle(lastMessage.tags || []);
+    if (fileMessageTitle) {
+      return fileMessageTitle;
+    }
     if (lastMessage.rumorKind === kinds.FileMessage) {
       return 'Encrypted file';
     }
     return lastMessage.content;
+  }
+
+  private getFileMessageTitle(tags: string[][]): string | undefined {
+    return tags.find(tag => tag[0] === 'alt' && !!tag[1])?.[1];
   }
 
   getChatPreviewEmojiUrl(lastMessage: DirectMessage): string | undefined {
@@ -4289,9 +4560,10 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     try {
       // Encrypt the message using NIP-04
       const encryptedContent = await this.encryption.encryptNip04(messageText, receiverPubkey);
+      const receiverRelayHint = await this.getDmRelayHint(receiverPubkey);
 
       // Build tags
-      const tags: string[][] = [['p', receiverPubkey]];
+      const tags: string[][] = [['p', receiverPubkey, receiverRelayHint || '']];
 
       // Add 'e' tag if this is a reply (NIP-17 - also supported in NIP-04 for compatibility)
       if (replyToId) {
@@ -4356,9 +4628,13 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     try {
       const isNoteToSelf = receiverPubkey === myPubkey;
       const rumorKind = options?.rumorKind ?? kinds.PrivateDirectMessage;
+      const [receiverRelayHint, myRelayHint] = await Promise.all([
+        this.getDmRelayHint(receiverPubkey),
+        isNoteToSelf ? Promise.resolve(undefined) : this.getDmRelayHint(myPubkey),
+      ]);
 
       // Step 1: Create the message (unsigned event) - kind 14
-      const tags: string[][] = [['p', receiverPubkey]];
+      const tags: string[][] = [['p', receiverPubkey, receiverRelayHint || '']];
 
       // Add 'e' tag if this is a reply (NIP-17)
       if (replyToId) {
@@ -4411,7 +4687,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
         kind: kinds.GiftWrap,
         pubkey: ephemeralPubkey,
         created_at: Math.floor(Date.now() / 1000) - Math.floor(Math.random() * 172800), // Random timestamp within 2 days
-        tags: [['p', receiverPubkey]],
+        tags: [['p', receiverPubkey, receiverRelayHint || '']],
         content: giftWrapContent,
       };
 
@@ -4443,7 +4719,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
           kind: kinds.GiftWrap,
           pubkey: ephemeralPubkey,
           created_at: Math.floor(Date.now() / 1000) - Math.floor(Math.random() * 172800),
-          tags: [['p', myPubkey]],
+          tags: [['p', myPubkey, myRelayHint || '']],
           content: giftWrapContent2,
         };
 
@@ -4525,9 +4801,18 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       const allParticipants = [...new Set([myPubkey, ...participants])].sort();
       const otherParticipants = allParticipants.filter(p => p !== myPubkey);
       const rumorKind = options?.rumorKind ?? kinds.PrivateDirectMessage;
+      const relayHints = new Map<string, string>();
+      const relayHintEntries = await Promise.all(
+        allParticipants.map(async participantPubkey => [participantPubkey, await this.getDmRelayHint(participantPubkey)] as const)
+      );
+      for (const [participantPubkey, relayHint] of relayHintEntries) {
+        if (relayHint) {
+          relayHints.set(participantPubkey, relayHint);
+        }
+      }
 
       // Step 1: Create the rumor (unsigned kind 14) with p-tags for all recipients
-      const tags: string[][] = otherParticipants.map(p => ['p', p]);
+      const tags: string[][] = otherParticipants.map(p => ['p', p, relayHints.get(p) || '']);
 
       if (replyToId) {
         tags.push(['e', replyToId]);
@@ -4582,7 +4867,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
           kind: kinds.GiftWrap,
           pubkey: ephemeralPubkey,
           created_at: Math.floor(Date.now() / 1000) - Math.floor(Math.random() * 172800),
-          tags: [['p', recipientPubkey]],
+          tags: [['p', recipientPubkey, relayHints.get(recipientPubkey) || '']],
           content: giftWrapContent,
         };
 
@@ -4655,6 +4940,11 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
    */
   private async publishToRelays(event: NostrEvent, pubkey: string): Promise<boolean> {
     return this.publishToUserDmRelays(event, pubkey);
+  }
+
+  private async getDmRelayHint(pubkey: string): Promise<string | undefined> {
+    const relayUrls = await this.userRelayService.getUserDmRelaysForPublishing(pubkey);
+    return relayUrls[0];
   }
 
   /**

@@ -457,6 +457,9 @@
           }
         </div>
         <div class="chat-header-actions">
+          @if (!isNoteToSelf() && !isGroupChat() && selectedChatLastActiveLabel()) {
+          <span class="chat-header-activity">{{ selectedChatLastActiveLabel() }}</span>
+          }
           <button mat-icon-button (click)="toggleChatDetails()" matTooltip="Chat details">
             <mat-icon>info</mat-icon>
           </button>
@@ -884,9 +887,29 @@
           @for (preview of mediaPreviews(); track preview.url; let i = $index) {
           <div class="media-preview-item">
             @if (preview.type === 'image') {
-            <img [src]="preview.url" class="media-preview-thumb" alt="Media preview">
+            <div class="media-preview-media-card">
+              <img [src]="preview.url" class="media-preview-thumb" alt="Media preview">
+              <div class="media-preview-details">
+                @if (preview.label) {
+                <span class="media-preview-label">{{ preview.label }}</span>
+                }
+                @if (preview.meta) {
+                <span class="media-preview-meta">{{ preview.meta }}</span>
+                }
+              </div>
+            </div>
             } @else if (preview.type === 'video') {
-            <video [src]="preview.url" class="media-preview-thumb" muted></video>
+            <div class="media-preview-media-card">
+              <video [src]="preview.url" class="media-preview-thumb" muted></video>
+              <div class="media-preview-details">
+                @if (preview.label) {
+                <span class="media-preview-label">{{ preview.label }}</span>
+                }
+                @if (preview.meta) {
+                <span class="media-preview-meta">{{ preview.meta }}</span>
+                }
+              </div>
+            </div>
             } @else if (preview.type === 'music') {
             <div class="reference-preview-thumb">
               <mat-icon>music_note</mat-icon>
@@ -907,6 +930,14 @@
             </button>
           </div>
           }
+          @if (pendingEncryptedMediaPreviews().length > 0) {
+          <div class="pending-media-actions">
+            <button mat-button type="button" (click)="clearPendingEncryptedMediaPreviews()">Cancel</button>
+            <button mat-flat-button type="button" (click)="confirmPastedMedia()" [disabled]="isUploading() || isSending()">
+              Send encrypted
+            </button>
+          </div>
+          }
         </div>
         }
 
@@ -919,15 +950,15 @@
           <mat-menu #plusMenu="matMenu">
             <button mat-menu-item (click)="openFileDialog()">
               <mat-icon>upload</mat-icon>
-              <span>Upload media</span>
+              <span>Media</span>
             </button>
             <button mat-menu-item (click)="openEncryptedFileDialog()">
               <mat-icon>lock</mat-icon>
-              <span>File (Encrypted)</span>
+              <span>File</span>
             </button>
             <button mat-menu-item (click)="openMediaChooser()">
               <mat-icon>photo_library</mat-icon>
-              <span>Choose from library</span>
+              <span>Media Library</span>
             </button>
             <button mat-menu-item (click)="openGifPickerDialog()">
               <mat-icon>gif_box</mat-icon>
@@ -939,7 +970,7 @@
             </button>
             <button mat-menu-item (click)="openReferencePicker()">
               <mat-icon>link</mat-icon>
-              <span>Insert Reference</span>
+              <span>Reference</span>
             </button>
             <mat-divider></mat-divider>
             <button mat-menu-item (click)="recordAudioClip()">
@@ -986,10 +1017,10 @@
           }
 
           <textarea #messageInput class="message-input" [ngModel]="newMessageText()"
-            (ngModelChange)="newMessageText.set($event)" placeholder="Your message" [disabled]="isSending()"
+            (ngModelChange)="onMessageTextChanged($event)" placeholder="Your message" [disabled]="isSending() || pendingEncryptedMediaPreviews().length > 0"
             (keydown)="onMessageKeydown($event)" (input)="autoResizeTextarea()" (paste)="onMessagePaste($event)"
             rows="1"></textarea>
-          <button mat-icon-button type="button" class="send-button" [disabled]="!newMessageText().trim() || isSending()"
+          <button mat-icon-button type="button" class="send-button" [disabled]="!newMessageText().trim() || isSending() || pendingEncryptedMediaPreviews().length > 0"
             (click)="sendMessage()" matTooltip="Send message">
             @if (isSending()) {
             <mat-spinner diameter="24"></mat-spinner>

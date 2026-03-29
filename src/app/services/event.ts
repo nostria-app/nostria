@@ -16,8 +16,8 @@ import { SubscriptionCacheService } from './subscription-cache.service';
 import { RelayPoolService } from './relays/relay-pool';
 // CommentEditorDialogComponent is dynamically imported to break circular dependency
 import type { CommentEditorDialogData } from '../components/comment-editor-dialog/comment-editor-dialog.component';
-import { CustomDialogService, CustomDialogRef } from './custom-dialog.service';
-import { MatDialog, MatDialogRef } from '@angular/material/dialog';
+import { CustomDialogService } from './custom-dialog.service';
+import { MatDialog } from '@angular/material/dialog';
 import { AccountStateService } from './account-state.service';
 import { AudioRecordDialogComponent } from '../pages/media/audio-record-dialog/audio-record-dialog.component';
 import { MediaService } from './media.service';
@@ -278,8 +278,12 @@ export class EventService {
         // Extract relay URL - use for both root and reply
         if (threadTags[0][2] && threadTags[0][2].trim() !== '') {
           const relayUrl = threadTags[0][2];
-          rootRelays.push(relayUrl);
-          replyRelays.push(relayUrl);
+          if (!rootRelays.includes(relayUrl)) {
+            rootRelays.push(relayUrl);
+          }
+          if (!replyRelays.includes(relayUrl)) {
+            replyRelays.push(relayUrl);
+          }
         }
       } else if (threadTags.length >= 2) {
         // First thread tag is root in positional format
@@ -1195,11 +1199,11 @@ export class EventService {
           if (limit) {
             // OPTIMIZED PATH: Separate queries per kind with limits
             // This dramatically reduces data loaded for popular posts in feeds
-            return this.loadEventInteractionsWithLimits(eventId, pubkey, repostKind, skipReplies, limit, invalidateCache);
+            return this.loadEventInteractionsWithLimits(eventId, eventKind, pubkey, repostKind, skipReplies, limit, invalidateCache);
           }
 
           // LEGACY PATH: Single combined query without limits (used when viewing full event details)
-          return this.loadEventInteractionsCombined(eventId, pubkey, repostKind, skipReplies, invalidateCache);
+          return this.loadEventInteractionsCombined(eventId, eventKind, pubkey, repostKind, skipReplies, invalidateCache);
         } catch (error) {
           this.logger.error('Error loading event interactions:', error);
           return {
@@ -1250,6 +1254,7 @@ export class EventService {
    */
   private async loadEventInteractionsWithLimits(
     eventId: string,
+    eventKind: number,
     pubkey: string,
     repostKind: number,
     skipReplies: boolean,
@@ -1286,9 +1291,9 @@ export class EventService {
     let replyEventsResult: Event[] = [];
     let hasMoreReplies = false;
     if (!skipReplies) {
-      const replyRecords = allRecords.filter((record) => this.isReplyInThread(record.event, eventId));
-      replyCount = replyRecords.length;
-      replyEventsResult = replyRecords.map((r: NostrRecord) => r.event);
+      const replyEvents = await this.extractReplyEventsFromInteractionRecords(allRecords, eventId, eventKind, pubkey);
+      replyCount = replyEvents.length;
+      replyEventsResult = replyEvents;
       hasMoreReplies = replyCount >= limit || querySaturated;
     }
 
@@ -1362,6 +1367,7 @@ export class EventService {
    */
   private async loadEventInteractionsCombined(
     eventId: string,
+    eventKind: number,
     pubkey: string,
     repostKind: number,
     skipReplies: boolean,
@@ -1395,9 +1401,9 @@ export class EventService {
     let replyCount = 0;
     let replyEventsResult: Event[] = [];
     if (!skipReplies) {
-      const replyRecords = allRecords.filter((record) => this.isReplyInThread(record.event, eventId));
-      replyCount = replyRecords.length;
-      replyEventsResult = replyRecords.map((r: NostrRecord) => r.event);
+      const replyEvents = await this.extractReplyEventsFromInteractionRecords(allRecords, eventId, eventKind, pubkey);
+      replyCount = replyEvents.length;
+      replyEventsResult = replyEvents;
     }
 
     // Process reactions
@@ -1453,6 +1459,30 @@ export class EventService {
       replyEvents: replyEventsResult,
       quotes: [],
     };
+  }
+
+  private async extractReplyEventsFromInteractionRecords(
+    allRecords: NostrRecord[],
+    eventId: string,
+    eventKind: number,
+    pubkey: string,
+  ): Promise<Event[]> {
+    const seenEvents = new Map<string, Event>();
+
+    for (const record of allRecords) {
+      if (this.isReplyInThread(record.event, eventId)) {
+        seenEvents.set(record.event.id, record.event);
+      }
+    }
+
+    if (eventKind !== kinds.ShortTextNote) {
+      const nip22Comments = await this.loadNip22Comments(eventId, pubkey);
+      for (const comment of nip22Comments) {
+        seenEvents.set(comment.id, comment);
+      }
+    }
+
+    return Array.from(seenEvents.values());
   }
 
   /**

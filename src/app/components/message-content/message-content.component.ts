@@ -6,7 +6,9 @@ import {
   signal,
   effect,
   ChangeDetectionStrategy,
+  OnDestroy,
 } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { MatCardModule } from '@angular/material/card';
@@ -43,6 +45,7 @@ import { AgoPipe } from '../../pipes/ago.pipe';
 import { TimestampPipe } from '../../pipes/timestamp.pipe';
 import { NostrRecord } from '../../interfaces';
 import { SafeResourceUrl } from '@angular/platform-browser';
+import { PLATFORM_ID } from '@angular/core';
 import { visualContentLength } from '../../utils/visual-content-length';
 
 // Music event kinds
@@ -80,6 +83,18 @@ interface EventMention {
   loading: boolean;
   eventId: string;
   expanded: boolean;
+}
+
+interface EncryptedFileMetadata {
+  content: string;
+  fileName?: string;
+  fileType: string;
+  fileSize?: number;
+}
+
+interface DecryptedPreviewState {
+  objectUrl: string;
+  mediaType: 'image' | 'video';
 }
 
 @Component({
@@ -686,7 +701,7 @@ interface EventMention {
   `],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class MessageContentComponent {
+export class MessageContentComponent implements OnDestroy {
   private utilities = inject(UtilitiesService);
   private layout = inject(LayoutService);
   private data = inject(DataService);
@@ -698,6 +713,8 @@ export class MessageContentComponent {
   private readonly emojiSetService = inject(EmojiSetService);
   private readonly media = inject(MediaPlayerService);
   private readonly corsProxy = inject(CorsProxyService);
+  private readonly platformId = inject(PLATFORM_ID);
+  private readonly isBrowser = isPlatformBrowser(this.platformId);
 
   content = input.required<string>();
   tags = input<string[][]>([]);
@@ -749,6 +766,8 @@ export class MessageContentComponent {
   // Store event mentions data
   eventMentionsMap = signal<Map<number, EventMention>>(new Map());
   encryptedFileStates = signal<Map<string, boolean>>(new Map());
+  decryptedEncryptedFilePreviews = signal<Map<string, DecryptedPreviewState>>(new Map());
+  autoDecryptAttempts = signal<Set<string>>(new Set());
 
   // Resolved custom emoji map (built from tags + author emoji sets)
   private resolvedEmojiMap = signal<Map<string, string>>(new Map());
@@ -812,6 +831,39 @@ export class MessageContentComponent {
         this.resolvedEmojiMap.set(emojiMap);
       }
     });
+
+    effect(() => {
+      if (!this.isBrowser) {
+        return;
+      }
+
+      const content = this.normalizedContent();
+      const metadata = this.getEncryptedFileMetadata(content);
+      if (!metadata || !this.isPreviewableEncryptedFileType(metadata.fileType)) {
+        return;
+      }
+
+      const previewState = this.decryptedEncryptedFilePreviews().get(metadata.content);
+      const decrypting = this.encryptedFileStates().get(metadata.content);
+      const attempted = this.autoDecryptAttempts().has(metadata.content);
+      if (previewState || decrypting || attempted) {
+        return;
+      }
+
+      this.autoDecryptAttempts.update(current => {
+        const next = new Set(current);
+        next.add(metadata.content);
+        return next;
+      });
+
+      void this.decryptEncryptedFilePreview(metadata);
+    });
+  }
+
+  ngOnDestroy(): void {
+    for (const preview of this.decryptedEncryptedFilePreviews().values()) {
+      URL.revokeObjectURL(preview.objectUrl);
+    }
   }
 
   parsedContent = computed<ContentPart[]>(() => {
@@ -1213,39 +1265,22 @@ export class MessageContentComponent {
       return;
     }
 
-    this.setEncryptedFileDecrypting(part.content, true);
-
     try {
-      const response = await this.corsProxy.fetch(part.content);
-      if (!response.ok) {
-        throw new Error(`Failed to download encrypted file (${response.status})`);
-      }
-
-      const encryptedBuffer = await response.arrayBuffer();
-      const keyTag = this.tags().find(tag => tag[0] === 'decryption-key')?.[1];
-      const nonceTag = this.tags().find(tag => tag[0] === 'decryption-nonce')?.[1];
-      if (!keyTag || !nonceTag) {
+      const metadata = this.getEncryptedFileMetadata(part.content);
+      if (!metadata) {
         throw new Error('Missing decryption metadata');
       }
 
-      const keyBytes = this.parseKeyBytes(keyTag);
-      const nonceBytes = this.parseKeyBytes(nonceTag);
-      const keyBuffer = new ArrayBuffer(keyBytes.byteLength);
-      new Uint8Array(keyBuffer).set(keyBytes);
-      const nonceBuffer = new ArrayBuffer(nonceBytes.byteLength);
-      new Uint8Array(nonceBuffer).set(nonceBytes);
-      const cryptoKey = await crypto.subtle.importKey('raw', keyBuffer, { name: 'AES-GCM' }, false, ['decrypt']);
-      const decryptedBuffer = await crypto.subtle.decrypt(
-        { name: 'AES-GCM', iv: nonceBuffer },
-        cryptoKey,
-        encryptedBuffer,
-      );
+      if (this.isPreviewableEncryptedFileType(metadata.fileType)) {
+        await this.decryptEncryptedFilePreview(metadata);
+        return;
+      }
 
-      const blob = new Blob([decryptedBuffer], { type: part.fileType || 'application/octet-stream' });
+      const blob = await this.decryptEncryptedFileBlob(metadata);
       const objectUrl = URL.createObjectURL(blob);
       const anchor = document.createElement('a');
       anchor.href = objectUrl;
-      anchor.download = part.fileName || 'encrypted-file';
+      anchor.download = metadata.fileName || 'encrypted-file';
       anchor.rel = 'noopener';
       anchor.click();
       setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
@@ -1348,6 +1383,35 @@ export class MessageContentComponent {
   }
 
   private buildEncryptedFilePart(content: string): ContentPart | null {
+    const metadata = this.getEncryptedFileMetadata(content);
+    if (!metadata) {
+      return null;
+    }
+
+    const previewState = this.decryptedEncryptedFilePreviews().get(content);
+    if (previewState) {
+      return {
+        type: previewState.mediaType,
+        content: previewState.objectUrl,
+        fileName: metadata.fileName,
+        fileType: metadata.fileType,
+        fileSize: metadata.fileSize,
+        id: this.partIdCounter++,
+      };
+    }
+
+    return {
+      type: 'encrypted-file',
+      content: metadata.content,
+      fileName: metadata.fileName,
+      fileType: metadata.fileType,
+      fileSize: metadata.fileSize,
+      decrypting: this.encryptedFileStates().get(content) || false,
+      id: this.partIdCounter++,
+    };
+  }
+
+  private getEncryptedFileMetadata(content: string): EncryptedFileMetadata | null {
     const tags = this.tags();
     const algorithm = tags.find(tag => tag[0] === 'encryption-algorithm')?.[1];
     const fileType = tags.find(tag => tag[0] === 'file-type')?.[1];
@@ -1359,14 +1423,112 @@ export class MessageContentComponent {
     }
 
     return {
-      type: 'encrypted-file',
       content,
-      fileName: tags.find(tag => tag[0] === 'name')?.[1],
+      fileName: tags.find(tag => tag[0] === 'alt')?.[1],
       fileType,
       fileSize: Number(tags.find(tag => tag[0] === 'size')?.[1] || 0) || undefined,
-      decrypting: this.encryptedFileStates().get(content) || false,
-      id: this.partIdCounter++,
     };
+  }
+
+  private isPreviewableEncryptedFileType(fileType: string): boolean {
+    return fileType.startsWith('image/') || fileType.startsWith('video/');
+  }
+
+  private getEncryptedFileCacheKey(content: string): string {
+    return `https://nostria.local/cache/file/${encodeURIComponent(content)}`;
+  }
+
+  private async decryptEncryptedFilePreview(metadata: EncryptedFileMetadata): Promise<void> {
+    const cacheKey = this.getEncryptedFileCacheKey(metadata.content);
+    const cachedBlob = await this.getCachedEncryptedFilePreviewBlob(cacheKey);
+    const blob = cachedBlob ?? await this.decryptEncryptedFileBlob(metadata);
+
+    if (!cachedBlob) {
+      await this.storeEncryptedFilePreviewBlob(cacheKey, blob);
+    }
+
+    const mediaType: 'image' | 'video' = metadata.fileType.startsWith('image/') ? 'image' : 'video';
+    const objectUrl = URL.createObjectURL(blob);
+
+    this.decryptedEncryptedFilePreviews.update(current => {
+      const next = new Map(current);
+      const existing = next.get(metadata.content);
+      if (existing) {
+        URL.revokeObjectURL(existing.objectUrl);
+      }
+      next.set(metadata.content, { objectUrl, mediaType });
+      return next;
+    });
+  }
+
+  private async getCachedEncryptedFilePreviewBlob(cacheKey: string): Promise<Blob | null> {
+    if (!this.isBrowser || !('caches' in window)) {
+      return null;
+    }
+
+    try {
+      const cache = await caches.open('nostria-files');
+      const response = await cache.match(cacheKey);
+      if (!response?.ok) {
+        return null;
+      }
+      return await response.blob();
+    } catch (error) {
+      this.logger.warn('Failed to read encrypted preview cache', error);
+      return null;
+    }
+  }
+
+  private async storeEncryptedFilePreviewBlob(cacheKey: string, blob: Blob): Promise<void> {
+    if (!this.isBrowser || !('caches' in window)) {
+      return;
+    }
+
+    try {
+      const cache = await caches.open('nostria-files');
+      await cache.put(cacheKey, new Response(blob, {
+        headers: new Headers({
+          'content-type': blob.type || 'application/octet-stream',
+        }),
+      }));
+    } catch (error) {
+      this.logger.warn('Failed to write encrypted preview cache', error);
+    }
+  }
+
+  private async decryptEncryptedFileBlob(metadata: EncryptedFileMetadata): Promise<Blob> {
+    this.setEncryptedFileDecrypting(metadata.content, true);
+
+    try {
+      const response = await this.corsProxy.fetch(metadata.content);
+      if (!response.ok) {
+        throw new Error(`Failed to download encrypted file (${response.status})`);
+      }
+
+      const encryptedBuffer = await response.arrayBuffer();
+      const keyTag = this.tags().find(tag => tag[0] === 'decryption-key')?.[1];
+      const nonceTag = this.tags().find(tag => tag[0] === 'decryption-nonce')?.[1];
+      if (!keyTag || !nonceTag) {
+        throw new Error('Missing decryption metadata');
+      }
+
+      const keyBytes = this.parseKeyBytes(keyTag);
+      const nonceBytes = this.parseKeyBytes(nonceTag);
+      const keyBuffer = new ArrayBuffer(keyBytes.byteLength);
+      new Uint8Array(keyBuffer).set(keyBytes);
+      const nonceBuffer = new ArrayBuffer(nonceBytes.byteLength);
+      new Uint8Array(nonceBuffer).set(nonceBytes);
+      const cryptoKey = await crypto.subtle.importKey('raw', keyBuffer, { name: 'AES-GCM' }, false, ['decrypt']);
+      const decryptedBuffer = await crypto.subtle.decrypt(
+        { name: 'AES-GCM', iv: nonceBuffer },
+        cryptoKey,
+        encryptedBuffer,
+      );
+
+      return new Blob([decryptedBuffer], { type: metadata.fileType || 'application/octet-stream' });
+    } finally {
+      this.setEncryptedFileDecrypting(metadata.content, false);
+    }
   }
 
   private setEncryptedFileDecrypting(url: string, decrypting: boolean): void {

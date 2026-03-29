@@ -481,12 +481,31 @@
   display: flex;
   align-items: center;
   gap: 8px;
+  min-width: 0;
 }
 
 .chat-header-actions {
   display: flex;
   align-items: center;
   gap: 4px;
+  min-width: 0;
+}
+
+.chat-header-activity {
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 0.85rem;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 130px;
+}
+
+@media (max-width: 699px) {
+  .chat-header-activity {
+    font-size: 0.78rem;
+    max-width: 96px;
+  }
 }
 
 .message-list {
@@ -682,10 +701,11 @@
 
 .media-preview-container {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
+  flex-wrap: wrap;
   gap: 6px;
   padding: 6px 8px;
-  overflow-x: auto;
+  overflow-x: hidden;
   scrollbar-width: none;
 
   &::-webkit-scrollbar {
@@ -695,7 +715,17 @@
 
 .media-preview-item {
   position: relative;
-  flex-shrink: 0;
+  flex: 1 1 220px;
+  min-width: 0;
+
+  .media-preview-media-card {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    min-width: 0;
+    padding: 0 26px 0 0;
+  }
 
   .media-preview-thumb {
     width: 48px;
@@ -704,6 +734,26 @@
     border-radius: 6px;
     border: 1px solid var(--mat-sys-outline-variant);
     display: block;
+  }
+
+  .media-preview-details {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    flex: 1;
+  }
+
+  .media-preview-label {
+    font-size: 12px;
+    color: var(--mat-sys-on-surface);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .media-preview-meta {
+    font-size: 11px;
+    color: var(--mat-sys-on-surface-variant);
   }
 
   .remove-media-preview-btn {
@@ -727,12 +777,23 @@
   }
 }
 
+.pending-media-actions {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+  width: 100%;
+  margin-top: 2px;
+}
+
 .reference-preview-thumb {
   display: flex;
   align-items: center;
   gap: 4px;
   height: 48px;
-  padding: 0 10px 0 6px;
+  width: 100%;
+  min-width: 0;
+  padding: 0 26px 0 6px;
   border-radius: 6px;
   border: 1px solid var(--mat-sys-outline-variant);
   background: var(--mat-sys-surface-container);
@@ -747,10 +808,32 @@
   .reference-preview-label {
     font-size: 12px;
     color: var(--mat-sys-on-surface);
+    flex: 1;
+    min-width: 0;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 120px;
+    max-width: none;
+  }
+
+  .reference-preview-meta {
+    flex-shrink: 0;
+    font-size: 11px;
+    color: var(--mat-sys-on-surface-variant);
+  }
+}
+
+@media (max-width: 699px) {
+  .media-preview-item {
+    flex-basis: 100%;
+  }
+
+  .pending-media-actions {
+    justify-content: stretch;
+
+    button {
+      flex: 1 1 0;
+    }
   }
 }
 

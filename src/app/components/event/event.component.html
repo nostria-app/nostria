@@ -1053,6 +1053,7 @@
         <mat-icon class="action-icon">mode_comment</mat-icon>
         @if (replyCount() > 0 || interactionsLoading()) {
         <span class="action-count" [class.count-placeholder]="interactionsLoading() && replyCount() === 0"
+          [class.count-bump]="replyCountAnimating()"
           [attr.aria-hidden]="interactionsLoading() && replyCount() === 0 ? 'true' : null">{{ replyCountDisplay() || '00' }}</span>
         }
         <span class="action-text">Reply</span>

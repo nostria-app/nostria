@@ -120,6 +120,10 @@ export class UserRelayService {
     return this.userRelaysService.getRelaysForPubkey(pubkey);
   }
 
+  async getUserDmRelaysForPublishing(pubkey: string): Promise<string[]> {
+    return this.userRelaysService.getUserDmRelaysForPublishing(pubkey);
+  }
+
   /**
    * Check if relay discovery is currently in progress for a pubkey
    * @param pubkey - The user's public key

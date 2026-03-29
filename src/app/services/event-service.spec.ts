@@ -1,3 +1,5 @@
+import '@angular/compiler';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Event, kinds } from 'nostr-tools';
 import { type NostrRecord } from '../interfaces';
 import { type EventInteractions, EventService } from './event';
@@ -29,10 +31,20 @@ function createRecord(event: Partial<Event> & Pick<Event, 'id' | 'pubkey' | 'kin
 
 type LoadEventInteractionsWithLimits = (
   eventId: string,
+  eventKind: number,
   pubkey: string,
   repostKind: number,
   skipReplies: boolean,
   limit: number,
+  invalidateCache: boolean,
+) => Promise<EventInteractions>;
+
+type LoadEventInteractionsCombined = (
+  eventId: string,
+  eventKind: number,
+  pubkey: string,
+  repostKind: number,
+  skipReplies: boolean,
   invalidateCache: boolean,
 ) => Promise<EventInteractions>;
 
@@ -366,6 +378,7 @@ describe('EventService limited interaction loading', () => {
 
     const result = await loadWithLimits(
       'target-event-id',
+      kinds.ShortTextNote,
       'target-pubkey',
       kinds.Repost,
       false,
@@ -425,6 +438,7 @@ describe('EventService limited interaction loading', () => {
 
     const result = await loadWithLimits(
       'target-event-id',
+      kinds.ShortTextNote,
       'target-pubkey',
       kinds.Repost,
       false,
@@ -464,6 +478,7 @@ describe('EventService limited interaction loading', () => {
 
     const result = await loadWithLimits(
       'target-event-id',
+      kinds.ShortTextNote,
       'target-pubkey',
       kinds.Repost,
       false,
@@ -473,6 +488,128 @@ describe('EventService limited interaction loading', () => {
 
     expect(result.replyCount).toBe(2);
     expect(result.replyEvents.map((event) => event.id)).toEqual(['direct-reply', 'nested-reply']);
+  });
+});
+
+describe('EventService non-note reply extraction', () => {
+  let service: EventService;
+
+  beforeEach(() => {
+    service = createEventServicePrototype();
+    setPrivateField(service, 'logger', {
+      info: () => undefined,
+      error: () => undefined,
+      warn: () => undefined,
+      debug: () => undefined,
+    });
+    setPrivateField(service, 'VALID_REPORT_TYPES', new Set(['spam', 'other']));
+  });
+
+  it('should merge NIP-22 comments for non-short-text roots and de-duplicate overlaps', async () => {
+    const allRecords = [
+      createRecord({ id: 'combined-reply', pubkey: 'alice', kind: 1111 }),
+      createRecord({ id: 'duplicate-comment', pubkey: 'bob', kind: 1111 }),
+      createRecord({ id: 'not-a-reply', pubkey: 'carol', kind: kinds.Reaction }),
+    ];
+    const nip22Comments: Event[] = [
+      {
+        id: 'duplicate-comment',
+        pubkey: 'bob',
+        created_at: 2,
+        kind: 1111,
+        tags: [['E', 'video-root-id', '', 'video-author']],
+        content: 'duplicate comment',
+        sig: 'sig-1',
+      },
+      {
+        id: 'uppercase-only-comment',
+        pubkey: 'dave',
+        created_at: 3,
+        kind: 1111,
+        tags: [['E', 'video-root-id', '', 'video-author']],
+        content: 'uppercase only',
+        sig: 'sig-2',
+      },
+    ];
+
+    const isReplyInThread = vi.fn((event: Event) => event.id !== 'not-a-reply');
+    const loadNip22Comments = vi.fn().mockResolvedValue(nip22Comments);
+    setPrivateField(service, 'isReplyInThread', isReplyInThread);
+    setPrivateField(service, 'loadNip22Comments', loadNip22Comments);
+
+    const extractReplyEvents = (
+      service as unknown as {
+        extractReplyEventsFromInteractionRecords: (
+          records: NostrRecord[],
+          eventId: string,
+          eventKind: number,
+          pubkey: string,
+        ) => Promise<Event[]>;
+      }
+    ).extractReplyEventsFromInteractionRecords.bind(service);
+
+    const result = await extractReplyEvents(allRecords, 'video-root-id', 30023, 'target-pubkey');
+
+    expect(loadNip22Comments).toHaveBeenCalledWith('video-root-id', 'target-pubkey');
+    expect(result.map((event) => event.id)).toEqual([
+      'combined-reply',
+      'duplicate-comment',
+      'uppercase-only-comment',
+    ]);
+  });
+
+  it('should include NIP-22 comments when loading combined interactions for non-note events', async () => {
+    const userDataService = {
+      getEventsByKindsAndEventTag: vi.fn().mockResolvedValue([
+        createRecord({
+          id: 'reaction-1',
+          pubkey: 'alice',
+          kind: kinds.Reaction,
+          content: '+',
+        }),
+        createRecord({
+          id: 'combined-comment',
+          pubkey: 'bob',
+          kind: 1111,
+          tags: [['e', 'video-root-id', '', 'reply']],
+          content: 'combined comment',
+        }),
+      ]),
+    };
+
+    const nip22Comment: Event = {
+      id: 'uppercase-only-comment',
+      pubkey: 'carol',
+      created_at: 4,
+      kind: 1111,
+      tags: [['E', 'video-root-id', '', 'video-author']],
+      content: 'uppercase only',
+      sig: 'sig-3',
+    };
+
+    setPrivateField(service, 'userDataService', userDataService);
+    setPrivateField(service, 'isReplyInThread', vi.fn((event: Event) => event.id === 'combined-comment'));
+    setPrivateField(service, 'loadNip22Comments', vi.fn().mockResolvedValue([nip22Comment]));
+
+    const loadCombined = (
+      service as unknown as { loadEventInteractionsCombined: LoadEventInteractionsCombined }
+    ).loadEventInteractionsCombined.bind(service);
+
+    const result = await loadCombined(
+      'video-root-id',
+      30023,
+      'target-pubkey',
+      kinds.GenericRepost,
+      false,
+      false,
+    );
+
+    expect(userDataService.getEventsByKindsAndEventTag).toHaveBeenCalledOnce();
+    expect(result.replyCount).toBe(2);
+    expect(result.replyEvents.map((event) => event.id)).toEqual([
+      'combined-comment',
+      'uppercase-only-comment',
+    ]);
   });
 });
 

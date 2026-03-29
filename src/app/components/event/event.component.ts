@@ -1075,6 +1075,8 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   quotes = signal<NostrRecord[]>([]);
   private _replyCountInternal = signal<number>(0);
   private _replyEventsInternal = signal<Event[]>([]);
+  replyCountAnimating = signal(false);
+  private replyCountAnimationTimer?: ReturnType<typeof setTimeout>;
 
   // Overflow flags - true when the query limit was reached (more exist on relays)
   hasMoreReactions = signal<boolean>(false);
@@ -2423,6 +2425,10 @@ export class EventComponent implements AfterViewInit, OnDestroy {
       clearTimeout(this.visibleInteractionRetryTimer);
       this.visibleInteractionRetryTimer = undefined;
     }
+    if (this.replyCountAnimationTimer) {
+      clearTimeout(this.replyCountAnimationTimer);
+      this.replyCountAnimationTimer = undefined;
+    }
     EventComponent.cancelQueuedInteractionPreload(this);
     if (this.interactionAbortController) {
       this.interactionAbortController.abort();
@@ -2614,6 +2620,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   }
 
   private applySharedInteractionSnapshot(snapshot: SharedInteractionSnapshot): void {
+    const previousReplyCount = this.replyCount();
     const normalizedInteractions = this.normalizeInteractionResults(
       {
         reactions: snapshot.reactions,
@@ -2643,6 +2650,10 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     if (this.replyCountFromParent() === undefined) {
       this._replyCountInternal.set(normalizedInteractions.replyCount);
       this._replyEventsInternal.set(normalizedInteractions.replyEvents);
+    }
+
+    if (normalizedInteractions.replyCount > previousReplyCount) {
+      this.triggerReplyCountAnimation();
     }
 
     this.hasLoadedInteractions.set(true);
@@ -3230,7 +3241,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     const ev = targetRecordData.event;
     if (ev.kind === kinds.ShortTextNote) {
       const eventTags = this.eventService.getEventTags(ev);
-      this.eventService.createNote({
+      const result = await this.eventService.createNote({
         navigateOnPublish: this.mode() !== 'thread',
         replyTo: {
           id: ev.id,
@@ -3239,6 +3250,9 @@ export class EventComponent implements AfterViewInit, OnDestroy {
           event: ev,
         },
       });
+      if (result?.published && result.event) {
+        this.applyOptimisticReplyPublished(result.event, ev.id);
+      }
     } else if (ev.kind === 1111) {
       // NIP-22: replying to a comment — extract root event info from the comment's tags
       const rootETag = ev.tags.find(t => t[0] === 'E');
@@ -3272,13 +3286,74 @@ export class EventComponent implements AfterViewInit, OnDestroy {
         sig: '',
       } as Event;
 
-      this.eventService.createCommentReply(rootEvent, ev);
+      const result = await this.eventService.createCommentReply(rootEvent, ev);
+      if (result?.published && result.event) {
+        this.applyOptimisticReplyPublished(result.event, ev.id);
+      }
     } else if (ev.kind === 1222 || ev.kind === 1244) {
       // Voice events can only be replied to with voice replies (kind 1244)
-      this.eventService.createAudioReply(ev);
+      const result = await this.eventService.createAudioReply(ev);
+      if (result) {
+        this.applyOptimisticReplyPublished(result, ev.id);
+      }
     } else {
-      this.eventService.createComment(ev);
+      const result = await this.eventService.createComment(ev);
+      if (result?.published && result.event) {
+        this.applyOptimisticReplyPublished(result.event, ev.id);
+      }
     }
+  }
+
+  private applyOptimisticReplyPublished(replyEvent: Event, targetEventId: string): void {
+    const existingReplyEvents = this._replyEventsInternal();
+    const hasReplyAlready = existingReplyEvents.some(event => event.id === replyEvent.id);
+    const currentReplyCount = this.replyCount();
+    const nextReplyCount = this.hasMoreReplies()
+      ? Math.max(currentReplyCount, EventService.INTERACTION_QUERY_LIMIT)
+      : Math.min(currentReplyCount + (hasReplyAlready ? 0 : 1), EventService.INTERACTION_QUERY_LIMIT);
+    const nextHasMoreReplies = this.hasMoreReplies() || nextReplyCount >= EventService.INTERACTION_QUERY_LIMIT;
+    const nextReplyEvents = hasReplyAlready
+      ? existingReplyEvents
+      : [replyEvent, ...existingReplyEvents].slice(0, EventService.INTERACTION_QUERY_LIMIT);
+
+    if (this.replyCountFromParent() === undefined) {
+      this._replyCountInternal.set(nextReplyCount);
+      this._replyEventsInternal.set(nextReplyEvents);
+    }
+
+    this.hasMoreReplies.set(nextHasMoreReplies);
+    if (!hasReplyAlready && nextReplyCount > currentReplyCount) {
+      this.triggerReplyCountAnimation();
+    }
+
+    this.eventService.publishInteractionSnapshot({
+      eventId: targetEventId,
+      reactions: this.reactions(),
+      reposts: this.reposts(),
+      reports: this.reports(),
+      quotes: this.quotes(),
+      replyCount: nextReplyCount,
+      replyEvents: nextReplyEvents,
+      hasMoreReactions: this.hasMoreReactions(),
+      hasMoreReposts: this.hasMoreReposts(),
+      hasMoreReplies: nextHasMoreReplies,
+      hasMoreQuotes: this.hasMoreQuotes(),
+    });
+  }
+
+  private triggerReplyCountAnimation(): void {
+    if (this.replyCountAnimationTimer) {
+      clearTimeout(this.replyCountAnimationTimer);
+    }
+
+    this.replyCountAnimating.set(false);
+    requestAnimationFrame(() => {
+      this.replyCountAnimating.set(true);
+      this.replyCountAnimationTimer = setTimeout(() => {
+        this.replyCountAnimating.set(false);
+        this.replyCountAnimationTimer = undefined;
+      }, 700);
+    });
   }
 
   private getEventPreviewTitle(content: string): string {
