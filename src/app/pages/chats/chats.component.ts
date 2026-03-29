@@ -32,6 +32,7 @@ import { AccountStateService } from '../../services/account-state.service';
 import { UtilitiesService } from '../../services/utilities.service';
 import { CustomDialogService } from '../../services/custom-dialog.service';
 import { MediaService } from '../../services/media.service';
+import { MediaProcessingService } from '../../services/media-processing.service';
 import { HapticsService } from '../../services/haptics.service';
 import { ZapService } from '../../services/zap.service';
 import { ZapSoundService } from '../../services/zap-sound.service';
@@ -68,6 +69,7 @@ import {
   ShareArticleDialogComponent,
   type ShareArticleDialogData,
 } from '../../components/share-article-dialog/share-article-dialog.component';
+import { VideoRecordDialogResult } from '../../interfaces/media-upload';
 import { AccountRelayService } from '../../services/relays/account-relay';
 import {
   ChatsSettingsDialogComponent,
@@ -135,6 +137,7 @@ export class ChatsComponent implements OnInit, OnDestroy {
   private readonly dialog = inject(MatDialog);
   private readonly customDialog = inject(CustomDialogService);
   readonly mediaService = inject(MediaService);
+  private readonly mediaProcessing = inject(MediaProcessingService);
   private readonly haptics = inject(HapticsService);
   private readonly publicChatsListService = inject(PublicChatsListService);
   private readonly zapService = inject(ZapService);
@@ -1395,7 +1398,7 @@ export class ChatsComponent implements OnInit, OnDestroy {
 
     const { VideoRecordDialogComponent } = await import('../../pages/media/video-record-dialog/video-record-dialog.component');
 
-    const dialogRef = this.customDialog.open<typeof VideoRecordDialogComponent.prototype, { file: File; uploadOriginal: boolean } | null>(
+    const dialogRef = this.customDialog.open<typeof VideoRecordDialogComponent.prototype, VideoRecordDialogResult | null>(
       VideoRecordDialogComponent,
       {
         title: 'Record Video Clip',
@@ -1413,9 +1416,14 @@ export class ChatsComponent implements OnInit, OnDestroy {
           this.isUploading.set(true);
           this.uploadStatus.set('Uploading video clip...');
 
+          const preparedFile = await this.mediaProcessing.prepareFileForUpload(result.file, result.uploadSettings);
+          if (preparedFile.warningMessage) {
+            this.snackBar.open(preparedFile.warningMessage, 'Dismiss', { duration: 5000 });
+          }
+
           const uploadResult = await this.mediaService.uploadFile(
-            result.file,
-            result.uploadOriginal ?? false,
+            preparedFile.file,
+            preparedFile.uploadOriginal,
             this.mediaService.mediaServers()
           );
 

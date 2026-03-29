@@ -89,6 +89,15 @@ import { isImageUrl } from '../../services/format/utils';
 import { HiddenChatInfoPromptComponent } from '../../components/hidden-chat-info-prompt/hidden-chat-info-prompt.component';
 import { HapticsService } from '../../services/haptics.service';
 import { EmojiSetService } from '../../services/emoji-set.service';
+import { MediaProcessingService } from '../../services/media-processing.service';
+import {
+  DEFAULT_DM_MEDIA_UPLOAD_SETTINGS,
+  getCompressionStrengthDescription,
+  getCompressionStrengthLabel,
+  normalizeCompressionStrength,
+  VideoRecordDialogResult,
+  type MediaUploadSettings,
+} from '../../interfaces/media-upload';
 import type { ReportTarget } from '../../services/reporting.service';
 import type { ReportDialogResult } from '../../components/report-dialog/report-dialog.component';
 import type { MessageDetailsDialogData } from '../../components/message-details-dialog/message-details-dialog.component';
@@ -239,6 +248,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   readonly localSettings = inject(LocalSettingsService);
   readonly settingsService = inject(SettingsService);
   readonly mediaService = inject(MediaService);
+  private readonly mediaProcessing = inject(MediaProcessingService);
   private readonly haptics = inject(HapticsService);
   private readonly openGraph = inject(OpenGraphService);
   private readonly emojiSetService = inject(EmojiSetService);
@@ -275,8 +285,14 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   isUploading = signal<boolean>(false);
   isDragOverMessageInput = signal<boolean>(false);
   uploadStatus = signal<string>('');
+  dmCompressionStrength = signal<number>(DEFAULT_DM_MEDIA_UPLOAD_SETTINGS.compressionStrength);
   mediaPreviews = signal<{ url: string; type: 'image' | 'video' | 'music' | 'file'; label?: string; meta?: string; pendingEncrypted?: boolean; pendingId?: string }[]>([]);
   pendingEncryptedMediaPreviews = signal<PendingEncryptedMediaPreview[]>([]);
+  readonly hasPendingCompressibleMedia = computed(() =>
+    this.pendingEncryptedMediaPreviews().some(preview => preview.type === 'image' || preview.type === 'video')
+  );
+  readonly dmCompressionStrengthLabel = computed(() => getCompressionStrengthLabel(this.dmCompressionStrength()));
+  readonly dmCompressionStrengthDescription = computed(() => getCompressionStrengthDescription(this.dmCompressionStrength()));
 
   /** Pending extra tags (e.g. imeta with waveform) for the next message */
   pendingTags = signal<string[][]>([]);
@@ -2145,7 +2161,10 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     await this.sendEncryptedFileMessage(file, { preserveComposer: true });
   }
 
-  private async sendEncryptedFileMessage(file: File, options?: { preserveComposer?: boolean }): Promise<void> {
+  private async sendEncryptedFileMessage(
+    file: File,
+    options?: { preserveComposer?: boolean; uploadSettings?: MediaUploadSettings }
+  ): Promise<void> {
     const selectedChat = this.selectedChat();
     const myPubkey = this.accountState.pubkey();
     const isGroup = !!selectedChat?.isGroup;
@@ -2166,7 +2185,28 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
 
     try {
       this.isSending.set(true);
-      this.uploadStatus.set(`Encrypting ${file.name}...`);
+      const uploadSettings = options?.uploadSettings ?? {
+        mode: DEFAULT_DM_MEDIA_UPLOAD_SETTINGS.mode,
+        compressionStrength: this.dmCompressionStrength(),
+      };
+      const preparedFile = this.isMediaFile(file)
+        ? await this.mediaProcessing.prepareFileForUpload(file, uploadSettings, progress => {
+          const progressSuffix = progress.progress !== undefined
+            ? ` ${Math.round(progress.progress * 100)}%`
+            : '';
+          this.uploadStatus.set(`${progress.message}${progressSuffix}`);
+        })
+        : {
+          file,
+          uploadOriginal: true,
+          wasProcessed: false,
+        };
+
+      if (preparedFile.warningMessage) {
+        this.layout.toast(preparedFile.warningMessage, 5000, 'error-snackbar');
+      }
+
+      this.uploadStatus.set(`Encrypting ${preparedFile.file.name}...`);
 
       if (isGroup && selectedChat.participants) {
         const otherParticipants = selectedChat.participants.filter(p => p !== myPubkey);
@@ -2183,15 +2223,15 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
         ]);
       }
 
-      const encryption = await this.encryptFileForMessage(file);
-      this.uploadStatus.set(`Uploading ${file.name}...`);
+      const encryption = await this.encryptFileForMessage(preparedFile.file);
+      this.uploadStatus.set(`Uploading ${preparedFile.file.name}...`);
 
       await this.mediaService.load();
       const encryptedUploadBuffer = new ArrayBuffer(encryption.encryptedBytes.byteLength);
       new Uint8Array(encryptedUploadBuffer).set(encryption.encryptedBytes);
-      const encryptedFile = new File([encryptedUploadBuffer], file.name, {
+      const encryptedFile = new File([encryptedUploadBuffer], preparedFile.file.name, {
         type: 'application/octet-stream',
-        lastModified: file.lastModified,
+        lastModified: preparedFile.file.lastModified,
       });
       const uploadResult = await this.mediaService.uploadFile(
         encryptedFile,
@@ -2204,7 +2244,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       }
 
       const extraRumorTags: string[][] = [
-        ['alt', file.name],
+        ['alt', preparedFile.file.name],
         ['file-type', encryption.mimeType],
         ['encryption-algorithm', 'aes-gcm'],
         ['decryption-key', encryption.keyHex],
@@ -2678,7 +2718,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
 
     const { VideoRecordDialogComponent } = await import('../../pages/media/video-record-dialog/video-record-dialog.component');
 
-    const dialogRef = this.customDialog.open<typeof VideoRecordDialogComponent.prototype, { file: File; uploadOriginal: boolean } | null>(
+    const dialogRef = this.customDialog.open<typeof VideoRecordDialogComponent.prototype, VideoRecordDialogResult | null>(
       VideoRecordDialogComponent,
       {
         title: 'Record Video Clip',
@@ -2693,7 +2733,10 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     dialogRef.afterClosed$.subscribe(async ({ result }) => {
       if (result?.file) {
         try {
-          await this.sendEncryptedFileMessage(result.file, { preserveComposer: true });
+          await this.sendEncryptedFileMessage(result.file, {
+            preserveComposer: true,
+            uploadSettings: result.uploadSettings,
+          });
         } catch {
           this.snackBar.open('Failed to upload video clip', 'Dismiss', { duration: 5000 });
         }
@@ -2746,6 +2789,10 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
 
     this.pendingEncryptedMediaPreviews.set([]);
     this.mediaPreviews.update(previews => previews.filter(preview => !preview.pendingEncrypted));
+  }
+
+  onDmCompressionStrengthChange(value: number): void {
+    this.dmCompressionStrength.set(normalizeCompressionStrength(value));
   }
 
   private hasConfiguredMediaServers(): boolean {

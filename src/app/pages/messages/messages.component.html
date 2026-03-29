@@ -458,7 +458,8 @@
             </div>
             <div class="group-header-info">
               <span class="group-header-name">{{ getGroupDisplayName(selectedChat()!) }}</span>
-              <span class="chat-header-activity group-header-members">{{ (selectedChat()!.participants?.length || 0) }} members</span>
+              <span class="chat-header-activity group-header-members">{{ (selectedChat()!.participants?.length || 0) }}
+                members</span>
             </div>
           </div>
           } @else {
@@ -672,7 +673,8 @@
 
                 <mat-menu #reactionMenu="matMenu">
                   @for (reactionItem of quickReactionMenuItems(); track reactionItem.content) {
-                  <button mat-menu-item (click)="sendReaction(message, reactionItem.content, reactionItem.customEmojiUrl)">
+                  <button mat-menu-item
+                    (click)="sendReaction(message, reactionItem.content, reactionItem.customEmojiUrl)">
                     @if (reactionItem.customEmojiUrl) {
                     <app-custom-emoji [src]="reactionItem.customEmojiUrl" [alt]="reactionItem.content"
                       cssClass="reaction-custom-emoji reaction-menu-custom-emoji" />
@@ -936,8 +938,22 @@
           }
           @if (pendingEncryptedMediaPreviews().length > 0) {
           <div class="pending-media-actions">
+            @if (hasPendingCompressibleMedia()) {
+            <div class="dm-compression-controls">
+              <div class="dm-compression-header">
+                <span class="dm-compression-title">Compression Strength</span>
+                <span class="dm-compression-value">{{ dmCompressionStrengthLabel() }}</span>
+              </div>
+              <mat-slider min="0" max="100" step="5" discrete>
+                <input matSliderThumb [value]="dmCompressionStrength()"
+                  (valueChange)="onDmCompressionStrengthChange($event)" aria-label="Compression strength" />
+              </mat-slider>
+              <span class="dm-compression-description">{{ dmCompressionStrengthDescription() }}</span>
+            </div>
+            }
             <button mat-button type="button" (click)="clearPendingEncryptedMediaPreviews()">Cancel</button>
-            <button mat-flat-button type="button" (click)="confirmPastedMedia()" [disabled]="isUploading() || isSending()">
+            <button mat-flat-button type="button" (click)="confirmPastedMedia()"
+              [disabled]="isUploading() || isSending()">
               Send encrypted
             </button>
           </div>
@@ -1011,20 +1027,22 @@
           </button>
           } @else {
           <button mat-icon-button type="button" [matMenuTriggerFor]="emojiMenu" class="emoji-button"
-            (menuOpened)="emojiPickerRef?.resetTab()"
-            [disabled]="isSending()" matTooltip="Emoji">
+            (menuOpened)="emojiPickerRef?.resetTab()" [disabled]="isSending()" matTooltip="Emoji">
             <mat-icon>sentiment_satisfied</mat-icon>
           </button>
           <mat-menu #emojiMenu="matMenu" class="emoji-picker-menu">
-            <app-emoji-picker #emojiPickerRef mode="content" (emojiSelected)="insertEmoji($event)" (gifSelected)="insertGifUrl($event)"></app-emoji-picker>
+            <app-emoji-picker #emojiPickerRef mode="content" (emojiSelected)="insertEmoji($event)"
+              (gifSelected)="insertGifUrl($event)"></app-emoji-picker>
           </mat-menu>
           }
 
           <textarea #messageInput class="message-input" [ngModel]="newMessageText()"
-            (ngModelChange)="onMessageTextChanged($event)" placeholder="Your message" [disabled]="isSending() || pendingEncryptedMediaPreviews().length > 0"
-            (keydown)="onMessageKeydown($event)" (input)="autoResizeTextarea()" (paste)="onMessagePaste($event)" (focus)="onMessageInputFocus()" (blur)="onMessageInputBlur()"
-            rows="1"></textarea>
-          <button mat-icon-button type="button" class="send-button" [disabled]="!newMessageText().trim() || isSending() || pendingEncryptedMediaPreviews().length > 0"
+            (ngModelChange)="onMessageTextChanged($event)" placeholder="Your message"
+            [disabled]="isSending() || pendingEncryptedMediaPreviews().length > 0" (keydown)="onMessageKeydown($event)"
+            (input)="autoResizeTextarea()" (paste)="onMessagePaste($event)" (focus)="onMessageInputFocus()"
+            (blur)="onMessageInputBlur()" rows="1"></textarea>
+          <button mat-icon-button type="button" class="send-button"
+            [disabled]="!newMessageText().trim() || isSending() || pendingEncryptedMediaPreviews().length > 0"
             (click)="sendMessage()" matTooltip="Send message">
             @if (isSending()) {
             <mat-spinner diameter="24"></mat-spinner>

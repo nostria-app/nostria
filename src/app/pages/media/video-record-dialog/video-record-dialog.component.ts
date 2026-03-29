@@ -4,12 +4,26 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatSelectModule } from '@angular/material/select';
+import { MatSliderModule } from '@angular/material/slider';
 import { FormsModule } from '@angular/forms';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { VideoFilterService } from '../../../services/video-filter.service';
 import { LoggerService } from '../../../services/logger.service';
 import { MatChipsModule } from '@angular/material/chips';
 import { CustomDialogRef } from '../../../services/custom-dialog.service';
+import {
+  DEFAULT_VIDEO_CLIP_UPLOAD_SETTINGS,
+  getCompressionStrengthDescription,
+  getCompressionStrengthLabel,
+  getMediaUploadModeDescription,
+  MEDIA_UPLOAD_MODE_OPTIONS,
+  MediaUploadMode,
+  normalizeCompressionStrength,
+  shouldUploadOriginal,
+  VideoRecordDialogResult,
+} from '../../../interfaces/media-upload';
 
 @Component({
   selector: 'app-video-record-dialog',
@@ -19,6 +33,9 @@ import { CustomDialogRef } from '../../../services/custom-dialog.service';
     MatProgressBarModule,
     MatTooltipModule,
     MatSlideToggleModule,
+    MatFormFieldModule,
+    MatSelectModule,
+    MatSliderModule,
     FormsModule,
     MatChipsModule,
   ],
@@ -26,10 +43,11 @@ import { CustomDialogRef } from '../../../services/custom-dialog.service';
   styleUrls: ['./video-record-dialog.component.scss'],
 })
 export class VideoRecordDialogComponent implements OnDestroy, AfterViewInit {
-  dialogRef = inject(CustomDialogRef<VideoRecordDialogComponent, { file: File; uploadOriginal: boolean } | null>);
+  dialogRef = inject(CustomDialogRef<VideoRecordDialogComponent, VideoRecordDialogResult | null>);
   private snackBar = inject(MatSnackBar);
   private logger = inject(LoggerService);
   filterService = inject(VideoFilterService);
+  readonly uploadModeOptions = MEDIA_UPLOAD_MODE_OPTIONS.filter(option => option.value !== 'server');
 
   @ViewChild('cameraPreview') cameraPreview?: ElementRef<HTMLVideoElement>;
   @ViewChild('filterCanvas') filterCanvas?: ElementRef<HTMLCanvasElement>;
@@ -47,7 +65,10 @@ export class VideoRecordDialogComponent implements OnDestroy, AfterViewInit {
   facingMode = signal<'user' | 'environment'>('user'); // 'user' = front camera, 'environment' = back camera
   isShortForm = true; // Toggle for short form recording (6.3 seconds auto-stop)
   aspectRatio = signal<'vertical' | 'horizontal'>('vertical'); // Video orientation
-  uploadOriginal = false; // Upload original without transcoding
+  showUploadSettings = signal(false);
+  uploadMode = signal<MediaUploadMode>(DEFAULT_VIDEO_CLIP_UPLOAD_SETTINGS.mode);
+  compressionStrength = signal<number>(DEFAULT_VIDEO_CLIP_UPLOAD_SETTINGS.compressionStrength);
+  usesLocalCompression = signal(DEFAULT_VIDEO_CLIP_UPLOAD_SETTINGS.mode === 'local');
   selectedFilter = signal<string>('none'); // Currently selected filter
   showFilters = signal<boolean>(false); // Show/hide filter selection
   showSwipeHint = signal<boolean>(false); // Show swipe hint briefly
@@ -178,6 +199,31 @@ export class VideoRecordDialogComponent implements OnDestroy, AfterViewInit {
         duration: 3000,
       });
     }
+  }
+
+  onUploadModeChange(mode: MediaUploadMode): void {
+    this.uploadMode.set(mode);
+    this.usesLocalCompression.set(mode === 'local');
+  }
+
+  toggleUploadSettings(): void {
+    this.showUploadSettings.update(current => !current);
+  }
+
+  onCompressionStrengthChange(value: number): void {
+    this.compressionStrength.set(normalizeCompressionStrength(value));
+  }
+
+  uploadModeDescription(): string {
+    return getMediaUploadModeDescription(this.uploadMode());
+  }
+
+  compressionStrengthLabel(): string {
+    return getCompressionStrengthLabel(this.compressionStrength());
+  }
+
+  compressionStrengthDescription(): string {
+    return getCompressionStrengthDescription(this.compressionStrength());
   }
 
   async startRecording(): Promise<void> {
@@ -386,7 +432,11 @@ export class VideoRecordDialogComponent implements OnDestroy, AfterViewInit {
       });
       this.dialogRef.close({
         file,
-        uploadOriginal: this.uploadOriginal
+        uploadSettings: {
+          mode: this.uploadMode(),
+          compressionStrength: this.compressionStrength(),
+        },
+        uploadOriginal: shouldUploadOriginal(this.uploadMode()),
       });
     }
   }

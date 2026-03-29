@@ -1,6 +1,5 @@
 import { Component, inject, signal, computed } from '@angular/core';
 
-import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -9,8 +8,22 @@ import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatSelectModule } from '@angular/material/select';
+import { MatSliderModule } from '@angular/material/slider';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { MediaService } from '../../../services/media.service';
 import { LoggerService } from '../../../services/logger.service';
+import {
+  DEFAULT_MEDIA_UPLOAD_SETTINGS,
+  getCompressionStrengthDescription,
+  getCompressionStrengthLabel,
+  getMediaUploadModeDescription,
+  MEDIA_UPLOAD_MODE_OPTIONS,
+  MediaUploadDialogResult,
+  MediaUploadMode,
+  normalizeCompressionStrength,
+  shouldUploadOriginal,
+} from '../../../interfaces/media-upload';
 
 interface SelectedFileEntry {
   file: File;
@@ -23,7 +36,6 @@ interface SelectedFileEntry {
 @Component({
   selector: 'app-media-upload-dialog',
   imports: [
-    ReactiveFormsModule,
     MatButtonModule,
     MatDialogModule,
     MatFormFieldModule,
@@ -32,22 +44,30 @@ interface SelectedFileEntry {
     MatProgressBarModule,
     MatCheckboxModule,
     MatProgressSpinnerModule,
+    MatSelectModule,
+    MatSliderModule,
+    MatTooltipModule,
   ],
   templateUrl: './media-upload-dialog.component.html',
   styleUrls: ['./media-upload-dialog.component.scss'],
 })
 export class MediaUploadDialogComponent {
-  private dialogRef = inject(MatDialogRef<MediaUploadDialogComponent>);
-  private fb = inject(FormBuilder);
+  private dialogRef = inject(MatDialogRef<MediaUploadDialogComponent, MediaUploadDialogResult | undefined>);
   private mediaService = inject(MediaService);
   private readonly logger = inject(LoggerService);
 
-  uploadForm: FormGroup;
   selectedFiles = signal<SelectedFileEntry[]>([]);
   hasFiles = computed(() => this.selectedFiles().length > 0);
   hasImageOrVideo = computed(() => this.selectedFiles().some(f => f.isImage || f.isVideo));
   isDragging = signal<boolean>(false);
   isUploading = signal<boolean>(false);
+  readonly uploadModeOptions = MEDIA_UPLOAD_MODE_OPTIONS;
+  uploadMode = signal<MediaUploadMode>(DEFAULT_MEDIA_UPLOAD_SETTINGS.mode);
+  compressionStrength = signal<number>(DEFAULT_MEDIA_UPLOAD_SETTINGS.compressionStrength);
+  usesLocalCompression = computed(() => this.uploadMode() === 'local');
+  selectedUploadModeDescription = computed(() => getMediaUploadModeDescription(this.uploadMode()));
+  compressionStrengthLabel = computed(() => getCompressionStrengthLabel(this.compressionStrength()));
+  compressionStrengthDescription = computed(() => getCompressionStrengthDescription(this.compressionStrength()));
 
   // Add signals for servers
   availableServers = signal<string[]>([]);
@@ -55,10 +75,6 @@ export class MediaUploadDialogComponent {
   showServerSelection = signal<boolean>(false);
 
   constructor() {
-    this.uploadForm = this.fb.group({
-      uploadOriginal: [false],
-    });
-
     // Initialize available servers from the media service
     this.availableServers.set(this.mediaService.mediaServers());
 
@@ -67,6 +83,14 @@ export class MediaUploadDialogComponent {
       this.selectedServers.set(this.availableServers());
       this.showServerSelection.set(true);
     }
+  }
+
+  onUploadModeChange(mode: MediaUploadMode): void {
+    this.uploadMode.set(mode);
+  }
+
+  onCompressionStrengthChange(value: number): void {
+    this.compressionStrength.set(normalizeCompressionStrength(value));
   }
 
   onFileSelected(event: Event): void {
@@ -179,13 +203,16 @@ export class MediaUploadDialogComponent {
   }
 
   onSubmit(): void {
-    if (this.uploadForm.valid && this.hasFiles()) {
+    if (this.hasFiles()) {
       this.isUploading.set(true);
       this.dialogRef.close({
         files: this.selectedFiles().map(e => e.file),
-        uploadOriginal: this.uploadForm.value.uploadOriginal,
+        uploadSettings: {
+          mode: this.uploadMode(),
+          compressionStrength: this.compressionStrength(),
+        },
+        uploadOriginal: shouldUploadOriginal(this.uploadMode()),
         servers: this.selectedServers(),
-        isUploading: this.isUploading,
       });
     }
   }

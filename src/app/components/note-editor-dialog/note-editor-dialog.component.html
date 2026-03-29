@@ -176,16 +176,35 @@
         </button>
       </div>
 
-      <!-- Upload Original Option -->
+      <!-- Media Upload Options -->
       <div class="option-row">
         <div class="option-header">
-          <mat-slide-toggle [checked]="uploadOriginal()" (change)="uploadOriginal.set($event.checked)" color="primary">
-            Upload Original
-          </mat-slide-toggle>
+          <mat-form-field class="upload-mode-field" subscriptSizing="dynamic">
+            <mat-label>Media Upload Mode</mat-label>
+            <mat-select [value]="mediaUploadMode()" (selectionChange)="onMediaUploadModeChange($event.value)">
+              @for (option of mediaUploadModeOptions; track option.value) {
+              <mat-option [value]="option.value">{{ option.label }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
           <span class="option-description">
-            Skip transcoding and optimization when uploading media files
+            {{ selectedMediaUploadModeDescription() }} Applies to newly added images and videos.
           </span>
         </div>
+
+        @if (usesLocalCompression()) {
+        <div class="option-content compression-slider-block">
+          <div class="compression-slider-header">
+            <span class="compression-slider-title">Compression Strength</span>
+            <span class="compression-slider-value">{{ compressionStrengthLabel() }}</span>
+          </div>
+          <mat-slider min="0" max="100" step="5" discrete>
+            <input matSliderThumb [value]="compressionStrength()" (valueChange)="onCompressionStrengthChange($event)"
+              aria-label="Compression strength" />
+          </mat-slider>
+          <span class="option-description">{{ compressionStrengthDescription() }}</span>
+        </div>
+        }
       </div>
 
       <!-- Add Client Tag Option -->

@@ -38,6 +38,8 @@ import { nip19 } from 'nostr-tools';
 import { LayoutService } from '../../services/layout.service';
 import { TwoColumnLayoutService } from '../../services/two-column-layout.service';
 import { CustomDialogService } from '../../services/custom-dialog.service';
+import { MediaProcessingService } from '../../services/media-processing.service';
+import { MediaUploadDialogResult } from '../../interfaces/media-upload';
 
 export type ViewMode = 'large' | 'medium' | 'details';
 export type MediaFilter = 'all' | 'images' | 'videos' | 'audio' | 'files';
@@ -78,6 +80,7 @@ export class MediaComponent {
   private readonly accountState = inject(AccountStateService);
   private readonly logger = inject(LoggerService);
   private readonly publishService = inject(PublishService);
+  private readonly mediaProcessing = inject(MediaProcessingService);
   private readonly twoColumnLayout = inject(TwoColumnLayoutService);
   private readonly platformId = inject(PLATFORM_ID);
   private readonly isBrowser = isPlatformBrowser(this.platformId);
@@ -383,7 +386,7 @@ export class MediaComponent {
       disableClose: true,
     });
 
-    dialogRef.afterClosed().subscribe(async result => {
+    dialogRef.afterClosed().subscribe(async (result: MediaUploadDialogResult | undefined) => {
       if (result && result.files && result.files.length > 0) {
         try {
           this.mediaService.uploading.set(true);
@@ -391,12 +394,18 @@ export class MediaComponent {
           let successCount = 0;
           let duplicateCount = 0;
           let failCount = 0;
+          let fallbackCount = 0;
 
           for (const file of files) {
             try {
+              const preparedFile = await this.mediaProcessing.prepareFileForUpload(file, result.uploadSettings);
+              if (preparedFile.warningMessage) {
+                fallbackCount++;
+              }
+
               const uploadResult = await this.mediaService.uploadFile(
-                file,
-                result.uploadOriginal,
+                preparedFile.file,
+                preparedFile.uploadOriginal,
                 result.servers
               );
 
@@ -416,6 +425,7 @@ export class MediaComponent {
           if (successCount > 0) parts.push(`${successCount} uploaded`);
           if (duplicateCount > 0) parts.push(`${duplicateCount} duplicate(s)`);
           if (failCount > 0) parts.push(`${failCount} failed`);
+          if (fallbackCount > 0) parts.push(`${fallbackCount} local fallback`);
           this.snackBar.open(parts.join(', '), 'Close', { duration: 4000 });
         } catch {
           this.mediaService.uploading.set(false);

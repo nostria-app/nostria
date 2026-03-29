@@ -35,6 +35,8 @@ import { AccountRelayService } from './relays/account-relay';
 import { UserRelayService } from './relays/user-relay';
 import { FeedService } from './feed.service';
 import { ReportTarget } from './reporting.service';
+import { MediaProcessingService } from './media-processing.service';
+import { VideoRecordDialogResult } from '../interfaces/media-upload';
 // EventDialogComponent is dynamically imported to break circular dependency
 import { OnDemandUserDataService } from './on-demand-user-data.service';
 import { CommandPaletteDialogComponent } from '../components/command-palette-dialog/command-palette-dialog.component';
@@ -2089,10 +2091,11 @@ export class LayoutService implements OnDestroy {
 
   private nostrService = inject(NostrService);
   private mediaService = inject(MediaService);
+  private mediaProcessing = inject(MediaProcessingService);
   private publishService = inject(PublishService);
 
   openRecordVideoDialog(): void {
-    const dialogRef = this.customDialog.open<VideoRecordDialogComponent, { file: File; uploadOriginal: boolean } | null>(
+    const dialogRef = this.customDialog.open<VideoRecordDialogComponent, VideoRecordDialogResult | null>(
       VideoRecordDialogComponent,
       {
         title: 'Record Video',
@@ -2110,11 +2113,17 @@ export class LayoutService implements OnDestroy {
           // Set uploading state to true
           this.mediaService.uploading.set(true);
 
+          const preparedFile = await this.mediaProcessing.prepareFileForUpload(result.file, result.uploadSettings);
+          if (preparedFile.warningMessage) {
+            this.snackBar.open(preparedFile.warningMessage, 'Close', {
+              duration: 5000,
+            });
+          }
+
           // Upload the recorded video to media servers
-          // Use uploadOriginal flag from dialog result
           const uploadResult = await this.mediaService.uploadFile(
-            result.file,
-            result.uploadOriginal ?? false,
+            preparedFile.file,
+            preparedFile.uploadOriginal,
             this.mediaService.mediaServers()
           );
 

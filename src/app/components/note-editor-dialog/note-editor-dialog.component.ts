@@ -27,6 +27,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule, provideNativeDateAdapter } from '@angular/material/core';
 import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatSelectModule } from '@angular/material/select';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatSliderModule } from '@angular/material/slider';
 import { DomSanitizer } from '@angular/platform-browser';
@@ -65,10 +66,21 @@ import { NoteEditorDialogData } from '../../interfaces/note-editor';
 import { SpeechService } from '../../services/speech.service';
 import { PlatformService } from '../../services/platform.service';
 import { UserProfileComponent } from '../user-profile/user-profile.component';
-import { EmojiPickerComponent } from '../emoji-picker/emoji-picker.component';
 import { HapticsService } from '../../services/haptics.service';
 import { SettingsService } from '../../services/settings.service';
 import { XDualPostService, XPostMediaItem } from '../../services/x-dual-post.service';
+import { MediaProcessingService } from '../../services/media-processing.service';
+import {
+  DEFAULT_MEDIA_UPLOAD_SETTINGS,
+  getCompressionStrengthDescription,
+  getCompressionStrengthLabel,
+  getMediaUploadModeDescription,
+  MEDIA_UPLOAD_MODE_OPTIONS,
+  MediaUploadMode,
+  normalizeCompressionStrength,
+  shouldUploadOriginal,
+  usesLocalCompression as usesLocalCompressionMode,
+} from '../../interfaces/media-upload';
 
 // Re-export for backward compatibility
 export type { NoteEditorDialogData } from '../../interfaces/note-editor';
@@ -97,7 +109,9 @@ interface NoteAutoDraft {
   expirationEnabled: boolean;
   expirationDate: Date | null;
   expirationTime: string;
-  uploadOriginal: boolean;
+  uploadOriginal?: boolean;
+  uploadMode?: MediaUploadMode;
+  compressionStrength?: number;
   addClientTag: boolean;
   lastModified: number;
   // Context data to ensure draft matches current dialog state
@@ -145,6 +159,7 @@ interface SentimentHeaderState {
     MatDatepickerModule,
     MatNativeDateModule,
     MatCheckboxModule,
+    MatSelectModule,
     MatSlideToggleModule,
     MatSliderModule,
     ContentComponent,
@@ -154,7 +169,6 @@ interface SentimentHeaderState {
     DragDropModule,
     TextFieldModule,
     UserProfileComponent,
-    EmojiPickerComponent,
   ],
   providers: [provideNativeDateAdapter()],
   templateUrl: './note-editor-dialog.component.html',
@@ -204,6 +218,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   private utilities = inject(UtilitiesService);
   private imagePlaceholder = inject(ImagePlaceholderService);
   private publishEventBus = inject(PublishEventBus);
+  private mediaProcessing = inject(MediaProcessingService);
   private publishSubscription?: Subscription;
   private readonly pasteHandler = (event: ClipboardEvent): void => this.handlePaste(event);
   private readonly handleViewportResize = (): void => this.scheduleTextareaRefresh();
@@ -318,7 +333,14 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   expirationEnabled = signal(false);
   expirationDate = signal<Date | null>(null);
   expirationTime = signal<string>('12:00');
-  uploadOriginal = signal(false);
+  readonly mediaUploadModeOptions = MEDIA_UPLOAD_MODE_OPTIONS;
+  mediaUploadMode = signal<MediaUploadMode>(DEFAULT_MEDIA_UPLOAD_SETTINGS.mode);
+  compressionStrength = signal<number>(DEFAULT_MEDIA_UPLOAD_SETTINGS.compressionStrength);
+  uploadOriginal = computed(() => shouldUploadOriginal(this.mediaUploadMode()));
+  usesLocalCompression = computed(() => usesLocalCompressionMode(this.mediaUploadMode()));
+  selectedMediaUploadModeDescription = computed(() => getMediaUploadModeDescription(this.mediaUploadMode()));
+  compressionStrengthLabel = computed(() => getCompressionStrengthLabel(this.compressionStrength()));
+  compressionStrengthDescription = computed(() => getCompressionStrengthDescription(this.compressionStrength()));
   addClientTag = signal(true); // Default to true, will be set from user preference in constructor
   postToX = signal(false);
 
@@ -1274,6 +1296,8 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       expirationEnabled: this.expirationEnabled(),
       expirationDate: this.expirationDate(),
       expirationTime: this.expirationTime(),
+      uploadMode: this.mediaUploadMode(),
+      compressionStrength: this.compressionStrength(),
       uploadOriginal: this.uploadOriginal(),
       addClientTag: this.addClientTag(),
       lastModified: Date.now(),
@@ -1295,6 +1319,8 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
         JSON.stringify(previousDraft.mediaMetadata) === JSON.stringify(autoDraft.mediaMetadata) &&
         previousDraft.expirationEnabled === autoDraft.expirationEnabled &&
         previousDraft.expirationTime === autoDraft.expirationTime &&
+        previousDraft.uploadMode === autoDraft.uploadMode &&
+        previousDraft.compressionStrength === autoDraft.compressionStrength &&
         previousDraft.title === autoDraft.title;
 
       // If content is very similar, don't save again (prevents spam)
@@ -1352,7 +1378,8 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
           this.expirationEnabled.set(autoDraft.expirationEnabled);
           this.expirationDate.set(autoDraft.expirationDate);
           this.expirationTime.set(autoDraft.expirationTime);
-          this.uploadOriginal.set(autoDraft.uploadOriginal ?? false);
+          this.mediaUploadMode.set(autoDraft.uploadMode ?? (autoDraft.uploadOriginal ? 'original' : 'server'));
+          this.compressionStrength.set(normalizeCompressionStrength(autoDraft.compressionStrength));
           this.addClientTag.set(autoDraft.addClientTag ?? this.localSettings.addClientTag());
 
           if (autoDraft.mediaMetadata) {
@@ -3256,6 +3283,14 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     this.expirationTime.set(time);
   }
 
+  onMediaUploadModeChange(mode: MediaUploadMode): void {
+    this.mediaUploadMode.set(mode);
+  }
+
+  onCompressionStrengthChange(value: number): void {
+    this.compressionStrength.set(normalizeCompressionStrength(value));
+  }
+
   private getExpirationDateTime(): Date | null {
     const date = this.expirationDate();
     const time = this.expirationTime();
@@ -3476,7 +3511,14 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       const totalFiles = files.length;
       let completedFiles = 0;
 
-      const uploadPromises = files.map(async (file, index) => {
+      const results: Array<{ success: boolean; fileName: string; error?: string }> = [];
+      const warningMessages: string[] = [];
+      const uploadSettings = {
+        mode: this.mediaUploadMode(),
+        compressionStrength: this.compressionStrength(),
+      };
+
+      for (const [index, file] of files.entries()) {
         try {
           const fileLabel = totalFiles > 1 ? ` (${index + 1}/${totalFiles})` : '';
           console.log(`Uploading file: ${file.name}, type: ${file.type}, size: ${file.size}`);
@@ -3493,6 +3535,23 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
 
           // Use the media service to get the correct MIME type
           const fileMimeType = this.mediaService.getFileMimeType(file);
+          const shouldProcessLocally = uploadSettings.mode === 'local'
+            && (fileMimeType.startsWith('image/') || fileMimeType.startsWith('video/'));
+
+          const preparedFile = await this.mediaProcessing.prepareFileForUpload(
+            file,
+            uploadSettings,
+            progress => {
+              const progressSuffix = progress.progress !== undefined
+                ? ` ${Math.round(progress.progress * 100)}%`
+                : '';
+              this.uploadStatus.set(`${progress.message}${progressSuffix}${fileLabel}`);
+            }
+          );
+
+          if (preparedFile.warningMessage) {
+            warningMessages.push(preparedFile.warningMessage);
+          }
 
           if (fileMimeType.startsWith('video/')) {
             try {
@@ -3526,12 +3585,15 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
             }
           }
 
-          const isVideoUpload = fileMimeType.startsWith('video/');
-          const uploadText = isVideoUpload && !this.uploadOriginal() ? 'Uploading and optimizing' : 'Uploading';
+          const uploadText = shouldProcessLocally
+            ? (preparedFile.wasProcessed ? 'Uploading locally compressed media' : 'Uploading original media')
+            : (uploadSettings.mode === 'server' && (fileMimeType.startsWith('image/') || fileMimeType.startsWith('video/'))
+              ? 'Uploading for server compression'
+              : 'Uploading');
           this.uploadStatus.set(`${uploadText}${fileLabel}...`);
           const result = await this.mediaService.uploadFile(
-            file,
-            this.uploadOriginal(),
+            preparedFile.file,
+            preparedFile.uploadOriginal,
             this.mediaService.mediaServers()
           );
 
@@ -3546,7 +3608,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
 
             // Extract metadata for imeta tag (NIP-92)
             const metadata = await this.extractMediaMetadata(
-              file,
+              preparedFile.file,
               result.item.url,
               result.item.sha256,
               result.item.mirrors, // Pass mirror URLs for fallback support
@@ -3561,32 +3623,44 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
               this.uploadStatus.set(`Completed ${completedFiles}/${totalFiles} files...`);
             }
 
-            return { success: true, fileName: file.name };
+            results.push({ success: true, fileName: file.name });
+            continue;
           } else {
             console.error(`Upload failed for ${file.name}:`, result.message);
             completedFiles++;
-            return {
+            results.push({
               success: false,
               fileName: file.name,
               error: result.message || 'Upload failed',
-            };
+            });
+            continue;
           }
         } catch (error) {
           console.error(`Upload error for ${file.name}:`, error);
           completedFiles++;
-          return {
+          results.push({
             success: false,
             fileName: file.name,
             error: error instanceof Error ? error.message : 'Upload failed',
-          };
+          });
         }
-      });
-
-      const results = await Promise.all(uploadPromises);
+      }
 
       // Show success/error messages
       const successful = results.filter(r => r.success);
       const failed = results.filter(r => !r.success);
+
+      if (warningMessages.length > 0) {
+        this.snackBar.open(
+          warningMessages.length === 1
+            ? warningMessages[0]
+            : `${warningMessages.length} file(s) fell back to the original upload because local compression was unavailable or not smaller.`,
+          'Close',
+          {
+            duration: 6000,
+          }
+        );
+      }
 
       if (successful.length > 0) {
         this.snackBar.open(`${successful.length} file(s) uploaded successfully`, 'Close', {

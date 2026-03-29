@@ -816,6 +816,42 @@
   gap: 8px;
   width: 100%;
   margin-top: 2px;
+
+  .dm-compression-controls {
+    flex: 1 1 260px;
+    min-width: 220px;
+    max-width: 360px;
+    padding: 8px 10px;
+    border: 1px solid var(--mat-sys-outline-variant);
+    border-radius: 10px;
+    background: var(--mat-sys-surface-container-low);
+  }
+
+  .dm-compression-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 6px;
+  }
+
+  .dm-compression-title {
+    font-size: 13px;
+    color: var(--mat-sys-on-surface);
+  }
+
+  .dm-compression-value {
+    font-size: 11px;
+    color: var(--mat-sys-primary);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .dm-compression-description {
+    display: block;
+    font-size: 11px;
+    color: var(--mat-sys-on-surface-variant);
+  }
 }
 
 .reference-preview-thumb {
@@ -862,6 +898,11 @@
 
   .pending-media-actions {
     justify-content: stretch;
+
+    .dm-compression-controls {
+      flex-basis: 100%;
+      max-width: none;
+    }
 
     button {
       flex: 1 1 0;

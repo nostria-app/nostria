@@ -85,24 +85,54 @@
 <div dialog-actions class="video-record-actions">
   @if (!isRecording() && !isPreviewing()) {
   <div class="recording-options">
-    <div class="aspect-ratio-buttons">
-      <button mat-button [class.active]="aspectRatio() === 'vertical'" (click)="aspectRatio.set('vertical')"
-        matTooltip="Portrait (9:16)">
-        <mat-icon>stay_current_portrait</mat-icon>
-      </button>
-      <button mat-button [class.active]="aspectRatio() === 'horizontal'" (click)="aspectRatio.set('horizontal')"
-        matTooltip="Landscape (16:9)">
-        <mat-icon>stay_current_landscape</mat-icon>
+    <div class="recording-options-main">
+      <div class="aspect-ratio-buttons">
+        <button mat-button [class.active]="aspectRatio() === 'vertical'" (click)="aspectRatio.set('vertical')"
+          matTooltip="Portrait (9:16)">
+          <mat-icon>stay_current_portrait</mat-icon>
+        </button>
+        <button mat-button [class.active]="aspectRatio() === 'horizontal'" (click)="aspectRatio.set('horizontal')"
+          matTooltip="Landscape (16:9)">
+          <mat-icon>stay_current_landscape</mat-icon>
+        </button>
+      </div>
+      <mat-slide-toggle [(ngModel)]="isShortForm" color="primary" class="short-form-toggle"
+        matTooltip="Automatically stop recording after 6.3 seconds">
+        <span class="toggle-label">Short Form (6.3s)</span>
+      </mat-slide-toggle>
+      <button mat-icon-button type="button" class="upload-settings-toggle" [class.active]="showUploadSettings()"
+        (click)="toggleUploadSettings()" matTooltip="Compression settings" aria-label="Open compression settings">
+        <mat-icon>settings</mat-icon>
       </button>
     </div>
-    <mat-slide-toggle [(ngModel)]="isShortForm" color="primary" class="short-form-toggle"
-      matTooltip="Automatically stop recording after 6.3 seconds">
-      <span class="toggle-label">Short Form (6.3s)</span>
-    </mat-slide-toggle>
-    <mat-slide-toggle [(ngModel)]="uploadOriginal" color="primary" class="upload-original-toggle"
-      matTooltip="Upload video without server-side transcoding">
-      <span class="toggle-label">Upload Original</span>
-    </mat-slide-toggle>
+
+    @if (showUploadSettings()) {
+    <div class="upload-settings-block">
+      <mat-form-field class="upload-mode-field" subscriptSizing="dynamic">
+        <mat-label>Video Upload Mode</mat-label>
+        <mat-select [value]="uploadMode()" (selectionChange)="onUploadModeChange($event.value)">
+          @for (option of uploadModeOptions; track option.value) {
+          <mat-option [value]="option.value">{{ option.label }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+      <span class="upload-settings-description">{{ uploadModeDescription() }}</span>
+
+      @if (usesLocalCompression()) {
+      <div class="compression-slider-block">
+        <div class="compression-slider-header">
+          <span class="compression-slider-title">Compression Strength</span>
+          <span class="compression-slider-value">{{ compressionStrengthLabel() }}</span>
+        </div>
+        <mat-slider min="0" max="100" step="5" discrete>
+          <input matSliderThumb [value]="compressionStrength()" (valueChange)="onCompressionStrengthChange($event)"
+            aria-label="Compression strength" />
+        </mat-slider>
+        <span class="upload-settings-description">{{ compressionStrengthDescription() }}</span>
+      </div>
+      }
+    </div>
+    }
   </div>
   <div class="action-buttons">
     <button mat-button (click)="cancel()">Cancel</button>

@@ -738,6 +738,30 @@ const encrypted = await encryption.encrypt(content, recipientPubkey);
 const decrypted = await encryption.decrypt(content, senderPubkey);
 ```
 
+### Encrypted Media Flow
+
+Private direct messages can attach encrypted media files. For image and video attachments, Nostria now performs optional client-side preprocessing before encryption so the encrypted payload itself is smaller.
+
+Flow for encrypted media:
+
+```text
+User selects image/video
+  ↓
+Optional local compression on device
+  ↓
+Encrypt compressed file for recipient(s)
+  ↓
+Upload encrypted blob to Blossom as original bytes
+  ↓
+Send Nostr message with decryption metadata
+```
+
+Important details:
+
+- Compression happens before encryption for private media attachments.
+- Generic files are encrypted and uploaded without media compression.
+- Encrypted uploads always use the original encrypted blob; server-side media optimization does not apply after encryption.
+
 ### Bunker Queue Management
 
 For remote signers, operations are queued to prevent overwhelming:
@@ -1102,6 +1126,20 @@ Uses Blossom protocol (BUD-01/02/03):
 const uploadResult = await mediaService.uploadFile(file);
 // Returns Blossom URL for inclusion in event
 ```
+
+Nostria now supports three upload strategies for user-selected images and videos:
+
+- `Upload Original`: send the selected file without preprocessing.
+- `Local Compression`: preprocess media on the client before upload.
+- `Server Compression`: upload the source file and let the Blossom media endpoint optimize it.
+
+The shared `MediaProcessingService` performs client-side preprocessing before the existing `MediaService.uploadFile(...)` call:
+
+- Images are compressed in the browser using canvas-based re-encoding.
+- Videos are transcoded/compressed in the browser using Mediabunny.
+- If local compression is unsupported or does not reduce file size, the app falls back to uploading the original file.
+
+This keeps the Blossom upload contract stable while allowing upload surfaces such as the note editor, media library, recorded video clips, and encrypted direct messages to reduce file size locally before the upload step.
 
 ---
 
