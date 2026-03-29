@@ -122,7 +122,14 @@
       <div class="compression-slider-block">
         <div class="compression-slider-header">
           <span class="compression-slider-title">Compression Strength</span>
-          <span class="compression-slider-value">{{ compressionStrengthLabel() }}</span>
+          <div class="compression-slider-meta">
+            <span class="compression-slider-value">{{ compressionStrengthLabel() }}</span>
+            <button mat-button type="button" class="compression-reset-button" (click)="resetCompressionStrength()"
+              [disabled]="isDefaultCompressionStrength()" matTooltip="Reset to the recommended default">
+              <mat-icon>restart_alt</mat-icon>
+              <span>Reset</span>
+            </button>
+          </div>
         </div>
         <mat-slider min="0" max="100" step="5" discrete>
           <input matSliderThumb [value]="compressionStrength()" (valueChange)="onCompressionStrengthChange($event)"

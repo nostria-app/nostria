@@ -951,7 +951,15 @@
             <div class="dm-compression-controls">
               <div class="dm-compression-header">
                 <span class="dm-compression-title">Compression Strength</span>
-                <span class="dm-compression-value">{{ dmCompressionStrengthLabel() }}</span>
+                <div class="dm-compression-meta">
+                  <span class="dm-compression-value">{{ dmCompressionStrengthLabel() }}</span>
+                  <button mat-button type="button" class="dm-compression-reset-button"
+                    (click)="resetDmCompressionStrength()" [disabled]="isDefaultDmCompressionStrength()"
+                    matTooltip="Reset to the recommended default">
+                    <mat-icon>restart_alt</mat-icon>
+                    <span>Reset</span>
+                  </button>
+                </div>
               </div>
               <mat-slider min="0" max="100" step="5" discrete>
                 <input matSliderThumb [value]="dmCompressionStrength()"

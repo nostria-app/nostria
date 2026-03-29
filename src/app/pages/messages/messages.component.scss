@@ -841,6 +841,12 @@
     margin-bottom: 6px;
   }
 
+  .dm-compression-meta {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
   .dm-compression-title {
     font-size: 13px;
     color: var(--mat-sys-on-surface);
@@ -851,6 +857,23 @@
     color: var(--mat-sys-primary);
     letter-spacing: 0.04em;
     text-transform: uppercase;
+  }
+
+  .dm-compression-reset-button {
+    min-width: 0;
+    padding-inline: 8px;
+    color: var(--mat-sys-on-surface-variant);
+
+    mat-icon {
+      margin-right: 4px;
+      font-size: 14px;
+      width: 14px;
+      height: 14px;
+    }
+
+    span {
+      font-size: 11px;
+    }
   }
 
   .dm-compression-description {

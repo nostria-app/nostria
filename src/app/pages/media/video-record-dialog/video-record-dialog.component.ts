@@ -1,4 +1,4 @@
-import { Component, inject, signal, OnDestroy, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
+import { Component, inject, signal, computed, OnDestroy, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
@@ -14,6 +14,7 @@ import { LoggerService } from '../../../services/logger.service';
 import { MatChipsModule } from '@angular/material/chips';
 import { CustomDialogRef, CustomDialogService } from '../../../services/custom-dialog.service';
 import {
+  DEFAULT_MEDIA_COMPRESSION_STRENGTH,
   DEFAULT_VIDEO_CLIP_UPLOAD_SETTINGS,
   getCompressionStrengthDescription,
   getCompressionStrengthLabel,
@@ -67,9 +68,11 @@ export class VideoRecordDialogComponent implements OnDestroy, AfterViewInit {
   isShortForm = true; // Toggle for short form recording (6.3 seconds auto-stop)
   aspectRatio = signal<'vertical' | 'horizontal'>('vertical'); // Video orientation
   showUploadSettings = signal(false);
+  readonly defaultCompressionStrength = DEFAULT_MEDIA_COMPRESSION_STRENGTH;
   uploadMode = signal<MediaUploadMode>(DEFAULT_VIDEO_CLIP_UPLOAD_SETTINGS.mode);
   compressionStrength = signal<number>(DEFAULT_VIDEO_CLIP_UPLOAD_SETTINGS.compressionStrength);
   usesLocalCompression = signal(DEFAULT_VIDEO_CLIP_UPLOAD_SETTINGS.mode === 'local');
+  isDefaultCompressionStrength = computed(() => this.compressionStrength() === this.defaultCompressionStrength);
   selectedFilter = signal<string>('none'); // Currently selected filter
   showFilters = signal<boolean>(false); // Show/hide filter selection
   showSwipeHint = signal<boolean>(false); // Show swipe hint briefly
@@ -213,6 +216,10 @@ export class VideoRecordDialogComponent implements OnDestroy, AfterViewInit {
 
   onCompressionStrengthChange(value: number): void {
     this.compressionStrength.set(normalizeCompressionStrength(value));
+  }
+
+  resetCompressionStrength(): void {
+    this.compressionStrength.set(this.defaultCompressionStrength);
   }
 
   uploadModeDescription(): string {

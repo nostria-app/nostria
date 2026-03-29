@@ -42,24 +42,26 @@ export const MEDIA_UPLOAD_MODE_OPTIONS: readonly MediaUploadModeOption[] = [
   },
 ] as const;
 
+export const DEFAULT_MEDIA_COMPRESSION_STRENGTH = 50;
+
 export const DEFAULT_MEDIA_UPLOAD_SETTINGS: MediaUploadSettings = {
   mode: 'local',
-  compressionStrength: 55,
+  compressionStrength: DEFAULT_MEDIA_COMPRESSION_STRENGTH,
 };
 
 export const DEFAULT_DM_MEDIA_UPLOAD_SETTINGS: MediaUploadSettings = {
   mode: 'local',
-  compressionStrength: 60,
+  compressionStrength: DEFAULT_MEDIA_COMPRESSION_STRENGTH,
 };
 
 export const DEFAULT_VIDEO_CLIP_UPLOAD_SETTINGS: MediaUploadSettings = {
   mode: 'local',
-  compressionStrength: 60,
+  compressionStrength: DEFAULT_MEDIA_COMPRESSION_STRENGTH,
 };
 
 export function normalizeCompressionStrength(value: number | null | undefined): number {
   if (typeof value !== 'number' || Number.isNaN(value)) {
-    return DEFAULT_MEDIA_UPLOAD_SETTINGS.compressionStrength;
+    return DEFAULT_MEDIA_COMPRESSION_STRENGTH;
   }
 
   return Math.max(0, Math.min(100, Math.round(value)));

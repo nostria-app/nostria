@@ -391,6 +391,12 @@
       gap: 12px;
     }
 
+    .compression-slider-meta {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
     .compression-slider-title {
       font-size: 14px;
       color: var(--mat-sys-on-surface);
@@ -401,6 +407,23 @@
       color: var(--mat-sys-primary);
       letter-spacing: 0.04em;
       text-transform: uppercase;
+    }
+
+    .compression-reset-button {
+      min-width: 0;
+      padding-inline: 8px;
+      color: var(--mat-sys-on-surface-variant);
+
+      mat-icon {
+        margin-right: 4px;
+        font-size: 16px;
+        width: 16px;
+        height: 16px;
+      }
+
+      span {
+        font-size: 12px;
+      }
     }
   }
 

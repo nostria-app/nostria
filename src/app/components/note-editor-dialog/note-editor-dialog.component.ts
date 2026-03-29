@@ -71,6 +71,7 @@ import { SettingsService } from '../../services/settings.service';
 import { XDualPostService, XPostMediaItem } from '../../services/x-dual-post.service';
 import { MediaProcessingService } from '../../services/media-processing.service';
 import {
+  DEFAULT_MEDIA_COMPRESSION_STRENGTH,
   DEFAULT_MEDIA_UPLOAD_SETTINGS,
   getCompressionStrengthDescription,
   getCompressionStrengthLabel,
@@ -334,6 +335,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   expirationDate = signal<Date | null>(null);
   expirationTime = signal<string>('12:00');
   readonly mediaUploadModeOptions = MEDIA_UPLOAD_MODE_OPTIONS;
+  readonly defaultCompressionStrength = DEFAULT_MEDIA_COMPRESSION_STRENGTH;
   mediaUploadMode = signal<MediaUploadMode>(DEFAULT_MEDIA_UPLOAD_SETTINGS.mode);
   compressionStrength = signal<number>(DEFAULT_MEDIA_UPLOAD_SETTINGS.compressionStrength);
   uploadOriginal = computed(() => shouldUploadOriginal(this.mediaUploadMode()));
@@ -341,6 +343,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   selectedMediaUploadModeDescription = computed(() => getMediaUploadModeDescription(this.mediaUploadMode()));
   compressionStrengthLabel = computed(() => getCompressionStrengthLabel(this.compressionStrength()));
   compressionStrengthDescription = computed(() => getCompressionStrengthDescription(this.compressionStrength()));
+  isDefaultCompressionStrength = computed(() => this.compressionStrength() === this.defaultCompressionStrength);
   addClientTag = signal(true); // Default to true, will be set from user preference in constructor
   postToX = signal(false);
 
@@ -3289,6 +3292,10 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
 
   onCompressionStrengthChange(value: number): void {
     this.compressionStrength.set(normalizeCompressionStrength(value));
+  }
+
+  resetCompressionStrength(): void {
+    this.compressionStrength.set(this.defaultCompressionStrength);
   }
 
   private getExpirationDateTime(): Date | null {

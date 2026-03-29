@@ -91,6 +91,7 @@ import { HapticsService } from '../../services/haptics.service';
 import { EmojiSetService } from '../../services/emoji-set.service';
 import { MediaProcessingService } from '../../services/media-processing.service';
 import {
+  DEFAULT_MEDIA_COMPRESSION_STRENGTH,
   DEFAULT_DM_MEDIA_UPLOAD_SETTINGS,
   getCompressionStrengthDescription,
   getCompressionStrengthLabel,
@@ -285,6 +286,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   isUploading = signal<boolean>(false);
   isDragOverMessageInput = signal<boolean>(false);
   uploadStatus = signal<string>('');
+  readonly defaultCompressionStrength = DEFAULT_MEDIA_COMPRESSION_STRENGTH;
   dmCompressionStrength = signal<number>(DEFAULT_DM_MEDIA_UPLOAD_SETTINGS.compressionStrength);
   mediaPreviews = signal<{ url: string; type: 'image' | 'video' | 'music' | 'file'; label?: string; meta?: string; pendingEncrypted?: boolean; pendingId?: string }[]>([]);
   pendingEncryptedMediaPreviews = signal<PendingEncryptedMediaPreview[]>([]);
@@ -293,6 +295,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   );
   readonly dmCompressionStrengthLabel = computed(() => getCompressionStrengthLabel(this.dmCompressionStrength()));
   readonly dmCompressionStrengthDescription = computed(() => getCompressionStrengthDescription(this.dmCompressionStrength()));
+  readonly isDefaultDmCompressionStrength = computed(() => this.dmCompressionStrength() === this.defaultCompressionStrength);
 
   /** Pending extra tags (e.g. imeta with waveform) for the next message */
   pendingTags = signal<string[][]>([]);
@@ -2819,6 +2822,10 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
 
   onDmCompressionStrengthChange(value: number): void {
     this.dmCompressionStrength.set(normalizeCompressionStrength(value));
+  }
+
+  resetDmCompressionStrength(): void {
+    this.dmCompressionStrength.set(this.defaultCompressionStrength);
   }
 
   private hasConfiguredMediaServers(): boolean {

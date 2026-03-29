@@ -15,6 +15,7 @@ import { MediaService } from '../../../services/media.service';
 import { LoggerService } from '../../../services/logger.service';
 import { CustomDialogService } from '../../../services/custom-dialog.service';
 import {
+  DEFAULT_MEDIA_COMPRESSION_STRENGTH,
   DEFAULT_MEDIA_UPLOAD_SETTINGS,
   getCompressionStrengthDescription,
   getCompressionStrengthLabel,
@@ -64,12 +65,14 @@ export class MediaUploadDialogComponent {
   isDragging = signal<boolean>(false);
   isUploading = signal<boolean>(false);
   readonly uploadModeOptions = MEDIA_UPLOAD_MODE_OPTIONS;
+  readonly defaultCompressionStrength = DEFAULT_MEDIA_COMPRESSION_STRENGTH;
   uploadMode = signal<MediaUploadMode>(DEFAULT_MEDIA_UPLOAD_SETTINGS.mode);
   compressionStrength = signal<number>(DEFAULT_MEDIA_UPLOAD_SETTINGS.compressionStrength);
   usesLocalCompression = computed(() => this.uploadMode() === 'local');
   selectedUploadModeDescription = computed(() => getMediaUploadModeDescription(this.uploadMode()));
   compressionStrengthLabel = computed(() => getCompressionStrengthLabel(this.compressionStrength()));
   compressionStrengthDescription = computed(() => getCompressionStrengthDescription(this.compressionStrength()));
+  isDefaultCompressionStrength = computed(() => this.compressionStrength() === this.defaultCompressionStrength);
 
   // Add signals for servers
   availableServers = signal<string[]>([]);
@@ -93,6 +96,10 @@ export class MediaUploadDialogComponent {
 
   onCompressionStrengthChange(value: number): void {
     this.compressionStrength.set(normalizeCompressionStrength(value));
+  }
+
+  resetCompressionStrength(): void {
+    this.compressionStrength.set(this.defaultCompressionStrength);
   }
 
   onFileSelected(event: Event): void {
