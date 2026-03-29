@@ -1,5 +1,6 @@
 import { Injectable, PLATFORM_ID, inject } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
+import { SettingsService } from './settings.service';
 
 /**
  * Zap intensity tiers based on sat amount:
@@ -22,6 +23,7 @@ export function getZapTier(amount: number): ZapTier {
 @Injectable({ providedIn: 'root' })
 export class ZapSoundService {
   private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
+  private readonly settingsService = inject(SettingsService);
   private audioContext: AudioContext | null = null;
 
   private getAudioContext(): AudioContext | null {
@@ -46,6 +48,10 @@ export class ZapSoundService {
 
   /** Play a zap sound scaled to the sat amount. */
   playZapSound(amount: number): void {
+    if (this.settingsService.settings().zapSoundsEnabled === false) {
+      return;
+    }
+
     const ctx = this.getAudioContext();
     if (!ctx) {
       return;

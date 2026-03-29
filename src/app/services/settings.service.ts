@@ -39,6 +39,8 @@ export interface SyncedFeedConfig {
 
 export interface UserSettings {
   socialSharingPreview: boolean;
+  messageNotificationSoundsEnabled?: boolean;
+  zapSoundsEnabled?: boolean;
   postToXByDefault?: boolean;
   rightSidebarEnabled?: boolean;
   relayDiscoveryMode?: RelayDiscoveryMode;
@@ -88,6 +90,8 @@ export interface UserSettings {
 
 const DEFAULT_SETTINGS: UserSettings = {
   socialSharingPreview: true,
+  messageNotificationSoundsEnabled: true,
+  zapSoundsEnabled: true,
   postToXByDefault: false,
   rightSidebarEnabled: undefined,
   relayDiscoveryMode: 'outbox',

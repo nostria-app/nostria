@@ -205,6 +205,16 @@ export class GeneralSettingsComponent implements OnInit, OnDestroy {
     this.settings.updateSettings({ publishMusicStatus: !currentValue });
   }
 
+  toggleMessageNotificationSounds(): void {
+    const currentValue = this.settings.settings().messageNotificationSoundsEnabled !== false;
+    this.settings.updateSettings({ messageNotificationSoundsEnabled: !currentValue });
+  }
+
+  toggleZapSounds(): void {
+    const currentValue = this.settings.settings().zapSoundsEnabled !== false;
+    this.settings.updateSettings({ zapSoundsEnabled: !currentValue });
+  }
+
   setPlaceholderAlgorithm(value: PlaceholderAlgorithm): void {
     this.settings.updateSettings({ placeholderAlgorithm: value });
     // Clear the placeholder cache when algorithm changes

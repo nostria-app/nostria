@@ -44,6 +44,14 @@
   }
 }
 
+.messages-header-status-icon {
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 20px;
+  width: 20px;
+  height: 20px;
+  flex: 0 0 auto;
+}
+
 // When the left panel is narrow (700–1024px), hide the title so icon buttons remain visible
 @media (min-width: 700px) and (max-width: 1024px) {
   .panel-header .panel-title {
@@ -2375,6 +2383,18 @@ app-message-content {
 }
 
 .reaction-menu-emoji {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  margin-right: 8px;
+}
+
+.reaction-menu-custom-emoji {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+  vertical-align: middle;
   margin-right: 8px;
 }
 

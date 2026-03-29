@@ -299,6 +299,26 @@
     </p>
   </div>
 
+  <div>
+    <h2>Sounds</h2>
+    <p class="setting-description">Choose which in-app notification sounds Nostria should play.</p>
+
+    <div class="setting-item">
+      <span>Message Notification Sounds</span>
+      <mat-slide-toggle [checked]="settings.settings().messageNotificationSoundsEnabled !== false"
+        (change)="toggleMessageNotificationSounds()">
+      </mat-slide-toggle>
+    </div>
+    <p class="setting-description">Play a short sound when a new unread direct message arrives.</p>
+
+    <div class="setting-item">
+      <span>Zap Sounds</span>
+      <mat-slide-toggle [checked]="settings.settings().zapSoundsEnabled !== false" (change)="toggleZapSounds()">
+      </mat-slide-toggle>
+    </div>
+    <p class="setting-description">Play celebratory sound effects when zaps come in.</p>
+  </div>
+
   @if (accountState.account()) {
   <div>
     <h2 i18n="@@settings.event-expiration.title">Global Event Expiration</h2>

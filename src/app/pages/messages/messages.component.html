@@ -31,6 +31,9 @@
       @if (messaging.isLoading()) {
       <mat-spinner diameter="20" matTooltip="Loading messages..."></mat-spinner>
       }
+      @if (settingsService.settings().messageNotificationSoundsEnabled === false) {
+      <mat-icon class="messages-header-status-icon" matTooltip="Message sounds disabled">notifications_off</mat-icon>
+      }
       <button mat-icon-button (click)="toggleSearch()" matTooltip="Search chats">
         <mat-icon>search</mat-icon>
       </button>
@@ -49,6 +52,12 @@
         <button mat-menu-item (click)="toggleShowHiddenChats()">
           <mat-icon>{{ showHiddenChats() ? 'visibility_off' : 'visibility' }}</mat-icon>
           <span>{{ showHiddenChats() ? 'Hide Hidden Chats' : 'Show Hidden Chats' }}</span>
+        </button>
+        <button mat-menu-item (click)="toggleMessageNotificationSounds()">
+          <mat-icon>{{ settingsService.settings().messageNotificationSoundsEnabled === false ? 'notifications_off' :
+            'notifications_active' }}</mat-icon>
+          <span>{{ settingsService.settings().messageNotificationSoundsEnabled === false ? 'Enable Message Sounds' :
+            'Disable Message Sounds' }}</span>
         </button>
         <mat-divider></mat-divider>
         <button mat-menu-item (click)="markAllChatsAsRead()">
@@ -662,26 +671,19 @@
                 </mat-menu>
 
                 <mat-menu #reactionMenu="matMenu">
-                  <button mat-menu-item (click)="sendReaction(message, '+')">
-                    <span class="reaction-menu-emoji">{{ getReactionDisplay('+') }}</span>
-                    <span>Like</span>
+                  @for (reactionItem of quickReactionMenuItems(); track reactionItem.content) {
+                  <button mat-menu-item (click)="sendReaction(message, reactionItem.content, reactionItem.customEmojiUrl)">
+                    @if (reactionItem.customEmojiUrl) {
+                    <app-custom-emoji [src]="reactionItem.customEmojiUrl" [alt]="reactionItem.content"
+                      cssClass="reaction-custom-emoji reaction-menu-custom-emoji" />
+                    } @else {
+                    <span class="reaction-menu-emoji">{{ getReactionDisplay(reactionItem.content) }}</span>
+                    }
                   </button>
-                  <button mat-menu-item (click)="sendReaction(message, '😂')">
-                    <span class="reaction-menu-emoji">😂</span>
-                    <span>Laugh</span>
-                  </button>
-                  <button mat-menu-item (click)="sendReaction(message, '😮')">
-                    <span class="reaction-menu-emoji">😮</span>
-                    <span>Surprised</span>
-                  </button>
-                  <button mat-menu-item (click)="sendReaction(message, '😢')">
-                    <span class="reaction-menu-emoji">😢</span>
-                    <span>Sad</span>
-                  </button>
+                  }
                   <mat-divider></mat-divider>
                   <button mat-menu-item (click)="openReactionPickerDialog(message)">
                     <mat-icon>add_reaction</mat-icon>
-                    <span>More reactions...</span>
                   </button>
                 </mat-menu>
               </div>
@@ -830,26 +832,19 @@
             </mat-menu>
 
             <mat-menu #reactionMenu="matMenu">
-              <button mat-menu-item (click)="sendReaction(message, '+')">
-                <span class="reaction-menu-emoji">{{ getReactionDisplay('+') }}</span>
-                <span>Like</span>
+              @for (reactionItem of quickReactionMenuItems(); track reactionItem.content) {
+              <button mat-menu-item (click)="sendReaction(message, reactionItem.content, reactionItem.customEmojiUrl)">
+                @if (reactionItem.customEmojiUrl) {
+                <app-custom-emoji [src]="reactionItem.customEmojiUrl" [alt]="reactionItem.content"
+                  cssClass="reaction-custom-emoji reaction-menu-custom-emoji" />
+                } @else {
+                <span class="reaction-menu-emoji">{{ getReactionDisplay(reactionItem.content) }}</span>
+                }
               </button>
-              <button mat-menu-item (click)="sendReaction(message, '😂')">
-                <span class="reaction-menu-emoji">😂</span>
-                <span>Laugh</span>
-              </button>
-              <button mat-menu-item (click)="sendReaction(message, '😮')">
-                <span class="reaction-menu-emoji">😮</span>
-                <span>Surprised</span>
-              </button>
-              <button mat-menu-item (click)="sendReaction(message, '😢')">
-                <span class="reaction-menu-emoji">😢</span>
-                <span>Sad</span>
-              </button>
+              }
               <mat-divider></mat-divider>
               <button mat-menu-item (click)="openReactionPickerDialog(message)">
                 <mat-icon>add_reaction</mat-icon>
-                <span>More reactions...</span>
               </button>
             </mat-menu>
           </div>

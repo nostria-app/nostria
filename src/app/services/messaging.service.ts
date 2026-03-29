@@ -21,6 +21,7 @@ import { DatabaseService, StoredDirectMessage } from './database.service';
 import { AccountLocalStateService } from './account-local-state.service';
 import { RelayPoolService } from './relays/relay-pool';
 import { DiscoveryRelayService } from './relays/discovery-relay';
+import { SettingsService } from './settings.service';
 
 // Define interfaces for our DM data structures
 interface Chat {
@@ -130,6 +131,7 @@ export class MessagingService implements NostriaService {
   private readonly database = inject(DatabaseService);
   private readonly accountLocalState = inject(AccountLocalStateService);
   private readonly injector = inject(Injector);
+  private readonly settingsService = inject(SettingsService);
   private userRelayService: any = null; // Lazy-initialized to control load timing
 
   /** Audio element for new-message notification sound */
@@ -186,6 +188,10 @@ export class MessagingService implements NostriaService {
 
   /** Play a short notification chime using the Web Audio API */
   private playNotificationSound(): void {
+    if (this.settingsService.settings().messageNotificationSoundsEnabled === false) {
+      return;
+    }
+
     const now = Date.now();
     if (now - this.lastNotificationSoundTime < this.NOTIFICATION_SOUND_COOLDOWN_MS) return;
     this.lastNotificationSoundTime = now;

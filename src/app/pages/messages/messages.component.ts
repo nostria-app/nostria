@@ -76,7 +76,7 @@ import { AccountRelayService } from '../../services/relays/account-relay';
 import { UserRelayService } from '../../services/relays/user-relay';
 import { RelayPoolService } from '../../services/relays/relay-pool';
 import { DatabaseService } from '../../services/database.service';
-import { AccountLocalStateService } from '../../services/account-local-state.service';
+import { AccountLocalStateService, type RecentEmoji } from '../../services/account-local-state.service';
 import { LocalSettingsService } from '../../services/local-settings.service';
 import { SettingsService } from '../../services/settings.service';
 import { MediaService } from '../../services/media.service';
@@ -175,6 +175,11 @@ interface PendingEncryptedMediaPreview {
   type: 'image' | 'video' | 'file';
 }
 
+interface QuickReactionMenuItem {
+  content: string;
+  customEmojiUrl?: string;
+}
+
 @Component({
   selector: 'app-messages',
   imports: [
@@ -216,7 +221,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   private logger = inject(LoggerService);
   messaging = inject(MessagingService);
   private notifications = inject(NotificationService);
-  private userRelayService = inject(UserRelayService);
+  private userRelayService: UserRelayService = inject(UserRelayService);
   private customDialog = inject(CustomDialogService);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
@@ -232,7 +237,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   private readonly database = inject(DatabaseService);
   private readonly accountLocalState = inject(AccountLocalStateService);
   readonly localSettings = inject(LocalSettingsService);
-  private readonly settingsService = inject(SettingsService);
+  readonly settingsService = inject(SettingsService);
   readonly mediaService = inject(MediaService);
   private readonly haptics = inject(HapticsService);
   private readonly openGraph = inject(OpenGraphService);
@@ -246,6 +251,19 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   // Cache of resolved custom emoji URLs (shortcode with colons -> URL)
   private resolvedEmojiUrls = signal<Map<string, string>>(new Map());
   private emojiResolutionPending = new Set<string>();
+  private readonly fallbackQuickReactions = ['❤️', '👍', '😂', '😮', '😢', '🔥'];
+  private readonly recentReactionEmojis = signal<RecentEmoji[]>([]);
+  readonly quickReactionMenuItems = computed<QuickReactionMenuItem[]>(() => {
+    const recent = this.recentReactionEmojis();
+    if (recent.length > 0) {
+      return recent.slice(0, 6).map(recentEmoji => ({
+        content: recentEmoji.emoji,
+        customEmojiUrl: recentEmoji.url,
+      }));
+    }
+
+    return this.fallbackQuickReactions.map(content => ({ content }));
+  });
 
   @ViewChild('chatSearchInput') chatSearchInput?: ElementRef<HTMLInputElement>;
 
@@ -792,6 +810,16 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   constructor() {
     // Initialize lastAccountPubkey with current account to avoid false "account changed" on first load
     this.lastAccountPubkey.set(this.accountState.account()?.pubkey || null);
+
+    effect(() => {
+      const pubkey = this.accountState.pubkey();
+      if (!pubkey) {
+        this.recentReactionEmojis.set([]);
+        return;
+      }
+
+      this.recentReactionEmojis.set(this.accountLocalState.getRecentEmojis(pubkey));
+    });
 
     // Effect to sync mobile nav visibility with chat selection on mobile
     effect(() => {
@@ -3344,6 +3372,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
 
       result.publish().then(publishResult => {
         if (publishResult.success) {
+          this.trackReactionUsage(reaction, customEmojiUrl);
           this.messaging.updateMessageInChat(chatId, result.message.id, {
             pending: false,
             received: true,
@@ -3362,6 +3391,16 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       this.logger.error('Failed to prepare DM reaction', error);
       this.snackBar.open('Failed to send reaction', 'Close', { duration: 3000 });
     }
+  }
+
+  private trackReactionUsage(emoji: string, url?: string): void {
+    const pubkey = this.accountState.pubkey();
+    if (!pubkey) {
+      return;
+    }
+
+    this.accountLocalState.addRecentEmoji(pubkey, emoji, url);
+    this.recentReactionEmojis.set(this.accountLocalState.getRecentEmojis(pubkey));
   }
 
   private getReactionTargetFromTags(tags: string[][]): string | undefined {
@@ -4012,6 +4051,19 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   toggleChatWidget(): void {
     const current = this.localSettings.settings().chatWidgetEnabled !== false;
     this.localSettings.updateSettings({ chatWidgetEnabled: !current });
+  }
+
+  async toggleMessageNotificationSounds(): Promise<void> {
+    const currentlyEnabled = this.settingsService.settings().messageNotificationSoundsEnabled !== false;
+    const nextEnabled = !currentlyEnabled;
+
+    try {
+      await this.settingsService.updateSettings({ messageNotificationSoundsEnabled: nextEnabled });
+      this.snackBar.open(nextEnabled ? 'Message sounds enabled' : 'Message sounds disabled', 'Close', { duration: 2500 });
+    } catch (error) {
+      this.logger.error('Failed to update message sound setting:', error);
+      this.snackBar.open('Failed to update message sound setting', 'Close', { duration: 3000 });
+    }
   }
 
   async resetLocalMessagesCache(): Promise<void> {
