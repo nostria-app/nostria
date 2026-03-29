@@ -71,7 +71,8 @@
             <div class="compression-slider-meta">
               <span class="compression-slider-value">{{ compressionStrengthLabel() }}</span>
               <button mat-button type="button" class="compression-reset-button" (click)="resetCompressionStrength()"
-                [disabled]="isDefaultCompressionStrength() || isUploading()" matTooltip="Reset to the recommended default">
+                [disabled]="isDefaultCompressionStrength() || isUploading()"
+                matTooltip="Reset to the recommended default">
                 <mat-icon>restart_alt</mat-icon>
                 <span>Reset</span>
               </button>
