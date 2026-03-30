@@ -74,6 +74,9 @@ describe('NoteEditorDialogComponent', () => {
   let mockMediaProcessingService: {
     prepareFileForUpload: Mock;
   };
+  let mockSnackBar: {
+    open: Mock;
+  };
 
   function createComponent(beforeDetectChanges?: (instance: NoteEditorDialogComponent) => void) {
     mockPlatformService = {
@@ -130,6 +133,10 @@ describe('NoteEditorDialogComponent', () => {
       })),
     };
 
+    mockSnackBar = {
+      open: vi.fn(),
+    };
+
     TestBed.configureTestingModule({
       imports: [NoteEditorDialogComponent],
       providers: [
@@ -157,7 +164,7 @@ describe('NoteEditorDialogComponent', () => {
             getZapSplitQuoterPercent: () => 10,
           },
         },
-        { provide: MatSnackBar, useValue: { open: vi.fn() } },
+        { provide: MatSnackBar, useValue: mockSnackBar },
         { provide: Router, useValue: { navigate: vi.fn() } },
         { provide: LayoutService, useValue: mockLayoutService },
         { provide: PowService, useValue: {} },
@@ -231,7 +238,7 @@ describe('NoteEditorDialogComponent', () => {
       createComponent();
       await fixture.whenStable();
 
-      const createObjectUrl = vi.fn((value: Blob | MediaSource) => `blob:${(value as Blob).size}`);
+      const createObjectUrl = vi.fn(() => 'blob:mock-video-url');
       const revokeObjectUrl = vi.fn();
       Object.defineProperty(URL, 'createObjectURL', { configurable: true, value: createObjectUrl });
       Object.defineProperty(URL, 'revokeObjectURL', { configurable: true, value: revokeObjectUrl });
@@ -335,6 +342,74 @@ describe('NoteEditorDialogComponent', () => {
       expect(component.content()).not.toContain(placeholder);
       expect(component.mediaMetadata()[0].pendingUpload).toBe(false);
       expect(component.mediaMetadata()[0].url).toBe('https://cdn.example/photo.png');
+    });
+
+    it('should skip queuing media when generating the pending video thumbnail fails', async () => {
+      createComponent();
+      await fixture.whenStable();
+
+      Object.defineProperty(URL, 'createObjectURL', { configurable: true, value: vi.fn(() => 'blob:video-preview') });
+      Object.defineProperty(URL, 'revokeObjectURL', { configurable: true, value: vi.fn() });
+
+      const originalFile = new File(['0123456789'], 'broken.mp4', { type: 'video/mp4' });
+      const compressedFile = new File(['0123'], 'broken.mp4', { type: 'video/mp4' });
+
+      mockMediaProcessingService.prepareFileForUpload.mockResolvedValue({
+        file: compressedFile,
+        uploadOriginal: false,
+        wasProcessed: true,
+      });
+
+      const privateComponent = component as unknown as {
+        extractPendingVideoThumbnail: (file: File) => Promise<never>;
+        uploadFiles: (files: File[]) => Promise<void>;
+      };
+
+      vi.spyOn(privateComponent, 'extractPendingVideoThumbnail').mockRejectedValue(new Error('thumbnail failed'));
+
+      await privateComponent.uploadFiles([originalFile]);
+
+      expect(component.mediaMetadata()).toHaveLength(0);
+      expect(component.content()).toBe('');
+      expect(mockSnackBar.open).toHaveBeenCalledWith(
+        expect.stringContaining('Failed to prepare 1 file(s)'),
+        'Close',
+        expect.objectContaining({ panelClass: 'error-snackbar' })
+      );
+    });
+
+    it('should keep placeholders in place when publish-time upload fails', async () => {
+      createComponent();
+      await fixture.whenStable();
+
+      Object.defineProperty(URL, 'createObjectURL', { configurable: true, value: vi.fn(() => 'blob:image-preview') });
+      Object.defineProperty(URL, 'revokeObjectURL', { configurable: true, value: vi.fn() });
+
+      const imageFile = new File(['image-data'], 'photo.png', { type: 'image/png' });
+
+      const privateComponent = component as unknown as {
+        uploadFiles: (files: File[]) => Promise<void>;
+        uploadPendingMediaBeforePublish: () => Promise<boolean>;
+      };
+
+      await privateComponent.uploadFiles([imageFile]);
+      const placeholder = component.mediaMetadata()[0].placeholderToken as string;
+
+      mockMediaService.uploadFile.mockResolvedValue({
+        status: 'error',
+        message: 'server rejected file',
+      });
+
+      const uploaded = await privateComponent.uploadPendingMediaBeforePublish();
+
+      expect(uploaded).toBe(false);
+      expect(component.content()).toContain(placeholder);
+      expect(component.mediaMetadata()[0].pendingUpload).toBe(true);
+      expect(mockSnackBar.open).toHaveBeenCalledWith(
+        expect.stringContaining('Failed to upload 1 file(s)'),
+        'Close',
+        expect.objectContaining({ panelClass: 'error-snackbar' })
+      );
     });
   });
 
