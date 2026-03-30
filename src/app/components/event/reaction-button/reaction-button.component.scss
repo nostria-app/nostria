@@ -158,10 +158,14 @@
   min-width: 0;
   max-width: none;
   overflow: visible;
+  background: transparent;
+  border-radius: 24px;
+  box-shadow: none;
 
   .mat-mdc-menu-content {
     padding: 0;
     overflow: visible;
+    background: transparent;
   }
 }
 

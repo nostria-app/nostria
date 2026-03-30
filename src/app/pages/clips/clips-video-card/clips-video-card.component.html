@@ -53,10 +53,11 @@
       }
     </div>
 
-    <div class="action-item like-action">
-      <app-reaction-button [event]="event()" view="icon" [enableDesktopHoverPicker]="true"
+    <div class="action-item like-action like-hover-container" (click)="reactionBtn.sendDefaultReaction(); $event.stopPropagation()">
+      <app-reaction-button #reactionBtn class="like-hover-target" [event]="event()" view="icon" [enableDesktopHoverPicker]="true"
         (reactionChanged)="onReactionChanged()"></app-reaction-button>
-      <span class="action-count" [class.hidden]="likesCount() <= 0">{{ likesCount() > 0 ? likesCount() : '0' }}</span>
+      <span class="action-count like-hover-target" (mouseenter)="reactionBtn.onDesktopMouseEnter()"
+        (mouseleave)="reactionBtn.onDesktopMouseLeave()" [class.hidden]="likesCount() <= 0">{{ likesCount() > 0 ? likesCount() : '0' }}</span>
     </div>
 
     <button mat-icon-button class="action-item" (click)="onComments($event)" matTooltip="Comments">

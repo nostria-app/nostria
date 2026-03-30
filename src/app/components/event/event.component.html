@@ -1012,15 +1012,17 @@
         [attr.aria-disabled]="isThreadInteractionBlocked()"
         [matTooltip]="isThreadInteractionBlocked() ? threadInteractionBlockedTooltip() : ''"
         [matTooltipDisabled]="!isThreadInteractionBlocked()" (click)="onLikeActionClick(reactionBtn, $event)">
-        <app-reaction-button class="action-icon" #reactionBtn [event]="targetItem.event"
+        <app-reaction-button class="action-icon like-hover-target" #reactionBtn [event]="targetItem.event"
           [reactionsFromParent]="reactions()" [disabled]="isThreadInteractionBlocked()"
-          [enableDesktopHoverPicker]="actionsDisplayMode() === 'icons-only'" (reactionChanged)="loadReactions(true)"
+          [enableDesktopHoverPicker]="true" (reactionChanged)="loadReactions(true)"
           view="icon"></app-reaction-button>
         @if (likes().length > 0 || interactionsLoading()) {
-        <span class="action-count" [class.count-placeholder]="interactionsLoading() && likes().length === 0"
+        <span class="action-count like-hover-target" (mouseenter)="reactionBtn.onDesktopMouseEnter()"
+          (mouseleave)="reactionBtn.onDesktopMouseLeave()" [class.count-placeholder]="interactionsLoading() && likes().length === 0"
           [attr.aria-hidden]="interactionsLoading() && likes().length === 0 ? 'true' : null">{{ likesDisplay() || '00' }}</span>
         }
-        <span class="action-text">Like</span>
+        <span class="action-text like-hover-target" (mouseenter)="reactionBtn.onDesktopMouseEnter()"
+          (mouseleave)="reactionBtn.onDesktopMouseLeave()">Like</span>
 
       </div>
       }

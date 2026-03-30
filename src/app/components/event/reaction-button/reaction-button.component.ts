@@ -1,4 +1,5 @@
 import { Component, computed, effect, ElementRef, inject, input, output, signal, untracked, viewChild, ChangeDetectionStrategy, PLATFORM_ID } from '@angular/core';
+import { CdkOverlayOrigin, ConnectedPosition, OverlayModule } from '@angular/cdk/overlay';
 import { isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -282,6 +283,7 @@ interface ReactionEmojiSectionNavItem {
     MatTooltipModule,
     MatMenuModule,
     MatProgressSpinnerModule,
+    OverlayModule,
     RouterLink,
     CustomDialogComponent,
     CustomEmojiComponent,
@@ -311,7 +313,17 @@ export class ReactionButtonComponent {
   // Menu trigger references to close the menu after reaction
   private readonly menuTrigger = viewChild<MatMenuTrigger>('menuTrigger');
   private readonly menuTriggerFull = viewChild<MatMenuTrigger>('menuTriggerFull');
+  readonly quickReactionOrigin = viewChild<CdkOverlayOrigin>('quickReactionOrigin');
   protected readonly isHandset = this.layout.isHandset.asReadonly();
+  readonly desktopQuickReactionPositions: ConnectedPosition[] = [
+    {
+      originX: 'center',
+      originY: 'bottom',
+      overlayX: 'center',
+      overlayY: 'top',
+      offsetY: 10,
+    },
+  ];
 
   /** Opens the reaction picker menu. Called from parent when label is clicked. */
   openMenu(): void {
@@ -324,7 +336,7 @@ export class ReactionButtonComponent {
       return;
     }
 
-    this.menuTrigger()?.openMenu();
+    this.desktopHoverMenuActive = false;
   }
 
   openFullReactionPicker(event: globalThis.MouseEvent): void {
@@ -350,6 +362,8 @@ export class ReactionButtonComponent {
   private suppressNextClick = false;
   private pointerDownType: string | null = null;
   private hoverCloseTimer: ReturnType<typeof setTimeout> | null = null;
+  protected desktopHoverSurfaceActive = false;
+  protected desktopHoverMenuActive = false;
 
   /**
    * Send the user's default reaction emoji (from settings) on a single tap.
@@ -442,12 +456,14 @@ export class ReactionButtonComponent {
       return;
     }
 
+    this.desktopHoverSurfaceActive = true;
+
     if (this.hoverCloseTimer) {
       clearTimeout(this.hoverCloseTimer);
       this.hoverCloseTimer = null;
     }
 
-    this.menuTrigger()?.openMenu();
+    this.desktopHoverMenuActive = false;
   }
 
   onDesktopMouseLeave(): void {
@@ -455,10 +471,47 @@ export class ReactionButtonComponent {
       return;
     }
 
-    this.hoverCloseTimer = setTimeout(() => {
-      this.menuTrigger()?.closeMenu();
+    this.desktopHoverSurfaceActive = false;
+
+    this.scheduleDesktopHoverClose();
+  }
+
+  onDesktopMenuMouseEnter(): void {
+    if (this.isHandset() || this.disabled() || !this.enableDesktopHoverPicker()) {
+      return;
+    }
+
+    this.desktopHoverMenuActive = true;
+
+    if (this.hoverCloseTimer) {
+      clearTimeout(this.hoverCloseTimer);
       this.hoverCloseTimer = null;
-    }, 120);
+    }
+  }
+
+  onDesktopMenuMouseLeave(): void {
+    if (this.isHandset() || !this.enableDesktopHoverPicker()) {
+      return;
+    }
+
+    this.desktopHoverMenuActive = false;
+
+    this.scheduleDesktopHoverClose();
+  }
+
+  private scheduleDesktopHoverClose(): void {
+    if (this.hoverCloseTimer) {
+      clearTimeout(this.hoverCloseTimer);
+    }
+
+    this.hoverCloseTimer = setTimeout(() => {
+      if (this.desktopHoverSurfaceActive || this.desktopHoverMenuActive) {
+        this.hoverCloseTimer = null;
+        return;
+      }
+
+      this.hoverCloseTimer = null;
+    }, 160);
   }
 
   openDesktopFullReactionPicker(event: MouseEvent): void {
@@ -469,7 +522,8 @@ export class ReactionButtonComponent {
       return;
     }
 
-    this.menuTrigger()?.closeMenu();
+    this.desktopHoverMenuActive = false;
+    this.desktopHoverSurfaceActive = false;
     this.menuTriggerFull()?.openMenu();
   }
 
@@ -491,6 +545,9 @@ export class ReactionButtonComponent {
       clearTimeout(this.hoverCloseTimer);
       this.hoverCloseTimer = null;
     }
+
+    this.desktopHoverSurfaceActive = false;
+    this.desktopHoverMenuActive = false;
   }
 
   // --- Touch quick-select emoji bar ---

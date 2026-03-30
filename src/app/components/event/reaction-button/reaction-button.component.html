@@ -1,9 +1,9 @@
 <div class="reaction-container">
   @if (view() === 'icon') {
   <!-- Icon view: single-tap sends default reaction, long-press opens picker -->
-  <button mat-icon-button [class.active]="!!userReaction()" [class.reacted]="!!userReaction()"
+  <button mat-icon-button cdkOverlayOrigin #quickReactionOrigin="cdkOverlayOrigin" [class.active]="!!userReaction()" [class.reacted]="!!userReaction()"
     [disabled]="isLoadingReactions() || disabled()" (pointerdown)="onPointerDown($event)" (pointerup)="onPointerUp($event)"
-    (pointerleave)="onPointerLeave()" (mouseenter)="onDesktopMouseEnter()" (mouseleave)="onDesktopMouseLeave()"
+    (pointerleave)="onPointerLeave()"
     (contextmenu)="$event.preventDefault()"
     (click)="onClick($event)" style="touch-action: none">
     @if (userReaction()) {
@@ -44,13 +44,13 @@
   </div>
   }
 
-  <!-- Hidden menu trigger for programmatic opening -->
-  <div class="hidden-menu-trigger" [matMenuTriggerFor]="reactionMenu" #menuTrigger="matMenuTrigger"></div>
-
-  <!-- Reaction picker menu -->
-  <mat-menu #reactionMenu="matMenu" class="reaction-quick-menu">
-    <div class="desktop-quick-reaction-menu" tabindex="-1" (mouseenter)="onDesktopMouseEnter()"
-      (mouseleave)="onDesktopMouseLeave()" (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()">
+  @if (quickReactionOrigin; as quickReactionOverlayOrigin) {
+  <ng-template cdkConnectedOverlay [cdkConnectedOverlayOrigin]="quickReactionOverlayOrigin"
+    [cdkConnectedOverlayOpen]="enableDesktopHoverPicker() && !isHandset() && !disabled() && (desktopHoverSurfaceActive || desktopHoverMenuActive)"
+    [cdkConnectedOverlayHasBackdrop]="false" [cdkConnectedOverlayPositions]="desktopQuickReactionPositions"
+    [cdkConnectedOverlayPush]="true">
+    <div class="desktop-quick-reaction-menu" tabindex="-1" (mouseenter)="onDesktopMenuMouseEnter()"
+      (mouseleave)="onDesktopMenuMouseLeave()" (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()">
       <div class="desktop-quick-reaction-row">
         @for (item of desktopQuickReactions(); track item.emoji) {
         <button class="emoji-button" mat-icon-button type="button" (click)="addReaction(item.emoji)">
@@ -68,7 +68,8 @@
         </button>
       </div>
     </div>
-  </mat-menu>
+  </ng-template>
+  }
 
   <div class="hidden-menu-trigger" [matMenuTriggerFor]="reactionMenuFull" #menuTriggerFull="matMenuTrigger"></div>
 
