@@ -997,7 +997,9 @@ export class NostrService implements NostriaService {
 
     // Open signing dialog
     this.currentSigningDialogRef = this.dialog.open(SigningDialogComponent, {
-      disableClose: false, // Allow user to close the dialog to cancel
+      // On mobile, the tap that triggers signing can also hit the new backdrop and
+      // immediately dismiss the dialog. Keep explicit cancel via the close button only.
+      disableClose: true,
       hasBackdrop: true,
       panelClass: 'signing-dialog',
       backdropClass: 'signing-dialog-backdrop',
