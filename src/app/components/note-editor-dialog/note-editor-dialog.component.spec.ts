@@ -245,7 +245,18 @@ describe('NoteEditorDialogComponent', () => {
         wasProcessed: true,
       });
 
-      vi.spyOn(component as never, 'extractPendingVideoThumbnail' as never).mockResolvedValue({
+      const privateComponent = component as unknown as {
+        extractPendingVideoThumbnail: (file: File) => Promise<{
+          blob: Blob;
+          objectUrl: string;
+          dimensions: { width: number; height: number };
+          blurhash?: string;
+          thumbhash?: string;
+        }>;
+        uploadFiles: (files: File[]) => Promise<void>;
+      };
+
+      vi.spyOn(privateComponent, 'extractPendingVideoThumbnail').mockResolvedValue({
         blob: new Blob(['thumb'], { type: 'image/jpeg' }),
         objectUrl: 'blob:video-thumb',
         dimensions: { width: 720, height: 1280 },
@@ -253,7 +264,7 @@ describe('NoteEditorDialogComponent', () => {
         thumbhash: 'thumbhash',
       });
 
-      await (component as never).uploadFiles([originalFile]);
+      await privateComponent.uploadFiles([originalFile]);
 
       const queuedMedia = component.mediaMetadata()[0];
       expect(mockMediaService.uploadFile).not.toHaveBeenCalled();
@@ -280,7 +291,23 @@ describe('NoteEditorDialogComponent', () => {
         wasProcessed: false,
       });
 
-      await (component as never).uploadFiles([imageFile]);
+      const privateComponent = component as unknown as {
+        uploadFiles: (files: File[]) => Promise<void>;
+        extractMediaMetadata: (
+          file: File,
+          url: string,
+          sha256?: string,
+          mirrors?: string[],
+        ) => Promise<{
+          url: string;
+          mimeType: string;
+          sha256?: string;
+          fallbackUrls?: string[];
+        }>;
+        uploadPendingMediaBeforePublish: () => Promise<boolean>;
+      };
+
+      await privateComponent.uploadFiles([imageFile]);
 
       const placeholder = component.mediaMetadata()[0].placeholderToken as string;
 
@@ -293,14 +320,14 @@ describe('NoteEditorDialogComponent', () => {
         },
       });
 
-      vi.spyOn(component as never, 'extractMediaMetadata' as never).mockResolvedValue({
+      vi.spyOn(privateComponent, 'extractMediaMetadata').mockResolvedValue({
         url: 'https://cdn.example/photo.png',
         mimeType: 'image/png',
         sha256: 'sha256-hash',
         fallbackUrls: ['https://mirror.example/photo.png'],
       });
 
-      const uploaded = await (component as never).uploadPendingMediaBeforePublish();
+      const uploaded = await privateComponent.uploadPendingMediaBeforePublish();
 
       expect(uploaded).toBe(true);
       expect(mockMediaService.uploadFile).toHaveBeenCalledTimes(1);

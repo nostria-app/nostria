@@ -3657,7 +3657,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       const totalFiles = files.length;
       let preparedFiles = 0;
       const queuedFiles: string[] = [];
-      const failedFiles: Array<{ fileName: string; error: string }> = [];
+      const failedFiles: { fileName: string; error: string }[] = [];
       const warningMessages: string[] = [];
       const uploadSettings = {
         mode: this.mediaUploadMode(),
@@ -3834,7 +3834,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       await this.mediaService.load();
 
       const currentMetadata = [...this.mediaMetadata()];
-      const failedUploads: Array<{ fileName: string; error: string }> = [];
+      const failedUploads: { fileName: string; error: string }[] = [];
 
       for (const [index, pending] of pendingMedia.entries()) {
         if (!pending.localFile) {
