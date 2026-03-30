@@ -52,16 +52,6 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
       
       <div dialog-actions>
         @if (viewInitialized() && loginComponent) {
-          @if (loginComponent.currentStep() === loginComponent.LoginStep.REGION_SELECTION) {
-            <button mat-flat-button (click)="loginComponent.generateNewKey()" [disabled]="loginComponent.loading()">
-              @if (loginComponent.loading()) {
-                <mat-spinner diameter="20" class="button-spinner"></mat-spinner>
-                <span>Creating Account...</span>
-              } @else {
-                <span>Create account</span>
-              }
-            </button>
-          }
           @if (loginComponent.currentStep() === loginComponent.LoginStep.NSEC_LOGIN) {
             <button mat-flat-button (click)="loginComponent.loginWithNsec()" [disabled]="!loginComponent.isNsecKeyValid() || loginComponent.loading()">
               @if (loginComponent.loading()) {

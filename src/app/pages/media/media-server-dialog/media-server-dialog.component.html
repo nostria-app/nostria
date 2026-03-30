@@ -16,7 +16,7 @@
     <div class="suggested-servers">
       <h3 class="suggested-title">Suggested servers:</h3>
       <mat-chip-listbox [multiple]="false" class="server-chips">
-        @for (server of suggestedServers(); track $index) {
+        @for (server of availableSuggestedServers(); track server.url) {
         <mat-chip-option (click)="selectSuggestedServer(server.url)">
           {{ server.name }}
         </mat-chip-option>

@@ -17,16 +17,23 @@ import { CustomDialogRef } from '../../../services/custom-dialog.service';
 
 // Suggested media servers
 const SUGGESTED_SERVERS = [
-  { name: 'Nostria (Europe)', url: 'https://mibo.eu.nostria.app/' },
-  { name: 'Nostria (USA)', url: 'https://mibo.us.nostria.app/' },
+  { name: 'Nostria (Europe)', url: 'https://mibo.nostria.app/' },
+  { name: 'Nostria (USA)', url: 'https://milo.nostria.app/' },
   { name: 'Blossom Band', url: 'https://blossom.band/' },
   { name: 'F7Z', url: 'https://blossom.f7z.io/' },
 ];
 
+const NOSTRIA_MEDIA_SERVER_HOSTS = new Set([
+  'mibo.nostria.app',
+  'milo.nostria.app',
+  'mibo.eu.nostria.app',
+  'mibo.us.nostria.app',
+]);
+
 // Nostria media server regions for auto-detection
 const NOSTRIA_MEDIA_REGIONS = [
-  { id: 'eu', name: 'Europe', mediaServer: 'https://mibo.eu.nostria.app' },
-  { id: 'us', name: 'North America', mediaServer: 'https://mibo.us.nostria.app' },
+  { id: 'eu', name: 'Europe', mediaServer: 'https://mibo.nostria.app' },
+  { id: 'us', name: 'North America', mediaServer: 'https://milo.nostria.app' },
 ];
 
 @Component({
@@ -363,7 +370,13 @@ export class MediaServersSettingsDialogComponent implements OnInit {
 
   // Get suggested servers that aren't already added
   get availableSuggestedServers(): typeof SUGGESTED_SERVERS {
+    const hasAnyNostriaServer = this.servers().some(server => this.isNostriaServer(server));
+
     return this.suggestedServers.filter(s => {
+      if (this.isNostriaServer(s.url)) {
+        return !hasAnyNostriaServer;
+      }
+
       const normalizedUrl = this.normalizeUrl(s.url);
       return normalizedUrl && !this.servers().includes(normalizedUrl);
     });
@@ -379,6 +392,19 @@ export class MediaServersSettingsDialogComponent implements OnInit {
       return urlObj.hostname;
     } catch {
       return url;
+    }
+  }
+
+  private isNostriaServer(url: string): boolean {
+    const normalizedUrl = this.normalizeUrl(url);
+    if (!normalizedUrl) {
+      return false;
+    }
+
+    try {
+      return NOSTRIA_MEDIA_SERVER_HOSTS.has(new URL(normalizedUrl).hostname.toLowerCase());
+    } catch {
+      return false;
     }
   }
 }

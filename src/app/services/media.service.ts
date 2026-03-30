@@ -170,7 +170,7 @@ export class MediaService implements NostriaService {
   }
 
   setMediaServers(servers: string[]): void {
-    this._mediaServers.set(servers);
+    this._mediaServers.set(this.region.rewriteMediaServerUrls(servers).urls);
   }
 
   private async wait(ms: number): Promise<void> {

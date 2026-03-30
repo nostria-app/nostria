@@ -508,6 +508,76 @@
   }
 }
 
+.signup-region-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+
+  @media (max-width: 500px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.signup-region-button {
+  min-height: 116px;
+  padding: 0.95rem 1.1rem !important;
+  text-align: left;
+  border-radius: 12px;
+  border-color: var(--mat-sys-outline-variant);
+  background: var(--mat-sys-surface-container-low);
+  justify-content: flex-start;
+
+  &.selected {
+    border-color: var(--mat-sys-primary);
+    background: var(--mat-sys-primary-container);
+    color: var(--mat-sys-on-primary-container);
+  }
+
+  .mdc-button__label {
+    width: 100%;
+  }
+}
+
+.signup-region-content {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.35rem;
+  width: 100%;
+}
+
+.signup-region-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  width: 100%;
+}
+
+.signup-region-title {
+  font-size: var(--text-base);
+}
+
+.signup-region-services {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  font-size: var(--text-xs);
+  color: var(--mat-sys-on-surface-variant);
+
+  .signup-region-button.selected & {
+    color: inherit;
+  }
+}
+
+.signup-region-check {
+  width: 18px;
+  height: 18px;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
 .profile-setup-form {
   display: flex;
   align-items: flex-start;
@@ -738,6 +808,14 @@
       }
     }
   }
+}
+
+.profile-setup-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
 }
 
 // Secondary login options grid

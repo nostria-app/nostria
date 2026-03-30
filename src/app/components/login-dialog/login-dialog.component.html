@@ -37,8 +37,43 @@
 
     <!-- Step 2: New account profile setup -->
     @if (currentStep() === LoginStep.REGION_SELECTION) {
-    <!-- Profile Setup Section -->
     <div class="profile-setup-section">
+      <h3>Choose your region</h3>
+
+      <div class="signup-region-grid">
+        <button mat-stroked-button class="signup-region-button" [class.selected]="signupRegion() === 'us'"
+          (click)="setSignupRegion('us')">
+          <span class="signup-region-content">
+            <span class="signup-region-header">
+              <span class="signup-region-title">USA</span>
+              @if (signupRegion() === 'us') {
+              <mat-icon class="signup-region-check">check_circle</mat-icon>
+              }
+            </span>
+            <span class="signup-region-services">
+              <span>Relay: rilo.nostria.app +3</span>
+              <span>Media: milo.nostria.app</span>
+            </span>
+          </span>
+        </button>
+
+        <button mat-stroked-button class="signup-region-button" [class.selected]="signupRegion() === 'eu'"
+          (click)="setSignupRegion('eu')">
+          <span class="signup-region-content">
+            <span class="signup-region-header">
+              <span class="signup-region-title">Europe</span>
+              @if (signupRegion() === 'eu') {
+              <mat-icon class="signup-region-check">check_circle</mat-icon>
+              }
+            </span>
+            <span class="signup-region-services">
+              <span>Relay: ribo.nostria.app +3</span>
+              <span>Media: mibo.nostria.app</span>
+            </span>
+          </span>
+        </button>
+      </div>
+
       <h3>Set up your profile (optional)</h3>
       <p>Add a name and photo so people can recognize you.</p>
 
@@ -71,6 +106,17 @@
               placeholder="Display name (optional)" maxlength="50" />
           </mat-form-field>
         </div>
+      </div>
+
+      <div class="profile-setup-actions">
+        <button mat-button type="button" (click)="goToStep(LoginStep.INITIAL)">Back</button>
+        <button mat-flat-button type="button" [disabled]="loading() || !signupRegion()" (click)="generateNewKey()">
+          @if (loading()) {
+          <mat-spinner diameter="20"></mat-spinner>
+          } @else {
+          Create Account
+          }
+        </button>
       </div>
     </div>
     }

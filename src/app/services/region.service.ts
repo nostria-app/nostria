@@ -12,6 +12,21 @@ export interface Region {
   providedIn: 'root',
 })
 export class RegionService {
+  private readonly legacyMediaServerHosts: Record<string, string> = {
+    'mibo.us.nostria.app': 'milo.nostria.app',
+    'mibo.eu.nostria.app': 'mibo.nostria.app',
+  };
+
+  private readonly legacyRelayHosts: Record<string, string> = {
+    'ribo.us.nostria.app': 'rilo.nostria.app',
+    'ribo.eu.nostria.app': 'ribo.nostria.app',
+  };
+
+  private readonly legacyDiscoveryRelayHosts: Record<string, string> = {
+    'discovery.us.nostria.app': 'indexer.openresist.com',
+    'discovery.eu.nostria.app': 'indexer.openresist.com',
+  };
+
   // TODO: The RegionService will query the infrastructure to get load and capacity information for each region, ensuring
   // that new accounts are created in the least loaded region.
 
@@ -230,10 +245,20 @@ export class RegionService {
   };
 
   getDiscoveryRelay(regionId: string) {
-    return `wss://discovery.${regionId}.nostria.app/`;
+    return 'wss://indexer.openresist.com/';
   }
 
   getMediaServer(regionId: string, instanceId: number): string | null {
+    if (instanceId === 0) {
+      if (regionId === 'us') {
+        return 'https://milo.nostria.app';
+      }
+
+      if (regionId === 'eu') {
+        return 'https://mibo.nostria.app';
+      }
+    }
+
     const region = this.regions.find(r => r.id === regionId);
     const instance = this.#mediaNames[instanceId];
 
@@ -245,6 +270,16 @@ export class RegionService {
   }
 
   getRelayServer(regionId: string, instanceId: number): string | null {
+    if (instanceId === 0) {
+      if (regionId === 'us') {
+        return 'wss://rilo.nostria.app/';
+      }
+
+      if (regionId === 'eu') {
+        return 'wss://ribo.nostria.app/';
+      }
+    }
+
     const region = this.regions.find(r => r.id === regionId);
     const instance = this.#relayNames[instanceId];
 
@@ -259,11 +294,73 @@ export class RegionService {
     return region.enabled;
   }
 
+  rewriteMediaServerUrl(url: string): string {
+    return this.rewriteUrl(url, this.legacyMediaServerHosts, 'https:');
+  }
+
+  rewriteRelayUrl(url: string): string {
+    return this.rewriteUrl(url, this.legacyRelayHosts, 'wss:');
+  }
+
+  rewriteDiscoveryRelayUrl(url: string): string {
+    return this.rewriteUrl(url, this.legacyDiscoveryRelayHosts, 'wss:');
+  }
+
+  rewriteAppRelayUrl(url: string): string {
+    return this.rewriteDiscoveryRelayUrl(this.rewriteRelayUrl(url));
+  }
+
+  rewriteMediaServerUrls(urls: string[]): { urls: string[]; changed: boolean } {
+    return this.rewriteUrlList(urls, url => this.rewriteMediaServerUrl(url));
+  }
+
+  rewriteRelayUrls(urls: string[]): { urls: string[]; changed: boolean } {
+    return this.rewriteUrlList(urls, url => this.rewriteAppRelayUrl(url));
+  }
+
   /**
    * Get default accounts for a specific region
    * These are used when a user has zero following to provide immediate content access
    */
   getDefaultAccountsForRegion(regionId: string): string[] {
     return this.defaultAccountsByRegion[regionId] || this.defaultAccountsByRegion['us'];
+  }
+
+  private rewriteUrl(url: string, hostMap: Record<string, string>, protocol: 'https:' | 'wss:'): string {
+    try {
+      const parsed = new URL(url);
+      const nextHost = hostMap[parsed.hostname.toLowerCase()];
+      if (!nextHost) {
+        return url;
+      }
+
+      parsed.protocol = protocol;
+      parsed.hostname = nextHost;
+      parsed.port = '';
+      return parsed.toString();
+    } catch {
+      return url;
+    }
+  }
+
+  private rewriteUrlList(urls: string[], rewrite: (url: string) => string): { urls: string[]; changed: boolean } {
+    let changed = false;
+    const seen = new Set<string>();
+    const rewrittenUrls: string[] = [];
+
+    for (const url of urls) {
+      const rewrittenUrl = rewrite(url);
+      changed ||= rewrittenUrl !== url;
+
+      if (seen.has(rewrittenUrl)) {
+        changed = true;
+        continue;
+      }
+
+      seen.add(rewrittenUrl);
+      rewrittenUrls.push(rewrittenUrl);
+    }
+
+    return { urls: rewrittenUrls, changed };
   }
 }

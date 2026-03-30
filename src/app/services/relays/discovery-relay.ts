@@ -7,6 +7,7 @@ import { DatabaseService } from '../database.service';
 import { kinds, UnsignedEvent, Event } from 'nostr-tools';
 import { AccountRelayService } from './account-relay';
 import { PoolService } from './pool.service';
+import { RegionService } from '../region.service';
 
 // Kind 10086 is the Relay Discovery List (indexer/discovery relays)
 export const DiscoveryRelayListKind = 10086;
@@ -18,6 +19,7 @@ export class DiscoveryRelayService extends RelayServiceBase implements NostriaSe
   private localStorage = inject(LocalStorageService);
   private appState = inject(ApplicationStateService);
   private database = inject(DatabaseService);
+  private readonly region = inject(RegionService);
   private poolLoaded = false;
   private readonly relayCacheTtlMs = 5 * 60 * 1000;
   private readonly dmRelayCacheTtlMs = 10 * 60 * 1000;
@@ -28,7 +30,7 @@ export class DiscoveryRelayService extends RelayServiceBase implements NostriaSe
 
   private readonly DEFAULT_BOOTSTRAP_RELAYS = [
     'wss://indexer.openresist.com/',
-    'wss://purplepag.es/',
+    'wss://indexer.coracle.social/',
   ];
 
   constructor() {
@@ -213,9 +215,16 @@ export class DiscoveryRelayService extends RelayServiceBase implements NostriaSe
           .map((tag: string[]) => tag[1])
           .filter((url: string | undefined) => url && url.startsWith('wss://')); // Only allow secure wss:// relays
 
-        if (relayUrls.length > 0) {
-          this.logger.debug(`[DiscoveryRelay] Found ${relayUrls.length} DM relays (kind 10050) for pubkey ${pubkey.slice(0, 16)}:`, relayUrls);
-          return this.setCachedRelayUrls(this.dmRelayCache, pubkey, relayUrls, this.dmRelayCacheTtlMs);
+        const normalizedRelayUrls = this.utilities.normalizeRelayUrls(relayUrls, false, {
+          source: 'account-relays',
+          ownerPubkey: pubkey,
+          eventKind: kinds.DirectMessageRelaysList,
+          details: 'kind 10050 dm relay tags',
+        });
+
+        if (normalizedRelayUrls.length > 0) {
+          this.logger.debug(`[DiscoveryRelay] Found ${normalizedRelayUrls.length} DM relays (kind 10050) for pubkey ${pubkey.slice(0, 16)}:`, normalizedRelayUrls);
+          return this.setCachedRelayUrls(this.dmRelayCache, pubkey, normalizedRelayUrls, this.dmRelayCacheTtlMs);
         }
       }
     }
@@ -353,15 +362,14 @@ export class DiscoveryRelayService extends RelayServiceBase implements NostriaSe
    */
   setDiscoveryRelays(relayUrls: string[]): void {
     try {
-      // Validate that all URLs are valid relay URLs
-      const validRelays = relayUrls.filter(url => {
-        try {
-          const parsed = new URL(url);
-          return parsed.protocol === 'wss:' || parsed.protocol === 'ws:';
-        } catch {
-          return false;
+      const validRelays = this.utilities.normalizeRelayUrls(
+        relayUrls.map(url => this.region.rewriteDiscoveryRelayUrl(url)),
+        false,
+        {
+          source: 'discovery-relays',
+          details: 'setDiscoveryRelays',
         }
-      });
+      );
 
       this.save(validRelays);
 
@@ -383,8 +391,16 @@ export class DiscoveryRelayService extends RelayServiceBase implements NostriaSe
       if (storedRelays) {
         const parsedRelays = JSON.parse(storedRelays);
         if (Array.isArray(parsedRelays)) {
-          this.logger.debug(`Loaded ${parsedRelays.length} discovery relays from storage`);
-          return parsedRelays;
+          const normalizedRelays = this.utilities.normalizeRelayUrls(
+            parsedRelays.map(url => this.region.rewriteDiscoveryRelayUrl(String(url))),
+            false,
+            {
+              source: 'discovery-relays',
+              details: 'local storage bootstrap relays',
+            }
+          );
+          this.logger.debug(`Loaded ${normalizedRelays.length} discovery relays from storage`);
+          return normalizedRelays;
         }
       }
     } catch (error) {

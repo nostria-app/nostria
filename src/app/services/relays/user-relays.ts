@@ -401,10 +401,19 @@ export class UserRelaysService {
     try {
       const dmRelayEvent = await this.database.getEventByPubkeyAndKind(pubkey, kinds.DirectMessageRelaysList);
       if (dmRelayEvent) {
-        const relayUrls = dmRelayEvent.tags
-          .filter((tag: string[]) => tag[0] === 'relay')
-          .map((tag: string[]) => tag[1])
-          .filter((url: string | undefined) => url && url.startsWith('wss://'));
+        const relayUrls = this.utilitiesService.normalizeRelayUrls(
+          dmRelayEvent.tags
+            .filter((tag: string[]) => tag[0] === 'relay')
+            .map((tag: string[]) => tag[1])
+            .filter((url: string | undefined) => url && url.startsWith('wss://')),
+          false,
+          {
+            source: 'account-relays',
+            ownerPubkey: pubkey,
+            eventKind: kinds.DirectMessageRelaysList,
+            details: 'cached DM relays from database',
+          }
+        );
 
         if (relayUrls.length > 0) {
           // User has explicit DM relays — use only those, do NOT mix in fallback relays

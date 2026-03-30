@@ -17,6 +17,10 @@ import { LoggerService } from './logger.service';
 import { UtilitiesService } from './utilities.service';
 import { SettingsService } from './settings.service';
 import { DiscoveryRelayListKind } from './relays/discovery-relay';
+import { DatabaseService } from './database.service';
+import { kinds } from 'nostr-tools';
+import { MEDIA_SERVERS_EVENT_KIND } from '../interfaces';
+import { RegionService } from './region.service';
 
 /** Service that handles changing account, will clear and load data in different services. */
 @Injectable({
@@ -40,6 +44,8 @@ export class StateService implements NostriaService {
   following = inject(FollowingService);
   metricsTracking = inject(MetricsTrackingService);
   settingsService = inject(SettingsService);
+  private readonly database = inject(DatabaseService);
+  private readonly region = inject(RegionService);
   private skipNextExtensionPubkeyVerificationFor: string | null = null;
   private extensionPubkeyVerificationInFlightFor: string | null = null;
 
@@ -206,6 +212,8 @@ export class StateService implements NostriaService {
     const discoveryStartTime = Date.now();
     await this.ensureDefaultDiscoveryRelays(pubkey, hasDiscoveryRelaysLocally);
     this.logger.info(`[StateService] Discovery relay check completed in ${Date.now() - discoveryStartTime}ms`);
+
+    await this.migrateLegacyInfrastructureUrls(pubkey);
 
     // Media load can also be parallelized but let's keep it sequential for now
     // as it's lower priority and depends on media servers being available
@@ -396,5 +404,90 @@ export class StateService implements NostriaService {
     this.media.clear();
     this.reporting.clear();
     this.following.clear();
+  }
+
+  private async migrateLegacyInfrastructureUrls(pubkey: string): Promise<void> {
+    await this.migrateLegacyRelayEvent(pubkey, kinds.RelayList, 'r');
+    await this.migrateLegacyRelayEvent(pubkey, kinds.DirectMessageRelaysList, 'relay');
+    await this.migrateLegacyRelayEvent(pubkey, DiscoveryRelayListKind, 'relay');
+    await this.migrateLegacyMediaServers(pubkey);
+  }
+
+  private async migrateLegacyRelayEvent(pubkey: string, kind: number, tagName: 'r' | 'relay'): Promise<void> {
+    const event = await this.database.getEventByPubkeyAndKind(pubkey, kind);
+    if (!event) {
+      return;
+    }
+
+    let changed = false;
+    const updatedTags = event.tags.map(tag => {
+      if (tag[0] !== tagName || !tag[1]) {
+        return tag;
+      }
+
+      const rewrittenUrl = this.utilities.normalizeRelayUrl(tag[1], true, {
+        source: tagName === 'r' ? 'account-relays' : 'discovery-relays',
+        ownerPubkey: pubkey,
+        eventKind: kind,
+        details: 'legacy Nostria relay migration',
+      });
+
+      if (!rewrittenUrl || rewrittenUrl === tag[1]) {
+        return tag;
+      }
+
+      changed = true;
+      return [tag[0], rewrittenUrl, ...tag.slice(2)];
+    });
+
+    if (!changed) {
+      return;
+    }
+
+    this.logger.info('[StateService] Migrating legacy relay URLs', {
+      pubkey,
+      kind,
+    });
+
+    const result = await this.nostr.signAndPublish(this.nostr.createEvent(kind, event.content, updatedTags));
+    if (!result.success) {
+      this.logger.warn('[StateService] Failed to publish migrated relay event; runtime override remains active', {
+        pubkey,
+        kind,
+        error: result.error,
+      });
+    }
+  }
+
+  private async migrateLegacyMediaServers(pubkey: string): Promise<void> {
+    const event = await this.database.getEventByPubkeyAndKind(pubkey, MEDIA_SERVERS_EVENT_KIND);
+    if (!event) {
+      return;
+    }
+
+    const currentServers = event.tags
+      .filter(tag => tag[0] === 'server' && !!tag[1])
+      .map(tag => tag[1]);
+    const { urls: rewrittenServers, changed } = this.region.rewriteMediaServerUrls(currentServers);
+
+    if (!changed) {
+      return;
+    }
+
+    this.logger.info('[StateService] Migrating legacy media server URLs', {
+      pubkey,
+      serverCount: rewrittenServers.length,
+    });
+
+    this.media.setMediaServers(rewrittenServers);
+
+    try {
+      await this.media.publishMediaServers();
+    } catch (error) {
+      this.logger.warn('[StateService] Failed to publish migrated media server event; runtime override remains active', {
+        pubkey,
+        error,
+      });
+    }
   }
 }

@@ -1,4 +1,5 @@
-import { Component, computed, effect, inject, input, output, signal, untracked, ElementRef, AfterViewInit, OnDestroy, ChangeDetectionStrategy, PLATFORM_ID } from '@angular/core';
+import { Component, computed, effect, inject, input, output, signal, untracked, ElementRef, AfterViewInit, OnDestroy, ChangeDetectionStrategy, PLATFORM_ID, viewChild } from '@angular/core';
+import { CdkOverlayOrigin, ConnectedPosition, OverlayModule } from '@angular/cdk/overlay';
 import { isPlatformBrowser } from '@angular/common';
 import { trigger, style, animate, transition } from '@angular/animations';
 import { MatButtonModule } from '@angular/material/button';
@@ -133,6 +134,7 @@ export function getTaggedXUrl(event?: Event | null): string | undefined {
     MatButtonModule,
     MatIconModule,
     MatProgressSpinnerModule,
+    OverlayModule,
     PhotoEventComponent,
     VideoEventComponent,
     ArticleEventComponent,
@@ -288,14 +290,24 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   private readonly platformId = inject(PLATFORM_ID);
   private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
   private readonly canHover = this.isBrowser && window.matchMedia('(hover: hover)').matches;
+  quickReactionOrigin = viewChild<CdkOverlayOrigin>('quickReactionOrigin');
+  reactionButton = viewChild<ReactionButtonComponent>('reactionBtn');
   reactions = signal<ReactionEvents>({ events: [], data: new Map() });
   reports = signal<ReactionEvents>({ events: [], data: new Map() });
 
   // Quick reaction hover popup
   showQuickReactions = signal<boolean>(false);
-  quickReactionPopupPosition = signal<{ top: number; left: number } | null>(null);
   private quickReactionTimeout: ReturnType<typeof setTimeout> | null = null;
   readonly defaultQuickReactions = ['👍', '❤️', '😂', '🔥', '🎉', '👏'];
+  readonly quickReactionPositions: ConnectedPosition[] = [
+    {
+      originX: 'start',
+      originY: 'bottom',
+      overlayX: 'start',
+      overlayY: 'top',
+      offsetY: 6,
+    },
+  ];
 
   recentEmojis = computed<RecentEmoji[]>(() => {
     const pubkey = this.accountState.pubkey();
@@ -317,7 +329,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     return this.defaultQuickReactions.map(e => ({ emoji: e }));
   });
 
-  onLikeHoverEnter(anchor?: HTMLElement): void {
+  onLikeHoverEnter(): void {
     // Don't show quick reaction popup on touch-only devices;
     // long-press opens the full emoji picker instead.
     if (!this.canHover || this.isThreadInteractionBlocked()) return;
@@ -325,16 +337,12 @@ export class EventComponent implements AfterViewInit, OnDestroy {
       clearTimeout(this.quickReactionTimeout);
       this.quickReactionTimeout = null;
     }
-    if (anchor) {
-      this.positionQuickReactionPopup(anchor);
-    }
     this.showQuickReactions.set(true);
   }
 
   onLikeHoverLeave(): void {
     this.quickReactionTimeout = setTimeout(() => {
       this.showQuickReactions.set(false);
-      this.quickReactionPopupPosition.set(null);
     }, 100);
   }
 
@@ -346,7 +354,6 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     event?.preventDefault();
     event?.stopPropagation();
     this.showQuickReactions.set(false);
-    this.quickReactionPopupPosition.set(null);
     return true;
   }
 
@@ -375,27 +382,12 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   onQuickReaction(emoji: string, reactionBtn: ReactionButtonComponent, event: MouseEvent): void {
     event.stopPropagation();
     this.showQuickReactions.set(false);
-    this.quickReactionPopupPosition.set(null);
     reactionBtn.addReaction(emoji);
   }
 
-  private positionQuickReactionPopup(anchor: HTMLElement): void {
-    if (!this.isBrowser) {
-      return;
-    }
-
-    const rect = anchor.getBoundingClientRect();
-    const estimatedPopupWidth = 320;
-    const viewportPadding = 8;
-    const left = Math.min(
-      Math.max(viewportPadding, rect.left),
-      Math.max(viewportPadding, window.innerWidth - estimatedPopupWidth - viewportPadding)
-    );
-
-    this.quickReactionPopupPosition.set({
-      top: rect.bottom + 6,
-      left,
-    });
+  openReactionMenu(event: MouseEvent): void {
+    event.stopPropagation();
+    this.reactionButton()?.openMenu();
   }
 
   isCustomEmoji(emoji: string): boolean {

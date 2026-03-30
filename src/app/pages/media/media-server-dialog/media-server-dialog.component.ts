@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
 
 import {
   FormsModule,
@@ -15,6 +15,14 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatChipsModule } from '@angular/material/chips';
+import { MediaService } from '../../../services/media.service';
+
+const NOSTRIA_MEDIA_SERVER_HOSTS = new Set([
+  'mibo.nostria.app',
+  'milo.nostria.app',
+  'mibo.eu.nostria.app',
+  'mibo.us.nostria.app',
+]);
 
 @Component({
   selector: 'app-media-server-dialog',
@@ -36,6 +44,7 @@ import { MatChipsModule } from '@angular/material/chips';
 export class MediaServerDialogComponent implements OnInit {
   private fb = inject(FormBuilder);
   private dialogRef = inject(MatDialogRef<MediaServerDialogComponent>);
+  private mediaService = inject(MediaService);
   private dialogData: string | undefined = inject(MAT_DIALOG_DATA, {
     optional: true,
   });
@@ -46,12 +55,25 @@ export class MediaServerDialogComponent implements OnInit {
   testResult: { success: boolean; message: string } | null = null;
 
   suggestedServers = signal<{ name: string; url: string }[]>([
-    { name: 'Nostria (Europe)', url: 'https://mibo.eu.nostria.app/' },
-    { name: 'Nostria (USA)', url: 'https://mibo.us.nostria.app/' },
+    { name: 'Nostria (Europe)', url: 'https://mibo.nostria.app/' },
+    { name: 'Nostria (USA)', url: 'https://milo.nostria.app/' },
     // { name: 'Nostria (Africa)', url: 'https://mibo.af.nostria.app/' },
     { name: 'Blossom Band', url: 'https://blossom.band/' },
     { name: 'F7Z', url: 'https://blossom.f7z.io/' },
   ]);
+  availableSuggestedServers = computed(() => {
+    const currentServers = this.mediaService.mediaServers();
+    const hasAnyNostriaServer = currentServers.some(server => this.isNostriaServer(server));
+
+    return this.suggestedServers().filter(server => {
+      if (this.isNostriaServer(server.url)) {
+        return !hasAnyNostriaServer;
+      }
+
+      const normalizedSuggestedUrl = this.normalizeUrl(server.url);
+      return !!normalizedSuggestedUrl && !currentServers.includes(normalizedSuggestedUrl);
+    });
+  });
 
   ngOnInit(): void {
     this.isEdit = !!this.dialogData;
@@ -164,6 +186,14 @@ export class MediaServerDialogComponent implements OnInit {
     if (this.serverForm.valid) {
       const normalizedUrl = this.normalizeUrl(this.serverForm.value.url);
       this.dialogRef.close(normalizedUrl);
+    }
+  }
+
+  private isNostriaServer(url: string): boolean {
+    try {
+      return NOSTRIA_MEDIA_SERVER_HOSTS.has(new URL(this.normalizeUrl(url)).hostname.toLowerCase());
+    } catch {
+      return false;
     }
   }
 }

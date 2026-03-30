@@ -90,6 +90,7 @@ export class LoginDialogComponent implements OnDestroy {
   nostrConnectLoading = signal<boolean>(false);
 
   // Profile setup signals (similar to welcome component)
+  signupRegion = signal<'us' | 'eu' | null>(null);
   displayName = signal('');
   profileImage = signal<string | null>(null);
   profileImageFile = signal<File | null>(null);
@@ -284,7 +285,12 @@ export class LoginDialogComponent implements OnDestroy {
   // Initial dialog methods
   startNewAccountFlow(): void {
     this.logger.debug('Starting account creation flow');
+    this.signupRegion.set(null);
     this.goToStep(LoginStep.REGION_SELECTION);
+  }
+
+  setSignupRegion(region: 'us' | 'eu'): void {
+    this.signupRegion.set(region);
   }
 
   // Profile setup methods (similar to welcome component)
@@ -316,14 +322,25 @@ export class LoginDialogComponent implements OnDestroy {
 
   // Account generation - now includes profile setup
   async generateNewKey(): Promise<void> {
+    const signupRegion = this.signupRegion();
+    if (!signupRegion) {
+      this.snackBar.open('Choose USA or Europe to continue.', 'Close', {
+        duration: 3000,
+        horizontalPosition: 'center',
+        verticalPosition: 'top',
+      });
+      return;
+    }
+
     this.logger.debug('Generating new key', {
+      region: signupRegion,
       displayName: this.displayName(),
       hasProfileImage: !!this.profileImage(),
     });
     this.loading.set(true);
 
     try {
-      const newUser = await this.nostrService.generateNewKey();
+      const newUser = await this.nostrService.generateNewKey(signupRegion);
 
       const displayName = this.displayName();
       const profileImageFile = this.profileImageFile();

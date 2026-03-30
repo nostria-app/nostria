@@ -2,6 +2,7 @@ import { inject, Injectable, PLATFORM_ID, signal } from '@angular/core';
 import { DomSanitizer } from '@angular/platform-browser';
 import { Event, nip19, UnsignedEvent } from 'nostr-tools';
 import { LoggerService } from './logger.service';
+import { RegionService } from './region.service';
 import { hexToBytes } from 'nostr-tools/utils';
 import { isPlatformBrowser } from '@angular/common';
 import { NostrTagKey } from '../standardized-tags';
@@ -45,6 +46,7 @@ export interface RelayNormalizationContext {
 export class UtilitiesService {
   private sanitizer = inject(DomSanitizer);
   private logger = inject(LoggerService);
+  private readonly regionService = inject(RegionService);
   private readonly ignoredRelayAudit = inject(IgnoredRelayAuditService);
   private readonly ignoredRelayDomains = new Set<string>([
     'nwc.primal.net',
@@ -631,7 +633,8 @@ export class UtilitiesService {
 
     const relayUrls = Object.keys(content).map(url => {
       const wssIndex = url.indexOf('wss://');
-      return wssIndex >= 0 ? url.substring(wssIndex) : url;
+      const relayUrl = wssIndex >= 0 ? url.substring(wssIndex) : url;
+      return this.regionService.rewriteAppRelayUrl(relayUrl);
     });
 
     this.trackIgnoredRelayUsage(event.pubkey, relayUrls);
@@ -650,7 +653,8 @@ export class UtilitiesService {
       .map(tag => {
         const url = tag[1];
         const wssIndex = url.indexOf('wss://');
-        return wssIndex >= 0 ? url.substring(wssIndex) : url;
+        const relayUrl = wssIndex >= 0 ? url.substring(wssIndex) : url;
+        return this.regionService.rewriteAppRelayUrl(relayUrl);
       })
       .filter(url => url.trim() !== '');
 
@@ -754,6 +758,7 @@ export class UtilitiesService {
         let url = tag[1];
         const wssIndex = url.indexOf('wss://');
         url = wssIndex >= 0 ? url.substring(wssIndex) : url;
+        url = this.regionService.rewriteAppRelayUrl(url);
 
         const marker = tag[2]?.toLowerCase();
 
@@ -976,7 +981,7 @@ export class UtilitiesService {
     let cleanedUrl = url.trim();
 
     if (!cleanedUrl.startsWith('wss://')) {
-      return cleanedUrl;
+      return this.regionService.rewriteAppRelayUrl(cleanedUrl);
     }
 
     cleanedUrl = cleanedUrl.replace(/,+$/g, '');
@@ -1001,7 +1006,7 @@ export class UtilitiesService {
         return `relay.ditto.pub${portMatch?.[1] ?? ''}`;
       });
 
-    return `wss://${canonicalAuthority}${suffix}`;
+    return this.regionService.rewriteAppRelayUrl(`wss://${canonicalAuthority}${suffix}`);
   }
 
   private logInvalidRelayUrl(
@@ -1166,8 +1171,8 @@ export class UtilitiesService {
    * not normal user events like notes, profiles, etc.
    */
   readonly excludedFromOptimalSelection: string[] = [
-    'wss://purplepag.es/',
     'wss://indexer.openresist.com/',
+    'wss://indexer.coracle.social/',
   ];
 
   /** Used to optimize the selection of a few relays from the user's relay list. */

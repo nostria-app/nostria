@@ -1901,9 +1901,18 @@ export class MessagingService implements NostriaService {
     const dmRelayEvent = await this.database.getEventByPubkeyAndKind(pubkey, kinds.DirectMessageRelaysList);
 
     if (dmRelayEvent) {
-      const storedDmRelayUrls = dmRelayEvent.tags
-        .filter(t => t[0] === 'relay' && t[1])
-        .map(t => t[1]);
+      const storedDmRelayUrls = this.utilities.normalizeRelayUrls(
+        dmRelayEvent.tags
+          .filter(t => t[0] === 'relay' && t[1])
+          .map(t => t[1]),
+        false,
+        {
+          source: 'account-relays',
+          ownerPubkey: pubkey,
+          eventKind: kinds.DirectMessageRelaysList,
+          details: 'cached DM relays for live subscription',
+        }
+      );
 
       storedDmRelayUrls.forEach(url => relayUrls.add(url));
 
