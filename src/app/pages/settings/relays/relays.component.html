@@ -190,10 +190,13 @@
       </mat-card-header>
       <mat-card-content>
         @if (messageRelays().length > 0) {
-        <mat-list>
+        <mat-list cdkDropList (cdkDropListDropped)="onMessageRelayDrop($event)">
           @for (url of messageRelays(); track url) {
-          <mat-list-item>
+          <mat-list-item cdkDrag>
             <div class="message-relay-item">
+              <div class="relay-drag-handle" cdkDragHandle>
+                <mat-icon>drag_indicator</mat-icon>
+              </div>
               <mat-icon class="status-icon status-ok">check_circle</mat-icon>
               <span class="relay-url">{{ formatRelayUrl(url) }}</span>
               <button mat-icon-button (click)="removeMessageRelay(url)" aria-label="Remove message relay">

@@ -24,7 +24,7 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatSelectModule } from '@angular/material/select';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { FormsModule } from '@angular/forms';
-import { CdkDragDrop, DragDropModule } from '@angular/cdk/drag-drop';
+import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
 import { RelayInfoDialogComponent } from './relay-info-dialog.component';
 import { RelayDetailComponent } from './relay-detail.component';
 import { MatMenuModule } from '@angular/material/menu';
@@ -967,6 +967,17 @@ export class RelaysComponent implements OnInit, OnDestroy {
     const updated = this.messageRelays().filter(r => r !== url);
     await this.publishMessageRelayList(updated);
     this.showMessage('Message relay removed');
+  }
+
+  async onMessageRelayDrop(event: CdkDragDrop<string[]>) {
+    if (event.previousIndex === event.currentIndex) {
+      return;
+    }
+
+    const updated = [...this.messageRelays()];
+    moveItemInArray(updated, event.previousIndex, event.currentIndex);
+    await this.publishMessageRelayList(updated);
+    this.showMessage('Message relay order updated');
   }
 
   async syncMessageRelaysWithAccount(): Promise<void> {

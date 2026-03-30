@@ -28,6 +28,11 @@ const NOSTRIA_MEDIA_SERVER_HOSTS = new Set([
   'milo.nostria.app',
 ]);
 
+const NOSTRIA_MEDIA_SERVER_REGIONS: Record<string, string> = {
+  'mibo.nostria.app': 'EU',
+  'milo.nostria.app': 'USA',
+};
+
 // Nostria media server regions for auto-detection
 const NOSTRIA_MEDIA_REGIONS = [
   { id: 'eu', name: 'Europe', mediaServer: 'https://mibo.nostria.app' },
@@ -391,6 +396,12 @@ export class MediaServersSettingsDialogComponent implements OnInit {
     } catch {
       return url;
     }
+  }
+
+  getServerDisplayName(url: string): string {
+    const domain = this.getServerDomain(url);
+    const regionLabel = NOSTRIA_MEDIA_SERVER_REGIONS[domain.toLowerCase()];
+    return regionLabel ? `${domain} (${regionLabel})` : domain;
   }
 
   private isNostriaServer(url: string): boolean {
