@@ -1367,19 +1367,26 @@ export class ReactionButtonComponent {
       currentEvents.push(tempRecord);
       currentData.set(emoji, (currentData.get(emoji) || 0) + 1);
     } else {
-      // Remove the user's reaction
-      const userReactionIndex = currentEvents.findIndex(
-        r => r.event.pubkey === userPubkey && r.event.content === emoji
-      );
+      // Remove every local reaction from this user so the button doesn't get stuck
+      // with a stale optimistic/signed record after unliking.
+      const removedContents = currentEvents
+        .filter(record => record.event.pubkey === userPubkey)
+        .map(record => record.event.content);
 
-      if (userReactionIndex !== -1) {
-        currentEvents.splice(userReactionIndex, 1);
-        const currentCount = currentData.get(emoji) || 0;
-        if (currentCount > 1) {
-          currentData.set(emoji, currentCount - 1);
-        } else {
-          currentData.delete(emoji);
+      if (removedContents.length > 0) {
+        const nextEvents = currentEvents.filter(record => record.event.pubkey !== userPubkey);
+
+        for (const content of removedContents) {
+          const currentCount = currentData.get(content) || 0;
+          if (currentCount > 1) {
+            currentData.set(content, currentCount - 1);
+          } else {
+            currentData.delete(content);
+          }
         }
+
+        currentEvents.length = 0;
+        currentEvents.push(...nextEvents);
       }
     }
 
