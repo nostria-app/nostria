@@ -293,6 +293,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
 
   // Quick reaction hover popup
   showQuickReactions = signal<boolean>(false);
+  quickReactionPopupPosition = signal<{ top: number; left: number } | null>(null);
   private quickReactionTimeout: ReturnType<typeof setTimeout> | null = null;
   readonly defaultQuickReactions = ['👍', '❤️', '😂', '🔥', '🎉', '👏'];
 
@@ -316,7 +317,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     return this.defaultQuickReactions.map(e => ({ emoji: e }));
   });
 
-  onLikeHoverEnter(): void {
+  onLikeHoverEnter(anchor?: HTMLElement): void {
     // Don't show quick reaction popup on touch-only devices;
     // long-press opens the full emoji picker instead.
     if (!this.canHover || this.isThreadInteractionBlocked()) return;
@@ -324,12 +325,16 @@ export class EventComponent implements AfterViewInit, OnDestroy {
       clearTimeout(this.quickReactionTimeout);
       this.quickReactionTimeout = null;
     }
+    if (anchor) {
+      this.positionQuickReactionPopup(anchor);
+    }
     this.showQuickReactions.set(true);
   }
 
   onLikeHoverLeave(): void {
     this.quickReactionTimeout = setTimeout(() => {
       this.showQuickReactions.set(false);
+      this.quickReactionPopupPosition.set(null);
     }, 100);
   }
 
@@ -341,6 +346,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     event?.preventDefault();
     event?.stopPropagation();
     this.showQuickReactions.set(false);
+    this.quickReactionPopupPosition.set(null);
     return true;
   }
 
@@ -369,7 +375,27 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   onQuickReaction(emoji: string, reactionBtn: ReactionButtonComponent, event: MouseEvent): void {
     event.stopPropagation();
     this.showQuickReactions.set(false);
+    this.quickReactionPopupPosition.set(null);
     reactionBtn.addReaction(emoji);
+  }
+
+  private positionQuickReactionPopup(anchor: HTMLElement): void {
+    if (!this.isBrowser) {
+      return;
+    }
+
+    const rect = anchor.getBoundingClientRect();
+    const estimatedPopupWidth = 320;
+    const viewportPadding = 8;
+    const left = Math.min(
+      Math.max(viewportPadding, rect.left),
+      Math.max(viewportPadding, window.innerWidth - estimatedPopupWidth - viewportPadding)
+    );
+
+    this.quickReactionPopupPosition.set({
+      top: rect.bottom + 6,
+      left,
+    });
   }
 
   isCustomEmoji(emoji: string): boolean {

@@ -1011,7 +1011,7 @@
         [attr.aria-disabled]="isThreadInteractionBlocked()"
         [matTooltip]="isThreadInteractionBlocked() ? threadInteractionBlockedTooltip() : ''"
         [matTooltipDisabled]="!isThreadInteractionBlocked()" (click)="onLikeActionClick(reactionBtn, $event)"
-        (mouseenter)="onLikeHoverEnter()" (mouseleave)="onLikeHoverLeave()">
+        (mouseenter)="onLikeHoverEnter($any($event.currentTarget))" (mouseleave)="onLikeHoverLeave()">
         <app-reaction-button class="action-icon" #reactionBtn [event]="targetItem.event"
           [reactionsFromParent]="reactions()" [disabled]="isThreadInteractionBlocked()"
           (reactionChanged)="loadReactions(true)" view="icon"></app-reaction-button>
@@ -1023,6 +1023,8 @@
 
         <!-- Quick reaction hover popup -->
         <div class="quick-reaction-popup" [class.visible]="showQuickReactions() && !isThreadInteractionBlocked()"
+          [style.top.px]="quickReactionPopupPosition()?.top ?? null"
+          [style.left.px]="quickReactionPopupPosition()?.left ?? null"
           (mouseenter)="onLikeHoverEnter()" (mouseleave)="onLikeHoverLeave()">
           @for (item of quickReactionEmojis(); track item.emoji) {
           <button class="quick-emoji-btn" (click)="onQuickReaction(item.emoji, reactionBtn, $event)" type="button">

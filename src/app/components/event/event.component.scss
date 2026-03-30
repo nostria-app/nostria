@@ -49,6 +49,14 @@
   &.selected {
     cursor: default;
   }
+
+  &:focus,
+  &:focus-visible,
+  &:active {
+    outline: none;
+    box-shadow: none;
+    -webkit-tap-highlight-color: transparent;
+  }
 }
 
 // Dark mode: lift cards above the near-black background for better visual separation
@@ -66,6 +74,8 @@
   // Horizontal padding matches video player controls (12px)
   background-color: transparent;
   border-radius: 0 0 12px 12px;
+  position: relative;
+  overflow: visible;
 }
 
 .reactions-row {
@@ -106,6 +116,8 @@
   opacity: 0.6;
   transition: opacity 0.15s ease;
   user-select: none;
+  position: relative;
+  overflow: visible;
 
   &:hover {
     opacity: 1;
@@ -168,11 +180,9 @@
 }
 
 .quick-reaction-popup {
-  position: absolute;
-  bottom: calc(100% + 4px);
-  left: 0;
+  position: fixed;
   transform: scale(0.3);
-  transform-origin: bottom left;
+  transform-origin: top left;
   display: flex;
   align-items: center;
   gap: 2px;
@@ -181,7 +191,7 @@
   border: 1px solid var(--mat-sys-outline-variant);
   border-radius: 24px;
   box-shadow: var(--mat-sys-level2);
-  z-index: 10;
+  z-index: 2000;
   white-space: nowrap;
   opacity: 0;
   pointer-events: none;
@@ -356,8 +366,7 @@
   }
 
   &:focus-visible {
-    outline: 2px solid var(--mat-sys-primary);
-    outline-offset: -2px;
+    outline: none;
   }
 
   &.disabled {
