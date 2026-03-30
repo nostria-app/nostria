@@ -54,7 +54,8 @@
     </div>
 
     <div class="action-item like-action">
-      <app-reaction-button [event]="event()" view="icon" (reactionChanged)="onReactionChanged()"></app-reaction-button>
+      <app-reaction-button [event]="event()" view="icon" [enableDesktopHoverPicker]="true"
+        (reactionChanged)="onReactionChanged()"></app-reaction-button>
       <span class="action-count" [class.hidden]="likesCount() <= 0">{{ likesCount() > 0 ? likesCount() : '0' }}</span>
     </div>
 

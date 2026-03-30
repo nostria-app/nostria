@@ -438,7 +438,7 @@ export class ReactionButtonComponent {
   }
 
   onDesktopMouseEnter(): void {
-    if (this.isHandset() || this.disabled()) {
+    if (this.isHandset() || this.disabled() || !this.enableDesktopHoverPicker()) {
       return;
     }
 
@@ -451,7 +451,7 @@ export class ReactionButtonComponent {
   }
 
   onDesktopMouseLeave(): void {
-    if (this.isHandset()) {
+    if (this.isHandset() || !this.enableDesktopHoverPicker()) {
       return;
     }
 
@@ -459,6 +459,18 @@ export class ReactionButtonComponent {
       this.menuTrigger()?.closeMenu();
       this.hoverCloseTimer = null;
     }, 120);
+  }
+
+  openDesktopFullReactionPicker(event: MouseEvent): void {
+    event.stopPropagation();
+    event.preventDefault();
+
+    if (this.isHandset() || this.disabled()) {
+      return;
+    }
+
+    this.menuTrigger()?.closeMenu();
+    this.menuTriggerFull()?.openMenu();
   }
 
   /**
@@ -662,6 +674,33 @@ export class ReactionButtonComponent {
   // Quick reactions for the picker
   readonly quickReactions = ['❤️', '👍', '😂', '😮', '😢', '🔥'];
 
+  desktopQuickReactions = computed<Array<{ emoji: string; url?: string }>>(() => {
+    const pubkey = this.accountState.pubkey();
+    const recent = pubkey ? this.accountLocalState.getRecentEmojis(pubkey) : [];
+    const recentItems = recent
+      .filter(item => item.emoji && item.emoji !== this.defaultReaction()?.emoji)
+      .slice(0, 2)
+      .map(item => ({ emoji: item.emoji, url: item.url }));
+
+    const defaultItem = this.defaultReaction();
+    const baseItems = [defaultItem, ...this.quickReactions.map(emoji => ({ emoji }))]
+      .filter((item): item is { emoji: string; url?: string } => !!item?.emoji);
+
+    const uniqueItems: Array<{ emoji: string; url?: string }> = [];
+    for (const item of [...baseItems, ...recentItems]) {
+      if (uniqueItems.some(existing => existing.emoji === item.emoji && existing.url === item.url)) {
+        continue;
+      }
+
+      uniqueItems.push(item);
+      if (uniqueItems.length >= 6) {
+        break;
+      }
+    }
+
+    return uniqueItems;
+  });
+
   defaultReaction = computed<{ emoji: string; url?: string } | null>(() => {
     const pubkey = this.accountState.pubkey();
     if (!pubkey) {
@@ -679,6 +718,7 @@ export class ReactionButtonComponent {
   event = input.required<Event>();
   view = input<ViewMode>('icon');
   disabled = input<boolean>(false);
+  enableDesktopHoverPicker = input<boolean>(true);
   // Accept reactions from parent to avoid duplicate queries
   // If not provided, component will load independently
   reactionsFromParent = input<ReactionEvents | null>(null);

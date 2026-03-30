@@ -48,7 +48,31 @@
   <div class="hidden-menu-trigger" [matMenuTriggerFor]="reactionMenu" #menuTrigger="matMenuTrigger"></div>
 
   <!-- Reaction picker menu -->
-  <mat-menu #reactionMenu="matMenu" class="reaction-picker-menu">
+  <mat-menu #reactionMenu="matMenu" class="reaction-quick-menu">
+    <div class="desktop-quick-reaction-menu" tabindex="-1" (mouseenter)="onDesktopMouseEnter()"
+      (mouseleave)="onDesktopMouseLeave()" (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()">
+      <div class="desktop-quick-reaction-row">
+        @for (item of desktopQuickReactions(); track item.emoji) {
+        <button class="emoji-button" mat-icon-button type="button" (click)="addReaction(item.emoji)">
+          @if (item.url) {
+          <img [src]="item.url" [alt]="item.emoji" class="custom-emoji-img">
+          } @else {
+          <span>{{ item.emoji }}</span>
+          }
+        </button>
+        }
+
+        <button class="emoji-button more-reactions-button" mat-icon-button type="button"
+          (click)="openDesktopFullReactionPicker($event)">
+          <mat-icon>add</mat-icon>
+        </button>
+      </div>
+    </div>
+  </mat-menu>
+
+  <div class="hidden-menu-trigger" [matMenuTriggerFor]="reactionMenuFull" #menuTriggerFull="matMenuTrigger"></div>
+
+  <mat-menu #reactionMenuFull="matMenu" class="reaction-picker-menu">
     <div class="emoji-picker-container" tabindex="-1" (click)="$event.stopPropagation()"
       (keydown)="$event.stopPropagation()">
       <app-emoji-picker mode="reaction" [allowPreferredReactionShortcut]="true"
@@ -58,10 +82,11 @@
   } @else {
   <!-- Full view with reaction groups -->
   <div class="reaction-full-view">
+    <div class="hidden-menu-trigger" [matMenuTriggerFor]="reactionMenuFull" #menuTriggerFull="matMenuTrigger"></div>
+
     <!-- Main reaction button -->
     <button mat-button [class.active]="!!userReaction()" [class.reacted]="!!userReaction()"
-      [disabled]="isLoadingReactions() || disabled()" [matMenuTriggerFor]="isHandset() ? null : reactionMenuFull"
-      #menuTriggerFull="matMenuTrigger" (click)="openFullReactionPicker($event)">
+      [disabled]="isLoadingReactions() || disabled()" [matMenuTriggerFor]="null" (click)="openFullReactionPicker($event)">
       @if (userReaction()) {
       @if (getCustomEmojiUrl(userReaction()!.event)) {
       <app-custom-emoji [src]="getCustomEmojiUrl(userReaction()!.event)!" [alt]="userReaction()!.event.content"

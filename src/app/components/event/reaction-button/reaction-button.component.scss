@@ -27,10 +27,6 @@
     justify-content: center;
     color: #666;
 
-    &:hover {
-      color: #e91e63;
-    }
-
     &.reacted {
       color: #e91e63;
     }
@@ -92,6 +88,9 @@
   display: inline-block;
 
   > button[mat-button]:not(.reacted) {
+    --mat-text-button-state-layer-color: transparent;
+    --mat-text-button-ripple-color: transparent;
+
     .emoji-icon {
       filter: grayscale(1);
       opacity: 0.8;
@@ -100,6 +99,10 @@
     .emoji-icon-img {
       filter: grayscale(1) brightness(0.9);
       opacity: 0.8;
+    }
+
+    &:hover {
+      background: transparent;
     }
   }
 }
@@ -150,6 +153,18 @@
 }
 
 // Reaction picker inside mat-menu
+::ng-deep .mat-mdc-menu-panel.reaction-quick-menu {
+  width: auto;
+  min-width: 0;
+  max-width: none;
+  overflow: visible;
+
+  .mat-mdc-menu-content {
+    padding: 0;
+    overflow: visible;
+  }
+}
+
 ::ng-deep .mat-mdc-menu-panel.reaction-picker-menu {
   overflow: hidden;
   width: min(360px, calc(100vw - 24px));
@@ -160,6 +175,48 @@
   .mat-mdc-menu-content {
     padding: 0;
     overflow: hidden;
+  }
+}
+
+.desktop-quick-reaction-menu {
+  padding: 6px 8px;
+  width: max-content;
+  background: var(--mat-sys-surface-container-high);
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: 24px;
+  box-shadow: var(--mat-sys-level2);
+}
+
+.desktop-quick-reaction-row {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-wrap: nowrap;
+  width: max-content;
+
+  .emoji-button {
+    width: 36px;
+    min-width: 36px;
+    height: 36px;
+    flex: 0 0 36px;
+    border-radius: 50%;
+    font-size: 1.375rem;
+
+    &.mat-mdc-icon-button {
+      --mdc-icon-button-state-layer-size: 36px;
+      --mdc-icon-button-icon-size: 1.375rem;
+    }
+
+    &:hover {
+      transform: scale(1.3);
+      background: var(--mat-sys-surface-container-highest);
+    }
+  }
+}
+
+.more-reactions-button {
+  mat-icon {
+    color: var(--mat-sys-on-surface-variant);
   }
 }
 

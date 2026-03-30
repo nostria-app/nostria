@@ -1,5 +1,4 @@
 import { Component, computed, effect, inject, input, output, signal, untracked, ElementRef, AfterViewInit, OnDestroy, ChangeDetectionStrategy, PLATFORM_ID, viewChild } from '@angular/core';
-import { CdkOverlayOrigin, ConnectedPosition, OverlayModule } from '@angular/cdk/overlay';
 import { isPlatformBrowser } from '@angular/common';
 import { trigger, style, animate, transition } from '@angular/animations';
 import { MatButtonModule } from '@angular/material/button';
@@ -19,7 +18,7 @@ import { BookmarkService } from '../../services/bookmark.service';
 import { DataService } from '../../services/data.service';
 import { LayoutService } from '../../services/layout.service';
 import { LocalSettingsService } from '../../services/local-settings.service';
-import { AccountLocalStateService, RecentEmoji } from '../../services/account-local-state.service';
+import { AccountLocalStateService } from '../../services/account-local-state.service';
 import { LoggerService } from '../../services/logger.service';
 import { RepostService } from '../../services/repost.service';
 import { ContentComponent } from '../content/content.component';
@@ -134,7 +133,6 @@ export function getTaggedXUrl(event?: Event | null): string | undefined {
     MatButtonModule,
     MatIconModule,
     MatProgressSpinnerModule,
-    OverlayModule,
     PhotoEventComponent,
     VideoEventComponent,
     ArticleEventComponent,
@@ -289,62 +287,8 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   private readonly haptics = inject(HapticsService);
   private readonly platformId = inject(PLATFORM_ID);
   private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
-  private readonly canHover = this.isBrowser && window.matchMedia('(hover: hover)').matches;
-  quickReactionOrigin = viewChild<CdkOverlayOrigin>('quickReactionOrigin');
-  reactionButton = viewChild<ReactionButtonComponent>('reactionBtn');
   reactions = signal<ReactionEvents>({ events: [], data: new Map() });
   reports = signal<ReactionEvents>({ events: [], data: new Map() });
-
-  // Quick reaction hover popup
-  showQuickReactions = signal<boolean>(false);
-  private quickReactionTimeout: ReturnType<typeof setTimeout> | null = null;
-  readonly defaultQuickReactions = ['👍', '❤️', '😂', '🔥', '🎉', '👏'];
-  readonly quickReactionPositions: ConnectedPosition[] = [
-    {
-      originX: 'start',
-      originY: 'bottom',
-      overlayX: 'start',
-      overlayY: 'top',
-      offsetY: 6,
-    },
-  ];
-
-  recentEmojis = computed<RecentEmoji[]>(() => {
-    const pubkey = this.accountState.pubkey();
-    if (!pubkey) return [];
-    return this.accountLocalState.getRecentEmojis(pubkey).slice(0, 6);
-  });
-
-  quickReactionEmojis = computed<{ emoji: string; url?: string }[]>(() => {
-    const recent = this.recentEmojis();
-    if (recent.length > 0) {
-      // Merge recent (up to 4) with defaults to fill 6 slots, no duplicates
-      const emojis: { emoji: string; url?: string }[] = recent.slice(0, 4).map(r => ({ emoji: r.emoji, url: r.url }));
-      for (const def of this.defaultQuickReactions) {
-        if (emojis.length >= 6) break;
-        if (!emojis.some(e => e.emoji === def)) emojis.push({ emoji: def });
-      }
-      return emojis;
-    }
-    return this.defaultQuickReactions.map(e => ({ emoji: e }));
-  });
-
-  onLikeHoverEnter(): void {
-    // Don't show quick reaction popup on touch-only devices;
-    // long-press opens the full emoji picker instead.
-    if (!this.canHover || this.isThreadInteractionBlocked()) return;
-    if (this.quickReactionTimeout) {
-      clearTimeout(this.quickReactionTimeout);
-      this.quickReactionTimeout = null;
-    }
-    this.showQuickReactions.set(true);
-  }
-
-  onLikeHoverLeave(): void {
-    this.quickReactionTimeout = setTimeout(() => {
-      this.showQuickReactions.set(false);
-    }, 100);
-  }
 
   private consumeBlockedThreadInteraction(event?: globalThis.Event): boolean {
     if (!this.isThreadInteractionBlocked()) {
@@ -353,7 +297,6 @@ export class EventComponent implements AfterViewInit, OnDestroy {
 
     event?.preventDefault();
     event?.stopPropagation();
-    this.showQuickReactions.set(false);
     return true;
   }
 
@@ -377,21 +320,6 @@ export class EventComponent implements AfterViewInit, OnDestroy {
 
     zapBtn.onClick(event);
     event.stopPropagation();
-  }
-
-  onQuickReaction(emoji: string, reactionBtn: ReactionButtonComponent, event: MouseEvent): void {
-    event.stopPropagation();
-    this.showQuickReactions.set(false);
-    reactionBtn.addReaction(emoji);
-  }
-
-  openReactionMenu(event: MouseEvent): void {
-    event.stopPropagation();
-    this.reactionButton()?.openMenu();
-  }
-
-  isCustomEmoji(emoji: string): boolean {
-    return emoji.startsWith(':') && emoji.endsWith(':');
   }
 
   // Display mode for action buttons: 'labels-only', 'icons-and-labels', 'icons-only'

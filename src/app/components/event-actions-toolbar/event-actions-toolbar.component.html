@@ -18,10 +18,11 @@
   </div>
   } @else if (!hideLike()) {
   <!-- Standard Like with count -->
-  <div class="action-button like-action like-hover-container"
-    (click)="reactionBtn.sendDefaultReaction(); $event.stopPropagation()">
+    <div class="action-button like-action like-hover-container"
+      (click)="reactionBtn.sendDefaultReaction(); $event.stopPropagation()">
     <app-reaction-button class="action-icon" #reactionBtn [event]="event()" [reactionsFromParent]="effectiveReactions()"
-      (reactionChanged)="onReactionChanged()" view="icon"></app-reaction-button>
+      [enableDesktopHoverPicker]="actionsDisplayMode() === 'icons-only'" (reactionChanged)="onReactionChanged()"
+      view="icon"></app-reaction-button>
     @if (likes().length > 0) {
     <span class="action-count">{{ likes().length }}</span>
     }
