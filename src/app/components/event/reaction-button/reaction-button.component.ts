@@ -336,7 +336,7 @@ export class ReactionButtonComponent {
       return;
     }
 
-    this.desktopHoverMenuActive = false;
+    this.desktopHoverMenuActive.set(false);
   }
 
   openFullReactionPicker(event: globalThis.MouseEvent): void {
@@ -362,8 +362,8 @@ export class ReactionButtonComponent {
   private suppressNextClick = false;
   private pointerDownType: string | null = null;
   private hoverCloseTimer: ReturnType<typeof setTimeout> | null = null;
-  protected desktopHoverSurfaceActive = false;
-  protected desktopHoverMenuActive = false;
+  protected desktopHoverSurfaceActive = signal(false);
+  protected desktopHoverMenuActive = signal(false);
 
   /**
    * Send the user's default reaction emoji (from settings) on a single tap.
@@ -456,14 +456,14 @@ export class ReactionButtonComponent {
       return;
     }
 
-    this.desktopHoverSurfaceActive = true;
+    this.desktopHoverSurfaceActive.set(true);
 
     if (this.hoverCloseTimer) {
       clearTimeout(this.hoverCloseTimer);
       this.hoverCloseTimer = null;
     }
 
-    this.desktopHoverMenuActive = false;
+    this.desktopHoverMenuActive.set(false);
   }
 
   onDesktopMouseLeave(): void {
@@ -471,7 +471,7 @@ export class ReactionButtonComponent {
       return;
     }
 
-    this.desktopHoverSurfaceActive = false;
+    this.desktopHoverSurfaceActive.set(false);
 
     this.scheduleDesktopHoverClose();
   }
@@ -481,7 +481,7 @@ export class ReactionButtonComponent {
       return;
     }
 
-    this.desktopHoverMenuActive = true;
+    this.desktopHoverMenuActive.set(true);
 
     if (this.hoverCloseTimer) {
       clearTimeout(this.hoverCloseTimer);
@@ -494,7 +494,7 @@ export class ReactionButtonComponent {
       return;
     }
 
-    this.desktopHoverMenuActive = false;
+    this.desktopHoverMenuActive.set(false);
 
     this.scheduleDesktopHoverClose();
   }
@@ -505,7 +505,7 @@ export class ReactionButtonComponent {
     }
 
     this.hoverCloseTimer = setTimeout(() => {
-      if (this.desktopHoverSurfaceActive || this.desktopHoverMenuActive) {
+      if (this.desktopHoverSurfaceActive() || this.desktopHoverMenuActive()) {
         this.hoverCloseTimer = null;
         return;
       }
@@ -522,8 +522,8 @@ export class ReactionButtonComponent {
       return;
     }
 
-    this.desktopHoverMenuActive = false;
-    this.desktopHoverSurfaceActive = false;
+    this.desktopHoverMenuActive.set(false);
+    this.desktopHoverSurfaceActive.set(false);
     this.menuTriggerFull()?.openMenu();
   }
 
@@ -546,8 +546,8 @@ export class ReactionButtonComponent {
       this.hoverCloseTimer = null;
     }
 
-    this.desktopHoverSurfaceActive = false;
-    this.desktopHoverMenuActive = false;
+    this.desktopHoverSurfaceActive.set(false);
+    this.desktopHoverMenuActive.set(false);
   }
 
   // --- Touch quick-select emoji bar ---

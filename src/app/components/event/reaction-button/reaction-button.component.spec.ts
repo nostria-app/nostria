@@ -428,6 +428,43 @@ describe('ReactionButtonComponent', () => {
     });
   });
 
+  describe('desktop hover picker', () => {
+    beforeEach(() => {
+      setRequiredInputs();
+    });
+
+    it('should open the quick reaction menu on hover enter', async () => {
+      fixture.componentRef.setInput('enableDesktopHoverPicker', true);
+      fixture.detectChanges();
+
+      component.onDesktopMouseEnter();
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      expect(fixture.nativeElement.querySelector('.desktop-quick-reaction-menu')).toBeTruthy();
+    });
+
+    it('should close the quick reaction menu after hover leave timeout', async () => {
+      vi.useFakeTimers();
+
+      fixture.componentRef.setInput('enableDesktopHoverPicker', true);
+      fixture.detectChanges();
+
+      component.onDesktopMouseEnter();
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      component.onDesktopMouseLeave();
+      vi.advanceTimersByTime(200);
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      expect(fixture.nativeElement.querySelector('.desktop-quick-reaction-menu')).toBeFalsy();
+
+      vi.useRealTimers();
+    });
+  });
+
   describe('toggleLike', () => {
     beforeEach(() => {
       setRequiredInputs();

@@ -343,6 +343,15 @@ export class MediaProcessingService {
       const mimeType = (await output.getMimeType()).split(';', 1)[0] || plan.format.mimeType;
       const blob = new Blob([buffer], { type: mimeType });
 
+      if (audioTrack) {
+        const preservesAudio = await this.outputHasAudioTrack(mediabunny, blob);
+        if (!preservesAudio) {
+          return {
+            failureReason: `Local compression would remove audio from ${file.name}, so the original file will be uploaded.`,
+          };
+        }
+      }
+
       onProgress?.({ message: `Compressed ${file.name}`, progress: 1 });
 
       return {
@@ -475,6 +484,22 @@ export class MediaProcessingService {
     }
 
     return null;
+  }
+
+  private async outputHasAudioTrack(mediabunny: MediabunnyModule, blob: Blob): Promise<boolean> {
+    const input = new mediabunny.Input({
+      source: new mediabunny.BlobSource(blob),
+      formats: mediabunny.ALL_FORMATS,
+    });
+
+    try {
+      return !!await input.getPrimaryAudioTrack();
+    } catch (error) {
+      this.logger.warn('Failed to verify audio track in locally compressed video output', error);
+      return false;
+    } finally {
+      input.dispose();
+    }
   }
 
   private getImageOutputMimeType(originalMimeType: string): 'image/jpeg' | 'image/webp' {

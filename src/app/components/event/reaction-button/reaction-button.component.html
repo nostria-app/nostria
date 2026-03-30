@@ -3,7 +3,7 @@
   <!-- Icon view: single-tap sends default reaction, long-press opens picker -->
   <button mat-icon-button cdkOverlayOrigin #quickReactionOrigin="cdkOverlayOrigin" [class.active]="!!userReaction()" [class.reacted]="!!userReaction()"
     [disabled]="isLoadingReactions() || disabled()" (pointerdown)="onPointerDown($event)" (pointerup)="onPointerUp($event)"
-    (pointerleave)="onPointerLeave()"
+    (pointerleave)="onPointerLeave()" (mouseenter)="onDesktopMouseEnter()" (mouseleave)="onDesktopMouseLeave()"
     (contextmenu)="$event.preventDefault()"
     (click)="onClick($event)" style="touch-action: none">
     @if (userReaction()) {
@@ -46,7 +46,7 @@
 
   @if (quickReactionOrigin; as quickReactionOverlayOrigin) {
   <ng-template cdkConnectedOverlay [cdkConnectedOverlayOrigin]="quickReactionOverlayOrigin"
-    [cdkConnectedOverlayOpen]="enableDesktopHoverPicker() && !isHandset() && !disabled() && (desktopHoverSurfaceActive || desktopHoverMenuActive)"
+    [cdkConnectedOverlayOpen]="enableDesktopHoverPicker() && !isHandset() && !disabled() && (desktopHoverSurfaceActive() || desktopHoverMenuActive())"
     [cdkConnectedOverlayHasBackdrop]="false" [cdkConnectedOverlayPositions]="desktopQuickReactionPositions"
     [cdkConnectedOverlayPush]="true">
     <div class="desktop-quick-reaction-menu" tabindex="-1" (mouseenter)="onDesktopMenuMouseEnter()"
