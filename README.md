@@ -16,6 +16,8 @@ On Nostria, users own their data, control their profiles, and resist censorship.
 
 Nostria is **Your Social Network** - a place where lasting engagement comes from meaning, utility, and community.
 
+<img src="public/screenshots/2025-02-13-home-dark.webp" alt="Nostria app">
+
 ## Installation
 
 Nostria is accessible as both web app and desktop app.
