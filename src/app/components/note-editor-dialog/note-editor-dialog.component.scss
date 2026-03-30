@@ -125,6 +125,31 @@
         object-fit: cover;
       }
 
+      .media-thumbnail-meta {
+        position: absolute;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        padding: 6px 6px 5px;
+        background: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.82) 100%);
+        color: white;
+      }
+
+      .media-status,
+      .media-size {
+        font-size: 10px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .media-status {
+        color: var(--mat-sys-secondary-fixed);
+      }
+
       .video-icon {
         position: absolute;
         top: 50%;

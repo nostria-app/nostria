@@ -439,7 +439,7 @@
     <div class="drag-overlay">
       <div class="drag-message">
         <mat-icon class="drag-icon">cloud_upload</mat-icon>
-        <span>Drop files here to upload</span>
+        <span>Drop files here to add media</span>
       </div>
     </div>
     }
@@ -463,20 +463,26 @@
     <!-- Media Thumbnails (shown above action buttons in footer) -->
     @if (mediaMetadata().length > 0 && !showPreview() && !showAdvancedOptions()) {
     <div class="media-thumbnails" cdkDropList cdkDropListOrientation="horizontal" (cdkDropListDropped)="drop($event)">
-      @for (media of mediaMetadata(); track media.url; let i = $index) {
+      @for (media of mediaMetadata(); track media.id ?? media.url; let i = $index) {
       <div class="media-thumbnail" cdkDrag>
         <button mat-icon-button class="remove-media-btn" (click)="removeMedia(i)" matTooltip="Remove media">
           <mat-icon>close</mat-icon>
         </button>
         @if (media.mimeType?.startsWith('video/')) {
         <mat-icon class="video-icon">videocam</mat-icon>
-        <!-- Use image preview if available -->
-        @if (media.image) {
-        <img [src]="media.image" class="thumbnail-img" alt="Video thumbnail">
+        @if (getMediaThumbnailUrl(media)) {
+        <img [src]="getMediaThumbnailUrl(media)" class="thumbnail-img" alt="Video thumbnail">
         }
         } @else {
-        <img [src]="media.url" class="thumbnail-img" alt="Image thumbnail">
+        <img [src]="getMediaThumbnailUrl(media)" class="thumbnail-img" alt="Image thumbnail">
         }
+        <div class="media-thumbnail-meta">
+          @if (media.pendingUpload) {
+          <span class="media-status">Uploads on publish</span>
+          }
+          <span class="media-size">Original {{ formatFileSize(media.originalSize) }}</span>
+          <span class="media-size">Upload {{ formatFileSize(getMediaUploadSize(media)) }}</span>
+        </div>
       </div>
       }
     </div>

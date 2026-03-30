@@ -27,6 +27,8 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatDialog } from '@angular/material/dialog';
 import { Router } from '@angular/router';
 import { XDualPostService } from '../../services/x-dual-post.service';
+import { MediaProcessingService } from '../../services/media-processing.service';
+import { SettingsService } from '../../services/settings.service';
 
 describe('NoteEditorDialogComponent', () => {
   let component: NoteEditorDialogComponent;
@@ -60,6 +62,17 @@ describe('NoteEditorDialogComponent', () => {
   };
   let mockAccountRelayService: {
     getRelayUrls: Mock;
+  };
+  let mockMediaService: {
+    uploadFile: Mock;
+    load: Mock;
+    mediaServers: Mock;
+    getFileMimeType: Mock;
+    error: ReturnType<typeof signal>;
+    clearError: Mock;
+  };
+  let mockMediaProcessingService: {
+    prepareFileForUpload: Mock;
   };
 
   function createComponent(beforeDetectChanges?: (instance: NoteEditorDialogComponent) => void) {
@@ -100,21 +113,39 @@ describe('NoteEditorDialogComponent', () => {
       getRelayUrls: vi.fn(() => []),
     };
 
+    mockMediaService = {
+      uploadFile: vi.fn(),
+      load: vi.fn().mockResolvedValue(undefined),
+      mediaServers: vi.fn(() => ['https://media.example']),
+      getFileMimeType: vi.fn((file: File) => file.type),
+      error: signal(''),
+      clearError: vi.fn(),
+    };
+
+    mockMediaProcessingService = {
+      prepareFileForUpload: vi.fn(async (file: File) => ({
+        file,
+        uploadOriginal: false,
+        wasProcessed: false,
+      })),
+    };
+
     TestBed.configureTestingModule({
       imports: [NoteEditorDialogComponent],
       providers: [
         provideZonelessChangeDetection(),
         { provide: NostrService, useValue: { getRelays: () => [], pool: {} } },
         { provide: AccountRelayService, useValue: mockAccountRelayService },
-        { provide: MediaService, useValue: { uploadFile: vi.fn() } },
+        { provide: MediaService, useValue: mockMediaService },
+        { provide: MediaProcessingService, useValue: mockMediaProcessingService },
         { provide: LocalStorageService, useValue: { get: () => null, set: vi.fn() } },
         {
           provide: LocalSettingsService,
-          useValue: { addClientTag: signal(true) },
+          useValue: { addClientTag: signal(true), removeTrackingParameters: signal(false) },
         },
         {
           provide: AccountStateService,
-          useValue: { pubkey: signal(null) },
+          useValue: { pubkey: signal(null), subscription: signal(null), profile: signal(null) },
         },
         {
           provide: AccountLocalStateService,
@@ -141,6 +172,7 @@ describe('NoteEditorDialogComponent', () => {
         { provide: AiService, useValue: mockAiService },
         { provide: SpeechService, useValue: { isRecording: signal(false), startRecording: vi.fn(), stopRecording: vi.fn() } },
         { provide: PlatformService, useValue: mockPlatformService },
+        { provide: SettingsService, useValue: { settings: signal({ postToXByDefault: false }) } },
       ],
     });
 
@@ -154,6 +186,7 @@ describe('NoteEditorDialogComponent', () => {
 
   afterEach(() => {
     fixture?.destroy();
+    vi.restoreAllMocks();
   });
 
   it('should create', () => {
@@ -190,6 +223,91 @@ describe('NoteEditorDialogComponent', () => {
 
       expect(preview?.textContent).toContain('Original reply content that should be visible in the composer preview.');
       expect(noteId?.textContent.trim()).toBe('01234567…');
+    });
+  });
+
+  describe('deferred media uploads', () => {
+    it('should queue dropped video media and insert a publish placeholder instead of uploading immediately', async () => {
+      createComponent();
+      await fixture.whenStable();
+
+      const createObjectUrl = vi.fn((value: Blob | MediaSource) => `blob:${(value as Blob).size}`);
+      const revokeObjectUrl = vi.fn();
+      Object.defineProperty(URL, 'createObjectURL', { configurable: true, value: createObjectUrl });
+      Object.defineProperty(URL, 'revokeObjectURL', { configurable: true, value: revokeObjectUrl });
+
+      const originalFile = new File(['0123456789'], 'clip.mp4', { type: 'video/mp4' });
+      const compressedFile = new File(['0123'], 'clip.mp4', { type: 'video/mp4' });
+
+      mockMediaProcessingService.prepareFileForUpload.mockResolvedValue({
+        file: compressedFile,
+        uploadOriginal: false,
+        wasProcessed: true,
+      });
+
+      vi.spyOn(component as never, 'extractPendingVideoThumbnail' as never).mockResolvedValue({
+        blob: new Blob(['thumb'], { type: 'image/jpeg' }),
+        objectUrl: 'blob:video-thumb',
+        dimensions: { width: 720, height: 1280 },
+        blurhash: 'blurhash',
+        thumbhash: 'thumbhash',
+      });
+
+      await (component as never).uploadFiles([originalFile]);
+
+      const queuedMedia = component.mediaMetadata()[0];
+      expect(mockMediaService.uploadFile).not.toHaveBeenCalled();
+      expect(queuedMedia.pendingUpload).toBe(true);
+      expect(queuedMedia.placeholderToken).toContain('uploads on publish');
+      expect(component.content()).toContain(queuedMedia.placeholderToken);
+      expect(queuedMedia.image).toBe('blob:video-thumb');
+      expect(queuedMedia.originalSize).toBe(originalFile.size);
+      expect(queuedMedia.processedSize).toBe(compressedFile.size);
+    });
+
+    it('should upload pending media on publish and replace the placeholder with the final URL', async () => {
+      createComponent();
+      await fixture.whenStable();
+
+      Object.defineProperty(URL, 'createObjectURL', { configurable: true, value: vi.fn(() => 'blob:image-preview') });
+      Object.defineProperty(URL, 'revokeObjectURL', { configurable: true, value: vi.fn() });
+
+      const imageFile = new File(['image-data'], 'photo.png', { type: 'image/png' });
+
+      mockMediaProcessingService.prepareFileForUpload.mockResolvedValue({
+        file: imageFile,
+        uploadOriginal: false,
+        wasProcessed: false,
+      });
+
+      await (component as never).uploadFiles([imageFile]);
+
+      const placeholder = component.mediaMetadata()[0].placeholderToken as string;
+
+      mockMediaService.uploadFile.mockResolvedValue({
+        status: 'success',
+        item: {
+          url: 'https://cdn.example/photo.png',
+          sha256: 'sha256-hash',
+          mirrors: ['https://mirror.example/photo.png'],
+        },
+      });
+
+      vi.spyOn(component as never, 'extractMediaMetadata' as never).mockResolvedValue({
+        url: 'https://cdn.example/photo.png',
+        mimeType: 'image/png',
+        sha256: 'sha256-hash',
+        fallbackUrls: ['https://mirror.example/photo.png'],
+      });
+
+      const uploaded = await (component as never).uploadPendingMediaBeforePublish();
+
+      expect(uploaded).toBe(true);
+      expect(mockMediaService.uploadFile).toHaveBeenCalledTimes(1);
+      expect(component.content()).toContain('https://cdn.example/photo.png');
+      expect(component.content()).not.toContain(placeholder);
+      expect(component.mediaMetadata()[0].pendingUpload).toBe(false);
+      expect(component.mediaMetadata()[0].url).toBe('https://cdn.example/photo.png');
     });
   });
 
