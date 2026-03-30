@@ -34,6 +34,18 @@
     &.reacted {
       color: #e91e63;
     }
+
+    &:not(.reacted) {
+      .emoji-icon {
+        filter: grayscale(1);
+        opacity: 0.8;
+      }
+
+      .emoji-icon-img {
+        filter: grayscale(1) brightness(0.9);
+        opacity: 0.8;
+      }
+    }
   }
 }
 
@@ -78,6 +90,18 @@
 .reaction-full-view {
   position: relative;
   display: inline-block;
+
+  > button[mat-button]:not(.reacted) {
+    .emoji-icon {
+      filter: grayscale(1);
+      opacity: 0.8;
+    }
+
+    .emoji-icon-img {
+      filter: grayscale(1) brightness(0.9);
+      opacity: 0.8;
+    }
+  }
 }
 
 // Reaction chips for displaying grouped reactions
