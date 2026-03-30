@@ -3,7 +3,8 @@
   <!-- Icon view: single-tap sends default reaction, long-press opens picker -->
   <button mat-icon-button [class.active]="!!userReaction()" [class.reacted]="!!userReaction()"
     [disabled]="isLoadingReactions() || disabled()" (pointerdown)="onPointerDown($event)" (pointerup)="onPointerUp($event)"
-    (pointerleave)="onPointerLeave()" (contextmenu)="$event.preventDefault()"
+    (pointerleave)="onPointerLeave()" (mouseenter)="onDesktopMouseEnter()" (mouseleave)="onDesktopMouseLeave()"
+    (contextmenu)="$event.preventDefault()"
     (click)="onClick($event)" style="touch-action: none">
     @if (userReaction()) {
     @if (getCustomEmojiUrl(userReaction()!.event)) {

@@ -286,6 +286,8 @@ interface EmojiSectionNavItem {
       border: 0;
       opacity: 0;
       pointer-events: none;
+      outline: none;
+      -webkit-tap-highlight-color: transparent;
     }
 
     .picker-tabs {
@@ -555,9 +557,21 @@ interface EmojiSectionNavItem {
       cursor: pointer;
       padding: 0;
       transition: background-color 0.15s ease;
+      outline: none;
+      box-shadow: none;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+      -webkit-user-select: none;
 
       &:hover {
         background-color: var(--mat-sys-surface-container-high);
+      }
+
+      &:focus,
+      &:focus-visible,
+      &:active {
+        outline: none;
+        box-shadow: none;
       }
 
       .custom-emoji-img {

@@ -348,6 +348,8 @@ export class ReactionButtonComponent {
   private readonly LONG_PRESS_DURATION = 500; // ms
   private reactionsMutationVersion = 0;
   private suppressNextClick = false;
+  private pointerDownType: string | null = null;
+  private hoverCloseTimer: ReturnType<typeof setTimeout> | null = null;
 
   /**
    * Send the user's default reaction emoji (from settings) on a single tap.
@@ -378,6 +380,7 @@ export class ReactionButtonComponent {
   onPointerDown(event: PointerEvent): void {
     if (!this.isBrowser || this.disabled()) return;
     this.longPressTriggered = false;
+    this.pointerDownType = event.pointerType || null;
     const isTouch = event.pointerType === 'touch';
     const pointerId = event.pointerId;
     this.longPressTimer = setTimeout(() => {
@@ -402,14 +405,22 @@ export class ReactionButtonComponent {
     }
     // If touch quick-select is active, the global pointerup listener handles it
     if (this.touchQuickSelectVisible()) {
+      this.suppressNextClick = true;
+      this.pointerDownType = null;
       return;
     }
-    if (!this.longPressTriggered) {
+
+    const pointerType = this.pointerDownType;
+    if (this.longPressTriggered) {
+      this.suppressNextClick = true;
+    } else if (pointerType === 'touch' || pointerType === 'pen') {
       event.preventDefault();
       event.stopPropagation();
       this.suppressNextClick = true;
       this.sendDefaultReaction();
     }
+
+    this.pointerDownType = null;
     this.longPressTriggered = false;
   }
 
@@ -419,7 +430,35 @@ export class ReactionButtonComponent {
 
     if (this.suppressNextClick) {
       this.suppressNextClick = false;
+      this.pointerDownType = null;
+      return;
     }
+
+    this.pointerDownType = null;
+  }
+
+  onDesktopMouseEnter(): void {
+    if (this.isHandset() || this.disabled()) {
+      return;
+    }
+
+    if (this.hoverCloseTimer) {
+      clearTimeout(this.hoverCloseTimer);
+      this.hoverCloseTimer = null;
+    }
+
+    this.menuTrigger()?.openMenu();
+  }
+
+  onDesktopMouseLeave(): void {
+    if (this.isHandset()) {
+      return;
+    }
+
+    this.hoverCloseTimer = setTimeout(() => {
+      this.menuTrigger()?.closeMenu();
+      this.hoverCloseTimer = null;
+    }, 120);
   }
 
   /**
@@ -433,6 +472,12 @@ export class ReactionButtonComponent {
     // Don't reset longPressTriggered if touch quick-select is active
     if (!this.touchQuickSelectVisible()) {
       this.longPressTriggered = false;
+    }
+    this.pointerDownType = null;
+
+    if (this.hoverCloseTimer) {
+      clearTimeout(this.hoverCloseTimer);
+      this.hoverCloseTimer = null;
     }
   }
 
