@@ -46,7 +46,7 @@
 
   @if (quickReactionOrigin; as quickReactionOverlayOrigin) {
   <ng-template cdkConnectedOverlay [cdkConnectedOverlayOrigin]="quickReactionOverlayOrigin"
-    [cdkConnectedOverlayOpen]="enableDesktopHoverPicker() && !isHandset() && !disabled() && (desktopHoverSurfaceActive() || desktopHoverMenuActive())"
+    [cdkConnectedOverlayOpen]="enableDesktopHoverPicker() && !isHandset() && !disabled() && desktopHoverOpen()"
     [cdkConnectedOverlayHasBackdrop]="false" [cdkConnectedOverlayPositions]="desktopQuickReactionPositions"
     [cdkConnectedOverlayPush]="true">
     <div class="desktop-quick-reaction-menu" tabindex="-1" (mouseenter)="onDesktopMenuMouseEnter()"
