@@ -12,7 +12,7 @@ import { CustomEmojiComponent } from '../../custom-emoji/custom-emoji.component'
 import { AccountStateService } from '../../../services/account-state.service';
 import { ReactionService } from '../../../services/reaction.service';
 import { EventRelaySourcesService } from '../../../services/event-relay-sources.service';
-import { MatTooltip, MatTooltipModule } from '@angular/material/tooltip';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
 export type ReactionSummaryTab = 'reactions' | 'reposts' | 'quotes' | 'zaps';
 
@@ -275,22 +275,14 @@ export class ReactionSummaryComponent {
     return this.relayTooltipOpenReactionId() === reaction.event.id;
   }
 
-  toggleReactionRelayTooltip(reaction: NostrRecord, tooltip: MatTooltip, event: MouseEvent): void {
-    if (!this.isHandset() || this.getReactionRelayUrls(reaction).length === 0) {
+  toggleReactionRelayTooltip(reaction: NostrRecord, event: MouseEvent): void {
+    if (this.getReactionRelayUrls(reaction).length === 0) {
       return;
     }
 
     event.preventDefault();
     event.stopPropagation();
 
-    const shouldOpen = this.relayTooltipOpenReactionId() !== reaction.event.id;
-    this.relayTooltipOpenReactionId.set(shouldOpen ? reaction.event.id : null);
-
-    if (shouldOpen) {
-      tooltip.show(0);
-      return;
-    }
-
-    tooltip.hide(0);
+    this.relayTooltipOpenReactionId.update(currentId => currentId === reaction.event.id ? null : reaction.event.id);
   }
 }

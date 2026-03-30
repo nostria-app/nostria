@@ -21,16 +21,21 @@
       <div class="list-item">
         <app-user-profile [pubkey]="reaction.event.pubkey" view="compact"></app-user-profile>
         <div class="item-meta">
-          <span class="item-time reaction-time-trigger" [class.reaction-time-trigger-touch]="isHandset()"
-            #relayTooltip="matTooltip"
-            [matTooltip]="getReactionRelayTooltip(reaction)" matTooltipPosition="above"
-            [matTooltipTouchGestures]="isHandset() ? 'off' : 'auto'"
-            [matTooltipClass]="isHandset() ? 'reaction-relay-tooltip-mobile' : ''"
-            [matTooltipPositionAtOrigin]="isHandset()"
-            [matTooltipHideDelay]="isHandset() ? 0 : 100"
-            [matTooltipShowDelay]="isHandset() ? 0 : 150"
-            [matTooltipDisabled]="getReactionRelayUrls(reaction).length === 0 || (isHandset() && !isRelayTooltipOpen(reaction))"
-            (click)="toggleReactionRelayTooltip(reaction, relayTooltip, $event)">{{ reaction.event.created_at | ago:'short' }} ago</span>
+          <div class="reaction-time-container">
+            <button class="item-time reaction-time-trigger" type="button" [class.reaction-time-trigger-touch]="isHandset()"
+              [matTooltip]="getReactionRelayTooltip(reaction)" matTooltipPosition="above"
+              [matTooltipTouchGestures]="'off'" [matTooltipHideDelay]="100" [matTooltipShowDelay]="150"
+              [matTooltipDisabled]="isHandset() || getReactionRelayUrls(reaction).length === 0"
+              (click)="toggleReactionRelayTooltip(reaction, $event)">{{ reaction.event.created_at | ago:'short' }} ago</button>
+
+            @if (isHandset() && isRelayTooltipOpen(reaction)) {
+            <div class="reaction-relay-popover" (click)="$event.stopPropagation()">
+              @for (relayUrl of getReactionRelayUrls(reaction); track relayUrl) {
+              <div class="reaction-relay-popover-item">{{ relayUrl }}</div>
+              }
+            </div>
+            }
+          </div>
           @if (canDeleteReaction(reaction)) {
           <button class="reaction-delete-toggle" type="button" [disabled]="deletingReactionIds().has(reaction.event.id)"
             (click)="deleteReaction(reaction, $event)" [attr.aria-label]="'Delete reaction ' + getReactionDisplay(reaction.event.content)"

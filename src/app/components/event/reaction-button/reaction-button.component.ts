@@ -347,6 +347,7 @@ export class ReactionButtonComponent {
   private longPressTriggered = false;
   private readonly LONG_PRESS_DURATION = 500; // ms
   private reactionsMutationVersion = 0;
+  private suppressNextClick = false;
 
   /**
    * Send the user's default reaction emoji (from settings) on a single tap.
@@ -406,9 +407,19 @@ export class ReactionButtonComponent {
     if (!this.longPressTriggered) {
       event.preventDefault();
       event.stopPropagation();
+      this.suppressNextClick = true;
       this.sendDefaultReaction();
     }
     this.longPressTriggered = false;
+  }
+
+  onClick(event: MouseEvent): void {
+    event.stopPropagation();
+    event.preventDefault();
+
+    if (this.suppressNextClick) {
+      this.suppressNextClick = false;
+    }
   }
 
   /**
@@ -788,6 +799,10 @@ export class ReactionButtonComponent {
   }
 
   async addReaction(emoji: string, closePicker = true) {
+    if (this.isLoadingReactions()) {
+      return;
+    }
+
     if (closePicker) {
       this.closeMenu();
     }

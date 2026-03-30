@@ -4,7 +4,7 @@
   <button mat-icon-button [class.active]="!!userReaction()" [class.reacted]="!!userReaction()"
     [disabled]="isLoadingReactions() || disabled()" (pointerdown)="onPointerDown($event)" (pointerup)="onPointerUp($event)"
     (pointerleave)="onPointerLeave()" (contextmenu)="$event.preventDefault()"
-    (click)="$event.stopPropagation(); $event.preventDefault()" style="touch-action: none">
+    (click)="onClick($event)" style="touch-action: none">
     @if (userReaction()) {
     @if (getCustomEmojiUrl(userReaction()!.event)) {
     <app-custom-emoji [src]="getCustomEmojiUrl(userReaction()!.event)!" [alt]="userReaction()!.event.content"
