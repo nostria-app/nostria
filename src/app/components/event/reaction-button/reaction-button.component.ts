@@ -565,13 +565,9 @@ export class ReactionButtonComponent {
   private boundTouchUp: ((e: PointerEvent) => void) | null = null;
   private boundTouchCancel: ((e: PointerEvent) => void) | null = null;
 
-  /** Items shown in the touch quick-select bar (recent emojis or popular fallbacks). */
+  /** Items shown in the touch quick-select bar. Shares the same source list as desktop quick reactions. */
   touchQuickSelectItems = computed<{ emoji: string; url?: string }[]>(() => {
-    const recent = this.recentEmojis();
-    if (recent.length > 0) {
-      return recent.slice(0, 6).map(r => ({ emoji: r.emoji, url: r.url }));
-    }
-    return this.quickReactions.map(e => ({ emoji: e }));
+    return this.desktopQuickReactions().slice(0, 6);
   });
 
   /**

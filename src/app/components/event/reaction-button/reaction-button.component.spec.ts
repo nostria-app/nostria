@@ -20,6 +20,11 @@ import { CustomDialogService } from '../../../services/custom-dialog.service';
 describe('ReactionButtonComponent', () => {
   let component: ReactionButtonComponent;
   let fixture: ComponentFixture<ReactionButtonComponent>;
+  let accountLocalState: {
+    getRecentEmojis: ReturnType<typeof vi.fn>;
+    addRecentEmoji: ReturnType<typeof vi.fn>;
+    getMostUsedReactionEmoji: ReturnType<typeof vi.fn>;
+  };
   const isHandset = signal(false);
   const defaultReactionEmoji = signal('❤️');
   const account = signal({ pubkey: 'test-pubkey', source: 'private-key' } as any);
@@ -57,6 +62,12 @@ describe('ReactionButtonComponent', () => {
   }
 
   beforeEach(async () => {
+    accountLocalState = {
+      getRecentEmojis: vi.fn().mockReturnValue([]),
+      addRecentEmoji: vi.fn(),
+      getMostUsedReactionEmoji: vi.fn().mockReturnValue(null),
+    };
+
     await TestBed.configureTestingModule({
       imports: [ReactionButtonComponent],
       providers: [
@@ -88,10 +99,7 @@ describe('ReactionButtonComponent', () => {
         },
         {
           provide: AccountLocalStateService,
-          useValue: {
-            getRecentEmojis: vi.fn().mockReturnValue([]),
-            addRecentEmoji: vi.fn(),
-          },
+          useValue: accountLocalState,
         },
         {
           provide: EmojiSetService,
@@ -462,6 +470,24 @@ describe('ReactionButtonComponent', () => {
       expect(fixture.nativeElement.querySelector('.desktop-quick-reaction-menu')).toBeFalsy();
 
       vi.useRealTimers();
+    });
+  });
+
+  describe('quick reaction lists', () => {
+    it('should use the same default quick reactions for touch and desktop when there is no history', () => {
+      expect(component.touchQuickSelectItems()).toEqual(component.desktopQuickReactions());
+      expect(component.touchQuickSelectItems().map(item => item.emoji)).toEqual(['❤️', '👍', '😂', '😮', '😢', '🔥']);
+    });
+
+    it('should use the same recent/default quick reactions for touch and desktop', () => {
+      accountLocalState.getMostUsedReactionEmoji.mockReturnValue({ emoji: '🎉', timestamp: 10, useCount: 4 });
+      accountLocalState.getRecentEmojis.mockReturnValue([
+        { emoji: '👏', timestamp: 9, useCount: 2 },
+        { emoji: '⚡', timestamp: 8, useCount: 1 },
+      ]);
+
+      expect(component.touchQuickSelectItems()).toEqual(component.desktopQuickReactions());
+      expect(component.touchQuickSelectItems().map(item => item.emoji)).toEqual(['🎉', '❤️', '👍', '😂', '😮', '😢']);
     });
   });
 
