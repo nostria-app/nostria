@@ -507,7 +507,7 @@ interface EmojiSectionNavItem {
     }
 
     :host-context(.emoji-picker-dialog) .emoji-search {
-      padding: 10px 12px;
+      padding: 12px 12px 10px;
 
       .search-icon {
         font-size: 20px;
@@ -516,7 +516,18 @@ interface EmojiSectionNavItem {
       }
 
       input {
-        font-size: 1rem;
+        font-size: 1.05rem;
+        padding-top: 2px;
+      }
+    }
+
+    @media (min-width: 701px) and (min-height: 701px) {
+      :host-context(.emoji-picker-dialog) .emoji-grid-container,
+      :host-context(.emoji-picker-dialog) .emoji-list-scroll {
+        margin: 8px 10px 10px;
+        padding: 6px;
+        border: 1px solid var(--mat-sys-outline-variant);
+        border-radius: 12px;
       }
     }
 
