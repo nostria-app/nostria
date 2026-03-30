@@ -3636,11 +3636,6 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
         title: `Original Event JSON (message.id: ${message.id})`,
         json: JSON.stringify(rawMessageEvent, null, 2),
       });
-    } else {
-      unwrapStages.push({
-        title: `Original Event JSON (message.id: ${message.id})`,
-        error: 'Event not found in local cache or queried relays',
-      });
     }
 
     if (message.giftWrapId) {
@@ -3720,8 +3715,6 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
           json: JSON.stringify(parsedSecondStage, null, 2),
         });
 
-        const stage4 = await this.tryDecryptInnerEventContent(parsedSecondStage, giftWrapSourceEvent);
-        unwrapStages.push(...stage4);
       } catch (parseError) {
         unwrapStages.push({
           title: 'Stage 3: Parsed Inner Event JSON',
@@ -3736,111 +3729,6 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     }
 
     return unwrapStages;
-  }
-
-  private async tryDecryptInnerEventContent(
-    parsedInnerEvent: unknown,
-    fallbackContextEvent: NostrEvent
-  ): Promise<NonNullable<MessageDetailsDialogData['unwrapStages']>> {
-    const stages: NonNullable<MessageDetailsDialogData['unwrapStages']> = [];
-    const myPubkey = this.accountState.pubkey();
-    if (!myPubkey || !parsedInnerEvent || typeof parsedInnerEvent !== 'object') {
-      return stages;
-    }
-
-    const innerEvent = parsedInnerEvent as {
-      id?: string;
-      pubkey?: string;
-      created_at?: number;
-      tags?: string[][];
-      content?: string;
-    };
-
-    if (typeof innerEvent.content !== 'string' || innerEvent.content.trim().length === 0) {
-      stages.push({
-        title: 'Stage 4: Decrypt Inner Event Content',
-        error: 'Inner event has no content to decrypt',
-      });
-      return stages;
-    }
-
-    if (!this.encryption.isContentEncrypted(innerEvent.content)) {
-      stages.push({
-        title: 'Stage 4: Decrypt Inner Event Content',
-        error: 'Inner event content does not look encrypted',
-      });
-      return stages;
-    }
-
-    const pTags = Array.isArray(innerEvent.tags)
-      ? innerEvent.tags.filter(tag => Array.isArray(tag) && tag[0] === 'p').map(tag => tag[1]).filter(Boolean)
-      : [];
-
-    const authorPubkey = typeof innerEvent.pubkey === 'string' ? innerEvent.pubkey : '';
-    let decryptionPubkey = authorPubkey;
-    if (authorPubkey === myPubkey && pTags.length > 0) {
-      decryptionPubkey = pTags[0] || '';
-    }
-
-    if (!decryptionPubkey) {
-      stages.push({
-        title: 'Stage 4: Decrypt Inner Event Content',
-        error: 'Could not determine peer pubkey for decryption',
-      });
-      return stages;
-    }
-
-    const innerEventId = typeof innerEvent.id === 'string' ? innerEvent.id : 'unknown-inner-event';
-    const eventContext = {
-      ...fallbackContextEvent,
-      ...innerEvent,
-      tags: Array.isArray(innerEvent.tags) ? innerEvent.tags : fallbackContextEvent.tags,
-      created_at:
-        typeof innerEvent.created_at === 'number'
-          ? innerEvent.created_at
-          : fallbackContextEvent.created_at,
-      pubkey: authorPubkey || fallbackContextEvent.pubkey,
-      content: innerEvent.content,
-      id: innerEventId,
-    } as NostrEvent;
-
-    try {
-      const decryptResult = await this.encryption.autoDecrypt(
-        innerEvent.content,
-        decryptionPubkey,
-        eventContext,
-        eventContext.created_at
-      );
-
-      stages.push({
-        title: `Stage 4: Decrypted Inner Event Content (${innerEventId})`,
-        json: decryptResult.content,
-      });
-
-      try {
-        const parsed = JSON.parse(decryptResult.content);
-        stages.push({
-          title: `Stage 5: Parsed Decrypted Inner Content (${innerEventId})`,
-          json: JSON.stringify(parsed, null, 2),
-        });
-      } catch {
-      }
-    } catch (error) {
-      this.logger.error('Message details: failed to decrypt inner event content', {
-        innerEventId,
-        decryptionPubkey,
-        authorPubkey,
-        kind: (innerEvent as { kind?: number }).kind,
-        contentLength: innerEvent.content.length,
-        error,
-      });
-      stages.push({
-        title: `Stage 4: Decrypted Inner Event Content (${innerEventId})`,
-        error: error instanceof Error ? error.message : String(error),
-      });
-    }
-
-    return stages;
   }
 
   private async tryDecryptNip04Event(event: NostrEvent): Promise<NonNullable<MessageDetailsDialogData['unwrapStages']>> {
