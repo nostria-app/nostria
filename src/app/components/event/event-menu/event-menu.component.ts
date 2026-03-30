@@ -51,6 +51,7 @@ import { isImageUrl } from '../../../services/format/utils';
 import { CollectionSetsService, EmojiSet } from '../../../services/collection-sets.service';
 import { SaveToGifsDialogComponent, SaveToGifsDialogData } from '../../save-to-gifs-dialog/save-to-gifs-dialog.component';
 import { ImageCacheService } from '../../../services/image-cache.service';
+import { EventRelaySourcesService } from '../../../services/event-relay-sources.service';
 
 @Component({
   selector: 'app-event-menu',
@@ -78,6 +79,7 @@ export class EventMenuComponent {
   pinned = inject(PinnedService);
   ai = inject(AiService);
   settings = inject(SettingsService);
+  eventRelaySources = inject(EventRelaySourcesService);
   mediaPlayer = inject(MediaPlayerService);
   utilities = inject(UtilitiesService);
   playlistService = inject(PlaylistService);
@@ -743,11 +745,11 @@ export class EventMenuComponent {
       title: 'Event Details',
       width: '800px',
       maxWidth: '95vw',
-      data: { event } as EventDetailsDialogData,
+      data: { event, relayUrls: this.eventRelaySources.getRelayUrls(event.id) } as EventDetailsDialogData,
     });
 
     dialogRef.componentInstance.dialogRef = dialogRef;
-    dialogRef.componentInstance.dialogData = { event };
+    dialogRef.componentInstance.dialogData = { event, relayUrls: this.eventRelaySources.getRelayUrls(event.id) };
   }
 
   /**

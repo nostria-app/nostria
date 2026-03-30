@@ -14,6 +14,7 @@ import {
 } from '../event-details-dialog/event-details-dialog.component';
 import { CustomDialogService } from '../../services/custom-dialog.service';
 import { LayoutService } from '../../services/layout.service';
+import { EventRelaySourcesService } from '../../services/event-relay-sources.service';
 
 @Component({
   selector: 'app-relay-publish-status',
@@ -36,6 +37,7 @@ export class RelayPublishStatusComponent {
   republish = output<string>();
 
   private customDialog = inject(CustomDialogService);
+  private eventRelaySources = inject(EventRelaySourcesService);
   layout = inject(LayoutService);
 
   get successCount(): number {
@@ -122,11 +124,17 @@ export class RelayPublishStatusComponent {
       title: 'Event Details',
       width: '800px',
       maxWidth: '95vw',
-      data: { event: this.notification().event } as EventDetailsDialogData,
+      data: {
+        event: this.notification().event,
+        relayUrls: this.eventRelaySources.getRelayUrls(this.notification().event.id),
+      } as EventDetailsDialogData,
     });
 
     dialogRef.componentInstance.dialogRef = dialogRef;
-    dialogRef.componentInstance.dialogData = { event: this.notification().event };
+    dialogRef.componentInstance.dialogData = {
+      event: this.notification().event,
+      relayUrls: this.eventRelaySources.getRelayUrls(this.notification().event.id),
+    };
   }
 
   openPublishedEvent(): void {

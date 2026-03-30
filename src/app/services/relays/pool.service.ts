@@ -16,6 +16,10 @@ import { SimplePool } from 'nostr-tools';
 export class PoolService {
   readonly pool = new SimplePool({ enablePing: false, enableReconnect: true });
 
+  constructor() {
+    this.pool.trackRelays = true;
+  }
+
   /**
    * Gracefully close connections to all provided relay URLs.
    * With enableReconnect:true the pool will reopen them on the next request.

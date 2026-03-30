@@ -6,6 +6,7 @@ export interface NostrRecord {
   event: Event;
   /** Data is the parsed content. */
   data: any;
+  relayUrls?: string[];
 }
 
 export interface MediaItem {

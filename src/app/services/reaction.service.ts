@@ -7,6 +7,8 @@ import { EmojiSetService } from './emoji-set.service';
 import { AccountStateService } from './account-state.service';
 import { AccountRelayService } from './relays/account-relay';
 import { UserRelaysService } from './relays/user-relays';
+import { DatabaseService } from './database.service';
+import { AccountLocalStateService } from './account-local-state.service';
 
 @Injectable({
   providedIn: 'root',
@@ -18,6 +20,8 @@ export class ReactionService {
   private accountState = inject(AccountStateService);
   private accountRelay = inject(AccountRelayService);
   private userRelaysService = inject(UserRelaysService);
+  private database = inject(DatabaseService);
+  private accountLocalState = inject(AccountLocalStateService);
 
   /**
    * Add a reaction to an event. Supports custom emoji via NIP-30.
@@ -104,6 +108,19 @@ export class ReactionService {
     ]);
 
     const result = await this.nostrService.signAndPublish(deleteEvent, relayUrls);
+    if (result.success) {
+      const currentUserPubkey = this.accountState.pubkey();
+      if (currentUserPubkey) {
+        this.accountLocalState.markReactionDeleted(currentUserPubkey, event.id);
+      }
+
+      try {
+        await this.database.deleteEvent(event.id);
+      } catch {
+        return { success: false, error: 'Failed to remove deleted reaction from local database.' };
+      }
+    }
+
     console.log('Reaction deleted:', { eventId: event.id, success: result.success });
     return { success: result.success, error: result.error };
   }

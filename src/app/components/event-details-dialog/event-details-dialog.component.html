@@ -62,6 +62,38 @@
       </div>
     </mat-tab>
 
+    <mat-tab [label]="'Relays (' + relayUrls().length + ')'">
+      <div class="tab-content">
+        @if (relayUrls().length > 0) {
+        <mat-card>
+          <mat-card-header>
+            <mat-card-title>Received From Relays</mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            <mat-list>
+              @for (relayUrl of relayUrls(); track relayUrl) {
+              <mat-list-item>
+                <mat-icon matListItemIcon>dns</mat-icon>
+                <div matListItemTitle class="monospace">{{ relayUrl }}</div>
+                <button mat-icon-button matListItemMeta (click)="layout.copyToClipboard(relayUrl, 'text')"
+                  matTooltip="Copy relay URL">
+                  <mat-icon>content_copy</mat-icon>
+                </button>
+              </mat-list-item>
+              }
+            </mat-list>
+          </mat-card-content>
+        </mat-card>
+        } @else {
+        <mat-card>
+          <mat-card-content>
+            <p class="no-data">No relay source data is available for this event yet.</p>
+          </mat-card-content>
+        </mat-card>
+        }
+      </div>
+    </mat-tab>
+
     <!-- Mentions Tab -->
     <mat-tab [label]="'Mentions (' + mentionedAccounts().length + ')'">
       <div class="tab-content">

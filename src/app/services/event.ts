@@ -28,6 +28,7 @@ import { ConfirmDialogComponent } from '../components/confirm-dialog/confirm-dia
 import { RepostService } from './repost.service';
 import { ImageCacheService } from './image-cache.service';
 import { DeletionFilterService } from './deletion-filter.service';
+import { AccountLocalStateService } from './account-local-state.service';
 
 export interface Reaction {
   emoji: string;
@@ -147,6 +148,7 @@ export class EventService {
   private readonly imageCacheService = inject(ImageCacheService);
   private readonly repostService = inject(RepostService);
   private readonly deletionFilter = inject(DeletionFilterService);
+  private readonly accountLocalState = inject(AccountLocalStateService);
   private readonly locallyDeletedEventIds = signal<Set<string>>(new Set());
   private readonly interactionSnapshot = signal<SharedInteractionSnapshot | null>(null);
   readonly latestInteractionSnapshot = this.interactionSnapshot.asReadonly();
@@ -1533,7 +1535,10 @@ export class EventService {
             reactionRecords.map(record => record.event)
           );
           const filteredReactionIds = new Set(filteredReactionEvents.map(event => event.id));
-          const visibleReactionRecords = reactionRecords.filter(record => filteredReactionIds.has(record.event.id));
+          const locallyDeletedReactionIds = new Set(this.accountLocalState.getDeletedReactionIds(pubkey));
+          const visibleReactionRecords = reactionRecords.filter(record => {
+            return filteredReactionIds.has(record.event.id) && !locallyDeletedReactionIds.has(record.event.id);
+          });
 
           // Count reactions by emoji
           const reactionCounts = new Map<string, number>();

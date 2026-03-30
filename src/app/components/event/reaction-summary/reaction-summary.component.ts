@@ -11,6 +11,8 @@ import { LayoutService } from '../../../services/layout.service';
 import { CustomEmojiComponent } from '../../custom-emoji/custom-emoji.component';
 import { AccountStateService } from '../../../services/account-state.service';
 import { ReactionService } from '../../../services/reaction.service';
+import { EventRelaySourcesService } from '../../../services/event-relay-sources.service';
+import { MatTooltip, MatTooltipModule } from '@angular/material/tooltip';
 
 export type ReactionSummaryTab = 'reactions' | 'reposts' | 'quotes' | 'zaps';
 
@@ -32,6 +34,7 @@ export interface ZapInfo {
     AgoPipe,
     EventHeaderComponent,
     CustomEmojiComponent,
+    MatTooltipModule,
   ],
   templateUrl: './reaction-summary.component.html',
   styleUrl: './reaction-summary.component.scss',
@@ -43,6 +46,8 @@ export class ReactionSummaryComponent {
   private accountState = inject(AccountStateService);
   private reactionService = inject(ReactionService);
   private snackBar = inject(MatSnackBar);
+  private eventRelaySources = inject(EventRelaySourcesService);
+  private readonly relayTooltipOpenReactionId = signal<string | null>(null);
 
   reactions = input<NostrRecord[]>([]);
   replyCount = input<number>(0);
@@ -247,5 +252,45 @@ export class ReactionSummaryComponent {
     event.preventDefault();
     event.stopPropagation();
     this.layout.openGenericEvent(quote.event.id, quote.event);
+  }
+
+  getReactionRelayUrls(reaction: NostrRecord): string[] {
+    return reaction.relayUrls || this.eventRelaySources.getRelayUrls(reaction.event.id);
+  }
+
+  getReactionRelayTooltip(reaction: NostrRecord): string {
+    const relayUrls = this.getReactionRelayUrls(reaction);
+    if (relayUrls.length === 0) {
+      return 'No relay source data available';
+    }
+
+    return relayUrls.join('\n');
+  }
+
+  isHandset(): boolean {
+    return this.layout.isHandset();
+  }
+
+  isRelayTooltipOpen(reaction: NostrRecord): boolean {
+    return this.relayTooltipOpenReactionId() === reaction.event.id;
+  }
+
+  toggleReactionRelayTooltip(reaction: NostrRecord, tooltip: MatTooltip, event: MouseEvent): void {
+    if (!this.isHandset() || this.getReactionRelayUrls(reaction).length === 0) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    const shouldOpen = this.relayTooltipOpenReactionId() !== reaction.event.id;
+    this.relayTooltipOpenReactionId.set(shouldOpen ? reaction.event.id : null);
+
+    if (shouldOpen) {
+      tooltip.show(0);
+      return;
+    }
+
+    tooltip.hide(0);
   }
 }

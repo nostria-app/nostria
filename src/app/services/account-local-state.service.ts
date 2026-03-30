@@ -120,6 +120,8 @@ interface AccountLocalState {
   threadReplyFilter?: string; // Global filter for thread replies: 'everyone', 'following', 'author-following', or follow set d-tag
   threadWotMinRank?: number; // Minimum WoT rank for thread reply filter (0-100)
   recentEmojis?: RecentEmoji[]; // Recently used emojis for quick access in emoji picker
+  preferredReactionEmoji?: string; // Optional preferred one-tap reaction emoji override
+  deletedReactionIds?: string[]; // Locally hidden deleted reaction event ids
   streamsListFilter?: string; // Filter for streams: 'all', 'following', or follow set d-tag
   articlesListFilter?: string; // Filter for articles: 'following', 'public', or follow set d-tag
   summaryListFilter?: string; // Filter for summary: 'following' or follow set d-tag
@@ -159,6 +161,7 @@ export interface RecentEmoji {
   emoji: string; // The emoji character or :shortcode: for custom emojis
   url?: string; // URL for custom emojis (NIP-30)
   timestamp: number; // When the emoji was last used (for sorting)
+  useCount?: number; // Number of times the emoji has been selected
 }
 
 /**
@@ -215,6 +218,9 @@ export class AccountLocalStateService {
 
   // Signal to trigger reactivity when actions display mode changes
   actionsDisplayModeVersion = signal(0);
+
+  // Signal to trigger reactivity when reaction emoji preferences change
+  reactionEmojiPreferencesVersion = signal(0);
 
   /**
    * Get all account states from cache or localStorage
@@ -1605,6 +1611,7 @@ export class AccountLocalStateService {
    * Returns up to 12 most recently used emojis, sorted by most recent first
    */
   getRecentEmojis(pubkey: string): RecentEmoji[] {
+    this.reactionEmojiPreferencesVersion();
     const state = this.getAccountState(pubkey);
     const emojis = state.recentEmojis || [];
     // Sort by timestamp descending (most recent first) and limit to 12
@@ -1620,20 +1627,85 @@ export class AccountLocalStateService {
     const state = this.getAccountState(pubkey);
     const currentEmojis = state.recentEmojis || [];
     const timestamp = Date.now();
+    const existingEmoji = currentEmojis.find(e => e.emoji === emoji);
 
     // Remove existing entry for this emoji if present
     const filteredEmojis = currentEmojis.filter(e => e.emoji !== emoji);
 
     // Add new entry at the beginning
-    const newEmoji: RecentEmoji = { emoji, timestamp };
+    const newEmoji: RecentEmoji = {
+      emoji,
+      timestamp,
+      useCount: (existingEmoji?.useCount || 0) + 1,
+    };
     if (url) {
       newEmoji.url = url;
+    } else if (existingEmoji?.url) {
+      newEmoji.url = existingEmoji.url;
     }
 
     // Keep only the 20 most recent emojis
     const updatedEmojis = [newEmoji, ...filteredEmojis].slice(0, 20);
 
     this.updateAccountState(pubkey, { recentEmojis: updatedEmojis });
+    this.reactionEmojiPreferencesVersion.update(v => v + 1);
+  }
+
+  getPreferredReactionEmoji(pubkey: string): string {
+    this.reactionEmojiPreferencesVersion();
+    const state = this.getAccountState(pubkey);
+    return state.preferredReactionEmoji || '';
+  }
+
+  setPreferredReactionEmoji(pubkey: string, emoji: string): void {
+    this.updateAccountState(pubkey, { preferredReactionEmoji: emoji || undefined });
+    this.reactionEmojiPreferencesVersion.update(v => v + 1);
+  }
+
+  promoteRecentEmoji(pubkey: string, emoji: string, url?: string): void {
+    const state = this.getAccountState(pubkey);
+    const currentEmojis = state.recentEmojis || [];
+    const existingEmoji = currentEmojis.find(entry => entry.emoji === emoji);
+    const promotedEmoji: RecentEmoji = {
+      emoji,
+      timestamp: Date.now(),
+      useCount: existingEmoji?.useCount || 0,
+    };
+
+    if (url) {
+      promotedEmoji.url = url;
+    } else if (existingEmoji?.url) {
+      promotedEmoji.url = existingEmoji.url;
+    }
+
+    const filteredEmojis = currentEmojis.filter(entry => entry.emoji !== emoji);
+    this.updateAccountState(pubkey, { recentEmojis: [promotedEmoji, ...filteredEmojis].slice(0, 20) });
+    this.reactionEmojiPreferencesVersion.update(v => v + 1);
+  }
+
+  getMostUsedReactionEmoji(pubkey: string): RecentEmoji | null {
+    this.reactionEmojiPreferencesVersion();
+    const state = this.getAccountState(pubkey);
+    const preferredEmoji = state.preferredReactionEmoji;
+    const recentEmojis = state.recentEmojis || [];
+
+    if (preferredEmoji) {
+      const preferredRecentEmoji = recentEmojis.find(entry => entry.emoji === preferredEmoji);
+      return preferredRecentEmoji || { emoji: preferredEmoji, timestamp: Date.now(), useCount: 0 };
+    }
+
+    if (recentEmojis.length === 0) {
+      return null;
+    }
+
+    return [...recentEmojis].sort((a, b) => {
+      const countDelta = (b.useCount || 0) - (a.useCount || 0);
+      if (countDelta !== 0) {
+        return countDelta;
+      }
+
+      return b.timestamp - a.timestamp;
+    })[0] || null;
   }
 
   /**
@@ -1641,6 +1713,22 @@ export class AccountLocalStateService {
    */
   clearRecentEmojis(pubkey: string): void {
     this.updateAccountState(pubkey, { recentEmojis: [] });
+    this.reactionEmojiPreferencesVersion.update(v => v + 1);
+  }
+
+  getDeletedReactionIds(pubkey: string): string[] {
+    const state = this.getAccountState(pubkey);
+    return state.deletedReactionIds || [];
+  }
+
+  markReactionDeleted(pubkey: string, eventId: string): void {
+    const deletedReactionIds = this.getDeletedReactionIds(pubkey);
+    if (deletedReactionIds.includes(eventId)) {
+      return;
+    }
+
+    this.updateAccountState(pubkey, { deletedReactionIds: [eventId, ...deletedReactionIds].slice(0, 200) });
+    this.reactionEmojiPreferencesVersion.update(v => v + 1);
   }
 
   getFavoriteGifs(pubkey: string): FavoriteGif[] {

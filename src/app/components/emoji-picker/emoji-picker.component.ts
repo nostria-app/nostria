@@ -14,11 +14,13 @@ import {
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
+import { MatMenuModule, MatMenuTrigger } from '@angular/material/menu';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { AccountLocalStateService, RecentEmoji } from '../../services/account-local-state.service';
 import { AccountStateService } from '../../services/account-state.service';
 import { EmojiSetGroup, EmojiSetService } from '../../services/emoji-set.service';
 import { LoggerService } from '../../services/logger.service';
+import { HapticsService } from '../../services/haptics.service';
 import { GifPickerComponent } from '../gif-picker/gif-picker.component';
 import { UNICODE_EMOJI_CATEGORIES } from '../../utils/unicode-emoji-catalog';
 
@@ -63,11 +65,23 @@ interface EmojiSectionNavItem {
     FormsModule,
     MatIconModule,
     MatButtonModule,
+    MatMenuModule,
     MatTooltipModule,
     GifPickerComponent,
   ],
   template: `
     <div class="emoji-picker" (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()">
+      <button class="emoji-context-menu-trigger" type="button" [style.left.px]="emojiContextMenuPosition().x"
+        [style.top.px]="emojiContextMenuPosition().y" [matMenuTriggerFor]="emojiContextMenu"
+        #emojiContextMenuTrigger="matMenuTrigger" aria-hidden="true" tabindex="-1"></button>
+
+      <mat-menu #emojiContextMenu="matMenu" class="emoji-context-menu">
+        <button mat-menu-item type="button" (click)="makeEmojiMostRecent()">
+          <mat-icon>vertical_align_top</mat-icon>
+          <span>Make most recent</span>
+        </button>
+      </mat-menu>
+
       <!-- Tabs (only in content mode) -->
       @if (mode() === 'content') {
       <div class="picker-tabs">
@@ -103,12 +117,17 @@ interface EmojiSectionNavItem {
       <div class="emoji-grid-container">
         <div class="emoji-grid">
           @for (emoji of filteredEmojis(); track emoji) {
-          <button class="emoji-btn" (click)="selectEmoji(emoji); $event.stopPropagation()">
+          <button class="emoji-btn" (click)="selectEmoji(emoji); $event.stopPropagation()"
+            (contextmenu)="openEmojiContextMenu($event, emoji)" (touchstart)="onEmojiTouchStart($event, emoji)"
+            (touchend)="onEmojiTouchEnd()" (touchcancel)="onEmojiTouchEnd()" (touchmove)="onEmojiTouchEnd()">
             {{ emoji }}
           </button>
           }
           @for (emoji of filteredCustomEmojis(); track emoji.shortcode) {
           <button class="emoji-btn custom-emoji" (click)="selectCustomEmoji(emoji.shortcode, emoji.url); $event.stopPropagation()"
+            (contextmenu)="openEmojiContextMenu($event, ':' + emoji.shortcode + ':', emoji.url)"
+            (touchstart)="onEmojiTouchStart($event, ':' + emoji.shortcode + ':', emoji.url)"
+            (touchend)="onEmojiTouchEnd()" (touchcancel)="onEmojiTouchEnd()" (touchmove)="onEmojiTouchEnd()"
             [matTooltip]="emoji.shortcode">
             <img [src]="emoji.url" [alt]="emoji.shortcode" class="custom-emoji-img">
           </button>
@@ -128,7 +147,10 @@ interface EmojiSectionNavItem {
             @if (recentEmojis().length > 0) {
             <div class="emoji-grid">
               @for (recent of recentEmojis(); track recent.emoji) {
-              <button class="emoji-btn" (click)="selectEmoji(recent.emoji); $event.stopPropagation()">
+              <button class="emoji-btn" (click)="selectEmoji(recent.emoji); $event.stopPropagation()"
+                (contextmenu)="openEmojiContextMenu($event, recent.emoji, recent.url)"
+                (touchstart)="onEmojiTouchStart($event, recent.emoji, recent.url)" (touchend)="onEmojiTouchEnd()"
+                (touchcancel)="onEmojiTouchEnd()" (touchmove)="onEmojiTouchEnd()">
                 @if (recent.url) {
                 <img [src]="recent.url" [alt]="recent.emoji" class="custom-emoji-img">
                 } @else {
@@ -157,6 +179,9 @@ interface EmojiSectionNavItem {
               <div class="emoji-grid">
                 @for (emoji of set.emojis; track emoji.shortcode) {
                 <button class="emoji-btn custom-emoji" (click)="selectCustomEmoji(emoji.shortcode, emoji.url); $event.stopPropagation()"
+                  (contextmenu)="openEmojiContextMenu($event, ':' + emoji.shortcode + ':', emoji.url)"
+                  (touchstart)="onEmojiTouchStart($event, ':' + emoji.shortcode + ':', emoji.url)"
+                  (touchend)="onEmojiTouchEnd()" (touchcancel)="onEmojiTouchEnd()" (touchmove)="onEmojiTouchEnd()"
                   [matTooltip]="emoji.shortcode">
                   <img [src]="emoji.url" [alt]="emoji.shortcode" class="custom-emoji-img">
                 </button>
@@ -175,7 +200,9 @@ interface EmojiSectionNavItem {
             </div>
             <div class="emoji-grid">
               @for (emoji of category.emojis; track emoji) {
-              <button class="emoji-btn" (click)="selectEmoji(emoji); $event.stopPropagation()">
+              <button class="emoji-btn" (click)="selectEmoji(emoji); $event.stopPropagation()"
+                (contextmenu)="openEmojiContextMenu($event, emoji)" (touchstart)="onEmojiTouchStart($event, emoji)"
+                (touchend)="onEmojiTouchEnd()" (touchcancel)="onEmojiTouchEnd()" (touchmove)="onEmojiTouchEnd()">
                 {{ emoji }}
               </button>
               }
@@ -235,6 +262,7 @@ interface EmojiSectionNavItem {
     }
 
     .emoji-picker {
+      position: relative;
       width: 100%;
       max-width: 360px;
       min-width: 0;
@@ -248,6 +276,16 @@ interface EmojiSectionNavItem {
 
     .emoji-picker * {
       box-sizing: border-box;
+    }
+
+    .emoji-context-menu-trigger {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      border: 0;
+      opacity: 0;
+      pointer-events: none;
     }
 
     .picker-tabs {
@@ -630,9 +668,11 @@ export class EmojiPickerComponent {
   private readonly accountState = inject(AccountStateService);
   private readonly emojiSetService = inject(EmojiSetService);
   private readonly logger = inject(LoggerService);
+  private readonly haptics = inject(HapticsService);
 
   /** 'reaction' = emoji only (no GIF tab), 'content' = emoji + GIF tabs */
   mode = input<'reaction' | 'content'>('content');
+  allowPreferredReactionShortcut = input<boolean>(false);
 
   /** Which tab to show initially */
   initialTab = input<'emoji' | 'gifs'>('emoji');
@@ -649,8 +689,13 @@ export class EmojiPickerComponent {
   private sectionNavDragStartX = 0;
   private sectionNavStartScrollLeft = 0;
   private sectionNavDragMoved = false;
+  private emojiContextMenuTimer: ReturnType<typeof setTimeout> | null = null;
+  private readonly EMOJI_CONTEXT_MENU_LONG_PRESS_MS = 500;
+  private readonly emojiContextMenuTrigger = viewChild<MatMenuTrigger>('emojiContextMenuTrigger');
 
   activeTab = signal<'emoji' | 'gifs'>('emoji');
+  emojiContextMenuPosition = signal({ x: 0, y: 0 });
+  emojiContextMenuTarget = signal<{ emoji: string; url?: string } | null>(null);
 
   readonly categories = EMOJI_CATEGORIES;
   searchQuery = signal('');
@@ -841,5 +886,93 @@ export class EmojiPickerComponent {
 
   onGifSelected(url: string): void {
     this.gifSelected.emit(url);
+  }
+
+  onEmojiTouchStart(event: TouchEvent, emoji: string, url?: string): void {
+    this.onEmojiTouchEnd();
+    this.emojiContextMenuTimer = setTimeout(() => {
+      this.haptics.triggerMedium();
+      this.openEmojiContextMenu(event, emoji, url);
+    }, this.EMOJI_CONTEXT_MENU_LONG_PRESS_MS);
+  }
+
+  onEmojiTouchEnd(): void {
+    if (this.emojiContextMenuTimer) {
+      clearTimeout(this.emojiContextMenuTimer);
+      this.emojiContextMenuTimer = null;
+    }
+  }
+
+  openEmojiContextMenu(event: Event, emoji: string, url?: string): void {
+    if (!this.allowPreferredReactionShortcut()) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    const pubkey = this.accountState.pubkey();
+    if (!pubkey) {
+      return;
+    }
+
+    const position = this.getEventLocalPosition(event);
+    this.emojiContextMenuTarget.set({ emoji, url });
+    this.emojiContextMenuPosition.set(position);
+
+    const trigger = this.emojiContextMenuTrigger();
+    if (!trigger) {
+      return;
+    }
+
+    trigger.closeMenu();
+    setTimeout(() => trigger.openMenu());
+  }
+
+  makeEmojiMostRecent(): void {
+    const pubkey = this.accountState.pubkey();
+    const target = this.emojiContextMenuTarget();
+    if (!pubkey || !target) {
+      return;
+    }
+
+    this.accountLocalState.promoteRecentEmoji(pubkey, target.emoji, target.url);
+    this.accountLocalState.setPreferredReactionEmoji(pubkey, target.emoji);
+    this.recentEmojis.set(this.accountLocalState.getRecentEmojis(pubkey));
+
+    const trigger = this.emojiContextMenuTrigger();
+    trigger?.closeMenu();
+  }
+
+  private getEventLocalPosition(event: Event): { x: number; y: number } {
+    const hostRect = this.getHostRect();
+
+    if (event instanceof MouseEvent) {
+      return {
+        x: Math.max(0, event.clientX - hostRect.left),
+        y: Math.max(0, event.clientY - hostRect.top),
+      };
+    }
+
+    if (event instanceof TouchEvent) {
+      const touch = event.touches[0] || event.changedTouches[0];
+      if (touch) {
+        return {
+          x: Math.max(0, touch.clientX - hostRect.left),
+          y: Math.max(0, touch.clientY - hostRect.top),
+        };
+      }
+    }
+
+    return {
+      x: Math.max(0, hostRect.width / 2),
+      y: Math.max(0, hostRect.height / 2),
+    };
+  }
+
+  private getHostRect(): DOMRect {
+    const scrollContainer = this.emojiScrollContainer()?.nativeElement;
+    const hostElement = scrollContainer?.closest('.emoji-picker') as HTMLElement | null;
+    return (hostElement || scrollContainer || document.body).getBoundingClientRect();
   }
 }

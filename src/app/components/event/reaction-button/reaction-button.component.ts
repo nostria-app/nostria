@@ -25,6 +25,7 @@ import { CustomDialogService } from '../../../services/custom-dialog.service';
 import { UNICODE_EMOJI_CATEGORIES } from '../../../utils/unicode-emoji-catalog';
 import { CustomDialogComponent } from '../../custom-dialog/custom-dialog.component';
 import { CustomEmojiComponent } from '../../custom-emoji/custom-emoji.component';
+import { EmojiPickerComponent } from '../../emoji-picker/emoji-picker.component';
 
 // Emoji categories with icons
 const EMOJI_CATEGORIES = UNICODE_EMOJI_CATEGORIES;
@@ -284,6 +285,7 @@ interface ReactionEmojiSectionNavItem {
     RouterLink,
     CustomDialogComponent,
     CustomEmojiComponent,
+    EmojiPickerComponent,
   ],
   templateUrl: './reaction-button.component.html',
   styleUrls: ['./reaction-button.component.scss'],
@@ -360,7 +362,7 @@ export class ReactionButtonComponent {
       return;
     }
 
-    const defaultEmoji = this.localSettings.defaultReactionEmoji();
+    const defaultEmoji = this.defaultReaction()?.emoji || this.localSettings.defaultReactionEmoji();
     if (!defaultEmoji) {
       this.openMenu();
       return;
@@ -603,6 +605,20 @@ export class ReactionButtonComponent {
 
   // Quick reactions for the picker
   readonly quickReactions = ['❤️', '👍', '😂', '😮', '😢', '🔥'];
+
+  defaultReaction = computed<{ emoji: string; url?: string } | null>(() => {
+    const pubkey = this.accountState.pubkey();
+    if (!pubkey) {
+      return { emoji: this.localSettings.defaultReactionEmoji() || '❤️' };
+    }
+
+    const preferredReaction = this.accountLocalState.getMostUsedReactionEmoji(pubkey);
+    if (preferredReaction) {
+      return preferredReaction;
+    }
+
+    return { emoji: this.localSettings.defaultReactionEmoji() || '❤️' };
+  });
 
   event = input.required<Event>();
   view = input<ViewMode>('icon');
@@ -884,7 +900,7 @@ export class ReactionButtonComponent {
       title: 'React',
       width: '400px',
       panelClass: 'emoji-picker-dialog',
-      data: { mode: 'reaction', activeTab: 'emoji' },
+      data: { mode: 'reaction', activeTab: 'emoji', allowPreferredReactionShortcut: true },
     });
 
     dialogRef.afterClosed$.subscribe(async result => {

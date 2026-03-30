@@ -9,6 +9,7 @@ import { CustomDialogRef } from '../../services/custom-dialog.service';
 export interface EmojiPickerDialogData {
   mode?: 'reaction' | 'content';
   activeTab?: 'emoji' | 'gifs';
+  allowPreferredReactionShortcut?: boolean;
 }
 
 @Component({
@@ -19,6 +20,7 @@ export interface EmojiPickerDialogData {
       <app-emoji-picker
         [mode]="data.mode ?? 'content'"
         [initialTab]="data.activeTab ?? 'emoji'"
+        [allowPreferredReactionShortcut]="data.allowPreferredReactionShortcut ?? false"
         (emojiSelected)="onEmojiSelected($event)"
         (gifSelected)="onGifSelected($event)">
       </app-emoji-picker>

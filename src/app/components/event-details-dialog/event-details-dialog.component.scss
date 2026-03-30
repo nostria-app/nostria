@@ -1,4 +1,19 @@
 .event-details-dialog {
+  ::ng-deep .mat-mdc-tab-header {
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: thin;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  ::ng-deep .mat-mdc-tab-label-container {
+    overflow: visible;
+  }
+
+  ::ng-deep .mat-mdc-tab-list {
+    min-width: max-content;
+  }
+
   .tab-content {
     padding: 16px;
     max-height: 60vh;

@@ -12,6 +12,7 @@ import { UserRelayService } from './relays/user-relay';
 import { RelaysService } from './relays/relays';
 import { RelayPoolService } from './relays/relay-pool';
 import { EventFocusService } from './event-focus.service';
+import { EventRelaySourcesService } from './event-relay-sources.service';
 
 export interface DataOptions {
   cache?: boolean; // Whether to use cache
@@ -39,6 +40,7 @@ export class UserDataService {
   private readonly cache = inject(Cache);
   private readonly relaysService = inject(RelaysService);
   private readonly relayPool = inject(RelayPoolService);
+  private readonly eventRelaySources = inject(EventRelaySourcesService);
   private readonly snackBar = inject(MatSnackBar);
   private readonly eventFocus = inject(EventFocusService);
 
@@ -75,7 +77,10 @@ export class UserDataService {
   }
 
   toRecord(event: Event) {
-    return this.utilities.toRecord(event);
+    return {
+      ...this.utilities.toRecord(event),
+      relayUrls: this.eventRelaySources.getRelayUrls(event.id),
+    };
   }
 
   toRecords(events: Event[]) {

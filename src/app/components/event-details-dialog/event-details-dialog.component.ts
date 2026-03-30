@@ -16,9 +16,11 @@ import { LocalSettingsService } from '../../services/local-settings.service';
 import { getKindLabel } from '../../utils/kind-labels';
 import { ChroniaCalendarService } from '../../services/chronia-calendar.service';
 import { EthiopianCalendarService } from '../../services/ethiopian-calendar.service';
+import { EventRelaySourcesService } from '../../services/event-relay-sources.service';
 
 export interface EventDetailsDialogData {
   event: Event;
+  relayUrls?: string[];
 }
 
 @Component({
@@ -46,6 +48,7 @@ export class EventDetailsDialogComponent {
   private localSettings = inject(LocalSettingsService);
   private chroniaCalendar = inject(ChroniaCalendarService);
   private ethiopianCalendar = inject(EthiopianCalendarService);
+  private eventRelaySources = inject(EventRelaySourcesService);
   showRawJson = signal(false);
 
   event = computed(() => this.dialogData.event);
@@ -113,6 +116,15 @@ export class EventDetailsDialogComponent {
 
   // Raw JSON for the event
   eventJson = computed(() => JSON.stringify(this.event(), null, 2));
+
+  relayUrls = computed(() => {
+    const explicitRelayUrls = this.dialogData.relayUrls || [];
+    if (explicitRelayUrls.length > 0) {
+      return explicitRelayUrls;
+    }
+
+    return this.eventRelaySources.getRelayUrls(this.eventId());
+  });
 
   close(): void {
     this.dialogRef?.close();

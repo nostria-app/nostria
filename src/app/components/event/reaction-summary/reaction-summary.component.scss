@@ -101,6 +101,20 @@
   flex-shrink: 0;
 }
 
+.reaction-time-trigger {
+  cursor: help;
+  text-decoration: underline dotted;
+  text-underline-offset: 2px;
+
+  @media (hover: none) {
+    cursor: pointer;
+  }
+}
+
+.reaction-time-trigger-touch {
+  cursor: pointer;
+}
+
 .reaction-emoji {
   font-size: 18px;
   line-height: 1;

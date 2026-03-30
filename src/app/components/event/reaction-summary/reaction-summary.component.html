@@ -21,7 +21,16 @@
       <div class="list-item">
         <app-user-profile [pubkey]="reaction.event.pubkey" view="compact"></app-user-profile>
         <div class="item-meta">
-          <span class="item-time">{{ reaction.event.created_at | ago }}</span>
+          <span class="item-time reaction-time-trigger" [class.reaction-time-trigger-touch]="isHandset()"
+            #relayTooltip="matTooltip"
+            [matTooltip]="getReactionRelayTooltip(reaction)" matTooltipPosition="above"
+            [matTooltipTouchGestures]="isHandset() ? 'off' : 'auto'"
+            [matTooltipClass]="isHandset() ? 'reaction-relay-tooltip-mobile' : ''"
+            [matTooltipPositionAtOrigin]="isHandset()"
+            [matTooltipHideDelay]="isHandset() ? 0 : 100"
+            [matTooltipShowDelay]="isHandset() ? 0 : 150"
+            [matTooltipDisabled]="getReactionRelayUrls(reaction).length === 0 || (isHandset() && !isRelayTooltipOpen(reaction))"
+            (click)="toggleReactionRelayTooltip(reaction, relayTooltip, $event)">{{ reaction.event.created_at | ago:'short' }} ago</span>
           @if (canDeleteReaction(reaction)) {
           <button class="reaction-delete-toggle" type="button" [disabled]="deletingReactionIds().has(reaction.event.id)"
             (click)="deleteReaction(reaction, $event)" [attr.aria-label]="'Delete reaction ' + getReactionDisplay(reaction.event.content)"
