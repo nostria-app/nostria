@@ -910,6 +910,7 @@ export class EmojiPickerComponent {
 
     event.preventDefault();
     event.stopPropagation();
+    this.blurEventTarget(event);
 
     const pubkey = this.accountState.pubkey();
     if (!pubkey) {
@@ -942,6 +943,21 @@ export class EmojiPickerComponent {
 
     const trigger = this.emojiContextMenuTrigger();
     trigger?.closeMenu();
+    this.blurActiveElement();
+  }
+
+  private blurEventTarget(event: Event): void {
+    const target = event.currentTarget || event.target;
+    if (target instanceof HTMLElement) {
+      target.blur();
+    }
+  }
+
+  private blurActiveElement(): void {
+    const activeElement = document.activeElement;
+    if (activeElement instanceof HTMLElement) {
+      activeElement.blur();
+    }
   }
 
   private getEventLocalPosition(event: Event): { x: number; y: number } {
