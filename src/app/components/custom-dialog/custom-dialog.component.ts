@@ -202,6 +202,13 @@ export class CustomDialogComponent implements AfterViewInit, OnDestroy {
 
     const hostElement = this.elementRef.nativeElement as HTMLElement;
 
+    // Dialogs opened via CustomDialogService are already mounted in the
+    // top-level custom dialog container. Re-parenting them into a second
+    // portal host can break stacking against Material/CDK dialogs.
+    if (hostElement.parentElement?.id === 'custom-dialog-container') {
+      return;
+    }
+
     // Create or get portal host
     this.portalHost = this.document.createElement('div');
     this.portalHost.classList.add('custom-dialog-portal-host');
