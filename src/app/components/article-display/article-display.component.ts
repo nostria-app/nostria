@@ -731,6 +731,23 @@ export class ArticleDisplayComponent implements OnDestroy {
     void this.loadEngagementMetrics(currentEvent);
   }
 
+  onReactionSummaryDeleted(reactionId: string): void {
+    const filteredEvents = this.effectiveReactions().events.filter(reaction => reaction.event.id !== reactionId);
+    const reactionData = new Map<string, number>();
+
+    for (const reaction of filteredEvents) {
+      const content = reaction.event.content || '+';
+      reactionData.set(content, (reactionData.get(content) || 0) + 1);
+    }
+
+    this.internalReactions.set({
+      events: filteredEvents,
+      data: reactionData,
+    });
+
+    this.reactionChanged.emit();
+  }
+
   onZapSent(amount: number): void {
     this.zapSent.emit(amount);
     const currentEvent = this.event();
@@ -942,6 +959,22 @@ export class ArticleDisplayComponent implements OnDestroy {
       reposts: [], // TODO: load reposts if needed
       quotes: [], // TODO: load quotes if needed
       selectedTab: tab,
+      onReactionDeleted: async (reactionId: string) => {
+        const filteredEvents = this.effectiveReactions().events.filter(reaction => reaction.event.id !== reactionId);
+        const reactionData = new Map<string, number>();
+
+        for (const reaction of filteredEvents) {
+          const content = reaction.event.content || '+';
+          reactionData.set(content, (reactionData.get(content) || 0) + 1);
+        }
+
+        this.internalReactions.set({
+          events: filteredEvents,
+          data: reactionData,
+        });
+
+        this.reactionChanged.emit();
+      },
     };
 
     this.dialog.open(ReactionsDialogComponent, {

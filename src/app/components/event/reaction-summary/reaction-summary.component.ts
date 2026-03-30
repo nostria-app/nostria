@@ -1,6 +1,7 @@
-import { Component, ChangeDetectionStrategy, input, computed, signal, effect, inject } from '@angular/core';
+import { Component, ChangeDetectionStrategy, input, computed, signal, effect, inject, output } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
 import { MatRippleModule } from '@angular/material/core';
+import { MatSnackBar } from '@angular/material/snack-bar';
 import { Event } from 'nostr-tools';
 import { NostrRecord } from '../../../interfaces';
 import { UserProfileComponent } from '../../user-profile/user-profile.component';
@@ -8,6 +9,8 @@ import { AgoPipe } from '../../../pipes/ago.pipe';
 import { EventHeaderComponent } from '../header/header.component';
 import { LayoutService } from '../../../services/layout.service';
 import { CustomEmojiComponent } from '../../custom-emoji/custom-emoji.component';
+import { AccountStateService } from '../../../services/account-state.service';
+import { ReactionService } from '../../../services/reaction.service';
 
 export type ReactionSummaryTab = 'reactions' | 'reposts' | 'quotes' | 'zaps';
 
@@ -37,6 +40,9 @@ export interface ZapInfo {
 export class ReactionSummaryComponent {
   private layout = inject(LayoutService);
   private dialog = inject(MatDialog);
+  private accountState = inject(AccountStateService);
+  private reactionService = inject(ReactionService);
+  private snackBar = inject(MatSnackBar);
 
   reactions = input<NostrRecord[]>([]);
   replyCount = input<number>(0);
@@ -49,8 +55,10 @@ export class ReactionSummaryComponent {
   zapCount = input<number>(0);
   initialTab = input<ReactionSummaryTab>('reactions');
   hideTabs = input<boolean>(false);
+  reactionDeleted = output<string>();
 
   selectedTab = signal<ReactionSummaryTab>('reactions');
+  deletingReactionIds = signal<Set<string>>(new Set());
 
   allTabs: ReactionSummaryTab[] = ['reactions', 'reposts', 'quotes', 'zaps'];
 
@@ -155,6 +163,44 @@ export class ReactionSummaryComponent {
     const shortcode = event.content.slice(1, -1);
     const emojiTag = event.tags.find(tag => tag[0] === 'emoji' && tag[1] === shortcode);
     return emojiTag?.[3] || undefined;
+  }
+
+  canDeleteReaction(reaction: NostrRecord): boolean {
+    const currentUserPubkey = this.accountState.pubkey();
+    return !!currentUserPubkey && reaction.event.pubkey === currentUserPubkey;
+  }
+
+  async deleteReaction(reaction: NostrRecord, event: MouseEvent): Promise<void> {
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (!this.canDeleteReaction(reaction)) {
+      return;
+    }
+
+    const currentDeletingIds = new Set(this.deletingReactionIds());
+    if (currentDeletingIds.has(reaction.event.id)) {
+      return;
+    }
+
+    currentDeletingIds.add(reaction.event.id);
+    this.deletingReactionIds.set(currentDeletingIds);
+
+    try {
+      const result = await this.reactionService.deleteReaction(reaction.event);
+      if (!result.success) {
+        this.snackBar.open('Failed to delete reaction. Please try again.', 'Dismiss', { duration: 3000 });
+        return;
+      }
+
+      this.reactionDeleted.emit(reaction.event.id);
+    } catch {
+      this.snackBar.open('Failed to delete reaction. Please try again.', 'Dismiss', { duration: 3000 });
+    } finally {
+      const nextDeletingIds = new Set(this.deletingReactionIds());
+      nextDeletingIds.delete(reaction.event.id);
+      this.deletingReactionIds.set(nextDeletingIds);
+    }
   }
 
   formatAmount(amount: number | null): string {

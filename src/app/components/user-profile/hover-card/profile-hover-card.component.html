@@ -121,7 +121,7 @@
     <!-- About -->
     @if (profile()?.data?.about) {
     <div class="about">
-      <app-bio-content [content]="profile()!.data!.about!"></app-bio-content>
+      {{ truncateContent(profile()!.data!.about!) }}
     </div>
     }
 

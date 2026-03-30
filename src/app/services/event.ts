@@ -27,6 +27,7 @@ import { DatabaseService } from './database.service';
 import { ConfirmDialogComponent } from '../components/confirm-dialog/confirm-dialog.component';
 import { RepostService } from './repost.service';
 import { ImageCacheService } from './image-cache.service';
+import { DeletionFilterService } from './deletion-filter.service';
 
 export interface Reaction {
   emoji: string;
@@ -145,6 +146,7 @@ export class EventService {
   private readonly accountRelay = inject(AccountRelayService);
   private readonly imageCacheService = inject(ImageCacheService);
   private readonly repostService = inject(RepostService);
+  private readonly deletionFilter = inject(DeletionFilterService);
   private readonly locallyDeletedEventIds = signal<Set<string>>(new Set());
   private readonly interactionSnapshot = signal<SharedInteractionSnapshot | null>(null);
   readonly latestInteractionSnapshot = this.interactionSnapshot.asReadonly();
@@ -1527,9 +1529,15 @@ export class EventService {
             },
           );
 
+          const filteredReactionEvents = await this.deletionFilter.filterDeletedEventsFromDatabase(
+            reactionRecords.map(record => record.event)
+          );
+          const filteredReactionIds = new Set(filteredReactionEvents.map(event => event.id));
+          const visibleReactionRecords = reactionRecords.filter(record => filteredReactionIds.has(record.event.id));
+
           // Count reactions by emoji
           const reactionCounts = new Map<string, number>();
-          reactionRecords.forEach((record: NostrRecord) => {
+          visibleReactionRecords.forEach((record: NostrRecord) => {
             const event = record.event;
             if (event.content && event.content.trim()) {
               const emoji = event.content.trim();
@@ -1547,7 +1555,7 @@ export class EventService {
           );
 
           return {
-            events: reactionRecords,
+            events: visibleReactionRecords,
             data: reactionCounts,
           };
         } catch (error) {

@@ -544,6 +544,28 @@ export class EventActionsToolbarComponent {
     }
   }
 
+  onReactionSummaryDeleted(reactionId: string): void {
+    const filteredEvents = this.effectiveReactions().events.filter(reaction => reaction.event.id !== reactionId);
+    const reactionData = new Map<string, number>();
+
+    for (const reaction of filteredEvents) {
+      const content = reaction.event.content || '+';
+      reactionData.set(content, (reactionData.get(content) || 0) + 1);
+    }
+
+    this.internalReactions.set({
+      events: filteredEvents,
+      data: reactionData,
+    });
+
+    this.reactionChanged.emit();
+
+    const currentEvent = this.event();
+    if (currentEvent && this.autoLoad()) {
+      void this.loadEngagementMetrics(currentEvent);
+    }
+  }
+
   onZapSent(amount: number): void {
     this.zapSent.emit(amount);
     const currentEvent = this.event();

@@ -22,11 +22,25 @@
         <app-user-profile [pubkey]="reaction.event.pubkey" view="compact"></app-user-profile>
         <div class="item-meta">
           <span class="item-time">{{ reaction.event.created_at | ago }}</span>
+          @if (canDeleteReaction(reaction)) {
+          <button class="reaction-delete-toggle" type="button" [disabled]="deletingReactionIds().has(reaction.event.id)"
+            (click)="deleteReaction(reaction, $event)" [attr.aria-label]="'Delete reaction ' + getReactionDisplay(reaction.event.content)"
+            title="Delete reaction">
+            @if (getCustomEmojiUrl(reaction.event)) {
+            <app-custom-emoji [src]="getCustomEmojiUrl(reaction.event)!" [alt]="reaction.event.content"
+              cssClass="reaction-emoji-img reaction-delete-emoji" [emojiSetAddress]="getEmojiSetAddress(reaction.event)" />
+            } @else {
+            <span class="reaction-emoji reaction-delete-emoji">{{ getReactionDisplay(reaction.event.content) }}</span>
+            }
+            <span class="reaction-delete-x" aria-hidden="true">X</span>
+          </button>
+          } @else {
           @if (getCustomEmojiUrl(reaction.event)) {
           <app-custom-emoji [src]="getCustomEmojiUrl(reaction.event)!" [alt]="reaction.event.content"
             cssClass="reaction-emoji-img" [emojiSetAddress]="getEmojiSetAddress(reaction.event)" />
           } @else {
           <span class="reaction-emoji">{{ getReactionDisplay(reaction.event.content) }}</span>
+          }
           }
         </div>
       </div>

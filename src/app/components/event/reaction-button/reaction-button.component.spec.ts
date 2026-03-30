@@ -2,14 +2,49 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideZonelessChangeDetection, signal } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { Event, kinds } from 'nostr-tools';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ReactionButtonComponent } from './reaction-button.component';
 import { LayoutService } from '../../../services/layout.service';
 import { LocalSettingsService } from '../../../services/local-settings.service';
+import { AccountStateService } from '../../../services/account-state.service';
+import { ReactionService } from '../../../services/reaction.service';
+import { EventService } from '../../../services/event';
+import { AccountLocalStateService } from '../../../services/account-local-state.service';
+import { EmojiSetService } from '../../../services/emoji-set.service';
+import { DataService } from '../../../services/data.service';
+import { DatabaseService } from '../../../services/database.service';
+import { LoggerService } from '../../../services/logger.service';
+import { CustomDialogService } from '../../../services/custom-dialog.service';
 
 describe('ReactionButtonComponent', () => {
   let component: ReactionButtonComponent;
   let fixture: ComponentFixture<ReactionButtonComponent>;
   const isHandset = signal(false);
+  const defaultReactionEmoji = signal('❤️');
+  const account = signal({ pubkey: 'test-pubkey', source: 'private-key' } as any);
+  const pubkey = signal('test-pubkey');
+  const reactionService = {
+    addLike: vi.fn(),
+    deleteReaction: vi.fn(),
+    addReaction: vi.fn(),
+  };
+
+  const targetEvent: Event = {
+    id: 'event-1',
+    pubkey: 'author-pubkey',
+    created_at: 1,
+    kind: kinds.ShortTextNote,
+    content: 'hello',
+    tags: [],
+    sig: 'sig',
+  };
+
+  function setRequiredInputs(): void {
+    fixture.componentRef.setInput('event', targetEvent);
+    fixture.componentRef.setInput('reactionsFromParent', { events: [], data: new Map() });
+    fixture.detectChanges();
+  }
 
   function createPointerEvent(type: string, init: PointerEventInit = {}): PointerEvent {
     return new PointerEvent(type, {
@@ -34,12 +69,85 @@ describe('ReactionButtonComponent', () => {
             showLoginDialog: vi.fn(),
           },
         },
+        {
+          provide: AccountStateService,
+          useValue: {
+            pubkey,
+            account,
+          },
+        },
+        {
+          provide: ReactionService,
+          useValue: reactionService,
+        },
+        {
+          provide: EventService,
+          useValue: {
+            loadReactions: vi.fn().mockResolvedValue({ events: [], data: new Map() }),
+          },
+        },
+        {
+          provide: AccountLocalStateService,
+          useValue: {
+            getRecentEmojis: vi.fn().mockReturnValue([]),
+            addRecentEmoji: vi.fn(),
+          },
+        },
+        {
+          provide: EmojiSetService,
+          useValue: {
+            preferencesChanged: signal(0),
+            getUserEmojiSets: vi.fn().mockResolvedValue(new Map()),
+            getUserEmojiSetsGrouped: vi.fn().mockResolvedValue([]),
+          },
+        },
+        {
+          provide: DataService,
+          useValue: {},
+        },
+        {
+          provide: DatabaseService,
+          useValue: {},
+        },
+        {
+          provide: LoggerService,
+          useValue: {
+            error: vi.fn(),
+            info: vi.fn(),
+            debug: vi.fn(),
+          },
+        },
+        {
+          provide: CustomDialogService,
+          useValue: {
+            open: vi.fn(),
+          },
+        },
+        {
+          provide: LocalSettingsService,
+          useValue: {
+            defaultReactionEmoji,
+            setDefaultReactionEmoji: (value: string) => defaultReactionEmoji.set(value),
+          },
+        },
+        {
+          provide: MatSnackBar,
+          useValue: {
+            open: vi.fn(),
+          },
+        },
       ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(ReactionButtonComponent);
     component = fixture.componentInstance;
     isHandset.set(false);
+    defaultReactionEmoji.set('❤️');
+    pubkey.set('test-pubkey');
+    account.set({ pubkey: 'test-pubkey', source: 'private-key' } as any);
+    reactionService.addLike.mockReset();
+    reactionService.deleteReaction.mockReset();
+    reactionService.addReaction.mockReset();
   });
 
   it('should create', () => {
@@ -116,7 +224,7 @@ describe('ReactionButtonComponent', () => {
 
       component.sendDefaultReaction();
 
-      expect(addReactionSpy).toHaveBeenCalledWith('🔥');
+      expect(addReactionSpy).toHaveBeenCalledWith('🔥', false);
     });
 
     it('should call addReaction with heart emoji when using default settings', () => {
@@ -124,7 +232,30 @@ describe('ReactionButtonComponent', () => {
 
       component.sendDefaultReaction();
 
-      expect(addReactionSpy).toHaveBeenCalledWith('❤️');
+      expect(addReactionSpy).toHaveBeenCalledWith('❤️', false);
+    });
+
+    it('should toggle the existing reaction off instead of adding another one', () => {
+      const toggleLikeSpy = vi.spyOn(component, 'toggleLike').mockResolvedValue(undefined);
+      component.reactions.set({
+        events: [{
+          event: {
+            id: 'reaction-1',
+            pubkey: 'test-pubkey',
+            created_at: 1,
+            kind: kinds.Reaction,
+            content: '+',
+            tags: [],
+            sig: 'sig',
+          },
+          data: '+',
+        }],
+        data: new Map([['+', 1]]),
+      });
+
+      component.sendDefaultReaction();
+
+      expect(toggleLikeSpy).toHaveBeenCalled();
     });
 
     it('should open menu when default emoji is empty string', () => {
@@ -294,6 +425,61 @@ describe('ReactionButtonComponent', () => {
 
       expect(component.showSigningErrorDialog()).toBe(false);
       expect(component.signingErrorMessage()).toBe('');
+    });
+  });
+
+  describe('toggleLike', () => {
+    beforeEach(() => {
+      setRequiredInputs();
+    });
+
+    it('should emit reactionChanged after deleting an existing reaction', async () => {
+      reactionService.deleteReaction.mockResolvedValue({ success: true });
+      const emitSpy = vi.spyOn(component.reactionChanged, 'emit');
+
+      component.reactions.set({
+        events: [{
+          event: {
+            id: 'reaction-1',
+            pubkey: 'test-pubkey',
+            created_at: 1,
+            kind: kinds.Reaction,
+            content: '+',
+            tags: [],
+            sig: 'sig',
+          },
+          data: '+',
+        }],
+        data: new Map([['+', 1]]),
+      });
+
+      await component.toggleLike();
+
+      expect(reactionService.deleteReaction).toHaveBeenCalled();
+      expect(emitSpy).toHaveBeenCalled();
+    });
+
+    it('should emit reactionChanged after adding a new like', async () => {
+      reactionService.addLike.mockResolvedValue({
+        success: true,
+        event: {
+          id: 'reaction-2',
+          pubkey: 'test-pubkey',
+          created_at: 2,
+          kind: kinds.Reaction,
+          content: '+',
+          tags: [],
+          sig: 'sig',
+        },
+      });
+      const emitSpy = vi.spyOn(component.reactionChanged, 'emit');
+
+      component.reactions.set({ events: [], data: new Map() });
+
+      await component.toggleLike();
+
+      expect(reactionService.addLike).toHaveBeenCalledWith(targetEvent);
+      expect(emitSpy).toHaveBeenCalled();
     });
   });
 });

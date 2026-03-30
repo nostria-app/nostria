@@ -7,6 +7,7 @@ import { nip19 } from 'nostr-tools';
 import { MatDialogModule, MatDialogRef, MatDialog, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatListModule } from '@angular/material/list';
 import { Event } from 'nostr-tools';
@@ -17,6 +18,7 @@ import { LayoutService } from '../../services/layout.service';
 import { EmojiSetService } from '../../services/emoji-set.service';
 import { AccountStateService } from '../../services/account-state.service';
 import { UserRelaysService } from '../../services/relays/user-relays';
+import { ReactionService } from '../../services/reaction.service';
 
 export interface ReactionsDialogData {
   event: Event;
@@ -33,6 +35,7 @@ export interface ReactionsDialogData {
   reposts: NostrRecord[];
   quotes: NostrRecord[];
   selectedTab?: 'likes' | 'zaps' | 'reposts' | 'quotes';
+  onReactionDeleted?: (reactionId: string) => void | Promise<void>;
 }
 
 @Component({
@@ -85,14 +88,37 @@ export interface ReactionsDialogData {
                           ></app-user-profile>
                         </div>
                         <div class="reaction-meta">
-                          @if (getCustomEmojiUrl(reaction.event)) {
-                            <img 
-                              [src]="getCustomEmojiUrl(reaction.event)!" 
-                              [alt]="reaction.event.content"
-                              class="reaction-emoji-img"
-                              [title]="reaction.event.content">
+                          @if (canDeleteReaction(reaction)) {
+                            <button
+                              mat-icon-button
+                              type="button"
+                              class="reaction-delete-toggle"
+                              [disabled]="deletingReactionIds().has(reaction.event.id)"
+                              (click)="deleteReaction(reaction, $event)"
+                              [attr.aria-label]="'Delete reaction ' + getReactionDisplay(reaction.event.content)"
+                              title="Delete reaction"
+                            >
+                              @if (getCustomEmojiUrl(reaction.event)) {
+                                <img 
+                                  [src]="getCustomEmojiUrl(reaction.event)!" 
+                                  [alt]="reaction.event.content"
+                                  class="reaction-emoji-img reaction-delete-emoji"
+                                  [title]="reaction.event.content">
+                              } @else {
+                                <span class="reaction-emoji reaction-delete-emoji">{{ getReactionDisplay(reaction.event.content) }}</span>
+                              }
+                              <span class="reaction-delete-x" aria-hidden="true">X</span>
+                            </button>
                           } @else {
-                            <span class="reaction-emoji">{{ getReactionDisplay(reaction.event.content) }}</span>
+                            @if (getCustomEmojiUrl(reaction.event)) {
+                              <img 
+                                [src]="getCustomEmojiUrl(reaction.event)!" 
+                                [alt]="reaction.event.content"
+                                class="reaction-emoji-img"
+                                [title]="reaction.event.content">
+                            } @else {
+                              <span class="reaction-emoji">{{ getReactionDisplay(reaction.event.content) }}</span>
+                            }
                           }
                           <span class="reaction-time">{{ reaction.event.created_at | ago }}</span>
                         </div>
@@ -307,6 +333,46 @@ export interface ReactionsDialogData {
         flex-shrink: 0;
       }
 
+      .reaction-delete-toggle {
+        width: 32px;
+        height: 32px;
+        padding: 0 !important;
+        display: flex !important;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+      }
+
+      .reaction-delete-emoji,
+      .reaction-delete-x {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: opacity 0.15s ease;
+      }
+
+      .reaction-delete-emoji {
+        opacity: 1;
+      }
+
+      .reaction-delete-x {
+        opacity: 0;
+        font-size: 12px;
+        color: var(--mat-sys-error);
+      }
+
+      .reaction-delete-toggle:hover .reaction-delete-emoji,
+      .reaction-delete-toggle:focus-visible .reaction-delete-emoji {
+        opacity: 0;
+      }
+
+      .reaction-delete-toggle:hover .reaction-delete-x,
+      .reaction-delete-toggle:focus-visible .reaction-delete-x {
+        opacity: 1;
+      }
+
       .reaction-emoji {
         font-size: 20px;
         line-height: 1;
@@ -464,10 +530,13 @@ export class ReactionsDialogComponent {
   private emojiSetService = inject(EmojiSetService);
   private accountState = inject(AccountStateService);
   private userRelaysService = inject(UserRelaysService);
+  private reactionService = inject(ReactionService);
+  private snackBar = inject(MatSnackBar);
   data = inject<ReactionsDialogData>(MAT_DIALOG_DATA);
 
   // Custom emojis for fallback lookup
   customEmojis = signal<{ shortcode: string; url: string }[]>([]);
+  deletingReactionIds = signal<Set<string>>(new Set());
 
   constructor() {
     this.router.events.pipe(
@@ -531,6 +600,8 @@ export class ReactionsDialogComponent {
     return [...this.reactions()].sort((a, b) => b.event.created_at - a.event.created_at);
   });
 
+  currentUserPubkey = computed(() => this.accountState.pubkey());
+
   /**
    * Get the display text for a reaction
    * Converts '+' to heart emoji, otherwise displays the actual reaction content
@@ -563,6 +634,49 @@ export class ReactionsDialogComponent {
     // Fallback: check user's loaded custom emojis
     const customEmoji = this.customEmojis().find(e => e.shortcode === shortcode);
     return customEmoji?.url || null;
+  }
+
+  canDeleteReaction(reaction: NostrRecord): boolean {
+    const currentUserPubkey = this.currentUserPubkey();
+    return !!currentUserPubkey && reaction.event.pubkey === currentUserPubkey;
+  }
+
+  async deleteReaction(reaction: NostrRecord, event: MouseEvent): Promise<void> {
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (!this.canDeleteReaction(reaction)) {
+      return;
+    }
+
+    const currentDeletingIds = new Set(this.deletingReactionIds());
+    if (currentDeletingIds.has(reaction.event.id)) {
+      return;
+    }
+
+    currentDeletingIds.add(reaction.event.id);
+    this.deletingReactionIds.set(currentDeletingIds);
+
+    const previousReactions = this.reactions();
+    this.reactions.set(previousReactions.filter(item => item.event.id !== reaction.event.id));
+
+    try {
+      const result = await this.reactionService.deleteReaction(reaction.event);
+      if (!result.success) {
+        this.reactions.set(previousReactions);
+        this.snackBar.open('Failed to delete reaction. Please try again.', 'Dismiss', { duration: 3000 });
+        return;
+      }
+
+      await this.data.onReactionDeleted?.(reaction.event.id);
+    } catch {
+      this.reactions.set(previousReactions);
+      this.snackBar.open('Failed to delete reaction. Please try again.', 'Dismiss', { duration: 3000 });
+    } finally {
+      const nextDeletingIds = new Set(this.deletingReactionIds());
+      nextDeletingIds.delete(reaction.event.id);
+      this.deletingReactionIds.set(nextDeletingIds);
+    }
   }
 
   onTabChange(index: number): void {

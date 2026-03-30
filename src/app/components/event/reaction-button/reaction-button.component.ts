@@ -355,6 +355,11 @@ export class ReactionButtonComponent {
       return;
     }
 
+    if (this.userReaction()) {
+      void this.toggleLike();
+      return;
+    }
+
     const defaultEmoji = this.localSettings.defaultReactionEmoji();
     if (!defaultEmoji) {
       this.openMenu();
@@ -975,17 +980,19 @@ export class ReactionButtonComponent {
     this.isLoadingReactions.set(true);
 
     try {
-      const existingLikeReaction = this.likeReaction();
+      const existingLikeReaction = this.userReaction();
 
       if (existingLikeReaction) {
-        // Remove like - optimistically update UI first
-        this.updateReactionsOptimistically(userPubkey, '+', false);
+        // Remove the current reaction, regardless of whether it was stored as '+' or an emoji.
+        this.updateReactionsOptimistically(userPubkey, existingLikeReaction.event.content, false);
 
         const result = await this.reactionService.deleteReaction(existingLikeReaction.event);
         if (!result.success) {
           // Revert optimistic update if failed
-          this.updateReactionsOptimistically(userPubkey, '+', true);
+          this.updateReactionsOptimistically(userPubkey, existingLikeReaction.event.content, true);
           this.handleReactionError(result.error, 'Failed to remove like. Please try again.');
+        } else {
+          this.reactionChanged.emit();
         }
       } else {
         // Add like - optimistically update UI first
@@ -998,6 +1005,10 @@ export class ReactionButtonComponent {
           this.handleReactionError(result.error, 'Failed to add like. Please try again.');
         } else if (result.event) {
           this.replaceOptimisticReactionWithSigned(userPubkey, '+', result.event);
+        }
+
+        if (result.success) {
+          this.reactionChanged.emit();
         }
       }
 

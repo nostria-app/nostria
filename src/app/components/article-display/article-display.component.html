@@ -143,7 +143,7 @@
             <app-reaction-summary [reactions]="likes()" [replyCount]="replyCountInput()" [repostCount]="repostCount()"
               [quoteCount]="quoteCount()" [reposts]="repostsInput()" [quotes]="quotesInput()" [zaps]="effectiveZaps()"
               [totalZapAmount]="totalZapAmount()" [zapCount]="zapCount()" [initialTab]="reactionsSummaryTab()"
-              [hideTabs]="false">
+              [hideTabs]="false" (reactionDeleted)="onReactionSummaryDeleted($event)">
             </app-reaction-summary>
           </div>
           }
@@ -397,7 +397,7 @@
       <app-reaction-summary [reactions]="likes()" [replyCount]="replyCountInput()" [repostCount]="repostCount()"
         [quoteCount]="quoteCount()" [reposts]="repostsInput()" [quotes]="quotesInput()" [zaps]="effectiveZaps()"
         [totalZapAmount]="totalZapAmount()" [zapCount]="zapCount()" [initialTab]="reactionsSummaryTab()"
-        [hideTabs]="false">
+        [hideTabs]="false" (reactionDeleted)="onReactionSummaryDeleted($event)">
       </app-reaction-summary>
     </div>
     }

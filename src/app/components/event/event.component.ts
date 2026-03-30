@@ -3151,6 +3151,21 @@ export class EventComponent implements AfterViewInit, OnDestroy {
         reposts: this.reposts(),
         quotes: this.quotes(),
         selectedTab,
+        onReactionDeleted: async (reactionId: string) => {
+          const currentReactions = this.reactions();
+          const filteredEvents = currentReactions.events.filter(reaction => reaction.event.id !== reactionId);
+          const reactionData = new Map<string, number>();
+
+          for (const reaction of filteredEvents) {
+            const content = reaction.event.content || '+';
+            reactionData.set(content, (reactionData.get(content) || 0) + 1);
+          }
+
+          this.reactions.set({
+            events: filteredEvents,
+            data: reactionData,
+          });
+        },
       },
     });
   }
@@ -3498,6 +3513,22 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     this.reactions.set({
       events: currentEvents,
       data: currentData
+    });
+  }
+
+  onReactionSummaryDeleted(reactionId: string): void {
+    const currentReactions = this.reactions();
+    const filteredEvents = currentReactions.events.filter(reaction => reaction.event.id !== reactionId);
+    const reactionData = new Map<string, number>();
+
+    for (const reaction of filteredEvents) {
+      const content = reaction.event.content || '+';
+      reactionData.set(content, (reactionData.get(content) || 0) + 1);
+    }
+
+    this.reactions.set({
+      events: filteredEvents,
+      data: reactionData,
     });
   }
 

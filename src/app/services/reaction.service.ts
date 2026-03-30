@@ -5,6 +5,8 @@ import { NostrService } from './nostr.service';
 import { UtilitiesService } from './utilities.service';
 import { EmojiSetService } from './emoji-set.service';
 import { AccountStateService } from './account-state.service';
+import { AccountRelayService } from './relays/account-relay';
+import { UserRelaysService } from './relays/user-relays';
 
 @Injectable({
   providedIn: 'root',
@@ -14,6 +16,8 @@ export class ReactionService {
   private utilities = inject(UtilitiesService);
   private emojiSetService = inject(EmojiSetService);
   private accountState = inject(AccountStateService);
+  private accountRelay = inject(AccountRelayService);
+  private userRelaysService = inject(UserRelaysService);
 
   /**
    * Add a reaction to an event. Supports custom emoji via NIP-30.
@@ -83,7 +87,23 @@ export class ReactionService {
 
   async deleteReaction(event: Event): Promise<{ success: boolean; error?: string }> {
     const deleteEvent = this.nostrService.createRetractionEvent(event);
-    const result = await this.nostrService.signAndPublish(deleteEvent);
+    const accountRelayUrls = this.accountRelay.getRelayUrls();
+    const targetAuthorPubkeys = [...new Set(
+      event.tags
+        .filter(tag => tag[0] === 'p' && tag[1])
+        .map(tag => tag[1])
+    )];
+
+    const targetAuthorRelayUrls = await Promise.all(
+      targetAuthorPubkeys.map(pubkey => this.userRelaysService.getUserRelaysForPublishing(pubkey))
+    );
+
+    const relayUrls = this.utilities.getUniqueNormalizedRelayUrls([
+      ...accountRelayUrls,
+      ...targetAuthorRelayUrls.flat(),
+    ]);
+
+    const result = await this.nostrService.signAndPublish(deleteEvent, relayUrls);
     console.log('Reaction deleted:', { eventId: event.id, success: result.success });
     return { success: result.success, error: result.error };
   }
