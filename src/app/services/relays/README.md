@@ -104,7 +104,7 @@ Provides access to other users' relay lists without managing persistent connecti
 
 Connects to bootstrap/discovery relays to find user relay lists.
 
-**Default Relays:** `wss://discovery.eu.nostria.app/`
+**Default Relays:** `wss://indexer.openresist.com/`
 
 **Use Case:** Finding where a user publishes (relay list discovery)
 

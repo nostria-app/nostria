@@ -26,8 +26,6 @@ const SUGGESTED_SERVERS = [
 const NOSTRIA_MEDIA_SERVER_HOSTS = new Set([
   'mibo.nostria.app',
   'milo.nostria.app',
-  'mibo.eu.nostria.app',
-  'mibo.us.nostria.app',
 ]);
 
 // Nostria media server regions for auto-detection
