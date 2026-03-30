@@ -38,6 +38,8 @@ export interface ContentFilterSettings {
   showReplies: boolean;
   /** Whether to show reposts */
   showReposts: boolean;
+  /** Whether to hide Wordle posts tagged with t=wordle */
+  hideWordle: boolean;
   /** Legacy boolean toggle for Web of Trust filtering. Prefer wotMinRank for new code. */
   wotFilter?: boolean;
   /** Minimum Web of Trust rank to include. 0 means any positive rank. */
@@ -49,6 +51,7 @@ export const DEFAULT_CONTENT_FILTER: ContentFilterSettings = {
   kinds: [1, 1111, 6, 16, 30023, 1068, 6969, 1222, 1244, 20, 21, 22, 34235, 34236],
   showReplies: false,
   showReposts: true,
+  hideWordle: true,
 };
 
 /**
@@ -583,6 +586,14 @@ export class LocalSettingsService {
   setContentFilterShowReposts(showReposts: boolean): void {
     const current = this.contentFilter();
     this.setContentFilter({ ...current, showReposts });
+  }
+
+  /**
+   * Set content filter Wordle visibility setting.
+   */
+  setContentFilterHideWordle(hideWordle: boolean): void {
+    const current = this.contentFilter();
+    this.setContentFilter({ ...current, hideWordle });
   }
 
   /**

@@ -439,7 +439,7 @@
     <div class="drag-overlay">
       <div class="drag-message">
         <mat-icon class="drag-icon">cloud_upload</mat-icon>
-        <span>Drop files here to upload</span>
+        <span>Drop files here to add media</span>
       </div>
     </div>
     }
@@ -462,21 +462,33 @@
 
     <!-- Media Thumbnails (shown above action buttons in footer) -->
     @if (mediaMetadata().length > 0 && !showPreview() && !showAdvancedOptions()) {
-    <div class="media-thumbnails" cdkDropList cdkDropListOrientation="horizontal" (cdkDropListDropped)="drop($event)">
-      @for (media of mediaMetadata(); track media.url; let i = $index) {
-      <div class="media-thumbnail" cdkDrag>
-        <button mat-icon-button class="remove-media-btn" (click)="removeMedia(i)" matTooltip="Remove media">
+    <div class="media-thumbnails">
+      @for (media of mediaMetadata(); track media.id ?? media.url; let i = $index) {
+      <div class="media-thumbnail">
+        <button mat-icon-button class="remove-media-btn" (click)="$event.stopPropagation(); removeMedia(i)"
+          matTooltip="Remove media">
           <mat-icon>close</mat-icon>
         </button>
-        @if (media.mimeType?.startsWith('video/')) {
-        <mat-icon class="video-icon">videocam</mat-icon>
-        <!-- Use image preview if available -->
-        @if (media.image) {
-        <img [src]="media.image" class="thumbnail-img" alt="Video thumbnail">
-        }
-        } @else {
-        <img [src]="media.url" class="thumbnail-img" alt="Image thumbnail">
-        }
+        <button type="button" class="media-thumbnail-button" [class.pending-upload]="media.pendingUpload"
+          [attr.aria-label]="media.pendingUpload ? 'Reinsert pending media placeholder' : 'Media preview'"
+          [matTooltip]="media.pendingUpload ? 'Reinsert placeholder tag' : ''"
+          [matTooltipDisabled]="!media.pendingUpload" (click)="reinsertPendingMediaReference(media)">
+          @if (media.mimeType?.startsWith('video/')) {
+          <mat-icon class="video-icon">videocam</mat-icon>
+          @if (getMediaThumbnailUrl(media)) {
+          <img [src]="getMediaThumbnailUrl(media)" class="thumbnail-img" alt="Video thumbnail">
+          }
+          } @else {
+          <img [src]="getMediaThumbnailUrl(media)" class="thumbnail-img" alt="Image thumbnail">
+          }
+          <div class="media-thumbnail-meta">
+            @if (media.pendingUpload) {
+            <span class="media-status">Uploads on publish</span>
+            }
+            <span class="media-size">Original {{ formatFileSize(media.originalSize) }}</span>
+            <span class="media-size">Upload {{ formatFileSize(getMediaUploadSize(media)) }}</span>
+          </div>
+        </button>
       </div>
       }
     </div>
@@ -496,13 +508,15 @@
       </button>
       } @else {
       @if (!inlineMode()) {
+      <button mat-icon-button type="button" class="plus-button desktop-action action-priority-high"
+        [matMenuTriggerFor]="plusMenu"
+        [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions()"
+        [class.button-disabled-visible]="showPreview() || showAdvancedOptions()" matTooltip="Add to post">
+        <mat-icon>add</mat-icon>
+      </button>
       <button mat-icon-button type="button" class="desktop-action action-priority-high" (click)="togglePreview()"
         [color]="showPreview() ? 'primary' : ''" matTooltip="Toggle preview">
         <mat-icon>{{ showPreview() ? 'visibility_off' : 'visibility' }}</mat-icon>
-      </button>
-      <button mat-icon-button type="button" class="desktop-action persistent-action" (click)="clearDraft()"
-        [disabled]="!isDirty()" matTooltip="Clear draft">
-        <mat-icon>delete_sweep</mat-icon>
       </button>
       <button mat-icon-button type="button" class="desktop-action action-priority-high persistent-action"
         (click)="toggleAdvancedOptions()" matTooltip="Advanced options">
@@ -510,12 +524,6 @@
       </button>
       }
 
-      <button mat-icon-button type="button" class="plus-button desktop-action action-priority-high"
-        [matMenuTriggerFor]="plusMenu"
-        [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions()"
-        [class.button-disabled-visible]="showPreview() || showAdvancedOptions()" matTooltip="Add to post">
-        <mat-icon>add</mat-icon>
-      </button>
       <mat-menu #plusMenu="matMenu">
         <button mat-menu-item (click)="openFileDialog()">
           <mat-icon>upload</mat-icon>
@@ -541,15 +549,6 @@
           <span>Insert reference</span>
         </button>
         }
-
-        @if (!layout.isHandset()) {
-        <button mat-menu-item (click)="toggleRecording()"
-          [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions() || isTranscribing()">
-          <mat-icon [class.spinning]="isTranscribing()">{{ isTranscribing() ? 'sync' : (isRecording() ? 'stop' : 'mic')
-            }}</mat-icon>
-          <span>{{ isTranscribing() ? 'Transcribing...' : (isRecording() ? 'Stop listening' : 'Dictate note') }}</span>
-        </button>
-        }
       </mat-menu>
 
       @if (recordingHistory.length > 0) {
@@ -568,6 +567,15 @@
       </button>
 
       <mat-menu #mobileActionsMenu="matMenu">
+        @if (!layout.isHandset()) {
+        <button mat-menu-item (click)="toggleRecording()"
+          [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions() || isTranscribing()">
+          <mat-icon [class.spinning]="isTranscribing()">{{ isTranscribing() ? 'sync' : (isRecording() ? 'stop' : 'mic')
+            }}</mat-icon>
+          <span>{{ isTranscribing() ? 'Transcribing...' : (isRecording() ? 'Stop listening' : 'Dictate note') }}</span>
+        </button>
+        }
+
         @if (recordingHistory.length > 0) {
         <button mat-menu-item (click)="undoLastRecording()"
           [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions() || isTranscribing()">
@@ -575,6 +583,11 @@
           <span>Undo last recording</span>
         </button>
         }
+
+        <button mat-menu-item (click)="clearDraft()" [disabled]="!isDirty()">
+          <mat-icon>delete_sweep</mat-icon>
+          <span>Clear draft</span>
+        </button>
 
         <button mat-menu-item (click)="openAiDialog('translate')"
           [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions()">

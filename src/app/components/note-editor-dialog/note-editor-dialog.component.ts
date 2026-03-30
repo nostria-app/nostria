@@ -32,7 +32,6 @@ import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatSliderModule } from '@angular/material/slider';
 import { DomSanitizer } from '@angular/platform-browser';
 import { FormsModule } from '@angular/forms';
-import { DragDropModule, CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
 import { CdkTextareaAutosize, TextFieldModule } from '@angular/cdk/text-field';
 
 import { NostrService } from '../../services/nostr.service';
@@ -87,6 +86,7 @@ import {
 export type { NoteEditorDialogData } from '../../interfaces/note-editor';
 
 interface MediaMetadata {
+  id?: string;
   url: string;
   mimeType?: string;
   blurhash?: string;
@@ -98,6 +98,15 @@ interface MediaMetadata {
   imageMirrors?: string[]; // Mirror URLs for the preview image
   fallbackUrls?: string[]; // Fallback URLs for the main media file
   thumbnailBlob?: Blob; // Thumbnail blob to be uploaded (temporary, before upload)
+  previewUrl?: string; // Local preview URL for pending images
+  placeholderToken?: string; // Placeholder inserted into the editor until publish
+  pendingUpload?: boolean;
+  fileName?: string;
+  originalSize?: number;
+  processedSize?: number;
+  localFile?: File;
+  uploadOriginal?: boolean;
+  warningMessage?: string;
 }
 
 interface NoteAutoDraft {
@@ -167,7 +176,6 @@ interface SentimentHeaderState {
     MentionAutocompleteComponent,
     SlashCommandMenuComponent,
     MatMenuModule,
-    DragDropModule,
     TextFieldModule,
     UserProfileComponent,
   ],
@@ -277,6 +285,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   showAdvancedOptions = signal(false);
   isContentFocused = signal(false);
   private lastCursorPosition: number | null = null;
+  private pendingMediaInsertionAnchors = new Map<string, number>();
   isDragOver = signal(false);
   isUploading = signal(false);
   uploadStatus = signal(''); // Detailed upload status message
@@ -313,6 +322,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
 
   // Media metadata for imeta tags (NIP-92)
   mediaMetadata = signal<MediaMetadata[]>([]);
+  hasPendingMedia = computed(() => this.mediaMetadata().some(media => media.pendingUpload));
 
   // Media Mode
   title = signal('');
@@ -559,7 +569,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   previewContent = computed((): string => {
     if (!this.showPreview()) return '';
 
-    const content = this.content();
+    const content = this.resolvePendingMediaReferences(this.content(), true);
 
     if (this.isMediaMode()) {
       // In Media Mode, content (description) is used as is (URLs already removed from text area)
@@ -594,7 +604,8 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     // 2. Prepare Content (remove URLs)
     let content = this.content();
     this.mediaMetadata().forEach(m => {
-      const escapedUrl = m.url.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const reference = this.getMediaContentReference(m);
+      const escapedUrl = reference.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       const regex = new RegExp(escapedUrl, 'g');
       content = content.replace(regex, '').trim();
     });
@@ -607,7 +618,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       mediaTags.push(['title', this.title()]);
     }
     // Imeta
-    this.mediaMetadata().forEach(metadata => {
+    this.mediaMetadata().filter(metadata => !metadata.pendingUpload).forEach(metadata => {
       const imetaTag = this.buildImetaTag(metadata);
       if (imetaTag) {
         mediaTags.push(imetaTag);
@@ -654,30 +665,14 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     return map;
   });
 
-  drop(event: CdkDragDrop<MediaMetadata[]>) {
-    const currentMetadata = [...this.mediaMetadata()];
-    moveItemInArray(currentMetadata, event.previousIndex, event.currentIndex);
-    this.mediaMetadata.set(currentMetadata);
-  }
-
   removeMedia(index: number): void {
     const currentMetadata = [...this.mediaMetadata()];
     const removedMedia = currentMetadata[index];
     currentMetadata.splice(index, 1);
     this.mediaMetadata.set(currentMetadata);
 
-    // Remove the media URL from content if present
-    if (removedMedia?.url) {
-      let currentContent = this.content();
-      const escapedUrl = removedMedia.url.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      // Remove the URL (with optional surrounding whitespace/newlines)
-      currentContent = currentContent.replace(new RegExp('\\s*' + escapedUrl + '\\s*', 'g'), ' ');
-      // Clean up extra whitespace
-      currentContent = currentContent.replace(/[ \t]+/g, ' ').replace(/\n\s*\n/g, '\n\n').trim();
-
-      this.content.set(currentContent);
-      this.scheduleTextareaRefresh();
-    }
+    this.removeMediaReferenceFromContent(this.getMediaContentReference(removedMedia));
+    this.revokeMediaPreviewUrls(removedMedia);
 
     // If no more media, disable media mode
     if (currentMetadata.length === 0) {
@@ -685,6 +680,23 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     }
 
     // Save draft immediately after media removal
+    this.saveAutoDraft();
+  }
+
+  reinsertPendingMediaReference(media: MediaMetadata): void {
+    if (!media.pendingUpload) {
+      return;
+    }
+
+    const reference = this.getMediaContentReference(media);
+    if (!reference || this.content().includes(reference)) {
+      return;
+    }
+
+    const { start } = this.insertFileUrl(reference);
+    if (media.placeholderToken) {
+      this.pendingMediaInsertionAnchors.set(media.placeholderToken, start);
+    }
     this.saveAutoDraft();
   }
 
@@ -771,7 +783,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   isDirty = computed(() => {
     const hasContentChange = this.content().trim() !== this.initialContent.trim();
     const hasMentionsChange = JSON.stringify(this.mentions()) !== JSON.stringify(this.initialMentions);
-    const hasMediaChange = JSON.stringify(this.mediaMetadata()) !== JSON.stringify(this.initialMediaMetadata);
+    const hasMediaChange = this.serializeMediaMetadata(this.mediaMetadata()) !== this.serializeMediaMetadata(this.initialMediaMetadata);
     const hasTitleChange = this.title().trim() !== this.initialTitle.trim();
     return hasContentChange || hasMentionsChange || hasMediaChange || hasTitleChange;
   });
@@ -964,6 +976,8 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     if (this.publishSubscription) {
       this.publishSubscription.unsubscribe();
     }
+
+    this.mediaMetadata().forEach(media => this.revokeMediaPreviewUrls(media));
   }
 
   constructor() {
@@ -1062,6 +1076,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
             this.mentions.set([event.pubkey]); // Start with the event author mentioned
             this.mentionMap.clear();
             this.pubkeyToNameMap.clear();
+            this.mediaMetadata().forEach(media => this.revokeMediaPreviewUrls(media));
             this.mediaMetadata.set([]);
             this.isExpanded.set(false);
 
@@ -1224,7 +1239,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     let previousMentions = JSON.stringify(mentionsSignal());
     let previousExpirationEnabled = expirationEnabledSignal();
     let previousExpirationTime = expirationTimeSignal();
-    let previousMediaMetadata = JSON.stringify(mediaMetadataSignal());
+    let previousMediaMetadata = this.serializeMediaMetadata(mediaMetadataSignal());
     let previousIsMediaMode = isMediaModeSignal();
     let previousTitle = titleSignal();
 
@@ -1232,7 +1247,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       const currentMentions = JSON.stringify(mentionsSignal());
       const currentExpirationEnabled = expirationEnabledSignal();
       const currentExpirationTime = expirationTimeSignal();
-      const currentMediaMetadata = JSON.stringify(mediaMetadataSignal());
+      const currentMediaMetadata = this.serializeMediaMetadata(mediaMetadataSignal());
       const currentIsMediaMode = isMediaModeSignal();
       const currentTitle = titleSignal();
 
@@ -1252,7 +1267,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
         previousTitle = currentTitle;
 
         // Only schedule auto-save if there's content or media
-        if (this.content().trim() || this.mediaMetadata().length > 0) {
+        if (this.getDraftContent().trim() || this.getDraftMediaMetadata().length > 0) {
           this.scheduleAutoSave();
         }
       }
@@ -1269,8 +1284,8 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     }
 
     // Only auto-save if there's meaningful content or media
-    const content = this.content().trim();
-    const hasMedia = this.mediaMetadata().length > 0;
+    const content = this.getDraftContent().trim();
+    const hasMedia = this.getDraftMediaMetadata().length > 0;
 
     if (!content && !hasMedia) return;
 
@@ -1284,13 +1299,15 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     const pubkey = this.accountState.pubkey();
     if (!pubkey) return;
 
-    const content = this.content().trim();
-    const hasMedia = this.mediaMetadata().length > 0;
+    const draftContent = this.getDraftContent();
+    const content = draftContent.trim();
+    const draftMediaMetadata = this.getDraftMediaMetadata();
+    const hasMedia = draftMediaMetadata.length > 0;
 
     if (!content && !hasMedia) return;
 
     const autoDraft: NoteAutoDraft = {
-      content: this.content(),
+      content: draftContent,
       mentions: [...this.mentions()],
       mentionMap: Array.from(this.mentionMap.entries()),
       pubkeyToNameMap: Array.from(this.pubkeyToNameMap.entries()),
@@ -1306,7 +1323,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       lastModified: Date.now(),
       replyToId: this.data?.replyTo?.id,
       quoteId: this.data?.quote?.id,
-      mediaMetadata: this.mediaMetadata(),
+      mediaMetadata: draftMediaMetadata,
       isMediaMode: this.isMediaMode(),
       title: this.title(),
     };
@@ -1319,7 +1336,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       const isSimilar =
         previousDraft.content === autoDraft.content &&
         JSON.stringify(previousDraft.mentions) === JSON.stringify(autoDraft.mentions) &&
-        JSON.stringify(previousDraft.mediaMetadata) === JSON.stringify(autoDraft.mediaMetadata) &&
+        this.serializeMediaMetadata(previousDraft.mediaMetadata ?? []) === this.serializeMediaMetadata(autoDraft.mediaMetadata ?? []) &&
         previousDraft.expirationEnabled === autoDraft.expirationEnabled &&
         previousDraft.expirationTime === autoDraft.expirationTime &&
         previousDraft.uploadMode === autoDraft.uploadMode &&
@@ -1442,6 +1459,11 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     this.isPublishing.set(true);
 
     try {
+      const uploadedPendingMedia = await this.uploadPendingMediaBeforePublish();
+      if (!uploadedPendingMedia) {
+        return;
+      }
+
       if (this.isEdit()) {
         await this.publishEditFlow();
       } else if (this.isMediaModeEnabled()) {
@@ -1475,7 +1497,8 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     // 2. Prepare Content (remove URLs)
     let content = this.content();
     this.mediaMetadata().forEach(m => {
-      const escapedUrl = m.url.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const reference = this.getMediaContentReference(m);
+      const escapedUrl = reference.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       const regex = new RegExp(escapedUrl, 'g');
       content = content.replace(regex, '').trim();
     });
@@ -1617,6 +1640,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
             this.content.set('');
             this.mentionMap.clear();
             this.pubkeyToNameMap.clear();
+            this.mediaMetadata().forEach(media => this.revokeMediaPreviewUrls(media));
             this.mediaMetadata.set([]);
             this.isExpanded.set(false);
             this.replyPublished.emit(signedEvent);
@@ -1752,6 +1776,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
             this.content.set('');
             this.mentionMap.clear();
             this.pubkeyToNameMap.clear();
+            this.mediaMetadata().forEach(media => this.revokeMediaPreviewUrls(media));
             this.mediaMetadata.set([]);
             this.isExpanded.set(false);
             this.replyPublished.emit(signedEvent);
@@ -1849,7 +1874,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
 
   private getXMediaItems(): XPostMediaItem[] {
     return this.mediaMetadata()
-      .filter(media => !!media.url)
+      .filter(media => !!media.url && !media.pendingUpload)
       .map(media => ({
         url: media.url,
         mimeType: media.mimeType,
@@ -2017,7 +2042,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     }
 
     // Add imeta tags for uploaded media (NIP-92)
-    this.mediaMetadata().forEach(metadata => {
+    this.mediaMetadata().filter(metadata => !metadata.pendingUpload).forEach(metadata => {
       const imetaTag = this.buildImetaTag(metadata);
       if (imetaTag) {
         tags.push(imetaTag);
@@ -3143,6 +3168,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
             this.content.set('');
             this.mentionMap.clear();
             this.pubkeyToNameMap.clear();
+            this.mediaMetadata().forEach(media => this.revokeMediaPreviewUrls(media));
             this.mediaMetadata.set([]);
             this.isExpanded.set(false);
             this.cancelled.emit();
@@ -3180,6 +3206,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     this.mentions.set([...this.initialMentions]);
     this.mentionMap.clear();
     this.pubkeyToNameMap.clear();
+    this.mediaMetadata().forEach(media => this.revokeMediaPreviewUrls(media));
     this.mediaMetadata.set([...this.initialMediaMetadata]);
     this.title.set(this.initialTitle);
     this.isMediaMode.set(false);
@@ -3344,6 +3371,191 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     return withNostrRefs;
   }
 
+  formatFileSize(bytes?: number): string {
+    if (!bytes || bytes <= 0) return '0 Bytes';
+
+    const units = ['Bytes', 'KB', 'MB', 'GB'];
+    const exponent = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
+    const value = bytes / Math.pow(1024, exponent);
+    return `${parseFloat(value.toFixed(2))} ${units[exponent]}`;
+  }
+
+  getMediaThumbnailUrl(media: MediaMetadata): string {
+    if (media.mimeType?.startsWith('video/')) {
+      return media.image || '';
+    }
+
+    return media.previewUrl || media.url;
+  }
+
+  getMediaUploadSize(media: MediaMetadata): number {
+    return media.processedSize ?? media.originalSize ?? 0;
+  }
+
+  private serializeMediaMetadata(media: MediaMetadata[]): string {
+    return JSON.stringify(
+      media.map(item => ({
+        id: item.id,
+        url: item.url,
+        mimeType: item.mimeType,
+        blurhash: item.blurhash,
+        thumbhash: item.thumbhash,
+        dimensions: item.dimensions,
+        alt: item.alt,
+        sha256: item.sha256,
+        image: item.image,
+        imageMirrors: item.imageMirrors,
+        fallbackUrls: item.fallbackUrls,
+        previewUrl: item.previewUrl,
+        placeholderToken: item.placeholderToken,
+        pendingUpload: item.pendingUpload,
+        fileName: item.fileName,
+        originalSize: item.originalSize,
+        processedSize: item.processedSize,
+        uploadOriginal: item.uploadOriginal,
+        warningMessage: item.warningMessage,
+      }))
+    );
+  }
+
+  private getDraftMediaMetadata(): MediaMetadata[] {
+    return this.mediaMetadata()
+      .filter(media => !media.pendingUpload)
+      .map(media => ({
+        id: media.id,
+        url: media.url,
+        mimeType: media.mimeType,
+        blurhash: media.blurhash,
+        thumbhash: media.thumbhash,
+        dimensions: media.dimensions,
+        alt: media.alt,
+        sha256: media.sha256,
+        image: media.image,
+        imageMirrors: media.imageMirrors,
+        fallbackUrls: media.fallbackUrls,
+        fileName: media.fileName,
+        originalSize: media.originalSize,
+        processedSize: media.processedSize,
+      }));
+  }
+
+  private getDraftContent(): string {
+    let draftContent = this.content();
+    this.mediaMetadata()
+      .filter(media => media.pendingUpload)
+      .forEach(media => {
+        const reference = this.getMediaContentReference(media);
+        const escapedReference = reference.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        draftContent = draftContent.replace(new RegExp('\\s*' + escapedReference + '\\s*', 'g'), ' ');
+      });
+
+    return draftContent.replace(/[ \t]+/g, ' ').replace(/\n\s*\n/g, '\n\n').trim();
+  }
+
+  private getMediaContentReference(media: MediaMetadata): string {
+    return media.placeholderToken || media.url;
+  }
+
+  private getPendingMediaPreviewReference(media: MediaMetadata): string {
+    const previewUrl = media.mimeType?.startsWith('video/') ? media.url : (media.previewUrl || media.url);
+    return this.decoratePreviewMediaUrl(previewUrl, media.mimeType);
+  }
+
+  private decoratePreviewMediaUrl(url: string, mimeType: string | undefined): string {
+    if (!url.startsWith('blob:')) {
+      return url;
+    }
+
+    if (mimeType?.startsWith('video/')) {
+      return `${url}#nostria-video`;
+    }
+
+    if (mimeType?.startsWith('audio/')) {
+      return `${url}#nostria-audio`;
+    }
+
+    return `${url}#nostria-image`;
+  }
+
+  private resolvePendingMediaReferences(content: string, forPreview = false): string {
+    let resolvedContent = content;
+
+    this.mediaMetadata()
+      .filter(media => media.pendingUpload)
+      .forEach(media => {
+        const reference = this.getMediaContentReference(media);
+        const replacement = forPreview ? this.getPendingMediaPreviewReference(media) : media.url;
+
+        if (!reference || !replacement) {
+          return;
+        }
+
+        const escapedReference = reference.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        resolvedContent = resolvedContent.replace(new RegExp(escapedReference, 'g'), replacement);
+      });
+
+    return resolvedContent;
+  }
+
+  private createPendingMediaPlaceholder(mimeType: string): string {
+    const mediaType = mimeType.startsWith('video/') ? 'video' : 'image';
+    const prefix = `[${mediaType}`;
+    let index = 1;
+
+    while (this.mediaMetadata().some(media => media.placeholderToken === `${prefix}${index}]`)) {
+      index++;
+    }
+
+    return `${prefix}${index}]`;
+  }
+
+  private replaceMediaPlaceholderInContent(placeholderToken: string | undefined, url: string): void {
+    if (!placeholderToken) {
+      return;
+    }
+
+    const currentContent = this.content();
+    if (currentContent.includes(placeholderToken)) {
+      this.content.set(currentContent.replace(placeholderToken, url));
+      this.pendingMediaInsertionAnchors.delete(placeholderToken);
+      return;
+    }
+
+    if (!this.isMediaMode() && !currentContent.includes(url)) {
+      const insertionAnchor = this.pendingMediaInsertionAnchors.get(placeholderToken);
+      this.insertFileUrl(url, insertionAnchor);
+    }
+
+    this.pendingMediaInsertionAnchors.delete(placeholderToken);
+  }
+
+  private revokeMediaPreviewUrls(media: MediaMetadata | undefined): void {
+    if (!media?.pendingUpload) {
+      return;
+    }
+
+    for (const url of [media.previewUrl, media.image, media.url]) {
+      if (url?.startsWith('blob:')) {
+        URL.revokeObjectURL(url);
+      }
+    }
+  }
+
+  private removeMediaReferenceFromContent(reference: string | undefined): void {
+    if (!reference) {
+      return;
+    }
+
+    this.pendingMediaInsertionAnchors.delete(reference);
+
+    let currentContent = this.content();
+    const escapedReference = reference.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    currentContent = currentContent.replace(new RegExp('\\s*' + escapedReference + '\\s*', 'g'), ' ');
+    currentContent = currentContent.replace(/[ \t]+/g, ' ').replace(/\n\s*\n/g, '\n\n').trim();
+    this.content.set(currentContent);
+    this.scheduleTextareaRefresh();
+  }
+
   // File upload functionality
   onFileSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
@@ -3357,12 +3569,6 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   openFileDialog(): void {
     if (!this.fileInput?.nativeElement) {
       console.warn('File input not available. Make sure preview and advanced options are closed.');
-      return;
-    }
-
-    // Check if user has media servers configured
-    if (!this.hasConfiguredMediaServers()) {
-      this.showMediaServerWarning();
       return;
     }
 
@@ -3444,9 +3650,13 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       this.mediaMetadata.set([
         ...currentMetadata,
         {
+          id: crypto.randomUUID(),
           url: urlToAdd,
           mimeType: item.type,
           sha256: item.sha256,
+          fileName: item.url.split('/').pop() || 'media',
+          originalSize: item.size,
+          processedSize: item.size,
         },
       ]);
     }
@@ -3502,23 +3712,18 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   private async uploadFiles(files: File[]): Promise<void> {
     if (files.length === 0) return;
 
-    // Check if user has media servers configured
-    if (!this.hasConfiguredMediaServers()) {
-      this.showMediaServerWarning();
-      return;
-    }
-
     this.isUploading.set(true);
-    this.uploadStatus.set('Preparing upload...');
+    this.uploadStatus.set('Preparing media...');
+
+    let insertionAnchor = this.getCurrentInsertionAnchor();
 
     try {
-      // Load media service if not already loaded
       await this.mediaService.load();
 
       const totalFiles = files.length;
-      let completedFiles = 0;
-
-      const results: Array<{ success: boolean; fileName: string; error?: string }> = [];
+      let preparedFiles = 0;
+      const queuedFiles: string[] = [];
+      const failedFiles: { fileName: string; error: string }[] = [];
       const warningMessages: string[] = [];
       const uploadSettings = {
         mode: this.mediaUploadMode(),
@@ -3528,22 +3733,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       for (const [index, file] of files.entries()) {
         try {
           const fileLabel = totalFiles > 1 ? ` (${index + 1}/${totalFiles})` : '';
-          console.log(`Uploading file: ${file.name}, type: ${file.type}, size: ${file.size}`);
-
-          // Pre-extract thumbnail for videos using the local file
-          let thumbnailData:
-            | {
-              blob: Blob;
-              dimensions: { width: number; height: number };
-              blurhash: string | undefined;
-              thumbhash: string | undefined;
-            }
-            | undefined;
-
-          // Use the media service to get the correct MIME type
-          const fileMimeType = this.mediaService.getFileMimeType(file);
-          const shouldProcessLocally = uploadSettings.mode === 'local'
-            && (fileMimeType.startsWith('image/') || fileMimeType.startsWith('video/'));
+          this.uploadStatus.set(`Preparing ${file.name}${fileLabel}...`);
 
           const preparedFile = await this.mediaProcessing.prepareFileForUpload(
             file,
@@ -3560,108 +3750,38 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
             warningMessages.push(preparedFile.warningMessage);
           }
 
-          if (fileMimeType.startsWith('video/')) {
-            try {
-              this.uploadStatus.set(`Extracting video thumbnail${fileLabel}...`);
+          const pendingMedia = await this.createPendingMediaMetadata(file, preparedFile, fileLabel);
+          this.mediaMetadata.set([...this.mediaMetadata(), pendingMedia]);
 
-              // Create object URL from the local file for thumbnail extraction
-              const localVideoUrl = URL.createObjectURL(file);
+          if (!this.isMediaMode()) {
+            const reference = pendingMedia.placeholderToken || pendingMedia.url;
+            const { start, end } = this.insertFileUrl(reference, insertionAnchor);
 
-              // Extract thumbnail from the local video file
-              const thumbnailResult = await this.utilities.extractThumbnailFromVideo(localVideoUrl, 1);
-
-              // Generate placeholders (blurhash and/or thumbhash) from the thumbnail
-              const thumbnailFile = new File([thumbnailResult.blob], 'thumbnail.jpg', {
-                type: 'image/jpeg',
-              });
-              const placeholderResult = await this.imagePlaceholder.generatePlaceholders(thumbnailFile);
-
-              thumbnailData = {
-                blob: thumbnailResult.blob,
-                dimensions: thumbnailResult.dimensions,
-                blurhash: placeholderResult.blurhash,
-                thumbhash: placeholderResult.thumbhash,
-              };
-
-              // Clean up the local object URL
-              URL.revokeObjectURL(localVideoUrl);
-              URL.revokeObjectURL(thumbnailResult.objectUrl);
-            } catch (error) {
-              console.error('Failed to extract video thumbnail:', error);
-              // Continue with upload even if thumbnail extraction fails
+            if (pendingMedia.placeholderToken) {
+              this.pendingMediaInsertionAnchors.set(pendingMedia.placeholderToken, start);
             }
+
+            insertionAnchor = end;
           }
 
-          const uploadText = shouldProcessLocally
-            ? (preparedFile.wasProcessed ? 'Uploading locally compressed media' : 'Uploading original media')
-            : (uploadSettings.mode === 'server' && (fileMimeType.startsWith('image/') || fileMimeType.startsWith('video/'))
-              ? 'Uploading for server compression'
-              : 'Uploading');
-          this.uploadStatus.set(`${uploadText}${fileLabel}...`);
-          const result = await this.mediaService.uploadFile(
-            preparedFile.file,
-            preparedFile.uploadOriginal,
-            this.mediaService.mediaServers()
-          );
-
-          console.log(`Upload result for ${file.name}:`, result);
-
-          if (result.status === 'success' && result.item) {
-            if (!this.isMediaMode()) {
-              this.insertFileUrl(result.item.url);
-            }
-
-            this.uploadStatus.set(`Processing metadata${fileLabel}...`);
-
-            // Extract metadata for imeta tag (NIP-92)
-            const metadata = await this.extractMediaMetadata(
-              preparedFile.file,
-              result.item.url,
-              result.item.sha256,
-              result.item.mirrors, // Pass mirror URLs for fallback support
-              thumbnailData // Pass pre-extracted thumbnail data for videos
-            );
-            if (metadata) {
-              this.mediaMetadata.set([...this.mediaMetadata(), metadata]);
-            }
-
-            completedFiles++;
-            if (completedFiles < totalFiles) {
-              this.uploadStatus.set(`Completed ${completedFiles}/${totalFiles} files...`);
-            }
-
-            results.push({ success: true, fileName: file.name });
-            continue;
-          } else {
-            console.error(`Upload failed for ${file.name}:`, result.message);
-            completedFiles++;
-            results.push({
-              success: false,
-              fileName: file.name,
-              error: result.message || 'Upload failed',
-            });
-            continue;
+          preparedFiles++;
+          if (preparedFiles < totalFiles) {
+            this.uploadStatus.set(`Prepared ${preparedFiles}/${totalFiles} files...`);
           }
+          queuedFiles.push(file.name);
         } catch (error) {
-          console.error(`Upload error for ${file.name}:`, error);
-          completedFiles++;
-          results.push({
-            success: false,
+          failedFiles.push({
             fileName: file.name,
             error: error instanceof Error ? error.message : 'Upload failed',
           });
         }
       }
 
-      // Show success/error messages
-      const successful = results.filter(r => r.success);
-      const failed = results.filter(r => !r.success);
-
       if (warningMessages.length > 0) {
         this.snackBar.open(
           warningMessages.length === 1
             ? warningMessages[0]
-            : `${warningMessages.length} file(s) fell back to the original upload because local compression was unavailable or not smaller.`,
+            : `${warningMessages.length} file(s) will keep their original upload because local compression was unavailable or not smaller.`,
           'Close',
           {
             duration: 6000,
@@ -3669,20 +3789,19 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
         );
       }
 
-      if (successful.length > 0) {
-        this.snackBar.open(`${successful.length} file(s) uploaded successfully`, 'Close', {
+      if (queuedFiles.length > 0) {
+        this.snackBar.open(`${queuedFiles.length} file(s) ready to upload on publish`, 'Close', {
           duration: 3000,
         });
       }
 
-      if (failed.length > 0) {
-        // Show detailed error message for each failed file
-        const errorMessages = failed
+      if (failedFiles.length > 0) {
+        const errorMessages = failedFiles
           .map(f => `${f.fileName}: ${f.error}`)
           .join('\n');
 
         this.snackBar.open(
-          `Failed to upload ${failed.length} file(s):\n${errorMessages}`,
+          `Failed to prepare ${failedFiles.length} file(s):\n${errorMessages}`,
           'Close',
           {
             duration: 8000,
@@ -3705,15 +3824,206 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     }
   }
 
+  private async createPendingMediaMetadata(
+    originalFile: File,
+    preparedFile: { file: File; uploadOriginal: boolean; warningMessage?: string },
+    fileLabel: string
+  ): Promise<MediaMetadata> {
+    const mimeType = this.mediaService.getFileMimeType(preparedFile.file);
+    const previewUrl = URL.createObjectURL(preparedFile.file);
+    const placeholderToken = this.createPendingMediaPlaceholder(mimeType);
+
+    const pendingMedia: MediaMetadata = {
+      id: crypto.randomUUID(),
+      url: previewUrl,
+      mimeType,
+      previewUrl: mimeType.startsWith('image/') ? previewUrl : undefined,
+      placeholderToken,
+      pendingUpload: true,
+      fileName: originalFile.name,
+      originalSize: originalFile.size,
+      processedSize: preparedFile.file.size,
+      localFile: preparedFile.file,
+      uploadOriginal: preparedFile.uploadOriginal,
+      warningMessage: preparedFile.warningMessage,
+    };
+
+    if (mimeType.startsWith('video/')) {
+      this.uploadStatus.set(`Extracting video thumbnail${fileLabel}...`);
+      const thumbnailData = await this.extractPendingVideoThumbnail(preparedFile.file);
+      pendingMedia.image = thumbnailData.objectUrl;
+      pendingMedia.thumbnailBlob = thumbnailData.blob;
+      pendingMedia.dimensions = thumbnailData.dimensions;
+      pendingMedia.blurhash = thumbnailData.blurhash;
+      pendingMedia.thumbhash = thumbnailData.thumbhash;
+    }
+
+    return pendingMedia;
+  }
+
+  private async extractPendingVideoThumbnail(videoFile: File): Promise<{
+    blob: Blob;
+    objectUrl: string;
+    dimensions: { width: number; height: number };
+    blurhash?: string;
+    thumbhash?: string;
+  }> {
+    const localVideoUrl = URL.createObjectURL(videoFile);
+
+    try {
+      const thumbnailResult = await this.utilities.extractThumbnailFromVideo(localVideoUrl, 1);
+      const thumbnailFile = new File([thumbnailResult.blob], 'thumbnail.jpg', {
+        type: 'image/jpeg',
+      });
+      const placeholderResult = await this.imagePlaceholder.generatePlaceholders(thumbnailFile);
+
+      return {
+        blob: thumbnailResult.blob,
+        objectUrl: thumbnailResult.objectUrl,
+        dimensions: thumbnailResult.dimensions,
+        blurhash: placeholderResult.blurhash,
+        thumbhash: placeholderResult.thumbhash,
+      };
+    } finally {
+      URL.revokeObjectURL(localVideoUrl);
+    }
+  }
+
+  private async uploadPendingMediaBeforePublish(): Promise<boolean> {
+    const pendingMedia = this.mediaMetadata().filter(media => media.pendingUpload && media.localFile);
+    if (pendingMedia.length === 0) {
+      return true;
+    }
+
+    if (!this.hasConfiguredMediaServers()) {
+      this.showMediaServerWarning();
+      return false;
+    }
+
+    this.isUploading.set(true);
+    this.uploadStatus.set('Uploading media...');
+
+    try {
+      await this.mediaService.load();
+
+      const currentMetadata = [...this.mediaMetadata()];
+      const failedUploads: { fileName: string; error: string }[] = [];
+
+      for (const [index, pending] of pendingMedia.entries()) {
+        if (!pending.localFile) {
+          continue;
+        }
+
+        const fileLabel = pendingMedia.length > 1 ? ` (${index + 1}/${pendingMedia.length})` : '';
+        const uploadSize = this.getMediaUploadSize(pending);
+        const isCompressed = !!pending.originalSize && uploadSize > 0 && uploadSize < pending.originalSize;
+
+        if (pending.mimeType?.startsWith('video/') || pending.mimeType?.startsWith('image/')) {
+          this.uploadStatus.set(`${isCompressed ? 'Uploading compressed media' : 'Uploading media'}${fileLabel}...`);
+        } else {
+          this.uploadStatus.set(`Uploading file${fileLabel}...`);
+        }
+
+        const result = await this.mediaService.uploadFile(
+          pending.localFile,
+          pending.uploadOriginal ?? false,
+          this.mediaService.mediaServers()
+        );
+
+        if (result.status !== 'success' || !result.item) {
+          failedUploads.push({
+            fileName: pending.fileName || pending.localFile.name,
+            error: result.message || 'Upload failed',
+          });
+          continue;
+        }
+
+        this.uploadStatus.set(`Processing metadata${fileLabel}...`);
+        const thumbnailData = pending.thumbnailBlob && pending.dimensions
+          ? {
+            blob: pending.thumbnailBlob,
+            dimensions: pending.dimensions,
+            blurhash: pending.blurhash,
+            thumbhash: pending.thumbhash,
+          }
+          : undefined;
+
+        const uploadedMetadata = await this.extractMediaMetadata(
+          pending.localFile,
+          result.item.url,
+          result.item.sha256,
+          result.item.mirrors,
+          thumbnailData
+        );
+
+        const updatedMedia: MediaMetadata = {
+          id: pending.id,
+          url: uploadedMetadata?.url ?? result.item.url,
+          mimeType: uploadedMetadata?.mimeType ?? pending.mimeType,
+          blurhash: uploadedMetadata?.blurhash,
+          thumbhash: uploadedMetadata?.thumbhash,
+          dimensions: uploadedMetadata?.dimensions ?? pending.dimensions,
+          alt: uploadedMetadata?.alt ?? pending.alt,
+          sha256: uploadedMetadata?.sha256 ?? result.item.sha256,
+          image: uploadedMetadata?.image,
+          imageMirrors: uploadedMetadata?.imageMirrors,
+          fallbackUrls: uploadedMetadata?.fallbackUrls ?? (result.item.mirrors?.length ? result.item.mirrors : undefined),
+          fileName: pending.fileName,
+          originalSize: pending.originalSize,
+          processedSize: pending.processedSize,
+          pendingUpload: false,
+        };
+
+        const metadataIndex = currentMetadata.findIndex(media => media.id === pending.id);
+        if (metadataIndex >= 0) {
+          currentMetadata[metadataIndex] = updatedMedia;
+          this.mediaMetadata.set([...currentMetadata]);
+        }
+
+        this.replaceMediaPlaceholderInContent(pending.placeholderToken, updatedMedia.url);
+        this.revokeMediaPreviewUrls(pending);
+      }
+
+      if (failedUploads.length > 0) {
+        const errorMessages = failedUploads.map(f => `${f.fileName}: ${f.error}`).join('\n');
+        this.snackBar.open(
+          `Failed to upload ${failedUploads.length} file(s):\n${errorMessages}`,
+          'Close',
+          {
+            duration: 8000,
+            panelClass: 'error-snackbar',
+          }
+        );
+        return false;
+      }
+
+      this.scheduleTextareaRefresh();
+      return true;
+    } catch (error) {
+      this.snackBar.open(
+        'Upload failed: ' + (error instanceof Error ? error.message : 'Unknown error'),
+        'Close',
+        {
+          duration: 5000,
+          panelClass: 'error-snackbar',
+        }
+      );
+      return false;
+    } finally {
+      this.isUploading.set(false);
+      this.uploadStatus.set('');
+    }
+  }
+
   setMediaMode(enabled: boolean): void {
     this.isMediaMode.set(enabled);
 
     let currentContent = this.content();
-    const mediaUrls = this.mediaMetadata().map(m => m.url);
+    const mediaReferences = this.mediaMetadata().map(m => this.getMediaContentReference(m));
 
     if (enabled) {
       // Remove URLs
-      mediaUrls.forEach(url => {
+      mediaReferences.forEach(url => {
         // Escape special regex characters in URL
         const escapedUrl = url.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         // Create global regex
@@ -3722,7 +4032,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       });
     } else {
       // Add URLs if missing
-      mediaUrls.forEach(url => {
+      mediaReferences.forEach(url => {
         if (!currentContent.includes(url)) {
           currentContent += (currentContent ? '\n' : '') + url;
         }
@@ -3731,11 +4041,22 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     this.content.set(currentContent);
   }
 
-  private insertFileUrl(url: string): void {
+  private getCurrentInsertionAnchor(): number {
     const currentContent = this.content();
-    const textarea = this.contentTextarea.nativeElement;
+    const textarea = this.contentTextarea?.nativeElement;
+
+    if (!textarea) {
+      return this.lastCursorPosition ?? currentContent.length;
+    }
+
     const isFocused = document.activeElement === textarea;
-    const cursorPosition = isFocused ? textarea.selectionStart : (this.lastCursorPosition ?? textarea.value.length);
+    return isFocused ? (textarea.selectionStart ?? currentContent.length) : (this.lastCursorPosition ?? currentContent.length);
+  }
+
+  private insertFileUrl(url: string, insertionAnchor?: number): { start: number; end: number } {
+    const currentContent = this.content();
+    const textarea = this.contentTextarea?.nativeElement;
+    const cursorPosition = insertionAnchor ?? this.getCurrentInsertionAnchor();
 
     // Insert URL at cursor position with some spacing
     const beforeCursor = currentContent.substring(0, cursorPosition);
@@ -3753,9 +4074,18 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     const newContent = beforeCursor + prefix + url + suffix + afterCursor;
     this.content.set(newContent);
 
+    const insertionStart = cursorPosition + prefix.length;
     const newCursorPosition = cursorPosition + prefix.length + url.length + suffix.length;
     this.lastCursorPosition = newCursorPosition;
-    this.setCursorAfterRender(newCursorPosition);
+
+    if (textarea) {
+      this.setCursorAfterRender(newCursorPosition);
+    }
+
+    return {
+      start: insertionStart,
+      end: newCursorPosition,
+    };
   }
 
   private setupPasteHandler(): void {
