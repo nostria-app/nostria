@@ -400,6 +400,9 @@ export class ParsingService implements OnDestroy {
     const audioRegex = /(https?:\/\/[^\s##]+\.(mp3|mpga|mp2|wav|ogg|oga|opus|m4a|aac|flac|weba)(\?[^\s##]*)?(?=\s|##LINEBREAK##|$|[A-Z]))/gi;
     const videoRegex =
       /(https?:\/\/[^\s##]+\.(mp4|webm|mov|avi|wmv|flv|mkv|qt)(\?[^\s##]*)?(?=\s|##LINEBREAK##|$|[A-Z]))/gi;
+    const blobImageRegex = /(blob:[^\s##]+#nostria-image)(?=\s|##LINEBREAK##|$)/g;
+    const blobAudioRegex = /(blob:[^\s##]+#nostria-audio)(?=\s|##LINEBREAK##|$)/g;
+    const blobVideoRegex = /(blob:[^\s##]+#nostria-video)(?=\s|##LINEBREAK##|$)/g;
     // Nostr URI regex: matches nostr: URIs and raw bech32 identifiers (with optional @ prefix)
     // Uses the exact bech32 character set (qpzry9x8gf2tvdw0s3jn54khce6mua7l) to properly
     // terminate the match when followed by non-bech32 characters (like 'is' in 'nprofile...is an')
@@ -839,6 +842,17 @@ export class ParsingService implements OnDestroy {
       });
     }
 
+    // Find preview-only blob images
+    blobImageRegex.lastIndex = 0;
+    while ((match = blobImageRegex.exec(processedContent)) !== null) {
+      matches.push({
+        start: match.index,
+        end: match.index + match[0].length,
+        content: match[0].replace('#nostria-image', ''),
+        type: 'image',
+      });
+    }
+
     // Find video URLs
     videoRegex.lastIndex = 0;
     while ((match = videoRegex.exec(processedContent)) !== null) {
@@ -912,6 +926,17 @@ export class ParsingService implements OnDestroy {
       });
     }
 
+    // Find preview-only blob videos
+    blobVideoRegex.lastIndex = 0;
+    while ((match = blobVideoRegex.exec(processedContent)) !== null) {
+      matches.push({
+        start: match.index,
+        end: match.index + match[0].length,
+        content: match[0].replace('#nostria-video', ''),
+        type: 'video',
+      });
+    }
+
     // Find audio URLs
     audioRegex.lastIndex = 0;
     while ((match = audioRegex.exec(processedContent)) !== null) {
@@ -942,6 +967,17 @@ export class ParsingService implements OnDestroy {
         type: 'audio',
         waveform,
         duration
+      });
+    }
+
+    // Find preview-only blob audio
+    blobAudioRegex.lastIndex = 0;
+    while ((match = blobAudioRegex.exec(processedContent)) !== null) {
+      matches.push({
+        start: match.index,
+        end: match.index + match[0].length,
+        content: match[0].replace('#nostria-audio', ''),
+        type: 'audio',
       });
     }
 

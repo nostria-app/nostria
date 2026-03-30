@@ -119,6 +119,19 @@
         height: 56px;
       }
 
+      .media-thumbnail-button {
+        width: 100%;
+        height: 100%;
+        padding: 0;
+        border: 0;
+        background: transparent;
+        cursor: default;
+      }
+
+      .media-thumbnail-button.pending-upload {
+        cursor: pointer;
+      }
+
       .thumbnail-img {
         width: 100%;
         height: 100%;

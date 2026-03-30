@@ -19,16 +19,30 @@ interface ContentType {
   icon: string;
 }
 
+interface ToggleFilterOption {
+  id: 'showReplies' | 'hideWordle';
+  label: string;
+  description: string;
+  icon: string;
+}
+
 /**
  * All available content types with their Nostr kinds
  * Note: Articles are excluded as there's a dedicated Articles feature in the app
  */
 const CONTENT_TYPES: ContentType[] = [
   { id: 'posts', label: 'Posts', description: 'Short text posts', kinds: [1, 1111], icon: 'description' },
+  { id: 'articles', label: 'Articles', description: 'Long-form writing', kinds: [30023], icon: 'article' },
+  { id: 'polls', label: 'Polls', description: 'Polls and zap polls', kinds: [1068, 6969], icon: 'poll' },
   { id: 'reposts', label: 'Reposts', description: 'Shared content from others', kinds: [6, 16], icon: 'repeat' },
   { id: 'voicePosts', label: 'Audio Posts', description: 'Audio posts and music', kinds: [1222, 1244], icon: 'audiotrack' },
   { id: 'photoPosts', label: 'Photo Posts', description: 'Image galleries', kinds: [20], icon: 'image' },
   { id: 'videoPosts', label: 'Video Posts', description: 'Video posts and clips', kinds: [21, 22, 34235, 34236], icon: 'movie' },
+];
+
+const TOGGLE_FILTER_OPTIONS: ToggleFilterOption[] = [
+  { id: 'showReplies', label: 'Show Replies', description: 'Comments on other posts', icon: 'reply' },
+  { id: 'hideWordle', label: 'Hide Wordle', description: 'Filter out posts tagged wordle', icon: 'grid_view' },
 ];
 
 /**
@@ -111,18 +125,21 @@ function isStandardKindsSelection(kinds: number[]): boolean {
         }
       </div>
 
-      <!-- Show Replies Toggle (as card-style button) -->
-      <div class="toggle-option">
-        <button
-          class="content-type-chip full-width"
-          [class.selected]="currentShowReplies()"
-          (click)="onShowRepliesChange(!currentShowReplies())">
-          <mat-icon class="chip-icon">reply</mat-icon>
-          <div class="chip-text">
-            <span class="chip-label">Show Replies</span>
-            <span class="chip-description">Comments on other posts</span>
-          </div>
-        </button>
+      <div class="toggle-options-grid">
+        @for (option of toggleFilterOptions; track option.id) {
+        <div class="toggle-option">
+          <button
+            class="content-type-chip full-width"
+            [class.selected]="isToggleOptionSelected(option)"
+            (click)="toggleOption(option)">
+            <mat-icon class="chip-icon">{{ option.icon }}</mat-icon>
+            <div class="chip-text">
+              <span class="chip-label">{{ option.label }}</span>
+              <span class="chip-description">{{ option.description }}</span>
+            </div>
+          </button>
+        </div>
+        }
       </div>
 
       <!-- Web of Trust Filter Toggle -->
@@ -324,6 +341,18 @@ function isStandardKindsSelection(kinds: number[]): boolean {
       padding: 0.25rem 0;
     }
 
+    .toggle-options-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0.5rem;
+    }
+
+    @media (max-width: 480px) {
+      .toggle-options-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
     .wot-slider-panel {
       display: flex;
       flex-direction: column;
@@ -422,6 +451,8 @@ export class FeedFilterPanelComponent {
   // Compute available content types (all types for now, could be filtered based on feed type)
   availableContentTypes = computed(() => CONTENT_TYPES);
 
+  readonly toggleFilterOptions = TOGGLE_FILTER_OPTIONS;
+
   // Track the current kinds - from feed config if available, otherwise from global settings
   currentKinds = computed(() => {
     const feedConfig = this.feed();
@@ -447,6 +478,14 @@ export class FeedFilterPanelComponent {
       return feedConfig.showReposts ?? true;
     }
     return this.localSettings.contentFilter().showReposts;
+  });
+
+  currentHideWordle = computed(() => {
+    const feedConfig = this.feed();
+    if (feedConfig) {
+      return feedConfig.hideWordle ?? true;
+    }
+    return this.localSettings.contentFilter().hideWordle;
   });
 
   // Track whether WoT filtering is enabled - from feed config if available
@@ -533,11 +572,35 @@ export class FeedFilterPanelComponent {
     }
   }
 
+  isToggleOptionSelected(option: ToggleFilterOption): boolean {
+    switch (option.id) {
+      case 'showReplies':
+        return this.currentShowReplies();
+      case 'hideWordle':
+        return this.currentHideWordle();
+    }
+  }
+
+  toggleOption(option: ToggleFilterOption): void {
+    switch (option.id) {
+      case 'showReplies':
+        this.onShowRepliesChange(!this.currentShowReplies());
+        return;
+      case 'hideWordle':
+        this.onHideWordleChange(!this.currentHideWordle());
+        return;
+    }
+  }
+
   /**
    * Handle show replies toggle
    */
   onShowRepliesChange(checked: boolean): void {
     this.updateShowReplies(checked);
+  }
+
+  onHideWordleChange(checked: boolean): void {
+    this.updateHideWordle(checked);
   }
 
   /**
@@ -575,6 +638,7 @@ export class FeedFilterPanelComponent {
     const uniqueKinds = [...new Set(allKinds)];
     this.updateKinds(uniqueKinds);
     this.updateShowReposts(true);
+    this.updateHideWordle(false);
   }
 
   /**
@@ -588,6 +652,7 @@ export class FeedFilterPanelComponent {
     // Keep at least posts (kind 1)
     this.updateKinds([1]);
     this.updateShowReposts(false);
+    this.updateHideWordle(true);
   }
 
   /**
@@ -599,8 +664,10 @@ export class FeedFilterPanelComponent {
       return;
     }
 
-    // Reset to posts and reposts
-    this.updateKinds([1, 1111, 6, 16]);
+    this.updateKinds(this.getDefaultKindsForFeedType(feedConfig.type));
+    this.updateShowReplies(false);
+    this.updateShowReposts(true);
+    this.updateHideWordle(true);
   }
 
   /**
@@ -637,6 +704,7 @@ export class FeedFilterPanelComponent {
       this.updateKinds(defaultKinds);
       this.updateShowReplies(false);
       this.updateShowReposts(true);
+      this.updateHideWordle(true);
       this.updateWotMinRank(undefined);
     } else {
       // Reset global settings
@@ -691,6 +759,15 @@ export class FeedFilterPanelComponent {
       this.localSettings.setContentFilterShowReposts(showReposts);
     }
     this.showRepostsChanged.emit(showReposts);
+  }
+
+  private updateHideWordle(hideWordle: boolean): void {
+    const feedConfig = this.feed();
+    if (feedConfig) {
+      this.feedService.updateFeed(feedConfig.id, { hideWordle });
+    } else {
+      this.localSettings.setContentFilterHideWordle(hideWordle);
+    }
   }
 
   /**

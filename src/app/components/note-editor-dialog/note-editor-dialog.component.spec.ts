@@ -276,7 +276,7 @@ describe('NoteEditorDialogComponent', () => {
       const queuedMedia = component.mediaMetadata()[0];
       expect(mockMediaService.uploadFile).not.toHaveBeenCalled();
       expect(queuedMedia.pendingUpload).toBe(true);
-      expect(queuedMedia.placeholderToken).toContain('uploads on publish');
+      expect(queuedMedia.placeholderToken).toBe('[video1]');
       expect(component.content()).toContain(queuedMedia.placeholderToken);
       expect(queuedMedia.image).toBe('blob:video-thumb');
       expect(queuedMedia.originalSize).toBe(originalFile.size);
@@ -342,6 +342,169 @@ describe('NoteEditorDialogComponent', () => {
       expect(component.content()).not.toContain(placeholder);
       expect(component.mediaMetadata()[0].pendingUpload).toBe(false);
       expect(component.mediaMetadata()[0].url).toBe('https://cdn.example/photo.png');
+    });
+
+    it('should assign sequential image placeholders for multiple queued uploads', async () => {
+      createComponent();
+      await fixture.whenStable();
+
+      Object.defineProperty(URL, 'createObjectURL', { configurable: true, value: vi.fn(() => 'blob:image-preview') });
+      Object.defineProperty(URL, 'revokeObjectURL', { configurable: true, value: vi.fn() });
+
+      const firstImageFile = new File(['image-data-1'], 'photo-1.png', { type: 'image/png' });
+      const secondImageFile = new File(['image-data-2'], 'photo-2.png', { type: 'image/png' });
+
+      mockMediaProcessingService.prepareFileForUpload.mockImplementation(async (file: File) => ({
+        file,
+        uploadOriginal: false,
+        wasProcessed: false,
+      }));
+
+      const privateComponent = component as unknown as {
+        uploadFiles: (files: File[]) => Promise<void>;
+      };
+
+      await privateComponent.uploadFiles([firstImageFile, secondImageFile]);
+
+      expect(component.mediaMetadata().map(media => media.placeholderToken)).toEqual(['[image1]', '[image2]']);
+      expect(component.content()).toContain('[image1]');
+      expect(component.content()).toContain('[image2]');
+    });
+
+    it('should resolve pending video placeholders to the local preview URL in preview mode', async () => {
+      createComponent();
+      await fixture.whenStable();
+
+      Object.defineProperty(URL, 'createObjectURL', { configurable: true, value: vi.fn(() => 'blob:mock-video-url') });
+      Object.defineProperty(URL, 'revokeObjectURL', { configurable: true, value: vi.fn() });
+
+      const originalFile = new File(['0123456789'], 'clip.mp4', { type: 'video/mp4' });
+      const compressedFile = new File(['0123'], 'clip.mp4', { type: 'video/mp4' });
+
+      mockMediaProcessingService.prepareFileForUpload.mockResolvedValue({
+        file: compressedFile,
+        uploadOriginal: false,
+        wasProcessed: true,
+      });
+
+      const privateComponent = component as unknown as {
+        extractPendingVideoThumbnail: (file: File) => Promise<{
+          blob: Blob;
+          objectUrl: string;
+          dimensions: { width: number; height: number };
+          blurhash?: string;
+          thumbhash?: string;
+        }>;
+        uploadFiles: (files: File[]) => Promise<void>;
+      };
+
+      vi.spyOn(privateComponent, 'extractPendingVideoThumbnail').mockResolvedValue({
+        blob: new Blob(['thumb'], { type: 'image/jpeg' }),
+        objectUrl: 'blob:video-thumb',
+        dimensions: { width: 720, height: 1280 },
+      });
+
+      await privateComponent.uploadFiles([originalFile]);
+
+      component.showPreview.set(true);
+
+      expect(component.previewContent()).toContain('blob:mock-video-url#nostria-video');
+      expect(component.previewContent()).not.toContain('[video1]');
+    });
+
+    it('should insert upload placeholders at the cursor position captured when upload started', async () => {
+      createComponent();
+      await fixture.whenStable();
+
+      Object.defineProperty(URL, 'createObjectURL', { configurable: true, value: vi.fn(() => 'blob:image-preview') });
+      Object.defineProperty(URL, 'revokeObjectURL', { configurable: true, value: vi.fn() });
+
+      const imageFile = new File(['image-data'], 'photo.png', { type: 'image/png' });
+
+      let resolvePrepare: ((value: { file: File; uploadOriginal: boolean; wasProcessed: boolean }) => void) | undefined;
+      mockMediaProcessingService.prepareFileForUpload.mockImplementation(() => new Promise(resolve => {
+        resolvePrepare = resolve;
+      }));
+
+      const textarea = component.contentTextarea.nativeElement;
+      const initialContent = 'Check this video and then you should check this video';
+      component.content.set(initialContent);
+      fixture.detectChanges();
+      textarea.value = initialContent;
+      textarea.focus();
+
+      const uploadStartPosition = 'Check this video'.length;
+      textarea.setSelectionRange(uploadStartPosition, uploadStartPosition);
+
+      const privateComponent = component as unknown as {
+        uploadFiles: (files: File[]) => Promise<void>;
+      };
+
+      const uploadPromise = privateComponent.uploadFiles([imageFile]);
+
+      const editedContent = 'Check this video and then you should check this video [image2]';
+      component.content.set(editedContent);
+      fixture.detectChanges();
+      textarea.value = editedContent;
+      textarea.setSelectionRange(editedContent.length, editedContent.length);
+
+      resolvePrepare?.({
+        file: imageFile,
+        uploadOriginal: false,
+        wasProcessed: false,
+      });
+
+      await uploadPromise;
+
+      expect(component.content()).toBe('Check this video [image1] and then you should check this video [image2]');
+    });
+
+    it('should reinsert a removed pending video placeholder when the thumbnail is clicked', async () => {
+      createComponent();
+      await fixture.whenStable();
+
+      Object.defineProperty(URL, 'createObjectURL', { configurable: true, value: vi.fn(() => 'blob:mock-video-url') });
+      Object.defineProperty(URL, 'revokeObjectURL', { configurable: true, value: vi.fn() });
+
+      const originalFile = new File(['0123456789'], 'clip.mp4', { type: 'video/mp4' });
+      const compressedFile = new File(['0123'], 'clip.mp4', { type: 'video/mp4' });
+
+      mockMediaProcessingService.prepareFileForUpload.mockResolvedValue({
+        file: compressedFile,
+        uploadOriginal: false,
+        wasProcessed: true,
+      });
+
+      const privateComponent = component as unknown as {
+        extractPendingVideoThumbnail: (file: File) => Promise<{
+          blob: Blob;
+          objectUrl: string;
+          dimensions: { width: number; height: number };
+          blurhash?: string;
+          thumbhash?: string;
+        }>;
+        uploadFiles: (files: File[]) => Promise<void>;
+      };
+
+      vi.spyOn(privateComponent, 'extractPendingVideoThumbnail').mockResolvedValue({
+        blob: new Blob(['thumb'], { type: 'image/jpeg' }),
+        objectUrl: 'blob:video-thumb',
+        dimensions: { width: 720, height: 1280 },
+      });
+
+      await privateComponent.uploadFiles([originalFile]);
+
+      const placeholder = component.mediaMetadata()[0].placeholderToken as string;
+      component.content.set('caption only');
+      fixture.detectChanges();
+
+      const reinsertButton = fixture.nativeElement.querySelector('.media-thumbnail-button.pending-upload') as HTMLButtonElement;
+      reinsertButton.click();
+      fixture.detectChanges();
+
+      expect(component.mediaMetadata()).toHaveLength(1);
+      expect(component.mediaMetadata()[0].pendingUpload).toBe(true);
+      expect(component.content()).toContain(placeholder);
     });
 
     it('should skip queuing media when generating the pending video thumbnail fails', async () => {
@@ -749,6 +912,23 @@ describe('NoteEditorDialogComponent', () => {
       expect(plusButton).toBeTruthy();
     });
 
+    it('should render the add button between preview and advanced options in dialog mode', async () => {
+      createComponent();
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      const buttons = Array.from(fixture.nativeElement.querySelectorAll('.left-actions button[mattooltip]')) as HTMLElement[];
+      const previewIndex = buttons.findIndex(button => button.getAttribute('mattooltip') === 'Toggle preview');
+      const addIndex = buttons.findIndex(button => button.getAttribute('mattooltip') === 'Add to post');
+      const settingsIndex = buttons.findIndex(button => button.getAttribute('mattooltip') === 'Advanced options');
+
+      expect(previewIndex).toBeGreaterThan(-1);
+      expect(addIndex).toBeGreaterThan(-1);
+      expect(settingsIndex).toBeGreaterThan(-1);
+      expect(previewIndex).toBeLessThan(addIndex);
+      expect(addIndex).toBeLessThan(settingsIndex);
+    });
+
     it('should include emoji and GIF actions in the add menu', async () => {
       createComponent();
       fixture.detectChanges();
@@ -770,6 +950,18 @@ describe('NoteEditorDialogComponent', () => {
       const advancedOptions = fixture.nativeElement.querySelector('.advanced-options-section');
       expect(advancedTrigger).toBeTruthy();
       expect(advancedOptions).toBeFalsy();
+    });
+
+    it('should include clear draft in the more actions menu instead of the main toolbar', async () => {
+      createComponent();
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      const toolbarClearDraft = fixture.nativeElement.querySelector('button[mattooltip="Clear draft"]');
+      const compiled = fixture.nativeElement;
+
+      expect(toolbarClearDraft).toBeFalsy();
+      expect(compiled.textContent).toContain('Clear draft');
     });
 
   });

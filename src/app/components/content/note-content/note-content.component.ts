@@ -1006,6 +1006,10 @@ export class NoteContentComponent implements OnDestroy {
    * Modern .mov files are typically MPEG-4 encoded and can be played by browsers
    */
   isVideoFormatSupported(url: string): boolean {
+    if (url.startsWith('blob:') || url.startsWith('data:video/')) {
+      return true;
+    }
+
     const extension = url.split('.').pop()?.split('?')[0]?.toLowerCase();
     // MP4, WebM, and modern MOV files have good cross-browser support
     // Modern .mov files are typically MPEG-4 which browsers can play

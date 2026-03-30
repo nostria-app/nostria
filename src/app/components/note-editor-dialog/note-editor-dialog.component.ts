@@ -32,7 +32,6 @@ import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatSliderModule } from '@angular/material/slider';
 import { DomSanitizer } from '@angular/platform-browser';
 import { FormsModule } from '@angular/forms';
-import { DragDropModule, CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
 import { CdkTextareaAutosize, TextFieldModule } from '@angular/cdk/text-field';
 
 import { NostrService } from '../../services/nostr.service';
@@ -177,7 +176,6 @@ interface SentimentHeaderState {
     MentionAutocompleteComponent,
     SlashCommandMenuComponent,
     MatMenuModule,
-    DragDropModule,
     TextFieldModule,
     UserProfileComponent,
   ],
@@ -287,6 +285,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   showAdvancedOptions = signal(false);
   isContentFocused = signal(false);
   private lastCursorPosition: number | null = null;
+  private pendingMediaInsertionAnchors = new Map<string, number>();
   isDragOver = signal(false);
   isUploading = signal(false);
   uploadStatus = signal(''); // Detailed upload status message
@@ -570,7 +569,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   previewContent = computed((): string => {
     if (!this.showPreview()) return '';
 
-    const content = this.content();
+    const content = this.resolvePendingMediaReferences(this.content(), true);
 
     if (this.isMediaMode()) {
       // In Media Mode, content (description) is used as is (URLs already removed from text area)
@@ -666,12 +665,6 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     return map;
   });
 
-  drop(event: CdkDragDrop<MediaMetadata[]>) {
-    const currentMetadata = [...this.mediaMetadata()];
-    moveItemInArray(currentMetadata, event.previousIndex, event.currentIndex);
-    this.mediaMetadata.set(currentMetadata);
-  }
-
   removeMedia(index: number): void {
     const currentMetadata = [...this.mediaMetadata()];
     const removedMedia = currentMetadata[index];
@@ -687,6 +680,23 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     }
 
     // Save draft immediately after media removal
+    this.saveAutoDraft();
+  }
+
+  reinsertPendingMediaReference(media: MediaMetadata): void {
+    if (!media.pendingUpload) {
+      return;
+    }
+
+    const reference = this.getMediaContentReference(media);
+    if (!reference || this.content().includes(reference)) {
+      return;
+    }
+
+    const { start } = this.insertFileUrl(reference);
+    if (media.placeholderToken) {
+      this.pendingMediaInsertionAnchors.set(media.placeholderToken, start);
+    }
     this.saveAutoDraft();
   }
 
@@ -3446,9 +3456,57 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     return media.placeholderToken || media.url;
   }
 
-  private createPendingMediaPlaceholder(file: File, mimeType: string): string {
+  private getPendingMediaPreviewReference(media: MediaMetadata): string {
+    const previewUrl = media.mimeType?.startsWith('video/') ? media.url : (media.previewUrl || media.url);
+    return this.decoratePreviewMediaUrl(previewUrl, media.mimeType);
+  }
+
+  private decoratePreviewMediaUrl(url: string, mimeType: string | undefined): string {
+    if (!url.startsWith('blob:')) {
+      return url;
+    }
+
+    if (mimeType?.startsWith('video/')) {
+      return `${url}#nostria-video`;
+    }
+
+    if (mimeType?.startsWith('audio/')) {
+      return `${url}#nostria-audio`;
+    }
+
+    return `${url}#nostria-image`;
+  }
+
+  private resolvePendingMediaReferences(content: string, forPreview = false): string {
+    let resolvedContent = content;
+
+    this.mediaMetadata()
+      .filter(media => media.pendingUpload)
+      .forEach(media => {
+        const reference = this.getMediaContentReference(media);
+        const replacement = forPreview ? this.getPendingMediaPreviewReference(media) : media.url;
+
+        if (!reference || !replacement) {
+          return;
+        }
+
+        const escapedReference = reference.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        resolvedContent = resolvedContent.replace(new RegExp(escapedReference, 'g'), replacement);
+      });
+
+    return resolvedContent;
+  }
+
+  private createPendingMediaPlaceholder(mimeType: string): string {
     const mediaType = mimeType.startsWith('video/') ? 'video' : 'image';
-    return `[[${mediaType}: ${file.name} · uploads on publish · ${crypto.randomUUID().slice(0, 8)}]]`;
+    const prefix = `[${mediaType}`;
+    let index = 1;
+
+    while (this.mediaMetadata().some(media => media.placeholderToken === `${prefix}${index}]`)) {
+      index++;
+    }
+
+    return `${prefix}${index}]`;
   }
 
   private replaceMediaPlaceholderInContent(placeholderToken: string | undefined, url: string): void {
@@ -3459,12 +3517,16 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     const currentContent = this.content();
     if (currentContent.includes(placeholderToken)) {
       this.content.set(currentContent.replace(placeholderToken, url));
+      this.pendingMediaInsertionAnchors.delete(placeholderToken);
       return;
     }
 
     if (!this.isMediaMode() && !currentContent.includes(url)) {
-      this.insertFileUrl(url);
+      const insertionAnchor = this.pendingMediaInsertionAnchors.get(placeholderToken);
+      this.insertFileUrl(url, insertionAnchor);
     }
+
+    this.pendingMediaInsertionAnchors.delete(placeholderToken);
   }
 
   private revokeMediaPreviewUrls(media: MediaMetadata | undefined): void {
@@ -3483,6 +3545,8 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     if (!reference) {
       return;
     }
+
+    this.pendingMediaInsertionAnchors.delete(reference);
 
     let currentContent = this.content();
     const escapedReference = reference.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -3651,6 +3715,8 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     this.isUploading.set(true);
     this.uploadStatus.set('Preparing media...');
 
+    let insertionAnchor = this.getCurrentInsertionAnchor();
+
     try {
       await this.mediaService.load();
 
@@ -3688,7 +3754,14 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
           this.mediaMetadata.set([...this.mediaMetadata(), pendingMedia]);
 
           if (!this.isMediaMode()) {
-            this.insertFileUrl(pendingMedia.placeholderToken || pendingMedia.url);
+            const reference = pendingMedia.placeholderToken || pendingMedia.url;
+            const { start, end } = this.insertFileUrl(reference, insertionAnchor);
+
+            if (pendingMedia.placeholderToken) {
+              this.pendingMediaInsertionAnchors.set(pendingMedia.placeholderToken, start);
+            }
+
+            insertionAnchor = end;
           }
 
           preparedFiles++;
@@ -3758,7 +3831,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   ): Promise<MediaMetadata> {
     const mimeType = this.mediaService.getFileMimeType(preparedFile.file);
     const previewUrl = URL.createObjectURL(preparedFile.file);
-    const placeholderToken = this.createPendingMediaPlaceholder(originalFile, mimeType);
+    const placeholderToken = this.createPendingMediaPlaceholder(mimeType);
 
     const pendingMedia: MediaMetadata = {
       id: crypto.randomUUID(),
@@ -3968,11 +4041,22 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     this.content.set(currentContent);
   }
 
-  private insertFileUrl(url: string): void {
+  private getCurrentInsertionAnchor(): number {
     const currentContent = this.content();
-    const textarea = this.contentTextarea.nativeElement;
+    const textarea = this.contentTextarea?.nativeElement;
+
+    if (!textarea) {
+      return this.lastCursorPosition ?? currentContent.length;
+    }
+
     const isFocused = document.activeElement === textarea;
-    const cursorPosition = isFocused ? textarea.selectionStart : (this.lastCursorPosition ?? textarea.value.length);
+    return isFocused ? (textarea.selectionStart ?? currentContent.length) : (this.lastCursorPosition ?? currentContent.length);
+  }
+
+  private insertFileUrl(url: string, insertionAnchor?: number): { start: number; end: number } {
+    const currentContent = this.content();
+    const textarea = this.contentTextarea?.nativeElement;
+    const cursorPosition = insertionAnchor ?? this.getCurrentInsertionAnchor();
 
     // Insert URL at cursor position with some spacing
     const beforeCursor = currentContent.substring(0, cursorPosition);
@@ -3990,9 +4074,18 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     const newContent = beforeCursor + prefix + url + suffix + afterCursor;
     this.content.set(newContent);
 
+    const insertionStart = cursorPosition + prefix.length;
     const newCursorPosition = cursorPosition + prefix.length + url.length + suffix.length;
     this.lastCursorPosition = newCursorPosition;
-    this.setCursorAfterRender(newCursorPosition);
+
+    if (textarea) {
+      this.setCursorAfterRender(newCursorPosition);
+    }
+
+    return {
+      start: insertionStart,
+      end: newCursorPosition,
+    };
   }
 
   private setupPasteHandler(): void {

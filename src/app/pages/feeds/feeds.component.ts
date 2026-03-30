@@ -241,9 +241,11 @@ export class FeedsComponent implements OnDestroy {
       const kindsMatch = kinds.length === defaultKinds.length && kinds.every(k => defaultKinds.includes(k));
       const showReplies = feed.showReplies ?? false;
       const showReposts = feed.showReposts ?? true;
+      const hideWordle = feed.hideWordle ?? true;
       return !kindsMatch
         || showReplies !== DEFAULT_CONTENT_FILTER.showReplies
         || showReposts !== DEFAULT_CONTENT_FILTER.showReposts
+        || hideWordle !== DEFAULT_CONTENT_FILTER.hideWordle
         || isWotFilterEnabled(feed);
     }
     // Global filter
@@ -253,6 +255,7 @@ export class FeedsComponent implements OnDestroy {
     return !kindsMatch
       || filter.showReplies !== DEFAULT_CONTENT_FILTER.showReplies
       || filter.showReposts !== DEFAULT_CONTENT_FILTER.showReposts
+      || filter.hideWordle !== DEFAULT_CONTENT_FILTER.hideWordle
       || isWotFilterEnabled(filter);
   });
 
@@ -508,12 +511,14 @@ export class FeedsComponent implements OnDestroy {
    * Each feed has its own kinds, showReplies, and showReposts settings
    * Filters out reply events when showReplies is false
    * Filters out repost events when showReposts is false
+   * Filters out Wordle-tagged events when hideWordle is true
    * Filters events by kinds based on the feed's configuration
    */
   private filterEventsByFeedSettings(events: Event[], feed: FeedConfig): Event[] {
     // Use feed-specific settings
     const showReplies = feed.showReplies ?? false;
     const showReposts = feed.showReposts ?? true;
+    const hideWordle = feed.hideWordle ?? true;
     const allowedKinds = feed.kinds || [];
     const wotMinRank = getEffectiveWotMinRank(feed);
 
@@ -535,6 +540,10 @@ export class FeedsComponent implements OnDestroy {
         if (!allowedKinds.includes(event.kind)) {
           return false;
         }
+      }
+
+      if (hideWordle && event.tags.some(tag => tag[0] === 't' && tag[1]?.toLowerCase() === 'wordle')) {
+        return false;
       }
 
       // Check if it's a repost (kind 6 or kind 16)
@@ -2191,6 +2200,7 @@ export class FeedsComponent implements OnDestroy {
           searchQuery: result.searchQuery,
           showReplies: result.showReplies,
           showReposts: result.showReposts,
+          hideWordle: result.hideWordle,
         });
       } else {
         // Add new feed
@@ -2209,6 +2219,7 @@ export class FeedsComponent implements OnDestroy {
           searchQuery: result.searchQuery,
           showReplies: result.showReplies,
           showReposts: result.showReposts,
+          hideWordle: result.hideWordle,
           filters: result.filters || {},
         });
 
