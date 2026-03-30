@@ -8,6 +8,8 @@ export interface ConfirmDialogData {
   confirmText: string;
   cancelText: string;
   confirmColor?: 'primary' | 'accent' | 'warn';
+  warningText?: string;
+  items?: string[];
 }
 
 @Component({

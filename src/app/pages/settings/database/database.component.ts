@@ -6,6 +6,8 @@ import { MatMenuModule } from '@angular/material/menu';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDialog } from '@angular/material/dialog';
+import { firstValueFrom } from 'rxjs';
+import { nip19 } from 'nostr-tools';
 import { DatabaseService } from '../../../services/database.service';
 import { NostrService } from '../../../services/nostr.service';
 import { LoggerService } from '../../../services/logger.service';
@@ -17,8 +19,9 @@ import { AccountLocalStateService } from '../../../services/account-local-state.
 import { AccountStateService } from '../../../services/account-state.service';
 import { ApplicationService } from '../../../services/application.service';
 import { EmojiSetService } from '../../../services/emoji-set.service';
-import { ConfirmDialogComponent } from '../../../components/confirm-dialog/confirm-dialog.component';
+import { ConfirmDialogComponent, type ConfirmDialogData } from '../../../components/confirm-dialog/confirm-dialog.component';
 import { RightPanelService } from '../../../services/right-panel.service';
+import type { NostrUser } from '../../../services/nostr.service';
 
 interface StoreStats {
   storeName: string;
@@ -318,20 +321,43 @@ export class DatabaseSettingsComponent implements OnInit {
     }
   }
 
-  wipeData(): void {
-    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
+  async wipeData(): Promise<void> {
+    const confirmed = await firstValueFrom(this.dialog.open<ConfirmDialogComponent, ConfirmDialogData, boolean>(ConfirmDialogComponent, {
       width: '400px',
       data: {
         title: 'Confirm Data Deletion',
         message: 'Are you sure you want to delete all app data? This action cannot be undone.',
-        confirmButtonText: 'Delete All Data',
+        confirmText: 'Continue',
+        cancelText: 'Cancel',
+        confirmColor: 'warn',
       },
-    });
+    }).afterClosed());
 
-    dialogRef.afterClosed().subscribe(async confirmed => {
-      if (confirmed) {
-        await this.app.wipe();
-      }
-    });
+    if (!confirmed) {
+      return;
+    }
+
+    const accounts = this.accountState.accounts().map(account => this.formatAccountLabel(account));
+    const finalConfirmed = await firstValueFrom(this.dialog.open<ConfirmDialogComponent, ConfirmDialogData, boolean>(ConfirmDialogComponent, {
+      width: '460px',
+      data: {
+        title: 'Accounts Will Be Deleted Too',
+        message: 'Wiping all data will also remove every account stored on this device.',
+        warningText: 'If you do not have a backup of your nsec, it will be lost forever.',
+        items: accounts,
+        confirmText: 'Delete All Data',
+        cancelText: 'Cancel',
+        confirmColor: 'warn',
+      },
+    }).afterClosed());
+
+    if (finalConfirmed) {
+      await this.app.wipe();
+    }
+  }
+
+  private formatAccountLabel(account: NostrUser): string {
+    const npub = nip19.npubEncode(account.pubkey);
+    return account.name?.trim() ? `${account.name} (${npub})` : npub;
   }
 }

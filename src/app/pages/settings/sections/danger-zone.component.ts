@@ -1,8 +1,12 @@
 import { Component, inject, ChangeDetectionStrategy } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
-import { ConfirmDialogComponent } from '../../../components/confirm-dialog/confirm-dialog.component';
+import { firstValueFrom } from 'rxjs';
+import { nip19 } from 'nostr-tools';
+import { ConfirmDialogComponent, type ConfirmDialogData } from '../../../components/confirm-dialog/confirm-dialog.component';
 import { ApplicationService } from '../../../services/application.service';
+import { AccountStateService } from '../../../services/account-state.service';
+import type { NostrUser } from '../../../services/nostr.service';
 
 @Component({
   selector: 'app-setting-danger-zone',
@@ -56,21 +60,45 @@ import { ApplicationService } from '../../../services/application.service';
 export class SettingDangerZoneComponent {
   private readonly dialog = inject(MatDialog);
   private readonly app = inject(ApplicationService);
+  private readonly accountState = inject(AccountStateService);
 
-  wipeData(): void {
-    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
+  async wipeData(): Promise<void> {
+    const confirmed = await firstValueFrom(this.dialog.open<ConfirmDialogComponent, ConfirmDialogData, boolean>(ConfirmDialogComponent, {
       width: '400px',
       data: {
         title: 'Confirm Data Deletion',
         message: 'Are you sure you want to delete all app data? This action cannot be undone.',
-        confirmButtonText: 'Delete All Data',
+        confirmText: 'Continue',
+        cancelText: 'Cancel',
+        confirmColor: 'warn',
       },
-    });
+    }).afterClosed());
 
-    dialogRef.afterClosed().subscribe(async confirmed => {
-      if (confirmed) {
-        await this.app.wipe();
-      }
-    });
+    if (!confirmed) {
+      return;
+    }
+
+    const accounts = this.accountState.accounts().map(account => this.formatAccountLabel(account));
+    const finalConfirmed = await firstValueFrom(this.dialog.open<ConfirmDialogComponent, ConfirmDialogData, boolean>(ConfirmDialogComponent, {
+      width: '460px',
+      data: {
+        title: 'Accounts Will Be Deleted Too',
+        message: 'Wiping all data will also remove every account stored on this device.',
+        warningText: 'If you do not have a backup of your nsec, it will be lost forever.',
+        items: accounts,
+        confirmText: 'Delete All Data',
+        cancelText: 'Cancel',
+        confirmColor: 'warn',
+      },
+    }).afterClosed());
+
+    if (finalConfirmed) {
+      await this.app.wipe();
+    }
+  }
+
+  private formatAccountLabel(account: NostrUser): string {
+    const npub = nip19.npubEncode(account.pubkey);
+    return account.name?.trim() ? `${account.name} (${npub})` : npub;
   }
 }

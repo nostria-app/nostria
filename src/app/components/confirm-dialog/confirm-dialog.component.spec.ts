@@ -78,6 +78,22 @@ describe('ConfirmDialogComponent', () => {
         expect(cancelButton.textContent).toContain('Nevermind');
     });
 
+    it('should display warning text and account list when provided', async () => {
+        createComponent({
+            warningText: 'Your nsec will be lost forever without a backup.',
+            items: ['alice', 'npub1example'],
+        });
+        await fixture.whenStable();
+
+        const warningEl = (fixture.nativeElement as HTMLElement).querySelector('.warning-text');
+        const items = (fixture.nativeElement as HTMLElement).querySelectorAll('li');
+
+        expect(warningEl?.textContent).toContain('Your nsec will be lost forever without a backup.');
+        expect(items).toHaveLength(2);
+        expect(items[0].textContent).toContain('alice');
+        expect(items[1].textContent).toContain('npub1example');
+    });
+
     it('should apply confirmColor class to confirm button', async () => {
         createComponent({ confirmColor: 'warn' });
         await fixture.whenStable();

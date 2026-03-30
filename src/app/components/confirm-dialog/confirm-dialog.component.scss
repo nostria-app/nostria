@@ -27,3 +27,26 @@ mat-dialog-content {
 p {
   margin: 0;
 }
+
+.warning-text {
+  margin-top: 12px;
+  color: var(--mat-sys-error);
+}
+
+.item-list {
+  margin-top: 16px;
+  text-align: left;
+}
+
+.item-list-title {
+  margin-bottom: 8px;
+}
+
+ul {
+  margin: 0;
+  padding-left: 20px;
+}
+
+li + li {
+  margin-top: 4px;
+}
