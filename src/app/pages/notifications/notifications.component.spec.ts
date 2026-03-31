@@ -1,8 +1,11 @@
-import type { Mock } from "vitest";
+import '@angular/compiler';
+import type { Mock } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideZonelessChangeDetection, signal } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
+import { BrowserDynamicTestingModule, platformBrowserDynamicTesting } from '@angular/platform-browser-dynamic/testing';
 import { NotificationsComponent } from './notifications.component';
 import { NotificationService } from '../../services/notification.service';
 import { AccountRelayService } from '../../services/relays/account-relay';
@@ -15,7 +18,7 @@ import { LayoutService } from '../../services/layout.service';
 import { LoggerService } from '../../services/logger.service';
 import { TwoColumnLayoutService } from '../../services/two-column-layout.service';
 import { TrustService } from '../../services/trust.service';
-import { NotificationType, Notification, ContentNotification } from '../../services/database.service';
+import { NotificationType, Notification, ContentNotification, RelayPublishingNotification } from '../../services/database.service';
 
 describe('NotificationsComponent', () => {
     let component: NotificationsComponent;
@@ -25,7 +28,14 @@ describe('NotificationsComponent', () => {
         markAsRead: Mock;
         clearNotifications: Mock;
         removeNotification: Mock;
+        updateRelayPromiseStatus: Mock;
+        retryFailedRelays: Mock;
     };
+    let mockAccountRelay: {
+        publishToRelay: Mock;
+    };
+
+    TestBed.initTestEnvironment(BrowserDynamicTestingModule, platformBrowserDynamicTesting());
 
     function createMockNotification(overrides: Partial<Notification> = {}): Notification {
         return {
@@ -41,14 +51,19 @@ describe('NotificationsComponent', () => {
     }
 
     beforeEach(async () => {
+        TestBed.resetTestingModule();
         mockNotificationService = {
             notifications: signal<Notification[]>([]),
             markAsRead: vi.fn(),
             clearNotifications: vi.fn(),
             removeNotification: vi.fn(),
+            updateRelayPromiseStatus: vi.fn().mockResolvedValue(undefined),
+            retryFailedRelays: vi.fn().mockResolvedValue(undefined),
         };
 
-        const mockAccountRelay = {};
+        mockAccountRelay = {
+            publishToRelay: vi.fn(),
+        };
         const mockLocalStorage = {
             getItem: vi.fn().mockReturnValue(null),
             setItem: vi.fn(),
@@ -235,6 +250,49 @@ describe('NotificationsComponent', () => {
                 prefix: 'reacted',
                 suffix: ' to your note',
             });
+        });
+    });
+
+    describe('onRepublish', () => {
+        it('marks relays as failed when republish promise rejects', async () => {
+            const relayNotification: RelayPublishingNotification = {
+                id: 'publish-1',
+                type: NotificationType.RELAY_PUBLISHING,
+                title: 'Publishing to relays',
+                timestamp: Date.now(),
+                read: false,
+                event: {
+                    id: 'event-1',
+                    pubkey: 'f'.repeat(64),
+                    created_at: Math.floor(Date.now() / 1000),
+                    kind: 7,
+                    tags: [],
+                    content: '+',
+                    sig: 'a'.repeat(128),
+                },
+                relayPromises: [
+                    { relayUrl: 'wss://nostr.wine/', status: 'success' },
+                    { relayUrl: 'wss://relay.damus.io/', status: 'success' },
+                ],
+                complete: true,
+            };
+
+            mockNotificationService.notifications.set([relayNotification]);
+            mockAccountRelay.publishToRelay
+                .mockResolvedValueOnce([Promise.reject(new Error('restricted: sign up required'))])
+                .mockResolvedValueOnce([Promise.resolve('ok')]);
+
+            await component.onRepublish('publish-1');
+
+            expect(mockNotificationService.updateRelayPromiseStatus).toHaveBeenCalledWith('publish-1', 'wss://nostr.wine/', 'pending');
+            expect(mockNotificationService.updateRelayPromiseStatus).toHaveBeenCalledWith('publish-1', 'wss://relay.damus.io/', 'pending');
+            expect(mockNotificationService.updateRelayPromiseStatus).toHaveBeenCalledWith(
+                'publish-1',
+                'wss://nostr.wine/',
+                'failed',
+                expect.any(Error)
+            );
+            expect(mockNotificationService.updateRelayPromiseStatus).toHaveBeenCalledWith('publish-1', 'wss://relay.damus.io/', 'success');
         });
     });
 

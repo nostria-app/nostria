@@ -717,7 +717,12 @@ export class NotificationsComponent implements OnInit, OnDestroy {
     // Republish to all relays
     for (const relayUrl of allRelayUrls) {
       try {
-        await this.accountRelay.publishToRelay(relayNotification.event, relayUrl);
+        const publishResult = await this.accountRelay.publishToRelay(relayNotification.event, relayUrl);
+        if (Array.isArray(publishResult)) {
+          await publishResult[0];
+        } else {
+          await publishResult;
+        }
         await this.notificationService.updateRelayPromiseStatus(notificationId, relayUrl, 'success');
       } catch (error) {
         await this.notificationService.updateRelayPromiseStatus(notificationId, relayUrl, 'failed', error);
