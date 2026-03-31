@@ -72,6 +72,19 @@
   border-color: transparent;
 }
 
+.preview-message-card {
+  align-items: flex-start;
+
+  mat-icon {
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+
+  span {
+    min-width: 0;
+  }
+}
+
 .preview-media-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -114,6 +127,18 @@
   object-fit: contain;
   border-radius: 12px;
   background: var(--mat-sys-surface-container-high);
+}
+
+.preview-image-button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: zoom-in;
+  border-radius: 12px;
+
+  .preview-media-asset {
+    display: block;
+  }
 }
 
 .preview-summary-card {

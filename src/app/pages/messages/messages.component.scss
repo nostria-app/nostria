@@ -749,13 +749,16 @@
   position: relative;
   flex: 1 1 220px;
   min-width: 0;
+  padding-top: 6px;
 
   .media-preview-actions {
     position: absolute;
     top: -6px;
-    right: -6px;
+    right: 0;
     display: flex;
-    gap: 4px;
+    align-items: center;
+    gap: 6px;
+    z-index: 1;
   }
 
   .media-preview-media-card {
@@ -764,7 +767,15 @@
     gap: 8px;
     width: 100%;
     min-width: 0;
-    padding: 0 52px 0 0;
+    padding: 0 56px 0 0;
+  }
+
+  .media-preview-image-button {
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+    padding: 0;
+    flex-shrink: 0;
   }
 
   .media-preview-thumb {
@@ -798,14 +809,19 @@
 
   .preview-media-comparison-btn,
   .remove-media-preview-btn {
+    appearance: none;
+    -webkit-appearance: none;
     width: 20px;
     height: 20px;
     padding: 0;
     display: flex;
     align-items: center;
     justify-content: center;
+    border: 0;
     background: var(--mat-sys-surface-container-highest);
+    color: var(--mat-sys-on-surface);
     border-radius: 50%;
+    cursor: pointer;
 
     mat-icon {
       font-size: 14px;
@@ -817,20 +833,35 @@
 
 .pending-media-actions {
   display: flex;
-  justify-content: flex-end;
-  flex-wrap: wrap;
+  justify-content: space-between;
+  flex-wrap: nowrap;
+  align-items: center;
   gap: 8px;
   width: 100%;
   margin-top: 2px;
 
   .dm-compression-controls {
-    flex: 1 1 260px;
+    flex: 0 1 360px;
     min-width: 220px;
     max-width: 360px;
     padding: 8px 10px;
     border: 1px solid var(--mat-sys-outline-variant);
     border-radius: 10px;
     background: var(--mat-sys-surface-container-low);
+    margin-right: auto;
+  }
+
+  .dm-compression-toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 8px;
+  }
+
+  .dm-compression-toggle-label {
+    font-size: 13px;
+    color: var(--mat-sys-on-surface);
   }
 
   .dm-compression-header {
@@ -881,6 +912,20 @@
     font-size: 11px;
     color: var(--mat-sys-on-surface-variant);
   }
+
+  .pending-media-buttons {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: center;
+    gap: 8px;
+    min-width: 188px;
+    margin-left: auto;
+
+    button {
+      min-width: 188px;
+    }
+  }
 }
 
 .reference-preview-thumb {
@@ -927,14 +972,33 @@
 
   .pending-media-actions {
     justify-content: stretch;
+    flex-wrap: wrap;
+    align-items: stretch;
 
     .dm-compression-controls {
       flex-basis: 100%;
       max-width: none;
+      margin-right: 0;
     }
 
-    button {
+    .pending-media-buttons {
+      flex-direction: row;
+      width: 100%;
+      min-width: 0;
+      margin-left: 0;
+
+      button:first-child {
+        order: 2;
+      }
+
+      button:last-child {
+        order: 1;
+      }
+    }
+
+    .pending-media-buttons button {
       flex: 1 1 0;
+      min-width: 0;
     }
   }
 }

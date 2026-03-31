@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
+import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { CustomDialogRef } from '../../services/custom-dialog.service';
@@ -26,6 +27,7 @@ export interface CompressionPreviewDialogData {
 export class CompressionPreviewDialogComponent implements OnInit, OnDestroy {
   readonly dialogRef = inject(CustomDialogRef<CompressionPreviewDialogComponent, void>, { optional: true });
   readonly mediaProcessing = inject(MediaProcessingService);
+  private readonly dialog = inject(MatDialog);
 
   data!: CompressionPreviewDialogData;
 
@@ -102,6 +104,48 @@ export class CompressionPreviewDialogComponent implements OnInit, OnDestroy {
 
   close(): void {
     this.dialogRef?.close();
+  }
+
+  async openLargeImagePreview(kind: 'original' | 'compressed'): Promise<void> {
+    if (!this.isImage()) {
+      return;
+    }
+
+    const originalUrl = this.originalObjectUrl();
+    const compressedUrl = this.compressedObjectUrl();
+    const previewUrl = kind === 'compressed' ? compressedUrl : originalUrl;
+
+    if (!previewUrl || !originalUrl) {
+      return;
+    }
+
+    const { MediaPreviewDialogComponent } = await import('../media-preview-dialog/media-preview.component');
+    const mediaItems = [
+      {
+        url: originalUrl,
+        type: 'image',
+        title: 'Original',
+      },
+      ...(compressedUrl ? [{
+        url: compressedUrl,
+        type: 'image',
+        title: 'Compressed',
+      }] : []),
+    ];
+
+    const initialIndex = kind === 'compressed' && compressedUrl ? 1 : 0;
+
+    this.dialog.open(MediaPreviewDialogComponent, {
+      data: {
+        mediaItems,
+        initialIndex,
+      },
+      maxWidth: '100vw',
+      maxHeight: '100vh',
+      width: '100vw',
+      height: '100vh',
+      panelClass: 'image-dialog-panel',
+    });
   }
 
   formatFileSize(bytes: number): string {

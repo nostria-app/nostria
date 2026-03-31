@@ -38,7 +38,10 @@
       </div>
 
       @if (isImage()) {
-      <img [src]="originalObjectUrl()!" class="preview-media-asset" alt="Original media preview" />
+      <button type="button" class="preview-image-button" (click)="openLargeImagePreview('original')"
+        aria-label="Open original image preview">
+        <img [src]="originalObjectUrl()!" class="preview-media-asset" alt="Original media preview" />
+      </button>
       } @else if (isVideo()) {
       <video [src]="originalObjectUrl()!" class="preview-media-asset" controls muted preload="metadata"></video>
       }
@@ -56,7 +59,10 @@
       </div>
 
       @if (isImage()) {
-      <img [src]="compressedObjectUrl()!" class="preview-media-asset" alt="Compressed media preview" />
+      <button type="button" class="preview-image-button" (click)="openLargeImagePreview('compressed')"
+        aria-label="Open compressed image preview">
+        <img [src]="compressedObjectUrl()!" class="preview-media-asset" alt="Compressed media preview" />
+      </button>
       } @else if (isVideo()) {
       <video [src]="compressedObjectUrl()!" class="preview-media-asset" controls muted preload="metadata"></video>
       }

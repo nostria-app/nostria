@@ -33,6 +33,7 @@ import { MatBottomSheet } from '@angular/material/bottom-sheet';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatSidenavModule } from '@angular/material/sidenav';
 import { MatSliderModule } from '@angular/material/slider';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { Router, RouterModule, ActivatedRoute } from '@angular/router';
 import { NostrService } from '../../services/nostr.service';
 import { LoggerService } from '../../services/logger.service';
@@ -96,7 +97,10 @@ import {
   getCompressionStrengthDescription,
   getCompressionStrengthLabel,
   normalizeCompressionStrength,
+  shouldUploadOriginal,
   VideoRecordDialogResult,
+  usesLocalCompression as usesLocalCompressionMode,
+  type MediaUploadMode,
   type MediaUploadSettings,
 } from '../../interfaces/media-upload';
 import type { ReportTarget } from '../../services/reporting.service';
@@ -209,6 +213,7 @@ interface QuickReactionMenuItem {
     MatTabsModule,
     MatSidenavModule,
     MatSliderModule,
+    MatSlideToggleModule,
     MatProgressBarModule,
     RouterModule,
     LoadingOverlayComponent,
@@ -287,12 +292,15 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   isDragOverMessageInput = signal<boolean>(false);
   uploadStatus = signal<string>('');
   readonly defaultCompressionStrength = DEFAULT_MEDIA_COMPRESSION_STRENGTH;
+  dmMediaUploadMode = signal<MediaUploadMode>(DEFAULT_DM_MEDIA_UPLOAD_SETTINGS.mode);
   dmCompressionStrength = signal<number>(DEFAULT_DM_MEDIA_UPLOAD_SETTINGS.compressionStrength);
   mediaPreviews = signal<{ url: string; type: 'image' | 'video' | 'music' | 'file'; label?: string; meta?: string; pendingEncrypted?: boolean; pendingId?: string }[]>([]);
   pendingEncryptedMediaPreviews = signal<PendingEncryptedMediaPreview[]>([]);
   readonly hasPendingCompressibleMedia = computed(() =>
     this.pendingEncryptedMediaPreviews().some(preview => preview.type === 'image' || preview.type === 'video')
   );
+  readonly dmUploadOriginal = computed(() => this.dmMediaUploadMode() === 'original');
+  readonly usesLocalDmCompression = computed(() => usesLocalCompressionMode(this.dmMediaUploadMode()));
   readonly dmCompressionStrengthLabel = computed(() => getCompressionStrengthLabel(this.dmCompressionStrength()));
   readonly dmCompressionStrengthDescription = computed(() => getCompressionStrengthDescription(this.dmCompressionStrength()));
   readonly isDefaultDmCompressionStrength = computed(() => this.dmCompressionStrength() === this.defaultCompressionStrength);
@@ -2188,10 +2196,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
 
     try {
       this.isSending.set(true);
-      const uploadSettings = options?.uploadSettings ?? {
-        mode: DEFAULT_DM_MEDIA_UPLOAD_SETTINGS.mode,
-        compressionStrength: this.dmCompressionStrength(),
-      };
+      const uploadSettings = options?.uploadSettings ?? this.getDmUploadSettings();
       const preparedFile = this.isMediaFile(file)
         ? await this.mediaProcessing.prepareFileForUpload(file, uploadSettings, progress => {
           const progressSuffix = progress.progress !== undefined
@@ -2411,6 +2416,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
 
   private setPendingEncryptedFiles(stagedPreviews: PendingEncryptedMediaPreview[]): void {
     this.clearPendingEncryptedMediaPreviews();
+    this.dmMediaUploadMode.set(DEFAULT_DM_MEDIA_UPLOAD_SETTINGS.mode);
 
     this.pendingEncryptedMediaPreviews.set(stagedPreviews);
     this.mediaPreviews.set(stagedPreviews.map(preview => ({
@@ -2802,12 +2808,41 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       showCloseButton: true,
       data: {
         file: stagedPreview.file,
-        uploadSettings: {
-          mode: DEFAULT_DM_MEDIA_UPLOAD_SETTINGS.mode,
-          compressionStrength: this.dmCompressionStrength(),
-        },
+        uploadSettings: this.getDmUploadSettings(),
         contextLabel: 'Encrypted attachment',
       },
+    });
+  }
+
+  async openComposerImagePreview(index: number, event?: MouseEvent): Promise<void> {
+    event?.preventDefault();
+    event?.stopPropagation();
+
+    const imagePreviews = this.mediaPreviews()
+      .map((preview, previewIndex) => ({ preview, previewIndex }))
+      .filter(entry => entry.preview.type === 'image');
+
+    const selectedImageIndex = imagePreviews.findIndex(entry => entry.previewIndex === index);
+    if (selectedImageIndex === -1) {
+      return;
+    }
+
+    const { MediaPreviewDialogComponent } = await import('../../components/media-preview-dialog/media-preview.component');
+
+    this.dialog.open(MediaPreviewDialogComponent, {
+      data: {
+        mediaItems: imagePreviews.map(({ preview }) => ({
+          url: preview.url,
+          type: 'image',
+          title: preview.label,
+        })),
+        initialIndex: selectedImageIndex,
+      },
+      maxWidth: '100vw',
+      maxHeight: '100vh',
+      width: '100vw',
+      height: '100vh',
+      panelClass: 'image-dialog-panel',
     });
   }
 
@@ -2818,6 +2853,11 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
 
     this.pendingEncryptedMediaPreviews.set([]);
     this.mediaPreviews.update(previews => previews.filter(preview => !preview.pendingEncrypted));
+    this.dmMediaUploadMode.set(DEFAULT_DM_MEDIA_UPLOAD_SETTINGS.mode);
+  }
+
+  onDmUploadOriginalChange(enabled: boolean): void {
+    this.dmMediaUploadMode.set(enabled ? 'original' : 'local');
   }
 
   onDmCompressionStrengthChange(value: number): void {
@@ -2826,6 +2866,13 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
 
   resetDmCompressionStrength(): void {
     this.dmCompressionStrength.set(this.defaultCompressionStrength);
+  }
+
+  private getDmUploadSettings(): MediaUploadSettings {
+    return {
+      mode: this.dmMediaUploadMode(),
+      compressionStrength: this.dmCompressionStrength(),
+    };
   }
 
   private hasConfiguredMediaServers(): boolean {

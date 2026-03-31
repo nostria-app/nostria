@@ -894,7 +894,10 @@
           <div class="media-preview-item">
             @if (preview.type === 'image') {
             <div class="media-preview-media-card">
-              <img [src]="preview.url" class="media-preview-thumb" alt="Media preview">
+              <button type="button" class="media-preview-image-button" (click)="openComposerImagePreview(i, $event)"
+                aria-label="Open image preview">
+                <img [src]="preview.url" class="media-preview-thumb" alt="Media preview">
+              </button>
               <div class="media-preview-details">
                 @if (preview.label) {
                 <span class="media-preview-label">{{ preview.label }}</span>
@@ -931,14 +934,14 @@
             </div>
             }
             <div class="media-preview-actions">
-              @if (preview.pendingEncrypted && preview.pendingId && (preview.type === 'image' || preview.type ===
-              'video')) {
-              <button mat-icon-button type="button" class="preview-media-comparison-btn"
+              @if (usesLocalDmCompression() && preview.pendingEncrypted && preview.pendingId && (preview.type ===
+              'image' || preview.type === 'video')) {
+              <button type="button" class="preview-media-comparison-btn"
                 (click)="openPendingCompressionPreview(preview.pendingId)" matTooltip="Preview compression">
                 <mat-icon>compare</mat-icon>
               </button>
               }
-              <button mat-icon-button type="button" class="remove-media-preview-btn" (click)="removeMediaPreview(i)"
+              <button type="button" class="remove-media-preview-btn" (click)="removeMediaPreview(i)"
                 matTooltip="Remove media">
                 <mat-icon>close</mat-icon>
               </button>
@@ -949,6 +952,13 @@
           <div class="pending-media-actions">
             @if (hasPendingCompressibleMedia()) {
             <div class="dm-compression-controls">
+              <div class="dm-compression-toggle-row">
+                <span class="dm-compression-toggle-label">Upload original</span>
+                <mat-slide-toggle [checked]="dmUploadOriginal()"
+                  (change)="onDmUploadOriginalChange($event.checked)"
+                  aria-label="Upload original media without compression"></mat-slide-toggle>
+              </div>
+              @if (usesLocalDmCompression()) {
               <div class="dm-compression-header">
                 <span class="dm-compression-title">Compression Strength</span>
                 <div class="dm-compression-meta">
@@ -966,18 +976,22 @@
                   (valueChange)="onDmCompressionStrengthChange($event)" aria-label="Compression strength" />
               </mat-slider>
               <span class="dm-compression-description">{{ dmCompressionStrengthDescription() }}</span>
+              }
             </div>
             }
-            <button mat-button type="button" (click)="clearPendingEncryptedMediaPreviews()">Cancel</button>
-            <button mat-flat-button type="button" (click)="confirmPastedMedia()"
-              [disabled]="isUploading() || isSending()">
-              Send encrypted
-            </button>
+            <div class="pending-media-buttons">
+              <button mat-flat-button type="button" (click)="confirmPastedMedia()"
+                [disabled]="isUploading() || isSending()">
+                Send encrypted
+              </button>
+              <button mat-button type="button" (click)="clearPendingEncryptedMediaPreviews()">Cancel</button>
+            </div>
           </div>
           }
         </div>
         }
 
+        @if (pendingEncryptedMediaPreviews().length === 0) {
         <div class="message-input-row">
           <!-- Plus menu button -->
           <button mat-icon-button type="button" [matMenuTriggerFor]="plusMenu" class="plus-button"
@@ -1068,6 +1082,7 @@
             }
           </button>
         </div>
+        }
       </div>
     </div>
 
