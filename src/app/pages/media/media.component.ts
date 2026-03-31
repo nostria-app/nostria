@@ -41,6 +41,11 @@ import { CustomDialogService } from '../../services/custom-dialog.service';
 import { MediaProcessingService } from '../../services/media-processing.service';
 import { MediaUploadDialogResult } from '../../interfaces/media-upload';
 
+interface MediaDisplayItem extends MediaItem {
+  displayUrl?: string;
+  encrypted?: boolean;
+}
+
 export type ViewMode = 'large' | 'medium' | 'details';
 export type MediaFilter = 'all' | 'images' | 'videos' | 'audio' | 'files';
 
@@ -102,28 +107,38 @@ export class MediaComponent {
 
   // Sort options
   sortOption = signal<'newest' | 'oldest' | 'name-asc' | 'name-desc' | 'size-asc' | 'size-desc'>('newest');
+  mediaDisplayUrls = signal<Map<string, string>>(new Map());
+  encryptedMediaMap = signal<Map<string, true>>(new Map());
 
   // Computed filtered and sorted media list
   filteredMedia = computed(() => {
     const allMedia = this.mediaService.mediaItems();
+    const displayUrls = this.mediaDisplayUrls();
+    const encryptedMedia = this.encryptedMediaMap();
     const filter = this.mediaFilter();
 
-    let filtered: MediaItem[];
+    const displayMedia: MediaDisplayItem[] = allMedia.map(item => ({
+      ...item,
+      displayUrl: displayUrls.get(item.sha256),
+      encrypted: encryptedMedia.has(item.sha256),
+    }));
+
+    let filtered: MediaDisplayItem[];
     switch (filter) {
       case 'images':
-        filtered = allMedia.filter(item => item.type?.startsWith('image') || false);
+        filtered = displayMedia.filter(item => item.type?.startsWith('image') || false);
         break;
       case 'videos':
-        filtered = allMedia.filter(item => item.type?.startsWith('video') || false);
+        filtered = displayMedia.filter(item => item.type?.startsWith('video') || false);
         break;
       case 'audio':
-        filtered = allMedia.filter(item => item.type?.startsWith('audio') || false);
+        filtered = displayMedia.filter(item => item.type?.startsWith('audio') || false);
         break;
       case 'files':
-        filtered = allMedia.filter(item => !item.type || (!item.type.startsWith('image') && !item.type.startsWith('video') && !item.type.startsWith('audio')));
+        filtered = displayMedia.filter(item => !item.type || (!item.type.startsWith('image') && !item.type.startsWith('video') && !item.type.startsWith('audio')));
         break;
       default:
-        filtered = allMedia;
+        filtered = displayMedia;
     }
 
     return this.sortMediaItems(filtered);
@@ -179,6 +194,11 @@ export class MediaComponent {
       if (this.accountState.initialized()) {
         await this.mediaService.loadMedia();
       }
+    });
+
+    effect(() => {
+      const items = this.mediaService.mediaItems();
+      void this.hydrateEncryptedMedia(items);
     });
 
     // Clear selection when filter changes

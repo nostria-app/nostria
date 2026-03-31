@@ -3,7 +3,7 @@ export const CLIENT_LOGO_MAP: Record<string, string> = {
   'nosotros': 'logos/clients/nosotros.png',
   'damus deck': 'logos/clients/damus.png',
   'damus': 'logos/clients/damus.png',
-  'amethyst': 'logos/clients/amethyst.png',
+  'amethyst': 'logos/clients/amethyst.svg',
   'primal': 'logos/clients/primal.png',
   'snort': 'logos/clients/snort.png',
   'iris': 'logos/clients/iris.png',
@@ -22,3 +22,22 @@ export const CLIENT_LOGO_MAP: Record<string, string> = {
   'nostore': 'logos/clients/nostore.png',
   'attestr.xyz': 'logos/clients/attestr.xyz.png',
 };
+
+export function resolveClientLogo(clientName: string | null | undefined): string | null {
+  if (!clientName) return null;
+
+  const normalizedClient = clientName.toLowerCase().trim();
+  const exactMatch = CLIENT_LOGO_MAP[normalizedClient];
+
+  if (exactMatch) {
+    return exactMatch;
+  }
+
+  const prefixMatch = Object.entries(CLIENT_LOGO_MAP).find(([client]) => (
+    normalizedClient.startsWith(`${client} `)
+    || normalizedClient.startsWith(`${client}/`)
+    || normalizedClient.startsWith(`${client}(`)
+  ));
+
+  return prefixMatch?.[1] || null;
+}

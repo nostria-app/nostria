@@ -1,6 +1,7 @@
-import { Injectable, inject, signal } from '@angular/core';
+import { Injectable, inject, signal, PLATFORM_ID } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { NostrService } from './nostr.service';
-import { DatabaseService } from './database.service';
+import { DatabaseService, StoredDirectMessage } from './database.service';
 import { LoggerService } from './logger.service';
 import { MEDIA_SERVERS_EVENT_KIND, NostriaService } from '../interfaces';
 import { standardizedTag } from '../standardized-tags';
@@ -10,6 +11,8 @@ import { ApplicationService } from './application.service';
 import { RegionService } from './region.service';
 import { AccountStateService } from './account-state.service';
 import { AccountRelayService } from './relays/account-relay';
+import { CorsProxyService } from './cors-proxy.service';
+import { UtilitiesService } from './utilities.service';
 
 export interface MediaItem {
   sha256: string; // SHA-256 hash of file (NIP-94)
@@ -30,6 +33,30 @@ export interface NostrEvent {
   sig: string;
 }
 
+export interface EncryptedMediaReference {
+  sha256: string;
+  originalSha256?: string;
+  url: string;
+  fileName?: string;
+  fileType: string;
+  fileSize?: number;
+  decryptionKey: string;
+  decryptionNonce: string;
+  messageId: string;
+  chatId: string;
+  createdAt: number;
+}
+
+export interface MediaUsageReference {
+  id: string;
+  kind: number;
+  pubkey: string;
+  createdAt: number;
+  source: 'event' | 'direct-message';
+  chatId?: string;
+  encryptionType?: 'nip04' | 'nip44';
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -41,6 +68,10 @@ export class MediaService implements NostriaService {
   private readonly app = inject(ApplicationService);
   private readonly region = inject(RegionService);
   private readonly accountState = inject(AccountStateService);
+  private readonly corsProxy = inject(CorsProxyService);
+  private readonly utilities = inject(UtilitiesService);
+  private readonly platformId = inject(PLATFORM_ID);
+  private readonly isBrowser = isPlatformBrowser(this.platformId);
 
   // State management
   private _mediaItems = signal<MediaItem[]>([]);
@@ -50,6 +81,8 @@ export class MediaService implements NostriaService {
   private _mediaServers = signal<string[]>([]);
   private lastFetchTime = signal<number>(0);
   private mediaServersLoadPromise: Promise<string[]> | null = null;
+  private encryptedMediaReferencePromise: Promise<Map<string, EncryptedMediaReference>> | null = null;
+  private decryptedMediaUrls = new Map<string, string>();
 
   // Temporary flag to disable batch operations due to server limitation
   readonly batchOperationsTemporarilyDisabledDueToBug = true;
@@ -130,12 +163,26 @@ export class MediaService implements NostriaService {
   }
 
   clear() {
+    this.releaseDecryptedMediaUrls();
     this._mediaItems.set([]);
     this.loading.set(false);
     this.uploading.set(false);
     this._error.set(null);
     this._mediaServers.set([]);
     this.lastFetchTime.set(0);
+    this.encryptedMediaReferencePromise = null;
+  }
+
+  private releaseDecryptedMediaUrls(): void {
+    for (const url of this.decryptedMediaUrls.values()) {
+      URL.revokeObjectURL(url);
+    }
+    this.decryptedMediaUrls.clear();
+  }
+
+  private resetEncryptedMediaCache(): void {
+    this.releaseDecryptedMediaUrls();
+    this.encryptedMediaReferencePromise = null;
   }
 
   async getFileById(id: string): Promise<MediaItem> {
@@ -147,6 +194,264 @@ export class MediaService implements NostriaService {
     }
 
     return item;
+  }
+
+  async getEncryptedMediaReferences(): Promise<Map<string, EncryptedMediaReference>> {
+    if (!this.encryptedMediaReferencePromise) {
+      this.encryptedMediaReferencePromise = this.loadEncryptedMediaReferences();
+    }
+
+    const references = await this.encryptedMediaReferencePromise;
+    return new Map(references);
+  }
+
+  async getEncryptedMediaReference(sha256: string): Promise<EncryptedMediaReference | null> {
+    const references = await this.getEncryptedMediaReferences();
+    return references.get(sha256) || null;
+  }
+
+  async getResolvedMediaUrl(item: MediaItem, decryptIfNeeded = false): Promise<string | null> {
+    const encryptedReference = await this.getEncryptedMediaReference(item.sha256);
+    if (!encryptedReference) {
+      return null;
+    }
+
+    const existingUrl = this.decryptedMediaUrls.get(item.sha256);
+    if (existingUrl) {
+      return existingUrl;
+    }
+
+    const cacheKey = this.getEncryptedMediaCacheKey(encryptedReference.url);
+    const cachedBlob = await this.getCachedEncryptedMediaBlob(cacheKey);
+    const blob = cachedBlob || (!decryptIfNeeded ? null : await this.decryptEncryptedMediaBlob(encryptedReference));
+
+    if (!blob) {
+      return null;
+    }
+
+    if (!cachedBlob) {
+      await this.storeEncryptedMediaBlob(cacheKey, blob);
+    }
+
+    const objectUrl = URL.createObjectURL(blob);
+    this.decryptedMediaUrls.set(item.sha256, objectUrl);
+    return objectUrl;
+  }
+
+  async getMediaUsageReferences(item: MediaItem): Promise<MediaUsageReference[]> {
+    const references = new Map<string, MediaUsageReference>();
+    const encryptedReference = await this.getEncryptedMediaReference(item.sha256);
+    const targetHashes = new Set<string>([item.sha256]);
+    if (encryptedReference?.originalSha256) {
+      targetHashes.add(encryptedReference.originalSha256);
+    }
+
+    const targetUrls = new Set<string>([item.url]);
+    if (encryptedReference?.url) {
+      targetUrls.add(encryptedReference.url);
+    }
+
+    const events = await this.database.getAllEvents();
+    for (const event of events) {
+      if (!this.eventReferencesMedia(event, targetHashes, targetUrls)) {
+        continue;
+      }
+
+      references.set(`event:${event.id}`, {
+        id: event.id,
+        kind: event.kind,
+        pubkey: event.pubkey,
+        createdAt: event.created_at,
+        source: 'event',
+      });
+    }
+
+    const myPubkey = this.accountState.pubkey();
+    if (myPubkey) {
+      const directMessages = await this.database.getDirectMessagesForAccount(myPubkey);
+      for (const message of directMessages) {
+        if (!this.directMessageReferencesMedia(message, targetHashes, targetUrls)) {
+          continue;
+        }
+
+        references.set(`dm:${message.messageId}`, {
+          id: message.messageId,
+          kind: message.rumorKind || 14,
+          pubkey: message.pubkey,
+          createdAt: message.created_at,
+          source: 'direct-message',
+          chatId: message.chatId,
+          encryptionType: message.encryptionType,
+        });
+      }
+    }
+
+    return Array.from(references.values()).sort((a, b) => b.createdAt - a.createdAt);
+  }
+
+  private async loadEncryptedMediaReferences(): Promise<Map<string, EncryptedMediaReference>> {
+    const myPubkey = this.accountState.pubkey();
+    if (!myPubkey) {
+      return new Map();
+    }
+
+    const directMessages = await this.database.getDirectMessagesForAccount(myPubkey);
+    const references = new Map<string, EncryptedMediaReference>();
+
+    for (const message of directMessages) {
+      const reference = this.extractEncryptedMediaReference(message);
+      if (!reference) {
+        continue;
+      }
+
+      const existing = references.get(reference.sha256);
+      if (!existing || reference.createdAt > existing.createdAt) {
+        references.set(reference.sha256, reference);
+      }
+    }
+
+    return references;
+  }
+
+  private extractEncryptedMediaReference(message: StoredDirectMessage): EncryptedMediaReference | null {
+    const algorithm = message.tags.find(tag => tag[0] === 'encryption-algorithm')?.[1];
+    const sha256 = message.tags.find(tag => tag[0] === 'x')?.[1];
+    const fileType = message.tags.find(tag => tag[0] === 'file-type')?.[1];
+    const decryptionKey = message.tags.find(tag => tag[0] === 'decryption-key')?.[1];
+    const decryptionNonce = message.tags.find(tag => tag[0] === 'decryption-nonce')?.[1];
+
+    if (algorithm !== 'aes-gcm' || !sha256 || !fileType || !decryptionKey || !decryptionNonce || !message.content) {
+      return null;
+    }
+
+    return {
+      sha256,
+      originalSha256: message.tags.find(tag => tag[0] === 'ox')?.[1],
+      url: message.content,
+      fileName: message.tags.find(tag => tag[0] === 'alt')?.[1],
+      fileType,
+      fileSize: Number(message.tags.find(tag => tag[0] === 'size')?.[1] || 0) || undefined,
+      decryptionKey,
+      decryptionNonce,
+      messageId: message.messageId,
+      chatId: message.chatId,
+      createdAt: message.created_at,
+    };
+  }
+
+  private eventReferencesMedia(event: NostrEvent, targetHashes: Set<string>, targetUrls: Set<string>): boolean {
+    if (this.tagsReferenceMedia(event.tags || [], targetHashes, targetUrls)) {
+      return true;
+    }
+
+    return Array.from(targetUrls).some(url => event.content?.includes(url));
+  }
+
+  private directMessageReferencesMedia(message: StoredDirectMessage, targetHashes: Set<string>, targetUrls: Set<string>): boolean {
+    if (this.tagsReferenceMedia(message.tags || [], targetHashes, targetUrls)) {
+      return true;
+    }
+
+    return Array.from(targetUrls).some(url => message.content?.includes(url));
+  }
+
+  private tagsReferenceMedia(tags: string[][], targetHashes: Set<string>, targetUrls: Set<string>): boolean {
+    for (const tag of tags) {
+      if ((tag[0] === 'x' || tag[0] === 'ox') && targetHashes.has(tag[1])) {
+        return true;
+      }
+
+      if (tag[0] === 'url' && targetUrls.has(tag[1])) {
+        return true;
+      }
+
+      if (tag[0] !== 'imeta') {
+        continue;
+      }
+
+      const parsed = this.utilities.parseImetaTag(tag, true);
+      if ((parsed['x'] && targetHashes.has(parsed['x'])) || (parsed['url'] && targetUrls.has(parsed['url']))) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  private getEncryptedMediaCacheKey(url: string): string {
+    return `https://nostria.local/cache/file/${encodeURIComponent(url)}`;
+  }
+
+  private async getCachedEncryptedMediaBlob(cacheKey: string): Promise<Blob | null> {
+    if (!this.isBrowser || typeof caches === 'undefined') {
+      return null;
+    }
+
+    try {
+      const cache = await caches.open('nostria-files');
+      const response = await cache.match(cacheKey);
+      if (!response?.ok) {
+        return null;
+      }
+
+      return await response.blob();
+    } catch (error) {
+      this.logger.warn('Failed to read encrypted media cache', error);
+      return null;
+    }
+  }
+
+  private async storeEncryptedMediaBlob(cacheKey: string, blob: Blob): Promise<void> {
+    if (!this.isBrowser || typeof caches === 'undefined') {
+      return;
+    }
+
+    try {
+      const cache = await caches.open('nostria-files');
+      await cache.put(cacheKey, new Response(blob, {
+        headers: new Headers({
+          'content-type': blob.type || 'application/octet-stream',
+        }),
+      }));
+    } catch (error) {
+      this.logger.warn('Failed to write encrypted media cache', error);
+    }
+  }
+
+  private async decryptEncryptedMediaBlob(reference: EncryptedMediaReference): Promise<Blob> {
+    const response = await this.corsProxy.fetch(reference.url);
+    if (!response.ok) {
+      throw new Error(`Failed to download encrypted media (${response.status})`);
+    }
+
+    const encryptedBuffer = await response.arrayBuffer();
+    const keyBytes = this.parseHex(reference.decryptionKey);
+    const nonceBytes = this.parseHex(reference.decryptionNonce);
+    const keyBuffer = new ArrayBuffer(keyBytes.byteLength);
+    new Uint8Array(keyBuffer).set(keyBytes);
+    const nonceBuffer = new ArrayBuffer(nonceBytes.byteLength);
+    new Uint8Array(nonceBuffer).set(nonceBytes);
+
+    const cryptoKey = await crypto.subtle.importKey('raw', keyBuffer, { name: 'AES-GCM' }, false, ['decrypt']);
+    const decryptedBuffer = await crypto.subtle.decrypt(
+      { name: 'AES-GCM', iv: nonceBuffer },
+      cryptoKey,
+      encryptedBuffer,
+    );
+
+    return new Blob([decryptedBuffer], { type: reference.fileType || 'application/octet-stream' });
+  }
+
+  private parseHex(value: string): Uint8Array {
+    if (value.length % 2 !== 0) {
+      throw new Error('Invalid hex value');
+    }
+
+    const bytes = new Uint8Array(value.length / 2);
+    for (let i = 0; i < value.length; i += 2) {
+      bytes[i / 2] = Number.parseInt(value.slice(i, i + 2), 16);
+    }
+    return bytes;
   }
 
   // Add implementation for the missing updateMetadata method
@@ -222,6 +527,7 @@ export class MediaService implements NostriaService {
   async getFiles(): Promise<void> {
     this.loading.set(true);
     this._error.set(null);
+    this.resetEncryptedMediaCache();
 
     try {
       await this.ensureMediaServersLoaded();

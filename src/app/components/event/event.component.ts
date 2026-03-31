@@ -77,7 +77,7 @@ import { SocialPreviewComponent } from '../social-preview/social-preview.compone
 import { MediaPreviewDialogComponent } from '../media-preview-dialog/media-preview.component';
 import { InlineVideoPlayerComponent } from '../inline-video-player/inline-video-player.component';
 import { HapticsService } from '../../services/haptics.service';
-import { CLIENT_LOGO_MAP } from '../../utils/client-logo-map';
+import { resolveClientLogo } from '../../utils/client-logo-map';
 import { visualContentLength } from '../../utils/visual-content-length';
 import { DatabaseService } from '../../services/database.service';
 
@@ -3474,10 +3474,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
    * Get the logo image path for a client
    */
   getClientLogo(clientName: string | null): string | null {
-    if (!clientName) return null;
-
-    const normalizedClient = clientName.toLowerCase().trim();
-    return CLIENT_LOGO_MAP[normalizedClient] || null;
+    return resolveClientLogo(clientName);
   }
 
   /**

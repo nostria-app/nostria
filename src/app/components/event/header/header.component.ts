@@ -29,7 +29,7 @@ import {
 } from '../../confirm-dialog/confirm-dialog.component';
 import { UserProfileComponent } from '../../user-profile/user-profile.component';
 import { EventMenuComponent } from '../event-menu/event-menu.component';
-import { CLIENT_LOGO_MAP } from '../../../utils/client-logo-map';
+import { resolveClientLogo } from '../../../utils/client-logo-map';
 
 @Component({
   selector: 'app-event-header',
@@ -124,9 +124,7 @@ export class EventHeaderComponent {
     if (!this.localSettings.showClientTag()) return null;
     const event = this.event();
     const clientTag = event?.tags?.find(tag => tag[0] === 'client' && tag[1]);
-    if (!clientTag) return null;
-    const normalizedClient = clientTag[1].toLowerCase().trim();
-    return CLIENT_LOGO_MAP[normalizedClient] || null;
+    return resolveClientLogo(clientTag?.[1]);
   });
 
   clientName = computed<string>(() => {
