@@ -2642,6 +2642,10 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
 
       this.syncTextareaHeight(textarea);
 
+      if (this.isKeyboardCompactMode() && dialogContentWrapper) {
+        dialogContentWrapper.scrollTop = 0;
+      }
+
       if (shouldRestoreSelection && selectionStart !== null && selectionEnd !== null) {
         textarea.setSelectionRange(selectionStart, selectionEnd);
       }
@@ -2727,6 +2731,10 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   private clearCompactTextareaSize(): void {
     this.noteEditorLayout?.nativeElement.style.removeProperty('--note-editor-mobile-textarea-max-height');
     this.noteEditorLayout?.nativeElement.style.removeProperty('--note-editor-mobile-viewport-cap');
+    const dialogContentWrapper = this.dialogContentWrapper?.nativeElement;
+    if (dialogContentWrapper) {
+      dialogContentWrapper.scrollTop = 0;
+    }
     const contentField = this.contentField?.nativeElement;
     if (contentField) {
       contentField.style.height = '';
