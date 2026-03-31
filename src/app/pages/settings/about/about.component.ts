@@ -12,6 +12,7 @@ import { LoggerService } from '../../../services/logger.service';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { RightPanelService } from '../../../services/right-panel.service';
+import { CelebrationBurstComponent } from '../../../components/celebration-burst/celebration-burst.component';
 import { ZapSoundService, ZapTier } from '../../../services/zap-sound.service';
 import { HapticsService } from '../../../services/haptics.service';
 
@@ -27,7 +28,7 @@ interface WebManifest {
 
 @Component({
   selector: 'app-about',
-  imports: [MatCardModule, MatListModule, MatIconModule, MatButtonModule, MatTooltipModule],
+  imports: [MatCardModule, MatListModule, MatIconModule, MatButtonModule, MatTooltipModule, CelebrationBurstComponent],
   templateUrl: './about.component.html',
   styleUrl: './about.component.scss',
   host: { class: 'panel-with-sticky-header' },

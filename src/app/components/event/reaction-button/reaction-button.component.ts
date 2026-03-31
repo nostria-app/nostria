@@ -26,6 +26,8 @@ import { UNICODE_EMOJI_CATEGORIES } from '../../../utils/unicode-emoji-catalog';
 import { CustomDialogComponent } from '../../custom-dialog/custom-dialog.component';
 import { CustomEmojiComponent } from '../../custom-emoji/custom-emoji.component';
 import { EmojiPickerComponent } from '../../emoji-picker/emoji-picker.component';
+import { CelebrationBurstComponent } from '../../celebration-burst/celebration-burst.component';
+import { HapticsService } from '../../../services/haptics.service';
 
 // Emoji categories with icons
 const EMOJI_CATEGORIES = UNICODE_EMOJI_CATEGORIES;
@@ -286,6 +288,7 @@ interface ReactionEmojiSectionNavItem {
     CustomDialogComponent,
     CustomEmojiComponent,
     EmojiPickerComponent,
+    CelebrationBurstComponent,
   ],
   templateUrl: './reaction-button.component.html',
   styleUrls: ['./reaction-button.component.scss'],
@@ -304,6 +307,7 @@ export class ReactionButtonComponent {
   private readonly logger = inject(LoggerService);
   private readonly localSettings = inject(LocalSettingsService);
   private readonly customDialog = inject(CustomDialogService);
+  private readonly haptics = inject(HapticsService);
   private readonly platformId = inject(PLATFORM_ID);
   private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
   private readonly elRef = inject(ElementRef);
@@ -364,6 +368,8 @@ export class ReactionButtonComponent {
   protected desktopHoverOpen = signal(false);
   protected desktopHoverSurfaceActive = signal(false);
   protected desktopHoverMenuActive = signal(false);
+  protected likeCelebrationTier = signal(0);
+  private likeCelebrationTimer: ReturnType<typeof setTimeout> | null = null;
 
   /**
    * Send the user's default reaction emoji (from settings) on a single tap.
@@ -1156,8 +1162,10 @@ export class ReactionButtonComponent {
           if (this.disabled()) {
             return;
           }
-
         }
+
+        this.haptics.triggerLight();
+        this.triggerReactionCelebration(emoji);
         // Track emoji usage for recent emojis
         this.trackEmojiUsage(emoji, emojiUrl);
         // Notify parent to reload reactions
@@ -1214,6 +1222,8 @@ export class ReactionButtonComponent {
         }
 
         if (result.success) {
+          this.haptics.triggerMedium();
+          this.triggerReactionCelebration('+');
           this.reactionChanged.emit();
         }
       }
@@ -1475,6 +1485,21 @@ export class ReactionButtonComponent {
     // Update local signal immediately for UI responsiveness
     const recent = this.accountLocalState.getRecentEmojis(pubkey);
     this.recentEmojis.set(recent);
+  }
+
+  private triggerReactionCelebration(emoji: string): void {
+    const normalizedEmoji = emoji.trim();
+    const tier = normalizedEmoji === '+' || normalizedEmoji === '❤️' || normalizedEmoji === '❤' ? 2 : 1;
+
+    if (this.likeCelebrationTimer) {
+      clearTimeout(this.likeCelebrationTimer);
+    }
+
+    this.likeCelebrationTier.set(tier);
+    this.likeCelebrationTimer = setTimeout(() => {
+      this.likeCelebrationTier.set(0);
+      this.likeCelebrationTimer = null;
+    }, tier === 2 ? 720 : 620);
   }
 
   /**

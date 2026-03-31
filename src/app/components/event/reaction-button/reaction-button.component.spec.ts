@@ -16,6 +16,7 @@ import { DataService } from '../../../services/data.service';
 import { DatabaseService } from '../../../services/database.service';
 import { LoggerService } from '../../../services/logger.service';
 import { CustomDialogService } from '../../../services/custom-dialog.service';
+import { HapticsService } from '../../../services/haptics.service';
 
 describe('ReactionButtonComponent', () => {
   let component: ReactionButtonComponent;
@@ -33,6 +34,10 @@ describe('ReactionButtonComponent', () => {
     addLike: vi.fn(),
     deleteReaction: vi.fn(),
     addReaction: vi.fn(),
+  };
+  const haptics = {
+    triggerLight: vi.fn(),
+    triggerMedium: vi.fn(),
   };
 
   const targetEvent: Event = {
@@ -144,6 +149,10 @@ describe('ReactionButtonComponent', () => {
             open: vi.fn(),
           },
         },
+        {
+          provide: HapticsService,
+          useValue: haptics,
+        },
       ],
     }).compileComponents();
 
@@ -156,6 +165,8 @@ describe('ReactionButtonComponent', () => {
     reactionService.addLike.mockReset();
     reactionService.deleteReaction.mockReset();
     reactionService.addReaction.mockReset();
+    haptics.triggerLight.mockReset();
+    haptics.triggerMedium.mockReset();
   });
 
   it('should create', () => {
@@ -604,9 +615,12 @@ describe('ReactionButtonComponent', () => {
       component.reactions.set({ events: [], data: new Map() });
 
       await component.toggleLike();
+      fixture.detectChanges();
 
       expect(reactionService.addLike).toHaveBeenCalledWith(targetEvent);
       expect(emitSpy).toHaveBeenCalled();
+      expect(haptics.triggerMedium).toHaveBeenCalled();
+      expect(fixture.nativeElement.querySelector('app-celebration-burst .celebration-overlay')).toBeTruthy();
     });
   });
 });

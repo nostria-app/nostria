@@ -35,82 +35,21 @@
           </p>
           }
         </div>
-        <div class="logo-container"
-             [class.zap-tier-1]="demoTier() === 1"
-             [class.zap-tier-2]="demoTier() === 2"
-             [class.zap-tier-3]="demoTier() === 3"
-             [class.zap-tier-4]="demoTier() === 4"
-             [class.zap-tier-5]="demoTier() === 5"
+        <app-celebration-burst class="logo-container"
+             theme="zap"
+             mode="logo"
+             [tier]="demoTier()"
              (click)="playZapDemo()">
-          @if (!videoFailed()) {
-          <video src="icons/nostria.mp4"
-                 class="logo"
-                 [class.celebrating]="demoTier() > 0"
+           @if (!videoFailed()) {
+           <video src="icons/nostria.mp4"
+                 class="logo celebration-target"
                  autoplay loop muted playsinline poster="icons/icon-512x512.png"
-            (error)="videoFailed.set(true)"></video>
-          } @else {
-          <img src="icons/icon-512x512.png" alt="Nostria Logo"
-               class="logo"
-               [class.celebrating]="demoTier() > 0">
-          }
-          <!-- Celebration overlay (easter egg) -->
-          @if (demoTier() > 0) {
-            <div class="celebration-overlay">
-              <!-- Glow rings -->
-              <div class="glow-ring ring-1"></div>
-              @if (demoTier() >= 3) {
-                <div class="glow-ring ring-2"></div>
-              }
-              @if (demoTier() >= 4) {
-                <div class="glow-ring ring-3"></div>
-              }
-              @if (demoTier() >= 5) {
-                <div class="glow-ring ring-4"></div>
-              }
-              <!-- Tier 1: 4 bolt particles -->
-              <span class="particle p1">⚡</span>
-              <span class="particle p2">⚡</span>
-              <span class="particle p3">⚡</span>
-              <span class="particle p4">⚡</span>
-              <!-- Tier 2+: additional bolts and stars -->
-              @if (demoTier() >= 2) {
-                <span class="particle p5">⚡</span>
-                <span class="particle p6">✦</span>
-                <span class="particle p7">⚡</span>
-                <span class="particle p8">✦</span>
-              }
-              <!-- Tier 3+: sparkles and extra bolts -->
-              @if (demoTier() >= 3) {
-                <span class="particle p9">✨</span>
-                <span class="particle p10">⚡</span>
-                <span class="particle p11">✨</span>
-                <span class="particle p12">⚡</span>
-              }
-              <!-- Tier 4+: coins and fire -->
-              @if (demoTier() >= 4) {
-                <span class="particle p13">🪙</span>
-                <span class="particle p14">🔥</span>
-                <span class="particle p15">🪙</span>
-                <span class="particle p16">🔥</span>
-                <span class="particle p17">⭐</span>
-                <span class="particle p18">⚡</span>
-              }
-              <!-- Tier 5: rockets, explosions, crown, diamond -->
-              @if (demoTier() >= 5) {
-                <span class="particle p19">🚀</span>
-                <span class="particle p20">💥</span>
-                <span class="particle p21">👑</span>
-                <span class="particle p22">💎</span>
-                <span class="particle p23">🚀</span>
-                <span class="particle p24">💥</span>
-                <span class="particle p25">⚡</span>
-                <span class="particle p26">✨</span>
-                <span class="particle p27">⚡</span>
-                <span class="particle p28">✨</span>
-              }
-            </div>
-          }
-        </div>
+             (error)="videoFailed.set(true)"></video>
+           } @else {
+           <img src="icons/icon-512x512.png" alt="Nostria Logo"
+                class="logo celebration-target">
+           }
+        </app-celebration-burst>
       </div>
 
       <h3>Your Social Network, built for human connection.</h3>
