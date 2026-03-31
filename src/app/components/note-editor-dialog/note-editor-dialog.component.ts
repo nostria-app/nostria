@@ -890,7 +890,6 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     this.setupPasteHandler();
     window.addEventListener('resize', this.handleViewportResize);
     window.visualViewport?.addEventListener('resize', this.handleViewportResize);
-    window.visualViewport?.addEventListener('scroll', this.handleViewportResize);
 
     // Auto-focus the textarea (only in dialog mode)
     if (!this.inlineMode()) {
@@ -964,7 +963,6 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     }
     window.removeEventListener('resize', this.handleViewportResize);
     window.visualViewport?.removeEventListener('resize', this.handleViewportResize);
-    window.visualViewport?.removeEventListener('scroll', this.handleViewportResize);
     this.dialogRef?.updateShowHeader(true);
 
     // Clear auto-save timer on destroy
@@ -2613,7 +2611,30 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
           dialogContentWrapper.scrollTop = dialogScrollTop;
         }
       }
+
+      if (document.activeElement === textarea && this.isCompactDialogLayout()) {
+        this.ensureCaretVisible(textarea);
+      }
     });
+  }
+
+  private ensureCaretVisible(textarea: HTMLTextAreaElement): void {
+    const caret = this.getCaretCoordinates(textarea);
+    const visibleTop = textarea.scrollTop;
+    const visibleBottom = textarea.scrollTop + textarea.clientHeight;
+    const topPadding = 12;
+    const bottomPadding = 24;
+    const caretTop = caret.top;
+    const caretBottom = caret.top + caret.height;
+
+    if (caretTop < visibleTop + topPadding) {
+      textarea.scrollTop = Math.max(0, caretTop - topPadding);
+      return;
+    }
+
+    if (caretBottom > visibleBottom - bottomPadding) {
+      textarea.scrollTop = Math.max(0, caretBottom - textarea.clientHeight + bottomPadding);
+    }
   }
 
   private shouldKeepTextareaScrolledToBottom(textarea: HTMLTextAreaElement, cursorPosition?: number): boolean {
@@ -2661,10 +2682,6 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     }
   }
 
-  private getKeyboardObscuredHeight(viewportHeight: number, viewportTop: number): number {
-    return Math.max(0, this.viewportHeightBaseline - viewportHeight - viewportTop);
-  }
-
   private syncTextareaHeight(textarea: HTMLTextAreaElement): void {
     if (this.inlineMode()) {
       // Inline mode: auto-grow with max-height cap
@@ -2692,20 +2709,21 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
 
       const visualViewport = window.visualViewport;
       const viewportBottom = visualViewport ? visualViewport.offsetTop + visualViewport.height : window.innerHeight;
-      const viewportHeight = visualViewport?.height ?? window.innerHeight;
-      const viewportTop = visualViewport?.offsetTop ?? 0;
-      const keyboardOffset = this.getKeyboardObscuredHeight(viewportHeight, viewportTop);
       const wrapperRect = this.dialogContentWrapper?.nativeElement.getBoundingClientRect();
       const composerActions = this.composerActions?.nativeElement;
+      const footerGap = 8;
       if (composerActions) {
-        composerActions.style.transform = keyboardOffset > 0 ? `translateY(-${Math.floor(keyboardOffset)}px)` : '';
-        composerActions.style.willChange = keyboardOffset > 0 ? 'transform' : '';
+        composerActions.style.transform = '';
+        const footerRect = composerActions.getBoundingClientRect();
+        const footerOverflow = Math.max(0, footerRect.bottom - (viewportBottom - footerGap));
+        composerActions.style.transform = footerOverflow > 0 ? `translateY(-${Math.ceil(footerOverflow)}px)` : '';
+        composerActions.style.willChange = footerOverflow > 0 ? 'transform' : '';
       }
       const composerActionsRect = composerActions?.getBoundingClientRect();
       const textareaRect = textarea.getBoundingClientRect();
       const footerTop = composerActionsRect?.top;
-      const containerBottom = footerTop ? Math.min(footerTop - 8, viewportBottom - 8) : (wrapperRect?.bottom ?? viewportBottom);
-      const bottomLimit = Math.min(containerBottom - 8, viewportBottom - 8);
+      const containerBottom = footerTop ? Math.min(footerTop - footerGap, viewportBottom - footerGap) : (wrapperRect?.bottom ?? viewportBottom);
+      const bottomLimit = Math.min(containerBottom - footerGap, viewportBottom - footerGap);
       const minHeight = Math.min(140, Math.max(96, window.innerHeight * 0.18));
       const availableHeight = Math.max(0, Math.floor(bottomLimit - textareaRect.top));
       const maxHeightSource = footerTop ? footerTop - 16 : (wrapperRect?.bottom ?? viewportBottom);
@@ -2943,11 +2961,17 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   onContentClick(event: MouseEvent): void {
     const target = event.target as HTMLTextAreaElement;
     this.syncSlashAndMentionStateFromSelection(target);
+    if (this.isCompactDialogLayout()) {
+      this.scheduleTextareaRefresh(undefined, false, false, false, false);
+    }
   }
 
   onContentSelectionChange(event: Event): void {
     const target = event.target as HTMLTextAreaElement;
     this.syncSlashAndMentionStateFromSelection(target);
+    if (this.isCompactDialogLayout()) {
+      this.scheduleTextareaRefresh(undefined, false, false, false, false);
+    }
   }
 
   private syncSlashAndMentionStateFromSelection(textarea: HTMLTextAreaElement): void {

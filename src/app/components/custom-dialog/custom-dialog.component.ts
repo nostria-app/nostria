@@ -413,7 +413,6 @@ export class CustomDialogComponent implements AfterViewInit, OnDestroy {
     };
 
     window.visualViewport.addEventListener('resize', this.visualViewportHandler);
-    window.visualViewport.addEventListener('scroll', this.visualViewportHandler);
     this.visualViewportHandler();
   }
 
@@ -423,7 +422,6 @@ export class CustomDialogComponent implements AfterViewInit, OnDestroy {
     }
 
     window.visualViewport.removeEventListener('resize', this.visualViewportHandler);
-    window.visualViewport.removeEventListener('scroll', this.visualViewportHandler);
     this.visualViewportHandler = null;
   }
 
