@@ -341,8 +341,11 @@ const result = await ref.closed.toPromise();
 
 - Responsive: floating on desktop, full-screen on mobile
 - Keyboard-aware: adjusts for mobile keyboard
+- iOS visual viewport aware: dialog shell follows `visualViewport` pan/resize so fixed dialogs stay aligned with the visible viewport during Safari keyboard focus changes
 - Enter key support for primary action
 - Backdrop click to close
+
+For the note editor's iPhone/Safari behavior, see [docs/note-editor-ios-keyboard-behavior.md](docs/note-editor-ios-keyboard-behavior.md). That document defines implementation invariants that should not be simplified or removed without validating long-note focus behavior on a physical iPhone Safari device.
 
 ---
 
@@ -1116,6 +1119,17 @@ AccountRelayService.publish()
     ↓
 Multiple relays (user's relay list)
 ```
+
+### iPhone Safari Note Editor
+
+The note editor has special keyboard-handling behavior on iPhone Safari because the browser pans the visual viewport to reveal lower carets inside focused textareas. That behavior is intentionally handled across both the dialog shell and the editor internals:
+
+- `CustomDialogComponent` follows `visualViewport` offset changes on iOS so the full-screen dialog stays aligned with the visible viewport instead of the layout viewport.
+- `NoteEditorDialogComponent` treats the textarea as the only scrollable area in compact keyboard mode; outer dialog wrappers must not become scroll targets while the keyboard is open.
+- Compact sizing for the textarea and footer is based on visible viewport geometry and measured footer overlap, not on caret depth or viewport pan amount.
+- Focusing deeper in a long note must not move the entire dialog upward; only the textarea scroll position may change to reveal the caret.
+
+These rules are documented in [docs/note-editor-ios-keyboard-behavior.md](docs/note-editor-ios-keyboard-behavior.md) and should be preserved when refactoring the dialog or composer layout.
 
 ### Media Upload
 
