@@ -917,7 +917,7 @@ export class ReactionButtonComponent {
       // If parent provides reactions, use them
       if (parentReactions !== null) {
         this.reactionsMutationVersion++;
-        this.reactions.set(parentReactions);
+        this.reactions.set(this.filterReactionsForCurrentEvent(parentReactions));
       }
     });
 
@@ -936,6 +936,42 @@ export class ReactionButtonComponent {
         this.loadReactions();
       });
     });
+  }
+
+  private filterReactionsForCurrentEvent(reactions: ReactionEvents): ReactionEvents {
+    const currentEvent = this.event();
+    if (!currentEvent || reactions.events.length === 0) {
+      return reactions;
+    }
+
+    const dTag = currentEvent.tags.find(tag => tag[0] === 'd')?.[1];
+    const eventAddress = dTag ? `${currentEvent.kind}:${currentEvent.pubkey}:${dTag}` : null;
+
+    const filteredEvents = reactions.events.filter(record => {
+      const tags = record.event.tags;
+      const matchesEventId = tags.some(tag => tag[0] === 'e' && tag[1] === currentEvent.id);
+      const matchesAddress = !!eventAddress && tags.some(tag => tag[0] === 'a' && tag[1] === eventAddress);
+      return matchesEventId || matchesAddress;
+    });
+
+    if (filteredEvents.length === reactions.events.length) {
+      return reactions;
+    }
+
+    const filteredCounts = new Map<string, number>();
+    filteredEvents.forEach(record => {
+      const emoji = record.event.content?.trim();
+      if (!emoji) {
+        return;
+      }
+
+      filteredCounts.set(emoji, (filteredCounts.get(emoji) || 0) + 1);
+    });
+
+    return {
+      events: filteredEvents,
+      data: filteredCounts,
+    };
   }
 
   async addReaction(emoji: string, closePicker = true) {

@@ -289,6 +289,46 @@ describe('ReactionButtonComponent', () => {
     });
   });
 
+  describe('default reaction icon rendering', () => {
+    it('shows an empty heart before the user has reacted, even with a preferred emoji', () => {
+      accountLocalState.getMostUsedReactionEmoji.mockReturnValue({
+        emoji: '⚡',
+        timestamp: Date.now(),
+        useCount: 12,
+      });
+
+      setRequiredInputs();
+
+      const button: HTMLButtonElement | null = fixture.nativeElement.querySelector('button');
+      expect(button?.textContent).toContain('favorite_border');
+      expect(button?.textContent).not.toContain('⚡');
+    });
+
+    it('shows the user reaction after reacting', () => {
+      component.reactions.set({
+        events: [{
+          event: {
+            id: 'reaction-1',
+            pubkey: 'test-pubkey',
+            created_at: 1,
+            kind: kinds.Reaction,
+            content: '⚡',
+            tags: [],
+            sig: 'sig',
+          },
+          data: '⚡',
+        }],
+        data: new Map([['⚡', 1]]),
+      });
+
+      setRequiredInputs();
+
+      const button: HTMLButtonElement | null = fixture.nativeElement.querySelector('button');
+      expect(button?.textContent).toContain('⚡');
+      expect(button?.textContent).not.toContain('favorite_border');
+    });
+  });
+
   describe('long-press detection', () => {
     beforeEach(() => {
       vi.useFakeTimers();

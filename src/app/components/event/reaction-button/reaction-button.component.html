@@ -14,11 +14,7 @@
     <span class="emoji-icon">{{ getReactionDisplay(userReaction()!.event.content) }}</span>
     }
     } @else {
-    @if (defaultReaction()?.url) {
-    <app-custom-emoji [src]="defaultReaction()!.url!" [alt]="defaultReaction()!.emoji" cssClass="emoji-icon-img" />
-    } @else {
-    <span class="emoji-icon">{{ getReactionDisplay(defaultReaction()?.emoji || '') }}</span>
-    }
+    <mat-icon>favorite_border</mat-icon>
     }
   </button>
 
@@ -98,11 +94,7 @@
       Unlike
       } @else {
       <ng-container>
-        @if (defaultReaction()?.url) {
-        <app-custom-emoji [src]="defaultReaction()!.url!" [alt]="defaultReaction()!.emoji" cssClass="emoji-icon-img" />
-        } @else {
-        <span class="emoji-icon">{{ getReactionDisplay(defaultReaction()?.emoji || '') }}</span>
-        }
+        <mat-icon>favorite_border</mat-icon>
         Like
       </ng-container>
       }
