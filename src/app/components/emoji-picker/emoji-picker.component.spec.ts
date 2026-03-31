@@ -3,27 +3,46 @@ import { provideZonelessChangeDetection } from '@angular/core';
 import { EmojiPickerComponent } from './emoji-picker.component';
 import { AccountLocalStateService } from '../../services/account-local-state.service';
 import { AccountStateService } from '../../services/account-state.service';
+import { LocalSettingsService } from '../../services/local-settings.service';
 
 describe('EmojiPickerComponent', () => {
   let component: EmojiPickerComponent;
   let fixture: ComponentFixture<EmojiPickerComponent>;
+  let accountLocalState: {
+    getRecentEmojis: ReturnType<typeof vi.fn>;
+    addRecentEmoji: ReturnType<typeof vi.fn>;
+    promoteRecentEmoji: ReturnType<typeof vi.fn>;
+    getPreferredReactionEmoji: ReturnType<typeof vi.fn>;
+    setPreferredReactionEmoji: ReturnType<typeof vi.fn>;
+  };
 
   beforeEach(() => {
+    accountLocalState = {
+      getRecentEmojis: vi.fn().mockReturnValue([]),
+      addRecentEmoji: vi.fn(),
+      promoteRecentEmoji: vi.fn(),
+      getPreferredReactionEmoji: vi.fn().mockReturnValue(''),
+      setPreferredReactionEmoji: vi.fn(),
+    };
+
     TestBed.configureTestingModule({
       imports: [EmojiPickerComponent],
       providers: [
         provideZonelessChangeDetection(),
         {
           provide: AccountLocalStateService,
-          useValue: {
-            getRecentEmojis: vi.fn().mockReturnValue([]),
-            addRecentEmoji: vi.fn(),
-          },
+          useValue: accountLocalState,
         },
         {
           provide: AccountStateService,
           useValue: {
             pubkey: vi.fn().mockReturnValue('test-pubkey'),
+          },
+        },
+        {
+          provide: LocalSettingsService,
+          useValue: {
+            defaultReactionEmoji: vi.fn().mockReturnValue('❤️'),
           },
         },
       ],
@@ -93,5 +112,34 @@ describe('EmojiPickerComponent', () => {
     await fixture.whenStable();
     const buttons = (fixture.nativeElement as HTMLElement).querySelectorAll('.section-nav-btn');
     expect(buttons.length).toBe(component.categories.length + 1);
+  });
+
+  it('should render plus and minus reaction buttons in reaction mode', async () => {
+    fixture.componentRef.setInput('mode', 'reaction');
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const reactionSymbols = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('.reaction-symbol'))
+      .map(element => element.textContent?.trim());
+
+    expect(reactionSymbols).toContain('+');
+    expect(reactionSymbols).toContain('-');
+  });
+
+  it('should keep make most recent separate from make default', () => {
+    component.emojiContextMenuTarget.set({ emoji: '🔥' });
+
+    component.makeEmojiMostRecent();
+
+    expect(accountLocalState.promoteRecentEmoji).toHaveBeenCalledWith('test-pubkey', '🔥', undefined);
+    expect(accountLocalState.setPreferredReactionEmoji).not.toHaveBeenCalled();
+  });
+
+  it('should set the selected emoji as default from the context menu', () => {
+    component.emojiContextMenuTarget.set({ emoji: '🔥' });
+
+    component.makeEmojiDefault();
+
+    expect(accountLocalState.setPreferredReactionEmoji).toHaveBeenCalledWith('test-pubkey', '🔥');
   });
 });

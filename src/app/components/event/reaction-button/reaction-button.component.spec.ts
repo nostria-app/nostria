@@ -398,6 +398,14 @@ describe('ReactionButtonComponent', () => {
       component.onPointerUp(new PointerEvent('pointerup', { cancelable: true }));
       expect(sendDefaultReactionSpy).toHaveBeenCalledTimes(2);
     });
+
+    it('should send the default reaction on mouse click', () => {
+      const sendDefaultReactionSpy = vi.spyOn(component, 'sendDefaultReaction');
+
+      component.onClick(new MouseEvent('click', { bubbles: true, cancelable: true }));
+
+      expect(sendDefaultReactionSpy).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe('signing error handling', () => {

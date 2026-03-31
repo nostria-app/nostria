@@ -8,7 +8,6 @@ import { MatMenuModule, MatMenuTrigger } from '@angular/material/menu';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { RouterLink } from '@angular/router';
 import type { Event } from 'nostr-tools';
 import { kinds } from 'nostr-tools';
 import type { NostrRecord } from '../../../interfaces';
@@ -284,7 +283,6 @@ interface ReactionEmojiSectionNavItem {
     MatMenuModule,
     MatProgressSpinnerModule,
     OverlayModule,
-    RouterLink,
     CustomDialogComponent,
     CustomEmojiComponent,
     EmojiPickerComponent,
@@ -451,6 +449,7 @@ export class ReactionButtonComponent {
     }
 
     this.pointerDownType = null;
+    this.sendDefaultReaction();
   }
 
   onDesktopMouseEnter(): void {
