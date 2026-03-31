@@ -96,11 +96,14 @@ export class CollectionSetsService {
       const pubkey = this.accountState.pubkey();
 
       if (pubkey && pubkey !== this.lastLoadedPubkey) {
+        this.interestSets.set([]);
+        this.interestSetsLoading.set(true);
         this.lastLoadedPubkey = pubkey;
         this.loadInterestSetsForAccount(pubkey);
       } else if (!pubkey) {
         this.lastLoadedPubkey = null;
         this.interestSets.set([]);
+        this.interestSetsLoading.set(false);
       }
     });
   }
@@ -112,11 +115,15 @@ export class CollectionSetsService {
     this.interestSetsLoading.set(true);
     try {
       const sets = await this.getInterestSets(pubkey);
-      this.interestSets.set(sets);
+      if (this.lastLoadedPubkey === pubkey) {
+        this.interestSets.set(sets);
+      }
     } catch (error) {
       this.logger.error('Error loading interest sets for account:', error);
     } finally {
-      this.interestSetsLoading.set(false);
+      if (this.lastLoadedPubkey === pubkey) {
+        this.interestSetsLoading.set(false);
+      }
     }
   }
 
@@ -511,12 +518,6 @@ export class CollectionSetsService {
 
       // If no interest sets exist, return a default one
       if (interestSets.length === 0) {
-        const cachedSets = this.getCachedInterestSets(pubkey);
-        if (cachedSets) {
-          this.logger.debug('No interest sets found, keeping cached interest sets');
-          return cachedSets;
-        }
-
         this.logger.debug('No interest sets found, returning default');
         return [this.createDefaultInterestSet()];
       }

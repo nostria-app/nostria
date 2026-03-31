@@ -1,7 +1,7 @@
 <!-- Panel Header -->
 <div class="panel-header">
   <!-- Interactive List Selector -->
-  @if (allFollowSets().length > 0) {
+  @if (otherFollowSets().length > 0 || favoritesSet()) {
   <button class="list-selector-button" mat-button [matMenuTriggerFor]="followSetsMenu"
     [class.has-selection]="selectedFollowSet()">
     <mat-icon class="selector-icon">{{ selectedFollowSet() ? (selectedFollowSet()!.isPrivate ? 'lock' :

@@ -563,11 +563,13 @@ export class App implements OnInit, OnDestroy {
           followSetId: set.dTag,
         }));
 
+        const hasRealFollowingLists = followSetChildren.length > 0;
+
         return {
           ...item,
-          expandable: true,
-          expanded: expandedItems['people'] || false,
-          children: followSetChildren,
+          expandable: hasRealFollowingLists,
+          expanded: hasRealFollowingLists ? (expandedItems['people'] || false) : false,
+          children: hasRealFollowingLists ? followSetChildren : undefined,
         };
       }
 

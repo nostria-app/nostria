@@ -160,32 +160,37 @@ export class SettingsService {
     null;
   private liveSettingsSubscriptionPubkey: string | null = null;
   private currentSettingsEventCreatedAt: number | null = null;
+  private loadedSettingsPubkey: string | null = null;
 
   constructor() {
     effect(async () => {
       const account = this.accountState.account();
       const initialized = this.accountState.initialized();
+      const pubkey = this.accountState.pubkey();
 
-      if (account && initialized) {
+      if (account && initialized && pubkey) {
         // Skip if settings are already loaded for this account
         // (StateService loads settings directly for faster startup)
-        if (this.settingsLoaded()) {
+        if (this.settingsLoaded() && this.loadedSettingsPubkey === pubkey) {
           return;
         }
         // Mark settings as not loaded while we fetch
         this.settingsLoaded.set(false);
         this.hasPersistedSettingsEvent.set(null);
+        this.loadedSettingsPubkey = null;
         // Reset to defaults first to ensure clean state
         this.settings.set({ ...DEFAULT_SETTINGS });
         // Then load settings for this account
-        await this.loadSettings(this.accountState.pubkey());
+        await this.loadSettings(pubkey);
         // Mark settings as loaded after fetch completes
+        this.loadedSettingsPubkey = pubkey;
         this.settingsLoaded.set(true);
       } else if (!account) {
         // No account, reset to defaults and mark as loaded (defaults are safe for anonymous)
         this.settings.set({ ...DEFAULT_SETTINGS });
         this.hasPersistedSettingsEvent.set(false);
         this.currentSettingsEventCreatedAt = null;
+        this.loadedSettingsPubkey = null;
         this.settingsLoaded.set(true);
       }
     });
