@@ -25,6 +25,7 @@ export class ZapSoundService {
   private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
   private readonly settingsService = inject(SettingsService);
   private audioContext: AudioContext | null = null;
+  private likeAudio: HTMLAudioElement | null = null;
 
   private getAudioContext(): AudioContext | null {
     if (!this.isBrowser) {
@@ -87,39 +88,27 @@ export class ZapSoundService {
 
   /** Play a light confirmation sound for likes. */
   playLikeSound(): void {
-    if (this.settingsService.settings().zapSoundsEnabled === false) {
+    if (!this.isBrowser || this.settingsService.settings().zapSoundsEnabled === false) {
       return;
     }
 
-    const ctx = this.getAudioContext();
-    if (!ctx) {
+    if (!this.likeAudio) {
+      try {
+        this.likeAudio = new Audio('/assets/sounds/likes/like.wav');
+        this.likeAudio.preload = 'auto';
+      } catch {
+        this.likeAudio = null;
+      }
+    }
+
+    if (!this.likeAudio) {
       return;
     }
 
     try {
-      const now = ctx.currentTime;
-      const masterGain = ctx.createGain();
-      masterGain.gain.setValueAtTime(0.18, now);
-      masterGain.connect(ctx.destination);
-
-      this.oscNote(ctx, now, masterGain, {
-        type: 'triangle',
-        freq: 740,
-        gain: 0.16,
-        dur: 0.08,
-      });
-      this.oscNote(ctx, now + 0.045, masterGain, {
-        type: 'sine',
-        freq: 988,
-        gain: 0.13,
-        dur: 0.15,
-      });
-      this.oscNote(ctx, now + 0.07, masterGain, {
-        type: 'sine',
-        freq: 1480,
-        gain: 0.06,
-        dur: 0.12,
-      });
+      this.likeAudio.currentTime = 0;
+      this.likeAudio.volume = 0.45;
+      void this.likeAudio.play();
     } catch {
       // Silently ignore audio errors
     }
