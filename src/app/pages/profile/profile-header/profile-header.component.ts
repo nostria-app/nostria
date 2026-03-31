@@ -687,6 +687,15 @@ export class ProfileHeaderComponent implements OnDestroy {
           clearTimeout(this.badgeTimeouts.get(badgeKey)!);
           this.badgeTimeouts.delete(badgeKey);
         }
+
+        // If badge finished loading after timing out, allow it to render again.
+        if (!loadingBadges.has(badgeKey) && this.timedOutBadges().has(badgeKey)) {
+          this.timedOutBadges.update(timedOut => {
+            const newSet = new Set(timedOut);
+            newSet.delete(badgeKey);
+            return newSet;
+          });
+        }
       }
     });
 

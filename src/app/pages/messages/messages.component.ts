@@ -1076,8 +1076,26 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     this.route.queryParams.pipe(
       takeUntilDestroyed(this.destroyRef)
     ).subscribe(params => {
+      const chatId = params['chat'];
       const pubkey = params['pubkey'];
-      if (pubkey) {
+      if (chatId) {
+        this.logger.debug('Query param chat detected:', chatId);
+        this.isOpeningChat.set(true);
+        this.openChatById(chatId);
+        this.isOpeningChat.set(false);
+
+        if (!this.messaging.isLoading() && this.messaging.sortedChats().length === 0) {
+          this.logger.debug('Loading chats in background after opening chat link...');
+          this.messaging.loadChats().catch(error => {
+            this.logger.error('Failed to load chats for chat link:', error);
+          });
+        } else if (!this.messaging.isLoading()) {
+          this.logger.debug('Refreshing chats in background after opening chat link...');
+          this.messaging.refreshChats().catch(error => {
+            this.logger.warn('Failed to refresh chats:', error);
+          });
+        }
+      } else if (pubkey) {
         this.logger.debug('Query param pubkey detected:', pubkey);
 
         // Show a loading indicator immediately so the user gets visual feedback
@@ -4252,6 +4270,22 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   startChatWithPubkey(pubkey: string): void {
     // Use modern encryption (NIP-44) by default
     this.startChatWithUser(pubkey, false);
+  }
+
+  private openChatById(chatId: string): void {
+    const existingChat = this.messaging.sortedChats().find(item => item.chat.id === chatId)?.chat;
+    if (existingChat) {
+      void this.selectChat(existingChat);
+      return;
+    }
+
+    const mappedChat = this.messaging.getChat(chatId);
+    if (mappedChat) {
+      void this.selectChat(mappedChat);
+      return;
+    }
+
+    this.logger.debug('Chat not available yet, waiting for refresh', { chatId });
   }
 
   /**

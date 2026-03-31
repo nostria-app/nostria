@@ -128,7 +128,6 @@
         @for (badge of topBadges(); track $index) {
         @let parsedBadge = parsedBadges()[$index];
         @let isTimedOut = isBadgeTimedOut()[$index];
-        @if (!isTimedOut) {
         <a (click)="navigateToBadges($event)" class="badge-item" [attr.data-badge-pubkey]="badge.pubkey"
           [attr.data-badge-slug]="badge.slug" (mouseenter)="onBadgeMouseEnter($event, badge)"
           (mouseleave)="onBadgeMouseLeave()">
@@ -142,7 +141,7 @@
           <img [src]="parsedBadge.thumb || parsedBadge.image" [alt]="parsedBadge.name || 'Badge'"
             [title]="parsedBadge.name || 'Badge'" class="badge-image" loading="lazy"
             (error)="onBadgeImageError($event)" />
-          } @else if (isBadgeLoading()[$index]) {
+          } @else if (isBadgeLoading()[$index] && !isTimedOut) {
           <!-- Show loading spinner while badge is loading -->
           <div class="badge-loading" title="Loading badge...">
             <mat-spinner diameter="32"></mat-spinner>
@@ -154,7 +153,6 @@
           </div>
           }
         </a>
-        }
         }
       </div>
       }
