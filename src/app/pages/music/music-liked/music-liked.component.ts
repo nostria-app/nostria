@@ -448,7 +448,6 @@ export class MusicLikedComponent implements OnDestroy, AfterViewInit {
 
   private reactionSubscription: { close: () => void } | null = null;
   private trackSubscription: { close: () => void } | null = null;
-  private trackFetchSubscriptions: { close: () => void }[] = [];
   private likedEventIds = new Set<string>();
   private trackMap = new Map<string, Event>();
   private intersectionObserver: IntersectionObserver | null = null;
@@ -502,8 +501,6 @@ export class MusicLikedComponent implements OnDestroy, AfterViewInit {
   ngOnDestroy(): void {
     this.reactionSubscription?.close();
     this.trackSubscription?.close();
-    this.trackFetchSubscriptions.forEach(sub => sub.close());
-    this.trackFetchSubscriptions = [];
     this.intersectionObserver?.disconnect();
   }
 
@@ -605,101 +602,82 @@ export class MusicLikedComponent implements OnDestroy, AfterViewInit {
       }
     });
 
-    let tracksLoaded = false;
-    this.trackFetchSubscriptions.forEach(sub => sub.close());
-    this.trackFetchSubscriptions = [];
+    void this.fetchLikedTracksSnapshot(relayUrls, aTagCoordinates, eventIds);
+  }
 
-    const finishTrackLoading = (): void => {
-      this.trackFetchSubscriptions.forEach(sub => sub.close());
-      this.trackFetchSubscriptions = [];
-
-      if (!tracksLoaded) {
-        clearTimeout(trackTimeout);
-        tracksLoaded = true;
-        this.loading.set(false);
-        this.tryObserveSentinel();
-      }
-    };
-
-    const trackTimeout = setTimeout(() => {
-      finishTrackLoading();
-    }, 5000);
-
-    // Subscribe to tracks by coordinate (for addressable events)
-    if (aTagCoordinates.length > 0) {
-      // Parse coordinates and build filters
-      const trackFilters: Filter[] = aTagCoordinates
-        .map(coord => this.utilities.parseMusicTrackCoordinate(coord))
-        .filter((coord): coord is { kind: number; pubkey: string; identifier: string } => coord !== null)
-        .map(coord => ({
-          kinds: [coord.kind],
-          authors: [coord.pubkey],
-          '#d': [coord.identifier],
-        }));
-
-      if (trackFilters.length > 0) {
-        // Batch filters in groups of 20 to avoid too large requests
-        const batchSize = 20;
-        for (let i = 0; i < trackFilters.length; i += batchSize) {
-          const batch = trackFilters.slice(i, i + batchSize);
-          batch.forEach(filter => {
-            const sub = this.pool.subscribe(relayUrls, filter, (event: Event) => {
-              if (this.reporting.isUserBlocked(event.pubkey)) return;
-              if (this.reporting.isContentBlocked(event)) return;
-
-              const uniqueId = this.getTrackUniqueId(event);
-
-              const existing = this.trackMap.get(uniqueId);
-              if (existing && existing.created_at >= event.created_at) return;
-
-              this.trackMap.set(uniqueId, event);
-              this.allTracks.set(
-                Array.from(this.trackMap.values()).sort((a, b) => b.created_at - a.created_at)
-              );
-
-              if (!tracksLoaded) {
-                finishTrackLoading();
-              }
-            });
-            this.trackFetchSubscriptions.push(sub);
-          });
-        }
-      }
-    }
-
-    // Also fetch by event IDs if any
-    if (eventIds.length > 0) {
-      const idFilter: Filter = {
-        kinds: MUSIC_KINDS,
-        ids: eventIds.slice(0, 100), // Limit to 100 IDs per request
-      };
-
-      const sub = this.pool.subscribe(relayUrls, idFilter, (event: Event) => {
-        if (this.reporting.isUserBlocked(event.pubkey)) return;
-        if (this.reporting.isContentBlocked(event)) return;
-
-        const uniqueId = this.getTrackUniqueId(event);
-
-        const existing = this.trackMap.get(uniqueId);
-        if (existing && existing.created_at >= event.created_at) return;
-
-        this.trackMap.set(uniqueId, event);
-        this.allTracks.set(
-          Array.from(this.trackMap.values()).sort((a, b) => b.created_at - a.created_at)
-        );
-
-        if (!tracksLoaded) {
-          finishTrackLoading();
-        }
-      });
-      this.trackFetchSubscriptions.push(sub);
-    }
-
-    // Fallback if no tracks found
+  private async fetchLikedTracksSnapshot(
+    relayUrls: string[],
+    aTagCoordinates: string[],
+    eventIds: string[],
+  ): Promise<void> {
     if (aTagCoordinates.length === 0 && eventIds.length === 0) {
       this.loading.set(false);
       this.tryObserveSentinel();
+      return;
     }
+
+    const parsedCoordinates = aTagCoordinates
+      .map(coord => this.utilities.parseMusicTrackCoordinate(coord))
+      .filter((coord): coord is { kind: number; pubkey: string; identifier: string } => coord !== null);
+
+    const authorKindGroups = new Map<string, { kind: number; pubkey: string; identifiers: Set<string> }>();
+    for (const coordinate of parsedCoordinates) {
+      const key = `${coordinate.kind}:${coordinate.pubkey}`;
+      if (!authorKindGroups.has(key)) {
+        authorKindGroups.set(key, {
+          kind: coordinate.kind,
+          pubkey: coordinate.pubkey,
+          identifiers: new Set<string>(),
+        });
+      }
+      authorKindGroups.get(key)!.identifiers.add(coordinate.identifier);
+    }
+
+    const upsertTrack = (event: Event): void => {
+      if (this.reporting.isUserBlocked(event.pubkey)) return;
+      if (this.reporting.isContentBlocked(event)) return;
+
+      const uniqueId = this.getTrackUniqueId(event);
+      const existing = this.trackMap.get(uniqueId);
+      if (existing && existing.created_at >= event.created_at) return;
+
+      this.trackMap.set(uniqueId, event);
+    };
+
+    const queryTasks: Promise<Event[]>[] = [];
+
+    const groupedFilters = Array.from(authorKindGroups.values()).map(group => ({
+      kinds: [group.kind],
+      authors: [group.pubkey],
+      '#d': Array.from(group.identifiers),
+      limit: Math.max(group.identifiers.size * 2, group.identifiers.size),
+    }));
+
+    const groupedBatchSize = 20;
+    for (let i = 0; i < groupedFilters.length; i += groupedBatchSize) {
+      const batch = groupedFilters.slice(i, i + groupedBatchSize);
+      batch.forEach(filter => {
+        queryTasks.push(this.pool.query(relayUrls, filter, 5000));
+      });
+    }
+
+    const eventIdBatchSize = 100;
+    for (let i = 0; i < eventIds.length; i += eventIdBatchSize) {
+      queryTasks.push(this.pool.query(relayUrls, {
+        kinds: MUSIC_KINDS,
+        ids: eventIds.slice(i, i + eventIdBatchSize),
+      }, 5000));
+    }
+
+    const results = await Promise.all(queryTasks);
+    results.flat().forEach(upsertTrack);
+
+    this.allTracks.set(
+      Array.from(this.trackMap.values()).sort((a, b) => b.created_at - a.created_at)
+    );
+
+    this.loading.set(false);
+    this.tryObserveSentinel();
   }
 
   loadMore(): void {

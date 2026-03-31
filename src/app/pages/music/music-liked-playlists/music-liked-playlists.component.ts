@@ -379,7 +379,6 @@ export class MusicLikedPlaylistsComponent implements OnDestroy, AfterViewInit {
   showSearch = signal(false);
 
   private reactionSubscription: { close: () => void } | null = null;
-  private playlistSubscriptions: { close: () => void }[] = [];
   private likedPlaylistIds = new Set<string>();
   private playlistMap = new Map<string, Event>();
   private likedReactionByTargetKey = signal(new Map<string, Event>());
@@ -441,7 +440,6 @@ export class MusicLikedPlaylistsComponent implements OnDestroy, AfterViewInit {
 
   ngOnDestroy(): void {
     this.reactionSubscription?.close();
-    this.playlistSubscriptions.forEach(sub => sub.close());
     this.intersectionObserver?.disconnect();
   }
 
@@ -597,98 +595,74 @@ export class MusicLikedPlaylistsComponent implements OnDestroy, AfterViewInit {
       }
     });
 
-    let playlistsLoaded = false;
-    const playlistTimeout = setTimeout(() => {
-      playlistsLoaded = true;
-      this.loading.set(false);
-      this.tryObserveSentinel();
-    }, 5000);
+    void this.fetchLikedPlaylistsSnapshot(relayUrls, aTagCoordinates, eventIds);
+  }
 
-    // Subscribe to playlists by coordinate (for addressable events)
-    if (aTagCoordinates.length > 0) {
-      // Parse coordinates and build filters
-      const playlistFilters: Filter[] = aTagCoordinates
-        .filter(coord => coord.startsWith(`${MUSIC_PLAYLIST_KIND}:`))
-        .map(coord => {
-          const parts = coord.split(':');
-          return {
-            kinds: [MUSIC_PLAYLIST_KIND],
-            authors: [parts[1]],
-            '#d': [parts[2]],
-          };
-        });
-
-      if (playlistFilters.length > 0) {
-        // Batch filters in groups of 20 to avoid too large requests
-        const batchSize = 20;
-        for (let i = 0; i < playlistFilters.length; i += batchSize) {
-          const batch = playlistFilters.slice(i, i + batchSize);
-          batch.forEach(filter => {
-            const sub = this.pool.subscribe(relayUrls, filter, (event: Event) => {
-              if (this.reporting.isUserBlocked(event.pubkey)) return;
-              if (this.reporting.isContentBlocked(event)) return;
-
-              const dTag = event.tags.find((tag: string[]) => tag[0] === 'd')?.[1] || '';
-              const uniqueId = `${event.pubkey}:${dTag}`;
-
-              const existing = this.playlistMap.get(uniqueId);
-              if (existing && existing.created_at >= event.created_at) return;
-
-              this.playlistMap.set(uniqueId, event);
-              this.allPlaylists.set(
-                Array.from(this.playlistMap.values()).sort((a, b) => b.created_at - a.created_at)
-              );
-
-              if (!playlistsLoaded) {
-                clearTimeout(playlistTimeout);
-                playlistsLoaded = true;
-                this.loading.set(false);
-                this.tryObserveSentinel();
-              }
-            });
-            this.playlistSubscriptions.push(sub);
-          });
-        }
-      }
-    }
-
-    // Also fetch by event IDs if any
-    if (eventIds.length > 0) {
-      const idFilter: Filter = {
-        kinds: [MUSIC_PLAYLIST_KIND],
-        ids: eventIds.slice(0, 100), // Limit to 100 IDs per request
-      };
-
-      const sub = this.pool.subscribe(relayUrls, idFilter, (event: Event) => {
-        if (this.reporting.isUserBlocked(event.pubkey)) return;
-        if (this.reporting.isContentBlocked(event)) return;
-
-        const dTag = event.tags.find((tag: string[]) => tag[0] === 'd')?.[1] || '';
-        const uniqueId = `${event.pubkey}:${dTag}`;
-
-        const existing = this.playlistMap.get(uniqueId);
-        if (existing && existing.created_at >= event.created_at) return;
-
-        this.playlistMap.set(uniqueId, event);
-        this.allPlaylists.set(
-          Array.from(this.playlistMap.values()).sort((a, b) => b.created_at - a.created_at)
-        );
-
-        if (!playlistsLoaded) {
-          clearTimeout(playlistTimeout);
-          playlistsLoaded = true;
-          this.loading.set(false);
-          this.tryObserveSentinel();
-        }
-      });
-      this.playlistSubscriptions.push(sub);
-    }
-
-    // Fallback if no playlists found
+  private async fetchLikedPlaylistsSnapshot(
+    relayUrls: string[],
+    aTagCoordinates: string[],
+    eventIds: string[],
+  ): Promise<void> {
     if (aTagCoordinates.length === 0 && eventIds.length === 0) {
       this.loading.set(false);
       this.tryObserveSentinel();
+      return;
     }
+
+    const authorGroups = new Map<string, Set<string>>();
+    for (const coordinate of aTagCoordinates.filter(coord => coord.startsWith(`${MUSIC_PLAYLIST_KIND}:`))) {
+      const parts = coordinate.split(':');
+      const author = parts[1];
+      const dTag = parts.slice(2).join(':');
+      if (!author || !dTag) {
+        continue;
+      }
+      if (!authorGroups.has(author)) {
+        authorGroups.set(author, new Set<string>());
+      }
+      authorGroups.get(author)!.add(dTag);
+    }
+
+    const upsertPlaylist = (event: Event): void => {
+      if (this.reporting.isUserBlocked(event.pubkey)) return;
+      if (this.reporting.isContentBlocked(event)) return;
+
+      const dTag = event.tags.find((tag: string[]) => tag[0] === 'd')?.[1] || '';
+      const uniqueId = `${event.pubkey}:${dTag}`;
+      const existing = this.playlistMap.get(uniqueId);
+      if (existing && existing.created_at >= event.created_at) return;
+
+      this.playlistMap.set(uniqueId, event);
+    };
+
+    const queryTasks: Promise<Event[]>[] = [];
+
+    Array.from(authorGroups.entries()).forEach(([author, dTags]) => {
+      queryTasks.push(this.pool.query(relayUrls, {
+        kinds: [MUSIC_PLAYLIST_KIND],
+        authors: [author],
+        '#d': Array.from(dTags),
+        limit: Math.max(dTags.size * 2, dTags.size),
+      }, 5000));
+    });
+
+    const eventIdBatchSize = 100;
+    for (let i = 0; i < eventIds.length; i += eventIdBatchSize) {
+      queryTasks.push(this.pool.query(relayUrls, {
+        kinds: [MUSIC_PLAYLIST_KIND],
+        ids: eventIds.slice(i, i + eventIdBatchSize),
+      }, 5000));
+    }
+
+    const results = await Promise.all(queryTasks);
+    results.flat().forEach(upsertPlaylist);
+
+    this.allPlaylists.set(
+      Array.from(this.playlistMap.values()).sort((a, b) => b.created_at - a.created_at)
+    );
+
+    this.loading.set(false);
+    this.tryObserveSentinel();
   }
 
   loadMore(): void {
