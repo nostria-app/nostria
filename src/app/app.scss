@@ -2289,6 +2289,10 @@ mat-sidenav-content {
     border-radius: 28px;
   }
 
+  &:focus-visible {
+    border-radius: 28px;
+  }
+
   &.active-link {
     background-color: var(--cube-glass-active);
     border: 1px solid var(--cube-glass-active-border);
