@@ -28,7 +28,7 @@
     "homepage": "https://nostria.app",
     "category": "SocialNetworking",
     "shortDescription": "Nostria is a decentralized Nostr client.",
-    "longDescription": "Nostria packages the Angular web application into native desktop installers for Windows, Linux, and macOS using Tauri.",
+    "longDescription": "Nostria is a decentralized Nostr client that offers a native desktop experience on Windows, Linux, and macOS.",
     "copyright": "Copyright (c) 2025 SondreB",
     "license": "MIT",
     "icon": [

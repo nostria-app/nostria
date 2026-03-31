@@ -137,6 +137,8 @@ Install dependencies:
 npm ci --legacy-peer-deps
 ```
 
+`--legacy-peer-deps` is currently required because the existing lockfile includes a peer dependency conflict around `@nostrability/schemata` and the repository's TypeScript version.
+
 Start the development server:
 
 ```bash
