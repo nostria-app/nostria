@@ -460,6 +460,16 @@ export class RelayPoolService {
     // Generate subscription ID
     const subscriptionId = `sub_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
+    const duplicateId = this.subscriptionManager.hasDuplicateSubscription(filter, filteredUrls);
+    if (duplicateId) {
+      this.logger.warn('[RelayPoolService] Duplicate subscription detected', {
+        subscriptionId,
+        duplicateId,
+        filter,
+        relayUrls: filteredUrls,
+      });
+    }
+
     // Try to register the subscription - returns available relays (those not at limit)
     const availableRelays = this.subscriptionManager.registerSubscription(
       subscriptionId,

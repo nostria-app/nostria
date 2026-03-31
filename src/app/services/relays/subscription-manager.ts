@@ -70,8 +70,8 @@ export class SubscriptionManagerService {
   private poolInstances = new Set<string>();
 
   // Global limits
-  readonly MAX_CONCURRENT_SUBS_PER_RELAY = 10;
-  readonly MAX_TOTAL_SUBSCRIPTIONS = 50;
+  readonly MAX_CONCURRENT_SUBS_PER_RELAY = 150;
+  readonly MAX_TOTAL_SUBSCRIPTIONS = 500;
 
   // Signals for reactive updates
   readonly metricsSignal = signal<RelayMetrics>(this.computeMetrics());

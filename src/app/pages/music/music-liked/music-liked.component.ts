@@ -448,6 +448,7 @@ export class MusicLikedComponent implements OnDestroy, AfterViewInit {
 
   private reactionSubscription: { close: () => void } | null = null;
   private trackSubscription: { close: () => void } | null = null;
+  private trackFetchSubscriptions: { close: () => void }[] = [];
   private likedEventIds = new Set<string>();
   private trackMap = new Map<string, Event>();
   private intersectionObserver: IntersectionObserver | null = null;
@@ -501,6 +502,8 @@ export class MusicLikedComponent implements OnDestroy, AfterViewInit {
   ngOnDestroy(): void {
     this.reactionSubscription?.close();
     this.trackSubscription?.close();
+    this.trackFetchSubscriptions.forEach(sub => sub.close());
+    this.trackFetchSubscriptions = [];
     this.intersectionObserver?.disconnect();
   }
 
@@ -603,10 +606,23 @@ export class MusicLikedComponent implements OnDestroy, AfterViewInit {
     });
 
     let tracksLoaded = false;
+    this.trackFetchSubscriptions.forEach(sub => sub.close());
+    this.trackFetchSubscriptions = [];
+
+    const finishTrackLoading = (): void => {
+      this.trackFetchSubscriptions.forEach(sub => sub.close());
+      this.trackFetchSubscriptions = [];
+
+      if (!tracksLoaded) {
+        clearTimeout(trackTimeout);
+        tracksLoaded = true;
+        this.loading.set(false);
+        this.tryObserveSentinel();
+      }
+    };
+
     const trackTimeout = setTimeout(() => {
-      tracksLoaded = true;
-      this.loading.set(false);
-      this.tryObserveSentinel();
+      finishTrackLoading();
     }, 5000);
 
     // Subscribe to tracks by coordinate (for addressable events)
@@ -627,7 +643,7 @@ export class MusicLikedComponent implements OnDestroy, AfterViewInit {
         for (let i = 0; i < trackFilters.length; i += batchSize) {
           const batch = trackFilters.slice(i, i + batchSize);
           batch.forEach(filter => {
-            this.pool.subscribe(relayUrls, filter, (event: Event) => {
+            const sub = this.pool.subscribe(relayUrls, filter, (event: Event) => {
               if (this.reporting.isUserBlocked(event.pubkey)) return;
               if (this.reporting.isContentBlocked(event)) return;
 
@@ -642,12 +658,10 @@ export class MusicLikedComponent implements OnDestroy, AfterViewInit {
               );
 
               if (!tracksLoaded) {
-                clearTimeout(trackTimeout);
-                tracksLoaded = true;
-                this.loading.set(false);
-                this.tryObserveSentinel();
+                finishTrackLoading();
               }
             });
+            this.trackFetchSubscriptions.push(sub);
           });
         }
       }
@@ -660,7 +674,7 @@ export class MusicLikedComponent implements OnDestroy, AfterViewInit {
         ids: eventIds.slice(0, 100), // Limit to 100 IDs per request
       };
 
-      this.pool.subscribe(relayUrls, idFilter, (event: Event) => {
+      const sub = this.pool.subscribe(relayUrls, idFilter, (event: Event) => {
         if (this.reporting.isUserBlocked(event.pubkey)) return;
         if (this.reporting.isContentBlocked(event)) return;
 
@@ -675,12 +689,10 @@ export class MusicLikedComponent implements OnDestroy, AfterViewInit {
         );
 
         if (!tracksLoaded) {
-          clearTimeout(trackTimeout);
-          tracksLoaded = true;
-          this.loading.set(false);
-          this.tryObserveSentinel();
+          finishTrackLoading();
         }
       });
+      this.trackFetchSubscriptions.push(sub);
     }
 
     // Fallback if no tracks found

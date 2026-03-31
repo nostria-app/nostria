@@ -82,6 +82,7 @@ export class DiscoverCategoryComponent implements OnInit, OnDestroy {
   private angorService = inject(AngorService);
   private destroy$ = new Subject<void>();
   private streamsSubscription: { close: () => void } | null = null;
+  private transientSubscriptions = new Set<{ close: () => void }>();
   private angorLoadMoreObserver: IntersectionObserver | null = null;
 
   // Route params
@@ -205,13 +206,13 @@ export class DiscoverCategoryComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
-    if (this.streamsSubscription) {
-      this.streamsSubscription.close();
-    }
+    this.closeRelaySubscriptions();
     this.disconnectAngorLoadMoreObserver();
   }
 
   private async loadCategoryContent(): Promise<void> {
+    this.closeRelaySubscriptions();
+
     const cat = this.category();
     if (!cat) {
       this.error.set('Category not found');
@@ -516,14 +517,24 @@ export class DiscoverCategoryComponent implements OnInit, OnDestroy {
       limit: 12,
     };
 
-    const loadingTimeout = setTimeout(() => {
+    let subscription: { close: () => void } | null = null;
+    const finishLoading = () => {
+      clearTimeout(loadingTimeout);
       if (this.vineLoading()) {
         this.vineLoading.set(false);
         this.updateVineVideos(eventMap);
       }
+      if (subscription) {
+        this.closeTransientSubscription(subscription);
+        subscription = null;
+      }
+    };
+
+    const loadingTimeout = setTimeout(() => {
+      finishLoading();
     }, 5000);
 
-    this.pool.subscribe(
+    subscription = this.trackTransientSubscription(this.pool.subscribe(
       [this.VINE_RELAY],
       filter,
       (event: Event) => {
@@ -540,11 +551,10 @@ export class DiscoverCategoryComponent implements OnInit, OnDestroy {
         this.updateVineVideos(eventMap);
 
         if (eventMap.size >= 12 && this.vineLoading()) {
-          clearTimeout(loadingTimeout);
-          this.vineLoading.set(false);
+          finishLoading();
         }
       }
-    );
+    ));
   }
 
   private updateVineVideos(eventMap: Map<string, Event>): void {
@@ -579,14 +589,24 @@ export class DiscoverCategoryComponent implements OnInit, OnDestroy {
       limit: 12,
     };
 
-    const loadingTimeout = setTimeout(() => {
+    let subscription: { close: () => void } | null = null;
+    const finishLoading = () => {
+      clearTimeout(loadingTimeout);
       if (this.shortsLoading()) {
         this.shortsLoading.set(false);
         this.updateCreatorShorts(eventMap);
       }
+      if (subscription) {
+        this.closeTransientSubscription(subscription);
+        subscription = null;
+      }
+    };
+
+    const loadingTimeout = setTimeout(() => {
+      finishLoading();
     }, 5000);
 
-    this.pool.subscribe(
+    subscription = this.trackTransientSubscription(this.pool.subscribe(
       relayUrls,
       filter,
       (event: Event) => {
@@ -602,11 +622,10 @@ export class DiscoverCategoryComponent implements OnInit, OnDestroy {
         this.updateCreatorShorts(eventMap);
 
         if (eventMap.size >= 12 && this.shortsLoading()) {
-          clearTimeout(loadingTimeout);
-          this.shortsLoading.set(false);
+          finishLoading();
         }
       }
-    );
+    ));
   }
 
   private updateCreatorShorts(eventMap: Map<string, Event>): void {
@@ -641,14 +660,24 @@ export class DiscoverCategoryComponent implements OnInit, OnDestroy {
       limit: 6,
     };
 
-    const loadingTimeout = setTimeout(() => {
+    let subscription: { close: () => void } | null = null;
+    const finishLoading = () => {
+      clearTimeout(loadingTimeout);
       if (this.videosLoading()) {
         this.videosLoading.set(false);
         this.updateCreatorVideos(eventMap);
       }
+      if (subscription) {
+        this.closeTransientSubscription(subscription);
+        subscription = null;
+      }
+    };
+
+    const loadingTimeout = setTimeout(() => {
+      finishLoading();
     }, 5000);
 
-    this.pool.subscribe(
+    subscription = this.trackTransientSubscription(this.pool.subscribe(
       relayUrls,
       filter,
       (event: Event) => {
@@ -664,11 +693,10 @@ export class DiscoverCategoryComponent implements OnInit, OnDestroy {
         this.updateCreatorVideos(eventMap);
 
         if (eventMap.size >= 6 && this.videosLoading()) {
-          clearTimeout(loadingTimeout);
-          this.videosLoading.set(false);
+          finishLoading();
         }
       }
-    );
+    ));
   }
 
   private updateCreatorVideos(eventMap: Map<string, Event>): void {
@@ -703,14 +731,24 @@ export class DiscoverCategoryComponent implements OnInit, OnDestroy {
       limit: creatorPubkeys.length * 5, // Fetch extra to ensure we have enough per author
     };
 
-    const loadingTimeout = setTimeout(() => {
+    let subscription: { close: () => void } | null = null;
+    const finishLoading = () => {
+      clearTimeout(loadingTimeout);
       if (this.imagesLoading()) {
         this.imagesLoading.set(false);
         this.updatePhotographerImages(eventsByAuthor, creatorPubkeys.length);
       }
+      if (subscription) {
+        this.closeTransientSubscription(subscription);
+        subscription = null;
+      }
+    };
+
+    const loadingTimeout = setTimeout(() => {
+      finishLoading();
     }, 5000);
 
-    this.pool.subscribe(
+    subscription = this.trackTransientSubscription(this.pool.subscribe(
       relayUrls,
       filter,
       (event: Event) => {
@@ -728,11 +766,10 @@ export class DiscoverCategoryComponent implements OnInit, OnDestroy {
         // Check if we have enough images
         const totalImages = Array.from(eventsByAuthor.values()).reduce((sum, events) => sum + Math.min(events.length, 3), 0);
         if (totalImages >= creatorPubkeys.length * 3 && this.imagesLoading()) {
-          clearTimeout(loadingTimeout);
-          this.imagesLoading.set(false);
+          finishLoading();
         }
       }
-    );
+    ));
   }
 
   private updatePhotographerImages(eventsByAuthor: Map<string, Event[]>, maxAuthors: number): void {
@@ -775,14 +812,24 @@ export class DiscoverCategoryComponent implements OnInit, OnDestroy {
       limit: creatorPubkeys.length * 4, // Fetch extra to ensure we have enough per author
     };
 
-    const loadingTimeout = setTimeout(() => {
+    let subscription: { close: () => void } | null = null;
+    const finishLoading = () => {
+      clearTimeout(loadingTimeout);
       if (this.postsLoading()) {
         this.postsLoading.set(false);
         this.updatePhotographerPosts(eventsByAuthor);
       }
+      if (subscription) {
+        this.closeTransientSubscription(subscription);
+        subscription = null;
+      }
+    };
+
+    const loadingTimeout = setTimeout(() => {
+      finishLoading();
     }, 5000);
 
-    this.pool.subscribe(
+    subscription = this.trackTransientSubscription(this.pool.subscribe(
       relayUrls,
       filter,
       (event: Event) => {
@@ -800,11 +847,32 @@ export class DiscoverCategoryComponent implements OnInit, OnDestroy {
         // Check if we have enough posts
         const totalPosts = Array.from(eventsByAuthor.values()).reduce((sum, events) => sum + Math.min(events.length, 2), 0);
         if (totalPosts >= creatorPubkeys.length * 2 && this.postsLoading()) {
-          clearTimeout(loadingTimeout);
-          this.postsLoading.set(false);
+          finishLoading();
         }
       }
-    );
+    ));
+  }
+
+  private trackTransientSubscription(subscription: { close: () => void }): { close: () => void } {
+    this.transientSubscriptions.add(subscription);
+    return subscription;
+  }
+
+  private closeTransientSubscription(subscription: { close: () => void }): void {
+    if (!this.transientSubscriptions.has(subscription)) {
+      return;
+    }
+
+    subscription.close();
+    this.transientSubscriptions.delete(subscription);
+  }
+
+  private closeRelaySubscriptions(): void {
+    this.streamsSubscription?.close();
+    this.streamsSubscription = null;
+
+    this.transientSubscriptions.forEach(subscription => subscription.close());
+    this.transientSubscriptions.clear();
   }
 
   private updatePhotographerPosts(eventsByAuthor: Map<string, Event[]>): void {
