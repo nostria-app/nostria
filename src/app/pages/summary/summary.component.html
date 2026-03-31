@@ -39,7 +39,8 @@
     [cdkConnectedOverlayBackdropClass]="'cdk-overlay-transparent-backdrop'"
     [cdkConnectedOverlayPositions]="filterPanelPositions" [cdkConnectedOverlayPush]="true"
     (backdropClick)="closeFilterPanel()">
-    <div class="combined-filter-panel" (click)="$event.stopPropagation()">
+    <div class="combined-filter-panel" (click)="$event.stopPropagation()" (keydown.enter)="$event.stopPropagation()"
+      tabindex="-1">
       <div class="combined-filter-column content-filter-column">
         <div class="combined-filter-header">
           <span class="combined-filter-title">Content types</span>
@@ -251,10 +252,46 @@
                 {{ poster.articlesCount }}
               </span>
               }
+              @if (showAudioStats() && poster.audioCount > 0) {
+              <span class="stat-item" matTooltip="Audio Posts">
+                <mat-icon>mic</mat-icon>
+                {{ poster.audioCount }}
+              </span>
+              }
               @if (showMediaStats() && poster.mediaCount > 0) {
               <span class="stat-item" matTooltip="Media">
                 <mat-icon>perm_media</mat-icon>
                 {{ poster.mediaCount }}
+              </span>
+              }
+              @if (showCommunitiesStats() && poster.communitiesCount > 0) {
+              <span class="stat-item" matTooltip="Communities">
+                <mat-icon>groups</mat-icon>
+                {{ poster.communitiesCount }}
+              </span>
+              }
+              @if (showChatsStats() && poster.chatsCount > 0) {
+              <span class="stat-item" matTooltip="Chats">
+                <mat-icon>forum</mat-icon>
+                {{ poster.chatsCount }}
+              </span>
+              }
+              @if (showLiveEventsStats() && poster.liveEventsCount > 0) {
+              <span class="stat-item" matTooltip="Live Events">
+                <mat-icon>live_tv</mat-icon>
+                {{ poster.liveEventsCount }}
+              </span>
+              }
+              @if (showCalendarStats() && poster.calendarCount > 0) {
+              <span class="stat-item" matTooltip="Calendar">
+                <mat-icon>event</mat-icon>
+                {{ poster.calendarCount }}
+              </span>
+              }
+              @if (showMusicStats() && poster.musicCount > 0) {
+              <span class="stat-item" matTooltip="Music">
+                <mat-icon>music_note</mat-icon>
+                {{ poster.musicCount }}
               </span>
               }
             </div>
@@ -347,10 +384,43 @@
             <div class="media-overlay">
               <app-user-profile [pubkey]="event.pubkey" view="icon" class="media-author"></app-user-profile>
               <a class="media-time" (click)="layout.openGenericEvent(event.id); $event.stopPropagation()"
+                (keydown.enter)="layout.openGenericEvent(event.id); $event.stopPropagation()"
                 tabindex="0">{{ event.created_at | ago }}</a>
             </div>
           </div>
           }
+          }
+        </div>
+      </div>
+    </mat-expansion-panel>
+    }
+
+    @for (section of summaryTimelineSections(); track section.id) {
+    <mat-expansion-panel class="summary-panel">
+      <mat-expansion-panel-header>
+        <mat-panel-title>
+          <mat-icon>{{ section.icon }}</mat-icon>
+          <span>{{ section.title }}</span>
+          <span class="panel-count-badge">{{ section.events.length }}</span>
+        </mat-panel-title>
+        <mat-panel-description>
+          <span class="filter-hint-inline">{{ section.description }}</span>
+        </mat-panel-description>
+      </mat-expansion-panel-header>
+      <div class="panel-content">
+        <div class="timeline">
+          @for (event of section.events; track event.id) {
+          <div class="timeline-item" [class.read]="readEventIds().has(event.id)" (click)="openEventDialog($event, event)"
+            (keydown.enter)="openEventDialog($any($event), event)" tabindex="0" role="button">
+            <app-user-profile [pubkey]="event.pubkey" view="icon" class="timeline-author"></app-user-profile>
+            <div class="timeline-content">
+              <div class="timeline-header">
+                <span class="timeline-type">{{ getEventKindLabel(event.kind) }}</span>
+              </div>
+              <p class="timeline-preview">{{ getEventPreview(event) }}</p>
+            </div>
+            <span class="timeline-time-external">{{ event.created_at | ago }}</span>
+          </div>
           }
         </div>
       </div>
@@ -374,7 +444,8 @@
       <div class="panel-content">
         <div class="poster-grid">
           @for (pubkey of profileUpdates(); track pubkey) {
-          <a class="poster-card" (click)="onProfileClick($event, pubkey)">
+          <a class="poster-card" (click)="onProfileClick($event, pubkey)" (keydown.enter)="onProfileClick($event, pubkey)"
+            tabindex="0">
             <div class="poster-avatar">
               <app-user-profile [pubkey]="pubkey" view="icon"></app-user-profile>
             </div>

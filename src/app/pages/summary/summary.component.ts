@@ -42,12 +42,19 @@ import { LayoutService } from '../../services/layout.service';
 import { ListFilterValue } from '../../components/list-filter-menu/list-filter-menu.component';
 import { LocalSettingsService, DEFAULT_CONTENT_FILTER } from '../../services/local-settings.service';
 import { getKindLabel } from '../../utils/kind-labels';
+import { COMMUNITY_DEFINITION_KIND } from '../../services/community.service';
 
 interface ActivitySummary {
   notesCount: number;
   repostsCount: number;
   articlesCount: number;
+  audioCount: number;
   mediaCount: number;
+  communitiesCount: number;
+  chatsCount: number;
+  liveEventsCount: number;
+  calendarCount: number;
+  musicCount: number;
   profileUpdatesCount: number;
 }
 
@@ -56,7 +63,13 @@ interface PosterStats {
   notesCount: number;
   repostsCount: number;
   articlesCount: number;
+  audioCount: number;
   mediaCount: number;
+  communitiesCount: number;
+  chatsCount: number;
+  liveEventsCount: number;
+  calendarCount: number;
+  musicCount: number;
   totalCount: number;
 }
 
@@ -72,19 +85,84 @@ interface TimelineEvent {
 type GmFilterMode = 'all' | 'only' | 'exclude';
 
 interface ContentTypeOption {
-  id: 'posts' | 'reposts' | 'voicePosts' | 'photoPosts' | 'videoPosts';
+  id: 'posts' | 'articles' | 'reposts' | 'voicePosts' | 'photoPosts' | 'videoPosts' | 'communities' | 'chats' | 'liveEvents' | 'calendar' | 'music';
   label: string;
   description: string;
   kinds: number[];
   icon: string;
 }
 
+interface SummaryTimelineSection {
+  id: 'audio' | 'communities' | 'chats' | 'liveEvents' | 'calendar' | 'music';
+  title: string;
+  description: string;
+  icon: string;
+  events: TimelineEvent[];
+}
+
+type PosterStatsCountKey =
+  | 'notesCount'
+  | 'repostsCount'
+  | 'articlesCount'
+  | 'audioCount'
+  | 'mediaCount'
+  | 'communitiesCount'
+  | 'chatsCount'
+  | 'liveEventsCount'
+  | 'calendarCount'
+  | 'musicCount';
+
+const MEDIA_KINDS = [20, 21, 22, 34235, 34236];
+const AUDIO_KINDS = [1222, 1244];
+const CHAT_KINDS = [40, 42];
+const LIVE_EVENT_KINDS = [30311];
+const CALENDAR_KINDS = [31922, 31923, 31925];
+const MUSIC_KINDS = [32100, 34139, 36787];
+const COMMUNITY_KINDS = [COMMUNITY_DEFINITION_KIND];
+const SUMMARY_FETCH_KINDS = [
+  1,
+  6,
+  16,
+  20,
+  21,
+  22,
+  40,
+  42,
+  1222,
+  1244,
+  30023,
+  30311,
+  31922,
+  31923,
+  31925,
+  32100,
+  34139,
+  34235,
+  34236,
+  COMMUNITY_DEFINITION_KIND,
+  36787,
+];
+const SUMMARY_DEFAULT_CONTENT_KINDS = [...new Set([
+  ...DEFAULT_CONTENT_FILTER.kinds,
+  ...CHAT_KINDS,
+  ...LIVE_EVENT_KINDS,
+  ...CALENDAR_KINDS,
+  ...MUSIC_KINDS,
+  ...COMMUNITY_KINDS,
+])];
+
 const SUMMARY_CONTENT_TYPES: ContentTypeOption[] = [
   { id: 'posts', label: 'Posts', description: 'Short text posts', kinds: [1, 1111], icon: 'description' },
+  { id: 'articles', label: 'Articles', description: 'Long-form writing', kinds: [30023], icon: 'article' },
   { id: 'reposts', label: 'Reposts', description: 'Shared content from others', kinds: [6, 16], icon: 'repeat' },
-  { id: 'voicePosts', label: 'Audio Posts', description: 'Audio posts and music', kinds: [1222, 1244], icon: 'audiotrack' },
+  { id: 'voicePosts', label: 'Audio Posts', description: 'Voice notes and audio uploads', kinds: AUDIO_KINDS, icon: 'mic' },
   { id: 'photoPosts', label: 'Photo Posts', description: 'Image galleries', kinds: [20], icon: 'image' },
-  { id: 'videoPosts', label: 'Video Posts', description: 'Video posts and clips', kinds: [21, 22, 34235, 34236], icon: 'movie' },
+  { id: 'videoPosts', label: 'Video Posts', description: 'Video posts and clips', kinds: MEDIA_KINDS.filter(kind => kind !== 20), icon: 'movie' },
+  { id: 'communities', label: 'Communities', description: 'New community definitions', kinds: COMMUNITY_KINDS, icon: 'groups' },
+  { id: 'chats', label: 'Chats', description: 'Public channel activity', kinds: CHAT_KINDS, icon: 'forum' },
+  { id: 'liveEvents', label: 'Live Events', description: 'Streams and live sessions', kinds: LIVE_EVENT_KINDS, icon: 'live_tv' },
+  { id: 'calendar', label: 'Calendar', description: 'Events and RSVPs', kinds: CALENDAR_KINDS, icon: 'event' },
+  { id: 'music', label: 'Music', description: 'Tracks and playlists', kinds: MUSIC_KINDS, icon: 'music_note' },
 ];
 
 const SUMMARY_TIMELINE_KIND_LABELS: Record<number, string> = {
@@ -92,6 +170,8 @@ const SUMMARY_TIMELINE_KIND_LABELS: Record<number, string> = {
   1: 'Note',
   6: 'Repost',
   16: 'Repost',
+  40: 'Chat Channel',
+  42: 'Chat Message',
   20: 'Photo',
   21: 'Video',
   22: 'Video',
@@ -99,8 +179,16 @@ const SUMMARY_TIMELINE_KIND_LABELS: Record<number, string> = {
   1222: 'Audio',
   1244: 'Audio',
   30023: 'Article',
+  30311: 'Live Event',
+  31922: 'Calendar Event',
+  31923: 'Calendar Event',
+  31925: 'Event RSVP',
+  32100: 'Playlist',
+  34139: 'Music Playlist',
   34235: 'Video',
   34236: 'Video',
+  [COMMUNITY_DEFINITION_KIND]: 'Community',
+  36787: 'Music Track',
 };
 
 // Constants for configurable limits
@@ -214,7 +302,13 @@ export class SummaryComponent implements OnInit, OnDestroy {
     notesCount: 0,
     repostsCount: 0,
     articlesCount: 0,
+    audioCount: 0,
     mediaCount: 0,
+    communitiesCount: 0,
+    chatsCount: 0,
+    liveEventsCount: 0,
+    calendarCount: 0,
+    musicCount: 0,
     profileUpdatesCount: 0,
   });
 
@@ -272,15 +366,23 @@ export class SummaryComponent implements OnInit, OnDestroy {
       .sort((a, b) => a.title.localeCompare(b.title))
   );
 
-  currentContentKinds = computed(() => this.localSettings.contentFilter().kinds);
+  currentContentKinds = computed(() => this.hasActiveContentFilter()
+    ? this.localSettings.contentFilter().kinds
+    : SUMMARY_DEFAULT_CONTENT_KINDS);
   currentShowReplies = computed(() => this.localSettings.contentFilter().showReplies);
   currentShowReposts = computed(() => this.localSettings.contentFilter().showReposts);
 
   // Determine which poster stat categories are visible based on content filter
   showNotesStats = computed(() => this.currentContentKinds().some(k => [1, 1111].includes(k)));
   showRepostsStats = computed(() => this.currentShowReposts() || this.currentContentKinds().some(k => [6, 16].includes(k)));
-  showArticlesStats = computed(() => this.currentContentKinds().includes(30023) || !this.hasActiveContentFilter());
-  showMediaStats = computed(() => this.currentContentKinds().some(k => [20, 21, 22, 34235, 34236].includes(k)));
+  showArticlesStats = computed(() => this.currentContentKinds().includes(30023));
+  showAudioStats = computed(() => this.currentContentKinds().some(k => AUDIO_KINDS.includes(k)));
+  showMediaStats = computed(() => this.currentContentKinds().some(k => MEDIA_KINDS.includes(k)));
+  showCommunitiesStats = computed(() => this.currentContentKinds().some(k => COMMUNITY_KINDS.includes(k)));
+  showChatsStats = computed(() => this.currentContentKinds().some(k => CHAT_KINDS.includes(k)));
+  showLiveEventsStats = computed(() => this.currentContentKinds().some(k => LIVE_EVENT_KINDS.includes(k)));
+  showCalendarStats = computed(() => this.currentContentKinds().some(k => CALENDAR_KINDS.includes(k)));
+  showMusicStats = computed(() => this.currentContentKinds().some(k => MUSIC_KINDS.includes(k)));
 
   currentListFilterLabel = computed(() => {
     const filter = this.currentListFilter();
@@ -312,7 +414,13 @@ export class SummaryComponent implements OnInit, OnDestroy {
     const showNotes = this.showNotesStats();
     const showReposts = this.showRepostsStats();
     const showArticles = this.showArticlesStats();
+    const showAudio = this.showAudioStats();
     const showMedia = this.showMediaStats();
+    const showCommunities = this.showCommunitiesStats();
+    const showChats = this.showChatsStats();
+    const showLiveEvents = this.showLiveEventsStats();
+    const showCalendar = this.showCalendarStats();
+    const showMusic = this.showMusicStats();
     const hasFilter = this.hasActiveContentFilter();
 
     if (hasFilter) {
@@ -322,7 +430,13 @@ export class SummaryComponent implements OnInit, OnDestroy {
             (showNotes ? poster.notesCount : 0) +
             (showReposts ? poster.repostsCount : 0) +
             (showArticles ? poster.articlesCount : 0) +
-            (showMedia ? poster.mediaCount : 0);
+            (showAudio ? poster.audioCount : 0) +
+            (showMedia ? poster.mediaCount : 0) +
+            (showCommunities ? poster.communitiesCount : 0) +
+            (showChats ? poster.chatsCount : 0) +
+            (showLiveEvents ? poster.liveEventsCount : 0) +
+            (showCalendar ? poster.calendarCount : 0) +
+            (showMusic ? poster.musicCount : 0);
           return { ...poster, totalCount: filteredTotal };
         })
         .filter(poster => poster.totalCount > 0)
@@ -368,24 +482,75 @@ export class SummaryComponent implements OnInit, OnDestroy {
   noteEvents = signal<TimelineEvent[]>([]);
   repostEvents = signal<TimelineEvent[]>([]);
   articleEventsRaw = signal<TimelineEvent[]>([]);
+  audioEventsRaw = signal<TimelineEvent[]>([]);
   mediaEventsRaw = signal<TimelineEvent[]>([]);
+  communityEventsRaw = signal<TimelineEvent[]>([]);
+  chatEventsRaw = signal<TimelineEvent[]>([]);
+  liveEventsRaw = signal<TimelineEvent[]>([]);
+  calendarEventsRaw = signal<TimelineEvent[]>([]);
+  musicEventsRaw = signal<TimelineEvent[]>([]);
+
+  // Filtered audio events (by list filter)
+  audioEvents = computed(() => this.filterEventsBySelectedList(this.audioEventsRaw()));
 
   // Filtered article events (by list filter)
-  articleEvents = computed(() => {
-    const all = this.articleEventsRaw();
-    const list = this.selectedList();
-    if (!list) return all;
-    const listPubkeys = new Set(list.pubkeys);
-    return all.filter(e => listPubkeys.has(e.pubkey));
-  });
+  articleEvents = computed(() => this.filterEventsBySelectedList(this.articleEventsRaw()));
 
   // Filtered media events (by list filter)
-  mediaEvents = computed(() => {
-    const all = this.mediaEventsRaw();
-    const list = this.selectedList();
-    if (!list) return all;
-    const listPubkeys = new Set(list.pubkeys);
-    return all.filter(e => listPubkeys.has(e.pubkey));
+  mediaEvents = computed(() => this.filterEventsBySelectedList(this.mediaEventsRaw()));
+  communityEvents = computed(() => this.filterEventsBySelectedList(this.communityEventsRaw()));
+  chatEvents = computed(() => this.filterEventsBySelectedList(this.chatEventsRaw()));
+  liveEvents = computed(() => this.filterEventsBySelectedList(this.liveEventsRaw()));
+  calendarEvents = computed(() => this.filterEventsBySelectedList(this.calendarEventsRaw()));
+  musicEvents = computed(() => this.filterEventsBySelectedList(this.musicEventsRaw()));
+
+  summaryTimelineSections = computed(() => {
+    const sections: SummaryTimelineSection[] = [
+      {
+        id: 'audio',
+        title: 'Audio Posts',
+        description: 'Voice notes and other audio shared recently',
+        icon: 'mic',
+        events: this.audioEvents(),
+      },
+      {
+        id: 'communities',
+        title: 'Communities',
+        description: 'New communities published by people you follow',
+        icon: 'groups',
+        events: this.communityEvents(),
+      },
+      {
+        id: 'chats',
+        title: 'Chats',
+        description: 'Public chat channels and new messages',
+        icon: 'forum',
+        events: this.chatEvents(),
+      },
+      {
+        id: 'liveEvents',
+        title: 'Live Events',
+        description: 'Streams and live sessions started recently',
+        icon: 'live_tv',
+        events: this.liveEvents(),
+      },
+      {
+        id: 'calendar',
+        title: 'Calendar',
+        description: 'Published events and RSVPs from your following',
+        icon: 'event',
+        events: this.calendarEvents(),
+      },
+      {
+        id: 'music',
+        title: 'Music',
+        description: 'Tracks and playlists published recently',
+        icon: 'music_note',
+        events: this.musicEvents(),
+      },
+    ];
+
+    return sections.filter(section => section.events.length > 0);
   });
 
   // Timeline pagination
@@ -393,16 +558,22 @@ export class SummaryComponent implements OnInit, OnDestroy {
 
   // All timeline events (combined, filtered by content filter, selected posters and list, and sorted)
   allTimelineEvents = computed(() => {
-    const contentFilter = this.localSettings.contentFilter();
-    const allowedKinds = contentFilter.kinds;
-    const showReposts = contentFilter.showReposts;
-    const showReplies = contentFilter.showReplies;
+    const allowedKinds = this.currentContentKinds();
+    const showReposts = this.currentShowReposts();
+    const showReplies = this.currentShowReplies();
 
-    const notes = this.noteEvents().map(e => ({ ...e, type: 'note' as const }));
-    const reposts = this.repostEvents().map(e => ({ ...e, type: 'repost' as const }));
-    const articles = this.articleEventsRaw().map(e => ({ ...e, type: 'article' as const }));
-    const media = this.mediaEventsRaw().map(e => ({ ...e, type: 'media' as const }));
-    let allEvents = [...notes, ...reposts, ...articles, ...media]
+    let allEvents = [
+      ...this.noteEvents(),
+      ...this.repostEvents(),
+      ...this.articleEventsRaw(),
+      ...this.audioEventsRaw(),
+      ...this.mediaEventsRaw(),
+      ...this.communityEventsRaw(),
+      ...this.chatEventsRaw(),
+      ...this.liveEventsRaw(),
+      ...this.calendarEventsRaw(),
+      ...this.musicEventsRaw(),
+    ]
       .sort((a, b) => b.created_at - a.created_at);
 
     // Apply content filter - filter by allowed kinds
@@ -475,7 +646,9 @@ export class SummaryComponent implements OnInit, OnDestroy {
   hasActivity = computed(() => {
     const summary = this.activitySummary();
     return summary.notesCount > 0 || summary.repostsCount > 0 || summary.articlesCount > 0 ||
-      summary.mediaCount > 0 || summary.profileUpdatesCount > 0;
+      summary.audioCount > 0 || summary.mediaCount > 0 || summary.communitiesCount > 0 ||
+      summary.chatsCount > 0 || summary.liveEventsCount > 0 || summary.calendarCount > 0 ||
+      summary.musicCount > 0 || summary.profileUpdatesCount > 0;
   });
 
   // Time since last check - reflects the selected time range
@@ -680,7 +853,7 @@ export class SummaryComponent implements OnInit, OnDestroy {
 
       // Use the FollowingDataService with the user's selected time range
       const events = await this.followingData.ensureFollowingData(
-        [1, 6, 16, 20, 30023], // Notes, Reposts, Generic Reposts, Media, Articles
+        SUMMARY_FETCH_KINDS,
         forceRefresh, // Force fetch if doing manual refresh
         // Progress callback for new events from relays
         (newEvents: Event[]) => {
@@ -712,7 +885,13 @@ export class SummaryComponent implements OnInit, OnDestroy {
           notesCount: 0,
           repostsCount: 0,
           articlesCount: 0,
+          audioCount: 0,
           mediaCount: 0,
+          communitiesCount: 0,
+          chatsCount: 0,
+          liveEventsCount: 0,
+          calendarCount: 0,
+          musicCount: 0,
           profileUpdatesCount: 0,
         });
         this.allActivePosters.set([]);
@@ -721,7 +900,13 @@ export class SummaryComponent implements OnInit, OnDestroy {
         this.noteEvents.set([]);
         this.repostEvents.set([]);
         this.articleEventsRaw.set([]);
+        this.audioEventsRaw.set([]);
         this.mediaEventsRaw.set([]);
+        this.communityEventsRaw.set([]);
+        this.chatEventsRaw.set([]);
+        this.liveEventsRaw.set([]);
+        this.calendarEventsRaw.set([]);
+        this.musicEventsRaw.set([]);
         return;
       }
 
@@ -731,19 +916,40 @@ export class SummaryComponent implements OnInit, OnDestroy {
       if (!accountPubkey) return;
 
       // Get events from database
-      const [notes, reposts6, reposts16, articles, media, profiles] = await Promise.all([
+      const [notes, reposts6, reposts16, articles, audio1222, audio1244, media20, media21, media22, media34235, media34236, communities, chatChannels, chatMessages, liveEvents, calendarDateEvents, calendarTimeEvents, calendarRsvps, music32100, music34139, music36787, profiles] = await Promise.all([
         this.database.getAllEventsByPubkeyKindSince(accountPubkey, following, 1, sinceTimestamp),
         this.database.getAllEventsByPubkeyKindSince(accountPubkey, following, 6, sinceTimestamp),
         this.database.getAllEventsByPubkeyKindSince(accountPubkey, following, 16, sinceTimestamp),
         this.database.getAllEventsByPubkeyKindSince(accountPubkey, following, 30023, sinceTimestamp),
+        this.database.getAllEventsByPubkeyKindSince(accountPubkey, following, 1222, sinceTimestamp),
+        this.database.getAllEventsByPubkeyKindSince(accountPubkey, following, 1244, sinceTimestamp),
         this.database.getAllEventsByPubkeyKindSince(accountPubkey, following, 20, sinceTimestamp),
+        this.database.getAllEventsByPubkeyKindSince(accountPubkey, following, 21, sinceTimestamp),
+        this.database.getAllEventsByPubkeyKindSince(accountPubkey, following, 22, sinceTimestamp),
+        this.database.getAllEventsByPubkeyKindSince(accountPubkey, following, 34235, sinceTimestamp),
+        this.database.getAllEventsByPubkeyKindSince(accountPubkey, following, 34236, sinceTimestamp),
+        this.database.getAllEventsByPubkeyKindSince(accountPubkey, following, COMMUNITY_DEFINITION_KIND, sinceTimestamp),
+        this.database.getAllEventsByPubkeyKindSince(accountPubkey, following, 40, sinceTimestamp),
+        this.database.getAllEventsByPubkeyKindSince(accountPubkey, following, 42, sinceTimestamp),
+        this.database.getAllEventsByPubkeyKindSince(accountPubkey, following, 30311, sinceTimestamp),
+        this.database.getAllEventsByPubkeyKindSince(accountPubkey, following, 31922, sinceTimestamp),
+        this.database.getAllEventsByPubkeyKindSince(accountPubkey, following, 31923, sinceTimestamp),
+        this.database.getAllEventsByPubkeyKindSince(accountPubkey, following, 31925, sinceTimestamp),
+        this.database.getAllEventsByPubkeyKindSince(accountPubkey, following, 32100, sinceTimestamp),
+        this.database.getAllEventsByPubkeyKindSince(accountPubkey, following, 34139, sinceTimestamp),
+        this.database.getAllEventsByPubkeyKindSince(accountPubkey, following, 36787, sinceTimestamp),
         this.database.getAllEventsByPubkeyKindSince(accountPubkey, following, 0, sinceTimestamp),
       ]);
 
       const reposts = [...reposts6, ...reposts16];
+      const audio = [...audio1222, ...audio1244];
+      const media = [...media20, ...media21, ...media22, ...media34235, ...media34236];
+      const chats = [...chatChannels, ...chatMessages];
+      const calendar = [...calendarDateEvents, ...calendarTimeEvents, ...calendarRsvps];
+      const music = [...music32100, ...music34139, ...music36787];
 
       this.logger.debug(`[Summary] Queried since timestamp: ${sinceTimestamp} (${new Date(sinceTimestamp * 1000).toISOString()})`);
-      this.logger.debug(`[Summary] Found ${notes.length} notes, ${reposts.length} reposts, ${articles.length} articles, ${media.length} media, ${profiles.length} profile updates`);
+      this.logger.debug(`[Summary] Found ${notes.length} notes, ${reposts.length} reposts, ${articles.length} articles, ${audio.length} audio posts, ${media.length} media events, ${communities.length} communities, ${chats.length} chats, ${liveEvents.length} live events, ${calendar.length} calendar events, ${music.length} music events, ${profiles.length} profile updates`);
 
       const profileUpdatePubkeys = [...new Set(profiles.map(p => p.pubkey))];
 
@@ -751,45 +957,29 @@ export class SummaryComponent implements OnInit, OnDestroy {
         notesCount: notes.length,
         repostsCount: reposts.length,
         articlesCount: articles.length,
+        audioCount: audio.length,
         mediaCount: media.length,
+        communitiesCount: communities.length,
+        chatsCount: chats.length,
+        liveEventsCount: liveEvents.length,
+        calendarCount: calendar.length,
+        musicCount: music.length,
         profileUpdatesCount: profileUpdatePubkeys.length,
       });
 
       // Store events for timeline and drill-down
-      this.noteEvents.set(notes.map(e => ({
-        id: e.id,
-        pubkey: e.pubkey,
-        kind: e.kind,
-        created_at: e.created_at,
-        content: e.content,
-        tags: e.tags,
-      })));
-      this.repostEvents.set(reposts.map(e => ({
-        id: e.id,
-        pubkey: e.pubkey,
-        kind: e.kind,
-        created_at: e.created_at,
-        content: e.content,
-        tags: e.tags,
-      })));
-      this.articleEventsRaw.set(articles.map(e => ({
-        id: e.id,
-        pubkey: e.pubkey,
-        kind: e.kind,
-        created_at: e.created_at,
-        content: e.content,
-        tags: e.tags, // Include tags for naddr generation
-      })));
-      this.mediaEventsRaw.set(media.map(e => ({
-        id: e.id,
-        pubkey: e.pubkey,
-        kind: e.kind,
-        created_at: e.created_at,
-        content: e.content,
-        tags: e.tags, // Include tags for media URL extraction
-      })));
+      this.noteEvents.set(this.mapTimelineEvents(notes));
+      this.repostEvents.set(this.mapTimelineEvents(reposts));
+      this.articleEventsRaw.set(this.mapTimelineEvents(articles));
+      this.audioEventsRaw.set(this.mapTimelineEvents(audio));
+      this.mediaEventsRaw.set(this.mapTimelineEvents(media));
+      this.communityEventsRaw.set(this.mapTimelineEvents(communities));
+      this.chatEventsRaw.set(this.mapTimelineEvents(chats));
+      this.liveEventsRaw.set(this.mapTimelineEvents(liveEvents));
+      this.calendarEventsRaw.set(this.mapTimelineEvents(calendar));
+      this.musicEventsRaw.set(this.mapTimelineEvents(music));
 
-      this.calculatePosterStats(notes, reposts, articles, media);
+      this.calculatePosterStats(notes, reposts, articles, audio, media, communities, chats, liveEvents, calendar, music);
       this.profileUpdatesRaw.set(profileUpdatePubkeys.slice(0, MAX_PROFILE_UPDATES));
 
     } catch (error) {
@@ -797,64 +987,19 @@ export class SummaryComponent implements OnInit, OnDestroy {
     }
   }
 
-  private calculatePosterStats(notes: Event[], reposts: Event[], articles: Event[], media: Event[]): void {
+  private calculatePosterStats(notes: Event[], reposts: Event[], articles: Event[], audio: Event[], media: Event[], communities: Event[], chats: Event[], liveEvents: Event[], calendar: Event[], music: Event[]): void {
     const statsMap = new Map<string, PosterStats>();
 
-    for (const event of notes) {
-      const existing = statsMap.get(event.pubkey) || {
-        pubkey: event.pubkey,
-        notesCount: 0,
-        repostsCount: 0,
-        articlesCount: 0,
-        mediaCount: 0,
-        totalCount: 0,
-      };
-      existing.notesCount++;
-      existing.totalCount++;
-      statsMap.set(event.pubkey, existing);
-    }
-
-    for (const event of reposts) {
-      const existing = statsMap.get(event.pubkey) || {
-        pubkey: event.pubkey,
-        notesCount: 0,
-        repostsCount: 0,
-        articlesCount: 0,
-        mediaCount: 0,
-        totalCount: 0,
-      };
-      existing.repostsCount++;
-      existing.totalCount++;
-      statsMap.set(event.pubkey, existing);
-    }
-
-    for (const event of articles) {
-      const existing = statsMap.get(event.pubkey) || {
-        pubkey: event.pubkey,
-        notesCount: 0,
-        repostsCount: 0,
-        articlesCount: 0,
-        mediaCount: 0,
-        totalCount: 0,
-      };
-      existing.articlesCount++;
-      existing.totalCount++;
-      statsMap.set(event.pubkey, existing);
-    }
-
-    for (const event of media) {
-      const existing = statsMap.get(event.pubkey) || {
-        pubkey: event.pubkey,
-        notesCount: 0,
-        repostsCount: 0,
-        articlesCount: 0,
-        mediaCount: 0,
-        totalCount: 0,
-      };
-      existing.mediaCount++;
-      existing.totalCount++;
-      statsMap.set(event.pubkey, existing);
-    }
+    this.incrementPosterStats(statsMap, notes, 'notesCount');
+    this.incrementPosterStats(statsMap, reposts, 'repostsCount');
+    this.incrementPosterStats(statsMap, articles, 'articlesCount');
+    this.incrementPosterStats(statsMap, audio, 'audioCount');
+    this.incrementPosterStats(statsMap, media, 'mediaCount');
+    this.incrementPosterStats(statsMap, communities, 'communitiesCount');
+    this.incrementPosterStats(statsMap, chats, 'chatsCount');
+    this.incrementPosterStats(statsMap, liveEvents, 'liveEventsCount');
+    this.incrementPosterStats(statsMap, calendar, 'calendarCount');
+    this.incrementPosterStats(statsMap, music, 'musicCount');
 
     // Sort by total count (no more slice limit here)
     const sorted = Array.from(statsMap.values())
@@ -862,6 +1007,53 @@ export class SummaryComponent implements OnInit, OnDestroy {
 
     this.allActivePosters.set(sorted);
     this.postersPage.set(1); // Reset pagination
+  }
+
+  private createEmptyPosterStats(pubkey: string): PosterStats {
+    return {
+      pubkey,
+      notesCount: 0,
+      repostsCount: 0,
+      articlesCount: 0,
+      audioCount: 0,
+      mediaCount: 0,
+      communitiesCount: 0,
+      chatsCount: 0,
+      liveEventsCount: 0,
+      calendarCount: 0,
+      musicCount: 0,
+      totalCount: 0,
+    };
+  }
+
+  private incrementPosterStats(statsMap: Map<string, PosterStats>, events: Event[], key: PosterStatsCountKey): void {
+    for (const event of events) {
+      const existing = statsMap.get(event.pubkey) || this.createEmptyPosterStats(event.pubkey);
+      existing[key]++;
+      existing.totalCount++;
+      statsMap.set(event.pubkey, existing);
+    }
+  }
+
+  private mapTimelineEvents(events: Event[]): TimelineEvent[] {
+    return events.map(event => ({
+      id: event.id,
+      pubkey: event.pubkey,
+      kind: event.kind,
+      created_at: event.created_at,
+      content: event.content,
+      tags: event.tags,
+    }));
+  }
+
+  private filterEventsBySelectedList(events: TimelineEvent[]): TimelineEvent[] {
+    const list = this.selectedList();
+    if (!list) {
+      return events;
+    }
+
+    const listPubkeys = new Set(list.pubkeys);
+    return events.filter(event => listPubkeys.has(event.pubkey));
   }
 
   toggleTimePanel(): void {
@@ -1028,7 +1220,7 @@ export class SummaryComponent implements OnInit, OnDestroy {
     this.timelinePage.set(1);
   }
 
-  onProfileClick(event: MouseEvent, pubkey: string): void {
+  onProfileClick(event: globalThis.Event, pubkey: string): void {
     event.preventDefault();
     event.stopPropagation();
     this.layout.openProfile(pubkey);
@@ -1078,7 +1270,7 @@ export class SummaryComponent implements OnInit, OnDestroy {
   }
 
   // Open event detail in the right panel
-  openEventDialog(event: MouseEvent, timelineEvent: TimelineEvent & { type: string }): void {
+  openEventDialog(event: MouseEvent, timelineEvent: TimelineEvent): void {
     event.preventDefault();
     event.stopPropagation();
 
@@ -1106,9 +1298,19 @@ export class SummaryComponent implements OnInit, OnDestroy {
       }
     }
 
+    if (
+      timelineEvent.kind === 30311 ||
+      timelineEvent.kind === 31922 ||
+      timelineEvent.kind === 31923 ||
+      timelineEvent.kind === 34139 ||
+      timelineEvent.kind === 36787
+    ) {
+      this.layout.openEvent(timelineEvent.id, timelineEvent as Event);
+      return;
+    }
+
     // For regular events, navigate to event route in right outlet
-    const eventId = timelineEvent.id;
-    this.layout.openGenericEvent(eventId);
+    this.layout.openGenericEvent(timelineEvent.id);
   }
 
   togglePanel(panel: 'notes' | 'articles' | 'media'): void {
@@ -1167,7 +1369,7 @@ export class SummaryComponent implements OnInit, OnDestroy {
     return ['/e', event.id];
   }
 
-  getEventRoute(event: TimelineEvent & { type: string }): string[] {
+  getEventRoute(event: TimelineEvent): string[] {
     // For articles (kind 30023), generate naddr route
     if (event.kind === 30023 && event.tags) {
       const dTag = event.tags.find(t => t[0] === 'd')?.[1] || '';
@@ -1193,6 +1395,33 @@ export class SummaryComponent implements OnInit, OnDestroy {
       const title = event.tags.find(t => t[0] === 'title')?.[1];
       if (title) return title;
     }
+    if (event.kind === COMMUNITY_DEFINITION_KIND) {
+      return this.getTaggedValue(event, 'name') || this.getTaggedValue(event, 'description') || 'Published a new community';
+    }
+    if (event.kind === 40) {
+      return this.getEventJsonString(event, 'name') || this.getEventJsonString(event, 'about') || 'Created a public chat';
+    }
+    if (event.kind === 31925) {
+      const status = this.getTaggedValue(event, 'status');
+      return status ? `RSVP: ${status}` : 'Responded to a calendar event';
+    }
+    if (
+      event.kind === 30311 ||
+      event.kind === 31922 ||
+      event.kind === 31923 ||
+      event.kind === 32100 ||
+      event.kind === 34139 ||
+      event.kind === 36787 ||
+      event.kind === 1222 ||
+      event.kind === 1244
+    ) {
+      return this.getTaggedValue(event, 'title') ||
+        this.getTaggedValue(event, 'name') ||
+        this.getTaggedValue(event, 'summary') ||
+        this.getTaggedValue(event, 'description') ||
+        this.getTaggedValue(event, 'alt') ||
+        (event.kind === 30311 ? 'Started a live event' : 'Published new content');
+    }
     // For reposts, try to extract content from embedded event or show referenced event info
     if (event.kind === 6 || event.kind === 16) {
       if (event.content) {
@@ -1211,6 +1440,28 @@ export class SummaryComponent implements OnInit, OnDestroy {
     // Truncate content for preview
     const content = event.content || '';
     return content.length > 100 ? content.substring(0, 100) + '...' : content;
+  }
+
+  private getTaggedValue(event: TimelineEvent, tagName: string): string {
+    return event.tags?.find(tag => tag[0] === tagName)?.[1] || '';
+  }
+
+  private getEventJsonString(event: TimelineEvent, key: string): string {
+    if (!event.content) {
+      return '';
+    }
+
+    try {
+      const parsed = JSON.parse(event.content) as unknown;
+      if (typeof parsed !== 'object' || parsed === null) {
+        return '';
+      }
+
+      const value = (parsed as Record<string, unknown>)[key];
+      return typeof value === 'string' ? value : '';
+    } catch {
+      return '';
+    }
   }
 
   async refresh(): Promise<void> {
