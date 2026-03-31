@@ -20,12 +20,10 @@
           <mat-icon class="pin-icon">push_pin</mat-icon>
           <h3>Pinned</h3>
         </div>
-        <div class="pinned-notes-container">
+        <div class="notes-list pinned-notes-list">
           @for (note of pinnedNotes(); track note.event.id) {
-          <div class="pinned-note-wrapper">
-            <app-event [event]="note.event" appearance="plain" [compact]="true" [hideParentEvent]="true"
-              [inFeedsPanel]="true"></app-event>
-          </div>
+          <app-event [event]="note.event" appearance="plain" [hideParentEvent]="true"
+            [inFeedsPanel]="true"></app-event>
           }
         </div>
       </div>
