@@ -2484,7 +2484,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     this.content.set(newContent);
     this.sentimentError.set('');
     this.lastCursorPosition = target.selectionStart || 0;
-    this.scheduleTextareaRefresh(target.selectionStart || 0);
+    this.scheduleTextareaRefresh(target.selectionStart || 0, false, true);
 
     // Check for removed mentions and sync with mentions list
     this.syncMentionsWithContent(newContent);
@@ -2507,7 +2507,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     this.scheduleTextareaRefresh();
   }
 
-  private scheduleTextareaRefresh(cursorPosition?: number, focus = false): void {
+  private scheduleTextareaRefresh(cursorPosition?: number, focus = false, followCaret = false): void {
     const textarea = this.contentTextarea?.nativeElement;
     if (!textarea) {
       return;
@@ -2515,7 +2515,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
 
     const dialogContentWrapper = this.dialogContentWrapper?.nativeElement;
     const shouldRestoreSelection = typeof cursorPosition === 'number' || document.activeElement === textarea;
-    const shouldScrollToBottom = this.shouldKeepTextareaScrolledToBottom(textarea, cursorPosition);
+    const shouldScrollToBottom = followCaret && this.shouldKeepTextareaScrolledToBottom(textarea, cursorPosition);
     const selectionStart = typeof cursorPosition === 'number' ? cursorPosition : textarea.selectionStart;
     const selectionEnd = typeof cursorPosition === 'number' ? cursorPosition : textarea.selectionEnd;
     const textareaScrollTop = textarea.scrollTop;
@@ -3008,7 +3008,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
 
     // Update content
     this.content.set(replacement.replacementText);
-    this.scheduleTextareaRefresh(replacement.newCursorPosition, true);
+    this.scheduleTextareaRefresh(replacement.newCursorPosition, true, true);
 
     // Add to mentions list for p tags
     this.addMention(selection.pubkey);
@@ -3084,7 +3084,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     const newContent = before + after;
     this.content.set(newContent);
     this.lastCursorPosition = config.commandStart;
-    this.scheduleTextareaRefresh(config.commandStart, true);
+    this.scheduleTextareaRefresh(config.commandStart, true, true);
 
     // Dismiss the menu
     this.slashCommandConfig.set(null);
@@ -3115,7 +3115,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
           const updatedContent = contentNow.substring(0, pos) + '@' + contentNow.substring(pos);
           this.content.set(updatedContent);
           const newCursorPos = pos + 1;
-          this.scheduleTextareaRefresh(newCursorPos, true);
+          this.scheduleTextareaRefresh(newCursorPos, true, true);
           // Trigger mention detection at next tick
           setTimeout(() => this.handleMentionInput(this.content(), newCursorPos), 0);
         }
@@ -4346,7 +4346,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     this.content.set(newContent);
 
     const newCursorPosition = cursorPosition + processedText.length;
-    this.scheduleTextareaRefresh(newCursorPosition, true);
+    this.scheduleTextareaRefresh(newCursorPosition, true, true);
   }
 
   /**
@@ -4366,7 +4366,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     this.content.set(newContent);
 
     const newCursorPosition = cursorPosition + text.length;
-    this.scheduleTextareaRefresh(newCursorPosition, true);
+    this.scheduleTextareaRefresh(newCursorPosition, true, true);
   }
 
   // Proof of Work methods

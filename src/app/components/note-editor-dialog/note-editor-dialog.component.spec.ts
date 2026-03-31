@@ -829,6 +829,37 @@ describe('NoteEditorDialogComponent', () => {
 
       expect(textarea.scrollTop).toBe(120);
     });
+
+    it('should preserve manual scroll during layout-only refreshes even when the cursor is at the end', async () => {
+      createComponent();
+      await fixture.whenStable();
+
+      const textarea = component.contentTextarea.nativeElement;
+      const wrapper = component.dialogContentWrapper?.nativeElement;
+
+      Object.defineProperty(textarea, 'scrollHeight', { configurable: true, value: 640 });
+      Object.defineProperty(textarea, 'clientHeight', { configurable: true, value: 200 });
+      textarea.scrollTop = 120;
+
+      if (wrapper) {
+        Object.defineProperty(wrapper, 'scrollHeight', { configurable: true, value: 900 });
+        Object.defineProperty(wrapper, 'clientHeight', { configurable: true, value: 300 });
+        wrapper.scrollTop = 400;
+      }
+
+      textarea.focus();
+      textarea.value = 'hello world';
+      textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+
+      (component as unknown as { scheduleTextareaRefresh: () => void }).scheduleTextareaRefresh();
+
+      await new Promise(resolve => requestAnimationFrame(resolve));
+
+      expect(textarea.scrollTop).toBe(120);
+      if (wrapper) {
+        expect(wrapper.scrollTop).toBe(400);
+      }
+    });
   });
 
   describe('cleanup', () => {
