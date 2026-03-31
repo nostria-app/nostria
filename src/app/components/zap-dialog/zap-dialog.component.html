@@ -43,15 +43,19 @@
         </div>
         @for (split of data.zapSplits; track split.pubkey) {
         <div class="split-recipient">
-          <app-user-profile [pubkey]="split.pubkey" view="compact"></app-user-profile>
+          <div class="recipient-name-row">
+            <mat-icon>person</mat-icon>
+            <app-profile-display-name [pubkey]="split.pubkey" [showFallbackWhileLoading]="true"></app-profile-display-name>
+          </div>
           <span class="split-weight">{{ (split.weight * 100).toFixed(0) }}%</span>
         </div>
         }
       </div>
       } @else {
       <!-- Single recipient -->
-      <div class="recipient-info">
-        <app-user-profile [pubkey]="data.recipientPubkey"></app-user-profile>
+      <div class="recipient-info recipient-name-row">
+        <mat-icon>person</mat-icon>
+        <app-profile-display-name [pubkey]="data.recipientPubkey" [showFallbackWhileLoading]="true"></app-profile-display-name>
       </div>
       }
       @if (data.eventContent) {
@@ -251,15 +255,19 @@
           </div>
           @for (split of data.zapSplits; track split.pubkey) {
           <div class="split-recipient">
-            <app-user-profile [pubkey]="split.pubkey" view="compact"></app-user-profile>
+            <div class="recipient-name-row">
+              <mat-icon>person</mat-icon>
+              <app-profile-display-name [pubkey]="split.pubkey" [showFallbackWhileLoading]="true"></app-profile-display-name>
+            </div>
             <span class="split-weight">{{ (split.weight * 100).toFixed(0) }}%</span>
           </div>
           }
         </div>
         } @else {
         <!-- Single recipient -->
-        <div class="recipient-info">
-          <app-user-profile [pubkey]="data.recipientPubkey"></app-user-profile>
+        <div class="recipient-info recipient-name-row">
+          <mat-icon>person</mat-icon>
+          <app-profile-display-name [pubkey]="data.recipientPubkey" [showFallbackWhileLoading]="true"></app-profile-display-name>
         </div>
         }
         @if (data.eventContent) {

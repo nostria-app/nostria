@@ -14,7 +14,7 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { Router } from '@angular/router';
 import { BreakpointObserver } from '@angular/cdk/layout';
-import { UserProfileComponent } from '../user-profile/user-profile.component';
+import { ProfileDisplayNameComponent } from '../user-profile/display-name/profile-display-name.component';
 import { QrCodeComponent } from '../qr-code/qr-code.component';
 import { ZapService } from '../../services/zap.service';
 import { Wallets } from '../../services/wallets';
@@ -81,7 +81,7 @@ const VIDEO_HOSTING_DOMAINS = ['youtube.com', 'youtu.be', 'vimeo.com', 'twitch.t
     MatDividerModule,
     MatTooltipModule,
     ReactiveFormsModule,
-    UserProfileComponent,
+    ProfileDisplayNameComponent,
     QrCodeComponent
   ],
   templateUrl: './zap-dialog.component.html',

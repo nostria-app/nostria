@@ -142,6 +142,23 @@
   margin-bottom: 8px;
 }
 
+.recipient-name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.recipient-name-row mat-icon {
+  color: var(--mat-sys-on-surface-variant);
+  flex-shrink: 0;
+}
+
+.recipient-name-row app-profile-display-name {
+  min-width: 0;
+  overflow: hidden;
+}
+
 .split-recipients {
   display: flex;
   flex-direction: column;
@@ -170,6 +187,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 12px;
   padding: 8px;
   background: var(--mat-sys-surface-container-low);
   border-radius: 8px;
