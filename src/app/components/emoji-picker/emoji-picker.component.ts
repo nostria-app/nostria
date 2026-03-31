@@ -60,15 +60,7 @@ interface EmojiSectionNavItem {
   icon: string;
 }
 
-interface SpecialReactionOption {
-  emoji: string;
-  label: string;
-}
-
-const SPECIAL_REACTION_OPTIONS: SpecialReactionOption[] = [
-  { emoji: '+', label: 'Plus reaction' },
-  { emoji: '-', label: 'Minus reaction' },
-];
+const DEFAULT_REACTION_RECENT_EMOJIS = ['+', '-'];
 
 @Component({
   selector: 'app-emoji-picker',
@@ -155,34 +147,14 @@ const SPECIAL_REACTION_OPTIONS: SpecialReactionOption[] = [
       </div>
       } @else {
         <div class="emoji-list-scroll" #emojiScrollContainer>
-          @if (mode() === 'reaction') {
-          <div class="emoji-section" data-section-id="reaction-options">
-            <div class="section-title">
-              <span class="section-icon">+/-</span>
-              <span>Reactions</span>
-            </div>
-            <div class="emoji-grid special-reaction-grid">
-              @for (reaction of specialReactionOptions; track reaction.emoji) {
-              <button class="emoji-btn special-reaction-btn" [class.default-emoji]="isDefaultEmoji(reaction.emoji)"
-                [attr.aria-label]="reaction.label" (click)="selectEmoji(reaction.emoji); $event.stopPropagation()"
-                (contextmenu)="openEmojiContextMenu($event, reaction.emoji)"
-                (touchstart)="onEmojiTouchStart($event, reaction.emoji)" (touchend)="onEmojiTouchEnd()"
-                (touchcancel)="onEmojiTouchEnd()" (touchmove)="onEmojiTouchEnd()">
-                <span class="reaction-symbol">{{ reaction.emoji }}</span>
-              </button>
-              }
-            </div>
-          </div>
-          }
-
           <div class="emoji-section" data-section-id="recent">
             <div class="section-title">
               <span class="section-icon">🕘</span>
               <span>Recent</span>
             </div>
-            @if (recentEmojis().length > 0) {
+            @if (visibleRecentEmojis().length > 0) {
             <div class="emoji-grid">
-              @for (recent of recentEmojis(); track recent.emoji) {
+              @for (recent of visibleRecentEmojis(); track recent.emoji) {
               <button class="emoji-btn" [class.default-emoji]="isDefaultEmoji(recent.emoji)"
                 (click)="selectEmoji(recent.emoji); $event.stopPropagation()"
                 (contextmenu)="openEmojiContextMenu($event, recent.emoji, recent.url)"
@@ -298,6 +270,8 @@ const SPECIAL_REACTION_OPTIONS: SpecialReactionOption[] = [
       max-height: none;
       flex: 1;
       min-height: 0;
+      background: var(--mat-sys-surface-container);
+      border-radius: 12px;
     }
 
     .emoji-picker {
@@ -438,6 +412,11 @@ const SPECIAL_REACTION_OPTIONS: SpecialReactionOption[] = [
       scrollbar-color: var(--scrollbar-thumb, var(--mat-sys-outline)) var(--scrollbar-track, transparent);
     }
 
+    :host-context(.emoji-picker-menu) .emoji-grid-container,
+    :host-context(.emoji-picker-menu) .emoji-list-scroll {
+      background: var(--mat-sys-surface-container-low);
+    }
+
     :host-context(.emoji-picker-dialog) .emoji-list-scroll,
     :host-context(.emoji-picker-menu) .emoji-list-scroll {
       max-height: none;
@@ -504,6 +483,11 @@ const SPECIAL_REACTION_OPTIONS: SpecialReactionOption[] = [
       &::-webkit-scrollbar {
         display: none;
       }
+    }
+
+    :host-context(.emoji-picker-menu) .emoji-section-nav {
+      background: var(--mat-sys-surface-container-high);
+      border-top-color: var(--mat-sys-outline);
     }
 
     .section-nav-btn {
@@ -640,22 +624,6 @@ const SPECIAL_REACTION_OPTIONS: SpecialReactionOption[] = [
       }
     }
 
-    .special-reaction-grid {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 6px;
-    }
-
-    .special-reaction-btn {
-      min-height: 44px;
-      border-radius: 10px;
-      background: var(--mat-sys-surface-container-low);
-    }
-
-    .reaction-symbol {
-      display: block;
-      font-size: 1.35rem;
-    }
-
     .emoji-section {
       margin-bottom: 8px;
       overflow-x: hidden;
@@ -788,7 +756,6 @@ export class EmojiPickerComponent {
   emojiContextMenuTarget = signal<{ emoji: string; url?: string } | null>(null);
 
   readonly categories = EMOJI_CATEGORIES;
-  readonly specialReactionOptions = SPECIAL_REACTION_OPTIONS;
   readonly defaultEmoji = computed(() => {
     const pubkey = this.accountState.pubkey();
     if (pubkey) {
@@ -803,9 +770,26 @@ export class EmojiPickerComponent {
   searchQuery = signal('');
   recentEmojis = signal<RecentEmoji[]>([]);
   emojiSets = signal<EmojiSetGroup[]>([]);
+  visibleRecentEmojis = computed<RecentEmoji[]>(() => {
+    const recentEmojis = this.recentEmojis();
+    if (this.mode() !== 'reaction') {
+      return recentEmojis;
+    }
+
+    const missingDefaults = DEFAULT_REACTION_RECENT_EMOJIS
+      .filter(emoji => !recentEmojis.some(entry => entry.emoji === emoji))
+      .map(emoji => ({ emoji, timestamp: 0, useCount: 0 }));
+
+    if (missingDefaults.length === 0) {
+      return recentEmojis;
+    }
+
+    const maxRecentCount = 12;
+    const retainedRecent = recentEmojis.slice(0, Math.max(0, maxRecentCount - missingDefaults.length));
+    return [...retainedRecent, ...missingDefaults];
+  });
   sectionNavItems = computed<EmojiSectionNavItem[]>(() => {
     const sections: EmojiSectionNavItem[] = [
-      ...(this.mode() === 'reaction' ? [{ id: 'reaction-options', label: 'Reactions', icon: '+' }] : []),
       { id: 'recent', label: 'Recent', icon: '🕘' },
     ];
 
@@ -1042,10 +1026,6 @@ export class EmojiPickerComponent {
 
     this.accountLocalState.promoteRecentEmoji(pubkey, target.emoji, target.url);
     this.recentEmojis.set(this.accountLocalState.getRecentEmojis(pubkey));
-
-    const trigger = this.emojiContextMenuTrigger();
-    trigger?.closeMenu();
-    this.blurActiveElement();
   }
 
   makeEmojiDefault(): void {
@@ -1056,10 +1036,6 @@ export class EmojiPickerComponent {
     }
 
     this.accountLocalState.setPreferredReactionEmoji(pubkey, target.emoji);
-
-    const trigger = this.emojiContextMenuTrigger();
-    trigger?.closeMenu();
-    this.blurActiveElement();
   }
 
   isDefaultEmoji(emoji: string): boolean {

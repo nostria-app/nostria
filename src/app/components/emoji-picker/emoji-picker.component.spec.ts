@@ -114,12 +114,12 @@ describe('EmojiPickerComponent', () => {
     expect(buttons.length).toBe(component.categories.length + 1);
   });
 
-  it('should render plus and minus reaction buttons in reaction mode', async () => {
+  it('should append plus and minus to the recent section in reaction mode', async () => {
     fixture.componentRef.setInput('mode', 'reaction');
     fixture.detectChanges();
     await fixture.whenStable();
 
-    const reactionSymbols = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('.reaction-symbol'))
+    const reactionSymbols = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('[data-section-id="recent"] .emoji-btn'))
       .map(element => element.textContent?.trim());
 
     expect(reactionSymbols).toContain('+');

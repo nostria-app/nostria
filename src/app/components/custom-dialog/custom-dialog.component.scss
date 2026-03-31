@@ -77,6 +77,15 @@
   }
 }
 
+.dialog-container.desktop-reaction-picker-dialog {
+  width: min(360px, calc(100vw - 24px));
+  max-width: min(360px, calc(100vw - 24px));
+
+  .dialog-content {
+    padding: 0;
+  }
+}
+
 // Header
 .dialog-header {
   display: grid;

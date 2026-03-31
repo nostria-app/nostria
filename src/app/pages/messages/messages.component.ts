@@ -3457,11 +3457,12 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
 
   async openReactionPickerDialog(message: DirectMessage): Promise<void> {
     const { EmojiPickerDialogComponent } = await import('../../components/emoji-picker/emoji-picker-dialog.component');
+    const isHandset = this.layout.isHandset();
     const dialogRef = this.customDialog.open<typeof EmojiPickerDialogComponent.prototype, string>(EmojiPickerDialogComponent, {
       title: 'React',
-      width: '400px',
-      panelClass: 'emoji-picker-dialog',
-      data: { mode: 'reaction' },
+      width: isHandset ? '400px' : '360px',
+      panelClass: isHandset ? 'emoji-picker-dialog' : ['emoji-picker-menu', 'desktop-reaction-picker-dialog'],
+      data: { mode: 'reaction', allowPreferredReactionShortcut: true },
     });
 
     dialogRef.afterClosed$.subscribe(({ result }) => {
