@@ -180,39 +180,18 @@
       <!-- Media Upload Options -->
       <div class="option-row">
         <div class="option-header">
-          <mat-form-field class="upload-mode-field" subscriptSizing="dynamic">
-            <mat-label>Media Upload Mode</mat-label>
-            <mat-select [value]="mediaUploadMode()" (selectionChange)="onMediaUploadModeChange($event.value)">
-              @for (option of mediaUploadModeOptions; track option.value) {
-              <mat-option [value]="option.value">{{ option.label }}</mat-option>
-              }
-            </mat-select>
-          </mat-form-field>
+          <span class="option-label">Optimization</span>
+          <mat-button-toggle-group class="optimization-toggle-group" [value]="selectedMediaOptimization()"
+            (change)="onMediaOptimizationChange($event.value)" [hideSingleSelectionIndicator]="true"
+            aria-label="Media optimization">
+            @for (option of mediaOptimizationOptions; track option.value) {
+            <mat-button-toggle [value]="option.value">{{ option.label }}</mat-button-toggle>
+            }
+          </mat-button-toggle-group>
           <span class="option-description">
-            {{ selectedMediaUploadModeDescription() }} Applies to newly added images and videos.
+            {{ selectedMediaOptimizationDescription() }} Applies to newly added images and videos.
           </span>
         </div>
-
-        @if (usesLocalCompression()) {
-        <div class="option-content compression-slider-block">
-          <div class="compression-slider-header">
-            <span class="compression-slider-title">Compression Strength</span>
-            <div class="compression-slider-meta">
-              <span class="compression-slider-value">{{ compressionStrengthLabel() }}</span>
-              <button mat-button type="button" class="compression-reset-button" (click)="resetCompressionStrength()"
-                [disabled]="isDefaultCompressionStrength()" matTooltip="Reset to the recommended default">
-                <mat-icon>restart_alt</mat-icon>
-                <span>Reset</span>
-              </button>
-            </div>
-          </div>
-          <mat-slider min="0" max="100" step="5" discrete>
-            <input matSliderThumb [value]="compressionStrength()" (valueChange)="onCompressionStrengthChange($event)"
-              aria-label="Compression strength" />
-          </mat-slider>
-          <span class="option-description compression-description">{{ compressionStrengthDescription() }}</span>
-        </div>
-        }
       </div>
 
       <!-- Client Metadata Options -->

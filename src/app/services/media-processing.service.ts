@@ -98,7 +98,7 @@ export class MediaProcessingService {
         file,
         uploadOriginal,
         wasProcessed: false,
-        warningMessage: `Local compression was not available for ${file.name}. Uploading the original file instead.`,
+        warningMessage: `Local optimization was not available for ${file.name}. Uploading the original file instead.`,
       };
     }
   }
@@ -112,7 +112,7 @@ export class MediaProcessingService {
       return {
         originalFile: file,
         willUploadCompressedFile: false,
-        warningMessage: 'Compression preview is only available in the browser.',
+        warningMessage: 'Optimization preview is only available in the browser.',
       };
     }
 
@@ -120,7 +120,7 @@ export class MediaProcessingService {
       return {
         originalFile: file,
         willUploadCompressedFile: false,
-        warningMessage: 'Switch to Local Compression to preview how the media will look after compression.',
+        warningMessage: 'Choose Balanced or Maximum to preview how the media will look after optimization.',
       };
     }
 
@@ -140,14 +140,14 @@ export class MediaProcessingService {
       return {
         originalFile: file,
         willUploadCompressedFile: false,
-        warningMessage: 'Compression preview is currently available for images and videos only.',
+        warningMessage: 'Optimization preview is currently available for images and videos only.',
       };
     } catch (error) {
       this.logger.warn('Failed to generate compression preview', error);
       return {
         originalFile: file,
         willUploadCompressedFile: false,
-        warningMessage: `Could not generate a compression preview for ${file.name}.`,
+        warningMessage: `Could not generate an optimization preview for ${file.name}.`,
       };
     }
   }
@@ -173,7 +173,7 @@ export class MediaProcessingService {
         file,
         uploadOriginal,
         wasProcessed: false,
-        warningMessage: candidate.failureReason ?? `Local compression was not available for ${file.name}. Uploading the original file instead.`,
+        warningMessage: candidate.failureReason ?? `Local optimization was not available for ${file.name}. Uploading the original file instead.`,
       };
     }
 
@@ -182,7 +182,7 @@ export class MediaProcessingService {
         file,
         uploadOriginal,
         wasProcessed: false,
-        warningMessage: `Local compression did not reduce ${file.name}, so the original file will be uploaded.`,
+        warningMessage: `Local optimization did not reduce ${file.name}, so the original file will be uploaded.`,
       };
     }
 
@@ -198,7 +198,7 @@ export class MediaProcessingService {
     settings: MediaUploadSettings,
     onProgress?: (progress: MediaProcessingProgress) => void,
   ): Promise<CompressionCandidateResult> {
-    onProgress?.({ message: `Compressing ${file.name}...`, progress: 0.1 });
+    onProgress?.({ message: `Optimizing ${file.name}...`, progress: 0.1 });
 
     const imageSource = await this.loadImageSource(file);
 
@@ -219,7 +219,7 @@ export class MediaProcessingService {
 
       const blob = await this.canvasToBlob(canvas, outputMimeType, quality);
 
-      onProgress?.({ message: `Compressed ${file.name}`, progress: 1 });
+      onProgress?.({ message: `Optimized ${file.name}`, progress: 1 });
 
       return {
         file: this.createOutputFile(file, blob, outputMimeType),
@@ -242,7 +242,7 @@ export class MediaProcessingService {
         file,
         uploadOriginal,
         wasProcessed: false,
-        warningMessage: candidate.failureReason ?? `Local compression was not available for ${file.name}. Uploading the original file instead.`,
+        warningMessage: candidate.failureReason ?? `Local optimization was not available for ${file.name}. Uploading the original file instead.`,
       };
     }
 
@@ -251,7 +251,7 @@ export class MediaProcessingService {
         file,
         uploadOriginal,
         wasProcessed: false,
-        warningMessage: `Local compression did not reduce ${file.name}, so the original file will be uploaded.`,
+        warningMessage: `Local optimization did not reduce ${file.name}, so the original file will be uploaded.`,
       };
     }
 
@@ -267,7 +267,7 @@ export class MediaProcessingService {
     settings: MediaUploadSettings,
     onProgress?: (progress: MediaProcessingProgress) => void,
   ): Promise<CompressionCandidateResult> {
-    onProgress?.({ message: `Preparing ${file.name} for local compression...`, progress: 0.05 });
+    onProgress?.({ message: `Preparing ${file.name} for optimization...`, progress: 0.05 });
 
     const mediabunny = await this.loadMediabunny();
     const input = new mediabunny.Input({
@@ -328,7 +328,7 @@ export class MediaProcessingService {
 
       conversion.onProgress = progress => {
         onProgress?.({
-          message: `Compressing ${file.name}...`,
+          message: `Optimizing ${file.name}...`,
           progress,
         });
       };
@@ -352,7 +352,7 @@ export class MediaProcessingService {
         }
       }
 
-      onProgress?.({ message: `Compressed ${file.name}`, progress: 1 });
+      onProgress?.({ message: `Optimized ${file.name}`, progress: 1 });
 
       return {
         file: this.createOutputFile(file, blob, mimeType, plan.extension),
@@ -370,7 +370,7 @@ export class MediaProcessingService {
       return {
         originalFile,
         willUploadCompressedFile: false,
-        warningMessage: candidate.failureReason ?? `Could not generate a compression preview for ${originalFile.name}.`,
+        warningMessage: candidate.failureReason ?? `Could not generate an optimization preview for ${originalFile.name}.`,
       };
     }
 

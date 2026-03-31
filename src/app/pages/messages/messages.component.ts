@@ -17,6 +17,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
+import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -92,14 +93,14 @@ import { HapticsService } from '../../services/haptics.service';
 import { EmojiSetService } from '../../services/emoji-set.service';
 import { MediaProcessingService } from '../../services/media-processing.service';
 import {
-  DEFAULT_MEDIA_COMPRESSION_STRENGTH,
   DEFAULT_DM_MEDIA_UPLOAD_SETTINGS,
-  getCompressionStrengthDescription,
-  getCompressionStrengthLabel,
-  normalizeCompressionStrength,
-  shouldUploadOriginal,
+  getMediaOptimizationDescription,
+  getMediaOptimizationOption,
+  getMediaUploadSettingsForOptimization,
+  MEDIA_OPTIMIZATION_OPTIONS,
   VideoRecordDialogResult,
   usesLocalCompression as usesLocalCompressionMode,
+  type MediaOptimizationOptionValue,
   type MediaUploadMode,
   type MediaUploadSettings,
 } from '../../interfaces/media-upload';
@@ -199,6 +200,7 @@ interface QuickReactionMenuItem {
   imports: [
     FormsModule,
     MatButtonModule,
+    MatButtonToggleModule,
     MatIconModule,
     MatInputModule,
     MatFormFieldModule,
@@ -291,7 +293,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   isUploading = signal<boolean>(false);
   isDragOverMessageInput = signal<boolean>(false);
   uploadStatus = signal<string>('');
-  readonly defaultCompressionStrength = DEFAULT_MEDIA_COMPRESSION_STRENGTH;
+  readonly optimizationOptions = MEDIA_OPTIMIZATION_OPTIONS;
   dmMediaUploadMode = signal<MediaUploadMode>(DEFAULT_DM_MEDIA_UPLOAD_SETTINGS.mode);
   dmCompressionStrength = signal<number>(DEFAULT_DM_MEDIA_UPLOAD_SETTINGS.compressionStrength);
   mediaPreviews = signal<{ url: string; type: 'image' | 'video' | 'music' | 'file'; label?: string; meta?: string; pendingEncrypted?: boolean; pendingId?: string }[]>([]);
@@ -299,11 +301,13 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   readonly hasPendingCompressibleMedia = computed(() =>
     this.pendingEncryptedMediaPreviews().some(preview => preview.type === 'image' || preview.type === 'video')
   );
-  readonly dmUploadOriginal = computed(() => this.dmMediaUploadMode() === 'original');
+  readonly selectedDmOptimization = computed(() =>
+    getMediaOptimizationOption(this.dmMediaUploadMode(), this.dmCompressionStrength())
+  );
   readonly usesLocalDmCompression = computed(() => usesLocalCompressionMode(this.dmMediaUploadMode()));
-  readonly dmCompressionStrengthLabel = computed(() => getCompressionStrengthLabel(this.dmCompressionStrength()));
-  readonly dmCompressionStrengthDescription = computed(() => getCompressionStrengthDescription(this.dmCompressionStrength()));
-  readonly isDefaultDmCompressionStrength = computed(() => this.dmCompressionStrength() === this.defaultCompressionStrength);
+  readonly dmOptimizationDescription = computed(() =>
+    getMediaOptimizationDescription(this.dmMediaUploadMode(), this.dmCompressionStrength())
+  );
 
   /** Pending extra tags (e.g. imeta with waveform) for the next message */
   pendingTags = signal<string[][]>([]);
@@ -2871,7 +2875,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     );
 
     this.customDialog.open<typeof CompressionPreviewDialogComponent.prototype, void>(CompressionPreviewDialogComponent, {
-      title: 'Compression Preview',
+      title: 'Optimization Preview',
       width: '980px',
       maxWidth: '96vw',
       showCloseButton: true,
@@ -2925,16 +2929,10 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     this.dmMediaUploadMode.set(DEFAULT_DM_MEDIA_UPLOAD_SETTINGS.mode);
   }
 
-  onDmUploadOriginalChange(enabled: boolean): void {
-    this.dmMediaUploadMode.set(enabled ? 'original' : 'local');
-  }
-
-  onDmCompressionStrengthChange(value: number): void {
-    this.dmCompressionStrength.set(normalizeCompressionStrength(value));
-  }
-
-  resetDmCompressionStrength(): void {
-    this.dmCompressionStrength.set(this.defaultCompressionStrength);
+  onDmOptimizationChange(optimization: MediaOptimizationOptionValue): void {
+    const settings = getMediaUploadSettingsForOptimization(optimization);
+    this.dmMediaUploadMode.set(settings.mode);
+    this.dmCompressionStrength.set(settings.compressionStrength);
   }
 
   private getDmUploadSettings(): MediaUploadSettings {

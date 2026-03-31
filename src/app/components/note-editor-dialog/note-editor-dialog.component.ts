@@ -17,6 +17,7 @@ import {
 } from '@angular/core';
 import { CustomDialogRef, CustomDialogService } from '../../services/custom-dialog.service';
 import { MatButtonModule } from '@angular/material/button';
+import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatIconModule } from '@angular/material/icon';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -69,16 +70,15 @@ import { SettingsService } from '../../services/settings.service';
 import { XDualPostService, XPostMediaItem } from '../../services/x-dual-post.service';
 import { MediaProcessingService } from '../../services/media-processing.service';
 import {
-  DEFAULT_MEDIA_COMPRESSION_STRENGTH,
   DEFAULT_MEDIA_UPLOAD_SETTINGS,
-  getCompressionStrengthDescription,
-  getCompressionStrengthLabel,
-  getMediaUploadModeDescription,
-  MEDIA_UPLOAD_MODE_OPTIONS,
+  getMediaOptimizationDescription,
+  getMediaOptimizationOption,
+  getMediaUploadSettingsForOptimization,
+  MEDIA_OPTIMIZATION_OPTIONS,
   MediaUploadMode,
-  normalizeCompressionStrength,
   shouldUploadOriginal,
   usesLocalCompression as usesLocalCompressionMode,
+  type MediaOptimizationOptionValue,
 } from '../../interfaces/media-upload';
 
 // Re-export for backward compatibility
@@ -159,6 +159,7 @@ interface SentimentHeaderState {
   imports: [
     FormsModule,
     MatButtonModule,
+    MatButtonToggleModule,
     MatIconModule,
     MatFormFieldModule,
     MatInputModule,
@@ -372,16 +373,17 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   expirationEnabled = signal(false);
   expirationDate = signal<Date | null>(null);
   expirationTime = signal<string>('12:00');
-  readonly mediaUploadModeOptions = MEDIA_UPLOAD_MODE_OPTIONS;
-  readonly defaultCompressionStrength = DEFAULT_MEDIA_COMPRESSION_STRENGTH;
+  readonly mediaOptimizationOptions = MEDIA_OPTIMIZATION_OPTIONS;
   mediaUploadMode = signal<MediaUploadMode>(DEFAULT_MEDIA_UPLOAD_SETTINGS.mode);
   compressionStrength = signal<number>(DEFAULT_MEDIA_UPLOAD_SETTINGS.compressionStrength);
   uploadOriginal = computed(() => shouldUploadOriginal(this.mediaUploadMode()));
   usesLocalCompression = computed(() => usesLocalCompressionMode(this.mediaUploadMode()));
-  selectedMediaUploadModeDescription = computed(() => getMediaUploadModeDescription(this.mediaUploadMode()));
-  compressionStrengthLabel = computed(() => getCompressionStrengthLabel(this.compressionStrength()));
-  compressionStrengthDescription = computed(() => getCompressionStrengthDescription(this.compressionStrength()));
-  isDefaultCompressionStrength = computed(() => this.compressionStrength() === this.defaultCompressionStrength);
+  selectedMediaOptimization = computed(() =>
+    getMediaOptimizationOption(this.mediaUploadMode(), this.compressionStrength())
+  );
+  selectedMediaOptimizationDescription = computed(() =>
+    getMediaOptimizationDescription(this.mediaUploadMode(), this.compressionStrength())
+  );
   addClientTag = signal(true); // Default to true, will be set from user preference in constructor
   postToX = signal(false);
 
@@ -1438,8 +1440,11 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
           this.expirationEnabled.set(autoDraft.expirationEnabled);
           this.expirationDate.set(autoDraft.expirationDate);
           this.expirationTime.set(autoDraft.expirationTime);
-          this.mediaUploadMode.set(autoDraft.uploadMode ?? (autoDraft.uploadOriginal ? 'original' : 'server'));
-          this.compressionStrength.set(normalizeCompressionStrength(autoDraft.compressionStrength));
+          const restoredUploadMode = autoDraft.uploadMode ?? (autoDraft.uploadOriginal ? 'original' : 'local');
+          this.mediaUploadMode.set(restoredUploadMode === 'server' ? 'local' : restoredUploadMode);
+          this.compressionStrength.set(
+            autoDraft.compressionStrength ?? DEFAULT_MEDIA_UPLOAD_SETTINGS.compressionStrength
+          );
           this.addClientTag.set(autoDraft.addClientTag ?? this.localSettings.addClientTag());
 
           if (autoDraft.mediaMetadata) {
@@ -3536,16 +3541,10 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     this.expirationTime.set(time);
   }
 
-  onMediaUploadModeChange(mode: MediaUploadMode): void {
-    this.mediaUploadMode.set(mode);
-  }
-
-  onCompressionStrengthChange(value: number): void {
-    this.compressionStrength.set(normalizeCompressionStrength(value));
-  }
-
-  resetCompressionStrength(): void {
-    this.compressionStrength.set(this.defaultCompressionStrength);
+  onMediaOptimizationChange(optimization: MediaOptimizationOptionValue): void {
+    const settings = getMediaUploadSettingsForOptimization(optimization);
+    this.mediaUploadMode.set(settings.mode);
+    this.compressionStrength.set(settings.compressionStrength);
   }
 
   private getExpirationDateTime(): Date | null {
@@ -4004,7 +4003,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
         this.snackBar.open(
           warningMessages.length === 1
             ? warningMessages[0]
-            : `${warningMessages.length} file(s) will keep their original upload because local compression was unavailable or not smaller.`,
+            : `${warningMessages.length} file(s) will keep their original upload because local optimization was unavailable or not smaller.`,
           'Close',
           {
             duration: 6000,

@@ -29,7 +29,7 @@
         <div class="file-actions">
           @if (usesLocalCompression() && (entry.isImage || entry.isVideo)) {
           <button mat-icon-button type="button" (click)="openCompressionPreview(entry)" [disabled]="isUploading()"
-            matTooltip="Preview compression">
+            matTooltip="Preview optimization">
             <mat-icon>compare</mat-icon>
           </button>
           }
@@ -53,38 +53,15 @@
     <div class="upload-form">
       @if (hasImageOrVideo()) {
       <div class="compression-settings">
-        <mat-form-field class="upload-mode-field" subscriptSizing="dynamic">
-          <mat-label>Media Upload Mode</mat-label>
-          <mat-select [value]="uploadMode()" (selectionChange)="onUploadModeChange($event.value)"
-            [disabled]="isUploading()">
-            @for (option of uploadModeOptions; track option.value) {
-            <mat-option [value]="option.value">{{ option.label }}</mat-option>
-            }
-          </mat-select>
-        </mat-form-field>
-        <p class="compression-description">{{ selectedUploadModeDescription() }}</p>
-
-        @if (usesLocalCompression()) {
-        <div class="compression-slider-block">
-          <div class="compression-slider-header">
-            <span class="compression-slider-title">Compression Strength</span>
-            <div class="compression-slider-meta">
-              <span class="compression-slider-value">{{ compressionStrengthLabel() }}</span>
-              <button mat-button type="button" class="compression-reset-button" (click)="resetCompressionStrength()"
-                [disabled]="isDefaultCompressionStrength() || isUploading()"
-                matTooltip="Reset to the recommended default">
-                <mat-icon>restart_alt</mat-icon>
-                <span>Reset</span>
-              </button>
-            </div>
-          </div>
-          <mat-slider min="0" max="100" step="5" discrete>
-            <input matSliderThumb [value]="compressionStrength()" (valueChange)="onCompressionStrengthChange($event)"
-              [disabled]="isUploading()" aria-label="Compression strength" />
-          </mat-slider>
-          <p class="compression-description">{{ compressionStrengthDescription() }}</p>
-        </div>
-        }
+        <span class="optimization-label">Optimization</span>
+        <mat-button-toggle-group class="optimization-toggle-group" [value]="selectedOptimization()"
+          (change)="onOptimizationChange($event.value)" [disabled]="isUploading()"
+          [hideSingleSelectionIndicator]="true" aria-label="Media optimization">
+          @for (option of optimizationOptions; track option.value) {
+          <mat-button-toggle [value]="option.value">{{ option.label }}</mat-button-toggle>
+          }
+        </mat-button-toggle-group>
+        <p class="compression-description">{{ selectedOptimizationDescription() }}</p>
       </div>
       }
 
