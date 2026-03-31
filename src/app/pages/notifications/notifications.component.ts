@@ -142,9 +142,8 @@ export class NotificationsComponent implements OnInit, OnDestroy {
       NotificationType.ZAP,
       NotificationType.WALLET,
     ];
-    // Return true if any content filter is disabled OR if showing system notifications OR if showing unread only
+    // Return true if any content filter is disabled or if other filter options are active
     return contentTypes.some(type => !filters[type])
-      || this.showSystemNotifications()
       || this.showUnreadOnly()
       || this.wotFilterLevel() !== 'off';
   });
@@ -1317,10 +1316,7 @@ export class NotificationsComponent implements OnInit, OnDestroy {
     this.notificationFilters.update(current => ({ ...current, ...changes }));
   }
 
-  /**
-   * Handle system notifications toggle from the filter panel
-   */
-  onSystemNotificationsChanged(show: boolean): void {
+  setNotificationsView(show: boolean): void {
     this.showSystemNotifications.set(show);
   }
 

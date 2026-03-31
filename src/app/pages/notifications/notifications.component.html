@@ -1,7 +1,33 @@
 <div class="notifications-page">
   <!-- Panel Header -->
   <div class="panel-header">
-    <h2 class="panel-title title-font">Notifications</h2>
+    <button
+      type="button"
+      class="panel-title-button title-font"
+      [matMenuTriggerFor]="notificationViewMenu"
+      #notificationViewTrigger="matMenuTrigger"
+      [class.panel-title-button-open]="notificationViewTrigger.menuOpen"
+      aria-label="Select notifications view">
+      <mat-icon class="panel-title-icon">{{ showSystemNotifications() ? 'priority' : 'notifications' }}</mat-icon>
+      <span class="panel-title-text">{{ showSystemNotifications() ? 'System Notifications' : 'Notifications' }}</span>
+      <mat-icon class="panel-title-chevron">expand_more</mat-icon>
+    </button>
+    <mat-menu #notificationViewMenu="matMenu">
+      <button mat-menu-item (click)="setNotificationsView(false)">
+        <mat-icon>notifications</mat-icon>
+        <span>Notifications</span>
+        @if (!showSystemNotifications()) {
+        <mat-icon>check</mat-icon>
+        }
+      </button>
+      <button mat-menu-item (click)="setNotificationsView(true)">
+        <mat-icon>priority</mat-icon>
+        <span>System Notifications</span>
+        @if (showSystemNotifications()) {
+        <mat-icon>check</mat-icon>
+        }
+      </button>
+    </mat-menu>
     @if (newNotificationCount() > 0) {
     <span class="notification-badge">{{ newNotificationCount() }}</span>
     }
@@ -11,10 +37,8 @@
     </button>
     <!-- Filter button with overlay panel -->
     <app-filter-button [active]="hasActiveFilters()" tooltip="Filter">
-      <app-notifications-filter-panel [filters]="notificationFilters()"
-        [showSystemNotifications]="showSystemNotifications()" [showUnreadOnly]="showUnreadOnly()"
+      <app-notifications-filter-panel [filters]="notificationFilters()" [showUnreadOnly]="showUnreadOnly()"
         [wotFilterLevel]="wotFilterLevel()" (filtersChanged)="onFiltersChanged($event)"
-        (showSystemNotificationsChanged)="onSystemNotificationsChanged($event)"
         (showUnreadOnlyChanged)="onUnreadOnlyChanged($event)" (wotFilterLevelChanged)="onWotFilterLevelChanged($event)">
       </app-notifications-filter-panel>
     </app-filter-button>

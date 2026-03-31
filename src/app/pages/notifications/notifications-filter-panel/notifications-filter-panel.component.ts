@@ -85,14 +85,6 @@ const FILTER_OPTIONS: FilterOption[] = [
             <span>Unread only</span>
           </div>
         </mat-checkbox>
-        <mat-checkbox
-          [checked]="showSystemNotifications()"
-          (change)="onSystemNotificationsChange($event.checked)">
-          <div class="filter-option-content">
-            <mat-icon class="filter-icon">priority</mat-icon>
-            <span>System Notifications</span>
-          </div>
-        </mat-checkbox>
       </div>
 
       <mat-divider></mat-divider>
@@ -187,13 +179,11 @@ const FILTER_OPTIONS: FilterOption[] = [
 })
 export class NotificationsFilterPanelComponent {
   filters = input.required<Record<NotificationType, boolean>>();
-  showSystemNotifications = input<boolean>(false);
   showUnreadOnly = input<boolean>(false);
   wotFilterLevel = input<WotFilterLevel>('off');
 
   // Output events for changes
   filtersChanged = output<Partial<Record<NotificationType, boolean>>>();
-  showSystemNotificationsChanged = output<boolean>();
   showUnreadOnlyChanged = output<boolean>();
   wotFilterLevelChanged = output<WotFilterLevel>();
 
@@ -205,13 +195,6 @@ export class NotificationsFilterPanelComponent {
    */
   onFilterChange(type: NotificationType, checked: boolean): void {
     this.filtersChanged.emit({ [type]: checked });
-  }
-
-  /**
-   * Handle system notifications toggle
-   */
-  onSystemNotificationsChange(checked: boolean): void {
-    this.showSystemNotificationsChanged.emit(checked);
   }
 
   /**
@@ -243,7 +226,6 @@ export class NotificationsFilterPanelComponent {
       [NotificationType.ZAP]: true,
       [NotificationType.WALLET]: true,
     });
-    this.showSystemNotificationsChanged.emit(false);
     this.showUnreadOnlyChanged.emit(false);
     this.wotFilterLevelChanged.emit('off');
   }

@@ -132,6 +132,23 @@ describe('NotificationsComponent', () => {
         expect(component).toBeTruthy();
     });
 
+    describe('notifications view dropdown', () => {
+        it('should show Notifications by default', () => {
+            const titleText = fixture.nativeElement.querySelector('.panel-title-text')?.textContent?.trim();
+
+            expect(titleText).toBe('Notifications');
+        });
+
+        it('should update the title when switching to system notifications', async () => {
+            component.setNotificationsView(true);
+            fixture.detectChanges();
+            await fixture.whenStable();
+
+            const titleText = fixture.nativeElement.querySelector('.panel-title-text')?.textContent?.trim();
+            expect(titleText).toBe('System Notifications');
+        });
+    });
+
     describe('mark all as read button', () => {
         it('should show mark all as read button in the header when notifications exist', async () => {
             mockNotificationService.notifications.set([createMockNotification()]);
