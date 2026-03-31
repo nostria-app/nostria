@@ -223,14 +223,11 @@ export class MediaUploadDialogComponent implements OnDestroy {
       });
 
       const thumbnailUrl = URL.createObjectURL(blob);
-      this.selectedFiles.update(list => list.map(e => {
-        if (e.file !== videoFile) {
-          return e;
-        }
-
-        this.releaseBlobUrl(e.videoThumbnailUrl);
-        return { ...e, videoThumbnailUrl: thumbnailUrl };
-      }));
+      const previousThumbnailUrl = this.selectedFiles().find(e => e.file === videoFile)?.videoThumbnailUrl ?? null;
+      this.selectedFiles.update(list => list.map(e =>
+        e.file === videoFile ? { ...e, videoThumbnailUrl: thumbnailUrl } : e
+      ));
+      this.releaseBlobUrl(previousThumbnailUrl);
 
       URL.revokeObjectURL(videoUrl);
     } catch (error) {
@@ -291,6 +288,7 @@ export class MediaUploadDialogComponent implements OnDestroy {
 
   private releaseEntryUrls(entries: SelectedFileEntry[]): void {
     for (const entry of entries) {
+      this.releaseBlobUrl(entry.previewUrl);
       this.releaseBlobUrl(entry.videoThumbnailUrl);
     }
   }

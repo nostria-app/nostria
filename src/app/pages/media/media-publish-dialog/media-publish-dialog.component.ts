@@ -368,7 +368,7 @@ export class MediaPublishDialogComponent implements OnDestroy {
   private setThumbnailUrl(url: string | undefined, owned = false): void {
     this.releaseOwnedThumbnailUrl();
     this.thumbnailUrl.set(url);
-    this.ownedThumbnailUrl = owned ? url : undefined;
+    this.ownedThumbnailUrl = owned && url?.startsWith('blob:') ? url : undefined;
   }
 
   private releaseOwnedThumbnailUrl(): void {

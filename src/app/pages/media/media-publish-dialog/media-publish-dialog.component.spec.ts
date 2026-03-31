@@ -52,11 +52,24 @@ describe('MediaPublishDialogComponent', () => {
     fixture.destroy();
   });
 
-  it('revokes owned thumbnail blob URLs when removing the thumbnail', () => {
+  async function setOwnedThumbnail(): Promise<void> {
+    vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:thumbnail');
+    vi.spyOn(component as never as { loadImageAndGenerateBlurhash: (url: string) => Promise<void> }, 'loadImageAndGenerateBlurhash')
+      .mockResolvedValue(undefined);
+
+    const file = new File(['thumbnail'], 'thumb.jpg', { type: 'image/jpeg' });
+    const input = document.createElement('input');
+    Object.defineProperty(input, 'files', {
+      value: [file],
+    });
+
+    await component.onThumbnailFileSelected({ target: input } as unknown as Event);
+  }
+
+  it('revokes owned thumbnail blob URLs when removing the thumbnail', async () => {
     const revokeSpy = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
 
-    component.thumbnailUrl.set('blob:thumbnail');
-    (component as never as { ownedThumbnailUrl?: string }).ownedThumbnailUrl = 'blob:thumbnail';
+    await setOwnedThumbnail();
 
     component.removeThumbnail();
 
@@ -64,10 +77,10 @@ describe('MediaPublishDialogComponent', () => {
     expect(component.thumbnailUrl()).toBeUndefined();
   });
 
-  it('revokes owned thumbnail blob URLs on destroy', () => {
+  it('revokes owned thumbnail blob URLs on destroy', async () => {
     const revokeSpy = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
 
-    (component as never as { ownedThumbnailUrl?: string }).ownedThumbnailUrl = 'blob:thumbnail';
+    await setOwnedThumbnail();
 
     component.ngOnDestroy();
 
