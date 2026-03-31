@@ -223,6 +223,17 @@
   <!-- Stats bar -->
   <div class="media-stats">
     <span class="item-count">{{ filteredMedia().length }} items</span>
+    @if (filteredMedia().length > 0) {
+    <div class="page-controls">
+      <button mat-icon-button (click)="goToPreviousPage()" [disabled]="!canGoToPreviousPage()" aria-label="Previous page">
+        <mat-icon>chevron_left</mat-icon>
+      </button>
+      <span class="page-range">{{ pageRangeLabel() }}</span>
+      <button mat-icon-button (click)="goToNextPage()" [disabled]="!canGoToNextPage()" aria-label="Next page">
+        <mat-icon>chevron_right</mat-icon>
+      </button>
+    </div>
+    }
     <div class="storage-info">
       <mat-icon>storage</mat-icon>
       <span>{{ formatFileSize(totalStorageBytes()) }}</span>
@@ -247,12 +258,12 @@
     } @else if (viewMode() === 'details') {
     <!-- Details/Table View -->
     <div class="files-table-container">
-      <table mat-table [dataSource]="filteredMedia()" class="files-table">
+      <table mat-table [dataSource]="pagedMedia()" class="files-table">
         <!-- Selection Column -->
         <ng-container matColumnDef="select">
           <th mat-header-cell *matHeaderCellDef width="48px">
             <mat-icon class="select-all-icon" (click)="selectAll()">
-              {{ selectedItems().length === filteredMedia().length && filteredMedia().length > 0 ? 'check_box' :
+              {{ selectedItems().length === pagedMedia().length && pagedMedia().length > 0 ? 'check_box' :
               'check_box_outline_blank' }}
             </mat-icon>
           </th>
@@ -359,7 +370,7 @@
     } @else {
     <!-- Grid View (Large or Medium) -->
     <div class="media-grid" [class.large]="viewMode() === 'large'" [class.medium]="viewMode() === 'medium'">
-      @for (item of filteredMedia(); track item.sha256) {
+      @for (item of pagedMedia(); track item.sha256) {
       <div class="media-card" [class.selected]="isSelected(item.sha256)"
         (pointerdown)="onItemPointerDown($event, item.sha256)" (pointerup)="onItemPointerUp($event)"
         (pointerleave)="onItemPointerLeave()" (click)="onCardClick($event, item)">

@@ -68,6 +68,8 @@ export type MediaFilter = 'all' | 'images' | 'videos' | 'audio' | 'files';
   styleUrls: ['./media.component.scss'],
 })
 export class MediaComponent {
+  readonly itemsPerPage = 56;
+
   mediaService = inject(MediaService);
   nostr = inject(NostrService);
   private dialog = inject(MatDialog);
@@ -90,6 +92,7 @@ export class MediaComponent {
   // View state
   viewMode = signal<ViewMode>('medium');
   mediaFilter = signal<MediaFilter>('all');
+  pageIndex = signal(0);
   selectedItems = signal<string[]>([]);
   selectionMode = signal(false);
 
@@ -126,6 +129,28 @@ export class MediaComponent {
     return this.sortMediaItems(filtered);
   });
 
+  pagedMedia = computed(() => {
+    const pageIndex = this.pageIndex();
+    const start = pageIndex * this.itemsPerPage;
+    return this.filteredMedia().slice(start, start + this.itemsPerPage);
+  });
+
+  totalPages = computed(() => {
+    const totalItems = this.filteredMedia().length;
+    return totalItems === 0 ? 0 : Math.ceil(totalItems / this.itemsPerPage);
+  });
+
+  pageRangeLabel = computed(() => {
+    const totalItems = this.filteredMedia().length;
+    if (totalItems === 0) {
+      return '0 of 0';
+    }
+
+    const start = this.pageIndex() * this.itemsPerPage + 1;
+    const end = Math.min(start + this.itemsPerPage - 1, totalItems);
+    return `${start}-${end} of ${totalItems}`;
+  });
+
   // Computed total storage used
   totalStorageBytes = computed(() => {
     const allMedia = this.mediaService.mediaItems();
@@ -159,8 +184,33 @@ export class MediaComponent {
     // Clear selection when filter changes
     effect(() => {
       this.mediaFilter(); // Track the filter
+      this.pageIndex.set(0);
       this.selectedItems.set([]);
       this.selectionMode.set(false);
+    });
+
+    // Reset to first page when sort changes
+    effect(() => {
+      this.sortOption();
+      this.pageIndex.set(0);
+    });
+
+    // Clamp the current page when the media count changes
+    effect(() => {
+      const totalPages = this.totalPages();
+      const currentPage = this.pageIndex();
+
+      if (totalPages === 0) {
+        if (currentPage !== 0) {
+          this.pageIndex.set(0);
+        }
+        return;
+      }
+
+      const lastPageIndex = totalPages - 1;
+      if (currentPage > lastPageIndex) {
+        this.pageIndex.set(lastPageIndex);
+      }
     });
 
     // Check for upload query parameter
@@ -364,7 +414,7 @@ export class MediaComponent {
   }
 
   selectAll(): void {
-    const currentMedia = this.filteredMedia();
+    const currentMedia = this.pagedMedia();
     this.selectionMode.set(true);
     this.selectedItems.set(currentMedia.map(item => item.sha256));
   }
@@ -682,6 +732,23 @@ export class MediaComponent {
 
   refreshMedia(): void {
     this.mediaService.getFiles();
+  }
+
+  goToPreviousPage(): void {
+    this.pageIndex.update(pageIndex => Math.max(pageIndex - 1, 0));
+  }
+
+  goToNextPage(): void {
+    this.pageIndex.update(pageIndex => Math.min(pageIndex + 1, this.totalPages() - 1));
+  }
+
+  canGoToPreviousPage(): boolean {
+    return this.pageIndex() > 0;
+  }
+
+  canGoToNextPage(): boolean {
+    const totalPages = this.totalPages();
+    return totalPages > 0 && this.pageIndex() < totalPages - 1;
   }
 
   setSortOption(option: 'newest' | 'oldest' | 'name-asc' | 'name-desc' | 'size-asc' | 'size-desc'): void {

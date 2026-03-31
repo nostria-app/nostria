@@ -55,6 +55,7 @@
 .media-stats {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 16px;
   margin-bottom: 16px;
   font-size: 13px;
@@ -75,6 +76,19 @@
       font-size: 16px;
       width: 16px;
       height: 16px;
+    }
+  }
+
+  .page-controls {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: auto;
+
+    .page-range {
+      min-width: 92px;
+      text-align: center;
+      white-space: nowrap;
     }
   }
 }
@@ -496,6 +510,15 @@
   }
 
   .media-stats {
+    gap: 12px;
+
+    .page-controls {
+      order: 3;
+      margin-left: 0;
+      width: 100%;
+      justify-content: flex-end;
+    }
+
     .storage-info {
       border-left: none;
       padding-left: 0;
