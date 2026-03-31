@@ -729,16 +729,20 @@ export class ReactionButtonComponent {
     const pubkey = this.accountState.pubkey();
     const recent = pubkey ? this.accountLocalState.getRecentEmojis(pubkey) : [];
     const recentItems = recent
-      .filter(item => item.emoji && item.emoji !== this.defaultReaction()?.emoji)
-      .slice(0, 2)
+      .filter(item => item.emoji)
+      .slice(0, 6)
       .map(item => ({ emoji: item.emoji, url: item.url }));
 
+    if (recentItems.length >= 6) {
+      return recentItems;
+    }
+
     const defaultItem = this.defaultReaction();
-    const baseItems = [defaultItem, ...this.quickReactions.map(emoji => ({ emoji }))]
+    const baseItems = [...recentItems, defaultItem, ...this.quickReactions.map(emoji => ({ emoji }))]
       .filter((item): item is { emoji: string; url?: string } => !!item?.emoji);
 
     const uniqueItems: Array<{ emoji: string; url?: string }> = [];
-    for (const item of [...baseItems, ...recentItems]) {
+    for (const item of baseItems) {
       if (uniqueItems.some(existing => existing.emoji === item.emoji && existing.url === item.url)) {
         continue;
       }

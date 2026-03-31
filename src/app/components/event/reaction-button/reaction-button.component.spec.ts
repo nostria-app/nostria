@@ -487,7 +487,23 @@ describe('ReactionButtonComponent', () => {
       ]);
 
       expect(component.touchQuickSelectItems()).toEqual(component.desktopQuickReactions());
-      expect(component.touchQuickSelectItems().map(item => item.emoji)).toEqual(['🎉', '❤️', '👍', '😂', '😮', '😢']);
+      expect(component.touchQuickSelectItems().map(item => item.emoji)).toEqual(['👏', '⚡', '🎉', '❤️', '👍', '😂']);
+    });
+
+    it('should use only the six most recent emojis when at least six exist', () => {
+      accountLocalState.getMostUsedReactionEmoji.mockReturnValue({ emoji: '🎉', timestamp: 10, useCount: 4 });
+      accountLocalState.getRecentEmojis.mockReturnValue([
+        { emoji: '👏', timestamp: 9, useCount: 2 },
+        { emoji: '⚡', timestamp: 8, useCount: 1 },
+        { emoji: '🤙', timestamp: 7, useCount: 1 },
+        { emoji: '🔥', timestamp: 6, useCount: 1 },
+        { emoji: '😂', timestamp: 5, useCount: 1 },
+        { emoji: '❤️', timestamp: 4, useCount: 1 },
+        { emoji: '👍', timestamp: 3, useCount: 1 },
+      ]);
+
+      expect(component.touchQuickSelectItems()).toEqual(component.desktopQuickReactions());
+      expect(component.touchQuickSelectItems().map(item => item.emoji)).toEqual(['👏', '⚡', '🤙', '🔥', '😂', '❤️']);
     });
   });
 
