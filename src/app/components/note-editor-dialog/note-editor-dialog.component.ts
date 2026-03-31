@@ -231,6 +231,18 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   private readonly pasteHandler = (event: ClipboardEvent): void => this.handlePaste(event);
   private readonly handleViewportResize = (): void => {
     this.updateKeyboardCompactMode();
+    const textarea = this.contentTextarea?.nativeElement;
+    const isFocusedCompactTextarea = this.platformService.isIOS()
+      && this.isCompactDialogLayout()
+      && !!textarea
+      && typeof document !== 'undefined'
+      && document.activeElement === textarea;
+
+    if (isFocusedCompactTextarea) {
+      this.scheduleTextareaRefresh(undefined, false, false, false, false);
+      return;
+    }
+
     this.scheduleTextareaRefresh();
   };
   private dialog = inject(MatDialog);
