@@ -49,6 +49,11 @@
   mat-form-field {
     width: 100%;
   }
+
+  textarea[matInput] {
+    field-sizing: content;
+    min-height: 7rem;
+  }
 }
 
 .image-preview {
@@ -180,6 +185,14 @@
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
+
+  mat-chip-set {
+    max-width: 100%;
+  }
+
+  mat-chip {
+    max-width: 100%;
+  }
 }
 
 .add-item-row {
@@ -324,5 +337,30 @@
 
   small {
     font-size: 0.75rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .create-community-container {
+    padding: 1rem 0.75rem 1.5rem;
+  }
+
+  .form-card mat-card-content {
+    padding: 1rem;
+  }
+
+  .image-input-row,
+  .add-item-row,
+  .form-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .image-input-row .upload-btn,
+  .add-item-row button,
+  .form-actions a,
+  .form-actions button {
+    width: 100%;
+    margin-top: 0;
   }
 }

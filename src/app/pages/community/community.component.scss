@@ -5,6 +5,7 @@
   z-index: 50;
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
   min-height: 56px;
   padding: 0 16px;
@@ -26,6 +27,15 @@
   .panel-header-spacer {
     flex: 1;
   }
+}
+
+.panel-header-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-left: auto;
 }
 
 :host-context(.dark) .panel-header {
@@ -239,6 +249,7 @@
 .post-toolbar {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 0.5rem;
   padding: 0.5rem 1.5rem;
   margin-bottom: 0.5rem;
@@ -283,27 +294,11 @@
   }
 }
 
-@media (max-width: 600px) {
-  .tab-content {
-    padding: 1rem;
-  }
-
-  .post-card {
-    padding: 0.875rem;
-    border-radius: 14px;
-  }
-
-  .post-toolbar {
-    padding-left: 1rem;
-    padding-right: 1rem;
-  }
-}
-
-
 // Moderation badge row
 .post-moderation-row {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 0.5rem;
 
   .approve-btn {
@@ -400,6 +395,7 @@
 .post-actions-row {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 4px;
 
   app-event-actions-toolbar {
@@ -434,6 +430,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
   padding: 0.5rem 0;
   border-bottom: 1px solid var(--mat-sys-outline-variant);
 
@@ -512,5 +510,39 @@
   .stat-label {
     font-size: 0.8rem;
     color: var(--mat-sys-on-surface-variant);
+  }
+}
+
+@media (max-width: 600px) {
+  .panel-header {
+    padding: 0.5rem 1rem;
+  }
+
+  .panel-header-spacer {
+    display: none;
+  }
+
+  .panel-header-actions {
+    width: 100%;
+    margin-left: 0;
+    justify-content: flex-start;
+  }
+
+  .community-header-content {
+    padding: 1rem;
+  }
+
+  .tab-content {
+    padding: 1rem;
+  }
+
+  .post-card {
+    padding: 0.875rem;
+    border-radius: 14px;
+  }
+
+  .post-toolbar {
+    padding-left: 1rem;
+    padding-right: 1rem;
   }
 }
