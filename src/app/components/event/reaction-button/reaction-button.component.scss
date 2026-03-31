@@ -91,7 +91,7 @@
   position: relative;
   display: inline-block;
 
-  > button[mat-button]:not(.reacted) {
+  >button[mat-button]:not(.reacted) {
     --mat-text-button-state-layer-color: transparent;
     --mat-text-button-ripple-color: transparent;
 
@@ -235,6 +235,7 @@
   color: var(--mat-sys-on-surface-variant);
   font-size: 1rem;
   letter-spacing: 0.08em;
+  transform: translateY(-4px);
 }
 
 // Main emoji picker container
@@ -673,7 +674,7 @@
   transform: scale(0.6) translateY(8px);
   transform-origin: center bottom;
   transition: opacity 0.2s cubic-bezier(0.2, 0, 0, 1),
-              transform 0.2s cubic-bezier(0.2, 0, 0, 1);
+    transform 0.2s cubic-bezier(0.2, 0, 0, 1);
 
   &.animating-in {
     opacity: 1;
@@ -690,7 +691,7 @@
   font-size: 1.5rem;
   border-radius: 50%;
   transition: transform 0.15s cubic-bezier(0.2, 0, 0, 1),
-              background-color 0.15s ease;
+    background-color 0.15s ease;
   -webkit-user-select: none;
   user-select: none;
 
