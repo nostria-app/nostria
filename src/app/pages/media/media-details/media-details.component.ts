@@ -1,15 +1,16 @@
 import { Component, inject, signal, computed, DestroyRef, viewChild, ElementRef } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatCardModule } from '@angular/material/card';
+import { MatChipsModule } from '@angular/material/chips';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDialog } from '@angular/material/dialog';
-import { MediaService, MediaItem } from '../../../services/media.service';
+import { MediaService, MediaItem, MediaUsageReference } from '../../../services/media.service';
 import { TimestampPipe } from '../../../pipes/timestamp.pipe';
 import { MediaPreviewDialogComponent } from '../../../components/media-preview-dialog/media-preview.component';
 import { ConfirmDialogComponent } from '../../../components/confirm-dialog/confirm-dialog.component';
@@ -23,6 +24,7 @@ import { VideoControlsComponent } from '../../../components/video-controls/video
 import { LayoutService } from '../../../services/layout.service';
 import { LoggerService } from '../../../services/logger.service';
 import { toggleFullscreen } from '../../../utils/fullscreen';
+import { ProfileDisplayNameComponent } from '../../../components/user-profile/display-name/profile-display-name.component';
 
 @Component({
   selector: 'app-media-details',
@@ -30,6 +32,7 @@ import { toggleFullscreen } from '../../../utils/fullscreen';
     MatButtonModule,
     MatIconModule,
     MatCardModule,
+    MatChipsModule,
     MatDividerModule,
     MatProgressSpinnerModule,
     MatSnackBarModule,
@@ -37,6 +40,7 @@ import { toggleFullscreen } from '../../../utils/fullscreen';
     MatTooltipModule,
     AudioPlayerComponent,
     VideoControlsComponent,
+    ProfileDisplayNameComponent,
   ],
   templateUrl: './media-details.component.html',
   styleUrls: ['./media-details.component.scss'],
@@ -47,6 +51,7 @@ export class MediaDetailsComponent {
   private mediaService = inject(MediaService);
   private snackBar = inject(MatSnackBar);
   private dialog = inject(MatDialog);
+  private router = inject(Router);
   private nostr = inject(NostrService);
   private publishService = inject(PublishService);
   private destroyRef = inject(DestroyRef);
@@ -62,6 +67,10 @@ export class MediaDetailsComponent {
   mediaItem = signal<MediaItem | null>(null);
   textContent = signal<string | null>(null);
   textLoading = signal(false);
+  mediaUrl = signal<string | null>(null);
+  referenceLoading = signal(false);
+  referencesLoaded = signal(false);
+  usageReferences = signal<MediaUsageReference[]>([]);
 
   // Add computed signal for memoized mirror status
   isFullyMirroredStatus = computed(() => {
@@ -92,10 +101,13 @@ export class MediaDetailsComponent {
 
       const item = await this.mediaService.getFileById(id);
       this.mediaItem.set(item);
+      this.referencesLoaded.set(false);
+      this.usageReferences.set([]);
+      this.mediaUrl.set(await this.mediaService.getResolvedMediaUrl(item, true) || item.url);
 
       // If it's a text file, fetch its content
       if (item && this.isTextFile(item.type)) {
-        await this.fetchTextContent(item.url);
+        await this.fetchTextContent(this.mediaUrl() || item.url);
       }
     } catch (err) {
       this.error.set(err instanceof Error ? err.message : 'Failed to load media item');
@@ -261,7 +273,7 @@ export class MediaDetailsComponent {
       this.snackBar.open('Preparing download...', '', { duration: 2000 });
 
       // Fetch the file
-      const response = await fetch(item.url);
+      const response = await fetch(this.mediaUrl() || item.url);
       const blob = await response.blob();
 
       // Get proper filename based on URL or mime type
@@ -292,9 +304,9 @@ export class MediaDetailsComponent {
     const item = this.mediaItem();
     if (!item) return;
 
-    this.dialog.open(MediaPreviewDialogComponent, {
+      this.dialog.open(MediaPreviewDialogComponent, {
       data: {
-        mediaUrl: item.url,
+        mediaUrl: this.mediaUrl() || item.url,
         mediaType: item.type,
         mediaTitle: item.url || 'Media',
       },
@@ -582,6 +594,46 @@ export class MediaDetailsComponent {
   goBack(): void {
     // Close the right panel
     this.layout.closeRightPanel();
+  }
+
+  async loadUsageReferences(): Promise<void> {
+    const item = this.mediaItem();
+    if (!item || this.referenceLoading() || this.referencesLoaded()) {
+      return;
+    }
+
+    this.referenceLoading.set(true);
+    try {
+      this.usageReferences.set(await this.mediaService.getMediaUsageReferences(item));
+      this.referencesLoaded.set(true);
+    } catch (error) {
+      this.logger.error('Failed to load media usage references', error);
+      this.snackBar.open('Failed to load media usage references', 'Close', { duration: 3000 });
+    } finally {
+      this.referenceLoading.set(false);
+    }
+  }
+
+  isEncrypted(): boolean {
+    const item = this.mediaItem();
+    return !!item && (this.mediaUrl() || item.url) !== item.url;
+  }
+
+  openUsageReference(reference: MediaUsageReference): void {
+    if (reference.source === 'direct-message' && reference.chatId) {
+      void this.router.navigate(['/messages', reference.chatId]);
+      return;
+    }
+
+    this.layout.openGenericEvent(reference.id);
+  }
+
+  getUsageReferenceLabel(reference: MediaUsageReference): string {
+    if (reference.source === 'direct-message') {
+      return reference.chatId?.startsWith('group:') ? 'Group message' : 'Direct message';
+    }
+
+    return `Kind ${reference.kind}`;
   }
 
   getMediaIcon(type: string | null | undefined): string {

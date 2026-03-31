@@ -309,6 +309,27 @@
   }
 }
 
+.media-thumbnail .encrypted-badge {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background-color: rgba(0, 0, 0, 0.65);
+  color: white;
+  z-index: 5;
+
+  mat-icon {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+  }
+}
+
 // Video preview
 .video-preview {
   position: absolute;
@@ -456,6 +477,10 @@
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+    }
+
+    .encrypted-indicator {
+      color: var(--mat-sys-tertiary);
     }
   }
 

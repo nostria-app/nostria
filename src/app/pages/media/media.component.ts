@@ -775,7 +775,7 @@ export class MediaComponent {
     this.sortOption.set(option);
   }
 
-  private sortMediaItems(items: MediaItem[]): MediaItem[] {
+  private sortMediaItems(items: MediaDisplayItem[]): MediaDisplayItem[] {
     const sortOption = this.sortOption();
 
     if (sortOption === 'name-asc' || sortOption === 'name-desc') {
@@ -915,6 +915,47 @@ export class MediaComponent {
 
   async publishSingleItemFromCard(item: MediaItem): Promise<void> {
     await this.layout.publishSingleItem(item);
+  }
+
+  getItemSourceUrl(item: MediaItem): string {
+    return this.mediaDisplayUrls().get(item.sha256) || item.url;
+  }
+
+  isEncrypted(item: MediaItem): boolean {
+    return this.encryptedMediaMap().has(item.sha256);
+  }
+
+  private async hydrateEncryptedMedia(items: MediaItem[]): Promise<void> {
+    if (!this.isBrowser || items.length === 0) {
+      this.encryptedMediaMap.set(new Map());
+      this.mediaDisplayUrls.set(new Map());
+      return;
+    }
+
+    try {
+      const encryptedReferences = await this.mediaService.getEncryptedMediaReferences();
+      const encryptedMap = new Map<string, true>();
+      const displayUrls = new Map<string, string>();
+
+      await Promise.all(items.map(async item => {
+        if (!encryptedReferences.has(item.sha256)) {
+          return;
+        }
+
+        encryptedMap.set(item.sha256, true);
+        const resolvedUrl = await this.mediaService.getResolvedMediaUrl(item, false);
+        if (resolvedUrl) {
+          displayUrls.set(item.sha256, resolvedUrl);
+        }
+      }));
+
+      this.encryptedMediaMap.set(encryptedMap);
+      this.mediaDisplayUrls.set(displayUrls);
+    } catch (error) {
+      this.logger.warn('Failed to hydrate encrypted media previews', error);
+      this.encryptedMediaMap.set(new Map());
+      this.mediaDisplayUrls.set(new Map());
+    }
   }
 
   private async publishSingleItemWithoutNavigation(item: MediaItem): Promise<string | null> {

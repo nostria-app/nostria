@@ -630,8 +630,6 @@ export class ProfileHeaderComponent implements OnDestroy {
       const cachedLoaded = this.profileState.cachedEventsLoaded();
 
       if (currentPubkey && cachedLoaded) {
-        // Clear badges first to prevent showing stale data from previous profile
-        this.badgeService.clear();
         // Clear timed out badges and cancel any pending timeouts
         this.clearBadgeTimeouts();
 

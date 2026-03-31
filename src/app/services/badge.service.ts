@@ -73,6 +73,11 @@ export class BadgeService implements NostriaService {
   isLoadingIssued = signal<boolean>(false);
   isLoadingDefinitions = signal<boolean>(false);
 
+  // Guard shared badge state from stale async loads completing out of order.
+  private acceptedLoadRequestId = 0;
+  private receivedLoadRequestId = 0;
+  private issuedLoadRequestId = 0;
+
   // Track failed badge definitions (pubkey:slug format)
   failedBadgeDefinitions = signal<Set<string>>(new Set());
 
@@ -125,6 +130,7 @@ export class BadgeService implements NostriaService {
   async load() { }
 
   async loadAcceptedBadges(pubkey: string): Promise<void> {
+    const requestId = ++this.acceptedLoadRequestId;
     this.isLoadingAccepted.set(true);
     try {
       // Ensure relays are discovered for this pubkey first
@@ -137,6 +143,10 @@ export class BadgeService implements NostriaService {
       );
       console.log('Profile Badges Event:', profileBadgesEvent);
 
+      if (requestId !== this.acceptedLoadRequestId) {
+        return;
+      }
+
       if (profileBadgesEvent) {
         this.parseBadgeTags(profileBadgesEvent.tags);
         await this.database.saveEvent(profileBadgesEvent);
@@ -147,15 +157,22 @@ export class BadgeService implements NostriaService {
 
       this.profileBadgesEvent.set(profileBadgesEvent);
     } catch (err) {
+      if (requestId !== this.acceptedLoadRequestId) {
+        return;
+      }
+
       console.error('Error loading accepted badges:', err);
       // Clear accepted badges on error
       this.acceptedBadges.set([]);
     } finally {
-      this.isLoadingAccepted.set(false);
+      if (requestId === this.acceptedLoadRequestId) {
+        this.isLoadingAccepted.set(false);
+      }
     }
   }
 
   async loadIssuedBadges(pubkey: string): Promise<void> {
+    const requestId = ++this.issuedLoadRequestId;
     this.isLoadingIssued.set(true);
     try {
       // Ensure relays are discovered for this pubkey first
@@ -172,14 +189,29 @@ export class BadgeService implements NostriaService {
         await this.database.saveEvent(event);
       }
 
+      if (requestId !== this.issuedLoadRequestId) {
+        return;
+      }
+
       this.issuedBadges.set(badgeAwardEvents);
 
       // Fetch recipient metadata
-      await this.fetchBadgeRecipients(badgeAwardEvents);
+      const recipients = await this.fetchBadgeRecipients(badgeAwardEvents);
+      if (requestId !== this.issuedLoadRequestId) {
+        return;
+      }
+
+      this.badgeRecipients.set(recipients);
     } catch (err) {
+      if (requestId !== this.issuedLoadRequestId) {
+        return;
+      }
+
       console.error('Error loading issued badges:', err);
     } finally {
-      this.isLoadingIssued.set(false);
+      if (requestId === this.issuedLoadRequestId) {
+        this.isLoadingIssued.set(false);
+      }
     }
   }
 
@@ -348,6 +380,7 @@ export class BadgeService implements NostriaService {
   }
 
   async loadReceivedBadges(pubkey: string): Promise<void> {
+    const requestId = ++this.receivedLoadRequestId;
     this.isLoadingReceived.set(true);
     try {
       // Ensure relays are discovered for this pubkey first
@@ -397,16 +430,35 @@ export class BadgeService implements NostriaService {
       }
 
       const receivedAwardsEvents = [...byId.values()].sort((a, b) => b.created_at - a.created_at);
+
+      if (requestId !== this.receivedLoadRequestId) {
+        return;
+      }
+
       this.receivedBadges.set(receivedAwardsEvents);
 
       // Load issuer metadata in the background so the list can render immediately.
-      this.fetchBadgeIssuers(receivedAwardsEvents).catch(err => {
+      this.fetchBadgeIssuers(receivedAwardsEvents).then(issuers => {
+        if (requestId === this.receivedLoadRequestId) {
+          this.badgeIssuers.set(issuers);
+        }
+      }).catch(err => {
+        if (requestId !== this.receivedLoadRequestId) {
+          return;
+        }
+
         console.error('Error fetching badge issuers:', err);
       });
     } catch (err) {
+      if (requestId !== this.receivedLoadRequestId) {
+        return;
+      }
+
       console.error('Error loading received badges:', err);
     } finally {
-      this.isLoadingReceived.set(false);
+      if (requestId === this.receivedLoadRequestId) {
+        this.isLoadingReceived.set(false);
+      }
     }
   }
 
@@ -428,7 +480,7 @@ export class BadgeService implements NostriaService {
     await this.loadReceivedBadges(pubkey);
   }
 
-  private async fetchBadgeIssuers(receivedBadges: NostrEvent[]): Promise<void> {
+  private async fetchBadgeIssuers(receivedBadges: NostrEvent[]): Promise<Record<string, any>> {
     const issuers: Record<string, any> = {};
 
     // Get unique issuer pubkeys
@@ -462,10 +514,10 @@ export class BadgeService implements NostriaService {
 
     await Promise.allSettled(Array.from({ length: Math.min(CONCURRENCY, queue.length) }, () => worker()));
 
-    this.badgeIssuers.set(issuers);
+    return issuers;
   }
 
-  private async fetchBadgeRecipients(issuedBadges: NostrEvent[]): Promise<void> {
+  private async fetchBadgeRecipients(issuedBadges: NostrEvent[]): Promise<Record<string, any>> {
     const recipients: Record<string, any> = {};
 
     // Get unique recipient pubkeys from 'p' tags
@@ -495,7 +547,7 @@ export class BadgeService implements NostriaService {
       }
     }
 
-    this.badgeRecipients.set(recipients);
+    return recipients;
   }
 
   private parseBadgeTags(tags: string[][]): void {
@@ -629,6 +681,9 @@ export class BadgeService implements NostriaService {
   }
 
   clear(): void {
+    this.acceptedLoadRequestId++;
+    this.receivedLoadRequestId++;
+    this.issuedLoadRequestId++;
     this.badgeDefinitions.set([]);
     this.profileBadgesEvent.set(null);
     this.acceptedBadges.set([]);

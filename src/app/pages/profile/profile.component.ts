@@ -80,6 +80,7 @@ import { firstValueFrom } from 'rxjs';
 import { ProfileHomeComponent } from './profile-home/profile-home.component';
 import { ShareArticleDialogComponent, ShareArticleDialogData } from '../../components/share-article-dialog/share-article-dialog.component';
 import { stripImageProxy } from '../../utils/strip-image-proxy';
+import { BadgeService } from '../../services/badge.service';
 
 @Component({
   selector: 'app-profile',
@@ -160,6 +161,7 @@ export class ProfileComponent implements OnDestroy, AfterViewInit {
   private readonly accountService = inject(AccountService);
   private readonly accountRelay = inject(AccountRelayService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly badgeService = inject(BadgeService);
 
   pubkey = signal<string>('');
 
@@ -424,6 +426,7 @@ export class ProfileComponent implements OnDestroy, AfterViewInit {
             this.logger.debug('Profile page opened with pubkey:', id);
 
             // Reset state when loading a new profile
+            this.badgeService.clear();
             this.userMetadata.set(undefined);
             this.lightningQrCode.set('');
             this.error.set(null);

@@ -45,13 +45,13 @@
   <div class="media-preview-card">
     <div class="media-preview">
       @if (mediaItem()?.type?.startsWith('image')) {
-      <img [src]="mediaItem()!.url" [alt]="mediaItem()!.url || 'Image'" (click)="openFullScreen()" />
+      <img [src]="mediaUrl() || mediaItem()!.url" [alt]="mediaItem()!.url || 'Image'" (click)="openFullScreen()" />
       } @else if (mediaItem()?.type?.startsWith('video')) {
       <div class="video-wrapper" 
         (mouseenter)="onVideoMouseEnter()" 
         (mouseleave)="onVideoMouseLeave()"
         (mousemove)="onVideoMouseMove()">
-        <video #videoElement [src]="mediaItem()!.url" (click)="onVideoPlayPause()"></video>
+        <video #videoElement [src]="mediaUrl() || mediaItem()!.url" (click)="onVideoPlayPause()"></video>
         <app-video-controls
           [videoElement]="videoElement"
           [config]="{ showQuality: false, showCast: false }"
@@ -68,7 +68,7 @@
         <div class="audio-icon">
           <mat-icon>audiotrack</mat-icon>
         </div>
-        <app-audio-player [src]="mediaItem()!.url"></app-audio-player>
+        <app-audio-player [src]="mediaUrl() || mediaItem()!.url"></app-audio-player>
       </div>
       } @else if (mediaItem()?.type && isTextFile(mediaItem()!.type)) {
       @if (textLoading()) {
@@ -100,6 +100,18 @@
           <span class="label">URL</span>
           <a class="value url-link" [href]="mediaItem()!.url" target="_blank" rel="noopener noreferrer">{{ mediaItem()!.url }}</a>
         </div>
+
+        @if (isEncrypted()) {
+        <mat-divider></mat-divider>
+
+        <div class="metadata-item">
+          <span class="label">Security</span>
+          <div class="encrypted-state">
+            <mat-icon>lock</mat-icon>
+            <span class="value">Encrypted direct-message media</span>
+          </div>
+        </div>
+        }
 
         <mat-divider></mat-divider>
 
@@ -149,6 +161,43 @@
         <div class="metadata-item">
           <span class="label">SHA-256 Hash</span>
           <span class="value code-value">{{ mediaItem()!.sha256 }}</span>
+        </div>
+
+        <mat-divider></mat-divider>
+
+        <div class="metadata-item usage-item">
+          <div class="usage-header">
+            <span class="label">Referenced By</span>
+            <button mat-flat-button type="button" (click)="loadUsageReferences()" [disabled]="referenceLoading()">
+              @if (referenceLoading()) {
+              <mat-spinner diameter="18"></mat-spinner>
+              } @else {
+              <mat-icon>search</mat-icon>
+              }
+              {{ referencesLoaded() ? 'Refresh' : 'Find References' }}
+            </button>
+          </div>
+
+          @if (referencesLoaded() && usageReferences().length === 0) {
+          <span class="value">No local references found.</span>
+          } @else if (usageReferences().length > 0) {
+          <div class="usage-list">
+            @for (reference of usageReferences(); track reference.source + ':' + reference.id) {
+            <button type="button" class="usage-reference" (click)="openUsageReference(reference)">
+              <div class="usage-reference-top">
+                <mat-chip-set>
+                  <mat-chip>{{ getUsageReferenceLabel(reference) }}</mat-chip>
+                </mat-chip-set>
+                <span class="usage-reference-time">{{ reference.createdAt | timestamp: 'medium' }}</span>
+              </div>
+              <div class="usage-reference-bottom">
+                <app-profile-display-name [pubkey]="reference.pubkey" />
+                <span class="usage-reference-id">{{ reference.id }}</span>
+              </div>
+            </button>
+            }
+          </div>
+          }
         </div>
       </div>
     </mat-card-content>
