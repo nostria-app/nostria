@@ -356,11 +356,52 @@
 
 // Article Editor Override
 .dialog-container.article-editor-dialog {
+  min-height: 0;
+
   .dialog-content {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
     padding: 16px;
 
     @media (max-width: 700px) {
-      padding: 12px;
+      padding: 0;
+    }
+
+    @media (max-height: 700px) {
+      padding: 0;
+    }
+  }
+
+  ::ng-deep .dialog-content>.article-editor-dialog {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: 100%;
+    width: 100%;
+  }
+
+  .dialog-actions {
+    position: static;
+    left: auto;
+    right: auto;
+    bottom: auto;
+    z-index: auto;
+    background: var(--mat-sys-surface);
+    border-top: 1px solid var(--mat-sys-outline-variant);
+
+    &:has([dialog-actions]) {
+      padding: 16px 24px 20px;
+    }
+
+    @media (max-width: 700px),
+    (max-height: 700px) {
+      &:has([dialog-actions]) {
+        padding: 10px 10px calc(10px + env(safe-area-inset-bottom));
+      }
     }
   }
 }

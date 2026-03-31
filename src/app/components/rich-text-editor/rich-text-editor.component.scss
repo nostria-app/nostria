@@ -9,6 +9,11 @@
   min-height: 400px;
   transition: border-color 0.2s ease;
 
+  @media (max-width: 700px),
+  (max-height: 700px) {
+    min-height: 280px;
+  }
+
   &.preview-hidden {
     min-height: 0;
   }
@@ -126,6 +131,11 @@
       line-height: 1.6;
       color: var(--mat-sys-on-surface);
 
+      @media (max-width: 700px),
+      (max-height: 700px) {
+        min-height: 280px;
+      }
+
       &:empty:before {
         content: attr(placeholder);
         color: var(--mat-sys-on-surface-variant);
@@ -208,6 +218,11 @@
       line-height: 1.6;
       box-sizing: border-box;
       field-sizing: content;
+
+      @media (max-width: 700px),
+      (max-height: 700px) {
+        min-height: 280px;
+      }
     }
   }
 

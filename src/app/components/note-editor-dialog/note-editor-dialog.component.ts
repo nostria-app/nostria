@@ -259,6 +259,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
 
   @ViewChild('contentTextarea')
   contentTextarea!: ElementRef<HTMLTextAreaElement>;
+  @ViewChild('contentField') contentField?: ElementRef<HTMLElement>;
   @ViewChild('noteEditorLayout') noteEditorLayout?: ElementRef<HTMLElement>;
   @ViewChild('dialogContentWrapper') dialogContentWrapper?: ElementRef<HTMLElement>;
   @ViewChild('composerActions') composerActions?: ElementRef<HTMLElement>;
@@ -2507,7 +2508,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   onContentFocus(): void {
     this.isContentFocused.set(true);
     this.updateKeyboardCompactMode();
-    this.scheduleTextareaRefresh();
+    this.scheduleTextareaRefresh(undefined, false, false, false);
   }
 
   onContentBlur(): void {
@@ -2553,14 +2554,14 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     this.dialogRef?.updateShowHeader(!enabled);
   }
 
-  private scheduleTextareaRefresh(cursorPosition?: number, focus = false, followCaret = false): void {
+  private scheduleTextareaRefresh(cursorPosition?: number, focus = false, followCaret = false, restoreSelection = true): void {
     const textarea = this.contentTextarea?.nativeElement;
     if (!textarea) {
       return;
     }
 
     const dialogContentWrapper = this.dialogContentWrapper?.nativeElement;
-    const shouldRestoreSelection = typeof cursorPosition === 'number' || document.activeElement === textarea;
+    const shouldRestoreSelection = restoreSelection && (typeof cursorPosition === 'number' || document.activeElement === textarea);
     const shouldScrollToBottom = followCaret && this.shouldKeepTextareaScrolledToBottom(textarea, cursorPosition);
     const selectionStart = typeof cursorPosition === 'number' ? cursorPosition : textarea.selectionStart;
     const selectionEnd = typeof cursorPosition === 'number' ? cursorPosition : textarea.selectionEnd;
@@ -2641,6 +2642,12 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   private clearCompactTextareaSize(): void {
     this.noteEditorLayout?.nativeElement.style.removeProperty('--note-editor-mobile-textarea-max-height');
     this.noteEditorLayout?.nativeElement.style.removeProperty('--note-editor-mobile-viewport-cap');
+    const contentField = this.contentField?.nativeElement;
+    if (contentField) {
+      contentField.style.height = '';
+      contentField.style.maxHeight = '';
+      contentField.style.flexBasis = '';
+    }
   }
 
   private syncTextareaHeight(textarea: HTMLTextAreaElement): void {
@@ -2686,6 +2693,12 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
 
       this.noteEditorLayout?.nativeElement.style.setProperty('--note-editor-mobile-viewport-cap', `${Math.floor(viewportBottom)}px`);
       this.noteEditorLayout?.nativeElement.style.setProperty('--note-editor-mobile-textarea-max-height', nextHeight);
+      const contentField = this.contentField?.nativeElement;
+      if (contentField) {
+        contentField.style.height = nextHeight;
+        contentField.style.maxHeight = nextHeight;
+        contentField.style.flexBasis = nextHeight;
+      }
 
       textarea.style.overflowY = 'auto';
       textarea.style.height = nextHeight;

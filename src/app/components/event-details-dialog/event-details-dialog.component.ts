@@ -42,7 +42,25 @@ export interface EventDetailsDialogData {
 })
 export class EventDetailsDialogComponent {
   dialogRef?: CustomDialogRef<EventDetailsDialogComponent>;
-  dialogData: EventDetailsDialogData = { event: {} as Event };
+  private dialogDataState = signal<EventDetailsDialogData>({ event: {} as Event });
+
+  set data(value: EventDetailsDialogData | undefined) {
+    if (value) {
+      this.dialogDataState.set(value);
+    }
+  }
+
+  get data(): EventDetailsDialogData {
+    return this.dialogDataState();
+  }
+
+  set dialogData(value: EventDetailsDialogData) {
+    this.dialogDataState.set(value);
+  }
+
+  get dialogData(): EventDetailsDialogData {
+    return this.dialogDataState();
+  }
 
   layout = inject(LayoutService);
   private localSettings = inject(LocalSettingsService);
@@ -51,7 +69,8 @@ export class EventDetailsDialogComponent {
   private eventRelaySources = inject(EventRelaySourcesService);
   showRawJson = signal(false);
 
-  event = computed(() => this.dialogData.event);
+  event = computed(() => this.dialogDataState().event);
+  eventTags = computed(() => Array.isArray(this.event().tags) ? this.event().tags : []);
 
   // Event metadata
   eventId = computed(() => this.event().id);
@@ -62,15 +81,13 @@ export class EventDetailsDialogComponent {
 
   // Extract client information from tags
   clientInfo = computed(() => {
-    const event = this.event();
-    const clientTag = event.tags.find(tag => tag[0] === standardizedTag.client);
+    const clientTag = this.eventTags().find(tag => tag[0] === standardizedTag.client);
     return clientTag ? clientTag[1] : null;
   });
 
   // Extract proof-of-work information
   proofOfWork = computed(() => {
-    const event = this.event();
-    const nonceTag = event.tags.find(tag => tag[0] === standardizedTag.nonce);
+    const nonceTag = this.eventTags().find(tag => tag[0] === standardizedTag.nonce);
     if (!nonceTag || nonceTag.length < 3) {
       return null;
     }
@@ -83,8 +100,7 @@ export class EventDetailsDialogComponent {
 
   // Extract mentioned accounts (p tags)
   mentionedAccounts = computed(() => {
-    const event = this.event();
-    return event.tags
+    return this.eventTags()
       .filter(tag => tag[0] === 'p')
       .map(tag => ({
         pubkey: tag[1],
@@ -96,8 +112,7 @@ export class EventDetailsDialogComponent {
 
   // Extract referenced events (e tags)
   referencedEvents = computed(() => {
-    const event = this.event();
-    return event.tags
+    return this.eventTags()
       .filter(tag => tag[0] === 'e')
       .map(tag => ({
         eventId: tag[1],
@@ -109,16 +124,15 @@ export class EventDetailsDialogComponent {
 
   // Extract all other tags
   otherTags = computed(() => {
-    const event = this.event();
     const knownTags = ['p', 'e', standardizedTag.client, standardizedTag.nonce];
-    return event.tags.filter(tag => !knownTags.includes(tag[0]));
+    return this.eventTags().filter(tag => !knownTags.includes(tag[0]));
   });
 
   // Raw JSON for the event
   eventJson = computed(() => JSON.stringify(this.event(), null, 2));
 
   relayUrls = computed(() => {
-    const explicitRelayUrls = this.dialogData.relayUrls || [];
+    const explicitRelayUrls = this.dialogDataState().relayUrls || [];
     if (explicitRelayUrls.length > 0) {
       return explicitRelayUrls;
     }

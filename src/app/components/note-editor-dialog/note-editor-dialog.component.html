@@ -126,7 +126,7 @@
       }
 
       <div class="textarea-container">
-        <div class="content-field" [class.focused]="isContentFocused()"
+        <div class="content-field" [class.focused]="isContentFocused()" #contentField
           [class.empty]="!content() && !isContentFocused()">
           @if (!content() && !isContentFocused()) {
           <div class="content-placeholder" aria-hidden="true">{{ isMediaModeEnabled() ? 'Description' :

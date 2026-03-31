@@ -1,7 +1,10 @@
 .article-editor-dialog {
   display: flex;
   flex-direction: column;
-  min-height: 80dvh;
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: 100%;
+  overflow: hidden;
   padding: 0;
 
   .loading-container {
@@ -23,6 +26,11 @@
   }
 
   .editor-content-wrapper {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
     padding: 16px 24px;
     max-width: 752px;
     margin: 0 auto;

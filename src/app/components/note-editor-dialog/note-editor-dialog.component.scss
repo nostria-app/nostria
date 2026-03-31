@@ -562,8 +562,7 @@
     }
 
     .content-editor-section,
-    .textarea-container,
-    .content-field {
+    .textarea-container {
 
       @media (max-width: 700px),
       (max-height: 700px) {
@@ -573,13 +572,23 @@
       }
     }
 
-    .content-textarea {
+    .content-field {
 
       @media (max-width: 700px),
       (max-height: 700px) {
         flex: 0 0 auto;
         height: var(--note-editor-mobile-textarea-max-height);
         max-height: var(--note-editor-mobile-textarea-max-height);
+      }
+    }
+
+    .content-textarea {
+
+      @media (max-width: 700px),
+      (max-height: 700px) {
+        flex: 0 0 auto;
+        height: 100%;
+        max-height: 100%;
       }
     }
 

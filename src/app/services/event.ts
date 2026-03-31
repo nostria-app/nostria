@@ -29,6 +29,7 @@ import { RepostService } from './repost.service';
 import { ImageCacheService } from './image-cache.service';
 import { DeletionFilterService } from './deletion-filter.service';
 import { AccountLocalStateService } from './account-local-state.service';
+import { NoteEditorDialogComponent } from '../components/note-editor-dialog/note-editor-dialog.component';
 
 export interface Reaction {
   emoji: string;
@@ -2528,9 +2529,6 @@ export class EventService {
 
   // Handler methods for different creation types
   async createNote(data: NoteEditorDialogData = {}): Promise<{ published: boolean; event?: Event } | undefined> {
-    // Dynamically import NoteEditorDialogComponent to avoid circular dependency
-    const { NoteEditorDialogComponent } = await import('../components/note-editor-dialog/note-editor-dialog.component');
-
     // Determine dialog title based on context
     let title = 'Create Note';
     if (data.replyTo) {
