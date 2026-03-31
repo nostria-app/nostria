@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, effect, ChangeDetectionStrategy, ElementRef, ViewChild, HostListener, DestroyRef } from '@angular/core';
+import { Component, inject, signal, computed, effect, ChangeDetectionStrategy, ElementRef, ViewChild, HostListener, DestroyRef, untracked } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -11,6 +11,7 @@ import { ApplicationService } from '../../services/application.service';
 import { LocalSettingsService } from '../../services/local-settings.service';
 import { SettingsService } from '../../services/settings.service';
 import { AccountStateService } from '../../services/account-state.service';
+import { AccountLocalStateService } from '../../services/account-local-state.service';
 import { DataService } from '../../services/data.service';
 import { UserRelayService } from '../../services/relays/user-relay';
 import { CustomDialogService } from '../../services/custom-dialog.service';
@@ -52,6 +53,7 @@ export class ChatWidgetComponent {
   private localSettings = inject(LocalSettingsService);
   private settings = inject(SettingsService);
   private accountState = inject(AccountStateService);
+  private accountLocalState = inject(AccountLocalStateService);
   private data = inject(DataService);
   private userRelayService = inject(UserRelayService);
   private customDialog = inject(CustomDialogService);
@@ -69,6 +71,7 @@ export class ChatWidgetComponent {
   activeChatIsGroup = signal(false);
   newMessageText = signal('');
   isSending = signal(false);
+  private suppressDraftPersistence = false;
 
   // Drag state — dragOffset is the user's chosen position;
   // clampAdjustment is a temporary shift applied only while expanded
@@ -181,6 +184,20 @@ export class ChatWidgetComponent {
         setTimeout(() => this.scrollChatToBottom(), 0);
       }
     });
+
+    effect(() => {
+      const chatId = this.activeChatId();
+      const draftText = this.newMessageText();
+      const accountPubkey = this.accountState.pubkey();
+
+      if (!chatId || !accountPubkey || this.suppressDraftPersistence) {
+        return;
+      }
+
+      untracked(() => {
+        this.accountLocalState.setChatDraft(accountPubkey, chatId, draftText);
+      });
+    });
   }
 
   private shouldHideOnRoute(url: string): boolean {
@@ -200,13 +217,14 @@ export class ChatWidgetComponent {
     this.state.set('collapsed');
     this.activeChatId.set(null);
     this.activeChatIsGroup.set(false);
-    this.newMessageText.set('');
+    this.restoreDraftForChat(null);
     this.clampAdjustment.set({ x: 0, y: 0 });
   }
 
   openFullMessages() {
     const chatId = this.activeChatId();
-    if (chatId && !this.activeChatIsGroup()) {
+    if (chatId) {
+      this.persistDraftForActiveChat();
       this.router.navigate(['/messages'], { queryParams: { chat: chatId } });
     } else {
       this.router.navigate(['/messages']);
@@ -218,7 +236,7 @@ export class ChatWidgetComponent {
     this.activeChatId.set(chatId);
     this.activeChatIsGroup.set(isGroup);
     this.state.set('chat');
-    this.newMessageText.set('');
+    this.restoreDraftForChat(chatId);
     this.messaging.markChatAsRead(chatId);
     this.clampToViewport();
     setTimeout(() => {
@@ -231,7 +249,7 @@ export class ChatWidgetComponent {
     this.state.set('list');
     this.activeChatId.set(null);
     this.activeChatIsGroup.set(false);
-    this.newMessageText.set('');
+    this.restoreDraftForChat(null);
     this.clampToViewport();
   }
 
@@ -320,6 +338,10 @@ export class ChatWidgetComponent {
       ]);
 
       await this.messaging.sendDirectMessage(text, chat.pubkey);
+      const accountPubkey = this.accountState.pubkey();
+      if (accountPubkey) {
+        this.accountLocalState.setChatDraft(accountPubkey, chatId, '');
+      }
       setTimeout(() => this.scrollChatToBottom(), 100);
     } catch (e) {
       // Restore text on failure
@@ -460,5 +482,24 @@ export class ChatWidgetComponent {
     if (el) {
       el.scrollTop = el.scrollHeight;
     }
+  }
+
+  private restoreDraftForChat(chatId: string | null): void {
+    const accountPubkey = this.accountState.pubkey();
+    const draftText = chatId && accountPubkey ? this.accountLocalState.getChatDraft(accountPubkey, chatId) : '';
+
+    this.suppressDraftPersistence = true;
+    this.newMessageText.set(draftText);
+    this.suppressDraftPersistence = false;
+  }
+
+  private persistDraftForActiveChat(): void {
+    const chatId = this.activeChatId();
+    const accountPubkey = this.accountState.pubkey();
+    if (!chatId || !accountPubkey) {
+      return;
+    }
+
+    this.accountLocalState.setChatDraft(accountPubkey, chatId, this.newMessageText());
   }
 }

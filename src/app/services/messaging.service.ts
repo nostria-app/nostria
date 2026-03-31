@@ -2584,30 +2584,18 @@ export class MessagingService implements NostriaService {
     };
 
     try {
-      // Query all relay types in parallel using the pool
-      await Promise.all([
-        new Promise<void>((resolve) => {
-          const sub = this.pool.subscribe(allRelays, filterReceived, async (event: NostrEvent) => {
-            await processEvent(event);
-          });
-
-          // Set a timeout to prevent hanging
-          setTimeout(() => {
-            sub.close();
-            resolve();
-          }, 15000);
-        }),
-        new Promise<void>((resolve) => {
-          const sub = this.pool.subscribe(allRelays, filterSent, async (event: NostrEvent) => {
-            await processEvent(event);
-          });
-
-          setTimeout(() => {
-            sub.close();
-            resolve();
-          }, 15000);
-        }),
+      const [receivedEvents, sentEvents] = await Promise.all([
+        this.pool.query(allRelays, filterReceived, 15000),
+        this.pool.query(allRelays, filterSent, 15000),
       ]);
+
+      for (const event of receivedEvents) {
+        await processEvent(event);
+      }
+
+      for (const event of sentEvents) {
+        await processEvent(event);
+      }
 
       this.logger.debug(`Loaded ${loadedMessages.length} older messages for chat ${chatId}`);
       return loadedMessages.sort((a, b) => a.created_at - b.created_at);
