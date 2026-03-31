@@ -134,7 +134,7 @@ Clone the repository.
 Install dependencies:
 
 ```bash
-npm install
+npm ci --legacy-peer-deps
 ```
 
 Start the development server:
@@ -146,21 +146,27 @@ npm start
 Alternative if you want to run the desktop app:
 
 ```bash
-npm run tauri dev
+npm run tauri:dev
 ```
 
 ## Native Build
 
-Template created! To get started run:
-cd nostria
-npm install
-npm run tauri android init
+Build a local desktop installer from the bundled Angular app:
 
-For Desktop development, run:
-npm run tauri dev
+```bash
+npm ci --legacy-peer-deps
+npm run tauri:build
+```
 
-For Android development, run:
-npm run tauri android dev
+Platform-specific installer commands:
+
+```bash
+npm run tauri:build:linux
+npm run tauri:build:windows
+npm run tauri:build:macos
+```
+
+Generated installers are written to `src-tauri/target/**/release/bundle/`.
 
 ## Mobile Build
 

@@ -1,22 +1,31 @@
-name: Desktop Release
+name: Desktop Build
 
 on:
+  pull_request:
+    paths:
+      - '.github/workflows/desktop-build.yml'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'src-tauri/**'
+      - 'src/**'
+      - 'angular.json'
   push:
-    tags:
-      - 'v*'
+    branches:
+      - main
+    paths:
+      - '.github/workflows/desktop-build.yml'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'src-tauri/**'
+      - 'src/**'
+      - 'angular.json'
   workflow_dispatch:
-    inputs:
-      prerelease:
-        description: 'Publish as a prerelease'
-        type: boolean
-        default: false
 
 permissions:
-  contents: write
-  packages: read
+  contents: read
 
 jobs:
-  publish-desktop:
+  build-desktop:
     strategy:
       fail-fast: false
       matrix:
@@ -24,12 +33,19 @@ jobs:
           - name: linux
             platform: ubuntu-22.04
             args: --bundles appimage,deb
+            artifact_path: |
+              src-tauri/target/release/bundle/appimage/*.AppImage
+              src-tauri/target/release/bundle/deb/*.deb
           - name: windows
             platform: windows-latest
             args: --bundles nsis,msi
+            artifact_path: |
+              src-tauri/target/release/bundle/msi/*.msi
+              src-tauri/target/release/bundle/nsis/*.exe
           - name: macos
             platform: macos-latest
             args: --target universal-apple-darwin
+            artifact_path: src-tauri/target/universal-apple-darwin/release/bundle/dmg/*.dmg
 
     runs-on: ${{ matrix.platform }}
 
@@ -42,26 +58,6 @@ jobs:
         with:
           node-version: 24
           cache: 'npm'
-
-      - name: Determine release metadata
-        shell: bash
-        run: |
-          VERSION=$(node -p "require('./package.json').version")
-          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
-
-          if [ "${GITHUB_EVENT_NAME}" = "push" ]; then
-            if [ "${GITHUB_REF_NAME}" != "v${VERSION}" ]; then
-              echo "Tag ${GITHUB_REF_NAME} does not match package.json version v${VERSION}" >&2
-              exit 1
-            fi
-            echo "RELEASE_TAG=${GITHUB_REF_NAME}" >> "$GITHUB_ENV"
-            echo "RELEASE_DRAFT=false" >> "$GITHUB_ENV"
-            echo "RELEASE_PRERELEASE=false" >> "$GITHUB_ENV"
-          else
-            echo "RELEASE_TAG=v${VERSION}" >> "$GITHUB_ENV"
-            echo "RELEASE_DRAFT=true" >> "$GITHUB_ENV"
-            echo "RELEASE_PRERELEASE=${{ github.event.inputs.prerelease }}" >> "$GITHUB_ENV"
-          fi
 
       - name: Install Rust toolchain
         if: matrix.name != 'macos'
@@ -97,15 +93,12 @@ jobs:
       - name: Print Tauri environment info
         run: npm run tauri:info
 
-      - name: Build installers and publish release assets
-        uses: tauri-apps/tauri-action@v0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build desktop installers
+        run: npm run tauri:build -- ${{ matrix.args }}
+
+      - name: Upload installers
+        uses: actions/upload-artifact@v4
         with:
-          tagName: ${{ env.RELEASE_TAG }}
-          releaseName: Nostria ${{ env.RELEASE_TAG }}
-          releaseBody: |
-            Installers for Windows, Linux, and macOS built from the bundled Nostria desktop app.
-          releaseDraft: ${{ env.RELEASE_DRAFT }}
-          prerelease: ${{ env.RELEASE_PRERELEASE }}
-          args: ${{ matrix.args }}
+          name: nostria-${{ matrix.name }}-installers
+          path: ${{ matrix.artifact_path }}
+          if-no-files-found: error
