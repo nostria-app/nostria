@@ -54,7 +54,7 @@ import { PublishEventBus, PublishRelayResultEvent } from '../../services/publish
 import { Subscription } from 'rxjs';
 import { MatDialog } from '@angular/material/dialog';
 import { ConfirmDialogComponent } from '../confirm-dialog/confirm-dialog.component';
-import { MatMenuModule } from '@angular/material/menu';
+import { MatMenuModule, MatMenuTrigger } from '@angular/material/menu';
 import { AiService } from '../../services/ai.service';
 import { AiToolsDialogComponent } from '../ai-tools-dialog/ai-tools-dialog.component';
 import { cleanTrackingParametersFromText } from '../../utils/url-cleaner';
@@ -297,6 +297,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   private otherChangesIntervalHandle?: ReturnType<typeof setInterval>;
   private textareaRefreshFrame: number | null = null;
   private viewportResizeTimeout: ReturnType<typeof setTimeout> | null = null;
+  private pendingMenuOpenTimeout: ReturnType<typeof setTimeout> | null = null;
   private viewportHeightBaseline = 0;
 
   // Signals for reactive state
@@ -984,6 +985,11 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     if (this.viewportResizeTimeout !== null) {
       clearTimeout(this.viewportResizeTimeout);
       this.viewportResizeTimeout = null;
+    }
+
+    if (this.pendingMenuOpenTimeout !== null) {
+      clearTimeout(this.pendingMenuOpenTimeout);
+      this.pendingMenuOpenTimeout = null;
     }
 
     if (this.contentTextarea?.nativeElement) {
@@ -2556,6 +2562,38 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     this.isContentFocused.set(false);
     this.updateKeyboardCompactMode();
     this.scheduleTextareaRefresh();
+  }
+
+  private openMenuAfterKeyboardDismiss(trigger: MatMenuTrigger): void {
+    if (this.pendingMenuOpenTimeout !== null) {
+      clearTimeout(this.pendingMenuOpenTimeout);
+    }
+
+    this.contentTextarea?.nativeElement?.blur();
+
+    this.pendingMenuOpenTimeout = setTimeout(() => {
+      this.pendingMenuOpenTimeout = null;
+      requestAnimationFrame(() => {
+        trigger.openMenu();
+        setTimeout(() => trigger.updatePosition(), 0);
+        setTimeout(() => trigger.updatePosition(), 120);
+      });
+    }, 180);
+  }
+
+  onFooterMenuTriggerClick(event: MouseEvent, trigger: MatMenuTrigger): void {
+    const textarea = this.contentTextarea?.nativeElement;
+    const isFocusedTextarea = !!textarea
+      && typeof document !== 'undefined'
+      && document.activeElement === textarea;
+
+    if (!this.platformService.isIOS() || !this.isCompactDialogLayout() || !isFocusedTextarea) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    this.openMenuAfterKeyboardDismiss(trigger);
   }
 
   private updateKeyboardCompactMode(): void {

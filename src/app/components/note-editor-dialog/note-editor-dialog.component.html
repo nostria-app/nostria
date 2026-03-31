@@ -511,7 +511,8 @@
     } @else {
     @if (!inlineMode()) {
     <button mat-icon-button type="button" class="plus-button desktop-action action-priority-high"
-      [matMenuTriggerFor]="plusMenu"
+      [matMenuTriggerFor]="plusMenu" #plusMenuTrigger="matMenuTrigger"
+      (click)="onFooterMenuTriggerClick($event, plusMenuTrigger)"
       [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions()"
       [class.button-disabled-visible]="showPreview() || showAdvancedOptions()" matTooltip="Add to post">
       <mat-icon>add</mat-icon>
@@ -564,6 +565,7 @@
 
     @if (!inlineMode()) {
     <button mat-icon-button type="button" class="mobile-actions-trigger" [matMenuTriggerFor]="mobileActionsMenu"
+      #mobileActionsMenuTrigger="matMenuTrigger" (click)="onFooterMenuTriggerClick($event, mobileActionsMenuTrigger)"
       [disabled]="isUploading() || isPublishing()" matTooltip="More actions">
       <mat-icon>more_horiz</mat-icon>
     </button>
