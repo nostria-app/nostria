@@ -138,7 +138,7 @@
           </div>
           } @else if (parsedBadge && (parsedBadge.thumb || parsedBadge.image) && !hasBadgeImageFailed(badge)) {
           <!-- Show badge image when loaded -->
-          <img [src]="parsedBadge.thumb || parsedBadge.image" [alt]="parsedBadge.name || 'Badge'"
+          <img [src]="getOptimizedImageUrl(parsedBadge.thumb || parsedBadge.image)" [alt]="parsedBadge.name || 'Badge'"
             [title]="parsedBadge.name || 'Badge'" class="badge-image" loading="lazy"
             (error)="onBadgeImageError($event)" />
           } @else if (isBadgeLoading()[$index] && !isTimedOut) {
