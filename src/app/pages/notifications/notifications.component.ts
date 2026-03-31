@@ -1,4 +1,15 @@
-import { Component, inject, signal, OnInit, OnDestroy, computed, effect, ElementRef, ViewChild, untracked } from '@angular/core';
+import {
+  Component,
+  inject,
+  signal,
+  OnInit,
+  OnDestroy,
+  computed,
+  effect,
+  ElementRef,
+  ViewChild,
+  untracked,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Clipboard } from '@angular/cdk/clipboard';
 import { FilterButtonComponent } from '../../components/filter-button/filter-button.component';
@@ -37,7 +48,10 @@ import { DataService } from '../../services/data.service';
 import { LayoutService } from '../../services/layout.service';
 import { LoggerService } from '../../services/logger.service';
 import { TwoColumnLayoutService } from '../../services/two-column-layout.service';
-import { NotificationsFilterPanelComponent, WotFilterLevel } from './notifications-filter-panel/notifications-filter-panel.component';
+import {
+  NotificationsFilterPanelComponent,
+  WotFilterLevel,
+} from './notifications-filter-panel/notifications-filter-panel.component';
 import { ResolveNostrPipe } from '../../pipes/resolve-nostr.pipe';
 import { UtilitiesService } from '../../services/utilities.service';
 import { TrustService } from '../../services/trust.service';
@@ -71,7 +85,7 @@ const NOTIFICATION_FILTERS_KEY = 'nostria-notification-filters';
     MatProgressBarModule,
     FilterButtonComponent,
     NotificationsFilterPanelComponent,
-    ResolveNostrPipe
+    ResolveNostrPipe,
   ],
   templateUrl: './notifications.component.html',
   styleUrls: ['./notifications.component.scss'],
@@ -143,9 +157,11 @@ export class NotificationsComponent implements OnInit, OnDestroy {
       NotificationType.WALLET,
     ];
     // Return true if any content filter is disabled or if other filter options are active
-    return contentTypes.some(type => !filters[type])
-      || this.showUnreadOnly()
-      || this.wotFilterLevel() !== 'off';
+    return (
+      contentTypes.some((type) => !filters[type]) ||
+      this.showUnreadOnly() ||
+      this.wotFilterLevel() !== 'off'
+    );
   });
 
   // State for loading older notifications
@@ -155,7 +171,9 @@ export class NotificationsComponent implements OnInit, OnDestroy {
   consecutiveEmptyLoads = signal(0);
   // State for refreshing notifications
   isRefreshing = signal(false);
-  isLoadingNotifications = computed(() => this.contentNotificationService.isCheckingNotifications());
+  isLoadingNotifications = computed(() =>
+    this.contentNotificationService.isCheckingNotifications(),
+  );
   // Default lookback period in days
   private readonly DEFAULT_LOOKBACK_DAYS = 2;
   // How many more days to load when scrolling
@@ -217,7 +235,7 @@ export class NotificationsComponent implements OnInit, OnDestroy {
           showSystemNotifications: this.showSystemNotifications(),
           showUnreadOnly: this.showUnreadOnly(),
           wotFilterLevel: this.wotFilterLevel(),
-        })
+        }),
       );
     });
 
@@ -241,12 +259,14 @@ export class NotificationsComponent implements OnInit, OnDestroy {
         return;
       }
 
-      const pubkeys = [...new Set(
-        notifications
-          .filter(n => this.isContentNotification(n.type))
-          .map(n => (n as ContentNotification).authorPubkey)
-          .filter((pubkey): pubkey is string => !!pubkey)
-      )];
+      const pubkeys = [
+        ...new Set(
+          notifications
+            .filter((n) => this.isContentNotification(n.type))
+            .map((n) => (n as ContentNotification).authorPubkey)
+            .filter((pubkey): pubkey is string => !!pubkey),
+        ),
+      ];
 
       if (pubkeys.length === 0) {
         return;
@@ -288,11 +308,13 @@ export class NotificationsComponent implements OnInit, OnDestroy {
     }
 
     // Extract unique author pubkeys
-    const pubkeys = [...new Set(
-      notifications
-        .map(n => (n as ContentNotification).authorPubkey)
-        .filter((p): p is string => !!p)
-    )];
+    const pubkeys = [
+      ...new Set(
+        notifications
+          .map((n) => (n as ContentNotification).authorPubkey)
+          .filter((p): p is string => !!p),
+      ),
+    ];
 
     if (pubkeys.length === 0) {
       return;
@@ -315,7 +337,7 @@ export class NotificationsComponent implements OnInit, OnDestroy {
         return;
       }
 
-      this.authorTrustRanks.update(current => {
+      this.authorTrustRanks.update((current) => {
         const next = new Map(current);
         for (const pubkey of pubkeys) {
           const rank = metricsMap.get(pubkey)?.rank;
@@ -358,7 +380,8 @@ export class NotificationsComponent implements OnInit, OnDestroy {
       return '';
     }
 
-    const profile = this.getPrefetchedProfile(notification) ?? this.dataService.getCachedProfile(pubkey) ?? null;
+    const profile =
+      this.getPrefetchedProfile(notification) ?? this.dataService.getCachedProfile(pubkey) ?? null;
     const profileData = profile?.data as Record<string, unknown> | undefined;
 
     const displayName = this.getProfileFieldAsString(profileData?.['display_name']);
@@ -412,7 +435,7 @@ export class NotificationsComponent implements OnInit, OnDestroy {
   // Separate system and content notifications, sorted by timestamp (newest first)
   systemNotifications = computed(() => {
     return this.notifications()
-      .filter(n => this.isSystemNotification(n.type))
+      .filter((n) => this.isSystemNotification(n.type))
       .sort((a, b) => b.timestamp - a.timestamp);
   });
 
@@ -429,12 +452,11 @@ export class NotificationsComponent implements OnInit, OnDestroy {
     const trustRanks = this.authorTrustRanks();
 
     return this.notifications()
-      .filter(n => {
+      .filter((n) => {
         // Filter by notification type
         // FOLLOWER_SUMMARY follows the NEW_FOLLOWER filter toggle
-        const filterType = n.type === NotificationType.FOLLOWER_SUMMARY
-          ? NotificationType.NEW_FOLLOWER
-          : n.type;
+        const filterType =
+          n.type === NotificationType.FOLLOWER_SUMMARY ? NotificationType.NEW_FOLLOWER : n.type;
         if (!this.isContentNotification(n.type) || !filters[filterType]) {
           return false;
         }
@@ -448,22 +470,25 @@ export class NotificationsComponent implements OnInit, OnDestroy {
         // Skip muted-account filtering for follower summary (it aggregates many users)
         // Skip muted-account filtering for wallet notifications (user configured wallets are trusted)
         const contentNotif = n as ContentNotification;
-        if (contentNotif.type !== NotificationType.FOLLOWER_SUMMARY
-          && contentNotif.type !== NotificationType.WALLET
-          && contentNotif.authorPubkey && mutedAccountsSet.has(contentNotif.authorPubkey)) {
+        if (
+          contentNotif.type !== NotificationType.FOLLOWER_SUMMARY &&
+          contentNotif.type !== NotificationType.WALLET &&
+          contentNotif.authorPubkey &&
+          mutedAccountsSet.has(contentNotif.authorPubkey)
+        ) {
           return false;
         }
 
         // Skip WoT filtering for follower summary (authorPubkey is just the first follower)
         // Skip WoT filtering for wallet notifications (user configured wallets are trusted)
         if (
-          contentNotif.type !== NotificationType.FOLLOWER_SUMMARY
-          && contentNotif.type !== NotificationType.WALLET
-          && contentNotif.authorPubkey
-          && !this.passesWotRankFilter(
+          contentNotif.type !== NotificationType.FOLLOWER_SUMMARY &&
+          contentNotif.type !== NotificationType.WALLET &&
+          contentNotif.authorPubkey &&
+          !this.passesWotRankFilter(
             trustRanks.get(contentNotif.authorPubkey),
             wotLevel,
-            followingAccountsSet.has(contentNotif.authorPubkey)
+            followingAccountsSet.has(contentNotif.authorPubkey),
           )
         ) {
           return false;
@@ -484,7 +509,7 @@ export class NotificationsComponent implements OnInit, OnDestroy {
   private passesWotRankFilter(
     rank: number | null | undefined,
     level: WotFilterLevel,
-    isFollowingAuthor = false
+    isFollowingAuthor = false,
   ): boolean {
     if (level === 'off') {
       return true;
@@ -513,7 +538,7 @@ export class NotificationsComponent implements OnInit, OnDestroy {
   // Count unread content notifications
   newNotificationCount = computed(() => {
     const contentNotifs = this.contentNotifications();
-    return contentNotifs.filter(n => !n.read).length;
+    return contentNotifs.filter((n) => !n.read).length;
   });
 
   async ngOnInit(): Promise<void> {
@@ -521,7 +546,7 @@ export class NotificationsComponent implements OnInit, OnDestroy {
     this.loadNotificationFilters();
 
     // Handle auxiliary outlet navigation changes while this list component stays mounted.
-    this.routerNavigationSubscription = this.router.events.subscribe(event => {
+    this.routerNavigationSubscription = this.router.events.subscribe((event) => {
       if (event instanceof NavigationEnd) {
         this.scheduleViewportRefresh();
       }
@@ -538,7 +563,7 @@ export class NotificationsComponent implements OnInit, OnDestroy {
     }
 
     if (typeof window !== 'undefined') {
-      this.viewportRefreshTimeouts.forEach(timeoutId => window.clearTimeout(timeoutId));
+      this.viewportRefreshTimeouts.forEach((timeoutId) => window.clearTimeout(timeoutId));
       this.viewportRefreshTimeouts = [];
     }
   }
@@ -552,7 +577,7 @@ export class NotificationsComponent implements OnInit, OnDestroy {
       window.cancelAnimationFrame(this.viewportRefreshRafId);
     }
 
-    this.viewportRefreshTimeouts.forEach(timeoutId => window.clearTimeout(timeoutId));
+    this.viewportRefreshTimeouts.forEach((timeoutId) => window.clearTimeout(timeoutId));
     this.viewportRefreshTimeouts = [];
 
     this.viewportRefreshRafId = window.requestAnimationFrame(() => {
@@ -563,13 +588,13 @@ export class NotificationsComponent implements OnInit, OnDestroy {
     this.viewportRefreshTimeouts.push(
       window.setTimeout(() => {
         this._notificationViewport?.checkViewportSize();
-      }, 120)
+      }, 120),
     );
 
     this.viewportRefreshTimeouts.push(
       window.setTimeout(() => {
         this._notificationViewport?.checkViewportSize();
-      }, 460)
+      }, 460),
     );
   }
 
@@ -589,7 +614,9 @@ export class NotificationsComponent implements OnInit, OnDestroy {
           });
           this.showSystemNotifications.set(parsed.showSystemNotifications ?? false);
           this.showUnreadOnly.set(parsed.showUnreadOnly ?? false);
-          this.wotFilterLevel.set(this.isWotFilterLevel(parsed.wotFilterLevel) ? parsed.wotFilterLevel : 'off');
+          this.wotFilterLevel.set(
+            this.isWotFilterLevel(parsed.wotFilterLevel) ? parsed.wotFilterLevel : 'off',
+          );
           return;
         }
 
@@ -606,9 +633,7 @@ export class NotificationsComponent implements OnInit, OnDestroy {
     }
   }
 
-  private isPersistedFilterState(
-    value: unknown
-  ): value is {
+  private isPersistedFilterState(value: unknown): value is {
     filters: Record<NotificationType, boolean>;
     showSystemNotifications?: boolean;
     showUnreadOnly?: boolean;
@@ -649,7 +674,11 @@ export class NotificationsComponent implements OnInit, OnDestroy {
     if (notification.authorPubkey) {
       const cachedProfile = this.dataService.getCachedProfile(notification.authorPubkey);
       if (cachedProfile?.data) {
-        const profileData = cachedProfile.data as { name?: string; display_name?: string; nip05?: string };
+        const profileData = cachedProfile.data as {
+          name?: string;
+          display_name?: string;
+          nip05?: string;
+        };
         if (profileData.name?.toLowerCase().includes(query)) {
           return true;
         }
@@ -688,12 +717,12 @@ export class NotificationsComponent implements OnInit, OnDestroy {
 
   async onRetryPublish(notificationId: string): Promise<void> {
     await this.notificationService.retryFailedRelays(notificationId, (event, relayUrl) =>
-      this.accountRelay.publishToRelay(event, relayUrl)
+      this.accountRelay.publishToRelay(event, relayUrl),
     );
   }
 
   async onRepublish(notificationId: string): Promise<void> {
-    const notification = this.notifications().find(n => n.id === notificationId);
+    const notification = this.notifications().find((n) => n.id === notificationId);
 
     if (!notification || notification.type !== NotificationType.RELAY_PUBLISHING) {
       this.logger.error('Cannot republish: notification not found or wrong type');
@@ -701,7 +730,7 @@ export class NotificationsComponent implements OnInit, OnDestroy {
     }
 
     const relayNotification = notification as RelayPublishingNotification;
-    const allRelayUrls = relayNotification.relayPromises?.map(rp => rp.relayUrl) || [];
+    const allRelayUrls = relayNotification.relayPromises?.map((rp) => rp.relayUrl) || [];
 
     if (allRelayUrls.length === 0) {
       this.logger.error('Cannot republish: no relay URLs found');
@@ -716,15 +745,27 @@ export class NotificationsComponent implements OnInit, OnDestroy {
     // Republish to all relays
     for (const relayUrl of allRelayUrls) {
       try {
-        const publishResult = await this.accountRelay.publishToRelay(relayNotification.event, relayUrl);
+        const publishResult = await this.accountRelay.publishToRelay(
+          relayNotification.event,
+          relayUrl,
+        );
         if (Array.isArray(publishResult)) {
           await publishResult[0];
         } else {
           await publishResult;
         }
-        await this.notificationService.updateRelayPromiseStatus(notificationId, relayUrl, 'success');
+        await this.notificationService.updateRelayPromiseStatus(
+          notificationId,
+          relayUrl,
+          'success',
+        );
       } catch (error) {
-        await this.notificationService.updateRelayPromiseStatus(notificationId, relayUrl, 'failed', error);
+        await this.notificationService.updateRelayPromiseStatus(
+          notificationId,
+          relayUrl,
+          'failed',
+          error,
+        );
       }
     }
   }
@@ -748,14 +789,14 @@ export class NotificationsComponent implements OnInit, OnDestroy {
       this.snackBar.open('Notifications refreshed', 'Close', {
         duration: 2000,
         horizontalPosition: 'center',
-        verticalPosition: 'bottom'
+        verticalPosition: 'bottom',
       });
     } catch (error) {
       this.logger.error('Failed to refresh notifications:', error);
       this.snackBar.open('Failed to refresh notifications', 'Close', {
         duration: 3000,
         horizontalPosition: 'center',
-        verticalPosition: 'bottom'
+        verticalPosition: 'bottom',
       });
     } finally {
       this.isRefreshing.set(false);
@@ -794,7 +835,9 @@ export class NotificationsComponent implements OnInit, OnDestroy {
     }
   }
 
-  isRelayPublishingNotification(notification: Notification): notification is RelayPublishingNotification {
+  isRelayPublishingNotification(
+    notification: Notification,
+  ): notification is RelayPublishingNotification {
     return notification.type === NotificationType.RELAY_PUBLISHING;
   }
 
@@ -821,7 +864,7 @@ export class NotificationsComponent implements OnInit, OnDestroy {
         day: 'numeric',
         year: '2-digit',
         hour: 'numeric',
-        minute: '2-digit'
+        minute: '2-digit',
       });
     }
   }
@@ -839,8 +882,8 @@ export class NotificationsComponent implements OnInit, OnDestroy {
   }
 
   /**
-     * Navigate to the event details page
-     */
+   * Navigate to the event details page
+   */
   async viewEvent(notification: Notification): Promise<void> {
     const contentNotif = notification as ContentNotification;
 
@@ -857,10 +900,7 @@ export class NotificationsComponent implements OnInit, OnDestroy {
     if (contentNotif.type === NotificationType.FOLLOWER_SUMMARY) {
       const currentPubkey = this.accountState.pubkey();
       if (currentPubkey) {
-        this.layout.openFollowersPage(
-          currentPubkey,
-          contentNotif.metadata?.followerPubkeys,
-        );
+        this.layout.openFollowersPage(currentPubkey, contentNotif.metadata?.followerPubkeys);
       }
       return;
     }
@@ -872,7 +912,11 @@ export class NotificationsComponent implements OnInit, OnDestroy {
     }
 
     // For wallet notifications without an event, navigate to the sender's profile
-    if (contentNotif.type === NotificationType.WALLET && !contentNotif.eventId && contentNotif.authorPubkey) {
+    if (
+      contentNotif.type === NotificationType.WALLET &&
+      !contentNotif.eventId &&
+      contentNotif.authorPubkey
+    ) {
       this.layout.openProfile(contentNotif.authorPubkey);
       return;
     }
@@ -919,7 +963,7 @@ export class NotificationsComponent implements OnInit, OnDestroy {
 
   private async getRelayHintsForNotification(
     notification: ContentNotification,
-    eventAuthor: string | undefined
+    eventAuthor: string | undefined,
   ): Promise<string[] | undefined> {
     const metadataRelayHints = notification.metadata?.relayHints;
 
@@ -936,7 +980,10 @@ export class NotificationsComponent implements OnInit, OnDestroy {
       const relays = this.userRelayService.getRelaysForPubkey(eventAuthor).slice(0, 3);
       return relays.length > 0 ? relays : undefined;
     } catch (error) {
-      this.logger.debug('[Notifications] Failed to resolve relay hints for event navigation', error);
+      this.logger.debug(
+        '[Notifications] Failed to resolve relay hints for event navigation',
+        error,
+      );
       return undefined;
     }
   }
@@ -1037,7 +1084,7 @@ export class NotificationsComponent implements OnInit, OnDestroy {
     const currentFilters = this.notificationFilters();
     this.notificationFilters.set({
       ...currentFilters,
-      [type]: !currentFilters[type]
+      [type]: !currentFilters[type],
     });
   }
 
@@ -1115,7 +1162,10 @@ export class NotificationsComponent implements OnInit, OnDestroy {
     // The emoji image itself is rendered separately in the template.
     if (this.isContentNotificationWithData(notification)) {
       const contentNotif = notification as ContentNotification;
-      if (contentNotif.type === NotificationType.REACTION && contentNotif.metadata?.customEmojiUrl) {
+      if (
+        contentNotif.type === NotificationType.REACTION &&
+        contentNotif.metadata?.customEmojiUrl
+      ) {
         const reactionContent = contentNotif.metadata.reactionContent;
 
         if (reactionContent) {
@@ -1143,7 +1193,9 @@ export class NotificationsComponent implements OnInit, OnDestroy {
    * For reaction titles this keeps emoji positioned naturally in the sentence,
    * e.g. "reacted [emoji] to your note".
    */
-  getCustomEmojiTitleSegments(notification: Notification): { prefix: string; suffix: string } | null {
+  getCustomEmojiTitleSegments(
+    notification: Notification,
+  ): { prefix: string; suffix: string } | null {
     if (!this.getCustomEmojiUrl(notification)) {
       return null;
     }
@@ -1224,7 +1276,7 @@ export class NotificationsComponent implements OnInit, OnDestroy {
     this.snackBar.open('Notification data copied to clipboard', 'Close', {
       duration: 2000,
       horizontalPosition: 'center',
-      verticalPosition: 'bottom'
+      verticalPosition: 'bottom',
     });
   }
 
@@ -1271,14 +1323,14 @@ export class NotificationsComponent implements OnInit, OnDestroy {
     try {
       // Get the paging window end (cursor). If unset, start from current oldest notification.
       const notifications = this.contentNotifications();
-      const currentOldest = notifications.length > 0
-        ? Math.min(...notifications.map(n => n.timestamp))
-        : Date.now();
+      const currentOldest =
+        notifications.length > 0 ? Math.min(...notifications.map((n) => n.timestamp)) : Date.now();
 
-      const windowEnd = this.oldestTimestamp() !== null
-        ? Math.floor(this.oldestTimestamp()! / 1000)
-        : Math.floor(currentOldest / 1000);
-      const windowStart = windowEnd - (this.LOAD_MORE_DAYS * 24 * 60 * 60);
+      const windowEnd =
+        this.oldestTimestamp() !== null
+          ? Math.floor(this.oldestTimestamp()! / 1000)
+          : Math.floor(currentOldest / 1000);
+      const windowStart = windowEnd - this.LOAD_MORE_DAYS * 24 * 60 * 60;
 
       // Track how many notifications we had before
       const countBefore = notifications.length;
@@ -1313,7 +1365,7 @@ export class NotificationsComponent implements OnInit, OnDestroy {
    * Handle filter changes from the filter panel
    */
   onFiltersChanged(changes: Partial<Record<NotificationType, boolean>>): void {
-    this.notificationFilters.update(current => ({ ...current, ...changes }));
+    this.notificationFilters.update((current) => ({ ...current, ...changes }));
   }
 
   setNotificationsView(show: boolean): void {
