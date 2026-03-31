@@ -1042,36 +1042,20 @@ export class MusicPlaylistCardComponent {
             limit: missingTrackKeys.length * 2,
           };
 
-          await new Promise<void>((resolve) => {
-            const timeout = setTimeout(() => resolve(), 5000);
+          const fetchedTracks = await this.pool.query(relayUrls, filter, 5000);
+          for (const trackEvent of fetchedTracks) {
+            const dTag = trackEvent.tags.find(t => t[0] === 'd')?.[1] || '';
+            const key = `${trackEvent.kind}:${trackEvent.pubkey}:${dTag}`;
 
-            const sub = this.pool.subscribe(relayUrls, filter, (trackEvent: Event) => {
-              const dTag = trackEvent.tags.find(t => t[0] === 'd')?.[1] || '';
-              const key = `${trackEvent.kind}:${trackEvent.pubkey}:${dTag}`;
+            if (!missingKeysSet.has(key)) {
+              continue;
+            }
 
-              if (!missingKeysSet.has(key)) return;
-
-              const existing = trackMap.get(key);
-              if (!existing || existing.created_at < trackEvent.created_at) {
-                trackMap.set(key, trackEvent);
-              }
-
-              const stillMissing = missingTrackKeys.some(k => !trackMap.has(`${k.kind}:${k.author}:${k.dTag}`));
-              if (!stillMissing) {
-                clearTimeout(timeout);
-                sub.close();
-                resolve();
-              }
-            });
-
-            setTimeout(() => {
-              if (trackMap.size > 0) {
-                clearTimeout(timeout);
-                sub.close();
-                resolve();
-              }
-            }, 3000);
-          });
+            const existing = trackMap.get(key);
+            if (!existing || existing.created_at < trackEvent.created_at) {
+              trackMap.set(key, trackEvent);
+            }
+          }
         }
       }
 

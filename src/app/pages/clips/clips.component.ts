@@ -749,25 +749,10 @@ export class ClipsComponent implements OnInit, OnDestroy {
         limit: 1,
       };
 
-      let foundEvent: Event | null = null;
-
-      await new Promise<void>(resolve => {
-        const timeout = setTimeout(() => {
-          resolve();
-        }, 5000);
-
-        const subscription = this.pool.subscribe(relayUrls, filter, (event: Event) => {
-          if (!foundEvent || event.created_at > foundEvent.created_at) {
-            foundEvent = event;
-          }
-        });
-
-        setTimeout(() => {
-          subscription.close();
-          clearTimeout(timeout);
-          resolve();
-        }, 3000);
-      });
+      const events = await this.pool.query(relayUrls, filter, 5000);
+      const foundEvent = events.length > 0
+        ? events.reduce((latest, event) => event.created_at > latest.created_at ? event : latest)
+        : null;
 
       if (foundEvent) {
         const event = foundEvent as Event;

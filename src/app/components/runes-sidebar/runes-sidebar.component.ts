@@ -1400,18 +1400,7 @@ export class RunesSidebarComponent implements OnDestroy {
   }
 
   private collectEvents(relayUrls: string[], filter: Filter, timeoutMs: number): Promise<Event[]> {
-    const events: Event[] = [];
-
-    return new Promise(resolve => {
-      const subscription = this.pool.subscribe(relayUrls, filter, event => {
-        events.push(event);
-      });
-
-      setTimeout(() => {
-        subscription.close();
-        resolve(events);
-      }, timeoutMs);
-    });
+    return this.pool.query(relayUrls, filter, timeoutMs);
   }
 
   private async fetchTracksFromRefs(relayUrls: string[], refs: string[]): Promise<Event[]> {
