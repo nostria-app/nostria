@@ -20,6 +20,10 @@
   align-items: center;
   gap: 4px;
 
+  .reaction-button-trigger {
+    touch-action: none;
+  }
+
   // Ensure the icon button matches other buttons in the footer
   >button[mat-icon-button] {
     display: inline-flex;
@@ -219,9 +223,18 @@
 }
 
 .more-reactions-button {
-  mat-icon {
+  .more-reactions-label {
     color: var(--mat-sys-on-surface-variant);
   }
+}
+
+.more-reactions-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 1rem;
+  letter-spacing: 0.08em;
 }
 
 // Main emoji picker container
@@ -678,8 +691,8 @@
   border-radius: 50%;
   transition: transform 0.15s cubic-bezier(0.2, 0, 0, 1),
               background-color 0.15s ease;
-  user-select: none;
   -webkit-user-select: none;
+  user-select: none;
 
   &.highlighted {
     background: var(--mat-sys-primary-container, rgba(255, 255, 255, 0.15));
@@ -694,14 +707,12 @@
   }
 
   &.touch-quick-more {
-    mat-icon {
-      font-size: 22px;
-      width: 22px;
-      height: 22px;
+    .more-reactions-label {
       color: var(--mat-sys-on-surface-variant, #aaa);
+      font-size: 1rem;
     }
 
-    &.highlighted mat-icon {
+    &.highlighted .more-reactions-label {
       color: var(--mat-sys-on-primary-container, #fff);
     }
   }

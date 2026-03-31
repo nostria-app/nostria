@@ -587,6 +587,7 @@ const DEFAULT_REACTION_RECENT_EMOJIS = ['+', '-'];
       font-size: 1.45rem;
       border: none;
       background: transparent;
+      color: var(--mat-sys-on-surface);
       border-radius: 6px;
       cursor: pointer;
       padding: 0;

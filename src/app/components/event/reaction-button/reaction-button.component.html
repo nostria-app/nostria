@@ -1,11 +1,11 @@
 <div class="reaction-container">
   @if (view() === 'icon') {
   <!-- Icon view: single-tap sends default reaction, long-press opens picker -->
-  <button mat-icon-button cdkOverlayOrigin #quickReactionOrigin="cdkOverlayOrigin" [class.active]="!!userReaction()" [class.reacted]="!!userReaction()"
+  <button class="reaction-button-trigger" mat-icon-button cdkOverlayOrigin #quickReactionOrigin="cdkOverlayOrigin" [class.active]="!!userReaction()" [class.reacted]="!!userReaction()"
     [disabled]="isLoadingReactions() || disabled()" (pointerdown)="onPointerDown($event)" (pointerup)="onPointerUp($event)"
     (pointerleave)="onPointerLeave()" (mouseenter)="onDesktopMouseEnter()" (mouseleave)="onDesktopMouseLeave()"
     (contextmenu)="$event.preventDefault()"
-    (click)="onClick($event)" style="touch-action: none">
+    (click)="onClick($event)">
     @if (userReaction()) {
     @if (getCustomEmojiUrl(userReaction()!.event)) {
     <app-custom-emoji [src]="getCustomEmojiUrl(userReaction()!.event)!" [alt]="userReaction()!.event.content"
@@ -27,7 +27,7 @@
     <div class="touch-quick-emoji" [class.highlighted]="touchQuickSelectIndex() === i"
       [style.transform]="touchQuickSelectIndex() === i ? 'scale(1.65) translateY(-10px)' : 'scale(1)'">
       @if (item.url) {
-      <img [src]="item.url" [alt]="item.emoji" class="touch-quick-emoji-img">
+      <img [src]="item.url" [alt]="item.emoji" title="{{ item.emoji }}" class="touch-quick-emoji-img">
       } @else {
       {{ item.emoji }}
       }
@@ -35,7 +35,7 @@
     }
     <div class="touch-quick-emoji touch-quick-more" [class.highlighted]="touchQuickSelectIndex() === touchQuickSelectItems().length"
       [style.transform]="touchQuickSelectIndex() === touchQuickSelectItems().length ? 'scale(1.65) translateY(-10px)' : 'scale(1)'">
-      <mat-icon>add</mat-icon>
+      <span class="more-reactions-label">...</span>
     </div>
   </div>
   }
@@ -51,7 +51,7 @@
         @for (item of desktopQuickReactions(); track item.emoji) {
         <button class="emoji-button" mat-icon-button type="button" (click)="addReaction(item.emoji)">
           @if (item.url) {
-          <img [src]="item.url" [alt]="item.emoji" class="custom-emoji-img">
+          <img [src]="item.url" [alt]="item.emoji" title="{{ item.emoji }}" class="custom-emoji-img">
           } @else {
           <span>{{ item.emoji }}</span>
           }
@@ -60,7 +60,7 @@
 
         <button class="emoji-button more-reactions-button" mat-icon-button type="button"
           (click)="openDesktopFullReactionPicker($event)">
-          <mat-icon>add</mat-icon>
+          <span class="more-reactions-label">...</span>
         </button>
       </div>
     </div>
