@@ -13,6 +13,12 @@ let EventProcessorServiceRef: any;
 
 type RelayRequestPriority = 0 | 1 | 2 | 3;
 
+interface PublishRelayResult {
+  relayUrl: string;
+  success: boolean;
+  error?: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -605,33 +611,10 @@ export class RelayPoolService {
         return await Promise.allSettled(publishPromises);
       });
 
-      // Track publish results
-      results.forEach((result, index) => {
-        const relayUrl = filteredUrls[index];
-        if (result.status === 'fulfilled') {
-          // Successful publish - update connection status
-          this.relaysService.updateRelayConnection(relayUrl, true);
-        } else {
-          // Failed publish - record retry attempt
-          let errorMsg = result.reason instanceof Error ? result.reason.message : String(result.reason);
-          // Handle empty error messages
-          if (!errorMsg || errorMsg.trim() === '') {
-            errorMsg = 'Unknown error (relay returned empty response)';
-          }
-          this.logger.warn('[RelayPoolService] Failed to publish to relay:', {
-            relay: relayUrl,
-            reason: errorMsg,
-          });
-          // Check for NIP-42 auth failures using proper prefixes
-          // auth-required: means client needs to authenticate first
-          // restricted: means client authenticated but key is not authorized (e.g., not paid, not whitelisted)
-          if (errorMsg.includes('auth-required:') || errorMsg.includes('restricted:')) {
-            this.relayAuth.markAuthFailed(relayUrl, errorMsg);
-          }
-          this.relaysService.recordConnectionRetry(relayUrl);
-          this.relaysService.updateRelayConnection(relayUrl, false);
-        }
-      });
+      const relayResults = this.handlePublishResults(filteredUrls, results);
+      if (relayResults.length === 1 && !relayResults[0].success) {
+        throw new Error(relayResults[0].error || `Failed to publish to ${relayResults[0].relayUrl}`);
+      }
 
     } catch (error) {
       this.logger.error('[RelayPoolService] Error publishing event:', error);
@@ -665,6 +648,38 @@ export class RelayPoolService {
     this.addRelays(filteredUrls);
     const authCallback = this.relayAuth.getAuthCallback();
     return this.#pool.publish(filteredUrls, event, { onauth: authCallback });
+  }
+
+  private handlePublishResults(
+    relayUrls: string[],
+    results: PromiseSettledResult<string>[]
+  ): PublishRelayResult[] {
+    return results.map((result, index) => {
+      const relayUrl = relayUrls[index];
+      if (result.status === 'fulfilled') {
+        this.relaysService.updateRelayConnection(relayUrl, true);
+        return { relayUrl, success: true };
+      }
+
+      let errorMsg = result.reason instanceof Error ? result.reason.message : String(result.reason);
+      if (!errorMsg || errorMsg.trim() === '') {
+        errorMsg = 'Unknown error (relay returned empty response)';
+      }
+
+      this.logger.warn('[RelayPoolService] Failed to publish to relay:', {
+        relay: relayUrl,
+        reason: errorMsg,
+      });
+
+      if (errorMsg.includes('auth-required:') || errorMsg.includes('restricted:')) {
+        this.relayAuth.markAuthFailed(relayUrl, errorMsg);
+      }
+
+      this.relaysService.recordConnectionRetry(relayUrl);
+      this.relaysService.updateRelayConnection(relayUrl, false);
+
+      return { relayUrl, success: false, error: errorMsg };
+    });
   }
 
   /**

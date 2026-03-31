@@ -1,5 +1,8 @@
+import '@angular/compiler';
 import { TestBed } from '@angular/core/testing';
 import { provideZonelessChangeDetection } from '@angular/core';
+import { BrowserDynamicTestingModule, platformBrowserDynamicTesting } from '@angular/platform-browser-dynamic/testing';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { RelayPoolService } from './relay-pool';
 import { RelaysService } from './relays';
@@ -13,11 +16,40 @@ import { UtilitiesService } from '../utilities.service';
 describe('RelayPoolService request queue', () => {
   let service: RelayPoolService;
   let poolGetMock: ReturnType<typeof vi.fn>;
+  let poolPublishMock: ReturnType<typeof vi.fn>;
+  let relaysServiceMock: {
+    getAllRelayStats: ReturnType<typeof vi.fn>;
+    addRelay: ReturnType<typeof vi.fn>;
+    incrementEventCount: ReturnType<typeof vi.fn>;
+    recordConnectionRetry: ReturnType<typeof vi.fn>;
+    updateRelayConnection: ReturnType<typeof vi.fn>;
+  };
+  let relayAuthServiceMock: {
+    filterAuthFailedRelays: ReturnType<typeof vi.fn>;
+    getAuthCallback: ReturnType<typeof vi.fn>;
+    markAuthFailed: ReturnType<typeof vi.fn>;
+  };
   let requestCounter = 0;
 
+  TestBed.initTestEnvironment(BrowserDynamicTestingModule, platformBrowserDynamicTesting());
+
   beforeEach(async () => {
+    TestBed.resetTestingModule();
     poolGetMock = vi.fn();
+    poolPublishMock = vi.fn();
     requestCounter = 0;
+    relaysServiceMock = {
+      getAllRelayStats: vi.fn().mockReturnValue(new Map()),
+      addRelay: vi.fn(),
+      incrementEventCount: vi.fn(),
+      recordConnectionRetry: vi.fn(),
+      updateRelayConnection: vi.fn(),
+    };
+    relayAuthServiceMock = {
+      filterAuthFailedRelays: vi.fn((relayUrls: string[]) => relayUrls),
+      getAuthCallback: vi.fn(),
+      markAuthFailed: vi.fn(),
+    };
 
     await TestBed.configureTestingModule({
       providers: [
@@ -25,12 +57,7 @@ describe('RelayPoolService request queue', () => {
         RelayPoolService,
         {
           provide: RelaysService,
-          useValue: {
-            getAllRelayStats: vi.fn().mockReturnValue(new Map()),
-            addRelay: vi.fn(),
-            incrementEventCount: vi.fn(),
-            recordConnectionRetry: vi.fn(),
-          },
+          useValue: relaysServiceMock,
         },
         {
           provide: SubscriptionManagerService,
@@ -51,9 +78,7 @@ describe('RelayPoolService request queue', () => {
         },
         {
           provide: RelayAuthService,
-          useValue: {
-            filterAuthFailedRelays: vi.fn((relayUrls: string[]) => relayUrls),
-          },
+          useValue: relayAuthServiceMock,
         },
         {
           provide: UtilitiesService,
@@ -67,6 +92,7 @@ describe('RelayPoolService request queue', () => {
           useValue: {
             pool: {
               get: poolGetMock,
+              publish: poolPublishMock,
             },
           },
         },
@@ -170,5 +196,18 @@ describe('RelayPoolService request queue', () => {
       { kinds: [1], authors: ['alice'] },
       { maxWait: 5000 }
     );
+  });
+
+  it('rejects single-relay publish failures with the relay reason', async () => {
+    poolPublishMock.mockReturnValueOnce([
+      Promise.reject(new Error('blocked: pubkey not in whitelist')),
+    ]);
+
+    await expect(service.publish(['wss://relay.example'], {} as never, 100)).rejects.toThrow(
+      'blocked: pubkey not in whitelist'
+    );
+
+    expect(relaysServiceMock.recordConnectionRetry).toHaveBeenCalledWith('wss://relay.example');
+    expect(relaysServiceMock.updateRelayConnection).toHaveBeenCalledWith('wss://relay.example', false);
   });
 });
