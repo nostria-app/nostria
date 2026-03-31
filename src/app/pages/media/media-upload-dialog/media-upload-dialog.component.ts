@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed } from '@angular/core';
+import { Component, computed, inject, OnDestroy, signal } from '@angular/core';
 
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
@@ -53,7 +53,7 @@ interface SelectedFileEntry {
   templateUrl: './media-upload-dialog.component.html',
   styleUrls: ['./media-upload-dialog.component.scss'],
 })
-export class MediaUploadDialogComponent {
+export class MediaUploadDialogComponent implements OnDestroy {
   private dialogRef = inject(MatDialogRef<MediaUploadDialogComponent, MediaUploadDialogResult | undefined>);
   private mediaService = inject(MediaService);
   private readonly logger = inject(LoggerService);
@@ -88,6 +88,10 @@ export class MediaUploadDialogComponent {
       this.selectedServers.set(this.availableServers());
       this.showServerSelection.set(true);
     }
+  }
+
+  ngOnDestroy(): void {
+    this.releaseEntryUrls(this.selectedFiles());
   }
 
   onUploadModeChange(mode: MediaUploadMode): void {
@@ -137,7 +141,13 @@ export class MediaUploadDialogComponent {
   }
 
   removeFile(index: number): void {
-    this.selectedFiles.update(list => list.filter((_, i) => i !== index));
+    this.selectedFiles.update(list => {
+      const entry = list[index];
+      if (entry) {
+        this.releaseEntryUrls([entry]);
+      }
+      return list.filter((_, i) => i !== index);
+    });
   }
 
   async openCompressionPreview(entry: SelectedFileEntry): Promise<void> {
@@ -166,6 +176,7 @@ export class MediaUploadDialogComponent {
   }
 
   clearAllFiles(): void {
+    this.releaseEntryUrls(this.selectedFiles());
     this.selectedFiles.set([]);
   }
 
@@ -212,9 +223,14 @@ export class MediaUploadDialogComponent {
       });
 
       const thumbnailUrl = URL.createObjectURL(blob);
-      this.selectedFiles.update(list =>
-        list.map(e => e.file === videoFile ? { ...e, videoThumbnailUrl: thumbnailUrl } : e)
-      );
+      this.selectedFiles.update(list => list.map(e => {
+        if (e.file !== videoFile) {
+          return e;
+        }
+
+        this.releaseBlobUrl(e.videoThumbnailUrl);
+        return { ...e, videoThumbnailUrl: thumbnailUrl };
+      }));
 
       URL.revokeObjectURL(videoUrl);
     } catch (error) {
@@ -272,6 +288,18 @@ export class MediaUploadDialogComponent {
   totalSize = computed(() => {
     return this.selectedFiles().reduce((sum, entry) => sum + entry.file.size, 0);
   });
+
+  private releaseEntryUrls(entries: SelectedFileEntry[]): void {
+    for (const entry of entries) {
+      this.releaseBlobUrl(entry.videoThumbnailUrl);
+    }
+  }
+
+  private releaseBlobUrl(url: string | null): void {
+    if (url?.startsWith('blob:')) {
+      URL.revokeObjectURL(url);
+    }
+  }
 
   // Drag and drop handlers
   onDragOver(event: DragEvent): void {
