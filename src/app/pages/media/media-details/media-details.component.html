@@ -79,6 +79,11 @@
       } @else {
       <pre class="text-preview">{{ textContent() }}</pre>
       }
+      } @else if (mediaItem()?.type === 'application/pdf') {
+      <div class="generic-preview pdf-preview">
+        <mat-icon>picture_as_pdf</mat-icon>
+        <button mat-flat-button type="button" (click)="openPdfInNewTab()">Open PDF</button>
+      </div>
       } @else {
       <div class="generic-preview">
         <mat-icon>{{ getMediaIcon(mediaItem()?.type) }}</mat-icon>

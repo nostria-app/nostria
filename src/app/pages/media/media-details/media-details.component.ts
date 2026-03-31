@@ -304,7 +304,7 @@ export class MediaDetailsComponent {
     const item = this.mediaItem();
     if (!item) return;
 
-      this.dialog.open(MediaPreviewDialogComponent, {
+    this.dialog.open(MediaPreviewDialogComponent, {
       data: {
         mediaUrl: this.mediaUrl() || item.url,
         mediaType: item.type,
@@ -316,6 +316,16 @@ export class MediaDetailsComponent {
       height: '100vh',
       panelClass: 'image-dialog-panel',
     });
+  }
+
+  openPdfInNewTab(): void {
+    const item = this.mediaItem();
+    const url = this.mediaUrl() || item?.url;
+    if (!url) {
+      return;
+    }
+
+    window.open(url, '_blank', 'noopener,noreferrer');
   }
 
   async deleteMedia(): Promise<void> {

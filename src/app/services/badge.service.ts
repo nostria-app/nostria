@@ -133,6 +133,23 @@ export class BadgeService implements NostriaService {
     const requestId = ++this.acceptedLoadRequestId;
     this.isLoadingAccepted.set(true);
     try {
+      const cachedProfileBadgesEvent = await this.database.getEventByPubkeyAndKind(
+        pubkey,
+        kinds.ProfileBadges
+      );
+
+      if (requestId !== this.acceptedLoadRequestId) {
+        return;
+      }
+
+      if (cachedProfileBadgesEvent) {
+        this.parseBadgeTags(cachedProfileBadgesEvent.tags);
+        this.profileBadgesEvent.set(cachedProfileBadgesEvent);
+      } else {
+        this.acceptedBadges.set([]);
+        this.profileBadgesEvent.set(null);
+      }
+
       // Ensure relays are discovered for this pubkey first
       await this.userRelayService.ensureRelaysForPubkey(pubkey);
 
@@ -175,6 +192,23 @@ export class BadgeService implements NostriaService {
     const requestId = ++this.issuedLoadRequestId;
     this.isLoadingIssued.set(true);
     try {
+      const cachedBadgeAwardEvents = await this.database.getEventsByPubkeyAndKind(
+        pubkey,
+        kinds.BadgeAward
+      );
+
+      if (requestId !== this.issuedLoadRequestId) {
+        return;
+      }
+
+      this.issuedBadges.set(cachedBadgeAwardEvents);
+      const cachedRecipients = await this.fetchBadgeRecipients(cachedBadgeAwardEvents);
+      if (requestId !== this.issuedLoadRequestId) {
+        return;
+      }
+
+      this.badgeRecipients.set(cachedRecipients);
+
       // Ensure relays are discovered for this pubkey first
       await this.userRelayService.ensureRelaysForPubkey(pubkey);
 
@@ -383,6 +417,32 @@ export class BadgeService implements NostriaService {
     const requestId = ++this.receivedLoadRequestId;
     this.isLoadingReceived.set(true);
     try {
+      const cachedReceivedBadgeEvents = await this.database.getEventsByKindAndPubkeyTag(
+        kinds.BadgeAward,
+        pubkey
+      );
+
+      if (requestId !== this.receivedLoadRequestId) {
+        return;
+      }
+
+      const cachedReceivedAwardsEvents = [...new Map(
+        cachedReceivedBadgeEvents.map(event => [event.id, event])
+      ).values()].sort((a, b) => b.created_at - a.created_at);
+
+      this.receivedBadges.set(cachedReceivedAwardsEvents);
+      this.fetchBadgeIssuers(cachedReceivedAwardsEvents).then(issuers => {
+        if (requestId === this.receivedLoadRequestId) {
+          this.badgeIssuers.set(issuers);
+        }
+      }).catch(err => {
+        if (requestId !== this.receivedLoadRequestId) {
+          return;
+        }
+
+        console.error('Error fetching cached badge issuers:', err);
+      });
+
       // Ensure relays are discovered for this pubkey first
       await this.userRelayService.ensureRelaysForPubkey(pubkey);
 

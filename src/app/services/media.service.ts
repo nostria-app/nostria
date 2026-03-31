@@ -185,6 +185,20 @@ export class MediaService implements NostriaService {
     this.encryptedMediaReferencePromise = null;
   }
 
+  private updateMediaItemType(sha256: string, type: string): void {
+    if (!type) {
+      return;
+    }
+
+    this._mediaItems.update(items => items.map(item => {
+      if (item.sha256 !== sha256 || item.type === type) {
+        return item;
+      }
+
+      return { ...item, type };
+    }));
+  }
+
   async getFileById(id: string): Promise<MediaItem> {
     const media = this.mediaItems();
     const item = media.find(m => m.sha256 === id);
@@ -216,6 +230,11 @@ export class MediaService implements NostriaService {
       return null;
     }
 
+    const inferredTypeFromName = this.getBestEffortEncryptedMimeType(encryptedReference.fileType, encryptedReference.fileName);
+    if (inferredTypeFromName !== item.type) {
+      this.updateMediaItemType(item.sha256, inferredTypeFromName);
+    }
+
     const existingUrl = this.decryptedMediaUrls.get(item.sha256);
     if (existingUrl) {
       return existingUrl;
@@ -227,6 +246,10 @@ export class MediaService implements NostriaService {
 
     if (!blob) {
       return null;
+    }
+
+    if (blob.type && blob.type !== item.type) {
+      this.updateMediaItemType(item.sha256, blob.type);
     }
 
     if (!cachedBlob) {
@@ -439,7 +462,125 @@ export class MediaService implements NostriaService {
       encryptedBuffer,
     );
 
-    return new Blob([decryptedBuffer], { type: reference.fileType || 'application/octet-stream' });
+    const blobType = this.detectMimeTypeFromBytes(
+      decryptedBuffer,
+      this.getBestEffortEncryptedMimeType(reference.fileType, reference.fileName),
+    );
+
+    return new Blob([decryptedBuffer], { type: blobType });
+  }
+
+  private getBestEffortEncryptedMimeType(fileType: string | undefined, fileName: string | undefined): string {
+    if (fileType && fileType !== 'application/octet-stream' && !this.isBinFileName(fileName)) {
+      return fileType;
+    }
+
+    return this.inferMimeTypeFromFileName(fileName) || fileType || 'application/octet-stream';
+  }
+
+  private inferMimeTypeFromFileName(fileName: string | undefined): string | null {
+    if (!fileName) {
+      return null;
+    }
+
+    const normalized = fileName.toLowerCase();
+    const extensionMap: Record<string, string> = {
+      '.jpg': 'image/jpeg',
+      '.jpeg': 'image/jpeg',
+      '.png': 'image/png',
+      '.gif': 'image/gif',
+      '.webp': 'image/webp',
+      '.svg': 'image/svg+xml',
+      '.avif': 'image/avif',
+      '.bmp': 'image/bmp',
+      '.mp4': 'video/mp4',
+      '.m4v': 'video/mp4',
+      '.webm': 'video/webm',
+      '.mov': 'video/quicktime',
+      '.mkv': 'video/x-matroska',
+      '.avi': 'video/x-msvideo',
+      '.mp3': 'audio/mpeg',
+      '.m4a': 'audio/mp4',
+      '.aac': 'audio/aac',
+      '.wav': 'audio/wav',
+      '.ogg': 'audio/ogg',
+      '.opus': 'audio/opus',
+      '.flac': 'audio/flac',
+      '.pdf': 'application/pdf',
+      '.json': 'application/json',
+      '.txt': 'text/plain',
+      '.md': 'text/markdown',
+      '.html': 'text/html',
+    };
+
+    const extension = Object.keys(extensionMap).find(ext => normalized.endsWith(ext));
+    return extension ? extensionMap[extension] : null;
+  }
+
+  private isBinFileName(fileName: string | undefined): boolean {
+    return !!fileName && fileName.toLowerCase().endsWith('.bin');
+  }
+
+  private detectMimeTypeFromBytes(buffer: ArrayBuffer, fallbackType: string): string {
+    const bytes = new Uint8Array(buffer);
+
+    if (bytes.length >= 4) {
+      if (bytes[0] === 0x25 && bytes[1] === 0x50 && bytes[2] === 0x44 && bytes[3] === 0x46) {
+        return 'application/pdf';
+      }
+
+      if (bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) {
+        return 'image/jpeg';
+      }
+
+      if (bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47) {
+        return 'image/png';
+      }
+
+      if (bytes[0] === 0x47 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x38) {
+        return 'image/gif';
+      }
+    }
+
+    if (bytes.length >= 12) {
+      if (
+        bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46 &&
+        bytes[8] === 0x57 && bytes[9] === 0x45 && bytes[10] === 0x42 && bytes[11] === 0x50
+      ) {
+        return 'image/webp';
+      }
+
+      if (
+        bytes[4] === 0x66 && bytes[5] === 0x74 && bytes[6] === 0x79 && bytes[7] === 0x70 &&
+        (bytes[8] === 0x69 || bytes[8] === 0x4d || bytes[8] === 0x71)
+      ) {
+        return 'video/mp4';
+      }
+    }
+
+    if (bytes.length >= 4) {
+      if (bytes[0] === 0x1a && bytes[1] === 0x45 && bytes[2] === 0xdf && bytes[3] === 0xa3) {
+        return 'video/webm';
+      }
+
+      if (bytes[0] === 0x4f && bytes[1] === 0x67 && bytes[2] === 0x67 && bytes[3] === 0x53) {
+        return fallbackType.startsWith('video/') ? 'video/ogg' : 'audio/ogg';
+      }
+    }
+
+    if (bytes.length >= 3 && bytes[0] === 0x49 && bytes[1] === 0x44 && bytes[2] === 0x33) {
+      return 'audio/mpeg';
+    }
+
+    if (
+      bytes.length >= 12 &&
+      bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46 &&
+      bytes[8] === 0x57 && bytes[9] === 0x41 && bytes[10] === 0x56 && bytes[11] === 0x45
+    ) {
+      return 'audio/wav';
+    }
+
+    return fallbackType;
   }
 
   private parseHex(value: string): Uint8Array {
@@ -588,6 +729,16 @@ export class MediaService implements NostriaService {
       }
 
       const mediaItems = Object.values(itemsByHash);
+
+      const encryptedReferences = await this.getEncryptedMediaReferences();
+      for (const item of mediaItems) {
+        const encryptedReference = encryptedReferences.get(item.sha256);
+        if (!encryptedReference) {
+          continue;
+        }
+
+        item.type = this.getBestEffortEncryptedMimeType(item.type || encryptedReference.fileType, encryptedReference.fileName);
+      }
 
       if (mediaItems.length > 0) {
         this._mediaItems.set(mediaItems);

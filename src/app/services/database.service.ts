@@ -1289,6 +1289,42 @@ export class DatabaseService {
   }
 
   /**
+   * Get events by kind that have a specific p-tag.
+   * Routes to the correct database based on the kind.
+   * Filters out expired events (NIP-40).
+   */
+  async getEventsByKindAndPubkeyTag(kind: number, pubkey: string): Promise<Event[]> {
+    const db = this.getDbForEventKind(kind);
+    if (!db) return [];
+
+    const events = await new Promise<Event[]>((resolve, reject) => {
+      const transaction = db.transaction(STORES.EVENTS, 'readonly');
+      const store = transaction.objectStore(STORES.EVENTS);
+      const index = store.index(EVENT_INDEXES.BY_KIND);
+
+      const results: Event[] = [];
+      const request = index.openCursor(IDBKeyRange.only(kind));
+
+      request.onsuccess = (event) => {
+        const cursor = (event.target as IDBRequest<IDBCursorWithValue>).result;
+        if (cursor) {
+          const eventData = cursor.value as Event;
+          if (eventData.tags?.some(tag => tag[0] === 'p' && tag[1] === pubkey)) {
+            results.push(eventData);
+          }
+          cursor.continue();
+        } else {
+          resolve(results);
+        }
+      };
+
+      request.onerror = () => reject(request.error);
+    });
+
+    return this.filterAndDeleteExpiredEvents(events);
+  }
+
+  /**
    * Get events by multiple kinds that have a specific e-tag.
    * May need to query both databases if kinds span shared and per-account.
    * Filters out expired events (NIP-40).
