@@ -925,6 +925,14 @@ export class MediaComponent {
     return this.encryptedMediaMap().has(item.sha256);
   }
 
+  hasRenderablePreview(item: MediaItem): boolean {
+    if (!this.isEncrypted(item)) {
+      return true;
+    }
+
+    return this.getItemSourceUrl(item) !== item.url;
+  }
+
   private async hydrateEncryptedMedia(items: MediaItem[]): Promise<void> {
     if (!this.isBrowser || items.length === 0) {
       this.encryptedMediaMap.set(new Map());

@@ -257,6 +257,7 @@ export class ProfileHeaderComponent implements OnDestroy {
   // Track badges that have timed out (3 second timeout)
   private timedOutBadges = signal<Set<string>>(new Set());
   private badgeTimeouts = new Map<string, ReturnType<typeof setTimeout>>();
+  private failedBadgeImages = signal<Set<string>>(new Set());
 
   // Computed to check if a badge has timed out
   isBadgeTimedOut = computed(() => {
@@ -459,6 +460,13 @@ export class ProfileHeaderComponent implements OnDestroy {
   });
 
   constructor() {
+    effect(() => {
+      this.topBadges();
+      untracked(() => {
+        this.failedBadgeImages.set(new Set());
+      });
+    });
+
     effect(() => {
       const currentPubkey = this.pubkey();
       if (currentPubkey) {
@@ -1569,8 +1577,23 @@ export class ProfileHeaderComponent implements OnDestroy {
    */
   onBadgeImageError(event: Event): void {
     const img = event.target as HTMLImageElement;
-    // Hide the image element
-    img.style.display = 'none';
+    const badgeItem = img.closest('.badge-item');
+    const pubkey = badgeItem?.getAttribute('data-badge-pubkey');
+    const slug = badgeItem?.getAttribute('data-badge-slug');
+
+    if (!pubkey || !slug) {
+      return;
+    }
+
+    this.failedBadgeImages.update(failed => {
+      const next = new Set(failed);
+      next.add(`${pubkey}:${slug}`);
+      return next;
+    });
+  }
+
+  hasBadgeImageFailed(badge: { pubkey: string; slug: string }): boolean {
+    return this.failedBadgeImages().has(`${badge.pubkey}:${badge.slug}`);
   }
 
   /**

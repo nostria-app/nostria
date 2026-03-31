@@ -129,14 +129,15 @@
         @let parsedBadge = parsedBadges()[$index];
         @let isTimedOut = isBadgeTimedOut()[$index];
         @if (!isTimedOut) {
-        <a (click)="navigateToBadges($event)" class="badge-item" (mouseenter)="onBadgeMouseEnter($event, badge)"
+        <a (click)="navigateToBadges($event)" class="badge-item" [attr.data-badge-pubkey]="badge.pubkey"
+          [attr.data-badge-slug]="badge.slug" (mouseenter)="onBadgeMouseEnter($event, badge)"
           (mouseleave)="onBadgeMouseLeave()">
           @if (isBadgeFailed()[$index]) {
           <!-- Show failed badge placeholder -->
           <div class="badge-placeholder badge-failed" title="Failed to load badge">
             <mat-icon>error_outline</mat-icon>
           </div>
-          } @else if (parsedBadge && (parsedBadge.thumb || parsedBadge.image)) {
+          } @else if (parsedBadge && (parsedBadge.thumb || parsedBadge.image) && !hasBadgeImageFailed(badge)) {
           <!-- Show badge image when loaded -->
           <img [src]="parsedBadge.thumb || parsedBadge.image" [alt]="parsedBadge.name || 'Badge'"
             [title]="parsedBadge.name || 'Badge'" class="badge-image" loading="lazy"
