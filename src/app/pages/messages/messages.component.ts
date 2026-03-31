@@ -833,6 +833,8 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   private composerViewportResizeHandler: (() => void) | null = null;
   private composerViewportResizeTimeout: ReturnType<typeof setTimeout> | null = null;
   private suppressDraftPersistence = false;
+  highlightedMessageId = signal<string | null>(null);
+  private pendingScrollToMessageId = signal<string | null>(null);
 
   constructor() {
     // Initialize lastAccountPubkey with current account to avoid false "account changed" on first load
@@ -1077,9 +1079,11 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       takeUntilDestroyed(this.destroyRef)
     ).subscribe(params => {
       const chatId = params['chat'];
+      const messageId = params['message'];
       const pubkey = params['pubkey'];
       if (chatId) {
         this.logger.debug('Query param chat detected:', chatId);
+        this.pendingScrollToMessageId.set(messageId || null);
         this.isOpeningChat.set(true);
         this.openChatById(chatId);
         this.isOpeningChat.set(false);
@@ -1097,6 +1101,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
         }
       } else if (pubkey) {
         this.logger.debug('Query param pubkey detected:', pubkey);
+        this.pendingScrollToMessageId.set(messageId || null);
 
         // Show a loading indicator immediately so the user gets visual feedback
         this.isOpeningChat.set(true);
@@ -1120,6 +1125,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
           });
         }
       } else {
+        this.pendingScrollToMessageId.set(null);
         // No pubkey query param - just do regular initialization
         // Always load all cached chats from database to ensure nothing is missed
         if (!this.messaging.isLoading()) {
@@ -1129,6 +1135,24 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
           this.messaging.loadChats();
         }
       }
+    });
+
+    effect(() => {
+      const targetMessageId = this.pendingScrollToMessageId();
+      const chat = this.selectedChat();
+      const messages = this.messages();
+
+      if (!targetMessageId || !chat || messages.length === 0) {
+        return;
+      }
+
+      if (!messages.some(message => message.id === targetMessageId)) {
+        return;
+      }
+
+      untracked(() => {
+        this.scrollToTargetMessage(targetMessageId);
+      });
     });
   }
 
@@ -1439,6 +1463,32 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       element.scrollTop = element.scrollHeight;
       this.lastScrollHeight = element.scrollHeight;
     }
+  }
+
+  private scrollToTargetMessage(messageId: string): void {
+    const attemptScroll = (remainingAttempts: number) => {
+      const wrapper = this.messagesWrapper?.nativeElement;
+      const messageElement = wrapper?.querySelector<HTMLElement>(`[data-message-id="${messageId}"]`);
+
+      if (!wrapper || !messageElement) {
+        if (remainingAttempts > 0) {
+          setTimeout(() => attemptScroll(remainingAttempts - 1), 120);
+        }
+        return;
+      }
+
+      messageElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      this.highlightedMessageId.set(messageId);
+      this.pendingScrollToMessageId.set(null);
+
+      setTimeout(() => {
+        if (this.highlightedMessageId() === messageId) {
+          this.highlightedMessageId.set(null);
+        }
+      }, 2500);
+    };
+
+    setTimeout(() => attemptScroll(8), 50);
   }
 
   private isMessagesViewNearBottom(threshold = 150): boolean {

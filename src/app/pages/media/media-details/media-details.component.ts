@@ -622,8 +622,8 @@ export class MediaDetailsComponent {
   openUsageReference(reference: MediaUsageReference): void {
     if (reference.source === 'direct-message' && reference.chatId) {
       const queryParams = reference.chatId.startsWith('group:')
-        ? { chat: reference.chatId }
-        : { chat: reference.chatId, pubkey: reference.pubkey };
+        ? { chat: reference.chatId, message: reference.id }
+        : { chat: reference.chatId, pubkey: reference.pubkey, message: reference.id };
       void this.router.navigate(['/messages'], { queryParams });
       return;
     }

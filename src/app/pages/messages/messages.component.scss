@@ -1446,8 +1446,17 @@
   border-bottom: 1px solid rgba(0, 0, 0, 0.06);
 }
 
+.message-target-highlight .message-bubble {
+  box-shadow: 0 0 0 2px var(--mat-sys-tertiary);
+  background-color: color-mix(in srgb, var(--mat-sys-tertiary-container) 38%, var(--mat-sys-surface));
+}
+
 :host-context(.dark) .note-to-self-item {
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+:host-context(.dark) .message-target-highlight .message-bubble {
+  background-color: color-mix(in srgb, var(--mat-sys-tertiary-container) 52%, var(--mat-sys-surface-container-highest));
 }
 
 .note-to-self-avatar {
