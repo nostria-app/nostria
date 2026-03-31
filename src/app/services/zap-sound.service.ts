@@ -94,7 +94,7 @@ export class ZapSoundService {
 
     if (!this.likeAudio) {
       try {
-        this.likeAudio = new Audio('/assets/sounds/likes/like.wav');
+        this.likeAudio = new Audio('/sounds/like.wav');
         this.likeAudio.preload = 'auto';
       } catch {
         this.likeAudio = null;
