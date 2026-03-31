@@ -319,7 +319,7 @@
           <span>Loading relays...</span>
         </span>
         } @else {
-        <span class="inline-error"> <mat-icon>error</mat-icon>&nbsp; No relays found! </span>
+        <span class="inline-error"> <mat-icon>error</mat-icon>&nbsp; {{ relayEmptyStateText() }} </span>
         }
 
         @if (badgeCount() > 0) {

@@ -388,6 +388,10 @@ export class ProfileHeaderComponent implements OnDestroy {
     return !this.profileState.relayListFullyLoaded();
   });
 
+  relayEmptyStateText = computed(() => {
+    return this.profileState.hasNoDeclaredRelays() ? 'User has no relays' : 'No relays found!';
+  });
+
   // Check if the current user is blocked
   isUserBlocked = computed(() => {
     const pubkey = this.pubkey();

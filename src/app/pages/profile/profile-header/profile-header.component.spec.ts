@@ -5,6 +5,12 @@ import { ProfileHeaderComponent } from './profile-header.component';
 function createComponent(): ProfileHeaderComponent {
   const component = Object.create(ProfileHeaderComponent.prototype) as ProfileHeaderComponent;
 
+  const profileState = {
+    hasNoDeclaredRelays: signal(false),
+  };
+
+  (component as any).profileState = profileState;
+
   // Initialize the premiumTier signal
   (component as any).premiumTier = signal<string | null>(null);
 
@@ -17,6 +23,12 @@ function createComponent(): ProfileHeaderComponent {
   (component as any).isPremiumPlus = computed(() => {
     const tier = (component as any).premiumTier();
     return tier === 'premium_plus';
+  });
+
+  (component as any).relayEmptyStateText = computed(() => {
+    return (component as any).profileState.hasNoDeclaredRelays()
+      ? 'User has no relays'
+      : 'No relays found!';
   });
 
   return component;
@@ -71,6 +83,21 @@ describe('ProfileHeaderComponent', () => {
       (component as any).premiumTier.set('free');
       expect(component.isPremium()).toBe(false);
       expect(component.isPremiumPlus()).toBe(false);
+    });
+  });
+
+  describe('relay empty state', () => {
+    it('should show explicit no-relays message when relay sources are empty by declaration', () => {
+      const component = createComponent();
+      (component as any).profileState.hasNoDeclaredRelays.set(true);
+
+      expect(component.relayEmptyStateText()).toBe('User has no relays');
+    });
+
+    it('should keep generic missing-relays message for other empty states', () => {
+      const component = createComponent();
+
+      expect(component.relayEmptyStateText()).toBe('No relays found!');
     });
   });
 });

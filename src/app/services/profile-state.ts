@@ -27,6 +27,8 @@ export class ProfileState {
   relayList = signal<string[]>([]);
   // Track the timestamp of the relay list event
   private relayListTimestamp = signal<number>(0);
+  hasRelayListEvent = signal<boolean>(false);
+  hasKind3RelayMap = signal<boolean>(false);
 
   notes = signal<NostrRecord[]>([]);
   reposts = signal<NostrRecord[]>([]);
@@ -69,6 +71,9 @@ export class ProfileState {
   // Signal to indicate when relay list loading is fully complete (cache + relay fetch)
   // Unlike cachedEventsLoaded, this stays false until the relay list has been queried from relays too
   relayListFullyLoaded = signal<boolean>(false);
+  hasNoDeclaredRelays = computed(() => {
+    return this.relayListFullyLoaded() && this.relayList().length === 0 && this.hasRelayListEvent() && !this.hasKind3RelayMap();
+  });
 
   // Track the oldest timestamp from relay-loaded events for pagination
   // This is separate from cached events to ensure proper infinite scroll
@@ -209,6 +214,8 @@ export class ProfileState {
     this.followingListTimestamp.set(0);
     this.relayList.set([]);
     this.relayListTimestamp.set(0);
+    this.hasRelayListEvent.set(false);
+    this.hasKind3RelayMap.set(false);
     this.notes.set([]);
     this.reposts.set([]);
     this.replies.set([]);
@@ -567,6 +574,7 @@ export class ProfileState {
             if (this.relayList().length === 0) {
               const fallbackRelayUrls = Array.from(new Set(this.utilities.getRelayUrlsFromFollowing(event, true)));
               if (fallbackRelayUrls.length > 0) {
+                this.hasKind3RelayMap.set(true);
                 this.relayList.set(fallbackRelayUrls);
                 this.logger.debug(`Loaded cached relay list fallback from kind 3 with ${fallbackRelayUrls.length} relays`);
               }
@@ -577,11 +585,15 @@ export class ProfileState {
           // Only set if this is newer than what we already have
           const currentTimestamp = this.relayListTimestamp();
           if (event.created_at > currentTimestamp) {
+            this.hasRelayListEvent.set(true);
             const relayUrls = this.utilities.getRelayUrls(event, true);
+            this.relayListTimestamp.set(event.created_at);
             if (relayUrls.length > 0) {
               this.relayList.set(relayUrls);
-              this.relayListTimestamp.set(event.created_at);
               this.logger.debug(`Loaded cached relay list with ${relayUrls.length} relays (timestamp: ${event.created_at})`);
+            } else if (!this.hasKind3RelayMap()) {
+              this.relayList.set([]);
+              this.logger.debug(`Loaded empty cached relay list event (timestamp: ${event.created_at})`);
             }
           }
         }
@@ -797,6 +809,7 @@ export class ProfileState {
         if (this.relayList().length === 0) {
           const fallbackRelayUrls = Array.from(new Set(this.utilities.getRelayUrlsFromFollowing(contactsEvent, true)));
           if (fallbackRelayUrls.length > 0) {
+            this.hasKind3RelayMap.set(true);
             this.relayList.set(fallbackRelayUrls);
             this.logger.debug(`Updated relay list fallback from kind 3 with ${fallbackRelayUrls.length} relays`);
           }
@@ -818,12 +831,18 @@ export class ProfileState {
       if (this.currentlyLoadingPubkey() !== pubkey) return;
 
       if (relayListEvent && relayListEvent.kind === kinds.RelayList) {
+        this.hasRelayListEvent.set(true);
         const currentTimestamp = this.relayListTimestamp();
         if (relayListEvent.created_at > currentTimestamp) {
           const relayUrls = this.utilities.getRelayUrls(relayListEvent, true);
-          this.relayList.set(relayUrls);
           this.relayListTimestamp.set(relayListEvent.created_at);
-          this.logger.debug(`Updated relay list with ${relayUrls.length} relays`);
+          if (relayUrls.length > 0) {
+            this.relayList.set(relayUrls);
+            this.logger.debug(`Updated relay list with ${relayUrls.length} relays`);
+          } else if (!this.hasKind3RelayMap()) {
+            this.relayList.set([]);
+            this.logger.debug('Updated relay list to empty from kind 10002; no kind 3 fallback available');
+          }
           this.database.saveReplaceableEvent(relayListEvent).catch(err => {
             this.logger.error('Failed to cache relay list event:', err);
           });
