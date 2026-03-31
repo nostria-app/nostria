@@ -28,6 +28,7 @@ import { CustomEmojiComponent } from '../../custom-emoji/custom-emoji.component'
 import { EmojiPickerComponent } from '../../emoji-picker/emoji-picker.component';
 import { CelebrationBurstComponent } from '../../celebration-burst/celebration-burst.component';
 import { HapticsService } from '../../../services/haptics.service';
+import { ZapSoundService } from '../../../services/zap-sound.service';
 
 // Emoji categories with icons
 const EMOJI_CATEGORIES = UNICODE_EMOJI_CATEGORIES;
@@ -308,6 +309,7 @@ export class ReactionButtonComponent {
   private readonly localSettings = inject(LocalSettingsService);
   private readonly customDialog = inject(CustomDialogService);
   private readonly haptics = inject(HapticsService);
+  private readonly zapSound = inject(ZapSoundService);
   private readonly platformId = inject(PLATFORM_ID);
   private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
   private readonly elRef = inject(ElementRef);
@@ -1165,6 +1167,7 @@ export class ReactionButtonComponent {
         }
 
         this.haptics.triggerLight();
+        this.zapSound.playLikeSound();
         this.triggerReactionCelebration(emoji);
         // Track emoji usage for recent emojis
         this.trackEmojiUsage(emoji, emojiUrl);
@@ -1223,6 +1226,7 @@ export class ReactionButtonComponent {
 
         if (result.success) {
           this.haptics.triggerMedium();
+          this.zapSound.playLikeSound();
           this.triggerReactionCelebration('+');
           this.reactionChanged.emit();
         }

@@ -85,6 +85,46 @@ export class ZapSoundService {
     }
   }
 
+  /** Play a light confirmation sound for likes. */
+  playLikeSound(): void {
+    if (this.settingsService.settings().zapSoundsEnabled === false) {
+      return;
+    }
+
+    const ctx = this.getAudioContext();
+    if (!ctx) {
+      return;
+    }
+
+    try {
+      const now = ctx.currentTime;
+      const masterGain = ctx.createGain();
+      masterGain.gain.setValueAtTime(0.18, now);
+      masterGain.connect(ctx.destination);
+
+      this.oscNote(ctx, now, masterGain, {
+        type: 'triangle',
+        freq: 740,
+        gain: 0.16,
+        dur: 0.08,
+      });
+      this.oscNote(ctx, now + 0.045, masterGain, {
+        type: 'sine',
+        freq: 988,
+        gain: 0.13,
+        dur: 0.15,
+      });
+      this.oscNote(ctx, now + 0.07, masterGain, {
+        type: 'sine',
+        freq: 1480,
+        gain: 0.06,
+        dur: 0.12,
+      });
+    } catch {
+      // Silently ignore audio errors
+    }
+  }
+
   // ── Tier 1 (1-100 sats): Subtle click + soft single chime ─────────────
   private playTier1(ctx: AudioContext, now: number, dest: AudioNode): void {
     dest.context.createGain(); // type anchor

@@ -17,6 +17,7 @@ import { DatabaseService } from '../../../services/database.service';
 import { LoggerService } from '../../../services/logger.service';
 import { CustomDialogService } from '../../../services/custom-dialog.service';
 import { HapticsService } from '../../../services/haptics.service';
+import { ZapSoundService } from '../../../services/zap-sound.service';
 
 describe('ReactionButtonComponent', () => {
   let component: ReactionButtonComponent;
@@ -38,6 +39,9 @@ describe('ReactionButtonComponent', () => {
   const haptics = {
     triggerLight: vi.fn(),
     triggerMedium: vi.fn(),
+  };
+  const zapSound = {
+    playLikeSound: vi.fn(),
   };
 
   const targetEvent: Event = {
@@ -153,6 +157,10 @@ describe('ReactionButtonComponent', () => {
           provide: HapticsService,
           useValue: haptics,
         },
+        {
+          provide: ZapSoundService,
+          useValue: zapSound,
+        },
       ],
     }).compileComponents();
 
@@ -167,6 +175,7 @@ describe('ReactionButtonComponent', () => {
     reactionService.addReaction.mockReset();
     haptics.triggerLight.mockReset();
     haptics.triggerMedium.mockReset();
+    zapSound.playLikeSound.mockReset();
   });
 
   it('should create', () => {
@@ -620,6 +629,7 @@ describe('ReactionButtonComponent', () => {
       expect(reactionService.addLike).toHaveBeenCalledWith(targetEvent);
       expect(emitSpy).toHaveBeenCalled();
       expect(haptics.triggerMedium).toHaveBeenCalled();
+      expect(zapSound.playLikeSound).toHaveBeenCalled();
       expect(fixture.nativeElement.querySelector('app-celebration-burst .celebration-overlay')).toBeTruthy();
     });
   });
