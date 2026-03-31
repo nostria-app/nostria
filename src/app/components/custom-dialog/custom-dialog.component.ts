@@ -405,10 +405,15 @@ export class CustomDialogComponent implements AfterViewInit, OnDestroy {
     this.visualViewportHandler = () => {
       const host = this.elementRef.nativeElement as HTMLElement;
       if (host && window.visualViewport) {
+        const viewportOffsetTop = this.platformService.isIOS() ? Math.max(0, Math.floor(window.visualViewport.offsetTop)) : 0;
+        const viewportOffsetLeft = this.platformService.isIOS() ? Math.max(0, Math.floor(window.visualViewport.offsetLeft)) : 0;
         host.style.top = '0';
         host.style.left = '0';
         host.style.width = '100%';
         host.style.height = '100%';
+        host.style.transform = (viewportOffsetTop > 0 || viewportOffsetLeft > 0)
+          ? `translate(${viewportOffsetLeft}px, ${viewportOffsetTop}px)`
+          : '';
       }
     };
 
@@ -422,6 +427,7 @@ export class CustomDialogComponent implements AfterViewInit, OnDestroy {
     }
 
     window.visualViewport.removeEventListener('resize', this.visualViewportHandler);
+    (this.elementRef.nativeElement as HTMLElement).style.transform = '';
     this.visualViewportHandler = null;
   }
 
