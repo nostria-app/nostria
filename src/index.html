@@ -421,7 +421,15 @@
         <button class="app-loading-reload-btn" onclick="clearCachesAndReload()">Clear Cache & Reload</button>
       </div>
       <script>
-        // Show reload button after 10 seconds if still loading
+        var connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+        var isLikelySlowBootstrapDevice =
+          (navigator.deviceMemory > 0 && navigator.deviceMemory <= 4) ||
+          (navigator.hardwareConcurrency > 0 && navigator.hardwareConcurrency <= 4) ||
+          !!(connection && (connection.saveData || /(^|-)2g$/.test(connection.effectiveType || '')));
+        var reloadPromptDelayMs = isLikelySlowBootstrapDevice ? 30000 : 22000;
+        var autoReloadDelayMs = isLikelySlowBootstrapDevice ? 45000 : 35000;
+
+        // Give slower devices more time before suggesting a recovery action.
         setTimeout(function () {
           var reloadEl = document.getElementById('app-loading-reload');
           var loadingEl = document.getElementById('app-loading');
@@ -429,21 +437,21 @@
           if (reloadEl && loadingEl && loadingEl.offsetParent !== null) {
             reloadEl.classList.add('visible');
           }
-        }, 10000);
+        }, reloadPromptDelayMs);
 
-        // Auto-reload after 20 seconds if Angular still hasn't bootstrapped (one-time only)
+        // Auto-reload after an extended delay if Angular still hasn't bootstrapped (one-time only)
         setTimeout(function () {
           var loadingEl = document.getElementById('app-loading');
           // Only auto-reload if the pre-Angular loading screen is still visible
           if (loadingEl && loadingEl.offsetParent !== null) {
             var hasAutoReloaded = sessionStorage.getItem('nostria-auto-reload-attempted');
             if (!hasAutoReloaded) {
-              console.warn('[BOOTSTRAP] App not loaded after 20s, attempting automatic reload');
+              console.warn('[BOOTSTRAP] App not loaded after delay, attempting automatic reload');
               sessionStorage.setItem('nostria-auto-reload-attempted', 'true');
               window.location.reload();
             }
           }
-        }, 20000);
+        }, autoReloadDelayMs);
 
         // Clear auto-reload flag on successful load
         setTimeout(function () {

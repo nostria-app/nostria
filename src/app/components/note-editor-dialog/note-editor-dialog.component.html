@@ -126,21 +126,22 @@
       }
 
       <div class="textarea-container">
-        <mat-form-field appearance="outline" class="content-field" [class.focused]="isContentFocused()">
+        <div class="content-field" [class.focused]="isContentFocused()"
+          [class.empty]="!content() && !isContentFocused()">
           @if (!content() && !isContentFocused()) {
-          <mat-label>{{ isMediaModeEnabled() ? 'Description' :
+          <div class="content-placeholder" aria-hidden="true">{{ isMediaModeEnabled() ? 'Description' :
             (inlineMode() ? 'Post your reply' : "What's on your
-            mind?") }}</mat-label>
+            mind?") }}</div>
           }
-          <textarea matInput [value]="content()" (input)="onContentInput($event)" (focus)="onContentFocus()"
+          <textarea [value]="content()" (input)="onContentInput($event)" (focus)="onContentFocus()"
             (blur)="onContentBlur()" (keydown)="onContentKeyDown($event)" (keyup)="onContentKeyUp($event)"
             (click)="onContentClick($event)" (select)="onContentSelectionChange($event)"
-            placeholder="{{ inlineMode() ? 'Write your reply... Use @ to mention, / for commands' : 'Write your note... Use @ to mention, / for commands' }}"
+            [attr.placeholder]="isContentFocused() ? (inlineMode() ? 'Write your reply... Use @ to mention, / for commands' : 'Write your note... Use @ to mention, / for commands') : null"
             title="{{ inlineMode() ? 'Reply content' : 'Note content' }}"
             aria-label="{{ inlineMode() ? 'Reply content' : 'Note content' }}" class="content-textarea"
             #contentTextarea>
           </textarea>
-        </mat-form-field>
+        </div>
 
         <!-- Mention Autocomplete positioned relative to textarea -->
         @if (mentionConfig()) {
@@ -452,192 +453,192 @@
     </div>
     } -->
   </div>
+</div>
 
-  <div class="action-container composer-actions" [class.inline-actions]="inlineMode()"
-    [class.has-media]="mediaMetadata().length > 0 && !showPreview() && !showAdvancedOptions()" #composerActions
-    (dragenter)="!showPreview() && !showAdvancedOptions() && onDragEnter($event)"
-    (dragover)="!showPreview() && !showAdvancedOptions() && onDragOver($event)"
-    (dragleave)="!showPreview() && !showAdvancedOptions() && onDragLeave($event)"
-    (drop)="!showPreview() && !showAdvancedOptions() && onDrop($event)">
+<div dialog-actions class="action-container composer-actions" [class.inline-actions]="inlineMode()"
+  [class.has-media]="mediaMetadata().length > 0 && !showPreview() && !showAdvancedOptions()" #composerActions
+  (dragenter)="!showPreview() && !showAdvancedOptions() && onDragEnter($event)"
+  (dragover)="!showPreview() && !showAdvancedOptions() && onDragOver($event)"
+  (dragleave)="!showPreview() && !showAdvancedOptions() && onDragLeave($event)"
+  (drop)="!showPreview() && !showAdvancedOptions() && onDrop($event)">
 
-    <!-- Media Thumbnails (shown above action buttons in footer) -->
-    @if (mediaMetadata().length > 0 && !showPreview() && !showAdvancedOptions()) {
-    <div class="media-thumbnails">
-      @for (media of mediaMetadata(); track media.id ?? media.url; let i = $index) {
-      <div class="media-thumbnail">
-        <button mat-icon-button class="remove-media-btn" (click)="$event.stopPropagation(); removeMedia(i)"
-          matTooltip="Remove media">
-          <mat-icon>close</mat-icon>
-        </button>
-        <button type="button" class="media-thumbnail-button" [class.pending-upload]="media.pendingUpload"
-          [attr.aria-label]="media.pendingUpload ? 'Reinsert pending media placeholder' : 'Media preview'"
-          [matTooltip]="media.pendingUpload ? 'Reinsert placeholder tag' : ''"
-          [matTooltipDisabled]="!media.pendingUpload" (click)="reinsertPendingMediaReference(media)">
-          @if (media.mimeType?.startsWith('video/')) {
-          <mat-icon class="video-icon">videocam</mat-icon>
-          @if (getMediaThumbnailUrl(media)) {
-          <img [src]="getMediaThumbnailUrl(media)" class="thumbnail-img" alt="Video thumbnail">
-          }
-          } @else {
-          <img [src]="getMediaThumbnailUrl(media)" class="thumbnail-img" alt="Image thumbnail">
-          }
-          <div class="media-thumbnail-meta">
-            @if (media.pendingUpload) {
-            <span class="media-status">Uploads on publish</span>
-            }
-            <span class="media-size">Original {{ formatFileSize(media.originalSize) }}</span>
-            <span class="media-size">Upload {{ formatFileSize(getMediaUploadSize(media)) }}</span>
-          </div>
-        </button>
-      </div>
-      }
-    </div>
-    }
-
-    <!-- Left side: Action buttons -->
-    <div class="left-actions">
-      @if (showAdvancedOptions() && !inlineMode()) {
-      <button mat-button type="button" class="back-from-overlay" (click)="toggleAdvancedOptions()">
-        <mat-icon>arrow_back</mat-icon>
-        <span>Back</span>
+  <!-- Media Thumbnails (shown above action buttons in footer) -->
+  @if (mediaMetadata().length > 0 && !showPreview() && !showAdvancedOptions()) {
+  <div class="media-thumbnails">
+    @for (media of mediaMetadata(); track media.id ?? media.url; let i = $index) {
+    <div class="media-thumbnail">
+      <button mat-icon-button class="remove-media-btn" (click)="$event.stopPropagation(); removeMedia(i)"
+        matTooltip="Remove media">
+        <mat-icon>close</mat-icon>
       </button>
-      } @else if (showPreview() && !inlineMode()) {
-      <button mat-button type="button" class="back-from-overlay" (click)="togglePreview()" #backFromPreviewBtn>
-        <mat-icon>arrow_back</mat-icon>
-        <span>Back</span>
-      </button>
-      } @else {
-      @if (!inlineMode()) {
-      <button mat-icon-button type="button" class="plus-button desktop-action action-priority-high"
-        [matMenuTriggerFor]="plusMenu"
-        [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions()"
-        [class.button-disabled-visible]="showPreview() || showAdvancedOptions()" matTooltip="Add to post">
-        <mat-icon>add</mat-icon>
-      </button>
-      <button mat-icon-button type="button" class="desktop-action action-priority-high" (click)="togglePreview()"
-        [color]="showPreview() ? 'primary' : ''" matTooltip="Toggle preview">
-        <mat-icon>{{ showPreview() ? 'visibility_off' : 'visibility' }}</mat-icon>
-      </button>
-      <button mat-icon-button type="button" class="desktop-action action-priority-high persistent-action"
-        (click)="toggleAdvancedOptions()" matTooltip="Advanced options">
-        <mat-icon>settings</mat-icon>
-      </button>
-      }
-
-      <mat-menu #plusMenu="matMenu">
-        <button mat-menu-item (click)="openFileDialog()">
-          <mat-icon>upload</mat-icon>
-          <span>Upload media</span>
-        </button>
-        <button mat-menu-item (click)="openMediaChooser()">
-          <mat-icon>photo_library</mat-icon>
-          <span>Choose from library</span>
-        </button>
-        <button mat-menu-item (click)="openEmojiPickerDialog()">
-          <mat-icon>sentiment_satisfied</mat-icon>
-          <span>Emoji</span>
-        </button>
-        <button mat-menu-item (click)="openGifPickerDialog()">
-          <mat-icon>gif_box</mat-icon>
-          <span>GIFs</span>
-        </button>
-
-        <!-- Insert reference button (dialog mode only) -->
-        @if (!inlineMode()) {
-        <button mat-menu-item (click)="openReferencePicker()">
-          <mat-icon>bookmarks</mat-icon>
-          <span>Insert reference</span>
-        </button>
+      <button type="button" class="media-thumbnail-button" [class.pending-upload]="media.pendingUpload"
+        [attr.aria-label]="media.pendingUpload ? 'Reinsert pending media placeholder' : 'Media preview'"
+        [matTooltip]="media.pendingUpload ? 'Reinsert placeholder tag' : ''" [matTooltipDisabled]="!media.pendingUpload"
+        (click)="reinsertPendingMediaReference(media)">
+        @if (media.mimeType?.startsWith('video/')) {
+        <mat-icon class="video-icon">videocam</mat-icon>
+        @if (getMediaThumbnailUrl(media)) {
+        <img [src]="getMediaThumbnailUrl(media)" class="thumbnail-img" alt="Video thumbnail">
         }
-      </mat-menu>
-
-      @if (recordingHistory.length > 0) {
-      <button mat-icon-button type="button" class="desktop-action action-priority-low" (click)="undoLastRecording()"
-        [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions() || isTranscribing()"
-        [class.button-disabled-visible]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions() || isTranscribing()"
-        matTooltip="Undo last recording">
-        <mat-icon>undo</mat-icon>
-      </button>
-      }
-
-      @if (!inlineMode()) {
-      <button mat-icon-button type="button" class="mobile-actions-trigger" [matMenuTriggerFor]="mobileActionsMenu"
-        [disabled]="isUploading() || isPublishing()" matTooltip="More actions">
-        <mat-icon>more_horiz</mat-icon>
-      </button>
-
-      <mat-menu #mobileActionsMenu="matMenu">
-        @if (!layout.isHandset()) {
-        <button mat-menu-item (click)="toggleRecording()"
-          [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions() || isTranscribing()">
-          <mat-icon [class.spinning]="isTranscribing()">{{ isTranscribing() ? 'sync' : (isRecording() ? 'stop' : 'mic')
-            }}</mat-icon>
-          <span>{{ isTranscribing() ? 'Transcribing...' : (isRecording() ? 'Stop listening' : 'Dictate note') }}</span>
-        </button>
-        }
-
-        @if (recordingHistory.length > 0) {
-        <button mat-menu-item (click)="undoLastRecording()"
-          [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions() || isTranscribing()">
-          <mat-icon>undo</mat-icon>
-          <span>Undo last recording</span>
-        </button>
-        }
-
-        <button mat-menu-item (click)="clearDraft()" [disabled]="!isDirty()">
-          <mat-icon>delete_sweep</mat-icon>
-          <span>Clear draft</span>
-        </button>
-
-        <button mat-menu-item (click)="openAiDialog('translate')"
-          [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions()">
-          <mat-icon>translate</mat-icon>
-          <span>Translate</span>
-        </button>
-
-        <button mat-menu-item (click)="analyzeSentimentInline()"
-          [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions() || !content().trim() || isSentimentAnalyzing()">
-          <mat-icon>mood</mat-icon>
-          <span>{{ isSentimentAnalyzing() ? 'Analyzing sentiment...' : 'Sentiment Analysis' }}</span>
-        </button>
-      </mat-menu>
-      }
-      }
-    </div>
-
-    <!-- Right side: PoW indicator and primary actions -->
-    @if (!showAdvancedOptions()) {
-    <div class="right-actions">
-      @if (powEnabled() && isPowMining()) {
-      <div class="pow-progress-indicator">
-        <mat-icon class="pow-icon spinning">auto_awesome</mat-icon>
-        <span class="pow-text">Mining PoW: {{ powDifficulty() }}/{{ powTargetDifficulty() }} bits</span>
-      </div>
-      }
-
-      @if (!inlineMode()) {
-      <button mat-button (click)="cancel()" [disabled]="isPublishing()">Cancel</button>
-      }
-
-      <button mat-flat-button (click)="publishNote()" [disabled]="!canPublish() || isPublishing()"
-        class="publish-button" [matTooltip]="inlineMode() ? 'Ctrl+Enter' : 'Alt+Enter'">
-        @if (isPublishing()) {
-        <ng-container>
-          <mat-icon class="spinning">hourglass_empty</mat-icon>
-          {{ inlineMode() ? 'Sending...' : 'Publishing...' }}
-        </ng-container>
         } @else {
-        <ng-container>
-          @if (inlineMode()) {
-          Reply
-          } @else {
-          <span>Publish</span>
-          }
-        </ng-container>
+        <img [src]="getMediaThumbnailUrl(media)" class="thumbnail-img" alt="Image thumbnail">
         }
+        <div class="media-thumbnail-meta">
+          @if (media.pendingUpload) {
+          <span class="media-status">Uploads on publish</span>
+          }
+          <span class="media-size">Original {{ formatFileSize(media.originalSize) }}</span>
+          <span class="media-size">Upload {{ formatFileSize(getMediaUploadSize(media)) }}</span>
+        </div>
       </button>
     </div>
     }
   </div>
+  }
+
+  <!-- Left side: Action buttons -->
+  <div class="left-actions">
+    @if (showAdvancedOptions() && !inlineMode()) {
+    <button mat-button type="button" class="back-from-overlay" (click)="toggleAdvancedOptions()">
+      <mat-icon>arrow_back</mat-icon>
+      <span>Back</span>
+    </button>
+    } @else if (showPreview() && !inlineMode()) {
+    <button mat-button type="button" class="back-from-overlay" (click)="togglePreview()" #backFromPreviewBtn>
+      <mat-icon>arrow_back</mat-icon>
+      <span>Back</span>
+    </button>
+    } @else {
+    @if (!inlineMode()) {
+    <button mat-icon-button type="button" class="plus-button desktop-action action-priority-high"
+      [matMenuTriggerFor]="plusMenu"
+      [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions()"
+      [class.button-disabled-visible]="showPreview() || showAdvancedOptions()" matTooltip="Add to post">
+      <mat-icon>add</mat-icon>
+    </button>
+    <button mat-icon-button type="button" class="desktop-action action-priority-high" (click)="togglePreview()"
+      [color]="showPreview() ? 'primary' : ''" matTooltip="Toggle preview">
+      <mat-icon>{{ showPreview() ? 'visibility_off' : 'visibility' }}</mat-icon>
+    </button>
+    <button mat-icon-button type="button" class="desktop-action action-priority-high persistent-action"
+      (click)="toggleAdvancedOptions()" matTooltip="Advanced options">
+      <mat-icon>settings</mat-icon>
+    </button>
+    }
+
+    <mat-menu #plusMenu="matMenu">
+      <button mat-menu-item (click)="openFileDialog()">
+        <mat-icon>upload</mat-icon>
+        <span>Upload media</span>
+      </button>
+      <button mat-menu-item (click)="openMediaChooser()">
+        <mat-icon>photo_library</mat-icon>
+        <span>Choose from library</span>
+      </button>
+      <button mat-menu-item (click)="openEmojiPickerDialog()">
+        <mat-icon>sentiment_satisfied</mat-icon>
+        <span>Emoji</span>
+      </button>
+      <button mat-menu-item (click)="openGifPickerDialog()">
+        <mat-icon>gif_box</mat-icon>
+        <span>GIFs</span>
+      </button>
+
+      <!-- Insert reference button (dialog mode only) -->
+      @if (!inlineMode()) {
+      <button mat-menu-item (click)="openReferencePicker()">
+        <mat-icon>bookmarks</mat-icon>
+        <span>Insert reference</span>
+      </button>
+      }
+    </mat-menu>
+
+    @if (recordingHistory.length > 0) {
+    <button mat-icon-button type="button" class="desktop-action action-priority-low" (click)="undoLastRecording()"
+      [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions() || isTranscribing()"
+      [class.button-disabled-visible]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions() || isTranscribing()"
+      matTooltip="Undo last recording">
+      <mat-icon>undo</mat-icon>
+    </button>
+    }
+
+    @if (!inlineMode()) {
+    <button mat-icon-button type="button" class="mobile-actions-trigger" [matMenuTriggerFor]="mobileActionsMenu"
+      [disabled]="isUploading() || isPublishing()" matTooltip="More actions">
+      <mat-icon>more_horiz</mat-icon>
+    </button>
+
+    <mat-menu #mobileActionsMenu="matMenu">
+      @if (!layout.isHandset()) {
+      <button mat-menu-item (click)="toggleRecording()"
+        [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions() || isTranscribing()">
+        <mat-icon [class.spinning]="isTranscribing()">{{ isTranscribing() ? 'sync' : (isRecording() ? 'stop' : 'mic')
+          }}</mat-icon>
+        <span>{{ isTranscribing() ? 'Transcribing...' : (isRecording() ? 'Stop listening' : 'Dictate note') }}</span>
+      </button>
+      }
+
+      @if (recordingHistory.length > 0) {
+      <button mat-menu-item (click)="undoLastRecording()"
+        [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions() || isTranscribing()">
+        <mat-icon>undo</mat-icon>
+        <span>Undo last recording</span>
+      </button>
+      }
+
+      <button mat-menu-item (click)="clearDraft()" [disabled]="!isDirty()">
+        <mat-icon>delete_sweep</mat-icon>
+        <span>Clear draft</span>
+      </button>
+
+      <button mat-menu-item (click)="openAiDialog('translate')"
+        [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions()">
+        <mat-icon>translate</mat-icon>
+        <span>Translate</span>
+      </button>
+
+      <button mat-menu-item (click)="analyzeSentimentInline()"
+        [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions() || !content().trim() || isSentimentAnalyzing()">
+        <mat-icon>mood</mat-icon>
+        <span>{{ isSentimentAnalyzing() ? 'Analyzing sentiment...' : 'Sentiment Analysis' }}</span>
+      </button>
+    </mat-menu>
+    }
+    }
+  </div>
+
+  <!-- Right side: PoW indicator and primary actions -->
+  @if (!showAdvancedOptions()) {
+  <div class="right-actions">
+    @if (powEnabled() && isPowMining()) {
+    <div class="pow-progress-indicator">
+      <mat-icon class="pow-icon spinning">auto_awesome</mat-icon>
+      <span class="pow-text">Mining PoW: {{ powDifficulty() }}/{{ powTargetDifficulty() }} bits</span>
+    </div>
+    }
+
+    @if (!inlineMode()) {
+    <button mat-button (click)="cancel()" [disabled]="isPublishing()">Cancel</button>
+    }
+
+    <button mat-flat-button (click)="publishNote()" [disabled]="!canPublish() || isPublishing()" class="publish-button"
+      [matTooltip]="inlineMode() ? 'Ctrl+Enter' : 'Alt+Enter'">
+      @if (isPublishing()) {
+      <ng-container>
+        <mat-icon class="spinning">hourglass_empty</mat-icon>
+        {{ inlineMode() ? 'Sending...' : 'Publishing...' }}
+      </ng-container>
+      } @else {
+      <ng-container>
+        @if (inlineMode()) {
+        Reply
+        } @else {
+        <span>Publish</span>
+        }
+      </ng-container>
+      }
+    </button>
+  </div>
+  }
 </div>
 }

@@ -1097,8 +1097,8 @@ export class NostrService implements NostriaService {
       throw new Error('No user account found. Please log in or create an account first.');
     }
 
-    // NIP-59 kind 13 seals must have empty tags, so skip any automatic tag injection.
-    const AUTO_TAG_EXCLUDED_KINDS = [kinds.Seal];
+    // Some event kinds have strict tag expectations, so skip automatic tag injection for them.
+    const AUTO_TAG_EXCLUDED_KINDS = [kinds.Contacts, kinds.RelayList, kinds.Seal];
 
     // Apply global event expiration if enabled and no expiration tag already exists
     const globalExpiration = this.accountLocalState.getGlobalEventExpiration(currentUser.pubkey);

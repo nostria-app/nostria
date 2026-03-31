@@ -4,6 +4,19 @@ import { A11yModule } from '@angular/cdk/a11y';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { PlatformService } from '../../services/platform.service';
+
+interface ScrollLockStyles {
+  bodyOverflow: string;
+  bodyPosition: string;
+  bodyTop: string;
+  bodyLeft: string;
+  bodyRight: string;
+  bodyWidth: string;
+  bodyOverscrollBehavior: string;
+  htmlOverflow: string;
+  htmlOverscrollBehavior: string;
+}
 
 /**
  * Custom dialog component that provides better mobile support and easier styling than Material Dialog
@@ -126,6 +139,10 @@ import { MatTooltipModule } from '@angular/material/tooltip';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CustomDialogComponent implements AfterViewInit, OnDestroy {
+  private static scrollLockCount = 0;
+  private static scrollLockY = 0;
+  private static scrollLockStyles: ScrollLockStyles | null = null;
+
   // Modern signal-based inputs
   title = input<string>('');
   showHeader = input<boolean>(true);
@@ -156,8 +173,13 @@ export class CustomDialogComponent implements AfterViewInit, OnDestroy {
 
   private document = inject(DOCUMENT);
   private elementRef = inject(ElementRef);
+  private platformService = inject(PlatformService);
   private portalHost: HTMLElement | null = null;
   private visualViewportHandler: (() => void) | null = null;
+  private lastTouchY = 0;
+  private touchStartHandler: ((event: TouchEvent) => void) | null = null;
+  private touchMoveHandler: ((event: TouchEvent) => void) | null = null;
+  private touchEndHandler: (() => void) | null = null;
 
   constructor() {
     // Set up keyboard handling immediately
@@ -184,6 +206,7 @@ export class CustomDialogComponent implements AfterViewInit, OnDestroy {
   ngAfterViewInit() {
     this.moveToBody();
     this.disableBodyScroll();
+    this.setupTouchScrollGuard();
 
     // Focus the dialog container for keyboard accessibility
     setTimeout(() => {
@@ -196,6 +219,7 @@ export class CustomDialogComponent implements AfterViewInit, OnDestroy {
     this.removeFromBody();
     this.enableBodyScroll();
     this.teardownKeyboardHandling();
+    this.teardownTouchScrollGuard();
   }
 
   /**
@@ -275,13 +299,69 @@ export class CustomDialogComponent implements AfterViewInit, OnDestroy {
   }
 
   private disableBodyScroll(): void {
-    if (typeof document === 'undefined') return;
-    document.body.style.overflow = 'hidden';
+    if (typeof window === 'undefined' || typeof document === 'undefined') return;
+
+    CustomDialogComponent.scrollLockCount += 1;
+    if (CustomDialogComponent.scrollLockCount > 1) {
+      return;
+    }
+
+    const body = document.body;
+    const html = document.documentElement;
+    CustomDialogComponent.scrollLockStyles = {
+      bodyOverflow: body.style.overflow,
+      bodyPosition: body.style.position,
+      bodyTop: body.style.top,
+      bodyLeft: body.style.left,
+      bodyRight: body.style.right,
+      bodyWidth: body.style.width,
+      bodyOverscrollBehavior: body.style.overscrollBehavior,
+      htmlOverflow: html.style.overflow,
+      htmlOverscrollBehavior: html.style.overscrollBehavior,
+    };
+
+    body.style.overflow = 'hidden';
+    body.style.overscrollBehavior = 'none';
+    html.style.overflow = 'hidden';
+    html.style.overscrollBehavior = 'none';
+
+    if (this.platformService.isIOS()) {
+      CustomDialogComponent.scrollLockY = window.scrollY;
+      body.style.position = 'fixed';
+      body.style.top = `-${CustomDialogComponent.scrollLockY}px`;
+      body.style.left = '0';
+      body.style.right = '0';
+      body.style.width = '100%';
+    }
   }
 
   private enableBodyScroll(): void {
-    if (typeof document === 'undefined') return;
-    document.body.style.overflow = '';
+    if (typeof window === 'undefined' || typeof document === 'undefined') return;
+
+    CustomDialogComponent.scrollLockCount = Math.max(0, CustomDialogComponent.scrollLockCount - 1);
+    if (CustomDialogComponent.scrollLockCount > 0) {
+      return;
+    }
+
+    const styles = CustomDialogComponent.scrollLockStyles;
+    const body = document.body;
+    const html = document.documentElement;
+
+    body.style.overflow = styles?.bodyOverflow ?? '';
+    body.style.position = styles?.bodyPosition ?? '';
+    body.style.top = styles?.bodyTop ?? '';
+    body.style.left = styles?.bodyLeft ?? '';
+    body.style.right = styles?.bodyRight ?? '';
+    body.style.width = styles?.bodyWidth ?? '';
+    body.style.overscrollBehavior = styles?.bodyOverscrollBehavior ?? '';
+    html.style.overflow = styles?.htmlOverflow ?? '';
+    html.style.overscrollBehavior = styles?.htmlOverscrollBehavior ?? '';
+
+    if (this.platformService.isIOS()) {
+      window.scrollTo(0, CustomDialogComponent.scrollLockY);
+    }
+
+    CustomDialogComponent.scrollLockStyles = null;
   }
 
   private setupEnterKeyListener(): void {
@@ -325,7 +405,10 @@ export class CustomDialogComponent implements AfterViewInit, OnDestroy {
     this.visualViewportHandler = () => {
       const host = this.elementRef.nativeElement as HTMLElement;
       if (host && window.visualViewport) {
-        host.style.height = `${window.visualViewport.height}px`;
+        host.style.top = '0';
+        host.style.left = '0';
+        host.style.width = '100%';
+        host.style.height = '100%';
       }
     };
 
@@ -342,6 +425,96 @@ export class CustomDialogComponent implements AfterViewInit, OnDestroy {
     window.visualViewport.removeEventListener('resize', this.visualViewportHandler);
     window.visualViewport.removeEventListener('scroll', this.visualViewportHandler);
     this.visualViewportHandler = null;
+  }
+
+  private setupTouchScrollGuard(): void {
+    if (typeof window === 'undefined' || !this.platformService.isIOS()) {
+      return;
+    }
+
+    const host = this.elementRef.nativeElement as HTMLElement;
+    this.touchStartHandler = (event: TouchEvent) => {
+      this.lastTouchY = event.touches[0]?.clientY ?? 0;
+    };
+
+    this.touchMoveHandler = (event: TouchEvent) => {
+      if (event.touches.length === 0) {
+        return;
+      }
+
+      const currentY = event.touches[0].clientY;
+      const deltaY = currentY - this.lastTouchY;
+      this.lastTouchY = currentY;
+
+      const target = event.target as HTMLElement | null;
+      const scrollableParent = target ? this.findScrollableParent(target, host, deltaY) : null;
+      if (!scrollableParent) {
+        event.preventDefault();
+        return;
+      }
+
+      const maxScrollTop = scrollableParent.scrollHeight - scrollableParent.clientHeight;
+      const atTop = scrollableParent.scrollTop <= 0;
+      const atBottom = scrollableParent.scrollTop >= maxScrollTop - 1;
+      const pullingDown = deltaY > 0;
+      const pushingUp = deltaY < 0;
+
+      if (maxScrollTop <= 0 || (atTop && pullingDown) || (atBottom && pushingUp)) {
+        event.preventDefault();
+      }
+    };
+
+    this.touchEndHandler = () => {
+      this.lastTouchY = 0;
+    };
+
+    host.addEventListener('touchstart', this.touchStartHandler, { passive: true });
+    host.addEventListener('touchmove', this.touchMoveHandler, { passive: false });
+    host.addEventListener('touchend', this.touchEndHandler, { passive: true });
+  }
+
+  private teardownTouchScrollGuard(): void {
+    const host = this.elementRef.nativeElement as HTMLElement;
+    if (this.touchStartHandler) {
+      host.removeEventListener('touchstart', this.touchStartHandler);
+      this.touchStartHandler = null;
+    }
+    if (this.touchMoveHandler) {
+      host.removeEventListener('touchmove', this.touchMoveHandler);
+      this.touchMoveHandler = null;
+    }
+    if (this.touchEndHandler) {
+      host.removeEventListener('touchend', this.touchEndHandler);
+      this.touchEndHandler = null;
+    }
+  }
+
+  private findScrollableParent(startElement: HTMLElement, host: HTMLElement, deltaY: number): HTMLElement | null {
+    let current: HTMLElement | null = startElement;
+    let fallback: HTMLElement | null = null;
+
+    while (current && current !== host) {
+      const styles = window.getComputedStyle(current);
+      const canScrollY = /(auto|scroll)/.test(styles.overflowY) || /(auto|scroll)/.test(styles.overflow);
+      const maxScrollTop = current.scrollHeight - current.clientHeight;
+
+      if (canScrollY && maxScrollTop > 0) {
+        fallback ??= current;
+
+        const atTop = current.scrollTop <= 0;
+        const atBottom = current.scrollTop >= maxScrollTop - 1;
+        const pullingDown = deltaY > 0;
+        const pushingUp = deltaY < 0;
+
+        if ((pullingDown && !atTop) || (pushingUp && !atBottom) || Math.abs(deltaY) < 0.5) {
+          return current;
+        }
+      }
+
+      current = current.parentElement;
+    }
+
+    return fallback;
   }
 
   onBackdropClick(): void {

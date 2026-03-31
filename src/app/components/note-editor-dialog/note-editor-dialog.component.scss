@@ -1,4 +1,7 @@
 .note-editor-dialog {
+  --note-editor-mobile-viewport-cap: 100%;
+  --note-editor-mobile-textarea-max-height: 100%;
+
   // Desktop: flex column, auto height. Textarea height is JS-driven (auto-grow).
   display: flex;
   flex-direction: column;
@@ -12,9 +15,10 @@
     display: flex;
     flex-direction: column;
     position: relative;
-    height: calc(100dvh - 72px - env(safe-area-inset-top));
-    min-height: calc(100dvh - 72px - env(safe-area-inset-top));
-    max-height: calc(100dvh - 72px - env(safe-area-inset-top));
+    height: 100%;
+    min-height: 100%;
+    max-height: 100%;
+    overscroll-behavior: contain;
   }
 
   .dialog-content-wrapper {
@@ -30,9 +34,12 @@
     @media (max-width: 700px),
     (max-height: 700px) {
       flex: 1 1 auto;
+      align-self: stretch;
       min-height: 0;
+      max-height: 100%;
       padding: 2px 6px 6px;
-      overflow-y: auto;
+      overflow: hidden;
+      overscroll-behavior: contain;
       -webkit-overflow-scrolling: touch;
     }
 
@@ -56,8 +63,8 @@
   }
 
   .composer-actions {
-    padding: 14px 6px 10px;
-    background-color: var(--mat-sys-surface);
+    padding: 0;
+    background-color: transparent;
     flex-shrink: 0;
 
     &.has-media {
@@ -83,11 +90,10 @@
 
     @media (max-width: 700px),
     (max-height: 700px) {
-      margin-top: auto;
       position: relative;
       z-index: 1;
-      padding: 12px 2px calc(8px + env(safe-area-inset-bottom));
-      border-top: 1px solid var(--mat-sys-outline-variant);
+      padding: 0;
+      border-top: 0;
     }
   }
 
@@ -535,6 +541,9 @@
 
 :host.keyboard-compact-mode {
   .note-editor-dialog {
+    --note-editor-mobile-viewport-cap: 100%;
+    --note-editor-mobile-textarea-max-height: 100%;
+
     @media (max-width: 700px),
     (max-height: 700px) {
       height: 100%;
@@ -543,13 +552,39 @@
     }
 
     .dialog-content-wrapper {
+
       @media (max-width: 700px),
       (max-height: 700px) {
         padding: 0 4px 2px;
+        overflow-x: hidden;
+        overflow-y: auto;
+      }
+    }
+
+    .content-editor-section,
+    .textarea-container,
+    .content-field {
+
+      @media (max-width: 700px),
+      (max-height: 700px) {
+        flex: 0 0 auto;
+        height: auto;
+        max-height: var(--note-editor-mobile-textarea-max-height);
+      }
+    }
+
+    .content-textarea {
+
+      @media (max-width: 700px),
+      (max-height: 700px) {
+        flex: 0 0 auto;
+        height: var(--note-editor-mobile-textarea-max-height);
+        max-height: var(--note-editor-mobile-textarea-max-height);
       }
     }
 
     .composer-actions {
+
       @media (max-width: 700px),
       (max-height: 700px) {
         padding-top: 8px;
@@ -559,6 +594,7 @@
 
     .reply-context,
     .quote-context {
+
       @media (max-width: 700px),
       (max-height: 700px) {
         margin-bottom: 8px;
@@ -809,6 +845,8 @@
   @media (max-width: 700px),
   (max-height: 700px) {
     flex: 1 1 auto;
+    max-height: 100%;
+    min-height: 0;
   }
 
   .textarea-container {
@@ -824,6 +862,8 @@
     @media (max-width: 700px),
     (max-height: 700px) {
       flex: 1 1 auto;
+      max-height: 100%;
+      min-height: 0;
     }
 
     .content-field {
@@ -832,39 +872,42 @@
       width: 100%;
       display: flex;
       flex-direction: column;
+      position: relative;
       min-height: 0;
+      border: 1px solid var(--mat-sys-outline);
+      border-radius: var(--mat-sys-corner-extra-small);
+      background: var(--mat-sys-surface);
+      overflow: hidden;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
 
       // Mobile: fill available space
       @media (max-width: 700px),
       (max-height: 700px) {
         flex: 1 1 auto;
+        height: 100%;
+        max-height: 100%;
+        min-height: 0;
       }
 
-      ::ng-deep {
-        .mat-mdc-text-field-wrapper {
-          height: auto !important;
-          max-height: none !important;
-          min-height: 0 !important;
-        }
+      &.focused {
+        border-color: var(--mat-sys-primary);
+        box-shadow: inset 0 0 0 1px var(--mat-sys-primary);
+      }
 
-        .mdc-text-field--outlined {
-          padding-left: 0 !important;
-          padding-right: 0 !important;
-          align-items: stretch !important;
-          overflow: hidden;
-        }
+      .content-placeholder {
+        position: absolute;
+        top: 14px;
+        left: 13px;
+        right: 12px;
+        color: var(--mat-sys-on-surface-variant);
+        pointer-events: none;
+        z-index: 1;
 
-        .mat-mdc-form-field-flex {
-          align-items: stretch !important;
-        }
-
-        .mat-mdc-form-field-infix {
-          min-height: 0 !important;
-          padding: 0 !important;
-          width: 100% !important;
-          display: flex;
-          flex-direction: column;
-          overflow: hidden;
+        @media (max-width: 700px),
+        (max-height: 700px) {
+          top: 12px;
+          left: 11px;
+          right: 10px;
         }
       }
 
@@ -883,9 +926,16 @@
         word-wrap: break-word;
         word-break: normal;
         white-space: pre-wrap;
-        padding: 12px 0 12px 12px !important;
+        padding: 14px 12px !important;
+        color: var(--mat-sys-on-surface);
+        font: inherit;
+        caret-color: var(--mat-sys-primary);
         // Use -webkit-overflow-scrolling for smooth scrolling on iOS
         -webkit-overflow-scrolling: touch;
+
+        &::placeholder {
+          color: var(--mat-sys-on-surface-variant);
+        }
 
         &:focus {
           outline: none;
@@ -895,9 +945,12 @@
         @media (max-width: 700px),
         (max-height: 700px) {
           flex: 1 1 auto;
+          height: 100%;
           overflow-y: auto;
-          min-height: 96px;
-          padding: 10px 0 10px 10px !important;
+          min-height: 0;
+          max-height: 100%;
+          overscroll-behavior: contain;
+          padding: 12px 10px !important;
         }
 
         @media (max-width: 400px) {

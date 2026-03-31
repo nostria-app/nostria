@@ -484,6 +484,48 @@ describe('Schemata Schema Validation', () => {
       expect(result.valid).toBe(true);
     });
 
+    it('kind 3 (Contacts) via signEvent skips auto client tag', async () => {
+      const signingService = createSigningNostrService({
+        addClientTag: true,
+      });
+
+      const signedContacts = await signingService.signEvent({
+        kind: kinds.Contacts,
+        pubkey: FAKE_PUBKEY,
+        created_at: Math.floor(Date.now() / 1000),
+        tags: [['p', FAKE_PUBKEY_2]],
+        content: '',
+      });
+
+      expect(signedContacts.tags).toEqual([['p', FAKE_PUBKEY_2]]);
+      expect(signedContacts.tags.some(tag => tag[0] === 'client')).toBe(false);
+
+      const result = validateRawEvent(signedContacts, schemaRegistry);
+      expect(result.errors).toEqual([]);
+      expect(result.valid).toBe(true);
+    });
+
+    it('kind 10002 (Relay List) via signEvent skips auto client tag', async () => {
+      const signingService = createSigningNostrService({
+        addClientTag: true,
+      });
+
+      const signedRelayList = await signingService.signEvent({
+        kind: kinds.RelayList,
+        pubkey: FAKE_PUBKEY,
+        created_at: Math.floor(Date.now() / 1000),
+        tags: [['r', 'wss://relay.damus.io', 'read']],
+        content: '',
+      });
+
+      expect(signedRelayList.tags).toEqual([['r', 'wss://relay.damus.io', 'read']]);
+      expect(signedRelayList.tags.some(tag => tag[0] === 'client')).toBe(false);
+
+      const result = validateRawEvent(signedRelayList, schemaRegistry);
+      expect(result.errors).toEqual([]);
+      expect(result.valid).toBe(true);
+    });
+
     it('kind 30078 (Application-specific Data) via createEvent', () => {
       // Mimics youtube.component.ts:462
       const content = JSON.stringify([{ channelId: 'UC123', name: 'Test Channel' }]);

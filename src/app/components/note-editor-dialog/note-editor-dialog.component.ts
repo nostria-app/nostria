@@ -32,7 +32,6 @@ import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatSliderModule } from '@angular/material/slider';
 import { DomSanitizer } from '@angular/platform-browser';
 import { FormsModule } from '@angular/forms';
-import { CdkTextareaAutosize, TextFieldModule } from '@angular/cdk/text-field';
 
 import { NostrService } from '../../services/nostr.service';
 import { MediaService } from '../../services/media.service';
@@ -176,7 +175,6 @@ interface SentimentHeaderState {
     MentionAutocompleteComponent,
     SlashCommandMenuComponent,
     MatMenuModule,
-    TextFieldModule,
     UserProfileComponent,
   ],
   providers: [provideNativeDateAdapter()],
@@ -261,7 +259,6 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
 
   @ViewChild('contentTextarea')
   contentTextarea!: ElementRef<HTMLTextAreaElement>;
-  @ViewChild(CdkTextareaAutosize) textareaAutosize?: CdkTextareaAutosize;
   @ViewChild('noteEditorLayout') noteEditorLayout?: ElementRef<HTMLElement>;
   @ViewChild('dialogContentWrapper') dialogContentWrapper?: ElementRef<HTMLElement>;
   @ViewChild('composerActions') composerActions?: ElementRef<HTMLElement>;
@@ -2641,6 +2638,11 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     }, 0);
   }
 
+  private clearCompactTextareaSize(): void {
+    this.noteEditorLayout?.nativeElement.style.removeProperty('--note-editor-mobile-textarea-max-height');
+    this.noteEditorLayout?.nativeElement.style.removeProperty('--note-editor-mobile-viewport-cap');
+  }
+
   private syncTextareaHeight(textarea: HTMLTextAreaElement): void {
     if (this.inlineMode()) {
       // Inline mode: auto-grow with max-height cap
@@ -2658,32 +2660,39 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       textarea.style.maxHeight = `${maxHeight}px`;
       textarea.style.overflowY = nextHeight > maxHeight ? 'auto' : 'hidden';
     } else if (this.isCompactDialogLayout()) {
-      // Compact/mobile dialog mode: auto-grow until the available space above
-      // the action row is filled, then keep scrolling inside the textarea.
-      const minHeight = 96;
-      let maxHeight = Math.max(minHeight, window.innerHeight - 240);
-
-      const layoutEl = this.noteEditorLayout?.nativeElement;
-      const actionsEl = this.composerActions?.nativeElement;
-      if (layoutEl && actionsEl) {
-        const layoutRect = layoutEl.getBoundingClientRect();
-        const actionsRect = actionsEl.getBoundingClientRect();
-        const verticalChrome = this.isKeyboardCompactMode() ? 8 : 20;
-        const footerOverlapAllowance = this.isKeyboardCompactMode() ? 52 : 0;
-        const availableHeight = layoutRect.height - actionsRect.height - verticalChrome + footerOverlapAllowance;
-        maxHeight = Math.max(minHeight, Math.floor(availableHeight));
+      if (!this.isKeyboardCompactMode()) {
+        this.clearCompactTextareaSize();
+        textarea.style.height = '';
+        textarea.style.maxHeight = '';
+        textarea.style.overflowY = 'auto';
+        return;
       }
 
-      textarea.style.maxHeight = 'none';
-      textarea.style.height = 'auto';
+      const visualViewport = window.visualViewport;
+      const viewportBottom = visualViewport ? visualViewport.offsetTop + visualViewport.height : window.innerHeight;
+      const wrapperRect = this.dialogContentWrapper?.nativeElement.getBoundingClientRect();
+      const composerActionsRect = this.composerActions?.nativeElement.getBoundingClientRect();
+      const textareaRect = textarea.getBoundingClientRect();
+      const footerTop = composerActionsRect?.top;
+      const containerBottom = footerTop ? Math.min(footerTop - 8, viewportBottom - 8) : (wrapperRect?.bottom ?? viewportBottom);
+      const bottomLimit = Math.min(containerBottom - 8, viewportBottom - 8);
+      const minHeight = Math.min(140, Math.max(96, window.innerHeight * 0.18));
+      const availableHeight = Math.max(0, Math.floor(bottomLimit - textareaRect.top));
+      const maxHeightSource = footerTop ? footerTop - 16 : (wrapperRect?.bottom ?? viewportBottom);
+      const maxHeight = Math.max(0, Math.floor(maxHeightSource - textareaRect.top));
+      const boundedMinHeight = Math.min(minHeight, Math.max(72, availableHeight));
+      const targetHeight = Math.max(boundedMinHeight, Math.min(availableHeight, maxHeight));
+      const nextHeight = `${targetHeight}px`;
 
-      const nextHeight = Math.max(minHeight, textarea.scrollHeight);
-      const targetHeight = Math.min(nextHeight, maxHeight);
+      this.noteEditorLayout?.nativeElement.style.setProperty('--note-editor-mobile-viewport-cap', `${Math.floor(viewportBottom)}px`);
+      this.noteEditorLayout?.nativeElement.style.setProperty('--note-editor-mobile-textarea-max-height', nextHeight);
 
-      textarea.style.height = `${targetHeight}px`;
-      textarea.style.maxHeight = `${maxHeight}px`;
-      textarea.style.overflowY = nextHeight > maxHeight ? 'auto' : 'hidden';
+      textarea.style.overflowY = 'auto';
+      textarea.style.height = nextHeight;
+      textarea.style.maxHeight = nextHeight;
     } else {
+      this.clearCompactTextareaSize();
+
       // Desktop dialog mode: auto-grow from min-height up to a max-height, then scroll.
       // Keep a stable max-height for all non-compact layouts (width > 700px and height > 700px)
       // so the editor does not shrink between medium-height desktop viewports.

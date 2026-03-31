@@ -8,8 +8,10 @@
   position: fixed;
   top: 0;
   left: 0;
+  right: 0;
+  bottom: 0;
   width: 100%;
-  height: 100dvh;
+  height: 100%;
 }
 
 :host {
@@ -31,6 +33,7 @@
   justify-content: center;
   padding: 16px;
   animation: fadeIn 0.2s ease-out;
+  overscroll-behavior: contain;
 
   // When opening a dialog from another dialog, use fixed positioning
   // so the backdrop covers everything including the previous dialog
@@ -62,6 +65,7 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  overscroll-behavior: contain;
   animation: slideIn 0.3s ease-out;
   outline: none;
 
@@ -314,6 +318,7 @@
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
+  overscroll-behavior: contain;
   padding: 10px 14px 14px;
 
   @media (max-width: 700px),
@@ -422,7 +427,7 @@
 .dialog-container.note-editor-dialog-panel {
   min-height: 0;
   height: auto;
-  max-height: calc(100dvh - 32px);
+  max-height: calc(100vh - 32px);
 
   .dialog-content {
     display: flex;
@@ -430,6 +435,20 @@
     min-height: 0;
     overflow: hidden;
     padding: 0 18px;
+  }
+
+  .dialog-actions {
+    position: static;
+    left: auto;
+    right: auto;
+    bottom: auto;
+    z-index: auto;
+    background: var(--mat-sys-surface);
+    border-top: 1px solid var(--mat-sys-outline-variant);
+
+    &:has([dialog-actions]) {
+      padding: 12px 18px 16px;
+    }
   }
 
   // Use ::ng-deep because .note-editor-dialog is inside projected content
@@ -447,24 +466,30 @@
   (max-height: 700px) {
     height: 100%;
     max-height: 100%;
+    min-height: 0;
 
     .dialog-content {
       display: flex;
       flex-direction: column;
       flex: 1 1 0;
       padding: 0 10px;
-      // Remove bottom padding since action-container is inside the grid, not dialog-actions
-      padding-bottom: 0 !important;
       min-height: 0;
       overflow: hidden;
+    }
+
+    .dialog-actions {
+      &:has([dialog-actions]) {
+        padding: 10px 10px calc(10px + env(safe-area-inset-bottom));
+      }
     }
 
     ::ng-deep .dialog-content>.note-editor-dialog {
       display: flex;
       flex-direction: column;
       flex: 1 1 auto;
-      min-height: 100%;
+      min-height: 0;
       height: 100%;
+      max-height: 100%;
     }
   }
 }
