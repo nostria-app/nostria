@@ -1,3 +1,4 @@
+import { describe, expect, it } from 'vitest';
 import { normalizeMarkdownLinkDestinations, urlsToMarkdownLinks } from './utils';
 
 describe('format utils', () => {
@@ -38,7 +39,25 @@ describe('format utils', () => {
     it('does not convert email domains', () => {
       const result = urlsToMarkdownLinks('Email me at hello@mywebsite.com');
 
-      expect(result).toBe('Email me at hello@mywebsite.com');
+      expect(result).toBe('Email me at [hello@mywebsite.com](mailto:hello@mywebsite.com)');
+    });
+
+    it('converts plain emails and protocol URLs in the same article text', () => {
+      const result = urlsToMarkdownLinks('support@primal.net https://spark.money');
+
+      expect(result).toBe('[support@primal.net](mailto:support@primal.net) [https://spark.money](https://spark.money)');
+    });
+
+    it('keeps trailing punctuation outside generated email links', () => {
+      const result = urlsToMarkdownLinks('Email support@primal.net, then visit https://spark.money.');
+
+      expect(result).toBe('Email [support@primal.net](mailto:support@primal.net), then visit [https://spark.money](https://spark.money).');
+    });
+
+    it('converts markdown-escaped emails and protocol URLs from article content', () => {
+      const result = urlsToMarkdownLinks('Contact support\\@primal.net or visit https\\://spark.money.');
+
+      expect(result).toBe('Contact [support@primal.net](mailto:support@primal.net) or visit [https://spark.money](https://spark.money).');
     });
 
     it('normalizes markdown link URLs with leading whitespace after opening parenthesis', () => {

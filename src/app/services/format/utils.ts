@@ -86,18 +86,78 @@ export const normalizeMarkdownLinkDestinations = (content: string): string => {
   );
 };
 
-export const urlsToMarkdownLinks = (content: string): string => {
-  const normalizedMarkdownLinks = normalizeMarkdownLinkDestinations(content);
+const unescapeStandaloneMarkdownUrlsAndEmails = (content: string): string => {
+  return content
+    .replace(/(^|[\s(>])([a-z0-9._%+-]+)\\@([a-z0-9.-]+\.[a-z]{2,})(?=\s|$|[),;!?.])/gim, '$1$2@$3')
+    .replace(/(^|[\s(>])(https?)\\:\/\//gim, '$1$2://');
+};
 
-  const normalizedContent = normalizedMarkdownLinks.replace(
+const trimMalformedMarkdownLabel = (label: string): string => {
+  const trimmedLabel = label.trim();
+  const words = trimmedLabel.split(/\s+/).filter(Boolean);
+
+  if (words.length <= 1) {
+    return trimmedLabel;
+  }
+
+  const titleLikeWord = /^[A-Z0-9][A-Za-z0-9@#:_\-/]*$/;
+  const directiveWords = new Set(['See', 'Read', 'Visit', 'Use', 'View', 'Open', 'Check', 'Try', 'Watch', 'Listen']);
+
+  let lastLowercaseWordIndex = -1;
+  for (let index = words.length - 1; index >= 0; index--) {
+    if (/^[a-z]/.test(words[index])) {
+      lastLowercaseWordIndex = index;
+      break;
+    }
+  }
+  if (lastLowercaseWordIndex >= 0 && lastLowercaseWordIndex < words.length - 1) {
+    return words.slice(lastLowercaseWordIndex + 1).join(' ');
+  }
+
+  if (directiveWords.has(words[0])) {
+    const candidateWords = words.slice(1);
+    const candidate = candidateWords.join(' ');
+    if (candidate && (/[0-9-]/.test(candidate) || candidateWords.every(word => titleLikeWord.test(word)))) {
+      return candidate;
+    }
+  }
+
+  return trimmedLabel;
+};
+
+export const urlsToMarkdownLinks = (content: string): string => {
+  const unescapedContent = unescapeStandaloneMarkdownUrlsAndEmails(content);
+  const normalizedMarkdownLinks = normalizeMarkdownLinkDestinations(unescapedContent);
+
+  const repairedContent = normalizedMarkdownLinks.replace(
     /(^|[\s(>])([A-Z0-9][A-Za-z0-9@#:_\-/ ]{0,80}?)\)\]\((https?:\/\/[^\s)]+)\)\)?/g,
     (match, prefix: string, label: string, href: string) => {
-      const trimmedLabel = label.trim();
+      const originalLabel = label.trim();
+      const trimmedLabel = trimMalformedMarkdownLabel(originalLabel);
       if (!trimmedLabel || trimmedLabel.includes('](')) {
         return match;
       }
 
-      return `${prefix}[${trimmedLabel}](${href})`;
+      const leadingText = originalLabel.slice(0, Math.max(0, originalLabel.length - trimmedLabel.length)).trimEnd();
+      const preservedLeadIn = leadingText ? `${leadingText} ` : '';
+
+      return `${prefix}${preservedLeadIn}[${trimmedLabel}](${href})`;
+    }
+  );
+
+  const emailPattern = /(^|[\s(>])([a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,})(?=\s|$|[),;!?.])/gim;
+
+  const normalizedContent = repairedContent.replace(
+    emailPattern,
+    (match, prefix: string, email: string, offset: number) => {
+      const emailStart = offset + prefix.length;
+      const markdownLinkPrefix = repairedContent.slice(Math.max(0, emailStart - 2), emailStart);
+
+      if (markdownLinkPrefix === '](') {
+        return match;
+      }
+
+      return `${prefix}[${email}](mailto:${email})`;
     }
   );
 

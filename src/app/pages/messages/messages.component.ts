@@ -1067,6 +1067,24 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
         this.accountLocalState.setChatDraft(accountPubkey, chatId, draftText);
       });
     });
+
+    effect(() => {
+      const targetMessageId = this.pendingScrollToMessageId();
+      const chat = this.selectedChat();
+      const messages = this.messages();
+
+      if (!targetMessageId || !chat || messages.length === 0) {
+        return;
+      }
+
+      if (!messages.some(message => message.id === targetMessageId)) {
+        return;
+      }
+
+      untracked(() => {
+        this.scrollToTargetMessage(targetMessageId);
+      });
+    });
   }
 
   ngOnInit(): void {
@@ -1137,23 +1155,6 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       }
     });
 
-    effect(() => {
-      const targetMessageId = this.pendingScrollToMessageId();
-      const chat = this.selectedChat();
-      const messages = this.messages();
-
-      if (!targetMessageId || !chat || messages.length === 0) {
-        return;
-      }
-
-      if (!messages.some(message => message.id === targetMessageId)) {
-        return;
-      }
-
-      untracked(() => {
-        this.scrollToTargetMessage(targetMessageId);
-      });
-    });
   }
 
   /**
