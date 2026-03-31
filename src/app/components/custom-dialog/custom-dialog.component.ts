@@ -61,6 +61,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
         #dialogContainer>
         
         <!-- Header -->
+        @if (showHeader()) {
         <div class="dialog-header">
           <div class="dialog-header-leading">
             @if (getShowBackButton()) {
@@ -107,6 +108,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
             }
           </div>
         </div>
+        }
         
         <!-- Content -->
         <div class="dialog-content" cdkFocusInitial tabindex="-1" #dialogContent>
@@ -126,6 +128,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 export class CustomDialogComponent implements AfterViewInit, OnDestroy {
   // Modern signal-based inputs
   title = input<string>('');
+  showHeader = input<boolean>(true);
   headerIcon = input<string>('');
   secondaryHeaderIcon = input<string>('');
   secondaryHeaderTooltip = input<string>('');
@@ -154,6 +157,7 @@ export class CustomDialogComponent implements AfterViewInit, OnDestroy {
   private document = inject(DOCUMENT);
   private elementRef = inject(ElementRef);
   private portalHost: HTMLElement | null = null;
+  private visualViewportHandler: (() => void) | null = null;
 
   constructor() {
     // Set up keyboard handling immediately
@@ -191,6 +195,7 @@ export class CustomDialogComponent implements AfterViewInit, OnDestroy {
   ngOnDestroy() {
     this.removeFromBody();
     this.enableBodyScroll();
+    this.teardownKeyboardHandling();
   }
 
   /**
@@ -317,16 +322,26 @@ export class CustomDialogComponent implements AfterViewInit, OnDestroy {
   private setupKeyboardHandling(): void {
     if (typeof window === 'undefined' || !window.visualViewport) return;
 
-    const updateHeight = () => {
+    this.visualViewportHandler = () => {
       const host = this.elementRef.nativeElement as HTMLElement;
       if (host && window.visualViewport) {
         host.style.height = `${window.visualViewport.height}px`;
       }
     };
 
-    window.visualViewport.addEventListener('resize', updateHeight);
-    window.visualViewport.addEventListener('scroll', updateHeight);
-    updateHeight(); // Initial setup
+    window.visualViewport.addEventListener('resize', this.visualViewportHandler);
+    window.visualViewport.addEventListener('scroll', this.visualViewportHandler);
+    this.visualViewportHandler();
+  }
+
+  private teardownKeyboardHandling(): void {
+    if (typeof window === 'undefined' || !window.visualViewport || !this.visualViewportHandler) {
+      return;
+    }
+
+    window.visualViewport.removeEventListener('resize', this.visualViewportHandler);
+    window.visualViewport.removeEventListener('scroll', this.visualViewportHandler);
+    this.visualViewportHandler = null;
   }
 
   onBackdropClick(): void {

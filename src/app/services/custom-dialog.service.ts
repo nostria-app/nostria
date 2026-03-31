@@ -160,6 +160,12 @@ export class CustomDialogRef<T = unknown, R = unknown> {
     }
   }
 
+  updateShowHeader(showHeader: boolean): void {
+    if (this.dialogComponentRef && !this.hasBeenClosed()) {
+      this.dialogComponentRef.setInput('showHeader', showHeader);
+    }
+  }
+
   /**
    * Update the dialog max width dynamically
    */

@@ -187,6 +187,7 @@ interface SentimentHeaderState {
     '(keydown)': 'onHostKeyDown($event)',
     '[class.inline-mode]': 'inlineMode()',
     '[class.collapsed]': 'inlineMode() && !isExpanded()',
+    '[class.keyboard-compact-mode]': 'isKeyboardCompactMode()',
   },
 })
 export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestroy {
@@ -230,7 +231,10 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   private mediaProcessing = inject(MediaProcessingService);
   private publishSubscription?: Subscription;
   private readonly pasteHandler = (event: ClipboardEvent): void => this.handlePaste(event);
-  private readonly handleViewportResize = (): void => this.scheduleTextareaRefresh();
+  private readonly handleViewportResize = (): void => {
+    this.updateKeyboardCompactMode();
+    this.scheduleTextareaRefresh();
+  };
   private dialog = inject(MatDialog);
   private customDialog = inject(CustomDialogService);
   private aiService = inject(AiService);
@@ -272,6 +276,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   private contentCheckIntervalHandle?: ReturnType<typeof setInterval>;
   private otherChangesIntervalHandle?: ReturnType<typeof setInterval>;
   private textareaRefreshFrame: number | null = null;
+  private viewportHeightBaseline = 0;
 
   // Signals for reactive state
   content = signal('');
@@ -284,6 +289,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   showPreview = signal(false);
   showAdvancedOptions = signal(false);
   isContentFocused = signal(false);
+  isKeyboardCompactMode = signal(false);
   private lastCursorPosition: number | null = null;
   private pendingMediaInsertionAnchors = new Map<string, number>();
   isDragOver = signal(false);
@@ -886,12 +892,14 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     this.setupPasteHandler();
     window.addEventListener('resize', this.handleViewportResize);
     window.visualViewport?.addEventListener('resize', this.handleViewportResize);
+    window.visualViewport?.addEventListener('scroll', this.handleViewportResize);
 
     // Auto-focus the textarea (only in dialog mode)
     if (!this.inlineMode()) {
       setTimeout(() => {
         if (this.contentTextarea) {
           this.contentTextarea.nativeElement.focus();
+          this.updateKeyboardCompactMode();
           this.scheduleTextareaRefresh();
         }
       }, 100);
@@ -958,6 +966,8 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     }
     window.removeEventListener('resize', this.handleViewportResize);
     window.visualViewport?.removeEventListener('resize', this.handleViewportResize);
+    window.visualViewport?.removeEventListener('scroll', this.handleViewportResize);
+    this.dialogRef?.updateShowHeader(true);
 
     // Clear auto-save timer on destroy
     if (this.autoSaveTimer) {
@@ -2499,12 +2509,51 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
 
   onContentFocus(): void {
     this.isContentFocused.set(true);
+    this.updateKeyboardCompactMode();
     this.scheduleTextareaRefresh();
   }
 
   onContentBlur(): void {
     this.isContentFocused.set(false);
+    this.updateKeyboardCompactMode();
     this.scheduleTextareaRefresh();
+  }
+
+  private updateKeyboardCompactMode(): void {
+    if (typeof window === 'undefined' || typeof document === 'undefined' || this.inlineMode()) {
+      this.setKeyboardCompactMode(false);
+      return;
+    }
+
+    const textarea = this.contentTextarea?.nativeElement;
+    const visualViewport = window.visualViewport;
+    const viewportHeight = visualViewport?.height ?? window.innerHeight;
+    const viewportTop = visualViewport?.offsetTop ?? 0;
+    const hasTextareaFocus = !!textarea && document.activeElement === textarea;
+    this.refreshViewportHeightBaseline(viewportHeight, hasTextareaFocus);
+
+    const obscuredHeight = Math.max(0, this.viewportHeightBaseline - viewportHeight - viewportTop);
+    const shouldUseCompactMode = this.platformService.isIOS()
+      && this.isCompactDialogLayout()
+      && hasTextareaFocus
+      && obscuredHeight > 120;
+
+    this.setKeyboardCompactMode(shouldUseCompactMode);
+  }
+
+  private refreshViewportHeightBaseline(viewportHeight: number, hasTextareaFocus: boolean): void {
+    if (!hasTextareaFocus || this.viewportHeightBaseline === 0 || viewportHeight > this.viewportHeightBaseline) {
+      this.viewportHeightBaseline = viewportHeight;
+    }
+  }
+
+  private setKeyboardCompactMode(enabled: boolean): void {
+    if (this.isKeyboardCompactMode() === enabled) {
+      return;
+    }
+
+    this.isKeyboardCompactMode.set(enabled);
+    this.dialogRef?.updateShowHeader(!enabled);
   }
 
   private scheduleTextareaRefresh(cursorPosition?: number, focus = false, followCaret = false): void {
@@ -2619,8 +2668,9 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       if (layoutEl && actionsEl) {
         const layoutRect = layoutEl.getBoundingClientRect();
         const actionsRect = actionsEl.getBoundingClientRect();
-        const verticalChrome = 20; // Wrapper paddings/gaps to keep action row visible
-        const availableHeight = layoutRect.height - actionsRect.height - verticalChrome;
+        const verticalChrome = this.isKeyboardCompactMode() ? 8 : 20;
+        const footerOverlapAllowance = this.isKeyboardCompactMode() ? 52 : 0;
+        const availableHeight = layoutRect.height - actionsRect.height - verticalChrome + footerOverlapAllowance;
         maxHeight = Math.max(minHeight, Math.floor(availableHeight));
       }
 

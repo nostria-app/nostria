@@ -533,6 +533,40 @@
   }
 }
 
+:host.keyboard-compact-mode {
+  .note-editor-dialog {
+    @media (max-width: 700px),
+    (max-height: 700px) {
+      height: 100%;
+      min-height: 100%;
+      max-height: 100%;
+    }
+
+    .dialog-content-wrapper {
+      @media (max-width: 700px),
+      (max-height: 700px) {
+        padding: 0 4px 2px;
+      }
+    }
+
+    .composer-actions {
+      @media (max-width: 700px),
+      (max-height: 700px) {
+        padding-top: 8px;
+        padding-bottom: env(safe-area-inset-bottom);
+      }
+    }
+
+    .reply-context,
+    .quote-context {
+      @media (max-width: 700px),
+      (max-height: 700px) {
+        margin-bottom: 8px;
+      }
+    }
+  }
+}
+
 .inline-status-row {
   display: flex;
   justify-content: center;
