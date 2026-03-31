@@ -412,8 +412,8 @@ export class ParsingService implements OnDestroy {
     // We'll filter out URL-embedded matches after finding them
     const nostrRegex =
       /@?(nostr:)?(?:npub|nprofile|note|nevent|naddr)1(?:(?!(?:npub|nprofile|note|nevent|naddr)1)[qpzry9x8gf2tvdw0s3jn54khce6mua7lQPZRY9X8GF2TVDW0S3JN54KHCE6MUA7L])+/gi;
-    // NIP-30: emoji shortcodes must be alphanumeric characters and underscores only
-    const emojiRegex = /(:[a-zA-Z0-9_]+:)/g;
+    // NIP-30 shortcodes in the ecosystem commonly include hyphens in addition to word characters.
+    const emojiRegex = /(:[a-zA-Z0-9_-]+:)/g;
     // Cashu regex: matches cashuA or cashuB tokens, which can span multiple lines
     // Must handle tokens that may be split across linebreaks or continue on same line
     const cashuRegex = /(cashu[AB][a-zA-Z0-9+/=_-]+)/g;
@@ -464,7 +464,7 @@ export class ParsingService implements OnDestroy {
     // Pre-scan for emoji shortcodes that aren't in event tags or built-in map
     // to determine if we need to fetch author's emoji sets
     const potentialCustomEmojis: string[] = [];
-    const emojiPreScanRegex = /(:[a-zA-Z0-9_]+:)/g;
+    const emojiPreScanRegex = /(:[a-zA-Z0-9_-]+:)/g;
     let preScanMatch: RegExpExecArray | null;
     while ((preScanMatch = emojiPreScanRegex.exec(processedContent)) !== null) {
       const emojiCode = preScanMatch[0];
