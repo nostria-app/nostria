@@ -33,6 +33,7 @@ interface PublishedStreamResult {
 }
 
 const LIVE_STREAM_KIND = 30311;
+const MILLISECONDS_PER_MINUTE = 60_000;
 
 const STREAMING_PROVIDER_OPTIONS: StreamingProviderOption[] = [
   {
@@ -522,7 +523,7 @@ export class StreamingAppsDialogComponent {
       ['d', identifier],
       ['title', title],
       ['status', this.status()],
-      ['p', pubkey, '', 'Host'],
+      ['p', pubkey, '', 'host'],
       ['starts', String(startsTimestamp)],
     ];
 
@@ -643,7 +644,7 @@ export class StreamingAppsDialogComponent {
   }
 
   private toLocalDateTimeValue(date: Date): string {
-    const localDate = new Date(date.getTime() - (date.getTimezoneOffset() * 60000));
+    const localDate = new Date(date.getTime() - (date.getTimezoneOffset() * MILLISECONDS_PER_MINUTE));
     return localDate.toISOString().slice(0, 16);
   }
 

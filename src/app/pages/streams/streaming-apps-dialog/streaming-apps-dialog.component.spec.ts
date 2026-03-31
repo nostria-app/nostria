@@ -103,7 +103,7 @@ describe('StreamingAppsDialogComponent', () => {
         ['d', 'friday-night-stream'],
         ['title', 'Friday Night Stream'],
         ['status', 'live'],
-        ['p', pubkey, '', 'Host'],
+        ['p', pubkey, '', 'host'],
         ['summary', 'Streaming from Nostria'],
         ['streaming', 'https://cdn.example.com/live/index.m3u8'],
         ['alt', 'Watch live on https://zap.stream/host/friday-night-stream'],
