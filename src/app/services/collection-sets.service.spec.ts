@@ -112,4 +112,94 @@ describe('CollectionSetsService', () => {
     expect(result[0].eventId).toBe('latest');
     expect(result[0].hashtags).toEqual(['nostr', 'gardening']);
   });
+
+  it('normalizes emoji shortcodes to NIP-30 format before saving', async () => {
+    const signedEvent = {
+      id: 'signed-id',
+      kind: 30030,
+      created_at: 100,
+      pubkey: 'pubkey',
+      content: '',
+      sig: 'sig',
+      tags: [],
+    } satisfies Event;
+    const service = Object.create(CollectionSetsService.prototype) as CollectionSetsService;
+    const saveEvent = vi.fn().mockResolvedValue(undefined);
+    const publish = vi.fn().mockResolvedValue({ success: true });
+
+    Object.assign(service, {
+      logger: {
+        debug: vi.fn(),
+        error: vi.fn(),
+        warn: vi.fn(),
+      },
+      accountState: {
+        pubkey: vi.fn().mockReturnValue('pubkey'),
+      },
+      nostrService: {
+        createEvent: vi.fn().mockReturnValue({ kind: 30030, content: '', tags: [] }),
+        signEvent: vi.fn().mockResolvedValue(signedEvent),
+      },
+      database: {
+        saveEvent,
+      },
+      publishService: {
+        publish,
+      },
+    });
+
+    const success = await service.saveEmojiSet(
+      'set-id',
+      'Set',
+      [{ shortcode: 'party parrot-wow', url: 'https://example.com/party-parrot.webp' }],
+      []
+    );
+
+    expect(success).toBe(true);
+    expect(service.nostrService.createEvent).toHaveBeenCalledWith(30030, '', [
+      ['d', 'set-id'],
+      ['title', 'Set'],
+      ['name', 'Set'],
+      ['emoji', 'party_parrot_wow', 'https://example.com/party-parrot.webp'],
+    ]);
+    expect(saveEvent).toHaveBeenCalledWith(signedEvent);
+    expect(publish).toHaveBeenCalledWith(signedEvent, {
+      useOptimizedRelays: false,
+    });
+  });
+
+  it('returns false when all emoji shortcodes normalize to empty values', async () => {
+    const service = Object.create(CollectionSetsService.prototype) as CollectionSetsService;
+
+    Object.assign(service, {
+      logger: {
+        debug: vi.fn(),
+        error: vi.fn(),
+        warn: vi.fn(),
+      },
+      accountState: {
+        pubkey: vi.fn().mockReturnValue('pubkey'),
+      },
+      nostrService: {
+        createEvent: vi.fn(),
+        signEvent: vi.fn(),
+      },
+      database: {
+        saveEvent: vi.fn(),
+      },
+      publishService: {
+        publish: vi.fn(),
+      },
+    });
+
+    const success = await service.saveEmojiSet(
+      'set-id',
+      'Set',
+      [{ shortcode: '---', url: 'https://example.com/invalid.webp' }],
+      []
+    );
+
+    expect(success).toBe(false);
+    expect(service.nostrService.createEvent).not.toHaveBeenCalled();
+  });
 });

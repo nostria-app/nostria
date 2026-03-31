@@ -30,6 +30,7 @@ import { DatabaseService } from '../../../services/database.service';
 import { PublishService } from '../../../services/publish.service';
 import { RelayPoolService } from '../../../services/relays/relay-pool';
 import { ClipboardService } from '../../../services/clipboard.service';
+import { normalizeEmojiShortcode } from '../../../utils/emoji-shortcode';
 
 interface SuggestedEmojiPackDef {
   pubkey: string;
@@ -297,7 +298,7 @@ export class EmojiSetsComponent implements OnInit, OnDestroy {
   async saveSetEdit() {
     const name = this.editingSetName().trim();
     const rows = this.editingSetRows().map(row => ({
-      shortcode: row.shortcode.trim(),
+      shortcode: normalizeEmojiShortcode(row.shortcode),
       url: row.url.trim(),
     }));
 
@@ -320,6 +321,13 @@ export class EmojiSetsComponent implements OnInit, OnDestroy {
 
       if (!row.shortcode || !row.url) {
         this.snackBar.open(`Row ${index + 1} needs both a filename and a file URL`, 'Close', { duration: 5000 });
+        return;
+      }
+
+      if (!row.shortcode) {
+        this.snackBar.open(`Row ${index + 1} needs a shortcode with only letters, numbers, or underscores`, 'Close', {
+          duration: 5000,
+        });
         return;
       }
 
@@ -385,7 +393,8 @@ export class EmojiSetsComponent implements OnInit, OnDestroy {
         return row;
       }
 
-      const nextRow = { ...row, [field]: value };
+      const normalizedValue = field === 'shortcode' ? normalizeEmojiShortcode(value) : value;
+      const nextRow = { ...row, [field]: normalizedValue };
       if (field === 'url' && value.trim() && !row.previewUrl?.startsWith('blob:')) {
         nextRow.previewUrl = value.trim();
       }
@@ -568,7 +577,7 @@ export class EmojiSetsComponent implements OnInit, OnDestroy {
 
   private getEmojiShortcodeFromFileName(fileName: string): string {
     const withoutExtension = fileName.replace(/\.[^.]+$/, '').trim();
-    return withoutExtension || 'emoji';
+    return normalizeEmojiShortcode(withoutExtension) || 'emoji';
   }
 
   private ensureTrailingEmptyRow(): void {

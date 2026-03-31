@@ -115,7 +115,7 @@
               <mat-form-field appearance="outline" class="emoji-row-field shortcode-field">
                 <mat-label>Filename</mat-label>
                 <input matInput [ngModel]="row.shortcode"
-                  (ngModelChange)="updateEmojiRowValue(row.id, 'shortcode', $event)" placeholder="party-parrot"
+                  (ngModelChange)="updateEmojiRowValue(row.id, 'shortcode', $event)" placeholder="party_parrot"
                   autocomplete="off" (keydown.enter)="onEmojiRowEnter($event, index)" />
               </mat-form-field>
 

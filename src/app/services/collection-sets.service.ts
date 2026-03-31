@@ -8,6 +8,7 @@ import { PublishService } from './publish.service';
 import { AccountRelayService } from './relays/account-relay';
 import { UserRelayService } from './relays/user-relay';
 import { DeletionFilterService } from './deletion-filter.service';
+import { normalizeEmojiShortcode } from '../utils/emoji-shortcode';
 
 /**
  * Kind 30030: Emoji sets
@@ -339,7 +340,21 @@ export class CollectionSetsService {
 
       // Add emoji tags
       for (const emoji of emojis) {
-        eventTags.push(['emoji', emoji.shortcode, emoji.url]);
+        const normalizedShortcode = normalizeEmojiShortcode(emoji.shortcode);
+        if (!normalizedShortcode) {
+          this.logger.warn('Skipping emoji with invalid shortcode after normalization', {
+            shortcode: emoji.shortcode,
+            url: emoji.url,
+          });
+          continue;
+        }
+
+        eventTags.push(['emoji', normalizedShortcode, emoji.url]);
+      }
+
+      if (eventTags.filter(tag => tag[0] === 'emoji').length === 0) {
+        this.logger.error('Emoji set has no valid emoji shortcodes after normalization');
+        return false;
       }
 
       // Add t-tags for categorization
