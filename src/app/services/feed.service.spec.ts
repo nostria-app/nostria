@@ -253,6 +253,33 @@ describe('FeedService', () => {
     });
   });
 
+  describe('feed type configuration', () => {
+    it('returns poll defaults for the polls feed type', () => {
+      const service = Object.create(FeedService.prototype) as FeedService;
+
+      expect(service.getFeedType('polls')).toEqual({
+        label: 'Polls',
+        icon: 'poll',
+        kinds: [1068, 6969],
+      });
+    });
+
+    it('includes polls in the available feed types list', () => {
+      const service = Object.create(FeedService.prototype) as FeedService;
+
+      expect(service.getFeedTypes()).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            key: 'polls',
+            label: 'Polls',
+            icon: 'poll',
+            kinds: [1068, 6969],
+          }),
+        ])
+      );
+    });
+  });
+
   describe('updateFeedIncremental - reactivity', () => {
     it('should trigger _feedData reactivity when queuing events to pending', () => {
       const service = createServiceForIncrementalFollowingTests();
