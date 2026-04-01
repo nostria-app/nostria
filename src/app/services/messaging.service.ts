@@ -2367,7 +2367,7 @@ export class MessagingService implements NostriaService {
         this.knownEventIds.add(rootWrappedEventId);
       }
 
-       shouldRememberWrappedEvent = true;
+      shouldRememberWrappedEvent = true;
 
       // Return the final decrypted message
       return {
@@ -3562,8 +3562,8 @@ export class MessagingService implements NostriaService {
       const userRelayService = await this.getUserRelayService();
       const publishPromises: Promise<unknown>[] = [];
 
-        // Create gift wraps for all participants (including self)
-        for (const recipientPubkey of allParticipants) {
+      // Create gift wraps for all participants (including self)
+      for (const recipientPubkey of allParticipants) {
         // Create the seal - encrypt the rumor for this specific recipient
         const sealedContent = await this.encryption.encryptNip44(rumorJson, recipientPubkey);
 
@@ -3597,10 +3597,10 @@ export class MessagingService implements NostriaService {
 
         const signedGiftWrap = finalizeEvent(giftWrap, ephemeralKey);
 
-          // Publish to recipient's DM relays (primary NIP-17 delivery)
-          if (userRelayService) {
-            publishPromises.push(userRelayService.publishToDmRelays(recipientPubkey, signedGiftWrap));
-          }
+        // Publish to recipient's DM relays (primary NIP-17 delivery)
+        if (userRelayService) {
+          publishPromises.push(userRelayService.publishToDmRelays(recipientPubkey, signedGiftWrap));
+        }
       }
 
       await this.awaitDirectMessagePublishes(publishPromises, 'direct-message');

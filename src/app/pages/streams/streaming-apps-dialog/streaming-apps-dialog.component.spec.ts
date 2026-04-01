@@ -152,18 +152,18 @@ describe('StreamingAppsDialogComponent', () => {
     expect(mockNostrService.createEvent).not.toHaveBeenCalled();
   });
 
-  it('should block publishing for non-premium accounts', async () => {
+  it('should allow publishing for non-premium accounts', async () => {
     mockAccountState.subscription.mockReturnValue({
       tier: 'free',
       expires: Date.now() + 60_000,
     });
 
-    component.onTitleChange('Premium Only');
+    component.onTitleChange('Open Access Stream');
     component.platformUrl.set('https://stream.openresist.com/');
 
     await component.publishStream();
 
-    expect(mockSnackBar.open).toHaveBeenCalled();
-    expect(mockNostrService.createEvent).not.toHaveBeenCalled();
+    expect(mockNostrService.createEvent).toHaveBeenCalled();
+    expect(mockPublishService.publish).toHaveBeenCalled();
   });
 });

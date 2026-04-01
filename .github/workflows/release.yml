@@ -1,13 +1,10 @@
 name: Desktop Release
 
 on:
-  push:
-    tags:
-      - 'v*'
   workflow_dispatch:
     inputs:
       prerelease:
-        description: 'Publish as a prerelease'
+        description: "Publish as a prerelease"
         type: boolean
         default: false
 
@@ -16,7 +13,70 @@ permissions:
   packages: read
 
 jobs:
+  prepare-release:
+    runs-on: ubuntu-22.04
+    outputs:
+      version: ${{ steps.release-metadata.outputs.version }}
+      release_tag: ${{ steps.release-metadata.outputs.release_tag }}
+      release_prerelease: ${{ steps.release-metadata.outputs.release_prerelease }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Determine release metadata
+        id: release-metadata
+        shell: bash
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?(\+[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$ ]]; then
+            echo "package.json version '$VERSION' is not a supported semver value" >&2
+            exit 1
+          fi
+
+          RELEASE_TAG="v${VERSION}"
+          if [[ "$VERSION" == *-* ]] || [ "${{ github.event.inputs.prerelease }}" = "true" ]; then
+            RELEASE_PRERELEASE=true
+          else
+            RELEASE_PRERELEASE=false
+          fi
+
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "release_tag=$RELEASE_TAG" >> "$GITHUB_OUTPUT"
+          echo "release_prerelease=$RELEASE_PRERELEASE" >> "$GITHUB_OUTPUT"
+
+      - name: Create and push release tag
+        shell: bash
+        env:
+          RELEASE_TAG: ${{ steps.release-metadata.outputs.release_tag }}
+        run: |
+          git fetch --tags --force
+
+          if git rev-parse "$RELEASE_TAG" >/dev/null 2>&1; then
+            TAG_COMMIT=$(git rev-list -n 1 "$RELEASE_TAG")
+            if [ "$TAG_COMMIT" != "$GITHUB_SHA" ]; then
+              echo "Tag $RELEASE_TAG already exists on commit $TAG_COMMIT, expected $GITHUB_SHA" >&2
+              exit 1
+            fi
+
+            echo "Tag $RELEASE_TAG already exists on the current commit."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag "$RELEASE_TAG" "$GITHUB_SHA"
+          git push origin "$RELEASE_TAG"
+
   publish-desktop:
+    needs: prepare-release
     strategy:
       fail-fast: false
       matrix:
@@ -36,47 +96,14 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare-release.outputs.release_tag }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: 'npm'
-
-      - name: Determine release metadata
-        shell: bash
-        run: |
-          VERSION=$(node -p "require('./package.json').version")
-          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
-
-          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?(\+[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$ ]]; then
-            echo "package.json version '$VERSION' is not a supported semver value" >&2
-            exit 1
-          fi
-
-          if [[ "$VERSION" == *-* ]]; then
-            VERSION_PRERELEASE=true
-          else
-            VERSION_PRERELEASE=false
-          fi
-
-          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
-            if [ "${GITHUB_REF_NAME}" != "v${VERSION}" ]; then
-              echo "Tag ${GITHUB_REF_NAME} does not match package.json version v${VERSION}" >&2
-              exit 1
-            fi
-            echo "RELEASE_TAG=${GITHUB_REF_NAME}" >> "$GITHUB_ENV"
-            echo "RELEASE_DRAFT=false" >> "$GITHUB_ENV"
-            echo "RELEASE_PRERELEASE=${VERSION_PRERELEASE}" >> "$GITHUB_ENV"
-          else
-            echo "RELEASE_TAG=v${VERSION}" >> "$GITHUB_ENV"
-            echo "RELEASE_DRAFT=true" >> "$GITHUB_ENV"
-            if [ "${{ github.event.inputs.prerelease }}" = "true" ] || [ "$VERSION_PRERELEASE" = "true" ]; then
-              echo "RELEASE_PRERELEASE=true" >> "$GITHUB_ENV"
-            else
-              echo "RELEASE_PRERELEASE=false" >> "$GITHUB_ENV"
-            fi
-          fi
+          cache: "npm"
 
       - name: Install Rust toolchain
         if: matrix.name != 'macos'
@@ -117,10 +144,10 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tagName: ${{ env.RELEASE_TAG }}
-          releaseName: Nostria v${{ env.VERSION }}
+          tagName: ${{ needs.prepare-release.outputs.release_tag }}
+          releaseName: Nostria v${{ needs.prepare-release.outputs.version }}
           releaseBody: |
             Installers for Windows, Linux, and macOS built from the bundled Nostria desktop app.
-          releaseDraft: ${{ env.RELEASE_DRAFT }}
-          prerelease: ${{ env.RELEASE_PRERELEASE }}
+          releaseDraft: false
+          prerelease: ${{ needs.prepare-release.outputs.release_prerelease }}
           args: ${{ matrix.args }}

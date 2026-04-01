@@ -45,6 +45,7 @@ interface StreamingProviderOption {
   defaultPlatformUrl?: string;
   supportsDirectBroadcast?: boolean;
   whipEndpoint?: string;
+  whipToken?: string;
 }
 
 interface PublishedStreamResult {
@@ -66,6 +67,7 @@ const STREAMING_PROVIDER_OPTIONS: StreamingProviderOption[] = [
     defaultPlatformUrl: 'https://stream.openresist.com/',
     supportsDirectBroadcast: true,
     whipEndpoint: 'https://stream.openresist.com/whip/endpoint/live',
+    whipToken: 'change-me',
   },
   {
     id: 'zap-stream',
@@ -140,13 +142,6 @@ export class StreamingAppsDialogComponent implements OnDestroy {
 
   readonly isAuthenticated = computed(() => !!this.accountState.pubkey());
 
-  readonly isPremiumSubscriber = computed(() => {
-    const subscription = this.accountState.subscription();
-    const isPremiumTier = subscription?.tier === 'premium' || subscription?.tier === 'premium_plus';
-    const isNotExpired = !subscription?.expires || Date.now() < subscription.expires;
-    return !!subscription && isPremiumTier && isNotExpired;
-  });
-
   readonly supportsDirectBroadcast = computed(() => !!this.currentProvider().supportsDirectBroadcast);
 
   readonly publishButtonLabel = computed(() => {
@@ -188,11 +183,11 @@ export class StreamingAppsDialogComponent implements OnDestroy {
   });
 
   readonly canPublish = computed(() => {
-    return this.isAuthenticated() && this.isPremiumSubscriber() && !!this.title().trim() && !this.publishing();
+    return this.isAuthenticated() && !!this.title().trim() && !this.publishing();
   });
 
   readonly canPreparePreview = computed(() => {
-    return this.isAuthenticated() && this.isPremiumSubscriber() && this.supportsDirectBroadcast() && !this.broadcast.isBusy();
+    return this.isAuthenticated() && this.supportsDirectBroadcast() && !this.broadcast.isBusy();
   });
 
   readonly canTogglePrivateBroadcast = computed(() => {
@@ -316,7 +311,7 @@ export class StreamingAppsDialogComponent implements OnDestroy {
   }
 
   async preparePreview(): Promise<void> {
-    if (!this.ensurePremiumAccess()) {
+    if (!this.ensureAuthenticatedAccess()) {
       return;
     }
 
@@ -354,7 +349,7 @@ export class StreamingAppsDialogComponent implements OnDestroy {
       return;
     }
 
-    if (!this.ensurePremiumAccess()) {
+    if (!this.ensureAuthenticatedAccess()) {
       return;
     }
 
@@ -366,6 +361,7 @@ export class StreamingAppsDialogComponent implements OnDestroy {
     try {
       await this.broadcast.startBroadcast({
         endpoint: whipEndpoint,
+        token: this.currentProvider().whipToken,
         audio: this.withMicrophone(),
         facingMode: this.cameraFacingMode(),
       });
@@ -410,7 +406,7 @@ export class StreamingAppsDialogComponent implements OnDestroy {
   }
 
   async publishStream(): Promise<void> {
-    if (!this.ensurePremiumAccess()) {
+    if (!this.ensureAuthenticatedAccess()) {
       return;
     }
 
@@ -621,7 +617,7 @@ export class StreamingAppsDialogComponent implements OnDestroy {
       : Date.now().toString(36);
   }
 
-  private ensurePremiumAccess(): boolean {
+  private ensureAuthenticatedAccess(): boolean {
     if (!this.isAuthenticated()) {
       this.snackBar.open(
         $localize`:@@streams.dialog.signInFirst:Sign in to publish a live stream.`,
@@ -631,19 +627,7 @@ export class StreamingAppsDialogComponent implements OnDestroy {
       return false;
     }
 
-    if (this.isPremiumSubscriber()) {
-      return true;
-    }
-
-    const snackBarRef = this.snackBar.open(
-      $localize`:@@streams.dialog.premiumRequired:Live streaming is a premium feature. Upgrade to start broadcasting.`,
-      $localize`:@@streams.dialog.upgrade:Upgrade`,
-      { duration: 5000 },
-    );
-    snackBarRef.onAction().subscribe(() => {
-      void this.router.navigate(['/accounts'], { queryParams: { tab: 'premium' } });
-    });
-    return false;
+    return true;
   }
 
   private normalizeIdentifier(value: string): string {

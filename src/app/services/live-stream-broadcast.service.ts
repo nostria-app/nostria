@@ -12,6 +12,7 @@ export interface LiveStreamPreviewOptions {
 
 export interface StartWhipBroadcastOptions extends LiveStreamPreviewOptions {
   endpoint: string;
+  token?: string;
 }
 
 @Injectable({
@@ -135,18 +136,20 @@ export class LiveStreamBroadcastService {
         headers: {
           Accept: 'application/sdp',
           'Content-Type': 'application/sdp',
+          ...(options.token ? { Authorization: `Bearer ${options.token}` } : {}),
         },
         body: peerConnection.localDescription?.sdp ?? offer.sdp ?? '',
       });
 
+      const responseBody = (await response.text()).trim();
+
       if (!response.ok) {
-        throw new Error(`WHIP publish failed with status ${response.status}.`);
+        throw new Error(responseBody || `WHIP publish failed with status ${response.status}.`);
       }
 
-      const answerSdp = await response.text();
       await peerConnection.setRemoteDescription({
         type: 'answer',
-        sdp: answerSdp,
+        sdp: responseBody,
       });
 
       const locationHeader = response.headers.get('location');

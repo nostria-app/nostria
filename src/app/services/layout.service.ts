@@ -2096,18 +2096,6 @@ export class LayoutService implements OnDestroy {
       return;
     }
 
-    if (!this.hasPremiumSubscription()) {
-      const snackBarRef = this.snackBar.open(
-        $localize`:@@streams.dialog.premiumOnly:Live streaming is available to premium subscribers.`,
-        $localize`:@@streams.dialog.upgrade:Upgrade`,
-        { duration: 5000 },
-      );
-      snackBarRef.onAction().subscribe(() => {
-        void this.router.navigate(['/accounts'], { queryParams: { tab: 'premium' } });
-      });
-      return;
-    }
-
     const { StreamingAppsDialogComponent } = await import('../pages/streams/streaming-apps-dialog/streaming-apps-dialog.component');
     this.customDialog.open(StreamingAppsDialogComponent, {
       title: 'Start Live Stream',
@@ -2116,13 +2104,6 @@ export class LayoutService implements OnDestroy {
       maxWidth: '96vw',
       showCloseButton: true,
     });
-  }
-
-  private hasPremiumSubscription(): boolean {
-    const subscription = this.accountStateService.subscription();
-    const isPremiumTier = subscription?.tier === 'premium' || subscription?.tier === 'premium_plus';
-    const isNotExpired = !subscription?.expires || Date.now() < subscription.expires;
-    return !!subscription && isPremiumTier && isNotExpired;
   }
 
   private nostrService = inject(NostrService);

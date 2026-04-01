@@ -1,24 +1,6 @@
 name: Desktop Build
 
 on:
-  pull_request:
-    paths:
-      - '.github/workflows/desktop-build.yml'
-      - 'package.json'
-      - 'package-lock.json'
-      - 'src-tauri/**'
-      - 'src/**'
-      - 'angular.json'
-  push:
-    branches:
-      - main
-    paths:
-      - '.github/workflows/desktop-build.yml'
-      - 'package.json'
-      - 'package-lock.json'
-      - 'src-tauri/**'
-      - 'src/**'
-      - 'angular.json'
   workflow_dispatch:
 
 permissions:
@@ -57,7 +39,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: 'npm'
+          cache: "npm"
 
       - name: Install Rust toolchain
         if: matrix.name != 'macos'
