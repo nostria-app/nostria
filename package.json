@@ -6,6 +6,7 @@
     "start": "ng serve --port 4200",
     "start-open": "ng serve --host 0.0.0.0 --port 4200",
     "build": "ng build",
+    "build:tauri": "ng build && node scripts/prepare-tauri-dist.mjs",
     "build:ssr:prod": "ng build --configuration=production",
     "serve:ssr:prod": "npm run build:ssr:prod && npm run serve:ssr:app",
     "watch": "ng build --watch --configuration development",
