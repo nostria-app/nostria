@@ -2831,11 +2831,13 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
    */
   removeMediaPreview(index: number): void {
     const preview = this.mediaPreviews()[index];
+    let pendingObjectUrlToRevoke: string | null = null;
+
     if (preview) {
       if (preview.pendingEncrypted && preview.pendingId) {
         const stagedPreview = this.pendingEncryptedMediaPreviews().find(item => item.id === preview.pendingId);
         if (stagedPreview) {
-          URL.revokeObjectURL(stagedPreview.objectUrl);
+          pendingObjectUrlToRevoke = stagedPreview.objectUrl;
         }
         this.pendingEncryptedMediaPreviews.update(items => items.filter(item => item.id !== preview.pendingId));
       }
@@ -2849,6 +2851,8 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       this.newMessageText.set(newText);
     }
     this.mediaPreviews.update(previews => previews.filter((_, i) => i !== index));
+
+    this.revokeObjectUrlLater(pendingObjectUrlToRevoke);
   }
 
   async confirmPastedMedia(): Promise<void> {
@@ -2920,13 +2924,15 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   clearPendingEncryptedMediaPreviews(): void {
-    for (const preview of this.pendingEncryptedMediaPreviews()) {
-      URL.revokeObjectURL(preview.objectUrl);
-    }
+    const objectUrls = this.pendingEncryptedMediaPreviews().map(preview => preview.objectUrl);
 
     this.pendingEncryptedMediaPreviews.set([]);
     this.mediaPreviews.update(previews => previews.filter(preview => !preview.pendingEncrypted));
     this.dmMediaUploadMode.set(DEFAULT_DM_MEDIA_UPLOAD_SETTINGS.mode);
+
+    for (const objectUrl of objectUrls) {
+      this.revokeObjectUrlLater(objectUrl);
+    }
   }
 
   onDmOptimizationChange(optimization: MediaOptimizationOptionValue): void {
@@ -2944,6 +2950,21 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
 
   private hasConfiguredMediaServers(): boolean {
     return this.mediaService.mediaServers().length > 0;
+  }
+
+  private revokeObjectUrlLater(url: string | null): void {
+    if (!url?.startsWith('blob:')) {
+      return;
+    }
+
+    const revoke = () => URL.revokeObjectURL(url);
+
+    if (typeof requestAnimationFrame === 'function') {
+      requestAnimationFrame(() => requestAnimationFrame(revoke));
+      return;
+    }
+
+    setTimeout(revoke, 0);
   }
 
   private showMediaServerWarning(): void {

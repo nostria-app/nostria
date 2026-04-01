@@ -566,8 +566,7 @@
         @for (message of group.messages; track message.id; let msgIdx = $index) {
         @if (isGroupChat()) {
         <!-- Group chat layout with avatar column (matches public chat) -->
-        <div class="message-group-container" [class.outgoing]="message.isOutgoing"
-          [attr.data-message-id]="message.id"
+        <div class="message-group-container" [class.outgoing]="message.isOutgoing" [attr.data-message-id]="message.id"
           [class.message-target-highlight]="highlightedMessageId() === message.id"
           [class.group-start]="isMessageGroupStart(group.messages, msgIdx)"
           [class.group-continuation]="!isMessageGroupStart(group.messages, msgIdx)"
@@ -716,8 +715,7 @@
         </div>
         } @else {
         <!-- 1-on-1 / note-to-self layout -->
-        <div class="message-bubble-container" [class.outgoing]="message.isOutgoing"
-          [attr.data-message-id]="message.id"
+        <div class="message-bubble-container" [class.outgoing]="message.isOutgoing" [attr.data-message-id]="message.id"
           [class.message-target-highlight]="highlightedMessageId() === message.id"
           (touchstart)="onMessageTouchStart($event, message)" (touchend)="onMessageTouchEnd()"
           (touchmove)="onMessageTouchEnd()" (contextmenu)="onMessageContextMenu($event, message)">
