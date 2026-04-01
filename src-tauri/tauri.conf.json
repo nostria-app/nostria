@@ -23,7 +23,13 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["appimage", "deb", "dmg", "nsis", "msi"],
+    "targets": [
+      "appimage",
+      "deb",
+      "dmg",
+      "nsis",
+      "msi"
+    ],
     "publisher": "Brainbox",
     "homepage": "https://nostria.app",
     "category": "SocialNetworking",
