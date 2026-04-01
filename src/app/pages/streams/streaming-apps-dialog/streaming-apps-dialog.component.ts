@@ -27,6 +27,7 @@ import { NostrService } from '../../../services/nostr.service';
 import { PublishService } from '../../../services/publish.service';
 import { LoggerService } from '../../../services/logger.service';
 import { AccountStateService } from '../../../services/account-state.service';
+import { OpenResistStreamService } from '../../../services/openresist-stream.service';
 import {
   CameraFacingMode,
   LiveStreamBroadcastService,
@@ -44,8 +45,6 @@ interface StreamingProviderOption {
   openUrl: string;
   defaultPlatformUrl?: string;
   supportsDirectBroadcast?: boolean;
-  whipEndpoint?: string;
-  whipToken?: string;
 }
 
 interface PublishedStreamResult {
@@ -66,8 +65,6 @@ const STREAMING_PROVIDER_OPTIONS: StreamingProviderOption[] = [
     openUrl: 'https://stream.openresist.com/',
     defaultPlatformUrl: 'https://stream.openresist.com/',
     supportsDirectBroadcast: true,
-    whipEndpoint: 'https://stream.openresist.com/whip/endpoint/browser',
-    whipToken: 'change-me',
   },
   {
     id: 'zap-stream',
@@ -113,6 +110,7 @@ export class StreamingAppsDialogComponent implements OnDestroy {
   private readonly router = inject(Router);
   private readonly logger = inject(LoggerService);
   private readonly accountState = inject(AccountStateService);
+  private readonly openResistStreamService = inject(OpenResistStreamService);
   readonly broadcast = inject(LiveStreamBroadcastService);
 
   readonly providers = STREAMING_PROVIDER_OPTIONS;
@@ -353,15 +351,12 @@ export class StreamingAppsDialogComponent implements OnDestroy {
       return;
     }
 
-    const whipEndpoint = this.currentProvider().whipEndpoint;
-    if (!whipEndpoint) {
-      return;
-    }
-
     try {
+      const session = await this.createDirectBroadcastSession();
+
       await this.broadcast.startBroadcast({
-        endpoint: whipEndpoint,
-        token: this.currentProvider().whipToken,
+        endpoint: session.url,
+        token: session.token,
         audio: this.withMicrophone(),
         facingMode: this.cameraFacingMode(),
       });
@@ -482,6 +477,7 @@ export class StreamingAppsDialogComponent implements OnDestroy {
     ];
 
     const summary = this.summary().trim();
+
     if (summary) {
       tags.push(['summary', summary]);
     }
@@ -554,6 +550,15 @@ export class StreamingAppsDialogComponent implements OnDestroy {
       );
     } finally {
       this.publishing.set(false);
+    }
+  }
+
+  private async createDirectBroadcastSession(): Promise<{ url: string; token?: string }> {
+    switch (this.currentProvider().id) {
+      case 'openresist-whip':
+        return await this.openResistStreamService.createWhipSession();
+      default:
+        throw new Error('Direct browser broadcast is not configured for this provider.');
     }
   }
 

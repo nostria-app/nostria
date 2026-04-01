@@ -8,6 +8,7 @@ import { PublishService } from '../../../services/publish.service';
 import { LoggerService } from '../../../services/logger.service';
 import { AccountStateService } from '../../../services/account-state.service';
 import { LiveStreamBroadcastService } from '../../../services/live-stream-broadcast.service';
+import { OpenResistStreamService } from '../../../services/openresist-stream.service';
 import { StreamingAppsDialogComponent } from './streaming-apps-dialog.component';
 
 describe('StreamingAppsDialogComponent', () => {
@@ -55,6 +56,13 @@ describe('StreamingAppsDialogComponent', () => {
     releasePreviewIfIdle: vi.fn().mockResolvedValue(undefined),
   };
 
+  const mockOpenResistStreamService = {
+    createWhipSession: vi.fn().mockResolvedValue({
+      url: 'https://stream.openresist.com/whip/endpoint/random-endpoint-id',
+      token: 'stream-token',
+    }),
+  };
+
   const mockNostrService = {
     createEvent: vi.fn((kind: number, content: string, tags: string[][]) => ({
       kind,
@@ -91,6 +99,7 @@ describe('StreamingAppsDialogComponent', () => {
         { provide: LoggerService, useValue: mockLogger },
         { provide: AccountStateService, useValue: mockAccountState },
         { provide: LiveStreamBroadcastService, useValue: mockBroadcastService },
+        { provide: OpenResistStreamService, useValue: mockOpenResistStreamService },
         { provide: NostrService, useValue: mockNostrService },
         { provide: PublishService, useValue: mockPublishService },
       ],
@@ -165,5 +174,17 @@ describe('StreamingAppsDialogComponent', () => {
 
     expect(mockNostrService.createEvent).toHaveBeenCalled();
     expect(mockPublishService.publish).toHaveBeenCalled();
+  });
+
+  it('should create an OpenResist session before starting a private broadcast', async () => {
+    await component.togglePrivateBroadcast();
+
+    expect(mockOpenResistStreamService.createWhipSession).toHaveBeenCalledTimes(1);
+    expect(mockBroadcastService.startBroadcast).toHaveBeenCalledWith({
+      endpoint: 'https://stream.openresist.com/whip/endpoint/random-endpoint-id',
+      token: 'stream-token',
+      audio: true,
+      facingMode: 'user',
+    });
   });
 });
