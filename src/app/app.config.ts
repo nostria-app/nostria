@@ -27,6 +27,7 @@ import { nip98AuthInterceptor } from './services/interceptors/nip98Auth';
 import { MAT_FORM_FIELD_DEFAULT_OPTIONS } from '@angular/material/form-field';
 import { MAT_TOOLTIP_DEFAULT_OPTIONS } from '@angular/material/tooltip';
 import { CustomReuseStrategy } from './services/custom-reuse-strategy';
+import { DesktopUpdaterService } from './services/desktop-updater.service';
 
 let appLang = 'en';
 
@@ -74,6 +75,9 @@ export const appConfig: ApplicationConfig = {
         iconRegistry.setDefaultFontSetClass(...outlinedFontSetClasses);
       })(inject(MatIconRegistry));
       return initializerFn();
+    }),
+    provideAppInitializer(() => {
+      inject(DesktopUpdaterService).initialize();
     }),
     {
       provide: LoggerService,

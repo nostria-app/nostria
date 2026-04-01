@@ -79,3 +79,13 @@
   }
 }
 
+.desktop-update-panel {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+
+  button {
+    justify-self: start;
+  }
+}
+

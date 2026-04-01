@@ -82,6 +82,20 @@ jobs:
             libwebkit2gtk-4.1-dev \
             patchelf
 
+      - name: Install LLVM for Windows ARM builds
+        if: matrix.name == 'windows-arm'
+        shell: pwsh
+        run: |
+          choco install llvm --no-progress -y
+          'C:\Program Files\LLVM\bin' | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+      - name: Configure compiler for Windows ARM builds
+        if: matrix.name == 'windows-arm'
+        shell: pwsh
+        run: |
+          'CC_aarch64_pc_windows_msvc=clang-cl' | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          'CXX_aarch64_pc_windows_msvc=clang-cl' | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
       - name: Install frontend dependencies
         run: npm ci --legacy-peer-deps
 

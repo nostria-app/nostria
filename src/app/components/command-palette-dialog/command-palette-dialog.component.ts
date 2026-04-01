@@ -20,6 +20,7 @@ import { IgnoredRelayAuditDialogComponent } from '../ignored-relay-audit-dialog/
 import { RunesSettingsService } from '../../services/runes-settings.service';
 import { MediaPlayerService } from '../../services/media-player.service';
 import { LocalSettingsService, getEffectiveWotMinRank, isWotFilterEnabled } from '../../services/local-settings.service';
+import { DesktopUpdaterService } from '../../services/desktop-updater.service';
 
 export interface Command {
   id: string;
@@ -55,6 +56,7 @@ export class CommandPaletteDialogComponent implements AfterViewInit, OnDestroy {
   private runesSettings = inject(RunesSettingsService);
   private mediaPlayer = inject(MediaPlayerService);
   private localSettings = inject(LocalSettingsService);
+  private desktopUpdater = inject(DesktopUpdaterService);
 
   @ViewChild('searchInput') searchInput!: ElementRef<HTMLInputElement>;
   @ViewChildren('listItem', { read: ElementRef }) listItems!: QueryList<ElementRef>;
@@ -479,6 +481,14 @@ export class CommandPaletteDialogComponent implements AfterViewInit, OnDestroy {
       icon: 'info',
       action: () => this.router.navigate(['/settings/about']),
       keywords: ['about', 'version', 'info', 'credits']
+    },
+    {
+      id: 'desktop-check-updates',
+      label: 'Check for Desktop Updates',
+      icon: 'system_update',
+      action: () => void this.desktopUpdater.checkForUpdates({ interactive: true, source: 'manual' }),
+      keywords: ['check for updates', 'update app', 'desktop update', 'release', 'upgrade'],
+      description: 'Check GitHub Releases for a newer desktop build'
     },
     {
       id: 'nav-backup',

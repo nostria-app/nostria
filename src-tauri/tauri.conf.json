@@ -63,5 +63,16 @@
         "installMode": "perMachine"
       }
     }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEYzQjc3MDgyQ0M3OEI2MEQKUldRTnRuak1nbkMzOHdLWHZpQzluMXJ3bGI1MEs1cGNoUmE4cDFIdUd4N0dPbXZGQlZIZjRsN2sK",
+      "endpoints": [
+        "https://github.com/nostria-app/nostria/releases/latest/download/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
+    }
   }
 }

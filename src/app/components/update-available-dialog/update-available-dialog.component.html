@@ -1,0 +1,49 @@
+<div dialog-content class="update-dialog-content">
+  <div class="update-version-row">
+    <div>
+      <p class="eyebrow" i18n="@@desktopUpdater.dialog.currentLabel">Current version</p>
+      <p class="version-value">{{ data.update.currentVersion }}</p>
+    </div>
+    <mat-icon>arrow_forward</mat-icon>
+    <div>
+      <p class="eyebrow" i18n="@@desktopUpdater.dialog.availableLabel">Available version</p>
+      <p class="version-value">{{ data.update.version }}</p>
+    </div>
+  </div>
+
+  @if (data.update.date) {
+  <p class="meta-row">
+    <span i18n="@@desktopUpdater.dialog.published">Published</span>
+    <span>{{ data.update.date | date: 'medium' }}</span>
+  </p>
+  }
+
+  @if (data.update.body) {
+  <div class="release-notes">
+    <p class="release-notes-title" i18n="@@desktopUpdater.dialog.notes">What’s new</p>
+    <pre>{{ data.update.body }}</pre>
+  </div>
+  } @else {
+  <p class="release-notes-empty" i18n="@@desktopUpdater.dialog.noNotes">This release did not include release notes.</p>
+  }
+
+  @if (progressMessage()) {
+  <div class="progress-panel">
+    <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+    <p>{{ progressMessage() }}</p>
+  </div>
+  }
+
+  @if (errorMessage()) {
+  <p class="error-message">{{ errorMessage() }}</p>
+  }
+</div>
+
+<div dialog-actions class="update-dialog-actions">
+  <button mat-button type="button" (click)="closeLater()" [disabled]="installing()" i18n="@@desktopUpdater.dialog.later">
+    Later
+  </button>
+  <button mat-flat-button type="button" (click)="install()" [disabled]="installing()" i18n="@@desktopUpdater.dialog.install">
+    Install update
+  </button>
+</div>

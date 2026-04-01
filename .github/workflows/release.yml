@@ -143,6 +143,20 @@ jobs:
             libwebkit2gtk-4.1-dev \
             patchelf
 
+      - name: Install LLVM for Windows ARM builds
+        if: matrix.name == 'windows-arm'
+        shell: pwsh
+        run: |
+          choco install llvm --no-progress -y
+          'C:\Program Files\LLVM\bin' | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+      - name: Configure compiler for Windows ARM builds
+        if: matrix.name == 'windows-arm'
+        shell: pwsh
+        run: |
+          'CC_aarch64_pc_windows_msvc=clang-cl' | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          'CXX_aarch64_pc_windows_msvc=clang-cl' | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
       - name: Install frontend dependencies
         run: npm ci --legacy-peer-deps
 
@@ -153,6 +167,8 @@ jobs:
         uses: tauri-apps/tauri-action@action-v0.6.2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           tagName: ${{ needs.prepare-release.outputs.release_tag }}
           releaseName: Nostria v${{ needs.prepare-release.outputs.version }}
@@ -160,4 +176,6 @@ jobs:
             Installers for Windows, Linux, and macOS built from the bundled Nostria desktop app.
           releaseDraft: false
           prerelease: ${{ needs.prepare-release.outputs.release_prerelease }}
-          args: ${{ matrix.args }}
+          includeUpdaterJson: true
+          updaterJsonPreferNsis: true
+          args: ${{ matrix.args }} --config src-tauri/tauri.release.conf.json
