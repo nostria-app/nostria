@@ -552,7 +552,7 @@
             @if (preview.type === 'image') {
             <img [src]="preview.url" class="media-preview-thumb" alt="Media preview">
             } @else if (preview.type === 'video') {
-            <video [src]="preview.url" class="media-preview-thumb" muted></video>
+            <video [src]="preview.url" class="media-preview-thumb" muted preload="metadata"></video>
             } @else if (preview.type === 'music') {
             <div class="reference-preview-thumb">
               <mat-icon>music_note</mat-icon>

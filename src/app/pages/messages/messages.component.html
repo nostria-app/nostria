@@ -913,7 +913,7 @@
             </div>
             } @else if (preview.type === 'video') {
             <div class="media-preview-media-card">
-              <video [src]="preview.url" class="media-preview-thumb" muted></video>
+              <video [src]="preview.url" class="media-preview-thumb" muted preload="metadata"></video>
               <div class="media-preview-details">
                 @if (preview.label) {
                 <span class="media-preview-label">{{ preview.label }}</span>
