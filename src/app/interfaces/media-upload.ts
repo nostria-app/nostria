@@ -11,6 +11,16 @@ export interface MediaUploadModeOption {
   description: string;
 }
 
+export type MediaOptimizationOptionValue = 'original' | 'balanced' | 'maximum';
+
+export interface MediaOptimizationOption {
+  value: MediaOptimizationOptionValue;
+  label: string;
+  description: string;
+  mode: MediaUploadMode;
+  compressionStrength: number;
+}
+
 export interface MediaUploadDialogResult {
   files: File[];
   uploadSettings: MediaUploadSettings;
@@ -43,6 +53,32 @@ export const MEDIA_UPLOAD_MODE_OPTIONS: readonly MediaUploadModeOption[] = [
 ] as const;
 
 export const DEFAULT_MEDIA_COMPRESSION_STRENGTH = 50;
+export const MAXIMUM_MEDIA_OPTIMIZATION_THRESHOLD = 80;
+export const MAXIMUM_MEDIA_COMPRESSION_STRENGTH = 100;
+
+export const MEDIA_OPTIMIZATION_OPTIONS: readonly MediaOptimizationOption[] = [
+  {
+    value: 'original',
+    label: 'Original',
+    description: 'Keep the original quality and upload the file as-is.',
+    mode: 'original',
+    compressionStrength: DEFAULT_MEDIA_COMPRESSION_STRENGTH,
+  },
+  {
+    value: 'balanced',
+    label: 'Balanced',
+    description: 'Recommended for most photos and videos with a good balance of quality and file size.',
+    mode: 'local',
+    compressionStrength: DEFAULT_MEDIA_COMPRESSION_STRENGTH,
+  },
+  {
+    value: 'maximum',
+    label: 'Maximum',
+    description: 'Make the file as small as possible, with the most noticeable quality reduction.',
+    mode: 'local',
+    compressionStrength: MAXIMUM_MEDIA_COMPRESSION_STRENGTH,
+  },
+] as const;
 
 export const DEFAULT_MEDIA_UPLOAD_SETTINGS: MediaUploadSettings = {
   mode: 'local',
@@ -73,6 +109,49 @@ export function shouldUploadOriginal(mode: MediaUploadMode): boolean {
 
 export function usesLocalCompression(mode: MediaUploadMode): boolean {
   return mode === 'local';
+}
+
+export function getMediaOptimizationOption(
+  mode: MediaUploadMode,
+  compressionStrength: number,
+): MediaOptimizationOptionValue {
+  if (mode === 'original') {
+    return 'original';
+  }
+
+  return normalizeCompressionStrength(compressionStrength) >= MAXIMUM_MEDIA_OPTIMIZATION_THRESHOLD
+    ? 'maximum'
+    : 'balanced';
+}
+
+export function getMediaOptimizationLabel(
+  mode: MediaUploadMode,
+  compressionStrength: number,
+): string {
+  return MEDIA_OPTIMIZATION_OPTIONS.find(option =>
+    option.value === getMediaOptimizationOption(mode, compressionStrength)
+  )?.label ?? MEDIA_OPTIMIZATION_OPTIONS[1].label;
+}
+
+export function getMediaOptimizationDescription(
+  mode: MediaUploadMode,
+  compressionStrength: number,
+): string {
+  return MEDIA_OPTIMIZATION_OPTIONS.find(option =>
+    option.value === getMediaOptimizationOption(mode, compressionStrength)
+  )?.description ?? MEDIA_OPTIMIZATION_OPTIONS[1].description;
+}
+
+export function getMediaUploadSettingsForOptimization(
+  optimization: MediaOptimizationOptionValue,
+): MediaUploadSettings {
+  const option = MEDIA_OPTIMIZATION_OPTIONS.find(candidate => candidate.value === optimization)
+    ?? MEDIA_OPTIMIZATION_OPTIONS[1];
+
+  return {
+    mode: option.mode,
+    compressionStrength: option.compressionStrength,
+  };
 }
 
 export function getCompressionStrengthLabel(strength: number): string {

@@ -941,7 +941,7 @@
               @if (usesLocalDmCompression() && preview.pendingEncrypted && preview.pendingId && (preview.type ===
               'image' || preview.type === 'video')) {
               <button type="button" class="preview-media-comparison-btn"
-                (click)="openPendingCompressionPreview(preview.pendingId)" matTooltip="Preview compression">
+                (click)="openPendingCompressionPreview(preview.pendingId)" matTooltip="Preview optimization">
                 <mat-icon>compare</mat-icon>
               </button>
               }
@@ -956,31 +956,15 @@
           <div class="pending-media-actions">
             @if (hasPendingCompressibleMedia()) {
             <div class="dm-compression-controls">
-              <div class="dm-compression-toggle-row">
-                <span class="dm-compression-toggle-label">Upload original</span>
-                <mat-slide-toggle [checked]="dmUploadOriginal()"
-                  (change)="onDmUploadOriginalChange($event.checked)"
-                  aria-label="Upload original media without compression"></mat-slide-toggle>
-              </div>
-              @if (usesLocalDmCompression()) {
-              <div class="dm-compression-header">
-                <span class="dm-compression-title">Compression Strength</span>
-                <div class="dm-compression-meta">
-                  <span class="dm-compression-value">{{ dmCompressionStrengthLabel() }}</span>
-                  <button mat-button type="button" class="dm-compression-reset-button"
-                    (click)="resetDmCompressionStrength()" [disabled]="isDefaultDmCompressionStrength()"
-                    matTooltip="Reset to the recommended default">
-                    <mat-icon>restart_alt</mat-icon>
-                    <span>Reset</span>
-                  </button>
-                </div>
-              </div>
-              <mat-slider min="0" max="100" step="5" discrete>
-                <input matSliderThumb [value]="dmCompressionStrength()"
-                  (valueChange)="onDmCompressionStrengthChange($event)" aria-label="Compression strength" />
-              </mat-slider>
-              <span class="dm-compression-description">{{ dmCompressionStrengthDescription() }}</span>
-              }
+              <span class="dm-optimization-label">Optimization</span>
+              <mat-button-toggle-group class="dm-optimization-toggle-group" [value]="selectedDmOptimization()"
+                (change)="onDmOptimizationChange($event.value)" [hideSingleSelectionIndicator]="true"
+                aria-label="Encrypted media optimization">
+                @for (option of optimizationOptions; track option.value) {
+                <mat-button-toggle [value]="option.value">{{ option.label }}</mat-button-toggle>
+                }
+              </mat-button-toggle-group>
+              <span class="dm-compression-description">{{ dmOptimizationDescription() }}</span>
             </div>
             }
             <div class="pending-media-buttons">

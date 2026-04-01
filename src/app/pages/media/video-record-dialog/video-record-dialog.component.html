@@ -100,46 +100,19 @@
         matTooltip="Automatically stop recording after 6.3 seconds">
         <span class="toggle-label">Short Form (6.3s)</span>
       </mat-slide-toggle>
-      <button mat-icon-button type="button" class="upload-settings-toggle" [class.active]="showUploadSettings()"
-        (click)="toggleUploadSettings()" matTooltip="Compression settings" aria-label="Open compression settings">
-        <mat-icon>settings</mat-icon>
-      </button>
     </div>
 
-    @if (showUploadSettings()) {
     <div class="upload-settings-block">
-      <mat-form-field class="upload-mode-field" subscriptSizing="dynamic">
-        <mat-label>Video Upload Mode</mat-label>
-        <mat-select [value]="uploadMode()" (selectionChange)="onUploadModeChange($event.value)">
-          @for (option of uploadModeOptions; track option.value) {
-          <mat-option [value]="option.value">{{ option.label }}</mat-option>
-          }
-        </mat-select>
-      </mat-form-field>
-      <span class="upload-settings-description">{{ uploadModeDescription() }}</span>
-
-      @if (usesLocalCompression()) {
-      <div class="compression-slider-block">
-        <div class="compression-slider-header">
-          <span class="compression-slider-title">Compression Strength</span>
-          <div class="compression-slider-meta">
-            <span class="compression-slider-value">{{ compressionStrengthLabel() }}</span>
-            <button mat-button type="button" class="compression-reset-button" (click)="resetCompressionStrength()"
-              [disabled]="isDefaultCompressionStrength()" matTooltip="Reset to the recommended default">
-              <mat-icon>restart_alt</mat-icon>
-              <span>Reset</span>
-            </button>
-          </div>
-        </div>
-        <mat-slider min="0" max="100" step="5" discrete>
-          <input matSliderThumb [value]="compressionStrength()" (valueChange)="onCompressionStrengthChange($event)"
-            aria-label="Compression strength" />
-        </mat-slider>
-        <span class="upload-settings-description">{{ compressionStrengthDescription() }}</span>
-      </div>
-      }
+      <span class="optimization-label">Optimization</span>
+      <mat-button-toggle-group class="optimization-toggle-group" [value]="selectedOptimization()"
+        (change)="onOptimizationChange($event.value)" [hideSingleSelectionIndicator]="true"
+        aria-label="Video optimization">
+        @for (option of optimizationOptions; track option.value) {
+        <mat-button-toggle [value]="option.value">{{ option.label }}</mat-button-toggle>
+        }
+      </mat-button-toggle-group>
+      <span class="upload-settings-description">{{ selectedOptimizationDescription() }}</span>
     </div>
-    }
   </div>
   <div class="action-buttons">
     <button mat-button (click)="cancel()">Cancel</button>
@@ -162,7 +135,7 @@
     @if (usesLocalCompression()) {
     <button mat-button type="button" (click)="openCompressionPreview()">
       <mat-icon>compare</mat-icon>
-      Preview Compression
+      Preview Optimization
     </button>
     }
     <button mat-button (click)="downloadVideo()" matTooltip="Save video to device">
