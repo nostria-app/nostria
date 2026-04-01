@@ -66,7 +66,7 @@ const STREAMING_PROVIDER_OPTIONS: StreamingProviderOption[] = [
     openUrl: 'https://stream.openresist.com/',
     defaultPlatformUrl: 'https://stream.openresist.com/',
     supportsDirectBroadcast: true,
-    whipEndpoint: 'https://stream.openresist.com/whip/endpoint/live',
+    whipEndpoint: 'https://stream.openresist.com/whip/endpoint/browser',
     whipToken: 'change-me',
   },
   {
