@@ -25,6 +25,7 @@ import { Profile } from '../../services/profile';
 import { AccountStateService } from '../../services/account-state.service';
 import { DataService } from '../../services/data.service';
 import { LayoutService } from '../../services/layout.service';
+import { RegionService } from '../../services/region.service';
 
 // Define the login steps
 enum LoginStep {
@@ -38,6 +39,8 @@ enum LoginStep {
   PREVIEW = 'preview',
   EXTERNAL_SIGNER = 'external-signer',
 }
+
+type NostrConnectRelayOption = 'nip46' | 'nostria-eu' | 'nostria-us';
 
 @Component({
   selector: 'app-unified-login-dialog',
@@ -71,6 +74,7 @@ export class LoginDialogComponent implements OnDestroy {
   private profileService = inject(Profile);
   private accountState = inject(AccountStateService);
   private data = inject(DataService);
+  private region = inject(RegionService);
   layout = inject(LayoutService);
 
   // Event emitter for when dialog should close (used in standalone mode)
@@ -97,7 +101,7 @@ export class LoginDialogComponent implements OnDestroy {
 
   // Client-initiated nostrconnect signals
   nostrConnectQrUrl = signal<string>('');
-  nostrConnectRelayOption = signal<'nip46' | 'openresist'>('nip46');
+  nostrConnectRelayOption = signal<NostrConnectRelayOption>('nip46');
   isWaitingForRemoteSigner = signal(false);
   private remoteSignerClientKey: Uint8Array | null = null;
   private remoteSignerPool: SimplePool | null = null;
@@ -105,11 +109,22 @@ export class LoginDialogComponent implements OnDestroy {
   private isFinalizingRemoteSigner = false;
   private nostrConnectListenTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
+  readonly nostrConnectRelayOptions = [
+    { id: 'nip46', label: 'NIP-46 Global', host: 'relay.nip46.com' },
+    { id: 'nostria-eu', label: 'Nostria Europe', host: 'ribo.nostria.app' },
+    { id: 'nostria-us', label: 'Nostria USA', host: 'rilo.nostria.app' },
+  ] as const satisfies ReadonlyArray<{
+    id: NostrConnectRelayOption;
+    label: string;
+    host: string;
+  }>;
+
   // Default relays for nostrconnect by option.
   // 'nip46' remains the default because relay.nip46.com is broadly supported.
-  private readonly nostrConnectRelays: Record<'nip46' | 'openresist', string[]> = {
+  private readonly nostrConnectRelays: Record<NostrConnectRelayOption, string[]> = {
     nip46: ['wss://relay.nip46.com'],
-    openresist: ['wss://relay.openresist.com'],
+    'nostria-eu': [this.region.getRelayServer('eu', 0) ?? 'wss://ribo.nostria.app/'],
+    'nostria-us': [this.region.getRelayServer('us', 0) ?? 'wss://rilo.nostria.app/'],
   };
 
   // Future-proof signer permissions:
@@ -935,7 +950,7 @@ export class LoginDialogComponent implements OnDestroy {
     }
   }
 
-  setNostrConnectRelayOption(option: 'nip46' | 'openresist'): void {
+  setNostrConnectRelayOption(option: NostrConnectRelayOption): void {
     this.nostrConnectRelayOption.set(option);
     // Regenerate QR code with new relay
     this.generateNostrConnectQR();
