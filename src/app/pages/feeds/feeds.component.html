@@ -54,10 +54,9 @@
 
         <span class="spacer"></span>
 
-        <!-- List Feeds Menu - People Lists and Interests -->
+        <!-- Interests menu -->
         @if (app.authenticated()) {
-        <app-list-feed-menu #listFeedMenu (listSelected)="onListSelected($event)"
-          (interestSelected)="onInterestSelected($event)">
+        <app-list-feed-menu #listFeedMenu (interestSelected)="onInterestSelected($event)">
         </app-list-feed-menu>
         }
 
@@ -69,9 +68,11 @@
         @if (app.authenticated() && feedService.feedsLoaded() && (activeFeed() || showListFeed()) && !showRelayFeed()) {
         <app-filter-button [active]="hasActiveFilters()" tooltip="Filter content">
           <app-feed-filter-panel [feed]="activeFeed() ?? undefined" [isListFeed]="showListFeed()"
-            [mentionedMode]="listMentionedMode()" (kindsChanged)="onKindsChanged($event)"
+            [mentionedMode]="listMentionedMode()" [currentListFilter]="currentListFilter()"
+            (kindsChanged)="onKindsChanged($event)"
             (showRepliesChanged)="onShowRepliesChanged($event)" (showRepostsChanged)="onShowRepostsChanged($event)"
-            (mentionedModeChanged)="onMentionedModeChanged($event)" (wotFilterChanged)="onWotFilterChanged($event)">
+            (mentionedModeChanged)="onMentionedModeChanged($event)" (wotFilterChanged)="onWotFilterChanged($event)"
+            (listFilterChanged)="onListFilterChanged($event)">
           </app-feed-filter-panel>
         </app-filter-button>
         }

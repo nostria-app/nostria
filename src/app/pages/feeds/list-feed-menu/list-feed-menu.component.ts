@@ -14,14 +14,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { LoggerService } from '../../../services/logger.service';
-import { FollowSetsService, FollowSet } from '../../../services/follow-sets.service';
 import { CollectionSetsService, InterestSet } from '../../../services/collection-sets.service';
-
-export interface ListFeedSelection {
-  dTag: string;
-  title: string;
-  pubkeys: string[];
-}
 
 export interface InterestFeedSelection {
   dTag: string;
@@ -44,53 +37,13 @@ export interface InterestFeedSelection {
     <button
       mat-icon-button
       [matMenuTriggerFor]="listMenu"
-      matTooltip="List feeds"
+      matTooltip="Interests"
       class="list-menu-trigger"
     >
-      <mat-icon>people</mat-icon>
+      <mat-icon>tag</mat-icon>
     </button>
 
     <mat-menu #listMenu="matMenu" class="list-feed-selector-menu">
-      <!-- People Lists Section -->
-      <div class="menu-header" role="presentation">
-        <mat-icon>people</mat-icon>
-        <span>People Lists</span>
-      </div>
-
-      <mat-divider></mat-divider>
-
-      @if (isLoading()) {
-        <div class="loading-state" role="presentation">
-          <mat-spinner diameter="24"></mat-spinner>
-          <span>Loading lists...</span>
-        </div>
-      } @else if (followSets().length === 0) {
-        <div class="empty-state" role="presentation">
-          <mat-icon>list_alt</mat-icon>
-          <span>No lists found</span>
-          <span class="empty-hint">Create lists in Collections → People Lists</span>
-        </div>
-      } @else {
-        <div class="list-items">
-          @for (list of followSets(); track list.dTag) {
-            <button
-              mat-menu-item
-              (click)="onSelectList(list)"
-              [class.active]="list.dTag === selectedList()"
-            >
-              <mat-icon class="list-item-icon">
-                {{ list.title.toLowerCase() === 'favorites' ? 'star' : (list.isPrivate ? 'lock' : 'people') }}
-              </mat-icon>
-              <span class="list-item-name">{{ list.title }}</span>
-              <span class="menu-item-count">{{ list.pubkeys.length }}</span>
-            </button>
-          }
-        </div>
-      }
-
-      <!-- Interests Section -->
-      <mat-divider></mat-divider>
-      
       <div class="menu-header" role="presentation">
         <mat-icon>tag</mat-icon>
         <span>Interests</span>
@@ -125,7 +78,7 @@ export interface InterestFeedSelection {
         </div>
       }
 
-      @if (selectedList() || selectedInterest()) {
+      @if (selectedInterest()) {
         <mat-divider></mat-divider>
         <button mat-menu-item (click)="onClearSelection()">
           <mat-icon>close</mat-icon>
@@ -269,28 +222,12 @@ export interface InterestFeedSelection {
 })
 export class ListFeedMenuComponent {
   private logger = inject(LoggerService);
-  private followSetsService = inject(FollowSetsService);
   private collectionSetsService = inject(CollectionSetsService);
 
-  // Outputs
-  listSelected = output<ListFeedSelection | null>();
   interestSelected = output<InterestFeedSelection | null>();
 
   // State
-  selectedList = signal<string>('');
   selectedInterest = signal<string>('');
-
-  // Expose service signals for people lists, with Favorites at top then sorted alphabetically
-  followSets = computed(() =>
-    this.followSetsService.followSets().slice().sort((a, b) => {
-      // Favorites always first
-      if (a.title.toLowerCase() === 'favorites') return -1;
-      if (b.title.toLowerCase() === 'favorites') return 1;
-      // Then sort alphabetically
-      return a.title.localeCompare(b.title);
-    })
-  );
-  isLoading = this.followSetsService.isLoading;
 
   // Interest sets - consume the reactive signal from CollectionSetsService via computed()
   // Using computed() ensures Angular tracks this as a reactive dependency even when
@@ -298,30 +235,12 @@ export class ListFeedMenuComponent {
   interestSets = computed(() => this.collectionSetsService.interestSets());
   isLoadingInterests = computed(() => this.collectionSetsService.interestSetsLoading());
 
-  onSelectList(list: FollowSet): void {
-    if (list.pubkeys.length === 0) {
-      this.logger.warn('[ListFeedMenu] Selected list has no pubkeys');
-      return;
-    }
-
-    // Clear interest selection when selecting a list
-    this.selectedInterest.set('');
-    this.selectedList.set(list.dTag);
-    this.listSelected.emit({
-      dTag: list.dTag,
-      title: list.title,
-      pubkeys: list.pubkeys,
-    });
-  }
-
   onSelectInterest(interest: InterestSet): void {
     if (interest.hashtags.length === 0) {
       this.logger.warn('[ListFeedMenu] Selected interest has no hashtags');
       return;
     }
 
-    // Clear list selection when selecting an interest
-    this.selectedList.set('');
     this.selectedInterest.set(interest.identifier);
     this.interestSelected.emit({
       dTag: interest.identifier,
@@ -331,24 +250,15 @@ export class ListFeedMenuComponent {
   }
 
   onClearSelection(): void {
-    this.selectedList.set('');
     this.selectedInterest.set('');
-    this.listSelected.emit(null);
     this.interestSelected.emit(null);
-  }
-
-  setSelectedList(dTag: string): void {
-    this.selectedList.set(dTag);
-    this.selectedInterest.set('');
   }
 
   setSelectedInterest(dTag: string): void {
     this.selectedInterest.set(dTag);
-    this.selectedList.set('');
   }
 
   clearSelection(): void {
-    this.selectedList.set('');
     this.selectedInterest.set('');
   }
 }

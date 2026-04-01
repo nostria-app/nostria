@@ -56,7 +56,7 @@ import { ImagePlaceholderService } from '../../services/image-placeholder.servic
 import { TrendingColumnComponent } from './trending-column/trending-column.component';
 import { RelayColumnComponent } from './relay-column/relay-column.component';
 import { RelayFeedMenuComponent } from './relay-feed-menu/relay-feed-menu.component';
-import { ListFeedMenuComponent, ListFeedSelection, InterestFeedSelection } from './list-feed-menu/list-feed-menu.component';
+import { ListFeedMenuComponent, InterestFeedSelection } from './list-feed-menu/list-feed-menu.component';
 import { ListColumnComponent, ListFeedData } from './list-column/list-column.component';
 import { FeedFilterPanelComponent } from './feed-filter-panel/feed-filter-panel.component';
 import { FilterButtonComponent } from '../../components/filter-button/filter-button.component';
@@ -226,6 +226,7 @@ export class FeedsComponent implements OnDestroy {
   listMentionedMode = signal(false);
   @ViewChild('listFeedMenu') listFeedMenu?: ListFeedMenuComponent;
   @ViewChild('listColumn') listColumn?: ListColumnComponent;
+  currentListFilter = computed(() => this.activeListFeed()?.dTag || 'following');
 
   // Dynamic hashtag feed state - for viewing hashtags from Interests page
   dynamicFeed = signal<FeedConfig | null>(null);
@@ -894,7 +895,7 @@ export class FeedsComponent implements OnDestroy {
         this.cleanupDynamicFeed();
 
         // Find the list by dTag from the FollowSetsService
-        const followSets = this.listFeedMenu?.followSets() || [];
+        const followSets = this.followSetsService.followSets();
         const list = followSets.find(set => set.dTag === listParam);
 
         if (list && list.pubkeys.length > 0) {
@@ -903,11 +904,6 @@ export class FeedsComponent implements OnDestroy {
             title: list.title,
             pubkeys: list.pubkeys,
           });
-
-          // Update the list feed menu selection if available
-          if (this.listFeedMenu) {
-            this.listFeedMenu.setSelectedList(listParam);
-          }
         } else {
           this.logger.warn(`List not found or empty: ${listParam}`);
           // Clear the list param since list wasn't found
@@ -1703,30 +1699,30 @@ export class FeedsComponent implements OnDestroy {
     });
   }
 
-  /**
-   * Handle list selection from the list feed menu
-   */
-  onListSelected(selection: ListFeedSelection | null): void {
-    if (selection) {
-      // Clear relay feed if active
-      this.activeRelayDomain.set('');
-
-      // Set the list feed data
-      this.activeListFeed.set({
-        dTag: selection.dTag,
-        title: selection.title,
-        pubkeys: selection.pubkeys,
-      });
-
-      // Navigate with list query param
-      // Don't clear the active feed - we just overlay the list feed view
-      this.router.navigate(['/f'], {
-        queryParams: { l: selection.dTag, r: null },
-        queryParamsHandling: 'merge',
-      });
-    } else {
+  onListFilterChanged(filter: string): void {
+    if (filter === 'following') {
       this.closeListFeed();
+      return;
     }
+
+    const selectedSet = this.followSetsService.followSets().find(set => set.dTag === filter);
+    if (!selectedSet || selectedSet.pubkeys.length === 0) {
+      this.logger.warn(`List not found or empty: ${filter}`);
+      return;
+    }
+
+    this.activeRelayDomain.set('');
+
+    this.activeListFeed.set({
+      dTag: selectedSet.dTag,
+      title: selectedSet.title,
+      pubkeys: [...selectedSet.pubkeys],
+    });
+
+    this.router.navigate(['/f'], {
+      queryParams: { l: selectedSet.dTag, r: null },
+      queryParamsHandling: 'merge',
+    });
   }
 
   /**
@@ -1735,7 +1731,6 @@ export class FeedsComponent implements OnDestroy {
   closeListFeed(): void {
     this.activeListFeed.set(null);
     this.listMentionedMode.set(false);
-    this.listFeedMenu?.clearSelection();
 
     this.router.navigate(['/f'], {
       queryParams: { l: null },

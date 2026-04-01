@@ -1,4 +1,4 @@
-import { Component, inject, output, computed, ChangeDetectionStrategy, input, signal, effect } from '@angular/core';
+import { Component, inject, output, computed, ChangeDetectionStrategy, input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -7,6 +7,7 @@ import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatSliderModule } from '@angular/material/slider';
 import { LocalSettingsService, DEFAULT_CONTENT_FILTER, getEffectiveWotMinRank, isWotFilterEnabled } from '../../../services/local-settings.service';
 import { FeedConfig, FeedService } from '../../../services/feed.service';
+import { FollowSetsService } from '../../../services/follow-sets.service';
 
 /**
  * Content type definition for filter options
@@ -72,136 +73,231 @@ function isStandardKindsSelection(kinds: number[]): boolean {
   ],
   template: `
     <div class="filter-panel" (click)="$event.stopPropagation()">
-      <!-- Authored / Mentioned toggle - only shown for list feeds -->
-      @if (isListFeed()) {
-        <div class="source-mode-section">
-          <div class="section-label">Show events where list members are</div>
-          <mat-button-toggle-group
-            [value]="currentMentionedMode() ? 'mentioned' : 'authored'"
-            (change)="onSourceModeChange($event.value)">
-            <mat-button-toggle value="authored">
-              <mat-icon>edit</mat-icon>
-              <span>Authored</span>
-            </mat-button-toggle>
-            <mat-button-toggle value="mentioned">
-              <mat-icon>alternate_email</mat-icon>
-              <span>Mentioned</span>
-            </mat-button-toggle>
-          </mat-button-toggle-group>
-        </div>
-      }
-
-      <!-- Custom Filter Warning -->
-      @if (hasCustomFilter()) {
-        <div class="custom-filter-notice">
-          <div class="notice-content">
-            <mat-icon>tune</mat-icon>
-            <div class="notice-text">
-              <span class="notice-title">Custom Filter Active</span>
-              <span class="notice-description">This feed has custom event kinds configured. Clear to use presets.</span>
-            </div>
+      <div class="filter-column content-filter-column">
+        @if (isListFeed()) {
+          <div class="source-mode-section">
+            <div class="section-label">Show events where list members are</div>
+            <mat-button-toggle-group
+              [value]="currentMentionedMode() ? 'mentioned' : 'authored'"
+              (change)="onSourceModeChange($event.value)">
+              <mat-button-toggle value="authored">
+                <mat-icon>edit</mat-icon>
+                <span>Authored</span>
+              </mat-button-toggle>
+              <mat-button-toggle value="mentioned">
+                <mat-icon>alternate_email</mat-icon>
+                <span>Mentioned</span>
+              </mat-button-toggle>
+            </mat-button-toggle-group>
           </div>
-          <button mat-stroked-button class="clear-custom-btn" (click)="clearCustomFilter()">
-            <mat-icon>clear</mat-icon>
-            Clear Custom
-          </button>
-        </div>
-      }
-
-      <!-- Content Types Grid -->
-      <div class="content-types-grid" [class.disabled]="hasCustomFilter()">
-        @for (type of availableContentTypes(); track type.id) {
-          <button
-            class="content-type-chip"
-            [class.selected]="isContentTypeSelected(type)"
-            [disabled]="hasCustomFilter()"
-            (click)="toggleContentType(type)">
-            <mat-icon class="chip-icon">{{ type.icon }}</mat-icon>
-            <div class="chip-text">
-              <span class="chip-label">{{ type.label }}</span>
-              <span class="chip-description">{{ type.description }}</span>
-            </div>
-          </button>
         }
-      </div>
 
-      <div class="toggle-options-grid">
-        @for (option of toggleFilterOptions; track option.id) {
+        @if (hasCustomFilter()) {
+          <div class="custom-filter-notice">
+            <div class="notice-content">
+              <mat-icon>tune</mat-icon>
+              <div class="notice-text">
+                <span class="notice-title">Custom Filter Active</span>
+                <span class="notice-description">This feed has custom event kinds configured. Clear to use presets.</span>
+              </div>
+            </div>
+            <button mat-stroked-button class="clear-custom-btn" (click)="clearCustomFilter()">
+              <mat-icon>clear</mat-icon>
+              Clear Custom
+            </button>
+          </div>
+        }
+
+        <div class="combined-filter-header">
+          <span class="combined-filter-title">Content types</span>
+          @if (hasCustomFilter()) {
+          <span class="combined-filter-status">Custom</span>
+          }
+        </div>
+
+        <div class="content-types-grid" [class.disabled]="hasCustomFilter()">
+          @for (type of availableContentTypes(); track type.id) {
+            <button
+              class="content-type-chip"
+              [class.selected]="isContentTypeSelected(type)"
+              [disabled]="hasCustomFilter()"
+              (click)="toggleContentType(type)">
+              <mat-icon class="chip-icon">{{ type.icon }}</mat-icon>
+              <div class="chip-text">
+                <span class="chip-label">{{ type.label }}</span>
+                <span class="chip-description">{{ type.description }}</span>
+              </div>
+            </button>
+          }
+        </div>
+
+        <div class="toggle-options-grid">
+          @for (option of toggleFilterOptions; track option.id) {
+          <div class="toggle-option">
+            <button
+              class="content-type-chip full-width"
+              [class.selected]="isToggleOptionSelected(option)"
+              (click)="toggleOption(option)">
+              <mat-icon class="chip-icon">{{ option.icon }}</mat-icon>
+              <div class="chip-text">
+                <span class="chip-label">{{ option.label }}</span>
+                <span class="chip-description">{{ option.description }}</span>
+              </div>
+            </button>
+          </div>
+          }
+        </div>
+
+        @if (trustProviderEnabled()) {
         <div class="toggle-option">
           <button
             class="content-type-chip full-width"
-            [class.selected]="isToggleOptionSelected(option)"
-            (click)="toggleOption(option)">
-            <mat-icon class="chip-icon">{{ option.icon }}</mat-icon>
+            [class.selected]="currentWotEnabled()"
+            (click)="onWotFilterChange(!currentWotEnabled())">
+            <mat-icon class="chip-icon">shield</mat-icon>
             <div class="chip-text">
-              <span class="chip-label">{{ option.label }}</span>
-              <span class="chip-description">{{ option.description }}</span>
+              <span class="chip-label">Web of Trust</span>
+              <span class="chip-description">Only show events from trusted users</span>
             </div>
           </button>
+
+          @if (currentWotEnabled()) {
+          <div class="wot-slider-panel">
+            <div class="wot-slider-header">
+              <span class="section-label">Min WoT rank</span>
+              <span class="wot-slider-value">{{ currentWotMinRankLabel() }}</span>
+            </div>
+            <mat-slider min="0" max="100" step="1" discrete>
+              <input
+                matSliderThumb
+                [value]="currentWotMinRank()"
+                title="Minimum Web of Trust rank"
+                aria-label="Minimum Web of Trust rank"
+                (valueChange)="onWotMinRankChange($any($event))" />
+            </mat-slider>
+            <p class="wot-slider-hint">0 includes authors with a positive trust rank.</p>
+          </div>
+          }
         </div>
         }
+
+        <div class="actions-row">
+          <button mat-stroked-button class="action-btn" (click)="selectAll()" [disabled]="hasCustomFilter()">
+            Select All
+          </button>
+          <button mat-stroked-button class="action-btn" (click)="clearAll()" [disabled]="hasCustomFilter()">
+            Clear All
+          </button>
+          <button mat-stroked-button class="action-btn" (click)="reset()">
+            Reset
+          </button>
+        </div>
       </div>
 
-      <!-- Web of Trust Filter Toggle -->
-      @if (trustProviderEnabled()) {
-      <div class="toggle-option">
-        <button
-          class="content-type-chip full-width"
-          [class.selected]="currentWotEnabled()"
-          (click)="onWotFilterChange(!currentWotEnabled())">
-          <mat-icon class="chip-icon">shield</mat-icon>
+      <div class="combined-filter-divider"></div>
+
+      <div class="filter-column list-filter-column">
+        <div class="combined-filter-header">
+          <span class="combined-filter-title">List filter</span>
+          @if (currentListFilter() !== 'following') {
+          <span class="combined-filter-status">Active</span>
+          }
+        </div>
+
+        <button class="filter-option-chip" [class.selected]="currentListFilter() === 'following'"
+          (click)="selectListFilter('following')">
+          <mat-icon class="chip-icon">people</mat-icon>
           <div class="chip-text">
-            <span class="chip-label">Web of Trust</span>
-            <span class="chip-description">Only show events from trusted users</span>
+            <span class="chip-label">Following</span>
+            <span class="chip-description">People you follow</span>
           </div>
         </button>
 
-        @if (currentWotEnabled()) {
-        <div class="wot-slider-panel">
-          <div class="wot-slider-header">
-            <span class="section-label">Min WoT rank</span>
-            <span class="wot-slider-value">{{ currentWotMinRankLabel() }}</span>
+        @if (favoritesSet(); as favorites) {
+        <button class="filter-option-chip" [class.selected]="currentListFilter() === 'nostria-favorites'"
+          (click)="selectListFilter('nostria-favorites')">
+          <mat-icon class="chip-icon">star</mat-icon>
+          <div class="chip-text">
+            <span class="chip-label">Favorites</span>
+            <span class="chip-description">{{ favorites.pubkeys.length }} people</span>
           </div>
-          <mat-slider min="0" max="100" step="1" discrete>
-            <input
-              matSliderThumb
-              [value]="currentWotMinRank()"
-              title="Minimum Web of Trust rank"
-              aria-label="Minimum Web of Trust rank"
-              (valueChange)="onWotMinRankChange($any($event))" />
-          </mat-slider>
-          <p class="wot-slider-hint">0 includes authors with a positive trust rank.</p>
-        </div>
+        </button>
         }
-      </div>
-      }
 
-      <!-- Actions Row -->
-      <div class="actions-row">
-        <button mat-stroked-button class="action-btn" (click)="selectAll()" [disabled]="hasCustomFilter()">
-          Select All
+        @if (otherFollowSets().length > 0) {
+        <mat-divider></mat-divider>
+        @for (set of otherFollowSets(); track set.id) {
+        <button class="filter-option-chip" [class.selected]="currentListFilter() === set.dTag"
+          (click)="selectListFilter(set.dTag)">
+          <mat-icon class="chip-icon">{{ set.isPrivate ? 'lock' : 'group' }}</mat-icon>
+          <div class="chip-text">
+            <span class="chip-label">{{ set.title }}</span>
+            <span class="chip-description">{{ set.pubkeys.length }} people</span>
+          </div>
         </button>
-        <button mat-stroked-button class="action-btn" (click)="clearAll()" [disabled]="hasCustomFilter()">
-          Clear All
-        </button>
-        <button mat-stroked-button class="action-btn" (click)="reset()">
-          Reset
-        </button>
+        }
+        }
+
+        <div class="actions-row single-action-row">
+          <button mat-stroked-button class="action-btn" (click)="resetListFilter()">
+            Reset
+          </button>
+        </div>
       </div>
     </div>
   `,
   styles: [`
     .filter-panel {
       display: flex;
-      flex-direction: column;
+      flex-direction: row;
       gap: 1rem;
       padding: 1rem;
-      width: 100%;
-      max-width: 340px;
+      width: min(720px, calc(100vw - 2rem));
+      max-width: calc(100vw - 2rem);
+      max-height: 75vh;
+      overflow: hidden;
       background: var(--mat-sys-surface-container);
       border-radius: 12px;
       border: 1px solid var(--mat-sys-outline-variant);
       box-sizing: border-box;
+      align-items: stretch;
+    }
+
+    .filter-column {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      flex: 1;
+      min-width: 0;
+      min-height: 0;
+      overflow-y: auto;
+      padding-right: 0.25rem;
+    }
+
+    .combined-filter-divider {
+      width: 1px;
+      background: var(--mat-sys-outline-variant);
+      flex-shrink: 0;
+    }
+
+    .combined-filter-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+    }
+
+    .combined-filter-title {
+      color: var(--mat-sys-on-surface);
+      font-size: 0.95rem;
+    }
+
+    .combined-filter-status {
+      color: var(--mat-sys-on-primary-container);
+      background: var(--mat-sys-primary-container);
+      border-radius: 999px;
+      padding: 0.2rem 0.55rem;
+      font-size: 0.75rem;
     }
 
     .custom-filter-notice {
@@ -337,6 +433,42 @@ function isStandardKindsSelection(kinds: number[]): boolean {
       width: 100%;
     }
 
+    .filter-option-chip {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.75rem 1rem;
+      border-radius: 8px;
+      border: 1px solid var(--mat-sys-outline-variant);
+      background: var(--mat-sys-surface);
+      cursor: pointer;
+      transition: all 0.15s ease;
+      text-align: left;
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    .filter-option-chip:hover {
+      background: var(--mat-sys-surface-container-high);
+      border-color: var(--mat-sys-outline);
+    }
+
+    .filter-option-chip.selected {
+      background: var(--mat-sys-primary-container);
+      border-color: var(--mat-sys-primary);
+    }
+
+    .filter-option-chip.selected .chip-icon,
+    .filter-option-chip.selected .chip-label {
+      color: var(--mat-sys-on-primary-container);
+    }
+
+    .filter-option-chip.selected .chip-description {
+      color: var(--mat-sys-on-primary-container);
+      opacity: 0.8;
+    }
+
     .toggle-option {
       padding: 0.25rem 0;
     }
@@ -388,6 +520,10 @@ function isStandardKindsSelection(kinds: number[]): boolean {
       flex-wrap: wrap;
     }
 
+    .single-action-row {
+      margin-top: auto;
+    }
+
     .action-btn {
       flex: 1;
       min-width: 70px;
@@ -423,17 +559,32 @@ function isStandardKindsSelection(kinds: number[]): boolean {
       height: 1.125rem;
       margin-right: 0.375rem;
     }
+
+    @media (max-width: 640px) {
+      .filter-panel {
+        flex-direction: column;
+      }
+
+      .combined-filter-divider {
+        width: 100%;
+        height: 1px;
+      }
+    }
   `]
 })
 export class FeedFilterPanelComponent {
   readonly localSettings = inject(LocalSettingsService);
   readonly feedService = inject(FeedService);
+  private readonly followSetsService = inject(FollowSetsService);
 
   // Input: the feed to configure (if provided, saves to feed; otherwise uses global)
   feed = input<FeedConfig | undefined>(undefined);
 
   // Input: whether the filter panel is being shown for a list feed
   isListFeed = input(false);
+
+  // Input: currently selected people/list filter
+  currentListFilter = input<string>('following');
 
   // Input: current mentioned mode state from parent
   mentionedMode = input(false);
@@ -444,6 +595,7 @@ export class FeedFilterPanelComponent {
   showRepostsChanged = output<boolean>();
   mentionedModeChanged = output<boolean>();
   wotFilterChanged = output<boolean>();
+  listFilterChanged = output<string>();
 
   // Compute the current mentioned mode from input
   currentMentionedMode = computed(() => this.mentionedMode());
@@ -452,6 +604,17 @@ export class FeedFilterPanelComponent {
   availableContentTypes = computed(() => CONTENT_TYPES);
 
   readonly toggleFilterOptions = TOGGLE_FILTER_OPTIONS;
+
+  favoritesSet = computed(() =>
+    this.followSetsService.followSets().find(set => set.dTag === 'nostria-favorites') ?? null
+  );
+
+  otherFollowSets = computed(() =>
+    this.followSetsService.followSets()
+      .filter(set => set.dTag !== 'nostria-favorites')
+      .slice()
+      .sort((a, b) => a.title.localeCompare(b.title))
+  );
 
   // Track the current kinds - from feed config if available, otherwise from global settings
   currentKinds = computed(() => {
@@ -624,6 +787,14 @@ export class FeedFilterPanelComponent {
    */
   onSourceModeChange(mode: string): void {
     this.mentionedModeChanged.emit(mode === 'mentioned');
+  }
+
+  selectListFilter(filter: string): void {
+    this.listFilterChanged.emit(filter);
+  }
+
+  resetListFilter(): void {
+    this.listFilterChanged.emit('following');
   }
 
   /**
