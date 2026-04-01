@@ -11,6 +11,7 @@ export interface CompressionPreviewDialogData {
   file: File;
   uploadSettings: MediaUploadSettings;
   contextLabel?: string;
+  previewResult?: CompressionPreviewResult;
 }
 
 @Component({
@@ -120,6 +121,18 @@ export class CompressionPreviewDialogComponent implements OnInit, OnDestroy {
   async ngOnInit(): Promise<void> {
     if (!this.data?.file) {
       this.errorMessage.set('No file was provided for the optimization preview.');
+      this.isLoading.set(false);
+      return;
+    }
+
+    if (this.data.previewResult) {
+      this.previewResult.set(this.data.previewResult);
+      this.originalObjectUrl.set(URL.createObjectURL(this.data.previewResult.originalFile));
+
+      if (this.data.previewResult.compressedFile) {
+        this.compressedObjectUrl.set(URL.createObjectURL(this.data.previewResult.compressedFile));
+      }
+
       this.isLoading.set(false);
       return;
     }

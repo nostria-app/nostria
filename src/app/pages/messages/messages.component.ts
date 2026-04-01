@@ -91,7 +91,7 @@ import { isImageUrl } from '../../services/format/utils';
 import { HiddenChatInfoPromptComponent } from '../../components/hidden-chat-info-prompt/hidden-chat-info-prompt.component';
 import { HapticsService } from '../../services/haptics.service';
 import { EmojiSetService } from '../../services/emoji-set.service';
-import { MediaProcessingService, type PreparedUploadFile } from '../../services/media-processing.service';
+import { MediaProcessingService, type CompressionPreviewResult, type PreparedUploadFile } from '../../services/media-processing.service';
 import {
   DEFAULT_DM_MEDIA_UPLOAD_SETTINGS,
   getMediaOptimizationDescription,
@@ -2994,6 +2994,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
         file: stagedPreview.sourceFile ?? stagedPreview.file,
         uploadSettings: this.getDmUploadSettingsForPreview(stagedPreview),
         contextLabel: 'Encrypted attachment',
+        previewResult: this.getDmExistingCompressionPreview(stagedPreview),
       },
     });
   }
@@ -3350,6 +3351,18 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     }
 
     return Math.round((1 - comparisonSize / originalSize) * 100);
+  }
+
+  private getDmExistingCompressionPreview(preview: PendingEncryptedMediaPreview): CompressionPreviewResult {
+    const originalFile = preview.sourceFile ?? preview.file;
+    const hasProcessedFile = preview.file !== originalFile;
+
+    return {
+      originalFile,
+      compressedFile: hasProcessedFile ? preview.file : undefined,
+      willUploadCompressedFile: hasProcessedFile,
+      warningMessage: preview.warningMessage,
+    };
   }
 
   private formatCompactFileSize(bytes?: number): string {
