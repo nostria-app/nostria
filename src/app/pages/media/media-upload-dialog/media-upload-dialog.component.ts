@@ -18,6 +18,7 @@ import {
   getMediaOptimizationOption,
   getMediaUploadSettingsForOptimization,
   MEDIA_OPTIMIZATION_OPTIONS,
+  normalizeCompressionStrength,
   type MediaOptimizationOptionValue,
   MediaUploadDialogResult,
   MediaUploadMode,
@@ -97,7 +98,9 @@ export class MediaUploadDialogComponent implements OnDestroy {
   }
 
   resetCompressionStrength(): void {
-    this.compressionStrength.set(this.defaultCompressionStrength);
+    this.compressionStrength.set(DEFAULT_MEDIA_UPLOAD_SETTINGS.compressionStrength);
+  }
+
   onOptimizationChange(optimization: MediaOptimizationOptionValue): void {
     const settings = getMediaUploadSettingsForOptimization(optimization);
     this.uploadMode.set(settings.mode);
