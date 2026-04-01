@@ -36,6 +36,11 @@ import { FollowingDataService } from './following-data.service';
 import { SettingsService, SyncedFeedConfig } from './settings.service';
 import { EventProcessorService } from './event-processor.service';
 import { EventFocusService } from './event-focus.service';
+import {
+  DEFAULT_FEED_MEMORY_LIMITS,
+  FeedMemoryLimits,
+  getRuntimeResourceProfile,
+} from '../utils/runtime-resource-profile';
 
 export interface FeedItem {
   feed: FeedConfig;
@@ -268,13 +273,12 @@ export class FeedService {
 
   // Feed type definitions
   readonly feedTypes = COLUMN_TYPES;
-
-  // Feed memory/cache limits
-  private readonly MAX_EVENTS_PER_FEED = 2000;
-  private readonly MAX_PENDING_EVENTS_PER_FEED = 400;
-  private readonly MAX_FEED_CACHE_EVENTS = 2400;
+  private readonly runtimeResourceProfile = getRuntimeResourceProfile();
 
   constructor() {
+    const feedLimits = this.getFeedMemoryLimits();
+    this.logger.info('📉 [FeedService] Feed memory limits configured', feedLimits);
+
     // Track if we've already started loading for the current pubkey
     let loadingForPubkey: string | null = null;
 
@@ -489,23 +493,28 @@ export class FeedService {
   }
 
   private limitDisplayedEvents(events: Event[]): Event[] {
-    return this.dedupeSortAndLimitEvents(events, this.MAX_EVENTS_PER_FEED);
+    return this.dedupeSortAndLimitEvents(events, this.getFeedMemoryLimits().maxEvents);
   }
 
   private limitPendingEvents(events: Event[]): Event[] {
-    return this.dedupeSortAndLimitEvents(events, this.MAX_PENDING_EVENTS_PER_FEED);
+    return this.dedupeSortAndLimitEvents(events, this.getFeedMemoryLimits().maxPending);
   }
 
   private trimFeedState(feedData: FeedItem): void {
+    const feedLimits = this.getFeedMemoryLimits();
     const currentEvents = feedData.events();
-    if (currentEvents.length > this.MAX_EVENTS_PER_FEED) {
+    if (currentEvents.length > feedLimits.maxEvents) {
       feedData.events.set(this.limitDisplayedEvents(currentEvents));
     }
 
     const currentPending = feedData.pendingEvents?.();
-    if (currentPending && currentPending.length > this.MAX_PENDING_EVENTS_PER_FEED) {
+    if (currentPending && currentPending.length > feedLimits.maxPending) {
       feedData.pendingEvents?.set(this.limitPendingEvents(currentPending));
     }
+  }
+
+  private getFeedMemoryLimits(): FeedMemoryLimits {
+    return this.runtimeResourceProfile?.feedLimits ?? DEFAULT_FEED_MEMORY_LIMITS;
   }
 
   /**
@@ -576,7 +585,7 @@ export class FeedService {
       try {
         await this.database.init();
 
-        const eventsToCache = this.dedupeSortAndLimitEvents(events, this.MAX_FEED_CACHE_EVENTS);
+        const eventsToCache = this.dedupeSortAndLimitEvents(events, this.getFeedMemoryLimits().maxCache);
 
         // Save to cache for instant loading
         await this.database.saveCachedEvents(pubkey, feedId, eventsToCache);
@@ -1907,7 +1916,10 @@ export class FeedService {
     this.trimFeedState(feedData);
     const pendingEvents = feedData.pendingEvents?.() || [];
     const allEventsForCache = [...feedData.events(), ...pendingEvents];
-    const uniqueEventsForCache = this.dedupeSortAndLimitEvents(allEventsForCache, this.MAX_FEED_CACHE_EVENTS);
+    const uniqueEventsForCache = this.dedupeSortAndLimitEvents(
+      allEventsForCache,
+      this.getFeedMemoryLimits().maxCache
+    );
 
     this.saveCachedEvents(feedData.feed.id, uniqueEventsForCache);
 
