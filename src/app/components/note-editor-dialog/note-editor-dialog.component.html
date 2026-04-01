@@ -451,9 +451,9 @@
         <mat-icon>close</mat-icon>
       </button>
       <button type="button" class="media-thumbnail-button" [class.pending-upload]="media.pendingUpload"
-        [attr.aria-label]="media.pendingUpload ? 'Reinsert pending media placeholder' : 'Media preview'"
-        [matTooltip]="media.pendingUpload ? 'Reinsert placeholder tag' : ''" [matTooltipDisabled]="!media.pendingUpload"
-        (click)="reinsertPendingMediaReference(media)">
+        [attr.aria-label]="media.pendingUpload ? 'Reinsert pending media placeholder' : 'Open media preview'"
+        [matTooltip]="media.pendingUpload ? 'Reinsert placeholder tag' : 'Open preview'"
+        (click)="onMediaThumbnailClick(i, $event)">
         @if (media.mimeType?.startsWith('video/')) {
         <mat-icon class="video-icon">videocam</mat-icon>
         @if (getMediaThumbnailUrl(media)) {

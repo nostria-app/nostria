@@ -730,6 +730,48 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     this.saveAutoDraft();
   }
 
+  async onMediaThumbnailClick(index: number, event?: MouseEvent): Promise<void> {
+    event?.preventDefault();
+    event?.stopPropagation();
+
+    const media = this.mediaMetadata()[index];
+    if (!media) {
+      return;
+    }
+
+    if (media.pendingUpload) {
+      this.reinsertPendingMediaReference(media);
+      return;
+    }
+
+    const previewableMedia = this.mediaMetadata()
+      .map((item, itemIndex) => ({ item, itemIndex }))
+      .filter(({ item }) => !item.pendingUpload && !!item.url);
+
+    const selectedIndex = previewableMedia.findIndex(entry => entry.itemIndex === index);
+    if (selectedIndex === -1) {
+      return;
+    }
+
+    const { MediaPreviewDialogComponent } = await import('../media-preview-dialog/media-preview.component');
+
+    this.dialog.open(MediaPreviewDialogComponent, {
+      data: {
+        mediaItems: previewableMedia.map(({ item }) => ({
+          url: item.url,
+          type: item.mimeType?.startsWith('video/') ? 'video' : 'image',
+          title: item.alt || item.fileName,
+        })),
+        initialIndex: selectedIndex,
+      },
+      maxWidth: '100vw',
+      maxHeight: '100vh',
+      width: '100vw',
+      height: '100vh',
+      panelClass: 'image-dialog-panel',
+    });
+  }
+
   // Dialog mode indicators
   isReply = computed(() => !!this.data?.replyTo);
   isQuote = computed(() => !!this.data?.quote);

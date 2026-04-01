@@ -74,6 +74,9 @@ describe('NoteEditorDialogComponent', () => {
   let mockMediaProcessingService: {
     prepareFileForUpload: Mock;
   };
+  let mockMatDialog: {
+    open: Mock;
+  };
   let mockSnackBar: {
     open: Mock;
   };
@@ -133,6 +136,10 @@ describe('NoteEditorDialogComponent', () => {
       })),
     };
 
+    mockMatDialog = {
+      open: vi.fn(),
+    };
+
     mockSnackBar = {
       open: vi.fn(),
     };
@@ -173,7 +180,7 @@ describe('NoteEditorDialogComponent', () => {
         { provide: UtilitiesService, useValue: mockUtilitiesService },
         { provide: ImagePlaceholderService, useValue: {} },
         { provide: PublishEventBus, useValue: { results$: { subscribe: () => ({ unsubscribe: vi.fn() }) } } },
-        { provide: MatDialog, useValue: { open: vi.fn() } },
+        { provide: MatDialog, useValue: mockMatDialog },
         { provide: CustomDialogService, useValue: mockCustomDialogService },
         { provide: XDualPostService, useValue: mockXDualPostService },
         { provide: AiService, useValue: mockAiService },
@@ -505,6 +512,48 @@ describe('NoteEditorDialogComponent', () => {
       expect(component.mediaMetadata()).toHaveLength(1);
       expect(component.mediaMetadata()[0].pendingUpload).toBe(true);
       expect(component.content()).toContain(placeholder);
+    });
+
+    it('should open uploaded image thumbnails in the media preview dialog', async () => {
+      createComponent();
+      await fixture.whenStable();
+
+      component.mediaMetadata.set([
+        {
+          id: 'image-1',
+          url: 'https://cdn.example/photo.png',
+          previewUrl: 'https://cdn.example/photo.png',
+          mimeType: 'image/png',
+          fileName: 'photo.png',
+          originalSize: 4096,
+          processedSize: 2048,
+        },
+      ]);
+      fixture.detectChanges();
+
+      const previewButton = fixture.nativeElement.querySelector('.media-thumbnail-button') as HTMLButtonElement;
+      previewButton.click();
+      await vi.dynamicImportSettled();
+
+      expect(mockMatDialog.open).toHaveBeenCalledTimes(1);
+      expect(mockMatDialog.open).toHaveBeenCalledWith(
+        expect.any(Function),
+        expect.objectContaining({
+          data: {
+            mediaItems: [
+              {
+                url: 'https://cdn.example/photo.png',
+                type: 'image',
+                title: 'photo.png',
+              },
+            ],
+            initialIndex: 0,
+          },
+          panelClass: 'image-dialog-panel',
+          width: '100vw',
+          height: '100vh',
+        })
+      );
     });
 
     it('should skip queuing media when generating the pending video thumbnail fails', async () => {
