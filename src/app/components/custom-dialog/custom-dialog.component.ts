@@ -93,10 +93,12 @@ interface ScrollLockStyles {
             }
 
             @if (getHeaderIcon()) {
-              @if (headerIconIsImage()) {
-                <img [src]="getHeaderIcon()" [alt]="getTitle() || 'Dialog'" class="header-icon" />
-              } @else {
+              @if (getHeaderIconMode() === 'image') {
+                <img [src]="getHeaderIcon()" [alt]="getTitle() || 'Dialog'" class="header-icon header-image-icon" />
+              } @else if (getHeaderIconMode() === 'material') {
                 <mat-icon class="header-icon material-header-icon">{{ getHeaderIcon() }}</mat-icon>
+              } @else {
+                <span class="header-icon emoji-header-icon" [attr.aria-label]="getTitle() || 'Dialog'">{{ getHeaderIcon() }}</span>
               }
             }
 
@@ -275,8 +277,18 @@ export class CustomDialogComponent implements AfterViewInit, OnDestroy {
     return this.headerIcon();
   }
 
-  headerIconIsImage(): boolean {
-    return this.isImageIcon(this.getHeaderIcon());
+  getHeaderIconMode(): 'image' | 'material' | 'emoji' {
+    const icon = this.getHeaderIcon();
+
+    if (this.isImageIcon(icon)) {
+      return 'image';
+    }
+
+    if (this.isMaterialIcon(icon)) {
+      return 'material';
+    }
+
+    return 'emoji';
   }
 
   getSecondaryHeaderIcon(): string {
@@ -308,7 +320,17 @@ export class CustomDialogComponent implements AfterViewInit, OnDestroy {
   }
 
   private isImageIcon(value: string): boolean {
-    return /^(https?:\/\/|\/|\.\/|\.\.\/|data:)/.test(value);
+    if (!value) {
+      return false;
+    }
+
+    return /^(https?:\/\/|\/|\.\/|\.\.\/|data:image\/|blob:)/.test(value)
+      || /[\\/]/.test(value)
+      || /\.(png|jpe?g|gif|webp|svg|avif|ico)(?:[?#].*)?$/i.test(value);
+  }
+
+  private isMaterialIcon(value: string): boolean {
+    return /^[a-z0-9_]+$/i.test(value);
   }
 
   getDisableClose(): boolean {

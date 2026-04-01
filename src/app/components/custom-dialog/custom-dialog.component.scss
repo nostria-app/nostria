@@ -154,8 +154,9 @@
 .header-icon {
   width: 40px;
   height: 40px;
-  border-radius: 50%;
-  object-fit: cover;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
 
   @media (max-width: 700px),
@@ -168,6 +169,11 @@
     width: 32px;
     height: 32px;
   }
+}
+
+.header-image-icon {
+  border-radius: 50%;
+  object-fit: cover;
 }
 
 .material-header-icon {
@@ -185,6 +191,21 @@
 
   @media (max-height: 700px) {
     font-size: 24px;
+  }
+}
+
+.emoji-header-icon {
+  border-radius: 0;
+  font-size: 28px;
+  line-height: 1;
+
+  @media (max-width: 700px),
+  (max-height: 700px) {
+    font-size: 24px;
+  }
+
+  @media (max-height: 700px) {
+    font-size: 22px;
   }
 }
 
