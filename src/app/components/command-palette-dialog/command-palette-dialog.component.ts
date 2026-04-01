@@ -183,6 +183,20 @@ export class CommandPaletteDialogComponent implements AfterViewInit, OnDestroy {
       keywords: ['people', 'following', 'followers', 'contacts', 'friends']
     },
     {
+      id: 'nav-communities',
+      label: 'Open Communities',
+      icon: 'diversity_3',
+      action: () => this.router.navigate(['/n']),
+      keywords: ['communities', 'community', 'groups', 'spaces', 'forums']
+    },
+    {
+      id: 'nav-create-community',
+      label: 'Create Community',
+      icon: 'add_circle',
+      action: () => this.router.navigate(['/n/create']),
+      keywords: ['create community', 'new community', 'community', 'groups', 'spaces']
+    },
+    {
       id: 'nav-lists',
       label: 'Open Lists',
       icon: 'list',

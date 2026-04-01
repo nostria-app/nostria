@@ -32,7 +32,7 @@ export type MusicTrackSortValue = 'released' | 'published';
   ],
   template: `
     <app-filter-button [active]="isFilterActive()" [tooltip]="'Filter by: ' + filterTitle()">
-      <div class="filter-panel" [class.compact]="compact()" (click)="$event.stopPropagation()">
+      <div class="filter-panel" [class.compact]="compact()">
         <div class="filter-panel-left">
           <div class="section-title">List filter</div>
 
@@ -239,7 +239,7 @@ export class ListFilterMenuComponent implements OnInit {
   showWotOption = input<boolean>(false);
   compact = input<boolean>(false);
   defaultFilter = input<ListFilterValue>('following');
-  storageKey = input.required<'streams' | 'articles' | 'summary' | 'music' | 'calendar' | 'chats'>();
+  storageKey = input.required<'streams' | 'articles' | 'summary' | 'music' | 'communities' | 'calendar' | 'chats'>();
   initialFilter = input<ListFilterValue | undefined>(undefined); // Override from URL query params
 
   // Outputs
@@ -331,6 +331,9 @@ export class ListFilterMenuComponent implements OnInit {
         case 'music':
           savedFilter = this.accountLocalState.getMusicListFilter(pubkey);
           break;
+        case 'communities':
+          savedFilter = this.accountLocalState.getCommunitiesListFilter(pubkey);
+          break;
         case 'calendar':
           savedFilter = this.accountLocalState.getCalendarListFilter(pubkey);
           break;
@@ -369,6 +372,9 @@ export class ListFilterMenuComponent implements OnInit {
           break;
         case 'music':
           this.accountLocalState.setMusicListFilter(pubkey, filter);
+          break;
+        case 'communities':
+          this.accountLocalState.setCommunitiesListFilter(pubkey, filter);
           break;
         case 'calendar':
           this.accountLocalState.setCalendarListFilter(pubkey, filter);

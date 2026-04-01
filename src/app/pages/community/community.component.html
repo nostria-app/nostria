@@ -21,23 +21,25 @@
   </a>
   <h2 class="panel-title title-font">n/{{ community()!.name }}</h2>
   <span class="panel-header-spacer"></span>
-  @if (isAuthenticated()) {
-  <button mat-icon-button (click)="navigateToCreatePost()" class="create-post-btn" matTooltip="Create post">
-    <mat-icon>add</mat-icon>
-  </button>
-  @if (!isJoined()) {
-  <button mat-button (click)="joinCommunity()">
-    <mat-icon>add_circle_outline</mat-icon>
-    Join
-  </button>
-  }
-  }
-  <button mat-icon-button (click)="refresh()" matTooltip="Refresh">
-    <mat-icon>refresh</mat-icon>
-  </button>
-  <button mat-icon-button [matMenuTriggerFor]="headerMenu" matTooltip="More options">
-    <mat-icon>more_vert</mat-icon>
-  </button>
+  <div class="panel-header-actions">
+    @if (isAuthenticated()) {
+    <button mat-icon-button (click)="navigateToCreatePost()" class="create-post-btn" matTooltip="Create post">
+      <mat-icon>add</mat-icon>
+    </button>
+    @if (!isJoined()) {
+    <button mat-button (click)="joinCommunity()">
+      <mat-icon>add_circle_outline</mat-icon>
+      Join
+    </button>
+    }
+    }
+    <button mat-icon-button (click)="refresh()" matTooltip="Refresh">
+      <mat-icon>refresh</mat-icon>
+    </button>
+    <button mat-icon-button [matMenuTriggerFor]="headerMenu" matTooltip="More options">
+      <mat-icon>more_vert</mat-icon>
+    </button>
+  </div>
   <mat-menu #headerMenu="matMenu">
     <button mat-menu-item (click)="openShareDialog()">
       <mat-icon>share</mat-icon>
@@ -146,7 +148,13 @@
       } @else {
       <div class="posts-list">
         @for (post of sortedPosts(); track post.id) {
-        <div class="post-card" (click)="onPostCardClick(post, $event)">
+        <div
+          class="post-card"
+          role="button"
+          tabindex="0"
+          (click)="onPostCardClick(post, $event)"
+          (keydown.enter)="onPostCardClick(post, $event)"
+          (keydown.space)="onPostCardClick(post, $event)">
           <!-- Post Header: author info + timestamp -->
           <app-event-header [event]="post" [compact]="true"></app-event-header>
 
@@ -188,7 +196,16 @@
           @if (getPostImages(post).length > 0) {
           <div class="post-images">
             @for (img of getPostImages(post); track img; let i = $index) {
-            <img [src]="img" alt="Post image" class="post-image" loading="lazy" (click)="openImagePreview(post, i); $event.stopPropagation()" />
+            <img
+              [src]="img"
+              alt="Post image"
+              class="post-image"
+              loading="lazy"
+              role="button"
+              tabindex="0"
+              (click)="openImagePreview(post, i); $event.stopPropagation()"
+              (keydown.enter)="openImagePreview(post, i); $event.stopPropagation()"
+              (keydown.space)="openImagePreview(post, i); $event.preventDefault(); $event.stopPropagation()" />
             }
           </div>
           }

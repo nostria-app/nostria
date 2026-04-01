@@ -126,6 +126,7 @@ interface AccountLocalState {
   articlesListFilter?: string; // Filter for articles: 'following', 'public', or follow set d-tag
   summaryListFilter?: string; // Filter for summary: 'following' or follow set d-tag
   musicListFilter?: string; // Filter for music: 'all', 'following', or follow set d-tag
+  communitiesListFilter?: string; // Filter for communities: 'all', 'following', or follow set d-tag
   musicTrackSort?: string; // Track sort for music: 'released' or 'published'
   calendarListFilter?: string; // Filter for calendar: 'all', 'following', or follow set d-tag
   chatsListFilter?: string; // Filter for chats: 'all', 'following', or follow set d-tag
@@ -1829,6 +1830,24 @@ export class AccountLocalStateService {
     // Only store non-default values
     const value = filter === 'all' ? undefined : filter;
     this.updateAccountState(pubkey, { musicListFilter: value });
+  }
+
+  /**
+   * Get communities list filter for an account
+   * Returns 'all' if not set (shows all communities)
+   */
+  getCommunitiesListFilter(pubkey: string): string {
+    const state = this.getAccountState(pubkey);
+    return state.communitiesListFilter || 'all';
+  }
+
+  /**
+   * Set communities list filter for an account
+   * @param filter - 'all', 'following', or a follow set d-tag
+   */
+  setCommunitiesListFilter(pubkey: string, filter: string): void {
+    const value = filter === 'all' ? undefined : filter;
+    this.updateAccountState(pubkey, { communitiesListFilter: value });
   }
 
   /**
