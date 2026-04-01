@@ -1094,13 +1094,13 @@ npm run tauri android dev
 
 ### Editors
 
-| Type           | Component                      | Event Kind                  |
-| -------------- | ------------------------------ | --------------------------- |
-| **Note**       | `NoteEditorDialogComponent`    | 1                           |
-| **Article**    | `ArticleEditorDialogComponent` | 30023                       |
-| **Media**      | `MediaCreatorDialogComponent`  | Varies                      |
-| **Video Clip** | `VideoRecordDialogComponent`   | 1063                        |
-| **Audio Clip** | `AudioRecordDialogComponent`   | 1222 (root), 1244 (replies) |
+| Type            | Component                      | Event Kind                   |
+| --------------- | ------------------------------ | ---------------------------- |
+| **Note**        | `NoteEditorDialogComponent`    | 1                            |
+| **Article**     | `ArticleEditorDialogComponent` | 30023                        |
+| **Media**       | `MediaCreatorDialogComponent`  | Varies                       |
+| **Video Clip**  | `VideoRecordDialogComponent`   | 1063                         |
+| **Audio Clip**  | `AudioRecordDialogComponent`   | 1222 (root), 1244 (replies)  |
 | **Live Stream** | `StreamingAppsDialogComponent` | 30311 (NIP-53 live activity) |
 
 ### Publishing Flow

@@ -70,6 +70,7 @@ interface ScrollLockStyles {
         class="dialog-container"
         [ngClass]="panelClass()"
         (click)="$event.stopPropagation()"
+        (keydown)="$event.stopPropagation()"
         role="dialog"
         [attr.aria-labelledby]="getTitle() ? 'dialog-title' : null"
         cdkTrapFocus
