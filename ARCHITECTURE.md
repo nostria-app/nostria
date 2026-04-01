@@ -1062,15 +1062,18 @@ If SSR fails for a bot request, a fallback HTML page is served with default meta
 ### Desktop (Tauri)
 
 ```bash
-npm run tauri dev      # Development
-npm run tauri build    # Production build
+npm run tauri:dev            # Development
+npm run tauri:build          # Cross-platform desktop build
+npm run tauri:build:linux    # Linux installers (.AppImage, .deb)
+npm run tauri:build:windows  # Windows installers (.msi, .exe)
+npm run tauri:build:macos    # Universal macOS DMG
 ```
 
 **Features:**
 
 - Native window management
-- System tray integration
-- Auto-updates
+- Local bundled Angular frontend from `dist/app/browser`
+- GitHub Actions workflows for desktop build validation and release publishing
 
 ### Mobile
 
