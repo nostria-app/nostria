@@ -91,7 +91,7 @@ import { isImageUrl } from '../../services/format/utils';
 import { HiddenChatInfoPromptComponent } from '../../components/hidden-chat-info-prompt/hidden-chat-info-prompt.component';
 import { HapticsService } from '../../services/haptics.service';
 import { EmojiSetService } from '../../services/emoji-set.service';
-import { MediaProcessingService } from '../../services/media-processing.service';
+import { MediaProcessingService, type PreparedUploadFile } from '../../services/media-processing.service';
 import {
   DEFAULT_DM_MEDIA_UPLOAD_SETTINGS,
   getMediaOptimizationDescription,
@@ -190,8 +190,27 @@ interface PendingEncryptedMediaPreview {
   id: string;
   objectUrl: string;
   file: File;
+  sourceFile?: File;
   type: 'image' | 'video' | 'file';
   videoOptimizationProfile?: VideoOptimizationProfile;
+  originalSize?: number;
+  processedSize?: number;
+  optimizedSize?: number;
+  warningMessage?: string;
+}
+
+interface ComposerMediaPreview {
+  url: string;
+  type: 'image' | 'video' | 'music' | 'file';
+  label?: string;
+  meta?: string;
+  pendingEncrypted?: boolean;
+  pendingId?: string;
+  videoOptimizationProfile?: VideoOptimizationProfile;
+  originalSize?: number;
+  processedSize?: number;
+  optimizedSize?: number;
+  warningMessage?: string;
 }
 
 interface QuickReactionMenuItem {
@@ -302,7 +321,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   dmMediaUploadMode = signal<MediaUploadMode>(DEFAULT_DM_MEDIA_UPLOAD_SETTINGS.mode);
   dmCompressionStrength = signal<number>(DEFAULT_DM_MEDIA_UPLOAD_SETTINGS.compressionStrength);
   dmVideoOptimizationProfile = signal<VideoOptimizationProfile>(DEFAULT_DM_MEDIA_UPLOAD_SETTINGS.videoOptimizationProfile ?? 'default');
-  mediaPreviews = signal<{ url: string; type: 'image' | 'video' | 'music' | 'file'; label?: string; meta?: string; pendingEncrypted?: boolean; pendingId?: string; videoOptimizationProfile?: VideoOptimizationProfile }[]>([]);
+  mediaPreviews = signal<ComposerMediaPreview[]>([]);
   pendingEncryptedMediaPreviews = signal<PendingEncryptedMediaPreview[]>([]);
   readonly hasPendingCompressibleMedia = computed(() =>
     this.pendingEncryptedMediaPreviews().some(preview => preview.type === 'image' || preview.type === 'video')
@@ -335,6 +354,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   longPressedMessage = signal<DirectMessage | null>(null);
   private longPressTimeout: ReturnType<typeof setTimeout> | null = null;
   private readonly LONG_PRESS_DURATION = 500; // 500ms for long press
+  private pendingDmMediaOptimizationRunId = 0;
   private pendingDmVideoProfileMenuTimeout: ReturnType<typeof setTimeout> | null = null;
   private readonly DM_VIDEO_PROFILE_MENU_HOLD_DELAY = 450;
   readonly showScrollToLatestButton = signal<boolean>(false);
@@ -2120,7 +2140,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   onMediaFileSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
     if (input.files && input.files.length > 0) {
-      this.stageEncryptedFiles(Array.from(input.files));
+      void this.stageEncryptedFiles(Array.from(input.files));
     }
     input.value = '';
   }
@@ -2128,7 +2148,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   onEncryptedFileSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
     if (input.files && input.files.length > 0) {
-      this.stageEncryptedFiles(Array.from(input.files));
+      void this.stageEncryptedFiles(Array.from(input.files));
     }
     input.value = '';
   }
@@ -2145,7 +2165,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
 
     event.preventDefault();
     event.stopPropagation();
-    this.stagePastedMediaFiles(mediaFiles);
+    void this.stagePastedMediaFiles(mediaFiles);
   }
 
   onMessageDragOver(event: DragEvent): void {
@@ -2179,7 +2199,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       return;
     }
 
-    void this.uploadMediaFiles(mediaFiles);
+    void this.stageEncryptedFiles(mediaFiles);
   }
 
   private hasFilePayload(event: DragEvent): boolean {
@@ -2221,51 +2241,9 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     return file.type.startsWith('image/') || file.type.startsWith('video/');
   }
 
-  private async uploadMediaFiles(files: File[], options?: { fromPendingPreview?: boolean }): Promise<void> {
-    if (files.length === 0) {
-      return;
-    }
-
-    if (this.newMessageText().trim()) {
-      this.layout.toast('Send the current text message first. Encrypted media is sent as a separate message.', 4000, 'error-snackbar');
-      return;
-    }
-
-    if (!options?.fromPendingPreview && this.pendingEncryptedMediaPreviews().length > 0) {
-      this.layout.toast('Confirm or remove the pasted media preview before adding more.', 4000, 'error-snackbar');
-      return;
-    }
-
-    if (!this.hasConfiguredMediaServers()) {
-      this.showMediaServerWarning();
-      return;
-    }
-
-    this.isUploading.set(true);
-
-    try {
-      await this.mediaService.load();
-
-      for (let index = 0; index < files.length; index++) {
-        this.uploadStatus.set(files.length > 1 ? `Encrypting ${index + 1}/${files.length}...` : 'Encrypting...');
-        await this.uploadMediaFile(files[index]);
-      }
-    } finally {
-      this.isUploading.set(false);
-      this.uploadStatus.set('');
-    }
-  }
-
-  /**
-   * Encrypt and send a media file as an encrypted file message
-   */
-  private async uploadMediaFile(file: File): Promise<void> {
-    await this.sendEncryptedFileMessage(file, { preserveComposer: true });
-  }
-
   private async sendEncryptedFileMessage(
     file: File,
-    options?: { preserveComposer?: boolean; uploadSettings?: MediaUploadSettings }
+    options?: { preserveComposer?: boolean; uploadSettings?: MediaUploadSettings; skipMediaPreparation?: boolean }
   ): Promise<void> {
     const selectedChat = this.selectedChat();
     const myPubkey = this.accountState.pubkey();
@@ -2288,7 +2266,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     try {
       this.isSending.set(true);
       const uploadSettings = options?.uploadSettings ?? this.getDmUploadSettings();
-      const preparedFile = this.isMediaFile(file)
+      const preparedFile = this.isMediaFile(file) && !options?.skipMediaPreparation
         ? await this.mediaProcessing.prepareFileForUpload(file, uploadSettings, progress => {
           const progressSuffix = progress.progress !== undefined
             ? ` ${Math.round(progress.progress * 100)}%`
@@ -2450,7 +2428,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     }
   }
 
-  private stagePastedMediaFiles(files: File[]): void {
+  private async stagePastedMediaFiles(files: File[]): Promise<void> {
     if (files.length === 0) {
       return;
     }
@@ -2465,20 +2443,10 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       return;
     }
 
-    const stagedPreviews = files.map((file, index) => {
-      const objectUrl = URL.createObjectURL(file);
-      return {
-        id: `${Date.now()}-${index}-${file.name}`,
-        objectUrl,
-        file,
-        type: file.type.startsWith('video/') ? 'video' as const : 'image' as const,
-      };
-    });
-
-    this.setPendingEncryptedFiles(stagedPreviews);
+    await this.stagePendingEncryptedFiles(files, true);
   }
 
-  private stageEncryptedFiles(files: File[]): void {
+  private async stageEncryptedFiles(files: File[]): Promise<void> {
     if (files.length === 0) {
       return;
     }
@@ -2493,32 +2461,123 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       return;
     }
 
-    const stagedPreviews = files.map((file, index) => ({
+    await this.stagePendingEncryptedFiles(files, false);
+  }
+
+  private async stagePendingEncryptedFiles(files: File[], pastedMediaOnly: boolean): Promise<void> {
+    if (!this.hasConfiguredMediaServers()) {
+      this.showMediaServerWarning();
+      return;
+    }
+
+    const stagedPreviews: PendingEncryptedMediaPreview[] = [];
+    const failedFiles: string[] = [];
+    const uploadSettings = this.getDmUploadSettings();
+    this.pendingDmMediaOptimizationRunId += 1;
+
+    this.isUploading.set(true);
+
+    try {
+      for (const [index, file] of files.entries()) {
+        try {
+          const preview = this.isMediaFile(file)
+            ? await this.createPendingEncryptedMediaPreview(file, index, uploadSettings)
+            : this.createPendingEncryptedFilePreview(file, index);
+
+          if (pastedMediaOnly && preview.type === 'file') {
+            this.revokeObjectUrlLater(preview.objectUrl);
+            continue;
+          }
+
+          stagedPreviews.push(preview);
+        } catch (error) {
+          this.logger.error('Failed to prepare encrypted attachment preview', error);
+          failedFiles.push(file.name);
+        }
+      }
+
+      if (stagedPreviews.length > 0) {
+        this.setPendingEncryptedFiles(stagedPreviews);
+      }
+
+      if (failedFiles.length > 0) {
+        const message = failedFiles.length === 1
+          ? `Failed to prepare ${failedFiles[0]}.`
+          : `Failed to prepare ${failedFiles.length} attachments.`;
+        this.layout.toast(message, 4000, 'error-snackbar');
+      }
+    } finally {
+      this.isUploading.set(false);
+      this.uploadStatus.set('');
+    }
+  }
+
+  private async createPendingEncryptedMediaPreview(
+    sourceFile: File,
+    index: number,
+    uploadSettings: MediaUploadSettings,
+    existingPreview?: PendingEncryptedMediaPreview,
+  ): Promise<PendingEncryptedMediaPreview> {
+    const preparedFile = await this.mediaProcessing.prepareFileForUpload(
+      sourceFile,
+      this.getDmUploadSettingsForSourceFile(sourceFile, uploadSettings, existingPreview),
+      progress => {
+        const progressSuffix = progress.progress !== undefined
+          ? ` ${Math.round(progress.progress * 100)}%`
+          : '';
+        this.uploadStatus.set(`${progress.message}${progressSuffix}`);
+      },
+    );
+
+    return {
+      id: existingPreview?.id ?? `${Date.now()}-${index}-${sourceFile.name}`,
+      objectUrl: URL.createObjectURL(preparedFile.file),
+      file: preparedFile.file,
+      sourceFile,
+      type: sourceFile.type.startsWith('video/') ? 'video' : 'image',
+      videoOptimizationProfile: sourceFile.type.startsWith('video/')
+        ? (existingPreview?.videoOptimizationProfile ?? uploadSettings.videoOptimizationProfile ?? 'default')
+        : undefined,
+      originalSize: sourceFile.size,
+      processedSize: preparedFile.file.size,
+      optimizedSize: preparedFile.optimizedSize ?? preparedFile.file.size,
+      warningMessage: preparedFile.warningMessage,
+    };
+  }
+
+  private createPendingEncryptedFilePreview(file: File, index: number): PendingEncryptedMediaPreview {
+    return {
       id: `${Date.now()}-${index}-${file.name}`,
       objectUrl: URL.createObjectURL(file),
       file,
-      type: this.isMediaFile(file)
-        ? (file.type.startsWith('video/') ? 'video' as const : 'image' as const)
-        : 'file' as const,
-      videoOptimizationProfile: file.type.startsWith('video/') ? this.dmVideoOptimizationProfile() : undefined,
-    }));
-
-    this.setPendingEncryptedFiles(stagedPreviews);
+      type: 'file',
+    };
   }
 
   private setPendingEncryptedFiles(stagedPreviews: PendingEncryptedMediaPreview[]): void {
-    this.clearPendingEncryptedMediaPreviews();
-    this.dmMediaUploadMode.set(DEFAULT_DM_MEDIA_UPLOAD_SETTINGS.mode);
+    const previousObjectUrls = this.pendingEncryptedMediaPreviews().map(preview => preview.objectUrl);
 
+    this.syncPendingEncryptedMediaPreviews(stagedPreviews);
+
+    for (const objectUrl of previousObjectUrls) {
+      this.revokeObjectUrlLater(objectUrl);
+    }
+  }
+
+  private syncPendingEncryptedMediaPreviews(stagedPreviews: PendingEncryptedMediaPreview[]): void {
     this.pendingEncryptedMediaPreviews.set(stagedPreviews);
     this.mediaPreviews.set(stagedPreviews.map(preview => ({
       url: preview.objectUrl,
       type: preview.type,
-      label: preview.file.name,
-      meta: this.formatFileSize(preview.file.size),
+      label: preview.sourceFile?.name ?? preview.file.name,
+      meta: this.formatFileSize(preview.originalSize ?? preview.file.size),
       pendingEncrypted: true,
       pendingId: preview.id,
       videoOptimizationProfile: preview.videoOptimizationProfile,
+      originalSize: preview.originalSize,
+      processedSize: preview.processedSize,
+      optimizedSize: preview.optimizedSize,
+      warningMessage: preview.warningMessage,
     })));
   }
 
@@ -2855,6 +2914,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
 
     if (preview) {
       if (preview.pendingEncrypted && preview.pendingId) {
+        this.pendingDmMediaOptimizationRunId += 1;
         const stagedPreview = this.pendingEncryptedMediaPreviews().find(item => item.id === preview.pendingId);
         if (stagedPreview) {
           pendingObjectUrlToRevoke = stagedPreview.objectUrl;
@@ -2901,6 +2961,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
         await this.sendEncryptedFileMessage(stagedPreviews[index].file, {
           preserveComposer: true,
           uploadSettings: this.getDmUploadSettingsForPreview(stagedPreviews[index]),
+          skipMediaPreparation: stagedPreviews[index].type === 'image' || stagedPreviews[index].type === 'video',
         });
       }
     } finally {
@@ -2926,7 +2987,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       maxWidth: '96vw',
       showCloseButton: true,
       data: {
-        file: stagedPreview.file,
+        file: stagedPreview.sourceFile ?? stagedPreview.file,
         uploadSettings: this.getDmUploadSettingsForPreview(stagedPreview),
         contextLabel: 'Encrypted attachment',
       },
@@ -2967,24 +3028,78 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
 
   clearPendingEncryptedMediaPreviews(): void {
     const objectUrls = this.pendingEncryptedMediaPreviews().map(preview => preview.objectUrl);
+    this.pendingDmMediaOptimizationRunId += 1;
 
     this.pendingEncryptedMediaPreviews.set([]);
     this.mediaPreviews.update(previews => previews.filter(preview => !preview.pendingEncrypted));
     this.dmMediaUploadMode.set(DEFAULT_DM_MEDIA_UPLOAD_SETTINGS.mode);
+    this.dmCompressionStrength.set(DEFAULT_DM_MEDIA_UPLOAD_SETTINGS.compressionStrength);
+    this.dmVideoOptimizationProfile.set(DEFAULT_DM_MEDIA_UPLOAD_SETTINGS.videoOptimizationProfile ?? 'default');
 
     for (const objectUrl of objectUrls) {
       this.revokeObjectUrlLater(objectUrl);
     }
   }
 
-  onDmOptimizationChange(optimization: MediaOptimizationOptionValue): void {
+  async onDmOptimizationChange(optimization: MediaOptimizationOptionValue): Promise<void> {
     const settings = {
       ...getMediaUploadSettingsForOptimization(optimization),
       videoOptimizationProfile: this.dmVideoOptimizationProfile(),
     };
+    const changed = settings.mode !== this.dmMediaUploadMode()
+      || settings.compressionStrength !== this.dmCompressionStrength()
+      || settings.videoOptimizationProfile !== this.dmVideoOptimizationProfile();
+
     this.dmMediaUploadMode.set(settings.mode);
     this.dmCompressionStrength.set(settings.compressionStrength);
     this.dmVideoOptimizationProfile.set(settings.videoOptimizationProfile ?? 'default');
+
+    if (!changed) {
+      return;
+    }
+
+    await this.reprocessPendingEncryptedMediaForOptimization(settings);
+  }
+
+  getDmPendingPreviewSizeLabel(preview: ComposerMediaPreview): string {
+    const comparisonSize = this.getDmPendingPreviewComparisonSize(preview);
+    return this.formatCompactFileSize(comparisonSize || this.getDmPendingPreviewUploadSize(preview) || this.getDmPendingPreviewOriginalSize(preview));
+  }
+
+  getDmPendingPreviewSavingsLabel(preview: ComposerMediaPreview): string {
+    const savings = this.getDmPendingPreviewCompressionChangePercent(preview);
+
+    if (savings === null) {
+      return '';
+    }
+
+    if (savings > 0) {
+      return `-${savings}%`;
+    }
+
+    if (savings < 0) {
+      return `+${Math.abs(savings)}%`;
+    }
+
+    return preview.optimizedSize !== undefined ? '0%' : '';
+  }
+
+  getDmPendingPreviewSavingsTone(preview: ComposerMediaPreview): 'decrease' | 'increase' | 'neutral' | 'none' {
+    const savings = this.getDmPendingPreviewCompressionChangePercent(preview);
+
+    if (savings === null) {
+      return 'none';
+    }
+
+    if (savings > 0) {
+      return 'decrease';
+    }
+
+    if (savings < 0) {
+      return 'increase';
+    }
+
+    return 'neutral';
   }
 
   getDmVideoOptimizationProfileBadgeLabel(previewId: string): string {
@@ -3060,9 +3175,15 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     return this.getDmVideoOptimizationProfileForPreview(preview) === profile;
   }
 
-  onDmVideoOptimizationProfileSelected(profile: VideoOptimizationProfile): void {
+  async onDmVideoOptimizationProfileSelected(profile: VideoOptimizationProfile): Promise<void> {
     const preview = this.getDmVideoProfileMenuPreview();
     if (!preview) {
+      return;
+    }
+
+    this.closeDmVideoOptimizationMenu();
+
+    if (this.getDmVideoOptimizationProfileForPreview(preview) === profile) {
       return;
     }
 
@@ -3072,7 +3193,8 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     this.mediaPreviews.update(items => items.map(item => item.pendingId === preview.id
       ? { ...item, videoOptimizationProfile: profile }
       : item));
-    this.closeDmVideoOptimizationMenu();
+
+    await this.reprocessPendingEncryptedMediaForOptimization(this.getDmUploadSettings(), [preview.id]);
   }
 
   onDmVideoOptimizationMenuClosed(): void {
@@ -3094,6 +3216,21 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       videoOptimizationProfile: preview.type === 'video'
         ? this.getDmVideoOptimizationProfileForPreview(preview)
         : this.dmVideoOptimizationProfile(),
+    };
+  }
+
+  private getDmUploadSettingsForSourceFile(
+    sourceFile: File,
+    settings: MediaUploadSettings,
+    preview?: PendingEncryptedMediaPreview,
+  ): MediaUploadSettings {
+    if (!sourceFile.type.startsWith('video/')) {
+      return settings;
+    }
+
+    return {
+      ...settings,
+      videoOptimizationProfile: preview?.videoOptimizationProfile ?? settings.videoOptimizationProfile ?? this.dmVideoOptimizationProfile(),
     };
   }
 
@@ -3156,6 +3293,109 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       clearTimeout(this.pendingDmVideoProfileMenuTimeout);
       this.pendingDmVideoProfileMenuTimeout = null;
     }
+  }
+
+  private async reprocessPendingEncryptedMediaForOptimization(
+    settings: MediaUploadSettings,
+    previewIds?: string[],
+  ): Promise<void> {
+    const pendingPreviews = this.pendingEncryptedMediaPreviews().filter(preview => {
+      if (preview.type !== 'image' && preview.type !== 'video') {
+        return false;
+      }
+
+      if (!previewIds || previewIds.length === 0) {
+        return true;
+      }
+
+      return previewIds.includes(preview.id);
+    });
+
+    if (pendingPreviews.length === 0) {
+      return;
+    }
+
+    const runId = ++this.pendingDmMediaOptimizationRunId;
+    const isStale = (): boolean => runId !== this.pendingDmMediaOptimizationRunId;
+    const currentPreviews = [...this.pendingEncryptedMediaPreviews()];
+
+    this.isUploading.set(true);
+
+    try {
+      for (const [index, preview] of pendingPreviews.entries()) {
+        if (isStale()) {
+          return;
+        }
+
+        const sourceFile = preview.sourceFile ?? preview.file;
+        const refreshedPreview = await this.createPendingEncryptedMediaPreview(sourceFile, index, settings, preview);
+
+        if (isStale()) {
+          this.revokeObjectUrlLater(refreshedPreview.objectUrl);
+          return;
+        }
+
+        const existingIndex = currentPreviews.findIndex(item => item.id === preview.id);
+        if (existingIndex === -1) {
+          this.revokeObjectUrlLater(refreshedPreview.objectUrl);
+          continue;
+        }
+
+        this.revokeObjectUrlLater(currentPreviews[existingIndex].objectUrl);
+        currentPreviews[existingIndex] = refreshedPreview;
+      }
+
+      if (isStale()) {
+        return;
+      }
+
+      this.syncPendingEncryptedMediaPreviews(currentPreviews);
+    } finally {
+      if (!isStale()) {
+        this.isUploading.set(false);
+        this.uploadStatus.set('');
+      }
+    }
+  }
+
+  private getDmPendingPreviewUploadSize(preview: ComposerMediaPreview): number {
+    return preview.processedSize ?? this.getDmPendingPreviewOriginalSize(preview);
+  }
+
+  private getDmPendingPreviewComparisonSize(preview: ComposerMediaPreview): number {
+    return preview.optimizedSize ?? preview.processedSize ?? this.getDmPendingPreviewOriginalSize(preview);
+  }
+
+  private getDmPendingPreviewOriginalSize(preview: ComposerMediaPreview): number {
+    return preview.originalSize ?? preview.processedSize ?? 0;
+  }
+
+  private getDmPendingPreviewCompressionChangePercent(preview: ComposerMediaPreview): number | null {
+    const originalSize = this.getDmPendingPreviewOriginalSize(preview);
+    const comparisonSize = this.getDmPendingPreviewComparisonSize(preview);
+
+    if (originalSize <= 0 || comparisonSize <= 0) {
+      return null;
+    }
+
+    return Math.round((1 - comparisonSize / originalSize) * 100);
+  }
+
+  private formatCompactFileSize(bytes?: number): string {
+    if (!bytes || bytes <= 0) {
+      return '0B';
+    }
+
+    const units = ['B', 'KB', 'MB', 'GB'];
+    const exponent = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
+    const value = bytes / Math.pow(1024, exponent);
+
+    let decimals = 0;
+    if (value < 10 && exponent > 0) {
+      decimals = 1;
+    }
+
+    return `${parseFloat(value.toFixed(decimals))}${units[exponent]}`;
   }
 
   private hasConfiguredMediaServers(): boolean {

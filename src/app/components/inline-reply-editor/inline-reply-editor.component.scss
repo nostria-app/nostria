@@ -206,14 +206,24 @@
     }
 
     .remove-media-btn {
+      --mdc-icon-button-state-layer-size: 20px;
+      --mat-icon-button-touch-target-size: 20px;
       position: absolute;
       top: 2px;
       right: 2px;
       width: 20px;
       height: 20px;
+      min-width: 20px;
+      min-height: 20px;
       padding: 0;
+      overflow: hidden;
       background-color: rgba(0, 0, 0, 0.6);
       color: white;
+
+      .mat-mdc-button-touch-target {
+        width: 20px;
+        height: 20px;
+      }
 
       mat-icon {
         font-size: 14px;

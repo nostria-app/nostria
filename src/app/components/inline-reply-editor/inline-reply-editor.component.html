@@ -56,7 +56,7 @@
     <div class="media-thumbnails">
       @for (media of mediaMetadata(); track media.url; let i = $index) {
       <div class="media-thumbnail">
-        <button mat-icon-button class="remove-media-btn" (click)="removeMedia(i)" matTooltip="Remove media">
+        <button type="button" class="remove-media-btn" (click)="removeMedia(i)" matTooltip="Remove media">
           <mat-icon>close</mat-icon>
         </button>
         @if (media.mimeType?.startsWith('video/')) {

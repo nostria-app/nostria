@@ -452,7 +452,7 @@
   <div class="media-thumbnails">
     @for (media of mediaMetadata(); track media.id ?? media.url; let i = $index) {
     <div class="media-thumbnail">
-      <button mat-icon-button class="remove-media-btn" (click)="$event.stopPropagation(); removeMedia(i)"
+      <button type="button" class="remove-media-btn" (click)="$event.stopPropagation(); removeMedia(i)"
         matTooltip="Remove media">
         <mat-icon>close</mat-icon>
       </button>
@@ -607,9 +607,6 @@
           <span class="video-profile-menu-label">{{ option.label }}</span>
           <span class="video-profile-menu-description">{{ option.description }}</span>
         </div>
-        @if (isSelectedVideoOptimizationProfile(option.value)) {
-        <mat-icon class="video-profile-menu-check">check</mat-icon>
-        }
       </button>
       }
     </mat-menu>

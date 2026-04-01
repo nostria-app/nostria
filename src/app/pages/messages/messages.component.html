@@ -898,7 +898,19 @@
             <div class="media-preview-media-card">
               <button type="button" class="media-preview-image-button" (click)="openComposerImagePreview(i, $event)"
                 aria-label="Open image preview">
-                <img [src]="preview.url" class="media-preview-thumb" alt="Media preview">
+                <div class="media-preview-thumb-wrap">
+                  <img [src]="preview.url" class="media-preview-thumb" alt="Media preview">
+                  @if (preview.pendingEncrypted) {
+                  <div class="media-preview-thumb-meta">
+                    <span class="media-preview-thumb-savings" [class.empty]="!getDmPendingPreviewSavingsLabel(preview)"
+                      [class.decrease]="getDmPendingPreviewSavingsTone(preview) === 'decrease'"
+                      [class.increase]="getDmPendingPreviewSavingsTone(preview) === 'increase'"
+                      [class.neutral]="getDmPendingPreviewSavingsTone(preview) === 'neutral'">{{
+                      getDmPendingPreviewSavingsLabel(preview) }}</span>
+                    <span class="media-preview-thumb-size">{{ getDmPendingPreviewSizeLabel(preview) }}</span>
+                  </div>
+                  }
+                </div>
               </button>
               <div class="media-preview-details">
                 @if (preview.label) {
@@ -922,6 +934,16 @@
                 @if (preview.pendingEncrypted && preview.pendingId) {
                 <span class="video-profile-badge">{{ getDmVideoOptimizationProfileBadgeLabel(preview.pendingId)
                   }}</span>
+                }
+                @if (preview.pendingEncrypted) {
+                <div class="media-preview-thumb-meta">
+                  <span class="media-preview-thumb-savings" [class.empty]="!getDmPendingPreviewSavingsLabel(preview)"
+                    [class.decrease]="getDmPendingPreviewSavingsTone(preview) === 'decrease'"
+                    [class.increase]="getDmPendingPreviewSavingsTone(preview) === 'increase'"
+                    [class.neutral]="getDmPendingPreviewSavingsTone(preview) === 'neutral'">{{
+                    getDmPendingPreviewSavingsLabel(preview) }}</span>
+                  <span class="media-preview-thumb-size">{{ getDmPendingPreviewSizeLabel(preview) }}</span>
+                </div>
                 }
               </div>
               <div class="media-preview-details">
@@ -1006,9 +1028,6 @@
               <span class="dm-video-profile-menu-label">{{ option.label }}</span>
               <span class="dm-video-profile-menu-description">{{ option.description }}</span>
             </div>
-            @if (isSelectedDmVideoOptimizationProfile(option.value)) {
-            <mat-icon class="dm-video-profile-menu-check">check</mat-icon>
-            }
           </button>
           }
         </mat-menu>
