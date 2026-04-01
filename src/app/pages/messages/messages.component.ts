@@ -192,6 +192,7 @@ interface PendingEncryptedMediaPreview {
   file: File;
   sourceFile?: File;
   type: 'image' | 'video' | 'file';
+  wasProcessed?: boolean;
   videoOptimizationProfile?: VideoOptimizationProfile;
   originalSize?: number;
   processedSize?: number;
@@ -2539,6 +2540,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       file: preparedFile.file,
       sourceFile,
       type: sourceFile.type.startsWith('video/') ? 'video' : 'image',
+      wasProcessed: preparedFile.wasProcessed,
       videoOptimizationProfile: sourceFile.type.startsWith('video/')
         ? (existingPreview?.videoOptimizationProfile ?? uploadSettings.videoOptimizationProfile ?? 'default')
         : undefined,
@@ -3355,11 +3357,12 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
 
   private getDmExistingCompressionPreview(preview: PendingEncryptedMediaPreview): CompressionPreviewResult {
     const originalFile = preview.sourceFile ?? preview.file;
-    const hasProcessedFile = preview.file !== originalFile;
+    const hasProcessedFile = !!preview.wasProcessed;
 
     return {
       originalFile,
       compressedFile: hasProcessedFile ? preview.file : undefined,
+      optimizedSize: preview.optimizedSize ?? preview.processedSize,
       willUploadCompressedFile: hasProcessedFile,
       warningMessage: preview.warningMessage,
     };

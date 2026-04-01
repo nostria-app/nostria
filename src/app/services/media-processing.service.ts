@@ -31,6 +31,7 @@ export interface PreparedUploadFile {
 export interface CompressionPreviewResult {
   originalFile: File;
   compressedFile?: File;
+  optimizedSize?: number;
   willUploadCompressedFile: boolean;
   warningMessage?: string;
 }
@@ -395,6 +396,7 @@ export class MediaProcessingService {
     return {
       originalFile,
       compressedFile: candidate.file,
+      optimizedSize: candidate.file.size,
       willUploadCompressedFile,
       warningMessage: willUploadCompressedFile
         ? undefined

@@ -77,7 +77,7 @@
   <div class="preview-summary-card" [class.preview-summary-card-success]="previewStatusTone() === 'success'"
     [class.preview-summary-card-warning]="previewStatusTone() === 'warning'">
     <span class="preview-summary-title">{{ summaryLabel() }}</span>
-    @if (result.compressedFile) {
+    @if (optimizedSizeLabel()) {
     <div class="preview-summary-metrics">
       <div class="preview-summary-metric" [class.preview-summary-metric-success]="previewStatusTone() === 'success'"
         [class.preview-summary-metric-warning]="previewStatusTone() === 'warning'">

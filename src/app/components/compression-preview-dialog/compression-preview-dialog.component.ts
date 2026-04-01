@@ -47,13 +47,19 @@ export class CompressionPreviewDialogComponent implements OnInit, OnDestroy {
       this.data?.uploadSettings.compressionStrength ?? 0,
     )
   );
+  readonly previewOptimizedSize = computed(() => {
+    const result = this.previewResult();
+    return result?.compressedFile?.size ?? result?.optimizedSize ?? null;
+  });
   readonly summaryLabel = computed(() => {
     const result = this.previewResult();
-    if (!result?.compressedFile) {
+    const optimizedSize = this.previewOptimizedSize();
+
+    if (!result || optimizedSize === null) {
       return 'Compression preview is unavailable for this file.';
     }
 
-    const sizeDifference = result.originalFile.size - result.compressedFile.size;
+    const sizeDifference = result.originalFile.size - optimizedSize;
     const percentDifference = result.originalFile.size > 0
       ? Math.abs(sizeDifference) / result.originalFile.size
       : 0;
@@ -69,16 +75,18 @@ export class CompressionPreviewDialogComponent implements OnInit, OnDestroy {
     return 'Same file size as the original.';
   });
   readonly optimizedSizeLabel = computed(() => {
-    const result = this.previewResult();
-    return result?.compressedFile ? this.formatFileSize(result.compressedFile.size) : null;
+    const optimizedSize = this.previewOptimizedSize();
+    return optimizedSize !== null ? this.formatFileSize(optimizedSize) : null;
   });
   readonly sizeChangeLabel = computed(() => {
     const result = this.previewResult();
-    if (!result?.compressedFile || result.originalFile.size <= 0) {
+    const optimizedSize = this.previewOptimizedSize();
+
+    if (!result || optimizedSize === null || result.originalFile.size <= 0) {
       return null;
     }
 
-    const sizeDifference = result.compressedFile.size - result.originalFile.size;
+    const sizeDifference = optimizedSize - result.originalFile.size;
     const percentDifference = Math.round((Math.abs(sizeDifference) / result.originalFile.size) * 100);
 
     if (sizeDifference < 0) {
@@ -93,11 +101,13 @@ export class CompressionPreviewDialogComponent implements OnInit, OnDestroy {
   });
   readonly sizeChangeTone = computed<'decrease' | 'increase' | 'neutral'>(() => {
     const result = this.previewResult();
-    if (!result?.compressedFile || result.originalFile.size <= 0) {
+    const optimizedSize = this.previewOptimizedSize();
+
+    if (!result || optimizedSize === null || result.originalFile.size <= 0) {
       return 'neutral';
     }
 
-    const sizeDifference = result.compressedFile.size - result.originalFile.size;
+    const sizeDifference = optimizedSize - result.originalFile.size;
 
     if (sizeDifference < 0) {
       return 'decrease';
@@ -111,7 +121,7 @@ export class CompressionPreviewDialogComponent implements OnInit, OnDestroy {
   });
   readonly previewStatusTone = computed<'neutral' | 'success' | 'warning'>(() => {
     const result = this.previewResult();
-    if (!result?.compressedFile) {
+    if (!result || this.previewOptimizedSize() === null) {
       return 'neutral';
     }
 
