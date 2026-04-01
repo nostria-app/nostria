@@ -104,6 +104,7 @@ interface MediaMetadata {
   originalSize?: number;
   processedSize?: number;
   localFile?: File;
+  sourceFile?: File;
   uploadOriginal?: boolean;
   warningMessage?: string;
 }
@@ -739,14 +740,14 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       return;
     }
 
-    if (media.pendingUpload) {
+    if (this.shouldReinsertPendingMediaReference(media)) {
       this.reinsertPendingMediaReference(media);
       return;
     }
 
     const previewableMedia = this.mediaMetadata()
       .map((item, itemIndex) => ({ item, itemIndex }))
-      .filter(({ item }) => !item.pendingUpload && !!item.url);
+      .filter(({ item }) => !!item.url);
 
     const selectedIndex = previewableMedia.findIndex(entry => entry.itemIndex === index);
     if (selectedIndex === -1) {
@@ -3583,10 +3584,19 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     this.expirationTime.set(time);
   }
 
-  onMediaOptimizationChange(optimization: MediaOptimizationOptionValue): void {
+  async onMediaOptimizationChange(optimization: MediaOptimizationOptionValue): Promise<void> {
     const settings = getMediaUploadSettingsForOptimization(optimization);
+    const changed = settings.mode !== this.mediaUploadMode()
+      || settings.compressionStrength !== this.compressionStrength();
+
     this.mediaUploadMode.set(settings.mode);
     this.compressionStrength.set(settings.compressionStrength);
+
+    if (!changed) {
+      return;
+    }
+
+    await this.reprocessPendingMediaForOptimization(settings);
   }
 
   private getExpirationDateTime(): Date | null {
@@ -3652,8 +3662,71 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     return media.previewUrl || media.url;
   }
 
+  getMediaThumbnailAriaLabel(media: MediaMetadata): string {
+    if (this.shouldReinsertPendingMediaReference(media)) {
+      return 'Reinsert pending media placeholder';
+    }
+
+    return media.pendingUpload ? 'Open optimized media preview' : 'Open media preview';
+  }
+
+  getMediaThumbnailTooltip(media: MediaMetadata): string {
+    if (this.shouldReinsertPendingMediaReference(media)) {
+      return 'Reinsert placeholder tag';
+    }
+
+    return media.pendingUpload ? 'Open optimized preview' : 'Open preview';
+  }
+
+  getMediaThumbnailSizeLabel(media: MediaMetadata): string {
+    const uploadSize = this.getMediaUploadSize(media);
+    return this.formatCompactFileSize(uploadSize || media.originalSize);
+  }
+
+  getMediaThumbnailSavingsLabel(media: MediaMetadata): string {
+    const savings = this.getMediaCompressionSavingsPercent(media);
+    return savings !== null ? `-${savings}%` : '';
+  }
+
   getMediaUploadSize(media: MediaMetadata): number {
     return media.processedSize ?? media.originalSize ?? 0;
+  }
+
+  private formatCompactFileSize(bytes?: number): string {
+    if (!bytes || bytes <= 0) {
+      return '0B';
+    }
+
+    const units = ['B', 'KB', 'MB', 'GB'];
+    const exponent = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
+    const value = bytes / Math.pow(1024, exponent);
+
+    let decimals = 0;
+    if (value < 10 && exponent > 0) {
+      decimals = 1;
+    }
+
+    return `${parseFloat(value.toFixed(decimals))}${units[exponent]}`;
+  }
+
+  private shouldReinsertPendingMediaReference(media: MediaMetadata): boolean {
+    if (!media.pendingUpload) {
+      return false;
+    }
+
+    const reference = this.getMediaContentReference(media);
+    return !!reference && !this.content().includes(reference);
+  }
+
+  private getMediaCompressionSavingsPercent(media: MediaMetadata): number | null {
+    const originalSize = media.originalSize ?? 0;
+    const uploadSize = this.getMediaUploadSize(media);
+
+    if (originalSize <= 0 || uploadSize <= 0 || uploadSize >= originalSize) {
+      return null;
+    }
+
+    return Math.round((1 - uploadSize / originalSize) * 100);
   }
 
   private serializeMediaMetadata(media: MediaMetadata[]): string {
@@ -3779,8 +3852,14 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     }
 
     const currentContent = this.content();
-    if (currentContent.includes(placeholderToken)) {
-      this.content.set(currentContent.replace(placeholderToken, url));
+    const placeholderIndex = currentContent.indexOf(placeholderToken);
+    if (placeholderIndex >= 0) {
+      const before = currentContent.substring(0, placeholderIndex);
+      const after = currentContent.substring(placeholderIndex + placeholderToken.length);
+      const prefix = this.endsWithMediaReference(before) ? ' ' : '';
+      const suffix = this.startsWithMediaReference(after) ? ' ' : '';
+
+      this.content.set(before + prefix + url + suffix + after);
       this.pendingMediaInsertionAnchors.delete(placeholderToken);
       return;
     }
@@ -3791,6 +3870,14 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     }
 
     this.pendingMediaInsertionAnchors.delete(placeholderToken);
+  }
+
+  private startsWithMediaReference(value: string): boolean {
+    return /^(\[(?:image|video)\d+\]|https?:\/\/\S+|blob:\S+)/.test(value);
+  }
+
+  private endsWithMediaReference(value: string): boolean {
+    return /(\[(?:image|video)\d+\]|https?:\/\/\S+|blob:\S+)$/.test(value);
   }
 
   private revokeMediaPreviewUrls(media: MediaMetadata | undefined): void {
@@ -4091,14 +4178,15 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   private async createPendingMediaMetadata(
     originalFile: File,
     preparedFile: { file: File; uploadOriginal: boolean; warningMessage?: string },
-    fileLabel: string
+    fileLabel: string,
+    existingMedia?: MediaMetadata,
   ): Promise<MediaMetadata> {
     const mimeType = this.mediaService.getFileMimeType(preparedFile.file);
     const previewUrl = URL.createObjectURL(preparedFile.file);
-    const placeholderToken = this.createPendingMediaPlaceholder(mimeType);
+    const placeholderToken = existingMedia?.placeholderToken ?? this.createPendingMediaPlaceholder(mimeType);
 
     const pendingMedia: MediaMetadata = {
-      id: crypto.randomUUID(),
+      id: existingMedia?.id ?? crypto.randomUUID(),
       url: previewUrl,
       mimeType,
       previewUrl: mimeType.startsWith('image/') ? previewUrl : undefined,
@@ -4108,6 +4196,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       originalSize: originalFile.size,
       processedSize: preparedFile.file.size,
       localFile: preparedFile.file,
+      sourceFile: originalFile,
       uploadOriginal: preparedFile.uploadOriginal,
       warningMessage: preparedFile.warningMessage,
     };
@@ -4123,6 +4212,87 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     }
 
     return pendingMedia;
+  }
+
+  private async reprocessPendingMediaForOptimization(settings: { mode: 'original' | 'local' | 'server'; compressionStrength: number }): Promise<void> {
+    const pendingMedia = this.mediaMetadata().filter(media => media.pendingUpload && (media.sourceFile || media.localFile));
+    if (pendingMedia.length === 0) {
+      return;
+    }
+
+    const currentMetadata = [...this.mediaMetadata()];
+    const warningMessages: string[] = [];
+    const failedFiles: string[] = [];
+
+    this.isUploading.set(true);
+    this.uploadStatus.set('Updating media optimization...');
+
+    try {
+      for (const [index, pending] of pendingMedia.entries()) {
+        const sourceFile = pending.sourceFile ?? pending.localFile;
+        if (!sourceFile) {
+          continue;
+        }
+
+        const fileLabel = pendingMedia.length > 1 ? ` (${index + 1}/${pendingMedia.length})` : '';
+        this.uploadStatus.set(`Updating ${sourceFile.name}${fileLabel}...`);
+
+        try {
+          const preparedFile = await this.mediaProcessing.prepareFileForUpload(
+            sourceFile,
+            settings,
+            progress => {
+              const progressSuffix = progress.progress !== undefined
+                ? ` ${Math.round(progress.progress * 100)}%`
+                : '';
+              this.uploadStatus.set(`${progress.message}${progressSuffix}${fileLabel}`);
+            }
+          );
+
+          if (preparedFile.warningMessage) {
+            warningMessages.push(preparedFile.warningMessage);
+          }
+
+          const refreshedMedia = await this.createPendingMediaMetadata(sourceFile, preparedFile, fileLabel, pending);
+          const metadataIndex = currentMetadata.findIndex(item => item.id === pending.id);
+          if (metadataIndex >= 0) {
+            currentMetadata[metadataIndex] = refreshedMedia;
+          }
+
+          this.revokeMediaPreviewUrls(pending);
+        } catch (error) {
+          failedFiles.push(sourceFile.name || `media ${index + 1}`);
+          console.error('Failed to update pending media optimization', error);
+        }
+      }
+
+      this.mediaMetadata.set(currentMetadata);
+      this.saveAutoDraft();
+
+      if (warningMessages.length > 0) {
+        this.snackBar.open(
+          warningMessages.length === 1
+            ? warningMessages[0]
+            : `${warningMessages.length} file(s) will keep their original upload because local optimization was unavailable or not smaller.`,
+          'Close',
+          { duration: 6000 }
+        );
+      }
+
+      if (failedFiles.length > 0) {
+        this.snackBar.open(
+          `Failed to update optimization for ${failedFiles.length} file(s).`,
+          'Close',
+          {
+            duration: 6000,
+            panelClass: 'error-snackbar',
+          }
+        );
+      }
+    } finally {
+      this.isUploading.set(false);
+      this.uploadStatus.set('');
+    }
   }
 
   private async extractPendingVideoThumbnail(videoFile: File): Promise<{

@@ -11,7 +11,7 @@ export interface MediaUploadModeOption {
   description: string;
 }
 
-export type MediaOptimizationOptionValue = 'original' | 'balanced' | 'maximum';
+export type MediaOptimizationOptionValue = 'original' | 'minimal' | 'balanced' | 'optimized';
 
 export interface MediaOptimizationOption {
   value: MediaOptimizationOptionValue;
@@ -52,9 +52,12 @@ export const MEDIA_UPLOAD_MODE_OPTIONS: readonly MediaUploadModeOption[] = [
   },
 ] as const;
 
-export const DEFAULT_MEDIA_COMPRESSION_STRENGTH = 50;
-export const MAXIMUM_MEDIA_OPTIMIZATION_THRESHOLD = 80;
-export const MAXIMUM_MEDIA_COMPRESSION_STRENGTH = 100;
+export const MINIMAL_MEDIA_COMPRESSION_STRENGTH = 10;
+export const BALANCED_MEDIA_COMPRESSION_STRENGTH = 35;
+export const OPTIMIZED_MEDIA_COMPRESSION_STRENGTH = 65;
+export const DEFAULT_MEDIA_COMPRESSION_STRENGTH = BALANCED_MEDIA_COMPRESSION_STRENGTH;
+export const BALANCED_MEDIA_OPTIMIZATION_THRESHOLD = 30;
+export const OPTIMIZED_MEDIA_OPTIMIZATION_THRESHOLD = 58;
 
 export const MEDIA_OPTIMIZATION_OPTIONS: readonly MediaOptimizationOption[] = [
   {
@@ -65,18 +68,25 @@ export const MEDIA_OPTIMIZATION_OPTIONS: readonly MediaOptimizationOption[] = [
     compressionStrength: DEFAULT_MEDIA_COMPRESSION_STRENGTH,
   },
   {
-    value: 'balanced',
-    label: 'Balanced',
-    description: 'Recommended for most photos and videos with a good balance of quality and file size.',
+    value: 'minimal',
+    label: 'Minimal',
+    description: 'Very light optimization for oversized photos and videos when you want to preserve more detail.',
     mode: 'local',
-    compressionStrength: DEFAULT_MEDIA_COMPRESSION_STRENGTH,
+    compressionStrength: MINIMAL_MEDIA_COMPRESSION_STRENGTH,
   },
   {
-    value: 'maximum',
-    label: 'Maximum',
-    description: 'Make the file as small as possible, with the most noticeable quality reduction.',
+    value: 'balanced',
+    label: 'Balanced',
+    description: 'Recommended default with a gentler quality reduction than before and solid size savings.',
     mode: 'local',
-    compressionStrength: MAXIMUM_MEDIA_COMPRESSION_STRENGTH,
+    compressionStrength: BALANCED_MEDIA_COMPRESSION_STRENGTH,
+  },
+  {
+    value: 'optimized',
+    label: 'Optimized',
+    description: 'Stronger local optimization for smaller uploads without pushing quality as hard as the old Maximum preset.',
+    mode: 'local',
+    compressionStrength: OPTIMIZED_MEDIA_COMPRESSION_STRENGTH,
   },
 ] as const;
 
@@ -119,9 +129,17 @@ export function getMediaOptimizationOption(
     return 'original';
   }
 
-  return normalizeCompressionStrength(compressionStrength) >= MAXIMUM_MEDIA_OPTIMIZATION_THRESHOLD
-    ? 'maximum'
-    : 'balanced';
+  const normalized = normalizeCompressionStrength(compressionStrength);
+
+  if (normalized >= OPTIMIZED_MEDIA_OPTIMIZATION_THRESHOLD) {
+    return 'optimized';
+  }
+
+  if (normalized >= BALANCED_MEDIA_OPTIMIZATION_THRESHOLD) {
+    return 'balanced';
+  }
+
+  return 'minimal';
 }
 
 export function getMediaOptimizationLabel(
@@ -157,45 +175,37 @@ export function getMediaUploadSettingsForOptimization(
 export function getCompressionStrengthLabel(strength: number): string {
   const normalized = normalizeCompressionStrength(strength);
 
-  if (normalized >= 80) {
-    return 'Maximum';
+  if (normalized >= OPTIMIZED_MEDIA_OPTIMIZATION_THRESHOLD) {
+    return 'Optimized';
   }
 
-  if (normalized >= 60) {
-    return 'High';
-  }
-
-  if (normalized >= 40) {
+  if (normalized >= BALANCED_MEDIA_OPTIMIZATION_THRESHOLD) {
     return 'Balanced';
   }
 
-  if (normalized >= 20) {
-    return 'Light';
+  if (normalized > 0) {
+    return 'Minimal';
   }
 
-  return 'Minimal';
+  return 'Original';
 }
 
 export function getCompressionStrengthDescription(strength: number): string {
   const normalized = normalizeCompressionStrength(strength);
 
-  if (normalized >= 80) {
-    return 'Smallest files with the most visible quality reduction.';
+  if (normalized >= OPTIMIZED_MEDIA_OPTIMIZATION_THRESHOLD) {
+    return 'Stronger optimization for smaller uploads with more visible softening than Balanced.';
   }
 
-  if (normalized >= 60) {
-    return 'Strong size reduction for faster uploads and smaller encrypted payloads.';
+  if (normalized >= BALANCED_MEDIA_OPTIMIZATION_THRESHOLD) {
+    return 'Balanced quality and file size with a gentler default than before.';
   }
 
-  if (normalized >= 40) {
-    return 'Balanced quality and file size for most photos and videos.';
+  if (normalized > 0) {
+    return 'Very light optimization that preserves more detail while still trimming oversized files.';
   }
 
-  if (normalized >= 20) {
-    return 'Mostly preserves quality while still trimming file size.';
-  }
-
-  return 'Closest to the original quality with only mild compression.';
+  return 'Keep the original quality and upload the file as-is.';
 }
 
 export function getMediaUploadModeDescription(mode: MediaUploadMode): string {

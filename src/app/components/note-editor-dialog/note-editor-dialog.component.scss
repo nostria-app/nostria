@@ -151,22 +151,30 @@
         left: 0;
         display: flex;
         flex-direction: column;
-        gap: 2px;
-        padding: 6px 6px 5px;
+        align-items: flex-start;
+        gap: 1px;
+        padding: 4px 4px 3px;
         background: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.82) 100%);
         color: var(--mat-sys-on-surface);
       }
 
-      .media-status,
-      .media-size {
-        font-size: 10px;
+      .media-size,
+      .media-savings {
+        font-size: 9px;
+        line-height: 1.05;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
+        max-width: 100%;
       }
 
-      .media-status {
+      .media-savings {
         color: var(--mat-sys-secondary-fixed);
+        min-height: 10px;
+
+        &.empty {
+          visibility: hidden;
+        }
       }
 
       .video-icon {
@@ -636,22 +644,30 @@
       left: 0;
       display: flex;
       flex-direction: column;
-      gap: 2px;
-      padding: 6px 6px 5px;
+      align-items: flex-start;
+      gap: 1px;
+      padding: 4px 4px 3px;
       background: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.82) 100%);
       color: var(--mat-sys-on-surface);
     }
 
-    .media-status,
-    .media-size {
-      font-size: 10px;
+    .media-size,
+    .media-savings {
+      font-size: 9px;
+      line-height: 1.05;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      max-width: 100%;
     }
 
-    .media-status {
+    .media-savings {
       color: var(--mat-sys-secondary-fixed);
+      min-height: 10px;
+
+      &.empty {
+        visibility: hidden;
+      }
     }
 
     .video-icon {
@@ -1407,6 +1423,18 @@
         align-self: flex-start;
       }
 
+      .event-json-expander {
+        align-self: flex-start;
+        padding-left: 0;
+        padding-right: 0;
+        min-width: 0;
+        color: var(--mat-sys-on-surface);
+
+        .mat-icon {
+          margin-right: 6px;
+        }
+      }
+
       .x-toggle-label {
         display: inline-flex;
         align-items: center;
@@ -1442,6 +1470,8 @@
       }
 
       .optimization-toggle-group {
+        display: flex;
+        flex-wrap: wrap;
         width: fit-content;
         max-width: 100%;
       }

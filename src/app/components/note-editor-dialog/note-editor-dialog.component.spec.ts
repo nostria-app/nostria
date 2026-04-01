@@ -29,6 +29,7 @@ import { Router } from '@angular/router';
 import { XDualPostService } from '../../services/x-dual-post.service';
 import { MediaProcessingService } from '../../services/media-processing.service';
 import { SettingsService } from '../../services/settings.service';
+import { OPTIMIZED_MEDIA_COMPRESSION_STRENGTH } from '../../interfaces/media-upload';
 
 describe('NoteEditorDialogComponent', () => {
   let component: NoteEditorDialogComponent;
@@ -378,6 +379,125 @@ describe('NoteEditorDialogComponent', () => {
       expect(component.content()).toContain('[image2]');
     });
 
+    it('should recompress pending media when media optimization changes', async () => {
+      createComponent();
+      await fixture.whenStable();
+
+      Object.defineProperty(URL, 'createObjectURL', {
+        configurable: true,
+        value: vi.fn()
+          .mockReturnValueOnce('blob:image-preview-initial')
+          .mockReturnValueOnce('blob:image-preview-updated'),
+      });
+      Object.defineProperty(URL, 'revokeObjectURL', { configurable: true, value: vi.fn() });
+
+      const originalFile = new File(['original-image-data'], 'photo.png', { type: 'image/png' });
+      const initialPrepared = new File(['initial-image-data'], 'photo.png', { type: 'image/webp' });
+      const optimizedPrepared = new File(['optimized-image-data'], 'photo.png', { type: 'image/webp' });
+
+      mockMediaProcessingService.prepareFileForUpload
+        .mockResolvedValueOnce({
+          file: initialPrepared,
+          uploadOriginal: false,
+          wasProcessed: true,
+        })
+        .mockResolvedValueOnce({
+          file: optimizedPrepared,
+          uploadOriginal: false,
+          wasProcessed: true,
+        });
+
+      const privateComponent = component as unknown as {
+        uploadFiles: (files: File[]) => Promise<void>;
+      };
+
+      await privateComponent.uploadFiles([originalFile]);
+      const pendingBefore = component.mediaMetadata()[0];
+
+      await component.onMediaOptimizationChange('optimized');
+
+      const pendingAfter = component.mediaMetadata()[0];
+      expect(component.compressionStrength()).toBe(OPTIMIZED_MEDIA_COMPRESSION_STRENGTH);
+      expect(mockMediaProcessingService.prepareFileForUpload).toHaveBeenLastCalledWith(
+        originalFile,
+        {
+          mode: 'local',
+          compressionStrength: OPTIMIZED_MEDIA_COMPRESSION_STRENGTH,
+        },
+        expect.any(Function)
+      );
+      expect(pendingAfter.id).toBe(pendingBefore.id);
+      expect(pendingAfter.placeholderToken).toBe(pendingBefore.placeholderToken);
+      expect(pendingAfter.processedSize).toBe(optimizedPrepared.size);
+      expect(pendingAfter.previewUrl).toBe('blob:image-preview-updated');
+      expect(pendingAfter.sourceFile).toBe(originalFile);
+    });
+
+    it('should insert a space when adjacent image placeholders are replaced with final URLs', async () => {
+      createComponent();
+      await fixture.whenStable();
+
+      Object.defineProperty(URL, 'createObjectURL', { configurable: true, value: vi.fn(() => 'blob:image-preview') });
+      Object.defineProperty(URL, 'revokeObjectURL', { configurable: true, value: vi.fn() });
+
+      const firstImageFile = new File(['image-data-1'], 'photo-1.png', { type: 'image/png' });
+      const secondImageFile = new File(['image-data-2'], 'photo-2.png', { type: 'image/png' });
+
+      mockMediaProcessingService.prepareFileForUpload.mockImplementation(async (file: File) => ({
+        file,
+        uploadOriginal: false,
+        wasProcessed: false,
+      }));
+
+      const privateComponent = component as unknown as {
+        uploadFiles: (files: File[]) => Promise<void>;
+        extractMediaMetadata: (
+          file: File,
+          url: string,
+          sha256?: string,
+          mirrors?: string[],
+        ) => Promise<{
+          url: string;
+          mimeType: string;
+          sha256?: string;
+          fallbackUrls?: string[];
+        }>;
+        uploadPendingMediaBeforePublish: () => Promise<boolean>;
+      };
+
+      await privateComponent.uploadFiles([firstImageFile, secondImageFile]);
+      component.content.set('[image1][image2]');
+
+      mockMediaService.uploadFile
+        .mockResolvedValueOnce({
+          status: 'success',
+          item: { url: 'https://cdn.example/photo-1.png', sha256: 'sha-1', mirrors: [] },
+        })
+        .mockResolvedValueOnce({
+          status: 'success',
+          item: { url: 'https://cdn.example/photo-2.png', sha256: 'sha-2', mirrors: [] },
+        });
+
+      vi.spyOn(privateComponent, 'extractMediaMetadata')
+        .mockResolvedValueOnce({
+          url: 'https://cdn.example/photo-1.png',
+          mimeType: 'image/png',
+          sha256: 'sha-1',
+          fallbackUrls: [],
+        })
+        .mockResolvedValueOnce({
+          url: 'https://cdn.example/photo-2.png',
+          mimeType: 'image/png',
+          sha256: 'sha-2',
+          fallbackUrls: [],
+        });
+
+      const uploaded = await privateComponent.uploadPendingMediaBeforePublish();
+
+      expect(uploaded).toBe(true);
+      expect(component.content()).toBe('https://cdn.example/photo-1.png https://cdn.example/photo-2.png');
+    });
+
     it('should resolve pending video placeholders to the local preview URL in preview mode', async () => {
       createComponent();
       await fixture.whenStable();
@@ -512,6 +632,49 @@ describe('NoteEditorDialogComponent', () => {
       expect(component.mediaMetadata()).toHaveLength(1);
       expect(component.mediaMetadata()[0].pendingUpload).toBe(true);
       expect(component.content()).toContain(placeholder);
+    });
+
+    it('should open pending image thumbnails in the media preview dialog when the placeholder is still present', async () => {
+      createComponent();
+      await fixture.whenStable();
+
+      component.mediaMetadata.set([
+        {
+          id: 'pending-image-1',
+          url: 'blob:optimized-image',
+          previewUrl: 'blob:optimized-image',
+          mimeType: 'image/png',
+          fileName: 'photo.png',
+          originalSize: 4096,
+          processedSize: 2048,
+          pendingUpload: true,
+          placeholderToken: '[image1]',
+        },
+      ]);
+      component.content.set('caption\n\n[image1]');
+      fixture.detectChanges();
+
+      const previewButton = fixture.nativeElement.querySelector('.media-thumbnail-button.pending-upload') as HTMLButtonElement;
+      previewButton.click();
+      await vi.dynamicImportSettled();
+
+      expect(mockMatDialog.open).toHaveBeenCalledTimes(1);
+      expect(mockMatDialog.open).toHaveBeenCalledWith(
+        expect.any(Function),
+        expect.objectContaining({
+          data: {
+            mediaItems: [
+              {
+                url: 'blob:optimized-image',
+                type: 'image',
+                title: 'photo.png',
+              },
+            ],
+            initialIndex: 0,
+          },
+          panelClass: 'image-dialog-panel',
+        })
+      );
     });
 
     it('should open uploaded image thumbnails in the media preview dialog', async () => {
@@ -1042,6 +1205,19 @@ describe('NoteEditorDialogComponent', () => {
 
       expect(toolbarClearDraft).toBeFalsy();
       expect(compiled.textContent).toContain('Clear draft');
+    });
+
+    it('should render Show Event JSON as an expander button instead of a slide toggle', async () => {
+      createComponent();
+      component.showAdvancedOptions.set(true);
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      const jsonExpander = fixture.nativeElement.querySelector('.event-json-expander') as HTMLButtonElement | null;
+      const jsonToggle = fixture.nativeElement.querySelector('mat-slide-toggle');
+
+      expect(jsonExpander?.textContent).toContain('Show Event JSON');
+      expect(jsonToggle?.textContent ?? '').not.toContain('Show Event JSON');
     });
 
   });

@@ -860,6 +860,8 @@
   }
 
   .dm-optimization-toggle-group {
+    display: flex;
+    flex-wrap: wrap;
     width: fit-content;
     max-width: 100%;
   }

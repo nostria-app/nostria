@@ -180,7 +180,7 @@
       <!-- Media Upload Options -->
       <div class="option-row">
         <div class="option-header">
-          <span class="option-label">Optimization</span>
+          <span class="option-label">Media Optimization</span>
           <mat-button-toggle-group class="optimization-toggle-group" [value]="selectedMediaOptimization()"
             (change)="onMediaOptimizationChange($event.value)" [hideSingleSelectionIndicator]="true"
             aria-label="Media optimization">
@@ -189,7 +189,7 @@
             }
           </mat-button-toggle-group>
           <span class="option-description">
-            {{ selectedMediaOptimizationDescription() }} Applies to newly added images and videos.
+            {{ selectedMediaOptimizationDescription() }}
           </span>
         </div>
       </div>
@@ -332,13 +332,15 @@
       <!-- Event JSON Preview Option -->
       <div class="option-row">
         <div class="option-header">
-          <mat-slide-toggle [checked]="showEventJson()" (change)="showEventJson.set($event.checked)" color="primary">
-            Show Event JSON
-          </mat-slide-toggle>
+          <button mat-button type="button" class="event-json-expander" (click)="showEventJson.update(value => !value)"
+            [attr.aria-expanded]="showEventJson()" aria-controls="event-json-preview-panel">
+            <mat-icon>{{ showEventJson() ? 'expand_less' : 'expand_more' }}</mat-icon>
+            <span>Show Event JSON</span>
+          </button>
         </div>
 
         @if (showEventJson()) {
-        <div class="option-content">
+        <div class="option-content" id="event-json-preview-panel">
           <div class="event-json-preview">
             <pre class="json-content">{{ previewEventJson() }}</pre>
           </div>
@@ -451,8 +453,7 @@
         <mat-icon>close</mat-icon>
       </button>
       <button type="button" class="media-thumbnail-button" [class.pending-upload]="media.pendingUpload"
-        [attr.aria-label]="media.pendingUpload ? 'Reinsert pending media placeholder' : 'Open media preview'"
-        [matTooltip]="media.pendingUpload ? 'Reinsert placeholder tag' : 'Open preview'"
+        [attr.aria-label]="getMediaThumbnailAriaLabel(media)" [matTooltip]="getMediaThumbnailTooltip(media)"
         (click)="onMediaThumbnailClick(i, $event)">
         @if (media.mimeType?.startsWith('video/')) {
         <mat-icon class="video-icon">videocam</mat-icon>
@@ -463,11 +464,8 @@
         <img [src]="getMediaThumbnailUrl(media)" class="thumbnail-img" alt="Image thumbnail">
         }
         <div class="media-thumbnail-meta">
-          @if (media.pendingUpload) {
-          <span class="media-status">Uploads on publish</span>
-          }
-          <span class="media-size">Original {{ formatFileSize(media.originalSize) }}</span>
-          <span class="media-size">Upload {{ formatFileSize(getMediaUploadSize(media)) }}</span>
+          <span class="media-savings" [class.empty]="!getMediaThumbnailSavingsLabel(media)">{{ getMediaThumbnailSavingsLabel(media) }}</span>
+          <span class="media-size">{{ getMediaThumbnailSizeLabel(media) }}</span>
         </div>
       </button>
     </div>

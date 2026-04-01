@@ -120,7 +120,7 @@ export class MediaProcessingService {
       return {
         originalFile: file,
         willUploadCompressedFile: false,
-        warningMessage: 'Choose Balanced or Maximum to preview how the media will look after optimization.',
+        warningMessage: 'Choose Minimal, Balanced, or Optimized to preview how the media will look after optimization.',
       };
     }
 
@@ -534,7 +534,11 @@ export class MediaProcessingService {
       return 1920;
     }
 
-    return 2560;
+    if (normalized >= 10) {
+      return 2560;
+    }
+
+    return 3200;
   }
 
   private getVideoMaxDimension(compressionStrength: number): number {
