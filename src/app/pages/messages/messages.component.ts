@@ -214,6 +214,11 @@ interface ComposerMediaPreview {
   warningMessage?: string;
 }
 
+interface PendingDmMediaOptimizationRequest {
+  settings: MediaUploadSettings;
+  previewIds?: string[];
+}
+
 interface QuickReactionMenuItem {
   content: string;
   customEmojiUrl?: string;
@@ -355,6 +360,8 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   private longPressTimeout: ReturnType<typeof setTimeout> | null = null;
   private readonly LONG_PRESS_DURATION = 500; // 500ms for long press
   private pendingDmMediaOptimizationRunId = 0;
+  private pendingDmMediaOptimizationRequest: PendingDmMediaOptimizationRequest | null = null;
+  private pendingDmMediaOptimizationPromise: Promise<void> | null = null;
   private pendingDmVideoProfileMenuTimeout: ReturnType<typeof setTimeout> | null = null;
   private activeDmVideoProfileMenuTrigger: MatMenuTrigger | null = null;
   private readonly DM_VIDEO_PROFILE_MENU_HOLD_DELAY = 450;
@@ -2522,11 +2529,16 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     index: number,
     uploadSettings: MediaUploadSettings,
     existingPreview?: PendingEncryptedMediaPreview,
+    optimizationRunId?: number,
   ): Promise<PendingEncryptedMediaPreview> {
     const preparedFile = await this.mediaProcessing.prepareFileForUpload(
       sourceFile,
       this.getDmUploadSettingsForSourceFile(sourceFile, uploadSettings, existingPreview),
       progress => {
+        if (optimizationRunId !== undefined && optimizationRunId !== this.pendingDmMediaOptimizationRunId) {
+          return;
+        }
+
         const progressSuffix = progress.progress !== undefined
           ? ` ${Math.round(progress.progress * 100)}%`
           : '';
@@ -3273,6 +3285,67 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     settings: MediaUploadSettings,
     previewIds?: string[],
   ): Promise<void> {
+    this.pendingDmMediaOptimizationRequest = this.mergePendingDmMediaOptimizationRequest(
+      this.pendingDmMediaOptimizationRequest,
+      { settings, previewIds },
+    );
+
+    if (this.pendingDmMediaOptimizationPromise) {
+      return this.pendingDmMediaOptimizationPromise;
+    }
+
+    this.pendingDmMediaOptimizationPromise = this.flushPendingDmMediaOptimizationQueue();
+    return this.pendingDmMediaOptimizationPromise;
+  }
+
+  private mergePendingDmMediaOptimizationRequest(
+    current: PendingDmMediaOptimizationRequest | null,
+    next: PendingDmMediaOptimizationRequest,
+  ): PendingDmMediaOptimizationRequest {
+    if (!current) {
+      return {
+        settings: next.settings,
+        previewIds: next.previewIds ? [...next.previewIds] : undefined,
+      };
+    }
+
+    return {
+      settings: next.settings,
+      previewIds: this.mergePendingDmMediaOptimizationPreviewIds(current.previewIds, next.previewIds),
+    };
+  }
+
+  private mergePendingDmMediaOptimizationPreviewIds(
+    current?: string[],
+    next?: string[],
+  ): string[] | undefined {
+    if (!current || current.length === 0 || !next || next.length === 0) {
+      return undefined;
+    }
+
+    return Array.from(new Set([...current, ...next]));
+  }
+
+  private async flushPendingDmMediaOptimizationQueue(): Promise<void> {
+    this.isUploading.set(true);
+
+    try {
+      while (this.pendingDmMediaOptimizationRequest) {
+        const request = this.pendingDmMediaOptimizationRequest;
+        this.pendingDmMediaOptimizationRequest = null;
+        await this.runPendingDmMediaOptimization(request.settings, request.previewIds);
+      }
+    } finally {
+      this.pendingDmMediaOptimizationPromise = null;
+      this.isUploading.set(false);
+      this.uploadStatus.set('');
+    }
+  }
+
+  private async runPendingDmMediaOptimization(
+    settings: MediaUploadSettings,
+    previewIds?: string[],
+  ): Promise<void> {
     const pendingPreviews = this.pendingEncryptedMediaPreviews().filter(preview => {
       if (preview.type !== 'image' && preview.type !== 'video') {
         return false;
@@ -3293,43 +3366,34 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     const isStale = (): boolean => runId !== this.pendingDmMediaOptimizationRunId;
     const currentPreviews = [...this.pendingEncryptedMediaPreviews()];
 
-    this.isUploading.set(true);
-
-    try {
-      for (const [index, preview] of pendingPreviews.entries()) {
-        if (isStale()) {
-          return;
-        }
-
-        const sourceFile = preview.sourceFile ?? preview.file;
-        const refreshedPreview = await this.createPendingEncryptedMediaPreview(sourceFile, index, settings, preview);
-
-        if (isStale()) {
-          this.revokeObjectUrlLater(refreshedPreview.objectUrl);
-          return;
-        }
-
-        const existingIndex = currentPreviews.findIndex(item => item.id === preview.id);
-        if (existingIndex === -1) {
-          this.revokeObjectUrlLater(refreshedPreview.objectUrl);
-          continue;
-        }
-
-        this.revokeObjectUrlLater(currentPreviews[existingIndex].objectUrl);
-        currentPreviews[existingIndex] = refreshedPreview;
-      }
-
+    for (const [index, preview] of pendingPreviews.entries()) {
       if (isStale()) {
         return;
       }
 
-      this.syncPendingEncryptedMediaPreviews(currentPreviews);
-    } finally {
-      if (!isStale()) {
-        this.isUploading.set(false);
-        this.uploadStatus.set('');
+      const sourceFile = preview.sourceFile ?? preview.file;
+      const refreshedPreview = await this.createPendingEncryptedMediaPreview(sourceFile, index, settings, preview, runId);
+
+      if (isStale()) {
+        this.revokeObjectUrlLater(refreshedPreview.objectUrl);
+        return;
       }
+
+      const existingIndex = currentPreviews.findIndex(item => item.id === preview.id);
+      if (existingIndex === -1) {
+        this.revokeObjectUrlLater(refreshedPreview.objectUrl);
+        continue;
+      }
+
+      this.revokeObjectUrlLater(currentPreviews[existingIndex].objectUrl);
+      currentPreviews[existingIndex] = refreshedPreview;
     }
+
+    if (isStale()) {
+      return;
+    }
+
+    this.syncPendingEncryptedMediaPreviews(currentPreviews);
   }
 
   private getDmPendingPreviewUploadSize(preview: ComposerMediaPreview): number {
