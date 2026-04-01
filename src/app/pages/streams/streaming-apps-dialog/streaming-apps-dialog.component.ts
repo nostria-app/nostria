@@ -1,4 +1,14 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  OnDestroy,
+  computed,
+  effect,
+  inject,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
@@ -6,17 +16,24 @@ import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { nip19 } from 'nostr-tools';
 import { CustomDialogRef } from '../../../services/custom-dialog.service';
 import { NostrService } from '../../../services/nostr.service';
 import { PublishService } from '../../../services/publish.service';
 import { LoggerService } from '../../../services/logger.service';
 import { AccountStateService } from '../../../services/account-state.service';
+import {
+  CameraFacingMode,
+  LiveStreamBroadcastService,
+} from '../../../services/live-stream-broadcast.service';
 
 type StreamStatus = 'planned' | 'live' | 'ended';
-type ProviderId = 'zap-stream' | 'generic';
+type ProviderId = 'openresist-whip' | 'zap-stream' | 'generic';
 
 interface StreamingProviderOption {
   id: ProviderId;
@@ -25,6 +42,9 @@ interface StreamingProviderOption {
   description: string;
   helpText: string;
   openUrl: string;
+  defaultPlatformUrl?: string;
+  supportsDirectBroadcast?: boolean;
+  whipEndpoint?: string;
 }
 
 interface PublishedStreamResult {
@@ -36,6 +56,17 @@ const LIVE_STREAM_KIND = 30311;
 const MILLISECONDS_PER_MINUTE = 60_000;
 
 const STREAMING_PROVIDER_OPTIONS: StreamingProviderOption[] = [
+  {
+    id: 'openresist-whip',
+    name: 'OpenResist WHIP',
+    serviceUrl: 'https://stream.openresist.com',
+    description: 'Push the device camera directly to OpenResist from Nostria, then announce it publicly when ready.',
+    helpText: 'OpenResist gives you a public watch page even when you do not have a direct HLS playback URL yet.',
+    openUrl: 'https://stream.openresist.com/',
+    defaultPlatformUrl: 'https://stream.openresist.com/',
+    supportsDirectBroadcast: true,
+    whipEndpoint: 'https://stream.openresist.com/whip/endpoint/live',
+  },
   {
     id: 'zap-stream',
     name: 'zap.stream',
@@ -63,295 +94,16 @@ const STREAMING_PROVIDER_OPTIONS: StreamingProviderOption[] = [
     MatFormFieldModule,
     MatIconModule,
     MatInputModule,
+    MatProgressSpinnerModule,
     MatSelectModule,
+    MatSlideToggleModule,
+    MatTooltipModule,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
-    <div dialog-content class="live-stream-dialog-content">
-      <mat-card class="intro-card">
-        <mat-card-content class="intro-content">
-          <div class="intro-copy">
-            <p class="intro-title" i18n="@@streams.dialog.introTitle">
-              Publish your live stream post from Nostria
-            </p>
-            <p i18n="@@streams.dialog.introDescription">
-              Nostria can publish the Nostr live stream post and send people to your stream, but providers such as
-              zap.stream still handle the actual video ingest.
-            </p>
-            <p class="supporting-text" i18n="@@streams.dialog.introDetails">
-              Paste the playback URL your provider gives you so people can watch directly inside Nostria. If your
-              provider only gives you a public page URL, Nostria will still publish the live stream post and link out
-              to that page.
-            </p>
-          </div>
-
-          <div class="provider-actions">
-            <button mat-stroked-button type="button" (click)="openProvider()">
-              <mat-icon>open_in_new</mat-icon>
-              <span>Open {{ currentProvider().name }}</span>
-            </button>
-          </div>
-        </mat-card-content>
-      </mat-card>
-
-      @if (!isAuthenticated()) {
-        <mat-card class="warning-card">
-          <mat-card-content class="warning-content">
-            <mat-icon>info</mat-icon>
-            <span i18n="@@streams.dialog.signInRequired">
-              Sign in to publish live streams from Nostria.
-            </span>
-          </mat-card-content>
-        </mat-card>
-      }
-
-      <div class="form-grid">
-        <mat-form-field appearance="outline">
-          <mat-label i18n="@@streams.dialog.providerLabel">Streaming provider</mat-label>
-          <mat-select
-            [ngModel]="selectedProviderId()"
-            (ngModelChange)="onProviderChange($event)"
-          >
-            @for (provider of providers; track provider.id) {
-              <mat-option [value]="provider.id">{{ provider.name }}</mat-option>
-            }
-          </mat-select>
-          <mat-hint>{{ currentProvider().description }}</mat-hint>
-        </mat-form-field>
-
-        <mat-form-field appearance="outline">
-          <mat-label i18n="@@streams.dialog.statusLabel">Status</mat-label>
-          <mat-select [ngModel]="status()" (ngModelChange)="onStatusChange($event)">
-            <mat-option value="planned" i18n="@@streams.dialog.statusPlanned">Scheduled</mat-option>
-            <mat-option value="live" i18n="@@streams.dialog.statusLive">Live now</mat-option>
-            <mat-option value="ended" i18n="@@streams.dialog.statusEnded">Ended</mat-option>
-          </mat-select>
-        </mat-form-field>
-
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label i18n="@@streams.dialog.titleLabel">Title</mat-label>
-          <input
-            matInput
-            maxlength="120"
-            [ngModel]="title()"
-            (ngModelChange)="onTitleChange($event)"
-            i18n-placeholder="@@streams.dialog.titlePlaceholder"
-            placeholder="Friday night stream"
-          >
-        </mat-form-field>
-
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label i18n="@@streams.dialog.summaryLabel">Summary</mat-label>
-          <textarea
-            matInput
-            rows="3"
-            [ngModel]="summary()"
-            (ngModelChange)="summary.set($event)"
-            i18n-placeholder="@@streams.dialog.summaryPlaceholder"
-            placeholder="What you're streaming, who is joining, and where people can watch."
-          ></textarea>
-        </mat-form-field>
-
-        <mat-form-field appearance="outline">
-          <mat-label i18n="@@streams.dialog.identifierLabel">Stream identifier</mat-label>
-          <input
-            matInput
-            [ngModel]="streamIdentifier()"
-            (ngModelChange)="onIdentifierChange($event)"
-            i18n-placeholder="@@streams.dialog.identifierPlaceholder"
-            placeholder="friday-night-stream"
-          >
-          <mat-hint i18n="@@streams.dialog.identifierHint">
-            Reuse this identifier later if you want to update the same live stream post.
-          </mat-hint>
-        </mat-form-field>
-
-        <mat-form-field appearance="outline">
-          <mat-label i18n="@@streams.dialog.startsLabel">Starts at</mat-label>
-          <input
-            matInput
-            type="datetime-local"
-            [ngModel]="startsAt()"
-            (ngModelChange)="startsAt.set($event)"
-          >
-        </mat-form-field>
-
-        @if (status() === 'ended') {
-          <mat-form-field appearance="outline">
-            <mat-label i18n="@@streams.dialog.endsLabel">Ended at</mat-label>
-            <input
-              matInput
-              type="datetime-local"
-              [ngModel]="endsAt()"
-              (ngModelChange)="endsAt.set($event)"
-            >
-          </mat-form-field>
-        }
-
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label i18n="@@streams.dialog.playbackLabel">Playback URL</mat-label>
-          <input
-            matInput
-            [ngModel]="streamingUrl()"
-            (ngModelChange)="streamingUrl.set($event)"
-            i18n-placeholder="@@streams.dialog.playbackPlaceholder"
-            placeholder="https://example.com/live/index.m3u8"
-          >
-          <mat-hint i18n="@@streams.dialog.playbackHint">
-            Required for inline playback when the stream is live. HLS (.m3u8) and LiveKit URLs work best.
-          </mat-hint>
-        </mat-form-field>
-
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label i18n="@@streams.dialog.platformLabel">Platform page URL</mat-label>
-          <input
-            matInput
-            [ngModel]="platformUrl()"
-            (ngModelChange)="platformUrl.set($event)"
-            i18n-placeholder="@@streams.dialog.platformPlaceholder"
-            placeholder="https://zap.stream/..."
-          >
-          <mat-hint>{{ currentProvider().helpText }}</mat-hint>
-        </mat-form-field>
-
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label i18n="@@streams.dialog.thumbnailLabel">Thumbnail image URL</mat-label>
-          <input
-            matInput
-            [ngModel]="imageUrl()"
-            (ngModelChange)="imageUrl.set($event)"
-            i18n-placeholder="@@streams.dialog.thumbnailPlaceholder"
-            placeholder="https://example.com/thumbnail.jpg"
-          >
-        </mat-form-field>
-
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label i18n="@@streams.dialog.hashtagsLabel">Hashtags</mat-label>
-          <input
-            matInput
-            [ngModel]="hashtagsInput()"
-            (ngModelChange)="hashtagsInput.set($event)"
-            i18n-placeholder="@@streams.dialog.hashtagsPlaceholder"
-            placeholder="nostr, gaming, live"
-          >
-          <mat-hint i18n="@@streams.dialog.hashtagsHint">
-            Separate tags with commas or spaces.
-          </mat-hint>
-        </mat-form-field>
-      </div>
-
-    </div>
-
-    <div dialog-actions class="dialog-actions">
-      <button mat-button type="button" (click)="close()" i18n="@@common.close">Close</button>
-      <button
-        mat-flat-button
-        type="button"
-        (click)="publishStream()"
-        [disabled]="!canPublish()"
-      >
-        <mat-icon>live_tv</mat-icon>
-        <span>{{ publishButtonLabel() }}</span>
-      </button>
-    </div>
-  `,
-  styles: [`
-    :host {
-      display: contents;
-    }
-
-    .live-stream-dialog-content {
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-      min-width: min(680px, 100%);
-      padding-top: 8px;
-    }
-
-    .intro-card,
-    .warning-card {
-      background: var(--mat-sys-surface-container);
-      border: 1px solid var(--mat-sys-outline-variant);
-    }
-
-    .intro-content,
-    .warning-content {
-      display: flex;
-      gap: 12px;
-      align-items: flex-start;
-    }
-
-    .intro-content {
-      justify-content: space-between;
-      flex-wrap: wrap;
-    }
-
-    .intro-copy {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      flex: 1 1 360px;
-    }
-
-    .intro-title {
-      margin: 0;
-      color: var(--mat-sys-on-surface);
-    }
-
-    .supporting-text {
-      color: var(--mat-sys-on-surface-variant);
-    }
-
-    .provider-actions {
-      display: flex;
-      align-items: center;
-    }
-
-    .warning-content {
-      color: var(--mat-sys-on-surface);
-      align-items: center;
-    }
-
-    .warning-content mat-icon {
-      color: var(--mat-sys-primary);
-      flex-shrink: 0;
-    }
-
-    .form-grid {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 16px;
-    }
-
-    .full-width {
-      grid-column: 1 / -1;
-    }
-
-    textarea[matInput] {
-      field-sizing: content;
-      min-height: 96px;
-    }
-
-    .dialog-actions {
-      display: flex;
-      justify-content: flex-end;
-      gap: 8px;
-      width: 100%;
-    }
-
-    @media (max-width: 720px),
-    (max-height: 720px) {
-      .live-stream-dialog-content {
-        min-width: 0;
-      }
-
-      .form-grid {
-        grid-template-columns: minmax(0, 1fr);
-      }
-    }
-  `],
+  templateUrl: './streaming-apps-dialog.component.html',
+  styleUrl: './streaming-apps-dialog.component.scss',
 })
-export class StreamingAppsDialogComponent {
+export class StreamingAppsDialogComponent implements OnDestroy {
   readonly dialogRef = inject(CustomDialogRef<StreamingAppsDialogComponent, PublishedStreamResult | undefined>);
   private readonly nostrService = inject(NostrService);
   private readonly publishService = inject(PublishService);
@@ -359,11 +111,13 @@ export class StreamingAppsDialogComponent {
   private readonly router = inject(Router);
   private readonly logger = inject(LoggerService);
   private readonly accountState = inject(AccountStateService);
+  readonly broadcast = inject(LiveStreamBroadcastService);
 
   readonly providers = STREAMING_PROVIDER_OPTIONS;
+  readonly cameraPreview = viewChild<ElementRef<HTMLVideoElement>>('cameraPreview');
 
   private readonly identifierSuffix = this.createIdentifierSuffix();
-  readonly selectedProviderId = signal<ProviderId>('zap-stream');
+  readonly selectedProviderId = signal<ProviderId>('openresist-whip');
   readonly title = signal('');
   readonly summary = signal('');
   readonly status = signal<StreamStatus>('planned');
@@ -371,10 +125,12 @@ export class StreamingAppsDialogComponent {
   readonly startsAt = signal(this.toLocalDateTimeValue(new Date()));
   readonly endsAt = signal('');
   readonly streamingUrl = signal('');
-  readonly platformUrl = signal(STREAMING_PROVIDER_OPTIONS[0].openUrl);
+  readonly platformUrl = signal(STREAMING_PROVIDER_OPTIONS[0].defaultPlatformUrl ?? STREAMING_PROVIDER_OPTIONS[0].openUrl);
   readonly imageUrl = signal('');
   readonly hashtagsInput = signal('');
   readonly publishing = signal(false);
+  readonly cameraFacingMode = signal<CameraFacingMode>('user');
+  readonly withMicrophone = signal(true);
 
   private readonly identifierEdited = signal(false);
 
@@ -384,7 +140,20 @@ export class StreamingAppsDialogComponent {
 
   readonly isAuthenticated = computed(() => !!this.accountState.pubkey());
 
+  readonly isPremiumSubscriber = computed(() => {
+    const subscription = this.accountState.subscription();
+    const isPremiumTier = subscription?.tier === 'premium' || subscription?.tier === 'premium_plus';
+    const isNotExpired = !subscription?.expires || Date.now() < subscription.expires;
+    return !!subscription && isPremiumTier && isNotExpired;
+  });
+
+  readonly supportsDirectBroadcast = computed(() => !!this.currentProvider().supportsDirectBroadcast);
+
   readonly publishButtonLabel = computed(() => {
+    if (this.broadcast.isLive()) {
+      return $localize`:@@streams.dialog.publishAnnounce:Announce live stream`;
+    }
+
     switch (this.status()) {
       case 'live':
         return $localize`:@@streams.dialog.publishLive:Publish live stream`;
@@ -395,22 +164,101 @@ export class StreamingAppsDialogComponent {
     }
   });
 
-  readonly canPublish = computed(() => {
-    return this.isAuthenticated() && !!this.title().trim() && !this.publishing();
+  readonly privateBroadcastButtonLabel = computed(() => {
+    return this.broadcast.isLive()
+      ? $localize`:@@streams.dialog.stopPrivate:Stop private broadcast`
+      : $localize`:@@streams.dialog.goLivePrivate:Go live privately`;
   });
+
+  readonly directBroadcastStatusLabel = computed(() => {
+    switch (this.broadcast.state()) {
+      case 'preparing':
+        return $localize`:@@streams.dialog.broadcastPreparing:Preparing camera`;
+      case 'connecting':
+        return $localize`:@@streams.dialog.broadcastConnecting:Connecting to provider`;
+      case 'live':
+        return $localize`:@@streams.dialog.broadcastLive:Private broadcast live`;
+      case 'error':
+        return $localize`:@@streams.dialog.broadcastError:Broadcast error`;
+      case 'stopping':
+        return $localize`:@@streams.dialog.broadcastStopping:Stopping broadcast`;
+      default:
+        return $localize`:@@streams.dialog.broadcastIdle:Idle`;
+    }
+  });
+
+  readonly canPublish = computed(() => {
+    return this.isAuthenticated() && this.isPremiumSubscriber() && !!this.title().trim() && !this.publishing();
+  });
+
+  readonly canPreparePreview = computed(() => {
+    return this.isAuthenticated() && this.isPremiumSubscriber() && this.supportsDirectBroadcast() && !this.broadcast.isBusy();
+  });
+
+  readonly canTogglePrivateBroadcast = computed(() => {
+    if (this.broadcast.isLive()) {
+      return !this.broadcast.isBusy();
+    }
+
+    return this.canPreparePreview();
+  });
+
+  constructor() {
+    effect(() => {
+      const previewElement = this.cameraPreview()?.nativeElement;
+      const previewStream = this.broadcast.previewStream();
+
+      if (!previewElement) {
+        return;
+      }
+
+      if (previewElement.srcObject !== previewStream) {
+        previewElement.srcObject = previewStream;
+      }
+
+      if (previewStream) {
+        previewElement.muted = true;
+        previewElement.playsInline = true;
+        void previewElement.play().catch(error => {
+          this.logger.warn('Failed to start live stream preview playback', error);
+        });
+      }
+    });
+  }
+
+  ngOnDestroy(): void {
+    void this.broadcast.releasePreviewIfIdle();
+  }
 
   close(): void {
     this.dialogRef.close();
   }
 
   onProviderChange(providerId: ProviderId): void {
+    if (this.broadcast.isLive() && providerId !== this.selectedProviderId()) {
+      this.snackBar.open(
+        $localize`:@@streams.dialog.stopBeforeSwitch:Stop the active broadcast before switching providers.`,
+        '',
+        { duration: 3000 },
+      );
+      return;
+    }
+
     const previousProvider = this.currentProvider();
     const currentPlatformUrl = this.platformUrl().trim();
 
     this.selectedProviderId.set(providerId);
 
-    if (!currentPlatformUrl || currentPlatformUrl === previousProvider.openUrl) {
-      this.platformUrl.set(this.currentProvider().openUrl);
+    if (
+      !currentPlatformUrl
+      || currentPlatformUrl === previousProvider.openUrl
+      || currentPlatformUrl === previousProvider.defaultPlatformUrl
+    ) {
+      this.platformUrl.set(this.currentProvider().defaultPlatformUrl ?? this.currentProvider().openUrl);
+    }
+
+    if (!this.supportsDirectBroadcast() && !this.broadcast.isLive()) {
+      void this.broadcast.releasePreviewIfIdle();
     }
   }
 
@@ -444,6 +292,14 @@ export class StreamingAppsDialogComponent {
     this.streamIdentifier.set(this.normalizeIdentifier(value));
   }
 
+  onMicrophoneChange(value: boolean): void {
+    this.withMicrophone.set(value);
+
+    if (this.broadcast.previewStream() && !this.broadcast.isLive()) {
+      void this.preparePreview();
+    }
+  }
+
   openProvider(): void {
     if (typeof window === 'undefined') {
       return;
@@ -459,7 +315,105 @@ export class StreamingAppsDialogComponent {
     window.open(normalizedTargetUrl, '_blank', 'noopener,noreferrer');
   }
 
+  async preparePreview(): Promise<void> {
+    if (!this.ensurePremiumAccess()) {
+      return;
+    }
+
+    if (!this.supportsDirectBroadcast()) {
+      return;
+    }
+
+    try {
+      await this.broadcast.restartPreview({
+        audio: this.withMicrophone(),
+        facingMode: this.cameraFacingMode(),
+      });
+    } catch (error) {
+      this.logger.error('Failed to prepare live stream preview', error);
+      this.snackBar.open(
+        error instanceof Error ? error.message : $localize`:@@streams.dialog.previewFailed:Failed to prepare the camera preview.`,
+        '',
+        { duration: 3500 },
+      );
+    }
+  }
+
+  async toggleCameraFacingMode(): Promise<void> {
+    const nextFacingMode = this.cameraFacingMode() === 'user' ? 'environment' : 'user';
+    this.cameraFacingMode.set(nextFacingMode);
+
+    if (this.broadcast.previewStream() && !this.broadcast.isLive()) {
+      await this.preparePreview();
+    }
+  }
+
+  async togglePrivateBroadcast(): Promise<void> {
+    if (this.broadcast.isLive()) {
+      await this.stopPrivateBroadcast();
+      return;
+    }
+
+    if (!this.ensurePremiumAccess()) {
+      return;
+    }
+
+    const whipEndpoint = this.currentProvider().whipEndpoint;
+    if (!whipEndpoint) {
+      return;
+    }
+
+    try {
+      await this.broadcast.startBroadcast({
+        endpoint: whipEndpoint,
+        audio: this.withMicrophone(),
+        facingMode: this.cameraFacingMode(),
+      });
+
+      if (!this.platformUrl().trim()) {
+        this.platformUrl.set(this.currentProvider().defaultPlatformUrl ?? this.currentProvider().openUrl);
+      }
+
+      this.status.set('live');
+      this.startsAt.set(this.toLocalDateTimeValue(new Date()));
+      this.snackBar.open(
+        $localize`:@@streams.dialog.privateStarted:Private broadcast is live. Publish the Nostr event when you are ready.`,
+        '',
+        { duration: 4000 },
+      );
+    } catch (error) {
+      this.logger.error('Failed to start private live broadcast', error);
+      this.snackBar.open(
+        error instanceof Error ? error.message : $localize`:@@streams.dialog.privateFailed:Failed to start the private broadcast.`,
+        '',
+        { duration: 4000 },
+      );
+    }
+  }
+
+  async stopPrivateBroadcast(): Promise<void> {
+    try {
+      await this.broadcast.stopBroadcast();
+      this.snackBar.open(
+        $localize`:@@streams.dialog.privateStopped:Private broadcast stopped.`,
+        '',
+        { duration: 3000 },
+      );
+    } catch (error) {
+      this.logger.error('Failed to stop private live broadcast', error);
+      this.snackBar.open(
+        $localize`:@@streams.dialog.stopFailed:Failed to stop the private broadcast cleanly.`,
+        '',
+        { duration: 3500 },
+      );
+    }
+  }
+
   async publishStream(): Promise<void> {
+    if (!this.ensurePremiumAccess()) {
+      return;
+    }
+
     const pubkey = this.accountState.pubkey();
     if (!pubkey) {
       this.snackBar.open(
@@ -505,9 +459,13 @@ export class StreamingAppsDialogComponent {
       return;
     }
 
-    if (this.status() === 'live' && !streamingUrl) {
+    if (this.broadcast.isLive()) {
+      this.status.set('live');
+    }
+
+    if (this.status() === 'live' && !streamingUrl && !platformUrl) {
       this.snackBar.open(
-        $localize`:@@streams.dialog.playbackRequired:Paste a playback URL before publishing a live stream.`,
+        $localize`:@@streams.dialog.playbackOrPlatformRequired:Add a playback URL or a provider watch page before announcing a live stream.`,
         '',
         { duration: 3500 },
       );
@@ -582,9 +540,11 @@ export class StreamingAppsDialogComponent {
       this.streamIdentifier.set(identifier);
 
       this.snackBar.open(
-        $localize`:@@streams.dialog.publishSuccess:Live stream published successfully.`,
+        this.broadcast.isLive()
+          ? $localize`:@@streams.dialog.publishSuccessWithBroadcast:Live stream announced. Your camera broadcast stays live until you stop it from Start Live Stream.`
+          : $localize`:@@streams.dialog.publishSuccess:Live stream published successfully.`,
         '',
-        { duration: 3000 },
+        { duration: 4500 },
       );
 
       await this.router.navigate(['/stream', naddr]);
@@ -659,6 +619,31 @@ export class StreamingAppsDialogComponent {
     return typeof crypto !== 'undefined' && crypto.randomUUID
       ? crypto.randomUUID().slice(0, 8)
       : Date.now().toString(36);
+  }
+
+  private ensurePremiumAccess(): boolean {
+    if (!this.isAuthenticated()) {
+      this.snackBar.open(
+        $localize`:@@streams.dialog.signInFirst:Sign in to publish a live stream.`,
+        '',
+        { duration: 3000 },
+      );
+      return false;
+    }
+
+    if (this.isPremiumSubscriber()) {
+      return true;
+    }
+
+    const snackBarRef = this.snackBar.open(
+      $localize`:@@streams.dialog.premiumRequired:Live streaming is a premium feature. Upgrade to start broadcasting.`,
+      $localize`:@@streams.dialog.upgrade:Upgrade`,
+      { duration: 5000 },
+    );
+    snackBarRef.onAction().subscribe(() => {
+      void this.router.navigate(['/accounts'], { queryParams: { tab: 'premium' } });
+    });
+    return false;
   }
 
   private normalizeIdentifier(value: string): string {

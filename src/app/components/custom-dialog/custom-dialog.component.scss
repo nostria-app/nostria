@@ -170,6 +170,24 @@
   }
 }
 
+.material-header-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--mat-sys-primary);
+  border-radius: 0;
+  font-size: 32px;
+
+  @media (max-width: 700px),
+  (max-height: 700px) {
+    font-size: 28px;
+  }
+
+  @media (max-height: 700px) {
+    font-size: 24px;
+  }
+}
+
 .secondary-header-button {
   display: inline-flex;
   align-items: center;
