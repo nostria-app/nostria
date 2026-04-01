@@ -28,7 +28,7 @@ describe('media-upload presets', () => {
 
   it('classifies existing local compression strengths into the new preset buckets', () => {
     expect(getMediaOptimizationOption('original', 35)).toBe('original');
-    expect(getMediaOptimizationOption('local', 10)).toBe('minimal');
+    expect(getMediaOptimizationOption('local', 5)).toBe('minimal');
     expect(getMediaOptimizationOption('local', 35)).toBe('balanced');
     expect(getMediaOptimizationOption('local', 50)).toBe('balanced');
     expect(getMediaOptimizationOption('local', 65)).toBe('optimized');
@@ -36,7 +36,7 @@ describe('media-upload presets', () => {
 
   it('uses the new user-facing compression labels', () => {
     expect(getCompressionStrengthLabel(0)).toBe('Original');
-    expect(getCompressionStrengthLabel(10)).toBe('Minimal');
+    expect(getCompressionStrengthLabel(5)).toBe('Minimal');
     expect(getCompressionStrengthLabel(35)).toBe('Balanced');
     expect(getCompressionStrengthLabel(65)).toBe('Optimized');
   });

@@ -433,19 +433,19 @@ export class MediaProcessingService {
       videoCodecs: SupportedVideoCodec[];
       audioCodecs: SupportedAudioCodec[];
     }[] = [
-      {
-        extension: '.mp4',
-        format: new mediabunny.Mp4OutputFormat({ fastStart: 'in-memory' }),
-        videoCodecs: ['avc', 'vp9', 'av1', 'hevc'],
-        audioCodecs: ['aac', 'opus', 'mp3'],
-      },
-      {
-        extension: '.webm',
-        format: new mediabunny.WebMOutputFormat(),
-        videoCodecs: ['vp9', 'vp8', 'av1'],
-        audioCodecs: ['opus', 'vorbis'],
-      },
-    ];
+        {
+          extension: '.mp4',
+          format: new mediabunny.Mp4OutputFormat({ fastStart: 'in-memory' }),
+          videoCodecs: ['avc', 'vp9', 'av1', 'hevc'],
+          audioCodecs: ['aac', 'opus', 'mp3'],
+        },
+        {
+          extension: '.webm',
+          format: new mediabunny.WebMOutputFormat(),
+          videoCodecs: ['vp9', 'vp8', 'av1'],
+          audioCodecs: ['opus', 'vorbis'],
+        },
+      ];
 
     for (const candidate of candidates) {
       const videoCodec = await mediabunny.getFirstEncodableVideoCodec(candidate.videoCodecs, {
@@ -538,7 +538,7 @@ export class MediaProcessingService {
       return 2560;
     }
 
-    return 3200;
+    return 3840;
   }
 
   private getVideoMaxDimension(compressionStrength: number): number {

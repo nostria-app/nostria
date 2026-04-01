@@ -464,7 +464,8 @@
         <img [src]="getMediaThumbnailUrl(media)" class="thumbnail-img" alt="Image thumbnail">
         }
         <div class="media-thumbnail-meta">
-          <span class="media-savings" [class.empty]="!getMediaThumbnailSavingsLabel(media)">{{ getMediaThumbnailSavingsLabel(media) }}</span>
+          <span class="media-savings" [class.empty]="!getMediaThumbnailSavingsLabel(media)">{{
+            getMediaThumbnailSavingsLabel(media) }}</span>
           <span class="media-size">{{ getMediaThumbnailSizeLabel(media) }}</span>
         </div>
       </button>
