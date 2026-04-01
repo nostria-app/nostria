@@ -234,10 +234,8 @@ describe('NoteEditorDialogComponent', () => {
       fixture.detectChanges();
 
       const preview = fixture.nativeElement.querySelector('.reply-preview-content');
-      const noteId = fixture.nativeElement.querySelector('.reply-note-id');
-
       expect(preview?.textContent).toContain('Original reply content that should be visible in the composer preview.');
-      expect(noteId?.textContent.trim()).toBe('01234567…');
+      expect(fixture.nativeElement.querySelector('.reply-note-id')).toBeNull();
     });
   });
 

@@ -180,8 +180,20 @@
       }
 
       .media-savings {
-        color: var(--mat-success-lighter);
+        color: var(--mat-sys-on-surface-variant);
         min-height: 10px;
+
+        &.decrease {
+          color: var(--mat-success-lighter);
+        }
+
+        &.increase {
+          color: var(--mat-sys-error);
+        }
+
+        &.neutral {
+          color: var(--mat-sys-on-surface-variant);
+        }
 
         &.empty {
           visibility: hidden;
@@ -285,12 +297,6 @@
       gap: 8px;
       min-width: 0;
       flex: 1 1 auto;
-    }
-
-    .reply-note-id {
-      font-size: 12px;
-      color: var(--mat-sys-on-surface-variant);
-      white-space: nowrap;
     }
 
     .reply-author {
@@ -671,8 +677,20 @@
     }
 
     .media-savings {
-      color: var(--mat-success-lighter);
+      color: var(--mat-sys-on-surface-variant);
       min-height: 10px;
+
+      &.decrease {
+        color: var(--mat-success-lighter);
+      }
+
+      &.increase {
+        color: var(--mat-sys-error);
+      }
+
+      &.neutral {
+        color: var(--mat-sys-on-surface-variant);
+      }
 
       &.empty {
         visibility: hidden;
@@ -1881,10 +1899,6 @@
         ::ng-deep .user-profile.list .user-profile-name-link {
           max-width: 110px;
         }
-      }
-
-      .reply-note-id {
-        font-size: 11px;
       }
 
       .reply-preview {

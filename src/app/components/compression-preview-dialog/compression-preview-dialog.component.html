@@ -87,7 +87,10 @@
       <div class="preview-summary-metric" [class.preview-summary-metric-success]="previewStatusTone() === 'success'"
         [class.preview-summary-metric-warning]="previewStatusTone() === 'warning'">
         <span class="preview-summary-metric-label">Size change</span>
-        <span class="preview-summary-metric-value">{{ sizeChangeLabel() }}</span>
+        <span class="preview-summary-metric-value"
+          [class.preview-summary-metric-value-decrease]="sizeChangeTone() === 'decrease'"
+          [class.preview-summary-metric-value-increase]="sizeChangeTone() === 'increase'"
+          [class.preview-summary-metric-value-neutral]="sizeChangeTone() === 'neutral'">{{ sizeChangeLabel() }}</span>
       </div>
     </div>
     }

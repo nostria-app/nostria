@@ -204,6 +204,18 @@
   color: var(--mat-sys-on-surface);
 }
 
+.preview-summary-metric-value-decrease {
+  color: var(--mat-success-lighter);
+}
+
+.preview-summary-metric-value-increase {
+  color: var(--mat-sys-error);
+}
+
+.preview-summary-metric-value-neutral {
+  color: var(--mat-sys-on-surface);
+}
+
 .preview-summary-title {
   font-size: 14px;
   color: var(--mat-sys-on-surface);

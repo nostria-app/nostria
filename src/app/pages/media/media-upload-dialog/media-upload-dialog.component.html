@@ -62,15 +62,16 @@
       <div class="compression-settings">
         <span class="optimization-label">Optimization</span>
         <mat-button-toggle-group class="optimization-toggle-group" [value]="selectedOptimization()"
-          (change)="onOptimizationChange($event.value)" [disabled]="isUploading()"
-          [hideSingleSelectionIndicator]="true" aria-label="Media optimization">
+          (change)="onOptimizationChange($event.value)" [disabled]="isUploading()" [hideSingleSelectionIndicator]="true"
+          aria-label="Media optimization">
           @for (option of optimizationOptions; track option.value) {
           <mat-button-toggle [value]="option.value">{{ option.label }}</mat-button-toggle>
           }
         </mat-button-toggle-group>
         <p class="compression-description">{{ selectedOptimizationDescription() }}</p>
         @if (hasVideo()) {
-        <p class="compression-description">Right-click or press and hold a selected video thumbnail to choose a video type for that file.</p>
+        <p class="compression-description">Right-click or press and hold a selected video thumbnail to choose a video
+          type for that file.</p>
         }
       </div>
       }
@@ -111,7 +112,8 @@
 
   <mat-menu #videoProfileMenu="matMenu" (closed)="onVideoOptimizationMenuClosed()">
     @for (option of videoOptimizationProfileOptions; track option.value) {
-    <button mat-menu-item class="video-profile-menu-item" [class.is-selected]="isSelectedVideoOptimizationProfile(option.value)"
+    <button mat-menu-item class="video-profile-menu-item"
+      [class.is-selected]="isSelectedVideoOptimizationProfile(option.value)"
       (click)="onVideoOptimizationProfileSelected(option.value)">
       <div class="video-profile-menu-copy">
         <span class="video-profile-menu-label">{{ option.label }}</span>

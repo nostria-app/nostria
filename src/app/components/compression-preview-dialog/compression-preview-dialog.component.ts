@@ -90,6 +90,24 @@ export class CompressionPreviewDialogComponent implements OnInit, OnDestroy {
 
     return '0%';
   });
+  readonly sizeChangeTone = computed<'decrease' | 'increase' | 'neutral'>(() => {
+    const result = this.previewResult();
+    if (!result?.compressedFile || result.originalFile.size <= 0) {
+      return 'neutral';
+    }
+
+    const sizeDifference = result.compressedFile.size - result.originalFile.size;
+
+    if (sizeDifference < 0) {
+      return 'decrease';
+    }
+
+    if (sizeDifference > 0) {
+      return 'increase';
+    }
+
+    return 'neutral';
+  });
   readonly previewStatusTone = computed<'neutral' | 'success' | 'warning'>(() => {
     const result = this.previewResult();
     if (!result?.compressedFile) {

@@ -880,14 +880,6 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
 
     return `${normalized.slice(0, 137).trim()}…`;
   });
-  replyPreviewShortId = computed(() => {
-    const id = this.replyPreviewEvent()?.id || this.data?.replyTo?.id || '';
-    if (!id) {
-      return '';
-    }
-
-    return `${id.slice(0, 8)}…`;
-  });
   replyPreviewFallbackText = computed(() => {
     if (!this.replyPreviewEvent()) {
       return 'Preview unavailable for this note.';
@@ -3933,6 +3925,24 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     }
 
     return media.optimizedSize !== undefined ? '0%' : '';
+  }
+
+  getMediaThumbnailSavingsTone(media: MediaMetadata): 'decrease' | 'increase' | 'neutral' | 'none' {
+    const savings = this.getMediaCompressionChangePercent(media);
+
+    if (savings === null) {
+      return 'none';
+    }
+
+    if (savings > 0) {
+      return 'decrease';
+    }
+
+    if (savings < 0) {
+      return 'increase';
+    }
+
+    return 'neutral';
   }
 
   getMediaUploadSize(media: MediaMetadata): number {

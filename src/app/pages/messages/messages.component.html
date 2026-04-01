@@ -920,7 +920,8 @@
               <div class="media-preview-thumb-wrap">
                 <video [src]="preview.url" class="media-preview-thumb" muted preload="metadata"></video>
                 @if (preview.pendingEncrypted && preview.pendingId) {
-                <span class="video-profile-badge">{{ getDmVideoOptimizationProfileBadgeLabel(preview.pendingId) }}</span>
+                <span class="video-profile-badge">{{ getDmVideoOptimizationProfileBadgeLabel(preview.pendingId)
+                  }}</span>
                 }
               </div>
               <div class="media-preview-details">
@@ -975,7 +976,8 @@
               </mat-button-toggle-group>
               <span class="dm-compression-description">{{ dmOptimizationDescription() }}</span>
               @if (hasPendingVideoMedia()) {
-              <span class="dm-compression-description">Right-click or press and hold a queued video preview to choose a video type for that attachment.</span>
+              <span class="dm-compression-description">Right-click or press and hold a queued video preview to choose a
+                video type for that attachment.</span>
               }
             </div>
             }
@@ -997,7 +999,8 @@
 
         <mat-menu #dmVideoProfileMenu="matMenu" (closed)="onDmVideoOptimizationMenuClosed()">
           @for (option of videoOptimizationProfileOptions; track option.value) {
-          <button mat-menu-item class="dm-video-profile-menu-item" [class.is-selected]="isSelectedDmVideoOptimizationProfile(option.value)"
+          <button mat-menu-item class="dm-video-profile-menu-item"
+            [class.is-selected]="isSelectedDmVideoOptimizationProfile(option.value)"
             (click)="onDmVideoOptimizationProfileSelected(option.value)">
             <div class="dm-video-profile-menu-copy">
               <span class="dm-video-profile-menu-label">{{ option.label }}</span>

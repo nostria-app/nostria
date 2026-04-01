@@ -60,9 +60,6 @@
           }
         </div>
 
-        @if (replyPreviewShortId()) {
-        <span class="reply-note-id">{{ replyPreviewShortId() }}</span>
-        }
       </div>
 
       <div class="reply-preview">
@@ -195,7 +192,8 @@
 
         <div class="option-content">
           @if (hasPendingVideoMedia()) {
-          <span class="option-description">Right-click or press and hold a queued video thumbnail to choose a clip type for that specific video.</span>
+          <span class="option-description">Right-click or press and hold a queued video thumbnail to choose a clip type
+            for that specific video.</span>
           }
         </div>
       </div>
@@ -473,7 +471,10 @@
         <span class="video-profile-badge">{{ getVideoOptimizationProfileBadgeLabelForMedia(media) }}</span>
         }
         <div class="media-thumbnail-meta">
-          <span class="media-savings" [class.empty]="!getMediaThumbnailSavingsLabel(media)">{{
+          <span class="media-savings" [class.empty]="!getMediaThumbnailSavingsLabel(media)"
+            [class.decrease]="getMediaThumbnailSavingsTone(media) === 'decrease'"
+            [class.increase]="getMediaThumbnailSavingsTone(media) === 'increase'"
+            [class.neutral]="getMediaThumbnailSavingsTone(media) === 'neutral'">{{
             getMediaThumbnailSavingsLabel(media) }}</span>
           <span class="media-size">{{ getMediaThumbnailSizeLabel(media) }}</span>
         </div>
@@ -599,7 +600,8 @@
 
     <mat-menu #videoProfileMenu="matMenu" (closed)="onVideoOptimizationMenuClosed()">
       @for (option of videoOptimizationProfileOptions; track option.value) {
-      <button mat-menu-item class="video-profile-menu-item" [class.is-selected]="isSelectedVideoOptimizationProfile(option.value)"
+      <button mat-menu-item class="video-profile-menu-item"
+        [class.is-selected]="isSelectedVideoOptimizationProfile(option.value)"
         (click)="onVideoOptimizationProfileSelected(option.value)">
         <div class="video-profile-menu-copy">
           <span class="video-profile-menu-label">{{ option.label }}</span>
