@@ -42,6 +42,7 @@
     "tauri:build": "tauri build --ci",
     "tauri:build:linux": "tauri build --ci --bundles appimage,deb",
     "tauri:build:windows": "tauri build --ci --bundles nsis,msi",
+    "tauri:build:windows-arm": "tauri build --ci --target aarch64-pc-windows-msvc --bundles nsis,msi",
     "tauri:build:macos": "tauri build --ci --target universal-apple-darwin",
     "get-version": "node -p \"require('./package.json').version\"",
     "serve:ssr:app": "node dist/app/server/server.mjs",

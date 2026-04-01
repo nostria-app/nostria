@@ -83,12 +83,19 @@ jobs:
         include:
           - name: linux
             platform: ubuntu-22.04
+            rust_targets: ""
             args: --bundles appimage,deb
           - name: windows
             platform: windows-latest
+            rust_targets: ""
             args: --bundles nsis,msi
+          - name: windows-arm
+            platform: windows-latest
+            rust_targets: aarch64-pc-windows-msvc
+            args: --target aarch64-pc-windows-msvc --bundles nsis,msi
           - name: macos
             platform: macos-latest
+            rust_targets: aarch64-apple-darwin,x86_64-apple-darwin
             args: --target universal-apple-darwin
 
     runs-on: ${{ matrix.platform }}
@@ -106,14 +113,14 @@ jobs:
           cache: "npm"
 
       - name: Install Rust toolchain
-        if: matrix.name != 'macos'
+        if: matrix.rust_targets == ''
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Install Rust toolchain for universal macOS build
-        if: matrix.name == 'macos'
+      - name: Install Rust toolchain with extra targets
+        if: matrix.rust_targets != ''
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: aarch64-apple-darwin,x86_64-apple-darwin
+          targets: ${{ matrix.rust_targets }}
 
       - name: Cache Rust dependencies
         uses: swatinem/rust-cache@v2
