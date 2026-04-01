@@ -112,7 +112,9 @@ type PosterStatsCountKey =
   | 'calendarCount'
   | 'musicCount';
 
+const POST_KINDS = [1];
 const MEDIA_KINDS = [20, 21, 22, 34235, 34236];
+const VIDEO_KINDS = [21, 22, 34235, 34236];
 const AUDIO_KINDS = [1222, 1244];
 const CHAT_KINDS = [40, 42];
 const LIVE_EVENT_KINDS = [30311];
@@ -142,22 +144,27 @@ const SUMMARY_FETCH_KINDS = [
   COMMUNITY_DEFINITION_KIND,
   36787,
 ];
-const SUMMARY_DEFAULT_CONTENT_KINDS = [...new Set([
-  ...DEFAULT_CONTENT_FILTER.kinds,
+const SUMMARY_DEFAULT_CONTENT_KINDS = [
+  ...POST_KINDS,
+  6,
+  16,
+  30023,
+  ...AUDIO_KINDS,
+  ...MEDIA_KINDS,
+  ...COMMUNITY_KINDS,
   ...CHAT_KINDS,
   ...LIVE_EVENT_KINDS,
   ...CALENDAR_KINDS,
   ...MUSIC_KINDS,
-  ...COMMUNITY_KINDS,
-])];
+];
 
 const SUMMARY_CONTENT_TYPES: ContentTypeOption[] = [
-  { id: 'posts', label: 'Posts', description: 'Short text posts', kinds: [1, 1111], icon: 'description' },
+  { id: 'posts', label: 'Posts', description: 'Short text posts', kinds: POST_KINDS, icon: 'description' },
   { id: 'articles', label: 'Articles', description: 'Long-form writing', kinds: [30023], icon: 'article' },
   { id: 'reposts', label: 'Reposts', description: 'Shared content from others', kinds: [6, 16], icon: 'repeat' },
   { id: 'voicePosts', label: 'Audio Posts', description: 'Voice notes and audio uploads', kinds: AUDIO_KINDS, icon: 'mic' },
   { id: 'photoPosts', label: 'Photo Posts', description: 'Image galleries', kinds: [20], icon: 'image' },
-  { id: 'videoPosts', label: 'Video Posts', description: 'Video posts and clips', kinds: MEDIA_KINDS.filter(kind => kind !== 20), icon: 'movie' },
+  { id: 'videoPosts', label: 'Video Posts', description: 'Video posts and clips', kinds: VIDEO_KINDS, icon: 'movie' },
   { id: 'communities', label: 'Communities', description: 'New community definitions', kinds: COMMUNITY_KINDS, icon: 'groups' },
   { id: 'chats', label: 'Chats', description: 'Public channel activity', kinds: CHAT_KINDS, icon: 'forum' },
   { id: 'liveEvents', label: 'Live Events', description: 'Streams and live sessions', kinds: LIVE_EVENT_KINDS, icon: 'live_tv' },
@@ -345,11 +352,11 @@ export class SummaryComponent implements OnInit, OnDestroy {
   urlListFilter = signal<string | undefined>(this.route.snapshot.queryParams['list']);
 
   // Content filter: whether the filter has been modified from defaults
-  hasActiveContentFilter = computed(() => {
+  isUsingDefaultContentFilter = computed(() => {
     const filter = this.localSettings.contentFilter();
     const kindsMatch = filter.kinds.length === DEFAULT_CONTENT_FILTER.kinds.length
       && filter.kinds.every(k => DEFAULT_CONTENT_FILTER.kinds.includes(k));
-    return !kindsMatch || filter.showReplies !== DEFAULT_CONTENT_FILTER.showReplies || filter.showReposts !== DEFAULT_CONTENT_FILTER.showReposts;
+    return kindsMatch && filter.showReplies === DEFAULT_CONTENT_FILTER.showReplies && filter.showReposts === DEFAULT_CONTENT_FILTER.showReposts;
   });
 
   hasActiveListFilter = computed(() => !!this.selectedList() || this.currentListFilter() !== 'following');
@@ -366,14 +373,21 @@ export class SummaryComponent implements OnInit, OnDestroy {
       .sort((a, b) => a.title.localeCompare(b.title))
   );
 
-  currentContentKinds = computed(() => this.hasActiveContentFilter()
-    ? this.localSettings.contentFilter().kinds
-    : SUMMARY_DEFAULT_CONTENT_KINDS);
+  currentContentKinds = computed(() => this.isUsingDefaultContentFilter()
+    ? SUMMARY_DEFAULT_CONTENT_KINDS
+    : this.localSettings.contentFilter().kinds);
   currentShowReplies = computed(() => this.localSettings.contentFilter().showReplies);
   currentShowReposts = computed(() => this.localSettings.contentFilter().showReposts);
+  hasActiveContentFilter = computed(() => {
+    const filter = this.localSettings.contentFilter();
+    const effectiveKinds = this.currentContentKinds();
+    const kindsMatch = effectiveKinds.length === SUMMARY_DEFAULT_CONTENT_KINDS.length
+      && effectiveKinds.every(kind => SUMMARY_DEFAULT_CONTENT_KINDS.includes(kind));
+    return !kindsMatch || filter.showReplies !== DEFAULT_CONTENT_FILTER.showReplies || filter.showReposts !== DEFAULT_CONTENT_FILTER.showReposts;
+  });
 
   // Determine which poster stat categories are visible based on content filter
-  showNotesStats = computed(() => this.currentContentKinds().some(k => [1, 1111].includes(k)));
+  showNotesStats = computed(() => this.currentContentKinds().some(k => POST_KINDS.includes(k)));
   showRepostsStats = computed(() => this.currentShowReposts() || this.currentContentKinds().some(k => [6, 16].includes(k)));
   showArticlesStats = computed(() => this.currentContentKinds().includes(30023));
   showAudioStats = computed(() => this.currentContentKinds().some(k => AUDIO_KINDS.includes(k)));
@@ -1305,7 +1319,7 @@ export class SummaryComponent implements OnInit, OnDestroy {
       timelineEvent.kind === 34139 ||
       timelineEvent.kind === 36787
     ) {
-      this.layout.openEvent(timelineEvent.id, timelineEvent as Event);
+      this.layout.openEvent(timelineEvent.id, this.toNostrEvent(timelineEvent));
       return;
     }
 
@@ -1342,7 +1356,7 @@ export class SummaryComponent implements OnInit, OnDestroy {
         identifier: dTag,
       });
       // Pass the event to avoid re-fetching
-      this.layout.openArticle(naddr, event as Event);
+      this.layout.openArticle(naddr, this.toNostrEvent(event));
     } catch (err) {
       this.logger.error('[Summary] Failed to encode article naddr:', err);
       // Fallback to event dialog
@@ -1462,6 +1476,18 @@ export class SummaryComponent implements OnInit, OnDestroy {
     } catch {
       return '';
     }
+  }
+
+  private toNostrEvent(event: TimelineEvent): Event {
+    return {
+      id: event.id,
+      pubkey: event.pubkey,
+      kind: event.kind,
+      created_at: event.created_at,
+      tags: event.tags ?? [],
+      content: event.content,
+      sig: '',
+    };
   }
 
   async refresh(): Promise<void> {

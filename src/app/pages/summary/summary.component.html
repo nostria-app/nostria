@@ -39,8 +39,7 @@
     [cdkConnectedOverlayBackdropClass]="'cdk-overlay-transparent-backdrop'"
     [cdkConnectedOverlayPositions]="filterPanelPositions" [cdkConnectedOverlayPush]="true"
     (backdropClick)="closeFilterPanel()">
-    <div class="combined-filter-panel" (click)="$event.stopPropagation()" (keydown.enter)="$event.stopPropagation()"
-      tabindex="-1">
+    <div class="combined-filter-panel" role="dialog" aria-modal="true" aria-label="Filter panel">
       <div class="combined-filter-column content-filter-column">
         <div class="combined-filter-header">
           <span class="combined-filter-title">Content types</span>
@@ -383,9 +382,10 @@
             </div>
             <div class="media-overlay">
               <app-user-profile [pubkey]="event.pubkey" view="icon" class="media-author"></app-user-profile>
-              <a class="media-time" (click)="layout.openGenericEvent(event.id); $event.stopPropagation()"
-                (keydown.enter)="layout.openGenericEvent(event.id); $event.stopPropagation()"
-                tabindex="0">{{ event.created_at | ago }}</a>
+              <button type="button" class="media-time" aria-label="View event details"
+                (click)="layout.openGenericEvent(event.id); $event.stopPropagation()">
+                {{ event.created_at | ago }}
+              </button>
             </div>
           </div>
           }
@@ -444,12 +444,12 @@
       <div class="panel-content">
         <div class="poster-grid">
           @for (pubkey of profileUpdates(); track pubkey) {
-          <a class="poster-card" (click)="onProfileClick($event, pubkey)" (keydown.enter)="onProfileClick($event, pubkey)"
-            tabindex="0">
+          <button type="button" class="poster-card" [attr.aria-label]="'Open profile ' + pubkey"
+            (click)="onProfileClick($event, pubkey)">
             <div class="poster-avatar">
               <app-user-profile [pubkey]="pubkey" view="icon"></app-user-profile>
             </div>
-          </a>
+          </button>
           }
         </div>
       </div>
