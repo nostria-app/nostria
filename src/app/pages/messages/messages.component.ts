@@ -4618,12 +4618,13 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     dialogRef.afterClosed$.subscribe(async ({ result }) => {
       if (result && result.pubkeys?.length) {
         const pubkeys = (result as ForwardResult).pubkeys;
+        const forwardingOptions = this.getForwardingMessageOptions(message);
         let successCount = 0;
         let failCount = 0;
 
         for (const pubkey of pubkeys) {
           try {
-            await this.messaging.sendDirectMessage(message.content, pubkey);
+            await this.messaging.sendDirectMessage(message.content, pubkey, forwardingOptions);
             successCount++;
           } catch (err) {
             failCount++;
@@ -4646,6 +4647,20 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
         }
       }
     });
+  }
+
+  private getForwardingMessageOptions(message: DirectMessage): {
+    rumorKind?: number;
+    extraRumorTags?: string[][];
+  } {
+    const extraRumorTags = message.tags
+      .filter(tag => tag[0] !== 'p' && tag[0] !== 'e')
+      .map(tag => [...tag]);
+
+    return {
+      rumorKind: message.rumorKind,
+      extraRumorTags,
+    };
   }
 
   /**

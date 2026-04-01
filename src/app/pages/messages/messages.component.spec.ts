@@ -91,6 +91,15 @@ function createComponent(): MessagesComponent {
         addMessageToChat: vi.fn(),
         getChat: vi.fn().mockReturnValue(mockChat),
         getChatMessages: vi.fn().mockReturnValue([]),
+        sendDirectMessage: vi.fn().mockResolvedValue(undefined),
+    };
+
+    (component as any).customDialog = {
+        open: vi.fn().mockReturnValue({
+            afterClosed$: {
+                subscribe: vi.fn(),
+            },
+        }),
     };
 
     (component as any).notifications = {
@@ -328,6 +337,62 @@ describe('MessagesComponent sendMessage', () => {
         } as DirectMessage);
 
         expect(text).toBe('Encrypted file');
+    });
+});
+
+describe('MessagesComponent forwardMessage', () => {
+    let component: MessagesComponent;
+
+    beforeEach(() => {
+        component = createComponent();
+    });
+
+    it('should preserve media encryption tags when forwarding a file message', async () => {
+        const subscribe = vi.fn((callback: ({ result }: { result: { pubkeys: string[] } }) => void) => {
+            callback({ result: { pubkeys: ['forward-recipient'] } });
+        });
+        (component as any).customDialog.open.mockReturnValue({
+            afterClosed$: { subscribe },
+        });
+
+        await component.forwardMessage({
+            id: 'original-message',
+            rumorKind: 15,
+            pubkey: 'sender-pubkey',
+            created_at: 123,
+            content: 'https://media.example/encrypted.bin',
+            isOutgoing: false,
+            tags: [
+                ['p', 'old-recipient'],
+                ['e', 'reply-id'],
+                ['alt', 'secret.pdf'],
+                ['file-type', 'application/pdf'],
+                ['encryption-algorithm', 'aes-gcm'],
+                ['decryption-key', 'key-hex'],
+                ['decryption-nonce', 'nonce-hex'],
+                ['x', 'encrypted-sha'],
+                ['ox', 'original-sha'],
+                ['size', '1234'],
+            ],
+        } as DirectMessage);
+
+        expect((component as any).messaging.sendDirectMessage).toHaveBeenCalledWith(
+            'https://media.example/encrypted.bin',
+            'forward-recipient',
+            {
+                rumorKind: 15,
+                extraRumorTags: [
+                    ['alt', 'secret.pdf'],
+                    ['file-type', 'application/pdf'],
+                    ['encryption-algorithm', 'aes-gcm'],
+                    ['decryption-key', 'key-hex'],
+                    ['decryption-nonce', 'nonce-hex'],
+                    ['x', 'encrypted-sha'],
+                    ['ox', 'original-sha'],
+                    ['size', '1234'],
+                ],
+            },
+        );
     });
 });
 

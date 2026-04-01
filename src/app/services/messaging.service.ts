@@ -3353,7 +3353,14 @@ export class MessagingService implements NostriaService {
    * @param receiverPubkey The recipient's public key
    * @returns Promise<DirectMessage> The sent message object
    */
-  async sendDirectMessage(messageText: string, receiverPubkey: string): Promise<DirectMessage> {
+  async sendDirectMessage(
+    messageText: string,
+    receiverPubkey: string,
+    options?: {
+      rumorKind?: number;
+      extraRumorTags?: string[][];
+    }
+  ): Promise<DirectMessage> {
     const myPubkey = this.accountState.pubkey();
     if (!myPubkey) {
       throw new Error('You need to be logged in to send messages');
@@ -3364,9 +3371,12 @@ export class MessagingService implements NostriaService {
     try {
       // Step 1: Create the message (unsigned event) - kind 14
       const tags: string[][] = [['p', receiverPubkey]];
+      if (options?.extraRumorTags?.length) {
+        tags.push(...options.extraRumorTags.map(tag => [...tag]));
+      }
 
       const unsignedMessage = {
-        kind: kinds.PrivateDirectMessage,
+        kind: options?.rumorKind ?? kinds.PrivateDirectMessage,
         pubkey: myPubkey,
         created_at: Math.floor(Date.now() / 1000),
         tags: tags,
@@ -3474,7 +3484,7 @@ export class MessagingService implements NostriaService {
       // Create the message object
       const message: DirectMessage = {
         id: rumorId,
-        rumorKind: kinds.PrivateDirectMessage,
+        rumorKind: unsignedMessage.kind,
         pubkey: myPubkey,
         created_at: unsignedMessage.created_at,
         content: messageText,
