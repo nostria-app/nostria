@@ -18,6 +18,7 @@ import { isXStatusUrl } from '../../utils/url-cleaner';
 })
 export class SocialPreviewComponent {
   private static widgetsScriptPromise: Promise<void> | null = null;
+  private xEmbedRenderToken = 0;
 
   openGraphService = inject(OpenGraphService);
   private themeService = inject(ThemeService);
@@ -64,8 +65,10 @@ export class SocialPreviewComponent {
         return;
       }
 
+      const renderToken = ++this.xEmbedRenderToken;
+
       queueMicrotask(() => {
-        void this.renderXEmbed(embedHost);
+        void this.renderXEmbed(renderToken);
       });
     });
   }
@@ -114,9 +117,27 @@ export class SocialPreviewComponent {
     return this.sanitizer.bypassSecurityTrustHtml(sanitizedHtml);
   }
 
-  private async renderXEmbed(embedHost: HTMLElement): Promise<void> {
+  private async renderXEmbed(renderToken: number): Promise<void> {
     try {
+      const embedHost = this.xEmbedHost()?.nativeElement;
+      if (!embedHost || !embedHost.isConnected || renderToken !== this.xEmbedRenderToken) {
+        return;
+      }
+
+      if (!embedHost.querySelector('blockquote.twitter-tweet')) {
+        return;
+      }
+
       await this.ensureWidgetsScript();
+
+      const currentEmbedHost = this.xEmbedHost()?.nativeElement;
+      if (!currentEmbedHost || !currentEmbedHost.isConnected || renderToken !== this.xEmbedRenderToken) {
+        return;
+      }
+
+      if (!currentEmbedHost.querySelector('blockquote.twitter-tweet')) {
+        return;
+      }
 
       const twitterWindow = window as Window & {
         twttr?: {
@@ -126,7 +147,7 @@ export class SocialPreviewComponent {
         };
       };
 
-      twitterWindow.twttr?.widgets?.load(embedHost);
+      twitterWindow.twttr?.widgets?.load(currentEmbedHost);
     } catch (error) {
       console.warn('Failed to initialize X embed widgets:', error);
     }

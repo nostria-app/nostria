@@ -1,5 +1,5 @@
-@if (isChannelCreate()) {
-<!-- Kind 40: Channel Creation Event -->
+@if (isChannelInfo()) {
+<!-- Kind 40/41: Channel Info Event -->
 <div class="channel-embed-container clickable" tabindex="0" role="button"
   (click)="openChannel($event)" (keydown.enter)="openChannel($event)" (keydown.space)="openChannel($event)">
   <div class="channel-embed-header">

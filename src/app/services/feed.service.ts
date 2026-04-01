@@ -878,7 +878,7 @@ export class FeedService {
 
     // Load cached events NON-BLOCKING — start the IndexedDB read and proceed
     // with relay subscriptions in parallel for faster time-to-first-render.
-    if (!isDynamicFeed) {
+    if (!isDynamicFeed && feed.source !== 'following') {
       // Fire-and-forget: load cache and update the signal when ready
       this.loadCachedEvents(feed.id).then(cachedEvents => {
         if (cachedEvents.length > 0) {
@@ -1721,7 +1721,7 @@ export class FeedService {
   private handleFollowingPaginationUpdate(feedData: FeedItem, newEvents: Event[]) {
     if (newEvents.length === 0) return;
 
-    const allowedKinds = new Set(feedData.feed.kinds);
+    const allowedKinds = new Set(feedData.filter?.kinds || feedData.feed.kinds || [1]);
 
     // Filter out muted events and events that don't match column's kinds
     const filteredEvents = newEvents.filter(
@@ -1770,7 +1770,7 @@ export class FeedService {
     const existingEvents = feedData.events();
 
     // Get allowed kinds for this column
-    const allowedKinds = new Set(feedData.feed.kinds);
+    const allowedKinds = new Set(feedData.filter?.kinds || feedData.feed.kinds || [1]);
 
     // Filter out muted events and events that don't match the column's kinds
     const filteredEvents = newEvents.filter(
@@ -1866,7 +1866,7 @@ export class FeedService {
    */
   private handleFollowingFinalUpdate(feedData: FeedItem, allEvents: Event[]) {
     // Get allowed kinds for this column
-    const allowedKinds = new Set(feedData.feed.kinds);
+    const allowedKinds = new Set(feedData.filter?.kinds || feedData.feed.kinds || [1]);
 
     // Filter out muted events and events that don't match the column's kinds
     const filteredEvents = allEvents.filter(
@@ -3243,18 +3243,37 @@ export class FeedService {
       limit: feedData.filter?.limit || 20,
     };
 
+    // Keep the in-memory feed reference aligned with the runtime filter so follow/feed
+    // handlers that still rely on feedData.feed use the latest selection immediately.
+    feedData.feed = {
+      ...feedData.feed,
+      kinds: newKinds,
+    };
+
     // Clear existing events since they may not match the new filter
     const existingEvents = feedData.events();
     if (existingEvents.length > 0) {
       this.logger.debug(`Clearing ${existingEvents.length} existing events for re-fetch with new kinds`);
       feedData.events.set([]);
     }
+    feedData.pendingEvents?.set([]);
+    feedData.hasMore?.set(true);
+    feedData.isRefreshing?.set(true);
+    feedData.initialLoadComplete = false;
 
     // For following/for-you feeds, clear the FollowingDataService cache
     // This forces a fresh fetch with the new kinds instead of returning stale cached data
     if (feed.source === 'following' || feed.source === 'for-you') {
       this.logger.debug('Clearing FollowingDataService cache to force re-fetch with new kinds');
       this.followingData.clearCache();
+    }
+
+    // Following and For You feeds need a full local-first reload so the new kinds are
+    // shown immediately from IndexedDB and then refreshed from relays.
+    if (feed.source === 'following' || feed.source === 'for-you') {
+      await this.refreshFeed(activeFeedId, true);
+      this.logger.info(`Feed ${feed.label} fully refreshed with new content filter kinds`);
+      return;
     }
 
     // Unsubscribe from current subscription

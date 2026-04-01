@@ -197,6 +197,17 @@
 
   @if (!isMainThreadHiddenByCollapsedParent()) {
   <div class="replies-section" [style.margin-left.px]="maxParentIndent()">
+    @if (showKindFilter()) {
+    <div class="filter-indicator kind-filter-indicator">
+      <mat-button-toggle-group [value]="commentKindFilter()" (change)="setCommentKindFilter($event.value)"
+        hideSingleSelectionIndicator>
+        <mat-button-toggle value="all">All</mat-button-toggle>
+        <mat-button-toggle value="nip22">Comments</mat-button-toggle>
+        <mat-button-toggle value="nip10">Replies</mat-button-toggle>
+      </mat-button-toggle-group>
+    </div>
+    }
+
     <!-- Filter indicator when filter is active -->
     @if (isReplyFilterActive() && !isLoadingReplies()) {
     <div class="filter-indicator">

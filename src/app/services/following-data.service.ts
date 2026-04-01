@@ -69,15 +69,15 @@ export class FollowingDataService {
   // Last successful fetch timestamp (per account)
   private lastFetchTimestamp = signal<number | null>(null);
 
-  // Cached events from following (in memory)
-  private cachedEvents = signal<Event[]>([]);
+  // Cached events from following (in memory), scoped per kinds selection.
+  private cachedEventsByKinds = signal<Map<string, Event[]>>(new Map());
   private readonly MAX_IN_MEMORY_EVENTS = 2400;
 
-  // Current fetch promise to avoid duplicate requests
-  private currentFetchPromise: Promise<Event[]> | null = null;
+  // Current fetch promises to avoid duplicate requests per kinds selection
+  private currentFetchPromises = new Map<string, Promise<Event[]>>();
 
-  // Current pagination fetch promise (for loading older events)
-  private paginationFetchPromise: Promise<Event[]> | null = null;
+  // Current pagination fetch promises (for loading older events) per kinds selection
+  private paginationFetchPromises = new Map<string, Promise<Event[]>>();
 
   // Windowed rotation cursor for periodic refresh checks
   private refreshWindowCursor = 0;
@@ -125,6 +125,23 @@ export class FollowingDataService {
   // next fetch. Without this, any event not returned within the 2-second relay
   // timeout would be permanently lost once `since` advances past its `created_at`.
   private readonly FETCH_OVERLAP_SECONDS = 10 * 60; // 10 minutes
+
+  private getKindsCacheKey(kinds: number[]): string {
+    return [...new Set(kinds)].sort((a, b) => a - b).join(',');
+  }
+
+  private getCachedEventsForKinds(kinds: number[]): Event[] {
+    return this.cachedEventsByKinds().get(this.getKindsCacheKey(kinds)) || [];
+  }
+
+  private setCachedEventsForKinds(kinds: number[], events: Event[]): void {
+    const key = this.getKindsCacheKey(kinds);
+    this.cachedEventsByKinds.update(existing => {
+      const next = new Map(existing);
+      next.set(key, events);
+      return next;
+    });
+  }
 
   /**
    * Calculate the 'since' timestamp for RELAY fetching.
@@ -237,7 +254,8 @@ export class FollowingDataService {
 
     // OPTIMIZATION: If we have in-memory cache and data is fresh, return immediately
     // This avoids hitting IndexedDB on subsequent calls within the 5-minute window
-    const memoryCache = this.cachedEvents();
+    const cacheKey = this.getKindsCacheKey(kinds);
+    const memoryCache = this.getCachedEventsForKinds(kinds);
     if (memoryCache.length > 0 && !force && this.isDataFresh()) {
       this.logger.debug(`[FollowingDataService] Using in-memory cache (${memoryCache.length} events)`);
       if (onCacheLoaded) {
@@ -255,7 +273,7 @@ export class FollowingDataService {
         onCacheLoaded(cachedEvents);
       }
       // Update in-memory cache
-      this.cachedEvents.set(cachedEvents);
+      this.setCachedEventsForKinds(kinds, cachedEvents);
     }
 
     // If data is fresh and not forced, return cached events without fetching
@@ -265,21 +283,23 @@ export class FollowingDataService {
     }
 
     // If there's already a fetch in progress, return that promise
-    if (this.currentFetchPromise) {
+    const currentFetchPromise = this.currentFetchPromises.get(cacheKey);
+    if (currentFetchPromise) {
       this.logger.debug('[FollowingDataService] Fetch already in progress, waiting...');
-      return this.currentFetchPromise;
+      return currentFetchPromise;
     }
 
     // Start a new fetch for events SINCE the specified time (or last fetch)
-    this.currentFetchPromise = this.fetchFromRelays(kinds, cachedEvents, onProgress, customSince);
+    const fetchPromise = this.fetchFromRelays(kinds, cachedEvents, onProgress, customSince);
+    this.currentFetchPromises.set(cacheKey, fetchPromise);
 
     try {
-      const newEvents = await this.currentFetchPromise;
+      const newEvents = await fetchPromise;
       // Merge new events with cached events
       const allEvents = this.mergeEvents(cachedEvents, newEvents);
       return allEvents;
     } finally {
-      this.currentFetchPromise = null;
+      this.currentFetchPromises.delete(cacheKey);
     }
   }
 
@@ -631,7 +651,7 @@ export class FollowingDataService {
 
       // Merge and cache all events
       const allEvents = this.mergeEvents(existingEvents, newEvents);
-      this.cachedEvents.set(allEvents);
+      this.setCachedEventsForKinds(kinds, allEvents);
 
       this.logger.info(
         `[FollowingDataService] Fetched ${newEvents.length} events (total: ${allEvents.length})`
@@ -667,9 +687,11 @@ export class FollowingDataService {
     }
 
     // Prevent duplicate pagination requests
-    if (this.paginationFetchPromise) {
+    const cacheKey = this.getKindsCacheKey(kinds);
+    const paginationFetchPromise = this.paginationFetchPromises.get(cacheKey);
+    if (paginationFetchPromise) {
       this.logger.debug('[FollowingDataService] Pagination already in progress, waiting...');
-      return this.paginationFetchPromise;
+      return paginationFetchPromise;
     }
 
     // Determine the time window for the next page
@@ -689,20 +711,21 @@ export class FollowingDataService {
     );
 
     // Start pagination fetch
-    const existingEvents = this.cachedEvents();
-    this.paginationFetchPromise = this.fetchFromRelays(
+    const existingEvents = this.getCachedEventsForKinds(kinds);
+    const fetchPromise = this.fetchFromRelays(
       kinds,
       existingEvents,
       onProgress,
       sinceTimestamp,
       untilTimestamp
     );
+    this.paginationFetchPromises.set(cacheKey, fetchPromise);
 
     try {
-      const newEvents = await this.paginationFetchPromise;
+      const newEvents = await fetchPromise;
       return newEvents;
     } finally {
-      this.paginationFetchPromise = null;
+      this.paginationFetchPromises.delete(cacheKey);
     }
   }
 
@@ -733,23 +756,29 @@ export class FollowingDataService {
    * Get the current in-memory cached events.
    */
   getCachedEventsSync(): Event[] {
-    return this.cachedEvents();
+    return Array.from(this.cachedEventsByKinds().values()).flat();
   }
 
   /**
    * Clear all cached data (useful when switching accounts).
    */
   clearCache(): void {
-    this.cachedEvents.set([]);
+    const pubkey = this.accountState.pubkey();
+
+    this.cachedEventsByKinds.set(new Map());
     this.lastFetchTimestamp.set(null);
     this.oldestFetchedTimestamp.set(null);
-    this.currentFetchPromise = null;
-    this.paginationFetchPromise = null;
+    this.currentFetchPromises.clear();
+    this.paginationFetchPromises.clear();
     this.refreshWindowCursor = 0;
     this.pendingActivityUpdates.clear();
     if (this.activityFlushTimer) {
       clearTimeout(this.activityFlushTimer);
       this.activityFlushTimer = null;
+    }
+
+    if (pubkey) {
+      this.accountLocalState.setFollowingLastFetch(pubkey, 0);
     }
   }
 }

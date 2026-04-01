@@ -587,6 +587,77 @@ describe('MessagesComponent chat drafts', () => {
     });
 });
 
+describe('MessagesComponent message render batching', () => {
+    function createThreadComponent(messageCount: number): MessagesComponent {
+        const component = Object.create(MessagesComponent.prototype) as MessagesComponent;
+
+        const messages = Array.from({ length: messageCount }, (_, index) => ({
+            id: `msg-${index + 1}`,
+            pubkey: 'receiver-pubkey',
+            created_at: index + 1,
+            content: `Message ${index + 1}`,
+            isOutgoing: index % 2 === 0,
+            tags: [],
+        }));
+
+        (component as any).MESSAGE_RENDER_BATCH_SIZE = 20;
+        (component as any).selectedChatId = signal('receiver-pubkey');
+        (component as any).messages = signal(messages);
+        (component as any).renderedMessageCount = signal(20);
+        (component as any).isReactionMessage = vi.fn().mockReturnValue(false);
+        (component as any).messagesWrapper = {
+            nativeElement: {
+                scrollHeight: 1000,
+                scrollTop: 0,
+            },
+        };
+        (component as any).selectedChat = vi.fn().mockReturnValue({ id: 'receiver-pubkey' });
+        (component as any).hasHiddenRenderedMessages = vi.fn(() => {
+            return (component as any).renderedMessageCount() < (component as any).messages().length;
+        });
+        (component as any).isLoadingMore = signal(false);
+        (component as any).isLoadingMoreMessages = signal(false);
+        (component as any).hasMoreMessages = signal(false);
+        (component as any).logger = {
+            debug: vi.fn(),
+            error: vi.fn(),
+        };
+        (component as any).error = signal(null);
+        (component as any).messaging = {
+            loadMoreMessages: vi.fn().mockResolvedValue([]),
+        };
+
+        return component;
+    }
+
+    it('should render only the newest 20 messages initially', () => {
+        const component = createThreadComponent(55);
+
+        const rendered = (component as any).renderedThreadMessages();
+
+        expect(rendered).toHaveLength(20);
+        expect(rendered[0].id).toBe('msg-36');
+        expect(rendered[19].id).toBe('msg-55');
+    });
+
+    it('should expand the rendered window by 20 before fetching older messages', async () => {
+        const component = createThreadComponent(55);
+
+        await component.loadMoreMessages();
+
+        expect((component as any).renderedMessageCount()).toBe(40);
+        expect((component as any).messaging.loadMoreMessages).not.toHaveBeenCalled();
+    });
+
+    it('should fetch older messages after all in-memory messages are already rendered', async () => {
+        const component = createThreadComponent(20);
+
+        await component.loadMoreMessages();
+
+        expect((component as any).messaging.loadMoreMessages).toHaveBeenCalledWith('receiver-pubkey', 0);
+    });
+});
+
 describe('MessagesComponent template structure', () => {
     it('should not reference message-time-side class in template file', async () => {
         // Verify old external timestamp class is no longer used

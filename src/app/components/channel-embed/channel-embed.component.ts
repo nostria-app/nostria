@@ -8,7 +8,7 @@ import { NostrRecord } from '../../interfaces';
 import { UserProfileComponent } from '../user-profile/user-profile.component';
 import { RelayPoolService } from '../../services/relays/relay-pool';
 import { LoggerService } from '../../services/logger.service';
-import { ChannelMetadata, CHANNEL_CREATE_KIND, CHANNEL_MESSAGE_KIND } from '../../services/chat-channels.service';
+import { ChannelMetadata, CHANNEL_CREATE_KIND, CHANNEL_METADATA_KIND, CHANNEL_MESSAGE_KIND } from '../../services/chat-channels.service';
 import { AgoPipe } from '../../pipes/ago.pipe';
 import { UtilitiesService } from '../../services/utilities.service';
 
@@ -17,6 +17,7 @@ import { UtilitiesService } from '../../services/utilities.service';
  *
  * Handles:
  * - Kind 40 (channel creation): Shows channel name, description, picture, and creator
+ * - Kind 41 (channel metadata): Shows the latest shared channel metadata and links to the channel
  * - Kind 42 (channel message): Shows the message content with author, in context of the channel
  *
  * The channel event content is JSON: { name, about, picture, relays }
@@ -35,7 +36,7 @@ import { UtilitiesService } from '../../services/utilities.service';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ChannelEmbedComponent {
-  /** The event to embed - either a kind 40 or kind 42 event */
+  /** The event to embed - kind 40, 41, or 42 */
   event = input.required<NostrEvent>();
 
   // Services
@@ -65,13 +66,19 @@ export class ChannelEmbedComponent {
   /** Whether this is a channel creation event (kind 40) */
   isChannelCreate = computed(() => this.event().kind === CHANNEL_CREATE_KIND);
 
+  /** Whether this is a channel metadata update event (kind 41) */
+  isChannelMetadata = computed(() => this.event().kind === CHANNEL_METADATA_KIND);
+
+  /** Whether this is a channel info event (kind 40 or 41) */
+  isChannelInfo = computed(() => this.event().kind === CHANNEL_CREATE_KIND || this.event().kind === CHANNEL_METADATA_KIND);
+
   /** Whether this is a channel message event (kind 42) */
   isChannelMessage = computed(() => this.event().kind === CHANNEL_MESSAGE_KIND);
 
-  /** Parsed channel metadata from a kind 40 event's JSON content */
+  /** Parsed channel metadata from a kind 40/41 event's JSON content */
   parsedMetadata = computed<ChannelMetadata | null>(() => {
     const ev = this.event();
-    if (ev.kind !== CHANNEL_CREATE_KIND) return null;
+    if (ev.kind !== CHANNEL_CREATE_KIND && ev.kind !== CHANNEL_METADATA_KIND) return null;
 
     try {
       const parsed = JSON.parse(ev.content) as Partial<ChannelMetadata>;
@@ -93,7 +100,7 @@ export class ChannelEmbedComponent {
 
   /** The channel name to display */
   channelName = computed(() => {
-    if (this.isChannelCreate()) {
+    if (this.isChannelInfo()) {
       return this.parsedMetadata()?.name || 'Unnamed Channel';
     }
     return this.channelMetadata()?.name || 'Chat Channel';
@@ -101,7 +108,7 @@ export class ChannelEmbedComponent {
 
   /** The channel description */
   channelAbout = computed(() => {
-    if (this.isChannelCreate()) {
+    if (this.isChannelInfo()) {
       return this.parsedMetadata()?.about || '';
     }
     return this.channelMetadata()?.about || '';
@@ -109,7 +116,7 @@ export class ChannelEmbedComponent {
 
   /** The channel picture URL */
   channelPicture = computed(() => {
-    if (this.isChannelCreate()) {
+    if (this.isChannelInfo()) {
       return this.parsedMetadata()?.picture || '';
     }
     return this.channelMetadata()?.picture || '';
@@ -126,7 +133,8 @@ export class ChannelEmbedComponent {
     if (ev.kind === CHANNEL_CREATE_KIND) {
       return ev.id;
     }
-    // For kind 42 messages, extract channel ID from the root e tag
+
+    // For kind 41 metadata updates and kind 42 messages, extract channel ID from the root e tag.
     const rootTag = ev.tags.find(
       (t: string[]) => t[0] === 'e' && (t[3] === 'root' || (!t[3] && t === ev.tags.find((tag: string[]) => tag[0] === 'e')))
     );

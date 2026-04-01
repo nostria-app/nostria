@@ -366,6 +366,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   private activeDmVideoProfileMenuTrigger: MatMenuTrigger | null = null;
   private readonly DM_VIDEO_PROFILE_MENU_HOLD_DELAY = 450;
   readonly showScrollToLatestButton = signal<boolean>(false);
+  private readonly MESSAGE_RENDER_BATCH_SIZE = 20;
 
   // Computed signal for single-pane view - collapse chat list when mobile or when right panel is open
   // This enables the same behavior as mobile (toggle between list and thread) when viewing
@@ -474,33 +475,21 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       .sort((a, b) => a.created_at - b.created_at);
   });
 
-  // Computed signal for messages grouped by date
-  groupedMessages = computed(() => {
+  renderedThreadMessages = computed(() => {
     const msgs = this.messages().filter(message => !this.isReactionMessage(message));
-    if (msgs.length === 0) return [];
+    const renderedCount = this.renderedMessageCount();
 
-    const groups: MessageGroup[] = [];
-    let currentGroup: MessageGroup | null = null;
-
-    for (const message of msgs) {
-      const messageDate = new Date(message.created_at * 1000);
-      const dateKey = this.getDateKey(messageDate);
-      const dateLabel = this.getDateLabel(messageDate);
-
-      if (!currentGroup || currentGroup.dateTimestamp !== dateKey) {
-        currentGroup = {
-          dateLabel,
-          dateTimestamp: dateKey,
-          messages: []
-        };
-        groups.push(currentGroup);
-      }
-
-      currentGroup.messages.push(message);
+    if (renderedCount >= msgs.length) {
+      return msgs;
     }
 
-    return groups;
+    return msgs.slice(Math.max(0, msgs.length - renderedCount));
   });
+
+  // Computed signal for messages grouped by date
+  groupedRenderedMessages = computed(() => this.groupMessagesByDate(this.renderedThreadMessages()));
+  hasHiddenRenderedMessages = computed(() => this.renderedThreadMessages().length < this.messages().filter(message => !this.isReactionMessage(message)).length);
+  hasOlderMessagesToLoad = computed(() => this.hasHiddenRenderedMessages() || this.hasMoreMessages());
 
   newMessageText = signal<string>('');
   hasMoreMessages = signal<boolean>(false);
@@ -514,6 +503,9 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   private lastAccountPubkey = signal<string | null>(null);
   // Track the last message count to detect new incoming messages
   private lastMessageCount = signal<number>(0);
+  private renderedMessageCount = signal<number>(this.MESSAGE_RENDER_BATCH_SIZE);
+  private lastRenderableMessageCount = 0;
+  private lastRenderableMessageChatId: string | null = null;
 
   // Computed helpers
   hasChats = computed(() => this.messaging.sortedChats().length > 0);
@@ -837,6 +829,32 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   hasFollowingChats = computed(() => this.followingChats().length > 0 || this.noteToSelfChat() !== null);
   hasOtherChats = computed(() => this.otherChats().length > 0);
 
+  private groupMessagesByDate(messages: DirectMessage[]): MessageGroup[] {
+    if (messages.length === 0) return [];
+
+    const groups: MessageGroup[] = [];
+    let currentGroup: MessageGroup | null = null;
+
+    for (const message of messages) {
+      const messageDate = new Date(message.created_at * 1000);
+      const dateKey = this.getDateKey(messageDate);
+      const dateLabel = this.getDateLabel(messageDate);
+
+      if (!currentGroup || currentGroup.dateTimestamp !== dateKey) {
+        currentGroup = {
+          dateLabel,
+          dateTimestamp: dateKey,
+          messages: []
+        };
+        groups.push(currentGroup);
+      }
+
+      currentGroup.messages.push(message);
+    }
+
+    return groups;
+  }
+
   private readonly destroyRef = inject(DestroyRef);
 
   // ViewChild for scrolling functionality
@@ -952,6 +970,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
             this.hasMoreMessages.set(true);
             // Reset message count tracking for the new chat
             this.lastMessageCount.set(chatMessages.length);
+            this.resetRenderedMessageWindow(chatId);
 
             // Set up scroll listener + ResizeObserver FIRST so it can catch
             // content reflows that happen after the initial scrollToBottom.
@@ -998,6 +1017,32 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
 
       // Update the last message count
       this.lastMessageCount.set(messageCount);
+    });
+
+    effect(() => {
+      const chatId = this.selectedChatId();
+      const totalRenderableCount = this.messages().filter(message => !this.isReactionMessage(message)).length;
+
+      if (!chatId) {
+        this.lastRenderableMessageChatId = null;
+        this.lastRenderableMessageCount = 0;
+        return;
+      }
+
+      if (this.lastRenderableMessageChatId !== chatId) {
+        this.lastRenderableMessageChatId = chatId;
+        this.lastRenderableMessageCount = totalRenderableCount;
+        return;
+      }
+
+      if (totalRenderableCount > this.lastRenderableMessageCount && this.lastRenderableMessageCount > 0) {
+        const newMessageCount = totalRenderableCount - this.lastRenderableMessageCount;
+        this.renderedMessageCount.update(count => Math.min(totalRenderableCount, count + newMessageCount));
+      } else if (totalRenderableCount < this.lastRenderableMessageCount) {
+        this.renderedMessageCount.update(count => Math.min(count, totalRenderableCount));
+      }
+
+      this.lastRenderableMessageCount = totalRenderableCount;
     });
 
     effect(() => {
@@ -1127,6 +1172,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       }
 
       untracked(() => {
+        this.ensureMessageRendered(targetMessageId);
         this.scrollToTargetMessage(targetMessageId);
       });
     });
@@ -1464,16 +1510,16 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       // Check if user is near the top and we have messages to load
       const threshold = 100; // pixels from top
 
-      this.logger.debug(
-        `Scroll position: ${scrollTop}, threshold: ${threshold}, hasMore: ${this.hasMoreMessages()}, isLoading: ${this.isLoadingMore()}, messages: ${this.messages().length}`
-      );
+        this.logger.debug(
+          `Scroll position: ${scrollTop}, threshold: ${threshold}, hasMore: ${this.hasOlderMessagesToLoad()}, isLoading: ${this.isLoadingMore()}, messages: ${this.renderedThreadMessages().length}`
+        );
 
-      if (
-        scrollTop <= threshold &&
-        this.hasMoreMessages() &&
-        !this.isLoadingMore() &&
-        this.messages().length > 0
-      ) {
+        if (
+          scrollTop <= threshold &&
+          this.hasOlderMessagesToLoad() &&
+          !this.isLoadingMore() &&
+          this.messages().length > 0
+        ) {
         this.logger.debug('Triggering loadMoreMessages from scroll');
         this.loadMoreMessages();
       }
@@ -1508,6 +1554,39 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       const element = this.messagesWrapper.nativeElement;
       element.scrollTop = element.scrollHeight;
       this.lastScrollHeight = element.scrollHeight;
+    }
+  }
+
+  private resetRenderedMessageWindow(chatId: string): void {
+    const totalMessages = this.messages().filter(message => !this.isReactionMessage(message)).length;
+    this.renderedMessageCount.set(Math.min(totalMessages, this.MESSAGE_RENDER_BATCH_SIZE));
+    this.lastRenderableMessageChatId = chatId;
+    this.lastRenderableMessageCount = totalMessages;
+  }
+
+  private expandRenderedMessageWindow(targetCount = this.renderedMessageCount() + this.MESSAGE_RENDER_BATCH_SIZE): boolean {
+    const totalMessages = this.messages().filter(message => !this.isReactionMessage(message)).length;
+    const nextRenderedCount = Math.min(totalMessages, targetCount);
+
+    if (nextRenderedCount <= this.renderedMessageCount()) {
+      return false;
+    }
+
+    this.renderedMessageCount.set(nextRenderedCount);
+    return true;
+  }
+
+  private ensureMessageRendered(messageId: string): void {
+    const messages = this.messages().filter(message => !this.isReactionMessage(message));
+    const targetIndex = messages.findIndex(message => message.id === messageId);
+
+    if (targetIndex === -1) {
+      return;
+    }
+
+    const requiredRenderedCount = messages.length - targetIndex;
+    if (requiredRenderedCount > this.renderedMessageCount()) {
+      this.renderedMessageCount.set(requiredRenderedCount);
     }
   }
 
@@ -1785,12 +1864,31 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       return;
     }
 
+    const scrollElement = this.messagesWrapper?.nativeElement;
+    const scrollHeight = scrollElement?.scrollHeight || 0;
+    const scrollTop = scrollElement?.scrollTop || 0;
+
+    if (this.hasHiddenRenderedMessages()) {
+      const expanded = this.expandRenderedMessageWindow();
+      if (expanded) {
+        setTimeout(() => {
+          if (!scrollElement) {
+            return;
+          }
+
+          const heightDiff = scrollElement.scrollHeight - scrollHeight;
+          scrollElement.scrollTop = scrollTop + heightDiff;
+        }, 50);
+      }
+      return;
+    }
+
     this.logger.debug(`Loading more messages for chat: ${selectedChat.id}`);
     this.isLoadingMore.set(true);
     this.isLoadingMoreMessages.set(true); // Prevent auto-scroll during loading
 
     try {
-      const currentMessages = this.messages();
+      const currentMessages = this.renderedThreadMessages();
       const oldestTimestamp =
         currentMessages.length > 0
           ? Math.min(...currentMessages.map(m => m.created_at)) - 1
@@ -1800,10 +1898,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
         `Current messages count: ${currentMessages.length}, oldest timestamp: ${oldestTimestamp}`
       );
 
-      // Store current scroll position to maintain it after loading new messages
-      const scrollElement = this.messagesWrapper?.nativeElement;
-      const scrollHeight = scrollElement?.scrollHeight || 0;
-      const scrollTop = scrollElement?.scrollTop || 0; // Load older messages from the messaging service
+      // Load older messages from the messaging service
       const olderMessages = await this.messaging.loadMoreMessages(selectedChat.id, oldestTimestamp);
 
       this.logger.debug(`Loaded ${olderMessages.length} older messages`);
@@ -1812,6 +1907,8 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       if (olderMessages.length === 0) {
         this.hasMoreMessages.set(false);
         this.logger.debug('No more messages to load, setting hasMoreMessages to false');
+      } else {
+        this.expandRenderedMessageWindow();
       }
 
       // Messages are automatically updated via the computed signal

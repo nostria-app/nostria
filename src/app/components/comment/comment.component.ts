@@ -98,12 +98,13 @@ export class CommentComponent {
     }
 
     const commentEvent = this.event();
+    const rootEvent = this.rootEvent();
 
-    // If replying to a kind 1 event, create a kind 1 reply (NIP-10)
-    if (commentEvent.kind === 1) {
+    // Replies should follow the root event semantics, not the existing comment kind.
+    // Polls and other non-kind-1 roots should keep using NIP-22 comments throughout.
+    if (rootEvent.kind === 1) {
       const eventTags = this.eventService.getEventTags(commentEvent);
-      // The root is the original event being commented on
-      const rootId = eventTags.rootId || this.rootEvent().id;
+      const rootId = eventTags.rootId || rootEvent.id;
 
       const result = await this.eventService.createNote({
         replyTo: {
@@ -121,7 +122,7 @@ export class CommentComponent {
     }
 
     // Otherwise create kind 1111 comment reply (NIP-22)
-    const result = await this.eventService.createCommentReply(this.rootEvent(), commentEvent);
+    const result = await this.eventService.createCommentReply(rootEvent, commentEvent);
 
     // Handle dialog result and emit the new reply event
     if (result?.published && result.event) {

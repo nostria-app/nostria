@@ -44,6 +44,7 @@ import { NostrRecord } from '../../interfaces';
 import { SafeResourceUrl } from '@angular/platform-browser';
 import { PLATFORM_ID } from '@angular/core';
 import { visualContentLength } from '../../utils/visual-content-length';
+import { ChannelEmbedComponent } from '../channel-embed/channel-embed.component';
 
 // Music event kinds
 const MUSIC_TRACK_KIND = 36787;
@@ -114,6 +115,7 @@ interface DecryptedPreviewState {
     InlineVideoPlayerComponent,
     AudioPlayerComponent,
     Bolt11InvoiceComponent,
+    ChannelEmbedComponent,
     AgoPipe,
     TimestampPipe,
   ],
@@ -212,6 +214,11 @@ interface DecryptedPreviewState {
             <div class="embedded-photo-event" (click)="onEventMentionClick($event, mention!.event!.event)">
               <app-event-header [event]="mention!.event!.event" [compact]="true"></app-event-header>
               <app-photo-event [event]="mention!.event!.event" [hideComments]="true"></app-photo-event>
+            </div>
+          } @else if (mention!.event!.event.kind === 40 || mention!.event!.event.kind === 41 || mention!.event!.event.kind === 42) {
+            <!-- Public chat event (kind 40/41/42, NIP-28) -->
+            <div class="embedded-channel-event">
+              <app-channel-embed [event]="mention!.event!.event"></app-channel-embed>
             </div>
           } @else {
             <!-- Regular event mention -->
