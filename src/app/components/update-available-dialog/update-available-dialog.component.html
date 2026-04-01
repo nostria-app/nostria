@@ -40,10 +40,12 @@
 </div>
 
 <div dialog-actions class="update-dialog-actions">
-  <button mat-button type="button" (click)="closeLater()" [disabled]="installing()" i18n="@@desktopUpdater.dialog.later">
+  <button mat-button type="button" (click)="closeLater()" [disabled]="installing()"
+    i18n="@@desktopUpdater.dialog.later">
     Later
   </button>
-  <button mat-flat-button type="button" (click)="install()" [disabled]="installing()" i18n="@@desktopUpdater.dialog.install">
+  <button mat-flat-button type="button" (click)="install()" [disabled]="installing()"
+    i18n="@@desktopUpdater.dialog.install">
     Install update
   </button>
 </div>

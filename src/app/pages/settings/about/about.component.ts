@@ -109,10 +109,10 @@ export class AboutComponent implements OnInit, OnDestroy {
 
     // Representative amounts for each tier
     const tiers: { tier: ZapTier; amount: number; delay: number; duration: number }[] = [
-      { tier: 1, amount: 21,    delay: 0,    duration: 800 },
-      { tier: 2, amount: 210,   delay: 1200, duration: 1200 },
-      { tier: 3, amount: 500,   delay: 2800, duration: 1400 },
-      { tier: 4, amount: 5000,  delay: 4600, duration: 1600 },
+      { tier: 1, amount: 21, delay: 0, duration: 800 },
+      { tier: 2, amount: 210, delay: 1200, duration: 1200 },
+      { tier: 3, amount: 500, delay: 2800, duration: 1400 },
+      { tier: 4, amount: 5000, delay: 4600, duration: 1600 },
       { tier: 5, amount: 21000, delay: 6600, duration: 2200 },
     ];
 
