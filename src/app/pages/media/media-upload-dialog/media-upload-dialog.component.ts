@@ -1,13 +1,14 @@
-import { Component, computed, inject, OnDestroy, signal } from '@angular/core';
+import { Component, computed, inject, OnDestroy, signal, ViewChild } from '@angular/core';
 
 import { MatButtonModule } from '@angular/material/button';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
+import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatMenuModule, MatMenuTrigger } from '@angular/material/menu';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MediaService } from '../../../services/media.service';
 import { LoggerService } from '../../../services/logger.service';
@@ -17,20 +18,26 @@ import {
   getMediaOptimizationDescription,
   getMediaOptimizationOption,
   getMediaUploadSettingsForOptimization,
+  getVideoOptimizationProfileBadgeLabel,
+  VIDEO_OPTIMIZATION_PROFILE_OPTIONS,
   MEDIA_OPTIMIZATION_OPTIONS,
   normalizeCompressionStrength,
   type MediaOptimizationOptionValue,
   MediaUploadDialogResult,
   MediaUploadMode,
   shouldUploadOriginal,
+  type MediaUploadSettings,
+  type VideoOptimizationProfile,
 } from '../../../interfaces/media-upload';
 
 interface SelectedFileEntry {
+  id: string;
   file: File;
   previewUrl: string | null;
   isImage: boolean;
   isVideo: boolean;
   videoThumbnailUrl: string | null;
+  videoOptimizationProfile?: VideoOptimizationProfile;
 }
 
 @Component({
@@ -38,12 +45,13 @@ interface SelectedFileEntry {
   imports: [
     MatButtonModule,
     MatButtonToggleModule,
+    MatCheckboxModule,
     MatDialogModule,
     MatIconModule,
     MatInputModule,
     MatProgressBarModule,
-    MatCheckboxModule,
     MatProgressSpinnerModule,
+    MatMenuModule,
     MatTooltipModule,
   ],
   templateUrl: './media-upload-dialog.component.html',
@@ -54,19 +62,26 @@ export class MediaUploadDialogComponent implements OnDestroy {
   private mediaService = inject(MediaService);
   private readonly logger = inject(LoggerService);
   private readonly customDialog = inject(CustomDialogService);
+  private pendingVideoProfileMenuTimeout: ReturnType<typeof setTimeout> | null = null;
+  private readonly VIDEO_PROFILE_MENU_HOLD_DELAY = 450;
 
   selectedFiles = signal<SelectedFileEntry[]>([]);
   hasFiles = computed(() => this.selectedFiles().length > 0);
   hasImageOrVideo = computed(() => this.selectedFiles().some(f => f.isImage || f.isVideo));
+  hasVideo = computed(() => this.selectedFiles().some(f => f.isVideo));
   isDragging = signal<boolean>(false);
   isUploading = signal<boolean>(false);
   readonly optimizationOptions = MEDIA_OPTIMIZATION_OPTIONS;
   uploadMode = signal<MediaUploadMode>(DEFAULT_MEDIA_UPLOAD_SETTINGS.mode);
   compressionStrength = signal<number>(DEFAULT_MEDIA_UPLOAD_SETTINGS.compressionStrength);
+  videoOptimizationProfile = signal<VideoOptimizationProfile>(DEFAULT_MEDIA_UPLOAD_SETTINGS.videoOptimizationProfile ?? 'default');
   usesLocalCompression = computed(() => this.uploadMode() === 'local');
+  readonly videoOptimizationProfileOptions = VIDEO_OPTIMIZATION_PROFILE_OPTIONS;
+  videoProfileMenuPosition = signal<{ x: number; y: number }>({ x: 0, y: 0 });
+  videoProfileMenuFileId = signal<string | null>(null);
   selectedOptimization = computed(() => getMediaOptimizationOption(this.uploadMode(), this.compressionStrength()));
   selectedOptimizationDescription = computed(() =>
-    getMediaOptimizationDescription(this.uploadMode(), this.compressionStrength())
+    getMediaOptimizationDescription(this.uploadMode(), this.compressionStrength(), this.videoOptimizationProfile())
   );
 
   // Add signals for servers
@@ -86,6 +101,7 @@ export class MediaUploadDialogComponent implements OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.clearPendingVideoProfileMenuOpen();
     this.releaseEntryUrls(this.selectedFiles());
   }
 
@@ -102,9 +118,21 @@ export class MediaUploadDialogComponent implements OnDestroy {
   }
 
   onOptimizationChange(optimization: MediaOptimizationOptionValue): void {
-    const settings = getMediaUploadSettingsForOptimization(optimization);
+    const settings = {
+      ...getMediaUploadSettingsForOptimization(optimization),
+      videoOptimizationProfile: this.videoOptimizationProfile(),
+    };
     this.uploadMode.set(settings.mode);
     this.compressionStrength.set(settings.compressionStrength);
+    this.videoOptimizationProfile.set(settings.videoOptimizationProfile ?? 'default');
+  }
+
+  private getCurrentUploadSettings() {
+    return {
+      mode: this.uploadMode(),
+      compressionStrength: this.compressionStrength(),
+      videoOptimizationProfile: this.videoOptimizationProfile(),
+    };
   }
 
   onFileSelected(event: Event): void {
@@ -118,11 +146,13 @@ export class MediaUploadDialogComponent implements OnDestroy {
   addFiles(files: File[]): void {
     for (const file of files) {
       const entry: SelectedFileEntry = {
+        id: crypto.randomUUID(),
         file,
         previewUrl: null,
         isImage: file.type.startsWith('image/'),
         isVideo: file.type.startsWith('video/'),
         videoThumbnailUrl: null,
+        videoOptimizationProfile: file.type.startsWith('video/') ? this.videoOptimizationProfile() : undefined,
       };
 
       if (entry.isImage) {
@@ -167,13 +197,80 @@ export class MediaUploadDialogComponent implements OnDestroy {
       showCloseButton: true,
       data: {
         file: entry.file,
-        uploadSettings: {
-          mode: this.uploadMode(),
-          compressionStrength: this.compressionStrength(),
-        },
+        uploadSettings: this.getUploadSettingsForEntry(entry),
         contextLabel: 'Media upload',
       },
     });
+  }
+
+  onFileThumbnailPointerDown(entry: SelectedFileEntry, event: PointerEvent): void {
+    if (event.button !== 0 || !entry.isVideo) {
+      return;
+    }
+
+    this.clearPendingVideoProfileMenuOpen();
+    const anchor = this.getContextMenuAnchor(event.currentTarget as HTMLElement | null, event.clientX, event.clientY);
+    this.pendingVideoProfileMenuTimeout = setTimeout(() => {
+      this.pendingVideoProfileMenuTimeout = null;
+      this.openVideoOptimizationMenu(entry, anchor.x, anchor.y);
+    }, this.VIDEO_PROFILE_MENU_HOLD_DELAY);
+  }
+
+  onFileThumbnailPointerUp(): void {
+    this.clearPendingVideoProfileMenuOpen();
+  }
+
+  onFileThumbnailContextMenu(entry: SelectedFileEntry, event: MouseEvent): void {
+    if (!entry.isVideo) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    this.clearPendingVideoProfileMenuOpen();
+    this.openVideoOptimizationMenu(entry, event.clientX, event.clientY);
+  }
+
+  onFileThumbnailKeyDown(entry: SelectedFileEntry, event: KeyboardEvent): void {
+    if (!entry.isVideo) {
+      return;
+    }
+
+    const shouldOpenMenu = event.key === 'ContextMenu' || (event.shiftKey && event.key === 'F10');
+    if (!shouldOpenMenu) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    const anchor = this.getContextMenuAnchor(event.currentTarget as HTMLElement | null, 0, 0);
+    this.openVideoOptimizationMenu(entry, anchor.x, anchor.y);
+  }
+
+  isSelectedVideoOptimizationProfile(profile: VideoOptimizationProfile): boolean {
+    const entry = this.getVideoProfileMenuEntry();
+    if (!entry) {
+      return false;
+    }
+
+    return this.getVideoOptimizationProfileForEntry(entry) === profile;
+  }
+
+  onVideoOptimizationProfileSelected(profile: VideoOptimizationProfile): void {
+    const entry = this.getVideoProfileMenuEntry();
+    if (!entry) {
+      return;
+    }
+
+    this.selectedFiles.update(files => files.map(file => file.id === entry.id
+      ? { ...file, videoOptimizationProfile: profile }
+      : file));
+    this.closeVideoOptimizationMenu();
+  }
+
+  onVideoOptimizationMenuClosed(): void {
+    this.clearPendingVideoProfileMenuOpen();
+    this.videoProfileMenuFileId.set(null);
   }
 
   clearAllFiles(): void {
@@ -255,10 +352,11 @@ export class MediaUploadDialogComponent implements OnDestroy {
       this.isUploading.set(true);
       this.dialogRef.close({
         files: this.selectedFiles().map(e => e.file),
-        uploadSettings: {
-          mode: this.uploadMode(),
-          compressionStrength: this.compressionStrength(),
-        },
+        uploadSettings: this.getCurrentUploadSettings(),
+        fileUploadSettings: this.selectedFiles().map(entry => ({
+          file: entry.file,
+          uploadSettings: this.getUploadSettingsForEntry(entry),
+        })),
         uploadOriginal: shouldUploadOriginal(this.uploadMode()),
         servers: this.selectedServers(),
       });
@@ -286,6 +384,87 @@ export class MediaUploadDialogComponent implements OnDestroy {
   totalSize = computed(() => {
     return this.selectedFiles().reduce((sum, entry) => sum + entry.file.size, 0);
   });
+
+  getVideoOptimizationProfileBadgeLabelForEntry(entry: SelectedFileEntry): string {
+    return getVideoOptimizationProfileBadgeLabel(this.getVideoOptimizationProfileForEntry(entry));
+  }
+
+  getVideoOptimizationProfileLabelForEntry(entry: SelectedFileEntry): string {
+    return this.videoOptimizationProfileOptions.find(option => option.value === this.getVideoOptimizationProfileForEntry(entry))?.label
+      ?? this.videoOptimizationProfileOptions[0].label;
+  }
+
+  private getUploadSettingsForEntry(entry: SelectedFileEntry): MediaUploadSettings {
+    return {
+      ...this.getCurrentUploadSettings(),
+      videoOptimizationProfile: entry.isVideo
+        ? this.getVideoOptimizationProfileForEntry(entry)
+        : this.videoOptimizationProfile(),
+    };
+  }
+
+  private getVideoOptimizationProfileForEntry(entry: SelectedFileEntry): VideoOptimizationProfile {
+    return entry.videoOptimizationProfile ?? this.videoOptimizationProfile();
+  }
+
+  private getVideoProfileMenuEntry(): SelectedFileEntry | undefined {
+    const fileId = this.videoProfileMenuFileId();
+    if (!fileId) {
+      return undefined;
+    }
+
+    return this.selectedFiles().find(entry => entry.id === fileId);
+  }
+
+  private getContextMenuAnchor(element: HTMLElement | null, clientX: number, clientY: number): { x: number; y: number } {
+    if (clientX > 0 || clientY > 0) {
+      return { x: clientX, y: clientY };
+    }
+
+    const rect = element?.getBoundingClientRect();
+    if (!rect) {
+      return { x: 24, y: 24 };
+    }
+
+    return {
+      x: rect.left + rect.width / 2,
+      y: rect.top + rect.height / 2,
+    };
+  }
+
+  private getClampedVideoProfileMenuPosition(x: number, y: number): { x: number; y: number } {
+    if (typeof window === 'undefined') {
+      return { x, y };
+    }
+
+    return {
+      x: Math.max(8, Math.min(x, window.innerWidth - 280)),
+      y: Math.max(8, Math.min(y, window.innerHeight - 260)),
+    };
+  }
+
+  private openVideoOptimizationMenu(entry: SelectedFileEntry, x: number, y: number): void {
+    this.videoProfileMenuFileId.set(entry.id);
+    this.videoProfileMenuPosition.set(this.getClampedVideoProfileMenuPosition(x, y));
+    requestAnimationFrame(() => {
+      this.videoProfileMenuTrigger?.openMenu();
+      setTimeout(() => this.videoProfileMenuTrigger?.updatePosition(), 0);
+    });
+  }
+
+  private closeVideoOptimizationMenu(): void {
+    this.videoProfileMenuTrigger?.closeMenu();
+    this.videoProfileMenuFileId.set(null);
+  }
+
+  private clearPendingVideoProfileMenuOpen(): void {
+    if (this.pendingVideoProfileMenuTimeout !== null) {
+      clearTimeout(this.pendingVideoProfileMenuTimeout);
+      this.pendingVideoProfileMenuTimeout = null;
+    }
+  }
+
+  @ViewChild('videoProfileMenuTrigger', { read: MatMenuTrigger }) videoProfileMenuTrigger?: MatMenuTrigger;
 
   private releaseEntryUrls(entries: SelectedFileEntry[]): void {
     for (const entry of entries) {

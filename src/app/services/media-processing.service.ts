@@ -6,6 +6,7 @@ import {
   MediaUploadSettings,
   normalizeCompressionStrength,
   shouldUploadOriginal,
+  type VideoOptimizationProfile,
 } from '../interfaces/media-upload';
 
 type SupportedImageMimeType = 'image/jpeg' | 'image/png' | 'image/webp' | 'image/heic' | 'image/heif';
@@ -23,6 +24,7 @@ export interface PreparedUploadFile {
   file: File;
   uploadOriginal: boolean;
   wasProcessed: boolean;
+  optimizedSize?: number;
   warningMessage?: string;
 }
 
@@ -182,6 +184,7 @@ export class MediaProcessingService {
         file,
         uploadOriginal,
         wasProcessed: false,
+        optimizedSize: candidate.file.size,
         warningMessage: `Local optimization did not reduce ${file.name}, so the original file will be uploaded.`,
       };
     }
@@ -190,6 +193,7 @@ export class MediaProcessingService {
       file: candidate.file,
       uploadOriginal,
       wasProcessed: true,
+      optimizedSize: candidate.file.size,
     };
   }
 
@@ -251,6 +255,7 @@ export class MediaProcessingService {
         file,
         uploadOriginal,
         wasProcessed: false,
+        optimizedSize: candidate.file.size,
         warningMessage: `Local optimization did not reduce ${file.name}, so the original file will be uploaded.`,
       };
     }
@@ -259,6 +264,7 @@ export class MediaProcessingService {
       file: candidate.file,
       uploadOriginal,
       wasProcessed: true,
+      optimizedSize: candidate.file.size,
     };
   }
 
@@ -284,7 +290,17 @@ export class MediaProcessingService {
       }
 
       const audioTrack = await input.getPrimaryAudioTrack();
-      const plan = await this.buildVideoPlan(mediabunny, videoTrack.displayWidth, videoTrack.displayHeight, !!audioTrack, settings.compressionStrength);
+      const durationSeconds = await this.getVideoDurationSeconds(file);
+      const plan = await this.buildVideoPlan(
+        mediabunny,
+        videoTrack.displayWidth,
+        videoTrack.displayHeight,
+        !!audioTrack,
+        settings.compressionStrength,
+        file.size,
+        durationSeconds,
+        settings.videoOptimizationProfile ?? 'default',
+      );
 
       if (!plan) {
         return {
@@ -421,11 +437,23 @@ export class MediaProcessingService {
     originalHeight: number,
     hasAudio: boolean,
     compressionStrength: number,
+    sourceFileSize: number,
+    durationSeconds?: number,
+    videoOptimizationProfile: VideoOptimizationProfile = 'default',
   ): Promise<VideoConversionPlan | null> {
-    const maxDimension = this.getVideoMaxDimension(compressionStrength);
+    const maxDimension = this.getVideoMaxDimension(compressionStrength, videoOptimizationProfile);
     const scaled = this.scaleDimensions(originalWidth, originalHeight, maxDimension);
-    const videoBitrate = this.getVideoBitrate(scaled.width, scaled.height, compressionStrength);
-    const audioBitrate = this.getAudioBitrate(compressionStrength);
+    const audioBitrate = this.getAudioBitrate(compressionStrength, videoOptimizationProfile);
+    const videoBitrate = this.getVideoBitrate(
+      scaled.width,
+      scaled.height,
+      compressionStrength,
+      sourceFileSize,
+      durationSeconds,
+      hasAudio,
+      audioBitrate,
+      videoOptimizationProfile,
+    );
 
     const candidates: {
       extension: string;
@@ -541,8 +569,71 @@ export class MediaProcessingService {
     return 3840;
   }
 
-  private getVideoMaxDimension(compressionStrength: number): number {
+  private getVideoMaxDimension(
+    compressionStrength: number,
+    videoOptimizationProfile: VideoOptimizationProfile,
+  ): number {
     const normalized = normalizeCompressionStrength(compressionStrength);
+
+    if (videoOptimizationProfile === 'screen') {
+      if (normalized >= 80) {
+        return 720;
+      }
+
+      if (normalized >= 60) {
+        return 960;
+      }
+
+      if (normalized >= 40) {
+        return 1280;
+      }
+
+      if (normalized >= 20) {
+        return 1600;
+      }
+
+      return 1920;
+    }
+
+    if (videoOptimizationProfile === 'slides') {
+      if (normalized >= 80) {
+        return 1080;
+      }
+
+      if (normalized >= 60) {
+        return 1280;
+      }
+
+      if (normalized >= 40) {
+        return 1600;
+      }
+
+      if (normalized >= 20) {
+        return 1920;
+      }
+
+      return 2560;
+    }
+
+    if (videoOptimizationProfile === 'action') {
+      if (normalized >= 80) {
+        return 960;
+      }
+
+      if (normalized >= 60) {
+        return 1280;
+      }
+
+      if (normalized >= 40) {
+        return 1600;
+      }
+
+      if (normalized >= 20) {
+        return 1920;
+      }
+
+      return 2560;
+    }
 
     if (normalized >= 80) {
       return 720;
@@ -563,15 +654,113 @@ export class MediaProcessingService {
     return 1920;
   }
 
-  private getVideoBitrate(width: number, height: number, compressionStrength: number): number {
+  private getVideoBitrate(
+    width: number,
+    height: number,
+    compressionStrength: number,
+    sourceFileSize: number,
+    durationSeconds: number | undefined,
+    hasAudio: boolean,
+    audioBitrate: number,
+    videoOptimizationProfile: VideoOptimizationProfile,
+  ): number {
     const normalized = normalizeCompressionStrength(compressionStrength) / 100;
     const megaPixels = (width * height) / 1_000_000;
-    const baseBitrate = 1_400_000 + megaPixels * 1_600_000;
-    return Math.round(this.clamp(baseBitrate * (1.05 - normalized * 0.55), 600_000, 12_000_000));
+    let baseBitrate = 600_000 + megaPixels * 900_000;
+    let dimensionFactor = 0.92 - normalized * 0.5;
+    let minBitrate = 350_000;
+    let maxBitrate = 8_000_000;
+
+    switch (videoOptimizationProfile) {
+      case 'screen':
+        baseBitrate = 320_000 + megaPixels * 520_000;
+        dimensionFactor = 0.78 - normalized * 0.42;
+        minBitrate = 220_000;
+        maxBitrate = 4_500_000;
+        break;
+      case 'slides':
+        baseBitrate = 260_000 + megaPixels * 420_000;
+        dimensionFactor = 0.72 - normalized * 0.36;
+        minBitrate = 180_000;
+        maxBitrate = 3_800_000;
+        break;
+      case 'action':
+        baseBitrate = 900_000 + megaPixels * 1_200_000;
+        dimensionFactor = 1.02 - normalized * 0.32;
+        minBitrate = 500_000;
+        maxBitrate = 10_000_000;
+        break;
+    }
+
+    const dimensionTarget = baseBitrate * dimensionFactor;
+    const sourceTarget = this.getSourceVideoBitrateTarget(
+      sourceFileSize,
+      durationSeconds,
+      hasAudio,
+      audioBitrate,
+      normalized,
+      videoOptimizationProfile,
+    );
+
+    const targetBitrate = sourceTarget !== null
+      ? Math.min(dimensionTarget, sourceTarget)
+      : dimensionTarget;
+
+    return Math.round(this.clamp(targetBitrate, minBitrate, maxBitrate));
   }
 
-  private getAudioBitrate(compressionStrength: number): number {
+  private getSourceVideoBitrateTarget(
+    sourceFileSize: number,
+    durationSeconds: number | undefined,
+    hasAudio: boolean,
+    audioBitrate: number,
+    normalizedCompressionStrength: number,
+    videoOptimizationProfile: VideoOptimizationProfile,
+  ): number | null {
+    if (!durationSeconds || durationSeconds <= 0 || sourceFileSize <= 0) {
+      return null;
+    }
+
+    const totalSourceBitrate = (sourceFileSize * 8) / durationSeconds;
+    const reservedAudioBitrate = hasAudio ? audioBitrate : 0;
+    let minBitrate = 350_000;
+    let targetFactor = this.clamp(0.88 - normalizedCompressionStrength * 0.38, 0.45, 0.88);
+
+    switch (videoOptimizationProfile) {
+      case 'screen':
+        minBitrate = 220_000;
+        targetFactor = this.clamp(0.68 - normalizedCompressionStrength * 0.34, 0.24, 0.68);
+        break;
+      case 'slides':
+        minBitrate = 180_000;
+        targetFactor = this.clamp(0.62 - normalizedCompressionStrength * 0.28, 0.28, 0.62);
+        break;
+      case 'action':
+        minBitrate = 500_000;
+        targetFactor = this.clamp(0.94 - normalizedCompressionStrength * 0.26, 0.58, 0.94);
+        break;
+    }
+
+    const sourceVideoBitrate = Math.max(minBitrate, totalSourceBitrate - reservedAudioBitrate);
+
+    return sourceVideoBitrate * targetFactor;
+  }
+
+  private getAudioBitrate(compressionStrength: number, videoOptimizationProfile: VideoOptimizationProfile): number {
     const normalized = normalizeCompressionStrength(compressionStrength) / 100;
+
+    if (videoOptimizationProfile === 'screen') {
+      return Math.round(this.clamp(96000 - normalized * 48000, 48000, 96000));
+    }
+
+    if (videoOptimizationProfile === 'slides') {
+      return Math.round(this.clamp(80000 - normalized * 32000, 48000, 80000));
+    }
+
+    if (videoOptimizationProfile === 'action') {
+      return Math.round(this.clamp(160000 - normalized * 48000, 96000, 160000));
+    }
+
     return Math.round(this.clamp(128000 - normalized * 56000, 64000, 128000));
   }
 
@@ -591,6 +780,31 @@ export class MediaProcessingService {
       width: Math.max(1, Math.round((width / height) * maxDimension)),
       height: maxDimension,
     };
+  }
+
+  private async getVideoDurationSeconds(file: File): Promise<number | undefined> {
+    if (!this.isBrowser || typeof document === 'undefined') {
+      return undefined;
+    }
+
+    const objectUrl = URL.createObjectURL(file);
+    const video = document.createElement('video');
+    video.preload = 'metadata';
+    video.muted = true;
+    video.src = objectUrl;
+
+    try {
+      const duration = await new Promise<number | undefined>(resolve => {
+        video.onloadedmetadata = () => resolve(Number.isFinite(video.duration) ? video.duration : undefined);
+        video.onerror = () => resolve(undefined);
+      });
+
+      return duration;
+    } finally {
+      video.removeAttribute('src');
+      video.load();
+      URL.revokeObjectURL(objectUrl);
+    }
   }
 
   private createCanvas(width: number, height: number): HTMLCanvasElement | OffscreenCanvas {

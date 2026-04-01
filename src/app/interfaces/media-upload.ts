@@ -1,8 +1,22 @@
 export type MediaUploadMode = 'original' | 'local' | 'server';
+export type VideoOptimizationProfile = 'default' | 'screen' | 'slides' | 'action';
+
+export interface VideoOptimizationProfileOption {
+  value: VideoOptimizationProfile;
+  label: string;
+  badgeLabel: string;
+  description: string;
+}
+
+export interface FileUploadSettingOverride {
+  file: File;
+  uploadSettings: MediaUploadSettings;
+}
 
 export interface MediaUploadSettings {
   mode: MediaUploadMode;
   compressionStrength: number;
+  videoOptimizationProfile?: VideoOptimizationProfile;
 }
 
 export interface MediaUploadModeOption {
@@ -24,6 +38,7 @@ export interface MediaOptimizationOption {
 export interface MediaUploadDialogResult {
   files: File[];
   uploadSettings: MediaUploadSettings;
+  fileUploadSettings?: FileUploadSettingOverride[];
   uploadOriginal: boolean;
   servers: string[];
 }
@@ -49,6 +64,33 @@ export const MEDIA_UPLOAD_MODE_OPTIONS: readonly MediaUploadModeOption[] = [
     value: 'server',
     label: 'Server Compression',
     description: 'Upload the source file and let the media server optimize it.',
+  },
+] as const;
+
+export const VIDEO_OPTIMIZATION_PROFILE_OPTIONS: readonly VideoOptimizationProfileOption[] = [
+  {
+    value: 'default',
+    label: 'Regular Video',
+    badgeLabel: 'Video',
+    description: 'General camera footage and mixed-motion clips.',
+  },
+  {
+    value: 'screen',
+    label: 'Screen Recording',
+    badgeLabel: 'Screen',
+    description: 'App demos, code walkthroughs, tutorials, and UI captures.',
+  },
+  {
+    value: 'slides',
+    label: 'Slides and Text',
+    badgeLabel: 'Slides',
+    description: 'Presentations, terminals, static scenes, or videos where text clarity matters most.',
+  },
+  {
+    value: 'action',
+    label: 'High Motion',
+    badgeLabel: 'Motion',
+    description: 'Gameplay, camera pans, sports, handheld footage, and fast movement.',
   },
 ] as const;
 
@@ -93,16 +135,19 @@ export const MEDIA_OPTIMIZATION_OPTIONS: readonly MediaOptimizationOption[] = [
 export const DEFAULT_MEDIA_UPLOAD_SETTINGS: MediaUploadSettings = {
   mode: 'local',
   compressionStrength: DEFAULT_MEDIA_COMPRESSION_STRENGTH,
+  videoOptimizationProfile: 'default',
 };
 
 export const DEFAULT_DM_MEDIA_UPLOAD_SETTINGS: MediaUploadSettings = {
   mode: 'local',
   compressionStrength: DEFAULT_MEDIA_COMPRESSION_STRENGTH,
+  videoOptimizationProfile: 'default',
 };
 
 export const DEFAULT_VIDEO_CLIP_UPLOAD_SETTINGS: MediaUploadSettings = {
   mode: 'local',
   compressionStrength: DEFAULT_MEDIA_COMPRESSION_STRENGTH,
+  videoOptimizationProfile: 'default',
 };
 
 export function normalizeCompressionStrength(value: number | null | undefined): number {
@@ -154,10 +199,24 @@ export function getMediaOptimizationLabel(
 export function getMediaOptimizationDescription(
   mode: MediaUploadMode,
   compressionStrength: number,
+  videoOptimizationProfile: VideoOptimizationProfile = 'default',
 ): string {
-  return MEDIA_OPTIMIZATION_OPTIONS.find(option =>
+  const baseDescription = MEDIA_OPTIMIZATION_OPTIONS.find(option =>
     option.value === getMediaOptimizationOption(mode, compressionStrength)
   )?.description ?? MEDIA_OPTIMIZATION_OPTIONS[1].description;
+
+  if (mode === 'local' && videoOptimizationProfile !== 'default') {
+    switch (videoOptimizationProfile) {
+      case 'screen':
+        return `${baseDescription} Screen recording tuning is enabled for videos.`;
+      case 'slides':
+        return `${baseDescription} Slides and text tuning is enabled for videos.`;
+      case 'action':
+        return `${baseDescription} High-motion tuning is enabled for videos.`;
+    }
+  }
+
+  return baseDescription;
 }
 
 export function getMediaUploadSettingsForOptimization(
@@ -169,7 +228,23 @@ export function getMediaUploadSettingsForOptimization(
   return {
     mode: option.mode,
     compressionStrength: option.compressionStrength,
+    videoOptimizationProfile: 'default',
   };
+}
+
+export function getVideoOptimizationProfileDescription(profile: VideoOptimizationProfile): string {
+  return VIDEO_OPTIMIZATION_PROFILE_OPTIONS.find(option => option.value === profile)?.description
+    ?? VIDEO_OPTIMIZATION_PROFILE_OPTIONS[0].description;
+}
+
+export function getVideoOptimizationProfileLabel(profile: VideoOptimizationProfile): string {
+  return VIDEO_OPTIMIZATION_PROFILE_OPTIONS.find(option => option.value === profile)?.label
+    ?? VIDEO_OPTIMIZATION_PROFILE_OPTIONS[0].label;
+}
+
+export function getVideoOptimizationProfileBadgeLabel(profile: VideoOptimizationProfile): string {
+  return VIDEO_OPTIMIZATION_PROFILE_OPTIONS.find(option => option.value === profile)?.badgeLabel
+    ?? VIDEO_OPTIMIZATION_PROFILE_OPTIONS[0].badgeLabel;
 }
 
 export function getCompressionStrengthLabel(strength: number): string {

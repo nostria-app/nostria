@@ -192,6 +192,12 @@
             {{ selectedMediaOptimizationDescription() }}
           </span>
         </div>
+
+        <div class="option-content">
+          @if (hasPendingVideoMedia()) {
+          <span class="option-description">Right-click or press and hold a queued video thumbnail to choose a clip type for that specific video.</span>
+          }
+        </div>
       </div>
 
       <!-- Client Metadata Options -->
@@ -454,14 +460,17 @@
       </button>
       <button type="button" class="media-thumbnail-button" [class.pending-upload]="media.pendingUpload"
         [attr.aria-label]="getMediaThumbnailAriaLabel(media)" [matTooltip]="getMediaThumbnailTooltip(media)"
+        (pointerdown)="onMediaThumbnailPointerDown(i, $event)" (pointerup)="onMediaThumbnailPointerUp()"
+        (pointerleave)="onMediaThumbnailPointerUp()" (pointercancel)="onMediaThumbnailPointerUp()"
+        (keydown)="onMediaThumbnailKeyDown(i, $event)" (contextmenu)="onMediaThumbnailContextMenu(i, $event)"
         (click)="onMediaThumbnailClick(i, $event)">
-        @if (media.mimeType?.startsWith('video/')) {
-        <mat-icon class="video-icon">videocam</mat-icon>
-        @if (getMediaThumbnailUrl(media)) {
-        <img [src]="getMediaThumbnailUrl(media)" class="thumbnail-img" alt="Video thumbnail">
-        }
+        @if (getMediaThumbnailUrl(media); as thumbnailUrl) {
+        <img [src]="thumbnailUrl" class="thumbnail-img" alt="Media thumbnail" title="Media thumbnail">
         } @else {
-        <img [src]="getMediaThumbnailUrl(media)" class="thumbnail-img" alt="Image thumbnail">
+        <mat-icon class="media-fallback-icon">{{ media.mimeType?.startsWith('video/') ? 'movie' : 'image' }}</mat-icon>
+        }
+        @if (media.mimeType?.startsWith('video/')) {
+        <span class="video-profile-badge">{{ getVideoOptimizationProfileBadgeLabelForMedia(media) }}</span>
         }
         <div class="media-thumbnail-meta">
           <span class="media-savings" [class.empty]="!getMediaThumbnailSavingsLabel(media)">{{
@@ -582,6 +591,25 @@
         <mat-icon>mood</mat-icon>
         <span>{{ isSentimentAnalyzing() ? 'Analyzing sentiment...' : 'Sentiment Analysis' }}</span>
       </button>
+    </mat-menu>
+
+    <button type="button" class="video-profile-menu-anchor" [style.left.px]="videoProfileMenuPosition().x"
+      [style.top.px]="videoProfileMenuPosition().y" [matMenuTriggerFor]="videoProfileMenu"
+      #videoProfileMenuTrigger="matMenuTrigger" tabindex="-1" aria-hidden="true"></button>
+
+    <mat-menu #videoProfileMenu="matMenu" (closed)="onVideoOptimizationMenuClosed()">
+      @for (option of videoOptimizationProfileOptions; track option.value) {
+      <button mat-menu-item class="video-profile-menu-item" [class.is-selected]="isSelectedVideoOptimizationProfile(option.value)"
+        (click)="onVideoOptimizationProfileSelected(option.value)">
+        <div class="video-profile-menu-copy">
+          <span class="video-profile-menu-label">{{ option.label }}</span>
+          <span class="video-profile-menu-description">{{ option.description }}</span>
+        </div>
+        @if (isSelectedVideoOptimizationProfile(option.value)) {
+        <mat-icon class="video-profile-menu-check">check</mat-icon>
+        }
+      </button>
+      }
     </mat-menu>
     }
     }

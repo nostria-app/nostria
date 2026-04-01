@@ -13,13 +13,20 @@
     <div class="files-list">
       @for (entry of selectedFiles(); track $index) {
       <div class="file-entry">
-        <div class="file-thumb">
+        <div class="file-thumb" [class.video-configurable]="entry.isVideo" [attr.tabindex]="entry.isVideo ? 0 : -1"
+          [matTooltip]="entry.isVideo ? ('Video type: ' + getVideoOptimizationProfileLabelForEntry(entry) + '. Right-click or press and hold to change it.') : null"
+          (pointerdown)="onFileThumbnailPointerDown(entry, $event)" (pointerup)="onFileThumbnailPointerUp()"
+          (pointerleave)="onFileThumbnailPointerUp()" (pointercancel)="onFileThumbnailPointerUp()"
+          (keydown)="onFileThumbnailKeyDown(entry, $event)" (contextmenu)="onFileThumbnailContextMenu(entry, $event)">
           @if (entry.previewUrl) {
           <img [src]="entry.previewUrl" alt="Preview" />
           } @else if (entry.isVideo && entry.videoThumbnailUrl) {
           <img [src]="entry.videoThumbnailUrl" alt="Video preview" />
           } @else {
           <mat-icon>{{ getFileTypeIcon(entry.file) }}</mat-icon>
+          }
+          @if (entry.isVideo) {
+          <span class="video-profile-badge">{{ getVideoOptimizationProfileBadgeLabelForEntry(entry) }}</span>
           }
         </div>
         <div class="file-details">
@@ -62,6 +69,9 @@
           }
         </mat-button-toggle-group>
         <p class="compression-description">{{ selectedOptimizationDescription() }}</p>
+        @if (hasVideo()) {
+        <p class="compression-description">Right-click or press and hold a selected video thumbnail to choose a video type for that file.</p>
+        }
       </div>
       }
 
@@ -94,6 +104,25 @@
     </div>
     }
   </div>
+
+  <button type="button" class="video-profile-menu-anchor" [style.left.px]="videoProfileMenuPosition().x"
+    [style.top.px]="videoProfileMenuPosition().y" [matMenuTriggerFor]="videoProfileMenu"
+    #videoProfileMenuTrigger="matMenuTrigger" tabindex="-1" aria-hidden="true"></button>
+
+  <mat-menu #videoProfileMenu="matMenu" (closed)="onVideoOptimizationMenuClosed()">
+    @for (option of videoOptimizationProfileOptions; track option.value) {
+    <button mat-menu-item class="video-profile-menu-item" [class.is-selected]="isSelectedVideoOptimizationProfile(option.value)"
+      (click)="onVideoOptimizationProfileSelected(option.value)">
+      <div class="video-profile-menu-copy">
+        <span class="video-profile-menu-label">{{ option.label }}</span>
+        <span class="video-profile-menu-description">{{ option.description }}</span>
+      </div>
+      @if (isSelectedVideoOptimizationProfile(option.value)) {
+      <mat-icon class="video-profile-menu-check">check</mat-icon>
+      }
+    </button>
+    }
+  </mat-menu>
 </mat-dialog-content>
 <mat-dialog-actions align="end">
   <button mat-button (click)="cancel()" [disabled]="isUploading()">Cancel</button>

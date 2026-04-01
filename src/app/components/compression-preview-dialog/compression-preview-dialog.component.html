@@ -24,7 +24,7 @@
   </div>
   } @else if (previewResult(); as result) {
   @if (result.warningMessage) {
-  <div class="preview-message-card">
+  <div class="preview-message-card" [class.preview-message-card-warning]="!!result.compressedFile">
     <mat-icon>info</mat-icon>
     <span>{{ result.warningMessage }}</span>
   </div>
@@ -74,8 +74,23 @@
     }
   </div>
 
-  <div class="preview-summary-card">
+  <div class="preview-summary-card" [class.preview-summary-card-success]="previewStatusTone() === 'success'"
+    [class.preview-summary-card-warning]="previewStatusTone() === 'warning'">
     <span class="preview-summary-title">{{ summaryLabel() }}</span>
+    @if (result.compressedFile) {
+    <div class="preview-summary-metrics">
+      <div class="preview-summary-metric" [class.preview-summary-metric-success]="previewStatusTone() === 'success'"
+        [class.preview-summary-metric-warning]="previewStatusTone() === 'warning'">
+        <span class="preview-summary-metric-label">Optimized size</span>
+        <span class="preview-summary-metric-value">{{ optimizedSizeLabel() }}</span>
+      </div>
+      <div class="preview-summary-metric" [class.preview-summary-metric-success]="previewStatusTone() === 'success'"
+        [class.preview-summary-metric-warning]="previewStatusTone() === 'warning'">
+        <span class="preview-summary-metric-label">Size change</span>
+        <span class="preview-summary-metric-value">{{ sizeChangeLabel() }}</span>
+      </div>
+    </div>
+    }
     <span class="preview-summary-copy">
       @if (result.willUploadCompressedFile) {
       This optimized version would be used for upload.

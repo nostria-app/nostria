@@ -141,6 +141,7 @@
     border-radius: 8px;
 
     .file-thumb {
+      position: relative;
       width: 48px;
       height: 48px;
       flex-shrink: 0;
@@ -150,6 +151,10 @@
       align-items: center;
       justify-content: center;
       background-color: var(--mat-sys-color-surface-container);
+
+      &.video-configurable {
+        cursor: context-menu;
+      }
 
       img {
         width: 100%;
@@ -162,6 +167,18 @@
         height: 28px;
         width: 28px;
         color: var(--mat-sys-color-on-surface-variant);
+      }
+
+      .video-profile-badge {
+        position: absolute;
+        top: 4px;
+        left: 4px;
+        padding: 2px 5px;
+        border-radius: var(--mat-sys-corner-full);
+        background: rgba(0, 0, 0, 0.78);
+        color: white;
+        font-size: 9px;
+        line-height: 1.1;
       }
     }
 
@@ -212,6 +229,10 @@
     display: flex;
     flex-direction: column;
     gap: 8px;
+
+    mat-checkbox {
+      margin-top: 4px;
+    }
   }
 
   .optimization-label {
@@ -393,4 +414,48 @@
       font-size: 14px;
     }
   }
+}
+
+.video-profile-menu-anchor {
+  position: fixed;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.video-profile-menu-item {
+  height: auto;
+  min-height: 56px;
+  align-items: flex-start;
+
+  &.is-selected {
+    background: color-mix(in srgb, var(--mat-sys-primary) 12%, transparent);
+  }
+}
+
+.video-profile-menu-copy {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  padding-block: 6px;
+  white-space: normal;
+}
+
+.video-profile-menu-check {
+  margin-top: 8px;
+  color: var(--mat-sys-primary);
+}
+
+.video-profile-menu-label {
+  color: var(--mat-sys-on-surface);
+}
+
+.video-profile-menu-description {
+  font-size: 12px;
+  line-height: 1.3;
+  color: var(--mat-sys-on-surface-variant);
 }

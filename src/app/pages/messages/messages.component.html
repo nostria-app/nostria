@@ -910,8 +910,19 @@
               </div>
             </div>
             } @else if (preview.type === 'video') {
-            <div class="media-preview-media-card">
-              <video [src]="preview.url" class="media-preview-thumb" muted preload="metadata"></video>
+            <div class="media-preview-media-card video-configurable" [attr.tabindex]="preview.pendingEncrypted ? 0 : -1"
+              [matTooltip]="preview.pendingEncrypted && preview.pendingId ? ('Video type: ' + getDmVideoOptimizationProfileLabel(preview.pendingId) + '. Right-click or press and hold to change it.') : null"
+              (pointerdown)="preview.pendingId && onPendingPreviewPointerDown(preview.pendingId, $event)"
+              (pointerup)="onPendingPreviewPointerUp()" (pointerleave)="onPendingPreviewPointerUp()"
+              (pointercancel)="onPendingPreviewPointerUp()"
+              (keydown)="preview.pendingId && onPendingPreviewKeyDown(preview.pendingId, $event)"
+              (contextmenu)="preview.pendingId && onPendingPreviewContextMenu(preview.pendingId, $event)">
+              <div class="media-preview-thumb-wrap">
+                <video [src]="preview.url" class="media-preview-thumb" muted preload="metadata"></video>
+                @if (preview.pendingEncrypted && preview.pendingId) {
+                <span class="video-profile-badge">{{ getDmVideoOptimizationProfileBadgeLabel(preview.pendingId) }}</span>
+                }
+              </div>
               <div class="media-preview-details">
                 @if (preview.label) {
                 <span class="media-preview-label">{{ preview.label }}</span>
@@ -963,6 +974,9 @@
                 }
               </mat-button-toggle-group>
               <span class="dm-compression-description">{{ dmOptimizationDescription() }}</span>
+              @if (hasPendingVideoMedia()) {
+              <span class="dm-compression-description">Right-click or press and hold a queued video preview to choose a video type for that attachment.</span>
+              }
             </div>
             }
             <div class="pending-media-buttons">
@@ -976,6 +990,25 @@
           }
         </div>
         }
+
+        <button type="button" class="dm-video-profile-menu-anchor" [style.left.px]="dmVideoProfileMenuPosition().x"
+          [style.top.px]="dmVideoProfileMenuPosition().y" [matMenuTriggerFor]="dmVideoProfileMenu"
+          #dmVideoProfileMenuTrigger="matMenuTrigger" tabindex="-1" aria-hidden="true"></button>
+
+        <mat-menu #dmVideoProfileMenu="matMenu" (closed)="onDmVideoOptimizationMenuClosed()">
+          @for (option of videoOptimizationProfileOptions; track option.value) {
+          <button mat-menu-item class="dm-video-profile-menu-item" [class.is-selected]="isSelectedDmVideoOptimizationProfile(option.value)"
+            (click)="onDmVideoOptimizationProfileSelected(option.value)">
+            <div class="dm-video-profile-menu-copy">
+              <span class="dm-video-profile-menu-label">{{ option.label }}</span>
+              <span class="dm-video-profile-menu-description">{{ option.description }}</span>
+            </div>
+            @if (isSelectedDmVideoOptimizationProfile(option.value)) {
+            <mat-icon class="dm-video-profile-menu-check">check</mat-icon>
+            }
+          </button>
+          }
+        </mat-menu>
 
         @if (pendingEncryptedMediaPreviews().length === 0) {
         <div class="message-input-row">

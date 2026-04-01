@@ -768,6 +768,15 @@
     width: 100%;
     min-width: 0;
     padding: 0 56px 0 0;
+
+    &.video-configurable {
+      cursor: context-menu;
+    }
+  }
+
+  .media-preview-thumb-wrap {
+    position: relative;
+    flex-shrink: 0;
   }
 
   .media-preview-image-button {
@@ -785,6 +794,18 @@
     border-radius: 6px;
     border: 1px solid var(--mat-sys-outline-variant);
     display: block;
+  }
+
+  .video-profile-badge {
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    padding: 2px 5px;
+    border-radius: var(--mat-sys-corner-full);
+    background: rgba(0, 0, 0, 0.78);
+    color: white;
+    font-size: 9px;
+    line-height: 1.1;
   }
 
   .media-preview-details {
@@ -870,6 +891,10 @@
     display: block;
     font-size: 11px;
     color: var(--mat-sys-on-surface-variant);
+  }
+
+  .mat-mdc-slide-toggle {
+    margin-top: 2px;
   }
 
   .pending-media-buttons {
@@ -2526,4 +2551,48 @@ app-message-content {
 :host-context(.dark) .scroll-latest-button {
   background-color: var(--mat-sys-surface-container-high);
   color: var(--mat-sys-on-surface);
+}
+
+.dm-video-profile-menu-anchor {
+  position: fixed;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.dm-video-profile-menu-item {
+  height: auto;
+  min-height: 56px;
+  align-items: flex-start;
+
+  &.is-selected {
+    background: color-mix(in srgb, var(--mat-sys-primary) 12%, transparent);
+  }
+}
+
+.dm-video-profile-menu-copy {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  padding-block: 6px;
+  white-space: normal;
+}
+
+.dm-video-profile-menu-check {
+  margin-top: 8px;
+  color: var(--mat-sys-primary);
+}
+
+.dm-video-profile-menu-label {
+  color: var(--mat-sys-on-surface);
+}
+
+.dm-video-profile-menu-description {
+  font-size: 12px;
+  line-height: 1.3;
+  color: var(--mat-sys-on-surface-variant);
 }

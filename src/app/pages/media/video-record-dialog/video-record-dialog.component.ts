@@ -16,10 +16,12 @@ import {
   getMediaOptimizationDescription,
   getMediaOptimizationOption,
   getMediaUploadSettingsForOptimization,
+  getVideoOptimizationProfileDescription,
   MEDIA_OPTIMIZATION_OPTIONS,
   MediaUploadMode,
   shouldUploadOriginal,
   type MediaOptimizationOptionValue,
+  type VideoOptimizationProfile,
   VideoRecordDialogResult,
 } from '../../../interfaces/media-upload';
 
@@ -64,10 +66,15 @@ export class VideoRecordDialogComponent implements OnDestroy, AfterViewInit {
   aspectRatio = signal<'vertical' | 'horizontal'>('vertical'); // Video orientation
   uploadMode = signal<MediaUploadMode>(DEFAULT_VIDEO_CLIP_UPLOAD_SETTINGS.mode);
   compressionStrength = signal<number>(DEFAULT_VIDEO_CLIP_UPLOAD_SETTINGS.compressionStrength);
+  videoOptimizationProfile = signal<VideoOptimizationProfile>(DEFAULT_VIDEO_CLIP_UPLOAD_SETTINGS.videoOptimizationProfile ?? 'default');
   usesLocalCompression = computed(() => this.uploadMode() === 'local');
+  screenRecordingOptimizationEnabled = computed(() => this.videoOptimizationProfile() === 'screen');
   selectedOptimization = computed(() => getMediaOptimizationOption(this.uploadMode(), this.compressionStrength()));
   selectedOptimizationDescription = computed(() =>
-    getMediaOptimizationDescription(this.uploadMode(), this.compressionStrength())
+    getMediaOptimizationDescription(this.uploadMode(), this.compressionStrength(), this.videoOptimizationProfile())
+  );
+  screenRecordingOptimizationDescription = computed(() =>
+    getVideoOptimizationProfileDescription(this.videoOptimizationProfile())
   );
   selectedFilter = signal<string>('none'); // Currently selected filter
   showFilters = signal<boolean>(false); // Show/hide filter selection
@@ -202,9 +209,25 @@ export class VideoRecordDialogComponent implements OnDestroy, AfterViewInit {
   }
 
   onOptimizationChange(optimization: MediaOptimizationOptionValue): void {
-    const settings = getMediaUploadSettingsForOptimization(optimization);
+    const settings = {
+      ...getMediaUploadSettingsForOptimization(optimization),
+      videoOptimizationProfile: this.videoOptimizationProfile(),
+    };
     this.uploadMode.set(settings.mode);
     this.compressionStrength.set(settings.compressionStrength);
+    this.videoOptimizationProfile.set(settings.videoOptimizationProfile ?? 'default');
+  }
+
+  onScreenRecordingOptimizationChange(enabled: boolean): void {
+    this.videoOptimizationProfile.set(enabled ? 'screen' : 'default');
+  }
+
+  private getCurrentUploadSettings() {
+    return {
+      mode: this.uploadMode(),
+      compressionStrength: this.compressionStrength(),
+      videoOptimizationProfile: this.videoOptimizationProfile(),
+    };
   }
 
   async startRecording(): Promise<void> {
@@ -421,10 +444,7 @@ export class VideoRecordDialogComponent implements OnDestroy, AfterViewInit {
       showCloseButton: true,
       data: {
         file,
-        uploadSettings: {
-          mode: this.uploadMode(),
-          compressionStrength: this.compressionStrength(),
-        },
+        uploadSettings: this.getCurrentUploadSettings(),
         contextLabel: 'Recorded video clip',
       },
     });
@@ -435,10 +455,7 @@ export class VideoRecordDialogComponent implements OnDestroy, AfterViewInit {
     if (file) {
       this.dialogRef.close({
         file,
-        uploadSettings: {
-          mode: this.uploadMode(),
-          compressionStrength: this.compressionStrength(),
-        },
+        uploadSettings: this.getCurrentUploadSettings(),
         uploadOriginal: shouldUploadOriginal(this.uploadMode()),
       });
     }

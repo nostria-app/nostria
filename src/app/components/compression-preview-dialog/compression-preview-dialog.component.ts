@@ -67,6 +67,37 @@ export class CompressionPreviewDialogComponent implements OnInit, OnDestroy {
 
     return 'Same file size as the original.';
   });
+  readonly optimizedSizeLabel = computed(() => {
+    const result = this.previewResult();
+    return result?.compressedFile ? this.formatFileSize(result.compressedFile.size) : null;
+  });
+  readonly sizeChangeLabel = computed(() => {
+    const result = this.previewResult();
+    if (!result?.compressedFile || result.originalFile.size <= 0) {
+      return null;
+    }
+
+    const sizeDifference = result.compressedFile.size - result.originalFile.size;
+    const percentDifference = Math.round((Math.abs(sizeDifference) / result.originalFile.size) * 100);
+
+    if (sizeDifference < 0) {
+      return `-${percentDifference}%`;
+    }
+
+    if (sizeDifference > 0) {
+      return `+${percentDifference}%`;
+    }
+
+    return '0%';
+  });
+  readonly previewStatusTone = computed<'neutral' | 'success' | 'warning'>(() => {
+    const result = this.previewResult();
+    if (!result?.compressedFile) {
+      return 'neutral';
+    }
+
+    return result.willUploadCompressedFile ? 'success' : 'warning';
+  });
 
   async ngOnInit(): Promise<void> {
     if (!this.data?.file) {

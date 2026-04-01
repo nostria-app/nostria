@@ -466,9 +466,11 @@ export class MediaComponent {
           let failCount = 0;
           let fallbackCount = 0;
 
-          for (const file of files) {
+          const fileUploadSettings = result.fileUploadSettings ?? files.map(file => ({ file, uploadSettings: result.uploadSettings }));
+
+          for (const fileEntry of fileUploadSettings) {
             try {
-              const preparedFile = await this.mediaProcessing.prepareFileForUpload(file, result.uploadSettings);
+              const preparedFile = await this.mediaProcessing.prepareFileForUpload(fileEntry.file, fileEntry.uploadSettings);
               if (preparedFile.warningMessage) {
                 fallbackCount++;
               }

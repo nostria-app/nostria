@@ -85,6 +85,12 @@
   }
 }
 
+.preview-message-card-warning {
+  background: var(--mat-sys-secondary-container);
+  color: var(--mat-sys-on-secondary-container);
+  border-color: var(--mat-sys-secondary);
+}
+
 .preview-media-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -146,6 +152,58 @@
   align-items: flex-start;
 }
 
+.preview-summary-card-success {
+  background: var(--mat-sys-surface-container-low);
+  border-color: var(--mat-success-color);
+}
+
+.preview-summary-card-warning {
+  background: var(--mat-sys-secondary-container);
+  border-color: var(--mat-sys-secondary);
+}
+
+.preview-summary-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  width: 100%;
+}
+
+.preview-summary-metric {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--mat-sys-surface-container-high);
+  border: 1px solid var(--mat-sys-outline-variant);
+  min-width: 0;
+}
+
+.preview-summary-metric-success {
+  background: var(--mat-sys-surface-container-high);
+  border-color: var(--mat-success-color);
+
+  .preview-summary-metric-value {
+    color: var(--mat-success-lighter);
+  }
+}
+
+.preview-summary-metric-warning {
+  background: var(--mat-sys-secondary-container);
+  border-color: var(--mat-sys-secondary);
+}
+
+.preview-summary-metric-label {
+  font-size: 11px;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.preview-summary-metric-value {
+  font-size: 14px;
+  color: var(--mat-sys-on-surface);
+}
+
 .preview-summary-title {
   font-size: 14px;
   color: var(--mat-sys-on-surface);
@@ -163,6 +221,10 @@
 
 @media (max-width: 720px) {
   .preview-media-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .preview-summary-metrics {
     grid-template-columns: minmax(0, 1fr);
   }
 }

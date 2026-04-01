@@ -24,7 +24,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatListModule } from '@angular/material/list';
 import { MatCardModule } from '@angular/material/card';
 import { MatDividerModule } from '@angular/material/divider';
-import { MatMenuModule } from '@angular/material/menu';
+import { MatMenuModule, MatMenuTrigger } from '@angular/material/menu';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatBadgeModule } from '@angular/material/badge';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -97,12 +97,15 @@ import {
   getMediaOptimizationDescription,
   getMediaOptimizationOption,
   getMediaUploadSettingsForOptimization,
+  getVideoOptimizationProfileBadgeLabel,
+  VIDEO_OPTIMIZATION_PROFILE_OPTIONS,
   MEDIA_OPTIMIZATION_OPTIONS,
   VideoRecordDialogResult,
   usesLocalCompression as usesLocalCompressionMode,
   type MediaOptimizationOptionValue,
   type MediaUploadMode,
   type MediaUploadSettings,
+  type VideoOptimizationProfile,
 } from '../../interfaces/media-upload';
 import type { ReportTarget } from '../../services/reporting.service';
 import type { ReportDialogResult } from '../../components/report-dialog/report-dialog.component';
@@ -188,6 +191,7 @@ interface PendingEncryptedMediaPreview {
   objectUrl: string;
   file: File;
   type: 'image' | 'video' | 'file';
+  videoOptimizationProfile?: VideoOptimizationProfile;
 }
 
 interface QuickReactionMenuItem {
@@ -294,19 +298,26 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   isDragOverMessageInput = signal<boolean>(false);
   uploadStatus = signal<string>('');
   readonly optimizationOptions = MEDIA_OPTIMIZATION_OPTIONS;
+  readonly videoOptimizationProfileOptions = VIDEO_OPTIMIZATION_PROFILE_OPTIONS;
   dmMediaUploadMode = signal<MediaUploadMode>(DEFAULT_DM_MEDIA_UPLOAD_SETTINGS.mode);
   dmCompressionStrength = signal<number>(DEFAULT_DM_MEDIA_UPLOAD_SETTINGS.compressionStrength);
-  mediaPreviews = signal<{ url: string; type: 'image' | 'video' | 'music' | 'file'; label?: string; meta?: string; pendingEncrypted?: boolean; pendingId?: string }[]>([]);
+  dmVideoOptimizationProfile = signal<VideoOptimizationProfile>(DEFAULT_DM_MEDIA_UPLOAD_SETTINGS.videoOptimizationProfile ?? 'default');
+  mediaPreviews = signal<{ url: string; type: 'image' | 'video' | 'music' | 'file'; label?: string; meta?: string; pendingEncrypted?: boolean; pendingId?: string; videoOptimizationProfile?: VideoOptimizationProfile }[]>([]);
   pendingEncryptedMediaPreviews = signal<PendingEncryptedMediaPreview[]>([]);
   readonly hasPendingCompressibleMedia = computed(() =>
     this.pendingEncryptedMediaPreviews().some(preview => preview.type === 'image' || preview.type === 'video')
+  );
+  readonly hasPendingVideoMedia = computed(() =>
+    this.pendingEncryptedMediaPreviews().some(preview => preview.type === 'video')
   );
   readonly selectedDmOptimization = computed(() =>
     getMediaOptimizationOption(this.dmMediaUploadMode(), this.dmCompressionStrength())
   );
   readonly usesLocalDmCompression = computed(() => usesLocalCompressionMode(this.dmMediaUploadMode()));
+  dmVideoProfileMenuPosition = signal<{ x: number; y: number }>({ x: 0, y: 0 });
+  dmVideoProfileMenuPreviewId = signal<string | null>(null);
   readonly dmOptimizationDescription = computed(() =>
-    getMediaOptimizationDescription(this.dmMediaUploadMode(), this.dmCompressionStrength())
+    getMediaOptimizationDescription(this.dmMediaUploadMode(), this.dmCompressionStrength(), this.dmVideoOptimizationProfile())
   );
 
   /** Pending extra tags (e.g. imeta with waveform) for the next message */
@@ -324,6 +335,8 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   longPressedMessage = signal<DirectMessage | null>(null);
   private longPressTimeout: ReturnType<typeof setTimeout> | null = null;
   private readonly LONG_PRESS_DURATION = 500; // 500ms for long press
+  private pendingDmVideoProfileMenuTimeout: ReturnType<typeof setTimeout> | null = null;
+  private readonly DM_VIDEO_PROFILE_MENU_HOLD_DELAY = 450;
   readonly showScrollToLatestButton = signal<boolean>(false);
 
   // Computed signal for single-pane view - collapse chat list when mobile or when right panel is open
@@ -816,6 +829,9 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
 
   @ViewChild('encryptedFileInput', { static: false })
   encryptedFileInput?: ElementRef<HTMLInputElement>;
+
+  @ViewChild('dmVideoProfileMenuTrigger', { read: MatMenuTrigger })
+  dmVideoProfileMenuTrigger?: MatMenuTrigger;
 
   // Throttling for scroll handler
   private scrollThrottleTimeout: any = null;
@@ -1523,6 +1539,8 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   ngOnDestroy(): void {
+
+    this.clearPendingDmVideoProfileMenuOpen();
 
     this.clearPendingEncryptedMediaPreviews();
 
@@ -2482,6 +2500,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       type: this.isMediaFile(file)
         ? (file.type.startsWith('video/') ? 'video' as const : 'image' as const)
         : 'file' as const,
+      videoOptimizationProfile: file.type.startsWith('video/') ? this.dmVideoOptimizationProfile() : undefined,
     }));
 
     this.setPendingEncryptedFiles(stagedPreviews);
@@ -2499,6 +2518,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       meta: this.formatFileSize(preview.file.size),
       pendingEncrypted: true,
       pendingId: preview.id,
+      videoOptimizationProfile: preview.videoOptimizationProfile,
     })));
   }
 
@@ -2861,9 +2881,31 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       return;
     }
 
+    if (this.newMessageText().trim()) {
+      this.layout.toast('Send the current text message first. Encrypted media is sent as a separate message.', 4000, 'error-snackbar');
+      return;
+    }
+
+    if (!this.hasConfiguredMediaServers()) {
+      this.showMediaServerWarning();
+      return;
+    }
+
+    this.isUploading.set(true);
+
     try {
-      await this.uploadMediaFiles(stagedPreviews.map(preview => preview.file), { fromPendingPreview: true });
+      await this.mediaService.load();
+
+      for (let index = 0; index < stagedPreviews.length; index++) {
+        this.uploadStatus.set(stagedPreviews.length > 1 ? `Encrypting ${index + 1}/${stagedPreviews.length}...` : 'Encrypting...');
+        await this.sendEncryptedFileMessage(stagedPreviews[index].file, {
+          preserveComposer: true,
+          uploadSettings: this.getDmUploadSettingsForPreview(stagedPreviews[index]),
+        });
+      }
     } finally {
+      this.isUploading.set(false);
+      this.uploadStatus.set('');
       this.clearPendingEncryptedMediaPreviews();
     }
   }
@@ -2885,7 +2927,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       showCloseButton: true,
       data: {
         file: stagedPreview.file,
-        uploadSettings: this.getDmUploadSettings(),
+        uploadSettings: this.getDmUploadSettingsForPreview(stagedPreview),
         contextLabel: 'Encrypted attachment',
       },
     });
@@ -2936,16 +2978,184 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   onDmOptimizationChange(optimization: MediaOptimizationOptionValue): void {
-    const settings = getMediaUploadSettingsForOptimization(optimization);
+    const settings = {
+      ...getMediaUploadSettingsForOptimization(optimization),
+      videoOptimizationProfile: this.dmVideoOptimizationProfile(),
+    };
     this.dmMediaUploadMode.set(settings.mode);
     this.dmCompressionStrength.set(settings.compressionStrength);
+    this.dmVideoOptimizationProfile.set(settings.videoOptimizationProfile ?? 'default');
+  }
+
+  getDmVideoOptimizationProfileBadgeLabel(previewId: string): string {
+    const preview = this.pendingEncryptedMediaPreviews().find(item => item.id === previewId);
+    if (!preview) {
+      return getVideoOptimizationProfileBadgeLabel(this.dmVideoOptimizationProfile());
+    }
+
+    return getVideoOptimizationProfileBadgeLabel(this.getDmVideoOptimizationProfileForPreview(preview));
+  }
+
+  getDmVideoOptimizationProfileLabel(previewId: string): string {
+    const preview = this.pendingEncryptedMediaPreviews().find(item => item.id === previewId);
+    const profile = preview ? this.getDmVideoOptimizationProfileForPreview(preview) : this.dmVideoOptimizationProfile();
+
+    return this.videoOptimizationProfileOptions.find(option => option.value === profile)?.label
+      ?? this.videoOptimizationProfileOptions[0].label;
+  }
+
+  onPendingPreviewPointerDown(previewId: string, event: PointerEvent): void {
+    const preview = this.pendingEncryptedMediaPreviews().find(item => item.id === previewId);
+    if (!preview || preview.type !== 'video' || event.button !== 0) {
+      return;
+    }
+
+    this.clearPendingDmVideoProfileMenuOpen();
+    const anchor = this.getDmContextMenuAnchor(event.currentTarget as HTMLElement | null, event.clientX, event.clientY);
+    this.pendingDmVideoProfileMenuTimeout = setTimeout(() => {
+      this.pendingDmVideoProfileMenuTimeout = null;
+      this.openDmVideoOptimizationMenu(preview, anchor.x, anchor.y);
+    }, this.DM_VIDEO_PROFILE_MENU_HOLD_DELAY);
+  }
+
+  onPendingPreviewPointerUp(): void {
+    this.clearPendingDmVideoProfileMenuOpen();
+  }
+
+  onPendingPreviewContextMenu(previewId: string, event: MouseEvent): void {
+    const preview = this.pendingEncryptedMediaPreviews().find(item => item.id === previewId);
+    if (!preview || preview.type !== 'video') {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    this.clearPendingDmVideoProfileMenuOpen();
+    this.openDmVideoOptimizationMenu(preview, event.clientX, event.clientY);
+  }
+
+  onPendingPreviewKeyDown(previewId: string, event: KeyboardEvent): void {
+    const preview = this.pendingEncryptedMediaPreviews().find(item => item.id === previewId);
+    if (!preview || preview.type !== 'video') {
+      return;
+    }
+
+    const shouldOpenMenu = event.key === 'ContextMenu' || (event.shiftKey && event.key === 'F10');
+    if (!shouldOpenMenu) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    const anchor = this.getDmContextMenuAnchor(event.currentTarget as HTMLElement | null, 0, 0);
+    this.openDmVideoOptimizationMenu(preview, anchor.x, anchor.y);
+  }
+
+  isSelectedDmVideoOptimizationProfile(profile: VideoOptimizationProfile): boolean {
+    const preview = this.getDmVideoProfileMenuPreview();
+    if (!preview) {
+      return false;
+    }
+
+    return this.getDmVideoOptimizationProfileForPreview(preview) === profile;
+  }
+
+  onDmVideoOptimizationProfileSelected(profile: VideoOptimizationProfile): void {
+    const preview = this.getDmVideoProfileMenuPreview();
+    if (!preview) {
+      return;
+    }
+
+    this.pendingEncryptedMediaPreviews.update(items => items.map(item => item.id === preview.id
+      ? { ...item, videoOptimizationProfile: profile }
+      : item));
+    this.mediaPreviews.update(items => items.map(item => item.pendingId === preview.id
+      ? { ...item, videoOptimizationProfile: profile }
+      : item));
+    this.closeDmVideoOptimizationMenu();
+  }
+
+  onDmVideoOptimizationMenuClosed(): void {
+    this.clearPendingDmVideoProfileMenuOpen();
+    this.dmVideoProfileMenuPreviewId.set(null);
   }
 
   private getDmUploadSettings(): MediaUploadSettings {
     return {
       mode: this.dmMediaUploadMode(),
       compressionStrength: this.dmCompressionStrength(),
+      videoOptimizationProfile: this.dmVideoOptimizationProfile(),
     };
+  }
+
+  private getDmUploadSettingsForPreview(preview: PendingEncryptedMediaPreview): MediaUploadSettings {
+    return {
+      ...this.getDmUploadSettings(),
+      videoOptimizationProfile: preview.type === 'video'
+        ? this.getDmVideoOptimizationProfileForPreview(preview)
+        : this.dmVideoOptimizationProfile(),
+    };
+  }
+
+  private getDmVideoOptimizationProfileForPreview(preview: PendingEncryptedMediaPreview): VideoOptimizationProfile {
+    return preview.videoOptimizationProfile ?? this.dmVideoOptimizationProfile();
+  }
+
+  private getDmVideoProfileMenuPreview(): PendingEncryptedMediaPreview | undefined {
+    const previewId = this.dmVideoProfileMenuPreviewId();
+    if (!previewId) {
+      return undefined;
+    }
+
+    return this.pendingEncryptedMediaPreviews().find(item => item.id === previewId);
+  }
+
+  private getDmContextMenuAnchor(element: HTMLElement | null, clientX: number, clientY: number): { x: number; y: number } {
+    if (clientX > 0 || clientY > 0) {
+      return { x: clientX, y: clientY };
+    }
+
+    const rect = element?.getBoundingClientRect();
+    if (!rect) {
+      return { x: 24, y: 24 };
+    }
+
+    return {
+      x: rect.left + rect.width / 2,
+      y: rect.top + rect.height / 2,
+    };
+  }
+
+  private getClampedDmVideoProfileMenuPosition(x: number, y: number): { x: number; y: number } {
+    if (typeof window === 'undefined') {
+      return { x, y };
+    }
+
+    return {
+      x: Math.max(8, Math.min(x, window.innerWidth - 280)),
+      y: Math.max(8, Math.min(y, window.innerHeight - 260)),
+    };
+  }
+
+  private openDmVideoOptimizationMenu(preview: PendingEncryptedMediaPreview, x: number, y: number): void {
+    this.dmVideoProfileMenuPreviewId.set(preview.id);
+    this.dmVideoProfileMenuPosition.set(this.getClampedDmVideoProfileMenuPosition(x, y));
+    requestAnimationFrame(() => {
+      this.dmVideoProfileMenuTrigger?.openMenu();
+      setTimeout(() => this.dmVideoProfileMenuTrigger?.updatePosition(), 0);
+    });
+  }
+
+  private closeDmVideoOptimizationMenu(): void {
+    this.dmVideoProfileMenuTrigger?.closeMenu();
+    this.dmVideoProfileMenuPreviewId.set(null);
+  }
+
+  private clearPendingDmVideoProfileMenuOpen(): void {
+    if (this.pendingDmVideoProfileMenuTimeout !== null) {
+      clearTimeout(this.pendingDmVideoProfileMenuTimeout);
+      this.pendingDmVideoProfileMenuTimeout = null;
+    }
   }
 
   private hasConfiguredMediaServers(): boolean {

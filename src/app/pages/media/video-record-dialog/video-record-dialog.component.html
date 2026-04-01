@@ -112,6 +112,11 @@
         }
       </mat-button-toggle-group>
       <span class="upload-settings-description">{{ selectedOptimizationDescription() }}</span>
+      <mat-slide-toggle [checked]="screenRecordingOptimizationEnabled()"
+        (change)="onScreenRecordingOptimizationChange($event.checked)" [disabled]="!usesLocalCompression()">
+        Tune for screen recordings
+      </mat-slide-toggle>
+      <span class="upload-settings-description">{{ screenRecordingOptimizationDescription() }}</span>
     </div>
   </div>
   <div class="action-buttons">

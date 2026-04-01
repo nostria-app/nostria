@@ -74,11 +74,16 @@ import {
   getMediaOptimizationDescription,
   getMediaOptimizationOption,
   getMediaUploadSettingsForOptimization,
+  getVideoOptimizationProfileBadgeLabel,
+  getVideoOptimizationProfileLabel,
   MEDIA_OPTIMIZATION_OPTIONS,
   MediaUploadMode,
   shouldUploadOriginal,
+  VIDEO_OPTIMIZATION_PROFILE_OPTIONS,
   usesLocalCompression as usesLocalCompressionMode,
   type MediaOptimizationOptionValue,
+  type MediaUploadSettings,
+  type VideoOptimizationProfile,
 } from '../../interfaces/media-upload';
 
 // Re-export for backward compatibility
@@ -103,6 +108,8 @@ interface MediaMetadata {
   fileName?: string;
   originalSize?: number;
   processedSize?: number;
+  optimizedSize?: number;
+  videoOptimizationProfile?: VideoOptimizationProfile;
   localFile?: File;
   sourceFile?: File;
   uploadOriginal?: boolean;
@@ -122,6 +129,7 @@ interface NoteAutoDraft {
   uploadOriginal?: boolean;
   uploadMode?: MediaUploadMode;
   compressionStrength?: number;
+  videoOptimizationProfile?: VideoOptimizationProfile;
   addClientTag: boolean;
   lastModified: number;
   // Context data to ensure draft matches current dialog state
@@ -230,6 +238,10 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   private publishEventBus = inject(PublishEventBus);
   private mediaProcessing = inject(MediaProcessingService);
   private publishSubscription?: Subscription;
+  private pendingMediaOptimizationRunId = 0;
+  private pendingVideoProfileMenuTimeout: ReturnType<typeof setTimeout> | null = null;
+  private suppressThumbnailClickUntil = 0;
+  private readonly VIDEO_PROFILE_MENU_HOLD_DELAY = 450;
   private readonly pasteHandler = (event: ClipboardEvent): void => this.handlePaste(event);
   private readonly handleViewportResize = (): void => {
     const textarea = this.contentTextarea?.nativeElement;
@@ -289,6 +301,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   @ViewChild('composerActions') composerActions?: ElementRef<HTMLElement>;
   @ViewChild('backFromPreviewBtn', { read: ElementRef }) backFromPreviewBtn?: ElementRef<HTMLElement>;
   @ViewChild('fileInput') fileInput!: ElementRef<HTMLInputElement>;
+  @ViewChild('videoProfileMenuTrigger', { read: MatMenuTrigger }) videoProfileMenuTrigger?: MatMenuTrigger;
   @ViewChild(MentionAutocompleteComponent) mentionAutocomplete?: MentionAutocompleteComponent;
   @ViewChild(SlashCommandMenuComponent) slashCommandMenu?: SlashCommandMenuComponent;
 
@@ -353,6 +366,9 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   // Media metadata for imeta tags (NIP-92)
   mediaMetadata = signal<MediaMetadata[]>([]);
   hasPendingMedia = computed(() => this.mediaMetadata().some(media => media.pendingUpload));
+  hasPendingVideoMedia = computed(() =>
+    this.mediaMetadata().some(media => media.pendingUpload && media.mimeType?.startsWith('video/'))
+  );
 
   // Media Mode
   title = signal('');
@@ -375,15 +391,19 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   expirationDate = signal<Date | null>(null);
   expirationTime = signal<string>('12:00');
   readonly mediaOptimizationOptions = MEDIA_OPTIMIZATION_OPTIONS;
+  readonly videoOptimizationProfileOptions = VIDEO_OPTIMIZATION_PROFILE_OPTIONS;
   mediaUploadMode = signal<MediaUploadMode>(DEFAULT_MEDIA_UPLOAD_SETTINGS.mode);
   compressionStrength = signal<number>(DEFAULT_MEDIA_UPLOAD_SETTINGS.compressionStrength);
+  videoOptimizationProfile = signal<VideoOptimizationProfile>(DEFAULT_MEDIA_UPLOAD_SETTINGS.videoOptimizationProfile ?? 'default');
+  videoProfileMenuPosition = signal<{ x: number; y: number }>({ x: 0, y: 0 });
+  videoProfileMenuMediaId = signal<string | null>(null);
   uploadOriginal = computed(() => shouldUploadOriginal(this.mediaUploadMode()));
   usesLocalCompression = computed(() => usesLocalCompressionMode(this.mediaUploadMode()));
   selectedMediaOptimization = computed(() =>
     getMediaOptimizationOption(this.mediaUploadMode(), this.compressionStrength())
   );
   selectedMediaOptimizationDescription = computed(() =>
-    getMediaOptimizationDescription(this.mediaUploadMode(), this.compressionStrength())
+    getMediaOptimizationDescription(this.mediaUploadMode(), this.compressionStrength(), this.videoOptimizationProfile())
   );
   addClientTag = signal(true); // Default to true, will be set from user preference in constructor
   postToX = signal(false);
@@ -714,6 +734,60 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     this.saveAutoDraft();
   }
 
+  onMediaThumbnailPointerDown(index: number, event: PointerEvent): void {
+    if (event.button !== 0) {
+      return;
+    }
+
+    const media = this.mediaMetadata()[index];
+    if (!this.canOpenVideoOptimizationMenu(media)) {
+      return;
+    }
+
+    this.clearPendingVideoProfileMenuOpen();
+    const anchor = this.getContextMenuAnchor(event.currentTarget as HTMLElement | null, event.clientX, event.clientY);
+
+    this.pendingVideoProfileMenuTimeout = setTimeout(() => {
+      this.pendingVideoProfileMenuTimeout = null;
+      this.suppressThumbnailClickUntil = Date.now() + 300;
+      this.openVideoOptimizationMenu(media, anchor.x, anchor.y);
+    }, this.VIDEO_PROFILE_MENU_HOLD_DELAY);
+  }
+
+  onMediaThumbnailPointerUp(): void {
+    this.clearPendingVideoProfileMenuOpen();
+  }
+
+  onMediaThumbnailContextMenu(index: number, event: MouseEvent): void {
+    const media = this.mediaMetadata()[index];
+    if (!this.canOpenVideoOptimizationMenu(media)) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    this.clearPendingVideoProfileMenuOpen();
+    this.suppressThumbnailClickUntil = Date.now() + 300;
+    this.openVideoOptimizationMenu(media, event.clientX, event.clientY);
+  }
+
+  onMediaThumbnailKeyDown(index: number, event: KeyboardEvent): void {
+    const media = this.mediaMetadata()[index];
+    if (!this.canOpenVideoOptimizationMenu(media)) {
+      return;
+    }
+
+    const shouldOpenMenu = event.key === 'ContextMenu' || (event.shiftKey && event.key === 'F10');
+    if (!shouldOpenMenu) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    const anchor = this.getContextMenuAnchor(event.currentTarget as HTMLElement | null, 0, 0);
+    this.openVideoOptimizationMenu(media, anchor.x, anchor.y);
+  }
+
   reinsertPendingMediaReference(media: MediaMetadata): void {
     if (!media.pendingUpload) {
       return;
@@ -734,6 +808,12 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   async onMediaThumbnailClick(index: number, event?: MouseEvent): Promise<void> {
     event?.preventDefault();
     event?.stopPropagation();
+
+    if (Date.now() < this.suppressThumbnailClickUntil) {
+      return;
+    }
+
+    this.clearPendingVideoProfileMenuOpen();
 
     const media = this.mediaMetadata()[index];
     if (!media) {
@@ -1036,6 +1116,8 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       clearTimeout(this.pendingMenuOpenTimeout);
       this.pendingMenuOpenTimeout = null;
     }
+
+    this.clearPendingVideoProfileMenuOpen();
 
     if (this.contentTextarea?.nativeElement) {
       this.contentTextarea.nativeElement.removeEventListener('paste', this.pasteHandler);
@@ -1403,6 +1485,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       expirationTime: this.expirationTime(),
       uploadMode: this.mediaUploadMode(),
       compressionStrength: this.compressionStrength(),
+      videoOptimizationProfile: this.videoOptimizationProfile(),
       uploadOriginal: this.uploadOriginal(),
       addClientTag: this.addClientTag(),
       lastModified: Date.now(),
@@ -1426,6 +1509,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
         previousDraft.expirationTime === autoDraft.expirationTime &&
         previousDraft.uploadMode === autoDraft.uploadMode &&
         previousDraft.compressionStrength === autoDraft.compressionStrength &&
+        previousDraft.videoOptimizationProfile === autoDraft.videoOptimizationProfile &&
         previousDraft.title === autoDraft.title;
 
       // If content is very similar, don't save again (prevents spam)
@@ -1488,6 +1572,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
           this.compressionStrength.set(
             autoDraft.compressionStrength ?? DEFAULT_MEDIA_UPLOAD_SETTINGS.compressionStrength
           );
+          this.videoOptimizationProfile.set(DEFAULT_MEDIA_UPLOAD_SETTINGS.videoOptimizationProfile ?? 'default');
           this.addClientTag.set(autoDraft.addClientTag ?? this.localSettings.addClientTag());
 
           if (autoDraft.mediaMetadata) {
@@ -3585,18 +3670,161 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   }
 
   async onMediaOptimizationChange(optimization: MediaOptimizationOptionValue): Promise<void> {
-    const settings = getMediaUploadSettingsForOptimization(optimization);
+    const settings = {
+      ...getMediaUploadSettingsForOptimization(optimization),
+      videoOptimizationProfile: this.videoOptimizationProfile(),
+    };
     const changed = settings.mode !== this.mediaUploadMode()
-      || settings.compressionStrength !== this.compressionStrength();
+      || settings.compressionStrength !== this.compressionStrength()
+      || settings.videoOptimizationProfile !== this.videoOptimizationProfile();
 
     this.mediaUploadMode.set(settings.mode);
     this.compressionStrength.set(settings.compressionStrength);
+    this.videoOptimizationProfile.set(settings.videoOptimizationProfile ?? 'default');
 
     if (!changed) {
       return;
     }
 
     await this.reprocessPendingMediaForOptimization(settings);
+  }
+
+  isSelectedVideoOptimizationProfile(profile: VideoOptimizationProfile): boolean {
+    const media = this.getVideoProfileMenuMedia();
+    if (!media) {
+      return false;
+    }
+
+    return this.getVideoOptimizationProfileForMedia(media) === profile;
+  }
+
+  async onVideoOptimizationProfileSelected(profile: VideoOptimizationProfile): Promise<void> {
+    const media = this.getVideoProfileMenuMedia();
+    if (!media) {
+      return;
+    }
+
+    this.closeVideoOptimizationMenu();
+
+    if (this.getVideoOptimizationProfileForMedia(media) === profile) {
+      return;
+    }
+
+    this.mediaMetadata.update(current => current.map(item => {
+      if (item.id !== media.id) {
+        return item;
+      }
+
+      return {
+        ...item,
+        videoOptimizationProfile: profile,
+      };
+    }));
+    this.saveAutoDraft();
+
+    if (!media.pendingUpload || !media.id) {
+      return;
+    }
+
+    await this.reprocessPendingMediaForOptimization(this.getCurrentMediaUploadSettings(), [media.id]);
+  }
+
+  onVideoOptimizationMenuClosed(): void {
+    this.clearPendingVideoProfileMenuOpen();
+    this.videoProfileMenuMediaId.set(null);
+  }
+
+  private getCurrentMediaUploadSettings(): MediaUploadSettings {
+    return {
+      mode: this.mediaUploadMode(),
+      compressionStrength: this.compressionStrength(),
+      videoOptimizationProfile: this.videoOptimizationProfile(),
+    };
+  }
+
+  private getVideoOptimizationProfileForMedia(media: MediaMetadata): VideoOptimizationProfile {
+    return media.videoOptimizationProfile ?? this.videoOptimizationProfile();
+  }
+
+  private getVideoOptimizationProfileLabelForMedia(media: MediaMetadata): string {
+    return getVideoOptimizationProfileLabel(this.getVideoOptimizationProfileForMedia(media));
+  }
+
+  getVideoOptimizationProfileBadgeLabelForMedia(media: MediaMetadata): string {
+    return getVideoOptimizationProfileBadgeLabel(this.getVideoOptimizationProfileForMedia(media));
+  }
+
+  private canOpenVideoOptimizationMenu(media: MediaMetadata | undefined): boolean {
+    return !!media?.pendingUpload && !!media.mimeType?.startsWith('video/');
+  }
+
+  private getVideoProfileMenuMedia(): MediaMetadata | undefined {
+    const mediaId = this.videoProfileMenuMediaId();
+    if (!mediaId) {
+      return undefined;
+    }
+
+    return this.mediaMetadata().find(media => media.id === mediaId);
+  }
+
+  private getContextMenuAnchor(
+    element: HTMLElement | null,
+    clientX: number,
+    clientY: number,
+  ): { x: number; y: number } {
+    if (clientX > 0 || clientY > 0) {
+      return { x: clientX, y: clientY };
+    }
+
+    const rect = element?.getBoundingClientRect();
+    if (!rect) {
+      return { x: 24, y: 24 };
+    }
+
+    return {
+      x: rect.left + rect.width / 2,
+      y: rect.top + rect.height / 2,
+    };
+  }
+
+  private getClampedVideoProfileMenuPosition(x: number, y: number): { x: number; y: number } {
+    if (typeof window === 'undefined') {
+      return { x, y };
+    }
+
+    const menuWidth = 280;
+    const menuHeight = 260;
+
+    return {
+      x: Math.max(8, Math.min(x, window.innerWidth - menuWidth - 8)),
+      y: Math.max(8, Math.min(y, window.innerHeight - menuHeight - 8)),
+    };
+  }
+
+  private openVideoOptimizationMenu(media: MediaMetadata, x: number, y: number): void {
+    if (!media.id) {
+      return;
+    }
+
+    this.videoProfileMenuMediaId.set(media.id);
+    this.videoProfileMenuPosition.set(this.getClampedVideoProfileMenuPosition(x, y));
+
+    requestAnimationFrame(() => {
+      this.videoProfileMenuTrigger?.openMenu();
+      setTimeout(() => this.videoProfileMenuTrigger?.updatePosition(), 0);
+    });
+  }
+
+  private closeVideoOptimizationMenu(): void {
+    this.videoProfileMenuTrigger?.closeMenu();
+    this.videoProfileMenuMediaId.set(null);
+  }
+
+  private clearPendingVideoProfileMenuOpen(): void {
+    if (this.pendingVideoProfileMenuTimeout !== null) {
+      clearTimeout(this.pendingVideoProfileMenuTimeout);
+      this.pendingVideoProfileMenuTimeout = null;
+    }
   }
 
   private getExpirationDateTime(): Date | null {
@@ -3675,21 +3903,48 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       return 'Reinsert placeholder tag';
     }
 
-    return media.pendingUpload ? 'Open optimized preview' : 'Open preview';
+    const baseTooltip = media.pendingUpload ? 'Open optimized preview' : 'Open preview';
+
+    if (!this.canOpenVideoOptimizationMenu(media)) {
+      return baseTooltip;
+    }
+
+    return `${baseTooltip}. Right-click or press and hold to change video type (${this.getVideoOptimizationProfileLabelForMedia(media)}).`;
   }
 
   getMediaThumbnailSizeLabel(media: MediaMetadata): string {
-    const uploadSize = this.getMediaUploadSize(media);
-    return this.formatCompactFileSize(uploadSize || media.originalSize);
+    const comparisonSize = this.getMediaComparisonSize(media);
+    return this.formatCompactFileSize(comparisonSize || this.getMediaUploadSize(media) || this.getMediaOriginalSize(media));
   }
 
   getMediaThumbnailSavingsLabel(media: MediaMetadata): string {
-    const savings = this.getMediaCompressionSavingsPercent(media);
-    return savings !== null ? `-${savings}%` : '';
+    const savings = this.getMediaCompressionChangePercent(media);
+
+    if (savings === null) {
+      return '';
+    }
+
+    if (savings > 0) {
+      return `-${savings}%`;
+    }
+
+    if (savings < 0) {
+      return `+${Math.abs(savings)}%`;
+    }
+
+    return media.optimizedSize !== undefined ? '0%' : '';
   }
 
   getMediaUploadSize(media: MediaMetadata): number {
-    return media.processedSize ?? media.originalSize ?? 0;
+    return media.localFile?.size ?? media.processedSize ?? this.getMediaOriginalSize(media);
+  }
+
+  private getMediaComparisonSize(media: MediaMetadata): number {
+    return media.optimizedSize ?? media.processedSize ?? media.localFile?.size ?? this.getMediaOriginalSize(media);
+  }
+
+  private getMediaOriginalSize(media: MediaMetadata): number {
+    return media.sourceFile?.size ?? media.originalSize ?? media.localFile?.size ?? 0;
   }
 
   private formatCompactFileSize(bytes?: number): string {
@@ -3718,15 +3973,15 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     return !!reference && !this.content().includes(reference);
   }
 
-  private getMediaCompressionSavingsPercent(media: MediaMetadata): number | null {
-    const originalSize = media.originalSize ?? 0;
-    const uploadSize = this.getMediaUploadSize(media);
+  private getMediaCompressionChangePercent(media: MediaMetadata): number | null {
+    const originalSize = this.getMediaOriginalSize(media);
+    const comparisonSize = this.getMediaComparisonSize(media);
 
-    if (originalSize <= 0 || uploadSize <= 0 || uploadSize >= originalSize) {
+    if (originalSize <= 0 || comparisonSize <= 0) {
       return null;
     }
 
-    return Math.round((1 - uploadSize / originalSize) * 100);
+    return Math.round((1 - comparisonSize / originalSize) * 100);
   }
 
   private serializeMediaMetadata(media: MediaMetadata[]): string {
@@ -3749,6 +4004,8 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
         fileName: item.fileName,
         originalSize: item.originalSize,
         processedSize: item.processedSize,
+        optimizedSize: item.optimizedSize,
+        videoOptimizationProfile: item.videoOptimizationProfile,
         uploadOriginal: item.uploadOriginal,
         warningMessage: item.warningMessage,
       }))
@@ -3773,6 +4030,8 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
         fileName: media.fileName,
         originalSize: media.originalSize,
         processedSize: media.processedSize,
+        optimizedSize: media.optimizedSize,
+        videoOptimizationProfile: media.videoOptimizationProfile,
       }));
   }
 
@@ -4008,6 +4267,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
           fileName: item.url.split('/').pop() || 'media',
           originalSize: item.size,
           processedSize: item.size,
+          optimizedSize: item.size,
         },
       ]);
     }
@@ -4076,10 +4336,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       const queuedFiles: string[] = [];
       const failedFiles: { fileName: string; error: string }[] = [];
       const warningMessages: string[] = [];
-      const uploadSettings = {
-        mode: this.mediaUploadMode(),
-        compressionStrength: this.compressionStrength(),
-      };
+      const uploadSettings = this.getCurrentMediaUploadSettings();
 
       for (const [index, file] of files.entries()) {
         try {
@@ -4101,7 +4358,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
             warningMessages.push(preparedFile.warningMessage);
           }
 
-          const pendingMedia = await this.createPendingMediaMetadata(file, preparedFile, fileLabel);
+          const pendingMedia = await this.createPendingMediaMetadata(file, preparedFile, fileLabel, uploadSettings);
           this.mediaMetadata.set([...this.mediaMetadata(), pendingMedia]);
 
           if (!this.isMediaMode()) {
@@ -4177,8 +4434,9 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
 
   private async createPendingMediaMetadata(
     originalFile: File,
-    preparedFile: { file: File; uploadOriginal: boolean; warningMessage?: string },
+    preparedFile: { file: File; uploadOriginal: boolean; optimizedSize?: number; warningMessage?: string },
     fileLabel: string,
+    uploadSettings: MediaUploadSettings,
     existingMedia?: MediaMetadata,
   ): Promise<MediaMetadata> {
     const mimeType = this.mediaService.getFileMimeType(preparedFile.file);
@@ -4195,6 +4453,10 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       fileName: originalFile.name,
       originalSize: originalFile.size,
       processedSize: preparedFile.file.size,
+      optimizedSize: preparedFile.optimizedSize ?? preparedFile.file.size,
+      videoOptimizationProfile: mimeType.startsWith('video/')
+        ? (existingMedia?.videoOptimizationProfile ?? uploadSettings.videoOptimizationProfile ?? 'default')
+        : undefined,
       localFile: preparedFile.file,
       sourceFile: originalFile,
       uploadOriginal: preparedFile.uploadOriginal,
@@ -4214,11 +4476,24 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     return pendingMedia;
   }
 
-  private async reprocessPendingMediaForOptimization(settings: { mode: 'original' | 'local' | 'server'; compressionStrength: number }): Promise<void> {
-    const pendingMedia = this.mediaMetadata().filter(media => media.pendingUpload && (media.sourceFile || media.localFile));
+  private async reprocessPendingMediaForOptimization(settings: MediaUploadSettings, mediaIds?: string[]): Promise<void> {
+    const pendingMedia = this.mediaMetadata().filter(media => {
+      if (!media.pendingUpload || (!media.sourceFile && !media.localFile)) {
+        return false;
+      }
+
+      if (!mediaIds || mediaIds.length === 0) {
+        return true;
+      }
+
+      return !!media.id && mediaIds.includes(media.id);
+    });
     if (pendingMedia.length === 0) {
       return;
     }
+
+    const runId = ++this.pendingMediaOptimizationRunId;
+    const isStale = (): boolean => runId !== this.pendingMediaOptimizationRunId;
 
     const currentMetadata = [...this.mediaMetadata()];
     const warningMessages: string[] = [];
@@ -4229,6 +4504,10 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
 
     try {
       for (const [index, pending] of pendingMedia.entries()) {
+        if (isStale()) {
+          return;
+        }
+
         const sourceFile = pending.sourceFile ?? pending.localFile;
         if (!sourceFile) {
           continue;
@@ -4238,10 +4517,15 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
         this.uploadStatus.set(`Updating ${sourceFile.name}${fileLabel}...`);
 
         try {
+          const mediaSettings = this.getUploadSettingsForPendingMedia(pending, settings);
           const preparedFile = await this.mediaProcessing.prepareFileForUpload(
             sourceFile,
-            settings,
+            mediaSettings,
             progress => {
+              if (isStale()) {
+                return;
+              }
+
               const progressSuffix = progress.progress !== undefined
                 ? ` ${Math.round(progress.progress * 100)}%`
                 : '';
@@ -4249,11 +4533,20 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
             }
           );
 
+          if (isStale()) {
+            return;
+          }
+
           if (preparedFile.warningMessage) {
             warningMessages.push(preparedFile.warningMessage);
           }
 
-          const refreshedMedia = await this.createPendingMediaMetadata(sourceFile, preparedFile, fileLabel, pending);
+          const refreshedMedia = await this.createPendingMediaMetadata(sourceFile, preparedFile, fileLabel, mediaSettings, pending);
+          if (isStale()) {
+            this.revokeMediaPreviewUrls(refreshedMedia);
+            return;
+          }
+
           const metadataIndex = currentMetadata.findIndex(item => item.id === pending.id);
           if (metadataIndex >= 0) {
             currentMetadata[metadataIndex] = refreshedMedia;
@@ -4264,6 +4557,10 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
           failedFiles.push(sourceFile.name || `media ${index + 1}`);
           console.error('Failed to update pending media optimization', error);
         }
+      }
+
+      if (isStale()) {
+        return;
       }
 
       this.mediaMetadata.set(currentMetadata);
@@ -4290,9 +4587,22 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
         );
       }
     } finally {
-      this.isUploading.set(false);
-      this.uploadStatus.set('');
+      if (!isStale()) {
+        this.isUploading.set(false);
+        this.uploadStatus.set('');
+      }
     }
+  }
+
+  private getUploadSettingsForPendingMedia(media: MediaMetadata, settings: MediaUploadSettings): MediaUploadSettings {
+    if (!media.mimeType?.startsWith('video/')) {
+      return settings;
+    }
+
+    return {
+      ...settings,
+      videoOptimizationProfile: this.getVideoOptimizationProfileForMedia(media),
+    };
   }
 
   private async extractPendingVideoThumbnail(videoFile: File): Promise<{
@@ -4405,6 +4715,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
           fileName: pending.fileName,
           originalSize: pending.originalSize,
           processedSize: pending.processedSize,
+          optimizedSize: pending.optimizedSize,
           pendingUpload: false,
         };
 

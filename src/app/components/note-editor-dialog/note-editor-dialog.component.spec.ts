@@ -352,6 +352,90 @@ describe('NoteEditorDialogComponent', () => {
       expect(component.mediaMetadata()[0].url).toBe('https://cdn.example/photo.png');
     });
 
+    it('should upload the original file when local optimization produces a larger result', async () => {
+      createComponent();
+      await fixture.whenStable();
+
+      Object.defineProperty(URL, 'createObjectURL', { configurable: true, value: vi.fn(() => 'blob:video-preview') });
+      Object.defineProperty(URL, 'revokeObjectURL', { configurable: true, value: vi.fn() });
+
+      const originalFile = new File(['01234567'], 'clip.mp4', { type: 'video/mp4' });
+      const largerOptimizedCandidate = new File(['0123456789AB'], 'clip.mp4', { type: 'video/mp4' });
+
+      mockMediaProcessingService.prepareFileForUpload.mockResolvedValue({
+        file: originalFile,
+        uploadOriginal: false,
+        wasProcessed: false,
+        optimizedSize: largerOptimizedCandidate.size,
+        warningMessage: 'Local optimization did not reduce clip.mp4, so the original file will be uploaded.',
+      });
+
+      const privateComponent = component as unknown as {
+        extractPendingVideoThumbnail: (file: File) => Promise<{
+          blob: Blob;
+          objectUrl: string;
+          dimensions: { width: number; height: number };
+          blurhash?: string;
+          thumbhash?: string;
+        }>;
+        extractMediaMetadata: (
+          file: File,
+          url: string,
+          sha256?: string,
+          mirrors?: string[],
+          thumbnailData?: unknown,
+        ) => Promise<{
+          url: string;
+          mimeType: string;
+          sha256?: string;
+          dimensions?: { width: number; height: number };
+          image?: string;
+          fallbackUrls?: string[];
+        } | null>;
+        uploadFiles: (files: File[]) => Promise<void>;
+        uploadPendingMediaBeforePublish: () => Promise<boolean>;
+      };
+
+      vi.spyOn(privateComponent, 'extractPendingVideoThumbnail').mockResolvedValue({
+        blob: new Blob(['thumb'], { type: 'image/jpeg' }),
+        objectUrl: 'blob:video-thumb',
+        dimensions: { width: 720, height: 1280 },
+        blurhash: 'blurhash',
+        thumbhash: 'thumbhash',
+      });
+
+      vi.spyOn(privateComponent, 'extractMediaMetadata').mockResolvedValue({
+        url: 'https://cdn.example/clip.mp4',
+        mimeType: 'video/mp4',
+        sha256: 'sha256-video',
+        dimensions: { width: 720, height: 1280 },
+        image: 'https://cdn.example/clip.jpg',
+        fallbackUrls: ['https://mirror.example/clip.mp4'],
+      });
+
+      await privateComponent.uploadFiles([originalFile]);
+
+      mockMediaService.uploadFile.mockResolvedValue({
+        status: 'success',
+        item: {
+          url: 'https://cdn.example/clip.mp4',
+          sha256: 'sha256-video',
+          mirrors: ['https://mirror.example/clip.mp4'],
+        },
+      });
+
+      const uploaded = await privateComponent.uploadPendingMediaBeforePublish();
+
+      expect(uploaded).toBe(true);
+      expect(mockMediaService.uploadFile).toHaveBeenCalledWith(
+        originalFile,
+        false,
+        ['https://media.example']
+      );
+      expect(component.mediaMetadata()[0].processedSize).toBe(originalFile.size);
+      expect(component.mediaMetadata()[0].optimizedSize).toBe(largerOptimizedCandidate.size);
+    });
+
     it('should assign sequential image placeholders for multiple queued uploads', async () => {
       createComponent();
       await fixture.whenStable();
@@ -423,6 +507,7 @@ describe('NoteEditorDialogComponent', () => {
         {
           mode: 'local',
           compressionStrength: OPTIMIZED_MEDIA_COMPRESSION_STRENGTH,
+          videoOptimizationProfile: 'default',
         },
         expect.any(Function)
       );
@@ -431,6 +516,69 @@ describe('NoteEditorDialogComponent', () => {
       expect(pendingAfter.processedSize).toBe(optimizedPrepared.size);
       expect(pendingAfter.previewUrl).toBe('blob:image-preview-updated');
       expect(pendingAfter.sourceFile).toBe(originalFile);
+    });
+
+    it('should ignore stale optimization results when the user switches presets quickly', async () => {
+      createComponent();
+      await fixture.whenStable();
+
+      Object.defineProperty(URL, 'createObjectURL', {
+        configurable: true,
+        value: vi.fn()
+          .mockReturnValueOnce('blob:image-preview-initial')
+          .mockReturnValueOnce('blob:image-preview-fast')
+          .mockReturnValueOnce('blob:image-preview-stale'),
+      });
+      Object.defineProperty(URL, 'revokeObjectURL', { configurable: true, value: vi.fn() });
+
+      const originalFile = new File(['original-image-data'], 'photo.png', { type: 'image/png' });
+      const initialPrepared = new File(['initial-image-data'], 'photo.png', { type: 'image/webp' });
+      const fastPrepared = new File(['fast-image-data'], 'photo.png', { type: 'image/webp' });
+      const stalePrepared = new File(['stale-image-data'], 'photo.png', { type: 'image/webp' });
+
+      let resolveSlow: ((value: { file: File; uploadOriginal: boolean; wasProcessed: boolean }) => void) | undefined;
+      let resolveFast: ((value: { file: File; uploadOriginal: boolean; wasProcessed: boolean }) => void) | undefined;
+
+      mockMediaProcessingService.prepareFileForUpload
+        .mockResolvedValueOnce({
+          file: initialPrepared,
+          uploadOriginal: false,
+          wasProcessed: true,
+        })
+        .mockImplementationOnce(() => new Promise(resolve => {
+          resolveSlow = resolve;
+        }))
+        .mockImplementationOnce(() => new Promise(resolve => {
+          resolveFast = resolve;
+        }));
+
+      const privateComponent = component as unknown as {
+        uploadFiles: (files: File[]) => Promise<void>;
+      };
+
+      await privateComponent.uploadFiles([originalFile]);
+
+      const slowRun = component.onMediaOptimizationChange('minimal');
+      const fastRun = component.onMediaOptimizationChange('optimized');
+
+      resolveFast?.({
+        file: fastPrepared,
+        uploadOriginal: false,
+        wasProcessed: true,
+      });
+      await fastRun;
+
+      resolveSlow?.({
+        file: stalePrepared,
+        uploadOriginal: false,
+        wasProcessed: true,
+      });
+      await slowRun;
+
+      const pendingAfter = component.mediaMetadata()[0];
+      expect(component.compressionStrength()).toBe(OPTIMIZED_MEDIA_COMPRESSION_STRENGTH);
+      expect(pendingAfter.processedSize).toBe(fastPrepared.size);
+      expect(pendingAfter.previewUrl).toBe('blob:image-preview-fast');
     });
 
     it('should insert a space when adjacent image placeholders are replaced with final URLs', async () => {
@@ -675,6 +823,174 @@ describe('NoteEditorDialogComponent', () => {
           panelClass: 'image-dialog-panel',
         })
       );
+    });
+
+    it('should render pending video thumbnail size and savings using local file fallbacks', async () => {
+      createComponent();
+      await fixture.whenStable();
+
+      const originalVideo = new File(['01234567'], 'clip.mp4', { type: 'video/mp4' });
+      const optimizedVideo = new File(['0123'], 'clip.mp4', { type: 'video/mp4' });
+
+      component.mediaMetadata.set([
+        {
+          id: 'pending-video-1',
+          url: 'blob:optimized-video',
+          image: 'blob:video-thumb',
+          mimeType: 'video/mp4',
+          fileName: 'clip.mp4',
+          localFile: optimizedVideo,
+          sourceFile: originalVideo,
+          pendingUpload: true,
+          placeholderToken: '[video1]',
+        },
+      ]);
+      component.content.set('caption\n\n[video1]');
+      fixture.detectChanges();
+
+      const savingsLabel = fixture.nativeElement.querySelector('.media-savings') as HTMLElement;
+      const sizeLabel = fixture.nativeElement.querySelector('.media-size') as HTMLElement;
+
+      expect(savingsLabel.textContent?.trim()).toBe('-50%');
+      expect(sizeLabel.textContent?.trim()).toBe('4B');
+      expect(fixture.nativeElement.querySelector('.video-icon')).toBeNull();
+    });
+
+    it('should render attempted optimized video size when local optimization falls back to the original upload', async () => {
+      createComponent();
+      await fixture.whenStable();
+
+      const originalVideo = new File(['01234567'], 'clip.mp4', { type: 'video/mp4' });
+      const uploadedOriginal = new File(['01234567'], 'clip.mp4', { type: 'video/mp4' });
+
+      component.mediaMetadata.set([
+        {
+          id: 'pending-video-fallback',
+          url: 'blob:original-video',
+          image: 'blob:video-thumb',
+          mimeType: 'video/mp4',
+          fileName: 'clip.mp4',
+          localFile: uploadedOriginal,
+          sourceFile: originalVideo,
+          originalSize: originalVideo.size,
+          processedSize: uploadedOriginal.size,
+          optimizedSize: 12,
+          warningMessage: 'Local optimization did not reduce clip.mp4, so the original file will be uploaded.',
+          pendingUpload: true,
+          placeholderToken: '[video1]',
+        },
+      ]);
+      component.content.set('caption\n\n[video1]');
+      fixture.detectChanges();
+
+      const savingsLabel = fixture.nativeElement.querySelector('.media-savings') as HTMLElement;
+      const sizeLabel = fixture.nativeElement.querySelector('.media-size') as HTMLElement;
+
+      expect(savingsLabel.textContent?.trim()).toBe('+50%');
+      expect(sizeLabel.textContent?.trim()).toBe('12B');
+    });
+
+    it('should reprocess only the selected pending video when changing its video type', async () => {
+      createComponent();
+      await fixture.whenStable();
+
+      const firstOriginal = new File(['01234567'], 'demo.mp4', { type: 'video/mp4' });
+      const secondOriginal = new File(['abcdefgh'], 'camera.mp4', { type: 'video/mp4' });
+      const firstProcessed = new File(['0123'], 'demo.mp4', { type: 'video/mp4' });
+
+      component.mediaMetadata.set([
+        {
+          id: 'video-a',
+          url: 'blob:video-a',
+          image: 'blob:thumb-a',
+          mimeType: 'video/mp4',
+          fileName: 'demo.mp4',
+          localFile: firstProcessed,
+          sourceFile: firstOriginal,
+          pendingUpload: true,
+          placeholderToken: '[video1]',
+          videoOptimizationProfile: 'default',
+        },
+        {
+          id: 'video-b',
+          url: 'blob:video-b',
+          image: 'blob:thumb-b',
+          mimeType: 'video/mp4',
+          fileName: 'camera.mp4',
+          localFile: secondOriginal,
+          sourceFile: secondOriginal,
+          pendingUpload: true,
+          placeholderToken: '[video2]',
+          videoOptimizationProfile: 'default',
+        },
+      ]);
+
+      const privateComponent = component as unknown as {
+        extractPendingVideoThumbnail: (file: File) => Promise<{
+          blob: Blob;
+          objectUrl: string;
+          dimensions: { width: number; height: number };
+        }>;
+      };
+
+      vi.spyOn(privateComponent, 'extractPendingVideoThumbnail').mockResolvedValue({
+        blob: new Blob(['thumb'], { type: 'image/jpeg' }),
+        objectUrl: 'blob:new-thumb',
+        dimensions: { width: 1280, height: 720 },
+      });
+
+      mockMediaProcessingService.prepareFileForUpload.mockResolvedValue({
+        file: new File(['01'], 'demo.mp4', { type: 'video/mp4' }),
+        uploadOriginal: false,
+        optimizedSize: 2,
+        wasProcessed: true,
+      });
+
+      component.videoProfileMenuMediaId.set('video-a');
+      await component.onVideoOptimizationProfileSelected('slides');
+
+      expect(mockMediaProcessingService.prepareFileForUpload).toHaveBeenCalledTimes(1);
+      expect(mockMediaProcessingService.prepareFileForUpload).toHaveBeenCalledWith(
+        firstOriginal,
+        expect.objectContaining({
+          mode: 'local',
+          compressionStrength: component.compressionStrength(),
+          videoOptimizationProfile: 'slides',
+        }),
+        expect.any(Function)
+      );
+      expect(component.mediaMetadata()[0].videoOptimizationProfile).toBe('slides');
+      expect(component.mediaMetadata()[1].videoOptimizationProfile).toBe('default');
+    });
+
+    it('should open the video type menu on right-click for pending videos', async () => {
+      createComponent();
+      await fixture.whenStable();
+
+      component.mediaMetadata.set([
+        {
+          id: 'pending-video-1',
+          url: 'blob:optimized-video',
+          image: 'blob:video-thumb',
+          mimeType: 'video/mp4',
+          fileName: 'clip.mp4',
+          localFile: new File(['0123'], 'clip.mp4', { type: 'video/mp4' }),
+          sourceFile: new File(['01234567'], 'clip.mp4', { type: 'video/mp4' }),
+          pendingUpload: true,
+          placeholderToken: '[video1]',
+        },
+      ]);
+      fixture.detectChanges();
+
+      const previewButton = fixture.nativeElement.querySelector('.media-thumbnail-button.pending-upload') as HTMLButtonElement;
+      previewButton.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 60, clientY: 70 }));
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      const overlayText = document.body.textContent ?? '';
+      expect(overlayText).toContain('Regular Video');
+      expect(overlayText).toContain('Slides and Text');
+      expect(component.videoProfileMenuMediaId()).toBe('pending-video-1');
     });
 
     it('should open uploaded image thumbnails in the media preview dialog', async () => {
