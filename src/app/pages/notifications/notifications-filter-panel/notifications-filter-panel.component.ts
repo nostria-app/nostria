@@ -63,7 +63,8 @@ const FILTER_OPTIONS: FilterOption[] = [
         @for (option of filterOptions; track option.type) {
           <mat-checkbox
             [checked]="filters()[option.type]"
-            (change)="onFilterChange(option.type, $event.checked)">
+            (change)="onFilterChange(option.type, $event.checked)"
+          >
             <div class="filter-option-content">
               <mat-icon class="filter-icon">{{ option.icon }}</mat-icon>
               <span>{{ option.label }}</span>
@@ -77,20 +78,10 @@ const FILTER_OPTIONS: FilterOption[] = [
       <!-- View Options -->
       <div class="section-label">View</div>
       <div class="filter-options">
-        <mat-checkbox
-          [checked]="showUnreadOnly()"
-          (change)="onUnreadOnlyChange($event.checked)">
+        <mat-checkbox [checked]="showUnreadOnly()" (change)="onUnreadOnlyChange($event.checked)">
           <div class="filter-option-content">
             <mat-icon class="filter-icon">mark_email_unread</mat-icon>
             <span>Unread only</span>
-          </div>
-        </mat-checkbox>
-        <mat-checkbox
-          [checked]="showSystemNotifications()"
-          (change)="onSystemNotificationsChange($event.checked)">
-          <div class="filter-option-content">
-            <mat-icon class="filter-icon">priority</mat-icon>
-            <span>System Notifications</span>
           </div>
         </mat-checkbox>
       </div>
@@ -103,7 +94,8 @@ const FILTER_OPTIONS: FilterOption[] = [
         (valueChange)="onWotFilterLevelChange($event)"
         class="wot-toggle-group"
         hideSingleSelectionIndicator
-        aria-label="Web of Trust filter level">
+        aria-label="Web of Trust filter level"
+      >
         <mat-button-toggle value="off">Off</mat-button-toggle>
         <mat-button-toggle value="low">Low</mat-button-toggle>
         <mat-button-toggle value="medium">Medium</mat-button-toggle>
@@ -112,88 +104,86 @@ const FILTER_OPTIONS: FilterOption[] = [
 
       <!-- Actions Row -->
       <div class="actions-row">
-        <button mat-stroked-button class="action-btn" (click)="reset()">
-          Reset All
-        </button>
+        <button mat-stroked-button class="action-btn" (click)="reset()">Reset All</button>
       </div>
     </div>
   `,
-  styles: [`
-    .filter-panel {
-      display: flex;
-      flex-direction: column;
-      gap: 0.75rem;
-      padding: 1rem;
-      min-width: 260px;
-      max-width: 320px;
-      background: var(--mat-sys-surface-container);
-      border-radius: 12px;
-      border: 1px solid var(--mat-sys-outline-variant);
-    }
+  styles: [
+    `
+      .filter-panel {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        padding: 1rem;
+        min-width: 260px;
+        max-width: 320px;
+        background: var(--mat-sys-surface-container);
+        border-radius: 12px;
+        border: 1px solid var(--mat-sys-outline-variant);
+      }
 
-    .section-label {
-      font-size: 0.75rem;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      color: var(--mat-sys-on-surface-variant);
-      margin-bottom: 0.25rem;
-    }
+      .section-label {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: var(--mat-sys-on-surface-variant);
+        margin-bottom: 0.25rem;
+      }
 
-    .filter-options {
-      display: flex;
-      flex-direction: column;
-      gap: 0.25rem;
-    }
+      .filter-options {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+      }
 
-    .filter-options mat-checkbox {
-      --mdc-checkbox-selected-checkmark-color: var(--mat-sys-on-primary);
-    }
+      .filter-options mat-checkbox {
+        --mdc-checkbox-selected-checkmark-color: var(--mat-sys-on-primary);
+      }
 
-    .filter-option-content {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
+      .filter-option-content {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
 
-    .filter-icon {
-      font-size: 18px;
-      width: 18px;
-      height: 18px;
-      opacity: 0.7;
-    }
+      .filter-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+        opacity: 0.7;
+      }
 
-    mat-divider {
-      margin: 0.25rem 0;
-    }
+      mat-divider {
+        margin: 0.25rem 0;
+      }
 
-    .actions-row {
-      display: flex;
-      gap: 0.5rem;
-      margin-top: 0.25rem;
-    }
+      .actions-row {
+        display: flex;
+        gap: 0.5rem;
+        margin-top: 0.25rem;
+      }
 
-    .wot-toggle-group {
-      width: 100%;
-      display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      align-items: stretch;
-    }
+      .wot-toggle-group {
+        width: 100%;
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        align-items: stretch;
+      }
 
-    .action-btn {
-      flex: 1;
-      font-size: 0.8125rem;
-    }
-  `]
+      .action-btn {
+        flex: 1;
+        font-size: 0.8125rem;
+      }
+    `,
+  ],
 })
 export class NotificationsFilterPanelComponent {
   filters = input.required<Record<NotificationType, boolean>>();
-  showSystemNotifications = input<boolean>(false);
   showUnreadOnly = input<boolean>(false);
   wotFilterLevel = input<WotFilterLevel>('off');
 
   // Output events for changes
   filtersChanged = output<Partial<Record<NotificationType, boolean>>>();
-  showSystemNotificationsChanged = output<boolean>();
   showUnreadOnlyChanged = output<boolean>();
   wotFilterLevelChanged = output<WotFilterLevel>();
 
@@ -205,13 +195,6 @@ export class NotificationsFilterPanelComponent {
    */
   onFilterChange(type: NotificationType, checked: boolean): void {
     this.filtersChanged.emit({ [type]: checked });
-  }
-
-  /**
-   * Handle system notifications toggle
-   */
-  onSystemNotificationsChange(checked: boolean): void {
-    this.showSystemNotificationsChanged.emit(checked);
   }
 
   /**
@@ -243,7 +226,6 @@ export class NotificationsFilterPanelComponent {
       [NotificationType.ZAP]: true,
       [NotificationType.WALLET]: true,
     });
-    this.showSystemNotificationsChanged.emit(false);
     this.showUnreadOnlyChanged.emit(false);
     this.wotFilterLevelChanged.emit('off');
   }
