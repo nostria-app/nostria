@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, OnDestroy, signal } from '@angular/core';
 import { MatDialogRef, MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -61,7 +61,7 @@ export interface MediaPublishOptions {
   templateUrl: './media-publish-dialog.component.html',
   styleUrls: ['./media-publish-dialog.component.scss'],
 })
-export class MediaPublishDialogComponent {
+export class MediaPublishDialogComponent implements OnDestroy {
   private dialogRef = inject(MatDialogRef<MediaPublishDialogComponent>);
   private mediaService = inject(MediaService);
   private utilities = inject(UtilitiesService);
@@ -97,6 +97,7 @@ export class MediaPublishDialogComponent {
   generatingBlurhash = signal(false);
   extractingThumbnail = signal(false);
   thumbnailExtractOffset = signal(0); // Track how many times extraction was called
+  private ownedThumbnailUrl?: string;
 
   // Custom relays
   customRelays = signal<string[]>([]);
@@ -117,6 +118,10 @@ export class MediaPublishDialogComponent {
     if (this.isVideo()) {
       this.extractThumbnailFromVideo();
     }
+  }
+
+  ngOnDestroy(): void {
+    this.releaseOwnedThumbnailUrl();
   }
 
   // Computed
@@ -260,7 +265,7 @@ export class MediaPublishDialogComponent {
       // Store blob and dimensions (don't upload yet)
       this.thumbnailBlob.set(result.blob);
       this.thumbnailDimensions.set(result.dimensions);
-      this.thumbnailUrl.set(result.objectUrl);
+      this.setThumbnailUrl(result.objectUrl, true);
 
       // Hide URL input if it was visible
       this.thumbnailUrlInput.set(null);
@@ -295,7 +300,7 @@ export class MediaPublishDialogComponent {
 
       // Create object URL for preview
       const objectUrl = URL.createObjectURL(file);
-      this.thumbnailUrl.set(objectUrl);
+      this.setThumbnailUrl(objectUrl, true);
 
       // Hide URL input if it was visible
       this.thumbnailUrlInput.set(null);
@@ -314,7 +319,7 @@ export class MediaPublishDialogComponent {
       // Reset extraction offset since user is using a URL
       this.thumbnailExtractOffset.set(0);
 
-      this.thumbnailUrl.set(url);
+      this.setThumbnailUrl(url);
       this.thumbnailBlob.set(undefined); // Clear blob since we're using URL
       this.thumbnailUrlInputValue = '';
       this.thumbnailUrlInput.set(null);
@@ -325,7 +330,7 @@ export class MediaPublishDialogComponent {
   }
 
   removeThumbnail(): void {
-    this.thumbnailUrl.set(undefined);
+    this.setThumbnailUrl(undefined);
     this.thumbnailBlob.set(undefined);
     this.thumbnailDimensions.set(undefined);
     this.blurhash.set(undefined);
@@ -358,6 +363,19 @@ export class MediaPublishDialogComponent {
 
   cancel(): void {
     this.dialogRef.close(null);
+  }
+
+  private setThumbnailUrl(url: string | undefined, owned = false): void {
+    this.releaseOwnedThumbnailUrl();
+    this.thumbnailUrl.set(url);
+    this.ownedThumbnailUrl = owned && url?.startsWith('blob:') ? url : undefined;
+  }
+
+  private releaseOwnedThumbnailUrl(): void {
+    if (this.ownedThumbnailUrl) {
+      URL.revokeObjectURL(this.ownedThumbnailUrl);
+      this.ownedThumbnailUrl = undefined;
+    }
   }
 
   publish(): void {

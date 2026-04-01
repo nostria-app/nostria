@@ -118,6 +118,7 @@ import { TextScaleService } from './services/text-scale.service';
 import { UtilitiesService } from './services/utilities.service';
 import { AccountRelayService } from './services/relays/account-relay';
 import { SettingsQuickCardComponent } from './components/settings-quick-card/settings-quick-card.component';
+import { getRuntimeResourceProfile } from './utils/runtime-resource-profile';
 import { ColorExtractionService } from './services/color-extraction.service';
 import { ChatWidgetComponent } from './components/chat-widget/chat-widget.component';
 
@@ -184,6 +185,7 @@ interface NavItem {
   },
 })
 export class App implements OnInit, OnDestroy {
+  private readonly runtimeResourceProfile = getRuntimeResourceProfile();
   // Translated labels for use in templates
   createLabel = $localize`:@@app.create.label:Create`;
   publishingEventLabel = $localize`:@@app.tooltip.publishing-event:Publishing event...`;
@@ -1419,7 +1421,9 @@ export class App implements OnInit, OnDestroy {
     runInInjectionContext(this.injector, () => {
       afterNextRender(() => {
         if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
-          window.requestIdleCallback(() => runTask(), { timeout: 2000 });
+          window.requestIdleCallback(() => runTask(), {
+            timeout: this.runtimeResourceProfile.idleTaskTimeoutMs,
+          });
           return;
         }
 
