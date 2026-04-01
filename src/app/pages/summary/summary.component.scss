@@ -928,6 +928,28 @@
     height: 100%;
     position: relative;
 
+    .media-placeholder {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 100%;
+      background:
+        radial-gradient(circle at top, rgb(255 255 255 / 0.08), transparent 55%),
+        linear-gradient(180deg, var(--mat-sys-surface-container-high), var(--mat-sys-surface-container));
+      color: var(--mat-sys-on-surface-variant);
+
+      &.video {
+        color: var(--mat-sys-primary);
+      }
+
+      mat-icon {
+        font-size: 40px;
+        width: 40px;
+        height: 40px;
+      }
+    }
+
     img {
       width: 100%;
       height: 100%;

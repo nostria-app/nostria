@@ -369,30 +369,39 @@
       <div class="panel-content">
         <div class="media-grid">
           @for (event of mediaEvents(); track event.id) {
-          @if (getMediaUrl(event); as mediaUrl) {
-          <div class="media-card" (click)="openMediaDialog($event, event)" tabindex="0" role="button"
-            (keydown.enter)="openMediaDialog($any($event), event)">
-            <div class="media-preview">
-              @if (isVideoUrl(mediaUrl)) {
-              <div class="video-indicator">
-                <mat-icon>play_circle</mat-icon>
-              </div>
-              }
-              <img [src]="mediaUrl" alt="Media content" title="View media" loading="lazy" />
-            </div>
-            <div class="media-overlay">
-              <app-user-profile [pubkey]="event.pubkey" view="icon" class="media-author"></app-user-profile>
+          @if (getMediaPreviewSource(event); as mediaSource) {
+          @if (mediaSource.mediaUrl) {
+           <div class="media-card" (click)="openMediaDialog($event, event)" tabindex="0" role="button"
+             (keydown.enter)="openMediaDialog($any($event), event)">
+             <div class="media-preview">
+               @if (mediaSource.previewUrl) {
+               <img [src]="mediaSource.previewUrl" alt="Media content" title="View media" loading="lazy"
+                 (error)="onMediaPreviewError(event.id)" />
+               } @else {
+               <div class="media-placeholder" [class.video]="mediaSource.isVideo">
+                 <mat-icon>{{ mediaSource.isVideo ? 'movie' : 'image' }}</mat-icon>
+               </div>
+               }
+               @if (mediaSource.isVideo) {
+               <div class="video-indicator">
+                 <mat-icon>play_circle</mat-icon>
+               </div>
+               }
+             </div>
+             <div class="media-overlay">
+               <app-user-profile [pubkey]="event.pubkey" view="icon" class="media-author"></app-user-profile>
               <button type="button" class="media-time" aria-label="View event details"
                 (click)="layout.openGenericEvent(event.id); $event.stopPropagation()">
                 {{ event.created_at | ago }}
               </button>
             </div>
-          </div>
-          }
-          }
-        </div>
-      </div>
-    </mat-expansion-panel>
+           </div>
+           }
+           }
+           }
+         </div>
+       </div>
+     </mat-expansion-panel>
     }
 
     @for (section of summaryTimelineSections(); track section.id) {

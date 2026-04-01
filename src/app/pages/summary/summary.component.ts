@@ -82,10 +82,16 @@ interface TimelineEvent {
   tags?: string[][]; // For article d-tag
 }
 
+interface MediaPreviewSource {
+  previewUrl: string | null;
+  mediaUrl: string | null;
+  isVideo: boolean;
+}
+
 type GmFilterMode = 'all' | 'only' | 'exclude';
 
 interface ContentTypeOption {
-  id: 'posts' | 'articles' | 'reposts' | 'voicePosts' | 'photoPosts' | 'videoPosts' | 'communities' | 'chats' | 'liveEvents' | 'calendar' | 'music';
+  id: 'posts' | 'articles' | 'reposts' | 'voicePosts' | 'photoPosts' | 'videoPosts' | 'communities' | 'chats' | 'liveEvents' | 'calendar' | 'music' | 'profiles';
   label: string;
   description: string;
   kinds: number[];
@@ -121,6 +127,7 @@ const LIVE_EVENT_KINDS = [30311];
 const CALENDAR_KINDS = [31922, 31923, 31925];
 const MUSIC_KINDS = [32100, 34139, 36787];
 const COMMUNITY_KINDS = [COMMUNITY_DEFINITION_KIND];
+const PROFILE_KINDS = [0];
 const SUMMARY_FETCH_KINDS = [
   1,
   6,
@@ -156,6 +163,7 @@ const SUMMARY_DEFAULT_CONTENT_KINDS = [
   ...LIVE_EVENT_KINDS,
   ...CALENDAR_KINDS,
   ...MUSIC_KINDS,
+  ...PROFILE_KINDS,
 ];
 
 const SUMMARY_CONTENT_TYPES: ContentTypeOption[] = [
@@ -170,6 +178,7 @@ const SUMMARY_CONTENT_TYPES: ContentTypeOption[] = [
   { id: 'liveEvents', label: 'Live Events', description: 'Streams and live sessions', kinds: LIVE_EVENT_KINDS, icon: 'live_tv' },
   { id: 'calendar', label: 'Calendar', description: 'Events and RSVPs', kinds: CALENDAR_KINDS, icon: 'event' },
   { id: 'music', label: 'Music', description: 'Tracks and playlists', kinds: MUSIC_KINDS, icon: 'music_note' },
+  { id: 'profiles', label: 'Profiles', description: 'Profile updates and metadata changes', kinds: PROFILE_KINDS, icon: 'badge' },
 ];
 
 const SUMMARY_TIMELINE_KIND_LABELS: Record<number, string> = {
@@ -335,6 +344,9 @@ export class SummaryComponent implements OnInit, OnDestroy {
   // Track which timeline events have been opened (local, non-persisted)
   readEventIds = signal<Set<string>>(new Set());
 
+  // Media items whose preview image failed to load
+  failedMediaPreviewIds = signal<Set<string>>(new Set());
+
   // Selected posters for filtering the timeline (empty means show all)
   selectedPosters = signal<Set<string>>(new Set());
 
@@ -397,6 +409,7 @@ export class SummaryComponent implements OnInit, OnDestroy {
   showLiveEventsStats = computed(() => this.currentContentKinds().some(k => LIVE_EVENT_KINDS.includes(k)));
   showCalendarStats = computed(() => this.currentContentKinds().some(k => CALENDAR_KINDS.includes(k)));
   showMusicStats = computed(() => this.currentContentKinds().some(k => MUSIC_KINDS.includes(k)));
+  showProfilesStats = computed(() => this.currentContentKinds().some(k => PROFILE_KINDS.includes(k)));
 
   currentListFilterLabel = computed(() => {
     const filter = this.currentListFilter();
@@ -485,6 +498,8 @@ export class SummaryComponent implements OnInit, OnDestroy {
 
   // Filtered profile updates (by list filter)
   profileUpdates = computed(() => {
+    if (!this.showProfilesStats()) return [];
+
     const all = this.profileUpdatesRaw();
     const list = this.selectedList();
     if (!list) return all;
@@ -505,18 +520,18 @@ export class SummaryComponent implements OnInit, OnDestroy {
   musicEventsRaw = signal<TimelineEvent[]>([]);
 
   // Filtered audio events (by list filter)
-  audioEvents = computed(() => this.filterEventsBySelectedList(this.audioEventsRaw()));
+  audioEvents = computed(() => this.filterSectionEvents(this.audioEventsRaw(), AUDIO_KINDS));
 
   // Filtered article events (by list filter)
-  articleEvents = computed(() => this.filterEventsBySelectedList(this.articleEventsRaw()));
+  articleEvents = computed(() => this.filterSectionEvents(this.articleEventsRaw(), [30023]));
 
   // Filtered media events (by list filter)
-  mediaEvents = computed(() => this.filterEventsBySelectedList(this.mediaEventsRaw()));
-  communityEvents = computed(() => this.filterEventsBySelectedList(this.communityEventsRaw()));
-  chatEvents = computed(() => this.filterEventsBySelectedList(this.chatEventsRaw()));
-  liveEvents = computed(() => this.filterEventsBySelectedList(this.liveEventsRaw()));
-  calendarEvents = computed(() => this.filterEventsBySelectedList(this.calendarEventsRaw()));
-  musicEvents = computed(() => this.filterEventsBySelectedList(this.musicEventsRaw()));
+  mediaEvents = computed(() => this.filterSectionEvents(this.mediaEventsRaw(), MEDIA_KINDS));
+  communityEvents = computed(() => this.filterSectionEvents(this.communityEventsRaw(), COMMUNITY_KINDS));
+  chatEvents = computed(() => this.filterSectionEvents(this.chatEventsRaw(), CHAT_KINDS));
+  liveEvents = computed(() => this.filterSectionEvents(this.liveEventsRaw(), LIVE_EVENT_KINDS));
+  calendarEvents = computed(() => this.filterSectionEvents(this.calendarEventsRaw(), CALENDAR_KINDS));
+  musicEvents = computed(() => this.filterSectionEvents(this.musicEventsRaw(), MUSIC_KINDS));
 
   summaryTimelineSections = computed(() => {
     const sections: SummaryTimelineSection[] = [
@@ -1070,6 +1085,17 @@ export class SummaryComponent implements OnInit, OnDestroy {
     return events.filter(event => listPubkeys.has(event.pubkey));
   }
 
+  private filterSectionEvents(events: TimelineEvent[], allowedKinds: number[]): TimelineEvent[] {
+    const filteredByList = this.filterEventsBySelectedList(events);
+    const currentKinds = this.currentContentKinds();
+
+    if (!allowedKinds.some(kind => currentKinds.includes(kind))) {
+      return [];
+    }
+
+    return filteredByList.filter(event => currentKinds.includes(event.kind));
+  }
+
   toggleTimePanel(): void {
     this.timePanelOpen.update(v => !v);
   }
@@ -1124,7 +1150,7 @@ export class SummaryComponent implements OnInit, OnDestroy {
   }
 
   clearContentTypes(): void {
-    this.localSettings.setContentFilterKinds([1]);
+    this.localSettings.setContentFilterKinds(POST_KINDS);
     this.localSettings.setContentFilterShowReposts(false);
     this.timelinePage.set(1);
   }
@@ -1595,6 +1621,53 @@ export class SummaryComponent implements OnInit, OnDestroy {
     return null;
   }
 
+  getMediaPreviewSource(event: TimelineEvent): MediaPreviewSource {
+    const mediaUrl = this.getMediaUrl(event);
+
+    if (!mediaUrl) {
+      return { previewUrl: null, mediaUrl: null, isVideo: false };
+    }
+
+    const isVideo = this.isVideoEvent(event, mediaUrl);
+    if (!isVideo) {
+      return { previewUrl: mediaUrl, mediaUrl, isVideo: false };
+    }
+
+    const previewUrl = this.getImetaValue(event, 'image')
+      ?? this.getImetaValue(event, 'thumb');
+
+    if (this.failedMediaPreviewIds().has(event.id)) {
+      return { previewUrl: null, mediaUrl, isVideo: true };
+    }
+
+    return { previewUrl, mediaUrl, isVideo: true };
+  }
+
+  onMediaPreviewError(eventId: string): void {
+    this.failedMediaPreviewIds.update(ids => {
+      if (ids.has(eventId)) {
+        return ids;
+      }
+
+      const next = new Set(ids);
+      next.add(eventId);
+      return next;
+    });
+  }
+
+  private getImetaValue(event: TimelineEvent, key: string): string | null {
+    const imetaTags = event.tags?.filter(tag => tag[0] === 'imeta') ?? [];
+
+    for (const imetaTag of imetaTags) {
+      const value = imetaTag.find(entry => entry.startsWith(`${key} `));
+      if (value) {
+        return value.substring(key.length + 1).trim();
+      }
+    }
+
+    return null;
+  }
+
   /**
    * Check if a URL is likely a video based on extension or common video hosts
    */
@@ -1609,6 +1682,19 @@ export class SummaryComponent implements OnInit, OnDestroy {
     return false;
   }
 
+  private isVideoEvent(event: TimelineEvent, mediaUrl: string): boolean {
+    if (VIDEO_KINDS.includes(event.kind)) {
+      return true;
+    }
+
+    const mimeType = this.getImetaValue(event, 'm');
+    if (mimeType?.toLowerCase().startsWith('video/')) {
+      return true;
+    }
+
+    return this.isVideoUrl(mediaUrl);
+  }
+
   /**
    * Open media in a fullscreen preview dialog
    */
@@ -1619,7 +1705,7 @@ export class SummaryComponent implements OnInit, OnDestroy {
     const mediaUrl = this.getMediaUrl(mediaEvent);
     if (!mediaUrl) return;
 
-    const isVideo = this.isVideoUrl(mediaUrl);
+    const isVideo = this.isVideoEvent(mediaEvent, mediaUrl);
 
     this.dialog.open(MediaPreviewDialogComponent, {
       data: {
