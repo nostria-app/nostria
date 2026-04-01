@@ -2467,46 +2467,53 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       return;
     }
 
-    const stagedPreviews: PendingEncryptedMediaPreview[] = [];
-    const failedFiles: string[] = [];
+    const stagedPreviews = files.flatMap((file, index) => {
+      if (pastedMediaOnly && !this.isMediaFile(file)) {
+        return [];
+      }
+
+      return [this.isMediaFile(file)
+        ? this.createInitialPendingEncryptedMediaPreview(file, index)
+        : this.createPendingEncryptedFilePreview(file, index)];
+    });
+
+    if (stagedPreviews.length === 0) {
+      return;
+    }
+
     const uploadSettings = this.getDmUploadSettings();
     this.pendingDmMediaOptimizationRunId += 1;
 
-    this.isUploading.set(true);
+    this.setPendingEncryptedFiles(stagedPreviews);
+
+    const previewIds = stagedPreviews
+      .filter(preview => preview.type === 'image' || preview.type === 'video')
+      .map(preview => preview.id);
+
+    if (previewIds.length === 0) {
+      return;
+    }
 
     try {
-      for (const [index, file] of files.entries()) {
-        try {
-          const preview = this.isMediaFile(file)
-            ? await this.createPendingEncryptedMediaPreview(file, index, uploadSettings)
-            : this.createPendingEncryptedFilePreview(file, index);
-
-          if (pastedMediaOnly && preview.type === 'file') {
-            this.revokeObjectUrlLater(preview.objectUrl);
-            continue;
-          }
-
-          stagedPreviews.push(preview);
-        } catch (error) {
-          this.logger.error('Failed to prepare encrypted attachment preview', error);
-          failedFiles.push(file.name);
-        }
-      }
-
-      if (stagedPreviews.length > 0) {
-        this.setPendingEncryptedFiles(stagedPreviews);
-      }
-
-      if (failedFiles.length > 0) {
-        const message = failedFiles.length === 1
-          ? `Failed to prepare ${failedFiles[0]}.`
-          : `Failed to prepare ${failedFiles.length} attachments.`;
-        this.layout.toast(message, 4000, 'error-snackbar');
-      }
-    } finally {
-      this.isUploading.set(false);
-      this.uploadStatus.set('');
+      await this.reprocessPendingEncryptedMediaForOptimization(uploadSettings, previewIds);
+    } catch (error) {
+      this.logger.error('Failed to prepare encrypted attachment preview', error);
+      this.layout.toast('Failed to prepare one or more attachments.', 4000, 'error-snackbar');
     }
+  }
+
+  private createInitialPendingEncryptedMediaPreview(file: File, index: number): PendingEncryptedMediaPreview {
+    return {
+      id: `${Date.now()}-${index}-${file.name}`,
+      objectUrl: URL.createObjectURL(file),
+      file,
+      sourceFile: file,
+      type: file.type.startsWith('video/') ? 'video' : 'image',
+      videoOptimizationProfile: file.type.startsWith('video/') ? this.dmVideoOptimizationProfile() : undefined,
+      originalSize: file.size,
+      processedSize: file.size,
+      optimizedSize: file.size,
+    };
   }
 
   private async createPendingEncryptedMediaPreview(

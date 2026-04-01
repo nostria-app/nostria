@@ -923,7 +923,8 @@
             </div>
             } @else if (preview.type === 'video') {
             <div class="media-preview-media-card">
-              <div class="media-preview-thumb-wrap video-configurable" [attr.tabindex]="preview.pendingEncrypted ? 0 : -1"
+              <div class="media-preview-thumb-wrap video-configurable"
+                [attr.tabindex]="preview.pendingEncrypted ? 0 : -1"
                 [matTooltip]="preview.pendingEncrypted && preview.pendingId ? ('Video type: ' + getDmVideoOptimizationProfileLabel(preview.pendingId) + '. Right-click or press and hold to change it.') : null"
                 (pointerdown)="preview.pendingId && onPendingPreviewPointerDown(preview.pendingId, dmVideoProfileTrigger, $event)"
                 (pointerup)="onPendingPreviewPointerUp()" (pointerleave)="onPendingPreviewPointerUp()"
@@ -990,7 +991,7 @@
           <div class="pending-media-actions">
             @if (hasPendingCompressibleMedia()) {
             <div class="dm-compression-controls">
-              <span class="dm-optimization-label">Optimization</span>
+              <span class="dm-optimization-label">Media Optimization</span>
               <mat-button-toggle-group class="dm-optimization-toggle-group" [value]="selectedDmOptimization()"
                 (change)="onDmOptimizationChange($event.value)" [hideSingleSelectionIndicator]="true"
                 aria-label="Encrypted media optimization">
