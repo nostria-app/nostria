@@ -922,14 +922,16 @@
               </div>
             </div>
             } @else if (preview.type === 'video') {
-            <div class="media-preview-media-card video-configurable" [attr.tabindex]="preview.pendingEncrypted ? 0 : -1"
-              [matTooltip]="preview.pendingEncrypted && preview.pendingId ? ('Video type: ' + getDmVideoOptimizationProfileLabel(preview.pendingId) + '. Right-click or press and hold to change it.') : null"
-              (pointerdown)="preview.pendingId && onPendingPreviewPointerDown(preview.pendingId, $event)"
-              (pointerup)="onPendingPreviewPointerUp()" (pointerleave)="onPendingPreviewPointerUp()"
-              (pointercancel)="onPendingPreviewPointerUp()"
-              (keydown)="preview.pendingId && onPendingPreviewKeyDown(preview.pendingId, $event)"
-              (contextmenu)="preview.pendingId && onPendingPreviewContextMenu(preview.pendingId, $event)">
-              <div class="media-preview-thumb-wrap">
+            <div class="media-preview-media-card">
+              <div class="media-preview-thumb-wrap video-configurable" [attr.tabindex]="preview.pendingEncrypted ? 0 : -1"
+                [matTooltip]="preview.pendingEncrypted && preview.pendingId ? ('Video type: ' + getDmVideoOptimizationProfileLabel(preview.pendingId) + '. Right-click or press and hold to change it.') : null"
+                (pointerdown)="preview.pendingId && onPendingPreviewPointerDown(preview.pendingId, dmVideoProfileTrigger, $event)"
+                (pointerup)="onPendingPreviewPointerUp()" (pointerleave)="onPendingPreviewPointerUp()"
+                (pointercancel)="onPendingPreviewPointerUp()"
+                (keydown)="preview.pendingId && onPendingPreviewKeyDown(preview.pendingId, dmVideoProfileTrigger, $event)"
+                (contextmenu)="preview.pendingId && onPendingPreviewContextMenu(preview.pendingId, dmVideoProfileTrigger, $event)">
+                <button type="button" class="dm-video-profile-trigger-anchor" [matMenuTriggerFor]="dmVideoProfileMenu"
+                  #dmVideoProfileTrigger="matMenuTrigger" tabindex="-1" aria-hidden="true"></button>
                 <video [src]="preview.url" class="media-preview-thumb" muted preload="metadata"></video>
                 @if (preview.pendingEncrypted && preview.pendingId) {
                 <span class="video-profile-badge">{{ getDmVideoOptimizationProfileBadgeLabel(preview.pendingId)
@@ -1014,10 +1016,6 @@
           }
         </div>
         }
-
-        <button type="button" class="dm-video-profile-menu-anchor" [style.left.px]="dmVideoProfileMenuPosition().x"
-          [style.top.px]="dmVideoProfileMenuPosition().y" [matMenuTriggerFor]="dmVideoProfileMenu"
-          #dmVideoProfileMenuTrigger="matMenuTrigger" tabindex="-1" aria-hidden="true"></button>
 
         <mat-menu #dmVideoProfileMenu="matMenu" (closed)="onDmVideoOptimizationMenuClosed()">
           @for (option of videoOptimizationProfileOptions; track option.value) {

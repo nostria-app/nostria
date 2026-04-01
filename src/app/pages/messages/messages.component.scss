@@ -779,6 +779,18 @@
     flex-shrink: 0;
   }
 
+  .dm-video-profile-trigger-anchor {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    border: 0;
+    opacity: 0;
+    pointer-events: none;
+  }
+
   .media-preview-image-button {
     border: 0;
     background: transparent;
@@ -2597,16 +2609,6 @@ app-message-content {
 :host-context(.dark) .scroll-latest-button {
   background-color: var(--mat-sys-surface-container-high);
   color: var(--mat-sys-on-surface);
-}
-
-.dm-video-profile-menu-anchor {
-  position: fixed;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  border: 0;
-  opacity: 0;
-  pointer-events: none;
 }
 
 .dm-video-profile-menu-item {

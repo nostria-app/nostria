@@ -333,7 +333,6 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     getMediaOptimizationOption(this.dmMediaUploadMode(), this.dmCompressionStrength())
   );
   readonly usesLocalDmCompression = computed(() => usesLocalCompressionMode(this.dmMediaUploadMode()));
-  dmVideoProfileMenuPosition = signal<{ x: number; y: number }>({ x: 0, y: 0 });
   dmVideoProfileMenuPreviewId = signal<string | null>(null);
   readonly dmOptimizationDescription = computed(() =>
     getMediaOptimizationDescription(this.dmMediaUploadMode(), this.dmCompressionStrength(), this.dmVideoOptimizationProfile())
@@ -356,6 +355,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   private readonly LONG_PRESS_DURATION = 500; // 500ms for long press
   private pendingDmMediaOptimizationRunId = 0;
   private pendingDmVideoProfileMenuTimeout: ReturnType<typeof setTimeout> | null = null;
+  private activeDmVideoProfileMenuTrigger: MatMenuTrigger | null = null;
   private readonly DM_VIDEO_PROFILE_MENU_HOLD_DELAY = 450;
   readonly showScrollToLatestButton = signal<boolean>(false);
 
@@ -849,9 +849,6 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
 
   @ViewChild('encryptedFileInput', { static: false })
   encryptedFileInput?: ElementRef<HTMLInputElement>;
-
-  @ViewChild('dmVideoProfileMenuTrigger', { read: MatMenuTrigger })
-  dmVideoProfileMenuTrigger?: MatMenuTrigger;
 
   // Throttling for scroll handler
   private scrollThrottleTimeout: any = null;
@@ -3119,17 +3116,16 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       ?? this.videoOptimizationProfileOptions[0].label;
   }
 
-  onPendingPreviewPointerDown(previewId: string, event: PointerEvent): void {
+  onPendingPreviewPointerDown(previewId: string, trigger: MatMenuTrigger, event: PointerEvent): void {
     const preview = this.pendingEncryptedMediaPreviews().find(item => item.id === previewId);
     if (!preview || preview.type !== 'video' || event.button !== 0) {
       return;
     }
 
     this.clearPendingDmVideoProfileMenuOpen();
-    const anchor = this.getDmContextMenuAnchor(event.currentTarget as HTMLElement | null, event.clientX, event.clientY);
     this.pendingDmVideoProfileMenuTimeout = setTimeout(() => {
       this.pendingDmVideoProfileMenuTimeout = null;
-      this.openDmVideoOptimizationMenu(preview, anchor.x, anchor.y);
+      this.openDmVideoOptimizationMenu(preview, trigger);
     }, this.DM_VIDEO_PROFILE_MENU_HOLD_DELAY);
   }
 
@@ -3137,7 +3133,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     this.clearPendingDmVideoProfileMenuOpen();
   }
 
-  onPendingPreviewContextMenu(previewId: string, event: MouseEvent): void {
+  onPendingPreviewContextMenu(previewId: string, trigger: MatMenuTrigger, event: MouseEvent): void {
     const preview = this.pendingEncryptedMediaPreviews().find(item => item.id === previewId);
     if (!preview || preview.type !== 'video') {
       return;
@@ -3146,10 +3142,10 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     event.preventDefault();
     event.stopPropagation();
     this.clearPendingDmVideoProfileMenuOpen();
-    this.openDmVideoOptimizationMenu(preview, event.clientX, event.clientY);
+    this.openDmVideoOptimizationMenu(preview, trigger);
   }
 
-  onPendingPreviewKeyDown(previewId: string, event: KeyboardEvent): void {
+  onPendingPreviewKeyDown(previewId: string, trigger: MatMenuTrigger, event: KeyboardEvent): void {
     const preview = this.pendingEncryptedMediaPreviews().find(item => item.id === previewId);
     if (!preview || preview.type !== 'video') {
       return;
@@ -3162,8 +3158,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
 
     event.preventDefault();
     event.stopPropagation();
-    const anchor = this.getDmContextMenuAnchor(event.currentTarget as HTMLElement | null, 0, 0);
-    this.openDmVideoOptimizationMenu(preview, anchor.x, anchor.y);
+    this.openDmVideoOptimizationMenu(preview, trigger);
   }
 
   isSelectedDmVideoOptimizationProfile(profile: VideoOptimizationProfile): boolean {
@@ -3181,7 +3176,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       return;
     }
 
-    this.closeDmVideoOptimizationMenu();
+    this.activeDmVideoProfileMenuTrigger?.closeMenu();
 
     if (this.getDmVideoOptimizationProfileForPreview(preview) === profile) {
       return;
@@ -3199,6 +3194,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
 
   onDmVideoOptimizationMenuClosed(): void {
     this.clearPendingDmVideoProfileMenuOpen();
+    this.activeDmVideoProfileMenuTrigger = null;
     this.dmVideoProfileMenuPreviewId.set(null);
   }
 
@@ -3247,45 +3243,13 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     return this.pendingEncryptedMediaPreviews().find(item => item.id === previewId);
   }
 
-  private getDmContextMenuAnchor(element: HTMLElement | null, clientX: number, clientY: number): { x: number; y: number } {
-    if (clientX > 0 || clientY > 0) {
-      return { x: clientX, y: clientY };
-    }
-
-    const rect = element?.getBoundingClientRect();
-    if (!rect) {
-      return { x: 24, y: 24 };
-    }
-
-    return {
-      x: rect.left + rect.width / 2,
-      y: rect.top + rect.height / 2,
-    };
-  }
-
-  private getClampedDmVideoProfileMenuPosition(x: number, y: number): { x: number; y: number } {
-    if (typeof window === 'undefined') {
-      return { x, y };
-    }
-
-    return {
-      x: Math.max(8, Math.min(x, window.innerWidth - 280)),
-      y: Math.max(8, Math.min(y, window.innerHeight - 260)),
-    };
-  }
-
-  private openDmVideoOptimizationMenu(preview: PendingEncryptedMediaPreview, x: number, y: number): void {
+  private openDmVideoOptimizationMenu(preview: PendingEncryptedMediaPreview, trigger: MatMenuTrigger): void {
     this.dmVideoProfileMenuPreviewId.set(preview.id);
-    this.dmVideoProfileMenuPosition.set(this.getClampedDmVideoProfileMenuPosition(x, y));
+    this.activeDmVideoProfileMenuTrigger = trigger;
     requestAnimationFrame(() => {
-      this.dmVideoProfileMenuTrigger?.openMenu();
-      setTimeout(() => this.dmVideoProfileMenuTrigger?.updatePosition(), 0);
+      trigger.openMenu();
+      setTimeout(() => trigger.updatePosition(), 0);
     });
-  }
-
-  private closeDmVideoOptimizationMenu(): void {
-    this.dmVideoProfileMenuTrigger?.closeMenu();
-    this.dmVideoProfileMenuPreviewId.set(null);
   }
 
   private clearPendingDmVideoProfileMenuOpen(): void {
