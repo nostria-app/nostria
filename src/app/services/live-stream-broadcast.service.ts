@@ -1,5 +1,5 @@
 import { isPlatformBrowser } from '@angular/common';
-import { Injectable, PLATFORM_ID, computed, inject, signal } from '@angular/core';
+import { DestroyRef, Injectable, PLATFORM_ID, computed, inject, signal } from '@angular/core';
 import { LoggerService } from './logger.service';
 
 export type BroadcastState = 'idle' | 'preparing' | 'connecting' | 'live' | 'stopping' | 'error';
@@ -15,6 +15,11 @@ export interface StartWhipBroadcastOptions extends LiveStreamPreviewOptions {
   token?: string;
 }
 
+interface WhipAnswerNormalizationResult {
+  sdp: string;
+  removedLines: string[];
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -24,6 +29,7 @@ export class LiveStreamBroadcastService {
   private static readonly MAX_VIDEO_BITRATE_BPS = 420_000;
 
   private readonly logger = inject(LoggerService);
+  private readonly destroyRef = inject(DestroyRef);
   private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
 
   readonly state = signal<BroadcastState>('idle');
@@ -48,6 +54,25 @@ export class LiveStreamBroadcastService {
 
   private peerConnection: RTCPeerConnection | null = null;
   private currentFacingMode: CameraFacingMode = 'user';
+  private currentWhipToken: string | null = null;
+
+  constructor() {
+    if (!this.isBrowser || typeof window === 'undefined') {
+      return;
+    }
+
+    const handleWindowUnload = () => {
+      this.releaseSessionForWindowUnload();
+    };
+
+    window.addEventListener('pagehide', handleWindowUnload);
+    window.addEventListener('beforeunload', handleWindowUnload);
+
+    this.destroyRef.onDestroy(() => {
+      window.removeEventListener('pagehide', handleWindowUnload);
+      window.removeEventListener('beforeunload', handleWindowUnload);
+    });
+  }
 
   async ensurePreview(options: LiveStreamPreviewOptions = {}): Promise<MediaStream> {
     if (!this.isSupported()) {
@@ -87,11 +112,16 @@ export class LiveStreamBroadcastService {
 
     const normalizedEndpoint = new URL(options.endpoint).toString();
     let peerConnection: RTCPeerConnection | null = null;
+    let sessionUrl: string | null = null;
+    let rawAnswerPreview = '';
+    let sanitizedAnswerPreview = '';
+    let removedAnswerLines: string[] = [];
 
     try {
       this.errorMessage.set(null);
       this.state.set('preparing');
       this.endpoint.set(normalizedEndpoint);
+      this.currentWhipToken = options.token ?? null;
 
       const stream = await this.ensurePreview(options);
 
@@ -141,25 +171,49 @@ export class LiveStreamBroadcastService {
         body: peerConnection.localDescription?.sdp ?? offer.sdp ?? '',
       });
 
-      const responseBody = (await response.text()).trim();
+      const responseBody = await response.text();
 
       if (!response.ok) {
-        throw new Error(responseBody || `WHIP publish failed with status ${response.status}.`);
+        throw this.createWhipResponseError(response.status, responseBody);
       }
 
-      const answerSdp = this.normalizeWhipAnswerSdp(responseBody);
+      const locationHeader = response.headers.get('location');
+      sessionUrl = locationHeader ? new URL(locationHeader, normalizedEndpoint).toString() : null;
+      this.sessionUrl.set(sessionUrl);
+
+      rawAnswerPreview = this.createSdpPreview(responseBody);
+
+      const normalizedAnswer = this.normalizeWhipAnswerSdp(responseBody);
+      const answerSdp = normalizedAnswer.sdp;
+      removedAnswerLines = normalizedAnswer.removedLines;
+      sanitizedAnswerPreview = this.createSdpPreview(answerSdp);
+
+      if (removedAnswerLines.length > 0) {
+        this.logger.warn('WHIP answer SDP normalization removed unsupported lines', {
+          removedLines: removedAnswerLines,
+          endpoint: normalizedEndpoint,
+          sessionUrl,
+        });
+      }
 
       await peerConnection.setRemoteDescription({
         type: 'answer',
         sdp: answerSdp,
       });
 
-      const locationHeader = response.headers.get('location');
-      this.sessionUrl.set(locationHeader ? new URL(locationHeader, normalizedEndpoint).toString() : null);
       this.startedAt.set(Date.now());
       this.state.set('live');
     } catch (error) {
-      this.logger.error('Failed to start WHIP live broadcast', error);
+      this.logger.error('Failed to start WHIP live broadcast', error, {
+        endpoint: normalizedEndpoint,
+        sessionUrl,
+        rawAnswerPreview,
+        sanitizedAnswerPreview,
+        removedAnswerLines,
+      });
+      if (sessionUrl) {
+        await this.closeWhipSession(sessionUrl, this.currentWhipToken);
+      }
       if (peerConnection) {
         peerConnection.close();
       }
@@ -167,6 +221,7 @@ export class LiveStreamBroadcastService {
       this.sessionUrl.set(null);
       this.startedAt.set(null);
       this.endpoint.set(null);
+      this.currentWhipToken = null;
       this.state.set('error');
       this.errorMessage.set(error instanceof Error ? error.message : 'Failed to start the live broadcast.');
       throw error;
@@ -185,11 +240,7 @@ export class LiveStreamBroadcastService {
 
     const activeSessionUrl = this.sessionUrl();
     if (activeSessionUrl) {
-      try {
-        await fetch(activeSessionUrl, { method: 'DELETE' });
-      } catch (error) {
-        this.logger.warn('Failed to close WHIP session cleanly', error);
-      }
+      await this.closeWhipSession(activeSessionUrl, this.currentWhipToken);
     }
 
     if (this.peerConnection) {
@@ -201,6 +252,7 @@ export class LiveStreamBroadcastService {
     this.sessionUrl.set(null);
     this.startedAt.set(null);
     this.endpoint.set(null);
+    this.currentWhipToken = null;
     this.errorMessage.set(null);
     this.state.set('idle');
 
@@ -306,13 +358,92 @@ export class LiveStreamBroadcastService {
     });
   }
 
-  private normalizeWhipAnswerSdp(sdp: string): string {
+  private normalizeWhipAnswerSdp(sdp: string): WhipAnswerNormalizationResult {
+    const removedLines: string[] = [];
     const sanitizedLines = sdp
+      .replace(/^\uFEFF/, '')
       .replace(/\r?\n/g, '\n')
       .split('\n')
-      .map(line => line.trimEnd())
-      .filter(line => !!line && line !== 'a=end-of-candidates');
+      .map(line => line.trim())
+      .filter(line => {
+        if (!line) {
+          return false;
+        }
 
-    return `${sanitizedLines.join('\r\n')}\r\n`;
+        if (line.toLowerCase() === 'a=end-of-candidates') {
+          removedLines.push(line);
+          return false;
+        }
+
+        if (!/^[a-z]=/i.test(line)) {
+          removedLines.push(line);
+          return false;
+        }
+
+        return true;
+      });
+
+    const hasRequiredSdpEnvelope = sanitizedLines.some(line => line.startsWith('v='))
+      && sanitizedLines.some(line => line.startsWith('o='))
+      && sanitizedLines.some(line => line.startsWith('s='))
+      && sanitizedLines.some(line => line.startsWith('t='))
+      && sanitizedLines.some(line => line.startsWith('m='));
+
+    if (!hasRequiredSdpEnvelope) {
+      throw new Error(`WHIP endpoint returned an invalid SDP answer: ${this.createSdpPreview(sdp)}`);
+    }
+
+    return {
+      sdp: `${sanitizedLines.join('\r\n')}\r\n`,
+      removedLines,
+    };
+  }
+
+  private createSdpPreview(sdp: string): string {
+    return sdp
+      .replace(/\r/g, '\\r')
+      .replace(/\n/g, '\\n')
+      .slice(0, 500);
+  }
+
+  private async closeWhipSession(sessionUrl: string, token: string | null): Promise<void> {
+    try {
+      await fetch(sessionUrl, {
+        method: 'DELETE',
+        keepalive: true,
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      });
+    } catch (error) {
+      this.logger.warn('Failed to close WHIP session cleanly', error);
+    }
+  }
+
+  private releaseSessionForWindowUnload(): void {
+    const activeSessionUrl = this.sessionUrl();
+    if (!activeSessionUrl) {
+      return;
+    }
+
+    void this.closeWhipSession(activeSessionUrl, this.currentWhipToken);
+
+    if (this.peerConnection) {
+      this.peerConnection.onconnectionstatechange = null;
+      this.peerConnection.close();
+      this.peerConnection = null;
+    }
+
+    this.sessionUrl.set(null);
+    this.startedAt.set(null);
+    this.endpoint.set(null);
+    this.currentWhipToken = null;
+  }
+
+  private createWhipResponseError(status: number, responseBody: string): Error {
+    const trimmedBody = responseBody.trim();
+    if (status === 403 && /endpoint id already in use/i.test(trimmedBody)) {
+      return new Error('The browser broadcast endpoint is already in use. Stop the existing browser stream or reset the browser endpoint before trying again.');
+    }
+
+    return new Error(trimmedBody || `WHIP publish failed with status ${status}.`);
   }
 }
