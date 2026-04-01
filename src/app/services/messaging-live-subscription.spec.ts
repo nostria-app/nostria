@@ -14,6 +14,7 @@ import { DatabaseService } from './database.service';
 import { AccountLocalStateService } from './account-local-state.service';
 import { RelayPoolService } from './relays/relay-pool';
 import { DiscoveryRelayService } from './relays/discovery-relay';
+import { SettingsService } from './settings.service';
 
 describe('MessagingService live subscriptions', () => {
   let service: MessagingService;
@@ -42,6 +43,10 @@ describe('MessagingService live subscriptions', () => {
     init: vi.fn().mockResolvedValue(undefined),
     messageExists: vi.fn().mockResolvedValue(false),
     saveDirectMessage: vi.fn().mockResolvedValue(undefined),
+  };
+
+  const settingsService = {
+    settings: signal({ messageNotificationSoundsEnabled: true }),
   };
 
   beforeEach(async () => {
@@ -96,6 +101,7 @@ describe('MessagingService live subscriptions', () => {
             getRelayUrls: vi.fn().mockReturnValue(['wss://discovery-relay']),
           },
         },
+        { provide: SettingsService, useValue: settingsService },
       ],
     }).compileComponents();
 
@@ -237,5 +243,37 @@ describe('MessagingService live subscriptions', () => {
     expect(message.content).toBe('Rendered text');
     expect(message.quotedReplyContent).toBe('Quoted content');
     expect(message.quotedReplyAuthor).toBe('sondreb');
+  });
+
+  it('plays notification sounds only for unread incoming messages from the last hour', () => {
+    const playNotificationSoundSpy = vi.spyOn(service as any, 'playNotificationSound').mockImplementation(() => undefined);
+
+    service.addMessageToChat('peer-pubkey', {
+      id: 'old-message-id',
+      pubkey: 'peer-pubkey',
+      created_at: 2_000_000 - 3_601,
+      content: 'old backlog message',
+      isOutgoing: false,
+      tags: [['p', 'my-pubkey']],
+      pending: false,
+      received: true,
+      failed: false,
+      encryptionType: 'nip44',
+    });
+
+    service.addMessageToChat('peer-pubkey', {
+      id: 'recent-message-id',
+      pubkey: 'peer-pubkey',
+      created_at: 2_000_000 - 3_600,
+      content: 'recent message',
+      isOutgoing: false,
+      tags: [['p', 'my-pubkey']],
+      pending: false,
+      received: true,
+      failed: false,
+      encryptionType: 'nip44',
+    });
+
+    expect(playNotificationSoundSpy).toHaveBeenCalledTimes(1);
   });
 });

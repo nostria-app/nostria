@@ -176,6 +176,7 @@ export class MessagingService implements NostriaService {
   private readonly maxDeadLetterEventIds = 2000;
   private readonly directMessagePublishTimeoutMs = 5000;
   private readonly DM_STARTUP_DELAY_MS = 4000;
+  private readonly MESSAGE_NOTIFICATION_MAX_AGE_SECONDS = 60 * 60;
 
   /**
    * Resolve callback to cancel the DM startup delay early.
@@ -220,6 +221,15 @@ export class MessagingService implements NostriaService {
     } catch {
       // AudioContext not available (e.g. SSR or denied) – silently ignore
     }
+  }
+
+  private shouldPlayNotificationSound(message: DirectMessage): boolean {
+    if (message.isOutgoing || message.read) {
+      return false;
+    }
+
+    const notificationCutoff = this.utilities.currentDate() - this.MESSAGE_NOTIFICATION_MAX_AGE_SECONDS;
+    return message.created_at >= notificationCutoff;
   }
 
   getChat(chatId: string): Chat | null {
@@ -800,7 +810,7 @@ export class MessagingService implements NostriaService {
     this.chatsMap.set(newMap);
 
     // Play notification sound for incoming unread messages
-    if (!normalizedMessage.isOutgoing && !normalizedMessage.read) {
+    if (this.shouldPlayNotificationSound(normalizedMessage)) {
       this.playNotificationSound();
     }
 
