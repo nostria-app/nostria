@@ -282,10 +282,10 @@ export class NewFeedDialogComponent {
   selectFeedType(typeKey: string): void {
     this.selectedFeedType.set(typeKey);
     this.feedForm.patchValue({
-      type: typeKey as 'photos' | 'videos' | 'notes' | 'articles' | 'music' | 'custom',
+      type: typeKey as 'photos' | 'videos' | 'notes' | 'articles' | 'music' | 'polls' | 'custom',
     });
 
-    const validTypes = ['notes', 'articles', 'photos', 'videos', 'music', 'custom'] as const;
+    const validTypes = ['notes', 'articles', 'photos', 'videos', 'music', 'polls', 'custom'] as const;
     if (validTypes.includes(typeKey as (typeof validTypes)[number])) {
       const feedType = this.feedService.getFeedType(typeKey as (typeof validTypes)[number]);
       if (feedType) {
@@ -688,7 +688,7 @@ export class NewFeedDialogComponent {
         id: existingFeed?.id || crypto.randomUUID(),
         label: formValue.label!,
         icon: formValue.icon!,
-        type: formValue.type as 'photos' | 'videos' | 'notes' | 'articles' | 'music' | 'custom',
+        type: formValue.type as 'photos' | 'videos' | 'notes' | 'articles' | 'music' | 'polls' | 'custom',
         kinds: this.selectedKinds(),
         source: (formValue.source || 'following') as 'following' | 'public' | 'custom' | 'for-you' | 'search' | 'trending' | 'interests',
         relayConfig: relayConfig,
