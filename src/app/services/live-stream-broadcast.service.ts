@@ -147,9 +147,11 @@ export class LiveStreamBroadcastService {
         throw new Error(responseBody || `WHIP publish failed with status ${response.status}.`);
       }
 
+      const answerSdp = this.normalizeWhipAnswerSdp(responseBody);
+
       await peerConnection.setRemoteDescription({
         type: 'answer',
-        sdp: responseBody,
+        sdp: answerSdp,
       });
 
       const locationHeader = response.headers.get('location');
@@ -302,5 +304,15 @@ export class LiveStreamBroadcastService {
 
       peerConnection.addEventListener('icegatheringstatechange', handleStateChange);
     });
+  }
+
+  private normalizeWhipAnswerSdp(sdp: string): string {
+    const sanitizedLines = sdp
+      .replace(/\r?\n/g, '\n')
+      .split('\n')
+      .map(line => line.trimEnd())
+      .filter(line => !!line && line !== 'a=end-of-candidates');
+
+    return `${sanitizedLines.join('\r\n')}\r\n`;
   }
 }
