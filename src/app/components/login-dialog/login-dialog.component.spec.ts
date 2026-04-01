@@ -13,107 +13,121 @@ import { DataService } from '../../services/data.service';
 import { LayoutService } from '../../services/layout.service';
 
 describe('LoginDialogComponent', () => {
-    let component: LoginDialogComponent;
-    let fixture: ComponentFixture<LoginDialogComponent>;
+  let component: LoginDialogComponent;
+  let fixture: ComponentFixture<LoginDialogComponent>;
 
-    function createComponent() {
-        TestBed.configureTestingModule({
-            imports: [LoginDialogComponent],
-            providers: [
-                provideZonelessChangeDetection(),
-                { provide: MatDialogRef, useValue: { close: vi.fn() } },
-                { provide: MatDialog, useValue: { open: vi.fn() } },
-                { provide: MatSnackBar, useValue: { open: vi.fn() } },
-                { provide: NostrService, useValue: {
-                        loginWithExtension: vi.fn(),
-                        loginWithNsec: vi.fn(),
-                        loginWithNostrConnect: vi.fn(),
-                        generateNewKey: vi.fn(),
-                        usePreviewAccount: vi.fn(),
-                        switchToUser: vi.fn(),
-                        removeAccount: vi.fn(),
-                        setAccount: vi.fn(),
-                        hasRelayConfiguration: vi.fn(),
-                        setupNewAccountWithDefaults: vi.fn(),
-                        users: vi.fn().mockReturnValue([]),
-                    } },
-                { provide: LoggerService, useValue: {
-                        debug: vi.fn(),
-                        info: vi.fn(),
-                        error: vi.fn(),
-                        warn: vi.fn(),
-                    } },
-                { provide: MnemonicService, useValue: {
-                        isMnemonic: vi.fn().mockReturnValue(false),
-                    } },
-                { provide: Profile, useValue: {
-                        createInitialProfile: vi.fn(),
-                    } },
-                { provide: AccountStateService, useValue: {
-                        account: vi.fn().mockReturnValue(null),
-                        addToCache: vi.fn(),
-                        profile: { set: vi.fn() },
-                    } },
-                { provide: DataService, useValue: {
-                        toRecord: vi.fn(),
-                    } },
-                { provide: LayoutService, useValue: {
-                        openTermsOfUse: vi.fn(),
-                        handleTermsDialogClose: vi.fn(),
-                        isMobile: vi.fn().mockReturnValue(false),
-                    } },
-            ],
-        });
-
-        fixture = TestBed.createComponent(LoginDialogComponent);
-        component = fixture.componentInstance;
-        fixture.detectChanges();
-    }
-
-    it('should create', () => {
-        createComponent();
-        expect(component).toBeTruthy();
+  function createComponent() {
+    TestBed.configureTestingModule({
+      imports: [LoginDialogComponent],
+      providers: [
+        provideZonelessChangeDetection(),
+        { provide: MatDialogRef, useValue: { close: vi.fn() } },
+        { provide: MatDialog, useValue: { open: vi.fn() } },
+        { provide: MatSnackBar, useValue: { open: vi.fn() } },
+        {
+          provide: NostrService, useValue: {
+            loginWithExtension: vi.fn(),
+            loginWithNsec: vi.fn(),
+            loginWithNostrConnect: vi.fn(),
+            generateNewKey: vi.fn(),
+            usePreviewAccount: vi.fn(),
+            switchToUser: vi.fn(),
+            removeAccount: vi.fn(),
+            setAccount: vi.fn(),
+            hasRelayConfiguration: vi.fn(),
+            setupNewAccountWithDefaults: vi.fn(),
+            users: vi.fn().mockReturnValue([]),
+          }
+        },
+        {
+          provide: LoggerService, useValue: {
+            debug: vi.fn(),
+            info: vi.fn(),
+            error: vi.fn(),
+            warn: vi.fn(),
+          }
+        },
+        {
+          provide: MnemonicService, useValue: {
+            isMnemonic: vi.fn().mockReturnValue(false),
+          }
+        },
+        {
+          provide: Profile, useValue: {
+            createInitialProfile: vi.fn(),
+          }
+        },
+        {
+          provide: AccountStateService, useValue: {
+            account: vi.fn().mockReturnValue(null),
+            addToCache: vi.fn(),
+            profile: { set: vi.fn() },
+          }
+        },
+        {
+          provide: DataService, useValue: {
+            toRecord: vi.fn(),
+          }
+        },
+        {
+          provide: LayoutService, useValue: {
+            openTermsOfUse: vi.fn(),
+            handleTermsDialogClose: vi.fn(),
+            isMobile: vi.fn().mockReturnValue(false),
+          }
+        },
+      ],
     });
 
-    it('should start on INITIAL step', () => {
-        createComponent();
-        expect(component.currentStep()).toBe('initial');
-    });
+    fixture = TestBed.createComponent(LoginDialogComponent);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+  }
 
-    it('should navigate to region selection on startNewAccountFlow', () => {
-        createComponent();
-        component.startNewAccountFlow();
-        expect(component.currentStep()).toBe('region');
-    });
+  it('should create', () => {
+    createComponent();
+    expect(component).toBeTruthy();
+  });
 
-    it('should validate empty nsec key as invalid', () => {
-        createComponent();
-        component.nsecKey = '';
-        expect(component.isNsecKeyValid()).toBe(false);
-    });
+  it('should start on INITIAL step', () => {
+    createComponent();
+    expect(component.currentStep()).toBe('initial');
+  });
 
-    it('should validate a 64-char hex string as valid nsec key', () => {
-        createComponent();
-        component.nsecKey = 'a'.repeat(64);
-        expect(component.isNsecKeyValid()).toBe(true);
-    });
+  it('should navigate to region selection on startNewAccountFlow', () => {
+    createComponent();
+    component.startNewAccountFlow();
+    expect(component.currentStep()).toBe('region');
+  });
 
-    it('should validate a short hex string as invalid nsec key', () => {
-        createComponent();
-        component.nsecKey = 'abcdef';
-        expect(component.isNsecKeyValid()).toBe(false);
-    });
+  it('should validate empty nsec key as invalid', () => {
+    createComponent();
+    component.nsecKey = '';
+    expect(component.isNsecKeyValid()).toBe(false);
+  });
 
-    it('should close dialog when closeDialog is called', () => {
-        createComponent();
-        const dialogRef = TestBed.inject(MatDialogRef);
-        component.closeDialog();
-        expect(dialogRef.close).toHaveBeenCalled();
-    });
+  it('should validate a 64-char hex string as valid nsec key', () => {
+    createComponent();
+    component.nsecKey = 'a'.repeat(64);
+    expect(component.isNsecKeyValid()).toBe(true);
+  });
 
-    it('should navigate steps with goToStep', () => {
-        createComponent();
-        component.goToStep('nsec' as never);
-        expect(component.currentStep()).toBe('nsec');
-    });
+  it('should validate a short hex string as invalid nsec key', () => {
+    createComponent();
+    component.nsecKey = 'abcdef';
+    expect(component.isNsecKeyValid()).toBe(false);
+  });
+
+  it('should close dialog when closeDialog is called', () => {
+    createComponent();
+    const dialogRef = TestBed.inject(MatDialogRef);
+    component.closeDialog();
+    expect(dialogRef.close).toHaveBeenCalled();
+  });
+
+  it('should navigate steps with goToStep', () => {
+    createComponent();
+    component.goToStep('nsec' as never);
+    expect(component.currentStep()).toBe('nsec');
+  });
 });

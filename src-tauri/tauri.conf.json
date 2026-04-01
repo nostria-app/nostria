@@ -1,12 +1,12 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "nostria",
-  "version": "3.1.0",
+  "productName": "Nostria",
+  "version": "../package.json",
   "identifier": "no.brainbox.nostria",
   "build": {
     "beforeDevCommand": "npm run start",
     "devUrl": "http://localhost:4200",
-    "beforeBuildCommand": "npm run build",
+    "beforeBuildCommand": "npm run build:tauri",
     "frontendDist": "../dist/app/browser"
   },
   "app": {
@@ -23,13 +23,56 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["msi", "appimage", "dmg"],
+    "targets": [
+      "appimage",
+      "deb",
+      "dmg",
+      "nsis",
+      "msi"
+    ],
+    "publisher": "Brainbox",
+    "homepage": "https://nostria.app",
+    "category": "SocialNetworking",
+    "shortDescription": "Nostria: Your Social Network",
+    "longDescription": "Nostria: Your Social Network. Built for human connections. Nostria is social without the noise.",
+    "copyright": "Copyright (c) 2025-2026 Nostria",
+    "license": "MIT",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ]
+    ],
+    "linux": {
+      "deb": {
+        "section": "web",
+        "priority": "optional"
+      }
+    },
+    "macOS": {
+      "minimumSystemVersion": "10.15"
+    },
+    "windows": {
+      "allowDowngrades": false,
+      "wix": {
+        "language": "en-US",
+        "upgradeCode": "eceda842-3f05-52aa-81b8-bd43bceecbab"
+      },
+      "nsis": {
+        "installMode": "perMachine"
+      }
+    }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEYzQjc3MDgyQ0M3OEI2MEQKUldRTnRuak1nbkMzOHdLWHZpQzluMXJ3bGI1MEs1cGNoUmE4cDFIdUd4N0dPbXZGQlZIZjRsN2sK",
+      "endpoints": [
+        "https://github.com/nostria-app/nostria/releases/latest/download/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
+    }
   }
 }

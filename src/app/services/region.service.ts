@@ -263,6 +263,10 @@ export class RegionService {
     const instance = this.#mediaNames[instanceId];
 
     if (region) {
+      if (region.id === 'eu' || region.id === 'us') {
+        return `https://${instance.toLowerCase()}.nostria.app`;
+      }
+
       return `https://${instance.toLowerCase()}.${region.id}.nostria.app`;
     }
 
@@ -284,6 +288,10 @@ export class RegionService {
     const instance = this.#relayNames[instanceId];
 
     if (region) {
+      if (region.id === 'eu' || region.id === 'us') {
+        return `wss://${instance.toLowerCase()}.nostria.app/`;
+      }
+
       return `wss://${instance.toLowerCase()}.${region.id}.nostria.app`;
     }
 
@@ -295,11 +303,11 @@ export class RegionService {
   }
 
   rewriteMediaServerUrl(url: string): string {
-    return this.rewriteUrl(url, this.legacyMediaServerHosts, 'https:');
+    return this.rewriteUrl(url, this.legacyMediaServerHosts, 'https:', true);
   }
 
   rewriteRelayUrl(url: string): string {
-    return this.rewriteUrl(url, this.legacyRelayHosts, 'wss:');
+    return this.rewriteUrl(url, this.legacyRelayHosts, 'wss:', true);
   }
 
   rewriteDiscoveryRelayUrl(url: string): string {
@@ -326,10 +334,16 @@ export class RegionService {
     return this.defaultAccountsByRegion[regionId] || this.defaultAccountsByRegion['us'];
   }
 
-  private rewriteUrl(url: string, hostMap: Record<string, string>, protocol: 'https:' | 'wss:'): string {
+  private rewriteUrl(
+    url: string,
+    hostMap: Record<string, string>,
+    protocol: 'https:' | 'wss:',
+    flattenUsEuHost: boolean = false,
+  ): string {
     try {
       const parsed = new URL(url);
-      const nextHost = hostMap[parsed.hostname.toLowerCase()];
+      const hostname = parsed.hostname.toLowerCase();
+      const nextHost = hostMap[hostname] ?? this.flattenLegacyNostriaHost(hostname, flattenUsEuHost);
       if (!nextHost) {
         return url;
       }
@@ -341,6 +355,19 @@ export class RegionService {
     } catch {
       return url;
     }
+  }
+
+  private flattenLegacyNostriaHost(hostname: string, flattenUsEuHost: boolean): string | null {
+    if (!flattenUsEuHost) {
+      return null;
+    }
+
+    const match = hostname.match(/^([^.]+)\.(eu|us)\.nostria\.app$/);
+    if (!match) {
+      return null;
+    }
+
+    return `${match[1]}.nostria.app`;
   }
 
   private rewriteUrlList(urls: string[], rewrite: (url: string) => string): { urls: string[]; changed: boolean } {

@@ -4,9 +4,9 @@
       <mat-icon>compare</mat-icon>
     </div>
     <div class="preview-intro-copy">
-      <span class="preview-intro-title">Compression Preview</span>
+      <span class="preview-intro-title">Optimization Preview</span>
       <span class="preview-intro-subtitle">
-        {{ data.contextLabel || 'Media upload' }} · {{ compressionStrengthLabel() }} local compression
+        {{ data.contextLabel || 'Media upload' }} · {{ optimizationLabel() }} optimization
       </span>
       <span class="preview-intro-filename">{{ data.file.name }}</span>
     </div>
@@ -54,14 +54,14 @@
     @if (result.compressedFile && compressedObjectUrl()) {
     <div class="preview-media-card">
       <div class="preview-media-card-header">
-        <span class="preview-media-card-title">Compressed</span>
+        <span class="preview-media-card-title">Optimized</span>
         <span class="preview-media-card-meta">{{ formatFileSize(result.compressedFile.size) }}</span>
       </div>
 
       @if (isImage()) {
       <button type="button" class="preview-image-button" (click)="openLargeImagePreview('compressed')"
-        aria-label="Open compressed image preview">
-        <img [src]="compressedObjectUrl()!" class="preview-media-asset" alt="Compressed media preview" />
+        aria-label="Open optimized image preview">
+        <img [src]="compressedObjectUrl()!" class="preview-media-asset" alt="Optimized media preview" />
       </button>
       } @else if (isVideo()) {
       <video [src]="compressedObjectUrl()!" class="preview-media-asset" controls muted preload="metadata"></video>
@@ -78,7 +78,7 @@
     <span class="preview-summary-title">{{ summaryLabel() }}</span>
     <span class="preview-summary-copy">
       @if (result.willUploadCompressedFile) {
-      This compressed version would be used for upload.
+      This optimized version would be used for upload.
       } @else {
       Upload would keep the original file with the current settings.
       }

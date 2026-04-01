@@ -176,6 +176,7 @@ export class MessagingService implements NostriaService {
   private readonly maxDeadLetterEventIds = 2000;
   private readonly directMessagePublishTimeoutMs = 5000;
   private readonly DM_STARTUP_DELAY_MS = 4000;
+  private readonly MESSAGE_NOTIFICATION_MAX_AGE_SECONDS = 60 * 60;
 
   /**
    * Resolve callback to cancel the DM startup delay early.
@@ -220,6 +221,15 @@ export class MessagingService implements NostriaService {
     } catch {
       // AudioContext not available (e.g. SSR or denied) – silently ignore
     }
+  }
+
+  private shouldPlayNotificationSound(message: DirectMessage): boolean {
+    if (message.isOutgoing || message.read) {
+      return false;
+    }
+
+    const notificationCutoff = this.utilities.currentDate() - this.MESSAGE_NOTIFICATION_MAX_AGE_SECONDS;
+    return message.created_at >= notificationCutoff;
   }
 
   getChat(chatId: string): Chat | null {
@@ -800,7 +810,7 @@ export class MessagingService implements NostriaService {
     this.chatsMap.set(newMap);
 
     // Play notification sound for incoming unread messages
-    if (!normalizedMessage.isOutgoing && !normalizedMessage.read) {
+    if (this.shouldPlayNotificationSound(normalizedMessage)) {
       this.playNotificationSound();
     }
 
@@ -2357,7 +2367,7 @@ export class MessagingService implements NostriaService {
         this.knownEventIds.add(rootWrappedEventId);
       }
 
-       shouldRememberWrappedEvent = true;
+      shouldRememberWrappedEvent = true;
 
       // Return the final decrypted message
       return {
@@ -3552,8 +3562,8 @@ export class MessagingService implements NostriaService {
       const userRelayService = await this.getUserRelayService();
       const publishPromises: Promise<unknown>[] = [];
 
-        // Create gift wraps for all participants (including self)
-        for (const recipientPubkey of allParticipants) {
+      // Create gift wraps for all participants (including self)
+      for (const recipientPubkey of allParticipants) {
         // Create the seal - encrypt the rumor for this specific recipient
         const sealedContent = await this.encryption.encryptNip44(rumorJson, recipientPubkey);
 
@@ -3587,10 +3597,10 @@ export class MessagingService implements NostriaService {
 
         const signedGiftWrap = finalizeEvent(giftWrap, ephemeralKey);
 
-          // Publish to recipient's DM relays (primary NIP-17 delivery)
-          if (userRelayService) {
-            publishPromises.push(userRelayService.publishToDmRelays(recipientPubkey, signedGiftWrap));
-          }
+        // Publish to recipient's DM relays (primary NIP-17 delivery)
+        if (userRelayService) {
+          publishPromises.push(userRelayService.publishToDmRelays(recipientPubkey, signedGiftWrap));
+        }
       }
 
       await this.awaitDirectMessagePublishes(publishPromises, 'direct-message');

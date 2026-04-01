@@ -20,6 +20,7 @@ import { IgnoredRelayAuditDialogComponent } from '../ignored-relay-audit-dialog/
 import { RunesSettingsService } from '../../services/runes-settings.service';
 import { MediaPlayerService } from '../../services/media-player.service';
 import { LocalSettingsService, getEffectiveWotMinRank, isWotFilterEnabled } from '../../services/local-settings.service';
+import { DesktopUpdaterService } from '../../services/desktop-updater.service';
 
 export interface Command {
   id: string;
@@ -55,6 +56,7 @@ export class CommandPaletteDialogComponent implements AfterViewInit, OnDestroy {
   private runesSettings = inject(RunesSettingsService);
   private mediaPlayer = inject(MediaPlayerService);
   private localSettings = inject(LocalSettingsService);
+  private desktopUpdater = inject(DesktopUpdaterService);
 
   @ViewChild('searchInput') searchInput!: ElementRef<HTMLInputElement>;
   @ViewChildren('listItem', { read: ElementRef }) listItems!: QueryList<ElementRef>;
@@ -181,6 +183,20 @@ export class CommandPaletteDialogComponent implements AfterViewInit, OnDestroy {
       icon: 'people',
       action: () => this.router.navigate(['/people']),
       keywords: ['people', 'following', 'followers', 'contacts', 'friends']
+    },
+    {
+      id: 'nav-communities',
+      label: 'Open Communities',
+      icon: 'diversity_3',
+      action: () => this.router.navigate(['/n']),
+      keywords: ['communities', 'community', 'groups', 'spaces', 'forums']
+    },
+    {
+      id: 'nav-create-community',
+      label: 'Create Community',
+      icon: 'add_circle',
+      action: () => this.router.navigate(['/n/create']),
+      keywords: ['create community', 'new community', 'community', 'groups', 'spaces']
     },
     {
       id: 'nav-lists',
@@ -467,6 +483,14 @@ export class CommandPaletteDialogComponent implements AfterViewInit, OnDestroy {
       keywords: ['about', 'version', 'info', 'credits']
     },
     {
+      id: 'desktop-check-updates',
+      label: 'Check for Desktop Updates',
+      icon: 'system_update',
+      action: () => void this.desktopUpdater.checkForUpdates({ interactive: true, source: 'manual' }),
+      keywords: ['check for updates', 'update app', 'desktop update', 'release', 'upgrade'],
+      description: 'Check GitHub Releases for a newer desktop build'
+    },
+    {
       id: 'nav-backup',
       label: 'Open Backup',
       icon: 'backup',
@@ -653,6 +677,13 @@ export class CommandPaletteDialogComponent implements AfterViewInit, OnDestroy {
       icon: 'post_add',
       action: () => this.layoutService.createArticle(),
       keywords: ['create article', 'write article', 'new article', 'blog', 'long-form']
+    },
+    {
+      id: 'act-create-live-stream',
+      label: 'Start Live Stream',
+      icon: 'live_tv',
+      action: () => this.layoutService.openLiveStreamDialog(),
+      keywords: ['start live stream', 'go live', 'broadcast', 'stream', 'zap stream']
     },
     {
       id: 'act-create-code-snippet',

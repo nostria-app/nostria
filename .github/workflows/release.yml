@@ -1,80 +1,181 @@
-name: Build and Release
+name: Desktop Release
 
 on:
   workflow_dispatch:
     inputs:
       prerelease:
-        description: 'Is this a pre-release?'
+        description: "Publish as a prerelease"
         type: boolean
         default: false
 
-# Add permissions needed for creating releases
 permissions:
   contents: write
   packages: read
 
-jobs:
-  build:
-    strategy:
-      fail-fast: false
-      matrix:
-        platform: [macos-latest, ubuntu-latest, windows-latest]
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
-    runs-on: ${{ matrix.platform }}
+jobs:
+  prepare-release:
+    runs-on: ubuntu-22.04
+    outputs:
+      version: ${{ steps.release-metadata.outputs.version }}
+      release_tag: ${{ steps.release-metadata.outputs.release_tag }}
+      release_prerelease: ${{ steps.release-metadata.outputs.release_prerelease }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: 'npm'
 
-      - name: Variables
-        run: |
-          echo VERSION=$(npm run get-version --silent) >> $GITHUB_ENV
+      - name: Determine release metadata
+        id: release-metadata
         shell: bash
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
 
-      - name: Install Rust (stable)
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?(\+[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$ ]]; then
+            echo "package.json version '$VERSION' is not a supported semver value" >&2
+            exit 1
+          fi
+
+          RELEASE_TAG="v${VERSION}"
+          if [[ "$VERSION" == *-* ]] || [ "${{ github.event.inputs.prerelease }}" = "true" ]; then
+            RELEASE_PRERELEASE=true
+          else
+            RELEASE_PRERELEASE=false
+          fi
+
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "release_tag=$RELEASE_TAG" >> "$GITHUB_OUTPUT"
+          echo "release_prerelease=$RELEASE_PRERELEASE" >> "$GITHUB_OUTPUT"
+
+      - name: Create and push release tag
+        shell: bash
+        env:
+          RELEASE_TAG: ${{ steps.release-metadata.outputs.release_tag }}
+        run: |
+          git fetch --tags --force
+
+          if git rev-parse "$RELEASE_TAG" >/dev/null 2>&1; then
+            TAG_COMMIT=$(git rev-list -n 1 "$RELEASE_TAG")
+            if [ "$TAG_COMMIT" != "$GITHUB_SHA" ]; then
+              echo "Tag $RELEASE_TAG already exists on commit $TAG_COMMIT, expected $GITHUB_SHA" >&2
+              exit 1
+            fi
+
+            echo "Tag $RELEASE_TAG already exists on the current commit."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag "$RELEASE_TAG" "$GITHUB_SHA"
+          git push origin "$RELEASE_TAG"
+
+  publish-desktop:
+    needs: prepare-release
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: linux
+            platform: ubuntu-22.04
+            rust_targets: ""
+            args: --bundles appimage,deb
+          - name: windows
+            platform: windows-latest
+            rust_targets: ""
+            args: --bundles nsis,msi
+          - name: windows-arm
+            platform: windows-latest
+            rust_targets: aarch64-pc-windows-msvc
+            args: --target aarch64-pc-windows-msvc --bundles nsis,msi
+          - name: macos
+            platform: macos-latest
+            rust_targets: aarch64-apple-darwin,x86_64-apple-darwin
+            args: --target universal-apple-darwin
+
+    runs-on: ${{ matrix.platform }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare-release.outputs.release_tag }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: "npm"
+
+      - name: Install Rust toolchain
+        if: matrix.rust_targets == ''
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Install dependencies (ubuntu only)
-        if: matrix.platform == 'ubuntu-latest'
+      - name: Install Rust toolchain with extra targets
+        if: matrix.rust_targets != ''
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.rust_targets }}
+
+      - name: Cache Rust dependencies
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+
+      - name: Install Linux dependencies
+        if: matrix.name == 'linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+          sudo apt-get install -y \
+            build-essential \
+            libappindicator3-dev \
+            libgtk-3-dev \
+            librsvg2-dev \
+            libssl-dev \
+            libwebkit2gtk-4.1-dev \
+            patchelf
 
-      - name: Install dependencies
-        run: npm install --force
+      - name: Install LLVM for Windows ARM builds
+        if: matrix.name == 'windows-arm'
+        shell: pwsh
+        run: |
+          choco install llvm --no-progress -y
+          'C:\Program Files\LLVM\bin' | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
-      - name: Build Tauri app
-        uses: tauri-apps/tauri-action@v0
-        id: tauri_build
+      - name: Configure compiler for Windows ARM builds
+        if: matrix.name == 'windows-arm'
+        shell: pwsh
+        run: |
+          'CC_aarch64_pc_windows_msvc=clang-cl' | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          'CXX_aarch64_pc_windows_msvc=clang-cl' | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Install frontend dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Print Tauri environment info
+        run: npm run tauri:info
+
+      - name: Build installers and publish release assets
+        uses: tauri-apps/tauri-action@action-v0.6.2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
-          tagName: ${{ env.VERSION }}
-          releaseName: 'Nostria v${{ env.VERSION }}'
-          releaseBody: 'See the assets to download this version and install.'
-          releaseDraft: true
-          prerelease: ${{ github.event.inputs.prerelease }}
-
-      # Upload APK as additional release artifact (only need to do this once, so use ubuntu runner)
-      - name: Upload APK as release asset
-        if: matrix.platform == 'ubuntu-latest'
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.tauri_build.outputs.releaseUploadUrl }}
-          asset_path: packages/nostria.apk
-          asset_name: nostria.apk
-          asset_content_type: application/vnd.android.package-archive
-
-      # - name: Upload artifacts
-      #   uses: actions/upload-artifact@v4
-      #   with:
-      #     name: artifacts-${{ matrix.platform }}
-      #     path: |
-      #       target/release/bundle/
+          tagName: ${{ needs.prepare-release.outputs.release_tag }}
+          releaseName: Nostria v${{ needs.prepare-release.outputs.version }}
+          releaseBody: |
+            Installers for Windows, Linux, and macOS built from the bundled Nostria desktop app.
+          releaseDraft: false
+          prerelease: ${{ needs.prepare-release.outputs.release_prerelease }}
+          includeUpdaterJson: true
+          updaterJsonPreferNsis: true
+          args: ${{ matrix.args }} --config src-tauri/tauri.release.conf.json

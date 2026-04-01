@@ -11,7 +11,7 @@ import { LoginDialogComponent } from '../login-dialog/login-dialog.component';
   template: `
     <app-custom-dialog
       [title]="getDialogTitle()"
-      [headerIcon]="'icons/icon-128x128.png'"
+      [headerIcon]="'/icons/icon-128x128.png'"
       [showBackButton]="loginDialog.currentStep() !== loginDialog.LoginStep.INITIAL"
       [showCloseButton]="loginDialog.currentStep() === loginDialog.LoginStep.INITIAL"
       [disableClose]="true"

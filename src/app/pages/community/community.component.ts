@@ -275,7 +275,11 @@ export class CommunityComponent implements OnInit, OnDestroy {
   }
 
   /** Handle click on post card — open the post in the event detail view */
-  onPostCardClick(post: Event, event: MouseEvent): void {
+  onPostCardClick(post: Event, event: globalThis.Event): void {
+    if (event instanceof KeyboardEvent) {
+      event.preventDefault();
+    }
+
     // Don't navigate if the user clicked on an interactive element
     const target = event.target as HTMLElement;
     if (target.closest('a, button, app-event-actions-toolbar, .post-moderation-row')) {

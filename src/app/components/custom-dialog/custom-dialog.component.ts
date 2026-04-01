@@ -60,12 +60,17 @@ interface ScrollLockStyles {
       class="dialog-backdrop" 
       [class.stacked-backdrop]="isStacked()"
       (click)="onBackdropClick()"
-      role="presentation">
+      (keydown.enter)="onBackdropClick()"
+      (keydown.space)="onBackdropClick()"
+      [attr.role]="disableClose() ? 'presentation' : 'button'"
+      [attr.aria-label]="disableClose() ? null : 'Close dialog'"
+      [attr.tabindex]="disableClose() ? -1 : 0">
       
       <div
         class="dialog-container"
         [ngClass]="panelClass()"
         (click)="$event.stopPropagation()"
+        (keydown)="$event.stopPropagation()"
         role="dialog"
         [attr.aria-labelledby]="getTitle() ? 'dialog-title' : null"
         cdkTrapFocus
@@ -88,7 +93,13 @@ interface ScrollLockStyles {
             }
 
             @if (getHeaderIcon()) {
-              <img [src]="getHeaderIcon()" [alt]="getTitle() || 'Dialog'" class="header-icon" />
+              @if (getHeaderIconMode() === 'image') {
+                <img [src]="getHeaderIcon()" [alt]="getTitle() || 'Dialog'" class="header-icon header-image-icon" />
+              } @else if (getHeaderIconMode() === 'material') {
+                <mat-icon class="header-icon material-header-icon">{{ getHeaderIcon() }}</mat-icon>
+              } @else {
+                <span class="header-icon emoji-header-icon" [attr.aria-label]="getTitle() || 'Dialog'">{{ getHeaderIcon() }}</span>
+              }
             }
 
             @if (getSecondaryHeaderIcon()) {
@@ -266,6 +277,20 @@ export class CustomDialogComponent implements AfterViewInit, OnDestroy {
     return this.headerIcon();
   }
 
+  getHeaderIconMode(): 'image' | 'material' | 'emoji' {
+    const icon = this.getHeaderIcon();
+
+    if (this.isImageIcon(icon)) {
+      return 'image';
+    }
+
+    if (this.isMaterialIcon(icon)) {
+      return 'material';
+    }
+
+    return 'emoji';
+  }
+
   getSecondaryHeaderIcon(): string {
     return this.secondaryHeaderIcon();
   }
@@ -292,6 +317,20 @@ export class CustomDialogComponent implements AfterViewInit, OnDestroy {
 
   getShowCloseButton(): boolean {
     return this.showCloseButton();
+  }
+
+  private isImageIcon(value: string): boolean {
+    if (!value) {
+      return false;
+    }
+
+    return /^(https?:\/\/|\/|\.\/|\.\.\/|data:image\/|blob:)/.test(value)
+      || /[\\/]/.test(value)
+      || /\.(png|jpe?g|gif|webp|svg|avif|ico)(?:[?#].*)?$/i.test(value);
+  }
+
+  private isMaterialIcon(value: string): boolean {
+    return /^[a-z0-9_]+$/i.test(value);
   }
 
   getDisableClose(): boolean {

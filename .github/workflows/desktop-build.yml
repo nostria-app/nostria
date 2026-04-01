@@ -1,0 +1,113 @@
+name: Desktop Build
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  build-desktop:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: linux
+            platform: ubuntu-22.04
+            rust_targets: ""
+            npm_script: npm run tauri:build:linux
+            artifact_path: |
+              src-tauri/target/release/bundle/appimage/*.AppImage
+              src-tauri/target/release/bundle/deb/*.deb
+          - name: windows
+            platform: windows-latest
+            rust_targets: ""
+            npm_script: npm run tauri:build:windows
+            artifact_path: |
+              src-tauri/target/release/bundle/msi/*.msi
+              src-tauri/target/release/bundle/nsis/*.exe
+          - name: windows-arm
+            platform: windows-latest
+            rust_targets: aarch64-pc-windows-msvc
+            npm_script: npm run tauri:build:windows-arm
+            artifact_path: |
+              src-tauri/target/aarch64-pc-windows-msvc/release/bundle/msi/*.msi
+              src-tauri/target/aarch64-pc-windows-msvc/release/bundle/nsis/*.exe
+          - name: macos
+            platform: macos-latest
+            rust_targets: aarch64-apple-darwin,x86_64-apple-darwin
+            npm_script: npm run tauri:build:macos
+            artifact_path: src-tauri/target/universal-apple-darwin/release/bundle/dmg/*.dmg
+
+    runs-on: ${{ matrix.platform }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: "npm"
+
+      - name: Install Rust toolchain
+        if: matrix.rust_targets == ''
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Rust toolchain with extra targets
+        if: matrix.rust_targets != ''
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.rust_targets }}
+
+      - name: Cache Rust dependencies
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+
+      - name: Install Linux dependencies
+        if: matrix.name == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            libappindicator3-dev \
+            libgtk-3-dev \
+            librsvg2-dev \
+            libssl-dev \
+            libwebkit2gtk-4.1-dev \
+            patchelf
+
+      - name: Install LLVM for Windows ARM builds
+        if: matrix.name == 'windows-arm'
+        shell: pwsh
+        run: |
+          choco install llvm --no-progress -y
+          'C:\Program Files\LLVM\bin' | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+      - name: Configure compiler for Windows ARM builds
+        if: matrix.name == 'windows-arm'
+        shell: pwsh
+        run: |
+          'CC_aarch64_pc_windows_msvc=clang-cl' | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          'CXX_aarch64_pc_windows_msvc=clang-cl' | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Install frontend dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Print Tauri environment info
+        run: npm run tauri:info
+
+      - name: Build desktop installers
+        run: ${{ matrix.npm_script }}
+
+      - name: Upload installers
+        uses: actions/upload-artifact@v4
+        with:
+          name: nostria-${{ matrix.name }}-installers
+          path: ${{ matrix.artifact_path }}
+          if-no-files-found: error

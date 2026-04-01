@@ -32,6 +32,54 @@
     font-size: 1.25rem;
   }
 
+  .panel-title-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+    padding: 0.35rem 0.8rem;
+    border: 1px solid var(--mat-sys-outline-variant);
+    border-radius: var(--mat-sys-corner-full);
+    background: var(--mat-sys-surface-container);
+    color: var(--mat-sys-on-surface);
+    cursor: pointer;
+    transition:
+      background-color 0.2s ease,
+      border-color 0.2s ease;
+
+    &:hover {
+      background: var(--mat-sys-surface-container-high);
+      border-color: var(--mat-sys-outline);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--mat-sys-primary);
+      outline-offset: 2px;
+    }
+  }
+
+  .panel-title-text {
+    font-size: 1.25rem;
+    white-space: nowrap;
+  }
+
+  .panel-title-icon,
+  .panel-title-chevron {
+    width: 20px;
+    height: 20px;
+    font-size: 20px;
+    flex-shrink: 0;
+    color: var(--mat-sys-on-surface-variant);
+  }
+
+  .panel-title-icon {
+    color: var(--mat-sys-primary);
+  }
+
+  .panel-title-button-open .panel-title-chevron {
+    transform: rotate(180deg);
+  }
+
   .panel-header-spacer {
     flex: 1;
   }
@@ -206,7 +254,9 @@
 
     &.clickable {
       cursor: pointer;
-      transition: background-color 0.2s, color 0.2s;
+      transition:
+        background-color 0.2s,
+        color 0.2s;
       border-radius: 8px;
       margin: 8px 16px;
       background: var(--mat-sys-surface-container);
@@ -426,31 +476,31 @@
   }
 
   // Type-specific accent colors for the left bar
-  &[data-notification-type="zap"]::before {
+  &[data-notification-type='zap']::before {
     background: linear-gradient(180deg, #f7931a 0%, #ffb347 100%);
   }
 
-  &[data-notification-type="newfollower"]::before {
+  &[data-notification-type='newfollower']::before {
     background: linear-gradient(180deg, #10b981 0%, #34d399 100%);
   }
 
-  &[data-notification-type="followersummary"]::before {
+  &[data-notification-type='followersummary']::before {
     background: linear-gradient(180deg, #10b981 0%, #34d399 100%);
   }
 
-  &[data-notification-type="mention"]::before {
+  &[data-notification-type='mention']::before {
     background: linear-gradient(180deg, #8b5cf6 0%, #a78bfa 100%);
   }
 
-  &[data-notification-type="repost"]::before {
+  &[data-notification-type='repost']::before {
     background: linear-gradient(180deg, #3b82f6 0%, #60a5fa 100%);
   }
 
-  &[data-notification-type="reply"]::before {
+  &[data-notification-type='reply']::before {
     background: linear-gradient(180deg, #0ea5e9 0%, #38bdf8 100%);
   }
 
-  &[data-notification-type="reaction"]::before {
+  &[data-notification-type='reaction']::before {
     background: linear-gradient(180deg, #ec4899 0%, #f472b6 100%);
   }
 
@@ -585,43 +635,43 @@
       }
 
       // Zap notifications - Bitcoin orange/gold
-      &[data-badge-type="zap"] {
+      &[data-badge-type='zap'] {
         background: linear-gradient(135deg, #f7931a 0%, #ffb347 100%);
         box-shadow: 0 2px 4px rgba(247, 147, 26, 0.4);
       }
 
       // New follower - Cheerful green/teal
-      &[data-badge-type="newfollower"] {
+      &[data-badge-type='newfollower'] {
         background: linear-gradient(135deg, #10b981 0%, #34d399 100%);
         box-shadow: 0 2px 4px rgba(16, 185, 129, 0.4);
       }
 
       // Follower summary - Same style as new follower
-      &[data-badge-type="followersummary"] {
+      &[data-badge-type='followersummary'] {
         background: linear-gradient(135deg, #10b981 0%, #34d399 100%);
         box-shadow: 0 2px 4px rgba(16, 185, 129, 0.4);
       }
 
       // Mentions - Purple/violet
-      &[data-badge-type="mention"] {
+      &[data-badge-type='mention'] {
         background: linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%);
         box-shadow: 0 2px 4px rgba(139, 92, 246, 0.4);
       }
 
       // Reposts - Blue
-      &[data-badge-type="repost"] {
+      &[data-badge-type='repost'] {
         background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
         box-shadow: 0 2px 4px rgba(59, 130, 246, 0.4);
       }
 
       // Replies - Sky blue
-      &[data-badge-type="reply"] {
+      &[data-badge-type='reply'] {
         background: linear-gradient(135deg, #0ea5e9 0%, #38bdf8 100%);
         box-shadow: 0 2px 4px rgba(14, 165, 233, 0.4);
       }
 
       // Reactions (likes) - Pink/rose
-      &[data-badge-type="reaction"] {
+      &[data-badge-type='reaction'] {
         background: linear-gradient(135deg, #ec4899 0%, #f472b6 100%);
         box-shadow: 0 2px 4px rgba(236, 72, 153, 0.4);
       }
@@ -706,7 +756,6 @@
       }
 
       @keyframes pulse-glow {
-
         0%,
         100% {
           opacity: 1;
@@ -832,7 +881,6 @@
 
 // Responsive
 @media (max-width: 768px) {
-
   .page-header {
     flex-direction: row;
     align-items: center;
@@ -852,7 +900,6 @@
 }
 
 @media (max-width: 600px) {
-
   // Show the menu mark-read button on small screens
   ::ng-deep .menu-mark-read-btn {
     display: flex !important;
@@ -866,7 +913,9 @@
 
   // Adjust viewport for mobile - use flex sizing, add extra bottom padding
   .notification-viewport {
-    --notification-viewport-bottom-padding: calc(100px + env(safe-area-inset-bottom, 0px)); // Space for mobile navigation menu
+    --notification-viewport-bottom-padding: calc(
+      100px + env(safe-area-inset-bottom, 0px)
+    ); // Space for mobile navigation menu
   }
 
   .notification-list {
@@ -1046,7 +1095,6 @@
 // Dark mode adjustments
 :host-context(.dark) {
   .notification-item {
-
     // Unread notifications in dark mode - brighter surface with emphasis
     &:not(.read) {
       background: var(--mat-sys-surface-container-high);
@@ -1061,39 +1109,38 @@
   }
 
   .notification-type-badge {
-
     // Adjust gradients for better contrast in dark mode
-    &[data-badge-type="zap"] {
+    &[data-badge-type='zap'] {
       background: linear-gradient(135deg, #f7931a 0%, #d97706 100%);
       box-shadow: 0 2px 8px rgba(247, 147, 26, 0.5);
     }
 
-    &[data-badge-type="newfollower"] {
+    &[data-badge-type='newfollower'] {
       background: linear-gradient(135deg, #059669 0%, #10b981 100%);
       box-shadow: 0 2px 8px rgba(16, 185, 129, 0.5);
     }
 
-    &[data-badge-type="followersummary"] {
+    &[data-badge-type='followersummary'] {
       background: linear-gradient(135deg, #059669 0%, #10b981 100%);
       box-shadow: 0 2px 8px rgba(16, 185, 129, 0.5);
     }
 
-    &[data-badge-type="mention"] {
+    &[data-badge-type='mention'] {
       background: linear-gradient(135deg, #7c3aed 0%, #8b5cf6 100%);
       box-shadow: 0 2px 8px rgba(124, 58, 237, 0.5);
     }
 
-    &[data-badge-type="repost"] {
+    &[data-badge-type='repost'] {
       background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
       box-shadow: 0 2px 8px rgba(37, 99, 235, 0.5);
     }
 
-    &[data-badge-type="reply"] {
+    &[data-badge-type='reply'] {
       background: linear-gradient(135deg, #0284c7 0%, #0ea5e9 100%);
       box-shadow: 0 2px 8px rgba(2, 132, 199, 0.5);
     }
 
-    &[data-badge-type="reaction"] {
+    &[data-badge-type='reaction'] {
       background: linear-gradient(135deg, #db2777 0%, #ec4899 100%);
       box-shadow: 0 2px 8px rgba(219, 39, 119, 0.5);
     }

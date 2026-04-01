@@ -1,11 +1,10 @@
+import { DatePipe } from '@angular/common';
 import { Component, effect, inject, signal, OnInit, OnDestroy } from '@angular/core';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
 import { ApplicationService } from '../../../services/application.service';
 import { MetaService } from '../../../services/meta.service';
-import { HttpClient } from '@angular/common/http';
-import { firstValueFrom } from 'rxjs';
 import { Router } from '@angular/router';
 import { LayoutService } from '../../../services/layout.service';
 import { LoggerService } from '../../../services/logger.service';
@@ -15,6 +14,7 @@ import { RightPanelService } from '../../../services/right-panel.service';
 import { CelebrationBurstComponent } from '../../../components/celebration-burst/celebration-burst.component';
 import { ZapSoundService, ZapTier } from '../../../services/zap-sound.service';
 import { HapticsService } from '../../../services/haptics.service';
+import { DesktopUpdaterService } from '../../../services/desktop-updater.service';
 
 interface WebManifest {
   version?: string;
@@ -28,7 +28,7 @@ interface WebManifest {
 
 @Component({
   selector: 'app-about',
-  imports: [MatCardModule, MatListModule, MatIconModule, MatButtonModule, MatTooltipModule, CelebrationBurstComponent],
+  imports: [DatePipe, MatCardModule, MatListModule, MatIconModule, MatButtonModule, MatTooltipModule, CelebrationBurstComponent],
   templateUrl: './about.component.html',
   styleUrl: './about.component.scss',
   host: { class: 'panel-with-sticky-header' },
@@ -36,13 +36,13 @@ interface WebManifest {
 export class AboutComponent implements OnInit, OnDestroy {
   private readonly app = inject(ApplicationService);
   private readonly meta = inject(MetaService);
-  private readonly http = inject(HttpClient);
   private readonly router = inject(Router);
   private readonly layout = inject(LayoutService);
   private readonly logger = inject(LoggerService);
   private readonly rightPanel = inject(RightPanelService);
   private readonly zapSound = inject(ZapSoundService);
   private readonly haptics = inject(HapticsService);
+  readonly desktopUpdater = inject(DesktopUpdaterService);
   version = signal('Loading...');
   videoFailed = signal(false);
   commitSha = signal<string | undefined>(undefined);
@@ -109,10 +109,10 @@ export class AboutComponent implements OnInit, OnDestroy {
 
     // Representative amounts for each tier
     const tiers: { tier: ZapTier; amount: number; delay: number; duration: number }[] = [
-      { tier: 1, amount: 21,    delay: 0,    duration: 800 },
-      { tier: 2, amount: 210,   delay: 1200, duration: 1200 },
-      { tier: 3, amount: 500,   delay: 2800, duration: 1400 },
-      { tier: 4, amount: 5000,  delay: 4600, duration: 1600 },
+      { tier: 1, amount: 21, delay: 0, duration: 800 },
+      { tier: 2, amount: 210, delay: 1200, duration: 1200 },
+      { tier: 3, amount: 500, delay: 2800, duration: 1400 },
+      { tier: 4, amount: 5000, delay: 4600, duration: 1600 },
       { tier: 5, amount: 21000, delay: 6600, duration: 2200 },
     ];
 
@@ -153,6 +153,10 @@ export class AboutComponent implements OnInit, OnDestroy {
     this.rightPanel.goBack();
   }
 
+  checkForUpdates(): void {
+    void this.desktopUpdater.checkForUpdates({ interactive: true, source: 'manual' });
+  }
+
   private async fetchManifestVersion(): Promise<void> {
     // Skip fetch on server side
     if (!this.app.isBrowser()) {
@@ -161,9 +165,11 @@ export class AboutComponent implements OnInit, OnDestroy {
     }
 
     try {
-      const manifestData = await firstValueFrom(
-        this.http.get<WebManifest>('/manifest.webmanifest')
-      );
+      const response = await fetch('/manifest.webmanifest');
+      if (!response.ok) {
+        throw new Error(`Failed to load manifest.webmanifest: ${response.status}`);
+      }
+      const manifestData = await response.json() as WebManifest;
 
       // Check if version exists in the manifest, otherwise fallback
       if (manifestData.version) {

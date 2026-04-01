@@ -37,7 +37,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
   template: `
     <app-custom-dialog
       [title]="getCurrentTitle()"
-      [headerIcon]="'icons/icon-128x128.png'"
+      [headerIcon]="'/icons/icon-128x128.png'"
       [showBackButton]="shouldShowBackButton()"
       [showCloseButton]="shouldShowCloseButton()"
       [disableClose]="false"

@@ -928,6 +928,28 @@
     height: 100%;
     position: relative;
 
+    .media-placeholder {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 100%;
+      background:
+        radial-gradient(circle at top, rgb(255 255 255 / 0.08), transparent 55%),
+        linear-gradient(180deg, var(--mat-sys-surface-container-high), var(--mat-sys-surface-container));
+      color: var(--mat-sys-on-surface-variant);
+
+      &.video {
+        color: var(--mat-sys-primary);
+      }
+
+      mat-icon {
+        font-size: 40px;
+        width: 40px;
+        height: 40px;
+      }
+    }
+
     img {
       width: 100%;
       height: 100%;
@@ -1000,6 +1022,10 @@
       position: absolute;
       bottom: 0.5rem;
       right: 0.5rem;
+      padding: 0;
+      border: none;
+      background: none;
+      font: inherit;
       font-size: 0.75rem;
       color: white;
       text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
@@ -1069,6 +1095,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
+  background: none;
   text-decoration: none;
   cursor: pointer;
   transition: transform 0.2s ease;

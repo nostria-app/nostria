@@ -4,7 +4,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { CustomDialogRef } from '../../services/custom-dialog.service';
-import { MediaUploadSettings, getCompressionStrengthLabel } from '../../interfaces/media-upload';
+import { MediaUploadSettings, getMediaOptimizationLabel } from '../../interfaces/media-upload';
 import { CompressionPreviewResult, MediaProcessingService } from '../../services/media-processing.service';
 
 export interface CompressionPreviewDialogData {
@@ -40,7 +40,12 @@ export class CompressionPreviewDialogComponent implements OnInit, OnDestroy {
 
   readonly isImage = computed(() => this.data?.file.type.startsWith('image/') ?? false);
   readonly isVideo = computed(() => this.data?.file.type.startsWith('video/') ?? false);
-  readonly compressionStrengthLabel = computed(() => getCompressionStrengthLabel(this.data?.uploadSettings.compressionStrength ?? 0));
+  readonly optimizationLabel = computed(() =>
+    getMediaOptimizationLabel(
+      this.data?.uploadSettings.mode ?? 'local',
+      this.data?.uploadSettings.compressionStrength ?? 0,
+    )
+  );
   readonly summaryLabel = computed(() => {
     const result = this.previewResult();
     if (!result?.compressedFile) {
@@ -65,7 +70,7 @@ export class CompressionPreviewDialogComponent implements OnInit, OnDestroy {
 
   async ngOnInit(): Promise<void> {
     if (!this.data?.file) {
-      this.errorMessage.set('No file was provided for the compression preview.');
+      this.errorMessage.set('No file was provided for the optimization preview.');
       this.isLoading.set(false);
       return;
     }
@@ -91,7 +96,7 @@ export class CompressionPreviewDialogComponent implements OnInit, OnDestroy {
         this.errorMessage.set(result.warningMessage);
       }
     } catch (error) {
-      this.errorMessage.set(error instanceof Error ? error.message : 'Could not generate the compression preview.');
+      this.errorMessage.set(error instanceof Error ? error.message : 'Could not generate the optimization preview.');
     } finally {
       this.isLoading.set(false);
     }
@@ -129,7 +134,7 @@ export class CompressionPreviewDialogComponent implements OnInit, OnDestroy {
       ...(compressedUrl ? [{
         url: compressedUrl,
         type: 'image',
-        title: 'Compressed',
+        title: 'Optimized',
       }] : []),
     ];
 

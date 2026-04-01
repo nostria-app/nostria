@@ -1,0 +1,214 @@
+<div dialog-content class="live-stream-dialog-content">
+  <mat-card class="intro-card">
+    <mat-card-content class="intro-content">
+      <div class="intro-copy">
+        <p class="intro-title" i18n="@@streams.dialog.introTitle">
+          Publish your live stream from Nostria
+        </p>
+        <p i18n="@@streams.dialog.introDescription">
+          You can push camera and microphone directly to OpenResist from the browser, verify the feed privately, and
+          then publish the Nostr live stream event when ready.
+        </p>
+        <p class="supporting-text" i18n="@@streams.dialog.introDetails">
+          If your provider only gives you a public watch page, Nostria can still publish the live stream event and link
+          viewers there. Add a direct HLS or LiveKit playback URL only when you want inline playback inside Nostria.
+        </p>
+      </div>
+
+      <div class="provider-actions">
+        <button mat-stroked-button type="button" (click)="openProvider()">
+          <mat-icon>open_in_new</mat-icon>
+          <span>Open {{ currentProvider().name }}</span>
+        </button>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  @if (!isAuthenticated()) {
+  <mat-card class="warning-card">
+    <mat-card-content class="warning-content">
+      <mat-icon>info</mat-icon>
+      <span i18n="@@streams.dialog.signInRequired">
+        Sign in to publish live streams from Nostria.
+      </span>
+    </mat-card-content>
+  </mat-card>
+  }
+
+  @if (supportsDirectBroadcast()) {
+  <mat-card class="broadcast-card">
+    <mat-card-content class="broadcast-content">
+      <div class="broadcast-copy">
+        <div>
+          <p class="section-title" i18n="@@streams.dialog.broadcastTitle">Direct camera broadcast</p>
+          <p class="supporting-text" i18n="@@streams.dialog.broadcastDescription">
+            Start a private WHIP broadcast first. Nothing is published to Nostr until you click the announce button.
+          </p>
+        </div>
+
+        <div class="status-badge" [class.live]="broadcast.isLive()" [class.error]="broadcast.state() === 'error'">
+          {{ directBroadcastStatusLabel() }}
+        </div>
+      </div>
+
+      <div class="broadcast-grid">
+        <div class="camera-shell">
+          @if (broadcast.previewStream()) {
+          <video #cameraPreview autoplay muted class="camera-preview"></video>
+          } @else {
+          <div class="camera-placeholder">
+            <mat-icon>videocam</mat-icon>
+            <span i18n="@@streams.dialog.previewPlaceholder">Prepare the camera to preview your stream here.</span>
+          </div>
+          }
+
+          @if (broadcast.isBusy()) {
+          <div class="camera-overlay">
+            <mat-spinner diameter="36"></mat-spinner>
+          </div>
+          }
+        </div>
+
+        <div class="broadcast-controls">
+          <p class="control-copy" i18n="@@streams.dialog.privateModeHint">
+            Private mode is useful for checking framing, permissions, and the provider watch page before you announce.
+          </p>
+
+          <div class="toggle-row">
+            <mat-slide-toggle [ngModel]="withMicrophone()" (ngModelChange)="onMicrophoneChange($event)">
+              <span i18n="@@streams.dialog.includeMic">Include microphone</span>
+            </mat-slide-toggle>
+
+            <button mat-icon-button type="button" (click)="toggleCameraFacingMode()"
+              [disabled]="broadcast.isBusy() || broadcast.isLive()" matTooltip="Switch camera">
+              <mat-icon>flip_camera_ios</mat-icon>
+            </button>
+          </div>
+
+          <div class="broadcast-actions-row">
+            <button mat-stroked-button type="button" (click)="preparePreview()" [disabled]="!canPreparePreview()">
+              <mat-icon>photo_camera</mat-icon>
+              <span i18n="@@streams.dialog.preparePreview">Prepare camera</span>
+            </button>
+
+            <button mat-flat-button type="button" (click)="togglePrivateBroadcast()"
+              [disabled]="!canTogglePrivateBroadcast()">
+              <mat-icon>{{ broadcast.isLive() ? 'stop_circle' : 'radio_button_checked' }}</mat-icon>
+              <span>{{ privateBroadcastButtonLabel() }}</span>
+            </button>
+          </div>
+
+          @if (broadcast.errorMessage()) {
+          <div class="inline-message error-message">
+            <mat-icon>error</mat-icon>
+            <span>{{ broadcast.errorMessage() }}</span>
+          </div>
+          }
+
+          <div class="inline-message info-message">
+            <mat-icon>link</mat-icon>
+            <span i18n="@@streams.dialog.watchPageHint">
+              The provider watch page is used as the public link when no inline playback URL is available.
+            </span>
+          </div>
+        </div>
+      </div>
+    </mat-card-content>
+  </mat-card>
+  }
+
+  <div class="form-grid">
+    <mat-form-field appearance="outline">
+      <mat-label i18n="@@streams.dialog.providerLabel">Streaming provider</mat-label>
+      <mat-select [ngModel]="selectedProviderId()" (ngModelChange)="onProviderChange($event)">
+        @for (provider of providers; track provider.id) {
+        <mat-option [value]="provider.id">{{ provider.name }}</mat-option>
+        }
+      </mat-select>
+      <mat-hint>{{ currentProvider().description }}</mat-hint>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label i18n="@@streams.dialog.statusLabel">Status</mat-label>
+      <mat-select [ngModel]="status()" (ngModelChange)="onStatusChange($event)">
+        <mat-option value="planned" i18n="@@streams.dialog.statusPlanned">Scheduled</mat-option>
+        <mat-option value="live" i18n="@@streams.dialog.statusLive">Live now</mat-option>
+        <mat-option value="ended" i18n="@@streams.dialog.statusEnded">Ended</mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label i18n="@@streams.dialog.titleLabel">Title</mat-label>
+      <input matInput maxlength="120" [ngModel]="title()" (ngModelChange)="onTitleChange($event)"
+        i18n-placeholder="@@streams.dialog.titlePlaceholder" placeholder="Friday night stream">
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label i18n="@@streams.dialog.summaryLabel">Summary</mat-label>
+      <textarea matInput rows="3" [ngModel]="summary()" (ngModelChange)="summary.set($event)"
+        i18n-placeholder="@@streams.dialog.summaryPlaceholder"
+        placeholder="What you're streaming, who is joining, and where people can watch."></textarea>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label i18n="@@streams.dialog.identifierLabel">Stream identifier</mat-label>
+      <input matInput [ngModel]="streamIdentifier()" (ngModelChange)="onIdentifierChange($event)"
+        i18n-placeholder="@@streams.dialog.identifierPlaceholder" placeholder="friday-night-stream">
+      <mat-hint i18n="@@streams.dialog.identifierHint">
+        Reuse this identifier later if you want to update the same live stream post.
+      </mat-hint>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label i18n="@@streams.dialog.startsLabel">Starts at</mat-label>
+      <input matInput type="datetime-local" title="Starts at" [ngModel]="startsAt()"
+        (ngModelChange)="startsAt.set($event)">
+    </mat-form-field>
+
+    @if (status() === 'ended') {
+    <mat-form-field appearance="outline">
+      <mat-label i18n="@@streams.dialog.endsLabel">Ended at</mat-label>
+      <input matInput type="datetime-local" title="Ended at" [ngModel]="endsAt()" (ngModelChange)="endsAt.set($event)">
+    </mat-form-field>
+    }
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label i18n="@@streams.dialog.playbackLabel">Playback URL</mat-label>
+      <input matInput [ngModel]="streamingUrl()" (ngModelChange)="streamingUrl.set($event)"
+        i18n-placeholder="@@streams.dialog.playbackPlaceholder" placeholder="https://example.com/live/index.m3u8">
+      <mat-hint i18n="@@streams.dialog.playbackHint">
+        Optional. Add an HLS (.m3u8) or LiveKit playback URL when you want inline playback in Nostria.
+      </mat-hint>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label i18n="@@streams.dialog.platformLabel">Platform page URL</mat-label>
+      <input matInput [ngModel]="platformUrl()" (ngModelChange)="platformUrl.set($event)"
+        i18n-placeholder="@@streams.dialog.platformPlaceholder" placeholder="https://stream.openresist.com/">
+      <mat-hint>{{ currentProvider().helpText }}</mat-hint>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label i18n="@@streams.dialog.thumbnailLabel">Thumbnail image URL</mat-label>
+      <input matInput [ngModel]="imageUrl()" (ngModelChange)="imageUrl.set($event)"
+        i18n-placeholder="@@streams.dialog.thumbnailPlaceholder" placeholder="https://example.com/thumbnail.jpg">
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label i18n="@@streams.dialog.hashtagsLabel">Hashtags</mat-label>
+      <input matInput [ngModel]="hashtagsInput()" (ngModelChange)="hashtagsInput.set($event)"
+        i18n-placeholder="@@streams.dialog.hashtagsPlaceholder" placeholder="nostr, gaming, live">
+      <mat-hint i18n="@@streams.dialog.hashtagsHint">
+        Separate tags with commas or spaces.
+      </mat-hint>
+    </mat-form-field>
+  </div>
+</div>
+
+<div dialog-actions class="dialog-actions">
+  <button mat-button type="button" (click)="close()" i18n="@@common.close">Close</button>
+  <button mat-flat-button type="button" (click)="publishStream()" [disabled]="!canPublish()">
+    <mat-icon>live_tv</mat-icon>
+    <span>{{ publishButtonLabel() }}</span>
+  </button>
+</div>

@@ -1,6 +1,5 @@
-import { Component, inject, signal, computed, OnDestroy, OnInit, effect, viewChild, ElementRef } from '@angular/core';
+import { Component, inject, signal, computed, OnDestroy, effect, viewChild, ElementRef } from '@angular/core';
 
-import { MatDialog } from '@angular/material/dialog';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -22,9 +21,9 @@ import { ApplicationService } from '../../services/application.service';
 import { DatabaseService } from '../../services/database.service';
 import { TwoColumnLayoutService } from '../../services/two-column-layout.service';
 import { AccountLocalStateService } from '../../services/account-local-state.service';
-import { FollowSetsService, FollowSet } from '../../services/follow-sets.service';
+import { LayoutService } from '../../services/layout.service';
+import { FollowSetsService } from '../../services/follow-sets.service';
 import { LiveEventComponent } from '../../components/event-types/live-event.component';
-import { StreamingAppsDialogComponent } from './streaming-apps-dialog/streaming-apps-dialog.component';
 import { StreamsSettingsDialogComponent } from './streams-settings-dialog/streams-settings-dialog.component';
 import { ListFilterMenuComponent, ListFilterValue } from '../../components/list-filter-menu/list-filter-menu.component';
 import { LoggerService } from '../../services/logger.service';
@@ -48,18 +47,18 @@ import { LoggerService } from '../../services/logger.service';
   templateUrl: './streams.component.html',
   styleUrl: './streams.component.scss',
 })
-export class StreamsComponent implements OnInit, OnDestroy {
+export class StreamsComponent implements OnDestroy {
   private pool = inject(RelayPoolService);
   private relaysService = inject(RelaysService);
   private accountRelay = inject(AccountRelayService);
   private utilities = inject(UtilitiesService);
   private reporting = inject(ReportingService);
-  private dialog = inject(MatDialog);
   private accountState = inject(AccountStateService);
   private app = inject(ApplicationService);
   private database = inject(DatabaseService);
   private twoColumnLayout = inject(TwoColumnLayoutService);
   private accountLocalState = inject(AccountLocalStateService);
+  private layout = inject(LayoutService);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   followSetsService = inject(FollowSetsService);
@@ -223,10 +222,6 @@ export class StreamsComponent implements OnInit, OnDestroy {
     this.initializeStreams();
   }
 
-  ngOnInit(): void {
-    // Component initialization
-  }
-
   /**
    * Initialize streams by first loading relay set, then starting subscriptions
    */
@@ -309,10 +304,7 @@ export class StreamsComponent implements OnInit, OnDestroy {
   }
 
   openStreamingAppsDialog(): void {
-    this.dialog.open(StreamingAppsDialogComponent, {
-      // width: '600px',
-      // maxWidth: '95vw'
-    });
+    void this.layout.openLiveStreamDialog();
   }
 
   private startLiveSubscription(): void {

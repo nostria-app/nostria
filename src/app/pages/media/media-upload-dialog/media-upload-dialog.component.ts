@@ -1,29 +1,26 @@
 import { Component, computed, inject, OnDestroy, signal } from '@angular/core';
 
 import { MatButtonModule } from '@angular/material/button';
+import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
-import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatSelectModule } from '@angular/material/select';
-import { MatSliderModule } from '@angular/material/slider';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MediaService } from '../../../services/media.service';
 import { LoggerService } from '../../../services/logger.service';
 import { CustomDialogService } from '../../../services/custom-dialog.service';
 import {
-  DEFAULT_MEDIA_COMPRESSION_STRENGTH,
   DEFAULT_MEDIA_UPLOAD_SETTINGS,
-  getCompressionStrengthDescription,
-  getCompressionStrengthLabel,
-  getMediaUploadModeDescription,
-  MEDIA_UPLOAD_MODE_OPTIONS,
+  getMediaOptimizationDescription,
+  getMediaOptimizationOption,
+  getMediaUploadSettingsForOptimization,
+  MEDIA_OPTIMIZATION_OPTIONS,
+  type MediaOptimizationOptionValue,
   MediaUploadDialogResult,
   MediaUploadMode,
-  normalizeCompressionStrength,
   shouldUploadOriginal,
 } from '../../../interfaces/media-upload';
 
@@ -39,15 +36,13 @@ interface SelectedFileEntry {
   selector: 'app-media-upload-dialog',
   imports: [
     MatButtonModule,
+    MatButtonToggleModule,
     MatDialogModule,
-    MatFormFieldModule,
     MatIconModule,
     MatInputModule,
     MatProgressBarModule,
     MatCheckboxModule,
     MatProgressSpinnerModule,
-    MatSelectModule,
-    MatSliderModule,
     MatTooltipModule,
   ],
   templateUrl: './media-upload-dialog.component.html',
@@ -64,15 +59,14 @@ export class MediaUploadDialogComponent implements OnDestroy {
   hasImageOrVideo = computed(() => this.selectedFiles().some(f => f.isImage || f.isVideo));
   isDragging = signal<boolean>(false);
   isUploading = signal<boolean>(false);
-  readonly uploadModeOptions = MEDIA_UPLOAD_MODE_OPTIONS;
-  readonly defaultCompressionStrength = DEFAULT_MEDIA_COMPRESSION_STRENGTH;
+  readonly optimizationOptions = MEDIA_OPTIMIZATION_OPTIONS;
   uploadMode = signal<MediaUploadMode>(DEFAULT_MEDIA_UPLOAD_SETTINGS.mode);
   compressionStrength = signal<number>(DEFAULT_MEDIA_UPLOAD_SETTINGS.compressionStrength);
   usesLocalCompression = computed(() => this.uploadMode() === 'local');
-  selectedUploadModeDescription = computed(() => getMediaUploadModeDescription(this.uploadMode()));
-  compressionStrengthLabel = computed(() => getCompressionStrengthLabel(this.compressionStrength()));
-  compressionStrengthDescription = computed(() => getCompressionStrengthDescription(this.compressionStrength()));
-  isDefaultCompressionStrength = computed(() => this.compressionStrength() === this.defaultCompressionStrength);
+  selectedOptimization = computed(() => getMediaOptimizationOption(this.uploadMode(), this.compressionStrength()));
+  selectedOptimizationDescription = computed(() =>
+    getMediaOptimizationDescription(this.uploadMode(), this.compressionStrength())
+  );
 
   // Add signals for servers
   availableServers = signal<string[]>([]);
@@ -104,6 +98,10 @@ export class MediaUploadDialogComponent implements OnDestroy {
 
   resetCompressionStrength(): void {
     this.compressionStrength.set(this.defaultCompressionStrength);
+  onOptimizationChange(optimization: MediaOptimizationOptionValue): void {
+    const settings = getMediaUploadSettingsForOptimization(optimization);
+    this.uploadMode.set(settings.mode);
+    this.compressionStrength.set(settings.compressionStrength);
   }
 
   onFileSelected(event: Event): void {
@@ -160,7 +158,7 @@ export class MediaUploadDialogComponent implements OnDestroy {
     );
 
     this.customDialog.open<typeof CompressionPreviewDialogComponent.prototype, void>(CompressionPreviewDialogComponent, {
-      title: 'Compression Preview',
+      title: 'Optimization Preview',
       width: '980px',
       maxWidth: '96vw',
       showCloseButton: true,

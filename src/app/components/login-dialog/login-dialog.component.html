@@ -264,14 +264,13 @@
       <div class="region-selector">
         <span class="region-label">Select signing relay:</span>
         <div class="region-buttons">
-          <button mat-stroked-button [class.selected]="nostrConnectRelayOption() === 'nip46'"
-            (click)="setNostrConnectRelayOption('nip46')">
-            relay.nip46.com
+          @for (option of nostrConnectRelayOptions; track option.id) {
+          <button mat-stroked-button class="region-button" [class.selected]="nostrConnectRelayOption() === option.id"
+            (click)="setNostrConnectRelayOption(option.id)">
+            <span class="region-button-title">{{ option.label }}</span>
+            <span class="region-button-host">{{ option.host }}</span>
           </button>
-          <button mat-stroked-button [class.selected]="nostrConnectRelayOption() === 'openresist'"
-            (click)="setNostrConnectRelayOption('openresist')">
-            relay.openresist.com
-          </button>
+          }
         </div>
       </div>
 
@@ -285,7 +284,8 @@
         }
       </div>
 
-      <button mat-stroked-button class="copy-qr-button" (click)="copyNostrConnectUrl()" [disabled]="!nostrConnectQrUrl()">
+      <button mat-stroked-button class="copy-qr-button" (click)="copyNostrConnectUrl()"
+        [disabled]="!nostrConnectQrUrl()">
         <mat-icon>content_copy</mat-icon>
         Copy connection string
       </button>

@@ -749,9 +749,13 @@ export class LayoutService implements OnDestroy {
     const scrollHeight = this.contentWrapper.scrollHeight;
     const clientHeight = this.contentWrapper.clientHeight;
     const threshold = 5;
-
-    const calculatedAtTop = scrollTop <= threshold;
-    const calculatedAtBottom = scrollTop + clientHeight >= scrollHeight - threshold;
+    this.logger.debug('Scroll debug state', {
+      scrollTop,
+      scrollHeight,
+      clientHeight,
+      atTop: scrollTop <= threshold,
+      atBottom: scrollTop + clientHeight >= scrollHeight - threshold,
+    });
   }
 
   /**
@@ -2085,8 +2089,21 @@ export class LayoutService implements OnDestroy {
 
   /** Open the streaming apps dialog to start a live stream */
   async openLiveStreamDialog(): Promise<void> {
+    if (!this.accountStateService.pubkey()) {
+      this.snackBar.open($localize`:@@streams.dialog.signInToStart:Sign in to start a live stream.`, '', {
+        duration: 3000,
+      });
+      return;
+    }
+
     const { StreamingAppsDialogComponent } = await import('../pages/streams/streaming-apps-dialog/streaming-apps-dialog.component');
-    this.dialog.open(StreamingAppsDialogComponent);
+    this.customDialog.open(StreamingAppsDialogComponent, {
+      title: 'Start Live Stream',
+      headerIcon: 'live_tv',
+      width: '860px',
+      maxWidth: '96vw',
+      showCloseButton: true,
+    });
   }
 
   private nostrService = inject(NostrService);

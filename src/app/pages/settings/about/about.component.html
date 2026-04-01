@@ -34,21 +34,34 @@
               rel="noopener noreferrer">{{ commitShort() }}</a>
           </p>
           }
+          @if (desktopUpdater.isDesktop()) {
+          <div class="desktop-update-panel">
+            <button mat-flat-button type="button" (click)="checkForUpdates()" [disabled]="desktopUpdater.checking()"
+              i18n="@@settings.about.checkUpdates">
+              Check for updates
+            </button>
+            @if (desktopUpdater.hasUpdate()) {
+            <p class="build-info">
+              <span i18n="@@settings.about.updateAvailable">Update available:</span>
+              {{ desktopUpdater.availableUpdate()?.version }}
+            </p>
+            } @else if (desktopUpdater.lastCheckedAt()) {
+            <p class="build-info">
+              <span i18n="@@settings.about.lastChecked">Last checked:</span>
+              {{ desktopUpdater.lastCheckedAt()! | date: 'medium' }}
+            </p>
+            }
+          </div>
+          }
         </div>
-        <app-celebration-burst class="logo-container"
-             theme="zap"
-             mode="logo"
-             [tier]="demoTier()"
-             (click)="playZapDemo()">
-           @if (!videoFailed()) {
-           <video src="icons/nostria.mp4"
-                 class="logo celebration-target"
-                 autoplay loop muted playsinline poster="icons/icon-512x512.png"
-             (error)="videoFailed.set(true)"></video>
-           } @else {
-           <img src="icons/icon-512x512.png" alt="Nostria Logo"
-                class="logo celebration-target">
-           }
+        <app-celebration-burst class="logo-container" theme="zap" mode="logo" [tier]="demoTier()"
+          (click)="playZapDemo()">
+          @if (!videoFailed()) {
+          <video src="icons/nostria.mp4" class="logo celebration-target" autoplay loop muted playsinline
+            poster="icons/icon-512x512.png" (error)="videoFailed.set(true)"></video>
+          } @else {
+          <img src="icons/icon-512x512.png" alt="Nostria Logo" class="logo celebration-target">
+          }
         </app-celebration-burst>
       </div>
 

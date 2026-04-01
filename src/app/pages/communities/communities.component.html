@@ -13,24 +13,87 @@
 </div>
 
 <div class="communities-container">
+  <div class="communities-discovery-bar">
+    <mat-form-field appearance="outline" subscriptSizing="dynamic" class="community-search-field">
+      <mat-label>Search communities</mat-label>
+      <mat-icon matPrefix>search</mat-icon>
+      <input
+        matInput
+        type="text"
+        placeholder="Search by name, description, or rules"
+        [value]="searchQuery()"
+        (input)="onSearchInput($event)" />
+      @if (hasSearchQuery()) {
+      <button mat-icon-button matSuffix type="button" (click)="clearSearch()" aria-label="Clear community search">
+        <mat-icon>close</mat-icon>
+      </button>
+      }
+    </mat-form-field>
+
+    <div class="communities-discovery-actions">
+      @if (isAuthenticated()) {
+      <app-list-filter-menu
+        storageKey="communities"
+        [showPublicOption]="true"
+        defaultFilter="all"
+        [initialFilter]="urlListFilter()"
+        (filterChanged)="onListFilterChanged($event)" />
+      }
+      <app-filter-button [active]="hasActiveCommunityFilters()" tooltip="Sort and filter communities">
+        <app-communities-filter-panel
+          [filters]="communityFilters()"
+          [sortOption]="sortOption()"
+          (filtersChanged)="onCommunityFiltersChanged($event)"
+          (sortOptionChanged)="onSortOptionChanged($event)"
+          (resetRequested)="resetCommunityFilters()" />
+      </app-filter-button>
+    </div>
+  </div>
+
+  <div class="communities-summary">
+    @if (showingFilteredResults()) {
+    <span>Showing {{ sortedCommunities().length }} of {{ allCommunities().length }} communities</span>
+    } @else {
+    <span>{{ allCommunities().length }} communities</span>
+    }
+  </div>
+
   <div class="communities-content">
     @if (loading()) {
     <div class="loading-container">
       <mat-spinner diameter="50"></mat-spinner>
       <p>Loading communities...</p>
     </div>
-    } @else if (!hasCommunities()) {
+    } @else if (!hasVisibleCommunities()) {
     <div class="empty-state">
       <mat-icon>diversity_3</mat-icon>
-      <h2>No communities found</h2>
+      <h2>{{ hasAnyCommunities() ? 'No matching communities' : 'No communities found' }}</h2>
       <p>
+        @if (hasAnyCommunities()) {
+        Try another search term, a different people list, or relax the selected filters to discover more communities.
+        } @else {
         Communities are moderated spaces where people can discuss topics together.
         Be the first to create one, or check back later as new communities appear.
+        }
       </p>
-      <button mat-flat-button (click)="refresh()">
+      <div class="empty-state-actions">
+        @if (hasSearchQuery()) {
+        <button mat-stroked-button (click)="clearSearch()">
+          <mat-icon>close</mat-icon>
+          <span>Clear Search</span>
+        </button>
+        }
+        @if (hasActiveCommunityFilters()) {
+        <button mat-stroked-button (click)="resetCommunityFilters()">
+          <mat-icon>tune</mat-icon>
+          <span>Reset Filters</span>
+        </button>
+        }
+        <button mat-flat-button (click)="refresh()">
         <mat-icon>refresh</mat-icon>
         <span>Refresh</span>
       </button>
+      </div>
     </div>
     } @else {
     <div class="communities-grid">
@@ -46,16 +109,30 @@
             </div>
             }
           </div>
+          } @else {
+          <div class="community-image-container community-image-placeholder">
+            <mat-icon>diversity_3</mat-icon>
+            @if (community.avatar) {
+            <div class="community-avatar-overlay">
+              <img [src]="community.avatar" [alt]="community.name" class="community-avatar" loading="lazy" />
+            </div>
+            }
+          </div>
           }
           <mat-card-content>
             <h3 class="community-name">n/{{ community.name }}</h3>
             @if (community.description) {
             <p class="community-description">{{ community.description }}</p>
             }
-            <div class="community-meta">
-              <div class="community-creator">
-                <app-user-profile [pubkey]="community.creatorPubkey" view="compact" [showRank]="false"></app-user-profile>
-              </div>
+            <div class="community-tags">
+              @if (community.rules) {
+              <mat-chip-set class="community-chips">
+                <mat-chip>
+                  <mat-icon matChipAvatar>gavel</mat-icon>
+                  Rules
+                </mat-chip>
+              </mat-chip-set>
+              }
               @if (community.moderators.length > 0) {
               <mat-chip-set class="community-chips">
                 <mat-chip>
@@ -72,6 +149,12 @@
                 </mat-chip>
               </mat-chip-set>
               }
+            </div>
+            <div class="community-meta">
+              <div class="community-creator">
+                <app-user-profile [pubkey]="community.creatorPubkey" view="compact" [showRank]="false"></app-user-profile>
+              </div>
+              <span class="community-created-at">Created {{ community.event.created_at * 1000 | date:'mediumDate':'UTC' }}</span>
             </div>
           </mat-card-content>
         </mat-card>

@@ -129,6 +129,11 @@ const COLUMN_TYPES = {
     icon: 'music_note',
     kinds: [32100, 36787, 34139], // Kind 32100 (Music), Kind 36787 (Music Tracks), Kind 34139 (Playlist)
   },
+  polls: {
+    label: 'Polls',
+    icon: 'poll',
+    kinds: [1068, 6969], // NIP-88 polls and zap polls
+  },
   code: {
     label: 'Code',
     icon: 'code',
