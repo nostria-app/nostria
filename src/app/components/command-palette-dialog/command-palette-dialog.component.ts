@@ -669,6 +669,13 @@ export class CommandPaletteDialogComponent implements AfterViewInit, OnDestroy {
       keywords: ['create article', 'write article', 'new article', 'blog', 'long-form']
     },
     {
+      id: 'act-create-live-stream',
+      label: 'Start Live Stream',
+      icon: 'live_tv',
+      action: () => this.layoutService.openLiveStreamDialog(),
+      keywords: ['start live stream', 'go live', 'broadcast', 'stream', 'zap stream']
+    },
+    {
       id: 'act-create-code-snippet',
       label: 'Create Code Snippet',
       icon: 'code',

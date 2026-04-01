@@ -1094,13 +1094,14 @@ npm run tauri android dev
 
 ### Editors
 
-| Type           | Component                      | Event Kind                  |
-| -------------- | ------------------------------ | --------------------------- |
-| **Note**       | `NoteEditorDialogComponent`    | 1                           |
-| **Article**    | `ArticleEditorDialogComponent` | 30023                       |
-| **Media**      | `MediaCreatorDialogComponent`  | Varies                      |
-| **Video Clip** | `VideoRecordDialogComponent`   | 1063                        |
-| **Audio Clip** | `AudioRecordDialogComponent`   | 1222 (root), 1244 (replies) |
+| Type            | Component                      | Event Kind                   |
+| --------------- | ------------------------------ | ---------------------------- |
+| **Note**        | `NoteEditorDialogComponent`    | 1                            |
+| **Article**     | `ArticleEditorDialogComponent` | 30023                        |
+| **Media**       | `MediaCreatorDialogComponent`  | Varies                       |
+| **Video Clip**  | `VideoRecordDialogComponent`   | 1063                         |
+| **Audio Clip**  | `AudioRecordDialogComponent`   | 1222 (root), 1244 (replies)  |
+| **Live Stream** | `StreamingAppsDialogComponent` | 30311 (NIP-53 live activity) |
 
 ### Publishing Flow
 
@@ -1154,6 +1155,14 @@ The shared `MediaProcessingService` performs client-side preprocessing before th
 - If local compression is unsupported or does not reduce file size, the app falls back to uploading the original file.
 
 This keeps the Blossom upload contract stable while allowing upload surfaces such as the note editor, media library, recorded video clips, and encrypted direct messages to reduce file size locally before the upload step.
+
+### Live Stream Publishing
+
+Nostria can publish NIP-53 live activity events directly from the app through `StreamingAppsDialogComponent`. The dialog creates a kind `30311` event with a `d` identifier, host `p` tag, `status`, timestamps, and optional `streaming`, `image`, `alt`, `service`, and `t` tags so the stream is discoverable across Nostr clients.
+
+The app intentionally separates **Nostr live stream publishing** from **video ingest**. Browser-only Nostria still publishes the live activity metadata and can link to inline playback URLs (for example HLS/LiveKit playback URLs), but it now also supports a premium-only browser WHIP workflow for OpenResist. That workflow uses direct camera and microphone capture in the dialog, starts a private provider broadcast first, and lets the user verify the feed before announcing the live event publicly.
+
+When no inline playback URL is available, Nostria can publish the live event with the provider watch page only. Viewers can still discover the stream through Nostr and follow the provider link even without an embedded HLS source.
 
 ---
 

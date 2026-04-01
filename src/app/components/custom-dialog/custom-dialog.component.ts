@@ -60,12 +60,17 @@ interface ScrollLockStyles {
       class="dialog-backdrop" 
       [class.stacked-backdrop]="isStacked()"
       (click)="onBackdropClick()"
-      role="presentation">
+      (keydown.enter)="onBackdropClick()"
+      (keydown.space)="onBackdropClick()"
+      [attr.role]="disableClose() ? 'presentation' : 'button'"
+      [attr.aria-label]="disableClose() ? null : 'Close dialog'"
+      [attr.tabindex]="disableClose() ? -1 : 0">
       
       <div
         class="dialog-container"
         [ngClass]="panelClass()"
         (click)="$event.stopPropagation()"
+        (keydown)="$event.stopPropagation()"
         role="dialog"
         [attr.aria-labelledby]="getTitle() ? 'dialog-title' : null"
         cdkTrapFocus
@@ -88,7 +93,11 @@ interface ScrollLockStyles {
             }
 
             @if (getHeaderIcon()) {
-              <img [src]="getHeaderIcon()" [alt]="getTitle() || 'Dialog'" class="header-icon" />
+              @if (headerIconIsImage()) {
+                <img [src]="getHeaderIcon()" [alt]="getTitle() || 'Dialog'" class="header-icon" />
+              } @else {
+                <mat-icon class="header-icon material-header-icon">{{ getHeaderIcon() }}</mat-icon>
+              }
             }
 
             @if (getSecondaryHeaderIcon()) {
@@ -266,6 +275,10 @@ export class CustomDialogComponent implements AfterViewInit, OnDestroy {
     return this.headerIcon();
   }
 
+  headerIconIsImage(): boolean {
+    return this.isImageIcon(this.getHeaderIcon());
+  }
+
   getSecondaryHeaderIcon(): string {
     return this.secondaryHeaderIcon();
   }
@@ -292,6 +305,10 @@ export class CustomDialogComponent implements AfterViewInit, OnDestroy {
 
   getShowCloseButton(): boolean {
     return this.showCloseButton();
+  }
+
+  private isImageIcon(value: string): boolean {
+    return /^(https?:\/\/|\/|\.\/|\.\.\/|data:)/.test(value);
   }
 
   getDisableClose(): boolean {
