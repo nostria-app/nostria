@@ -43,6 +43,12 @@
       <span class="settings-item-label">Picture-in-picture</span>
     </button>
     }
+    @if (canDownload()) {
+    <button class="settings-item" (click)="downloadVideo($event)">
+      <mat-icon>download</mat-icon>
+      <span class="settings-item-label">Download</span>
+    </button>
+    }
   </div>
   } @else if (settingsPanel() === 'speed') {
   <!-- YouTube-style speed panel -->
@@ -173,7 +179,7 @@
       <!-- Right controls -->
       <div class="controls-right">
         <!-- Settings button (opens custom panel instead of mat-menu) -->
-        @if (mergedConfig().showQuality || mergedConfig().showPlaybackRate || (isSmallScreen() &&
+        @if (mergedConfig().showQuality || mergedConfig().showPlaybackRate || canDownload() || (isSmallScreen() &&
         (mergedConfig().showCast || mergedConfig().showPiP)) || (mergedConfig().forceCastPiPInSettingsMenu &&
         (mergedConfig().showCast || mergedConfig().showPiP))) {
         <button mat-icon-button matTooltip="Settings" class="control-btn" (click)="openSettingsPanel($event)">

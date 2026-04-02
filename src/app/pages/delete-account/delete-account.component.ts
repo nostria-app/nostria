@@ -24,6 +24,7 @@ import { AccountRelayService } from '../../services/relays/account-relay';
 import { LoggerService } from '../../services/logger.service';
 import { RightPanelService } from '../../services/right-panel.service';
 import { ConfirmDialogComponent, ConfirmDialogData } from '../../components/confirm-dialog/confirm-dialog.component';
+import { DeleteEventReferenceMode } from '../../components/delete-confirmation-dialog/delete-confirmation-dialog.component';
 import { NPubPipe } from '../../pipes/npub.pipe';
 import { UserProfileComponent } from '../../components/user-profile/user-profile.component';
 import { getKindLabel } from '../../utils/kind-labels';
@@ -300,8 +301,9 @@ export class DeleteAccountComponent implements OnInit {
 
         const batchPromises = batch.map(async (event) => {
           try {
-            // Create deletion event (NIP-09)
-            const deleteEvent = this.nostrService.createRetractionEvent(event);
+            // Addressable events delete more reliably by coordinate when we have a d tag.
+            const referenceMode = this.getBulkDeleteReferenceMode(event);
+            const deleteEvent = this.nostrService.createRetractionEventWithMode(event, referenceMode);
             const publishResult = await this.nostrService.signAndPublish(deleteEvent);
             if (publishResult.success) {
               deletedEventIds.push(event.id);
@@ -518,6 +520,11 @@ export class DeleteAccountComponent implements OnInit {
     }
 
     this.location.back();
+  }
+
+  private getBulkDeleteReferenceMode(event: { kind: number; tags: string[][] }): DeleteEventReferenceMode {
+    const hasDTag = event.tags.some(tag => tag[0] === 'd' && tag[1]?.trim());
+    return event.kind >= 30000 && event.kind < 40000 && hasDTag ? 'a' : 'e';
   }
 
   private showMessage(message: string) {

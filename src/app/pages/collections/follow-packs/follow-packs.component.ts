@@ -21,6 +21,7 @@ import { TwoColumnLayoutService } from '../../../services/two-column-layout.serv
 import { ClipboardService } from '../../../services/clipboard.service';
 import { ConfirmDialogComponent, ConfirmDialogData } from '../../../components/confirm-dialog/confirm-dialog.component';
 import { ProfileDisplayNameComponent } from '../../../components/user-profile/display-name/profile-display-name.component';
+import { DeleteEventService } from '../../../services/delete-event.service';
 
 @Component({
   selector: 'app-follow-packs',
@@ -51,6 +52,7 @@ export class FollowPacksComponent implements OnInit {
   private layout = inject(LayoutService);
   private twoColumnLayout = inject(TwoColumnLayoutService);
   private clipboard = inject(ClipboardService);
+  private deleteEventService = inject(DeleteEventService);
 
   // State
   isLoading = signal(false);
@@ -223,36 +225,38 @@ export class FollowPacksComponent implements OnInit {
 
   // Delete a follow pack
   async deletePack(pack: FollowPack) {
-    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
-      data: {
-        title: 'Delete Follow Pack',
-        message: `Are you sure you want to delete "${pack.title}"? This action cannot be undone.`,
-        confirmText: 'Delete',
-        cancelText: 'Cancel',
-        confirmColor: 'warn',
-      } as ConfirmDialogData,
+    const result = await this.deleteEventService.confirmDeletion({
+      event: {
+        id: pack.eventId,
+        kind: 39089,
+        pubkey: this.accountState.pubkey() || '',
+        content: '',
+        created_at: pack.created_at,
+        tags: [['d', pack.identifier]],
+        sig: '',
+      },
+      title: 'Delete Follow Pack',
+      entityLabel: 'follow pack',
+      confirmText: 'Delete',
     });
+    if (!result) return;
 
-    dialogRef.afterClosed().subscribe(async (result) => {
-      if (result) {
-        this.isLoading.set(true);
-        try {
-          const success = await this.followPacksService.deleteFollowPack(pack.identifier);
+    this.isLoading.set(true);
+    try {
+      const success = await this.followPacksService.deleteFollowPack(pack.identifier, result.referenceMode);
 
-          if (success) {
-            this.snackBar.open('Follow pack deleted', 'Close', { duration: 3000 });
-            await this.loadData();
-          } else {
-            this.snackBar.open('Failed to delete follow pack', 'Close', { duration: 3000 });
-          }
-        } catch (error) {
-          this.logger.error('Error deleting follow pack:', error);
-          this.snackBar.open('Error deleting follow pack', 'Close', { duration: 3000 });
-        } finally {
-          this.isLoading.set(false);
-        }
+      if (success) {
+        this.snackBar.open('Follow pack deleted', 'Close', { duration: 3000 });
+        await this.loadData();
+      } else {
+        this.snackBar.open('Failed to delete follow pack', 'Close', { duration: 3000 });
       }
-    });
+    } catch (error) {
+      this.logger.error('Error deleting follow pack:', error);
+      this.snackBar.open('Error deleting follow pack', 'Close', { duration: 3000 });
+    } finally {
+      this.isLoading.set(false);
+    }
   }
 
   async copyPackData(pack: FollowPack) {

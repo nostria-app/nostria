@@ -13,6 +13,7 @@ import { ZapService } from './zap.service';
 import { UserRelaysService } from './relays/user-relays';
 import { AccountLocalStateService } from './account-local-state.service';
 import { NostriaService } from '../interfaces';
+import type { DeleteEventReferenceMode } from '../components/delete-confirmation-dialog/delete-confirmation-dialog.component';
 
 /**
  * NIP-28 Event kinds for public chat channels
@@ -1085,7 +1086,7 @@ export class ChatChannelsService implements NostriaService {
    * Delete a channel message (kind 5 NIP-09 retraction)
    * Only the message author can delete their own messages.
    */
-  async deleteMessage(message: ChannelMessage): Promise<boolean> {
+  async deleteMessage(message: ChannelMessage, referenceMode: DeleteEventReferenceMode = 'e'): Promise<boolean> {
     const currentUserPubkey = this.accountState.pubkey();
     if (!currentUserPubkey || message.pubkey !== currentUserPubkey) {
       this.logger.warn('[ChatChannels] Cannot delete message - not the author');
@@ -1093,7 +1094,7 @@ export class ChatChannelsService implements NostriaService {
     }
 
     try {
-      const deleteEvent = this.nostrService.createRetractionEvent(message.event);
+      const deleteEvent = this.nostrService.createRetractionEventWithMode(message.event, referenceMode);
       const channel = this.channelsMap().get(message.channelId);
       const publishRelays = this.getPublishRelayUrls(channel?.metadata.relays);
       const result = await this.nostrService.signAndPublish(deleteEvent, publishRelays);

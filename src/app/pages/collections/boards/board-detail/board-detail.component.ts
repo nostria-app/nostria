@@ -32,6 +32,7 @@ import { TwoColumnLayoutService } from '../../../../services/two-column-layout.s
 import { ConfirmDialogComponent, ConfirmDialogData } from '../../../../components/confirm-dialog/confirm-dialog.component';
 import { EventComponent } from '../../../../components/event/event.component';
 import { LayoutService } from '../../../../services/layout.service';
+import { DeleteEventService } from '../../../../services/delete-event.service';
 
 type BoardViewMode = 'compact' | 'standard';
 
@@ -74,6 +75,7 @@ export class BoardDetailComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private layout = inject(LayoutService);
+  private deleteEventService = inject(DeleteEventService);
 
   tabs: BoardTab[] = [
     { kind: ARTICLE_CURATION_KIND, label: 'Posts & Articles', icon: 'article' },
@@ -252,35 +254,37 @@ export class BoardDetailComponent implements OnInit {
     const set = this.boardSet();
     if (!set) return;
 
-    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
-      data: {
-        title: 'Delete Board',
-        message: `Are you sure you want to delete "${set.title}"? This action cannot be undone.`,
-        confirmText: 'Delete',
-        cancelText: 'Cancel',
-        confirmColor: 'warn',
-      } as ConfirmDialogData,
+    const result = await this.deleteEventService.confirmDeletion({
+      event: {
+        id: set.eventId,
+        kind: set.kind,
+        pubkey: this.accountState.pubkey() || '',
+        content: '',
+        created_at: set.created_at,
+        tags: [['d', set.identifier]],
+        sig: '',
+      },
+      title: 'Delete Board',
+      entityLabel: 'board',
+      confirmText: 'Delete',
     });
+    if (!result) return;
 
-    dialogRef.afterClosed().subscribe(async (result) => {
-      if (result) {
-        this.isLoading.set(true);
-        try {
-          const success = await this.curationSetsService.deleteCurationSet(set.identifier, set.kind);
-          if (success) {
-            this.snackBar.open('Board deleted', 'Close', { duration: 3000 });
-            this.router.navigate(['/collections/boards']);
-          } else {
-            this.snackBar.open('Failed to delete board', 'Close', { duration: 3000 });
-          }
-        } catch (error) {
-          this.logger.error('Error deleting board:', error);
-          this.snackBar.open('Error deleting board', 'Close', { duration: 3000 });
-        } finally {
-          this.isLoading.set(false);
-        }
+    this.isLoading.set(true);
+    try {
+      const success = await this.curationSetsService.deleteCurationSet(set.identifier, set.kind, result.referenceMode);
+      if (success) {
+        this.snackBar.open('Board deleted', 'Close', { duration: 3000 });
+        this.router.navigate(['/collections/boards']);
+      } else {
+        this.snackBar.open('Failed to delete board', 'Close', { duration: 3000 });
       }
-    });
+    } catch (error) {
+      this.logger.error('Error deleting board:', error);
+      this.snackBar.open('Error deleting board', 'Close', { duration: 3000 });
+    } finally {
+      this.isLoading.set(false);
+    }
   }
 
   // Navigate to event in right panel

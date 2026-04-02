@@ -71,6 +71,7 @@ import {
 } from '../../components/share-article-dialog/share-article-dialog.component';
 import { VideoRecordDialogResult } from '../../interfaces/media-upload';
 import { AccountRelayService } from '../../services/relays/account-relay';
+import { DeleteEventService } from '../../services/delete-event.service';
 import {
   ChatsSettingsDialogComponent,
 } from './chats-settings-dialog/chats-settings-dialog.component';
@@ -123,6 +124,7 @@ export type TimelineEntry =
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ChatsComponent implements OnInit, OnDestroy {
+  private deleteEventService = inject(DeleteEventService);
   readonly chatChannels = inject(ChatChannelsService);
   private readonly logger = inject(LoggerService);
   private readonly accountState = inject(AccountStateService);
@@ -1029,19 +1031,14 @@ export class ChatsComponent implements OnInit, OnDestroy {
 
   /** Delete a message (NIP-09 retraction, own messages only) */
   async deleteMessage(message: ChannelMessage): Promise<void> {
-    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
-      data: {
-        title: 'Delete message',
-        message: 'Are you sure you want to delete this message?',
-        confirmText: 'Delete',
-        cancelText: 'Cancel',
-        confirmColor: 'warn',
-      } as ConfirmDialogData,
+    const confirmed = await this.deleteEventService.confirmDeletion({
+      event: message.event,
+      title: 'Delete message',
+      entityLabel: 'message',
+      confirmText: 'Delete',
     });
-
-    const confirmed = await firstValueFrom(dialogRef.afterClosed());
     if (confirmed) {
-      const success = await this.chatChannels.deleteMessage(message);
+      const success = await this.chatChannels.deleteMessage(message, confirmed.referenceMode);
       if (success) {
         this.snackBar.open('Message deleted', 'OK', { duration: 3000 });
       } else {

@@ -6,6 +6,7 @@ import { DatabaseService } from './database.service';
 import { AccountStateService } from './account-state.service';
 import { PublishService } from './publish.service';
 import { AccountRelayService } from './relays/account-relay';
+import type { DeleteEventReferenceMode } from '../components/delete-confirmation-dialog/delete-confirmation-dialog.component';
 
 /**
  * Kind 10012: Relay feeds - stores browsable relay feeds
@@ -342,7 +343,7 @@ export class RelayFeedsService {
   /**
    * Delete a relay set (kind 30002) by publishing a deletion event
    */
-  async deleteRelaySet(identifier: string): Promise<boolean> {
+  async deleteRelaySet(identifier: string, referenceMode: DeleteEventReferenceMode = 'a'): Promise<boolean> {
     const pubkey = this.accountState.pubkey();
     if (!pubkey) {
       this.logger.error('No authenticated user');
@@ -350,12 +351,14 @@ export class RelayFeedsService {
     }
 
     try {
-      // Create a deletion event (kind 5) targeting the relay set
-      const tags: string[][] = [
-        ['a', `${RELAY_SET_KIND}:${pubkey}:${identifier}`],
-      ];
+      const events = await this.accountRelay.getEventsByPubkeyAndKind(pubkey, RELAY_SET_KIND);
+      const eventToDelete = events.find(e => e.tags.find(tag => tag[0] === 'd')?.[1] === identifier);
+      if (!eventToDelete) {
+        this.logger.error('Relay set not found:', identifier);
+        return false;
+      }
 
-      const event = this.nostrService.createEvent(kinds.EventDeletion, '', tags);
+      const event = this.nostrService.createRetractionEventWithMode(eventToDelete, referenceMode);
       const signedEvent = await this.nostrService.signEvent(event);
 
       await this.database.saveEvent(signedEvent);

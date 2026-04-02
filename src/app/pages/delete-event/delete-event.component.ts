@@ -19,6 +19,7 @@ import { EventService } from '../../services/event';
 import { LoggerService } from '../../services/logger.service';
 import { RightPanelService } from '../../services/right-panel.service';
 import { ConfirmDialogComponent, ConfirmDialogData } from '../../components/confirm-dialog/confirm-dialog.component';
+import { DeleteEventService } from '../../services/delete-event.service';
 
 @Component({
   selector: 'app-delete-event',
@@ -46,6 +47,7 @@ export class DeleteEventComponent implements OnInit {
   private readonly eventService = inject(EventService);
   private readonly logger = inject(LoggerService);
   private readonly rightPanel = inject(RightPanelService);
+  private readonly deleteEventService = inject(DeleteEventService);
 
   /** Event ID passed as input (e.g., from right panel) */
   eventId = input<string>();
@@ -175,24 +177,19 @@ export class DeleteEventComponent implements OnInit {
 
     const reason = this.deleteForm.get('reason')?.value || '';
 
-    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
-      data: {
-        title: 'Delete Event',
-        message: `Are you sure you want to request deletion of this event? This action creates a deletion request (NIP-09) but cannot guarantee the event will be removed from all relays and clients.`,
-        confirmText: 'Delete Event',
-        cancelText: 'Cancel',
-        confirmColor: 'warn',
-      } as ConfirmDialogData,
+    const confirmed = await this.deleteEventService.confirmDeletion({
+      event,
+      title: 'Delete Event',
+      entityLabel: 'event',
+      confirmText: 'Delete Event',
     });
-
-    const confirmed = await firstValueFrom(dialogRef.afterClosed());
     if (!confirmed) {
       return;
     }
 
     try {
       this.isLoading.set(true);
-      const deleteEvent = this.nostrService.createRetractionEvent(event);
+      const deleteEvent = this.nostrService.createRetractionEventWithMode(event, confirmed.referenceMode);
 
       // Add reason if provided
       if (reason.trim()) {

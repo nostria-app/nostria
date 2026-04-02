@@ -7,6 +7,7 @@ import { AccountStateService } from './account-state.service';
 import { PublishService } from './publish.service';
 import { AccountRelayService } from './relays/account-relay';
 import { DeletionFilterService } from './deletion-filter.service';
+import type { DeleteEventReferenceMode } from '../components/delete-confirmation-dialog/delete-confirmation-dialog.component';
 
 export const ARTICLE_CURATION_KIND = 30004;
 export const VIDEO_CURATION_KIND = 30005;
@@ -319,16 +320,19 @@ export class CurationSetsService {
   /**
    * Delete a curation set using a kind 5 deletion event (NIP-09).
    */
-  async deleteCurationSet(identifier: string, kind: CurationKind): Promise<boolean> {
+  async deleteCurationSet(identifier: string, kind: CurationKind, referenceMode: DeleteEventReferenceMode = 'a'): Promise<boolean> {
     const pubkey = this.accountState.pubkey();
     if (!pubkey) return false;
 
     try {
-      const tags: string[][] = [
-        ['a', `${kind}:${pubkey}:${identifier}`],
-      ];
+      const events = await this.accountRelay.getEventsByPubkeyAndKind(pubkey, kind);
+      const eventToDelete = events.find(e => e.tags.find(tag => tag[0] === 'd')?.[1] === identifier);
+      if (!eventToDelete) {
+        this.logger.error('Curation set not found:', { identifier, kind });
+        return false;
+      }
 
-      const event = this.nostrService.createEvent(kinds.EventDeletion, '', tags);
+      const event = this.nostrService.createRetractionEventWithMode(eventToDelete, referenceMode);
       const signedEvent = await this.nostrService.signEvent(event);
 
       await this.database.saveEvent(signedEvent);

@@ -8,6 +8,7 @@ import { PublishService } from './publish.service';
 import { EncryptionService } from './encryption.service';
 import { DeletionFilterService } from './deletion-filter.service';
 import { AccountRelayService } from './relays/account-relay';
+import type { DeleteEventReferenceMode } from '../components/delete-confirmation-dialog/delete-confirmation-dialog.component';
 
 export interface FollowSet {
   id: string; // Event ID
@@ -950,7 +951,7 @@ export class FollowSetsService {
   /**
    * Delete a follow set by publishing a kind 5 deletion event (NIP-09)
    */
-  async deleteFollowSet(dTag: string): Promise<boolean> {
+  async deleteFollowSet(dTag: string, referenceMode: DeleteEventReferenceMode = 'a'): Promise<boolean> {
     const currentPubkey = this.accountState.pubkey();
     if (!currentPubkey) {
       this.logger.warn('[FollowSets] Cannot delete follow set: no current account');
@@ -970,18 +971,12 @@ export class FollowSetsService {
     }
 
     try {
-      // Create a deletion event (kind 5) - NIP-09
-      // For addressable events (kind 30000), use 'a' tag with format: kind:pubkey:d-tag
-      // Include 'k' tag for the kind being deleted as per NIP-09
       const deletionEvent: UnsignedEvent = {
-        kind: 5,
+        kind: kinds.EventDeletion,
         pubkey: currentPubkey,
         created_at: Math.floor(Date.now() / 1000),
         content: 'Deleted follow set',
-        tags: [
-          ['a', `30000:${currentPubkey}:${dTag}`],
-          ['k', '30000']
-        ],
+        tags: this.buildDeletionTags(followSet.event!, referenceMode),
       };
 
       // Sign and publish
@@ -1005,6 +1000,22 @@ export class FollowSetsService {
       this.logger.error('[FollowSets] Failed to delete follow set:', error);
       return false;
     }
+  }
+
+  private buildDeletionTags(event: Event, referenceMode: DeleteEventReferenceMode): string[][] {
+    const dTag = event.tags.find(tag => tag[0] === 'd' && tag[1]?.trim())?.[1]?.trim();
+
+    if (referenceMode === 'a' && dTag) {
+      return [
+        ['a', `${event.kind}:${event.pubkey}:${dTag}`],
+        ['k', String(event.kind)],
+      ];
+    }
+
+    return [
+      ['e', event.id],
+      ['k', String(event.kind)],
+    ];
   }
 
   /**

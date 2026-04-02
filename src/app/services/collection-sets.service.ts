@@ -9,6 +9,7 @@ import { AccountRelayService } from './relays/account-relay';
 import { UserRelayService } from './relays/user-relay';
 import { DeletionFilterService } from './deletion-filter.service';
 import { normalizeEmojiShortcode } from '../utils/emoji-shortcode';
+import type { DeleteEventReferenceMode } from '../components/delete-confirmation-dialog/delete-confirmation-dialog.component';
 
 /**
  * Kind 30030: Emoji sets
@@ -423,7 +424,7 @@ export class CollectionSetsService {
   /**
    * Delete an emoji set (publishes kind 5 deletion event)
    */
-  async deleteEmojiSet(identifier: string): Promise<boolean> {
+  async deleteEmojiSet(identifier: string, referenceMode: DeleteEventReferenceMode = 'a'): Promise<boolean> {
     const pubkey = this.accountState.pubkey();
     if (!pubkey) {
       this.logger.error('No authenticated user');
@@ -444,10 +445,8 @@ export class CollectionSetsService {
       }
 
       // Create deletion event (kind 5)
-      const event = this.nostrService.createEvent(kinds.EventDeletion, 'Deleted emoji set', [
-        ['e', eventToDelete.id],
-        ['a', `${EMOJI_SET_KIND}:${pubkey}:${identifier}`],
-      ]);
+      const event = this.nostrService.createRetractionEventWithMode(eventToDelete, referenceMode);
+      event.content = 'Deleted emoji set';
       const signedEvent = await this.nostrService.signEvent(event);
 
       // Save deletion event to database
@@ -682,7 +681,7 @@ export class CollectionSetsService {
   /**
    * Delete an interest set (publishes kind 5 deletion event)
    */
-  async deleteInterestSet(identifier: string): Promise<boolean> {
+  async deleteInterestSet(identifier: string, referenceMode: DeleteEventReferenceMode = 'a'): Promise<boolean> {
     const pubkey = this.accountState.pubkey();
     if (!pubkey) {
       this.logger.error('No authenticated user');
@@ -703,10 +702,8 @@ export class CollectionSetsService {
       }
 
       // Create deletion event (kind 5)
-      const event = this.nostrService.createEvent(kinds.EventDeletion, 'Deleted interest set', [
-        ['e', eventToDelete.id],
-        ['a', `${INTEREST_SET_KIND}:${pubkey}:${identifier}`],
-      ]);
+      const event = this.nostrService.createRetractionEventWithMode(eventToDelete, referenceMode);
+      event.content = 'Deleted interest set';
       const signedEvent = await this.nostrService.signEvent(event);
 
       // Save deletion event to database

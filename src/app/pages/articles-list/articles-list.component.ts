@@ -25,6 +25,7 @@ import { AccountRelayService } from '../../services/relays/account-relay';
 import { LayoutService } from '../../services/layout.service';
 import { NostrRecord } from '../../interfaces';
 import { AccountLocalStateService } from '../../services/account-local-state.service';
+import { DeleteEventService } from '../../services/delete-event.service';
 
 export interface ArticleItem {
   id: string;
@@ -74,6 +75,7 @@ export class ArticlesListComponent {
   private accountLocalState = inject(AccountLocalStateService);
   private dialog = inject(MatDialog);
   private layout = inject(LayoutService);
+  private deleteEventService = inject(DeleteEventService);
 
   isLoading = signal(true);
   articles = signal<ArticleItem[]>([]);
@@ -287,29 +289,16 @@ export class ArticlesListComponent {
   }
 
   async deleteDraft(article: ArticleItem): Promise<void> {
-    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
-      data: {
-        title: 'Delete Draft',
-        message: `Are you sure you want to delete the draft "${article.title}"? This action cannot be undone.`,
-        confirmText: 'Delete',
-        cancelText: 'Cancel',
-      },
+    const result = await this.deleteEventService.confirmDeletion({
+      event: article.event,
+      title: 'Delete Draft',
+      entityLabel: 'draft',
+      confirmText: 'Delete',
     });
-
-    const result = await dialogRef.afterClosed().toPromise();
     if (result) {
       try {
-        // Create a deletion event (kind 5) using the "a" tag for the replaceable event.
-        // Per NIP-09, relays delete all versions up to the deletion request's created_at,
-        // so the user can re-create a new draft with the same d-tag after deletion.
-        const tags: string[][] = [
-          // DELETE WITH "a" TAG DOESN'T WORK WITH STRFRY!
-          //['a', `${article.event.kind}:${article.event.pubkey}:${article.dTag}`],
-          ['e', article.event.id],
-          ['k', '30024'],
-        ];
-
-        const deleteEvent = this.nostrService.createEvent(5, 'Deleted draft', tags);
+        const deleteEvent = this.nostrService.createRetractionEventWithMode(article.event, result.referenceMode);
+        deleteEvent.content = 'Deleted draft';
         const signedEvent = await this.nostrService.signEvent(deleteEvent);
         await this.accountRelay.publish(signedEvent);
 
@@ -355,31 +344,17 @@ export class ArticlesListComponent {
   }
 
   async deleteArticle(article: ArticleItem): Promise<void> {
-    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
-      data: {
-        title: 'Delete Article',
-        message: `Are you sure you want to delete the article "${article.title}"? This action cannot be undone.`,
-        confirmText: 'Delete',
-        cancelText: 'Cancel',
-      },
+    const targetEvent = article.publishedEvent || article.event;
+    const result = await this.deleteEventService.confirmDeletion({
+      event: targetEvent,
+      title: 'Delete Article',
+      entityLabel: 'article',
+      confirmText: 'Delete',
     });
-
-    const result = await dialogRef.afterClosed().toPromise();
     if (result) {
       try {
-        const tags: string[][] = [];
-
-        if (article.event) {
-          tags.push(['a', `${article.event.kind}:${article.event.pubkey}:${article.dTag}`]);
-          tags.push(['k', `${article.event.kind}`]);
-        }
-
-        if (article.publishedEvent) {
-          tags.push(['a', `${article.publishedEvent.kind}:${article.publishedEvent.pubkey}:${article.dTag}`]);
-          tags.push(['k', `${article.publishedEvent.kind}`]);
-        }
-
-        const deleteEvent = this.nostrService.createEvent(5, 'Deleted article', tags);
+        const deleteEvent = this.nostrService.createRetractionEventWithMode(targetEvent, result.referenceMode);
+        deleteEvent.content = 'Deleted article';
         const signedEvent = await this.nostrService.signEvent(deleteEvent);
         await this.accountRelay.publish(signedEvent);
 

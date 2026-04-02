@@ -29,6 +29,7 @@ import { EncryptionService } from '../../services/encryption.service';
 import { DatabaseService } from '../../services/database.service';
 import { FollowSetsService } from '../../services/follow-sets.service';
 import { ListEditorDialogComponent } from './list-editor-dialog/list-editor-dialog.component';
+import { DeleteEventService } from '../../services/delete-event.service';
 
 // NIP-51 List type definitions
 export interface ListType {
@@ -199,6 +200,7 @@ export class ListsComponent implements OnInit {
   private readonly layout = inject(LayoutService);
   private readonly database = inject(DatabaseService);
   private readonly followSetsService = inject(FollowSetsService);
+  private readonly deleteEventService = inject(DeleteEventService);
 
   // Available list types
   standardLists = STANDARD_LISTS;
@@ -816,35 +818,19 @@ export class ListsComponent implements OnInit {
    * Delete a list
    */
   async deleteList(listData: ListData) {
-    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
-      data: {
-        title: 'Delete List',
-        message: `Are you sure you want to delete "${listData.title || listData.type.name}"? This action cannot be undone.`,
-        confirmText: 'Delete',
-        cancelText: 'Cancel',
-        confirmColor: 'warn'
-      }
+    const confirmed = await this.deleteEventService.confirmDeletion({
+      event: listData.event,
+      title: 'Delete List',
+      entityLabel: 'list',
+      confirmText: 'Delete',
     });
-
-    const confirmed = await dialogRef.afterClosed().toPromise();
     if (!confirmed) return;
 
     this.loading.set(true);
 
     try {
-      // Create a deletion event (kind 5)
-      const tags: string[][] = [['e', listData.event.id]];
-
-      if (listData.identifier) {
-        // For parameterized replaceable events, include the coordinates
-        tags.push(['a', `${listData.type.kind}:${listData.event.pubkey}:${listData.identifier}`]);
-      }
-
-      const unsignedEvent = this.nostr.createEvent(
-        kinds.EventDeletion,
-        'List deleted',
-        tags
-      );
+      const unsignedEvent = this.nostr.createRetractionEventWithMode(listData.event, confirmed.referenceMode);
+      unsignedEvent.content = 'List deleted';
 
       const signedEvent = await this.nostr.signEvent(unsignedEvent);
 

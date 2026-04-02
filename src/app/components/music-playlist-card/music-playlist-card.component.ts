@@ -31,6 +31,7 @@ import { NostrRecord, MediaItem } from '../../interfaces';
 import { ZapDialogComponent, ZapDialogData } from '../zap-dialog/zap-dialog.component';
 import { ShareArticleDialogComponent, ShareArticleDialogData } from '../share-article-dialog/share-article-dialog.component';
 import { ConfirmDialogComponent, ConfirmDialogData } from '../confirm-dialog/confirm-dialog.component';
+import { DeleteEventService } from '../../services/delete-event.service';
 import {
   EditMusicPlaylistDialogComponent,
   EditMusicPlaylistDialogData,
@@ -618,6 +619,7 @@ export class MusicPlaylistCardComponent {
   private userRelaysService = inject(UserRelaysService);
   private nostrService = inject(NostrService);
   private likedSongsService = inject(MusicLikedSongsService);
+  private deleteEventService = inject(DeleteEventService);
 
   event = input.required<Event>();
   likedReaction = input<Event | null>(null);
@@ -965,22 +967,17 @@ export class MusicPlaylistCardComponent {
     const ev = this.event();
     if (!this.isOwnPlaylist() || this.isDeleting()) return;
 
-    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
-      data: {
-        title: 'Delete Album',
-        message: 'Are you sure you want to request deletion of this album? This action creates a deletion request (NIP-09) but cannot guarantee the album will be removed from all relays and clients.',
-        confirmText: 'Delete',
-        cancelText: 'Cancel',
-        confirmColor: 'warn',
-      } as ConfirmDialogData,
+    const confirmedDelete = await this.deleteEventService.confirmDeletion({
+      event: ev,
+      title: 'Delete Album',
+      entityLabel: 'album',
+      confirmText: 'Delete',
     });
-
-    const confirmedDelete = await firstValueFrom(dialogRef.afterClosed());
     if (!confirmedDelete) return;
 
     this.isDeleting.set(true);
     try {
-      const deleteEvent = this.nostrService.createRetractionEvent(ev);
+      const deleteEvent = this.nostrService.createRetractionEventWithMode(ev, confirmedDelete.referenceMode);
       const result = await this.nostrService.signAndPublish(deleteEvent);
 
       if (result.success) {

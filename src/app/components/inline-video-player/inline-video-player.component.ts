@@ -31,6 +31,7 @@ import { UtilitiesService } from '../../services/utilities.service';
 const DEFAULT_INLINE_VIDEO_CONTROLS_CONFIG: VideoControlsConfig = {
   showQuality: false,
   isLiveStream: false,
+  showDownload: true,
 };
 
 @Component({
@@ -117,6 +118,7 @@ export class InlineVideoPlayerComponent implements AfterViewInit, OnDestroy {
 
   effectiveControlsConfig = computed<VideoControlsConfig>(() => ({
     ...DEFAULT_INLINE_VIDEO_CONTROLS_CONFIG,
+    downloadUrl: this.effectiveSrc(),
     ...(this.controlsConfig() ?? {}),
   }));
 

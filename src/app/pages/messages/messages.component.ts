@@ -45,6 +45,7 @@ import { LoadingOverlayComponent } from '../../components/loading-overlay/loadin
 import { UserProfileComponent } from '../../components/user-profile/user-profile.component';
 import { ProfileDisplayNameComponent } from '../../components/user-profile/display-name/profile-display-name.component';
 import { CustomDialogService } from '../../services/custom-dialog.service';
+import { DeleteEventService } from '../../services/delete-event.service';
 import { NPubPipe } from '../../pipes/npub.pipe';
 import { TimestampPipe } from '../../pipes/timestamp.pipe';
 import { AgoPipe } from '../../pipes/ago.pipe';
@@ -261,6 +262,7 @@ interface QuickReactionMenuItem {
   styleUrl: './messages.component.scss',
 })
 export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
+  private readonly deleteEventService = inject(DeleteEventService);
   private data = inject(DataService);
   private nostr = inject(NostrService);
   // private relay = inject(AccountRelayServiceEx);
@@ -4596,20 +4598,15 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
    * Show confirmation dialog before deleting a message
    */
   async confirmDeleteMessage(message: DirectMessage): Promise<void> {
-    // Show confirmation snackbar
-    const snackRef = this.snackBar.open(
-      'Delete this message? This only removes it from your device.',
-      'Delete',
-      {
-        duration: 5000,
-        horizontalPosition: 'center',
-        verticalPosition: 'bottom',
-      }
-    );
-
-    snackRef.onAction().subscribe(async () => {
-      await this.deleteMessage(message);
+    const confirmed = await this.deleteEventService.confirmDeletion({
+      title: 'Delete message',
+      entityLabel: 'message',
+      confirmText: 'Delete',
     });
+
+    if (confirmed) {
+      await this.deleteMessage(message);
+    }
   }
 
   /**

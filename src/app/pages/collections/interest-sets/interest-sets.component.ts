@@ -20,6 +20,7 @@ import { LoggerService } from '../../../services/logger.service';
 import { LayoutService } from '../../../services/layout.service';
 import { TwoColumnLayoutService } from '../../../services/two-column-layout.service';
 import { ConfirmDialogComponent, ConfirmDialogData } from '../../../components/confirm-dialog/confirm-dialog.component';
+import { DeleteEventService } from '../../../services/delete-event.service';
 
 @Component({
   selector: 'app-interest-sets',
@@ -50,6 +51,7 @@ export class InterestSetsComponent implements OnInit {
   private layout = inject(LayoutService);
   private twoColumnLayout = inject(TwoColumnLayoutService);
   private router = inject(Router);
+  private deleteEventService = inject(DeleteEventService);
 
   // State - multiple interest sets
   isLoading = signal(false);
@@ -208,36 +210,38 @@ export class InterestSetsComponent implements OnInit {
 
   // Delete an interest list
   async deleteList(set: InterestSet) {
-    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
-      data: {
-        title: 'Delete Interest List',
-        message: `Are you sure you want to delete "${set.title}"? This action cannot be undone.`,
-        confirmText: 'Delete',
-        cancelText: 'Cancel',
-        confirmColor: 'warn',
-      } as ConfirmDialogData,
+    const result = await this.deleteEventService.confirmDeletion({
+      event: {
+        id: set.eventId,
+        kind: 30015,
+        pubkey: this.accountState.pubkey() || '',
+        content: '',
+        created_at: set.created_at,
+        tags: [['d', set.identifier]],
+        sig: '',
+      },
+      title: 'Delete Interest List',
+      entityLabel: 'interest list',
+      confirmText: 'Delete',
     });
+    if (!result) return;
 
-    dialogRef.afterClosed().subscribe(async (result) => {
-      if (result) {
-        this.isLoading.set(true);
-        try {
-          const success = await this.collectionSetsService.deleteInterestSet(set.identifier);
+    this.isLoading.set(true);
+    try {
+      const success = await this.collectionSetsService.deleteInterestSet(set.identifier, result.referenceMode);
 
-          if (success) {
-            this.snackBar.open('Interest list deleted', 'Close', { duration: 3000 });
-            await this.loadData();
-          } else {
-            this.snackBar.open('Failed to delete interest list', 'Close', { duration: 3000 });
-          }
-        } catch (error) {
-          this.logger.error('Error deleting interest list:', error);
-          this.snackBar.open('Error deleting interest list', 'Close', { duration: 3000 });
-        } finally {
-          this.isLoading.set(false);
-        }
+      if (success) {
+        this.snackBar.open('Interest list deleted', 'Close', { duration: 3000 });
+        await this.loadData();
+      } else {
+        this.snackBar.open('Failed to delete interest list', 'Close', { duration: 3000 });
       }
-    });
+    } catch (error) {
+      this.logger.error('Error deleting interest list:', error);
+      this.snackBar.open('Error deleting interest list', 'Close', { duration: 3000 });
+    } finally {
+      this.isLoading.set(false);
+    }
   }
 
   // Open a single hashtag as a dynamic feed

@@ -30,6 +30,7 @@ import {
 import { UserProfileComponent } from '../../user-profile/user-profile.component';
 import { EventMenuComponent } from '../event-menu/event-menu.component';
 import { resolveClientLogo } from '../../../utils/client-logo-map';
+import { DeleteEventService } from '../../../services/delete-event.service';
 
 @Component({
   selector: 'app-event-header',
@@ -63,6 +64,7 @@ export class EventHeaderComponent {
   private userRelaysService = inject(UserRelaysService);
   private powService = inject(PowService);
   private localSettings = inject(LocalSettingsService);
+  private deleteEventService = inject(DeleteEventService);
   event = input.required<Event>();
   compact = input<boolean>(false);
   /** Whether this event has been edited (NIP-41) */
@@ -254,19 +256,14 @@ export class EventHeaderComponent {
       return;
     }
 
-    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
-      data: {
-        title: 'Delete event',
-        message: 'Are you sure?',
-        confirmText: 'Delete event',
-        cancelText: 'Cancel',
-        confirmColor: 'warn',
-      } as ConfirmDialogData,
+    const confirmedDelete = await this.deleteEventService.confirmDeletion({
+      event,
+      title: 'Delete event',
+      entityLabel: 'event',
+      confirmText: 'Delete event',
     });
-
-    const confirmedDelete = await firstValueFrom(dialogRef.afterClosed());
     if (confirmedDelete) {
-      const deleteEvent = this.nostrService.createRetractionEvent(event);
+      const deleteEvent = this.nostrService.createRetractionEventWithMode(event, confirmedDelete.referenceMode);
 
       const result = await this.nostrService.signAndPublish(deleteEvent);
       if (result.success) {

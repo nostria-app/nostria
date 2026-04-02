@@ -16,6 +16,7 @@ import { AccountStateService } from '../../../services/account-state.service';
 import { LoggerService } from '../../../services/logger.service';
 import { ConfirmDialogComponent } from '../../../components/confirm-dialog/confirm-dialog.component';
 import { TwoColumnLayoutService } from '../../../services/two-column-layout.service';
+import { DeleteEventService } from '../../../services/delete-event.service';
 
 @Component({
   selector: 'app-relay-sets',
@@ -42,6 +43,7 @@ export class RelaySetsComponent implements OnInit {
   private snackBar = inject(MatSnackBar);
   private dialog = inject(MatDialog);
   private twoColumnLayout = inject(TwoColumnLayoutService);
+  private deleteEventService = inject(DeleteEventService);
 
   // State
   isLoading = signal(false);
@@ -241,21 +243,25 @@ export class RelaySetsComponent implements OnInit {
   }
 
   async deleteSet(set: RelaySet) {
-    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
-      data: {
-        title: 'Delete Relay Set',
-        message: `Are you sure you want to delete "${set.name}"?`,
-        confirmText: 'Delete',
-        cancelText: 'Cancel',
+    const confirmed = await this.deleteEventService.confirmDeletion({
+      event: {
+        id: set.eventId,
+        kind: 30002,
+        pubkey: this.accountState.pubkey() || '',
+        content: '',
+        created_at: set.created_at,
+        tags: [['d', set.identifier]],
+        sig: '',
       },
+      title: 'Delete Relay Set',
+      entityLabel: 'relay set',
+      confirmText: 'Delete',
     });
-
-    const confirmed = await dialogRef.afterClosed().toPromise();
     if (!confirmed) return;
 
     this.isLoading.set(true);
     try {
-      const success = await this.relayFeedsService.deleteRelaySet(set.identifier);
+      const success = await this.relayFeedsService.deleteRelaySet(set.identifier, confirmed.referenceMode);
       if (success) {
         this.snackBar.open('Relay set deleted', 'Close', { duration: 3000 });
         await this.loadData(); // Reload to show updated sets

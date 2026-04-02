@@ -47,6 +47,7 @@ import {
   CreateCalendarDialogData,
   CreateCalendarDialogResult,
 } from './create-calendar-dialog/create-calendar-dialog.component';
+import { DeleteEventService } from '../../services/delete-event.service';
 
 // Calendar event interfaces based on NIP-52
 interface CalendarEvent {
@@ -139,6 +140,7 @@ export class Calendar implements OnInit, OnDestroy, AfterViewInit {
   private followSetsService = inject(FollowSetsService);
   private nostrService = inject(NostrService);
   private platformId = inject(PLATFORM_ID);
+  private deleteEventService = inject(DeleteEventService);
 
   // Premium check
   isPremium = computed(() => {
@@ -1065,25 +1067,38 @@ export class Calendar implements OnInit, OnDestroy, AfterViewInit {
       return;
     }
 
-    try {
-      // Create deletion request event (kind 5) according to NIP-09
-      const deletionEvent = {
-        kind: 5,
-        content: 'Calendar event deleted',
-        tags: [
-          ['e', event.id],
-          ['a', `${event.kind}:${event.pubkey}:${this.getEventDTag(event)}`],
-          ['k', event.kind.toString()],
-        ],
-        created_at: Math.floor(Date.now() / 1000),
-        pubkey: this.app.accountState.pubkey()!,
-      };
+    const confirmed = await this.deleteEventService.confirmDeletion({
+      event: {
+        id: event.id,
+        pubkey: event.pubkey,
+        created_at: event.created_at,
+        kind: event.kind,
+        content: event.content,
+        tags: event.tags,
+        sig: '',
+      },
+      title: 'Delete Event',
+      entityLabel: 'calendar event',
+      confirmText: 'Delete Event',
+    });
+    if (!confirmed) {
+      return;
+    }
 
-      const unsigned = this.nostrService.createEvent(5, 'Calendar event deleted', [
-        ['e', event.id],
-        ['a', `${event.kind}:${event.pubkey}:${this.getEventDTag(event)}`],
-        ['k', event.kind.toString()],
-      ]);
+    try {
+      const unsigned = this.nostrService.createEvent(
+        5,
+        'Calendar event deleted',
+        this.deleteEventService.createDeletionTagsForCoordinate(
+          {
+            id: event.id,
+            kind: event.kind,
+            pubkey: event.pubkey,
+            identifier: this.getEventDTag(event),
+          },
+          confirmed.referenceMode
+        )
+      );
       const signed = await this.nostrService.signEvent(unsigned);
       await this.accountRelay.publish(signed);
 

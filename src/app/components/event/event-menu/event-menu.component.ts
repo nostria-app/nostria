@@ -52,6 +52,7 @@ import { CollectionSetsService, EmojiSet } from '../../../services/collection-se
 import { SaveToGifsDialogComponent, SaveToGifsDialogData } from '../../save-to-gifs-dialog/save-to-gifs-dialog.component';
 import { ImageCacheService } from '../../../services/image-cache.service';
 import { EventRelaySourcesService } from '../../../services/event-relay-sources.service';
+import { DeleteEventService } from '../../../services/delete-event.service';
 
 @Component({
   selector: 'app-event-menu',
@@ -96,6 +97,7 @@ export class EventMenuComponent {
   private logger = inject(LoggerService);
   private collectionSets = inject(CollectionSetsService);
   private imageCacheService = inject(ImageCacheService);
+  private deleteEventService = inject(DeleteEventService);
 
   event = input.required<Event>();
   view = input<'icon' | 'full'>('icon');
@@ -480,19 +482,14 @@ export class EventMenuComponent {
       return;
     }
 
-    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
-      data: {
-        title: 'Delete event',
-        message: 'Are you sure?',
-        confirmText: 'Delete event',
-        cancelText: 'Cancel',
-        confirmColor: 'warn',
-      } as ConfirmDialogData,
+    const confirmedDelete = await this.deleteEventService.confirmDeletion({
+      event,
+      title: 'Delete event',
+      entityLabel: 'event',
+      confirmText: 'Delete event',
     });
-
-    const confirmedDelete = await firstValueFrom(dialogRef.afterClosed());
     if (confirmedDelete) {
-      const deleteEvent = this.nostrService.createRetractionEvent(event);
+      const deleteEvent = this.nostrService.createRetractionEventWithMode(event, confirmedDelete.referenceMode);
 
       const result = await this.nostrService.signAndPublish(deleteEvent);
       if (result.success) {

@@ -31,6 +31,7 @@ import { PublishService } from '../../../services/publish.service';
 import { RelayPoolService } from '../../../services/relays/relay-pool';
 import { ClipboardService } from '../../../services/clipboard.service';
 import { normalizeEmojiShortcode } from '../../../utils/emoji-shortcode';
+import { DeleteEventService } from '../../../services/delete-event.service';
 
 interface SuggestedEmojiPackDef {
   pubkey: string;
@@ -87,6 +88,7 @@ interface EditableEmojiRow {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class EmojiSetsComponent implements OnInit, OnDestroy {
+  private deleteEventService = inject(DeleteEventService);
   private collectionSetsService = inject(CollectionSetsService);
   private accountState = inject(AccountStateService);
   private logger = inject(LoggerService);
@@ -619,21 +621,25 @@ export class EmojiSetsComponent implements OnInit, OnDestroy {
   }
 
   async deleteSet(set: EmojiSet) {
-    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
-      data: {
-        title: 'Delete Emoji Set',
-        message: `Are you sure you want to delete "${set.name}"?`,
-        confirmText: 'Delete',
-        cancelText: 'Cancel',
+    const result = await this.deleteEventService.confirmDeletion({
+      event: {
+        id: set.eventId,
+        kind: 30030,
+        pubkey: this.accountState.pubkey() || '',
+        content: '',
+        created_at: set.created_at,
+        tags: [['d', set.identifier]],
+        sig: '',
       },
+      title: 'Delete Emoji Set',
+      entityLabel: 'emoji set',
+      confirmText: 'Delete',
     });
-
-    const result = await dialogRef.afterClosed().toPromise();
     if (!result) return;
 
     this.isLoading.set(true);
     try {
-      const success = await this.collectionSetsService.deleteEmojiSet(set.identifier);
+      const success = await this.collectionSetsService.deleteEmojiSet(set.identifier, result.referenceMode);
 
       if (success) {
         this.snackBar.open('Emoji set deleted', 'Close', { duration: 3000 });

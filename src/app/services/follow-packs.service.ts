@@ -7,6 +7,7 @@ import { AccountStateService } from './account-state.service';
 import { PublishService } from './publish.service';
 import { AccountRelayService } from './relays/account-relay';
 import { DeletionFilterService } from './deletion-filter.service';
+import type { DeleteEventReferenceMode } from '../components/delete-confirmation-dialog/delete-confirmation-dialog.component';
 
 const FOLLOW_PACK_KIND = 39089;
 
@@ -163,16 +164,19 @@ export class FollowPacksService {
   /**
    * Delete a follow pack using a kind 5 deletion event (NIP-09).
    */
-  async deleteFollowPack(identifier: string): Promise<boolean> {
+  async deleteFollowPack(identifier: string, referenceMode: DeleteEventReferenceMode = 'a'): Promise<boolean> {
     const pubkey = this.accountState.pubkey();
     if (!pubkey) return false;
 
     try {
-      const tags: string[][] = [
-        ['a', `${FOLLOW_PACK_KIND}:${pubkey}:${identifier}`],
-      ];
+      const events = await this.accountRelay.getEventsByPubkeyAndKind(pubkey, FOLLOW_PACK_KIND);
+      const eventToDelete = events.find(e => e.tags.find(tag => tag[0] === 'd')?.[1] === identifier);
+      if (!eventToDelete) {
+        this.logger.error('Follow pack not found:', identifier);
+        return false;
+      }
 
-      const event = this.nostrService.createEvent(kinds.EventDeletion, '', tags);
+      const event = this.nostrService.createRetractionEventWithMode(eventToDelete, referenceMode);
       const signedEvent = await this.nostrService.signEvent(event);
 
       await this.database.saveEvent(signedEvent);

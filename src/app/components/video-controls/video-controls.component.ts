@@ -33,6 +33,7 @@ export interface VideoControlsConfig {
   showPiP?: boolean;
   showFullscreen?: boolean;
   showPlaybackRate?: boolean;
+  showDownload?: boolean;
   showCast?: boolean;
   showVolumeControl?: boolean;
   showVolumeSlider?: boolean;
@@ -45,6 +46,8 @@ export interface VideoControlsConfig {
   isLiveStream?: boolean;
   autoHide?: boolean;
   autoHideDelay?: number;
+  downloadUrl?: string;
+  downloadFilename?: string;
 }
 
 const DEFAULT_CONFIG: VideoControlsConfig = {
@@ -52,6 +55,7 @@ const DEFAULT_CONFIG: VideoControlsConfig = {
   showPiP: true,
   showFullscreen: true,
   showPlaybackRate: true,
+  showDownload: true,
   showCast: true,
   showVolumeControl: true,
   showVolumeSlider: true,
@@ -204,6 +208,11 @@ export class VideoControlsComponent implements OnDestroy {
 
   // Speed panel state: 'closed' | 'main' | 'speed'
   settingsPanel = signal<'closed' | 'main' | 'speed'>('closed');
+
+  canDownload = computed(() => {
+    const config = this.mergedConfig();
+    return !!config.showDownload && !config.isLiveStream && !!config.downloadUrl;
+  });
 
   // Speed slider range: 0.25 to 3.0, step 0.05
   readonly speedMin = 0.25;
@@ -836,6 +845,50 @@ export class VideoControlsComponent implements OnDestroy {
 
   onCastToggle(): void {
     this.castToggle.emit();
+  }
+
+  async downloadVideo(event?: Event): Promise<void> {
+    this.consumeInteraction(event);
+
+    if (!this.isBrowser || !this.canDownload()) {
+      return;
+    }
+
+    const { downloadUrl, downloadFilename } = this.mergedConfig();
+    if (!downloadUrl) {
+      return;
+    }
+
+    try {
+      const response = await fetch(downloadUrl);
+      if (!response.ok) {
+        throw new Error(`Failed to download video: ${response.status}`);
+      }
+
+      const blob = await response.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = objectUrl;
+      link.download = downloadFilename || this.getDownloadFilename(downloadUrl);
+      link.rel = 'noopener';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      this.settingsPanel.set('closed');
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 0);
+    } catch (error) {
+      console.error('Unable to download video file:', error);
+    }
+  }
+
+  private getDownloadFilename(downloadUrl: string): string {
+    try {
+      const url = new URL(downloadUrl, window.location.origin);
+      const lastSegment = url.pathname.split('/').pop() || 'video';
+      return lastSegment || 'video';
+    } catch {
+      return 'video';
+    }
   }
 
   // Utilities

@@ -1,0 +1,25 @@
+.delete-confirmation-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+
+  p {
+    margin: 0;
+    color: var(--mat-sys-on-surface);
+    line-height: 1.5;
+  }
+}
+
+.delete-mode-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 12px;
+  background: var(--mat-sys-surface-container-low);
+}
+
+.delete-button {
+  background: var(--mat-sys-error-container);
+  color: var(--mat-sys-on-error-container);
+}

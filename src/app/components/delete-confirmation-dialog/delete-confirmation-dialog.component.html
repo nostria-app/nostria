@@ -1,0 +1,36 @@
+<app-custom-dialog
+  [title]="data.title"
+  [showCloseButton]="true"
+  [disableClose]="false"
+  [width]="'520px'"
+  [maxWidth]="'92vw'"
+  [panelClass]="'delete-confirmation-dialog'"
+  (closed)="cancel()">
+
+  <div dialog-content class="delete-confirmation-content">
+    <p>Delete requests are not guaranteed on a decentralized network, but they work in most cases.</p>
+
+    @if (supportsAddressDelete) {
+      <p>
+        This is an addressable {{ entityLabel }}. Some relays don't support delete of addressable events,
+        choose to delete this single event instance instead if needed.
+      </p>
+
+      <mat-radio-group [(ngModel)]="selectedMode" aria-label="Delete mode" class="delete-mode-group">
+        <mat-radio-button value="a">
+          Delete by address (`a` tag)
+        </mat-radio-button>
+        <mat-radio-button value="e">
+          Delete this single event instance (`e` tag)
+        </mat-radio-button>
+      </mat-radio-group>
+    } @else {
+      <p>Are you sure you want to request deletion of this {{ entityLabel }}?</p>
+    }
+  </div>
+
+  <div dialog-actions>
+    <button mat-button type="button" (click)="cancel()">Cancel</button>
+    <button mat-flat-button class="delete-button" type="button" (click)="confirm()">{{ confirmText }}</button>
+  </div>
+</app-custom-dialog>

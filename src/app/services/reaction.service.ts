@@ -10,6 +10,7 @@ import { UserRelaysService } from './relays/user-relays';
 import { DatabaseService } from './database.service';
 import { AccountLocalStateService } from './account-local-state.service';
 import { MusicLikedSongsService } from './music-liked-songs.service';
+import type { DeleteEventReferenceMode } from '../components/delete-confirmation-dialog/delete-confirmation-dialog.component';
 
 @Injectable({
   providedIn: 'root',
@@ -102,10 +103,10 @@ export class ReactionService {
     return this.addReaction('-', event);
   }
 
-  async deleteReaction(event: Event): Promise<{ success: boolean; error?: string }> {
+  async deleteReaction(event: Event, referenceMode: DeleteEventReferenceMode = 'e'): Promise<{ success: boolean; error?: string }> {
     const likedSongsRef = this.getMusicReactionRef(event);
 
-    const deleteEvent = this.nostrService.createRetractionEvent(event);
+    const deleteEvent = this.nostrService.createRetractionEventWithMode(event, referenceMode);
     const accountRelayUrls = this.accountRelay.getRelayUrls();
     const targetAuthorPubkeys = [...new Set(
       event.tags

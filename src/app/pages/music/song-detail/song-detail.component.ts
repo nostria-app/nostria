@@ -47,6 +47,7 @@ import { ShareArticleDialogComponent, ShareArticleDialogData } from '../../../co
 import { CustomDialogService } from '../../../services/custom-dialog.service';
 import { EventActionsToolbarComponent } from '../../../components/event-actions-toolbar/event-actions-toolbar.component';
 import { BookmarkListSelectorComponent } from '../../../components/bookmark-list-selector/bookmark-list-selector.component';
+import { DeleteEventService } from '../../../services/delete-event.service';
 
 interface TopZapper {
   pubkey: string;
@@ -118,6 +119,7 @@ export class SongDetailComponent implements OnInit, OnDestroy {
   private database = inject(DatabaseService);
   private colorExtraction = inject(ColorExtractionService);
   private themeService = inject(ThemeService);
+  private deleteEventService = inject(DeleteEventService);
 
   // Inputs for when opened via RightPanelService
   pubkeyInput = input<string | undefined>(undefined);
@@ -1323,21 +1325,16 @@ export class SongDetailComponent implements OnInit, OnDestroy {
     const ev = this.song();
     if (!ev || !this.isOwnTrack()) return;
 
-    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
-      data: {
-        title: 'Delete Track',
-        message: 'Are you sure you want to request deletion of this track? This action creates a deletion request (NIP-09) but cannot guarantee the track will be removed from all relays and clients.',
-        confirmText: 'Delete',
-        cancelText: 'Cancel',
-        confirmColor: 'warn',
-      } as ConfirmDialogData,
+    const confirmedDelete = await this.deleteEventService.confirmDeletion({
+      event: ev,
+      title: 'Delete Track',
+      entityLabel: 'track',
+      confirmText: 'Delete',
     });
-
-    const confirmedDelete = await firstValueFrom(dialogRef.afterClosed());
     if (confirmedDelete) {
       this.isDeleting.set(true);
       try {
-        const deleteEvent = this.nostrService.createRetractionEvent(ev);
+        const deleteEvent = this.nostrService.createRetractionEventWithMode(ev, confirmedDelete.referenceMode);
         const result = await this.nostrService.signAndPublish(deleteEvent);
 
         if (result.success) {

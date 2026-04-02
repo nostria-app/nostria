@@ -29,6 +29,7 @@ import { ZapDialogComponent, ZapDialogData } from '../zap-dialog/zap-dialog.comp
 import { DataService } from '../../services/data.service';
 import { NostrService } from '../../services/nostr.service';
 import { ConfirmDialogComponent, ConfirmDialogData } from '../confirm-dialog/confirm-dialog.component';
+import { DeleteEventService } from '../../services/delete-event.service';
 
 @Component({
   selector: 'app-music-track-menu',
@@ -194,6 +195,7 @@ export class MusicTrackMenuComponent {
   private zapService = inject(ZapService);
   private dataService = inject(DataService);
   private nostrService = inject(NostrService);
+  private deleteEventService = inject(DeleteEventService);
 
   // Like state
   isLiked = signal(false);
@@ -277,22 +279,17 @@ export class MusicTrackMenuComponent {
     const ev = this.track();
     if (!ev || !this.isOwnTrack() || this.isDeleting()) return;
 
-    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
-      data: {
-        title: 'Delete Track',
-        message: 'Are you sure you want to request deletion of this track? This action creates a deletion request (NIP-09) but cannot guarantee the track will be removed from all relays and clients.',
-        confirmText: 'Delete',
-        cancelText: 'Cancel',
-        confirmColor: 'warn',
-      } as ConfirmDialogData,
+    const confirmedDelete = await this.deleteEventService.confirmDeletion({
+      event: ev,
+      title: 'Delete Track',
+      entityLabel: 'track',
+      confirmText: 'Delete',
     });
-
-    const confirmedDelete = await firstValueFrom(dialogRef.afterClosed());
     if (!confirmedDelete) return;
 
     this.isDeleting.set(true);
     try {
-      const deleteEvent = this.nostrService.createRetractionEvent(ev);
+      const deleteEvent = this.nostrService.createRetractionEventWithMode(ev, confirmedDelete.referenceMode);
       const result = await this.nostrService.signAndPublish(deleteEvent);
 
       if (result.success) {

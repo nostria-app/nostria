@@ -15,6 +15,7 @@ import { NotificationService } from '../../services/notification.service';
 import { SettingsService } from '../../services/settings.service';
 import { ImageCacheService } from '../../services/image-cache.service';
 import { ConfirmDialogComponent, ConfirmDialogData } from '../../components/confirm-dialog/confirm-dialog.component';
+import { DeleteEventService } from '../../services/delete-event.service';
 
 export interface EditPeopleListDialogData {
   followSet: FollowSet;
@@ -308,6 +309,7 @@ export class EditPeopleListDialogComponent {
   private readonly imageCacheService = inject(ImageCacheService);
   private readonly dialogRef = inject(MatDialogRef<EditPeopleListDialogComponent>);
   private readonly dialog = inject(MatDialog);
+  private readonly deleteEventService = inject(DeleteEventService);
 
   // Injected data
   readonly data: EditPeopleListDialogData = inject(MAT_DIALOG_DATA);
@@ -411,24 +413,16 @@ export class EditPeopleListDialogComponent {
   async deleteList(): Promise<void> {
     const set = this.data.followSet;
 
-    const dialogData: ConfirmDialogData = {
+    const confirmed = await this.deleteEventService.confirmDeletion({
+      event: set.event,
       title: 'Delete List',
-      message: `Are you sure you want to delete "${set.title}"? This action cannot be undone.`,
+      entityLabel: 'list',
       confirmText: 'Delete',
-      cancelText: 'Cancel',
-      confirmColor: 'warn'
-    };
-
-    const confirmRef = this.dialog.open(ConfirmDialogComponent, {
-      data: dialogData,
-      width: '400px'
     });
-
-    const confirmed = await confirmRef.afterClosed().toPromise();
 
     if (confirmed) {
       try {
-        const success = await this.followSetsService.deleteFollowSet(set.dTag);
+        const success = await this.followSetsService.deleteFollowSet(set.dTag, confirmed.referenceMode);
         if (success) {
           this.notificationService.notify(`Deleted list "${set.title}"`);
           this.dialogRef.close({ followSet: set, removedPubkeys: [], deleted: true });

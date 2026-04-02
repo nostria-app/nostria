@@ -43,6 +43,8 @@ import { TrustProviderService, TRUST_PROVIDER_LIST_KIND } from './trust-provider
 import { PublicChatsListService } from './public-chats-list.service';
 import { CommunityListService } from './community-list.service';
 import { UserRelayService } from './relays/user-relay';
+import { DeleteEventService } from './delete-event.service';
+import type { DeleteEventReferenceMode } from '../components/delete-confirmation-dialog/delete-confirmation-dialog.component';
 
 export interface NostrUser {
   pubkey: string;
@@ -108,6 +110,7 @@ export interface UserMetadataWithPubkey extends NostrEventData<UserMetadata> {
   providedIn: 'root',
 })
 export class NostrService implements NostriaService {
+  private readonly deleteEventService = inject(DeleteEventService);
   private readonly logger = inject(LoggerService);
   private readonly platformId = inject(PLATFORM_ID);
   private readonly isBrowser = isPlatformBrowser(this.platformId);
@@ -1386,10 +1389,16 @@ export class NostrService implements NostriaService {
 
   // NIP-09 Deletion Request / Retraction Event
   createRetractionEvent(eventToRetract: Event): UnsignedEvent {
-    return this.createEvent(kinds.EventDeletion, '', [
-      ['e', eventToRetract.id],
-      ['k', String(eventToRetract.kind)],
-    ]);
+    return this.createRetractionEventWithMode(eventToRetract, 'e');
+  }
+
+  createRetractionEventWithMode(eventToRetract: Event, referenceMode: DeleteEventReferenceMode): UnsignedEvent {
+    return this.deleteEventService.createRetractionEvent(
+      this.createEvent.bind(this),
+      eventToRetract,
+      referenceMode,
+      ''
+    );
   }
 
   /**

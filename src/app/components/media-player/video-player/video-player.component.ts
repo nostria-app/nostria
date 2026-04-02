@@ -339,6 +339,42 @@ export class VideoPlayerComponent implements OnDestroy {
     }
   }
 
+  canDownloadCurrentVideo(): boolean {
+    const currentMedia = this.media.current();
+    return currentMedia?.type === 'Video';
+  }
+
+  async downloadCurrentVideo(): Promise<void> {
+    if (!this.utilities.isBrowser()) {
+      return;
+    }
+
+    const downloadUrl = this.getDownloadUrl();
+    if (!downloadUrl) {
+      return;
+    }
+
+    try {
+      const response = await fetch(downloadUrl);
+      if (!response.ok) {
+        throw new Error(`Failed to download video: ${response.status}`);
+      }
+
+      const blob = await response.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = objectUrl;
+      link.download = this.getDownloadFilename(downloadUrl);
+      link.rel = 'noopener';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 0);
+    } catch (error) {
+      console.error('Unable to download video file:', error);
+    }
+  }
+
   async castToDevice(): Promise<void> {
     const video = this.videoElement?.nativeElement;
     if (!video) {
@@ -482,6 +518,30 @@ export class VideoPlayerComponent implements OnDestroy {
 
   get volume(): number {
     return this.videoElement?.nativeElement ? Math.round(this.videoElement.nativeElement.volume * 100) : 100;
+  }
+
+  private getDownloadUrl(): string | null {
+    const currentMedia = this.media.current();
+    if (!currentMedia) {
+      return null;
+    }
+
+    return currentMedia.type === 'Video' ? currentMedia.source : null;
+  }
+
+  private getDownloadFilename(downloadUrl: string): string {
+    const currentMedia = this.media.current();
+    const fallbackName = (currentMedia?.title?.trim() || 'video').replace(/[\\/:*?"<>|]+/g, '_');
+
+    try {
+      const url = new URL(downloadUrl, window.location.origin);
+      const pathname = url.pathname;
+      const lastSegment = pathname.split('/').pop() || '';
+      const extensionMatch = lastSegment.match(/(\.[a-z0-9]{2,5})$/i);
+      return extensionMatch ? `${fallbackName}${extensionMatch[1]}` : fallbackName;
+    } catch {
+      return fallbackName;
+    }
   }
 
   private isMusicVideoTrack(): boolean {

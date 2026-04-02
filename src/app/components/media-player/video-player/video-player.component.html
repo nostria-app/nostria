@@ -162,6 +162,12 @@
     <span>Picture-in-Picture</span>
   </button>
   }
+  @if (canDownloadCurrentVideo()) {
+  <button mat-menu-item (click)="downloadCurrentVideo()">
+    <mat-icon>download</mat-icon>
+    <span>Download</span>
+  </button>
+  }
   <button mat-menu-item (click)="toggleExpand()">
     <mat-icon>{{ layout.expandedMediaPlayer() ? 'expand_more' : 'expand_less' }}</mat-icon>
     <span>{{ layout.expandedMediaPlayer() ? 'Collapse video' : 'Expand video' }}</span>
@@ -186,6 +192,12 @@
   <button mat-menu-item (click)="pictureInPicture()">
     <mat-icon>picture_in_picture</mat-icon>
     <span>Picture-in-Picture</span>
+  </button>
+  }
+  @if (canDownloadCurrentVideo()) {
+  <button mat-menu-item (click)="downloadCurrentVideo()">
+    <mat-icon>download</mat-icon>
+    <span>Download</span>
   </button>
   }
   <button mat-menu-item (click)="requestNativeFullscreen()">

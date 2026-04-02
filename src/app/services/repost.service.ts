@@ -5,6 +5,7 @@ import { kinds } from 'nostr-tools';
 import type { NostrRecord } from '../interfaces';
 import { NostrService } from './nostr.service';
 import { UtilitiesService } from './utilities.service';
+import type { DeleteEventReferenceMode } from '../components/delete-confirmation-dialog/delete-confirmation-dialog.component';
 
 export interface RepostReference {
   eventId: string;
@@ -87,9 +88,9 @@ export class RepostService {
     };
   }
 
-  async deleteRepost(event: Event): Promise<boolean> {
+  async deleteRepost(event: Event, referenceMode: DeleteEventReferenceMode = 'e'): Promise<boolean> {
     // Create the event
-    const deleteEvent = this.nostrService.createRetractionEvent(event);
+    const deleteEvent = this.nostrService.createRetractionEventWithMode(event, referenceMode);
 
     const result = await this.nostrService.signAndPublish(deleteEvent);
     if (result.success) {
