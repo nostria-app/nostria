@@ -1573,9 +1573,24 @@ export class App implements OnInit, OnDestroy {
         });
 
       } else if (entity.startsWith('naddr')) {
-        // Handle address entities using canonical /a route
         try {
-          this.layout.openArticle(entity);
+          const decoded = nip19.decode(entity);
+          if (decoded.type === 'naddr') {
+            const data = decoded.data;
+            const npub = nip19.npubEncode(data.pubkey);
+
+            if (data.kind === 34139) {
+              this.layout.openMusicAlbum(npub, data.identifier);
+            } else if (data.kind === 30003) {
+              this.layout.openMusicPlaylist(npub, data.identifier);
+            } else if (this.utilities.isMusicKind(data.kind)) {
+              this.layout.openSongDetail(npub, data.identifier);
+            } else {
+              this.layout.openArticle(entity);
+            }
+          } else {
+            this.layout.openArticle(entity);
+          }
           this.snackBar.open($localize`:@@app.snackbar.opening-event:Opening event...`, $localize`:@@app.snackbar.dismiss:Dismiss`, {
             duration: 2000,
             horizontalPosition: 'center',
@@ -2834,3 +2849,4 @@ export class App implements OnInit, OnDestroy {
     return this.utilities.unique(relayUrls);
   }
 }
+

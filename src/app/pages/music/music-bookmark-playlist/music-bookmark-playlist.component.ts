@@ -818,7 +818,6 @@ export class MusicBookmarkPlaylistComponent {
     try {
       const authorRelays = await this.userRelays.getUserRelaysForPublishing(event.pubkey);
       const npub = nip19.npubEncode(event.pubkey);
-      const link = `https://nostria.app/music/playlist/${npub}/${encodeURIComponent(identifier)}`;
       const naddr = nip19.naddrEncode({
         kind: event.kind,
         pubkey: event.pubkey,
@@ -830,7 +829,7 @@ export class MusicBookmarkPlaylistComponent {
         title: this.title(),
         summary: this.description() || `Check out ${this.title()}`,
         image: this.coverImage() || undefined,
-        url: link,
+        url: `nostr:${naddr}`,
         eventId: event.id,
         pubkey: event.pubkey,
         identifier,

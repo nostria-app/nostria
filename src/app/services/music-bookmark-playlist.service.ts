@@ -114,10 +114,11 @@ export class MusicBookmarkPlaylistService {
     this.lastFetchedPubkey = userPubkey;
 
     try {
+      // Some relays do not reliably index `#t` for addressable playlists.
+      // Fetch the user's kind 30003 events and keep only music playlists locally.
       const events = await this.accountRelay.getMany<Event>({
         kinds: [MUSIC_PLAYLIST_KIND],
         authors: [userPubkey],
-        '#t': ['playlist'],
         limit: 200,
       } as Filter, { timeout: 5000 });
 

@@ -475,6 +475,7 @@ export class MusicComponent implements OnDestroy {
 
   constructor() {
     this.twoColumnLayout.setWideLeft();
+    this.playlists.set(this.getVisibleBookmarkPlaylistEvents());
     this.initializeMusic();
     void this.loadBookmarkPlaylists();
 
@@ -1568,11 +1569,25 @@ export class MusicComponent implements OnDestroy {
 
   private async loadBookmarkPlaylists(): Promise<void> {
     try {
+      const cached = this.getVisibleBookmarkPlaylistEvents();
+      if (cached.length > 0) {
+        this.playlists.set(cached);
+      }
+
       const events = await this.bookmarkPlaylistService.fetchPublicPlaylists(100);
-      this.playlists.set(events);
+      this.playlists.set(events.filter(event => !this.reporting.isUserBlocked(event.pubkey) && !this.reporting.isContentBlocked(event)));
     } catch (error) {
       this.logger.warn('[Music] Failed to load bookmark playlists:', error);
     }
+  }
+
+  private getVisibleBookmarkPlaylistEvents(): Event[] {
+    return this.bookmarkPlaylistService
+      .userPlaylists()
+      .map(playlist => playlist.event)
+      .filter((event): event is Event => !!event)
+      .filter(event => !this.reporting.isUserBlocked(event.pubkey) && !this.reporting.isContentBlocked(event))
+      .sort((a, b) => b.created_at - a.created_at);
   }
 
   openImportFromRss(): void {
