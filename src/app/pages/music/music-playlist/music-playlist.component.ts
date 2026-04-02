@@ -38,7 +38,6 @@ import {
   EditMusicPlaylistDialogComponent,
   EditMusicPlaylistDialogData,
 } from '../edit-music-playlist-dialog/edit-music-playlist-dialog.component';
-import { MusicEventComponent } from '../../../components/event-types/music-event.component';
 import { ZapDialogComponent, ZapDialogData } from '../../../components/zap-dialog/zap-dialog.component';
 import { ShareArticleDialogComponent, ShareArticleDialogData } from '../../../components/share-article-dialog/share-article-dialog.component';
 import { CustomDialogService } from '../../../services/custom-dialog.service';
@@ -62,7 +61,6 @@ const MUSIC_PLAYLIST_KIND = 34139;
     MatSnackBarModule,
     MatTooltipModule,
     EditMusicPlaylistDialogComponent,
-    MusicEventComponent,
     EventActionsToolbarComponent,
     CommentsListComponent,
   ],
@@ -1026,6 +1024,17 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
 
   getPlaylistTrackDisplayNumber(track: Event, index: number): string {
     return track.tags.find(tag => tag[0] === 'track_number')?.[1]?.trim() || `${index + 1}`;
+  }
+
+  getTrackDuration(track: Event): string {
+    const seconds = this.utilities.getMusicDuration(track);
+    if (!seconds || Number.isNaN(seconds)) {
+      return '--:--';
+    }
+
+    const minutes = Math.floor(seconds / 60);
+    const remainder = seconds % 60;
+    return `${minutes}:${remainder.toString().padStart(2, '0')}`;
   }
 
   getTrackArtist(track: Event): string {

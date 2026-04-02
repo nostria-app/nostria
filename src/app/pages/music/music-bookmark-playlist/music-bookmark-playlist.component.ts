@@ -3,6 +3,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { Event, nip19 } from 'nostr-tools';
 import { MusicBookmarkPlaylistService } from '../../../services/music-bookmark-playlist.service';
 import { UtilitiesService } from '../../../services/utilities.service';
@@ -11,12 +12,13 @@ import { DatabaseService } from '../../../services/database.service';
 import { DataService } from '../../../services/data.service';
 import { LoggerService } from '../../../services/logger.service';
 import { LayoutService } from '../../../services/layout.service';
+import { ImageCacheService } from '../../../services/image-cache.service';
 import { MediaItem } from '../../../interfaces';
 
 @Component({
   selector: 'app-music-bookmark-playlist',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [MatButtonModule, MatIconModule, MatProgressSpinnerModule],
+  imports: [MatButtonModule, MatIconModule, MatProgressSpinnerModule, MatTooltipModule],
   template: `
     <div class="panel-header">
       <button mat-icon-button (click)="goBack()">
@@ -32,35 +34,77 @@ import { MediaItem } from '../../../interfaces';
         <div class="state"><mat-icon>playlist_remove</mat-icon><p>Playlist not found.</p></div>
       } @else {
         <div class="hero">
-          <div class="hero-art" [style.background]="gradient() || ''">
-            @if (coverImage()) {
-              <img [src]="coverImage()!" [alt]="title()" />
+          <div class="header-icon hero-art" [style.background]="gradient() || ''">
+            @if (coverImage(); as cover) {
+              <img [src]="cover" [alt]="title()" />
             } @else {
               <mat-icon>playlist_play</mat-icon>
             }
           </div>
-          <div class="hero-info">
+          <div class="header-text hero-info">
             <h1>{{ title() }}</h1>
+            <p class="subtitle">{{ tracks().length }} tracks</p>
             @if (description()) {
-              <p>{{ description() }}</p>
+              <p class="playlist-description">{{ description() }}</p>
             }
-            <div class="meta">{{ tracks().length }} tracks</div>
-            <div class="actions">
-              <button mat-flat-button (click)="playAll()" [disabled]="tracks().length === 0">
-                <mat-icon>play_arrow</mat-icon>
-                <span>Play</span>
-              </button>
-            </div>
           </div>
+          <div class="header-actions">
+            <button mat-fab extended class="play-all-button" (click)="playAll()" [disabled]="tracks().length === 0">
+                <mat-icon>play_arrow</mat-icon>
+                <span>Play All</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="track-list-header hide-small">
+          <span class="track-list-header-number">#</span>
+          <span class="track-list-header-title">Title</span>
+          <span class="track-list-header-album">Album</span>
+          <span class="track-list-header-duration">
+            <mat-icon>schedule</mat-icon>
+          </span>
         </div>
 
         <div class="track-list">
           @for (track of tracks(); track track.id; let i = $index) {
-            <button type="button" class="track-row" (click)="playTrack(i)">
-              <span class="index">{{ i + 1 }}</span>
-              <span class="track-title">{{ getTrackTitle(track) }}</span>
-              <span class="track-artist">{{ getTrackArtist(track) }}</span>
-            </button>
+            <div class="track-row">
+              <button type="button" class="track-play-button" (click)="playTrack(i)"
+                [attr.aria-label]="'Play ' + getTrackTitle(track)">
+                <span class="track-number">{{ i + 1 }}</span>
+                <mat-icon class="play-icon">play_arrow</mat-icon>
+              </button>
+
+              <div class="track-main">
+                <button type="button" class="track-cover-button" (click)="playTrack(i)"
+                  [attr.aria-label]="'Play ' + getTrackTitle(track)">
+                  @if (getTrackImage(track); as image) {
+                    <img [src]="image" [alt]="getTrackTitle(track)" class="track-cover" />
+                  } @else if (getTrackGradient(track); as trackGradient) {
+                    <div class="track-cover track-cover-gradient" [style.background]="trackGradient"></div>
+                  } @else {
+                    <div class="track-cover track-cover-placeholder">
+                      <mat-icon>music_note</mat-icon>
+                    </div>
+                  }
+                </button>
+
+                <div class="track-text">
+                  <button type="button" class="track-title-button" (click)="openTrack(track)">
+                    <span class="track-title">{{ getTrackTitle(track) }}</span>
+                  </button>
+                  <span class="track-artist">{{ getTrackArtist(track) }}</span>
+                </div>
+              </div>
+
+              <div class="track-meta">
+                <span class="track-album">{{ getTrackAlbum(track) }}</span>
+                <span class="track-duration">{{ getTrackDuration(track) }}</span>
+                <button mat-icon-button type="button" class="track-menu-button"
+                  [matTooltip]="'Open ' + getTrackTitle(track)" (click)="openTrack(track)">
+                  <mat-icon>more_horiz</mat-icon>
+                </button>
+              </div>
+            </div>
           }
         </div>
       }
@@ -81,7 +125,10 @@ import { MediaItem } from '../../../interfaces';
       backdrop-filter: blur(20px);
     }
     .panel-title { margin: 0; font-size: 1.25rem; }
-    .container { padding: 1rem; padding-bottom: 120px; }
+    .container {
+      padding: 1rem;
+      padding-bottom: 120px;
+    }
     .state {
       min-height: 260px;
       display: flex;
@@ -94,13 +141,18 @@ import { MediaItem } from '../../../interfaces';
     }
     .hero {
       display: grid;
-      grid-template-columns: 160px 1fr;
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      align-items: center;
       gap: 1rem;
-      margin-bottom: 1.5rem;
+      padding: 0.5rem 0 1.25rem;
+    }
+    .header-icon {
+      width: 64px;
+      height: 64px;
+      border-radius: var(--mat-sys-corner-medium);
     }
     .hero-art {
       aspect-ratio: 1;
-      border-radius: 12px;
       overflow: hidden;
       background: linear-gradient(135deg, var(--mat-sys-primary-container), var(--mat-sys-secondary-container));
       display: flex;
@@ -108,31 +160,274 @@ import { MediaItem } from '../../../interfaces';
       justify-content: center;
     }
     .hero-art img { width: 100%; height: 100%; object-fit: cover; }
-    .hero-art mat-icon { font-size: 4rem; width: 4rem; height: 4rem; color: var(--mat-sys-on-primary-container); }
-    .hero-info h1 { margin: 0 0 0.5rem; }
-    .hero-info p, .meta { color: var(--mat-sys-on-surface-variant); }
-    .actions { margin-top: 1rem; }
+    .hero-art mat-icon { font-size: 2rem; width: 2rem; height: 2rem; color: var(--mat-sys-on-primary-container); }
+    .header-text {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+      min-width: 0;
+    }
+    .hero-info h1 {
+      margin: 0;
+      font-size: 2.25rem;
+      line-height: 1.05;
+      color: var(--mat-sys-on-surface);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .subtitle,
+    .playlist-description {
+      margin: 0;
+      color: var(--mat-sys-on-surface-variant);
+    }
+    .playlist-description {
+      font-size: 0.875rem;
+      line-height: 1.4;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .header-actions {
+      display: flex;
+      justify-content: flex-end;
+    }
+    .play-all-button {
+      border-radius: var(--mat-sys-corner-large);
+      min-height: 56px;
+      padding: 0 1.5rem;
+      background: linear-gradient(135deg, #946200, #c88900);
+      color: #fff6db;
+    }
+    .track-list-header {
+      display: grid;
+      grid-template-columns: 2rem minmax(0, 1fr) minmax(8rem, 20vw) 3.25rem;
+      align-items: center;
+      gap: 0.625rem;
+      padding: 0 0.75rem 0.35rem;
+      border-bottom: 1px solid color-mix(in srgb, var(--mat-sys-outline-variant) 78%, transparent);
+      color: var(--mat-sys-on-surface-variant);
+      font-size: 0.75rem;
+    }
+    .track-list-header-number,
+    .track-list-header-duration {
+      text-align: right;
+    }
+    .track-list-header-duration {
+      display: flex;
+      justify-content: flex-end;
+    }
+    .track-list-header-duration mat-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+    }
     .track-list {
       display: flex;
       flex-direction: column;
-      gap: 0.5rem;
+      gap: 0;
     }
     .track-row {
-      width: 100%;
-      border: 0;
-      border-radius: 12px;
-      background: var(--mat-sys-surface-container-low);
-      padding: 0.875rem 1rem;
       display: grid;
-      grid-template-columns: 32px 1fr auto;
+      grid-template-columns: 2.5rem minmax(0, 1fr) minmax(8rem, 16rem);
       gap: 0.75rem;
       align-items: center;
-      text-align: left;
+      min-height: 3.25rem;
+      border-bottom: 1px solid color-mix(in srgb, var(--mat-sys-outline-variant) 78%, transparent);
+    }
+    .track-row:hover {
+      background: color-mix(in srgb, var(--mat-sys-surface-container-high) 24%, transparent);
+    }
+    .track-row:hover .track-number {
+      opacity: 0;
+    }
+    .track-row:hover .play-icon {
+      opacity: 1;
+    }
+    .track-play-button,
+    .track-cover-button,
+    .track-title-button {
+      padding: 0;
+      border: 0;
+      background: transparent;
       color: inherit;
     }
-    .index, .track-artist { color: var(--mat-sys-on-surface-variant); }
+    .track-play-button {
+      position: relative;
+      width: 2.5rem;
+      height: 2.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+    .track-number,
+    .play-icon {
+      position: absolute;
+      inset: 50% auto auto 50%;
+      transform: translate(-50%, -50%);
+      transition: opacity 0.15s ease;
+    }
+    .track-number {
+      color: var(--mat-sys-on-surface-variant);
+      font-size: 0.875rem;
+      font-variant-numeric: tabular-nums;
+    }
+    .play-icon {
+      opacity: 0;
+      font-size: 1.1rem;
+      width: 1.1rem;
+      height: 1.1rem;
+      color: var(--mat-sys-on-surface);
+    }
+    .track-main {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      min-width: 0;
+    }
+    .track-cover-button {
+      cursor: pointer;
+    }
+    .track-cover {
+      width: 36px;
+      height: 36px;
+      min-width: 36px;
+      border-radius: var(--mat-sys-corner-extra-small);
+      object-fit: cover;
+      display: block;
+    }
+    .track-cover-gradient,
+    .track-cover-placeholder {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .track-cover-placeholder {
+      background: linear-gradient(135deg, var(--mat-sys-tertiary-container) 0%, var(--mat-sys-secondary-container) 100%);
+    }
+    .track-cover-placeholder mat-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+      color: var(--mat-sys-on-tertiary-container);
+      opacity: 0.7;
+    }
+    .track-text {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+    .track-title-button {
+      min-width: 0;
+      max-width: 100%;
+      cursor: pointer;
+      text-align: left;
+    }
+    .track-title {
+      display: block;
+      color: var(--mat-sys-on-surface);
+      font-size: 1rem;
+      line-height: 1.2;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .track-title-button:hover .track-title {
+      color: var(--mat-sys-primary);
+      text-decoration: underline;
+    }
+    .track-artist,
+    .track-album,
+    .track-duration {
+      color: var(--mat-sys-on-surface-variant);
+      font-size: 0.875rem;
+    }
+    .track-artist,
+    .track-album {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .track-meta {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 3.25rem 2rem;
+      align-items: center;
+      gap: 0.75rem;
+      min-width: 0;
+    }
+    .track-duration {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+    .track-menu-button {
+      width: 32px;
+      height: 32px;
+      padding: 0 !important;
+      display: flex !important;
+      align-items: center;
+      justify-content: center;
+      color: var(--mat-sys-on-surface-variant);
+    }
+    .track-menu-button mat-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+    }
     @media (max-width: 720px) {
-      .hero { grid-template-columns: 1fr; }
+      .hero {
+        grid-template-columns: 1fr;
+        align-items: flex-start;
+      }
+      .header-actions {
+        width: 100%;
+        justify-content: flex-start;
+      }
+      .track-list-header {
+        grid-template-columns: minmax(0, 1fr) 3.25rem;
+      }
+      .track-list-header-number,
+      .track-list-header-album,
+      .track-play-button,
+      .track-album,
+      .track-menu-button {
+        display: none !important;
+      }
+      .track-row {
+        grid-template-columns: minmax(0, 1fr) 3.25rem;
+      }
+      .track-meta {
+        grid-template-columns: 3.25rem;
+        justify-self: end;
+      }
+    }
+    @media (max-width: 520px) {
+      .container {
+        padding-left: 0.5rem;
+        padding-right: 0.5rem;
+      }
+      .hero-info h1 {
+        font-size: 2rem;
+      }
+      .track-list-header {
+        grid-template-columns: minmax(0, 1fr) 3rem;
+        gap: 0.5rem;
+        padding-left: 0.5rem;
+        padding-right: 0.5rem;
+      }
+      .track-row {
+        grid-template-columns: minmax(0, 1fr) 3rem;
+        gap: 0.5rem;
+      }
+      .track-cover {
+        width: 32px;
+        height: 32px;
+        min-width: 32px;
+      }
+      .track-meta {
+        grid-template-columns: 3rem;
+      }
     }
   `],
 })
@@ -146,6 +441,7 @@ export class MusicBookmarkPlaylistComponent {
   private data = inject(DataService);
   private logger = inject(LoggerService);
   private layout = inject(LayoutService);
+  private imageCache = inject(ImageCacheService);
 
   playlist = signal<Event | null>(null);
   tracks = signal<Event[]>([]);
@@ -235,8 +531,45 @@ export class MusicBookmarkPlaylistComponent {
     return this.utilities.getMusicTitle(track) || 'Untitled Track';
   }
 
+  getTrackImage(track: Event): string | null {
+    const rawUrl = this.utilities.getMusicImage(track) || null;
+    if (!rawUrl) {
+      return null;
+    }
+
+    return this.imageCache.getOptimizedImageUrlWithSize(rawUrl, 64, 64);
+  }
+
+  getTrackGradient(track: Event): string | null {
+    return this.utilities.getMusicGradient(track);
+  }
+
   getTrackArtist(track: Event): string {
     return this.utilities.getMusicArtist(track) || 'Unknown Artist';
+  }
+
+  getTrackAlbum(track: Event): string {
+    return track.tags.find(tag => tag[0] === 'album')?.[1] || this.title();
+  }
+
+  getTrackDuration(track: Event): string {
+    const seconds = this.utilities.getMusicDuration(track);
+    if (!seconds || Number.isNaN(seconds)) {
+      return '--:--';
+    }
+
+    const minutes = Math.floor(seconds / 60);
+    const remainder = seconds % 60;
+    return `${minutes}:${remainder.toString().padStart(2, '0')}`;
+  }
+
+  openTrack(track: Event): void {
+    const dTag = track.tags.find(tag => tag[0] === 'd')?.[1] || '';
+    if (!track.pubkey || !dTag) {
+      return;
+    }
+
+    this.layout.openSongDetail(track.pubkey, dTag, track);
   }
 
   playAll(): void {

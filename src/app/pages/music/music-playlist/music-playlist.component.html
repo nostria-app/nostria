@@ -159,10 +159,46 @@
         </span>
       </div>
 
-      <div class="track-list">
+      <div class="track-list" role="list">
         @for (track of tracks(); track track.id; let i = $index) {
-        <app-music-event [event]="track" mode="track-list" [trackNumber]="getPlaylistTrackDisplayNumber(track, i)"
-          [queueTracks]="tracks()" [queueTrackIndex]="i"></app-music-event>
+        <div class="track-row" role="listitem">
+          <button type="button" class="track-play-button" (click)="playTrack(i)"
+            [attr.aria-label]="'Play ' + getTrackTitle(track)">
+            <span class="track-number">{{ getPlaylistTrackDisplayNumber(track, i) }}</span>
+            <mat-icon class="play-icon">play_arrow</mat-icon>
+          </button>
+
+          <div class="track-main">
+            <button type="button" class="track-cover-button" (click)="playTrack(i)"
+              [attr.aria-label]="'Play ' + getTrackTitle(track)">
+              @if (getTrackImage(track); as img) {
+              <img [src]="img" [alt]="getTrackTitle(track)" class="track-cover" />
+              } @else if (gradient(); as playlistGradient) {
+              <div class="track-cover track-cover-gradient" [style.background]="playlistGradient"></div>
+              } @else {
+              <div class="track-cover track-cover-placeholder">
+                <mat-icon>music_note</mat-icon>
+              </div>
+              }
+            </button>
+
+            <div class="track-text">
+              <button type="button" class="track-title-button" (click)="goToTrackDetails(track)">
+                <span class="track-title">{{ getTrackTitle(track) }}</span>
+              </button>
+              <span class="track-artist">{{ getTrackArtist(track) }}</span>
+            </div>
+          </div>
+
+          <div class="track-meta">
+            <span class="track-album">{{ title() }}</span>
+            <span class="track-duration">{{ getTrackDuration(track) }}</span>
+            <button mat-icon-button class="track-menu-button" type="button"
+              [attr.aria-label]="'More options for ' + getTrackTitle(track)">
+              <mat-icon>more_horiz</mat-icon>
+            </button>
+          </div>
+        </div>
         }
       </div>
       }
