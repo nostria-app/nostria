@@ -48,7 +48,7 @@ import { ChannelEmbedComponent } from '../channel-embed/channel-embed.component'
 
 // Music event kinds
 const MUSIC_TRACK_KIND = 36787;
-const MUSIC_PLAYLIST_KIND = 34139;
+const MUSIC_ALBUM_KIND = 34139;
 const EMOJI_SET_KIND = 30030;
 const LIVE_EVENT_KIND = 30311;
 
@@ -1173,7 +1173,7 @@ export class MessageContentComponent implements OnDestroy {
 
   isMusicMention(part: ContentPart): boolean {
     if (!part.naddrData) return false;
-    return part.naddrData.kind === MUSIC_TRACK_KIND || part.naddrData.kind === MUSIC_PLAYLIST_KIND;
+    return part.naddrData.kind === MUSIC_TRACK_KIND || part.naddrData.kind === MUSIC_ALBUM_KIND;
   }
 
   isEmojiSetMention(part: ContentPart): boolean {

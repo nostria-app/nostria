@@ -63,7 +63,7 @@ interface AlbumInfo {
 }
 
 const MUSIC_KINDS = [...UtilitiesService.MUSIC_KINDS];
-const MUSIC_PLAYLIST_KIND = 34139;
+const MUSIC_ALBUM_KIND = 34139;
 
 @Component({
   selector: 'app-song-detail',
@@ -1133,7 +1133,7 @@ export class SongDetailComponent implements OnInit, OnDestroy {
 
     // 1. Search local DB first
     try {
-      const localPlaylists = await this.database.getEventsByKind(MUSIC_PLAYLIST_KIND);
+      const localPlaylists = await this.database.getEventsByKind(MUSIC_ALBUM_KIND);
       for (const pl of localPlaylists) {
         const hasTrack = pl.tags.some(t => t[0] === 'a' && t[1] === trackCoordinate);
         if (hasTrack) {
@@ -1152,7 +1152,7 @@ export class SongDetailComponent implements OnInit, OnDestroy {
     }
 
     const filter: Filter = {
-      kinds: [MUSIC_PLAYLIST_KIND],
+      kinds: [MUSIC_ALBUM_KIND],
       '#a': [trackCoordinate],
       limit: 20,
     };
@@ -1215,7 +1215,7 @@ export class SongDetailComponent implements OnInit, OnDestroy {
 
     // 1. Search local DB first
     try {
-      const localPlaylists = await this.database.getEventsByKind(MUSIC_PLAYLIST_KIND);
+      const localPlaylists = await this.database.getEventsByKind(MUSIC_ALBUM_KIND);
       for (const pl of localPlaylists) {
         if (pl.pubkey !== artistPubkey) continue;
         // Exclude albums that contain this specific track (those are shown in "containing albums")
@@ -1235,7 +1235,7 @@ export class SongDetailComponent implements OnInit, OnDestroy {
     }
 
     const filter: Filter = {
-      kinds: [MUSIC_PLAYLIST_KIND],
+      kinds: [MUSIC_ALBUM_KIND],
       authors: [artistPubkey],
       limit: 20,
     };

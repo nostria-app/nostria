@@ -31,7 +31,7 @@ import { ZapDialogComponent, ZapDialogData } from '../../../components/zap-dialo
 import { ZapService } from '../../../services/zap.service';
 
 const MUSIC_KINDS = [...UtilitiesService.MUSIC_KINDS];
-const MUSIC_PLAYLIST_KIND = 34139;
+const MUSIC_ALBUM_KIND = 34139;
 
 @Component({
   selector: 'app-music-artist',
@@ -262,7 +262,7 @@ export class MusicArtistComponent implements OnInit, OnDestroy {
 
     // Load playlists
     const playlistFilter: Filter = {
-      kinds: [MUSIC_PLAYLIST_KIND],
+      kinds: [MUSIC_ALBUM_KIND],
       authors: [pubkey],
       limit: 100,
     };
@@ -299,7 +299,7 @@ export class MusicArtistComponent implements OnInit, OnDestroy {
     try {
       const [cachedTrackGroups, cachedPlaylists] = await Promise.all([
         Promise.all(MUSIC_KINDS.map(kind => this.database.getEventsByPubkeyAndKind(pubkey, kind))),
-        this.database.getEventsByPubkeyAndKind(pubkey, MUSIC_PLAYLIST_KIND),
+        this.database.getEventsByPubkeyAndKind(pubkey, MUSIC_ALBUM_KIND),
       ]);
 
       const cachedTracks = cachedTrackGroups.flat();

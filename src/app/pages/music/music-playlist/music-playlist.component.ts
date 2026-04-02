@@ -47,7 +47,7 @@ import { BookmarkListSelectorComponent } from '../../../components/bookmark-list
 import { ConfirmDialogComponent, ConfirmDialogData } from '../../../components/confirm-dialog/confirm-dialog.component';
 
 const MUSIC_KINDS = [...UtilitiesService.MUSIC_KINDS];
-const MUSIC_PLAYLIST_KIND = 34139;
+const MUSIC_ALBUM_KIND = 34139;
 
 @Component({
   selector: 'app-music-playlist',
@@ -429,7 +429,7 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
     }
 
     const filter: Filter = {
-      kinds: [MUSIC_PLAYLIST_KIND],
+      kinds: [MUSIC_ALBUM_KIND],
       authors: [decodedPubkey],
       '#d': [identifier],
       limit: 1,
@@ -576,7 +576,7 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
 
   private async loadCachedPlaylist(pubkey: string, identifier: string): Promise<void> {
     try {
-      const cached = await this.database.getParameterizedReplaceableEvent(pubkey, MUSIC_PLAYLIST_KIND, identifier);
+      const cached = await this.database.getParameterizedReplaceableEvent(pubkey, MUSIC_ALBUM_KIND, identifier);
       if (cached) {
         this.playlist.set(cached);
         this.loading.set(false);

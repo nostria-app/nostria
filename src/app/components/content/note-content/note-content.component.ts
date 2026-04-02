@@ -55,7 +55,7 @@ import { stripImageProxy } from '../../../utils/strip-image-proxy';
 
 // Music event kinds
 const MUSIC_TRACK_KIND = 36787;
-const MUSIC_PLAYLIST_KIND = 34139;
+const MUSIC_ALBUM_KIND = 34139;
 const EMOJI_SET_KIND = 30030;
 const STARTER_PACK_KIND = 39089;
 const LIVE_EVENT_KIND = 30311;
@@ -824,7 +824,7 @@ export class NoteContentComponent implements OnDestroy {
    */
   isMusicMention(token: ContentToken): boolean {
     const data = this.getNaddrData(token);
-    return data !== null && (data.kind === MUSIC_TRACK_KIND || data.kind === MUSIC_PLAYLIST_KIND);
+    return data !== null && (data.kind === MUSIC_TRACK_KIND || data.kind === MUSIC_ALBUM_KIND);
   }
 
   /**
@@ -857,7 +857,7 @@ export class NoteContentComponent implements OnDestroy {
   isArticleMention(token: ContentToken): boolean {
     const data = this.getNaddrData(token);
     if (!data) return false;
-    return data.kind !== MUSIC_TRACK_KIND && data.kind !== MUSIC_PLAYLIST_KIND && data.kind !== EMOJI_SET_KIND;
+    return data.kind !== MUSIC_TRACK_KIND && data.kind !== MUSIC_ALBUM_KIND && data.kind !== EMOJI_SET_KIND;
   }
 
   /**

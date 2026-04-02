@@ -66,12 +66,11 @@ export class MusicBookmarkPlaylistService {
       return false;
     }
 
+    const hasPlaylistTag = event.tags.some(tag => tag[0] === 't' && tag[1] === 'playlist');
+    const hasMusicTag = event.tags.some(tag => tag[0] === 't' && tag[1] === 'music');
     const dTag = event.tags.find(tag => tag[0] === 'd')?.[1] || '';
-    if (dTag.startsWith(PLAYLIST_D_TAG_PREFIX)) {
-      return true;
-    }
 
-    return event.tags.some(tag => tag[0] === 't' && tag[1] === 'playlist');
+    return dTag.startsWith(PLAYLIST_D_TAG_PREFIX) && hasPlaylistTag && hasMusicTag;
   }
 
   parsePlaylistEvent(event: Event): MusicBookmarkPlaylist | null {
@@ -114,13 +113,18 @@ export class MusicBookmarkPlaylistService {
     this.lastFetchedPubkey = userPubkey;
 
     try {
-      // Some relays do not reliably index `#t` for addressable playlists.
-      // Fetch the user's kind 30003 events and keep only music playlists locally.
-      const events = await this.accountRelay.getMany<Event>({
+      const relayUrls = this.relaysService.getOptimalRelays(this.utilities.preferredRelays);
+      if (relayUrls.length === 0) {
+        return this._userPlaylists();
+      }
+
+      // Bookmark playlists are music content and may exist on the user's music relays
+      // even when account relays do not surface them consistently.
+      const events = await this.pool.query(relayUrls, {
         kinds: [MUSIC_PLAYLIST_KIND],
         authors: [userPubkey],
         limit: 200,
-      } as Filter, { timeout: 5000 });
+      } as Filter, 5000);
 
       const nextMap = new Map<string, MusicBookmarkPlaylist>();
       for (const event of events) {

@@ -99,7 +99,7 @@ interface SidebarWidgetOption {
 }
 
 const MUSIC_KIND = 36787;
-const MUSIC_PLAYLIST_KIND = 34139;
+const MUSIC_ALBUM_KIND = 34139;
 const OPEN_METEO_URL = 'https://api.open-meteo.com/v1/forecast';
 const OPEN_METEO_GEOCODING_URL = 'https://geocoding-api.open-meteo.com/v1/search';
 const IP_LOCATION_URL = 'https://ipwho.is/';
@@ -799,7 +799,7 @@ export class RunesSidebarComponent implements OnDestroy {
       const reactionsFilter: Filter = {
         kinds: [kinds.Reaction],
         authors: [pubkey],
-        '#k': [String(MUSIC_PLAYLIST_KIND)],
+        '#k': [String(MUSIC_ALBUM_KIND)],
         limit: 200,
       };
 
@@ -812,7 +812,7 @@ export class RunesSidebarComponent implements OnDestroy {
         }
 
         const aTag = reaction.tags.find(tag => tag[0] === 'a')?.[1];
-        if (aTag && aTag.startsWith(`${MUSIC_PLAYLIST_KIND}:`)) {
+        if (aTag && aTag.startsWith(`${MUSIC_ALBUM_KIND}:`)) {
           playlistRefs.add(aTag);
         }
       }
@@ -1467,7 +1467,7 @@ export class RunesSidebarComponent implements OnDestroy {
     const batchedFilters: Filter[] = [];
     for (const [author, dTags] of authorDTags) {
       batchedFilters.push({
-        kinds: [MUSIC_PLAYLIST_KIND],
+        kinds: [MUSIC_ALBUM_KIND],
         authors: [author],
         '#d': Array.from(dTags),
       });

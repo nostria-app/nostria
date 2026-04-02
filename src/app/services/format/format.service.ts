@@ -17,7 +17,7 @@ import { UserRelaysService } from '../relays/user-relays';
   providedIn: 'root',
 })
 export class FormatService {
-  private static readonly MUSIC_PLAYLIST_KIND = 34139;
+  private static readonly MUSIC_ALBUM_KIND = 34139;
   private static readonly MUSIC_TRACK_KIND = 36787;
 
   private logger = inject(LoggerService);
@@ -280,7 +280,7 @@ export class FormatService {
   private getAddressableRoute(kind: number, pubkey: string, identifier: string, naddrEncoded: string): string {
     const npub = this.utilities.getNpubFromPubkey(pubkey);
 
-    if (kind === FormatService.MUSIC_PLAYLIST_KIND) {
+    if (kind === FormatService.MUSIC_ALBUM_KIND) {
       return `/music/album/${npub}/${encodeURIComponent(identifier)}`;
     }
 
@@ -555,7 +555,7 @@ export class FormatService {
       return this.buildMusicTrackNaddrPreview(event, identifier, naddrEncoded);
     }
 
-    if (kind === FormatService.MUSIC_PLAYLIST_KIND) {
+    if (kind === FormatService.MUSIC_ALBUM_KIND) {
       return this.buildMusicPlaylistNaddrPreview(event, identifier, naddrEncoded);
     }
 

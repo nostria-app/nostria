@@ -9,7 +9,7 @@ import { NostrService } from './nostr.service';
 import { ApplicationService } from './application.service';
 import { LoggerService } from './logger.service';
 
-const MUSIC_PLAYLIST_KIND = 34139;
+const MUSIC_ALBUM_KIND = 34139;
 const MUSIC_KIND = UtilitiesService.PRIMARY_MUSIC_KIND;
 
 export interface MusicPlaylist {
@@ -92,7 +92,7 @@ export class MusicPlaylistService {
       }
 
       const filter: Filter = {
-        kinds: [MUSIC_PLAYLIST_KIND],
+        kinds: [MUSIC_ALBUM_KIND],
         authors: [userPubkey],
         limit: 100,
       };
@@ -200,7 +200,7 @@ export class MusicPlaylistService {
 
     const content = data.description || '';
 
-    const event = this.nostrService.createEvent(MUSIC_PLAYLIST_KIND, content, tags);
+    const event = this.nostrService.createEvent(MUSIC_ALBUM_KIND, content, tags);
     if (!event) {
       this.logger.error('Failed to create playlist event');
       return null;
@@ -264,7 +264,7 @@ export class MusicPlaylistService {
     newTags.push(['a', trackRef]);
 
     const event = this.nostrService.createEvent(
-      MUSIC_PLAYLIST_KIND,
+      MUSIC_ALBUM_KIND,
       playlist.event.content,
       newTags
     );
@@ -373,7 +373,7 @@ export class MusicPlaylistService {
 
     const content = description || '';
 
-    const event = this.nostrService.createEvent(MUSIC_PLAYLIST_KIND, content, newTags);
+    const event = this.nostrService.createEvent(MUSIC_ALBUM_KIND, content, newTags);
     if (!event) {
       this.logger.error('Failed to create updated playlist event');
       return null;

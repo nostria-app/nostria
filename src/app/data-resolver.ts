@@ -24,7 +24,7 @@ function debugLog(message: string, ...args: unknown[]): void {
 
 // Known addressable event kinds
 const MUSIC_KIND = 36787;
-const MUSIC_PLAYLIST_KIND = 34139;
+const MUSIC_ALBUM_KIND = 34139;
 const ARTICLE_KIND = kinds.LongFormArticle; // 30023
 const EVENT_RETRY_TIMEOUT_MS = 2500;
 const PROFILE_WAIT_AFTER_EVENT_MS = 800;
@@ -622,7 +622,7 @@ export class DataResolver implements Resolve<EventData | null> {
         if (routePath.includes('music/song')) {
           kind = MUSIC_KIND;
         } else if (routePath.includes('music/album')) {
-          kind = MUSIC_PLAYLIST_KIND;
+          kind = MUSIC_ALBUM_KIND;
         } else if (routePath.includes('music/playlist')) {
           kind = 30003;
         }

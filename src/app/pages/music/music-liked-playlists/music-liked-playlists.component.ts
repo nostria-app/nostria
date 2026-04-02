@@ -17,7 +17,7 @@ import { MusicPlaylistCardComponent } from '../../../components/music-playlist-c
 import { LoggerService } from '../../../services/logger.service';
 import { MusicLikedSongsService } from '../../../services/music-liked-songs.service';
 
-const MUSIC_PLAYLIST_KIND = 34139;
+const MUSIC_ALBUM_KIND = 34139;
 const PAGE_SIZE = 24;
 
 @Component({
@@ -560,7 +560,7 @@ export class MusicLikedPlaylistsComponent implements OnDestroy, AfterViewInit {
     }
 
     const authorGroups = new Map<string, Set<string>>();
-    for (const coordinate of aTagCoordinates.filter(coord => coord.startsWith(`${MUSIC_PLAYLIST_KIND}:`))) {
+    for (const coordinate of aTagCoordinates.filter(coord => coord.startsWith(`${MUSIC_ALBUM_KIND}:`))) {
       const parts = coordinate.split(':');
       const author = parts[1];
       const dTag = parts.slice(2).join(':');
@@ -589,7 +589,7 @@ export class MusicLikedPlaylistsComponent implements OnDestroy, AfterViewInit {
 
     Array.from(authorGroups.entries()).forEach(([author, dTags]) => {
       queryTasks.push(this.pool.query(relayUrls, {
-        kinds: [MUSIC_PLAYLIST_KIND],
+        kinds: [MUSIC_ALBUM_KIND],
         authors: [author],
         '#d': Array.from(dTags),
         limit: Math.max(dTags.size * 2, dTags.size),
@@ -599,7 +599,7 @@ export class MusicLikedPlaylistsComponent implements OnDestroy, AfterViewInit {
     const eventIdBatchSize = 100;
     for (let i = 0; i < eventIds.length; i += eventIdBatchSize) {
       queryTasks.push(this.pool.query(relayUrls, {
-        kinds: [MUSIC_PLAYLIST_KIND],
+        kinds: [MUSIC_ALBUM_KIND],
         ids: eventIds.slice(i, i + eventIdBatchSize),
       }, 5000));
     }
@@ -675,7 +675,7 @@ export class MusicLikedPlaylistsComponent implements OnDestroy, AfterViewInit {
         id: ref,
         pubkey: this.accountState.pubkey() || '',
         created_at: 0,
-        kind: MUSIC_PLAYLIST_KIND,
+        kind: MUSIC_ALBUM_KIND,
         content: '+',
         tags: [['a', ref]],
         sig: '',
