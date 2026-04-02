@@ -149,6 +149,15 @@ export class ReactionService {
     return { success: result.success, error: result.error };
   }
 
+  async deleteLikeForTarget(target: Event): Promise<{ success: boolean; error?: string }> {
+    const reaction = await this.findExistingLikeReaction(target);
+    if (!reaction) {
+      return { success: false, error: 'Could not find the existing like reaction.' };
+    }
+
+    return this.deleteReaction(reaction);
+  }
+
   private isMusicLikeTarget(event: Event): boolean {
     if (this.utilities.isParameterizedReplaceableEvent(event.kind)) {
       const dTag = this.utilities.getTagValues('d', event.tags)[0];
@@ -164,6 +173,84 @@ export class ReactionService {
     }
 
     return this.utilities.isMusicKind(event.kind) || event.kind === 34139;
+  }
+
+  private async findExistingLikeReaction(target: Event): Promise<Event | null> {
+    const currentUserPubkey = this.accountState.pubkey();
+    if (!currentUserPubkey) {
+      return null;
+    }
+
+    const matchesTarget = (reaction: Event): boolean => {
+      if (reaction.kind !== kinds.Reaction || !this.isPositiveReaction(reaction)) {
+        return false;
+      }
+
+      if (this.utilities.isParameterizedReplaceableEvent(target.kind)) {
+        const dTag = this.utilities.getTagValues('d', target.tags)[0];
+        if (!dTag) {
+          return false;
+        }
+
+        const aTag = `${target.kind}:${target.pubkey}:${dTag}`;
+        return reaction.tags.some(tag => tag[0] === 'a' && tag[1] === aTag);
+      }
+
+      return reaction.tags.some(tag => tag[0] === 'e' && tag[1] === target.id)
+        && reaction.tags.some(tag => tag[0] === 'k' && tag[1] === String(target.kind));
+    };
+
+    const cachedReactions = await this.database.getEventsByPubkeyAndKind(currentUserPubkey, kinds.Reaction);
+    const cachedReaction = cachedReactions
+      .filter(matchesTarget)
+      .sort((a, b) => b.created_at - a.created_at)[0] ?? null;
+    if (cachedReaction) {
+      return cachedReaction;
+    }
+
+    const filter = this.buildLikeLookupFilter(currentUserPubkey, target);
+    if (!filter) {
+      return null;
+    }
+
+    const relayReactions = await this.accountRelay.getMany<Event>(filter, { timeout: 5000 });
+    return relayReactions
+      .filter(matchesTarget)
+      .sort((a, b) => b.created_at - a.created_at)[0] ?? null;
+  }
+
+  private buildLikeLookupFilter(pubkey: string, target: Event): { kinds: number[]; authors: string[]; limit: number; '#a'?: string[]; '#e'?: string[] } | null {
+    if (this.utilities.isParameterizedReplaceableEvent(target.kind)) {
+      const dTag = this.utilities.getTagValues('d', target.tags)[0];
+      if (!dTag) {
+        return null;
+      }
+
+      return {
+        kinds: [kinds.Reaction],
+        authors: [pubkey],
+        '#a': [`${target.kind}:${target.pubkey}:${dTag}`],
+        limit: 20,
+      };
+    }
+
+    if (!target.id) {
+      return null;
+    }
+
+    return {
+      kinds: [kinds.Reaction],
+      authors: [pubkey],
+      '#e': [target.id],
+      limit: 20,
+    };
+  }
+
+  private isPositiveReaction(reaction: Event): boolean {
+    return reaction.content === '+'
+      || reaction.content === '❤️'
+      || reaction.content === '🤙'
+      || reaction.content === '👍';
   }
 
   private getMusicReactionRef(reaction: Event): string | null {

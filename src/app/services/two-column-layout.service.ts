@@ -296,8 +296,8 @@ export class TwoColumnLayoutService {
       }
     });
 
-    // Track route changes
-    this.router.events.pipe(
+  // Track route changes
+  this.router.events.pipe(
       filter(event => event instanceof NavigationEnd)
     ).subscribe((event) => {
       const navEvent = event as NavigationEnd;
@@ -332,7 +332,9 @@ export class TwoColumnLayoutService {
     // - Other routes get narrow mode (700px) by default
     // Components can override this by calling setWideLeft() in their lifecycle
     const wideRoutes = ['streams', 'clips', 'music', 'messages', 'chats', 'collections/bookmarks', 'collections/media', 'articles', 'discover', 'people', 'calendar'];
-    const isWideRoute = isHome || wideRoutes.some(route => cleanUrl === route || cleanUrl.startsWith(route + '/'));
+    const narrowRouteOverrides = new Set(['music/offline', 'music/playlists']);
+    const isWideRoute = !narrowRouteOverrides.has(cleanUrl)
+      && (isHome || wideRoutes.some(route => cleanUrl === route || cleanUrl.startsWith(route + '/')));
     if (isWideRoute) {
       this._leftWidthMode.set('wide');
     } else {

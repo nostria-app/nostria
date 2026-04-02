@@ -26,6 +26,7 @@ import { LayoutService } from '../../services/layout.service';
 import { CustomDialogService } from '../../services/custom-dialog.service';
 import { UserRelaysService } from '../../services/relays/user-relays';
 import { NostrService } from '../../services/nostr.service';
+import { MusicLikedSongsService } from '../../services/music-liked-songs.service';
 import { NostrRecord, MediaItem } from '../../interfaces';
 import { ZapDialogComponent, ZapDialogData } from '../zap-dialog/zap-dialog.component';
 import { ShareArticleDialogComponent, ShareArticleDialogData } from '../share-article-dialog/share-article-dialog.component';
@@ -616,6 +617,7 @@ export class MusicPlaylistCardComponent {
   private customDialog = inject(CustomDialogService);
   private userRelaysService = inject(UserRelaysService);
   private nostrService = inject(NostrService);
+  private likedSongsService = inject(MusicLikedSongsService);
 
   event = input.required<Event>();
   likedReaction = input<Event | null>(null);
@@ -649,6 +651,20 @@ export class MusicPlaylistCardComponent {
           });
         });
       }
+    });
+
+    effect(() => {
+      const event = this.event();
+      const userPubkey = this.accountState.pubkey();
+      if (!event || !userPubkey) {
+        return;
+      }
+
+      this.likedSongsService.likedAlbumRefs();
+
+      untracked(() => {
+        void this.likedSongsService.ensureInitialized(userPubkey);
+      });
     });
   }
 
@@ -721,6 +737,12 @@ export class MusicPlaylistCardComponent {
   isLiked = computed(() => {
     const override = this._likedOverride();
     if (override !== undefined) return !!override;
+
+    const playlist = this.event();
+    if (playlist.kind === 34139 && this.likedSongsService.isAlbumLiked(playlist)) {
+      return true;
+    }
+
     return !!this.likedReaction();
   });
 
@@ -759,12 +781,12 @@ export class MusicPlaylistCardComponent {
     const ev = this.event();
     if (this.isLiked()) {
       const existingReaction = this._likedOverride() ?? this.likedReaction();
-      if (!existingReaction) {
-        this.snackBar.open('Like is still syncing. Try again in a moment.', 'Close', { duration: 2500 });
-        return;
-      }
 
-      this.reactionService.deleteReaction(existingReaction).then(result => {
+      const deletePromise = existingReaction
+        ? this.reactionService.deleteReaction(existingReaction)
+        : this.reactionService.deleteLikeForTarget(ev);
+
+      deletePromise.then(result => {
         if (result.success) {
           this._likedOverride.set(null);
           this.likedReactionChange.emit(null);

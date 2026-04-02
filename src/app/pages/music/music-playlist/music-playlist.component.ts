@@ -30,6 +30,7 @@ import { ImageCacheService } from '../../../services/image-cache.service';
 import { ZapService } from '../../../services/zap.service';
 import { PanelNavigationService } from '../../../services/panel-navigation.service';
 import { NostrService } from '../../../services/nostr.service';
+import { MusicLikedSongsService } from '../../../services/music-liked-songs.service';
 import { NostrRecord, MediaItem } from '../../../interfaces';
 import { UserRelaysService } from '../../../services/relays/user-relays';
 import { ColorExtractionService, ExtractedColors } from '../../../services/color-extraction.service';
@@ -98,6 +99,7 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
   private panelNav = inject(PanelNavigationService);
   private userRelaysService = inject(UserRelaysService);
   private nostrService = inject(NostrService);
+  private likedSongsService = inject(MusicLikedSongsService);
   private colorExtraction = inject(ColorExtractionService);
   private themeService = inject(ThemeService);
 
@@ -316,9 +318,13 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
       const event = this.playlist();
       const userPubkey = this.accountState.pubkey();
       if (event && userPubkey) {
+        this.likedSongsService.likedAlbumRefs();
         untracked(() => {
+          void this.likedSongsService.ensureInitialized(userPubkey);
           this.checkExistingLike(event, userPubkey);
         });
+      } else {
+        this.isLiked.set(false);
       }
     });
 
@@ -992,6 +998,11 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
   }
 
   private checkExistingLike(ev: Event, userPubkey: string): void {
+    if (this.likedSongsService.isAlbumLiked(ev)) {
+      this.isLiked.set(true);
+      return;
+    }
+
     const relayUrls = this.relaysService.getOptimalRelays(this.utilities.preferredRelays);
     if (relayUrls.length === 0) return;
 

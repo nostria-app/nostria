@@ -45,17 +45,18 @@
 </div>
 
 <mat-menu #addMenu="matMenu">
-  <button mat-menu-item (click)="openUploadTrack()">
-    <mat-icon>upload</mat-icon>
-    <span i18n="@@music.menu.uploadTrack">Upload Track</span>
-  </button>
   <button mat-menu-item (click)="openCreatePlaylist()">
     <mat-icon>playlist_add</mat-icon>
     <span i18n="@@music.menu.createPlaylist">Create Playlist</span>
   </button>
+  <mat-divider></mat-divider>
   <button mat-menu-item (click)="openCreateAlbum()">
     <mat-icon>album</mat-icon>
     <span>Create Album</span>
+  </button>
+  <button mat-menu-item (click)="openUploadTrack()">
+    <mat-icon>upload</mat-icon>
+    <span i18n="@@music.menu.uploadTrack">Upload Track</span>
   </button>
   <button mat-menu-item (click)="openImportFromRss()">
     <mat-icon>rss_feed</mat-icon>
@@ -117,7 +118,7 @@
           </div>
           <div class="yours-card-info">
             <span class="yours-card-title">Liked Albums</span>
-            <span class="yours-card-meta">Your favorite collections</span>
+            <span class="yours-card-meta">Your favorite albums</span>
           </div>
         </div>
 
@@ -128,7 +129,7 @@
           </div>
           <div class="yours-card-info">
             <span class="yours-card-title">My Playlists</span>
-            <span class="yours-card-meta">Bookmark-set track collections</span>
+            <span class="yours-card-meta">Your track collections</span>
           </div>
         </div>
 

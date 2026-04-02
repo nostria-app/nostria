@@ -3,18 +3,20 @@ import { Router } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { ApplicationService } from '../../../services/application.service';
 import { Event } from 'nostr-tools';
 import { MusicBookmarkPlaylistService } from '../../../services/music-bookmark-playlist.service';
 import { MusicBookmarkPlaylistCardComponent } from '../../../components/music-bookmark-playlist-card/music-bookmark-playlist-card.component';
 import { ReportingService } from '../../../services/reporting.service';
 import { LoggerService } from '../../../services/logger.service';
+import { CreateMusicBookmarkPlaylistDialogComponent } from '../create-music-bookmark-playlist-dialog/create-music-bookmark-playlist-dialog.component';
 
 const PAGE_SIZE = 24;
 
 @Component({
   selector: 'app-music-bookmark-playlists',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [MatButtonModule, MatIconModule, MatProgressSpinnerModule, MusicBookmarkPlaylistCardComponent],
+  imports: [MatButtonModule, MatIconModule, MatProgressSpinnerModule, MusicBookmarkPlaylistCardComponent, CreateMusicBookmarkPlaylistDialogComponent],
   template: `
     <div class="panel-header">
       <button mat-icon-button (click)="goBack()">
@@ -33,6 +35,12 @@ const PAGE_SIZE = 24;
         <div class="state">
           <mat-icon>playlist_add</mat-icon>
           <p>No playlists found.</p>
+          @if (isAuthenticated()) {
+            <button mat-flat-button type="button" (click)="openCreatePlaylist()">
+              <mat-icon>add</mat-icon>
+              <span>Create Playlist</span>
+            </button>
+          }
         </div>
       } @else {
         <div class="grid">
@@ -50,6 +58,10 @@ const PAGE_SIZE = 24;
         }
       }
     </div>
+
+    @if (showCreatePlaylistDialog()) {
+      <app-create-music-bookmark-playlist-dialog (closed)="onCreatePlaylistDialogClosed($event)" />
+    }
   `,
   styles: [`
     :host { display: block; }
@@ -66,7 +78,12 @@ const PAGE_SIZE = 24;
       backdrop-filter: blur(20px);
     }
     .panel-title { margin: 0; font-size: 1.25rem; }
-    .container { padding: 1rem; padding-bottom: 120px; }
+    .container {
+      padding: 1rem;
+      padding-bottom: 120px;
+      max-width: 700px;
+      margin: 0 auto;
+    }
     .grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
@@ -83,11 +100,13 @@ const PAGE_SIZE = 24;
       text-align: center;
     }
     .state mat-icon { width: 3rem; height: 3rem; font-size: 3rem; }
+    .state button mat-icon { width: 1.25rem; height: 1.25rem; font-size: 1.25rem; }
     .load-more { display: flex; justify-content: center; padding: 2rem 0; }
   `],
 })
 export class MusicBookmarkPlaylistsComponent implements AfterViewInit {
   private router = inject(Router);
+  private app = inject(ApplicationService);
   private playlistService = inject(MusicBookmarkPlaylistService);
   private reporting = inject(ReportingService);
   private logger = inject(LoggerService);
@@ -95,10 +114,12 @@ export class MusicBookmarkPlaylistsComponent implements AfterViewInit {
   allPlaylists = signal<Event[]>([]);
   loading = signal(true);
   displayLimit = signal(PAGE_SIZE);
+  showCreatePlaylistDialog = signal(false);
   loadMoreSentinel = viewChild<ElementRef>('loadMoreSentinel');
 
   displayedPlaylists = computed(() => this.allPlaylists().slice(0, this.displayLimit()));
   hasMore = computed(() => this.allPlaylists().length > this.displayLimit());
+  isAuthenticated = computed(() => this.app.authenticated());
 
   private intersectionObserver: IntersectionObserver | null = null;
 
@@ -136,6 +157,19 @@ export class MusicBookmarkPlaylistsComponent implements AfterViewInit {
 
   loadMore(): void {
     this.displayLimit.update(limit => limit + PAGE_SIZE);
+  }
+
+  openCreatePlaylist(): void {
+    this.showCreatePlaylistDialog.set(true);
+  }
+
+  async onCreatePlaylistDialogClosed(result: unknown): Promise<void> {
+    this.showCreatePlaylistDialog.set(false);
+    if (!result) {
+      return;
+    }
+
+    await this.loadPlaylists();
   }
 
   goBack(): void {

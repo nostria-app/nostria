@@ -208,8 +208,8 @@ export class MusicBookmarkPlaylistService {
       ['d', dTag],
       ['title', data.title],
       ['alt', `Playlist: ${data.title}`],
+      ['t', 'music'],
       ['t', 'playlist'],
-      ['public', 'true'],
     ];
 
     if (data.description) {

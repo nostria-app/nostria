@@ -134,7 +134,7 @@ import { PanelNavigationService } from '../../../services/panel-navigation.servi
       flex-direction: column;
       padding: 1rem;
       padding-bottom: 120px;
-      max-width: 800px;
+      max-width: 700px;
       margin: 0 auto;
     }
 
