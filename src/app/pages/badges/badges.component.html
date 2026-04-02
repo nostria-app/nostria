@@ -63,7 +63,7 @@
             <mat-icon>drag_indicator</mat-icon>
           </div>
           <app-badge [badge]="badge" layout="horizontal" [showActions]="true" [isUpdating]="isUpdating()"
-            [isAccepted]="true" (viewClicked)="viewBadgeDetailsById(badge.id, badge.slug)"
+            [isAccepted]="true" (viewClicked)="viewBadgeDetailsById(badge.id)"
             (removeClicked)="removeBadge(badge)">
           </app-badge>
           <div class="badge-drag-placeholder" *cdkDragPlaceholder></div>
@@ -75,7 +75,7 @@
         @for (badge of accepted(); track badge.aTag) {
         <div class="badge-container">
           <app-badge [badge]="badge" layout="horizontal" [showActions]="true" [isUpdating]="isUpdating()"
-            [isAccepted]="true" (viewClicked)="viewBadgeDetailsById(badge.id, badge.slug)"
+            [isAccepted]="true" (viewClicked)="viewBadgeDetailsById(badge.id)"
             (removeClicked)="removeBadge(badge)">
           </app-badge>
         </div>
@@ -95,7 +95,7 @@
         @for (badge of accepted(); track badge.aTag) {
         <div class="badge-container">
           <app-badge [badge]="badge" layout="horizontal" [showActions]="false" [isUpdating]="false" [isAccepted]="true"
-            (viewClicked)="viewBadgeDetailsById(badge.id, badge.slug)">
+            (viewClicked)="viewBadgeDetailsById(badge.id)">
           </app-badge>
         </div>
         }

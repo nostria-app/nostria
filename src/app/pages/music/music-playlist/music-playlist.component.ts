@@ -13,7 +13,6 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { Clipboard } from '@angular/cdk/clipboard';
 import { firstValueFrom } from 'rxjs';
 import { Event, Filter, kinds, nip19 } from 'nostr-tools';
-import { formatDuration } from '../../../utils/format-duration';
 import { RelayPoolService } from '../../../services/relays/relay-pool';
 import { RelaysService } from '../../../services/relays/relays';
 import { UtilitiesService } from '../../../services/utilities.service';
@@ -39,8 +38,7 @@ import {
   EditMusicPlaylistDialogComponent,
   EditMusicPlaylistDialogData,
 } from '../edit-music-playlist-dialog/edit-music-playlist-dialog.component';
-import { MusicTrackMenuComponent } from '../../../components/music-track-menu/music-track-menu.component';
-import { MusicTrackDialogComponent, MusicTrackDialogData } from '../music-track-dialog/music-track-dialog.component';
+import { MusicEventComponent } from '../../../components/event-types/music-event.component';
 import { ZapDialogComponent, ZapDialogData } from '../../../components/zap-dialog/zap-dialog.component';
 import { ShareArticleDialogComponent, ShareArticleDialogData } from '../../../components/share-article-dialog/share-article-dialog.component';
 import { CustomDialogService } from '../../../services/custom-dialog.service';
@@ -64,8 +62,7 @@ const MUSIC_PLAYLIST_KIND = 34139;
     MatSnackBarModule,
     MatTooltipModule,
     EditMusicPlaylistDialogComponent,
-    MusicTrackMenuComponent,
-    MusicTrackDialogComponent,
+    MusicEventComponent,
     EventActionsToolbarComponent,
     CommentsListComponent,
   ],
@@ -135,10 +132,6 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
   // Edit dialog state
   showEditDialog = signal(false);
   editDialogData = signal<EditMusicPlaylistDialogData | null>(null);
-
-  // Track edit dialog state
-  showTrackEditDialog = signal(false);
-  trackEditDialogData = signal<MusicTrackDialogData | null>(null);
 
   private subscriptions: { close: () => void }[] = [];
   private likeSubscription: { close: () => void } | null = null;
@@ -616,7 +609,7 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
         if (!event) {
           continue;
         }
-        const dTag = event.tags.find(t => t[0] === 'd')?.[1] || '';
+        const dTag = event.tags.find((t: string[]) => t[0] === 'd')?.[1] || '';
         const uniqueId = `${event.kind}:${event.pubkey}:${dTag}`;
         const existing = this.trackMap.get(uniqueId);
         if (!existing || existing.created_at < event.created_at) {
@@ -966,37 +959,6 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
     }
   }
 
-  // Check if the current user owns a specific track
-  isOwnTrack(track: Event): boolean {
-    const currentPubkey = this.accountState.pubkey();
-    return !!currentPubkey && currentPubkey === track.pubkey;
-  }
-
-  editTrack(track: Event): void {
-    if (!this.isOwnTrack(track)) return;
-    this.trackEditDialogData.set({ track });
-    this.showTrackEditDialog.set(true);
-  }
-
-  onTrackEditDialogClosed(result: { published: boolean; updated?: boolean; event?: Event } | null): void {
-    this.showTrackEditDialog.set(false);
-    this.trackEditDialogData.set(null);
-
-    if (result?.updated && result?.event) {
-      // Update the track in the local map
-      const event = result.event;
-      const dTag = event.tags.find(t => t[0] === 'd')?.[1] || '';
-      const uniqueId = `${event.kind}:${event.pubkey}:${dTag}`;
-      this.trackMap.set(uniqueId, event);
-      this.updateTracks(this.trackRefs());
-      // Persist the updated event to the local database so it survives reloads
-      this.database.saveEvent({ ...event, dTag }).catch((err: unknown) => {
-        this.logger.warn('[MusicPlaylist] Failed to save updated track to database:', err);
-      });
-      this.snackBar.open('Track updated', 'Close', { duration: 2000 });
-    }
-  }
-
   private checkExistingLike(ev: Event, userPubkey: string): void {
     if (this.likedSongsService.isAlbumLiked(ev)) {
       this.isLiked.set(true);
@@ -1062,8 +1024,8 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
     return this.imageCache.getOptimizedImageUrlWithSize(rawUrl, 64, 64);
   }
 
-  getTrackGradient(track: Event): string | null {
-    return this.utilities.getMusicGradient(track);
+  getPlaylistTrackDisplayNumber(track: Event, index: number): string {
+    return track.tags.find(tag => tag[0] === 'track_number')?.[1]?.trim() || `${index + 1}`;
   }
 
   getTrackArtist(track: Event): string {
@@ -1105,33 +1067,6 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
     } finally {
       this.pendingArtistProfileFetches.delete(pubkey);
     }
-  }
-
-  getTrackDate(track: Event): string {
-    const released = track.tags.find(t => t[0] === 'released')?.[1]?.trim();
-    if (!released) {
-      const fallbackDate = new Date(track.created_at * 1000);
-      return fallbackDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
-    }
-
-    if (/^\d{4}$/.test(released)) {
-      return released;
-    }
-
-    const parsed = Date.parse(released);
-    if (Number.isNaN(parsed)) {
-      return released;
-    }
-
-    return new Date(parsed).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
-  }
-
-  getTrackDuration(track: Event): string {
-    const seconds = this.utilities.getMusicDuration(track);
-    if (seconds && !Number.isNaN(seconds)) {
-      return formatDuration(seconds);
-    }
-    return '--:--';
   }
 
   playTrack(index: number): void {
@@ -1198,26 +1133,6 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
 
     this.mediaPlayer.enque(mediaItem);
     this.snackBar.open('Added to queue', 'Close', { duration: 2000 });
-  }
-
-  goToTrackArtist(track: Event, event: MouseEvent | KeyboardEvent): void {
-    event.stopPropagation();
-    try {
-      const npub = nip19.npubEncode(track.pubkey);
-      this.layout.openMusicArtist(npub);
-    } catch {
-      // Ignore
-    }
-  }
-
-  openTrackDetailsFromList(track: Event, event: MouseEvent): void {
-    event.preventDefault();
-    event.stopPropagation();
-    this.goToTrackDetails(track);
-  }
-
-  isTrackAiGenerated(track: Event): boolean {
-    return this.utilities.isMusicAiGenerated(track);
   }
 
   goToTrackDetails(track: Event): void {

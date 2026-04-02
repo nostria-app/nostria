@@ -150,57 +150,19 @@
         <p>No tracks in this album yet</p>
       </div>
       } @else {
-      <!-- Table Header -->
-      <div class="track-header">
-        <span class="track-number">#</span>
-        <span class="track-title-header">Title</span>
-        <span class="track-date-header">Released</span>
-        <span class="track-duration-header">
+      <div class="track-list-header hide-small">
+        <span class="track-list-header-number">#</span>
+        <span class="track-list-header-title">Title</span>
+        <span class="track-list-header-album">Album</span>
+        <span class="track-list-header-duration">
           <mat-icon>schedule</mat-icon>
         </span>
       </div>
 
-      <!-- Track List -->
-      <!-- eslint-disable @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus -->
-      <div class="track-list" role="list">
+      <div class="track-list">
         @for (track of tracks(); track track.id; let i = $index) {
-        <div class="track-row" role="listitem" tabindex="0" (click)="playTrack(i)" (keydown.enter)="playTrack(i)">
-          <span class="track-number">
-            <span class="number-text">{{ i + 1 }}</span>
-            <mat-icon class="play-icon">play_arrow</mat-icon>
-          </span>
-          <div class="track-info">
-            <div class="track-image">
-              @if (getTrackImage(track); as img) {
-              <img [src]="img" [alt]="getTrackTitle(track)" title="Track cover" />
-              } @else if (getTrackGradient(track); as gradient) {
-              <div class="track-gradient" [style.background]="gradient"></div>
-              } @else {
-              <div class="track-placeholder">
-                <mat-icon>music_note</mat-icon>
-              </div>
-              }
-            </div>
-            <div class="track-text">
-              <span class="track-title-row">
-                <a class="track-title" href="" (click)="openTrackDetailsFromList(track, $event)">{{ getTrackTitle(track)
-                  }}</a>
-                @if (isTrackAiGenerated(track)) {
-                <span class="track-ai-badge">AI</span>
-                }
-              </span>
-              <a class="track-artist" (click)="goToTrackArtist(track, $any($event))">{{ getTrackArtist(track) }}</a>
-            </div>
-          </div>
-          <span class="track-date">{{ getTrackDate(track) }}</span>
-          <span class="track-duration">{{ getTrackDuration(track) }}</span>
-          <app-music-track-menu [track]="track" [artistName]="getTrackArtist(track)"
-            [showEditOption]="isOwnTrack(track)" (editRequested)="editTrack($event)" #trackMenuRef="musicTrackMenu" />
-          <button mat-icon-button class="track-menu-btn" [matMenuTriggerFor]="trackMenuRef.trackMenu" type="button"
-            aria-label="Track options" (click)="$event.stopPropagation()">
-            <mat-icon>more_horiz</mat-icon>
-          </button>
-        </div>
+        <app-music-event [event]="track" mode="track-list" [trackNumber]="getPlaylistTrackDisplayNumber(track, i)"
+          [queueTracks]="tracks()" [queueTrackIndex]="i"></app-music-event>
         }
       </div>
       }
@@ -218,8 +180,4 @@
 
 @if (showEditDialog() && editDialogData()) {
 <app-edit-music-playlist-dialog [data]="editDialogData()!" (closed)="onEditDialogClosed($event)" />
-}
-
-@if (showTrackEditDialog() && trackEditDialogData()) {
-<app-music-track-dialog [data]="trackEditDialogData()!" (closed)="onTrackEditDialogClosed($event)" />
 }
