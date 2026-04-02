@@ -1,22 +1,39 @@
+.panel-header,
+.communities-content-wrapper {
+  width: 100%;
+  max-width: 700px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+:host {
+  display: block;
+}
+
 // Panel header styles - fixed at top
 .panel-header {
   position: sticky;
   top: 0;
   z-index: 50;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 56px;
-  padding: 0 16px;
   flex-shrink: 0;
 
-  // Glass effect - light mode
-  background-color: rgba(255, 255, 255, 0.92);
+  background-color: color-mix(in srgb, var(--mat-sys-surface) 92%, transparent);
   -webkit-backdrop-filter: blur(20px) saturate(1.8);
   backdrop-filter: blur(20px) saturate(1.8);
 
-  // Subtle bottom border
-  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  border-bottom: 1px solid var(--mat-sys-outline-variant);
+
+  .panel-header-inner {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 56px;
+    padding: 0 12px;
+  }
+
+  .panel-search-row {
+    padding: 0 12px 12px;
+  }
 
   .panel-title {
     margin: 0;
@@ -31,11 +48,6 @@
   }
 }
 
-:host-context(.dark) .panel-header {
-  background-color: rgba(18, 18, 18, 0.92);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-}
-
 .communities-container {
   display: flex;
   flex-direction: column;
@@ -43,23 +55,14 @@
   gap: 1rem;
 }
 
-.communities-discovery-bar {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 0.75rem;
-  align-items: start;
-}
-
 .community-search-field {
   width: 100%;
 }
 
-.communities-discovery-actions {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 0.5rem;
-  flex-wrap: wrap;
+.toolbar-action-active {
+  color: var(--mat-sys-primary) !important;
+  background: color-mix(in srgb, var(--mat-sys-primary) 12%, transparent) !important;
+  border-radius: 50%;
 }
 
 .communities-summary {
@@ -286,16 +289,32 @@
   }
 }
 
+:host-context(.dual-panel-layout.has-right-content) {
+  .panel-header,
+  .communities-content-wrapper {
+    margin-left: auto;
+    margin-right: 0;
+  }
+}
+
+:host-context(.dual-panel-layout.has-right-content.mobile-layout) {
+  .panel-header,
+  .communities-content-wrapper {
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
+
 @media (max-width: 768px) {
   .communities-container {
     padding: 0.75rem;
   }
 
-  .communities-discovery-bar {
-    grid-template-columns: 1fr;
-  }
-
-  .communities-discovery-actions {
-    justify-content: space-between;
+  .panel-header {
+    .panel-header-inner,
+    .panel-search-row {
+      padding-left: 8px;
+      padding-right: 8px;
+    }
   }
 }

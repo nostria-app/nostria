@@ -15,10 +15,11 @@ import { CommunityListService } from '../../services/community-list.service';
 import { ApplicationService } from '../../services/application.service';
 import { LayoutService } from '../../services/layout.service';
 import { AccountStateService } from '../../services/account-state.service';
+import { AccountLocalStateService } from '../../services/account-local-state.service';
 import { UserProfileComponent } from '../../components/user-profile/user-profile.component';
 import { LoggerService } from '../../services/logger.service';
 import { FollowSetsService } from '../../services/follow-sets.service';
-import { ListFilterMenuComponent, ListFilterValue } from '../../components/list-filter-menu/list-filter-menu.component';
+import { ListFilterValue } from '../../components/list-filter-menu/list-filter-menu.component';
 import { FilterButtonComponent } from '../../components/filter-button/filter-button.component';
 import { CommunitiesFilterPanelComponent } from './communities-filter-panel/communities-filter-panel.component';
 import {
@@ -43,7 +44,6 @@ const PAGE_SIZE = 30;
     DatePipe,
     RouterLink,
     UserProfileComponent,
-    ListFilterMenuComponent,
     FilterButtonComponent,
     CommunitiesFilterPanelComponent,
   ],
@@ -57,6 +57,7 @@ export class CommunitiesComponent implements OnInit, OnDestroy {
   private app = inject(ApplicationService);
   private layout = inject(LayoutService);
   private accountState = inject(AccountStateService);
+  private accountLocalState = inject(AccountLocalStateService);
   private followSetsService = inject(FollowSetsService);
   private readonly logger = inject(LoggerService);
   private readonly router = inject(Router);
@@ -65,6 +66,7 @@ export class CommunitiesComponent implements OnInit, OnDestroy {
   allCommunities = signal<Community[]>([]);
   loading = signal(true);
   loadingMore = signal(false);
+  showSearch = signal(false);
   searchQuery = signal('');
   selectedListFilter = signal<string>('all');
   urlListFilter = signal<string | undefined>(this.route.snapshot.queryParams['list']);
@@ -173,6 +175,7 @@ export class CommunitiesComponent implements OnInit, OnDestroy {
 
   isAuthenticated = computed(() => this.app.authenticated());
   hasSearchQuery = computed(() => this.searchQuery().trim().length > 0);
+  showSearchField = computed(() => this.showSearch() || this.hasSearchQuery());
   hasActiveCommunityFilters = computed(() => {
     const filters = this.communityFilters();
     return (
@@ -182,6 +185,7 @@ export class CommunitiesComponent implements OnInit, OnDestroy {
       this.sortOption() !== 'default'
     );
   });
+  hasActiveUnifiedFilters = computed(() => this.selectedListFilter() !== 'all' || this.hasActiveCommunityFilters());
   showingFilteredResults = computed(() => {
     return (
       this.hasSearchQuery() ||
@@ -230,6 +234,7 @@ export class CommunitiesComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
+    this.initializeListFilter();
     this.startSubscription();
   }
 
@@ -297,8 +302,24 @@ export class CommunitiesComponent implements OnInit, OnDestroy {
     this.searchQuery.set('');
   }
 
+  toggleSearch(): void {
+    if (this.showSearchField()) {
+      this.clearSearch();
+      this.showSearch.set(false);
+      return;
+    }
+
+    this.showSearch.set(true);
+  }
+
   onListFilterChanged(filter: ListFilterValue): void {
     this.selectedListFilter.set(filter);
+
+    const pubkey = this.accountState.pubkey();
+    if (pubkey) {
+      this.accountLocalState.setCommunitiesListFilter(pubkey, filter);
+    }
+
     void this.router.navigate([], {
       relativeTo: this.route,
       queryParams: { list: filter === 'all' ? null : filter },
@@ -359,5 +380,21 @@ export class CommunitiesComponent implements OnInit, OnDestroy {
 
   private updateCommunitiesList(): void {
     this.allCommunities.set(Array.from(this.communityMap.values()));
+  }
+
+  private initializeListFilter(): void {
+    const urlFilter = this.urlListFilter();
+    if (urlFilter) {
+      this.selectedListFilter.set(urlFilter);
+      return;
+    }
+
+    const pubkey = this.accountState.pubkey();
+    if (!pubkey) {
+      this.selectedListFilter.set('all');
+      return;
+    }
+
+    this.selectedListFilter.set(this.accountLocalState.getCommunitiesListFilter(pubkey) as ListFilterValue);
   }
 }

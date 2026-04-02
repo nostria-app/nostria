@@ -1,19 +1,36 @@
 <!-- Panel Header -->
 <div class="panel-header">
-  <h2 class="panel-title title-font">Communities</h2>
-  <span class="panel-header-spacer"></span>
-  @if (isAuthenticated()) {
-  <a mat-icon-button routerLink="/n/create" matTooltip="Create Community">
-    <mat-icon>add</mat-icon>
-  </a>
-  }
-  <button mat-icon-button (click)="refresh()" matTooltip="Refresh communities">
-    <mat-icon>refresh</mat-icon>
-  </button>
-</div>
+  <div class="panel-header-inner">
+    <h2 class="panel-title title-font">Communities</h2>
+    <span class="panel-header-spacer"></span>
+    <button mat-icon-button (click)="toggleSearch()" matTooltip="Search communities"
+      [class.toolbar-action-active]="showSearchField()">
+      <mat-icon>{{ showSearchField() ? 'close' : 'search' }}</mat-icon>
+    </button>
+    <app-filter-button [active]="hasActiveUnifiedFilters()" tooltip="Sort and filter communities">
+      <app-communities-filter-panel
+        [filters]="communityFilters()"
+        [sortOption]="sortOption()"
+        [currentListFilter]="selectedListFilter()"
+        [defaultListFilter]="'all'"
+        [showPublicOption]="true"
+        (listFilterChanged)="onListFilterChanged($event)"
+        (filtersChanged)="onCommunityFiltersChanged($event)"
+        (sortOptionChanged)="onSortOptionChanged($event)"
+        (resetRequested)="resetCommunityFilters()" />
+    </app-filter-button>
+    @if (isAuthenticated()) {
+    <a mat-icon-button routerLink="/n/create" matTooltip="Create Community">
+      <mat-icon>add</mat-icon>
+    </a>
+    }
+    <button mat-icon-button (click)="refresh()" matTooltip="Refresh communities">
+      <mat-icon>refresh</mat-icon>
+    </button>
+  </div>
 
-<div class="communities-container">
-  <div class="communities-discovery-bar">
+  @if (showSearchField()) {
+  <div class="panel-search-row">
     <mat-form-field appearance="outline" subscriptSizing="dynamic" class="community-search-field">
       <mat-label>Search communities</mat-label>
       <mat-icon matPrefix>search</mat-icon>
@@ -23,42 +40,25 @@
         placeholder="Search by name, description, or rules"
         [value]="searchQuery()"
         (input)="onSearchInput($event)" />
-      @if (hasSearchQuery()) {
-      <button mat-icon-button matSuffix type="button" (click)="clearSearch()" aria-label="Clear community search">
-        <mat-icon>close</mat-icon>
+      <button mat-icon-button matSuffix type="button" (click)="toggleSearch()" aria-label="Close community search">
+        <mat-icon>{{ hasSearchQuery() ? 'close' : 'keyboard_arrow_up' }}</mat-icon>
       </button>
-      }
     </mat-form-field>
+  </div>
+  }
+</div>
 
-    <div class="communities-discovery-actions">
-      @if (isAuthenticated()) {
-      <app-list-filter-menu
-        storageKey="communities"
-        [showPublicOption]="true"
-        defaultFilter="all"
-        [initialFilter]="urlListFilter()"
-        (filterChanged)="onListFilterChanged($event)" />
+<div class="communities-content-wrapper">
+  <div class="communities-container">
+    <div class="communities-summary">
+      @if (showingFilteredResults()) {
+      <span>Showing {{ sortedCommunities().length }} of {{ allCommunities().length }} communities</span>
+      } @else {
+      <span>{{ allCommunities().length }} communities</span>
       }
-      <app-filter-button [active]="hasActiveCommunityFilters()" tooltip="Sort and filter communities">
-        <app-communities-filter-panel
-          [filters]="communityFilters()"
-          [sortOption]="sortOption()"
-          (filtersChanged)="onCommunityFiltersChanged($event)"
-          (sortOptionChanged)="onSortOptionChanged($event)"
-          (resetRequested)="resetCommunityFilters()" />
-      </app-filter-button>
     </div>
-  </div>
 
-  <div class="communities-summary">
-    @if (showingFilteredResults()) {
-    <span>Showing {{ sortedCommunities().length }} of {{ allCommunities().length }} communities</span>
-    } @else {
-    <span>{{ allCommunities().length }} communities</span>
-    }
-  </div>
-
-  <div class="communities-content">
+    <div class="communities-content">
     @if (loading()) {
     <div class="loading-container">
       <mat-spinner diameter="50"></mat-spinner>
@@ -175,5 +175,6 @@
     </div>
     }
     }
+    </div>
   </div>
 </div>
