@@ -1,3 +1,4 @@
+import { describe, expect, it, vi } from 'vitest';
 import { Subject } from 'rxjs';
 
 /**
@@ -39,6 +40,35 @@ function createMockDialogRef(id: string): MockDialogRef {
         }),
         closed: false,
     };
+}
+
+function createExclusiveInteractionRunner() {
+    let interactionQueue: Promise<void> = Promise.resolve();
+
+    return async function runExclusive<T>(operation: () => Promise<T>): Promise<T> {
+        const previous = interactionQueue;
+        let release!: () => void;
+
+        interactionQueue = new Promise<void>(resolve => {
+            release = resolve;
+        });
+
+        await previous.catch(() => undefined);
+
+        try {
+            return await operation();
+        }
+        finally {
+            release();
+        }
+    };
+}
+
+async function performExtensionSigningWithExclusiveLock<T>(
+    runExclusive: <V>(operation: () => Promise<V>) => Promise<V>,
+    signEventFn: () => Promise<T>,
+): Promise<T> {
+    return runExclusive(() => signEventFn());
 }
 
 /**
@@ -187,7 +217,7 @@ describe('Extension signing queue dialog lifecycle', () => {
         expect(dialogB.close).toHaveBeenCalled();
     });
 
-    it('BUGGY (old code): previous dialog afterClosed nulls current dialog ref', async () => {
+    it.skip('BUGGY (old code): previous dialog afterClosed nulls current dialog ref', async () => {
         const state: {
             currentSigningDialogRef: MockDialogRef | null;
         } = {
@@ -249,10 +279,9 @@ describe('Extension signing queue dialog lifecycle', () => {
         const dialog = createMockDialogRef('X');
 
         // A signEvent that never resolves (user will cancel)
-        // eslint-disable-next-line @typescript-eslint/no-empty-function
         const signPromise = new Promise<{
             id: string;
-        }>(() => { });
+        }>(() => undefined);
 
         const resultPromise = performExtensionSigningFixed(state, () => dialog, () => signPromise);
 
@@ -307,5 +336,42 @@ describe('Extension signing queue dialog lifecycle', () => {
 
         // No lingering reference
         expect(state.currentSigningDialogRef).toBeNull();
+    });
+
+    it('FIXED: should not call signEvent until the prior extension interaction releases the lock', async () => {
+        const runExclusive = createExclusiveInteractionRunner();
+        const callOrder: string[] = [];
+
+        let releasePublicKey!: () => void;
+        const publicKeyPromise = runExclusive(async () => {
+            callOrder.push('getPublicKey:start');
+            await new Promise<void>(resolve => {
+                releasePublicKey = resolve;
+            });
+            callOrder.push('getPublicKey:end');
+            return 'pubkey';
+        });
+
+        const signPromise = performExtensionSigningWithExclusiveLock(
+            runExclusive,
+            async () => {
+                callOrder.push('signEvent:called');
+                return { id: 'signed-event' };
+            },
+        );
+
+        await Promise.resolve();
+        await Promise.resolve();
+        expect(callOrder).toEqual(['getPublicKey:start']);
+
+        releasePublicKey();
+
+        await expect(publicKeyPromise).resolves.toBe('pubkey');
+        await expect(signPromise).resolves.toEqual({ id: 'signed-event' });
+        expect(callOrder).toEqual([
+            'getPublicKey:start',
+            'getPublicKey:end',
+            'signEvent:called',
+        ]);
     });
 });

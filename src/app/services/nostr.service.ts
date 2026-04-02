@@ -1046,34 +1046,34 @@ export class NostrService implements NostriaService {
         eventTemplate.pubkey = (event as UnsignedEvent).pubkey;
       }
 
-      // Pass event template to extension, race against dialog close.
-      // IMPORTANT: window.nostr.signEvent() resolves outside Angular's zone (it's a browser
-      // extension API). We must bring the resolution back into the zone so that the dialog
-      // close triggers change detection and the UI actually updates. Without this, the dialog
-      // can visually "hang" even though signing completed successfully underneath.
-      this.logger.debug('[Extension Signing] Calling window.nostr.signEvent');
+      const extensionResult = await this.runExclusiveExtensionInteraction(() => {
+        // Start the actual extension request only after we own the interaction lock.
+        // Previously the Promise was created before acquiring the lock, so the browser
+        // extension could receive signEvent() concurrently with a queued getPublicKey().
+        this.logger.debug('[Extension Signing] Calling window.nostr.signEvent');
 
-      const zonedSignEvent = new Promise<Event>((resolve, reject) => {
-        window.nostr!.signEvent(eventTemplate).then(
-          (result) => {
-            this.ngZone.run(() => {
-              this.logger.debug('[Extension Signing] Extension returned result', { hasResult: !!result, resultId: (result as Event)?.id });
-              resolve(result as Event);
-            });
-          },
-          (err: Error) => {
-            this.ngZone.run(() => {
-              this.logger.error('[Extension Signing] Extension signEvent threw error', err);
-              reject(err);
-            });
-          }
-        );
+        const zonedSignEvent = new Promise<Event>((resolve, reject) => {
+          window.nostr!.signEvent(eventTemplate).then(
+            (result) => {
+              this.ngZone.run(() => {
+                this.logger.debug('[Extension Signing] Extension returned result', { hasResult: !!result, resultId: (result as Event)?.id });
+                resolve(result as Event);
+              });
+            },
+            (err: Error) => {
+              this.ngZone.run(() => {
+                this.logger.error('[Extension Signing] Extension signEvent threw error', err);
+                reject(err);
+              });
+            }
+          );
+        });
+
+        return Promise.race([
+          zonedSignEvent,
+          dialogClosedPromise,
+        ]);
       });
-
-      const extensionResult = await this.runExclusiveExtensionInteraction(() => Promise.race([
-        zonedSignEvent,
-        dialogClosedPromise,
-      ]));
       this.logger.debug('[Extension Signing] Extension signing completed', { resultId: (extensionResult as Event)?.id });
       return extensionResult as Event;
     } finally {
