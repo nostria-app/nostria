@@ -64,13 +64,14 @@ export class CustomReuseStrategy implements RouteReuseStrategy {
    * Determine if the route should be reused.
    * Preserve the current right-pane component when only the left pane changes,
    * but still recreate right-pane components when their own params or path change.
+   * Query params are global to the whole URL, so left-panel filters like
+   * `/music/tracks?source=public` must not force a right-outlet remount.
    */
   shouldReuseRoute(future: ActivatedRouteSnapshot, curr: ActivatedRouteSnapshot): boolean {
     if (future.outlet === 'right' || curr.outlet === 'right') {
       return future.routeConfig === curr.routeConfig
         && this.sameUrlSegments(future, curr)
-        && this.shallowEqual(future.params, curr.params)
-        && this.shallowEqual(future.queryParams, curr.queryParams);
+        && this.shallowEqual(future.params, curr.params);
     }
     return future.routeConfig === curr.routeConfig;
   }

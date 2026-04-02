@@ -36,6 +36,7 @@ import { MusicSettingsDialogComponent } from './music-settings-dialog/music-sett
 import { MusicPlaylist } from '../../services/music-playlist.service';
 import { MusicBookmarkPlaylist, MusicBookmarkPlaylistService } from '../../services/music-bookmark-playlist.service';
 import { MusicDataService } from '../../services/music-data.service';
+import { PanelNavigationService } from '../../services/panel-navigation.service';
 import { ListFilterValue } from '../../components/list-filter-menu/list-filter-menu.component';
 import { MusicListFilterComponent } from '../../components/music-list-filter/music-list-filter.component';
 import { LoggerService } from '../../services/logger.service';
@@ -105,6 +106,7 @@ export class MusicComponent implements OnDestroy {
   private accountLocalState = inject(AccountLocalStateService);
   private layout = inject(LayoutService);
   private twoColumnLayout = inject(TwoColumnLayoutService);
+  private panelNav = inject(PanelNavigationService);
   private musicData = inject(MusicDataService);
   private bookmarkPlaylistService = inject(MusicBookmarkPlaylistService);
   private likedSongsService = inject(MusicLikedSongsService);
@@ -1354,7 +1356,7 @@ export class MusicComponent implements OnDestroy {
   }
 
   goToPlaylists(): void {
-    void this.router.navigate(['/music/playlists']);
+    void this.panelNav.navigateLeftPreservingRight('/music/playlists');
   }
 
   goToMyMusic(): void {
@@ -1366,7 +1368,7 @@ export class MusicComponent implements OnDestroy {
   }
 
   goToOfflineMusic(): void {
-    this.router.navigate(['/music/offline']);
+    void this.panelNav.navigateLeftPreservingRight('/music/offline');
   }
 
   /**
@@ -1435,10 +1437,10 @@ export class MusicComponent implements OnDestroy {
       source = 'following';
     } else {
       // For follow set, pass the d-tag as list parameter
-        this.router.navigate(['/music/albums'], { queryParams: { list: filter } });
+        void this.panelNav.navigateLeftPreservingRight('/music/albums', { queryParams: { list: filter } });
         return;
       }
-    this.router.navigate(['/music/albums'], { queryParams: { source } });
+    void this.panelNav.navigateLeftPreservingRight('/music/albums', { queryParams: { source } });
   }
 
   /**
@@ -1456,31 +1458,31 @@ export class MusicComponent implements OnDestroy {
       source = 'following';
     } else {
       // For follow set, pass the d-tag as list parameter
-      this.router.navigate(['/music/tracks'], { queryParams: { list: filter } });
+      void this.panelNav.navigateLeftPreservingRight('/music/tracks', { queryParams: { list: filter } });
       return;
     }
-    this.router.navigate(['/music/tracks'], { queryParams: { source } });
+    void this.panelNav.navigateLeftPreservingRight('/music/tracks', { queryParams: { source } });
   }
 
   // Legacy navigation methods (keep for backward compatibility)
   goToAllFollowingPlaylists(): void {
     this.musicData.setPreloadedPlaylists(this.followingPlaylists());
-    this.router.navigate(['/music/albums'], { queryParams: { source: 'following' } });
+    void this.panelNav.navigateLeftPreservingRight('/music/albums', { queryParams: { source: 'following' } });
   }
 
   goToAllFollowingTracks(): void {
     this.musicData.setPreloadedTracks(this.followingTracks());
-    this.router.navigate(['/music/tracks'], { queryParams: { source: 'following' } });
+    void this.panelNav.navigateLeftPreservingRight('/music/tracks', { queryParams: { source: 'following' } });
   }
 
   goToAllPublicPlaylists(): void {
     this.musicData.setPreloadedPlaylists(this.publicPlaylists());
-    this.router.navigate(['/music/albums'], { queryParams: { source: 'public' } });
+    void this.panelNav.navigateLeftPreservingRight('/music/albums', { queryParams: { source: 'public' } });
   }
 
   goToAllPublicTracks(): void {
     this.musicData.setPreloadedTracks(this.publicTracks());
-    this.router.navigate(['/music/tracks'], { queryParams: { source: 'public' } });
+    void this.panelNav.navigateLeftPreservingRight('/music/tracks', { queryParams: { source: 'public' } });
   }
 
   goToAllArtists(): void {
@@ -1492,7 +1494,7 @@ export class MusicComponent implements OnDestroy {
     }));
     this.musicData.setPreloadedArtists(artistsWithCount);
     this.musicData.setPreloadedTracks(this.allTracks());
-    this.router.navigate(['/music/artists']);
+    void this.panelNav.navigateLeftPreservingRight('/music/artists');
   }
 
   goToArtist(pubkey: string): void {

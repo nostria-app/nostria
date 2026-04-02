@@ -1,6 +1,6 @@
 import { Injectable, signal, computed, inject, PLATFORM_ID } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
-import { Router, NavigationEnd, NavigationStart, PRIMARY_OUTLET, UrlTree } from '@angular/router';
+import { NavigationExtras, Router, NavigationEnd, NavigationStart, PRIMARY_OUTLET, UrlTree } from '@angular/router';
 import { filter } from 'rxjs/operators';
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { PanelActionsService } from './panel-actions.service';
@@ -540,6 +540,37 @@ export class PanelNavigationService {
    */
   navigateTo(path: string, params?: Record<string, string>): void {
     this.router.navigate([path], { queryParams: params });
+  }
+
+  /**
+   * Navigate in the left panel while preserving any active right-panel outlet.
+   */
+  navigateLeftPreservingRight(path: string, extras?: NavigationExtras): Promise<boolean> {
+    this.preserveRightPanelOnNextNavigation();
+
+    const tree = this.router.parseUrl(this.router.url);
+    const rightGroup = tree.root.children['right'];
+    const primarySegments = path.replace(/^\/+/, '').split('/').filter(Boolean);
+
+    const targetTree = this.router.createUrlTree([
+      {
+        outlets: {
+          primary: primarySegments,
+          ...(rightGroup ? { right: rightGroup.segments.map(segment => segment.path) } : {}),
+        },
+      },
+    ], {
+      queryParams: extras?.queryParams,
+      fragment: extras?.fragment,
+      queryParamsHandling: extras?.queryParamsHandling,
+      preserveFragment: extras?.preserveFragment,
+    });
+
+    return this.router.navigateByUrl(targetTree, {
+      skipLocationChange: extras?.skipLocationChange,
+      replaceUrl: extras?.replaceUrl,
+      state: extras?.state,
+    });
   }
 
   /**

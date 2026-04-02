@@ -1835,7 +1835,7 @@ export class LayoutService implements OnDestroy {
    */
   openMusicTracks(source?: 'following' | 'public'): void {
     const queryParams = source ? { source } : undefined;
-    this.router.navigate(['/music/tracks'], { queryParams });
+    void this.panelNavigation.navigateLeftPreservingRight('/music/tracks', { queryParams });
   }
 
   /**
@@ -1843,7 +1843,7 @@ export class LayoutService implements OnDestroy {
    */
   openMusicAlbums(source?: 'following' | 'public'): void {
     const queryParams = source ? { source } : undefined;
-    this.router.navigate(['/music/albums'], { queryParams });
+    void this.panelNavigation.navigateLeftPreservingRight('/music/albums', { queryParams });
   }
 
   /**
@@ -1851,21 +1851,21 @@ export class LayoutService implements OnDestroy {
    */
   openMusicPlaylists(source?: 'following' | 'public'): void {
     const queryParams = source ? { source } : undefined;
-    this.router.navigate(['/music/playlists'], { queryParams });
+    void this.panelNavigation.navigateLeftPreservingRight('/music/playlists', { queryParams });
   }
 
   /**
    * Open interest sets in the left panel (it's a list view)
    */
   openInterestSets(): void {
-    this.router.navigate(['/collections/interests']);
+    void this.panelNavigation.navigateLeftPreservingRight('/collections/interests');
   }
 
   /**
    * Open emoji sets in the left panel (it's a list view)
    */
   openEmojiSets(): void {
-    this.router.navigate(['/collections/emojis']);
+    void this.panelNavigation.navigateLeftPreservingRight('/collections/emojis');
   }
 
   /**
@@ -1873,9 +1873,9 @@ export class LayoutService implements OnDestroy {
    */
   openSearchInLeftPanel(query?: string): void {
     if (query) {
-      this.router.navigate(['/search'], { queryParams: { q: query } });
+      void this.panelNavigation.navigateLeftPreservingRight('/search', { queryParams: { q: query } });
     } else {
-      this.router.navigate(['/search']);
+      void this.panelNavigation.navigateLeftPreservingRight('/search');
     }
   }
 
