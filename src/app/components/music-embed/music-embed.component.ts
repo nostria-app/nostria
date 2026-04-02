@@ -1175,7 +1175,7 @@ export class MusicEmbedComponent {
     if (this.isTrack()) {
       this.layout.openSongDetail(nip19.npubEncode(this.pubkey()), this.identifier(), this.event() || undefined);
     } else {
-      this.layout.openMusicPlaylist(nip19.npubEncode(this.pubkey()), this.identifier(), this.event() || undefined);
+      this.layout.openMusicAlbum(nip19.npubEncode(this.pubkey()), this.identifier(), this.event() || undefined);
     }
   }
 

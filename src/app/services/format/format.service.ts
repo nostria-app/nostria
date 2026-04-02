@@ -281,6 +281,10 @@ export class FormatService {
     const npub = this.utilities.getNpubFromPubkey(pubkey);
 
     if (kind === FormatService.MUSIC_PLAYLIST_KIND) {
+      return `/music/album/${npub}/${encodeURIComponent(identifier)}`;
+    }
+
+    if (kind === 30003) {
       return `/music/playlist/${npub}/${encodeURIComponent(identifier)}`;
     }
 

@@ -1312,7 +1312,10 @@ export class LayoutService implements OnDestroy {
         const decoded = nip19.decode(value).data as AddressPointer;
 
         if (decoded.kind === 34139) {
-          // Music playlist - route directly to music playlist page
+          // Music album - route directly to music album page
+          const npub = nip19.npubEncode(decoded.pubkey);
+          this.openMusicAlbum(npub, decoded.identifier);
+        } else if (decoded.kind === 30003) {
           const npub = nip19.npubEncode(decoded.pubkey);
           this.openMusicPlaylist(npub, decoded.identifier);
         } else if (this.utilities.isMusicKind(decoded.kind)) {
@@ -1562,8 +1565,14 @@ export class LayoutService implements OnDestroy {
       return;
     }
 
-    // Music/Nostr playlists (kind 34139)
+    // Music albums (kind 34139)
     if (event.kind === 34139) {
+      this.openMusicAlbum(npub, dTag, event);
+      return;
+    }
+
+    // Music playlists (kind 30003 bookmark sets)
+    if (event.kind === 30003) {
       this.openMusicPlaylist(npub, dTag, event);
       return;
     }
@@ -1604,6 +1613,10 @@ export class LayoutService implements OnDestroy {
             return;
           }
           if (kind === 34139) {
+            this.openMusicAlbum(npub, identifier, event);
+            return;
+          }
+          if (kind === 30003) {
             this.openMusicPlaylist(npub, identifier, event);
             return;
           }
@@ -1642,6 +1655,10 @@ export class LayoutService implements OnDestroy {
             return;
           }
           if (kind === 34139) {
+            this.openMusicAlbum(npub, identifier, event);
+            return;
+          }
+          if (kind === 30003) {
             this.openMusicPlaylist(npub, identifier, event);
             return;
           }
@@ -1766,6 +1783,15 @@ export class LayoutService implements OnDestroy {
   }
 
   /**
+   * Open a music album in the right panel
+   */
+  openMusicAlbum(pubkey: string, dTag: string, event?: Event): void {
+    this.navigateToRightPanel(`music/album/${pubkey}/${dTag}`, {
+      state: { playlistEvent: event }
+    });
+  }
+
+  /**
    * Open a music playlist in the right panel
    */
   openMusicPlaylist(pubkey: string, dTag: string, event?: Event): void {
@@ -1810,6 +1836,14 @@ export class LayoutService implements OnDestroy {
   openMusicTracks(source?: 'following' | 'public'): void {
     const queryParams = source ? { source } : undefined;
     this.router.navigate(['/music/tracks'], { queryParams });
+  }
+
+  /**
+   * Open music albums list in the left panel
+   */
+  openMusicAlbums(source?: 'following' | 'public'): void {
+    const queryParams = source ? { source } : undefined;
+    this.router.navigate(['/music/albums'], { queryParams });
   }
 
   /**

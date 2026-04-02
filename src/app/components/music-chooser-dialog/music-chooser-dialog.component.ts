@@ -19,7 +19,7 @@ import { RelayPoolService } from '../../services/relays/relay-pool';
 import { RelaysService } from '../../services/relays/relays';
 import { AccountRelayService } from '../../services/relays/account-relay';
 import { DatabaseService } from '../../services/database.service';
-import { MusicPlaylistService, MusicPlaylist } from '../../services/music-playlist.service';
+import { AlbumService, Album } from '../../services/music-playlist.service';
 import { AccountStateService } from '../../services/account-state.service';
 import { LoggerService } from '../../services/logger.service';
 import { DEFAULT_MUSIC_RELAYS } from '../../utils/music-default-relays';
@@ -59,7 +59,7 @@ export class MusicChooserDialogComponent implements OnDestroy {
   private readonly relaysService = inject(RelaysService);
   private readonly accountRelay = inject(AccountRelayService);
   private readonly database = inject(DatabaseService);
-  private readonly playlistService = inject(MusicPlaylistService);
+  private readonly playlistService = inject(AlbumService);
   private readonly accountState = inject(AccountStateService);
   private readonly logger = inject(LoggerService);
 
@@ -187,7 +187,7 @@ export class MusicChooserDialogComponent implements OnDestroy {
     this.dialogRef?.close({ naddr, type: 'track', title });
   }
 
-  selectAlbum(album: MusicPlaylist): void {
+  selectAlbum(album: Album): void {
     if (!album.event) return;
     const naddr = this.utilities.encodeEventForUrl(album.event);
     this.dialogRef?.close({ naddr, type: 'playlist', title: album.title });

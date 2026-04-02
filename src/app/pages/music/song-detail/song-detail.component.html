@@ -326,6 +326,6 @@
 }
 
 @if (showCreatePlaylistDialog() && createPlaylistDialogData()) {
-<app-create-music-playlist-dialog [data]="createPlaylistDialogData()!"
+<app-create-music-bookmark-playlist-dialog [data]="createPlaylistDialogData()!"
   (closed)="onCreatePlaylistDialogClosed($event)" />
 }

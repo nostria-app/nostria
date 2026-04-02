@@ -200,7 +200,7 @@ const SUMMARY_TIMELINE_KIND_LABELS: Record<number, string> = {
   31923: 'Calendar Event',
   31925: 'Event RSVP',
   32100: 'Playlist',
-  34139: 'Music Playlist',
+  34139: 'Music Album',
   34235: 'Video',
   34236: 'Video',
   [COMMUNITY_DEFINITION_KIND]: 'Community',

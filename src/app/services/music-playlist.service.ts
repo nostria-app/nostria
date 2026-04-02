@@ -469,3 +469,7 @@ export class MusicPlaylistService {
     this.lastFetchedPubkey = null;
   }
 }
+
+export type Album = MusicPlaylist;
+export type CreateAlbumData = CreateMusicPlaylistData;
+export { MusicPlaylistService as AlbumService };

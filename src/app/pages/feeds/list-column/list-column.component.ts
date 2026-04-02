@@ -20,6 +20,7 @@ import { RepostService } from '../../../services/repost.service';
 import { SharedRelayService } from '../../../services/relays/shared-relay';
 import { AccountRelayService } from '../../../services/relays/account-relay';
 import { DatabaseService } from '../../../services/database.service';
+import { TrustService } from '../../../services/trust.service';
 import { Event } from 'nostr-tools';
 
 const PAGE_SIZE = 10;
@@ -126,6 +127,7 @@ export class ListColumnComponent implements OnDestroy {
   private sharedRelayService = inject(SharedRelayService);
   private accountRelay = inject(AccountRelayService);
   private database = inject(DatabaseService);
+  private trustService = inject(TrustService);
 
   // Input for the list data
   listData = input<ListFeedData | null>(null);
@@ -134,6 +136,7 @@ export class ListColumnComponent implements OnDestroy {
   private currentListDTag = '';
   // Track previous mentionedMode to detect changes
   private previousMentionedMode = false;
+  private previousKindsKey = '';
 
   // Pagination cursor for mentioned mode (oldest event timestamp)
   private mentionedUntilCursor = signal<number | null>(null);
@@ -165,6 +168,9 @@ export class ListColumnComponent implements OnDestroy {
   // Kinds to filter by (from parent filter panel)
   filterKinds = input<number[]>([]);
 
+  hideWordle = input(true);
+  wotMinRank = input<number | undefined>(undefined);
+
   // State
   isLoading = signal(false);
   isRefreshing = signal(false);
@@ -183,11 +189,28 @@ export class ListColumnComponent implements OnDestroy {
     const showReplies = this.showReplies();
     const showReposts = this.showReposts();
     const filterKinds = this.filterKinds();
+    const hideWordle = this.hideWordle();
+    const wotMinRank = this.wotMinRank();
 
     return events.filter(event => {
       // Filter by kinds if specified
       if (filterKinds.length > 0 && !filterKinds.includes(event.kind)) {
         return false;
+      }
+
+      if (hideWordle && event.tags.some(tag => tag[0] === 't' && tag[1]?.toLowerCase() === 'wordle')) {
+        return false;
+      }
+
+      if (wotMinRank !== undefined) {
+        const rank = this.trustService.getRankSignal(event.pubkey);
+        const passesRank = wotMinRank === 0
+          ? typeof rank === 'number' && rank > 0
+          : typeof rank === 'number' && rank >= wotMinRank;
+
+        if (!passesRank) {
+          return false;
+        }
       }
 
       // Check if it's a repost
@@ -228,9 +251,14 @@ export class ListColumnComponent implements OnDestroy {
     effect(() => {
       const data = this.listData();
       const mentioned = this.mentionedMode();
+      const kindsKey = this.getKindsKey(this.filterKinds());
       if (data && data.pubkeys.length > 0) {
         // Only load when the list or mode actually changed
-        if (this.currentListDTag !== data.dTag || this.previousMentionedMode !== mentioned) {
+        if (
+          this.currentListDTag !== data.dTag
+          || this.previousMentionedMode !== mentioned
+          || this.previousKindsKey !== kindsKey
+        ) {
           // Clear existing events immediately when switching lists or modes
           this.allEvents.set([]);
           this.displayCount.set(PAGE_SIZE);
@@ -240,12 +268,14 @@ export class ListColumnComponent implements OnDestroy {
           this.mentionedEmptyFetchCount = 0;
           this.currentListDTag = data.dTag;
           this.previousMentionedMode = mentioned;
+          this.previousKindsKey = kindsKey;
           this.loadEventsFromList(data, mentioned);
         }
       } else {
         this.allEvents.set([]);
         this.displayCount.set(PAGE_SIZE);
         this.currentListDTag = '';
+        this.previousKindsKey = kindsKey;
       }
     });
   }
@@ -330,9 +360,7 @@ export class ListColumnComponent implements OnDestroy {
    */
   private async loadEventsFromDatabase(pubkeys: string[]): Promise<Event[]> {
     const allCachedEvents: Event[] = [];
-
-    // Query database for each kind we're interested in
-    const kinds = [1, 6, 30023]; // Notes, reposts, articles
+    const kinds = this.getQueryKinds();
 
     for (const kind of kinds) {
       try {
@@ -352,6 +380,7 @@ export class ListColumnComponent implements OnDestroy {
   private async loadEventsFromRelays(pubkeys: string[], existingEvents: Event[]): Promise<void> {
     const allLoadedEvents: Event[] = [...existingEvents];
     const eventsPerUser = 15;
+    const kinds = this.getQueryKinds();
 
     // Process users in parallel batches to avoid overwhelming relays
     const batchSize = 10;
@@ -362,7 +391,7 @@ export class ListColumnComponent implements OnDestroy {
         try {
           const events = await this.sharedRelayService.getMany(pubkey, {
             authors: [pubkey],
-            kinds: [1, 6, 30023], // Notes, reposts, articles
+            kinds,
             limit: eventsPerUser,
           }, { timeout: 5000 });
 
@@ -397,7 +426,7 @@ export class ListColumnComponent implements OnDestroy {
   private async loadMentionedEventsFromRelays(pubkeys: string[], until?: number): Promise<number> {
     const existingIds = new Set(this.allEvents().map(e => e.id));
     const allLoadedEvents: Event[] = [...this.allEvents()];
-    const kinds = [1, 6, 30023]; // Notes, reposts, articles
+    const kinds = this.getQueryKinds();
     const batchSize = 10;
     let newEventCount = 0;
     // Track the oldest timestamp from THIS fetch (not the global pool)
@@ -461,6 +490,15 @@ export class ListColumnComponent implements OnDestroy {
       .sort((a, b) => b.created_at - a.created_at);
 
     this.allEvents.set(uniqueEvents);
+  }
+
+  private getQueryKinds(): number[] {
+    const kinds = this.filterKinds();
+    return kinds.length > 0 ? [...new Set(kinds)] : [1, 1111, 6, 16, 30023];
+  }
+
+  private getKindsKey(kinds: number[]): string {
+    return [...kinds].sort((a, b) => a - b).join(',');
   }
 
   async refresh(): Promise<void> {

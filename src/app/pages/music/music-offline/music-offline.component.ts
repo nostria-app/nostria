@@ -1,5 +1,5 @@
 import { Component, inject, computed, ChangeDetectionStrategy } from '@angular/core';
-import { Router } from '@angular/router';
+import { Router, ActivatedRoute } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -8,6 +8,8 @@ import { OfflineMusicService, OfflineMusicTrack } from '../../../services/offlin
 import { MediaPlayerService } from '../../../services/media-player.service';
 import { ApplicationService } from '../../../services/application.service';
 import { MediaItem } from '../../../interfaces';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { PanelNavigationService } from '../../../services/panel-navigation.service';
 
 @Component({
   selector: 'app-music-offline',
@@ -17,17 +19,21 @@ import { MediaItem } from '../../../interfaces';
     MatIconModule,
     MatProgressSpinnerModule,
     MatSnackBarModule,
+    MatTooltipModule,
   ],
   template: `
-    <div class="offline-music-container">
-      <div class="header">
-        <h1>Offline Library</h1>
-        <span class="spacer"></span>
-        @if (tracks().length > 0) {
-          <span class="storage-info">{{ totalStorage() }}</span>
-        }
-      </div>
+    <div class="panel-header">
+      <button mat-icon-button (click)="goBack()" matTooltip="Back to Music">
+        <mat-icon>arrow_back</mat-icon>
+      </button>
+      <h2 class="panel-title title-font">Offline Library</h2>
+      <span class="panel-header-spacer"></span>
+      @if (tracks().length > 0) {
+        <span class="storage-info">{{ totalStorage() }}</span>
+      }
+    </div>
 
+    <div class="offline-music-container">
       @if (!isOnline()) {
         <div class="offline-banner">
           <mat-icon>wifi_off</mat-icon>
@@ -89,6 +95,40 @@ import { MediaItem } from '../../../interfaces';
     </div>
   `,
   styles: [`
+    :host {
+      display: block;
+    }
+
+    .panel-header {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 56px;
+      padding: 0 16px;
+      flex-shrink: 0;
+      background-color: rgba(255, 255, 255, 0.92);
+      -webkit-backdrop-filter: blur(20px) saturate(1.8);
+      backdrop-filter: blur(20px) saturate(1.8);
+      border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    }
+
+    .panel-title {
+      margin: 0;
+      font-size: 1.25rem;
+    }
+
+    .panel-header-spacer {
+      flex: 1;
+    }
+
+    :host-context(.dark) .panel-header {
+      background-color: rgba(18, 18, 18, 0.92);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
     .offline-music-container {
       display: flex;
       flex-direction: column;
@@ -98,26 +138,9 @@ import { MediaItem } from '../../../interfaces';
       margin: 0 auto;
     }
 
-    .header {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      margin-bottom: 1rem;
-
-      h1 {
-        margin: 0;
-        font-size: 1.5rem;
-        color: var(--mat-sys-on-surface);
-      }
-
-      .spacer {
-        flex: 1;
-      }
-
-      .storage-info {
-        color: var(--mat-sys-on-surface-variant);
-        font-size: 0.875rem;
-      }
+    .storage-info {
+      color: var(--mat-sys-on-surface-variant);
+      font-size: 0.875rem;
     }
 
     .offline-banner {
@@ -267,6 +290,8 @@ import { MediaItem } from '../../../interfaces';
 })
 export class MusicOfflineComponent {
   private router = inject(Router);
+  private route = inject(ActivatedRoute);
+  private panelNav = inject(PanelNavigationService);
   private offlineMusicService = inject(OfflineMusicService);
   private mediaPlayer = inject(MediaPlayerService);
   private app = inject(ApplicationService);
@@ -289,8 +314,8 @@ export class MusicOfflineComponent {
   }
 
   goBack(): void {
-    if (window.history.length > 1) {
-      window.history.back();
+    if (this.route.outlet === 'right') {
+      this.panelNav.goBackRight();
     } else {
       this.router.navigate(['/music']);
     }

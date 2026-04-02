@@ -51,7 +51,11 @@
   </button>
   <button mat-menu-item (click)="openCreatePlaylist()">
     <mat-icon>playlist_add</mat-icon>
-    <span i18n="@@music.menu.createPlaylist">Create Album</span>
+    <span i18n="@@music.menu.createPlaylist">Create Playlist</span>
+  </button>
+  <button mat-menu-item (click)="openCreateAlbum()">
+    <mat-icon>album</mat-icon>
+    <span>Create Album</span>
   </button>
   <button mat-menu-item (click)="openImportFromRss()">
     <mat-icon>rss_feed</mat-icon>
@@ -64,7 +68,7 @@
   <!-- Search Bar (always in DOM for Safari/iOS focus support) -->
   <div class="search-bar" [class.hidden]="!showSearch()">
     <mat-icon class="search-icon">search</mat-icon>
-    <input #searchInput type="text" class="search-input" placeholder="Search tracks, albums, and artists..."
+    <input #searchInput type="text" class="search-input" placeholder="Search tracks, playlists, albums, and artists..."
       [value]="searchQuery()" (input)="onSearchInput($any($event))" />
     <button mat-icon-button class="clear-search-btn" [class.invisible]="!searchQuery()" (click)="clearSearch()"
       aria-label="Clear search">
@@ -117,6 +121,17 @@
           </div>
         </div>
 
+        <div class="yours-card my-music-card" (click)="goToPlaylists()" (keydown.enter)="goToPlaylists()" tabindex="0"
+          role="button">
+          <div class="yours-card-cover my-music-gradient">
+            <mat-icon>playlist_play</mat-icon>
+          </div>
+          <div class="yours-card-info">
+            <span class="yours-card-title">My Playlists</span>
+            <span class="yours-card-meta">Bookmark-set track collections</span>
+          </div>
+        </div>
+
         <!-- My Music Card -->
         <div class="yours-card my-music-card" (click)="goToMyMusic()" (keydown.enter)="goToMyMusic()" tabindex="0"
           role="button">
@@ -143,12 +158,29 @@
           </div>
         </div>
         }
+      </div>
+    </section>
+    }
 
-        <!-- User's playlists -->
-        @for (playlist of myPlaylistsPreview(); track playlist.id) {
-        <app-music-playlist-card [event]="playlist"
-          [likedReaction]="playlistLikedReactionById().get(playlist.id) ?? null"
-          (likedReactionChange)="onPlaylistLikedReactionChange(playlist, $event)"></app-music-playlist-card>
+    @if (playlistPreview().length > 0) {
+    <section class="music-section">
+      <div class="section-header">
+        <h2>
+          <span>Playlists</span>
+          @if (playlistsCount() > 0) {
+          <span class="section-count">{{ playlistsCount() }}</span>
+          }
+        </h2>
+        @if (hasMorePlaylists()) {
+        <button mat-button (click)="goToPlaylists()" class="show-all-btn">
+          <span i18n="@@music.showAll">Show all</span>
+          <mat-icon>arrow_forward</mat-icon>
+        </button>
+        }
+      </div>
+      <div class="playlists-grid">
+        @for (playlist of playlistPreview(); track playlist.id) {
+        <app-music-bookmark-playlist-card [event]="playlist"></app-music-bookmark-playlist-card>
         }
       </div>
     </section>
@@ -289,7 +321,7 @@
           <div class="listening-card-body">
             <div class="listening-card-label" i18n="@@music.listening.label">Listening to</div>
 
-            @if (entry.trackPubkey && entry.trackIdentifier) {
+            @if (entry.trackPubkey && entry.trackIdentifier || entry.externalUrl) {
             <button type="button" class="listening-track-button" (click)="openListeningTrack(entry, $event)">
               <div class="listening-track-art">
                 @if (getListeningTrackArtwork(entry); as artwork) {
@@ -339,7 +371,11 @@
 }
 
 @if (showCreatePlaylistDialog()) {
-<app-create-music-playlist-dialog (closed)="onCreatePlaylistDialogClosed($event)" />
+<app-create-music-bookmark-playlist-dialog (closed)="onCreatePlaylistDialogClosed($event)" />
+}
+
+@if (showCreateAlbumDialog()) {
+<app-create-music-playlist-dialog (closed)="onCreateAlbumDialogClosed($event)" />
 }
 
 @if (showImportRssDialog()) {

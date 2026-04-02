@@ -28,14 +28,18 @@ import { MediaItem } from '../../interfaces';
 import { MusicEventComponent } from '../../components/event-types/music-event.component';
 import { MusicPlaylistCardComponent } from '../../components/music-playlist-card/music-playlist-card.component';
 import { CreateMusicPlaylistDialogComponent } from './create-music-playlist-dialog/create-music-playlist-dialog.component';
+import { CreateMusicBookmarkPlaylistDialogComponent } from './create-music-bookmark-playlist-dialog/create-music-bookmark-playlist-dialog.component';
+import { MusicBookmarkPlaylistCardComponent } from '../../components/music-bookmark-playlist-card/music-bookmark-playlist-card.component';
 import { MusicTrackDialogComponent } from './music-track-dialog/music-track-dialog.component';
 import { ImportRssDialogComponent } from './import-rss-dialog/import-rss-dialog.component';
 import { MusicSettingsDialogComponent } from './music-settings-dialog/music-settings-dialog.component';
 import { MusicPlaylist } from '../../services/music-playlist.service';
+import { MusicBookmarkPlaylist, MusicBookmarkPlaylistService } from '../../services/music-bookmark-playlist.service';
 import { MusicDataService } from '../../services/music-data.service';
 import { ListFilterValue } from '../../components/list-filter-menu/list-filter-menu.component';
 import { MusicListFilterComponent } from '../../components/music-list-filter/music-list-filter.component';
 import { LoggerService } from '../../services/logger.service';
+import { MusicLikedSongsService } from '../../services/music-liked-songs.service';
 import { DEFAULT_MUSIC_RELAYS } from '../../utils/music-default-relays';
 
 const MUSIC_KINDS = [...UtilitiesService.MUSIC_KINDS];
@@ -53,6 +57,7 @@ interface ListeningEntry {
   trackKind?: number;
   trackPubkey?: string;
   trackIdentifier?: string;
+  externalUrl?: string;
 }
 
 @Component({
@@ -72,6 +77,8 @@ interface ListeningEntry {
     MusicEventComponent,
     MusicPlaylistCardComponent,
     CreateMusicPlaylistDialogComponent,
+    CreateMusicBookmarkPlaylistDialogComponent,
+    MusicBookmarkPlaylistCardComponent,
     MusicTrackDialogComponent,
     ImportRssDialogComponent,
     MusicSettingsDialogComponent,
@@ -99,12 +106,15 @@ export class MusicComponent implements OnDestroy {
   private layout = inject(LayoutService);
   private twoColumnLayout = inject(TwoColumnLayoutService);
   private musicData = inject(MusicDataService);
+  private bookmarkPlaylistService = inject(MusicBookmarkPlaylistService);
+  private likedSongsService = inject(MusicLikedSongsService);
   followSetsService = inject(FollowSetsService);
   private readonly logger = inject(LoggerService);
   private zapService = inject(ZapService);
 
   allTracks = signal<Event[]>([]);
   allPlaylists = signal<Event[]>([]);
+  playlists = signal<Event[]>([]);
   recentListening = signal<ListeningEntry[]>([]);
   loading = signal(true);
   isLoadingLikedSongs = signal(false);
@@ -125,6 +135,7 @@ export class MusicComponent implements OnDestroy {
   // Dialog visibility
   showUploadDialog = signal(false);
   showCreatePlaylistDialog = signal(false);
+  showCreateAlbumDialog = signal(false);
   showImportRssDialog = signal(false);
   showSettingsDialog = signal(false);
 
@@ -155,17 +166,16 @@ export class MusicComponent implements OnDestroy {
   playlistLikedReactionById = computed(() => {
     const likeMap = this.likedReactionByTargetKey();
     const playlists = this.listFilteredPlaylistsPreview();
-    const myPlaylists = this.myPlaylistsPreview();
     const result = new Map<string, Event>();
-    for (const playlist of [...playlists, ...myPlaylists]) {
+    for (const playlist of playlists) {
       const target = this.getTrackReactionTarget(playlist);
       if (!target) continue;
       const reaction = likeMap.get(`${target.type}:${target.value}`);
       if (reaction) result.set(playlist.id, reaction);
     }
     // Debug: log computed result
-    if (likeMap.size > 0 && (playlists.length > 0 || myPlaylists.length > 0)) {
-      console.warn('[MusicHome] playlistLikedReactionById:', result.size, 'matches from', playlists.length + myPlaylists.length, 'playlists, likeMap has', likeMap.size, 'entries');
+    if (likeMap.size > 0 && playlists.length > 0) {
+      console.warn('[MusicHome] playlistLikedReactionById:', result.size, 'matches from', playlists.length, 'playlists, likeMap has', likeMap.size, 'entries');
     }
     return result;
   });
@@ -452,8 +462,12 @@ export class MusicComponent implements OnDestroy {
   totalSearchResults = computed(() => {
     const query = this.searchQuery().trim();
     if (!query) return 0;
-    return this.filteredTracks().length + this.filteredPlaylists().length;
+    return this.filteredTracks().length + this.filteredPlaylists().length + this.playlists().length;
   });
+
+  playlistPreview = computed(() => this.playlists().slice(0, this.calculatePlaylistLimit()));
+  playlistsCount = computed(() => this.playlists().length);
+  hasMorePlaylists = computed(() => this.playlists().length > this.calculatePlaylistLimit());
 
   // Music relay set constant
   private readonly RELAY_SET_KIND = 30002;
@@ -462,6 +476,7 @@ export class MusicComponent implements OnDestroy {
   constructor() {
     this.twoColumnLayout.setWideLeft();
     this.initializeMusic();
+    void this.loadBookmarkPlaylists();
 
     // Auto-open upload dialog if navigated with ?upload=true
     if (this.route.snapshot.queryParams['upload'] === 'true') {
@@ -569,6 +584,8 @@ export class MusicComponent implements OnDestroy {
   private async initializeMusic(): Promise<void> {
     // First, load cached tracks and playlists from database for instant display
     await this.loadFromDatabase();
+
+    await this.likedSongsService.ensureInitialized(this.currentPubkey());
 
     // Then load relay set and start subscriptions for fresh data
     await this.loadMusicRelaySet();
@@ -1067,6 +1084,7 @@ export class MusicComponent implements OnDestroy {
     const [trackKind, trackPubkey, trackIdentifier] = this.parseMusicTrackReference(
       event.tags.find(tag => tag[0] === 'a')?.[1],
     );
+    const externalUrl = this.parseListeningExternalUrl(event.tags.find(tag => tag[0] === 'r')?.[1]);
 
     return {
       pubkey: event.pubkey,
@@ -1076,6 +1094,7 @@ export class MusicComponent implements OnDestroy {
       trackKind,
       trackPubkey,
       trackIdentifier,
+      externalUrl,
     };
   }
 
@@ -1110,14 +1129,34 @@ export class MusicComponent implements OnDestroy {
     return [parsed.kind, parsed.pubkey, parsed.identifier];
   }
 
+  private parseListeningExternalUrl(url?: string): string | undefined {
+    if (!url) {
+      return undefined;
+    }
+
+    try {
+      const parsed = new URL(url);
+      if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+        return undefined;
+      }
+
+      return parsed.toString();
+    } catch {
+      return undefined;
+    }
+  }
+
   openListeningTrack(entry: ListeningEntry, event?: MouseEvent): void {
     event?.stopPropagation();
 
-    if (!entry.trackPubkey || !entry.trackIdentifier) {
+    if (entry.trackPubkey && entry.trackIdentifier) {
+      this.layout.openSongDetail(entry.trackPubkey, entry.trackIdentifier);
       return;
     }
 
-    this.layout.openSongDetail(entry.trackPubkey, entry.trackIdentifier);
+    if (entry.externalUrl) {
+      window.open(entry.externalUrl, '_blank', 'noopener,noreferrer');
+    }
   }
 
   async playListeningEntry(entry: ListeningEntry, event?: MouseEvent): Promise<void> {
@@ -1302,6 +1341,10 @@ export class MusicComponent implements OnDestroy {
     this.layout.openMusicLikedPlaylists();
   }
 
+  goToPlaylists(): void {
+    void this.router.navigate(['/music/playlists']);
+  }
+
   goToMyMusic(): void {
     const pubkey = this.currentPubkey();
     if (pubkey) {
@@ -1380,10 +1423,10 @@ export class MusicComponent implements OnDestroy {
       source = 'following';
     } else {
       // For follow set, pass the d-tag as list parameter
-      this.router.navigate(['/music/playlists'], { queryParams: { list: filter } });
-      return;
-    }
-    this.router.navigate(['/music/playlists'], { queryParams: { source } });
+        this.router.navigate(['/music/albums'], { queryParams: { list: filter } });
+        return;
+      }
+    this.router.navigate(['/music/albums'], { queryParams: { source } });
   }
 
   /**
@@ -1410,7 +1453,7 @@ export class MusicComponent implements OnDestroy {
   // Legacy navigation methods (keep for backward compatibility)
   goToAllFollowingPlaylists(): void {
     this.musicData.setPreloadedPlaylists(this.followingPlaylists());
-    this.router.navigate(['/music/playlists'], { queryParams: { source: 'following' } });
+    this.router.navigate(['/music/albums'], { queryParams: { source: 'following' } });
   }
 
   goToAllFollowingTracks(): void {
@@ -1420,7 +1463,7 @@ export class MusicComponent implements OnDestroy {
 
   goToAllPublicPlaylists(): void {
     this.musicData.setPreloadedPlaylists(this.publicPlaylists());
-    this.router.navigate(['/music/playlists'], { queryParams: { source: 'public' } });
+    this.router.navigate(['/music/albums'], { queryParams: { source: 'public' } });
   }
 
   goToAllPublicTracks(): void {
@@ -1494,10 +1537,30 @@ export class MusicComponent implements OnDestroy {
     this.showCreatePlaylistDialog.set(true);
   }
 
-  onCreatePlaylistDialogClosed(result: { playlist: MusicPlaylist; trackAdded: boolean } | null): void {
+  openCreateAlbum(): void {
+    this.showCreateAlbumDialog.set(true);
+  }
+
+  onCreatePlaylistDialogClosed(result: { playlist: MusicBookmarkPlaylist; trackAdded: boolean } | null): void {
     this.showCreatePlaylistDialog.set(false);
     if (result?.playlist) {
+      void this.loadBookmarkPlaylists();
+    }
+  }
+
+  onCreateAlbumDialogClosed(result: { playlist: MusicPlaylist; trackAdded: boolean } | null): void {
+    this.showCreateAlbumDialog.set(false);
+    if (result?.playlist) {
       this.refresh();
+    }
+  }
+
+  private async loadBookmarkPlaylists(): Promise<void> {
+    try {
+      const events = await this.bookmarkPlaylistService.fetchPublicPlaylists(100);
+      this.playlists.set(events);
+    } catch (error) {
+      this.logger.warn('[Music] Failed to load bookmark playlists:', error);
     }
   }
 
@@ -1534,56 +1597,25 @@ export class MusicComponent implements OnDestroy {
     this.isLoadingLikedSongs.set(true);
 
     try {
+      await this.likedSongsService.ensureInitialized(pubkey);
+
+      const likedTrackRefs = this.likedSongsService.likedSongRefs()
+        .map(item => item.ref)
+        .filter(ref => !!this.utilities.parseMusicTrackCoordinate(ref));
+
+      if (likedTrackRefs.length === 0) {
+        this.isLoadingLikedSongs.set(false);
+        return;
+      }
+
       // Use account relays + custom music relays
       const accountRelays = this.accountRelay.getRelayUrls();
       const customMusicRelays = this.musicRelays();
       const relayUrls = [...new Set([...accountRelays, ...customMusicRelays])];
 
-      // First, fetch reactions (kind 7) from the user for music tracks
-      const reactionsFilter: Filter = {
-        kinds: [kinds.Reaction],
-        authors: [pubkey],
-        '#k': MUSIC_KINDS.map(String),
-        limit: 500,
-      };
-
-      const reactions: Event[] = [];
-      await new Promise<void>((resolve) => {
-        const timeout = setTimeout(resolve, 5000);
-        const sub = this.pool.subscribe(relayUrls, reactionsFilter, (event: Event) => {
-          if (event.content === '+' || event.content === '❤️' || event.content === '🤙' || event.content === '👍') {
-            reactions.push(event);
-          }
-        });
-        setTimeout(() => {
-          sub.close();
-          clearTimeout(timeout);
-          resolve();
-        }, 3000);
-      });
-
-      if (reactions.length === 0) {
-        this.isLoadingLikedSongs.set(false);
-        return;
-      }
-
-      // Extract unique track addresses from reactions
-      const trackAddresses = new Set<string>();
-      for (const reaction of reactions) {
-        const aTag = reaction.tags.find(t => t[0] === 'a');
-        if (aTag && aTag[1]) {
-          trackAddresses.add(aTag[1]);
-        }
-      }
-
-      if (trackAddresses.size === 0) {
-        this.isLoadingLikedSongs.set(false);
-        return;
-      }
-
       // Build individual filters for each address
       const addressFilters: Filter[] = [];
-      for (const addr of Array.from(trackAddresses).slice(0, 100)) {
+      for (const addr of likedTrackRefs.slice(0, 500)) {
         const coordinate = this.utilities.parseMusicTrackCoordinate(addr);
         if (coordinate) {
           addressFilters.push({

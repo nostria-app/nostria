@@ -12,7 +12,7 @@ import { Event, Filter, kinds, nip19 } from 'nostr-tools';
 import { DataService } from '../../services/data.service';
 import { MediaPlayerService } from '../../services/media-player.service';
 import { ReactionService } from '../../services/reaction.service';
-import { MusicPlaylistService, MusicPlaylist } from '../../services/music-playlist.service';
+import { MusicBookmarkPlaylistService, MusicBookmarkPlaylist } from '../../services/music-bookmark-playlist.service';
 import { ApplicationService } from '../../services/application.service';
 import { AccountStateService } from '../../services/account-state.service';
 import { EventService } from '../../services/event';
@@ -26,10 +26,11 @@ import { CustomDialogService } from '../../services/custom-dialog.service';
 import { UserRelaysService } from '../../services/relays/user-relays';
 import { RelayPoolService } from '../../services/relays/relay-pool';
 import { RelaysService } from '../../services/relays/relays';
+import { MusicLikedSongsService } from '../../services/music-liked-songs.service';
 import { NostrRecord, MediaItem } from '../../interfaces';
 import { ZapDialogComponent, ZapDialogData } from '../zap-dialog/zap-dialog.component';
 import { ShareArticleDialogComponent, ShareArticleDialogData } from '../share-article-dialog/share-article-dialog.component';
-import { CreateMusicPlaylistDialogComponent, CreateMusicPlaylistDialogData } from '../../pages/music/create-music-playlist-dialog/create-music-playlist-dialog.component';
+import { CreateMusicBookmarkPlaylistDialogComponent, CreateMusicBookmarkPlaylistDialogData } from '../../pages/music/create-music-bookmark-playlist-dialog/create-music-bookmark-playlist-dialog.component';
 import { MusicTrackDialogComponent, MusicTrackDialogData } from '../../pages/music/music-track-dialog/music-track-dialog.component';
 import { UserProfileComponent } from '../user-profile/user-profile.component';
 import { DateToggleComponent } from '../date-toggle/date-toggle.component';
@@ -37,7 +38,7 @@ import { MatDividerModule } from '@angular/material/divider';
 
 @Component({
   selector: 'app-music-event',
-  imports: [MatIconModule, MatButtonModule, MatMenuModule, MatDividerModule, MatSnackBarModule, MatProgressSpinnerModule, MatChipsModule, MusicTrackDialogComponent, CreateMusicPlaylistDialogComponent, UserProfileComponent, DateToggleComponent],
+  imports: [MatIconModule, MatButtonModule, MatMenuModule, MatDividerModule, MatSnackBarModule, MatProgressSpinnerModule, MatChipsModule, MusicTrackDialogComponent, CreateMusicBookmarkPlaylistDialogComponent, UserProfileComponent, DateToggleComponent],
   template: `
     <!-- Card mode: Vertical layout for grid views -->
     @if (mode() === 'card') {
@@ -306,7 +307,7 @@ import { MatDividerModule } from '@angular/material/divider';
       />
     }
     @if (showCreatePlaylistDialog() && createPlaylistDialogData()) {
-      <app-create-music-playlist-dialog
+      <app-create-music-bookmark-playlist-dialog
         [data]="createPlaylistDialogData()!"
         (closed)="onCreatePlaylistDialogClosed($event)"
       />
@@ -1172,7 +1173,7 @@ export class MusicEventComponent implements OnDestroy {
   private reactionService = inject(ReactionService);
   private pool = inject(RelayPoolService);
   private relaysService = inject(RelaysService);
-  private musicPlaylistService = inject(MusicPlaylistService);
+  private musicPlaylistService = inject(MusicBookmarkPlaylistService);
   private app = inject(ApplicationService);
   private accountState = inject(AccountStateService);
   private eventService = inject(EventService);
@@ -1186,12 +1187,10 @@ export class MusicEventComponent implements OnDestroy {
   private logger = inject(LoggerService);
   private customDialog = inject(CustomDialogService);
   private userRelaysService = inject(UserRelaysService);
+  private likedSongsService = inject(MusicLikedSongsService);
 
   private likeLookupRequestId = 0;
   private destroyed = false;
-
-  private static readonly likedReactionCache = new Map<string, Event | null>();
-  private static readonly likedReactionLookupInFlight = new Map<string, Promise<Event | null>>();
 
   event = input.required<Event>();
   mode = input<'card' | 'list' | 'track-list'>('list');
@@ -1210,7 +1209,7 @@ export class MusicEventComponent implements OnDestroy {
 
   // Create playlist dialog signals
   showCreatePlaylistDialog = signal(false);
-  createPlaylistDialogData = signal<CreateMusicPlaylistDialogData | null>(null);
+  createPlaylistDialogData = signal<CreateMusicBookmarkPlaylistDialogData | null>(null);
 
   // Check if this is the current user's track
   isOwnTrack = computed(() => {
@@ -1252,6 +1251,7 @@ export class MusicEventComponent implements OnDestroy {
       }
 
       untracked(() => {
+        void this.likedSongsService.ensureInitialized(userPubkey);
         this.checkExistingLike(ev, userPubkey);
       });
     });
@@ -1352,7 +1352,7 @@ export class MusicEventComponent implements OnDestroy {
 
   // Track liked state hydrated from relays and updated locally on like/unlike.
   private likedReaction = signal<Event | null>(null);
-  isLiked = computed(() => !!this.likedReaction());
+  isLiked = computed(() => this.likedSongsService.isTrackLiked(this.event()));
 
   private getReactionCacheKey(track: Event, userPubkey: string): string {
     const dTag = track.tags.find(tag => tag[0] === 'd')?.[1] || '';
@@ -1360,19 +1360,11 @@ export class MusicEventComponent implements OnDestroy {
   }
 
   private async checkExistingLike(track: Event, userPubkey: string): Promise<void> {
-    const cacheKey = this.getReactionCacheKey(track, userPubkey);
-    const cachedReaction = MusicEventComponent.likedReactionCache.get(cacheKey);
-    if (cachedReaction !== undefined) {
-      this.likedReaction.set(cachedReaction);
-      return;
-    }
-
     const requestId = ++this.likeLookupRequestId;
 
     const dTag = track.tags.find(tag => tag[0] === 'd')?.[1] || '';
     if (!dTag) {
       this.likedReaction.set(null);
-      MusicEventComponent.likedReactionCache.set(cacheKey, null);
       return;
     }
 
@@ -1381,7 +1373,6 @@ export class MusicEventComponent implements OnDestroy {
 
     if (relayUrls.length === 0) {
       this.likedReaction.set(null);
-      MusicEventComponent.likedReactionCache.set(cacheKey, null);
       return;
     }
 
@@ -1392,41 +1383,19 @@ export class MusicEventComponent implements OnDestroy {
       limit: 10,
     };
 
-    const lookupPromise = MusicEventComponent.likedReactionLookupInFlight.get(cacheKey)
-      ?? this.pool.query(relayUrls, filter, 2500)
-        .then((events) => {
-          let matchedLike: Event | null = null;
-          for (const reaction of events) {
-            if (reaction.content !== '+') {
-              continue;
-            }
+    const reactions = await this.pool.query(relayUrls, filter, 2500).catch(() => []);
+    let matchedLike: Event | null = null;
+    for (const reaction of reactions) {
+      if (reaction.content !== '+') {
+        continue;
+      }
 
-            if (!matchedLike || reaction.created_at > matchedLike.created_at) {
-              matchedLike = reaction;
-            }
-          }
-
-          return matchedLike;
-        })
-        .catch(() => null)
-        .finally(() => {
-          MusicEventComponent.likedReactionLookupInFlight.delete(cacheKey);
-        });
-
-    if (!MusicEventComponent.likedReactionLookupInFlight.has(cacheKey)) {
-      MusicEventComponent.likedReactionLookupInFlight.set(cacheKey, lookupPromise);
+      if (!matchedLike || reaction.created_at > matchedLike.created_at) {
+        matchedLike = reaction;
+      }
     }
 
-    const matchedLike = await lookupPromise;
-    MusicEventComponent.likedReactionCache.set(cacheKey, matchedLike);
-
-    const currentTrack = this.event();
-    const currentUserPubkey = this.accountState.pubkey();
-    const currentCacheKey = currentTrack && currentUserPubkey
-      ? this.getReactionCacheKey(currentTrack, currentUserPubkey)
-      : '';
-
-    if (this.destroyed || requestId !== this.likeLookupRequestId || currentCacheKey !== cacheKey) {
+    if (this.destroyed || requestId !== this.likeLookupRequestId) {
       return;
     }
 
@@ -1634,7 +1603,6 @@ export class MusicEventComponent implements OnDestroy {
     }
 
     const ev = this.event();
-    const cacheKey = this.getReactionCacheKey(ev, userPubkey);
 
     if (this.isLiked()) {
       const existingReaction = this.likedReaction();
@@ -1646,7 +1614,6 @@ export class MusicEventComponent implements OnDestroy {
       const result = await this.reactionService.deleteReaction(existingReaction);
       if (result.success) {
         this.likedReaction.set(null);
-        MusicEventComponent.likedReactionCache.set(cacheKey, null);
         this.snackBar.open('Like removed', 'Close', { duration: 2000 });
       } else {
         this.snackBar.open('Failed to remove like', 'Close', { duration: 3000 });
@@ -1658,7 +1625,6 @@ export class MusicEventComponent implements OnDestroy {
     if (result.success) {
       const reactionEvent = result.event ?? null;
       this.likedReaction.set(reactionEvent);
-      MusicEventComponent.likedReactionCache.set(cacheKey, reactionEvent);
       this.snackBar.open('Liked!', 'Close', { duration: 2000 });
     } else {
       this.snackBar.open('Failed to like', 'Close', { duration: 3000 });
@@ -1811,7 +1777,7 @@ export class MusicEventComponent implements OnDestroy {
     this.showCreatePlaylistDialog.set(true);
   }
 
-  onCreatePlaylistDialogClosed(result: { playlist: MusicPlaylist; trackAdded: boolean } | null): void {
+  onCreatePlaylistDialogClosed(result: { playlist: MusicBookmarkPlaylist; trackAdded: boolean } | null): void {
     this.showCreatePlaylistDialog.set(false);
     this.createPlaylistDialogData.set(null);
     if (result?.playlist) {

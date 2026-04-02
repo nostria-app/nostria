@@ -496,6 +496,14 @@ function buildFallbackSocialMetadata(routePath: string, id: string): { title: st
     };
   }
 
+  if (routePath.startsWith('music/album')) {
+    return {
+      title: 'Nostr Album on Nostria',
+      description: 'Open this album on Nostria, the decentralized social app.',
+      url: `https://nostria.app/music/album/${normalizedId}`,
+    };
+  }
+
   if (routePath.startsWith('music/playlist')) {
     return {
       title: 'Nostr Playlist on Nostria',
@@ -613,8 +621,10 @@ export class DataResolver implements Resolve<EventData | null> {
 
         if (routePath.includes('music/song')) {
           kind = MUSIC_KIND;
-        } else if (routePath.includes('music/playlist')) {
+        } else if (routePath.includes('music/album')) {
           kind = MUSIC_PLAYLIST_KIND;
+        } else if (routePath.includes('music/playlist')) {
+          kind = 30003;
         }
 
         if (kind) {

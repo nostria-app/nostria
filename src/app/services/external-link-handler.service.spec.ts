@@ -82,13 +82,13 @@ describe('ExternalLinkHandlerService', () => {
   });
 
   describe('handleLinkClick with sunami.app release URLs', () => {
-    it('should route sunami.app /release/naddr1 playlist URL to music playlist page', () => {
+    it('should route sunami.app /release/naddr1 playlist URL to music album page', () => {
       const url = `https://sunami.app/release/${playlistNaddr}`;
       const result = service.handleLinkClick(url);
 
       expect(result).toBe(true);
       expect(routerSpy.navigate).toHaveBeenCalledWith([
-        `/music/playlist/${testNpub}/${testPlaylistIdentifier}`
+        `/music/album/${testNpub}/${testPlaylistIdentifier}`
       ]);
     });
 
@@ -124,13 +124,13 @@ describe('ExternalLinkHandlerService', () => {
   });
 
   describe('handleLinkClick with naddr1 direct path', () => {
-    it('should route direct /naddr1 playlist URL to music playlist page', () => {
+    it('should route direct /naddr1 playlist URL to music album page', () => {
       const url = `https://njump.me/${playlistNaddr}`;
       const result = service.handleLinkClick(url);
 
       expect(result).toBe(true);
       expect(routerSpy.navigate).toHaveBeenCalledWith([
-        `/music/playlist/${testNpub}/${testPlaylistIdentifier}`
+        `/music/album/${testNpub}/${testPlaylistIdentifier}`
       ]);
     });
 
@@ -166,13 +166,13 @@ describe('ExternalLinkHandlerService', () => {
   });
 
   describe('handleLinkClick with /a/ prefix naddr1', () => {
-    it('should route /a/naddr1 playlist to music playlist page', () => {
+    it('should route /a/naddr1 playlist to music album page', () => {
       const url = `https://nostria.app/a/${playlistNaddr}`;
       const result = service.handleLinkClick(url);
 
       expect(result).toBe(true);
       expect(routerSpy.navigate).toHaveBeenCalledWith([
-        `/music/playlist/${testNpub}/${testPlaylistIdentifier}`
+        `/music/album/${testNpub}/${testPlaylistIdentifier}`
       ]);
     });
 
@@ -209,13 +209,13 @@ describe('ExternalLinkHandlerService', () => {
   });
 
   describe('existing nostria.app music routes', () => {
-    it('should handle nostria.app music playlist route', () => {
-      const url = `https://nostria.app/music/playlist/${testNpub}/${testPlaylistIdentifier}`;
+    it('should handle nostria.app music album route', () => {
+      const url = `https://nostria.app/music/album/${testNpub}/${testPlaylistIdentifier}`;
       const result = service.handleLinkClick(url);
 
       expect(result).toBe(true);
       expect(routerSpy.navigate).toHaveBeenCalledWith([
-        '/music/playlist', testNpub, testPlaylistIdentifier
+        '/music/album', testNpub, testPlaylistIdentifier
       ]);
     });
 

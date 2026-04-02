@@ -62,7 +62,7 @@ const BACKUP_RELAY_EVENT_KINDS = [
   31924, // Calendars
   31925, // Calendar RSVPs
   32100, // Music playlists
-  34139, // Music/Nostr playlists
+  34139, // Music albums
   36787, // Music tracks
 ];
 

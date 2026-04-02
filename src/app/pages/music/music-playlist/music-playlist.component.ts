@@ -753,7 +753,7 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
     try {
       const dTag = ev.tags.find(t => t[0] === 'd')?.[1] || '';
       const npub = nip19.npubEncode(ev.pubkey);
-      const link = `https://nostria.app/music/playlist/${npub}/${encodeURIComponent(dTag)}`;
+      const link = `https://nostria.app/music/album/${npub}/${encodeURIComponent(dTag)}`;
       this.clipboard.copy(link);
       this.snackBar.open('Link copied!', 'Close', { duration: 2000 });
     } catch {
@@ -793,7 +793,7 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
       const authorRelays = await this.userRelaysService.getUserRelaysForPublishing(ev.pubkey);
       const dTag = ev.tags.find(t => t[0] === 'd')?.[1] || '';
       const npub = nip19.npubEncode(ev.pubkey);
-      const link = `https://nostria.app/music/playlist/${npub}/${encodeURIComponent(dTag)}`;
+      const link = `https://nostria.app/music/album/${npub}/${encodeURIComponent(dTag)}`;
       const naddr = nip19.naddrEncode({
         kind: ev.kind,
         pubkey: ev.pubkey,

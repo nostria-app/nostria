@@ -9,6 +9,7 @@ import { AccountRelayService } from './relays/account-relay';
 import { UserRelaysService } from './relays/user-relays';
 import { DatabaseService } from './database.service';
 import { AccountLocalStateService } from './account-local-state.service';
+import { MusicLikedSongsService } from './music-liked-songs.service';
 
 @Injectable({
   providedIn: 'root',
@@ -22,6 +23,7 @@ export class ReactionService {
   private userRelaysService = inject(UserRelaysService);
   private database = inject(DatabaseService);
   private accountLocalState = inject(AccountLocalStateService);
+  private musicLikedSongs = inject(MusicLikedSongsService);
 
   /**
    * Add a reaction to an event. Supports custom emoji via NIP-30.
@@ -82,7 +84,18 @@ export class ReactionService {
   }
 
   async addLike(event: Event): Promise<{ success: boolean; event?: Event; error?: string }> {
-    return this.addReaction('+', event);
+    const result = await this.addReaction('+', event);
+
+    if (result.success && this.isMusicLikeTarget(event)) {
+      const likedSaved = event.kind === 34139
+        ? await this.musicLikedSongs.addAlbum(event)
+        : await this.musicLikedSongs.addTrack(event);
+      if (!likedSaved) {
+        return { success: false, event: result.event, error: 'Failed to update liked songs.' };
+      }
+    }
+
+    return result;
   }
 
   async addDislike(event: Event): Promise<{ success: boolean; event?: Event; error?: string }> {
@@ -90,6 +103,8 @@ export class ReactionService {
   }
 
   async deleteReaction(event: Event): Promise<{ success: boolean; error?: string }> {
+    const likedSongsRef = this.getMusicReactionRef(event);
+
     const deleteEvent = this.nostrService.createRetractionEvent(event);
     const accountRelayUrls = this.accountRelay.getRelayUrls();
     const targetAuthorPubkeys = [...new Set(
@@ -119,9 +134,75 @@ export class ReactionService {
       } catch {
         return { success: false, error: 'Failed to remove deleted reaction from local database.' };
       }
+
+      if (likedSongsRef) {
+        const likedRemoved = this.isAlbumReactionRef(likedSongsRef)
+          ? await this.musicLikedSongs.removeRef(likedSongsRef, 'albums')
+          : await this.musicLikedSongs.removeRef(likedSongsRef, 'tracks');
+        if (!likedRemoved) {
+          return { success: false, error: 'Failed to update liked songs.' };
+        }
+      }
     }
 
     console.log('Reaction deleted:', { eventId: event.id, success: result.success });
     return { success: result.success, error: result.error };
+  }
+
+  private isMusicLikeTarget(event: Event): boolean {
+    if (this.utilities.isParameterizedReplaceableEvent(event.kind)) {
+      const dTag = this.utilities.getTagValues('d', event.tags)[0];
+      if (!dTag) {
+        return false;
+      }
+
+      if (this.utilities.parseMusicTrackCoordinate(`${event.kind}:${event.pubkey}:${dTag}`)) {
+        return true;
+      }
+
+      return event.kind === 34139;
+    }
+
+    return this.utilities.isMusicKind(event.kind) || event.kind === 34139;
+  }
+
+  private getMusicReactionRef(reaction: Event): string | null {
+    if (reaction.kind !== kinds.Reaction) {
+      return null;
+    }
+
+    const aTag = reaction.tags.find(tag => tag[0] === 'a')?.[1]?.trim();
+    if (aTag) {
+      if (this.utilities.parseMusicTrackCoordinate(aTag)) {
+        return aTag;
+      }
+
+      const parts = aTag.split(':');
+      if (parts.length >= 3 && Number.parseInt(parts[0], 10) === 34139) {
+        return aTag;
+      }
+    }
+
+    const eTag = reaction.tags.find(tag => tag[0] === 'e')?.[1]?.trim();
+    const kindTag = reaction.tags.find(tag => tag[0] === 'k')?.[1]?.trim();
+    if (!eTag || !kindTag) {
+      return null;
+    }
+
+    const kind = Number.parseInt(kindTag, 10);
+    if (Number.isNaN(kind) || (!this.utilities.isMusicKind(kind) && kind !== 34139)) {
+      return null;
+    }
+
+    return eTag;
+  }
+
+  private isAlbumReactionRef(ref: string): boolean {
+    if (!ref.includes(':')) {
+      return false;
+    }
+
+    const kind = Number.parseInt(ref.split(':')[0], 10);
+    return kind === 34139;
   }
 }

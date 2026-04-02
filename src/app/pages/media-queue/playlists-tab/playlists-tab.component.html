@@ -3,7 +3,7 @@
     <div class="header-actions">
       <button mat-flat-button (click)="createNewPlaylist()">
         <mat-icon>add</mat-icon>
-        New Album
+        New Media Playlist
       </button>
     </div>
   </header>
@@ -13,7 +13,7 @@
     @if (isLoading() && playlists().length === 0 && drafts().length === 0) {
     <div class="loading-container">
       <mat-spinner></mat-spinner>
-      <p>Loading albums...</p>
+      <p>Loading media playlists...</p>
     </div>
     } @else {
     <!-- Drafts Section -->
@@ -65,7 +65,7 @@
     <!-- Playlists Section -->
     <section class="playlists-section">
       <div class="section-header">
-        <h3>Albums</h3>
+        <h3>Media Playlists</h3>
         @if (isLoading() && playlists().length > 0) {
         <mat-spinner diameter="16"></mat-spinner>
         }
@@ -73,11 +73,11 @@
       @if (playlists().length === 0 && !isLoading()) {
       <div class="empty-state">
         <mat-icon class="empty-icon">queue_music</mat-icon>
-        <h4>No albums yet</h4>
-        <p>Create your first album to get started</p>
+        <h4>No media playlists yet</h4>
+        <p>Create your first media playlist to get started</p>
         <button mat-flat-button (click)="createNewPlaylist()">
           <mat-icon>add</mat-icon>
-          Create Album
+          Create Media Playlist
         </button>
       </div>
       } @else if (playlists().length > 0) {

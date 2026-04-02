@@ -136,6 +136,7 @@
   border: 1px solid var(--mat-sys-outline-variant);
   border-radius: var(--mat-sys-corner-large);
   box-shadow: var(--mat-sys-level3);
+  align-items: stretch;
 
   @media (max-width: 720px) {
     grid-template-columns: 1fr;
@@ -150,6 +151,8 @@
   gap: 0.75rem;
   padding: 1rem;
   min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .combined-filter-divider {
@@ -278,10 +281,6 @@
 .action-btn {
   flex: 1;
   min-width: 88px;
-}
-
-.list-filter-column {
-  overflow-y: auto;
 }
 
 .list-filter-column mat-divider {

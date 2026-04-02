@@ -26,7 +26,7 @@ import { EventService } from '../../../services/event';
 import { ZapService } from '../../../services/zap.service';
 import { SharedRelayService } from '../../../services/relays/shared-relay';
 import { LoggerService } from '../../../services/logger.service';
-import { MusicPlaylistService, MusicPlaylist } from '../../../services/music-playlist.service';
+import { MusicBookmarkPlaylistService, MusicBookmarkPlaylist } from '../../../services/music-bookmark-playlist.service';
 import { DatabaseService } from '../../../services/database.service';
 import { LayoutService } from '../../../services/layout.service';
 import { PanelNavigationService } from '../../../services/panel-navigation.service';
@@ -41,7 +41,7 @@ import { ConfirmDialogComponent, ConfirmDialogData } from '../../../components/c
 import { ZapDialogComponent, ZapDialogData } from '../../../components/zap-dialog/zap-dialog.component';
 import { ZapChipsComponent } from '../../../components/zap-chips/zap-chips.component';
 import { CommentsListComponent } from '../../../components/comments-list/comments-list.component';
-import { CreateMusicPlaylistDialogComponent, CreateMusicPlaylistDialogData } from '../create-music-playlist-dialog/create-music-playlist-dialog.component';
+import { CreateMusicBookmarkPlaylistDialogComponent, CreateMusicBookmarkPlaylistDialogData } from '../create-music-bookmark-playlist-dialog/create-music-bookmark-playlist-dialog.component';
 import { MusicTrackDialogComponent, MusicTrackDialogData } from '../music-track-dialog/music-track-dialog.component';
 import { ShareArticleDialogComponent, ShareArticleDialogData } from '../../../components/share-article-dialog/share-article-dialog.component';
 import { CustomDialogService } from '../../../services/custom-dialog.service';
@@ -80,7 +80,7 @@ const MUSIC_PLAYLIST_KIND = 34139;
     ZapChipsComponent,
     CommentsListComponent,
     MusicTrackDialogComponent,
-    CreateMusicPlaylistDialogComponent,
+    CreateMusicBookmarkPlaylistDialogComponent,
     EventActionsToolbarComponent,
   ],
   templateUrl: './song-detail.component.html',
@@ -104,7 +104,7 @@ export class SongDetailComponent implements OnInit, OnDestroy {
   private zapService = inject(ZapService);
   private sharedRelay = inject(SharedRelayService);
   private logger = inject(LoggerService);
-  private musicPlaylistService = inject(MusicPlaylistService);
+  private musicPlaylistService = inject(MusicBookmarkPlaylistService);
   private layout = inject(LayoutService);
   private panelNav = inject(PanelNavigationService);
   private offlineMusicService = inject(OfflineMusicService);
@@ -162,7 +162,7 @@ export class SongDetailComponent implements OnInit, OnDestroy {
 
   // Create playlist dialog signals
   showCreatePlaylistDialog = signal(false);
-  createPlaylistDialogData = signal<CreateMusicPlaylistDialogData | null>(null);
+  createPlaylistDialogData = signal<CreateMusicBookmarkPlaylistDialogData | null>(null);
 
   // Engagement metrics
   reactionCount = signal<number>(0);
@@ -1011,7 +1011,7 @@ export class SongDetailComponent implements OnInit, OnDestroy {
     this.showCreatePlaylistDialog.set(true);
   }
 
-  onCreatePlaylistDialogClosed(result: { playlist: MusicPlaylist; trackAdded: boolean } | null): void {
+  onCreatePlaylistDialogClosed(result: { playlist: MusicBookmarkPlaylist; trackAdded: boolean } | null): void {
     this.showCreatePlaylistDialog.set(false);
     this.createPlaylistDialogData.set(null);
     if (result?.playlist) {
@@ -1036,13 +1036,13 @@ export class SongDetailComponent implements OnInit, OnDestroy {
 
       if (success) {
         const playlist = this.userPlaylists().find(p => p.id === playlistId);
-        this.snackBar.open(`Added to "${playlist?.title || 'album'}"`, 'Close', { duration: 2000 });
+        this.snackBar.open(`Added to "${playlist?.title || 'playlist'}"`, 'Close', { duration: 2000 });
       } else {
-        this.snackBar.open('Failed to add to album', 'Close', { duration: 3000 });
+        this.snackBar.open('Failed to add to playlist', 'Close', { duration: 3000 });
       }
     } catch (error) {
       this.logger.error('Error adding to playlist:', error);
-      this.snackBar.open('Failed to add to album', 'Close', { duration: 3000 });
+      this.snackBar.open('Failed to add to playlist', 'Close', { duration: 3000 });
     }
   }
 
@@ -1310,7 +1310,7 @@ export class SongDetailComponent implements OnInit, OnDestroy {
   openAlbum(album: AlbumInfo): void {
     try {
       const npub = nip19.npubEncode(album.pubkey);
-      this.layout.openMusicPlaylist(npub, album.dTag, album.event);
+      this.layout.openMusicAlbum(npub, album.dTag, album.event);
     } catch {
       this.logger.error('[SongDetail] Failed to encode npub for album navigation');
     }

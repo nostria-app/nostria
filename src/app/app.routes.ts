@@ -314,8 +314,14 @@ export const routes: Routes = [
   {
     path: 'music/playlists',
     loadComponent: () =>
-      import('./pages/music/music-playlists/music-playlists.component').then(m => m.MusicPlaylistsComponent),
+      import('./pages/music/music-bookmark-playlists/music-bookmark-playlists.component').then(m => m.MusicBookmarkPlaylistsComponent),
     title: 'All Playlists',
+  },
+  {
+    path: 'music/albums',
+    loadComponent: () =>
+      import('./pages/music/music-albums/music-albums.component').then(m => m.MusicAlbumsComponent),
+    title: 'All Albums',
   },
   {
     path: 'music/artists',
@@ -338,9 +344,16 @@ export const routes: Routes = [
     title: 'Artist',
   },
   {
+    path: 'music/album/:pubkey/:identifier',
+    loadComponent: () =>
+      import('./pages/music/music-album/music-album.component').then(m => m.MusicAlbumComponent),
+    resolve: { data: DataResolver },
+    title: 'Album',
+  },
+  {
     path: 'music/playlist/:pubkey/:identifier',
     loadComponent: () =>
-      import('./pages/music/music-playlist/music-playlist.component').then(m => m.MusicPlaylistComponent),
+      import('./pages/music/music-bookmark-playlist/music-bookmark-playlist.component').then(m => m.MusicBookmarkPlaylistComponent),
     resolve: { data: DataResolver },
     title: 'Playlist',
   },
@@ -843,10 +856,18 @@ export const routes: Routes = [
     title: 'Artist',
   },
   {
+    path: 'music/album/:pubkey/:identifier',
+    outlet: 'right',
+    loadComponent: () =>
+      import('./pages/music/music-album/music-album.component').then(m => m.MusicAlbumComponent),
+    resolve: { data: DataResolver },
+    title: 'Album',
+  },
+  {
     path: 'music/playlist/:pubkey/:identifier',
     outlet: 'right',
     loadComponent: () =>
-      import('./pages/music/music-playlist/music-playlist.component').then(m => m.MusicPlaylistComponent),
+      import('./pages/music/music-bookmark-playlist/music-bookmark-playlist.component').then(m => m.MusicBookmarkPlaylistComponent),
     resolve: { data: DataResolver },
     title: 'Playlist',
   },

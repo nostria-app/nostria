@@ -677,7 +677,8 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     30023,  // Long-form article (kind 30023) - opens article page
     30311,  // Live event (kind 30311) - opens stream page
     32100,  // M3U Playlist (kind 32100) - opens event page
-    34139,  // Nostr/Music Playlist (kind 34139) - opens playlist page
+    34139,  // Music album (kind 34139) - opens album page
+    30003,  // Music playlist bookmark set (kind 30003) - opens playlist page
     36787,  // Music track (kind 36787) - opens song detail page
     1311,   // Live event comment (kind 1311) - opens referenced stream
     9802,   // Highlight (kind 9802) - opens thread

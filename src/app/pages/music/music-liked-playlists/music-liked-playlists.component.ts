@@ -1,11 +1,11 @@
-import { Component, inject, signal, computed, OnDestroy, ChangeDetectionStrategy, AfterViewInit, ElementRef, viewChild } from '@angular/core';
+import { Component, inject, signal, computed, OnDestroy, ChangeDetectionStrategy, AfterViewInit, ElementRef, viewChild, effect, untracked } from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatMenuModule } from '@angular/material/menu';
-import { Event, Filter, kinds } from 'nostr-tools';
+import { Event } from 'nostr-tools';
 import { RelayPoolService } from '../../../services/relays/relay-pool';
 import { RelaysService } from '../../../services/relays/relays';
 import { UtilitiesService } from '../../../services/utilities.service';
@@ -15,6 +15,7 @@ import { ApplicationService } from '../../../services/application.service';
 import { PanelNavigationService } from '../../../services/panel-navigation.service';
 import { MusicPlaylistCardComponent } from '../../../components/music-playlist-card/music-playlist-card.component';
 import { LoggerService } from '../../../services/logger.service';
+import { MusicLikedSongsService } from '../../../services/music-liked-songs.service';
 
 const MUSIC_PLAYLIST_KIND = 34139;
 const PAGE_SIZE = 24;
@@ -43,12 +44,16 @@ const PAGE_SIZE = 24;
       <button mat-icon-button [matMenuTriggerFor]="moreOptionsMenu" matTooltip="More options" class="show-small">
         <mat-icon>more_vert</mat-icon>
       </button>
-      <mat-menu #moreOptionsMenu="matMenu">
-        <button mat-menu-item (click)="toggleSearch()">
-          <mat-icon>{{ showSearch() ? 'search_off' : 'search' }}</mat-icon>
-          <span>{{ showSearch() ? 'Close Search' : 'Search' }}</span>
-        </button>
-      </mat-menu>
+       <mat-menu #moreOptionsMenu="matMenu">
+         <button mat-menu-item (click)="toggleSearch()">
+           <mat-icon>{{ showSearch() ? 'search_off' : 'search' }}</mat-icon>
+           <span>{{ showSearch() ? 'Close Search' : 'Search' }}</span>
+         </button>
+         <button mat-menu-item (click)="importFromLikes()" [disabled]="importingLikes()">
+           <mat-icon>sync</mat-icon>
+           <span>Import from likes</span>
+         </button>
+       </mat-menu>
     </div>
 
     <div class="music-liked-playlists-container">
@@ -81,6 +86,10 @@ const PAGE_SIZE = 24;
             <p class="subtitle">{{ playlistsCount() }} albums</p>
           </div>
         </div>
+        <button mat-stroked-button (click)="importFromLikes()" [disabled]="importingLikes()">
+          <mat-icon>sync</mat-icon>
+          <span>Import from likes</span>
+        </button>
       </div>
 
       <div class="page-content">
@@ -368,18 +377,18 @@ export class MusicLikedPlaylistsComponent implements OnDestroy, AfterViewInit {
   private route = inject(ActivatedRoute);
   private panelNav = inject(PanelNavigationService);
   private readonly logger = inject(LoggerService);
+  private likedSongsService = inject(MusicLikedSongsService);
 
   allPlaylists = signal<Event[]>([]);
   loading = signal(true);
   loadingMore = signal(false);
+  importingLikes = signal(false);
   displayLimit = signal(PAGE_SIZE);
 
   // Search functionality
   searchQuery = signal('');
   showSearch = signal(false);
 
-  private reactionSubscription: { close: () => void } | null = null;
-  private likedPlaylistIds = new Set<string>();
   private playlistMap = new Map<string, Event>();
   private likedReactionByTargetKey = signal(new Map<string, Event>());
   private intersectionObserver: IntersectionObserver | null = null;
@@ -431,7 +440,12 @@ export class MusicLikedPlaylistsComponent implements OnDestroy, AfterViewInit {
   });
 
   constructor() {
-    this.startSubscriptions();
+    effect(() => {
+      this.likedSongsService.likedAlbumRefs();
+      untracked(() => {
+        void this.loadLikedPlaylists();
+      });
+    });
   }
 
   ngAfterViewInit(): void {
@@ -439,7 +453,6 @@ export class MusicLikedPlaylistsComponent implements OnDestroy, AfterViewInit {
   }
 
   ngOnDestroy(): void {
-    this.reactionSubscription?.close();
     this.intersectionObserver?.disconnect();
   }
 
@@ -469,12 +482,14 @@ export class MusicLikedPlaylistsComponent implements OnDestroy, AfterViewInit {
     }
   }
 
-  private startSubscriptions(): void {
+  private async loadLikedPlaylists(): Promise<void> {
     const pubkey = this.accountState.pubkey();
     if (!pubkey) {
       this.loading.set(false);
       return;
     }
+
+    await this.likedSongsService.ensureInitialized(pubkey);
 
     const relayUrls = this.relaysService.getOptimalRelays(this.utilities.preferredRelays);
 
@@ -484,59 +499,18 @@ export class MusicLikedPlaylistsComponent implements OnDestroy, AfterViewInit {
       return;
     }
 
-    // Fetch user's reactions (kind 7) to playlist events (kind 34139)
-    const reactionFilter: Filter = {
-      kinds: [kinds.Reaction],
-      authors: [pubkey],
-      '#k': [MUSIC_PLAYLIST_KIND.toString()],
-      limit: 500,
-    };
+    const likedAlbumRefs = this.likedSongsService.likedAlbumRefs().map(item => item.ref);
+    this.syncReactionMap(likedAlbumRefs);
 
-    let reactionsLoaded = false;
-    const reactionTimeout = setTimeout(() => {
-      reactionsLoaded = true;
-      this.fetchLikedPlaylists(relayUrls);
-    }, 3000);
+    if (likedAlbumRefs.length === 0) {
+      this.playlistMap.clear();
+      this.allPlaylists.set([]);
+      this.loading.set(false);
+      this.tryObserveSentinel();
+      return;
+    }
 
-    this.reactionSubscription = this.pool.subscribe(relayUrls, reactionFilter, (event: Event) => {
-      // Check if it's a like ('+' content)
-      if (event.content !== '+') return;
-
-      // Get the 'a' tag for addressable events
-      const aTag = event.tags.find((tag: string[]) => tag[0] === 'a')?.[1];
-      const eTag = event.tags.find((tag: string[]) => tag[0] === 'e')?.[1];
-
-      if (aTag) {
-        this.likedPlaylistIds.add(aTag);
-        const key = `a:${aTag}`;
-        this.likedReactionByTargetKey.update(existing => {
-          const next = new Map(existing);
-          const current = next.get(key);
-          if (!current || current.created_at < event.created_at) {
-            next.set(key, event);
-          }
-          return next;
-        });
-      } else if (eTag) {
-        this.likedPlaylistIds.add(eTag);
-        const key = `e:${eTag}`;
-        this.likedReactionByTargetKey.update(existing => {
-          const next = new Map(existing);
-          const current = next.get(key);
-          if (!current || current.created_at < event.created_at) {
-            next.set(key, event);
-          }
-          return next;
-        });
-      }
-
-      if (!reactionsLoaded) {
-        clearTimeout(reactionTimeout);
-        reactionsLoaded = true;
-        // Delay slightly to collect more reactions before fetching playlists
-        setTimeout(() => this.fetchLikedPlaylists(relayUrls), 500);
-      }
-    });
+    await this.fetchLikedPlaylistsSnapshot(relayUrls, likedAlbumRefs, []);
   }
 
   getPlaylistUniqueKey(playlist: Event): string {
@@ -568,34 +542,10 @@ export class MusicLikedPlaylistsComponent implements OnDestroy, AfterViewInit {
       return next;
     });
 
-    // Liked Albums page should only show currently liked albums.
     if (!reaction) {
-      this.likedPlaylistIds.delete(target.value);
       this.playlistMap.delete(this.getPlaylistUniqueKey(playlist));
       this.allPlaylists.set(Array.from(this.playlistMap.values()).sort((a, b) => b.created_at - a.created_at));
     }
-  }
-
-  private fetchLikedPlaylists(relayUrls: string[]): void {
-    if (this.likedPlaylistIds.size === 0) {
-      this.loading.set(false);
-      this.tryObserveSentinel();
-      return;
-    }
-
-    // Build filters for liked playlists
-    const aTagCoordinates: string[] = [];
-    const eventIds: string[] = [];
-
-    this.likedPlaylistIds.forEach(id => {
-      if (id.includes(':')) {
-        aTagCoordinates.push(id);
-      } else {
-        eventIds.push(id);
-      }
-    });
-
-    void this.fetchLikedPlaylistsSnapshot(relayUrls, aTagCoordinates, eventIds);
   }
 
   private async fetchLikedPlaylistsSnapshot(
@@ -701,5 +651,37 @@ export class MusicLikedPlaylistsComponent implements OnDestroy, AfterViewInit {
   onSearchInput(event: InputEvent): void {
     const target = event.target as HTMLInputElement;
     this.searchQuery.set(target.value);
+  }
+
+  async importFromLikes(): Promise<void> {
+    if (this.importingLikes()) {
+      return;
+    }
+
+    this.importingLikes.set(true);
+
+    try {
+      await this.likedSongsService.importExistingAlbumLikes();
+      await this.loadLikedPlaylists();
+    } finally {
+      this.importingLikes.set(false);
+    }
+  }
+
+  private syncReactionMap(refs: string[]): void {
+    const next = new Map<string, Event>();
+    for (const ref of refs) {
+      next.set(`a:${ref}`, {
+        id: ref,
+        pubkey: this.accountState.pubkey() || '',
+        created_at: 0,
+        kind: MUSIC_PLAYLIST_KIND,
+        content: '+',
+        tags: [['a', ref]],
+        sig: '',
+      } as Event);
+    }
+
+    this.likedReactionByTargetKey.set(next);
   }
 }

@@ -748,7 +748,7 @@ export class MusicPlaylistCardComponent {
     const event = this.event();
     const dTag = event.tags.find(t => t[0] === 'd')?.[1];
     if (dTag) {
-      this.layout.openMusicPlaylist(event.pubkey, dTag, event);
+      this.layout.openMusicAlbum(event.pubkey, dTag, event);
     }
   }
 
@@ -821,7 +821,7 @@ export class MusicPlaylistCardComponent {
     const dTag = ev.tags.find(t => t[0] === 'd')?.[1];
     if (dTag) {
       const npub = nip19.npubEncode(ev.pubkey);
-      const link = `https://nostria.app/music/playlist/${npub}/${encodeURIComponent(dTag)}`;
+      const link = `https://nostria.app/music/album/${npub}/${encodeURIComponent(dTag)}`;
       this.clipboard.copy(link);
       this.snackBar.open('Link copied!', 'Close', { duration: 2000 });
     } else {
@@ -849,7 +849,7 @@ export class MusicPlaylistCardComponent {
     try {
       const authorRelays = await this.userRelaysService.getUserRelaysForPublishing(ev.pubkey);
       const npub = nip19.npubEncode(ev.pubkey);
-      const link = `https://nostria.app/music/playlist/${npub}/${encodeURIComponent(dTag)}`;
+      const link = `https://nostria.app/music/album/${npub}/${encodeURIComponent(dTag)}`;
       const naddr = nip19.naddrEncode({
         kind: ev.kind,
         pubkey: ev.pubkey,

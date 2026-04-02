@@ -873,6 +873,13 @@ export class ArticleDisplayComponent implements OnDestroy {
       if (parts.length >= 4) {
         this.layout.openSongDetail(parts[2], decodeURIComponent(parts[3]));
       }
+    } else if (href.startsWith('/music/album/')) {
+      event.preventDefault();
+      event.stopPropagation();
+      const parts = href.split('/').filter(Boolean);
+      if (parts.length >= 4) {
+        this.layout.openMusicAlbum(parts[2], decodeURIComponent(parts[3]));
+      }
     } else if (href.startsWith('/music/playlist/')) {
       event.preventDefault();
       event.stopPropagation();

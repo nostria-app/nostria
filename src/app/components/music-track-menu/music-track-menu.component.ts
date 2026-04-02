@@ -11,7 +11,7 @@ import { Clipboard } from '@angular/cdk/clipboard';
 import { firstValueFrom } from 'rxjs';
 import { Event, nip19 } from 'nostr-tools';
 import { MediaPlayerService } from '../../services/media-player.service';
-import { MusicPlaylistService, MusicPlaylist } from '../../services/music-playlist.service';
+import { MusicBookmarkPlaylistService, MusicBookmarkPlaylist } from '../../services/music-bookmark-playlist.service';
 import { ApplicationService } from '../../services/application.service';
 import { AccountStateService } from '../../services/account-state.service';
 import { UtilitiesService } from '../../services/utilities.service';
@@ -19,7 +19,7 @@ import { LayoutService } from '../../services/layout.service';
 import { EventService } from '../../services/event';
 import { MediaItem } from '../../interfaces';
 import { UserRelaysService } from '../../services/relays/user-relays';
-import { CreateMusicPlaylistDialogComponent, CreateMusicPlaylistDialogData } from '../../pages/music/create-music-playlist-dialog/create-music-playlist-dialog.component';
+import { CreateMusicBookmarkPlaylistDialogComponent, CreateMusicBookmarkPlaylistDialogData } from '../../pages/music/create-music-bookmark-playlist-dialog/create-music-bookmark-playlist-dialog.component';
 import { ShareArticleDialogComponent, ShareArticleDialogData } from '../share-article-dialog/share-article-dialog.component';
 import { CustomDialogService } from '../../services/custom-dialog.service';
 import { LoggerService } from '../../services/logger.service';
@@ -39,7 +39,7 @@ import { ConfirmDialogComponent, ConfirmDialogData } from '../confirm-dialog/con
     MatDividerModule,
     MatProgressSpinnerModule,
     MatSnackBarModule,
-    CreateMusicPlaylistDialogComponent,
+    CreateMusicBookmarkPlaylistDialogComponent,
   ],
   template: `
     <mat-menu #trackMenu="matMenu">
@@ -143,7 +143,7 @@ import { ConfirmDialogComponent, ConfirmDialogData } from '../confirm-dialog/con
     </mat-menu>
 
     @if (showCreatePlaylistDialog() && createPlaylistDialogData()) {
-      <app-create-music-playlist-dialog
+      <app-create-music-bookmark-playlist-dialog
         [data]="createPlaylistDialogData()!"
         (closed)="onCreatePlaylistDialogClosed($event)"
       />
@@ -172,7 +172,7 @@ import { ConfirmDialogComponent, ConfirmDialogData } from '../confirm-dialog/con
 export class MusicTrackMenuComponent {
   private router = inject(Router);
   private mediaPlayer = inject(MediaPlayerService);
-  private musicPlaylistService = inject(MusicPlaylistService);
+  private musicPlaylistService = inject(MusicBookmarkPlaylistService);
   private app = inject(ApplicationService);
   private accountState = inject(AccountStateService);
   private snackBar = inject(MatSnackBar);
@@ -445,7 +445,7 @@ export class MusicTrackMenuComponent {
 
   // Create playlist dialog signals
   showCreatePlaylistDialog = signal(false);
-  createPlaylistDialogData = signal<CreateMusicPlaylistDialogData | null>(null);
+  createPlaylistDialogData = signal<CreateMusicBookmarkPlaylistDialogData | null>(null);
 
   createNewPlaylist(): void {
     const ev = this.track();
@@ -459,7 +459,7 @@ export class MusicTrackMenuComponent {
     this.showCreatePlaylistDialog.set(true);
   }
 
-  onCreatePlaylistDialogClosed(result: { playlist: MusicPlaylist; trackAdded: boolean } | null): void {
+  onCreatePlaylistDialogClosed(result: { playlist: MusicBookmarkPlaylist; trackAdded: boolean } | null): void {
     this.showCreatePlaylistDialog.set(false);
     this.createPlaylistDialogData.set(null);
     if (result?.playlist) {

@@ -1,4 +1,4 @@
-<h2 mat-dialog-title>Create New Album</h2>
+<h2 mat-dialog-title>Create Media Playlist</h2>
 
 <mat-dialog-content>
   <form [formGroup]="playlistForm" class="playlist-form">
@@ -21,12 +21,12 @@
 
     <div class="id-field-container">
       <mat-form-field appearance="outline" class="id-field">
-        <mat-label>Album ID (d tag)</mat-label>
-        <input matInput formControlName="id" placeholder="unique-album-id" autocomplete="off">
+        <mat-label>Media Playlist ID (d tag)</mat-label>
+        <input matInput formControlName="id" placeholder="unique-playlist-id" autocomplete="off">
         @if (playlistForm.get('id')?.hasError('required')) {
-        <mat-error>Album ID is required</mat-error>
+        <mat-error>Media Playlist ID is required</mat-error>
         }
-        <mat-hint>Unique identifier for this album (used in Nostr events)</mat-hint>
+        <mat-hint>Unique identifier for this media playlist (used in Nostr events)</mat-hint>
       </mat-form-field>
       <button type="button" mat-icon-button (click)="generateRandomId()" matTooltip="Generate random ID"
         class="generate-id-button">
@@ -35,16 +35,16 @@
     </div>
 
     <mat-form-field appearance="outline" class="full-width">
-      <mat-label>Album Title</mat-label>
-      <input matInput formControlName="title" placeholder="Enter album title" autocomplete="off">
+      <mat-label>Media Playlist Title</mat-label>
+      <input matInput formControlName="title" placeholder="Enter media playlist title" autocomplete="off">
       @if (playlistForm.get('title')?.hasError('required')) {
-      <mat-error>Album title is required</mat-error>
+      <mat-error>Media Playlist title is required</mat-error>
       }
     </mat-form-field>
 
     <mat-form-field appearance="outline" class="full-width">
       <mat-label>Description (Optional)</mat-label>
-      <textarea matInput formControlName="description" placeholder="Enter album description" rows="3"
+      <textarea matInput formControlName="description" placeholder="Enter media playlist description" rows="3"
         autocomplete="off">
       </textarea>
     </mat-form-field>
@@ -54,6 +54,6 @@
 <mat-dialog-actions align="end">
   <button mat-button type="button" (click)="onCancel()">Cancel</button>
   <button mat-flat-button color="primary" type="submit" (click)="onSubmit()" [disabled]="!playlistForm.valid">
-    Create Album
+    Create Media Playlist
   </button>
 </mat-dialog-actions>

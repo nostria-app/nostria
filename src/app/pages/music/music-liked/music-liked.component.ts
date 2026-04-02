@@ -1,11 +1,11 @@
-import { Component, inject, signal, computed, OnDestroy, ChangeDetectionStrategy, AfterViewInit, ElementRef, viewChild } from '@angular/core';
+import { Component, inject, signal, computed, OnDestroy, ChangeDetectionStrategy, AfterViewInit, ElementRef, viewChild, effect, untracked } from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatMenuModule } from '@angular/material/menu';
-import { Event, Filter, kinds } from 'nostr-tools';
+import { Event } from 'nostr-tools';
 import { RelayPoolService } from '../../../services/relays/relay-pool';
 import { RelaysService } from '../../../services/relays/relays';
 import { UtilitiesService } from '../../../services/utilities.service';
@@ -18,6 +18,7 @@ import { PanelNavigationService } from '../../../services/panel-navigation.servi
 import { MediaItem } from '../../../interfaces';
 import { MusicEventComponent } from '../../../components/event-types/music-event.component';
 import { LoggerService } from '../../../services/logger.service';
+import { MusicLikedSongsService } from '../../../services/music-liked-songs.service';
 
 const MUSIC_KINDS = [...UtilitiesService.MUSIC_KINDS];
 const PAGE_SIZE = 24;
@@ -43,15 +44,19 @@ const PAGE_SIZE = 24;
         <mat-icon>{{ showSearch() ? 'search_off' : 'search' }}</mat-icon>
       </button>
       <span class="panel-header-spacer"></span>
-      <button mat-icon-button [matMenuTriggerFor]="moreOptionsMenu" matTooltip="More options" class="show-small">
-        <mat-icon>more_vert</mat-icon>
-      </button>
-      <mat-menu #moreOptionsMenu="matMenu">
-        <button mat-menu-item (click)="toggleSearch()">
-          <mat-icon>{{ showSearch() ? 'search_off' : 'search' }}</mat-icon>
-          <span>{{ showSearch() ? 'Close Search' : 'Search' }}</span>
-        </button>
-      </mat-menu>
+       <button mat-icon-button [matMenuTriggerFor]="moreOptionsMenu" matTooltip="More options" class="show-small">
+         <mat-icon>more_vert</mat-icon>
+       </button>
+       <mat-menu #moreOptionsMenu="matMenu">
+         <button mat-menu-item (click)="toggleSearch()">
+           <mat-icon>{{ showSearch() ? 'search_off' : 'search' }}</mat-icon>
+           <span>{{ showSearch() ? 'Close Search' : 'Search' }}</span>
+         </button>
+         <button mat-menu-item (click)="importFromLikes()" [disabled]="importingLikes()">
+           <mat-icon>sync</mat-icon>
+           <span>Import from likes</span>
+         </button>
+       </mat-menu>
     </div>
 
     <div class="music-liked-container">
@@ -84,6 +89,10 @@ const PAGE_SIZE = 24;
             <p class="subtitle">{{ tracksCount() }} <span i18n="@@music.liked.trackCount">tracks</span></p>
           </div>
         </div>
+        <button mat-stroked-button (click)="importFromLikes()" [disabled]="importingLikes()">
+          <mat-icon>sync</mat-icon>
+          <span>Import from likes</span>
+        </button>
         @if (allTracks().length > 0) {
           <button mat-fab extended class="play-all-button" (click)="playAll()" aria-label="Play all">
             <mat-icon>play_arrow</mat-icon>
@@ -436,19 +445,18 @@ export class MusicLikedComponent implements OnDestroy, AfterViewInit {
   private dataService = inject(DataService);
   private panelNav = inject(PanelNavigationService);
   private readonly logger = inject(LoggerService);
+  private likedSongsService = inject(MusicLikedSongsService);
 
   allTracks = signal<Event[]>([]);
   loading = signal(true);
   loadingMore = signal(false);
+  importingLikes = signal(false);
   displayLimit = signal(PAGE_SIZE);
 
   // Search functionality
   searchQuery = signal('');
   showSearch = signal(false);
 
-  private reactionSubscription: { close: () => void } | null = null;
-  private trackSubscription: { close: () => void } | null = null;
-  private likedEventIds = new Set<string>();
   private trackMap = new Map<string, Event>();
   private intersectionObserver: IntersectionObserver | null = null;
 
@@ -491,7 +499,12 @@ export class MusicLikedComponent implements OnDestroy, AfterViewInit {
   });
 
   constructor() {
-    this.startSubscriptions();
+    effect(() => {
+      this.likedSongsService.likedSongRefs();
+      untracked(() => {
+        void this.loadLikedTracks();
+      });
+    });
   }
 
   ngAfterViewInit(): void {
@@ -499,8 +512,6 @@ export class MusicLikedComponent implements OnDestroy, AfterViewInit {
   }
 
   ngOnDestroy(): void {
-    this.reactionSubscription?.close();
-    this.trackSubscription?.close();
     this.intersectionObserver?.disconnect();
   }
 
@@ -530,12 +541,14 @@ export class MusicLikedComponent implements OnDestroy, AfterViewInit {
     }
   }
 
-  private startSubscriptions(): void {
+  private async loadLikedTracks(): Promise<void> {
     const pubkey = this.accountState.pubkey();
     if (!pubkey) {
       this.loading.set(false);
       return;
     }
+
+    await this.likedSongsService.ensureInitialized(pubkey);
 
     const relayUrls = this.relaysService.getOptimalRelays(this.utilities.preferredRelays);
 
@@ -545,64 +558,19 @@ export class MusicLikedComponent implements OnDestroy, AfterViewInit {
       return;
     }
 
-    // First, fetch user's reactions (kind 7) to supported music track events
-    const reactionFilter: Filter = {
-      kinds: [kinds.Reaction],
-      authors: [pubkey],
-      '#k': MUSIC_KINDS.map(String),
-      limit: 500,
-    };
+    const likedTrackRefs = this.likedSongsService.likedSongRefs()
+      .map(item => item.ref)
+      .filter(ref => !!this.utilities.parseMusicTrackCoordinate(ref));
 
-    let reactionsLoaded = false;
-    const reactionTimeout = setTimeout(() => {
-      reactionsLoaded = true;
-      this.fetchLikedTracks(relayUrls);
-    }, 3000);
-
-    this.reactionSubscription = this.pool.subscribe(relayUrls, reactionFilter, (event: Event) => {
-      // Check if it's a like ('+' content)
-      if (event.content !== '+') return;
-
-      // Get the 'a' tag for addressable events or 'e' tag for regular events
-      const aTag = event.tags.find((tag: string[]) => tag[0] === 'a')?.[1];
-      const eTag = event.tags.find((tag: string[]) => tag[0] === 'e')?.[1];
-
-      if (aTag) {
-        // For addressable events, store the coordinate
-        this.likedEventIds.add(aTag);
-      } else if (eTag) {
-        this.likedEventIds.add(eTag);
-      }
-
-      if (!reactionsLoaded) {
-        clearTimeout(reactionTimeout);
-        reactionsLoaded = true;
-        // Delay slightly to collect more reactions before fetching tracks
-        setTimeout(() => this.fetchLikedTracks(relayUrls), 500);
-      }
-    });
-  }
-
-  private fetchLikedTracks(relayUrls: string[]): void {
-    if (this.likedEventIds.size === 0) {
+    if (likedTrackRefs.length === 0) {
+      this.trackMap.clear();
+      this.allTracks.set([]);
       this.loading.set(false);
       this.tryObserveSentinel();
       return;
     }
 
-    // Build filters for liked tracks
-    const aTagCoordinates: string[] = [];
-    const eventIds: string[] = [];
-
-    this.likedEventIds.forEach(id => {
-      if (id.includes(':')) {
-        aTagCoordinates.push(id);
-      } else {
-        eventIds.push(id);
-      }
-    });
-
-    void this.fetchLikedTracksSnapshot(relayUrls, aTagCoordinates, eventIds);
+    await this.fetchLikedTracksSnapshot(relayUrls, likedTrackRefs, []);
   }
 
   private async fetchLikedTracksSnapshot(
@@ -729,6 +697,21 @@ export class MusicLikedComponent implements OnDestroy, AfterViewInit {
       } else {
         this.mediaPlayer.enque(mediaItem);
       }
+    }
+  }
+
+  async importFromLikes(): Promise<void> {
+    if (this.importingLikes()) {
+      return;
+    }
+
+    this.importingLikes.set(true);
+
+    try {
+      await this.likedSongsService.importExistingLikes();
+      await this.loadLikedTracks();
+    } finally {
+      this.importingLikes.set(false);
     }
   }
 

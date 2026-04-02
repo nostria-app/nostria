@@ -188,6 +188,13 @@ export class ExternalLinkHandlerService {
       return ['/music/artist', pubkey];
     }
 
+    // Music album: /music/album/:pubkey/:identifier
+    const musicAlbumMatch = path.match(/^\/music\/album\/([a-zA-Z0-9]+)\/(.+)$/i);
+    if (musicAlbumMatch) {
+      const [, pubkey, identifier] = musicAlbumMatch;
+      return ['/music/album', pubkey, identifier];
+    }
+
     // Music playlist: /music/playlist/:pubkey/:identifier
     const musicPlaylistMatch = path.match(/^\/music\/playlist\/([a-zA-Z0-9]+)\/(.+)$/i);
     if (musicPlaylistMatch) {
@@ -324,7 +331,10 @@ export class ExternalLinkHandlerService {
         const npub = nip19.npubEncode(data.pubkey);
 
         if (data.kind === 34139) {
-          // Music playlist - route directly to music playlist page
+          return `/music/album/${npub}/${data.identifier}`;
+        }
+
+        if (data.kind === 30003) {
           return `/music/playlist/${npub}/${data.identifier}`;
         }
 

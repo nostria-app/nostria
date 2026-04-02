@@ -77,7 +77,7 @@ const KIND_LABELS: Record<number, string> = {
   31989: 'App Recommendation',
   31990: 'App Handler',
   32100: 'M3U Playlist',
-  34139: 'Music Playlist',
+  34139: 'Music Album',
   34235: 'Video Event',
   34236: 'Short Video Event',
   36787: 'Music Track',
@@ -133,7 +133,7 @@ const KNOWN_RENDERABLE_KINDS = new Set([
   30311,  // Live Event
   31871,  // Web of Trust
   32100,  // M3U Playlist
-  34139,  // Music Playlist
+  34139,  // Music Album
   34235,  // Video Event
   34236,  // Short Video Event
   36787,  // Music Track
