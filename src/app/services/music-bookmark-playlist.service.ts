@@ -26,7 +26,8 @@ export interface MusicBookmarkPlaylist {
 export interface CreateMusicBookmarkPlaylistData {
   title: string;
   description?: string;
-  image?: string;
+  image?: string | null;
+  gradient?: string | null;
 }
 
 @Injectable({
@@ -218,6 +219,8 @@ export class MusicBookmarkPlaylistService {
 
     if (data.image) {
       tags.push(['image', data.image]);
+    } else if (data.gradient) {
+      tags.push(['gradient', 'colors', data.gradient]);
     }
 
     const event = this.nostrService.createEvent(MUSIC_PLAYLIST_KIND, data.description || '', tags);
@@ -240,6 +243,82 @@ export class MusicBookmarkPlaylistService {
     }
 
     return playlist;
+  }
+
+  async updatePlaylist(
+    playlistId: string,
+    updates: Partial<CreateMusicBookmarkPlaylistData>,
+  ): Promise<MusicBookmarkPlaylist | null> {
+    const pubkey = this.accountState.pubkey();
+    if (!pubkey) {
+      return null;
+    }
+
+    let playlist: MusicBookmarkPlaylist | undefined = this.userPlaylists().find(
+      item => item.id === playlistId && item.pubkey === pubkey,
+    );
+    if (!playlist?.event) {
+      const event = await this.fetchPlaylistEvent(pubkey, playlistId);
+      playlist = event ? this.parsePlaylistEvent(event) || undefined : undefined;
+    }
+
+    if (!playlist?.event) {
+      this.logger.warn('[MusicBookmarkPlaylist] Playlist not found:', playlistId);
+      return null;
+    }
+
+    const title = updates.title ?? playlist.title;
+    const description = updates.description ?? playlist.description;
+    const image = updates.image === undefined ? playlist.image : updates.image;
+
+    const tags: string[][] = [
+      ['d', playlist.id],
+      ['title', title],
+      ['alt', `Playlist: ${title}`],
+      ['t', 'music'],
+      ['t', 'playlist'],
+    ];
+
+    if (description) {
+      tags.push(['description', description]);
+    }
+
+    if (image) {
+      tags.push(['image', image]);
+    } else {
+      const gradient = updates.gradient === undefined
+        ? this.utilities.getMusicGradient(playlist.event)
+        : updates.gradient;
+      if (gradient) {
+        tags.push(['gradient', 'colors', gradient]);
+      }
+    }
+
+    for (const ref of playlist.trackRefs) {
+      tags.push(['a', ref]);
+    }
+
+    const event = this.nostrService.createEvent(MUSIC_PLAYLIST_KIND, description || '', tags);
+    if (!event) {
+      return null;
+    }
+
+    const signedEvent = await this.nostrService.signEvent(event);
+    if (!signedEvent) {
+      return null;
+    }
+
+    await this.accountRelay.publish(signedEvent);
+
+    const updatedPlaylist = this.parsePlaylistEvent(signedEvent);
+    if (updatedPlaylist) {
+      const key = `${updatedPlaylist.pubkey}:${updatedPlaylist.id}`;
+      this.playlistMap.set(key, updatedPlaylist);
+      this._userPlaylists.set(Array.from(this.playlistMap.values()).sort((a, b) => b.created_at - a.created_at));
+      return updatedPlaylist;
+    }
+
+    return null;
   }
 
   async addTrackToPlaylist(

@@ -173,6 +173,7 @@ import { ImageCacheService } from '../../services/image-cache.service';
     }
 
     .title {
+      font-size: 0.95rem;
       color: var(--mat-sys-on-surface);
     }
 

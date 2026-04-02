@@ -1,27 +1,26 @@
-import { Component, computed, inject, input, output, signal } from '@angular/core';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { Component, computed, effect, inject, input, output, signal, untracked } from '@angular/core';
 import { Router } from '@angular/router';
+import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
-import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { ConfirmDialogComponent } from '../../../components/confirm-dialog/confirm-dialog.component';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { CustomDialogComponent } from '../../../components/custom-dialog/custom-dialog.component';
+import { ConfirmDialogComponent } from '../../../components/confirm-dialog/confirm-dialog.component';
 import { MediaService } from '../../../services/media.service';
 import { MusicBookmarkPlaylist, MusicBookmarkPlaylistService } from '../../../services/music-bookmark-playlist.service';
+import { UtilitiesService } from '../../../services/utilities.service';
 import { LoggerService } from '../../../services/logger.service';
 
-export interface CreateMusicBookmarkPlaylistDialogData {
-  trackPubkey?: string;
-  trackDTag?: string;
-  trackKind?: number;
+export interface EditMusicBookmarkPlaylistDialogData {
+  playlist: MusicBookmarkPlaylist;
 }
 
 @Component({
-  selector: 'app-create-music-bookmark-playlist-dialog',
+  selector: 'app-edit-music-bookmark-playlist-dialog',
   imports: [
     CustomDialogComponent,
     MatButtonModule,
@@ -34,30 +33,32 @@ export interface CreateMusicBookmarkPlaylistDialogData {
     ReactiveFormsModule,
   ],
   template: `
-    <app-custom-dialog [title]="'Create Playlist'" [showCloseButton]="true" [disableClose]="true" [width]="'500px'"
+    <app-custom-dialog [title]="'Edit Playlist'" [showCloseButton]="true" [disableClose]="true" [width]="'500px'"
       [maxWidth]="'95vw'" (closed)="onCancel()">
       <div dialog-content>
         @if (!hasMediaServers()) {
           <div class="media-server-warning">
             <div class="warning-content">
               <mat-icon>warning</mat-icon>
-              <span>No media servers configured. You can still create a playlist with gradient art.</span>
+              <span>You need to configure a media server to upload cover images</span>
             </div>
             <button mat-flat-button type="button" (click)="navigateToMediaSettings()">Configure Media Server</button>
           </div>
         }
 
-        <p class="subtitle">Create a bookmark-set playlist for tracks you want to keep together.</p>
-
-        <form [formGroup]="playlistForm" class="form">
+        <form [formGroup]="playlistForm" class="playlist-form">
           <mat-form-field appearance="outline" class="full-width">
             <mat-label>Title</mat-label>
-            <input matInput formControlName="title" autocomplete="off" placeholder="Late Night Mix" />
+            <input matInput formControlName="title" placeholder="Late Night Mix" autocomplete="off" required />
+            @if (playlistForm.get('title')?.hasError('required')) {
+              <mat-error>Title is required</mat-error>
+            }
           </mat-form-field>
 
           <mat-form-field appearance="outline" class="full-width">
             <mat-label>Description</mat-label>
-            <textarea matInput formControlName="description" rows="2" placeholder="Optional description"></textarea>
+            <textarea matInput formControlName="description" placeholder="What's this playlist about?" rows="2"
+              autocomplete="off"></textarea>
           </mat-form-field>
 
           <div class="cover-section" [class.drag-over]="isDraggingImage()" (dragenter)="onImageDragEnter($event)"
@@ -94,7 +95,7 @@ export interface CreateMusicBookmarkPlaylistDialogData {
             <div class="url-row">
               <span class="or-divider">OR</span>
               <mat-form-field appearance="outline" class="full-width url-field">
-                <input matInput formControlName="imageUrl" autocomplete="off" placeholder="https://..."
+                <input matInput formControlName="imageUrl" placeholder="Paste image URL" autocomplete="off"
                   (blur)="onImageUrlChange()" (keyup.enter)="onImageUrlChange()" />
               </mat-form-field>
             </div>
@@ -104,20 +105,25 @@ export interface CreateMusicBookmarkPlaylistDialogData {
 
       <div dialog-actions>
         <button mat-button type="button" (click)="onCancel()">Cancel</button>
-        <button mat-flat-button type="button" (click)="onSubmit()" [disabled]="playlistForm.invalid || isCreating()">
-          @if (isCreating()) {
+        <button mat-flat-button type="button" (click)="onSubmit()" [disabled]="playlistForm.invalid || isSaving()">
+          @if (isSaving()) {
             <mat-spinner diameter="18"></mat-spinner>
           } @else {
-            Create Playlist
+            Save Changes
           }
         </button>
       </div>
     </app-custom-dialog>
   `,
   styles: [`
-    .subtitle {
-      margin: 0 0 1rem;
-      color: var(--mat-sys-on-surface-variant);
+    .playlist-form {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .full-width {
+      width: 100%;
     }
 
     .media-server-warning {
@@ -136,16 +142,6 @@ export interface CreateMusicBookmarkPlaylistDialogData {
       align-items: center;
       gap: 0.5rem;
       color: var(--mat-sys-on-surface-variant);
-    }
-
-    .form {
-      display: flex;
-      flex-direction: column;
-      gap: 1rem;
-    }
-
-    .full-width {
-      width: 100%;
     }
 
     .cover-section {
@@ -186,6 +182,10 @@ export interface CreateMusicBookmarkPlaylistDialogData {
       align-items: center;
       justify-content: center;
       overflow: hidden;
+    }
+
+    .cover-preview.has-image {
+      background-size: cover;
     }
 
     .cover-icon {
@@ -244,20 +244,21 @@ export interface CreateMusicBookmarkPlaylistDialogData {
     }
   `],
 })
-export class CreateMusicBookmarkPlaylistDialogComponent {
-  data = input<CreateMusicBookmarkPlaylistDialogData>({});
-  closed = output<{ playlist: MusicBookmarkPlaylist; trackAdded: boolean } | null>();
+export class EditMusicBookmarkPlaylistDialogComponent {
+  data = input.required<EditMusicBookmarkPlaylistDialogData>();
+  closed = output<{ updated: boolean; playlist?: MusicBookmarkPlaylist } | null>();
 
   private fb = inject(FormBuilder);
   private playlistService = inject(MusicBookmarkPlaylistService);
   private mediaService = inject(MediaService);
+  private utilities = inject(UtilitiesService);
   private snackBar = inject(MatSnackBar);
   private logger = inject(LoggerService);
   private router = inject(Router);
   private dialog = inject(MatDialog);
 
   hasMediaServers = computed(() => this.mediaService.mediaServers().length > 0);
-  isCreating = signal(false);
+  isSaving = signal(false);
   isUploading = signal(false);
   isDraggingImage = signal(false);
   coverImage = signal<string | null>(null);
@@ -274,12 +275,41 @@ export class CreateMusicBookmarkPlaylistDialogComponent {
   ];
 
   currentGradient = signal(this.getRandomGradient());
+  private initialized = false;
 
   playlistForm: FormGroup = this.fb.group({
     title: ['', [Validators.required, Validators.minLength(1)]],
     description: [''],
     imageUrl: [''],
   });
+
+  constructor() {
+    effect(() => {
+      const current = this.data();
+      if (!current || this.initialized) {
+        return;
+      }
+
+      this.initialized = true;
+      untracked(() => {
+        this.playlistForm.patchValue({
+          title: current.playlist.title,
+          description: current.playlist.description || '',
+          imageUrl: current.playlist.image || '',
+        });
+
+        if (current.playlist.image) {
+          this.coverImage.set(current.playlist.image);
+          this.previousCoverImage.set(current.playlist.image);
+        }
+
+        const gradient = current.playlist.event ? this.utilities.getMusicGradient(current.playlist.event) : null;
+        if (gradient) {
+          this.currentGradient.set(gradient);
+        }
+      });
+    });
+  }
 
   private getRandomGradient(): string {
     return this.gradients[Math.floor(Math.random() * this.gradients.length)];
@@ -436,52 +466,40 @@ export class CreateMusicBookmarkPlaylistDialogComponent {
   }
 
   async onSubmit(): Promise<void> {
-    if (this.playlistForm.invalid || this.isCreating()) {
+    if (this.playlistForm.invalid || this.isSaving()) {
       return;
     }
 
-    this.isCreating.set(true);
+    this.isSaving.set(true);
     try {
-      const value = this.playlistForm.value;
-      const playlist = await this.playlistService.createPlaylist({
-        title: value.title,
-        description: value.description || undefined,
-        image: value.imageUrl || null,
-        gradient: value.imageUrl ? null : this.currentGradient(),
+      const formValue = this.playlistForm.value;
+      const updated = await this.playlistService.updatePlaylist(this.data().playlist.id, {
+        title: formValue.title,
+        description: formValue.description || undefined,
+        image: formValue.imageUrl || undefined,
+        gradient: formValue.imageUrl ? null : this.currentGradient(),
       });
 
-      if (!playlist) {
-        this.closed.emit(null);
-        return;
+      if (updated) {
+        this.snackBar.open('Playlist updated!', 'Close', { duration: 2000 });
+        this.closed.emit({ updated: true, playlist: updated });
+      } else {
+        this.snackBar.open('Failed to update playlist', 'Close', { duration: 3000 });
       }
-
-      const dialogData = this.data();
-      let trackAdded = false;
-      if (dialogData.trackPubkey && dialogData.trackDTag) {
-        trackAdded = await this.playlistService.addTrackToPlaylist(
-          playlist.id,
-          dialogData.trackPubkey,
-          dialogData.trackDTag,
-          dialogData.trackKind,
-        );
-      }
-
-      this.closed.emit({ playlist, trackAdded });
     } catch (error) {
-      this.logger.error('[MusicBookmarkPlaylist] Failed to create playlist:', error);
-      this.snackBar.open('Failed to create playlist', 'Close', { duration: 3000 });
-      this.closed.emit(null);
+      this.logger.error('Failed to update bookmark playlist:', error);
+      this.snackBar.open('Failed to update playlist', 'Close', { duration: 3000 });
     } finally {
-      this.isCreating.set(false);
+      this.isSaving.set(false);
     }
+  }
+
+  onCancel(): void {
+    this.closed.emit(null);
   }
 
   navigateToMediaSettings(): void {
     this.onCancel();
     void this.router.navigate(['/media'], { queryParams: { tab: 'servers' } });
-  }
-
-  onCancel(): void {
-    this.closed.emit(null);
   }
 }

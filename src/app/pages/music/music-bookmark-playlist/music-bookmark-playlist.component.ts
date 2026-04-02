@@ -5,6 +5,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { Event, nip19 } from 'nostr-tools';
 import { MusicBookmarkPlaylistService } from '../../../services/music-bookmark-playlist.service';
@@ -18,19 +19,45 @@ import { ImageCacheService } from '../../../services/image-cache.service';
 import { AccountStateService } from '../../../services/account-state.service';
 import { MusicLikedSongsService } from '../../../services/music-liked-songs.service';
 import { MusicTrackMenuComponent } from '../../../components/music-track-menu/music-track-menu.component';
+import { ShareArticleDialogComponent, ShareArticleDialogData } from '../../../components/share-article-dialog/share-article-dialog.component';
+import { CustomDialogService } from '../../../services/custom-dialog.service';
+import { UserRelaysService } from '../../../services/relays/user-relays';
+import {
+  EditMusicBookmarkPlaylistDialogComponent,
+  EditMusicBookmarkPlaylistDialogData,
+} from '../edit-music-bookmark-playlist-dialog/edit-music-bookmark-playlist-dialog.component';
 import { MediaItem } from '../../../interfaces';
 
 @Component({
   selector: 'app-music-bookmark-playlist',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [MatButtonModule, MatIconModule, MatMenuModule, MatProgressSpinnerModule, MatTooltipModule, DragDropModule, MusicTrackMenuComponent],
+  imports: [MatButtonModule, MatIconModule, MatMenuModule, MatProgressSpinnerModule, MatSnackBarModule, MatTooltipModule, DragDropModule, MusicTrackMenuComponent, EditMusicBookmarkPlaylistDialogComponent],
   template: `
     <div class="panel-header">
       <button mat-icon-button (click)="goBack()">
         <mat-icon>arrow_back</mat-icon>
       </button>
       <h2 class="panel-title title-font">Playlist</h2>
+      <span class="panel-header-spacer"></span>
+      @if (playlist()) {
+        <button mat-icon-button [matMenuTriggerFor]="playlistMenu" aria-label="Playlist options">
+          <mat-icon>more_horiz</mat-icon>
+        </button>
+      }
     </div>
+
+    <mat-menu #playlistMenu="matMenu">
+      <button mat-menu-item (click)="sharePlaylist()">
+        <mat-icon>share</mat-icon>
+        <span>Share</span>
+      </button>
+      @if (isOwnPlaylist()) {
+        <button mat-menu-item (click)="openEditDialog()">
+          <mat-icon>edit</mat-icon>
+          <span>Edit playlist</span>
+        </button>
+      }
+    </mat-menu>
 
     <div class="container">
       @if (loading()) {
@@ -58,6 +85,12 @@ import { MediaItem } from '../../../interfaces';
             </div>
           </div>
           <div class="header-actions">
+            @if (isOwnPlaylist()) {
+              <button mat-stroked-button type="button" (click)="openEditDialog()">
+                <mat-icon>edit</mat-icon>
+                <span>Edit</span>
+              </button>
+            }
             <button mat-fab extended class="play-all-button" (click)="playAll()" [disabled]="tracks().length === 0">
                 <mat-icon>play_arrow</mat-icon>
                 <span>Play All</span>
@@ -129,6 +162,10 @@ import { MediaItem } from '../../../interfaces';
         </div>
       }
     </div>
+
+    @if (editDialogData(); as data) {
+      <app-edit-music-bookmark-playlist-dialog [data]="data" (closed)="onEditDialogClosed($event)" />
+    }
   `,
   styles: [`
     :host { display: block; }
@@ -145,6 +182,7 @@ import { MediaItem } from '../../../interfaces';
       backdrop-filter: blur(20px);
     }
     .panel-title { margin: 0; font-size: 1.25rem; }
+    .panel-header-spacer { flex: 1; }
     .container {
       padding: 1rem;
       padding-bottom: 120px;
@@ -224,6 +262,8 @@ import { MediaItem } from '../../../interfaces';
     .header-actions {
       display: flex;
       justify-content: flex-end;
+      align-items: center;
+      gap: 0.75rem;
     }
     .play-all-button {
       border-radius: var(--mat-sys-corner-large);
@@ -514,15 +554,22 @@ export class MusicBookmarkPlaylistComponent {
   private imageCache = inject(ImageCacheService);
   private accountState = inject(AccountStateService);
   private likedSongs = inject(MusicLikedSongsService);
+  private snackBar = inject(MatSnackBar);
+  private customDialog = inject(CustomDialogService);
+  private userRelays = inject(UserRelaysService);
 
   playlist = signal<Event | null>(null);
   tracks = signal<Event[]>([]);
   loading = signal(true);
   savingOrder = signal(false);
+  editDialogData = signal<EditMusicBookmarkPlaylistDialogData | null>(null);
 
   title = computed(() => this.playlist()?.tags.find(tag => tag[0] === 'title')?.[1] || 'Untitled Playlist');
   description = computed(() => this.playlist()?.tags.find(tag => tag[0] === 'description')?.[1] || this.playlist()?.content || '');
-  coverImage = computed(() => this.playlist()?.tags.find(tag => tag[0] === 'image')?.[1] || null);
+  coverImage = computed(() => {
+    const image = this.playlist()?.tags.find(tag => tag[0] === 'image')?.[1] || null;
+    return image ? this.imageCache.getOptimizedImageUrlWithSize(image, 320, 320) : null;
+  });
   gradient = computed(() => this.playlist() ? this.utilities.getMusicGradient(this.playlist()!) : null);
   playlistId = computed(() => this.playlist()?.tags.find(tag => tag[0] === 'd')?.[1] || null);
   isOwnPlaylist = computed(() => {
@@ -743,6 +790,80 @@ export class MusicBookmarkPlaylistComponent {
         this.mediaPlayer.enque(item);
       }
     }
+  }
+
+  openEditDialog(): void {
+    const event = this.playlist();
+    if (!event || !this.isOwnPlaylist()) {
+      return;
+    }
+
+    const playlist = this.playlistService.parsePlaylistEvent(event);
+    if (!playlist) {
+      this.snackBar.open('Failed to load playlist details', 'Close', { duration: 3000 });
+      return;
+    }
+
+    this.editDialogData.set({ playlist });
+  }
+
+  async sharePlaylist(): Promise<void> {
+    const event = this.playlist();
+    const identifier = this.playlistId();
+    if (!event || !identifier) {
+      this.snackBar.open('Failed to generate playlist link', 'Close', { duration: 3000 });
+      return;
+    }
+
+    try {
+      const authorRelays = await this.userRelays.getUserRelaysForPublishing(event.pubkey);
+      const npub = nip19.npubEncode(event.pubkey);
+      const link = `https://nostria.app/music/playlist/${npub}/${encodeURIComponent(identifier)}`;
+      const naddr = nip19.naddrEncode({
+        kind: event.kind,
+        pubkey: event.pubkey,
+        identifier,
+        relays: authorRelays.length > 0 ? authorRelays : undefined,
+      });
+
+      const dialogData: ShareArticleDialogData = {
+        title: this.title(),
+        summary: this.description() || `Check out ${this.title()}`,
+        image: this.coverImage() || undefined,
+        url: link,
+        eventId: event.id,
+        pubkey: event.pubkey,
+        identifier,
+        kind: event.kind,
+        encodedId: naddr,
+        naddr,
+        event,
+      };
+
+      this.customDialog.open(ShareArticleDialogComponent, {
+        title: '',
+        showCloseButton: false,
+        panelClass: 'share-sheet-dialog',
+        data: dialogData,
+        width: '450px',
+        maxWidth: '95vw',
+      });
+    } catch {
+      this.snackBar.open('Failed to share playlist', 'Close', { duration: 3000 });
+    }
+  }
+
+  async onEditDialogClosed(result: { updated: boolean; playlist?: { event?: Event } } | null): Promise<void> {
+    this.editDialogData.set(null);
+    if (!result?.updated) {
+      return;
+    }
+
+    if (result.playlist?.event) {
+      this.playlist.set(result.playlist.event);
+    }
+
+    await this.loadPlaylist();
   }
 
   goBack(): void {
