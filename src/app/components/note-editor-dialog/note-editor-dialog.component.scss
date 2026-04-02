@@ -201,30 +201,25 @@
       }
 
       .remove-media-btn {
-        --mdc-icon-button-state-layer-size: 20px;
-        --mat-icon-button-touch-target-size: 20px;
         position: absolute;
-        top: 2px;
-        right: 2px;
-        width: 20px;
-        height: 20px;
-        min-width: 20px;
-        min-height: 20px;
-        padding: 0 !important;
+        top: 3px;
+        right: 3px;
+        width: 18px;
+        height: 18px;
+        min-width: 18px;
+        min-height: 18px;
+        padding: 0;
+        border: 0;
+        border-radius: 999px;
+        background: transparent;
+        color: white;
+        text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
         z-index: 2;
-        overflow: hidden;
-        background-color: rgba(0, 0, 0, 0.7);
-        border-radius: 50%;
-        display: flex !important;
+        display: flex;
         align-items: center;
         justify-content: center;
-
-        --mdc-icon-button-icon-color: white;
-
-        .mat-mdc-button-touch-target {
-          width: 20px;
-          height: 20px;
-        }
+        cursor: pointer;
+        transition: background-color 0.16s ease;
 
         mat-icon {
           font-size: 14px;
@@ -237,7 +232,12 @@
         }
 
         &:hover {
-          background-color: rgba(0, 0, 0, 0.9);
+          background: rgba(0, 0, 0, 0.28);
+        }
+
+        &:focus-visible {
+          outline: 2px solid rgba(var(--mat-sys-primary-rgb), 0.65);
+          outline-offset: 1px;
         }
       }
     }
@@ -707,30 +707,25 @@
     }
 
     .remove-media-btn {
-      --mdc-icon-button-state-layer-size: 20px;
-      --mat-icon-button-touch-target-size: 20px;
       position: absolute;
-      top: 2px;
-      right: 2px;
-      width: 20px;
-      height: 20px;
-      min-width: 20px;
-      min-height: 20px;
-      padding: 0 !important;
+      top: 3px;
+      right: 3px;
+      width: 18px;
+      height: 18px;
+      min-width: 18px;
+      min-height: 18px;
+      padding: 0;
+      border: 0;
+      border-radius: 999px;
+      background: transparent;
+      color: white;
+      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
       z-index: 2;
-      overflow: hidden;
-      background-color: rgba(0, 0, 0, 0.7);
-      border-radius: 50%;
-      display: flex !important;
+      display: flex;
       align-items: center;
       justify-content: center;
-
-      --mdc-icon-button-icon-color: white;
-
-      .mat-mdc-button-touch-target {
-        width: 20px;
-        height: 20px;
-      }
+      cursor: pointer;
+      transition: background-color 0.16s ease;
 
       mat-icon {
         font-size: 14px;
@@ -743,7 +738,12 @@
       }
 
       &:hover {
-        background-color: rgba(0, 0, 0, 0.9);
+        background: rgba(0, 0, 0, 0.28);
+      }
+
+      &:focus-visible {
+        outline: 2px solid rgba(var(--mat-sys-primary-rgb), 0.65);
+        outline-offset: 1px;
       }
     }
   }
