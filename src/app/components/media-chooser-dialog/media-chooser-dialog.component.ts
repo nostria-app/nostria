@@ -17,6 +17,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { CustomDialogRef } from '../../services/custom-dialog.service';
 import { MediaService, MediaItem } from '../../services/media.service';
 import { AccountStateService } from '../../services/account-state.service';
+import { LoggerService } from '../../services/logger.service';
 
 export interface MediaChooserDialogData {
   /** Allow multiple selection */
@@ -28,6 +29,11 @@ export interface MediaChooserDialogData {
 export interface MediaChooserResult {
   /** Selected media items */
   items: MediaItem[];
+}
+
+interface MediaChooserDisplayItem extends MediaItem {
+  displayUrl?: string;
+  encrypted?: boolean;
 }
 
 @Component({
@@ -52,16 +58,31 @@ export class MediaChooserDialogComponent {
 
   private readonly mediaService = inject(MediaService);
   private readonly accountState = inject(AccountStateService);
+  private readonly logger = inject(LoggerService);
 
   // View state
   activeTab = signal<'images' | 'videos' | 'files'>('images');
   selectedItems = signal<Set<string>>(new Set());
   searchQuery = signal('');
   isLoading = signal(false);
+  mediaDisplayUrls = signal<Map<string, string>>(new Map());
+  encryptedMediaMap = signal<Map<string, true>>(new Map());
+
+  displayMedia = computed<MediaChooserDisplayItem[]>(() => {
+    const allMedia = this.mediaService.mediaItems();
+    const displayUrls = this.mediaDisplayUrls();
+    const encryptedMedia = this.encryptedMediaMap();
+
+    return allMedia.map(item => ({
+      ...item,
+      displayUrl: displayUrls.get(item.sha256),
+      encrypted: encryptedMedia.has(item.sha256),
+    }));
+  });
 
   // Computed media lists
   images = computed(() => {
-    const allMedia = this.mediaService.mediaItems();
+    const allMedia = this.displayMedia();
     const query = this.searchQuery().toLowerCase();
     return allMedia
       .filter(item => item.type?.startsWith('image') || false)
@@ -70,7 +91,7 @@ export class MediaChooserDialogComponent {
   });
 
   videos = computed(() => {
-    const allMedia = this.mediaService.mediaItems();
+    const allMedia = this.displayMedia();
     const query = this.searchQuery().toLowerCase();
     return allMedia
       .filter(item => item.type?.startsWith('video') || false)
@@ -79,7 +100,7 @@ export class MediaChooserDialogComponent {
   });
 
   files = computed(() => {
-    const allMedia = this.mediaService.mediaItems();
+    const allMedia = this.displayMedia();
     const query = this.searchQuery().toLowerCase();
     return allMedia
       .filter(item => !item.type || (!item.type.startsWith('image') && !item.type.startsWith('video')))
@@ -110,6 +131,11 @@ export class MediaChooserDialogComponent {
           this.isLoading.set(false);
         }
       }
+    });
+
+    effect(() => {
+      const items = this.mediaService.mediaItems();
+      void this.hydrateEncryptedMedia(items);
     });
 
     // Set initial tab based on mediaType filter
@@ -217,6 +243,22 @@ export class MediaChooserDialogComponent {
     return allMedia.filter(item => selectedSet.has(item.sha256));
   }
 
+  getItemSourceUrl(item: MediaChooserDisplayItem): string {
+    return item.displayUrl || item.url;
+  }
+
+  isEncrypted(item: MediaChooserDisplayItem): boolean {
+    return item.encrypted || false;
+  }
+
+  hasRenderablePreview(item: MediaChooserDisplayItem): boolean {
+    if (!this.isEncrypted(item)) {
+      return true;
+    }
+
+    return this.getItemSourceUrl(item) !== item.url;
+  }
+
   confirm(): void {
     const selectedItems = this.getSelectedItems();
     this.dialogRef?.close({ items: selectedItems });
@@ -232,6 +274,39 @@ export class MediaChooserDialogComponent {
       await this.mediaService.loadMedia();
     } finally {
       this.isLoading.set(false);
+    }
+  }
+
+  private async hydrateEncryptedMedia(items: MediaItem[]): Promise<void> {
+    if (items.length === 0) {
+      this.encryptedMediaMap.set(new Map());
+      this.mediaDisplayUrls.set(new Map());
+      return;
+    }
+
+    try {
+      const encryptedReferences = await this.mediaService.getEncryptedMediaReferences();
+      const encryptedMap = new Map<string, true>();
+      const displayUrls = new Map<string, string>();
+
+      await Promise.all(items.map(async item => {
+        if (!encryptedReferences.has(item.sha256)) {
+          return;
+        }
+
+        encryptedMap.set(item.sha256, true);
+        const resolvedUrl = await this.mediaService.getResolvedMediaUrl(item, false);
+        if (resolvedUrl) {
+          displayUrls.set(item.sha256, resolvedUrl);
+        }
+      }));
+
+      this.encryptedMediaMap.set(encryptedMap);
+      this.mediaDisplayUrls.set(displayUrls);
+    } catch (error) {
+      this.logger.warn('Failed to hydrate encrypted media previews in chooser', error);
+      this.encryptedMediaMap.set(new Map());
+      this.mediaDisplayUrls.set(new Map());
     }
   }
 }

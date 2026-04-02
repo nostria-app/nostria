@@ -21,7 +21,18 @@
               <div class="selection-indicator">
                 <mat-icon>check_circle</mat-icon>
               </div>
-              <img [src]="item.url" [alt]="getFileName(item.url)" [title]="getFileName(item.url)" loading="lazy" />
+              @if (isEncrypted(item)) {
+              <div class="encrypted-badge" matTooltip="Encrypted file">
+                <mat-icon>lock</mat-icon>
+              </div>
+              }
+              @if (hasRenderablePreview(item)) {
+              <img [src]="getItemSourceUrl(item)" [alt]="getFileName(item.url)" [title]="getFileName(item.url)" loading="lazy" />
+              } @else {
+              <div class="file-preview">
+                <mat-icon>insert_drive_file</mat-icon>
+              </div>
+              }
             </div>
             <div class="media-info">
               <span class="media-name" [matTooltip]="getFileName(item.url)">{{ getFileName(item.url) }}</span>
@@ -54,8 +65,19 @@
               <div class="selection-indicator">
                 <mat-icon>check_circle</mat-icon>
               </div>
+              @if (isEncrypted(item)) {
+              <div class="encrypted-badge" matTooltip="Encrypted file">
+                <mat-icon>lock</mat-icon>
+              </div>
+              }
+              @if (hasRenderablePreview(item)) {
               <mat-icon class="video-play-icon">play_circle</mat-icon>
-              <video [src]="item.url" preload="metadata"></video>
+              <video [src]="getItemSourceUrl(item)" preload="metadata"></video>
+              } @else {
+              <div class="file-preview">
+                <mat-icon>insert_drive_file</mat-icon>
+              </div>
+              }
             </div>
             <div class="media-info">
               <span class="media-name" [matTooltip]="getFileName(item.url)">{{ getFileName(item.url) }}</span>
@@ -87,7 +109,7 @@
             <div class="selection-indicator">
               <mat-icon>check_circle</mat-icon>
             </div>
-            <mat-icon class="file-icon">insert_drive_file</mat-icon>
+            <mat-icon class="file-icon">{{ isEncrypted(item) ? 'lock' : 'insert_drive_file' }}</mat-icon>
             <div class="file-details">
               <span class="file-name" [matTooltip]="getFileName(item.url)">{{ getFileName(item.url) }}</span>
               <span class="file-meta">{{ item.type || 'Unknown type' }} • {{ formatFileSize(item.size) }}</span>
