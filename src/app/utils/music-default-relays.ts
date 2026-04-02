@@ -2,5 +2,5 @@ export const DEFAULT_MUSIC_RELAYS = [
   'wss://drops.basspistol.org/',
   'wss://nos.lol/',
   'wss://relay.damus.io/',
-  'wss://relay.openresist.com/',
+  'wss://ribo.nostria.app/',
 ];

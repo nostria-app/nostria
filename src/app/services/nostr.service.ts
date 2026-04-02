@@ -160,7 +160,7 @@ export class NostrService implements NostriaService {
     'wss://relay.damus.io/',
     'wss://relay.primal.net/',
   ];
-  private readonly DEFAULT_ACCOUNT_RELAY = 'wss://relay.openresist.com/';
+  private readonly DEFAULT_ACCOUNT_RELAY = 'wss://ribo.nostria.app/';
   private readonly DEFAULT_DISCOVERY_RELAYS = [
     'wss://indexer.openresist.com/',
     'wss://indexer.coracle.social/',

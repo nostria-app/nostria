@@ -77,8 +77,8 @@ export class AccountsComponent implements OnInit, OnDestroy {
       url: 'wss://relay.nip46.com/',
     },
     openresist: {
-      label: 'relay.openresist.com',
-      url: 'wss://relay.openresist.com/',
+      label: 'ribo.nostria.app',
+      url: 'wss://ribo.nostria.app/',
     },
   } as const;
 

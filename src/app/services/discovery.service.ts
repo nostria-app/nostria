@@ -183,7 +183,7 @@ export class DiscoveryService {
   readonly CURATOR_PUBKEY = '929dd94e6cc8a6665665a1e1fc043952c014c16c1735578e3436cd4510b1e829';
 
   /** The relay for curated discovery content */
-  readonly CURATOR_RELAY = 'wss://relay.openresist.com/';
+  readonly CURATOR_RELAY = 'wss://ribo.nostria.app/';
 
   /** Dedicated SimplePool instance for discovery relay connections */
   private discoveryPool: SimplePool | null = null;

@@ -1295,7 +1295,7 @@ export class RelaysComponent implements OnInit, OnDestroy {
     const hadZeroDiscoveryRelays = this.discoveryRelay.getRelayUrls().length === 0;
 
     try {
-      const accountRelayUrl = 'wss://relay.openresist.com/';
+      const accountRelayUrl = 'wss://ribo.nostria.app/';
       const discoveryRelayUrl = 'wss://indexer.openresist.com/';
       const defaultRelays = [
         accountRelayUrl,
