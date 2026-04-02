@@ -2146,6 +2146,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       data: {
         multiple: true,
         mediaType: 'all',
+        encryptedSelectionBehavior: 'keep-encrypted',
       },
     });
 

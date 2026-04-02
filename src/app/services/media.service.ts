@@ -47,6 +47,11 @@ export interface EncryptedMediaReference {
   createdAt: number;
 }
 
+export interface DecryptedMediaFile {
+  file: File;
+  reference: EncryptedMediaReference;
+}
+
 export interface MediaUsageReference {
   id: string;
   kind: number;
@@ -259,6 +264,24 @@ export class MediaService implements NostriaService {
     const objectUrl = URL.createObjectURL(blob);
     this.decryptedMediaUrls.set(item.sha256, objectUrl);
     return objectUrl;
+  }
+
+  async getDecryptedMediaFile(item: MediaItem): Promise<DecryptedMediaFile | null> {
+    const encryptedReference = await this.getEncryptedMediaReference(item.sha256);
+    if (!encryptedReference) {
+      return null;
+    }
+
+    const blob = await this.decryptEncryptedMediaBlob(encryptedReference);
+    const fileName = this.getDecryptedMediaFileName(item, encryptedReference, blob.type);
+
+    return {
+      file: new File([blob], fileName, {
+        type: blob.type || encryptedReference.fileType || item.type || 'application/octet-stream',
+        lastModified: Date.now(),
+      }),
+      reference: encryptedReference,
+    };
   }
 
   async getMediaUsageReferences(item: MediaItem): Promise<MediaUsageReference[]> {
@@ -581,6 +604,52 @@ export class MediaService implements NostriaService {
     }
 
     return fallbackType;
+  }
+
+  private getDecryptedMediaFileName(item: MediaItem, reference: EncryptedMediaReference, fileType: string): string {
+    if (reference.fileName && !this.isBinFileName(reference.fileName)) {
+      return reference.fileName;
+    }
+
+    const extension = this.inferExtensionFromMimeType(fileType || reference.fileType || item.type);
+    return extension
+      ? `media-${item.sha256.slice(0, 12)}.${extension}`
+      : `media-${item.sha256.slice(0, 12)}`;
+  }
+
+  private inferExtensionFromMimeType(mimeType: string | undefined): string | null {
+    if (!mimeType) {
+      return null;
+    }
+
+    const extensionMap: Record<string, string> = {
+      'image/jpeg': 'jpg',
+      'image/png': 'png',
+      'image/gif': 'gif',
+      'image/webp': 'webp',
+      'image/svg+xml': 'svg',
+      'image/avif': 'avif',
+      'image/bmp': 'bmp',
+      'video/mp4': 'mp4',
+      'video/webm': 'webm',
+      'video/quicktime': 'mov',
+      'video/x-matroska': 'mkv',
+      'video/x-msvideo': 'avi',
+      'audio/mpeg': 'mp3',
+      'audio/mp4': 'm4a',
+      'audio/aac': 'aac',
+      'audio/wav': 'wav',
+      'audio/ogg': 'ogg',
+      'audio/opus': 'opus',
+      'audio/flac': 'flac',
+      'application/pdf': 'pdf',
+      'application/json': 'json',
+      'text/plain': 'txt',
+      'text/markdown': 'md',
+      'text/html': 'html',
+    };
+
+    return extensionMap[mimeType] || null;
   }
 
   private parseHex(value: string): Uint8Array {

@@ -72,7 +72,7 @@
               }
               @if (hasRenderablePreview(item)) {
               <mat-icon class="video-play-icon">play_circle</mat-icon>
-              <video [src]="getItemSourceUrl(item)" preload="metadata"></video>
+              <video [src]="getItemSourceUrl(item)" preload="metadata" muted playsinline></video>
               } @else {
               <div class="file-preview">
                 <mat-icon>insert_drive_file</mat-icon>
@@ -132,8 +132,8 @@
   <div class="action-buttons">
     <button mat-button (click)="cancel()">Cancel</button>
     @if (allowMultiple()) {
-    <button mat-flat-button (click)="confirm()" [disabled]="!hasSelection()">
-      Add Selected
+    <button mat-flat-button (click)="confirm()" [disabled]="!hasSelection() || isConfirming()">
+      {{ isConfirming() ? 'Processing...' : 'Add Selected' }}
     </button>
     }
   </div>

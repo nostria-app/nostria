@@ -1269,6 +1269,7 @@ export class ChatsComponent implements OnInit, OnDestroy {
       data: {
         multiple: true,
         mediaType: 'all',
+        encryptedSelectionBehavior: 'keep-encrypted',
       },
     });
 

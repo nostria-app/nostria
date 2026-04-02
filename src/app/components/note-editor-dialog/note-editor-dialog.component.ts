@@ -4238,6 +4238,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       data: {
         multiple: true,
         mediaType: 'all',
+        encryptedSelectionBehavior: 'decrypt-and-queue',
       },
     });
 
@@ -4251,7 +4252,12 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     });
   }
 
-  private addExistingMediaToEditor(item: { sha256: string; type: string; url: string; size: number }): void {
+  private async addExistingMediaToEditor(item: { sha256: string; type: string; url: string; size: number; localFile?: File; uploadOriginal?: boolean }): Promise<void> {
+    if (item.localFile) {
+      await this.addQueuedMediaToEditor(item.localFile, item.uploadOriginal ?? true);
+      return;
+    }
+
     // Add the media URL to the content
     const currentContent = this.content();
     const urlToAdd = item.url;
@@ -4291,6 +4297,36 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     this.lastCursorPosition = newPos;
     this.setCursorAfterRender(newPos);
 
+    this.snackBar.open('Media added to note', 'Dismiss', { duration: 2000 });
+  }
+
+  private async addQueuedMediaToEditor(file: File, uploadOriginal: boolean): Promise<void> {
+    const uploadSettings: MediaUploadSettings = {
+      mode: 'original',
+      compressionStrength: this.compressionStrength(),
+      videoOptimizationProfile: this.videoOptimizationProfile(),
+    };
+    const preparedFile = {
+      file,
+      uploadOriginal,
+      optimizedSize: file.size,
+    };
+    const pendingMedia = await this.createPendingMediaMetadata(file, preparedFile, '', uploadSettings);
+    this.mediaMetadata.set([...this.mediaMetadata(), pendingMedia]);
+
+    if (!this.isMediaMode()) {
+      const reference = pendingMedia.placeholderToken || pendingMedia.url;
+      const { start, end } = this.insertFileUrl(reference);
+
+      if (pendingMedia.placeholderToken) {
+        this.pendingMediaInsertionAnchors.set(pendingMedia.placeholderToken, start);
+      }
+
+      this.lastCursorPosition = end;
+      this.setCursorAfterRender(end);
+    }
+
+    this.saveAutoDraft();
     this.snackBar.open('Media added to note', 'Dismiss', { duration: 2000 });
   }
 

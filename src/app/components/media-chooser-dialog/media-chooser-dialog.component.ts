@@ -18,17 +18,25 @@ import { CustomDialogRef } from '../../services/custom-dialog.service';
 import { MediaService, MediaItem } from '../../services/media.service';
 import { AccountStateService } from '../../services/account-state.service';
 import { LoggerService } from '../../services/logger.service';
+import { MatSnackBar } from '@angular/material/snack-bar';
 
 export interface MediaChooserDialogData {
   /** Allow multiple selection */
   multiple?: boolean;
   /** Filter by media type: 'images', 'videos', 'files', or 'all' */
   mediaType?: 'images' | 'videos' | 'files' | 'all';
+  /** How encrypted library items should be handled when selected */
+  encryptedSelectionBehavior?: 'keep-encrypted' | 'decrypt-and-queue' | 'decrypt-and-reupload';
+}
+
+export interface MediaChooserSelectedItem extends MediaItem {
+  localFile?: File;
+  uploadOriginal?: boolean;
 }
 
 export interface MediaChooserResult {
   /** Selected media items */
-  items: MediaItem[];
+  items: MediaChooserSelectedItem[];
 }
 
 interface MediaChooserDisplayItem extends MediaItem {
@@ -59,12 +67,14 @@ export class MediaChooserDialogComponent {
   private readonly mediaService = inject(MediaService);
   private readonly accountState = inject(AccountStateService);
   private readonly logger = inject(LoggerService);
+  private readonly snackBar = inject(MatSnackBar);
 
   // View state
   activeTab = signal<'images' | 'videos' | 'files'>('images');
   selectedItems = signal<Set<string>>(new Set());
   searchQuery = signal('');
   isLoading = signal(false);
+  isConfirming = signal(false);
   mediaDisplayUrls = signal<Map<string, string>>(new Map());
   encryptedMediaMap = signal<Map<string, true>>(new Map());
 
@@ -195,7 +205,7 @@ export class MediaChooserDialogComponent {
   selectItem(item: MediaItem): void {
     if (!this.allowMultiple()) {
       // Single selection mode - immediately confirm
-      this.dialogRef?.close({ items: [item] });
+      void this.confirm([item]);
       return;
     }
     this.toggleItemSelection(item);
@@ -259,9 +269,27 @@ export class MediaChooserDialogComponent {
     return this.getItemSourceUrl(item) !== item.url;
   }
 
-  confirm(): void {
-    const selectedItems = this.getSelectedItems();
-    this.dialogRef?.close({ items: selectedItems });
+  async confirm(preselectedItems?: MediaItem[]): Promise<void> {
+    const selectedItems = preselectedItems || this.getSelectedItems();
+    if (selectedItems.length === 0 || this.isConfirming()) {
+      return;
+    }
+
+    this.isConfirming.set(true);
+
+    try {
+      const resolvedItems = await this.resolveSelectedItems(selectedItems);
+      this.dialogRef?.close({ items: resolvedItems });
+    } catch (error) {
+      this.logger.error('Failed to process selected media items', error);
+      this.snackBar.open(
+        error instanceof Error ? error.message : 'Failed to process selected media items',
+        'Close',
+        { duration: 5000 }
+      );
+    } finally {
+      this.isConfirming.set(false);
+    }
   }
 
   cancel(): void {
@@ -275,6 +303,45 @@ export class MediaChooserDialogComponent {
     } finally {
       this.isLoading.set(false);
     }
+  }
+
+  private async resolveSelectedItems(items: MediaItem[]): Promise<MediaChooserSelectedItem[]> {
+    const behavior = this.data?.encryptedSelectionBehavior || 'decrypt-and-reupload';
+
+    if (behavior === 'keep-encrypted') {
+      return items;
+    }
+
+    return await Promise.all(items.map(item => this.resolveSelectedItem(item)));
+  }
+
+  private async resolveSelectedItem(item: MediaItem): Promise<MediaChooserSelectedItem> {
+    const decryptedMedia = await this.mediaService.getDecryptedMediaFile(item);
+    if (!decryptedMedia) {
+      return item;
+    }
+
+    if (this.data?.encryptedSelectionBehavior === 'decrypt-and-queue') {
+      return {
+        ...item,
+        type: decryptedMedia.file.type || item.type,
+        size: decryptedMedia.file.size,
+        localFile: decryptedMedia.file,
+        uploadOriginal: true,
+      };
+    }
+
+    const uploadResult = await this.mediaService.uploadFile(
+      decryptedMedia.file,
+      false,
+      this.mediaService.mediaServers()
+    );
+
+    if (!uploadResult.item || uploadResult.status === 'error') {
+      throw new Error(uploadResult.message || 'Failed to upload decrypted media');
+    }
+
+    return uploadResult.item;
   }
 
   private async hydrateEncryptedMedia(items: MediaItem[]): Promise<void> {
@@ -295,16 +362,21 @@ export class MediaChooserDialogComponent {
         }
 
         encryptedMap.set(item.sha256, true);
-        const resolvedUrl = await this.mediaService.getResolvedMediaUrl(item, false);
-        if (resolvedUrl) {
-          displayUrls.set(item.sha256, resolvedUrl);
+
+        try {
+          const resolvedUrl = await this.mediaService.getResolvedMediaUrl(item, true);
+          if (resolvedUrl) {
+            displayUrls.set(item.sha256, resolvedUrl);
+          }
+        } catch (error) {
+          this.logger.warn(`Failed to hydrate encrypted media preview for ${item.sha256}`, error);
         }
       }));
 
       this.encryptedMediaMap.set(encryptedMap);
       this.mediaDisplayUrls.set(displayUrls);
     } catch (error) {
-      this.logger.warn('Failed to hydrate encrypted media previews in chooser', error);
+      this.logger.warn('Failed to load encrypted media references in chooser', error);
       this.encryptedMediaMap.set(new Map());
       this.mediaDisplayUrls.set(new Map());
     }
