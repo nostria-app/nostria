@@ -1,5 +1,4 @@
 import { Component, computed, inject, input } from '@angular/core';
-import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { Event, nip19 } from 'nostr-tools';
 import { LayoutService } from '../../services/layout.service';
@@ -8,58 +7,108 @@ import { ImageCacheService } from '../../services/image-cache.service';
 
 @Component({
   selector: 'app-music-bookmark-playlist-card',
-  imports: [MatCardModule, MatIconModule],
+  imports: [MatIconModule],
   template: `
-    <mat-card class="playlist-card" [class.compact]="variant() === 'compact'" (click)="openPlaylist()"
-      (keydown.enter)="openPlaylist()" tabindex="0" role="button">
-      <div class="cover" [style.background]="gradient() || ''">
-        @if (coverImage()) {
-          <img [src]="coverImage()!" [alt]="title()" />
-        } @else {
-          <div class="placeholder">
-            <mat-icon>playlist_play</mat-icon>
-          </div>
-        }
+    @if (variant() === 'compact') {
+      <div class="compact-playlist-card" (click)="openPlaylist()" (keydown.enter)="openPlaylist()" tabindex="0"
+        role="button">
+        <div class="compact-cover" [style.background]="gradient() || ''">
+          @if (coverImage()) {
+            <img [src]="coverImage()!" [alt]="title()" />
+          } @else {
+            <div class="compact-placeholder">
+              <mat-icon>playlist_play</mat-icon>
+            </div>
+          }
+        </div>
+        <div class="compact-content">
+          <div class="compact-title">{{ title() }}</div>
+          <div class="compact-meta">{{ trackCount() }} tracks</div>
+        </div>
       </div>
-      <div class="content">
-        <div class="title">{{ title() }}</div>
-        <div class="meta">{{ trackCount() }} tracks</div>
-        @if (description() && variant() !== 'compact') {
-          <div class="description">{{ description() }}</div>
-        }
+    } @else {
+      <div class="playlist-card" (click)="openPlaylist()" (keydown.enter)="openPlaylist()" tabindex="0" role="button">
+        <div class="cover" [style.background]="gradient() || ''">
+          @if (coverImage()) {
+            <img [src]="coverImage()!" [alt]="title()" />
+          } @else {
+            <div class="placeholder">
+              <mat-icon>playlist_play</mat-icon>
+            </div>
+          }
+        </div>
+        <div class="content">
+          <div class="title">{{ title() }}</div>
+          <div class="meta">{{ trackCount() }} tracks</div>
+          @if (description()) {
+            <div class="description">{{ description() }}</div>
+          }
+        </div>
       </div>
-    </mat-card>
+    }
   `,
   styles: [`
     .playlist-card {
+      display: block;
       overflow: hidden;
       cursor: pointer;
+      border-radius: var(--mat-sys-corner-medium);
+      background-color: var(--mat-sys-surface-container);
+
+      &:hover,
+      &:focus {
+        background-color: var(--mat-sys-surface-container-high);
+        outline: none;
+      }
     }
 
-     .playlist-card.compact {
-       display: flex;
-       align-items: center;
-       border-radius: var(--mat-sys-corner-small);
-       background-color: var(--mat-sys-surface-container);
-       min-height: 56px;
-     }
+    .compact-playlist-card {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      border-radius: var(--mat-sys-corner-small);
+      cursor: pointer;
+      transition: background-color 0.15s ease;
+      overflow: hidden;
+      background-color: var(--mat-sys-surface-container);
+      height: 56px;
+      min-width: 0;
 
-     .cover {
-       aspect-ratio: 1;
-       display: block;
-       background: linear-gradient(135deg, var(--mat-sys-primary-container), var(--mat-sys-secondary-container));
-     }
+      &:hover,
+      &:focus {
+        background-color: var(--mat-sys-surface-container-high);
+        outline: none;
+      }
+    }
 
-     .playlist-card.compact .cover {
-       width: 56px;
-       min-width: 56px;
-       height: 56px;
-       aspect-ratio: auto;
-     }
+    .cover {
+      aspect-ratio: 1;
+      display: block;
+      background: linear-gradient(135deg, var(--mat-sys-primary-container), var(--mat-sys-secondary-container));
+    }
 
-     .cover img {
-       width: 100%;
-       height: 100%;
+    .compact-cover {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 56px;
+      height: 56px;
+      min-width: 56px;
+      border-radius: var(--mat-sys-corner-small) 0 0 var(--mat-sys-corner-small);
+      overflow: hidden;
+      background: linear-gradient(135deg, var(--mat-sys-primary-container), var(--mat-sys-secondary-container));
+
+      img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+      }
+    }
+
+    .cover img {
+      width: 100%;
+      height: 100%;
       object-fit: cover;
       display: block;
     }
@@ -72,38 +121,52 @@ import { ImageCacheService } from '../../services/image-cache.service';
       justify-content: center;
     }
 
-     .placeholder mat-icon {
-       width: 3rem;
-       height: 3rem;
-       font-size: 3rem;
-       color: var(--mat-sys-on-primary-container);
-       opacity: 0.7;
-     }
+    .placeholder mat-icon {
+      width: 3rem;
+      height: 3rem;
+      font-size: 3rem;
+      color: var(--mat-sys-on-primary-container);
+      opacity: 0.7;
+    }
 
-     .playlist-card.compact .placeholder mat-icon {
-       width: 1.5rem;
-       height: 1.5rem;
-       font-size: 1.5rem;
-       color: white;
-       opacity: 1;
-     }
+    .compact-placeholder {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
 
-     .content {
-       padding: 0.75rem;
-       display: flex;
-       flex-direction: column;
-       gap: 0.125rem;
-     }
+    .compact-placeholder mat-icon {
+        width: 1.5rem;
+        height: 1.5rem;
+        font-size: 1.5rem;
+        color: white;
+        opacity: 1;
+    }
 
-     .playlist-card.compact .content {
-       padding: 0.5rem 0.75rem;
-       min-width: 0;
-       flex: 1;
-     }
+    .content {
+      padding: 0.75rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.125rem;
+    }
 
-     .title,
-     .meta,
-    .description {
+    .compact-content {
+      display: flex;
+      flex-direction: column;
+      padding: 0.5rem 0.75rem;
+      gap: 0.125rem;
+      min-width: 0;
+      overflow: hidden;
+      flex: 1;
+    }
+
+    .title,
+    .meta,
+    .compact-title,
+    .compact-meta,
+     .description {
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
@@ -113,19 +176,21 @@ import { ImageCacheService } from '../../services/image-cache.service';
       color: var(--mat-sys-on-surface);
     }
 
-     .meta,
-     .description {
-       color: var(--mat-sys-on-surface-variant);
-       font-size: 0.75rem;
-     }
+    .compact-title {
+      font-size: 0.8125rem;
+      color: var(--mat-sys-on-surface);
+    }
 
-     .playlist-card.compact .title {
-       font-size: 0.8125rem;
-     }
+    .meta,
+    .description {
+      color: var(--mat-sys-on-surface-variant);
+      font-size: 0.75rem;
+    }
 
-     .playlist-card.compact .meta {
-       font-size: 0.6875rem;
-     }
+    .compact-meta {
+      font-size: 0.6875rem;
+      color: var(--mat-sys-on-surface-variant);
+    }
   `],
 })
 export class MusicBookmarkPlaylistCardComponent {
