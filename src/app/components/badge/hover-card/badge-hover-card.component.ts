@@ -13,7 +13,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { BadgeService, ParsedBadge } from '../../../services/badge.service';
-import { NostrEvent } from 'nostr-tools';
+import { kinds, NostrEvent } from 'nostr-tools';
 import { DatabaseService } from '../../../services/database.service';
 import { UtilitiesService } from '../../../services/utilities.service';
 import { LayoutService } from '../../../services/layout.service';
@@ -111,5 +111,13 @@ export class BadgeHoverCardComponent {
     } finally {
       this.isLoading.set(false);
     }
+  }
+
+  openBadgeDetails(event: Event): void {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const badgeId = `${kinds.BadgeDefinition}:${this.pubkey()}:${this.slug()}`;
+    this.layout.openBadgeDetails(badgeId, this.badgeDefinition());
   }
 }

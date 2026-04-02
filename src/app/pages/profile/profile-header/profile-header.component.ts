@@ -640,13 +640,16 @@ export class ProfileHeaderComponent implements OnDestroy {
     effect(async () => {
       const currentPubkey = this.pubkey();
       const cachedLoaded = this.profileState.cachedEventsLoaded();
+      const loadedBadgeOwner = this.badgeService.profileBadgesEvent()?.pubkey;
 
       if (currentPubkey && cachedLoaded) {
         // Clear timed out badges and cancel any pending timeouts
         this.clearBadgeTimeouts();
 
         if (this.pubkey() === currentPubkey) {
-          await this.badgeService.loadAcceptedBadges(currentPubkey, { refresh: false });
+          if (loadedBadgeOwner !== currentPubkey) {
+            await this.badgeService.loadAcceptedBadges(currentPubkey, { refresh: false });
+          }
 
           await this.badgeService.hydrateCachedBadgeDefinitions(
             this.badgeService.acceptedBadges().slice(0, 3)

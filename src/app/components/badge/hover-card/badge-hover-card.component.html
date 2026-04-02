@@ -58,10 +58,10 @@
 
     <!-- View Badge Button -->
     <div class="card-actions">
-      <a mat-flat-button color="primary" (click)="layout.openBadgesPage(pubkey())" class="view-button" tabindex="0">
+      <button mat-flat-button type="button" (click)="openBadgeDetails($event)" class="view-button">
         <mat-icon>visibility</mat-icon>
         View Badge Details
-      </a>
+      </button>
     </div>
   </div>
   }
