@@ -69,6 +69,23 @@ export class PinnedService {
   }
 
   /**
+   * Get cached pinned notes for a specific user without waiting on relay refresh.
+   */
+  async getCachedPinnedNotesForUser(pubkey: string): Promise<string[]> {
+    const pinnedEvent = await this.database.getEventByPubkeyAndKind(pubkey, 10001);
+
+    if (!pinnedEvent) {
+      return [];
+    }
+
+    const eventTags = pinnedEvent.tags
+      .filter(tag => tag[0] === 'e')
+      .map(tag => tag[1]);
+
+    return eventTags.slice(-3).reverse();
+  }
+
+  /**
    * Get pinned notes for a specific user
    */
   async getPinnedNotesForUser(pubkey: string): Promise<string[]> {
@@ -89,13 +106,10 @@ export class PinnedService {
       return [];
     }
 
-    // According to NIP-51, items are in chronological order (oldest first)
-    // We want the last 3 items (most recent pins)
     const eventTags = pinnedEvent.tags
       .filter(tag => tag[0] === 'e')
       .map(tag => tag[1]);
 
-    // Return last 3 items (most recent pins)
     return eventTags.slice(-3).reverse();
   }
 

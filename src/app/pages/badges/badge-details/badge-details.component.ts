@@ -114,14 +114,9 @@ export class BadgeDetailsComponent {
     this.error.set(null);
 
     try {
-      // Check if we have the badge definition in memory first
-      let badgeDefinition = this.badgeService.getBadgeDefinition(pubkey, slug);
-
-      // If not found in memory, try to load it
-      if (!badgeDefinition) {
-        await this.badgeService.loadBadgeDefinitions(pubkey);
-        badgeDefinition = this.badgeService.getBadgeDefinition(pubkey, slug);
-      }
+      let badgeDefinition = await this.badgeService.loadBadgeDefinition(pubkey, slug, {
+        forceRefresh: true,
+      });
 
       if (!badgeDefinition) {
         this.error.set('Badge definition not found');

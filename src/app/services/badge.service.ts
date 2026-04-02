@@ -27,6 +27,14 @@ export interface AcceptedBadge {
   slug: string;
 }
 
+interface BadgeLoadOptions {
+  refresh?: boolean;
+}
+
+interface BadgeDefinitionLoadOptions {
+  forceRefresh?: boolean;
+}
+
 interface ParsedReward {
   badgeId: string;
   slug: string;
@@ -129,7 +137,17 @@ export class BadgeService implements NostriaService {
 
   async load() { }
 
-  async loadAcceptedBadges(pubkey: string): Promise<void> {
+  private applyAcceptedBadgesEvent(profileBadgesEvent: NostrEvent | null): void {
+    if (profileBadgesEvent) {
+      this.parseBadgeTags(profileBadgesEvent.tags);
+      this.profileBadgesEvent.set(profileBadgesEvent);
+    } else {
+      this.acceptedBadges.set([]);
+      this.profileBadgesEvent.set(null);
+    }
+  }
+
+  async loadAcceptedBadges(pubkey: string, options: BadgeLoadOptions = {}): Promise<void> {
     const requestId = ++this.acceptedLoadRequestId;
     this.isLoadingAccepted.set(true);
     try {
@@ -142,37 +160,29 @@ export class BadgeService implements NostriaService {
         return;
       }
 
-      if (cachedProfileBadgesEvent) {
-        this.parseBadgeTags(cachedProfileBadgesEvent.tags);
-        this.profileBadgesEvent.set(cachedProfileBadgesEvent);
-      } else {
-        this.acceptedBadges.set([]);
-        this.profileBadgesEvent.set(null);
+      this.applyAcceptedBadgesEvent(cachedProfileBadgesEvent);
+
+      if (!options.refresh) {
+        return;
       }
 
       // Ensure relays are discovered for this pubkey first
-      await this.userRelayService.ensureRelaysForPubkey(pubkey);
-
-      // Use userRelayService to query the specific user's relays
       const profileBadgesEvent = await this.userRelayService.getEventByPubkeyAndKind(
         pubkey,
-        kinds.ProfileBadges
+        kinds.ProfileBadges,
+        { refreshRelays: true, useFullRelaySet: true }
       );
-      console.log('Profile Badges Event:', profileBadgesEvent);
 
       if (requestId !== this.acceptedLoadRequestId) {
         return;
       }
 
       if (profileBadgesEvent) {
-        this.parseBadgeTags(profileBadgesEvent.tags);
+        this.applyAcceptedBadgesEvent(profileBadgesEvent);
         await this.database.saveEvent(profileBadgesEvent);
       } else {
-        // Clear accepted badges if no profile badges event found
-        this.acceptedBadges.set([]);
+        this.applyAcceptedBadgesEvent(null);
       }
-
-      this.profileBadgesEvent.set(profileBadgesEvent);
     } catch (err) {
       if (requestId !== this.acceptedLoadRequestId) {
         return;
@@ -184,6 +194,21 @@ export class BadgeService implements NostriaService {
     } finally {
       if (requestId === this.acceptedLoadRequestId) {
         this.isLoadingAccepted.set(false);
+      }
+    }
+  }
+
+  async hydrateCachedBadgeDefinitions(
+    badges: { pubkey: string; slug: string }[]
+  ): Promise<void> {
+    for (const badge of badges) {
+      if (this.getBadgeDefinition(badge.pubkey, badge.slug)) {
+        continue;
+      }
+
+      const cachedDefinition = await this.database.getBadgeDefinition(badge.pubkey, badge.slug);
+      if (cachedDefinition) {
+        this.putBadgeDefinition(cachedDefinition);
       }
     }
   }
@@ -250,7 +275,7 @@ export class BadgeService implements NostriaService {
   }
 
   /** Attempts to discovery a badge definition. */
-  async loadBadgeDefinition(pubkey: string, slug: string) {
+  async loadBadgeDefinition(pubkey: string, slug: string, options: BadgeDefinitionLoadOptions = {}) {
     const badgeKey = `${pubkey}:${slug}`;
 
     // Mark as loading
@@ -261,7 +286,9 @@ export class BadgeService implements NostriaService {
     });
 
     try {
-      let definition: NostrEvent | null | undefined = this.getBadgeDefinition(pubkey, slug);
+      let definition: NostrEvent | null | undefined = options.forceRefresh
+        ? undefined
+        : this.getBadgeDefinition(pubkey, slug);
 
       // If not in memory, check storage
       if (!definition) {
@@ -273,8 +300,8 @@ export class BadgeService implements NostriaService {
         }
       }
 
-      // If still not found, fetch from relays
-      if (!definition) {
+      // If still not found, or if explicitly refreshing, fetch from relays
+      if (!definition || options.forceRefresh) {
         definition = await this.accountRelay.getEventByPubkeyAndKindAndTag(
           pubkey,
           kinds.BadgeDefinition,
@@ -390,15 +417,12 @@ export class BadgeService implements NostriaService {
         this.putBadgeDefinition(event);
       }
 
-      // Ensure relays are discovered for this pubkey first
-      await this.userRelayService.ensureRelaysForPubkey(pubkey);
-
       // Then fetch fresh from relays using userRelayService
       const badgeDefinitionEvents = await this.userRelayService.getEventsByPubkeyAndKind(
         pubkey,
-        kinds.BadgeDefinition
+        kinds.BadgeDefinition,
+        { refreshRelays: true, useFullRelaySet: true }
       );
-      console.log('badgeDefinitionEvents:', badgeDefinitionEvents);
 
       for (const event of badgeDefinitionEvents) {
         await this.database.saveEvent(event);
@@ -444,8 +468,6 @@ export class BadgeService implements NostriaService {
       });
 
       // Ensure relays are discovered for this pubkey first
-      await this.userRelayService.ensureRelaysForPubkey(pubkey);
-
       // Some relays apply low implicit limits when no `limit` is provided.
       // Fetch in pages until we have everything.
       const PAGE_SIZE = 200;
@@ -463,7 +485,7 @@ export class BadgeService implements NostriaService {
         };
 
         // Use userRelayService to query the specific user's relays
-        const pageEvents = await this.userRelayService.query(pubkey, filter) as NostrEvent[] | null;
+        const pageEvents = await this.userRelayService.query(pubkey, filter, { refreshRelays: page === 0, useFullRelaySet: true }) as NostrEvent[] | null;
 
         if (!pageEvents || pageEvents.length === 0) {
           break;
@@ -534,7 +556,7 @@ export class BadgeService implements NostriaService {
     await this.loadIssuedBadges(pubkey);
 
     // Load the profile badges event (this will trigger background definition loading)
-    await this.loadAcceptedBadges(pubkey);
+    await this.loadAcceptedBadges(pubkey, { refresh: true });
 
     // Load received badges (these are needed for the Received tab)
     await this.loadReceivedBadges(pubkey);

@@ -209,7 +209,7 @@ export class BadgesComponent implements OnDestroy {
   private async ensureTabDataLoaded(index: number, pubkey: string): Promise<void> {
     if (index === 0) {
       if (this.loadedAcceptedForPubkey === pubkey) return;
-      await this.badgeService.loadAcceptedBadges(pubkey);
+      await this.badgeService.loadAcceptedBadges(pubkey, { refresh: true });
       this.loadedAcceptedForPubkey = pubkey;
       return;
     }
@@ -485,7 +485,7 @@ export class BadgesComponent implements OnDestroy {
       this.badgeService.profileBadgesEvent.set(signedEvent);
 
       // Reload accepted badges to update the UI
-      await this.badgeService.loadAcceptedBadges(this.accountState.pubkey());
+      await this.badgeService.loadAcceptedBadges(this.accountState.pubkey()!, { refresh: true });
     } catch (err) {
       this.logger.error('Error accepting badge:', err);
     } finally {
@@ -583,7 +583,7 @@ export class BadgesComponent implements OnDestroy {
       this.badgeService.profileBadgesEvent.set(signedEvent);
 
       // Reload accepted badges to update the UI
-      await this.badgeService.loadAcceptedBadges(this.accountState.pubkey());
+      await this.badgeService.loadAcceptedBadges(this.accountState.pubkey()!, { refresh: true });
     } catch (err) {
       this.logger.error('Error removing badge:', err);
     } finally {
@@ -655,7 +655,7 @@ export class BadgesComponent implements OnDestroy {
       this.badgeService.profileBadgesEvent.set(signedEvent);
 
       // Reload accepted badges
-      await this.badgeService.loadAcceptedBadges(this.accountState.pubkey());
+      await this.badgeService.loadAcceptedBadges(this.accountState.pubkey()!, { refresh: true });
 
     } catch (err) {
       this.logger.error('Error reordering badges:', err);

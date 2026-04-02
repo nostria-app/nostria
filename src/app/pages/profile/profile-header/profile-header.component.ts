@@ -635,8 +635,8 @@ export class ProfileHeaderComponent implements OnDestroy {
       });
     });
 
-    // Load badges when pubkey changes - DEFERRED: badges are lowest priority
-    // Wait for cachedEventsLoaded signal to be true before loading badges
+    // Load badges from cache only on profile open.
+    // Fresh badge network fetches are deferred to the badges/details surfaces.
     effect(async () => {
       const currentPubkey = this.pubkey();
       const cachedLoaded = this.profileState.cachedEventsLoaded();
@@ -645,21 +645,12 @@ export class ProfileHeaderComponent implements OnDestroy {
         // Clear timed out badges and cancel any pending timeouts
         this.clearBadgeTimeouts();
 
-        // Add a small delay to ensure timeline queries complete first
-        // This prevents badge queries from competing with more important data
-        await new Promise(resolve => setTimeout(resolve, 500));
-
-        // Double-check we're still on the same profile after delay
         if (this.pubkey() === currentPubkey) {
-          await this.badgeService.loadAcceptedBadges(currentPubkey);
+          await this.badgeService.loadAcceptedBadges(currentPubkey, { refresh: false });
 
-          // Prefetch only the small set used in the header UI.
-          // Avoid preloading every accepted badge definition here.
-          this.badgeService.preloadBadgeDefinitionsInBackground(
+          await this.badgeService.hydrateCachedBadgeDefinitions(
             this.badgeService.acceptedBadges().slice(0, 3)
-          ).catch(() => {
-            // Best-effort only
-          });
+          );
         }
       }
     });

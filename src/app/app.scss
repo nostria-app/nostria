@@ -493,8 +493,10 @@ mat-sidenav-content {
     }
   }
 
-  @media (min-width: 700px) {
-    z-index: 0 !important;
+  @media (min-width: 700px) and (max-width: 1023px) {
+    // Keep the side drawer above route content in the intermediate layout.
+    // Some pages create their own stacking contexts, which can otherwise paint over the menu.
+    z-index: 20 !important;
   }
 
   // Ensure nav list items maintain their size
