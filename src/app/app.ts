@@ -340,6 +340,13 @@ export class App implements OnInit, OnDestroy {
   // Use local settings for sidenav state
   opened = computed(() => this.localSettings.menuOpen());
   displayLabels = computed(() => this.localSettings.menuExpanded());
+  dockedSidenavWidth = computed(() => {
+    if (!this.opened() || this.layout.isHandset()) {
+      return 0;
+    }
+
+    return this.displayLabels() ? 240 : 56;
+  });
   settingsQuickCardFullscreen = computed(() => this.layout.isHandset());
 
   // User's preference for whether to collapse left panel when right panel has content
@@ -1680,7 +1687,7 @@ export class App implements OnInit, OnDestroy {
 
     if (isOpen && isSideMode) {
       // Sidenav is open in side mode - it pushes content
-      const sidenavWidth = this.displayLabels() ? 220 : 56;
+      const sidenavWidth = this.dockedSidenavWidth();
       document.documentElement.style.setProperty('--floating-toolbar-left', `${72 + sidenavWidth}px`);
     } else {
       // Sidenav closed or in overlay mode - no offset needed
