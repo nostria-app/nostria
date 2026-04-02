@@ -220,10 +220,25 @@ export class NoteContentComponent implements OnDestroy {
   private isTouchTriggered = false;
   private backdropSubscription?: Subscription;
 
+  private readonly blockRenderedTokenTypes = new Set<ContentToken['type']>([
+    'image',
+    'base64-image',
+    'audio',
+    'base64-audio',
+    'video',
+    'base64-video',
+    'youtube',
+    'tidal',
+    'spotify',
+    'cashu',
+    'bolt11',
+    'bolt12',
+  ]);
+
   // Computed: Group consecutive images into display items for Instagram-style carousel
   // Images separated only by linebreaks or whitespace are treated as a single group
   displayItems = computed<DisplayItem[]>(() => {
-    const tokens = this.contentTokens();
+    const tokens = this.removeLinebreaksAfterBlockTokens(this.contentTokens());
     const items: DisplayItem[] = [];
     let currentImageGroup: ContentToken[] = [];
     let pendingLinebreaks: ContentToken[] = [];
@@ -297,6 +312,26 @@ export class NoteContentComponent implements OnDestroy {
 
     return items;
   });
+
+  private removeLinebreaksAfterBlockTokens(tokens: ContentToken[]): ContentToken[] {
+    return tokens.filter((token, index) => {
+      if (token.type !== 'linebreak') {
+        return true;
+      }
+
+      for (let previousIndex = index - 1; previousIndex >= 0; previousIndex--) {
+        const previousToken = tokens[previousIndex];
+
+        if (previousToken.type === 'linebreak') {
+          continue;
+        }
+
+        return !this.blockRenderedTokenTypes.has(previousToken.type);
+      }
+
+      return true;
+    });
+  }
 
   // Computed: Should blur images based on privacy settings
   shouldBlurImages = computed(() => {
