@@ -444,6 +444,36 @@ describe('ContentComponent', () => {
     ]);
   });
 
+  it('should remove linebreaks after block media before following hashtags', () => {
+    (component as unknown as {
+      _hasBeenVisible: { set: (value: boolean) => void };
+      _cachedTokens: { set: (value: ContentToken[]) => void };
+    })._hasBeenVisible.set(true);
+
+    (component as unknown as {
+      _cachedTokens: { set: (value: ContentToken[]) => void };
+    })._cachedTokens.set([
+      { id: 1, type: 'text', content: 'How to get started, create your account and publish your first post.' } as ContentToken,
+      { id: 2, type: 'linebreak', content: '\n' } as ContentToken,
+      { id: 3, type: 'video', content: 'https://mibo.nostria.app/demo.mp4' } as ContentToken,
+      { id: 4, type: 'linebreak', content: '\n' } as ContentToken,
+      { id: 5, type: 'hashtag', content: 'nostria' } as ContentToken,
+      { id: 6, type: 'text', content: ' ' } as ContentToken,
+      { id: 7, type: 'hashtag', content: 'nostriasupport' } as ContentToken,
+    ]);
+
+    fixture.detectChanges();
+
+    expect(component.displayContentTokens()).toEqual([
+      { id: 1, type: 'text', content: 'How to get started, create your account and publish your first post.' },
+      { id: 2, type: 'linebreak', content: '\n' },
+      { id: 3, type: 'video', content: 'https://mibo.nostria.app/demo.mp4' },
+      { id: 5, type: 'hashtag', content: 'nostria' },
+      { id: 6, type: 'text', content: ' ' },
+      { id: 7, type: 'hashtag', content: 'nostriasupport' },
+    ]);
+  });
+
   it('should keep inline X status URLs when social previews are disabled', () => {
     mockSettingsService.settings.set({ socialSharingPreview: false });
 

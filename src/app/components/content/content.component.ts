@@ -71,6 +71,21 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
     'youtube',
   ]);
 
+  private readonly blockRenderedTokenTypes = new Set<ContentToken['type']>([
+    'image',
+    'base64-image',
+    'audio',
+    'base64-audio',
+    'video',
+    'base64-video',
+    'youtube',
+    'tidal',
+    'spotify',
+    'cashu',
+    'bolt11',
+    'bolt12',
+  ]);
+
   // Track visibility of the component
   private _isVisible = signal<boolean>(false);
   private _hasBeenVisible = signal<boolean>(false);
@@ -112,7 +127,7 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
     }
 
     if (!this.hideInlineMediaAndLinks()) {
-      return tokens;
+      return this.removeLinebreaksAfterBlockTokens(tokens);
     }
 
     return tokens.filter(token => !this.collapsedHiddenTokenTypes.has(token.type));
@@ -348,6 +363,26 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
     }
 
     return -1;
+  }
+
+  private removeLinebreaksAfterBlockTokens(tokens: ContentToken[]): ContentToken[] {
+    return tokens.filter((token, index) => {
+      if (token.type !== 'linebreak') {
+        return true;
+      }
+
+      for (let previousIndex = index - 1; previousIndex >= 0; previousIndex--) {
+        const previousToken = tokens[previousIndex];
+
+        if (previousToken.type === 'linebreak') {
+          continue;
+        }
+
+        return !this.blockRenderedTokenTypes.has(previousToken.type);
+      }
+
+      return true;
+    });
   }
 
   /**
