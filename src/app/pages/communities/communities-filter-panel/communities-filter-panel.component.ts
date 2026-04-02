@@ -30,6 +30,57 @@ const SORT_OPTIONS: SortOptionDef[] = [
   ],
   template: `
     <div class="filter-panel" role="dialog" aria-label="Community filters" (click)="$event.stopPropagation()">
+      <div class="filter-column community-filter-column">
+        <div class="combined-filter-header">
+          <span class="combined-filter-title">Community options</span>
+          @if (hasActiveCommunityFilters()) {
+          <span class="combined-filter-status">Active</span>
+          }
+        </div>
+
+        <div class="section-label">Sort</div>
+        <div class="sort-options-grid" role="radiogroup" aria-label="Community sort options">
+          @for (option of sortOptions; track option.id) {
+            <button
+              class="sort-option-chip"
+              [class.selected]="sortOption() === option.id"
+              [attr.aria-pressed]="sortOption() === option.id"
+              (click)="sortOptionChanged.emit(option.id)">
+              <span class="chip-label">{{ option.label }}</span>
+            </button>
+          }
+        </div>
+
+        <mat-divider></mat-divider>
+
+        <div class="section-label">Show only</div>
+        <div class="filter-options">
+          <mat-checkbox
+            [checked]="filters().joinedOnly"
+            (change)="filtersChanged.emit({ joinedOnly: $event.checked })">
+            Joined communities
+          </mat-checkbox>
+          <mat-checkbox
+            [checked]="filters().hasImage"
+            (change)="filtersChanged.emit({ hasImage: $event.checked })">
+            Communities with artwork
+          </mat-checkbox>
+          <mat-checkbox
+            [checked]="filters().hasRules"
+            (change)="filtersChanged.emit({ hasRules: $event.checked })">
+            Communities with rules
+          </mat-checkbox>
+        </div>
+
+        <div class="actions-row single-action-row">
+          <button mat-stroked-button class="action-btn" (click)="resetRequested.emit()">
+            Reset
+          </button>
+        </div>
+      </div>
+
+      <div class="combined-filter-divider"></div>
+
       <div class="filter-column list-filter-column">
         <div class="combined-filter-header">
           <span class="combined-filter-title">List filter</span>
@@ -93,57 +144,6 @@ const SORT_OPTIONS: SortOptionDef[] = [
 
         <div class="actions-row single-action-row">
           <button mat-stroked-button class="action-btn" (click)="listFilterChanged.emit(defaultListFilter())">
-            Reset
-          </button>
-        </div>
-      </div>
-
-      <div class="combined-filter-divider"></div>
-
-      <div class="filter-column community-filter-column">
-        <div class="combined-filter-header">
-          <span class="combined-filter-title">Community options</span>
-          @if (hasActiveCommunityFilters()) {
-          <span class="combined-filter-status">Active</span>
-          }
-        </div>
-
-        <div class="section-label">Sort</div>
-        <div class="sort-options-grid" role="radiogroup" aria-label="Community sort options">
-          @for (option of sortOptions; track option.id) {
-            <button
-              class="sort-option-chip"
-              [class.selected]="sortOption() === option.id"
-              [attr.aria-pressed]="sortOption() === option.id"
-              (click)="sortOptionChanged.emit(option.id)">
-              <span class="chip-label">{{ option.label }}</span>
-            </button>
-          }
-        </div>
-
-        <mat-divider></mat-divider>
-
-        <div class="section-label">Show only</div>
-        <div class="filter-options">
-          <mat-checkbox
-            [checked]="filters().joinedOnly"
-            (change)="filtersChanged.emit({ joinedOnly: $event.checked })">
-            Joined communities
-          </mat-checkbox>
-          <mat-checkbox
-            [checked]="filters().hasImage"
-            (change)="filtersChanged.emit({ hasImage: $event.checked })">
-            Communities with artwork
-          </mat-checkbox>
-          <mat-checkbox
-            [checked]="filters().hasRules"
-            (change)="filtersChanged.emit({ hasRules: $event.checked })">
-            Communities with rules
-          </mat-checkbox>
-        </div>
-
-        <div class="actions-row single-action-row">
-          <button mat-stroked-button class="action-btn" (click)="resetRequested.emit()">
             Reset
           </button>
         </div>

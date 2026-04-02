@@ -27,6 +27,7 @@ import { RegionService } from './region.service';
   providedIn: 'root',
 })
 export class StateService implements NostriaService {
+  private static readonly EXTENSION_PUBKEY_VERIFICATION_DELAY_MS = 5000;
   private router = inject(Router);
   private snackBar = inject(MatSnackBar);
   private utilities = inject(UtilitiesService);
@@ -48,18 +49,13 @@ export class StateService implements NostriaService {
   private readonly region = inject(RegionService);
   private skipNextExtensionPubkeyVerificationFor: string | null = null;
   private extensionPubkeyVerificationInFlightFor: string | null = null;
+  private extensionPubkeyVerificationTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor() {
     effect(async () => {
       const account = this.accountState.account();
       if (account) {
         try {
-          if (account.source === 'extension') {
-            // Trigger extension pubkey verification as early as possible on startup.
-            // This runs in the background and never blocks loading.
-            this.startExtensionPubkeyVerification(account);
-          }
-
           // Clear previous account state first
           this.clear();
 
@@ -72,6 +68,13 @@ export class StateService implements NostriaService {
           this.logger.info(`[StateService] Cached data loaded in ${Date.now() - startTime}ms`);
 
           await this.load();
+
+          if (account.source === 'extension') {
+            // Pubkey verification is optional background work. Delay it slightly so
+            // the first real extension interaction after reload (for example a NIP-98
+            // media-library signing request) gets priority.
+            this.startExtensionPubkeyVerification(account);
+          }
         } catch (error) {
           console.error('Error during account change:', error);
           // Ensure we don't leave the app in a broken state
@@ -99,30 +102,52 @@ export class StateService implements NostriaService {
 
     this.extensionPubkeyVerificationInFlightFor = account.pubkey;
 
-    if (this.utilities.isBrowser() && window.nostr) {
-      this.logger.info('[StateService] Browser extension already available, requesting pubkey immediately');
-      this.verifyExtensionPubkey(account);
-      this.extensionPubkeyVerificationInFlightFor = null;
-      return;
+    if (this.extensionPubkeyVerificationTimer) {
+      clearTimeout(this.extensionPubkeyVerificationTimer);
+      this.extensionPubkeyVerificationTimer = null;
     }
 
-    void (async () => {
-      this.logger.info('[StateService] Extension account detected, waiting for browser extension...');
-
-      // Use a longer timeout because extension injection can be delayed during startup.
-      const extensionAvailable = await this.utilities.waitForNostrExtension(20000);
-      if (!extensionAvailable) {
-        this.logger.warn('[StateService] Browser extension not available after timeout');
-        return;
-      }
-
-      this.logger.info('[StateService] Browser extension is ready');
-      this.verifyExtensionPubkey(account);
-    })().finally(() => {
-      if (this.extensionPubkeyVerificationInFlightFor === account.pubkey) {
-        this.extensionPubkeyVerificationInFlightFor = null;
-      }
+    this.logger.info('[StateService] Scheduling background extension pubkey verification', {
+      pubkey: account.pubkey.substring(0, 16),
+      delayMs: StateService.EXTENSION_PUBKEY_VERIFICATION_DELAY_MS,
     });
+
+    this.extensionPubkeyVerificationTimer = setTimeout(() => {
+      this.extensionPubkeyVerificationTimer = null;
+
+      void (async () => {
+        // Ignore stale timers after account switches.
+        if (this.accountState.account()?.pubkey !== account.pubkey) {
+          return;
+        }
+
+        if (this.utilities.isBrowser() && window.nostr) {
+          this.logger.info('[StateService] Browser extension already available, requesting pubkey');
+          await this.verifyExtensionPubkey(account);
+          return;
+        }
+
+        this.logger.info('[StateService] Extension account detected, waiting for browser extension...');
+
+        // Use a longer timeout because extension injection can be delayed during startup.
+        const extensionAvailable = await this.utilities.waitForNostrExtension(20000);
+        if (!extensionAvailable) {
+          this.logger.warn('[StateService] Browser extension not available after timeout');
+          return;
+        }
+
+        if (this.accountState.account()?.pubkey !== account.pubkey) {
+          return;
+        }
+
+        this.logger.info('[StateService] Browser extension is ready');
+        await this.verifyExtensionPubkey(account);
+      })().finally(() => {
+        if (this.extensionPubkeyVerificationInFlightFor === account.pubkey) {
+          this.extensionPubkeyVerificationInFlightFor = null;
+        }
+      });
+    }, StateService.EXTENSION_PUBKEY_VERIFICATION_DELAY_MS);
   }
 
   async load() {
@@ -324,25 +349,19 @@ export class StateService implements NostriaService {
    * getPublicKey(). If the user doesn't interact with it, the promise hangs
    * forever, so we apply a timeout.
    */
-  private verifyExtensionPubkey(currentAccount: NostrUser): void {
+  private async verifyExtensionPubkey(currentAccount: NostrUser): Promise<void> {
     if (!window.nostr) {
       return;
     }
 
     this.logger.info('[StateService] Querying extension for active pubkey (non-blocking)');
 
-    // Timeout: extensions that require user approval via a popup may hang
-    // indefinitely if the user doesn't interact with the popup.
     const TIMEOUT_MS = 60000;
-    const timeoutPromise = new Promise<string>((_, reject) => {
-      setTimeout(() => reject(new Error('Extension getPublicKey() timed out')), TIMEOUT_MS);
-    });
+    try {
+      // Route pubkey verification through NostrService so extension requests are
+      // serialized with signing/NIP-98 prompts instead of racing each other.
+      const extensionPubkey = await this.nostr.getExtensionPublicKey(TIMEOUT_MS);
 
-    // Fire-and-forget — don't await, don't block the app
-    Promise.race([
-      window.nostr.getPublicKey(),
-      timeoutPromise,
-    ]).then(async (extensionPubkey) => {
       if (!extensionPubkey) {
         this.logger.warn('[StateService] Extension returned empty pubkey');
         return;
@@ -385,15 +404,20 @@ export class StateService implements NostriaService {
         };
         await this.nostr.setAccount(newUser);
       }
-    }).catch((error) => {
+    } catch (error) {
       // Don't disrupt the app if the extension rejects or times out.
       // Timeout is expected for extensions that require popup approval —
       // the user will still be asked to approve when they first sign an event.
       this.logger.warn('[StateService] Extension getPublicKey() failed (non-blocking)', error);
-    });
+    }
   }
 
   clear() {
+    if (this.extensionPubkeyVerificationTimer) {
+      clearTimeout(this.extensionPubkeyVerificationTimer);
+      this.extensionPubkeyVerificationTimer = null;
+    }
+
     // Cancel any pending metrics scan when clearing state
     this.metricsTracking.cancelPendingScan();
 
