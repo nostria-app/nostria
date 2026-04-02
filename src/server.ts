@@ -809,7 +809,7 @@ app.get('/.well-known/nostr.json', async (req, res) => {
 
   // Handle hard-coded values
   const hardCodedUsers: Record<string, string> = {
-    support: 'd884f41487d7e4b596a2fc5b064fe211632fc9c4459a238539729ff1b06d7fc7',
+    support: '77c3805acd32407a693a8f8ac21a9a621a538fbbf34723729ba6d67ef90a295b',
     premium: '54f4adbd1d2b1b25b0cb690fbea35d2e0a62f38e77ca0fcd2907fb22f4a7fdbb',
     curator: '929dd94e6cc8a6665665a1e1fc043952c014c16c1735578e3436cd4510b1e829',
     payment: '3e5b8d197f4a9279278fd61d9d033058e13d62f6652e3f868dcab54fac8c9658',
