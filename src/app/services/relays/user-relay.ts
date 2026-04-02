@@ -10,6 +10,8 @@ import { UtilitiesService } from '../utilities.service';
 
 interface LookupOptions {
   bypassCache?: boolean;
+  refreshRelays?: boolean;
+  useFullRelaySet?: boolean;
 }
 
 @Injectable({
@@ -112,6 +114,10 @@ export class UserRelayService {
     await this.userRelaysService.ensureRelaysForPubkey(pubkey);
   }
 
+  async refreshRelaysForPubkey(pubkey: string): Promise<void> {
+    await this.userRelaysService.refreshUserRelays(pubkey);
+  }
+
   /**
    * Ensure DM relays (kind 10050) are loaded and cached for a pubkey.
    * Call this when opening a chat - loads from database instantly,
@@ -127,6 +133,26 @@ export class UserRelayService {
    */
   getRelaysForPubkey(pubkey: string): string[] {
     return this.userRelaysService.getRelaysForPubkey(pubkey);
+  }
+
+  private async getRelayUrlsForPubkeys(pubkeys: string[], options: LookupOptions = {}): Promise<string[]> {
+    const allRelayUrls = new Set<string>();
+
+    for (const pk of pubkeys) {
+      if (options.refreshRelays) {
+        await this.userRelaysService.refreshUserRelays(pk);
+      } else {
+        await this.ensureRelaysForPubkey(pk);
+      }
+
+      const relayUrls = this.getRelaysForPubkey(pk);
+      relayUrls.forEach(url => allRelayUrls.add(url));
+    }
+
+    const resolvedRelayUrls = Array.from(allRelayUrls);
+    return options.useFullRelaySet
+      ? resolvedRelayUrls
+      : this.getEffectiveRelayUrls(resolvedRelayUrls);
   }
 
   async getUserDmRelaysForPublishing(pubkey: string): Promise<string[]> {
@@ -169,10 +195,12 @@ export class UserRelayService {
 
   async getEventById(pubkey: string, id: string, options: LookupOptions = {}): Promise<Event | null> {
     const cacheKey = this.createEventByIdCacheKey(pubkey, id);
+    const lookupOptions = options.useFullRelaySet || options.refreshRelays
+      ? { ...options, bypassCache: true }
+      : options;
 
     return this.getOrCreateLookup(this.eventByIdCache, this.inflightEventByIdRequests, cacheKey, async () => {
-      await this.ensureRelaysForPubkey(pubkey);
-      const relayUrls = this.getEffectiveRelayUrls(this.getRelaysForPubkey(pubkey));
+      const relayUrls = await this.getRelayUrlsForPubkeys([pubkey], lookupOptions);
 
       if (relayUrls.length === 0) {
         this.logger.warn(`[UserRelayService] No relays available for pubkey: ${pubkey.slice(0, 16)}...`);
@@ -180,24 +208,16 @@ export class UserRelayService {
       }
 
       return this.pool.get(relayUrls, { ids: [id] });
-    }, options);
+    }, lookupOptions);
   }
 
   /**
    * Get a single event by pubkey and kind
    */
-  async getEventByPubkeyAndKind(pubkey: string | string[], kind: number): Promise<Event | null> {
+  async getEventByPubkeyAndKind(pubkey: string | string[], kind: number, options: LookupOptions = {}): Promise<Event | null> {
     // For multiple pubkeys, we need to get relays for each one
     const pubkeys = Array.isArray(pubkey) ? pubkey : [pubkey];
-    const allRelayUrls = new Set<string>();
-
-    for (const pk of pubkeys) {
-      await this.ensureRelaysForPubkey(pk);
-      const relayUrls = this.getRelaysForPubkey(pk);
-      relayUrls.forEach(url => allRelayUrls.add(url));
-    }
-
-    const relayUrls = this.getEffectiveRelayUrls(Array.from(allRelayUrls));
+    const relayUrls = await this.getRelayUrlsForPubkeys(pubkeys, options);
 
     if (relayUrls.length === 0) {
       this.logger.warn(`[UserRelayService] No relays available for pubkeys: ${pubkeys.map(pk => pk.slice(0, 16)).join(', ')}...`);
@@ -211,7 +231,7 @@ export class UserRelayService {
   /**
    * Get multiple events by pubkey and kind
    */
-  async getEventsByPubkeyAndKind(pubkey: string | string[], kind: number): Promise<Event[]> {
+  async getEventsByPubkeyAndKind(pubkey: string | string[], kind: number, options: LookupOptions = {}): Promise<Event[]> {
     // For multiple pubkeys, we need to get relays for each one
     const pubkeys = Array.isArray(pubkey) ? pubkey : [pubkey];
     // Filter out any undefined or invalid values
@@ -221,15 +241,7 @@ export class UserRelayService {
       return [];
     }
 
-    const allRelayUrls = new Set<string>();
-
-    for (const pk of validPubkeys) {
-      await this.ensureRelaysForPubkey(pk);
-      const relayUrls = this.getRelaysForPubkey(pk);
-      relayUrls.forEach(url => allRelayUrls.add(url));
-    }
-
-    const relayUrls = this.getEffectiveRelayUrls(Array.from(allRelayUrls));
+    const relayUrls = await this.getRelayUrlsForPubkeys(validPubkeys, options);
 
     if (relayUrls.length === 0) {
       this.logger.warn(`[UserRelayService] No relays available for pubkeys: ${validPubkeys.map(pk => pk.slice(0, 16)).join(', ')}...`);
@@ -817,10 +829,10 @@ export class UserRelayService {
 
   async query(
     pubkey: string,
-    filter: Filter
+    filter: Filter,
+    options: LookupOptions = {}
   ): Promise<Event[] | null> {
-    await this.ensureRelaysForPubkey(pubkey);
-    const relayUrls = this.getEffectiveRelayUrls(this.getRelaysForPubkey(pubkey));
+    const relayUrls = await this.getRelayUrlsForPubkeys([pubkey], options);
 
     if (relayUrls.length === 0) {
       this.logger.warn(`[UserRelayService] No relays available for subscribeEose for pubkey: ${pubkey.slice(0, 16)}...`);

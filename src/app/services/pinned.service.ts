@@ -72,17 +72,17 @@ export class PinnedService {
    * Get pinned notes for a specific user
    */
   async getPinnedNotesForUser(pubkey: string): Promise<string[]> {
-    // Try to get from storage first
-    let pinnedEvent = await this.database.getEventByPubkeyAndKind(pubkey, 10001);
+    const cachedPinnedEvent = await this.database.getEventByPubkeyAndKind(pubkey, 10001);
+    const relayPinnedEvent = await this.userRelay.getEventByPubkeyAndKind(pubkey, 10001, {
+      refreshRelays: true,
+      useFullRelaySet: true,
+    });
 
-    // If not in storage, try to fetch from user relays
-    if (!pinnedEvent) {
-      pinnedEvent = await this.userRelay.getEventByPubkeyAndKind(pubkey, 10001);
+    let pinnedEvent = cachedPinnedEvent;
 
-      // If found, save to storage for future use
-      if (pinnedEvent) {
-        await this.database.saveEvent(pinnedEvent);
-      }
+    if (relayPinnedEvent && (!cachedPinnedEvent || relayPinnedEvent.created_at >= cachedPinnedEvent.created_at)) {
+      pinnedEvent = relayPinnedEvent;
+      await this.database.saveReplaceableEvent(relayPinnedEvent);
     }
 
     if (!pinnedEvent) {
@@ -104,17 +104,17 @@ export class PinnedService {
    * Returns all pinned article "a" tag values (kind:pubkey:d-tag).
    */
   async getPinnedArticlesForUser(pubkey: string): Promise<string[]> {
-    // Try to get from storage first
-    let pinnedArticlesEvent = await this.database.getEventByPubkeyAndKind(pubkey, 10023);
+    const cachedPinnedArticlesEvent = await this.database.getEventByPubkeyAndKind(pubkey, 10023);
+    const relayPinnedArticlesEvent = await this.userRelay.getEventByPubkeyAndKind(pubkey, 10023, {
+      refreshRelays: true,
+      useFullRelaySet: true,
+    });
 
-    // If not in storage, try to fetch from user relays
-    if (!pinnedArticlesEvent) {
-      pinnedArticlesEvent = await this.userRelay.getEventByPubkeyAndKind(pubkey, 10023);
+    let pinnedArticlesEvent = cachedPinnedArticlesEvent;
 
-      // If found, save to storage for future use
-      if (pinnedArticlesEvent) {
-        await this.database.saveEvent(pinnedArticlesEvent);
-      }
+    if (relayPinnedArticlesEvent && (!cachedPinnedArticlesEvent || relayPinnedArticlesEvent.created_at >= cachedPinnedArticlesEvent.created_at)) {
+      pinnedArticlesEvent = relayPinnedArticlesEvent;
+      await this.database.saveReplaceableEvent(relayPinnedArticlesEvent);
     }
 
     if (!pinnedArticlesEvent) {

@@ -16,14 +16,22 @@ import { UtilitiesService } from '../utilities.service';
 describe('UserRelayService', () => {
   let service: UserRelayService;
   let poolGetMock: ReturnType<typeof vi.fn>;
+  let poolQueryMock: ReturnType<typeof vi.fn>;
   let ensureRelaysForPubkeyMock: ReturnType<typeof vi.fn>;
+  let refreshUserRelaysMock: ReturnType<typeof vi.fn>;
+  let getRelaysForPubkeyMock: ReturnType<typeof vi.fn>;
+  let getOptimalRelaysMock: ReturnType<typeof vi.fn>;
 
   TestBed.initTestEnvironment(BrowserDynamicTestingModule, platformBrowserDynamicTesting());
 
   beforeEach(async () => {
     TestBed.resetTestingModule();
     poolGetMock = vi.fn();
+    poolQueryMock = vi.fn().mockResolvedValue([]);
     ensureRelaysForPubkeyMock = vi.fn().mockResolvedValue(undefined);
+    refreshUserRelaysMock = vi.fn().mockResolvedValue(['wss://user-relay-a', 'wss://user-relay-b']);
+    getRelaysForPubkeyMock = vi.fn().mockReturnValue(['wss://user-relay-a', 'wss://user-relay-b']);
+    getOptimalRelaysMock = vi.fn((relayUrls: string[], limit?: number) => relayUrls.slice(0, limit ?? relayUrls.length));
 
     await TestBed.configureTestingModule({
       providers: [
@@ -47,13 +55,14 @@ describe('UserRelayService', () => {
         {
           provide: RelaysService,
           useValue: {
-            getOptimalRelays: vi.fn((relayUrls: string[], limit?: number) => relayUrls.slice(0, limit ?? relayUrls.length)),
+            getOptimalRelays: getOptimalRelaysMock,
           },
         },
         {
           provide: RelayPoolService,
           useValue: {
             get: poolGetMock,
+            query: poolQueryMock,
             isBacklogged: vi.fn().mockReturnValue(false),
             getQueueLength: vi.fn().mockReturnValue(0),
             getActiveRequestCount: vi.fn().mockReturnValue(0),
@@ -63,7 +72,8 @@ describe('UserRelayService', () => {
           provide: UserRelaysService,
           useValue: {
             ensureRelaysForPubkey: ensureRelaysForPubkeyMock,
-            getRelaysForPubkey: vi.fn().mockReturnValue(['wss://user-relay-a', 'wss://user-relay-b']),
+            refreshUserRelays: refreshUserRelaysMock,
+            getRelaysForPubkey: getRelaysForPubkeyMock,
             isLoadingRelaysForPubkey: vi.fn().mockReturnValue(false),
             clearUserRelaysCache: vi.fn(),
           },
@@ -120,5 +130,14 @@ describe('UserRelayService', () => {
 
     expect(ensureRelaysForPubkeyMock).toHaveBeenCalledTimes(2);
     expect(poolGetMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('queries the full refreshed relay set when requested', async () => {
+    await service.query('author-pubkey', { authors: ['author-pubkey'], kinds: [1] }, { refreshRelays: true, useFullRelaySet: true });
+
+    expect(refreshUserRelaysMock).toHaveBeenCalledTimes(1);
+    expect(ensureRelaysForPubkeyMock).not.toHaveBeenCalled();
+    expect(getOptimalRelaysMock).not.toHaveBeenCalled();
+    expect(poolQueryMock).toHaveBeenCalledWith(['wss://user-relay-a', 'wss://user-relay-b'], { authors: ['author-pubkey'], kinds: [1] });
   });
 });

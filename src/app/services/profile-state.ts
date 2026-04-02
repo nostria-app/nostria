@@ -172,7 +172,7 @@ export class ProfileState {
 
   async ensureRelaysForPubkey(pubkey: string) {
     try {
-      await this.userRelayService.ensureRelaysForPubkey(pubkey);
+      await this.userRelayService.refreshRelaysForPubkey(pubkey);
     } catch (err) {
       this.logger.error('Failed to ensure relays for pubkey:', err);
     }
@@ -674,7 +674,7 @@ export class ProfileState {
       kinds: kindsToQuery,
       authors: [pubkey],
       limit: 50, // Increased limit for better initial load
-    });
+    }, { useFullRelaySet: true });
 
     // Critical check: verify we're still loading data for this pubkey
     if (this.currentlyLoadingPubkey() !== pubkey) {
@@ -788,7 +788,7 @@ export class ProfileState {
 
     // 2a. Load contacts (following list) - important for profile header
     try {
-      const contactsEvent = await this.userRelayService.getEventByPubkeyAndKind(pubkey, kinds.Contacts);
+      const contactsEvent = await this.userRelayService.getEventByPubkeyAndKind(pubkey, kinds.Contacts, { useFullRelaySet: true });
 
       if (this.currentlyLoadingPubkey() !== pubkey) return;
 
@@ -826,7 +826,7 @@ export class ProfileState {
     if (this.currentlyLoadingPubkey() !== pubkey) return;
 
     try {
-      const relayListEvent = await this.userRelayService.getEventByPubkeyAndKind(pubkey, kinds.RelayList);
+      const relayListEvent = await this.userRelayService.getEventByPubkeyAndKind(pubkey, kinds.RelayList, { useFullRelaySet: true });
 
       if (this.currentlyLoadingPubkey() !== pubkey) return;
 
@@ -868,7 +868,7 @@ export class ProfileState {
         kinds: [kinds.LongFormArticle],
         authors: [pubkey],
         limit: 12,
-      });
+      }, { useFullRelaySet: true });
 
       if (this.currentlyLoadingPubkey() !== pubkey) return;
 
@@ -917,7 +917,7 @@ export class ProfileState {
     this.logger.debug(`Trying fallback contacts search for ${pubkey}`);
 
     try {
-      const contactsEvents = await this.userRelayService.getEventsByPubkeyAndKind(pubkey, kinds.Contacts);
+      const contactsEvents = await this.userRelayService.getEventsByPubkeyAndKind(pubkey, kinds.Contacts, { useFullRelaySet: true });
 
       if (this.currentlyLoadingPubkey() !== pubkey) return;
 
@@ -1016,7 +1016,7 @@ export class ProfileState {
         authors: [pubkey],
         until: oldestTimestamp,
         limit: LOAD_LIMIT,
-      });
+      }, { useFullRelaySet: true });
 
       // Track the total number of events returned by relay
       const eventsFromRelay = events?.length || 0;
@@ -1409,7 +1409,7 @@ export class ProfileState {
         authors: [pubkey],
         until: oldestTimestamp,
         limit: 6, // Load smaller article batches for smoother incremental loading
-      });
+      }, { useFullRelaySet: true });
 
       // Check if profile was switched during the query
       if (this.currentlyLoadingPubkey() !== pubkey) {
@@ -1497,7 +1497,7 @@ export class ProfileState {
         kinds: [20, 21, 22, 34235, 34236], // Picture (20), Video (21), Short Video (22), Addressable Video (34235), Addressable Short Video (34236)
         authors: [pubkey],
         limit: 30, // Load 30 media items initially
-      });
+      }, { useFullRelaySet: true });
 
       // Check if profile was switched during the query
       if (this.currentlyLoadingPubkey() !== pubkey || this.pubkey() !== pubkey) {

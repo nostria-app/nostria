@@ -268,7 +268,7 @@ export class ProfileNotesComponent {
       const missingEventIds = pinnedEventIds.filter((id, index) => events[index] === null);
       if (missingEventIds.length > 0) {
         this.logger.info('Fetching missing events from user relays:', missingEventIds);
-        const relayEventPromises = missingEventIds.map(id => this.userRelay.getEventById(pubkey, id));
+        const relayEventPromises = missingEventIds.map(id => this.userRelay.getEventById(pubkey, id, { useFullRelaySet: true, bypassCache: true }));
         const relayEvents = await Promise.all(relayEventPromises);
 
         // Save found events to storage and merge with existing events
