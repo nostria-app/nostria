@@ -137,6 +137,14 @@ export class BadgeService implements NostriaService {
 
   async load() { }
 
+  isSameBadgeDefinition(a: NostrEvent | null | undefined, b: NostrEvent | null | undefined): boolean {
+    if (!a || !b) {
+      return a === b;
+    }
+
+    return a.id === b.id && a.created_at === b.created_at;
+  }
+
   private applyAcceptedBadgesEvent(profileBadgesEvent: NostrEvent | null): void {
     if (profileBadgesEvent) {
       this.parseBadgeTags(profileBadgesEvent.tags);
@@ -355,8 +363,15 @@ export class BadgeService implements NostriaService {
       }
 
       if (definition) {
-        this.putBadgeDefinition(definition);
-        await this.database.saveEvent(definition);
+        const currentDefinition = this.getBadgeDefinition(pubkey, slug);
+        if (!this.isSameBadgeDefinition(currentDefinition, definition)) {
+          this.putBadgeDefinition(definition);
+        }
+
+        const storedDefinition = await this.database.getBadgeDefinition(pubkey, slug);
+        if (!this.isSameBadgeDefinition(storedDefinition, definition)) {
+          await this.database.saveEvent(definition);
+        }
       }
 
       return definition;

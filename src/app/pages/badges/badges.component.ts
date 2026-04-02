@@ -366,8 +366,10 @@ export class BadgesComponent implements OnDestroy {
     this.reorderMode.update(v => !v);
   }
 
-  viewBadgeDetailsById(id: string, slug: string): void {
-    this.layout.openBadge(id, undefined, {
+  viewBadgeDetailsById(id: string): void {
+    const definition = this.badgeService.getBadgeDefinitionByATag(id);
+
+    this.layout.openBadge(id, definition, {
       queryParams: { tab: this.activeTabIndex() },
     });
   }

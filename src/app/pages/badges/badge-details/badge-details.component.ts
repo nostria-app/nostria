@@ -1,4 +1,4 @@
-import { Component, inject, signal, effect } from '@angular/core';
+import { Component, inject, signal, effect, untracked } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
@@ -14,7 +14,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { BadgeService } from '../../../services/badge.service';
-import { Event } from 'nostr-tools';
+import { Event, kinds } from 'nostr-tools';
 import { AccountStateService } from '../../../services/account-state.service';
 import { UserProfileComponent } from '../../../components/user-profile/user-profile.component';
 import { UtilitiesService } from '../../../services/utilities.service';
@@ -67,6 +67,7 @@ export class BadgeDetailsComponent {
   private readonly layout = inject(LayoutService);
   private readonly panelNav = inject(PanelNavigationService);
   private readonly logger = inject(LoggerService);
+  private readonly isBrowser = this.appIsBrowser();
 
   badge = signal<BadgeDisplayData | null>(null);
   isCreator = signal(false);
@@ -105,38 +106,87 @@ export class BadgeDetailsComponent {
       }
 
       const [, pubkey, slug] = parts;
-      this.fetchBadge(pubkey, slug);
+      untracked(() => {
+        this.fetchBadge(pubkey, slug);
+      });
     });
   }
 
   private async fetchBadge(pubkey: string, slug: string): Promise<void> {
-    this.loading.set(true);
     this.error.set(null);
 
     try {
-      let badgeDefinition = await this.badgeService.loadBadgeDefinition(pubkey, slug, {
+      const initialBadgeDefinition = this.getInitialBadgeDefinition(pubkey, slug);
+
+      if (initialBadgeDefinition) {
+        this.badgeService.putBadgeDefinition(initialBadgeDefinition);
+        this.applyBadgeDefinition(initialBadgeDefinition);
+        this.loading.set(false);
+        this.refreshBadgeDefinitionInBackground(pubkey, slug, initialBadgeDefinition);
+        return;
+      }
+
+      this.loading.set(true);
+
+      const badgeDefinition = await this.badgeService.loadBadgeDefinition(pubkey, slug, {
         forceRefresh: true,
       });
 
       if (!badgeDefinition) {
         this.error.set('Badge definition not found');
-        this.loading.set(false);
         return;
       }
 
-      // Extract badge information from the definition event
-      const badgeInfo = this.extractBadgeInfo(badgeDefinition);
-
-      // Check if current user is the creator
-      this.isCreator.set(badgeDefinition.pubkey === this.accountState.pubkey());
-
-      this.badge.set(badgeInfo);
+      this.applyBadgeDefinition(badgeDefinition);
     } catch (err) {
       this.logger.error('Error fetching badge:', err);
-      this.error.set('Failed to load badge details');
+      if (!this.badge()) {
+        this.error.set('Failed to load badge details');
+      }
     } finally {
       this.loading.set(false);
     }
+  }
+
+  private getInitialBadgeDefinition(pubkey: string, slug: string): Event | undefined {
+    const navigationState = this.router.currentNavigation()?.extras.state as { event?: Event } | undefined;
+    const historyState = this.isBrowser ? (window.history.state as { event?: Event } | undefined) : undefined;
+    const stateEvent = navigationState?.event ?? historyState?.event;
+
+    if (stateEvent?.kind === kinds.BadgeDefinition && stateEvent.pubkey === pubkey) {
+      const dTag = stateEvent.tags.find(tag => tag[0] === 'd')?.[1];
+      if (dTag === slug) {
+        return stateEvent;
+      }
+    }
+
+    return this.badgeService.getBadgeDefinition(pubkey, slug);
+  }
+
+  private applyBadgeDefinition(badgeDefinition: Event): void {
+    const badgeInfo = this.extractBadgeInfo(badgeDefinition);
+    this.isCreator.set(badgeDefinition.pubkey === this.accountState.pubkey());
+    this.badge.set(badgeInfo);
+  }
+
+  private refreshBadgeDefinitionInBackground(pubkey: string, slug: string, initialBadgeDefinition: Event): void {
+    this.badgeService.loadBadgeDefinition(pubkey, slug, { forceRefresh: true })
+      .then(refreshedBadgeDefinition => {
+        if (!refreshedBadgeDefinition) {
+          return;
+        }
+
+        if (!this.badgeService.isSameBadgeDefinition(initialBadgeDefinition, refreshedBadgeDefinition)) {
+          this.applyBadgeDefinition(refreshedBadgeDefinition);
+        }
+      })
+      .catch(err => {
+        this.logger.debug('Background badge definition refresh failed', err);
+      });
+  }
+
+  private appIsBrowser(): boolean {
+    return typeof window !== 'undefined';
   }
 
   private extractBadgeInfo(badgeEvent: Event): BadgeDisplayData {
