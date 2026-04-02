@@ -4,9 +4,8 @@ import { ActivatedRouteSnapshot, DetachedRouteHandle, RouteReuseStrategy } from 
 /**
  * Custom route reuse strategy.
  * 
- * This strategy does NOT cache/reuse any routes. All components are destroyed
- * and recreated on navigation. The only customization is to prevent route reuse
- * in the 'right' auxiliary outlet to avoid Angular router state tree issues.
+ * This strategy does NOT detach/cache routes.
+ * It only controls when Angular can reuse the current component instance.
  * 
  * Note: FeedsComponent is embedded directly in app.html (not routed), so it
  * stays alive regardless of this strategy.
@@ -43,14 +42,35 @@ export class CustomReuseStrategy implements RouteReuseStrategy {
     return null;
   }
 
+  private shallowEqual(a: Record<string, unknown>, b: Record<string, unknown>): boolean {
+    const aKeys = Object.keys(a);
+    const bKeys = Object.keys(b);
+    if (aKeys.length !== bKeys.length) {
+      return false;
+    }
+
+    return aKeys.every(key => a[key] === b[key]);
+  }
+
+  private sameUrlSegments(future: ActivatedRouteSnapshot, curr: ActivatedRouteSnapshot): boolean {
+    if (future.url.length !== curr.url.length) {
+      return false;
+    }
+
+    return future.url.every((segment, index) => segment.path === curr.url[index]?.path);
+  }
+
   /**
    * Determine if the route should be reused.
-   * Never reuse routes in the 'right' auxiliary outlet to prevent
-   * Angular's router state tree from getting confused.
+   * Preserve the current right-pane component when only the left pane changes,
+   * but still recreate right-pane components when their own params or path change.
    */
   shouldReuseRoute(future: ActivatedRouteSnapshot, curr: ActivatedRouteSnapshot): boolean {
     if (future.outlet === 'right' || curr.outlet === 'right') {
-      return false;
+      return future.routeConfig === curr.routeConfig
+        && this.sameUrlSegments(future, curr)
+        && this.shallowEqual(future.params, curr.params)
+        && this.shallowEqual(future.queryParams, curr.queryParams);
     }
     return future.routeConfig === curr.routeConfig;
   }
