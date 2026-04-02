@@ -465,9 +465,9 @@ export class MusicComponent implements OnDestroy {
     return this.filteredTracks().length + this.filteredPlaylists().length + this.playlists().length;
   });
 
-  playlistPreview = computed(() => this.playlists().slice(0, this.calculatePlaylistLimit()));
+  playlistPreview = computed(() => this.playlists().slice(0, this.calculateCompactPlaylistLimit()));
   playlistsCount = computed(() => this.playlists().length);
-  hasMorePlaylists = computed(() => this.playlists().length > this.calculatePlaylistLimit());
+  hasMorePlaylists = computed(() => this.playlists().length > this.calculateCompactPlaylistLimit());
 
   // Music relay set constant
   private readonly RELAY_SET_KIND = 30002;
@@ -543,6 +543,17 @@ export class MusicComponent implements OnDestroy {
     const itemsPerRow = Math.floor((width + gap) / (cardMinWidth + gap));
 
     // Return at least 1 item, max items per row to prevent wrapping
+    return Math.max(1, itemsPerRow);
+  }
+
+  private calculateCompactPlaylistLimit(): number {
+    const width = this.containerWidth();
+    if (width === 0) return SECTION_LIMIT;
+
+    const cardMinWidth = 200;
+    const gap = 8;
+    const itemsPerRow = Math.floor((width + gap) / (cardMinWidth + gap));
+
     return Math.max(1, itemsPerRow);
   }
 

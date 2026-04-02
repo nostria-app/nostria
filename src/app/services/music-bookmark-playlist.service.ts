@@ -293,4 +293,84 @@ export class MusicBookmarkPlaylistService {
 
     return true;
   }
+
+  async removeTrackFromPlaylist(
+    playlistId: string,
+    trackPubkey: string,
+    trackDTag: string,
+    trackKind = UtilitiesService.PRIMARY_MUSIC_KIND,
+  ): Promise<boolean> {
+    const trackRef = `${trackKind}:${trackPubkey}:${trackDTag}`;
+    return this.updatePlaylistTrackRefs(playlistId, refs => {
+      const nextRefs = refs.filter(ref => ref !== trackRef);
+      return nextRefs.length === refs.length ? refs : nextRefs;
+    });
+  }
+
+  async reorderPlaylistTracks(playlistId: string, orderedTrackRefs: string[]): Promise<boolean> {
+    return this.updatePlaylistTrackRefs(playlistId, refs => {
+      if (refs.length !== orderedTrackRefs.length) {
+        return refs;
+      }
+
+      const currentSorted = [...refs].sort();
+      const nextSorted = [...orderedTrackRefs].sort();
+      if (currentSorted.some((ref, index) => ref !== nextSorted[index])) {
+        return refs;
+      }
+
+      return [...orderedTrackRefs];
+    });
+  }
+
+  private async updatePlaylistTrackRefs(
+    playlistId: string,
+    updater: (trackRefs: string[]) => string[],
+  ): Promise<boolean> {
+    const pubkey = this.accountState.pubkey();
+    if (!pubkey) {
+      return false;
+    }
+
+    let playlist: MusicBookmarkPlaylist | undefined = this.userPlaylists().find(
+      item => item.id === playlistId && item.pubkey === pubkey,
+    );
+    if (!playlist?.event) {
+      const event = await this.fetchPlaylistEvent(pubkey, playlistId);
+      playlist = event ? this.parsePlaylistEvent(event) || undefined : undefined;
+    }
+
+    if (!playlist?.event) {
+      this.logger.warn('[MusicBookmarkPlaylist] Playlist not found:', playlistId);
+      return false;
+    }
+
+    const nextTrackRefs = updater(playlist.trackRefs);
+    if (nextTrackRefs.length === playlist.trackRefs.length && nextTrackRefs.every((ref, index) => ref === playlist.trackRefs[index])) {
+      return true;
+    }
+
+    const nonTrackTags = playlist.event.tags.filter(tag => tag[0] !== 'a' || !this.utilities.parseMusicTrackCoordinate(tag[1]));
+    const tags = [...nonTrackTags, ...nextTrackRefs.map(ref => ['a', ref] as string[])];
+    const updatedEvent = this.nostrService.createEvent(MUSIC_PLAYLIST_KIND, playlist.event.content, tags);
+    if (!updatedEvent) {
+      return false;
+    }
+
+    const signedEvent = await this.nostrService.signEvent(updatedEvent);
+    if (!signedEvent) {
+      return false;
+    }
+
+    await this.accountRelay.publish(signedEvent);
+
+    const updatedPlaylist = this.parsePlaylistEvent(signedEvent);
+    if (updatedPlaylist) {
+      const key = `${updatedPlaylist.pubkey}:${updatedPlaylist.id}`;
+      this.playlistMap.set(key, updatedPlaylist);
+      this._userPlaylists.set(Array.from(this.playlistMap.values()).sort((a, b) => b.created_at - a.created_at));
+    }
+
+    return true;
+  }
 }

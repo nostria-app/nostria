@@ -122,17 +122,6 @@
           </div>
         </div>
 
-        <div class="yours-card my-music-card" (click)="goToPlaylists()" (keydown.enter)="goToPlaylists()" tabindex="0"
-          role="button">
-          <div class="yours-card-cover my-music-gradient">
-            <mat-icon>playlist_play</mat-icon>
-          </div>
-          <div class="yours-card-info">
-            <span class="yours-card-title">My Playlists</span>
-            <span class="yours-card-meta">Your track collections</span>
-          </div>
-        </div>
-
         <!-- My Music Card -->
         <div class="yours-card my-music-card" (click)="goToMyMusic()" (keydown.enter)="goToMyMusic()" tabindex="0"
           role="button">
@@ -172,16 +161,14 @@
           <span class="section-count">{{ playlistsCount() }}</span>
           }
         </h2>
-        @if (hasMorePlaylists()) {
         <button mat-button (click)="goToPlaylists()" class="show-all-btn">
           <span i18n="@@music.showAll">Show all</span>
           <mat-icon>arrow_forward</mat-icon>
         </button>
-        }
       </div>
-      <div class="playlists-grid">
+      <div class="compact-playlists-grid compact-playlists-grid-single-row">
         @for (playlist of playlistPreview(); track playlist.id) {
-        <app-music-bookmark-playlist-card [event]="playlist"></app-music-bookmark-playlist-card>
+        <app-music-bookmark-playlist-card [event]="playlist" variant="compact"></app-music-bookmark-playlist-card>
         }
       </div>
     </section>

@@ -10,7 +10,8 @@ import { ImageCacheService } from '../../services/image-cache.service';
   selector: 'app-music-bookmark-playlist-card',
   imports: [MatCardModule, MatIconModule],
   template: `
-    <mat-card class="playlist-card" (click)="openPlaylist()" (keydown.enter)="openPlaylist()" tabindex="0" role="button">
+    <mat-card class="playlist-card" [class.compact]="variant() === 'compact'" (click)="openPlaylist()"
+      (keydown.enter)="openPlaylist()" tabindex="0" role="button">
       <div class="cover" [style.background]="gradient() || ''">
         @if (coverImage()) {
           <img [src]="coverImage()!" [alt]="title()" />
@@ -23,7 +24,7 @@ import { ImageCacheService } from '../../services/image-cache.service';
       <div class="content">
         <div class="title">{{ title() }}</div>
         <div class="meta">{{ trackCount() }} tracks</div>
-        @if (description()) {
+        @if (description() && variant() !== 'compact') {
           <div class="description">{{ description() }}</div>
         }
       </div>
@@ -35,15 +36,30 @@ import { ImageCacheService } from '../../services/image-cache.service';
       cursor: pointer;
     }
 
-    .cover {
-      aspect-ratio: 1;
-      display: block;
-      background: linear-gradient(135deg, var(--mat-sys-primary-container), var(--mat-sys-secondary-container));
-    }
+     .playlist-card.compact {
+       display: flex;
+       align-items: center;
+       border-radius: var(--mat-sys-corner-small);
+       background-color: var(--mat-sys-surface-container);
+       min-height: 56px;
+     }
 
-    .cover img {
-      width: 100%;
-      height: 100%;
+     .cover {
+       aspect-ratio: 1;
+       display: block;
+       background: linear-gradient(135deg, var(--mat-sys-primary-container), var(--mat-sys-secondary-container));
+     }
+
+     .playlist-card.compact .cover {
+       width: 56px;
+       min-width: 56px;
+       height: 56px;
+       aspect-ratio: auto;
+     }
+
+     .cover img {
+       width: 100%;
+       height: 100%;
       object-fit: cover;
       display: block;
     }
@@ -56,23 +72,37 @@ import { ImageCacheService } from '../../services/image-cache.service';
       justify-content: center;
     }
 
-    .placeholder mat-icon {
-      width: 3rem;
-      height: 3rem;
-      font-size: 3rem;
-      color: var(--mat-sys-on-primary-container);
-      opacity: 0.7;
-    }
+     .placeholder mat-icon {
+       width: 3rem;
+       height: 3rem;
+       font-size: 3rem;
+       color: var(--mat-sys-on-primary-container);
+       opacity: 0.7;
+     }
 
-    .content {
-      padding: 0.75rem;
-      display: flex;
-      flex-direction: column;
-      gap: 0.125rem;
-    }
+     .playlist-card.compact .placeholder mat-icon {
+       width: 1.5rem;
+       height: 1.5rem;
+       font-size: 1.5rem;
+       color: white;
+       opacity: 1;
+     }
 
-    .title,
-    .meta,
+     .content {
+       padding: 0.75rem;
+       display: flex;
+       flex-direction: column;
+       gap: 0.125rem;
+     }
+
+     .playlist-card.compact .content {
+       padding: 0.5rem 0.75rem;
+       min-width: 0;
+       flex: 1;
+     }
+
+     .title,
+     .meta,
     .description {
       overflow: hidden;
       text-overflow: ellipsis;
@@ -83,11 +113,19 @@ import { ImageCacheService } from '../../services/image-cache.service';
       color: var(--mat-sys-on-surface);
     }
 
-    .meta,
-    .description {
-      color: var(--mat-sys-on-surface-variant);
-      font-size: 0.75rem;
-    }
+     .meta,
+     .description {
+       color: var(--mat-sys-on-surface-variant);
+       font-size: 0.75rem;
+     }
+
+     .playlist-card.compact .title {
+       font-size: 0.8125rem;
+     }
+
+     .playlist-card.compact .meta {
+       font-size: 0.6875rem;
+     }
   `],
 })
 export class MusicBookmarkPlaylistCardComponent {
@@ -96,6 +134,7 @@ export class MusicBookmarkPlaylistCardComponent {
   private imageCache = inject(ImageCacheService);
 
   event = input.required<Event>();
+  variant = input<'card' | 'compact'>('card');
 
   title = computed(() => {
     const title = this.event().tags.find(tag => tag[0] === 'title')?.[1];

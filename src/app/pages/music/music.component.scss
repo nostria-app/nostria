@@ -255,6 +255,31 @@
   }
 }
 
+.playlists-grid-single-row {
+  overflow: hidden;
+}
+
+.compact-playlists-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 0.5rem;
+  padding: 0.5rem 0;
+  max-width: 100%;
+
+  app-music-bookmark-playlist-card {
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  @media (max-width: 600px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.compact-playlists-grid-single-row {
+  overflow: hidden;
+}
+
 // "Yours" section grid - compact horizontal rows
 .yours-grid {
   display: grid;

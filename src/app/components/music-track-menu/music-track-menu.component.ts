@@ -61,6 +61,12 @@ import { ConfirmDialogComponent, ConfirmDialogData } from '../confirm-dialog/con
         <mat-icon>info</mat-icon>
         <span>Track Details</span>
       </button>
+      @if (showRemoveFromPlaylist() && playlistId()) {
+        <button mat-menu-item (click)="removeFromPlaylist()">
+          <mat-icon>playlist_remove</mat-icon>
+          <span>Remove from Playlist</span>
+        </button>
+      }
 
       <mat-divider></mat-divider>
 
@@ -201,10 +207,13 @@ export class MusicTrackMenuComponent {
   track = input.required<Event>();
   artistName = input<string>('Unknown Artist');
   showEditOption = input<boolean>(true);
+  playlistId = input<string | null>(null);
+  showRemoveFromPlaylist = input<boolean>(false);
 
   // Outputs
   editRequested = output<Event>();
   trackDeleted = output<Event>();
+  removedFromPlaylist = output<Event>();
 
   // Playlist state from service
   userPlaylists = this.musicPlaylistService.userPlaylists;
@@ -488,6 +497,30 @@ export class MusicTrackMenuComponent {
     } catch (error) {
       this.logger.error('Error adding to playlist:', error);
       this.snackBar.open('Failed to add to playlist', 'Close', { duration: 3000 });
+    }
+  }
+
+  async removeFromPlaylist(): Promise<void> {
+    const playlistId = this.playlistId();
+    const ev = this.track();
+    const dTag = ev.tags.find(t => t[0] === 'd')?.[1] || '';
+
+    if (!playlistId || !dTag) {
+      this.snackBar.open('Failed to remove from playlist', 'Close', { duration: 3000 });
+      return;
+    }
+
+    try {
+      const success = await this.musicPlaylistService.removeTrackFromPlaylist(playlistId, ev.pubkey, dTag, ev.kind);
+      if (success) {
+        this.removedFromPlaylist.emit(ev);
+        this.snackBar.open('Removed from playlist', 'Close', { duration: 2000 });
+      } else {
+        this.snackBar.open('Failed to remove from playlist', 'Close', { duration: 3000 });
+      }
+    } catch (error) {
+      this.logger.error('Error removing from playlist:', error);
+      this.snackBar.open('Failed to remove from playlist', 'Close', { duration: 3000 });
     }
   }
 

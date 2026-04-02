@@ -1,7 +1,9 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
+import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { MatMenuModule } from '@angular/material/menu';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { Event, nip19 } from 'nostr-tools';
@@ -13,12 +15,15 @@ import { DataService } from '../../../services/data.service';
 import { LoggerService } from '../../../services/logger.service';
 import { LayoutService } from '../../../services/layout.service';
 import { ImageCacheService } from '../../../services/image-cache.service';
+import { AccountStateService } from '../../../services/account-state.service';
+import { MusicLikedSongsService } from '../../../services/music-liked-songs.service';
+import { MusicTrackMenuComponent } from '../../../components/music-track-menu/music-track-menu.component';
 import { MediaItem } from '../../../interfaces';
 
 @Component({
   selector: 'app-music-bookmark-playlist',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [MatButtonModule, MatIconModule, MatProgressSpinnerModule, MatTooltipModule],
+  imports: [MatButtonModule, MatIconModule, MatMenuModule, MatProgressSpinnerModule, MatTooltipModule, DragDropModule, MusicTrackMenuComponent],
   template: `
     <div class="panel-header">
       <button mat-icon-button (click)="goBack()">
@@ -47,6 +52,10 @@ import { MediaItem } from '../../../interfaces';
             @if (description()) {
               <p class="playlist-description">{{ description() }}</p>
             }
+            <div class="playlist-visibility">
+              <mat-icon>public</mat-icon>
+              <span>Public playlist</span>
+            </div>
           </div>
           <div class="header-actions">
             <button mat-fab extended class="play-all-button" (click)="playAll()" [disabled]="tracks().length === 0">
@@ -65,14 +74,18 @@ import { MediaItem } from '../../../interfaces';
           </span>
         </div>
 
-        <div class="track-list">
+        <div class="track-list" cdkDropList cdkDropListLockAxis="y" (cdkDropListDropped)="onTrackDrop($event)">
           @for (track of tracks(); track track.id; let i = $index) {
-            <div class="track-row">
+            <div class="track-row" cdkDrag [cdkDragDisabled]="!isOwnPlaylist()" [cdkDragStartDelay]="{ touch: 250, mouse: 180 }">
               <button type="button" class="track-play-button" (click)="playTrack(i)"
                 [attr.aria-label]="'Play ' + getTrackTitle(track)">
                 <span class="track-number">{{ i + 1 }}</span>
                 <mat-icon class="play-icon">play_arrow</mat-icon>
               </button>
+
+              <div class="track-drag-handle" cdkDragHandle [class.is-disabled]="!isOwnPlaylist()" matTooltip="Drag to reorder">
+                <mat-icon>drag_indicator</mat-icon>
+              </div>
 
               <div class="track-main">
                 <button type="button" class="track-cover-button" (click)="playTrack(i)"
@@ -97,10 +110,17 @@ import { MediaItem } from '../../../interfaces';
               </div>
 
               <div class="track-meta">
+                <button type="button" class="track-liked-button" [class.is-empty]="!isTrackLiked(track)"
+                  (click)="toggleTrackLike(track, $event)" [attr.aria-label]="isTrackLiked(track) ? 'Unlike track' : 'Like track'">
+                  <mat-icon>{{ isTrackLiked(track) ? 'favorite' : 'favorite_border' }}</mat-icon>
+                </button>
                 <span class="track-album">{{ getTrackAlbum(track) }}</span>
                 <span class="track-duration">{{ getTrackDuration(track) }}</span>
-                <button mat-icon-button type="button" class="track-menu-button"
-                  [matTooltip]="'Open ' + getTrackTitle(track)" (click)="openTrack(track)">
+                <app-music-track-menu [track]="track" [artistName]="getTrackArtist(track)" [showEditOption]="false"
+                  [playlistId]="playlistId()" [showRemoveFromPlaylist]="isOwnPlaylist()"
+                  (removedFromPlaylist)="onTrackRemoved($event)" #trackMenuRef="musicTrackMenu"></app-music-track-menu>
+                <button mat-icon-button type="button" class="track-menu-button" [matMenuTriggerFor]="trackMenuRef.trackMenu"
+                  (click)="$event.stopPropagation()">
                   <mat-icon>more_horiz</mat-icon>
                 </button>
               </div>
@@ -181,6 +201,18 @@ import { MediaItem } from '../../../interfaces';
       margin: 0;
       color: var(--mat-sys-on-surface-variant);
     }
+    .playlist-visibility {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.375rem;
+      color: var(--mat-sys-on-surface-variant);
+      font-size: 0.8125rem;
+    }
+    .playlist-visibility mat-icon {
+      font-size: 16px;
+      width: 16px;
+      height: 16px;
+    }
     .playlist-description {
       font-size: 0.875rem;
       line-height: 1.4;
@@ -230,7 +262,7 @@ import { MediaItem } from '../../../interfaces';
     }
     .track-row {
       display: grid;
-      grid-template-columns: 2.5rem minmax(0, 1fr) minmax(8rem, 16rem);
+      grid-template-columns: 2.5rem 1.5rem minmax(0, 1fr) minmax(10rem, 18rem);
       gap: 0.75rem;
       align-items: center;
       min-height: 3.25rem;
@@ -247,11 +279,30 @@ import { MediaItem } from '../../../interfaces';
     }
     .track-play-button,
     .track-cover-button,
-    .track-title-button {
+    .track-title-button,
+    .track-liked-button {
       padding: 0;
       border: 0;
       background: transparent;
       color: inherit;
+    }
+    .track-drag-handle {
+      width: 1.5rem;
+      height: 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--mat-sys-on-surface-variant);
+      cursor: grab;
+    }
+    .track-drag-handle.is-disabled {
+      opacity: 0.35;
+      cursor: default;
+    }
+    .track-drag-handle mat-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
     }
     .track-play-button {
       position: relative;
@@ -352,10 +403,27 @@ import { MediaItem } from '../../../interfaces';
     }
     .track-meta {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) 3.25rem 2rem;
+      grid-template-columns: 1rem minmax(0, 1fr) 3.25rem 2rem;
       align-items: center;
       gap: 0.75rem;
       min-width: 0;
+    }
+    .track-liked-button {
+      width: 1rem;
+      height: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #f0a7a2;
+      cursor: pointer;
+    }
+    .track-liked-button.is-empty {
+      color: var(--mat-sys-on-surface-variant);
+    }
+    .track-liked-button mat-icon {
+      font-size: 0.95rem;
+      width: 0.95rem;
+      height: 0.95rem;
     }
     .track-duration {
       text-align: right;
@@ -390,6 +458,8 @@ import { MediaItem } from '../../../interfaces';
       .track-list-header-number,
       .track-list-header-album,
       .track-play-button,
+      .track-drag-handle,
+      .track-liked-button,
       .track-album,
       .track-menu-button {
         display: none !important;
@@ -442,15 +512,24 @@ export class MusicBookmarkPlaylistComponent {
   private logger = inject(LoggerService);
   private layout = inject(LayoutService);
   private imageCache = inject(ImageCacheService);
+  private accountState = inject(AccountStateService);
+  private likedSongs = inject(MusicLikedSongsService);
 
   playlist = signal<Event | null>(null);
   tracks = signal<Event[]>([]);
   loading = signal(true);
+  savingOrder = signal(false);
 
   title = computed(() => this.playlist()?.tags.find(tag => tag[0] === 'title')?.[1] || 'Untitled Playlist');
   description = computed(() => this.playlist()?.tags.find(tag => tag[0] === 'description')?.[1] || this.playlist()?.content || '');
   coverImage = computed(() => this.playlist()?.tags.find(tag => tag[0] === 'image')?.[1] || null);
   gradient = computed(() => this.playlist() ? this.utilities.getMusicGradient(this.playlist()!) : null);
+  playlistId = computed(() => this.playlist()?.tags.find(tag => tag[0] === 'd')?.[1] || null);
+  isOwnPlaylist = computed(() => {
+    const playlist = this.playlist();
+    const currentPubkey = this.accountState.pubkey();
+    return !!playlist && !!currentPubkey && playlist.pubkey === currentPubkey;
+  });
 
   constructor() {
     void this.loadPlaylist();
@@ -480,6 +559,7 @@ export class MusicBookmarkPlaylistComponent {
       const event = await this.playlistService.fetchPlaylistEvent(pubkey, identifier);
       this.playlist.set(event);
       if (event) {
+        await this.likedSongs.ensureInitialized();
         await this.loadTracks(event);
       }
     } catch (error) {
@@ -572,6 +652,58 @@ export class MusicBookmarkPlaylistComponent {
     this.layout.openSongDetail(track.pubkey, dTag, track);
   }
 
+  isTrackLiked(track: Event): boolean {
+    return this.likedSongs.isTrackLiked(track);
+  }
+
+  async toggleTrackLike(track: Event, event: MouseEvent): Promise<void> {
+    event.stopPropagation();
+
+    if (this.isTrackLiked(track)) {
+      await this.likedSongs.removeTrack(track);
+      return;
+    }
+
+    await this.likedSongs.addTrack(track);
+  }
+
+  onTrackRemoved(track: Event): void {
+    const dTag = track.tags.find(tag => tag[0] === 'd')?.[1] || '';
+    this.tracks.update(current => current.filter(item => {
+      const itemDTag = item.tags.find(tag => tag[0] === 'd')?.[1] || '';
+      return !(item.kind === track.kind && item.pubkey === track.pubkey && itemDTag === dTag);
+    }));
+  }
+
+  async onTrackDrop(event: CdkDragDrop<Event[]>): Promise<void> {
+    if (!this.isOwnPlaylist()) {
+      return;
+    }
+
+    const previousTracks = this.tracks();
+    const reordered = [...previousTracks];
+    moveItemInArray(reordered, event.previousIndex, event.currentIndex);
+    this.tracks.set(reordered);
+
+    const playlistId = this.playlistId();
+    if (!playlistId) {
+      return;
+    }
+
+    const orderedRefs = reordered.map(track => {
+      const dTag = track.tags.find(tag => tag[0] === 'd')?.[1] || '';
+      return `${track.kind}:${track.pubkey}:${dTag}`;
+    });
+
+    this.savingOrder.set(true);
+    const success = await this.playlistService.reorderPlaylistTracks(playlistId, orderedRefs);
+    this.savingOrder.set(false);
+
+    if (!success) {
+      this.tracks.set(previousTracks);
+    }
+  }
+
   playAll(): void {
     this.playTrack(0);
   }
@@ -614,6 +746,6 @@ export class MusicBookmarkPlaylistComponent {
   }
 
   goBack(): void {
-    void this.router.navigate(['/music']);
+    this.layout.closeRightPanel();
   }
 }
