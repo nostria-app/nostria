@@ -152,6 +152,7 @@ export class NostrService implements NostriaService {
   }[] = [];
   private isExtensionSigning = false;
   private currentSigningDialogRef: MatDialogRef<SigningDialogComponent> | null = null;
+  private extensionInteractionQueue: Promise<void> = Promise.resolve();
 
   // Default relays for new user accounts
   private readonly DEFAULT_RELAYS = [
@@ -1069,10 +1070,10 @@ export class NostrService implements NostriaService {
         );
       });
 
-      const extensionResult = await Promise.race([
+      const extensionResult = await this.runExclusiveExtensionInteraction(() => Promise.race([
         zonedSignEvent,
         dialogClosedPromise,
-      ]);
+      ]));
       this.logger.debug('[Extension Signing] Extension signing completed', { resultId: (extensionResult as Event)?.id });
       return extensionResult as Event;
     } finally {
@@ -1088,6 +1089,40 @@ export class NostrService implements NostriaService {
 
   async signEvent(event: EventTemplate | UnsignedEvent) {
     return this.sign(event);
+  }
+
+  async getExtensionPublicKey(timeoutMs = 60000): Promise<string> {
+    if (!window.nostr) {
+      this.logger.info('Extension not immediately available, waiting...');
+      const extensionAvailable = await this.utilities.waitForNostrExtension();
+      if (!extensionAvailable || !window.nostr) {
+        throw new Error(
+          'No Nostr extension found. Please install Alby, nos2x, or another NIP-07 compatible extension.'
+        );
+      }
+      this.logger.info('Extension became available');
+    }
+
+    return this.runExclusiveExtensionInteraction(async () => {
+      this.logger.debug('Requesting public key from extension');
+
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => {
+          reject(new Error('Extension did not respond in time. Please check if your browser extension popup is visible and approve the request.'));
+        }, timeoutMs);
+      });
+
+      const pubkey = await Promise.race([
+        window.nostr!.getPublicKey(),
+        timeoutPromise,
+      ]);
+
+      if (!pubkey) {
+        throw new Error('Failed to get public key from extension');
+      }
+
+      return pubkey;
+    });
   }
 
   private async sign(event: EventTemplate | Event | UnsignedEvent): Promise<Event> {
@@ -2400,44 +2435,7 @@ export class NostrService implements NostriaService {
   async loginWithExtension(): Promise<void> {
     this.logger.info('Attempting to login with Nostr extension');
     try {
-      // Wait for extension to be available (it's injected asynchronously)
-      if (!window.nostr) {
-        this.logger.info('Extension not immediately available, waiting...');
-        const extensionAvailable = await this.utilities.waitForNostrExtension();
-        if (!extensionAvailable) {
-          const error =
-            'No Nostr extension found. Please install Alby, nos2x, or another NIP-07 compatible extension.';
-          this.logger.error(error);
-          throw new Error(error);
-        }
-        this.logger.info('Extension became available');
-      }
-
-      // Double-check extension is available (for TypeScript)
-      if (!window.nostr) {
-        throw new Error('No Nostr extension found after waiting');
-      }
-
-      // Get the public key from the extension with a timeout
-      // The extension may show a popup for user approval which takes time
-      this.logger.debug('Requesting public key from extension');
-
-      const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => {
-          reject(new Error('Extension did not respond in time. Please check if your browser extension popup is visible and approve the request.'));
-        }, 60000); // 60 second timeout - extensions can take time if user needs to approve
-      });
-
-      const pubkey = await Promise.race([
-        window.nostr.getPublicKey(),
-        timeoutPromise,
-      ]);
-
-      if (!pubkey) {
-        const error = 'Failed to get public key from extension';
-        this.logger.error(error);
-        throw new Error(error);
-      }
+      const pubkey = await this.getExtensionPublicKey();
 
       this.logger.debug('Received public key from extension', { pubkey });
 
@@ -2457,6 +2455,23 @@ export class NostrService implements NostriaService {
     } catch (error) {
       this.logger.error('Error connecting to Nostr extension:', error);
       throw error; // Re-throw to handle in the UI
+    }
+  }
+
+  private async runExclusiveExtensionInteraction<T>(operation: () => Promise<T>): Promise<T> {
+    const previous = this.extensionInteractionQueue;
+    let release!: () => void;
+
+    this.extensionInteractionQueue = new Promise<void>(resolve => {
+      release = resolve;
+    });
+
+    await previous.catch(() => undefined);
+
+    try {
+      return await operation();
+    } finally {
+      release();
     }
   }
 
