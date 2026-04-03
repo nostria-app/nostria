@@ -7,7 +7,7 @@
 }
 
 .inline-video-container {
-  --_default-video-max-height: calc(100dvh - var(--toolbar-height, 64px) - 56px - env(safe-area-inset-top, 0px) - 16px);
+  --_default-video-max-height: calc(100dvh - var(--toolbar-height, 64px) - 56px - var(--safe-area-top, 0px) - 16px);
   position: relative;
   width: 100%;
   max-height: var(--inline-video-max-height, var(--_default-video-max-height));

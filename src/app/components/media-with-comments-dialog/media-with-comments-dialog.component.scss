@@ -33,7 +33,7 @@
 // Header with buttons
 .dialog-header {
   position: absolute;
-  top: calc(env(safe-area-inset-top, 0px) + 12px);
+  top: calc(var(--safe-area-top, 0px) + 12px);
   left: 12px;
   right: 16px;
   z-index: 1000;
@@ -502,7 +502,7 @@
 @media (max-width: 900px) {
   .dialog-header {
     position: fixed;
-    top: calc(env(safe-area-inset-top, 0px) + 8px);
+    top: calc(var(--safe-area-top, 0px) + 8px);
     left: 8px;
     right: 14px;
     z-index: 3000;
