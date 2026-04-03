@@ -70,6 +70,20 @@
   }
 }
 
+.upload-preference-section {
+  margin-bottom: 24px;
+  padding: 16px;
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: 12px;
+  background: var(--mat-sys-surface-container-low);
+}
+
+.upload-preference-hint {
+  margin: 8px 0 0;
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 0.875rem;
+}
+
 .media-server-warning {
   display: flex;
   flex-direction: column;

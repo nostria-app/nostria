@@ -113,6 +113,15 @@
         }
       </div>
 
+      <div class="upload-preference-section">
+        <mat-slide-toggle [checked]="uploadOriginalImages()" (change)="uploadOriginalImages.set($event.checked)">
+          Upload original images
+        </mat-slide-toggle>
+        <p class="upload-preference-hint">
+          Off uses balanced compression for new profile and banner uploads. URLs and media library selections are unchanged.
+        </p>
+      </div>
+
       @if (profile()) {
       <p>
         <mat-form-field class="input-full-width">

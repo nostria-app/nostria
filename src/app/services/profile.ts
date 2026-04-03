@@ -7,6 +7,8 @@ import { MediaService } from './media.service';
 import { LoggerService } from './logger.service';
 import { Event } from 'nostr-tools';
 import { AccountRelayService } from './relays/account-relay';
+import { MediaProcessingService } from './media-processing.service';
+import { DEFAULT_MEDIA_UPLOAD_SETTINGS } from '../interfaces/media-upload';
 
 /**
  * Interface for profile data
@@ -38,6 +40,8 @@ export interface ProfileUpdateOptions {
   skipMediaServerCheck?: boolean;
   /** External identities (NIP-39) - array of [platform, identity, proof?] */
   externalIdentities?: { platform: string; identity: string; proof?: string }[];
+  /** Upload source files without local compression */
+  uploadOriginalImages?: boolean;
 }
 
 /**
@@ -64,6 +68,7 @@ export class Profile {
   private data = inject(DataService);
   private accountState = inject(AccountStateService);
   private media = inject(MediaService);
+  private mediaProcessing = inject(MediaProcessingService);
   private logger = inject(LoggerService);
 
   private isUpdating = signal<boolean>(false);
@@ -110,9 +115,13 @@ export class Profile {
 
       // Handle profile image upload (only if media servers are available or check is skipped)
       if (options.profileImageFile && (options.skipMediaServerCheck || this.hasMediaServers())) {
-        const uploadResult = await this.media.uploadFile(
+        const preparedProfileImage = await this.prepareProfileImageForUpload(
           options.profileImageFile,
-          false,
+          options.uploadOriginalImages === true
+        );
+        const uploadResult = await this.media.uploadFile(
+          preparedProfileImage.file,
+          preparedProfileImage.uploadOriginal,
           this.media.mediaServers()
         );
 
@@ -130,9 +139,13 @@ export class Profile {
 
       // Handle banner upload (only if media servers are available or check is skipped)
       if (options.bannerImageFile && (options.skipMediaServerCheck || this.hasMediaServers())) {
-        const uploadResult = await this.media.uploadFile(
+        const preparedBannerImage = await this.prepareProfileImageForUpload(
           options.bannerImageFile,
-          false,
+          options.uploadOriginalImages === true
+        );
+        const uploadResult = await this.media.uploadFile(
+          preparedBannerImage.file,
+          preparedBannerImage.uploadOriginal,
           this.media.mediaServers()
         );
 
@@ -254,6 +267,35 @@ export class Profile {
    */
   private hasMediaServers(): boolean {
     return this.media.mediaServers().length > 0;
+  }
+
+  private async prepareProfileImageForUpload(
+    file: File,
+    uploadOriginalImage: boolean,
+  ): Promise<{ file: File; uploadOriginal: boolean }> {
+    if (uploadOriginalImage) {
+      return {
+        file,
+        uploadOriginal: true,
+      };
+    }
+
+    const preparedFile = await this.mediaProcessing.prepareFileForUpload(
+      file,
+      DEFAULT_MEDIA_UPLOAD_SETTINGS,
+    );
+
+    if (preparedFile.warningMessage) {
+      this.logger.warn('Profile image optimization warning', {
+        fileName: file.name,
+        warningMessage: preparedFile.warningMessage,
+      });
+    }
+
+    return {
+      file: preparedFile.file,
+      uploadOriginal: preparedFile.uploadOriginal,
+    };
   }
 
   /**

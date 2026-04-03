@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, effect, OnInit, OnDestroy } from '@angular/core';
+import { Component, inject, signal, computed, effect, OnInit } from '@angular/core';
 
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -13,6 +13,7 @@ import { Router } from '@angular/router';
 import { DatabaseService } from '../../../services/database.service';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatMenuModule } from '@angular/material/menu';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { CdkDragDrop, CdkDrag, CdkDropList, CdkDragHandle, moveItemInArray } from '@angular/cdk/drag-drop';
 import { DataService } from '../../../services/data.service';
@@ -43,6 +44,7 @@ interface ExternalIdentity {
     AgoPipe,
     MatProgressSpinnerModule,
     MatMenuModule,
+    MatSlideToggleModule,
     MatTooltipModule,
     CdkDropList,
     CdkDrag,
@@ -51,7 +53,7 @@ interface ExternalIdentity {
   templateUrl: './profile-edit.component.html',
   styleUrl: './profile-edit.component.scss',
 })
-export class ProfileEditComponent implements OnInit, OnDestroy {
+export class ProfileEditComponent implements OnInit {
   nostr = inject(NostrService);
   database = inject(DatabaseService);
   data = inject(DataService);
@@ -79,6 +81,7 @@ export class ProfileEditComponent implements OnInit, OnDestroy {
   // Preview states
   previewProfileImage = signal<string | null>(null);
   previewBanner = signal<string | null>(null);
+  uploadOriginalImages = signal(false);
 
   // Media server availability
   hasMediaServers = computed(() => this.media.mediaServers().length > 0);
@@ -171,11 +174,6 @@ export class ProfileEditComponent implements OnInit, OnDestroy {
     } finally {
       this.refreshing.set(false);
     }
-  }
-
-  ngOnDestroy() {
-    // Note: Profile component will handle setting the title back to "Profile"
-    // via its router events subscription when navigating away from edit
   }
 
   goBack(): void {
@@ -302,6 +300,7 @@ export class ProfileEditComponent implements OnInit, OnDestroy {
       const updateOptions: ProfileUpdateOptions = {
         profileData,
         externalIdentities: this.externalIdentities(),
+        uploadOriginalImages: this.uploadOriginalImages(),
       };
 
       // Add profile image file if selected
