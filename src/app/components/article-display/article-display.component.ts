@@ -30,6 +30,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { RouterModule, Router } from '@angular/router';
 import { SafeHtml } from '@angular/platform-browser';
 import { Event, nip19 } from 'nostr-tools';
+import { firstValueFrom } from 'rxjs';
 import { UserProfileComponent } from '../user-profile/user-profile.component';
 import { DateToggleComponent } from '../date-toggle/date-toggle.component';
 import { ReactionButtonComponent } from '../event/reaction-button/reaction-button.component';
@@ -47,12 +48,17 @@ import { SharedRelayService } from '../../services/relays/shared-relay';
 import { EventService } from '../../services/event';
 import { ZapService } from '../../services/zap.service';
 import { LoggerService } from '../../services/logger.service';
+import { DataService } from '../../services/data.service';
 import { BookmarkListSelectorComponent } from '../bookmark-list-selector/bookmark-list-selector.component';
 import { ReactionsDialogComponent, ReactionsDialogData } from '../reactions-dialog/reactions-dialog.component';
 import { UserRelaysService } from '../../services/relays/user-relays';
 import { AccountLocalStateService } from '../../services/account-local-state.service';
 import { MediaPreviewDialogComponent } from '../media-preview-dialog/media-preview.component';
 import { MusicEmbedComponent } from '../music-embed/music-embed.component';
+import { EventComponent as NostrEventComponent } from '../event/event.component';
+import { ReferencedEventService } from '../../services/referenced-event.service';
+
+type ArticleEmbedState = 'loading' | 'loaded' | 'failed';
 
 export interface ArticleData {
   event?: Event;
@@ -139,6 +145,7 @@ export class ArticleDisplayComponent implements OnDestroy {
   playbackRateChange = output<number>();
   share = output<void>();
   translate = output<string>();
+  articleUpdated = output<Event>();
 
   // Reaction footer inputs
   reactions = input<ReactionEvents>({ events: [], data: new Map() });
@@ -230,6 +237,8 @@ export class ArticleDisplayComponent implements OnDestroy {
   private eventService = inject(EventService);
   private zapService = inject(ZapService);
   private logger = inject(LoggerService);
+  private data = inject(DataService);
+  private referencedEventService = inject(ReferencedEventService);
   private userRelaysService = inject(UserRelaysService);
   private accountLocalState = inject(AccountLocalStateService);
   private environmentInjector = inject(EnvironmentInjector);
@@ -237,6 +246,8 @@ export class ArticleDisplayComponent implements OnDestroy {
 
   @ViewChild('markdownContentHost') private markdownContentHost?: ElementRef<HTMLElement>;
   private musicEmbedRefs: ComponentRef<MusicEmbedComponent>[] = [];
+  private eventEmbedRefs: ComponentRef<NostrEventComponent>[] = [];
+  private eventEmbedStates = new Map<string, ArticleEmbedState>();
   private markdownObserver: MutationObserver | null = null;
   private observedMarkdownContainer: HTMLElement | null = null;
   private enhanceScheduled = false;
@@ -414,6 +425,7 @@ export class ArticleDisplayComponent implements OnDestroy {
 
         this.ensureMarkdownObserver();
         this.scheduleEnhanceMusicEmbeds(true);
+        this.enhanceEventEmbeds(true);
       });
     });
   }
@@ -421,6 +433,7 @@ export class ArticleDisplayComponent implements OnDestroy {
   ngOnDestroy(): void {
     this.disconnectMarkdownObserver();
     this.destroyMusicEmbeds();
+    this.destroyEventEmbeds();
     this.onBookmarkLongPressEnd();
   }
 
@@ -466,6 +479,7 @@ export class ArticleDisplayComponent implements OnDestroy {
       const shouldForceEnhance = this.pendingForceEnhance;
       this.pendingForceEnhance = false;
       this.enhanceMusicEmbeds(shouldForceEnhance);
+      this.enhanceEventEmbeds(shouldForceEnhance);
     }, 0);
   }
 
@@ -510,6 +524,14 @@ export class ArticleDisplayComponent implements OnDestroy {
       ref.destroy();
     }
     this.musicEmbedRefs = [];
+  }
+
+  private destroyEventEmbeds(): void {
+    for (const ref of this.eventEmbedRefs) {
+      this.appRef.detachView(ref.hostView);
+      ref.destroy();
+    }
+    this.eventEmbedRefs = [];
   }
 
   private enhanceMusicEmbeds(force = false): void {
@@ -575,6 +597,102 @@ export class ArticleDisplayComponent implements OnDestroy {
 
       this.musicEmbedRefs.push(componentRef);
     }
+  }
+
+  private enhanceEventEmbeds(force = false): void {
+    const container = this.markdownContentHost?.nativeElement;
+    if (!container) {
+      return;
+    }
+
+    const placeholders = container.querySelectorAll<HTMLElement>(
+      '.nostr-embed-preview[data-event-id]:not([data-kind="36787"]):not([data-kind="34139"])'
+    );
+
+    if (!force && placeholders.length === 0) {
+      return;
+    }
+
+    this.destroyEventEmbeds();
+
+    if (placeholders.length === 0) {
+      return;
+    }
+
+    for (const node of placeholders) {
+      const eventId = node.dataset['eventId'];
+      if (!eventId) {
+        continue;
+      }
+
+      this.renderEventEmbedPlaceholder(node, eventId, 'loading');
+      void this.renderEventEmbed(node, eventId);
+    }
+  }
+
+  private async renderEventEmbed(node: HTMLElement, eventId: string): Promise<void> {
+    const authorPubkey = node.dataset['author'];
+    const record = await this.referencedEventService.getReferencedEvent(eventId, {
+      authorPubkey,
+    });
+    const event = record?.event;
+    if (!node.isConnected) {
+      return;
+    }
+
+    if (!event) {
+      this.renderEventEmbedPlaceholder(node, eventId, 'failed');
+      return;
+    }
+
+    const host = document.createElement('div');
+    host.className = 'article-event-embed';
+    node.replaceWith(host);
+    this.eventEmbedStates.set(eventId, 'loaded');
+
+    const componentRef = createComponent(NostrEventComponent, {
+      environmentInjector: this.environmentInjector,
+      hostElement: host,
+    });
+
+      this.appRef.attachView(componentRef.hostView);
+      componentRef.setInput('event', event);
+      componentRef.setInput('appearance', 'plain');
+      componentRef.setInput('compact', false);
+      componentRef.setInput('hideComments', true);
+      componentRef.setInput('hideFooter', true);
+      componentRef.setInput('disableEngagementLoading', true);
+      componentRef.changeDetectorRef.detectChanges();
+
+    this.eventEmbedRefs.push(componentRef);
+  }
+
+  private renderEventEmbedPlaceholder(node: HTMLElement, eventId: string, state: ArticleEmbedState): void {
+    this.eventEmbedStates.set(eventId, state);
+
+    if (state === 'loading') {
+      node.innerHTML = `
+        <div class="article-embed-placeholder loading" data-event-id="${eventId}">
+          <div class="article-embed-status">Loading referenced post...</div>
+        </div>
+      `;
+      return;
+    }
+
+    node.innerHTML = `
+      <div class="article-embed-placeholder failed" data-event-id="${eventId}">
+        <div class="article-embed-status">Failed to load referenced post.</div>
+        <button type="button" class="article-embed-retry">Retry</button>
+      </div>
+    `;
+
+    const retryButton = node.querySelector<HTMLButtonElement>('.article-embed-retry');
+    retryButton?.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      this.renderEventEmbedPlaceholder(node, eventId, 'loading');
+      void this.renderEventEmbed(node, eventId);
+    }, { once: true });
   }
 
   readonly taggedUsersSpamThreshold = 50;
@@ -731,6 +849,22 @@ export class ArticleDisplayComponent implements OnDestroy {
     void this.loadEngagementMetrics(currentEvent);
   }
 
+  async editArticle(event?: MouseEvent): Promise<void> {
+    event?.preventDefault();
+    event?.stopPropagation();
+
+    const articleEvent = this.event();
+    if (!articleEvent) {
+      return;
+    }
+
+    const dialogRef = await this.layout.createArticle(this.link(), articleEvent);
+    const result = await firstValueFrom(dialogRef.afterClosed$);
+    if (result.result) {
+      this.articleUpdated.emit(result.result as Event);
+    }
+  }
+
   onReactionSummaryDeleted(reactionId: string): void {
     const filteredEvents = this.effectiveReactions().events.filter(reaction => reaction.event.id !== reactionId);
     const reactionData = new Map<string, number>();
@@ -827,6 +961,12 @@ export class ArticleDisplayComponent implements OnDestroy {
    */
   handleContentClick(event: MouseEvent): void {
     const target = event.target as HTMLElement;
+    const embeddedEventRoot = target.closest('.article-event-embed');
+
+    if (embeddedEventRoot) {
+      return;
+    }
+
     const imageElement = target.closest('img');
 
     if (imageElement) {

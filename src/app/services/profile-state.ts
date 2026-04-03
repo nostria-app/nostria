@@ -233,6 +233,40 @@ export class ProfileState {
     this.mediaDisplayLimit.set(this.INITIAL_MEDIA_DISPLAY_LIMIT);
   }
 
+  private mergeArticleRecord(articles: NostrRecord[], incoming: NostrRecord): NostrRecord[] {
+    const incomingDTag = this.utilities.getTagValues('d', incoming.event.tags)[0] || '';
+    if (!incomingDTag) {
+      const exists = articles.some(article => article.event.id === incoming.event.id);
+      return exists ? articles : [...articles, incoming];
+    }
+
+    const existingIndex = articles.findIndex(article => {
+      if (article.event.kind !== incoming.event.kind || article.event.pubkey !== incoming.event.pubkey) {
+        return false;
+      }
+
+      const existingDTag = this.utilities.getTagValues('d', article.event.tags)[0] || '';
+      return existingDTag === incomingDTag;
+    });
+
+    if (existingIndex === -1) {
+      return [...articles, incoming];
+    }
+
+    const existing = articles[existingIndex];
+    const shouldReplace =
+      incoming.event.created_at > existing.event.created_at ||
+      (incoming.event.created_at === existing.event.created_at && incoming.event.id.localeCompare(existing.event.id) > 0);
+
+    if (!shouldReplace) {
+      return articles;
+    }
+
+    const next = [...articles];
+    next[existingIndex] = incoming;
+    return next;
+  }
+
   // Computed signals for sorted data
   sortedNotes = computed(() =>
     [...this.notes(), ...this.reposts()].sort((a, b) => b.event.created_at - a.event.created_at)
@@ -495,13 +529,7 @@ export class ProfileState {
 
         if (event.kind === kinds.LongFormArticle) {
           const record = this.utilities.toRecord(event);
-          this.articles.update(articles => {
-            const exists = articles.some(a => a.event.id === event.id);
-            if (!exists) {
-              return [...articles, record];
-            }
-            return articles;
-          });
+          this.articles.update(articles => this.mergeArticleRecord(articles, record));
         } else if (event.kind === kinds.ShortTextNote) {
           const record = this.utilities.toRecord(event);
           if (this.utilities.isRootPost(event)) {
@@ -875,13 +903,7 @@ export class ProfileState {
       for (const event of articleEvents || []) {
         if (event.kind === kinds.LongFormArticle) {
           const record = this.utilities.toRecord(event);
-          this.articles.update(articles => {
-            const exists = articles.some(a => a.event.id === event.id);
-            if (!exists) {
-              return [...articles, record];
-            }
-            return articles;
-          });
+          this.articles.update(articles => this.mergeArticleRecord(articles, record));
         }
       }
       this.logger.debug(`Loaded ${articleEvents?.length || 0} articles`);
@@ -1450,21 +1472,24 @@ export class ProfileState {
       // Add new articles to the existing ones with final deduplication check
       if (newArticles.length > 0) {
         this.articles.update(existing => {
-          const filtered = newArticles.filter(
-            newArticle =>
-              !existing.some(
-                existingArticle => existingArticle.event.id === newArticle.event.id
-              )
-          );
-          this.logger.debug(
-            `Adding ${filtered.length} new articles (${newArticles.length - filtered.length} duplicates filtered)`
-          );
+          let next = existing;
+          let addedOrReplaced = 0;
 
-          if (filtered.length > 0) {
+          for (const article of newArticles) {
+            const merged = this.mergeArticleRecord(next, article);
+            if (merged !== next) {
+              next = merged;
+              addedOrReplaced++;
+            }
+          }
+
+          this.logger.debug(`Merged ${addedOrReplaced} article updates from ${newArticles.length} fetched records`);
+
+          if (addedOrReplaced > 0) {
             addedAnyContent = true;
           }
 
-          return [...existing, ...filtered];
+          return next;
         });
       }
 

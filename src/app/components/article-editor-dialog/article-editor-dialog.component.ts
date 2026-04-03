@@ -30,6 +30,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatMenuModule } from '@angular/material/menu';
 import { NostrService } from '../../services/nostr.service';
 import { DataService } from '../../services/data.service';
+import { DatabaseService } from '../../services/database.service';
 import { LocalStorageService } from '../../services/local-storage.service';
 import { MatCardModule } from '@angular/material/card';
 import { AccountStateService } from '../../services/account-state.service';
@@ -49,6 +50,7 @@ import { AiToolsDialogComponent } from '../ai-tools-dialog/ai-tools-dialog.compo
 import { AiService } from '../../services/ai.service';
 import { SpeechService } from '../../services/speech.service';
 import { FormatService } from '../../services/format/format.service';
+import { LoggerService } from '../../services/logger.service';
 import { normalizeMarkdownLinkDestinations } from '../../services/format/utils';
 import { ArticleReferencePickerResult } from '../article-reference-picker-dialog/article-reference-picker-dialog.component';
 import JSZip from '@progress/jszip-esm';
@@ -140,6 +142,7 @@ export class ArticleEditorDialogComponent implements OnDestroy, AfterViewInit {
   private isBrowser = isPlatformBrowser(this.platformId);
   private nostrService = inject(NostrService);
   private dataService = inject(DataService);
+  private database = inject(DatabaseService);
   private accountRelay = inject(AccountRelayService);
   private snackBar = inject(MatSnackBar);
   private dialog = inject(MatDialog);
@@ -149,6 +152,7 @@ export class ArticleEditorDialogComponent implements OnDestroy, AfterViewInit {
   private media = inject(MediaService);
   private localStorage = inject(LocalStorageService);
   private customDialog = inject(CustomDialogService);
+  private logger = inject(LoggerService);
   private readonly DEFAULT_DIALOG_WIDTH = '920px';
   private readonly SPLIT_DIALOG_WIDTH = '1840px';
 
@@ -821,6 +825,12 @@ export class ArticleEditorDialogComponent implements OnDestroy, AfterViewInit {
       }
 
       const signedEvent = result.event;
+
+      try {
+        await this.database.saveReplaceableEvent(signedEvent);
+      } catch (saveError) {
+        this.logger.warn('[ArticleEditorDialog] Failed to replace saved article locally', saveError);
+      }
 
       // CRITICAL: Clear draft immediately after signing to prevent duplicate publishes
       // If user clicks publish again while this is processing, there's no draft to republish

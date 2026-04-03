@@ -16,6 +16,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import type { SafeHtml } from '@angular/platform-browser';
 import { ActivatedRoute, type ParamMap, Router } from '@angular/router';
 import { type Event, kinds, nip19 } from 'nostr-tools';
+import { firstValueFrom } from 'rxjs';
 import type { Subscription } from 'rxjs';
 import { ArticleDisplayComponent, type ArticleData } from '../../components/article-display/article-display.component';
 import { UtilitiesService } from '../../services/utilities.service';
@@ -333,6 +334,36 @@ export class ArticleComponent implements OnDestroy {
     if (commentsSection) {
       commentsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
+  }
+
+  async editArticle(event?: MouseEvent): Promise<void> {
+    event?.preventDefault();
+    event?.stopPropagation();
+
+    const articleEvent = this.event();
+    if (!articleEvent) {
+      return;
+    }
+
+    const dialogRef = await this.layout.createArticle(this.link, articleEvent);
+    const result = await firstValueFrom(dialogRef.afterClosed$);
+    if (result.result) {
+      this.applyUpdatedArticle(result.result as Event);
+    }
+  }
+
+  onArticleUpdated(event: Event): void {
+    this.applyUpdatedArticle(event);
+  }
+
+  private applyUpdatedArticle(event: Event): void {
+    this.event.set(event);
+    this.error.set(null);
+    this.link = nip19.naddrEncode({
+      identifier: this.getDTag(event),
+      kind: event.kind,
+      pubkey: event.pubkey,
+    });
   }
 
   private isAddressableFormat(value: string): boolean {

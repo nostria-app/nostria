@@ -8,7 +8,7 @@
 
   @if (event()) {
   @if (isLongFormArticle() && accountState.isCurrentUser(authorPubkey())) {
-  <button mat-icon-button (click)="layout.createArticle(link, event())" matTooltip="Edit Article">
+  <button mat-icon-button (click)="editArticle($event)" matTooltip="Edit Article">
     <mat-icon>edit</mat-icon>
   </button>
   }
@@ -52,7 +52,7 @@
 <div class="article-container">
   @if (isLongFormArticle()) {
   <app-article-display [article]="articleData()" mode="full" [showTopActions]="false" (share)="shareArticle()"
-    (replyClick)="scrollToComments()"></app-article-display>
+    (replyClick)="scrollToComments()" (articleUpdated)="onArticleUpdated($event)"></app-article-display>
   } @else {
   <app-event [event]="article" appearance="plain" [navigationDisabled]="true" mode="thread"></app-event>
   }

@@ -198,6 +198,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   hideParentEvent = input<boolean>(false);
   hideFooter = input<boolean>(false);
   hideHeader = input<boolean>(false);
+  disableEngagementLoading = input<boolean>(false);
   threadInteractionDisabled = input<boolean>(false);
   threadInteractionDisabledReason = input<string | null>(null);
   // Media navigation context (for Media tab grid)
@@ -2222,6 +2223,10 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     const currentEventId = this.observedEventId;
 
     if (!currentEventId || this.record()?.event.id !== currentEventId || this.hasLoadedInteractions()) {
+      return;
+    }
+
+    if (this.disableEngagementLoading()) {
       return;
     }
 

@@ -286,6 +286,39 @@
     overflow-wrap: break-word;
     word-break: break-word;
 
+    .article-embed-placeholder {
+      margin: 0.75rem 0;
+      padding: 16px;
+      border: 1px solid var(--mat-sys-outline-variant);
+      border-radius: 12px;
+      background: var(--mat-sys-surface-container-low);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      color: var(--mat-sys-on-surface-variant);
+
+      &.loading {
+        justify-content: flex-start;
+      }
+    }
+
+    .article-embed-status {
+      font-size: 0.95rem;
+      line-height: 1.4;
+    }
+
+    .article-embed-retry {
+      border: 1px solid var(--mat-sys-outline);
+      border-radius: 999px;
+      background: transparent;
+      color: var(--mat-sys-primary);
+      padding: 6px 14px;
+      cursor: pointer;
+      font: inherit;
+      flex-shrink: 0;
+    }
+
     ::ng-deep {
 
       h1,
@@ -343,6 +376,40 @@
 
         &:hover {
           text-decoration: underline;
+        }
+      }
+
+      .article-event-embed {
+        a,
+        .user-profile-name-link,
+        .user-profile-npub-link,
+        .date-link {
+          color: inherit;
+          word-break: normal;
+        }
+
+        .user-profile-avatar,
+        .user-profile-avatar img,
+        .user-profile-avatar .user-avatar,
+        .user-profile-avatar .default-user-avatar {
+          cursor: pointer !important;
+          margin: 0;
+          box-shadow: none;
+          max-width: none;
+        }
+
+        .header-client,
+        .client-logo {
+          cursor: default !important;
+          margin: 0;
+          box-shadow: none;
+          max-width: none;
+        }
+
+        .user-profile-name-link:hover,
+        .user-profile-npub-link:hover,
+        .date-link:hover {
+          color: inherit;
         }
       }
 
@@ -421,6 +488,18 @@
 :host ::ng-deep .markdown-content img,
 :host ::ng-deep .markdown-content a img {
   cursor: zoom-in !important;
+}
+
+:host ::ng-deep .markdown-content .article-event-embed .user-profile-avatar,
+:host ::ng-deep .markdown-content .article-event-embed .user-profile-avatar img,
+:host ::ng-deep .markdown-content .article-event-embed .user-profile-avatar .user-avatar,
+:host ::ng-deep .markdown-content .article-event-embed .user-profile-avatar .default-user-avatar {
+  cursor: pointer !important;
+}
+
+:host ::ng-deep .markdown-content .article-event-embed .header-client,
+:host ::ng-deep .markdown-content .article-event-embed .client-logo {
+  cursor: default !important;
 }
 
 // Footer section with reaction actions

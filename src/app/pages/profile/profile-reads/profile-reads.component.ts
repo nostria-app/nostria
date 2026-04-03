@@ -20,6 +20,8 @@ import { ShareArticleDialogComponent, ShareArticleDialogData } from '../../../co
 import { CustomDialogService } from '../../../services/custom-dialog.service';
 import { PinnedService } from '../../../services/pinned.service';
 import { NostrRecord } from '../../../interfaces';
+import { DatabaseService } from '../../../services/database.service';
+import { AccountStateService } from '../../../services/account-state.service';
 
 @Component({
   selector: 'app-profile-reads',
@@ -47,13 +49,16 @@ export class ProfileReadsComponent {
   private router = inject(Router);
   private nostrService = inject(NostrService);
   private logger = inject(LoggerService);
+  private accountState = inject(AccountStateService);
   profileState = inject(PROFILE_STATE);
   bookmark = inject(BookmarkService);
   utilities = inject(UtilitiesService);
   private layoutService = inject(LayoutService);
   private userRelaysService = inject(UserRelaysService);
   private customDialog = inject(CustomDialogService);
+  private database = inject(DatabaseService);
   pinned = inject(PinnedService);
+  private ownProfileCleanupDone = signal<string | null>(null);
 
   // Use sorted articles from profile state
   sortedArticles = computed(() => this.profileState.sortedArticles());
@@ -169,6 +174,25 @@ export class ProfileReadsComponent {
       }
     });
 
+    effect(() => {
+      const visible = this.isVisible();
+      const profilePubkey = this.profileState.pubkey();
+      const currentUserPubkey = this.accountState.pubkey();
+      const articles = this.profileState.articles();
+
+      if (!visible || !profilePubkey || typeof currentUserPubkey !== 'string' || profilePubkey !== currentUserPubkey) {
+        return;
+      }
+
+      if (this.ownProfileCleanupDone() === profilePubkey || articles.length < 2) {
+        return;
+      }
+
+      untracked(() => {
+        void this.cleanupDuplicateOwnArticles(profilePubkey, articles);
+      });
+    });
+
   }
 
   // Get the pubkey from the parent route
@@ -177,6 +201,64 @@ export class ProfileReadsComponent {
   }
 
   async loadReads(): Promise<void> {
+  }
+
+  private async cleanupDuplicateOwnArticles(pubkey: string, articles: NostrRecord[]): Promise<void> {
+    const groups = new Map<string, NostrRecord[]>();
+
+    for (const article of articles) {
+      const dTag = this.utilities.getTagValues('d', article.event.tags)[0] || '';
+      if (!dTag) {
+        continue;
+      }
+
+      const key = `${article.event.pubkey}:${dTag}`;
+      const existing = groups.get(key) ?? [];
+      existing.push(article);
+      groups.set(key, existing);
+    }
+
+    const duplicateIdsToDelete: string[] = [];
+    const dedupedArticles = [...articles];
+
+    for (const groupedArticles of groups.values()) {
+      if (groupedArticles.length < 2) {
+        continue;
+      }
+
+      const sorted = [...groupedArticles].sort((a, b) => {
+        if (b.event.created_at !== a.event.created_at) {
+          return b.event.created_at - a.event.created_at;
+        }
+
+        return b.event.id.localeCompare(a.event.id);
+      });
+
+      const keep = sorted[0];
+      const stale = sorted.slice(1);
+
+      for (const article of stale) {
+        duplicateIdsToDelete.push(article.event.id);
+        const index = dedupedArticles.findIndex(candidate => candidate.event.id === article.event.id);
+        if (index >= 0) {
+          dedupedArticles.splice(index, 1);
+        }
+      }
+
+      this.logger.info(
+        `[ProfileReads] Keeping latest article ${keep.event.id} for d-tag ${this.utilities.getTagValues('d', keep.event.tags)[0]}`
+      );
+    }
+
+    this.ownProfileCleanupDone.set(pubkey);
+
+    if (duplicateIdsToDelete.length === 0) {
+      return;
+    }
+
+    await this.database.deleteEvents(duplicateIdsToDelete);
+    this.profileState.articles.set(dedupedArticles);
+    this.logger.info(`[ProfileReads] Removed ${duplicateIdsToDelete.length} duplicate article(s) from own profile`);
   }
 
   /**
