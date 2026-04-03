@@ -18,10 +18,10 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: "20"
 
@@ -96,13 +96,13 @@ jobs:
           ls -la *.apk *.aab 2>/dev/null || echo "No APK/AAB files found"
 
       - name: Upload APK
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: nostria-android-v${{ github.event.inputs.version }}-apk
           path: nostria-android-v${{ github.event.inputs.version }}.apk
 
       - name: Upload AAB
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: nostria-android-v${{ github.event.inputs.version }}-aab
           path: nostria-android-v${{ github.event.inputs.version }}.aab
@@ -129,13 +129,13 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       # - name: Upload APK
-      #   uses: actions/upload-artifact@v4
+      #   uses: actions/upload-artifact@v6
       #   with:
       #     name: release-apk
       #     path: app-release-signed.apk
 
       # - name: Upload AAB
-      #   uses: actions/upload-artifact@v4
+      #   uses: actions/upload-artifact@v6
       #   with:
       #     name: release-aab
       #     path: app-release-bundle.aab

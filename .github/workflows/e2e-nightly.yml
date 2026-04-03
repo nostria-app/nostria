@@ -3,7 +3,7 @@ name: E2E Nightly Tests
 on:
   schedule:
     # Run at 2:00 AM UTC every day
-    - cron: '0 2 * * *'
+    - cron: "0 2 * * *"
   workflow_dispatch:
 
 env:
@@ -24,13 +24,13 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v6
 
       - name: Set up Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v6
         with:
           node-version: 24
-          cache: 'npm'
+          cache: "npm"
 
       # Cache node_modules
       - name: Cache node_modules
@@ -96,7 +96,7 @@ jobs:
       # Upload all test results
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: nightly-e2e-results-${{ github.run_number }}
           path: |
@@ -106,7 +106,7 @@ jobs:
       # Upload performance metrics separately for trend tracking
       - name: Upload performance metrics
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: nightly-performance-${{ github.run_number }}
           path: |
