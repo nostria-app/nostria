@@ -3,7 +3,7 @@
 <mat-dialog-content>
   @if (!showNewListInput() && !showNewBoardInput()) {
   <mat-list>
-    @for (list of allLists(); track list.id) {
+    @for (list of visibleLists(); track list.id) {
     <mat-list-item (click)="toggleBookmarkInList(list.id)" class="bookmark-list-item">
       <mat-icon matListItemIcon>
         @if (isInList(list.id)) {

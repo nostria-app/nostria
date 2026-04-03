@@ -1,4 +1,4 @@
-import { Component, inject, signal, OnInit } from '@angular/core';
+import { Component, computed, inject, signal, OnInit } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
@@ -16,6 +16,9 @@ import {
   CurationSet,
   CurationKind,
 } from '../../services/curation-sets.service';
+import { UtilitiesService } from '../../services/utilities.service';
+
+const MUSIC_ONLY_BOOKMARK_LIST_IDS = new Set(['liked-songs', 'liked-albums']);
 
 export interface BookmarkListSelectorData {
   itemId: string;
@@ -49,6 +52,7 @@ export class BookmarkListSelectorComponent implements OnInit {
   curationSetsService = inject(CurationSetsService);
   accountState = inject(AccountStateService);
   snackBar = inject(MatSnackBar);
+  private utilities = inject(UtilitiesService);
 
   showNewListInput = signal(false);
   newListName = signal('');
@@ -67,6 +71,7 @@ export class BookmarkListSelectorComponent implements OnInit {
   creatingBoard = signal(false);
 
   allLists = this.bookmarkService.allBookmarkLists;
+  visibleLists = computed(() => this.allLists().filter(list => this.shouldShowList(list)));
 
   async ngOnInit() {
     // Determine if we should show boards based on event kind
@@ -102,6 +107,22 @@ export class BookmarkListSelectorComponent implements OnInit {
 
   getListsWithBookmark(): BookmarkList[] {
     return this.bookmarkService.getListsContainingBookmark(this.data.itemId, this.data.type);
+  }
+
+  private shouldShowList(list: BookmarkList): boolean {
+    if (!MUSIC_ONLY_BOOKMARK_LIST_IDS.has(list.id)) {
+      return true;
+    }
+
+    return !this.shouldHideMusicOnlyLists();
+  }
+
+  private shouldHideMusicOnlyLists(): boolean {
+    return this.data.type === 'e' && !this.isMusicEventKind(this.data.eventKind);
+  }
+
+  private isMusicEventKind(kind?: number): boolean {
+    return kind != null && this.utilities.isMusicKind(kind);
   }
 
   isInList(listId: string): boolean {
