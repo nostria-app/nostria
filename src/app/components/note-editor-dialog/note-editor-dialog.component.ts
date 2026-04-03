@@ -4381,7 +4381,6 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       let preparedFiles = 0;
       const queuedFiles: string[] = [];
       const failedFiles: { fileName: string; error: string }[] = [];
-      const warningMessages: string[] = [];
       const uploadSettings = this.getCurrentMediaUploadSettings();
 
       for (const [index, file] of files.entries()) {
@@ -4399,10 +4398,6 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
               this.uploadStatus.set(`${progress.message}${progressSuffix}${fileLabel}`);
             }
           );
-
-          if (preparedFile.warningMessage) {
-            warningMessages.push(preparedFile.warningMessage);
-          }
 
           const pendingMedia = await this.createPendingMediaMetadata(file, preparedFile, fileLabel, uploadSettings);
           this.mediaMetadata.set([...this.mediaMetadata(), pendingMedia]);
@@ -4429,24 +4424,6 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
             error: error instanceof Error ? error.message : 'Upload failed',
           });
         }
-      }
-
-      if (warningMessages.length > 0) {
-        this.snackBar.open(
-          warningMessages.length === 1
-            ? warningMessages[0]
-            : `${warningMessages.length} file(s) will keep their original upload because local optimization was unavailable or not smaller.`,
-          'Close',
-          {
-            duration: 6000,
-          }
-        );
-      }
-
-      if (queuedFiles.length > 0) {
-        this.snackBar.open(`${queuedFiles.length} file(s) ready to upload on publish`, 'Close', {
-          duration: 3000,
-        });
       }
 
       if (failedFiles.length > 0) {
@@ -4542,7 +4519,6 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     const isStale = (): boolean => runId !== this.pendingMediaOptimizationRunId;
 
     const currentMetadata = [...this.mediaMetadata()];
-    const warningMessages: string[] = [];
     const failedFiles: string[] = [];
 
     this.isUploading.set(true);
@@ -4583,10 +4559,6 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
             return;
           }
 
-          if (preparedFile.warningMessage) {
-            warningMessages.push(preparedFile.warningMessage);
-          }
-
           const refreshedMedia = await this.createPendingMediaMetadata(sourceFile, preparedFile, fileLabel, mediaSettings, pending);
           if (isStale()) {
             this.revokeMediaPreviewUrls(refreshedMedia);
@@ -4611,16 +4583,6 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
 
       this.mediaMetadata.set(currentMetadata);
       this.saveAutoDraft();
-
-      if (warningMessages.length > 0) {
-        this.snackBar.open(
-          warningMessages.length === 1
-            ? warningMessages[0]
-            : `${warningMessages.length} file(s) will keep their original upload because local optimization was unavailable or not smaller.`,
-          'Close',
-          { duration: 6000 }
-        );
-      }
 
       if (failedFiles.length > 0) {
         this.snackBar.open(
