@@ -68,7 +68,7 @@ jobs:
       - name: Build release APK with debug signing for verification
         env:
           TAURI_ANDROID_RELEASE_USE_DEBUG_KEY: "true"
-        run: npx tauri android build --apk --release
+        run: npx tauri android build --apk
 
       - name: Upload debug APK
         uses: actions/upload-artifact@v6
@@ -168,7 +168,7 @@ jobs:
           TAURI_ANDROID_KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           TAURI_ANDROID_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           TAURI_ANDROID_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-        run: npx tauri android build --apk --release
+        run: npx tauri android build --apk
 
       - name: Build signed release AAB
         env:
@@ -176,7 +176,7 @@ jobs:
           TAURI_ANDROID_KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           TAURI_ANDROID_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           TAURI_ANDROID_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-        run: npx tauri android build --aab --release
+        run: npx tauri android build --aab
 
       - name: Upload signed release APK
         uses: actions/upload-artifact@v6
