@@ -7,6 +7,7 @@
   ],
   "permissions": [
     "core:default",
+    "android-signer:default",
     "opener:default",
     "updater:default"
   ]

@@ -9,6 +9,7 @@ import { BunkerSigner } from 'nostr-tools/nip46';
 import { SimplePool } from 'nostr-tools';
 import { UtilitiesService } from './utilities.service';
 import { NostrService, NostrUser } from './nostr.service';
+import { AndroidSignerService } from './android-signer.service';
 
 export interface EncryptionResult {
   content: string;
@@ -41,6 +42,7 @@ export class EncryptionService {
 
   private logger = inject(LoggerService);
   private readonly utilities = inject(UtilitiesService);
+  private readonly androidSigner = inject(AndroidSignerService);
   private accountState = inject(AccountStateService);
   private encryptionPermission = inject(EncryptionPermissionService);
   private injector = inject(Injector);
@@ -387,6 +389,17 @@ export class EncryptionService {
         });
       }
 
+      if (account?.source === 'external' && this.androidSigner.isSupported()) {
+        const nostrService = this.getNostrService();
+        const signerPackage = await nostrService.ensureExternalSignerPackage(account);
+        return await this.androidSigner.encryptNip04(
+          plaintext,
+          recipientPubkey,
+          account.pubkey,
+          signerPackage,
+        );
+      }
+
       if (!account?.privkey) {
         throw new Error('Private key not available for encryption');
       }
@@ -433,6 +446,17 @@ export class EncryptionService {
           const bunker = await this.getBunkerSigner(account);
           return await bunker.nip04Decrypt(pubkey, ciphertext);
         }, priority);
+      }
+
+      if (account?.source === 'external' && this.androidSigner.isSupported()) {
+        const nostrService = this.getNostrService();
+        const signerPackage = await nostrService.ensureExternalSignerPackage(account);
+        return await this.androidSigner.decryptNip04(
+          ciphertext,
+          pubkey,
+          account.pubkey,
+          signerPackage,
+        );
       }
 
       if (!account?.privkey) {
@@ -483,6 +507,17 @@ export class EncryptionService {
           const bunker = await this.getBunkerSigner(account);
           return await bunker.nip44Encrypt(recipientPubkey, plaintext);
         });
+      }
+
+      if (account?.source === 'external' && this.androidSigner.isSupported()) {
+        const nostrService = this.getNostrService();
+        const signerPackage = await nostrService.ensureExternalSignerPackage(account);
+        return await this.androidSigner.encryptNip44(
+          plaintext,
+          recipientPubkey,
+          account.pubkey,
+          signerPackage,
+        );
       }
 
       if (!account?.privkey) {
@@ -537,6 +572,17 @@ export class EncryptionService {
           const bunker = await this.getBunkerSigner(account);
           return await bunker.nip44Decrypt(senderPubkey, ciphertext);
         }, priority);
+      }
+
+      if (account?.source === 'external' && this.androidSigner.isSupported()) {
+        const nostrService = this.getNostrService();
+        const signerPackage = await nostrService.ensureExternalSignerPackage(account);
+        return await this.androidSigner.decryptNip44(
+          ciphertext,
+          senderPubkey,
+          account.pubkey,
+          signerPackage,
+        );
       }
 
       if (!account?.privkey) {

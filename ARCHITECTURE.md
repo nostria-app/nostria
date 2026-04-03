@@ -1088,8 +1088,13 @@ bubblewrap build
 
 ```bash
 npm run tauri android init
-npm run tauri android dev
+npm run tauri:android:dev
+npm run tauri:android:run:packaged
 ```
+
+True Android release installs require a configured signing keystore. For local release-mode testing, use `npm run tauri:android:run:release:local`.
+
+When running inside the Android Tauri app, local signer accounts use native NIP-55 integration through a Tauri Android plugin. The app stores the signer package returned by `get_public_key`, prefers content-resolver requests for background-approved operations, and falls back to Android intents when the signer needs explicit user approval. Web and PWA builds keep the existing `nostrsigner:` URL flow.
 
 ---
 

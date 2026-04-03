@@ -89,6 +89,9 @@ html {
   --text-xs-capped-ui: min(var(--text-xs), 13px);
   --text-sm-capped-ui: min(var(--text-sm), 14px);
 
+  // Safe area insets with Android-specific fallbacks applied below when needed
+  --safe-area-top: env(safe-area-inset-top, 0px);
+
   // Safe area inset with fallback for Android devices
   // Android often returns 0 for env(safe-area-inset-bottom) even when there's a nav bar
   --safe-area-bottom: env(safe-area-inset-bottom, 0px);
@@ -224,6 +227,13 @@ mat-nav-list,
   html[data-platform="android"] {
     padding-bottom: max(24px, env(safe-area-inset-bottom, 0px));
   }
+}
+
+// Android immersive shells do not always expose a non-zero top inset,
+// so provide a small fallback for camera cutouts and status bars.
+html[data-app-context="native-android"],
+html[data-platform="android"][data-display-mode="standalone"] {
+  --safe-area-top: max(24px, env(safe-area-inset-top, 0px));
 }
 
 // Arabic locale font styling

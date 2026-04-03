@@ -26,6 +26,7 @@ import { AccountStateService } from '../../services/account-state.service';
 import { DataService } from '../../services/data.service';
 import { LayoutService } from '../../services/layout.service';
 import { RegionService } from '../../services/region.service';
+import { AndroidSignerService } from '../../services/android-signer.service';
 
 // Define the login steps
 enum LoginStep {
@@ -75,6 +76,7 @@ export class LoginDialogComponent implements OnDestroy {
   private accountState = inject(AccountStateService);
   private data = inject(DataService);
   private region = inject(RegionService);
+  private androidSigner = inject(AndroidSignerService);
   layout = inject(LayoutService);
 
   // Event emitter for when dialog should close (used in standalone mode)
@@ -177,6 +179,7 @@ export class LoginDialogComponent implements OnDestroy {
   // Input fields
   nsecKey = '';
   externalSignerPubkey = '';
+  private externalSignerPackage: string | null = null;
   // previewPubkey = 'npub1sg6plzptd64u62a878hep2kev88swjh3tw00gjsfl8f237lmu63q0uf63m'; // jack
   previewPubkey = 'npub1lmtv5qjrgjak504pc0a2885w72df69lmk8jfaet2xc3x2rppjy8sfzxvac' // Coffee
 
@@ -185,7 +188,7 @@ export class LoginDialogComponent implements OnDestroy {
 
   constructor() {
     effect(() => {
-      if (this.currentStep() === LoginStep.EXTERNAL_SIGNER) {
+      if (this.currentStep() === LoginStep.EXTERNAL_SIGNER && !this.androidSigner.isSupported()) {
         window.addEventListener('focus', this.onWindowFocusExternalSigner);
         // Don't auto-focus input - it brings up keyboard and hides the login button on mobile
       } else {
@@ -1091,6 +1094,25 @@ export class LoginDialogComponent implements OnDestroy {
     return `nostrsigner:?compressionType=none&returnType=signature&type=get_public_key&appName=Nostria`;
   }
 
+  private async connectAndroidSigner(): Promise<void> {
+    this.loading.set(true);
+
+    try {
+      const signer = await this.androidSigner.getPublicKey(this.androidSigner.getDefaultPermissions());
+      this.externalSignerPubkey = signer.pubkey;
+      this.externalSignerPackage = signer.packageName;
+      await this.loginWithExternalSigner();
+    } catch (error) {
+      this.logger.error('Failed to connect Android signer', error);
+      const message = error instanceof Error ? error.message : 'Failed to connect Android signer';
+      this.snackBar.open(message, 'Close', {
+        duration: 5000,
+        panelClass: 'error-snackbar',
+      });
+      this.loading.set(false);
+    }
+  }
+
   /**
    * Opens the external signer app without navigating away from the main app.
    * Uses an iframe to trigger the Android intent system while keeping
@@ -1098,6 +1120,11 @@ export class LoginDialogComponent implements OnDestroy {
    */
   openExternalSignerApp(event: Event): void {
     event.preventDefault();
+
+    if (this.androidSigner.isSupported()) {
+      void this.connectAndroidSigner();
+      return;
+    }
 
     const url = this.getExternalSignerUrl();
 
@@ -1166,6 +1193,7 @@ export class LoginDialogComponent implements OnDestroy {
         pubkey,
         name: 'Local Signer',
         source: 'external',
+        externalSignerPackage: this.externalSignerPackage ?? undefined,
         lastUsed: Date.now(),
         hasActivated: true,
       };
@@ -1173,18 +1201,15 @@ export class LoginDialogComponent implements OnDestroy {
       await this.nostrService.setAccount(newUser);
       this.logger.debug('Local signer account set successfully', { pubkey });
 
-      // Check if the user has relay configuration
+      // Close quickly after successful authentication.
+      // Relay discovery/setup checks can continue in the background.
       const currentAccount = this.accountState.account();
-      if (currentAccount) {
-        const hasRelays = await this.nostrService.hasRelayConfiguration(currentAccount.pubkey);
-
-        if (!hasRelays) {
-          this.logger.info('No relay configuration found, showing setup dialog');
-          await this.showSetupNewAccountDialog(currentAccount);
-        }
-      }
-
+      this.loading.set(false);
       this.closeDialog();
+
+      if (currentAccount) {
+        void this.checkRelayConfigurationInBackground(currentAccount);
+      }
     } catch (err) {
       this.logger.error('Login with external signer failed', err);
       this.loading.set(false);

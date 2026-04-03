@@ -44,6 +44,7 @@ import { PublicChatsListService } from './public-chats-list.service';
 import { CommunityListService } from './community-list.service';
 import { UserRelayService } from './relays/user-relay';
 import { DeleteEventService } from './delete-event.service';
+import { AndroidSignerService } from './android-signer.service';
 import type { DeleteEventReferenceMode } from '../components/delete-confirmation-dialog/delete-confirmation-dialog.component';
 
 export interface NostrUser {
@@ -100,6 +101,7 @@ export interface NostrUser {
    * Required for pure remote signer accounts (source='remote')
    */
   bunkerClientKey?: string;
+  externalSignerPackage?: string;
 }
 
 export interface UserMetadataWithPubkey extends NostrEventData<UserMetadata> {
@@ -139,6 +141,7 @@ export class NostrService implements NostriaService {
   private readonly ngZone = inject(NgZone);
   private readonly injector = inject(Injector);
   private readonly userRelayService = inject(UserRelayService);
+  private readonly androidSigner = inject(AndroidSignerService);
   private encryptionServiceInstance?: import('./encryption.service').EncryptionService;
 
   initialized = signal(false);
@@ -1094,6 +1097,29 @@ export class NostrService implements NostriaService {
     return this.sign(event);
   }
 
+  async ensureExternalSignerPackage(account: NostrUser): Promise<string> {
+    if (account.externalSignerPackage) {
+      return account.externalSignerPackage;
+    }
+
+    if (!this.androidSigner.isSupported()) {
+      throw new Error('External signer package is not configured for this account. Reconnect the signer from Android first.');
+    }
+
+    const signer = await this.androidSigner.getPublicKey(this.androidSigner.getDefaultPermissions());
+    if (signer.pubkey !== account.pubkey) {
+      throw new Error('The connected Android signer does not match the current account pubkey.');
+    }
+
+    const updatedAccount: NostrUser = {
+      ...account,
+      externalSignerPackage: signer.packageName,
+    };
+
+    await this.setAccount(updatedAccount);
+    return signer.packageName;
+  }
+
   async getExtensionPublicKey(timeoutMs = 60000): Promise<string> {
     if (!window.nostr) {
       this.logger.info('Extension not immediately available, waiting...');
@@ -1196,6 +1222,32 @@ export class NostrService implements NostriaService {
         const eventId = getEventHash(unsignedEvent);
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (unsignedEvent as any).id = eventId;
+
+        if (this.androidSigner.isSupported()) {
+          const signerPackage = await this.ensureExternalSignerPackage(currentUser);
+          const result = await this.androidSigner.signEvent(
+            JSON.stringify(unsignedEvent),
+            currentUser.pubkey,
+            signerPackage,
+            eventId,
+          );
+
+          const signedEventJson = result.event?.trim() ?? result.result?.trim();
+          if (signedEventJson?.startsWith('{')) {
+            const parsedEvent = JSON.parse(signedEventJson) as Event;
+            if (parsedEvent.sig && typeof parsedEvent.sig === 'string') {
+              signedEvent = parsedEvent;
+              break;
+            }
+          }
+
+          signedEvent = {
+            ...unsignedEvent,
+            id: eventId,
+            sig: result.result,
+          } as Event;
+          break;
+        }
 
         const eventJson = JSON.stringify(unsignedEvent);
         const encodedJson = encodeURIComponent(eventJson);
