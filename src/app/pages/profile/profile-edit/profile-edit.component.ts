@@ -24,6 +24,7 @@ import { AccountRelayService } from '../../../services/relays/account-relay';
 import { LoggerService } from '../../../services/logger.service';
 import { PanelNavigationService } from '../../../services/panel-navigation.service';
 import { CustomDialogService } from '../../../services/custom-dialog.service';
+import { sanitizeProfileNameInput } from '../../../utils/profile-name';
 
 interface ExternalIdentity {
   platform: string;
@@ -82,6 +83,7 @@ export class ProfileEditComponent implements OnInit {
   previewProfileImage = signal<string | null>(null);
   previewBanner = signal<string | null>(null);
   uploadOriginalImages = signal(false);
+  nameWasNormalized = signal(false);
 
   // Media server availability
   hasMediaServers = computed(() => this.media.mediaServers().length > 0);
@@ -135,6 +137,9 @@ export class ProfileEditComponent implements OnInit {
 
   private applyProfileData(metadata: { event: { pubkey: string; tags: string[][] }; data: ProfileData }) {
     const profileClone = structuredClone(metadata.data);
+    if (typeof profileClone.name === 'string') {
+      profileClone.name = sanitizeProfileNameInput(profileClone.name);
+    }
     profileClone['pictureUrl'] = profileClone.picture || '';
     profileClone['bannerUrl'] = profileClone.banner || '';
     this.profile.set(profileClone);
@@ -214,7 +219,9 @@ export class ProfileEditComponent implements OnInit {
   }
 
   set name(value: string) {
-    this.profile.update(p => ({ ...p, name: value }));
+    const sanitizedName = sanitizeProfileNameInput(value);
+    this.nameWasNormalized.set(value !== sanitizedName);
+    this.profile.update(p => ({ ...p, name: sanitizedName }));
   }
 
   get about(): string {

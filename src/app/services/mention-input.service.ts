@@ -1,5 +1,7 @@
 import { Injectable } from '@angular/core';
 
+import { sanitizeProfileNameInput } from '../utils/profile-name';
+
 export interface MentionDetectionResult {
   /** Whether @ mention is currently being typed */
   isTypingMention: boolean;
@@ -173,20 +175,11 @@ export class MentionInputService {
 
   /**
    * Sanitize a display name for use as a mention token in content text.
-   * Replaces whitespace with underscores and strips characters that could
-   * break mention matching:
-   * - Apostrophes/quotes (mobile keyboards may auto-correct to smart quotes)
-   * - Regex metacharacters that could break content processing
-   * - Other special punctuation
-   * Preserves letters (including Unicode), digits, underscores, hyphens, and dots.
+   * Replaces whitespace with underscores and keeps the value in a
+   * nickname-style format that stays safe for @mention matching.
    */
   sanitizeDisplayName(displayName: string): string {
-    let name = displayName
-      .replace(/\s+/g, '_')
-      .replace(/['\u2018\u2019\u201A\u201B"\u201C\u201D\u201E\u201F`\u00B4]/g, '')
-      .replace(/[*+?^${}()|[\]\\#@!~<>,;:]/g, '')
-      .replace(/_+/g, '_')
-      .replace(/^_|_$/g, '');
+    let name = sanitizeProfileNameInput(displayName);
 
     if (!name) {
       name = 'user';

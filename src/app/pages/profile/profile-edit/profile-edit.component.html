@@ -135,6 +135,10 @@
           <mat-icon matPrefix>alternate_email</mat-icon>
           <mat-label>Name</mat-label>
           <input matInput type="text" [(ngModel)]="name" />
+          <mat-hint>Used for @mentions. Letters, numbers, underscores, hyphens, and dots only.</mat-hint>
+          @if (nameWasNormalized()) {
+          <mat-hint align="end">Unsupported characters are removed automatically.</mat-hint>
+          }
         </mat-form-field>
       </p>
       <p>

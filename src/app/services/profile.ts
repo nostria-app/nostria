@@ -9,6 +9,7 @@ import { Event } from 'nostr-tools';
 import { AccountRelayService } from './relays/account-relay';
 import { MediaProcessingService } from './media-processing.service';
 import { DEFAULT_MEDIA_UPLOAD_SETTINGS } from '../interfaces/media-upload';
+import { sanitizeProfileNameInput } from '../utils/profile-name';
 
 /**
  * Interface for profile data
@@ -305,6 +306,10 @@ export class Profile {
    */
   private cleanProfileData(profileData: ProfileData): ProfileData {
     const cleaned = { ...profileData };
+
+    if (typeof cleaned.name === 'string') {
+      cleaned.name = sanitizeProfileNameInput(cleaned.name);
+    }
 
     // Remove deprecated fields according to NIP-24
     delete cleaned['displayName']; // Use display_name instead
