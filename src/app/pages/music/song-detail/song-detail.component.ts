@@ -189,6 +189,7 @@ export class SongDetailComponent implements OnInit, OnDestroy {
   private likeChecked = false;
   private engagementLoaded = false;
   private albumsLoaded = false;
+  private checkedDeletionForTrackId: string | null = null;
 
   // Extracted song data
   title = computed(() => {
@@ -423,6 +424,18 @@ export class SongDetailComponent implements OnInit, OnDestroy {
 
       untracked(() => {
         this.checkExistingLike(ev, userPubkey);
+      });
+    });
+
+    effect(() => {
+      const ev = this.song();
+      if (!ev || this.checkedDeletionForTrackId === ev.id) {
+        return;
+      }
+
+      this.checkedDeletionForTrackId = ev.id;
+      untracked(() => {
+        void this.checkDeletionRequestForTrack(ev);
       });
     });
 
@@ -735,6 +748,80 @@ export class SongDetailComponent implements OnInit, OnDestroy {
       clearTimeout(timeout);
       this.song.set(event);
       this.loading.set(false);
+    });
+  }
+
+  private async checkDeletionRequestForTrack(event: Event): Promise<void> {
+    const dTag = event.tags.find(tag => tag[0] === 'd' && tag[1]?.trim())?.[1]?.trim();
+    if (!dTag) {
+      return;
+    }
+
+    const aTagValue = `${event.kind}:${event.pubkey}:${dTag}`;
+
+    try {
+      const authorRelays = await this.userRelaysService.getUserRelaysForPublishing(event.pubkey);
+      const relayUrls = this.utilities.getUniqueNormalizedRelayUrls(authorRelays);
+
+      if (relayUrls.length === 0) {
+        return;
+      }
+
+      const [deletionEventsByEventId, deletionEventsByAddress] = await Promise.all([
+        this.pool.query(relayUrls, {
+          kinds: [kinds.EventDeletion],
+          authors: [event.pubkey],
+          '#e': [event.id],
+        }, 5000),
+        this.pool.query(relayUrls, {
+          kinds: [kinds.EventDeletion],
+          authors: [event.pubkey],
+          '#a': [aTagValue],
+        }, 5000),
+      ]);
+
+      const deletionEvent = [...deletionEventsByEventId, ...deletionEventsByAddress]
+        .filter(candidate => this.isValidTrackDeletionRequest(candidate, event, aTagValue))
+        .sort((a, b) => b.created_at - a.created_at)[0];
+
+      if (!deletionEvent) {
+        return;
+      }
+
+      this.logger.info('[SongDetail] Track has been deleted by author', {
+        trackEventId: event.id,
+        deletionEventId: deletionEvent.id,
+        reason: deletionEvent.content || '(no reason given)',
+      });
+
+      await Promise.all([
+        this.eventService.deleteEventFromLocalStorage(event.id),
+        this.database.deleteEvent(deletionEvent.id),
+      ]);
+
+      this.song.set(null);
+      this.loading.set(false);
+      this.snackBar.open('This track has been deleted by its author', 'Close', { duration: 4000 });
+    } catch (error) {
+      this.logger.error('[SongDetail] Error checking deletion request for track:', error);
+    }
+  }
+
+  private isValidTrackDeletionRequest(deletionEvent: Event, targetEvent: Event, aTagValue: string): boolean {
+    if (deletionEvent.kind !== kinds.EventDeletion || deletionEvent.pubkey !== targetEvent.pubkey) {
+      return false;
+    }
+
+    return deletionEvent.tags.some(tag => {
+      if (tag[0] === 'e') {
+        return tag[1] === targetEvent.id;
+      }
+
+      if (tag[0] === 'a') {
+        return tag[1] === aTagValue;
+      }
+
+      return false;
     });
   }
 
