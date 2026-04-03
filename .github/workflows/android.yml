@@ -3,7 +3,7 @@ name: Tauri Android Build
 on:
   push:
     branches:
-      - '**'
+      - "**"
   pull_request:
     branches:
       - main
@@ -39,7 +39,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: "17"
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
@@ -67,7 +67,7 @@ jobs:
 
       - name: Build release APK with debug signing for verification
         env:
-          TAURI_ANDROID_RELEASE_USE_DEBUG_KEY: 'true'
+          TAURI_ANDROID_RELEASE_USE_DEBUG_KEY: "true"
         run: npx tauri android build --apk --release
 
       - name: Upload debug APK
@@ -113,7 +113,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: "17"
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
