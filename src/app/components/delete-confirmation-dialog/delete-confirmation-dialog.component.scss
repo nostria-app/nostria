@@ -10,6 +10,12 @@
   }
 }
 
+.delete-mode-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
 .delete-mode-group {
   display: flex;
   flex-direction: column;

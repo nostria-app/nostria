@@ -52,11 +52,11 @@ export class DeleteConfirmationDialogComponent {
   }
 
   get confirmText(): string {
-    return this.data?.confirmText || 'Delete';
+    return 'Delete';
   }
 
-  get entityLabel(): string {
-    return this.data?.entityLabel || 'event';
+  get title(): string {
+    return 'Delete this item?';
   }
 
   confirm(): void {
