@@ -73,21 +73,21 @@ jobs:
       - name: Upload debug APK
         uses: actions/upload-artifact@v6
         with:
-          name: nostria-android-debug-apk-${{ github.ref_name }}-${{ github.run_number }}
+          name: nostria-android-debug-apk-run-${{ github.run_id }}-${{ github.run_attempt }}
           path: src-tauri/gen/android/app/build/outputs/apk/**/debug/*.apk
           if-no-files-found: error
 
       - name: Upload release verification APK
         uses: actions/upload-artifact@v6
         with:
-          name: nostria-android-release-verification-apk-${{ github.ref_name }}-${{ github.run_number }}
+          name: nostria-android-release-verification-apk-run-${{ github.run_id }}-${{ github.run_attempt }}
           path: src-tauri/gen/android/app/build/outputs/apk/**/release/*.apk
           if-no-files-found: error
 
       - name: Upload ProGuard mapping
         uses: actions/upload-artifact@v6
         with:
-          name: nostria-android-release-mapping-${{ github.ref_name }}-${{ github.run_number }}
+          name: nostria-android-release-mapping-run-${{ github.run_id }}-${{ github.run_attempt }}
           path: src-tauri/gen/android/app/build/outputs/mapping/**
           if-no-files-found: error
 
@@ -181,20 +181,20 @@ jobs:
       - name: Upload signed release APK
         uses: actions/upload-artifact@v6
         with:
-          name: nostria-android-release-apk-${{ github.ref_name }}-${{ github.run_number }}
+          name: nostria-android-release-apk-run-${{ github.run_id }}-${{ github.run_attempt }}
           path: src-tauri/gen/android/app/build/outputs/apk/**/release/*.apk
           if-no-files-found: error
 
       - name: Upload signed release AAB
         uses: actions/upload-artifact@v6
         with:
-          name: nostria-android-release-aab-${{ github.ref_name }}-${{ github.run_number }}
+          name: nostria-android-release-aab-run-${{ github.run_id }}-${{ github.run_attempt }}
           path: src-tauri/gen/android/app/build/outputs/bundle/**/*.aab
           if-no-files-found: error
 
       - name: Upload signed release mapping
         uses: actions/upload-artifact@v6
         with:
-          name: nostria-android-release-mapping-signed-${{ github.ref_name }}-${{ github.run_number }}
+          name: nostria-android-release-mapping-signed-run-${{ github.run_id }}-${{ github.run_attempt }}
           path: src-tauri/gen/android/app/build/outputs/mapping/**
           if-no-files-found: error
