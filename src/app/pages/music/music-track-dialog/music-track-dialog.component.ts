@@ -15,7 +15,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, AbstractControl, ValidationErrors } from '@angular/forms';
 import { Event, nip19 } from 'nostr-tools';
-import { parseBlob, selectCover } from 'music-metadata';
+import { parseBlob, selectCover, type IAudioMetadata } from 'music-metadata';
 import { MediaService } from '../../../services/media.service';
 import { AccountStateService } from '../../../services/account-state.service';
 import { NostrService } from '../../../services/nostr.service';
@@ -93,8 +93,10 @@ export class MusicTrackDialogComponent {
   isEditMode = computed(() => !!this.data()?.track);
   dialogTitle = computed(() => this.isEditMode() ? 'Edit Track' : 'Upload Music Track');
 
-  // Show full form when in edit mode OR audio has been uploaded
-  showFullForm = computed(() => this.isEditMode() || !!this.audioUrl());
+  // Show full form when in edit mode or when an audio source is ready locally/remotely.
+  showFullForm = computed(() => this.isEditMode() || !!this.audioUrl() || !!this.audioFile());
+  hasAudioSource = computed(() => !!this.audioUrl() || !!this.audioFile());
+  audioPreviewUrl = computed(() => this.audioUrl() || this.localAudioPreviewUrl());
 
   // Media server availability
   hasMediaServers = computed(() => this.mediaService.mediaServers().length > 0);
@@ -107,6 +109,7 @@ export class MusicTrackDialogComponent {
   isDraggingImage = signal(false);
   audioFile = signal<File | null>(null);
   audioUrl = signal<string | null>(null);
+  pendingCoverFile = signal<File | null>(null);
   coverImage = signal<string | null>(null);
   showExternalUrlInput = signal(false);
   externalUrlValue = signal('');
@@ -138,6 +141,8 @@ export class MusicTrackDialogComponent {
   // Genre tags for the track (free-form, user can add any value)
   genres = signal<string[]>([]);
   genreInput = signal('');
+  parsedAudioMetadataDebug = signal('');
+  parsedTrackMetadataSummary = signal<string | null>(null);
 
   readonly suggestedGenres = [
     'Electronic', 'Rock', 'Pop', 'Hip Hop', 'R&B', 'Jazz', 'Classical',
@@ -182,6 +187,8 @@ export class MusicTrackDialogComponent {
   ];
 
   currentGradient = signal(this.getRandomGradient());
+  private localAudioPreviewUrl = signal<string | null>(null);
+  private localAudioPreviewObjectUrl: string | null = null;
   private extractedCoverPreviewObjectUrl: string | null = null;
 
   totalSplitPercentage = computed(() => {
@@ -464,6 +471,7 @@ export class MusicTrackDialogComponent {
   }
 
   randomizeGradient(): void {
+    this.pendingCoverFile.set(null);
     this.currentGradient.set(this.getRandomGradient());
     this.coverImage.set(null);
     this.trackForm.patchValue({ imageUrl: '' });
@@ -578,9 +586,11 @@ export class MusicTrackDialogComponent {
       return;
     }
 
+    this.clearLocalAudioPreview();
     const coverUrl = this.externalCoverUrlValue().trim();
     this.audioFile.set(null);
     this.audioUrl.set(audioUrl);
+    this.pendingCoverFile.set(null);
 
     if (coverUrl) {
       try {
@@ -594,6 +604,7 @@ export class MusicTrackDialogComponent {
       this.trackForm.patchValue({ imageUrl: coverUrl });
     } else {
       this.trackForm.patchValue({ imageUrl: '' });
+      this.clearExtractedCoverPreview();
       this.coverImage.set(null);
     }
 
@@ -650,42 +661,22 @@ export class MusicTrackDialogComponent {
   }
 
   private async handleAudioFile(file: File): Promise<void> {
-    const previousUrl = this.audioUrl();
-    const isReupload = this.isEditMode() && !!previousUrl;
+    const isReupload = this.isEditMode() && !!this.previousAudioUrl();
+
+    this.clearLocalAudioPreview();
     this.audioFile.set(file);
+    this.audioUrl.set(null);
+    this.localAudioPreviewObjectUrl = URL.createObjectURL(file);
+    this.localAudioPreviewUrl.set(this.localAudioPreviewObjectUrl);
 
-    // Extract metadata from audio file (title, album art, etc.)
-    // When re-uploading, force update all metadata fields
-    await this.extractAudioMetadata(file, isReupload);
-
-    // Upload the audio file
     this.isUploadingAudio.set(true);
     try {
-      const servers = this.mediaService.mediaServers();
-      if (servers.length === 0) {
-        this.snackBar.open('No media servers available', 'Close', { duration: 3000 });
-        return;
-      }
-      const result = await this.mediaService.uploadFile(file, false, servers);
-      if (result.status === 'success' || result.status === 'duplicate') {
-        const url = result.item?.url;
-        if (url) {
-          this.audioUrl.set(url);
-          this.snackBar.open('Audio uploaded successfully', 'Close', { duration: 2000 });
-
-          // If this was a re-upload (edit mode with different URL), ask to delete old file
-          if (previousUrl && previousUrl !== url && this.isEditMode()) {
-            // Wait for the snackbar to be seen, then prompt
-            setTimeout(() => this.promptDeleteFile('audio track', previousUrl), 500);
-          }
-        }
-      } else {
-        this.snackBar.open('Failed to upload audio', 'Close', { duration: 3000 });
-        this.audioFile.set(null);
-      }
+      await this.extractAudioMetadata(file, isReupload);
+      this.snackBar.open('Audio ready. It will upload when you publish.', 'Close', { duration: 2500 });
     } catch (error) {
-      this.logger.error('Error uploading audio:', error);
-      this.snackBar.open('Error uploading audio', 'Close', { duration: 3000 });
+      this.logger.error('Error preparing audio:', error);
+      this.snackBar.open('Error preparing audio', 'Close', { duration: 3000 });
+      this.clearLocalAudioPreview();
       this.audioFile.set(null);
     } finally {
       this.isUploadingAudio.set(false);
@@ -696,7 +687,6 @@ export class MusicTrackDialogComponent {
     await this.extractAudioMetadataFromBlob(file, {
       forceUpdate,
       fallbackTitle: file.name,
-      uploadExtractedCover: true,
     });
   }
 
@@ -711,7 +701,6 @@ export class MusicTrackDialogComponent {
       await this.extractAudioMetadataFromBlob(blob, {
         forceUpdate,
         fallbackTitle: this.getFilenameFromUrl(url),
-        uploadExtractedCover: false,
       });
     } catch (error) {
       this.logger.warn('Could not extract metadata from external audio URL:', error);
@@ -737,14 +726,226 @@ export class MusicTrackDialogComponent {
     }
   }
 
+  private clearLocalAudioPreview(): void {
+    if (this.localAudioPreviewObjectUrl) {
+      URL.revokeObjectURL(this.localAudioPreviewObjectUrl);
+      this.localAudioPreviewObjectUrl = null;
+    }
+    this.localAudioPreviewUrl.set(null);
+  }
+
+  private updateParsedMetadataDebug(metadata: IAudioMetadata): void {
+    const metadataJson = JSON.stringify(metadata, this.metadataJsonReplacer, 2);
+    this.parsedAudioMetadataDebug.set(metadataJson);
+    this.parsedTrackMetadataSummary.set(this.describeTrackMetadataSource(metadata));
+    this.logger.debug('Parsed audio metadata:', metadata);
+  }
+
+  private metadataJsonReplacer(_key: string, value: unknown): unknown {
+    if (value instanceof ArrayBuffer) {
+      return {
+        type: 'ArrayBuffer',
+        byteLength: value.byteLength,
+      };
+    }
+
+    if (value instanceof Uint8Array) {
+      return {
+        type: 'Uint8Array',
+        byteLength: value.byteLength,
+      };
+    }
+
+    return value;
+  }
+
+  private describeTrackMetadataSource(metadata: IAudioMetadata): string | null {
+    const details: string[] = [];
+
+    if (metadata.common.track?.no != null) {
+      details.push(`common.track.no=${metadata.common.track.no}`);
+    }
+
+    if (metadata.common.track?.of != null) {
+      details.push(`common.track.of=${metadata.common.track.of}`);
+    }
+
+    const nativeTrackTags = Object.entries(metadata.native).flatMap(([container, tags]) =>
+      (tags || [])
+        .filter(tag => this.isTrackMetadataTag(tag.id))
+        .map(tag => `${container}.${tag.id}=${this.stringifyMetadataValue(tag.value)}`)
+    );
+
+    if (nativeTrackTags.length > 0) {
+      details.push(`native tags: ${nativeTrackTags.join(', ')}`);
+    }
+
+    return details.length > 0 ? details.join(' | ') : null;
+  }
+
+  private isTrackMetadataTag(id: string): boolean {
+    const normalizedId = id.trim().toLowerCase();
+    return normalizedId === 'trck'
+      || normalizedId === 'track'
+      || normalizedId.includes('tracknumber')
+      || normalizedId.includes('track_number')
+      || normalizedId.includes('track no')
+      || normalizedId.includes('track');
+  }
+
+  private stringifyMetadataValue(value: unknown): string {
+    if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+      return String(value);
+    }
+
+    return JSON.stringify(value, this.metadataJsonReplacer, 0);
+  }
+
+  private normalizeMetadataReleaseDate(metadata: IAudioMetadata): string | null {
+    const rawDate = metadata.common.releasedate || metadata.common.date || metadata.common.originaldate;
+    if (rawDate) {
+      const trimmed = rawDate.trim();
+      const isoDate = trimmed.replace(/\//g, '-').split('T')[0];
+
+      if (/^\d{4}-\d{2}-\d{2}$/.test(isoDate)) {
+        return isoDate;
+      }
+
+      if (/^\d{4}-\d{2}$/.test(isoDate)) {
+        return `${isoDate}-01`;
+      }
+
+      if (/^\d{4}$/.test(isoDate)) {
+        return `${isoDate}-01-01`;
+      }
+    }
+
+    if (metadata.common.year) {
+      return `${metadata.common.year}-01-01`;
+    }
+
+    return null;
+  }
+
+  private extractLyrics(metadata: IAudioMetadata): string | null {
+    const lyricEntries = metadata.common.lyrics || [];
+    for (const entry of lyricEntries) {
+      const unsyncedText = entry.text?.trim();
+      if (unsyncedText) {
+        return unsyncedText;
+      }
+
+      const syncedText = entry.syncText
+        .map(line => line.text.trim())
+        .filter(line => line.length > 0)
+        .join('\n')
+        .trim();
+      if (syncedText) {
+        return syncedText;
+      }
+    }
+
+    return null;
+  }
+
+  private extractMetadataLanguage(metadata: IAudioMetadata): string | null {
+    const commonLanguage = metadata.common.language?.trim();
+    if (commonLanguage) {
+      return commonLanguage;
+    }
+
+    const lyricLanguage = metadata.common.lyrics
+      ?.map(entry => entry.language?.trim() || '')
+      .find(language => language.length > 0);
+    if (lyricLanguage) {
+      return lyricLanguage;
+    }
+
+    const commentLanguage = metadata.common.comment
+      ?.map(entry => entry.language?.trim() || '')
+      .find(language => language.length > 0);
+    if (commentLanguage) {
+      return commentLanguage;
+    }
+
+    return null;
+  }
+
+  private buildMetadataCredits(metadata: IAudioMetadata): string | null {
+    const lines: string[] = [];
+    const pushList = (label: string, values?: string[]) => {
+      const filteredValues = values?.map(value => value.trim()).filter(value => value.length > 0) || [];
+      if (filteredValues.length > 0) {
+        lines.push(`${label}: ${filteredValues.join(', ')}`);
+      }
+    };
+
+    pushList('Composer', metadata.common.composer);
+    pushList('Lyricist', metadata.common.lyricist);
+    pushList('Writer', metadata.common.writer);
+    pushList('Producer', metadata.common.producer);
+    pushList('Engineer', metadata.common.engineer);
+    pushList('Mixer', metadata.common.mixer);
+    pushList('Arranger', metadata.common.arranger);
+    pushList('Publisher', metadata.common.publisher);
+    pushList('Label', metadata.common.label);
+
+    const copyright = metadata.common.copyright?.trim();
+    if (copyright) {
+      lines.push(`Copyright: ${copyright}`);
+    }
+
+    const website = metadata.common.website?.trim();
+    if (website) {
+      lines.push(`Website: ${website}`);
+    }
+
+    const comments = metadata.common.comment
+      ?.map(entry => entry.text?.trim() || '')
+      .filter(text => text.length > 0) || [];
+    if (comments.length > 0) {
+      lines.push(`Comment: ${comments.join(' | ')}`);
+    }
+
+    return lines.length > 0 ? lines.join('\n') : null;
+  }
+
+  private applyMetadataLicense(metadata: IAudioMetadata, forceUpdate: boolean): void {
+    const currentLicense = String(this.trackForm.get('license')?.value || '').trim();
+    if (!forceUpdate && currentLicense) {
+      return;
+    }
+
+    const metadataLicense = metadata.common.license?.trim();
+    if (!metadataLicense) {
+      return;
+    }
+
+    const matchedOption = this.licenseOptions.find(option => option.value === metadataLicense && option.value !== 'custom');
+    if (matchedOption) {
+      this.trackForm.patchValue({
+        license: matchedOption.value,
+        customLicense: '',
+        customLicenseUrl: matchedOption.url || '',
+      });
+      return;
+    }
+
+    this.trackForm.patchValue({
+      license: 'custom',
+      customLicense: metadataLicense,
+    });
+  }
+
   private async extractAudioMetadataFromBlob(
     blob: Blob,
-    options: { forceUpdate: boolean; fallbackTitle: string; uploadExtractedCover: boolean }
+    options: { forceUpdate: boolean; fallbackTitle: string }
   ): Promise<void> {
-    const { forceUpdate, fallbackTitle, uploadExtractedCover } = options;
+    const { forceUpdate, fallbackTitle } = options;
 
     try {
       const metadata = await parseBlob(blob);
+      this.updateParsedMetadataDebug(metadata);
 
       // Auto-fill title from metadata or filename (update if forceUpdate or empty)
       const currentTitle = this.trackForm.get('title')?.value;
@@ -781,9 +982,9 @@ export class MusicTrackDialogComponent {
 
       // Auto-fill year/release date (update if forceUpdate or empty)
       const currentReleaseDate = this.trackForm.get('releaseDate')?.value;
-      if ((forceUpdate || !currentReleaseDate) && metadata.common.year) {
-        const year = metadata.common.year;
-        this.trackForm.patchValue({ releaseDate: `${year}-01-01` });
+      const metadataReleaseDate = this.normalizeMetadataReleaseDate(metadata);
+      if ((forceUpdate || !currentReleaseDate) && metadataReleaseDate) {
+        this.trackForm.patchValue({ releaseDate: metadataReleaseDate });
       }
 
       // Auto-fill track number (update if forceUpdate or empty)
@@ -798,21 +999,37 @@ export class MusicTrackDialogComponent {
         this.genres.set(metadata.common.genre);
       }
 
+      const currentLanguage = this.trackForm.get('language')?.value;
+      const metadataLanguage = this.extractMetadataLanguage(metadata);
+      if ((forceUpdate || !currentLanguage || currentLanguage === 'en') && metadataLanguage) {
+        this.trackForm.patchValue({ language: metadataLanguage });
+      }
+
+      const currentLyrics = this.trackForm.get('lyrics')?.value;
+      const metadataLyrics = this.extractLyrics(metadata);
+      if ((forceUpdate || !currentLyrics) && metadataLyrics) {
+        this.trackForm.patchValue({ lyrics: metadataLyrics });
+      }
+
+      const currentCredits = this.trackForm.get('credits')?.value;
+      const metadataCredits = this.buildMetadataCredits(metadata);
+      if ((forceUpdate || !currentCredits) && metadataCredits) {
+        this.trackForm.patchValue({ credits: metadataCredits });
+      }
+
+      this.applyMetadataLicense(metadata, forceUpdate);
+
       // Only auto-mark AI when the file contains an explicit AI metadata flag.
       // Source/comment heuristics were causing false positives for normal uploads.
       if (shouldAutoMarkTrackAsAiGenerated(metadata.native)) {
         this.trackForm.patchValue({ aiGenerated: true });
       }
 
-      // Extract and upload album art (always extract if forceUpdate or no cover image)
+      // Extract album art into local pending state so it uploads together with publish.
       if (forceUpdate || !this.coverImage()) {
         const cover = selectCover(metadata.common.picture);
         if (cover) {
-          if (uploadExtractedCover) {
-            await this.uploadExtractedCoverArt(cover);
-          } else {
-            this.setExtractedCoverPreview(cover);
-          }
+          await this.stageExtractedCoverArt(cover);
         }
       }
     } catch (error) {
@@ -836,17 +1053,19 @@ export class MusicTrackDialogComponent {
     this.coverImage.set(objectUrl);
   }
 
-  private async uploadExtractedCoverArt(cover: { format: string; data: Uint8Array }): Promise<void> {
+  private async stageExtractedCoverArt(cover: { format: string; data: Uint8Array }): Promise<void> {
     try {
       const buffer = new Uint8Array(cover.data).buffer;
       const blob = new Blob([buffer], { type: cover.format });
       const extension = cover.format.split('/')[1] || 'jpg';
       const file = new File([blob], `cover.${extension}`, { type: cover.format });
 
-      await this.handleImageFile(file);
-      this.snackBar.open('Album art extracted and uploaded', 'Close', { duration: 2000 });
+      this.pendingCoverFile.set(file);
+      this.trackForm.patchValue({ imageUrl: '' });
+      this.setExtractedCoverPreview(cover);
+      this.snackBar.open('Album art extracted. It will upload when you publish.', 'Close', { duration: 2500 });
     } catch (error) {
-      this.logger.error('Error uploading extracted cover art:', error);
+      this.logger.error('Error staging extracted cover art:', error);
     }
   }
 
@@ -895,43 +1114,122 @@ export class MusicTrackDialogComponent {
   }
 
   private async handleImageFile(file: File): Promise<void> {
-    const previousImage = this.coverImage();
-    this.clearExtractedCoverPreview();
     this.isUploadingImage.set(true);
     try {
-      const servers = this.mediaService.mediaServers();
-      if (servers.length === 0) {
-        this.snackBar.open('No media servers available', 'Close', { duration: 3000 });
-        return;
-      }
-      const result = await this.mediaService.uploadFile(file, false, servers);
-      if (result.status === 'success' || result.status === 'duplicate') {
-        const url = result.item?.url;
-        if (url) {
-          this.coverImage.set(url);
-          this.trackForm.patchValue({ imageUrl: url });
-
-          // If this was a re-upload (with different URL), ask to delete old file
-          if (previousImage && previousImage !== url && this.isEditMode()) {
-            setTimeout(() => this.promptDeleteFile('album art', previousImage), 500);
-          }
-        }
-      } else {
-        this.snackBar.open('Failed to upload image', 'Close', { duration: 3000 });
-      }
+      this.pendingCoverFile.set(file);
+      this.trackForm.patchValue({ imageUrl: '' });
+      this.clearExtractedCoverPreview();
+      this.extractedCoverPreviewObjectUrl = URL.createObjectURL(file);
+      this.coverImage.set(this.extractedCoverPreviewObjectUrl);
+      this.snackBar.open('Cover image ready. It will upload when you publish.', 'Close', { duration: 2500 });
     } catch (error) {
-      this.logger.error('Error uploading image:', error);
-      this.snackBar.open('Error uploading image', 'Close', { duration: 3000 });
+      this.logger.error('Error preparing image:', error);
+      this.snackBar.open('Error preparing image', 'Close', { duration: 3000 });
     } finally {
       this.isUploadingImage.set(false);
     }
   }
 
   onImageUrlChange(): void {
-    const url = this.trackForm.get('imageUrl')?.value;
+    const url = String(this.trackForm.get('imageUrl')?.value || '').trim();
     if (url) {
+      this.pendingCoverFile.set(null);
       this.clearExtractedCoverPreview();
       this.coverImage.set(url);
+    }
+  }
+
+  private async uploadPendingAudioIfNeeded(): Promise<{ url: string | null; replacedUrl: string | null }> {
+    const file = this.audioFile();
+    if (!file) {
+      return { url: this.audioUrl(), replacedUrl: null };
+    }
+
+    const servers = this.mediaService.mediaServers();
+    if (servers.length === 0) {
+      this.snackBar.open('No media servers available', 'Close', { duration: 3000 });
+      return { url: null, replacedUrl: null };
+    }
+
+    this.isUploadingAudio.set(true);
+    try {
+      const result = await this.mediaService.uploadFile(file, false, servers);
+      if (result.status !== 'success' && result.status !== 'duplicate') {
+        this.snackBar.open('Failed to upload audio', 'Close', { duration: 3000 });
+        return { url: null, replacedUrl: null };
+      }
+
+      const url = result.item?.url || null;
+      if (!url) {
+        this.snackBar.open('Failed to upload audio', 'Close', { duration: 3000 });
+        return { url: null, replacedUrl: null };
+      }
+
+      const previousUrl = this.previousAudioUrl();
+      this.audioUrl.set(url);
+      this.audioFile.set(null);
+      this.clearLocalAudioPreview();
+
+      return {
+        url,
+        replacedUrl: this.isEditMode() && previousUrl && previousUrl !== url ? previousUrl : null,
+      };
+    } catch (error) {
+      this.logger.error('Error uploading audio:', error);
+      this.snackBar.open('Error uploading audio', 'Close', { duration: 3000 });
+      return { url: null, replacedUrl: null };
+    } finally {
+      this.isUploadingAudio.set(false);
+    }
+  }
+
+  private async uploadPendingCoverIfNeeded(): Promise<{ url: string | null; replacedUrl: string | null; failed: boolean }> {
+    const file = this.pendingCoverFile();
+    if (!file) {
+      return {
+        url: String(this.trackForm.get('imageUrl')?.value || '').trim() || null,
+        replacedUrl: null,
+        failed: false,
+      };
+    }
+
+    const servers = this.mediaService.mediaServers();
+    if (servers.length === 0) {
+      this.snackBar.open('No media servers available', 'Close', { duration: 3000 });
+      return { url: null, replacedUrl: null, failed: true };
+    }
+
+    this.isUploadingImage.set(true);
+    try {
+      const result = await this.mediaService.uploadFile(file, false, servers);
+      if (result.status !== 'success' && result.status !== 'duplicate') {
+        this.snackBar.open('Failed to upload image', 'Close', { duration: 3000 });
+        return { url: null, replacedUrl: null, failed: true };
+      }
+
+      const url = result.item?.url || null;
+      if (!url) {
+        this.snackBar.open('Failed to upload image', 'Close', { duration: 3000 });
+        return { url: null, replacedUrl: null, failed: true };
+      }
+
+      const previousImage = this.previousCoverImage();
+      this.pendingCoverFile.set(null);
+      this.clearExtractedCoverPreview();
+      this.coverImage.set(url);
+      this.trackForm.patchValue({ imageUrl: url });
+
+      return {
+        url,
+        replacedUrl: this.isEditMode() && previousImage && previousImage !== url ? previousImage : null,
+        failed: false,
+      };
+    } catch (error) {
+      this.logger.error('Error uploading image:', error);
+      this.snackBar.open('Error uploading image', 'Close', { duration: 3000 });
+      return { url: null, replacedUrl: null, failed: true };
+    } finally {
+      this.isUploadingImage.set(false);
     }
   }
 
@@ -1198,7 +1496,7 @@ export class MusicTrackDialogComponent {
   }
 
   async submitTrack(): Promise<void> {
-    if (!this.trackForm.valid || !this.audioUrl() || (!this.isEditMode() && !this.agreedToTerms())) {
+    if (!this.trackForm.valid || !this.hasAudioSource() || (!this.isEditMode() && !this.agreedToTerms())) {
       return;
     }
 
@@ -1214,29 +1512,40 @@ export class MusicTrackDialogComponent {
     this.isPublishing.set(true);
 
     try {
-      const formValue = this.trackForm.value;
       const pubkey = this.accountState.pubkey();
       if (!pubkey) {
         this.snackBar.open('Not authenticated', 'Close', { duration: 3000 });
         return;
       }
 
+      const uploadedAudio = await this.uploadPendingAudioIfNeeded();
+      if (!uploadedAudio.url) {
+        return;
+      }
+
+      const uploadedCover = await this.uploadPendingCoverIfNeeded();
+      if (uploadedCover.failed) {
+        return;
+      }
+
+      const formValue = this.trackForm.value;
+
       // In edit mode always preserve the original d tag, including empty values for legacy events.
       // This keeps the same addressable coordinate and prevents duplicates after edits.
       const dTag = this.isEditMode()
         ? this.originalDTag()
-        : `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+        : `track-${Date.now()}`;
 
       // Build tags
       const tags: string[][] = [
         ['d', dTag],
         ['title', formValue.title],
-        ['url', this.audioUrl()!],
+        ['url', uploadedAudio.url],
         ['t', 'music'],
       ];
 
       // Add image or gradient
-      const imageUrl = String(formValue.imageUrl || '').trim();
+      const imageUrl = uploadedCover.url || String(formValue.imageUrl || '').trim();
       if (imageUrl) {
         tags.push(['image', imageUrl]);
       } else {
@@ -1387,6 +1696,14 @@ export class MusicTrackDialogComponent {
       }
 
       if (published) {
+        if (uploadedAudio.replacedUrl) {
+          setTimeout(() => this.promptDeleteFile('audio track', uploadedAudio.replacedUrl!), 500);
+        }
+
+        if (uploadedCover.replacedUrl) {
+          setTimeout(() => this.promptDeleteFile('album art', uploadedCover.replacedUrl!), 500);
+        }
+
         const message = this.isEditMode() ? 'Track updated successfully!' : 'Track published successfully!';
         this.snackBar.open(message, 'Close', { duration: 3000 });
         this.closed.emit({
@@ -1407,6 +1724,7 @@ export class MusicTrackDialogComponent {
   }
 
   cancel(): void {
+    this.clearLocalAudioPreview();
     this.clearExtractedCoverPreview();
     this.closed.emit(null);
   }

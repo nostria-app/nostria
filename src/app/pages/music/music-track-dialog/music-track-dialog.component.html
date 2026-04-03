@@ -36,7 +36,7 @@
           @if (isUploadingAudio()) {
           <div class="uploading-indicator">
             <mat-spinner diameter="24"></mat-spinner>
-            <span>Uploading audio...</span>
+            <span>Preparing audio...</span>
           </div>
           } @else if (audioFile()) {
           <div class="audio-selected">
@@ -47,8 +47,9 @@
                 <mat-icon>edit</mat-icon>
               </button>
             </div>
-            @if (audioUrl()) {
-            <audio class="audio-preview" controls preload="metadata" [src]="audioUrl()!"
+            <span class="pending-upload-hint">Local audio stays on this device until you publish.</span>
+            @if (audioPreviewUrl()) {
+            <audio class="audio-preview" controls preload="metadata" [src]="audioPreviewUrl()!"
               (click)="$event.stopPropagation()"></audio>
             }
           </div>
@@ -130,6 +131,20 @@
         <mat-hint>Format: mm:ss, h:mm:ss, or seconds</mat-hint>
       </mat-form-field>
 
+      @if (parsedAudioMetadataDebug()) {
+      <mat-expansion-panel class="metadata-debug-panel">
+        <mat-expansion-panel-header>
+          <mat-panel-title>Parsed Audio Metadata</mat-panel-title>
+        </mat-expansion-panel-header>
+
+        @if (parsedTrackMetadataSummary()) {
+        <p class="metadata-debug-summary">{{ parsedTrackMetadataSummary() }}</p>
+        }
+
+        <pre class="metadata-debug-output">{{ parsedAudioMetadataDebug() }}</pre>
+      </mat-expansion-panel>
+      }
+
       <!-- Album Art -->
       <div class="album-art-section">
         <label class="field-label">Album Art</label>
@@ -156,6 +171,9 @@
                 <mat-icon>auto_awesome</mat-icon>
                 Random
               </button>
+              @if (pendingCoverFile()) {
+              <span class="pending-upload-hint">Local image stays on this device until you publish.</span>
+              }
             </div>
           </div>
         </div>
@@ -174,7 +192,7 @@
           @for (genre of genres(); track genre) {
           <mat-chip-row (removed)="removeGenre(genre)">
             {{ genre }}
-            <button matChipRemove>
+            <button type="button" matChipRemove>
               <mat-icon>cancel</mat-icon>
             </button>
           </mat-chip-row>
@@ -383,7 +401,7 @@
   <div dialog-actions>
     <button mat-stroked-button (click)="cancel()" [disabled]="isPublishing()">Cancel</button>
     <button mat-flat-button (click)="submitTrack()"
-      [disabled]="!trackForm.valid || !audioUrl() || (!isEditMode() && !agreedToTerms()) || isPublishing() || totalSplitPercentage() !== 100">
+      [disabled]="!trackForm.valid || !hasAudioSource() || (!isEditMode() && !agreedToTerms()) || isPublishing() || totalSplitPercentage() !== 100">
       @if (isPublishing()) {
       <mat-spinner diameter="18"></mat-spinner>
       {{ isEditMode() ? 'Saving...' : 'Publishing...' }}
