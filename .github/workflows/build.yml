@@ -592,10 +592,16 @@ jobs:
 
           printf '%s' "$IOS_CERTIFICATE" | tr -d '\r\n' | base64 --decode > "$CERT_PATH"
 
+          if ! openssl pkcs12 -in "$CERT_PATH" -passin pass:"$IOS_CERTIFICATE_PASSWORD" -nodes -nocerts 2>/dev/null | grep -q 'BEGIN .*PRIVATE KEY'; then
+            echo 'The IOS_CERTIFICATE secret does not contain an exportable private key.' >&2
+            echo 'Export the .p12 from Keychain Access using the Apple Distribution certificate entry that has the private key nested under it.' >&2
+            exit 1
+          fi
+
           security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
           security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
           security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
-          security import "$CERT_PATH" -P "$IOS_CERTIFICATE_PASSWORD" -T /usr/bin/codesign -T /usr/bin/security -T /usr/bin/pkgbuild -T /usr/bin/productbuild -k "$KEYCHAIN_PATH"
+          security import "$CERT_PATH" -f pkcs12 -A -P "$IOS_CERTIFICATE_PASSWORD" -T /usr/bin/codesign -T /usr/bin/security -T /usr/bin/pkgbuild -T /usr/bin/productbuild -k "$KEYCHAIN_PATH"
           security list-keychains -d user -s "$KEYCHAIN_PATH" login.keychain-db
           security default-keychain -d user -s "$KEYCHAIN_PATH"
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
@@ -604,6 +610,7 @@ jobs:
 
           if [ -z "$IDENTITY" ]; then
             echo 'Unable to resolve an Apple Distribution identity from the imported certificate.' >&2
+            echo 'This usually means the .p12 contains a certificate without its private key, or the private key was not exportable when the .p12 was created.' >&2
             security find-identity -v -p codesigning "$KEYCHAIN_PATH" || true
             exit 1
           fi
