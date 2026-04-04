@@ -211,7 +211,9 @@ jobs:
         uses: actions/upload-artifact@v6
         with:
           name: nostria-android-release-aab-run-${{ github.run_id }}-${{ github.run_attempt }}
-          path: src-tauri/gen/android/app/build/outputs/bundle/arm64Release/*.aab
+          path: |
+            src-tauri/gen/android/app/build/outputs/bundle/arm64Release/*.aab
+            src-tauri/gen/android/app/build/outputs/bundle/universalRelease/*.aab
           if-no-files-found: error
 
       - name: Upload signed release mapping
