@@ -368,6 +368,9 @@ export class EncryptionService {
   async encryptNip04(plaintext: string, recipientPubkey: string): Promise<string> {
     try {
       const account = this.accountState.account();
+      if (!this.accountState.canSign(account)) {
+        throw new Error('Current account cannot encrypt messages');
+      }
 
       // Check if we can use the browser extension
       if (account?.source === 'extension') {
@@ -426,6 +429,9 @@ export class EncryptionService {
   async decryptNip04(ciphertext: string, pubkey: string, priority = 0): Promise<string> {
     try {
       const account = this.accountState.account();
+      if (!this.accountState.canDecrypt(account)) {
+        throw new Error('Current account cannot decrypt messages');
+      }
 
       // Check if we can use the browser extension
       if (account?.source === 'extension') {
@@ -488,6 +494,9 @@ export class EncryptionService {
   async encryptNip44(plaintext: string, recipientPubkey: string): Promise<string> {
     try {
       const account = this.accountState.account();
+      if (!this.accountState.canSign(account)) {
+        throw new Error('Current account cannot encrypt messages');
+      }
 
       // Check if we can use the browser extension
       if (account?.source === 'extension') {
@@ -552,6 +561,9 @@ export class EncryptionService {
 
     try {
       const account = this.accountState.account();
+      if (!this.accountState.canDecrypt(account)) {
+        throw new Error('Current account cannot decrypt messages');
+      }
 
       // Check if we can use the browser extension
       if (account?.source === 'extension') {
