@@ -81,7 +81,7 @@ jobs:
         uses: actions/upload-artifact@v6
         with:
           name: nostria-android-release-verification-apk-run-${{ github.run_id }}-${{ github.run_attempt }}
-          path: src-tauri/gen/android/app/build/outputs/apk/**/release/*.apk
+          path: src-tauri/gen/android/app/build/outputs/apk/arm64/release/*.apk
           if-no-files-found: error
 
       - name: Upload ProGuard mapping
@@ -182,14 +182,14 @@ jobs:
         uses: actions/upload-artifact@v6
         with:
           name: nostria-android-release-apk-run-${{ github.run_id }}-${{ github.run_attempt }}
-          path: src-tauri/gen/android/app/build/outputs/apk/**/release/*.apk
+          path: src-tauri/gen/android/app/build/outputs/apk/arm64/release/*.apk
           if-no-files-found: error
 
       - name: Upload signed release AAB
         uses: actions/upload-artifact@v6
         with:
           name: nostria-android-release-aab-run-${{ github.run_id }}-${{ github.run_attempt }}
-          path: src-tauri/gen/android/app/build/outputs/bundle/**/*.aab
+          path: src-tauri/gen/android/app/build/outputs/bundle/arm64Release/*.aab
           if-no-files-found: error
 
       - name: Upload signed release mapping
