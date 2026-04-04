@@ -89,9 +89,17 @@ html {
   --text-xs-capped-ui: min(var(--text-xs), 13px);
   --text-sm-capped-ui: min(var(--text-sm), 14px);
 
+  // Safe area insets with Android-specific fallbacks applied below when needed
+  --safe-area-top: env(safe-area-inset-top, 0px);
+
   // Safe area inset with fallback for Android devices
   // Android often returns 0 for env(safe-area-inset-bottom) even when there's a nav bar
   --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+
+  // Global scrollbar sizing for browser and Tauri webviews
+  --scrollbar-size: 8px;
+  --scrollbar-radius: 999px;
+  --scrollbar-reaction-picker-size: 10px;
 
   // Scrollbar colors for light theme
   --scrollbar-track: transparent;
@@ -226,6 +234,13 @@ mat-nav-list,
   }
 }
 
+// Android immersive shells do not always expose a non-zero top inset,
+// so provide a small fallback for camera cutouts and status bars.
+html[data-app-context="native-android"],
+html[data-platform="android"][data-display-mode="standalone"] {
+  --safe-area-top: max(24px, env(safe-area-inset-top, 0px));
+}
+
 // Arabic locale font styling
 html.locale-ar,
 html.locale-ar body {
@@ -303,8 +318,8 @@ html.locale-fa {
 
 // Scrollbar styling
 ::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
+  width: var(--scrollbar-size);
+  height: var(--scrollbar-size);
 }
 
 // Emoji picker menu panel - needs wider max-width
@@ -355,7 +370,7 @@ html.locale-fa {
 }
 
 .mat-mdc-menu-panel.reaction-picker-menu .emoji-list-scroll::-webkit-scrollbar {
-  width: 10px;
+  width: var(--scrollbar-reaction-picker-size);
 }
 
 .mat-mdc-menu-panel.reaction-picker-menu .emoji-list-scroll::-webkit-scrollbar-track {
@@ -364,7 +379,7 @@ html.locale-fa {
 
 .mat-mdc-menu-panel.reaction-picker-menu .emoji-list-scroll::-webkit-scrollbar-thumb {
   background: var(--scrollbar-thumb, var(--mat-sys-outline));
-  border-radius: 5px;
+  border-radius: var(--scrollbar-radius);
 }
 
 .mat-mdc-menu-panel.reaction-picker-menu .emoji-list-scroll::-webkit-scrollbar-thumb:hover {
@@ -377,7 +392,9 @@ html.locale-fa {
 
 ::-webkit-scrollbar-thumb {
   background: var(--scrollbar-thumb);
-  border-radius: 5px;
+  border-radius: var(--scrollbar-radius);
+  border: 2px solid transparent;
+  background-clip: padding-box;
 }
 
 ::-webkit-scrollbar-thumb:hover {
@@ -1980,6 +1997,7 @@ html[data-font='sora'] {
 }
 
 @media (max-width: 499px) {
+
   .reply-filter-menu-panel.mat-mdc-menu-panel,
   .reply-filter-menu.mat-mdc-menu-panel {
     max-width: 90vw;

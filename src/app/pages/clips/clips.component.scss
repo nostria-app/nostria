@@ -255,7 +255,7 @@
 .mobile-jump-latest-btn {
   display: none;
   position: absolute;
-  top: calc(env(safe-area-inset-top, 0px) + 0.25rem);
+  top: calc(var(--safe-area-top, 0px) + 0.25rem);
   right: 0.5rem;
   z-index: 50;
   background: color-mix(in srgb, var(--mat-sys-surface-container-high) 80%, transparent);
@@ -360,7 +360,7 @@
   .clips-tabs {
     display: flex;
     position: fixed;
-    top: calc(env(safe-area-inset-top, 0px) + 0.25rem);
+    top: calc(var(--safe-area-top, 0px) + 0.25rem);
     left: 50%;
     transform: translateX(-50%);
     right: auto;
@@ -393,7 +393,7 @@
   .explore-list {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 0.55rem;
-    padding: calc(env(safe-area-inset-top, 0px) + 3.8rem) 0.55rem 1rem;
+    padding: calc(var(--safe-area-top, 0px) + 3.8rem) 0.55rem 1rem;
   }
 
   .explore-card-title {
@@ -433,7 +433,7 @@
   .fullscreen-loading,
   .fullscreen-empty {
     box-sizing: border-box;
-    padding-top: calc(env(safe-area-inset-top, 0px) + 4.25rem);
+    padding-top: calc(var(--safe-area-top, 0px) + 4.25rem);
   }
 }
 

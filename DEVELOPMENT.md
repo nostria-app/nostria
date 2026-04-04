@@ -148,6 +148,23 @@ The `.gitattributes` file ensures:
 2. **Lint on Save**: Auto-fixes ESLint issues
 3. **Pre-commit**: Consider using husky for pre-commit hooks
 
+### Android Tauri Development
+
+- Use `npm run tauri:android:dev` for normal Android development on Windows.
+- The launcher automatically uses `10.0.2.2` for a single connected Android emulator so the app can reach the Angular dev server.
+- Use `npm run tauri:android:dev:emulator` to force emulator mode.
+- Use `npm run tauri:android:dev:device` to keep Tauri's default host behavior for a physical device.
+- Use `npm run tauri:android:run:packaged` to build and launch a packaged app without the live dev server. This is the simplest local install path.
+- Use `npm run tauri:android:build:packaged` to build that packaged debug APK without launching it.
+- Use `npm run tauri:android:run:release:local` to build and launch a release-mode APK signed with the Android debug key for local emulator or device testing.
+- Use `npm run tauri:android:build:release:local` to build that local-only release APK without launching it.
+- Use `npm run tauri:android:run:release` or `npm run tauri:android:build:release` only after setting all of these environment variables for a real release keystore:
+   - `TAURI_ANDROID_KEYSTORE_PATH`
+   - `TAURI_ANDROID_KEYSTORE_PASSWORD`
+   - `TAURI_ANDROID_KEY_ALIAS`
+   - `TAURI_ANDROID_KEY_PASSWORD`
+- Android rejects unsigned release APKs with `INSTALL_PARSE_FAILED_NO_CERTIFICATES`, so `tauri:android:run:release` will fail until signing is configured.
+
 ### Before Committing
 
 ```bash

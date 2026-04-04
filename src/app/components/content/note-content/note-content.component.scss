@@ -480,7 +480,7 @@
 // Don't use aspect-ratio on container as it conflicts with max-height constraints
 // Let the video element itself handle aspect ratio naturally
 .video-container {
-  --note-video-max-height: min(70vh, calc(100dvh - var(--toolbar-height, 64px) - 56px - env(safe-area-inset-top, 0px) - 16px));
+  --note-video-max-height: min(70vh, calc(100dvh - var(--toolbar-height, 64px) - 56px - var(--safe-area-top, 0px) - 16px));
   position: relative;
   overflow: hidden;
   display: block;
