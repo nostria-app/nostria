@@ -62,23 +62,13 @@ jobs:
       - name: Print Tauri environment info
         run: npm run tauri:info
 
-      - name: Prepare Android project for arm64 debug build
-        run: npx tauri android android-studio-script --target aarch64
-
       - name: Build arm64 debug APK
-        working-directory: src-tauri/gen/android
-        run: ./gradlew :app:assembleArm64Debug
-
-      - name: Prepare Android project for arm64 release build
-        env:
-          TAURI_ANDROID_RELEASE_USE_DEBUG_KEY: "true"
-        run: npx tauri android android-studio-script --release --target aarch64
+        run: npx tauri android build --debug --apk --target aarch64
 
       - name: Build arm64 release APK with debug signing for verification
         env:
           TAURI_ANDROID_RELEASE_USE_DEBUG_KEY: "true"
-        working-directory: src-tauri/gen/android
-        run: ./gradlew :app:assembleArm64Release
+        run: npx tauri android build --apk --target aarch64
 
       - name: List generated Android artifacts
         shell: bash
@@ -180,31 +170,13 @@ jobs:
       - name: Print Tauri environment info
         run: npm run tauri:info
 
-      - name: Prepare Android project for signed arm64 release build
+      - name: Build signed arm64 release APK and AAB
         env:
           TAURI_ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/nostria-android.keystore
           TAURI_ANDROID_KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           TAURI_ANDROID_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           TAURI_ANDROID_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-        run: npx tauri android android-studio-script --release --target aarch64
-
-      - name: Build signed arm64 release APK
-        env:
-          TAURI_ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/nostria-android.keystore
-          TAURI_ANDROID_KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          TAURI_ANDROID_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          TAURI_ANDROID_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-        working-directory: src-tauri/gen/android
-        run: ./gradlew :app:assembleArm64Release
-
-      - name: Build signed arm64 release AAB
-        env:
-          TAURI_ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/nostria-android.keystore
-          TAURI_ANDROID_KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          TAURI_ANDROID_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          TAURI_ANDROID_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-        working-directory: src-tauri/gen/android
-        run: ./gradlew :app:bundleArm64Release
+        run: npx tauri android build --apk --aab --target aarch64
 
       - name: List generated Android artifacts
         shell: bash
