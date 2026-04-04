@@ -397,7 +397,7 @@ jobs:
           xcodebuild \
             -project src-tauri/gen/apple/nostria.xcodeproj \
             -scheme nostria_iOS \
-            -configuration Release \
+            -configuration release \
             -sdk iphoneos \
             -destination generic/platform=iOS \
             -derivedDataPath "$RUNNER_TEMP/nostria-ios-derived-data" \
@@ -411,8 +411,8 @@ jobs:
           set -euo pipefail
           mkdir -p artifacts/ios
 
-          APP_PATH="$RUNNER_TEMP/nostria-ios-derived-data/Build/Products/Release-iphoneos/Nostria.app"
-          DSYM_PATH="$RUNNER_TEMP/nostria-ios-derived-data/Build/Products/Release-iphoneos/Nostria.app.dSYM"
+          APP_PATH="$RUNNER_TEMP/nostria-ios-derived-data/Build/Products/release-iphoneos/Nostria.app"
+          DSYM_PATH="$RUNNER_TEMP/nostria-ios-derived-data/Build/Products/release-iphoneos/Nostria.app.dSYM"
 
           if [ ! -d "$APP_PATH" ]; then
             echo "Expected iOS app bundle not found at $APP_PATH" >&2
@@ -606,7 +606,7 @@ jobs:
           xcodebuild \
             -project src-tauri/gen/apple/nostria.xcodeproj \
             -scheme nostria_iOS \
-            -configuration Release \
+            -configuration release \
             -sdk iphoneos \
             -destination generic/platform=iOS \
             -archivePath "$RUNNER_TEMP/Nostria.xcarchive" \
