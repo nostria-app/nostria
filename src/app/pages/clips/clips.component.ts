@@ -1333,6 +1333,7 @@ export class ClipsComponent implements OnInit, OnDestroy {
         event.pubkey,
         false,
         false,
+        [],
         EventService.INTERACTION_QUERY_LIMIT,
       ),
       this.zapService.getZapsForEvent(event.id),

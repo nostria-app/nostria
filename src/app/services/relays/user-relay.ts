@@ -322,7 +322,9 @@ export class UserRelayService {
     pubkey: string | string[],
     kind: number,
     eventTag: string | string[],
-    includeAccountRelays = false
+    includeAccountRelays = false,
+    useFullRelaySet = false,
+    sourceRelayUrls: string[] = [],
   ): Promise<Event[]> {
     // For multiple pubkeys, we need to get relays for each one
     const pubkeys = Array.isArray(pubkey) ? pubkey : [pubkey];
@@ -341,14 +343,28 @@ export class UserRelayService {
       this.logger.debug(`[UserRelayService] Including ${accountRelayUrls.length} account relays for broader discovery`);
     }
 
-    const relayUrls = this.getEffectiveRelayUrls(Array.from(allRelayUrls));
+    sourceRelayUrls.forEach(url => allRelayUrls.add(url));
+
+    const events = Array.isArray(eventTag) ? eventTag : [eventTag];
+
+    const relayUrls = useFullRelaySet
+      ? Array.from(allRelayUrls)
+      : this.getEffectiveRelayUrls(Array.from(allRelayUrls));
+
+    if (kind === 7) {
+      this.logger.warn('[InteractionDebug] Querying event-tag reactions', {
+        eventTag: events[0]?.slice?.(0, 16) ?? events[0],
+        relayCount: relayUrls.length,
+        includeAccountRelays,
+        useFullRelaySet,
+        sourceRelayCount: sourceRelayUrls.length,
+      });
+    }
 
     if (relayUrls.length === 0) {
       this.logger.warn(`[UserRelayService] No relays available for pubkeys: ${pubkeys.map(pk => pk.slice(0, 16)).join(', ')}...`);
       return [];
     }
-
-    const events = Array.isArray(eventTag) ? eventTag : [eventTag];
 
     this.logger.debug(`[UserRelayService] Searching for kind ${kind} events across ${relayUrls.length} relays`);
 
@@ -368,7 +384,9 @@ export class UserRelayService {
     kinds: number[],
     eventTag: string | string[],
     includeAccountRelays = false,
-    limit?: number
+    limit?: number,
+    useFullRelaySet = false,
+    sourceRelayUrls: string[] = [],
   ): Promise<Event[]> {
     // For multiple pubkeys, we need to get relays for each one
     const pubkeys = Array.isArray(pubkey) ? pubkey : [pubkey];
@@ -395,14 +413,30 @@ export class UserRelayService {
       this.logger.debug(`[UserRelayService] Including ${accountRelayUrls.length} account relays for broader discovery`);
     }
 
-    const relayUrls = this.getEffectiveRelayUrls(Array.from(allRelayUrls));
+    sourceRelayUrls.forEach(url => allRelayUrls.add(url));
+
+    const events = Array.isArray(eventTag) ? eventTag : [eventTag];
+
+    const relayUrls = useFullRelaySet
+      ? Array.from(allRelayUrls)
+      : this.getEffectiveRelayUrls(Array.from(allRelayUrls));
+
+    if (kinds.includes(7)) {
+      this.logger.warn('[InteractionDebug] Querying multi-kind event-tag interactions', {
+        eventTag: events[0]?.slice?.(0, 16) ?? events[0],
+        relayCount: relayUrls.length,
+        kinds,
+        includeAccountRelays,
+        useFullRelaySet,
+        sourceRelayCount: sourceRelayUrls.length,
+        limit,
+      });
+    }
 
     if (relayUrls.length === 0) {
       this.logger.warn(`[UserRelayService] No relays available for pubkeys: ${validPubkeys.map(pk => pk.slice(0, 16)).join(', ')}...`);
       return [];
     }
-
-    const events = Array.isArray(eventTag) ? eventTag : [eventTag];
 
     this.logger.debug(`[UserRelayService] Searching for kinds ${kinds.join(', ')} events across ${relayUrls.length} relays`);
 

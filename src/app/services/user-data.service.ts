@@ -24,6 +24,16 @@ export interface DataOptions {
    * be on the target user's relays but are on the current account's relays.
    */
   includeAccountRelays?: boolean;
+  /**
+   * Whether to bypass relay optimization and query the full discovered relay set.
+   * Useful for interaction discovery where a small optimized subset can miss data.
+   */
+  useFullRelaySet?: boolean;
+  /**
+   * Relay URLs observed for the source event itself.
+   * Useful for interaction discovery when the event was seen on relays outside the author's current list.
+   */
+  sourceRelayUrls?: string[];
 }
 
 @Injectable({
@@ -69,11 +79,13 @@ export class UserDataService {
 
   private buildEventTagCacheKey(
     keyPrefix: string,
-    options?: Pick<DataOptions, 'includeAccountRelays'> & { limit?: number },
+    options?: Pick<DataOptions, 'includeAccountRelays' | 'useFullRelaySet' | 'sourceRelayUrls'> & { limit?: number },
   ): string {
     const relayScope = options?.includeAccountRelays ? 'with-account-relays' : 'author-relays-only';
+    const relaySelectionScope = options?.useFullRelaySet ? 'full-relay-set' : 'optimized-relay-set';
+    const sourceRelayScope = options?.sourceRelayUrls?.length ? 'with-source-relays' : 'without-source-relays';
     const limitScope = options?.limit === undefined ? 'all' : `limit-${options.limit}`;
-    return `${keyPrefix}-${relayScope}-${limitScope}`;
+    return `${keyPrefix}-${relayScope}-${relaySelectionScope}-${sourceRelayScope}-${limitScope}`;
   }
 
   toRecord(event: Event) {
@@ -805,7 +817,9 @@ export class UserDataService {
       pubkey,
       kind,
       eventTag,
-      options?.includeAccountRelays
+      options?.includeAccountRelays,
+      options?.useFullRelaySet,
+      options?.sourceRelayUrls,
     );
 
     const [dbEvents, relayEvents] = await Promise.all([dbEventsPromise, relayEventsPromise]);
@@ -895,7 +909,9 @@ export class UserDataService {
       kinds,
       eventTag,
       options?.includeAccountRelays,
-      options?.limit
+      options?.limit,
+      options?.useFullRelaySet,
+      options?.sourceRelayUrls,
     );
 
     const [dbEvents, relayEvents] = await Promise.all([dbEventsPromise, relayEventsPromise]);

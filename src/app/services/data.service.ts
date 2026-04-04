@@ -12,6 +12,7 @@ import { AccountRelayService } from './relays/account-relay';
 import { RelaysService } from './relays/relays';
 import { RelayPoolService } from './relays/relay-pool';
 import { PerformanceMetricsService } from './performance-metrics.service';
+import { EventRelaySourcesService } from './event-relay-sources.service';
 import type { AccountStateService } from './account-state.service';
 
 export interface DataOptions {
@@ -65,6 +66,7 @@ export class DataService implements OnDestroy {
   private readonly relayPool = inject(RelayPoolService);
   private readonly injector = inject(Injector);
   private readonly perfMetrics = inject(PerformanceMetricsService);
+  private readonly eventRelaySources = inject(EventRelaySourcesService);
 
   // Lazy-loaded to avoid circular dependency
   private get accountState(): AccountStateService {
@@ -115,7 +117,10 @@ export class DataService implements OnDestroy {
   }
 
   toRecord(event: Event) {
-    return this.utilities.toRecord(event);
+    return {
+      ...this.utilities.toRecord(event),
+      relayUrls: this.eventRelaySources.getRelayUrls(event.id),
+    };
   }
 
   toRecords(events: Event[]) {

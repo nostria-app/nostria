@@ -1284,16 +1284,16 @@ export class ReactionButtonComponent {
     const event = this.event();
     if (!event) return;
 
-    const userPubkey = this.accountState.pubkey();
-    if (!userPubkey) return;
+    const sourceRelayUrls = this.data.toRecord(event).relayUrls ?? [];
 
     this.isLoadingReactions.set(true);
     const mutationVersionAtStart = this.reactionsMutationVersion;
     try {
       const reactions = await this.eventService.loadReactions(
         event.id,
-        userPubkey,
-        invalidateCache
+        event.pubkey,
+        invalidateCache,
+        sourceRelayUrls,
       );
 
       if (mutationVersionAtStart !== this.reactionsMutationVersion) {

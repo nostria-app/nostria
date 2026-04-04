@@ -30,6 +30,7 @@ import { ImageCacheService } from './image-cache.service';
 import { DeletionFilterService } from './deletion-filter.service';
 import { AccountLocalStateService } from './account-local-state.service';
 import { NoteEditorDialogComponent } from '../components/note-editor-dialog/note-editor-dialog.component';
+import { EventRelaySourcesService } from './event-relay-sources.service';
 
 export interface Reaction {
   emoji: string;
@@ -162,6 +163,7 @@ export class EventService {
   private readonly repostService = inject(RepostService);
   private readonly deletionFilter = inject(DeletionFilterService);
   private readonly accountLocalState = inject(AccountLocalStateService);
+  private readonly eventRelaySources = inject(EventRelaySourcesService);
   private readonly locallyDeletedEventIds = signal<Set<string>>(new Set());
   private readonly interactionSnapshot = signal<SharedInteractionSnapshot | null>(null);
   readonly latestInteractionSnapshot = this.interactionSnapshot.asReadonly();
@@ -1205,6 +1207,7 @@ export class EventService {
     pubkey: string,
     invalidateCache = false,
     skipReplies = false,
+    sourceRelayUrls: string[] = [],
     /**
      * Per-kind limit for feed optimization.
      * When set, we use a combined query sized to cover multiple interaction buckets
@@ -1234,11 +1237,11 @@ export class EventService {
           if (limit) {
             // OPTIMIZED PATH: Separate queries per kind with limits
             // This dramatically reduces data loaded for popular posts in feeds
-            return this.loadEventInteractionsWithLimits(eventId, eventKind, pubkey, repostKind, skipReplies, limit, invalidateCache);
+            return this.loadEventInteractionsWithLimits(eventId, eventKind, pubkey, repostKind, skipReplies, sourceRelayUrls, limit, invalidateCache);
           }
 
           // LEGACY PATH: Single combined query without limits (used when viewing full event details)
-          return this.loadEventInteractionsCombined(eventId, eventKind, pubkey, repostKind, skipReplies, invalidateCache);
+          return this.loadEventInteractionsCombined(eventId, eventKind, pubkey, repostKind, skipReplies, sourceRelayUrls, invalidateCache);
         } catch (error) {
           this.logger.error('Error loading event interactions:', error);
           return {
@@ -1257,6 +1260,115 @@ export class EventService {
     );
 
     return cachedResult;
+  }
+
+  async loadCachedEventInteractions(
+    eventId: string,
+    eventKind: number,
+    pubkey: string,
+    skipReplies = false,
+  ): Promise<EventInteractions> {
+    try {
+      const repostKind = eventKind === kinds.ShortTextNote ? kinds.Repost : kinds.GenericRepost;
+      const interactionKinds = this.getInteractionKinds(eventKind, repostKind, skipReplies);
+      const cachedRecords = (await this.database.getEventsByKindsAndEventTag(interactionKinds, eventId))
+        .map(event => this.data.toRecord(event));
+
+      if (cachedRecords.length === 0) {
+        return {
+          reactions: { events: [], data: new Map() },
+          reposts: [],
+          reports: { events: [], data: new Map() },
+          replyCount: 0,
+          replyEvents: [],
+          quotes: [],
+        };
+      }
+
+      const reactionRecords = cachedRecords.filter(record => record.event.kind === kinds.Reaction);
+      const repostRecords = cachedRecords.filter(record => record.event.kind === repostKind);
+      const reportRecords = cachedRecords.filter(record => record.event.kind === kinds.Report);
+
+      const reactionCounts = new Map<string, number>();
+      reactionRecords.forEach((record: NostrRecord) => {
+        const emoji = record.event.content?.trim();
+        if (emoji) {
+          reactionCounts.set(emoji, (reactionCounts.get(emoji) || 0) + 1);
+        }
+      });
+
+      const reportCounts = new Map<string, number>();
+      const validReportRecords: NostrRecord[] = [];
+      reportRecords.forEach((record: NostrRecord) => {
+        const eTags = record.event.tags.filter((tag: string[]) => tag[0] === 'e' && tag[1] === eventId);
+        let hasValidReportType = false;
+        eTags.forEach((tag: string[]) => {
+          const reportType = tag[2]?.trim().toLowerCase();
+          if (reportType && this.VALID_REPORT_TYPES.has(reportType)) {
+            reportCounts.set(reportType, (reportCounts.get(reportType) || 0) + 1);
+            hasValidReportType = true;
+          }
+        });
+        if (hasValidReportType) {
+          validReportRecords.push(record);
+        }
+      });
+
+      let replyEvents: Event[] = [];
+      if (!skipReplies) {
+        const seenReplyIds = new Set<string>();
+        replyEvents = cachedRecords
+          .filter((record) => this.isReplyInThread(record.event, eventId))
+          .map(record => record.event)
+          .filter((event) => {
+            if (seenReplyIds.has(event.id)) {
+              return false;
+            }
+            seenReplyIds.add(event.id);
+            return true;
+          });
+      }
+
+      this.logger.debug('[InteractionDebug] Hydrated cached interaction counters before relay fetch', {
+        eventId,
+        relayRecordCount: cachedRecords.length,
+        reactionCount: reactionRecords.length,
+        repostCount: repostRecords.length,
+        reportCount: validReportRecords.length,
+        replyCount: replyEvents.length,
+        skipReplies,
+        pubkey,
+      });
+
+      return {
+        reactions: {
+          events: reactionRecords,
+          data: reactionCounts,
+        },
+        reposts: repostRecords,
+        reports: {
+          events: validReportRecords,
+          data: reportCounts,
+        },
+        replyCount: replyEvents.length,
+        replyEvents,
+        quotes: [],
+      };
+    } catch (error) {
+      this.logger.warn('[InteractionDebug] Failed to hydrate cached interaction counters', {
+        eventId,
+        pubkey,
+        error,
+      });
+      return {
+        reactions: { events: [], data: new Map() },
+        reposts: [],
+        reports: { events: [], data: new Map() },
+        replyCount: 0,
+        replyEvents: [],
+        quotes: [],
+      };
+    }
   }
 
   private getInteractionCacheDuration(limit: number | undefined, result: EventInteractions): number | undefined {
@@ -1280,6 +1392,18 @@ export class EventService {
       && result.quotes.length === 0;
   }
 
+  private getInteractionKinds(eventKind: number, repostKind: number, skipReplies: boolean): number[] {
+    if (skipReplies) {
+      return [kinds.Reaction, repostKind, kinds.Report];
+    }
+
+    if (eventKind === kinds.ShortTextNote) {
+      return [kinds.Reaction, repostKind, kinds.Report, kinds.ShortTextNote];
+    }
+
+    return [kinds.Reaction, repostKind, kinds.Report, kinds.ShortTextNote, 1111, 1244];
+  }
+
   /**
    * Load interactions with per-kind limits for feed optimization.
    * Uses a single combined relay query sized to cover multiple interaction buckets.
@@ -1293,6 +1417,7 @@ export class EventService {
     pubkey: string,
     repostKind: number,
     skipReplies: boolean,
+    sourceRelayUrls: string[],
     limit: number,
     invalidateCache: boolean,
   ): Promise<EventInteractions> {
@@ -1301,12 +1426,11 @@ export class EventService {
       ttl: minutes.five,
       invalidateCache,
       includeAccountRelays: true,
+      sourceRelayUrls,
       save: true,
     };
 
-    const interactionKinds = skipReplies
-      ? [kinds.Reaction, repostKind, kinds.Report]
-      : [kinds.Reaction, repostKind, kinds.Report, kinds.ShortTextNote, 1111, 1244];
+    const interactionKinds = this.getInteractionKinds(eventKind, repostKind, skipReplies);
     const interactionBucketCount = skipReplies ? 3 : 4;
     const combinedLimit = limit * interactionBucketCount;
     const allRecords = await this.userDataService.getEventsByKindsAndEventTag(
@@ -1331,13 +1455,14 @@ export class EventService {
       reactionFallbackSaturated = reactionRecords.length >= reactionFallbackLimit;
 
       if (reactionRecords.length > 0) {
-        this.logger.info(
-          'Recovered timeline reactions with focused fallback query:',
+        this.logger.warn('[InteractionDebug] Recovered timeline reactions with focused fallback query', {
           eventId,
-          'reactions:',
-          reactionRecords.length,
-          reactionFallbackSaturated ? '(fallback saturated)' : '',
-        );
+          reactions: reactionRecords.length,
+          reactionFallbackSaturated,
+          sourceRelayCount: sourceRelayUrls.length,
+          combinedLimit,
+          fallbackLimit: reactionFallbackLimit,
+        });
       }
     }
 
@@ -1360,6 +1485,19 @@ export class EventService {
     // per-kind flag keeps the timeline verification path active for those cases.
     const hasMoreReactions = reactionRecords.length >= limit || querySaturated || reactionFallbackSaturated;
     const hasMoreReposts = repostRecords.length >= limit || querySaturated;
+
+    if (reactionRecords.length === 0) {
+      this.logger.warn('[InteractionDebug] Timeline interaction query completed with zero reactions', {
+        eventId,
+        querySaturated,
+        relayRecordCount: allRecords.length,
+        repostCount: repostRecords.length,
+        reportCount: reportRecords.length,
+        skipReplies,
+        sourceRelayCount: sourceRelayUrls.length,
+        combinedLimit,
+      });
+    }
 
     // Process reactions
     const reactionCounts = new Map<string, number>();
@@ -1429,12 +1567,10 @@ export class EventService {
     pubkey: string,
     repostKind: number,
     skipReplies: boolean,
+    sourceRelayUrls: string[],
     invalidateCache: boolean,
   ): Promise<EventInteractions> {
-    // Build the list of kinds to query
-    const kindsToQuery = skipReplies
-      ? [kinds.Reaction, repostKind, kinds.Report]
-      : [kinds.Reaction, repostKind, kinds.Report, kinds.ShortTextNote, 1111, 1244];
+    const kindsToQuery = this.getInteractionKinds(eventKind, repostKind, skipReplies);
 
     // Fetch all interaction types in a single query
     const allRecords = await this.userDataService.getEventsByKindsAndEventTag(
@@ -1446,6 +1582,7 @@ export class EventService {
         ttl: minutes.five,
         invalidateCache,
         includeAccountRelays: true,
+        sourceRelayUrls,
         save: true,
       },
     );
@@ -1554,6 +1691,7 @@ export class EventService {
     eventId: string,
     pubkey: string,
     invalidateCache = false,
+    sourceRelayUrls: string[] = [],
   ): Promise<ReactionEvents> {
     this.logger.debug('loadReactions called with eventId:', eventId, 'pubkey:', pubkey);
 
@@ -1582,6 +1720,7 @@ export class EventService {
               ttl: minutes.five,
               invalidateCache,
               includeAccountRelays: true,
+              sourceRelayUrls,
             },
           );
 
@@ -1605,6 +1744,15 @@ export class EventService {
           });
 
           const reactions = this.mapToReactionArray(reactionCounts);
+
+          this.logger.warn('[InteractionDebug] Finalized event reactions', {
+            eventId,
+            reactionRecordCount: visibleReactionRecords.length,
+            distinctReactionCount: reactionCounts.size,
+            reactions,
+            sourceRelayCount: sourceRelayUrls.length,
+            invalidateCache,
+          });
 
           this.logger.info(
             'Successfully loaded reactions for event:',
@@ -2089,6 +2237,8 @@ export class EventService {
     let targetEventId = event.id;
     let targetEventPubkey = event.pubkey;
     let targetEventKind = event.kind;
+    let targetSourceRelayUrls = this.data.toRecord(event).relayUrls ?? [];
+    let repostReference = this.repostService.getRepostReference(event);
 
     if (isRepost) {
       // Try to get the reposted event from embedded content first
@@ -2097,18 +2247,24 @@ export class EventService {
         targetEventId = repostedRecord.event.id;
         targetEventPubkey = repostedRecord.event.pubkey;
         targetEventKind = repostedRecord.event.kind;
+        targetSourceRelayUrls = repostedRecord.relayUrls
+          ?? this.eventRelaySources.getRelayUrls(repostedRecord.event.id);
       } else {
         // Fallback to e-tag reference
-        const reference = this.repostService.getRepostReference(event);
-        if (reference) {
-          targetEventId = reference.eventId;
-          if (reference.pubkey) {
-            targetEventPubkey = reference.pubkey;
+        if (repostReference) {
+          targetEventId = repostReference.eventId;
+          if (repostReference.pubkey) {
+            targetEventPubkey = repostReference.pubkey;
           }
         }
         // Kind 6 reposts are always kind 1 content; kind 16 is unknown without the embedded event
         if (event.kind === kinds.Repost) {
           targetEventKind = kinds.ShortTextNote;
+        }
+
+        targetSourceRelayUrls = this.eventRelaySources.getRelayUrls(targetEventId);
+        if (repostReference?.relayHint && !targetSourceRelayUrls.includes(repostReference.relayHint)) {
+          targetSourceRelayUrls = [...targetSourceRelayUrls, repostReference.relayHint];
         }
       }
     }
@@ -2163,7 +2319,12 @@ export class EventService {
     const currentEventNip22CommentsPromise = targetEventKind === kinds.ShortTextNote
       ? Promise.resolve([] as Event[])
       : this.loadNip22Comments(targetEventId, targetEventPubkey);
-    const currentEventReactionsPromise = this.loadReactions(targetEventId, targetEventPubkey);
+    const currentEventReactionsPromise = this.loadReactions(
+      targetEventId,
+      targetEventPubkey,
+      false,
+      targetSourceRelayUrls,
+    );
 
     // Race parents and replies so whichever finishes first gets yielded immediately.
     // This prevents slow parent resolution from blocking cached replies.
@@ -2281,7 +2442,15 @@ export class EventService {
           seenIds.add(reply.id);
           return true;
         });
-        finalReactionsPromise = this.loadReactions(threadRootId, rootEvent?.pubkey || event.pubkey);
+        const threadRootSourceRelayUrls = rootEvent
+          ? this.data.toRecord(rootEvent).relayUrls ?? []
+          : this.eventRelaySources.getRelayUrls(threadRootId);
+        finalReactionsPromise = this.loadReactions(
+          threadRootId,
+          rootEvent?.pubkey || event.pubkey,
+          false,
+          threadRootSourceRelayUrls,
+        );
       } else {
         const seenIds = new Set<string>();
         allReplies = [...nip10, ...nip22].filter((reply) => {

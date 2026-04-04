@@ -200,6 +200,9 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   hideFooter = input<boolean>(false);
   hideHeader = input<boolean>(false);
   disableEngagementLoading = input<boolean>(false);
+  engagementLoadMode = input<'auto' | 'external'>('auto');
+  engagementLoadRequested = input<boolean>(false);
+  engagementLoadPriority = input<number>(0);
   threadInteractionDisabled = input<boolean>(false);
   threadInteractionDisabledReason = input<string | null>(null);
   // Media navigation context (for Media tab grid)
@@ -259,6 +262,18 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   shouldVirtualize = computed<boolean>(() => {
     return this.mode() !== 'thread' && !this.navigationDisabled();
   });
+
+  private isExternalEngagementControlEnabled(): boolean {
+    return this.engagementLoadMode() === 'external';
+  }
+
+  private isExternalEngagementRequested(): boolean {
+    return this.isExternalEngagementControlEnabled() && this.engagementLoadRequested();
+  }
+
+  private getExternalInteractionPreloadPriority(): number {
+    return Math.max(0, this.engagementLoadPriority());
+  }
 
   data = inject(DataService);
   record = signal<NostrRecord | null>(null);
@@ -1092,8 +1107,12 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     return `${total}`;
   });
 
+  hasVisibleInteractionCounters = computed<boolean>(() => {
+    return this.likes().length > 0 || this.replyCount() > 0 || this.shareCount() > 0;
+  });
+
   interactionsLoading = computed<boolean>(() => {
-    return this.hasLoadedInteractions() && this.isLoadingReactions();
+    return this.hasLoadedInteractions() && this.isLoadingReactions() && !this.hasVisibleInteractionCounters();
   });
 
   interactionsReady = computed<boolean>(() => {
@@ -1101,11 +1120,11 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   });
 
   zapsLoading = computed<boolean>(() => {
-    return this.hasLoadedInteractions() && this.isLoadingZaps();
+    return this.mode() !== 'timeline' && this.hasLoadedInteractions() && this.isLoadingZaps();
   });
 
   zapsReady = computed<boolean>(() => {
-    return this.hasLoadedInteractions() && !this.isLoadingZaps();
+    return this.hasLoadedInteractions() && (this.mode() === 'timeline' || !this.isLoadingZaps());
   });
 
   engagementLoading = computed<boolean>(() => {
@@ -1536,10 +1555,46 @@ export class EventComponent implements AfterViewInit, OnDestroy {
         }
 
         if (this.hasViewInitialized) {
-          this.checkAndLoadInteractionsIfVisible();
+          if (this.isExternalEngagementControlEnabled()) {
+            this.maybePreloadInteractionsFromExternalRequest();
+          } else {
+            this.checkAndLoadInteractionsIfVisible();
+          }
         }
 
-        this.maybePreloadInteractionsImmediately();
+        if (this.isExternalEngagementControlEnabled()) {
+          this.maybePreloadInteractionsFromExternalRequest();
+        } else {
+          this.maybePreloadInteractionsImmediately();
+        }
+      });
+    });
+
+    effect(() => {
+      const requested = this.engagementLoadRequested();
+      const priority = this.engagementLoadPriority();
+      const currentRecord = this.record();
+
+      if (!this.isExternalEngagementControlEnabled()) {
+        return;
+      }
+
+      if (!requested || !currentRecord) {
+        untracked(() => {
+          if (this.interactionLoadTimer) {
+            clearTimeout(this.interactionLoadTimer);
+            this.interactionLoadTimer = undefined;
+          }
+
+          EventComponent.cancelQueuedInteractionPreload(this);
+        });
+        return;
+      }
+
+      void priority;
+
+      untracked(() => {
+        this.maybePreloadInteractionsFromExternalRequest();
       });
     });
 
@@ -1653,8 +1708,12 @@ export class EventComponent implements AfterViewInit, OnDestroy {
               // This handles the case where the element was already visible before the event loaded
               // (e.g., trending posts) - the intersection observer won't re-trigger since the element
               // was already visible, so we need to manually trigger interaction loading
-              this.checkAndLoadInteractionsIfVisible();
-              this.maybePreloadInteractionsImmediately();
+              if (this.isExternalEngagementControlEnabled()) {
+                this.maybePreloadInteractionsFromExternalRequest();
+              } else {
+                this.checkAndLoadInteractionsIfVisible();
+                this.maybePreloadInteractionsImmediately();
+              }
             } catch (error) {
               this.logger.error('[EventComponent:Load] Error loading event:', error, '| eventId:', eventId);
               this.loadingError.set('Failed to load event');
@@ -1930,6 +1989,12 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     this.hasViewInitialized = true;
     // Set up IntersectionObserver for lazy loading
     this.setupIntersectionObserver();
+
+    if (this.isExternalEngagementControlEnabled()) {
+      this.maybePreloadInteractionsFromExternalRequest();
+      return;
+    }
+
     this.checkAndLoadInteractionsIfVisible();
     this.maybePreloadInteractionsImmediately();
     this.scheduleVisibleInteractionRetry();
@@ -1987,7 +2052,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
             this.isOffScreen = false;
           }
 
-          if (!this.hasLoadedInteractions()) {
+          if (!this.hasLoadedInteractions() && !this.isExternalEngagementControlEnabled()) {
             // CRITICAL: Capture the current event at the moment of intersection
             // This prevents loading interactions for the wrong event
             const currentRecord = this.record();
@@ -2009,35 +2074,37 @@ export class EventComponent implements AfterViewInit, OnDestroy {
         } else {
           // --- Leaving viewport (and buffer zone) ---
 
-          // Cancel any pending interaction load that hasn't started yet.
-          // This prevents relay queries from firing for events the user scrolled past.
-          if (this.interactionLoadTimer) {
-            clearTimeout(this.interactionLoadTimer);
-            this.interactionLoadTimer = undefined;
-          }
+          if (!this.isExternalEngagementControlEnabled()) {
+            // Cancel any pending interaction load that hasn't started yet.
+            // This prevents relay queries from firing for events the user scrolled past.
+            if (this.interactionLoadTimer) {
+              clearTimeout(this.interactionLoadTimer);
+              this.interactionLoadTimer = undefined;
+            }
 
-          if (this.visibleInteractionRetryTimer) {
-            clearTimeout(this.visibleInteractionRetryTimer);
-            this.visibleInteractionRetryTimer = undefined;
-          }
+            if (this.visibleInteractionRetryTimer) {
+              clearTimeout(this.visibleInteractionRetryTimer);
+              this.visibleInteractionRetryTimer = undefined;
+            }
 
-          EventComponent.cancelQueuedInteractionPreload(this);
+            EventComponent.cancelQueuedInteractionPreload(this);
 
-          // Abort any in-flight interaction queries.
-          // The relay query itself will complete, but result processing is skipped.
-          if (this.interactionAbortController) {
-            this.interactionAbortController.abort();
-            this.interactionAbortController = undefined;
-            this.isLoadingReactions.set(false);
-            this.isLoadingZaps.set(false);
-            this.interactionLoadGeneration += 1;
-          }
+            // Abort any in-flight interaction queries.
+            // The relay query itself will complete, but result processing is skipped.
+            if (this.interactionAbortController) {
+              this.interactionAbortController.abort();
+              this.interactionAbortController = undefined;
+              this.isLoadingReactions.set(false);
+              this.isLoadingZaps.set(false);
+              this.interactionLoadGeneration += 1;
+            }
 
-          // If interactions were marked as loading but results haven't been applied yet
-          // (e.g. isLoadingReactions is still true), reset so they can re-trigger
-          // when the event scrolls back into view.
-          if (this.hasLoadedInteractions() && this.isLoadingReactions()) {
-            this.hasLoadedInteractions.set(false);
+            // If interactions were marked as loading but results haven't been applied yet
+            // (e.g. isLoadingReactions is still true), reset so they can re-trigger
+            // when the event scrolls back into view.
+            if (this.hasLoadedInteractions() && this.isLoadingReactions()) {
+              this.hasLoadedInteractions.set(false);
+            }
           }
 
           // Only virtualize if the event has actually been visible inside the real
@@ -2075,7 +2142,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
             }
           }
 
-          if (!this.hasLoadedInteractions()) {
+          if (!this.hasLoadedInteractions() && !this.isExternalEngagementControlEnabled()) {
             this.maybePreloadInteractionsImmediately();
           }
         }
@@ -2121,6 +2188,11 @@ export class EventComponent implements AfterViewInit, OnDestroy {
         return;
       }
 
+      const externalRequestActive = this.isExternalEngagementRequested();
+      if (this.isExternalEngagementControlEnabled() && !externalRequestActive) {
+        return;
+      }
+
       if (this.hasLoadedInteractions()) {
         if (this.shouldRetryVisibleTimelineInteractions(currentRecord.event.id, element)) {
           void this.retryVisibleTimelineInteractions(currentRecord.event.id);
@@ -2128,7 +2200,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
         return;
       }
 
-      if (!this.isWithinImmediatePreloadBounds(element)) {
+      if (!externalRequestActive && !this.isWithinImmediatePreloadBounds(element)) {
         return;
       }
 
@@ -2137,11 +2209,13 @@ export class EventComponent implements AfterViewInit, OnDestroy {
         return;
       }
 
-      const observerRoot = this.resolveObserverRoot(element);
       const currentEventId = currentRecord.event.id;
       this.observedEventId = currentEventId;
-      const priority = this.getInteractionPreloadPriority(observerRoot);
-      this.logger.debug('[Lazy Load] Retrying visible preload for event:', currentEventId.substring(0, 8), 'priority:', priority);
+      const priority = externalRequestActive
+        ? this.getExternalInteractionPreloadPriority()
+        : this.getInteractionPreloadPriority(this.resolveObserverRoot(element));
+      const retryLabel = externalRequestActive ? '[Feed Preload]' : '[Lazy Load]';
+      this.logger.debug(retryLabel, 'Retrying interaction preload for event:', currentEventId.substring(0, 8), 'priority:', priority);
       EventComponent.enqueueInteractionPreload(this, priority);
 
       if (!this.hasLoadedInteractions()) {
@@ -2159,7 +2233,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
       return false;
     }
 
-    if (!this.isWithinImmediatePreloadBounds(element)) {
+    if (!this.isExternalEngagementRequested() && !this.isWithinImmediatePreloadBounds(element)) {
       return false;
     }
 
@@ -2171,6 +2245,10 @@ export class EventComponent implements AfterViewInit, OnDestroy {
 
     if (hasAnyEngagementLoaded) {
       return false;
+    }
+
+    if (this.isExternalEngagementRequested()) {
+      return true;
     }
 
     const observerRoot = this.resolveObserverRoot(element);
@@ -2193,11 +2271,12 @@ export class EventComponent implements AfterViewInit, OnDestroy {
       'limit:',
       recoveryLimit,
     );
-    await this.loadAllInteractions(true, undefined, loadGeneration, recoveryLimit);
+    await Promise.allSettled([
+      this.loadAllInteractions(true, undefined, loadGeneration, recoveryLimit),
+      this.loadDeferredTimelineEngagement(undefined, loadGeneration, true, recoveryLimit),
+    ]);
 
     if (this.interactionLoadGeneration === loadGeneration) {
-      await this.loadDeferredTimelineEngagement(undefined, loadGeneration, true, recoveryLimit);
-
       if (this.shouldEscalateVisibleInteractionRecovery(currentEventId)) {
         await this.loadFullVisibleInteractionRecovery(currentEventId, loadGeneration);
       }
@@ -2210,7 +2289,11 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     }
 
     const element = this.elementRef.nativeElement as HTMLElement | undefined;
-    if (!element?.isConnected || !this.isWithinImmediatePreloadBounds(element)) {
+    if (!element?.isConnected) {
+      return false;
+    }
+
+    if (!this.isExternalEngagementRequested() && !this.isWithinImmediatePreloadBounds(element)) {
       return false;
     }
 
@@ -2244,6 +2327,10 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   }
 
   private maybePreloadInteractionsImmediately(): void {
+    if (this.isExternalEngagementControlEnabled()) {
+      return;
+    }
+
     if (!this.hasViewInitialized || this.hasLoadedInteractions() || !this.supportsReactions()) {
       return;
     }
@@ -2265,6 +2352,30 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     const observerRoot = this.resolveObserverRoot(element);
     const priority = this.getInteractionPreloadPriority(observerRoot);
     this.logger.debug('[Lazy Load] Queueing immediate preload for event:', currentEventId.substring(0, 8), 'priority:', priority);
+    EventComponent.enqueueInteractionPreload(this, priority);
+    this.scheduleVisibleInteractionRetry();
+  }
+
+  private maybePreloadInteractionsFromExternalRequest(): void {
+    if (!this.hasViewInitialized || this.hasLoadedInteractions() || !this.supportsReactions()) {
+      return;
+    }
+
+    if (!this.isExternalEngagementRequested()) {
+      return;
+    }
+
+    const currentRecord = this.record();
+    const element = this.elementRef.nativeElement as HTMLElement | undefined;
+
+    if (!currentRecord || !element?.isConnected || this.isLoadingReactions() || this.isLoadingZaps()) {
+      return;
+    }
+
+    const currentEventId = currentRecord.event.id;
+    this.observedEventId = currentEventId;
+    const priority = this.getExternalInteractionPreloadPriority();
+    this.logger.debug('[Feed Preload] Queueing feed-managed engagement preload for event:', currentEventId.substring(0, 8), 'priority:', priority);
     EventComponent.enqueueInteractionPreload(this, priority);
     this.scheduleVisibleInteractionRetry();
   }
@@ -2374,13 +2485,14 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     const signal = this.interactionAbortController.signal;
 
     if (this.mode() === 'timeline') {
+      void this.loadDeferredTimelineEngagement(signal, loadGeneration, false);
+
       await Promise.allSettled([
         this.loadAllInteractions(false, signal, loadGeneration),
         this.loadLatestEditForEvent(),
       ]);
 
       if (this.interactionLoadGeneration === loadGeneration && !signal.aborted) {
-        void this.loadDeferredTimelineEngagement(signal, loadGeneration, false);
         this.scheduleVisibleInteractionRetry();
       }
       return;
@@ -2412,13 +2524,10 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     const eventAuthorPubkey = targetRecordData.event.pubkey;
     const queryLimit = queryLimitOverride ?? EventService.INTERACTION_QUERY_LIMIT;
 
-    await this.loadTimelineQuotes(targetEventId, eventAuthorPubkey, invalidateCache, queryLimit, signal, loadGeneration);
-
-    if (signal?.aborted || this.interactionLoadGeneration !== loadGeneration || this.targetRecord()?.event.id !== targetEventId) {
-      return;
-    }
-
-    await this.loadZaps(signal, loadGeneration, invalidateCache);
+    await Promise.allSettled([
+      this.loadTimelineQuotes(targetEventId, eventAuthorPubkey, invalidateCache, queryLimit, signal, loadGeneration),
+      this.loadZaps(signal, loadGeneration, invalidateCache),
+    ]);
   }
 
   private resolveObserverRoot(element: HTMLElement): HTMLElement | null {
@@ -2450,6 +2559,10 @@ export class EventComponent implements AfterViewInit, OnDestroy {
    * already fired while the element was visible but before the event data was available.
    */
   private checkAndLoadInteractionsIfVisible(): void {
+    if (this.isExternalEngagementControlEnabled()) {
+      return;
+    }
+
     // Skip if interactions were already loaded
     if (this.hasLoadedInteractions()) {
       return;
@@ -2566,6 +2679,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     // IMPORTANT: Use the EVENT AUTHOR's pubkey, not the current user's pubkey!
     // This ensures we query the author's relays where replies/reactions are likely to be found.
     const eventAuthorPubkey = targetRecordData.event.pubkey;
+    const sourceRelayUrls = targetRecordData.relayUrls ?? [];
 
     // If reply count is provided from parent (e.g., event page that already loaded all replies),
     // skip loading replies from relays to avoid duplicate queries
@@ -2581,6 +2695,13 @@ export class EventComponent implements AfterViewInit, OnDestroy {
 
     this.isLoadingReactions.set(true);
     try {
+      const cachedInteractionsPromise = this.eventService.loadCachedEventInteractions(
+        targetEventId,
+        targetRecordData.event.kind,
+        eventAuthorPubkey,
+        skipReplies,
+      );
+
       const loadInteractionBatch = (limitOverride = queryLimit, invalidateCacheOverride = invalidateCache) => {
         const interactionsPromise = this.eventService.loadEventInteractions(
           targetEventId,
@@ -2588,6 +2709,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
           eventAuthorPubkey,
           invalidateCacheOverride,
           skipReplies,
+          sourceRelayUrls,
           limitOverride,
         );
 
@@ -2609,7 +2731,24 @@ export class EventComponent implements AfterViewInit, OnDestroy {
         ]);
       };
 
-      let [interactions, quotesResult] = await loadInteractionBatch();
+      const initialInteractionBatchPromise = loadInteractionBatch();
+
+      const cachedInteractions = await cachedInteractionsPromise;
+      if (this.shouldDiscardInteractionLoadResult(targetEventId, signal, loadGeneration)) {
+        return;
+      }
+
+      const normalizedCachedInteractions = this.normalizeInteractionResults(cachedInteractions, [], queryLimit);
+      if (
+        normalizedCachedInteractions.reactions.events.length > 0
+        || normalizedCachedInteractions.reposts.length > 0
+        || normalizedCachedInteractions.replyCount > 0
+        || normalizedCachedInteractions.reports.events.length > 0
+      ) {
+        this.applyNormalizedInteractionResults(targetEventId, normalizedCachedInteractions, skipReplies, queryLimit, false);
+      }
+
+      let [interactions, quotesResult] = await initialInteractionBatchPromise;
 
       if (this.shouldDiscardInteractionLoadResult(targetEventId, signal, loadGeneration)) {
         return;
@@ -2658,42 +2797,21 @@ export class EventComponent implements AfterViewInit, OnDestroy {
         normalizedInteractions = this.normalizeInteractionResults(interactions, quotesResult, queryLimit);
       }
 
-      // Update all states from the normalized results
-      this.reactions.set(normalizedInteractions.reactions);
-      this.reposts.set(normalizedInteractions.reposts);
-      this.quotes.set(normalizedInteractions.quotes);
-      this.reports.set(normalizedInteractions.reports);
+      this.applyNormalizedInteractionResults(targetEventId, normalizedInteractions, skipReplies, queryLimit, true);
 
-      // Update overflow flags (only relevant when limits are applied)
-      this.hasMoreReactions.set(normalizedInteractions.hasMoreReactions);
-      this.hasMoreReposts.set(normalizedInteractions.hasMoreReposts);
-      this.hasMoreReplies.set(normalizedInteractions.hasMoreReplies);
-      this.hasMoreQuotes.set(normalizedInteractions.hasMoreQuotes);
-
-      // Only update internal reply count if we actually loaded it (not skipped)
-      if (!skipReplies) {
-        this._replyCountInternal.set(normalizedInteractions.replyCount);
-        this._replyEventsInternal.set(normalizedInteractions.replyEvents);
-      }
-
-      if (queryLimit == null) {
-        const sharedReplyCount = this.replyCountFromParent() ?? normalizedInteractions.replyCount;
-        this.eventService.publishInteractionSnapshot({
+      if (this.mode() === 'timeline' && normalizedInteractions.reactions.events.length === 0) {
+        this.logger.warn('[InteractionDebug] Timeline card resolved with zero visible reactions', {
           eventId: targetEventId,
-          reactions: normalizedInteractions.reactions,
-          reposts: normalizedInteractions.reposts,
-          reports: normalizedInteractions.reports,
-          quotes: normalizedInteractions.quotes,
-          zaps: this.zaps(),
-          replyCount: sharedReplyCount,
-          replyEvents: normalizedInteractions.replyEvents,
+          queryLimit,
+          sourceRelayCount: sourceRelayUrls.length,
+          normalizedReplyCount: normalizedInteractions.replyCount,
+          repostCount: normalizedInteractions.reposts.length,
+          quoteCount: normalizedInteractions.quotes.length,
           hasMoreReactions: normalizedInteractions.hasMoreReactions,
-          hasMoreReposts: normalizedInteractions.hasMoreReposts,
-          hasMoreReplies: sharedReplyCount >= EventService.INTERACTION_QUERY_LIMIT,
-          hasMoreQuotes: normalizedInteractions.hasMoreQuotes,
-          hasMoreZaps: this.hasMoreZaps(),
+          hasMoreReplies: normalizedInteractions.hasMoreReplies,
         });
       }
+
     } catch (error) {
       this.logger.error('Error loading event interactions:', error);
       if (loadGeneration === this.interactionLoadGeneration) {
@@ -2702,6 +2820,53 @@ export class EventComponent implements AfterViewInit, OnDestroy {
       }
     } finally {
       this.isLoadingReactions.set(false);
+    }
+  }
+
+  private applyNormalizedInteractionResults(
+    targetEventId: string,
+    normalizedInteractions: ReturnType<EventComponent['normalizeInteractionResults']>,
+    skipReplies: boolean,
+    queryLimit: number | undefined,
+    publishSnapshot: boolean,
+  ): void {
+    const previousReplyCount = this.replyCount();
+
+    this.reactions.set(normalizedInteractions.reactions);
+    this.reposts.set(normalizedInteractions.reposts);
+    this.quotes.set(normalizedInteractions.quotes);
+    this.reports.set(normalizedInteractions.reports);
+    this.hasMoreReactions.set(normalizedInteractions.hasMoreReactions);
+    this.hasMoreReposts.set(normalizedInteractions.hasMoreReposts);
+    this.hasMoreReplies.set(normalizedInteractions.hasMoreReplies);
+    this.hasMoreQuotes.set(normalizedInteractions.hasMoreQuotes);
+
+    if (!skipReplies) {
+      this._replyCountInternal.set(normalizedInteractions.replyCount);
+      this._replyEventsInternal.set(normalizedInteractions.replyEvents);
+    }
+
+    if (normalizedInteractions.replyCount > previousReplyCount) {
+      this.triggerReplyCountAnimation();
+    }
+
+    if (publishSnapshot && queryLimit == null) {
+      const sharedReplyCount = this.replyCountFromParent() ?? normalizedInteractions.replyCount;
+      this.eventService.publishInteractionSnapshot({
+        eventId: targetEventId,
+        reactions: normalizedInteractions.reactions,
+        reposts: normalizedInteractions.reposts,
+        reports: normalizedInteractions.reports,
+        quotes: normalizedInteractions.quotes,
+        zaps: this.zaps(),
+        replyCount: sharedReplyCount,
+        replyEvents: normalizedInteractions.replyEvents,
+        hasMoreReactions: normalizedInteractions.hasMoreReactions,
+        hasMoreReposts: normalizedInteractions.hasMoreReposts,
+        hasMoreReplies: sharedReplyCount >= EventService.INTERACTION_QUERY_LIMIT,
+        hasMoreQuotes: normalizedInteractions.hasMoreQuotes,
+        hasMoreZaps: this.hasMoreZaps(),
+      });
     }
   }
 
@@ -2764,7 +2929,11 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     }
 
     const element = this.elementRef.nativeElement as HTMLElement | undefined;
-    if (!element?.isConnected || !this.isWithinImmediatePreloadBounds(element)) {
+    if (!element?.isConnected) {
+      return false;
+    }
+
+    if (!this.isExternalEngagementRequested() && !this.isWithinImmediatePreloadBounds(element)) {
       return false;
     }
 
@@ -2916,13 +3085,15 @@ export class EventComponent implements AfterViewInit, OnDestroy {
 
     // Use the event author's pubkey to query their relays for reactions
     const eventAuthorPubkey = targetRecordData.event.pubkey;
+    const sourceRelayUrls = targetRecordData.relayUrls ?? [];
 
     this.isLoadingReactions.set(true);
     try {
       const reactions = await this.eventService.loadReactions(
         targetRecordData.event.id,
         eventAuthorPubkey,
-        invalidateCache
+        invalidateCache,
+        sourceRelayUrls,
       );
 
       // CRITICAL: Filter out reactions from muted accounts
@@ -3095,6 +3266,20 @@ export class EventComponent implements AfterViewInit, OnDestroy {
       this.zaps.set(parsedZaps);
       // Track if zap query hit its limit (only relevant when limits are applied)
       this.hasMoreZaps.set(queryLimit != null && zapReceipts.length >= queryLimit);
+
+      this.logger.warn('[InteractionDebug] Finalized event zaps', {
+        eventId: targetEventId,
+        zapReceiptCount: zapReceipts.length,
+        parsedZapCount: parsedZaps.length,
+        hasMoreZaps: this.hasMoreZaps(),
+        queryLimit,
+        invalidateCache,
+        zaps: parsedZaps.map((zap) => ({
+          senderPubkey: zap.senderPubkey,
+          amount: zap.amount,
+          timestamp: zap.timestamp,
+        })),
+      });
 
       if (queryLimit == null) {
         this.eventService.publishInteractionSnapshotPatch(targetEventId, {
