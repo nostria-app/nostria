@@ -291,17 +291,26 @@ export class MessagingService implements NostriaService {
     effect(() => {
       const pubkey = this.accountState.pubkey();
       const account = this.accountState.account();
+      const canUseDirectMessages = this.accountState.canUseDirectMessages(account);
 
-      if (pubkey && account?.source !== 'preview') {
+      if (pubkey && canUseDirectMessages) {
         // User is logged in with a non-preview account - start the subscription
         untracked(() => {
           this.logger.info('Auto-starting DM subscription for logged in user');
           this.startDmSubscriptionWithRetry();
         });
-      } else if (account?.source === 'preview') {
-        // Preview account - skip DM subscription (cannot decrypt)
+      } else if (pubkey && account) {
         untracked(() => {
-          this.logger.info('Skipping DM subscription for preview account - cannot decrypt messages');
+          this.logger.info('Skipping DM subscription for account without signing/decryption capability');
+          this.bootstrapUnreadCount.set(null);
+          this.bootstrappedPubkey = null;
+          if (this.dmStartupDelayResolve) {
+            this.dmStartupDelayResolve();
+            this.dmStartupDelayResolve = null;
+          }
+          if (this.liveSubscription) {
+            this.closeLiveSubscription();
+          }
         });
       } else {
         // User logged out - close the subscription
@@ -328,6 +337,11 @@ export class MessagingService implements NostriaService {
    * The delay is skipped if the user navigates to Messages before it elapses.
    */
   private async startDmSubscriptionWithRetry(): Promise<void> {
+    if (!this.accountState.canUseDirectMessages()) {
+      this.logger.info('[MessagingService] Skipping DM startup for account without signing/decryption capability');
+      return;
+    }
+
     this.logger.debug('[MessagingService] Waiting for relay initialization before starting DM subscription');
 
     try {
@@ -1099,6 +1113,12 @@ export class MessagingService implements NostriaService {
   }
 
   private async bootstrapFromStorage(): Promise<void> {
+    if (!this.accountState.canUseDirectMessages()) {
+      this.bootstrapUnreadCount.set(null);
+      this.bootstrappedPubkey = null;
+      return;
+    }
+
     const myPubkey = this.accountState.pubkey();
     if (!myPubkey) {
       return;
@@ -1979,6 +1999,11 @@ export class MessagingService implements NostriaService {
    * @returns A subscription object with a close() method for cleanup
    */
   async subscribeToIncomingMessages(): Promise<{ close: () => void } | null> {
+    if (!this.accountState.canUseDirectMessages()) {
+      this.logger.info('Cannot subscribe to messages: account cannot sign/decrypt');
+      return null;
+    }
+
     const myPubkey = this.accountState.pubkey();
 
     if (!myPubkey) {
