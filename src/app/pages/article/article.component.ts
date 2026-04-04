@@ -297,7 +297,7 @@ export class ArticleComponent implements OnDestroy {
     const image = this.utilities.getTagValues('image', event.tags)[0] || undefined;
 
     const authorRelays = await this.userRelaysService.getUserRelaysForPublishing(event.pubkey);
-    const relayHints = this.utilities.normalizeRelayUrls(authorRelays);
+    const relayHints = this.utilities.getShareRelayHints(authorRelays);
     const encodedId = this.utilities.encodeEventForUrl(event, relayHints.length > 0 ? relayHints : undefined);
 
     const dialogData: ShareArticleDialogData = {

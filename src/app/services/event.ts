@@ -1160,6 +1160,7 @@ export class EventService {
   static readonly INTERACTION_QUERY_LIMIT = 11;
   private static readonly TIMELINE_INTERACTION_CACHE_TIMEOUT_MS = 30 * 1000;
   private static readonly EMPTY_TIMELINE_INTERACTION_CACHE_TIMEOUT_MS = 5 * 1000;
+  private static readonly TIMELINE_REACTION_FALLBACK_LIMIT_MULTIPLIER = 6;
 
   /**
    * Load event interactions (reactions, reposts, reports, replies) with optional limits.
@@ -1287,7 +1288,30 @@ export class EventService {
     );
 
     const querySaturated = allRecords.length >= combinedLimit;
-    const reactionRecords = allRecords.filter((record) => record.event.kind === kinds.Reaction);
+    let reactionRecords = allRecords.filter((record) => record.event.kind === kinds.Reaction);
+    let reactionFallbackSaturated = false;
+
+    if (reactionRecords.length === 0) {
+      const reactionFallbackLimit = limit * EventService.TIMELINE_REACTION_FALLBACK_LIMIT_MULTIPLIER;
+      reactionRecords = await this.userDataService.getEventsByKindsAndEventTag(
+        pubkey,
+        [kinds.Reaction],
+        eventId,
+        { ...queryOptions, limit: reactionFallbackLimit },
+      );
+      reactionFallbackSaturated = reactionRecords.length >= reactionFallbackLimit;
+
+      if (reactionRecords.length > 0) {
+        this.logger.info(
+          'Recovered timeline reactions with focused fallback query:',
+          eventId,
+          'reactions:',
+          reactionRecords.length,
+          reactionFallbackSaturated ? '(fallback saturated)' : '',
+        );
+      }
+    }
+
     const repostRecords = allRecords.filter((record) => record.event.kind === repostKind);
     const reportRecords = allRecords.filter((record) => record.event.kind === kinds.Report);
 
@@ -1305,7 +1329,7 @@ export class EventService {
     // A saturated combined query means another interaction bucket may have consumed
     // the relay-side limit before a smaller bucket was fully returned. Marking the
     // per-kind flag keeps the timeline verification path active for those cases.
-    const hasMoreReactions = reactionRecords.length >= limit || querySaturated;
+    const hasMoreReactions = reactionRecords.length >= limit || querySaturated || reactionFallbackSaturated;
     const hasMoreReposts = repostRecords.length >= limit || querySaturated;
 
     // Process reactions

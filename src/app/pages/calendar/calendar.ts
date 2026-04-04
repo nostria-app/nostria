@@ -1277,7 +1277,7 @@ export class Calendar implements OnInit, OnDestroy, AfterViewInit {
   async openEventDetails(event: CalendarEvent): Promise<void> {
     const eventDTag = this.getEventDTag(event);
     const authorRelays = await this.userRelaysService.getUserRelaysForPublishing(event.pubkey);
-    const relayHints = this.utilities.normalizeRelayUrls(authorRelays);
+    const relayHints = this.utilities.getShareRelayHints(authorRelays);
     const naddr = nip19.naddrEncode({
       identifier: eventDTag,
       pubkey: event.pubkey,
@@ -1290,7 +1290,7 @@ export class Calendar implements OnInit, OnDestroy, AfterViewInit {
   async shareEvent(event: CalendarEvent): Promise<void> {
     const eventDTag = this.getEventDTag(event);
     const authorRelays = await this.userRelaysService.getUserRelaysForPublishing(event.pubkey);
-    const relayHints = this.utilities.normalizeRelayUrls(authorRelays);
+    const relayHints = this.utilities.getShareRelayHints(authorRelays);
     const naddr = nip19.naddrEncode({
       identifier: eventDTag,
       pubkey: event.pubkey,

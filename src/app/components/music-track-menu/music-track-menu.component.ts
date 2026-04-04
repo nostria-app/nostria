@@ -374,7 +374,9 @@ export class MusicTrackMenuComponent {
     }
 
     try {
-      const authorRelays = await this.userRelaysService.getUserRelaysForPublishing(ev.pubkey);
+      const authorRelays = this.utilities.getShareRelayHints(
+        await this.userRelaysService.getUserRelaysForPublishing(ev.pubkey)
+      );
       const naddr = nip19.naddrEncode({
         kind: ev.kind,
         pubkey: ev.pubkey,
@@ -403,7 +405,9 @@ export class MusicTrackMenuComponent {
     const ev = this.track();
     const dTag = this.getIdentifier();
     try {
-      const authorRelays = await this.userRelaysService.getUserRelaysForPublishing(ev.pubkey);
+      const authorRelays = this.utilities.getShareRelayHints(
+        await this.userRelaysService.getUserRelaysForPublishing(ev.pubkey)
+      );
       const naddr = nip19.naddrEncode({
         kind: ev.kind,
         pubkey: ev.pubkey,
@@ -429,7 +433,9 @@ export class MusicTrackMenuComponent {
     }
 
     try {
-      const authorRelays = await this.userRelaysService.getUserRelaysForPublishing(ev.pubkey);
+      const authorRelays = this.utilities.getShareRelayHints(
+        await this.userRelaysService.getUserRelaysForPublishing(ev.pubkey)
+      );
       const naddr = nip19.naddrEncode({
         kind: ev.kind,
         pubkey: ev.pubkey,

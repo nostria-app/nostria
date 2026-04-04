@@ -10,6 +10,7 @@ import { AccountStateService } from './account-state.service';
 import { AccountLocalStateService } from './account-local-state.service';
 import { LocalSettingsService } from './local-settings.service';
 import { UserRelayService } from './relays/user-relay';
+import { UtilitiesService } from './utilities.service';
 
 /**
  * Query limits for fetching notifications from relays
@@ -48,6 +49,7 @@ export class ContentNotificationService implements OnDestroy {
   private platformId = inject(PLATFORM_ID);
   private localSettings = inject(LocalSettingsService);
   private userRelayService = inject(UserRelayService);
+  private utilities = inject(UtilitiesService);
 
   // Polling configuration
   private readonly POLLING_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
@@ -1246,7 +1248,7 @@ export class ContentNotificationService implements OnDestroy {
   private async getRelayHintsForAuthor(pubkey: string): Promise<string[] | undefined> {
     try {
       await this.userRelayService.ensureRelaysForPubkey(pubkey);
-      const relays = this.userRelayService.getRelaysForPubkey(pubkey).slice(0, 3);
+      const relays = this.utilities.getShareRelayHints(this.userRelayService.getRelaysForPubkey(pubkey));
       return relays.length > 0 ? relays : undefined;
     } catch (error) {
       this.logger.debug('Failed to resolve relay hints for notification author', error);

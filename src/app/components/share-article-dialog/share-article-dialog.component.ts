@@ -974,7 +974,7 @@ export class ShareArticleDialogComponent {
         }
 
         const authorRelays = await this.userRelaysService.getUserRelaysForPublishing(ev.pubkey);
-        const relayHints = this.utilities.normalizeRelayUrls(authorRelays);
+        const relayHints = this.utilities.getShareRelayHints(authorRelays);
         const relayUrl = relayHints[0];
 
         const reposted = await this.repostService.repostNote(ev, { expiration: repostExpiration, relayUrl });
@@ -1013,9 +1013,7 @@ export class ShareArticleDialogComponent {
 
     // Include relay hints so the quoted nevent encodes a relay for discoverability
     const authorRelays = await this.userRelaysService.getUserRelaysForPublishing(ev.pubkey);
-    const relayHints = authorRelays.length > 0
-      ? this.utilities.normalizeRelayUrls(authorRelays)
-      : [];
+    const relayHints = this.utilities.getShareRelayHints(authorRelays);
 
     const identifier = this.utilities.isParameterizedReplaceableEvent(ev.kind)
       ? ev.tags.find(tag => tag[0] === 'd')?.[1] || this.data.identifier
@@ -1548,7 +1546,7 @@ export class ShareArticleDialogComponent {
     }
 
     const authorRelays = this.userRelaysService.getRelaysForPubkey(this.data.pubkey);
-    const relayHints = this.utilities.normalizeRelayUrls(authorRelays);
+    const relayHints = this.utilities.getShareRelayHints(authorRelays);
 
     if (this.data.kind === kinds.Metadata) {
       return nip19.nprofileEncode({

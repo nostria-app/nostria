@@ -1190,12 +1190,12 @@ export class ProfileComponent implements OnDestroy, AfterViewInit {
 
     try {
       // Get the logged-in user's account relays (not the profile being viewed)
-      const relays = this.accountRelay.getRelayUrls();
+      const relays = this.utilities.getShareRelayHints(this.accountRelay.getRelayUrls());
 
       // Encode nprofile with pubkey and relays
       const nprofile = nip19.nprofileEncode({
         pubkey: pubkey,
-        relays: relays.slice(0, 5), // Include up to 5 relays
+        relays: relays,
       });
 
       // Generate the invite URL
@@ -1251,12 +1251,12 @@ export class ProfileComponent implements OnDestroy, AfterViewInit {
       const displayName = this.getFormattedName();
 
       // Get the logged-in user's account relays
-      const relays = this.accountRelay.getRelayUrls();
+      const relays = this.utilities.getShareRelayHints(this.accountRelay.getRelayUrls());
 
       // Encode nprofile with pubkey and relays
       const nprofile = nip19.nprofileEncode({
         pubkey: pubkey,
-        relays: relays.slice(0, 5), // Include up to 5 relays
+        relays: relays,
       });
 
       // Generate the invite URL

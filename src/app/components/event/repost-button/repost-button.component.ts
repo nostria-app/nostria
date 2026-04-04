@@ -119,7 +119,7 @@ export class RepostButtonComponent {
     }
 
     const authorRelays = await this.userRelaysService.getUserRelaysForPublishing(event.pubkey);
-    const relayHints = this.utilities.normalizeRelayUrls(authorRelays);
+    const relayHints = this.utilities.getShareRelayHints(authorRelays);
     const relayUrl = relayHints[0];
 
     await this.repostService.repostNote(event, { expiration: repostExpiration, relayUrl });

@@ -816,7 +816,9 @@ export class MusicBookmarkPlaylistComponent {
     }
 
     try {
-      const authorRelays = await this.userRelays.getUserRelaysForPublishing(event.pubkey);
+      const authorRelays = this.utilities.getShareRelayHints(
+        await this.userRelays.getUserRelaysForPublishing(event.pubkey)
+      );
       const npub = nip19.npubEncode(event.pubkey);
       const naddr = nip19.naddrEncode({
         kind: event.kind,

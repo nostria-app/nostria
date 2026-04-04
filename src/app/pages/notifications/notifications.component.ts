@@ -970,7 +970,8 @@ export class NotificationsComponent implements OnInit, OnDestroy {
     const metadataRelayHints = notification.metadata?.relayHints;
 
     if (Array.isArray(metadataRelayHints) && metadataRelayHints.length > 0) {
-      return metadataRelayHints.slice(0, 3);
+      const relayHints = this.utilities.getShareRelayHints(metadataRelayHints);
+      return relayHints.length > 0 ? relayHints : undefined;
     }
 
     if (!eventAuthor) {
@@ -979,7 +980,7 @@ export class NotificationsComponent implements OnInit, OnDestroy {
 
     try {
       await this.userRelayService.ensureRelaysForPubkey(eventAuthor);
-      const relays = this.userRelayService.getRelaysForPubkey(eventAuthor).slice(0, 3);
+      const relays = this.utilities.getShareRelayHints(this.userRelayService.getRelaysForPubkey(eventAuthor));
       return relays.length > 0 ? relays : undefined;
     } catch (error) {
       this.logger.debug(

@@ -1175,6 +1175,12 @@ export class UtilitiesService {
     'wss://indexer.coracle.social/',
   ];
 
+  readonly maxShareRelayHints = 3;
+
+  getShareRelayHints(relayUrls: string[], maxHints = this.maxShareRelayHints): string[] {
+    return this.pickOptimalRelays(relayUrls, maxHints);
+  }
+
   /** Used to optimize the selection of a few relays from the user's relay list. */
   pickOptimalRelays(relayUrls: string[], count: number): string[] {
     // Filter out malformed URLs first
@@ -1210,14 +1216,16 @@ export class UtilitiesService {
       }
     };
 
+    const normalizedPreferredRelays = new Set(this.normalizeRelayUrls(this.preferredRelays));
+
     // 1. First tier: Preferred relays
     const preferredRelays = filteredUrls.filter(
-      url => this.preferredRelays.includes(url) && !isIpOrLocalhost(url)
+      url => normalizedPreferredRelays.has(url) && !isIpOrLocalhost(url)
     );
 
     // 2. Second tier: Normal domain relays (not IP or localhost)
     const normalDomainRelays = filteredUrls.filter(
-      url => !this.preferredRelays.includes(url) && !isIpOrLocalhost(url)
+      url => !normalizedPreferredRelays.has(url) && !isIpOrLocalhost(url)
     );
 
     // 3. Third tier: IP-based and localhost relays

@@ -359,7 +359,7 @@ export class LiveEventComponent {
     const liveEvent = this.event();
     if (liveEvent) {
       const authorRelays = this.userRelaysService.getRelaysForPubkey(liveEvent.pubkey);
-      const relayHints = this.utilities.normalizeRelayUrls(authorRelays);
+      const relayHints = this.utilities.getShareRelayHints(authorRelays);
       const encoded = this.utilities.encodeEventForUrl(liveEvent, relayHints.length > 0 ? relayHints : undefined);
       this.clipboard.copy(`https://nostria.app/stream/${encoded}`);
       this.snackBar.open('Stream URL copied to clipboard', 'Close', {

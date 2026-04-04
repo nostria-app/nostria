@@ -1522,6 +1522,8 @@ export class EventComponent implements AfterViewInit, OnDestroy {
           this.hasLoadedInteractions.set(false);
           this.observedEventId = event.id;
           this.hasLoadedEdit = false;
+          this.retriedVisibleInteractionRecoveryEventId = undefined;
+          this.fullVisibleInteractionRecoveryEventId = undefined;
           this.interactionLoadGeneration += 1;
           this.interactionAbortController?.abort();
           this.interactionAbortController = undefined;
@@ -1845,12 +1847,15 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   private readonly immediateDomPreloadBehindPx = this.runtimeResourceProfile.likelyConstrained ? 150 : 250;
   private readonly initialBatchPreloadCount = this.runtimeResourceProfile.likelyConstrained ? 4 : 12;
   private readonly interactionVerificationLimitMultiplier = 4;
+  private readonly visibleRecoveryLimitMultiplier = 12;
   private readonly emptyInteractionRetryMinAgeSeconds = 600;
   private readonly actualVisibilityObserverOptions = {
     rootMargin: '0px',
     threshold: 0.01,
   } as const;
   private retriedEmptyInteractionEventId?: string;
+  private retriedVisibleInteractionRecoveryEventId?: string;
+  private fullVisibleInteractionRecoveryEventId?: string;
 
   private static startInteractionPreload(component: EventComponent, priority: number): void {
     EventComponent.queuedInteractionPreloads.delete(component);
@@ -2110,13 +2115,25 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     this.visibleInteractionRetryTimer = setTimeout(() => {
       this.visibleInteractionRetryTimer = undefined;
 
-      if (this.hasLoadedInteractions() || this.isLoadingReactions() || this.isLoadingZaps()) {
+      const element = this.elementRef.nativeElement as HTMLElement | undefined;
+      const currentRecord = this.record();
+      if (!element?.isConnected || !currentRecord || !this.supportsReactions()) {
         return;
       }
 
-      const element = this.elementRef.nativeElement as HTMLElement | undefined;
-      const currentRecord = this.record();
-      if (!element?.isConnected || !currentRecord || !this.isWithinImmediatePreloadBounds(element) || !this.supportsReactions()) {
+      if (this.hasLoadedInteractions()) {
+        if (this.shouldRetryVisibleTimelineInteractions(currentRecord.event.id, element)) {
+          void this.retryVisibleTimelineInteractions(currentRecord.event.id);
+        }
+        return;
+      }
+
+      if (!this.isWithinImmediatePreloadBounds(element)) {
+        return;
+      }
+
+      if (this.isLoadingReactions() || this.isLoadingZaps()) {
+        this.scheduleVisibleInteractionRetry();
         return;
       }
 
@@ -2126,7 +2143,104 @@ export class EventComponent implements AfterViewInit, OnDestroy {
       const priority = this.getInteractionPreloadPriority(observerRoot);
       this.logger.debug('[Lazy Load] Retrying visible preload for event:', currentEventId.substring(0, 8), 'priority:', priority);
       EventComponent.enqueueInteractionPreload(this, priority);
+
+      if (!this.hasLoadedInteractions()) {
+        this.scheduleVisibleInteractionRetry();
+      }
     }, 900);
+  }
+
+  private shouldRetryVisibleTimelineInteractions(currentEventId: string, element: HTMLElement): boolean {
+    if (this.mode() !== 'timeline' || !this.inFeedsPanel()) {
+      return false;
+    }
+
+    if (this.retriedVisibleInteractionRecoveryEventId === currentEventId) {
+      return false;
+    }
+
+    if (!this.isWithinImmediatePreloadBounds(element)) {
+      return false;
+    }
+
+    const hasAnyEngagementLoaded = this.reactions().events.length > 0
+      || this.reposts().length > 0
+      || this.replyCount() > 0
+      || this.quotes().length > 0
+      || this.zaps().length > 0;
+
+    if (hasAnyEngagementLoaded) {
+      return false;
+    }
+
+    const observerRoot = this.resolveObserverRoot(element);
+    const priority = this.getInteractionPreloadPriority(observerRoot);
+    return priority <= 0 || this.shouldForceInitialBatchPreload(element);
+  }
+
+  private async retryVisibleTimelineInteractions(currentEventId: string): Promise<void> {
+    if (this.retriedVisibleInteractionRecoveryEventId === currentEventId) {
+      return;
+    }
+
+    this.retriedVisibleInteractionRecoveryEventId = currentEventId;
+    const loadGeneration = ++this.interactionLoadGeneration;
+    const recoveryLimit = EventService.INTERACTION_QUERY_LIMIT * this.visibleRecoveryLimitMultiplier;
+
+    this.logger.debug(
+      '[Loading Interactions] Retrying visible timeline engagement for:',
+      currentEventId.substring(0, 8),
+      'limit:',
+      recoveryLimit,
+    );
+    await this.loadAllInteractions(true, undefined, loadGeneration, recoveryLimit);
+
+    if (this.interactionLoadGeneration === loadGeneration) {
+      await this.loadDeferredTimelineEngagement(undefined, loadGeneration, true, recoveryLimit);
+
+      if (this.shouldEscalateVisibleInteractionRecovery(currentEventId)) {
+        await this.loadFullVisibleInteractionRecovery(currentEventId, loadGeneration);
+      }
+    }
+  }
+
+  private shouldEscalateVisibleInteractionRecovery(currentEventId: string): boolean {
+    if (this.fullVisibleInteractionRecoveryEventId === currentEventId) {
+      return false;
+    }
+
+    const element = this.elementRef.nativeElement as HTMLElement | undefined;
+    if (!element?.isConnected || !this.isWithinImmediatePreloadBounds(element)) {
+      return false;
+    }
+
+    const currentRecord = this.targetRecord();
+    if (!currentRecord || currentRecord.event.id !== currentEventId) {
+      return false;
+    }
+
+    const eventAgeSeconds = Math.floor(Date.now() / 1000) - currentRecord.event.created_at;
+    if (eventAgeSeconds < this.emptyInteractionRetryMinAgeSeconds) {
+      return false;
+    }
+
+    return this.reactions().events.length === 0
+      && this.reposts().length === 0
+      && this.replyCount() === 0;
+  }
+
+  private async loadFullVisibleInteractionRecovery(currentEventId: string, loadGeneration: number): Promise<void> {
+    this.fullVisibleInteractionRecoveryEventId = currentEventId;
+    this.logger.debug(
+      '[Loading Interactions] Escalating visible timeline engagement to full recovery for:',
+      currentEventId.substring(0, 8),
+    );
+
+    await this.loadAllInteractions(true, undefined, loadGeneration, null);
+
+    if (this.interactionLoadGeneration === loadGeneration) {
+      await this.loadZaps(undefined, loadGeneration, true);
+    }
   }
 
   private maybePreloadInteractionsImmediately(): void {
@@ -2266,7 +2380,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
       ]);
 
       if (this.interactionLoadGeneration === loadGeneration && !signal.aborted) {
-        void this.loadDeferredTimelineEngagement(signal, loadGeneration);
+        void this.loadDeferredTimelineEngagement(signal, loadGeneration, false);
         this.scheduleVisibleInteractionRetry();
       }
       return;
@@ -2283,7 +2397,12 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     }
   }
 
-  private async loadDeferredTimelineEngagement(signal?: AbortSignal, loadGeneration?: number): Promise<void> {
+  private async loadDeferredTimelineEngagement(
+    signal?: AbortSignal,
+    loadGeneration?: number,
+    invalidateCache = false,
+    queryLimitOverride?: number,
+  ): Promise<void> {
     const targetRecordData = this.targetRecord();
     if (!targetRecordData) {
       return;
@@ -2291,15 +2410,15 @@ export class EventComponent implements AfterViewInit, OnDestroy {
 
     const targetEventId = targetRecordData.event.id;
     const eventAuthorPubkey = targetRecordData.event.pubkey;
-    const queryLimit = EventService.INTERACTION_QUERY_LIMIT;
+    const queryLimit = queryLimitOverride ?? EventService.INTERACTION_QUERY_LIMIT;
 
-    await this.loadTimelineQuotes(targetEventId, eventAuthorPubkey, false, queryLimit, signal, loadGeneration);
+    await this.loadTimelineQuotes(targetEventId, eventAuthorPubkey, invalidateCache, queryLimit, signal, loadGeneration);
 
     if (signal?.aborted || this.interactionLoadGeneration !== loadGeneration || this.targetRecord()?.event.id !== targetEventId) {
       return;
     }
 
-    await this.loadZaps(signal, loadGeneration);
+    await this.loadZaps(signal, loadGeneration, invalidateCache);
   }
 
   private resolveObserverRoot(element: HTMLElement): HTMLElement | null {
@@ -2431,7 +2550,12 @@ export class EventComponent implements AfterViewInit, OnDestroy {
    *
    * For reposts, loads interactions for the reposted event, not the repost itself.
    */
-  async loadAllInteractions(invalidateCache = false, signal?: AbortSignal, loadGeneration?: number) {
+  async loadAllInteractions(
+    invalidateCache = false,
+    signal?: AbortSignal,
+    loadGeneration?: number,
+    timelineQueryLimitOverride?: number | null,
+  ) {
     // Use targetRecord to get the actual event for interactions
     // For reposts, this will be the reposted event, not the repost event
     const targetRecordData = this.targetRecord();
@@ -2450,7 +2574,9 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     this.logger.debug('[Loading Interactions] Starting load for event:', targetEventId.substring(0, 8), 'skipReplies:', skipReplies);
 
     // Only apply limits in timeline (feed) mode; thread (detail) mode loads all interactions
-    const queryLimit = this.mode() === 'timeline' ? EventService.INTERACTION_QUERY_LIMIT : undefined;
+    const queryLimit = this.mode() === 'timeline'
+      ? (timelineQueryLimitOverride === null ? undefined : (timelineQueryLimitOverride ?? EventService.INTERACTION_QUERY_LIMIT))
+      : undefined;
     const shouldDeferSecondaryTimelineEngagement = this.mode() === 'timeline' && queryLimit != null;
 
     this.isLoadingReactions.set(true);
@@ -2905,7 +3031,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
    * Load zaps for an event
    * For reposts, loads zaps for the reposted event, not the repost itself
    */
-  async loadZaps(signal?: AbortSignal, loadGeneration?: number) {
+  async loadZaps(signal?: AbortSignal, loadGeneration?: number, invalidateCache = false) {
     // Use targetRecord to get the actual event for zaps
     // For reposts, this will be the reposted event, not the repost event
     const targetRecordData = this.targetRecord();
@@ -2914,7 +3040,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     // Capture the event ID we're loading for to prevent race conditions
     const targetEventId = targetRecordData.event.id;
 
-    this.logger.debug('[Loading Zaps] Starting load for event:', targetEventId.substring(0, 8));
+    this.logger.debug('[Loading Zaps] Starting load for event:', targetEventId.substring(0, 8), invalidateCache ? '(recovery)' : '');
 
     this.isLoadingZaps.set(true);
     try {
@@ -3122,7 +3248,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
 
     const ev = targetItem.event;
     const authorRelays = await this.userRelaysService.getUserRelaysForPublishing(ev.pubkey);
-    const relayHints = this.utilities.normalizeRelayUrls(authorRelays);
+    const relayHints = this.utilities.getShareRelayHints(authorRelays);
     const encodedId = this.utilities.encodeEventForUrl(ev, relayHints.length > 0 ? relayHints : undefined);
 
     const dialogData: ShareArticleDialogData = {

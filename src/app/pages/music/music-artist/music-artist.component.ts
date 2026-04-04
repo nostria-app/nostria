@@ -676,7 +676,9 @@ export class MusicArtistComponent implements OnInit, OnDestroy {
 
   async copyTrackLink(track: Event): Promise<void> {
     try {
-      const authorRelays = await this.userRelaysService.getUserRelaysForPublishing(track.pubkey);
+      const authorRelays = this.utilities.getShareRelayHints(
+        await this.userRelaysService.getUserRelaysForPublishing(track.pubkey)
+      );
       const dTag = track.tags.find(t => t[0] === 'd')?.[1] || '';
       const naddr = nip19.naddrEncode({
         kind: track.kind,

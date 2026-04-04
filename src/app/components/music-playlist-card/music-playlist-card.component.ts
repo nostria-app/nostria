@@ -872,7 +872,9 @@ export class MusicPlaylistCardComponent {
     }
 
     try {
-      const authorRelays = await this.userRelaysService.getUserRelaysForPublishing(ev.pubkey);
+      const authorRelays = this.utilities.getShareRelayHints(
+        await this.userRelaysService.getUserRelaysForPublishing(ev.pubkey)
+      );
       const npub = nip19.npubEncode(ev.pubkey);
       const link = `https://nostria.app/music/album/${npub}/${encodeURIComponent(dTag)}`;
       const naddr = nip19.naddrEncode({

@@ -653,7 +653,7 @@ export class FeedsComponent implements OnDestroy {
     const rawEventCount = events.length;
 
     // Filter based on feed-specific settings (each feed has its own kinds, showReplies, showReposts)
-  events = this.getFilteredEventsForFeed(feed, events);
+    events = this.getFilteredEventsForFeed(feed, events);
 
     eventsMap.set(feed.id, events);
 
@@ -1231,11 +1231,11 @@ export class FeedsComponent implements OnDestroy {
       return;
     }
 
-      const options: IntersectionObserverInit = {
-        root: scrollRoot,
-        rootMargin: '0px 0px 400px 0px',
-        threshold: 0,
-      };
+    const options: IntersectionObserverInit = {
+      root: scrollRoot,
+      rootMargin: '0px 0px 400px 0px',
+      threshold: 0,
+    };
 
     this.intersectionObserver = new IntersectionObserver((entries) => {
       entries.forEach((entry) => {
@@ -1356,7 +1356,7 @@ export class FeedsComponent implements OnDestroy {
       }
 
       void this.maybeAutoLoadMore(feedId, container, true);
-     }, 150);
+    }, 150);
   }
 
   /**

@@ -493,7 +493,7 @@ export class CommunityComponent implements OnInit, OnDestroy {
     const comm = this.community();
     if (!comm?.event) return;
 
-    const relayHints = this.utilities.normalizeRelayUrls(comm.relays.map(relay => relay.url));
+    const relayHints = this.utilities.getShareRelayHints(comm.relays.map(relay => relay.url));
     const naddr = relayHints.length > 0
       ? nip19.naddrEncode({
         kind: comm.event.kind,

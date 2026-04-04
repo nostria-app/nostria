@@ -1518,7 +1518,9 @@ export class LayoutService implements OnDestroy {
           // This is a reference to a live event (kind 30311)
           const [, pubkey, dTag] = parts;
           const relayHint = aTag[2] || '';
-          const relays = relayHint ? [relayHint] : this.userRelayService.getRelaysForPubkey(pubkey).slice(0, 3);
+          const relays = relayHint
+            ? this.utilities.getShareRelayHints([relayHint])
+            : this.utilities.getShareRelayHints(this.userRelayService.getRelaysForPubkey(pubkey));
 
           // Encode as naddr (for parameterized replaceable events)
           const naddr = nip19.naddrEncode({
@@ -1537,7 +1539,7 @@ export class LayoutService implements OnDestroy {
 
     // Handle live events (kind 30311) - open the stream directly
     if (event.kind === 30311) {
-      const relayHints = this.userRelayService.getRelaysForPubkey(event.pubkey).slice(0, 3);
+      const relayHints = this.utilities.getShareRelayHints(this.userRelayService.getRelaysForPubkey(event.pubkey));
       const dTag = event.tags.find((tag: string[]) => tag[0] === 'd')?.[1] || '';
 
       // Encode as naddr (for parameterized replaceable events)
@@ -1553,7 +1555,7 @@ export class LayoutService implements OnDestroy {
       return;
     }
 
-    const relayHints = this.userRelayService.getRelaysForPubkey(event.pubkey).slice(0, 3);
+    const relayHints = this.utilities.getShareRelayHints(this.userRelayService.getRelaysForPubkey(event.pubkey));
 
     // Route content-specific kinds to their dedicated pages
     const dTag = event.tags.find((tag: string[]) => tag[0] === 'd')?.[1] || '';
@@ -1579,7 +1581,7 @@ export class LayoutService implements OnDestroy {
 
     // Calendar events (NIP-52: date-based 31922, time-based 31923)
     if (event.kind === 31922 || event.kind === 31923) {
-      const relayHintsForAddr = this.userRelayService.getRelaysForPubkey(event.pubkey).slice(0, 3);
+      const relayHintsForAddr = this.utilities.getShareRelayHints(this.userRelayService.getRelaysForPubkey(event.pubkey));
       const naddr = nip19.naddrEncode({
         kind: event.kind,
         pubkey: event.pubkey,
