@@ -587,7 +587,7 @@ jobs:
           set -euo pipefail
 
           CERT_PATH="$RUNNER_TEMP/ios-signing-cert.p12"
-          KEYCHAIN_PATH="$RUNNER_TEMP/ios-signing.keychain-db"
+          KEYCHAIN_PATH="$HOME/Library/Keychains/ios-signing-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}.keychain-db"
           KEYCHAIN_PASSWORD="$(openssl rand -base64 24 | tr -d '\r\n')"
 
           printf '%s' "$IOS_CERTIFICATE" | tr -d '\r\n' | base64 --decode > "$CERT_PATH"
@@ -601,10 +601,12 @@ jobs:
           security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
           security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
           security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
-          security import "$CERT_PATH" -f pkcs12 -A -P "$IOS_CERTIFICATE_PASSWORD" -T /usr/bin/codesign -T /usr/bin/security -T /usr/bin/pkgbuild -T /usr/bin/productbuild -k "$KEYCHAIN_PATH"
-          security list-keychains -d user -s "$KEYCHAIN_PATH" login.keychain-db
-          security default-keychain -d user -s "$KEYCHAIN_PATH"
+          security import "$CERT_PATH" -P "$IOS_CERTIFICATE_PASSWORD" -T /usr/bin/codesign -T /usr/bin/pkgbuild -T /usr/bin/productbuild -k "$KEYCHAIN_PATH"
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+
+          CURRENT_KEYCHAINS=$(security list-keychain -d user | tr '\n' ' ')
+          # shellcheck disable=SC2086
+          security list-keychain -d user -s $CURRENT_KEYCHAINS "$KEYCHAIN_PATH"
 
           IDENTITY="$(security find-identity -v -p codesigning "$KEYCHAIN_PATH" | sed -n 's/.*"\([^"]*\)"/\1/p' | grep -m 1 '^Apple Distribution:' || true)"
 
