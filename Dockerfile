@@ -4,10 +4,10 @@ FROM node:24 AS build
 WORKDIR /app/src
 COPY package*.json ./
 RUN --mount=type=cache,target=/root/.npm \
-	npm config set fetch-retries 5 && \
-	npm config set fetch-retry-mintimeout 20000 && \
-	npm config set fetch-retry-maxtimeout 120000 && \
-	npm ci --legacy-peer-deps --no-audit --no-fund
+  npm config set fetch-retries 5 && \
+  npm config set fetch-retry-mintimeout 20000 && \
+  npm config set fetch-retry-maxtimeout 120000 && \
+  npm ci --legacy-peer-deps --no-audit --no-fund
 COPY . ./
 RUN npm run build
 
