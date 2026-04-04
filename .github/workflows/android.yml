@@ -62,15 +62,8 @@ jobs:
       - name: Print Tauri environment info
         run: npm run tauri:info
 
-      - name: Prepare Android project for arm64 debug build
-        run: npx tauri android android-studio-script --target aarch64
-
-      - name: Build arm64 debug APK
-        working-directory: src-tauri/gen/android
-        shell: bash
-        run: |
-          chmod +x ./gradlew
-          ./gradlew :app:assembleArm64Debug
+      - name: Build debug APK
+        run: npx tauri android build --debug --apk --target aarch64
 
       - name: Prepare Android project for arm64 release build
         env:
@@ -106,7 +99,7 @@ jobs:
         uses: actions/upload-artifact@v6
         with:
           name: nostria-android-debug-apk-run-${{ github.run_id }}-${{ github.run_attempt }}
-          path: src-tauri/gen/android/app/build/outputs/apk/arm64/debug/*.apk
+          path: src-tauri/gen/android/app/build/outputs/apk/universal/debug/*.apk
           if-no-files-found: error
 
       - name: Upload release verification APK
