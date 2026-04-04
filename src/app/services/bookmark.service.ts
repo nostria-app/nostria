@@ -12,6 +12,8 @@ import { DatabaseService } from './database.service';
 import { EncryptionService } from './encryption.service';
 import { UtilitiesService } from './utilities.service';
 import { LoggerService } from './logger.service';
+import { DeleteEventService } from './delete-event.service';
+import { DeleteEventReferenceMode } from '../components/delete-confirmation-dialog/delete-confirmation-dialog.component';
 
 // Define bookmark types
 export type BookmarkType = 'e' | 'a' | 'r' | 't';
@@ -52,6 +54,7 @@ export class BookmarkService {
   encryption = inject(EncryptionService);
   private utilities = inject(UtilitiesService);
   private logger = inject(LoggerService);
+  private deleteEventService = inject(DeleteEventService);
 
   // Kind 10003 - default bookmarks event (single replaceable)
   bookmarkEvent = signal<Event | null>(null);
@@ -898,7 +901,7 @@ export class BookmarkService {
     this.logger.debug(`[BookmarkService] ✅ List "${list.name}" is now ${newIsPrivate ? 'private' : 'public'}`);
   }
 
-  async deleteBookmarkList(listId: string): Promise<void> {
+  async deleteBookmarkList(listId: string, referenceMode: DeleteEventReferenceMode = 'a'): Promise<void> {
     const list = this.bookmarkLists().find(l => l.id === listId);
     if (!list || !list.event) {
       return;
@@ -910,9 +913,7 @@ export class BookmarkService {
       pubkey: this.accountState.pubkey()!,
       created_at: this.utilities.currentDate(),
       content: 'Deleted bookmark list',
-      tags: [
-        ['a', `30003:${this.accountState.pubkey()}:${listId}`]
-      ],
+      tags: this.deleteEventService.createDeletionTags(list.event, referenceMode),
       id: '',
       sig: '',
     };
