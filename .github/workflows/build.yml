@@ -1,4 +1,4 @@
-name: Tauri Platform Builds
+name: Build
 
 on:
   push:
@@ -16,12 +16,52 @@ on:
         default: false
 
 permissions:
-  contents: read
+  contents: write
+  packages: read
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
+  prepare-release:
+    name: Prepare draft release metadata
+    runs-on: ubuntu-22.04
+    outputs:
+      version: ${{ steps.release-metadata.outputs.version }}
+      release_tag: ${{ steps.release-metadata.outputs.release_tag }}
+      release_name: ${{ steps.release-metadata.outputs.release_name }}
+      release_prerelease: ${{ steps.release-metadata.outputs.release_prerelease }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Determine release metadata
+        id: release-metadata
+        shell: bash
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?(\+[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$ ]]; then
+            echo "package.json version '$VERSION' is not a supported semver value" >&2
+            exit 1
+          fi
+
+          RELEASE_TAG="v${VERSION}"
+          RELEASE_NAME="Nostria v${VERSION}"
+
+          RELEASE_PRERELEASE=false
+
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "release_tag=$RELEASE_TAG" >> "$GITHUB_OUTPUT"
+          echo "release_name=$RELEASE_NAME" >> "$GITHUB_OUTPUT"
+          echo "release_prerelease=$RELEASE_PRERELEASE" >> "$GITHUB_OUTPUT"
+
   build-desktop:
     name: Desktop ${{ matrix.name }} artifacts
     strategy:
@@ -588,3 +628,51 @@ jobs:
           name: nostria-ios-signed-run-${{ github.run_id }}-${{ github.run_attempt }}
           path: artifacts/ios-signed/**
           if-no-files-found: error
+
+  publish-draft-release:
+    name: Publish draft release assets
+    runs-on: ubuntu-22.04
+    needs:
+      - prepare-release
+      - build-desktop
+      - build-android-verification
+      - build-android-signed-release
+      - build-ios-verification
+      - build-ios-signed-release
+    if: >-
+      always() &&
+      needs.prepare-release.result == 'success' &&
+      needs.build-desktop.result == 'success' &&
+      needs.build-android-verification.result == 'success' &&
+      needs.build-ios-verification.result == 'success' &&
+      (needs.build-android-signed-release.result == 'success' || needs.build-android-signed-release.result == 'skipped') &&
+      (needs.build-ios-signed-release.result == 'success' || needs.build-ios-signed-release.result == 'skipped')
+
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v6
+        with:
+          pattern: nostria-*
+          path: release-assets
+
+      - name: List release assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          find release-assets -type f | sort
+
+      - name: Publish draft GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.prepare-release.outputs.release_tag }}
+          name: ${{ needs.prepare-release.outputs.release_name }}
+          target_commitish: ${{ github.sha }}
+          draft: true
+          prerelease: ${{ needs.prepare-release.outputs.release_prerelease }}
+          overwrite_files: true
+          fail_on_unmatched_files: true
+          files: release-assets/**/*
+          body: |
+            Draft build assets for Nostria v${{ needs.prepare-release.outputs.version }}.
+
+            This draft is updated by the unified build workflow on each run so the generated artifacts can be reviewed and published when ready.
