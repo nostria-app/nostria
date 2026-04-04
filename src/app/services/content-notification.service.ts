@@ -57,7 +57,6 @@ export class ContentNotificationService implements OnDestroy {
   private lastCheckTime = 0;
   private visibilityChangeHandler: (() => void) | null = null;
   private isPollingEnabled = false;
-  private readonly knownFollowerPubkeysCache = new Map<string, Set<string>>();
 
   /**
    * Regex to match nostr: URI identifiers and bare NIP-19 identifiers in content
@@ -81,7 +80,6 @@ export class ContentNotificationService implements OnDestroy {
     if (pubkey) {
       this.accountLocalState.setNotificationLastCheck(pubkey, 0);
       this.accountLocalState.clearFollowerNotificationsProcessed(pubkey);
-      this.clearKnownFollowerPubkeys(pubkey);
     }
     this.logger.info('ContentNotificationService last check timestamp reset for account');
   }
@@ -103,7 +101,6 @@ export class ContentNotificationService implements OnDestroy {
 
     // Reset the rate limiter so an immediate check is not blocked
     this.lastCheckTime = 0;
-    this.clearKnownFollowerPubkeys(pubkey);
 
     // Reload the last check timestamp for the new account from storage
     const timestamp = await this.getLastCheckTimestamp();
@@ -561,48 +558,6 @@ export class ContentNotificationService implements OnDestroy {
   /** Batch size for paginated follower scanning */
   private readonly FOLLOWER_SCAN_BATCH_SIZE = 500;
 
-  private clearKnownFollowerPubkeys(pubkey?: string): void {
-    if (pubkey) {
-      this.knownFollowerPubkeysCache.delete(pubkey);
-      return;
-    }
-
-    this.knownFollowerPubkeysCache.clear();
-  }
-
-  private async getKnownFollowerPubkeys(pubkey: string): Promise<Set<string>> {
-    const cachedFollowerPubkeys = this.knownFollowerPubkeysCache.get(pubkey);
-    if (cachedFollowerPubkeys) {
-      return cachedFollowerPubkeys;
-    }
-
-    const processedFollowerMap = this.accountLocalState.getFollowerNotificationsProcessedAt(pubkey);
-    const knownFollowerPubkeys = new Set(Object.keys(processedFollowerMap));
-    const followerSummaryId = `content-${NotificationType.FOLLOWER_SUMMARY}-${pubkey}`;
-
-    const inMemorySummary = this.notificationService.notifications().find((notification): notification is ContentNotification => {
-      return notification.id === followerSummaryId && notification.type === NotificationType.FOLLOWER_SUMMARY;
-    });
-
-    const storedSummary = inMemorySummary ?? await this.database.getNotification(followerSummaryId) as ContentNotification | undefined;
-    const summaryFollowerPubkeys = storedSummary?.metadata?.followerPubkeys ?? [];
-
-    for (const followerPubkey of summaryFollowerPubkeys) {
-      knownFollowerPubkeys.add(followerPubkey);
-    }
-
-    const missingFollowerPubkeys = summaryFollowerPubkeys.filter(followerPubkey => processedFollowerMap[followerPubkey] === undefined);
-    if (missingFollowerPubkeys.length > 0) {
-      const processedTimestamp = storedSummary
-        ? Math.floor(storedSummary.timestamp / 1000)
-        : this.accountLocalState.getFollowerCheckLastTimestamp(pubkey);
-      this.accountLocalState.markFollowerNotificationsBatchProcessed(pubkey, missingFollowerPubkeys, processedTimestamp);
-    }
-
-    this.knownFollowerPubkeysCache.set(pubkey, knownFollowerPubkeys);
-    return knownFollowerPubkeys;
-  }
-
   private eventShowsFollower(event: Event, pubkey: string): boolean {
     return event.tags.some(tag => tag[0] === 'p' && tag[1] === pubkey);
   }
@@ -652,8 +607,7 @@ export class ContentNotificationService implements OnDestroy {
    * All discovered followers are aggregated into a single summary notification.
    */
   private async scanAllFollowers(pubkey: string, now: number): Promise<void> {
-    const seen = new Set<string>();
-    const followerPubkeys: string[] = [];
+    let uniqueFollowerCount = 0;
     let until: number | undefined;
     let totalFetched = 0;
 
@@ -689,27 +643,28 @@ export class ContentNotificationService implements OnDestroy {
 
       // Find the oldest timestamp in this batch for the next pagination cursor
       let oldestTimestamp = Infinity;
+      const batchFollowerPubkeys: string[] = [];
+      const seenInBatch = new Set<string>();
 
       for (const event of events) {
+        if (event.created_at < oldestTimestamp) {
+          oldestTimestamp = event.created_at;
+        }
+
         if (event.pubkey === pubkey) continue;
-        if (seen.has(event.pubkey)) continue;
+        if (seenInBatch.has(event.pubkey)) continue;
+        if (this.accountLocalState.hasProcessedFollowerNotification(pubkey, event.pubkey)) continue;
 
         const followsCurrentUser = event.tags.some(tag => tag[0] === 'p' && tag[1] === pubkey);
         if (!followsCurrentUser) continue;
 
-        seen.add(event.pubkey);
-        followerPubkeys.push(event.pubkey);
-
-        if (event.created_at < oldestTimestamp) {
-          oldestTimestamp = event.created_at;
-        }
+        seenInBatch.add(event.pubkey);
+        batchFollowerPubkeys.push(event.pubkey);
       }
 
-      // Also check non-matching events for oldest timestamp (they still affect pagination)
-      for (const event of events) {
-        if (event.created_at < oldestTimestamp) {
-          oldestTimestamp = event.created_at;
-        }
+      if (batchFollowerPubkeys.length > 0) {
+        uniqueFollowerCount += batchFollowerPubkeys.length;
+        this.accountLocalState.markFollowerNotificationsBatchProcessed(pubkey, batchFollowerPubkeys, now);
       }
 
       // If we got fewer events than the batch size, we've exhausted all events
@@ -727,12 +682,12 @@ export class ContentNotificationService implements OnDestroy {
       }
     }
 
-    this.logger.info(`[FollowerScan] Complete. Found ${followerPubkeys.length} unique followers from ${totalFetched} events`);
+    this.logger.info(`[FollowerScan] Complete. Found ${uniqueFollowerCount} unique followers from ${totalFetched} events`);
 
-    if (followerPubkeys.length > 0) {
-      const message = followerPubkeys.length === 1
+    if (uniqueFollowerCount > 0) {
+      const message = uniqueFollowerCount === 1
         ? '1 person is following you'
-        : `${followerPubkeys.length} people are following you`;
+        : `${uniqueFollowerCount} people are following you`;
 
       await this.createContentNotification({
         type: NotificationType.FOLLOWER_SUMMARY,
@@ -742,16 +697,10 @@ export class ContentNotificationService implements OnDestroy {
         recipientPubkey: pubkey,
         timestamp: now * 1000,
         metadata: {
-          followerCount: followerPubkeys.length,
-          followerPubkeys,
+          followerCount: uniqueFollowerCount,
         },
       });
-
-      // Batch-mark all follower pubkeys as processed
-      this.accountLocalState.markFollowerNotificationsBatchProcessed(pubkey, followerPubkeys, now);
     }
-
-    this.knownFollowerPubkeysCache.set(pubkey, new Set(followerPubkeys));
   }
 
   /**
@@ -768,14 +717,12 @@ export class ContentNotificationService implements OnDestroy {
       return;
     }
 
-    const knownFollowerPubkeys = await this.getKnownFollowerPubkeys(pubkey);
-    if (knownFollowerPubkeys.has(event.pubkey)) {
+    if (this.accountLocalState.hasProcessedFollowerNotification(pubkey, event.pubkey)) {
       return;
     }
 
     if (await this.hasHistoricalFollowEvent(pubkey, event)) {
       this.accountLocalState.markFollowerNotificationProcessed(pubkey, event.pubkey, event.created_at);
-      knownFollowerPubkeys.add(event.pubkey);
       return;
     }
 
@@ -794,7 +741,6 @@ export class ContentNotificationService implements OnDestroy {
     // Persist follower as processed so future contact list updates from this user
     // do not depend on p-tag ordering and won't duplicate follow notifications.
     this.accountLocalState.markFollowerNotificationProcessed(pubkey, event.pubkey, event.created_at);
-    knownFollowerPubkeys.add(event.pubkey);
   }
 
   /**

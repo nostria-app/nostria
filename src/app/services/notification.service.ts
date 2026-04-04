@@ -18,6 +18,10 @@ import { AccountRelayService } from './relays/account-relay';
   providedIn: 'root',
 })
 export class NotificationService implements OnDestroy {
+  private readonly MAX_IN_MEMORY_READ_NOTIFICATIONS = 250;
+  private readonly MAX_CONTENT_NOTIFICATION_MESSAGE_LENGTH = 240;
+  private readonly MAX_CONTENT_NOTIFICATION_METADATA_LENGTH = 200;
+  private readonly MAX_NOTIFICATION_RELAY_HINTS = 3;
   private logger = inject(LoggerService);
   private database = inject(DatabaseService);
   private accountState = inject(AccountStateService);
@@ -206,11 +210,13 @@ export class NotificationService implements OnDestroy {
   }
 
   private normalizeRelayNotification(notification: Notification): Notification {
-    if (notification.type !== NotificationType.RELAY_PUBLISHING) {
-      return notification;
+    const normalizedNotification = this.sanitizeNotification(notification);
+
+    if (normalizedNotification.type !== NotificationType.RELAY_PUBLISHING) {
+      return normalizedNotification;
     }
 
-    const relayNotification = notification as RelayPublishingNotification;
+    const relayNotification = normalizedNotification as RelayPublishingNotification;
     const normalizedRelayNotification: RelayPublishingNotification = {
       ...relayNotification,
       retryCount: relayNotification.retryCount ?? 0,
@@ -399,7 +405,7 @@ export class NotificationService implements OnDestroy {
         );
 
         this.logger.info(`Loaded ${normalizedNotifications.length} notifications from storage`);
-        this._notifications.set(normalizedNotifications);
+        this._notifications.set(this.clampNotifications(normalizedNotifications));
       } else {
         this.logger.info('No notifications found in storage');
         this._notifications.set([]);
@@ -552,13 +558,14 @@ export class NotificationService implements OnDestroy {
    */
   addNotification(notification: Notification): void {
     this._notifications.update(notifications => {
+      const sanitizedNotification = this.normalizeRelayNotification(notification);
       // Check if notification with this ID already exists
       const exists = notifications.some(n => n.id === notification.id);
       if (exists) {
         this.logger.debug(`Skipping duplicate notification ${notification.id}`);
         return notifications;
       }
-      return [notification, ...notifications];
+      return this.clampNotifications([sanitizedNotification, ...notifications]);
     });
     this.logger.debug('Added notification', notification);
   }
@@ -606,12 +613,12 @@ export class NotificationService implements OnDestroy {
     const updatedNotification = this._notifications().find(n => n.id === id);
 
     this._notifications.update(notifications => {
-      return notifications.map(notification => {
+      return this.clampNotifications(notifications.map(notification => {
         if (notification.id === id) {
-          return { ...notification, read: true };
+          return this.normalizeRelayNotification({ ...notification, read: true });
         }
         return notification;
-      });
+      }));
     });
 
     // Persist the updated notification to storage
@@ -780,7 +787,7 @@ export class NotificationService implements OnDestroy {
     }
 
     this._notifications.update(notifications => {
-      return notifications.map(notification => {
+      return this.clampNotifications(notifications.map(notification => {
         if (
           notification.id === notificationId &&
           notification.type === NotificationType.RELAY_PUBLISHING
@@ -816,13 +823,13 @@ export class NotificationService implements OnDestroy {
             );
           }
 
-          const updatedNotification = {
+          const updatedNotification = this.normalizeRelayNotification({
             ...relayNotification,
             relayPromises: updatedRelayPromises,
             complete: allResolved,
             // Preserve the read status from storage if available, otherwise use current in-memory value
             read: readStatusFromStorage !== undefined ? readStatusFromStorage : relayNotification.read,
-          };
+          } as RelayPublishingNotification) as RelayPublishingNotification;
 
           // Persist the updated notification to storage
           this.persistNotificationToStorage(updatedNotification).catch(err => {
@@ -832,7 +839,7 @@ export class NotificationService implements OnDestroy {
           return updatedNotification;
         }
         return notification;
-      });
+      }));
     });
 
     // Storage is updated inline above
@@ -926,5 +933,62 @@ export class NotificationService implements OnDestroy {
     this.logger.info(
       `[Notification Cleanup] Completed in ${elapsed}ms: removed ${totalRemoved} notifications from ${accountsWithNotifications}/${mutedPubkeys.length} accounts`
     );
+  }
+
+  private clampNotifications(notifications: Notification[]): Notification[] {
+    if (notifications.length <= this.MAX_IN_MEMORY_READ_NOTIFICATIONS) {
+      return notifications;
+    }
+
+    const mustKeep: Notification[] = [];
+    const readNotifications: Notification[] = [];
+
+    for (const notification of notifications) {
+      const isRelayPublishing = notification.type === NotificationType.RELAY_PUBLISHING;
+      if (!notification.read || isRelayPublishing) {
+        mustKeep.push(notification);
+      } else {
+        readNotifications.push(notification);
+      }
+    }
+
+    readNotifications.sort((left, right) => right.timestamp - left.timestamp);
+    return [...mustKeep, ...readNotifications.slice(0, this.MAX_IN_MEMORY_READ_NOTIFICATIONS)];
+  }
+
+  private sanitizeNotification(notification: Notification): Notification {
+    if (
+      notification.type === NotificationType.RELAY_PUBLISHING ||
+      notification.type === NotificationType.GENERAL ||
+      notification.type === NotificationType.ERROR ||
+      notification.type === NotificationType.SUCCESS ||
+      notification.type === NotificationType.WARNING
+    ) {
+      return notification;
+    }
+
+    const contentNotification = notification as ContentNotification;
+    return {
+      ...contentNotification,
+      message: this.trimText(contentNotification.message, this.MAX_CONTENT_NOTIFICATION_MESSAGE_LENGTH),
+      metadata: contentNotification.metadata
+        ? {
+          ...contentNotification.metadata,
+          content: this.trimText(
+            contentNotification.metadata.content,
+            this.MAX_CONTENT_NOTIFICATION_METADATA_LENGTH,
+          ),
+          relayHints: contentNotification.metadata.relayHints?.slice(0, this.MAX_NOTIFICATION_RELAY_HINTS),
+        }
+        : undefined,
+    } as ContentNotification;
+  }
+
+  private trimText(value: string | undefined, maxLength: number): string | undefined {
+    if (!value || value.length <= maxLength) {
+      return value;
+    }
+
+    return `${value.slice(0, maxLength)}...`;
   }
 }

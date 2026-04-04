@@ -136,6 +136,12 @@ export class FavoritesOverlayComponent implements OnDestroy {
       }
     });
 
+    effect(() => {
+      if (this.isVisible() || this.isDocked()) {
+        this.followingService.activate();
+      }
+    });
+
     // Effect to load profiles when favorites change - use cached profiles when available
     effect(() => {
       const favs = this.favorites();

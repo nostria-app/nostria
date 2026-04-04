@@ -229,6 +229,8 @@ export class NewFeedDialogComponent {
   private initialized = false;
 
   constructor() {
+    this.followingService.activate();
+
     effect(() => {
       const feedData = this.feed();
       if (feedData && !this.initialized) {

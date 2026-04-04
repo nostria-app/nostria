@@ -192,11 +192,13 @@ export class ShoutoutOverlayComponent {
     this.layout.toggleShoutouts();
     // Refresh when opening
     if (!wasVisible) {
+      this.followingService.activate();
       this.shoutoutService.refresh();
     }
   }
 
   showOverlay(): void {
+    this.followingService.activate();
     this.layout.openShoutouts();
     this.shoutoutService.refresh();
   }

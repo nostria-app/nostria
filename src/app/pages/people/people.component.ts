@@ -342,6 +342,8 @@ export class PeopleComponent implements OnDestroy {
   });
 
   constructor() {
+    this.followingService.activate();
+
     // Set wide left panel (1400px) like Music component
     this.twoColumnLayout.setWideLeft();
 

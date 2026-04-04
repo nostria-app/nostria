@@ -16,6 +16,7 @@ export const DiscoveryRelayListKind = 10086;
   providedIn: 'root',
 })
 export class DiscoveryRelayService extends RelayServiceBase implements NostriaService {
+  private readonly maxRelayCacheEntries = 256;
   private localStorage = inject(LocalStorageService);
   private appState = inject(ApplicationStateService);
   private database = inject(DatabaseService);
@@ -67,6 +68,14 @@ export class DiscoveryRelayService extends RelayServiceBase implements NostriaSe
       relayUrls: [...relayUrls],
       expiresAt: Date.now() + ttlMs,
     });
+
+    while (cache.size > this.maxRelayCacheEntries) {
+      const oldestKey = cache.keys().next().value;
+      if (!oldestKey) {
+        break;
+      }
+      cache.delete(oldestKey);
+    }
 
     return relayUrls;
   }

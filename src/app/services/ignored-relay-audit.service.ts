@@ -21,6 +21,9 @@ export interface IgnoredRelayAuditSnapshot {
   providedIn: 'root',
 })
 export class IgnoredRelayAuditService {
+  private readonly maxAuditEntries = 250;
+  private readonly maxIgnoredDomainsPerEntry = 8;
+  private readonly maxRelayUrlsPerEntry = 12;
   private readonly platformId = inject(PLATFORM_ID);
   private readonly storageKey = 'nostria-ignored-relay-audit-v1';
   private readonly accountsStorageKey = 'nostria-accounts';
@@ -70,15 +73,15 @@ export class IgnoredRelayAuditService {
     const nextEntry: IgnoredRelayAuditEntry = existing
       ? {
         ...existing,
-        ignoredDomains: this.mergeUnique(existing.ignoredDomains, filteredDomains),
-        relayUrls: this.mergeUnique(existing.relayUrls, relayUrls),
+        ignoredDomains: this.limitList(this.mergeUnique(existing.ignoredDomains, filteredDomains), this.maxIgnoredDomainsPerEntry),
+        relayUrls: this.limitList(this.mergeUnique(existing.relayUrls, relayUrls), this.maxRelayUrlsPerEntry),
         lastSeen: now,
         observationCount: existing.observationCount + 1,
       }
       : {
         pubkey,
-        ignoredDomains: this.mergeUnique([], filteredDomains),
-        relayUrls: this.mergeUnique([], relayUrls),
+        ignoredDomains: this.limitList(this.mergeUnique([], filteredDomains), this.maxIgnoredDomainsPerEntry),
+        relayUrls: this.limitList(this.mergeUnique([], relayUrls), this.maxRelayUrlsPerEntry),
         firstSeen: now,
         lastSeen: now,
         observationCount: 1,
@@ -86,7 +89,7 @@ export class IgnoredRelayAuditService {
 
     const updatedEntries = new Map(currentEntries);
     updatedEntries.set(pubkey, nextEntry);
-    this.entriesMap.set(updatedEntries);
+    this.entriesMap.set(this.trimEntries(updatedEntries));
     this.saveToStorage();
   }
 
@@ -149,6 +152,28 @@ export class IgnoredRelayAuditService {
     return Array.from(merged.values());
   }
 
+  private limitList(values: string[], maxItems: number): string[] {
+    return values.length > maxItems ? values.slice(0, maxItems) : values;
+  }
+
+  private trimEntries(entries: Map<string, IgnoredRelayAuditEntry>): Map<string, IgnoredRelayAuditEntry> {
+    if (entries.size <= this.maxAuditEntries) {
+      return entries;
+    }
+
+    const nextEntries = new Map(entries);
+    const sortedByLastSeen = Array.from(nextEntries.values()).sort((left, right) => right.lastSeen - left.lastSeen);
+    const allowedPubkeys = new Set(sortedByLastSeen.slice(0, this.maxAuditEntries).map(entry => entry.pubkey));
+
+    for (const pubkey of nextEntries.keys()) {
+      if (!allowedPubkeys.has(pubkey)) {
+        nextEntries.delete(pubkey);
+      }
+    }
+
+    return nextEntries;
+  }
+
   private loadFromStorage(): void {
     if (!isPlatformBrowser(this.platformId)) {
       return;
@@ -173,8 +198,8 @@ export class IgnoredRelayAuditService {
 
         restored.set(entry.pubkey, {
           pubkey: entry.pubkey,
-          ignoredDomains: this.filterAuditDomains(Array.isArray(entry.ignoredDomains) ? entry.ignoredDomains : []),
-          relayUrls: this.mergeUnique([], Array.isArray(entry.relayUrls) ? entry.relayUrls : []),
+          ignoredDomains: this.limitList(this.filterAuditDomains(Array.isArray(entry.ignoredDomains) ? entry.ignoredDomains : []), this.maxIgnoredDomainsPerEntry),
+          relayUrls: this.limitList(this.mergeUnique([], Array.isArray(entry.relayUrls) ? entry.relayUrls : []), this.maxRelayUrlsPerEntry),
           firstSeen: typeof entry.firstSeen === 'number' ? entry.firstSeen : Date.now(),
           lastSeen: typeof entry.lastSeen === 'number' ? entry.lastSeen : Date.now(),
           observationCount: typeof entry.observationCount === 'number' && entry.observationCount > 0
@@ -183,7 +208,7 @@ export class IgnoredRelayAuditService {
         });
       }
 
-      this.entriesMap.set(restored);
+      this.entriesMap.set(this.trimEntries(restored));
     } catch {
       this.entriesMap.set(new Map());
     }

@@ -429,58 +429,6 @@ describe('ContentNotificationService', () => {
       expect(mockAccountLocalState.markFollowerNotificationProcessed).not.toHaveBeenCalled();
     });
 
-    it('should skip follower notification when follower exists in stored follower summary metadata', async () => {
-      mockAccountLocalState.getNotificationLastCheck.mockReturnValue(1700000000);
-      mockAccountLocalState.getFollowerNotificationsProcessedAt.mockReturnValue({});
-
-      const now = Math.floor(Date.now() / 1000);
-      const followerEvent = {
-        id: 'follow-3',
-        pubkey: TEST_PUBKEY_B,
-        kind: kinds.Contacts,
-        created_at: now,
-        content: '',
-        tags: [['p', TEST_PUBKEY_A]],
-      };
-
-      mockDatabase.getNotification.mockImplementation(async (notificationId: string) => {
-        if (notificationId === `content-${NotificationType.FOLLOWER_SUMMARY}-${TEST_PUBKEY_A}`) {
-          return {
-            id: notificationId,
-            type: NotificationType.FOLLOWER_SUMMARY,
-            title: 'Followers',
-            timestamp: now * 1000,
-            read: false,
-            recipientPubkey: TEST_PUBKEY_A,
-            authorPubkey: TEST_PUBKEY_A,
-            metadata: {
-              followerCount: 1,
-              followerPubkeys: [TEST_PUBKEY_B],
-            },
-          };
-        }
-
-        return undefined;
-      });
-
-      mockAccountRelay.getMany.mockImplementation(async <T>(filter: {
-        kinds?: number[];
-      }) => {
-        if (filter.kinds?.includes(kinds.Contacts)) {
-          return [followerEvent] as unknown as T[];
-        }
-        return [] as T[];
-      });
-
-      await service.initialize();
-      await service.checkForNewNotifications();
-
-      expect(mockNotificationService.addNotification).not.toHaveBeenCalled();
-      expect(mockAccountLocalState.markFollowerNotificationsBatchProcessed)
-        .toHaveBeenCalledWith(TEST_PUBKEY_A, [TEST_PUBKEY_B], now);
-      expect(mockAccountLocalState.markFollowerNotificationProcessed).not.toHaveBeenCalled();
-    });
-
     it('should skip follower notification when author already followed in an earlier contact list event', async () => {
       mockAccountLocalState.getNotificationLastCheck.mockReturnValue(1700000000);
       mockAccountLocalState.getFollowerNotificationsProcessedAt.mockReturnValue({});

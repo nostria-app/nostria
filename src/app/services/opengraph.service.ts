@@ -16,7 +16,7 @@ export interface OpenGraphData {
   authorName?: string;
   authorUrl?: string;
   embedHtml?: string;
-  previewType?: 'generic' | 'x-post';
+  previewType?: 'generic' | 'x-post' | 'blocked';
   loading: boolean;
   error: boolean;
   errorMessage?: string;
@@ -38,6 +38,13 @@ export class OpenGraphService {
   async getOpenGraphData(url: string): Promise<OpenGraphData> {
     const normalizedUrl = normalizePreviewUrl(url);
     const cacheKey = this.getCacheKey(normalizedUrl);
+
+    if (this.shouldSkipPreview(normalizedUrl)) {
+      const blockedData = this.createBlockedPreview(normalizedUrl);
+
+      this.cache.set(cacheKey, blockedData);
+      return blockedData;
+    }
 
     // Check cache first
     if (this.cache.has(cacheKey)) {
@@ -161,6 +168,38 @@ export class OpenGraphService {
       siteName: 'YouTube',
       providerName: 'YouTube',
       previewType: 'generic',
+      loading: false,
+      error: false,
+    };
+  }
+
+  private shouldSkipPreview(url: string): boolean {
+    try {
+      const hostname = new URL(url).hostname.toLowerCase();
+      return hostname === 'reddit.com' || hostname.endsWith('.reddit.com');
+    } catch {
+      return false;
+    }
+  }
+
+  private createBlockedPreview(url: string): OpenGraphData {
+    let title = 'Link preview unavailable';
+    let siteName: string | undefined;
+
+    try {
+      const parsedUrl = new URL(url);
+      siteName = parsedUrl.hostname.replace(/^www\./, '');
+      title = siteName === 'reddit.com' ? 'Reddit link' : siteName;
+    } catch {
+      // Keep the generic fallback title when URL parsing fails.
+    }
+
+    return {
+      url,
+      title,
+      description: 'Open the link to view it directly.',
+      siteName,
+      previewType: 'blocked',
       loading: false,
       error: false,
     };

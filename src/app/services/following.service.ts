@@ -53,6 +53,7 @@ export class FollowingService {
   // Loading state
   readonly isLoading = signal(false);
   readonly isInitialized = signal(false);
+  readonly isActive = signal(false);
 
   // Computed array of all profiles for easy iteration
   readonly profiles = computed(() => Array.from(this.profilesMap().values()));
@@ -74,6 +75,11 @@ export class FollowingService {
         this.logger.debug('[FollowingService] No account or empty following list, clearing profiles');
         this.clear();
         this.previousFollowingList = [];
+        return;
+      }
+
+      if (!this.isActive()) {
+        this.logger.debug('[FollowingService] Skipping load - service inactive');
         return;
       }
 
@@ -103,6 +109,15 @@ export class FollowingService {
         this.previousFollowingList = [...followingList];
       });
     });
+  }
+
+  activate(): void {
+    if (this.isActive()) {
+      return;
+    }
+
+    this.logger.info('[FollowingService] Activating following profile cache');
+    this.isActive.set(true);
   }
 
   /**
@@ -272,12 +287,14 @@ export class FollowingService {
    */
   private async handleIncrementalUpdate(newFollowingList: string[]): Promise<void> {
     const previousList = this.previousFollowingList;
+    const previousSet = new Set(previousList);
+    const nextSet = new Set(newFollowingList);
 
     // Find profiles to add (in new list but not in previous list)
-    const toAdd = newFollowingList.filter(pubkey => !previousList.includes(pubkey));
+    const toAdd = newFollowingList.filter(pubkey => !previousSet.has(pubkey));
 
     // Find profiles to remove (in previous list but not in new list)
-    const toRemove = previousList.filter(pubkey => !newFollowingList.includes(pubkey));
+    const toRemove = previousList.filter(pubkey => !nextSet.has(pubkey));
 
     if (toAdd.length === 0 && toRemove.length === 0) {
       this.logger.debug('[FollowingService] No changes detected in following list');
@@ -466,6 +483,7 @@ export class FollowingService {
    * Get a specific profile by pubkey
    */
   getProfile(pubkey: string): FollowingProfile | undefined {
+    this.activate();
     return this.profilesMap().get(pubkey);
   }
 
@@ -473,6 +491,7 @@ export class FollowingService {
    * Check if a profile exists in the following list
    */
   hasProfile(pubkey: string): boolean {
+    this.activate();
     return this.profilesMap().has(pubkey);
   }
 
@@ -698,6 +717,8 @@ export class FollowingService {
    * Search profiles by name, display name, or nip05
    */
   searchProfiles(query: string): FollowingProfile[] {
+    this.activate();
+
     if (!query || query.trim() === '') {
       return this.profiles();
     }
@@ -735,6 +756,8 @@ export class FollowingService {
    * Uses optimized batch loading from discovery relays
    */
   async loadProfilesForPubkeys(pubkeys: string[]): Promise<FollowingProfile[]> {
+    this.activate();
+
     if (pubkeys.length === 0) {
       return [];
     }

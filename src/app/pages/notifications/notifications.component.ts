@@ -902,7 +902,7 @@ export class NotificationsComponent implements OnInit, OnDestroy {
     if (contentNotif.type === NotificationType.FOLLOWER_SUMMARY) {
       const currentPubkey = this.accountState.pubkey();
       if (currentPubkey) {
-        this.layout.openFollowersPage(currentPubkey, contentNotif.metadata?.followerPubkeys);
+        this.layout.openFollowersPage(currentPubkey);
       }
       return;
     }

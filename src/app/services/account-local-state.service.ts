@@ -181,6 +181,8 @@ export interface AccountWallet {
 type AccountStatesRoot = Record<string, AccountLocalState>;
 
 const ACCOUNT_STATE_KEY = 'nostria-state';
+const MAX_PROCESSED_FOLLOWER_NOTIFICATIONS = 4000;
+const PROCESSED_FOLLOWER_RETENTION_SECONDS = 90 * 24 * 60 * 60;
 
 /**
  * Key used for storing state for anonymous (unauthenticated) users
@@ -300,7 +302,20 @@ export class AccountLocalStateService {
    */
   getFollowerNotificationsProcessedAt(pubkey: string): Record<string, number> {
     const state = this.getAccountState(pubkey);
-    return state.followerNotificationsProcessedAt || {};
+    const processed = state.followerNotificationsProcessedAt;
+    if (!processed) {
+      return {};
+    }
+
+    const pruned = this.pruneFollowerNotificationsProcessed(processed);
+    if (pruned !== processed) {
+      this.updateAccountState(pubkey, {
+        followerNotificationsProcessedAt: pruned,
+      });
+      return pruned || {};
+    }
+
+    return processed;
   }
 
   /**
@@ -318,10 +333,10 @@ export class AccountLocalStateService {
     const state = this.getAccountState(pubkey);
     const existingProcessed = state.followerNotificationsProcessedAt || {};
     this.updateAccountState(pubkey, {
-      followerNotificationsProcessedAt: {
+      followerNotificationsProcessedAt: this.pruneFollowerNotificationsProcessed({
         ...existingProcessed,
         [followerPubkey]: timestamp,
-      },
+      }),
     });
   }
 
@@ -346,7 +361,36 @@ export class AccountLocalStateService {
     for (const followerPubkey of followerPubkeys) {
       updated[followerPubkey] = timestamp;
     }
-    this.updateAccountState(pubkey, { followerNotificationsProcessedAt: updated });
+    this.updateAccountState(pubkey, {
+      followerNotificationsProcessedAt: this.pruneFollowerNotificationsProcessed(updated),
+    });
+  }
+
+  private pruneFollowerNotificationsProcessed(
+    processed: Record<string, number> | undefined,
+  ): Record<string, number> | undefined {
+    if (!processed) {
+      return undefined;
+    }
+
+    const cutoff = Math.floor(Date.now() / 1000) - PROCESSED_FOLLOWER_RETENTION_SECONDS;
+    const entries = Object.entries(processed).filter(([, timestamp]) => {
+      return Number.isFinite(timestamp) && timestamp >= cutoff;
+    });
+
+    if (entries.length === 0) {
+      return undefined;
+    }
+
+    const originalKeys = Object.keys(processed);
+    const needsTrim = entries.length !== originalKeys.length || entries.length > MAX_PROCESSED_FOLLOWER_NOTIFICATIONS;
+    if (!needsTrim) {
+      return processed;
+    }
+
+    entries.sort(([, leftTimestamp], [, rightTimestamp]) => rightTimestamp - leftTimestamp);
+
+    return Object.fromEntries(entries.slice(0, MAX_PROCESSED_FOLLOWER_NOTIFICATIONS));
   }
 
   /**

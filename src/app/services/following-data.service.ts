@@ -72,6 +72,7 @@ export class FollowingDataService {
   // Cached events from following (in memory), scoped per kinds selection.
   private cachedEventsByKinds = signal<Map<string, Event[]>>(new Map());
   private readonly MAX_IN_MEMORY_EVENTS = 2400;
+  private readonly MAX_IN_MEMORY_KIND_CACHES = 4;
 
   // Current fetch promises to avoid duplicate requests per kinds selection
   private currentFetchPromises = new Map<string, Promise<Event[]>>();
@@ -138,7 +139,19 @@ export class FollowingDataService {
     const key = this.getKindsCacheKey(kinds);
     this.cachedEventsByKinds.update(existing => {
       const next = new Map(existing);
+      if (next.has(key)) {
+        next.delete(key);
+      }
       next.set(key, events);
+
+      while (next.size > this.MAX_IN_MEMORY_KIND_CACHES) {
+        const oldestKey = next.keys().next().value;
+        if (!oldestKey) {
+          break;
+        }
+        next.delete(oldestKey);
+      }
+
       return next;
     });
   }

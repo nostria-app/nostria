@@ -247,8 +247,10 @@ export class ProfileHoverCardComponent {
         .filter((tag: string[]) => tag[0] === 'p')
         .map((tag: string[]) => tag[1]);
 
+      const targetFollowingSet = new Set(targetFollowing);
+
       // Find mutual follows (people that both follow)
-      const mutual = myFollowing.filter(p => targetFollowing.includes(p));
+      const mutual = myFollowing.filter((followedPubkey) => targetFollowingSet.has(followedPubkey));
       this.mutualFollowing.set(mutual);
 
       // Load profiles for the first 2 mutual follows

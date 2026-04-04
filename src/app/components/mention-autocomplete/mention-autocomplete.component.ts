@@ -193,6 +193,7 @@ export class MentionAutocompleteComponent {
   private performSearch(query: string): void {
     if (query.length === 0) {
       // Show recent profiles when no query - just get first few from following list
+      this.followingService.activate();
       const recentProfiles = this.followingService.profiles().slice(0, this.maxResults());
       const records = this.followingService.toNostrRecords(recentProfiles);
       this.searchResults.set(records);
