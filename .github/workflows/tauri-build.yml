@@ -30,14 +30,14 @@ jobs:
         include:
           - name: linux
             platform: ubuntu-22.04
-            rust_targets: ''
+            rust_targets: ""
             npm_script: npm run tauri:build:linux
             artifact_path: |
               src-tauri/target/release/bundle/appimage/*.AppImage
               src-tauri/target/release/bundle/deb/*.deb
           - name: windows
             platform: windows-latest
-            rust_targets: ''
+            rust_targets: ""
             npm_script: npm run tauri:build:windows
             artifact_path: |
               src-tauri/target/release/bundle/msi/*.msi
@@ -143,7 +143,7 @@ jobs:
         uses: actions/setup-java@v5
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: "17"
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v4
@@ -171,12 +171,12 @@ jobs:
 
       - name: Prepare Android project for release artifact build
         env:
-          TAURI_ANDROID_RELEASE_USE_DEBUG_KEY: 'true'
+          TAURI_ANDROID_RELEASE_USE_DEBUG_KEY: "true"
         run: npx tauri android build --apk --target aarch64
 
       - name: Build arm64 release APK with debug signing for verification
         env:
-          TAURI_ANDROID_RELEASE_USE_DEBUG_KEY: 'true'
+          TAURI_ANDROID_RELEASE_USE_DEBUG_KEY: "true"
         working-directory: src-tauri/gen/android
         shell: bash
         run: |
@@ -242,7 +242,7 @@ jobs:
         uses: actions/setup-java@v5
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: "17"
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v4
