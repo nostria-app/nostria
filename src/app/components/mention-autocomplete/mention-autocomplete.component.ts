@@ -47,7 +47,7 @@ export interface MentionAutocompleteConfig {
     MatIconModule,
     MatProgressSpinnerModule,
     UserProfileComponent
-],
+  ],
   template: `
     @if (isVisible() && searchResults().length > 0) {
       <div 

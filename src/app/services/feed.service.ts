@@ -522,6 +522,15 @@ export class FeedService {
     return this.runtimeResourceProfile?.feedLimits ?? DEFAULT_FEED_MEMORY_LIMITS;
   }
 
+  private getFollowingInitialLoadSinceTimestamp(): number {
+    const now = Math.floor(Date.now() / 1000);
+    const lookbackSeconds = this.runtimeResourceProfile?.likelyConstrained
+      ? 24 * 60 * 60
+      : 48 * 60 * 60;
+
+    return now - lookbackSeconds;
+  }
+
   /**
    * Prefetch profiles for a list of events.
    * This extracts unique author pubkeys and uses batch loading to populate the cache.
@@ -1638,6 +1647,7 @@ export class FeedService {
       }
 
       const kinds = feedData.filter?.kinds || [1]; // Default to text notes
+  const initialSinceTimestamp = this.getFollowingInitialLoadSinceTimestamp();
 
       this.logger.info(`📢 Loading FOLLOWING feed with ${followingList.length} users (TIME-WINDOW mode)`);
 
@@ -1664,7 +1674,8 @@ export class FeedService {
               this.logger.debug(`✅ [Following] Cache loaded - signaling content ready`);
             }
           }
-        }
+        },
+        initialSinceTimestamp
       );
 
       // Final update with all events
