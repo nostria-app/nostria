@@ -37,6 +37,7 @@ import { SocialPreviewComponent } from '../../components/social-preview/social-p
 import { BookmarkListSelectorComponent } from '../../components/bookmark-list-selector/bookmark-list-selector.component';
 import { FilterButtonComponent } from '../../components/filter-button/filter-button.component';
 import { BookmarkSortFilterPanelComponent } from './bookmark-sort-filter-panel/bookmark-sort-filter-panel.component';
+import { DeleteEventService } from '../../services/delete-event.service';
 
 export interface Bookmark {
   id: string;
@@ -133,6 +134,7 @@ export class BookmarksComponent implements OnInit {
   private database = inject(DatabaseService);
   private relayPool = inject(RelayPoolService);
   private openGraph = inject(OpenGraphService);
+  private deleteEventService = inject(DeleteEventService);
 
   // Loading states
   loading = signal(false);
@@ -1405,25 +1407,20 @@ export class BookmarksComponent implements OnInit {
     const currentListId = this.bookmarkService.selectedListId();
     const currentList = this.bookmarkService.allBookmarkLists().find(l => l.id === currentListId);
 
-    if (!currentList) {
+    if (!currentList?.event || currentList.isDefault) {
       return;
     }
 
-    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
-      data: {
-        title: 'Delete Bookmark Folder',
-        message: `Are you sure you want to delete folder "${currentList.name}"? This will remove all bookmarks in this folder.`,
-        confirmText: 'Delete',
-        cancelText: 'Cancel',
-        confirmColor: 'warn'
-      }
+    const result = await this.deleteEventService.confirmDeletion({
+      event: currentList.event,
+      title: 'Delete Bookmark Folder',
+      entityLabel: 'bookmark folder',
+      confirmText: 'Delete',
     });
 
-    const confirmed = await dialogRef.afterClosed().toPromise();
+    if (!result) return;
 
-    if (confirmed) {
-      await this.bookmarkService.deleteBookmarkList(currentListId);
-      this.snackBar.open(`Deleted folder "${currentList.name}"`, 'Close', { duration: 2000 });
-    }
+    await this.bookmarkService.deleteBookmarkList(currentListId, result.referenceMode);
+    this.snackBar.open(`Deleted folder "${currentList.name}"`, 'Close', { duration: 2000 });
   }
 }
