@@ -408,12 +408,23 @@ jobs:
           set -euo pipefail
           mkdir -p artifacts/ios
 
-          APP_PATH=$(find src-tauri/target -type d -name '*.app' | head -n 1)
-          DSYM_PATH=$(find src-tauri/target -type d -name '*.app.dSYM' | head -n 1 || true)
+          APP_PATH=$(
+            find src-tauri/target "$HOME/Library/Developer/Xcode/DerivedData" \
+              \( -path '*/Build/Products/*/*.app' -o -name '*.app' \) \
+              -type d 2>/dev/null | head -n 1
+          )
+          DSYM_PATH=$(
+            find src-tauri/target "$HOME/Library/Developer/Xcode/DerivedData" \
+              -type d -name '*.app.dSYM' 2>/dev/null | head -n 1 || true
+          )
 
           if [ -z "$APP_PATH" ]; then
             echo 'Expected iOS app bundle was not produced by tauri ios build.' >&2
+            echo 'Contents of src-tauri/target:'
             find src-tauri/target -maxdepth 6 \( -type d -o -type f \) | sort || true
+            echo 'Contents of Xcode DerivedData products:'
+            find "$HOME/Library/Developer/Xcode/DerivedData" -path '*/Build/Products/*' \
+              \( -type d -o -type f \) 2>/dev/null | sort || true
             exit 1
           fi
 

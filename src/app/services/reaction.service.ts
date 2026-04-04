@@ -161,6 +161,10 @@ export class ReactionService {
 
   private isMusicLikeTarget(event: Event): boolean {
     if (this.utilities.isParameterizedReplaceableEvent(event.kind)) {
+      if (event.kind === 34139) {
+        return true;
+      }
+
       const dTag = this.utilities.getTagValues('d', event.tags)[0];
       if (!dTag) {
         return false;
@@ -287,7 +291,7 @@ export class ReactionService {
 
   private isAlbumReactionRef(ref: string): boolean {
     if (!ref.includes(':')) {
-      return false;
+      return true;
     }
 
     const kind = Number.parseInt(ref.split(':')[0], 10);

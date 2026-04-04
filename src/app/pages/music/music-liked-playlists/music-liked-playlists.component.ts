@@ -510,7 +510,9 @@ export class MusicLikedPlaylistsComponent implements OnDestroy, AfterViewInit {
       return;
     }
 
-    await this.fetchLikedPlaylistsSnapshot(relayUrls, likedAlbumRefs, []);
+    const coordinateRefs = likedAlbumRefs.filter(ref => ref.startsWith(`${MUSIC_ALBUM_KIND}:`));
+    const eventIdRefs = likedAlbumRefs.filter(ref => !ref.includes(':'));
+    await this.fetchLikedPlaylistsSnapshot(relayUrls, coordinateRefs, eventIdRefs);
   }
 
   getPlaylistUniqueKey(playlist: Event): string {
@@ -671,13 +673,14 @@ export class MusicLikedPlaylistsComponent implements OnDestroy, AfterViewInit {
   private syncReactionMap(refs: string[]): void {
     const next = new Map<string, Event>();
     for (const ref of refs) {
-      next.set(`a:${ref}`, {
+      const targetType = ref.includes(':') ? 'a' : 'e';
+      next.set(`${targetType}:${ref}`, {
         id: ref,
         pubkey: this.accountState.pubkey() || '',
         created_at: 0,
         kind: MUSIC_ALBUM_KIND,
         content: '+',
-        tags: [['a', ref]],
+        tags: [[targetType, ref]],
         sig: '',
       } as Event);
     }

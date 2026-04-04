@@ -389,11 +389,15 @@ export class MusicLikedSongsService {
   private getTrackRef(track: Event): string | null {
     if (this.utilities.isParameterizedReplaceableEvent(track.kind)) {
       const dTag = track.tags.find(tag => tag[0] === 'd')?.[1] || '';
-      if (!dTag) {
-        return null;
+      if (dTag) {
+        return `${track.kind}:${track.pubkey}:${dTag}`;
       }
 
-      return `${track.kind}:${track.pubkey}:${dTag}`;
+      if (track.kind === 34139 && track.id) {
+        return track.id;
+      }
+
+      return null;
     }
 
     return track.id || null;
