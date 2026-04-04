@@ -667,7 +667,7 @@ export class EncryptionService {
   async autoDecrypt(
     ciphertext: string,
     senderPubkey: string,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
     _event?: Event,
     priority = 0
   ): Promise<DecryptionResult> {
