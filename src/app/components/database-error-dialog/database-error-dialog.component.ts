@@ -12,33 +12,52 @@ import { DatabaseService } from '../../services/database.service';
     <div style="max-width: 600px">
       <h2 mat-dialog-title style="display: flex; align-items: center; gap: 12px;">
         <mat-icon style="color: #f44336;">error</mat-icon>
-        <span>Database Locked</span>
+        <span>{{ title() }}</span>
       </h2>
       <mat-dialog-content>
         <p style="margin-bottom: 16px;">
           <strong>Nostria is unable to access the browser's IndexedDB database.</strong>
         </p>
-        <p style="margin-bottom: 16px;">
-          This typically happens when:
-        </p>
-        <ul style="margin-bottom: 16px; padding-left: 20px;">
-          <li>Another browser tab or window has a lock on the database</li>
-          <li>The browser's storage has become corrupted</li>
-          <li>A browser extension is interfering with database access</li>
-        </ul>
-        <p style="margin-bottom: 8px;">
-          <strong>To resolve this issue:</strong>
-        </p>
-        <ol style="padding-left: 20px; margin-bottom: 20px;">
-          <li style="margin-bottom: 8px;">Close ALL browser tabs and windows running Nostria</li>
-          <li style="margin-bottom: 8px;">Completely restart your browser (close and reopen)</li>
-          <li style="margin-bottom: 8px;">
-            <strong>If the problem persists</strong>, use "Delete Database" to create a fresh database
-          </li>
-          <li style="margin-bottom: 8px;">
-            <strong>Only as last resort</strong>, restart your device
-          </li>
-        </ol>
+
+        @if (storageFailureMode() === 'indexeddb-unavailable') {
+          <p style="margin-bottom: 16px;">
+            Nostria tested the browser's IndexedDB APIs directly, and the browser failed those low-level operations.
+          </p>
+          <p style="margin-bottom: 16px;">
+            This is broader than a single broken Nostria database. It usually means browser storage is unavailable in this profile or an extension/privacy setting is interfering.
+          </p>
+          <p style="margin-bottom: 8px;">
+            <strong>Recommended next steps:</strong>
+          </p>
+          <ol style="padding-left: 20px; margin-bottom: 20px;">
+            <li style="margin-bottom: 8px;">Completely close the browser and reopen it</li>
+            <li style="margin-bottom: 8px;">Disable browser extensions for this site and retry</li>
+            <li style="margin-bottom: 8px;">Try the same URL in a different browser profile or another browser</li>
+            <li style="margin-bottom: 8px;">If it only fails in one profile, clear that profile's site storage manually from browser settings</li>
+          </ol>
+        } @else {
+          <p style="margin-bottom: 16px;">
+            This typically happens when:
+          </p>
+          <ul style="margin-bottom: 16px; padding-left: 20px;">
+            <li>Another browser tab or window has a lock on the database</li>
+            <li>The browser's storage has become corrupted</li>
+            <li>A browser extension is interfering with database access</li>
+          </ul>
+          <p style="margin-bottom: 8px;">
+            <strong>To resolve this issue:</strong>
+          </p>
+          <ol style="padding-left: 20px; margin-bottom: 20px;">
+            <li style="margin-bottom: 8px;">Close ALL browser tabs and windows running Nostria</li>
+            <li style="margin-bottom: 8px;">Completely restart your browser (close and reopen)</li>
+            <li style="margin-bottom: 8px;">
+              <strong>If the problem persists</strong>, use "Delete Database" to create a fresh database
+            </li>
+            <li style="margin-bottom: 8px;">
+              <strong>Only as last resort</strong>, restart your device
+            </li>
+          </ol>
+        }
 
         @if (operationStatus()) {
           <div style="padding: 12px; background-color: var(--mat-sys-surface-container); border-radius: 8px; margin-bottom: 16px;">
@@ -56,8 +75,7 @@ import { DatabaseService } from '../../services/database.service';
                 <div>
                   <p style="margin: 0 0 8px 0;"><strong>Database deletion failed</strong></p>
                   <p style="margin: 0;">
-                    The database is currently locked and cannot be deleted. Please close all browser instances,
-                    restart your browser completely, and if needed, restart your device.
+                    The browser could not delete the site database. Restart the browser, disable extensions for this site, and retry in another browser profile if needed.
                   </p>
                 </div>
               </div>
@@ -65,7 +83,7 @@ import { DatabaseService } from '../../services/database.service';
           </div>
         }
 
-        @if (!operationStatus()) {
+        @if (!operationStatus() && canAttemptDeletion()) {
           <div style="padding: 12px; background-color: var(--mat-sys-surface-container); border-radius: 8px; margin-top: 16px;">
             <div style="display: flex; align-items: start; gap: 8px;">
               <mat-icon style="color: #2196f3;">info</mat-icon>
@@ -95,16 +113,18 @@ import { DatabaseService } from '../../services/database.service';
               (click)="attemptReload()">
               Attempt Reload
             </button>
-            <button 
-              mat-flat-button  
-              (click)="attemptDeletion()"
-              [disabled]="operationStatus() === 'delete-failed'">
-              @if (operationStatus() === 'delete-failed') {
-                Deletion Failed
-              } @else {
-                Delete Database
-              }
-            </button>
+            @if (canAttemptDeletion()) {
+              <button 
+                mat-flat-button  
+                (click)="attemptDeletion()"
+                [disabled]="operationStatus() === 'delete-failed'">
+                @if (operationStatus() === 'delete-failed') {
+                  Deletion Failed
+                } @else {
+                  Delete Database
+                }
+              </button>
+            }
           } @else {
             <div style="display: flex; align-items: center; gap: 12px; padding: 8px 16px;">
               <mat-spinner diameter="20"></mat-spinner>
@@ -143,6 +163,22 @@ export class DatabaseErrorDialogComponent {
   isProcessing = signal(false);
   processingMessage = signal('');
   operationStatus = signal<'delete-success' | 'delete-failed' | null>(null);
+  protected readonly storageFailureMode = this.database.storageFailureMode;
+
+  protected title(): string {
+    switch (this.storageFailureMode()) {
+      case 'indexeddb-unavailable':
+        return 'Browser Storage Unavailable';
+      case 'shared-database-reset-failed':
+        return 'Database Reset Failed';
+      default:
+        return 'Database Locked';
+    }
+  }
+
+  protected canAttemptDeletion(): boolean {
+    return this.storageFailureMode() !== 'indexeddb-unavailable';
+  }
 
   async attemptDeletion(): Promise<void> {
     this.isProcessing.set(true);

@@ -457,6 +457,8 @@ export class DatabaseService {
   // Signal to track errors
   readonly lastError = signal<string | null>(null);
 
+  readonly storageFailureMode = signal<'none' | 'database-blocked' | 'indexeddb-unavailable' | 'shared-database-reset-failed' | 'unknown'>('none');
+
   /**
    * Initialize the shared database connection.
    * Call initAccount(pubkey) afterwards to open the per-account DB.
@@ -488,7 +490,108 @@ export class DatabaseService {
     // Run migration: delete legacy databases on first launch with multi-DB
     await this.migrateIfNeeded();
 
-    await this.openSharedDatabase();
+    try {
+      await this.openSharedDatabase();
+      this.lastError.set(null);
+      this.storageFailureMode.set('none');
+    } catch (error) {
+      if (!this.isRecoverableSharedDatabaseError(error)) {
+        this.storageFailureMode.set('unknown');
+        throw error;
+      }
+
+      const probeResult = await this.probeIndexedDbAvailability();
+      if (!probeResult.canOpen || !probeResult.canDelete) {
+        this.storageFailureMode.set('indexeddb-unavailable');
+        const reason = !probeResult.canOpen
+          ? 'Browser IndexedDB open probe failed'
+          : 'Browser IndexedDB delete probe failed';
+        this.lastError.set(reason);
+        this.logger.error('IndexedDB environment probe failed', probeResult.error ?? reason);
+        throw probeResult.error ?? error;
+      }
+
+      this.logger.warn('Shared database open failed with a recoverable IndexedDB error, rebuilding shared cache database', error);
+      this.lastError.set(null);
+      try {
+        await this.rebuildSharedDatabase();
+      } catch (rebuildError) {
+        this.storageFailureMode.set('shared-database-reset-failed');
+        throw rebuildError;
+      }
+      await this.openSharedDatabase();
+      this.lastError.set(null);
+      this.storageFailureMode.set('none');
+    }
+  }
+
+  private isRecoverableSharedDatabaseError(error: unknown): boolean {
+    const errorName = error instanceof Error ? error.name : null;
+    const errorMessage = error instanceof Error ? error.message : String(error ?? '');
+
+    return errorName === 'UnknownError' || /internal error/i.test(errorMessage);
+  }
+
+  private async rebuildSharedDatabase(): Promise<void> {
+    if (this.sharedDb) {
+      this.sharedDb.close();
+      this.sharedDb = null;
+    }
+
+    await this.deleteDatabaseByName(SHARED_DB_NAME);
+    this.logger.info('Rebuilt shared database after recoverable open failure');
+  }
+
+  private probeIndexedDbAvailability(): Promise<{ canOpen: boolean; canDelete: boolean; error: Error | null }> {
+    return new Promise((resolve) => {
+      const probeName = `nostria-probe-${Date.now()}`;
+      const openRequest = indexedDB.open(probeName, 1);
+
+      openRequest.onupgradeneeded = () => {
+        const db = openRequest.result;
+        if (!db.objectStoreNames.contains('probe')) {
+          db.createObjectStore('probe', { keyPath: 'id' });
+        }
+      };
+
+      openRequest.onerror = () => {
+        resolve({
+          canOpen: false,
+          canDelete: false,
+          error: this.toIndexedDbError(openRequest.error, 'IndexedDB open probe failed'),
+        });
+      };
+
+      openRequest.onsuccess = () => {
+        const db = openRequest.result;
+        db.close();
+
+        const deleteRequest = indexedDB.deleteDatabase(probeName);
+        deleteRequest.onerror = () => {
+          resolve({
+            canOpen: true,
+            canDelete: false,
+            error: this.toIndexedDbError(deleteRequest.error, 'IndexedDB delete probe failed'),
+          });
+        };
+
+        deleteRequest.onblocked = () => {
+          resolve({
+            canOpen: true,
+            canDelete: false,
+            error: new Error('IndexedDB delete probe blocked'),
+          });
+        };
+
+        deleteRequest.onsuccess = () => {
+          resolve({ canOpen: true, canDelete: true, error: null });
+        };
+      };
+    });
+  }
+
+  private toIndexedDbError(error: DOMException | null, fallbackMessage: string): Error {
+    return new Error(error?.message || fallbackMessage);
   }
 
   /**
@@ -600,6 +703,7 @@ export class DatabaseService {
         clearTimeout(timeout);
         this.logger.warn('Shared database upgrade blocked - close other tabs');
         this.lastError.set('Database blocked - close other tabs');
+        this.storageFailureMode.set('database-blocked');
         reject(new Error('Database blocked by another tab. Please close all other Nostria tabs and try again.'));
       };
     });
@@ -893,6 +997,7 @@ export class DatabaseService {
       this.sharedDb = null;
     }
     this.initialized.set(false);
+    this.storageFailureMode.set('none');
     this.logger.info('All database connections closed');
   }
 
@@ -2193,15 +2298,19 @@ export class DatabaseService {
     }
 
     // Delete all account databases using indexedDB.databases() if available
-    if ('databases' in indexedDB) {
+    const indexedDbWithDatabases = indexedDB as IDBFactory & {
+      databases?: () => Promise<{ name?: string }[]>;
+    };
+
+    if (indexedDbWithDatabases.databases) {
       try {
-        const allDbs = await (indexedDB as any).databases();
+        const allDbs = await indexedDbWithDatabases.databases();
         for (const dbInfo of allDbs) {
           if (dbInfo.name && dbInfo.name.startsWith(ACCOUNT_DB_PREFIX)) {
             deletePromises.push(this.deleteDatabaseByName(dbInfo.name));
           }
         }
-      } catch (error) {
+      } catch {
         this.logger.warn('indexedDB.databases() not available, using localStorage fallback');
       }
     }
@@ -2209,6 +2318,7 @@ export class DatabaseService {
     try {
       await Promise.all(deletePromises);
       this.initialized.set(false);
+      this.storageFailureMode.set('none');
       // Reset migration version so it runs again on next init
       localStorage.removeItem(MULTI_DB_VERSION_KEY);
       this.logger.info('All databases wiped successfully');
@@ -2225,13 +2335,19 @@ export class DatabaseService {
     return new Promise((resolve, reject) => {
       this.logger.info(`Deleting database: ${dbName}`);
       const deleteRequest = indexedDB.deleteDatabase(dbName);
+      const timeout = setTimeout(() => {
+        this.logger.warn(`Database '${dbName}' deletion timed out`);
+        reject(new Error(`Database '${dbName}' deletion timed out`));
+      }, 5000);
 
       deleteRequest.onsuccess = () => {
+        clearTimeout(timeout);
         this.logger.info(`Database '${dbName}' deleted successfully`);
         resolve();
       };
 
       deleteRequest.onerror = () => {
+        clearTimeout(timeout);
         this.logger.error(`Error deleting database '${dbName}':`, deleteRequest.error);
         reject(deleteRequest.error);
       };
@@ -2240,12 +2356,6 @@ export class DatabaseService {
         this.logger.warn(`Database '${dbName}' deletion blocked - other connections may be open`);
         // Don't reject - the deletion will still happen once connections close
       };
-
-      // Timeout to prevent hanging
-      setTimeout(() => {
-        this.logger.warn(`Database '${dbName}' deletion timed out`);
-        reject(new Error(`Database '${dbName}' deletion timed out`));
-      }, 5000);
     });
   }
 
