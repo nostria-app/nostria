@@ -684,7 +684,7 @@ export class MusicArtistComponent implements OnInit, OnDestroy {
         identifier: dTag,
         relays: authorRelays.length > 0 ? authorRelays : undefined,
       });
-      const link = `https://nostria.app/a/${naddr}`;
+      const link = `https://nostria.app/music/song/${naddr}`;
       this.clipboard.copy(link);
       this.snackBar.open('Track link copied!', 'Close', { duration: 2000 });
     } catch {

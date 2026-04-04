@@ -330,6 +330,13 @@ export const routes: Routes = [
     title: 'Artists',
   },
   {
+    path: 'music/song/:encodedAddress',
+    loadComponent: () =>
+      import('./pages/music/song-detail/song-detail.component').then(m => m.SongDetailComponent),
+    resolve: { data: DataResolver },
+    title: 'Song',
+  },
+  {
     path: 'music/song/:pubkey/:identifier',
     loadComponent: () =>
       import('./pages/music/song-detail/song-detail.component').then(m => m.SongDetailComponent),
@@ -838,6 +845,14 @@ export const routes: Routes = [
       import('./pages/stream-viewer/stream-viewer.component').then(m => m.StreamViewerComponent),
     title: 'Live Stream',
     resolve: { streamData: streamResolver },
+  },
+  {
+    path: 'music/song/:encodedAddress',
+    outlet: 'right',
+    loadComponent: () =>
+      import('./pages/music/song-detail/song-detail.component').then(m => m.SongDetailComponent),
+    resolve: { data: DataResolver },
+    title: 'Song',
   },
   {
     path: 'music/song/:pubkey/:identifier',

@@ -289,7 +289,7 @@ export class FormatService {
     }
 
     if (kind === FormatService.MUSIC_TRACK_KIND) {
-      return `/music/song/${npub}/${encodeURIComponent(identifier)}`;
+      return `/music/song/${naddrEncoded}`;
     }
 
     return `/a/${naddrEncoded}`;

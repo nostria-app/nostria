@@ -1012,7 +1012,9 @@ export class ArticleDisplayComponent implements OnDestroy {
       event.preventDefault();
       event.stopPropagation();
       const parts = href.split('/').filter(Boolean);
-      if (parts.length >= 4) {
+      if (parts.length === 3 && parts[2].startsWith('naddr1')) {
+        this.router.navigate(['/music/song', parts[2]]);
+      } else if (parts.length >= 4) {
         this.layout.openSongDetail(parts[2], decodeURIComponent(parts[3]));
       }
     } else if (href.startsWith('/music/album/')) {

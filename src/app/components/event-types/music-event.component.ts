@@ -1672,13 +1672,29 @@ export class MusicEventComponent implements OnDestroy {
 
   // Copy event link (music song URL)
   copyEventLink(): void {
-    const npub = this.artistNpub();
+    void this.copyEventLinkWithRelayHints();
+  }
+
+  private async copyEventLinkWithRelayHints(): Promise<void> {
+    const ev = this.event();
     const id = this.identifier();
-    if (npub && id) {
-      const link = `https://nostria.app/music/song/${npub}/${id}`;
+    if (!id) {
+      this.snackBar.open('Failed to generate link', 'Close', { duration: 3000 });
+      return;
+    }
+
+    try {
+      const authorRelays = await this.userRelaysService.getUserRelaysForPublishing(ev.pubkey);
+      const naddr = nip19.naddrEncode({
+        kind: ev.kind,
+        pubkey: ev.pubkey,
+        identifier: id,
+        relays: authorRelays.length > 0 ? authorRelays : undefined,
+      });
+      const link = `https://nostria.app/music/song/${naddr}`;
       this.clipboard.copy(link);
       this.snackBar.open('Link copied!', 'Close', { duration: 2000 });
-    } else {
+    } catch {
       this.snackBar.open('Failed to generate link', 'Close', { duration: 3000 });
     }
   }
@@ -1694,9 +1710,7 @@ export class MusicEventComponent implements OnDestroy {
   async shareTrack(): Promise<void> {
     const ev = this.event();
     const dTag = this.identifier();
-    const npub = this.artistNpub();
-
-    if (!dTag || !npub) {
+    if (!dTag) {
       this.snackBar.open('Failed to generate share link', 'Close', { duration: 3000 });
       return;
     }
@@ -1710,7 +1724,7 @@ export class MusicEventComponent implements OnDestroy {
         relays: authorRelays.length > 0 ? authorRelays : undefined,
       });
 
-      const link = `https://nostria.app/music/song/${npub}/${encodeURIComponent(dTag)}`;
+      const link = `https://nostria.app/music/song/${naddr}`;
       const title = this.title() || 'Untitled Track';
 
       const dialogData: ShareArticleDialogData = {

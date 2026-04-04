@@ -174,7 +174,13 @@ export class ExternalLinkHandlerService {
    * Returns the route segments array if matched, null otherwise
    */
   private handleNostriaAppRoute(path: string): string[] | null {
-    // Music song: /music/song/:pubkey/:identifier
+    // Music song: /music/song/:encodedAddress or /music/song/:pubkey/:identifier
+    const musicSongNaddrMatch = path.match(/^\/music\/song\/(naddr1[a-zA-Z0-9]+)$/i);
+    if (musicSongNaddrMatch) {
+      const [, encodedAddress] = musicSongNaddrMatch;
+      return ['/music/song', encodedAddress];
+    }
+
     const musicSongMatch = path.match(/^\/music\/song\/([a-zA-Z0-9]+)\/(.+)$/i);
     if (musicSongMatch) {
       const [, pubkey, identifier] = musicSongMatch;
@@ -328,19 +334,20 @@ export class ExternalLinkHandlerService {
       const decoded = nip19.decode(identifier);
       if (decoded.type === 'naddr') {
         const data = decoded.data as { kind: number; pubkey: string; identifier: string };
-        const npub = nip19.npubEncode(data.pubkey);
 
         if (data.kind === 34139) {
+          const npub = nip19.npubEncode(data.pubkey);
           return `/music/album/${npub}/${data.identifier}`;
         }
 
         if (data.kind === 30003) {
+          const npub = nip19.npubEncode(data.pubkey);
           return `/music/playlist/${npub}/${data.identifier}`;
         }
 
         if (data.kind === 36787) {
-          // Music track - route directly to song detail page
-          return `/music/song/${npub}/${data.identifier}`;
+          // Music track - preserve relay hints in the shared music route
+          return `/music/song/${identifier}`;
         }
 
         // All other addressable events (articles, starter packs, etc.)

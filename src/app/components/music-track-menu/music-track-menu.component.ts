@@ -362,13 +362,29 @@ export class MusicTrackMenuComponent {
   }
 
   copyTrackLink(): void {
-    const npub = this.getArtistNpub();
+    void this.copyTrackLinkWithRelayHints();
+  }
+
+  private async copyTrackLinkWithRelayHints(): Promise<void> {
+    const ev = this.track();
     const id = this.getIdentifier();
-    if (npub && id) {
-      const link = `https://nostria.app/music/song/${npub}/${id}`;
+    if (!id) {
+      this.snackBar.open('Failed to generate link', 'Close', { duration: 3000 });
+      return;
+    }
+
+    try {
+      const authorRelays = await this.userRelaysService.getUserRelaysForPublishing(ev.pubkey);
+      const naddr = nip19.naddrEncode({
+        kind: ev.kind,
+        pubkey: ev.pubkey,
+        identifier: id,
+        relays: authorRelays.length > 0 ? authorRelays : undefined,
+      });
+      const link = `https://nostria.app/music/song/${naddr}`;
       this.clipboard.copy(link);
       this.snackBar.open('Link copied!', 'Close', { duration: 2000 });
-    } else {
+    } catch {
       this.snackBar.open('Failed to generate link', 'Close', { duration: 3000 });
     }
   }
@@ -403,17 +419,14 @@ export class MusicTrackMenuComponent {
 
   async openShareDialog(): Promise<void> {
     const ev = this.track();
-    const npub = this.getArtistNpub();
     const id = this.getIdentifier();
     const title = this.getTitle();
     const image = this.getImage();
 
-    if (!npub || !id) {
+    if (!id) {
       this.snackBar.open('Failed to generate share link', 'Close', { duration: 3000 });
       return;
     }
-
-    const link = `https://nostria.app/music/song/${npub}/${encodeURIComponent(id)}`;
 
     try {
       const authorRelays = await this.userRelaysService.getUserRelaysForPublishing(ev.pubkey);
@@ -423,6 +436,7 @@ export class MusicTrackMenuComponent {
         identifier: id,
         relays: authorRelays.length > 0 ? authorRelays : undefined,
       });
+      const link = `https://nostria.app/music/song/${naddr}`;
 
       const dialogData: ShareArticleDialogData = {
         title: title,

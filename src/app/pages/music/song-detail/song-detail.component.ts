@@ -191,6 +191,7 @@ export class SongDetailComponent implements OnInit, OnDestroy {
   private engagementLoaded = false;
   private albumsLoaded = false;
   private checkedDeletionForTrackId: string | null = null;
+  private routeRelayHints: string[] = [];
 
   // Extracted song data
   title = computed(() => {
@@ -653,8 +654,19 @@ export class SongDetailComponent implements OnInit, OnDestroy {
     }
 
     // Fall back to route params (when opened via router)
+    const encodedAddress = this.route.snapshot.paramMap.get('encodedAddress');
+    if (encodedAddress?.startsWith('naddr1')) {
+      const decodedAddress = this.utilities.decodeEventFromUrl(encodedAddress);
+      if (decodedAddress?.author && decodedAddress.identifier) {
+        this.routeRelayHints = decodedAddress.relays || [];
+        this.loadSong(decodedAddress.author, decodedAddress.identifier);
+        return;
+      }
+    }
+
     const pubkey = this.route.snapshot.paramMap.get('pubkey');
     const identifier = this.route.snapshot.paramMap.get('identifier');
+    this.routeRelayHints = [];
 
     if (pubkey && identifier) {
       this.loadSong(pubkey, identifier);
@@ -722,7 +734,10 @@ export class SongDetailComponent implements OnInit, OnDestroy {
   }
 
   private subscribeToSong(pubkey: string, identifier: string, alreadyResolvedLocally: boolean): void {
-    const relayUrls = this.relaysService.getOptimalRelays(this.utilities.preferredRelays);
+    const relayUrls = this.relaysService.getOptimalRelays([
+      ...this.routeRelayHints,
+      ...this.utilities.preferredRelays,
+    ]);
 
     if (relayUrls.length === 0) {
       this.logger.warn('No relays available');
@@ -979,8 +994,7 @@ export class SongDetailComponent implements OnInit, OnDestroy {
         relays: authorRelays.length > 0 ? authorRelays : undefined,
       });
 
-      const npub = this.artistNpub();
-      const link = `https://nostria.app/music/song/${npub}/${encodeURIComponent(dTag)}`;
+      const link = `https://nostria.app/music/song/${naddr}`;
 
       const dialogData: ShareArticleDialogData = {
         title: this.title(),

@@ -566,6 +566,7 @@ export class DataResolver implements Resolve<EventData | null> {
 
       let id = route.params['id'] || route.params['pubkey'];
       const identifier = route.params['identifier'];
+      const encodedAddress = route.params['encodedAddress'];
       const slug = route.params['slug']; // For article routes like /a/:id/:slug
       const routePath = route.routeConfig?.path || '';
 
@@ -613,6 +614,10 @@ export class DataResolver implements Resolve<EventData | null> {
         } catch (e) {
           console.error('[SSR] DataResolver: Failed to create naddr for article:', e);
         }
+      }
+
+      if (!id && encodedAddress) {
+        id = encodedAddress;
       }
 
       // For addressable events (tracks, playlists), create naddr from pubkey + identifier
