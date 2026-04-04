@@ -1039,7 +1039,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
         return;
       }
 
-      if (totalRenderableCount > this.lastRenderableMessageCount && this.lastRenderableMessageCount > 0) {
+      if (totalRenderableCount > this.lastRenderableMessageCount) {
         const newMessageCount = totalRenderableCount - this.lastRenderableMessageCount;
         this.renderedMessageCount.update(count => Math.min(totalRenderableCount, count + newMessageCount));
       } else if (totalRenderableCount < this.lastRenderableMessageCount) {

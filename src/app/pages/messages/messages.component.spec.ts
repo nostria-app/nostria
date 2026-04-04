@@ -656,6 +656,47 @@ describe('MessagesComponent message render batching', () => {
 
         expect((component as any).messaging.loadMoreMessages).toHaveBeenCalledWith('receiver-pubkey', 0);
     });
+
+    it('should expand the rendered window when the first message appears in a new chat', () => {
+        const component = createThreadComponent(0);
+
+        (component as any).lastRenderableMessageChatId = 'receiver-pubkey';
+        (component as any).lastRenderableMessageCount = 0;
+        (component as any).renderedMessageCount.set(0);
+
+        const totalRenderableCount = (component as any).messages().filter((message: DirectMessage) => !(component as any).isReactionMessage(message)).length;
+
+        if (totalRenderableCount > (component as any).lastRenderableMessageCount) {
+            const newMessageCount = totalRenderableCount - (component as any).lastRenderableMessageCount;
+            (component as any).renderedMessageCount.update((count: number) => Math.min(totalRenderableCount, count + newMessageCount));
+        } else if (totalRenderableCount < (component as any).lastRenderableMessageCount) {
+            (component as any).renderedMessageCount.update((count: number) => Math.min(count, totalRenderableCount));
+        }
+
+        expect((component as any).renderedMessageCount()).toBe(0);
+
+        const firstMessage = {
+            id: 'msg-1',
+            pubkey: 'receiver-pubkey',
+            created_at: 1,
+            content: 'First message',
+            isOutgoing: true,
+            tags: [],
+        };
+
+        (component as any).messages.set([firstMessage]);
+
+        const updatedRenderableCount = (component as any).messages().filter((message: DirectMessage) => !(component as any).isReactionMessage(message)).length;
+
+        if (updatedRenderableCount > (component as any).lastRenderableMessageCount) {
+            const newMessageCount = updatedRenderableCount - (component as any).lastRenderableMessageCount;
+            (component as any).renderedMessageCount.update((count: number) => Math.min(updatedRenderableCount, count + newMessageCount));
+        } else if (updatedRenderableCount < (component as any).lastRenderableMessageCount) {
+            (component as any).renderedMessageCount.update((count: number) => Math.min(count, updatedRenderableCount));
+        }
+
+        expect((component as any).renderedMessageCount()).toBe(1);
+    });
 });
 
 describe('MessagesComponent template structure', () => {

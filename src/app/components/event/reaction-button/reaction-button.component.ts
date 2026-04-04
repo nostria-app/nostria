@@ -382,16 +382,23 @@ export class ReactionButtonComponent {
       return;
     }
 
+    const defaultEmoji = this.defaultReaction()?.emoji || this.localSettings.defaultReactionEmoji();
+
     if (this.userReaction()) {
       void this.toggleLike();
       return;
     }
 
-    const defaultEmoji = this.defaultReaction()?.emoji || this.localSettings.defaultReactionEmoji();
     if (!defaultEmoji) {
       this.openMenu();
       return;
     }
+
+    if (this.isStandardLikeEmoji(defaultEmoji)) {
+      void this.toggleLike();
+      return;
+    }
+
     this.addReaction(defaultEmoji, false);
   }
 
@@ -1261,6 +1268,10 @@ export class ReactionButtonComponent {
   closeSigningErrorDialog(): void {
     this.showSigningErrorDialog.set(false);
     this.signingErrorMessage.set('');
+  }
+
+  private isStandardLikeEmoji(emoji: string): boolean {
+    return emoji === '+' || emoji === '❤️';
   }
 
   async loadReactions(invalidateCache = false) {
