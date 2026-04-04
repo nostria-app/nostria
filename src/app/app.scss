@@ -22,10 +22,9 @@ nav {
   box-sizing: border-box;
   height: 100dvh;
   overflow: hidden;
-  padding-top: var(--safe-area-top, 0px);
   width: 100%;
   position: fixed;
-  top: 0;
+  top: var(--safe-area-top, 0px);
   left: 0;
   right: 0;
   bottom: 0;
@@ -35,7 +34,7 @@ nav {
 }
 
 .app-container[data-fullscreen="true"] {
-  padding-top: 0;
+  top: 0;
 }
 
 // Glass toolbar styles - positioned beside sidenav (not fixed)
