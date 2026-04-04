@@ -273,6 +273,46 @@ export class AccountStateService implements OnDestroy {
     return features.includes(feature);
   }
 
+  canSign(account: NostrUser | null = this.account()): boolean {
+    if (!account) {
+      return false;
+    }
+
+    switch (account.source) {
+      case 'preview':
+        return false;
+      case 'nsec':
+        return !!account.privkey || !!account.bunker;
+      case 'remote':
+        return !!account.bunker;
+      case 'extension':
+      case 'external':
+        return true;
+    }
+  }
+
+  canDecrypt(account: NostrUser | null = this.account()): boolean {
+    if (!account) {
+      return false;
+    }
+
+    switch (account.source) {
+      case 'preview':
+        return false;
+      case 'nsec':
+        return !!account.privkey;
+      case 'remote':
+        return !!account.bunker;
+      case 'extension':
+      case 'external':
+        return true;
+    }
+  }
+
+  canUseDirectMessages(account: NostrUser | null = this.account()): boolean {
+    return this.canSign(account) && this.canDecrypt(account);
+  }
+
   async unfollow(pubkey: string) {
     const account = this.account();
     if (!account || account.source === 'preview') {
