@@ -390,17 +390,12 @@ jobs:
       - name: Print Tauri environment info
         run: npm run tauri:info
 
-      - name: Install CocoaPods dependencies
-        working-directory: src-tauri/gen/apple
-        shell: bash
-        run: pod install
-
       - name: Build unsigned iOS app bundle
         shell: bash
         run: |
           set -euo pipefail
           xcodebuild \
-            -workspace src-tauri/gen/apple/nostria.xcworkspace \
+            -project src-tauri/gen/apple/nostria.xcodeproj \
             -scheme nostria_iOS \
             -configuration Release \
             -sdk iphoneos \
@@ -491,11 +486,6 @@ jobs:
 
       - name: Print Tauri environment info
         run: npm run tauri:info
-
-      - name: Install CocoaPods dependencies
-        working-directory: src-tauri/gen/apple
-        shell: bash
-        run: pod install
 
       - name: Install iOS signing assets
         id: install-ios-signing
@@ -614,7 +604,7 @@ jobs:
           set -euo pipefail
 
           xcodebuild \
-            -workspace src-tauri/gen/apple/nostria.xcworkspace \
+            -project src-tauri/gen/apple/nostria.xcodeproj \
             -scheme nostria_iOS \
             -configuration Release \
             -sdk iphoneos \
