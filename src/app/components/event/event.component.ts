@@ -79,6 +79,7 @@ import { InlineVideoPlayerComponent } from '../inline-video-player/inline-video-
 import { HapticsService } from '../../services/haptics.service';
 import { resolveClientLogo } from '../../utils/client-logo-map';
 import { visualContentLength } from '../../utils/visual-content-length';
+import { getRuntimeResourceProfile } from '../../utils/runtime-resource-profile';
 import { DatabaseService } from '../../services/database.service';
 
 type EventCardAppearance = 'card' | 'plain';
@@ -1831,13 +1832,18 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   }
 
   private hasLoadedEdit = false;
-  private readonly interactionPreloadDelayMs = 0;
-  private readonly interactionViewportPreloadMarginPx = 1400;
-  private readonly timelineInteractionRootMargin = '1600px 0px 2200px 0px';
-  private readonly viewportInteractionRootMargin = '1400px 0px 1800px 0px';
-  private readonly immediateDomPreloadAheadPx = 900;
-  private readonly immediateDomPreloadBehindPx = 250;
-  private readonly initialBatchPreloadCount = 12;
+  private readonly runtimeResourceProfile = getRuntimeResourceProfile();
+  private readonly interactionPreloadDelayMs = this.runtimeResourceProfile.likelyConstrained ? 120 : 0;
+  private readonly interactionViewportPreloadMarginPx = this.runtimeResourceProfile.likelyConstrained ? 700 : 1400;
+  private readonly timelineInteractionRootMargin = this.runtimeResourceProfile.likelyConstrained
+    ? '800px 0px 1200px 0px'
+    : '1600px 0px 2200px 0px';
+  private readonly viewportInteractionRootMargin = this.runtimeResourceProfile.likelyConstrained
+    ? '700px 0px 1000px 0px'
+    : '1400px 0px 1800px 0px';
+  private readonly immediateDomPreloadAheadPx = this.runtimeResourceProfile.likelyConstrained ? 450 : 900;
+  private readonly immediateDomPreloadBehindPx = this.runtimeResourceProfile.likelyConstrained ? 150 : 250;
+  private readonly initialBatchPreloadCount = this.runtimeResourceProfile.likelyConstrained ? 4 : 12;
   private readonly interactionVerificationLimitMultiplier = 4;
   private readonly emptyInteractionRetryMinAgeSeconds = 600;
   private readonly actualVisibilityObserverOptions = {

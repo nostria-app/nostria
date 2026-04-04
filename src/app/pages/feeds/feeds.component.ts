@@ -483,6 +483,16 @@ export class FeedsComponent implements OnDestroy {
 
   // Cache to store events during drag operations
   private _eventCache = new Map<string, Event[]>();
+  private filteredFeedEventsCache = new Map<string, {
+    sourceEvents: Event[];
+    settingsKey: string;
+    filteredEvents: Event[];
+  }>();
+  private renderedFeedEventsCache = new Map<string, {
+    filteredEvents: Event[];
+    renderCount: number;
+    renderedEvents: Event[];
+  }>();
 
   // Virtual list configuration
   INITIAL_RENDER_COUNT = 8;
@@ -564,6 +574,51 @@ export class FeedsComponent implements OnDestroy {
     });
   }
 
+  private getFeedSettingsCacheKey(feed: FeedConfig): string {
+    return [
+      feed.showReplies ?? false,
+      feed.showReposts ?? true,
+      feed.hideWordle ?? true,
+      getEffectiveWotMinRank(feed),
+      (feed.kinds || []).join(','),
+    ].join('|');
+  }
+
+  private getFilteredEventsForFeed(feed: FeedConfig, sourceEvents: Event[]): Event[] {
+    const settingsKey = this.getFeedSettingsCacheKey(feed);
+    const cached = this.filteredFeedEventsCache.get(feed.id);
+
+    if (cached?.sourceEvents === sourceEvents && cached.settingsKey === settingsKey) {
+      return cached.filteredEvents;
+    }
+
+    const filteredEvents = this.filterEventsByFeedSettings(sourceEvents, feed);
+    this.filteredFeedEventsCache.set(feed.id, {
+      sourceEvents,
+      settingsKey,
+      filteredEvents,
+    });
+
+    return filteredEvents;
+  }
+
+  private getRenderedEventsForFeed(feedId: string, filteredEvents: Event[], renderCount: number): Event[] {
+    const cached = this.renderedFeedEventsCache.get(feedId);
+
+    if (cached?.filteredEvents === filteredEvents && cached.renderCount === renderCount) {
+      return cached.renderedEvents;
+    }
+
+    const renderedEvents = filteredEvents.slice(0, renderCount);
+    this.renderedFeedEventsCache.set(feedId, {
+      filteredEvents,
+      renderCount,
+      renderedEvents,
+    });
+
+    return renderedEvents;
+  }
+
   // Computed signal for ALL events (in-memory, not rendered)
   allColumnEvents = computed(() => {
     const activeFeed = this.activeFeed();
@@ -598,7 +653,7 @@ export class FeedsComponent implements OnDestroy {
     const rawEventCount = events.length;
 
     // Filter based on feed-specific settings (each feed has its own kinds, showReplies, showReposts)
-    events = this.filterEventsByFeedSettings(events, feed);
+  events = this.getFilteredEventsForFeed(feed, events);
 
     eventsMap.set(feed.id, events);
 
@@ -613,8 +668,7 @@ export class FeedsComponent implements OnDestroy {
 
     allEvents.forEach((events, columnId) => {
       const renderCount = renderedCounts[columnId] || this.INITIAL_RENDER_COUNT;
-      // Only render the first N events
-      eventsMap.set(columnId, events.slice(0, renderCount));
+      eventsMap.set(columnId, this.getRenderedEventsForFeed(columnId, events, renderCount));
     });
 
     return eventsMap;
