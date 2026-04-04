@@ -1,4 +1,4 @@
-import { Component, inject, input, output, computed, signal, ViewChild } from '@angular/core';
+import { Component, inject, input, output, computed, signal, ViewChild, ChangeDetectionStrategy } from '@angular/core';
 import { Router } from '@angular/router';
 import { MatMenuModule, MatMenu } from '@angular/material/menu';
 import { MatButtonModule } from '@angular/material/button';
@@ -32,6 +32,7 @@ import { ConfirmDialogComponent, ConfirmDialogData } from '../confirm-dialog/con
 import { DeleteEventService } from '../../services/delete-event.service';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-music-track-menu',
   imports: [
     MatMenuModule,

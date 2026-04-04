@@ -1,9 +1,10 @@
-import { Component, output } from '@angular/core';
+import { Component, output, ChangeDetectionStrategy } from '@angular/core';
 import { CustomDialogComponent } from '../custom-dialog/custom-dialog.component';
 import { TermsOfUseDialogContentComponent } from '../terms-of-use-dialog/terms-of-use-dialog.component';
 import { MatButtonModule } from '@angular/material/button';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-standalone-terms-dialog',
   imports: [CustomDialogComponent, TermsOfUseDialogContentComponent, MatButtonModule],
   template: `

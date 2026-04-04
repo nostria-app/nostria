@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal, OnInit, input, effect } from '@angular/core';
+import { Component, computed, inject, signal, OnInit, input, effect, ChangeDetectionStrategy } from '@angular/core';
 import { Location } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -22,6 +22,7 @@ import { ConfirmDialogComponent, ConfirmDialogData } from '../../components/conf
 import { DeleteEventService } from '../../services/delete-event.service';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-delete-event',
   imports: [
     ReactiveFormsModule,

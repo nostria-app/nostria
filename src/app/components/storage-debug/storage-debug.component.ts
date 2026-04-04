@@ -1,4 +1,4 @@
-import { Component, inject, signal, OnInit } from '@angular/core';
+import { Component, inject, signal, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { DatabaseService } from '../../services/database.service';
 import { LoggerService } from '../../services/logger.service';
 import { MatCardModule } from '@angular/material/card';
@@ -9,6 +9,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { ConfirmDialogComponent } from '../confirm-dialog/confirm-dialog.component';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-storage-debug',
   imports: [CommonModule, MatCardModule, MatButtonModule, MatExpansionModule],
   template: `

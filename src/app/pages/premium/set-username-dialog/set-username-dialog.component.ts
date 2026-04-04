@@ -1,4 +1,4 @@
-import { Component, inject, signal, OnDestroy, computed } from '@angular/core';
+import { Component, inject, signal, OnDestroy, computed, ChangeDetectionStrategy } from '@angular/core';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
@@ -23,6 +23,7 @@ export interface SetUsernameDialogData {
 }
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-set-username-dialog',
   imports: [
     FormsModule,

@@ -13,6 +13,7 @@ import {
   viewChild,
   AfterViewInit,
   DestroyRef,
+  ChangeDetectionStrategy,
 } from '@angular/core';
 import { isPlatformBrowser, Location, NgTemplateOutlet } from '@angular/common';
 import {
@@ -83,6 +84,7 @@ import { stripImageProxy } from '../../utils/strip-image-proxy';
 import { BadgeService } from '../../services/badge.service';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-profile',
   imports: [
     RouterModule,

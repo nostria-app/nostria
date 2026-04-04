@@ -1,4 +1,4 @@
-import { Component, effect, inject, input, signal, untracked, computed, OnDestroy } from '@angular/core';
+import { Component, effect, inject, input, signal, untracked, computed, OnDestroy, ChangeDetectionStrategy } from '@angular/core';
 
 import { MatIconModule } from '@angular/material/icon';
 import { RouterModule } from '@angular/router';
@@ -69,6 +69,7 @@ interface MutualFollowProfile {
 }
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-profile-header',
   imports: [
     MatIconModule,

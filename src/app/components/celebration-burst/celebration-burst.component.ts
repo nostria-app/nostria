@@ -1,4 +1,4 @@
-import { Component, computed, input } from '@angular/core';
+import { Component, computed, input, ChangeDetectionStrategy } from '@angular/core';
 
 type CelebrationTheme = 'zap' | 'like';
 type CelebrationMode = 'button' | 'logo';
@@ -64,6 +64,7 @@ const LIKE_ICONS: Record<number, string[]> = {
 };
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-celebration-burst',
   template: `
     <div class="celebration-shell"

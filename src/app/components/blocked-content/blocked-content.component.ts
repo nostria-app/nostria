@@ -1,4 +1,4 @@
-import { Component, input, inject } from '@angular/core';
+import { Component, input, inject, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -7,6 +7,7 @@ import { Event } from 'nostr-tools';
 import { ReportingService } from '../../services/reporting.service';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-blocked-content',
   imports: [CommonModule, MatButtonModule, MatIconModule, MatCardModule],
   templateUrl: './blocked-content.component.html',

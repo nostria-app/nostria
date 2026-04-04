@@ -1,4 +1,4 @@
-import { Component, inject, signal, input, effect, computed } from '@angular/core';
+import { Component, inject, signal, input, effect, computed, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
@@ -42,6 +42,7 @@ interface ConnectionStats {
 }
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-contact-overview',
   imports: [
     CommonModule,

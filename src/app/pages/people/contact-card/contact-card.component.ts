@@ -1,4 +1,4 @@
-import { Component, inject, signal, effect, input, output, viewChild, ElementRef } from '@angular/core';
+import { Component, inject, signal, effect, input, output, viewChild, ElementRef, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { MatTabsModule } from '@angular/material/tabs';
@@ -21,6 +21,7 @@ import { NostrRecord } from '../../../interfaces';
 import { nip19 } from 'nostr-tools';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-contact-card',
   imports: [
     CommonModule,

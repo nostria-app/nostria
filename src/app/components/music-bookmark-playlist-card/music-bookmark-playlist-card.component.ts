@@ -1,4 +1,4 @@
-import { Component, computed, inject, input } from '@angular/core';
+import { Component, computed, inject, input, ChangeDetectionStrategy } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { Event, nip19 } from 'nostr-tools';
 import { LayoutService } from '../../services/layout.service';
@@ -6,6 +6,7 @@ import { UtilitiesService } from '../../services/utilities.service';
 import { ImageCacheService } from '../../services/image-cache.service';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-music-bookmark-playlist-card',
   imports: [MatIconModule],
   template: `

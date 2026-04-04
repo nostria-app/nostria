@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, DestroyRef } from '@angular/core';
+import { Component, inject, signal, computed, DestroyRef, ChangeDetectionStrategy } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 
@@ -69,6 +69,7 @@ const IMAGE_HOSTING_DOMAINS = ['imgur.com', 'i.imgur.com', 'imagebin.ca', 'posti
 const VIDEO_HOSTING_DOMAINS = ['youtube.com', 'youtu.be', 'vimeo.com', 'twitch.tv'];
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-zap-dialog',
   imports: [
     MatDialogModule,

@@ -9,6 +9,7 @@ import {
   input,
   ElementRef,
   DestroyRef,
+  ChangeDetectionStrategy,
 } from '@angular/core';
 import { LayoutService } from '../../services/layout.service';
 import { NostrService } from '../../services/nostr.service';
@@ -72,6 +73,7 @@ export const REPLY_FILTER_AUTHOR_FOLLOWING = 'author-following';
 export const REPLY_FILTER_WOT = 'wot';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-event-page',
   imports: [CommonModule, EventComponent, MatIconModule, MatButtonModule, MatProgressSpinnerModule, MatTooltipModule, MatMenuModule, MatDividerModule, MatButtonToggleModule, MatSliderModule, InlineReplyEditorComponent],
   templateUrl: './event.component.html',

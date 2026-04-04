@@ -1,4 +1,4 @@
-import { Component, inject, signal, effect } from '@angular/core';
+import { Component, inject, signal, effect, ChangeDetectionStrategy } from '@angular/core';
 import { Router } from '@angular/router';
 import { MatListModule } from '@angular/material/list';
 import { MatIconModule } from '@angular/material/icon';
@@ -11,6 +11,7 @@ import { LayoutService } from '../../services/layout.service';
 import { Event as NostrEvent, nip19, kinds } from 'nostr-tools';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-search-results',
   imports: [MatListModule, MatIconModule, MatButtonModule, MatProgressSpinnerModule, MatTooltipModule],
   template: `

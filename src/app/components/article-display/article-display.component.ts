@@ -15,6 +15,7 @@ import {
   ComponentRef,
   OnDestroy,
   ApplicationRef,
+  ChangeDetectionStrategy,
 } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { trigger, style, animate, transition } from '@angular/animations';
@@ -78,6 +79,7 @@ export interface ArticleData {
 }
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-article-display',
   imports: [
     MatCardModule,

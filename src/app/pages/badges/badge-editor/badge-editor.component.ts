@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, effect, untracked } from '@angular/core';
+import { Component, inject, signal, computed, effect, untracked, ChangeDetectionStrategy } from '@angular/core';
 
 import {
   FormBuilder,
@@ -31,6 +31,7 @@ import { PanelNavigationService } from '../../../services/panel-navigation.servi
 import { LoggerService } from '../../../services/logger.service';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-badge-editor',
   imports: [
     ReactiveFormsModule,

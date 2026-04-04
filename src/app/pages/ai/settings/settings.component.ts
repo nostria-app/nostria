@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, ChangeDetectionStrategy } from '@angular/core';
 
 import { MatCardModule } from '@angular/material/card';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
@@ -11,6 +11,7 @@ import { SettingsService } from '../../../services/settings.service';
 import { AiInfoDialogComponent } from '../../../components/ai-info-dialog/ai-info-dialog.component';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-ai-settings',
   imports: [
     MatCardModule,

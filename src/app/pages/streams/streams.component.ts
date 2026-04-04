@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, OnDestroy, effect, viewChild, ElementRef } from '@angular/core';
+import { Component, inject, signal, computed, OnDestroy, effect, viewChild, ElementRef, ChangeDetectionStrategy } from '@angular/core';
 
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatButtonModule } from '@angular/material/button';
@@ -29,6 +29,7 @@ import { ListFilterMenuComponent, ListFilterValue } from '../../components/list-
 import { LoggerService } from '../../services/logger.service';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-streams',
   imports: [
     MatProgressSpinnerModule,

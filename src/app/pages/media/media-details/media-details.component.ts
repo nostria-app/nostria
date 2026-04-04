@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, DestroyRef, viewChild, ElementRef } from '@angular/core';
+import { Component, inject, signal, computed, DestroyRef, viewChild, ElementRef, ChangeDetectionStrategy } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { ActivatedRoute, Router } from '@angular/router';
@@ -27,6 +27,7 @@ import { toggleFullscreen } from '../../../utils/fullscreen';
 import { ProfileDisplayNameComponent } from '../../../components/user-profile/display-name/profile-display-name.component';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-media-details',
   imports: [
     MatButtonModule,

@@ -6,6 +6,7 @@ import {
   inject,
   untracked,
   computed,
+  ChangeDetectionStrategy,
 } from '@angular/core';
 
 import { MatCardModule } from '@angular/material/card';
@@ -19,6 +20,7 @@ import { UtilitiesService } from '../../../services/utilities.service';
 import { LayoutService } from '../../../services/layout.service';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-badge-hover-card',
   imports: [
     MatCardModule,

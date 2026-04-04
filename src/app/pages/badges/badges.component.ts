@@ -1,4 +1,4 @@
-import { Component, effect, inject, signal, untracked, computed, ElementRef, ViewChild, NgZone, afterNextRender, OnDestroy, PLATFORM_ID, Injector, DestroyRef } from '@angular/core';
+import { Component, effect, inject, signal, untracked, computed, ElementRef, ViewChild, NgZone, afterNextRender, OnDestroy, PLATFORM_ID, Injector, DestroyRef, ChangeDetectionStrategy } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { isPlatformBrowser } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
@@ -28,6 +28,7 @@ import { NostrRecord } from '../../interfaces';
 import { LoggerService } from '../../services/logger.service';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-badges',
   imports: [
     MatCardModule,

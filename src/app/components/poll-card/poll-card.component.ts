@@ -1,4 +1,4 @@
-import { Component, input, output, computed, signal, inject } from '@angular/core';
+import { Component, input, output, computed, signal, inject, ChangeDetectionStrategy } from '@angular/core';
 
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -12,6 +12,7 @@ import { Poll, PollResults } from '../../interfaces';
 import { UtilitiesService } from '../../services/utilities.service';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-poll-card',
   imports: [
     MatCardModule,

@@ -1,4 +1,4 @@
-import { Component, inject, signal, effect, computed, OnInit, OnDestroy, input } from '@angular/core';
+import { Component, inject, signal, effect, computed, OnInit, OnDestroy, input, ChangeDetectionStrategy } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 
 import { MatCardModule } from '@angular/material/card';
@@ -67,6 +67,7 @@ const BACKUP_RELAY_EVENT_KINDS = [
 ];
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-backup',
   imports: [
     MatCardModule,

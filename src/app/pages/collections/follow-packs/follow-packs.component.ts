@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { nip19 } from 'nostr-tools';
@@ -24,6 +24,7 @@ import { ProfileDisplayNameComponent } from '../../../components/user-profile/di
 import { DeleteEventService } from '../../../services/delete-event.service';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-follow-packs',
   imports: [
     CommonModule,

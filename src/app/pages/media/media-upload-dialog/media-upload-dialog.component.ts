@@ -1,4 +1,4 @@
-import { Component, computed, inject, OnDestroy, signal, ViewChild } from '@angular/core';
+import { Component, computed, inject, OnDestroy, signal, ViewChild, ChangeDetectionStrategy } from '@angular/core';
 
 import { MatButtonModule } from '@angular/material/button';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
@@ -41,6 +41,7 @@ interface SelectedFileEntry {
 }
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-media-upload-dialog',
   imports: [
     MatButtonModule,

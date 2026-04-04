@@ -1,4 +1,4 @@
-import { ApplicationRef, Component, EnvironmentInjector, PLATFORM_ID, ViewRef, computed, createComponent, inject, signal } from '@angular/core';
+import { ApplicationRef, Component, EnvironmentInjector, PLATFORM_ID, ViewRef, computed, createComponent, inject, signal, ChangeDetectionStrategy } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialog } from '@angular/material/dialog';
@@ -44,6 +44,7 @@ export interface ShareArticleDialogData {
 }
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-share-article-dialog',
   imports: [
     FormsModule,

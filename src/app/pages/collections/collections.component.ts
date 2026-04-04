@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, ChangeDetectionStrategy } from '@angular/core';
 
 import { Router } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
@@ -14,6 +14,7 @@ interface CollectionItem {
 }
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-collections',
   imports: [
     MatButtonModule,

@@ -1,4 +1,4 @@
-import { Component, computed, input, inject, signal, effect, OnDestroy, ElementRef, ViewChild } from '@angular/core';
+import { Component, computed, input, inject, signal, effect, OnDestroy, ElementRef, ViewChild, ChangeDetectionStrategy } from '@angular/core';
 import { Event, Filter } from 'nostr-tools';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -19,6 +19,7 @@ import { IgdbService, GameData } from '../../services/igdb.service';
 import { GameHoverCardService } from '../../services/game-hover-card.service';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-stream-info-bar',
   imports: [
     MatButtonModule,

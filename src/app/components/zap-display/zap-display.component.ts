@@ -1,4 +1,4 @@
-import { Component, inject, input, signal, computed, OnInit, OnDestroy } from '@angular/core';
+import { Component, inject, input, signal, computed, OnInit, OnDestroy, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
@@ -22,6 +22,7 @@ interface ZapReceipt {
 }
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-zap-display',
   imports: [
     CommonModule,

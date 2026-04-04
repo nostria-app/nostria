@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, ChangeDetectionStrategy } from '@angular/core';
 
 import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
@@ -7,6 +7,7 @@ import { FormsModule } from '@angular/forms';
 import { SettingsService } from '../../services/settings.service';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-ai-info-dialog',
   imports: [MatDialogModule, MatButtonModule, MatCheckboxModule, FormsModule],
   templateUrl: './ai-info-dialog.component.html',

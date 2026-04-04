@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Component, inject, signal, OnDestroy, AfterViewInit } from '@angular/core';
+import { Component, inject, signal, OnDestroy, AfterViewInit, ChangeDetectionStrategy } from '@angular/core';
 import { MatDialogRef, MatDialogModule } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -11,6 +11,7 @@ import { AudioPlayerComponent } from '../../../components/audio-player/audio-pla
 import { LoggerService } from '../../../services/logger.service';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-audio-record-dialog',
   imports: [
     MatDialogModule,

@@ -5,6 +5,7 @@ import {
   signal,
   computed,
   untracked,
+  ChangeDetectionStrategy,
 } from '@angular/core';
 import { CommonModule, Location } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -33,6 +34,7 @@ import { EventComponent } from '../../components/event/event.component';
 import { AgoPipe } from '../../pipes/ago.pipe';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-zap-detail',
   imports: [
     CommonModule,

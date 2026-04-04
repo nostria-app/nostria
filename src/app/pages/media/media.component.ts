@@ -1,4 +1,4 @@
-import { Component, inject, signal, effect, computed, PLATFORM_ID, DestroyRef } from '@angular/core';
+import { Component, inject, signal, effect, computed, PLATFORM_ID, DestroyRef, ChangeDetectionStrategy } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
@@ -50,6 +50,7 @@ export type ViewMode = 'large' | 'medium' | 'details';
 export type MediaFilter = 'all' | 'images' | 'videos' | 'audio' | 'files';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-media',
   imports: [
     FormsModule,

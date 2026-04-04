@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, OnInit, OnDestroy, effect, untracked, input, ViewChild, TemplateRef } from '@angular/core';
+import { Component, inject, signal, computed, OnInit, OnDestroy, effect, untracked, input, ViewChild, TemplateRef, ChangeDetectionStrategy } from '@angular/core';
 import { ActivatedRoute, Router, ParamMap } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -51,6 +51,7 @@ const MUSIC_KINDS = [...UtilitiesService.MUSIC_KINDS];
 const MUSIC_ALBUM_KIND = 34139;
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-music-playlist',
   imports: [
     MatProgressSpinnerModule,

@@ -7,12 +7,14 @@ import {
   ViewChild,
   AfterViewInit,
   inject,
+  ChangeDetectionStrategy,
 } from '@angular/core';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import encodeQR from 'qr';
 import { LoggerService } from '../../services/logger.service';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'qr-code',
   template: `
     @if (mode() === 'canvas') {

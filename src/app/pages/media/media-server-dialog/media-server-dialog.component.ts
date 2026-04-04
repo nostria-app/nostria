@@ -1,4 +1,4 @@
-import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, inject, OnInit, signal, ChangeDetectionStrategy } from '@angular/core';
 
 import {
   FormsModule,
@@ -23,6 +23,7 @@ const NOSTRIA_MEDIA_SERVER_HOSTS = new Set([
 ]);
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-media-server-dialog',
   imports: [
     FormsModule,

@@ -1,4 +1,4 @@
-import { Component, computed, input, inject, signal, effect, untracked } from '@angular/core';
+import { Component, computed, input, inject, signal, effect, untracked, ChangeDetectionStrategy } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatMenuModule } from '@angular/material/menu';
@@ -29,6 +29,7 @@ interface PlaylistTrackReference {
 }
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-music-embed',
   imports: [
     MatIconModule,

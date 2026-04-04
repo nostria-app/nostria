@@ -1,4 +1,4 @@
-import { Component, computed, effect, inject, input, OnDestroy, output, signal } from '@angular/core';
+import { Component, computed, effect, inject, input, OnDestroy, output, signal, ChangeDetectionStrategy } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
@@ -29,6 +29,7 @@ const INTERACTION_REFRESH_MIN_INTERVAL_MS = 1200;
 const INTERACTION_REFRESH_INTERVAL_MS = 15000;
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-clips-video-card',
   imports: [
     MatButtonModule,

@@ -1,4 +1,4 @@
-import { Component, input, inject, signal, effect, untracked } from '@angular/core';
+import { Component, input, inject, signal, effect, untracked, ChangeDetectionStrategy } from '@angular/core';
 
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -11,6 +11,7 @@ import { EventService, ReportEvents } from '../../services/event';
 import { ReportsDialogComponent } from '../reports-dialog/reports-dialog.component';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-reported-content',
   imports: [MatButtonModule, MatIconModule, MatCardModule, MatChipsModule],
   templateUrl: './reported-content.component.html',

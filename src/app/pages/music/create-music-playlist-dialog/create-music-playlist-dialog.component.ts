@@ -1,4 +1,4 @@
-import { Component, inject, signal, input, output, computed } from '@angular/core';
+import { Component, inject, signal, input, output, computed, ChangeDetectionStrategy } from '@angular/core';
 import { Router } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -22,6 +22,7 @@ export interface CreateMusicPlaylistDialogData {
 }
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-create-music-playlist-dialog',
   imports: [
     CustomDialogComponent,

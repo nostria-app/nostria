@@ -1,4 +1,4 @@
-import { Component, inject, signal, output, computed, OnInit, effect } from '@angular/core';
+import { Component, inject, signal, output, computed, OnInit, effect, ChangeDetectionStrategy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatCheckboxModule } from '@angular/material/checkbox';
@@ -23,6 +23,7 @@ export interface RelayPublishConfig {
 }
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-relay-publish-selector',
   imports: [
     FormsModule,

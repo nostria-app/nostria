@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, OnInit, OnDestroy, effect, input } from '@angular/core';
+import { Component, inject, signal, computed, OnInit, OnDestroy, effect, input, ChangeDetectionStrategy } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatButtonModule } from '@angular/material/button';
@@ -34,6 +34,7 @@ const MUSIC_KINDS = [...UtilitiesService.MUSIC_KINDS];
 const MUSIC_ALBUM_KIND = 34139;
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-music-artist',
   imports: [
     MatProgressSpinnerModule,

@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, input, output, effect, untracked, OnInit } from '@angular/core';
+import { Component, inject, signal, computed, input, output, effect, untracked, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { Router } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -65,6 +65,7 @@ interface ZapSplit {
 }
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-edit-music-playlist-dialog',
   imports: [
     CustomDialogComponent,

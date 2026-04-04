@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, ViewChild, ElementRef, OnDestroy } from '@angular/core';
+import { Component, inject, signal, computed, ViewChild, ElementRef, OnDestroy, ChangeDetectionStrategy } from '@angular/core';
 import { MAT_DIALOG_DATA, MatDialogRef, MatDialogModule } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -19,6 +19,7 @@ interface MediaPreviewData {
 }
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-media-preview-dialog',
   imports: [MatDialogModule, MatButtonModule, MatIconModule, InlineVideoPlayerComponent],
   templateUrl: './media-preview.component.html',

@@ -1,4 +1,4 @@
-import { Component, inject, output, signal } from '@angular/core';
+import { Component, inject, output, signal, ChangeDetectionStrategy } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { LayoutService } from '../../services/layout.service';
@@ -11,6 +11,7 @@ interface CreateOption {
 }
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-create-menu',
   imports: [MatIconModule, MatButtonModule],
   templateUrl: './create-menu.component.html',

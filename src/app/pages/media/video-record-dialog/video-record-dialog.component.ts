@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, OnDestroy, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
+import { Component, inject, signal, computed, OnDestroy, ViewChild, ElementRef, AfterViewInit, ChangeDetectionStrategy } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatIconModule } from '@angular/material/icon';
@@ -26,6 +26,7 @@ import {
 } from '../../../interfaces/media-upload';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-video-record-dialog',
   imports: [
     MatButtonModule,

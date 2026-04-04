@@ -1,4 +1,4 @@
-import { Component, computed, effect, inject, OnInit, output, signal } from '@angular/core';
+import { Component, computed, effect, inject, OnInit, output, signal, ChangeDetectionStrategy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatChipsModule } from '@angular/material/chips';
@@ -36,6 +36,7 @@ interface ClipsRelaySet {
 }
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-clips-settings-dialog',
   imports: [
     CustomDialogComponent,

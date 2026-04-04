@@ -1,4 +1,4 @@
-import { Component, computed, effect, inject, OnInit, OnDestroy, signal } from '@angular/core';
+import { Component, computed, effect, inject, OnInit, OnDestroy, signal, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatCheckboxModule } from '@angular/material/checkbox';
@@ -18,6 +18,7 @@ import { AccountStateService } from '../../../services/account-state.service';
 import { LoggerService } from '../../../services/logger.service';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-manage',
   imports: [
     CommonModule,

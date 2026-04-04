@@ -1,4 +1,4 @@
-import { Component, inject, computed, signal, OnDestroy, OnInit } from '@angular/core';
+import { Component, inject, computed, signal, OnDestroy, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -36,6 +36,7 @@ interface QueryGroup {
 }
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-debug-panel',
   imports: [
     CommonModule,

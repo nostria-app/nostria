@@ -6,6 +6,7 @@ import {
   effect,
   inject,
   untracked,
+  ChangeDetectionStrategy,
 } from '@angular/core';
 
 import { MatCardModule } from '@angular/material/card';
@@ -25,6 +26,7 @@ import { nip19 } from 'nostr-tools';
 import type { NostrRecord } from '../../interfaces';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-timeline-hover-card',
   imports: [
     MatCardModule,

@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, computed, ElementRef, viewChild, effect } from '@angular/core';
+import { Component, inject, OnInit, computed, ElementRef, viewChild, effect, ChangeDetectionStrategy } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule, NgComponentOutlet } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -21,6 +21,7 @@ import { getSettingComponent } from '../sections/settings-components.map';
 import { getSettingsSectionComponent } from '../settings-section-components.map';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-settings-home',
   imports: [
     CommonModule,

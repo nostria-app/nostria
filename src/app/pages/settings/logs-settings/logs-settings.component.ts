@@ -1,4 +1,4 @@
-import { Component, inject, computed, effect, signal, OnInit, OnDestroy } from '@angular/core';
+import { Component, inject, computed, effect, signal, OnInit, OnDestroy, ChangeDetectionStrategy } from '@angular/core';
 
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatCardModule } from '@angular/material/card';
@@ -39,6 +39,7 @@ export interface RelayConnection {
 }
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-logs-settings',
   imports: [
     MatTabsModule,

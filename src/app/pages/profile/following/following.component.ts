@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, effect, ViewChild, ElementRef, DestroyRef } from '@angular/core';
+import { Component, inject, signal, computed, effect, ViewChild, ElementRef, DestroyRef, ChangeDetectionStrategy } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router, ActivatedRoute } from '@angular/router';
 import { animate, style, transition, trigger } from '@angular/animations';
@@ -40,6 +40,7 @@ interface ProfileData {
 type SortOption = 'default' | 'reverse' | 'name-asc' | 'name-desc';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-following',
   imports: [
     FormsModule,

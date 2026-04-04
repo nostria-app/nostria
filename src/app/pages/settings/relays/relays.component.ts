@@ -9,6 +9,7 @@ import {
   computed,
   ViewChild,
   TemplateRef,
+  ChangeDetectionStrategy,
 } from '@angular/core';
 import { Location } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
@@ -57,6 +58,7 @@ import {
 } from './find-responsive-relays-dialog.component';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-relays-page',
   imports: [
     FormsModule,

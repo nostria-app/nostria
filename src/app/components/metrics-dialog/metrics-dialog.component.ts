@@ -1,4 +1,4 @@
-import { Component, inject, computed, signal, OnDestroy, OnInit } from '@angular/core';
+import { Component, inject, computed, signal, OnDestroy, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -10,6 +10,7 @@ import { CustomDialogRef } from '../../services/custom-dialog.service';
 type TabId = 'overview' | 'timings' | 'counters';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-metrics-dialog',
   imports: [
     CommonModule,

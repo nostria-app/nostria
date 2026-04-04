@@ -1,4 +1,4 @@
-import { Component, computed, input, inject, signal, effect, untracked, output } from '@angular/core';
+import { Component, computed, input, inject, signal, effect, untracked, output, ChangeDetectionStrategy } from '@angular/core';
 import { Router } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { MatCardModule } from '@angular/material/card';
@@ -39,6 +39,7 @@ import {
 import { MatDividerModule } from '@angular/material/divider';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-music-playlist-card',
   imports: [MatIconModule, MatCardModule, MatDividerModule, MatButtonModule, MatMenuModule, MatSnackBarModule, MatProgressSpinnerModule, EditMusicPlaylistDialogComponent],
   template: `

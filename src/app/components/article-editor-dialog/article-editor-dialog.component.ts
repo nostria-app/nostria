@@ -9,12 +9,13 @@ import {
   ViewChild,
   ElementRef,
   AfterViewInit,
+  PLATFORM_ID,
+  ChangeDetectionStrategy,
 } from '@angular/core';
 
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { isPlatformBrowser, Location } from '@angular/common';
-import { PLATFORM_ID } from '@angular/core';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
@@ -106,6 +107,7 @@ interface PackageImportFile {
 }
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-article-editor-dialog',
   imports: [
     FormsModule,

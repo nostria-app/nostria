@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, ChangeDetectionStrategy } from '@angular/core';
 import { MatBottomSheetRef } from '@angular/material/bottom-sheet';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -7,6 +7,7 @@ import { AccountLocalStateService } from '../../services/account-local-state.ser
 import { AccountStateService } from '../../services/account-state.service';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-push-notification-prompt',
   imports: [MatButtonModule, MatIconModule],
   templateUrl: './push-notification-prompt.component.html',

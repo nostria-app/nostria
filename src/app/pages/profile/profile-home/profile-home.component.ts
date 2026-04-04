@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal, ChangeDetectionStrategy } from '@angular/core';
 
 import { MatIconModule } from '@angular/material/icon';
 import { ActivatedRoute, Router, RouterModule, NavigationEnd } from '@angular/router';
@@ -21,6 +21,7 @@ interface NavLink {
 }
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-profile-home',
   imports: [
     MatIconModule,

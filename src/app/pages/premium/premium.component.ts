@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, signal, computed, OnDestroy } from '@angular/core';
+import { Component, inject, OnInit, signal, computed, OnDestroy, ChangeDetectionStrategy } from '@angular/core';
 
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -20,6 +20,7 @@ import { MatTabsModule } from '@angular/material/tabs';
 import { Subject, takeUntil } from 'rxjs';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-premium',
   imports: [
     CommonModule,

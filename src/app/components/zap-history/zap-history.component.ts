@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, effect, OnDestroy } from '@angular/core';
+import { Component, inject, signal, computed, effect, OnDestroy, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { ScrollingModule } from '@angular/cdk/scrolling';
@@ -33,6 +33,7 @@ interface ZapHistoryEntry {
 }
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-zap-history',
   imports: [
     CommonModule,

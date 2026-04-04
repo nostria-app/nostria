@@ -4,6 +4,7 @@ import {
   output,
   ElementRef,
   ViewChild,
+  ChangeDetectionStrategy,
 } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -16,6 +17,7 @@ export interface FloatingToolbarPosition {
 }
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-floating-toolbar',
   imports: [MatButtonModule, MatIconModule, MatTooltipModule, MatDividerModule],
   templateUrl: './floating-toolbar.component.html',

@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, PLATFORM_ID, TransferState } from '@angular/core';
+import { Component, OnInit, inject, PLATFORM_ID, TransferState, ChangeDetectionStrategy } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MediaPlayerService } from '../../services/media-player.service';
 import { LayoutService } from '../../services/layout.service';
@@ -13,6 +13,7 @@ import { STREAM_STATE_KEY, StreamData } from '../../stream-resolver';
 import { isPlatformServer, isPlatformBrowser } from '@angular/common';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-stream-viewer',
   imports: [],
   template: `

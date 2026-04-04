@@ -1,4 +1,4 @@
-import { Component, inject, signal, input, effect } from '@angular/core';
+import { Component, inject, signal, input, effect, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
@@ -25,6 +25,7 @@ interface Interaction {
 }
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-contact-interactions',
   imports: [
     CommonModule,

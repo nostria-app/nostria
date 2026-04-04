@@ -1,4 +1,4 @@
-import { Component, input, signal, effect, inject, untracked, computed } from '@angular/core';
+import { Component, input, signal, effect, inject, untracked, computed, ChangeDetectionStrategy } from '@angular/core';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -7,6 +7,7 @@ import { MatChipsModule } from '@angular/material/chips';
 import { IgdbService, GameData } from '../../services/igdb.service';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-game-hover-card',
   imports: [
     MatCardModule,

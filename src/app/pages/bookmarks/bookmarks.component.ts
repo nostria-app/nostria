@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, effect, OnInit } from '@angular/core';
+import { Component, inject, signal, computed, effect, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { CdkDragDrop, DragDropModule } from '@angular/cdk/drag-drop';
 
 import { FormsModule } from '@angular/forms';
@@ -91,6 +91,7 @@ interface CompactUrlDetails {
 }
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-bookmarks',
   imports: [
     FormsModule,

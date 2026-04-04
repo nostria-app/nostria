@@ -1,4 +1,4 @@
-import { Component, inject, signal, effect } from '@angular/core';
+import { Component, inject, signal, effect, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
@@ -12,6 +12,7 @@ import { DataService } from '../../../services/data.service';
 import { TimestampPipe } from '../../../pipes/timestamp.pipe';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-profile-about',
   imports: [CommonModule, MatCardModule, MatIconModule, MatButtonModule, TimestampPipe],
   templateUrl: './profile-about.component.html',

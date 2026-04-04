@@ -9,6 +9,7 @@ import {
   ElementRef,
   ViewChild,
   untracked,
+  ChangeDetectionStrategy,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Clipboard } from '@angular/cdk/clipboard';
@@ -64,6 +65,7 @@ import { UserRelayService } from '../../services/relays/user-relay';
 const NOTIFICATION_FILTERS_KEY = 'nostria-notification-filters';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-notifications',
   imports: [
     FormsModule,

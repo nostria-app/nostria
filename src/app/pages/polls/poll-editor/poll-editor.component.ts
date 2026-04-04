@@ -1,4 +1,4 @@
-import { Component, inject, signal, OnInit, ElementRef, QueryList, ViewChildren } from '@angular/core';
+import { Component, inject, signal, OnInit, ElementRef, QueryList, ViewChildren, ChangeDetectionStrategy } from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
 import { FormBuilder, FormGroup, FormArray, Validators, ReactiveFormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -18,6 +18,7 @@ import { CustomDialogService } from '../../../services/custom-dialog.service';
 import { nip19 } from 'nostr-tools';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-poll-editor',
   imports: [
     ReactiveFormsModule,

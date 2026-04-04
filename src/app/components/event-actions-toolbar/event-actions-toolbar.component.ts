@@ -1,4 +1,4 @@
-import { Component, computed, effect, inject, input, output, signal, untracked, PLATFORM_ID } from '@angular/core';
+import { Component, computed, effect, inject, input, output, signal, untracked, PLATFORM_ID, ChangeDetectionStrategy } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { trigger, style, animate, transition } from '@angular/animations';
 import { MatIconModule } from '@angular/material/icon';
@@ -19,6 +19,7 @@ import { ReactionService } from '../../services/reaction.service';
 import { LayoutService } from '../../services/layout.service';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-event-actions-toolbar',
   imports: [
     MatIconModule,

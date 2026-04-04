@@ -6,6 +6,7 @@ import {
   output,
   signal,
   untracked,
+  ChangeDetectionStrategy,
 } from '@angular/core';
 import { MatCardModule } from '@angular/material/card';
 import { kinds, NostrEvent } from 'nostr-tools';
@@ -21,6 +22,7 @@ import { LoggerService } from '../../../services/logger.service';
 export type BadgeLayout = 'vertical' | 'horizontal';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-badge',
   imports: [
     MatCardModule,

@@ -1,4 +1,4 @@
-import { Component, inject, computed, signal, effect, untracked, OnDestroy } from '@angular/core';
+import { Component, inject, computed, signal, effect, untracked, OnDestroy, ChangeDetectionStrategy } from '@angular/core';
 
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -17,6 +17,7 @@ import { UtilitiesService } from '../../services/utilities.service';
 import { HapticsService } from '../../services/haptics.service';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-favorites-overlay',
   imports: [
     MatButtonModule,

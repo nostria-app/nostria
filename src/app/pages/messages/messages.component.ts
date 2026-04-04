@@ -11,6 +11,7 @@ import {
   effect,
   untracked,
   DestroyRef,
+  ChangeDetectionStrategy,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
@@ -226,6 +227,7 @@ interface QuickReactionMenuItem {
 }
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-messages',
   imports: [
     FormsModule,

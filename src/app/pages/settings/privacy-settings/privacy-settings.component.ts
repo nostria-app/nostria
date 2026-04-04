@@ -1,4 +1,4 @@
-import { Component, inject, computed, ViewChild, TemplateRef, OnInit, OnDestroy } from '@angular/core';
+import { Component, inject, computed, ViewChild, TemplateRef, OnInit, OnDestroy, ChangeDetectionStrategy } from '@angular/core';
 
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatCardModule } from '@angular/material/card';
@@ -28,6 +28,7 @@ import { LoggerService } from '../../../services/logger.service';
 import { getSettingsSectionComponent } from '../settings-section-components.map';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-privacy-settings',
   imports: [
     MatTabsModule,

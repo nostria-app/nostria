@@ -1,4 +1,4 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { MatCardModule } from '@angular/material/card';
 import { MatListModule } from '@angular/material/list';
 import { MatButtonModule } from '@angular/material/button';
@@ -13,6 +13,7 @@ import { RightPanelService } from '../../../services/right-panel.service';
 import { MatTooltipModule } from '@angular/material/tooltip';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-premium-settings',
   imports: [MatCardModule, MatListModule, MatButtonModule, MatIconModule, MatTooltipModule, RouterLink, DatePipe],
   templateUrl: './settings.html',

@@ -1,4 +1,4 @@
-import { Component, input, inject, signal, effect, untracked } from '@angular/core';
+import { Component, input, inject, signal, effect, untracked, ChangeDetectionStrategy } from '@angular/core';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatCardModule } from '@angular/material/card';
 import { EmojiSetService } from '../../services/emoji-set.service';
@@ -6,6 +6,7 @@ import { EmojiSetEventComponent } from '../event-types/emoji-set-event.component
 import { Event as NostrEvent } from 'nostr-tools';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-emoji-set-mention',
   imports: [MatProgressSpinnerModule, MatCardModule, EmojiSetEventComponent],
   template: `

@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, OnDestroy, OnInit, effect } from '@angular/core';
+import { Component, inject, signal, computed, OnDestroy, OnInit, effect, ChangeDetectionStrategy } from '@angular/core';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -43,6 +43,7 @@ export function filterVisibleArticles(articles: Event[], isBlocked: (event: Even
 }
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-articles-discover',
   imports: [
     MatProgressSpinnerModule,

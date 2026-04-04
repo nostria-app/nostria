@@ -1,4 +1,4 @@
-import { Component, inject, ViewChild, output, AfterViewInit, ChangeDetectorRef, signal } from '@angular/core';
+import { Component, inject, ViewChild, output, AfterViewInit, ChangeDetectorRef, signal, ChangeDetectionStrategy } from '@angular/core';
 import { CustomDialogComponent } from '../custom-dialog/custom-dialog.component';
 import { LoginDialogComponent } from '../login-dialog/login-dialog.component';
 import { LoggerService } from '../../services/logger.service';
@@ -32,6 +32,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
  * ```
  */
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-standalone-login-dialog',
   imports: [CustomDialogComponent, LoginDialogComponent, MatButtonModule, MatIconModule, MatProgressSpinnerModule],
   template: `

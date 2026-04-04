@@ -1,4 +1,4 @@
-import { Component, effect, inject, signal, OnDestroy, computed } from '@angular/core';
+import { Component, effect, inject, signal, OnDestroy, computed, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { MatStepperModule } from '@angular/material/stepper';
@@ -50,6 +50,7 @@ interface TierDisplay {
 }
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-renew',
   imports: [
     CommonModule,

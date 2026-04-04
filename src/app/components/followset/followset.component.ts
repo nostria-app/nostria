@@ -1,4 +1,4 @@
-import { Component, input, output, computed, inject } from '@angular/core';
+import { Component, input, output, computed, inject, ChangeDetectionStrategy } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatCheckboxModule } from '@angular/material/checkbox';
@@ -29,6 +29,7 @@ export interface SuggestedProfile {
  * Each follow action immediately signs and publishes a kind 3 event to the relays.
  */
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-followset',
   imports: [MatIconModule, MatButtonModule, MatCheckboxModule, MatProgressSpinnerModule, FormsModule],
   templateUrl: './followset.component.html',

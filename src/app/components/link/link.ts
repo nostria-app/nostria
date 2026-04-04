@@ -1,10 +1,11 @@
-import { Component, input, computed, inject } from '@angular/core';
+import { Component, input, computed, inject, ChangeDetectionStrategy } from '@angular/core';
 import { Event, nip19 } from 'nostr-tools';
 import { AgoPipe } from '../../pipes/ago.pipe';
 import { TimestampPipe } from '../../pipes/timestamp.pipe';
 import { LayoutService } from '../../services/layout.service';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-link',
   imports: [AgoPipe, TimestampPipe],
   templateUrl: './link.html',

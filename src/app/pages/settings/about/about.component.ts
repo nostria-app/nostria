@@ -1,5 +1,5 @@
 import { DatePipe } from '@angular/common';
-import { Component, effect, inject, signal, OnInit, OnDestroy } from '@angular/core';
+import { Component, effect, inject, signal, OnInit, OnDestroy, ChangeDetectionStrategy } from '@angular/core';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
@@ -27,6 +27,7 @@ interface WebManifest {
 }
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-about',
   imports: [DatePipe, MatCardModule, MatListModule, MatIconModule, MatButtonModule, MatTooltipModule, CelebrationBurstComponent],
   templateUrl: './about.component.html',

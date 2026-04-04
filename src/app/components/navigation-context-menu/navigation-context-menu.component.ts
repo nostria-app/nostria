@@ -1,10 +1,11 @@
-import { Component, OnInit, OnDestroy, Renderer2, inject, signal, PLATFORM_ID } from '@angular/core';
+import { Component, OnInit, OnDestroy, Renderer2, inject, signal, PLATFORM_ID, ChangeDetectionStrategy } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { NavigationHistoryItem, RouteDataService } from '../../services/route-data.service';
 import { DOCUMENT, isPlatformBrowser } from '@angular/common';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-navigation-context-menu',
   imports: [MatIconModule, MatButtonModule],
   templateUrl: './navigation-context-menu.component.html',

@@ -1,4 +1,4 @@
-import { Component, inject, signal, output, computed, effect, OnInit } from '@angular/core';
+import { Component, inject, signal, output, computed, effect, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -42,6 +42,7 @@ interface ArticlesRelaySet {
 }
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-articles-settings-dialog',
   imports: [
     CustomDialogComponent,

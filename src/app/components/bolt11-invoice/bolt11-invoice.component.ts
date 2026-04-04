@@ -1,4 +1,4 @@
-import { Component, input, signal, inject, computed, PLATFORM_ID, OnInit, OnDestroy } from '@angular/core';
+import { Component, input, signal, inject, computed, PLATFORM_ID, OnInit, OnDestroy, ChangeDetectionStrategy } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
@@ -26,6 +26,7 @@ interface DecodedInvoiceData {
 }
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-bolt11-invoice',
   imports: [MatCardModule, MatIconModule, MatButtonModule, MatTooltipModule, OverlayModule, QrCodeComponent],
   templateUrl: './bolt11-invoice.component.html',

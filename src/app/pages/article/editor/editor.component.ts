@@ -1,4 +1,4 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
 import { Location } from '@angular/common';
 import { CustomDialogService } from '../../../services/custom-dialog.service';
@@ -6,6 +6,7 @@ import { ArticleEditorDialogComponent } from '../../../components/article-editor
 import type { Event } from 'nostr-tools';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-editor',
   template: '',
   styles: [],

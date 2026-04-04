@@ -1,13 +1,13 @@
-import { Component, input } from '@angular/core';
+import { Component, input, inject, ChangeDetectionStrategy } from '@angular/core';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { Clipboard } from '@angular/cdk/clipboard';
-import { inject } from '@angular/core';
 import { MatSnackBar } from '@angular/material/snack-bar';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-cashu-token',
   imports: [MatCardModule, MatIconModule, MatButtonModule, MatTooltipModule],
   templateUrl: './cashu-token.component.html',

@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, ChangeDetectionStrategy } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
@@ -8,6 +8,7 @@ import { LayoutService } from '../../services/layout.service';
 import { ThemeService } from '../../services/theme.service';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-welcome',
   imports: [MatIconModule, MatButtonModule, MatInputModule, MatFormFieldModule, FormsModule],
   templateUrl: './welcome.component.html',

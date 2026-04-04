@@ -1,4 +1,4 @@
-import { Component, input, output, signal, effect, computed, inject } from '@angular/core';
+import { Component, input, output, signal, effect, computed, inject, ChangeDetectionStrategy } from '@angular/core';
 
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -10,6 +10,7 @@ import { Memo } from '../../../models/memo.model';
 import { MemoDeleteDialogComponent } from '../memos-delete-dialog/memo-delete-dialog.component';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-memo-card',
   imports: [
     FormsModule,

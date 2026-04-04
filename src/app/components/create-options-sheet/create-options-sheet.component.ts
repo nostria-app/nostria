@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, ChangeDetectionStrategy } from '@angular/core';
 import { MatBottomSheetRef } from '@angular/material/bottom-sheet';
 import { MatIconModule } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
@@ -6,6 +6,7 @@ import { LayoutService } from '../../services/layout.service';
 import { EventService } from '../../services/event';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-create-options-sheet',
   imports: [MatListModule, MatIconModule],
   templateUrl: './create-options-sheet.component.html',

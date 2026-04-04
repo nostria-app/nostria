@@ -1,4 +1,4 @@
-import { Component, inject, signal, effect, untracked } from '@angular/core';
+import { Component, inject, signal, effect, untracked, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
@@ -36,6 +36,7 @@ interface BadgeDisplayData {
 }
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-badge-details',
   imports: [
     CommonModule,
