@@ -98,6 +98,7 @@ import { SpeechService } from './services/speech.service';
 import { CommandPaletteDialogComponent } from './components/command-palette-dialog/command-palette-dialog.component';
 import { DatabaseService } from './services/database.service';
 import { MetricsTrackingService } from './services/metrics-tracking.service';
+import { AnalyticsService } from './services/analytics.service';
 import { FollowingBackupService } from './services/following-backup.service';
 import { ShortcutsDialogComponent } from './components/shortcuts-dialog/shortcuts-dialog.component';
 import { MessagingService } from './services/messaging.service';
@@ -1316,6 +1317,13 @@ export class App implements OnInit, OnDestroy {
       const metricsTracking = this.injector.get(MetricsTrackingService);
       metricsTracking.initialize();
       this.logger.info('[App] Metrics tracking service initialized successfully');
+    });
+
+    this.deferStartupTask('optional analytics', () => {
+      this.logger.info('[App] Initializing optional analytics service');
+      const analyticsService = this.injector.get(AnalyticsService);
+      analyticsService.initialize();
+      this.logger.info('[App] Optional analytics service initialized successfully');
     });
 
     this.deferStartupTask('cache cleanup', () => {

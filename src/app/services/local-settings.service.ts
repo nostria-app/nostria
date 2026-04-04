@@ -125,6 +125,8 @@ export interface LocalSettings {
   lockScreenRotation: boolean;
   /** Show the floating chat widget on desktop. */
   chatWidgetEnabled: boolean;
+  /** Whether optional analytics collection is enabled app-wide on this device. */
+  analyticsEnabled: boolean;
 }
 
 const DEFAULT_LOCAL_SETTINGS: LocalSettings = {
@@ -149,10 +151,11 @@ const DEFAULT_LOCAL_SETTINGS: LocalSettings = {
   menuItems: [], // Empty means use default order
   contentFilter: { ...DEFAULT_CONTENT_FILTER },
   maxTaggedAccountsFilter: 100, // Filter mass-tagging by default
-  defaultReactionEmoji: '❤️', // Default reaction sent on single-tap
+  defaultReactionEmoji: '+', // Default reaction sent on single-tap
   articleEditorShowToolbar: true,
   lockScreenRotation: false,
   chatWidgetEnabled: true,
+  analyticsEnabled: false,
 };
 
 /**
@@ -213,6 +216,7 @@ export class LocalSettingsService {
   readonly defaultReactionEmoji = computed(() => this.settings().defaultReactionEmoji ?? '❤️');
   readonly articleEditorShowToolbar = computed(() => this.settings().articleEditorShowToolbar ?? true);
   readonly lockScreenRotation = computed(() => this.settings().lockScreenRotation ?? false);
+  readonly analyticsEnabled = computed(() => this.settings().analyticsEnabled ?? false);
 
   /** Default menu item IDs in order (used when no custom config is set) */
   private readonly defaultMenuIds = [...DEFAULT_MENU_ITEM_IDS];
@@ -656,6 +660,13 @@ export class LocalSettingsService {
    */
   setLockScreenRotation(lockScreenRotation: boolean): void {
     this.updateSettings({ lockScreenRotation });
+  }
+
+  /**
+   * Set optional analytics preference.
+   */
+  setAnalyticsEnabled(analyticsEnabled: boolean): void {
+    this.updateSettings({ analyticsEnabled });
   }
 
   /**
