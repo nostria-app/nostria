@@ -53,6 +53,7 @@ yarn-error.log
 /libpeerconnection.log
 testem.log
 /typings
+/.tmp-tauri-icons/
 
 # Playwright
 /test-results/
