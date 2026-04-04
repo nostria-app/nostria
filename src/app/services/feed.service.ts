@@ -1647,7 +1647,7 @@ export class FeedService {
       }
 
       const kinds = feedData.filter?.kinds || [1]; // Default to text notes
-  const initialSinceTimestamp = this.getFollowingInitialLoadSinceTimestamp();
+      const initialSinceTimestamp = this.getFollowingInitialLoadSinceTimestamp();
 
       this.logger.info(`📢 Loading FOLLOWING feed with ${followingList.length} users (TIME-WINDOW mode)`);
 
