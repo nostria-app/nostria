@@ -65,10 +65,10 @@ jobs:
       - name: Build debug APK
         run: npx tauri android build --debug --apk --target aarch64
 
-      - name: Prepare Android project for arm64 release build
+      - name: Prepare Android project for release artifact build
         env:
           TAURI_ANDROID_RELEASE_USE_DEBUG_KEY: "true"
-        run: npx tauri android android-studio-script --release --target aarch64
+        run: npx tauri android build --apk --target aarch64
 
       - name: Build arm64 release APK with debug signing for verification
         env:
@@ -77,7 +77,7 @@ jobs:
         shell: bash
         run: |
           chmod +x ./gradlew
-          ./gradlew :app:assembleArm64Release
+          ./gradlew :app:assembleArm64Release -x rustBuildArm64Release
 
       - name: List generated Android artifacts
         shell: bash
@@ -187,13 +187,13 @@ jobs:
       - name: Print Tauri environment info
         run: npm run tauri:info
 
-      - name: Prepare Android project for signed arm64 release build
+      - name: Prepare Android project for signed release artifact build
         env:
           TAURI_ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/nostria-android.keystore
           TAURI_ANDROID_KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           TAURI_ANDROID_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           TAURI_ANDROID_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-        run: npx tauri android android-studio-script --release --target aarch64
+        run: npx tauri android build --apk --target aarch64
 
       - name: Build signed arm64 release APK
         env:
@@ -205,7 +205,7 @@ jobs:
         shell: bash
         run: |
           chmod +x ./gradlew
-          ./gradlew :app:assembleArm64Release
+          ./gradlew :app:assembleArm64Release -x rustBuildArm64Release
 
       - name: Build signed arm64 release AAB
         env:
@@ -217,7 +217,7 @@ jobs:
         shell: bash
         run: |
           chmod +x ./gradlew
-          ./gradlew :app:bundleArm64Release
+          ./gradlew :app:bundleArm64Release -x rustBuildArm64Release
 
       - name: List generated Android artifacts
         shell: bash
