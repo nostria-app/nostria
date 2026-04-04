@@ -2684,12 +2684,14 @@ export class EventComponent implements AfterViewInit, OnDestroy {
           reposts: normalizedInteractions.reposts,
           reports: normalizedInteractions.reports,
           quotes: normalizedInteractions.quotes,
+          zaps: this.zaps(),
           replyCount: sharedReplyCount,
           replyEvents: normalizedInteractions.replyEvents,
           hasMoreReactions: normalizedInteractions.hasMoreReactions,
           hasMoreReposts: normalizedInteractions.hasMoreReposts,
           hasMoreReplies: sharedReplyCount >= EventService.INTERACTION_QUERY_LIMIT,
           hasMoreQuotes: normalizedInteractions.hasMoreQuotes,
+          hasMoreZaps: this.hasMoreZaps(),
         });
       }
     } catch (error) {
@@ -2726,10 +2728,12 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     this.reposts.set(normalizedInteractions.reposts);
     this.quotes.set(normalizedInteractions.quotes);
     this.reports.set(normalizedInteractions.reports);
+    this.zaps.set(snapshot.zaps);
     this.hasMoreReactions.set(normalizedInteractions.hasMoreReactions);
     this.hasMoreReposts.set(normalizedInteractions.hasMoreReposts);
     this.hasMoreReplies.set(normalizedInteractions.hasMoreReplies);
     this.hasMoreQuotes.set(snapshot.hasMoreQuotes || normalizedInteractions.hasMoreQuotes);
+    this.hasMoreZaps.set(snapshot.hasMoreZaps);
 
     if (this.replyCountFromParent() === undefined) {
       this._replyCountInternal.set(normalizedInteractions.replyCount);
@@ -3091,6 +3095,13 @@ export class EventComponent implements AfterViewInit, OnDestroy {
       this.zaps.set(parsedZaps);
       // Track if zap query hit its limit (only relevant when limits are applied)
       this.hasMoreZaps.set(queryLimit != null && zapReceipts.length >= queryLimit);
+
+      if (queryLimit == null) {
+        this.eventService.publishInteractionSnapshotPatch(targetEventId, {
+          zaps: parsedZaps,
+          hasMoreZaps: this.hasMoreZaps(),
+        });
+      }
     } catch (error) {
       this.logger.error('Error loading zaps:', error);
       if (loadGeneration === this.interactionLoadGeneration && !this.isLoadingReactions()) {
@@ -3431,12 +3442,14 @@ export class EventComponent implements AfterViewInit, OnDestroy {
       reposts: this.reposts(),
       reports: this.reports(),
       quotes: this.quotes(),
+      zaps: this.zaps(),
       replyCount: nextReplyCount,
       replyEvents: nextReplyEvents,
       hasMoreReactions: this.hasMoreReactions(),
       hasMoreReposts: this.hasMoreReposts(),
       hasMoreReplies: nextHasMoreReplies,
       hasMoreQuotes: this.hasMoreQuotes(),
+      hasMoreZaps: this.hasMoreZaps(),
     });
   }
 

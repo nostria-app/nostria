@@ -61,18 +61,30 @@ export interface EventInteractions {
   hasMoreReplies?: boolean;
 }
 
+export interface SharedZapEntry {
+  receipt: Event;
+  zapRequest: Event | null;
+  amount: number | null;
+  comment: string;
+  senderName?: string;
+  senderPubkey: string;
+  timestamp: number;
+}
+
 export interface SharedInteractionSnapshot {
   eventId: string;
   reactions: ReactionEvents;
   reposts: NostrRecord[];
   reports: ReportEvents;
   quotes: NostrRecord[];
+  zaps: SharedZapEntry[];
   replyCount: number;
   replyEvents: Event[];
   hasMoreReactions: boolean;
   hasMoreReposts: boolean;
   hasMoreReplies: boolean;
   hasMoreQuotes: boolean;
+  hasMoreZaps: boolean;
   publishedAt: number;
 }
 
@@ -157,6 +169,23 @@ export class EventService {
   publishInteractionSnapshot(snapshot: Omit<SharedInteractionSnapshot, 'publishedAt'>): void {
     this.interactionSnapshot.set({
       ...snapshot,
+      publishedAt: Date.now(),
+    });
+  }
+
+  publishInteractionSnapshotPatch(
+    eventId: string,
+    patch: Partial<Omit<SharedInteractionSnapshot, 'eventId' | 'publishedAt'>>,
+  ): void {
+    const current = this.interactionSnapshot();
+    if (!current || current.eventId !== eventId) {
+      return;
+    }
+
+    this.interactionSnapshot.set({
+      ...current,
+      ...patch,
+      eventId,
       publishedAt: Date.now(),
     });
   }
