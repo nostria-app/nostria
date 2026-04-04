@@ -509,7 +509,7 @@ jobs:
 
           PROFILE_PATH="$RUNNER_TEMP/ios.mobileprovision"
           PROFILE_PLIST_PATH="$RUNNER_TEMP/ios-profile.plist"
-          echo "$IOS_MOBILE_PROVISION" | base64 --decode > "$PROFILE_PATH"
+          printf '%s' "$IOS_MOBILE_PROVISION" | tr -d '\r\n' | base64 --decode > "$PROFILE_PATH"
           security cms -D -i "$PROFILE_PATH" > "$PROFILE_PLIST_PATH"
 
           TEAM_ID=$(/usr/libexec/PlistBuddy -c 'Print :TeamIdentifier:0' "$PROFILE_PLIST_PATH")
