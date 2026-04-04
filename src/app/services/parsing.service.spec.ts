@@ -96,4 +96,15 @@ describe('ParsingService', () => {
       customEmoji: 'https://i.nostr.build/HSalALZf2ftAUOxP.png',
     });
   });
+
+  it('does not link ignored bare domains', async () => {
+    const result = await service.parseContent('Talk to andrzej.btc about it');
+
+    expect(result.pendingMentions).toEqual([]);
+    expect(result.tokens).toHaveLength(1);
+    expect(result.tokens[0]).toMatchObject({
+      type: 'text',
+      content: 'Talk to andrzej.btc about it',
+    });
+  });
 });

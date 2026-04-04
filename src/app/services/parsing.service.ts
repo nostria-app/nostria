@@ -102,6 +102,10 @@ export interface ParseContentResult {
   providedIn: 'root',
 })
 export class ParsingService implements OnDestroy {
+  private readonly ignoredBareLinkDomains = new Set([
+    'andrzej.btc',
+  ]);
+
   data = inject(DataService);
   nostr = inject(NostrService);
   utilities = inject(UtilitiesService);
@@ -1103,6 +1107,10 @@ export class ParsingService implements OnDestroy {
 
       if (!rawUrl) continue;
 
+      if (this.shouldIgnoreBareLinkDomain(rawUrl)) {
+        continue;
+      }
+
       // Normalize bare domains to clickable hrefs
       const normalizedUrl = `https://${rawUrl}`;
 
@@ -1257,6 +1265,11 @@ export class ParsingService implements OnDestroy {
         });
       }
     }
+  }
+
+  private shouldIgnoreBareLinkDomain(rawUrl: string): boolean {
+    const domain = rawUrl.split('/')[0]?.toLowerCase();
+    return domain ? this.ignoredBareLinkDomains.has(domain) : false;
   }
 
   /**
