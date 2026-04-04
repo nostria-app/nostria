@@ -10,7 +10,8 @@
   [href]="preview.url" [attr.data-url]="preview.url" target="_blank" rel="noopener noreferrer">
   <mat-card [class.compact-preview]="compact() || (!preview.title && !preview.image)"
     [class.prominent-image-preview]="prominentImage() && compact() && !!preview.image && !preview.loading && !preview.error"
-    [class.single-link-preview]="singleLinkLayout() && !preview.loading && !preview.error">
+    [class.single-link-preview]="singleLinkLayout() && !preview.loading && !preview.error"
+    [class.no-thumbnail-preview]="!preview.loading && !preview.error && !preview.image">
     <div class="preview-content">
       <div class="thumbnail-frame">
         <div class="thumbnail-container">

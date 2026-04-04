@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, OnDestroy, computed, effect, inject
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { Event, Filter, kinds, nip19 } from 'nostr-tools';
 import { LayoutService } from '../../services/layout.service';
 import { RelayPoolService } from '../../services/relays/relay-pool';
@@ -15,6 +15,7 @@ import { LoggerService } from '../../services/logger.service';
 import { RunesSettingsService, RuneId, SidebarWidgetId, WeatherLocationPreference, BITCOIN_PRICE_API } from '../../services/runes-settings.service';
 import { Playlist } from '../../interfaces';
 import { UtilitiesService } from '../../services/utilities.service';
+import { ExternalLinkHandlerService } from '../../services/external-link-handler.service';
 
 interface RuneDefinition {
   id: RuneId;
@@ -90,6 +91,7 @@ interface SwissKnifeResult {
   type: string;
   primaryValue: string;
   extraValue?: string;
+  route?: string;
 }
 
 interface SidebarWidgetOption {
@@ -106,7 +108,7 @@ const IP_LOCATION_URL = 'https://ipwho.is/';
 
 @Component({
   selector: 'app-runes-sidebar',
-  imports: [MatButtonModule, MatIconModule, MatTooltipModule],
+  imports: [MatButtonModule, MatIconModule, MatTooltipModule, RouterLink],
   templateUrl: './runes-sidebar.component.html',
   styleUrl: './runes-sidebar.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -131,6 +133,7 @@ export class RunesSidebarComponent implements OnDestroy {
   private readonly logger = inject(LoggerService);
   private readonly utilities = inject(UtilitiesService);
   private readonly runesSettings = inject(RunesSettingsService);
+  private readonly externalLinkHandler = inject(ExternalLinkHandlerService);
 
   protected readonly runes: RuneDefinition[] = [
     {
@@ -342,8 +345,8 @@ export class RunesSidebarComponent implements OnDestroy {
         const note = nip19.noteEncode(normalized.toLowerCase());
         return [
           { type: 'hex', primaryValue: normalized.toLowerCase() },
-          { type: 'npub', primaryValue: npub },
-          { type: 'note', primaryValue: note },
+          { type: 'npub', primaryValue: npub, route: this.getSwissKnifeRoute(npub) },
+          { type: 'note', primaryValue: note, route: this.getSwissKnifeRoute(note) },
         ];
       } catch {
         return [{ type: 'hex', primaryValue: normalized.toLowerCase() }];
@@ -355,7 +358,7 @@ export class RunesSidebarComponent implements OnDestroy {
 
       if (decoded.type === 'npub' || decoded.type === 'note') {
         return [
-          { type: decoded.type, primaryValue: normalized },
+          { type: decoded.type, primaryValue: normalized, route: this.getSwissKnifeRoute(normalized) },
           { type: 'hex', primaryValue: decoded.data as string },
         ];
       }
@@ -363,8 +366,8 @@ export class RunesSidebarComponent implements OnDestroy {
       if (decoded.type === 'nprofile') {
         const data = decoded.data as { pubkey: string; relays?: string[] };
         return [
-          { type: 'nprofile', primaryValue: normalized },
-          { type: 'pubkey', primaryValue: data.pubkey },
+          { type: 'nprofile', primaryValue: normalized, route: this.getSwissKnifeRoute(normalized) },
+          { type: 'pubkey', primaryValue: data.pubkey, route: this.getSwissKnifeRoute(data.pubkey) },
           { type: 'relays', primaryValue: (data.relays || []).join(', ') || 'none' },
         ];
       }
@@ -372,9 +375,9 @@ export class RunesSidebarComponent implements OnDestroy {
       if (decoded.type === 'nevent') {
         const data = decoded.data as { id: string; author?: string; relays?: string[] };
         return [
-          { type: 'nevent', primaryValue: normalized },
-          { type: 'event id', primaryValue: data.id },
-          { type: 'author', primaryValue: data.author || 'unknown' },
+          { type: 'nevent', primaryValue: normalized, route: this.getSwissKnifeRoute(normalized) },
+          { type: 'event id', primaryValue: data.id, route: this.getSwissKnifeRoute(data.id) },
+          { type: 'author', primaryValue: data.author || 'unknown', route: data.author ? this.getSwissKnifeRoute(data.author) : undefined },
           { type: 'relays', primaryValue: (data.relays || []).join(', ') || 'none' },
         ];
       }
@@ -382,22 +385,26 @@ export class RunesSidebarComponent implements OnDestroy {
       if (decoded.type === 'naddr') {
         const data = decoded.data as { identifier: string; pubkey: string; kind: number; relays?: string[] };
         return [
-          { type: 'naddr', primaryValue: normalized },
+          { type: 'naddr', primaryValue: normalized, route: this.getSwissKnifeRoute(normalized) },
           { type: 'identifier', primaryValue: data.identifier },
-          { type: 'pubkey', primaryValue: data.pubkey },
+          { type: 'pubkey', primaryValue: data.pubkey, route: this.getSwissKnifeRoute(data.pubkey) },
           { type: 'kind', primaryValue: String(data.kind) },
           { type: 'relays', primaryValue: (data.relays || []).join(', ') || 'none' },
         ];
       }
 
       return [
-        { type: decoded.type, primaryValue: normalized },
+        { type: decoded.type, primaryValue: normalized, route: this.getSwissKnifeRoute(normalized) },
         { type: 'decoded', primaryValue: JSON.stringify(decoded.data) },
       ];
     } catch {
       return [{ type: 'invalid', primaryValue: 'Unsupported or invalid Nostr value' }];
     }
   });
+
+  protected getSwissKnifeRoute(value: string): string | undefined {
+    return this.externalLinkHandler.getInternalRouteForIdentifier(value) ?? undefined;
+  }
 
   private readonly refreshTimer = setInterval(() => {
     if (this.runesSettings.isRuneEnabled('bitcoin-price')) {

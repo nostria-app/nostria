@@ -170,6 +170,13 @@ export class ExternalLinkHandlerService {
   }
 
   /**
+   * Map a Nostr identifier to an internal app route when possible.
+   */
+  getInternalRouteForIdentifier(identifier: string): string | null {
+    return this.mapIdentifierToRoute(identifier);
+  }
+
+  /**
    * Handle nostria.app-specific routes that don't follow the nostr identifier pattern
    * Returns the route segments array if matched, null otherwise
    */

@@ -474,6 +474,15 @@
   font-size: 0.78rem;
 }
 
+.swiss-link {
+  color: var(--mat-sys-primary);
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
 .music-actions {
   gap: 0.45rem;
 

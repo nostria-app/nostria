@@ -207,7 +207,11 @@
       @for (result of swissKnifeResults(); track result.type + result.primaryValue) {
       <div class="swiss-row">
         <span class="swiss-type">{{ result.type }}</span>
+        @if (result.route) {
+        <a class="swiss-value swiss-link" [routerLink]="result.route">{{ result.primaryValue }}</a>
+        } @else {
         <span class="swiss-value">{{ result.primaryValue }}</span>
+        }
       </div>
       }
     </div>
@@ -391,7 +395,11 @@
         @for (result of swissKnifeResults(); track result.type + result.primaryValue) {
         <div class="swiss-row">
           <span class="swiss-type">{{ result.type }}</span>
+          @if (result.route) {
+          <a class="swiss-value swiss-link" [routerLink]="result.route">{{ result.primaryValue }}</a>
+          } @else {
           <span class="swiss-value">{{ result.primaryValue }}</span>
+          }
         </div>
         }
       </div>
