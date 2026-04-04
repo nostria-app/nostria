@@ -62,21 +62,45 @@ jobs:
       - name: Print Tauri environment info
         run: npm run tauri:info
 
+      - name: Prepare Android project for arm64 debug build
+        run: npx tauri android android-studio-script --target aarch64
+
       - name: Build arm64 debug APK
-        run: npx tauri android build --debug --apk --target aarch64
+        working-directory: src-tauri/gen/android
+        shell: bash
+        run: |
+          chmod +x ./gradlew
+          ./gradlew :app:assembleArm64Debug
+
+      - name: Prepare Android project for arm64 release build
+        env:
+          TAURI_ANDROID_RELEASE_USE_DEBUG_KEY: "true"
+        run: npx tauri android android-studio-script --release --target aarch64
 
       - name: Build arm64 release APK with debug signing for verification
         env:
           TAURI_ANDROID_RELEASE_USE_DEBUG_KEY: "true"
-        run: npx tauri android build --apk --target aarch64
+        working-directory: src-tauri/gen/android
+        shell: bash
+        run: |
+          chmod +x ./gradlew
+          ./gradlew :app:assembleArm64Release
 
       - name: List generated Android artifacts
         shell: bash
         run: |
           echo "APK outputs:"
-          find src-tauri/gen/android/app/build/outputs/apk -maxdepth 3 -type f | sort || true
+          if [ -d src-tauri/gen/android/app/build/outputs/apk ]; then
+            find src-tauri/gen/android/app/build/outputs/apk -maxdepth 3 -type f | sort
+          else
+            echo "No APK output directory found"
+          fi
           echo "Bundle outputs:"
-          find src-tauri/gen/android/app/build/outputs/bundle -maxdepth 3 -type f | sort || true
+          if [ -d src-tauri/gen/android/app/build/outputs/bundle ]; then
+            find src-tauri/gen/android/app/build/outputs/bundle -maxdepth 3 -type f | sort
+          else
+            echo "No bundle output directory found"
+          fi
 
       - name: Upload debug APK
         uses: actions/upload-artifact@v6
@@ -170,21 +194,53 @@ jobs:
       - name: Print Tauri environment info
         run: npm run tauri:info
 
-      - name: Build signed arm64 release APK and AAB
+      - name: Prepare Android project for signed arm64 release build
         env:
           TAURI_ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/nostria-android.keystore
           TAURI_ANDROID_KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           TAURI_ANDROID_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           TAURI_ANDROID_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-        run: npx tauri android build --apk --aab --target aarch64
+        run: npx tauri android android-studio-script --release --target aarch64
+
+      - name: Build signed arm64 release APK
+        env:
+          TAURI_ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/nostria-android.keystore
+          TAURI_ANDROID_KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          TAURI_ANDROID_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          TAURI_ANDROID_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        working-directory: src-tauri/gen/android
+        shell: bash
+        run: |
+          chmod +x ./gradlew
+          ./gradlew :app:assembleArm64Release
+
+      - name: Build signed arm64 release AAB
+        env:
+          TAURI_ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/nostria-android.keystore
+          TAURI_ANDROID_KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          TAURI_ANDROID_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          TAURI_ANDROID_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        working-directory: src-tauri/gen/android
+        shell: bash
+        run: |
+          chmod +x ./gradlew
+          ./gradlew :app:bundleArm64Release
 
       - name: List generated Android artifacts
         shell: bash
         run: |
           echo "APK outputs:"
-          find src-tauri/gen/android/app/build/outputs/apk -maxdepth 3 -type f | sort || true
+          if [ -d src-tauri/gen/android/app/build/outputs/apk ]; then
+            find src-tauri/gen/android/app/build/outputs/apk -maxdepth 3 -type f | sort
+          else
+            echo "No APK output directory found"
+          fi
           echo "Bundle outputs:"
-          find src-tauri/gen/android/app/build/outputs/bundle -maxdepth 3 -type f | sort || true
+          if [ -d src-tauri/gen/android/app/build/outputs/bundle ]; then
+            find src-tauri/gen/android/app/build/outputs/bundle -maxdepth 3 -type f | sort
+          else
+            echo "No bundle output directory found"
+          fi
 
       - name: Upload signed release APK
         uses: actions/upload-artifact@v6
