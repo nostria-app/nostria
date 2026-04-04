@@ -48,10 +48,22 @@ function Get-ConnectedDeviceSerials {
 
   return @(
     $adbOutput |
-      Select-Object -Skip 1 |
-      Where-Object { $_ -match "\tdevice$" } |
-      ForEach-Object { ($_ -split "\t")[0].Trim() } |
-      Where-Object { $_ }
+    Select-Object -Skip 1 |
+    Where-Object { $_ -match "\tdevice$" } |
+    ForEach-Object { ($_ -split "\t")[0].Trim() } |
+    Where-Object { $_ }
+  )
+}
+
+function Get-ConnectedDevices {
+  return @(
+    Get-ConnectedDeviceSerials |
+    ForEach-Object {
+      [PSCustomObject]@{
+        Serial     = $_
+        IsEmulator = $_.StartsWith('emulator-')
+      }
+    }
   )
 }
 
@@ -68,6 +80,10 @@ function Get-RequestedDevice {
     if ($arg.StartsWith('--device=')) {
       return $arg.Substring('--device='.Length)
     }
+
+    if (-not $arg.StartsWith('-')) {
+      return $arg
+    }
   }
 
   return $null
@@ -79,21 +95,47 @@ $hostReason = $null
 if ($Emulator) {
   $hostOverride = '10.0.2.2'
   $hostReason = 'forced emulator mode'
-} elseif ($PhysicalDevice) {
-  $hostReason = 'forced physical-device mode'
-} else {
+}
+elseif ($PhysicalDevice) {
   $requestedDevice = Get-RequestedDevice -Args $TauriArgs
-  $connectedDevices = Get-ConnectedDeviceSerials
+  $connectedDevices = Get-ConnectedDevices
+  $physicalDevices = @($connectedDevices | Where-Object { -not $_.IsEmulator })
+
+  if (-not $requestedDevice -and $physicalDevices.Count -eq 1) {
+    $requestedDevice = $physicalDevices[0].Serial
+    $TauriArgs = @($requestedDevice) + $TauriArgs
+  }
+
+  if ($requestedDevice) {
+    $hostReason = "forced physical-device mode for '$requestedDevice'"
+  }
+  elseif ($physicalDevices.Count -gt 1) {
+    Write-Host 'Multiple physical Android devices detected. Pass a specific serial, for example:'
+    Write-Host 'npm run tauri:android:dev:device -- SERIAL'
+    exit 1
+  }
+  else {
+    Write-Host 'No physical Android device detected. Connect your phone or use npm run tauri:android:dev:emulator.'
+    exit 1
+  }
+}
+else {
+  $requestedDevice = Get-RequestedDevice -Args $TauriArgs
+  $connectedDevices = @(Get-ConnectedDevices)
+  $emulatorDevices = @($connectedDevices | Where-Object { $_.IsEmulator })
 
   if ($requestedDevice -and $requestedDevice.StartsWith('emulator-')) {
     $hostOverride = '10.0.2.2'
     $hostReason = "requested device '$requestedDevice' is an emulator"
-  } elseif ($connectedDevices.Count -eq 1 -and $connectedDevices[0].StartsWith('emulator-')) {
+  }
+  elseif ($connectedDevices.Count -eq 1 -and $connectedDevices[0].IsEmulator) {
     $hostOverride = '10.0.2.2'
-    $hostReason = "detected emulator '$($connectedDevices[0])'"
-  } elseif ($connectedDevices.Count -eq 1) {
-    $hostReason = "detected physical device '$($connectedDevices[0])'"
-  } elseif ($connectedDevices.Count -gt 1 -and ($connectedDevices | Where-Object { $_.StartsWith('emulator-') }).Count -gt 0) {
+    $hostReason = "detected emulator '$($connectedDevices[0].Serial)'"
+  }
+  elseif ($connectedDevices.Count -eq 1) {
+    $hostReason = "detected physical device '$($connectedDevices[0].Serial)'"
+  }
+  elseif ($connectedDevices.Count -gt 1 -and $emulatorDevices.Count -gt 0) {
     Write-Host 'Multiple Android devices detected. Leaving Tauri host selection unchanged.'
     Write-Host 'Use npm run tauri:android:dev:emulator for the emulator or pass -- --device emulator-5554.'
   }

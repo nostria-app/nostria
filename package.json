@@ -42,7 +42,7 @@
     "tauri:dev": "tauri dev",
     "tauri:android:dev": "powershell -ExecutionPolicy Bypass -File scripts/tauri-android-dev.ps1",
     "tauri:android:dev:emulator": "tauri android dev --host 10.0.2.2",
-    "tauri:android:dev:device": "tauri android dev",
+    "tauri:android:dev:device": "powershell -ExecutionPolicy Bypass -File scripts/tauri-android-dev.ps1 -PhysicalDevice",
     "tauri:android:build:packaged": "tauri android build --debug --apk",
     "tauri:android:build:debug": "tauri android build --debug --apk",
     "tauri:android:build:release": "tauri android build --apk",
