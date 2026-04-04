@@ -20,7 +20,7 @@
   <!-- Standard Like with count -->
     <div class="action-button like-action like-hover-container" (click)="reactionBtn.sendDefaultReaction(); $event.stopPropagation()">
     <app-reaction-button class="action-icon like-hover-target" #reactionBtn [event]="event()" [reactionsFromParent]="effectiveReactions()"
-      [enableDesktopHoverPicker]="true" (reactionChanged)="onReactionChanged()"
+      [tapBehavior]="likeTapBehavior()" [enableDesktopHoverPicker]="true" (reactionChanged)="onReactionChanged()"
       view="icon"></app-reaction-button>
     @if (likes().length > 0) {
     <span class="action-count like-hover-target" (mouseenter)="reactionBtn.onDesktopMouseEnter()"

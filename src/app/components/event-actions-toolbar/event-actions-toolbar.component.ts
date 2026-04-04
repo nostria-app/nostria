@@ -88,6 +88,7 @@ export class EventActionsToolbarComponent {
    * Useful when a parent component provides its own voting UI (e.g., community vote pills).
    */
   hideLike = input<boolean>(false);
+  likeTapBehavior = input<'default-reaction' | 'like'>('default-reaction');
 
   /**
    * Explicit vote mode override.

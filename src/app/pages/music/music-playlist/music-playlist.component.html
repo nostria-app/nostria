@@ -133,7 +133,7 @@
     </div>
 
     <!-- Event Actions Toolbar -->
-    <app-event-actions-toolbar [event]="playlist()!" [bookmarkType]="'a'" (replyClick)="scrollToComments()"
+    <app-event-actions-toolbar [event]="playlist()!" [bookmarkType]="'a'" [likeTapBehavior]="'like'" (replyClick)="scrollToComments()"
       (bookmarkClick)="onBookmarkClick($event)" (shareClick)="openShareDialog()">
     </app-event-actions-toolbar>
 

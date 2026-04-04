@@ -1,3 +1,4 @@
+import '@angular/compiler';
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { signal } from '@angular/core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';

@@ -382,6 +382,11 @@ export class ReactionButtonComponent {
       return;
     }
 
+    if (this.tapBehavior() === 'like') {
+      void this.toggleLike();
+      return;
+    }
+
     const defaultEmoji = this.defaultReaction()?.emoji || this.localSettings.defaultReactionEmoji();
 
     if (this.userReaction()) {
@@ -786,6 +791,7 @@ export class ReactionButtonComponent {
 
   event = input.required<Event>();
   view = input<ViewMode>('icon');
+  tapBehavior = input<'default-reaction' | 'like'>('default-reaction');
   disabled = input<boolean>(false);
   enableDesktopHoverPicker = input<boolean>(true);
   // Accept reactions from parent to avoid duplicate queries
