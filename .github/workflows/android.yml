@@ -62,13 +62,23 @@ jobs:
       - name: Print Tauri environment info
         run: npm run tauri:info
 
-      - name: Build debug APK
-        run: npx tauri android build --debug --apk --target aarch64
+      - name: Prepare Android project for arm64 debug build
+        run: npx tauri android android-studio-script --target aarch64
 
-      - name: Build release APK with debug signing for verification
+      - name: Build arm64 debug APK
+        working-directory: src-tauri/gen/android
+        run: ./gradlew :app:assembleArm64Debug
+
+      - name: Prepare Android project for arm64 release build
         env:
           TAURI_ANDROID_RELEASE_USE_DEBUG_KEY: "true"
-        run: npx tauri android build --apk --target aarch64
+        run: npx tauri android android-studio-script --release --target aarch64
+
+      - name: Build arm64 release APK with debug signing for verification
+        env:
+          TAURI_ANDROID_RELEASE_USE_DEBUG_KEY: "true"
+        working-directory: src-tauri/gen/android
+        run: ./gradlew :app:assembleArm64Release
 
       - name: List generated Android artifacts
         shell: bash
@@ -82,18 +92,14 @@ jobs:
         uses: actions/upload-artifact@v6
         with:
           name: nostria-android-debug-apk-run-${{ github.run_id }}-${{ github.run_attempt }}
-          path: |
-            src-tauri/gen/android/app/build/outputs/apk/arm64/debug/*.apk
-            src-tauri/gen/android/app/build/outputs/apk/universal/debug/*.apk
+          path: src-tauri/gen/android/app/build/outputs/apk/arm64/debug/*.apk
           if-no-files-found: error
 
       - name: Upload release verification APK
         uses: actions/upload-artifact@v6
         with:
           name: nostria-android-release-verification-apk-run-${{ github.run_id }}-${{ github.run_attempt }}
-          path: |
-            src-tauri/gen/android/app/build/outputs/apk/arm64/release/*.apk
-            src-tauri/gen/android/app/build/outputs/apk/universal/release/*.apk
+          path: src-tauri/gen/android/app/build/outputs/apk/arm64/release/*.apk
           if-no-files-found: error
 
       - name: Upload ProGuard mapping
@@ -174,21 +180,31 @@ jobs:
       - name: Print Tauri environment info
         run: npm run tauri:info
 
-      - name: Build signed release APK
+      - name: Prepare Android project for signed arm64 release build
         env:
           TAURI_ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/nostria-android.keystore
           TAURI_ANDROID_KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           TAURI_ANDROID_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           TAURI_ANDROID_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-        run: npx tauri android build --apk --target aarch64
+        run: npx tauri android android-studio-script --release --target aarch64
 
-      - name: Build signed release AAB
+      - name: Build signed arm64 release APK
         env:
           TAURI_ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/nostria-android.keystore
           TAURI_ANDROID_KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           TAURI_ANDROID_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           TAURI_ANDROID_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-        run: npx tauri android build --aab --target aarch64
+        working-directory: src-tauri/gen/android
+        run: ./gradlew :app:assembleArm64Release
+
+      - name: Build signed arm64 release AAB
+        env:
+          TAURI_ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/nostria-android.keystore
+          TAURI_ANDROID_KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          TAURI_ANDROID_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          TAURI_ANDROID_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        working-directory: src-tauri/gen/android
+        run: ./gradlew :app:bundleArm64Release
 
       - name: List generated Android artifacts
         shell: bash
@@ -202,18 +218,14 @@ jobs:
         uses: actions/upload-artifact@v6
         with:
           name: nostria-android-release-apk-run-${{ github.run_id }}-${{ github.run_attempt }}
-          path: |
-            src-tauri/gen/android/app/build/outputs/apk/arm64/release/*.apk
-            src-tauri/gen/android/app/build/outputs/apk/universal/release/*.apk
+          path: src-tauri/gen/android/app/build/outputs/apk/arm64/release/*.apk
           if-no-files-found: error
 
       - name: Upload signed release AAB
         uses: actions/upload-artifact@v6
         with:
           name: nostria-android-release-aab-run-${{ github.run_id }}-${{ github.run_attempt }}
-          path: |
-            src-tauri/gen/android/app/build/outputs/bundle/arm64Release/*.aab
-            src-tauri/gen/android/app/build/outputs/bundle/universalRelease/*.aab
+          path: src-tauri/gen/android/app/build/outputs/bundle/arm64Release/*.aab
           if-no-files-found: error
 
       - name: Upload signed release mapping
