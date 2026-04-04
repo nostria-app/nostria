@@ -104,6 +104,7 @@ export interface ParseContentResult {
 export class ParsingService implements OnDestroy {
   private readonly ignoredBareLinkDomains = new Set([
     'andrzej.btc',
+    'necessary.so',
   ]);
 
   data = inject(DataService);
