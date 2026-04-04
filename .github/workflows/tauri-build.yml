@@ -408,18 +408,22 @@ jobs:
           set -euo pipefail
           mkdir -p artifacts/ios
 
+          IOS_OUTPUT_ROOT='src-tauri/gen/apple/build'
+
           APP_PATH=$(
-            find src-tauri/target "$HOME/Library/Developer/Xcode/DerivedData" \
+            find "$IOS_OUTPUT_ROOT" src-tauri/target "$HOME/Library/Developer/Xcode/DerivedData" \
               \( -path '*/Build/Products/*/*.app' -o -name '*.app' \) \
               -type d 2>/dev/null | head -n 1
           )
           DSYM_PATH=$(
-            find src-tauri/target "$HOME/Library/Developer/Xcode/DerivedData" \
+            find "$IOS_OUTPUT_ROOT" src-tauri/target "$HOME/Library/Developer/Xcode/DerivedData" \
               -type d -name '*.app.dSYM' 2>/dev/null | head -n 1 || true
           )
 
           if [ -z "$APP_PATH" ]; then
             echo 'Expected iOS app bundle was not produced by tauri ios build.' >&2
+            echo 'Contents of src-tauri/gen/apple/build:'
+            find "$IOS_OUTPUT_ROOT" -maxdepth 6 \( -type d -o -type f \) | sort || true
             echo 'Contents of src-tauri/target:'
             find src-tauri/target -maxdepth 6 \( -type d -o -type f \) | sort || true
             echo 'Contents of Xcode DerivedData products:'
@@ -549,13 +553,17 @@ jobs:
           set -euo pipefail
           mkdir -p artifacts/ios-signed
 
-          IPA_PATH=$(find src-tauri/target -type f -name '*.ipa' | head -n 1)
-          APP_PATH=$(find src-tauri/target -type d -name '*.app' | head -n 1 || true)
-          DSYM_PATH=$(find src-tauri/target -type d -name '*.app.dSYM' | head -n 1 || true)
-          ARCHIVE_PATH=$(find src-tauri/target -type d -name '*.xcarchive' | head -n 1 || true)
+          IOS_OUTPUT_ROOT='src-tauri/gen/apple/build'
+
+          IPA_PATH=$(find "$IOS_OUTPUT_ROOT" src-tauri/target -type f -name '*.ipa' 2>/dev/null | head -n 1)
+          APP_PATH=$(find "$IOS_OUTPUT_ROOT" src-tauri/target -type d -name '*.app' 2>/dev/null | head -n 1 || true)
+          DSYM_PATH=$(find "$IOS_OUTPUT_ROOT" src-tauri/target -type d -name '*.app.dSYM' 2>/dev/null | head -n 1 || true)
+          ARCHIVE_PATH=$(find "$IOS_OUTPUT_ROOT" src-tauri/target -type d -name '*.xcarchive' 2>/dev/null | head -n 1 || true)
 
           if [ -z "$IPA_PATH" ]; then
             echo 'No IPA was produced by tauri ios build.' >&2
+            echo 'Contents of src-tauri/gen/apple/build:'
+            find "$IOS_OUTPUT_ROOT" -maxdepth 6 \( -type d -o -type f \) | sort || true
             find src-tauri/target -maxdepth 6 \( -type d -o -type f \) | sort || true
             exit 1
           fi
