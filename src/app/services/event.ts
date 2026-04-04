@@ -2238,7 +2238,7 @@ export class EventService {
     let targetEventPubkey = event.pubkey;
     let targetEventKind = event.kind;
     let targetSourceRelayUrls = this.data.toRecord(event).relayUrls ?? [];
-    let repostReference = this.repostService.getRepostReference(event);
+    const repostReference = this.repostService.getRepostReference(event);
 
     if (isRepost) {
       // Try to get the reposted event from embedded content first
