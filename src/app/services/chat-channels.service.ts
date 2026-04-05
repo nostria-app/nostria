@@ -345,7 +345,7 @@ export class ChatChannelsService implements NostriaService {
         }
       }
 
-  this.channelsMap.set(channelMap);
+      this.channelsMap.set(channelMap);
 
       // Load moderation data for authenticated user
       await this.loadModerationData();

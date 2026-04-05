@@ -545,8 +545,6 @@ export class AccountStateService implements OnDestroy {
         const isValid = this.utilities.isValidPubkey(pubkey);
         if (!isValid) {
           console.warn('[AccountStateService] Invalid pubkey in following list:', pubkey);
-          // console.log(JSON.stringify(event));
-          // debugger; // Debug invalid pubkeys
         }
         return isValid;
       });
@@ -971,8 +969,8 @@ export class AccountStateService implements OnDestroy {
       }
 
       const skippedCount = pubkeys.length - successCount;
-  void skippedCount;
-  void startTime;
+      void skippedCount;
+      void startTime;
 
       // Signal that cache loading is complete - FollowingService waits for this
       this.profileCacheLoaded.set(true);
@@ -1043,11 +1041,8 @@ export class AccountStateService implements OnDestroy {
 
       // Only update if the new profile is newer
       if (newTimestamp <= existingTimestamp) {
-        // console.log(`⏭️ [Cache] Skipping older/same profile for ${pubkey.substring(0, 8)}... (existing: ${existingTimestamp}, new: ${newTimestamp})`);
         return; // Don't update, existing profile is newer or same age
       }
-    } else {
-      // console.log(`➕ [Cache] Adding new profile for ${pubkey.substring(0, 8)}...`);
     }
 
     // Add to cache with persistent options (no expiration, no size limit eviction)

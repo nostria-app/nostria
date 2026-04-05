@@ -199,7 +199,6 @@ async function handleSynthesize(payload: { text: string, params?: any }, id: str
       }
 
       console.log('Embedding parsed. Length:', data.length);
-      // console.log('First 5 values:', Array.from(data.slice(0, 5)));
 
       const tensor = new Tensor('float32', data, [1, data.length]);
       payload.params.speaker_embeddings = tensor;

@@ -323,7 +323,6 @@ export class Metrics {
     // Check if event has already been processed
     const alreadyProcessed = await this.isEventProcessed(eventId, currentAccount);
     if (alreadyProcessed) {
-      // console.debug(`Event ${eventId} already processed for metrics, skipping`);
       return false;
     }
 
@@ -356,9 +355,6 @@ export class Metrics {
 
     // Mark event as processed
     await this.markEventProcessed(eventId, currentAccount);
-
-    // Debug logging disabled for production - uncomment for debugging engagement tracking
-    // console.debug(`Added ${points} engagement points to ${validHexPubkey} for ${actionType} (event: ${eventId})`);
     return true;
   }
 

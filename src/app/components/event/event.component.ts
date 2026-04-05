@@ -1510,8 +1510,6 @@ export class EventComponent implements AfterViewInit, OnDestroy {
         const record = this.data.toRecord(event);
         this.record.set(record);
 
-        // console.log('📝 [Event Setup] Record created for event:', event.id.substring(0, 8), '| Kind:', event.kind);
-
         if (!isSameEvent) {
           // CRITICAL: Clear all interaction state only when the component is reused
           // for a different event ID. Feed/profile timelines can re-emit the same

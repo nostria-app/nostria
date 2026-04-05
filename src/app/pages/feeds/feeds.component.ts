@@ -1648,7 +1648,6 @@ export class FeedsComponent implements OnDestroy {
   //       this.notificationService.notify('Trending content updated');
   //     }
   //   } catch (error) {
-  //     console.error('Failed to load trending content:', error);
   //     if (!silent) {
   //       this.notificationService.notify('Failed to load trending content', 'error');
   //     }
@@ -1666,7 +1665,6 @@ export class FeedsComponent implements OnDestroy {
   //     const events = await this.fetchFollowingEvents();
   //     this.followingEvents.set(events);
   //   } catch (error) {
-  //     console.error('Failed to load following content:', error);
   //     this.notificationService.notify('Failed to load following content', 'error');
   //   } finally {
   //     this.isLoading.set(false);
@@ -1680,7 +1678,6 @@ export class FeedsComponent implements OnDestroy {
   //     const events = await this.fetchMediaEvents();
   //     this.mediaEvents.set(events);
   //   } catch (error) {
-  //     console.error('Failed to load media content:', error);
   //     this.notificationService.notify('Failed to load media content', 'error');
   //   } finally {
   //     this.isLoading.set(false);
