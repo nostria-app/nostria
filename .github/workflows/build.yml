@@ -5,15 +5,6 @@ on:
     branches:
       - main
   workflow_dispatch:
-    inputs:
-      build_android_signed_release:
-        description: Build a signed Android release artifact when signing secrets are configured
-        type: boolean
-        default: false
-      build_ios_signed_release:
-        description: Build a signed iOS release artifact when signing secrets are configured
-        type: boolean
-        default: false
 
 permissions:
   contents: write
@@ -264,9 +255,6 @@ jobs:
     name: Android signed release artifacts
     runs-on: ubuntu-22.04
     needs: build-android-verification
-    if: >-
-      github.event_name == 'workflow_dispatch' &&
-      inputs.build_android_signed_release
 
     steps:
       - name: Checkout repository
@@ -489,9 +477,6 @@ jobs:
     name: iOS signed release artifacts
     runs-on: macos-latest
     needs: build-ios-verification
-    if: >-
-      github.event_name == 'workflow_dispatch' &&
-      inputs.build_ios_signed_release
 
     steps:
       - name: Checkout repository
@@ -776,8 +761,8 @@ jobs:
       needs.build-desktop.result == 'success' &&
       needs.build-android-verification.result == 'success' &&
       needs.build-ios-verification.result == 'success' &&
-      (needs.build-android-signed-release.result == 'success' || needs.build-android-signed-release.result == 'skipped') &&
-      (needs.build-ios-signed-release.result == 'success' || needs.build-ios-signed-release.result == 'skipped')
+      needs.build-android-signed-release.result == 'success' &&
+      needs.build-ios-signed-release.result == 'success'
 
     steps:
       - name: Download build artifacts
