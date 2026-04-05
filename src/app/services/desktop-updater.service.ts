@@ -195,7 +195,7 @@ export class DesktopUpdaterService {
     const updateContext = this.cachedUpdateContext;
     const linuxManualUpdate = updateContext?.platform === 'linux' && updateContext.linuxInstallKind === 'system'
       ? this.buildLinuxManualUpdateInfo(updateInfo.version)
-      : null;
+      : undefined;
 
     const dialogRef = this.customDialog.open<UpdateAvailableDialogComponent, UpdateInstallOutcome>(UpdateAvailableDialogComponent, {
       title: $localize`:@@desktopUpdater.dialog.title:Update available`,

@@ -30,7 +30,7 @@ Desktop: https://github.com/nostria-app/nostria/releases
 
 When there is a new release available, you'll see the update notification (button) in the app. This only works for certain installation packages.
 
-**Linux**: AppImage will update in-place, the .deb package users will need to run installer manually, but the app will notify and install.
+**Linux**: AppImage will update in-place. `.deb` package installs will show an update notification, but you must download and install the new `.deb` manually.
 
 **Mac**: App should update.
 
@@ -42,10 +42,26 @@ When there is a new release available, you'll see the update notification (butto
 
 ### Linux
 
+AppImage with in-app updates:
+
 ```bash
-wget https://github.com/nostria-app/nostria/releases/download/v3.1.0/Nostria_3.1.0_amd64.deb
-sudo apt install ./Nostria_3.1.0_amd64.deb
+wget -O Nostria.AppImage https://github.com/nostria-app/nostria/releases/download/v3.1.2/Nostria_3.1.2_amd64.AppImage
+chmod +x Nostria.AppImage
+./Nostria.AppImage
+```
+
+AppImage is portable. It does not install a desktop icon or app launcher by default, so keep the file somewhere stable such as `~/Applications/` and launch that same file again later. If you want a menu entry/icon, use an AppImage integration tool such as AppImageLauncher or create a desktop launcher manually.
+
+`.deb` package with manual package updates:
+
+```bash
+wget https://github.com/nostria-app/nostria/releases/download/v3.1.2/Nostria_3.1.2_amd64.deb
+sudo apt install ./Nostria_3.1.2_amd64.deb
+```
+
 ## Uninstall
+
+```bash
 sudo apt remove Nostria
 ```
 
