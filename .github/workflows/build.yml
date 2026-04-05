@@ -88,7 +88,7 @@ jobs:
           - name: macos
             platform: macos-latest
             rust_targets: aarch64-apple-darwin,x86_64-apple-darwin
-            tauri_args: --target universal-apple-darwin --config src-tauri/tauri.release.conf.json
+            tauri_args: --target universal-apple-darwin --bundles app,dmg --config src-tauri/tauri.release.conf.json
             artifact_path: |
               src-tauri/target/universal-apple-darwin/release/bundle/dmg/*.dmg
               src-tauri/target/universal-apple-darwin/release/bundle/macos/*.app.tar.gz
@@ -168,6 +168,60 @@ jobs:
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
         run: npx tauri build --ci ${{ matrix.tauri_args }}
+
+      - name: List desktop bundle outputs
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          echo 'Bundle outputs:'
+          if [ -d src-tauri/target ]; then
+            find src-tauri/target -path '*/bundle/*' -type f | sort
+          else
+            echo 'No src-tauri/target directory found.' >&2
+            exit 1
+          fi
+
+      - name: Validate desktop updater outputs
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          required_patterns=()
+
+          case '${{ matrix.name }}' in
+            linux)
+              required_patterns=(
+                'src-tauri/target/release/bundle/appimage/*.AppImage'
+                'src-tauri/target/release/bundle/appimage/*.AppImage.sig'
+              )
+              ;;
+            windows)
+              required_patterns=(
+                'src-tauri/target/release/bundle/nsis/*.exe'
+                'src-tauri/target/release/bundle/nsis/*.exe.sig'
+              )
+              ;;
+            windows-arm)
+              required_patterns=(
+                'src-tauri/target/aarch64-pc-windows-msvc/release/bundle/nsis/*.exe'
+                'src-tauri/target/aarch64-pc-windows-msvc/release/bundle/nsis/*.exe.sig'
+              )
+              ;;
+            macos)
+              required_patterns=(
+                'src-tauri/target/universal-apple-darwin/release/bundle/macos/*.app.tar.gz'
+                'src-tauri/target/universal-apple-darwin/release/bundle/macos/*.app.tar.gz.sig'
+              )
+              ;;
+          esac
+
+          for pattern in "${required_patterns[@]}"; do
+            if ! compgen -G "$pattern" > /dev/null; then
+              echo "Missing expected updater artifact: $pattern" >&2
+              exit 1
+            fi
+          done
 
       - name: Upload installers
         uses: actions/upload-artifact@v6
