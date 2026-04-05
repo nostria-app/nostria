@@ -1,4 +1,5 @@
-import { ChangeDetectionStrategy, Component, inject, signal, output, effect, ViewChild, ElementRef, OnDestroy } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal, output, effect, ViewChild, ElementRef, OnDestroy } from '@angular/core';
+import { isTauri } from '@tauri-apps/api/core';
 import { nip19, nip04, nip44, generateSecretKey, getPublicKey, SimplePool } from 'nostr-tools';
 import { bytesToHex } from '@noble/hashes/utils.js';
 import { BunkerPointer } from 'nostr-tools/nip46';
@@ -27,6 +28,7 @@ import { DataService } from '../../services/data.service';
 import { LayoutService } from '../../services/layout.service';
 import { RegionService } from '../../services/region.service';
 import { AndroidSignerService } from '../../services/android-signer.service';
+import { ApplicationService } from '../../services/application.service';
 
 // Define the login steps
 enum LoginStep {
@@ -77,6 +79,7 @@ export class LoginDialogComponent implements OnDestroy {
   private data = inject(DataService);
   private region = inject(RegionService);
   private androidSigner = inject(AndroidSignerService);
+  private app = inject(ApplicationService);
   layout = inject(LayoutService);
 
   // Event emitter for when dialog should close (used in standalone mode)
@@ -94,6 +97,9 @@ export class LoginDialogComponent implements OnDestroy {
   nostrConnectUrl = signal('');
   nostrConnectError = signal<string | null>(null);
   nostrConnectLoading = signal<boolean>(false);
+  readonly isDesktopTauri = computed(() =>
+    this.app.isBrowser() && isTauri() && !/Android/i.test(window.navigator.userAgent)
+  );
 
   // Profile setup signals (similar to welcome component)
   signupRegion = signal<'us' | 'eu' | null>(null);

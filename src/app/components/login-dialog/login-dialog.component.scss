@@ -294,6 +294,16 @@
 
 }
 
+.login-card.login-card-disabled {
+  cursor: default;
+  opacity: 0.65;
+
+  &:hover {
+    transform: none;
+    box-shadow: var(--mat-sys-level1);
+  }
+}
+
 // Region selection styles
 .region-grid {
   display: grid;

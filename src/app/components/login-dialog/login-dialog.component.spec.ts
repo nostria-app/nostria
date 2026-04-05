@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideZonelessChangeDetection } from '@angular/core';
+import { provideZonelessChangeDetection, signal } from '@angular/core';
 import { describe, expect, it, vi } from 'vitest';
 import { MatDialogRef, MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
@@ -11,10 +11,19 @@ import { Profile } from '../../services/profile';
 import { AccountStateService } from '../../services/account-state.service';
 import { DataService } from '../../services/data.service';
 import { LayoutService } from '../../services/layout.service';
+import { RegionService } from '../../services/region.service';
+import { AndroidSignerService } from '../../services/android-signer.service';
+import { ApplicationService } from '../../services/application.service';
+import { isTauri } from '@tauri-apps/api/core';
+
+vi.mock('@tauri-apps/api/core', () => ({
+  isTauri: vi.fn(() => false),
+}));
 
 describe('LoginDialogComponent', () => {
   let component: LoginDialogComponent;
   let fixture: ComponentFixture<LoginDialogComponent>;
+  const mockedIsTauri = vi.mocked(isTauri);
 
   function createComponent() {
     TestBed.configureTestingModule({
@@ -76,6 +85,21 @@ describe('LoginDialogComponent', () => {
             isMobile: vi.fn().mockReturnValue(false),
           }
         },
+        {
+          provide: RegionService, useValue: {
+            getRelayServer: vi.fn().mockReturnValue(null),
+          }
+        },
+        {
+          provide: AndroidSignerService, useValue: {
+            isSupported: vi.fn().mockReturnValue(false),
+          }
+        },
+        {
+          provide: ApplicationService, useValue: {
+            isBrowser: signal(true),
+          }
+        },
       ],
     });
 
@@ -129,5 +153,19 @@ describe('LoginDialogComponent', () => {
     createComponent();
     component.goToStep('nsec' as never);
     expect(component.currentStep()).toBe('nsec');
+  });
+
+  it('should disable extension login in desktop tauri', () => {
+    mockedIsTauri.mockReturnValue(true);
+    createComponent();
+
+    component.goToStep(component.LoginStep.LOGIN_OPTIONS);
+    fixture.detectChanges();
+
+    const extensionCard = fixture.nativeElement.querySelector('.login-card.extension');
+
+    expect(component.isDesktopTauri()).toBe(true);
+    expect(extensionCard?.getAttribute('aria-disabled')).toBe('true');
+    expect(extensionCard?.textContent).toContain('Not available in desktop app');
   });
 });

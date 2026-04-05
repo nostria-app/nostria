@@ -140,12 +140,15 @@
 
       <!-- Secondary login options -->
       <div class="login-options secondary">
-        <mat-card class="login-card extension" (click)="loginWithExtension()">
+        <mat-card class="login-card extension" [class.login-card-disabled]="isDesktopTauri()"
+          [attr.aria-disabled]="isDesktopTauri()"
+          [matTooltip]="isDesktopTauri() ? 'Browser extensions are not available in the desktop app' : 'Browser extension'"
+          (click)="!isDesktopTauri() && loginWithExtension()">
           <mat-card-content>
             <div class="card-content">
               <div class="card-text">
                 <h3><mat-icon>extension</mat-icon>Extension</h3>
-                <p>Browser extension</p>
+                <p>{{ isDesktopTauri() ? 'Not available in desktop app' : 'Browser extension' }}</p>
               </div>
             </div>
           </mat-card-content>
