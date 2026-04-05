@@ -283,6 +283,8 @@
     "introduction.new-user.description": "أنشئ حساباً جديداً بنقرتين",
     "introduction.login.title": "تسجيل الدخول",
     "introduction.login.description": "سجل الدخول بحسابك الحالي",
+    "introduction.signer.title": "Login with Signer (Amber)",
+    "introduction.signer.description": "Open the local signer flow directly",
     "introduction.preview.title": "معاينة",
     "introduction.preview.description": "استكشف Nostr في وضع القراءة فقط",
     "introduction.terms-of-use.prefix": "باستخدام نوستريا، فإنك توافق على",

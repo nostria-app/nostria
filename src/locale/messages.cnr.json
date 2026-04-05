@@ -266,6 +266,8 @@
     "introduction.new-user.description": "Kreirajte novi nalog sa dva klika",
     "introduction.login.title": "Prijava",
     "introduction.login.description": "Prijavite se sa svojim postojećim nalogom",
+    "introduction.signer.title": "Login with Signer (Amber)",
+    "introduction.signer.description": "Open the local signer flow directly",
     "introduction.preview.title": "Pregled",
     "introduction.preview.description": "Istražite Nostr u režimu samo za čitanje",
     "introduction.terms-of-use.prefix": "Korišćenjem Nostrie, slažete se sa",

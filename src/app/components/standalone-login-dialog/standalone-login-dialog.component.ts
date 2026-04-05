@@ -119,13 +119,17 @@ export class StandaloneLoginDialogComponent implements AfterViewInit {
           this.loginComponent.startNewAccountFlow();
         } else if (initialStep === 'login') {
           this.loginComponent.goToStep(this.loginComponent.LoginStep.LOGIN_OPTIONS);
+        } else if (initialStep === 'external-signer') {
+          this.loginComponent.goToStep(this.loginComponent.LoginStep.EXTERNAL_SIGNER);
         }
 
         // Trigger change detection after signal changes
         this.cdr.detectChanges();
       });
     }
-  } getCurrentTitle(): string {
+  }
+
+  getCurrentTitle(): string {
     const step = this.loginComponent?.currentStep();
     const LoginStep = this.loginComponent?.LoginStep;
 
@@ -142,6 +146,8 @@ export class StandaloneLoginDialogComponent implements AfterViewInit {
         return 'Sign in with Private Key';
       case LoginStep.NOSTR_CONNECT:
         return 'Sign in with Remote Signer';
+      case LoginStep.EXTERNAL_SIGNER:
+        return 'Sign in with Signer (Amber)';
       case LoginStep.EXISTING_ACCOUNTS:
         return 'Choose an Account';
       case LoginStep.PREVIEW:
@@ -172,6 +178,8 @@ export class StandaloneLoginDialogComponent implements AfterViewInit {
     if (step === LoginStep.REGION_SELECTION) {
       this.loginComponent.goToStep(LoginStep.INITIAL);
     } else if (step === LoginStep.LOGIN_OPTIONS) {
+      this.loginComponent.goToStep(LoginStep.INITIAL);
+    } else if (step === LoginStep.EXTERNAL_SIGNER) {
       this.loginComponent.goToStep(LoginStep.INITIAL);
     } else {
       this.loginComponent.goToStep(LoginStep.LOGIN_OPTIONS);

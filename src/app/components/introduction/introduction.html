@@ -32,15 +32,15 @@
           </mat-card-content>
         </mat-card>
 
-        <mat-card class="action-card preview" (click)="loginWithPreview()">
+        <mat-card class="action-card signer" (click)="openSignerLoginFlow()">
           <mat-card-content>
             <div class="card-content">
               <div class="card-icon">
-                <mat-icon>visibility</mat-icon>
+                <img ngSrc="/logos/clients/amber.png" width="24" height="24" alt="Amber" class="client-logo" />
               </div>
               <div class="card-text">
-                <h3 i18n="@@introduction.preview.title">Preview</h3>
-                <p i18n="@@introduction.preview.description">Explore Nostr in read-only mode</p>
+                <h3 i18n="@@introduction.signer.title">Login with Signer (Amber)</h3>
+                <p i18n="@@introduction.signer.description">Open the local signer</p>
               </div>
             </div>
           </mat-card-content>
@@ -56,21 +56,6 @@
         <p class="app-slogan" i18n="@@introduction.slogan">Your Social Network</p>
       </div>
     </div>
-
-    <!-- Learn more card -->
-    <mat-card class="learn-more-card" (click)="showWelcomeDialog()">
-      <mat-card-content>
-        <div class="learn-more-content">
-          <div class="question-icon">
-            <mat-icon>help</mat-icon>
-          </div>
-          <div class="learn-more-text">
-            <span i18n="@@introduction.learn-more">What is Nostr?</span>
-          </div>
-          <mat-icon class="arrow-icon">arrow_forward</mat-icon>
-        </div>
-      </mat-card-content>
-    </mat-card>
 
     <!-- Footer section: terms and language -->
     <div class="footer-section">

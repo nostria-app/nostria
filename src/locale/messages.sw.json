@@ -283,6 +283,8 @@
     "introduction.new-user.description": "Unda akaunti mpya kwa mibofyo miwili",
     "introduction.login.title": "Ingia",
     "introduction.login.description": "Ingia kwa akaunti yako iliyopo",
+    "introduction.signer.title": "Login with Signer (Amber)",
+    "introduction.signer.description": "Open the local signer flow directly",
     "introduction.preview.title": "Hakikisho",
     "introduction.preview.description": "Chunguza Nostr katika hali ya kusoma tu",
     "introduction.terms-of-use.prefix": "Kwa kutumia Nostria, unakubaliana na",

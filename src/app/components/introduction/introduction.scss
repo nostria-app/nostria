@@ -132,18 +132,24 @@
 }
 
 @keyframes pulse-glow {
-  0%, 100% {
+
+  0%,
+  100% {
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
   }
+
   50% {
     box-shadow: 0 4px 25px rgba(0, 0, 0, 0.25);
   }
 }
 
 @keyframes bounce {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: translateY(0);
   }
+
   50% {
     transform: translateY(-2px);
   }
@@ -186,6 +192,14 @@
       }
     }
 
+    &.signer {
+      background-color: var(--mat-sys-surface-container-high);
+
+      .card-content {
+        color: var(--mat-sys-on-surface);
+      }
+    }
+
     &.preview {
       background-color: var(--mat-sys-surface-container-low);
       border: 1px dashed var(--mat-sys-outline-variant);
@@ -220,6 +234,13 @@
           font-size: 20px;
           width: 20px;
           height: 20px;
+        }
+
+        .client-logo {
+          display: block;
+          width: 24px;
+          height: 24px;
+          object-fit: contain;
         }
       }
 

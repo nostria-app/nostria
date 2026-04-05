@@ -7,7 +7,6 @@ import { MatMenuModule } from '@angular/material/menu';
 import { LayoutService } from '../../services/layout.service';
 import { LocalSettingsService } from '../../services/local-settings.service';
 import { ApplicationService } from '../../services/application.service';
-import { NostrService } from '../../services/nostr.service';
 
 interface Language {
   code: string;
@@ -31,10 +30,6 @@ export class Introduction {
   private layout = inject(LayoutService);
   localSettings = inject(LocalSettingsService);
   private app = inject(ApplicationService);
-  private nostrService = inject(NostrService);
-
-  // Default preview account - Coffee
-  private readonly previewPubkey = 'npub1lmtv5qjrgjak504pc0a2885w72df69lmk8jfaet2xc3x2rppjy8sfzxvac';
 
   // Available languages - same as general settings
   languages: Language[] = [
@@ -59,8 +54,8 @@ export class Introduction {
     this.layout.showLoginDialogWithStep('login');
   }
 
-  showWelcomeDialog(): void {
-    this.layout.showWelcomeDialog();
+  openSignerLoginFlow(): void {
+    this.layout.showLoginDialogWithStep('external-signer');
   }
 
   openTermsOfUse(): void {
@@ -72,9 +67,5 @@ export class Introduction {
     if (this.app.isBrowser()) {
       window.location.reload();
     }
-  }
-
-  loginWithPreview(): void {
-    this.nostrService.usePreviewAccount(this.previewPubkey);
   }
 }

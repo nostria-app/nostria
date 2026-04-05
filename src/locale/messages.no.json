@@ -283,6 +283,8 @@
     "introduction.new-user.description": "Opprett en ny konto med to klikk",
     "introduction.login.title": "Logg inn",
     "introduction.login.description": "Logg inn med din eksisterende konto",
+    "introduction.signer.title": "Login with Signer (Amber)",
+    "introduction.signer.description": "Open the local signer flow directly",
     "introduction.preview.title": "Forhåndsvisning",
     "introduction.preview.description": "Utforsk Nostr i skrivebeskyttet modus",
     "introduction.terms-of-use.prefix": "Ved å bruke Nostria godtar du våre",
