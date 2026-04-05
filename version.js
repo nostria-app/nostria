@@ -6,6 +6,7 @@ const files = {
   packageJson: path.join(rootDir, 'package.json'),
   packageLock: path.join(rootDir, 'package-lock.json'),
   manifest: path.join(rootDir, 'public', 'manifest.webmanifest'),
+  readme: path.join(rootDir, 'README.md'),
   cargoToml: path.join(rootDir, 'src-tauri', 'Cargo.toml'),
   appleProject: path.join(rootDir, 'src-tauri', 'gen', 'apple', 'project.yml'),
   appleInfoPlist: path.join(rootDir, 'src-tauri', 'gen', 'apple', 'nostria_iOS', 'Info.plist'),
@@ -75,6 +76,25 @@ async function main() {
     json.version = nextVersion;
   });
   console.log('Updated public/manifest.webmanifest');
+
+  await updateTextFile(files.readme, (content) => {
+    let updated = replaceOrThrow(
+      content,
+      /releases\/download\/v\d+\.\d+\.\d+\/Nostria_\d+\.\d+\.\d+_amd64\.AppImage/g,
+      `releases/download/v${nextVersion}/Nostria_${nextVersion}_amd64.AppImage`,
+      'README.md (AppImage release URL)'
+    );
+
+    updated = replaceOrThrow(
+      updated,
+      /releases\/download\/v\d+\.\d+\.\d+\/Nostria_\d+\.\d+\.\d+_amd64\.deb/g,
+      `releases/download/v${nextVersion}/Nostria_${nextVersion}_amd64.deb`,
+      'README.md (.deb release URL)'
+    );
+
+    return updated;
+  });
+  console.log('Updated README.md release download links');
 
   await updateTextFile(files.cargoToml, (content) =>
     replaceOrThrow(

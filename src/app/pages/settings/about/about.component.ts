@@ -49,6 +49,7 @@ export class AboutComponent implements OnInit, OnDestroy {
   readonly androidUpdater = inject(AndroidUpdaterService);
   version = computed(() => this.app.version());
   videoFailed = signal(false);
+  useStaticLogo = signal(false);
   commitSha = signal<string | undefined>(undefined);
   commitShort = signal<string | undefined>(undefined);
   buildDate = signal<string | undefined>(undefined);
@@ -92,6 +93,8 @@ export class AboutComponent implements OnInit, OnDestroy {
   }
 
   async ngOnInit() {
+    this.useStaticLogo.set(this.shouldUseStaticLogo());
+
     // Parent settings component handles the page title
     void this.fetchBuildMetadata();
   }
@@ -148,6 +151,14 @@ export class AboutComponent implements OnInit, OnDestroy {
     this.demoTimers = [];
     this.demoTier.set(0);
     this.demoRunning = false;
+  }
+
+  private shouldUseStaticLogo(): boolean {
+    if (!this.app.isBrowser() || !isTauri()) {
+      return false;
+    }
+
+    return /linux/i.test(window.navigator.userAgent);
   }
 
   goBack(): void {

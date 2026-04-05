@@ -81,7 +81,7 @@
         </div>
         <app-celebration-burst class="logo-container" theme="zap" mode="logo" [tier]="demoTier()"
           (click)="playZapDemo()">
-          @if (!videoFailed()) {
+          @if (!useStaticLogo() && !videoFailed()) {
           <video src="icons/nostria.mp4" class="logo celebration-target" autoplay loop muted playsinline
             poster="icons/icon-512x512.png" (error)="videoFailed.set(true)"></video>
           } @else {
