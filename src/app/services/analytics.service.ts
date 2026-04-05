@@ -32,8 +32,6 @@ export class AnalyticsService {
     if (!this.isBrowser) {
       return;
     }
-
-    this.logger.debug('[Analytics] Analytics service initialized');
   }
 
   private async syncAnalyticsState(shouldEnable: boolean): Promise<void> {
@@ -61,7 +59,6 @@ export class AnalyticsService {
     try {
       await this.loadPromise;
       this.enabled = true;
-      this.logger.info('[Analytics] Optional analytics enabled');
     } catch (error) {
       this.loadPromise = null;
       this.logger.error('[Analytics] Failed to enable analytics', error);
@@ -72,10 +69,6 @@ export class AnalyticsService {
     if (this.appInsights) {
       this.appInsights.flush(false);
       this.appInsights.config.disableTelemetry = true;
-    }
-
-    if (this.enabled) {
-      this.logger.info('[Analytics] Optional analytics disabled');
     }
 
     this.enabled = false;

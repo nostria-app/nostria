@@ -26,12 +26,9 @@ export class ThemeService {
   darkMode = signal<boolean>(this.getInitialThemePreference());
 
   constructor() {
-    this.logger.info('Initializing ThemeService');
-
     // Set up effect to apply theme changes
     effect(() => {
       const isDark = this.darkMode();
-      this.logger.debug(`Applying theme change: ${isDark ? 'dark' : 'light'}`);
       this.applyTheme(isDark);
     });
 
@@ -39,8 +36,6 @@ export class ThemeService {
     if (isPlatformBrowser(this.platformId)) {
       // Run on next tick to ensure we're fully in the browser context
       setTimeout(() => this.initBrowserFeatures(), 0);
-    } else {
-      this.logger.debug('Running in SSR mode, skipping browser-specific initialization');
     }
 
     // React to override changes — update meta tag when override is set or cleared
@@ -56,7 +51,6 @@ export class ThemeService {
       }
     });
 
-    this.logger.debug(`Initial theme set to: ${this.darkMode() ? 'dark' : 'light'}`);
   }
 
   private async initBrowserFeatures(): Promise<void> {
@@ -71,14 +65,9 @@ export class ThemeService {
       this.darkThemeMediaQuery.addEventListener('change', e => {
         // Only update if user hasn't explicitly set a preference
         if (!this.localStorage.getItem(this.THEME_KEY)) {
-          this.logger.info(`System color scheme changed to ${e.matches ? 'dark' : 'light'}`);
           this.darkMode.set(e.matches);
         }
       });
-
-      this.logger.debug(
-        `Browser initialization complete. Theme: ${this.darkMode() ? 'dark' : 'light'}`
-      );
     } catch (error) {
       this.logger.error('Error initializing browser features:', error);
     }
@@ -92,7 +81,6 @@ export class ThemeService {
     }
 
     const newValue = !this.darkMode();
-    this.logger.info(`Toggling theme to: ${newValue ? 'dark' : 'light'}`);
     this.darkMode.set(newValue);
     this.localStorage.setItem(this.THEME_KEY, newValue ? 'dark' : 'light');
   }
@@ -105,15 +93,11 @@ export class ThemeService {
     // Check for saved preference
     const savedPreference = this.localStorage.getItem(this.THEME_KEY);
     if (savedPreference) {
-      this.logger.debug(`Using saved theme preference: ${savedPreference}`);
       return savedPreference === 'dark';
     }
 
     // Fall back to system preference
     const systemPrefersDark = this.darkThemeMediaQuery?.matches || false;
-    this.logger.debug(
-      `No saved theme preference, using system preference: ${systemPrefersDark ? 'dark' : 'light'}`
-    );
     return systemPrefersDark;
   }
 
@@ -125,7 +109,6 @@ export class ThemeService {
    * @param color A CSS hex color string, e.g. '#2a1a3b'
    */
   setThemeColorOverride(color: string): void {
-    this.logger.debug(`Setting theme-color override: ${color}`);
     this.themeColorOverride.set(color);
   }
 
@@ -134,7 +117,6 @@ export class ThemeService {
    * Call this when leaving immersive pages.
    */
   clearThemeColorOverride(): void {
-    this.logger.debug('Clearing theme-color override');
     this.themeColorOverride.set(null);
   }
 
@@ -181,8 +163,6 @@ export class ThemeService {
     if (!isPlatformBrowser(this.platformId)) {
       return; // Don't try to modify DOM during SSR
     }
-
-    this.logger.debug(`Setting all theme-color meta tags to: ${color}`);
 
     // Update all meta[name="theme-color"] tags
     const metaTags = this.document.querySelectorAll('meta[name="theme-color"]');

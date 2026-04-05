@@ -16,18 +16,15 @@ export class UsernameResolver implements Resolve<{ id: string | undefined; usern
 
   resolve(route: ActivatedRouteSnapshot): Observable<{ id: string | undefined; username: string }> {
     const username = route.params['username'] as string;
-    this.logger.info('[UsernameResolver] Resolving username:', username);
 
     const sub = this.accountState.subscription();
 
     if (sub && sub.username === username) {
-      this.logger.info('[UsernameResolver] Found username in subscription:', username);
       return of({ id: sub.pubkey, username });
     }
 
     // Check if this is a NIP-05 alias (contains @)
     if (username.includes('@')) {
-      this.logger.info('[UsernameResolver] Resolving NIP-05 alias:', username);
       return from(this.resolveNip05(username)).pipe(
         map(result => {
           if (!result.id) {
@@ -36,7 +33,6 @@ export class UsernameResolver implements Resolve<{ id: string | undefined; usern
             this.router.navigate(['/']);
             return { id: undefined, username };
           }
-          this.logger.info('[UsernameResolver] NIP-05 lookup successful:', username, result.id);
           return result;
         }),
         catchError(error => {
@@ -48,12 +44,8 @@ export class UsernameResolver implements Resolve<{ id: string | undefined; usern
     }
 
     // Regular username lookup
-    this.logger.info('[UsernameResolver] Starting regular username lookup for:', username);
     return from(
-      this.usernameService.getPubkey(username).then(pubkey => {
-        this.logger.info('[UsernameResolver] getPubkey returned:', pubkey, 'for username:', username);
-        return { id: pubkey, username };
-      })
+      this.usernameService.getPubkey(username).then(pubkey => ({ id: pubkey, username }))
     ).pipe(
       map(result => {
         // If pubkey is empty string, the username lookup failed
@@ -63,7 +55,6 @@ export class UsernameResolver implements Resolve<{ id: string | undefined; usern
           this.router.navigate(['/']);
           return { id: undefined, username };
         }
-        this.logger.info('[UsernameResolver] Successfully resolved username:', username, 'to pubkey:', result.id);
         return result;
       }),
       catchError(error => {
@@ -77,11 +68,9 @@ export class UsernameResolver implements Resolve<{ id: string | undefined; usern
 
   private async resolveNip05(nip05Address: string): Promise<{ id: string | undefined; username: string }> {
     try {
-      this.logger.info('[UsernameResolver] Querying NIP-05 profile for:', nip05Address);
       const profile = await nip05.queryProfile(nip05Address);
 
       if (profile && profile.pubkey) {
-        this.logger.info('[UsernameResolver] NIP-05 profile found:', profile.pubkey);
         return { id: profile.pubkey, username: nip05Address };
       }
 

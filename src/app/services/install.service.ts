@@ -59,9 +59,6 @@ export class InstallService {
           iosStandalone: !!(window.navigator as { standalone?: boolean }).standalone,
         });
       };
-
-      // Log initial status
-      console.log('[InstallService] Initialized. Run "installStatus()" in console for details.');
     }
   }
 
@@ -88,13 +85,6 @@ export class InstallService {
 
     this.platformInfo.set(info);
     this.isInstalled.set(isInStandaloneMode);
-
-    this.logger.debug('[InstallService] Platform detected:', info);
-    this.logger.debug('[InstallService] Display modes:', {
-      standalone: isStandalone,
-      iosStandalone: isIOSStandalone,
-    });
-    this.logger.debug('[InstallService] Is installed:', isInStandaloneMode);
   }
 
   private setupInstallPrompt(): void {
@@ -106,9 +96,6 @@ export class InstallService {
       const info = this.platformInfo();
       info.canInstallPWA = true;
       this.platformInfo.set(info);
-
-      this.logger.debug('[InstallService] PWA install prompt available');
-      console.log('[InstallService] beforeinstallprompt fired - PWA is installable');
     });
 
     window.addEventListener('appinstalled', () => {
@@ -119,28 +106,12 @@ export class InstallService {
       const info = this.platformInfo();
       info.isInstalled = true;
       this.platformInfo.set(info);
-
-      this.logger.info('[InstallService] PWA installed successfully');
-      console.log('[InstallService] appinstalled event fired - PWA was installed');
     });
   }
 
   async promptInstall(): Promise<boolean> {
     if (!this.deferredPrompt) {
       this.logger.warn('[InstallService] No deferred install prompt available');
-
-      // Provide more detailed feedback about why prompt isn't available
-      const info = this.platformInfo();
-      if (info.isInstalled) {
-        this.logger.debug('[InstallService] App is already installed');
-      } else {
-        this.logger.debug('[InstallService] beforeinstallprompt event has not fired yet. This can happen if:', [
-          '1. Browser does not support PWA installation (e.g., Safari)',
-          '2. App does not meet installability criteria',
-          '3. User recently dismissed the install prompt',
-          '4. App needs to be visited more times before prompt is available'
-        ].join('\n   '));
-      }
 
       return false;
     }

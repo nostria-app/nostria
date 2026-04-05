@@ -123,14 +123,13 @@ export class WebPushService {
         { method: 'POST', body: JSON.stringify(prefs) },
         { kind: kinds.HTTPAuth }
       );
-      console.log('Response from savePreferencesToServer:', response);
+      void response;
 
       // Update cache timestamp and settings after successful save
       const now = Date.now();
       this.accountLocalState.setSubscriptionSettingsLastFetch(pubkey, now);
       this.accountLocalState.setSubscriptionSettings(pubkey, prefs);
 
-      this.logger.info('Device notification preferences saved successfully');
     } catch (error) {
       this.logger.error('Failed to save preferences to server:', error);
     }
@@ -153,7 +152,6 @@ export class WebPushService {
     // Check if we have recent cached data (within 3 days)
     const now = Date.now();
     if (lastFetch > 0 && (now - lastFetch) < this.PREFERENCES_CACHE_DURATION) {
-      this.logger.debug('Using cached subscription settings (fetched less than 3 days ago)');
       return;
     }
 
@@ -178,10 +176,6 @@ export class WebPushService {
 
         // Update settings in cache
         this.accountLocalState.setSubscriptionSettings(pubkey, settings);
-
-        this.logger.info('Device notification preferences loaded from server');
-      } else {
-        this.logger.debug('No subscription settings found on server');
       }
     } catch (error) {
       this.logger.error('Failed to load preferences from server:', error);
@@ -251,7 +245,6 @@ export class WebPushService {
       try {
         // const url = `${this.server}/api/subscription/devices/${this.accountState.pubkey()}?deviceId=${deviceId || ''}`;
         const url = `${this.server}api/subscription/devices/${this.accountState.pubkey()}`;
-        console.log('Fetching devices from:', url);
 
         const result = await this.webRequest.fetchJson(
           url,
@@ -286,7 +279,7 @@ export class WebPushService {
         { method: 'POST', body: JSON.stringify(payload) },
         { kind: kinds.HTTPAuth }
       );
-      console.log('Response from self notification:', result);
+      void result;
     } catch (error) {
       this.logger.error('Failed to send self notification:', error);
     }
@@ -329,7 +322,7 @@ export class WebPushService {
           { kind: kinds.HTTPAuth }
         );
 
-        this.logger.info('Push subscription registered successfully', result);
+        void result;
 
         const newDevice = {
           deviceId: subscriptionData.keys.p256dh,
@@ -376,13 +369,10 @@ export class WebPushService {
         { kind: kinds.HTTPAuth }
       );
 
-      console.log('Response from unsubscribe:', result);
+      void result;
 
       // Remove the device from the signal
       this.removeDevice(deviceId);
-
-      // Single log for successful operation
-      this.logger.info('Device unregistered successfully');
     } catch (error) {
       this.logger.error('Failed to unregister device:', error);
     }

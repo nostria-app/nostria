@@ -248,7 +248,6 @@ export class ChatChannelsService implements NostriaService {
 
       if (channelMap.size > 0) {
         this.channelsMap.set(channelMap);
-        this.logger.info('[ChatChannels] Loaded channels from cache:', channelMap.size);
       }
 
       // Load cached moderation data
@@ -269,8 +268,7 @@ export class ChatChannelsService implements NostriaService {
     this.isLoading.set(true);
 
     try {
-      const relayUrls = this.getRelayUrls();
-      this.logger.info('[ChatChannels] Loading channels from relays:', relayUrls.length);
+      this.getRelayUrls();
 
       // Fetch kind 40 channel creation events
       const rawChannelEvents = await this.accountRelay.getMany<Event>(
@@ -347,8 +345,7 @@ export class ChatChannelsService implements NostriaService {
         }
       }
 
-      this.channelsMap.set(channelMap);
-      this.logger.info('[ChatChannels] Loaded channels:', channelMap.size);
+  this.channelsMap.set(channelMap);
 
       // Load moderation data for authenticated user
       await this.loadModerationData();
@@ -371,7 +368,7 @@ export class ChatChannelsService implements NostriaService {
     if (channelMap.size === 0) return;
 
     const channelIds = Array.from(channelMap.keys());
-    this.logger.info('[ChatChannels] Refreshing metadata for channels:', channelIds.length);
+    void channelIds;
 
     try {
       // Step 1: Fetch kind 41 from account relays
@@ -419,7 +416,6 @@ export class ChatChannelsService implements NostriaService {
       }
 
       this.channelsMap.set(channelMap);
-      this.logger.info('[ChatChannels] Refreshed metadata for channels:', channelMap.size);
     } catch (error) {
       this.logger.error('[ChatChannels] Failed to refresh channel metadata', error);
     }

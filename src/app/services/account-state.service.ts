@@ -322,7 +322,6 @@ export class AccountStateService implements OnDestroy {
 
     // Check if not following
     if (!this.followingList().includes(pubkey)) {
-      console.log(`Not following ${pubkey}, cannot unfollow.`);
       return;
     }
 
@@ -350,7 +349,6 @@ export class AccountStateService implements OnDestroy {
     if (existingFollowingEvent) {
       // Save fresh following list to storage
       await this.database.saveEvent(existingFollowingEvent);
-      console.log('Fetched fresh following list from relay before unfollowing');
     } else {
       // Fallback to storage only if relay fetch fails
       console.warn('Could not fetch following list from relay, falling back to storage');
@@ -380,7 +378,6 @@ export class AccountStateService implements OnDestroy {
     // Publish the event to update the following list
     try {
       await this.publishEvent(newFollowingEvent);
-      console.log(`Unfollowed ${pubkey} successfully.`);
     } catch (error) {
       console.error(`Failed to unfollow ${pubkey}:`, error);
     }
@@ -433,9 +430,6 @@ export class AccountStateService implements OnDestroy {
         clearInterval(checkNostrInterval);
         if (!dataLoaded) {
           dataLoaded = true;
-          if (!window.nostr) {
-            console.debug('window.nostr not available - extension may not be installed');
-          }
           this.loadData();
         }
       }, 2000);
@@ -466,22 +460,11 @@ export class AccountStateService implements OnDestroy {
     // Normalize input to always be an array
     const pubkeyArray = Array.isArray(pubkeys) ? pubkeys : [pubkeys];
 
-    console.log('[AccountStateService] DEBUG follow() called:', {
-      inputPubkeys: pubkeyArray.map(pk => pk.slice(0, 16)),
-      currentFollowing: this.followingList().length,
-    });
-
     // Filter out pubkeys that are already being followed
     const currentFollowing = this.followingList();
     const newPubkeys = pubkeyArray.filter(pubkey => !currentFollowing.includes(pubkey));
 
-    console.log('[AccountStateService] DEBUG after filtering:', {
-      newPubkeysCount: newPubkeys.length,
-      newPubkeysList: newPubkeys.map(pk => pk.slice(0, 16)),
-    });
-
     if (newPubkeys.length === 0) {
-      console.log('All specified pubkeys are already being followed - RETURNING EARLY');
       return;
     }
 
@@ -510,7 +493,6 @@ export class AccountStateService implements OnDestroy {
     if (existingFollowingEvent) {
       // Save fresh following list to storage (relay always returns signed Event)
       await this.database.saveEvent(existingFollowingEvent);
-      console.log('Fetched fresh following list from relay before following');
     } else {
       // Fallback to storage only if relay fetch fails
       console.warn('Could not fetch following list from relay, falling back to storage');
@@ -544,19 +526,9 @@ export class AccountStateService implements OnDestroy {
     // Add all new pubkeys to following list
     this.followingList.update(list => [...list, ...newPubkeys]);
 
-    console.log('[AccountStateService] DEBUG: About to publish follow event:', {
-      newPubkeysCount: newPubkeys.length,
-      newPubkeysList: newPubkeys.map(pk => pk.slice(0, 16)),
-      totalTagsCount: existingTags.length,
-      eventKind: newFollowingEvent.kind,
-      eventCreatedAt: newFollowingEvent.created_at,
-      currentTime: Math.floor(Date.now() / 1000),
-    });
-
     // Publish the event to update the following list (single operation)
     try {
       await this.publishEvent(newFollowingEvent, newPubkeys);
-      console.log(`Followed ${newPubkeys.length} pubkey(s) successfully:`, newPubkeys);
     } catch (error) {
       console.error(`Failed to follow pubkey(s):`, error);
       // Rollback the local state if publish failed
@@ -847,7 +819,6 @@ export class AccountStateService implements OnDestroy {
     }
 
     this.isPreloadingProfiles = true;
-    this.logger.debug('[AccountStateService] Pre-loading account profiles', { count: accounts.length });
 
     try {
       for (const account of accounts) {
@@ -866,9 +837,6 @@ export class AccountStateService implements OnDestroy {
               const newProfiles = new Map(profiles);
               newProfiles.set(account.pubkey, profile);
               return newProfiles;
-            });
-            this.logger.debug('[AccountStateService] Pre-loaded profile for account', {
-              pubkey: account.pubkey,
             });
           }
         } catch (error) {
@@ -969,13 +937,8 @@ export class AccountStateService implements OnDestroy {
     // Don't start if already processing
     const currentState = this.profileProcessingState();
     if (currentState.isProcessing) {
-      console.log('Profile processing already in progress, skipping...');
       return;
     }
-
-    console.log('🔄 [Profile Loading] Starting batch profile processing');
-    console.log(`📊 [Profile Loading] Total profiles to load: ${pubkeys.length}`);
-    console.log(`👤 [Profile Loading] Account: ${this.pubkey()?.substring(0, 8)}...`);
 
     this.profileProcessingState.set({
       isProcessing: true,
@@ -1008,11 +971,8 @@ export class AccountStateService implements OnDestroy {
       }
 
       const skippedCount = pubkeys.length - successCount;
-      const duration = Date.now() - startTime;
-
-      console.log(`✅ [Profile Loading] Batch processing completed in ${duration}ms`);
-      console.log(`📈 [Profile Loading] Results: ${successCount} loaded, ${skippedCount} not found`);
-      console.log(`💾 [Profile Loading] Total cached profiles: ${this.cache.keys().filter(k => k.startsWith('metadata-')).length}`);
+  void skippedCount;
+  void startTime;
 
       // Signal that cache loading is complete - FollowingService waits for this
       this.profileCacheLoaded.set(true);
@@ -1086,7 +1046,6 @@ export class AccountStateService implements OnDestroy {
         // console.log(`⏭️ [Cache] Skipping older/same profile for ${pubkey.substring(0, 8)}... (existing: ${existingTimestamp}, new: ${newTimestamp})`);
         return; // Don't update, existing profile is newer or same age
       }
-      console.log(`🔄 [Cache] Updating profile for ${pubkey.substring(0, 8)}... (${existingTimestamp} → ${newTimestamp})`);
     } else {
       // console.log(`➕ [Cache] Adding new profile for ${pubkey.substring(0, 8)}...`);
     }
@@ -1105,8 +1064,6 @@ export class AccountStateService implements OnDestroy {
       return [];
     }
 
-    console.log(`🔍 [Profile Search] Searching for: "${query}"`);
-
     // Since we can't iterate over cache keys with the injected cache service,
     // we'll search through the following list and additional known pubkeys
     const pubkeysToSearch = [...this.followingList()];
@@ -1116,8 +1073,6 @@ export class AccountStateService implements OnDestroy {
     if (currentPubkey && !pubkeysToSearch.includes(currentPubkey)) {
       pubkeysToSearch.push(currentPubkey);
     }
-
-    console.log(`📊 [Profile Search] Searching through ${pubkeysToSearch.length} pubkeys`);
 
     const results: NostrRecord[] = [];
     const lowercaseQuery = query.toLowerCase();
@@ -1153,9 +1108,6 @@ export class AccountStateService implements OnDestroy {
       // Limit results to prevent overwhelming UI
       if (results.length >= 20) break;
     }
-
-    console.log(`📈 [Profile Search] Results: ${results.length} matches found`);
-    console.log(`💾 [Profile Search] Cache stats: ${cachedCount} cached, ${notCachedCount} not cached out of ${pubkeysToSearch.length} total`);
 
     if (notCachedCount > 0) {
       console.warn(`⚠️ [Profile Search] ${notCachedCount} profiles from following list are not in cache!`);
@@ -1286,7 +1238,6 @@ export class AccountStateService implements OnDestroy {
     databaseService: DatabaseService
   ): Promise<void> {
     if (!this.hasProfileDiscoveryBeenDone(pubkey)) {
-      console.log(`⏭️ [Profile Loading] Skipping storage load - discovery not done for ${pubkey.substring(0, 8)}...`);
       // Still mark as loaded so FollowingService and DataService don't wait forever
       this.profileCacheLoaded.set(true);
       return; // Don't load if discovery hasn't been done
@@ -1295,14 +1246,10 @@ export class AccountStateService implements OnDestroy {
     try {
       const followingList = this.followingList();
       if (followingList.length === 0) {
-        console.log('⏭️ [Profile Loading] Skipping storage load - no following list');
         // Still mark as loaded so FollowingService and DataService don't wait forever
         this.profileCacheLoaded.set(true);
         return; // No following list to load profiles for
       }
-
-      console.log(`📂 [Profile Loading] Loading profiles from storage for account: ${pubkey.substring(0, 8)}...`);
-      console.log(`📊 [Profile Loading] Following list size: ${followingList.length}`);
 
       const startTime = Date.now();
 
@@ -1332,11 +1279,8 @@ export class AccountStateService implements OnDestroy {
       const deduplicatedEvents = Array.from(latestEventsByPubkey.values());
       const records = dataService.toRecords(deduplicatedEvents);
 
-      console.log(`💾 [Profile Loading] Found ${events.length} metadata records in storage (${records.length} unique profiles)`);
-
       // Clean up old duplicate metadata events from database
       if (oldEventIds.length > 0) {
-        console.log(`🧹 [Profile Loading] Cleaning up ${oldEventIds.length} old duplicate metadata events from database...`);
         await databaseService.deleteEvents(oldEventIds).catch(err => {
           console.error('❌ [Profile Loading] Failed to delete old metadata events:', err);
         });
@@ -1350,12 +1294,10 @@ export class AccountStateService implements OnDestroy {
       const duration = Date.now() - startTime;
       const missingCount = followingList.length - records.length;
 
-      console.log(`✅ [Profile Loading] Storage load completed in ${duration}ms`);
-      console.log(`📈 [Profile Loading] Added ${records.length} profiles to cache`);
+      void duration;
       if (missingCount > 0) {
         console.warn(`⚠️ [Profile Loading] Missing ${missingCount} profiles from storage (${followingList.length - records.length}/${followingList.length})`);
       }
-      console.log(`💾 [Profile Loading] Total cached profiles now: ${this.cache.keys().filter(k => k.startsWith('metadata-')).length}`);
 
       // Signal that cache loading is complete - FollowingService waits for this
       this.profileCacheLoaded.set(true);
@@ -1413,7 +1355,6 @@ export class AccountStateService implements OnDestroy {
 
     // Check if the pubkey is already muted
     if (this.mutedAccounts().includes(pubkey)) {
-      console.log(`Pubkey ${pubkey} is already muted.`);
       return;
     }
 

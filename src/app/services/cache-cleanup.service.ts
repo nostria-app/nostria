@@ -45,7 +45,6 @@ export class CacheCleanupService {
   start(): void {
     // Skip on server - only run in browser
     if (!this.isBrowser) {
-      this.logger.debug('CacheCleanupService skipped - not in browser environment');
       return;
     }
 
@@ -54,7 +53,6 @@ export class CacheCleanupService {
       return;
     }
 
-    this.logger.info('Starting CacheCleanupService');
     this.isRunning.set(true);
 
     // Calculate next cleanup time
@@ -70,10 +68,6 @@ export class CacheCleanupService {
         this.performCleanup();
       }, this.CLEANUP_INTERVAL_MS) as unknown as number;
     }, this.INITIAL_DELAY_MS) as unknown as number;
-
-    this.logger.info(
-      `CacheCleanupService scheduled to start in ${this.INITIAL_DELAY_MS / 1000} seconds`
-    );
   }
 
   /**
@@ -84,8 +78,6 @@ export class CacheCleanupService {
     if (!this.isRunning()) {
       return;
     }
-
-    this.logger.info('Stopping CacheCleanupService');
 
     if (this.initialTimeoutId !== null) {
       clearTimeout(this.initialTimeoutId);
@@ -99,8 +91,6 @@ export class CacheCleanupService {
 
     this.isRunning.set(false);
     this.nextCleanup.set(null);
-
-    this.logger.info('CacheCleanupService stopped');
   }
 
   /**
@@ -108,17 +98,10 @@ export class CacheCleanupService {
    */
   private async performCleanup(): Promise<void> {
     try {
-      this.logger.info('🧹 Running scheduled cache cleanup');
-
       const startTime = Date.now();
 
       // Get stats before cleanup
       const statsBefore = await this.database.getCachedEventsStats();
-      this.logger.debug('Cache stats before cleanup:', {
-        totalEvents: statsBefore.totalEvents,
-        accounts: statsBefore.eventsByAccount.size,
-        columns: statsBefore.eventsByColumn.size,
-      });
 
       // Perform the cleanup
       await this.database.cleanupCachedEvents();
@@ -129,11 +112,8 @@ export class CacheCleanupService {
 
       const duration = Date.now() - startTime;
 
-      this.logger.info('✅ Cache cleanup completed', {
-        duration: `${duration}ms`,
-        eventsRemoved,
-        remainingEvents: statsAfter.totalEvents,
-      });
+      void duration;
+      void eventsRemoved;
 
       // Update signals
       this.lastCleanup.set(Date.now());
@@ -151,7 +131,6 @@ export class CacheCleanupService {
    * Manually trigger a cleanup (useful for testing or manual operations)
    */
   async triggerCleanup(): Promise<void> {
-    this.logger.info('Manual cache cleanup triggered');
     await this.performCleanup();
   }
 

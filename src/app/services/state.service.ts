@@ -66,14 +66,11 @@ export class StateService implements NostriaService {
           // FAST PATH: Load cached data IMMEDIATELY (before waiting for extension)
           // This makes following list, profile, and mute list available immediately
           // Cached data is just database reads - no signing/extension needed
-          const startTime = Date.now();
-          this.logger.info('[StateService] Loading cached data from storage (fast path)');
           await this.nostr.loadCachedData();
-          this.logger.info(`[StateService] Cached data loaded in ${Date.now() - startTime}ms`);
 
           await this.load();
         } catch (error) {
-          console.error('Error during account change:', error);
+          this.logger.error('[StateService] Error during account change', error);
           // Ensure we don't leave the app in a broken state
           this.clear();
         }
@@ -86,9 +83,6 @@ export class StateService implements NostriaService {
 
   private startExtensionPubkeyVerification(account: NostrUser): void {
     if (this.skipNextExtensionPubkeyVerificationFor === account.pubkey) {
-      this.logger.info('[StateService] Skipping redundant extension pubkey verification for account', {
-        pubkey: account.pubkey.substring(0, 16),
-      });
       this.skipNextExtensionPubkeyVerificationFor = null;
       return;
     }
@@ -100,7 +94,6 @@ export class StateService implements NostriaService {
     this.extensionPubkeyVerificationInFlightFor = account.pubkey;
 
     if (this.utilities.isBrowser() && window.nostr) {
-      this.logger.info('[StateService] Browser extension already available, requesting pubkey immediately');
       void this.verifyExtensionPubkey(account).finally(() => {
         if (this.extensionPubkeyVerificationInFlightFor === account.pubkey) {
           this.extensionPubkeyVerificationInFlightFor = null;
@@ -110,8 +103,6 @@ export class StateService implements NostriaService {
     }
 
     void (async () => {
-      this.logger.info('[StateService] Extension account detected, waiting for browser extension...');
-
       // Use a longer timeout because extension injection can be delayed during startup.
       const extensionAvailable = await this.utilities.waitForNostrExtension(20000);
       if (!extensionAvailable) {
@@ -119,7 +110,6 @@ export class StateService implements NostriaService {
         return;
       }
 
-      this.logger.info('[StateService] Browser extension is ready');
       await this.verifyExtensionPubkey(account);
     })().finally(() => {
       if (this.extensionPubkeyVerificationInFlightFor === account.pubkey) {
@@ -130,8 +120,6 @@ export class StateService implements NostriaService {
 
   async load() {
     const pubkey = this.accountState.pubkey();
-    const startTime = Date.now();
-    this.logger.info('[StateService] Starting relay and settings load sequence');
 
     // NOTE: Cached data (following list, profile, mute list) was already loaded
     // in the constructor effect before waiting for extension - see loadCachedData() call above
@@ -143,9 +131,7 @@ export class StateService implements NostriaService {
     const hasDiscoveryRelaysLocally = await this.discoveryRelay.load(pubkey);
 
     // Destroy old connections before setting up new ones
-    const relayStartTime = Date.now();
     const relayStatus = await this.accountRelay.setAccount(pubkey, true);
-    this.logger.info(`[StateService] Account relay setup completed in ${Date.now() - relayStartTime}ms`);
 
     // Check if user has a malformed relay list or no relays configured
     if (relayStatus.hasMalformedRelayList || relayStatus.relayUrls.length === 0) {
@@ -170,27 +156,18 @@ export class StateService implements NostriaService {
 
     // OPTIMIZATION: Run independent operations in parallel after relay setup
     // These operations don't depend on each other and can load simultaneously
-    this.logger.info('[StateService] Starting parallel load operations');
-    const parallelStartTime = Date.now();
-
     const settingsPromise = (async () => {
-      const settingsStartTime = Date.now();
       await this.settingsService.loadSettings(pubkey);
       this.settingsService.settingsLoaded.set(true);
-      this.logger.info(`[StateService] Settings loaded in ${Date.now() - settingsStartTime}ms`);
     })();
 
     const accountStatePromise = (async () => {
-      const accountStartTime = Date.now();
       await this.accountState.load();
-      this.logger.info(`[StateService] Account state loaded in ${Date.now() - accountStartTime}ms`);
     })();
 
     const notificationPromise = (async () => {
       if (!this.notification.notificationsLoaded()) {
-        const notifStartTime = Date.now();
         await this.notification.loadNotifications();
-        this.logger.info(`[StateService] Notifications loaded in ${Date.now() - notifStartTime}ms`);
       }
     })();
 
@@ -200,7 +177,6 @@ export class StateService implements NostriaService {
       accountStatePromise,
       notificationPromise,
     ]);
-    this.logger.info(`[StateService] Parallel operations completed in ${Date.now() - parallelStartTime}ms`);
 
     // Start relay subscriptions (this will fetch fresh data in background)
     // Note: nostr.loadCachedData() was already called above for fast startup
@@ -212,9 +188,7 @@ export class StateService implements NostriaService {
     // relays for the user's existing kind 10086 event. Only if it's truly not found anywhere
     // do we create, sign, and publish a new one. This prevents unnecessary signing prompts
     // for users who already have a kind 10086 event on their relays.
-    const discoveryStartTime = Date.now();
     await this.ensureDefaultDiscoveryRelays(pubkey, hasDiscoveryRelaysLocally);
-    this.logger.info(`[StateService] Discovery relay check completed in ${Date.now() - discoveryStartTime}ms`);
 
     await this.migrateLegacyInfrastructureUrls(pubkey);
 
@@ -225,8 +199,6 @@ export class StateService implements NostriaService {
     // Schedule historical events scan for engagement metrics
     // Uses built-in timeout management to prevent duplicate scans
     this.metricsTracking.scheduleHistoricalScan();
-
-    this.logger.info(`[StateService] Full load sequence completed in ${Date.now() - startTime}ms`);
 
     // NOTE: We don't automatically load chats here anymore
     // Chats are loaded on-demand when the user navigates to the messages page
@@ -250,14 +222,12 @@ export class StateService implements NostriaService {
   private async ensureDefaultDiscoveryRelays(pubkey: string, hasDiscoveryRelaysLocally: boolean): Promise<void> {
     try {
       if (hasDiscoveryRelaysLocally) {
-        this.logger.debug('[StateService] User already has discovery relays in local DB');
         return;
       }
 
       // Local DB didn't have kind 10086 — query account relays.
       // Account relays are fully connected at this point and the subscription has started,
       // so this one-shot query has the best chance of finding the event.
-      this.logger.debug('[StateService] No kind 10086 in local DB, querying account relays');
       const existingDiscoveryEvent = await this.accountRelay.getEventByPubkeyAndKind(pubkey, DiscoveryRelayListKind);
 
       if (existingDiscoveryEvent) {
@@ -265,7 +235,6 @@ export class StateService implements NostriaService {
         this.discoveryRelay.setDiscoveryRelays(relayUrls);
 
         await this.discoveryRelay.saveEvent(existingDiscoveryEvent);
-        this.logger.info('[StateService] Found existing discovery relays event (kind 10086) on account relays, saved locally');
         return;
       }
 
@@ -275,13 +244,10 @@ export class StateService implements NostriaService {
       const relaysFromEvent = await this.discoveryRelay.loadFromEvent(pubkey);
       if (relaysFromEvent !== null) {
         this.discoveryRelay.setDiscoveryRelays(relaysFromEvent);
-        this.logger.info('[StateService] Found kind 10086 event in local DB on re-check (delivered by subscription)');
         return;
       }
 
       // Truly not found anywhere — create and publish defaults.
-      this.logger.info('[StateService] User has no discovery relays (kind 10086) anywhere, creating defaults');
-
       const defaultRelays = this.discoveryRelay.getDefaultDiscoveryRelays();
 
       // Save to local storage so they're used immediately
@@ -303,8 +269,6 @@ export class StateService implements NostriaService {
         await Promise.allSettled([
           this.accountRelay.publish(signedEvent),
         ]);
-
-        this.logger.info('[StateService] Successfully published default discovery relays (kind 10086)');
       } else {
         this.logger.warn('[StateService] Failed to sign discovery relay event');
       }
@@ -332,8 +296,6 @@ export class StateService implements NostriaService {
       return;
     }
 
-    this.logger.info('[StateService] Querying extension for active pubkey (non-blocking)');
-
     const TIMEOUT_MS = 60000;
     try {
       // Route pubkey verification through NostrService so extension requests are
@@ -347,15 +309,8 @@ export class StateService implements NostriaService {
 
       // Same pubkey — nothing to do
       if (extensionPubkey === currentAccount.pubkey) {
-        this.logger.info('[StateService] Extension pubkey matches current account');
         return;
       }
-
-      // Different pubkey — the user switched keys in their extension
-      this.logger.info('[StateService] Extension pubkey differs from current account', {
-        current: currentAccount.pubkey.substring(0, 16),
-        extension: extensionPubkey.substring(0, 16),
-      });
 
       // We already know the active extension pubkey from this request.
       // Mark the next account-change cycle to avoid a redundant second request.
@@ -368,11 +323,9 @@ export class StateService implements NostriaService {
 
       if (existingAccount) {
         // Switch to the existing account
-        this.logger.info('[StateService] Switching to existing account from extension');
         await this.nostr.switchToUser(extensionPubkey);
       } else {
         // Create a new extension account and switch to it
-        this.logger.info('[StateService] Creating new account from extension pubkey');
         const newUser: NostrUser = {
           pubkey: extensionPubkey,
           name: this.utilities.getTruncatedNpub(extensionPubkey),
@@ -441,11 +394,6 @@ export class StateService implements NostriaService {
       return;
     }
 
-    this.logger.info('[StateService] Migrating legacy relay URLs', {
-      pubkey,
-      kind,
-    });
-
     const result = await this.nostr.signAndPublish(this.nostr.createEvent(kind, event.content, updatedTags));
     if (!result.success) {
       this.logger.warn('[StateService] Failed to publish migrated relay event; runtime override remains active', {
@@ -470,11 +418,6 @@ export class StateService implements NostriaService {
     if (!changed) {
       return;
     }
-
-    this.logger.info('[StateService] Migrating legacy media server URLs', {
-      pubkey,
-      serverCount: rewrittenServers.length,
-    });
 
     this.media.setMediaServers(rewrittenServers);
 

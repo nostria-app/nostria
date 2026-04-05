@@ -40,16 +40,11 @@ export class TextScaleService {
   textScale = signal<number>(this.getInitialTextScale());
 
   constructor() {
-    this.logger.info('Initializing TextScaleService');
-
     // Set up effect to apply text scale changes
     effect(() => {
       const scale = this.textScale();
-      this.logger.debug(`Applying text scale: ${scale * 100}%`);
       this.applyTextScale(scale);
     });
-
-    this.logger.debug(`Initial text scale set to: ${this.textScale() * 100}%`);
   }
 
   /**
@@ -65,7 +60,6 @@ export class TextScaleService {
     // Clamp to valid range
     const clampedScale = Math.max(1.0, Math.min(2.0, scale));
 
-    this.logger.info(`Setting text scale to: ${clampedScale * 100}%`);
     this.textScale.set(clampedScale);
     this.localStorage.setItem(this.STORAGE_KEY, clampedScale.toString());
   }
@@ -109,12 +103,9 @@ export class TextScaleService {
     if (savedScale) {
       const parsed = parseFloat(savedScale);
       if (!isNaN(parsed) && parsed >= 1.0 && parsed <= 2.0) {
-        this.logger.debug(`Using saved text scale: ${parsed * 100}%`);
         return parsed;
       }
     }
-
-    this.logger.debug('No saved text scale, using default: 100%');
     return DEFAULT_TEXT_SCALE;
   }
 

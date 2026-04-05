@@ -104,9 +104,6 @@ export class PollService implements OnInitialized {
    * Fetch polls for a specific pubkey (for feed)
    */
   async fetchPollsForPubkey(pubkey: string, relayUrls: string[]): Promise<Poll[]> {
-    console.log(`[PollService] Fetching polls for ${pubkey.substring(0, 8)}... from ${relayUrls.length} relays`);
-    console.log('[PollService] Relay URLs:', relayUrls);
-
     if (relayUrls.length === 0) {
       console.warn('[PollService] No relay URLs provided');
       return [];
@@ -117,11 +114,7 @@ export class PollService implements OnInitialized {
       authors: [pubkey],
     };
 
-    console.log('[PollService] Query filter:', filter);
-
     const events = await this.pool.query(relayUrls, filter, 5000);
-
-    console.log(`[PollService] Received ${events.length} events from relays`);
 
     return events.map((event: Event) => this.parseNostrPollEvent(event));
   }
@@ -175,8 +168,6 @@ export class PollService implements OnInitialized {
       allPolls.push(...polls);
     });
 
-    console.log(`[PollService] Loaded ${allPolls.length} polls from ${pubkeys.length} users`);
-
     return allPolls;
   }
 
@@ -192,8 +183,6 @@ export class PollService implements OnInitialized {
       return [];
     }
 
-    console.log(`[PollService] Fetching polls for ${pubkeys.length} users in one query from ${relayUrls.length} relays`);
-
     const filter = {
       kinds: [1068],
       authors: pubkeys, // Query all authors at once!
@@ -201,8 +190,6 @@ export class PollService implements OnInitialized {
     };
 
     const events = await this.pool.query(relayUrls, filter, 10000);
-
-    console.log(`[PollService] Received ${events.length} poll events from relays`);
 
     return events.map((event: Event) => this.parseNostrPollEvent(event));
   }
@@ -234,8 +221,6 @@ export class PollService implements OnInitialized {
     results.forEach(({ pollId, responses }) => {
       responsesMap.set(pollId, responses);
     });
-
-    console.log(`[PollService] Loaded responses for ${responsesMap.size} polls`);
 
     return responsesMap;
   }

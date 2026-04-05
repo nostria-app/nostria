@@ -79,22 +79,17 @@ export class ApplicationService {
       const pubkey = this.accountState.pubkey();
       const isEventFocused = this.eventFocus.isEventFocused();
 
-      this.logger.debug(`[Profile Loading Effect] Triggered - Account: ${pubkey?.substring(0, 8) || 'none'}..., Following: ${followingList.length}`);
-
       // Don't process if there's no account
       if (!this.accountState.account() || !pubkey) {
-        this.logger.debug('[Profile Loading Effect] Skipping - no account');
         return;
       }
 
       if (isEventFocused) {
-        this.logger.debug('[Profile Loading Effect] Skipping - event focused');
         return;
       }
 
       // Handle empty following list case
       if (followingList.length === 0) {
-        this.logger.debug('[Profile Loading Effect] Empty following list');
         // For returning users with empty following list, still mark cache as loaded
         // so FollowingService and DataService don't wait forever
         if (this.accountState.hasProfileDiscoveryBeenDone(pubkey)) {
@@ -108,7 +103,6 @@ export class ApplicationService {
       const currentHash = followingList.join(',');
       if (this.previousFollowingListSize === followingList.length &&
         this.previousFollowingListHash === currentHash) {
-        this.logger.debug('[Profile Loading Effect] Skipping - following list unchanged');
         return;
       }
 
@@ -120,21 +114,17 @@ export class ApplicationService {
         try {
           // Check if profile discovery has already been done for this account
           const hasDiscoveryBeenDone = this.accountState.hasProfileDiscoveryBeenDone(pubkey);
-          this.logger.debug(`[Profile Loading Effect] Discovery status for ${pubkey.substring(0, 8)}...: ${hasDiscoveryBeenDone ? 'DONE' : 'NOT DONE'}`);
 
           if (!hasDiscoveryBeenDone) {
             // Wait for feed content to actually render before starting heavy profile loading
             // This ensures users see content first, not a blank screen while profiles load
-            this.logger.debug(`[Profile Loading Effect] First time load - waiting for feed content`);
             await this.waitForFeedContent(5000); // Wait up to 5 seconds for feed content
 
             // Re-check if we still need to process (account might have changed)
             if (this.accountState.pubkey() !== pubkey) {
-              this.logger.debug('[Profile Loading Effect] Account changed during delay, skipping');
               return;
             }
 
-            this.logger.debug(`[Profile Loading Effect] Now fetching ${followingList.length} profiles from relays`);
             await this.accountState.startProfileProcessing(
               followingList,
               this.dataService,
@@ -144,19 +134,15 @@ export class ApplicationService {
               }
             );
             this.accountState.markProfileDiscoveryDone(pubkey);
-            this.logger.debug(`[Profile Loading Effect] Marked discovery as done for ${pubkey.substring(0, 8)}...`);
           } else {
             const currentState = this.accountState.profileProcessingState();
             if (!currentState.isProcessing) {
-              this.logger.debug(`[Profile Loading Effect] Loading ${followingList.length} profiles from storage`);
               // Profile discovery has been done, load profiles from storage into cache
               await this.accountState.loadProfilesFromStorageToCache(
                 pubkey,
                 this.dataService,
                 this.database
               );
-            } else {
-              this.logger.debug('[Profile Loading Effect] Skipping - processing already in progress');
             }
           }
         } catch (error) {
@@ -187,17 +173,11 @@ export class ApplicationService {
         // Only check for returning users here
         // First-time checks are handled after profile processing completes
         if (!isFirstTime) {
-          this.logger.info(
-            `[ApplicationService] Account changed - checking notifications for returning user (lastCheck: ${lastCheck})`
-          );
           try {
             await this.contentNotificationService.checkForNewNotifications();
-            this.logger.info('[ApplicationService] Notification check completed after account change');
           } catch (error) {
             this.logger.error('[ApplicationService] Failed to check notifications after account change', error);
           }
-        } else {
-          this.logger.debug('[ApplicationService] First-time user - notification check will happen after profile processing');
         }
       });
     });
@@ -320,11 +300,8 @@ export class ApplicationService {
   private async waitForFeedContent(maxWaitMs = 5000): Promise<void> {
     // Check if content is already ready
     if (this.appState.feedHasInitialContent()) {
-      this.logger.debug('[Profile Loading] Feed content already ready, proceeding immediately');
       return;
     }
-
-    this.logger.debug(`[Profile Loading] Waiting up to ${maxWaitMs}ms for feed content...`);
 
     return new Promise<void>((resolve) => {
       const startTime = Date.now();
@@ -333,11 +310,9 @@ export class ApplicationService {
       const intervalId = setInterval(() => {
         if (this.appState.feedHasInitialContent()) {
           clearInterval(intervalId);
-          this.logger.debug(`[Profile Loading] Feed content ready after ${Date.now() - startTime}ms`);
           resolve();
         } else if (Date.now() - startTime >= maxWaitMs) {
           clearInterval(intervalId);
-          this.logger.debug(`[Profile Loading] Timeout waiting for feed content, proceeding anyway`);
           resolve();
         }
       }, checkInterval);
@@ -358,18 +333,11 @@ export class ApplicationService {
 
     // Only trigger for first-time users (lastCheck === 0)
     if (lastCheck === 0) {
-      this.logger.info(
-        '[ApplicationService] Profile processing complete - triggering first-time notification check (7 days)'
-      );
       // Note: checkForNewNotifications already has a default 7-day limit,
       // so we don't need to pass limitDays here
       this.contentNotificationService.checkForNewNotifications().catch(error => {
         this.logger.error('[ApplicationService] Failed to check notifications after profile processing', error);
       });
-    } else {
-      this.logger.debug(
-        `[ApplicationService] Not first-time (lastCheck: ${lastCheck}), skipping notification check after profile processing`
-      );
     }
   }
 }
