@@ -919,7 +919,7 @@ export abstract class RelayServiceBase {
             }
 
             reasons.forEach((reason) => {
-              if (reason) {
+              if (reason && !reason.toLowerCase().includes('closed automatically on eose')) {
                 urls.forEach((url) => {
                   this.logger.debug(`Relay ${url} closed with reason: ${reason}`);
                 });
@@ -1252,7 +1252,7 @@ export abstract class RelayServiceBase {
             reasons,
           });
           reasons.forEach((reason) => {
-            if (reason) {
+            if (reason && !reason.toLowerCase().includes('closed automatically on eose')) {
               availableRelays.forEach((url) => {
                 this.logger.debug(`Relay ${url} subscription closed with reason: ${reason}`);
               });
@@ -1376,7 +1376,7 @@ export abstract class RelayServiceBase {
         onclose: (reasons) => {
           this.logger.debug('Pool closed', reasons);
           reasons.forEach((reason) => {
-            if (reason) {
+            if (reason && !reason.toLowerCase().includes('closed automatically on eose')) {
               urls.forEach((url) => {
                 this.logger.debug(`Relay ${url} closed with reason: ${reason}`);
               });

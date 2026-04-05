@@ -355,7 +355,7 @@ export class SharedRelayService {
               this.logger.error('Subscriptions closed unexpectedly', reasons);
             }
             reasons.forEach(reason => {
-              if (reason) {
+              if (reason && !reason.toLowerCase().includes('closed automatically on eose')) {
                 this.logger.debug('Relay closed with reason:', reason);
               }
             });
