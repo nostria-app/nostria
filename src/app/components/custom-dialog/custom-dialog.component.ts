@@ -446,10 +446,10 @@ export class CustomDialogComponent implements AfterViewInit, OnDestroy {
       if (host && window.visualViewport) {
         const viewportOffsetTop = this.platformService.isIOS() ? Math.max(0, Math.floor(window.visualViewport.offsetTop)) : 0;
         const viewportOffsetLeft = this.platformService.isIOS() ? Math.max(0, Math.floor(window.visualViewport.offsetLeft)) : 0;
-        host.style.top = '0';
+        host.style.top = 'var(--safe-area-top, 0px)';
         host.style.left = '0';
         host.style.width = '100%';
-        host.style.height = '100%';
+        host.style.height = 'calc(100dvh - var(--safe-area-top, 0px))';
         host.style.transform = (viewportOffsetTop > 0 || viewportOffsetLeft > 0)
           ? `translate(${viewportOffsetLeft}px, ${viewportOffsetTop}px)`
           : '';

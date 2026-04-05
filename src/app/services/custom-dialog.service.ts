@@ -271,7 +271,7 @@ export class CustomDialogService {
       this.dialogContainer.style.top = '0';
       this.dialogContainer.style.left = '0';
       this.dialogContainer.style.width = '100%';
-      this.dialogContainer.style.height = '100%';
+      this.dialogContainer.style.height = '100dvh';
       this.dialogContainer.style.zIndex = '99999';
       this.dialogContainer.style.pointerEvents = 'none';
       document.body.appendChild(this.dialogContainer);
@@ -357,10 +357,10 @@ export class CustomDialogService {
     // Apply critical positioning styles directly to the host element
     const hostElement = dialogRef.location.nativeElement as HTMLElement;
     hostElement.style.position = 'fixed';
-    hostElement.style.top = '0';
+    hostElement.style.top = 'var(--safe-area-top, 0px)';
     hostElement.style.left = '0';
     hostElement.style.width = '100%';
-    hostElement.style.height = '100dvh';
+    hostElement.style.height = 'calc(100dvh - var(--safe-area-top, 0px))';
     hostElement.style.zIndex = '1'; // Relative to container which has z-index 99999
     hostElement.style.display = 'block';
     hostElement.style.pointerEvents = 'auto';
