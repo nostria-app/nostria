@@ -807,6 +807,15 @@ jobs:
 
             target_name=$(basename "$nested_path")
 
+            case "$artifact_name" in
+              nostria-android-release-apk-run-*)
+                target_name="Nostria_${{ needs.prepare-release.outputs.version }}.apk"
+                ;;
+              nostria-ios-signed-run-*)
+                target_name="Nostria_${{ needs.prepare-release.outputs.version }}.ipa"
+                ;;
+            esac
+
             cp "$source_file" "release-upload/$target_name"
           done < <(find release-assets -type f | sort)
 
