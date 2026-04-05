@@ -553,6 +553,7 @@ jobs:
           security cms -D -i "$PROFILE_PATH" > "$PROFILE_PLIST_PATH"
 
           PROFILE_UUID=$(/usr/libexec/PlistBuddy -c 'Print :UUID' "$PROFILE_PLIST_PATH")
+          PROFILE_NAME=$(/usr/libexec/PlistBuddy -c 'Print :Name' "$PROFILE_PLIST_PATH")
           TEAM_ID=$(/usr/libexec/PlistBuddy -c 'Print :TeamIdentifier:0' "$PROFILE_PLIST_PATH")
           GET_TASK_ALLOW=$(/usr/libexec/PlistBuddy -c 'Print :Entitlements:get-task-allow' "$PROFILE_PLIST_PATH" 2>/dev/null || echo false)
           HAS_PROVISIONED_DEVICES=$(/usr/libexec/PlistBuddy -c 'Print :ProvisionedDevices:0' "$PROFILE_PLIST_PATH" >/dev/null 2>&1 && echo true || echo false)
@@ -572,6 +573,7 @@ jobs:
           fi
 
           {
+            echo "profile_name=$PROFILE_NAME"
             echo "profile_uuid=$PROFILE_UUID"
             echo "team_id=$TEAM_ID"
             echo "export_method=$EXPORT_METHOD"
@@ -626,6 +628,9 @@ jobs:
         shell: bash
         env:
           IOS_SIGNING_IDENTITY: ${{ steps.ios-certificate.outputs.identity }}
+          IOS_PROFILE_NAME: ${{ steps.ios-signing.outputs.profile_name }}
+          IOS_PROFILE_UUID: ${{ steps.ios-signing.outputs.profile_uuid }}
+          IOS_TEAM_ID: ${{ steps.ios-signing.outputs.team_id }}
         run: |
           set -euo pipefail
 
@@ -636,9 +641,59 @@ jobs:
             exit 1
           fi
 
-          SIGNING_IDENTITY="$IOS_SIGNING_IDENTITY" perl -0pi -e 's/CODE_SIGN_IDENTITY = "iPhone Developer";/CODE_SIGN_IDENTITY = "$ENV{SIGNING_IDENTITY}";/g' "$PROJECT_FILE"
+          PROJECT_FILE="$PROJECT_FILE" SIGNING_IDENTITY="$IOS_SIGNING_IDENTITY" PROFILE_NAME="$IOS_PROFILE_NAME" PROFILE_UUID="$IOS_PROFILE_UUID" TEAM_ID="$IOS_TEAM_ID" python3 - <<'PY'
+          from pathlib import Path
+          import os
 
-          grep -n 'CODE_SIGN_IDENTITY' "$PROJECT_FILE"
+          project_file = Path(os.environ['PROJECT_FILE'])
+          text = project_file.read_text(encoding='utf-8')
+          identity = os.environ['SIGNING_IDENTITY']
+          profile_name = os.environ['PROFILE_NAME']
+          profile_uuid = os.environ['PROFILE_UUID']
+          team_id = os.environ['TEAM_ID']
+
+          def patch_block(block: str) -> str:
+              block = block.replace(
+                  'CODE_SIGN_IDENTITY = "iPhone Developer";',
+                  f'CODE_SIGN_IDENTITY = "{identity}";'
+              )
+
+              additions = [
+                  'CODE_SIGN_STYLE = Manual;',
+                  f'DEVELOPMENT_TEAM = {team_id};',
+                  f'"DEVELOPMENT_TEAM[sdk=iphoneos*]" = {team_id};',
+                  f'PROVISIONING_PROFILE = "{profile_uuid}";',
+                  f'"PROVISIONING_PROFILE[sdk=iphoneos*]" = "{profile_uuid}";',
+                  f'PROVISIONING_PROFILE_SPECIFIER = "{profile_name}";',
+                  f'"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = "{profile_name}";',
+              ]
+
+              anchor = f'CODE_SIGN_IDENTITY = "{identity}";'
+              if anchor not in block:
+                  raise SystemExit(f'Missing anchor in block: {anchor}')
+
+              for line in additions:
+                  if line not in block:
+                      block = block.replace(anchor, anchor + '\n\t\t\t\t' + line)
+                      anchor = line
+
+              return block
+
+          parts = text.split('buildSettings = {')
+          if len(parts) < 3:
+              raise SystemExit('Unexpected pbxproj structure')
+
+          rebuilt = [parts[0]]
+          for part in parts[1:]:
+              settings, remainder = part.split('};', 1)
+              if 'CODE_SIGN_ENTITLEMENTS = nostria_iOS/nostria_iOS.entitlements;' in settings:
+                  settings = patch_block(settings)
+              rebuilt.append('buildSettings = {' + settings + '};' + remainder)
+
+          project_file.write_text(''.join(rebuilt), encoding='utf-8')
+          PY
+
+          grep -n 'CODE_SIGN_IDENTITY\|CODE_SIGN_STYLE\|DEVELOPMENT_TEAM\|PROVISIONING_PROFILE' "$PROJECT_FILE"
 
       - name: Build signed iOS release bundle
         shell: bash
