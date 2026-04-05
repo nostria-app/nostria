@@ -1,62 +1,150 @@
-const fs = require('fs');
-const path = require('path');
+const fs = require('node:fs/promises');
+const path = require('node:path');
 
-// Paths to the files that need version updates
-const packageJsonPath = path.join(__dirname, 'package.json');
-const cargoTomlPath = path.join(__dirname, 'src-tauri', 'Cargo.toml');
-const tauriConfPath = path.join(__dirname, 'src-tauri', 'tauri.conf.json');
-const manifestPath = path.join(__dirname, 'public', 'manofest.webmanifest');
+const rootDir = __dirname;
+const files = {
+  packageJson: path.join(rootDir, 'package.json'),
+  packageLock: path.join(rootDir, 'package-lock.json'),
+  manifest: path.join(rootDir, 'public', 'manifest.webmanifest'),
+  cargoToml: path.join(rootDir, 'src-tauri', 'Cargo.toml'),
+  appleProject: path.join(rootDir, 'src-tauri', 'gen', 'apple', 'project.yml'),
+  appleInfoPlist: path.join(rootDir, 'src-tauri', 'gen', 'apple', 'nostria_iOS', 'Info.plist'),
+};
 
-async function updateVersion() {
-  try {
-    // Read package.json to get current version
-    const packageJsonContent = await fs.promises.readFile(packageJsonPath, 'utf8');
-    const packageJson = JSON.parse(packageJsonContent);
-    const currentVersion = packageJson.version;
-
-    // Split version into major, minor, and patch components
-    const versionParts = currentVersion.split('.');
-    if (versionParts.length !== 3) {
-      throw new Error(`Invalid version format: ${currentVersion}`);
-    }
-
-    const [major, minor, patch] = versionParts.map(Number);
-    // Increment the patch/revision number
-    const newVersion = `${major}.${minor}.${patch + 1}`;
-    console.log(`Bumping version: ${currentVersion} → ${newVersion}`);
-
-    // Update package.json
-    packageJson.version = newVersion;
-    await fs.promises.writeFile(packageJsonPath, JSON.stringify(packageJson, null, 2) + '\n');
-    console.log(`✓ Updated package.json`);
-
-    // Update manifest.webmanifest
-    packageJson.version = newVersion;
-    await fs.promises.writeFile(manifestPath, JSON.stringify(packageJson, null, 2) + '\n');
-    console.log(`✓ Updated package.json`);
-
-    // Update Cargo.toml
-    let cargoContent = await fs.promises.readFile(cargoTomlPath, 'utf8');
-    cargoContent = cargoContent.replace(/^version\s*=\s*"[^"]*"/m, `version = "${newVersion}"`);
-    await fs.promises.writeFile(cargoTomlPath, cargoContent);
-    console.log(`✓ Updated src-tauri/Cargo.toml`);
-
-    // Update tauri.conf.json
-    const tauriConfContent = await fs.promises.readFile(tauriConfPath, 'utf8');
-    const tauriConf = JSON.parse(tauriConfContent);
-    if (tauriConf.version) {
-      tauriConf.version = newVersion;
-      await fs.promises.writeFile(tauriConfPath, JSON.stringify(tauriConf, null, 2) + '\n');
-      console.log(`✓ Updated src-tauri/tauri.conf.json`);
-    } else {
-      console.warn('⚠️ Could not find version field in tauri.conf.json');
-    }
-
-    console.log(`Version bumped successfully to ${newVersion}`);
-  } catch (error) {
-    console.error('Error updating version:', error);
-    process.exit(1);
+function bumpPatchVersion(version) {
+  const match = /^(\d+)\.(\d+)\.(\d+)$/.exec(version);
+  if (!match) {
+    throw new Error(`Unsupported version format in package.json: ${version}`);
   }
+
+  const [, major, minor, patch] = match;
+  return `${major}.${minor}.${Number.parseInt(patch, 10) + 1}`;
 }
 
-updateVersion();
+function getLineEnding(text) {
+  return text.includes('\r\n') ? '\r\n' : '\n';
+}
+
+async function readText(filePath) {
+  return fs.readFile(filePath, 'utf8');
+}
+
+async function writeText(filePath, text) {
+  await fs.writeFile(filePath, text, 'utf8');
+}
+
+async function updateJsonFile(filePath, updater) {
+  const original = await readText(filePath);
+  const newline = getLineEnding(original);
+  const parsed = JSON.parse(original);
+
+  updater(parsed);
+
+  await writeText(filePath, `${JSON.stringify(parsed, null, 2)}${newline}`);
+}
+
+function replaceOrThrow(content, matcher, replacer, fileLabel) {
+  const updated = content.replace(matcher, replacer);
+  if (updated === content) {
+    throw new Error(`Could not update version in ${fileLabel}`);
+  }
+
+  return updated;
+}
+
+async function updateTextFile(filePath, updater) {
+  const original = await readText(filePath);
+  const updated = updater(original);
+  await writeText(filePath, updated);
+}
+
+async function main() {
+  const packageJsonContent = await readText(files.packageJson);
+  const packageJson = JSON.parse(packageJsonContent);
+  const currentVersion = packageJson.version;
+  const nextVersion = bumpPatchVersion(currentVersion);
+
+  console.log(`Bumping version ${currentVersion} -> ${nextVersion}`);
+
+  await updateJsonFile(files.packageJson, (json) => {
+    json.version = nextVersion;
+  });
+  console.log('Updated package.json');
+
+  await updateJsonFile(files.manifest, (json) => {
+    json.version = nextVersion;
+  });
+  console.log('Updated public/manifest.webmanifest');
+
+  await updateTextFile(files.cargoToml, (content) =>
+    replaceOrThrow(
+      content,
+      /(\[package\][\s\S]*?\nversion\s*=\s*")([^"]+)(")/,
+      `$1${nextVersion}$3`,
+      'src-tauri/Cargo.toml'
+    )
+  );
+  console.log('Updated src-tauri/Cargo.toml');
+
+  await updateTextFile(files.appleProject, (content) => {
+    let updated = replaceOrThrow(
+      content,
+      /(CFBundleShortVersionString:\s*)([^\r\n]+)/,
+      `$1${nextVersion}`,
+      'src-tauri/gen/apple/project.yml (CFBundleShortVersionString)'
+    );
+
+    updated = replaceOrThrow(
+      updated,
+      /(CFBundleVersion:\s*")([^"]+)(")/,
+      `$1${nextVersion}$3`,
+      'src-tauri/gen/apple/project.yml (CFBundleVersion)'
+    );
+
+    return updated;
+  });
+  console.log('Updated src-tauri/gen/apple/project.yml');
+
+  await updateTextFile(files.appleInfoPlist, (content) => {
+    let updated = replaceOrThrow(
+      content,
+      /(<key>CFBundleShortVersionString<\/key>\s*<string>)([^<]+)(<\/string>)/,
+      `$1${nextVersion}$3`,
+      'src-tauri/gen/apple/nostria_iOS/Info.plist (CFBundleShortVersionString)'
+    );
+
+    updated = replaceOrThrow(
+      updated,
+      /(<key>CFBundleVersion<\/key>\s*<string>)([^<]+)(<\/string>)/,
+      `$1${nextVersion}$3`,
+      'src-tauri/gen/apple/nostria_iOS/Info.plist (CFBundleVersion)'
+    );
+
+    return updated;
+  });
+  console.log('Updated src-tauri/gen/apple/nostria_iOS/Info.plist');
+
+  try {
+    await updateJsonFile(files.packageLock, (json) => {
+      json.version = nextVersion;
+
+      if (json.packages?.['']) {
+        json.packages[''].version = nextVersion;
+      }
+    });
+    console.log('Updated package-lock.json');
+  } catch (error) {
+    if (error.code === 'ENOENT') {
+      console.log('Skipped package-lock.json (not found)');
+    } else {
+      throw error;
+    }
+  }
+
+  console.log(`Version bump complete: ${currentVersion} -> ${nextVersion}`);
+}
+
+main().catch((error) => {
+  console.error(error instanceof Error ? error.message : error);
+  process.exit(1);
+});
