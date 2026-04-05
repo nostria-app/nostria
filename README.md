@@ -26,6 +26,13 @@ Web: https://nostria.app
 
 Desktop: https://github.com/nostria-app/nostria/releases
 
+### Linux
+
+```bash
+wget https://github.com/nostria-app/nostria/releases/download/v3.1.0/Nostria_3.1.0_amd64.deb
+sudo apt install ./Nostria_3.1.0_amd64.deb
+```
+
 ## Documentation
 
 Documentation of source code is available here: [Nostria DeepWiki](https://deepwiki.com/nostria-app/nostria)
