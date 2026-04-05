@@ -804,12 +804,33 @@ jobs:
             relative_path="${source_file#release-assets/}"
             artifact_name="${relative_path%%/*}"
             nested_path="${relative_path#*/}"
+
+            case "$artifact_name" in
+              nostria-linux-installers-run-*|nostria-macos-installers-run-*|nostria-windows-installers-run-*|nostria-windows-arm-installers-run-*)
+                ;;
+              nostria-android-release-apk-run-*)
+                ;;
+              nostria-ios-signed-run-*)
+                if [[ "$nested_path" != "Nostria.ipa" ]]; then
+                  continue
+                fi
+                ;;
+              *)
+                continue
+                ;;
+            esac
+
             stable_artifact_name=$(printf '%s' "$artifact_name" | sed -E 's/-run-[0-9]+-[0-9]+$//')
             flattened_nested_path=$(printf '%s' "$nested_path" | tr '/' '-')
             target_name="${stable_artifact_name}--${flattened_nested_path}"
 
             cp "$source_file" "release-upload/$target_name"
           done < <(find release-assets -type f | sort)
+
+          if ! find release-upload -maxdepth 1 -type f | grep -q .; then
+            echo "No end-user release assets were prepared." >&2
+            exit 1
+          fi
 
           echo "Prepared release upload assets:"
           find release-upload -maxdepth 1 -type f | sort
