@@ -840,7 +840,7 @@ jobs:
 
     steps:
       - name: Download build artifacts
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v8
         with:
           pattern: nostria-*
           path: release-assets
@@ -1009,17 +1009,48 @@ jobs:
           find release-upload -maxdepth 1 -type f | sort
 
       - name: Publish draft GitHub release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ needs.prepare-release.outputs.release_tag }}
-          name: ${{ needs.prepare-release.outputs.release_name }}
-          target_commitish: ${{ github.sha }}
-          draft: true
-          prerelease: ${{ needs.prepare-release.outputs.release_prerelease }}
-          overwrite_files: true
-          fail_on_unmatched_files: true
-          files: release-upload/*
-          body: |
-            Draft build assets for Nostria v${{ needs.prepare-release.outputs.version }}.
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ needs.prepare-release.outputs.release_tag }}
+          RELEASE_NAME: ${{ needs.prepare-release.outputs.release_name }}
+          RELEASE_PRERELEASE: ${{ needs.prepare-release.outputs.release_prerelease }}
+          RELEASE_VERSION: ${{ needs.prepare-release.outputs.version }}
+          TARGET_COMMITISH: ${{ github.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
 
-            This draft is updated by the unified build workflow on each run so the generated artifacts can be reviewed and published when ready.
+          release_body=$(cat <<EOF
+          Draft build assets for Nostria v${RELEASE_VERSION}.
+
+          This draft is updated by the unified build workflow on each run so the generated artifacts can be reviewed and published when ready.
+          EOF
+          )
+
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            release_id=$(gh release view "$RELEASE_TAG" --json databaseId --jq '.databaseId')
+
+            gh api \
+              --method PATCH \
+              -H 'Accept: application/vnd.github+json' \
+              "/repos/${GITHUB_REPOSITORY}/releases/${release_id}" \
+              -f tag_name="$RELEASE_TAG" \
+              -f target_commitish="$TARGET_COMMITISH" \
+              -f name="$RELEASE_NAME" \
+              -F draft=true \
+              -F prerelease="$RELEASE_PRERELEASE" \
+              -f body="$release_body" >/dev/null
+          else
+            gh api \
+              --method POST \
+              -H 'Accept: application/vnd.github+json' \
+              "/repos/${GITHUB_REPOSITORY}/releases" \
+              -f tag_name="$RELEASE_TAG" \
+              -f target_commitish="$TARGET_COMMITISH" \
+              -f name="$RELEASE_NAME" \
+              -F draft=true \
+              -F prerelease="$RELEASE_PRERELEASE" \
+              -f body="$release_body" >/dev/null
+          fi
+
+          gh release upload "$RELEASE_TAG" release-upload/* --clobber
