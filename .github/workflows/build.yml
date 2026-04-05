@@ -62,29 +62,37 @@ jobs:
           - name: linux
             platform: ubuntu-22.04
             rust_targets: ""
-            npm_script: npm run tauri:build:linux
+            tauri_args: --bundles appimage,deb --config src-tauri/tauri.release.conf.json
             artifact_path: |
               src-tauri/target/release/bundle/appimage/*.AppImage
+              src-tauri/target/release/bundle/appimage/*.AppImage.sig
               src-tauri/target/release/bundle/deb/*.deb
           - name: windows
             platform: windows-latest
             rust_targets: ""
-            npm_script: npm run tauri:build:windows
+            tauri_args: --bundles nsis,msi --config src-tauri/tauri.release.conf.json
             artifact_path: |
               src-tauri/target/release/bundle/msi/*.msi
+              src-tauri/target/release/bundle/msi/*.msi.sig
               src-tauri/target/release/bundle/nsis/*.exe
+              src-tauri/target/release/bundle/nsis/*.exe.sig
           - name: windows-arm
             platform: windows-latest
             rust_targets: aarch64-pc-windows-msvc
-            npm_script: npm run tauri:build:windows-arm
+            tauri_args: --target aarch64-pc-windows-msvc --bundles nsis,msi --config src-tauri/tauri.release.conf.json
             artifact_path: |
               src-tauri/target/aarch64-pc-windows-msvc/release/bundle/msi/*.msi
+              src-tauri/target/aarch64-pc-windows-msvc/release/bundle/msi/*.msi.sig
               src-tauri/target/aarch64-pc-windows-msvc/release/bundle/nsis/*.exe
+              src-tauri/target/aarch64-pc-windows-msvc/release/bundle/nsis/*.exe.sig
           - name: macos
             platform: macos-latest
             rust_targets: aarch64-apple-darwin,x86_64-apple-darwin
-            npm_script: npm run tauri:build:macos
-            artifact_path: src-tauri/target/universal-apple-darwin/release/bundle/dmg/*.dmg
+            tauri_args: --target universal-apple-darwin --config src-tauri/tauri.release.conf.json
+            artifact_path: |
+              src-tauri/target/universal-apple-darwin/release/bundle/dmg/*.dmg
+              src-tauri/target/universal-apple-darwin/release/bundle/macos/*.app.tar.gz
+              src-tauri/target/universal-apple-darwin/release/bundle/macos/*.app.tar.gz.sig
 
     runs-on: ${{ matrix.platform }}
 
@@ -146,8 +154,20 @@ jobs:
       - name: Print Tauri environment info
         run: npm run tauri:info
 
+      - name: Validate desktop updater signing secrets
+        shell: bash
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+        run: |
+          if [ -z "$TAURI_SIGNING_PRIVATE_KEY" ]; then
+            echo 'Missing required secret: TAURI_SIGNING_PRIVATE_KEY' >&2
+            exit 1
+          fi
+
       - name: Build desktop installers
-        run: ${{ matrix.npm_script }}
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+        run: npx tauri build --ci ${{ matrix.tauri_args }}
 
       - name: Upload installers
         uses: actions/upload-artifact@v6
@@ -784,14 +804,44 @@ jobs:
 
           rm -rf release-upload
           mkdir -p release-upload
+          updater_entries_file=$(mktemp)
+
+          copy_release_asset() {
+            local source_file="$1"
+            local target_name="$2"
+
+            cp "$source_file" "release-upload/$target_name"
+          }
+
+          append_updater_entry() {
+            local platform="$1"
+            local kind="$2"
+            local file_name="$3"
+
+            printf '%s|%s|%s\n' "$platform" "$kind" "$file_name" >> "$updater_entries_file"
+          }
 
           while IFS= read -r source_file; do
             relative_path="${source_file#release-assets/}"
             artifact_name="${relative_path%%/*}"
             nested_path="${relative_path#*/}"
+            target_name=$(basename "$nested_path")
 
             case "$artifact_name" in
               nostria-linux-installers-run-*|nostria-macos-installers-run-*|nostria-windows-installers-run-*|nostria-windows-arm-installers-run-*)
+                case "$artifact_name:$target_name" in
+                  nostria-linux-installers-run-*:*.AppImage|nostria-linux-installers-run-*:*.AppImage.sig|nostria-linux-installers-run-*:*.deb)
+                    ;;
+                  nostria-macos-installers-run-*:*.dmg|nostria-macos-installers-run-*:*.app.tar.gz|nostria-macos-installers-run-*:*.app.tar.gz.sig)
+                    ;;
+                  nostria-windows-installers-run-*:*.msi|nostria-windows-installers-run-*:*.exe|nostria-windows-installers-run-*:*.exe.sig)
+                    ;;
+                  nostria-windows-arm-installers-run-*:*.msi|nostria-windows-arm-installers-run-*:*.exe|nostria-windows-arm-installers-run-*:*.exe.sig)
+                    ;;
+                  *)
+                    continue
+                    ;;
+                esac
                 ;;
               nostria-android-release-apk-run-*)
                 ;;
@@ -805,8 +855,6 @@ jobs:
                 ;;
             esac
 
-            target_name=$(basename "$nested_path")
-
             case "$artifact_name" in
               nostria-android-release-apk-run-*)
                 target_name="Nostria_${{ needs.prepare-release.outputs.version }}.apk"
@@ -816,8 +864,87 @@ jobs:
                 ;;
             esac
 
-            cp "$source_file" "release-upload/$target_name"
+            copy_release_asset "$source_file" "$target_name"
+
+            case "$artifact_name:$target_name" in
+              nostria-linux-installers-run-*:*.AppImage)
+                append_updater_entry 'linux-x86_64' file "$target_name"
+                ;;
+              nostria-linux-installers-run-*:*.AppImage.sig)
+                append_updater_entry 'linux-x86_64' signature "$target_name"
+                ;;
+              nostria-windows-installers-run-*:*.exe)
+                append_updater_entry 'windows-x86_64' file "$target_name"
+                ;;
+              nostria-windows-installers-run-*:*.exe.sig)
+                append_updater_entry 'windows-x86_64' signature "$target_name"
+                ;;
+              nostria-windows-arm-installers-run-*:*.exe)
+                append_updater_entry 'windows-aarch64' file "$target_name"
+                ;;
+              nostria-windows-arm-installers-run-*:*.exe.sig)
+                append_updater_entry 'windows-aarch64' signature "$target_name"
+                ;;
+              nostria-macos-installers-run-*:*.app.tar.gz)
+                append_updater_entry 'darwin-aarch64' file "$target_name"
+                append_updater_entry 'darwin-x86_64' file "$target_name"
+                ;;
+              nostria-macos-installers-run-*:*.app.tar.gz.sig)
+                append_updater_entry 'darwin-aarch64' signature "$target_name"
+                append_updater_entry 'darwin-x86_64' signature "$target_name"
+                ;;
+            esac
           done < <(find release-assets -type f | sort)
+
+          VERSION='${{ needs.prepare-release.outputs.version }}' \
+          RELEASE_TAG='${{ needs.prepare-release.outputs.release_tag }}' \
+          UPDATER_ENTRIES_FILE="$updater_entries_file" \
+          python3 - <<'PY'
+          import json
+          import os
+          from collections import defaultdict
+          from datetime import datetime, timezone
+          from pathlib import Path
+
+          version = os.environ['VERSION']
+          release_tag = os.environ['RELEASE_TAG']
+          base_url = f"https://github.com/${{ github.repository }}/releases/download/{release_tag}"
+          entries_path = Path(os.environ['UPDATER_ENTRIES_FILE'])
+          upload_dir = Path('release-upload')
+
+          platforms = defaultdict(dict)
+
+          if entries_path.exists():
+              for raw_line in entries_path.read_text(encoding='utf-8').splitlines():
+                  if not raw_line:
+                      continue
+                  platform, kind, file_name = raw_line.split('|', 2)
+                  if kind == 'file':
+                      platforms[platform]['url'] = f"{base_url}/{file_name}"
+                  else:
+                      signature_path = upload_dir / file_name
+                      platforms[platform]['signature'] = signature_path.read_text(encoding='utf-8').strip()
+
+          required_platforms = [
+              'linux-x86_64',
+              'windows-x86_64',
+              'windows-aarch64',
+              'darwin-aarch64',
+              'darwin-x86_64',
+          ]
+
+          missing = [platform for platform in required_platforms if set(platforms[platform]) != {'url', 'signature'}]
+          if missing:
+              raise SystemExit(f"Missing updater assets for platforms: {', '.join(missing)}")
+
+          manifest = {
+              'version': version,
+              'pub_date': datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace('+00:00', 'Z'),
+              'platforms': {platform: platforms[platform] for platform in required_platforms},
+          }
+
+          (upload_dir / 'latest.json').write_text(json.dumps(manifest, indent=2) + '\n', encoding='utf-8')
+          PY
 
           if ! find release-upload -maxdepth 1 -type f | grep -q .; then
             echo "No end-user release assets were prepared." >&2
