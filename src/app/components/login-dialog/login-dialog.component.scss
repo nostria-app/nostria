@@ -6,7 +6,7 @@
 }
 
 .unified-login-dialog {
-  padding: 16px 0;
+  // padding: 16px 0;
   position: relative;
   max-height: 90vh;
 
@@ -1161,11 +1161,10 @@
     align-items: stretch;
     gap: 6px;
     width: min(100%, 560px);
-    padding: 10px;
     border-radius: 12px;
     margin: 0 auto;
-    background: var(--mat-sys-surface-container-low);
-    border: 1px solid var(--mat-sys-outline-variant);
+    // background: var(--mat-sys-surface-container-low);
+    // border: 1px solid var(--mat-sys-outline-variant);
 
     .region-label {
       font-size: var(--text-xs);
