@@ -27,6 +27,31 @@
   <p class="release-notes-empty" i18n="@@desktopUpdater.dialog.noNotes">This release did not include release notes.</p>
   }
 
+  @if (data.installMode === 'manual-linux-package' && linuxManualUpdate) {
+  <div class="linux-manual-panel">
+    <p class="linux-manual-title" i18n="@@desktopUpdater.dialog.linux.title">Manual install required on Linux package
+      installs</p>
+    <p class="linux-manual-copy" i18n="@@desktopUpdater.dialog.linux.description">
+      Automatic in-app install is only supported for AppImage builds. This copy of Nostria appears to be installed as a
+      system package, so download the updated <code>.deb</code> and install it manually.
+    </p>
+    <p class="linux-manual-copy" i18n="@@desktopUpdater.dialog.linux.pathHint">
+      If you use the download button below, your browser decides where the file is saved. Replace <code>/path/to</code>
+      in the install command with that actual location.
+    </p>
+
+    <div class="linux-command-block">
+      <p class="linux-command-label" i18n="@@desktopUpdater.dialog.linux.downloadLabel">Download the package</p>
+      <pre>{{ linuxManualUpdate.downloadCommand }}</pre>
+    </div>
+
+    <div class="linux-command-block">
+      <p class="linux-command-label" i18n="@@desktopUpdater.dialog.linux.installLabel">Install the package</p>
+      <pre>{{ linuxManualUpdate.installCommand }}</pre>
+    </div>
+  </div>
+  }
+
   @if (progressMessage()) {
   <div class="progress-panel">
     <mat-progress-bar mode="indeterminate"></mat-progress-bar>
@@ -44,8 +69,19 @@
     i18n="@@desktopUpdater.dialog.later">
     Later
   </button>
+  @if (data.installMode === 'manual-linux-package') {
+  <button mat-button type="button" (click)="copyLinuxInstallCommand()" [disabled]="installing()"
+    i18n="@@desktopUpdater.dialog.linux.copyCommand">
+    Copy install command
+  </button>
+  <button mat-flat-button type="button" (click)="openLinuxDownload()" [disabled]="installing()"
+    i18n="@@desktopUpdater.dialog.linux.download">
+    Download .deb
+  </button>
+  } @else {
   <button mat-flat-button type="button" (click)="install()" [disabled]="installing()"
     i18n="@@desktopUpdater.dialog.install">
     Install update
   </button>
+  }
 </div>

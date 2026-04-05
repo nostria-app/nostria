@@ -1,5 +1,5 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
-import { isTauri } from '@tauri-apps/api/core';
+import { invoke, isTauri } from '@tauri-apps/api/core';
 import { getVersion } from '@tauri-apps/api/app';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { ApplicationService } from './application.service';
@@ -15,6 +15,18 @@ export interface DesktopUpdateInfo {
   date?: string;
   body?: string;
   rawJson: Record<string, unknown>;
+}
+
+export interface DesktopUpdateContext {
+  platform: 'linux' | 'windows' | 'macos' | 'unknown';
+  linuxInstallKind: 'appimage' | 'system' | null;
+}
+
+export interface LinuxManualUpdateInfo {
+  downloadUrl: string;
+  packageFileName: string;
+  downloadCommand: string;
+  installCommand: string;
 }
 
 interface TauriUpdateHandle {
@@ -40,6 +52,7 @@ export class DesktopUpdaterService {
   private initialized = false;
   private promptOpenForVersion: string | null = null;
   private pendingUpdate: TauriUpdateHandle | null = null;
+  private cachedUpdateContext: DesktopUpdateContext | null = null;
 
   readonly currentVersion = signal<string | null>(null);
   readonly checking = signal(false);
@@ -67,6 +80,8 @@ export class DesktopUpdaterService {
       return;
     }
 
+    void this.loadUpdateContext();
+
     window.setTimeout(() => {
       void this.checkForUpdates({ interactive: false, source: 'startup' });
     }, this.STARTUP_DELAY_MS);
@@ -92,6 +107,7 @@ export class DesktopUpdaterService {
     try {
       const updaterModule = await import('@tauri-apps/plugin-updater');
       const currentVersion = await this.loadCurrentVersion();
+      await this.loadUpdateContext();
       const update = await updaterModule.check();
 
       this.lastCheckedAt.set(Date.now());
@@ -176,6 +192,11 @@ export class DesktopUpdaterService {
 
     this.promptOpenForVersion = updateInfo.version;
 
+    const updateContext = this.cachedUpdateContext;
+    const linuxManualUpdate = updateContext?.platform === 'linux' && updateContext.linuxInstallKind === 'system'
+      ? this.buildLinuxManualUpdateInfo(updateInfo.version)
+      : null;
+
     const dialogRef = this.customDialog.open<UpdateAvailableDialogComponent, UpdateInstallOutcome>(UpdateAvailableDialogComponent, {
       title: $localize`:@@desktopUpdater.dialog.title:Update available`,
       headerIcon: 'system_update',
@@ -185,7 +206,10 @@ export class DesktopUpdaterService {
       data: {
         update: updateInfo,
         interactive,
+        installMode: linuxManualUpdate ? 'manual-linux-package' : 'automatic',
+        linuxManualUpdate,
         installUpdate: (onProgress) => this.installUpdate(updateInfo.version, onProgress),
+        openLinuxDownload: linuxManualUpdate ? () => this.openLinuxManualDownload(linuxManualUpdate.downloadUrl) : undefined,
       } satisfies UpdateAvailableDialogData,
     });
 
@@ -205,6 +229,50 @@ export class DesktopUpdaterService {
         });
       }
     });
+  }
+
+  private async loadUpdateContext(): Promise<DesktopUpdateContext> {
+    if (this.cachedUpdateContext) {
+      return this.cachedUpdateContext;
+    }
+
+    const fallbackContext: DesktopUpdateContext = {
+      platform: 'unknown',
+      linuxInstallKind: null,
+    };
+
+    if (!this.isDesktop()) {
+      this.cachedUpdateContext = fallbackContext;
+      return fallbackContext;
+    }
+
+    try {
+      const context = await invoke<DesktopUpdateContext>('desktop_update_context');
+      this.cachedUpdateContext = context;
+      return context;
+    } catch (error) {
+      this.logger.warn('[DesktopUpdater] Failed to detect desktop update context', error);
+      this.cachedUpdateContext = fallbackContext;
+      return fallbackContext;
+    }
+  }
+
+  private buildLinuxManualUpdateInfo(version: string): LinuxManualUpdateInfo {
+    const releaseTag = `v${version}`;
+    const packageFileName = `Nostria_${version}_amd64.deb`;
+    const downloadUrl = `https://github.com/nostria-app/nostria/releases/download/${releaseTag}/${packageFileName}`;
+
+    return {
+      downloadUrl,
+      packageFileName,
+      downloadCommand: `wget ${downloadUrl}`,
+      installCommand: `sudo apt install /path/to/${packageFileName}`,
+    };
+  }
+
+  private async openLinuxManualDownload(downloadUrl: string): Promise<void> {
+    const openerModule = await import('@tauri-apps/plugin-opener');
+    await openerModule.openUrl(downloadUrl);
   }
 
   private async installUpdate(version: string, onProgress: (message: string) => void): Promise<UpdateInstallOutcome> {

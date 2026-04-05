@@ -51,6 +51,40 @@
   margin: 0;
 }
 
+.linux-manual-panel {
+  display: grid;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: var(--mat-sys-corner-large);
+  background: var(--mat-sys-surface-container-low);
+}
+
+.linux-manual-title,
+.linux-manual-copy,
+.linux-command-label {
+  margin: 0;
+}
+
+.linux-manual-copy {
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.linux-command-block {
+  display: grid;
+  gap: 8px;
+}
+
+.linux-command-block pre {
+  margin: 0;
+  padding: 12px 14px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  border-radius: var(--mat-sys-corner-medium);
+  background: var(--mat-sys-surface-container);
+  color: var(--mat-sys-on-surface);
+  font-family: inherit;
+}
+
 .release-notes pre {
   margin: 0;
   padding: 14px 16px;

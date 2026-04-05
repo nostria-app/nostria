@@ -4,14 +4,20 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { CustomDialogRef } from '../../services/custom-dialog.service';
-import { DesktopUpdateInfo } from '../../services/desktop-updater.service';
+import { ClipboardService } from '../../services/clipboard.service';
+import { DesktopUpdateInfo, LinuxManualUpdateInfo } from '../../services/desktop-updater.service';
 
-export type UpdateInstallOutcome = 'installed' | 'later';
+export type UpdateInstallOutcome = 'installed' | 'later' | 'manual';
+
+export type UpdateInstallMode = 'automatic' | 'manual-linux-package';
 
 export interface UpdateAvailableDialogData {
   update: DesktopUpdateInfo;
   interactive: boolean;
+  installMode: UpdateInstallMode;
+  linuxManualUpdate?: LinuxManualUpdateInfo;
   installUpdate: (onProgress: (message: string) => void) => Promise<UpdateInstallOutcome>;
+  openLinuxDownload?: () => Promise<void>;
 }
 
 @Component({
@@ -23,12 +29,17 @@ export interface UpdateAvailableDialogData {
 })
 export class UpdateAvailableDialogComponent {
   dialogRef = inject(CustomDialogRef<UpdateAvailableDialogComponent, UpdateInstallOutcome>);
+  private readonly clipboard = inject(ClipboardService);
 
   data!: UpdateAvailableDialogData;
 
   installing = signal(false);
   progressMessage = signal<string | null>(null);
   errorMessage = signal<string | null>(null);
+
+  get linuxManualUpdate(): LinuxManualUpdateInfo | undefined {
+    return this.data.linuxManualUpdate;
+  }
 
   async install(): Promise<void> {
     if (this.installing()) {
@@ -52,6 +63,33 @@ export class UpdateAvailableDialogComponent {
       this.progressMessage.set(null);
     } finally {
       this.installing.set(false);
+    }
+  }
+
+  async copyLinuxInstallCommand(): Promise<void> {
+    const installCommand = this.linuxManualUpdate?.installCommand;
+    if (!installCommand) {
+      return;
+    }
+
+    await this.clipboard.copyText(
+      installCommand,
+      $localize`:@@desktopUpdater.dialog.linux.commandCopied:Install command copied to clipboard.`
+    );
+  }
+
+  async openLinuxDownload(): Promise<void> {
+    if (!this.data.openLinuxDownload) {
+      return;
+    }
+
+    try {
+      await this.data.openLinuxDownload();
+    } catch (error) {
+      const message = error instanceof Error
+        ? error.message
+        : $localize`:@@desktopUpdater.dialog.linux.downloadFailed:Unable to open the package download right now.`;
+      this.errorMessage.set(message);
     }
   }
 
