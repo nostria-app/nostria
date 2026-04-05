@@ -3321,11 +3321,9 @@ export class LayoutService implements OnDestroy {
    */
   scrollLayoutToTop(smooth = true, panel: 'left' | 'right' = 'left'): void {
     if (!isPlatformBrowser(this.platformId)) return;
-    this.logger.debug('[LayoutService] scrollLayoutToTop called with panel:', panel);
     const panelSelector = panel === 'left' ? '.left-panel' : '.right-panel';
     const panelContainer = document.querySelector(panelSelector);
     if (panelContainer) {
-      this.logger.debug('[LayoutService] Scrolling', panelSelector, 'to top');
       panelContainer.scrollTo({ top: 0, behavior: smooth ? 'smooth' : 'instant' });
     }
   }

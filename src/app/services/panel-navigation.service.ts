@@ -467,7 +467,6 @@ export class PanelNavigationService {
       // Clear the page title when left panel route actually changes (not just when right panel opens)
       // Components that want a custom title will set it in their ngOnInit
       const leftPathActuallyChanged = !currentLeft || currentLeft.path !== leftPath;
-      this.logger.debug('[PanelNav] leftPathActuallyChanged:', leftPathActuallyChanged, 'currentLeft:', currentLeft?.path, 'leftPath:', leftPath, 'rightPath:', rightPath);
       if (leftPathActuallyChanged) {
         this.panelActions.clearPageTitle();
         this.panelActions.clearLeftPanelActions();
@@ -477,7 +476,6 @@ export class PanelNavigationService {
         const isFeedsRoute = leftPath === 'f' || leftPath === '/f';
         const isProfileTabSwitch = this.isProfileTabSwitch(currentLeft?.path, leftPath);
         if (!this._isBackNavigation && !isFeedsRoute && !isProfileTabSwitch) {
-          this.logger.debug('[PanelNav] Scrolling left panel to top');
           this.scrollLeftPanelToTop();
         }
       }
