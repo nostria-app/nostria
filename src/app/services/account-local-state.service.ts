@@ -97,7 +97,7 @@ interface AccountLocalState {
   unreadMessagesCount?: number; // Cached count of unread direct messages
   hiddenChatIds?: string[]; // Chat IDs that user has hidden
   hiddenMessageIds?: Record<string, string[]>; // Hidden message IDs per chat (chatId -> messageId[])
-  chatDrafts?: Record<string, string>; // Draft message text per chat (chatId -> text)
+  chatDrafts?: Record<string, string>; // @deprecated migrated to dedicated chat draft storage
   globalEventExpiration?: number | null; // Global expiration time in hours for all events created (null = disabled)
   musicTrackLicense?: string; // Last used license for music tracks
   musicTrackLicenseUrl?: string; // Last used license URL for music tracks (for custom licenses)
@@ -179,8 +179,10 @@ export interface AccountWallet {
  * Root structure for all account states
  */
 type AccountStatesRoot = Record<string, AccountLocalState>;
+type ChatDraftsRoot = Record<string, Record<string, string>>;
 
 const ACCOUNT_STATE_KEY = 'nostria-state';
+const CHAT_DRAFTS_STORAGE_KEY = 'nostria-chat-drafts';
 const MAX_PROCESSED_FOLLOWER_NOTIFICATIONS = 4000;
 const PROCESSED_FOLLOWER_RETENTION_SECONDS = 90 * 24 * 60 * 60;
 
@@ -203,6 +205,7 @@ export class AccountLocalStateService {
 
   // In-memory cache of account states to avoid repeated localStorage reads
   private cachedStates: AccountStatesRoot | null = null;
+  private cachedChatDraftStates: ChatDraftsRoot | null = null;
 
   // Signal to trigger reactivity when trusted media authors change
   private trustedMediaAuthorsVersion = signal(0);
@@ -259,6 +262,62 @@ export class AccountLocalStateService {
     } catch (error) {
       this.logger.error('Failed to save account states:', error);
     }
+  }
+
+  private getAllChatDraftStates(): ChatDraftsRoot {
+    if (this.cachedChatDraftStates !== null) {
+      return this.cachedChatDraftStates;
+    }
+
+    try {
+      const data = this.localStorage.getItem(CHAT_DRAFTS_STORAGE_KEY);
+      if (data) {
+        this.cachedChatDraftStates = JSON.parse(data) as ChatDraftsRoot;
+        return this.cachedChatDraftStates;
+      }
+    } catch (error) {
+      this.logger.error('Failed to load chat draft states:', error);
+    }
+
+    this.cachedChatDraftStates = {};
+    return this.cachedChatDraftStates;
+  }
+
+  private saveAllChatDraftStates(states: ChatDraftsRoot): void {
+    try {
+      this.cachedChatDraftStates = states;
+      if (Object.keys(states).length === 0) {
+        this.localStorage.removeItem(CHAT_DRAFTS_STORAGE_KEY);
+        return;
+      }
+
+      this.localStorage.setItem(CHAT_DRAFTS_STORAGE_KEY, JSON.stringify(states));
+    } catch (error) {
+      this.logger.error('Failed to save chat draft states:', error);
+    }
+  }
+
+  private migrateLegacyChatDrafts(pubkey: string): Record<string, string> {
+    const allDraftStates = this.getAllChatDraftStates();
+    const existingDrafts = allDraftStates[pubkey];
+    if (existingDrafts) {
+      return existingDrafts;
+    }
+
+    const allStates = this.getAllStates();
+    const legacyDrafts = allStates[pubkey]?.chatDrafts;
+    if (!legacyDrafts || Object.keys(legacyDrafts).length === 0) {
+      return {};
+    }
+
+    allDraftStates[pubkey] = { ...legacyDrafts };
+    this.saveAllChatDraftStates(allDraftStates);
+
+    const { chatDrafts: _legacyDrafts, ...restState } = allStates[pubkey];
+    allStates[pubkey] = restState;
+    this.saveAllStates(allStates);
+
+    return allDraftStates[pubkey];
   }
 
   /**
@@ -1287,30 +1346,32 @@ export class AccountLocalStateService {
    * Get the locally stored draft text for a chat.
    */
   getChatDraft(pubkey: string, chatId: string): string {
-    return this.getAccountState(pubkey).chatDrafts?.[chatId] || '';
+    return this.migrateLegacyChatDrafts(pubkey)[chatId] || '';
   }
 
   /**
    * Store or clear the locally stored draft text for a chat.
    */
   setChatDraft(pubkey: string, chatId: string, text: string): void {
-    const state = this.getAccountState(pubkey);
-    const currentDrafts = state.chatDrafts || {};
+    const allDraftStates = this.getAllChatDraftStates();
+    const currentDrafts = allDraftStates[pubkey] || this.migrateLegacyChatDrafts(pubkey);
 
     if (!text) {
       const { [chatId]: _, ...rest } = currentDrafts;
-      this.updateAccountState(pubkey, {
-        chatDrafts: Object.keys(rest).length > 0 ? rest : undefined,
-      });
+      if (Object.keys(rest).length > 0) {
+        allDraftStates[pubkey] = rest;
+      } else {
+        delete allDraftStates[pubkey];
+      }
+      this.saveAllChatDraftStates(allDraftStates);
       return;
     }
 
-    this.updateAccountState(pubkey, {
-      chatDrafts: {
-        ...currentDrafts,
-        [chatId]: text,
-      },
-    });
+    allDraftStates[pubkey] = {
+      ...currentDrafts,
+      [chatId]: text,
+    };
+    this.saveAllChatDraftStates(allDraftStates);
   }
 
   /**
@@ -1947,6 +2008,12 @@ export class AccountLocalStateService {
     const allStates = this.getAllStates();
     delete allStates[pubkey];
     this.saveAllStates(allStates);
+
+    const allDraftStates = this.getAllChatDraftStates();
+    if (allDraftStates[pubkey]) {
+      delete allDraftStates[pubkey];
+      this.saveAllChatDraftStates(allDraftStates);
+    }
   }
 
   /**
@@ -1982,6 +2049,8 @@ export class AccountLocalStateService {
    */
   clearAllStates(): void {
     this.cachedStates = null;
+    this.cachedChatDraftStates = null;
     this.localStorage.removeItem(ACCOUNT_STATE_KEY);
+    this.localStorage.removeItem(CHAT_DRAFTS_STORAGE_KEY);
   }
 }

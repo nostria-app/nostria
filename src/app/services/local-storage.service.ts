@@ -12,12 +12,17 @@ export class LocalStorageService {
   private readonly platformId = inject(PLATFORM_ID);
   private readonly document = inject(DOCUMENT);
   private readonly logger = inject(LoggerService);
+  private readonly mutedDebugKeys = new Set(['nostria-state', 'nostria-chat-drafts']);
 
   // Signal to track if we're running in browser (as opposed to server)
   private readonly isBrowser = signal(isPlatformBrowser(this.platformId));
 
   // Memory storage for SSR fallback
   private readonly memoryStore = signal<Record<string, string>>({});
+
+  private shouldLogKey(key: string): boolean {
+    return !this.mutedDebugKeys.has(key);
+  }
 
   // Computed state that checks if local storage is available
   readonly isAvailable = computed(() => {
@@ -66,7 +71,9 @@ export class LocalStorageService {
     try {
       if (this.isAvailable()) {
         localStorage.setItem(key, value);
-        this.logger.debug(`Stored "${key}" in localStorage`);
+        if (this.shouldLogKey(key)) {
+          this.logger.debug(`Stored "${key}" in localStorage`);
+        }
         return true;
       } else {
         // Update memory store for SSR
@@ -74,7 +81,9 @@ export class LocalStorageService {
           ...store,
           [key]: value,
         }));
-        this.logger.debug(`Stored "${key}" in memory store (SSR or localStorage unavailable)`);
+        if (this.shouldLogKey(key)) {
+          this.logger.debug(`Stored "${key}" in memory store (SSR or localStorage unavailable)`);
+        }
         return true;
       }
     } catch (error) {
@@ -92,7 +101,9 @@ export class LocalStorageService {
     try {
       if (this.isAvailable()) {
         localStorage.removeItem(key);
-        this.logger.debug(`Removed "${key}" from localStorage`);
+        if (this.shouldLogKey(key)) {
+          this.logger.debug(`Removed "${key}" from localStorage`);
+        }
         return true;
       } else {
         // Update memory store for SSR
@@ -100,7 +111,9 @@ export class LocalStorageService {
           const { [key]: removed, ...rest } = store;
           return rest;
         });
-        this.logger.debug(`Removed "${key}" from memory store (SSR or localStorage unavailable)`);
+        if (this.shouldLogKey(key)) {
+          this.logger.debug(`Removed "${key}" from memory store (SSR or localStorage unavailable)`);
+        }
         return true;
       }
     } catch (error) {

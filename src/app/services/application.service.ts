@@ -258,6 +258,7 @@ export class ApplicationService {
       this.favorites.STORAGE_KEY,
 
       'nostria-notification-filters',
+      'nostria-chat-drafts',
       'nostria-poll-drafts',
       'nostria-polls',
       'nostria-subscriptions',
