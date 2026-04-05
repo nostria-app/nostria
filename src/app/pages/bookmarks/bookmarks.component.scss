@@ -1056,6 +1056,10 @@
 }
 
 .load-more-indicator {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
   text-align: center;
   padding: 24px;
   color: var(--mat-sys-on-surface-variant);
@@ -1064,5 +1068,9 @@
 
   p {
     margin: 0;
+  }
+
+  button {
+    opacity: 1;
   }
 }

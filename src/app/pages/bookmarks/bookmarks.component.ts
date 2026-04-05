@@ -1,5 +1,6 @@
-import { Component, inject, signal, computed, effect, OnInit, ChangeDetectionStrategy } from '@angular/core';
+import { Component, inject, signal, computed, effect, OnInit, AfterViewInit, OnDestroy, ChangeDetectionStrategy, ElementRef, PLATFORM_ID } from '@angular/core';
 import { CdkDragDrop, DragDropModule } from '@angular/cdk/drag-drop';
+import { isPlatformBrowser } from '@angular/common';
 
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -118,10 +119,12 @@ interface CompactUrlDetails {
   templateUrl: './bookmarks.component.html',
   styleUrl: './bookmarks.component.scss',
 })
-export class BookmarksComponent implements OnInit {
+export class BookmarksComponent implements OnInit, AfterViewInit, OnDestroy {
   private logger = inject(LoggerService);
   private dialog = inject(MatDialog);
   private snackBar = inject(MatSnackBar);
+  private hostElement = inject<ElementRef<HTMLElement>>(ElementRef);
+  private platformId = inject(PLATFORM_ID);
   private localStorage = inject(LocalStorageService);
   private accountLocalState = inject(AccountLocalStateService);
   private accountState = inject(AccountStateService);
@@ -135,6 +138,9 @@ export class BookmarksComponent implements OnInit {
   private relayPool = inject(RelayPoolService);
   private openGraph = inject(OpenGraphService);
   private deleteEventService = inject(DeleteEventService);
+  private scrollContainer: HTMLElement | Window | null = null;
+  private loadMoreCheckScheduled = false;
+  private readonly scrollHandler = () => this.checkLoadMoreThreshold();
 
   // Loading states
   loading = signal(false);
@@ -333,8 +339,18 @@ export class BookmarksComponent implements OnInit {
     this.resetPagination();
   }
 
+  ngAfterViewInit(): void {
+    this.attachScrollListener();
+    this.scheduleLoadMoreCheck();
+  }
+
+  ngOnDestroy(): void {
+    this.detachScrollListener();
+  }
+
   private resetPagination(): void {
     this.displayedBookmarkCount.set(this.PAGE_SIZE);
+    this.scheduleLoadMoreCheck();
   }
 
   /**
@@ -350,6 +366,7 @@ export class BookmarksComponent implements OnInit {
     if (current < total) {
       this.displayedBookmarkCount.set(Math.min(current + this.PAGE_SIZE, total));
       this.logger.debug(`[Bookmarks] Loaded more bookmarks: ${this.displayedBookmarkCount()}/${total}`);
+      this.scheduleLoadMoreCheck();
     }
   }
 
@@ -357,13 +374,8 @@ export class BookmarksComponent implements OnInit {
    * Handle scroll events to trigger loading more items
    */
   onScroll(event: Event): void {
-    const element = event.target as HTMLElement;
-    const scrollPosition = element.scrollTop + element.clientHeight;
-    const scrollHeight = element.scrollHeight;
-
-    // Load more when scrolled to 80% of the way down
-    if (scrollPosition >= scrollHeight * 0.8) {
-      this.loadMore();
+    if (event.target instanceof HTMLElement) {
+      this.checkLoadMoreThreshold(event.target);
     }
   }
 
@@ -376,6 +388,85 @@ export class BookmarksComponent implements OnInit {
     }
 
     return this.displayedBookmarkCount() < this.filteredSortedBookmarks().length;
+  }
+
+  private attachScrollListener(): void {
+    if (!isPlatformBrowser(this.platformId)) {
+      return;
+    }
+
+    const host = this.hostElement.nativeElement;
+    const scrollContainer = host.closest('.left-panel, .right-panel, .content-wrapper, .mat-drawer-content');
+
+    if (scrollContainer instanceof HTMLElement) {
+      this.scrollContainer = scrollContainer;
+      this.scrollContainer.addEventListener('scroll', this.scrollHandler, { passive: true });
+      return;
+    }
+
+    this.scrollContainer = window;
+    window.addEventListener('scroll', this.scrollHandler, { passive: true });
+  }
+
+  private detachScrollListener(): void {
+    if (!isPlatformBrowser(this.platformId) || !this.scrollContainer) {
+      return;
+    }
+
+    if (this.scrollContainer instanceof Window) {
+      this.scrollContainer.removeEventListener('scroll', this.scrollHandler);
+      return;
+    }
+
+    this.scrollContainer.removeEventListener('scroll', this.scrollHandler);
+  }
+
+  private scheduleLoadMoreCheck(): void {
+    if (!isPlatformBrowser(this.platformId) || this.loadMoreCheckScheduled) {
+      return;
+    }
+
+    this.loadMoreCheckScheduled = true;
+    requestAnimationFrame(() => {
+      this.loadMoreCheckScheduled = false;
+      this.checkLoadMoreThreshold();
+    });
+  }
+
+  private checkLoadMoreThreshold(container?: HTMLElement): void {
+    if (!isPlatformBrowser(this.platformId) || !this.hasMoreToLoad()) {
+      return;
+    }
+
+    const remainingDistance = this.getRemainingScrollDistance(container);
+    if (remainingDistance > 320) {
+      return;
+    }
+
+    const previousCount = this.displayedBookmarkCount();
+    this.loadMore();
+
+    if (this.displayedBookmarkCount() > previousCount && this.hasMoreToLoad()) {
+      this.scheduleLoadMoreCheck();
+    }
+  }
+
+  private getRemainingScrollDistance(container?: HTMLElement): number {
+    if (container) {
+      return container.scrollHeight - (container.scrollTop + container.clientHeight);
+    }
+
+    if (this.scrollContainer && !(this.scrollContainer instanceof Window)) {
+      return this.scrollContainer.scrollHeight - (this.scrollContainer.scrollTop + this.scrollContainer.clientHeight);
+    }
+
+    const doc = document.documentElement;
+    const body = document.body;
+    const scrollTop = window.scrollY || doc.scrollTop || body?.scrollTop || 0;
+    const viewportHeight = window.innerHeight || doc.clientHeight;
+    const scrollHeight = Math.max(doc.scrollHeight, body?.scrollHeight || 0);
+
+    return scrollHeight - (scrollTop + viewportHeight);
   }
 
   private loadFromStorage(): void {

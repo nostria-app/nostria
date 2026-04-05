@@ -372,6 +372,7 @@
     @if (hasVisibleCategories() && hasMoreToLoad()) {
     <div class="load-more-indicator">
       <p>Scroll for more...</p>
+      <button mat-stroked-button type="button" (click)="loadMore()">Load more</button>
     </div>
     }
   </div>
