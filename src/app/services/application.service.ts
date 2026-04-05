@@ -25,6 +25,9 @@ import { FavoritesService } from './favorites.service';
 import { ContentNotificationService } from './content-notification.service';
 import { AccountLocalStateService } from './account-local-state.service';
 import { EventFocusService } from './event-focus.service';
+import { CustomDialogService } from './custom-dialog.service';
+import { AndroidSignerService } from './android-signer.service';
+import { AndroidWipeRestartDialogComponent } from '../components/android-wipe-restart-dialog/android-wipe-restart-dialog.component';
 
 @Injectable({
   providedIn: 'root',
@@ -48,6 +51,8 @@ export class ApplicationService {
   private readonly favorites = inject(FavoritesService);
   private readonly platformId = inject(PLATFORM_ID);
   private readonly eventFocus = inject(EventFocusService);
+  private readonly customDialog = inject(CustomDialogService);
+  private readonly androidSigner = inject(AndroidSignerService);
   readonly isBrowser = signal(isPlatformBrowser(this.platformId));
 
   /** Check the status on fully initialized, which ensures Nostr, Storage and user is logged in. */
@@ -284,6 +289,19 @@ export class ApplicationService {
 
     // Navigate to home page before reloading
     await this.router.navigate(['/']);
+
+    if (this.androidSigner.isSupported()) {
+      this.customDialog.open(AndroidWipeRestartDialogComponent, {
+        title: '',
+        showHeader: false,
+        showCloseButton: false,
+        disableClose: true,
+        width: '100vw',
+        maxWidth: '100vw',
+        panelClass: 'android-wipe-restart-dialog',
+      });
+      return;
+    }
 
     const window = this.appState.getWindow();
 

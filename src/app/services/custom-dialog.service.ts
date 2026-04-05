@@ -196,6 +196,8 @@ export class CustomDialogRef<T = unknown, R = unknown> {
 export interface CustomDialogConfig {
   /** Dialog title */
   title?: string;
+  /** Show or hide the dialog shell header */
+  showHeader?: boolean;
   /** Icon to show in the header */
   headerIcon?: string;
   /** Secondary icon to show in the header */
@@ -296,6 +298,7 @@ export class CustomDialogService {
 
     // Set dialog configuration using setInput
     if (config.title) dialogRef.setInput('title', config.title);
+    if (config.showHeader !== undefined) dialogRef.setInput('showHeader', config.showHeader);
     if (config.headerIcon) dialogRef.setInput('headerIcon', config.headerIcon);
     if (config.secondaryHeaderIcon) dialogRef.setInput('secondaryHeaderIcon', config.secondaryHeaderIcon);
     if (config.secondaryHeaderTooltip) dialogRef.setInput('secondaryHeaderTooltip', config.secondaryHeaderTooltip);
