@@ -40,12 +40,13 @@ When there is a new release available, you'll see the update notification (butto
 
 **iOS**: Updates will come through App Store (when available).
 
-
 ### Linux
 
 ```bash
 wget https://github.com/nostria-app/nostria/releases/download/v3.1.0/Nostria_3.1.0_amd64.deb
 sudo apt install ./Nostria_3.1.0_amd64.deb
+## Uninstall
+sudo apt remove Nostria
 ```
 
 ## Documentation
