@@ -1011,6 +1011,7 @@ jobs:
       - name: Publish draft GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
           RELEASE_TAG: ${{ needs.prepare-release.outputs.release_tag }}
           RELEASE_NAME: ${{ needs.prepare-release.outputs.release_name }}
           RELEASE_PRERELEASE: ${{ needs.prepare-release.outputs.release_prerelease }}
@@ -1027,8 +1028,8 @@ jobs:
           EOF
           )
 
-          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
-            release_id=$(gh release view "$RELEASE_TAG" --json databaseId --jq '.databaseId')
+          if gh release view "$RELEASE_TAG" --repo "$GH_REPO" >/dev/null 2>&1; then
+            release_id=$(gh release view "$RELEASE_TAG" --repo "$GH_REPO" --json databaseId --jq '.databaseId')
 
             gh api \
               --method PATCH \
@@ -1053,4 +1054,4 @@ jobs:
               -f body="$release_body" >/dev/null
           fi
 
-          gh release upload "$RELEASE_TAG" release-upload/* --clobber
+          gh release upload "$RELEASE_TAG" release-upload/* --repo "$GH_REPO" --clobber
