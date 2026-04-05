@@ -340,7 +340,7 @@
     @switch (bookmark.type) {
     @case ('e') {
     <app-event [id]="bookmark.id" [relayHints]="bookmark.relay ? [bookmark.relay] : undefined"
-      [compact]="viewMode() === 'tiles'"></app-event>
+      [compact]="viewMode() === 'tiles'" [hideFooter]="true" [disableEngagementLoading]="true"></app-event>
     }
     @case ('a') {
     @let bm = bookmarkService.parseArticleId(bookmark.id);
