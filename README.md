@@ -26,6 +26,21 @@ Web: https://nostria.app
 
 Desktop: https://github.com/nostria-app/nostria/releases
 
+### Updates
+
+When there is a new release available, you'll see the update notification (button) in the app. This only works for certain installation packages.
+
+**Linux**: AppImage will update in-place, the .deb package users will need to run installer manually, but the app will notify and install.
+
+**Mac**: App should update.
+
+**Windows**: Only the .exe will show updates, the .msi will not show updates.
+
+**Android**: Updates must be manually downloaded and installed if installing the APK directly. If installing through Google Play, updates will come through the Play Store. Zapstore users must also open Zapstore to get the update.
+
+**iOS**: Updates will come through App Store (when available).
+
+
 ### Linux
 
 ```bash
