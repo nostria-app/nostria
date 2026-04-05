@@ -179,7 +179,7 @@ export class DesktopUpdaterService {
       return version;
     } catch (error) {
       this.logger.warn('[DesktopUpdater] Failed to read app version from Tauri, falling back to manifest version', error);
-      const fallbackVersion = this.app.version;
+      const fallbackVersion = this.app.version();
       this.currentVersion.set(fallbackVersion);
       return fallbackVersion;
     }

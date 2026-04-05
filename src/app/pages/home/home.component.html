@@ -31,7 +31,8 @@
     <a routerLink="/messages" class="bento-tile tile-messages tile-hero-side" mat-ripple>
       <div class="tile-background"></div>
       <div class="tile-content">
-        <mat-icon class="tile-icon" [matBadge]="unreadMessagesCount()" matBadgeSize="small" matBadgeColor="warn">mail</mat-icon>
+        <mat-icon class="tile-icon" [matBadge]="unreadMessagesCount()" matBadgeSize="small"
+          matBadgeColor="warn">mail</mat-icon>
         <h3 i18n="@@home.messages.title">Messages</h3>
       </div>
     </a>
@@ -341,7 +342,7 @@
       <span class="dot">•</span>
       <a routerLink="/about" i18n="@@home.footer.about">About</a>
     </div>
-    <span class="version">Nostria v{{ app.version }}</span>
+    <span class="version">Nostria v{{ app.version() }}</span>
   </footer>
 </div>
 }

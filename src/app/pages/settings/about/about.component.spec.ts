@@ -27,7 +27,7 @@ describe('AboutComponent', () => {
 
     const mockApp = {
       isBrowser: signal(false),
-      version: '1.0.0',
+      version: signal('1.0.0'),
     };
 
     const mockLayout = {

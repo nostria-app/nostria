@@ -7,6 +7,8 @@ import {
   signal,
   untracked,
 } from '@angular/core';
+import { getVersion } from '@tauri-apps/api/app';
+import { isTauri } from '@tauri-apps/api/core';
 import { NostrService } from './nostr.service';
 import { DatabaseService } from './database.service';
 import { Router } from '@angular/router';
@@ -29,7 +31,7 @@ import { EventFocusService } from './event-focus.service';
 })
 export class ApplicationService {
   /** Application version */
-  readonly version = '3.0.0';
+  readonly version = signal('Loading...');
   nostrService = inject(NostrService);
   database = inject(DatabaseService);
   router = inject(Router);
@@ -69,6 +71,8 @@ export class ApplicationService {
   private previousFollowingListHash = '';
 
   constructor() {
+    void this.initializeVersion();
+
     // Effect for profile processing when following list changes
     effect(async () => {
       const followingList = this.accountState.followingList();
@@ -197,6 +201,35 @@ export class ApplicationService {
         }
       });
     });
+  }
+
+  private async initializeVersion(): Promise<void> {
+    if (!this.isBrowser()) {
+      return;
+    }
+
+    if (isTauri()) {
+      try {
+        const version = await getVersion();
+        this.version.set(version);
+        return;
+      } catch (error) {
+        this.logger.warn('[ApplicationService] Failed to read app version from Tauri', error);
+      }
+    }
+
+    try {
+      const response = await fetch('/manifest.webmanifest');
+      if (!response.ok) {
+        throw new Error(`Failed to load manifest.webmanifest: ${response.status}`);
+      }
+
+      const manifest = await response.json() as { version?: string };
+      this.version.set(manifest.version || 'Unknown');
+    } catch (error) {
+      this.logger.warn('[ApplicationService] Failed to read app version from manifest', error);
+      this.version.set('Unknown');
+    }
   }
 
   private getStoredFeatureLevel(): FeatureLevel {

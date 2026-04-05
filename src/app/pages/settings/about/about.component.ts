@@ -1,5 +1,6 @@
 import { DatePipe } from '@angular/common';
-import { Component, effect, inject, signal, OnInit, OnDestroy, ChangeDetectionStrategy } from '@angular/core';
+import { Component, computed, inject, signal, OnInit, OnDestroy, ChangeDetectionStrategy } from '@angular/core';
+import { isTauri } from '@tauri-apps/api/core';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
@@ -44,7 +45,7 @@ export class AboutComponent implements OnInit, OnDestroy {
   private readonly zapSound = inject(ZapSoundService);
   private readonly haptics = inject(HapticsService);
   readonly desktopUpdater = inject(DesktopUpdaterService);
-  version = signal('Loading...');
+  version = computed(() => this.app.version());
   videoFailed = signal(false);
   commitSha = signal<string | undefined>(undefined);
   commitShort = signal<string | undefined>(undefined);
@@ -57,11 +58,7 @@ export class AboutComponent implements OnInit, OnDestroy {
   /** Timers for the demo sequence so we can clean up. */
   private demoTimers: ReturnType<typeof setTimeout>[] = [];
 
-  constructor() {
-    effect(() => {
-      this.fetchManifestVersion();
-    });
-  }
+  constructor() { }
 
   resetIntroduction() {
     this.layout.showWelcomeScreen.set(true);
@@ -94,6 +91,7 @@ export class AboutComponent implements OnInit, OnDestroy {
 
   async ngOnInit() {
     // Parent settings component handles the page title
+    void this.fetchBuildMetadata();
   }
 
   ngOnDestroy() {
@@ -158,10 +156,12 @@ export class AboutComponent implements OnInit, OnDestroy {
     void this.desktopUpdater.checkForUpdates({ interactive: true, source: 'manual' });
   }
 
-  private async fetchManifestVersion(): Promise<void> {
-    // Skip fetch on server side
+  private async fetchBuildMetadata(): Promise<void> {
     if (!this.app.isBrowser()) {
-      this.version.set('1.0.0'); // Default value for SSR
+      return;
+    }
+
+    if (isTauri()) {
       return;
     }
 
@@ -171,14 +171,6 @@ export class AboutComponent implements OnInit, OnDestroy {
         throw new Error(`Failed to load manifest.webmanifest: ${response.status}`);
       }
       const manifestData = await response.json() as WebManifest;
-
-      // Check if version exists in the manifest, otherwise fallback
-      if (manifestData.version) {
-        this.version.set(manifestData.version);
-      } else {
-        this.logger.warn('Version not found in manifest.webmanifest');
-        this.version.set('1.0.0'); // Fallback version
-      }
 
       // Set commit and build date information
       if (manifestData.commitSha) {
@@ -192,7 +184,6 @@ export class AboutComponent implements OnInit, OnDestroy {
       }
     } catch (error) {
       this.logger.error('Error fetching manifest.webmanifest:', error);
-      this.version.set('1.0.0'); // Fallback version
     }
   }
 }
