@@ -731,13 +731,6 @@ export class UserDataService {
     limit = 20,
     options?: CacheOptions & DataOptions,
   ): Promise<NostrRecord[]> {
-    console.log('[UserDataService] getEventsByPubkeyAndKindPaginated called:', {
-      pubkey: Array.isArray(pubkey) ? pubkey.map(p => p.slice(0, 8)) : pubkey.slice(0, 8),
-      kind,
-      until: until ? new Date(until * 1000).toISOString() : 'none',
-      limit
-    });
-
     // Validate pubkey parameter
     if (!pubkey || (Array.isArray(pubkey) && pubkey.length === 0)) {
       this.logger.warn('getEventsByPubkeyAndKindPaginated called with invalid pubkey:', pubkey);
@@ -811,11 +804,8 @@ export class UserDataService {
     const [dbEvents, relayEvents] = await Promise.all([dbEventsPromise, relayEventsPromise]);
 
     if (dbEvents.length > 0) {
-      console.log(`📀 [DB Cache] Loaded ${dbEvents.length} events from database for kind ${kind} with tag ${eventTag.substring(0, 8)}...`);
       this.logger.debug(`Found ${dbEvents.length} cached events for non-replaceable kind ${kind} with tag ${eventTag}`);
     }
-
-    console.log(`🌐 [Relay] Fetching kind ${kind} with tag ${eventTag.substring(0, 8)}... from relays (db had ${dbEvents.length})`);
 
     // Merge database and relay events, deduplicated by event ID
     const eventMap = new Map<string, Event>();
@@ -827,7 +817,6 @@ export class UserDataService {
 
     // Add/update with relay events (relay events take precedence if same ID)
     if (relayEvents && relayEvents.length > 0) {
-      console.log(`🌐 [Relay] Received ${relayEvents.length} events from relays for kind ${kind}`);
       for (const event of relayEvents) {
         eventMap.set(event.id, event);
       }
@@ -901,11 +890,8 @@ export class UserDataService {
     const [dbEvents, relayEvents] = await Promise.all([dbEventsPromise, relayEventsPromise]);
 
     if (dbEvents.length > 0) {
-      console.log(`📀 [DB Cache] Loaded ${dbEvents.length} events from database for kinds [${kinds.join(',')}] with tag ${eventTag.substring(0, 8)}...`);
       this.logger.debug(`Found ${dbEvents.length} cached events for non-replaceable kinds [${kinds.join(',')}] with tag ${eventTag}`);
     }
-
-    console.log(`🌐 [Relay] Fetching kinds [${kinds.join(',')}] with tag ${eventTag.substring(0, 8)}... from relays (db had ${dbEvents.length})`);
 
     // Merge database and relay events, deduplicated by event ID
     const eventMap = new Map<string, Event>();
@@ -917,7 +903,6 @@ export class UserDataService {
 
     // Add/update with relay events (relay events take precedence if same ID)
     if (relayEvents && relayEvents.length > 0) {
-      console.log(`🌐 [Relay] Received ${relayEvents.length} events from relays for kinds [${kinds.join(',')}]`);
       for (const event of relayEvents) {
         eventMap.set(event.id, event);
       }

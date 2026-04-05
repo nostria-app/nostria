@@ -47,14 +47,6 @@ if (typeof window !== 'undefined') {
   }
 }
 
-// Create a logger for bootstrapping phase
-const bootstrapLogger = {
-  log: (message: string) => console.log(`[BOOTSTRAP] ${message}`),
-  error: (message: string, error?: any) => console.error(`[BOOTSTRAP ERROR] ${message}`, error),
-};
-
-bootstrapLogger.log('Configuring application');
-
 export const appConfig: ApplicationConfig = {
   providers: [
     { provide: LOCALE_ID, useValue: appLang },
@@ -81,10 +73,7 @@ export const appConfig: ApplicationConfig = {
     }),
     {
       provide: LoggerService,
-      useFactory: () => {
-        bootstrapLogger.log('Creating LoggerService');
-        return new LoggerService();
-      },
+      useFactory: () => new LoggerService(),
     },
     {
       provide: ApiConfiguration,
@@ -151,5 +140,3 @@ export const appConfig: ApplicationConfig = {
     importProvidersFrom(DragDropModule),
   ],
 };
-
-bootstrapLogger.log('Application configuration complete');

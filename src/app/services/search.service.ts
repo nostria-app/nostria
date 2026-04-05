@@ -145,8 +145,6 @@ export class SearchService {
     }
 
     this.#lastQuery = searchValue;
-    console.log('SearchService effect triggered with query:', searchValue);
-
     // Check if query is a URL
     const isUrl = /^(http|https):\/\/[^ "]+$/.test(searchValue);
 
@@ -267,13 +265,6 @@ export class SearchService {
       source: 'following' as const,
     }));
 
-    console.log(
-      'Following search results:',
-      followingProfileResults.length,
-      'results for query:',
-      searchValue
-    );
-
     // Search in all cached profiles from database (excluding already found following profiles)
     const followingPubkeys = new Set(followingRecords.map(p => p.event.pubkey));
     const cachedProfileEvents = await this.database.searchCachedProfiles(searchValue);
@@ -293,13 +284,6 @@ export class SearchService {
           source: 'cached' as const,
         };
       });
-
-    console.log(
-      'Cached search results:',
-      cachedProfileResults.length,
-      'additional cached profiles for query:',
-      searchValue
-    );
 
     // Combine following and cached results
     const allLocalResults = [...followingProfileResults, ...cachedProfileResults];
@@ -331,8 +315,6 @@ export class SearchService {
       if (isNip05(nip05Value)) {
         try {
           const profile = await queryProfile(nip05Value);
-          console.log('Profile:', profile);
-
           if (profile?.pubkey) {
             this.layout.openProfile(profile?.pubkey);
             this.layout.toggleSearch();
@@ -352,13 +334,10 @@ export class SearchService {
    * First tries account relays, then falls back to popular observed relays
    */
   private async searchForEventById(eventId: string): Promise<void> {
-    console.log('Searching for event by ID:', eventId);
-
     try {
       // If user is authenticated, try their account relays first
       if (this.accountState.pubkey()) {
         const pubkey = this.accountState.pubkey();
-        console.log('Trying to fetch event from account relays');
 
         const event = await this.userData.getEventById(pubkey, eventId, {
           save: true,
@@ -366,7 +345,6 @@ export class SearchService {
         });
 
         if (event) {
-          console.log('Event found on account relays:', event);
           this.layout.openEvent(eventId, event.event);
           this.layout.toggleSearch();
           return;
@@ -374,8 +352,6 @@ export class SearchService {
       }
 
       // If not found on account relays, try observed relays sorted by popularity
-      console.log('Event not found on account relays, trying observed relays');
-
       const observedRelays = await this.relaysService.getAllObservedRelays();
 
       // Sort by events received (popularity) and connection success
@@ -395,22 +371,14 @@ export class SearchService {
         })
         .map(relay => relay.url);
 
-      console.log(
-        'Searching through',
-        sortedRelays.length,
-        'observed relays (most popular first)'
-      );
-
       // Try up to 20 of the most popular relays
       const relaysToTry = sortedRelays.slice(0, 20);
 
       for (const relayUrl of relaysToTry) {
         try {
-          console.log('Trying relay:', relayUrl);
           const event = await this.relayPool.getEventById([relayUrl], eventId, 2000);
 
           if (event) {
-            console.log('Event found on relay:', relayUrl);
             this.layout.openEvent(eventId, event);
             this.layout.toggleSearch();
 
@@ -419,12 +387,10 @@ export class SearchService {
             return;
           }
         } catch (error) {
-          console.debug('Failed to fetch from relay:', relayUrl, error);
           // Continue to next relay
         }
       }
 
-      console.log('Event not found on any relay');
       this.layout.toast('Event not found');
     } catch (error) {
       console.error('Error searching for event:', error);

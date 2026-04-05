@@ -76,7 +76,6 @@ export class SubscriptionCacheService implements OnDestroy {
 
     if (existing && Date.now() - existing.timestamp < this.deduplicationWindow) {
       this.deduplicationHits.update((count) => count + 1);
-      console.log(`[SubscriptionCache] Deduplicating request for ${type}: ${eventIds.join(', ')}`);
       return existing.promise as Promise<T>;
     }
 
@@ -163,7 +162,6 @@ export class SubscriptionCacheService implements OnDestroy {
     }
 
     keysToDelete.forEach((key) => this.resultCache.delete(key));
-    console.log(`[SubscriptionCache] Invalidated ${keysToDelete.length} cache entries`);
   }
 
   /**
@@ -205,11 +203,6 @@ export class SubscriptionCacheService implements OnDestroy {
       }
     }
 
-    if (cleanedCache > 0 || cleanedPending > 0) {
-      console.log(
-        `[SubscriptionCache] Cleaned up ${cleanedCache} cached entries and ${cleanedPending} pending subscriptions`,
-      );
-    }
   }
 
   /**

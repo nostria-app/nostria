@@ -15,7 +15,7 @@ export interface AuthenticationInit {
 export class WebRequest {
   nostr = inject(NostrService);
 
-  constructor() {}
+  constructor() { }
 
   async fetchText(url: string, options?: RequestInit, auth?: AuthenticationInit): Promise<string> {
     try {
@@ -67,7 +67,6 @@ export class WebRequest {
         (options.headers as Record<string, string>)['Authorization'] = `Nostr ${authHeader}`;
       }
 
-      console.log('WebRequest.fetch', url, options);
       const response = await fetch(url, options);
 
       if (!response.ok) {

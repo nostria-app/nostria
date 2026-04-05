@@ -296,8 +296,8 @@ export class TwoColumnLayoutService {
       }
     });
 
-  // Track route changes
-  this.router.events.pipe(
+    // Track route changes
+    this.router.events.pipe(
       filter(event => event instanceof NavigationEnd)
     ).subscribe((event) => {
       const navEvent = event as NavigationEnd;
@@ -465,20 +465,8 @@ export class TwoColumnLayoutService {
     // Check if there's right panel content
     const hasRightContent = this.panelNav.hasRightContent() || this.rightPanel.hasContent();
 
-    console.log('[resetNavigation]', {
-      route,
-      normalizedTarget,
-      currentUrl,
-      currentPrimaryPath,
-      isSameSection,
-      hasRightContent,
-      panelNavHasRight: this.panelNav.hasRightContent(),
-      rightPanelHasContent: this.rightPanel.hasContent()
-    });
-
     // If re-opening the same section and there's right panel content, just clear the right panel
     if (isSameSection && hasRightContent) {
-      console.log('[resetNavigation] Same section with right content - clearing right panel only');
       // Clear right panel navigation stack and component stack
       this.panelNav.clearRightStack();
       this.rightPanel.clearHistory();
@@ -498,7 +486,6 @@ export class TwoColumnLayoutService {
 
       // Navigate to the same route without the right outlet
       const targetUrl = '/' + normalizedTarget;
-      console.log('[resetNavigation] Navigating to:', targetUrl, 'with queryParams:', queryParams);
       if (hasQueryParams) {
         this.router.navigate([targetUrl], { queryParams });
       } else {
@@ -511,11 +498,9 @@ export class TwoColumnLayoutService {
     // Skip clearing stacks because router.navigateByUrl() will be a no-op (same URL)
     // and the NavigationEnd event that repopulates the stacks won't fire.
     if (isSameSection) {
-      console.log('[resetNavigation] Same section, no right content - nothing to reset');
       return;
     }
 
-    console.log('[resetNavigation] Full reset - different section');
     // Full reset for different sections
     this.panelNav.clearHistory();
     // Clear right panel component stack (RightPanelService manages component instances)

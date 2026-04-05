@@ -668,7 +668,6 @@ export class App implements OnInit, OnDestroy {
       // Filter out items that should be hidden when subscribed
       // Only hide if there's a valid subscription with an expiry date
       if (item.hideOnSubscribed && subscription?.expires) {
-        this.logger.info('Hiding item due to subscription:', item.label);
         return false;
       }
 
@@ -741,12 +740,6 @@ export class App implements OnInit, OnDestroy {
   private readonly defaultMenuIds = [...DEFAULT_MENU_ITEM_IDS];
 
   constructor() {
-    this.logger.info('[App] ==> AppComponent constructor started');
-    this.logger.debug('[App] Services injection status:');
-    this.logger.debug('[App] - NostrProtocolService injected:', !!this.nostrProtocol);
-    this.logger.debug('[App] - ApplicationService injected:', !!this.app);
-    this.logger.debug('[App] - LoggerService injected:', !!this.logger);
-
     // EARLY ROUTE RESTORATION: Check synchronously from localStorage before Angular
     // processes the initial navigation to '/'. This prevents the Home→Feeds flash
     // by navigating to the saved route BEFORE the first render completes.
@@ -759,7 +752,6 @@ export class App implements OnInit, OnDestroy {
           if (pubkey && this.localSettings.startOnLastRoute()) {
             const lastRoute = this.accountLocalState.getLastRoute(pubkey);
             if (lastRoute && lastRoute !== '/' && lastRoute !== this.initialUrl) {
-              this.logger.info(`[App] Early route restoration: navigating to ${lastRoute}`);
               this.hasRestoredRoute = true;
               // Navigate immediately — Angular hasn't completed initial navigation yet,
               // so this replaces the default '/' navigation rather than adding a second one.
@@ -820,7 +812,6 @@ export class App implements OnInit, OnDestroy {
     });
 
     if (!this.app.isBrowser()) {
-      this.logger.info('[App] Not in browser environment, skipping browser-specific setup');
       return;
     }
 
@@ -852,37 +843,17 @@ export class App implements OnInit, OnDestroy {
     }
 
     if ('launchQueue' in window) {
-      this.logger.info('[App] LaunchQueue is available, setting up consumer');
       const launchQueue = (window as any).launchQueue;
 
       launchQueue.setConsumer(async (launchParams: any) => {
-        this.logger.info('[App] LaunchQueue consumer triggered');
-        this.logger.info('[App] LaunchParams received:', launchParams);
-        this.logger.info('[App] LaunchParams type:', typeof launchParams);
-
         if (launchParams?.targetURL) {
-          this.logger.info('[App] Target URL found in launch params');
-          this.logger.info('[App] Target URL:', launchParams.targetURL);
-          this.logger.info('[App] Target URL type:', typeof launchParams.targetURL);
-          this.logger.info(
-            '[App] Target URL length:',
-            launchParams.targetURL?.length || 'undefined'
-          );
-
           // Handle nostr protocol links
           const url = launchParams.targetURL;
-          this.logger.debug('[App] Checking if URL contains nostr or nwc parameter');
 
           if (url.includes('nostr=') || url.includes('nwc=')) {
-            this.logger.info('[App] *** NOSTR/NWC PROTOCOL DETECTED IN LAUNCH QUEUE ***');
-            this.logger.info('[App] Processing protocol from launch queue');
-            this.logger.info('[App] URL with parameter:', url);
-
             try {
               await this.nostrProtocol.handleNostrProtocol(url);
-              this.logger.info('[App] *** PROTOCOL HANDLING COMPLETED SUCCESSFULLY ***');
             } catch (error) {
-              this.logger.error('[App] *** PROTOCOL HANDLING FAILED ***');
               this.logger.error('[App] Launch queue protocol error:', error);
 
               if (error instanceof Error) {
@@ -892,9 +863,6 @@ export class App implements OnInit, OnDestroy {
               }
             }
           } else {
-            this.logger.debug('[App] No nostr parameter found in launch queue URL');
-            this.logger.debug('[App] URL content for analysis:', url);
-
             // Check for other patterns that might indicate nostr content
             if (url.includes('nostr')) {
               this.logger.warn('[App] URL contains "nostr" but not as expected parameter:', url);
@@ -905,14 +873,6 @@ export class App implements OnInit, OnDestroy {
           this.logger.warn('[App] LaunchParams structure:', Object.keys(launchParams || {}));
         }
       });
-
-      this.logger.info('[App] LaunchQueue consumer setup completed');
-    } else {
-      this.logger.info('[App] LaunchQueue not available in this environment');
-      this.logger.debug(
-        '[App] Window object keys containing "launch":',
-        Object.keys(window).filter(key => key.toLowerCase().includes('launch'))
-      );
     }
 
     // Track previous handset state to detect transitions
@@ -999,7 +959,6 @@ export class App implements OnInit, OnDestroy {
       effect(() => {
         const showSuccess = this.appState.showSuccess();
         if (showSuccess) {
-          this.logger.debug('Data loading completed, refreshing user metadata');
           // this.nostrService.loadUsersMetadata().catch(err =>
           //   this.logger.error('Failed to reload metadata after data loading', err));
         }
@@ -1039,7 +998,6 @@ export class App implements OnInit, OnDestroy {
         const pubkey = this.accountState.pubkey();
         if (pubkey && event.urlAfterRedirects) {
           this.accountLocalState.setLastRoute(pubkey, event.urlAfterRedirects);
-          this.logger.debug(`[App] Saved last route for account: ${event.urlAfterRedirects}`);
         }
 
         if (event.urlAfterRedirects && !this.isEventRoute(event.urlAfterRedirects)) {
@@ -1056,7 +1014,6 @@ export class App implements OnInit, OnDestroy {
     effect(() => {
       const pubkey = this.accountState.pubkey();
       if (pubkey !== lastPubkey) {
-        this.logger.debug(`[App] Account changed from ${lastPubkey?.substring(0, 8)} to ${pubkey?.substring(0, 8)}, resetting route restoration flag`);
         lastPubkey = pubkey;
         this.hasRestoredRoute = false;
         this.deadRelaysPromptCheckedForPubkey = null;
@@ -1105,8 +1062,6 @@ export class App implements OnInit, OnDestroy {
       const pubkey = this.accountState.pubkey();
       const startOnLastRoute = this.localSettings.startOnLastRoute();
 
-      this.logger.debug(`[App] Route restoration effect triggered - authenticated: ${authenticated}, initialized: ${initialized}, pubkey: ${pubkey?.substring(0, 8)}, hasRestored: ${this.hasRestoredRoute}, startOnLastRoute: ${startOnLastRoute}`);
-
       // Only restore if the setting is enabled
       if (authenticated && initialized && pubkey && !this.hasRestoredRoute && startOnLastRoute) {
         // Mark as restored immediately to prevent re-triggering
@@ -1116,31 +1071,22 @@ export class App implements OnInit, OnDestroy {
         // This prevents restoring last route when user directly navigated to a specific URL
         const isRootOrFeeds = this.initialUrl === '/' || this.initialUrl.startsWith('/?') || this.initialUrl === '';
 
-        this.logger.debug(`[App] Route restoration check - initialUrl: ${this.initialUrl}, isRootOrFeeds: ${isRootOrFeeds}`);
-
         if (isRootOrFeeds) {
           const lastRoute = this.accountLocalState.getLastRoute(pubkey);
-          this.logger.debug(`[App] Last route from storage: ${lastRoute}`);
 
           const currentUrl = this.router.url;
           if (lastRoute && lastRoute !== '/' && lastRoute !== currentUrl) {
-            this.logger.info(`[App] Restoring last route: ${lastRoute}`);
             // Use setTimeout to avoid navigation during change detection
             setTimeout(() => {
               this.router.navigateByUrl(lastRoute).catch(err => {
                 this.logger.error('[App] Failed to restore last route', err);
               });
             }, 100);
-          } else {
-            this.logger.debug('[App] No last route to restore or already on that route');
           }
-        } else {
-          this.logger.debug(`[App] Not restoring last route - user navigated directly to: ${this.initialUrl}`);
         }
       } else if (authenticated && initialized && pubkey && !this.hasRestoredRoute && !startOnLastRoute) {
         // Mark as "restored" even though we're not restoring, to prevent checking again
         this.hasRestoredRoute = true;
-        this.logger.debug('[App] Start on last route is disabled, not restoring');
       }
     });
 
@@ -1154,7 +1100,6 @@ export class App implements OnInit, OnDestroy {
         // Only increment launch count once per session
         if (!this.pushPromptShown() && !this.credentialsBackupPromptShown()) {
           const launchCount = this.accountLocalState.incrementLaunchCount(pubkey);
-          this.logger.info(`[App] Launch count for user: ${launchCount}`);
 
           // Show push notification prompt after 5 launches (only once per session and if not previously dismissed)
           const pushDismissed = this.accountLocalState.getDismissedPushNotificationDialog(pubkey);
@@ -1187,10 +1132,8 @@ export class App implements OnInit, OnDestroy {
       }
     });
 
-    this.logger.debug('AppComponent constructor completed'); // Register a one-time callback after the first render
+    // Register a one-time callback after the first render
     afterNextRender(() => {
-      this.logger.debug('AppComponent first render completed');
-
       // Initialize sidenav state after view is ready
       this.initializeSidenavState();
     });
@@ -1218,17 +1161,11 @@ export class App implements OnInit, OnDestroy {
   }
 
   async ngOnInit() {
-    this.logger.info('[App] ==> ngOnInit started');
-    this.logger.debug('[App] Platform check - isBrowser:', this.app.isBrowser());
-
     if (!this.app.isBrowser()) {
-      this.logger.info('[App] Not in browser environment, skipping initialization');
       return;
     }
 
     try {
-      this.logger.info('[App] Initializing storage');
-
       // Add timeout for storage initialization
       // const storageInitPromise = this.storage.init();
       // const timeoutPromise = new Promise<never>((_, reject) => {
@@ -1237,11 +1174,7 @@ export class App implements OnInit, OnDestroy {
       //   }, 15000);
       // });
 
-      // await Promise.race([storageInitPromise, timeoutPromise]);
-      // this.logger.info('[App] Storage initialized successfully');
-
       // Initialize the new DatabaseService
-      this.logger.info('[App] Initializing database');
       const databaseInitPromise = this.database.init();
       const databaseTimeoutPromise = new Promise<never>((_, reject) => {
         setTimeout(() => {
@@ -1250,7 +1183,6 @@ export class App implements OnInit, OnDestroy {
       });
 
       await Promise.race([databaseInitPromise, databaseTimeoutPromise]);
-      this.logger.info('[App] Shared database initialized successfully');
 
       // Open the per-account database if an account is already known from localStorage
       try {
@@ -1258,9 +1190,7 @@ export class App implements OnInit, OnDestroy {
         if (accountJson) {
           const account = JSON.parse(accountJson);
           if (account?.pubkey) {
-            this.logger.info('[App] Opening per-account database for stored account');
             await this.database.initAccount(account.pubkey);
-            this.logger.info('[App] Per-account database initialized');
           } else {
             await this.database.initAnonymous();
           }
@@ -1276,7 +1206,6 @@ export class App implements OnInit, OnDestroy {
       try {
         const relaysService = this.injector.get(RelaysService);
         await relaysService.persistInitialRelayStats();
-        this.logger.info('[App] Initial relay statistics persisted successfully');
       } catch (error) {
         this.logger.warn('[App] Failed to persist initial relay statistics:', error);
       }
@@ -1300,42 +1229,31 @@ export class App implements OnInit, OnDestroy {
     }
 
     // Check for nostr protocol parameter in current URL
-    this.logger.info('[App] Checking for nostr protocol in current URL');
     await this.checkForNostrProtocolInUrl();
 
     this.deferStartupTask('content notifications', async () => {
       // Initialize content notification service
       // This also starts periodic polling for new notifications with visibility awareness
-      this.logger.info('[App] Initializing content notification service');
       const contentNotificationService = this.injector.get(ContentNotificationService);
       await contentNotificationService.initialize();
-      this.logger.info('[App] Content notification service initialized successfully');
       // Note: Periodic polling is now handled internally by ContentNotificationService
       // with visibility awareness (pauses when hidden, checks immediately when visible)
     });
 
     this.deferStartupTask('metrics tracking', () => {
-      this.logger.info('[App] Initializing metrics tracking service');
       const metricsTracking = this.injector.get(MetricsTrackingService);
       metricsTracking.initialize();
-      this.logger.info('[App] Metrics tracking service initialized successfully');
     });
 
     this.deferStartupTask('optional analytics', () => {
-      this.logger.info('[App] Initializing optional analytics service');
       const analyticsService = this.injector.get(AnalyticsService);
       analyticsService.initialize();
-      this.logger.info('[App] Optional analytics service initialized successfully');
     });
 
     this.deferStartupTask('cache cleanup', () => {
-      this.logger.info('[App] Starting cache cleanup service');
       const cacheCleanup = this.injector.get(CacheCleanupService);
       cacheCleanup.start();
-      this.logger.info('[App] Cache cleanup service started successfully');
     });
-
-    this.logger.info('[App] ==> ngOnInit completed');
   }
 
   ngOnDestroy(): void {
@@ -1463,7 +1381,6 @@ export class App implements OnInit, OnDestroy {
 
     dialogRef.afterClosed().subscribe(async result => {
       if (result) {
-        this.logger.info('QR scan result received:', result);
         this.layout.toggleSearch();
 
         try {
@@ -1508,13 +1425,11 @@ export class App implements OnInit, OnDestroy {
 
           // Handle Nostr entities (npub, nprofile, note, nevent, naddr, etc.)
           if (this.isNostrEntity(result)) {
-            this.logger.debug('Handling Nostr entity from QR code:', result);
             await this.handleNostrEntityFromQR(result);
             return;
           }
 
           // Handle any other formats - show a generic message
-          this.logger.info('Unrecognized QR code format:', result);
           this.snackBar.open($localize`:@@app.snackbar.qr-unrecognized:QR code scanned, but format not recognized.`, $localize`:@@app.snackbar.dismiss:Dismiss`, {
             duration: 3000,
             horizontalPosition: 'center',
@@ -2322,7 +2237,7 @@ export class App implements OnInit, OnDestroy {
 
     dialogRef.afterClosed().subscribe((result: EditPeopleListDialogResult | null) => {
       if (result) {
-        this.logger.info('Follow set updated, removed pubkeys:', result.removedPubkeys);
+        void result;
       }
     });
 
@@ -2537,8 +2452,6 @@ export class App implements OnInit, OnDestroy {
     const currentUrl = this.router.url;
     const isStreamRoute = currentUrl.startsWith('/stream/');
 
-    this.logger.debug('[App] exitFullscreen called, currentUrl:', currentUrl, 'isStreamRoute:', isStreamRoute);
-
     this.media.exitFullscreen();
     // Animate close of fullscreen media player
     if (this.layout.fullscreenMediaPlayer()) {
@@ -2547,7 +2460,6 @@ export class App implements OnInit, OnDestroy {
 
     // Navigate to streams page if we were on a stream route
     if (isStreamRoute) {
-      this.logger.debug('[App] Navigating to /streams');
       this.router.navigate(['/streams']);
     }
   }
@@ -2662,61 +2574,13 @@ export class App implements OnInit, OnDestroy {
    * Check if the current URL contains a nostr protocol parameter and handle it
    */
   private async checkForNostrProtocolInUrl(): Promise<void> {
-    this.logger.info('[App] ==> Checking for nostr protocol in current URL');
-
     try {
-      this.logger.debug('[App] Getting current URL from window.location');
       const currentUrl = window.location.href;
 
-      this.logger.info('[App] Current URL:', currentUrl);
-      this.logger.info('[App] Current URL length:', currentUrl?.length || 'undefined');
-      this.logger.debug('[App] Current URL breakdown:', {
-        href: window.location.href,
-        origin: window.location.origin,
-        pathname: window.location.pathname,
-        search: window.location.search,
-        hash: window.location.hash,
-      });
-
-      this.logger.debug('[App] Checking if current URL contains nostr parameter');
-
       if (currentUrl.includes('nostr=')) {
-        this.logger.info('[App] *** NOSTR PARAMETER DETECTED IN CURRENT URL ***');
-        this.logger.info('[App] URL with nostr parameter:', currentUrl);
-
-        // Extract and log the nostr parameter value
-        try {
-          const urlObj = new URL(currentUrl);
-          const nostrParam = urlObj.searchParams.get('nostr');
-          this.logger.info('[App] Extracted nostr parameter value:', nostrParam);
-          this.logger.debug('[App] All URL parameters:', Array.from(urlObj.searchParams.entries()));
-        } catch (urlParseError) {
-          this.logger.error(
-            '[App] Failed to parse current URL for parameter extraction:',
-            urlParseError
-          );
-        }
-
-        this.logger.info('[App] Calling nostr protocol handler for current URL');
         await this.nostrProtocol.handleNostrProtocol(currentUrl);
-        this.logger.info('[App] *** NOSTR PROTOCOL HANDLING FROM URL COMPLETED ***');
-      } else {
-        this.logger.debug('[App] No nostr parameter found in current URL');
-
-        // Check for other nostr-related patterns
-        if (currentUrl.includes('nostr')) {
-          this.logger.info('[App] URL contains "nostr" but not as parameter:', currentUrl);
-        }
-
-        // Check for direct nostr protocol in hash or other locations
-        if (window.location.hash && window.location.hash.includes('nostr')) {
-          this.logger.info('[App] Found nostr reference in URL hash:', window.location.hash);
-        }
       }
-
-      this.logger.info('[App] ==> URL check completed');
     } catch (error) {
-      this.logger.error('[App] ==> ERROR: Failed to check for nostr protocol in URL');
       this.logger.error('[App] URL check error:', error);
 
       if (error instanceof Error) {

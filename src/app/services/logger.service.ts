@@ -1,4 +1,4 @@
-import { Injectable, PLATFORM_ID, inject, signal } from '@angular/core';
+import { Injectable, PLATFORM_ID, inject, isDevMode, signal } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error' | 'none';
@@ -38,7 +38,17 @@ export class LoggerService {
     if (!this.isBrowser()) return 'warn'; // Default to warn level if not in browser context
 
     const storedLevel = localStorage.getItem(this.LOG_LEVEL_KEY) as LogLevel | null;
-    return storedLevel || 'warn'; // Default to warn level
+    if (!storedLevel) {
+      return 'warn';
+    }
+
+    // Older sessions may persist verbose logging and create excessive console noise.
+    // Keep production startup quiet unless the level is changed again manually.
+    if (!isDevMode() && (storedLevel === 'debug' || storedLevel === 'info')) {
+      return 'warn';
+    }
+
+    return storedLevel;
   }
 
   setLogLevel(level: LogLevel): void {
