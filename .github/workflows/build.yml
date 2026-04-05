@@ -805,9 +805,7 @@ jobs:
                 ;;
             esac
 
-            stable_artifact_name=$(printf '%s' "$artifact_name" | sed -E 's/-run-[0-9]+-[0-9]+$//')
-            flattened_nested_path=$(printf '%s' "$nested_path" | tr '/' '-')
-            target_name="${stable_artifact_name}--${flattened_nested_path}"
+            target_name=$(basename "$nested_path")
 
             cp "$source_file" "release-upload/$target_name"
           done < <(find release-assets -type f | sort)
