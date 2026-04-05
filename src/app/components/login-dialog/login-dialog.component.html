@@ -248,15 +248,19 @@
     }
 
     <div class="nostr-connect-qr-section">
-      <p class="scan-instruction">Scan this QR code with your remote signer app (e.g., Amber)</p>
 
       <div class="region-selector">
-        <span class="region-label">Select signing relay:</span>
+        <span class="region-label">Select signing relay</span>
         <div class="region-buttons">
           @for (option of nostrConnectRelayOptions; track option.id) {
           <button mat-stroked-button class="region-button" [class.selected]="nostrConnectRelayOption() === option.id"
             (click)="setNostrConnectRelayOption(option.id)">
-            <span class="region-button-title">{{ option.label }}</span>
+            <span class="region-button-topline">
+              <span class="region-button-title">{{ option.label }}</span>
+              @if (nostrConnectRelayOption() === option.id) {
+              <mat-icon class="region-button-check">check_circle</mat-icon>
+              }
+            </span>
             <span class="region-button-host">{{ option.host }}</span>
           </button>
           }

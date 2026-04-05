@@ -7,6 +7,7 @@ import { MatMenuModule } from '@angular/material/menu';
 import { LayoutService } from '../../services/layout.service';
 import { LocalSettingsService } from '../../services/local-settings.service';
 import { ApplicationService } from '../../services/application.service';
+import { AndroidSignerService } from '../../services/android-signer.service';
 
 interface Language {
   code: string;
@@ -30,6 +31,7 @@ export class Introduction {
   private layout = inject(LayoutService);
   localSettings = inject(LocalSettingsService);
   private app = inject(ApplicationService);
+  private androidSigner = inject(AndroidSignerService);
 
   // Available languages - same as general settings
   languages: Language[] = [
@@ -55,7 +57,11 @@ export class Introduction {
   }
 
   openSignerLoginFlow(): void {
-    this.layout.showLoginDialogWithStep('external-signer');
+    this.layout.showLoginDialogWithStep(this.usesLocalSigner() ? 'external-signer' : 'remote-signer');
+  }
+
+  usesLocalSigner(): boolean {
+    return this.androidSigner.isSupported();
   }
 
   openTermsOfUse(): void {

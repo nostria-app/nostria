@@ -119,6 +119,8 @@ export class StandaloneLoginDialogComponent implements AfterViewInit {
           this.loginComponent.startNewAccountFlow();
         } else if (initialStep === 'login') {
           this.loginComponent.goToStep(this.loginComponent.LoginStep.LOGIN_OPTIONS);
+        } else if (initialStep === 'remote-signer') {
+          this.loginComponent.goToStep(this.loginComponent.LoginStep.NOSTR_CONNECT);
         } else if (initialStep === 'external-signer') {
           this.loginComponent.goToStep(this.loginComponent.LoginStep.EXTERNAL_SIGNER);
         }
@@ -172,12 +174,15 @@ export class StandaloneLoginDialogComponent implements AfterViewInit {
   handleBackButton(): void {
     const step = this.loginComponent?.currentStep();
     const LoginStep = this.loginComponent?.LoginStep;
+    const initialStep = this.layout.loginDialogInitialStep();
 
     if (!step || !LoginStep || !this.loginComponent) return;
 
     if (step === LoginStep.REGION_SELECTION) {
       this.loginComponent.goToStep(LoginStep.INITIAL);
     } else if (step === LoginStep.LOGIN_OPTIONS) {
+      this.loginComponent.goToStep(LoginStep.INITIAL);
+    } else if (step === LoginStep.NOSTR_CONNECT && initialStep === 'remote-signer') {
       this.loginComponent.goToStep(LoginStep.INITIAL);
     } else if (step === LoginStep.EXTERNAL_SIGNER) {
       this.loginComponent.goToStep(LoginStep.INITIAL);

@@ -40,7 +40,11 @@
               </div>
               <div class="card-text">
                 <h3 i18n="@@introduction.signer.title">Login with Signer (Amber)</h3>
-                <p i18n="@@introduction.signer.description">Open the local signer</p>
+                @if (usesLocalSigner()) {
+                <p i18n="@@introduction.signer.local-description">Open the local signer</p>
+                } @else {
+                <p i18n="@@introduction.signer.remote-description">Open the remote signer</p>
+                }
               </div>
             </div>
           </mat-card-content>
