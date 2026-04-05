@@ -792,6 +792,28 @@ jobs:
           set -euo pipefail
           find release-assets -type f | sort
 
+      - name: Prepare release upload assets
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          rm -rf release-upload
+          mkdir -p release-upload
+
+          while IFS= read -r source_file; do
+            relative_path="${source_file#release-assets/}"
+            artifact_name="${relative_path%%/*}"
+            nested_path="${relative_path#*/}"
+            stable_artifact_name=$(printf '%s' "$artifact_name" | sed -E 's/-run-[0-9]+-[0-9]+$//')
+            flattened_nested_path=$(printf '%s' "$nested_path" | tr '/' '-')
+            target_name="${stable_artifact_name}--${flattened_nested_path}"
+
+            cp "$source_file" "release-upload/$target_name"
+          done < <(find release-assets -type f | sort)
+
+          echo "Prepared release upload assets:"
+          find release-upload -maxdepth 1 -type f | sort
+
       - name: Publish draft GitHub release
         uses: softprops/action-gh-release@v2
         with:
@@ -802,7 +824,7 @@ jobs:
           prerelease: ${{ needs.prepare-release.outputs.release_prerelease }}
           overwrite_files: true
           fail_on_unmatched_files: true
-          files: release-assets/**/*
+          files: release-upload/*
           body: |
             Draft build assets for Nostria v${{ needs.prepare-release.outputs.version }}.
 
