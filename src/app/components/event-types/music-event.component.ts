@@ -1606,12 +1606,9 @@ export class MusicEventComponent implements OnDestroy {
 
     if (this.isLiked()) {
       const existingReaction = this.likedReaction();
-      if (!existingReaction) {
-        this.snackBar.open('Like is still syncing. Try again in a moment.', 'Close', { duration: 2500 });
-        return;
-      }
-
-      const result = await this.reactionService.deleteReaction(existingReaction);
+      const result = existingReaction
+        ? await this.reactionService.deleteReaction(existingReaction)
+        : await this.reactionService.deleteLikeForTarget(ev);
       if (result.success) {
         this.likedReaction.set(null);
         this.snackBar.open('Like removed', 'Close', { duration: 2000 });
