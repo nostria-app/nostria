@@ -45,7 +45,7 @@ When there is a new release available, you'll see the update notification (butto
 AppImage with in-app updates:
 
 ```bash
-wget -O Nostria.AppImage https://github.com/nostria-app/nostria/releases/download/v3.1.2/Nostria_3.1.2_amd64.AppImage
+wget -O Nostria.AppImage https://github.com/nostria-app/nostria/releases/download/v3.1.4/Nostria_3.1.4_amd64.AppImage
 chmod +x Nostria.AppImage
 ./Nostria.AppImage
 ```
@@ -55,8 +55,8 @@ AppImage is portable. It does not install a desktop icon or app launcher by defa
 `.deb` package with manual package updates:
 
 ```bash
-wget https://github.com/nostria-app/nostria/releases/download/v3.1.2/Nostria_3.1.2_amd64.deb
-sudo apt install ./Nostria_3.1.2_amd64.deb
+wget https://github.com/nostria-app/nostria/releases/download/v3.1.4/Nostria_3.1.4_amd64.deb
+sudo apt install ./Nostria_3.1.4_amd64.deb
 ```
 
 ## Uninstall
