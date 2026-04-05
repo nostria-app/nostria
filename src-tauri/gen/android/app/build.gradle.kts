@@ -37,10 +37,10 @@ if (hasPartialReleaseSigning) {
 
 android {
     compileSdk = 36
-    namespace = "no.brainbox.nostria"
+    namespace = "app.nostria"
     defaultConfig {
         manifestPlaceholders["usesCleartextTraffic"] = "false"
-        applicationId = "no.brainbox.nostria"
+        applicationId = "app.nostria"
         minSdk = 24
         targetSdk = 36
         versionCode = tauriProperties.getProperty("tauri.android.versionCode", "1").toInt()

@@ -1,4 +1,4 @@
-package no.brainbox.nostria
+package app.nostria
 
 import android.app.Activity
 import android.content.ActivityNotFoundException

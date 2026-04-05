@@ -5,7 +5,7 @@ use tauri::{plugin::TauriPlugin, AppHandle, Manager, Runtime};
 use tauri::plugin::PluginHandle;
 
 #[cfg(target_os = "android")]
-const PLUGIN_IDENTIFIER: &str = "no.brainbox.nostria";
+const PLUGIN_IDENTIFIER: &str = "app.nostria";
 
 type Result<T> = std::result::Result<T, String>;
 

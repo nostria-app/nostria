@@ -1,6 +1,6 @@
 name: nostria
 options:
-  bundleIdPrefix: no.brainbox.nostria
+  bundleIdPrefix: app.nostria
   deploymentTarget:
     iOS: 14.0
 fileGroups: [../../src]
@@ -11,7 +11,7 @@ settingGroups:
   app:
     base:
       PRODUCT_NAME: Nostria
-      PRODUCT_BUNDLE_IDENTIFIER: no.brainbox.nostria
+      PRODUCT_BUNDLE_IDENTIFIER: app.nostria
 targetTemplates:
   app:
     type: application

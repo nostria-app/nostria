@@ -1,4 +1,4 @@
-package no.brainbox.nostria
+package app.nostria
 
 import android.os.Bundle
 import androidx.activity.enableEdgeToEdge

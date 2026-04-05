@@ -23,9 +23,9 @@
 # The custom Android signer bridge exchanges JSON with the Rust side via Tauri.
 # These DTOs are serialized/deserialized reflectively, so release obfuscation must
 # preserve their field and method names.
--keep class no.brainbox.nostria.AndroidSignerPlugin { *; }
--keep class no.brainbox.nostria.AndroidSignerPermission { *; }
--keep class no.brainbox.nostria.GetPublicKeyArgs { *; }
--keep class no.brainbox.nostria.AndroidSignerCommandArgs { *; }
--keep class no.brainbox.nostria.AndroidSignerResponse { *; }
--keep class no.brainbox.nostria.AndroidSignerPublicKeyResponse { *; }
+-keep class app.nostria.AndroidSignerPlugin { *; }
+-keep class app.nostria.AndroidSignerPermission { *; }
+-keep class app.nostria.GetPublicKeyArgs { *; }
+-keep class app.nostria.AndroidSignerCommandArgs { *; }
+-keep class app.nostria.AndroidSignerResponse { *; }
+-keep class app.nostria.AndroidSignerPublicKeyResponse { *; }
