@@ -52,6 +52,31 @@
             </p>
             }
           </div>
+          } @else if (androidUpdater.isAndroidInstalled()) {
+          <div class="desktop-update-panel">
+            <button mat-flat-button type="button" (click)="checkForAndroidUpdates()"
+              [disabled]="androidUpdater.checking()" i18n="@@settings.about.checkUpdatesAndroid">
+              Check for updates
+            </button>
+            @if (androidUpdater.hasUpdate()) {
+            <p class="build-info">
+              <span i18n="@@settings.about.updateAvailableAndroid">Android update available:</span>
+              {{ androidUpdater.latestVersion() }}
+            </p>
+            <button mat-stroked-button type="button" (click)="downloadAndroidUpdate()"
+              i18n="@@settings.about.downloadAndroidUpdate">
+              Download APK
+            </button>
+            } @else if (androidUpdater.lastCheckedAt()) {
+            <p class="build-info">
+              <span i18n="@@settings.about.lastCheckedAndroid">Last checked:</span>
+              {{ androidUpdater.lastCheckedAt()! | date: 'medium' }}
+            </p>
+            }
+            @if (androidUpdater.lastError()) {
+            <p class="build-info update-error">{{ androidUpdater.lastError() }}</p>
+            }
+          </div>
           }
         </div>
         <app-celebration-burst class="logo-container" theme="zap" mode="logo" [tier]="demoTier()"

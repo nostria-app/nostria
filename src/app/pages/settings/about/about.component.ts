@@ -16,6 +16,7 @@ import { CelebrationBurstComponent } from '../../../components/celebration-burst
 import { ZapSoundService, ZapTier } from '../../../services/zap-sound.service';
 import { HapticsService } from '../../../services/haptics.service';
 import { DesktopUpdaterService } from '../../../services/desktop-updater.service';
+import { AndroidUpdaterService } from '../../../services/android-updater.service';
 
 interface WebManifest {
   version?: string;
@@ -45,6 +46,7 @@ export class AboutComponent implements OnInit, OnDestroy {
   private readonly zapSound = inject(ZapSoundService);
   private readonly haptics = inject(HapticsService);
   readonly desktopUpdater = inject(DesktopUpdaterService);
+  readonly androidUpdater = inject(AndroidUpdaterService);
   version = computed(() => this.app.version());
   videoFailed = signal(false);
   commitSha = signal<string | undefined>(undefined);
@@ -154,6 +156,14 @@ export class AboutComponent implements OnInit, OnDestroy {
 
   checkForUpdates(): void {
     void this.desktopUpdater.checkForUpdates({ interactive: true, source: 'manual' });
+  }
+
+  checkForAndroidUpdates(): void {
+    void this.androidUpdater.checkForUpdates({ interactive: true });
+  }
+
+  downloadAndroidUpdate(): void {
+    void this.androidUpdater.openLatestApkDownload();
   }
 
   private async fetchBuildMetadata(): Promise<void> {

@@ -5,6 +5,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { InstallService, PlatformInfo } from '../../services/install.service';
+import { AndroidUpdaterService } from '../../services/android-updater.service';
 
 export interface InstallDialogData {
   platformInfo: PlatformInfo;
@@ -265,6 +266,7 @@ export class InstallDialogComponent {
   readonly data = inject<InstallDialogData>(MAT_DIALOG_DATA);
   private readonly installService = inject(InstallService);
   private readonly snackBar = inject(MatSnackBar);
+  private readonly androidUpdater = inject(AndroidUpdaterService);
 
   constructor() {
     // Debug logging
@@ -316,7 +318,7 @@ export class InstallDialogComponent {
   }
 
   downloadApk(): void {
-    window.open('https://github.com/nostria-app/nostria/releases/download/android-v1.0.5/nostria-android-v1.0.5.apk', '_blank');
+    void this.androidUpdater.openLatestApkDownload();
     this.dialogRef.close();
   }
 
