@@ -555,9 +555,18 @@ jobs:
           PROFILE_UUID=$(/usr/libexec/PlistBuddy -c 'Print :UUID' "$PROFILE_PLIST_PATH")
           PROFILE_NAME=$(/usr/libexec/PlistBuddy -c 'Print :Name' "$PROFILE_PLIST_PATH")
           TEAM_ID=$(/usr/libexec/PlistBuddy -c 'Print :TeamIdentifier:0' "$PROFILE_PLIST_PATH")
+          APP_IDENTIFIER=$(/usr/libexec/PlistBuddy -c 'Print :Entitlements:application-identifier' "$PROFILE_PLIST_PATH")
+          EXPECTED_BUNDLE_ID=$(node -p "require('./src-tauri/tauri.conf.json').identifier")
+          PROFILE_BUNDLE_ID="${APP_IDENTIFIER#${TEAM_ID}.}"
           GET_TASK_ALLOW=$(/usr/libexec/PlistBuddy -c 'Print :Entitlements:get-task-allow' "$PROFILE_PLIST_PATH" 2>/dev/null || echo false)
           HAS_PROVISIONED_DEVICES=$(/usr/libexec/PlistBuddy -c 'Print :ProvisionedDevices:0' "$PROFILE_PLIST_PATH" >/dev/null 2>&1 && echo true || echo false)
           HAS_ALL_DEVICES=$(/usr/libexec/PlistBuddy -c 'Print :ProvisionsAllDevices' "$PROFILE_PLIST_PATH" 2>/dev/null || echo false)
+
+          if [ "$PROFILE_BUNDLE_ID" != "$EXPECTED_BUNDLE_ID" ]; then
+            echo "Provisioning profile bundle ID '$PROFILE_BUNDLE_ID' does not match app bundle ID '$EXPECTED_BUNDLE_ID'." >&2
+            echo 'Create or download a provisioning profile for the exact app identifier configured in src-tauri/tauri.conf.json.' >&2
+            exit 1
+          fi
 
           mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
           cp "$PROFILE_PATH" "$HOME/Library/MobileDevice/Provisioning Profiles/$PROFILE_UUID.mobileprovision"
