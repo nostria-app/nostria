@@ -174,6 +174,11 @@
       transform: translateY(-2px);
     }
 
+    &.pending {
+      pointer-events: none;
+      opacity: 0.85;
+    }
+
     &.new-user {
       background: linear-gradient(135deg,
           var(--mat-sys-primary-container) 0%,
@@ -263,6 +268,87 @@
         }
       }
     }
+  }
+}
+
+.introduction-container.native-android-app {
+  padding: 0.75rem 1rem calc(1rem + max(18px, env(safe-area-inset-bottom, 0px)));
+
+  .introduction-content {
+    gap: 0.75rem;
+    padding-top: 0;
+  }
+
+  .main-section {
+    gap: 0.75rem;
+  }
+
+  .actions-section {
+    gap: 0.625rem;
+
+    .action-card {
+      min-height: 72px;
+
+      mat-card-content {
+        padding: 0.85rem 0.9rem;
+      }
+
+      .card-content {
+        gap: 0.65rem;
+
+        .card-icon {
+          width: 36px;
+          height: 36px;
+
+          mat-icon {
+            font-size: 18px;
+            width: 18px;
+            height: 18px;
+          }
+
+          .client-logo {
+            width: 22px;
+            height: 22px;
+          }
+        }
+
+        .card-text {
+          h3 {
+            font-size: 1rem;
+          }
+
+          p {
+            font-size: 0.8rem;
+            line-height: 1.25;
+          }
+        }
+      }
+    }
+  }
+
+  .branding-section {
+    .logo-container {
+      margin-bottom: 0.4rem;
+
+      .nostria-logo {
+        width: 92px;
+        height: 92px;
+      }
+    }
+
+    .app-title {
+      font-size: 2.25rem;
+      margin-bottom: 0.2rem;
+    }
+
+    .app-slogan {
+      font-size: 1.05rem;
+    }
+  }
+
+  .footer-section {
+    gap: 0.35rem;
+    padding-bottom: 0.25rem;
   }
 }
 
@@ -447,7 +533,7 @@
 @media (max-height: 700px) {
   .introduction-container {
     padding: 1rem 0.5rem;
-    min-height: auto;
+    min-height: 0;
   }
 
   .introduction-content {

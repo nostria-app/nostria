@@ -1,4 +1,4 @@
-<div class="introduction-container no-select">
+<div class="introduction-container no-select" [class.native-android-app]="isNativeAndroidApp()">
   <div class="introduction-content">
     <!-- Main content: cards and branding side by side -->
     <div class="main-section">
@@ -32,7 +32,7 @@
           </mat-card-content>
         </mat-card>
 
-        <mat-card class="action-card signer" (click)="openSignerLoginFlow()">
+        <mat-card class="action-card signer" [class.pending]="signerConnecting()" (click)="openSignerLoginFlow()">
           <mat-card-content>
             <div class="card-content">
               <div class="card-icon">
@@ -40,7 +40,9 @@
               </div>
               <div class="card-text">
                 <h3 i18n="@@introduction.signer.title">Login with Signer (Amber)</h3>
-                @if (usesLocalSigner()) {
+                @if (signerConnecting()) {
+                <p i18n="@@introduction.signer.connecting">Opening the signer app...</p>
+                } @else if (usesLocalSigner()) {
                 <p i18n="@@introduction.signer.local-description">Open the local signer</p>
                 } @else {
                 <p i18n="@@introduction.signer.remote-description">Open the remote signer</p>
@@ -76,15 +78,16 @@
         <button mat-icon-button [matMenuTriggerFor]="languageMenu" class="language-button" aria-label="Select language">
           <mat-icon>translate</mat-icon>
         </button>
-        <mat-menu #languageMenu="matMenu">
-          @for (language of languages; track language.code) {
-          <button mat-menu-item (click)="setLanguage(language.code)"
-            [class.selected]="localSettings.locale() === language.code">
-            {{ language.name }}
-          </button>
-          }
-        </mat-menu>
       </div>
+
+      <mat-menu #languageMenu="matMenu">
+        @for (language of languages; track language.code) {
+        <button mat-menu-item (click)="setLanguage(language.code)"
+          [class.selected]="localSettings.locale() === language.code">
+          {{ language.name }}
+        </button>
+        }
+      </mat-menu>
     </div>
   </div>
 </div>

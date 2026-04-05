@@ -178,24 +178,13 @@ export class LoginDialogComponent implements OnDestroy {
 
   // Input fields
   nsecKey = '';
-  externalSignerPubkey = '';
   private externalSignerPackage: string | null = null;
   // previewPubkey = 'npub1sg6plzptd64u62a878hep2kev88swjh3tw00gjsfl8f237lmu63q0uf63m'; // jack
   previewPubkey = 'npub1lmtv5qjrgjak504pc0a2885w72df69lmk8jfaet2xc3x2rppjy8sfzxvac' // Coffee
 
-  @ViewChild('externalSignerInput') externalSignerInput!: ElementRef<HTMLInputElement>;
   @ViewChild('nostrConnectCanvas') nostrConnectCanvas!: ElementRef<HTMLCanvasElement>;
 
   constructor() {
-    effect(() => {
-      if (this.currentStep() === LoginStep.EXTERNAL_SIGNER && !this.androidSigner.isSupported()) {
-        window.addEventListener('focus', this.onWindowFocusExternalSigner);
-        // Don't auto-focus input - it brings up keyboard and hides the login button on mobile
-      } else {
-        window.removeEventListener('focus', this.onWindowFocusExternalSigner);
-      }
-    });
-
     // Generate QR code when entering NOSTR_CONNECT step
     effect(() => {
       if (this.currentStep() === LoginStep.NOSTR_CONNECT) {
@@ -212,7 +201,6 @@ export class LoginDialogComponent implements OnDestroy {
 
   ngOnDestroy(): void {
     this.cleanupNostrConnectConnection();
-    window.removeEventListener('focus', this.onWindowFocusExternalSigner);
   }
 
   private cleanupNostrConnectConnection(): void {
@@ -250,20 +238,6 @@ export class LoginDialogComponent implements OnDestroy {
     setTimeout(() => {
       this.cleanupNostrConnectConnection();
     }, 0);
-  }
-
-  onWindowFocusExternalSigner = async () => {
-    // Don't auto-focus input - it brings up keyboard and hides the login button on mobile
-    try {
-      const text = (await navigator.clipboard.readText()).trim();
-      if (text && (text.startsWith('npub') || /^[0-9a-fA-F]{64}$/.test(text))) {
-        this.externalSignerPubkey = text;
-        // Auto-login when a valid public key is received from the signer
-        this.loginWithExternalSigner();
-      }
-    } catch {
-      // Ignore clipboard read errors
-    }
   }
 
   /**
@@ -1098,10 +1072,14 @@ export class LoginDialogComponent implements OnDestroy {
     this.loading.set(true);
 
     try {
-      const signer = await this.androidSigner.getPublicKey(this.androidSigner.getDefaultPermissions());
-      this.externalSignerPubkey = signer.pubkey;
-      this.externalSignerPackage = signer.packageName;
-      await this.loginWithExternalSigner();
+      const newUser = await this.nostrService.loginWithAndroidSigner();
+
+      // Close quickly after successful authentication.
+      // Relay discovery/setup checks can continue in the background.
+      this.loading.set(false);
+      this.closeDialog();
+
+      void this.checkRelayConfigurationInBackground(newUser);
     } catch (error) {
       this.logger.error('Failed to connect Android signer', error);
       const message = error instanceof Error ? error.message : 'Failed to connect Android signer';
@@ -1164,61 +1142,4 @@ export class LoginDialogComponent implements OnDestroy {
     }, 500);
   }
 
-  async loginWithExternalSigner(): Promise<void> {
-    this.logger.debug('Attempting login with external signer');
-    this.loading.set(true);
-
-    try {
-      let pubkey = this.externalSignerPubkey.trim();
-
-      // Handle npub if pasted
-      if (pubkey.startsWith('npub')) {
-        try {
-          const decoded = nip19.decode(pubkey);
-          if (decoded.type === 'npub') {
-            pubkey = decoded.data as string;
-          }
-        } catch (e) {
-          this.logger.error('Invalid npub', e);
-          throw new Error('Invalid public key format');
-        }
-      }
-
-      // Basic validation
-      if (!pubkey || pubkey.length !== 64) {
-        throw new Error('Invalid public key length. It should be 64 characters (hex).');
-      }
-
-      const newUser: NostrUser = {
-        pubkey,
-        name: 'Local Signer',
-        source: 'external',
-        externalSignerPackage: this.externalSignerPackage ?? undefined,
-        lastUsed: Date.now(),
-        hasActivated: true,
-      };
-
-      await this.nostrService.setAccount(newUser);
-      this.logger.debug('Local signer account set successfully', { pubkey });
-
-      // Close quickly after successful authentication.
-      // Relay discovery/setup checks can continue in the background.
-      const currentAccount = this.accountState.account();
-      this.loading.set(false);
-      this.closeDialog();
-
-      if (currentAccount) {
-        void this.checkRelayConfigurationInBackground(currentAccount);
-      }
-    } catch (err) {
-      this.logger.error('Login with external signer failed', err);
-      this.loading.set(false);
-
-      const errorMessage = err instanceof Error ? err.message : 'Failed to login with external signer';
-      this.snackBar.open(errorMessage, 'Close', {
-        duration: 5000,
-        panelClass: 'error-snackbar',
-      });
-    }
-  }
 }

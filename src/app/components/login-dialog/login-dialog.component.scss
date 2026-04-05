@@ -1469,7 +1469,7 @@
 .external-signer-section {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
   padding: 16px 0;
 
   .instruction-text {
@@ -1482,36 +1482,11 @@
     display: flex;
     justify-content: center;
     padding: 8px 0;
-  }
 
-  .divider {
-    display: flex;
-    align-items: center;
-    text-align: center;
-    color: var(--mat-sys-outline);
-    margin: 8px 0;
-
-    &::before,
-    &::after {
-      content: '';
-      flex: 1;
-      border-bottom: 1px solid var(--mat-sys-outline-variant);
+    button {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
     }
-
-    span {
-      padding: 0 10px;
-      font-size: var(--text-xs);
-      font-weight: 500;
-    }
-  }
-
-  .full-width {
-    width: 100%;
-  }
-
-  .actions-row {
-    display: flex;
-    justify-content: space-between;
-    margin-top: 8px;
   }
 }

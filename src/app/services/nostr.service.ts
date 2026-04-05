@@ -1120,6 +1120,25 @@ export class NostrService implements NostriaService {
     return signer.packageName;
   }
 
+  async loginWithAndroidSigner(): Promise<NostrUser> {
+    if (!this.androidSigner.isSupported()) {
+      throw new Error('Android signer is only available in the Android Tauri app.');
+    }
+
+    const signer = await this.androidSigner.getPublicKey(this.androidSigner.getDefaultPermissions());
+    const newUser: NostrUser = {
+      pubkey: signer.pubkey,
+      name: 'Local Signer',
+      source: 'external',
+      externalSignerPackage: signer.packageName,
+      lastUsed: Date.now(),
+      hasActivated: true,
+    };
+
+    await this.setAccount(newUser);
+    return newUser;
+  }
+
   async getExtensionPublicKey(timeoutMs = 60000): Promise<string> {
     if (!window.nostr) {
       this.logger.info('Extension not immediately available, waiting...');
