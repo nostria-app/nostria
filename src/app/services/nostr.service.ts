@@ -43,6 +43,7 @@ import { TrustProviderService, TRUST_PROVIDER_LIST_KIND } from './trust-provider
 import { PublicChatsListService } from './public-chats-list.service';
 import { CommunityListService } from './community-list.service';
 import { UserRelayService } from './relays/user-relay';
+import { UserRelaysService } from './relays/user-relays';
 import { DeleteEventService } from './delete-event.service';
 import { AndroidSignerService } from './android-signer.service';
 import type { DeleteEventReferenceMode } from '../components/delete-confirmation-dialog/delete-confirmation-dialog.component';
@@ -141,6 +142,7 @@ export class NostrService implements NostriaService {
   private readonly ngZone = inject(NgZone);
   private readonly injector = inject(Injector);
   private readonly userRelayService = inject(UserRelayService);
+  private readonly userRelaysService = inject(UserRelaysService);
   private readonly androidSigner = inject(AndroidSignerService);
   private encryptionServiceInstance?: import('./encryption.service').EncryptionService;
 
@@ -2506,6 +2508,22 @@ export class NostrService implements NostriaService {
       }
     } catch (error) {
       this.logger.warn('Failed to discover relays from discovery relay', error);
+    }
+
+    // Reuse the broader relay resolution used elsewhere in the app before
+    // concluding the account has no relay configuration. This covers cached
+    // relay hints and other fallback sources that discovery relays may miss.
+    try {
+      const resolvedRelays = await this.userRelaysService.getUserRelays(pubkey);
+      if (resolvedRelays.length > 0) {
+        this.logger.debug('Found relays via user relay resolution', {
+          pubkey,
+          relayCount: resolvedRelays.length,
+        });
+        return true;
+      }
+    } catch (error) {
+      this.logger.warn('Failed to resolve relays from fallback sources', error);
     }
 
     this.logger.info('No relay configuration found for user', { pubkey });

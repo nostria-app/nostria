@@ -49,6 +49,10 @@ import { RelayAuthService } from '../../../services/relays/relay-auth.service';
 import { EventRepublishService } from '../../../services/event-republish.service';
 import { PanelActionsService } from '../../../services/panel-actions.service';
 import { RightPanelService } from '../../../services/right-panel.service';
+import {
+  DEFAULT_ACCOUNT_RELAYS,
+  DEFAULT_DISCOVERY_RELAY,
+} from '../../../services/relays/default-account-relays';
 import { BackupComponent } from '../backup/backup.component';
 import { ConfirmDialogComponent } from '../../../components/confirm-dialog/confirm-dialog.component';
 import { CustomDialogService } from '../../../services/custom-dialog.service';
@@ -1297,14 +1301,8 @@ export class RelaysComponent implements OnInit, OnDestroy {
     const hadZeroDiscoveryRelays = this.discoveryRelay.getRelayUrls().length === 0;
 
     try {
-      const accountRelayUrl = 'wss://ribo.nostria.app/';
-      const discoveryRelayUrl = 'wss://indexer.openresist.com/';
-      const defaultRelays = [
-        accountRelayUrl,
-        'wss://relay.damus.io/',
-        'wss://nos.lol/',
-        'wss://relay.primal.net/',
-      ];
+      const discoveryRelayUrl = DEFAULT_DISCOVERY_RELAY;
+      const defaultRelays = [...DEFAULT_ACCOUNT_RELAYS];
 
       this.logger.info('Adding default relays for automated setup', { defaultRelays, discoveryRelayUrl });
       defaultRelays.forEach(relayUrl => {
