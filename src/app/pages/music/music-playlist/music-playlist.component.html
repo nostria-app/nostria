@@ -133,8 +133,8 @@
     </div>
 
     <!-- Event Actions Toolbar -->
-    <app-event-actions-toolbar [event]="playlist()!" [bookmarkType]="'a'" [likeTapBehavior]="'like'" (replyClick)="scrollToComments()"
-      (bookmarkClick)="onBookmarkClick($event)" (shareClick)="openShareDialog()">
+    <app-event-actions-toolbar [event]="playlist()!" [bookmarkType]="'a'" [likeTapBehavior]="'like'"
+      (replyClick)="scrollToComments()" (bookmarkClick)="onBookmarkClick($event)" (shareClick)="openShareDialog()">
     </app-event-actions-toolbar>
 
     <!-- Tracks Table -->
@@ -172,7 +172,7 @@
             <button type="button" class="track-cover-button" (click)="playTrack(i)"
               [attr.aria-label]="'Play ' + getTrackTitle(track)">
               @if (getTrackImage(track); as img) {
-              <img [src]="img" [alt]="getTrackTitle(track)" class="track-cover" />
+              <img [src]="img" [alt]="getTrackTitle(track)" [title]="getTrackTitle(track)" class="track-cover" />
               } @else if (gradient(); as playlistGradient) {
               <div class="track-cover track-cover-gradient" [style.background]="playlistGradient"></div>
               } @else {
@@ -193,8 +193,11 @@
           <div class="track-meta">
             <span class="track-album">{{ title() }}</span>
             <span class="track-duration">{{ getTrackDuration(track) }}</span>
-            <button mat-icon-button class="track-menu-button" type="button"
-              [attr.aria-label]="'More options for ' + getTrackTitle(track)">
+            <app-music-track-menu [track]="track" [artistName]="getTrackArtist(track)"
+              (editRequested)="editTrack($event)" (trackDeleted)="onTrackDeleted($event)"
+              #trackMenuRef="musicTrackMenu"></app-music-track-menu>
+            <button mat-icon-button class="track-menu-button" type="button" [matMenuTriggerFor]="trackMenuRef.trackMenu"
+              (click)="$event.stopPropagation()" [attr.aria-label]="'More options for ' + getTrackTitle(track)">
               <mat-icon>more_horiz</mat-icon>
             </button>
           </div>
@@ -216,4 +219,9 @@
 
 @if (showEditDialog() && editDialogData()) {
 <app-edit-music-playlist-dialog [data]="editDialogData()!" (closed)="onEditDialogClosed($event)" />
+}
+
+@if (showTrackEditDialog() && trackEditDialogData()) {
+<app-music-track-dialog [data]="trackEditDialogData()!"
+  (closed)="onTrackEditDialogClosed($event)"></app-music-track-dialog>
 }

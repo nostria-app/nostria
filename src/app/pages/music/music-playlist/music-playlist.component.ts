@@ -44,8 +44,10 @@ import { CustomDialogService } from '../../../services/custom-dialog.service';
 import { EventActionsToolbarComponent } from '../../../components/event-actions-toolbar/event-actions-toolbar.component';
 import { CommentsListComponent } from '../../../components/comments-list/comments-list.component';
 import { BookmarkListSelectorComponent } from '../../../components/bookmark-list-selector/bookmark-list-selector.component';
+import { MusicTrackMenuComponent } from '../../../components/music-track-menu/music-track-menu.component';
 import { ConfirmDialogComponent, ConfirmDialogData } from '../../../components/confirm-dialog/confirm-dialog.component';
 import { DeleteEventService } from '../../../services/delete-event.service';
+import { MusicTrackDialogComponent, MusicTrackDialogData } from '../music-track-dialog/music-track-dialog.component';
 
 const MUSIC_KINDS = [...UtilitiesService.MUSIC_KINDS];
 const MUSIC_ALBUM_KIND = 34139;
@@ -63,6 +65,8 @@ const MUSIC_ALBUM_KIND = 34139;
     MatSnackBarModule,
     MatTooltipModule,
     EditMusicPlaylistDialogComponent,
+    MusicTrackDialogComponent,
+    MusicTrackMenuComponent,
     EventActionsToolbarComponent,
     CommentsListComponent,
   ],
@@ -133,6 +137,8 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
   // Edit dialog state
   showEditDialog = signal(false);
   editDialogData = signal<EditMusicPlaylistDialogData | null>(null);
+  showTrackEditDialog = signal(false);
+  trackEditDialogData = signal<MusicTrackDialogData | null>(null);
 
   private subscriptions: { close: () => void }[] = [];
   private likeSubscription: { close: () => void } | null = null;
@@ -643,6 +649,11 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
     this.tracks.set(orderedTracks);
   }
 
+  private getTrackUniqueId(track: Event): string {
+    const dTag = track.tags.find(t => t[0] === 'd')?.[1] || '';
+    return `${track.kind}:${track.pubkey}:${dTag}`;
+  }
+
   private getCurrentPlaylistSourceKey(): string | undefined {
     const event = this.playlist();
     if (!event) return undefined;
@@ -1151,6 +1162,37 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
     if (track.pubkey && dTag) {
       this.layout.openSongDetail(track.pubkey, dTag, track);
     }
+  }
+
+  editTrack(track: Event): void {
+    this.trackEditDialogData.set({ track });
+    this.showTrackEditDialog.set(true);
+  }
+
+  onTrackEditDialogClosed(result: { published: boolean; updated?: boolean; event?: Event } | null): void {
+    this.showTrackEditDialog.set(false);
+    this.trackEditDialogData.set(null);
+
+    if (!result?.updated || !result.event) {
+      return;
+    }
+
+    const updatedTrack = result.event;
+    const uniqueId = this.getTrackUniqueId(updatedTrack);
+    this.trackMap.set(uniqueId, updatedTrack);
+    this.updateTracks(this.trackRefs());
+
+    const dTag = updatedTrack.tags.find(t => t[0] === 'd')?.[1] || '';
+    this.database.saveEvent({ ...updatedTrack, dTag }).catch((err: unknown) => {
+      this.logger.warn('[MusicPlaylist] Failed to save updated track to database:', err);
+    });
+
+    this.snackBar.open('Track updated', 'Close', { duration: 2000 });
+  }
+
+  onTrackDeleted(track: Event): void {
+    this.trackMap.delete(this.getTrackUniqueId(track));
+    this.updateTracks(this.trackRefs());
   }
 
   async copyTrackLink(track: Event): Promise<void> {
