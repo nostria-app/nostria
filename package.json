@@ -41,6 +41,7 @@
     "tauri": "tauri",
     "tauri:info": "tauri info",
     "tauri:dev": "tauri dev",
+    "tauri:android:icons": "powershell -ExecutionPolicy Bypass -File scripts/regenerate-tauri-android-icons.ps1",
     "tauri:android:dev": "powershell -ExecutionPolicy Bypass -File scripts/tauri-android-dev.ps1",
     "tauri:android:dev:emulator": "tauri android dev --host 10.0.2.2",
     "tauri:android:dev:device": "powershell -ExecutionPolicy Bypass -File scripts/tauri-android-dev.ps1 -PhysicalDevice",
