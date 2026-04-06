@@ -1214,7 +1214,7 @@ mat-sidenav-content {
         width: calc(100% - var(--docked-sidenav-width, 0px));
         max-width: calc(100% - var(--docked-sidenav-width, 0px));
         z-index: 500;
-        background-color: var(--mat-app-background-color);
+        background: transparent;
         overflow-y: auto;
 
         .panel-content-wrapper {
@@ -1319,7 +1319,7 @@ mat-sidenav-content {
         width: calc(100% - var(--docked-sidenav-width, 0px));
         max-width: calc(100% - var(--docked-sidenav-width, 0px));
         z-index: 500;
-        background-color: var(--mat-app-background-color);
+        background: transparent;
         overflow-y: auto;
         padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px));
         box-sizing: border-box;
