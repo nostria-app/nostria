@@ -263,6 +263,26 @@ html.locale-fa body {
   direction: rtl;
 }
 
+html.locale-hi,
+html.locale-hi body {
+  font-family: 'Noto Sans Devanagari', var(--nostria-font-family);
+}
+
+html.locale-ja,
+html.locale-ja body {
+  font-family: 'Noto Sans JP', var(--nostria-font-family);
+}
+
+html.locale-ko,
+html.locale-ko body {
+  font-family: 'Noto Sans KR', var(--nostria-font-family);
+}
+
+html.locale-zh,
+html.locale-zh body {
+  font-family: 'Noto Sans SC', var(--nostria-font-family);
+}
+
 // Elements that should remain LTR even in RTL locales
 html.locale-ar,
 html.locale-fa {

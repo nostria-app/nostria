@@ -75,7 +75,8 @@
 
       <!-- Language selection -->
       <div class="language-section">
-        <button mat-icon-button [matMenuTriggerFor]="languageMenu" class="language-button" aria-label="Select language">
+        <button mat-icon-button [matMenuTriggerFor]="languageMenu" class="language-button" aria-label="Select language"
+          i18n-aria-label="@@settings.language.select">
           <mat-icon>translate</mat-icon>
         </button>
       </div>
@@ -84,7 +85,7 @@
         @for (language of languages; track language.code) {
         <button mat-menu-item (click)="setLanguage(language.code)"
           [class.selected]="localSettings.locale() === language.code">
-          {{ language.name }}
+          {{ language.displayName }}
         </button>
         }
       </mat-menu>

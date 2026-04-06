@@ -29,6 +29,7 @@ import { MAT_TOOLTIP_DEFAULT_OPTIONS } from '@angular/material/tooltip';
 import { CustomReuseStrategy } from './services/custom-reuse-strategy';
 import { DesktopUpdaterService } from './services/desktop-updater.service';
 import { ExternalLinkService } from './services/external-link.service';
+import { getAngularLocaleCode, normalizeLocale } from './utils/supported-locales';
 
 let appLang = 'en';
 
@@ -37,14 +38,7 @@ if (typeof window !== 'undefined') {
 
   if (settings) {
     const parsedSettings = JSON.parse(settings);
-    let locale = parsedSettings.locale || 'en';
-
-    // Map 'no' to 'nb' for Angular locale compatibility
-    if (locale === 'no') {
-      locale = 'nb';
-    }
-
-    appLang = locale;
+    appLang = getAngularLocaleCode(normalizeLocale(parsedSettings.locale));
   }
 }
 

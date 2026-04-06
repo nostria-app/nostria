@@ -36,7 +36,7 @@
         <mat-label i18n="@@settings.language.label">Language</mat-label>
         <mat-select [ngModel]="localSettings.locale()" (selectionChange)="setLanguage($event.value)">
           @for (language of languageOptions; track language.code) {
-          <mat-option [value]="language.code">{{ language.name }}</mat-option>
+          <mat-option [value]="language.code">{{ language.displayName }}</mat-option>
           }
         </mat-select>
       </mat-form-field>

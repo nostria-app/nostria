@@ -4,6 +4,7 @@ import { LoggerService } from './logger.service';
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { isPlatformBrowser } from '@angular/common';
 import { Subject, debounceTime } from 'rxjs';
+import { getSupportedLocale, normalizeLocale } from '../utils/supported-locales';
 
 export type CalendarType = 'gregorian' | 'chronia' | 'ethiopian';
 export type TimeFormat = '12h' | '24h';
@@ -173,15 +174,6 @@ export class LocalSettingsService {
   private readonly platformId = inject(PLATFORM_ID);
   private readonly STORAGE_KEY = 'nostria-settings';
 
-  // Locales that require special font handling
-  private readonly RTL_LOCALES = ['ar', 'fa'];
-
-  // Font URLs for dynamic loading
-  private readonly LOCALE_FONTS: Record<string, string> = {
-    ar: 'https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@100..900&display=swap',
-    fa: 'https://fonts.googleapis.com/css2?family=Vazirmatn:wght@100..900&display=swap',
-  };
-
   // Track which fonts have been loaded
   private loadedFonts = new Set<string>();
 
@@ -277,8 +269,10 @@ export class LocalSettingsService {
       }
     });
 
-    // Add the current locale class for RTL languages that need special fonts
-    if (this.RTL_LOCALES.includes(locale)) {
+    const localeConfig = getSupportedLocale(locale);
+
+    // Add the current locale class for locales that need custom font handling or RTL layout
+    if (localeConfig?.rtl || localeConfig?.fontFamily) {
       // Dynamically load the font if not already loaded
       this.loadFontForLocale(locale);
       htmlElement.classList.add(`locale-${locale}`);
@@ -301,7 +295,7 @@ export class LocalSettingsService {
       return;
     }
 
-    const fontUrl = this.LOCALE_FONTS[locale];
+    const fontUrl = getSupportedLocale(locale)?.fontUrl;
     if (!fontUrl) {
       this.logger.warn(`No font URL configured for locale: ${locale}`);
       return;
@@ -352,6 +346,8 @@ export class LocalSettingsService {
           autoRelayAuth: stored.autoRelayAuth !== undefined ? stored.autoRelayAuth : false,
           // Ensure contentFilter exists for existing users
           contentFilter: stored.contentFilter ?? DEFAULT_CONTENT_FILTER,
+          // Ensure locale is supported
+          locale: normalizeLocale(stored.locale),
         };
 
         this.settings.set(mergedSettings);
@@ -422,7 +418,7 @@ export class LocalSettingsService {
    * Set locale
    */
   setLocale(locale: string): void {
-    this.updateSettings({ locale });
+    this.updateSettings({ locale: normalizeLocale(locale) });
   }
 
   /**
@@ -430,9 +426,11 @@ export class LocalSettingsService {
    * Use this when you need to reload the page right after changing locale.
    */
   setLocaleImmediate(locale: string): void {
+    const normalizedLocale = normalizeLocale(locale);
+
     this.settings.update(current => ({
       ...current,
-      locale,
+      locale: normalizedLocale,
     }));
     // Save immediately, bypassing the debounce
     this.saveSettings(this.settings());

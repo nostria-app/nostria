@@ -30,11 +30,7 @@ import { RightPanelService } from '../../../services/right-panel.service';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { XDualPostService } from '../../../services/x-dual-post.service';
-
-interface Language {
-  code: string;
-  name: string;
-}
+import { SUPPORTED_LOCALE_LABELS } from '../../../utils/supported-locales';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -111,20 +107,7 @@ export class GeneralSettingsComponent implements OnInit, OnDestroy {
   configuredDomains = signal<string[]>(this.externalLinkHandler.getConfiguredDomains());
   newDomain = '';
 
-  // Available languages
-  languages: Language[] = [
-    { code: 'en', name: 'English' },
-    { code: 'ar', name: 'العربية' },
-    { code: 'cnr', name: 'Crnogorski' },
-    { code: 'es', name: 'Español' },
-    { code: 'fa', name: 'فارسی' },
-    { code: 'fr', name: 'Français' },
-    { code: 'it', name: 'Italiano' },
-    { code: 'no', name: 'Norsk' },
-    { code: 'ru', name: 'Русский' },
-    { code: 'sw', name: 'Kiswahili' },
-    { code: 'zu', name: 'isiZulu' },
-  ];
+  readonly languages = SUPPORTED_LOCALE_LABELS;
 
   setFeatureLevel(level: FeatureLevel): void {
     if (!this.app.isBrowser()) return;

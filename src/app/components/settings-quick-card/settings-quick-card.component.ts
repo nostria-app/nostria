@@ -9,11 +9,7 @@ import { ApplicationService } from '../../services/application.service';
 import { LocalSettingsService } from '../../services/local-settings.service';
 import { TextScaleService, DEFAULT_TEXT_SCALE, TEXT_SCALE_OPTIONS } from '../../services/text-scale.service';
 import { ThemeService } from '../../services/theme.service';
-
-interface LanguageOption {
-  code: string;
-  name: string;
-}
+import { SUPPORTED_LOCALE_LABELS } from '../../utils/supported-locales';
 
 @Component({
   selector: 'app-settings-quick-card',
@@ -49,19 +45,7 @@ export class SettingsQuickCardComponent {
   readonly isMinScale = computed(() => this.textScaleService.textScale() <= this.minScale);
   readonly isMaxScale = computed(() => this.textScaleService.textScale() >= this.maxScale);
 
-  readonly languageOptions: LanguageOption[] = [
-    { code: 'en', name: 'English' },
-    { code: 'ar', name: 'العربية' },
-    { code: 'cnr', name: 'Crnogorski' },
-    { code: 'es', name: 'Español' },
-    { code: 'fa', name: 'فارسی' },
-    { code: 'fr', name: 'Français' },
-    { code: 'it', name: 'Italiano' },
-    { code: 'no', name: 'Norsk' },
-    { code: 'ru', name: 'Русский' },
-    { code: 'sw', name: 'Kiswahili' },
-    { code: 'zu', name: 'isiZulu' },
-  ];
+  readonly languageOptions = SUPPORTED_LOCALE_LABELS;
 
   setTheme(darkMode: boolean): void {
     if (this.themeService.darkMode() === darkMode) {

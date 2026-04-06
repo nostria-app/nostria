@@ -10,11 +10,7 @@ import { LocalSettingsService } from '../../services/local-settings.service';
 import { ApplicationService } from '../../services/application.service';
 import { AndroidSignerService } from '../../services/android-signer.service';
 import { NostrService } from '../../services/nostr.service';
-
-interface Language {
-  code: string;
-  name: string;
-}
+import { SUPPORTED_LOCALE_LABELS } from '../../utils/supported-locales';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -38,20 +34,7 @@ export class Introduction {
   private snackBar = inject(MatSnackBar);
   signerConnecting = signal(false);
 
-  // Available languages - same as general settings
-  languages: Language[] = [
-    { code: 'en', name: 'English' },
-    { code: 'ar', name: 'العربية' },
-    { code: 'cnr', name: 'Crnogorski' },
-    { code: 'es', name: 'Español' },
-    { code: 'fa', name: 'فارسی' },
-    { code: 'fr', name: 'Français' },
-    { code: 'it', name: 'Italiano' },
-    { code: 'no', name: 'Norsk' },
-    { code: 'ru', name: 'Русский' },
-    { code: 'sw', name: 'Kiswahili' },
-    { code: 'zu', name: 'isiZulu' },
-  ];
+  readonly languages = SUPPORTED_LOCALE_LABELS;
 
   openNewUserFlow(): void {
     this.layout.showLoginDialogWithStep('new-user');
