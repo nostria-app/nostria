@@ -24,6 +24,7 @@ export interface NavigationEntry {
   params?: Record<string, string>;
   title?: string;
   type: RouteType;
+  state?: Record<string, unknown>;
 }
 
 /**
@@ -90,6 +91,9 @@ export class PanelNavigationService {
 
   // Store the URL before popstate for restoration if needed
   private _urlBeforePopstate: string | null = null;
+
+  // Preserve custom router state for the next handled panel navigation entry.
+  private _pendingNavigationState: Record<string, unknown> | undefined;
 
   // Track if we should preserve the right panel on the next navigation
   private _preserveRightPanelOnNextNavigation = false;
@@ -275,6 +279,21 @@ export class PanelNavigationService {
       const navEvent = event as NavigationEnd;
       this.handleNavigation(navEvent.urlAfterRedirects);
     });
+  }
+  private extractCustomNavigationState(state: unknown): Record<string, unknown> | undefined {
+    if (!state || typeof state !== 'object' || Array.isArray(state)) {
+      return undefined;
+    }
+
+    const filteredEntries = Object.entries(state as Record<string, unknown>).filter(([key]) => {
+      return key !== 'navigationId' && key !== 'ɵrouterPageId';
+    });
+
+    if (filteredEntries.length === 0) {
+      return undefined;
+    }
+
+    return Object.fromEntries(filteredEntries);
   }
 
   /**
@@ -487,7 +506,8 @@ export class PanelNavigationService {
     if (rightPath && !clearingRightPanel) {
       const type = this.getRouteType(rightPath);
       const title = this.getRouteTitle(rightPath);
-      const entry: NavigationEntry = { path: rightPath, title, type };
+      const entryState = this._pendingNavigationState ?? this.extractCustomNavigationState(history.state);
+      const entry: NavigationEntry = { path: rightPath, title, type, state: entryState };
 
       const rightStack = this._rightStack();
       const currentRight = rightStack[rightStack.length - 1];
@@ -531,6 +551,7 @@ export class PanelNavigationService {
     // Reset flags
     this._preserveRightPanelOnNextNavigation = false;
     this._isBackNavigation = false;
+    this._pendingNavigationState = undefined;
   }
 
   /**
@@ -643,7 +664,8 @@ export class PanelNavigationService {
     const primaryPath = currentUrl.split('(')[0] || '/';
 
     const targetUrl = `${primaryPath}(right:${prev.path})${queryString}`;
-    this.router.navigateByUrl(targetUrl);
+    this._pendingNavigationState = prev.state;
+    this.router.navigateByUrl(targetUrl, { state: prev.state });
   }
 
   /**
@@ -944,6 +966,7 @@ export class PanelNavigationService {
     const primaryPath = currentUrl.split('(')[0] || '/';
 
     const targetUrl = `${primaryPath}(right:${prev.path})${queryString}`;
-    this.router.navigateByUrl(targetUrl);
+    this._pendingNavigationState = prev.state;
+    this.router.navigateByUrl(targetUrl, { state: prev.state });
   }
 }

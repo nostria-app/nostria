@@ -1,6 +1,5 @@
 <div class="app-container" [class.dark-theme]="themeService.darkMode()" [class.has-right-content]="hasRightContent()"
-  [attr.data-fullscreen]="layout.fullscreenMediaPlayer()"
-  [style.--docked-sidenav-width.px]="dockedSidenavWidth()"
+  [attr.data-fullscreen]="layout.fullscreenMediaPlayer()" [style.--docked-sidenav-width.px]="dockedSidenavWidth()"
   [style.background]="appBackground()">
   <!-- Success overlay with checkmark -->
   @if (appState.showSuccess()) {
@@ -248,8 +247,7 @@
 
       <!-- Top toolbar - beside sidenav -->
       <mat-toolbar class="app-toolbar no-print no-select" [class.hidden-for-clips]="isClipsMode()"
-        [class.immersive-toolbar]="!!toolbarBackground()"
-        [style.background-color]="toolbarBackground()">
+        [class.immersive-toolbar]="!!toolbarBackground()" [style.background-color]="toolbarBackground()">
 
 
 

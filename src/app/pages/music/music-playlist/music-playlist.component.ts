@@ -223,6 +223,11 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
     const stateEvent = navigation?.extras?.state?.['playlistEvent'] as Event | undefined;
     if (stateEvent) {
       this.routerStateEvent = stateEvent;
+    } else {
+      const historyStateEvent = history.state?.['playlistEvent'] as Event | undefined;
+      if (historyStateEvent) {
+        this.routerStateEvent = historyStateEvent;
+      }
     }
 
     // React to route param changes for playlist navigation
