@@ -710,7 +710,7 @@ export class NostrService implements NostriaService {
     try {
       const userJson = this.localStorage.getItem(this.appState.ACCOUNT_STORAGE_KEY);
       if (userJson) {
-        return JSON.parse(userJson) as NostrUser;
+        return this.normalizeAccount(JSON.parse(userJson) as NostrUser);
       }
     } catch (e) {
       this.logger.error('Failed to parse user from localStorage during initialization', e);
@@ -2078,7 +2078,17 @@ export class NostrService implements NostriaService {
     const usersJson = this.localStorage.getItem(this.appState.ACCOUNTS_STORAGE_KEY);
     if (usersJson) {
       try {
-        const parsedUsers = JSON.parse(usersJson);
+        const parsedUsers = (JSON.parse(usersJson) as NostrUser[])
+          .map((user) => {
+            try {
+              return this.normalizeAccount(user);
+            } catch (error) {
+              this.logger.warn('Skipping invalid stored account during accounts load', user, error);
+              return null;
+            }
+          })
+          .filter((user): user is NostrUser => !!user);
+
         this.logger.debug(`Loaded ${parsedUsers.length} users from localStorage`);
         return parsedUsers;
       } catch (e) {
@@ -2091,7 +2101,7 @@ export class NostrService implements NostriaService {
       const singleAccountJson = this.localStorage.getItem(this.appState.ACCOUNT_STORAGE_KEY);
       if (singleAccountJson) {
         try {
-          const singleAccount = JSON.parse(singleAccountJson);
+          const singleAccount = this.normalizeAccount(JSON.parse(singleAccountJson) as NostrUser);
           this.logger.info('Found single account in storage, recovering to accounts list', {
             pubkey: singleAccount.pubkey,
           });
@@ -2257,6 +2267,8 @@ export class NostrService implements NostriaService {
   }
 
   async setAccount(user: NostrUser) {
+    user = this.normalizeAccount(user);
+
     this.logger.debug('Updating user in collection', { pubkey: user.pubkey });
 
     // Update lastUsed timestamp
@@ -2286,6 +2298,29 @@ export class NostrService implements NostriaService {
     // Trigger the user signal which indicates user is logged on.
     // This will trigger a lot of effects.
     await this.accountState.changeAccount(user);
+  }
+
+  private normalizeAccount(user: NostrUser): NostrUser {
+    const normalizedPubkey = this.utilities.safeGetHexPubkey(user.pubkey);
+
+    if (!normalizedPubkey) {
+      throw new Error(`Invalid account pubkey: ${user.pubkey}`);
+    }
+
+    if (normalizedPubkey === user.pubkey) {
+      return user;
+    }
+
+    this.logger.info('Normalizing account pubkey to hex', {
+      originalPubkey: user.pubkey,
+      normalizedPubkey,
+      source: user.source,
+    });
+
+    return {
+      ...user,
+      pubkey: normalizedPubkey,
+    };
   }
 
   async generateNewKey(region?: string) {

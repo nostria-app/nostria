@@ -6,6 +6,7 @@ import { DiscoveryRelayService } from './discovery-relay';
 import { PoolService } from './pool.service';
 import { RelayEntry } from '../utilities.service';
 import { DEFAULT_ACCOUNT_RELAYS } from './default-account-relays';
+import { UserRelaysService } from './user-relays';
 
 @Injectable({
   providedIn: 'root',
@@ -13,6 +14,7 @@ import { DEFAULT_ACCOUNT_RELAYS } from './default-account-relays';
 export class AccountRelayService extends RelayServiceBase {
   private database = inject(DatabaseService);
   private discoveryRelay = inject(DiscoveryRelayService);
+  private userRelays = inject(UserRelaysService);
   readonly activeAccountPubkey = signal<string>('');
   readonly loadingAccountPubkey = signal<string>('');
 
@@ -98,6 +100,17 @@ export class AccountRelayService extends RelayServiceBase {
 
       if (relayUrls.length === 0 && relayEntries.length === 0) {
         relayUrls = await this.discoveryRelay.getUserRelayUrls(pubkey);
+      }
+
+      if (relayUrls.length === 0 && relayEntries.length === 0) {
+        relayUrls = await this.userRelays.getUserRelays(pubkey);
+
+        if (relayUrls.length > 0) {
+          this.logger.info('Resolved account relays via broader user relay discovery during bootstrap', {
+            pubkey,
+            relayCount: relayUrls.length,
+          });
+        }
       }
 
       if (relayUrls.length === 0 && relayEntries.length === 0) {

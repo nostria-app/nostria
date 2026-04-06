@@ -150,6 +150,7 @@ export class StateService implements NostriaService {
           duration: 0, // Don't auto-dismiss
           horizontalPosition: 'center',
           verticalPosition: 'top',
+          panelClass: 'safe-area-top-snackbar',
         }
       );
     }

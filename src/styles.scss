@@ -241,6 +241,14 @@ html[data-platform="android"][data-display-mode="standalone"] {
   --safe-area-top: max(24px, env(safe-area-inset-top, 0px));
 }
 
+.cdk-global-overlay-wrapper:has(.safe-area-top-snackbar) {
+  padding-top: var(--safe-area-top);
+}
+
+.safe-area-top-snackbar {
+  margin-top: 0 !important;
+}
+
 // Arabic locale font styling
 html.locale-ar,
 html.locale-ar body {
