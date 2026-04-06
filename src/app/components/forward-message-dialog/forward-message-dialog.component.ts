@@ -14,7 +14,6 @@ import { FollowingService } from '../../services/following.service';
 import { CustomDialogRef } from '../../services/custom-dialog.service';
 import { NostrRecord } from '../../interfaces';
 import { UserProfileComponent } from '../user-profile/user-profile.component';
-import { NPubPipe } from '../../pipes/npub.pipe';
 
 export interface ForwardMessageDialogResult {
   pubkeys: string[];
@@ -33,7 +32,6 @@ export interface ForwardMessageDialogResult {
     MatTooltipModule,
     MatCheckboxModule,
     UserProfileComponent,
-    NPubPipe,
   ],
   templateUrl: './forward-message-dialog.component.html',
   styleUrl: './forward-message-dialog.component.scss',

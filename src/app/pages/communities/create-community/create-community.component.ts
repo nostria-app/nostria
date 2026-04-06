@@ -23,7 +23,6 @@ import { MediaService } from '../../../services/media.service';
 import { LoggerService } from '../../../services/logger.service';
 import { NostrRecord } from '../../../interfaces';
 import { UserProfileComponent } from '../../../components/user-profile/user-profile.component';
-import { NPubPipe } from '../../../pipes/npub.pipe';
 
 @Component({
   selector: 'app-create-community',
@@ -41,7 +40,6 @@ import { NPubPipe } from '../../../pipes/npub.pipe';
     FormsModule,
     RouterLink,
     UserProfileComponent,
-    NPubPipe,
   ],
   templateUrl: './create-community.component.html',
   styleUrls: ['./create-community.component.scss'],
