@@ -30,7 +30,7 @@ import { XDualPostService } from '../../../services/x-dual-post.service';
         <span>Post to X</span>
       </h2>
       <p class="setting-description">Connect your X account to publish the text of your Nostria posts to X.</p>
-      <p class="setting-description">Post to X is available for Premium accounts only.</p>
+      <p class="setting-description">Post to X is available for Premium+ accounts only.</p>
 
       @if (xDualPost.loading()) {
       <p class="setting-description">Checking X connection status...</p>
@@ -47,7 +47,7 @@ import { XDualPostService } from '../../../services/x-dual-post.service';
       </mat-card>
       }
       <div class="x-upgrade-prompt">
-        <p class="setting-description">Upgrade to Premium to connect or publish to X from Nostria.</p>
+        <p class="setting-description">Upgrade to Premium+ to connect or publish to X from Nostria.</p>
         <button mat-flat-button type="button" (click)="openPremiumTab()">
           Open Premium
         </button>
@@ -323,9 +323,9 @@ export class SettingPostToXComponent implements OnInit {
 
   xPremiumEligible = computed(() => {
     const subscription = this.accountState.subscription();
-    const isPremiumTier = subscription?.tier === 'premium' || subscription?.tier === 'premium_plus';
+    const hasXPostingEntitlement = subscription?.entitlements?.features?.some(feature => feature.key === 'DUAL_POST_X_10') ?? false;
     const isNotExpired = !subscription?.expires || Date.now() < subscription.expires;
-    return !!subscription && isPremiumTier && isNotExpired;
+    return !!subscription && hasXPostingEntitlement && isNotExpired;
   });
 
   xProfileUrl = computed(() => {
@@ -349,7 +349,7 @@ export class SettingPostToXComponent implements OnInit {
 
   async connectX(): Promise<void> {
     if (!this.xPremiumEligible()) {
-      this.snackBar.open('Post to X is available for Premium accounts only.', 'Close', {
+      this.snackBar.open('Post to X is available for Premium+ accounts only.', 'Close', {
         duration: 5000,
       });
       return;
@@ -379,7 +379,7 @@ export class SettingPostToXComponent implements OnInit {
 
   async reconnectX(): Promise<void> {
     if (!this.xPremiumEligible()) {
-      this.snackBar.open('Post to X is available for Premium accounts only.', 'Close', {
+      this.snackBar.open('Post to X is available for Premium+ accounts only.', 'Close', {
         duration: 5000,
       });
       return;

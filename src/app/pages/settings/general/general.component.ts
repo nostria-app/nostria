@@ -95,9 +95,9 @@ export class GeneralSettingsComponent implements OnInit, OnDestroy {
   currentFeatureLevel = signal<FeatureLevel>(this.app.featureLevel());
   xPremiumEligible = computed(() => {
     const subscription = this.accountState.subscription();
-    const isPremiumTier = subscription?.tier === 'premium' || subscription?.tier === 'premium_plus';
+    const hasXPostingEntitlement = subscription?.entitlements?.features?.some(feature => feature.key === 'DUAL_POST_X_10') ?? false;
     const isNotExpired = !subscription?.expires || Date.now() < subscription.expires;
-    return !!subscription && isPremiumTier && isNotExpired;
+    return !!subscription && hasXPostingEntitlement && isNotExpired;
   });
   xProfileUrl = computed(() => {
     const username = this.xDualPost.status().username;
@@ -276,7 +276,7 @@ export class GeneralSettingsComponent implements OnInit, OnDestroy {
 
   async connectX(): Promise<void> {
     if (!this.xPremiumEligible()) {
-      this.snackBar.open('Post to X is available for Premium accounts only.', 'Close', {
+      this.snackBar.open('Post to X is available for Premium+ accounts only.', 'Close', {
         duration: 5000,
       });
       return;
@@ -306,7 +306,7 @@ export class GeneralSettingsComponent implements OnInit, OnDestroy {
 
   async reconnectX(): Promise<void> {
     if (!this.xPremiumEligible()) {
-      this.snackBar.open('Post to X is available for Premium accounts only.', 'Close', {
+      this.snackBar.open('Post to X is available for Premium+ accounts only.', 'Close', {
         duration: 5000,
       });
       return;

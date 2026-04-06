@@ -536,7 +536,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     if (!this.xPremiumEligible()) {
       return {
         valid: false,
-        message: 'Post to X is available for Premium accounts only.',
+        message: 'Post to X is available for Premium+ accounts only.',
       };
     }
 
@@ -889,9 +889,9 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   });
   xPremiumEligible = computed(() => {
     const subscription = this.accountState.subscription();
-    const isPremiumTier = subscription?.tier === 'premium' || subscription?.tier === 'premium_plus';
+    const hasXPostingEntitlement = subscription?.entitlements?.features?.some(feature => feature.key === 'DUAL_POST_X_10') ?? false;
     const isNotExpired = !subscription?.expires || Date.now() < subscription.expires;
-    return !!subscription && isPremiumTier && isNotExpired;
+    return !!subscription && hasXPostingEntitlement && isNotExpired;
   });
 
   // Check if a mention is the reply target (cannot be removed)
@@ -2005,7 +2005,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
 
   async connectXFromComposer(): Promise<void> {
     if (!this.xPremiumEligible()) {
-      this.snackBar.open('Post to X is available for Premium accounts only.', 'Close', {
+      this.snackBar.open('Post to X is available for Premium+ accounts only.', 'Close', {
         duration: 5000,
       });
       return;
