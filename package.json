@@ -1,6 +1,6 @@
 {
   "name": "nostria",
-  "version": "3.1.12",
+  "version": "3.1.13",
   "scripts": {
     "ng": "ng",
     "start": "ng serve --host 0.0.0.0 --port 4200",
@@ -56,6 +56,7 @@
     "tauri:build": "tauri build --ci",
     "tauri:build:linux": "tauri build --ci --bundles appimage,deb",
     "tauri:build:windows": "tauri build --ci --bundles nsis,msi",
+    "tauri:build:windows:launch": "powershell -ExecutionPolicy Bypass -Command \"npm run tauri:build:windows; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; $binary = Resolve-Path 'src-tauri/target/release/nostria.exe'; Start-Process -FilePath $binary\"",
     "tauri:build:windows-arm": "tauri build --ci --target aarch64-pc-windows-msvc --bundles nsis,msi",
     "tauri:build:macos": "tauri build --ci --target universal-apple-darwin",
     "get-version": "node -p \"require('./package.json').version\"",

@@ -28,6 +28,7 @@ import { MAT_FORM_FIELD_DEFAULT_OPTIONS } from '@angular/material/form-field';
 import { MAT_TOOLTIP_DEFAULT_OPTIONS } from '@angular/material/tooltip';
 import { CustomReuseStrategy } from './services/custom-reuse-strategy';
 import { DesktopUpdaterService } from './services/desktop-updater.service';
+import { ExternalLinkService } from './services/external-link.service';
 
 let appLang = 'en';
 
@@ -70,6 +71,9 @@ export const appConfig: ApplicationConfig = {
     }),
     provideAppInitializer(() => {
       inject(DesktopUpdaterService).initialize();
+    }),
+    provideAppInitializer(() => {
+      inject(ExternalLinkService).initialize();
     }),
     {
       provide: LoggerService,
