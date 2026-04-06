@@ -483,7 +483,6 @@ export class FollowingService {
    * Get a specific profile by pubkey
    */
   getProfile(pubkey: string): FollowingProfile | undefined {
-    this.activate();
     return this.profilesMap().get(pubkey);
   }
 
@@ -491,7 +490,6 @@ export class FollowingService {
    * Check if a profile exists in the following list
    */
   hasProfile(pubkey: string): boolean {
-    this.activate();
     return this.profilesMap().has(pubkey);
   }
 
@@ -717,8 +715,6 @@ export class FollowingService {
    * Search profiles by name, display name, or nip05
    */
   searchProfiles(query: string): FollowingProfile[] {
-    this.activate();
-
     if (!query || query.trim() === '') {
       return this.profiles();
     }

@@ -135,6 +135,8 @@ export class StartChatDialogComponent {
   });
 
   constructor() {
+    this.followingService.activate();
+
     // Load initial following list
     this.loadInitialFollowingList();
   }

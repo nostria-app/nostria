@@ -140,6 +140,8 @@ export class CreateCommunityComponent implements OnInit {
   newRelayUrl = signal('');
 
   constructor() {
+    this.followingService.activate();
+
     // Load initial following list
     this.loadInitialFollowingList();
   }

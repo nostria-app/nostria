@@ -105,6 +105,8 @@ export class ForwardMessageDialogComponent {
   canForward = computed(() => this.selectedPubkeys().size > 0);
 
   constructor() {
+    this.followingService.activate();
+
     // Load initial following list
     this.loadInitialFollowingList();
   }

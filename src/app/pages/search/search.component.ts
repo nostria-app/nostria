@@ -134,6 +134,10 @@ export class SearchComponent implements OnInit, OnDestroy {
     maxResults: 100,
   };
 
+  constructor() {
+    this.followingService.activate();
+  }
+
   ngOnInit() {
     // Subscribe to query param changes to react when URL changes
     this.queryParamsSubscription = this.route.queryParams.subscribe(params => {

@@ -96,6 +96,8 @@ export class SearchService {
   readonly #debounceDelay = 300;
 
   constructor() {
+    this.followingService.activate();
+
     effect(() => {
       const query = this.layout.query();
       const searchValue = query?.trim() || '';

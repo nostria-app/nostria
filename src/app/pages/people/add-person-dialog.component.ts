@@ -331,6 +331,8 @@ export class AddPersonDialogComponent {
   isAddingToSet = computed(() => !!this.targetFollowSet());
 
   constructor() {
+    this.followingService.activate();
+
     this.logger.debug('[AddPersonDialog] Opened with data:', this.data);
     this.logger.debug('[AddPersonDialog] Target follow set:', this.targetFollowSet());
   }

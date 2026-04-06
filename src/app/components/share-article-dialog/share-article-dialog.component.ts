@@ -796,6 +796,8 @@ export class ShareArticleDialogComponent {
   isRepostInProgress = signal<boolean>(false);
 
   constructor() {
+    this.followingService.activate();
+
     // Check if user has already reposted this event
     this.checkRepostState();
   }
