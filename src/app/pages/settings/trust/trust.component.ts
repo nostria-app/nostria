@@ -99,6 +99,13 @@ export class TrustSettingsComponent implements OnInit, OnDestroy {
   copy10040Status = signal<'idle' | 'done' | 'error'>('idle');
   private hasAutoLoadedStatus = false;
 
+  canRetryBrainstormActivation = computed(() => {
+    return !this.brainstormActivateLoading()
+      && !this.brainstormStatusLoading()
+      && !this.brainstormRecalculateLoading()
+      && !this.brainstormConfigLoading();
+  });
+
   /** Check if a known provider is enabled */
   isProviderConfigured(provider: KnownProvider): boolean {
     return this.trustProviderService.isKnownProviderConfigured(provider);
@@ -106,7 +113,12 @@ export class TrustSettingsComponent implements OnInit, OnDestroy {
 
   canRecalculate = computed(() => {
     const status = (this.brainstormStatus()?.status || '').toLowerCase();
-    return this.isBrainstormActivated() && status === 'success';
+    return this.isBrainstormActivated() && ['success', 'failed', 'failure', 'error'].includes(status);
+  });
+
+  hasFailedBrainstormCalculation = computed(() => {
+    const status = (this.brainstormStatus()?.status || '').toLowerCase();
+    return status === 'failed' || status === 'failure' || status === 'error';
   });
 
   constructor() {
@@ -205,6 +217,16 @@ export class TrustSettingsComponent implements OnInit, OnDestroy {
     } finally {
       this.brainstormActivateLoading.set(false);
     }
+  }
+
+  async retryBrainstormActivation(): Promise<void> {
+    const brainstormProvider = this.getBrainstormProvider();
+    if (!brainstormProvider) {
+      this.brainstormError.set($localize`:@@settings.trust.brainstorm.providerMissing:Brainstorm provider is not available.`);
+      return;
+    }
+
+    await this.activateProvider(brainstormProvider);
   }
 
   async checkBrainstormStatus(): Promise<void> {
@@ -345,6 +367,10 @@ export class TrustSettingsComponent implements OnInit, OnDestroy {
     return setup;
   }
 
+  private getBrainstormProvider(): KnownProvider | undefined {
+    return KNOWN_PROVIDERS.find(provider => provider.name === 'Brainstorm');
+  }
+
   private addBrainstormProviders(configTags: BrainstormSetup['configTags']): void {
     for (const tag of configTags) {
       this.trustProviderService.addProvider(
@@ -466,7 +492,7 @@ export class TrustSettingsComponent implements OnInit, OnDestroy {
       return 'COMPLETE';
     }
 
-    if (status === 'failed' || status === 'error') {
+    if (status === 'failed' || status === 'failure' || status === 'error') {
       return 'FAILED';
     }
 
@@ -479,7 +505,7 @@ export class TrustSettingsComponent implements OnInit, OnDestroy {
       return 'success';
     }
 
-    if (status === 'failed' || status === 'error') {
+    if (status === 'failed' || status === 'failure' || status === 'error') {
       return 'error';
     }
 

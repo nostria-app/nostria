@@ -87,6 +87,21 @@
       <div class="callout-content">
         @if (brainstormError()) {
         <p class="brainstorm-feedback error">{{ brainstormError() }}</p>
+
+        <div class="brainstorm-retry-actions">
+          <button mat-flat-button (click)="retryBrainstormActivation()" [disabled]="!canRetryBrainstormActivation()">
+            @if (brainstormActivateLoading()) {
+            <mat-spinner diameter="18"></mat-spinner>
+            } @else {
+            <mat-icon>replay</mat-icon>
+            }
+            @if (brainstormActivateLoading()) {
+            <span i18n="@@settings.trust.brainstorm.retryingActivation">Retrying activation...</span>
+            } @else {
+            <span i18n="@@settings.trust.brainstorm.retryActivation">Retry Activation / Generation</span>
+            }
+          </button>
+        </div>
         }
 
         @if (brainstormMessage()) {
@@ -154,13 +169,21 @@
               <mat-spinner diameter="18"></mat-spinner>
               }
               @if (!brainstormRecalculateLoading()) {
-              <mat-icon>refresh</mat-icon>
+              <mat-icon>{{ hasFailedBrainstormCalculation() ? 'replay' : 'refresh' }}</mat-icon>
               }
               @if (brainstormRecalculateLoading()) {
+              @if (hasFailedBrainstormCalculation()) {
+              <span i18n="@@settings.trust.personalized.retryingGrapeRank">Retrying GrapeRank...</span>
+              } @else {
               <span i18n="@@settings.trust.personalized.recalculating">Recalculating...</span>
               }
+              }
               @if (!brainstormRecalculateLoading()) {
+              @if (hasFailedBrainstormCalculation()) {
+              <span i18n="@@settings.trust.personalized.retryGrapeRank">Retry GrapeRank</span>
+              } @else {
               <span i18n="@@settings.trust.personalized.recalculateGrapeRank">Recalculate GrapeRank</span>
+              }
               }
             </button>
           </div>
@@ -174,6 +197,21 @@
             <span class="trust-status-label" i18n="@@settings.trust.personalized.status">Status</span>
             <span class="trust-status-value" i18n="@@settings.trust.personalized.noStatusData">No status data
               found</span>
+          </div>
+
+          <div class="brainstorm-retry-actions">
+            <button mat-stroked-button (click)="retryBrainstormActivation()" [disabled]="!canRetryBrainstormActivation()">
+              @if (brainstormActivateLoading()) {
+              <mat-spinner diameter="18"></mat-spinner>
+              } @else {
+              <mat-icon>replay</mat-icon>
+              }
+              @if (brainstormActivateLoading()) {
+              <span i18n="@@settings.trust.brainstorm.retryingActivation">Retrying activation...</span>
+              } @else {
+              <span i18n="@@settings.trust.brainstorm.retryNoStatus">Retry Activation / Generation</span>
+              }
+            </button>
           </div>
         </div>
         }
