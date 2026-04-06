@@ -201,6 +201,19 @@ npm run tauri:build
 
 ### Manual Linux build
 
+Install a current stable Rust toolchain first. The checked-in `src-tauri/Cargo.lock` uses lockfile format `4`, so older Cargo releases such as `cargo 1.59.0` will fail to parse it.
+
+Recommended setup with `rustup`:
+
+```bash
+curl https://sh.rustup.rs -sSf | sh
+rustup update stable
+rustup default stable
+cargo --version
+```
+
+Use a recent stable toolchain here. `cargo 1.59.0` is too old for this project.
+
 On Ubuntu/Debian, install the native dependencies required by Tauri before building:
 
 ```bash
