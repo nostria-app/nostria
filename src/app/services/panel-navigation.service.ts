@@ -219,6 +219,7 @@ export class PanelNavigationService {
     'e': { type: 'detail', title: 'Event' },
     'a': { type: 'detail', title: 'Article' },
     'b': { type: 'detail', title: 'Badge' },
+    'music/album': { type: 'detail', title: 'Album' },
     'music/song': { type: 'detail', title: 'Song' },
     'music/playlist': { type: 'detail', title: 'Album' },
     'music/artist': { type: 'detail', title: 'Artist' },

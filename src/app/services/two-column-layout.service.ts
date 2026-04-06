@@ -231,6 +231,7 @@ export class TwoColumnLayoutService {
     'e': { type: 'detail' }, // Event
     'a': { type: 'detail' }, // Article
     'b': { type: 'detail' }, // Badge details
+    'music/album': { type: 'detail' },
     'music/song': { type: 'detail' },
     'music/playlist': { type: 'detail' },
     'music/artist': { type: 'detail' },
