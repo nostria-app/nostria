@@ -200,7 +200,8 @@
           </div>
 
           <div class="brainstorm-retry-actions">
-            <button mat-stroked-button (click)="retryBrainstormActivation()" [disabled]="!canRetryBrainstormActivation()">
+            <button mat-stroked-button (click)="retryBrainstormActivation()"
+              [disabled]="!canRetryBrainstormActivation()">
               @if (brainstormActivateLoading()) {
               <mat-spinner diameter="18"></mat-spinner>
               } @else {
@@ -216,6 +217,7 @@
         </div>
         }
 
+        @if (hasCompletedBrainstormCalculation()) {
         <div class="refresh-section">
           <div>
             <p class="trust-calculation-title" i18n="@@settings.trust.precache.title">Pre-cache Following Rank Scores
@@ -266,6 +268,7 @@
           </p>
           }
         </div>
+        }
 
         <div class="event-10040-section">
           <div class="event-10040-actions">

@@ -121,6 +121,11 @@ export class TrustSettingsComponent implements OnInit, OnDestroy {
     return status === 'failed' || status === 'failure' || status === 'error';
   });
 
+  hasCompletedBrainstormCalculation = computed(() => {
+    const status = (this.brainstormStatus()?.status || '').toLowerCase();
+    return ['success', 'failed', 'failure', 'error'].includes(status);
+  });
+
   constructor() {
     effect(() => {
       const loaded = this.trustProviderService.loaded();
