@@ -201,7 +201,13 @@ export class ExternalLinkHandlerService {
       return ['/music/artist', pubkey];
     }
 
-    // Music album: /music/album/:pubkey/:identifier
+    // Music album: /music/album/:encodedAddress or /music/album/:pubkey/:identifier
+    const musicAlbumEncodedMatch = path.match(/^\/music\/album\/([a-zA-Z0-9]+)$/i);
+    if (musicAlbumEncodedMatch) {
+      const [, encodedAddress] = musicAlbumEncodedMatch;
+      return ['/music/album', encodedAddress];
+    }
+
     const musicAlbumMatch = path.match(/^\/music\/album\/([a-zA-Z0-9]+)\/(.+)$/i);
     if (musicAlbumMatch) {
       const [, pubkey, identifier] = musicAlbumMatch;
@@ -343,8 +349,7 @@ export class ExternalLinkHandlerService {
         const data = decoded.data as { kind: number; pubkey: string; identifier: string };
 
         if (data.kind === 34139) {
-          const npub = nip19.npubEncode(data.pubkey);
-          return `/music/album/${npub}/${data.identifier}`;
+          return `/music/album/${identifier}`;
         }
 
         if (data.kind === 30003) {

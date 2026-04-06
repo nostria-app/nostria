@@ -845,10 +845,12 @@ export class MusicPlaylistCardComponent {
     const ev = this.event();
     const dTag = ev.tags.find(t => t[0] === 'd')?.[1];
     if (dTag) {
-      const npub = nip19.npubEncode(ev.pubkey);
-      const link = `https://nostria.app/music/album/${npub}/${encodeURIComponent(dTag)}`;
-      this.clipboard.copy(link);
-      this.snackBar.open('Link copied!', 'Close', { duration: 2000 });
+      void this.createAlbumShareUrl(ev).then(link => {
+        this.clipboard.copy(link);
+        this.snackBar.open('Link copied!', 'Close', { duration: 2000 });
+      }).catch(() => {
+        this.snackBar.open('Failed to generate link', 'Close', { duration: 3000 });
+      });
     } else {
       this.snackBar.open('Failed to generate link', 'Close', { duration: 3000 });
     }
@@ -872,17 +874,8 @@ export class MusicPlaylistCardComponent {
     }
 
     try {
-      const authorRelays = this.utilities.getShareRelayHints(
-        await this.userRelaysService.getUserRelaysForPublishing(ev.pubkey)
-      );
-      const npub = nip19.npubEncode(ev.pubkey);
-      const link = `https://nostria.app/music/album/${npub}/${encodeURIComponent(dTag)}`;
-      const naddr = nip19.naddrEncode({
-        kind: ev.kind,
-        pubkey: ev.pubkey,
-        identifier: dTag,
-        relays: authorRelays.length > 0 ? authorRelays : undefined,
-      });
+      const naddr = await this.createAlbumShareNaddr(ev);
+      const link = this.getAlbumShareUrl(naddr);
 
       const dialogData: ShareArticleDialogData = {
         title: this.title(),
@@ -909,6 +902,33 @@ export class MusicPlaylistCardComponent {
     } catch {
       this.snackBar.open('Failed to share playlist', 'Close', { duration: 3000 });
     }
+  }
+
+  private async createAlbumShareUrl(event: Event): Promise<string> {
+    const naddr = await this.createAlbumShareNaddr(event);
+    return this.getAlbumShareUrl(naddr);
+  }
+
+  private async createAlbumShareNaddr(event: Event): Promise<string> {
+    const identifier = event.tags.find(t => t[0] === 'd')?.[1];
+    if (!identifier) {
+      throw new Error('Missing album identifier');
+    }
+
+    const authorRelays = this.utilities.getShareRelayHints(
+      await this.userRelaysService.getUserRelaysForPublishing(event.pubkey)
+    );
+
+    return nip19.naddrEncode({
+      kind: event.kind,
+      pubkey: event.pubkey,
+      identifier,
+      relays: authorRelays.length > 0 ? authorRelays : undefined,
+    });
+  }
+
+  private getAlbumShareUrl(naddr: string): string {
+    return `https://nostria.app/music/album/${naddr}`;
   }
 
   // Edit playlist

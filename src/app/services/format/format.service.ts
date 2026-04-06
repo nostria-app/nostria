@@ -278,11 +278,11 @@ export class FormatService {
   }
 
   private getAddressableRoute(kind: number, pubkey: string, identifier: string, naddrEncoded: string): string {
-    const npub = this.utilities.getNpubFromPubkey(pubkey);
-
     if (kind === FormatService.MUSIC_ALBUM_KIND) {
-      return `/music/album/${npub}/${encodeURIComponent(identifier)}`;
+      return `/music/album/${naddrEncoded}`;
     }
+
+    const npub = this.utilities.getNpubFromPubkey(pubkey);
 
     if (kind === 30003) {
       return `/music/playlist/${npub}/${encodeURIComponent(identifier)}`;

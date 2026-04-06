@@ -88,7 +88,7 @@ describe('ExternalLinkHandlerService', () => {
 
       expect(result).toBe(true);
       expect(routerSpy.navigate).toHaveBeenCalledWith([
-        `/music/album/${testNpub}/${testPlaylistIdentifier}`
+        `/music/album/${playlistNaddr}`
       ]);
     });
 
@@ -130,7 +130,7 @@ describe('ExternalLinkHandlerService', () => {
 
       expect(result).toBe(true);
       expect(routerSpy.navigate).toHaveBeenCalledWith([
-        `/music/album/${testNpub}/${testPlaylistIdentifier}`
+        `/music/album/${playlistNaddr}`
       ]);
     });
 
@@ -172,7 +172,7 @@ describe('ExternalLinkHandlerService', () => {
 
       expect(result).toBe(true);
       expect(routerSpy.navigate).toHaveBeenCalledWith([
-        `/music/album/${testNpub}/${testPlaylistIdentifier}`
+        `/music/album/${playlistNaddr}`
       ]);
     });
 
@@ -216,6 +216,16 @@ describe('ExternalLinkHandlerService', () => {
       expect(result).toBe(true);
       expect(routerSpy.navigate).toHaveBeenCalledWith([
         '/music/album', testNpub, testPlaylistIdentifier
+      ]);
+    });
+
+    it('should handle nostria.app music album naddr route', () => {
+      const url = `https://nostria.app/music/album/${playlistNaddr}`;
+      const result = service.handleLinkClick(url);
+
+      expect(result).toBe(true);
+      expect(routerSpy.navigate).toHaveBeenCalledWith([
+        '/music/album', playlistNaddr
       ]);
     });
 

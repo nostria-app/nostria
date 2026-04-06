@@ -351,6 +351,13 @@ export const routes: Routes = [
     title: 'Artist',
   },
   {
+    path: 'music/album/:encodedAddress',
+    loadComponent: () =>
+      import('./pages/music/music-album/music-album.component').then(m => m.MusicAlbumComponent),
+    resolve: { data: DataResolver },
+    title: 'Album',
+  },
+  {
     path: 'music/album/:pubkey/:identifier',
     loadComponent: () =>
       import('./pages/music/music-album/music-album.component').then(m => m.MusicAlbumComponent),
@@ -869,6 +876,14 @@ export const routes: Routes = [
       import('./pages/music/music-artist/music-artist.component').then(m => m.MusicArtistComponent),
     resolve: { data: DataResolver },
     title: 'Artist',
+  },
+  {
+    path: 'music/album/:encodedAddress',
+    outlet: 'right',
+    loadComponent: () =>
+      import('./pages/music/music-album/music-album.component').then(m => m.MusicAlbumComponent),
+    resolve: { data: DataResolver },
+    title: 'Album',
   },
   {
     path: 'music/album/:pubkey/:identifier',

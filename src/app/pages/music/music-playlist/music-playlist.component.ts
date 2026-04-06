@@ -132,6 +132,7 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
   private trackMap = new Map<string, Event>();
   private currentPlaylistKey = ''; // Track current pubkey+dTag to detect changes
   private currentTrackRefsKey = ''; // Track current playlist track refs to avoid redundant reloads
+  private routeRelayHints: string[] = [];
 
   // Store event from router state (must be captured in constructor before navigation ends)
   private routerStateEvent: Event | null = null;
@@ -242,12 +243,26 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
       if (pubkeyFromInput && dTagFromInput) {
         pubkey = pubkeyFromInput;
         identifier = dTagFromInput;
+        this.routeRelayHints = [];
       } else {
         // Use route params (when opened via router)
         const params = this.routeParams();
         if (params) {
-          pubkey = params.get('pubkey');
-          identifier = params.get('identifier');
+          const encodedAddress = params.get('encodedAddress');
+          if (encodedAddress?.startsWith('naddr1')) {
+            const decodedAddress = this.utilities.decodeEventFromUrl(encodedAddress);
+            if (decodedAddress?.author && decodedAddress.identifier) {
+              pubkey = decodedAddress.author;
+              identifier = decodedAddress.identifier;
+              this.routeRelayHints = decodedAddress.relays || [];
+            }
+          }
+
+          if (!pubkey || !identifier) {
+            pubkey = params.get('pubkey');
+            identifier = params.get('identifier');
+            this.routeRelayHints = [];
+          }
         }
       }
 
@@ -441,7 +456,10 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
     // Load cached playlist first so details can open while offline.
     void this.loadCachedPlaylist(decodedPubkey, identifier);
 
-    const relayUrls = this.relaysService.getOptimalRelays(this.utilities.preferredRelays);
+    const relayUrls = this.relaysService.getOptimalRelays([
+      ...this.routeRelayHints,
+      ...this.utilities.preferredRelays,
+    ]);
 
     if (relayUrls.length === 0) {
       this.logger.warn('No relays available');
@@ -771,15 +789,12 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
     const ev = this.playlist();
     if (!ev) return;
 
-    try {
-      const dTag = ev.tags.find(t => t[0] === 'd')?.[1] || '';
-      const npub = nip19.npubEncode(ev.pubkey);
-      const link = `https://nostria.app/music/album/${npub}/${encodeURIComponent(dTag)}`;
+    void this.createAlbumShareUrl(ev).then(link => {
       this.clipboard.copy(link);
       this.snackBar.open('Link copied!', 'Close', { duration: 2000 });
-    } catch {
+    }).catch(() => {
       this.snackBar.open('Failed to copy link', 'Close', { duration: 2000 });
-    }
+    });
   }
 
   async copyEventId(): Promise<void> {
@@ -813,18 +828,9 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
     if (!ev) return;
 
     try {
-      const authorRelays = this.utilities.getShareRelayHints(
-        await this.userRelaysService.getUserRelaysForPublishing(ev.pubkey)
-      );
       const dTag = ev.tags.find(t => t[0] === 'd')?.[1] || '';
-      const npub = nip19.npubEncode(ev.pubkey);
-      const link = `https://nostria.app/music/album/${npub}/${encodeURIComponent(dTag)}`;
-      const naddr = nip19.naddrEncode({
-        kind: ev.kind,
-        pubkey: ev.pubkey,
-        identifier: dTag,
-        relays: authorRelays.length > 0 ? authorRelays : undefined,
-      });
+      const naddr = await this.createAlbumShareNaddr(ev);
+      const link = this.getAlbumShareUrl(naddr);
 
       const dialogData: ShareArticleDialogData = {
         title: this.title(),
@@ -850,6 +856,33 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
     } catch {
       this.snackBar.open('Failed to share playlist', 'Close', { duration: 3000 });
     }
+  }
+
+  private async createAlbumShareUrl(event: Event): Promise<string> {
+    const naddr = await this.createAlbumShareNaddr(event);
+    return this.getAlbumShareUrl(naddr);
+  }
+
+  private async createAlbumShareNaddr(event: Event): Promise<string> {
+    const identifier = event.tags.find(t => t[0] === 'd')?.[1] || '';
+    if (!identifier) {
+      throw new Error('Missing album identifier');
+    }
+
+    const authorRelays = this.utilities.getShareRelayHints(
+      await this.userRelaysService.getUserRelaysForPublishing(event.pubkey)
+    );
+
+    return nip19.naddrEncode({
+      kind: event.kind,
+      pubkey: event.pubkey,
+      identifier,
+      relays: authorRelays.length > 0 ? authorRelays : undefined,
+    });
+  }
+
+  private getAlbumShareUrl(naddr: string): string {
+    return `https://nostria.app/music/album/${naddr}`;
   }
 
   sharePlaylist(): void {
