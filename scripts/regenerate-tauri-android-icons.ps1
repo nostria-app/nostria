@@ -85,10 +85,10 @@ try {
   }
 
   $legacySizes = @{
-    'mipmap-mdpi' = 48
-    'mipmap-hdpi' = 72
-    'mipmap-xhdpi' = 96
-    'mipmap-xxhdpi' = 144
+    'mipmap-mdpi'    = 48
+    'mipmap-hdpi'    = 72
+    'mipmap-xhdpi'   = 96
+    'mipmap-xxhdpi'  = 144
     'mipmap-xxxhdpi' = 192
   }
 

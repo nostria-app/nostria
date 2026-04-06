@@ -78,6 +78,19 @@ describe('FeedService', () => {
     return { service, logger };
   }
 
+  function createServiceForPaginationTests(): FeedService {
+    const service = Object.create(FeedService.prototype) as FeedService;
+
+    (service as any).logger = {
+      debug: vi.fn(),
+      info: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+    };
+
+    return service;
+  }
+
   describe('handleFollowingIncrementalUpdate', () => {
     it('renders events directly when initialLoadComplete=true and feed is empty', () => {
       const service = createServiceForIncrementalFollowingTests();
@@ -250,6 +263,26 @@ describe('FeedService', () => {
       ] as any;
 
       expect((service as any).shouldUseBackupFeeds(currentFeeds, backupFeeds)).toBe(false);
+    });
+  });
+
+  describe('loadMoreEvents', () => {
+    it('should keep following feeds pageable after an empty older window', async () => {
+      const service = createServiceForPaginationTests();
+
+      const feedData: any = {
+        feed: { id: 'feed-following', source: 'following' },
+        isLoadingMore: signal(false),
+        hasMore: signal(true),
+      };
+
+      (service as any).data = new Map([[feedData.feed.id, feedData]]);
+      (service as any).loadMoreFollowingEvents = vi.fn().mockResolvedValue(false);
+
+      await service.loadMoreEvents(feedData.feed.id);
+
+      expect((service as any).loadMoreFollowingEvents).toHaveBeenCalledWith(feedData);
+      expect(feedData.hasMore()).toBe(true);
     });
   });
 

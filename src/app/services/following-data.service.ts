@@ -45,6 +45,11 @@ export class FollowingDataService {
   // This is the size of each "page" when infinite scrolling
   readonly TIME_WINDOW_SECONDS = 6 * 60 * 60;
 
+  // Sparse following feeds may need to skip across multiple empty windows
+  // before they find enough older events to fill the next page.
+  private readonly MIN_EVENTS_PER_PAGINATION_LOAD = 10;
+  private readonly MAX_WINDOWS_PER_PAGINATION_LOAD = 8;
+
   // Maximum lookback period for initial cache loading (7 days in seconds)
   // This limits how many events are loaded at startup for the feed display
   // Older events can still be loaded via infinite scroll pagination
@@ -657,9 +662,13 @@ export class FollowingDataService {
         if (!currentOldest || oldestEventTime < currentOldest) {
           this.oldestFetchedTimestamp.set(oldestEventTime);
         }
-      } else if (!this.oldestFetchedTimestamp()) {
-        // Even if no events, track the time window we searched
-        this.oldestFetchedTimestamp.set(sinceTimestamp);
+      } else {
+        const currentOldest = this.oldestFetchedTimestamp();
+        // Advance the cursor even when a window is empty so sparse feeds do not
+        // get stuck re-querying the same gap forever.
+        if (!currentOldest || sinceTimestamp < currentOldest) {
+          this.oldestFetchedTimestamp.set(sinceTimestamp);
+        }
       }
 
       // Merge and cache all events
@@ -690,7 +699,8 @@ export class FollowingDataService {
    */
   async loadOlderEvents(
     kinds: number[] = [1],
-    onProgress?: (events: Event[]) => void
+    onProgress?: (events: Event[]) => void,
+    minimumEventCount = this.MIN_EVENTS_PER_PAGINATION_LOAD
   ): Promise<Event[]> {
     const followingList = this.accountState.followingList();
 
@@ -707,31 +717,46 @@ export class FollowingDataService {
       return paginationFetchPromise;
     }
 
-    // Determine the time window for the next page
-    const oldestTimestamp = this.oldestFetchedTimestamp();
-    if (!oldestTimestamp) {
-      // No previous fetch, just do initial load
-      return this.ensureFollowingData(kinds, true, onProgress);
-    }
-
-    // Calculate the next 6-hour window (going backwards in time)
-    const untilTimestamp = oldestTimestamp - 1; // Just before the oldest we have
-    const sinceTimestamp = untilTimestamp - this.TIME_WINDOW_SECONDS;
-
-    this.logger.info(
-      `[FollowingDataService] Loading older events: ` +
-      `from ${new Date(sinceTimestamp * 1000).toISOString()} to ${new Date(untilTimestamp * 1000).toISOString()}`
-    );
-
-    // Start pagination fetch
+    const targetEventCount = Math.max(1, minimumEventCount);
     const existingEvents = this.getCachedEventsForKinds(kinds);
-    const fetchPromise = this.fetchFromRelays(
-      kinds,
-      existingEvents,
-      onProgress,
-      sinceTimestamp,
-      untilTimestamp
-    );
+    const fetchPromise = (async () => {
+      const aggregatedEvents: Event[] = [];
+
+      for (let windowsSearched = 0; windowsSearched < this.MAX_WINDOWS_PER_PAGINATION_LOAD; windowsSearched++) {
+        const oldestTimestamp = this.oldestFetchedTimestamp();
+        if (!oldestTimestamp) {
+          aggregatedEvents.push(...await this.ensureFollowingData(kinds, true, onProgress));
+          break;
+        }
+
+        const untilTimestamp = oldestTimestamp - 1;
+        const sinceTimestamp = untilTimestamp - this.TIME_WINDOW_SECONDS;
+
+        this.logger.info(
+          `[FollowingDataService] Loading older events: ` +
+          `from ${new Date(sinceTimestamp * 1000).toISOString()} to ${new Date(untilTimestamp * 1000).toISOString()}`
+        );
+
+        const pageEvents = await this.fetchFromRelays(
+          kinds,
+          existingEvents,
+          onProgress,
+          sinceTimestamp,
+          untilTimestamp
+        );
+
+        if (pageEvents.length === 0) {
+          continue;
+        }
+
+        aggregatedEvents.push(...pageEvents);
+        if (aggregatedEvents.length >= targetEventCount) {
+          break;
+        }
+      }
+
+      return aggregatedEvents;
+    })();
     this.paginationFetchPromises.set(cacheKey, fetchPromise);
 
     try {

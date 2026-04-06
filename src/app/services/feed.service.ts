@@ -195,6 +195,9 @@ const TRENDING_FEED: FeedConfig = {
   providedIn: 'root',
 })
 export class FeedService {
+  private readonly FOLLOWING_INITIAL_MIN_EVENTS = 12;
+  private readonly FOLLOWING_INITIAL_BACKFILL_PAGES = 3;
+
   private readonly localStorageService = inject(LocalStorageService);
   private readonly logger = inject(LoggerService);
   private readonly database = inject(DatabaseService);
@@ -1681,6 +1684,8 @@ export class FeedService {
       // Final update with all events
       this.handleFollowingFinalUpdate(feedData, events);
 
+      await this.backfillInitialFollowingFeed(feedData);
+
       this.logger.info(`✅ Loaded FOLLOWING feed with ${events.length} events from ${followingList.length} users`);
     } catch (error) {
       this.logger.error('Error loading following feed:', error);
@@ -1709,11 +1714,12 @@ export class FeedService {
         (batchEvents: Event[]) => {
           // For pagination, add events directly (they're already older)
           this.handleFollowingPaginationUpdate(feedData, batchEvents);
-        }
+        },
+        8
       );
 
       if (newEvents.length === 0) {
-        this.logger.debug('No events found in the older time window');
+        this.logger.debug('No events found in the searched older time windows');
         return false;
       }
 
@@ -1763,6 +1769,27 @@ export class FeedService {
 
       // Save to cache
       this.saveCachedEvents(feedData.feed.id, mergedEvents);
+    }
+  }
+
+  private getFollowingFeedEventCount(feedData: FeedItem): number {
+    return feedData.events().length + (feedData.pendingEvents?.()?.length || 0);
+  }
+
+  private async backfillInitialFollowingFeed(feedData: FeedItem): Promise<void> {
+    let pagesLoaded = 0;
+
+    while (
+      this.getFollowingFeedEventCount(feedData) < this.FOLLOWING_INITIAL_MIN_EVENTS &&
+      pagesLoaded < this.FOLLOWING_INITIAL_BACKFILL_PAGES &&
+      this.followingData.hasMoreOlderEvents()
+    ) {
+      const loadedAnyEvents = await this.loadMoreFollowingEvents(feedData);
+      pagesLoaded++;
+
+      if (!loadedAnyEvents) {
+        break;
+      }
     }
   }
 
@@ -2740,10 +2767,7 @@ export class FeedService {
       if (feed.source === 'following') {
         // For following feeds, use TIME-WINDOW based pagination (6-hour windows)
         // This is more efficient and avoids gaps from users with different posting frequencies
-        const hasMore = await this.loadMoreFollowingEvents(feedData);
-        if (!hasMore) {
-          feedData.hasMore.set(false);
-        }
+        await this.loadMoreFollowingEvents(feedData);
       } else if (feed.source === 'for-you') {
         // For "For You" feed, combine all sources like in initial load
         const allPubkeys = new Set<string>();
