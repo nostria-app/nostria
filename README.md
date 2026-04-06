@@ -199,6 +199,31 @@ npm ci --legacy-peer-deps
 npm run tauri:build
 ```
 
+### Manual Linux build
+
+On Ubuntu/Debian, install the native dependencies required by Tauri before building:
+
+```bash
+sudo apt-get update
+sudo apt-get install -y \
+  build-essential \
+  libappindicator3-dev \
+  libgtk-3-dev \
+  librsvg2-dev \
+  libssl-dev \
+  libwebkit2gtk-4.1-dev \
+  patchelf
+```
+
+Then build the Linux bundles:
+
+```bash
+npm ci --legacy-peer-deps
+npm run tauri:build:linux
+```
+
+This produces AppImage and `.deb` installers under `src-tauri/target/release/bundle/`.
+
 Platform-specific installer commands:
 
 ```bash
