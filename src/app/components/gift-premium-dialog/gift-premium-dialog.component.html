@@ -105,7 +105,8 @@
             @if (loadingPrice()) {
             <mat-spinner diameter="16"></mat-spinner>
             } @else {
-            {{ (getDollarAmount(giftForm.get('premiumType')?.value ?? 'basic', 1) / bitcoinPrice()!.usd * 100000000) | number:'1.0-0' }} sats
+            {{ (getDollarAmount(giftForm.get('premiumType')?.value ?? 'basic', 1) / bitcoinPrice()!.usd * 100000000) |
+            number:'1.0-0' }} sats
             }
           </span>
         </button>
@@ -118,7 +119,8 @@
             @if (loadingPrice()) {
             <mat-spinner diameter="16"></mat-spinner>
             } @else {
-            {{ (getDollarAmount(giftForm.get('premiumType')?.value ?? 'basic', 3) / bitcoinPrice()!.usd * 100000000) | number:'1.0-0' }} sats
+            {{ (getDollarAmount(giftForm.get('premiumType')?.value ?? 'basic', 3) / bitcoinPrice()!.usd * 100000000) |
+            number:'1.0-0' }} sats
             }
           </span>
         </button>
