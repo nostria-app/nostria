@@ -61,12 +61,12 @@ export class PremiumComponent implements OnInit, OnDestroy {
   expiresIn = computed(() => {
     const expires = this.accountState.subscription()?.expires;
     if (!expires) return null;
-    
+
     const now = Date.now();
     const diff = expires - now;
-    
+
     if (diff <= 0) return 'Expired';
-    
+
     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
     if (days > 30) {
       const months = Math.floor(days / 30);
@@ -79,7 +79,7 @@ export class PremiumComponent implements OnInit, OnDestroy {
   isExpiringSoon = computed(() => {
     const expires = this.accountState.subscription()?.expires;
     if (!expires) return false;
-    
+
     const thirtyDaysFromNow = Date.now() + (30 * 24 * 60 * 60 * 1000);
     return expires < thirtyDaysFromNow && expires > Date.now();
   });
@@ -104,7 +104,7 @@ export class PremiumComponent implements OnInit, OnDestroy {
 
   loadHistory() {
     this.isLoadingHistory.set(true);
-    
+
     // Load both histories in parallel
     this.premiumApi.getSubscriptionHistory()
       .pipe(takeUntil(this.destroy$))
@@ -139,6 +139,21 @@ export class PremiumComponent implements OnInit, OnDestroy {
   formatPrice(cents: number, currency?: string): string {
     const currencyCode = currency || 'USD';
     return `$${(cents / 100).toFixed(2)} ${currencyCode}`;
+  }
+
+  formatTierName(tier?: string | null): string {
+    switch (tier) {
+      case 'premium_plus':
+        return 'Premium+';
+      case 'premium':
+        return 'Premium';
+      case 'basic':
+        return 'Basic';
+      case 'free':
+        return 'Free';
+      default:
+        return tier || 'Unknown';
+    }
   }
 
   openSetUsernameDialog(): void {

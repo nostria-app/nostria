@@ -10,10 +10,14 @@ export enum Feature {
   BasicWebpush = 'BASIC_WEBPUSH',
   CommunitySupport = 'COMMUNITY_SUPPORT',
   Username = 'USERNAME',
-  AdvancedFiltering = 'ADVANCED_FILTERING',
-  PrioritySupport = 'PRIORITY_SUPPORT',
-  CustomTemplates = 'CUSTOM_TEMPLATES',
-  ApiAccess = 'API_ACCESS',
-  Webhook = 'WEBHOOK',
-  Analytics = 'ANALYTICS'
+  Newsletter = 'NEWSLETTER',
+  Storage1gb = 'STORAGE_1GB',
+  Storage5gb = 'STORAGE_5GB',
+  Storage50gb = 'STORAGE_50GB',
+  DualPostX10 = 'DUAL_POST_X_10',
+  Analytics = 'ANALYTICS',
+  CloudBackupComingSoon = 'CLOUD_BACKUP_COMING_SOON',
+  Memos = 'MEMOS',
+  Youtube = 'YOUTUBE',
+  ExtraBackupFeatures = 'EXTRA_BACKUP_FEATURES'
 }

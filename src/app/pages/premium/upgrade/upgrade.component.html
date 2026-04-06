@@ -1,5 +1,5 @@
 <div class="upgrade-container">
-  <h1 class="upgrade-title">Upgrade to Nostria Premium</h1>
+  <h1 class="upgrade-title">Choose Your Nostria Plan</h1>
 
   <div class="stepper-container">
     <div class="step-indicator-container">
@@ -23,9 +23,9 @@
   <!-- Step 1: Username Selection -->
   @if (currentStep() === 0) {
   <div class="step-content username-step">
-    <h2>Choose Your Premium Username</h2>
+    <h2>Choose Your Username</h2>
     <p class="step-description">
-      Your premium username will be uniquely yours across the Nostr network.
+      Your paid-plan username will be uniquely yours across the Nostr network.
     </p>
 
     <form [formGroup]="usernameFormGroup">
@@ -96,7 +96,7 @@
   <!-- Step 2: Payment Plan -->
   @if (currentStep() === 1) {
   <div class="step-content payment-plan-step">
-    <h2>Select Your Premium Plan</h2>
+    <h2>Select Your Plan</h2>
     <p class="step-description">
       @if (storeSingleSubscriptionMode()) {
       Store checkout currently supports <strong>Premium Monthly</strong>.
@@ -392,14 +392,14 @@
   <div class="step-content completion-step">
     <div class="completion-container">
       <mat-icon class="completion-icon">verified</mat-icon>
-      <h2>Welcome to Nostria Premium!</h2>
-      <p>Your premium account is now active. You can now enjoy all premium features.</p>
+      <h2>Welcome to {{ selectedTier()?.details?.name }}!</h2>
+      <p>Your paid plan is now active. You can start using your new Nostria features right away.</p>
 
       <div class="premium-features">
         <div class="feature-item">
           <mat-icon>verified</mat-icon>
           <div>
-            <h4>Verified Username</h4>
+            <h4>Username Activated</h4>
             <p>
               Your username
               <strong>{{ usernameFormGroup.get('username')?.value }}&#64;nostria.app</strong>
@@ -411,16 +411,16 @@
         <div class="feature-item">
           <mat-icon>cloud_done</mat-icon>
           <div>
-            <h4>2GB Storage</h4>
-            <p>Your storage has been upgraded to 2GB</p>
+            <h4>{{ getStorageDescription(selectedTier()) }}</h4>
+            <p>Your selected plan storage is now active.</p>
           </div>
         </div>
 
         <div class="feature-item">
           <mat-icon>backup</mat-icon>
           <div>
-            <h4>Automatic Backups</h4>
-            <p>Your data will be automatically backed up</p>
+            <h4>{{ selectedTier()?.details?.name }} Features</h4>
+            <p>Your account now has access to the features included with this plan.</p>
           </div>
         </div>
       </div>

@@ -114,7 +114,7 @@ export class RenewComponent implements OnDestroy {
   );
 
   readonly planTiers = computed(() => {
-    const allTiers = this.tiers();
+    const allTiers = this.tiers().filter(tier => tier.key !== 'free');
     if (!this.storeSingleSubscriptionMode()) {
       return allTiers;
     }
@@ -243,10 +243,14 @@ export class RenewComponent implements OnDestroy {
             // Pre-select the user's current tier
             const currentTierKey = this.currentTier();
             const matchingTier = tiers.find(t => t.key === currentTierKey);
-            if (matchingTier) {
+            if (matchingTier && matchingTier.key !== 'free') {
               this.selectedTier.set(matchingTier);
             } else if (tiers.length > 0) {
-              this.selectedTier.set(tiers[0]);
+              this.selectedTier.set(
+                tiers.find(tier => tier.key === 'basic') ||
+                tiers.find(tier => tier.key === 'premium') ||
+                tiers[0]
+              );
             }
           });
       }

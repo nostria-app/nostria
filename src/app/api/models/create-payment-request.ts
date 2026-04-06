@@ -17,5 +17,5 @@ export interface CreatePaymentRequest {
   /**
    * Subscription tier name
    */
-  tierName: 'free' | 'premium' | 'premium_plus';
+  tierName: 'free' | 'basic' | 'premium' | 'premium_plus';
 }

@@ -120,7 +120,7 @@ export class UpgradeComponent implements OnDestroy {
   );
 
   readonly planTiers = computed(() => {
-    const allTiers = this.tiers();
+    const allTiers = this.tiers().filter(tier => tier.key !== 'free');
     if (!this.storeSingleSubscriptionMode()) {
       return allTiers;
     }
@@ -231,7 +231,11 @@ export class UpgradeComponent implements OnDestroy {
 
             this.tiers.set(tiers);
             if (tiers.length > 0) {
-              this.selectedTier.set(tiers[0]);
+              this.selectedTier.set(
+                tiers.find(tier => tier.key === 'basic') ||
+                tiers.find(tier => tier.key === 'premium') ||
+                tiers[0]
+              );
             }
           });
       }
@@ -672,6 +676,21 @@ export class UpgradeComponent implements OnDestroy {
   getFeatureDescriptions(tier: TierDisplay): string[] {
     if (!tier.details.entitlements?.features) return [];
     return tier.details.entitlements.features.map(feature => feature.label || feature.key);
+  }
+
+  getStorageDescription(tier: TierDisplay | null): string {
+    if (!tier) {
+      return 'Storage included';
+    }
+
+    const features = tier.details.entitlements?.features ?? [];
+    const storageFeature = features.find(feature =>
+      feature.key === 'STORAGE_1GB' ||
+      feature.key === 'STORAGE_5GB' ||
+      feature.key === 'STORAGE_50GB'
+    );
+
+    return storageFeature?.label || 'Storage included';
   }
 
   // Helper for template: get pricing for a tier and billing period
