@@ -14,7 +14,8 @@
       {
         "title": "Nostria",
         "width": 1660,
-        "height": 940
+        "height": 940,
+        "dragDropEnabled": false
       }
     ],
     "security": {
