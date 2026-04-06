@@ -35,7 +35,7 @@ import { NostrService } from '../../../services/nostr.service';
 import { ImageCacheService } from '../../../services/image-cache.service';
 import { NostrRecord, MediaItem } from '../../../interfaces';
 import { UserRelaysService } from '../../../services/relays/user-relays';
-import { ColorExtractionService, ExtractedColors } from '../../../services/color-extraction.service';
+import { ColorExtractionService } from '../../../services/color-extraction.service';
 import { ThemeService } from '../../../services/theme.service';
 import { ConfirmDialogComponent, ConfirmDialogData } from '../../../components/confirm-dialog/confirm-dialog.component';
 import { ZapDialogComponent, ZapDialogData } from '../../../components/zap-dialog/zap-dialog.component';
@@ -87,9 +87,6 @@ const MUSIC_ALBUM_KIND = 34139;
   ],
   templateUrl: './song-detail.component.html',
   styleUrls: ['./song-detail.component.scss'],
-  host: {
-    '[style.background]': 'hostBackground()',
-  },
 })
 export class SongDetailComponent implements OnInit, OnDestroy {
   private route = inject(ActivatedRoute);
@@ -133,16 +130,6 @@ export class SongDetailComponent implements OnInit, OnDestroy {
   isLiking = signal(false);
   isSavingOffline = signal(false);
   isDeleting = signal(false);
-
-  // Extracted background colors from track art
-  extractedColors = signal<ExtractedColors | null>(null);
-
-  // Host background gradient derived from extracted colors
-  hostBackground = computed(() => {
-    const colors = this.extractedColors();
-    if (!colors) return null;
-    return `linear-gradient(180deg, ${colors.background} 0%, ${colors.backgroundEnd} 100%)`;
-  });
 
   // Offline music signals
   isOffline = computed(() => {
@@ -470,7 +457,6 @@ export class SongDetailComponent implements OnInit, OnDestroy {
       if (img) {
         untracked(() => {
           this.colorExtraction.extractColors(img).then(colors => {
-            this.extractedColors.set(colors);
             this.colorExtraction.activeBackground.set(colors);
             if (colors) {
               const isDark = this.themeService.darkMode();
@@ -485,7 +471,6 @@ export class SongDetailComponent implements OnInit, OnDestroy {
         });
       } else {
         untracked(() => {
-          this.extractedColors.set(null);
           this.colorExtraction.activeBackground.set(null);
           this.themeService.clearThemeColorOverride();
         });

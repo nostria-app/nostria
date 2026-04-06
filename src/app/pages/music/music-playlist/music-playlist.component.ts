@@ -32,7 +32,7 @@ import { NostrService } from '../../../services/nostr.service';
 import { MusicLikedSongsService } from '../../../services/music-liked-songs.service';
 import { NostrRecord, MediaItem } from '../../../interfaces';
 import { UserRelaysService } from '../../../services/relays/user-relays';
-import { ColorExtractionService, ExtractedColors } from '../../../services/color-extraction.service';
+import { ColorExtractionService } from '../../../services/color-extraction.service';
 import { ThemeService } from '../../../services/theme.service';
 import {
   EditMusicPlaylistDialogComponent,
@@ -72,9 +72,6 @@ const MUSIC_ALBUM_KIND = 34139;
   ],
   templateUrl: './music-playlist.component.html',
   styleUrls: ['./music-playlist.component.scss'],
-  host: {
-    '[style.background]': 'hostBackground()',
-  },
 })
 export class MusicPlaylistComponent implements OnInit, OnDestroy {
   private route = inject(ActivatedRoute);
@@ -107,16 +104,6 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
 
   // Template for playlist menu (used in panel header)
   @ViewChild('playlistMenuTemplate') playlistMenuTemplate!: TemplateRef<unknown>;
-
-  // Extracted background colors from album art
-  extractedColors = signal<ExtractedColors | null>(null);
-
-  // Host background gradient derived from extracted colors
-  hostBackground = computed(() => {
-    const colors = this.extractedColors();
-    if (!colors) return null;
-    return `linear-gradient(180deg, ${colors.background} 0%, ${colors.backgroundEnd} 100%)`;
-  });
 
   // Inputs for when opened via RightPanelService
   pubkeyInput = input<string | undefined>(undefined);
@@ -334,7 +321,6 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
       if (image) {
         untracked(() => {
           this.colorExtraction.extractColors(image).then(colors => {
-            this.extractedColors.set(colors);
             this.colorExtraction.activeBackground.set(colors);
             if (colors) {
               const isDark = this.themeService.darkMode();
@@ -349,7 +335,6 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
         });
       } else {
         untracked(() => {
-          this.extractedColors.set(null);
           this.colorExtraction.activeBackground.set(null);
           this.themeService.clearThemeColorOverride();
         });

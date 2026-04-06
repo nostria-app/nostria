@@ -31,6 +31,7 @@ nav {
 
   // CSS variable for toolbar height
   --toolbar-height: 64px;
+  transition: background 0.6s ease;
 }
 
 .app-container[data-fullscreen="true"] {
@@ -435,6 +436,7 @@ nav {
   margin-top: 0;
   height: 100%;
   box-sizing: border-box;
+  background: transparent !important;
 
   // Make space for mobile nav when on mobile
   @media (max-width: 599px) {}
@@ -448,6 +450,7 @@ mat-sidenav-content {
   transition: margin-right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   // Content no longer needs padding-top since toolbar is inside
   box-sizing: border-box;
+  background: transparent !important;
 
   // Add margin when following sidebar is docked (this is a real sidebar, not centering compensation)
   &.following-sidebar-docked {
@@ -466,6 +469,7 @@ mat-sidenav-content {
   flex: 1;
   min-height: 0;
   overflow: hidden;
+  background: transparent;
 }
 
 .sidenav {
