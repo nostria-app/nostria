@@ -16,8 +16,11 @@ interface AuthTokenResponse {
   token: string;
 }
 
-interface BrainstormPubkeyInstance {
-  brainstorm_pubkey: string;
+export type BrainstormConfigTag = [string, string, string];
+
+export interface BrainstormSetup {
+  configTags: BrainstormConfigTag[];
+  publisherPubkey: string | null;
 }
 
 export interface BrainstormRequestInstance {
@@ -36,8 +39,6 @@ export interface BrainstormRequestInstance {
   updated_at: string;
 }
 
-type ConfigTag = [string, string, string];
-
 interface ConfigTagObject {
   tag?: unknown;
 }
@@ -54,6 +55,10 @@ export class BrainstormWotApiService {
   private readonly baseUrl = 'https://brainstormserver.nosfabrica.com';
   private readonly authToken = signal<string | null>(null);
   private readonly authenticatedPubkey = signal<string | null>(null);
+
+  async authenticate(pubkey: string): Promise<void> {
+    await this.ensureAuthToken(pubkey);
+  }
 
   async getLatestGraperank(pubkey: string): Promise<BrainstormRequestInstance | null> {
     const token = await this.ensureAuthToken(pubkey);
@@ -84,32 +89,14 @@ export class BrainstormWotApiService {
     return response.data;
   }
 
-  async get10040ConfigTags(customerPubkey: string): Promise<ConfigTag[] | null> {
-    const endpoint = `${this.baseUrl}/config/10040/${customerPubkey}`;
+  async getSetup(customerPubkey: string): Promise<BrainstormSetup> {
+    const payload = await this.fetchJson<unknown>(`${this.baseUrl}/setup/${customerPubkey}`);
+    const configTags = this.normalizeConfigTags(payload);
 
-    try {
-      const response = await fetch(endpoint);
-      if (!response.ok) {
-        if (response.status === 404 || response.status === 501) {
-          return null;
-        }
-        throw new Error(`Config request failed (${response.status})`);
-      }
-
-      const payload = await response.json() as unknown;
-      return this.normalizeConfigTags(payload);
-    } catch (error) {
-      this.logger.warn('Failed to fetch Brainstorm 10040 config tags', error);
-      return null;
-    }
-  }
-
-  async getPublisherPubkey(customerPubkey: string): Promise<string> {
-    const response = await this.fetchJson<ApiEnvelope<BrainstormPubkeyInstance>>(
-      `${this.baseUrl}/brainstormPubkey/${customerPubkey}`,
-    );
-
-    return response.data.brainstorm_pubkey;
+    return {
+      configTags,
+      publisherPubkey: configTags[0]?.[1] ?? null,
+    };
   }
 
   private async ensureAuthToken(pubkey: string): Promise<string> {
@@ -161,14 +148,14 @@ export class BrainstormWotApiService {
     return await response.json() as T;
   }
 
-  private normalizeConfigTags(payload: unknown): ConfigTag[] {
+  private normalizeConfigTags(payload: unknown): BrainstormConfigTag[] {
     if (!Array.isArray(payload)) {
       return [];
     }
 
     const directTags = payload
       .filter(item => this.isRawConfigTag(item))
-      .map(item => [String(item[0]), String(item[1]), String(item[2])] as ConfigTag);
+      .map(item => [String(item[0]), String(item[1]), String(item[2])] as BrainstormConfigTag);
 
     if (directTags.length > 0) {
       return directTags;
@@ -178,7 +165,7 @@ export class BrainstormWotApiService {
       .filter(item => this.isConfigTagObject(item))
       .map(item => item.tag)
       .filter(tag => this.isRawConfigTag(tag))
-      .map(tag => [String(tag[0]), String(tag[1]), String(tag[2])] as ConfigTag);
+      .map(tag => [String(tag[0]), String(tag[1]), String(tag[2])] as BrainstormConfigTag);
 
     return objectTags;
   }

@@ -9,7 +9,7 @@ import { RightPanelService } from '../../../services/right-panel.service';
 import { BRAINSTORM_TRUST_RELAY, TrustProviderService, KNOWN_PROVIDERS, KnownProvider } from '../../../services/trust-provider.service';
 import { AccountStateService } from '../../../services/account-state.service';
 import { TrustService } from '../../../services/trust.service';
-import { BrainstormRequestInstance, BrainstormWotApiService } from '../../../services/brainstorm-wot-api.service';
+import { BrainstormRequestInstance, BrainstormSetup, BrainstormWotApiService } from '../../../services/brainstorm-wot-api.service';
 import type { Event as NostrEvent } from 'nostr-tools';
 
 interface TrustProviderTagViewModel {
@@ -166,7 +166,7 @@ export class TrustSettingsComponent implements OnInit, OnDestroy {
     return [...requiredTags].every(tag => configuredTags.has(tag));
   }
 
-  async activateProvider(provider: KnownProvider): Promise<void> {
+  async activateProvider(_provider: KnownProvider): Promise<void> {
     const pubkey = this.accountState.pubkey();
     if (!pubkey) {
       this.brainstormError.set($localize`:@@settings.trust.brainstorm.noAccount:No active account`);
@@ -178,36 +178,28 @@ export class TrustSettingsComponent implements OnInit, OnDestroy {
     this.brainstormMessage.set(null);
 
     try {
-      const publisherPubkey = await this.brainstormApi.getPublisherPubkey(pubkey);
-      this.brainstormPublisherPubkey.set(publisherPubkey);
-
-      const processingResult = await this.brainstormApi.startGraperank(pubkey);
-      this.brainstormStatus.set(processingResult);
-      this.updateCountValuesFromStatus(processingResult);
-      this.brainstormStatusChecked.set(true);
+      const setup = await this.loadBrainstormSetup(pubkey);
+      this.brainstormPublisherPubkey.set(setup.publisherPubkey);
 
       this.trustProviderService.clearConfiguredProviders();
-      this.trustProviderService.addProvider(
-        {
-          kindTag: '30382:rank',
-          pubkey: publisherPubkey,
-          relayUrl: provider.relayUrl,
-        },
-        false,
-      );
-      this.trustProviderService.addProvider(
-        {
-          kindTag: '30382:followers',
-          pubkey: publisherPubkey,
-          relayUrl: provider.relayUrl,
-        },
-        false,
-      );
+      this.addBrainstormProviders(setup.configTags);
 
       const publishResult = await this.trustProviderService.publishProviders();
       if (!publishResult.success) {
         throw new Error(publishResult.error || 'Failed to publish provider config');
       }
+
+      let processingResult: BrainstormRequestInstance | null = null;
+
+      try {
+        processingResult = await this.brainstormApi.startGraperank(pubkey);
+      } catch {
+        processingResult = await this.brainstormApi.getLatestGraperank(pubkey);
+      }
+
+      this.brainstormStatus.set(processingResult);
+      this.updateCountValuesFromStatus(processingResult);
+      this.brainstormStatusChecked.set(true);
     } catch (error) {
       this.brainstormError.set(this.errorToMessage(error));
     } finally {
@@ -233,8 +225,8 @@ export class TrustSettingsComponent implements OnInit, OnDestroy {
       this.brainstormStatusChecked.set(true);
 
       try {
-        const publisherPubkey = await this.brainstormApi.getPublisherPubkey(pubkey);
-        this.brainstormPublisherPubkey.set(publisherPubkey);
+        const setup = await this.brainstormApi.getSetup(pubkey);
+        this.brainstormPublisherPubkey.set(setup.publisherPubkey);
       } catch {
         this.brainstormPublisherPubkey.set(null);
       }
@@ -307,59 +299,62 @@ export class TrustSettingsComponent implements OnInit, OnDestroy {
     this.brainstormMessage.set(null);
 
     try {
-      const configTags = await this.brainstormApi.get10040ConfigTags(pubkey);
+      const setup = await this.loadBrainstormSetup(pubkey);
+      const configTags = setup.configTags;
       const brainstormProvider = KNOWN_PROVIDERS.find(provider => provider.name === 'Brainstorm');
       if (brainstormProvider) {
         this.trustProviderService.removeKnownProvider(brainstormProvider);
       }
 
-      if (configTags && configTags.length > 0) {
-        const relaysFromConfig = new Set(configTags.map(tag => tag[2]));
-        const existingProviders = [...this.trustProviderService.allProviders()];
-        for (const provider of existingProviders) {
-          if (relaysFromConfig.has(provider.relayUrl)) {
-            this.trustProviderService.removeProvider(provider.kindTag, provider.pubkey);
-          }
-        }
+      if (configTags.length === 0) {
+        throw new Error('Brainstorm setup did not return any trust provider tags');
+      }
 
-        for (const tag of configTags) {
-          this.trustProviderService.addProvider(
-            {
-              kindTag: tag[0],
-              pubkey: tag[1],
-              relayUrl: tag[2],
-            },
-            false,
-          );
-        }
-      } else if (brainstormProvider) {
-        const publisherPubkey = await this.brainstormApi.getPublisherPubkey(pubkey);
-        for (const metric of brainstormProvider.supportedMetrics) {
-          this.trustProviderService.addProvider(
-            {
-              kindTag: metric,
-              pubkey: publisherPubkey,
-              relayUrl: brainstormProvider.relayUrl,
-            },
-            false,
-          );
+      const relaysFromConfig = new Set(configTags.map(tag => tag[2]));
+      const existingProviders = [...this.trustProviderService.allProviders()];
+      for (const provider of existingProviders) {
+        if (relaysFromConfig.has(provider.relayUrl)) {
+          this.trustProviderService.removeProvider(provider.kindTag, provider.pubkey);
         }
       }
+
+      this.addBrainstormProviders(configTags);
+      this.brainstormPublisherPubkey.set(setup.publisherPubkey);
 
       const publishResult = await this.trustProviderService.publishProviders();
       if (!publishResult.success) {
         throw new Error(publishResult.error || 'Failed to publish provider config');
       }
 
-      if (configTags && configTags.length > 0) {
-        this.brainstormMessage.set($localize`:@@settings.trust.brainstorm.configFromApi:Brainstorm provider tags configured from API.`);
-      } else {
-        this.brainstormMessage.set($localize`:@@settings.trust.brainstorm.configFallback:Brainstorm provider configured with fallback defaults.`);
-      }
+      this.brainstormMessage.set($localize`:@@settings.trust.brainstorm.configFromApi:Brainstorm provider tags configured from API.`);
     } catch (error) {
       this.brainstormError.set(this.errorToMessage(error));
     } finally {
       this.brainstormConfigLoading.set(false);
+    }
+  }
+
+  private async loadBrainstormSetup(pubkey: string): Promise<BrainstormSetup> {
+    await this.brainstormApi.authenticate(pubkey);
+
+    const setup = await this.brainstormApi.getSetup(pubkey);
+    if (setup.configTags.length === 0 || !setup.publisherPubkey) {
+      throw new Error('Brainstorm setup is not available for this account yet');
+    }
+
+    return setup;
+  }
+
+  private addBrainstormProviders(configTags: BrainstormSetup['configTags']): void {
+    for (const tag of configTags) {
+      this.trustProviderService.addProvider(
+        {
+          kindTag: tag[0],
+          pubkey: tag[1],
+          relayUrl: tag[2],
+        },
+        false,
+      );
     }
   }
 
