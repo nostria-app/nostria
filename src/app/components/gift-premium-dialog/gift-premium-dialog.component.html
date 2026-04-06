@@ -39,6 +39,23 @@
     <div class="section-group">
       <h3 class="section-title">Choose Plan</h3>
       <mat-radio-group formControlName="premiumType" class="premium-type-group">
+        <button type="button" class="plan-card basic" [class.selected]="giftForm.get('premiumType')?.value === 'basic'"
+          (click)="giftForm.get('premiumType')?.setValue('basic')">
+          <mat-radio-button value="basic" class="hidden-radio"></mat-radio-button>
+          <div class="plan-icon-wrapper">
+            <mat-icon class="plan-icon">rocket_launch</mat-icon>
+          </div>
+          <div class="plan-info">
+            <span class="plan-name">Basic</span>
+            <span class="plan-description">Username + 1 GB storage</span>
+          </div>
+          <div class="plan-check">
+            @if (giftForm.get('premiumType')?.value === 'basic') {
+            <mat-icon>check_circle</mat-icon>
+            }
+          </div>
+        </button>
+
         <button type="button" class="plan-card" [class.selected]="giftForm.get('premiumType')?.value === 'premium'"
           (click)="giftForm.get('premiumType')?.setValue('premium')">
           <mat-radio-button value="premium" class="hidden-radio"></mat-radio-button>
@@ -87,10 +104,8 @@
           <span class="duration-price">
             @if (loadingPrice()) {
             <mat-spinner diameter="16"></mat-spinner>
-            } @else if (giftForm.get('premiumType')?.value === 'premium') {
-            {{ (getDollarAmount('premium', 1) / bitcoinPrice()!.usd * 100000000) | number:'1.0-0' }} sats
             } @else {
-            {{ (getDollarAmount('premium-plus', 1) / bitcoinPrice()!.usd * 100000000) | number:'1.0-0' }} sats
+            {{ (getDollarAmount(giftForm.get('premiumType')?.value ?? 'basic', 1) / bitcoinPrice()!.usd * 100000000) | number:'1.0-0' }} sats
             }
           </span>
         </button>
@@ -102,10 +117,8 @@
           <span class="duration-price">
             @if (loadingPrice()) {
             <mat-spinner diameter="16"></mat-spinner>
-            } @else if (giftForm.get('premiumType')?.value === 'premium') {
-            {{ (getDollarAmount('premium', 3) / bitcoinPrice()!.usd * 100000000) | number:'1.0-0' }} sats
             } @else {
-            {{ (getDollarAmount('premium-plus', 3) / bitcoinPrice()!.usd * 100000000) | number:'1.0-0' }} sats
+            {{ (getDollarAmount(giftForm.get('premiumType')?.value ?? 'basic', 3) / bitcoinPrice()!.usd * 100000000) | number:'1.0-0' }} sats
             }
           </span>
         </button>

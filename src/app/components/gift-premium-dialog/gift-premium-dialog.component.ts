@@ -51,25 +51,25 @@ export interface GiftPremiumDialogData {
  * Zap content format (clear text, order is important):
  * Line 1: "🎁 Nostria Premium Gift" (identifier)
  * Line 2: Receiver pubkey
- * Line 3: Subscription type ("premium" or "premium-plus")
+ * Line 3: Subscription type ("basic", "premium" or "premium-plus")
  * Line 4: Duration in months ("1" or "3")
  * Line 5+: Optional user message (can span multiple lines)
  * 
  * Example:
  * 🎁 Nostria Premium Gift
  * npub1abc...
- * premium
+ * basic
  * 1
  * Happy birthday! Enjoy your month of Premium!
  */
 export interface GiftPremiumData {
   receiver: string;
   message: string;
-  subscription: 'premium' | 'premium-plus';
+  subscription: 'basic' | 'premium' | 'premium-plus';
   duration: 1 | 3;
 }
 
-type PremiumType = 'premium' | 'premium-plus';
+type PremiumType = 'basic' | 'premium' | 'premium-plus';
 type Duration = 1 | 3;
 type DialogState = 'input' | 'confirmation';
 type PaymentMethod = 'nwc' | 'native' | 'manual';
@@ -125,7 +125,7 @@ export class GiftPremiumDialogComponent {
 
   // Form and reactive state
   giftForm = new FormGroup({
-    premiumType: new FormControl<PremiumType>('premium', [Validators.required]),
+    premiumType: new FormControl<PremiumType>('basic', [Validators.required]),
     duration: new FormControl<Duration>(1, [Validators.required]),
     message: new FormControl('', [Validators.maxLength(100)]),
     selectedWallet: new FormControl<string>(''),
@@ -177,9 +177,7 @@ export class GiftPremiumDialogComponent {
     }
 
     // Calculate price in dollars
-    const dollarAmount = premiumType === 'premium'
-      ? (duration === 1 ? 10 : 30)
-      : (duration === 1 ? 25 : 75);
+    const dollarAmount = this.getDollarAmount(premiumType, duration);
 
     // Apply development mode discount (10x cheaper in dev mode)
     const adjustedDollarAmount = dollarAmount * PRICE_MULTIPLIER;
@@ -202,9 +200,7 @@ export class GiftPremiumDialogComponent {
       return null;
     }
 
-    const dollarAmount = premiumType === 'premium'
-      ? (duration === 1 ? 10 : 30)
-      : (duration === 1 ? 25 : 75);
+    const dollarAmount = this.getDollarAmount(premiumType, duration);
 
     // Apply development mode discount
     const adjustedDollarAmount = dollarAmount * PRICE_MULTIPLIER;
@@ -250,14 +246,26 @@ export class GiftPremiumDialogComponent {
   }
 
   getPremiumTypeName(type: PremiumType | null | undefined): string {
-    if (!type) return 'Premium';
+    if (!type) return 'Basic';
+
+    if (type === 'basic') {
+      return 'Basic';
+    }
+
     return type === 'premium' ? 'Premium' : 'Premium+';
   }
 
-  getDollarAmount(premiumType: 'premium' | 'premium-plus', duration: 1 | 3): number {
-    const baseAmount = premiumType === 'premium'
-      ? (duration === 1 ? 10 : 30)
-      : (duration === 1 ? 25 : 75);
+  getDollarAmount(premiumType: PremiumType, duration: 1 | 3): number {
+    let baseAmount: number;
+
+    if (premiumType === 'basic') {
+      baseAmount = duration === 1 ? 5 : 15;
+    } else if (premiumType === 'premium') {
+      baseAmount = duration === 1 ? 10 : 30;
+    } else {
+      baseAmount = duration === 1 ? 45 : 135;
+    }
+
     return baseAmount * PRICE_MULTIPLIER;
   }
 
@@ -440,7 +448,7 @@ export class GiftPremiumDialogComponent {
       // Create clear text format for zap content (order is important for parsing)
       // Line 1: Gift type identifier
       // Line 2: Receiver pubkey
-      // Line 3: Subscription type (premium or premium-plus)
+      // Line 3: Subscription type (basic, premium or premium-plus)
       // Line 4: Duration in months
       // Line 5+: Optional user message
       const zapContentLines = [
@@ -523,8 +531,12 @@ export class GiftPremiumDialogComponent {
     const duration = this.giftForm.get('duration')?.value as Duration;
     if (!premiumType || !duration) return;
 
-    const tier = premiumType === 'premium' ? 'premium' : 'premium_plus';
-    const productId = this.iap.getGiftProductId(tier as 'premium' | 'premium_plus', duration);
+    const tier = premiumType === 'basic'
+      ? 'basic'
+      : premiumType === 'premium'
+        ? 'premium'
+        : 'premium_plus';
+    const productId = this.iap.getGiftProductId(tier, duration);
     if (!productId) {
       this.snackBar.open('Gift product not available in store.', 'Close', { duration: 5000 });
       return;
@@ -571,8 +583,12 @@ export class GiftPremiumDialogComponent {
     const duration = this.giftForm.get('duration')?.value as Duration;
     if (!premiumType || !duration) return;
 
-    const tier = premiumType === 'premium' ? 'premium' : 'premium_plus';
-    const productId = this.iap.getGiftProductId(tier as 'premium' | 'premium_plus', duration);
+    const tier = premiumType === 'basic'
+      ? 'basic'
+      : premiumType === 'premium'
+        ? 'premium'
+        : 'premium_plus';
+    const productId = this.iap.getGiftProductId(tier, duration);
     if (!productId) {
       this.snackBar.open('Gift product not available in store.', 'Close', { duration: 5000 });
       return;
@@ -617,7 +633,11 @@ export class GiftPremiumDialogComponent {
   openExternalGiftPayment(): void {
     const premiumType = this.giftForm.get('premiumType')?.value as PremiumType;
     const duration = this.giftForm.get('duration')?.value as Duration;
-    const tier = premiumType === 'premium' ? 'premium' : 'premium_plus';
+    const tier = premiumType === 'basic'
+      ? 'basic'
+      : premiumType === 'premium'
+        ? 'premium'
+        : 'premium_plus';
 
     this.iap.openExternalGiftUrl(
       this.accountState.pubkey(),

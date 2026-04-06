@@ -13,7 +13,7 @@ export interface StoreProduct {
   /** The product ID as configured in the native store */
   productId: string;
   /** Nostria tier name */
-  tier: 'premium' | 'premium_plus';
+  tier: 'basic' | 'premium' | 'premium_plus';
   /** Billing cycle */
   billingCycle: 'monthly' | 'quarterly' | 'yearly';
 }
@@ -52,6 +52,8 @@ const STORE_PRODUCTS: StoreProduct[] = [
  * Used when gifting a subscription to another user.
  */
 const GIFT_PRODUCTS: StoreProduct[] = [
+  { productId: 'nostria_gift_basic_1mo', tier: 'basic', billingCycle: 'monthly' },
+  { productId: 'nostria_gift_basic_3mo', tier: 'basic', billingCycle: 'quarterly' },
   { productId: 'nostria_gift_premium_1mo', tier: 'premium', billingCycle: 'monthly' },
   { productId: 'nostria_gift_premium_3mo', tier: 'premium', billingCycle: 'quarterly' },
   { productId: 'nostria_gift_premium_plus_1mo', tier: 'premium_plus', billingCycle: 'monthly' },
@@ -270,7 +272,7 @@ export class InAppPurchaseService {
    * Get the gift product ID for a given tier and duration.
    */
   getGiftProductId(
-    tier: 'premium' | 'premium_plus',
+    tier: 'basic' | 'premium' | 'premium_plus',
     durationMonths: 1 | 3
   ): string | undefined {
     const billingCycle = durationMonths === 1 ? 'monthly' : 'quarterly';
