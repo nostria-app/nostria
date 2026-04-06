@@ -362,6 +362,29 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
     this.themeService.clearThemeColorOverride();
   }
 
+  private isNewerReplaceableEvent(current: Event | null, incoming: Event): boolean {
+    if (!current) {
+      return true;
+    }
+
+    if (incoming.created_at !== current.created_at) {
+      return incoming.created_at > current.created_at;
+    }
+
+    return incoming.id.localeCompare(current.id) > 0;
+  }
+
+  private applyPlaylistEvent(incoming: Event): boolean {
+    const current = this.playlist();
+    if (!this.isNewerReplaceableEvent(current, incoming)) {
+      return false;
+    }
+
+    this.playlist.set(incoming);
+    this.loading.set(false);
+    return true;
+  }
+
   /**
    * Reset state and load a new playlist.
    * Called when navigating to a different playlist.
@@ -388,15 +411,14 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
     if (this.routerStateEvent &&
       this.routerStateEvent.pubkey === pubkey &&
       this.routerStateEvent.tags.find(t => t[0] === 'd')?.[1] === identifier) {
-      this.playlist.set(this.routerStateEvent);
-      this.loading.set(false);
+      this.applyPlaylistEvent(this.routerStateEvent);
       this.routerStateEvent = null; // Clear after using
-      return;
     }
 
-    // Need to load from relay
-    this.playlist.set(null);
-    this.loading.set(true);
+    // Need to load from cache/relay if we don't already have a current matching event
+    if (!this.playlist()) {
+      this.loading.set(true);
+    }
 
     // Load the new playlist
     this.loadPlaylist(pubkey, identifier);
@@ -442,10 +464,9 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
 
     const sub = this.pool.subscribe(relayUrls, filter, (event: Event) => {
       clearTimeout(timeout);
-      this.playlist.set(event);
-      this.loading.set(false);
+      this.applyPlaylistEvent(event);
 
-      this.database.saveEvent({ ...event, dTag: identifier }).catch((err: unknown) => {
+      this.database.saveReplaceableEvent({ ...event, dTag: identifier }).catch((err: unknown) => {
         this.logger.warn('[MusicPlaylist] Failed to save playlist to database:', err);
       });
     });
@@ -577,8 +598,7 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
     try {
       const cached = await this.database.getParameterizedReplaceableEvent(pubkey, MUSIC_ALBUM_KIND, identifier);
       if (cached) {
-        this.playlist.set(cached);
-        this.loading.set(false);
+        this.applyPlaylistEvent(cached);
       }
     } catch (error) {
       this.logger.warn('[MusicPlaylist] Failed to load cached playlist:', error);

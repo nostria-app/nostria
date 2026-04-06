@@ -624,9 +624,8 @@ export class SongDetailComponent implements OnInit, OnDestroy {
     // Check for router state first (event passed directly for instant rendering)
     // Router state was captured in constructor before navigation ended
     if (this.routerStateEvent) {
-      this.song.set(this.routerStateEvent);
+      this.applySongEvent(this.routerStateEvent);
       this.loading.set(false);
-      return;
     }
 
     // Check for inputs (when opened via RightPanelService)
@@ -669,6 +668,29 @@ export class SongDetailComponent implements OnInit, OnDestroy {
     this.themeService.clearThemeColorOverride();
   }
 
+  private isNewerReplaceableEvent(current: Event | null, incoming: Event): boolean {
+    if (!current) {
+      return true;
+    }
+
+    if (incoming.created_at !== current.created_at) {
+      return incoming.created_at > current.created_at;
+    }
+
+    return incoming.id.localeCompare(current.id) > 0;
+  }
+
+  private applySongEvent(incoming: Event): boolean {
+    const current = this.song();
+    if (!this.isNewerReplaceableEvent(current, incoming)) {
+      return false;
+    }
+
+    this.song.set(incoming);
+    this.loading.set(false);
+    return true;
+  }
+
   private loadSong(pubkey: string, identifier: string): void {
     // Decode pubkey if it's an npub
     let decodedPubkey = pubkey;
@@ -695,7 +717,7 @@ export class SongDetailComponent implements OnInit, OnDestroy {
   private async resolveSongFromLocalSources(pubkey: string, identifier: string): Promise<boolean> {
     const offlineTrack = this.offlineMusicService.getOfflineTrack(pubkey, identifier);
     if (offlineTrack?.event) {
-      this.song.set(offlineTrack.event);
+      this.applySongEvent(offlineTrack.event);
       return true;
     }
 
@@ -708,7 +730,7 @@ export class SongDetailComponent implements OnInit, OnDestroy {
         .sort((a, b) => b.created_at - a.created_at)[0];
 
       if (cachedEvent) {
-        this.song.set(cachedEvent);
+        this.applySongEvent(cachedEvent);
         return true;
       }
     } catch (error) {
@@ -747,8 +769,7 @@ export class SongDetailComponent implements OnInit, OnDestroy {
 
     this.subscription = this.pool.subscribe(relayUrls, filter, (event: Event) => {
       clearTimeout(timeout);
-      this.song.set(event);
-      this.loading.set(false);
+      this.applySongEvent(event);
     });
   }
 
@@ -1073,11 +1094,11 @@ export class SongDetailComponent implements OnInit, OnDestroy {
 
     if (result?.updated && result?.event) {
       // Reload the track data
-      this.song.set(result.event);
+      this.applySongEvent(result.event);
       // Persist the updated event to the local database so it survives reloads
       const event = result.event;
       const dTag = event.tags.find(t => t[0] === 'd')?.[1] || '';
-      this.database.saveEvent({ ...event, dTag }).catch((err: unknown) => {
+      this.database.saveReplaceableEvent({ ...event, dTag }).catch((err: unknown) => {
         this.logger.warn('[SongDetail] Failed to save updated track to database:', err);
       });
       this.snackBar.open('Track updated', 'Close', { duration: 2000 });
