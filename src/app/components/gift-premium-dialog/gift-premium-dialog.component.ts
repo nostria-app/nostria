@@ -74,6 +74,17 @@ type Duration = 1 | 3;
 type DialogState = 'input' | 'confirmation';
 type PaymentMethod = 'nwc' | 'native' | 'manual';
 
+export interface GiftPremiumCelebrationData {
+  recipientName?: string;
+  premiumType: PremiumType;
+  duration: Duration;
+}
+
+export interface GiftPremiumDialogResult {
+  success: boolean;
+  celebration?: GiftPremiumCelebrationData;
+}
+
 @Component({
   selector: 'app-gift-premium-dialog',
   imports: [
@@ -116,12 +127,6 @@ export class GiftPremiumDialogComponent {
   invoiceUrl = signal<string | null>(null);
   bitcoinPrice = signal<BitcoinPrice | null>(null);
   loadingPrice = signal(true);
-  showCelebration = signal(false);
-
-  // Arrays for celebration particles
-  confettiItems = Array.from({ length: 50 }, (_, i) => i);
-  sparkleItems = Array.from({ length: 20 }, (_, i) => i);
-  burstItems = Array.from({ length: 20 }, (_, i) => i);
 
   // Form and reactive state
   giftForm = new FormGroup({
@@ -394,8 +399,6 @@ export class GiftPremiumDialogComponent {
     const premiumType = this.giftForm.get('premiumType')?.value as PremiumType;
     const duration = this.giftForm.get('duration')?.value as Duration;
 
-    this.triggerCelebration();
-
     this.snackBar.open(
       `Payment initiated for ${this.getPremiumTypeName(premiumType)} gift (${this.getDurationText(duration)})!`,
       'Dismiss',
@@ -406,18 +409,7 @@ export class GiftPremiumDialogComponent {
       }
     );
 
-    // Delay closing to show celebration
-    setTimeout(() => {
-      this.dialogRef.close({ success: true });
-    }, 2500);
-  }
-
-  triggerCelebration(): void {
-    this.showCelebration.set(true);
-    // Auto-hide after animation completes
-    setTimeout(() => {
-      this.showCelebration.set(false);
-    }, 3000);
+    this.dialogRef.close(this.buildSuccessResult(premiumType, duration));
   }
 
   backToInput(): void {
@@ -489,8 +481,6 @@ export class GiftPremiumDialogComponent {
         combinedRelays // Include both gift recipient's and Nostria's relays
       );
 
-      this.triggerCelebration();
-
       this.snackBar.open(
         `Successfully gifted ${this.getPremiumTypeName(premiumType)} for ${this.getDurationText(duration)}!`,
         'Dismiss',
@@ -501,10 +491,7 @@ export class GiftPremiumDialogComponent {
         }
       );
 
-      // Delay closing to show celebration
-      setTimeout(() => {
-        this.dialogRef.close({ success: true });
-      }, 2500);
+      this.dialogRef.close(this.buildSuccessResult(premiumType, duration));
     } catch (error) {
       console.error('Failed to send gift premium zap:', error);
 
@@ -553,13 +540,12 @@ export class GiftPremiumDialogComponent {
         );
 
         if (verified) {
-          this.triggerCelebration();
           this.snackBar.open(
             `Successfully gifted ${this.getPremiumTypeName(premiumType)} for ${this.getDurationText(duration)}!`,
             'Dismiss',
             { duration: 5000 }
           );
-          setTimeout(() => this.dialogRef.close({ success: true }), 2500);
+          this.dialogRef.close(this.buildSuccessResult(premiumType, duration));
         } else {
           this.snackBar.open(
             'Purchase completed but verification failed. Please contact support.',
@@ -605,13 +591,12 @@ export class GiftPremiumDialogComponent {
         );
 
         if (verified) {
-          this.triggerCelebration();
           this.snackBar.open(
             `Successfully gifted ${this.getPremiumTypeName(premiumType)} for ${this.getDurationText(duration)}!`,
             'Dismiss',
             { duration: 5000 }
           );
-          setTimeout(() => this.dialogRef.close({ success: true }), 2500);
+          this.dialogRef.close(this.buildSuccessResult(premiumType, duration));
         } else {
           this.snackBar.open(
             'Purchase completed but verification failed. Please contact support.',
@@ -656,6 +641,20 @@ export class GiftPremiumDialogComponent {
 
   close(): void {
     this.dialogRef.close({ success: false });
+  }
+
+  private buildSuccessResult(
+    premiumType: PremiumType,
+    duration: Duration
+  ): GiftPremiumDialogResult {
+    return {
+      success: true,
+      celebration: {
+        recipientName: this.data.recipientName,
+        premiumType,
+        duration,
+      },
+    };
   }
 
   openWalletSettings(): void {

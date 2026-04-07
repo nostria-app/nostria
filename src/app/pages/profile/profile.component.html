@@ -191,6 +191,41 @@
 <!-- This ensures proper sticky behavior in both left and right panels -->
 
 <div class="profile-page">
+  @if (giftCelebration(); as celebration) {
+  <div class="gift-celebration-overlay" aria-hidden="true">
+    <div class="gift-celebration-backdrop"></div>
+
+    @for (i of giftCelebrationConfetti; track i) {
+    <div class="gift-confetti" [style.--delay]="(i * 0.04) + 's'" [style.--x]="((i * 9) % 100) + '%'"
+      [style.--drift]="((i % 7) - 3) * 24 + 'px'" [style.--rotation]="(i * 41) + 'deg'" [attr.data-shape]="i % 4">
+    </div>
+    }
+
+    @for (i of giftCelebrationSparkles; track i) {
+    <div class="gift-sparkle" [style.--delay]="(i * 0.09) + 's'" [style.--x]="((i * 19) % 100) + '%'"
+      [style.--y]="((i * 11) % 70 + 12) + '%'">
+    </div>
+    }
+
+    @for (i of giftCelebrationBursts; track i) {
+    <div class="gift-burst" [style.--angle]="(i * 18) + 'deg'" [style.--distance]="(110 + (i % 4) * 36) + 'px'"
+      [style.--delay]="(i * 0.02) + 's'"></div>
+    }
+
+    <div class="gift-celebration-card">
+      <div class="gift-celebration-glow"></div>
+      <div class="gift-celebration-kicker">Gift Sent</div>
+      <mat-icon class="gift-celebration-icon">card_giftcard</mat-icon>
+      <h2>Subscription delivered</h2>
+      <p>You gifted {{ celebration.planName }} for {{ celebration.durationText }} to {{ celebration.recipientName }}.
+      </p>
+      <div class="gift-celebration-footer">
+        <span>Thank you for supporting Nostria</span>
+      </div>
+    </div>
+  </div>
+  }
+
   @if (isLoading()) {
   <div class="profile-loading-container">
     <div class="profile-loading-content">

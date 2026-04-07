@@ -15,7 +15,7 @@ import {
   DestroyRef,
   ChangeDetectionStrategy,
 } from '@angular/core';
-import { isPlatformBrowser, Location, NgTemplateOutlet } from '@angular/common';
+import { isPlatformBrowser, Location } from '@angular/common';
 import {
   ActivatedRoute,
   ParamMap,
@@ -83,13 +83,29 @@ import { ShareArticleDialogComponent, ShareArticleDialogData } from '../../compo
 import { stripImageProxy } from '../../utils/strip-image-proxy';
 import { BadgeService } from '../../services/badge.service';
 
+interface GiftCelebrationPayload {
+  recipientName?: string;
+  premiumType: 'basic' | 'premium' | 'premium-plus';
+  duration: 1 | 3;
+}
+
+interface GiftDialogResult {
+  success?: boolean;
+  celebration?: GiftCelebrationPayload;
+}
+
+interface GiftCelebrationViewModel {
+  recipientName: string;
+  planName: string;
+  durationText: string;
+}
+
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-profile',
   imports: [
     RouterModule,
     RouterOutlet,
-    NgTemplateOutlet,
     MatCardModule,
     MatButtonModule,
     MatIconModule,
@@ -252,6 +268,12 @@ export class ProfileComponent implements OnDestroy, AfterViewInit {
 
   // Signal to track the username of the profile being viewed
   profileUsername = signal<string | null>(null);
+
+  giftCelebration = signal<GiftCelebrationViewModel | null>(null);
+  giftCelebrationConfetti = Array.from({ length: 42 }, (_, i) => i);
+  giftCelebrationSparkles = Array.from({ length: 18 }, (_, i) => i);
+  giftCelebrationBursts = Array.from({ length: 20 }, (_, i) => i);
+  private giftCelebrationTimer: ReturnType<typeof setTimeout> | null = null;
 
   // Computed to check if user has premium subscription
   isPremium = computed(() => {
@@ -1069,7 +1091,13 @@ export class ProfileComponent implements OnDestroy, AfterViewInit {
       profileData
     ).then(dialogRef => {
       dialogRef.afterClosed$.subscribe(result => {
-        if (result?.result && (result.result as { success?: boolean }).success) {
+        const dialogResult = result?.result as GiftDialogResult | undefined;
+
+        if (dialogResult?.success) {
+          if (dialogResult.celebration) {
+            this.startGiftCelebration(dialogResult.celebration);
+          }
+
           // Wait 2 seconds for backend to process the gift, then refresh premium status
           setTimeout(() => {
             this.fetchPremiumStatus(pubkey);
@@ -1475,6 +1503,34 @@ export class ProfileComponent implements OnDestroy, AfterViewInit {
     return `${baseUrl}${url}`;
   }
 
+  private startGiftCelebration(payload: GiftCelebrationPayload): void {
+    if (this.giftCelebrationTimer) {
+      clearTimeout(this.giftCelebrationTimer);
+      this.giftCelebrationTimer = null;
+    }
+
+    const recipientName = payload.recipientName?.trim() || this.getFormattedName() || 'your friend';
+
+    this.giftCelebration.set({
+      recipientName,
+      planName: this.getGiftPlanName(payload.premiumType),
+      durationText: payload.duration === 1 ? '1 month' : '3 months',
+    });
+
+    this.giftCelebrationTimer = setTimeout(() => {
+      this.giftCelebration.set(null);
+      this.giftCelebrationTimer = null;
+    }, 3200);
+  }
+
+  private getGiftPlanName(type: GiftCelebrationPayload['premiumType']): string {
+    if (type === 'basic') {
+      return 'Basic';
+    }
+
+    return type === 'premium' ? 'Premium' : 'Premium+';
+  }
+
   ngAfterViewInit(): void {
     // Register header template with the appropriate panel header service
     const template = this.headerTemplate();
@@ -1488,6 +1544,11 @@ export class ProfileComponent implements OnDestroy, AfterViewInit {
   }
 
   ngOnDestroy(): void {
+    if (this.giftCelebrationTimer) {
+      clearTimeout(this.giftCelebrationTimer);
+      this.giftCelebrationTimer = null;
+    }
+
     // Clean up the ProfileState instance to prevent memory leaks
     this.profileState.destroy();
 
