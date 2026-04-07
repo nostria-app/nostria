@@ -165,9 +165,10 @@
     <div class="chat-input-container">
       <div class="chat-input-row">
         <textarea #widgetMessageInput class="chat-input" [ngModel]="newMessageText()"
-          (ngModelChange)="newMessageText.set($event)" placeholder="Message..." [disabled]="isSending()"
+          (ngModelChange)="newMessageText.set($event)" placeholder="Message..."
           (keydown)="onMessageKeydown($event)" rows="1"></textarea>
         <button mat-icon-button class="send-button" [disabled]="!newMessageText().trim() || isSending()"
+          (pointerdown)="preventButtonFocusSteal($event)" (mousedown)="preventButtonFocusSteal($event)"
           (click)="sendMessage()">
           <mat-icon>send</mat-icon>
         </button>

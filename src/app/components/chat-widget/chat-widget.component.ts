@@ -484,6 +484,10 @@ export class ChatWidgetComponent {
     }
   }
 
+  preventButtonFocusSteal(event: Event): void {
+    event.preventDefault();
+  }
+
   private restoreDraftForChat(chatId: string | null): void {
     const accountPubkey = this.accountState.pubkey();
     const draftText = chatId && accountPubkey ? this.accountLocalState.getChatDraft(accountPubkey, chatId) : '';

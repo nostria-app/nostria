@@ -745,6 +745,10 @@ export class LiveChatComponent implements AfterViewInit, OnDestroy {
     }
   }
 
+  preventButtonFocusSteal(event: globalThis.Event): void {
+    event.preventDefault();
+  }
+
   private restoreMessageInputFocus(): void {
     requestAnimationFrame(() => {
       this.messageInputElement?.nativeElement.focus({ preventScroll: true });

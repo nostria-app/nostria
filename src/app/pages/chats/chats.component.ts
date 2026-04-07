@@ -734,6 +734,10 @@ export class ChatsComponent implements OnInit, OnDestroy {
     }
   }
 
+  preventButtonFocusSteal(event: Event): void {
+    event.preventDefault();
+  }
+
   /** Handle keydown in message input */
   onMessageKeydown(event: KeyboardEvent): void {
     if (event.key === 'Enter' && !event.shiftKey) {

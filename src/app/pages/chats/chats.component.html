@@ -614,7 +614,9 @@
             [disabled]="isUploading()" (keydown)="onMessageKeydown($event)"
             (paste)="onMessagePaste($event)" rows="1"></textarea>
           <button mat-icon-button type="button" class="send-button"
-            [disabled]="!newMessageText().trim() || isSending() || isUploading()" (click)="sendMessage()"
+            [disabled]="!newMessageText().trim() || isSending() || isUploading()"
+            (pointerdown)="preventButtonFocusSteal($event)" (mousedown)="preventButtonFocusSteal($event)"
+            (click)="sendMessage()"
             matTooltip="Send message">
             @if (isSending() || isUploading()) {
             <mat-spinner diameter="24"></mat-spinner>
