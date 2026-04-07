@@ -30,8 +30,7 @@ import { AccountRelayService } from './relays/account-relay';
 import { DiscoveryRelayService, DiscoveryRelayListKind } from './relays/discovery-relay';
 import { LocalSettingsService } from './local-settings.service';
 import { PublishService } from './publish.service';
-import { MatDialog, MatDialogRef } from '@angular/material/dialog';
-import { SigningDialogComponent } from '../components/signing-dialog/signing-dialog.component';
+import { MatDialog } from '@angular/material/dialog';
 import { ExternalSignerDialogComponent } from '../components/external-signer-dialog/external-signer-dialog.component';
 import { CryptoEncryptionService, EncryptedData } from './crypto-encryption.service';
 import { PinPromptService } from './pin-prompt.service';
@@ -152,14 +151,13 @@ export class NostrService implements NostriaService {
   MAX_WAIT_TIME_METADATA = 2500;
   dataLoaded = false;
 
-  // Extension signing queue to prevent concurrent signing dialogs
+  // Extension signing queue to prevent concurrent extension prompts
   private extensionSigningQueue: {
     event: EventTemplate | Event | UnsignedEvent;
     resolve: (event: Event) => void;
     reject: (error: Error) => void;
   }[] = [];
   private isExtensionSigning = false;
-  private currentSigningDialogRef: MatDialogRef<SigningDialogComponent> | null = null;
   private extensionInteractionQueue: Promise<void> = Promise.resolve();
 
   // Default relays for new user accounts
@@ -938,8 +936,8 @@ export class NostrService implements NostriaService {
   }
 
   /**
-   * Queue extension signing requests to prevent concurrent signing dialogs.
-   * This serializes signing operations so only one dialog is shown at a time.
+    * Queue extension signing requests to prevent concurrent extension prompts.
+    * This serializes signing operations so only one extension interaction runs at a time.
    */
   private queueExtensionSigning(event: EventTemplate | Event | UnsignedEvent): Promise<Event> {
     return new Promise((resolve, reject) => {
@@ -955,7 +953,7 @@ export class NostrService implements NostriaService {
 
   /**
    * Process the extension signing queue one request at a time.
-   * Shows only one signing dialog at a time to prevent multiple concurrent dialogs.
+    * Ensures only one browser extension signing interaction runs at a time.
    */
   private async processExtensionSigningQueue(): Promise<void> {
     if (this.isExtensionSigning || this.extensionSigningQueue.length === 0) {
@@ -983,7 +981,7 @@ export class NostrService implements NostriaService {
   }
 
   /**
-   * Perform the actual extension signing with dialog management.
+   * Perform the actual extension signing.
    */
   private async performExtensionSigning(event: EventTemplate | Event | UnsignedEvent): Promise<Event> {
     // Wait for window.nostr to be available (extensions inject it asynchronously)
@@ -997,102 +995,51 @@ export class NostrService implements NostriaService {
       );
     }
 
-    // Close any existing signing dialog (shouldn't happen, but safety check)
-    if (this.currentSigningDialogRef) {
-      this.logger.warn('[Extension Signing] Closing stale signing dialog');
-      this.currentSigningDialogRef.close();
-      this.currentSigningDialogRef = null;
+    // Create EventTemplate WITHOUT pubkey for NIP-07 extensions.
+    // Extensions will add the pubkey themselves. Preserve created_at if already set
+    // (important for PoW). For PoW events, we need to include the pre-calculated ID.
+    const eventTemplate: any = {
+      kind: event.kind,
+      created_at: event.created_at ?? this.currentDate(),
+      tags: event.tags,
+      content: event.content,
+    };
+
+    // If this is a mined PoW event (has nonce tag and pubkey), include the ID
+    const hasNonceTag = event.tags.some(tag => tag[0] === 'nonce');
+    if (hasNonceTag && 'pubkey' in event) {
+      // Calculate and include the event ID for PoW events
+      const { getEventHash } = await import('nostr-tools');
+      eventTemplate.id = getEventHash(event as UnsignedEvent);
+      eventTemplate.pubkey = (event as UnsignedEvent).pubkey;
     }
 
-    // Open signing dialog
-    this.currentSigningDialogRef = this.dialog.open(SigningDialogComponent, {
-      // On mobile, the tap that triggers signing can also hit the new backdrop and
-      // immediately dismiss the dialog. Keep explicit cancel via the close button only.
-      disableClose: true,
-      hasBackdrop: true,
-      panelClass: 'signing-dialog',
-      backdropClass: 'signing-dialog-backdrop',
-    });
+    const extensionResult = await this.runExclusiveExtensionInteraction(() => {
+      // Start the actual extension request only after we own the interaction lock.
+      // Previously the Promise was created before acquiring the lock, so the browser
+      // extension could receive signEvent() concurrently with a queued getPublicKey().
+      this.logger.debug('[Extension Signing] Calling window.nostr.signEvent');
 
-    // Capture a local reference so the afterClosed handler can verify it's still the
-    // active dialog.  Without this, a previous dialog's afterClosed (which fires
-    // asynchronously after dialog.close()) could null-out currentSigningDialogRef that
-    // already points to a *new* dialog, causing the new dialog to never be closed.
-    const localDialogRef = this.currentSigningDialogRef;
-
-    // Create a promise that rejects if the user closes the dialog
-    const dialogClosedPromise = new Promise<never>((_, reject) => {
-      localDialogRef.afterClosed().subscribe(() => {
-        // Only reject if THIS dialog is still the active one and was closed by user
-        // action, not by our code. We set currentSigningDialogRef to null before
-        // closing programmatically, so if it still matches, the user dismissed it.
-        if (this.currentSigningDialogRef === localDialogRef) {
-          this.currentSigningDialogRef = null;
-          reject(new Error('Signing cancelled by user'));
-        }
+      return new Promise<Event>((resolve, reject) => {
+        window.nostr!.signEvent(eventTemplate).then(
+          (result) => {
+            this.ngZone.run(() => {
+              this.logger.debug('[Extension Signing] Extension returned result', { hasResult: !!result, resultId: (result as Event)?.id });
+              resolve(result as Event);
+            });
+          },
+          (err: Error) => {
+            this.ngZone.run(() => {
+              this.logger.error('[Extension Signing] Extension signEvent threw error', err);
+              reject(err);
+            });
+          }
+        );
       });
     });
 
-    try {
-      // Create EventTemplate WITHOUT pubkey for NIP-07 extensions
-      // Extensions will add the pubkey themselves
-      // Preserve created_at if already set (important for PoW)
-      // For PoW events, we need to include the pre-calculated ID
-      const eventTemplate: any = {
-        kind: event.kind,
-        created_at: event.created_at ?? this.currentDate(),
-        tags: event.tags,
-        content: event.content,
-      };
-
-      // If this is a mined PoW event (has nonce tag and pubkey), include the ID
-      const hasNonceTag = event.tags.some(tag => tag[0] === 'nonce');
-      if (hasNonceTag && 'pubkey' in event) {
-        // Calculate and include the event ID for PoW events
-        const { getEventHash } = await import('nostr-tools');
-        eventTemplate.id = getEventHash(event as UnsignedEvent);
-        eventTemplate.pubkey = (event as UnsignedEvent).pubkey;
-      }
-
-      const extensionResult = await this.runExclusiveExtensionInteraction(() => {
-        // Start the actual extension request only after we own the interaction lock.
-        // Previously the Promise was created before acquiring the lock, so the browser
-        // extension could receive signEvent() concurrently with a queued getPublicKey().
-        this.logger.debug('[Extension Signing] Calling window.nostr.signEvent');
-
-        const zonedSignEvent = new Promise<Event>((resolve, reject) => {
-          window.nostr!.signEvent(eventTemplate).then(
-            (result) => {
-              this.ngZone.run(() => {
-                this.logger.debug('[Extension Signing] Extension returned result', { hasResult: !!result, resultId: (result as Event)?.id });
-                resolve(result as Event);
-              });
-            },
-            (err: Error) => {
-              this.ngZone.run(() => {
-                this.logger.error('[Extension Signing] Extension signEvent threw error', err);
-                reject(err);
-              });
-            }
-          );
-        });
-
-        return Promise.race([
-          zonedSignEvent,
-          dialogClosedPromise,
-        ]);
-      });
-      this.logger.debug('[Extension Signing] Extension signing completed', { resultId: (extensionResult as Event)?.id });
-      return extensionResult as Event;
-    } finally {
-      // Always close the dialog when signing completes (success or error).
-      // Run inside NgZone to ensure Angular processes the dialog removal.
-      if (this.currentSigningDialogRef) {
-        const dialogRef = this.currentSigningDialogRef;
-        this.currentSigningDialogRef = null; // Clear before closing to prevent rejection
-        this.ngZone.run(() => dialogRef.close());
-      }
-    }
+    this.logger.debug('[Extension Signing] Extension signing completed', { resultId: (extensionResult as Event)?.id });
+    return extensionResult as Event;
   }
 
   async signEvent(event: EventTemplate | UnsignedEvent) {

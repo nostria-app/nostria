@@ -13,7 +13,6 @@ import { QrcodeScanDialogComponent } from './qrcode-scan-dialog/qrcode-scan-dial
 import { ReactionsDialogComponent } from './reactions-dialog/reactions-dialog.component';
 import { ReportDialogComponent } from './report-dialog/report-dialog.component';
 import { ReportsDialogComponent } from './reports-dialog/reports-dialog.component';
-import { SigningDialogComponent } from './signing-dialog/signing-dialog.component';
 import { TextInputDialogComponent } from './text-input-dialog/text-input-dialog.component';
 
 interface ComponentDef {
@@ -41,7 +40,6 @@ const dialogComponents: {
     { name: 'ReactionsDialogComponent', component: ReactionsDialogComponent },
     { name: 'ReportDialogComponent', component: ReportDialogComponent },
     { name: 'ReportsDialogComponent', component: ReportsDialogComponent },
-    { name: 'SigningDialogComponent', component: SigningDialogComponent },
     { name: 'TextInputDialogComponent', component: TextInputDialogComponent },
 ];
 
