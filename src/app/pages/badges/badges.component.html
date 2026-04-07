@@ -1,21 +1,21 @@
 <div class="panel-header">
-  <button mat-icon-button (click)="goBack()" matTooltip="Back">
+  <button mat-icon-button (click)="goBack()" matTooltip="Back" i18n-matTooltip="@@common.back">
     <mat-icon>arrow_back</mat-icon>
   </button>
 
   @if (viewingProfile(); as profile) {
     @if (profile.data?.picture) {
-    <img class="profile-avatar" [src]="profile.data.picture" alt="Profile picture" />
+    <img class="profile-avatar" [src]="profile.data.picture" alt="Profile picture" i18n-alt="@@profile.picture" />
     }
-    <h2 class="panel-title title-font">{{ profile.data?.display_name || profile.data?.name || 'Anonymous' }}'s Badges</h2>
+    <h2 class="panel-title title-font" i18n="@@badges.profile-title">{{ profile.data?.display_name || profile.data?.name || 'Anonymous' }}'s Badges</h2>
   } @else {
-    <h2 class="panel-title title-font">Badges</h2>
+    <h2 class="panel-title title-font" i18n="@@badges.title">Badges</h2>
   }
 
   <span class="panel-header-spacer"></span>
 
   @if (isViewingOwnProfile()) {
-    <button mat-icon-button (click)="openBadgeEditor()" matTooltip="Badge Editor">
+    <button mat-icon-button (click)="openBadgeEditor()" matTooltip="Badge Editor" i18n-matTooltip="@@badges.editor">
       <mat-icon>add</mat-icon>
     </button>
   }
@@ -25,19 +25,19 @@
   @if (isInitialLoading()) {
   <div class="initial-loading">
     <mat-spinner diameter="40"></mat-spinner>
-    <p>Loading badges...</p>
+    <p i18n="@@badges.loading">Loading badges...</p>
   </div>
   } @else {
   <mat-tab-group animationDuration="0ms" [selectedIndex]="activeTabIndex()" (selectedIndexChange)="onTabChange($event)">
     <mat-tab>
       <ng-template mat-tab-label>
         <mat-icon class="tab-icon">verified</mat-icon>
-        Accepted
+        <span i18n="@@badges.tab.accepted">Accepted</span>
       </ng-template>
       @if (isLoadingAccepted()) {
       <div class="tab-loading">
         <mat-spinner diameter="32"></mat-spinner>
-        <p>Loading accepted badges...</p>
+        <p i18n="@@badges.loading.accepted">Loading accepted badges...</p>
       </div>
       } @else {
       <!-- Enable drag-and-drop only for own profile when reorder mode is enabled -->
@@ -47,10 +47,14 @@
       <div class="reorder-toggle">
         <button mat-button [color]="reorderMode() ? 'accent' : 'primary'" (click)="toggleReorderMode()">
           <mat-icon>{{ reorderMode() ? 'check' : 'swap_vert' }}</mat-icon>
-          {{ reorderMode() ? 'Done Reordering' : 'Reorder Badges' }}
+          @if (reorderMode()) {
+          <span i18n="@@badges.done-reordering">Done Reordering</span>
+          } @else {
+          <span i18n="@@badges.reorder">Reorder Badges</span>
+          }
         </button>
         @if (reorderMode()) {
-        <span class="reorder-hint">Drag badges to reorder them</span>
+        <span class="reorder-hint" i18n="@@badges.drag-to-reorder">Drag badges to reorder them</span>
         }
       </div>
       }
@@ -84,7 +88,7 @@
         @if (accepted().length === 0) {
         <div class="no-badges-message">
           <mat-icon>verified</mat-icon>
-          <p>No badges accepted yet</p>
+          <p i18n="@@badges.empty.accepted-own">No badges accepted yet</p>
         </div>
         }
       </div>
@@ -103,7 +107,7 @@
         @if (accepted().length === 0) {
         <div class="no-badges-message">
           <mat-icon>verified</mat-icon>
-          <p>No accepted badges</p>
+          <p i18n="@@badges.empty.accepted">No accepted badges</p>
         </div>
         }
       </div>
@@ -113,12 +117,12 @@
     <mat-tab>
       <ng-template mat-tab-label>
         <mat-icon class="tab-icon">military_tech</mat-icon>
-        Received
+        <span i18n="@@badges.tab.received">Received</span>
       </ng-template>
       @if (isLoadingReceived()) {
       <div class="tab-loading">
         <mat-spinner diameter="32"></mat-spinner>
-        <p>Loading received badges...</p>
+        <p i18n="@@badges.loading.received">Loading received badges...</p>
       </div>
       } @else {
       <div class="badges-list">
@@ -141,9 +145,9 @@
         <div class="no-badges-message">
           <mat-icon>emoji_events</mat-icon>
           @if (isViewingOwnProfile()) {
-          <p>You haven't received any badges yet</p>
+          <p i18n="@@badges.empty.received-own">You haven't received any badges yet</p>
           } @else {
-          <p>No badges received yet</p>
+          <p i18n="@@badges.empty.received">No badges received yet</p>
           }
         </div>
         }
@@ -153,12 +157,12 @@
     <mat-tab>
       <ng-template mat-tab-label>
         <mat-icon class="tab-icon">emoji_events</mat-icon>
-        Given
+        <span i18n="@@badges.tab.given">Given</span>
       </ng-template>
       @if (isLoadingIssued()) {
       <div class="tab-loading">
         <mat-spinner diameter="32"></mat-spinner>
-        <p>Loading given badges...</p>
+        <p i18n="@@badges.loading.given">Loading given badges...</p>
       </div>
       } @else {
       <div class="badges-list">
@@ -175,9 +179,9 @@
         <div class="no-badges-message">
           <mat-icon>emoji_events</mat-icon>
           @if (isViewingOwnProfile()) {
-          <p>You haven't given any badges yet</p>
+          <p i18n="@@badges.empty.given-own">You haven't given any badges yet</p>
           } @else {
-          <p>No badges given yet</p>
+          <p i18n="@@badges.empty.given">No badges given yet</p>
           }
         </div>
         }
@@ -187,12 +191,12 @@
     <mat-tab>
       <ng-template mat-tab-label>
         <mat-icon class="tab-icon">create</mat-icon>
-        Created
+        <span i18n="@@badges.tab.created">Created</span>
       </ng-template>
       @if (isLoadingDefinitions()) {
       <div class="tab-loading">
         <mat-spinner diameter="32"></mat-spinner>
-        <p>Loading created badges...</p>
+        <p i18n="@@badges.loading.created">Loading created badges...</p>
       </div>
       } @else {
       <div class="badges-list">
@@ -204,12 +208,12 @@
         <div class="no-badges-message">
           <mat-icon>sentiment_very_dissatisfied</mat-icon>
           @if (isViewingOwnProfile()) {
-          <p>You haven't created any badges yet</p>
+          <p i18n="@@badges.empty.created-own">You haven't created any badges yet</p>
           <button mat-raised-button color="accent" (click)="openBadgeEditor()">
-            Create Your First Badge
+            <span i18n="@@badges.create-first">Create Your First Badge</span>
           </button>
           } @else {
-          <p>No badges created yet</p>
+          <p i18n="@@badges.empty.created">No badges created yet</p>
           }
         </div>
         }

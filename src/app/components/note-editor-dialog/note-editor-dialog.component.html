@@ -9,9 +9,9 @@
     <mat-icon class="default-avatar">account_circle</mat-icon>
     }
   </div>
-  <span class="placeholder-text">Post your reply</span>
+  <span class="placeholder-text" i18n="@@editor.inline.post-reply">Post your reply</span>
   <button mat-flat-button class="reply-button" [disabled]="!isLoggedIn()">
-    Reply
+    <span i18n="@@event.actions.reply">Reply</span>
   </button>
 </div>
 }
@@ -34,7 +34,7 @@
     <div class="error-container">
       <mat-icon color="warn">error</mat-icon>
       <p>{{ mediaService.error() }}</p>
-      <button mat-button (click)="dismissError()">Dismiss</button>
+      <button mat-button (click)="dismissError()" i18n="@@common.dismiss">Dismiss</button>
     </div>
     }
 
@@ -52,7 +52,7 @@
       <div class="reply-context-header">
         <div class="reply-context-title">
           <mat-icon class="reply-icon">reply</mat-icon>
-          <span class="reply-text">Replying to note by</span>
+          <span class="reply-text" i18n="@@editor.replying-to-note-by">Replying to note by</span>
 
           @if (replyPreviewPubkey()) {
           <app-user-profile [pubkey]="replyPreviewPubkey()" view="list" class="reply-author" [disableLink]="true"
@@ -76,7 +76,7 @@
     @if (isQuote()) {
     <div class="quote-context">
       <mat-icon class="quote-icon">format_quote</mat-icon>
-      <span class="quote-text">Quoting: "{{ (data.quote?.content || '').slice(0, 100)
+      <span class="quote-text" i18n="@@editor.quoting">Quoting: "{{ (data.quote?.content || '').slice(0, 100)
         }}{{ (data.quote?.content || '').length > 100 ? '...' : '' }}"</span>
     </div>
     }
@@ -88,7 +88,7 @@
         <mat-icon [class.spinning]="sentimentState.kind === 'loading'">{{ sentimentState.icon }}</mat-icon>
         <span>{{ sentimentState.text }}</span>
         <button mat-icon-button type="button" class="close-inline-status" (click)="dismissSentimentStatus()"
-          matTooltip="Dismiss sentiment result">
+          matTooltip="Dismiss sentiment result" i18n-matTooltip="@@editor.dismiss-sentiment-result">
           <mat-icon>close</mat-icon>
         </button>
       </span>
@@ -105,8 +105,8 @@
         <div class="media-mode-info">
           <mat-icon class="media-icon">perm_media</mat-icon>
           <div class="media-text">
-            <span class="media-label">Publish as Media Story</span>
-            <span class="media-description">Create a rich media event optimized for media clients</span>
+            <span class="media-label" i18n="@@editor.publish-as-media-story">Publish as Media Story</span>
+            <span class="media-description" i18n="@@editor.media-story.description">Create a rich media event optimized for media clients</span>
           </div>
         </div>
         <mat-slide-toggle [checked]="isMediaMode()" (change)="setMediaMode($event.checked)" color="primary">
@@ -117,8 +117,9 @@
       <!-- Title Input for Media Mode -->
       @if (isMediaModeEnabled()) {
       <mat-form-field appearance="outline" class="title-field">
-        <mat-label>Title</mat-label>
-        <input matInput [ngModel]="title()" (ngModelChange)="title.set($event)" placeholder="Give your story a title">
+        <mat-label i18n="@@common.title">Title</mat-label>
+        <input matInput [ngModel]="title()" (ngModelChange)="title.set($event)" placeholder="Give your story a title"
+          i18n-placeholder="@@editor.story-title.placeholder">
       </mat-form-field>
       }
 
@@ -126,9 +127,15 @@
         <div class="content-field" [class.focused]="isContentFocused()" #contentField
           [class.empty]="!content() && !isContentFocused()">
           @if (!content() && !isContentFocused()) {
-          <div class="content-placeholder" aria-hidden="true">{{ isMediaModeEnabled() ? 'Description' :
-            (inlineMode() ? 'Post your reply' : "What's on your
-            mind?") }}</div>
+          <div class="content-placeholder" aria-hidden="true">
+            @if (isMediaModeEnabled()) {
+            <ng-container i18n="@@editor.placeholder.description">Description</ng-container>
+            } @else if (inlineMode()) {
+            <ng-container i18n="@@editor.inline.post-reply">Post your reply</ng-container>
+            } @else {
+            <ng-container i18n="@@editor.placeholder.whats-on-your-mind">What's on your mind?</ng-container>
+            }
+          </div>
           }
           <textarea [value]="content()" (input)="onContentInput($event)" (focus)="onContentFocus()"
             (blur)="onContentBlur()" (keydown)="onContentKeyDown($event)" (keyup)="onContentKeyUp($event)"
@@ -157,7 +164,7 @@
 
       <!-- Hidden file input -->
       <input type="file" #fileInput (change)="onFileSelected($event)" accept="image/*,video/*" multiple
-        class="hidden-file-input" aria-label="Upload media files" />
+        class="hidden-file-input" aria-label="Upload media files" i18n-aria-label="@@editor.upload-media-files" />
     </div>
     }
 
@@ -166,10 +173,10 @@
     <div class="advanced-options-section">
       <div class="advanced-options-header">
         <mat-icon class="options-icon">settings</mat-icon>
-        <span class="options-title">Advanced Options</span>
+        <span class="options-title" i18n="@@editor.advanced-options">Advanced Options</span>
         <span class="spacer"></span>
         <button mat-icon-button type="button" class="close-advanced-options" (click)="toggleAdvancedOptions()"
-          matTooltip="Close advanced options">
+          matTooltip="Close advanced options" i18n-matTooltip="@@editor.close-advanced-options">
           <mat-icon>close</mat-icon>
         </button>
       </div>
@@ -177,10 +184,10 @@
       <!-- Media Upload Options -->
       <div class="option-row">
         <div class="option-header">
-          <span class="option-label">Media Optimization</span>
+          <span class="option-label" i18n="@@editor.media-optimization">Media Optimization</span>
           <mat-button-toggle-group class="optimization-toggle-group" [value]="selectedMediaOptimization()"
             (change)="onMediaOptimizationChange($event.value)" [hideSingleSelectionIndicator]="true"
-            aria-label="Media optimization">
+            aria-label="Media optimization" i18n-aria-label="@@editor.media-optimization">
             @for (option of mediaOptimizationOptions; track option.value) {
             <mat-button-toggle [value]="option.value">{{ option.label }}</mat-button-toggle>
             }
@@ -192,7 +199,7 @@
 
         <div class="option-content">
           @if (hasPendingVideoMedia()) {
-          <span class="option-description">Right-click or press and hold a queued video thumbnail to choose a clip type
+          <span class="option-description" i18n="@@editor.pending-video-choice">Right-click or press and hold a queued video thumbnail to choose a clip type
             for that specific video.</span>
           }
         </div>
@@ -203,10 +210,10 @@
         <div class="option-group-section">
           <div class="option-header">
             <mat-slide-toggle [checked]="addClientTag()" (change)="addClientTag.set($event.checked)" color="primary">
-              Add Client Tag
+              <span i18n="@@settings.client-tags.add">Add Client Tag</span>
             </mat-slide-toggle>
             <span class="option-description">
-              Add the Nostria client tag to this event
+              <span i18n="@@editor.client-tag.description">Add the Nostria client tag to this event</span>
             </span>
           </div>
         </div>
@@ -215,27 +222,27 @@
           <div class="option-header">
             <mat-slide-toggle [checked]="expirationEnabled()" (change)="onExpirationToggle($event.checked)"
               color="primary">
-              Expiration
+              <span i18n="@@editor.expiration">Expiration</span>
             </mat-slide-toggle>
-            <span class="option-description">Set an expiration date and time for this note</span>
+            <span class="option-description" i18n="@@editor.expiration.description">Set an expiration date and time for this note</span>
           </div>
 
           @if (expirationEnabled()) {
           <div class="option-content">
             <div class="expiration-inputs">
               <mat-form-field appearance="outline" class="date-field">
-                <mat-label>Expiration Date</mat-label>
+                <mat-label i18n="@@editor.expiration.date">Expiration Date</mat-label>
                 <input matInput [matDatepicker]="expirationPicker" [value]="expirationDate()"
                   (dateInput)="onExpirationDateChange($event.value)" (dateChange)="onExpirationDateChange($event.value)"
-                  placeholder="Select date" [min]="minDate()" readonly />
+                  placeholder="Select date" i18n-placeholder="@@editor.expiration.select-date" [min]="minDate()" readonly />
                 <mat-datepicker-toggle matIconSuffix [for]="expirationPicker"></mat-datepicker-toggle>
                 <mat-datepicker #expirationPicker></mat-datepicker>
               </mat-form-field>
 
               <mat-form-field appearance="outline" class="time-field">
-                <mat-label>Expiration Time</mat-label>
+                <mat-label i18n="@@editor.expiration.time">Expiration Time</mat-label>
                 <input matInput type="time" [value]="expirationTime()" (input)="onExpirationTimeChange($event)"
-                  placeholder="Select time" />
+                  placeholder="Select time" i18n-placeholder="@@editor.expiration.select-time" />
               </mat-form-field>
             </div>
 
@@ -246,7 +253,7 @@
             </div>
             }
 
-            <mat-hint class="expiration-hint">Note will be considered expired after this date and time</mat-hint>
+            <mat-hint class="expiration-hint" i18n="@@editor.expiration.hint">Note will be considered expired after this date and time</mat-hint>
           </div>
           }
         </div>

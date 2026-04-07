@@ -5,7 +5,7 @@
 @if (isLoading()) {
 <div class="loading-container">
   <mat-progress-bar mode="indeterminate"></mat-progress-bar>
-  <p>Loading article...</p>
+  <p i18n="@@articles.editor.loading">Loading article...</p>
 </div>
 } @else {
 <div class="editor-container">
@@ -18,21 +18,22 @@
         <div class="featured-image-drop-zone" [class.drag-over]="isFeaturedImageDragOver()"
           (dragenter)="onFeaturedImageDragEnter($event)" (dragover)="onFeaturedImageDragOver($event)"
           (dragleave)="onFeaturedImageDragLeave($event)" (drop)="onFeaturedImageDrop($event)">
-          <button mat-icon-button [matMenuTriggerFor]="featuredImageMenu" matTooltip="Add featured image">
+          <button mat-icon-button [matMenuTriggerFor]="featuredImageMenu" matTooltip="Add featured image"
+            i18n-matTooltip="@@articles.editor.add-featured-image">
             <mat-icon>add_photo_alternate</mat-icon>
           </button>
           @if (isFeaturedImageDragOver()) {
-          <span class="drop-hint">Drop image here</span>
+          <span class="drop-hint" i18n="@@articles.editor.drop-image">Drop image here</span>
           }
         </div>
         <mat-menu #featuredImageMenu="matMenu">
           <button mat-menu-item (click)="openFeaturedImageUpload()">
             <mat-icon>upload</mat-icon>
-            <span>Upload Image</span>
+            <span i18n="@@articles.editor.upload-image">Upload Image</span>
           </button>
           <button mat-menu-item (click)="openFeaturedImageUrl()">
             <mat-icon>link</mat-icon>
-            <span>Image from URL</span>
+            <span i18n="@@articles.editor.image-from-url">Image from URL</span>
           </button>
         </mat-menu>
         }
@@ -48,8 +49,8 @@
     <!-- Featured Image Preview -->
     @if (article().image && !showPreview()) {
     <div class="featured-image-preview">
-      <img [src]="article().image" [attr.alt]="article().title || 'Featured image'"
-        [attr.title]="article().title || 'Featured image'" loading="lazy" />
+      <img [src]="article().image" alt="Featured image" i18n-alt="@@articles.editor.featured-image"
+        title="Featured image" i18n-title="@@articles.editor.featured-image" loading="lazy" />
       <button mat-icon-button class="clear-image-button" (click)="clearFeaturedImage()" matTooltip="Remove image">
         <mat-icon>close</mat-icon>
       </button>
@@ -59,11 +60,12 @@
     <!-- Title Input -->
     @if (!showPreview()) {
     <input #titleInput type="text" class="title-input" placeholder="Title" [value]="article().title"
-      (input)="updateTitle($any($event.target).value)" (keydown)="onTitleKeyDown($event)" />
+      i18n-placeholder="@@common.title" (input)="updateTitle($any($event.target).value)"
+      (keydown)="onTitleKeyDown($event)" />
 
     <!-- Summary Input -->
     <textarea class="summary-input" placeholder="Summary (optional)" [value]="article().summary"
-      (input)="updateSummary($any($event.target).value)"></textarea>
+      i18n-placeholder="@@articles.editor.summary.optional" (input)="updateSummary($any($event.target).value)"></textarea>
     }
 
     <!-- Content Editor or Preview -->
@@ -85,13 +87,13 @@
   <div class="metadata-section">
     <div class="dTag-field-container">
       <mat-form-field appearance="outline" class="full-width">
-        <mat-label>Article ID (d tag) *</mat-label>
+          <mat-label i18n="@@articles.editor.article-id">Article ID (d tag) *</mat-label>
         <input matInput [value]="article().dTag" (input)="updateDTag($any($event.target).value)"
-          placeholder="unique-article-identifier" required [readonly]="autoDTagEnabled()" />
+          placeholder="unique-article-identifier" i18n-placeholder="@@articles.editor.article-id.placeholder" required [readonly]="autoDTagEnabled()" />
         @if (autoDTagEnabled()) {
-        <mat-hint>Auto-ID is enabled. ID will update based on title.</mat-hint>
+        <mat-hint i18n="@@articles.editor.auto-id-enabled">Auto-ID is enabled. ID will update based on title.</mat-hint>
         } @else {
-        <mat-hint>Unique identifier for your article. Used in URLs.</mat-hint>
+        <mat-hint i18n="@@articles.editor.article-id.hint">Unique identifier for your article. Used in URLs.</mat-hint>
         }
       </mat-form-field>
       <div class="dTag-controls">
@@ -109,11 +111,11 @@
 
     <!-- Tags Section -->
     <div class="tags-section">
-      <h3>Tags</h3>
+      <h3 i18n="@@common.tags">Tags</h3>
       <div class="tag-input-container">
         <mat-form-field appearance="outline" class="tag-input">
           <input matInput [value]="newTag()" (input)="newTag.set($any($event.target).value)"
-            (keypress)="onTagKeyPress($event)" placeholder="Enter a tag" />
+            (keypress)="onTagKeyPress($event)" placeholder="Enter a tag" i18n-placeholder="@@articles.editor.enter-tag" />
         </mat-form-field>
         <button mat-icon-button (click)="addTag()" [disabled]="!newTag().trim()">
           <mat-icon>add</mat-icon>
@@ -142,21 +144,21 @@
 
     <button mat-button (click)="resetDraft()" [disabled]="isPublishing()" class="reset-button">
       <mat-icon>refresh</mat-icon>
-      <span class="button-label">Reset Draft</span>
+      <span class="button-label" i18n="@@articles.editor.reset-draft">Reset Draft</span>
     </button>
 
-    <button mat-button (click)="cancel()" [disabled]="isPublishing()">
+    <button mat-button (click)="cancel()" [disabled]="isPublishing()" i18n="@@common.cancel">
       Cancel
     </button>
 
     <button mat-button (click)="saveDraft()" [disabled]="!isDraftValid() || isPublishing()">
       <mat-icon>save</mat-icon>
-      <span class="button-label">Save Draft</span>
+      <span class="button-label" i18n="@@articles.editor.save-draft">Save Draft</span>
     </button>
 
     <button mat-flat-button color="primary" (click)="publish()" [disabled]="!isValid() || isPublishing()">
       <mat-icon>publish</mat-icon>
-      <span class="button-label">Publish</span>
+      <span class="button-label" i18n="@@common.publish">Publish</span>
     </button>
   </div>
 </div>

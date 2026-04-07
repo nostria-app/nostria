@@ -1,13 +1,15 @@
 <div class="articles-container">
   <!-- Panel Header -->
   <div class="panel-header">
-    <h2 class="panel-title title-font">My Articles</h2>
+    <h2 class="panel-title title-font" i18n="@@articles.list.title">My Articles</h2>
     <span class="panel-header-spacer"></span>
     <div class="panel-actions">
-      <button mat-icon-button (click)="refreshArticles()" matTooltip="Refresh articles">
+      <button mat-icon-button (click)="refreshArticles()" matTooltip="Refresh articles"
+        i18n-matTooltip="@@articles.list.refresh">
         <mat-icon>refresh</mat-icon>
       </button>
-      <button mat-icon-button (click)="createNewArticle()" matTooltip="Create new article">
+      <button mat-icon-button (click)="createNewArticle()" matTooltip="Create new article"
+        i18n-matTooltip="@@articles.list.create">
         <mat-icon>add</mat-icon>
       </button>
     </div>
@@ -15,13 +17,13 @@
 
   <div class="articles-header">
     <mat-tab-group [selectedIndex]="selectedTab()" (selectedIndexChange)="onTabChange($event)" animationDuration="0ms">
-      <mat-tab label="Drafts"></mat-tab>
-      <mat-tab label="Published"></mat-tab>
+      <mat-tab label="Drafts" i18n-label="@@articles.list.drafts"></mat-tab>
+      <mat-tab label="Published" i18n-label="@@articles.list.published"></mat-tab>
     </mat-tab-group>
 
     @if (availableTags().length > 0) {
     <div class="tag-filters">
-      <span class="filter-label">Filter by tags:</span>
+      <span class="filter-label" i18n="@@articles.list.filter-by-tags">Filter by tags:</span>
       <mat-chip-listbox multiple (change)="onTagSelectionChange($any($event.value))">
         @for (tag of availableTags(); track $index) {
         <mat-chip-option [value]="tag"
@@ -37,29 +39,34 @@
   @if (isLoading()) {
   <div class="loading-container">
     <mat-progress-spinner mode="indeterminate" diameter="50"></mat-progress-spinner>
-    <p>Loading articles...</p>
+    <p i18n="@@articles.list.loading">Loading articles...</p>
   </div>
   } @else if (error()) {
   <div class="error-container">
     <mat-icon color="warn">error</mat-icon>
     <p>{{ error() }}</p>
-    <button mat-raised-button (click)="refreshArticles()">Try Again</button>
+    <button mat-raised-button (click)="refreshArticles()" i18n="@@common.try-again">Try Again</button>
   </div>
   } @else if (filteredArticles().length === 0) {
   <div class="empty-state">
     @if ((selectedTab() === 0 ? selectedDraftTags() : selectedPublishedTags()).length > 0) {
     <mat-icon>filter_list_off</mat-icon>
-    <h2>No articles found with selected tags</h2>
-    <p>Try clearing the filter or selecting different tags.</p>
-    <button mat-raised-button (click)="clearTagFilter()">Clear Filter</button>
+    <h2 i18n="@@articles.list.empty.filtered.title">No articles found with selected tags</h2>
+    <p i18n="@@articles.list.empty.filtered.description">Try clearing the filter or selecting different tags.</p>
+    <button mat-raised-button (click)="clearTagFilter()" i18n="@@articles.list.clear-filter">Clear Filter</button>
     } @else {
     <mat-icon>article</mat-icon>
-    <h2>No {{ selectedTab() === 0 ? 'drafts' : 'published articles' }} yet</h2>
-    <p>{{ selectedTab() === 0 ? 'Start writing your first article!' : 'Publish your drafts to see them here.' }}</p>
+    @if (selectedTab() === 0) {
+    <h2 i18n="@@articles.list.empty.drafts.title">No drafts yet</h2>
+    <p i18n="@@articles.list.empty.drafts.description">Start writing your first article!</p>
+    } @else {
+    <h2 i18n="@@articles.list.empty.published.title">No published articles yet</h2>
+    <p i18n="@@articles.list.empty.published.description">Publish your drafts to see them here.</p>
+    }
     @if (selectedTab() === 0) {
     <button mat-flat-button (click)="createNewArticle()">
       <mat-icon>add</mat-icon>
-      Create Your First Article
+      <span i18n="@@articles.list.create-first">Create Your First Article</span>
     </button>
     }
     }
@@ -82,10 +89,10 @@
                 {{ article.title }}
                 @if (selectedTab() === 0) {
                 @if (article.status === 'published') {
-                <span class="status-badge published">Published</span>
+                <span class="status-badge published" i18n="@@articles.list.status.published">Published</span>
                 }
                 @if (article.isEdited) {
-                <span class="status-badge edited">Unpublished Changes</span>
+                <span class="status-badge edited" i18n="@@articles.list.status.unpublished-changes">Unpublished Changes</span>
                 }
                 }
               </h3>
@@ -101,12 +108,12 @@
               @if (selectedTab() === 0) {
               <button mat-menu-item (click)="deleteDraft(article)">
                 <mat-icon>delete</mat-icon>
-                <span>Delete</span>
+                <span i18n="@@common.delete">Delete</span>
               </button>
               } @else {
               <button mat-menu-item (click)="deleteArticle(article)">
                 <mat-icon>delete</mat-icon>
-                <span>Delete</span>
+                <span i18n="@@common.delete">Delete</span>
               </button>
               }
             </mat-menu>
@@ -127,13 +134,17 @@
           <div class="article-actions">
             <button mat-button (click)="openArticle(article, $event)">
               <mat-icon>edit</mat-icon>
-              {{ selectedTab() === 0 ? 'Continue Writing' : 'Edit Article' }}
+              @if (selectedTab() === 0) {
+              <span i18n="@@articles.list.continue-writing">Continue Writing</span>
+              } @else {
+              <span i18n="@@articles.list.edit-article">Edit Article</span>
+              }
             </button>
 
             @if(selectedTab() === 1) {
             <button mat-button (click)="viewArticle(article, $event)">
               <mat-icon>visibility</mat-icon>
-              View Article
+              <span i18n="@@articles.list.view-article">View Article</span>
             </button>
             }
           </div>

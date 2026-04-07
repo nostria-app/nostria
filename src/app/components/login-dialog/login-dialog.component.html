@@ -8,8 +8,8 @@
         <mat-card-content>
           <div class="card-content">
             <div class="card-text">
-              <h3><mat-icon>person_add</mat-icon>New User</h3>
-              <p>Create a new account</p>
+              <h3><mat-icon>person_add</mat-icon><span i18n="@@login.new-user">New User</span></h3>
+              <p i18n="@@login.new-user.description">Create a new account</p>
             </div>
           </div>
         </mat-card-content>
@@ -19,8 +19,8 @@
         <mat-card-content>
           <div class="card-content">
             <div class="card-text">
-              <h3><mat-icon>login</mat-icon>Sign In</h3>
-              <p>Use your existing account</p>
+              <h3><mat-icon>login</mat-icon><span i18n="@@login.sign-in">Sign In</span></h3>
+              <p i18n="@@login.sign-in.description">Use your existing account</p>
             </div>
           </div>
         </mat-card-content>
@@ -29,8 +29,8 @@
 
     <div class="terms-of-use-notice">
       <p>
-        By using Nostria, you agree to our
-        <a href="#" (click)="$event.preventDefault(); openTermsOfUse()">Terms of Use</a>.
+        <span i18n="@@introduction.terms-of-use.prefix">By using Nostria, you agree to our</span>
+        <a href="#" (click)="$event.preventDefault(); openTermsOfUse()" i18n="@@introduction.terms-of-use.link">Terms of Use</a><span i18n="@@introduction.terms-of-use.suffix">.</span>
       </p>
     </div>
     }
@@ -38,7 +38,7 @@
     <!-- Step 2: New account profile setup -->
     @if (currentStep() === LoginStep.REGION_SELECTION) {
     <div class="profile-setup-section">
-      <h3>Choose your region</h3>
+      <h3 i18n="@@login.choose-region">Choose your region</h3>
 
       <div class="signup-region-grid">
         <button mat-stroked-button class="signup-region-button" [class.selected]="signupRegion() === 'us'"
@@ -51,8 +51,8 @@
               }
             </span>
             <span class="signup-region-services">
-              <span>Relay: rilo.nostria.app +3</span>
-              <span>Media: milo.nostria.app</span>
+              <span i18n="@@login.region.us.relay">Relay: rilo.nostria.app +3</span>
+              <span i18n="@@login.region.us.media">Media: milo.nostria.app</span>
             </span>
           </span>
         </button>
@@ -61,26 +61,26 @@
           (click)="setSignupRegion('eu')">
           <span class="signup-region-content">
             <span class="signup-region-header">
-              <span class="signup-region-title">Europe</span>
+              <span class="signup-region-title" i18n="@@login.region.eu.title">Europe</span>
               @if (signupRegion() === 'eu') {
               <mat-icon class="signup-region-check">check_circle</mat-icon>
               }
             </span>
             <span class="signup-region-services">
-              <span>Relay: ribo.nostria.app +3</span>
-              <span>Media: mibo.nostria.app</span>
+              <span i18n="@@login.region.eu.relay">Relay: ribo.nostria.app +3</span>
+              <span i18n="@@login.region.eu.media">Media: mibo.nostria.app</span>
             </span>
           </span>
         </button>
       </div>
 
-      <h3>Set up your profile (optional)</h3>
-      <p>Add a name and photo so people can recognize you.</p>
+      <h3 i18n="@@login.profile-setup.optional">Set up your profile (optional)</h3>
+      <p i18n="@@login.profile-setup.description">Add a name and photo so people can recognize you.</p>
 
       <div class="profile-setup-form">
         <div class="profile-avatar-section">
-          <div class="profile-setup-avatar" (click)="fileInput.click()" (keydown.enter)="fileInput.click()"
-            (keydown.space)="fileInput.click()" tabindex="0" role="button" aria-label="Select profile image">
+          <div class="profile-setup-avatar" (click)="fileInput.click()" aria-label="Select profile image"
+            i18n-aria-label="@@login.profile-image.select">
             @if (profileImage()) {
             <img [src]="profileImage()" alt="Profile" class="profile-preview" />
             } @else {
@@ -89,11 +89,12 @@
             </div>
             }
             <input type="file" accept="image/*" (change)="onFileSelected($event)" #fileInput class="hidden-file-input"
-              title="Select profile image" />
+              title="Select profile image" i18n-title="@@login.profile-image.select" />
           </div>
           @if (profileImage()) {
           <button mat-icon-button class="clear-avatar-button" (click)="clearProfileImage()"
-            matTooltip="Remove profile image" aria-label="Remove profile image">
+            matTooltip="Remove profile image" i18n-matTooltip="@@login.profile-image.remove"
+            aria-label="Remove profile image" i18n-aria-label="@@login.profile-image.remove">
             <mat-icon>close</mat-icon>
           </button>
           }
@@ -101,20 +102,20 @@
 
         <div class="profile-name-section">
           <mat-form-field appearance="outline" class="profile-name-field">
-            <mat-label>What should we call you?</mat-label>
+            <mat-label i18n="@@login.profile-name.label">What should we call you?</mat-label>
             <input matInput [ngModel]="displayName()" (ngModelChange)="displayName.set($event)"
-              placeholder="Display name (optional)" maxlength="50" />
+              placeholder="Display name (optional)" i18n-placeholder="@@login.profile-name.placeholder" maxlength="50" />
           </mat-form-field>
         </div>
       </div>
 
       <div class="profile-setup-actions">
-        <button mat-button type="button" (click)="goToStep(LoginStep.INITIAL)">Back</button>
+        <button mat-button type="button" (click)="goToStep(LoginStep.INITIAL)" i18n="@@common.back">Back</button>
         <button mat-flat-button type="button" [disabled]="loading() || !signupRegion()" (click)="generateNewKey()">
           @if (loading()) {
           <mat-spinner diameter="20"></mat-spinner>
           } @else {
-          Create Account
+          <span i18n="@@login.create-account">Create Account</span>
           }
         </button>
       </div>
@@ -131,8 +132,8 @@
           <div class="card-content">
             <mat-icon class="featured-icon">key</mat-icon>
             <div class="card-text">
-              <h3>Private Key (nsec)</h3>
-              <p>Sign in with your Nostr private key or recovery phrase</p>
+              <h3 i18n="@@login.private-key.title">Private Key (nsec)</h3>
+              <p i18n="@@login.private-key.description">Sign in with your Nostr private key or recovery phrase</p>
             </div>
           </div>
         </mat-card-content>
@@ -147,7 +148,7 @@
           <mat-card-content>
             <div class="card-content">
               <div class="card-text">
-                <h3><mat-icon>extension</mat-icon>Extension</h3>
+                <h3><mat-icon>extension</mat-icon><span i18n="@@login.extension.title">Extension</span></h3>
                 <p>{{ isDesktopTauri() ? 'Not available in desktop app' : 'Browser extension' }}</p>
               </div>
             </div>
@@ -158,8 +159,8 @@
           <mat-card-content>
             <div class="card-content">
               <div class="card-text">
-                <h3><mat-icon>visibility</mat-icon>Preview</h3>
-                <p>Read-only mode</p>
+                <h3><mat-icon>visibility</mat-icon><span i18n="@@login.preview.title">Preview</span></h3>
+                <p i18n="@@login.preview.description">Read-only mode</p>
               </div>
             </div>
           </mat-card-content>
@@ -169,7 +170,7 @@
           <mat-card-content>
             <div class="card-content">
               <div class="card-text">
-                <h3><mat-icon>phone_iphone</mat-icon>Remote Signer</h3>
+                <h3><mat-icon>phone_iphone</mat-icon><span i18n="@@login.remote-signer.title">Remote Signer</span></h3>
                 <p>Amber, nsec.app, etc.</p>
               </div>
             </div>
@@ -183,9 +184,9 @@
       <mat-card-content>
         <div class="error-header">
           <mat-icon color="warn">extension_off</mat-icon>
-          <h3>Extension Not Found</h3>
+          <h3 i18n="@@login.extension.not-found">Extension Not Found</h3>
         </div>
-        <p>Install a Nostr extension (Blockcore Wallet, Alby, or nos2x), then refresh this page.</p>
+        <p i18n="@@login.extension.not-found.description">Install a Nostr extension (Blockcore Wallet, Alby, or nos2x), then refresh this page.</p>
       </mat-card-content>
     </mat-card>
     }
@@ -195,10 +196,11 @@
     @if (currentStep() === LoginStep.EXTENSION_LOADING) {
     <div class="loading-content">
       <mat-spinner diameter="48"></mat-spinner>
-      <p class="loading-text">Connecting to your Nostr extension...</p>
-      <p class="extension-hint">Look for a popup from your browser extension (Alby, nos2x, etc.) and approve the
+      <p class="loading-text" i18n="@@login.extension.loading">Connecting to your Nostr extension...</p>
+      <p class="extension-hint" i18n="@@login.extension.loading.hint">Look for a popup from your browser extension (Alby, nos2x, etc.) and approve the
         connection request.</p>
-      <button mat-stroked-button (click)="goToStep(LoginStep.LOGIN_OPTIONS)" class="cancel-extension-button">
+      <button mat-stroked-button (click)="goToStep(LoginStep.LOGIN_OPTIONS)" class="cancel-extension-button"
+        i18n="@@common.cancel">
         Cancel
       </button>
     </div>
@@ -209,24 +211,26 @@
 
     <div class="nsec-input-container">
       <mat-form-field class="nsec-input">
-        <mat-label>Private Key (nsec) or Recovery Phrase</mat-label>
+        <mat-label i18n="@@login.nsec-or-recovery">Private Key (nsec) or Recovery Phrase</mat-label>
         <input matInput [(ngModel)]="nsecKey" type="password" placeholder="nsec1... or 12-word phrase"
-          autocomplete="off" autocorrect="off" spellcheck="false" name="nostr-private-key" readonly
+          i18n-placeholder="@@login.nsec-or-recovery.placeholder" autocomplete="off" autocorrect="off"
+          spellcheck="false" name="nostr-private-key" readonly
           onfocus="this.removeAttribute('readonly');" (keydown.enter)="loginWithNsec()" />
       </mat-form-field>
 
-      <button mat-icon-button class="qr-scan-button" (click)="scanQrCodeForNsec()" matTooltip="Scan QR code">
+      <button mat-icon-button class="qr-scan-button" (click)="scanQrCodeForNsec()" matTooltip="Scan QR code"
+        i18n-matTooltip="@@login.scan-qr-code">
         <mat-icon>qr_code_scanner</mat-icon>
       </button>
     </div>
 
     <div class="file-upload-section">
-      <p>Load from backup file:</p>
+      <p i18n="@@login.load-backup-file">Load from backup file:</p>
       <input #fileInput type="file" accept=".json" (change)="loadCredentialsFromFile($event)" class="hidden-file-input"
-        title="Select JSON backup file" />
+        title="Select JSON backup file" i18n-title="@@login.select-json-backup" />
       <button mat-stroked-button type="button" (click)="fileInput.click()" class="file-upload-button">
         <mat-icon>upload_file</mat-icon>
-        <span>Choose JSON backup file</span>
+        <span i18n="@@login.choose-json-backup">Choose JSON backup file</span>
       </button>
     </div>
 
@@ -234,9 +238,9 @@
       <mat-card-content>
         <div class="warning-header">
           <mat-icon color="warn">warning</mat-icon>
-          <h3>Security Notice</h3>
+          <h3 i18n="@@login.security-notice">Security Notice</h3>
         </div>
-        <p>Your private key will be stored locally on your device. Never share it with anyone.</p>
+        <p i18n="@@login.security-notice.description">Your private key will be stored locally on your device. Never share it with anyone.</p>
       </mat-card-content>
     </mat-card>
     }

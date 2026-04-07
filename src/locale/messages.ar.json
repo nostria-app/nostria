@@ -1,7 +1,7 @@
 {
   "locale": "ar",
   "translations": {
-    "settings.back.title": "{$INTERPOLATION}",
+    "settings.back.title": "__نوستريا_PH_0__",
     "settings.title": "الإعدادات",
     "settings.nav.general": "عام",
     "settings.nav.algorithm": "الخوارزمية",

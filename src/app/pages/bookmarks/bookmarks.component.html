@@ -2,9 +2,14 @@
 <div class="panel-header bookmarks-header" [class.explorer-open]="folderExplorerExpanded()">
   <div class="panel-header-main">
     <button type="button" class="folder-launcher" (click)="toggleFolderExplorer()"
-      [attr.aria-expanded]="folderExplorerExpanded()" aria-label="Toggle bookmark folders">
+      [attr.aria-expanded]="folderExplorerExpanded()" aria-label="Toggle bookmark folders"
+      i18n-aria-label="@@bookmarks.toggle-folders">
       <span class="folder-launcher-title-row">
-        <span class="folder-launcher-title title-font">{{ currentList()?.name || 'Bookmarks' }}</span>
+        @if (currentList()) {
+        <span class="folder-launcher-title title-font">{{ currentList()!.name }}</span>
+        } @else {
+        <span class="folder-launcher-title title-font" i18n="@@bookmarks.title">Bookmarks</span>
+        }
         @if (currentList()?.isPrivate) {
         <mat-icon class="folder-launcher-lock">lock</mat-icon>
         }
@@ -34,38 +39,42 @@
     <mat-menu #addMenu="matMenu">
       <button mat-menu-item (click)="addBookmark()">
         <mat-icon>bookmark_add</mat-icon>
-        <span>Add Bookmark</span>
+        <span i18n="@@bookmarks.add-bookmark">Add Bookmark</span>
       </button>
       <button mat-menu-item (click)="createNewList()">
         <mat-icon>create_new_folder</mat-icon>
-        <span>Create Folder</span>
+        <span i18n="@@bookmarks.create-folder">Create Folder</span>
       </button>
     </mat-menu>
 
     <!-- View mode toggle button - hidden on small screens -->
-    <button mat-icon-button (click)="toggleViewMode()" matTooltip="Switch View" class="hide-small">
+    <button mat-icon-button (click)="toggleViewMode()" matTooltip="Switch View" i18n-matTooltip="@@bookmarks.switch-view" class="hide-small">
       <mat-icon>{{ getViewIcon() }}</mat-icon>
     </button>
 
     <!-- Manage folders menu -->
-    <button mat-icon-button [matMenuTriggerFor]="listMenu" matTooltip="Manage Folders">
+    <button mat-icon-button [matMenuTriggerFor]="listMenu" matTooltip="Manage Folders" i18n-matTooltip="@@bookmarks.manage-folders">
       <mat-icon>more_vert</mat-icon>
     </button>
     <mat-menu #listMenu="matMenu">
       <!-- Add options - shown only on small screens -->
       <button mat-menu-item (click)="toggleSearch()" class="show-small">
         <mat-icon>{{ showSearch() ? 'search_off' : 'search' }}</mat-icon>
-        <span>{{ showSearch() ? 'Close Search' : 'Search' }}</span>
+        @if (showSearch()) {
+        <span i18n="@@bookmarks.close-search">Close Search</span>
+        } @else {
+        <span i18n="@@common.search">Search</span>
+        }
       </button>
       <mat-divider class="show-small"></mat-divider>
 
       <button mat-menu-item (click)="addBookmark()" class="show-small">
         <mat-icon>bookmark_add</mat-icon>
-        <span>Add Bookmark</span>
+        <span i18n="@@bookmarks.add-bookmark">Add Bookmark</span>
       </button>
       <button mat-menu-item (click)="createNewList()" class="show-small">
         <mat-icon>create_new_folder</mat-icon>
-        <span>Create Folder</span>
+        <span i18n="@@bookmarks.create-folder">Create Folder</span>
       </button>
       <mat-divider class="show-small"></mat-divider>
 
@@ -73,31 +82,35 @@
       <button mat-menu-item (click)="setViewMode('content')" class="show-small"
         [class.active]="viewMode() === 'content'">
         <mat-icon>view_stream</mat-icon>
-        <span>Content View</span>
+        <span i18n="@@bookmarks.view.content">Content View</span>
       </button>
       <button mat-menu-item (click)="setViewMode('tiles')" class="show-small" [class.active]="viewMode() === 'tiles'">
         <mat-icon>grid_view</mat-icon>
-        <span>Tiles View</span>
+        <span i18n="@@bookmarks.view.tiles">Tiles View</span>
       </button>
       <button mat-menu-item (click)="setViewMode('list')" class="show-small" [class.active]="viewMode() === 'list'">
         <mat-icon>view_list</mat-icon>
-        <span>List View</span>
+        <span i18n="@@bookmarks.view.list">List View</span>
       </button>
       <mat-divider class="show-small"></mat-divider>
 
       @if (bookmarkService.selectedListId() !== 'default') {
       <button mat-menu-item (click)="renameCurrentList()">
         <mat-icon>drive_file_rename_outline</mat-icon>
-        <span>Rename Folder</span>
+        <span i18n="@@bookmarks.rename-folder">Rename Folder</span>
       </button>
       }
       <button mat-menu-item (click)="toggleListPrivacy()">
         <mat-icon>{{ currentList()?.isPrivate ? 'lock_open' : 'lock' }}</mat-icon>
-        <span>{{ currentList()?.isPrivate ? 'Make Public' : 'Make Private' }}</span>
+        @if (currentList()?.isPrivate) {
+        <span i18n="@@bookmarks.make-public">Make Public</span>
+        } @else {
+        <span i18n="@@bookmarks.make-private">Make Private</span>
+        }
       </button>
       <button mat-menu-item (click)="deleteCurrentList()">
         <mat-icon>delete</mat-icon>
-        <span>Delete Folder</span>
+        <span i18n="@@bookmarks.delete-folder">Delete Folder</span>
       </button>
     </mat-menu>
   </div>
@@ -110,7 +123,7 @@
         <mat-icon class="folder-node-icon">bookmarks</mat-icon>
       </span>
       <span class="folder-node-copy">
-        <span class="folder-node-name">Bookmarks</span>
+        <span class="folder-node-name" i18n="@@bookmarks.title">Bookmarks</span>
       </span>
       <span class="folder-node-count">{{ getBookmarkCount(rootBookmarkFolder()) }}</span>
     </button>
@@ -118,7 +131,7 @@
     @if (folderExplorerLoading()) {
     <div class="folder-explorer-status">
       <mat-spinner diameter="18"></mat-spinner>
-      <span>Loading encrypted folder counts...</span>
+      <span i18n="@@bookmarks.loading-encrypted-counts">Loading encrypted folder counts...</span>
     </div>
     }
 
@@ -141,7 +154,7 @@
     @if (bookmarkFolderChildren().length === 0) {
     <div class="folder-empty-state">
       <mat-icon>create_new_folder</mat-icon>
-      <span>Create your first folder to organize saved items under Bookmarks.</span>
+      <span i18n="@@bookmarks.first-folder-hint">Create your first folder to organize saved items under Bookmarks.</span>
     </div>
     }
   </div>
@@ -153,8 +166,9 @@
   <mat-form-field appearance="outline" class="search-field">
     <mat-icon matPrefix>search</mat-icon>
     <input matInput placeholder="Search bookmarks..." [ngModel]="searchQuery()"
-      (ngModelChange)="searchQuery.set($event)">
-    <button matSuffix mat-icon-button (click)="toggleSearch()" matTooltip="Close search">
+      i18n-placeholder="@@bookmarks.search" (ngModelChange)="searchQuery.set($event)">
+    <button matSuffix mat-icon-button (click)="toggleSearch()" matTooltip="Close search"
+      i18n-matTooltip="@@bookmarks.close-search">
       <mat-icon>close</mat-icon>
     </button>
   </mat-form-field>
@@ -165,7 +179,7 @@
   @if (loading()) {
   <div class="loading-container">
     <mat-spinner diameter="40"></mat-spinner>
-    <p>Loading bookmarks...</p>
+    <p i18n="@@bookmarks.loading">Loading bookmarks...</p>
   </div>
   } @else {
   <div class="filters-container">
@@ -188,12 +202,12 @@
     @if (!hasVisibleCategories()) {
     <div class="empty-state bookmarks-empty-state">
       <mat-icon>visibility_off</mat-icon>
-      <p>Enable at least one toggle to show bookmarks.</p>
+      <p i18n="@@bookmarks.enable-toggle">Enable at least one toggle to show bookmarks.</p>
     </div>
     } @else if (displayedBookmarks().length === 0) {
     <div class="empty-state bookmarks-empty-state">
       <mat-icon>bookmark_border</mat-icon>
-      <p>No bookmarks matched the current filters.</p>
+      <p i18n="@@bookmarks.no-matches">No bookmarks matched the current filters.</p>
     </div>
     } @else if (viewMode() === 'list') {
     <div class="bookmark-mixed-list">

@@ -1,7 +1,7 @@
 {
   "locale": "hi",
   "translations": {
-    "settings.back.title": "{$INTERPOLATION}",
+    "settings.back.title": "__नोस्ट्रिया_PH_0__",
     "settings.title": "सेटिंग्स",
     "settings.nav.general": "सामान्य",
     "settings.nav.algorithm": "एल्गोरिदम",

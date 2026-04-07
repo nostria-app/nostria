@@ -26,7 +26,7 @@
     <span class="action-count like-hover-target" (mouseenter)="reactionBtn.onDesktopMouseEnter()"
       (mouseleave)="reactionBtn.onDesktopMouseLeave()">{{ likes().length }}</span>
     }
-    <span class="action-text like-hover-target" (mouseenter)="reactionBtn.onDesktopMouseEnter()"
+    <span class="action-text like-hover-target" i18n="@@event.actions.like" (mouseenter)="reactionBtn.onDesktopMouseEnter()"
       (mouseleave)="reactionBtn.onDesktopMouseLeave()">Like</span>
   </div>
   }
@@ -37,7 +37,7 @@
     @if (effectiveReplyCount() > 0) {
     <span class="action-count">{{ effectiveReplyCount() }}</span>
     }
-    <span class="action-text">Reply</span>
+    <span class="action-text" i18n="@@event.actions.reply">Reply</span>
   </div>
 
   <!-- Zap with sats -->
@@ -48,7 +48,7 @@
     @if (totalZapAmount() > 0) {
     <span class="action-count">{{ formatZapAmount(totalZapAmount()) }}</span>
     }
-    <span class="action-text">Zap</span>
+    <span class="action-text" i18n="@@event.actions.zap">Zap</span>
   </div>
 
   <!-- Share with count (reposts + quotes) -->
@@ -58,7 +58,7 @@
     @if (shareCount() > 0) {
     <span class="action-count">{{ shareCount() }}</span>
     }
-    <span class="action-text">Share</span>
+    <span class="action-text" i18n="@@event.actions.share">Share</span>
   </div>
 
   <!-- Bookmark -->
@@ -66,7 +66,7 @@
     (contextmenu)="onActionsDisplayModeToggle($event)" (touchstart)="onBookmarkLongPressStart($event)"
     (touchend)="onBookmarkLongPressEnd()" (touchcancel)="onBookmarkLongPressEnd()">
     <mat-icon class="action-icon">{{ bookmarkIcon() }}</mat-icon>
-    <span class="action-text">Bookmark</span>
+    <span class="action-text" i18n="@@event.actions.bookmark">Bookmark</span>
   </div>
 
   <!-- Top emojis indicator (right-aligned) -->
@@ -79,7 +79,8 @@
     <span class="aggregated-emojis">
       @for (emoji of topEmojis(); track emoji.emoji) {
       @if (emoji.url) {
-      <img [src]="emoji.url" [alt]="emoji.emoji" title="Custom emoji" class="emoji-item custom-emoji" />
+      <img [src]="emoji.url" [alt]="emoji.emoji" title="Custom emoji" i18n-title="@@event.actions.custom-emoji"
+        class="emoji-item custom-emoji" />
       } @else {
       <span class="emoji-item">{{ emoji.emoji }}</span>
       }

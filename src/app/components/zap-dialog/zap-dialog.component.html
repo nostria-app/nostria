@@ -5,12 +5,13 @@
     <div class="dialog-title-content">
       <div class="title-text">
         <mat-icon>bolt</mat-icon>
-        Zap
+        <span i18n="@@zap.dialog.title">Zap</span>
         @if (data.recipientName) {
-        to {{ data.recipientName }}
+        <span i18n="@@zap.dialog.title.to">to {{ data.recipientName }}</span>
         }
       </div>
-      <button mat-icon-button class="close-button" (click)="close()" matTooltip="Close">
+      <button mat-icon-button class="close-button" (click)="close()" matTooltip="Close"
+        i18n-matTooltip="@@common.close">
         <mat-icon>close</mat-icon>
       </button>
     </div>
@@ -27,19 +28,19 @@
     @if (isLoadingLnurlInfo()) {
     <div class="loading-indicator">
       <mat-spinner diameter="20"></mat-spinner>
-      <span>Loading payment information...</span>
+      <span i18n="@@zap.dialog.loading-payment-info">Loading payment information...</span>
     </div>
     }
 
     @if (data.recipientPubkey) {
     <div class="recipient-preview">
-      <h4>Zapping</h4>
+      <h4 i18n="@@zap.dialog.zapping">Zapping</h4>
       @if (data.zapSplits && data.zapSplits.length > 0) {
       <!-- Show split recipients -->
       <div class="split-recipients">
         <div class="split-header">
           <mat-icon>people</mat-icon>
-          <span>Split between {{ data.zapSplits.length }} recipients</span>
+          <span i18n="@@zap.dialog.split-between">Split between {{ data.zapSplits.length }} recipients</span>
         </div>
         @for (split of data.zapSplits; track split.pubkey) {
         <div class="split-recipient">
@@ -71,7 +72,7 @@
       } @else if (!data.eventId) {
       <div class="event-context">
         <mat-icon>person</mat-icon>
-        <span>Profile zap</span>
+        <span i18n="@@zap.dialog.profile-zap">Profile zap</span>
       </div>
       }
     </div>
@@ -81,13 +82,13 @@
       @if (availableWallets().length > 1) {
       <div class="wallet-selection">
         <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Select Wallet</mat-label>
+          <mat-label i18n="@@zap.dialog.select-wallet">Select Wallet</mat-label>
           <mat-select formControlName="selectedWallet">
             <mat-select-trigger>
               @if (selectedWalletDisplay(); as wallet) {
               {{ wallet.name }}
               @if (wallet.connected) {
-              <span class="wallet-status connected">Connected</span>
+              <span class="wallet-status connected" i18n="@@zap.dialog.wallet.connected">Connected</span>
               }
               }
             </mat-select-trigger>
@@ -97,28 +98,32 @@
                 <mat-icon>account_balance_wallet</mat-icon>
                 <span class="wallet-name">{{ wallet.name }}</span>
                 <span class="wallet-status" [class.connected]="wallet.connected">
-                  {{ wallet.connected ? 'Connected' : 'Disconnected' }}
+                  @if (wallet.connected) {
+                  <span i18n="@@zap.dialog.wallet.connected">Connected</span>
+                  } @else {
+                  <span i18n="@@zap.dialog.wallet.disconnected">Disconnected</span>
+                  }
                 </span>
               </div>
             </mat-option>
             }
           </mat-select>
-          <mat-hint>Choose which wallet to use for this zap</mat-hint>
+          <mat-hint i18n="@@zap.dialog.wallet-hint">Choose which wallet to use for this zap</mat-hint>
         </mat-form-field>
       </div>
       }
 
       <div class="amount-selection">
-        <h3>Select Amount</h3>
+        <h3 i18n="@@zap.dialog.select-amount">Select Amount</h3>
         @if (amountLimits()) {
-        <p class="limits-info">
+        <p class="limits-info" i18n="@@zap.dialog.amount-range">
           This recipient accepts {{ amountLimits()!.minSats }} -
           {{ amountLimits()!.maxSats }} sats
         </p>
         } @else if (isLoadingLnurlInfo()) {
-        <p class="limits-info">Loading payment limits...</p>
+        <p class="limits-info" i18n="@@zap.dialog.loading-payment-limits">Loading payment limits...</p>
         } @else if (lnurlError()) {
-        <p class="limits-info error">Unable to load payment limits</p>
+        <p class="limits-info error" i18n="@@zap.dialog.unable-load-payment-limits">Unable to load payment limits</p>
         }
         <div class="amount-buttons">
           <button type="button" mat-raised-button [class.selected]="zapForm.get('amount')?.value === 21"
@@ -159,40 +164,41 @@
           <button type="button" mat-raised-button [class.selected]="zapForm.get('amount')?.value === 'custom'"
             (click)="selectAmount('custom')">
             <mat-icon>bolt</mat-icon>
-            Custom
+            <span i18n="@@zap.dialog.custom">Custom</span>
           </button>
         </div>
       </div>
 
       @if (zapForm.get('amount')?.value === 'custom') {
       <mat-form-field appearance="outline" class="full-width">
-        <mat-label>Custom Amount (sats)</mat-label>
+        <mat-label i18n="@@zap.dialog.custom-amount">Custom Amount (sats)</mat-label>
         <input matInput formControlName="customAmount" type="number" [min]="amountLimits()?.minSats || 1"
-          [max]="amountLimits()?.maxSats || 1000000" placeholder="Enter custom amount" />
+          [max]="amountLimits()?.maxSats || 1000000" placeholder="Enter custom amount"
+          i18n-placeholder="@@zap.dialog.enter-custom-amount" />
         @if (zapForm.get('customAmount')?.hasError('required')) {
-        <mat-error>Custom amount is required</mat-error>
+        <mat-error i18n="@@zap.dialog.custom-amount.required">Custom amount is required</mat-error>
         }
         @if (zapForm.get('customAmount')?.hasError('min')) {
-        <mat-error>Amount must be at least {{ amountLimits()?.minSats || 1 }} sats</mat-error>
+        <mat-error i18n="@@zap.dialog.custom-amount.min">Amount must be at least {{ amountLimits()?.minSats || 1 }} sats</mat-error>
         }
         @if (zapForm.get('customAmount')?.hasError('max')) {
-        <mat-error>Amount must be at most {{ amountLimits()?.maxSats || 1000000 }} sats</mat-error>
+        <mat-error i18n="@@zap.dialog.custom-amount.max">Amount must be at most {{ amountLimits()?.maxSats || 1000000 }} sats</mat-error>
         }
         @if (amountLimits()) {
-        <mat-hint>{{ amountLimits()!.minSats }} - {{ amountLimits()!.maxSats }} sats
+        <mat-hint i18n="@@zap.dialog.custom-amount.allowed">{{ amountLimits()!.minSats }} - {{ amountLimits()!.maxSats }} sats
           allowed</mat-hint>
         } @else {
-        <mat-hint>Loading amount limits...</mat-hint>
+        <mat-hint i18n="@@zap.dialog.loading-amount-limits">Loading amount limits...</mat-hint>
         }
       </mat-form-field>
       }
 
       <mat-form-field appearance="outline" class="full-width">
-        <mat-label>Message (optional)</mat-label>
+        <mat-label i18n="@@zap.dialog.message.optional">Message (optional)</mat-label>
         <textarea matInput [maxlength]="forceComment() ? 200 : (commentLimit() || 200)" formControlName="message"
-          placeholder="Add a message with your zap..." rows="3"></textarea>
+          placeholder="Add a message with your zap..." i18n-placeholder="@@zap.dialog.message.placeholder" rows="3"></textarea>
         @if (commentLimit() === 0 && !forceComment()) {
-        <mat-hint>
+        <mat-hint i18n="@@zap.dialog.message.no-comments">
           This recipient does not allow comments with zaps.
           <a href="javascript:void(0)" (click)="toggleForceComment()">Override</a>
         </mat-hint>
@@ -206,7 +212,7 @@
           limits...)</mat-hint>
         }
         @if (zapForm.get('message')?.hasError('maxlength')) {
-        <mat-error>Message is too long (max {{ forceComment() ? 200 : (commentLimit() || 200) }} characters)</mat-error>
+        <mat-error i18n="@@zap.dialog.message.too-long">Message is too long (max {{ forceComment() ? 200 : (commentLimit() || 200) }} characters)</mat-error>
         }
       </mat-form-field>
     </form>
@@ -220,8 +226,9 @@
   </mat-dialog-content>
 
   <mat-dialog-actions align="end">
-    <button mat-button (click)="onCancel()" [disabled]="isProcessing()">Cancel</button>
-    <button mat-flat-button (click)="proceedToConfirmation()" [disabled]="isProcessing() || !zapForm.valid">
+    <button mat-button (click)="onCancel()" [disabled]="isProcessing()" i18n="@@common.cancel">Cancel</button>
+    <button mat-flat-button (click)="proceedToConfirmation()" [disabled]="isProcessing() || !zapForm.valid"
+      i18n="@@zap.dialog.continue">
       Continue ({{ getFinalAmount() }} sats)
     </button>
   </mat-dialog-actions>
@@ -233,9 +240,10 @@
     <div class="dialog-title-content">
       <div class="title-text">
         <mat-icon>bolt</mat-icon>
-        Confirm Lightning Zap
+        <span i18n="@@zap.dialog.confirm-title">Confirm Lightning Zap</span>
       </div>
-      <button mat-icon-button class="close-button" (click)="close()" matTooltip="Close">
+      <button mat-icon-button class="close-button" (click)="close()" matTooltip="Close"
+        i18n-matTooltip="@@common.close">
         <mat-icon>close</mat-icon>
       </button>
     </div>
@@ -245,13 +253,13 @@
     <div class="confirmation-content">
       <!-- Recipient Info -->
       <div class="section recipient-section">
-        <h3>Zapping</h3>
+        <h3 i18n="@@zap.dialog.zapping">Zapping</h3>
         @if (data.zapSplits && data.zapSplits.length > 0) {
         <!-- Show split recipients -->
         <div class="split-recipients">
           <div class="split-header">
             <mat-icon>people</mat-icon>
-            <span>Split between {{ data.zapSplits.length }} recipients</span>
+            <span i18n="@@zap.dialog.split-between">Split between {{ data.zapSplits.length }} recipients</span>
           </div>
           @for (split of data.zapSplits; track split.pubkey) {
           <div class="split-recipient">

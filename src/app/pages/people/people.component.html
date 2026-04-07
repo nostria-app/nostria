@@ -7,7 +7,11 @@
     <mat-icon class="selector-icon">{{ selectedFollowSet() ? (selectedFollowSet()!.isPrivate ? 'lock' :
       (selectedFollowSet()!.dTag === 'nostria-favorites' ? 'star' : (selectedFollowSet()!.dTag ===
       'nostria-cached-profiles' ? 'storage' : 'group'))) : 'people' }}</mat-icon>
-    <span class="selector-label">{{ selectedFollowSet() ? selectedFollowSet()!.title : 'Following' }}</span>
+    @if (selectedFollowSet()) {
+    <span class="selector-label">{{ selectedFollowSet()!.title }}</span>
+    } @else {
+    <span class="selector-label" i18n="@@people.following">Following</span>
+    }
     @if (selectedFollowSet()) {
     <span class="selector-count">{{ selectedFollowSet()!.pubkeys.length }}</span>
     }
@@ -17,18 +21,18 @@
   <mat-menu #followSetsMenu="matMenu" class="list-filter-menu" yPosition="below" [overlapTrigger]="false">
     <button mat-menu-item (click)="selectFollowSet(null)" [class.active]="!selectedFollowSet()">
       <mat-icon>people</mat-icon>
-      <span class="menu-item-label">Following</span>
+      <span class="menu-item-label" i18n="@@people.following">Following</span>
     </button>
     @if (favoritesSet(); as favorites) {
     <button mat-menu-item (click)="selectFollowSet(favorites)"
       [class.active]="selectedFollowSet()?.dTag === 'nostria-favorites'">
       <mat-icon>star</mat-icon>
-      <span class="menu-item-label">Favorites</span>
+      <span class="menu-item-label" i18n="@@people.favorites">Favorites</span>
       <span class="menu-item-count">{{ favorites.pubkeys.length }}</span>
     </button>
     <button mat-menu-item (click)="selectCachedProfiles()" [class.active]="isCachedListSelected()">
       <mat-icon>storage</mat-icon>
-      <span class="menu-item-label">Cached</span>
+      <span class="menu-item-label" i18n="@@people.cached">Cached</span>
       <span class="menu-item-count">{{ cachedProfilesSet().pubkeys.length }}</span>
     </button>
     }
@@ -44,58 +48,58 @@
     }
   </mat-menu>
   } @else {
-  <h2 class="panel-title-static title-font">Following</h2>
+  <h2 class="panel-title-static title-font" i18n="@@people.following">Following</h2>
   }
 
   <span class="panel-header-spacer"></span>
 
   <!-- Add button with dropdown menu -->
-  <button mat-icon-button [matMenuTriggerFor]="addMenu" matTooltip="Add">
+  <button mat-icon-button [matMenuTriggerFor]="addMenu" matTooltip="Add" i18n-matTooltip="@@common.add">
     <mat-icon>add</mat-icon>
   </button>
 
   <mat-menu #addMenu="matMenu">
     <button mat-menu-item (click)="openAddPersonDialog()">
       <mat-icon>person_add</mat-icon>
-      <span>Add person</span>
+      <span i18n="@@people.add-person">Add person</span>
     </button>
     <button mat-menu-item (click)="createNewList()">
       <mat-icon>playlist_add</mat-icon>
-      <span>New list</span>
+      <span i18n="@@people.new-list">New list</span>
     </button>
   </mat-menu>
 
   <!-- Edit List button (only when a list is selected) - hidden on small screens -->
   @if (canUseListActions()) {
-  <button mat-icon-button (click)="openEditListDialog()" matTooltip="Edit List" class="hide-small">
+  <button mat-icon-button (click)="openEditListDialog()" matTooltip="Edit List" i18n-matTooltip="@@people.edit-list" class="hide-small">
     <mat-icon>edit</mat-icon>
   </button>
 
   <!-- Shortcuts menu (only when a list is selected) - hidden on small screens -->
-  <button mat-icon-button [matMenuTriggerFor]="shortcutsMenu" matTooltip="View this list in..." class="hide-small">
+  <button mat-icon-button [matMenuTriggerFor]="shortcutsMenu" matTooltip="View this list in..." i18n-matTooltip="@@people.view-list-in" class="hide-small">
     <mat-icon>open_in_new</mat-icon>
   </button>
 
   <mat-menu #shortcutsMenu="matMenu">
     <button mat-menu-item (click)="goToFeeds()">
       <mat-icon>dynamic_feed</mat-icon>
-      <span>Feeds</span>
+      <span i18n="@@app.mobile.feeds">Feeds</span>
     </button>
     <button mat-menu-item (click)="goToSummary()">
       <mat-icon>summarize</mat-icon>
-      <span>Summary</span>
+      <span i18n="@@people.summary">Summary</span>
     </button>
     <button mat-menu-item (click)="goToStreams()">
       <mat-icon>live_tv</mat-icon>
-      <span>Streams</span>
+      <span i18n="@@people.streams">Streams</span>
     </button>
     <button mat-menu-item (click)="goToArticles()">
       <mat-icon>article</mat-icon>
-      <span>Articles</span>
+      <span i18n="@@people.articles">Articles</span>
     </button>
     <button mat-menu-item (click)="goToMusic()">
       <mat-icon>music_note</mat-icon>
-      <span>Music</span>
+      <span i18n="@@people.music">Music</span>
     </button>
   </mat-menu>
   }
@@ -115,20 +119,20 @@
 
   <!-- More options menu - shown only on small screens when a list is selected -->
   @if (canUseListActions()) {
-  <button mat-icon-button [matMenuTriggerFor]="moreOptionsMenu" matTooltip="More options" class="show-small">
+  <button mat-icon-button [matMenuTriggerFor]="moreOptionsMenu" matTooltip="More options" i18n-matTooltip="@@common.more-options" class="show-small">
     <mat-icon>more_vert</mat-icon>
   </button>
 
   <mat-menu #moreOptionsMenu="matMenu">
     <button mat-menu-item (click)="openEditListDialog()">
       <mat-icon>edit</mat-icon>
-      <span>Edit List</span>
+      <span i18n="@@people.edit-list">Edit List</span>
     </button>
     <mat-divider></mat-divider>
     <!-- View this list in... submenu -->
     <button mat-menu-item [matMenuTriggerFor]="mobileShortcutsMenu">
       <mat-icon>open_in_new</mat-icon>
-      <span>View list in...</span>
+      <span i18n="@@people.view-list-in">View list in...</span>
     </button>
   </mat-menu>
 
@@ -136,23 +140,23 @@
   <mat-menu #mobileShortcutsMenu="matMenu">
     <button mat-menu-item (click)="goToFeeds()">
       <mat-icon>dynamic_feed</mat-icon>
-      <span>Feeds</span>
+      <span i18n="@@app.mobile.feeds">Feeds</span>
     </button>
     <button mat-menu-item (click)="goToSummary()">
       <mat-icon>summarize</mat-icon>
-      <span>Summary</span>
+      <span i18n="@@people.summary">Summary</span>
     </button>
     <button mat-menu-item (click)="goToStreams()">
       <mat-icon>live_tv</mat-icon>
-      <span>Streams</span>
+      <span i18n="@@people.streams">Streams</span>
     </button>
     <button mat-menu-item (click)="goToArticles()">
       <mat-icon>article</mat-icon>
-      <span>Articles</span>
+      <span i18n="@@people.articles">Articles</span>
     </button>
     <button mat-menu-item (click)="goToMusic()">
       <mat-icon>music_note</mat-icon>
-      <span>Music</span>
+      <span i18n="@@people.music">Music</span>
     </button>
   </mat-menu>
   }
@@ -167,7 +171,7 @@
     <div class="search-bar">
       <mat-icon>search</mat-icon>
       <input type="text" placeholder="Filter people..." [value]="searchTerm()"
-        (input)="updateSearch($any($event.target).value)" />
+        i18n-placeholder="@@people.filter-people" (input)="updateSearch($any($event.target).value)" />
       @if (searchTerm()) {
       <button mat-icon-button (click)="updateSearch('')">
         <mat-icon>close</mat-icon>
@@ -180,7 +184,7 @@
       @if (isLoading()) {
       <div class="loading-container">
         <mat-spinner diameter="40"></mat-spinner>
-        <p>Loading...</p>
+        <p i18n="@@common.loading">Loading...</p>
       </div>
       } @else if (error()) {
       <div class="error-container">
@@ -191,23 +195,23 @@
       <div class="empty-container">
         @if (searchTerm()) {
         <mat-icon>search_off</mat-icon>
-        <p>No results</p>
-        <button mat-button (click)="updateSearch('')">Clear</button>
+        <p i18n="@@common.no-results">No results</p>
+        <button mat-button (click)="updateSearch('')" i18n="@@common.clear">Clear</button>
         } @else if (selectedFollowSet()) {
         <mat-icon>group_off</mat-icon>
-        <p>It's pretty empty in here...</p>
-        <p class="subtitle">Let's add some awesome people!</p>
+        <p i18n="@@people.empty.list.title">It's pretty empty in here...</p>
+        <p class="subtitle" i18n="@@people.empty.list.subtitle">Let's add some awesome people!</p>
         <button mat-flat-button (click)="openAddPersonDialog()">
           <mat-icon>person_add</mat-icon>
-          Add Your First Person
+          <span i18n="@@people.add-first-person">Add Your First Person</span>
         </button>
         } @else {
         <mat-icon>people_outline</mat-icon>
-        <p>No people yet</p>
-        <p class="subtitle">Start by adding people you want to follow</p>
+        <p i18n="@@people.empty.none.title">No people yet</p>
+        <p class="subtitle" i18n="@@people.empty.none.subtitle">Start by adding people you want to follow</p>
         <button mat-flat-button (click)="openAddPersonDialog()">
           <mat-icon>person_add</mat-icon>
-          Add Person
+          <span i18n="@@people.add-person">Add Person</span>
         </button>
         }
       </div>
@@ -219,7 +223,10 @@
         <div class="person-item" [attr.data-pubkey]="pubkey" (click)="selectContact(pubkey)"
           (keydown.enter)="selectContact(pubkey)" (keydown.space)="selectContact(pubkey); $event.preventDefault()"
           tabindex="0" role="button"
-          [attr.aria-label]="'View contact details for ' + (followingService.getProfile(pubkey)?.info?.['displayName'] || 'user')">
+          title="View contact details for {{ followingService.getProfile(pubkey)?.info?.['displayName'] || 'user' }}"
+          i18n-title="@@people.view-contact-details"
+          aria-label="View contact details for {{ followingService.getProfile(pubkey)?.info?.['displayName'] || 'user' }}"
+          i18n-aria-label="@@people.view-contact-details">
           <app-user-profile [info]="followingService.getProfile(pubkey)?.info ?? undefined"
             [trust]="followingService.getProfile(pubkey)?.trust ?? undefined" [pubkey]="pubkey"
             [view]="$any(viewMode())" [hostWidthAuto]="viewMode() === 'comfortable' || viewMode() === 'medium'"

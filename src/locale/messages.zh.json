@@ -1,7 +1,7 @@
 {
   "locale": "zh",
   "translations": {
-    "settings.back.title": "{$INTERPOLATION}",
+    "settings.back.title": "__诺斯特里亚_PH_0__",
     "settings.title": "设置",
     "settings.nav.general": "一般",
     "settings.nav.algorithm": "算法",
