@@ -77,6 +77,7 @@ export class LiveChatComponent implements AfterViewInit, OnDestroy {
   private reactionService = inject(ReactionService);
 
   @ViewChild('messagesContainer') messagesContainer?: ElementRef<HTMLDivElement>;
+  @ViewChild('messageInputField') messageInputElement?: ElementRef<HTMLInputElement>;
 
   // Input: The live event data (kind 30311 or 30313)
   liveEvent = input<Event | undefined>(undefined);
@@ -720,6 +721,7 @@ export class LiveChatComponent implements AfterViewInit, OnDestroy {
       // Clear input and reply state immediately for better UX
       this.messageInput.set('');
       this.replyingTo.set(null);
+      this.restoreMessageInputFocus();
 
       // Sign and publish the event
       const result = await this.nostrService.signAndPublish(chatEvent);
@@ -731,14 +733,22 @@ export class LiveChatComponent implements AfterViewInit, OnDestroy {
       } else {
         // Restore the message if publish failed
         this.messageInput.set(message);
+        this.restoreMessageInputFocus();
         this.snackBar.open('Failed to send message', 'Close', { duration: 3000 });
       }
     } catch (error) {
       console.error('Error sending message:', error);
       // Restore the message on error
       this.messageInput.set(message);
+      this.restoreMessageInputFocus();
       this.snackBar.open('Error sending message', 'Close', { duration: 3000 });
     }
+  }
+
+  private restoreMessageInputFocus(): void {
+    requestAnimationFrame(() => {
+      this.messageInputElement?.nativeElement.focus({ preventScroll: true });
+    });
   }
 
   toggleView(mode: string) {

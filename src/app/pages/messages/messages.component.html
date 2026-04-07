@@ -1109,7 +1109,7 @@
 
           <textarea #messageInput class="message-input" [ngModel]="newMessageText()"
             (ngModelChange)="onMessageTextChanged($event)" placeholder="Your message"
-            [disabled]="isSending() || pendingEncryptedMediaPreviews().length > 0" (keydown)="onMessageKeydown($event)"
+            [disabled]="pendingEncryptedMediaPreviews().length > 0" (keydown)="onMessageKeydown($event)"
             (input)="autoResizeTextarea()" (paste)="onMessagePaste($event)" (focus)="onMessageInputFocus()"
             (blur)="onMessageInputBlur()" rows="1"></textarea>
           <button mat-icon-button type="button" class="send-button"

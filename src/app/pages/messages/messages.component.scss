@@ -1180,23 +1180,14 @@
       display: inline;
     }
 
-    // Glass effect for incoming messages - light mode
-    background-color: rgba(255, 255, 255, 0.7);
-    -webkit-backdrop-filter: blur(20px) saturate(1.8);
-    backdrop-filter: blur(20px) saturate(1.8);
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.5),
-    inset 0 0 8px 2px rgba(255, 255, 255, 0.2),
-    0px 2px 8px rgba(17, 17, 26, 0.08),
-    0px 4px 16px rgba(17, 17, 26, 0.06);
+    background-color: var(--mat-sys-surface-container-high);
+    color: var(--mat-sys-on-surface);
+    border: 1px solid var(--mat-sys-outline-variant);
 
     &.outgoing {
-      // Glass effect for outgoing messages - light mode (primary tint)
       background-color: var(--mat-sys-primary-container);
-      box-shadow:
-        inset 0 0 0 1px rgba(255, 255, 255, 0.4),
-        inset 0 0 8px 2px rgba(255, 255, 255, 0.15),
-        0px 2px 8px rgba(17, 17, 26, 0.1),
-        0px 4px 16px rgba(17, 17, 26, 0.08);
+      color: var(--mat-sys-on-primary-container);
+      border-color: color-mix(in srgb, var(--mat-sys-primary) 24%, var(--mat-sys-primary-container));
     }
 
     &.pending {
@@ -1205,7 +1196,8 @@
     }
 
     &.failed {
-      background-color: rgba(255, 180, 171, 0.8);
+      background-color: var(--mat-sys-error-container);
+      color: var(--mat-sys-on-error-container);
       border-left: 3px solid var(--mat-sys-error);
     }
   }
@@ -1226,27 +1218,19 @@
 // Dark mode glass effect for message bubbles
 :host-context(.dark) .message-bubble-container {
   .message-bubble {
-    // Dark card style for incoming messages - darker than background
-    background-color: #0d0d0d;
-    box-shadow:
-      inset 0 0 0 1px rgba(255, 255, 255, 0.06),
-      0px 2px 8px rgba(0, 0, 0, 0.3),
-      0px 4px 16px rgba(0, 0, 0, 0.25);
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
+    background-color: var(--mat-sys-surface-container-high);
+    color: var(--mat-sys-on-surface);
+    border-color: var(--mat-sys-outline-variant);
 
     &.outgoing {
-      // Glass effect for outgoing messages - dark mode (primary tint)
-      background-color: color-mix(in srgb, var(--mat-sys-primary-container) 60%, black);
-      box-shadow:
-        inset 0 0 0 1px rgba(255, 255, 255, 0.15),
-        inset 0 0 8px 2px rgba(255, 255, 255, 0.05),
-        0px 2px 8px rgba(0, 0, 0, 0.35),
-        0px 4px 16px rgba(0, 0, 0, 0.3);
+      background-color: var(--mat-sys-primary-container);
+      color: var(--mat-sys-on-primary-container);
+      border-color: color-mix(in srgb, var(--mat-sys-primary) 24%, var(--mat-sys-primary-container));
     }
 
     &.failed {
-      background-color: rgba(147, 0, 10, 0.7);
+      background-color: var(--mat-sys-error-container);
+      color: var(--mat-sys-on-error-container);
       border-left: 3px solid var(--mat-sys-error);
     }
   }
@@ -1260,7 +1244,8 @@
   padding: 6px 8px;
   margin-bottom: 6px;
   border-left: 3px solid var(--mat-sys-primary);
-  background-color: rgba(0, 0, 0, 0.05);
+  background-color: var(--mat-sys-surface-container-highest);
+  color: var(--mat-sys-on-surface-variant);
   border-radius: 4px;
 
   mat-icon {
@@ -1286,7 +1271,7 @@
 }
 
 :host-context(.dark) .reply-context {
-  background-color: rgba(255, 255, 255, 0.05);
+  background-color: var(--mat-sys-surface-container-highest);
 }
 
 // Reply preview styles (above input)
@@ -1294,8 +1279,8 @@
   display: flex;
   align-items: center;
   padding: 8px 12px;
-  background-color: rgba(0, 0, 0, 0.05);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  background-color: var(--mat-sys-surface-container-high);
+  border-bottom: 1px solid var(--mat-sys-outline-variant);
   gap: 8px;
   border-radius: 14px 14px 0 0;
   margin: -6px -8px 4px -8px;
@@ -1333,8 +1318,8 @@
 }
 
 :host-context(.dark) .reply-preview {
-  background-color: rgba(255, 255, 255, 0.05);
-  border-bottom-color: rgba(255, 255, 255, 0.1);
+  background-color: var(--mat-sys-surface-container-high);
+  border-bottom-color: var(--mat-sys-outline-variant);
 }
 
 // Message actions
@@ -1797,13 +1782,9 @@
     padding: 8px 12px;
   }
 
-  background-color: rgba(255, 255, 255, 0.7);
-  -webkit-backdrop-filter: blur(20px) saturate(1.8);
-  backdrop-filter: blur(20px) saturate(1.8);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.5),
-  inset 0 0 8px 2px rgba(255, 255, 255, 0.2),
-  0px 2px 8px rgba(17, 17, 26, 0.08),
-  0px 4px 16px rgba(17, 17, 26, 0.06);
+  background-color: var(--mat-sys-surface-container-high);
+  color: var(--mat-sys-on-surface);
+  border: 1px solid var(--mat-sys-outline-variant);
 
   &.pending {
     opacity: 0.7;
@@ -1811,22 +1792,20 @@
   }
 
   &.failed {
-    background-color: rgba(255, 180, 171, 0.8);
+    background-color: var(--mat-sys-error-container);
+    color: var(--mat-sys-on-error-container);
     border-left: 3px solid var(--mat-sys-error);
   }
 }
 
 :host-context(.dark) .message-group-container .message-bubble {
-  background-color: #0d0d0d;
-  box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.06),
-    0px 2px 8px rgba(0, 0, 0, 0.3),
-    0px 4px 16px rgba(0, 0, 0, 0.25);
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
+  background-color: var(--mat-sys-surface-container-high);
+  color: var(--mat-sys-on-surface);
+  border-color: var(--mat-sys-outline-variant);
 
   &.failed {
-    background-color: rgba(147, 0, 10, 0.7);
+    background-color: var(--mat-sys-error-container);
+    color: var(--mat-sys-on-error-container);
     border-left: 3px solid var(--mat-sys-error);
   }
 }
@@ -1834,20 +1813,13 @@
 .message-group-container.outgoing .message-bubble {
   background-color: var(--mat-sys-primary-container);
   color: var(--mat-sys-on-primary-container);
-  box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.4),
-    inset 0 0 8px 2px rgba(255, 255, 255, 0.15),
-    0px 2px 8px rgba(17, 17, 26, 0.1),
-    0px 4px 16px rgba(17, 17, 26, 0.08);
+  border-color: color-mix(in srgb, var(--mat-sys-primary) 24%, var(--mat-sys-primary-container));
 }
 
 :host-context(.dark) .message-group-container.outgoing .message-bubble {
-  background-color: color-mix(in srgb, var(--mat-sys-primary-container) 60%, black);
-  box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.15),
-    inset 0 0 8px 2px rgba(255, 255, 255, 0.05),
-    0px 2px 8px rgba(0, 0, 0, 0.35),
-    0px 4px 16px rgba(0, 0, 0, 0.3);
+  background-color: var(--mat-sys-primary-container);
+  color: var(--mat-sys-on-primary-container);
+  border-color: color-mix(in srgb, var(--mat-sys-primary) 24%, var(--mat-sys-primary-container));
 }
 
 .message-group-container .message-reactions {

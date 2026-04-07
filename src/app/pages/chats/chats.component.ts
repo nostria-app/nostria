@@ -721,6 +721,7 @@ export class ChatsComponent implements OnInit, OnDestroy {
         this.replyingToMessage.set(null);
         this.mediaPreviews.set([]);
         this.pendingTags.set([]);
+        this.restoreMessageInputFocus();
         this.scrollToBottom();
       } else {
         this.snackBar.open('Failed to send message', 'OK', { duration: 3000 });
@@ -1115,6 +1116,12 @@ export class ChatsComponent implements OnInit, OnDestroy {
   /** Scroll to bottom */
   scrollToLatestMessage(): void {
     this.scrollToBottom();
+  }
+
+  private restoreMessageInputFocus(): void {
+    requestAnimationFrame(() => {
+      this.messageInput?.nativeElement?.focus({ preventScroll: true });
+    });
   }
 
   /** Copy channel event data to clipboard */
