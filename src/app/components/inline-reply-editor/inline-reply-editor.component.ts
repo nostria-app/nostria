@@ -178,8 +178,8 @@ export class InlineReplyEditorComponent implements AfterViewInit, OnDestroy {
   constructor() {
     // Hide mobile nav when mention picker is visible so it doesn't overlap
     effect(() => {
-      const isVisible = this.mentionConfig() !== null;
-      if (this.layout.isHandset()) {
+      const isVisible = this.isExpanded() && this.mentionConfig() !== null;
+      if (this.layout.isHandset() && !this.layout.keyboardMobileNavHidden()) {
         this.layout.hideMobileNav.set(isVisible);
       }
     });
@@ -195,15 +195,7 @@ export class InlineReplyEditorComponent implements AfterViewInit, OnDestroy {
         this.lastEventId = event.id;
 
         // Reset editor state for the new event
-        this.content.set('');
-        this.mentions.set([event.pubkey]); // Start with the event author mentioned
-        this.mentionMap.clear();
-        this.pubkeyToNameMap.clear();
-        this.mediaMetadata.set([]);
-        this.isExpanded.set(false);
-
-        // Fetch the profile name for the reply target
-        this.loadMentionProfileName(event.pubkey);
+        this.resetEditorState({ collapse: true });
       }
     });
   }
@@ -215,6 +207,9 @@ export class InlineReplyEditorComponent implements AfterViewInit, OnDestroy {
   }
 
   ngOnDestroy() {
+    if (this.isRecording()) {
+      this.stopRecording();
+    }
     if (this.publishSubscription) {
       this.publishSubscription.unsubscribe();
     }
@@ -271,6 +266,37 @@ export class InlineReplyEditorComponent implements AfterViewInit, OnDestroy {
   private syncTextareaValue(value: string): void {
     if (this.contentTextarea) {
       this.contentTextarea.nativeElement.value = value;
+    }
+  }
+
+  private resetEditorState(options: { collapse?: boolean } = {}): void {
+    const { collapse = false } = options;
+    const event = this.replyToEvent();
+
+    if (this.isRecording()) {
+      this.stopRecording();
+    }
+
+    this.content.set('');
+    this.syncTextareaValue('');
+    this.mentions.set(event ? [event.pubkey] : []);
+    this.mentionMap.clear();
+    this.pubkeyToNameMap.clear();
+    this.mentionConfig.set(null);
+    this.mentionDetection.set(null);
+    this.mediaMetadata.set([]);
+    this.recordingHistory.set([]);
+    this.isDragOver.set(false);
+    this.dragCounter = 0;
+    this.uploadStatus.set('');
+    this.mediaService.clearError();
+
+    if (collapse) {
+      this.isExpanded.set(false);
+    }
+
+    if (event) {
+      void this.loadMentionProfileName(event.pubkey);
     }
   }
 
@@ -731,7 +757,7 @@ export class InlineReplyEditorComponent implements AfterViewInit, OnDestroy {
     } as NostrEvent;
   }
 
-  private async publishEvent(contentToPublish: string, tags: string[][], eventKind: number = 1): Promise<void> {
+  private async publishEvent(contentToPublish: string, tags: string[][], eventKind = 1): Promise<void> {
     const eventToSign = this.nostrService.createEvent(eventKind, contentToPublish, tags);
     await this.publishUnsignedEvent(eventToSign, contentToPublish);
   }
@@ -776,11 +802,7 @@ export class InlineReplyEditorComponent implements AfterViewInit, OnDestroy {
           this.snackBar.open('Reply published!', 'Close', { duration: 3000 });
 
           const signedEvent = relayEvent.event;
-          this.content.set('');
-          this.mentionMap.clear();
-          this.pubkeyToNameMap.clear();
-          this.mediaMetadata.set([]);
-          this.isExpanded.set(false);
+          this.resetEditorState({ collapse: true });
           this.replyPublished.emit(signedEvent);
 
           if (this.navigateOnPublish()) {
@@ -842,16 +864,12 @@ export class InlineReplyEditorComponent implements AfterViewInit, OnDestroy {
 
       dialogRef.afterClosed().subscribe(confirmed => {
         if (confirmed) {
-          this.content.set('');
-          this.mentionMap.clear();
-          this.pubkeyToNameMap.clear();
-          this.mediaMetadata.set([]);
-          this.isExpanded.set(false);
+          this.resetEditorState({ collapse: true });
           this.cancelled.emit();
         }
       });
     } else {
-      this.isExpanded.set(false);
+      this.resetEditorState({ collapse: true });
       this.cancelled.emit();
     }
   }

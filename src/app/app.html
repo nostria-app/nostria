@@ -520,7 +520,7 @@
   <div class="mobile-bottom-cube no-print" [class.show-player]="layout.showCubePlayerFace()"
     [class.player-expanded]="layout.expandedMediaPlayer()" [class.cube-settled]="layout.cubeSettled()"
     [class.cube-no-transition]="layout.cubeTransitionDisabled()" [class.scroll-hidden]="layout.mobileNavScrollHidden()"
-    [class.sidenav-open]="opened()" [class.hide-nav]="layout.hideMobileNav() && !layout.showCubePlayerFace()"
+    [class.sidenav-open]="opened()" [class.hide-nav]="layout.effectiveHideMobileNav() && !layout.showCubePlayerFace()"
     (touchstart)="onCubeTouchStart($event)" (touchmove)="onCubeTouchMove($event)" (touchend)="onCubeTouchEnd($event)">
     <div class="cube-inner">
       <!-- Face 1: Mobile navigation -->

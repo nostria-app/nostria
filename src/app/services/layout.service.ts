@@ -441,6 +441,8 @@ export class LayoutService implements OnDestroy {
           this.currentEventDialogRef = null;
         }
       });
+
+      this.setupKeyboardVisibilityMonitoring();
     }
 
     // Track whether we're on the home route
@@ -839,6 +841,8 @@ export class LayoutService implements OnDestroy {
    * - Call reinitializeScrollMonitoring() if the DOM structure changes
    */
   ngOnDestroy(): void {
+    this.teardownKeyboardVisibilityMonitoring();
+
     if (this.contentWrapper && this.scrollEventListener) {
       this.contentWrapper.removeEventListener('scroll', this.scrollEventListener);
     }
@@ -1093,9 +1097,98 @@ export class LayoutService implements OnDestroy {
 
   // Signal to hide the mobile navigation (e.g., when in chat view)
   hideMobileNav = signal(false);
+  keyboardMobileNavHidden = signal(false);
+  effectiveHideMobileNav = computed(() => this.hideMobileNav() || this.keyboardMobileNavHidden());
+  private keyboardViewportBaseline = 0;
+  private keyboardVisibilityHandler?: () => void;
 
   // Signal to control shoutout overlay visibility
   showShoutoutOverlay = signal(false);
+
+  private setupKeyboardVisibilityMonitoring(): void {
+    if (!this.isBrowser()) {
+      return;
+    }
+
+    this.teardownKeyboardVisibilityMonitoring();
+
+    this.keyboardVisibilityHandler = () => {
+      this.updateKeyboardMobileNavHidden();
+    };
+
+    document.addEventListener('focusin', this.keyboardVisibilityHandler, true);
+    document.addEventListener('focusout', this.keyboardVisibilityHandler, true);
+    window.addEventListener('resize', this.keyboardVisibilityHandler, { passive: true });
+    window.visualViewport?.addEventListener('resize', this.keyboardVisibilityHandler, { passive: true });
+    window.visualViewport?.addEventListener('scroll', this.keyboardVisibilityHandler, { passive: true });
+
+    this.updateKeyboardMobileNavHidden();
+  }
+
+  private teardownKeyboardVisibilityMonitoring(): void {
+    if (!this.isBrowser() || !this.keyboardVisibilityHandler) {
+      return;
+    }
+
+    document.removeEventListener('focusin', this.keyboardVisibilityHandler, true);
+    document.removeEventListener('focusout', this.keyboardVisibilityHandler, true);
+    window.removeEventListener('resize', this.keyboardVisibilityHandler);
+    window.visualViewport?.removeEventListener('resize', this.keyboardVisibilityHandler);
+    window.visualViewport?.removeEventListener('scroll', this.keyboardVisibilityHandler);
+    this.keyboardVisibilityHandler = undefined;
+    this.keyboardViewportBaseline = 0;
+    this.keyboardMobileNavHidden.set(false);
+  }
+
+  private updateKeyboardMobileNavHidden(): void {
+    if (!this.isBrowser() || !this.isHandset()) {
+      this.keyboardViewportBaseline = 0;
+      this.keyboardMobileNavHidden.set(false);
+      return;
+    }
+
+    const activeElement = document.activeElement;
+    const hasEditableFocus = this.isKeyboardFocusableElement(activeElement);
+    const visualViewport = window.visualViewport;
+    const viewportHeight = visualViewport?.height ?? window.innerHeight;
+
+    if (this.keyboardViewportBaseline === 0 || viewportHeight > this.keyboardViewportBaseline) {
+      this.keyboardViewportBaseline = viewportHeight;
+    }
+
+    if (!hasEditableFocus && viewportHeight >= this.keyboardViewportBaseline - 24) {
+      this.keyboardViewportBaseline = viewportHeight;
+    }
+
+    const obscuredHeight = Math.max(0, this.keyboardViewportBaseline - viewportHeight);
+    const keyboardVisible = hasEditableFocus && (!visualViewport || obscuredHeight > 120);
+    this.keyboardMobileNavHidden.set(keyboardVisible);
+  }
+
+  private isKeyboardFocusableElement(element: Element | null): boolean {
+    if (!(element instanceof HTMLElement)) {
+      return false;
+    }
+
+    if (element.isContentEditable) {
+      return true;
+    }
+
+    if (element instanceof HTMLTextAreaElement) {
+      return !element.readOnly && !element.disabled;
+    }
+
+    if (element instanceof HTMLInputElement) {
+      if (element.readOnly || element.disabled) {
+        return false;
+      }
+
+      const inputType = element.type?.toLowerCase() || 'text';
+      return !['button', 'checkbox', 'color', 'file', 'hidden', 'image', 'radio', 'range', 'reset', 'submit'].includes(inputType);
+    }
+
+    return false;
+  }
 
   /**
    * Open the shoutout overlay
