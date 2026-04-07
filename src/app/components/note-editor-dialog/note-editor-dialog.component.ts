@@ -4180,15 +4180,20 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   onFileSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
     if (input.files && input.files.length > 0) {
-      this.uploadFiles(Array.from(input.files));
+      void this.uploadFiles(Array.from(input.files));
     }
     // Reset the input so the same file can be selected again
     input.value = '';
   }
 
-  openFileDialog(): void {
+  async openFileDialog(): Promise<void> {
     if (!this.fileInput?.nativeElement) {
       console.warn('File input not available. Make sure preview and advanced options are closed.');
+      return;
+    }
+
+    const hasMediaServers = await this.ensureConfiguredMediaServers();
+    if (!hasMediaServers) {
       return;
     }
 
@@ -4197,6 +4202,17 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
 
   private hasConfiguredMediaServers(): boolean {
     return this.mediaService.mediaServers().length > 0;
+  }
+
+  private async ensureConfiguredMediaServers(): Promise<boolean> {
+    await this.mediaService.load();
+
+    if (this.hasConfiguredMediaServers()) {
+      return true;
+    }
+
+    this.showMediaServerWarning();
+    return false;
   }
 
   private showMediaServerWarning(): void {
@@ -4221,9 +4237,8 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   }
 
   async openMediaChooser(): Promise<void> {
-    // Check if user has media servers configured
-    if (!this.hasConfiguredMediaServers()) {
-      this.showMediaServerWarning();
+    const hasMediaServers = await this.ensureConfiguredMediaServers();
+    if (!hasMediaServers) {
       return;
     }
 
@@ -4368,6 +4383,11 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
 
   private async uploadFiles(files: File[]): Promise<void> {
     if (files.length === 0) return;
+
+    const hasMediaServers = await this.ensureConfiguredMediaServers();
+    if (!hasMediaServers) {
+      return;
+    }
 
     this.isUploading.set(true);
     this.uploadStatus.set('Preparing media...');
@@ -4647,8 +4667,8 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       return true;
     }
 
-    if (!this.hasConfiguredMediaServers()) {
-      this.showMediaServerWarning();
+    const hasMediaServers = await this.ensureConfiguredMediaServers();
+    if (!hasMediaServers) {
       return false;
     }
 

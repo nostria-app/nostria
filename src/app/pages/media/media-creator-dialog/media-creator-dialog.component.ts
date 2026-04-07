@@ -12,7 +12,9 @@ import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatSliderModule } from '@angular/material/slider';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { MatDialog } from '@angular/material/dialog';
 import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
+import { Router } from '@angular/router';
 import { CustomDialogRef } from '../../../services/custom-dialog.service';
 import { MediaService, MediaItem } from '../../../services/media.service';
 import { NostrService } from '../../../services/nostr.service';
@@ -21,6 +23,7 @@ import { ImagePlaceholderService } from '../../../services/image-placeholder.ser
 import { UtilitiesService } from '../../../services/utilities.service';
 import { LoggerService } from '../../../services/logger.service';
 import { nip19, NostrEvent } from 'nostr-tools';
+import { ConfirmDialogComponent } from '../../../components/confirm-dialog/confirm-dialog.component';
 
 export interface MediaCreatorResult {
   published: boolean;
@@ -67,6 +70,8 @@ export class MediaCreatorDialogComponent implements AfterViewInit, OnDestroy {
   private mediaService = inject(MediaService);
   private nostrService = inject(NostrService);
   private snackBar = inject(MatSnackBar);
+  private dialog = inject(MatDialog);
+  private router = inject(Router);
   filterService = inject(VideoFilterService);
   private imagePlaceholder = inject(ImagePlaceholderService);
   private utilities = inject(UtilitiesService);
@@ -279,12 +284,22 @@ export class MediaCreatorDialogComponent implements AfterViewInit, OnDestroy {
   }
 
   // File selection methods
-  openFilePicker(): void {
+  async openFilePicker(): Promise<void> {
+    const hasMediaServers = await this.ensureConfiguredMediaServers();
+    if (!hasMediaServers) {
+      return;
+    }
+
     this.fileInput?.nativeElement.click();
   }
 
   // Camera capture methods
   async openCamera(): Promise<void> {
+    const hasMediaServers = await this.ensureConfiguredMediaServers();
+    if (!hasMediaServers) {
+      return;
+    }
+
     this.cameraError.set(null);
     this.isCameraMode.set(true);
 
@@ -381,7 +396,7 @@ export class MediaCreatorDialogComponent implements AfterViewInit, OnDestroy {
   onFileSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
     if (input.files && input.files.length > 0) {
-      this.processFiles(Array.from(input.files));
+      void this.processFiles(Array.from(input.files));
     }
     // Reset input so same file can be selected again
     input.value = '';
@@ -417,11 +432,16 @@ export class MediaCreatorDialogComponent implements AfterViewInit, OnDestroy {
 
     const files = event.dataTransfer?.files;
     if (files && files.length > 0) {
-      this.processFiles(Array.from(files));
+      void this.processFiles(Array.from(files));
     }
   }
 
   private async processFiles(files: File[]): Promise<void> {
+    const hasMediaServers = await this.ensureConfiguredMediaServers();
+    if (!hasMediaServers) {
+      return;
+    }
+
     const existingType = this.mediaType();
     const hasExisting = this.hasMedia();
 
@@ -802,6 +822,11 @@ export class MediaCreatorDialogComponent implements AfterViewInit, OnDestroy {
     const mediaFiles = this.mediaFiles();
     if (mediaFiles.length === 0 || !this.canPublish()) return;
 
+    const hasMediaServers = await this.ensureConfiguredMediaServers();
+    if (!hasMediaServers) {
+      return;
+    }
+
     this.publishGuard = true;
     this.isUploading.set(true);
     this.uploadStatus.set('Preparing media...');
@@ -864,6 +889,40 @@ export class MediaCreatorDialogComponent implements AfterViewInit, OnDestroy {
       this.isPublishing.set(false);
       this.uploadStatus.set('');
     }
+  }
+
+  private hasConfiguredMediaServers(): boolean {
+    return this.mediaService.mediaServers().length > 0;
+  }
+
+  private async ensureConfiguredMediaServers(): Promise<boolean> {
+    await this.mediaService.load();
+
+    if (this.hasConfiguredMediaServers()) {
+      return true;
+    }
+
+    this.showMediaServerWarning();
+    return false;
+  }
+
+  private showMediaServerWarning(): void {
+    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
+      data: {
+        title: 'No Media Server Configured',
+        message: 'You need to configure a media server before creating picture or video events. Would you like to set one up now?',
+        confirmText: 'Setup Media Server',
+        cancelText: 'Cancel',
+        confirmColor: 'primary',
+      },
+    });
+
+    dialogRef.afterClosed().subscribe((result: boolean) => {
+      if (result) {
+        this.dialogRef.close({ published: false });
+        void this.router.navigate(['/collections/media'], { queryParams: { tab: 'servers' } });
+      }
+    });
   }
 
   private async renderFilteredImage(originalFile: File): Promise<File> {

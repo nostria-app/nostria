@@ -141,6 +141,12 @@ describe('NoteEditorDialogComponent', () => {
       open: vi.fn(),
     };
 
+    mockMatDialog.open.mockReturnValue({
+      afterClosed: () => ({
+        subscribe: vi.fn(),
+      }),
+    });
+
     mockSnackBar = {
       open: vi.fn(),
     };
@@ -240,6 +246,25 @@ describe('NoteEditorDialogComponent', () => {
   });
 
   describe('deferred media uploads', () => {
+    it('should warn instead of queueing files when no media server is configured', async () => {
+      mockMediaService.mediaServers.mockReturnValue([]);
+      createComponent();
+      await fixture.whenStable();
+
+      const imageFile = new File(['image-data'], 'photo.png', { type: 'image/png' });
+
+      const privateComponent = component as unknown as {
+        uploadFiles: (files: File[]) => Promise<void>;
+      };
+
+      await privateComponent.uploadFiles([imageFile]);
+
+      expect(mockMediaService.load).toHaveBeenCalledTimes(1);
+      expect(mockMediaProcessingService.prepareFileForUpload).not.toHaveBeenCalled();
+      expect(mockMatDialog.open).toHaveBeenCalledTimes(1);
+      expect(component.mediaMetadata()).toEqual([]);
+    });
+
     it('should queue dropped video media and insert a publish placeholder instead of uploading immediately', async () => {
       createComponent();
       await fixture.whenStable();

@@ -1,5 +1,5 @@
 import { Component, inject, OnDestroy, signal, ChangeDetectionStrategy } from '@angular/core';
-import { MatDialogRef, MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
+import { MatDialogRef, MAT_DIALOG_DATA, MatDialogModule, MatDialog } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -15,6 +15,8 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { UtilitiesService } from '../../../services/utilities.service';
 import { ImagePlaceholderService } from '../../../services/image-placeholder.service';
 import { LoggerService } from '../../../services/logger.service';
+import { Router } from '@angular/router';
+import { ConfirmDialogComponent } from '../../../components/confirm-dialog/confirm-dialog.component';
 
 export interface MediaPublishDialogData {
   mediaItem: MediaItem;
@@ -64,10 +66,12 @@ export interface MediaPublishOptions {
 })
 export class MediaPublishDialogComponent implements OnDestroy {
   private dialogRef = inject(MatDialogRef<MediaPublishDialogComponent>);
+  private dialog = inject(MatDialog);
   private mediaService = inject(MediaService);
   private utilities = inject(UtilitiesService);
   private imagePlaceholder = inject(ImagePlaceholderService);
   private readonly logger = inject(LoggerService);
+  private router = inject(Router);
   data: MediaPublishDialogData = inject(MAT_DIALOG_DATA);
 
   // Form fields
@@ -379,9 +383,50 @@ export class MediaPublishDialogComponent implements OnDestroy {
     }
   }
 
-  publish(): void {
+  private hasConfiguredMediaServers(): boolean {
+    return this.mediaService.mediaServers().length > 0;
+  }
+
+  private async ensureConfiguredMediaServers(): Promise<boolean> {
+    await this.mediaService.load();
+
+    if (this.hasConfiguredMediaServers()) {
+      return true;
+    }
+
+    this.showMediaServerWarning();
+    return false;
+  }
+
+  private showMediaServerWarning(): void {
+    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
+      data: {
+        title: 'No Media Server Configured',
+        message: 'You need to configure a media server before publishing picture or video events. Would you like to set one up now?',
+        confirmText: 'Setup Media Server',
+        cancelText: 'Cancel',
+        confirmColor: 'primary',
+      },
+    });
+
+    dialogRef.afterClosed().subscribe((result: boolean) => {
+      if (result) {
+        this.dialogRef.close(null);
+        void this.router.navigate(['/collections/media'], { queryParams: { tab: 'servers' } });
+      }
+    });
+  }
+
+  async publish(): Promise<void> {
     if (!this.canPublish()) {
       return;
+    }
+
+    if (this.kind() !== 1) {
+      const hasMediaServers = await this.ensureConfiguredMediaServers();
+      if (!hasMediaServers) {
+        return;
+      }
     }
 
     // Set guard flag immediately to prevent race conditions
