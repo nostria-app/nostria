@@ -46,7 +46,8 @@
         <div class="split-recipient">
           <div class="recipient-name-row">
             <mat-icon>person</mat-icon>
-            <app-profile-display-name [pubkey]="split.pubkey" [showFallbackWhileLoading]="true"></app-profile-display-name>
+            <app-profile-display-name [pubkey]="split.pubkey"
+              [showFallbackWhileLoading]="true"></app-profile-display-name>
           </div>
           <span class="split-weight">{{ (split.weight * 100).toFixed(0) }}%</span>
         </div>
@@ -56,7 +57,8 @@
       <!-- Single recipient -->
       <div class="recipient-info recipient-name-row">
         <mat-icon>person</mat-icon>
-        <app-profile-display-name [pubkey]="data.recipientPubkey" [showFallbackWhileLoading]="true"></app-profile-display-name>
+        <app-profile-display-name [pubkey]="data.recipientPubkey"
+          [showFallbackWhileLoading]="true"></app-profile-display-name>
       </div>
       }
       @if (data.eventContent) {
@@ -179,13 +181,16 @@
         <mat-error i18n="@@zap.dialog.custom-amount.required">Custom amount is required</mat-error>
         }
         @if (zapForm.get('customAmount')?.hasError('min')) {
-        <mat-error i18n="@@zap.dialog.custom-amount.min">Amount must be at least {{ amountLimits()?.minSats || 1 }} sats</mat-error>
+        <mat-error i18n="@@zap.dialog.custom-amount.min">Amount must be at least {{ amountLimits()?.minSats || 1 }}
+          sats</mat-error>
         }
         @if (zapForm.get('customAmount')?.hasError('max')) {
-        <mat-error i18n="@@zap.dialog.custom-amount.max">Amount must be at most {{ amountLimits()?.maxSats || 1000000 }} sats</mat-error>
+        <mat-error i18n="@@zap.dialog.custom-amount.max">Amount must be at most {{ amountLimits()?.maxSats || 1000000 }}
+          sats</mat-error>
         }
         @if (amountLimits()) {
-        <mat-hint i18n="@@zap.dialog.custom-amount.allowed">{{ amountLimits()!.minSats }} - {{ amountLimits()!.maxSats }} sats
+        <mat-hint i18n="@@zap.dialog.custom-amount.allowed">{{ amountLimits()!.minSats }} - {{ amountLimits()!.maxSats
+          }} sats
           allowed</mat-hint>
         } @else {
         <mat-hint i18n="@@zap.dialog.loading-amount-limits">Loading amount limits...</mat-hint>
@@ -196,7 +201,8 @@
       <mat-form-field appearance="outline" class="full-width">
         <mat-label i18n="@@zap.dialog.message.optional">Message (optional)</mat-label>
         <textarea matInput [maxlength]="forceComment() ? 200 : (commentLimit() || 200)" formControlName="message"
-          placeholder="Add a message with your zap..." i18n-placeholder="@@zap.dialog.message.placeholder" rows="3"></textarea>
+          placeholder="Add a message with your zap..." i18n-placeholder="@@zap.dialog.message.placeholder"
+          rows="3"></textarea>
         @if (commentLimit() === 0 && !forceComment()) {
         <mat-hint i18n="@@zap.dialog.message.no-comments">
           This recipient does not allow comments with zaps.
@@ -212,7 +218,8 @@
           limits...)</mat-hint>
         }
         @if (zapForm.get('message')?.hasError('maxlength')) {
-        <mat-error i18n="@@zap.dialog.message.too-long">Message is too long (max {{ forceComment() ? 200 : (commentLimit() || 200) }} characters)</mat-error>
+        <mat-error i18n="@@zap.dialog.message.too-long">Message is too long (max {{ forceComment() ? 200 :
+          (commentLimit() || 200) }} characters)</mat-error>
         }
       </mat-form-field>
     </form>
@@ -265,7 +272,8 @@
           <div class="split-recipient">
             <div class="recipient-name-row">
               <mat-icon>person</mat-icon>
-              <app-profile-display-name [pubkey]="split.pubkey" [showFallbackWhileLoading]="true"></app-profile-display-name>
+              <app-profile-display-name [pubkey]="split.pubkey"
+                [showFallbackWhileLoading]="true"></app-profile-display-name>
             </div>
             <span class="split-weight">{{ (split.weight * 100).toFixed(0) }}%</span>
           </div>
@@ -275,7 +283,8 @@
         <!-- Single recipient -->
         <div class="recipient-info recipient-name-row">
           <mat-icon>person</mat-icon>
-          <app-profile-display-name [pubkey]="data.recipientPubkey" [showFallbackWhileLoading]="true"></app-profile-display-name>
+          <app-profile-display-name [pubkey]="data.recipientPubkey"
+            [showFallbackWhileLoading]="true"></app-profile-display-name>
         </div>
         }
         @if (data.eventContent) {

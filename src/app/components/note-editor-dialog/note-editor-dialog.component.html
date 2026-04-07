@@ -106,7 +106,8 @@
           <mat-icon class="media-icon">perm_media</mat-icon>
           <div class="media-text">
             <span class="media-label" i18n="@@editor.publish-as-media-story">Publish as Media Story</span>
-            <span class="media-description" i18n="@@editor.media-story.description">Create a rich media event optimized for media clients</span>
+            <span class="media-description" i18n="@@editor.media-story.description">Create a rich media event optimized
+              for media clients</span>
           </div>
         </div>
         <mat-slide-toggle [checked]="isMediaMode()" (change)="setMediaMode($event.checked)" color="primary">
@@ -199,7 +200,8 @@
 
         <div class="option-content">
           @if (hasPendingVideoMedia()) {
-          <span class="option-description" i18n="@@editor.pending-video-choice">Right-click or press and hold a queued video thumbnail to choose a clip type
+          <span class="option-description" i18n="@@editor.pending-video-choice">Right-click or press and hold a queued
+            video thumbnail to choose a clip type
             for that specific video.</span>
           }
         </div>
@@ -224,7 +226,8 @@
               color="primary">
               <span i18n="@@editor.expiration">Expiration</span>
             </mat-slide-toggle>
-            <span class="option-description" i18n="@@editor.expiration.description">Set an expiration date and time for this note</span>
+            <span class="option-description" i18n="@@editor.expiration.description">Set an expiration date and time for
+              this note</span>
           </div>
 
           @if (expirationEnabled()) {
@@ -234,7 +237,8 @@
                 <mat-label i18n="@@editor.expiration.date">Expiration Date</mat-label>
                 <input matInput [matDatepicker]="expirationPicker" [value]="expirationDate()"
                   (dateInput)="onExpirationDateChange($event.value)" (dateChange)="onExpirationDateChange($event.value)"
-                  placeholder="Select date" i18n-placeholder="@@editor.expiration.select-date" [min]="minDate()" readonly />
+                  placeholder="Select date" i18n-placeholder="@@editor.expiration.select-date" [min]="minDate()"
+                  readonly />
                 <mat-datepicker-toggle matIconSuffix [for]="expirationPicker"></mat-datepicker-toggle>
                 <mat-datepicker #expirationPicker></mat-datepicker>
               </mat-form-field>
@@ -253,7 +257,8 @@
             </div>
             }
 
-            <mat-hint class="expiration-hint" i18n="@@editor.expiration.hint">Note will be considered expired after this date and time</mat-hint>
+            <mat-hint class="expiration-hint" i18n="@@editor.expiration.hint">Note will be considered expired after this
+              date and time</mat-hint>
           </div>
           }
         </div>

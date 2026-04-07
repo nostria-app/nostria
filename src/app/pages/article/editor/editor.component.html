@@ -65,7 +65,8 @@
 
     <!-- Summary Input -->
     <textarea class="summary-input" placeholder="Summary (optional)" [value]="article().summary"
-      i18n-placeholder="@@articles.editor.summary.optional" (input)="updateSummary($any($event.target).value)"></textarea>
+      i18n-placeholder="@@articles.editor.summary.optional"
+      (input)="updateSummary($any($event.target).value)"></textarea>
     }
 
     <!-- Content Editor or Preview -->
@@ -87,9 +88,10 @@
   <div class="metadata-section">
     <div class="dTag-field-container">
       <mat-form-field appearance="outline" class="full-width">
-          <mat-label i18n="@@articles.editor.article-id">Article ID (d tag) *</mat-label>
+        <mat-label i18n="@@articles.editor.article-id">Article ID (d tag) *</mat-label>
         <input matInput [value]="article().dTag" (input)="updateDTag($any($event.target).value)"
-          placeholder="unique-article-identifier" i18n-placeholder="@@articles.editor.article-id.placeholder" required [readonly]="autoDTagEnabled()" />
+          placeholder="unique-article-identifier" i18n-placeholder="@@articles.editor.article-id.placeholder" required
+          [readonly]="autoDTagEnabled()" />
         @if (autoDTagEnabled()) {
         <mat-hint i18n="@@articles.editor.auto-id-enabled">Auto-ID is enabled. ID will update based on title.</mat-hint>
         } @else {
@@ -115,7 +117,8 @@
       <div class="tag-input-container">
         <mat-form-field appearance="outline" class="tag-input">
           <input matInput [value]="newTag()" (input)="newTag.set($any($event.target).value)"
-            (keypress)="onTagKeyPress($event)" placeholder="Enter a tag" i18n-placeholder="@@articles.editor.enter-tag" />
+            (keypress)="onTagKeyPress($event)" placeholder="Enter a tag"
+            i18n-placeholder="@@articles.editor.enter-tag" />
         </mat-form-field>
         <button mat-icon-button (click)="addTag()" [disabled]="!newTag().trim()">
           <mat-icon>add</mat-icon>

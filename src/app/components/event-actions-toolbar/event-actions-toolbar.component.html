@@ -18,16 +18,17 @@
   </div>
   } @else if (!hideLike()) {
   <!-- Standard Like with count -->
-    <div class="action-button like-action like-hover-container" (click)="reactionBtn.sendDefaultReaction(); $event.stopPropagation()">
-    <app-reaction-button class="action-icon like-hover-target" #reactionBtn [event]="event()" [reactionsFromParent]="effectiveReactions()"
-      [tapBehavior]="likeTapBehavior()" [enableDesktopHoverPicker]="true" (reactionChanged)="onReactionChanged()"
-      view="icon"></app-reaction-button>
+  <div class="action-button like-action like-hover-container"
+    (click)="reactionBtn.sendDefaultReaction(); $event.stopPropagation()">
+    <app-reaction-button class="action-icon like-hover-target" #reactionBtn [event]="event()"
+      [reactionsFromParent]="effectiveReactions()" [tapBehavior]="likeTapBehavior()" [enableDesktopHoverPicker]="true"
+      (reactionChanged)="onReactionChanged()" view="icon"></app-reaction-button>
     @if (likes().length > 0) {
     <span class="action-count like-hover-target" (mouseenter)="reactionBtn.onDesktopMouseEnter()"
       (mouseleave)="reactionBtn.onDesktopMouseLeave()">{{ likes().length }}</span>
     }
-    <span class="action-text like-hover-target" i18n="@@event.actions.like" (mouseenter)="reactionBtn.onDesktopMouseEnter()"
-      (mouseleave)="reactionBtn.onDesktopMouseLeave()">Like</span>
+    <span class="action-text like-hover-target" i18n="@@event.actions.like"
+      (mouseenter)="reactionBtn.onDesktopMouseEnter()" (mouseleave)="reactionBtn.onDesktopMouseLeave()">Like</span>
   </div>
   }
 

@@ -30,7 +30,8 @@
     <div class="terms-of-use-notice">
       <p>
         <span i18n="@@introduction.terms-of-use.prefix">By using Nostria, you agree to our</span>
-        <a href="#" (click)="$event.preventDefault(); openTermsOfUse()" i18n="@@introduction.terms-of-use.link">Terms of Use</a><span i18n="@@introduction.terms-of-use.suffix">.</span>
+        <a href="#" (click)="$event.preventDefault(); openTermsOfUse()" i18n="@@introduction.terms-of-use.link">Terms of
+          Use</a><span i18n="@@introduction.terms-of-use.suffix">.</span>
       </p>
     </div>
     }
@@ -104,7 +105,8 @@
           <mat-form-field appearance="outline" class="profile-name-field">
             <mat-label i18n="@@login.profile-name.label">What should we call you?</mat-label>
             <input matInput [ngModel]="displayName()" (ngModelChange)="displayName.set($event)"
-              placeholder="Display name (optional)" i18n-placeholder="@@login.profile-name.placeholder" maxlength="50" />
+              placeholder="Display name (optional)" i18n-placeholder="@@login.profile-name.placeholder"
+              maxlength="50" />
           </mat-form-field>
         </div>
       </div>
@@ -186,7 +188,8 @@
           <mat-icon color="warn">extension_off</mat-icon>
           <h3 i18n="@@login.extension.not-found">Extension Not Found</h3>
         </div>
-        <p i18n="@@login.extension.not-found.description">Install a Nostr extension (Blockcore Wallet, Alby, or nos2x), then refresh this page.</p>
+        <p i18n="@@login.extension.not-found.description">Install a Nostr extension (Blockcore Wallet, Alby, or nos2x),
+          then refresh this page.</p>
       </mat-card-content>
     </mat-card>
     }
@@ -197,7 +200,8 @@
     <div class="loading-content">
       <mat-spinner diameter="48"></mat-spinner>
       <p class="loading-text" i18n="@@login.extension.loading">Connecting to your Nostr extension...</p>
-      <p class="extension-hint" i18n="@@login.extension.loading.hint">Look for a popup from your browser extension (Alby, nos2x, etc.) and approve the
+      <p class="extension-hint" i18n="@@login.extension.loading.hint">Look for a popup from your browser extension
+        (Alby, nos2x, etc.) and approve the
         connection request.</p>
       <button mat-stroked-button (click)="goToStep(LoginStep.LOGIN_OPTIONS)" class="cancel-extension-button"
         i18n="@@common.cancel">
@@ -214,8 +218,8 @@
         <mat-label i18n="@@login.nsec-or-recovery">Private Key (nsec) or Recovery Phrase</mat-label>
         <input matInput [(ngModel)]="nsecKey" type="password" placeholder="nsec1... or 12-word phrase"
           i18n-placeholder="@@login.nsec-or-recovery.placeholder" autocomplete="off" autocorrect="off"
-          spellcheck="false" name="nostr-private-key" readonly
-          onfocus="this.removeAttribute('readonly');" (keydown.enter)="loginWithNsec()" />
+          spellcheck="false" name="nostr-private-key" readonly onfocus="this.removeAttribute('readonly');"
+          (keydown.enter)="loginWithNsec()" />
       </mat-form-field>
 
       <button mat-icon-button class="qr-scan-button" (click)="scanQrCodeForNsec()" matTooltip="Scan QR code"
@@ -240,7 +244,8 @@
           <mat-icon color="warn">warning</mat-icon>
           <h3 i18n="@@login.security-notice">Security Notice</h3>
         </div>
-        <p i18n="@@login.security-notice.description">Your private key will be stored locally on your device. Never share it with anyone.</p>
+        <p i18n="@@login.security-notice.description">Your private key will be stored locally on your device. Never
+          share it with anyone.</p>
       </mat-card-content>
     </mat-card>
     }

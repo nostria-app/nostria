@@ -48,12 +48,14 @@
     </mat-menu>
 
     <!-- View mode toggle button - hidden on small screens -->
-    <button mat-icon-button (click)="toggleViewMode()" matTooltip="Switch View" i18n-matTooltip="@@bookmarks.switch-view" class="hide-small">
+    <button mat-icon-button (click)="toggleViewMode()" matTooltip="Switch View"
+      i18n-matTooltip="@@bookmarks.switch-view" class="hide-small">
       <mat-icon>{{ getViewIcon() }}</mat-icon>
     </button>
 
     <!-- Manage folders menu -->
-    <button mat-icon-button [matMenuTriggerFor]="listMenu" matTooltip="Manage Folders" i18n-matTooltip="@@bookmarks.manage-folders">
+    <button mat-icon-button [matMenuTriggerFor]="listMenu" matTooltip="Manage Folders"
+      i18n-matTooltip="@@bookmarks.manage-folders">
       <mat-icon>more_vert</mat-icon>
     </button>
     <mat-menu #listMenu="matMenu">
@@ -154,7 +156,8 @@
     @if (bookmarkFolderChildren().length === 0) {
     <div class="folder-empty-state">
       <mat-icon>create_new_folder</mat-icon>
-      <span i18n="@@bookmarks.first-folder-hint">Create your first folder to organize saved items under Bookmarks.</span>
+      <span i18n="@@bookmarks.first-folder-hint">Create your first folder to organize saved items under
+        Bookmarks.</span>
     </div>
     }
   </div>
@@ -165,8 +168,8 @@
 <div class="search-container">
   <mat-form-field appearance="outline" class="search-field">
     <mat-icon matPrefix>search</mat-icon>
-    <input matInput placeholder="Search bookmarks..." [ngModel]="searchQuery()"
-      i18n-placeholder="@@bookmarks.search" (ngModelChange)="searchQuery.set($event)">
+    <input matInput placeholder="Search bookmarks..." [ngModel]="searchQuery()" i18n-placeholder="@@bookmarks.search"
+      (ngModelChange)="searchQuery.set($event)">
     <button matSuffix mat-icon-button (click)="toggleSearch()" matTooltip="Close search"
       i18n-matTooltip="@@bookmarks.close-search">
       <mat-icon>close</mat-icon>

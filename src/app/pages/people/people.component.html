@@ -71,12 +71,14 @@
 
   <!-- Edit List button (only when a list is selected) - hidden on small screens -->
   @if (canUseListActions()) {
-  <button mat-icon-button (click)="openEditListDialog()" matTooltip="Edit List" i18n-matTooltip="@@people.edit-list" class="hide-small">
+  <button mat-icon-button (click)="openEditListDialog()" matTooltip="Edit List" i18n-matTooltip="@@people.edit-list"
+    class="hide-small">
     <mat-icon>edit</mat-icon>
   </button>
 
   <!-- Shortcuts menu (only when a list is selected) - hidden on small screens -->
-  <button mat-icon-button [matMenuTriggerFor]="shortcutsMenu" matTooltip="View this list in..." i18n-matTooltip="@@people.view-list-in" class="hide-small">
+  <button mat-icon-button [matMenuTriggerFor]="shortcutsMenu" matTooltip="View this list in..."
+    i18n-matTooltip="@@people.view-list-in" class="hide-small">
     <mat-icon>open_in_new</mat-icon>
   </button>
 
@@ -119,7 +121,8 @@
 
   <!-- More options menu - shown only on small screens when a list is selected -->
   @if (canUseListActions()) {
-  <button mat-icon-button [matMenuTriggerFor]="moreOptionsMenu" matTooltip="More options" i18n-matTooltip="@@common.more-options" class="show-small">
+  <button mat-icon-button [matMenuTriggerFor]="moreOptionsMenu" matTooltip="More options"
+    i18n-matTooltip="@@common.more-options" class="show-small">
     <mat-icon>more_vert</mat-icon>
   </button>
 
@@ -170,8 +173,8 @@
     <!-- Search bar -->
     <div class="search-bar">
       <mat-icon>search</mat-icon>
-      <input type="text" placeholder="Filter people..." [value]="searchTerm()"
-        i18n-placeholder="@@people.filter-people" (input)="updateSearch($any($event.target).value)" />
+      <input type="text" placeholder="Filter people..." [value]="searchTerm()" i18n-placeholder="@@people.filter-people"
+        (input)="updateSearch($any($event.target).value)" />
       @if (searchTerm()) {
       <button mat-icon-button (click)="updateSearch('')">
         <mat-icon>close</mat-icon>

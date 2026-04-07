@@ -4,20 +4,21 @@
   </button>
 
   @if (viewingProfile(); as profile) {
-    @if (profile.data?.picture) {
-    <img class="profile-avatar" [src]="profile.data.picture" alt="Profile picture" i18n-alt="@@profile.picture" />
-    }
-    <h2 class="panel-title title-font" i18n="@@badges.profile-title">{{ profile.data?.display_name || profile.data?.name || 'Anonymous' }}'s Badges</h2>
+  @if (profile.data?.picture) {
+  <img class="profile-avatar" [src]="profile.data.picture" alt="Profile picture" i18n-alt="@@profile.picture" />
+  }
+  <h2 class="panel-title title-font" i18n="@@badges.profile-title">{{ profile.data?.display_name || profile.data?.name
+    || 'Anonymous' }}'s Badges</h2>
   } @else {
-    <h2 class="panel-title title-font" i18n="@@badges.title">Badges</h2>
+  <h2 class="panel-title title-font" i18n="@@badges.title">Badges</h2>
   }
 
   <span class="panel-header-spacer"></span>
 
   @if (isViewingOwnProfile()) {
-    <button mat-icon-button (click)="openBadgeEditor()" matTooltip="Badge Editor" i18n-matTooltip="@@badges.editor">
-      <mat-icon>add</mat-icon>
-    </button>
+  <button mat-icon-button (click)="openBadgeEditor()" matTooltip="Badge Editor" i18n-matTooltip="@@badges.editor">
+    <mat-icon>add</mat-icon>
+  </button>
   }
 </div>
 
@@ -67,8 +68,7 @@
             <mat-icon>drag_indicator</mat-icon>
           </div>
           <app-badge [badge]="badge" layout="horizontal" [showActions]="true" [isUpdating]="isUpdating()"
-            [isAccepted]="true" (viewClicked)="viewBadgeDetailsById(badge.id)"
-            (removeClicked)="removeBadge(badge)">
+            [isAccepted]="true" (viewClicked)="viewBadgeDetailsById(badge.id)" (removeClicked)="removeBadge(badge)">
           </app-badge>
           <div class="badge-drag-placeholder" *cdkDragPlaceholder></div>
         </div>
@@ -79,8 +79,7 @@
         @for (badge of accepted(); track badge.aTag) {
         <div class="badge-container">
           <app-badge [badge]="badge" layout="horizontal" [showActions]="true" [isUpdating]="isUpdating()"
-            [isAccepted]="true" (viewClicked)="viewBadgeDetailsById(badge.id)"
-            (removeClicked)="removeBadge(badge)">
+            [isAccepted]="true" (viewClicked)="viewBadgeDetailsById(badge.id)" (removeClicked)="removeBadge(badge)">
           </app-badge>
         </div>
         }
