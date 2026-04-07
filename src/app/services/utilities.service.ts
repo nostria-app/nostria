@@ -54,7 +54,7 @@ export class UtilitiesService {
     'relay.minds.com',
     'nostr.ono.re',
     'dev.nostrplayground.com',
-    'nostrelites.org',
+    // 'nostrelites.org', Appears back
     'relay.nsite.lol',
     'nostr.bongbong.com',
     'nostr1.tunnelsats.com',
@@ -84,7 +84,7 @@ export class UtilitiesService {
     'nostr-relay.lnmarkets.com',
     'relayable.org',
     'nostr.fmt.wiz.biz',
-    'wot.dergigi.com',
+    // 'wot.dergigi.com', Appears back
     'relay.ohbe.me',
     'relay.westernbtc.com',
     'nostr.milou.lol',
@@ -113,7 +113,7 @@ export class UtilitiesService {
     'ca.orangepill.dev',
     'nostrex.fly.dev',
     'rsslay.fiatjaf.com',
-    'kiwibuilders.nostr21.net',
+    // 'kiwibuilders.nostr21.net', Appears back
     'news.nos.social',
     'nostr3.actn.io',
     'relay-jp.nostr.wirednet.jp',
@@ -123,7 +123,7 @@ export class UtilitiesService {
     'relay.farscapian.com',
     'thewildhustle.nostr1.com',
     'relay.nostr.vet',
-    'nostr.v6.army',
+    // 'nostr.v6.army', Appears back
     'haven.vanderwarker.family',
     'jellyfish.land',
     'relay.otherstuff.fyi',
@@ -136,8 +136,8 @@ export class UtilitiesService {
     'nostr.okaits7534.net',
     'nostr.easify.de',
     'br.purplerelay.com',
-    'lightning.red',
-    'haven.slidestr.net',
+    // 'lightning.red', Appears back
+    // 'haven.slidestr.net', Appears back
     'atl.purplerelay.com',
     'dev-relay.nostrassets.com',
     'relay.hash.stream',
