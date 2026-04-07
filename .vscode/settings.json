@@ -44,13 +44,13 @@
     "html"
   ],
   "eslint.format.enable": true,
-  "files.exclude": {
-    "**/android": true,
-    "**/android/.gradle": true,
-    "**/android/build": true,
-    "**/src-android": true,
-    "**/src-tauri": true
-  },
+  // "files.exclude": {
+  //   "**/android": true,
+  //   "**/android/.gradle": true,
+  //   "**/android/build": true,
+  //   "**/src-android": true,
+  //   "**/src-tauri": true
+  // },
   "search.exclude": {
     "**/android": true,
     "**/android/.gradle": true,

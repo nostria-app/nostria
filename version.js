@@ -8,6 +8,7 @@ const files = {
   manifest: path.join(rootDir, 'public', 'manifest.webmanifest'),
   readme: path.join(rootDir, 'README.md'),
   cargoToml: path.join(rootDir, 'src-tauri', 'Cargo.toml'),
+  cargoLock: path.join(rootDir, 'src-tauri', 'Cargo.lock'),
   appleProject: path.join(rootDir, 'src-tauri', 'gen', 'apple', 'project.yml'),
   appleInfoPlist: path.join(rootDir, 'src-tauri', 'gen', 'apple', 'nostria_iOS', 'Info.plist'),
 };
@@ -105,6 +106,16 @@ async function main() {
     )
   );
   console.log('Updated src-tauri/Cargo.toml');
+
+  await updateTextFile(files.cargoLock, (content) =>
+    replaceOrThrow(
+      content,
+      /(\[\[package\]\]\s*\r?\nname\s*=\s*"nostria"\s*\r?\nversion\s*=\s*")([^"]+)(")/,
+      `$1${nextVersion}$3`,
+      'src-tauri/Cargo.lock'
+    )
+  );
+  console.log('Updated src-tauri/Cargo.lock');
 
   await updateTextFile(files.appleProject, (content) => {
     let updated = replaceOrThrow(

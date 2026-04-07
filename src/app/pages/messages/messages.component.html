@@ -1114,6 +1114,7 @@
             (blur)="onMessageInputBlur()" rows="1"></textarea>
           <button mat-icon-button type="button" class="send-button"
             [disabled]="!newMessageText().trim() || isSending() || pendingEncryptedMediaPreviews().length > 0"
+            (pointerdown)="preventButtonFocusSteal($event)" (mousedown)="preventButtonFocusSteal($event)"
             (click)="sendMessage()" matTooltip="Send message">
             @if (isSending()) {
             <mat-spinner diameter="24"></mat-spinner>

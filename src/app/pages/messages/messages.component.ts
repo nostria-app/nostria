@@ -1642,6 +1642,10 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     this.shouldStickToBottomOnKeyboardOpen = false;
   }
 
+  preventButtonFocusSteal(event: Event): void {
+    event.preventDefault();
+  }
+
   scrollToLatestMessage(): void {
     this.scrollToBottom();
   }
