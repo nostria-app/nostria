@@ -17,7 +17,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDividerModule } from '@angular/material/divider';
 import { LoggerService } from '../../services/logger.service';
 import { BookmarkCategoryDialogComponent } from './bookmark-category-dialog/bookmark-category-dialog.component';
-import { AddBookmarkDialogComponent } from './add-bookmark-dialog/add-bookmark-dialog.component';
+import { AddBookmarkDialogComponent, AddBookmarkData } from './add-bookmark-dialog/add-bookmark-dialog.component';
 import { BookmarkService, BookmarkList, BookmarkType } from '../../services/bookmark.service';
 import { DataService } from '../../services/data.service';
 import { DatabaseService } from '../../services/database.service';
@@ -33,12 +33,14 @@ import { TwoColumnLayoutService } from '../../services/two-column-layout.service
 import { EventComponent } from '../../components/event/event.component';
 import { ArticleComponent } from '../../components/article/article.component';
 import { ConfirmDialogComponent } from '../../components/confirm-dialog/confirm-dialog.component';
-import { CreateListDialogComponent } from './create-list-dialog/create-list-dialog.component';
+import { CreateListDialogComponent, CreateListDialogResult } from './create-list-dialog/create-list-dialog.component';
 import { SocialPreviewComponent } from '../../components/social-preview/social-preview.component';
 import { BookmarkListSelectorComponent } from '../../components/bookmark-list-selector/bookmark-list-selector.component';
 import { FilterButtonComponent } from '../../components/filter-button/filter-button.component';
 import { BookmarkSortFilterPanelComponent } from './bookmark-sort-filter-panel/bookmark-sort-filter-panel.component';
 import { DeleteEventService } from '../../services/delete-event.service';
+import { CustomDialogService } from '../../services/custom-dialog.service';
+import { firstValueFrom } from 'rxjs';
 
 export interface Bookmark {
   id: string;
@@ -122,6 +124,7 @@ interface CompactUrlDetails {
 export class BookmarksComponent implements OnInit, AfterViewInit, OnDestroy {
   private logger = inject(LoggerService);
   private dialog = inject(MatDialog);
+  private customDialog = inject(CustomDialogService);
   private snackBar = inject(MatSnackBar);
   private hostElement = inject<ElementRef<HTMLElement>>(ElementRef);
   private platformId = inject(PLATFORM_ID);
@@ -733,12 +736,15 @@ export class BookmarksComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   async addBookmark(): Promise<void> {
-    const dialogRef = this.dialog.open(AddBookmarkDialogComponent, {
-      width: '500px',
+    const dialogRef = this.customDialog.open<AddBookmarkDialogComponent, AddBookmarkData | undefined>(AddBookmarkDialogComponent, {
+      title: 'Add Bookmark',
+      headerIcon: 'bookmark_add',
+      width: 'min(500px, calc(100vw - 24px))',
+      maxWidth: 'calc(100vw - 24px)',
       panelClass: 'responsive-dialog',
     });
 
-    const result = await dialogRef.afterClosed().toPromise();
+    const { result } = await firstValueFrom(dialogRef.afterClosed$);
     if (!result) {
       return;
     }
@@ -1430,12 +1436,15 @@ export class BookmarksComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   async createNewList() {
-    const dialogRef = this.dialog.open(CreateListDialogComponent, {
-      width: '500px',
+    const dialogRef = this.customDialog.open<CreateListDialogComponent, CreateListDialogResult | undefined>(CreateListDialogComponent, {
+      title: 'Create Bookmark Folder',
+      headerIcon: 'create_new_folder',
+      width: 'min(500px, calc(100vw - 24px))',
+      maxWidth: 'calc(100vw - 24px)',
       panelClass: 'responsive-dialog'
     });
 
-    const result = await dialogRef.afterClosed().toPromise();
+    const { result } = await firstValueFrom(dialogRef.afterClosed$);
 
     if (result) {
       const newList = await this.bookmarkService.createBookmarkList(result.name, result.id, result.isPrivate);
@@ -1454,13 +1463,16 @@ export class BookmarksComponent implements OnInit, AfterViewInit, OnDestroy {
       return;
     }
 
-    const dialogRef = this.dialog.open(CreateListDialogComponent, {
-      width: '500px',
+    const dialogRef = this.customDialog.open<CreateListDialogComponent, CreateListDialogResult | undefined>(CreateListDialogComponent, {
+      title: 'Rename Bookmark Folder',
+      headerIcon: 'edit',
+      width: 'min(500px, calc(100vw - 24px))',
+      maxWidth: 'calc(100vw - 24px)',
       panelClass: 'responsive-dialog',
       data: { name: currentList.name, id: currentListId, isRename: true }
     });
 
-    const result = await dialogRef.afterClosed().toPromise();
+    const { result } = await firstValueFrom(dialogRef.afterClosed$);
 
     if (result && result.name.trim() !== currentList.name) {
       await this.bookmarkService.updateBookmarkList(currentListId, result.name.trim());

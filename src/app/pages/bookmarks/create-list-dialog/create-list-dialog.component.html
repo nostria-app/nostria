@@ -1,21 +1,19 @@
-<h2 mat-dialog-title>{{ isRename ? 'Rename Bookmark Folder' : 'Create Bookmark Folder' }}</h2>
-
-<mat-dialog-content>
+<div dialog-content class="create-bookmark-folder-content">
   <mat-form-field appearance="outline" class="full-width">
     <mat-label>Folder Name</mat-label>
-    <input matInput [(ngModel)]="listName" (ngModelChange)="generateIdFromName()" placeholder="My Reading Folder"
-      required>
+    <input matInput [ngModel]="listName()" (ngModelChange)="listName.set($event); generateIdFromName()"
+      placeholder="My Reading Folder" required>
   </mat-form-field>
 
-  @if (!isRename) {
+  @if (!isRename()) {
   <mat-form-field appearance="outline" class="full-width">
     <mat-label>Unique ID (d-tag)</mat-label>
-    <input matInput [(ngModel)]="listId" placeholder="my-reading-list" required>
+    <input matInput [ngModel]="listId()" (ngModelChange)="listId.set($event)" placeholder="my-reading-list" required>
     <mat-hint>Used to uniquely identify this list. Can contain letters, numbers, and hyphens.</mat-hint>
   </mat-form-field>
 
   <div class="private-checkbox">
-    <mat-checkbox [(ngModel)]="isPrivate">
+    <mat-checkbox [ngModel]="isPrivate()" (ngModelChange)="isPrivate.set($event)">
       <span class="checkbox-label">Private (Encrypted)</span>
     </mat-checkbox>
     <div class="checkbox-hint">
@@ -23,11 +21,11 @@
     </div>
   </div>
   }
-</mat-dialog-content>
+</div>
 
-<mat-dialog-actions align="end">
+<div dialog-actions class="create-bookmark-folder-actions">
   <button mat-button (click)="cancel()">Cancel</button>
-  <button mat-flat-button (click)="create()" [disabled]="!listName().trim() || (!isRename && !listId().trim())">
-    {{ isRename ? 'Rename' : 'Create Folder' }}
+  <button mat-flat-button (click)="create()" [disabled]="!listName().trim() || (!isRename() && !listId().trim())">
+    {{ isRename() ? 'Rename' : 'Create Folder' }}
   </button>
-</mat-dialog-actions>
+</div>

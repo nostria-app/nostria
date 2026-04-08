@@ -1,6 +1,5 @@
 import { Component, inject, signal, ChangeDetectionStrategy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -8,6 +7,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatIconModule } from '@angular/material/icon';
 import { LoggerService } from '../../../services/logger.service';
 import { BookmarkType } from '../../../services/bookmark.service';
+import { CustomDialogRef } from '../../../services/custom-dialog.service';
 
 export interface AddBookmarkData {
   url: string;
@@ -21,7 +21,6 @@ export interface AddBookmarkData {
   selector: 'app-add-bookmark-dialog',
   imports: [
     FormsModule,
-    MatDialogModule,
     MatButtonModule,
     MatFormFieldModule,
     MatInputModule,
@@ -33,7 +32,7 @@ export interface AddBookmarkData {
 })
 export class AddBookmarkDialogComponent {
   private logger = inject(LoggerService);
-  private dialogRef = inject(MatDialogRef<AddBookmarkDialogComponent>);
+  private dialogRef = inject(CustomDialogRef<AddBookmarkDialogComponent, AddBookmarkData | undefined>);
 
   url = signal('');
   title = signal('');

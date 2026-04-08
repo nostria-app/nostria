@@ -10,6 +10,10 @@
   }
 }
 
+.add-bookmark-content {
+  min-width: min(400px, calc(100vw - 48px));
+}
+
 .type-option {
   display: flex;
   align-items: center;
@@ -22,7 +26,16 @@
   }
 }
 
-mat-dialog-actions {
-  padding: 16px 24px;
-  margin: 0 -24px -24px -24px;
+.add-bookmark-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+@media (max-width: 520px) {
+
+  .form-container,
+  .add-bookmark-content {
+    min-width: 0;
+  }
 }

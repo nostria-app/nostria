@@ -1,10 +1,10 @@
 import { Component, inject, signal, ChangeDetectionStrategy } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
-import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { FormsModule } from '@angular/forms';
+import { CustomDialogRef } from '../../../services/custom-dialog.service';
 
 export interface CreateListDialogResult {
   name: string;
@@ -22,7 +22,6 @@ export interface CreateListDialogData {
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-create-list-dialog',
   imports: [
-    MatDialogModule,
     MatButtonModule,
     MatFormFieldModule,
     MatInputModule,
@@ -33,13 +32,19 @@ export interface CreateListDialogData {
   styleUrl: './create-list-dialog.component.scss',
 })
 export class CreateListDialogComponent {
-  dialogRef = inject(MatDialogRef<CreateListDialogComponent>);
-  data = inject<CreateListDialogData | null>(MAT_DIALOG_DATA, { optional: true });
+  dialogRef = inject(CustomDialogRef<CreateListDialogComponent, CreateListDialogResult | undefined>);
 
-  listName = signal(this.data?.name || '');
-  listId = signal(this.data?.id || '');
+  set data(value: CreateListDialogData | null | undefined) {
+    this.listName.set(value?.name || '');
+    this.listId.set(value?.id || '');
+    this.isRename.set(value?.isRename || false);
+    this.isPrivate.set(false);
+  }
+
+  listName = signal('');
+  listId = signal('');
   isPrivate = signal(false);
-  isRename = this.data?.isRename || false;
+  isRename = signal(false);
 
   // Generate a suggested ID based on the name
   generateIdFromName() {
@@ -63,7 +68,7 @@ export class CreateListDialogComponent {
     const name = this.listName().trim();
     const id = this.listId().trim();
 
-    if (!name || !id) {
+    if (!name || (!this.isRename() && !id)) {
       return;
     }
 

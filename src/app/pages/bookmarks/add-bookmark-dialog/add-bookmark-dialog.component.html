@@ -1,6 +1,4 @@
-<h2 mat-dialog-title>Add Bookmark</h2>
-
-<mat-dialog-content>
+<div dialog-content class="add-bookmark-content">
   <div class="form-container">
     <mat-form-field appearance="outline">
       <mat-label>Type</mat-label>
@@ -69,12 +67,12 @@
       <mat-icon matPrefix>description</mat-icon>
     </mat-form-field>
   </div>
-</mat-dialog-content>
+</div>
 
-<mat-dialog-actions align="end">
+<div dialog-actions class="add-bookmark-actions">
   <button mat-button (click)="cancel()">Cancel</button>
-  <button mat-flat-button color="primary" (click)="save()" [disabled]="!canSave()">
+  <button mat-flat-button (click)="save()" [disabled]="!canSave()">
     <mat-icon>add</mat-icon>
     Add Bookmark
   </button>
-</mat-dialog-actions>
+</div>
