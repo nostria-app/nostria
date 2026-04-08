@@ -2,7 +2,7 @@
   <div class="dialog-header">
     <div class="dialog-header-leading">
       <div class="header-icon-surface" aria-hidden="true">
-        <mat-icon class="header-icon">{{ data.icon || 'responsive_layout' }}</mat-icon>
+        <mat-icon class="header-icon">{{ data.icon || defaultIcon }}</mat-icon>
       </div>
     </div>
 
@@ -19,26 +19,26 @@
     <p class="dialog-message">{{ data.message }}</p>
 
     @if (data.details?.length) {
-      <div class="detail-list">
-        @for (detail of data.details; track detail.title) {
-          <div class="detail-item">
-            <mat-icon class="detail-icon">{{ detail.icon }}</mat-icon>
-            <div class="detail-copy">
-              <p class="detail-title">{{ detail.title }}</p>
-              <p class="detail-description">{{ detail.description }}</p>
-            </div>
-          </div>
-        }
+    <div class="detail-list">
+      @for (detail of data.details; track detail.title) {
+      <div class="detail-item">
+        <mat-icon class="detail-icon">{{ detail.icon }}</mat-icon>
+        <div class="detail-copy">
+          <p class="detail-title">{{ detail.title }}</p>
+          <p class="detail-description">{{ detail.description }}</p>
+        </div>
       </div>
+      }
+    </div>
     }
   </div>
 
   <div mat-dialog-actions class="dialog-actions">
     <button mat-button type="button" (click)="close(false)">
-      {{ data.secondaryActionText || 'Close' }}
+      {{ data.secondaryActionText || defaultSecondaryActionText }}
     </button>
     <button mat-flat-button type="button" class="primary-action" (click)="close(true)">
-      {{ data.primaryActionText || 'Looks good' }}
+      {{ data.primaryActionText || defaultPrimaryActionText }}
     </button>
   </div>
 </div>

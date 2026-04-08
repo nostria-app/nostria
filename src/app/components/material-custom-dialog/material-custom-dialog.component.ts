@@ -3,6 +3,10 @@ import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/materia
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 
+const DEFAULT_DIALOG_ICON = 'responsive_layout';
+const DEFAULT_PRIMARY_ACTION_TEXT = 'Looks good';
+const DEFAULT_SECONDARY_ACTION_TEXT = 'Close';
+
 export interface MaterialCustomDialogDetail {
   icon: string;
   title: string;
@@ -29,6 +33,9 @@ export interface MaterialCustomDialogData {
 export class MaterialCustomDialogComponent {
   private dialogRef = inject(MatDialogRef<MaterialCustomDialogComponent, boolean>);
   data: MaterialCustomDialogData = inject(MAT_DIALOG_DATA);
+  defaultIcon = DEFAULT_DIALOG_ICON;
+  defaultPrimaryActionText = DEFAULT_PRIMARY_ACTION_TEXT;
+  defaultSecondaryActionText = DEFAULT_SECONDARY_ACTION_TEXT;
 
   close(result = false): void {
     this.dialogRef.close(result);
