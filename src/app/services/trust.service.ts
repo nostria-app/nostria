@@ -1,10 +1,11 @@
-import { Injectable, inject, signal, computed, Injector, runInInjectionContext } from '@angular/core';
+import { Injectable, inject, signal, computed, Injector, runInInjectionContext, effect } from '@angular/core';
 import { LocalSettingsService } from './local-settings.service';
 import { LoggerService } from './logger.service';
 import { RelayPoolService } from './relays/relay-pool';
 import { DatabaseService, TrustMetrics } from './database.service';
 import { TrustProviderService } from './trust-provider.service';
 import { RelayAuthService } from './relays/relay-auth.service';
+import { AccountStateService } from './account-state.service';
 import type { Event as NostrEvent, Filter } from 'nostr-tools';
 
 /** Pending relay fetch request waiting in the queue */
@@ -28,6 +29,7 @@ export class TrustService {
   private database = inject(DatabaseService);
   private trustProviderService = inject(TrustProviderService);
   private relayAuth = inject(RelayAuthService);
+  private accountState = inject(AccountStateService);
   private injector = inject(Injector);
 
   // In-memory cache for quick access
@@ -46,6 +48,9 @@ export class TrustService {
 
   /** How long cached metrics are considered fresh before background refresh */
   private readonly METRICS_REFRESH_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+
+  /** Track the current account so personalized in-memory trust state never crosses accounts */
+  private currentAccountPubkey: string | null = null;
 
   // Signal for tracking loaded pubkeys
   private loadedPubkeys = signal<Set<string>>(new Set());
@@ -72,6 +77,19 @@ export class TrustService {
 
   constructor() {
     this.logger.info('TrustService initialized');
+
+    effect(() => {
+      const pubkey = this.accountState.pubkey();
+      if (pubkey === this.currentAccountPubkey) {
+        return;
+      }
+
+      this.currentAccountPubkey = pubkey;
+      this.metricsCache.clear();
+      this.pendingFetches.clear();
+      this.notFoundCache.clear();
+      this.loadedPubkeys.set(new Set());
+    });
   }
 
   /**
@@ -179,21 +197,20 @@ export class TrustService {
 
   /**
    * Resolve relay URLs and author pubkeys for fetching kind 30382 assertions.
-   * Uses kind 10040 provider declarations if available, falls back to local setting.
-   * When providers are configured, returns their pubkeys as authors so queries
-   * only return events from trusted providers.
+   * Uses kind 10040 provider declarations for the active account.
+   * If no provider is configured yet, trust metrics are unavailable.
    */
   private resolveProviderConfig(): { relayUrls: string[]; authors: string[] } {
-    // Check if user has kind 10040 providers configured for kind 30382
-    if (this.trustProviderService.loaded()) {
-      const config = this.trustProviderService.getProviderConfigForKind(30382);
-      if (config.relayUrls.length > 0) {
-        return config;
-      }
+    if (!this.trustProviderService.loaded()) {
+      return { relayUrls: [], authors: [] };
     }
 
-    // Fall back to the local trust relay setting (no author filter)
-    return { relayUrls: [this.trustRelayUrl()], authors: [] };
+    const config = this.trustProviderService.getProviderConfigForKind(30382);
+    if (config.relayUrls.length > 0) {
+      return config;
+    }
+
+    return { relayUrls: [], authors: [] };
   }
 
   /**
@@ -202,6 +219,11 @@ export class TrustService {
    * are fetched in a single relay subscription, avoiding "too many concurrent REQs".
    */
   private fetchMetricsFromRelay(pubkey: string): Promise<TrustMetrics | null> {
+    const { relayUrls } = this.resolveProviderConfig();
+    if (relayUrls.length === 0) {
+      return Promise.resolve(null);
+    }
+
     return new Promise<TrustMetrics | null>((resolve, reject) => {
       this.fetchQueue.push({ pubkey, resolve, reject });
       this.scheduleFlush();
@@ -358,6 +380,11 @@ export class TrustService {
    */
   getCachedMetrics(pubkey: string): TrustMetrics | null {
     if (!this.isEnabled()) {
+      return null;
+    }
+
+    const { relayUrls } = this.resolveProviderConfig();
+    if (relayUrls.length === 0) {
       return null;
     }
 
@@ -658,7 +685,11 @@ export class TrustService {
    * If no provider authors are configured, we accept any cached metrics.
    */
   private isMetricsCompatibleWithCurrentProviders(metrics: TrustMetrics): boolean {
-    const { authors } = this.resolveProviderConfig();
+    const { relayUrls, authors } = this.resolveProviderConfig();
+    if (relayUrls.length === 0) {
+      return false;
+    }
+
     if (authors.length === 0) {
       return true;
     }

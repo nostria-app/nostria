@@ -101,6 +101,7 @@
   </section>
 
   <!-- Personalized Scoring -->
+  @if (shouldShowPersonalizedScoring()) {
   <section class="section">
     <h2 i18n="@@settings.trust.personalized.title">Personalized Scoring</h2>
     <div class="callout-card">
@@ -353,5 +354,6 @@
       </div>
     </div>
   </section>
+  }
 
 </div>

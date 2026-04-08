@@ -107,6 +107,17 @@ export class TrustSettingsComponent implements OnInit, OnDestroy {
       && !this.brainstormConfigLoading();
   });
 
+  shouldShowPersonalizedScoring = computed(() => {
+    return this.isBrainstormActivated()
+      || this.brainstormActivateLoading()
+      || this.brainstormStatusLoading()
+      || this.brainstormRecalculateLoading()
+      || this.brainstormConfigLoading()
+      || this.brainstormStatusChecked()
+      || !!this.brainstormError()
+      || !!this.brainstormMessage();
+  });
+
   /** Check if a known provider is enabled */
   isProviderConfigured(provider: KnownProvider): boolean {
     return this.trustProviderService.isKnownProviderConfigured(provider);
