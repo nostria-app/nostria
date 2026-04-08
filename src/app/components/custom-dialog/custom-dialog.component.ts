@@ -84,7 +84,7 @@ interface ScrollLockStyles {
           [style.--material-custom-dialog-min-height]="'0'"
           [style.--material-custom-dialog-max-height]="'100%'"
           [title]="getTitle()"
-          [icon]="getHeaderIcon() || 'responsive_layout'"
+          [icon]="getHeaderIcon()"
           [showHeader]="showHeader()"
           [showDefaultActions]="false"
           [showCloseButton]="getShowCloseButton() && !getDisableClose()"

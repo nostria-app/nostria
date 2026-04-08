@@ -3,6 +3,7 @@
   <div class="dialog-header">
     <div class="dialog-header-leading">
       <ng-content select="[dialog-header-leading]"></ng-content>
+      @if (resolvedIcon()) {
       <div class="header-icon-surface" [class.image-icon-surface]="resolvedIconMode() === 'image'" aria-hidden="true">
         @if (resolvedIconMode() === 'image') {
         <img [src]="resolvedIcon()" [alt]="resolvedTitle() || 'Dialog'" class="header-icon header-image-icon" />
@@ -12,6 +13,7 @@
         <span class="header-icon emoji-header-icon">{{ resolvedIcon() }}</span>
         }
       </div>
+      }
     </div>
 
     <h2 mat-dialog-title class="dialog-title">{{ resolvedTitle() }}</h2>
@@ -19,7 +21,8 @@
     <div class="dialog-header-trailing">
       <ng-content select="[dialog-header-actions]"></ng-content>
       @if (showCloseButton()) {
-      <button mat-icon-button type="button" class="close-button" (click)="close(closeResult())" aria-label="Close dialog">
+      <button mat-icon-button type="button" class="close-button" (click)="close(closeResult())"
+        aria-label="Close dialog">
         <mat-icon>close</mat-icon>
       </button>
       }

@@ -69,7 +69,7 @@
   animation: slideIn 0.3s ease-out;
   outline: none;
 
-  > app-material-custom-dialog.legacy-custom-dialog-shell {
+  >app-material-custom-dialog.legacy-custom-dialog-shell {
     display: flex;
     flex: 1 1 auto;
     min-width: 0;
@@ -77,20 +77,20 @@
     max-height: 100%;
   }
 
-  > app-material-custom-dialog.legacy-custom-dialog-shell .material-custom-dialog {
+  >app-material-custom-dialog.legacy-custom-dialog-shell .material-custom-dialog {
     flex: 1 1 auto;
     min-width: 0;
     min-height: 0;
     max-height: 100%;
   }
 
-  > app-material-custom-dialog.legacy-custom-dialog-shell .dialog-content {
+  >app-material-custom-dialog.legacy-custom-dialog-shell .dialog-content {
     flex: 1 1 auto;
     min-width: 0;
     min-height: 0;
   }
 
-  > app-material-custom-dialog.legacy-custom-dialog-shell [dialog-content] {
+  >app-material-custom-dialog.legacy-custom-dialog-shell [dialog-content] {
     min-width: 0;
     min-height: 0;
   }

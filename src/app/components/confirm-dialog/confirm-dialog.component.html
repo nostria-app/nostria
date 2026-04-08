@@ -1,23 +1,19 @@
-<app-material-custom-dialog
-  [title]="data.title"
-  [icon]="data.confirmColor === 'warn' ? 'warning' : 'help'"
-  [showDefaultActions]="false"
-  [showCloseButton]="false"
->
+<app-material-custom-dialog [title]="data.title" [icon]="data.confirmColor === 'warn' ? 'warning' : 'help'"
+  [showDefaultActions]="false" [showCloseButton]="false">
   <div dialog-content>
     <p>{{ data.message }}</p>
     @if (data.warningText) {
-      <p class="warning-text">{{ data.warningText }}</p>
+    <p class="warning-text">{{ data.warningText }}</p>
     }
     @if (data.items?.length) {
-      <div class="item-list">
-        <p class="item-list-title">Accounts on this device:</p>
-        <div class="item-list-items">
-          @for (item of data.items; track item) {
-            <div class="item-list-entry">{{ item }}</div>
-          }
-        </div>
+    <div class="item-list">
+      <p class="item-list-title">Accounts on this device:</p>
+      <div class="item-list-items">
+        @for (item of data.items; track item) {
+        <div class="item-list-entry">{{ item }}</div>
+        }
       </div>
+    </div>
     }
   </div>
 

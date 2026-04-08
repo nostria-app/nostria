@@ -1,90 +1,75 @@
-<app-material-custom-dialog
-  [title]="data.target.type === 'user' ? 'Report User' : 'Report Content'"
-  icon="report"
-  [showDefaultActions]="false"
-  [showCloseButton]="false"
->
-<div dialog-content class="report-dialog-content">
-  <div class="report-target-info">
-    <h3>Reporting: {{ getTargetDescription() }}</h3>
-  </div>
+<app-material-custom-dialog [title]="data.target.type === 'user' ? 'Report User' : 'Report Content'" icon="report"
+  [showDefaultActions]="false" [showCloseButton]="false">
+  <div dialog-content class="report-dialog-content">
+    <div class="report-target-info">
+      <h3>Reporting: {{ getTargetDescription() }}</h3>
+    </div>
 
-  <div class="report-type-section">
-    <h3>Reason for Report</h3>
-    <mat-form-field class="full-width">
-      <mat-label>Select reason</mat-label>
-      <mat-select [(value)]="selectedReportType">
-        @for (option of reportTypeOptions; track option.value) {
+    <div class="report-type-section">
+      <h3>Reason for Report</h3>
+      <mat-form-field class="full-width">
+        <mat-label>Select reason</mat-label>
+        <mat-select [(value)]="selectedReportType">
+          @for (option of reportTypeOptions; track option.value) {
           <mat-option [value]="option.value">
             {{ option.label }}
           </mat-option>
-        }
-      </mat-select>
-    </mat-form-field>
-  </div>
+          }
+        </mat-select>
+      </mat-form-field>
+    </div>
 
-  <div class="report-description-section">
-    <h3>Additional Details (Optional)</h3>
-    <mat-form-field class="full-width">
-      <mat-label>Describe the issue</mat-label>
-      <textarea
-        matInput
-        [(ngModel)]="reportDescription"
-        rows="3"
-        placeholder="Provide additional context about why you're reporting this..."
-      ></textarea>
-    </mat-form-field>
-  </div>
+    <div class="report-description-section">
+      <h3>Additional Details (Optional)</h3>
+      <mat-form-field class="full-width">
+        <mat-label>Describe the issue</mat-label>
+        <textarea matInput [(ngModel)]="reportDescription" rows="3"
+          placeholder="Provide additional context about why you're reporting this..."></textarea>
+      </mat-form-field>
+    </div>
 
-  <div class="publish-options">
-    <h3>Select Publishing Targets</h3>
+    <div class="publish-options">
+      <h3>Select Publishing Targets</h3>
 
-    @for (option of publishOptions; track option.id) {
+      @for (option of publishOptions; track option.id) {
       <div class="publish-option">
-        <mat-checkbox
-          [checked]="isOptionSelected(option.id)"
-          (change)="onOptionChange(option.id, $event.checked)"
-        >
+        <mat-checkbox [checked]="isOptionSelected(option.id)" (change)="onOptionChange(option.id, $event.checked)">
           <div class="option-content">
             <div class="option-label">{{ option.label }}</div>
             <div class="option-description">{{ option.description }}</div>
 
             @if (option.id === 'author' && loadingAuthorRelays()) {
-              <mat-spinner diameter="20"></mat-spinner>
+            <mat-spinner diameter="20"></mat-spinner>
             }
 
             @if (option.id === 'author' && !loadingAuthorRelays()) {
-              <div class="relay-count">
-                {{ authorRelays().length }} relay{{ authorRelays().length !== 1 ? 's' : '' }}
-                available
-              </div>
+            <div class="relay-count">
+              {{ authorRelays().length }} relay{{ authorRelays().length !== 1 ? 's' : '' }}
+              available
+            </div>
             }
 
             @if (option.id === 'account') {
-              <div class="relay-count">
-                {{ accountRelay.getRelayUrls().length }} relay{{
-                  accountRelay.getRelayUrls().length !== 1 ? 's' : ''
-                }}
-                available
-              </div>
+            <div class="relay-count">
+              {{ accountRelay.getRelayUrls().length }} relay{{
+              accountRelay.getRelayUrls().length !== 1 ? 's' : ''
+              }}
+              available
+            </div>
             }
           </div>
         </mat-checkbox>
       </div>
-    }
+      }
 
-    @if (isOptionSelected('custom')) {
+      @if (isOptionSelected('custom')) {
       <div class="custom-relays-section">
         <h4>Custom Relays</h4>
         <div class="custom-relay-input">
           <mat-form-field class="relay-input">
             <mat-label>Relay URL</mat-label>
-            <input
-              matInput
-              [(ngModel)]="customRelayInput"
-              placeholder="wss://relay.example.com"
-              (keydown.enter)="addCustomRelay()"
-            />
+            <input matInput [(ngModel)]="customRelayInput" placeholder="wss://relay.example.com"
+              (keydown.enter)="addCustomRelay()" />
           </mat-form-field>
           <button mat-icon-button type="button" class="primary" (click)="addCustomRelay()">
             <mat-icon>add</mat-icon>
@@ -92,111 +77,109 @@
         </div>
 
         @if (customRelays().length > 0) {
-          <div class="custom-relays-list">
-            <mat-chip-listbox>
-              @for (relay of customRelays(); track $index) {
-                <mat-chip-option>
-                  {{ relay }}
-                  <button matChipRemove type="button" (click)="removeCustomRelay(relay)">
-                    <mat-icon>cancel</mat-icon>
-                  </button>
-                </mat-chip-option>
-              }
-            </mat-chip-listbox>
-          </div>
+        <div class="custom-relays-list">
+          <mat-chip-listbox>
+            @for (relay of customRelays(); track $index) {
+            <mat-chip-option>
+              {{ relay }}
+              <button matChipRemove type="button" (click)="removeCustomRelay(relay)">
+                <mat-icon>cancel</mat-icon>
+              </button>
+            </mat-chip-option>
+            }
+          </mat-chip-listbox>
+        </div>
         }
       </div>
-    }
-  </div>
+      }
+    </div>
 
-  @if (publishResults().length > 0) {
+    @if (publishResults().length > 0) {
     <div class="publish-results">
       <h4>Publishing Results</h4>
       <mat-list>
         @for (result of publishResults(); track result.url) {
-          <mat-list-item>
-            <div class="result-content">
-              <div class="relay-url">{{ result.url }}</div>
-              <div class="result-status"
-                [class.status-pending]="result.status === 'pending'"
-                [class.status-success]="result.status === 'success'"
-                [class.status-error]="result.status === 'error'">
-                @if (result.status === 'pending') {
-                  <mat-spinner diameter="16"></mat-spinner>
-                  <span>Publishing...</span>
-                } @else if (result.status === 'success') {
-                  <mat-icon class="status-success-icon">check_circle</mat-icon>
-                  <span>Success</span>
-                } @else {
-                  <mat-icon class="status-error-icon">error</mat-icon>
-                  <span>Failed: {{ result.message }}</span>
-                }
-              </div>
+        <mat-list-item>
+          <div class="result-content">
+            <div class="relay-url">{{ result.url }}</div>
+            <div class="result-status" [class.status-pending]="result.status === 'pending'"
+              [class.status-success]="result.status === 'success'" [class.status-error]="result.status === 'error'">
+              @if (result.status === 'pending') {
+              <mat-spinner diameter="16"></mat-spinner>
+              <span>Publishing...</span>
+              } @else if (result.status === 'success') {
+              <mat-icon class="status-success-icon">check_circle</mat-icon>
+              <span>Success</span>
+              } @else {
+              <mat-icon class="status-error-icon">error</mat-icon>
+              <span>Failed: {{ result.message }}</span>
+              }
             </div>
-          </mat-list-item>
+          </div>
+        </mat-list-item>
         }
       </mat-list>
     </div>
-  }
+    }
 
-  @if (showRelaysView()) {
+    @if (showRelaysView()) {
     <div class="relays-view-section">
       <h4>Target Relays</h4>
       <div class="relays-list">
         @if (getTargetRelays().length > 0) {
-          @for (relay of getTargetRelays(); track $index) {
-            <div class="relay-item">
-              <mat-icon>dns</mat-icon>
-              <span class="relay-url">{{ relay }}</span>
-            </div>
-          }
+        @for (relay of getTargetRelays(); track $index) {
+        <div class="relay-item">
+          <mat-icon>dns</mat-icon>
+          <span class="relay-url">{{ relay }}</span>
+        </div>
+        }
         } @else {
-          <div class="no-relays">
-            <mat-icon>warning</mat-icon>
-            <span>No relays selected for publishing</span>
-          </div>
+        <div class="no-relays">
+          <mat-icon>warning</mat-icon>
+          <span>No relays selected for publishing</span>
+        </div>
         }
       </div>
     </div>
-  }
-  </div>
-
-<div dialog-actions>
-  <div class="block-toggle-section">
-    <mat-slide-toggle [(ngModel)]="shouldBlock" color="warn">
-      @if (data.target.type === 'user') {
-        Block User
-      } @else {
-        Block Content
-      }
-    </mat-slide-toggle>
-  </div>
-
-  <button mat-button type="button" (click)="toggleRelaysView()">
-    <mat-icon>{{ showRelaysView() ? 'visibility_off' : 'dns' }}</mat-icon>
-    {{ showRelaysView() ? 'Hide' : 'Show' }} Relays
-  </button>
-
-  <button mat-button type="button" (click)="close()">
-    @if (publishResults().length > 0) {
-      Close
-    } @else {
-      Cancel
     }
-  </button>
+  </div>
 
-  <button mat-flat-button type="button" class="warn" (click)="submitReport()" [disabled]="!canSubmit()">
-    @if (isSubmitting()) {
+  <div dialog-actions>
+    <div class="block-toggle-section">
+      <mat-slide-toggle [(ngModel)]="shouldBlock" color="warn">
+        @if (data.target.type === 'user') {
+        Block User
+        } @else {
+        Block Content
+        }
+      </mat-slide-toggle>
+    </div>
+
+    <button mat-button type="button" (click)="toggleRelaysView()">
+      <mat-icon>{{ showRelaysView() ? 'visibility_off' : 'dns' }}</mat-icon>
+      {{ showRelaysView() ? 'Hide' : 'Show' }} Relays
+    </button>
+
+    <button mat-button type="button" (click)="close()">
+      @if (publishResults().length > 0) {
+      Close
+      } @else {
+      Cancel
+      }
+    </button>
+
+    <button mat-flat-button type="button" class="warn" (click)="submitReport()" [disabled]="!canSubmit()">
+      @if (isSubmitting()) {
       <mat-spinner diameter="16"></mat-spinner>
       Submitting...
-    } @else {
+      } @else {
       @let relayCount = getTargetRelays().length;
       @if (relayCount > 0) {
-        Submit Report to {{ relayCount }} Relay{{ relayCount !== 1 ? 's' : '' }}
+      Submit Report to {{ relayCount }} Relay{{ relayCount !== 1 ? 's' : '' }}
       } @else {
-        Select Publishing Targets
+      Select Publishing Targets
       }
-    }
-  </button>
-</div>
+      }
+    </button>
+  </div>
 </app-material-custom-dialog>

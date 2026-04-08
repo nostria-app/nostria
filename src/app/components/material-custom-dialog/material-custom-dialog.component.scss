@@ -134,7 +134,7 @@
     margin: 0;
   }
 
-  .dialog-content > [dialog-content] {
+  .dialog-content>[dialog-content] {
     min-width: 0;
   }
 
@@ -202,7 +202,7 @@
     background: var(--mat-sys-surface);
   }
 
-  .dialog-actions > [dialog-actions] {
+  .dialog-actions>[dialog-actions] {
     min-width: 0;
   }
 

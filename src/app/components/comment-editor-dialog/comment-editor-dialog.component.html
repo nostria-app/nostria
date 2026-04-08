@@ -1,9 +1,5 @@
-<app-material-custom-dialog
-  [title]="getTitle()"
-  [icon]="data.parentComment ? 'reply' : 'comment'"
-  [showDefaultActions]="false"
-  [showCloseButton]="false"
->
+<app-material-custom-dialog [title]="getTitle()" [icon]="data.parentComment ? 'reply' : 'comment'"
+  [showDefaultActions]="false" [showCloseButton]="false">
   <div dialog-content class="comment-editor-dialog">
     <div class="editor-container">
       <div class="reply-context">
@@ -72,7 +68,8 @@
       Publishing...
     </button>
     } @else {
-    <button mat-flat-button type="button" class="primary" (click)="onPublish()" [disabled]="!content().trim() && !audioAttachment()">
+    <button mat-flat-button type="button" class="primary" (click)="onPublish()"
+      [disabled]="!content().trim() && !audioAttachment()">
       <mat-icon>send</mat-icon>
       Publish Comment
     </button>

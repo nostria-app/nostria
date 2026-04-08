@@ -1,9 +1,5 @@
-<app-material-custom-dialog
-  [title]="data.title || 'QR Code'"
-  icon="qr_code"
-  [showDefaultActions]="false"
-  [showCloseButton]="false"
->
+<app-material-custom-dialog [title]="data.title || 'QR Code'" icon="qr_code" [showDefaultActions]="false"
+  [showCloseButton]="false">
   <div dialog-content class="qr-code-content centered-dialog-content">
     <canvas #qrCanvas></canvas>
     <br />
@@ -54,6 +50,7 @@
   </div>
 
   <div dialog-actions>
-    <button mat-button type="button" cdkFocusInitial (click)="close()">{{ data.mode === 'remote-signer' ? 'Cancel' : 'Close' }}</button>
+    <button mat-button type="button" cdkFocusInitial (click)="close()">{{ data.mode === 'remote-signer' ? 'Cancel' :
+      'Close' }}</button>
   </div>
 </app-material-custom-dialog>

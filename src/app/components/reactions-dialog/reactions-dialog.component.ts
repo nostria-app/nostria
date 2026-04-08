@@ -622,7 +622,7 @@ export class ReactionsDialogComponent {
     }
 
     const shortcode = event.content.slice(1, -1); // Remove colons
-    
+
     // First, try to get URL from the event's emoji tag (NIP-30)
     const emojiTag = event.tags.find(tag => tag[0] === 'emoji' && tag[1] === shortcode);
     if (emojiTag?.[2]) {

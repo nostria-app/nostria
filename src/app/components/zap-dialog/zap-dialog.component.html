@@ -1,11 +1,9 @@
 <app-material-custom-dialog
   [title]="currentState() === 'input' ? (data.recipientName ? 'Zap to ' + data.recipientName : 'Zap') : 'Confirm Lightning Zap'"
-  icon="bolt"
-  [showDefaultActions]="false"
->
-<div dialog-content class="zap-dialog" [class.confirmation-state]="currentState() === 'confirmation'">
-  <!-- Input State -->
-  @if (currentState() === 'input') {
+  icon="bolt" [showDefaultActions]="false">
+  <div dialog-content class="zap-dialog" [class.confirmation-state]="currentState() === 'confirmation'">
+    <!-- Input State -->
+    @if (currentState() === 'input') {
     @if (lnurlError()) {
     <div class="error-message">
       <mat-icon>error</mat-icon>
@@ -218,17 +216,18 @@
       {{ errorMessage() }}
     </div>
     }
-  <div dialog-actions>
-    <button mat-button type="button" (click)="onCancel()" [disabled]="isProcessing()" i18n="@@common.cancel">Cancel</button>
-    <button mat-flat-button type="button" class="primary" (click)="proceedToConfirmation()" [disabled]="isProcessing() || !zapForm.valid"
-      i18n="@@zap.dialog.continue">
-      Continue ({{ getFinalAmount() }} sats)
-    </button>
-  </div>
-  }
+    <div dialog-actions>
+      <button mat-button type="button" (click)="onCancel()" [disabled]="isProcessing()"
+        i18n="@@common.cancel">Cancel</button>
+      <button mat-flat-button type="button" class="primary" (click)="proceedToConfirmation()"
+        [disabled]="isProcessing() || !zapForm.valid" i18n="@@zap.dialog.continue">
+        Continue ({{ getFinalAmount() }} sats)
+      </button>
+    </div>
+    }
 
-  <!-- Confirmation State -->
-  @if (currentState() === 'confirmation') {
+    <!-- Confirmation State -->
+    @if (currentState() === 'confirmation') {
     <div class="confirmation-content">
       <!-- Recipient Info -->
       <div class="section recipient-section">
@@ -438,48 +437,48 @@
         </div>
       </div>
     </div>
-  <div dialog-actions>
-    <button mat-button type="button" (click)="backToInput()" [disabled]="isProcessing()">Back</button>
+    <div dialog-actions>
+      <button mat-button type="button" (click)="backToInput()" [disabled]="isProcessing()">Back</button>
 
-    @if (selectedPaymentMethod() === 'nwc') {
-    <button mat-flat-button type="button" class="confirm-button primary" (click)="confirmNwcPayment()"
-      [disabled]="isProcessing() || !hasNwcWallet()">
-      @if (isProcessing()) {
-      <span class="button-content">
-        <mat-spinner diameter="18"></mat-spinner>
-        Processing...
-      </span>
+      @if (selectedPaymentMethod() === 'nwc') {
+      <button mat-flat-button type="button" class="confirm-button primary" (click)="confirmNwcPayment()"
+        [disabled]="isProcessing() || !hasNwcWallet()">
+        @if (isProcessing()) {
+        <span class="button-content">
+          <mat-spinner diameter="18"></mat-spinner>
+          Processing...
+        </span>
+        } @else {
+        <span class="button-content">
+          <mat-icon>bolt</mat-icon>
+          Send Zap
+        </span>
+        }
+      </button>
+      } @else if (selectedPaymentMethod() === 'native' || selectedPaymentMethod() === 'manual') {
+      @if (!invoiceUrl()) {
+      <button mat-flat-button type="button" class="confirm-button primary" (click)="generateInvoice()"
+        [disabled]="isProcessing()">
+        @if (isProcessing()) {
+        <span class="button-content">
+          <mat-spinner diameter="18"></mat-spinner>
+          Generating...
+        </span>
+        } @else {
+        <span class="button-content">
+          <mat-icon>receipt</mat-icon>
+          {{ selectedPaymentMethod() === 'native' ? 'Generate Invoice' : 'Generate QR Code' }}
+        </span>
+        }
+      </button>
       } @else {
-      <span class="button-content">
-        <mat-icon>bolt</mat-icon>
-        Send Zap
-      </span>
+      <button mat-flat-button type="button" class="confirm-button primary" (click)="markAsPaid()">
+        <mat-icon>check</mat-icon>
+        I've Paid
+      </button>
       }
-    </button>
-    } @else if (selectedPaymentMethod() === 'native' || selectedPaymentMethod() === 'manual') {
-    @if (!invoiceUrl()) {
-    <button mat-flat-button type="button" class="confirm-button primary" (click)="generateInvoice()"
-      [disabled]="isProcessing()">
-      @if (isProcessing()) {
-      <span class="button-content">
-        <mat-spinner diameter="18"></mat-spinner>
-        Generating...
-      </span>
-      } @else {
-      <span class="button-content">
-        <mat-icon>receipt</mat-icon>
-        {{ selectedPaymentMethod() === 'native' ? 'Generate Invoice' : 'Generate QR Code' }}
-      </span>
       }
-    </button>
-    } @else {
-    <button mat-flat-button type="button" class="confirm-button primary" (click)="markAsPaid()">
-      <mat-icon>check</mat-icon>
-      I've Paid
-    </button>
-    }
+    </div>
     }
   </div>
-  }
-</div>
 </app-material-custom-dialog>

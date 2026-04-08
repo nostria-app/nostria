@@ -1,9 +1,5 @@
-<app-material-custom-dialog
-  title="Save to Bookmark Folder"
-  icon="bookmark"
-  [showDefaultActions]="false"
-  [showCloseButton]="false"
->
+<app-material-custom-dialog title="Save to Bookmark Folder" icon="bookmark" [showDefaultActions]="false"
+  [showCloseButton]="false">
   <div dialog-content>
     @if (!showNewListInput() && !showNewBoardInput()) {
     <mat-list>
@@ -86,12 +82,14 @@
     <div class="new-list-form">
       <mat-form-field appearance="outline" class="full-width">
         <mat-label>Folder Name</mat-label>
-        <input matInput [(ngModel)]="newListName" placeholder="Enter folder name" (keyup.enter)="createAndAddToNewList()">
+        <input matInput [(ngModel)]="newListName" placeholder="Enter folder name"
+          (keyup.enter)="createAndAddToNewList()">
       </mat-form-field>
 
       <div class="form-actions">
         <button mat-button type="button" (click)="cancelNewList()" [disabled]="creatingList()">Cancel</button>
-        <button mat-flat-button type="button" class="primary" (click)="createAndAddToNewList()" [disabled]="!newListName().trim() || creatingList()">
+        <button mat-flat-button type="button" class="primary" (click)="createAndAddToNewList()"
+          [disabled]="!newListName().trim() || creatingList()">
           @if (creatingList()) {
           Creating...
           } @else {
@@ -110,7 +108,8 @@
 
       <div class="form-actions">
         <button mat-button type="button" (click)="cancelNewBoard()" [disabled]="creatingBoard()">Cancel</button>
-        <button mat-flat-button type="button" class="primary" (click)="createAndAddToNewBoard()" [disabled]="!newBoardName().trim() || creatingBoard()">
+        <button mat-flat-button type="button" class="primary" (click)="createAndAddToNewBoard()"
+          [disabled]="!newBoardName().trim() || creatingBoard()">
           @if (creatingBoard()) {
           Creating...
           } @else {

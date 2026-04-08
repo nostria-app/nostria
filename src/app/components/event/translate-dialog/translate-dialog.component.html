@@ -1,9 +1,4 @@
-<app-material-custom-dialog
-  title="Translation"
-  icon="translate"
-  [showDefaultActions]="false"
-  [showCloseButton]="false"
->
+<app-material-custom-dialog title="Translation" icon="translate" [showDefaultActions]="false" [showCloseButton]="false">
   <div dialog-content>
     <div class="language-selectors">
       <mat-form-field appearance="outline">
@@ -49,13 +44,15 @@
 
     <div class="ai-warning">
       <mat-icon>info</mat-icon>
-      <p>Translations are performed by AI models running locally in your browser. The results may contain inaccuracies or
+      <p>Translations are performed by AI models running locally in your browser. The results may contain inaccuracies
+        or
         mistakes. AI-generated translations should be reviewed and verified for accuracy before relying on them.</p>
     </div>
   </div>
 
   <div dialog-actions>
     <button mat-button type="button" (click)="close()">Close</button>
-    <button mat-flat-button type="button" class="primary" (click)="translate()" [disabled]="isTranslating()">Translate</button>
+    <button mat-flat-button type="button" class="primary" (click)="translate()"
+      [disabled]="isTranslating()">Translate</button>
   </div>
 </app-material-custom-dialog>

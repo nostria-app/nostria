@@ -1,16 +1,12 @@
-<app-material-custom-dialog
-  title="Rename Playlist"
-  icon="edit_note"
-  [showDefaultActions]="false"
-  [showCloseButton]="false"
->
+<app-material-custom-dialog title="Rename Playlist" icon="edit_note" [showDefaultActions]="false"
+  [showCloseButton]="false">
   <div dialog-content>
     <form [formGroup]="renameForm" (ngSubmit)="onSubmit()">
       <mat-form-field appearance="outline" class="full-width">
         <mat-label>Playlist Name</mat-label>
         <input matInput formControlName="name" placeholder="Enter new playlist name" required />
         @if (renameForm.get('name')?.hasError('required')) {
-          <mat-error>Playlist name is required</mat-error>
+        <mat-error>Playlist name is required</mat-error>
         }
       </mat-form-field>
     </form>
