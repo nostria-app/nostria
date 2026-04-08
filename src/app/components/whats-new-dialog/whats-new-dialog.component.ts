@@ -89,7 +89,7 @@ interface FeatureUpdate {
     MatCardModule,
     MatDividerModule,
     NgOptimizedImage
-],
+  ],
 })
 export class WhatsNewDialogComponent {
   dialogTitle = `What's New in Nostria`;

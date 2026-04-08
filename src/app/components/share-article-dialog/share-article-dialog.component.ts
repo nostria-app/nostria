@@ -1145,12 +1145,16 @@ export class ShareArticleDialogComponent {
       // Dynamically import NoteEditorDialogComponent to avoid circular dependency
       const { NoteEditorDialogComponent } = await import('../note-editor-dialog/note-editor-dialog.component');
 
-      this.customDialog.open(NoteEditorDialogComponent, {
-        title: 'Share Article',
-        data: noteData,
-        panelClass: 'note-editor-dialog-panel',
-        width: '680px',
+      this.matDialog.open(NoteEditorDialogComponent, {
+        data: {
+          ...noteData,
+          dialogTitle: 'Share Article',
+        },
+        panelClass: ['material-custom-dialog-panel', 'note-editor-dialog-panel'],
         maxWidth: '95vw',
+        disableClose: true,
+        autoFocus: false,
+        restoreFocus: false,
       });
     }, 100);
   }

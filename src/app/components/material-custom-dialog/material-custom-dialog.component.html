@@ -1,8 +1,15 @@
 <div class="material-custom-dialog">
+  @if (showHeader()) {
   <div class="dialog-header">
     <div class="dialog-header-leading">
-      <div class="header-icon-surface" aria-hidden="true">
+      <div class="header-icon-surface" [class.image-icon-surface]="resolvedIconMode() === 'image'" aria-hidden="true">
+        @if (resolvedIconMode() === 'image') {
+        <img [src]="resolvedIcon()" [alt]="resolvedTitle() || 'Dialog'" class="header-icon header-image-icon" />
+        } @else if (resolvedIconMode() === 'material') {
         <mat-icon class="header-icon">{{ resolvedIcon() }}</mat-icon>
+        } @else {
+        <span class="header-icon emoji-header-icon">{{ resolvedIcon() }}</span>
+        }
       </div>
     </div>
 
@@ -17,6 +24,7 @@
       }
     </div>
   </div>
+  }
 
   <div mat-dialog-content class="dialog-content">
     @if (resolvedMessage()) {
@@ -37,10 +45,18 @@
     </div>
     }
 
+    @if (contentTemplate(); as template) {
+    <ng-container [ngTemplateOutlet]="template"></ng-container>
+    }
+
     <ng-content select="[dialog-content]"></ng-content>
   </div>
 
   <div mat-dialog-actions class="dialog-actions">
+    @if (actionsTemplate(); as template) {
+    <ng-container [ngTemplateOutlet]="template"></ng-container>
+    }
+
     <ng-content select="[dialog-actions]"></ng-content>
 
     @if (showDefaultActions()) {

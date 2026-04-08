@@ -1101,6 +1101,7 @@ export class LayoutService implements OnDestroy {
   effectiveHideMobileNav = computed(() => this.hideMobileNav() || this.keyboardMobileNavHidden());
   private keyboardViewportBaseline = 0;
   private keyboardVisibilityHandler?: () => void;
+  private keyboardVisibilityUpdateQueued = false;
 
   // Signal to control shoutout overlay visibility
   showShoutoutOverlay = signal(false);
@@ -1113,7 +1114,7 @@ export class LayoutService implements OnDestroy {
     this.teardownKeyboardVisibilityMonitoring();
 
     this.keyboardVisibilityHandler = () => {
-      this.updateKeyboardMobileNavHidden();
+      this.scheduleKeyboardMobileNavUpdate();
     };
 
     document.addEventListener('focusin', this.keyboardVisibilityHandler, true);
@@ -1122,7 +1123,7 @@ export class LayoutService implements OnDestroy {
     window.visualViewport?.addEventListener('resize', this.keyboardVisibilityHandler, { passive: true });
     window.visualViewport?.addEventListener('scroll', this.keyboardVisibilityHandler, { passive: true });
 
-    this.updateKeyboardMobileNavHidden();
+    this.scheduleKeyboardMobileNavUpdate();
   }
 
   private teardownKeyboardVisibilityMonitoring(): void {
@@ -1137,7 +1138,20 @@ export class LayoutService implements OnDestroy {
     window.visualViewport?.removeEventListener('scroll', this.keyboardVisibilityHandler);
     this.keyboardVisibilityHandler = undefined;
     this.keyboardViewportBaseline = 0;
+    this.keyboardVisibilityUpdateQueued = false;
     this.keyboardMobileNavHidden.set(false);
+  }
+
+  private scheduleKeyboardMobileNavUpdate(): void {
+    if (this.keyboardVisibilityUpdateQueued) {
+      return;
+    }
+
+    this.keyboardVisibilityUpdateQueued = true;
+    queueMicrotask(() => {
+      this.keyboardVisibilityUpdateQueued = false;
+      this.updateKeyboardMobileNavHidden();
+    });
   }
 
   private updateKeyboardMobileNavHidden(): void {

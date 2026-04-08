@@ -1,3 +1,66 @@
+.note-editor-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.note-editor-secondary-header-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: var(--mat-sys-corner-full);
+  background: var(--mat-sys-surface-container-low);
+  box-shadow: var(--mat-sys-level1);
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.2s ease;
+
+  &.active {
+    background: var(--mat-sys-surface-container-high);
+  }
+
+  &:hover {
+    background: var(--mat-sys-surface-container-highest);
+  }
+
+  &:active {
+    transform: scale(0.96);
+  }
+
+  @media (max-width: 700px),
+  (max-height: 700px) {
+    width: 24px;
+    height: 24px;
+  }
+}
+
+.note-editor-secondary-header-icon {
+  width: 100%;
+  height: 100%;
+  border-radius: var(--mat-sys-corner-full);
+  object-fit: contain;
+  opacity: 0.85;
+}
+
+.note-editor-close-button {
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.note-editor-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 .note-editor-dialog {
   --note-editor-mobile-viewport-cap: 100%;
   --note-editor-mobile-textarea-max-height: 100%;
@@ -559,9 +622,34 @@
 }
 
 .composer-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  width: 100%;
   padding: 0;
   background-color: transparent;
   flex-shrink: 0;
+
+  .left-actions,
+  .right-actions {
+    display: flex;
+    align-items: center;
+    align-self: center;
+  }
+
+  .left-actions {
+    flex: 1 1 auto;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    gap: 8px;
+    min-width: 0;
+  }
+
+  .right-actions {
+    flex: 0 0 auto;
+    gap: 12px;
+    margin-left: auto;
+  }
 
   &.has-media {
     gap: 8px;
@@ -589,6 +677,20 @@
     z-index: 1;
     padding: 0;
     border-top: 0;
+
+    &:not(.has-media) {
+      flex-wrap: nowrap;
+    }
+
+    .left-actions {
+      flex: 0 1 auto;
+      gap: 6px;
+    }
+
+    .right-actions {
+      flex: 0 0 auto;
+      gap: 8px;
+    }
   }
 }
 

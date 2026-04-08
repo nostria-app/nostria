@@ -1,7 +1,7 @@
 import { Component, effect, inject, PLATFORM_ID, ChangeDetectionStrategy } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
+import { MatDialog } from '@angular/material/dialog';
 import { ActivatedRoute, Router } from '@angular/router';
-import { CustomDialogService } from '../../services/custom-dialog.service';
 import { AccountStateService } from '../../services/account-state.service';
 import { ApplicationService } from '../../services/application.service';
 import { take } from 'rxjs/operators';
@@ -15,7 +15,7 @@ import { ImageCacheService } from '../../services/image-cache.service';
 export class ShareTargetComponent {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
-  private customDialog = inject(CustomDialogService);
+  private dialog = inject(MatDialog);
   private accountState = inject(AccountStateService);
   private app = inject(ApplicationService);
   private imageCacheService = inject(ImageCacheService);
@@ -153,14 +153,18 @@ export class ShareTargetComponent {
       const profilePicture = this.accountState.profile()?.data?.picture;
       const headerIcon = profilePicture ? this.imageCacheService.getOptimizedImageUrl(profilePicture) : '';
 
-      this.customDialog.open(NoteEditorDialogComponent, {
-        title: 'Create Note',
-        headerIcon,
-        data: { content, files },
-        panelClass: 'note-editor-dialog-panel',
-        width: '680px',
+      this.dialog.open(NoteEditorDialogComponent, {
+        data: {
+          content,
+          files,
+          dialogTitle: 'Create Note',
+          dialogHeaderIcon: headerIcon,
+        },
+        panelClass: ['material-custom-dialog-panel', 'note-editor-dialog-panel'],
         maxWidth: '95vw',
-        disableClose: true
+        disableClose: true,
+        autoFocus: false,
+        restoreFocus: false,
       });
     }
 

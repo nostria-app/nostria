@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, ViewEncapsulation, computed, inject, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, TemplateRef, ViewEncapsulation, computed, inject, input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
@@ -41,6 +41,9 @@ export class MaterialCustomDialogComponent {
   primaryActionText = input<string>();
   secondaryActionText = input<string>();
   details = input<MaterialCustomDialogDetail[]>();
+  contentTemplate = input<TemplateRef<unknown> | null>(null);
+  actionsTemplate = input<TemplateRef<unknown> | null>(null);
+  showHeader = input(true);
   showDefaultActions = input(true);
   showCloseButton = input(true);
 
@@ -58,6 +61,23 @@ export class MaterialCustomDialogComponent {
     () => this.secondaryActionText() ?? this.data?.secondaryActionText ?? this.defaultSecondaryActionText,
   );
   resolvedDetails = computed(() => this.details() ?? this.data?.details ?? []);
+  resolvedIconMode = computed<'image' | 'material' | 'emoji'>(() => {
+    const icon = this.resolvedIcon();
+
+    if (!icon) {
+      return 'material';
+    }
+
+    if (icon.includes('/') || icon.startsWith('data:')) {
+      return 'image';
+    }
+
+    if (/^[a-zA-Z0-9_]+$/.test(icon)) {
+      return 'material';
+    }
+
+    return 'emoji';
+  });
 
   close(result = false): void {
     this.dialogRef?.close(result);

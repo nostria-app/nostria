@@ -15,6 +15,7 @@ import {
   ChangeDetectionStrategy,
   effect,
 } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
 import { CustomDialogRef, CustomDialogService } from '../../services/custom-dialog.service';
 import { MatButtonModule } from '@angular/material/button';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
@@ -53,7 +54,7 @@ import { MentionInputService, MentionDetectionResult } from '../../services/ment
 import { UtilitiesService } from '../../services/utilities.service';
 import { PublishEventBus, PublishRelayResultEvent } from '../../services/publish-event-bus.service';
 import { Subscription } from 'rxjs';
-import { MatDialog } from '@angular/material/dialog';
+import { MAT_DIALOG_DATA, MatDialog, MatDialogRef } from '@angular/material/dialog';
 import { ConfirmDialogComponent } from '../confirm-dialog/confirm-dialog.component';
 import { MatMenuModule, MatMenuTrigger } from '@angular/material/menu';
 import { AiService } from '../../services/ai.service';
@@ -85,9 +86,12 @@ import {
   type MediaUploadSettings,
   type VideoOptimizationProfile,
 } from '../../interfaces/media-upload';
+import { MaterialCustomDialogComponent } from '../material-custom-dialog/material-custom-dialog.component';
 
 // Re-export for backward compatibility
 export type { NoteEditorDialogData } from '../../interfaces/note-editor';
+
+type NoteEditorDialogResult = { published: boolean; event?: NostrEvent };
 
 interface MediaMetadata {
   id?: string;
@@ -166,6 +170,7 @@ interface SentimentHeaderState {
 @Component({
   selector: 'app-note-editor-dialog',
   imports: [
+    NgTemplateOutlet,
     FormsModule,
     MatButtonModule,
     MatButtonToggleModule,
@@ -186,6 +191,7 @@ interface SentimentHeaderState {
     SlashCommandMenuComponent,
     MatMenuModule,
     UserProfileComponent,
+    MaterialCustomDialogComponent,
   ],
   providers: [provideNativeDateAdapter()],
   templateUrl: './note-editor-dialog.component.html',
@@ -199,7 +205,7 @@ interface SentimentHeaderState {
   },
 })
 export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestroy {
-  private readonly xHeaderIconUrl = '/logos/clients/x.png';
+  readonly xHeaderIconUrl = '/logos/clients/x.png';
   // Inline mode inputs/outputs
   /** When true, renders in inline mode (embedded in page) instead of dialog mode */
   inlineMode = input(false);
@@ -216,8 +222,11 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   // Inline mode state
   isExpanded = signal(false);
   private elementRef = inject(ElementRef);
+  private materialDialogRef = inject(MatDialogRef<NoteEditorDialogComponent, NoteEditorDialogResult>, { optional: true });
+  private materialDialogData = inject<NoteEditorDialogData | null>(MAT_DIALOG_DATA, { optional: true });
 
-  dialogRef?: CustomDialogRef<NoteEditorDialogComponent, { published: boolean; event?: NostrEvent }>;
+  dialogRef?: CustomDialogRef<NoteEditorDialogComponent, NoteEditorDialogResult>
+    | MatDialogRef<NoteEditorDialogComponent, NoteEditorDialogResult>;
   data: NoteEditorDialogData = {};
   private nostrService = inject(NostrService);
   private accountRelay = inject(AccountRelayService);
@@ -914,6 +923,39 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   xPostingAvailable = computed(() => this.xStatusReady() && this.xPremiumEligible() && this.xDualPost.status().connected && !this.isEdit() && !this.hasReplyTarget());
   xStatusLoading = computed(() => this.xDualPost.loading());
   xHeaderIndicatorVisible = computed(() => this.xPostingAvailable());
+  dialogTitle = computed(() => {
+    if (this.data.dialogTitle) {
+      return this.data.dialogTitle;
+    }
+
+    if (this.isEdit()) {
+      return 'Edit Note';
+    }
+
+    if (this.isReply()) {
+      return 'Reply to Note';
+    }
+
+    if (this.isQuote()) {
+      return 'Quote Note';
+    }
+
+    return 'Create Note';
+  });
+  dialogHeaderIcon = computed(() => this.data.dialogHeaderIcon || 'edit_square');
+  showShellHeader = computed(() => !this.isKeyboardCompactMode());
+  showXHeaderAction = computed(() => !this.inlineMode() && this.xHeaderIndicatorVisible() && this.postToX());
+  xHeaderActionTooltip = computed(() => {
+    if (!this.showXHeaderAction()) {
+      return '';
+    }
+
+    const username = this.xDualPost.status().username;
+    return username
+      ? `Post to X is on. Publishing as @${username}. Click to turn off.`
+      : 'Post to X is on. Click to turn off.';
+  });
+  xHeaderActionAriaLabel = computed(() => this.postToX() ? 'Turn off Post to X' : 'Turn on Post to X');
   hasPowResult = computed(() => this.powMinedEvent() !== null);
   powDifficulty = computed(() => this.powProgress().difficulty);
   powAttempts = computed(() => this.powProgress().attempts);
@@ -1116,7 +1158,6 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     }
     window.removeEventListener('resize', this.handleViewportResize);
     window.visualViewport?.removeEventListener('resize', this.handleViewportResize);
-    this.dialogRef?.updateShowHeader(true);
 
     // Clear auto-save timer on destroy
     if (this.autoSaveTimer) {
@@ -1173,22 +1214,6 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
         this.postToX.set(defaultXPosting);
         this.xPostingChoiceInitialized = true;
       }
-    });
-
-    effect(() => {
-      const canToggleXFromHeader = !this.inlineMode() && this.xHeaderIndicatorVisible() && this.postToX();
-      const secondaryHeaderIcon = canToggleXFromHeader ? this.xHeaderIconUrl : '';
-      const username = this.xDualPost.status().username;
-      const secondaryHeaderTooltip = secondaryHeaderIcon
-        ? this.postToX()
-          ? (username ? `Post to X is on. Publishing as @${username}. Click to turn off.` : 'Post to X is on. Click to turn off.')
-          : (username ? `Post to X is off. Click to publish as @${username}.` : 'Post to X is off. Click to turn on.')
-        : '';
-      this.dialogRef?.updateSecondaryHeaderIcon(secondaryHeaderIcon);
-      this.dialogRef?.updateSecondaryHeaderTooltip(secondaryHeaderTooltip);
-      this.dialogRef?.updateSecondaryHeaderActive(canToggleXFromHeader && this.postToX());
-      this.dialogRef?.updateSecondaryHeaderClickable(canToggleXFromHeader);
-      this.dialogRef?.updateSecondaryHeaderAriaLabel(this.postToX() ? 'Turn off Post to X' : 'Turn on Post to X');
     });
 
     // Load PoW settings from account state
@@ -1258,6 +1283,15 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   }
 
   ngOnInit() {
+    this.dialogRef ??= this.materialDialogRef ?? undefined;
+
+    if (!this.inlineMode() && this.materialDialogData) {
+      this.data = {
+        ...this.materialDialogData,
+        ...this.data,
+      };
+    }
+
     // In inline mode, initial setup is handled by the effect in constructor
     // This ensures reactivity when replyToEvent changes
     if (this.inlineMode() && this.replyToEvent()) {
@@ -2760,7 +2794,6 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     }
 
     this.isKeyboardCompactMode.set(enabled);
-    this.dialogRef?.updateShowHeader(!enabled);
   }
 
   private scheduleTextareaRefresh(

@@ -16,8 +16,7 @@
 </div>
 }
 
-<!-- Main Editor Content (Dialog mode always, Inline mode when expanded) -->
-@if (!inlineMode() || isExpanded()) {
+<ng-template #editorDialogContent>
 <!-- Content Area -->
 <div dialog-content class="note-editor-dialog" [class.inline-editor]="inlineMode()" #noteEditorLayout>
   <div class="dialog-content-wrapper" [class.scrollable]="showAdvancedOptions()"
@@ -451,7 +450,9 @@
     } -->
   </div>
 </div>
+</ng-template>
 
+<ng-template #editorDialogActions>
 <div dialog-actions class="action-container composer-actions" [class.inline-actions]="inlineMode()"
   [class.has-media]="mediaMetadata().length > 0 && !showPreview() && !showAdvancedOptions()" #composerActions
   (dragenter)="!showPreview() && !showAdvancedOptions() && onDragEnter($event)"
@@ -660,4 +661,29 @@
   </div>
   }
 </div>
+</ng-template>
+
+@if (!inlineMode()) {
+<app-material-custom-dialog class="note-editor-shell" [title]="dialogTitle()" [icon]="dialogHeaderIcon()"
+  [contentTemplate]="editorDialogContent" [actionsTemplate]="editorDialogActions" [showHeader]="showShellHeader()"
+  [showDefaultActions]="false" [showCloseButton]="false">
+  <div dialog-header-actions class="note-editor-header-actions">
+    @if (showXHeaderAction()) {
+    <button type="button" class="note-editor-secondary-header-button" [class.active]="postToX()"
+      [matTooltip]="xHeaderActionTooltip()" [attr.aria-label]="xHeaderActionAriaLabel()" title="Post to X"
+      (click)="toggleSecondaryHeaderAction()">
+      <img [src]="xHeaderIconUrl" alt="Post to X" title="Post to X"
+        class="note-editor-secondary-header-icon" />
+      <span class="note-editor-visually-hidden">Toggle Post to X</span>
+    </button>
+    }
+
+    <button mat-icon-button type="button" class="note-editor-close-button" (click)="cancel()" aria-label="Close editor">
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
+</app-material-custom-dialog>
+} @else if (isExpanded()) {
+<ng-container [ngTemplateOutlet]="editorDialogContent"></ng-container>
+<ng-container [ngTemplateOutlet]="editorDialogActions"></ng-container>
 }

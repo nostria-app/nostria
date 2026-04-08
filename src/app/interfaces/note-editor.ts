@@ -5,6 +5,8 @@ import type { Event as NostrEvent } from 'nostr-tools';
  * Extracted to a separate file to avoid circular dependencies
  */
 export interface NoteEditorDialogData {
+  dialogTitle?: string;
+  dialogHeaderIcon?: string;
   /**
    * When false, do not navigate to the newly published event after publish succeeds.
    * Useful in thread views where the user should stay in-context.

@@ -76,6 +76,26 @@
     font-size: 24px;
   }
 
+  .image-icon-surface {
+    padding: 0;
+    overflow: hidden;
+  }
+
+  .header-image-icon {
+    width: 100%;
+    height: 100%;
+    border-radius: inherit;
+    object-fit: cover;
+  }
+
+  .emoji-header-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    line-height: 1;
+  }
+
   .dialog-title {
     display: flex;
     align-items: center;
@@ -172,6 +192,45 @@
   }
 }
 
+.material-custom-dialog-panel.note-editor-dialog-panel {
+  --material-custom-dialog-width: min(680px, 95vw);
+  --material-custom-dialog-min-height: 0;
+  --material-custom-dialog-max-height: calc(100dvh - var(--safe-area-top, 0px) - 32px);
+
+  app-material-custom-dialog.note-editor-shell {
+    display: flex;
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
+  app-material-custom-dialog.note-editor-shell .material-custom-dialog {
+    min-height: 0;
+    background: var(--mat-sys-surface);
+  }
+
+  app-material-custom-dialog.note-editor-shell .dialog-content {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+    padding: 0 18px;
+  }
+
+  app-material-custom-dialog.note-editor-shell .dialog-actions {
+    padding: 12px 18px 16px;
+    background: var(--mat-sys-surface);
+  }
+
+  app-material-custom-dialog.note-editor-shell .dialog-content > .note-editor-dialog {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-height: 0;
+    max-height: 100%;
+  }
+}
+
 @media (max-width: 700px),
 (max-height: 700px) {
   .material-custom-dialog-panel {
@@ -262,6 +321,21 @@
     .dialog-actions button {
       flex: 1 1 0;
       min-width: 0;
+    }
+  }
+
+  .material-custom-dialog-panel.note-editor-dialog-panel {
+    app-material-custom-dialog.note-editor-shell .dialog-content {
+      padding: 0 10px;
+    }
+
+    app-material-custom-dialog.note-editor-shell .dialog-actions {
+      padding: 10px 10px calc(10px + env(safe-area-inset-bottom, 0px));
+    }
+
+    app-material-custom-dialog.note-editor-shell .dialog-content > .note-editor-dialog {
+      height: 100%;
+      max-height: 100%;
     }
   }
 }

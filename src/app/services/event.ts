@@ -1,5 +1,6 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { Event, kinds, nip19, Filter } from 'nostr-tools';
+import { firstValueFrom } from 'rxjs';
 import { LoggerService } from './logger.service';
 import { DataService } from './data.service';
 import { UtilitiesService } from './utilities.service';
@@ -2593,39 +2594,25 @@ export class EventService {
     const profilePicture = this.accountState.profile()?.data?.picture;
     const headerIcon = profilePicture ? this.imageCacheService.getOptimizedImageUrl(profilePicture) : '';
 
-    // Open note editor dialog using custom dialog service
-    const dialogRef = this.customDialog.open<typeof NoteEditorDialogComponent.prototype, { published: boolean; event?: Event }>(
-      NoteEditorDialogComponent,
-      {
-        title,
-        headerIcon,
-        panelClass: 'note-editor-dialog-panel',
-        width: '680px',
-        maxWidth: '95vw',
-        disableClose: true,
-        data,
-      }
-    );
-
-    // Set the dialogRef and data on the component instance
-    dialogRef.componentInstance.dialogRef = dialogRef;
-    dialogRef.componentInstance.data = data;
-
-    // Wait for dialog to close and return the result
-    return new Promise<{ published: boolean; event?: Event } | undefined>((resolve) => {
-      const checkClosed = () => {
-        const result = dialogRef.afterClosed()();
-        if (result !== undefined) {
-          if (result?.published) {
-            this.logger.debug('Note published successfully:', result.event);
-          }
-          resolve(result ?? undefined);
-        } else {
-          setTimeout(checkClosed, 100);
-        }
-      };
-      checkClosed();
+    const dialogRef = this.dialog.open(NoteEditorDialogComponent, {
+      data: {
+        ...data,
+        dialogTitle: title,
+        dialogHeaderIcon: headerIcon,
+      },
+      panelClass: ['material-custom-dialog-panel', 'note-editor-dialog-panel'],
+      maxWidth: '95vw',
+      disableClose: true,
+      autoFocus: false,
+      restoreFocus: false,
     });
+
+    const result = await firstValueFrom(dialogRef.afterClosed());
+    if (result?.published) {
+      this.logger.debug('Note published successfully:', result.event);
+    }
+
+    return result ?? undefined;
   }
 
   async createComment(rootEvent: Event): Promise<{ published: boolean; event?: Event } | undefined> {

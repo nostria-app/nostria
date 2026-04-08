@@ -1042,18 +1042,17 @@ export class EventMenuComponent {
     const profilePicture = this.accountState.profile()?.data?.picture;
     const headerIcon = profilePicture ? this.imageCacheService.getOptimizedImageUrl(profilePicture) : '';
 
-    const dialogRef = this.customDialog.open<typeof NoteEditorDialogComponent.prototype, { published: boolean; event?: Event }>(
-      NoteEditorDialogComponent, {
-      title: 'Edit Note',
-      headerIcon,
-      width: '680px',
+    this.dialog.open(NoteEditorDialogComponent, {
+      data: {
+        ...editData,
+        dialogTitle: 'Edit Note',
+        dialogHeaderIcon: headerIcon,
+      },
+      panelClass: ['material-custom-dialog-panel', 'note-editor-dialog-panel'],
       maxWidth: '95vw',
       disableClose: true,
-      data: editData,
-    }
-    );
-
-    dialogRef.componentInstance.dialogRef = dialogRef;
-    dialogRef.componentInstance.data = editData;
+      autoFocus: false,
+      restoreFocus: false,
+    });
   }
 }
