@@ -927,12 +927,11 @@ export class ProfileComponent implements OnDestroy, AfterViewInit {
     };
 
     this.customDialog.open(ShareArticleDialogComponent, {
-      title: '',
-      showCloseButton: false,
-      panelClass: 'share-sheet-dialog',
+      title: 'Share',
+      showCloseButton: true,
       data: dialogData,
-      width: '450px',
-      maxWidth: '95vw',
+      width: '560px',
+      maxWidth: 'min(560px, calc(100vw - 24px))',
     });
   }
 
@@ -1301,12 +1300,11 @@ export class ProfileComponent implements OnDestroy, AfterViewInit {
       };
 
       this.customDialog.open(ShareArticleDialogComponent, {
-        title: '',
-        showCloseButton: false,
-        panelClass: 'share-sheet-dialog',
+        title: 'Share',
+        showCloseButton: true,
         data: dialogData,
-        width: '450px',
-        maxWidth: '95vw',
+        width: '560px',
+        maxWidth: 'min(560px, calc(100vw - 24px))',
       });
     } catch (err) {
       this.logger.error('Failed to open invite dialog', err);

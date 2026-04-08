@@ -314,12 +314,11 @@ export class PollEditorComponent implements OnInit {
     };
 
     this.customDialog.open(ShareArticleDialogComponent, {
-      title: '',
-      showCloseButton: false,
-      panelClass: 'share-sheet-dialog',
+      title: 'Share',
+      showCloseButton: true,
       data: dialogData,
-      width: '450px',
-      maxWidth: '95vw',
+      width: '560px',
+      maxWidth: 'min(560px, calc(100vw - 24px))',
     });
   }
 }

@@ -67,8 +67,6 @@ export interface ShareArticleDialogData {
       </div>
       }
 
-      <div class="sheet-handle" aria-hidden="true"></div>
-
       <!-- Prominent Nostr Actions: Repost & Quote -->
       @if (canRepostOrQuote()) {
       <div class="prominent-actions">
@@ -252,7 +250,7 @@ export interface ShareArticleDialogData {
         }
       </div>
     </div>
-    <div dialog-actions class="dialog-actions">
+    <div dialog-actions class="share-dialog-actions">
       @if (selectedRecipients().length > 0) {
       <button mat-button (click)="close()" [disabled]="isSending()">Cancel</button>
       @if (isSending()) {
@@ -274,15 +272,6 @@ export interface ShareArticleDialogData {
     .share-dialog-content {
       min-width: 320px;
       position: relative;
-    }
-
-    .sheet-handle {
-      width: 56px;
-      height: 5px;
-      border-radius: var(--mat-sys-corner-full);
-      background: var(--mat-sys-outline);
-      opacity: 0.7;
-      margin: 4px auto 12px;
     }
 
     .sending-overlay {
@@ -472,9 +461,17 @@ export interface ShareArticleDialogData {
 
     .quick-contacts-grid {
       display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-template-columns: repeat(4, minmax(0, 1fr));
       gap: 10px;
       margin-bottom: 8px;
+
+      @media (max-width: 560px) {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      @media (max-width: 420px) {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
     }
 
     .quick-contact-chip {
@@ -599,7 +596,7 @@ export interface ShareArticleDialogData {
       font-size: 18px;
     }
 
-    .dialog-actions {
+    .share-dialog-actions {
       display: flex;
       justify-content: flex-end;
       gap: 12px;

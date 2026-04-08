@@ -1020,12 +1020,11 @@ export class SongDetailComponent implements OnInit, OnDestroy {
       };
 
       this.customDialog.open(ShareArticleDialogComponent, {
-        title: '',
-        showCloseButton: false,
-        panelClass: 'share-sheet-dialog',
+        title: 'Share',
+        showCloseButton: true,
         data: dialogData,
-        width: '450px',
-        maxWidth: '95vw',
+        width: '560px',
+        maxWidth: 'min(560px, calc(100vw - 24px))',
       });
     } catch {
       this.snackBar.open('Failed to share track', 'Close', { duration: 2000 });

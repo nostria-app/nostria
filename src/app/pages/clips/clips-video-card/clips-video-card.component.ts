@@ -270,12 +270,11 @@ export class ClipsVideoCardComponent implements OnDestroy {
       };
 
       this.customDialog.open(ShareArticleDialogComponent, {
-        title: '',
-        showCloseButton: false,
-        panelClass: 'share-sheet-dialog',
+        title: 'Share',
+        showCloseButton: true,
         data: dialogData,
-        width: '450px',
-        maxWidth: '95vw',
+        width: '560px',
+        maxWidth: 'min(560px, calc(100vw - 24px))',
       });
     } catch {
       this.snackBar.open('Unable to open share dialog', 'Dismiss', { duration: 2500 });

@@ -1224,8 +1224,8 @@ export class ChatsComponent implements OnInit, OnDestroy {
     };
 
     this.customDialog.open(ShareArticleDialogComponent, {
-      title: '',
-      showCloseButton: false,
+      title: 'Share',
+      showCloseButton: true,
       data: dialogData,
     });
   }
