@@ -51,8 +51,8 @@ targets:
           - UIInterfaceOrientationPortraitUpsideDown
           - UIInterfaceOrientationLandscapeLeft
           - UIInterfaceOrientationLandscapeRight
-        CFBundleShortVersionString: 3.1.19
-        CFBundleVersion: "3.1.19"
+        CFBundleShortVersionString: 3.1.20
+        CFBundleVersion: "3.1.20"
     entitlements:
       path: nostria_iOS/nostria_iOS.entitlements
     scheme:
