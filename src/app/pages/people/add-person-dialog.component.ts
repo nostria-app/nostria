@@ -1,6 +1,5 @@
 import { Component, inject, signal, computed, ChangeDetectionStrategy } from '@angular/core';
 
-import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
@@ -16,6 +15,7 @@ import { UserProfileComponent } from '../../components/user-profile/user-profile
 import { FollowSet, FollowSetsService } from '../../services/follow-sets.service';
 import { FollowingService } from '../../services/following.service';
 import { NostrRecord } from '../../interfaces';
+import { CustomDialogRef } from '../../services/custom-dialog.service';
 
 type DialogState = 'input' | 'loading' | 'preview' | 'error' | 'success';
 
@@ -27,7 +27,6 @@ export interface AddPersonDialogData {
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-add-person-dialog',
   imports: [
-    MatDialogModule,
     MatButtonModule,
     MatIconModule,
     MatInputModule,
@@ -37,13 +36,7 @@ export interface AddPersonDialogData {
     UserProfileComponent
   ],
   template: `
-    <div class="add-person-dialog">
-      <h2 mat-dialog-title>
-        <mat-icon>person_add</mat-icon>
-        {{ getDialogTitle() }}
-      </h2>
-
-      <mat-dialog-content>
+    <div dialog-content class="dialog-content">
         @switch (state()) {
           @case ('input') {
             <div class="input-section">
@@ -133,13 +126,13 @@ export interface AddPersonDialogData {
             </div>
           }
         }
-      </mat-dialog-content>
+    </div>
 
-      <mat-dialog-actions align="end">
+    <div dialog-actions class="dialog-actions">
         @switch (state()) {
           @case ('input') {
             <button mat-button (click)="onCancel()">Cancel</button>
-            <button mat-flat-button color="primary" (click)="onSearch()" [disabled]="!inputValue()">
+            <button mat-flat-button (click)="onSearch()" [disabled]="!inputValue()">
               Search
             </button>
           }
@@ -147,7 +140,6 @@ export interface AddPersonDialogData {
             <button mat-button (click)="onBack()">Back</button>
             <button
               mat-flat-button
-              color="primary"
               (click)="onFollow()"
               [disabled]="(alreadyFollowing() && !isAddingToSet()) || alreadyInSet()"
             >
@@ -155,33 +147,25 @@ export interface AddPersonDialogData {
             </button>
           }
           @case ('success') {
-            <button mat-flat-button color="primary" (click)="onClose()">Done</button>
+            <button mat-flat-button (click)="onClose()">Done</button>
           }
           @case ('error') {
             <button mat-button (click)="onBack()">Back</button>
-            <button mat-flat-button color="primary" (click)="onClose()">Close</button>
+            <button mat-flat-button (click)="onClose()">Close</button>
           }
         }
-      </mat-dialog-actions>
     </div>
   `,
   styles: [
     `
-      .add-person-dialog {
-        min-width: 400px;
-        max-width: 600px;
-
-        h2 {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          margin: 0;
-        }
+      :host {
+        display: block;
+        min-width: 0;
       }
 
-      mat-dialog-content {
+      .dialog-content {
+        min-width: min(400px, calc(100vw - 48px));
         min-height: 200px;
-        padding: 20px 24px;
       }
 
       .input-section {
@@ -300,16 +284,22 @@ export interface AddPersonDialogData {
         }
       }
 
-      mat-dialog-actions {
-        padding: 16px 24px;
+      .dialog-actions {
+        display: flex;
+        justify-content: flex-end;
         gap: 8px;
+      }
+
+      @media (max-width: 520px) {
+        .dialog-content {
+          min-width: 0;
+        }
       }
     `,
   ],
 })
 export class AddPersonDialogComponent {
-  private dialogRef = inject(MatDialogRef<AddPersonDialogComponent>);
-  private data = inject<AddPersonDialogData>(MAT_DIALOG_DATA, { optional: true });
+  private dialogRef = inject(CustomDialogRef<AddPersonDialogComponent, string | null | undefined>);
   private discoveryRelay = inject(DiscoveryRelayService);
   private nostr = inject(NostrService);
   private logger = inject(LoggerService);
@@ -317,8 +307,14 @@ export class AddPersonDialogComponent {
   private followSetsService = inject(FollowSetsService);
   private followingService = inject(FollowingService);
 
-  // Store the follow set in a signal to ensure it's captured at dialog creation time
-  private readonly targetFollowSet = signal<FollowSet | null>(this.data?.followSet ?? null);
+  set data(value: AddPersonDialogData | undefined) {
+    this.targetFollowSet.set(value?.followSet ?? null);
+    this.logger.debug('[AddPersonDialog] Opened with data:', value);
+    this.logger.debug('[AddPersonDialog] Target follow set:', value?.followSet ?? null);
+  }
+
+  // Store the follow set in a signal so dialog data assignment updates state when opened via CustomDialogService
+  private readonly targetFollowSet = signal<FollowSet | null>(null);
 
   state = signal<DialogState>('input');
   inputValue = signal<string>('');
@@ -332,9 +328,6 @@ export class AddPersonDialogComponent {
 
   constructor() {
     this.followingService.activate();
-
-    this.logger.debug('[AddPersonDialog] Opened with data:', this.data);
-    this.logger.debug('[AddPersonDialog] Target follow set:', this.targetFollowSet());
   }
 
   // Computed: Check if input looks like an npub, hex, or NIP-05

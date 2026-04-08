@@ -3,7 +3,6 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { MatDialog, MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatInputModule } from '@angular/material/input';
@@ -16,6 +15,7 @@ import { SettingsService } from '../../services/settings.service';
 import { ImageCacheService } from '../../services/image-cache.service';
 import { ConfirmDialogComponent, ConfirmDialogData } from '../../components/confirm-dialog/confirm-dialog.component';
 import { DeleteEventService } from '../../services/delete-event.service';
+import { CustomDialogRef } from '../../services/custom-dialog.service';
 
 export interface EditPeopleListDialogData {
   followSet: FollowSet;
@@ -35,22 +35,13 @@ export interface EditPeopleListDialogResult {
     FormsModule,
     MatButtonModule,
     MatIconModule,
-    MatDialogModule,
     MatProgressSpinnerModule,
     MatTooltipModule,
     MatInputModule,
     MatFormFieldModule,
   ],
   template: `
-    <div class="dialog-container">
-      <div class="dialog-header">
-        <h2 class="dialog-title">Edit List</h2>
-        <button mat-icon-button class="close-button" (click)="cancel()">
-          <mat-icon>close</mat-icon>
-        </button>
-      </div>
-
-      <div class="dialog-content">
+    <div dialog-content class="dialog-content">
         <!-- List Name Input -->
         <div class="name-section">
           <mat-form-field appearance="outline" class="full-width">
@@ -108,60 +99,32 @@ export interface EditPeopleListDialogResult {
           }
         </div>
         }
-      </div>
+    </div>
 
-      <div class="dialog-actions">
-        <button mat-button class="delete-button" (click)="deleteList()">
+    <div dialog-actions class="dialog-actions">
+        <button mat-button type="button" class="delete-button" (click)="deleteList()">
           <mat-icon>delete</mat-icon>
           Delete List
         </button>
         <span class="spacer"></span>
-        <button mat-button (click)="cancel()">Cancel</button>
-        <button mat-flat-button color="primary" (click)="save()" [disabled]="!hasChanges()">
+        <button mat-button type="button" (click)="cancel()">Cancel</button>
+        <button mat-flat-button type="button" (click)="save()" [disabled]="!hasChanges()">
           Save Changes
         </button>
-      </div>
     </div>
   `,
   styles: [`
-    .dialog-container {
+    :host {
       display: flex;
       flex-direction: column;
-      max-height: 80vh;
-      width: 500px;
-      max-width: 90vw;
-      overflow: hidden;
-    }
-
-    .dialog-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 16px 24px;
-      border-bottom: 1px solid var(--mat-sys-outline-variant);
       min-width: 0;
-    }
-
-    .dialog-title {
-      margin: 0;
-      font-size: 20px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      min-width: 0;
-      flex: 1;
-    }
-
-    .close-button {
-      margin-right: -12px;
-      flex-shrink: 0;
     }
 
     .dialog-content {
       flex: 1;
       overflow-y: auto;
-      padding: 16px 24px;
       min-height: 200px;
+      min-width: min(420px, calc(100vw - 48px));
     }
 
     .name-section {
@@ -283,9 +246,8 @@ export interface EditPeopleListDialogResult {
     .dialog-actions {
       display: flex;
       align-items: center;
+      justify-content: flex-end;
       gap: 8px;
-      padding: 16px 24px;
-      border-top: 1px solid var(--mat-sys-outline-variant);
 
       .delete-button {
         color: var(--mat-sys-error);
@@ -299,6 +261,11 @@ export interface EditPeopleListDialogResult {
         flex: 1;
       }
     }
+    @media (max-width: 520px) {
+      .dialog-content {
+        min-width: 0;
+      }
+    }
   `]
 })
 export class EditPeopleListDialogComponent {
@@ -308,12 +275,16 @@ export class EditPeopleListDialogComponent {
   private readonly notificationService = inject(NotificationService);
   private readonly settings = inject(SettingsService);
   private readonly imageCacheService = inject(ImageCacheService);
-  private readonly dialogRef = inject(MatDialogRef<EditPeopleListDialogComponent>);
-  private readonly dialog = inject(MatDialog);
+  private readonly dialogRef = inject(CustomDialogRef<EditPeopleListDialogComponent, EditPeopleListDialogResult | undefined>);
   private readonly deleteEventService = inject(DeleteEventService);
 
-  // Injected data
-  readonly data: EditPeopleListDialogData = inject(MAT_DIALOG_DATA);
+  set data(value: EditPeopleListDialogData) {
+    this.followSetData.set(value.followSet);
+    this.listName.set(value.followSet.title);
+    void this.loadProfiles();
+  }
+
+  private readonly followSetData = signal<FollowSet | null>(null);
 
   // State
   loading = signal(true);
@@ -323,21 +294,16 @@ export class EditPeopleListDialogComponent {
 
   // Computed
   hasChanges = computed(() => 
-    this.removedPubkeys().length > 0 || 
-    this.listName().trim() !== this.data.followSet.title.trim()
+    !!this.followSetData() && (
+      this.removedPubkeys().length > 0 || 
+      this.listName().trim() !== this.followSetData()!.title.trim()
+    )
   );
-
-  constructor() {
-    // Initialize list name
-    this.listName.set(this.data.followSet.title);
-    
-    // Load profiles for the follow set
-    this.loadProfiles();
-  }
 
   private async loadProfiles(): Promise<void> {
     try {
-      const set = this.data.followSet;
+      this.loading.set(true);
+      const set = this.followSetData();
       if (!set || !set.pubkeys.length) {
         this.profiles.set([]);
         this.loading.set(false);
@@ -363,7 +329,10 @@ export class EditPeopleListDialogComponent {
   }
 
   async save(): Promise<void> {
-    const set = this.data.followSet;
+    const set = this.followSetData();
+    if (!set) {
+      return;
+    }
     const removed = this.removedPubkeys();
     const newName = this.listName().trim();
 
@@ -412,7 +381,10 @@ export class EditPeopleListDialogComponent {
   }
 
   async deleteList(): Promise<void> {
-    const set = this.data.followSet;
+    const set = this.followSetData();
+    if (!set) {
+      return;
+    }
 
     const confirmed = await this.deleteEventService.confirmDeletion({
       event: set.event,

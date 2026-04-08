@@ -2236,15 +2236,17 @@ export class App implements OnInit, OnDestroy {
     }
 
     // Open the edit dialog
-    const dialogRef = this.dialog.open(EditPeopleListDialogComponent, {
+    const dialogRef = this.customDialog.open<EditPeopleListDialogComponent, EditPeopleListDialogResult | undefined>(EditPeopleListDialogComponent, {
+      title: 'Edit List',
+      headerIcon: 'format_list_bulleted',
       data: {
         followSet: followSet,
       },
-      width: '500px',
-      maxWidth: '90vw',
+      width: 'min(500px, calc(100vw - 24px))',
+      maxWidth: 'calc(100vw - 24px)',
     });
 
-    dialogRef.afterClosed().subscribe((result: EditPeopleListDialogResult | null) => {
+    dialogRef.afterClosed$.subscribe(({ result }: { result?: EditPeopleListDialogResult }) => {
       if (result) {
         void result;
       }

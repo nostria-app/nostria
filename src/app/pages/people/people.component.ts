@@ -25,6 +25,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { AddPersonDialogComponent } from './add-person-dialog.component';
 import { EditPeopleListDialogComponent, EditPeopleListDialogResult } from './edit-people-list-dialog.component';
 import { CreateListDialogComponent, CreateListDialogResult } from '../../components/create-list-dialog/create-list-dialog.component';
+import { CustomDialogService } from '../../services/custom-dialog.service';
 import {
   Interest,
   SuggestedProfile,
@@ -85,6 +86,7 @@ export class PeopleComponent implements OnDestroy {
   private readonly accountLocalState = inject(AccountLocalStateService);
   private favoritesService = inject(FavoritesService);
   private dialog = inject(MatDialog);
+  private customDialog = inject(CustomDialogService);
   private followsetService = inject(Followset);
   private notificationService = inject(NotificationService);
   private feedsCollectionService = inject(FeedsCollectionService);
@@ -1099,18 +1101,18 @@ export class PeopleComponent implements OnDestroy {
     const selectedSet = this.selectedFollowSet();
     this.logger.debug('[People] Opening add person dialog with follow set:', selectedSet?.title ?? 'None (All Following)');
 
-    const dialogRef = this.dialog.open(AddPersonDialogComponent, {
-      width: '600px',
-      // maxWidth: '90vw',
+    const dialogRef = this.customDialog.open<AddPersonDialogComponent, string | null | undefined>(AddPersonDialogComponent, {
+      title: selectedSet ? `Add Person to ${selectedSet.title}` : 'Add Person to Follow',
+      headerIcon: 'person_add',
+      width: 'min(600px, calc(100vw - 24px))',
+      maxWidth: 'calc(100vw - 24px)',
       panelClass: 'responsive-dialog',
-      disableClose: false,
-      autoFocus: true,
       data: {
         followSet: selectedSet, // Pass the currently selected follow set (null if "All Following")
       },
     });
 
-    dialogRef.afterClosed().subscribe(result => {
+    dialogRef.afterClosed$.subscribe(({ result }) => {
       if (result) {
         this.logger.info('Person added:', result);
         // The effect watching selectedFollowSet pubkeys will automatically
@@ -1161,15 +1163,17 @@ export class PeopleComponent implements OnDestroy {
       return;
     }
 
-    const dialogRef = this.dialog.open(EditPeopleListDialogComponent, {
+    const dialogRef = this.customDialog.open<EditPeopleListDialogComponent, EditPeopleListDialogResult | undefined>(EditPeopleListDialogComponent, {
+      title: 'Edit List',
+      headerIcon: 'format_list_bulleted',
       data: {
         followSet: selectedSet,
       },
-      width: '500px',
-      maxWidth: '90vw',
+      width: 'min(500px, calc(100vw - 24px))',
+      maxWidth: 'calc(100vw - 24px)',
     });
 
-    const result: EditPeopleListDialogResult | null = await firstValueFrom(dialogRef.afterClosed());
+    const { result } = await firstValueFrom(dialogRef.afterClosed$);
 
     if (result) {
       if (result.deleted) {
