@@ -1,125 +1,129 @@
 <app-material-custom-dialog title="Choose from Library" icon="photo_library" [showDefaultActions]="false">
   <div dialog-content class="media-chooser-dialog">
     <mat-tab-group [selectedIndex]="getTabIndex()" (selectedIndexChange)="onTabChange($event)">
-    <mat-tab>
-      <ng-template mat-tab-label>
-        <mat-icon class="tab-icon">image</mat-icon>
-        <span>Images ({{ images().length }})</span>
-      </ng-template>
-      <div class="tab-content">
-        @if (images().length === 0) {
-        <div class="empty-state">
-          <mat-icon>image</mat-icon>
-          <p>No images in your library</p>
+      <mat-tab>
+        <ng-template mat-tab-label>
+          <mat-icon class="tab-icon">image</mat-icon>
+          <span>Images ({{ images().length }})</span>
+        </ng-template>
+        <div class="tab-content">
+          @if (images().length === 0) {
+          <div class="empty-state">
+            <mat-icon>image</mat-icon>
+            <p>No images in your library</p>
+          </div>
+          } @else {
+          <div class="media-grid">
+            @for (item of images(); track item.sha256) {
+            <div class="media-card" [class.selected]="isSelected(item.sha256)" (click)="selectItem(item)"
+              (keydown.enter)="onEnterKey($event, item)" (keydown.space)="onSpaceKey($event, item)" tabindex="0"
+              role="button">
+              <div class="media-thumbnail">
+                <div class="selection-indicator">
+                  <mat-icon>check_circle</mat-icon>
+                </div>
+                @if (isEncrypted(item)) {
+                <div class="encrypted-badge" matTooltip="Encrypted file">
+                  <mat-icon>lock</mat-icon>
+                </div>
+                }
+                @if (hasRenderablePreview(item)) {
+                <img [src]="getItemSourceUrl(item)" alt="{{ getFileName(item.url) }}"
+                  title="{{ getFileName(item.url) }}" loading="lazy" />
+                } @else {
+                <div class="file-preview">
+                  <mat-icon>insert_drive_file</mat-icon>
+                </div>
+                }
+              </div>
+              <div class="media-info">
+                <span class="media-name" [matTooltip]="getFileName(item.url)">{{ getFileName(item.url) }}</span>
+                <span class="media-size">{{ formatFileSize(item.size) }}</span>
+              </div>
+            </div>
+            }
+          </div>
+          }
         </div>
-        } @else {
-        <div class="media-grid">
-          @for (item of images(); track item.sha256) {
-          <div class="media-card" [class.selected]="isSelected(item.sha256)" (click)="selectItem(item)"
-            (keydown.enter)="onEnterKey($event, item)" (keydown.space)="onSpaceKey($event, item)" tabindex="0" role="button">
-            <div class="media-thumbnail">
+      </mat-tab>
+
+      <mat-tab>
+        <ng-template mat-tab-label>
+          <mat-icon class="tab-icon">videocam</mat-icon>
+          <span>Videos ({{ videos().length }})</span>
+        </ng-template>
+        <div class="tab-content">
+          @if (videos().length === 0) {
+          <div class="empty-state">
+            <mat-icon>videocam</mat-icon>
+            <p>No videos in your library</p>
+          </div>
+          } @else {
+          <div class="media-grid">
+            @for (item of videos(); track item.sha256) {
+            <div class="media-card" [class.selected]="isSelected(item.sha256)" (click)="selectItem(item)"
+              (keydown.enter)="onEnterKey($event, item)" (keydown.space)="onSpaceKey($event, item)" tabindex="0"
+              role="button">
+              <div class="media-thumbnail video-thumbnail">
+                <div class="selection-indicator">
+                  <mat-icon>check_circle</mat-icon>
+                </div>
+                @if (isEncrypted(item)) {
+                <div class="encrypted-badge" matTooltip="Encrypted file">
+                  <mat-icon>lock</mat-icon>
+                </div>
+                }
+                @if (hasRenderablePreview(item)) {
+                <mat-icon class="video-play-icon">play_circle</mat-icon>
+                <video [src]="getItemSourceUrl(item)" preload="metadata" muted></video>
+                } @else {
+                <div class="file-preview">
+                  <mat-icon>insert_drive_file</mat-icon>
+                </div>
+                }
+              </div>
+              <div class="media-info">
+                <span class="media-name" [matTooltip]="getFileName(item.url)">{{ getFileName(item.url) }}</span>
+                <span class="media-size">{{ formatFileSize(item.size) }}</span>
+              </div>
+            </div>
+            }
+          </div>
+          }
+        </div>
+      </mat-tab>
+
+      <mat-tab>
+        <ng-template mat-tab-label>
+          <mat-icon class="tab-icon">insert_drive_file</mat-icon>
+          <span>Files ({{ files().length }})</span>
+        </ng-template>
+        <div class="tab-content">
+          @if (files().length === 0) {
+          <div class="empty-state">
+            <mat-icon>insert_drive_file</mat-icon>
+            <p>No files in your library</p>
+          </div>
+          } @else {
+          <div class="files-list">
+            @for (item of files(); track item.sha256) {
+            <div class="file-item" [class.selected]="isSelected(item.sha256)" (click)="selectItem(item)"
+              (keydown.enter)="onEnterKey($event, item)" (keydown.space)="onSpaceKey($event, item)" tabindex="0"
+              role="button">
               <div class="selection-indicator">
                 <mat-icon>check_circle</mat-icon>
               </div>
-              @if (isEncrypted(item)) {
-              <div class="encrypted-badge" matTooltip="Encrypted file">
-                <mat-icon>lock</mat-icon>
+              <mat-icon class="file-icon">{{ isEncrypted(item) ? 'lock' : 'insert_drive_file' }}</mat-icon>
+              <div class="file-details">
+                <span class="file-name" [matTooltip]="getFileName(item.url)">{{ getFileName(item.url) }}</span>
+                <span class="file-meta">{{ item.type || 'Unknown type' }} • {{ formatFileSize(item.size) }}</span>
               </div>
-              }
-              @if (hasRenderablePreview(item)) {
-              <img [src]="getItemSourceUrl(item)" alt="{{ getFileName(item.url) }}" title="{{ getFileName(item.url) }}" loading="lazy" />
-              } @else {
-              <div class="file-preview">
-                <mat-icon>insert_drive_file</mat-icon>
-              </div>
-              }
             </div>
-            <div class="media-info">
-              <span class="media-name" [matTooltip]="getFileName(item.url)">{{ getFileName(item.url) }}</span>
-              <span class="media-size">{{ formatFileSize(item.size) }}</span>
-            </div>
+            }
           </div>
           }
         </div>
-        }
-      </div>
-    </mat-tab>
-
-    <mat-tab>
-      <ng-template mat-tab-label>
-        <mat-icon class="tab-icon">videocam</mat-icon>
-        <span>Videos ({{ videos().length }})</span>
-      </ng-template>
-      <div class="tab-content">
-        @if (videos().length === 0) {
-        <div class="empty-state">
-          <mat-icon>videocam</mat-icon>
-          <p>No videos in your library</p>
-        </div>
-        } @else {
-        <div class="media-grid">
-          @for (item of videos(); track item.sha256) {
-          <div class="media-card" [class.selected]="isSelected(item.sha256)" (click)="selectItem(item)"
-            (keydown.enter)="onEnterKey($event, item)" (keydown.space)="onSpaceKey($event, item)" tabindex="0" role="button">
-            <div class="media-thumbnail video-thumbnail">
-              <div class="selection-indicator">
-                <mat-icon>check_circle</mat-icon>
-              </div>
-              @if (isEncrypted(item)) {
-              <div class="encrypted-badge" matTooltip="Encrypted file">
-                <mat-icon>lock</mat-icon>
-              </div>
-              }
-              @if (hasRenderablePreview(item)) {
-              <mat-icon class="video-play-icon">play_circle</mat-icon>
-              <video [src]="getItemSourceUrl(item)" preload="metadata" muted></video>
-              } @else {
-              <div class="file-preview">
-                <mat-icon>insert_drive_file</mat-icon>
-              </div>
-              }
-            </div>
-            <div class="media-info">
-              <span class="media-name" [matTooltip]="getFileName(item.url)">{{ getFileName(item.url) }}</span>
-              <span class="media-size">{{ formatFileSize(item.size) }}</span>
-            </div>
-          </div>
-          }
-        </div>
-        }
-      </div>
-    </mat-tab>
-
-    <mat-tab>
-      <ng-template mat-tab-label>
-        <mat-icon class="tab-icon">insert_drive_file</mat-icon>
-        <span>Files ({{ files().length }})</span>
-      </ng-template>
-      <div class="tab-content">
-        @if (files().length === 0) {
-        <div class="empty-state">
-          <mat-icon>insert_drive_file</mat-icon>
-          <p>No files in your library</p>
-        </div>
-        } @else {
-        <div class="files-list">
-          @for (item of files(); track item.sha256) {
-          <div class="file-item" [class.selected]="isSelected(item.sha256)" (click)="selectItem(item)"
-            (keydown.enter)="onEnterKey($event, item)" (keydown.space)="onSpaceKey($event, item)" tabindex="0" role="button">
-            <div class="selection-indicator">
-              <mat-icon>check_circle</mat-icon>
-            </div>
-            <mat-icon class="file-icon">{{ isEncrypted(item) ? 'lock' : 'insert_drive_file' }}</mat-icon>
-            <div class="file-details">
-              <span class="file-name" [matTooltip]="getFileName(item.url)">{{ getFileName(item.url) }}</span>
-              <span class="file-meta">{{ item.type || 'Unknown type' }} • {{ formatFileSize(item.size) }}</span>
-            </div>
-          </div>
-          }
-        </div>
-        }
-      </div>
-    </mat-tab>
+      </mat-tab>
     </mat-tab-group>
   </div>
 

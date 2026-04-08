@@ -2,6 +2,7 @@ import { Component, computed, inject, signal, ChangeDetectionStrategy } from '@a
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
+import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
@@ -10,7 +11,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { AiService } from '../../services/ai.service';
 import { AccountLocalStateService } from '../../services/account-local-state.service';
 import { AccountStateService } from '../../services/account-state.service';
-import { CustomDialogRef } from '../../services/custom-dialog.service';
+import { MaterialCustomDialogComponent } from '../material-custom-dialog/material-custom-dialog.component';
 
 export interface AiToolsDialogData {
   content: string;
@@ -23,6 +24,7 @@ export interface AiToolsDialogData {
   imports: [
     CommonModule,
     FormsModule,
+    MaterialCustomDialogComponent,
     MatButtonModule,
     MatFormFieldModule,
     MatIconModule,
@@ -31,100 +33,102 @@ export interface AiToolsDialogData {
     MatSelectModule,
   ],
   template: `
-    <div dialog-content class="tools-dialog-content">
-      <div class="tools-container">
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Action</mat-label>
-          <mat-select [ngModel]="selectedAction()" (ngModelChange)="selectedAction.set($event)">
-            <mat-option value="generate" disabled>Generate Text (Temporarily Disabled)</mat-option>
-            <mat-option value="translate">Translate</mat-option>
-            <mat-option value="sentiment">Sentiment Analysis</mat-option>
-          </mat-select>
-        </mat-form-field>
-
-        @if (selectedAction() === 'generate') {
-        <p>Generates text based on the current content as prompt.</p>
-        @if (!aiService.textModelLoaded()) {
-        <button mat-stroked-button (click)="loadTextModel()" [disabled]="aiService.textModelLoaded()">
-          {{ aiService.textModelLoaded() ? 'Model Loaded' : 'Load Model' }}
-        </button>
-        }
-        }
-
-        @if (selectedAction() === 'translate') {
-        <p>Translates the current content.</p>
-        <div class="language-selectors">
-          <mat-form-field appearance="outline">
-            <mat-label>Source Language</mat-label>
-            <mat-select [ngModel]="sourceLang()" (ngModelChange)="setSourceLang($event)">
-              @for (lang of availableLanguages(); track lang.code) {
-              <mat-option [value]="lang.code">{{ lang.name }}</mat-option>
-              }
+    <app-material-custom-dialog title="AI Tools" icon="auto_awesome" [showDefaultActions]="false">
+      <div dialog-content class="tools-dialog-content">
+        <div class="tools-container">
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Action</mat-label>
+            <mat-select [ngModel]="selectedAction()" (ngModelChange)="selectedAction.set($event)">
+              <mat-option value="generate" disabled>Generate Text (Temporarily Disabled)</mat-option>
+              <mat-option value="translate">Translate</mat-option>
+              <mat-option value="sentiment">Sentiment Analysis</mat-option>
             </mat-select>
           </mat-form-field>
 
-          <mat-icon>arrow_forward</mat-icon>
+          @if (selectedAction() === 'generate') {
+          <p>Generates text based on the current content as prompt.</p>
+          @if (!aiService.textModelLoaded()) {
+          <button mat-stroked-button (click)="loadTextModel()" [disabled]="aiService.textModelLoaded()">
+            {{ aiService.textModelLoaded() ? 'Model Loaded' : 'Load Model' }}
+          </button>
+          }
+          }
 
-          <mat-form-field appearance="outline">
-            <mat-label>Target Language</mat-label>
-            <mat-select [ngModel]="targetLang()" (ngModelChange)="setTargetLang($event)">
-              @for (lang of availableLanguages(); track lang.code) {
-              <mat-option [value]="lang.code">{{ lang.name }}</mat-option>
-              }
-            </mat-select>
+          @if (selectedAction() === 'translate') {
+          <p>Translates the current content.</p>
+          <div class="language-selectors">
+            <mat-form-field appearance="outline">
+              <mat-label>Source Language</mat-label>
+              <mat-select [ngModel]="sourceLang()" (ngModelChange)="setSourceLang($event)">
+                @for (lang of availableLanguages(); track lang.code) {
+                <mat-option [value]="lang.code">{{ lang.name }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+
+            <mat-icon>arrow_forward</mat-icon>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Target Language</mat-label>
+              <mat-select [ngModel]="targetLang()" (ngModelChange)="setTargetLang($event)">
+                @for (lang of availableLanguages(); track lang.code) {
+                <mat-option [value]="lang.code">{{ lang.name }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+          </div>
+
+          @if (!aiService.isModelLoaded(selectedTranslationModel())) {
+          <button mat-stroked-button (click)="loadTranslationModel()"
+            [disabled]="aiService.isModelLoaded(selectedTranslationModel())">
+            {{ aiService.isModelLoaded(selectedTranslationModel()) ? 'Model Loaded' : 'Load Model' }}
+          </button>
+          }
+
+          @if (translationError()) {
+          <p class="error">{{ translationError() }}</p>
+          }
+          }
+
+          @if (selectedAction() === 'sentiment') {
+          <p>Analyzes the sentiment of the content.</p>
+          @if (!aiService.sentimentModelLoaded()) {
+          <button mat-stroked-button (click)="loadSentimentModel()" [disabled]="aiService.sentimentModelLoaded()">
+            {{ aiService.sentimentModelLoaded() ? 'Model Loaded' : 'Load Model' }}
+          </button>
+          }
+
+          @if (sentimentResult()) {
+          <div class="sentiment-result">
+            <mat-icon [class]="sentimentResult()?.label === 'POSITIVE' ? 'positive' : 'negative'">
+              {{ sentimentIcon() }}
+            </mat-icon>
+            <span>{{ sentimentResult()?.label }} ({{ sentimentResult()?.score | percent:'1.0-2' }})</span>
+          </div>
+          }
+          }
+
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Content</mat-label>
+            <textarea matInput [ngModel]="content()" (ngModelChange)="content.set($event)" rows="6"></textarea>
           </mat-form-field>
+
+          @if (isProcessing()) {
+          <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+          }
         </div>
-
-        @if (!aiService.isModelLoaded(selectedTranslationModel())) {
-        <button mat-stroked-button (click)="loadTranslationModel()"
-          [disabled]="aiService.isModelLoaded(selectedTranslationModel())">
-          {{ aiService.isModelLoaded(selectedTranslationModel()) ? 'Model Loaded' : 'Load Model' }}
-        </button>
-        }
-
-        @if (translationError()) {
-        <p class="error">{{ translationError() }}</p>
-        }
-        }
-
-        @if (selectedAction() === 'sentiment') {
-        <p>Analyzes the sentiment of the content.</p>
-        @if (!aiService.sentimentModelLoaded()) {
-        <button mat-stroked-button (click)="loadSentimentModel()" [disabled]="aiService.sentimentModelLoaded()">
-          {{ aiService.sentimentModelLoaded() ? 'Model Loaded' : 'Load Model' }}
-        </button>
-        }
-
-        @if (sentimentResult()) {
-        <div class="sentiment-result">
-          <mat-icon [class]="sentimentResult()?.label === 'POSITIVE' ? 'positive' : 'negative'">
-            {{ sentimentIcon() }}
-          </mat-icon>
-          <span>{{ sentimentResult()?.label }} ({{ sentimentResult()?.score | percent:'1.0-2' }})</span>
-        </div>
-        }
-        }
-
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Content</mat-label>
-          <textarea matInput [ngModel]="content()" (ngModelChange)="content.set($event)" rows="6"></textarea>
-        </mat-form-field>
-
-        @if (isProcessing()) {
-        <mat-progress-bar mode="indeterminate"></mat-progress-bar>
-        }
       </div>
-    </div>
 
-    <div dialog-actions class="tools-dialog-actions">
-      <button mat-button type="button" (click)="cancel()">Cancel</button>
-      <button mat-flat-button type="button" (click)="process()" [disabled]="isProcessing() || !canProcess()">
-        Process
-      </button>
-      <button mat-button type="button" (click)="useResult()" [disabled]="isProcessing()">
-        Use Result
-      </button>
-    </div>
+      <div dialog-actions class="tools-dialog-actions">
+        <button mat-button type="button" (click)="cancel()">Cancel</button>
+        <button mat-flat-button type="button" (click)="process()" [disabled]="isProcessing() || !canProcess()">
+          Process
+        </button>
+        <button mat-button type="button" (click)="useResult()" [disabled]="isProcessing()">
+          Use Result
+        </button>
+      </div>
+    </app-material-custom-dialog>
   `,
   styles: [`
     :host {
@@ -132,21 +136,18 @@ export interface AiToolsDialogData {
     }
 
     .tools-dialog-content {
-      min-width: min(400px, 100%);
-    }
-
-    @media (max-width: 700px),
-    (max-height: 700px) {
-      .tools-dialog-content {
-        min-width: 0;
-      }
+      display: flex;
+      flex-direction: column;
+      flex: 1 1 auto;
+      min-width: 0;
+      min-height: 0;
     }
 
     .tools-container {
       display: flex;
       flex-direction: column;
+      flex: 1 1 auto;
       gap: 16px;
-      padding-top: 8px;
     }
 
     .tools-dialog-actions {
@@ -187,28 +188,30 @@ export interface AiToolsDialogData {
     .error {
       color: var(--mat-sys-error);
     }
+
+    @media (max-width: 700px) {
+      .language-selectors {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+      }
+
+      .language-selectors > mat-icon {
+        align-self: center;
+        transform: rotate(90deg);
+      }
+    }
   `],
 })
 export class AiToolsDialogComponent {
-  readonly dialogRef = inject(CustomDialogRef<AiToolsDialogComponent, string | undefined>);
+  private readonly dialogRef = inject(MatDialogRef<AiToolsDialogComponent, string | undefined>, { optional: true });
+  readonly data = inject<AiToolsDialogData | null>(MAT_DIALOG_DATA, { optional: true }) ?? { content: '' };
   readonly aiService = inject(AiService);
   private accountLocalState = inject(AccountLocalStateService);
   private accountState = inject(AccountStateService);
 
-  private _data: AiToolsDialogData = { content: '' };
-
-  set data(value: AiToolsDialogData) {
-    this._data = value;
-    this.content.set(value.content);
-    this.selectedAction.set(value.initialAction || 'generate');
-  }
-
-  get data(): AiToolsDialogData {
-    return this._data;
-  }
-
-  content = signal('');
-  selectedAction = signal<'generate' | 'translate' | 'sentiment'>('generate');
+  content = signal(this.data.content);
+  selectedAction = signal<'generate' | 'translate' | 'sentiment'>(this.data.initialAction || 'generate');
   sourceLang = signal('en');
   targetLang = signal('es');
   translationError = signal('');
@@ -274,11 +277,11 @@ export class AiToolsDialogComponent {
   }
 
   cancel(): void {
-    this.dialogRef.close();
+    this.dialogRef?.close();
   }
 
   useResult(): void {
-    this.dialogRef.close(this.content());
+    this.dialogRef?.close(this.content());
   }
 
   setSourceLang(lang: string): void {

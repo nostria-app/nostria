@@ -276,7 +276,7 @@ export class App implements OnInit, OnDestroy {
   appBackground = computed(() => {
     const colors = this.colorExtraction.activeBackground();
     if (!colors) {
-      return this.themeService.darkMode() ? '#0a0a0a' : '#efefef';
+      return 'var(--mat-app-background-color)';
     }
 
     return `linear-gradient(180deg, ${colors.background} 0%, ${colors.backgroundEnd} 100%)`;

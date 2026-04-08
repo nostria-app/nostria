@@ -5313,14 +5313,13 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   }
 
   openAiDialog(action: 'generate' | 'translate'): void {
-    const dialogRef = this.customDialog.open(AiToolsDialogComponent, {
-      title: 'AI Tools',
+    const dialogRef = this.dialog.open(AiToolsDialogComponent, {
+      panelClass: ['material-custom-dialog-panel', 'ai-tools-dialog-panel'],
       data: { content: this.content(), initialAction: action },
       width: '500px'
     });
 
-    effect(() => {
-      const result = dialogRef.afterClosed();
+    dialogRef.afterClosed().subscribe((result: string | undefined) => {
       if (typeof result === 'string') {
         this.content.set(result);
         this.sentimentError.set('');

@@ -243,7 +243,9 @@ const DEFAULT_REACTION_RECENT_EMOJIS = ['+', '-'];
     </div>
   `,
   styles: [`
-    :host-context(.emoji-picker-dialog) {
+    :host-context(.emoji-picker-dialog),
+    :host-context(.emoji-picker-dialog-panel),
+    :host-context(.desktop-reaction-picker-dialog-panel) {
       display: flex;
       flex-direction: column;
       flex: 1;
@@ -257,7 +259,9 @@ const DEFAULT_REACTION_RECENT_EMOJIS = ['+', '-'];
       min-height: 0;
     }
 
-    :host-context(.emoji-picker-dialog) .emoji-picker {
+    :host-context(.emoji-picker-dialog) .emoji-picker,
+    :host-context(.emoji-picker-dialog-panel) .emoji-picker,
+    :host-context(.desktop-reaction-picker-dialog-panel) .emoji-picker {
       width: 100%;
       max-width: none;
       max-height: none;
@@ -407,7 +411,7 @@ const DEFAULT_REACTION_RECENT_EMOJIS = ['+', '-'];
       overflow-x: hidden;
       max-height: none;
       padding: 4px;
-      scrollbar-gutter: stable both-edges;
+      scrollbar-gutter: stable;
       scrollbar-width: auto;
       scrollbar-color: var(--scrollbar-thumb, var(--mat-sys-outline)) var(--scrollbar-track, transparent);
     }
@@ -418,6 +422,8 @@ const DEFAULT_REACTION_RECENT_EMOJIS = ['+', '-'];
     }
 
     :host-context(.emoji-picker-dialog) .emoji-list-scroll,
+    :host-context(.emoji-picker-dialog-panel) .emoji-list-scroll,
+    :host-context(.desktop-reaction-picker-dialog-panel) .emoji-list-scroll,
     :host-context(.emoji-picker-menu) .emoji-list-scroll {
       max-height: none;
       flex: 1;
@@ -431,7 +437,7 @@ const DEFAULT_REACTION_RECENT_EMOJIS = ['+', '-'];
       overflow-x: hidden;
       max-height: none;
       padding: 4px;
-      scrollbar-gutter: stable both-edges;
+      scrollbar-gutter: stable;
       scrollbar-width: auto;
       scrollbar-color: var(--scrollbar-thumb, var(--mat-sys-outline)) var(--scrollbar-track, transparent);
     }
@@ -514,11 +520,15 @@ const DEFAULT_REACTION_RECENT_EMOJIS = ['+', '-'];
       }
     }
 
-    :host-context(.emoji-picker-dialog) .emoji-grid {
+    :host-context(.emoji-picker-dialog) .emoji-grid,
+    :host-context(.emoji-picker-dialog-panel) .emoji-grid,
+    :host-context(.desktop-reaction-picker-dialog-panel) .emoji-grid {
       grid-template-columns: repeat(6, minmax(0, 1fr));
     }
 
-    :host-context(.emoji-picker-dialog) .emoji-btn {
+    :host-context(.emoji-picker-dialog) .emoji-btn,
+    :host-context(.emoji-picker-dialog-panel) .emoji-btn,
+    :host-context(.desktop-reaction-picker-dialog-panel) .emoji-btn {
       width: 100%;
       height: 58px;
       font-size: 1.95rem;
@@ -529,7 +539,9 @@ const DEFAULT_REACTION_RECENT_EMOJIS = ['+', '-'];
       }
     }
 
-    :host-context(.emoji-picker-dialog) .emoji-search {
+    :host-context(.emoji-picker-dialog) .emoji-search,
+    :host-context(.emoji-picker-dialog-panel) .emoji-search,
+    :host-context(.desktop-reaction-picker-dialog-panel) .emoji-search {
       padding: 12px 12px 10px;
 
       .search-icon {
@@ -546,7 +558,11 @@ const DEFAULT_REACTION_RECENT_EMOJIS = ['+', '-'];
 
     @media (min-width: 701px) and (min-height: 701px) {
       :host-context(.emoji-picker-dialog) .emoji-grid-container,
-      :host-context(.emoji-picker-dialog) .emoji-list-scroll {
+      :host-context(.emoji-picker-dialog-panel) .emoji-grid-container,
+      :host-context(.desktop-reaction-picker-dialog-panel) .emoji-grid-container,
+      :host-context(.emoji-picker-dialog) .emoji-list-scroll,
+      :host-context(.emoji-picker-dialog-panel) .emoji-list-scroll,
+      :host-context(.desktop-reaction-picker-dialog-panel) .emoji-list-scroll {
         margin: 8px 10px 10px;
         padding: 6px;
         border: 1px solid var(--mat-sys-outline-variant);
@@ -565,14 +581,18 @@ const DEFAULT_REACTION_RECENT_EMOJIS = ['+', '-'];
 
     @media (max-width: 420px) {
       .emoji-grid,
-      :host-context(.emoji-picker-dialog) .emoji-grid {
+      :host-context(.emoji-picker-dialog) .emoji-grid,
+      :host-context(.emoji-picker-dialog-panel) .emoji-grid,
+      :host-context(.desktop-reaction-picker-dialog-panel) .emoji-grid {
         grid-template-columns: repeat(5, minmax(0, 1fr));
       }
     }
 
     @media (max-width: 360px) {
       .emoji-grid,
-      :host-context(.emoji-picker-dialog) .emoji-grid {
+      :host-context(.emoji-picker-dialog) .emoji-grid,
+      :host-context(.emoji-picker-dialog-panel) .emoji-grid,
+      :host-context(.desktop-reaction-picker-dialog-panel) .emoji-grid {
         grid-template-columns: repeat(4, minmax(0, 1fr));
       }
     }
@@ -677,24 +697,36 @@ const DEFAULT_REACTION_RECENT_EMOJIS = ['+', '-'];
 
     @media (max-width: 700px),
     (max-height: 700px) {
-      :host-context(.emoji-picker-dialog) .emoji-picker {
+      :host-context(.emoji-picker-dialog) .emoji-picker,
+      :host-context(.emoji-picker-dialog-panel) .emoji-picker,
+      :host-context(.desktop-reaction-picker-dialog-panel) .emoji-picker {
         height: 100%;
       }
 
-      :host-context(.emoji-picker-dialog) .emoji-search {
+      :host-context(.emoji-picker-dialog) .emoji-search,
+      :host-context(.emoji-picker-dialog-panel) .emoji-search,
+      :host-context(.desktop-reaction-picker-dialog-panel) .emoji-search {
         padding: 8px 10px;
       }
 
       :host-context(.emoji-picker-dialog) .emoji-grid-container,
-      :host-context(.emoji-picker-dialog) .emoji-list-scroll {
+      :host-context(.emoji-picker-dialog-panel) .emoji-grid-container,
+      :host-context(.desktop-reaction-picker-dialog-panel) .emoji-grid-container,
+      :host-context(.emoji-picker-dialog) .emoji-list-scroll,
+      :host-context(.emoji-picker-dialog-panel) .emoji-list-scroll,
+      :host-context(.desktop-reaction-picker-dialog-panel) .emoji-list-scroll {
         padding: 2px 4px 4px;
       }
 
-      :host-context(.emoji-picker-dialog) .emoji-grid {
+      :host-context(.emoji-picker-dialog) .emoji-grid,
+      :host-context(.emoji-picker-dialog-panel) .emoji-grid,
+      :host-context(.desktop-reaction-picker-dialog-panel) .emoji-grid {
         gap: 0;
       }
 
-      :host-context(.emoji-picker-dialog) .emoji-btn {
+      :host-context(.emoji-picker-dialog) .emoji-btn,
+      :host-context(.emoji-picker-dialog-panel) .emoji-btn,
+      :host-context(.desktop-reaction-picker-dialog-panel) .emoji-btn {
         height: 60px;
         font-size: 2.05rem;
 
@@ -704,16 +736,22 @@ const DEFAULT_REACTION_RECENT_EMOJIS = ['+', '-'];
         }
       }
 
-      :host-context(.emoji-picker-dialog) .emoji-section {
+      :host-context(.emoji-picker-dialog) .emoji-section,
+      :host-context(.emoji-picker-dialog-panel) .emoji-section,
+      :host-context(.desktop-reaction-picker-dialog-panel) .emoji-section {
         margin-bottom: 6px;
       }
 
-      :host-context(.emoji-picker-dialog) .emoji-section-nav {
+      :host-context(.emoji-picker-dialog) .emoji-section-nav,
+      :host-context(.emoji-picker-dialog-panel) .emoji-section-nav,
+      :host-context(.desktop-reaction-picker-dialog-panel) .emoji-section-nav {
         gap: 3px;
         padding: 6px 4px max(4px, env(safe-area-inset-bottom));
       }
 
-      :host-context(.emoji-picker-dialog) .section-nav-btn {
+      :host-context(.emoji-picker-dialog) .section-nav-btn,
+      :host-context(.emoji-picker-dialog-panel) .section-nav-btn,
+      :host-context(.desktop-reaction-picker-dialog-panel) .section-nav-btn {
         height: 36px;
         font-size: 1.1rem;
       }

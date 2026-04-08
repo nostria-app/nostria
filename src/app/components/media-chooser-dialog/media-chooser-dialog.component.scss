@@ -1,18 +1,15 @@
 .media-chooser-dialog {
   display: flex;
   flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
   height: 100%;
-  max-height: 70vh;
   overflow: hidden;
-
-  @media (max-width: 600px) {
-    max-height: none;
-  }
 }
 
 
 mat-tab-group {
-  flex: 1;
+  flex: 1 1 auto;
   min-height: 0;
   overflow: hidden;
   display: flex;
@@ -24,6 +21,14 @@ mat-tab-group {
 
   ::ng-deep .mat-mdc-tab-body-wrapper {
     flex: 1;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  ::ng-deep .mat-mdc-tab-body,
+  ::ng-deep .mat-mdc-tab-body-content {
+    height: 100%;
+    min-height: 0;
   }
 }
 
@@ -42,12 +47,14 @@ mat-tab-group {
 }
 
 .tab-content {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
   padding: 16px 0;
   overflow-y: auto;
-  max-height: calc(70vh - 200px);
 
   @media (max-width: 600px) {
-    max-height: none;
     flex: 1;
   }
 }
