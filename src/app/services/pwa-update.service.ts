@@ -12,6 +12,17 @@ export class PwaUpdateService implements OnDestroy {
   private swUpdate = inject(SwUpdate);
   private logger = inject(LoggerService);
   private notificationService = inject(NotificationService);
+  private readonly focusHandler = () => {
+    void this.checkForUpdate();
+  };
+  private readonly onlineHandler = () => {
+    void this.checkForUpdate();
+  };
+  private readonly visibilityChangeHandler = () => {
+    if (document.visibilityState === 'visible') {
+      void this.checkForUpdate();
+    }
+  };
 
   // Signal to track if an update is available
   updateAvailable = signal(false);
@@ -41,6 +52,12 @@ export class PwaUpdateService implements OnDestroy {
 
     // Set up global error handler for chunk loading failures
     this.setupChunkLoadErrorHandler();
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('focus', this.focusHandler);
+      window.addEventListener('online', this.onlineHandler);
+      document.addEventListener('visibilitychange', this.visibilityChangeHandler);
+    }
   }
 
   /**
@@ -120,6 +137,20 @@ export class PwaUpdateService implements OnDestroy {
       clearInterval(this.updateCheckIntervalHandle);
       this.updateCheckIntervalHandle = null;
     }
+
+    if (typeof window !== 'undefined') {
+      window.removeEventListener('focus', this.focusHandler);
+      window.removeEventListener('online', this.onlineHandler);
+      document.removeEventListener('visibilitychange', this.visibilityChangeHandler);
+    }
+  }
+
+  private async waitForServiceWorkerReady(): Promise<void> {
+    if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) {
+      return;
+    }
+
+    await navigator.serviceWorker.ready;
   }
 
   /**
@@ -169,6 +200,7 @@ export class PwaUpdateService implements OnDestroy {
     if (this.swUpdate.isEnabled) {
       this.logger.debug('Checking for updates');
       try {
+        await this.waitForServiceWorkerReady();
         await this.swUpdate.checkForUpdate();
         this.logger.debug('Update check completed');
       } catch (err) {

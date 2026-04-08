@@ -319,10 +319,19 @@
           </div>
         </div>
 
-        <!-- Right section: action buttons and notifications (only when authenticated) -->
-        @if (app.authenticated()) {
+        <!-- Right section: update action is shown for all users -->
         <div class="toolbar-section toolbar-right"
           [class.mobile-search-focused]="searchFocused() && layout.isHandset()">
+          @if (pwaUpdateService.updateAvailable()) {
+          <button mat-icon-button class="update-button" (click)="pwaUpdateService.updateApplication()"
+            i18n-matTooltip="@@app.update.ready" matTooltip="Update ready!" i18n-aria-label="@@app.update.aria"
+            aria-label="Update application">
+            <mat-icon class="update-icon">system_update</mat-icon>
+          </button>
+          }
+
+          <!-- Authenticated-only action buttons and notifications -->
+          @if (app.authenticated()) {
           <!-- Right panel actions (when right panel has content) -->
           @if (hasRightContent()) {
           @for (action of panelActions.rightPanelActions(); track action.id) {
@@ -338,14 +347,6 @@
           </button>
           }
           }
-          }
-
-          @if (pwaUpdateService.updateAvailable()) {
-          <button mat-icon-button class="update-button" (click)="pwaUpdateService.updateApplication()"
-            i18n-matTooltip="@@app.update.ready" matTooltip="Update ready!" i18n-aria-label="@@app.update.aria"
-            aria-label="Update application">
-            <mat-icon class="update-icon">system_update</mat-icon>
-          </button>
           }
 
           @if (accountState.profileProcessingState().isProcessing) {
@@ -376,8 +377,8 @@
               aria-hidden="false">notifications</mat-icon>
           </button>
           }
+          }
         </div>
-        }
       </mat-toolbar>
 
       <!-- Floating Offline Indicator -->
