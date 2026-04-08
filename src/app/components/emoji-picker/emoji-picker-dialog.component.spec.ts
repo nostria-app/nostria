@@ -1,8 +1,8 @@
 import type { Mock } from "vitest";
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideZonelessChangeDetection } from '@angular/core';
+import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { EmojiPickerDialogComponent } from './emoji-picker-dialog.component';
-import { CustomDialogRef } from '../../services/custom-dialog.service';
 import { AccountLocalStateService } from '../../services/account-local-state.service';
 import { AccountStateService } from '../../services/account-state.service';
 
@@ -20,7 +20,8 @@ describe('EmojiPickerDialogComponent', () => {
             imports: [EmojiPickerDialogComponent],
             providers: [
                 provideZonelessChangeDetection(),
-                { provide: CustomDialogRef, useValue: mockDialogRef },
+                { provide: MatDialogRef, useValue: mockDialogRef },
+                { provide: MAT_DIALOG_DATA, useValue: { mode: 'content', activeTab: 'emoji' } },
                 {
                     provide: AccountLocalStateService,
                     useValue: {

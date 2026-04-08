@@ -6,6 +6,7 @@ import {
   effect,
   ChangeDetectionStrategy,
 } from '@angular/core';
+import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -14,11 +15,11 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
-import { CustomDialogRef } from '../../services/custom-dialog.service';
 import { MediaService, MediaItem } from '../../services/media.service';
 import { AccountStateService } from '../../services/account-state.service';
 import { LoggerService } from '../../services/logger.service';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { MaterialCustomDialogComponent } from '../material-custom-dialog/material-custom-dialog.component';
 
 export interface MediaChooserDialogData {
   /** Allow multiple selection */
@@ -48,6 +49,7 @@ interface MediaChooserDisplayItem extends MediaItem {
   selector: 'app-media-chooser-dialog',
   imports: [
     FormsModule,
+    MaterialCustomDialogComponent,
     MatButtonModule,
     MatIconModule,
     MatTabsModule,
@@ -61,8 +63,8 @@ interface MediaChooserDisplayItem extends MediaItem {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class MediaChooserDialogComponent {
-  dialogRef?: CustomDialogRef<MediaChooserDialogComponent, MediaChooserResult>;
-  data: MediaChooserDialogData = {};
+  private readonly dialogRef = inject(MatDialogRef<MediaChooserDialogComponent, MediaChooserResult>, { optional: true });
+  readonly data = inject<MediaChooserDialogData | null>(MAT_DIALOG_DATA, { optional: true }) ?? {};
 
   private readonly mediaService = inject(MediaService);
   private readonly accountState = inject(AccountStateService);

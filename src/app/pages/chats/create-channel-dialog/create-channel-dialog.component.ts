@@ -1,5 +1,6 @@
 import { Component, inject, signal, computed, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
+import { MatDialog } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
@@ -8,7 +9,7 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MediaService } from '../../../services/media.service';
-import { CustomDialogRef, CustomDialogService } from '../../../services/custom-dialog.service';
+import { CustomDialogRef } from '../../../services/custom-dialog.service';
 import { AccountRelayService } from '../../../services/relays/account-relay';
 
 export interface CreateChannelDialogData {
@@ -43,7 +44,7 @@ export interface CreateChannelDialogResult {
   template: `
     <div dialog-content class="channel-dialog-content">
       <p class="dialog-description">
-        {{ data?.isEdit ? 'Update your chat details.' : 'Create a new public chat.' }}
+        {{ data.isEdit ? 'Update your chat details.' : 'Create a new public chat.' }}
       </p>
 
       <mat-form-field appearance="outline" class="full-width">
@@ -199,7 +200,7 @@ export interface CreateChannelDialogResult {
           (click)="onSubmit()"
           [disabled]="nameControl.invalid"
         >
-          {{ data?.isEdit ? 'Save' : 'Create' }}
+          {{ data.isEdit ? 'Save' : 'Create' }}
         </button>
       </div>
     </div>
@@ -396,7 +397,7 @@ export class CreateChannelDialogComponent implements OnInit {
   }
 
   private mediaService = inject(MediaService);
-  private customDialog = inject(CustomDialogService);
+  private dialog = inject(MatDialog);
   private snackBar = inject(MatSnackBar);
   private accountRelay = inject(AccountRelayService);
 
@@ -529,14 +530,14 @@ export class CreateChannelDialogComponent implements OnInit {
     const { MediaChooserDialogComponent } = await import('../../../components/media-chooser-dialog/media-chooser-dialog.component');
     type MediaChooserResult = import('../../../components/media-chooser-dialog/media-chooser-dialog.component').MediaChooserResult;
 
-    const dialogRef = this.customDialog.open<typeof MediaChooserDialogComponent.prototype, MediaChooserResult>(MediaChooserDialogComponent, {
-      title: 'Choose from Library',
+    const dialogRef = this.dialog.open(MediaChooserDialogComponent, {
+      panelClass: ['material-custom-dialog-panel', 'media-chooser-dialog-panel'],
       width: '700px',
       maxWidth: '95vw',
       data: { multiple: false, mediaType: 'images' },
     });
 
-    dialogRef.afterClosed$.subscribe(({ result }) => {
+    dialogRef.afterClosed().subscribe((result: MediaChooserResult | undefined) => {
       if (result?.items?.length) {
         const url = result.items[0].url;
         this.pictureControl.setValue(url);

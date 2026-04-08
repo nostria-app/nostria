@@ -2551,16 +2551,15 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
    */
   async openGifPickerDialog(): Promise<void> {
     const { EmojiPickerDialogComponent } = await import('../emoji-picker/emoji-picker-dialog.component');
-    const dialogRef = this.customDialog.open<typeof EmojiPickerDialogComponent.prototype, string>(EmojiPickerDialogComponent, {
-      title: 'GIFs',
+    const dialogRef = this.dialog.open(EmojiPickerDialogComponent, {
+      panelClass: ['material-custom-dialog-panel', 'emoji-picker-dialog-panel'],
       width: '400px',
-      panelClass: 'emoji-picker-dialog',
-      data: { mode: 'content', activeTab: 'gifs' },
+      data: { title: 'GIFs', mode: 'content', activeTab: 'gifs' },
     });
 
-    dialogRef.afterClosed$.subscribe(result => {
-      if (result.result) {
-        this.insertGifUrl(result.result);
+    dialogRef.afterClosed().subscribe((result: string | undefined) => {
+      if (result) {
+        this.insertGifUrl(result);
       } else {
         this.scheduleTextareaRefresh(undefined, true);
       }
@@ -2572,20 +2571,18 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
    */
   async openEmojiPickerDialog(): Promise<void> {
     const { EmojiPickerDialogComponent } = await import('../emoji-picker/emoji-picker-dialog.component');
-    const dialogRef = this.customDialog.open<typeof EmojiPickerDialogComponent.prototype, string>(EmojiPickerDialogComponent, {
-      title: 'Emoji',
+    const dialogRef = this.dialog.open(EmojiPickerDialogComponent, {
+      panelClass: ['material-custom-dialog-panel', 'emoji-picker-dialog-panel'],
       width: '400px',
-      panelClass: 'emoji-picker-dialog',
-      data: { mode: 'content', activeTab: 'emoji' },
+      data: { title: 'Emoji', mode: 'content', activeTab: 'emoji' },
     });
 
-    dialogRef.afterClosed$.subscribe(result => {
-      if (result.result) {
-        // Check if it's a GIF URL (starts with http)
-        if (result.result.startsWith('http')) {
-          this.insertGifUrl(result.result);
+    dialogRef.afterClosed().subscribe((result: string | undefined) => {
+      if (result) {
+        if (result.startsWith('http')) {
+          this.insertGifUrl(result);
         } else {
-          this.insertEmoji(result.result);
+          this.insertEmoji(result);
         }
       } else {
         this.scheduleTextareaRefresh(undefined, true);
@@ -4275,8 +4272,8 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     const { MediaChooserDialogComponent } = await import('../media-chooser-dialog/media-chooser-dialog.component');
     type MediaChooserResult = import('../media-chooser-dialog/media-chooser-dialog.component').MediaChooserResult;
 
-    const dialogRef = this.customDialog.open<typeof MediaChooserDialogComponent.prototype, MediaChooserResult>(MediaChooserDialogComponent, {
-      title: 'Choose from Library',
+    const dialogRef = this.dialog.open(MediaChooserDialogComponent, {
+      panelClass: ['material-custom-dialog-panel', 'media-chooser-dialog-panel'],
       width: '700px',
       maxWidth: '95vw',
       data: {
@@ -4286,7 +4283,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       },
     });
 
-    dialogRef.afterClosed$.subscribe(({ result }) => {
+    dialogRef.afterClosed().subscribe((result: MediaChooserResult | undefined) => {
       if (result?.items?.length) {
         // Add selected media items to the editor
         for (const item of result.items) {

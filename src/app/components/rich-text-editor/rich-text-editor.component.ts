@@ -33,7 +33,6 @@ import {
 import { LocalSettingsService } from '../../services/local-settings.service';
 import { cleanTrackingParametersFromText } from '../../utils/url-cleaner';
 import { ConfirmDialogComponent } from '../confirm-dialog/confirm-dialog.component';
-import { CustomDialogService } from '../../services/custom-dialog.service';
 
 @Component({
   selector: 'app-rich-text-editor',
@@ -110,7 +109,6 @@ export class RichTextEditorComponent implements AfterViewInit {
   private snackBar = inject(MatSnackBar);
   private dialog = inject(MatDialog);
   private router = inject(Router);
-  private customDialog = inject(CustomDialogService);
   private localSettingsService = inject(LocalSettingsService);
 
   constructor() {
@@ -570,20 +568,17 @@ export class RichTextEditorComponent implements AfterViewInit {
     const { MediaChooserDialogComponent } = await import('../media-chooser-dialog/media-chooser-dialog.component');
     type MediaChooserResult = import('../media-chooser-dialog/media-chooser-dialog.component').MediaChooserResult;
 
-    const dialogRef = this.customDialog.open<typeof MediaChooserDialogComponent.prototype, MediaChooserResult>(
-      MediaChooserDialogComponent,
-      {
-        title: 'Choose from Library',
-        width: '700px',
-        maxWidth: '95vw',
-        data: {
-          multiple: true,
-          mediaType: 'all',
-        },
-      }
-    );
+    const dialogRef = this.dialog.open(MediaChooserDialogComponent, {
+      panelClass: ['material-custom-dialog-panel', 'media-chooser-dialog-panel'],
+      width: '700px',
+      maxWidth: '95vw',
+      data: {
+        multiple: true,
+        mediaType: 'all',
+      },
+    });
 
-    dialogRef.afterClosed$.subscribe(({ result }) => {
+    dialogRef.afterClosed().subscribe((result: MediaChooserResult | undefined) => {
       if (!result?.items?.length) {
         return;
       }

@@ -1,6 +1,6 @@
-<div dialog-content class="media-chooser-dialog">
-  <!-- Tabs for media types -->
-  <mat-tab-group [selectedIndex]="getTabIndex()" (selectedIndexChange)="onTabChange($event)">
+<app-material-custom-dialog title="Choose from Library" icon="photo_library" [showDefaultActions]="false">
+  <div dialog-content class="media-chooser-dialog">
+    <mat-tab-group [selectedIndex]="getTabIndex()" (selectedIndexChange)="onTabChange($event)">
     <mat-tab>
       <ng-template mat-tab-label>
         <mat-icon class="tab-icon">image</mat-icon>
@@ -27,7 +27,7 @@
               </div>
               }
               @if (hasRenderablePreview(item)) {
-              <img [src]="getItemSourceUrl(item)" [alt]="getFileName(item.url)" [title]="getFileName(item.url)" loading="lazy" />
+              <img [src]="getItemSourceUrl(item)" alt="{{ getFileName(item.url) }}" title="{{ getFileName(item.url) }}" loading="lazy" />
               } @else {
               <div class="file-preview">
                 <mat-icon>insert_drive_file</mat-icon>
@@ -72,7 +72,7 @@
               }
               @if (hasRenderablePreview(item)) {
               <mat-icon class="video-play-icon">play_circle</mat-icon>
-              <video [src]="getItemSourceUrl(item)" preload="metadata" muted playsinline></video>
+              <video [src]="getItemSourceUrl(item)" preload="metadata" muted></video>
               } @else {
               <div class="file-preview">
                 <mat-icon>insert_drive_file</mat-icon>
@@ -120,21 +120,22 @@
         }
       </div>
     </mat-tab>
-  </mat-tab-group>
-</div>
+    </mat-tab-group>
+  </div>
 
-<div dialog-actions class="chooser-actions">
-  <div class="selection-info">
-    @if (hasSelection()) {
-    <span>{{ selectionCount() }} item(s) selected</span>
-    }
+  <div dialog-actions class="chooser-actions">
+    <div class="selection-info">
+      @if (hasSelection()) {
+      <span>{{ selectionCount() }} item(s) selected</span>
+      }
+    </div>
+    <div class="action-buttons">
+      <button mat-button (click)="cancel()">Cancel</button>
+      @if (allowMultiple()) {
+      <button mat-flat-button (click)="confirm()" [disabled]="!hasSelection() || isConfirming()">
+        {{ isConfirming() ? 'Processing...' : 'Add Selected' }}
+      </button>
+      }
+    </div>
   </div>
-  <div class="action-buttons">
-    <button mat-button (click)="cancel()">Cancel</button>
-    @if (allowMultiple()) {
-    <button mat-flat-button (click)="confirm()" [disabled]="!hasSelection() || isConfirming()">
-      {{ isConfirming() ? 'Processing...' : 'Add Selected' }}
-    </button>
-    }
-  </div>
-</div>
+</app-material-custom-dialog>

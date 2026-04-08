@@ -1,6 +1,7 @@
 import { Component, inject, signal, computed, effect, OnInit, ChangeDetectionStrategy } from '@angular/core';
 
 import { FormsModule } from '@angular/forms';
+import { MatDialog } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -23,7 +24,6 @@ import { Profile, ProfileData, ProfileUpdateOptions } from '../../../services/pr
 import { AccountRelayService } from '../../../services/relays/account-relay';
 import { LoggerService } from '../../../services/logger.service';
 import { PanelNavigationService } from '../../../services/panel-navigation.service';
-import { CustomDialogService } from '../../../services/custom-dialog.service';
 import { sanitizeProfileNameInput } from '../../../utils/profile-name';
 
 interface ExternalIdentity {
@@ -64,7 +64,7 @@ export class ProfileEditComponent implements OnInit {
   media = inject(MediaService);
   private panelNav = inject(PanelNavigationService);
   private snackBar = inject(MatSnackBar);
-  private customDialog = inject(CustomDialogService);
+  private dialog = inject(MatDialog);
   private readonly logger = inject(LoggerService);
   private profileService = inject(Profile);
   profile = signal<ProfileData | null>(null);
@@ -421,8 +421,8 @@ export class ProfileEditComponent implements OnInit {
     const { MediaChooserDialogComponent } = await import('../../../components/media-chooser-dialog/media-chooser-dialog.component');
     type MediaChooserResult = import('../../../components/media-chooser-dialog/media-chooser-dialog.component').MediaChooserResult;
 
-    const dialogRef = this.customDialog.open<typeof MediaChooserDialogComponent.prototype, MediaChooserResult>(MediaChooserDialogComponent, {
-      title: 'Choose from Library',
+    const dialogRef = this.dialog.open(MediaChooserDialogComponent, {
+      panelClass: ['material-custom-dialog-panel', 'media-chooser-dialog-panel'],
       width: '700px',
       maxWidth: '95vw',
       data: {
@@ -431,7 +431,7 @@ export class ProfileEditComponent implements OnInit {
       },
     });
 
-    dialogRef.afterClosed$.subscribe(({ result }) => {
+    dialogRef.afterClosed().subscribe((result: MediaChooserResult | undefined) => {
       const selected = result?.items?.[0];
       if (!selected) return;
 

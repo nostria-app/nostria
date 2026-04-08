@@ -235,6 +235,43 @@
   --material-custom-dialog-width: min(760px, 96vw);
 }
 
+.material-custom-dialog-panel.media-chooser-dialog-panel {
+  --material-custom-dialog-width: min(700px, 95vw);
+  --material-custom-dialog-min-height: 0;
+}
+
+.material-custom-dialog-panel.emoji-picker-dialog-panel {
+  --material-custom-dialog-width: min(420px, calc(100vw - 32px));
+  --material-custom-dialog-min-height: 0;
+  --material-custom-dialog-max-height: calc(100dvh - var(--safe-area-top, 0px) - 32px);
+
+  app-material-custom-dialog .dialog-content {
+    padding: 0;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  app-material-custom-dialog .dialog-actions {
+    display: none;
+  }
+}
+
+.material-custom-dialog-panel.desktop-reaction-picker-dialog-panel {
+  --material-custom-dialog-width: min(360px, calc(100vw - 24px));
+  --material-custom-dialog-min-height: 0;
+  --material-custom-dialog-max-height: min(420px, calc(100vh - 100px));
+
+  app-material-custom-dialog .dialog-content {
+    padding: 0;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  app-material-custom-dialog .dialog-actions {
+    display: none;
+  }
+}
+
 @media (max-width: 700px),
 (max-height: 700px) {
   .material-custom-dialog-panel {

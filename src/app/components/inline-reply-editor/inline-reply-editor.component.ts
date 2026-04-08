@@ -39,7 +39,6 @@ import { UserProfileComponent } from '../user-profile/user-profile.component';
 import { EmojiPickerComponent } from '../emoji-picker/emoji-picker.component';
 import { NoteEditorService, ReplyToInfo } from '../../services/note-editor.service';
 import { EventService } from '../../services/event';
-import { CustomDialogService } from '../../services/custom-dialog.service';
 import { ConfirmDialogComponent } from '../confirm-dialog/confirm-dialog.component';
 import { MatDialog } from '@angular/material/dialog';
 import { Router } from '@angular/router';
@@ -144,7 +143,6 @@ export class InlineReplyEditorComponent implements AfterViewInit, OnDestroy {
   private platformService = inject(PlatformService);
   private noteEditorService = inject(NoteEditorService);
   private eventService = inject(EventService);
-  private customDialog = inject(CustomDialogService);
   private dialog = inject(MatDialog);
   private router = inject(Router);
   private imagePlaceholder = inject(ImagePlaceholderService);
@@ -540,20 +538,18 @@ export class InlineReplyEditorComponent implements AfterViewInit, OnDestroy {
   async openEmojiPickerDialog(): Promise<void> {
     const { EmojiPickerDialogComponent } = await import('../emoji-picker/emoji-picker-dialog.component');
     type EmojiPickerDialogResult = string;
-    const dialogRef = this.customDialog.open<typeof EmojiPickerDialogComponent.prototype, EmojiPickerDialogResult>(EmojiPickerDialogComponent, {
-      title: 'Emoji',
+    const dialogRef = this.dialog.open(EmojiPickerDialogComponent, {
+      panelClass: ['material-custom-dialog-panel', 'emoji-picker-dialog-panel'],
       width: '400px',
-      panelClass: 'emoji-picker-dialog',
-      data: { mode: 'content', activeTab: 'emoji' },
+      data: { title: 'Emoji', mode: 'content', activeTab: 'emoji' },
     });
 
-    dialogRef.afterClosed$.subscribe(result => {
-      if (result.result) {
-        // Check if it's a GIF URL (starts with http)
-        if (result.result.startsWith('http')) {
-          this.insertGifUrl(result.result);
+    dialogRef.afterClosed().subscribe((result: EmojiPickerDialogResult | undefined) => {
+      if (result) {
+        if (result.startsWith('http')) {
+          this.insertGifUrl(result);
         } else {
-          this.insertEmoji(result.result);
+          this.insertEmoji(result);
         }
       }
     });
@@ -924,8 +920,8 @@ export class InlineReplyEditorComponent implements AfterViewInit, OnDestroy {
     const { MediaChooserDialogComponent } = await import('../media-chooser-dialog/media-chooser-dialog.component');
     type MediaChooserResult = import('../media-chooser-dialog/media-chooser-dialog.component').MediaChooserResult;
 
-    const dialogRef = this.customDialog.open<typeof MediaChooserDialogComponent.prototype, MediaChooserResult>(MediaChooserDialogComponent, {
-      title: 'Choose from Library',
+    const dialogRef = this.dialog.open(MediaChooserDialogComponent, {
+      panelClass: ['material-custom-dialog-panel', 'media-chooser-dialog-panel'],
       width: '700px',
       maxWidth: '95vw',
       data: {
@@ -934,7 +930,7 @@ export class InlineReplyEditorComponent implements AfterViewInit, OnDestroy {
       },
     });
 
-    dialogRef.afterClosed$.subscribe(({ result }) => {
+    dialogRef.afterClosed().subscribe((result: MediaChooserResult | undefined) => {
       if (result?.items?.length) {
         for (const item of result.items) {
           this.addExistingMediaToEditor(item);

@@ -31,7 +31,6 @@ import {
 import { DatabaseService } from '../../../services/database.service';
 import type { ReportTarget } from '../../../services/reporting.service';
 import { ReportingService } from '../../../services/reporting.service';
-import { ZapButtonComponent } from '../../../components/zap-button/zap-button.component';
 import { ZapService } from '../../../services/zap.service';
 import { BioContentComponent } from '../../../components/bio-content/bio-content.component';
 import {
@@ -59,7 +58,6 @@ import { CreateListDialogComponent, CreateListDialogResult } from '../../../comp
 import { RelayPoolService } from '../../../services/relays/relay-pool';
 import { MediaService } from '../../../services/media.service';
 import { Profile } from '../../../services/profile';
-import { CustomDialogService } from '../../../services/custom-dialog.service';
 import { TrustMetrics } from '../../../services/database.service';
 
 interface MutualFollowProfile {
@@ -81,7 +79,6 @@ interface MutualFollowProfile {
     MatDividerModule,
     MatTooltipModule,
     QrCodeComponent,
-    ZapButtonComponent,
     BioContentComponent,
     FormsModule,
     MatInputModule,
@@ -129,7 +126,6 @@ export class ProfileHeaderComponent implements OnDestroy {
   private userStatusService = inject(UserStatusService);
   private mediaService = inject(MediaService);
   private profileService = inject(Profile);
-  private customDialog = inject(CustomDialogService);
 
   // User status (NIP-38)
   generalStatus = signal<UserStatus | null>(null);
@@ -1749,8 +1745,8 @@ export class ProfileHeaderComponent implements OnDestroy {
     const { MediaChooserDialogComponent } = await import('../../../components/media-chooser-dialog/media-chooser-dialog.component');
     type MediaChooserResult = import('../../../components/media-chooser-dialog/media-chooser-dialog.component').MediaChooserResult;
 
-    const dialogRef = this.customDialog.open<typeof MediaChooserDialogComponent.prototype, MediaChooserResult>(MediaChooserDialogComponent, {
-      title: 'Choose from Library',
+    const dialogRef = this.dialog.open(MediaChooserDialogComponent, {
+      panelClass: ['material-custom-dialog-panel', 'media-chooser-dialog-panel'],
       width: '700px',
       maxWidth: '95vw',
       data: {
@@ -1759,7 +1755,7 @@ export class ProfileHeaderComponent implements OnDestroy {
       },
     });
 
-    dialogRef.afterClosed$.subscribe(({ result }) => {
+    dialogRef.afterClosed().subscribe((result: MediaChooserResult | undefined) => {
       const selected = result?.items?.[0];
       if (!selected) return;
 

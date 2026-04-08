@@ -2,6 +2,7 @@ import { Component, computed, effect, ElementRef, inject, input, output, signal,
 import { CdkOverlayOrigin, ConnectedPosition, OverlayModule } from '@angular/cdk/overlay';
 import { isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { MatDialog } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule, MatMenuTrigger } from '@angular/material/menu';
@@ -21,10 +22,9 @@ import { DataService } from '../../../services/data.service';
 import { DatabaseService } from '../../../services/database.service';
 import { LoggerService } from '../../../services/logger.service';
 import { LocalSettingsService } from '../../../services/local-settings.service';
-import { CustomDialogService } from '../../../services/custom-dialog.service';
 import { UNICODE_EMOJI_CATEGORIES } from '../../../utils/unicode-emoji-catalog';
-import { CustomDialogComponent } from '../../custom-dialog/custom-dialog.component';
 import { CustomEmojiComponent } from '../../custom-emoji/custom-emoji.component';
+import { CustomDialogComponent } from '../../custom-dialog/custom-dialog.component';
 import { EmojiPickerComponent } from '../../emoji-picker/emoji-picker.component';
 import { CelebrationBurstComponent } from '../../celebration-burst/celebration-burst.component';
 import { HapticsService } from '../../../services/haptics.service';
@@ -286,8 +286,8 @@ interface ReactionEmojiSectionNavItem {
     MatMenuModule,
     MatProgressSpinnerModule,
     OverlayModule,
-    CustomDialogComponent,
     CustomEmojiComponent,
+    CustomDialogComponent,
     EmojiPickerComponent,
     CelebrationBurstComponent,
   ],
@@ -307,7 +307,7 @@ export class ReactionButtonComponent {
   private readonly database = inject(DatabaseService);
   private readonly logger = inject(LoggerService);
   private readonly localSettings = inject(LocalSettingsService);
-  private readonly customDialog = inject(CustomDialogService);
+  private readonly dialog = inject(MatDialog);
   private readonly haptics = inject(HapticsService);
   private readonly zapSound = inject(ZapSoundService);
   private readonly platformId = inject(PLATFORM_ID);
@@ -1107,16 +1107,15 @@ export class ReactionButtonComponent {
     this.closeMenu();
 
     const { EmojiPickerDialogComponent } = await import('../../emoji-picker/emoji-picker-dialog.component');
-    const dialogRef = this.customDialog.open<typeof EmojiPickerDialogComponent.prototype, string>(EmojiPickerDialogComponent, {
-      title: 'React',
+    const dialogRef = this.dialog.open(EmojiPickerDialogComponent, {
+      panelClass: ['material-custom-dialog-panel', 'desktop-reaction-picker-dialog-panel'],
       width: '400px',
-      panelClass: 'emoji-picker-dialog',
-      data: { mode: 'reaction', activeTab: 'emoji', allowPreferredReactionShortcut: true },
+      data: { title: 'React', mode: 'reaction', activeTab: 'emoji', allowPreferredReactionShortcut: true },
     });
 
-    dialogRef.afterClosed$.subscribe(async result => {
-      if (result.result) {
-        await this.addReaction(result.result, false);
+    dialogRef.afterClosed().subscribe(async (result: string | undefined) => {
+      if (result) {
+        await this.addReaction(result, false);
       }
     });
   }

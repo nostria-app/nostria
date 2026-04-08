@@ -1270,8 +1270,8 @@ export class ChatsComponent implements OnInit, OnDestroy {
     const { MediaChooserDialogComponent } = await import('../../components/media-chooser-dialog/media-chooser-dialog.component');
     type MediaChooserResult = import('../../components/media-chooser-dialog/media-chooser-dialog.component').MediaChooserResult;
 
-    const dialogRef = this.customDialog.open<typeof MediaChooserDialogComponent.prototype, MediaChooserResult>(MediaChooserDialogComponent, {
-      title: 'Choose from Library',
+    const dialogRef = this.dialog.open(MediaChooserDialogComponent, {
+      panelClass: ['material-custom-dialog-panel', 'media-chooser-dialog-panel'],
       width: '700px',
       maxWidth: '95vw',
       data: {
@@ -1281,7 +1281,7 @@ export class ChatsComponent implements OnInit, OnDestroy {
       },
     });
 
-    dialogRef.afterClosed$.subscribe(({ result }) => {
+    dialogRef.afterClosed().subscribe((result: MediaChooserResult | undefined) => {
       if (result?.items?.length) {
         for (const item of result.items) {
           this.insertMediaUrl(item.url, item.type);
@@ -1311,16 +1311,15 @@ export class ChatsComponent implements OnInit, OnDestroy {
   /** Open GIF picker dialog */
   async openGifPickerDialog(): Promise<void> {
     const { EmojiPickerDialogComponent } = await import('../../components/emoji-picker/emoji-picker-dialog.component');
-    const dialogRef = this.customDialog.open<typeof EmojiPickerDialogComponent.prototype, string>(EmojiPickerDialogComponent, {
-      title: 'GIFs',
+    const dialogRef = this.dialog.open(EmojiPickerDialogComponent, {
+      panelClass: ['material-custom-dialog-panel', 'emoji-picker-dialog-panel'],
       width: '400px',
-      panelClass: 'emoji-picker-dialog',
-      data: { mode: 'content', activeTab: 'gifs' },
+      data: { title: 'GIFs', mode: 'content', activeTab: 'gifs' },
     });
 
-    dialogRef.afterClosed$.subscribe(result => {
-      if (result.result) {
-        this.insertGifUrl(result.result);
+    dialogRef.afterClosed().subscribe((result: string | undefined) => {
+      if (result) {
+        this.insertGifUrl(result);
       }
     });
   }

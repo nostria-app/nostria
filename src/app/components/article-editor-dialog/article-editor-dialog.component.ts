@@ -1139,20 +1139,17 @@ export class ArticleEditorDialogComponent implements OnDestroy, AfterViewInit {
     const { MediaChooserDialogComponent } = await import('../media-chooser-dialog/media-chooser-dialog.component');
     type MediaChooserResult = import('../media-chooser-dialog/media-chooser-dialog.component').MediaChooserResult;
 
-    const dialogRef = this.customDialog.open<typeof MediaChooserDialogComponent.prototype, MediaChooserResult>(
-      MediaChooserDialogComponent,
-      {
-        title: 'Choose from Library',
-        width: '700px',
-        maxWidth: '95vw',
-        data: {
-          multiple: false,
-          mediaType: 'images',
-        },
-      }
-    );
+    const dialogRef = this.dialog.open(MediaChooserDialogComponent, {
+      panelClass: ['material-custom-dialog-panel', 'media-chooser-dialog-panel'],
+      width: '700px',
+      maxWidth: '95vw',
+      data: {
+        multiple: false,
+        mediaType: 'images',
+      },
+    });
 
-    dialogRef.afterClosed$.subscribe(({ result }) => {
+    dialogRef.afterClosed().subscribe((result: MediaChooserResult | undefined) => {
       const selected = result?.items?.[0];
       if (!selected) {
         return;
