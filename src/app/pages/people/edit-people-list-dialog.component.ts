@@ -41,7 +41,7 @@ export interface EditPeopleListDialogResult {
     MatFormFieldModule,
   ],
   template: `
-    <div dialog-content class="dialog-content">
+    <div dialog-content class="edit-people-list-content">
         <!-- List Name Input -->
         <div class="name-section">
           <mat-form-field appearance="outline" class="full-width">
@@ -101,12 +101,11 @@ export interface EditPeopleListDialogResult {
         }
     </div>
 
-    <div dialog-actions class="dialog-actions">
+    <div dialog-actions class="edit-people-list-actions">
         <button mat-button type="button" class="delete-button" (click)="deleteList()">
           <mat-icon>delete</mat-icon>
           Delete List
         </button>
-        <span class="spacer"></span>
         <button mat-button type="button" (click)="cancel()">Cancel</button>
         <button mat-flat-button type="button" (click)="save()" [disabled]="!hasChanges()">
           Save Changes
@@ -120,7 +119,7 @@ export interface EditPeopleListDialogResult {
       min-width: 0;
     }
 
-    .dialog-content {
+    .edit-people-list-content {
       flex: 1;
       overflow-y: auto;
       min-height: 200px;
@@ -243,7 +242,7 @@ export interface EditPeopleListDialogResult {
       }
     }
 
-    .dialog-actions {
+    .edit-people-list-actions {
       display: flex;
       align-items: center;
       justify-content: flex-end;
@@ -251,18 +250,15 @@ export interface EditPeopleListDialogResult {
 
       .delete-button {
         color: var(--mat-sys-error);
+        margin-right: auto;
         
         mat-icon {
           margin-right: 4px;
         }
       }
-
-      .spacer {
-        flex: 1;
-      }
     }
     @media (max-width: 520px) {
-      .dialog-content {
+      .edit-people-list-content {
         min-width: 0;
       }
     }
@@ -293,9 +289,9 @@ export class EditPeopleListDialogComponent {
   listName = signal('');
 
   // Computed
-  hasChanges = computed(() => 
+  hasChanges = computed(() =>
     !!this.followSetData() && (
-      this.removedPubkeys().length > 0 || 
+      this.removedPubkeys().length > 0 ||
       this.listName().trim() !== this.followSetData()!.title.trim()
     )
   );
@@ -363,7 +359,7 @@ export class EditPeopleListDialogComponent {
         if (newName !== set.title.trim()) {
           changes.push(`Renamed to "${newName}"`);
         }
-        
+
         this.notificationService.notify(changes.join(' and '));
 
         // Close dialog with result

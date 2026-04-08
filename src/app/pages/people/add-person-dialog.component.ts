@@ -36,7 +36,7 @@ export interface AddPersonDialogData {
     UserProfileComponent
   ],
   template: `
-    <div dialog-content class="dialog-content">
+    <div dialog-content class="add-person-content">
         @switch (state()) {
           @case ('input') {
             <div class="input-section">
@@ -128,7 +128,7 @@ export interface AddPersonDialogData {
         }
     </div>
 
-    <div dialog-actions class="dialog-actions">
+    <div dialog-actions class="add-person-actions">
         @switch (state()) {
           @case ('input') {
             <button mat-button (click)="onCancel()">Cancel</button>
@@ -163,7 +163,7 @@ export interface AddPersonDialogData {
         min-width: 0;
       }
 
-      .dialog-content {
+      .add-person-content {
         min-width: min(400px, calc(100vw - 48px));
         min-height: 200px;
       }
@@ -284,14 +284,14 @@ export interface AddPersonDialogData {
         }
       }
 
-      .dialog-actions {
+      .add-person-actions {
         display: flex;
         justify-content: flex-end;
         gap: 8px;
       }
 
       @media (max-width: 520px) {
-        .dialog-content {
+        .add-person-content {
           min-width: 0;
         }
       }
