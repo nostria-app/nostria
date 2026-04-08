@@ -51,6 +51,8 @@ export class TrustSettingsComponent implements OnInit, OnDestroy {
   private readonly legacyBrainstormRelays = new Set([
     'wss://nip85.brainstorm.world',
   ]);
+  private readonly brainstormStatusPollIntervalMs = 15000;
+  private brainstormStatusPollTimer: ReturnType<typeof setInterval> | null = null;
 
   trustProviderService = inject(TrustProviderService);
   private accountState = inject(AccountStateService);
@@ -150,6 +152,18 @@ export class TrustSettingsComponent implements OnInit, OnDestroy {
       this.hasAutoLoadedStatus = true;
       void this.checkBrainstormStatus();
     });
+
+    effect(() => {
+      const activated = this.isBrainstormActivated();
+      const statusChecked = this.brainstormStatusChecked();
+      const completed = this.hasCompletedBrainstormCalculation();
+
+      if (activated && statusChecked && !completed) {
+        this.startBrainstormStatusPolling();
+      } else {
+        this.stopBrainstormStatusPolling();
+      }
+    });
   }
 
   needsBrainstormMigration = computed(() => {
@@ -169,6 +183,8 @@ export class TrustSettingsComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.stopBrainstormStatusPolling();
+
     if (!this.rightPanel.hasContent()) {
       this.panelActions.clearPageTitle();
     }
@@ -415,6 +431,29 @@ export class TrustSettingsComponent implements OnInit, OnDestroy {
     }
 
     return $localize`:@@settings.trust.brainstorm.errorGeneric:Something went wrong while talking to Brainstorm.`;
+  }
+
+  private startBrainstormStatusPolling(): void {
+    if (this.brainstormStatusPollTimer) {
+      return;
+    }
+
+    this.brainstormStatusPollTimer = setInterval(() => {
+      if (this.brainstormStatusLoading()) {
+        return;
+      }
+
+      void this.checkBrainstormStatus();
+    }, this.brainstormStatusPollIntervalMs);
+  }
+
+  private stopBrainstormStatusPolling(): void {
+    if (!this.brainstormStatusPollTimer) {
+      return;
+    }
+
+    clearInterval(this.brainstormStatusPollTimer);
+    this.brainstormStatusPollTimer = null;
   }
 
   toggleShow10040Event(): void {
