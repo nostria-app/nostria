@@ -87,7 +87,7 @@ interface ScrollLockStyles {
           [icon]="getHeaderIcon()"
           [showHeader]="showHeader()"
           [showDefaultActions]="false"
-          [showCloseButton]="getShowCloseButton() && !getDisableClose()"
+          [showCloseButton]="getShowCloseButton()"
           [closeResult]="false"
           (closed)="onCloseClick()">
           @if (getShowBackButton()) {
