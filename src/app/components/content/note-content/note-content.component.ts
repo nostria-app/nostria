@@ -326,7 +326,8 @@ export class NoteContentComponent implements OnDestroy {
           continue;
         }
 
-        return !this.blockRenderedTokenTypes.has(previousToken.type);
+        return !this.blockRenderedTokenTypes.has(previousToken.type)
+          && !(previousToken.type === 'nostr-mention' && this.isMusicMention(previousToken));
       }
 
       return true;

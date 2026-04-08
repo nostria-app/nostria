@@ -380,6 +380,7 @@
       }
 
       .article-event-embed {
+
         a,
         .user-profile-name-link,
         .user-profile-npub-link,
@@ -411,6 +412,12 @@
         .date-link:hover {
           color: inherit;
         }
+      }
+
+      .article-music-embed,
+      .article-music-embed app-music-embed {
+        display: block;
+        margin: 0;
       }
 
       code {
@@ -895,6 +902,7 @@
 }
 
 @media (max-width: 420px) {
+
   .actions-row,
   .actions-row.mode-labels-only,
   .actions-row.mode-icons-only,
@@ -929,6 +937,7 @@
 }
 
 @container (max-width: 420px) {
+
   .actions-row,
   .actions-row.mode-labels-only,
   .actions-row.mode-icons-only,
