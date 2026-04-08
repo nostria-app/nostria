@@ -17,650 +17,656 @@
 }
 
 <ng-template #editorDialogContent>
-<!-- Content Area -->
-<div dialog-content class="note-editor-dialog" [class.inline-editor]="inlineMode()" #noteEditorLayout>
-  <div class="dialog-content-wrapper" [class.scrollable]="showAdvancedOptions()"
-    [class.preview-mode]="showPreview() && !showAdvancedOptions()"
-    [attr.data-drag-enabled]="!showPreview() && !showAdvancedOptions() || null"
-    (dragenter)="!showPreview() && !showAdvancedOptions() && onDragEnter($event)"
-    (dragover)="!showPreview() && !showAdvancedOptions() && onDragOver($event)"
-    (dragleave)="!showPreview() && !showAdvancedOptions() && onDragLeave($event)"
-    (drop)="!showPreview() && !showAdvancedOptions() && onDrop($event)" [class.drag-over]="isDragOver()"
-    #dialogContentWrapper>
+  <!-- Content Area -->
+  <div dialog-content class="note-editor-dialog" [class.inline-editor]="inlineMode()" #noteEditorLayout>
+    <div class="dialog-content-wrapper" [class.scrollable]="showAdvancedOptions()"
+      [class.preview-mode]="showPreview() && !showAdvancedOptions()"
+      [attr.data-drag-enabled]="!showPreview() && !showAdvancedOptions() || null"
+      (dragenter)="!showPreview() && !showAdvancedOptions() && onDragEnter($event)"
+      (dragover)="!showPreview() && !showAdvancedOptions() && onDragOver($event)"
+      (dragleave)="!showPreview() && !showAdvancedOptions() && onDragLeave($event)"
+      (drop)="!showPreview() && !showAdvancedOptions() && onDrop($event)" [class.drag-over]="isDragOver()"
+      #dialogContentWrapper>
 
-    <!-- Error display -->
-    @if (mediaService.error()) {
-    <div class="error-container">
-      <mat-icon color="warn">error</mat-icon>
-      <p>{{ mediaService.error() }}</p>
-      <button mat-button (click)="dismissError()" i18n="@@common.dismiss">Dismiss</button>
-    </div>
-    }
-
-    <!-- Upload progress -->
-    @if (isUploading()) {
-    <div class="upload-progress">
-      <mat-progress-bar mode="indeterminate"></mat-progress-bar>
-      <span class="upload-text">{{ uploadStatus() || 'Uploading...' }}</span>
-    </div>
-    }
-
-    <!-- Reply context (inline mode shows who we're replying to) -->
-    @if (isReply()) {
-    <div class="reply-context">
-      <div class="reply-context-header">
-        <div class="reply-context-title">
-          <mat-icon class="reply-icon">reply</mat-icon>
-          <span class="reply-text" i18n="@@editor.replying-to-note-by">Replying to note by</span>
-
-          @if (replyPreviewPubkey()) {
-          <app-user-profile [pubkey]="replyPreviewPubkey()" view="list" class="reply-author" [disableLink]="true"
-            [disableHoverCard]="true" [hostWidthAuto]="true" [showRank]="false"></app-user-profile>
-          }
-        </div>
-
-      </div>
-
-      <div class="reply-preview">
-        @if (replyPreviewText()) {
-        <p class="reply-preview-content">{{ replyPreviewText() }}</p>
-        } @else {
-        <p class="reply-preview-empty">{{ replyPreviewFallbackText() }}</p>
-        }
-      </div>
-    </div>
-    }
-
-    <!-- Quote context -->
-    @if (isQuote()) {
-    <div class="quote-context">
-      <mat-icon class="quote-icon">format_quote</mat-icon>
-      <span class="quote-text" i18n="@@editor.quoting">Quoting: "{{ (data.quote?.content || '').slice(0, 100)
-        }}{{ (data.quote?.content || '').length > 100 ? '...' : '' }}"</span>
-    </div>
-    }
-
-    @if (sentimentHeaderState(); as sentimentState) {
-    <div class="inline-status-row">
-      <span class="sentiment-status" [class.loading]="sentimentState.kind === 'loading'"
-        [class.error]="sentimentState.kind === 'error'" [class.result]="sentimentState.kind === 'result'">
-        <mat-icon [class.spinning]="sentimentState.kind === 'loading'">{{ sentimentState.icon }}</mat-icon>
-        <span>{{ sentimentState.text }}</span>
-        <button mat-icon-button type="button" class="close-inline-status" (click)="dismissSentimentStatus()"
-          matTooltip="Dismiss sentiment result" i18n-matTooltip="@@editor.dismiss-sentiment-result">
-          <mat-icon>close</mat-icon>
-        </button>
-      </span>
-    </div>
-    }
-
-    <!-- Content editor with upload actions -->
-    @if (!showPreview() && !showAdvancedOptions()) {
-    <div class="content-editor-section">
-
-      <!-- Media Mode Toggle Banner (hidden until future change) -->
-      @if (false && isMediaModeAvailable() && !inlineMode()) {
-      <div class="media-mode-banner" [class.active]="isMediaMode()">
-        <div class="media-mode-info">
-          <mat-icon class="media-icon">perm_media</mat-icon>
-          <div class="media-text">
-            <span class="media-label" i18n="@@editor.publish-as-media-story">Publish as Media Story</span>
-            <span class="media-description" i18n="@@editor.media-story.description">Create a rich media event optimized
-              for media clients</span>
-          </div>
-        </div>
-        <mat-slide-toggle [checked]="isMediaMode()" (change)="setMediaMode($event.checked)" color="primary">
-        </mat-slide-toggle>
+      <!-- Error display -->
+      @if (mediaService.error()) {
+      <div class="error-container">
+        <mat-icon color="warn">error</mat-icon>
+        <p>{{ mediaService.error() }}</p>
+        <button mat-button (click)="dismissError()" i18n="@@common.dismiss">Dismiss</button>
       </div>
       }
 
-      <!-- Title Input for Media Mode -->
-      @if (isMediaModeEnabled()) {
-      <mat-form-field appearance="outline" class="title-field">
-        <mat-label i18n="@@common.title">Title</mat-label>
-        <input matInput [ngModel]="title()" (ngModelChange)="title.set($event)" placeholder="Give your story a title"
-          i18n-placeholder="@@editor.story-title.placeholder">
-      </mat-form-field>
+      <!-- Upload progress -->
+      @if (isUploading()) {
+      <div class="upload-progress">
+        <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+        <span class="upload-text">{{ uploadStatus() || 'Uploading...' }}</span>
+      </div>
       }
 
-      <div class="textarea-container">
-        <div class="content-field" [class.focused]="isContentFocused()" #contentField
-          [class.empty]="!content() && !isContentFocused()">
-          @if (!content() && !isContentFocused()) {
-          <div class="content-placeholder" aria-hidden="true">
-            @if (isMediaModeEnabled()) {
-            <ng-container i18n="@@editor.placeholder.description">Description</ng-container>
-            } @else if (inlineMode()) {
-            <ng-container i18n="@@editor.inline.post-reply">Post your reply</ng-container>
-            } @else {
-            <ng-container i18n="@@editor.placeholder.whats-on-your-mind">What's on your mind?</ng-container>
+      <!-- Reply context (inline mode shows who we're replying to) -->
+      @if (isReply()) {
+      <div class="reply-context">
+        <div class="reply-context-header">
+          <div class="reply-context-title">
+            <mat-icon class="reply-icon">reply</mat-icon>
+            <span class="reply-text" i18n="@@editor.replying-to-note-by">Replying to note by</span>
+
+            @if (replyPreviewPubkey()) {
+            <app-user-profile [pubkey]="replyPreviewPubkey()" view="list" class="reply-author" [disableLink]="true"
+              [disableHoverCard]="true" [hostWidthAuto]="true" [showRank]="false"></app-user-profile>
             }
           </div>
-          }
-          <textarea [value]="content()" (input)="onContentInput($event)" (focus)="onContentFocus()"
-            (blur)="onContentBlur()" (keydown)="onContentKeyDown($event)" (keyup)="onContentKeyUp($event)"
-            (click)="onContentClick($event)" (select)="onContentSelectionChange($event)"
-            [attr.placeholder]="isContentFocused() ? (inlineMode() ? 'Write your reply... Use @ to mention, / for commands' : 'Write your note... Use @ to mention, / for commands') : null"
-            title="{{ inlineMode() ? 'Reply content' : 'Note content' }}"
-            aria-label="{{ inlineMode() ? 'Reply content' : 'Note content' }}" class="content-textarea"
-            #contentTextarea>
-          </textarea>
+
         </div>
 
-        <!-- Mention Autocomplete positioned relative to textarea -->
-        @if (mentionConfig()) {
-        <app-mention-autocomplete [config]="mentionConfig()" [position]="mentionPosition()" [maxResults]="100"
-          [maxHeight]="400" (mentionSelected)="onMentionSelected($event)"
-          (dismissed)="onMentionDismissed()"></app-mention-autocomplete>
-        }
-
-        <!-- Slash Command Menu positioned relative to textarea -->
-        @if (slashCommandConfig()) {
-        <app-slash-command-menu [config]="slashCommandConfig()" [position]="slashCommandPosition()"
-          (commandSelected)="onSlashCommandSelected($event)"
-          (dismissed)="onSlashCommandDismissed()"></app-slash-command-menu>
-        }
-      </div>
-
-      <!-- Hidden file input -->
-      <input type="file" #fileInput (change)="onFileSelected($event)" accept="image/*,video/*" multiple
-        class="hidden-file-input" aria-label="Upload media files" i18n-aria-label="@@editor.upload-media-files" />
-    </div>
-    }
-
-    <!-- Advanced Options (not in inline mode) -->
-    @if (showAdvancedOptions() && !inlineMode()) {
-    <div class="advanced-options-section">
-      <div class="advanced-options-header">
-        <mat-icon class="options-icon">settings</mat-icon>
-        <span class="options-title" i18n="@@editor.advanced-options">Advanced Options</span>
-        <span class="spacer"></span>
-        <button mat-icon-button type="button" class="close-advanced-options" (click)="toggleAdvancedOptions()"
-          matTooltip="Close advanced options" i18n-matTooltip="@@editor.close-advanced-options">
-          <mat-icon>close</mat-icon>
-        </button>
-      </div>
-
-      <!-- Media Upload Options -->
-      <div class="option-row">
-        <div class="option-header">
-          <span class="option-label" i18n="@@editor.media-optimization">Media Optimization</span>
-          <mat-button-toggle-group class="optimization-toggle-group" [value]="selectedMediaOptimization()"
-            (change)="onMediaOptimizationChange($event.value)" [hideSingleSelectionIndicator]="true"
-            aria-label="Media optimization" i18n-aria-label="@@editor.media-optimization">
-            @for (option of mediaOptimizationOptions; track option.value) {
-            <mat-button-toggle [value]="option.value">{{ option.label }}</mat-button-toggle>
-            }
-          </mat-button-toggle-group>
-          <span class="option-description">
-            {{ selectedMediaOptimizationDescription() }}
-          </span>
-        </div>
-
-        <div class="option-content">
-          @if (hasPendingVideoMedia()) {
-          <span class="option-description" i18n="@@editor.pending-video-choice">Right-click or press and hold a queued
-            video thumbnail to choose a clip type
-            for that specific video.</span>
+        <div class="reply-preview">
+          @if (replyPreviewText()) {
+          <p class="reply-preview-content">{{ replyPreviewText() }}</p>
+          } @else {
+          <p class="reply-preview-empty">{{ replyPreviewFallbackText() }}</p>
           }
         </div>
       </div>
+      }
 
-      <!-- Client Metadata Options -->
-      <div class="option-row option-grouped-row">
-        <div class="option-group-section">
-          <div class="option-header">
-            <mat-slide-toggle [checked]="addClientTag()" (change)="addClientTag.set($event.checked)" color="primary">
-              <span i18n="@@settings.client-tags.add">Add Client Tag</span>
-            </mat-slide-toggle>
-            <span class="option-description">
-              <span i18n="@@editor.client-tag.description">Add the Nostria client tag to this event</span>
-            </span>
-          </div>
-        </div>
+      <!-- Quote context -->
+      @if (isQuote()) {
+      <div class="quote-context">
+        <mat-icon class="quote-icon">format_quote</mat-icon>
+        <span class="quote-text" i18n="@@editor.quoting">Quoting: "{{ (data.quote?.content || '').slice(0, 100)
+          }}{{ (data.quote?.content || '').length > 100 ? '...' : '' }}"</span>
+      </div>
+      }
 
-        <div class="option-group-section option-group-section-divider">
-          <div class="option-header">
-            <mat-slide-toggle [checked]="expirationEnabled()" (change)="onExpirationToggle($event.checked)"
-              color="primary">
-              <span i18n="@@editor.expiration">Expiration</span>
-            </mat-slide-toggle>
-            <span class="option-description" i18n="@@editor.expiration.description">Set an expiration date and time for
-              this note</span>
-          </div>
+      @if (sentimentHeaderState(); as sentimentState) {
+      <div class="inline-status-row">
+        <span class="sentiment-status" [class.loading]="sentimentState.kind === 'loading'"
+          [class.error]="sentimentState.kind === 'error'" [class.result]="sentimentState.kind === 'result'">
+          <mat-icon [class.spinning]="sentimentState.kind === 'loading'">{{ sentimentState.icon }}</mat-icon>
+          <span>{{ sentimentState.text }}</span>
+          <button mat-icon-button type="button" class="close-inline-status" (click)="dismissSentimentStatus()"
+            matTooltip="Dismiss sentiment result" i18n-matTooltip="@@editor.dismiss-sentiment-result">
+            <mat-icon>close</mat-icon>
+          </button>
+        </span>
+      </div>
+      }
 
-          @if (expirationEnabled()) {
-          <div class="option-content">
-            <div class="expiration-inputs">
-              <mat-form-field appearance="outline" class="date-field">
-                <mat-label i18n="@@editor.expiration.date">Expiration Date</mat-label>
-                <input matInput [matDatepicker]="expirationPicker" [value]="expirationDate()"
-                  (dateInput)="onExpirationDateChange($event.value)" (dateChange)="onExpirationDateChange($event.value)"
-                  placeholder="Select date" i18n-placeholder="@@editor.expiration.select-date" [min]="minDate()"
-                  readonly />
-                <mat-datepicker-toggle matIconSuffix [for]="expirationPicker"></mat-datepicker-toggle>
-                <mat-datepicker #expirationPicker></mat-datepicker>
-              </mat-form-field>
+      <!-- Content editor with upload actions -->
+      @if (!showPreview() && !showAdvancedOptions()) {
+      <div class="content-editor-section">
 
-              <mat-form-field appearance="outline" class="time-field">
-                <mat-label i18n="@@editor.expiration.time">Expiration Time</mat-label>
-                <input matInput type="time" [value]="expirationTime()" (input)="onExpirationTimeChange($event)"
-                  placeholder="Select time" i18n-placeholder="@@editor.expiration.select-time" />
-              </mat-form-field>
+        <!-- Media Mode Toggle Banner (hidden until future change) -->
+        @if (false && isMediaModeAvailable() && !inlineMode()) {
+        <div class="media-mode-banner" [class.active]="isMediaMode()">
+          <div class="media-mode-info">
+            <mat-icon class="media-icon">perm_media</mat-icon>
+            <div class="media-text">
+              <span class="media-label" i18n="@@editor.publish-as-media-story">Publish as Media Story</span>
+              <span class="media-description" i18n="@@editor.media-story.description">Create a rich media event
+                optimized
+                for media clients</span>
             </div>
-
-            @if (!expirationValidation().valid) {
-            <div class="expiration-error">
-              <mat-icon color="warn">warning</mat-icon>
-              <span>{{ expirationValidation().message }}</span>
-            </div>
-            }
-
-            <mat-hint class="expiration-hint" i18n="@@editor.expiration.hint">Note will be considered expired after this
-              date and time</mat-hint>
           </div>
-          }
-        </div>
-      </div>
-
-      <!-- Post to X Option -->
-      <div class="option-row">
-        <div class="option-header">
-          <mat-slide-toggle [checked]="postToX()" (change)="onPostToXChange($event.checked)"
-            [disabled]="!canTogglePostToX()">
-            <span class="x-toggle-label">
-              <img src="/logos/clients/x.png" width="16" height="16" alt="X" class="x-logo" />
-              <span>Post to X</span>
-              @if (postToX() && xPostValidation().valid) {
-              <span class="x-enabled-pill">Enabled</span>
-              }
-            </span>
+          <mat-slide-toggle [checked]="isMediaMode()" (change)="setMediaMode($event.checked)" color="primary">
           </mat-slide-toggle>
-          <span class="option-description">
-            Publish this post to your connected X account. Supports up to 4 images or 1 video/GIF. Quote/reply threading
-            and edits are not mirrored yet.
-          </span>
-        </div>
-
-        @if (xStatusLoading()) {
-        <div class="option-content">
-          <span class="option-description">Checking X connection...</span>
-        </div>
-        } @else if (!xPremiumEligible()) {
-        <div class="option-content">
-          <span class="option-description">Post to X is available for Premium+ accounts only.</span>
-
-          @if (postToX() && !xPostValidation().valid) {
-          <div class="x-post-validation">
-            <mat-icon>warning</mat-icon>
-            <span>{{ xPostValidation().message }}</span>
-          </div>
-          }
-        </div>
-        } @else if (hasReplyTarget()) {
-        <div class="option-content">
-          <span class="option-description">Replies stay on Nostr only. Post to X is available for original posts.</span>
-
-          @if (postToX() && !xPostValidation().valid) {
-          <div class="x-post-validation">
-            <mat-icon>warning</mat-icon>
-            <span>{{ xPostValidation().message }}</span>
-          </div>
-          }
-        </div>
-        } @else if (!xStatusReady()) {
-        <div class="option-content">
-          <span class="option-description">Enable Post to X to check your X connection.</span>
-        </div>
-        } @else if (xPostingAvailable()) {
-        <div class="option-content">
-          <span class="option-description">Connected as {{ xDualPost.status().username || 'X user' }}</span>
-
-          @if (postToX() && !xPostValidation().valid) {
-          <div class="x-post-validation">
-            <mat-icon>warning</mat-icon>
-            <span>{{ xPostValidation().message }}</span>
-          </div>
-          }
-        </div>
-        } @else {
-        <div class="option-content">
-          <button mat-button type="button" (click)="connectXFromComposer()">Connect X</button>
         </div>
         }
-      </div>
 
-      <!-- Proof of Work Option -->
-      <div class="option-row">
-        <div class="option-header">
-          <div class="option-label">Proof of Work (Difficulty: {{ powTargetDifficulty() }})</div>
+        <!-- Title Input for Media Mode -->
+        @if (isMediaModeEnabled()) {
+        <mat-form-field appearance="outline" class="title-field">
+          <mat-label i18n="@@common.title">Title</mat-label>
+          <input matInput [ngModel]="title()" (ngModelChange)="title.set($event)" placeholder="Give your story a title"
+            i18n-placeholder="@@editor.story-title.placeholder">
+        </mat-form-field>
+        }
+
+        <div class="textarea-container">
+          <div class="content-field" [class.focused]="isContentFocused()" #contentField
+            [class.empty]="!content() && !isContentFocused()">
+            @if (!content() && !isContentFocused()) {
+            <div class="content-placeholder" aria-hidden="true">
+              @if (isMediaModeEnabled()) {
+              <ng-container i18n="@@editor.placeholder.description">Description</ng-container>
+              } @else if (inlineMode()) {
+              <ng-container i18n="@@editor.inline.post-reply">Post your reply</ng-container>
+              } @else {
+              <ng-container i18n="@@editor.placeholder.whats-on-your-mind">What's on your mind?</ng-container>
+              }
+            </div>
+            }
+            <textarea [value]="content()" (input)="onContentInput($event)" (focus)="onContentFocus()"
+              (blur)="onContentBlur()" (keydown)="onContentKeyDown($event)" (keyup)="onContentKeyUp($event)"
+              (click)="onContentClick($event)" (select)="onContentSelectionChange($event)"
+              [attr.placeholder]="isContentFocused() ? (inlineMode() ? 'Write your reply... Use @ to mention, / for commands' : 'Write your note... Use @ to mention, / for commands') : null"
+              title="{{ inlineMode() ? 'Reply content' : 'Note content' }}"
+              aria-label="{{ inlineMode() ? 'Reply content' : 'Note content' }}" class="content-textarea"
+              #contentTextarea>
+          </textarea>
+          </div>
+
+          <!-- Mention Autocomplete positioned relative to textarea -->
+          @if (mentionConfig()) {
+          <app-mention-autocomplete [config]="mentionConfig()" [position]="mentionPosition()" [maxResults]="100"
+            [maxHeight]="400" (mentionSelected)="onMentionSelected($event)"
+            (dismissed)="onMentionDismissed()"></app-mention-autocomplete>
+          }
+
+          <!-- Slash Command Menu positioned relative to textarea -->
+          @if (slashCommandConfig()) {
+          <app-slash-command-menu [config]="slashCommandConfig()" [position]="slashCommandPosition()"
+            (commandSelected)="onSlashCommandSelected($event)"
+            (dismissed)="onSlashCommandDismissed()"></app-slash-command-menu>
+          }
         </div>
 
-        <div class="option-content pow-content">
-          <mat-slider min="0" max="26" step="1" showTickMarks discrete [disabled]="isPowMining()">
-            <input matSliderThumb [value]="powTargetDifficulty()" (valueChange)="onPowDifficultySliderChange($event)"
-              aria-label="Proof of Work Difficulty">
-          </mat-slider>
-        </div>
+        <!-- Hidden file input -->
+        <input type="file" #fileInput (change)="onFileSelected($event)" accept="image/*,video/*" multiple
+          class="hidden-file-input" aria-label="Upload media files" i18n-aria-label="@@editor.upload-media-files" />
       </div>
+      }
 
-      <!-- Event JSON Preview Option -->
-      <div class="option-row">
-        <div class="option-header">
-          <button mat-button type="button" class="event-json-expander" (click)="showEventJson.update(value => !value)"
-            [attr.aria-expanded]="showEventJson()" aria-controls="event-json-preview-panel">
-            <mat-icon>{{ showEventJson() ? 'expand_less' : 'expand_more' }}</mat-icon>
-            <span>Show Event JSON</span>
+      <!-- Advanced Options (not in inline mode) -->
+      @if (showAdvancedOptions() && !inlineMode()) {
+      <div class="advanced-options-section">
+        <div class="advanced-options-header">
+          <mat-icon class="options-icon">settings</mat-icon>
+          <span class="options-title" i18n="@@editor.advanced-options">Advanced Options</span>
+          <span class="spacer"></span>
+          <button mat-icon-button type="button" class="close-advanced-options" (click)="toggleAdvancedOptions()"
+            matTooltip="Close advanced options" i18n-matTooltip="@@editor.close-advanced-options">
+            <mat-icon>close</mat-icon>
           </button>
         </div>
 
-        @if (showEventJson()) {
-        <div class="option-content" id="event-json-preview-panel">
-          <div class="event-json-preview">
-            <pre class="json-content">{{ previewEventJson() }}</pre>
+        <!-- Media Upload Options -->
+        <div class="option-row">
+          <div class="option-header">
+            <span class="option-label" i18n="@@editor.media-optimization">Media Optimization</span>
+            <mat-button-toggle-group class="optimization-toggle-group" [value]="selectedMediaOptimization()"
+              (change)="onMediaOptimizationChange($event.value)" [hideSingleSelectionIndicator]="true"
+              aria-label="Media optimization" i18n-aria-label="@@editor.media-optimization">
+              @for (option of mediaOptimizationOptions; track option.value) {
+              <mat-button-toggle [value]="option.value">{{ option.label }}</mat-button-toggle>
+              }
+            </mat-button-toggle-group>
+            <span class="option-description">
+              {{ selectedMediaOptimizationDescription() }}
+            </span>
+          </div>
+
+          <div class="option-content">
+            @if (hasPendingVideoMedia()) {
+            <span class="option-description" i18n="@@editor.pending-video-choice">Right-click or press and hold a queued
+              video thumbnail to choose a clip type
+              for that specific video.</span>
+            }
           </div>
         </div>
-        }
-      </div>
 
-      <!-- Zap Split Option (only shown when quoting and logged in) -->
-      @if (zapSplitAvailable()) {
-      <div class="option-row">
-        <div class="option-header">
-          <mat-slide-toggle [checked]="zapSplitEnabled()" (change)="onZapSplitToggle($event.checked)" color="primary">
-            Enable Zap Split
-          </mat-slide-toggle>
-          <span class="option-description">
-            Split zaps between the original author and yourself when people zap your quote
-          </span>
-        </div>
-
-        @if (zapSplitEnabled()) {
-        <div class="option-content">
-          <div class="zap-split-sliders">
-            <div class="zap-split-slider">
-              <div class="slider-label">
-                <span>Original Author</span>
-                <span class="slider-value">{{ zapSplitOriginalPercent() }}%</span>
-              </div>
-              <mat-slider min="0" max="100" step="1" showTickMarks discrete>
-                <input matSliderThumb [value]="zapSplitOriginalPercent()"
-                  (valueChange)="onZapSplitOriginalChange($event)" aria-label="Original Author Percentage">
-              </mat-slider>
-            </div>
-
-            <div class="zap-split-slider">
-              <div class="slider-label">
-                <span>You (Quoter)</span>
-                <span class="slider-value">{{ zapSplitQuoterPercent() }}%</span>
-              </div>
-              <mat-slider min="0" max="100" step="1" showTickMarks discrete>
-                <input matSliderThumb [value]="zapSplitQuoterPercent()" (valueChange)="onZapSplitQuoterChange($event)"
-                  aria-label="Quoter Percentage">
-              </mat-slider>
+        <!-- Client Metadata Options -->
+        <div class="option-row option-grouped-row">
+          <div class="option-group-section">
+            <div class="option-header">
+              <mat-slide-toggle [checked]="addClientTag()" (change)="addClientTag.set($event.checked)" color="primary">
+                <span i18n="@@settings.client-tags.add">Add Client Tag</span>
+              </mat-slide-toggle>
+              <span class="option-description">
+                <span i18n="@@editor.client-tag.description">Add the Nostria client tag to this event</span>
+              </span>
             </div>
           </div>
 
-          <mat-hint class="zap-split-hint">
-            When someone zaps your quote, the zap will be automatically split according to these percentages (NIP-57).
-          </mat-hint>
+          <div class="option-group-section option-group-section-divider">
+            <div class="option-header">
+              <mat-slide-toggle [checked]="expirationEnabled()" (change)="onExpirationToggle($event.checked)"
+                color="primary">
+                <span i18n="@@editor.expiration">Expiration</span>
+              </mat-slide-toggle>
+              <span class="option-description" i18n="@@editor.expiration.description">Set an expiration date and time
+                for
+                this note</span>
+            </div>
+
+            @if (expirationEnabled()) {
+            <div class="option-content">
+              <div class="expiration-inputs">
+                <mat-form-field appearance="outline" class="date-field">
+                  <mat-label i18n="@@editor.expiration.date">Expiration Date</mat-label>
+                  <input matInput [matDatepicker]="expirationPicker" [value]="expirationDate()"
+                    (dateInput)="onExpirationDateChange($event.value)"
+                    (dateChange)="onExpirationDateChange($event.value)" placeholder="Select date"
+                    i18n-placeholder="@@editor.expiration.select-date" [min]="minDate()" readonly />
+                  <mat-datepicker-toggle matIconSuffix [for]="expirationPicker"></mat-datepicker-toggle>
+                  <mat-datepicker #expirationPicker></mat-datepicker>
+                </mat-form-field>
+
+                <mat-form-field appearance="outline" class="time-field">
+                  <mat-label i18n="@@editor.expiration.time">Expiration Time</mat-label>
+                  <input matInput type="time" [value]="expirationTime()" (input)="onExpirationTimeChange($event)"
+                    placeholder="Select time" i18n-placeholder="@@editor.expiration.select-time" />
+                </mat-form-field>
+              </div>
+
+              @if (!expirationValidation().valid) {
+              <div class="expiration-error">
+                <mat-icon color="warn">warning</mat-icon>
+                <span>{{ expirationValidation().message }}</span>
+              </div>
+              }
+
+              <mat-hint class="expiration-hint" i18n="@@editor.expiration.hint">Note will be considered expired after
+                this
+                date and time</mat-hint>
+            </div>
+            }
+          </div>
+        </div>
+
+        <!-- Post to X Option -->
+        <div class="option-row">
+          <div class="option-header">
+            <mat-slide-toggle [checked]="postToX()" (change)="onPostToXChange($event.checked)"
+              [disabled]="!canTogglePostToX()">
+              <span class="x-toggle-label">
+                <img src="/logos/clients/x.png" width="16" height="16" alt="X" class="x-logo" />
+                <span>Post to X</span>
+                @if (postToX() && xPostValidation().valid) {
+                <span class="x-enabled-pill">Enabled</span>
+                }
+              </span>
+            </mat-slide-toggle>
+            <span class="option-description">
+              Publish this post to your connected X account. Supports up to 4 images or 1 video/GIF. Quote/reply
+              threading
+              and edits are not mirrored yet.
+            </span>
+          </div>
+
+          @if (xStatusLoading()) {
+          <div class="option-content">
+            <span class="option-description">Checking X connection...</span>
+          </div>
+          } @else if (!xPremiumEligible()) {
+          <div class="option-content">
+            <span class="option-description">Post to X is available for Premium+ accounts only.</span>
+
+            @if (postToX() && !xPostValidation().valid) {
+            <div class="x-post-validation">
+              <mat-icon>warning</mat-icon>
+              <span>{{ xPostValidation().message }}</span>
+            </div>
+            }
+          </div>
+          } @else if (hasReplyTarget()) {
+          <div class="option-content">
+            <span class="option-description">Replies stay on Nostr only. Post to X is available for original
+              posts.</span>
+
+            @if (postToX() && !xPostValidation().valid) {
+            <div class="x-post-validation">
+              <mat-icon>warning</mat-icon>
+              <span>{{ xPostValidation().message }}</span>
+            </div>
+            }
+          </div>
+          } @else if (!xStatusReady()) {
+          <div class="option-content">
+            <span class="option-description">Enable Post to X to check your X connection.</span>
+          </div>
+          } @else if (xPostingAvailable()) {
+          <div class="option-content">
+            <span class="option-description">Connected as {{ xDualPost.status().username || 'X user' }}</span>
+
+            @if (postToX() && !xPostValidation().valid) {
+            <div class="x-post-validation">
+              <mat-icon>warning</mat-icon>
+              <span>{{ xPostValidation().message }}</span>
+            </div>
+            }
+          </div>
+          } @else {
+          <div class="option-content">
+            <button mat-button type="button" (click)="connectXFromComposer()">Connect X</button>
+          </div>
+          }
+        </div>
+
+        <!-- Proof of Work Option -->
+        <div class="option-row">
+          <div class="option-header">
+            <div class="option-label">Proof of Work (Difficulty: {{ powTargetDifficulty() }})</div>
+          </div>
+
+          <div class="option-content pow-content">
+            <mat-slider min="0" max="26" step="1" showTickMarks discrete [disabled]="isPowMining()">
+              <input matSliderThumb [value]="powTargetDifficulty()" (valueChange)="onPowDifficultySliderChange($event)"
+                aria-label="Proof of Work Difficulty">
+            </mat-slider>
+          </div>
+        </div>
+
+        <!-- Event JSON Preview Option -->
+        <div class="option-row">
+          <div class="option-header">
+            <button mat-button type="button" class="event-json-expander" (click)="showEventJson.update(value => !value)"
+              [attr.aria-expanded]="showEventJson()" aria-controls="event-json-preview-panel">
+              <mat-icon>{{ showEventJson() ? 'expand_less' : 'expand_more' }}</mat-icon>
+              <span>Show Event JSON</span>
+            </button>
+          </div>
+
+          @if (showEventJson()) {
+          <div class="option-content" id="event-json-preview-panel">
+            <div class="event-json-preview">
+              <pre class="json-content">{{ previewEventJson() }}</pre>
+            </div>
+          </div>
+          }
+        </div>
+
+        <!-- Zap Split Option (only shown when quoting and logged in) -->
+        @if (zapSplitAvailable()) {
+        <div class="option-row">
+          <div class="option-header">
+            <mat-slide-toggle [checked]="zapSplitEnabled()" (change)="onZapSplitToggle($event.checked)" color="primary">
+              Enable Zap Split
+            </mat-slide-toggle>
+            <span class="option-description">
+              Split zaps between the original author and yourself when people zap your quote
+            </span>
+          </div>
+
+          @if (zapSplitEnabled()) {
+          <div class="option-content">
+            <div class="zap-split-sliders">
+              <div class="zap-split-slider">
+                <div class="slider-label">
+                  <span>Original Author</span>
+                  <span class="slider-value">{{ zapSplitOriginalPercent() }}%</span>
+                </div>
+                <mat-slider min="0" max="100" step="1" showTickMarks discrete>
+                  <input matSliderThumb [value]="zapSplitOriginalPercent()"
+                    (valueChange)="onZapSplitOriginalChange($event)" aria-label="Original Author Percentage">
+                </mat-slider>
+              </div>
+
+              <div class="zap-split-slider">
+                <div class="slider-label">
+                  <span>You (Quoter)</span>
+                  <span class="slider-value">{{ zapSplitQuoterPercent() }}%</span>
+                </div>
+                <mat-slider min="0" max="100" step="1" showTickMarks discrete>
+                  <input matSliderThumb [value]="zapSplitQuoterPercent()" (valueChange)="onZapSplitQuoterChange($event)"
+                    aria-label="Quoter Percentage">
+                </mat-slider>
+              </div>
+            </div>
+
+            <mat-hint class="zap-split-hint">
+              When someone zaps your quote, the zap will be automatically split according to these percentages (NIP-57).
+            </mat-hint>
+          </div>
+          }
         </div>
         }
       </div>
       }
-    </div>
-    }
 
-    <!-- Preview section (not in inline mode) -->
-    @if (showPreview() && !showAdvancedOptions() && !inlineMode()) {
-    <div class="preview-section">
-      <div class="preview-header">
-        <div class="preview-header-label">
-          <mat-icon class="preview-icon">visibility</mat-icon>
-          <span class="preview-title">Preview</span>
+      <!-- Preview section (not in inline mode) -->
+      @if (showPreview() && !showAdvancedOptions() && !inlineMode()) {
+      <div class="preview-section">
+        <div class="preview-header">
+          <div class="preview-header-label">
+            <mat-icon class="preview-icon">visibility</mat-icon>
+            <span class="preview-title">Preview</span>
+          </div>
+          <span class="spacer"></span>
+          <button mat-icon-button type="button" class="close-preview" (click)="togglePreview()"
+            matTooltip="Close preview">
+            <mat-icon>close</mat-icon>
+          </button>
         </div>
-        <span class="spacer"></span>
-        <button mat-icon-button type="button" class="close-preview" (click)="togglePreview()"
-          matTooltip="Close preview">
-          <mat-icon>close</mat-icon>
-        </button>
+        <app-content class="preview-content" [content]="previewContent()"
+          [preloadedEvents]="previewEventsMap()"></app-content>
+        <!-- <div class="preview-content" [innerHTML]="previewContent()"></div> -->
       </div>
-      <app-content class="preview-content" [content]="previewContent()"
-        [preloadedEvents]="previewEventsMap()"></app-content>
-      <!-- <div class="preview-content" [innerHTML]="previewContent()"></div> -->
-    </div>
-    }
+      }
 
-    <!-- Drag overlay -->
-    @if (isDragOver()) {
-    <div class="drag-overlay">
-      <div class="drag-message">
-        <mat-icon class="drag-icon">cloud_upload</mat-icon>
-        <span>Drop files here to add media</span>
+      <!-- Drag overlay -->
+      @if (isDragOver()) {
+      <div class="drag-overlay">
+        <div class="drag-message">
+          <mat-icon class="drag-icon">cloud_upload</mat-icon>
+          <span>Drop files here to add media</span>
+        </div>
       </div>
-    </div>
-    }
+      }
 
-    <!-- Character limit warning -->
-    <!-- @if (isOverLimit()) {
+      <!-- Character limit warning -->
+      <!-- @if (isOverLimit()) {
     <div class="warning-message">
       <mat-icon color="warn">warning</mat-icon>
       <span>Note exceeds 280 character limit</span>
     </div>
     } -->
+    </div>
   </div>
-</div>
 </ng-template>
 
 <ng-template #editorDialogActions>
-<div dialog-actions class="action-container composer-actions" [class.inline-actions]="inlineMode()"
-  [class.has-media]="mediaMetadata().length > 0 && !showPreview() && !showAdvancedOptions()" #composerActions
-  (dragenter)="!showPreview() && !showAdvancedOptions() && onDragEnter($event)"
-  (dragover)="!showPreview() && !showAdvancedOptions() && onDragOver($event)"
-  (dragleave)="!showPreview() && !showAdvancedOptions() && onDragLeave($event)"
-  (drop)="!showPreview() && !showAdvancedOptions() && onDrop($event)">
+  <div dialog-actions class="action-container composer-actions" [class.inline-actions]="inlineMode()"
+    [class.has-media]="mediaMetadata().length > 0 && !showPreview() && !showAdvancedOptions()" #composerActions
+    (dragenter)="!showPreview() && !showAdvancedOptions() && onDragEnter($event)"
+    (dragover)="!showPreview() && !showAdvancedOptions() && onDragOver($event)"
+    (dragleave)="!showPreview() && !showAdvancedOptions() && onDragLeave($event)"
+    (drop)="!showPreview() && !showAdvancedOptions() && onDrop($event)">
 
-  <!-- Media Thumbnails (shown above action buttons in footer) -->
-  @if (mediaMetadata().length > 0 && !showPreview() && !showAdvancedOptions()) {
-  <div class="media-thumbnails">
-    @for (media of mediaMetadata(); track media.id ?? media.url; let i = $index) {
-    <div class="media-thumbnail">
-      <button type="button" class="remove-media-btn" (click)="$event.stopPropagation(); removeMedia(i)"
-        matTooltip="Remove media">
-        <mat-icon>close</mat-icon>
-      </button>
-      <button type="button" class="media-thumbnail-button" [class.pending-upload]="media.pendingUpload"
-        [attr.aria-label]="getMediaThumbnailAriaLabel(media)" [matTooltip]="getMediaThumbnailTooltip(media)"
-        (pointerdown)="onMediaThumbnailPointerDown(i, $event)" (pointerup)="onMediaThumbnailPointerUp()"
-        (pointerleave)="onMediaThumbnailPointerUp()" (pointercancel)="onMediaThumbnailPointerUp()"
-        (keydown)="onMediaThumbnailKeyDown(i, $event)" (contextmenu)="onMediaThumbnailContextMenu(i, $event)"
-        (click)="onMediaThumbnailClick(i, $event)">
-        @if (getMediaThumbnailUrl(media); as thumbnailUrl) {
-        <img [src]="thumbnailUrl" class="thumbnail-img" alt="Media thumbnail" title="Media thumbnail">
-        } @else {
-        <mat-icon class="media-fallback-icon">{{ media.mimeType?.startsWith('video/') ? 'movie' : 'image' }}</mat-icon>
-        }
-        @if (media.mimeType?.startsWith('video/')) {
-        <span class="video-profile-badge">{{ getVideoOptimizationProfileBadgeLabelForMedia(media) }}</span>
-        }
-        <div class="media-thumbnail-meta">
-          <span class="media-savings" [class.empty]="!getMediaThumbnailSavingsLabel(media)"
-            [class.decrease]="getMediaThumbnailSavingsTone(media) === 'decrease'"
-            [class.increase]="getMediaThumbnailSavingsTone(media) === 'increase'"
-            [class.neutral]="getMediaThumbnailSavingsTone(media) === 'neutral'">{{
-            getMediaThumbnailSavingsLabel(media) }}</span>
-          <span class="media-size">{{ getMediaThumbnailSizeLabel(media) }}</span>
-        </div>
-      </button>
+    <!-- Media Thumbnails (shown above action buttons in footer) -->
+    @if (mediaMetadata().length > 0 && !showPreview() && !showAdvancedOptions()) {
+    <div class="media-thumbnails">
+      @for (media of mediaMetadata(); track media.id ?? media.url; let i = $index) {
+      <div class="media-thumbnail">
+        <button type="button" class="remove-media-btn" (click)="$event.stopPropagation(); removeMedia(i)"
+          matTooltip="Remove media">
+          <mat-icon>close</mat-icon>
+        </button>
+        <button type="button" class="media-thumbnail-button" [class.pending-upload]="media.pendingUpload"
+          [attr.aria-label]="getMediaThumbnailAriaLabel(media)" [matTooltip]="getMediaThumbnailTooltip(media)"
+          (pointerdown)="onMediaThumbnailPointerDown(i, $event)" (pointerup)="onMediaThumbnailPointerUp()"
+          (pointerleave)="onMediaThumbnailPointerUp()" (pointercancel)="onMediaThumbnailPointerUp()"
+          (keydown)="onMediaThumbnailKeyDown(i, $event)" (contextmenu)="onMediaThumbnailContextMenu(i, $event)"
+          (click)="onMediaThumbnailClick(i, $event)">
+          @if (getMediaThumbnailUrl(media); as thumbnailUrl) {
+          <img [src]="thumbnailUrl" class="thumbnail-img" alt="Media thumbnail" title="Media thumbnail">
+          } @else {
+          <mat-icon class="media-fallback-icon">{{ media.mimeType?.startsWith('video/') ? 'movie' : 'image'
+            }}</mat-icon>
+          }
+          @if (media.mimeType?.startsWith('video/')) {
+          <span class="video-profile-badge">{{ getVideoOptimizationProfileBadgeLabelForMedia(media) }}</span>
+          }
+          <div class="media-thumbnail-meta">
+            <span class="media-savings" [class.empty]="!getMediaThumbnailSavingsLabel(media)"
+              [class.decrease]="getMediaThumbnailSavingsTone(media) === 'decrease'"
+              [class.increase]="getMediaThumbnailSavingsTone(media) === 'increase'"
+              [class.neutral]="getMediaThumbnailSavingsTone(media) === 'neutral'">{{
+              getMediaThumbnailSavingsLabel(media) }}</span>
+            <span class="media-size">{{ getMediaThumbnailSizeLabel(media) }}</span>
+          </div>
+        </button>
+      </div>
+      }
     </div>
     }
-  </div>
-  }
 
-  <!-- Left side: Action buttons -->
-  <div class="left-actions">
-    @if (showAdvancedOptions() && !inlineMode()) {
-    <button mat-button type="button" class="back-from-overlay" (click)="toggleAdvancedOptions()">
-      <mat-icon>arrow_back</mat-icon>
-      <span>Back</span>
-    </button>
-    } @else if (showPreview() && !inlineMode()) {
-    <button mat-button type="button" class="back-from-overlay" (click)="togglePreview()" #backFromPreviewBtn>
-      <mat-icon>arrow_back</mat-icon>
-      <span>Back</span>
-    </button>
-    } @else {
-    @if (!inlineMode()) {
-    <button mat-icon-button type="button" class="plus-button desktop-action action-priority-high"
-      [matMenuTriggerFor]="plusMenu" #plusMenuTrigger="matMenuTrigger"
-      (click)="onFooterMenuTriggerClick($event, plusMenuTrigger)"
-      [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions()"
-      [class.button-disabled-visible]="showPreview() || showAdvancedOptions()" matTooltip="Add to post">
-      <mat-icon>add</mat-icon>
-    </button>
-    <button mat-icon-button type="button" class="desktop-action action-priority-high" (click)="togglePreview()"
-      [color]="showPreview() ? 'primary' : ''" matTooltip="Toggle preview">
-      <mat-icon>{{ showPreview() ? 'visibility_off' : 'visibility' }}</mat-icon>
-    </button>
-    <button mat-icon-button type="button" class="desktop-action action-priority-high persistent-action"
-      (click)="toggleAdvancedOptions()" matTooltip="Advanced options">
-      <mat-icon>settings</mat-icon>
-    </button>
-    }
-
-    <mat-menu #plusMenu="matMenu">
-      <button mat-menu-item (click)="openFileDialog()">
-        <mat-icon>upload</mat-icon>
-        <span>Upload media</span>
+    <!-- Left side: Action buttons -->
+    <div class="left-actions">
+      @if (showAdvancedOptions() && !inlineMode()) {
+      <button mat-button type="button" class="back-from-overlay" (click)="toggleAdvancedOptions()">
+        <mat-icon>arrow_back</mat-icon>
+        <span>Back</span>
       </button>
-      <button mat-menu-item (click)="openMediaChooser()">
-        <mat-icon>photo_library</mat-icon>
-        <span>Choose from library</span>
+      } @else if (showPreview() && !inlineMode()) {
+      <button mat-button type="button" class="back-from-overlay" (click)="togglePreview()" #backFromPreviewBtn>
+        <mat-icon>arrow_back</mat-icon>
+        <span>Back</span>
       </button>
-      <button mat-menu-item (click)="openEmojiPickerDialog()">
-        <mat-icon>sentiment_satisfied</mat-icon>
-        <span>Emoji</span>
-      </button>
-      <button mat-menu-item (click)="openGifPickerDialog()">
-        <mat-icon>gif_box</mat-icon>
-        <span>GIFs</span>
-      </button>
-
-      <!-- Insert reference button (dialog mode only) -->
+      } @else {
       @if (!inlineMode()) {
-      <button mat-menu-item (click)="openReferencePicker()">
-        <mat-icon>bookmarks</mat-icon>
-        <span>Insert reference</span>
+      <button mat-icon-button type="button" class="plus-button desktop-action action-priority-high"
+        [matMenuTriggerFor]="plusMenu" #plusMenuTrigger="matMenuTrigger"
+        (click)="onFooterMenuTriggerClick($event, plusMenuTrigger)"
+        [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions()"
+        [class.button-disabled-visible]="showPreview() || showAdvancedOptions()" matTooltip="Add to post">
+        <mat-icon>add</mat-icon>
+      </button>
+      <button mat-icon-button type="button" class="desktop-action action-priority-high" (click)="togglePreview()"
+        [color]="showPreview() ? 'primary' : ''" matTooltip="Toggle preview">
+        <mat-icon>{{ showPreview() ? 'visibility_off' : 'visibility' }}</mat-icon>
+      </button>
+      <button mat-icon-button type="button" class="desktop-action action-priority-high persistent-action"
+        (click)="toggleAdvancedOptions()" matTooltip="Advanced options">
+        <mat-icon>settings</mat-icon>
       </button>
       }
-    </mat-menu>
 
-    @if (recordingHistory.length > 0) {
-    <button mat-icon-button type="button" class="desktop-action action-priority-low" (click)="undoLastRecording()"
-      [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions() || isTranscribing()"
-      [class.button-disabled-visible]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions() || isTranscribing()"
-      matTooltip="Undo last recording">
-      <mat-icon>undo</mat-icon>
-    </button>
-    }
+      <mat-menu #plusMenu="matMenu">
+        <button mat-menu-item (click)="openFileDialog()">
+          <mat-icon>upload</mat-icon>
+          <span>Upload media</span>
+        </button>
+        <button mat-menu-item (click)="openMediaChooser()">
+          <mat-icon>photo_library</mat-icon>
+          <span>Choose from library</span>
+        </button>
+        <button mat-menu-item (click)="openEmojiPickerDialog()">
+          <mat-icon>sentiment_satisfied</mat-icon>
+          <span>Emoji</span>
+        </button>
+        <button mat-menu-item (click)="openGifPickerDialog()">
+          <mat-icon>gif_box</mat-icon>
+          <span>GIFs</span>
+        </button>
 
-    @if (!inlineMode()) {
-    <button mat-icon-button type="button" class="mobile-actions-trigger" [matMenuTriggerFor]="mobileActionsMenu"
-      #mobileActionsMenuTrigger="matMenuTrigger" (click)="onFooterMenuTriggerClick($event, mobileActionsMenuTrigger)"
-      [disabled]="isUploading() || isPublishing()" matTooltip="More actions">
-      <mat-icon>more_horiz</mat-icon>
-    </button>
-
-    <mat-menu #mobileActionsMenu="matMenu">
-      @if (!layout.isHandset()) {
-      <button mat-menu-item (click)="toggleRecording()"
-        [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions() || isTranscribing()">
-        <mat-icon [class.spinning]="isTranscribing()">{{ isTranscribing() ? 'sync' : (isRecording() ? 'stop' : 'mic')
-          }}</mat-icon>
-        <span>{{ isTranscribing() ? 'Transcribing...' : (isRecording() ? 'Stop listening' : 'Dictate note') }}</span>
-      </button>
-      }
+        <!-- Insert reference button (dialog mode only) -->
+        @if (!inlineMode()) {
+        <button mat-menu-item (click)="openReferencePicker()">
+          <mat-icon>bookmarks</mat-icon>
+          <span>Insert reference</span>
+        </button>
+        }
+      </mat-menu>
 
       @if (recordingHistory.length > 0) {
-      <button mat-menu-item (click)="undoLastRecording()"
-        [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions() || isTranscribing()">
+      <button mat-icon-button type="button" class="desktop-action action-priority-low" (click)="undoLastRecording()"
+        [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions() || isTranscribing()"
+        [class.button-disabled-visible]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions() || isTranscribing()"
+        matTooltip="Undo last recording">
         <mat-icon>undo</mat-icon>
-        <span>Undo last recording</span>
       </button>
       }
 
-      <button mat-menu-item (click)="clearDraft()" [disabled]="!isDirty()">
-        <mat-icon>delete_sweep</mat-icon>
-        <span>Clear draft</span>
+      @if (!inlineMode()) {
+      <button mat-icon-button type="button" class="mobile-actions-trigger" [matMenuTriggerFor]="mobileActionsMenu"
+        #mobileActionsMenuTrigger="matMenuTrigger" (click)="onFooterMenuTriggerClick($event, mobileActionsMenuTrigger)"
+        [disabled]="isUploading() || isPublishing()" matTooltip="More actions">
+        <mat-icon>more_horiz</mat-icon>
       </button>
 
-      <button mat-menu-item (click)="openAiDialog('translate')"
-        [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions()">
-        <mat-icon>translate</mat-icon>
-        <span>Translate</span>
-      </button>
+      <mat-menu #mobileActionsMenu="matMenu">
+        @if (!layout.isHandset()) {
+        <button mat-menu-item (click)="toggleRecording()"
+          [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions() || isTranscribing()">
+          <mat-icon [class.spinning]="isTranscribing()">{{ isTranscribing() ? 'sync' : (isRecording() ? 'stop' : 'mic')
+            }}</mat-icon>
+          <span>{{ isTranscribing() ? 'Transcribing...' : (isRecording() ? 'Stop listening' : 'Dictate note') }}</span>
+        </button>
+        }
 
-      <button mat-menu-item (click)="analyzeSentimentInline()"
-        [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions() || !content().trim() || isSentimentAnalyzing()">
-        <mat-icon>mood</mat-icon>
-        <span>{{ isSentimentAnalyzing() ? 'Analyzing sentiment...' : 'Sentiment Analysis' }}</span>
-      </button>
-    </mat-menu>
+        @if (recordingHistory.length > 0) {
+        <button mat-menu-item (click)="undoLastRecording()"
+          [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions() || isTranscribing()">
+          <mat-icon>undo</mat-icon>
+          <span>Undo last recording</span>
+        </button>
+        }
 
-    <button type="button" class="video-profile-menu-anchor" [style.left.px]="videoProfileMenuPosition().x"
-      [style.top.px]="videoProfileMenuPosition().y" [matMenuTriggerFor]="videoProfileMenu"
-      #videoProfileMenuTrigger="matMenuTrigger" tabindex="-1" aria-hidden="true"></button>
+        <button mat-menu-item (click)="clearDraft()" [disabled]="!isDirty()">
+          <mat-icon>delete_sweep</mat-icon>
+          <span>Clear draft</span>
+        </button>
 
-    <mat-menu #videoProfileMenu="matMenu" (closed)="onVideoOptimizationMenuClosed()">
-      @for (option of videoOptimizationProfileOptions; track option.value) {
-      <button mat-menu-item class="video-profile-menu-item"
-        [class.is-selected]="isSelectedVideoOptimizationProfile(option.value)"
-        (click)="onVideoOptimizationProfileSelected(option.value)">
-        <div class="video-profile-menu-copy">
-          <span class="video-profile-menu-label">{{ option.label }}</span>
-          <span class="video-profile-menu-description">{{ option.description }}</span>
-        </div>
-      </button>
+        <button mat-menu-item (click)="openAiDialog('translate')"
+          [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions()">
+          <mat-icon>translate</mat-icon>
+          <span>Translate</span>
+        </button>
+
+        <button mat-menu-item (click)="analyzeSentimentInline()"
+          [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions() || !content().trim() || isSentimentAnalyzing()">
+          <mat-icon>mood</mat-icon>
+          <span>{{ isSentimentAnalyzing() ? 'Analyzing sentiment...' : 'Sentiment Analysis' }}</span>
+        </button>
+      </mat-menu>
+
+      <button type="button" class="video-profile-menu-anchor" [style.left.px]="videoProfileMenuPosition().x"
+        [style.top.px]="videoProfileMenuPosition().y" [matMenuTriggerFor]="videoProfileMenu"
+        #videoProfileMenuTrigger="matMenuTrigger" tabindex="-1" aria-hidden="true"></button>
+
+      <mat-menu #videoProfileMenu="matMenu" (closed)="onVideoOptimizationMenuClosed()">
+        @for (option of videoOptimizationProfileOptions; track option.value) {
+        <button mat-menu-item class="video-profile-menu-item"
+          [class.is-selected]="isSelectedVideoOptimizationProfile(option.value)"
+          (click)="onVideoOptimizationProfileSelected(option.value)">
+          <div class="video-profile-menu-copy">
+            <span class="video-profile-menu-label">{{ option.label }}</span>
+            <span class="video-profile-menu-description">{{ option.description }}</span>
+          </div>
+        </button>
+        }
+      </mat-menu>
       }
-    </mat-menu>
-    }
-    }
-  </div>
+      }
+    </div>
 
-  <!-- Right side: PoW indicator and primary actions -->
-  @if (!showAdvancedOptions()) {
-  <div class="right-actions">
-    @if (powEnabled() && isPowMining()) {
-    <div class="pow-progress-indicator">
-      <mat-icon class="pow-icon spinning">auto_awesome</mat-icon>
-      <span class="pow-text">Mining PoW: {{ powDifficulty() }}/{{ powTargetDifficulty() }} bits</span>
+    <!-- Right side: PoW indicator and primary actions -->
+    @if (!showAdvancedOptions()) {
+    <div class="right-actions">
+      @if (powEnabled() && isPowMining()) {
+      <div class="pow-progress-indicator">
+        <mat-icon class="pow-icon spinning">auto_awesome</mat-icon>
+        <span class="pow-text">Mining PoW: {{ powDifficulty() }}/{{ powTargetDifficulty() }} bits</span>
+      </div>
+      }
+
+      @if (!inlineMode()) {
+      <button mat-button (click)="cancel()" [disabled]="isPublishing()">Cancel</button>
+      }
+
+      <button mat-flat-button (click)="publishNote()" [disabled]="!canPublish() || isPublishing()"
+        class="publish-button" [matTooltip]="inlineMode() ? 'Ctrl+Enter' : 'Alt+Enter'">
+        @if (isPublishing()) {
+        <ng-container>
+          <mat-icon class="spinning">hourglass_empty</mat-icon>
+          {{ inlineMode() ? 'Sending...' : 'Publishing...' }}
+        </ng-container>
+        } @else {
+        <ng-container>
+          @if (inlineMode()) {
+          Reply
+          } @else {
+          <span>Publish</span>
+          }
+        </ng-container>
+        }
+      </button>
     </div>
     }
-
-    @if (!inlineMode()) {
-    <button mat-button (click)="cancel()" [disabled]="isPublishing()">Cancel</button>
-    }
-
-    <button mat-flat-button (click)="publishNote()" [disabled]="!canPublish() || isPublishing()" class="publish-button"
-      [matTooltip]="inlineMode() ? 'Ctrl+Enter' : 'Alt+Enter'">
-      @if (isPublishing()) {
-      <ng-container>
-        <mat-icon class="spinning">hourglass_empty</mat-icon>
-        {{ inlineMode() ? 'Sending...' : 'Publishing...' }}
-      </ng-container>
-      } @else {
-      <ng-container>
-        @if (inlineMode()) {
-        Reply
-        } @else {
-        <span>Publish</span>
-        }
-      </ng-container>
-      }
-    </button>
   </div>
-  }
-</div>
 </ng-template>
 
 @if (!inlineMode()) {
@@ -672,8 +678,7 @@
     <button type="button" class="note-editor-secondary-header-button" [class.active]="postToX()"
       [matTooltip]="xHeaderActionTooltip()" [attr.aria-label]="xHeaderActionAriaLabel()" title="Post to X"
       (click)="toggleSecondaryHeaderAction()">
-      <img [src]="xHeaderIconUrl" alt="Post to X" title="Post to X"
-        class="note-editor-secondary-header-icon" />
+      <img [src]="xHeaderIconUrl" alt="Post to X" title="Post to X" class="note-editor-secondary-header-icon" />
       <span class="note-editor-visually-hidden">Toggle Post to X</span>
     </button>
     }

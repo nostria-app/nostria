@@ -1,241 +1,249 @@
-<div dialog-content class="article-reference-picker-dialog">
-  <div class="reference-toolbar">
-    <mat-form-field appearance="outline" class="search-field">
-      <mat-icon matPrefix>search</mat-icon>
-      <input matInput [ngModel]="query()" (ngModelChange)="onSearchQueryChange($event)"
-        placeholder="Search profiles, events, or articles" />
-    </mat-form-field>
-  </div>
+<app-material-custom-dialog title="Insert Reference" icon="link" [showDefaultActions]="false">
+  <div dialog-content class="article-reference-picker-dialog">
+    <div class="reference-toolbar">
+      <mat-form-field appearance="outline" class="search-field">
+        <mat-icon matPrefix>search</mat-icon>
+        <input matInput [ngModel]="query()" (ngModelChange)="onSearchQueryChange($event)"
+          placeholder="Search profiles, events, or articles" />
+      </mat-form-field>
+    </div>
 
-  <mat-tab-group (selectedIndexChange)="onTabIndexChange($event)">
-    <mat-tab label="Paste">
-      <div class="tab-content paste-tab">
-        <p class="tab-description">Paste npub, nevent, or naddr (with or without nostr: prefix).</p>
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Reference</mat-label>
-          <input matInput [ngModel]="pastedReference()" (ngModelChange)="pastedReference.set($event)"
-            placeholder="npub1..., nevent1..., naddr1..." />
-        </mat-form-field>
+    <mat-tab-group (selectedIndexChange)="onTabIndexChange($event)">
+      <mat-tab label="Paste">
+        <div class="tab-content paste-tab">
+          <p class="tab-description">Paste npub, nevent, or naddr (with or without nostr: prefix).</p>
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Reference</mat-label>
+            <input matInput [ngModel]="pastedReference()" (ngModelChange)="pastedReference.set($event)"
+              placeholder="npub1..., nevent1..., naddr1..." />
+          </mat-form-field>
 
-        <div class="paste-actions">
-          <button mat-flat-button type="button" (click)="addPastedReference()" [disabled]="!pastedReference().trim()">
-            Insert reference
-          </button>
+          <div class="paste-actions">
+            <button mat-flat-button type="button" (click)="addPastedReference()" [disabled]="!pastedReference().trim()">
+              Insert reference
+            </button>
+          </div>
         </div>
-      </div>
-    </mat-tab>
+      </mat-tab>
 
-    <mat-tab>
-      <ng-template mat-tab-label>
-        <mat-icon class="tab-icon">article</mat-icon>
-        My Articles
-      </ng-template>
-      <div class="tab-content">
-        @if (!isLoggedIn()) {
-        <div class="empty-state">
-          <mat-icon class="empty-icon">login</mat-icon>
-          <span>Log in to see your published articles.</span>
-        </div>
-        } @else if (myArticlesLoading()) {
-        <div class="loading-state">
-          <mat-spinner diameter="28"></mat-spinner>
-        </div>
-        } @else if (myArticles().length === 0) {
-        <div class="empty-state">
-          <mat-icon class="empty-icon">article</mat-icon>
-          @if (query().trim()) {
-          <span>No articles matched your search.</span>
+      <mat-tab>
+        <ng-template mat-tab-label>
+          <mat-icon class="tab-icon">article</mat-icon>
+          My Articles
+        </ng-template>
+        <div class="tab-content">
+          @if (!isLoggedIn()) {
+          <div class="empty-state">
+            <mat-icon class="empty-icon">login</mat-icon>
+            <span>Log in to see your published articles.</span>
+          </div>
+          } @else if (myArticlesLoading()) {
+          <div class="loading-state">
+            <mat-spinner diameter="28"></mat-spinner>
+          </div>
+          } @else if (myArticles().length === 0) {
+          <div class="empty-state">
+            <mat-icon class="empty-icon">article</mat-icon>
+            @if (query().trim()) {
+            <span>No articles matched your search.</span>
+            } @else {
+            <span>No published articles found.</span>
+            }
+          </div>
           } @else {
-           <span>No published articles found.</span>
-          }
-        </div>
-        } @else {
-        <div class="results-list">
-          @for (article of myArticles(); track article.id) {
-          <div class="result-card article-card" tabindex="0" (click)="insertEventReference(article)" (keydown.enter)="insertEventReference(article)">
-            @if (getEventImage(article)) {
-            <div class="article-image">
-              <img [src]="getEventImage(article)" alt="" loading="lazy" />
+          <div class="results-list">
+            @for (article of myArticles(); track article.id) {
+            <div class="result-card article-card" tabindex="0" (click)="insertEventReference(article)"
+              (keydown.enter)="insertEventReference(article)">
+              @if (getEventImage(article)) {
+              <div class="article-image">
+                <img [src]="getEventImage(article)" alt="" loading="lazy" />
+              </div>
+              }
+              <div class="card-body">
+                <div class="card-header">
+                  <mat-icon class="kind-icon">article</mat-icon>
+                  <span class="card-title">{{ getEventTitle(article) }}</span>
+                </div>
+                <div class="card-summary">{{ getEventSummary(article) }}</div>
+                <div class="card-meta">
+                  <span class="meta-time">{{ article.created_at | ago }}</span>
+                  @for (tag of getEventHashtags(article); track tag) {
+                  <span class="meta-tag">#{{ tag }}</span>
+                  }
+                </div>
+              </div>
+              <button mat-button type="button" class="insert-btn"
+                (click)="insertEventReference(article); $event.stopPropagation()">
+                Insert
+              </button>
             </div>
             }
-            <div class="card-body">
-              <div class="card-header">
-                <mat-icon class="kind-icon">article</mat-icon>
-                <span class="card-title">{{ getEventTitle(article) }}</span>
-              </div>
-              <div class="card-summary">{{ getEventSummary(article) }}</div>
-              <div class="card-meta">
-                <span class="meta-time">{{ article.created_at | ago }}</span>
-                @for (tag of getEventHashtags(article); track tag) {
-                <span class="meta-tag">#{{ tag }}</span>
-                }
-              </div>
-            </div>
-            <button mat-button type="button" class="insert-btn" (click)="insertEventReference(article); $event.stopPropagation()">
-              Insert
-            </button>
           </div>
           }
         </div>
-        }
-      </div>
-    </mat-tab>
+      </mat-tab>
 
-    <mat-tab label="Profiles">
-      <div class="tab-content">
-        @if (!query().trim()) {
-        <div class="empty-state">
-          <mat-icon class="empty-icon">person_search</mat-icon>
-          <span>Type in search to find cached profiles.</span>
-        </div>
-        } @else if (profilesLoading()) {
-        <div class="loading-state">
-          <mat-spinner diameter="28"></mat-spinner>
-        </div>
-        } @else if (filteredProfiles().length === 0) {
-        <div class="empty-state">
-          <mat-icon class="empty-icon">person_off</mat-icon>
-          <span>No cached profiles matched your search.</span>
-        </div>
-        } @else {
-        <div class="results-list">
-          @for (profile of filteredProfiles(); track profile.id) {
-          <div class="result-card profile-card" tabindex="0" (click)="insertProfileReference(profile.pubkey)" (keydown.enter)="insertProfileReference(profile.pubkey)">
-            <div class="profile-avatar">
-              <app-user-profile [pubkey]="profile.pubkey" view="icon" [showRank]="false" [disableLink]="true" />
-            </div>
-            <div class="card-body">
-              <div class="card-header">
-                <span class="card-title">{{ getProfileDisplayName(profile) }}</span>
-              </div>
-              <div class="card-subtitle">{{ getProfileSubtitle(profile) }}</div>
-              @if (getProfileAbout(profile)) {
-              <div class="card-about">{{ getProfileAbout(profile) }}</div>
-              }
-            </div>
-            <button mat-button type="button" class="insert-btn"
-              (click)="insertProfileReference(profile.pubkey); $event.stopPropagation()">
-              Insert
-            </button>
+      <mat-tab label="Profiles">
+        <div class="tab-content">
+          @if (!query().trim()) {
+          <div class="empty-state">
+            <mat-icon class="empty-icon">person_search</mat-icon>
+            <span>Type in search to find cached profiles.</span>
           </div>
-          }
-        </div>
-        }
-      </div>
-    </mat-tab>
-
-    <mat-tab label="Events">
-      <div class="tab-content">
-        <div class="filter-bar">
-          <mat-chip-set aria-label="Event kind filter">
-            <mat-chip [highlighted]="eventKindFilter() === 'all'" (click)="onEventKindFilterChange('all')">
-              All
-            </mat-chip>
-            <mat-chip [highlighted]="eventKindFilter() === 'articles'" (click)="onEventKindFilterChange('articles')">
-              <mat-icon matChipAvatar>article</mat-icon>
-              Articles
-            </mat-chip>
-            <mat-chip [highlighted]="eventKindFilter() === 'notes'" (click)="onEventKindFilterChange('notes')">
-              <mat-icon matChipAvatar>short_text</mat-icon>
-              Notes
-            </mat-chip>
-            <mat-chip [highlighted]="eventKindFilter() === 'media'" (click)="onEventKindFilterChange('media')">
-              <mat-icon matChipAvatar>perm_media</mat-icon>
-              Media
-            </mat-chip>
-            <mat-chip [highlighted]="eventKindFilter() === 'other'" (click)="onEventKindFilterChange('other')">
-              <mat-icon matChipAvatar>more_horiz</mat-icon>
-              Other
-            </mat-chip>
-          </mat-chip-set>
-        </div>
-
-        @if (!query().trim()) {
-        <div class="empty-state">
-          <mat-icon class="empty-icon">manage_search</mat-icon>
-          <span>Type in search to find cached events.</span>
-        </div>
-        } @else if (eventsLoading()) {
-        <div class="loading-state">
-          <mat-spinner diameter="28"></mat-spinner>
-        </div>
-        } @else if (filteredEvents().length === 0) {
-        <div class="empty-state">
-          <mat-icon class="empty-icon">search_off</mat-icon>
-          <span>No cached events matched your search.</span>
-        </div>
-        } @else {
-        <div class="results-list">
-          @for (event of filteredEvents(); track event.id) {
-          <div class="result-card event-card" tabindex="0" (click)="insertEventReference(event)" (keydown.enter)="insertEventReference(event)">
-            <div class="event-kind-badge" [matTooltip]="getKindLabel(event.kind)">
-              <mat-icon>{{ getKindIcon(event.kind) }}</mat-icon>
-            </div>
-            <div class="card-body">
-              <div class="card-header">
-                <span class="card-title">{{ getEventTitle(event) }}</span>
+          } @else if (profilesLoading()) {
+          <div class="loading-state">
+            <mat-spinner diameter="28"></mat-spinner>
+          </div>
+          } @else if (filteredProfiles().length === 0) {
+          <div class="empty-state">
+            <mat-icon class="empty-icon">person_off</mat-icon>
+            <span>No cached profiles matched your search.</span>
+          </div>
+          } @else {
+          <div class="results-list">
+            @for (profile of filteredProfiles(); track profile.id) {
+            <div class="result-card profile-card" tabindex="0" (click)="insertProfileReference(profile.pubkey)"
+              (keydown.enter)="insertProfileReference(profile.pubkey)">
+              <div class="profile-avatar">
+                <app-user-profile [pubkey]="profile.pubkey" view="icon" [showRank]="false" [disableLink]="true" />
               </div>
-              <div class="card-meta">
-                <span class="meta-kind">{{ getKindLabel(event.kind) }}</span>
-                <span class="meta-separator">·</span>
-                <span class="meta-time">{{ event.created_at | ago }}</span>
-              </div>
-              @if (getEventSummary(event)) {
-              <div class="card-summary event-summary">{{ getEventSummary(event) }}</div>
-              }
-              <div class="card-meta event-author-row">
-                <div class="author-avatar">
-                  <app-user-profile [pubkey]="event.pubkey" view="icon" [showRank]="false" [disableLink]="true" />
+              <div class="card-body">
+                <div class="card-header">
+                  <span class="card-title">{{ getProfileDisplayName(profile) }}</span>
                 </div>
-                <span class="author-name">{{ getAuthorName(event.pubkey) }}</span>
-                @for (tag of getEventHashtags(event); track tag) {
-                <span class="meta-tag">#{{ tag }}</span>
+                <div class="card-subtitle">{{ getProfileSubtitle(profile) }}</div>
+                @if (getProfileAbout(profile)) {
+                <div class="card-about">{{ getProfileAbout(profile) }}</div>
                 }
               </div>
+              <button mat-button type="button" class="insert-btn"
+                (click)="insertProfileReference(profile.pubkey); $event.stopPropagation()">
+                Insert
+              </button>
             </div>
-            <button mat-button type="button" class="insert-btn" (click)="insertEventReference(event); $event.stopPropagation()">
-              Insert
-            </button>
+            }
           </div>
           }
         </div>
-        }
-      </div>
-    </mat-tab>
+      </mat-tab>
 
-    <mat-tab label="Bookmarks">
-      <div class="tab-content">
-        @if (bookmarkLists().length === 0) {
-        <div class="empty-state">
-          <mat-icon class="empty-icon">bookmarks</mat-icon>
-          <span>No bookmark folders available.</span>
-        </div>
-        } @else {
-        <div class="results-list">
-          @for (list of bookmarkLists(); track list.id) {
-          <div class="result-card bookmark-card" tabindex="0" (click)="insertBookmarkListReferences(list)" (keydown.enter)="insertBookmarkListReferences(list)">
-            <div class="bookmark-icon">
-              <mat-icon>{{ list.isPrivate ? 'lock' : 'bookmark' }}</mat-icon>
-            </div>
-            <div class="card-body">
-              <div class="card-header">
-                <span class="card-title">{{ list.name }}</span>
+      <mat-tab label="Events">
+        <div class="tab-content">
+          <div class="filter-bar">
+            <mat-chip-set aria-label="Event kind filter">
+              <mat-chip [highlighted]="eventKindFilter() === 'all'" (click)="onEventKindFilterChange('all')">
+                All
+              </mat-chip>
+              <mat-chip [highlighted]="eventKindFilter() === 'articles'" (click)="onEventKindFilterChange('articles')">
+                <mat-icon matChipAvatar>article</mat-icon>
+                Articles
+              </mat-chip>
+              <mat-chip [highlighted]="eventKindFilter() === 'notes'" (click)="onEventKindFilterChange('notes')">
+                <mat-icon matChipAvatar>short_text</mat-icon>
+                Notes
+              </mat-chip>
+              <mat-chip [highlighted]="eventKindFilter() === 'media'" (click)="onEventKindFilterChange('media')">
+                <mat-icon matChipAvatar>perm_media</mat-icon>
+                Media
+              </mat-chip>
+              <mat-chip [highlighted]="eventKindFilter() === 'other'" (click)="onEventKindFilterChange('other')">
+                <mat-icon matChipAvatar>more_horiz</mat-icon>
+                Other
+              </mat-chip>
+            </mat-chip-set>
+          </div>
+
+          @if (!query().trim()) {
+          <div class="empty-state">
+            <mat-icon class="empty-icon">manage_search</mat-icon>
+            <span>Type in search to find cached events.</span>
+          </div>
+          } @else if (eventsLoading()) {
+          <div class="loading-state">
+            <mat-spinner diameter="28"></mat-spinner>
+          </div>
+          } @else if (filteredEvents().length === 0) {
+          <div class="empty-state">
+            <mat-icon class="empty-icon">search_off</mat-icon>
+            <span>No cached events matched your search.</span>
+          </div>
+          } @else {
+          <div class="results-list">
+            @for (event of filteredEvents(); track event.id) {
+            <div class="result-card event-card" tabindex="0" (click)="insertEventReference(event)"
+              (keydown.enter)="insertEventReference(event)">
+              <div class="event-kind-badge" [matTooltip]="getKindLabel(event.kind)">
+                <mat-icon>{{ getKindIcon(event.kind) }}</mat-icon>
               </div>
-              <div class="card-subtitle">{{ getBookmarkListEntryLabel(list) }}</div>
+              <div class="card-body">
+                <div class="card-header">
+                  <span class="card-title">{{ getEventTitle(event) }}</span>
+                </div>
+                <div class="card-meta">
+                  <span class="meta-kind">{{ getKindLabel(event.kind) }}</span>
+                  <span class="meta-separator">·</span>
+                  <span class="meta-time">{{ event.created_at | ago }}</span>
+                </div>
+                @if (getEventSummary(event)) {
+                <div class="card-summary event-summary">{{ getEventSummary(event) }}</div>
+                }
+                <div class="card-meta event-author-row">
+                  <div class="author-avatar">
+                    <app-user-profile [pubkey]="event.pubkey" view="icon" [showRank]="false" [disableLink]="true" />
+                  </div>
+                  <span class="author-name">{{ getAuthorName(event.pubkey) }}</span>
+                  @for (tag of getEventHashtags(event); track tag) {
+                  <span class="meta-tag">#{{ tag }}</span>
+                  }
+                </div>
+              </div>
+              <button mat-button type="button" class="insert-btn"
+                (click)="insertEventReference(event); $event.stopPropagation()">
+                Insert
+              </button>
             </div>
-            <button mat-button type="button" class="insert-btn"
-              (click)="insertBookmarkListReferences(list); $event.stopPropagation()">
-              Insert all
-            </button>
+            }
           </div>
           }
         </div>
-        }
-      </div>
-    </mat-tab>
-  </mat-tab-group>
-</div>
+      </mat-tab>
 
-<div dialog-actions class="actions-row">
-  <button mat-button type="button" (click)="cancel()">Cancel</button>
-</div>
+      <mat-tab label="Bookmarks">
+        <div class="tab-content">
+          @if (bookmarkLists().length === 0) {
+          <div class="empty-state">
+            <mat-icon class="empty-icon">bookmarks</mat-icon>
+            <span>No bookmark folders available.</span>
+          </div>
+          } @else {
+          <div class="results-list">
+            @for (list of bookmarkLists(); track list.id) {
+            <div class="result-card bookmark-card" tabindex="0" (click)="insertBookmarkListReferences(list)"
+              (keydown.enter)="insertBookmarkListReferences(list)">
+              <div class="bookmark-icon">
+                <mat-icon>{{ list.isPrivate ? 'lock' : 'bookmark' }}</mat-icon>
+              </div>
+              <div class="card-body">
+                <div class="card-header">
+                  <span class="card-title">{{ list.name }}</span>
+                </div>
+                <div class="card-subtitle">{{ getBookmarkListEntryLabel(list) }}</div>
+              </div>
+              <button mat-button type="button" class="insert-btn"
+                (click)="insertBookmarkListReferences(list); $event.stopPropagation()">
+                Insert all
+              </button>
+            </div>
+            }
+          </div>
+          }
+        </div>
+      </mat-tab>
+    </mat-tab-group>
+  </div>
+
+  <div dialog-actions class="actions-row">
+    <button mat-button type="button" (click)="cancel()">Cancel</button>
+  </div>
+</app-material-custom-dialog>

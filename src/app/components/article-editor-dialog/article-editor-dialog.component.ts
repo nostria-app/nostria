@@ -1337,17 +1337,13 @@ export class ArticleEditorDialogComponent implements OnDestroy, AfterViewInit {
       '../article-reference-picker-dialog/article-reference-picker-dialog.component'
     );
 
-    const dialogRef = this.customDialog.open<
-      typeof ArticleReferencePickerDialogComponent.prototype,
-      ArticleReferencePickerResult
-    >(ArticleReferencePickerDialogComponent, {
-      title: 'Insert Reference',
+    const dialogRef = this.dialog.open(ArticleReferencePickerDialogComponent, {
+      panelClass: ['material-custom-dialog-panel', 'article-reference-picker-dialog-panel'],
       width: '760px',
       maxWidth: '96vw',
-      showCloseButton: true,
     });
 
-    dialogRef.afterClosed$.subscribe(({ result }) => {
+    dialogRef.afterClosed().subscribe((result: ArticleReferencePickerResult | undefined) => {
       const references = result?.references ?? [];
       if (references.length > 0) {
         this.insertReferences(references);

@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Event, kinds, nip19 } from 'nostr-tools';
+import { MatDialogRef } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTabsModule } from '@angular/material/tabs';
@@ -12,12 +13,12 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { BookmarkList, BookmarkService } from '../../services/bookmark.service';
-import { CustomDialogRef } from '../../services/custom-dialog.service';
 import { DatabaseService } from '../../services/database.service';
 import { AccountStateService } from '../../services/account-state.service';
 import { UserRelayService } from '../../services/relays/user-relay';
 import { AccountRelayService } from '../../services/relays/account-relay';
 import { UserProfileComponent } from '../user-profile/user-profile.component';
+import { MaterialCustomDialogComponent } from '../material-custom-dialog/material-custom-dialog.component';
 import { AgoPipe } from '../../pipes/ago.pipe';
 import { getKindLabel } from '../../utils/kind-labels';
 
@@ -31,6 +32,7 @@ type EventKindFilter = 'all' | 'articles' | 'notes' | 'media' | 'other';
   selector: 'app-article-reference-picker-dialog',
   imports: [
     FormsModule,
+    MaterialCustomDialogComponent,
     MatButtonModule,
     MatIconModule,
     MatTabsModule,
@@ -49,7 +51,7 @@ type EventKindFilter = 'all' | 'articles' | 'notes' | 'media' | 'other';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ArticleReferencePickerDialogComponent {
-  dialogRef?: CustomDialogRef<ArticleReferencePickerDialogComponent, ArticleReferencePickerResult>;
+  private readonly dialogRef = inject(MatDialogRef<ArticleReferencePickerDialogComponent, ArticleReferencePickerResult>, { optional: true });
 
   private readonly database = inject(DatabaseService);
   private readonly snackBar = inject(MatSnackBar);
@@ -448,13 +450,13 @@ export class ArticleReferencePickerDialogComponent {
       return;
     }
 
-    this.dialogRef?.close({ references: [normalized] });
+    this.closeDialog({ references: [normalized] });
   }
 
   insertProfileReference(pubkey: string): void {
     try {
       const npub = nip19.npubEncode(pubkey);
-      this.dialogRef?.close({ references: [`nostr:${npub}`] });
+      this.closeDialog({ references: [`nostr:${npub}`] });
     } catch {
       this.snackBar.open('Could not encode profile reference', 'Close', { duration: 3000 });
     }
@@ -467,7 +469,7 @@ export class ArticleReferencePickerDialogComponent {
       return;
     }
 
-    this.dialogRef?.close({ references: [reference] });
+    this.closeDialog({ references: [reference] });
   }
 
   async insertBookmarkListReferences(list: BookmarkList): Promise<void> {
@@ -489,7 +491,7 @@ export class ArticleReferencePickerDialogComponent {
         return;
       }
 
-      this.dialogRef?.close({ references });
+      this.closeDialog({ references });
     } catch (error) {
       console.error('Failed to insert bookmark list references:', error);
       this.snackBar.open('Failed to load bookmark folder references', 'Close', { duration: 3000 });
@@ -497,7 +499,11 @@ export class ArticleReferencePickerDialogComponent {
   }
 
   cancel(): void {
-    this.dialogRef?.close({ references: [] });
+    this.closeDialog({ references: [] });
+  }
+
+  private closeDialog(result: ArticleReferencePickerResult): void {
+    this.dialogRef?.close(result);
   }
 
   getProfileDisplayName(event: Event): string {

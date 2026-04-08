@@ -222,13 +222,17 @@
     background: var(--mat-sys-surface);
   }
 
-  app-material-custom-dialog.note-editor-shell .dialog-content > .note-editor-dialog {
+  app-material-custom-dialog.note-editor-shell .dialog-content>.note-editor-dialog {
     display: flex;
     flex: 1 1 auto;
     flex-direction: column;
     min-height: 0;
     max-height: 100%;
   }
+}
+
+.material-custom-dialog-panel.article-reference-picker-dialog-panel {
+  --material-custom-dialog-width: min(760px, 96vw);
 }
 
 @media (max-width: 700px),
@@ -333,7 +337,7 @@
       padding: 10px 10px calc(10px + env(safe-area-inset-bottom, 0px));
     }
 
-    app-material-custom-dialog.note-editor-shell .dialog-content > .note-editor-dialog {
+    app-material-custom-dialog.note-editor-shell .dialog-content>.note-editor-dialog {
       height: 100%;
       max-height: 100%;
     }

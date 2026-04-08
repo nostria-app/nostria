@@ -1514,16 +1514,16 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       // Check if user is near the top and we have messages to load
       const threshold = 100; // pixels from top
 
-        this.logger.debug(
-          `Scroll position: ${scrollTop}, threshold: ${threshold}, hasMore: ${this.hasOlderMessagesToLoad()}, isLoading: ${this.isLoadingMore()}, messages: ${this.renderedThreadMessages().length}`
-        );
+      this.logger.debug(
+        `Scroll position: ${scrollTop}, threshold: ${threshold}, hasMore: ${this.hasOlderMessagesToLoad()}, isLoading: ${this.isLoadingMore()}, messages: ${this.renderedThreadMessages().length}`
+      );
 
-        if (
-          scrollTop <= threshold &&
-          this.hasOlderMessagesToLoad() &&
-          !this.isLoadingMore() &&
-          this.messages().length > 0
-        ) {
+      if (
+        scrollTop <= threshold &&
+        this.hasOlderMessagesToLoad() &&
+        !this.isLoadingMore() &&
+        this.messages().length > 0
+      ) {
         this.logger.debug('Triggering loadMoreMessages from scroll');
         this.loadMoreMessages();
       }
@@ -2923,17 +2923,13 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       '../../components/article-reference-picker-dialog/article-reference-picker-dialog.component'
     ).ArticleReferencePickerResult;
 
-    const dialogRef = this.customDialog.open<
-      typeof ArticleReferencePickerDialogComponent.prototype,
-      ArticleReferencePickerResult
-    >(ArticleReferencePickerDialogComponent, {
-      title: 'Insert Reference',
+    const dialogRef = this.dialog.open(ArticleReferencePickerDialogComponent, {
+      panelClass: ['material-custom-dialog-panel', 'article-reference-picker-dialog-panel'],
       width: '760px',
       maxWidth: '96vw',
-      showCloseButton: true,
     });
 
-    dialogRef.afterClosed$.subscribe(({ result }) => {
+    dialogRef.afterClosed().subscribe((result: ArticleReferencePickerResult | undefined) => {
       const references = result?.references ?? [];
       if (references.length > 0) {
         this.insertNostrReferences(references);
