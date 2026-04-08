@@ -1,11 +1,11 @@
-import { Component, inject, ChangeDetectionStrategy } from '@angular/core';
-import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
+import { Component, ChangeDetectionStrategy } from '@angular/core';
+import { MatDialogModule } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
 import { MatCardModule } from '@angular/material/card';
 import { MatDividerModule } from '@angular/material/divider';
 
 import { NgOptimizedImage } from '@angular/common';
+import { MaterialCustomDialogComponent } from '../material-custom-dialog/material-custom-dialog.component';
 
 interface FeatureUpdate {
   version: string;
@@ -28,18 +28,8 @@ interface FeatureUpdate {
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-whats-new-dialog',
   template: `
-    <div class="whats-new-dialog">
-      <div class="dialog-header">
-        <h1 mat-dialog-title>
-          <mat-icon>campaign</mat-icon>
-          What's New in Nostria
-        </h1>
-        <button mat-icon-button [mat-dialog-close]="true" aria-label="Close dialog">
-          <mat-icon>close</mat-icon>
-        </button>
-      </div>
-
-      <div mat-dialog-content class="dialog-content">
+    <app-material-custom-dialog class="whats-new-shell" [title]="dialogTitle" [icon]="'campaign'" [showDefaultActions]="false">
+      <div dialog-content class="whats-new-dialog-content">
         @for (update of updates; track update.version) {
           <mat-card class="update-card">
             <mat-card-header>
@@ -86,23 +76,23 @@ interface FeatureUpdate {
         }
       </div>
 
-      <div mat-dialog-actions class="dialog-actions">
-        <button mat-flat-button [mat-dialog-close]="true">Got it!</button>
+      <div dialog-actions class="whats-new-dialog-actions">
+        <button mat-flat-button type="button" [mat-dialog-close]="true">Got it!</button>
       </div>
-    </div>
+    </app-material-custom-dialog>
   `,
   styleUrl: './whats-new-dialog.component.scss',
   imports: [
+    MaterialCustomDialogComponent,
     MatDialogModule,
     MatButtonModule,
-    MatIconModule,
     MatCardModule,
     MatDividerModule,
     NgOptimizedImage
 ],
 })
 export class WhatsNewDialogComponent {
-  private dialogRef = inject(MatDialogRef<WhatsNewDialogComponent>);
+  dialogTitle = `What's New in Nostria`;
 
   // Sample updates - replace with real data
   updates: FeatureUpdate[] = [
@@ -452,7 +442,4 @@ export class WhatsNewDialogComponent {
     },
   ];
 
-  close(): void {
-    this.dialogRef.close();
-  }
 }

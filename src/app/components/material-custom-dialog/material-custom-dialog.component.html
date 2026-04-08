@@ -2,25 +2,30 @@
   <div class="dialog-header">
     <div class="dialog-header-leading">
       <div class="header-icon-surface" aria-hidden="true">
-        <mat-icon class="header-icon">{{ data.icon || defaultIcon }}</mat-icon>
+        <mat-icon class="header-icon">{{ resolvedIcon() }}</mat-icon>
       </div>
     </div>
 
-    <h2 mat-dialog-title class="dialog-title">{{ data.title }}</h2>
+    <h2 mat-dialog-title class="dialog-title">{{ resolvedTitle() }}</h2>
 
     <div class="dialog-header-trailing">
+      <ng-content select="[dialog-header-actions]"></ng-content>
+      @if (showCloseButton()) {
       <button mat-icon-button type="button" class="close-button" (click)="close()" aria-label="Close dialog">
         <mat-icon>close</mat-icon>
       </button>
+      }
     </div>
   </div>
 
   <div mat-dialog-content class="dialog-content">
-    <p class="dialog-message">{{ data.message }}</p>
+    @if (resolvedMessage()) {
+    <p class="dialog-message">{{ resolvedMessage() }}</p>
+    }
 
-    @if (data.details?.length) {
+    @if (resolvedDetails().length) {
     <div class="detail-list">
-      @for (detail of data.details; track detail.title) {
+      @for (detail of resolvedDetails(); track detail.title) {
       <div class="detail-item">
         <mat-icon class="detail-icon">{{ detail.icon }}</mat-icon>
         <div class="detail-copy">
@@ -31,14 +36,20 @@
       }
     </div>
     }
+
+    <ng-content select="[dialog-content]"></ng-content>
   </div>
 
   <div mat-dialog-actions class="dialog-actions">
+    <ng-content select="[dialog-actions]"></ng-content>
+
+    @if (showDefaultActions()) {
     <button mat-button type="button" (click)="close(false)">
-      {{ data.secondaryActionText || defaultSecondaryActionText }}
+      {{ resolvedSecondaryActionText() }}
     </button>
     <button mat-flat-button type="button" class="primary-action" (click)="close(true)">
-      {{ data.primaryActionText || defaultPrimaryActionText }}
+      {{ resolvedPrimaryActionText() }}
     </button>
+    }
   </div>
 </div>

@@ -109,10 +109,7 @@ export class HomeComponent {
 
   openWhatsNewDialog(): void {
     this.dialog.open(WhatsNewDialogComponent, {
-      width: '800px',
-      maxWidth: '95vw',
-      maxHeight: '90vh',
-      panelClass: 'whats-new-dialog-container',
+      panelClass: ['material-custom-dialog-panel'],
     });
   }
 

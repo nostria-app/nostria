@@ -323,27 +323,31 @@ const response = await corsProxyService.fetch(url);
 
 ### Custom Dialog System
 
-Nostria uses `CustomDialogComponent` instead of Angular Material dialogs for better mobile support:
+Nostria now prefers a Material-derived dialog shell built on top of `MatDialog` for standard dialogs. The shared shell component is `MaterialCustomDialogComponent`, which keeps Angular Material overlay, focus trapping, escape handling, and stacking behavior while applying Nostria-specific header, content, and action layouts.
 
 ```typescript
-// CustomDialogService usage
-const ref = customDialog.open(MyDialogComponent, {
-  title: 'Dialog Title',
+const dialogRef = dialog.open(MyDialogComponent, {
+  panelClass: 'material-custom-dialog-panel',
+  width: '680px',
+  maxWidth: '92vw',
   data: {
-    /* ... */
+    title: 'Dialog Title',
+    icon: 'campaign',
   },
 });
 
-const result = await ref.closed.toPromise();
+const result = await dialogRef.afterClosed().toPromise();
 ```
 
 **Features:**
 
-- Responsive: floating on desktop, full-screen on mobile
-- Keyboard-aware: adjusts for mobile keyboard
-- iOS visual viewport aware: dialog shell follows `visualViewport` pan/resize so fixed dialogs stay aligned with the visible viewport during Safari keyboard focus changes
-- Enter key support for primary action
-- Backdrop click to close
+- Uses Angular Material's overlay, focus management, and accessibility primitives
+- Responsive shell: floating dialog on desktop, edge-to-edge full-screen on smaller screens
+- Shared Nostria header and action row styling via `MaterialCustomDialogComponent`
+- Supports both simple data-driven dialogs and projected custom content via `[dialog-content]`, `[dialog-actions]`, and `[dialog-header-actions]`
+- Keeps the content area as the flexible region on mobile so action buttons stay pinned to the bottom
+
+Use `MaterialCustomDialogComponent` for new standard dialogs. The older `CustomDialogComponent` / `CustomDialogService` pair remains in the codebase only for specialized full-screen flows that need direct `visualViewport` tracking or custom back-stack behavior beyond what the Material-derived shell provides.
 
 For the note editor's iPhone/Safari behavior, see [docs/note-editor-ios-keyboard-behavior.md](docs/note-editor-ios-keyboard-behavior.md). That document defines implementation invariants that should not be simplified or removed without validating long-note focus behavior on a physical iPhone Safari device.
 
@@ -1133,7 +1137,7 @@ Multiple relays (user's relay list)
 
 The note editor has special keyboard-handling behavior on iPhone Safari because the browser pans the visual viewport to reveal lower carets inside focused textareas. That behavior is intentionally handled across both the dialog shell and the editor internals:
 
-- `CustomDialogComponent` follows `visualViewport` offset changes on iOS so the full-screen dialog stays aligned with the visible viewport instead of the layout viewport.
+- The note editor still uses the legacy `CustomDialogComponent` shell because it follows `visualViewport` offset changes on iOS so the full-screen dialog stays aligned with the visible viewport instead of the layout viewport.
 - `NoteEditorDialogComponent` treats the textarea as the only scrollable area in compact keyboard mode; outer dialog wrappers must not become scroll targets while the keyboard is open.
 - Compact sizing for the textarea and footer is based on visible viewport geometry and measured footer overlap, not on caret depth or viewport pan amount.
 - Focusing deeper in a long note must not move the entire dialog upward; only the textarea scroll position may change to reveal the caret.
@@ -1384,14 +1388,14 @@ Signals provide:
 - Better Angular integration
 - Fine-grained reactivity
 
-### 3. Custom Dialog Over Material Dialog
+### 3. Material-Derived Dialog Shell
 
-`CustomDialogComponent` provides:
+`MaterialCustomDialogComponent` is the default shell for standard dialogs because it provides:
 
-- Better mobile keyboard handling
-- Full-screen mobile mode
-- Consistent styling
-- Easier customization
+- Angular Material overlay, focus, and accessibility behavior without reimplementing dialog primitives
+- Consistent Nostria styling for headers, actions, and mobile full-screen behavior
+- Projected content slots so feature dialogs can customize content without duplicating shell markup
+- A smaller maintenance surface than the older fully custom overlay system
 
 ### 4. Component-Based Right Panel
 
