@@ -3,6 +3,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { MatMenuModule } from '@angular/material/menu';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { PanelActionsService } from '../../../services/panel-actions.service';
 import { RightPanelService } from '../../../services/right-panel.service';
@@ -36,6 +37,7 @@ interface CountValueGroupViewModel {
   imports: [
     MatButtonModule,
     MatIconModule,
+    MatMenuModule,
     MatProgressBarModule,
     MatProgressSpinnerModule,
     MatTooltipModule,
@@ -89,7 +91,6 @@ export class TrustSettingsComponent implements OnInit, OnDestroy {
   brainstormStatusChecked = signal(false);
   brainstormStatus = signal<BrainstormRequestInstance | null>(null);
   brainstormCountValueGroups = signal<CountValueGroupViewModel[]>([]);
-  brainstormPublisherPubkey = signal<string | null>(null);
   brainstormError = signal<string | null>(null);
   brainstormMessage = signal<string | null>(null);
   copyPasswordStatus = signal<'idle' | 'done' | 'error'>('idle');
@@ -196,8 +197,6 @@ export class TrustSettingsComponent implements OnInit, OnDestroy {
 
     try {
       const setup = await this.loadBrainstormSetup(pubkey);
-      this.brainstormPublisherPubkey.set(setup.publisherPubkey);
-
       this.trustProviderService.clearConfiguredProviders();
       this.addBrainstormProviders(setup.configTags);
 
@@ -252,10 +251,8 @@ export class TrustSettingsComponent implements OnInit, OnDestroy {
       this.brainstormStatusChecked.set(true);
 
       try {
-        const setup = await this.brainstormApi.getSetup(pubkey);
-        this.brainstormPublisherPubkey.set(setup.publisherPubkey);
+        await this.brainstormApi.getSetup(pubkey);
       } catch {
-        this.brainstormPublisherPubkey.set(null);
       }
 
       if (!latest) {
@@ -346,7 +343,6 @@ export class TrustSettingsComponent implements OnInit, OnDestroy {
       }
 
       this.addBrainstormProviders(configTags);
-      this.brainstormPublisherPubkey.set(setup.publisherPubkey);
 
       const publishResult = await this.trustProviderService.publishProviders();
       if (!publishResult.success) {

@@ -4,7 +4,27 @@
   </button>
   <h2 class="panel-title title-font" i18n="@@settings.sections.web-of-trust">Web of Trust</h2>
   <span class="panel-header-spacer"></span>
+  <button mat-icon-button [matMenuTriggerFor]="trustActionsMenu" matTooltip="More options"
+    i18n-matTooltip="@@common.moreOptions">
+    <mat-icon>more_vert</mat-icon>
+  </button>
 </div>
+
+<mat-menu #trustActionsMenu="matMenu">
+  <button mat-menu-item (click)="toggleShow10040Event()">
+    <mat-icon>code</mat-icon>
+    @if (show10040Event()) {
+    <span i18n="@@settings.trust.personalized.hide10040">Hide 10040 Event</span>
+    } @else {
+    <span i18n="@@settings.trust.personalized.show10040">Show 10040 Event</span>
+    }
+  </button>
+
+  <button mat-menu-item (click)="copy10040Json()" [disabled]="!trustProviderService.hasEvent()">
+    <mat-icon>content_copy</mat-icon>
+    <span i18n="@@settings.trust.personalized.copy10040">Copy JSON</span>
+  </button>
+</mat-menu>
 
 <div class="content-medium">
   <p class="setting-description" i18n="@@settings.trust.description">
@@ -114,8 +134,6 @@
             <div>
               <p class="trust-calculation-title" i18n="@@settings.trust.personalized.calculationTitle">Trust Calculation
               </p>
-              <p class="trust-calculation-subtitle">{{ formatNullableValue(brainstormStatus()?.algorithm) }} network
-                analysis</p>
             </div>
             <span class="trust-status-pill"
               [class]="'trust-status-pill ' + getStatusPillClass(brainstormStatus()?.status)">
@@ -137,13 +155,6 @@
 
             <span class="trust-status-label" i18n="@@settings.trust.personalized.lastTriggered">Last triggered</span>
             <span class="trust-status-value">{{ formatIsoDate(brainstormStatus()?.created_at || null) }}</span>
-
-            <span class="trust-status-label" i18n="@@settings.trust.personalized.algorithm">Algorithm</span>
-            <span class="trust-status-value">{{ formatNullableValue(brainstormStatus()?.algorithm) }}</span>
-
-            <span class="trust-status-label" i18n="@@settings.trust.personalized.publisherLabel">Publisher pubkey</span>
-            <span class="trust-status-value trust-code-value">{{ formatNullableValue(brainstormPublisherPubkey())
-              }}</span>
           </div>
 
           <div class="trust-calculation-actions">
@@ -271,22 +282,6 @@
         }
 
         <div class="event-10040-section">
-          <div class="event-10040-actions">
-            <button mat-stroked-button (click)="toggleShow10040Event()">
-              <mat-icon>code</mat-icon>
-              @if (show10040Event()) {
-              <span i18n="@@settings.trust.personalized.hide10040">Hide 10040 Event</span>
-              } @else {
-              <span i18n="@@settings.trust.personalized.show10040">Show 10040 Event</span>
-              }
-            </button>
-
-            <button mat-stroked-button (click)="copy10040Json()" [disabled]="!trustProviderService.hasEvent()">
-              <mat-icon>content_copy</mat-icon>
-              <span i18n="@@settings.trust.personalized.copy10040">Copy JSON</span>
-            </button>
-          </div>
-
           @if (copy10040Status() === 'done') {
           <p class="brainstorm-feedback success" i18n="@@settings.trust.personalized.copyDone">
             Copied 10040 JSON to clipboard.
