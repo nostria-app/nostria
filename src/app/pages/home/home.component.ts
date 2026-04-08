@@ -18,6 +18,7 @@ import { ThemeService } from '../../services/theme.service';
 import { LayoutService } from '../../services/layout.service';
 import { SettingsService } from '../../services/settings.service';
 import { InstallService } from '../../services/install.service';
+import { MaterialCustomDialogComponent } from '../../components/material-custom-dialog/material-custom-dialog.component';
 import { WhatsNewDialogComponent } from '../../components/whats-new-dialog/whats-new-dialog.component';
 import { Introduction } from '../../components/introduction/introduction';
 import { MediaPlayerService } from '../../services/media-player.service';
@@ -112,6 +113,38 @@ export class HomeComponent {
       maxWidth: '95vw',
       maxHeight: '90vh',
       panelClass: 'whats-new-dialog-container',
+    });
+  }
+
+  openTestDialog(): void {
+    this.dialog.open(MaterialCustomDialogComponent, {
+      width: '680px',
+      maxWidth: '92vw',
+      panelClass: 'material-custom-dialog-panel',
+      data: {
+        icon: 'responsive_layout',
+        title: $localize`:@@home.test-dialog.title:Material Dialog Shell`,
+        message: $localize`:@@home.test-dialog.message:This dialog uses Angular Material for the overlay and accessibility behavior, but the layout and mobile treatment are styled to feel like Nostria's custom dialog component.`,
+        primaryActionText: $localize`:@@home.test-dialog.primary-action:Looks good`,
+        secondaryActionText: $localize`:@@home.test-dialog.secondary-action:Close`,
+        details: [
+          {
+            icon: 'phone_iphone',
+            title: $localize`:@@home.test-dialog.detail.mobile-title:Mobile-first layout`,
+            description: $localize`:@@home.test-dialog.detail.mobile-description:On smaller screens the dialog expands edge-to-edge, removes rounded corners, and keeps the action row anchored at the bottom.`,
+          },
+          {
+            icon: 'style',
+            title: $localize`:@@home.test-dialog.detail.style-title:Custom shell styling`,
+            description: $localize`:@@home.test-dialog.detail.style-description:The header, spacing, surface tones, and button treatment follow the app's custom dialog language instead of the stock Material appearance.`,
+          },
+          {
+            icon: 'verified_user',
+            title: $localize`:@@home.test-dialog.detail.material-title:Material dialog behavior`,
+            description: $localize`:@@home.test-dialog.detail.material-description:Focus handling, overlay stacking, escape handling, and close interactions still come from Angular Material.`,
+          },
+        ],
+      },
     });
   }
 

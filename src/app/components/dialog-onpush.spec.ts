@@ -6,6 +6,7 @@ import { DatabaseErrorDialogComponent } from './database-error-dialog/database-e
 import { ImageUrlDialogComponent } from './image-url-dialog/image-url-dialog.component';
 import { InstallDialogComponent } from './install-dialog/install-dialog.component';
 import { LoginDialogComponent } from './login-dialog/login-dialog.component';
+import { MaterialCustomDialogComponent } from './material-custom-dialog/material-custom-dialog.component';
 import { ModelLoadDialogComponent } from './model-load-dialog/model-load-dialog.component';
 import { PinPromptDialogComponent } from './pin-prompt-dialog/pin-prompt-dialog.component';
 import { PublishDialogComponent } from './publish-dialog/publish-dialog.component';
@@ -33,6 +34,7 @@ const dialogComponents: {
     { name: 'ImageUrlDialogComponent', component: ImageUrlDialogComponent },
     { name: 'InstallDialogComponent', component: InstallDialogComponent },
     { name: 'LoginDialogComponent', component: LoginDialogComponent },
+    { name: 'MaterialCustomDialogComponent', component: MaterialCustomDialogComponent },
     { name: 'ModelLoadDialogComponent', component: ModelLoadDialogComponent },
     { name: 'PinPromptDialogComponent', component: PinPromptDialogComponent },
     { name: 'PublishDialogComponent', component: PublishDialogComponent },
