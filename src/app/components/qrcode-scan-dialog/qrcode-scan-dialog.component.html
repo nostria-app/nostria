@@ -1,15 +1,13 @@
-<div class="qr-dialog-container">
-  <mat-dialog-content class="qr-dialog-content">
+<app-material-custom-dialog
+  title="Scan QR Code"
+  icon="qr_code_scanner"
+  [showDefaultActions]="false"
+>
+  <div dialog-content class="qr-dialog-container qr-dialog-content">
     <div class="camera-container">
       <video #videoElement class="camera-video" autoplay playsinline muted></video>
       <canvas #canvasElement class="camera-overlay"></canvas>
 
-      <!-- Floating close button -->
-      <button mat-icon-button mat-dialog-close class="floating-close-button">
-        <mat-icon>close</mat-icon>
-      </button>
-
-      <!-- Scanning indicator - top center -->
       @if (isScanning()) {
       <div class="scanning-indicator">
         <mat-icon>qr_code_scanner</mat-icon>
@@ -17,10 +15,9 @@
       </div>
       }
 
-      <!-- Camera controls - bottom center -->
       @if (availableCameras().length > 1) {
       <div class="camera-controls">
-        <button mat-raised-button color="primary" (click)="switchCamera()" [disabled]="!isScanning()">
+        <button mat-flat-button type="button" class="primary" (click)="switchCamera()" [disabled]="!isScanning()">
           <mat-icon>switch_camera</mat-icon>
           Switch Camera ({{ currentCameraIndex() + 1 }}/{{ availableCameras().length }})
         </button>
@@ -31,7 +28,6 @@
       }
     </div>
 
-    <!-- Error panel - outside camera container -->
     @if (errorMessage()) {
     <div class="error-panel">
       <div class="error-message">
@@ -44,7 +40,7 @@
         <h3>Try a different camera:</h3>
         <div class="camera-buttons">
           @for (camera of availableCameras(); track camera.deviceId) {
-          <button mat-raised-button [color]="currentDevice()?.deviceId === camera.deviceId ? 'primary' : 'basic'"
+          <button mat-flat-button type="button" [class.primary]="currentDevice()?.deviceId === camera.deviceId"
             (click)="tryDifferentCamera(camera.deviceId)" class="camera-option-button">
             <mat-icon>videocam</mat-icon>
             {{ camera.label }}
@@ -55,5 +51,9 @@
       }
     </div>
     }
-  </mat-dialog-content>
-</div>
+  </div>
+
+  <div dialog-actions>
+    <button mat-button type="button" (click)="dialogRef.close()">Close</button>
+  </div>
+</app-material-custom-dialog>

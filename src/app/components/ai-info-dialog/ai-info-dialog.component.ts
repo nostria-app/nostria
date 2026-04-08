@@ -1,15 +1,16 @@
 import { Component, inject, ChangeDetectionStrategy } from '@angular/core';
 
-import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
+import { MatDialogRef } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { FormsModule } from '@angular/forms';
 import { SettingsService } from '../../services/settings.service';
+import { MaterialCustomDialogComponent } from '../material-custom-dialog/material-custom-dialog.component';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-ai-info-dialog',
-  imports: [MatDialogModule, MatButtonModule, MatCheckboxModule, FormsModule],
+  imports: [MaterialCustomDialogComponent, MatButtonModule, MatCheckboxModule, FormsModule],
   templateUrl: './ai-info-dialog.component.html',
   styleUrl: './ai-info-dialog.component.scss',
 })
@@ -24,7 +25,7 @@ export class AiInfoDialogComponent {
     this.disableAi = !this.settingsService.settings().aiEnabled;
   }
 
-  close() {
+  close(): void {
     if (this.disableAi) {
       this.settingsService.updateSettings({ aiEnabled: false });
       this.dialogRef.close(false);

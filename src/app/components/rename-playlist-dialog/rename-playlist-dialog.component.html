@@ -1,22 +1,25 @@
-<div mat-dialog-title>
-  <h2>Rename Playlist</h2>
-</div>
+<app-material-custom-dialog
+  title="Rename Playlist"
+  icon="edit_note"
+  [showDefaultActions]="false"
+  [showCloseButton]="false"
+>
+  <div dialog-content>
+    <form [formGroup]="renameForm" (ngSubmit)="onSubmit()">
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Playlist Name</mat-label>
+        <input matInput formControlName="name" placeholder="Enter new playlist name" required />
+        @if (renameForm.get('name')?.hasError('required')) {
+          <mat-error>Playlist name is required</mat-error>
+        }
+      </mat-form-field>
+    </form>
+  </div>
 
-<div mat-dialog-content>
-  <form [formGroup]="renameForm" (ngSubmit)="onSubmit()">
-    <mat-form-field appearance="outline" class="full-width">
-      <mat-label>Playlist Name</mat-label>
-      <input matInput formControlName="name" placeholder="Enter new playlist name" required />
-      @if (renameForm.get('name')?.hasError('required')) {
-        <mat-error>Playlist name is required</mat-error>
-      }
-    </mat-form-field>
-  </form>
-</div>
-
-<div mat-dialog-actions align="end">
-  <button mat-button (click)="cancel()">Cancel</button>
-  <button mat-flat-button (click)="onSubmit()" [disabled]="!renameForm.valid">
-    Rename
-  </button>
-</div>
+  <div dialog-actions>
+    <button mat-button type="button" (click)="cancel()">Cancel</button>
+    <button mat-flat-button type="button" class="primary" (click)="onSubmit()" [disabled]="!renameForm.valid">
+      Rename
+    </button>
+  </div>
+</app-material-custom-dialog>

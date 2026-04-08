@@ -1,7 +1,10 @@
-<div class="comment-editor-dialog">
-  <h2 mat-dialog-title>{{ getTitle() }}</h2>
-
-  <mat-dialog-content>
+<app-material-custom-dialog
+  [title]="getTitle()"
+  [icon]="data.parentComment ? 'reply' : 'comment'"
+  [showDefaultActions]="false"
+  [showCloseButton]="false"
+>
+  <div dialog-content class="comment-editor-dialog">
     <div class="editor-container">
       <div class="reply-context">
         <mat-icon class="reply-icon">{{ data.parentComment ? 'reply' : 'comment' }}</mat-icon>
@@ -59,24 +62,24 @@
       </div>
       }
     </div>
-  </mat-dialog-content>
+  </div>
 
-  <mat-dialog-actions align="end">
-    <button mat-button (click)="onCancel()" [disabled]="isPublishing()">Cancel</button>
+  <div dialog-actions>
+    <button mat-button type="button" (click)="onCancel()" [disabled]="isPublishing()">Cancel</button>
     @if (isPublishing()) {
-    <button mat-flat-button color="primary" [disabled]="true">
+    <button mat-flat-button type="button" class="primary" [disabled]="true">
       <mat-icon>hourglass_empty</mat-icon>
       Publishing...
     </button>
     } @else {
-    <button mat-flat-button color="primary" (click)="onPublish()" [disabled]="!content().trim() && !audioAttachment()">
+    <button mat-flat-button type="button" class="primary" (click)="onPublish()" [disabled]="!content().trim() && !audioAttachment()">
       <mat-icon>send</mat-icon>
       Publish Comment
     </button>
     }
-  </mat-dialog-actions>
+  </div>
 
   @if (isPublishing()) {
   <mat-progress-bar mode="indeterminate"></mat-progress-bar>
   }
-</div>
+</app-material-custom-dialog>

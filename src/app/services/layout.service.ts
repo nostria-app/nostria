@@ -2173,8 +2173,8 @@ export class LayoutService implements OnDestroy {
       StartChatDialogComponent,
       {
         title: $localize`:@@create.message.dialog.title:Start New Chat`,
-        width: '500px',
-        maxWidth: '90vw',
+        width: 'min(500px, calc(100vw - 24px))',
+        maxWidth: 'calc(100vw - 24px)',
       },
     );
 

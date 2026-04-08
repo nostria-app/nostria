@@ -4,7 +4,7 @@ import { filter } from 'rxjs/operators';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { nip19 } from 'nostr-tools';
 
-import { MatDialogModule, MatDialogRef, MatDialog, MAT_DIALOG_DATA } from '@angular/material/dialog';
+import { MatDialogRef, MatDialog, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar } from '@angular/material/snack-bar';
@@ -19,6 +19,7 @@ import { EmojiSetService } from '../../services/emoji-set.service';
 import { AccountStateService } from '../../services/account-state.service';
 import { UserRelaysService } from '../../services/relays/user-relays';
 import { ReactionService } from '../../services/reaction.service';
+import { MaterialCustomDialogComponent } from '../material-custom-dialog/material-custom-dialog.component';
 
 export interface ReactionsDialogData {
   event: Event;
@@ -41,7 +42,7 @@ export interface ReactionsDialogData {
 @Component({
   selector: 'app-reactions-dialog',
   imports: [
-    MatDialogModule,
+    MaterialCustomDialogComponent,
     MatButtonModule,
     MatIconModule,
     MatTabsModule,
@@ -50,15 +51,12 @@ export interface ReactionsDialogData {
     AgoPipe,
   ],
   template: `
-    <div class="reactions-dialog">
-      <div class="dialog-header">
-        <h2 mat-dialog-title>Reactions</h2>
-        <button mat-icon-button [mat-dialog-close]="true" aria-label="Close dialog">
-          <mat-icon>close</mat-icon>
-        </button>
-      </div>
-
-      <mat-dialog-content class="dialog-content">
+    <app-material-custom-dialog
+      title="Reactions"
+      icon="favorite"
+      [showDefaultActions]="false"
+    >
+      <div dialog-content class="reactions-dialog dialog-content">
         <mat-tab-group
           [selectedIndex]="selectedTabIndex()"
           (selectedIndexChange)="onTabChange($event)"
@@ -238,12 +236,12 @@ export interface ReactionsDialogData {
             </div>
           </mat-tab>
         </mat-tab-group>
-      </mat-dialog-content>
+      </div>
 
-      <mat-dialog-actions class="dialog-actions">
-        <button mat-button [mat-dialog-close]="true">Close</button>
-      </mat-dialog-actions>
-    </div>
+      <div dialog-actions class="dialog-actions">
+        <button mat-button type="button" (click)="dialogRef.close(true)">Close</button>
+      </div>
+    </app-material-custom-dialog>
   `,
   styles: [
     `
@@ -523,7 +521,7 @@ export interface ReactionsDialogData {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ReactionsDialogComponent {
-  private dialogRef = inject(MatDialogRef<ReactionsDialogComponent>);
+  readonly dialogRef = inject(MatDialogRef<ReactionsDialogComponent>);
   private dialog = inject(MatDialog);
   private router = inject(Router);
   private layout = inject(LayoutService);

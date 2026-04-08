@@ -1,27 +1,25 @@
-<h2 mat-dialog-title>
-  @if (customMode()) {
-  Publish Custom Event
-  } @else {
-  Publish Event
-  }
-</h2>
-
-<mat-dialog-content class="publish-dialog-content">
-  @if (customMode()) {
-  <div class="custom-event-section">
-    <h3>Enter Nostr Event JSON</h3>
-    <mat-form-field appearance="outline" class="full-width">
-      <mat-label>Event JSON</mat-label>
-      <textarea matInput [ngModel]="customEventJson()" (ngModelChange)="onCustomEventChange($event)"
-        placeholder='{"kind":1,"created_at":1234567890,"tags":[],"content":"Hello Nostr!"}' rows="12"
-        class="event-json-input"></textarea>
-      @if (customEventError()) {
-      <mat-error>{{ customEventError() }}</mat-error>
-      }
-      <mat-hint>Paste a Nostr event JSON (signed or unsigned - will be signed if needed)</mat-hint>
-    </mat-form-field>
-  </div>
-  }
+<app-material-custom-dialog
+  [title]="customMode() ? 'Publish Custom Event' : 'Publish Event'"
+  icon="publish"
+  [showDefaultActions]="false"
+  [showCloseButton]="false"
+>
+  <div dialog-content class="publish-dialog-content">
+    @if (customMode()) {
+    <div class="custom-event-section">
+      <h3>Enter Nostr Event JSON</h3>
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Event JSON</mat-label>
+        <textarea matInput [ngModel]="customEventJson()" (ngModelChange)="onCustomEventChange($event)"
+          placeholder='{"kind":1,"created_at":1234567890,"tags":[],"content":"Hello Nostr!"}' rows="12"
+          class="event-json-input"></textarea>
+        @if (customEventError()) {
+        <mat-error>{{ customEventError() }}</mat-error>
+        }
+        <mat-hint>Paste a Nostr event JSON (signed or unsigned - will be signed if needed)</mat-hint>
+      </mat-form-field>
+    </div>
+    }
 
   <div class="publish-options">
     <h3>Select Publishing Targets</h3>
@@ -86,7 +84,7 @@
         <input matInput [ngModel]="customRelayInput()" (ngModelChange)="customRelayInput.set($event)"
           placeholder="wss://relay.example.com" (keyup.enter)="addCustomRelay()" />
       </mat-form-field>
-      <button mat-raised-button color="primary" (click)="addCustomRelay()" [disabled]="!customRelayInput().trim()">
+      <button mat-flat-button type="button" class="primary" (click)="addCustomRelay()" [disabled]="!customRelayInput().trim()">
         <mat-icon>add</mat-icon>
         Add
       </button>
@@ -98,7 +96,7 @@
         @for (relay of customRelays(); track $index) {
         <mat-chip-option>
           {{ relay }}
-          <button matChipRemove (click)="removeCustomRelay(relay)">
+          <button matChipRemove type="button" (click)="removeCustomRelay(relay)">
             <mat-icon>cancel</mat-icon>
           </button>
         </mat-chip-option>
@@ -125,10 +123,10 @@
             <mat-spinner diameter="16"></mat-spinner>
             <span>Publishing...</span>
             } @else if (result.status === 'success') {
-            <mat-icon color="primary">check_circle</mat-icon>
+            <mat-icon class="status-success-icon">check_circle</mat-icon>
             <span>Success</span>
             } @else {
-            <mat-icon color="warn">error</mat-icon>
+            <mat-icon class="status-error-icon">error</mat-icon>
             <span>Failed: {{ result.message }}</span>
             }
           </div>
@@ -166,25 +164,25 @@
     </div>
   </div>
   }
-</mat-dialog-content>
+  </div>
 
-<mat-dialog-actions align="end">
-  <button mat-stroked-button (click)="toggleJsonView()">
+  <div dialog-actions>
+  <button mat-stroked-button type="button" (click)="toggleJsonView()">
     <mat-icon>{{ showJsonView() ? 'visibility_off' : 'code' }}</mat-icon>
     {{ showJsonView() ? 'Event' : 'Event' }}
   </button>
-  <button mat-stroked-button (click)="toggleRelaysView()">
+  <button mat-stroked-button type="button" (click)="toggleRelaysView()">
     <mat-icon>{{ showRelaysView() ? 'visibility_off' : 'dns' }}</mat-icon>
     {{ showRelaysView() ? 'Relays' : 'Relays' }}
   </button>
-  <button mat-button (click)="close()">
+  <button mat-button type="button" (click)="close()">
     @if (publishResults().length > 0) {
     Close
     } @else {
     Cancel
     }
   </button>
-  <button mat-flat-button (click)="publish()" [disabled]="!canPublish()">
+  <button mat-flat-button type="button" class="primary" (click)="publish()" [disabled]="!canPublish()">
     @if (isPublishing()) {
     <mat-spinner diameter="16"></mat-spinner>
     Publishing...
@@ -197,4 +195,5 @@
     }
     }
   </button>
-</mat-dialog-actions>
+  </div>
+</app-material-custom-dialog>

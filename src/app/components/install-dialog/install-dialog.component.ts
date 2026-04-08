@@ -1,11 +1,12 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
-import { MAT_DIALOG_DATA, MatDialogRef, MatDialogModule } from '@angular/material/dialog';
+import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { InstallService, PlatformInfo } from '../../services/install.service';
 import { AndroidUpdaterService } from '../../services/android-updater.service';
+import { MaterialCustomDialogComponent } from '../material-custom-dialog/material-custom-dialog.component';
 
 export interface InstallDialogData {
   platformInfo: PlatformInfo;
@@ -14,18 +15,23 @@ export interface InstallDialogData {
 
 @Component({
   selector: 'app-install-dialog',
-  imports: [MatDialogModule, MatButtonModule, MatIconModule, MatDividerModule],
+  imports: [MaterialCustomDialogComponent, MatButtonModule, MatIconModule, MatDividerModule],
   template: `
-    <h2 mat-dialog-title>Install Nostria</h2>
-    <mat-dialog-content>
-      <div class="install-options">
+    <app-material-custom-dialog
+      title="Install Nostria"
+      icon="download"
+      [showDefaultActions]="false"
+      [showCloseButton]="false"
+    >
+      <div dialog-content>
+        <div class="install-options">
         @if (showPWAInstall()) {
         <div class="install-option pwa-option">
           <mat-icon>web</mat-icon>
           <div class="option-content">
             <h3>Install as Web App</h3>
             <p>Install Nostria directly from your browser for quick access</p>
-            <button mat-raised-button color="primary" (click)="installPWA()">
+            <button mat-flat-button class="primary" type="button" (click)="installPWA()">
               <mat-icon>download</mat-icon>
               Install Now
             </button>
@@ -134,11 +140,13 @@ export interface InstallDialogData {
           </div>
         </div>
         }
+        </div>
       </div>
-    </mat-dialog-content>
-    <mat-dialog-actions align="end">
-      <button mat-button mat-dialog-close>Close</button>
-    </mat-dialog-actions>
+
+      <div dialog-actions>
+        <button mat-button type="button" (click)="dialogRef.close()">Close</button>
+      </div>
+    </app-material-custom-dialog>
   `,
   styles: [
     `

@@ -1,12 +1,10 @@
-<h2 mat-dialog-title>
-  @if (data.target.type === 'user') {
-    Report User
-  } @else {
-    Report Content
-  }
-</h2>
-
-<mat-dialog-content class="report-dialog-content">
+<app-material-custom-dialog
+  [title]="data.target.type === 'user' ? 'Report User' : 'Report Content'"
+  icon="report"
+  [showDefaultActions]="false"
+  [showCloseButton]="false"
+>
+<div dialog-content class="report-dialog-content">
   <div class="report-target-info">
     <h3>Reporting: {{ getTargetDescription() }}</h3>
   </div>
@@ -88,7 +86,7 @@
               (keydown.enter)="addCustomRelay()"
             />
           </mat-form-field>
-          <button mat-icon-button color="primary" (click)="addCustomRelay()">
+          <button mat-icon-button type="button" class="primary" (click)="addCustomRelay()">
             <mat-icon>add</mat-icon>
           </button>
         </div>
@@ -99,7 +97,7 @@
               @for (relay of customRelays(); track $index) {
                 <mat-chip-option>
                   {{ relay }}
-                  <button matChipRemove (click)="removeCustomRelay(relay)">
+                  <button matChipRemove type="button" (click)="removeCustomRelay(relay)">
                     <mat-icon>cancel</mat-icon>
                   </button>
                 </mat-chip-option>
@@ -127,10 +125,10 @@
                   <mat-spinner diameter="16"></mat-spinner>
                   <span>Publishing...</span>
                 } @else if (result.status === 'success') {
-                  <mat-icon color="primary">check_circle</mat-icon>
+                  <mat-icon class="status-success-icon">check_circle</mat-icon>
                   <span>Success</span>
                 } @else {
-                  <mat-icon color="warn">error</mat-icon>
+                  <mat-icon class="status-error-icon">error</mat-icon>
                   <span>Failed: {{ result.message }}</span>
                 }
               </div>
@@ -161,9 +159,9 @@
       </div>
     </div>
   }
-</mat-dialog-content>
+  </div>
 
-<mat-dialog-actions align="end">
+<div dialog-actions>
   <div class="block-toggle-section">
     <mat-slide-toggle [(ngModel)]="shouldBlock" color="warn">
       @if (data.target.type === 'user') {
@@ -174,12 +172,12 @@
     </mat-slide-toggle>
   </div>
 
-  <button mat-button (click)="toggleRelaysView()">
+  <button mat-button type="button" (click)="toggleRelaysView()">
     <mat-icon>{{ showRelaysView() ? 'visibility_off' : 'dns' }}</mat-icon>
     {{ showRelaysView() ? 'Hide' : 'Show' }} Relays
   </button>
 
-  <button mat-button (click)="close()">
+  <button mat-button type="button" (click)="close()">
     @if (publishResults().length > 0) {
       Close
     } @else {
@@ -187,7 +185,7 @@
     }
   </button>
 
-  <button mat-flat-button color="warn" (click)="submitReport()" [disabled]="!canSubmit()">
+  <button mat-flat-button type="button" class="warn" (click)="submitReport()" [disabled]="!canSubmit()">
     @if (isSubmitting()) {
       <mat-spinner diameter="16"></mat-spinner>
       Submitting...
@@ -200,4 +198,5 @@
       }
     }
   </button>
-</mat-dialog-actions>
+</div>
+</app-material-custom-dialog>

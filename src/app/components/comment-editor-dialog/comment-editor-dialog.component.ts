@@ -7,7 +7,7 @@ import {
   AfterViewInit,
   ChangeDetectionStrategy,
 } from '@angular/core';
-import { MAT_DIALOG_DATA, MatDialogRef, MatDialogModule } from '@angular/material/dialog';
+import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -27,6 +27,7 @@ import { EventService } from '../../services/event';
 import { MentionAutocompleteComponent, MentionSelection, MentionAutocompleteConfig } from '../mention-autocomplete/mention-autocomplete.component';
 import { MentionInputService, MentionDetectionResult } from '../../services/mention-input.service';
 import { UserProfileComponent } from '../user-profile/user-profile.component';
+import { MaterialCustomDialogComponent } from '../material-custom-dialog/material-custom-dialog.component';
 
 export interface CommentEditorDialogData {
   rootEvent: NostrEvent; // The event being commented on
@@ -38,7 +39,7 @@ export interface CommentEditorDialogData {
   selector: 'app-comment-editor-dialog',
   imports: [
     FormsModule,
-    MatDialogModule,
+    MaterialCustomDialogComponent,
     MatButtonModule,
     MatIconModule,
     MatFormFieldModule,

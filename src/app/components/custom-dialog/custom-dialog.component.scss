@@ -69,6 +69,32 @@
   animation: slideIn 0.3s ease-out;
   outline: none;
 
+  > app-material-custom-dialog.legacy-custom-dialog-shell {
+    display: flex;
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 0;
+    max-height: 100%;
+  }
+
+  > app-material-custom-dialog.legacy-custom-dialog-shell .material-custom-dialog {
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 0;
+    max-height: 100%;
+  }
+
+  > app-material-custom-dialog.legacy-custom-dialog-shell .dialog-content {
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 0;
+  }
+
+  > app-material-custom-dialog.legacy-custom-dialog-shell [dialog-content] {
+    min-width: 0;
+    min-height: 0;
+  }
+
   // Mobile: full screen
   @media (max-width: 700px),
   (max-height: 700px) {
@@ -355,6 +381,7 @@
 .dialog-content {
   flex: 1;
   min-height: 0;
+  min-width: 0;
   overflow-y: auto;
   overflow-x: hidden;
   overscroll-behavior: contain;
@@ -601,6 +628,7 @@
   gap: 0.5rem;
   flex-shrink: 0;
   min-height: 0;
+  min-width: 0;
   padding: 0;
   isolation: isolate; // Create stacking context to prevent Material ripple from bleeding through
 

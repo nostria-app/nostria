@@ -1,10 +1,11 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
-import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
+import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { MaterialCustomDialogComponent } from '../material-custom-dialog/material-custom-dialog.component';
 
 export interface PinPromptDialogData {
   /** Title for the dialog */
@@ -20,7 +21,7 @@ export interface PinPromptDialogData {
 @Component({
   selector: 'app-pin-prompt-dialog',
   imports: [
-    MatDialogModule,
+    MaterialCustomDialogComponent,
     MatFormFieldModule,
     MatInputModule,
     MatButtonModule,
@@ -28,79 +29,79 @@ export interface PinPromptDialogData {
     ReactiveFormsModule,
   ],
   template: `
-    <h2 mat-dialog-title>
-      <mat-icon class="title-icon">{{ failedAttempts() > 0 ? 'error_outline' : 'lock' }}</mat-icon>
-      {{ title() }}
-    </h2>
-    <mat-dialog-content>
-      <p class="message">{{ message() }}</p>
+    <app-material-custom-dialog
+      [title]="title()"
+      [icon]="failedAttempts() > 0 ? 'error_outline' : 'lock'"
+      [showDefaultActions]="false"
+      [showCloseButton]="false"
+    >
+      <div dialog-content>
+        <p class="message">{{ message() }}</p>
 
-      @if (failedAttempts() > 0) {
-        <div class="error-banner">
-          <mat-icon>warning</mat-icon>
-          <div class="error-content">
-            <strong>Incorrect PIN</strong>
-            <span>{{ failedAttempts() === 1 ? 'The PIN you entered was incorrect.' : 'PIN incorrect. Attempt ' + failedAttempts() + ' failed.' }}</span>
-          </div>
-        </div>
-      }
-      
-      <mat-form-field appearance="outline" class="full-width">
-        <mat-label>PIN Code</mat-label>
-        <input
-          matInput
-          [type]="hidePin() ? 'password' : 'text'"
-          [formControl]="pinControl"
-          placeholder="Enter your PIN"
-          (keyup.enter)="onSubmit()"
-          autocomplete="off"
-          cdkFocusInitial
-        />
-        <button
-          mat-icon-button
-          matSuffix
-          (click)="hidePin.set(!hidePin())"
-          type="button"
-        >
-          <mat-icon>{{ hidePin() ? 'visibility_off' : 'visibility' }}</mat-icon>
-        </button>
-        @if (pinControl.hasError('required')) {
-          <mat-error>PIN is required</mat-error>
-        }
-        @if (pinControl.hasError('minlength')) {
-          <mat-error>PIN must be at least 4 characters</mat-error>
-        }
-      </mat-form-field>
-
-      @if (showForgotHint()) {
-        <div class="forgot-hint">
-          <mat-icon>help_outline</mat-icon>
-          <span>Forgot your PIN? Go to <strong>Credentials</strong> page and use <strong>Reset PIN</strong> if you know your current PIN, or restore your account using your recovery phrase.</span>
-        </div>
-      }
-    </mat-dialog-content>
-    <mat-dialog-actions align="end">
-      <button mat-button (click)="onCancel()">Cancel</button>
-      <button
-        mat-flat-button
-        (click)="onSubmit()"
-        [disabled]="pinControl.invalid"
-      >
         @if (failedAttempts() > 0) {
-          Try Again
-        } @else {
-          Unlock
+          <div class="error-banner">
+            <mat-icon>warning</mat-icon>
+            <div class="error-content">
+              <strong>Incorrect PIN</strong>
+              <span>{{ failedAttempts() === 1 ? 'The PIN you entered was incorrect.' : 'PIN incorrect. Attempt ' + failedAttempts() + ' failed.' }}</span>
+            </div>
+          </div>
         }
-      </button>
-    </mat-dialog-actions>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>PIN Code</mat-label>
+          <input
+            matInput
+            [type]="hidePin() ? 'password' : 'text'"
+            [formControl]="pinControl"
+            placeholder="Enter your PIN"
+            (keyup.enter)="onSubmit()"
+            autocomplete="off"
+            cdkFocusInitial
+          />
+          <button
+            mat-icon-button
+            matSuffix
+            (click)="hidePin.set(!hidePin())"
+            type="button"
+          >
+            <mat-icon>{{ hidePin() ? 'visibility_off' : 'visibility' }}</mat-icon>
+          </button>
+          @if (pinControl.hasError('required')) {
+            <mat-error>PIN is required</mat-error>
+          }
+          @if (pinControl.hasError('minlength')) {
+            <mat-error>PIN must be at least 4 characters</mat-error>
+          }
+        </mat-form-field>
+
+        @if (showForgotHint()) {
+          <div class="forgot-hint">
+            <mat-icon>help_outline</mat-icon>
+            <span>Forgot your PIN? Go to <strong>Credentials</strong> page and use <strong>Reset PIN</strong> if you know your current PIN, or restore your account using your recovery phrase.</span>
+          </div>
+        }
+      </div>
+
+      <div dialog-actions>
+        <button mat-button type="button" (click)="onCancel()">Cancel</button>
+        <button
+          mat-flat-button
+          type="button"
+          class="primary"
+          (click)="onSubmit()"
+          [disabled]="pinControl.invalid"
+        >
+          @if (failedAttempts() > 0) {
+            Try Again
+          } @else {
+            Unlock
+          }
+        </button>
+      </div>
+    </app-material-custom-dialog>
   `,
   styles: [`
-    h2[mat-dialog-title] {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
     .title-icon {
       color: var(--mat-sys-primary);
     }
@@ -175,7 +176,7 @@ export interface PinPromptDialogData {
       }
     }
 
-    mat-dialog-content {
+    .dialog-content {
       min-width: 300px;
     }
   `],

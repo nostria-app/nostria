@@ -1,8 +1,9 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 
-import { MAT_DIALOG_DATA, MatDialogRef, MatDialogModule } from '@angular/material/dialog';
+import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatButtonModule } from '@angular/material/button';
+import { MaterialCustomDialogComponent } from '../material-custom-dialog/material-custom-dialog.component';
 
 export interface ModelLoadDialogData {
   model: string;
@@ -11,29 +12,36 @@ export interface ModelLoadDialogData {
 
 @Component({
   selector: 'app-model-load-dialog',
-  imports: [MatDialogModule, MatProgressBarModule, MatButtonModule],
+  imports: [MaterialCustomDialogComponent, MatProgressBarModule, MatButtonModule],
   template: `
-    <h2 mat-dialog-title>Loading AI Model</h2>
-    <div mat-dialog-content>
-      <p>Downloading model <strong>{{ data.model }}</strong> for {{ data.task }}...</p>
-      <p class="note">This happens only once. The model will be cached for future use.</p>
-      
-      <mat-progress-bar 
-        [mode]="progress() > 0 ? 'determinate' : 'indeterminate'" 
-        [value]="progress()">
-      </mat-progress-bar>
-      
-      <div class="status-text">
-        @if (status()) {
-          {{ status() }}
-        } @else {
-          Initializing...
-        }
+    <app-material-custom-dialog
+      title="Loading AI Model"
+      icon="download"
+      [showDefaultActions]="false"
+      [showCloseButton]="false"
+    >
+      <div dialog-content>
+        <p>Downloading model <strong>{{ data.model }}</strong> for {{ data.task }}...</p>
+        <p class="note">This happens only once. The model will be cached for future use.</p>
+
+        <mat-progress-bar
+          [mode]="progress() > 0 ? 'determinate' : 'indeterminate'"
+          [value]="progress()">
+        </mat-progress-bar>
+
+        <div class="status-text">
+          @if (status()) {
+            {{ status() }}
+          } @else {
+            Initializing...
+          }
+        </div>
       </div>
-    </div>
-    <div mat-dialog-actions align="end">
-      <button mat-button (click)="cancel()">Cancel</button>
-    </div>
+
+      <div dialog-actions>
+        <button mat-button type="button" (click)="cancel()">Cancel</button>
+      </div>
+    </app-material-custom-dialog>
   `,
   styles: [`
     .note {

@@ -8,13 +8,14 @@ import {
   AfterViewInit,
   OnDestroy,
 } from '@angular/core';
-import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
+import { MatDialogRef } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { frontalCamera, QRCanvas, frameLoop } from 'qr/dom.js';
 import { nip19 } from 'nostr-tools';
 import { UtilitiesService } from '../../services/utilities.service';
 import { LoggerService } from '../../services/logger.service';
+import { MaterialCustomDialogComponent } from '../material-custom-dialog/material-custom-dialog.component';
 
 // Define interface for QR camera to avoid 'any' type
 interface QRCamera {
@@ -28,12 +29,12 @@ interface QRCamera {
   selector: 'app-qrcode-scan-dialog',
   templateUrl: './qrcode-scan-dialog.component.html',
   styleUrls: ['./qrcode-scan-dialog.component.scss'],
-  imports: [MatDialogModule, MatButtonModule, MatIconModule],
+  imports: [MaterialCustomDialogComponent, MatButtonModule, MatIconModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class
   QrcodeScanDialogComponent implements AfterViewInit, OnDestroy {
-  private dialogRef = inject(MatDialogRef<QrcodeScanDialogComponent>);
+  readonly dialogRef = inject(MatDialogRef<QrcodeScanDialogComponent>);
   private utilities = inject(UtilitiesService);
   private logger = inject(LoggerService);
 

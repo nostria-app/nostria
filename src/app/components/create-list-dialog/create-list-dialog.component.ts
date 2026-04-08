@@ -1,11 +1,12 @@
 import { Component, inject, ChangeDetectionStrategy } from '@angular/core';
 import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
-import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
+import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatIconModule } from '@angular/material/icon';
+import { MaterialCustomDialogComponent } from '../material-custom-dialog/material-custom-dialog.component';
 
 export interface CreateListDialogData {
   title?: string;
@@ -21,7 +22,7 @@ export interface CreateListDialogResult {
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-create-list-dialog',
   imports: [
-    MatDialogModule,
+    MaterialCustomDialogComponent,
     MatFormFieldModule,
     MatInputModule,
     MatButtonModule,
@@ -30,63 +31,71 @@ export interface CreateListDialogResult {
     ReactiveFormsModule,
   ],
   template: `
-    <h2 mat-dialog-title>Create new list</h2>
-    <mat-dialog-content>
-      <p>Create a custom list to organize people you follow</p>
-      
-      <mat-form-field appearance="outline" class="full-width">
-        <mat-label>List Name</mat-label>
-        <input
-          matInput
-          [formControl]="titleControl"
-          placeholder="e.g., Developers, Friends, Artists"
-          (keyup.enter)="onSubmit()"
-          autocomplete="off"
-        />
-        @if (titleControl.hasError('required')) {
-          <mat-error>List name is required</mat-error>
-        }
-        @if (titleControl.hasError('minlength')) {
-          <mat-error>Must be at least 1 character</mat-error>
-        }
-        @if (titleControl.hasError('maxlength')) {
-          <mat-error>Must not exceed 100 characters</mat-error>
-        }
-      </mat-form-field>
+    <app-material-custom-dialog
+      title="Create new list"
+      icon="format_list_bulleted"
+      [showDefaultActions]="false"
+      [showCloseButton]="false"
+    >
+      <div dialog-content>
+        <p>Create a custom list to organize people you follow</p>
 
-      <div class="privacy-section">
-        <mat-checkbox [formControl]="privateControl">
-          <div class="checkbox-content">
-            <div class="checkbox-label">
-              <mat-icon>lock</mat-icon>
-              <span>Private (encrypted)</span>
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>List Name</mat-label>
+          <input
+            matInput
+            [formControl]="titleControl"
+            placeholder="e.g., Developers, Friends, Artists"
+            (keyup.enter)="onSubmit()"
+            autocomplete="off"
+          />
+          @if (titleControl.hasError('required')) {
+            <mat-error>List name is required</mat-error>
+          }
+          @if (titleControl.hasError('minlength')) {
+            <mat-error>Must be at least 1 character</mat-error>
+          }
+          @if (titleControl.hasError('maxlength')) {
+            <mat-error>Must not exceed 100 characters</mat-error>
+          }
+        </mat-form-field>
+
+        <div class="privacy-section">
+          <mat-checkbox [formControl]="privateControl">
+            <div class="checkbox-content">
+              <div class="checkbox-label">
+                <mat-icon>lock</mat-icon>
+                <span>Private (encrypted)</span>
+              </div>
+              <div class="checkbox-description">
+                Private lists are encrypted and only visible to you
+              </div>
             </div>
-            <div class="checkbox-description">
-              Private lists are encrypted and only visible to you
-            </div>
-          </div>
-        </mat-checkbox>
+          </mat-checkbox>
+        </div>
       </div>
-    </mat-dialog-content>
-    <mat-dialog-actions align="end">
-      <button mat-button (click)="onCancel()">Cancel</button>
-      <button
-        mat-flat-button
-        (click)="onSubmit()"
-        [disabled]="titleControl.invalid"
-      >
-        Create List
-      </button>
-    </mat-dialog-actions>
+
+      <div dialog-actions>
+        <button mat-button type="button" (click)="onCancel()">Cancel</button>
+        <button
+          mat-flat-button
+          type="button"
+          class="primary"
+          (click)="onSubmit()"
+          [disabled]="titleControl.invalid"
+        >
+          Create List
+        </button>
+      </div>
+    </app-material-custom-dialog>
   `,
   styles: [`
     .full-width {
       width: 100%;
     }
 
-    mat-dialog-content {
+    .dialog-content {
       min-width: 400px;
-      padding-top: 16px;
     }
 
     p {

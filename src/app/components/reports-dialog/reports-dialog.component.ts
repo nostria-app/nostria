@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, inject, signal, effect, untracked } from '@angular/core';
 
 import { MatButtonModule } from '@angular/material/button';
-import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
+import { MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatChipsModule } from '@angular/material/chips';
@@ -9,6 +9,7 @@ import { EventService, ReportEvents } from '../../services/event';
 import { AgoPipe } from '../../pipes/ago.pipe';
 import { UserProfileComponent } from '../user-profile/user-profile.component';
 import { UtilitiesService } from '../../services/utilities.service';
+import { MaterialCustomDialogComponent } from '../material-custom-dialog/material-custom-dialog.component';
 
 export interface ReportsDialogData {
   eventId: string;
@@ -19,7 +20,7 @@ export interface ReportsDialogData {
   selector: 'app-reports-dialog',
   imports: [
     MatButtonModule,
-    MatDialogModule,
+    MaterialCustomDialogComponent,
     MatIconModule,
     MatProgressSpinnerModule,
     MatChipsModule,

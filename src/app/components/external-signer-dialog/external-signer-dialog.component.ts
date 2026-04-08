@@ -1,8 +1,9 @@
 import { Component, inject, AfterViewInit, OnDestroy, ChangeDetectionStrategy, NgZone } from '@angular/core';
-import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
+import { MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MaterialCustomDialogComponent } from '../material-custom-dialog/material-custom-dialog.component';
 
 export interface ExternalSignerDialogData {
   eventJson: string;
@@ -12,28 +13,35 @@ export interface ExternalSignerDialogData {
 @Component({
   selector: 'app-external-signer-dialog',
   imports: [
-    MatDialogModule,
+    MaterialCustomDialogComponent,
     MatButtonModule,
     MatIconModule,
     MatProgressSpinnerModule
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <h2 mat-dialog-title>Waiting for Signature</h2>
-    <mat-dialog-content class="dialog-content">
-      <div class="spinner-container">
-        <mat-spinner diameter="48"></mat-spinner>
+    <app-material-custom-dialog
+      title="Waiting for Signature"
+      icon="draw"
+      [showDefaultActions]="false"
+      [showCloseButton]="false"
+    >
+      <div dialog-content class="dialog-content">
+        <div class="spinner-container">
+          <mat-spinner diameter="48"></mat-spinner>
+        </div>
+        <p class="status-text">
+          Please approve the signing request in your external signer app (like Amber).
+        </p>
+        <p class="hint-text">
+          The signed event will be detected automatically.
+        </p>
       </div>
-      <p class="status-text">
-        Please approve the signing request in your external signer app (like Amber).
-      </p>
-      <p class="hint-text">
-        The signed event will be detected automatically.
-      </p>
-    </mat-dialog-content>
-    <mat-dialog-actions align="end">
-      <button mat-button mat-dialog-close>Cancel</button>
-    </mat-dialog-actions>
+
+      <div dialog-actions>
+        <button mat-button type="button" (click)="dialogRef.close()">Cancel</button>
+      </div>
+    </app-material-custom-dialog>
   `,
   styles: [`
     .dialog-content {

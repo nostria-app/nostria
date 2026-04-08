@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject, signal, effect } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
+import { MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -22,6 +22,7 @@ import { LayoutService } from '../../services/layout.service';
 import { AccountStateService } from '../../services/account-state.service';
 import { PublishService } from '../../services/publish.service';
 import { LoggerService } from '../../services/logger.service';
+import { MaterialCustomDialogComponent } from '../material-custom-dialog/material-custom-dialog.component';
 
 export interface ReportDialogData {
   target: ReportTarget;
@@ -49,7 +50,7 @@ interface RelayPublishResult {
   selector: 'app-report-dialog',
   imports: [
     FormsModule,
-    MatDialogModule,
+    MaterialCustomDialogComponent,
     MatButtonModule,
     MatCheckboxModule,
     MatFormFieldModule,

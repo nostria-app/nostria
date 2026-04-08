@@ -1,9 +1,10 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
-import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
+import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
+import { MaterialCustomDialogComponent } from '../material-custom-dialog/material-custom-dialog.component';
 
 export interface TextInputDialogData {
   title: string;
@@ -19,59 +20,66 @@ export interface TextInputDialogData {
 @Component({
   selector: 'app-text-input-dialog',
   imports: [
-    MatDialogModule,
+    MaterialCustomDialogComponent,
     MatFormFieldModule,
     MatInputModule,
     MatButtonModule,
     ReactiveFormsModule,
   ],
   template: `
-    <h2 mat-dialog-title>{{ data.title }}</h2>
-    <mat-dialog-content>
-      @if (data.message) {
-        <p>{{ data.message }}</p>
-      }
-      
-      <mat-form-field appearance="outline" class="full-width">
-        <mat-label>{{ data.label }}</mat-label>
-        <input
-          matInput
-          [formControl]="inputControl"
-          [placeholder]="data.placeholder || ''"
-          (keyup.enter)="onSubmit()"
-          autocomplete="off"
-        />
-        @if (inputControl.hasError('required')) {
-          <mat-error>{{ data.label }} is required</mat-error>
+    <app-material-custom-dialog
+      [title]="data.title"
+      icon="edit"
+      [showDefaultActions]="false"
+      [showCloseButton]="false"
+    >
+      <div dialog-content>
+        @if (data.message) {
+          <p>{{ data.message }}</p>
         }
-        @if (inputControl.hasError('minlength')) {
-          <mat-error>Must be at least {{ data.minLength }} characters</mat-error>
-        }
-        @if (inputControl.hasError('maxlength')) {
-          <mat-error>Must not exceed {{ data.maxLength }} characters</mat-error>
-        }
-      </mat-form-field>
-    </mat-dialog-content>
-    <mat-dialog-actions align="end">
-      <button mat-button (click)="onCancel()">Cancel</button>
-      <button
-        mat-flat-button
-        color="primary"
-        (click)="onSubmit()"
-        [disabled]="inputControl.invalid"
-      >
-        OK
-      </button>
-    </mat-dialog-actions>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>{{ data.label }}</mat-label>
+          <input
+            matInput
+            [formControl]="inputControl"
+            [placeholder]="data.placeholder || ''"
+            (keyup.enter)="onSubmit()"
+            autocomplete="off"
+          />
+          @if (inputControl.hasError('required')) {
+            <mat-error>{{ data.label }} is required</mat-error>
+          }
+          @if (inputControl.hasError('minlength')) {
+            <mat-error>Must be at least {{ data.minLength }} characters</mat-error>
+          }
+          @if (inputControl.hasError('maxlength')) {
+            <mat-error>Must not exceed {{ data.maxLength }} characters</mat-error>
+          }
+        </mat-form-field>
+      </div>
+
+      <div dialog-actions>
+        <button mat-button type="button" (click)="onCancel()">Cancel</button>
+        <button
+          mat-flat-button
+          type="button"
+          class="primary"
+          (click)="onSubmit()"
+          [disabled]="inputControl.invalid"
+        >
+          OK
+        </button>
+      </div>
+    </app-material-custom-dialog>
   `,
   styles: [`
     .full-width {
       width: 100%;
     }
 
-    mat-dialog-content {
+    .dialog-content {
       min-width: 350px;
-      padding-top: 16px;
     }
 
     p {

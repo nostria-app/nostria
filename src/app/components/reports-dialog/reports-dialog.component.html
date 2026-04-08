@@ -1,10 +1,10 @@
-<div class="reports-dialog">
-  <h2 mat-dialog-title>
-    <mat-icon>flag</mat-icon>
-    Event Reports
-  </h2>
-
-  <mat-dialog-content>
+<app-material-custom-dialog
+  title="Event Reports"
+  icon="flag"
+  [showDefaultActions]="false"
+  [showCloseButton]="false"
+>
+  <div dialog-content class="reports-dialog">
     @if (isLoading()) {
     <div class="loading-container">
       <mat-spinner diameter="32"></mat-spinner>
@@ -61,9 +61,9 @@
     </div>
     }
     }
-  </mat-dialog-content>
+  </div>
 
-  <mat-dialog-actions>
-    <button mat-button (click)="close()">Close</button>
-  </mat-dialog-actions>
-</div>
+  <div dialog-actions>
+    <button mat-button type="button" (click)="close()">Close</button>
+  </div>
+</app-material-custom-dialog>

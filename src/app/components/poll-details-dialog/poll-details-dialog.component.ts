@@ -1,6 +1,6 @@
 import { Component, inject, ChangeDetectionStrategy } from '@angular/core';
 
-import { MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
+import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
@@ -8,6 +8,7 @@ import { MatListModule } from '@angular/material/list';
 import { MatChipsModule } from '@angular/material/chips';
 import { Poll, PollResults, PollResponse } from '../../interfaces';
 import { UtilitiesService } from '../../services/utilities.service';
+import { MaterialCustomDialogComponent } from '../material-custom-dialog/material-custom-dialog.component';
 
 interface PollDetailsData {
   poll: Poll;
@@ -19,87 +20,85 @@ interface PollDetailsData {
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-poll-details-dialog',
   imports: [
-    MatDialogModule,
+    MaterialCustomDialogComponent,
     MatButtonModule,
     MatIconModule,
     MatProgressBarModule,
     MatListModule,
     MatChipsModule
-],
+  ],
   template: `
-    <h2 mat-dialog-title>
-      <mat-icon>poll</mat-icon>
-      Poll Results
-    </h2>
-    
-    <mat-dialog-content>
-      <!-- Poll Question -->
-      <div class="poll-question">
-        <h3>{{ normalizedPollQuestion() }}</h3>
-      </div>
+    <app-material-custom-dialog
+      title="Poll Results"
+      icon="poll"
+      [showDefaultActions]="false"
+      [showCloseButton]="false"
+    >
+      <div dialog-content>
+        <div class="poll-question">
+          <h3>{{ normalizedPollQuestion() }}</h3>
+        </div>
 
-      <!-- Poll Metadata -->
-      <div class="poll-metadata">
-        <mat-chip-set>
-          <mat-chip>
-            <mat-icon>how_to_vote</mat-icon>
-            {{ data.results.totalVotes }} total votes
-          </mat-chip>
-          <mat-chip>
-            <mat-icon>{{ data.poll.pollType === 'singlechoice' ? 'radio_button_checked' : 'check_box' }}</mat-icon>
-            {{ data.poll.pollType === 'singlechoice' ? 'Single Choice' : 'Multiple Choice' }}
-          </mat-chip>
-          @if (data.poll.endsAt) {
+        <div class="poll-metadata">
+          <mat-chip-set>
             <mat-chip>
-              <mat-icon>schedule</mat-icon>
-              {{ isExpired() ? 'Ended' : 'Active' }}
+              <mat-icon>how_to_vote</mat-icon>
+              {{ data.results.totalVotes }} total votes
             </mat-chip>
-          }
-        </mat-chip-set>
-      </div>
+            <mat-chip>
+              <mat-icon>{{ data.poll.pollType === 'singlechoice' ? 'radio_button_checked' : 'check_box' }}</mat-icon>
+              {{ data.poll.pollType === 'singlechoice' ? 'Single Choice' : 'Multiple Choice' }}
+            </mat-chip>
+            @if (data.poll.endsAt) {
+              <mat-chip>
+                <mat-icon>schedule</mat-icon>
+                {{ isExpired() ? 'Ended' : 'Active' }}
+              </mat-chip>
+            }
+          </mat-chip-set>
+        </div>
 
-      <!-- Results by Option -->
-      <div class="results-section">
-        <h4>Results</h4>
-        <mat-list>
-          @for (option of data.poll.options; track option.id) {
-            <mat-list-item>
-              <div class="option-result">
-                <div class="option-header">
-                  <span class="option-label">{{ option.label }}</span>
-                  <span class="option-stats">
-                    {{ getVoteCount(option.id) }} votes ({{ getPercentage(option.id) }}%)
-                  </span>
-                </div>
-                <mat-progress-bar 
-                  mode="determinate" 
-                  [value]="getPercentage(option.id)">
-                </mat-progress-bar>
-              </div>
-            </mat-list-item>
-          }
-        </mat-list>
-      </div>
-
-      <!-- Voters List -->
-      @if (data.results.voters.length > 0) {
-        <div class="voters-section">
-          <h4>Voters ({{ data.results.voters.length }})</h4>
-          <mat-list dense>
-            @for (voter of data.results.voters; track voter) {
+        <div class="results-section">
+          <h4>Results</h4>
+          <mat-list>
+            @for (option of data.poll.options; track option.id) {
               <mat-list-item>
-                <mat-icon matListItemIcon>person</mat-icon>
-                <span matListItemTitle class="voter-pubkey">{{ formatPubkey(voter) }}</span>
+                <div class="option-result">
+                  <div class="option-header">
+                    <span class="option-label">{{ option.label }}</span>
+                    <span class="option-stats">
+                      {{ getVoteCount(option.id) }} votes ({{ getPercentage(option.id) }}%)
+                    </span>
+                  </div>
+                  <mat-progress-bar
+                    mode="determinate"
+                    [value]="getPercentage(option.id)">
+                  </mat-progress-bar>
+                </div>
               </mat-list-item>
             }
           </mat-list>
         </div>
-      }
-    </mat-dialog-content>
 
-    <mat-dialog-actions align="end">
-      <button mat-button mat-dialog-close>Close</button>
-    </mat-dialog-actions>
+        @if (data.results.voters.length > 0) {
+          <div class="voters-section">
+            <h4>Voters ({{ data.results.voters.length }})</h4>
+            <mat-list dense>
+              @for (voter of data.results.voters; track voter) {
+                <mat-list-item>
+                  <mat-icon matListItemIcon>person</mat-icon>
+                  <span matListItemTitle class="voter-pubkey">{{ formatPubkey(voter) }}</span>
+                </mat-list-item>
+              }
+            </mat-list>
+          </div>
+        }
+      </div>
+
+      <div dialog-actions>
+        <button mat-button type="button" (click)="close()">Close</button>
+      </div>
+    </app-material-custom-dialog>
   `,
   styles: [`
     .poll-question {
@@ -172,6 +171,7 @@ interface PollDetailsData {
   `],
 })
 export class PollDetailsDialogComponent {
+  private dialogRef = inject(MatDialogRef<PollDetailsDialogComponent>);
   data = inject<PollDetailsData>(MAT_DIALOG_DATA);
   private utilities = inject(UtilitiesService);
 
@@ -196,5 +196,9 @@ export class PollDetailsDialogComponent {
   isExpired(): boolean {
     if (!this.data.poll.endsAt) return false;
     return Date.now() / 1000 > this.data.poll.endsAt;
+  }
+
+  close(): void {
+    this.dialogRef.close();
   }
 }

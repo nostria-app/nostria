@@ -1,23 +1,11 @@
-<div class="zap-dialog" [class.confirmation-state]="currentState() === 'confirmation'">
+<app-material-custom-dialog
+  [title]="currentState() === 'input' ? (data.recipientName ? 'Zap to ' + data.recipientName : 'Zap') : 'Confirm Lightning Zap'"
+  icon="bolt"
+  [showDefaultActions]="false"
+>
+<div dialog-content class="zap-dialog" [class.confirmation-state]="currentState() === 'confirmation'">
   <!-- Input State -->
   @if (currentState() === 'input') {
-  <h2 mat-dialog-title>
-    <div class="dialog-title-content">
-      <div class="title-text">
-        <mat-icon>bolt</mat-icon>
-        <span i18n="@@zap.dialog.title">Zap</span>
-        @if (data.recipientName) {
-        <span i18n="@@zap.dialog.title.to">to {{ data.recipientName }}</span>
-        }
-      </div>
-      <button mat-icon-button class="close-button" (click)="close()" matTooltip="Close"
-        i18n-matTooltip="@@common.close">
-        <mat-icon>close</mat-icon>
-      </button>
-    </div>
-  </h2>
-
-  <mat-dialog-content>
     @if (lnurlError()) {
     <div class="error-message">
       <mat-icon>error</mat-icon>
@@ -230,33 +218,17 @@
       {{ errorMessage() }}
     </div>
     }
-  </mat-dialog-content>
-
-  <mat-dialog-actions align="end">
-    <button mat-button (click)="onCancel()" [disabled]="isProcessing()" i18n="@@common.cancel">Cancel</button>
-    <button mat-flat-button (click)="proceedToConfirmation()" [disabled]="isProcessing() || !zapForm.valid"
+  <div dialog-actions>
+    <button mat-button type="button" (click)="onCancel()" [disabled]="isProcessing()" i18n="@@common.cancel">Cancel</button>
+    <button mat-flat-button type="button" class="primary" (click)="proceedToConfirmation()" [disabled]="isProcessing() || !zapForm.valid"
       i18n="@@zap.dialog.continue">
       Continue ({{ getFinalAmount() }} sats)
     </button>
-  </mat-dialog-actions>
+  </div>
   }
 
   <!-- Confirmation State -->
   @if (currentState() === 'confirmation') {
-  <h2 mat-dialog-title>
-    <div class="dialog-title-content">
-      <div class="title-text">
-        <mat-icon>bolt</mat-icon>
-        <span i18n="@@zap.dialog.confirm-title">Confirm Lightning Zap</span>
-      </div>
-      <button mat-icon-button class="close-button" (click)="close()" matTooltip="Close"
-        i18n-matTooltip="@@common.close">
-        <mat-icon>close</mat-icon>
-      </button>
-    </div>
-  </h2>
-
-  <mat-dialog-content>
     <div class="confirmation-content">
       <!-- Recipient Info -->
       <div class="section recipient-section">
@@ -466,13 +438,11 @@
         </div>
       </div>
     </div>
-  </mat-dialog-content>
-
-  <mat-dialog-actions>
-    <button mat-button (click)="backToInput()" [disabled]="isProcessing()">Back</button>
+  <div dialog-actions>
+    <button mat-button type="button" (click)="backToInput()" [disabled]="isProcessing()">Back</button>
 
     @if (selectedPaymentMethod() === 'nwc') {
-    <button mat-flat-button color="primary" (click)="confirmNwcPayment()" class="confirm-button"
+    <button mat-flat-button type="button" class="confirm-button primary" (click)="confirmNwcPayment()"
       [disabled]="isProcessing() || !hasNwcWallet()">
       @if (isProcessing()) {
       <span class="button-content">
@@ -488,7 +458,7 @@
     </button>
     } @else if (selectedPaymentMethod() === 'native' || selectedPaymentMethod() === 'manual') {
     @if (!invoiceUrl()) {
-    <button mat-flat-button color="primary" (click)="generateInvoice()" class="confirm-button"
+    <button mat-flat-button type="button" class="confirm-button primary" (click)="generateInvoice()"
       [disabled]="isProcessing()">
       @if (isProcessing()) {
       <span class="button-content">
@@ -503,12 +473,13 @@
       }
     </button>
     } @else {
-    <button mat-flat-button color="accent" (click)="markAsPaid()" class="confirm-button">
+    <button mat-flat-button type="button" class="confirm-button primary" (click)="markAsPaid()">
       <mat-icon>check</mat-icon>
       I've Paid
     </button>
     }
     }
-  </mat-dialog-actions>
+  </div>
   }
 </div>
+</app-material-custom-dialog>

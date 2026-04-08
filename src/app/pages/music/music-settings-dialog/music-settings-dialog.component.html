@@ -1,5 +1,5 @@
-<app-custom-dialog [title]="'Music Settings'" [showCloseButton]="true" [disableClose]="isSaving()" [width]="'500px'"
-  [maxWidth]="'95vw'" (closed)="onCancel()">
+<app-custom-dialog [title]="'Music Settings'" [showCloseButton]="true" [disableClose]="isSaving()"
+  [width]="'min(500px, calc(100vw - 24px))'" [maxWidth]="'calc(100vw - 24px)'" (closed)="onCancel()">
 
   <div dialog-content>
     @if (isLoading()) {

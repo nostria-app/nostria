@@ -1,6 +1,6 @@
 import { Component, computed, inject, signal, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
-import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
+import { MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
 import { MatDividerModule } from '@angular/material/divider';
@@ -17,6 +17,7 @@ import {
   CurationKind,
 } from '../../services/curation-sets.service';
 import { UtilitiesService } from '../../services/utilities.service';
+import { MaterialCustomDialogComponent } from '../material-custom-dialog/material-custom-dialog.component';
 
 const MUSIC_ONLY_BOOKMARK_LIST_IDS = new Set(['liked-songs', 'liked-albums']);
 
@@ -32,7 +33,7 @@ export interface BookmarkListSelectorData {
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-bookmark-list-selector',
   imports: [
-    MatDialogModule,
+    MaterialCustomDialogComponent,
     MatButtonModule,
     MatIconModule,
     MatListModule,

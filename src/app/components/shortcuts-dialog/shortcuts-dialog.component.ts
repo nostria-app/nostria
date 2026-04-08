@@ -1,8 +1,8 @@
 import { ChangeDetectionStrategy, Component, inject, computed } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
-import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
-import { MatIconModule } from '@angular/material/icon';
+import { MatDialogRef } from '@angular/material/dialog';
 import { PlatformService } from '../../services/platform.service';
+import { MaterialCustomDialogComponent } from '../material-custom-dialog/material-custom-dialog.component';
 
 interface ShortcutItem {
   keys: string;
@@ -11,22 +11,30 @@ interface ShortcutItem {
 
 @Component({
   selector: 'app-shortcuts-dialog',
-  imports: [MatDialogModule, MatButtonModule, MatIconModule],
+  imports: [MaterialCustomDialogComponent, MatButtonModule],
   template: `
-    <h2 mat-dialog-title i18n="@@shortcuts.title">Keyboard Shortcuts</h2>
-    <mat-dialog-content>
-      <div class="shortcuts-list">
-        @for (shortcut of shortcuts(); track shortcut.keys) {
-        <div class="shortcut-item">
-          <span class="shortcut-keys">{{ shortcut.keys }}</span>
-          <span class="shortcut-description">{{ shortcut.description }}</span>
+    <app-material-custom-dialog
+      i18n-title="@@shortcuts.title"
+      title="Keyboard Shortcuts"
+      icon="keyboard"
+      [showDefaultActions]="false"
+      [showCloseButton]="false"
+    >
+      <div dialog-content>
+        <div class="shortcuts-list">
+          @for (shortcut of shortcuts(); track shortcut.keys) {
+          <div class="shortcut-item">
+            <span class="shortcut-keys">{{ shortcut.keys }}</span>
+            <span class="shortcut-description">{{ shortcut.description }}</span>
+          </div>
+          }
         </div>
-        }
       </div>
-    </mat-dialog-content>
-    <mat-dialog-actions align="end">
-      <button mat-flat-button (click)="close()" i18n="@@shortcuts.close">Close</button>
-    </mat-dialog-actions>
+
+      <div dialog-actions>
+        <button mat-flat-button type="button" class="primary" (click)="close()" i18n="@@shortcuts.close">Close</button>
+      </div>
+    </app-material-custom-dialog>
   `,
   styles: `
     .shortcuts-list {

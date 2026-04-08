@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject, signal, computed } from '@angular/core';
 import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
-import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
+import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
@@ -13,6 +13,7 @@ import { CollectionSetsService, EmojiSet } from '../../services/collection-sets.
 import { AccountStateService } from '../../services/account-state.service';
 import { MediaService } from '../../services/media.service';
 import { LoggerService } from '../../services/logger.service';
+import { MaterialCustomDialogComponent } from '../material-custom-dialog/material-custom-dialog.component';
 
 export interface SaveToGifsDialogData {
   imageUrls: string[];
@@ -29,7 +30,7 @@ export interface SaveToGifsDialogResult {
 @Component({
   selector: 'app-save-to-gifs-dialog',
   imports: [
-    MatDialogModule,
+    MaterialCustomDialogComponent,
     MatFormFieldModule,
     MatInputModule,
     MatButtonModule,
@@ -41,101 +42,110 @@ export interface SaveToGifsDialogResult {
     ReactiveFormsModule,
   ],
   template: `
-    <h2 mat-dialog-title>Save to Gifs Set</h2>
-    <mat-dialog-content>
-      @if (imageUrls().length > 1) {
-        <p class="subtitle">Select an image to save</p>
-        <div class="image-grid">
-          @for (url of imageUrls(); track url) {
-            <button class="image-option" [class.selected]="selectedImageUrl() === url" (click)="selectImage(url)">
-              <img [src]="url" alt="Meme" />
-            </button>
-          }
-        </div>
-      } @else if (imageUrls().length === 1) {
-        <div class="image-preview">
-          <img [src]="imageUrls()[0]" alt="Meme" />
-        </div>
-      }
-
-      <div class="source-url">
-        <mat-icon class="source-url-icon">link</mat-icon>
-        <span class="source-url-text">{{ selectedImageUrl() }}</span>
-      </div>
-
-      <mat-checkbox [formControl]="uploadCopyControl" class="upload-checkbox">
-        Upload a copy to my media server
-      </mat-checkbox>
-      @if (uploadCopyControl.value && !hasMediaServers()) {
-        <p class="no-server-warning">
-          <mat-icon>warning</mat-icon>
-          No media servers configured. Go to Settings to add one.
-        </p>
-      }
-
-      <mat-form-field appearance="outline" class="full-width">
-        <mat-label>Meme name (shortcode)</mat-label>
-        <input
-          matInput
-          [formControl]="shortcodeControl"
-          placeholder="e.g., laughing_cat, deal_with_it"
-          (keyup.enter)="onSave()"
-          autocomplete="off"
-        />
-        @if (shortcodeControl.hasError('required')) {
-          <mat-error>Name is required</mat-error>
-        }
-        @if (shortcodeControl.hasError('pattern')) {
-          <mat-error>Only letters, numbers, underscores and hyphens</mat-error>
-        }
-      </mat-form-field>
-
-      @if (!creatingNewSet()) {
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Gifs Set</mat-label>
-          <mat-select [formControl]="setControl">
-            @for (set of gifsSets(); track set.identifier) {
-              <mat-option [value]="set.identifier">{{ set.name }} ({{ set.emojis.length }})</mat-option>
+    <app-material-custom-dialog
+      title="Save to Gifs Set"
+      icon="gif_box"
+      [showDefaultActions]="false"
+      [showCloseButton]="false"
+    >
+      <div dialog-content>
+        @if (imageUrls().length > 1) {
+          <p class="subtitle">Select an image to save</p>
+          <div class="image-grid">
+            @for (url of imageUrls(); track url) {
+              <button class="image-option" type="button" [class.selected]="selectedImageUrl() === url" (click)="selectImage(url)">
+                <img [src]="url" alt="Meme" />
+              </button>
             }
-            <mat-option value="__new__">
-              <mat-icon>add_circle</mat-icon> Create new gifs set
-            </mat-option>
-          </mat-select>
-        </mat-form-field>
-      }
+          </div>
+        } @else if (imageUrls().length === 1) {
+          <div class="image-preview">
+            <img [src]="imageUrls()[0]" alt="Meme" />
+          </div>
+        }
 
-      @if (creatingNewSet()) {
+        <div class="source-url">
+          <mat-icon class="source-url-icon">link</mat-icon>
+          <span class="source-url-text">{{ selectedImageUrl() }}</span>
+        </div>
+
+        <mat-checkbox [formControl]="uploadCopyControl" class="upload-checkbox">
+          Upload a copy to my media server
+        </mat-checkbox>
+        @if (uploadCopyControl.value && !hasMediaServers()) {
+          <p class="no-server-warning">
+            <mat-icon>warning</mat-icon>
+            No media servers configured. Go to Settings to add one.
+          </p>
+        }
+
         <mat-form-field appearance="outline" class="full-width">
-          <mat-label>New gifs set name</mat-label>
+          <mat-label>Meme name (shortcode)</mat-label>
           <input
             matInput
-            [formControl]="newSetNameControl"
-            placeholder="e.g., My Memes, Reaction Gifs"
+            [formControl]="shortcodeControl"
+            placeholder="e.g., laughing_cat, deal_with_it"
+            (keyup.enter)="onSave()"
             autocomplete="off"
           />
-          @if (newSetNameControl.hasError('required')) {
-            <mat-error>Set name is required</mat-error>
+          @if (shortcodeControl.hasError('required')) {
+            <mat-error>Name is required</mat-error>
+          }
+          @if (shortcodeControl.hasError('pattern')) {
+            <mat-error>Only letters, numbers, underscores and hyphens</mat-error>
           }
         </mat-form-field>
-        <button mat-button (click)="cancelNewSet()">
-          <mat-icon>arrow_back</mat-icon> Choose existing set
-        </button>
-      }
-    </mat-dialog-content>
-    <mat-dialog-actions align="end">
-      <button mat-button (click)="onCancel()">Cancel</button>
-      <button
-        mat-flat-button
-        (click)="onSave()"
-        [disabled]="!canSave() || saving()"
-      >
-        @if (saving()) {
-          <mat-spinner diameter="20"></mat-spinner>
-        } @else {
-          Save
+
+        @if (!creatingNewSet()) {
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Gifs Set</mat-label>
+            <mat-select [formControl]="setControl">
+              @for (set of gifsSets(); track set.identifier) {
+                <mat-option [value]="set.identifier">{{ set.name }} ({{ set.emojis.length }})</mat-option>
+              }
+              <mat-option value="__new__">
+                <mat-icon>add_circle</mat-icon> Create new gifs set
+              </mat-option>
+            </mat-select>
+          </mat-form-field>
         }
-      </button>
-    </mat-dialog-actions>
+
+        @if (creatingNewSet()) {
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>New gifs set name</mat-label>
+            <input
+              matInput
+              [formControl]="newSetNameControl"
+              placeholder="e.g., My Memes, Reaction Gifs"
+              autocomplete="off"
+            />
+            @if (newSetNameControl.hasError('required')) {
+              <mat-error>Set name is required</mat-error>
+            }
+          </mat-form-field>
+          <button mat-button type="button" (click)="cancelNewSet()">
+            <mat-icon>arrow_back</mat-icon> Choose existing set
+          </button>
+        }
+      </div>
+
+      <div dialog-actions>
+        <button mat-button type="button" (click)="onCancel()">Cancel</button>
+        <button
+          mat-flat-button
+          type="button"
+          class="primary"
+          (click)="onSave()"
+          [disabled]="!canSave() || saving()"
+        >
+          @if (saving()) {
+            <mat-spinner diameter="20"></mat-spinner>
+          } @else {
+            Save
+          }
+        </button>
+      </div>
+    </app-material-custom-dialog>
   `,
   styles: [`
     .subtitle {
@@ -233,7 +243,7 @@ export interface SaveToGifsDialogResult {
       width: 100%;
     }
 
-    mat-dialog-content {
+    .dialog-content {
       min-width: 300px;
     }
   `],

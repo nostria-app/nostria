@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
-import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
+import { MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -16,6 +16,7 @@ import { DiscoveryRelayService } from '../../services/relays/discovery-relay';
 import { UserRelaysService } from '../../services/relays/user-relays';
 import { UtilitiesService } from '../../services/utilities.service';
 import { LoggerService } from '../../services/logger.service';
+import { MaterialCustomDialogComponent } from '../material-custom-dialog/material-custom-dialog.component';
 
 export interface PublishDialogData {
   event?: Event;
@@ -37,7 +38,7 @@ interface RelayPublishResult {
 @Component({
   selector: 'app-publish-dialog',
   imports: [
-    MatDialogModule,
+    MaterialCustomDialogComponent,
     MatButtonModule,
     MatCheckboxModule,
     MatFormFieldModule,

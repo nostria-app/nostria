@@ -46,7 +46,7 @@ describe('ConfirmDialogComponent', () => {
         createComponent({ title: 'Delete Item' });
         await fixture.whenStable();
 
-        const titleEl = (fixture.nativeElement as HTMLElement).querySelector('[mat-dialog-title]');
+        const titleEl = (fixture.nativeElement as HTMLElement).querySelector('.dialog-title');
         expect(titleEl).toBeTruthy();
         expect(titleEl!.textContent).toContain('Delete Item');
     });
@@ -55,7 +55,7 @@ describe('ConfirmDialogComponent', () => {
         createComponent({ message: 'This cannot be undone.' });
         await fixture.whenStable();
 
-        const contentEl = (fixture.nativeElement as HTMLElement).querySelector('mat-dialog-content p');
+        const contentEl = (fixture.nativeElement as HTMLElement).querySelector('[dialog-content] p, .dialog-content p');
         expect(contentEl).toBeTruthy();
         expect(contentEl!.textContent).toContain('This cannot be undone.');
     });
@@ -86,7 +86,7 @@ describe('ConfirmDialogComponent', () => {
         await fixture.whenStable();
 
         const warningEl = (fixture.nativeElement as HTMLElement).querySelector('.warning-text');
-        const items = (fixture.nativeElement as HTMLElement).querySelectorAll('li');
+        const items = (fixture.nativeElement as HTMLElement).querySelectorAll('.item-list-entry');
 
         expect(warningEl?.textContent).toContain('Your nsec will be lost forever without a backup.');
         expect(items).toHaveLength(2);

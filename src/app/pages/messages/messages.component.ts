@@ -4677,8 +4677,8 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       StartChatDialogComponent,
       {
         title: 'New Conversation',
-        width: '500px',
-        maxWidth: '90vw',
+        width: 'min(500px, calc(100vw - 24px))',
+        maxWidth: 'calc(100vw - 24px)',
       }
     );
 

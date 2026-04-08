@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, TemplateRef, ViewEncapsulation, computed, inject, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, TemplateRef, ViewEncapsulation, computed, inject, input, output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
@@ -46,6 +46,9 @@ export class MaterialCustomDialogComponent {
   showHeader = input(true);
   showDefaultActions = input(true);
   showCloseButton = input(true);
+  closeResult = input<boolean>(false);
+
+  closed = output<boolean>();
 
   defaultIcon = DEFAULT_DIALOG_ICON;
   defaultPrimaryActionText = DEFAULT_PRIMARY_ACTION_TEXT;
@@ -80,6 +83,7 @@ export class MaterialCustomDialogComponent {
   });
 
   close(result = false): void {
+    this.closed.emit(result);
     this.dialogRef?.close(result);
   }
 }

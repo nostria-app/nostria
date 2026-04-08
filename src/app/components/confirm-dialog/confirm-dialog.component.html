@@ -1,25 +1,32 @@
-<h2 mat-dialog-title>{{ data.title }}</h2>
-<mat-dialog-content>
-  <p>{{ data.message }}</p>
-  @if (data.warningText) {
-    <p class="warning-text">{{ data.warningText }}</p>
-  }
-  @if (data.items?.length) {
-    <div class="item-list">
-      <p class="item-list-title">Accounts on this device:</p>
-      <ul>
-        @for (item of data.items; track item) {
-          <li>{{ item }}</li>
-        }
-      </ul>
-    </div>
-  }
-</mat-dialog-content>
-<mat-dialog-actions align="end">
-  <button mat-button (click)="cancel()">
-    {{ data.cancelText || 'Cancel' }}
-  </button>
-  <button mat-flat-button [class]="data.confirmColor" (click)="confirm()">
-    {{ data.confirmText || 'Confirm' }}
-  </button>
-</mat-dialog-actions>
+<app-material-custom-dialog
+  [title]="data.title"
+  [icon]="data.confirmColor === 'warn' ? 'warning' : 'help'"
+  [showDefaultActions]="false"
+  [showCloseButton]="false"
+>
+  <div dialog-content>
+    <p>{{ data.message }}</p>
+    @if (data.warningText) {
+      <p class="warning-text">{{ data.warningText }}</p>
+    }
+    @if (data.items?.length) {
+      <div class="item-list">
+        <p class="item-list-title">Accounts on this device:</p>
+        <div class="item-list-items">
+          @for (item of data.items; track item) {
+            <div class="item-list-entry">{{ item }}</div>
+          }
+        </div>
+      </div>
+    }
+  </div>
+
+  <div dialog-actions>
+    <button mat-button type="button" (click)="cancel()">
+      {{ data.cancelText || 'Cancel' }}
+    </button>
+    <button mat-flat-button type="button" [class]="data.confirmColor" (click)="confirm()">
+      {{ data.confirmText || 'Confirm' }}
+    </button>
+  </div>
+</app-material-custom-dialog>

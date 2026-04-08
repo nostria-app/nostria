@@ -1,55 +1,61 @@
-<h2 mat-dialog-title>Translation</h2>
-<mat-dialog-content>
-  <div class="language-selectors">
-    <mat-form-field appearance="outline">
-      <mat-label>Source Language</mat-label>
-      <mat-select [ngModel]="sourceLang()" (ngModelChange)="setSourceLang($event)">
-        @for (lang of availableLanguages(); track lang.code) {
-        <mat-option [value]="lang.code">{{ lang.name }}</mat-option>
-        }
-      </mat-select>
-    </mat-form-field>
+<app-material-custom-dialog
+  title="Translation"
+  icon="translate"
+  [showDefaultActions]="false"
+  [showCloseButton]="false"
+>
+  <div dialog-content>
+    <div class="language-selectors">
+      <mat-form-field appearance="outline">
+        <mat-label>Source Language</mat-label>
+        <mat-select [ngModel]="sourceLang()" (ngModelChange)="setSourceLang($event)">
+          @for (lang of availableLanguages(); track lang.code) {
+          <mat-option [value]="lang.code">{{ lang.name }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
 
-    <button mat-icon-button class="swap-button" (click)="swapLanguages()" type="button" aria-label="Swap languages">
-      <mat-icon>swap_horiz</mat-icon>
-    </button>
+      <button mat-icon-button class="swap-button" (click)="swapLanguages()" type="button" aria-label="Swap languages">
+        <mat-icon>swap_horiz</mat-icon>
+      </button>
 
-    <mat-form-field appearance="outline">
-      <mat-label>Target Language</mat-label>
-      <mat-select [ngModel]="targetLang()" (ngModelChange)="setTargetLang($event)">
-        @for (lang of availableLanguages(); track lang.code) {
-        <mat-option [value]="lang.code">{{ lang.name }}</mat-option>
-        }
-      </mat-select>
-    </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>Target Language</mat-label>
+        <mat-select [ngModel]="targetLang()" (ngModelChange)="setTargetLang($event)">
+          @for (lang of availableLanguages(); track lang.code) {
+          <mat-option [value]="lang.code">{{ lang.name }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+    </div>
+
+    @if (isTranslating()) {
+    <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+    <p class="status">Translating...</p>
+    }
+
+    @if (error()) {
+    <p class="error">{{ error() }}</p>
+    }
+
+    @if (translatedText()) {
+    <div class="result">
+      <h3>Result:</h3>
+      <p>{{ translatedText() }}</p>
+    </div>
+    } @else if (!isTranslating() && !error()) {
+    <p class="preview">Original: {{ data.content | slice:0:100 }}{{ data.content.length > 100 ? '...' : '' }}</p>
+    }
+
+    <div class="ai-warning">
+      <mat-icon>info</mat-icon>
+      <p>Translations are performed by AI models running locally in your browser. The results may contain inaccuracies or
+        mistakes. AI-generated translations should be reviewed and verified for accuracy before relying on them.</p>
+    </div>
   </div>
 
-  @if (isTranslating()) {
-  <mat-progress-bar mode="indeterminate"></mat-progress-bar>
-  <p class="status">Translating...</p>
-  }
-
-  @if (error()) {
-  <p class="error">{{ error() }}</p>
-  }
-
-  @if (translatedText()) {
-  <div class="result">
-    <h3>Result:</h3>
-    <p>{{ translatedText() }}</p>
+  <div dialog-actions>
+    <button mat-button type="button" (click)="close()">Close</button>
+    <button mat-flat-button type="button" class="primary" (click)="translate()" [disabled]="isTranslating()">Translate</button>
   </div>
-  } @else if (!isTranslating() && !error()) {
-  <p class="preview">Original: {{ data.content | slice:0:100 }}{{ data.content.length > 100 ? '...' : '' }}</p>
-  }
-
-  <div class="ai-warning">
-    <mat-icon>info</mat-icon>
-    <p>Translations are performed by AI models running locally in your browser. The results may contain inaccuracies or
-      mistakes. AI-generated translations should be reviewed and verified for accuracy before relying on them.</p>
-  </div>
-
-</mat-dialog-content>
-<mat-dialog-actions align="end">
-  <button mat-button (click)="close()">Close</button>
-  <button mat-flat-button color="primary" (click)="translate()" [disabled]="isTranslating()">Translate</button>
-</mat-dialog-actions>
+</app-material-custom-dialog>

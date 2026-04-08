@@ -2,10 +2,11 @@ import { ChangeDetectionStrategy, Component, AfterViewInit, inject } from '@angu
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
-import { MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
+import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import encodeQR from 'qr';
 import { ClipboardService } from '../../services/clipboard.service';
+import { MaterialCustomDialogComponent } from '../material-custom-dialog/material-custom-dialog.component';
 
 export interface QRCodeDialogData {
   did: string;
@@ -16,13 +17,14 @@ export interface QRCodeDialogData {
 
 @Component({
   selector: 'app-qrcode-dialog',
-  imports: [MatDialogModule, MatButtonModule, MatButtonToggleModule, FormsModule, MatIconModule],
+  imports: [MaterialCustomDialogComponent, MatButtonModule, MatButtonToggleModule, FormsModule, MatIconModule],
   templateUrl: './qrcode-dialog.component.html',
   styleUrl: './qrcode-dialog.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class QRCodeDialogComponent implements AfterViewInit {
   private clipboard = inject(ClipboardService);
+  private dialogRef = inject(MatDialogRef<QRCodeDialogComponent>);
   data = inject<QRCodeDialogData>(MAT_DIALOG_DATA);
 
   qrStyle = 'did';
@@ -92,5 +94,9 @@ export class QRCodeDialogComponent implements AfterViewInit {
     } else {
       this.generateQR(this.data.did);
     }
+  }
+
+  close(): void {
+    this.dialogRef.close(true);
   }
 }

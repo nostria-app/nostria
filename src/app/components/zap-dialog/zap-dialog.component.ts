@@ -3,7 +3,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 
 import { MatButtonModule } from '@angular/material/button';
-import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
+import { MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
@@ -22,6 +22,7 @@ import { ZapErrorHandlerService } from '../../services/zap-error-handler.service
 import { DataService } from '../../services/data.service';
 import { UtilitiesService } from '../../services/utilities.service';
 import { Event } from 'nostr-tools';
+import { MaterialCustomDialogComponent } from '../material-custom-dialog/material-custom-dialog.component';
 
 export interface ZapDialogData {
   recipientPubkey: string;
@@ -72,7 +73,7 @@ const VIDEO_HOSTING_DOMAINS = ['youtube.com', 'youtu.be', 'vimeo.com', 'twitch.t
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-zap-dialog',
   imports: [
-    MatDialogModule,
+    MaterialCustomDialogComponent,
     MatButtonModule,
     MatFormFieldModule,
     MatInputModule,

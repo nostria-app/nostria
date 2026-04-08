@@ -1,5 +1,6 @@
 :host {
   display: block;
+  min-width: 0;
 }
 
 .material-custom-dialog-panel {
@@ -18,6 +19,7 @@
   .mat-mdc-dialog-surface {
     display: flex;
     flex-direction: column;
+    min-height: 0;
     height: auto;
     max-height: var(--material-custom-dialog-max-height);
     overflow: hidden;
@@ -30,8 +32,10 @@
 
 .material-custom-dialog {
   display: flex;
+  flex: 1 1 auto;
   flex-direction: column;
   min-height: 0;
+  min-width: 0;
   width: var(--material-custom-dialog-width);
   max-width: 100%;
   min-height: var(--material-custom-dialog-min-height);
@@ -53,6 +57,7 @@
   .dialog-header-trailing {
     display: flex;
     align-items: center;
+    gap: 8px;
   }
 
   .dialog-header-trailing {
@@ -111,15 +116,26 @@
     color: var(--mat-sys-on-surface-variant);
   }
 
+  .dialog-header-leading:empty,
+  .dialog-header-trailing:empty {
+    display: none;
+  }
+
   .dialog-content {
     display: flex;
-    flex: 0 1 auto;
+    flex: 1 1 auto;
     flex-direction: column;
     gap: 18px;
+    min-height: 0;
+    min-width: 0;
     overflow: auto;
     max-height: none;
     padding: 20px 24px 24px;
     margin: 0;
+  }
+
+  .dialog-content > [dialog-content] {
+    min-width: 0;
   }
 
   .dialog-message,
@@ -184,6 +200,10 @@
     margin: 0;
     border-top: 1px solid var(--mat-sys-outline-variant);
     background: var(--mat-sys-surface);
+  }
+
+  .dialog-actions > [dialog-actions] {
+    min-width: 0;
   }
 
   .primary-action {

@@ -2,15 +2,18 @@
   display: flex;
   flex-direction: column;
   gap: 24px;
+  min-width: 0;
 
   .mode-tabs {
     margin-bottom: -8px;
+    min-width: 0;
   }
 
   .selected-profile {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    min-width: 0;
     padding: 12px 16px;
     background-color: var(--mat-sys-surface-container-high);
     border-radius: 8px;
@@ -47,6 +50,8 @@
   }
 
   .search-section {
+    min-width: 0;
+
     .full-width {
       width: 100%;
     }
@@ -79,6 +84,7 @@
     }
 
     .search-results {
+      min-width: 0;
       max-height: 300px;
       overflow-y: auto;
       border: 1px solid var(--mat-sys-outline-variant);
@@ -102,6 +108,7 @@
       .search-result-item {
         display: flex;
         align-items: center;
+        min-width: 0;
         padding: 10px 16px;
         cursor: pointer;
         transition: background-color 0.2s;
@@ -140,6 +147,8 @@
   }
 
   .chat-type-section {
+    min-width: 0;
+
     h3 {
       margin: 0 0 16px;
       font-size: 16px;
@@ -182,6 +191,8 @@
   }
 
   .group-members-section {
+    min-width: 0;
+
     .members-label {
       font-size: 12px;
       color: var(--mat-sys-on-surface-variant);
@@ -230,6 +241,8 @@
   }
 
   .group-subject-section {
+    min-width: 0;
+
     .full-width {
       width: 100%;
     }
@@ -239,6 +252,7 @@
     display: flex;
     flex-direction: column;
     gap: 8px;
+    min-width: 0;
 
     .modern-info,
     .group-min-info {

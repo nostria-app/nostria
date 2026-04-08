@@ -4,6 +4,7 @@ import { A11yModule } from '@angular/cdk/a11y';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MaterialCustomDialogComponent } from '../material-custom-dialog/material-custom-dialog.component';
 import { PlatformService } from '../../services/platform.service';
 
 interface ScrollLockStyles {
@@ -54,7 +55,7 @@ interface ScrollLockStyles {
  */
 @Component({
   selector: 'app-custom-dialog',
-  imports: [CommonModule, A11yModule, MatIconModule, MatButtonModule, MatTooltipModule],
+  imports: [CommonModule, A11yModule, MatIconModule, MatButtonModule, MatTooltipModule, MaterialCustomDialogComponent],
   template: `
     <div 
       class="dialog-backdrop" 
@@ -77,72 +78,34 @@ interface ScrollLockStyles {
         [cdkTrapFocusAutoCapture]="true"
         tabindex="-1"
         #dialogContainer>
-        
-        <!-- Header -->
-        @if (showHeader()) {
-        <div class="dialog-header">
-          <div class="dialog-header-leading">
-            @if (getShowBackButton()) {
-              <button 
-                class="back-button" 
-                (click)="onBackClick()"
-                aria-label="Back"
-                type="button">
-                <mat-icon>arrow_back</mat-icon>
-              </button>
-            }
-
-            @if (getHeaderIcon()) {
-              @if (getHeaderIconMode() === 'image') {
-                <img [src]="getHeaderIcon()" [alt]="getTitle() || 'Dialog'" class="header-icon header-image-icon" />
-              } @else if (getHeaderIconMode() === 'material') {
-                <mat-icon class="header-icon material-header-icon">{{ getHeaderIcon() }}</mat-icon>
-              } @else {
-                <span class="header-icon emoji-header-icon" [attr.aria-label]="getTitle() || 'Dialog'">{{ getHeaderIcon() }}</span>
-              }
-            }
-
-            @if (getSecondaryHeaderIcon()) {
-              <button class="secondary-header-button" [class.active]="getSecondaryHeaderActive()"
-                [class.clickable]="getSecondaryHeaderClickable()" [matTooltip]="getSecondaryHeaderTooltip()"
-                [matTooltipDisabled]="!getSecondaryHeaderTooltip()" [attr.aria-label]="getSecondaryHeaderAriaLabel()"
-                [disabled]="!getSecondaryHeaderClickable()" (click)="onSecondaryHeaderClick()" type="button">
-                <img [src]="getSecondaryHeaderIcon()" [alt]="getSecondaryHeaderTooltip() || 'Dialog status'"
-                  class="secondary-header-icon" />
-              </button>
-            }
-          </div>
-
-          @if (getTitle()) {
-            <h2 class="dialog-title" id="dialog-title">{{ getTitle() }}</h2>
+        <app-material-custom-dialog
+          class="legacy-custom-dialog-shell"
+          [style.--material-custom-dialog-width]="width()"
+          [style.--material-custom-dialog-min-height]="'0'"
+          [style.--material-custom-dialog-max-height]="'100%'"
+          [title]="getTitle()"
+          [icon]="getHeaderIcon() || 'responsive_layout'"
+          [showHeader]="showHeader()"
+          [showDefaultActions]="false"
+          [showCloseButton]="getShowCloseButton() && !getDisableClose()"
+          [closeResult]="false"
+          (closed)="onCloseClick()">
+          @if (getShowBackButton()) {
+          <button dialog-header-leading class="back-button" (click)="onBackClick()" aria-label="Back" type="button">
+            <mat-icon>arrow_back</mat-icon>
+          </button>
           }
 
-          <div class="dialog-header-trailing">
-            <!-- Custom header content -->
-            <ng-content select="[dialog-header]"></ng-content>
+          <ng-content select="[dialog-header]"></ng-content>
 
-            @if (getShowCloseButton()) {
-              <button 
-                class="close-button" 
-                (click)="onCloseClick()"
-                aria-label="Close"
-                type="button">
-                <mat-icon>close</mat-icon>
-              </button>
-            }
+          <div dialog-content cdkFocusInitial tabindex="-1" #dialogContent>
+            <ng-content select="[dialog-content]"></ng-content>
           </div>
-        </div>
-        }
-        
-        <!-- Content -->
-        <div class="dialog-content" cdkFocusInitial tabindex="-1" #dialogContent>
-          <ng-content select="[dialog-content]"></ng-content>
-        </div>
-        
-        <!-- Actions -->
-        <div class="dialog-actions">
-          <ng-content select="[dialog-actions]"></ng-content>
-        </div>
+
+          <div dialog-actions>
+            <ng-content select="[dialog-actions]"></ng-content>
+          </div>
+        </app-material-custom-dialog>
       </div>
     </div>
   `,
