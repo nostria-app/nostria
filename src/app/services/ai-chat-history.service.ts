@@ -63,7 +63,13 @@ export class AiChatHistoryService {
     modelName: string;
     messages: AiHistoryMessage[];
   }): string {
-    const trimmedMessages = input.messages.filter(message => message.content.trim().length > 0);
+    const trimmedMessages = input.messages.filter(message => {
+      if (message.content.trim().length > 0) {
+        return true;
+      }
+
+      return (message.generatedImages?.length ?? 0) > 0;
+    });
     if (trimmedMessages.length === 0) {
       return input.id ?? this.createId();
     }
