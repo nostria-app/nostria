@@ -7,7 +7,6 @@ import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatSelectModule } from '@angular/material/select';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { MatDialog } from '@angular/material/dialog';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -17,6 +16,7 @@ import { FormsModule } from '@angular/forms';
 import { SettingsService } from '../../../services/settings.service';
 import { AiCloudProvider, AiManagedModelStatus, AiModelStorageReport, AiService } from '../../../services/ai.service';
 import { AiInfoDialogComponent } from '../../../components/ai-info-dialog/ai-info-dialog.component';
+import { CustomDialogService } from '../../../services/custom-dialog.service';
 import { PanelActionsService } from '../../../services/panel-actions.service';
 import { RightPanelService } from '../../../services/right-panel.service';
 import { PanelNavigationService } from '../../../services/panel-navigation.service';
@@ -53,7 +53,7 @@ const STANDARD_PROMPTS_BLOCKLIST = /(Gaslighter|AI Trying to Escape the Box|Unco
 export class AiSettingsComponent implements OnInit, OnDestroy {
   readonly settings = inject(SettingsService);
   readonly aiService = inject(AiService);
-  private readonly dialog = inject(MatDialog);
+  private readonly customDialog = inject(CustomDialogService);
   private readonly snackBar = inject(MatSnackBar);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
@@ -129,8 +129,9 @@ export class AiSettingsComponent implements OnInit, OnDestroy {
   }
 
   openInfoDialog() {
-    this.dialog.open(AiInfoDialogComponent, {
-      width: '500px',
+    this.customDialog.open(AiInfoDialogComponent, {
+      width: 'min(680px, calc(100vw - 24px))',
+      maxWidth: 'calc(100vw - 24px)',
     });
   }
 

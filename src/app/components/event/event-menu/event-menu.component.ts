@@ -36,7 +36,7 @@ import { PlaylistService } from '../../../services/playlist.service';
 import { FavoritesService } from '../../../services/favorites.service';
 import { FollowSetsService } from '../../../services/follow-sets.service';
 import { TranslateDialogComponent, TranslateDialogData } from '../translate-dialog/translate-dialog.component';
-import { AiInfoDialogComponent } from '../../ai-info-dialog/ai-info-dialog.component';
+import { AiInfoDialogComponent, type AiInfoDialogResult } from '../../ai-info-dialog/ai-info-dialog.component';
 import { ModelLoadDialogComponent } from '../../model-load-dialog/model-load-dialog.component';
 import { CustomDialogService } from '../../../services/custom-dialog.service';
 import { EventService } from '../../../services/event';
@@ -289,8 +289,11 @@ export class EventMenuComponent {
     const pubkey = this.accountState.pubkey();
     const disclaimerSeen = pubkey ? this.accountLocalState.getAiDisclaimerSeen(pubkey) : false;
     if (!disclaimerSeen) {
-      const dialogRef = this.dialog.open(AiInfoDialogComponent);
-      const result = await firstValueFrom(dialogRef.afterClosed());
+      const dialogRef = this.customDialog.open<AiInfoDialogComponent, AiInfoDialogResult>(AiInfoDialogComponent, {
+        width: 'min(680px, calc(100vw - 24px))',
+        maxWidth: 'calc(100vw - 24px)',
+      });
+      const result = (await firstValueFrom(dialogRef.afterClosed$)).result;
       if (!result) {
         return false; // User cancelled or declined
       }

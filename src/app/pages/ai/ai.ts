@@ -11,12 +11,17 @@ import { MatMenuModule } from '@angular/material/menu';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { SafeHtml } from '@angular/platform-browser';
+import { firstValueFrom } from 'rxjs';
 import { AiChatMessage, AiCloudProvider, AiGeneratedImage, AiGenerationProgress, AiModelLoadOptions, AiMultimodalChatMessage, AiMultimodalChatPart, AiService } from '../../services/ai.service';
 import { AiChatHistoryService, AiHistoryGeneratedImage } from '../../services/ai-chat-history.service';
+import { AiInfoDialogComponent, type AiInfoDialogResult } from '../../components/ai-info-dialog/ai-info-dialog.component';
 import type { ArticleEditorDialogInitialDraft } from '../../components/article-editor-dialog/article-editor-dialog.component';
+import { AccountLocalStateService } from '../../services/account-local-state.service';
+import { AccountStateService } from '../../services/account-state.service';
 import { EventService } from '../../services/event';
 import { FormatService } from '../../services/format/format.service';
 import { LayoutService } from '../../services/layout.service';
+import { LocalStorageService } from '../../services/local-storage.service';
 import { LoggerService } from '../../services/logger.service';
 import { MediaService } from '../../services/media.service';
 import { MediaPreviewDialogComponent } from '../../components/media-preview-dialog/media-preview.component';
@@ -100,10 +105,13 @@ interface FetchedPromptContext {
 })
 export class AiComponent {
   private static readonly AI_UPLOAD_CACHE = 'nostria-ai';
+  private static readonly AI_INFO_SEEN_STORAGE_KEY = 'nostria-ai-info-dialog-seen';
   private static readonly FETCH_COMMAND_PATTERN = /(^|\s)#fetch\s+(https?:\/\/\S+)/gi;
   private static readonly FETCH_KEYWORD_PATTERN = /(^|\s)#fetch\b/i;
   private static readonly FETCH_MARKDOWN_CHAR_LIMIT = 12000;
 
+  private readonly accountLocalState = inject(AccountLocalStateService);
+  private readonly accountState = inject(AccountStateService);
   private readonly aiService = inject(AiService);
   private readonly breakpointObserver = inject(BreakpointObserver);
   private readonly destroyRef = inject(DestroyRef);
@@ -115,6 +123,7 @@ export class AiComponent {
   private readonly eventService = inject(EventService);
   private readonly mediaService = inject(MediaService);
   private readonly customDialog = inject(CustomDialogService);
+  private readonly localStorage = inject(LocalStorageService);
   private readonly panelNav = inject(PanelNavigationService);
   private readonly platformId = inject(PLATFORM_ID);
   private readonly snackBar = inject(MatSnackBar);
@@ -595,6 +604,50 @@ export class AiComponent {
     });
 
     void this.initializeModelStatus();
+
+    if (this.isBrowser) {
+      void Promise.resolve().then(() => this.openFirstRunAiDialogIfNeeded());
+    }
+  }
+
+  private async openFirstRunAiDialogIfNeeded(): Promise<void> {
+    if (this.hasSeenAiInfoDialog()) {
+      return;
+    }
+
+    this.markAiInfoDialogSeen();
+
+    const dialogRef = this.customDialog.open<AiInfoDialogComponent, AiInfoDialogResult>(AiInfoDialogComponent, {
+      width: 'min(680px, calc(100vw - 24px))',
+      maxWidth: 'calc(100vw - 24px)',
+      data: {
+        firstRun: true,
+        showSettingsAction: true,
+      },
+    });
+
+    const result = (await firstValueFrom(dialogRef.afterClosed$)).result;
+    if (result === 'settings') {
+      this.openSettingsPanel();
+    }
+  }
+
+  private hasSeenAiInfoDialog(): boolean {
+    const pubkey = this.accountState.pubkey();
+    if (pubkey && this.accountLocalState.getAiDisclaimerSeen(pubkey)) {
+      return true;
+    }
+
+    return this.localStorage.getItem(AiComponent.AI_INFO_SEEN_STORAGE_KEY) === 'true';
+  }
+
+  private markAiInfoDialogSeen(): void {
+    this.localStorage.setItem(AiComponent.AI_INFO_SEEN_STORAGE_KEY, 'true');
+
+    const pubkey = this.accountState.pubkey();
+    if (pubkey) {
+      this.accountLocalState.setAiDisclaimerSeen(pubkey, true);
+    }
   }
 
   openSettingsPanel(): void {

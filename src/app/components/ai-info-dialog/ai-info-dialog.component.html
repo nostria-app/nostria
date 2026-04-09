@@ -1,34 +1,81 @@
-<app-material-custom-dialog title="Local AI Models" icon="smart_toy" [showDefaultActions]="false"
-  [showCloseButton]="false">
+<app-custom-dialog [title]="dialogTitle" [showCloseButton]="true" [width]="'min(680px, calc(100vw - 24px))'"
+  [maxWidth]="'calc(100vw - 24px)'" (closed)="cancel()">
   <div dialog-content>
-    <p>
-      Nostria uses advanced AI models that run directly on your device. This means:
-    </p>
-    <ul>
-      <li><strong>Privacy First:</strong> Your data never leaves your device. No cloud servers are involved.</li>
-      <li><strong>Offline Capable:</strong> Once downloaded, models work without an internet connection.</li>
-      <li><strong>Local Processing:</strong> Processing happens on your hardware, which may be slower than cloud
-        services
-        depending on your device's capabilities.</li>
-    </ul>
-    <p>
-      <strong>Note:</strong> The first time you use an AI feature, the app will download and cache the necessary model.
-      This may take a few moments and use some data.
-    </p>
-    <p>
-      Local image generation on the AI page uses the Janus Pro browser model and currently requires WebGPU support for
-      practical performance.
+    <p class="intro-copy">
+      Nostria can run several AI models directly in your browser. That keeps prompts local when you want privacy, but
+      the experience depends on the RAM, GPU support, CPU threads, and browser storage available on this device.
     </p>
 
+    <section class="guidance-banner" [class.guidance-banner-cloud]="guidance().mode === 'cloud-first'"
+      [class.guidance-banner-hybrid]="guidance().mode === 'hybrid'"
+      [class.guidance-banner-local]="guidance().mode === 'local-chat' || guidance().mode === 'full-local'">
+      <mat-icon>{{ guidance().mode === 'cloud-first' ? 'cloud' : guidance().mode === 'hybrid' ? 'hub' : 'memory'
+        }}</mat-icon>
+      <div class="guidance-copy">
+        <h3>{{ guidance().title }}</h3>
+        <p>{{ guidance().summary }}</p>
+      </div>
+    </section>
+
+    <section class="resource-grid" aria-label="Detected device resources">
+      <article class="resource-card">
+        <span class="resource-label">RAM</span>
+        <strong>{{ formatMemoryLabel() }}</strong>
+      </article>
+      <article class="resource-card">
+        <span class="resource-label">CPU</span>
+        <strong>{{ formatCpuLabel() }}</strong>
+      </article>
+      <article class="resource-card">
+        <span class="resource-label">WebGPU</span>
+        <strong>{{ formatWebGpuLabel() }}</strong>
+      </article>
+      <article class="resource-card">
+        <span class="resource-label">Storage</span>
+        <strong>{{ formatStorageLabel() }}</strong>
+      </article>
+      <article class="resource-card resource-card-wide">
+        <span class="resource-label">Connection hint</span>
+        <strong>{{ formatConnectionLabel() }}</strong>
+      </article>
+    </section>
+
+    <section class="details-section">
+      <h3>Why this recommendation</h3>
+      <div class="detail-list" role="list">
+        @for (reason of guidance().reasons; track reason) {
+        <p class="detail-list-item" role="listitem">{{ reason }}</p>
+        }
+      </div>
+    </section>
+
+    <section class="details-section">
+      <h3>How to use AI here</h3>
+      <div class="detail-list" role="list">
+        <p class="detail-list-item" role="listitem"><strong>Local models:</strong> They stay on this device once
+          downloaded and cached.</p>
+        <p class="detail-list-item" role="listitem"><strong>Cloud providers:</strong> If this device is tight on RAM or
+          lacks WebGPU, add OpenAI or xAI API keys in AI Settings.</p>
+        <p class="detail-list-item" role="listitem"><strong>Image generation:</strong> Janus Pro on the AI page
+          currently needs WebGPU for practical local performance.</p>
+        @for (tip of guidance().tips; track tip) {
+        <p class="detail-list-item" role="listitem">{{ tip }}</p>
+        }
+      </div>
+    </section>
+
     <div class="disable-option">
-      <mat-checkbox [(ngModel)]="disableAi" color="warn">
+      <mat-checkbox [(ngModel)]="disableAi">
         Disable all AI features
       </mat-checkbox>
-      <p class="hint">Check this if you prefer not to use any AI features or want to save resources.</p>
+      <p class="hint">Turn this on if you do not want local or cloud AI features available in Nostria.</p>
     </div>
   </div>
 
   <div dialog-actions>
-    <button mat-button type="button" (click)="close()">Close</button>
+    @if (showSettingsAction) {
+    <button mat-button type="button" (click)="openSettings()">AI Settings</button>
+    }
+    <button mat-flat-button type="button" (click)="close()">{{ primaryActionLabel }}</button>
   </div>
-</app-material-custom-dialog>
+</app-custom-dialog>

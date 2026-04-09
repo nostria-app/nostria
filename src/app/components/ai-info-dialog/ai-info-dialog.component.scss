@@ -1,10 +1,102 @@
-ul {
-  margin: 16px 0;
-  padding-left: 24px;
+.intro-copy {
+  margin: 0 0 16px;
+  color: var(--mat-sys-on-surface-variant);
+}
 
-  li {
-    margin-bottom: 8px;
+.guidance-banner {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 12px;
+  margin-bottom: 18px;
+  padding: 16px;
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: 20px;
+  background: var(--mat-sys-surface-container-low);
+
+  mat-icon {
+    width: 24px;
+    height: 24px;
+    font-size: 24px;
+    color: var(--mat-sys-primary);
   }
+}
+
+.guidance-banner-cloud {
+  background: color-mix(in srgb, var(--mat-sys-error-container) 24%, var(--mat-sys-surface-container-low));
+}
+
+.guidance-banner-hybrid {
+  background: color-mix(in srgb, var(--mat-sys-secondary-container) 28%, var(--mat-sys-surface-container-low));
+}
+
+.guidance-banner-local {
+  background: color-mix(in srgb, var(--mat-sys-primary-container) 28%, var(--mat-sys-surface-container-low));
+}
+
+.guidance-copy h3,
+.details-section h3 {
+  margin: 0;
+}
+
+.guidance-copy p {
+  margin: 6px 0 0;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.resource-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.resource-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px;
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: 16px;
+  background: var(--mat-sys-surface-container-low);
+}
+
+.resource-card-wide {
+  grid-column: 1 / -1;
+}
+
+.resource-label {
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.details-section {
+  margin-top: 18px;
+}
+
+.detail-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.detail-list-item {
+  margin: 0;
+  padding-left: 16px;
+  position: relative;
+}
+
+.detail-list-item::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.6em;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--mat-sys-primary);
 }
 
 .disable-option {
@@ -13,8 +105,14 @@ ul {
   border-top: 1px solid var(--mat-sys-outline-variant);
 
   .hint {
-    margin: 4px 0 0 0;
-    font-size: 12px;
+    margin: 6px 0 0;
+    font-size: 0.82rem;
     color: var(--mat-sys-on-surface-variant);
+  }
+}
+
+@media (max-width: 640px) {
+  .resource-grid {
+    grid-template-columns: 1fr;
   }
 }
