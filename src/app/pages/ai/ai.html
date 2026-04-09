@@ -122,6 +122,76 @@
       </div>
       }
 
+      <section class="image-studio">
+        <div class="image-studio-header">
+          <div>
+            <p class="eyebrow">Cloud image generation</p>
+            <h3>Generate images with your own provider key</h3>
+          </div>
+
+          @if (availableImageProviders().length > 0) {
+          <mat-form-field appearance="outline" class="image-provider-field">
+            <mat-label>Provider</mat-label>
+            <mat-select [value]="selectedImageProvider()" (selectionChange)="selectImageProvider($event.value)">
+              @for (provider of availableImageProviders(); track provider) {
+              <mat-option [value]="provider">{{ imageProviderLabel(provider) }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+          }
+        </div>
+
+        @if (availableImageProviders().length === 0) {
+        <div class="notice warning-notice">
+          <mat-icon>vpn_key</mat-icon>
+          <span>Add an OpenAI or xAI API key in AI Settings to generate hosted images.</span>
+          <button mat-button type="button" (click)="openImageSettings()">Open settings</button>
+        </div>
+        } @else {
+        <div class="image-studio-shell">
+          <textarea class="image-prompt-input" [ngModel]="imagePrompt()" (ngModelChange)="imagePrompt.set($event)"
+            rows="2" placeholder="Describe the image you want to create..." [disabled]="isGeneratingImage()"></textarea>
+
+          <div class="image-studio-actions">
+            <div class="image-studio-meta">
+              <span>Provider: {{ imageProviderLabel(selectedImageProvider()) }}</span>
+              <span>Model: {{ selectedImageModel() }}</span>
+            </div>
+            <button mat-flat-button type="button" (click)="generateImage()"
+              [disabled]="!imagePrompt().trim() || isGeneratingImage()">
+              <mat-icon>image</mat-icon>
+              {{ isGeneratingImage() ? 'Generating...' : 'Generate image' }}
+            </button>
+          </div>
+        </div>
+        }
+
+        @if (imageGenerationError()) {
+        <div class="notice error-notice">
+          <mat-icon>error</mat-icon>
+          <span>{{ imageGenerationError() }}</span>
+        </div>
+        }
+
+        @if (generatedImages().length > 0) {
+        <div class="generated-image-grid">
+          @for (image of generatedImages(); track image.id) {
+          <article class="generated-image-card">
+            <img [src]="image.src" [alt]="image.prompt" class="generated-image-preview" />
+            <div class="generated-image-copy">
+              <div class="generated-image-meta">
+                <span>{{ image.providerLabel }}</span>
+                <span>{{ image.model }}</span>
+              </div>
+              <p>{{ image.revisedPrompt || image.prompt }}</p>
+              <a [href]="image.src" target="_blank" rel="noopener noreferrer">Open image</a>
+            </div>
+          </article>
+          }
+        </div>
+        }
+      </section>
+
       @if (selectedChatModel()?.chatDisabledReason) {
       <div class="notice warning-notice">
         <mat-icon>warning</mat-icon>

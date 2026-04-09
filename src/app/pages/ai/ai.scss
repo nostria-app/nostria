@@ -282,6 +282,117 @@
   color: var(--mat-sys-on-error-container);
 }
 
+.image-studio {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: 24px;
+  background: color-mix(in srgb, var(--mat-sys-tertiary-container) 16%, var(--mat-sys-surface));
+}
+
+.image-studio-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+
+  h3,
+  p {
+    margin: 0;
+  }
+
+  h3 {
+    margin-top: 4px;
+  }
+}
+
+.image-provider-field {
+  min-width: 180px;
+}
+
+.image-studio-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.image-prompt-input {
+  width: 100%;
+  min-height: 86px;
+  padding: 14px 16px;
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: 18px;
+  background: var(--mat-sys-surface);
+  color: var(--mat-sys-on-surface);
+  resize: vertical;
+  font: inherit;
+}
+
+.image-studio-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.image-studio-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 0.9rem;
+}
+
+.generated-image-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+}
+
+.generated-image-card {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: 20px;
+  background: var(--mat-sys-surface);
+}
+
+.generated-image-preview {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  background: var(--mat-sys-surface-container);
+}
+
+.generated-image-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+
+  p {
+    margin: 0;
+    color: var(--mat-sys-on-surface);
+  }
+
+  a {
+    color: var(--mat-sys-primary);
+    text-decoration: none;
+  }
+}
+
+.generated-image-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 0.84rem;
+}
+
 .prompt-suggestions {
   display: flex;
   flex-wrap: wrap;
@@ -589,7 +700,8 @@
 
   .chat-header,
   .chat-header-controls,
-  .composer-footer {
+  .composer-footer,
+  .image-studio-header {
     flex-direction: column;
     align-items: stretch;
   }

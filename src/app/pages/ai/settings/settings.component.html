@@ -92,6 +92,101 @@
         </div>
       </mat-card-content>
     </mat-card>
+
+    <mat-card class="settings-card provider-card provider-card-wide">
+      <mat-card-header>
+        <mat-card-title>Cloud Providers</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <p class="provider-intro">
+          Store your own provider keys on this device to use hosted AI services. These keys stay local and are not
+          synced to your Nostr settings event.
+        </p>
+
+        <div class="provider-list">
+          <section class="provider-section">
+            <div class="provider-heading-row">
+              <div>
+                <h3>OpenAI</h3>
+                <p>Use your OpenAI account for hosted image generation.</p>
+              </div>
+              <span class="provider-status" [class.configured]="providerConfigured('openai')">
+                {{ providerConfigured('openai') ? 'Configured' : 'Not configured' }}
+              </span>
+            </div>
+
+            <mat-form-field appearance="outline">
+              <mat-label>OpenAI API key</mat-label>
+              <input matInput [type]="showOpenAiApiKey ? 'text' : 'password'" [(ngModel)]="openAiApiKey"
+                placeholder="sk-..." />
+              <button mat-icon-button matSuffix type="button" (click)="toggleApiKeyVisibility('openai')"
+                [attr.aria-label]="showOpenAiApiKey ? 'Hide API key' : 'Show API key'">
+                <mat-icon>{{ showOpenAiApiKey ? 'visibility_off' : 'visibility' }}</mat-icon>
+              </button>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>OpenAI image model</mat-label>
+              <input matInput [ngModel]="aiService.cloudSettings().openaiImageModel"
+                (ngModelChange)="updateImageModel('openai', $event)" placeholder="gpt-image-1" />
+            </mat-form-field>
+
+            <div class="provider-actions">
+              <button mat-flat-button type="button" (click)="saveApiKey('openai')">Save key</button>
+              <button mat-stroked-button type="button" (click)="clearApiKey('openai')"
+                [disabled]="!providerConfigured('openai') && !openAiApiKey.trim()">Clear</button>
+            </div>
+          </section>
+
+          <section class="provider-section">
+            <div class="provider-heading-row">
+              <div>
+                <h3>xAI / Grok</h3>
+                <p>Enable Grok Imagine image generation with your xAI API key.</p>
+              </div>
+              <span class="provider-status" [class.configured]="providerConfigured('xai')">
+                {{ providerConfigured('xai') ? 'Configured' : 'Not configured' }}
+              </span>
+            </div>
+
+            <mat-form-field appearance="outline">
+              <mat-label>xAI API key</mat-label>
+              <input matInput [type]="showXAiApiKey ? 'text' : 'password'" [(ngModel)]="xAiApiKey"
+                placeholder="xai-..." />
+              <button mat-icon-button matSuffix type="button" (click)="toggleApiKeyVisibility('xai')"
+                [attr.aria-label]="showXAiApiKey ? 'Hide API key' : 'Show API key'">
+                <mat-icon>{{ showXAiApiKey ? 'visibility_off' : 'visibility' }}</mat-icon>
+              </button>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>xAI image model</mat-label>
+              <input matInput [ngModel]="aiService.cloudSettings().xaiImageModel"
+                (ngModelChange)="updateImageModel('xai', $event)" placeholder="grok-imagine-image" />
+            </mat-form-field>
+
+            <div class="provider-actions">
+              <button mat-flat-button type="button" (click)="saveApiKey('xai')">Save key</button>
+              <button mat-stroked-button type="button" (click)="clearApiKey('xai')"
+                [disabled]="!providerConfigured('xai') && !xAiApiKey.trim()">Clear</button>
+            </div>
+          </section>
+        </div>
+
+        <div class="setting-item provider-defaults">
+          <label>Default image provider</label>
+          <mat-form-field appearance="outline">
+            <mat-select [value]="aiService.cloudSettings().preferredImageProvider"
+              (selectionChange)="updatePreferredImageProvider($event.value)">
+              @for (provider of cloudProviders; track provider) {
+              <mat-option [value]="provider">{{ providerLabel(provider) }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+          <p class="hint">The AI page will use this provider first when you generate an image.</p>
+        </div>
+      </mat-card-content>
+    </mat-card>
   </div>
   }
 </div>

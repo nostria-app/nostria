@@ -1,4 +1,5 @@
 import { Injectable, signal, inject } from '@angular/core';
+import { LocalStorageService } from './local-storage.service';
 import { SettingsService } from './settings.service';
 
 export interface AiModelLoadOptions {
@@ -16,6 +17,38 @@ export interface AiGenerationProgress {
   text: string;
 }
 
+export type AiCloudProvider = 'openai' | 'xai';
+
+export interface AiCloudSettings {
+  openaiApiKey?: string;
+  xaiApiKey?: string;
+  preferredImageProvider: AiCloudProvider;
+  openaiImageModel: string;
+  xaiImageModel: string;
+}
+
+export interface AiGeneratedImage {
+  id: string;
+  provider: AiCloudProvider;
+  providerLabel: string;
+  model: string;
+  prompt: string;
+  revisedPrompt?: string;
+  src: string;
+}
+
+interface AiImageApiPayload {
+  data?: Array<{
+    b64_json?: string;
+    revised_prompt?: string;
+    url?: string;
+  }>;
+  error?: {
+    message?: string;
+  } | string;
+  message?: string;
+}
+
 interface WorkerCallback {
   resolve: (value: unknown) => void;
   reject: (reason: unknown) => void;
@@ -26,7 +59,16 @@ interface WorkerCallback {
   providedIn: 'root'
 })
 export class AiService {
+  private static readonly CLOUD_SETTINGS_STORAGE_KEY = 'nostria-ai-cloud-settings';
+
+  private readonly defaultCloudSettings: AiCloudSettings = {
+    preferredImageProvider: 'xai',
+    openaiImageModel: 'gpt-image-1',
+    xaiImageModel: 'grok-imagine-image',
+  };
+
   private settings = inject(SettingsService);
+  private localStorage = inject(LocalStorageService);
   private worker: Worker | null = null;
   private callbacks: Record<string, WorkerCallback> = {};
 
@@ -42,6 +84,7 @@ export class AiService {
   private _processingCount = 0;
 
   loadedModels = signal<Set<string>>(new Set());
+  cloudSettings = signal<AiCloudSettings>({ ...this.defaultCloudSettings });
 
   availableTranslationModels = [
     'Xenova/opus-mt-es-fr', 'Xenova/opus-mt-es-it', 'Xenova/opus-mt-es-ru', 'Xenova/opus-mt-fr-es',
@@ -135,6 +178,8 @@ export class AiService {
   }
 
   constructor() {
+    this.loadCloudSettings();
+
     if (typeof Worker !== 'undefined') {
       this.worker = new Worker(new URL('../workers/ai.worker', import.meta.url));
       this.worker.onmessage = ({ data }) => {
@@ -219,6 +264,74 @@ export class AiService {
     return this.postMessage('check', { task, model }) as Promise<{ loaded: boolean, cached: boolean }>;
   }
 
+  getProviderLabel(provider: AiCloudProvider): string {
+    return provider === 'openai' ? 'OpenAI' : 'xAI / Grok';
+  }
+
+  getImageModel(provider: AiCloudProvider): string {
+    const cloudSettings = this.cloudSettings();
+    return provider === 'openai' ? cloudSettings.openaiImageModel : cloudSettings.xaiImageModel;
+  }
+
+  hasCloudApiKey(provider: AiCloudProvider): boolean {
+    const cloudSettings = this.cloudSettings();
+    return provider === 'openai'
+      ? typeof cloudSettings.openaiApiKey === 'string' && cloudSettings.openaiApiKey.length > 0
+      : typeof cloudSettings.xaiApiKey === 'string' && cloudSettings.xaiApiKey.length > 0;
+  }
+
+  getConfiguredImageProviders(): AiCloudProvider[] {
+    const providers: AiCloudProvider[] = ['xai', 'openai'];
+    return providers.filter(provider => this.hasCloudApiKey(provider));
+  }
+
+  getActiveImageProvider(preferredProvider?: AiCloudProvider | null): AiCloudProvider | null {
+    if (preferredProvider && this.hasCloudApiKey(preferredProvider)) {
+      return preferredProvider;
+    }
+
+    const defaultProvider = this.cloudSettings().preferredImageProvider;
+    if (this.hasCloudApiKey(defaultProvider)) {
+      return defaultProvider;
+    }
+
+    return this.getConfiguredImageProviders()[0] ?? null;
+  }
+
+  updateCloudSettings(updates: Partial<AiCloudSettings>): void {
+    const nextSettings = this.normalizeCloudSettings({
+      ...this.cloudSettings(),
+      ...updates,
+    });
+
+    this.cloudSettings.set(nextSettings);
+    this.localStorage.setObject(AiService.CLOUD_SETTINGS_STORAGE_KEY, nextSettings);
+  }
+
+  setCloudApiKey(provider: AiCloudProvider, apiKey: string): void {
+    this.updateCloudSettings(provider === 'openai' ? { openaiApiKey: apiKey } : { xaiApiKey: apiKey });
+  }
+
+  clearCloudApiKey(provider: AiCloudProvider): void {
+    this.updateCloudSettings(provider === 'openai' ? { openaiApiKey: '' } : { xaiApiKey: '' });
+  }
+
+  async generateImage(prompt: string, provider?: AiCloudProvider | null): Promise<AiGeneratedImage[]> {
+    const activeProvider = this.getActiveImageProvider(provider);
+    if (!activeProvider) {
+      throw new Error('Add an OpenAI or xAI API key in AI Settings first.');
+    }
+
+    const trimmedPrompt = prompt.trim();
+    if (!trimmedPrompt) {
+      throw new Error('Image prompt cannot be empty.');
+    }
+
+    return activeProvider === 'openai'
+      ? this.generateOpenAiImage(trimmedPrompt)
+      : this.generateXAiImage(trimmedPrompt);
+  }
+
   async deleteModelFromCache(modelId: string) {
     if ('caches' in window) {
       try {
@@ -258,6 +371,163 @@ export class AiService {
       }
     }
     return false;
+  }
+
+  private loadCloudSettings(): void {
+    const stored = this.localStorage.getObject<Partial<AiCloudSettings>>(AiService.CLOUD_SETTINGS_STORAGE_KEY);
+    if (!stored) {
+      return;
+    }
+
+    this.cloudSettings.set(this.normalizeCloudSettings({
+      ...this.defaultCloudSettings,
+      ...stored,
+    }));
+  }
+
+  private normalizeCloudSettings(settings: Partial<AiCloudSettings>): AiCloudSettings {
+    return {
+      preferredImageProvider: settings.preferredImageProvider === 'openai' ? 'openai' : 'xai',
+      openaiImageModel: settings.openaiImageModel?.trim() || this.defaultCloudSettings.openaiImageModel,
+      xaiImageModel: settings.xaiImageModel?.trim() || this.defaultCloudSettings.xaiImageModel,
+      openaiApiKey: this.normalizeApiKey(settings.openaiApiKey),
+      xaiApiKey: this.normalizeApiKey(settings.xaiApiKey),
+    };
+  }
+
+  private normalizeApiKey(value?: string): string | undefined {
+    const trimmed = value?.trim();
+    return trimmed ? trimmed : undefined;
+  }
+
+  private async generateOpenAiImage(prompt: string): Promise<AiGeneratedImage[]> {
+    const apiKey = this.cloudSettings().openaiApiKey;
+    if (!apiKey) {
+      throw new Error('OpenAI API key is missing.');
+    }
+
+    const payload = await this.fetchImageGeneration('https://api.openai.com/v1/images/generations', apiKey, {
+      model: this.cloudSettings().openaiImageModel,
+      prompt,
+      n: 1,
+      size: '1024x1024',
+    });
+
+    return this.mapGeneratedImages(payload, 'openai', prompt);
+  }
+
+  private async generateXAiImage(prompt: string): Promise<AiGeneratedImage[]> {
+    const apiKey = this.cloudSettings().xaiApiKey;
+    if (!apiKey) {
+      throw new Error('xAI API key is missing.');
+    }
+
+    const payload = await this.fetchImageGeneration('https://api.x.ai/v1/images/generations', apiKey, {
+      model: this.cloudSettings().xaiImageModel,
+      prompt,
+      n: 1,
+      response_format: 'b64_json',
+    });
+
+    return this.mapGeneratedImages(payload, 'xai', prompt);
+  }
+
+  private async fetchImageGeneration(url: string, apiKey: string, body: Record<string, unknown>): Promise<AiImageApiPayload> {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+
+    const payload = await this.parseApiResponse(response);
+    if (!response.ok) {
+      throw new Error(this.extractApiError(payload) || `Image generation failed with status ${response.status}.`);
+    }
+
+    return payload;
+  }
+
+  private async parseApiResponse(response: Response): Promise<AiImageApiPayload> {
+    const text = await response.text();
+    if (!text) {
+      return {};
+    }
+
+    try {
+      return JSON.parse(text) as AiImageApiPayload;
+    } catch {
+      return { message: text };
+    }
+  }
+
+  private extractApiError(payload: AiImageApiPayload): string | null {
+    if (typeof payload.error === 'string' && payload.error.trim()) {
+      return payload.error.trim();
+    }
+
+    if (typeof payload.error === 'object' && typeof payload.error?.message === 'string' && payload.error.message.trim()) {
+      return payload.error.message.trim();
+    }
+
+    if (typeof payload.message === 'string' && payload.message.trim()) {
+      return payload.message.trim();
+    }
+
+    return null;
+  }
+
+  private mapGeneratedImages(payload: AiImageApiPayload, provider: AiCloudProvider, prompt: string): AiGeneratedImage[] {
+    if (!Array.isArray(payload.data) || payload.data.length === 0) {
+      throw new Error('The provider returned no images.');
+    }
+
+    return payload.data.map((entry, index) => {
+      const src = entry.b64_json
+        ? this.buildBase64DataUrl(entry.b64_json)
+        : entry.url;
+
+      if (!src) {
+        throw new Error('The provider response did not include image content.');
+      }
+
+      return {
+        id: `${provider}-${Date.now()}-${index}`,
+        provider,
+        providerLabel: this.getProviderLabel(provider),
+        model: this.getImageModel(provider),
+        prompt,
+        revisedPrompt: entry.revised_prompt,
+        src,
+      };
+    });
+  }
+
+  private buildBase64DataUrl(base64: string): string {
+    const mimeType = this.inferMimeType(base64);
+    return `data:${mimeType};base64,${base64}`;
+  }
+
+  private inferMimeType(base64: string): string {
+    if (base64.startsWith('iVBORw0KGgo')) {
+      return 'image/png';
+    }
+
+    if (base64.startsWith('/9j/')) {
+      return 'image/jpeg';
+    }
+
+    if (base64.startsWith('UklGR')) {
+      return 'image/webp';
+    }
+
+    if (base64.startsWith('R0lGOD')) {
+      return 'image/gif';
+    }
+
+    return 'image/png';
   }
 
   private postMessage(type: string, payload: unknown, progressCallback?: (data: unknown) => void): Promise<unknown> {

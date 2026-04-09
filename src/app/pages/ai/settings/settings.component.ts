@@ -8,8 +8,12 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDialog } from '@angular/material/dialog';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatSnackBar } from '@angular/material/snack-bar';
 import { FormsModule } from '@angular/forms';
 import { SettingsService } from '../../../services/settings.service';
+import { AiCloudProvider, AiService } from '../../../services/ai.service';
 import { AiInfoDialogComponent } from '../../../components/ai-info-dialog/ai-info-dialog.component';
 import { PanelActionsService } from '../../../services/panel-actions.service';
 import { RightPanelService } from '../../../services/right-panel.service';
@@ -25,6 +29,8 @@ import { PanelNavigationService } from '../../../services/panel-navigation.servi
     MatButtonModule,
     MatIconModule,
     MatTooltipModule,
+    MatFormFieldModule,
+    MatInputModule,
     FormsModule
   ],
   templateUrl: './settings.component.html',
@@ -33,13 +39,27 @@ import { PanelNavigationService } from '../../../services/panel-navigation.servi
 })
 export class AiSettingsComponent implements OnInit, OnDestroy {
   readonly settings = inject(SettingsService);
+  readonly aiService = inject(AiService);
   private readonly dialog = inject(MatDialog);
+  private readonly snackBar = inject(MatSnackBar);
   private readonly route = inject(ActivatedRoute);
   private readonly panelActions = inject(PanelActionsService);
   private readonly rightPanel = inject(RightPanelService);
   private readonly panelNav = inject(PanelNavigationService);
 
   readonly isInRightPanel = this.route.outlet === 'right';
+  readonly cloudProviders: AiCloudProvider[] = ['xai', 'openai'];
+
+  openAiApiKey = '';
+  xAiApiKey = '';
+  showOpenAiApiKey = false;
+  showXAiApiKey = false;
+
+  constructor() {
+    const cloudSettings = this.aiService.cloudSettings();
+    this.openAiApiKey = cloudSettings.openaiApiKey ?? '';
+    this.xAiApiKey = cloudSettings.xaiApiKey ?? '';
+  }
 
   ngOnInit(): void {
     if (this.isInRightPanel) {
@@ -98,6 +118,56 @@ export class AiSettingsComponent implements OnInit, OnDestroy {
 
   async updateVoice(voice: 'female' | 'male') {
     await this.settings.updateSettings({ aiVoice: voice });
+  }
+
+  providerLabel(provider: AiCloudProvider): string {
+    return this.aiService.getProviderLabel(provider);
+  }
+
+  providerConfigured(provider: AiCloudProvider): boolean {
+    return this.aiService.hasCloudApiKey(provider);
+  }
+
+  toggleApiKeyVisibility(provider: AiCloudProvider): void {
+    if (provider === 'openai') {
+      this.showOpenAiApiKey = !this.showOpenAiApiKey;
+      return;
+    }
+
+    this.showXAiApiKey = !this.showXAiApiKey;
+  }
+
+  saveApiKey(provider: AiCloudProvider): void {
+    const value = provider === 'openai' ? this.openAiApiKey : this.xAiApiKey;
+    this.aiService.setCloudApiKey(provider, value);
+    this.snackBar.open(`${this.providerLabel(provider)} API key saved on this device.`, 'Dismiss', { duration: 3500 });
+  }
+
+  clearApiKey(provider: AiCloudProvider): void {
+    this.aiService.clearCloudApiKey(provider);
+
+    if (provider === 'openai') {
+      this.openAiApiKey = '';
+      this.showOpenAiApiKey = false;
+    } else {
+      this.xAiApiKey = '';
+      this.showXAiApiKey = false;
+    }
+
+    this.snackBar.open(`${this.providerLabel(provider)} API key removed from this device.`, 'Dismiss', { duration: 3500 });
+  }
+
+  updatePreferredImageProvider(provider: AiCloudProvider): void {
+    this.aiService.updateCloudSettings({ preferredImageProvider: provider });
+  }
+
+  updateImageModel(provider: AiCloudProvider, model: string): void {
+    if (provider === 'openai') {
+      this.aiService.updateCloudSettings({ openaiImageModel: model });
+      return;
+    }
+
+    this.aiService.updateCloudSettings({ xaiImageModel: model });
   }
 
   goBack(): void {

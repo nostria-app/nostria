@@ -6,9 +6,10 @@ import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
+import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { SafeHtml } from '@angular/platform-browser';
-import { AiChatMessage, AiGenerationProgress, AiModelLoadOptions, AiService } from '../../services/ai.service';
+import { AiChatMessage, AiCloudProvider, AiGeneratedImage, AiGenerationProgress, AiModelLoadOptions, AiService } from '../../services/ai.service';
 import { AiChatHistoryService } from '../../services/ai-chat-history.service';
 import { FormatService } from '../../services/format/format.service';
 import { LayoutService } from '../../services/layout.service';
@@ -59,6 +60,7 @@ interface ComposerAttachment {
     MatButtonModule,
     MatIconModule,
     MatMenuModule,
+    MatSelectModule,
   ],
   templateUrl: './ai.html',
   styleUrl: './ai.scss',
@@ -94,6 +96,11 @@ export class AiComponent {
   readonly showHistoryDrawer = signal(false);
   readonly renderedAssistantMessages = signal<Record<string, SafeHtml>>({});
   readonly attachedFiles = signal<ComposerAttachment[]>([]);
+  readonly imagePrompt = signal('');
+  readonly generatedImages = signal<AiGeneratedImage[]>([]);
+  readonly imageGenerationError = signal('');
+  readonly isGeneratingImage = signal(false);
+  readonly hideHistoryRail = computed(() => this.splitPaneMode() || this.narrowHistoryMode());
 
   readonly models = signal<ModelInfo[]>([
     {
@@ -186,10 +193,12 @@ export class AiComponent {
   ]);
 
   readonly chatModels = computed(() => this.models().filter(model => model.task === 'text-generation'));
+  readonly availableImageProviders = computed(() => this.aiService.getConfiguredImageProviders());
+  readonly selectedImageProvider = signal<AiCloudProvider | null>(this.aiService.getActiveImageProvider());
   readonly selectedChatModelId = signal(this.webGpuAvailable ? 'onnx-community/gemma-4-E2B-it-ONNX' : 'Xenova/distilgpt2');
   readonly selectedChatModel = computed(() => this.chatModels().find(model => model.id === this.selectedChatModelId()) ?? null);
   readonly histories = this.historyService.histories;
-  readonly showHistoryPanel = computed(() => !this.narrowHistoryMode() || this.showHistoryDrawer());
+  readonly showHistoryPanel = computed(() => !this.hideHistoryRail() || this.showHistoryDrawer());
   readonly showChatPanel = computed(() => !this.narrowHistoryMode() || !this.showHistoryDrawer());
   readonly conversation = signal<ConversationMessage[]>([
     {
@@ -222,6 +231,13 @@ export class AiComponent {
       this.narrowHistoryMode.set(result.matches);
       if (!result.matches) {
         this.showHistoryDrawer.set(false);
+      }
+    });
+
+    effect(() => {
+      const activeProvider = this.aiService.getActiveImageProvider(this.selectedImageProvider());
+      if (activeProvider !== this.selectedImageProvider()) {
+        this.selectedImageProvider.set(activeProvider);
       }
     });
 
@@ -344,6 +360,34 @@ export class AiComponent {
     this.showHistoryDrawer.update(value => !value);
   }
 
+  selectImageProvider(provider: AiCloudProvider): void {
+    this.selectedImageProvider.set(provider);
+  }
+
+  async generateImage(): Promise<void> {
+    const prompt = this.imagePrompt().trim();
+    if (!prompt || this.isGeneratingImage()) {
+      return;
+    }
+
+    this.imageGenerationError.set('');
+    this.isGeneratingImage.set(true);
+
+    try {
+      const generatedImages = await this.aiService.generateImage(prompt, this.selectedImageProvider());
+      this.generatedImages.set(generatedImages);
+    } catch (err) {
+      this.logger.error('AI image generation error:', err);
+      this.imageGenerationError.set(err instanceof Error ? err.message : String(err));
+    } finally {
+      this.isGeneratingImage.set(false);
+    }
+  }
+
+  openImageSettings(): void {
+    this.openSettingsPanel();
+  }
+
   openAttachmentPicker(): void {
     this.attachmentInputRef()?.nativeElement.click();
   }
@@ -459,6 +503,15 @@ export class AiComponent {
         content: 'Conversation cleared. Ask a new question whenever you are ready.',
       },
     ]);
+  }
+
+  imageProviderLabel(provider: AiCloudProvider | null): string {
+    return provider ? this.aiService.getProviderLabel(provider) : 'Unavailable';
+  }
+
+  selectedImageModel(): string {
+    const provider = this.selectedImageProvider();
+    return provider ? this.aiService.getImageModel(provider) : '';
   }
 
   onConversationScroll(event: Event): void {

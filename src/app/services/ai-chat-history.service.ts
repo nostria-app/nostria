@@ -30,7 +30,7 @@ export class AiChatHistoryService {
   private readonly storageKey = 'nostria-ai-chat-history';
   private readonly maxHistoryEntries = 30;
 
-  private readonly _histories = signal<AiChatHistoryEntry[]>(this.loadLegacyHistory());
+  private readonly _histories = signal<AiChatHistoryEntry[]>([]);
   readonly histories = computed(() => this._histories());
 
   constructor() {
@@ -123,18 +123,7 @@ export class AiChatHistoryService {
   private async refreshHistory(accountPubkey: string | null): Promise<void> {
     if (accountPubkey && this.database.hasAccountDb()) {
       try {
-        let entries = await this.database.getAiChatHistoryEntries(accountPubkey);
-
-        if (entries.length === 0) {
-          const legacyEntries = this.loadLegacyHistory();
-          if (legacyEntries.length > 0) {
-            const migratedEntries = this.toStoredEntries(legacyEntries, accountPubkey);
-            await this.database.replaceAiChatHistoryEntries(accountPubkey, migratedEntries);
-            this.storage.removeItem(this.storageKey);
-            entries = migratedEntries;
-          }
-        }
-
+        const entries = await this.database.getAiChatHistoryEntries(accountPubkey);
         this._histories.set(this.fromStoredEntries(entries));
         return;
       } catch (error) {
@@ -151,7 +140,6 @@ export class AiChatHistoryService {
     if (accountPubkey && this.database.hasAccountDb()) {
       try {
         await this.database.replaceAiChatHistoryEntries(accountPubkey, this.toStoredEntries(entries, accountPubkey));
-        this.storage.removeItem(this.storageKey);
         return;
       } catch (error) {
         this.logger.warn('Failed to save AI chat history to account database, falling back to localStorage', error);
