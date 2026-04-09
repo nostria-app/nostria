@@ -183,7 +183,8 @@
             </article>
             }
           </div>
-          } @else {
+          }
+          @if (message.streaming && message.content.trim().length === 0 && !message.generatedImages?.length) {
           <div class="stream-placeholder">Generating...</div>
           }
         </div>
