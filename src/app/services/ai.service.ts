@@ -1,6 +1,16 @@
 import { Injectable, signal, inject } from '@angular/core';
 import { SettingsService } from './settings.service';
 
+export interface AiModelLoadOptions {
+  device?: 'webgpu' | 'wasm';
+  dtype?: string | Record<string, string>;
+}
+
+export interface AiChatMessage {
+  role: 'system' | 'user' | 'assistant';
+  content: string;
+}
+
 interface WorkerCallback {
   resolve: (value: unknown) => void;
   reject: (reason: unknown) => void;
@@ -55,7 +65,7 @@ export class AiService {
   readonly transcriptionModelId = 'Xenova/whisper-tiny';
   readonly summarizationModelId = 'Xenova/distilbart-cnn-6-6';
   readonly sentimentModelId = 'Xenova/distilbert-base-uncased-finetuned-sst-2-english';
-  readonly textGenerationModelId = 'Xenova/LaMini-Flan-T5-783M';
+  readonly textGenerationModelId = 'Xenova/distilgpt2';
 
   getTaskName(task: string | null): string {
     if (!task) return '';
@@ -146,8 +156,8 @@ export class AiService {
     }
   }
 
-  async loadModel(task: string, model: string, progressCallback?: (data: unknown) => void) {
-    return this.postMessage('load', { task, model }, progressCallback).then((res) => {
+  async loadModel(task: string, model: string, progressCallback?: (data: unknown) => void, options?: AiModelLoadOptions) {
+    return this.postMessage('load', { task, model, options }, progressCallback).then((res) => {
       if (task === 'text-generation') this.textModelLoaded.set(true);
       if (task === 'translation') this.translationModelLoaded.set(true);
       if (task === 'summarization') this.summarizationModelLoaded.set(true);
@@ -165,9 +175,9 @@ export class AiService {
     });
   }
 
-  async generateText(text: string, params?: unknown) {
+  async generateText(input: string | AiChatMessage[], params?: unknown, model = this.textGenerationModelId) {
     if (!this.settings.settings().aiEnabled) throw new Error('AI is disabled');
-    return this.postMessage('generate', { text, params });
+    return this.postMessage('generate', { input, params, model });
   }
 
   async summarizeText(text: string, params?: unknown) {

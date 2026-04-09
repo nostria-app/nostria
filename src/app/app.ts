@@ -700,6 +700,7 @@ export class App implements OnInit, OnDestroy {
       icon: 'article',
     },
     { path: 'summary', label: $localize`:@@app.nav.summary:Summary`, icon: 'dashboard', authenticated: true },
+    { path: 'ai', label: $localize`:@@menu.ai:AI`, icon: 'smart_toy', authenticated: false },
     { path: 'discover', label: $localize`:@@app.nav.discover:Discover`, icon: 'explore', authenticated: true },
     { path: 'search', label: $localize`:@@app.nav.search:Search`, icon: 'manage_search', authenticated: false },
     { path: 'people', label: $localize`:@@app.nav.people:People`, icon: 'people', authenticated: true },

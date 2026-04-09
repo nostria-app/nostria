@@ -71,6 +71,7 @@ export const DEFAULT_MENU_ITEM_IDS: string[] = [
   '/f',
   'articles',
   'summary',
+  'ai',
   'messages',
   'chats',
   'n',

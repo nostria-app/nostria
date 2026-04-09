@@ -30,6 +30,7 @@ const ALL_MENU_ITEMS: AvailableMenuItem[] = [
   { id: '/f', label: $localize`:@@app.nav.feeds:Feeds`, icon: 'stacks', authenticated: false },
   { id: 'summary', label: $localize`:@@app.nav.summary:Summary`, icon: 'dashboard', authenticated: true },
   { id: 'messages', label: $localize`:@@app.nav.messages:Messages`, icon: 'mail', authenticated: true },
+  { id: 'ai', label: $localize`:@@menu.ai:AI`, icon: 'smart_toy', authenticated: false },
   { id: 'articles', label: $localize`:@@app.nav.articles:Articles`, icon: 'article', authenticated: false },
   { id: 'discover', label: $localize`:@@app.nav.discover:Discover`, icon: 'explore', authenticated: true },
   { id: 'search', label: $localize`:@@app.nav.search:Search`, icon: 'manage_search', authenticated: false },

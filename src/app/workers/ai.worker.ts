@@ -1,11 +1,11 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { pipeline, env, Tensor, AutoTokenizer, SpeechT5ForTextToSpeech, SpeechT5HifiGan } from '@xenova/transformers';
+import { pipeline, env, Tensor, AutoTokenizer, SpeechT5ForTextToSpeech, SpeechT5HifiGan } from '@huggingface/transformers';
 
 // Configure environment to use the Cache API for storing models
 env.allowLocalModels = false;
 env.useBrowserCache = true;
 
-let textGenerator: any = null;
+const textGenerators = new Map<string, any>();
 let summarizer: any = null;
 let sentiment: any = null;
 let transcriber: any = null;
@@ -24,10 +24,10 @@ class TTSPipeline {
       this.tokenizer = AutoTokenizer.from_pretrained(this.model_id, { progress_callback });
     }
     if (this.model === null) {
-      this.model = SpeechT5ForTextToSpeech.from_pretrained(this.model_id, { quantized: false, progress_callback });
+      this.model = SpeechT5ForTextToSpeech.from_pretrained(this.model_id, { dtype: 'fp32', progress_callback });
     }
     if (this.vocoder === null) {
-      this.vocoder = SpeechT5HifiGan.from_pretrained(this.vocoder_id, { quantized: false, progress_callback });
+      this.vocoder = SpeechT5HifiGan.from_pretrained(this.vocoder_id, { dtype: 'fp32', progress_callback });
     }
 
     return Promise.all([this.tokenizer, this.model, this.vocoder]);
@@ -73,8 +73,9 @@ addEventListener('message', async ({ data }) => {
   }
 });
 
-async function handleLoad(payload: { task: string, model: string }, id: string) {
+async function handleLoad(payload: { task: string, model: string, options?: Record<string, unknown> }, id: string) {
   const { task, model } = payload;
+  const options = payload.options ?? {};
 
   const progressCallback = (data: unknown) => {
     postMessage({
@@ -85,16 +86,17 @@ async function handleLoad(payload: { task: string, model: string }, id: string) 
   };
 
   if (task === 'text-generation') {
-    textGenerator = await pipeline(task, model, { progress_callback: progressCallback });
+    const textGenerator = await pipeline(task, model, { ...options, progress_callback: progressCallback });
+    textGenerators.set(model, textGenerator);
   } else if (task === 'summarization') {
-    summarizer = await pipeline(task, model, { progress_callback: progressCallback });
+    summarizer = await pipeline(task, model, { ...options, progress_callback: progressCallback });
   } else if (task === 'sentiment-analysis') {
-    sentiment = await pipeline(task, model, { progress_callback: progressCallback });
+    sentiment = await pipeline(task, model, { ...options, progress_callback: progressCallback });
   } else if (task === 'translation') {
-    const translator = await pipeline(task, model, { progress_callback: progressCallback });
+    const translator = await pipeline(task, model, { ...options, progress_callback: progressCallback });
     translators.set(model, translator);
   } else if (task === 'automatic-speech-recognition') {
-    transcriber = await pipeline(task, model, { progress_callback: progressCallback });
+    transcriber = await pipeline(task, model, { ...options, progress_callback: progressCallback });
   } else if (task === 'text-to-speech') {
     await TTSPipeline.getInstance(progressCallback);
   }
@@ -106,11 +108,12 @@ async function handleLoad(payload: { task: string, model: string }, id: string) 
   });
 }
 
-async function handleGenerate(payload: { text: string, params?: any }, id: string) {
+async function handleGenerate(payload: { input: string | Array<{ role: string, content: string }>, model: string, params?: any }, id: string) {
+  const textGenerator = textGenerators.get(payload.model);
   if (!textGenerator) {
-    throw new Error('Text generation model not loaded');
+    throw new Error(`Text generation model ${payload.model} not loaded`);
   }
-  const result = await textGenerator(payload.text, payload.params);
+  const result = await textGenerator(payload.input, payload.params);
   postMessage({
     type: 'result',
     id,
@@ -321,7 +324,7 @@ async function handleCheck(payload: { task: string, model: string }, id: string)
   let isCached = false;
 
   // Check memory
-  if (task === 'text-generation') isLoaded = !!textGenerator;
+  if (task === 'text-generation') isLoaded = textGenerators.has(model);
   else if (task === 'summarization') isLoaded = !!summarizer;
   else if (task === 'sentiment-analysis') isLoaded = !!sentiment;
   else if (task === 'translation') isLoaded = translators.has(model);

@@ -1,86 +1,134 @@
-<div class="page-container">
-  <div class="header-actions">
-    <div>
-      <h1>Local AI Models</h1>
-      <p>Run Small Language Models locally in your browser using WebGPU/WASM.</p>
-    </div>
-    <div class="header-buttons">
-      <button mat-stroked-button (click)="downloadAll()">
-        <mat-icon>download</mat-icon>
-        Download All
-      </button>
-      <button mat-stroked-button color="warn" (click)="clearAllCache()">
-        <mat-icon>delete_forever</mat-icon>
-        Wipe All Cache
-      </button>
-    </div>
-  </div>
-
-  <mat-tab-group>
-    <mat-tab label="Models">
-      <div class="models-table-container">
-        <ng-container *ngTemplateOutlet="modelsTable; context: { $implicit: models() }"></ng-container>
+<div class="ai-page">
+  <section class="ai-shell">
+    <aside class="model-dock">
+      <div class="dock-brand">
+        <div>
+          <p class="eyebrow">Local inference</p>
+          <h1>AI</h1>
+        </div>
+        <a mat-icon-button routerLink="/ai/settings" aria-label="AI settings">
+          <mat-icon>tune</mat-icon>
+        </a>
       </div>
-    </mat-tab>
-    <mat-tab label="Languages">
-      <div class="models-table-container">
-        <ng-container *ngTemplateOutlet="modelsTable; context: { $implicit: languageModels() }"></ng-container>
-      </div>
-    </mat-tab>
-  </mat-tab-group>
 
-  <ng-template #modelsTable let-dataSource>
-    <div class="models-table-container">
-      <table mat-table [dataSource]="dataSource" class="mat-elevation-z8">
+      <p class="dock-copy">
+        Chat with the local models already wired into Nostria. Gemma 4 uses WebGPU when the device supports it.
+      </p>
 
-        <!-- Info Column (Name, ID, Description) -->
-        <ng-container matColumnDef="info">
-          <th mat-header-cell *matHeaderCellDef> Model </th>
-          <td mat-cell *matCellDef="let model">
-            <div class="model-info-cell">
-              <div class="model-name">{{model.name}}</div>
-              <div class="model-subtext">
-                <a [href]="'https://huggingface.co/' + model.id" target="_blank" class="model-link">
-                  {{model.id}} <mat-icon class="link-icon">open_in_new</mat-icon>
-                </a>
-                <span class="separator">•</span>
-                <span>{{model.description}}</span>
-              </div>
+      <mat-form-field appearance="outline" class="model-field dock-model-field">
+        <mat-label>Chat model</mat-label>
+        <mat-select [ngModel]="selectedChatModelId()" (ngModelChange)="selectedChatModelId.set($event)">
+          @for (model of chatModels(); track model.id) {
+          <mat-option [value]="model.id">{{ model.name }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      @if (selectedChatModel(); as model) {
+      <div class="selected-model-panel">
+        <div class="selected-model-summary">
+          <div class="model-summary-copy">
+            <div class="model-title-row">
+              <h2>{{ model.name }}</h2>
+              <span class="status-chip"
+                [class.status-loaded]="model.loaded"
+                [class.status-cached]="!model.loaded && model.cached"
+                [class.status-idle]="!model.loaded && !model.cached && !model.loading"
+                [class.status-loading]="model.loading">
+                {{ statusLabel(model) }}
+              </span>
             </div>
-          </td>
-        </ng-container>
+            <p>{{ model.description }}</p>
+            <div class="model-meta-row">
+              <span>{{ model.size }}</span>
+              <span>{{ model.runtime }}</span>
+              <a [href]="'https://huggingface.co/' + model.id" target="_blank" rel="noreferrer">View model</a>
+            </div>
+          </div>
+        </div>
 
-        <!-- Size Column -->
-        <ng-container matColumnDef="size">
-          <th mat-header-cell *matHeaderCellDef> Size </th>
-          <td mat-cell *matCellDef="let model"> {{model.size}} </td>
-        </ng-container>
+        @if (model.loading) {
+        <div class="progress-row">
+          <mat-progress-bar mode="determinate" [value]="model.progress"></mat-progress-bar>
+          <span>{{ model.progress | number:'1.0-0' }}%</span>
+        </div>
+        }
 
-        <!-- Status Column -->
-        <ng-container matColumnDef="status">
-          <th mat-header-cell *matHeaderCellDef> Status </th>
-          <td mat-cell *matCellDef="let model">
+        @if (!model.loaded && !model.chatDisabledReason) {
+        <div class="selected-model-actions">
+          <button mat-flat-button type="button" (click)="loadSelectedModel()" [disabled]="model.loading">
+            <mat-icon>download</mat-icon>
             @if (model.loading) {
-            <div class="status-loading">
+            Loading
+            } @else if (model.cached) {
+            Load Model
+            } @else {
+            Download Model
+            }
+          </button>
+        </div>
+        }
+      </div>
+      }
+
+      @if (selectedChatModel()?.chatDisabledReason) {
+      <div class="notice warning-notice dock-notice">
+        <mat-icon>warning</mat-icon>
+        <span>{{ selectedChatModel()?.chatDisabledReason }}</span>
+      </div>
+      }
+
+      <div class="dock-actions">
+        <button mat-stroked-button type="button" (click)="clearConversation()">
+          <mat-icon>refresh</mat-icon>
+          Clear Chat
+        </button>
+      </div>
+
+      <section class="library-section">
+        <div class="section-heading dock-heading">
+          <div>
+            <p class="eyebrow">Model library</p>
+            <h2>Available models</h2>
+          </div>
+        </div>
+
+        <div class="library-grid">
+          @for (model of models(); track model.id) {
+          <mat-card class="model-card">
+            <div class="model-card-head">
+              <div>
+                <h3>{{ model.name }}</h3>
+                <p>{{ model.description }}</p>
+              </div>
+              <span class="status-chip"
+                [class.status-loaded]="model.loaded"
+                [class.status-cached]="!model.loaded && model.cached"
+                [class.status-idle]="!model.loaded && !model.cached && !model.loading"
+                [class.status-loading]="model.loading">
+                {{ statusLabel(model) }}
+              </span>
+            </div>
+
+            <div class="model-card-meta">
+              <span>{{ model.size }}</span>
+              <span>{{ model.runtime }}</span>
+            </div>
+
+            @if (model.loading) {
+            <div class="progress-row compact-progress">
               <mat-progress-bar mode="determinate" [value]="model.progress"></mat-progress-bar>
               <span>{{ model.progress | number:'1.0-0' }}%</span>
             </div>
-            } @else if (model.loaded) {
-            <span class="status-loaded"><mat-icon>check_circle</mat-icon> Loaded</span>
-            } @else if (model.cached) {
-            <span class="status-cached"><mat-icon>save</mat-icon> Cached</span>
-            } @else {
-            <span class="status-not-loaded">Not Loaded</span>
             }
-          </td>
-        </ng-container>
 
-        <!-- Actions Column -->
-        <ng-container matColumnDef="actions">
-          <th mat-header-cell *matHeaderCellDef> Actions </th>
-          <td mat-cell *matCellDef="let model">
-            <div class="action-buttons">
-              <button mat-stroked-button (click)="loadModel(model)" [disabled]="model.loaded || model.loading">
+            @if (model.chatDisabledReason) {
+            <p class="model-note">{{ model.chatDisabledReason }}</p>
+            }
+
+            <div class="model-card-actions">
+              <button mat-stroked-button type="button" (click)="loadModel(model)"
+                [disabled]="model.loading || model.loaded || !!model.chatDisabledReason">
                 @if (model.loaded) {
                 Loaded
                 } @else if (model.cached) {
@@ -89,92 +137,72 @@
                 Download
                 }
               </button>
-              @if (model.cached || model.loaded) {
-              <button mat-icon-button color="warn" (click)="deleteModel(model)" matTooltip="Delete from cache">
-                <mat-icon>delete</mat-icon>
-              </button>
-              }
+
+              <a mat-button [href]="'https://huggingface.co/' + model.id" target="_blank" rel="noreferrer">View model</a>
             </div>
-          </td>
-        </ng-container>
-
-        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-        <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
-      </table>
-    </div>
-  </ng-template>
-  <div class="playground-section">
-    <h2>Playground</h2>
-    <mat-form-field appearance="outline" class="full-width">
-      <mat-label>Input Text</mat-label>
-      <textarea matInput [ngModel]="inputText()" (ngModelChange)="inputText.set($event)" rows="4"
-        placeholder="Enter text here..."></textarea>
-    </mat-form-field>
-
-    <div class="actions">
-      <mat-form-field appearance="outline" subscriptSizing="dynamic">
-        <mat-label>Speaker</mat-label>
-        <mat-select [ngModel]="selectedSpeaker()" (ngModelChange)="selectedSpeaker.set($event)">
-          @for (speaker of speakers; track speaker.id) {
-          <mat-option [value]="speaker">{{ speaker.name }}</mat-option>
+          </mat-card>
           }
-        </mat-select>
-      </mat-form-field>
+        </div>
+      </section>
+    </aside>
 
-      <button mat-stroked-button (click)="generate()"
-        [disabled]="!isModelLoaded('Xenova/distilgpt2') || isGenerating()">
-        Generate Text
-      </button>
-      <button mat-stroked-button (click)="speak()" [disabled]="isSpeaking()">
-        @if (isSpeaking()) {
-        <mat-progress-spinner mode="indeterminate" diameter="20"></mat-progress-spinner>
-        } @else {
-        <span><mat-icon>volume_up</mat-icon> Speak</span>
+    <section class="chat-surface">
+      <header class="chat-header">
+        <div>
+          <p class="eyebrow">Nostria assistant</p>
+          <h2>How can I help you?</h2>
+        </div>
+      </header>
+
+      @if (chatError()) {
+      <div class="notice error-notice">
+        <mat-icon>error</mat-icon>
+        <span>{{ chatError() }}</span>
+      </div>
+      }
+
+      @if (conversation().length <= 1) {
+      <section class="prompt-suggestions">
+        <button mat-stroked-button type="button" (click)="composerText.set('Summarize the latest Nostria architecture direction.')">Summarize a feature</button>
+        <button mat-stroked-button type="button" (click)="composerText.set('Help me write a better Nostr post about this idea.')">Draft a post</button>
+        <button mat-stroked-button type="button" (click)="composerText.set('Explain this code change in simple terms.')">Explain code</button>
+        <button mat-stroked-button type="button" (click)="composerText.set('Brainstorm improvements for this product flow.')">Brainstorm</button>
+      </section>
+      }
+
+      <div class="conversation-panel">
+        @for (message of conversation(); track $index) {
+        <article class="message-row"
+          [class.message-user]="message.role === 'user'"
+          [class.message-assistant]="message.role === 'assistant'">
+          <div class="message-label">{{ message.role === 'user' ? 'You' : 'AI' }}</div>
+          <div class="message-bubble">{{ message.content }}</div>
+        </article>
         }
-      </button>
-      <button mat-stroked-button (click)="summarize()"
-        [disabled]="!isModelLoaded('Xenova/distilbart-cnn-6-6') || isGenerating()">
-        Summarize
-      </button>
-      <button mat-stroked-button (click)="analyzeSentiment()"
-        [disabled]="!isModelLoaded('Xenova/distilbert-base-uncased-finetuned-sst-2-english') || isGenerating()">
-        Sentiment
-      </button>
 
-      <div class="translation-group">
-        <mat-form-field appearance="outline" class="compact-select" subscriptSizing="dynamic">
-          <mat-label>Translation Model</mat-label>
-          <mat-select [ngModel]="selectedTranslationModel()" (ngModelChange)="selectedTranslationModel.set($event)">
-            @for (model of languageModels(); track model.id) {
-            <mat-option [value]="model.id">{{ model.name }}</mat-option>
-            }
-          </mat-select>
+        @if (isGenerating()) {
+        <article class="message-row message-assistant">
+          <div class="message-label">AI</div>
+          <div class="message-bubble pending-bubble">Generating a local reply...</div>
+        </article>
+        }
+      </div>
+
+      <div class="composer-panel">
+        <mat-form-field appearance="outline" class="composer-field">
+          <mat-label>Message</mat-label>
+          <textarea matInput [ngModel]="composerText()" (ngModelChange)="composerText.set($event)" rows="3"
+            placeholder="Type your message here..." [disabled]="isGenerating()"></textarea>
         </mat-form-field>
-        <button mat-stroked-button (click)="translate()"
-          [disabled]="!isModelLoaded(selectedTranslationModel()) || isGenerating()">
-          Translate
-        </button>
+
+        <div class="composer-actions">
+          <button mat-stroked-button type="button" (click)="clearConversation()">Reset</button>
+          <button mat-flat-button type="button" (click)="sendMessage()" [disabled]="!canSend()">
+            <mat-icon>send</mat-icon>
+            Send
+          </button>
+        </div>
       </div>
-    </div>
-
-    @if (isGenerating()) {
-    <mat-progress-bar mode="indeterminate"></mat-progress-bar>
-    }
-
-    @if (outputText()) {
-    <div class="output-section">
-      <h3>Output</h3>
-      <div class="output-box">
-        {{ outputText() }}
-      </div>
-    </div>
-    }
-
-    @if (audioUrl()) {
-    <div class="output-section">
-      <h3>Audio Output</h3>
-      <audio controls [src]="audioUrl()" class="full-width"></audio>
-    </div>
-    }
-  </div>
+    </section>
+  </section>
 </div>

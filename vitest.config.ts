@@ -7,6 +7,6 @@ export default defineConfig({
     },
   },
   optimizeDeps: {
-    exclude: ['sharp', 'onnxruntime-node', '@xenova/transformers'],
+    exclude: ['sharp', 'onnxruntime-node', '@huggingface/transformers'],
   },
 });
