@@ -490,7 +490,11 @@ export class AiComponent {
 
     return this.workerTaskLabel() || (this.isGenerating() ? 'Processing...' : '');
   });
-  readonly showProcessingStatus = computed(() => this.workerProcessingState().isProcessing || !!this.selectedModel()?.loading || this.isGenerating());
+  readonly hasInlineStreamingIndicator = computed(() => this.conversation().some(message => message.role === 'assistant' && !!message.streaming && !message.content.trim().length && !(message.generatedImages?.length ?? 0)));
+  readonly showProcessingStatus = computed(() => {
+    const busy = this.workerProcessingState().isProcessing || !!this.selectedModel()?.loading || this.isGenerating();
+    return busy && !this.hasInlineStreamingIndicator();
+  });
   readonly canSend = computed(() => {
     const model = this.selectedModel();
     if (!model || this.isGenerating()) {
