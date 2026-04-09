@@ -62,6 +62,11 @@ interface AiQuickPrompt {
   prompt: string;
 }
 
+interface FetchedPromptContext {
+  url: string;
+  markdown: string;
+}
+
 @Component({
   selector: 'app-ai',
   imports: [
@@ -79,6 +84,9 @@ interface AiQuickPrompt {
 })
 export class AiComponent {
   private static readonly AI_UPLOAD_CACHE = 'nostria-ai';
+  private static readonly FETCH_COMMAND_PATTERN = /(^|\s)#fetch\s+(https?:\/\/\S+)/gi;
+  private static readonly FETCH_KEYWORD_PATTERN = /(^|\s)#fetch\b/i;
+  private static readonly FETCH_MARKDOWN_CHAR_LIMIT = 12000;
 
   private readonly aiService = inject(AiService);
   private readonly breakpointObserver = inject(BreakpointObserver);
@@ -247,6 +255,7 @@ export class AiComponent {
     { label: 'Draft an article', prompt: 'Draft an article for me about [this topic] and add hashtags at the bottom.' },
     { label: 'Summarize a feature', prompt: 'Summarize the latest Nostria architecture direction.' },
     { label: 'Draft a post', prompt: 'Help me write a better Nostr post about [this idea].' },
+    { label: 'Fetch a page', prompt: '#fetch https://nostria.app' },
     { label: 'Explain code', prompt: 'Explain this code change in simple terms.' },
     { label: 'Brainstorm', prompt: 'Brainstorm improvements for this product flow.' },
   ];
@@ -753,9 +762,22 @@ export class AiComponent {
     const model = this.selectedChatModel();
     const promptText = this.composerText().trim();
     const attachments = this.attachedFiles();
-    const prompt = promptText || (attachments.length > 0 ? 'Please analyze the attached files.' : '');
 
-    if (!model || !prompt) {
+    if (!model || (!promptText && attachments.length === 0)) {
+      return;
+    }
+
+    let preparedPrompt: { prompt: string; attachmentContext: string };
+
+    try {
+      preparedPrompt = await this.preparePromptSubmission(promptText, attachments);
+    } catch (err) {
+      this.logger.error('AI prompt preparation error:', err);
+      this.chatError.set(err instanceof Error ? err.message : String(err));
+      return;
+    }
+
+    if (!preparedPrompt.prompt) {
       return;
     }
 
@@ -765,9 +787,9 @@ export class AiComponent {
     const userMessage: ConversationMessage = {
       id: this.createMessageId(),
       role: 'user',
-      content: prompt,
+      content: preparedPrompt.prompt,
       attachments,
-      attachmentContext: this.buildAttachmentContext(attachments),
+      attachmentContext: preparedPrompt.attachmentContext,
     };
     const generationConversation = [...this.conversation(), userMessage];
     this.conversation.set([
@@ -923,6 +945,147 @@ export class AiComponent {
     });
 
     this.currentConversationId.set(savedId);
+  }
+
+  private async preparePromptSubmission(promptText: string, attachments: ComposerAttachment[]): Promise<{ prompt: string; attachmentContext: string }> {
+    const fetchedContexts = await this.resolveFetchedPromptContexts(promptText);
+    const prompt = this.resolvePromptText(promptText, attachments, fetchedContexts);
+
+    return {
+      prompt,
+      attachmentContext: this.combinePromptContexts(
+        this.buildAttachmentContext(attachments),
+        this.buildFetchedPromptContext(fetchedContexts),
+      ),
+    };
+  }
+
+  private resolvePromptText(promptText: string, attachments: ComposerAttachment[], fetchedContexts: FetchedPromptContext[]): string {
+    const cleanedPrompt = this.stripFetchCommands(promptText);
+    if (cleanedPrompt) {
+      return cleanedPrompt;
+    }
+
+    if (attachments.length > 0 && fetchedContexts.length > 0) {
+      return 'Use the attached files and fetched page content as context.';
+    }
+
+    if (attachments.length > 0) {
+      return 'Please analyze the attached files.';
+    }
+
+    if (fetchedContexts.length === 1) {
+      return `Use the fetched page content from ${fetchedContexts[0].url} as context.`;
+    }
+
+    if (fetchedContexts.length > 1) {
+      return 'Use the fetched page content as context.';
+    }
+
+    return '';
+  }
+
+  private combinePromptContexts(...contexts: string[]): string {
+    return contexts
+      .map(context => context.trim())
+      .filter(context => context.length > 0)
+      .join('\n\n');
+  }
+
+  private async resolveFetchedPromptContexts(promptText: string): Promise<FetchedPromptContext[]> {
+    const urls = this.extractFetchUrls(promptText);
+    if (urls.length === 0 && AiComponent.FETCH_KEYWORD_PATTERN.test(promptText)) {
+      throw new Error('Invalid #fetch URL. Use #fetch followed by a full http or https URL.');
+    }
+
+    if (urls.length === 0) {
+      return [];
+    }
+
+    return Promise.all(urls.map(url => this.fetchMarkdownContext(url)));
+  }
+
+  private extractFetchUrls(promptText: string): string[] {
+    const matches = Array.from(promptText.matchAll(AiComponent.FETCH_COMMAND_PATTERN));
+    if (matches.length === 0) {
+      return [];
+    }
+
+    const uniqueUrls = new Set<string>();
+    for (const match of matches) {
+      const rawUrl = match[2]?.trim();
+      if (!rawUrl) {
+        continue;
+      }
+
+      uniqueUrls.add(this.normalizeFetchUrl(rawUrl));
+    }
+
+    return Array.from(uniqueUrls);
+  }
+
+  private normalizeFetchUrl(rawUrl: string): string {
+    let parsedUrl: URL;
+
+    try {
+      parsedUrl = new URL(rawUrl);
+    } catch {
+      throw new Error('Invalid #fetch URL. Use #fetch followed by a full http or https URL.');
+    }
+
+    if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
+      throw new Error('The #fetch command only supports http and https URLs.');
+    }
+
+    return parsedUrl.toString();
+  }
+
+  private stripFetchCommands(promptText: string): string {
+    const withoutCommands = promptText.replace(AiComponent.FETCH_COMMAND_PATTERN, '$1');
+
+    return withoutCommands
+      .replace(/[\t ]+\n/g, '\n')
+      .replace(/\n{3,}/g, '\n\n')
+      .replace(/[\t ]{2,}/g, ' ')
+      .trim();
+  }
+
+  private async fetchMarkdownContext(url: string): Promise<FetchedPromptContext> {
+    const apiUrl = `https://metadata.nostria.app/markdown?url=${encodeURIComponent(url)}`;
+    const response = await fetch(apiUrl, {
+      headers: {
+        accept: 'text/markdown, text/plain;q=0.9, */*;q=0.1',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Could not fetch markdown content for ${url}.`);
+    }
+
+    const markdown = (await response.text()).trim();
+    if (!markdown) {
+      throw new Error(`No markdown content was returned for ${url}.`);
+    }
+
+    const truncatedMarkdown = markdown.length > AiComponent.FETCH_MARKDOWN_CHAR_LIMIT
+      ? `${markdown.slice(0, AiComponent.FETCH_MARKDOWN_CHAR_LIMIT).trimEnd()}\n\n[Truncated for AI context]`
+      : markdown;
+
+    return {
+      url,
+      markdown: truncatedMarkdown,
+    };
+  }
+
+  private buildFetchedPromptContext(fetchedContexts: FetchedPromptContext[]): string {
+    if (fetchedContexts.length === 0) {
+      return '';
+    }
+
+    return [
+      'Fetched web content:',
+      ...fetchedContexts.map(({ url, markdown }) => `- Source: ${url}\n\n\`\`\`markdown\n${markdown}\n\`\`\``),
+    ].join('\n\n');
   }
 
   private buildGenerationInput(model: ModelInfo, conversation: ConversationMessage[]): string | AiChatMessage[] {

@@ -1,0 +1,114 @@
+import '@angular/compiler';
+import { signal } from '@angular/core';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { AiComponent } from './ai';
+
+function createComponent(): AiComponent {
+  const component = Object.create(AiComponent.prototype) as AiComponent;
+
+  (component as any).aiService = {
+    generateText: vi.fn().mockResolvedValue([{ generated_text: 'Assistant reply' }]),
+  };
+  (component as any).historyService = {
+    saveConversation: vi.fn().mockReturnValue('ai-history-id'),
+  };
+  (component as any).logger = {
+    error: vi.fn(),
+  };
+  (component as any).workspaceView = signal<'chat' | 'create'>('chat');
+  (component as any).chatError = signal('');
+  (component as any).composerText = signal('');
+  (component as any).attachedFiles = signal([]);
+  (component as any).conversation = signal([]);
+  (component as any).autoScrollPinned = signal(false);
+  (component as any).showHistoryDrawer = signal(true);
+  (component as any).currentConversationId = signal<string | null>(null);
+  (component as any).isGenerating = signal(false);
+  (component as any).nextMessageId = signal(0);
+  (component as any).selectedChatModel = signal({
+    id: 'model-1',
+    name: 'Test Model',
+    task: 'text-generation',
+    description: 'Test',
+    size: 'tiny',
+    loading: false,
+    progress: 0,
+    loaded: true,
+    cached: true,
+    runtime: 'test',
+    chatMode: 'messages',
+    preferredParams: undefined,
+  });
+
+  return component;
+}
+
+describe('AiComponent #fetch prompt support', () => {
+  let component: AiComponent;
+
+  beforeEach(() => {
+    component = createComponent();
+    vi.restoreAllMocks();
+  });
+
+  it('removes #fetch commands from the visible prompt and injects fetched markdown into model context', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      text: () => Promise.resolve('# Page Title\n\nFetched markdown content.'),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    (component as any).composerText.set('Summarize this page #fetch https://sondreb.com');
+
+    await component.sendMessage();
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://metadata.nostria.app/markdown?url=https%3A%2F%2Fsondreb.com%2F',
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          accept: expect.stringContaining('text/markdown'),
+        }),
+      }),
+    );
+
+    const generateInput = (component as any).aiService.generateText.mock.calls[0][0] as Array<{ role: string; content: string }>;
+    expect(generateInput[1]).toEqual(expect.objectContaining({
+      role: 'user',
+      content: expect.stringContaining('Summarize this page'),
+    }));
+    expect(generateInput[1].content).not.toContain('#fetch');
+    expect(generateInput[1].content).toContain('Fetched web content:');
+    expect(generateInput[1].content).toContain('https://sondreb.com/');
+    expect(generateInput[1].content).toContain('Fetched markdown content.');
+
+    const conversation = (component as any).conversation();
+    expect(conversation[0].content).toBe('Summarize this page');
+  });
+
+  it('uses a default prompt when the composer only contains a #fetch command', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      text: () => Promise.resolve('Fetched content'),
+    }));
+
+    (component as any).composerText.set('#fetch https://nostria.app');
+
+    await component.sendMessage();
+
+    const conversation = (component as any).conversation();
+    expect(conversation[0].content).toBe('Use the fetched page content from https://nostria.app/ as context.');
+  });
+
+  it('shows an error and aborts when the #fetch URL is invalid', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+
+    (component as any).composerText.set('#fetch not-a-url');
+
+    await component.sendMessage();
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect((component as any).chatError()).toContain('Invalid #fetch URL');
+    expect((component as any).aiService.generateText).not.toHaveBeenCalled();
+  });
+});
