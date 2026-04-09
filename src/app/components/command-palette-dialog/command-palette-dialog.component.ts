@@ -21,6 +21,7 @@ import { RunesSettingsService } from '../../services/runes-settings.service';
 import { MediaPlayerService } from '../../services/media-player.service';
 import { LocalSettingsService, getEffectiveWotMinRank, isWotFilterEnabled } from '../../services/local-settings.service';
 import { DesktopUpdaterService } from '../../services/desktop-updater.service';
+import { AiChatHistoryService } from '../../services/ai-chat-history.service';
 
 export interface Command {
   id: string;
@@ -58,6 +59,7 @@ export class CommandPaletteDialogComponent implements AfterViewInit, OnDestroy {
   private mediaPlayer = inject(MediaPlayerService);
   private localSettings = inject(LocalSettingsService);
   private desktopUpdater = inject(DesktopUpdaterService);
+  private aiHistory = inject(AiChatHistoryService);
 
   @ViewChild('searchInput') searchInput!: ElementRef<HTMLInputElement>;
   @ViewChildren('listItem', { read: ElementRef }) listItems!: QueryList<ElementRef>;
@@ -518,8 +520,23 @@ export class CommandPaletteDialogComponent implements AfterViewInit, OnDestroy {
       id: 'nav-ai-settings',
       label: 'Open AI Settings',
       icon: 'psychology_alt',
-      action: () => this.router.navigate(['/ai/settings']),
+      action: () => this.layoutService.navigateToRightPanel('ai/settings'),
       keywords: ['ai settings', 'ai config', 'models', 'transformers']
+    },
+    {
+      id: 'nav-ai-latest-history',
+      label: 'Open Latest AI Chat',
+      icon: 'history',
+      action: () => {
+        const latest = this.aiHistory.histories()[0];
+        if (latest) {
+          this.layoutService.navigateToRightPanel(`ai/history/${latest.id}`);
+          return;
+        }
+
+        this.router.navigate(['/ai']);
+      },
+      keywords: ['ai history', 'latest ai chat', 'thread history', 'local ai thread']
     },
 
     // Runes
@@ -816,7 +833,7 @@ export class CommandPaletteDialogComponent implements AfterViewInit, OnDestroy {
       this.snackBar.open('AI transcription is disabled in settings', 'Open Settings', { duration: 5000 })
         .onAction().subscribe(() => {
           this.dialogRef.close();
-          this.router.navigate(['/ai/settings']);
+          this.layoutService.navigateToRightPanel('ai/settings');
         });
       return;
     }

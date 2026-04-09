@@ -11,6 +11,11 @@ export interface AiChatMessage {
   content: string;
 }
 
+export interface AiGenerationProgress {
+  status: 'stream';
+  text: string;
+}
+
 interface WorkerCallback {
   resolve: (value: unknown) => void;
   reject: (reason: unknown) => void;
@@ -175,9 +180,14 @@ export class AiService {
     });
   }
 
-  async generateText(input: string | AiChatMessage[], params?: unknown, model = this.textGenerationModelId) {
+  async generateText(
+    input: string | AiChatMessage[],
+    params?: unknown,
+    model = this.textGenerationModelId,
+    progressCallback?: (data: AiGenerationProgress) => void,
+  ) {
     if (!this.settings.settings().aiEnabled) throw new Error('AI is disabled');
-    return this.postMessage('generate', { input, params, model });
+    return this.postMessage('generate', { input, params, model }, progressCallback as ((data: unknown) => void) | undefined);
   }
 
   async summarizeText(text: string, params?: unknown) {

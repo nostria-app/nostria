@@ -4,6 +4,10 @@
   margin: 0 auto;
 }
 
+:host {
+  display: block;
+}
+
 .page-header {
   display: flex;
   align-items: center;
@@ -61,7 +65,6 @@
   label {
     display: block;
     margin-bottom: 8px;
-    font-weight: 500;
   }
 
   .hint {

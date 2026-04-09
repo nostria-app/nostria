@@ -99,6 +99,11 @@ export class HomeComponent {
     this.layout.openCommandPalette();
   }
 
+  openAiSettingsPanel(event?: Event): void {
+    event?.preventDefault();
+    this.layout.navigateToRightPanel('ai/settings');
+  }
+
   openPublishCustomEvent(): void {
     this.layout.openPublishCustomEvent();
   }

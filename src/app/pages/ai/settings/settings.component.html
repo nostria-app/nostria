@@ -1,4 +1,15 @@
+@if (isInRightPanel) {
+<div class="panel-header">
+  <button mat-icon-button type="button" (click)="goBack()" matTooltip="Back" i18n-matTooltip="@@common.back">
+    <mat-icon>arrow_back</mat-icon>
+  </button>
+  <h2 class="panel-title title-font" i18n="@@ai.settings.title">AI Settings</h2>
+  <span class="panel-header-spacer"></span>
+</div>
+}
+
 <div class="settings-container">
+  @if (!isInRightPanel) {
   <header class="page-header">
     <h1>
       <mat-icon>psychology</mat-icon>
@@ -8,6 +19,7 @@
       <mat-icon>info</mat-icon>
     </button>
   </header>
+  }
 
   <mat-card class="settings-card main-toggle">
     <mat-card-content>

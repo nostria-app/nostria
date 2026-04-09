@@ -1,0 +1,41 @@
+<div class="panel-header">
+  <button mat-icon-button type="button" (click)="goBack()" matTooltip="Back" i18n-matTooltip="@@common.back">
+    <mat-icon>arrow_back</mat-icon>
+  </button>
+  <h2 class="panel-title title-font">Chat History</h2>
+  <span class="panel-header-spacer"></span>
+  @if (history()) {
+  <button mat-icon-button type="button" (click)="deleteCurrentHistory()" matTooltip="Delete chat">
+    <mat-icon>delete</mat-icon>
+  </button>
+  }
+</div>
+
+<div class="history-detail-page">
+  @if (history(); as entry) {
+  <div class="history-meta-card">
+    <p class="history-meta-label">Saved thread</p>
+    <h1>{{ entry.title }}</h1>
+    <div class="history-meta-row">
+      <span>{{ entry.modelName }}</span>
+      <span>{{ entry.updatedAt | date:'medium' }}</span>
+    </div>
+  </div>
+
+  <section class="history-message-list">
+    @for (message of entry.messages; track $index) {
+    <article class="history-message" [class.history-message-user]="message.role === 'user'"
+      [class.history-message-assistant]="message.role === 'assistant'">
+      <div class="history-message-label">{{ message.role === 'user' ? 'You' : 'AI' }}</div>
+      <div class="history-message-bubble">{{ message.content }}</div>
+    </article>
+    }
+  </section>
+  } @else {
+  <div class="history-empty-state">
+    <mat-icon>history</mat-icon>
+    <h3>No saved chat found</h3>
+    <p>The selected AI thread is not available on this device anymore.</p>
+  </div>
+  }
+</div>

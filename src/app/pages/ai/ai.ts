@@ -1,16 +1,16 @@
-import { ChangeDetectionStrategy, Component, PLATFORM_ID, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, PLATFORM_ID, computed, effect, inject, signal, viewChild } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
-import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
-import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { MatSelectModule } from '@angular/material/select';
-import { AiChatMessage, AiModelLoadOptions, AiService } from '../../services/ai.service';
+import { MatMenuModule } from '@angular/material/menu';
+import { AiChatMessage, AiGenerationProgress, AiModelLoadOptions, AiService } from '../../services/ai.service';
+import { AiChatHistoryService } from '../../services/ai-chat-history.service';
+import { LayoutService } from '../../services/layout.service';
 import { LoggerService } from '../../services/logger.service';
+import { PanelNavigationService } from '../../services/panel-navigation.service';
 
 interface ModelInfo {
   id: string;
@@ -30,8 +30,10 @@ interface ModelInfo {
 }
 
 interface ConversationMessage {
+  id: string;
   role: 'user' | 'assistant';
   content: string;
+  streaming?: boolean;
 }
 
 @Component({
@@ -39,14 +41,11 @@ interface ConversationMessage {
   imports: [
     CommonModule,
     FormsModule,
-    RouterLink,
     MatButtonModule,
-    MatCardModule,
     MatFormFieldModule,
     MatIconModule,
     MatInputModule,
-    MatProgressBarModule,
-    MatSelectModule,
+    MatMenuModule,
   ],
   templateUrl: './ai.html',
   styleUrl: './ai.scss',
@@ -54,12 +53,21 @@ interface ConversationMessage {
 })
 export class AiComponent {
   private readonly aiService = inject(AiService);
+  private readonly historyService = inject(AiChatHistoryService);
+  private readonly layout = inject(LayoutService);
   private readonly logger = inject(LoggerService);
+  private readonly panelNav = inject(PanelNavigationService);
   private readonly platformId = inject(PLATFORM_ID);
+  private readonly conversationPanelRef = viewChild<ElementRef<HTMLDivElement>>('conversationPanel');
+  private readonly conversationEndRef = viewChild<ElementRef<HTMLDivElement>>('conversationEnd');
 
   private readonly isBrowser = isPlatformBrowser(this.platformId);
   private readonly systemPrompt = 'You are Nostria\'s local AI assistant. Keep replies concise, practical, and grounded in the user\'s request.';
+  private readonly nextMessageId = signal(0);
   readonly webGpuAvailable = this.isBrowser && typeof navigator !== 'undefined' && 'gpu' in navigator;
+  readonly autoScrollPinned = signal(true);
+  readonly splitPaneMode = computed(() => this.panelNav.hasRightContent() && !this.panelNav.isMobile());
+  readonly currentConversationId = signal<string | null>(null);
 
   readonly models = signal<ModelInfo[]>([
     {
@@ -154,8 +162,10 @@ export class AiComponent {
   readonly chatModels = computed(() => this.models().filter(model => model.task === 'text-generation'));
   readonly selectedChatModelId = signal(this.webGpuAvailable ? 'onnx-community/gemma-4-E2B-it-ONNX' : 'Xenova/distilgpt2');
   readonly selectedChatModel = computed(() => this.chatModels().find(model => model.id === this.selectedChatModelId()) ?? null);
+  readonly histories = this.historyService.histories;
   readonly conversation = signal<ConversationMessage[]>([
     {
+      id: this.createMessageId(),
       role: 'assistant',
       content: 'Choose a local model, load it, and start chatting. Responses stay on your device.',
     },
@@ -175,9 +185,45 @@ export class AiComponent {
 
     return this.composerText().trim().length > 0;
   });
+  readonly selectedModelStatus = computed(() => this.selectedChatModel() ? this.statusLabel(this.selectedChatModel()!) : 'Unavailable');
 
   constructor() {
+    effect(() => {
+      this.conversation();
+      this.isGenerating();
+
+      if (!this.isBrowser || !this.autoScrollPinned()) {
+        return;
+      }
+
+      this.scrollConversationToEnd(this.isGenerating() ? 'auto' : 'smooth');
+    });
+
     void this.initializeModelStatus();
+  }
+
+  openSettingsPanel(): void {
+    this.layout.navigateToRightPanel('ai/settings');
+  }
+
+  createNewChat(): void {
+    this.currentConversationId.set(null);
+    this.clearConversation();
+  }
+
+  openHistory(historyId: string): void {
+    this.layout.navigateToRightPanel(`ai/history/${historyId}`);
+  }
+
+  selectChatModel(modelId: string): void {
+    this.selectedChatModelId.set(modelId);
+  }
+
+  formatHistoryTimestamp(timestamp: number): string {
+    return new Intl.DateTimeFormat(undefined, {
+      month: 'short',
+      day: 'numeric',
+    }).format(timestamp);
   }
 
   statusLabel(model: ModelInfo): string {
@@ -241,10 +287,17 @@ export class AiComponent {
     this.chatError.set('');
     this.conversation.set([
       {
+        id: this.createMessageId(),
         role: 'assistant',
         content: 'Conversation cleared. Ask a new question whenever you are ready.',
       },
     ]);
+  }
+
+  onConversationScroll(event: Event): void {
+    const panel = event.target as HTMLDivElement;
+    const distanceFromBottom = panel.scrollHeight - panel.scrollTop - panel.clientHeight;
+    this.autoScrollPinned.set(distanceFromBottom < 48);
   }
 
   async sendMessage(): Promise<void> {
@@ -256,16 +309,21 @@ export class AiComponent {
     }
 
     this.chatError.set('');
-    this.conversation.update(messages => [...messages, { role: 'user', content: prompt }]);
+    const assistantMessageId = this.createMessageId();
+    const userMessage: ConversationMessage = { id: this.createMessageId(), role: 'user', content: prompt };
+    const generationConversation = [...this.conversation(), userMessage];
+    this.conversation.set([
+      ...generationConversation,
+      { id: assistantMessageId, role: 'assistant', content: '', streaming: true },
+    ]);
     this.composerText.set('');
+    this.autoScrollPinned.set(true);
 
     if (!model.loaded) {
       const loaded = await this.loadModel(model);
       if (!loaded) {
-        this.conversation.update(messages => [...messages, {
-          role: 'assistant',
-          content: 'The selected model could not be loaded in this browser.',
-        }]);
+        this.replaceMessageContent(assistantMessageId, 'The selected model could not be loaded in this browser.', false);
+        this.persistCurrentConversation();
         return;
       }
     }
@@ -273,21 +331,27 @@ export class AiComponent {
     this.isGenerating.set(true);
 
     try {
-      const input = this.buildGenerationInput(model, this.conversation());
-      const result = await this.aiService.generateText(input, model.preferredParams, model.id);
+      const input = this.buildGenerationInput(model, generationConversation);
+      const result = await this.aiService.generateText(
+        input,
+        model.preferredParams,
+        model.id,
+        (progress: AiGenerationProgress) => {
+          if (progress.status === 'stream') {
+            this.appendToMessage(assistantMessageId, progress.text);
+          }
+        },
+      );
       const assistantReply = this.extractAssistantReply(result);
-      this.conversation.update(messages => [...messages, {
-        role: 'assistant',
-        content: assistantReply,
-      }]);
+      const currentReply = this.getMessageContent(assistantMessageId);
+      this.replaceMessageContent(assistantMessageId, currentReply.trim().length > 0 ? currentReply.trimEnd() : assistantReply, false);
+      this.persistCurrentConversation();
     } catch (err) {
       this.logger.error('AI chat error:', err);
       const message = err instanceof Error ? err.message : String(err);
       this.chatError.set(message);
-      this.conversation.update(messages => [...messages, {
-        role: 'assistant',
-        content: `Model error: ${message}`,
-      }]);
+      this.replaceMessageContent(assistantMessageId, `Model error: ${message}`, false);
+      this.persistCurrentConversation();
     } finally {
       this.isGenerating.set(false);
     }
@@ -306,6 +370,75 @@ export class AiComponent {
         this.logger.warn('Model status check failed', err);
       }
     }
+  }
+
+  private createMessageId(): string {
+    this.nextMessageId.update(value => value + 1);
+    return `msg-${this.nextMessageId()}`;
+  }
+
+  private appendToMessage(id: string, text: string): void {
+    this.conversation.update(messages => messages.map(message => {
+      if (message.id !== id) {
+        return message;
+      }
+
+      return {
+        ...message,
+        content: `${message.content}${text}`,
+        streaming: true,
+      };
+    }));
+  }
+
+  private replaceMessageContent(id: string, content: string, streaming: boolean): void {
+    this.conversation.update(messages => messages.map(message => {
+      if (message.id !== id) {
+        return message;
+      }
+
+      return {
+        ...message,
+        content,
+        streaming,
+      };
+    }));
+  }
+
+  private getMessageContent(id: string): string {
+    return this.conversation().find(message => message.id === id)?.content ?? '';
+  }
+
+  private scrollConversationToEnd(behavior: ScrollBehavior): void {
+    requestAnimationFrame(() => {
+      const anchor = this.conversationEndRef()?.nativeElement;
+      if (anchor) {
+        anchor.scrollIntoView({ behavior, block: 'end' });
+        return;
+      }
+
+      const panel = this.conversationPanelRef()?.nativeElement;
+      panel?.scrollTo({ top: panel.scrollHeight, behavior });
+    });
+  }
+
+  private persistCurrentConversation(): void {
+    const model = this.selectedChatModel();
+    if (!model) {
+      return;
+    }
+
+    const savedId = this.historyService.saveConversation({
+      id: this.currentConversationId(),
+      modelId: model.id,
+      modelName: model.name,
+      messages: this.conversation().map(message => ({
+        role: message.role,
+        content: message.content,
+      })),
+    });
+
+    this.currentConversationId.set(savedId);
   }
 
   private buildGenerationInput(model: ModelInfo, conversation: ConversationMessage[]): string | AiChatMessage[] {

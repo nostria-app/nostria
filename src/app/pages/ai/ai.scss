@@ -2,16 +2,22 @@
   width: min(1400px, 100%);
   margin: 0 auto;
   padding: 16px 16px 32px;
+  min-height: 0;
 }
 
 .ai-shell {
   display: grid;
-  grid-template-columns: 340px minmax(0, 1fr);
+  grid-template-columns: 250px minmax(0, 1fr);
   gap: 20px;
-  min-height: calc(100vh - 132px);
+  min-height: calc(100vh - 152px);
 }
 
-.model-dock,
+.ai-shell.ai-shell-split {
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 16px;
+}
+
+.history-sidebar,
 .chat-surface {
   position: relative;
   overflow: hidden;
@@ -19,28 +25,33 @@
   box-shadow: var(--mat-sys-level1);
 }
 
-.model-dock {
+.history-sidebar {
   display: flex;
   flex-direction: column;
-  gap: 18px;
-  padding: 18px;
-  border-radius: 26px;
+  gap: 14px;
+  padding: 16px;
+  border-radius: 24px;
   background:
-    linear-gradient(180deg, color-mix(in srgb, var(--mat-sys-secondary-container) 18%, var(--mat-sys-surface)) 0%, var(--mat-sys-surface) 100%);
+    linear-gradient(180deg, color-mix(in srgb, var(--mat-sys-secondary-container) 14%, var(--mat-sys-surface)) 0%, var(--mat-sys-surface) 100%);
+}
+
+.history-sidebar.history-sidebar-split {
+  padding: 14px;
 }
 
 .chat-surface {
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-  padding: 28px 28px 22px;
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  gap: 16px;
+  padding: 24px;
   border-radius: 30px;
   background:
     radial-gradient(circle at top center, color-mix(in srgb, var(--mat-sys-primary-container) 18%, transparent) 0%, transparent 34%),
     linear-gradient(180deg, color-mix(in srgb, var(--mat-sys-surface-container-low) 60%, var(--mat-sys-surface)) 0%, var(--mat-sys-surface) 100%);
+  min-height: 0;
 }
 
-.dock-brand,
+.history-sidebar-head,
 .hero-actions,
 .model-meta-row,
 .model-card-meta,
@@ -51,19 +62,18 @@
 .model-card-head,
 .selected-model-actions,
 .selected-model-summary,
-.dock-actions,
 .chat-header {
   display: flex;
   align-items: center;
   gap: 12px;
 }
 
-.dock-brand {
+.history-sidebar-head {
   justify-content: space-between;
   align-items: flex-start;
 }
 
-.dock-brand h1,
+.history-sidebar-head h1,
 .chat-header h2,
 .section-heading h2,
 .model-summary h2,
@@ -71,7 +81,7 @@
   margin: 0;
 }
 
-.dock-copy,
+.history-sidebar-copy,
 .section-text,
 .model-summary p,
 .model-card p,
@@ -91,46 +101,73 @@
   font-size: 0.78rem;
 }
 
-.model-field,
-.composer-field {
-  flex: 1 1 auto;
+
+.history-sidebar-copy {
+  font-size: 0.92rem;
 }
 
-.dock-model-field {
-  margin-top: 2px;
+.new-chat-button {
+  min-height: 42px;
+  justify-content: flex-start;
 }
 
-.selected-model-panel,
-.model-summary {
+.history-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 16px 18px;
-  border-radius: 20px;
-  background: color-mix(in srgb, var(--mat-sys-surface-container-low) 84%, transparent);
+  gap: 10px;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.history-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-start;
+  padding: 12px 14px;
+  border-radius: 16px;
   border: 1px solid var(--mat-sys-outline-variant);
+  background: color-mix(in srgb, var(--mat-sys-surface-container-low) 80%, transparent);
+  color: var(--mat-sys-on-surface);
+  text-align: left;
 }
 
-.selected-model-summary {
-  align-items: flex-start;
+.history-item-current {
+  border-color: var(--mat-sys-primary);
+  background: color-mix(in srgb, var(--mat-sys-primary-container) 38%, var(--mat-sys-surface));
+}
+
+.history-item-title {
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.history-item-meta {
+  display: flex;
   justify-content: space-between;
-  gap: 16px;
+  width: 100%;
+  gap: 8px;
+  font-size: 0.82rem;
+  color: var(--mat-sys-on-surface-variant);
 }
 
-.model-summary-copy {
+.history-empty-state {
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 8px;
+  padding: 24px 12px;
+  border: 1px dashed var(--mat-sys-outline-variant);
+  border-radius: 16px;
+  color: var(--mat-sys-on-surface-variant);
 }
 
-.selected-model-actions {
-  align-items: flex-start;
-  justify-content: flex-end;
-  flex: 0 0 auto;
-}
-
-.model-title-row {
-  justify-content: space-between;
+.history-empty-state mat-icon {
+  width: 32px;
+  height: 32px;
+  font-size: 32px;
 }
 
 .model-meta-row,
@@ -202,13 +239,61 @@
 
 .chat-header {
   justify-content: space-between;
-  align-items: flex-start;
-  padding: 6px 6px 0;
+  align-items: center;
+  gap: 14px;
+  padding: 4px 2px 0;
 }
 
 .chat-header h2 {
   font-size: clamp(2rem, 2.5vw, 3rem);
   line-height: 1.05;
+}
+
+.chat-header-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.chat-header-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.model-selector-button {
+  min-height: 42px;
+  border-radius: 999px;
+}
+
+.header-load-button {
+  min-height: 42px;
+  border-radius: 999px;
+}
+
+.model-menu-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
+}
+
+.model-menu-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.model-menu-title {
+  color: var(--mat-sys-on-surface);
+}
+
+.model-menu-meta {
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 0.82rem;
 }
 
 .prompt-suggestions {
@@ -227,10 +312,10 @@
   display: flex;
   flex-direction: column;
   gap: 14px;
-  min-height: 420px;
-  flex: 1 1 auto;
+  min-height: 0;
   overflow-y: auto;
   padding: 18px 8px 8px 0;
+  scroll-padding-bottom: 96px;
 }
 
 .message-row {
@@ -274,6 +359,16 @@
   font-style: italic;
 }
 
+.typing-indicator {
+  padding: 0 4px 4px;
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 0.9rem;
+}
+
+.conversation-anchor {
+  block-size: 1px;
+}
+
 .composer-panel {
   display: flex;
   flex-direction: column;
@@ -285,58 +380,17 @@
   box-shadow: var(--mat-sys-level1);
 }
 
+.composer-field {
+  width: 100%;
+}
+
 .composer-panel textarea {
   field-sizing: content;
-  min-height: 110px;
+  min-height: 72px;
+  max-height: 220px;
 }
 
 .composer-actions {
-  justify-content: space-between;
-  flex-wrap: wrap;
-}
-
-.library-section {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  min-height: 0;
-}
-
-.library-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 12px;
-  overflow-y: auto;
-  padding-right: 2px;
-}
-
-.model-card {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 14px;
-  border-radius: 18px;
-  background: color-mix(in srgb, var(--mat-sys-surface-container-low) 88%, transparent);
-  box-shadow: none;
-  border: 1px solid var(--mat-sys-outline-variant);
-}
-
-.model-card-head {
-  align-items: flex-start;
-  justify-content: space-between;
-}
-
-.model-card-head > div {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.model-note {
-  font-size: 0.9rem;
-}
-
-.model-card-actions {
   justify-content: space-between;
   flex-wrap: wrap;
 }
@@ -356,19 +410,16 @@
 @media (max-width: 1120px) {
   .ai-shell {
     grid-template-columns: 1fr;
+    min-height: 0;
   }
 
-  .model-dock {
+  .history-sidebar {
     order: 2;
   }
 
   .chat-surface {
     order: 1;
     min-height: 70vh;
-  }
-
-  .library-grid {
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   }
 }
 
@@ -377,27 +428,20 @@
     padding: 16px 14px 32px;
   }
 
-  .model-dock,
+  .history-sidebar,
   .chat-surface,
   .composer-panel,
-  .selected-model-panel,
-  .model-card {
+  .history-item {
     padding: 18px;
     border-radius: 20px;
   }
 
-  .dock-brand,
-  .selected-model-summary,
-  .model-title-row,
-  .model-card-head,
+  .history-sidebar-head,
   .composer-actions,
-  .chat-header {
+  .chat-header,
+  .chat-header-controls {
     flex-direction: column;
     align-items: stretch;
-  }
-
-  .model-card-actions {
-    justify-content: flex-start;
   }
 
   .chat-surface {
@@ -410,5 +454,21 @@
 
   .message-row {
     max-width: 100%;
+  }
+}
+
+@media (max-width: 1380px) {
+  .ai-shell {
+    grid-template-columns: 300px minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 1240px) {
+  .ai-shell {
+    grid-template-columns: 280px minmax(0, 1fr);
+  }
+
+  .model-dock {
+    padding: 16px;
   }
 }

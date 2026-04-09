@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { pipeline, env, Tensor, AutoTokenizer, SpeechT5ForTextToSpeech, SpeechT5HifiGan } from '@huggingface/transformers';
+import { pipeline, env, Tensor, AutoTokenizer, SpeechT5ForTextToSpeech, SpeechT5HifiGan, TextStreamer } from '@huggingface/transformers';
 
 // Configure environment to use the Cache API for storing models
 env.allowLocalModels = false;
@@ -108,12 +108,31 @@ async function handleLoad(payload: { task: string, model: string, options?: Reco
   });
 }
 
-async function handleGenerate(payload: { input: string | Array<{ role: string, content: string }>, model: string, params?: any }, id: string) {
+async function handleGenerate(payload: { input: string | { role: string, content: string }[], model: string, params?: any }, id: string) {
   const textGenerator = textGenerators.get(payload.model);
   if (!textGenerator) {
     throw new Error(`Text generation model ${payload.model} not loaded`);
   }
-  const result = await textGenerator(payload.input, payload.params);
+
+  const streamer = new TextStreamer(textGenerator.tokenizer, {
+    skip_prompt: true,
+    callback_function: (text: string) => {
+      if (!text) {
+        return;
+      }
+
+      postMessage({
+        type: 'progress',
+        id,
+        payload: {
+          status: 'stream',
+          text,
+        }
+      });
+    },
+  });
+
+  const result = await textGenerator(payload.input, { ...payload.params, streamer });
   postMessage({
     type: 'result',
     id,

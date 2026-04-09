@@ -183,7 +183,8 @@
         </div>
       </a>
       }
-      <a routerLink="/ai/settings" class="bento-tile tile-ai-settings tile-section-small" mat-ripple>
+      <a href="/ai/settings" class="bento-tile tile-ai-settings tile-section-small" mat-ripple
+        (click)="openAiSettingsPanel($event)">
         <mat-icon class="tile-icon">settings_suggest</mat-icon>
         <span i18n="@@home.ai.settings">AI Settings</span>
       </a>

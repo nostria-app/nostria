@@ -1,156 +1,95 @@
 <div class="ai-page">
-  <section class="ai-shell">
-    <aside class="model-dock">
-      <div class="dock-brand">
+  <section class="ai-shell" [class.ai-shell-split]="splitPaneMode()">
+    <aside class="history-sidebar" [class.history-sidebar-split]="splitPaneMode()">
+      <div class="history-sidebar-head">
         <div>
           <p class="eyebrow">Local inference</p>
           <h1>AI</h1>
         </div>
-        <a mat-icon-button routerLink="/ai/settings" aria-label="AI settings">
+        <button mat-icon-button type="button" (click)="openSettingsPanel()" aria-label="AI settings">
           <mat-icon>tune</mat-icon>
-        </a>
-      </div>
-
-      <p class="dock-copy">
-        Chat with the local models already wired into Nostria. Gemma 4 uses WebGPU when the device supports it.
-      </p>
-
-      <mat-form-field appearance="outline" class="model-field dock-model-field">
-        <mat-label>Chat model</mat-label>
-        <mat-select [ngModel]="selectedChatModelId()" (ngModelChange)="selectedChatModelId.set($event)">
-          @for (model of chatModels(); track model.id) {
-          <mat-option [value]="model.id">{{ model.name }}</mat-option>
-          }
-        </mat-select>
-      </mat-form-field>
-
-      @if (selectedChatModel(); as model) {
-      <div class="selected-model-panel">
-        <div class="selected-model-summary">
-          <div class="model-summary-copy">
-            <div class="model-title-row">
-              <h2>{{ model.name }}</h2>
-              <span class="status-chip"
-                [class.status-loaded]="model.loaded"
-                [class.status-cached]="!model.loaded && model.cached"
-                [class.status-idle]="!model.loaded && !model.cached && !model.loading"
-                [class.status-loading]="model.loading">
-                {{ statusLabel(model) }}
-              </span>
-            </div>
-            <p>{{ model.description }}</p>
-            <div class="model-meta-row">
-              <span>{{ model.size }}</span>
-              <span>{{ model.runtime }}</span>
-              <a [href]="'https://huggingface.co/' + model.id" target="_blank" rel="noreferrer">View model</a>
-            </div>
-          </div>
-        </div>
-
-        @if (model.loading) {
-        <div class="progress-row">
-          <mat-progress-bar mode="determinate" [value]="model.progress"></mat-progress-bar>
-          <span>{{ model.progress | number:'1.0-0' }}%</span>
-        </div>
-        }
-
-        @if (!model.loaded && !model.chatDisabledReason) {
-        <div class="selected-model-actions">
-          <button mat-flat-button type="button" (click)="loadSelectedModel()" [disabled]="model.loading">
-            <mat-icon>download</mat-icon>
-            @if (model.loading) {
-            Loading
-            } @else if (model.cached) {
-            Load Model
-            } @else {
-            Download Model
-            }
-          </button>
-        </div>
-        }
-      </div>
-      }
-
-      @if (selectedChatModel()?.chatDisabledReason) {
-      <div class="notice warning-notice dock-notice">
-        <mat-icon>warning</mat-icon>
-        <span>{{ selectedChatModel()?.chatDisabledReason }}</span>
-      </div>
-      }
-
-      <div class="dock-actions">
-        <button mat-stroked-button type="button" (click)="clearConversation()">
-          <mat-icon>refresh</mat-icon>
-          Clear Chat
         </button>
       </div>
 
-      <section class="library-section">
-        <div class="section-heading dock-heading">
-          <div>
-            <p class="eyebrow">Model library</p>
-            <h2>Available models</h2>
+      <button mat-flat-button type="button" class="new-chat-button" (click)="createNewChat()">
+        <mat-icon>add</mat-icon>
+        New Chat
+      </button>
+
+      <div class="history-sidebar-copy">Recent local threads on this device</div>
+
+      <div class="history-list">
+        @if (histories().length === 0) {
+        <div class="history-empty-state">
+          <mat-icon>history</mat-icon>
+          <span>No saved chats yet</span>
+        </div>
+        } @else {
+        @for (entry of histories(); track entry.id) {
+        <button type="button" class="history-item" (click)="openHistory(entry.id)"
+          [class.history-item-current]="entry.id === currentConversationId()">
+          <div class="history-item-title">{{ entry.title }}</div>
+          <div class="history-item-meta">
+            <span>{{ entry.modelName }}</span>
+            <span>{{ formatHistoryTimestamp(entry.updatedAt) }}</span>
           </div>
-        </div>
-
-        <div class="library-grid">
-          @for (model of models(); track model.id) {
-          <mat-card class="model-card">
-            <div class="model-card-head">
-              <div>
-                <h3>{{ model.name }}</h3>
-                <p>{{ model.description }}</p>
-              </div>
-              <span class="status-chip"
-                [class.status-loaded]="model.loaded"
-                [class.status-cached]="!model.loaded && model.cached"
-                [class.status-idle]="!model.loaded && !model.cached && !model.loading"
-                [class.status-loading]="model.loading">
-                {{ statusLabel(model) }}
-              </span>
-            </div>
-
-            <div class="model-card-meta">
-              <span>{{ model.size }}</span>
-              <span>{{ model.runtime }}</span>
-            </div>
-
-            @if (model.loading) {
-            <div class="progress-row compact-progress">
-              <mat-progress-bar mode="determinate" [value]="model.progress"></mat-progress-bar>
-              <span>{{ model.progress | number:'1.0-0' }}%</span>
-            </div>
-            }
-
-            @if (model.chatDisabledReason) {
-            <p class="model-note">{{ model.chatDisabledReason }}</p>
-            }
-
-            <div class="model-card-actions">
-              <button mat-stroked-button type="button" (click)="loadModel(model)"
-                [disabled]="model.loading || model.loaded || !!model.chatDisabledReason">
-                @if (model.loaded) {
-                Loaded
-                } @else if (model.cached) {
-                Load
-                } @else {
-                Download
-                }
-              </button>
-
-              <a mat-button [href]="'https://huggingface.co/' + model.id" target="_blank" rel="noreferrer">View model</a>
-            </div>
-          </mat-card>
-          }
-        </div>
-      </section>
+        </button>
+        }
+        }
+      </div>
     </aside>
 
     <section class="chat-surface">
       <header class="chat-header">
-        <div>
+        <div class="chat-header-copy">
           <p class="eyebrow">Nostria assistant</p>
           <h2>How can I help you?</h2>
+        </div>
+        <div class="chat-header-controls">
+          @if (selectedChatModel(); as model) {
+          <button mat-stroked-button type="button" class="model-selector-button" [matMenuTriggerFor]="modelMenu">
+            <mat-icon>model_training</mat-icon>
+            <span>{{ model.name }}</span>
+            <span class="status-chip" [class.status-loaded]="model.loaded"
+              [class.status-cached]="!model.loaded && model.cached"
+              [class.status-idle]="!model.loaded && !model.cached && !model.loading"
+              [class.status-loading]="model.loading">
+              {{ selectedModelStatus() }}
+            </span>
+            <mat-icon>expand_more</mat-icon>
+          </button>
+
+          <mat-menu #modelMenu="matMenu" class="model-selector-menu">
+            @for (chatModel of chatModels(); track chatModel.id) {
+            <button mat-menu-item type="button" (click)="selectChatModel(chatModel.id)">
+              <div class="model-menu-item">
+                <div class="model-menu-copy">
+                  <span class="model-menu-title">{{ chatModel.name }}</span>
+                  <span class="model-menu-meta">{{ chatModel.runtime }}</span>
+                </div>
+                <span class="status-chip" [class.status-loaded]="chatModel.loaded"
+                  [class.status-cached]="!chatModel.loaded && chatModel.cached"
+                  [class.status-idle]="!chatModel.loaded && !chatModel.cached && !chatModel.loading"
+                  [class.status-loading]="chatModel.loading">
+                  {{ statusLabel(chatModel) }}
+                </span>
+              </div>
+            </button>
+            }
+          </mat-menu>
+          }
+
+          @if (selectedChatModel() && !selectedChatModel()!.loaded && !selectedChatModel()!.chatDisabledReason) {
+          <button mat-flat-button type="button" class="header-load-button" (click)="loadSelectedModel()"
+            [disabled]="selectedChatModel()!.loading">
+            <mat-icon>download</mat-icon>
+            @if (selectedChatModel()!.cached) {
+            Load
+            } @else {
+            Download
+            }
+          </button>
+          }
         </div>
       </header>
 
@@ -161,48 +100,57 @@
       </div>
       }
 
-      @if (conversation().length <= 1) {
-      <section class="prompt-suggestions">
-        <button mat-stroked-button type="button" (click)="composerText.set('Summarize the latest Nostria architecture direction.')">Summarize a feature</button>
-        <button mat-stroked-button type="button" (click)="composerText.set('Help me write a better Nostr post about this idea.')">Draft a post</button>
-        <button mat-stroked-button type="button" (click)="composerText.set('Explain this code change in simple terms.')">Explain code</button>
-        <button mat-stroked-button type="button" (click)="composerText.set('Brainstorm improvements for this product flow.')">Brainstorm</button>
-      </section>
+      @if (selectedChatModel()?.chatDisabledReason) {
+      <div class="notice warning-notice">
+        <mat-icon>warning</mat-icon>
+        <span>{{ selectedChatModel()?.chatDisabledReason }}</span>
+      </div>
       }
 
-      <div class="conversation-panel">
-        @for (message of conversation(); track $index) {
-        <article class="message-row"
-          [class.message-user]="message.role === 'user'"
-          [class.message-assistant]="message.role === 'assistant'">
-          <div class="message-label">{{ message.role === 'user' ? 'You' : 'AI' }}</div>
-          <div class="message-bubble">{{ message.content }}</div>
-        </article>
-        }
-
-        @if (isGenerating()) {
-        <article class="message-row message-assistant">
-          <div class="message-label">AI</div>
-          <div class="message-bubble pending-bubble">Generating a local reply...</div>
-        </article>
-        }
-      </div>
-
-      <div class="composer-panel">
-        <mat-form-field appearance="outline" class="composer-field">
-          <mat-label>Message</mat-label>
-          <textarea matInput [ngModel]="composerText()" (ngModelChange)="composerText.set($event)" rows="3"
-            placeholder="Type your message here..." [disabled]="isGenerating()"></textarea>
-        </mat-form-field>
-
-        <div class="composer-actions">
-          <button mat-stroked-button type="button" (click)="clearConversation()">Reset</button>
-          <button mat-flat-button type="button" (click)="sendMessage()" [disabled]="!canSend()">
-            <mat-icon>send</mat-icon>
-            Send
-          </button>
-        </div>
-      </div>
+      @if (conversation().length <= 1) { <section class="prompt-suggestions">
+        <button mat-stroked-button type="button"
+          (click)="composerText.set('Summarize the latest Nostria architecture direction.')">Summarize a
+          feature</button>
+        <button mat-stroked-button type="button"
+          (click)="composerText.set('Help me write a better Nostr post about this idea.')">Draft a post</button>
+        <button mat-stroked-button type="button"
+          (click)="composerText.set('Explain this code change in simple terms.')">Explain code</button>
+        <button mat-stroked-button type="button"
+          (click)="composerText.set('Brainstorm improvements for this product flow.')">Brainstorm</button>
     </section>
+    }
+
+    <div class="conversation-panel" #conversationPanel (scroll)="onConversationScroll($event)">
+      @for (message of conversation(); track $index) {
+      <article class="message-row" [class.message-user]="message.role === 'user'"
+        [class.message-assistant]="message.role === 'assistant'">
+        <div class="message-label">{{ message.role === 'user' ? 'You' : 'AI' }}</div>
+        <div class="message-bubble" [class.pending-bubble]="message.streaming">{{ message.content }}</div>
+      </article>
+      }
+
+      @if (isGenerating()) {
+      <div class="typing-indicator" aria-live="polite">Generating a local reply...</div>
+      }
+
+      <div class="conversation-anchor" #conversationEnd aria-hidden="true"></div>
+    </div>
+
+    <div class="composer-panel">
+      <mat-form-field appearance="outline" class="composer-field">
+        <mat-label>Message</mat-label>
+        <textarea matInput [ngModel]="composerText()" (ngModelChange)="composerText.set($event)" rows="3"
+          placeholder="Type your message here..." [disabled]="isGenerating()"></textarea>
+      </mat-form-field>
+
+      <div class="composer-actions">
+        <button mat-stroked-button type="button" (click)="createNewChat()">New Chat</button>
+        <button mat-flat-button type="button" (click)="sendMessage()" [disabled]="!canSend()">
+          <mat-icon>send</mat-icon>
+          Send
+        </button>
+      </div>
+    </div>
+  </section>
   </section>
 </div>

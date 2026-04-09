@@ -238,6 +238,7 @@ export class PanelNavigationService {
     'discover/content': { type: 'detail', title: 'Discover Content' },
     'premium/upgrade': { type: 'detail', title: 'Upgrade' },
     'ai/settings': { type: 'detail', title: 'AI Settings' },
+    'ai/history': { type: 'detail', title: 'AI Chat History' },
     'collections/interests': { type: 'list', title: 'Interests' },
     'collections/emojis': { type: 'list', title: 'Emojis' },
     'collections/bookmarks': { type: 'list', title: 'Bookmarks' },

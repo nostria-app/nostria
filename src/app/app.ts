@@ -2009,7 +2009,7 @@ export class App implements OnInit, OnDestroy {
     if (!this.settings.settings().aiEnabled || !this.settings.settings().aiTranscriptionEnabled) {
       this.snackBar.open('AI transcription is disabled in settings', 'Open Settings', { duration: 5000 })
         .onAction().subscribe(() => {
-          this.router.navigate(['/ai/settings']);
+          this.layout.navigateToRightPanel('ai/settings');
         });
       return;
     }

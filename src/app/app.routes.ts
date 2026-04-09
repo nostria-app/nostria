@@ -690,6 +690,12 @@ export const routes: Routes = [
       import('./pages/ai/settings/settings.component').then(m => m.AiSettingsComponent),
     title: 'AI Settings',
   },
+  {
+    path: 'ai/history/:id',
+    loadComponent: () =>
+      import('./pages/ai/history-detail/history-detail.component').then(m => m.AiHistoryDetailComponent),
+    title: 'AI Chat History',
+  },
 
   {
     path: 'collections/media',
@@ -789,6 +795,20 @@ export const routes: Routes = [
   },
 
   // Right panel routes (named outlet)
+  {
+    path: 'ai/settings',
+    outlet: 'right',
+    loadComponent: () =>
+      import('./pages/ai/settings/settings.component').then(m => m.AiSettingsComponent),
+    title: 'AI Settings',
+  },
+  {
+    path: 'ai/history/:id',
+    outlet: 'right',
+    loadComponent: () =>
+      import('./pages/ai/history-detail/history-detail.component').then(m => m.AiHistoryDetailComponent),
+    title: 'AI Chat History',
+  },
   {
     path: 'e/:id',
     outlet: 'right',
