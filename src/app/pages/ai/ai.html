@@ -146,6 +146,10 @@
               <mat-icon>{{ message.role === 'assistant' ? 'edit_note' : 'edit' }}</mat-icon>
               <span>{{ message.role === 'assistant' ? 'Use in composer' : 'Edit prompt' }}</span>
             </button>
+            <button type="button" class="message-action-button" (click)="deleteMessage(message)">
+              <mat-icon>delete</mat-icon>
+              <span>Delete</span>
+            </button>
             @if (message.role === 'assistant' && message.id === conversation().at(-1)?.id && canRetryLastReply()) {
             <button type="button" class="message-action-button" (click)="retryLastReply()">
               <mat-icon>refresh</mat-icon>

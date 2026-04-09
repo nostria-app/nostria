@@ -727,6 +727,35 @@ export class AiComponent {
     this.snackBar.open(message.role === 'assistant' ? 'Reply moved into the composer.' : 'Prompt ready to edit.', 'Dismiss', { duration: 2400 });
   }
 
+  async deleteMessage(message: ConversationMessage): Promise<void> {
+    const nextConversation = this.conversation().filter(entry => entry.id !== message.id);
+
+    await this.removeGeneratedImagesFromCache(message.generatedImages);
+
+    if (this.activeShareMessage()?.id === message.id) {
+      this.activeShareMessage.set(null);
+    }
+
+    const activeGeneratedImage = this.activeGeneratedImage();
+    if (activeGeneratedImage && message.generatedImages?.some(image => image.id === activeGeneratedImage.id)) {
+      this.activeGeneratedImage.set(null);
+    }
+
+    if (this.hasPersistableMessages(nextConversation)) {
+      this.conversation.set(nextConversation);
+      this.persistCurrentConversation();
+    } else {
+      const currentConversationId = this.currentConversationId();
+      if (currentConversationId) {
+        this.historyService.deleteHistory(currentConversationId);
+      }
+      this.currentConversationId.set(null);
+      this.clearConversation();
+    }
+
+    this.snackBar.open(message.role === 'assistant' ? 'Reply deleted.' : 'Prompt deleted.', 'Dismiss', { duration: 2400 });
+  }
+
   async retryLastReply(): Promise<void> {
     const model = this.selectedModel();
     const currentConversation = this.conversation();
@@ -1139,6 +1168,16 @@ export class AiComponent {
     this.currentConversationId.set(savedId);
   }
 
+  private hasPersistableMessages(messages: ConversationMessage[]): boolean {
+    return messages.some(message => {
+      if (message.content.trim().length > 0) {
+        return true;
+      }
+
+      return (message.generatedImages?.length ?? 0) > 0;
+    });
+  }
+
   private async generateImageMessage(model: ModelInfo, promptText: string, attachments: ComposerAttachment[]): Promise<void> {
     if (attachments.length > 0) {
       this.chatError.set('Image generation does not support file attachments yet.');
@@ -1230,6 +1269,25 @@ export class AiComponent {
       cacheKey,
       mimeType: blob.type || image.mimeType || 'image/png',
     };
+  }
+
+  private async removeGeneratedImagesFromCache(images?: AiGeneratedImage[]): Promise<void> {
+    if (!this.isBrowser || typeof caches === 'undefined' || !images?.length) {
+      return;
+    }
+
+    try {
+      const cache = await caches.open(AiComponent.AI_UPLOAD_CACHE);
+      await Promise.all(images.map(async image => {
+        if (!image.cacheKey) {
+          return;
+        }
+
+        await cache.delete(image.cacheKey);
+      }));
+    } catch (error) {
+      this.logger.warn('Failed to delete generated image cache entries', error);
+    }
   }
 
   private async restoreGeneratedImages(images: AiHistoryGeneratedImage[]): Promise<AiGeneratedImage[]> {
