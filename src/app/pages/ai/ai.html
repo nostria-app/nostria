@@ -118,7 +118,8 @@
         @if (conversation().length <= 1) { <section class="prompt-suggestions">
           @for (prompt of activeQuickPrompts(); track prompt.label) {
           <button mat-stroked-button type="button"
-            (click)="isImageMode() ? applyImagePrompt(prompt.prompt) : applyChatPrompt(prompt.prompt)">{{ prompt.label }}</button>
+            (click)="isImageMode() ? applyImagePrompt(prompt.prompt) : applyChatPrompt(prompt.prompt)">{{ prompt.label
+            }}</button>
           }
     </section>
     }
@@ -161,7 +162,8 @@
           <div class="generated-image-grid">
             @for (image of message.generatedImages!; track image.id) {
             <article class="generated-image-card">
-              <img [src]="image.src" alt="Generated image" [attr.title]="image.prompt" class="generated-image-preview" />
+              <img [src]="image.src" alt="Generated image" [attr.title]="image.prompt"
+                class="generated-image-preview" />
               <div class="generated-image-copy">
                 <div class="generated-image-meta">
                   <span>{{ image.providerLabel }}</span>
@@ -169,10 +171,12 @@
                 </div>
                 <p>{{ image.revisedPrompt || image.prompt }}</p>
                 <div class="generated-image-actions">
-                  <button mat-button type="button" (click)="applyImagePrompt(image.revisedPrompt || image.prompt)">Remix</button>
+                  <button mat-button type="button"
+                    (click)="applyImagePrompt(image.revisedPrompt || image.prompt)">Remix</button>
                   <button mat-button type="button" (click)="useImagePromptInChat(image)">Use in chat</button>
                   <button mat-button type="button" (click)="downloadImage(image)">Download</button>
-                  <button mat-button type="button" (click)="setActiveGeneratedImage(image)" [matMenuTriggerFor]="generatedImageMenu">Share</button>
+                  <button mat-button type="button" (click)="setActiveGeneratedImage(image)"
+                    [matMenuTriggerFor]="generatedImageMenu">Share</button>
                   <a [href]="image.src" target="_blank" rel="noopener noreferrer">Open image</a>
                 </div>
               </div>
@@ -204,7 +208,8 @@
       }
 
       @if (isGenerating()) {
-      <div class="typing-indicator" aria-live="polite">{{ isImageMode() ? 'Generating image...' : 'Generating reply...' }}</div>
+      <div class="typing-indicator" aria-live="polite">{{ isImageMode() ? 'Generating image...' : 'Generating reply...'
+        }}</div>
       }
 
       <div class="conversation-anchor" #conversationEnd aria-hidden="true"></div>
@@ -249,8 +254,7 @@
           (ngModelChange)="composerText.set($event)" (keydown)="onComposerKeydown($event)" rows="1"
           placeholder="{{ isImageMode() ? 'Describe the image you want to create' : 'Ask anything or use #fetch https://example.com' }}"
           aria-label="{{ isImageMode() ? 'Image prompt' : 'Chat prompt' }}"
-          title="{{ isImageMode() ? 'Image prompt' : 'Chat prompt' }}"
-          [disabled]="isGenerating()"></textarea>
+          title="{{ isImageMode() ? 'Image prompt' : 'Chat prompt' }}" [disabled]="isGenerating()"></textarea>
 
         <button mat-icon-button type="button" class="composer-send-button" (click)="sendMessage()"
           [disabled]="!canSend()" [attr.aria-label]="isImageMode() ? 'Generate image' : 'Send message'">

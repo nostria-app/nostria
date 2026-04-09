@@ -159,10 +159,9 @@
 
             <mat-form-field appearance="outline">
               <mat-label>xAI API key</mat-label>
-              <input matInput [type]="showXAiApiKey ? 'text' : 'password'" [(ngModel)]="xAiApiKey"
-                placeholder="xai-..." autocomplete="new-password" autocorrect="off" autocapitalize="off"
-                spellcheck="false" name="nostria-xai-api-key" data-lpignore="true" data-1p-ignore="true"
-                data-bwignore="true" />
+              <input matInput [type]="showXAiApiKey ? 'text' : 'password'" [(ngModel)]="xAiApiKey" placeholder="xai-..."
+                autocomplete="new-password" autocorrect="off" autocapitalize="off" spellcheck="false"
+                name="nostria-xai-api-key" data-lpignore="true" data-1p-ignore="true" data-bwignore="true" />
               <button mat-icon-button matSuffix type="button" (click)="toggleApiKeyVisibility('xai')"
                 [attr.aria-label]="showXAiApiKey ? 'Hide API key' : 'Show API key'">
                 <mat-icon>{{ showXAiApiKey ? 'visibility_off' : 'visibility' }}</mat-icon>
