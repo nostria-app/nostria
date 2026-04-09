@@ -299,8 +299,26 @@ export class AiComponent {
   }
 
   openHistory(historyId: string): void {
+    const history = this.historyService.getHistory(historyId);
+    if (!history) {
+      this.snackBar.open('That AI chat could not be found.', 'Dismiss', { duration: 4000 });
+      return;
+    }
+
+    if (this.chatModels().some(model => model.id === history.modelId)) {
+      this.selectedChatModelId.set(history.modelId);
+    }
+
+    this.currentConversationId.set(history.id);
+    this.chatError.set('');
+    this.attachedFiles.set([]);
+    this.autoScrollPinned.set(true);
     this.showHistoryDrawer.set(false);
-    this.layout.navigateToRightPanel(`ai/history/${historyId}`);
+    this.conversation.set(history.messages.map(message => ({
+      id: this.createMessageId(),
+      role: message.role,
+      content: message.content,
+    })));
   }
 
   selectChatModel(modelId: string): void {
