@@ -12,6 +12,7 @@ let transcriber: any = null;
 // let synthesizer: any = null; // Replaced by TTSPipeline
 const translators = new Map<string, any>();
 const imageGenerators = new Map<string, { processor: Promise<any>, model: Promise<any> }>();
+const imageUpscalers = new Map<string, any>();
 let fp16Supported = false;
 
 class TTSPipeline {
@@ -145,6 +146,9 @@ addEventListener('message', async ({ data }) => {
       case 'generate-image':
         await handleGenerateImage(payload, id);
         break;
+      case 'upscale-image':
+        await handleUpscaleImage(payload, id);
+        break;
     }
   } catch (error: unknown) {
     postMessage({
@@ -183,6 +187,9 @@ async function handleLoad(payload: { task: string, model: string, options?: Reco
     await TTSPipeline.getInstance(progressCallback);
   } else if (task === 'image-generation') {
     await getImageGenerator(model, progressCallback);
+  } else if (task === 'image-upscaling') {
+    const upscaler = await pipeline('image-to-image', model, { ...options, progress_callback: progressCallback });
+    imageUpscalers.set(model, upscaler);
   }
 
   postMessage({
@@ -272,6 +279,27 @@ async function handleGenerateImage(payload: { prompt: string, model: string }, i
     type: 'result',
     id,
     payload: { images }
+  });
+}
+
+async function handleUpscaleImage(payload: { image: Blob, model: string }, id: string) {
+  const upscaler = imageUpscalers.get(payload.model);
+  if (!upscaler) {
+    throw new Error(`Image upscaling model ${payload.model} not loaded`);
+  }
+
+  const output = await upscaler(payload.image);
+  const blob = await output.toBlob();
+
+  postMessage({
+    type: 'result',
+    id,
+    payload: {
+      image: {
+        blob,
+        mimeType: blob.type || 'image/png',
+      },
+    }
   });
 }
 
@@ -485,6 +513,7 @@ async function handleCheck(payload: { task: string, model: string }, id: string)
   else if (task === 'automatic-speech-recognition') isLoaded = !!transcriber;
   else if (task === 'text-to-speech') isLoaded = !!TTSPipeline.model;
   else if (task === 'image-generation') isLoaded = imageGenerators.has(model);
+  else if (task === 'image-upscaling') isLoaded = imageUpscalers.has(model);
 
   // Check cache if not loaded
   if (!isLoaded) {

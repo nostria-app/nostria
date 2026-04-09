@@ -406,8 +406,8 @@
 }
 
 .status-chip.status-loaded {
-  background: var(--mat-success-lighter);
-  color: var(--mat-success-darker);
+  background: var(--mat-success-darker);
+  color: var(--mat-sys-on-surface);
 }
 
 .status-chip.status-cached {
@@ -980,8 +980,9 @@
 }
 
 .composer-model-button.composer-model-button-loaded {
-  background: var(--mat-success-lighter);
-  color: var(--mat-success-darker);
+  background: var(--mat-success-darker);
+  border-color: var(--mat-success-darker);
+  color: var(--mat-sys-on-surface);
 }
 
 .composer-model-button.composer-model-button-cached {

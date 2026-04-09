@@ -101,6 +101,13 @@ interface AiLocalImageWorkerPayload {
   }>;
 }
 
+interface AiLocalUpscaledImageWorkerPayload {
+  image?: {
+    blob?: Blob;
+    mimeType?: string;
+  };
+}
+
 interface WorkerCallback {
   resolve: (value: unknown) => void;
   reject: (reason: unknown) => void;
@@ -171,6 +178,14 @@ export class AiService {
   readonly textGenerationModelId = 'Xenova/distilgpt2';
 
   readonly manageableModels: AiManageableModel[] = [
+    {
+      id: 'Xenova/swin2SR-classical-sr-x2-64',
+      task: 'image-upscaling',
+      name: 'Swin2SR x2',
+      description: 'Local image upscaling model for attached artwork, screenshots, and photos.',
+      runtime: 'WASM/CPU · q8',
+      sizeHint: 'x2 super-resolution',
+    },
     {
       id: 'onnx-community/Janus-Pro-1B-ONNX',
       task: 'image-generation',
@@ -264,8 +279,10 @@ export class AiService {
       case 'automatic-speech-recognition': return 'Transcribing...';
       case 'text-to-speech': return 'Synthesizing speech...';
       case 'image-generation': return 'Generating image...';
+      case 'image-upscaling': return 'Upscaling image...';
       case 'load': return 'Loading model...';
       case 'synthesize': return 'Synthesizing speech...'; // The postMessage type is 'synthesize'
+      case 'upscale-image': return 'Upscaling image...';
       case 'generate': return 'Generating text...';
       case 'summarize': return 'Summarizing...';
       case 'sentiment': return 'Analyzing sentiment...';
@@ -502,6 +519,15 @@ export class AiService {
     ) as AiLocalImageWorkerPayload;
 
     return this.mapLocalGeneratedImages(payload, model, trimmedPrompt);
+  }
+
+  async upscaleLocalImage(image: Blob, model: string, prompt = 'Upscale this image.'): Promise<AiGeneratedImage[]> {
+    if (!this.settings.settings().aiEnabled) {
+      throw new Error('AI is disabled');
+    }
+
+    const payload = await this.postMessage('upscale-image', { image, model }) as AiLocalUpscaledImageWorkerPayload;
+    return this.mapUpscaledImage(payload, model, prompt);
   }
 
   async generateCloudText(messages: AiChatMessage[], provider: AiCloudProvider, model?: string): Promise<string> {
@@ -877,6 +903,27 @@ export class AiService {
         mimeType,
       };
     }));
+  }
+
+  private async mapUpscaledImage(
+    payload: AiLocalUpscaledImageWorkerPayload,
+    model: string,
+    prompt: string,
+  ): Promise<AiGeneratedImage[]> {
+    if (!(payload.image?.blob instanceof Blob)) {
+      throw new Error('The upscaling model did not return image content.');
+    }
+
+    const mimeType = payload.image.mimeType || payload.image.blob.type || 'image/png';
+    return [{
+      id: `local-upscale-${Date.now()}`,
+      provider: 'local',
+      providerLabel: this.getProviderLabel('local'),
+      model,
+      prompt,
+      src: await this.blobToDataUrl(payload.image.blob),
+      mimeType,
+    }];
   }
 
   private blobToDataUrl(blob: Blob): Promise<string> {

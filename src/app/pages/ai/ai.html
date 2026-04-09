@@ -117,8 +117,7 @@
       <div class="chat-workspace">
         @if (conversation().length <= 1) { <section class="prompt-suggestions">
           @for (prompt of activeQuickPrompts(); track prompt.label) {
-          <button mat-stroked-button type="button"
-            (click)="isImageMode() ? applyImagePrompt(prompt.prompt) : applyChatPrompt(prompt.prompt)">{{ prompt.label
+          <button mat-stroked-button type="button" (click)="applyActiveQuickPrompt(prompt.prompt)">{{ prompt.label
             }}</button>
           }
     </section>
@@ -170,6 +169,11 @@
             <article class="generated-image-card">
               <div class="generated-image-head">
                 <div class="message-actions generated-image-actions">
+                  <button type="button" class="message-action-button" (click)="upscaleGeneratedImage(image)"
+                    [disabled]="isGenerating()" [attr.title]="'Upscale this image on device'">
+                    <mat-icon>zoom_in</mat-icon>
+                    <span>Upscale</span>
+                  </button>
                   <button type="button" class="message-action-button"
                     (click)="applyImagePrompt(image.revisedPrompt || image.prompt)">
                     <mat-icon>auto_fix_high</mat-icon>
@@ -274,13 +278,15 @@
 
         <textarea #composerInput class="composer-input" [ngModel]="composerText()"
           (ngModelChange)="composerText.set($event)" (keydown)="onComposerKeydown($event)" rows="1"
-          placeholder="{{ isImageMode() ? 'Describe the image you want to create' : 'Ask anything or use #fetch https://example.com' }}"
-          aria-label="{{ isImageMode() ? 'Image prompt' : 'Chat prompt' }}"
-          title="{{ isImageMode() ? 'Image prompt' : 'Chat prompt' }}" [disabled]="isGenerating()"></textarea>
+          placeholder="{{ isImageUpscalingMode() ? 'Attach one image to upscale' : isImageGenerationMode() ? 'Describe the image you want to create' : 'Ask anything or use #fetch https://example.com' }}"
+          aria-label="{{ isImageUpscalingMode() ? 'Upscaling instruction' : isImageGenerationMode() ? 'Image prompt' : 'Chat prompt' }}"
+          title="{{ isImageUpscalingMode() ? 'Upscaling instruction' : isImageGenerationMode() ? 'Image prompt' : 'Chat prompt' }}"
+          [disabled]="isGenerating()"></textarea>
 
         <button mat-icon-button type="button" class="composer-send-button" (click)="sendMessage()"
-          [disabled]="!canSend()" [attr.aria-label]="isImageMode() ? 'Generate image' : 'Send message'">
-          <mat-icon>{{ isImageMode() ? 'image' : 'send' }}</mat-icon>
+          [disabled]="!canSend()"
+          [attr.aria-label]="isImageUpscalingMode() ? 'Upscale image' : isImageGenerationMode() ? 'Generate image' : 'Send message'">
+          <mat-icon>{{ isImageUpscalingMode() ? 'zoom_in' : isImageGenerationMode() ? 'image' : 'send' }}</mat-icon>
         </button>
       </div>
 
@@ -345,8 +351,8 @@
         </button>
       </mat-menu>
 
-      <input #attachmentInput type="file" multiple class="hidden-file-input" (change)="onAttachmentSelected($event)"
-        aria-label="Attach files" />
+      <input #attachmentInput type="file" multiple [attr.accept]="isImageUpscalingMode() ? 'image/*' : null"
+        class="hidden-file-input" (change)="onAttachmentSelected($event)" aria-label="Attach files" />
     </div>
 </div>
 </section>

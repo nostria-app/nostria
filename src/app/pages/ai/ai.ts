@@ -131,6 +131,20 @@ export class AiComponent {
 
   readonly models = signal<ModelInfo[]>([
     {
+      id: 'Xenova/swin2SR-classical-sr-x2-64',
+      task: 'image-upscaling',
+      name: 'Swin2SR x2',
+      description: 'Local image upscaling for attached artwork, screenshots, and photos.',
+      size: 'x2 super-resolution',
+      loading: false,
+      progress: 0,
+      loaded: false,
+      cached: false,
+      runtime: 'WASM/CPU · q8',
+      source: 'local',
+      loadOptions: { device: 'wasm', dtype: 'q8' },
+    },
+    {
       id: 'onnx-community/Janus-Pro-1B-ONNX',
       task: 'image-generation',
       name: 'Janus Pro 1B',
@@ -313,7 +327,7 @@ export class AiComponent {
       }));
   });
   readonly imageModels = computed<ModelInfo[]>(() => {
-    const localImageModels = this.models().filter(model => model.task === 'image-generation');
+    const localImageModels = this.models().filter(model => model.task === 'image-generation' || model.task === 'image-upscaling');
     const preferredProvider = this.aiService.getActiveImageProvider();
     const providers: AiCloudProvider[] = ['xai', 'openai'];
     const sortedProviders = providers
@@ -355,8 +369,20 @@ export class AiComponent {
   ]);
   readonly selectedModelId = signal(this.webGpuAvailable ? 'onnx-community/gemma-4-E2B-it-ONNX' : 'Xenova/distilgpt2');
   readonly selectedModel = computed(() => this.composerModels().find(model => model.id === this.selectedModelId()) ?? null);
-  readonly isImageMode = computed(() => this.selectedModel()?.task === 'image-generation');
-  readonly activeQuickPrompts = computed(() => this.isImageMode() ? this.imageQuickPrompts : this.chatQuickPrompts);
+  readonly isImageGenerationMode = computed(() => this.selectedModel()?.task === 'image-generation');
+  readonly isImageUpscalingMode = computed(() => this.selectedModel()?.task === 'image-upscaling');
+  readonly isImageMode = computed(() => this.isImageGenerationMode() || this.isImageUpscalingMode());
+  readonly activeQuickPrompts = computed(() => {
+    if (this.isImageGenerationMode()) {
+      return this.imageQuickPrompts;
+    }
+
+    if (this.isImageUpscalingMode()) {
+      return this.upscalingQuickPrompts;
+    }
+
+    return this.chatQuickPrompts;
+  });
   readonly histories = this.historyService.histories;
   readonly filteredHistories = computed(() => {
     const query = this.historyQuery().trim().toLowerCase();
@@ -400,11 +426,16 @@ export class AiComponent {
     { label: 'Product hero', prompt: 'Create a premium product hero image for a futuristic social app running on glass screens in a bright studio scene.' },
     { label: 'Poster concept', prompt: 'Generate a contemporary poster illustration for a Nostr community event with layered typography and editorial texture.' },
   ];
+  readonly upscalingQuickPrompts: AiQuickPrompt[] = [
+    { label: 'Enhance artwork', prompt: 'Upscale the attached artwork while keeping clean edges and fine line detail.' },
+    { label: 'Sharpen photo', prompt: 'Upscale the attached photo and preserve natural textures.' },
+    { label: 'Improve screenshot', prompt: 'Upscale the attached screenshot while keeping UI text crisp.' },
+  ];
   readonly conversation = signal<ConversationMessage[]>([
     {
       id: this.createMessageId(),
       role: 'assistant',
-      content: 'Choose a model and start chatting or generating images. Local models stay on your device.',
+      content: 'Choose a model and start chatting, generating images, or upscaling an attached image. Local models stay on your device.',
     },
   ]);
   readonly composerText = signal('');
@@ -598,13 +629,22 @@ export class AiComponent {
   }
 
   applyImagePrompt(prompt: string): void {
-    const imageModel = this.imageModels()[0];
+    const imageModel = this.imageModels().find(model => model.task === 'image-generation');
     if (imageModel) {
       this.selectedModelId.set(imageModel.id);
     }
 
     this.composerText.set(prompt);
     this.focusComposerPromptPlaceholder(prompt);
+  }
+
+  applyActiveQuickPrompt(prompt: string): void {
+    if (this.isImageGenerationMode()) {
+      this.applyImagePrompt(prompt);
+      return;
+    }
+
+    this.applyChatPrompt(prompt);
   }
 
   clearHistoryQuery(): void {
@@ -822,6 +862,33 @@ export class AiComponent {
     this.composerText.set(`Use this image concept as context and turn it into a polished post or product idea:\n\n${image.revisedPrompt || image.prompt}`);
   }
 
+  async upscaleGeneratedImage(image: AiGeneratedImage): Promise<void> {
+    if (this.isGenerating()) {
+      return;
+    }
+
+    const model = this.models().find(candidate => candidate.task === 'image-upscaling');
+    if (!model) {
+      this.chatError.set('No image upscaling model is available.');
+      return;
+    }
+
+    try {
+      const file = await this.createFileFromGeneratedImage(image);
+      const attachment = await this.createAttachment(file);
+      this.selectedModelId.set(model.id);
+      await this.upscaleImageMessage(
+        model,
+        `Upscale this image and preserve the original composition: ${image.revisedPrompt || image.prompt}`,
+        [attachment],
+      );
+    } catch (error) {
+      this.logger.error('Failed to queue generated image for upscaling', error);
+      this.chatError.set(error instanceof Error ? error.message : 'Could not prepare the image for upscaling.');
+      this.snackBar.open('Could not prepare the image for upscaling.', 'Dismiss', { duration: 3500 });
+    }
+  }
+
   openGeneratedImagePreview(image: AiGeneratedImage): void {
     this.customDialog.open(GeneratedImagePreviewDialogComponent, {
       title: 'Generated image',
@@ -966,6 +1033,11 @@ export class AiComponent {
 
     if (model.task === 'image-generation') {
       await this.generateImageMessage(model, promptText, attachments);
+      return;
+    }
+
+    if (model.task === 'image-upscaling') {
+      await this.upscaleImageMessage(model, promptText, attachments);
       return;
     }
 
@@ -1239,6 +1311,77 @@ export class AiComponent {
       const message = err instanceof Error ? err.message : String(err);
       this.chatError.set(message);
       this.replaceMessageContent(assistantMessageId, `Image generation error: ${message}`, false);
+      this.persistCurrentConversation();
+    } finally {
+      this.isGenerating.set(false);
+    }
+  }
+
+  private async upscaleImageMessage(model: ModelInfo, promptText: string, attachments: ComposerAttachment[]): Promise<void> {
+    if (attachments.length !== 1) {
+      this.chatError.set('Attach exactly one image to upscale.');
+      return;
+    }
+
+    const [attachment] = attachments;
+    if (!attachment.mimeType.startsWith('image/')) {
+      this.chatError.set('Image upscaling only supports image attachments.');
+      return;
+    }
+
+    const prompt = promptText.trim() || `Upscale ${attachment.name}`;
+    const assistantMessageId = this.createMessageId();
+    const userMessage: ConversationMessage = {
+      id: this.createMessageId(),
+      role: 'user',
+      content: prompt,
+      attachments,
+    };
+
+    this.chatError.set('');
+    this.conversation.set([
+      ...this.conversation(),
+      userMessage,
+      { id: assistantMessageId, role: 'assistant', content: '', streaming: true },
+    ]);
+    this.composerText.set('');
+    this.attachedFiles.set([]);
+    this.autoScrollPinned.set(true);
+    this.showHistoryDrawer.set(false);
+    this.isGenerating.set(true);
+
+    try {
+      if (!model.loaded) {
+        const loaded = await this.ensureLocalModelReady(model);
+        if (!loaded) {
+          this.replaceMessageContent(assistantMessageId, 'The selected model could not be loaded in this browser.', false);
+          this.persistCurrentConversation();
+          return;
+        }
+      }
+
+      const imageBlob = await this.readAttachmentBlob(attachment);
+      const images = await this.aiService.upscaleLocalImage(imageBlob, model.id, prompt);
+      const cachedImages = await Promise.all(images.map(image => this.cacheGeneratedImage(image)));
+
+      this.conversation.update(messages => messages.map(message => {
+        if (message.id !== assistantMessageId) {
+          return message;
+        }
+
+        return {
+          ...message,
+          content: '',
+          streaming: false,
+          generatedImages: cachedImages,
+        };
+      }));
+      this.persistCurrentConversation();
+    } catch (err) {
+      this.logger.error('AI image upscaling error:', err);
+      const message = err instanceof Error ? err.message : String(err);
+      this.chatError.set(message);
+      this.replaceMessageContent(assistantMessageId, `Image upscaling error: ${message}`, false);
       this.persistCurrentConversation();
     } finally {
       this.isGenerating.set(false);
@@ -1628,6 +1771,20 @@ export class AiComponent {
     }
 
     return file.text();
+  }
+
+  private async readAttachmentBlob(attachment: ComposerAttachment): Promise<Blob> {
+    if (!this.isBrowser || typeof caches === 'undefined') {
+      throw new Error('Attachment cache is unavailable in this browser.');
+    }
+
+    const cache = await caches.open(AiComponent.AI_UPLOAD_CACHE);
+    const response = await cache.match(attachment.cacheKey);
+    if (!response?.ok) {
+      throw new Error(`Could not load the attached image '${attachment.name}'.`);
+    }
+
+    return response.blob();
   }
 
   private isTextLikeFile(file: File): boolean {
