@@ -1,6 +1,6 @@
 <div class="ai-page">
-  <section class="ai-shell" [class.ai-shell-split]="splitPaneMode()"
-    [class.ai-shell-history-only]="narrowHistoryMode() && showHistoryDrawer()">
+  <section class="ai-shell" [class.ai-shell-split]="splitPaneMode() && showHistoryPanel()"
+    [class.ai-shell-history-only]="!showHistoryPanel() || (narrowHistoryMode() && showHistoryDrawer())">
     @if (showHistoryPanel()) {
     <aside class="history-sidebar" [class.history-sidebar-split]="splitPaneMode()">
       <div class="history-sidebar-head">
@@ -177,7 +177,7 @@
         <div class="generated-image-grid">
           @for (image of generatedImages(); track image.id) {
           <article class="generated-image-card">
-            <img [src]="image.src" [alt]="image.prompt" class="generated-image-preview" />
+            <img [src]="image.src" [alt]="image.prompt" [title]="image.prompt" class="generated-image-preview" />
             <div class="generated-image-copy">
               <div class="generated-image-meta">
                 <span>{{ image.providerLabel }}</span>
