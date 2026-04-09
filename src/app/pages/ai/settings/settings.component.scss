@@ -140,6 +140,7 @@
   }
 
   .model-storage-copy {
+    flex: 1 1 auto;
     min-width: 0;
     display: flex;
     flex-direction: column;
@@ -158,14 +159,19 @@
   .model-storage-title-row {
     display: flex;
     align-items: center;
-    justify-content: space-between;
     gap: 12px;
+
+    h3 {
+      flex: 1 1 auto;
+      min-width: 0;
+    }
   }
 
   .model-storage-status {
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    margin-left: auto;
     min-height: 28px;
     padding: 0 10px;
     border-radius: 999px;
