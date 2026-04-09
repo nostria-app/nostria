@@ -80,6 +80,11 @@ export interface AiManagedModelStatus extends AiManageableModel {
   bytes: number;
 }
 
+export interface AiStandardPromptSelection {
+  title: string;
+  prompt: string;
+}
+
 export interface AiModelStorageReport {
   models: AiManagedModelStatus[];
   totalBytes: number;
@@ -161,6 +166,7 @@ export class AiService {
 
   processingState = signal<{ isProcessing: boolean, task: string | null }>({ isProcessing: false, task: null });
   private _processingCount = 0;
+  queuedStandardPrompt = signal<AiStandardPromptSelection | null>(null);
 
   loadedModels = signal<Set<string>>(new Set());
   cloudSettings = signal<AiCloudSettings>({ ...this.defaultCloudSettings });
@@ -461,6 +467,20 @@ export class AiService {
 
   async checkModel(task: string, model: string): Promise<{ loaded: boolean, cached: boolean }> {
     return this.postMessage('check', { task, model }) as Promise<{ loaded: boolean, cached: boolean }>;
+  }
+
+  queueStandardPrompt(selection: AiStandardPromptSelection): void {
+    const title = selection.title.trim();
+    const prompt = selection.prompt.trim();
+    if (!title || !prompt) {
+      return;
+    }
+
+    this.queuedStandardPrompt.set({ title, prompt });
+  }
+
+  clearQueuedStandardPrompt(): void {
+    this.queuedStandardPrompt.set(null);
   }
 
   getProviderLabel(provider: AiImageProvider): string {

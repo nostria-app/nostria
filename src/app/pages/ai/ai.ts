@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, ElementRef, PLATFORM_ID, computed, effect, inject, signal, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, ElementRef, PLATFORM_ID, computed, effect, inject, signal, untracked, viewChild } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -568,6 +568,30 @@ export class AiComponent {
           [message.id]: initialRendered,
         }));
       }
+    });
+
+    effect(() => {
+      const selection = this.aiService.queuedStandardPrompt();
+      if (!selection) {
+        return;
+      }
+
+      untracked(() => {
+        const currentModel = this.selectedModel();
+        if (!currentModel || !this.isChatGenerationTask(currentModel.task)) {
+          const chatModel = this.composerModels().find(model => this.isChatGenerationTask(model.task) && !model.chatDisabledReason)
+            ?? this.composerModels().find(model => this.isChatGenerationTask(model.task));
+
+          if (chatModel) {
+            this.selectedModelId.set(chatModel.id);
+          }
+        }
+
+        this.showHistoryDrawer.set(false);
+        this.applyChatPrompt(selection.prompt);
+        this.snackBar.open(`Prompt ready: ${selection.title}`, 'Dismiss', { duration: 2600 });
+        this.aiService.clearQueuedStandardPrompt();
+      });
     });
 
     void this.initializeModelStatus();

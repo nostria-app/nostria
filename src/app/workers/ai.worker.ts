@@ -1,9 +1,81 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { pipeline, env, Tensor, AutoModelForImageTextToText, AutoProcessor, AutoTokenizer, BaseStreamer, MultiModalityCausalLM, RawImage, SpeechT5ForTextToSpeech, SpeechT5HifiGan, TextStreamer } from '@huggingface/transformers';
 
+const HUGGING_FACE_REMOTE_HOST = 'https://huggingface.co/';
+const SPEAKER_EMBEDDINGS_URL = 'https://huggingface.co/datasets/Xenova/transformers.js-docs/resolve/main/speaker_embeddings.bin';
+const nativeFetch = globalThis.fetch.bind(globalThis);
+const allowedExternalHosts = new Set([
+  'huggingface.co',
+  'hf.co',
+  'cdn-lfs.huggingface.co',
+  'cas-bridge.xethub.hf.co',
+  'cas-server.xethub.hf.co',
+]);
+
+function isAllowedExternalHost(hostname: string): boolean {
+  return allowedExternalHosts.has(hostname)
+    || hostname.endsWith('.huggingface.co')
+    || hostname.endsWith('.hf.co');
+}
+
+function normalizeFetchTarget(input: RequestInfo | URL): URL {
+  if (input instanceof URL) {
+    return input;
+  }
+
+  if (typeof input === 'string') {
+    return new URL(input, self.location.href);
+  }
+
+  return new URL(input.url, self.location.href);
+}
+
+async function secureWorkerFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  const targetUrl = normalizeFetchTarget(input);
+  const method = (init?.method ?? (input instanceof Request ? input.method : 'GET')).toUpperCase();
+  const isSameOrigin = targetUrl.origin === self.location.origin;
+  const isHttp = targetUrl.protocol === 'http:' || targetUrl.protocol === 'https:';
+
+  if (!isHttp) {
+    return nativeFetch(input, init);
+  }
+
+  if (!isSameOrigin) {
+    if (!isAllowedExternalHost(targetUrl.hostname)) {
+      throw new Error(`Blocked external AI asset fetch to unexpected host: ${targetUrl.hostname}`);
+    }
+
+    if (method !== 'GET' && method !== 'HEAD') {
+      throw new Error(`Blocked external AI asset fetch with unsafe method: ${method}`);
+    }
+
+    if (init?.body !== undefined) {
+      throw new Error('Blocked external AI asset fetch carrying a request body.');
+    }
+
+    if (targetUrl.searchParams.size > 0) {
+      throw new Error(`Blocked external AI asset fetch with query parameters: ${targetUrl.href}`);
+    }
+
+    return nativeFetch(input, {
+      ...init,
+      method,
+      body: undefined,
+      credentials: 'omit',
+      referrerPolicy: 'no-referrer',
+    });
+  }
+
+  return nativeFetch(input, init);
+}
+
 // Configure environment to use the Cache API for storing models
+env.allowRemoteModels = true;
+env.remoteHost = HUGGING_FACE_REMOTE_HOST;
 env.allowLocalModels = false;
 env.useBrowserCache = true;
+env.fetch = secureWorkerFetch;
+globalThis.fetch = secureWorkerFetch;
 
 const textGenerators = new Map<string, any>();
 let summarizer: any = null;
@@ -465,7 +537,7 @@ async function handleSynthesize(payload: { text: string, params?: any }, id: str
   }
 
   if (!payload.params.speaker_embeddings) {
-    payload.params.speaker_embeddings = 'https://huggingface.co/datasets/Xenova/transformers.js-docs/resolve/main/speaker_embeddings.bin';
+    payload.params.speaker_embeddings = SPEAKER_EMBEDDINGS_URL;
   }
 
   if (payload.params && payload.params.speaker_embeddings && typeof payload.params.speaker_embeddings === 'string') {

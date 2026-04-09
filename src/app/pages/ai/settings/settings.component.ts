@@ -1,5 +1,6 @@
 import { Component, computed, inject, ChangeDetectionStrategy, OnDestroy, OnInit, signal } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
+import { Router } from '@angular/router';
 
 import { MatCardModule } from '@angular/material/card';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
@@ -19,6 +20,16 @@ import { AiInfoDialogComponent } from '../../../components/ai-info-dialog/ai-inf
 import { PanelActionsService } from '../../../services/panel-actions.service';
 import { RightPanelService } from '../../../services/right-panel.service';
 import { PanelNavigationService } from '../../../services/panel-navigation.service';
+
+interface StandardPromptItem {
+  title: string;
+  prompt: string;
+  preview: string;
+}
+
+const STANDARD_PROMPTS_SOURCE_URL = 'https://raw.githubusercontent.com/mlc-ai/web-llm-chat/223895cb1be677504cf26904df5e3b0b451ba992/public/prompts.json';
+const STANDARD_PROMPTS_SOURCE_LABEL = 'MLC web-llm-chat prompts.json';
+const STANDARD_PROMPTS_BLOCKLIST = /(Gaslighter|AI Trying to Escape the Box|Unconstrained AI model DAN|\bDAN\b|Lunatic|Plagiarism Checker)/i;
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -45,6 +56,7 @@ export class AiSettingsComponent implements OnInit, OnDestroy {
   private readonly dialog = inject(MatDialog);
   private readonly snackBar = inject(MatSnackBar);
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   private readonly panelActions = inject(PanelActionsService);
   private readonly rightPanel = inject(RightPanelService);
   private readonly panelNav = inject(PanelNavigationService);
@@ -53,6 +65,10 @@ export class AiSettingsComponent implements OnInit, OnDestroy {
   readonly cloudProviders: AiCloudProvider[] = ['xai', 'openai'];
   readonly modelStorageReport = signal<AiModelStorageReport | null>(null);
   readonly modelStorageLoading = signal(false);
+  readonly standardPromptQuery = signal('');
+  readonly standardPrompts = signal<StandardPromptItem[]>([]);
+  readonly standardPromptsLoading = signal(false);
+  readonly standardPromptsError = signal('');
   readonly clearingModelIds = signal<Set<string>>(new Set());
   readonly clearingAllModels = signal(false);
   readonly modelStorageSummary = computed(() => {
@@ -69,6 +85,14 @@ export class AiSettingsComponent implements OnInit, OnDestroy {
       usageBytes: report.storageUsageBytes,
     };
   });
+  readonly filteredStandardPrompts = computed(() => {
+    const query = this.standardPromptQuery().trim().toLowerCase();
+    if (!query) {
+      return this.standardPrompts();
+    }
+
+    return this.standardPrompts().filter(prompt => prompt.title.toLowerCase().includes(query) || prompt.prompt.toLowerCase().includes(query));
+  });
 
   openAiApiKey = '';
   xAiApiKey = '';
@@ -83,6 +107,7 @@ export class AiSettingsComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     void this.refreshModelStorage();
+    void this.loadStandardPrompts();
 
     if (this.isInRightPanel) {
       this.panelActions.setRightPanelActions([
@@ -252,6 +277,53 @@ export class AiSettingsComponent implements OnInit, OnDestroy {
     }
   }
 
+  async loadStandardPrompts(): Promise<void> {
+    this.standardPromptsLoading.set(true);
+    this.standardPromptsError.set('');
+
+    try {
+      const response = await fetch(STANDARD_PROMPTS_SOURCE_URL, {
+        headers: {
+          accept: 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Prompt library request failed with ${response.status}`);
+      }
+
+      const payload = await response.json() as { en?: unknown[] };
+      this.standardPrompts.set(this.parseStandardPrompts(payload.en));
+    } catch (error) {
+      console.error('Failed to load AI standard prompts', error);
+      this.standardPromptsError.set('Could not load the standard prompt library right now.');
+    } finally {
+      this.standardPromptsLoading.set(false);
+    }
+  }
+
+  async useStandardPrompt(prompt: StandardPromptItem): Promise<void> {
+    this.aiService.queueStandardPrompt({ title: prompt.title, prompt: prompt.prompt });
+
+    if (this.isInRightPanel) {
+      this.goBack();
+    } else {
+      await this.router.navigate(['/ai']);
+    }
+  }
+
+  clearStandardPromptQuery(): void {
+    this.standardPromptQuery.set('');
+  }
+
+  promptSourceUrl(): string {
+    return STANDARD_PROMPTS_SOURCE_URL;
+  }
+
+  promptSourceLabel(): string {
+    return STANDARD_PROMPTS_SOURCE_LABEL;
+  }
+
   isClearingModel(modelId: string): boolean {
     return this.clearingModelIds().has(modelId);
   }
@@ -292,5 +364,44 @@ export class AiSettingsComponent implements OnInit, OnDestroy {
     }
 
     this.rightPanel.goBack();
+  }
+
+  private parseStandardPrompts(source: unknown[] | undefined): StandardPromptItem[] {
+    if (!Array.isArray(source)) {
+      return [];
+    }
+
+    const titleCounts = new Map<string, number>();
+
+    return source
+      .filter((entry): entry is [string, string] => Array.isArray(entry)
+        && entry.length >= 2
+        && typeof entry[0] === 'string'
+        && typeof entry[1] === 'string')
+      .map(([rawTitle, rawPrompt]) => ({
+        title: rawTitle.trim(),
+        prompt: rawPrompt.trim(),
+      }))
+      .filter(entry => entry.title.length > 0 && entry.prompt.length > 0)
+      .filter(entry => !STANDARD_PROMPTS_BLOCKLIST.test(entry.title) && !STANDARD_PROMPTS_BLOCKLIST.test(entry.prompt))
+      .map(entry => {
+        const count = (titleCounts.get(entry.title) ?? 0) + 1;
+        titleCounts.set(entry.title, count);
+
+        return {
+          title: count > 1 ? `${entry.title} ${count}` : entry.title,
+          prompt: entry.prompt,
+          preview: this.buildPromptPreview(entry.prompt),
+        };
+      });
+  }
+
+  private buildPromptPreview(prompt: string): string {
+    const compact = prompt.replace(/\s+/g, ' ').trim();
+    if (compact.length <= 180) {
+      return compact;
+    }
+
+    return `${compact.slice(0, 177).trimEnd()}...`;
   }
 }

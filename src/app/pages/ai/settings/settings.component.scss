@@ -67,6 +67,121 @@
   grid-column: 1 / -1;
 }
 
+.prompt-library-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.prompt-library-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+
+  h3,
+  p {
+    margin: 0;
+  }
+
+  p {
+    margin-top: 6px;
+    color: var(--mat-sys-on-surface-variant);
+  }
+
+  a {
+    color: inherit;
+  }
+}
+
+.prompt-license-note {
+  font-size: 13px;
+}
+
+.prompt-search-shell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 52px;
+  padding: 0 14px;
+  border-radius: 18px;
+  border: 1px solid var(--mat-sys-outline-variant);
+  background: var(--mat-sys-surface);
+
+  input {
+    flex: 1 1 auto;
+    width: 100%;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: var(--mat-sys-on-surface);
+    font: inherit;
+  }
+}
+
+.prompt-search-clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--mat-sys-on-surface-variant);
+  cursor: pointer;
+}
+
+.prompt-library-summary {
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 13px;
+}
+
+.prompt-library-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.prompt-library-item {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px;
+  border-radius: 20px;
+  border: 1px solid var(--mat-sys-outline-variant);
+  background: var(--mat-sys-surface);
+}
+
+.prompt-library-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+
+  h3,
+  p {
+    margin: 0;
+  }
+
+  p {
+    color: var(--mat-sys-on-surface-variant);
+  }
+}
+
+.prompt-library-actions {
+  flex: 0 0 auto;
+}
+
+.prompt-library-empty-state {
+  padding: 18px;
+  border-radius: 18px;
+  border: 1px dashed var(--mat-sys-outline-variant);
+  color: var(--mat-sys-on-surface-variant);
+  text-align: center;
+}
+
 .model-storage-card {
   margin-bottom: 16px;
 
@@ -280,6 +395,12 @@
 @media (max-width: 700px) {
   .tab-panel {
     padding: 12px;
+  }
+
+  .prompt-library-header,
+  .prompt-library-item {
+    flex-direction: column;
+    align-items: stretch;
   }
 
   .provider-heading-row {

@@ -307,5 +307,67 @@
         </section>
       </div>
     </mat-tab>
+
+    <mat-tab label="Prompts">
+      <div class="tab-panel">
+        <section class="prompt-library-card">
+          <div class="prompt-library-header">
+            <div>
+              <h3>Standard prompt library</h3>
+              <p>
+                English prompt starters sourced from
+                <a [href]="promptSourceUrl()" target="_blank" rel="noreferrer">{{ promptSourceLabel() }}</a>.
+              </p>
+              <p class="prompt-license-note">
+                Source content notice: Apache License, Version 2.0.
+              </p>
+            </div>
+
+            <button mat-stroked-button type="button" (click)="loadStandardPrompts()"
+              [disabled]="standardPromptsLoading()">
+              <mat-icon>refresh</mat-icon>
+              Refresh
+            </button>
+          </div>
+
+          <div class="prompt-search-shell">
+            <mat-icon>search</mat-icon>
+            <input matInput [ngModel]="standardPromptQuery()" (ngModelChange)="standardPromptQuery.set($event)"
+              placeholder="Search prompt titles or prompt text" />
+            @if (standardPromptQuery().trim()) {
+            <button type="button" class="prompt-search-clear" (click)="clearStandardPromptQuery()"
+              aria-label="Clear prompt search">
+              <mat-icon>close</mat-icon>
+            </button>
+            }
+          </div>
+
+          @if (standardPromptsLoading()) {
+          <div class="prompt-library-empty-state">Loading the standard prompt library…</div>
+          } @else if (standardPromptsError()) {
+          <div class="prompt-library-empty-state">{{ standardPromptsError() }}</div>
+          } @else if (filteredStandardPrompts().length === 0) {
+          <div class="prompt-library-empty-state">No prompts match that search.</div>
+          } @else {
+          <div class="prompt-library-summary">{{ filteredStandardPrompts().length }} prompts available</div>
+
+          <div class="prompt-library-list">
+            @for (prompt of filteredStandardPrompts(); track prompt.title) {
+            <section class="prompt-library-item">
+              <div class="prompt-library-copy">
+                <h3>{{ prompt.title }}</h3>
+                <p>{{ prompt.preview }}</p>
+              </div>
+
+              <div class="prompt-library-actions">
+                <button mat-flat-button type="button" (click)="useStandardPrompt(prompt)">Use in chat</button>
+              </div>
+            </section>
+            }
+          </div>
+          }
+        </section>
+      </div>
+    </mat-tab>
   </mat-tab-group>
 </div>
