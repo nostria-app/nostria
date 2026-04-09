@@ -1,4 +1,7 @@
-import { Injectable, computed, inject, signal } from '@angular/core';
+import { Injectable, computed, effect, inject, signal } from '@angular/core';
+import { AccountStateService } from './account-state.service';
+import { DatabaseService, StoredAiChatHistoryEntry } from './database.service';
+import { LoggerService } from './logger.service';
 import { LocalStorageService } from './local-storage.service';
 
 export interface AiHistoryMessage {
@@ -20,12 +23,22 @@ export interface AiChatHistoryEntry {
   providedIn: 'root',
 })
 export class AiChatHistoryService {
+  private readonly accountState = inject(AccountStateService);
+  private readonly database = inject(DatabaseService);
+  private readonly logger = inject(LoggerService);
   private readonly storage = inject(LocalStorageService);
   private readonly storageKey = 'nostria-ai-chat-history';
   private readonly maxHistoryEntries = 30;
 
-  private readonly _histories = signal<AiChatHistoryEntry[]>(this.loadHistory());
+  private readonly _histories = signal<AiChatHistoryEntry[]>(this.loadLegacyHistory());
   readonly histories = computed(() => this._histories());
+
+  constructor() {
+    effect(() => {
+      const accountPubkey = this.accountState.account()?.pubkey ?? null;
+      void this.refreshHistory(accountPubkey);
+    });
+  }
 
   getHistory(id: string): AiChatHistoryEntry | undefined {
     return this._histories().find(entry => entry.id === id);
@@ -79,7 +92,7 @@ export class AiChatHistoryService {
         .sort((left, right) => right.updatedAt - left.updatedAt)
         .slice(0, this.maxHistoryEntries);
 
-      this.persist(sorted);
+      void this.persist(sorted);
       return sorted;
     });
 
@@ -89,7 +102,7 @@ export class AiChatHistoryService {
   deleteHistory(id: string): void {
     this._histories.update(entries => {
       const nextEntries = entries.filter(entry => entry.id !== id);
-      this.persist(nextEntries);
+      void this.persist(nextEntries);
       return nextEntries;
     });
   }
@@ -103,12 +116,75 @@ export class AiChatHistoryService {
     return firstUserMessage.length > 56 ? `${firstUserMessage.slice(0, 56).trimEnd()}...` : firstUserMessage;
   }
 
-  private loadHistory(): AiChatHistoryEntry[] {
+  private loadLegacyHistory(): AiChatHistoryEntry[] {
     return this.storage.getObject<AiChatHistoryEntry[]>(this.storageKey) ?? [];
   }
 
-  private persist(entries: AiChatHistoryEntry[]): void {
+  private async refreshHistory(accountPubkey: string | null): Promise<void> {
+    if (accountPubkey && this.database.hasAccountDb()) {
+      try {
+        let entries = await this.database.getAiChatHistoryEntries(accountPubkey);
+
+        if (entries.length === 0) {
+          const legacyEntries = this.loadLegacyHistory();
+          if (legacyEntries.length > 0) {
+            const migratedEntries = this.toStoredEntries(legacyEntries, accountPubkey);
+            await this.database.replaceAiChatHistoryEntries(accountPubkey, migratedEntries);
+            this.storage.removeItem(this.storageKey);
+            entries = migratedEntries;
+          }
+        }
+
+        this._histories.set(this.fromStoredEntries(entries));
+        return;
+      } catch (error) {
+        this.logger.warn('Failed to load AI chat history from account database, falling back to localStorage', error);
+      }
+    }
+
+    this._histories.set(this.loadLegacyHistory());
+  }
+
+  private async persist(entries: AiChatHistoryEntry[]): Promise<void> {
+    const accountPubkey = this.accountState.account()?.pubkey ?? null;
+
+    if (accountPubkey && this.database.hasAccountDb()) {
+      try {
+        await this.database.replaceAiChatHistoryEntries(accountPubkey, this.toStoredEntries(entries, accountPubkey));
+        this.storage.removeItem(this.storageKey);
+        return;
+      } catch (error) {
+        this.logger.warn('Failed to save AI chat history to account database, falling back to localStorage', error);
+      }
+    }
+
     this.storage.setObject(this.storageKey, entries);
+  }
+
+  private toStoredEntries(entries: AiChatHistoryEntry[], accountPubkey: string): StoredAiChatHistoryEntry[] {
+    return entries.map(entry => ({
+      ...entry,
+      accountPubkey,
+      messages: entry.messages.map(message => ({
+        role: message.role,
+        content: message.content,
+      })),
+    }));
+  }
+
+  private fromStoredEntries(entries: StoredAiChatHistoryEntry[]): AiChatHistoryEntry[] {
+    return entries.map(entry => ({
+      id: entry.id,
+      title: entry.title,
+      createdAt: entry.createdAt,
+      updatedAt: entry.updatedAt,
+      modelId: entry.modelId,
+      modelName: entry.modelName,
+      messages: entry.messages.map(message => ({
+        role: message.role,
+        content: message.content,
+      })),
+    }));
   }
 
   private createId(): string {

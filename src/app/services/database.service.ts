@@ -250,6 +250,20 @@ export interface CachedFeedEvent {
   cachedAt: number; // Timestamp when this was cached
 }
 
+export interface StoredAiChatHistoryEntry {
+  id: string;
+  accountPubkey: string;
+  title: string;
+  createdAt: number;
+  updatedAt: number;
+  modelId: string;
+  modelName: string;
+  messages: Array<{
+    role: 'user' | 'assistant';
+    content: string;
+  }>;
+}
+
 /**
  * Interface for trust metrics data
  */
@@ -294,7 +308,7 @@ export interface InfoRecord {
  */
 const SHARED_DB_NAME = 'nostria-shared';
 const ACCOUNT_DB_PREFIX = 'nostria-account-';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 
 /** Legacy database names to delete during migration */
 const LEGACY_DB_NAMES = ['nostria-db', 'nostria'];
@@ -323,6 +337,7 @@ const STORES = {
   BADGE_DEFINITIONS: 'badgeDefinitions',
   EVENTS_CACHE: 'eventsCache',
   MESSAGES: 'messages',
+  AI_CHAT_HISTORY: 'aiChatHistory',
 } as const;
 
 /** Stores that live in the shared database */
@@ -342,6 +357,7 @@ const ACCOUNT_STORES = new Set([
   STORES.NOTIFICATIONS,
   STORES.EVENTS_CACHE,
   STORES.MESSAGES,
+  STORES.AI_CHAT_HISTORY,
 ]);
 
 /**
@@ -830,7 +846,7 @@ export class DatabaseService {
 
   /**
    * Create schema for a per-account database.
-   * Stores: events (non-shared kinds), info, notifications, eventsCache, messages
+  * Stores: events (non-shared kinds), info, notifications, eventsCache, messages, aiChatHistory
    */
   private createAccountSchema(db: IDBDatabase): void {
     // Create events store (for per-account event kinds)
@@ -878,6 +894,13 @@ export class DatabaseService {
       messagesStore.createIndex('by-account', 'accountPubkey', { unique: false });
       messagesStore.createIndex('by-chat', 'chatId', { unique: false });
       this.logger.debug('Created messages store');
+    }
+
+    if (!db.objectStoreNames.contains(STORES.AI_CHAT_HISTORY)) {
+      const aiChatHistoryStore = db.createObjectStore(STORES.AI_CHAT_HISTORY, { keyPath: 'id' });
+      aiChatHistoryStore.createIndex('by-account', 'accountPubkey', { unique: false });
+      aiChatHistoryStore.createIndex('by-updated', 'updatedAt', { unique: false });
+      this.logger.debug('Created aiChatHistory store');
     }
   }
 
@@ -2451,6 +2474,59 @@ export class DatabaseService {
       }
     }
     return {};
+  }
+
+  // ============================================================================
+  // AI CHAT HISTORY OPERATIONS
+  // ============================================================================
+
+  async getAiChatHistoryEntries(accountPubkey: string): Promise<StoredAiChatHistoryEntry[]> {
+    const db = this.getAccountDb();
+    if (!db) return [];
+
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORES.AI_CHAT_HISTORY, 'readonly');
+      const store = transaction.objectStore(STORES.AI_CHAT_HISTORY);
+      const index = store.index('by-account');
+      const request = index.getAll(accountPubkey);
+
+      request.onsuccess = () => {
+        const entries = (request.result as StoredAiChatHistoryEntry[] | undefined) ?? [];
+        entries.sort((left, right) => right.updatedAt - left.updatedAt);
+        resolve(entries);
+      };
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  async replaceAiChatHistoryEntries(accountPubkey: string, entries: StoredAiChatHistoryEntry[]): Promise<void> {
+    const db = this.getAccountDb();
+    if (!db) return;
+
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORES.AI_CHAT_HISTORY, 'readwrite');
+      const store = transaction.objectStore(STORES.AI_CHAT_HISTORY);
+      const index = store.index('by-account');
+      const getExistingRequest = index.getAllKeys(accountPubkey);
+
+      getExistingRequest.onsuccess = () => {
+        const nextIds = new Set(entries.map(entry => entry.id));
+        for (const existingId of getExistingRequest.result ?? []) {
+          if (typeof existingId === 'string' && !nextIds.has(existingId)) {
+            store.delete(existingId);
+          }
+        }
+
+        for (const entry of entries) {
+          store.put(entry);
+        }
+      };
+
+      getExistingRequest.onerror = () => reject(getExistingRequest.error);
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error);
+      transaction.onabort = () => reject(transaction.error);
+    });
   }
 
   // ============================================================================
