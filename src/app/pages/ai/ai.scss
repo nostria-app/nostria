@@ -1,12 +1,13 @@
 .ai-page {
   --ai-chat-surface-background: var(--mat-sys-surface);
+  --ai-page-vertical-padding: 16px;
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
   width: min(1400px, 100%);
   height: 100%;
   margin: 0 auto;
-  padding: 16px 16px 0;
+  padding: var(--ai-page-vertical-padding) 16px;
   min-height: 0;
 }
 
@@ -15,8 +16,8 @@
   display: grid;
   grid-template-columns: 250px minmax(0, 1fr);
   gap: 20px;
-  min-height: calc(100dvh - var(--toolbar-height, 64px) - 16px);
-  height: calc(100dvh - var(--toolbar-height, 64px) - 16px);
+  min-height: calc(100dvh - var(--toolbar-height, 64px) - (var(--ai-page-vertical-padding) * 2));
+  height: calc(100dvh - var(--toolbar-height, 64px) - (var(--ai-page-vertical-padding) * 2));
 }
 
 .ai-shell.ai-shell-split {
@@ -167,9 +168,7 @@
 }
 
 .sidebar-settings-button {
-  min-height: 42px;
-  border-radius: 999px;
-  flex: 1 1 0;
+  flex: 0 0 auto;
 }
 
 .history-back-button {
@@ -948,13 +947,11 @@
 
 @media (max-width: 1120px) {
   .ai-page {
-    padding: 16px 14px 0;
+    padding-inline: 14px;
   }
 
   .ai-shell {
     grid-template-columns: 1fr;
-    min-height: calc(100dvh - var(--toolbar-height, 64px) - 16px);
-    height: calc(100dvh - var(--toolbar-height, 64px) - 16px);
   }
 
   .history-sidebar,
@@ -1015,8 +1012,9 @@
 
 @media (max-width: 640px) {
   .ai-page {
+    --ai-page-vertical-padding: 8px;
     width: 100%;
-    padding: 8px 10px 0;
+    padding-inline: 10px;
   }
 
   .history-sidebar {
