@@ -1,14 +1,23 @@
 <div class="ai-page">
-  <section class="ai-shell" [class.ai-shell-split]="splitPaneMode()">
+  <section class="ai-shell" [class.ai-shell-split]="splitPaneMode()"
+    [class.ai-shell-history-only]="narrowHistoryMode() && showHistoryDrawer()">
+    @if (showHistoryPanel()) {
     <aside class="history-sidebar" [class.history-sidebar-split]="splitPaneMode()">
       <div class="history-sidebar-head">
         <div>
           <p class="eyebrow">Local inference</p>
           <h1>AI</h1>
         </div>
-        <button mat-icon-button type="button" (click)="openSettingsPanel()" aria-label="AI settings">
-          <mat-icon>tune</mat-icon>
-        </button>
+        <div class="history-sidebar-actions">
+          <button mat-icon-button type="button" (click)="openSettingsPanel()" aria-label="AI settings">
+            <mat-icon>tune</mat-icon>
+          </button>
+          @if (narrowHistoryMode()) {
+          <button mat-icon-button type="button" (click)="toggleHistoryPanel()" aria-label="Back to chat">
+            <mat-icon>arrow_back</mat-icon>
+          </button>
+          }
+        </div>
       </div>
 
       <button mat-flat-button type="button" class="new-chat-button" (click)="createNewChat()">
@@ -38,7 +47,9 @@
         }
       </div>
     </aside>
+    }
 
+    @if (showChatPanel()) {
     <section class="chat-surface">
       <header class="chat-header">
         <div class="chat-header-copy">
@@ -46,17 +57,28 @@
           <h2>How can I help you?</h2>
         </div>
         <div class="chat-header-controls">
+          @if (narrowHistoryMode()) {
+          <button mat-stroked-button type="button" class="history-toggle-button" (click)="toggleHistoryPanel()">
+            <mat-icon>history</mat-icon>
+            History
+          </button>
+          }
+
           @if (selectedChatModel(); as model) {
           <button mat-stroked-button type="button" class="model-selector-button" [matMenuTriggerFor]="modelMenu">
-            <mat-icon>model_training</mat-icon>
-            <span>{{ model.name }}</span>
-            <span class="status-chip" [class.status-loaded]="model.loaded"
-              [class.status-cached]="!model.loaded && model.cached"
-              [class.status-idle]="!model.loaded && !model.cached && !model.loading"
-              [class.status-loading]="model.loading">
-              {{ selectedModelStatus() }}
+            <span class="model-selector-content">
+              <span class="model-selector-leading">
+                <mat-icon>model_training</mat-icon>
+                <span class="model-selector-name">{{ model.name }}</span>
+              </span>
+              <span class="status-chip model-selector-status" [class.status-loaded]="model.loaded"
+                [class.status-cached]="!model.loaded && model.cached"
+                [class.status-idle]="!model.loaded && !model.cached && !model.loading"
+                [class.status-loading]="model.loading">
+                {{ selectedModelStatus() }}
+              </span>
+              <mat-icon>expand_more</mat-icon>
             </span>
-            <mat-icon>expand_more</mat-icon>
           </button>
 
           <mat-menu #modelMenu="matMenu" class="model-selector-menu">
@@ -125,7 +147,31 @@
       <article class="message-row" [class.message-user]="message.role === 'user'"
         [class.message-assistant]="message.role === 'assistant'">
         <div class="message-label">{{ message.role === 'user' ? 'You' : 'AI' }}</div>
-        <div class="message-bubble" [class.pending-bubble]="message.streaming">{{ message.content }}</div>
+        @if (message.role === 'assistant') {
+        <div class="message-bubble markdown-bubble" [class.pending-bubble]="message.streaming">
+          @if (message.content.trim().length > 0) {
+          <div class="message-markdown" [innerHTML]="renderedAssistantMessage(message.id)"></div>
+          } @else {
+          <div class="stream-placeholder">Generating...</div>
+          }
+        </div>
+        } @else {
+        <div class="message-bubble user-bubble">
+          @if (message.content.trim().length > 0) {
+          <div class="message-text">{{ message.content }}</div>
+          }
+          @if (message.attachments?.length) {
+          <div class="message-attachments">
+            @for (attachment of message.attachments!; track attachment.id) {
+            <div class="message-attachment-chip">
+              <mat-icon>{{ attachment.kind === 'text' ? 'description' : 'attach_file' }}</mat-icon>
+              <span>{{ attachment.name }}</span>
+            </div>
+            }
+          </div>
+          }
+        </div>
+        }
       </article>
       }
 
@@ -137,20 +183,55 @@
     </div>
 
     <div class="composer-panel">
-      <mat-form-field appearance="outline" class="composer-field">
-        <mat-label>Message</mat-label>
-        <textarea matInput [ngModel]="composerText()" (ngModelChange)="composerText.set($event)" rows="3"
-          placeholder="Type your message here..." [disabled]="isGenerating()"></textarea>
-      </mat-form-field>
+      @if (attachedFiles().length > 0) {
+      <div class="composer-attachments">
+        @for (attachment of attachedFiles(); track attachment.id) {
+        <div class="composer-attachment-chip">
+          <div class="composer-attachment-copy">
+            <span class="composer-attachment-name">{{ attachment.name }}</span>
+            <span class="composer-attachment-meta">{{ formatFileSize(attachment.size) }}</span>
+          </div>
+          <button mat-icon-button type="button" class="composer-attachment-remove"
+            (click)="removeAttachment(attachment.id)" aria-label="Remove attachment">
+            <mat-icon>close</mat-icon>
+          </button>
+        </div>
+        }
+      </div>
+      }
 
-      <div class="composer-actions">
-        <button mat-stroked-button type="button" (click)="createNewChat()">New Chat</button>
-        <button mat-flat-button type="button" (click)="sendMessage()" [disabled]="!canSend()">
+      <div class="composer-shell">
+        <button mat-icon-button type="button" class="composer-plus-button" [matMenuTriggerFor]="attachmentMenu"
+          [disabled]="isGenerating()" aria-label="Add attachment">
+          <mat-icon>add</mat-icon>
+        </button>
+
+        <textarea class="composer-input" [ngModel]="composerText()" (ngModelChange)="composerText.set($event)"
+          (keydown)="onComposerKeydown($event)" rows="1" placeholder="Message Nostria assistant..."
+          [disabled]="isGenerating()"></textarea>
+
+        <button mat-icon-button type="button" class="composer-send-button" (click)="sendMessage()"
+          [disabled]="!canSend()" aria-label="Send message">
           <mat-icon>send</mat-icon>
-          Send
         </button>
       </div>
+
+      <div class="composer-footer">
+        <span class="composer-hint">Local chat. Files stay on this device unless you share them elsewhere.</span>
+        <button mat-button type="button" class="composer-secondary-button" (click)="createNewChat()">New Chat</button>
+      </div>
+
+      <mat-menu #attachmentMenu="matMenu">
+        <button mat-menu-item type="button" (click)="openAttachmentPicker()">
+          <mat-icon>attach_file</mat-icon>
+          <span>Attach files</span>
+        </button>
+      </mat-menu>
+
+      <input #attachmentInput type="file" multiple class="hidden-file-input" (change)="onAttachmentSelected($event)"
+        aria-label="Attach files" />
     </div>
   </section>
+  }
   </section>
 </div>

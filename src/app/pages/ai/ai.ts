@@ -1,13 +1,16 @@
-import { ChangeDetectionStrategy, Component, ElementRef, PLATFORM_ID, computed, effect, inject, signal, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, ElementRef, PLATFORM_ID, computed, effect, inject, signal, viewChild } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
+import { BreakpointObserver } from '@angular/cdk/layout';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
-import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
-import { MatInputModule } from '@angular/material/input';
 import { MatMenuModule } from '@angular/material/menu';
+import { MatSnackBar } from '@angular/material/snack-bar';
+import { SafeHtml } from '@angular/platform-browser';
 import { AiChatMessage, AiGenerationProgress, AiModelLoadOptions, AiService } from '../../services/ai.service';
 import { AiChatHistoryService } from '../../services/ai-chat-history.service';
+import { FormatService } from '../../services/format/format.service';
 import { LayoutService } from '../../services/layout.service';
 import { LoggerService } from '../../services/logger.service';
 import { PanelNavigationService } from '../../services/panel-navigation.service';
@@ -34,6 +37,18 @@ interface ConversationMessage {
   role: 'user' | 'assistant';
   content: string;
   streaming?: boolean;
+  attachments?: ComposerAttachment[];
+  attachmentContext?: string;
+}
+
+interface ComposerAttachment {
+  id: string;
+  name: string;
+  size: number;
+  mimeType: string;
+  kind: 'text' | 'file';
+  context: string;
+  cacheKey: string;
 }
 
 @Component({
@@ -42,9 +57,7 @@ interface ConversationMessage {
     CommonModule,
     FormsModule,
     MatButtonModule,
-    MatFormFieldModule,
     MatIconModule,
-    MatInputModule,
     MatMenuModule,
   ],
   templateUrl: './ai.html',
@@ -52,22 +65,35 @@ interface ConversationMessage {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AiComponent {
+  private static readonly AI_UPLOAD_CACHE = 'nostria-ai';
+
   private readonly aiService = inject(AiService);
+  private readonly breakpointObserver = inject(BreakpointObserver);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly formatService = inject(FormatService);
   private readonly historyService = inject(AiChatHistoryService);
   private readonly layout = inject(LayoutService);
   private readonly logger = inject(LoggerService);
   private readonly panelNav = inject(PanelNavigationService);
   private readonly platformId = inject(PLATFORM_ID);
+  private readonly snackBar = inject(MatSnackBar);
   private readonly conversationPanelRef = viewChild<ElementRef<HTMLDivElement>>('conversationPanel');
   private readonly conversationEndRef = viewChild<ElementRef<HTMLDivElement>>('conversationEnd');
+  private readonly attachmentInputRef = viewChild<ElementRef<HTMLInputElement>>('attachmentInput');
 
   private readonly isBrowser = isPlatformBrowser(this.platformId);
   private readonly systemPrompt = 'You are Nostria\'s local AI assistant. Keep replies concise, practical, and grounded in the user\'s request.';
   private readonly nextMessageId = signal(0);
+  private readonly renderedAssistantSource = new Map<string, string>();
+  private readonly renderedAssistantVersion = new Map<string, number>();
   readonly webGpuAvailable = this.isBrowser && typeof navigator !== 'undefined' && 'gpu' in navigator;
   readonly autoScrollPinned = signal(true);
   readonly splitPaneMode = computed(() => this.panelNav.hasRightContent() && !this.panelNav.isMobile());
   readonly currentConversationId = signal<string | null>(null);
+  readonly narrowHistoryMode = signal(false);
+  readonly showHistoryDrawer = signal(false);
+  readonly renderedAssistantMessages = signal<Record<string, SafeHtml>>({});
+  readonly attachedFiles = signal<ComposerAttachment[]>([]);
 
   readonly models = signal<ModelInfo[]>([
     {
@@ -163,6 +189,8 @@ export class AiComponent {
   readonly selectedChatModelId = signal(this.webGpuAvailable ? 'onnx-community/gemma-4-E2B-it-ONNX' : 'Xenova/distilgpt2');
   readonly selectedChatModel = computed(() => this.chatModels().find(model => model.id === this.selectedChatModelId()) ?? null);
   readonly histories = this.historyService.histories;
+  readonly showHistoryPanel = computed(() => !this.narrowHistoryMode() || this.showHistoryDrawer());
+  readonly showChatPanel = computed(() => !this.narrowHistoryMode() || !this.showHistoryDrawer());
   readonly conversation = signal<ConversationMessage[]>([
     {
       id: this.createMessageId(),
@@ -183,11 +211,20 @@ export class AiComponent {
       return false;
     }
 
-    return this.composerText().trim().length > 0;
+    return this.composerText().trim().length > 0 || this.attachedFiles().length > 0;
   });
   readonly selectedModelStatus = computed(() => this.selectedChatModel() ? this.statusLabel(this.selectedChatModel()!) : 'Unavailable');
 
   constructor() {
+    this.breakpointObserver.observe('(max-width: 1120px)').pipe(
+      takeUntilDestroyed(this.destroyRef),
+    ).subscribe(result => {
+      this.narrowHistoryMode.set(result.matches);
+      if (!result.matches) {
+        this.showHistoryDrawer.set(false);
+      }
+    });
+
     effect(() => {
       this.conversation();
       this.isGenerating();
@@ -199,24 +236,136 @@ export class AiComponent {
       this.scrollConversationToEnd(this.isGenerating() ? 'auto' : 'smooth');
     });
 
+    effect(() => {
+      if (!this.isBrowser) {
+        return;
+      }
+
+      const assistantMessages = this.conversation().filter(message => message.role === 'assistant');
+      const activeIds = new Set(assistantMessages.map(message => message.id));
+
+      this.renderedAssistantMessages.update(rendered => {
+        const next = { ...rendered };
+        for (const key of Object.keys(next)) {
+          if (!activeIds.has(key)) {
+            delete next[key];
+            this.renderedAssistantSource.delete(key);
+            this.renderedAssistantVersion.delete(key);
+          }
+        }
+        return next;
+      });
+
+      for (const message of assistantMessages) {
+        if (this.renderedAssistantSource.get(message.id) === message.content) {
+          continue;
+        }
+
+        this.renderedAssistantSource.set(message.id, message.content);
+        const nextVersion = (this.renderedAssistantVersion.get(message.id) ?? 0) + 1;
+        this.renderedAssistantVersion.set(message.id, nextVersion);
+
+        const initialHtml = this.formatService.markdownToHtmlNonBlocking(message.content, updatedHtml => {
+          if (this.renderedAssistantVersion.get(message.id) !== nextVersion) {
+            return;
+          }
+
+          this.renderedAssistantMessages.update(rendered => ({
+            ...rendered,
+            [message.id]: updatedHtml,
+          }));
+        });
+
+        this.renderedAssistantMessages.update(rendered => ({
+          ...rendered,
+          [message.id]: initialHtml,
+        }));
+      }
+    });
+
     void this.initializeModelStatus();
   }
 
   openSettingsPanel(): void {
+    this.showHistoryDrawer.set(false);
     this.layout.navigateToRightPanel('ai/settings');
   }
 
   createNewChat(): void {
     this.currentConversationId.set(null);
+    this.attachedFiles.set([]);
+    this.showHistoryDrawer.set(false);
     this.clearConversation();
   }
 
   openHistory(historyId: string): void {
+    this.showHistoryDrawer.set(false);
     this.layout.navigateToRightPanel(`ai/history/${historyId}`);
   }
 
   selectChatModel(modelId: string): void {
     this.selectedChatModelId.set(modelId);
+  }
+
+  onComposerKeydown(event: KeyboardEvent): void {
+    if (event.key !== 'Enter' || event.shiftKey || event.isComposing) {
+      return;
+    }
+
+    event.preventDefault();
+    if (this.canSend()) {
+      void this.sendMessage();
+    }
+  }
+
+  toggleHistoryPanel(): void {
+    if (!this.narrowHistoryMode()) {
+      return;
+    }
+
+    this.showHistoryDrawer.update(value => !value);
+  }
+
+  openAttachmentPicker(): void {
+    this.attachmentInputRef()?.nativeElement.click();
+  }
+
+  async onAttachmentSelected(event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement;
+    const files = Array.from(input.files ?? []);
+    if (files.length === 0) {
+      return;
+    }
+
+    try {
+      const attachments = await Promise.all(files.map(file => this.createAttachment(file)));
+      this.attachedFiles.update(existing => [...existing, ...attachments]);
+    } catch (err) {
+      this.logger.error('AI attachment read error:', err);
+      this.snackBar.open('Failed to attach one or more files.', 'Dismiss', { duration: 4000 });
+    } finally {
+      input.value = '';
+    }
+  }
+
+  removeAttachment(id: string): void {
+    this.attachedFiles.update(attachments => attachments.filter(attachment => attachment.id !== id));
+  }
+
+  formatFileSize(size: number): string {
+    if (size < 1024) {
+      return `${size} B`;
+    }
+
+    if (size < 1024 * 1024) {
+      return `${Math.round(size / 102.4) / 10} KB`;
+    }
+
+    return `${Math.round(size / 104857.6) / 10} MB`;
+  }
+
+  renderedAssistantMessage(id: string): SafeHtml | string {
+    return this.renderedAssistantMessages()[id] ?? '';
   }
 
   formatHistoryTimestamp(timestamp: number): string {
@@ -302,7 +451,9 @@ export class AiComponent {
 
   async sendMessage(): Promise<void> {
     const model = this.selectedChatModel();
-    const prompt = this.composerText().trim();
+    const promptText = this.composerText().trim();
+    const attachments = this.attachedFiles();
+    const prompt = promptText || (attachments.length > 0 ? 'Please analyze the attached files.' : '');
 
     if (!model || !prompt) {
       return;
@@ -310,14 +461,22 @@ export class AiComponent {
 
     this.chatError.set('');
     const assistantMessageId = this.createMessageId();
-    const userMessage: ConversationMessage = { id: this.createMessageId(), role: 'user', content: prompt };
+    const userMessage: ConversationMessage = {
+      id: this.createMessageId(),
+      role: 'user',
+      content: prompt,
+      attachments,
+      attachmentContext: this.buildAttachmentContext(attachments),
+    };
     const generationConversation = [...this.conversation(), userMessage];
     this.conversation.set([
       ...generationConversation,
       { id: assistantMessageId, role: 'assistant', content: '', streaming: true },
     ]);
     this.composerText.set('');
+    this.attachedFiles.set([]);
     this.autoScrollPinned.set(true);
+    this.showHistoryDrawer.set(false);
 
     if (!model.loaded) {
       const loaded = await this.loadModel(model);
@@ -447,16 +606,160 @@ export class AiComponent {
         { role: 'system', content: this.systemPrompt },
         ...conversation.map(message => ({
           role: message.role,
-          content: message.content,
+          content: this.buildGenerationMessageContent(message),
         })),
       ];
     }
 
     const transcript = conversation
-      .map(message => `${message.role === 'user' ? 'User' : 'Assistant'}: ${message.content}`)
+      .map(message => `${message.role === 'user' ? 'User' : 'Assistant'}: ${this.buildGenerationMessageContent(message)}`)
       .join('\n\n');
 
     return `${this.systemPrompt}\n\n${transcript}\n\nAssistant:`;
+  }
+
+  private buildGenerationMessageContent(message: ConversationMessage): string {
+    if (!message.attachmentContext) {
+      return message.content;
+    }
+
+    return `${message.content}\n\n${message.attachmentContext}`.trim();
+  }
+
+  private buildAttachmentContext(attachments: ComposerAttachment[]): string {
+    if (attachments.length === 0) {
+      return '';
+    }
+
+    return [
+      'Attached files:',
+      ...attachments.map(attachment => attachment.context),
+    ].join('\n\n');
+  }
+
+  private async createAttachment(file: File): Promise<ComposerAttachment> {
+    const mimeType = file.type || 'application/octet-stream';
+    const isTextFile = this.isTextLikeFile(file);
+    const fileId = `${file.name}-${file.lastModified}-${file.size}-${this.createMessageId()}`;
+    const cacheKey = this.getAiUploadCacheKey(fileId, file.name);
+
+    await this.storeFileInCache(cacheKey, file);
+
+    if (!isTextFile) {
+      return {
+        id: fileId,
+        name: file.name,
+        size: file.size,
+        mimeType,
+        kind: 'file',
+        context: `- ${file.name} (${mimeType}, ${this.formatFileSize(file.size)}). Binary file attached; include only its metadata in your reasoning.`,
+        cacheKey,
+      };
+    }
+
+    const rawText = await this.readCachedFileText(cacheKey, file);
+    const truncated = rawText.length > 12000 ? rawText.slice(0, 12000) : rawText;
+    const note = rawText.length > truncated.length ? '\n[Truncated for local context]' : '';
+    const languageHint = this.fileLanguageHint(file.name);
+    const codeFence = languageHint ? `\`\`\`${languageHint}` : '```';
+
+    return {
+      id: fileId,
+      name: file.name,
+      size: file.size,
+      mimeType,
+      kind: 'text',
+      context: `- ${file.name} (${mimeType}, ${this.formatFileSize(file.size)})\n\n${codeFence}\n${truncated}${note}\n${'```'}`,
+      cacheKey,
+    };
+  }
+
+  private getAiUploadCacheKey(attachmentId: string, fileName: string): string {
+    return `https://nostria.local/cache/ai/${encodeURIComponent(attachmentId)}/${encodeURIComponent(fileName)}`;
+  }
+
+  private async storeFileInCache(cacheKey: string, file: File): Promise<void> {
+    if (!this.isBrowser || typeof caches === 'undefined') {
+      return;
+    }
+
+    try {
+      const cache = await caches.open(AiComponent.AI_UPLOAD_CACHE);
+      await cache.put(cacheKey, new Response(file, {
+        headers: new Headers({
+          'content-type': file.type || 'application/octet-stream',
+          'x-nostria-file-name': file.name,
+        }),
+      }));
+    } catch (error) {
+      this.logger.warn('Failed to write AI upload cache', error);
+    }
+  }
+
+  private async readCachedFileText(cacheKey: string, file: File): Promise<string> {
+    if (!this.isBrowser || typeof caches === 'undefined') {
+      return file.text();
+    }
+
+    try {
+      const cache = await caches.open(AiComponent.AI_UPLOAD_CACHE);
+      const response = await cache.match(cacheKey);
+      if (response?.ok) {
+        return await response.text();
+      }
+    } catch (error) {
+      this.logger.warn('Failed to read AI upload cache', error);
+    }
+
+    return file.text();
+  }
+
+  private isTextLikeFile(file: File): boolean {
+    if (file.type.startsWith('text/')) {
+      return true;
+    }
+
+    const textExtensions = new Set([
+      'md', 'markdown', 'txt', 'json', 'yaml', 'yml', 'toml', 'xml', 'html', 'htm', 'css', 'scss', 'ts', 'tsx', 'js', 'jsx', 'mjs', 'cjs', 'py', 'rb', 'rs', 'go', 'java', 'cs', 'php', 'sql', 'sh', 'ps1', 'log', 'csv', 'ini', 'conf', 'env',
+    ]);
+    const extension = file.name.split('.').pop()?.toLowerCase() ?? '';
+    return textExtensions.has(extension);
+  }
+
+  private fileLanguageHint(fileName: string): string {
+    const extension = fileName.split('.').pop()?.toLowerCase() ?? '';
+    switch (extension) {
+      case 'ts':
+      case 'tsx':
+        return 'typescript';
+      case 'js':
+      case 'jsx':
+      case 'mjs':
+      case 'cjs':
+        return 'javascript';
+      case 'json':
+        return 'json';
+      case 'md':
+      case 'markdown':
+        return 'markdown';
+      case 'scss':
+      case 'css':
+        return extension;
+      case 'html':
+      case 'htm':
+        return 'html';
+      case 'yml':
+      case 'yaml':
+        return 'yaml';
+      case 'py':
+        return 'python';
+      case 'sh':
+        return 'bash';
+      case 'ps1':
+        return 'powershell';
+      default:
+        return '';
+    }
   }
 
   private extractAssistantReply(result: unknown): string {
