@@ -3,27 +3,22 @@
     [class.ai-shell-history-only]="!showHistoryPanel() || (narrowHistoryMode() && showHistoryDrawer())">
     @if (showHistoryPanel()) {
     <aside class="history-sidebar" [class.history-sidebar-split]="splitPaneMode()">
-      <div class="history-sidebar-head">
-        <div>
-          <p class="eyebrow">Local inference</p>
-          <h1>AI</h1>
-        </div>
-        <div class="history-sidebar-actions">
-          <button mat-icon-button type="button" (click)="openSettingsPanel()" aria-label="AI settings">
-            <mat-icon>tune</mat-icon>
-          </button>
-          @if (narrowHistoryMode()) {
-          <button mat-icon-button type="button" (click)="toggleHistoryPanel()" aria-label="Back to chat">
-            <mat-icon>arrow_back</mat-icon>
-          </button>
-          }
-        </div>
+      <div class="history-sidebar-topbar">
+        @if (narrowHistoryMode()) {
+        <button mat-icon-button type="button" class="history-back-button" (click)="toggleHistoryPanel()"
+          aria-label="Back to chat">
+          <mat-icon>arrow_back</mat-icon>
+        </button>
+        }
+        <button mat-flat-button type="button" class="new-chat-button" (click)="createNewChat()">
+          <mat-icon>add</mat-icon>
+          New Chat
+        </button>
+        <button mat-stroked-button type="button" class="sidebar-settings-button" (click)="openSettingsPanel()">
+          <mat-icon>tune</mat-icon>
+          AI Settings
+        </button>
       </div>
-
-      <button mat-flat-button type="button" class="new-chat-button" (click)="createNewChat()">
-        <mat-icon>add</mat-icon>
-        New Chat
-      </button>
 
       <div class="history-sidebar-copy">Recent local threads on this device</div>
 

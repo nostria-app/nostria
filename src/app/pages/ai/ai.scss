@@ -73,6 +73,7 @@
 }
 
 .history-sidebar-head,
+.history-sidebar-topbar,
 .chat-header,
 .chat-header-controls,
 .workspace-toolbar,
@@ -95,6 +96,11 @@
 .composer-footer,
 .model-menu-item {
   justify-content: space-between;
+}
+
+.history-sidebar-topbar {
+  align-items: center;
+  flex-wrap: wrap;
 }
 
 .history-sidebar-head {
@@ -153,6 +159,17 @@
 .new-chat-button {
   min-height: 42px;
   justify-content: flex-start;
+  flex: 1 1 0;
+}
+
+.sidebar-settings-button {
+  min-height: 42px;
+  border-radius: 999px;
+  flex: 1 1 0;
+}
+
+.history-back-button {
+  flex: 0 0 auto;
 }
 
 .history-list {
@@ -944,9 +961,22 @@
 
 @media (max-width: 820px) {
 
+  .ai-page {
+    padding-inline: 10px;
+  }
+
   .history-sidebar,
   .chat-surface {
     padding: 18px;
+  }
+
+  .chat-surface {
+    gap: 14px;
+    padding: 0;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    background: transparent;
   }
 
   .chat-header,
@@ -977,13 +1007,22 @@
 
 @media (max-width: 640px) {
   .ai-page {
-    padding: 12px 10px 16px;
+    width: 100%;
+    padding: 8px 10px 12px;
   }
 
-  .history-sidebar,
-  .chat-surface {
+  .history-sidebar {
     padding: 16px;
     border-radius: 18px;
+  }
+
+  .history-sidebar-topbar {
+    gap: 8px;
+  }
+
+  .new-chat-button,
+  .sidebar-settings-button {
+    min-width: 0;
   }
 
   .composer-panel {
