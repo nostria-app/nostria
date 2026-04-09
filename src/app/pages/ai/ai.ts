@@ -4,6 +4,7 @@ import { BreakpointObserver } from '@angular/cdk/layout';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
+import { MatDialog } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
@@ -18,9 +19,9 @@ import { FormatService } from '../../services/format/format.service';
 import { LayoutService } from '../../services/layout.service';
 import { LoggerService } from '../../services/logger.service';
 import { MediaService } from '../../services/media.service';
+import { MediaPreviewDialogComponent } from '../../components/media-preview-dialog/media-preview.component';
 import { CustomDialogService } from '../../services/custom-dialog.service';
 import { PanelNavigationService } from '../../services/panel-navigation.service';
-import { GeneratedImagePreviewDialogComponent } from './generated-image-preview-dialog.component';
 
 interface ModelInfo {
   id: string;
@@ -110,6 +111,7 @@ export class AiComponent {
   private readonly historyService = inject(AiChatHistoryService);
   private readonly layout = inject(LayoutService);
   private readonly logger = inject(LoggerService);
+  private readonly dialog = inject(MatDialog);
   private readonly eventService = inject(EventService);
   private readonly mediaService = inject(MediaService);
   private readonly customDialog = inject(CustomDialogService);
@@ -914,11 +916,17 @@ export class AiComponent {
   }
 
   openGeneratedImagePreview(image: AiGeneratedImage): void {
-    this.customDialog.open(GeneratedImagePreviewDialogComponent, {
-      title: 'Generated image',
-      width: 'min(92vw, 960px)',
-      maxWidth: '96vw',
-      data: { image },
+    this.dialog.open(MediaPreviewDialogComponent, {
+      data: {
+        mediaUrl: image.src,
+        mediaType: 'image',
+        mediaTitle: image.revisedPrompt || image.prompt || 'Generated image',
+      },
+      maxWidth: '100vw',
+      maxHeight: '100vh',
+      width: '100vw',
+      height: '100vh',
+      panelClass: 'image-dialog-panel',
     });
   }
 
