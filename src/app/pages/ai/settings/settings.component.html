@@ -64,8 +64,8 @@
               <div class="toggle-list">
                 <div class="toggle-item">
                   <span>Sentiment Analysis</span>
-                  <mat-slide-toggle [checked]="settings.settings().aiSentimentEnabled" (change)="toggleFeature('sentiment')"
-                    color="primary">
+                  <mat-slide-toggle [checked]="settings.settings().aiSentimentEnabled"
+                    (change)="toggleFeature('sentiment')" color="primary">
                   </mat-slide-toggle>
                 </div>
                 <div class="toggle-item">
@@ -106,7 +106,8 @@
                 synced to your Nostr settings event.
               </p>
               <p class="provider-intro">
-                Local browser image generation with Janus Pro is available on the AI page without an API key when WebGPU is
+                Local browser image generation with Janus Pro is available on the AI page without an API key when WebGPU
+                is
                 supported.
               </p>
 
@@ -166,9 +167,10 @@
 
                   <mat-form-field appearance="outline">
                     <mat-label>xAI API key</mat-label>
-                    <input matInput [type]="showXAiApiKey ? 'text' : 'password'" [(ngModel)]="xAiApiKey" placeholder="xai-..."
-                      autocomplete="new-password" autocorrect="off" autocapitalize="off" spellcheck="false"
-                      name="nostria-xai-api-key" data-lpignore="true" data-1p-ignore="true" data-bwignore="true" />
+                    <input matInput [type]="showXAiApiKey ? 'text' : 'password'" [(ngModel)]="xAiApiKey"
+                      placeholder="xai-..." autocomplete="new-password" autocorrect="off" autocapitalize="off"
+                      spellcheck="false" name="nostria-xai-api-key" data-lpignore="true" data-1p-ignore="true"
+                      data-bwignore="true" />
                     <button mat-icon-button matSuffix type="button" (click)="toggleApiKeyVisibility('xai')"
                       [attr.aria-label]="showXAiApiKey ? 'Hide API key' : 'Show API key'">
                       <mat-icon>{{ showXAiApiKey ? 'visibility_off' : 'visibility' }}</mat-icon>
@@ -232,7 +234,8 @@
             </div>
 
             <div class="storage-summary-actions">
-              <button mat-stroked-button type="button" (click)="refreshModelStorage()" [disabled]="modelStorageLoading()">
+              <button mat-stroked-button type="button" (click)="refreshModelStorage()"
+                [disabled]="modelStorageLoading()">
                 <mat-icon>refresh</mat-icon>
                 Refresh
               </button>
@@ -268,7 +271,8 @@
               <div class="model-storage-copy">
                 <div class="model-storage-title-row">
                   <h3>{{ model.name }}</h3>
-                  <span class="model-storage-status" [class.model-storage-status-cached]="model.cached || model.bytes > 0"
+                  <span class="model-storage-status"
+                    [class.model-storage-status-cached]="model.cached || model.bytes > 0"
                     [class.model-storage-status-loaded]="model.loaded">
                     @if (model.loaded) {
                     Loaded
