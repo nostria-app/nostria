@@ -328,7 +328,6 @@
 }
 
 .history-toggle-button,
-.header-load-button,
 .model-selector-button {
   min-height: 42px;
   border-radius: 999px;
@@ -831,6 +830,24 @@
   box-sizing: border-box;
 }
 
+.composer-meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.composer-model-button {
+  min-height: 38px;
+  max-width: min(100%, 420px);
+}
+
+.composer-model-hint {
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 0.82rem;
+}
+
 :host-context(.dark) .composer-panel {
   background: var(--mat-sys-surface-container-low);
 }
@@ -975,6 +992,14 @@
     left: 0;
     right: 10px;
     bottom: 6px;
+  }
+
+  .composer-meta-row {
+    align-items: stretch;
+  }
+
+  .composer-model-button {
+    max-width: 100%;
   }
 
   .composer-shell {

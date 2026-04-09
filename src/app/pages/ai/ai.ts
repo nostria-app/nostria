@@ -148,6 +148,44 @@ export class AiComponent {
       },
     },
     {
+      id: 'onnx-community/Qwen3-0.6B-ONNX',
+      task: 'text-generation',
+      name: 'Qwen 3 0.6B',
+      description: 'Compact Qwen 3 chat model for fast local browser inference.',
+      size: '~0.6B parameters',
+      loading: false,
+      progress: 0,
+      loaded: false,
+      cached: false,
+      runtime: 'WebGPU · q4f16',
+      loadOptions: { device: 'webgpu', dtype: 'q4f16' },
+      chatMode: 'messages',
+      chatDisabledReason: this.webGpuAvailable ? undefined : 'Requires WebGPU support in the browser.',
+      preferredParams: {
+        max_new_tokens: 384,
+        do_sample: false,
+      },
+    },
+    {
+      id: 'onnx-community/Qwen3-1.7B-ONNX',
+      task: 'text-generation',
+      name: 'Qwen 3 1.7B',
+      description: 'Higher-capacity Qwen 3 local chat model for stronger answers on capable GPUs.',
+      size: '~1.7B parameters',
+      loading: false,
+      progress: 0,
+      loaded: false,
+      cached: false,
+      runtime: 'WebGPU · q4f16',
+      loadOptions: { device: 'webgpu', dtype: 'q4f16' },
+      chatMode: 'messages',
+      chatDisabledReason: this.webGpuAvailable ? undefined : 'Requires WebGPU support in the browser.',
+      preferredParams: {
+        max_new_tokens: 512,
+        do_sample: false,
+      },
+    },
+    {
       id: 'Xenova/distilgpt2',
       task: 'text-generation',
       name: 'DistilGPT2',
@@ -287,6 +325,26 @@ export class AiComponent {
     return this.composerText().trim().length > 0 || this.attachedFiles().length > 0;
   });
   readonly selectedModelStatus = computed(() => this.selectedChatModel() ? this.statusLabel(this.selectedChatModel()!) : 'Unavailable');
+  readonly selectedModelActionHint = computed(() => {
+    const model = this.selectedChatModel();
+    if (!model) {
+      return 'Unavailable';
+    }
+
+    if (model.loading) {
+      return this.statusLabel(model);
+    }
+
+    if (model.loaded) {
+      return 'Ready';
+    }
+
+    if (model.cached) {
+      return 'Loads on first send';
+    }
+
+    return 'Downloads on first send';
+  });
 
   constructor() {
     this.breakpointObserver.observe('(max-width: 1120px)').pipe(
@@ -598,7 +656,7 @@ export class AiComponent {
     this.autoScrollPinned.set(true);
 
     if (!model.loaded) {
-      const loaded = await this.loadModel(model);
+      const loaded = await this.ensureChatModelReady(model);
       if (!loaded) {
         this.replaceMessageContent(assistantMessageId, 'The selected model could not be loaded in this browser.', false);
         this.persistCurrentConversation();
@@ -723,15 +781,6 @@ export class AiComponent {
     }
   }
 
-  async loadSelectedModel(): Promise<void> {
-    const model = this.selectedChatModel();
-    if (!model) {
-      return;
-    }
-
-    await this.loadModel(model);
-  }
-
   clearConversation(): void {
     this.chatError.set('');
     this.conversation.set([
@@ -802,7 +851,7 @@ export class AiComponent {
     this.showHistoryDrawer.set(false);
 
     if (!model.loaded) {
-      const loaded = await this.loadModel(model);
+      const loaded = await this.ensureChatModelReady(model);
       if (!loaded) {
         this.replaceMessageContent(assistantMessageId, 'The selected model could not be loaded in this browser.', false);
         this.persistCurrentConversation();
@@ -902,6 +951,24 @@ export class AiComponent {
       const panel = this.conversationPanelRef()?.nativeElement;
       panel?.scrollTo({ top: panel.scrollHeight, behavior });
     });
+  }
+
+  private async ensureChatModelReady(model: ModelInfo): Promise<boolean> {
+    if (model.loaded) {
+      return true;
+    }
+
+    const notice = model.cached
+      ? `Loading ${model.name}...`
+      : `Downloading ${model.name} for first use...`;
+    this.snackBar.open(notice, undefined, { duration: 2400 });
+
+    const loaded = await this.loadModel(model);
+    if (loaded) {
+      this.snackBar.open(`${model.name} is ready.`, undefined, { duration: 1800 });
+    }
+
+    return loaded;
   }
 
   private focusComposerPromptPlaceholder(prompt: string): void {
