@@ -564,6 +564,7 @@
 }
 
 .chat-workspace {
+  position: relative;
   display: flex;
   flex: 1 1 auto;
   flex-direction: column;
@@ -590,8 +591,8 @@
   display: flex;
   flex-direction: column;
   gap: 14px;
-  padding: 8px 10px 124px 0;
-  scroll-padding-bottom: 140px;
+  padding: 8px 10px 136px 0;
+  scroll-padding-bottom: 156px;
 }
 
 .conversation-panel::-webkit-scrollbar {
@@ -814,29 +815,46 @@
 }
 
 .composer-panel {
-  position: sticky;
-  bottom: 0;
+  position: absolute;
+  left: 0;
+  right: 10px;
+  bottom: 12px;
   z-index: 2;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding: 10px;
-  border-radius: 26px;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 22px;
   border: 1px solid var(--mat-sys-outline-variant);
-  background: rgba(20, 16, 24, 0.62);
-  -webkit-backdrop-filter: blur(20px) saturate(1.4);
-  backdrop-filter: blur(20px) saturate(1.4);
-  box-shadow: var(--mat-sys-level2);
+  background: color-mix(in srgb, var(--mat-sys-surface-container-low) 76%, transparent);
+  -webkit-backdrop-filter: blur(18px) saturate(1.2);
+  backdrop-filter: blur(18px) saturate(1.2);
+  box-shadow:
+    0 12px 30px color-mix(in srgb, var(--mat-sys-shadow) 20%, transparent),
+    inset 0 1px 0 color-mix(in srgb, var(--mat-sys-on-surface) 8%, transparent);
+  overflow: hidden;
+  box-sizing: border-box;
 }
 
 :host-context(.dark) .composer-panel {
-  background: rgba(15, 11, 18, 0.72);
+  background: color-mix(in srgb, var(--mat-sys-surface-container-low) 82%, transparent);
+}
+
+.composer-panel::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--mat-sys-on-surface) 4%, transparent) 0%, transparent 42%);
+  pointer-events: none;
 }
 
 .composer-shell {
+  position: relative;
   gap: 8px;
-  padding: 2px 4px;
-  border-radius: 18px;
+  min-height: 48px;
+  padding: 0;
+  border-radius: inherit;
   background: transparent;
   border: none;
   align-items: flex-end;
@@ -845,6 +863,8 @@
 .composer-plus-button,
 .composer-send-button {
   flex: 0 0 auto;
+  inline-size: 36px;
+  block-size: 36px;
 }
 
 .composer-input {
@@ -855,11 +875,11 @@
   resize: none;
   background: transparent;
   color: var(--mat-sys-on-surface);
-  padding: 10px 8px 10px 2px;
+  padding: 11px 6px 11px 2px;
   font: inherit;
   line-height: 1.45;
   field-sizing: content;
-  min-height: 44px;
+  min-height: 42px;
   max-height: 180px;
 }
 
@@ -945,7 +965,7 @@
 
 @media (max-width: 640px) {
   .ai-page {
-    padding: 12px 10px 18px;
+    padding: 12px 10px 16px;
   }
 
   .history-sidebar,
@@ -955,12 +975,26 @@
   }
 
   .composer-panel {
-    border-radius: 20px;
-    padding: 10px;
+    border-radius: 22px;
+    padding: 8px 10px;
+    left: 0;
+    right: 10px;
+    bottom: 6px;
   }
 
   .composer-shell {
-    padding: 4px;
+    min-height: 46px;
+  }
+
+  .composer-input {
+    min-height: 40px;
+    padding: 10px 6px 10px 2px;
+  }
+
+  .composer-plus-button,
+  .composer-send-button {
+    inline-size: 34px;
+    block-size: 34px;
   }
 
   .workspace-switch {

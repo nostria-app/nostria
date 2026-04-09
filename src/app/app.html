@@ -522,7 +522,8 @@
     [class.player-expanded]="layout.expandedMediaPlayer()" [class.cube-settled]="layout.cubeSettled()"
     [class.cube-no-transition]="layout.cubeTransitionDisabled()" [class.scroll-hidden]="layout.mobileNavScrollHidden()"
     [class.sidenav-open]="opened()" [class.hide-nav]="layout.effectiveHideMobileNav() && !layout.showCubePlayerFace()"
-    (touchstart)="onCubeTouchStart($event)" (touchmove)="onCubeTouchMove($event)" (touchend)="onCubeTouchEnd($event)">
+    [class.ai-route-hidden]="hideMobileNavForCurrentRoute()" (touchstart)="onCubeTouchStart($event)"
+    (touchmove)="onCubeTouchMove($event)" (touchend)="onCubeTouchEnd($event)">
     <div class="cube-inner">
       <!-- Face 1: Mobile navigation -->
       <div class="cube-face cube-face-nav">

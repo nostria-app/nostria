@@ -1961,6 +1961,10 @@ mat-sidenav-content {
     display: none;
   }
 
+  &.ai-route-hidden {
+    display: none;
+  }
+
   // When showing the media player face, increase z-index
   &.show-player {
     z-index: 1500;

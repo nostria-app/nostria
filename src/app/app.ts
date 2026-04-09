@@ -346,6 +346,15 @@ export class App implements OnInit, OnDestroy {
     return path === '/clips' || path.startsWith('/clips/');
   });
 
+  hideMobileNavForCurrentRoute = computed(() => {
+    if (!this.layout.isHandset()) {
+      return false;
+    }
+
+    const path = this.currentRouteUrl().split('?')[0] ?? '';
+    return path === '/ai' || path.startsWith('/ai/');
+  });
+
   // Track shortcuts dialog reference for toggle behavior
   private shortcutsDialogRef: MatDialogRef<ShortcutsDialogComponent> | null = null;
 

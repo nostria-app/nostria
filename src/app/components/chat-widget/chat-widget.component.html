@@ -3,17 +3,18 @@
 
   <!-- Collapsed pill -->
   @if (state() === 'collapsed') {
-  <div class="chat-pill" (mousedown)="onDragStart($event, true)">
-    <button class="pill-left" (click)="!wasDragged() && toggleOpen()">
+  <div class="chat-pill" (mousedown)="onDragStart($event, true)" (click)="!wasDragged() && toggleOpen()"
+    (contextmenu)="toggleLauncherMode($event)">
+    <div class="pill-left" aria-label="Messages" matTooltip="Click to open, right-click to minimize">
       <mat-icon class="pill-icon">send</mat-icon>
       <span class="pill-label">Messages</span>
       @if (unreadCount() > 0) {
       <span class="pill-badge">{{ unreadCount() > 99 ? '99+' : unreadCount() }}</span>
       }
-    </button>
+    </div>
     <div class="pill-avatars">
       @for (pubkey of recentAvatarPubkeys(); track pubkey) {
-      <button class="pill-avatar-button" (click)="!wasDragged() && openChat(pubkey, false)"
+      <button class="pill-avatar-button" (click)="openChatFromLauncher($event, pubkey)"
         aria-label="Open {{ getParticipantName(pubkey) }} chat" title="Open {{ getParticipantName(pubkey) }} chat"
         [matTooltip]="'Open ' + getParticipantName(pubkey) + ' chat'">
         <app-user-profile [pubkey]="pubkey" view="icon" [disableLink]="true" [disableHoverCard]="true" />
@@ -21,6 +22,18 @@
       }
     </div>
   </div>
+  }
+
+  <!-- Compact launcher -->
+  @if (state() === 'compact') {
+  <button class="chat-bubble" (mousedown)="onDragStart($event, true)" (click)="!wasDragged() && expandFromCompact()"
+    (contextmenu)="toggleLauncherMode($event)" aria-label="Open chat widget"
+    matTooltip="Click to open, right-click to expand">
+    <mat-icon class="bubble-icon">forum</mat-icon>
+    @if (unreadCount() > 0) {
+    <span class="bubble-badge">{{ unreadCount() > 99 ? '99+' : unreadCount() }}</span>
+    }
+  </button>
   }
 
   <!-- Expanded messages list -->

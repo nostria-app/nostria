@@ -369,7 +369,7 @@
 
           <textarea #composerInput class="composer-input" [ngModel]="composerText()"
             (ngModelChange)="composerText.set($event)" (keydown)="onComposerKeydown($event)" rows="1"
-            placeholder="Message Nostria assistant..." [disabled]="isGenerating()"></textarea>
+            placeholder="Ask anything" [disabled]="isGenerating()"></textarea>
 
           <button mat-icon-button type="button" class="composer-send-button" (click)="sendMessage()"
             [disabled]="!canSend()" aria-label="Send message">

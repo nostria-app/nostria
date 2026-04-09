@@ -21,7 +21,7 @@ import { ProfileDisplayNameComponent } from '../user-profile/display-name/profil
 import { MessageContentComponent } from '../message-content/message-content.component';
 import { AgoPipe } from '../../pipes/ago.pipe';
 
-type WidgetState = 'collapsed' | 'list' | 'chat';
+type WidgetState = 'compact' | 'collapsed' | 'list' | 'chat';
 
 @Component({
   selector: 'app-chat-widget',
@@ -67,6 +67,7 @@ export class ChatWidgetComponent {
   @ViewChild('widgetMessageInput') widgetMessageInput?: ElementRef<HTMLTextAreaElement>;
 
   state = signal<WidgetState>('collapsed');
+  private compactRestoreState = signal<Exclude<WidgetState, 'compact'>>('collapsed');
   activeChatId = signal<string | null>(null);
   activeChatIsGroup = signal(false);
   newMessageText = signal('');
@@ -205,20 +206,74 @@ export class ChatWidgetComponent {
   }
 
   toggleOpen() {
-    this.state.update(s => s === 'collapsed' ? 'list' : 'collapsed');
-    if (this.state() === 'list') {
-      this.clampToViewport();
-    } else {
-      this.clampAdjustment.set({ x: 0, y: 0 });
-    }
+    this.state.set('list');
+    this.clampToViewport();
   }
 
   close() {
-    this.state.set('collapsed');
-    this.activeChatId.set(null);
-    this.activeChatIsGroup.set(false);
-    this.restoreDraftForChat(null);
+    this.collapseToCompact();
     this.clampAdjustment.set({ x: 0, y: 0 });
+  }
+
+  collapseToCompact(): void {
+    const currentState = this.state();
+    if (currentState === 'compact') {
+      return;
+    }
+
+    this.compactRestoreState.set(currentState);
+    this.state.set('compact');
+    this.clampAdjustment.set({ x: 0, y: 0 });
+  }
+
+  openChatFromLauncher(event: Event, pubkey: string): void {
+    event.stopPropagation();
+    if (this.wasDragged()) {
+      return;
+    }
+
+    this.openChat(pubkey, false);
+  }
+
+  toggleLauncherMode(event: Event): void {
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (this.wasDragged()) {
+      return;
+    }
+
+    if (this.state() === 'compact') {
+      this.compactRestoreState.set('collapsed');
+      this.state.set('collapsed');
+      return;
+    }
+
+    if (this.state() === 'collapsed') {
+      this.collapseToCompact();
+    }
+  }
+
+  expandFromCompact(): void {
+    if (this.state() !== 'compact') {
+      return;
+    }
+
+    this.state.set('list');
+    this.compactRestoreState.set('collapsed');
+    this.clampToViewport();
+  }
+
+  restoreCollapsedLauncher(event?: Event): void {
+    event?.preventDefault();
+    event?.stopPropagation();
+
+    if (this.state() !== 'compact' || this.wasDragged()) {
+      return;
+    }
+
+    this.compactRestoreState.set('collapsed');
+    this.state.set('collapsed');
   }
 
   openFullMessages() {
