@@ -285,12 +285,13 @@
           [class.message-assistant]="message.role === 'assistant'">
           <div class="message-row-head">
             <div class="message-actions">
-                @if (message.role === 'assistant' && message.content.trim().length > 0) {
-                <button type="button" class="message-action-button" (click)="setShareTarget(message)" [matMenuTriggerFor]="assistantShareMenu">
-                  <mat-icon>share</mat-icon>
-                  <span>Share</span>
-                </button>
-                }
+              @if (message.role === 'assistant' && message.content.trim().length > 0) {
+              <button type="button" class="message-action-button" (click)="setShareTarget(message)"
+                [matMenuTriggerFor]="assistantShareMenu">
+                <mat-icon>share</mat-icon>
+                <span>Share</span>
+              </button>
+              }
               <button type="button" class="message-action-button" (click)="copyMessage(message)">
                 <mat-icon>content_copy</mat-icon>
                 <span>Copy</span>
