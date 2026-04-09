@@ -128,6 +128,20 @@ export class AiComponent {
 
   readonly models = signal<ModelInfo[]>([
     {
+      id: 'onnx-community/Janus-Pro-1B-ONNX',
+      task: 'image-generation',
+      name: 'Janus Pro 1B',
+      description: 'Local browser image generation with DeepSeek Janus Pro via Transformers.js.',
+      size: '~1B parameters',
+      loading: false,
+      progress: 0,
+      loaded: false,
+      cached: false,
+      runtime: 'WebGPU · multimodal',
+      source: 'local',
+      chatDisabledReason: this.webGpuAvailable ? undefined : 'Requires WebGPU support in the browser.',
+    },
+    {
       id: 'onnx-community/gemma-4-E2B-it-ONNX',
       task: 'text-generation',
       name: 'Gemma 4 E2B',
@@ -296,6 +310,7 @@ export class AiComponent {
       }));
   });
   readonly imageModels = computed<ModelInfo[]>(() => {
+    const localImageModels = this.models().filter(model => model.task === 'image-generation');
     const preferredProvider = this.aiService.getActiveImageProvider();
     const providers: AiCloudProvider[] = ['xai', 'openai'];
     const sortedProviders = providers
@@ -312,7 +327,7 @@ export class AiComponent {
         return 0;
       });
 
-    return sortedProviders.map(provider => ({
+    const cloudImageModels = sortedProviders.map<ModelInfo>(provider => ({
       id: `cloud-image:${provider}`,
       task: 'image-generation',
       name: `${this.aiService.getProviderLabel(provider)} Image`,
@@ -327,6 +342,8 @@ export class AiComponent {
       provider,
       cloudModel: this.aiService.getImageModel(provider),
     }));
+
+    return [...localImageModels, ...cloudImageModels];
   });
   readonly composerModels = computed(() => [
     ...this.localChatModels(),
@@ -726,7 +743,7 @@ export class AiComponent {
     this.autoScrollPinned.set(true);
 
     if (model.source !== 'cloud' && !model.loaded) {
-      const loaded = await this.ensureChatModelReady(model);
+      const loaded = await this.ensureLocalModelReady(model);
       if (!loaded) {
         this.replaceMessageContent(assistantMessageId, 'The selected model could not be loaded in this browser.', false);
         this.persistCurrentConversation();
@@ -925,7 +942,7 @@ export class AiComponent {
     this.showHistoryDrawer.set(false);
 
     if (model.source !== 'cloud' && !model.loaded) {
-      const loaded = await this.ensureChatModelReady(model);
+      const loaded = await this.ensureLocalModelReady(model);
       if (!loaded) {
         this.replaceMessageContent(assistantMessageId, 'The selected model could not be loaded in this browser.', false);
         this.persistCurrentConversation();
@@ -1028,7 +1045,7 @@ export class AiComponent {
     });
   }
 
-  private async ensureChatModelReady(model: ModelInfo): Promise<boolean> {
+  private async ensureLocalModelReady(model: ModelInfo): Promise<boolean> {
     if (model.loaded) {
       return true;
     }
@@ -1096,11 +1113,6 @@ export class AiComponent {
       return;
     }
 
-    if (!model.provider) {
-      this.chatError.set('Select an image provider first.');
-      return;
-    }
-
     const prompt = promptText.trim();
     if (!prompt) {
       return;
@@ -1125,7 +1137,18 @@ export class AiComponent {
     this.isGenerating.set(true);
 
     try {
-      const images = await this.aiService.generateImage(prompt, model.provider);
+      if (model.source !== 'cloud' && !model.loaded) {
+        const loaded = await this.ensureLocalModelReady(model);
+        if (!loaded) {
+          this.replaceMessageContent(assistantMessageId, 'The selected model could not be loaded in this browser.', false);
+          this.persistCurrentConversation();
+          return;
+        }
+      }
+
+      const images = model.source === 'cloud'
+        ? await this.aiService.generateImage(prompt, model.provider)
+        : await this.aiService.generateLocalImage(prompt, model.id);
       const cachedImages = await Promise.all(images.map(image => this.cacheGeneratedImage(image)));
       this.conversation.update(messages => messages.map(message => {
         if (message.id !== assistantMessageId) {

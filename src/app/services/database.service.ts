@@ -263,7 +263,7 @@ export interface StoredAiChatHistoryEntry {
     content: string;
     generatedImages?: Array<{
       id: string;
-      provider: 'openai' | 'xai';
+      provider: 'openai' | 'xai' | 'local';
       providerLabel: string;
       model: string;
       prompt: string;

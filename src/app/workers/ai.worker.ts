@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { pipeline, env, Tensor, AutoTokenizer, SpeechT5ForTextToSpeech, SpeechT5HifiGan, TextStreamer } from '@huggingface/transformers';
+import { pipeline, env, Tensor, AutoProcessor, AutoTokenizer, BaseStreamer, MultiModalityCausalLM, SpeechT5ForTextToSpeech, SpeechT5HifiGan, TextStreamer } from '@huggingface/transformers';
 
 // Configure environment to use the Cache API for storing models
 env.allowLocalModels = false;
@@ -11,6 +11,8 @@ let sentiment: any = null;
 let transcriber: any = null;
 // let synthesizer: any = null; // Replaced by TTSPipeline
 const translators = new Map<string, any>();
+const imageGenerators = new Map<string, { processor: Promise<any>, model: Promise<any> }>();
+let fp16Supported = false;
 
 class TTSPipeline {
   static model_id = 'Xenova/speecht5_tts';
@@ -32,6 +34,83 @@ class TTSPipeline {
 
     return Promise.all([this.tokenizer, this.model, this.vocoder]);
   }
+}
+
+class ImageProgressStreamer extends BaseStreamer {
+  private generatedTokens = 0;
+
+  constructor(
+    private readonly totalTokens: number,
+    private readonly callback: (payload: { status: 'image-progress'; progress: number }) => void,
+  ) {
+    super();
+  }
+
+  put(): void {
+    this.generatedTokens += 1;
+    const progress = this.totalTokens > 0 ? Math.min(this.generatedTokens / this.totalTokens, 1) : 0;
+    this.callback({ status: 'image-progress', progress });
+  }
+
+  end(): void {
+    this.callback({ status: 'image-progress', progress: 1 });
+  }
+}
+
+async function detectFp16Support() {
+  if (!('gpu' in navigator)) {
+    fp16Supported = false;
+    return;
+  }
+
+  try {
+    const adapter = await navigator.gpu.requestAdapter();
+    fp16Supported = !!adapter?.features?.has('shader-f16');
+  } catch {
+    fp16Supported = false;
+  }
+}
+
+async function getImageGenerator(modelId: string, progressCallback: (data: unknown) => void) {
+  const existing = imageGenerators.get(modelId);
+  if (existing) {
+    return Promise.all([existing.processor, existing.model]);
+  }
+
+  await detectFp16Support();
+
+  const processor = AutoProcessor.from_pretrained(modelId, { progress_callback: progressCallback });
+  const model = MultiModalityCausalLM.from_pretrained(modelId, {
+    dtype: fp16Supported
+      ? {
+        prepare_inputs_embeds: 'q4',
+        language_model: 'q4f16',
+        lm_head: 'fp16',
+        gen_head: 'fp16',
+        gen_img_embeds: 'fp16',
+        image_decode: 'fp32',
+      }
+      : {
+        prepare_inputs_embeds: 'fp32',
+        language_model: 'q4',
+        lm_head: 'fp32',
+        gen_head: 'fp32',
+        gen_img_embeds: 'fp32',
+        image_decode: 'fp32',
+      },
+    device: {
+      prepare_inputs_embeds: 'wasm',
+      language_model: 'webgpu',
+      lm_head: 'webgpu',
+      gen_head: 'webgpu',
+      gen_img_embeds: 'webgpu',
+      image_decode: 'webgpu',
+    },
+    progress_callback: progressCallback,
+  });
+
+  imageGenerators.set(modelId, { processor, model });
+  return Promise.all([processor, model]);
 }
 
 addEventListener('message', async ({ data }) => {
@@ -62,6 +141,9 @@ addEventListener('message', async ({ data }) => {
         break;
       case 'check':
         await handleCheck(payload, id);
+        break;
+      case 'generate-image':
+        await handleGenerateImage(payload, id);
         break;
     }
   } catch (error: unknown) {
@@ -99,6 +181,8 @@ async function handleLoad(payload: { task: string, model: string, options?: Reco
     transcriber = await pipeline(task, model, { ...options, progress_callback: progressCallback });
   } else if (task === 'text-to-speech') {
     await TTSPipeline.getInstance(progressCallback);
+  } else if (task === 'image-generation') {
+    await getImageGenerator(model, progressCallback);
   }
 
   postMessage({
@@ -137,6 +221,57 @@ async function handleGenerate(payload: { input: string | { role: string, content
     type: 'result',
     id,
     payload: result
+  });
+}
+
+async function handleGenerateImage(payload: { prompt: string, model: string }, id: string) {
+  const progressCallback = (data: unknown) => {
+    postMessage({
+      type: 'progress',
+      id,
+      payload: data
+    });
+  };
+
+  const [processor, model] = await getImageGenerator(payload.model, progressCallback);
+  const inputs = await processor([
+    {
+      role: '<|User|>',
+      content: payload.prompt,
+    },
+  ], {
+    chat_template: 'text_to_image',
+  });
+
+  const numImageTokens = processor.num_image_tokens;
+  const streamer = new ImageProgressStreamer(numImageTokens, progress => {
+    postMessage({
+      type: 'progress',
+      id,
+      payload: progress
+    });
+  });
+
+  const outputs = await model.generate_images({
+    ...inputs,
+    min_new_tokens: numImageTokens,
+    max_new_tokens: numImageTokens,
+    do_sample: true,
+    streamer,
+  });
+
+  const images = await Promise.all(outputs.map(async (image: { toBlob: () => Promise<Blob> }) => {
+    const blob = await image.toBlob();
+    return {
+      blob,
+      mimeType: blob.type || 'image/png',
+    };
+  }));
+
+  postMessage({
+    type: 'result',
+    id,
+    payload: { images }
   });
 }
 
@@ -349,6 +484,7 @@ async function handleCheck(payload: { task: string, model: string }, id: string)
   else if (task === 'translation') isLoaded = translators.has(model);
   else if (task === 'automatic-speech-recognition') isLoaded = !!transcriber;
   else if (task === 'text-to-speech') isLoaded = !!TTSPipeline.model;
+  else if (task === 'image-generation') isLoaded = imageGenerators.has(model);
 
   // Check cache if not loaded
   if (!isLoaded) {

@@ -17,7 +17,13 @@ export interface AiGenerationProgress {
   text: string;
 }
 
+export interface AiImageGenerationProgress {
+  status: 'image-progress';
+  progress: number;
+}
+
 export type AiCloudProvider = 'openai' | 'xai';
+export type AiImageProvider = AiCloudProvider | 'local';
 
 export interface AiCloudSettings {
   openaiApiKey?: string;
@@ -31,7 +37,7 @@ export interface AiCloudSettings {
 
 export interface AiGeneratedImage {
   id: string;
-  provider: AiCloudProvider;
+  provider: AiImageProvider;
   providerLabel: string;
   model: string;
   prompt: string;
@@ -63,6 +69,13 @@ interface AiImageApiPayload {
     message?: string;
   } | string;
   message?: string;
+}
+
+interface AiLocalImageWorkerPayload {
+  images?: Array<{
+    blob?: Blob;
+    mimeType?: string;
+  }>;
 }
 
 interface WorkerCallback {
@@ -142,6 +155,7 @@ export class AiService {
       case 'translation': return 'Translating...';
       case 'automatic-speech-recognition': return 'Transcribing...';
       case 'text-to-speech': return 'Synthesizing speech...';
+      case 'image-generation': return 'Generating image...';
       case 'load': return 'Loading model...';
       case 'synthesize': return 'Synthesizing speech...'; // The postMessage type is 'synthesize'
       case 'generate': return 'Generating text...';
@@ -282,7 +296,11 @@ export class AiService {
     return this.postMessage('check', { task, model }) as Promise<{ loaded: boolean, cached: boolean }>;
   }
 
-  getProviderLabel(provider: AiCloudProvider): string {
+  getProviderLabel(provider: AiImageProvider): string {
+    if (provider === 'local') {
+      return 'Local browser AI';
+    }
+
     return provider === 'openai' ? 'OpenAI' : 'xAI / Grok';
   }
 
@@ -353,6 +371,29 @@ export class AiService {
     return activeProvider === 'openai'
       ? this.generateOpenAiImage(trimmedPrompt)
       : this.generateXAiImage(trimmedPrompt);
+  }
+
+  async generateLocalImage(
+    prompt: string,
+    model: string,
+    progressCallback?: (data: AiImageGenerationProgress) => void,
+  ): Promise<AiGeneratedImage[]> {
+    if (!this.settings.settings().aiEnabled) {
+      throw new Error('AI is disabled');
+    }
+
+    const trimmedPrompt = prompt.trim();
+    if (!trimmedPrompt) {
+      throw new Error('Image prompt cannot be empty.');
+    }
+
+    const payload = await this.postMessage(
+      'generate-image',
+      { prompt: trimmedPrompt, model },
+      progressCallback as ((data: unknown) => void) | undefined,
+    ) as AiLocalImageWorkerPayload;
+
+    return this.mapLocalGeneratedImages(payload, model, trimmedPrompt);
   }
 
   async generateCloudText(messages: AiChatMessage[], provider: AiCloudProvider, model?: string): Promise<string> {
@@ -618,6 +659,42 @@ export class AiService {
         revisedPrompt: entry.revised_prompt,
         src,
       };
+    });
+  }
+
+  private async mapLocalGeneratedImages(
+    payload: AiLocalImageWorkerPayload,
+    model: string,
+    prompt: string,
+  ): Promise<AiGeneratedImage[]> {
+    if (!Array.isArray(payload.images) || payload.images.length === 0) {
+      throw new Error('The local model returned no images.');
+    }
+
+    return Promise.all(payload.images.map(async (entry, index) => {
+      if (!(entry.blob instanceof Blob)) {
+        throw new Error('The local model did not return image content.');
+      }
+
+      const mimeType = entry.mimeType || entry.blob.type || 'image/png';
+      return {
+        id: `local-${Date.now()}-${index}`,
+        provider: 'local' as const,
+        providerLabel: this.getProviderLabel('local'),
+        model,
+        prompt,
+        src: await this.blobToDataUrl(entry.blob),
+        mimeType,
+      };
+    }));
+  }
+
+  private blobToDataUrl(blob: Blob): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(typeof reader.result === 'string' ? reader.result : '');
+      reader.onerror = () => reject(reader.error ?? new Error('Could not read image data.'));
+      reader.readAsDataURL(blob);
     });
   }
 
