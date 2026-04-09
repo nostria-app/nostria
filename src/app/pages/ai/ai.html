@@ -307,33 +307,22 @@
       </div>
       }
 
-      @if (selectedChatModel(); as model) {
-      <div class="composer-meta-row">
-        <button mat-stroked-button type="button" class="model-selector-button composer-model-button"
-          [matMenuTriggerFor]="modelMenu">
-          <span class="model-selector-content">
-            <span class="model-selector-leading">
-              <mat-icon>model_training</mat-icon>
-              <span class="model-selector-name">{{ model.name }}</span>
-            </span>
-            <span class="status-chip model-selector-status" [class.status-loaded]="model.loaded"
-              [class.status-cached]="!model.loaded && model.cached"
-              [class.status-idle]="!model.loaded && !model.cached && !model.loading"
-              [class.status-loading]="model.loading">
-              {{ selectedModelStatus() }}
-            </span>
-            <mat-icon>expand_more</mat-icon>
-          </span>
-        </button>
-        <span class="composer-model-hint">{{ selectedModelActionHint() }}</span>
-      </div>
-      }
-
       <div class="composer-shell">
         <button mat-icon-button type="button" class="composer-plus-button" [matMenuTriggerFor]="attachmentMenu"
           [disabled]="isGenerating()" aria-label="Add attachment">
           <mat-icon>add</mat-icon>
         </button>
+
+        @if (selectedChatModel(); as model) {
+        <button mat-icon-button type="button" class="composer-model-button" [matMenuTriggerFor]="modelMenu"
+          [class.composer-model-button-loaded]="model.loaded"
+          [class.composer-model-button-cached]="!model.loaded && model.cached"
+          [class.composer-model-button-idle]="!model.loaded && !model.cached && !model.loading"
+          [class.composer-model-button-loading]="model.loading" [attr.aria-label]="'Select model: ' + model.name"
+          [attr.title]="model.name">
+          <mat-icon>model_training</mat-icon>
+        </button>
+        }
 
         <textarea #composerInput class="composer-input" [ngModel]="composerText()"
           (ngModelChange)="composerText.set($event)" (keydown)="onComposerKeydown($event)" rows="1"

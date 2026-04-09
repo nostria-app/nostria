@@ -343,28 +343,6 @@ export class AiComponent {
 
     return this.composerText().trim().length > 0 || this.attachedFiles().length > 0;
   });
-  readonly selectedModelStatus = computed(() => this.selectedChatModel() ? this.statusLabel(this.selectedChatModel()!) : 'Unavailable');
-  readonly selectedModelActionHint = computed(() => {
-    const model = this.selectedChatModel();
-    if (!model) {
-      return 'Unavailable';
-    }
-
-    if (model.loading) {
-      return this.statusLabel(model);
-    }
-
-    if (model.loaded) {
-      return 'Ready';
-    }
-
-    if (model.cached) {
-      return 'Loads on first send';
-    }
-
-    return 'Downloads on first send';
-  });
-
   constructor() {
     this.breakpointObserver.observe('(max-width: 1120px)').pipe(
       takeUntilDestroyed(this.destroyRef),

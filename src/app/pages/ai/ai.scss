@@ -3,7 +3,7 @@
   width: min(1400px, 100%);
   height: 100%;
   margin: 0 auto;
-  padding: 16px 16px 24px;
+  padding: 16px 16px 0;
   min-height: 0;
 }
 
@@ -12,7 +12,7 @@
   grid-template-columns: 250px minmax(0, 1fr);
   gap: 20px;
   height: calc(100vh - 152px);
-  min-height: 640px;
+  min-height: 0;
 }
 
 .ai-shell.ai-shell-split {
@@ -847,24 +847,6 @@
   box-sizing: border-box;
 }
 
-.composer-meta-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.composer-model-button {
-  min-height: 38px;
-  max-width: min(100%, 420px);
-}
-
-.composer-model-hint {
-  color: var(--mat-sys-on-surface-variant);
-  font-size: 0.82rem;
-}
-
 :host-context(.dark) .composer-panel {
   background: var(--mat-sys-surface-container-low);
 }
@@ -886,6 +868,7 @@
 }
 
 .composer-plus-button,
+.composer-model-button,
 .composer-send-button {
   flex: 0 0 auto;
   inline-size: 36px;
@@ -894,6 +877,27 @@
   display: flex !important;
   align-items: center;
   justify-content: center;
+}
+
+.composer-model-button {
+  border: 1px solid var(--mat-sys-outline-variant);
+  background: var(--mat-sys-surface-container);
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.composer-model-button.composer-model-button-loaded {
+  background: var(--mat-success-lighter);
+  color: var(--mat-success-darker);
+}
+
+.composer-model-button.composer-model-button-cached {
+  background: var(--mat-sys-primary-container);
+  color: var(--mat-sys-on-primary-container);
+}
+
+.composer-model-button.composer-model-button-loading {
+  background: var(--mat-sys-secondary-container);
+  color: var(--mat-sys-on-secondary-container);
 }
 
 .composer-input {
@@ -940,7 +944,7 @@
 
 @media (max-width: 1120px) {
   .ai-page {
-    padding: 16px 14px 24px;
+    padding: 16px 14px 0;
   }
 
   .ai-shell {
@@ -1008,7 +1012,7 @@
 @media (max-width: 640px) {
   .ai-page {
     width: 100%;
-    padding: 8px 10px 12px;
+    padding: 8px 10px 0;
   }
 
   .history-sidebar {
@@ -1033,14 +1037,6 @@
     bottom: 6px;
   }
 
-  .composer-meta-row {
-    align-items: stretch;
-  }
-
-  .composer-model-button {
-    max-width: 100%;
-  }
-
   .composer-shell {
     min-height: 46px;
   }
@@ -1051,6 +1047,7 @@
   }
 
   .composer-plus-button,
+  .composer-model-button,
   .composer-send-button {
     inline-size: 34px;
     block-size: 34px;

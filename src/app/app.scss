@@ -1297,6 +1297,12 @@ mat-sidenav-content {
         padding-bottom: 0;
       }
 
+      // AI hides the mobile bottom cube on handset routes, so panel-level
+      // bottom spacing only creates unused empty space.
+      &:has(app-ai) {
+        padding-bottom: 0;
+      }
+
       .panel-content-wrapper {
         max-width: 700px;
         margin-left: auto;
@@ -1327,6 +1333,10 @@ mat-sidenav-content {
         // Notifications handles mobile menu spacing inside its own virtual scroll.
         // Avoid adding panel-level bottom padding to prevent duplicate bottom gap.
         &:has(app-notifications) {
+          padding-bottom: 0;
+        }
+
+        &:has(app-ai) {
           padding-bottom: 0;
         }
       }
