@@ -78,12 +78,16 @@
 .history-sidebar-head,
 .chat-header,
 .chat-header-controls,
+.workspace-toolbar,
 .history-sidebar-actions,
 .model-selector-content,
 .model-selector-leading,
 .model-menu-item,
 .composer-shell,
 .composer-footer,
+.composer-footer-actions,
+.message-row-head,
+.message-actions,
 .message-attachments,
 .composer-attachments {
   display: flex;
@@ -111,6 +115,46 @@
   font-size: 0.92rem;
 }
 
+.history-search-shell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px;
+  min-height: 42px;
+  border-radius: 999px;
+  border: 1px solid var(--mat-sys-outline-variant);
+  background: color-mix(in srgb, var(--mat-sys-surface-container-low) 88%, transparent);
+}
+
+.history-search-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--mat-sys-on-surface);
+  font: inherit;
+}
+
+.history-search-clear {
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--mat-sys-on-surface-variant);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.history-summary-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 0.82rem;
+}
+
 .new-chat-button {
   min-height: 42px;
   justify-content: flex-start;
@@ -126,15 +170,38 @@
 
 .history-item {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
-  align-items: flex-start;
-  padding: 12px 14px;
-  border-radius: 16px;
+  align-items: stretch;
+  gap: 8px;
+  padding: 8px;
+  border-radius: 18px;
   border: 1px solid var(--mat-sys-outline-variant);
   background: color-mix(in srgb, var(--mat-sys-surface-container-low) 80%, transparent);
+}
+
+.history-item-open {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1 1 auto;
+  align-items: flex-start;
+  padding: 4px 6px;
+  border: none;
+  background: transparent;
   color: var(--mat-sys-on-surface);
   text-align: left;
+}
+
+.history-item-delete {
+  flex: 0 0 auto;
+  inline-size: 36px;
+  block-size: 36px;
+  border-radius: 999px;
+  border: none;
+  background: transparent;
+  color: var(--mat-sys-on-surface-variant);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .history-item-current {
@@ -175,6 +242,59 @@
 
 .chat-header {
   padding: 4px 2px 0;
+}
+
+.workspace-toolbar {
+  justify-content: space-between;
+  flex-wrap: wrap;
+  padding: 0 2px;
+}
+
+.workspace-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--mat-sys-surface-container-high) 94%, transparent);
+  border: 1px solid var(--mat-sys-outline-variant);
+}
+
+.workspace-switch-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--mat-sys-on-surface-variant);
+  font: inherit;
+}
+
+.workspace-switch-button-active {
+  background: color-mix(in srgb, var(--mat-sys-primary-container) 78%, var(--mat-sys-surface));
+  color: var(--mat-sys-on-primary-container);
+}
+
+.workspace-stats {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.workspace-stat-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--mat-sys-surface-container-low) 88%, transparent);
+  border: 1px solid var(--mat-sys-outline-variant);
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 0.84rem;
 }
 
 .chat-header-copy {
@@ -292,6 +412,33 @@
   background: color-mix(in srgb, var(--mat-sys-tertiary-container) 16%, var(--mat-sys-surface));
 }
 
+.chat-workspace,
+.image-studio {
+  position: relative;
+  transition: box-shadow 180ms ease, transform 180ms ease, border-color 180ms ease;
+}
+
+.section-focused {
+  border-color: var(--mat-sys-primary);
+  box-shadow: 0 20px 48px color-mix(in srgb, var(--mat-sys-primary-container) 20%, transparent);
+}
+
+.tool-suggestion-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.tool-suggestion-chip {
+  min-height: 36px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid var(--mat-sys-outline-variant);
+  background: color-mix(in srgb, var(--mat-sys-surface) 82%, transparent);
+  color: var(--mat-sys-on-surface);
+  font: inherit;
+}
+
 .image-studio-header {
   display: flex;
   align-items: flex-start;
@@ -393,6 +540,13 @@
   font-size: 0.84rem;
 }
 
+.generated-image-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
 .prompt-suggestions {
   display: flex;
   flex-wrap: wrap;
@@ -437,6 +591,38 @@
   letter-spacing: 0.04em;
   text-transform: uppercase;
   padding: 0 4px;
+}
+
+.message-row-head {
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.message-actions {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.message-action-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background: color-mix(in srgb, var(--mat-sys-surface-container-high) 84%, transparent);
+  color: var(--mat-sys-on-surface-variant);
+  font: inherit;
+  font-size: 0.8rem;
+}
+
+.message-action-button mat-icon {
+  width: 16px;
+  height: 16px;
+  font-size: 16px;
 }
 
 .message-bubble {
@@ -644,6 +830,12 @@
   gap: 10px;
 }
 
+.composer-footer-actions {
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
 .composer-hint {
   flex: 1 1 auto;
   min-width: 0;
@@ -700,10 +892,21 @@
 
   .chat-header,
   .chat-header-controls,
+  .workspace-toolbar,
   .composer-footer,
   .image-studio-header {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .message-row-head {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .message-actions,
+  .composer-footer-actions {
+    justify-content: flex-start;
   }
 
   .chat-header h2 {
@@ -733,6 +936,16 @@
 
   .composer-shell {
     padding: 4px;
+  }
+
+  .workspace-switch {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .workspace-switch-button {
+    flex: 1 1 0;
+    justify-content: center;
   }
 
   .composer-attachment-name {

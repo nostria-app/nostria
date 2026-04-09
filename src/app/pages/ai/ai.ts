@@ -4,6 +4,7 @@ import { BreakpointObserver } from '@angular/cdk/layout';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
+import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatSelectModule } from '@angular/material/select';
@@ -52,12 +53,20 @@ interface ComposerAttachment {
   cacheKey: string;
 }
 
+type AiWorkspaceView = 'chat' | 'create';
+
+interface AiQuickPrompt {
+  label: string;
+  prompt: string;
+}
+
 @Component({
   selector: 'app-ai',
   imports: [
     CommonModule,
     FormsModule,
     MatButtonModule,
+    MatFormFieldModule,
     MatIconModule,
     MatMenuModule,
     MatSelectModule,
@@ -94,6 +103,8 @@ export class AiComponent {
   readonly currentConversationId = signal<string | null>(null);
   readonly narrowHistoryMode = signal(false);
   readonly showHistoryDrawer = signal(false);
+  readonly workspaceView = signal<AiWorkspaceView>('chat');
+  readonly historyQuery = signal('');
   readonly renderedAssistantMessages = signal<Record<string, SafeHtml>>({});
   readonly attachedFiles = signal<ComposerAttachment[]>([]);
   readonly imagePrompt = signal('');
@@ -198,8 +209,46 @@ export class AiComponent {
   readonly selectedChatModelId = signal(this.webGpuAvailable ? 'onnx-community/gemma-4-E2B-it-ONNX' : 'Xenova/distilgpt2');
   readonly selectedChatModel = computed(() => this.chatModels().find(model => model.id === this.selectedChatModelId()) ?? null);
   readonly histories = this.historyService.histories;
+  readonly filteredHistories = computed(() => {
+    const query = this.historyQuery().trim().toLowerCase();
+    if (!query) {
+      return this.histories();
+    }
+
+    return this.histories().filter(entry => {
+      const searchTarget = [
+        entry.title,
+        entry.modelName,
+        ...entry.messages.map(message => message.content),
+      ].join(' ').toLowerCase();
+      return searchTarget.includes(query);
+    });
+  });
   readonly showHistoryPanel = computed(() => !this.hideHistoryRail() || this.showHistoryDrawer());
   readonly showChatPanel = computed(() => !this.narrowHistoryMode() || !this.showHistoryDrawer());
+  readonly activeHistory = computed(() => this.histories().find(entry => entry.id === this.currentConversationId()) ?? null);
+  readonly conversationMessageCount = computed(() => this.conversation().filter(message => message.content.trim().length > 0).length);
+  readonly conversationAttachmentCount = computed(() => this.conversation().reduce((total, message) => total + (message.attachments?.length ?? 0), 0));
+  readonly currentConversationTitle = computed(() => this.activeHistory()?.title ?? 'New local chat');
+  readonly canRetryLastReply = computed(() => {
+    if (this.isGenerating() || this.selectedChatModel()?.chatDisabledReason) {
+      return false;
+    }
+
+    const lastMessage = this.conversation().at(-1);
+    return lastMessage?.role === 'assistant';
+  });
+  readonly chatQuickPrompts: AiQuickPrompt[] = [
+    { label: 'Summarize a feature', prompt: 'Summarize the latest Nostria architecture direction.' },
+    { label: 'Draft a post', prompt: 'Help me write a better Nostr post about this idea.' },
+    { label: 'Explain code', prompt: 'Explain this code change in simple terms.' },
+    { label: 'Brainstorm', prompt: 'Brainstorm improvements for this product flow.' },
+  ];
+  readonly imageQuickPrompts: AiQuickPrompt[] = [
+    { label: 'Album artwork', prompt: 'Design a bold album cover for an independent electronic release with geometric light trails and a cinematic atmosphere.' },
+    { label: 'Product hero', prompt: 'Create a premium product hero image for a futuristic social app running on glass screens in a bright studio scene.' },
+    { label: 'Poster concept', prompt: 'Generate a contemporary poster illustration for a Nostr community event with layered typography and editorial texture.' },
+  ];
   readonly conversation = signal<ConversationMessage[]>([
     {
       id: this.createMessageId(),
@@ -307,10 +356,15 @@ export class AiComponent {
     this.layout.navigateToRightPanel('ai/settings');
   }
 
+  setWorkspaceView(view: AiWorkspaceView): void {
+    this.workspaceView.set(view);
+  }
+
   createNewChat(): void {
     this.currentConversationId.set(null);
     this.attachedFiles.set([]);
     this.showHistoryDrawer.set(false);
+    this.workspaceView.set('chat');
     this.clearConversation();
   }
 
@@ -330,6 +384,7 @@ export class AiComponent {
     this.attachedFiles.set([]);
     this.autoScrollPinned.set(true);
     this.showHistoryDrawer.set(false);
+    this.workspaceView.set('chat');
     this.conversation.set(history.messages.map(message => ({
       id: this.createMessageId(),
       role: message.role,
@@ -362,6 +417,7 @@ export class AiComponent {
 
   selectImageProvider(provider: AiCloudProvider): void {
     this.selectedImageProvider.set(provider);
+    this.workspaceView.set('create');
   }
 
   async generateImage(): Promise<void> {
@@ -372,6 +428,7 @@ export class AiComponent {
 
     this.imageGenerationError.set('');
     this.isGeneratingImage.set(true);
+    this.workspaceView.set('create');
 
     try {
       const generatedImages = await this.aiService.generateImage(prompt, this.selectedImageProvider());
@@ -412,6 +469,128 @@ export class AiComponent {
 
   removeAttachment(id: string): void {
     this.attachedFiles.update(attachments => attachments.filter(attachment => attachment.id !== id));
+  }
+
+  applyChatPrompt(prompt: string): void {
+    this.workspaceView.set('chat');
+    this.composerText.set(prompt);
+  }
+
+  applyImagePrompt(prompt: string): void {
+    this.workspaceView.set('create');
+    this.imagePrompt.set(prompt);
+  }
+
+  clearHistoryQuery(): void {
+    this.historyQuery.set('');
+  }
+
+  deleteHistory(historyId: string): void {
+    const history = this.historyService.getHistory(historyId);
+    if (!history) {
+      return;
+    }
+
+    this.historyService.deleteHistory(historyId);
+    if (this.currentConversationId() === historyId) {
+      this.createNewChat();
+    }
+
+    this.snackBar.open(`Removed '${history.title}'.`, 'Dismiss', { duration: 3000 });
+  }
+
+  async copyMessage(message: ConversationMessage): Promise<void> {
+    if (!this.isBrowser || typeof navigator === 'undefined' || !navigator.clipboard) {
+      this.snackBar.open('Clipboard access is not available in this browser.', 'Dismiss', { duration: 3500 });
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(message.content);
+      this.snackBar.open(message.role === 'assistant' ? 'Reply copied.' : 'Prompt copied.', 'Dismiss', { duration: 2400 });
+    } catch (error) {
+      this.logger.warn('Failed to copy AI message', error);
+      this.snackBar.open('Could not copy that message.', 'Dismiss', { duration: 3500 });
+    }
+  }
+
+  reuseMessage(message: ConversationMessage): void {
+    this.workspaceView.set('chat');
+    this.composerText.set(message.content);
+    this.snackBar.open(message.role === 'assistant' ? 'Reply moved into the composer.' : 'Prompt ready to edit.', 'Dismiss', { duration: 2400 });
+  }
+
+  async retryLastReply(): Promise<void> {
+    const model = this.selectedChatModel();
+    const currentConversation = this.conversation();
+    const lastMessage = currentConversation.at(-1);
+
+    if (!model || lastMessage?.role !== 'assistant' || this.isGenerating()) {
+      return;
+    }
+
+    const generationConversation = currentConversation.slice(0, -1);
+    const assistantMessageId = this.createMessageId();
+    this.chatError.set('');
+    this.conversation.set([
+      ...generationConversation,
+      { id: assistantMessageId, role: 'assistant', content: '', streaming: true },
+    ]);
+    this.autoScrollPinned.set(true);
+
+    if (!model.loaded) {
+      const loaded = await this.loadModel(model);
+      if (!loaded) {
+        this.replaceMessageContent(assistantMessageId, 'The selected model could not be loaded in this browser.', false);
+        this.persistCurrentConversation();
+        return;
+      }
+    }
+
+    this.isGenerating.set(true);
+
+    try {
+      const input = this.buildGenerationInput(model, generationConversation);
+      const result = await this.aiService.generateText(
+        input,
+        model.preferredParams,
+        model.id,
+        (progress: AiGenerationProgress) => {
+          if (progress.status === 'stream') {
+            this.appendToMessage(assistantMessageId, progress.text);
+          }
+        },
+      );
+      const assistantReply = this.extractAssistantReply(result);
+      const currentReply = this.getMessageContent(assistantMessageId);
+      this.replaceMessageContent(assistantMessageId, currentReply.trim().length > 0 ? currentReply.trimEnd() : assistantReply, false);
+      this.persistCurrentConversation();
+    } catch (err) {
+      this.logger.error('AI retry error:', err);
+      const message = err instanceof Error ? err.message : String(err);
+      this.chatError.set(message);
+      this.replaceMessageContent(assistantMessageId, `Model error: ${message}`, false);
+      this.persistCurrentConversation();
+    } finally {
+      this.isGenerating.set(false);
+    }
+  }
+
+  useImagePromptInChat(image: AiGeneratedImage): void {
+    this.workspaceView.set('chat');
+    this.composerText.set(`Use this image concept as context and turn it into a polished post or product idea:\n\n${image.revisedPrompt || image.prompt}`);
+  }
+
+  downloadImage(image: AiGeneratedImage): void {
+    if (!this.isBrowser || typeof document === 'undefined') {
+      return;
+    }
+
+    const link = document.createElement('a');
+    link.href = image.src;
+    link.download = `${image.id}.png`;
+    link.rel = 'noopener';
+    link.click();
   }
 
   formatFileSize(size: number): string {
@@ -530,6 +709,7 @@ export class AiComponent {
       return;
     }
 
+    this.workspaceView.set('chat');
     this.chatError.set('');
     const assistantMessageId = this.createMessageId();
     const userMessage: ConversationMessage = {

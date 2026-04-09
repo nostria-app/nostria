@@ -27,22 +27,49 @@
 
       <div class="history-sidebar-copy">Recent local threads on this device</div>
 
+      <div class="history-search-shell">
+        <mat-icon>search</mat-icon>
+        <input class="history-search-input" [ngModel]="historyQuery()" (ngModelChange)="historyQuery.set($event)"
+          placeholder="Search chats, models, or replies" />
+        @if (historyQuery().trim()) {
+        <button type="button" class="history-search-clear" (click)="clearHistoryQuery()" aria-label="Clear search">
+          <mat-icon>close</mat-icon>
+        </button>
+        }
+      </div>
+
+      <div class="history-summary-row">
+        <span>{{ histories().length }} saved</span>
+        @if (historyQuery().trim()) {
+        <span>{{ filteredHistories().length }} matches</span>
+        }
+      </div>
+
       <div class="history-list">
         @if (histories().length === 0) {
         <div class="history-empty-state">
           <mat-icon>history</mat-icon>
           <span>No saved chats yet</span>
         </div>
+        } @else if (filteredHistories().length === 0) {
+        <div class="history-empty-state">
+          <mat-icon>search_off</mat-icon>
+          <span>No chats match that search</span>
+        </div>
         } @else {
-        @for (entry of histories(); track entry.id) {
-        <button type="button" class="history-item" (click)="openHistory(entry.id)"
-          [class.history-item-current]="entry.id === currentConversationId()">
-          <div class="history-item-title">{{ entry.title }}</div>
-          <div class="history-item-meta">
-            <span>{{ entry.modelName }}</span>
-            <span>{{ formatHistoryTimestamp(entry.updatedAt) }}</span>
-          </div>
-        </button>
+        @for (entry of filteredHistories(); track entry.id) {
+        <div class="history-item" [class.history-item-current]="entry.id === currentConversationId()">
+          <button type="button" class="history-item-open" (click)="openHistory(entry.id)">
+            <div class="history-item-title">{{ entry.title }}</div>
+            <div class="history-item-meta">
+              <span>{{ entry.modelName }}</span>
+              <span>{{ formatHistoryTimestamp(entry.updatedAt) }}</span>
+            </div>
+          </button>
+          <button type="button" class="history-item-delete" (click)="deleteHistory(entry.id)" aria-label="Delete chat">
+            <mat-icon>delete</mat-icon>
+          </button>
+        </div>
         }
         }
       </div>
@@ -115,6 +142,32 @@
         </div>
       </header>
 
+      <section class="workspace-toolbar">
+        <div class="workspace-switch" aria-label="AI workspace mode">
+          <button type="button" class="workspace-switch-button" [class.workspace-switch-button-active]="workspaceView() === 'chat'"
+            [attr.aria-pressed]="workspaceView() === 'chat'" (click)="setWorkspaceView('chat')">
+            <mat-icon>chat</mat-icon>
+            Chat
+          </button>
+          <button type="button" class="workspace-switch-button" [class.workspace-switch-button-active]="workspaceView() === 'create'"
+            [attr.aria-pressed]="workspaceView() === 'create'" (click)="setWorkspaceView('create')">
+            <mat-icon>image</mat-icon>
+            Create
+          </button>
+        </div>
+
+        <div class="workspace-stats">
+          <span class="workspace-stat-pill">{{ currentConversationTitle() }}</span>
+          <span class="workspace-stat-pill">{{ conversationMessageCount() }} messages</span>
+          @if (conversationAttachmentCount() > 0) {
+          <span class="workspace-stat-pill">{{ conversationAttachmentCount() }} attachments</span>
+          }
+          @if (selectedChatModel(); as model) {
+          <span class="workspace-stat-pill">{{ model.runtime }}</span>
+          }
+        </div>
+      </section>
+
       @if (chatError()) {
       <div class="notice error-notice">
         <mat-icon>error</mat-icon>
@@ -122,7 +175,7 @@
       </div>
       }
 
-      <section class="image-studio">
+      <section class="image-studio" [class.section-focused]="workspaceView() === 'create'">
         <div class="image-studio-header">
           <div>
             <p class="eyebrow">Cloud image generation</p>
@@ -164,6 +217,14 @@
             </button>
           </div>
         </div>
+
+        <div class="tool-suggestion-strip">
+          @for (prompt of imageQuickPrompts; track prompt.label) {
+          <button type="button" class="tool-suggestion-chip" (click)="applyImagePrompt(prompt.prompt)">
+            {{ prompt.label }}
+          </button>
+          }
+        </div>
         }
 
         @if (imageGenerationError()) {
@@ -177,14 +238,19 @@
         <div class="generated-image-grid">
           @for (image of generatedImages(); track image.id) {
           <article class="generated-image-card">
-            <img [src]="image.src" [alt]="image.prompt" [title]="image.prompt" class="generated-image-preview" />
+            <img [src]="image.src" [attr.alt]="image.prompt" [attr.title]="image.prompt" class="generated-image-preview" />
             <div class="generated-image-copy">
               <div class="generated-image-meta">
                 <span>{{ image.providerLabel }}</span>
                 <span>{{ image.model }}</span>
               </div>
               <p>{{ image.revisedPrompt || image.prompt }}</p>
-              <a [href]="image.src" target="_blank" rel="noopener noreferrer">Open image</a>
+              <div class="generated-image-actions">
+                <button mat-button type="button" (click)="applyImagePrompt(image.revisedPrompt || image.prompt)">Remix</button>
+                <button mat-button type="button" (click)="useImagePromptInChat(image)">Use in chat</button>
+                <button mat-button type="button" (click)="downloadImage(image)">Download</button>
+                <a [href]="image.src" target="_blank" rel="noopener noreferrer">Open image</a>
+              </div>
             </div>
           </article>
           }
@@ -199,108 +265,127 @@
       </div>
       }
 
-      @if (conversation().length <= 1) { <section class="prompt-suggestions">
-        <button mat-stroked-button type="button"
-          (click)="composerText.set('Summarize the latest Nostria architecture direction.')">Summarize a
-          feature</button>
-        <button mat-stroked-button type="button"
-          (click)="composerText.set('Help me write a better Nostr post about this idea.')">Draft a post</button>
-        <button mat-stroked-button type="button"
-          (click)="composerText.set('Explain this code change in simple terms.')">Explain code</button>
-        <button mat-stroked-button type="button"
-          (click)="composerText.set('Brainstorm improvements for this product flow.')">Brainstorm</button>
-    </section>
-    }
+      <section class="chat-workspace" [class.section-focused]="workspaceView() === 'chat'">
+        @if (conversation().length <= 1) {
+        <section class="prompt-suggestions">
+          @for (prompt of chatQuickPrompts; track prompt.label) {
+          <button mat-stroked-button type="button" (click)="applyChatPrompt(prompt.prompt)">{{ prompt.label }}</button>
+          }
+        </section>
+        }
 
-    <div class="conversation-panel" #conversationPanel (scroll)="onConversationScroll($event)">
-      @for (message of conversation(); track $index) {
-      <article class="message-row" [class.message-user]="message.role === 'user'"
-        [class.message-assistant]="message.role === 'assistant'">
-        <div class="message-label">{{ message.role === 'user' ? 'You' : 'AI' }}</div>
-        @if (message.role === 'assistant') {
-        <div class="message-bubble markdown-bubble" [class.pending-bubble]="message.streaming">
-          @if (message.content.trim().length > 0) {
-          <div class="message-markdown" [innerHTML]="renderedAssistantMessage(message.id)"></div>
-          } @else {
-          <div class="stream-placeholder">Generating...</div>
+        <div class="conversation-panel" #conversationPanel (scroll)="onConversationScroll($event)">
+          @for (message of conversation(); track message.id) {
+          <article class="message-row" [class.message-user]="message.role === 'user'"
+            [class.message-assistant]="message.role === 'assistant'">
+            <div class="message-row-head">
+              <div class="message-label">{{ message.role === 'user' ? 'You' : 'AI' }}</div>
+              <div class="message-actions">
+                <button type="button" class="message-action-button" (click)="copyMessage(message)">
+                  <mat-icon>content_copy</mat-icon>
+                  <span>Copy</span>
+                </button>
+                <button type="button" class="message-action-button" (click)="reuseMessage(message)">
+                  <mat-icon>{{ message.role === 'assistant' ? 'edit_note' : 'edit' }}</mat-icon>
+                  <span>{{ message.role === 'assistant' ? 'Use in composer' : 'Edit prompt' }}</span>
+                </button>
+                @if (message.role === 'assistant' && message.id === conversation().at(-1)?.id && canRetryLastReply()) {
+                <button type="button" class="message-action-button" (click)="retryLastReply()">
+                  <mat-icon>refresh</mat-icon>
+                  <span>Retry</span>
+                </button>
+                }
+              </div>
+            </div>
+            @if (message.role === 'assistant') {
+            <div class="message-bubble markdown-bubble" [class.pending-bubble]="message.streaming">
+              @if (message.content.trim().length > 0) {
+              <div class="message-markdown" [innerHTML]="renderedAssistantMessage(message.id)"></div>
+              } @else {
+              <div class="stream-placeholder">Generating...</div>
+              }
+            </div>
+            } @else {
+            <div class="message-bubble user-bubble">
+              @if (message.content.trim().length > 0) {
+              <div class="message-text">{{ message.content }}</div>
+              }
+              @if (message.attachments?.length) {
+              <div class="message-attachments">
+                @for (attachment of message.attachments!; track attachment.id) {
+                <div class="message-attachment-chip">
+                  <mat-icon>{{ attachment.kind === 'text' ? 'description' : 'attach_file' }}</mat-icon>
+                  <span>{{ attachment.name }}</span>
+                </div>
+                }
+              </div>
+              }
+            </div>
+            }
+          </article>
           }
+
+          @if (isGenerating()) {
+          <div class="typing-indicator" aria-live="polite">Generating a local reply...</div>
+          }
+
+          <div class="conversation-anchor" #conversationEnd aria-hidden="true"></div>
         </div>
-        } @else {
-        <div class="message-bubble user-bubble">
-          @if (message.content.trim().length > 0) {
-          <div class="message-text">{{ message.content }}</div>
-          }
-          @if (message.attachments?.length) {
-          <div class="message-attachments">
-            @for (attachment of message.attachments!; track attachment.id) {
-            <div class="message-attachment-chip">
-              <mat-icon>{{ attachment.kind === 'text' ? 'description' : 'attach_file' }}</mat-icon>
-              <span>{{ attachment.name }}</span>
+
+        <div class="composer-panel">
+          @if (attachedFiles().length > 0) {
+          <div class="composer-attachments">
+            @for (attachment of attachedFiles(); track attachment.id) {
+            <div class="composer-attachment-chip">
+              <div class="composer-attachment-copy">
+                <span class="composer-attachment-name">{{ attachment.name }}</span>
+                <span class="composer-attachment-meta">{{ formatFileSize(attachment.size) }}</span>
+              </div>
+              <button mat-icon-button type="button" class="composer-attachment-remove"
+                (click)="removeAttachment(attachment.id)" aria-label="Remove attachment">
+                <mat-icon>close</mat-icon>
+              </button>
             </div>
             }
           </div>
           }
-        </div>
-        }
-      </article>
-      }
 
-      @if (isGenerating()) {
-      <div class="typing-indicator" aria-live="polite">Generating a local reply...</div>
-      }
+          <div class="composer-shell">
+            <button mat-icon-button type="button" class="composer-plus-button" [matMenuTriggerFor]="attachmentMenu"
+              [disabled]="isGenerating()" aria-label="Add attachment">
+              <mat-icon>add</mat-icon>
+            </button>
 
-      <div class="conversation-anchor" #conversationEnd aria-hidden="true"></div>
-    </div>
+            <textarea class="composer-input" [ngModel]="composerText()" (ngModelChange)="composerText.set($event)"
+              (keydown)="onComposerKeydown($event)" rows="1" placeholder="Message Nostria assistant..."
+              [disabled]="isGenerating()"></textarea>
 
-    <div class="composer-panel">
-      @if (attachedFiles().length > 0) {
-      <div class="composer-attachments">
-        @for (attachment of attachedFiles(); track attachment.id) {
-        <div class="composer-attachment-chip">
-          <div class="composer-attachment-copy">
-            <span class="composer-attachment-name">{{ attachment.name }}</span>
-            <span class="composer-attachment-meta">{{ formatFileSize(attachment.size) }}</span>
+            <button mat-icon-button type="button" class="composer-send-button" (click)="sendMessage()"
+              [disabled]="!canSend()" aria-label="Send message">
+              <mat-icon>send</mat-icon>
+            </button>
           </div>
-          <button mat-icon-button type="button" class="composer-attachment-remove"
-            (click)="removeAttachment(attachment.id)" aria-label="Remove attachment">
-            <mat-icon>close</mat-icon>
-          </button>
+
+          <div class="composer-footer">
+            <span class="composer-hint">Local chat. Files stay on this device unless you share them elsewhere.</span>
+            <div class="composer-footer-actions">
+              <button mat-button type="button" class="composer-secondary-button" (click)="retryLastReply()"
+                [disabled]="!canRetryLastReply()">Retry last reply</button>
+              <button mat-button type="button" class="composer-secondary-button" (click)="createNewChat()">New Chat</button>
+            </div>
+          </div>
+
+          <mat-menu #attachmentMenu="matMenu">
+            <button mat-menu-item type="button" (click)="openAttachmentPicker()">
+              <mat-icon>attach_file</mat-icon>
+              <span>Attach files</span>
+            </button>
+          </mat-menu>
+
+          <input #attachmentInput type="file" multiple class="hidden-file-input" (change)="onAttachmentSelected($event)"
+            aria-label="Attach files" />
         </div>
-        }
-      </div>
-      }
-
-      <div class="composer-shell">
-        <button mat-icon-button type="button" class="composer-plus-button" [matMenuTriggerFor]="attachmentMenu"
-          [disabled]="isGenerating()" aria-label="Add attachment">
-          <mat-icon>add</mat-icon>
-        </button>
-
-        <textarea class="composer-input" [ngModel]="composerText()" (ngModelChange)="composerText.set($event)"
-          (keydown)="onComposerKeydown($event)" rows="1" placeholder="Message Nostria assistant..."
-          [disabled]="isGenerating()"></textarea>
-
-        <button mat-icon-button type="button" class="composer-send-button" (click)="sendMessage()"
-          [disabled]="!canSend()" aria-label="Send message">
-          <mat-icon>send</mat-icon>
-        </button>
-      </div>
-
-      <div class="composer-footer">
-        <span class="composer-hint">Local chat. Files stay on this device unless you share them elsewhere.</span>
-        <button mat-button type="button" class="composer-secondary-button" (click)="createNewChat()">New Chat</button>
-      </div>
-
-      <mat-menu #attachmentMenu="matMenu">
-        <button mat-menu-item type="button" (click)="openAttachmentPicker()">
-          <mat-icon>attach_file</mat-icon>
-          <span>Attach files</span>
-        </button>
-      </mat-menu>
-
-      <input #attachmentInput type="file" multiple class="hidden-file-input" (change)="onAttachmentSelected($event)"
-        aria-label="Attach files" />
-    </div>
+      </section>
   </section>
   }
   </section>
