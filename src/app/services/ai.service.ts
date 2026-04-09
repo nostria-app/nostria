@@ -47,6 +47,29 @@ export interface AiGeneratedImage {
   mimeType?: string;
 }
 
+export interface AiManageableModel {
+  id: string;
+  task: string;
+  name: string;
+  description: string;
+  runtime: string;
+  sizeHint: string;
+  cacheKeys?: string[];
+}
+
+export interface AiManagedModelStatus extends AiManageableModel {
+  loaded: boolean;
+  cached: boolean;
+  bytes: number;
+}
+
+export interface AiModelStorageReport {
+  models: AiManagedModelStatus[];
+  totalBytes: number;
+  storageUsageBytes?: number;
+  storageQuotaBytes?: number;
+}
+
 interface AiCloudChatCompletionPayload {
   choices?: Array<{
     message?: {
@@ -89,6 +112,7 @@ interface WorkerCallback {
 })
 export class AiService {
   private static readonly CLOUD_SETTINGS_STORAGE_KEY = 'nostria-ai-cloud-settings';
+  private static readonly TRANSFORMERS_CACHE_NAME = 'transformers-cache';
 
   private readonly defaultCloudSettings: AiCloudSettings = {
     preferredImageProvider: 'xai',
@@ -145,6 +169,90 @@ export class AiService {
   readonly summarizationModelId = 'Xenova/distilbart-cnn-6-6';
   readonly sentimentModelId = 'Xenova/distilbert-base-uncased-finetuned-sst-2-english';
   readonly textGenerationModelId = 'Xenova/distilgpt2';
+
+  readonly manageableModels: AiManageableModel[] = [
+    {
+      id: 'onnx-community/Janus-Pro-1B-ONNX',
+      task: 'image-generation',
+      name: 'Janus Pro 1B',
+      description: 'Local browser image generation with DeepSeek Janus Pro via Transformers.js.',
+      runtime: 'WebGPU · multimodal',
+      sizeHint: '~1B parameters',
+    },
+    {
+      id: 'onnx-community/gemma-4-E2B-it-ONNX',
+      task: 'text-generation',
+      name: 'Gemma 4 E2B',
+      description: 'Instruction-tuned Gemma 4 chat model for local browser inference.',
+      runtime: 'WebGPU · q4f16',
+      sizeHint: '~2B parameters',
+    },
+    {
+      id: 'onnx-community/Qwen3-0.6B-ONNX',
+      task: 'text-generation',
+      name: 'Qwen 3 0.6B',
+      description: 'Compact Qwen 3 chat model for fast local browser inference.',
+      runtime: 'WebGPU · q4f16',
+      sizeHint: '~0.6B parameters',
+    },
+    {
+      id: 'onnx-community/Qwen3-1.7B-ONNX',
+      task: 'text-generation',
+      name: 'Qwen 3 1.7B',
+      description: 'Higher-capacity Qwen 3 local chat model for stronger answers on capable GPUs.',
+      runtime: 'WebGPU · q4f16',
+      sizeHint: '~1.7B parameters',
+    },
+    {
+      id: 'onnx-community/Qwen3.5-0.8B-Text-ONNX',
+      task: 'text-generation',
+      name: 'Qwen 3.5 0.8B',
+      description: 'Verified Qwen 3.5 text-only chat model for local browser inference.',
+      runtime: 'WebGPU · q4f16',
+      sizeHint: '~0.8B parameters',
+    },
+    {
+      id: 'Xenova/distilgpt2',
+      task: 'text-generation',
+      name: 'DistilGPT2',
+      description: 'Small fallback chat model for lighter devices and browsers without WebGPU.',
+      runtime: 'WASM/CPU',
+      sizeHint: '~85MB',
+    },
+    {
+      id: 'Xenova/distilbart-cnn-6-6',
+      task: 'summarization',
+      name: 'DistilBART CNN',
+      description: 'Summarization model used for local content shortening.',
+      runtime: 'WASM/CPU',
+      sizeHint: '~283MB',
+    },
+    {
+      id: 'Xenova/distilbert-base-uncased-finetuned-sst-2-english',
+      task: 'sentiment-analysis',
+      name: 'DistilBERT Sentiment',
+      description: 'Sentiment analysis model used for local text evaluation.',
+      runtime: 'WASM/CPU',
+      sizeHint: '~65MB',
+    },
+    {
+      id: 'Xenova/whisper-tiny.en',
+      task: 'automatic-speech-recognition',
+      name: 'Whisper Tiny',
+      description: 'Speech-to-text model used for local transcription.',
+      runtime: 'WASM/CPU',
+      sizeHint: '~40MB',
+    },
+    {
+      id: 'Xenova/speecht5_tts',
+      task: 'text-to-speech',
+      name: 'SpeechT5',
+      description: 'Text-to-speech voice synthesis model.',
+      runtime: 'WASM/CPU',
+      sizeHint: '~180MB',
+      cacheKeys: ['Xenova/speecht5_tts', 'Xenova/speecht5_hifigan'],
+    },
+  ];
 
   getTaskName(task: string | null): string {
     if (!task) return '';
@@ -425,12 +533,13 @@ export class AiService {
   }
 
   async deleteModelFromCache(modelId: string) {
-    if ('caches' in window) {
+    if (typeof window !== 'undefined' && 'caches' in window) {
       try {
-        const cache = await caches.open('transformers-cache');
+        const cache = await caches.open(AiService.TRANSFORMERS_CACHE_NAME);
+        const cacheKeys = this.getCacheLookupKeys(modelId);
         const keys = await cache.keys();
         const deletions = keys
-          .filter(request => request.url.includes(modelId))
+          .filter(request => cacheKeys.some(cacheKey => request.url.includes(cacheKey)))
           .map(request => cache.delete(request));
 
         await Promise.all(deletions);
@@ -452,9 +561,9 @@ export class AiService {
   }
 
   async clearAllCache() {
-    if ('caches' in window) {
+    if (typeof window !== 'undefined' && 'caches' in window) {
       try {
-        await caches.delete('transformers-cache');
+        await caches.delete(AiService.TRANSFORMERS_CACHE_NAME);
         this.loadedModels.set(new Set());
         return true;
       } catch (error) {
@@ -463,6 +572,87 @@ export class AiService {
       }
     }
     return false;
+  }
+
+  async getModelStorageReport(): Promise<AiModelStorageReport> {
+    const models = await Promise.all(this.manageableModels.map(model => this.getManagedModelStatus(model)));
+    const totalBytes = models.reduce((sum, model) => sum + model.bytes, 0);
+    const estimate = await this.getStorageEstimate();
+
+    return {
+      models,
+      totalBytes,
+      storageUsageBytes: estimate?.usage,
+      storageQuotaBytes: estimate?.quota,
+    };
+  }
+
+  private async getManagedModelStatus(model: AiManageableModel): Promise<AiManagedModelStatus> {
+    const status = await this.checkModel(model.task, model.id);
+    const bytes = await this.getCachedModelBytes(model.id);
+
+    return {
+      ...model,
+      loaded: status.loaded,
+      cached: status.cached || bytes > 0,
+      bytes,
+    };
+  }
+
+  private async getCachedModelBytes(modelId: string): Promise<number> {
+    if (typeof window === 'undefined' || typeof caches === 'undefined') {
+      return 0;
+    }
+
+    try {
+      const cache = await caches.open(AiService.TRANSFORMERS_CACHE_NAME);
+      const cacheKeys = this.getCacheLookupKeys(modelId);
+      const requests = await cache.keys();
+      const matchingRequests = requests.filter(request => cacheKeys.some(cacheKey => request.url.includes(cacheKey)));
+
+      let totalBytes = 0;
+      for (const request of matchingRequests) {
+        const response = await cache.match(request);
+        if (!response) {
+          continue;
+        }
+
+        const contentLength = response.headers.get('content-length');
+        if (contentLength) {
+          const parsed = Number(contentLength);
+          if (Number.isFinite(parsed) && parsed >= 0) {
+            totalBytes += parsed;
+            continue;
+          }
+        }
+
+        const blob = await response.clone().blob();
+        totalBytes += blob.size;
+      }
+
+      return totalBytes;
+    } catch (error) {
+      console.error('Error reading model cache size:', error);
+      return 0;
+    }
+  }
+
+  private async getStorageEstimate(): Promise<StorageEstimate | null> {
+    if (typeof navigator === 'undefined' || !navigator.storage?.estimate) {
+      return null;
+    }
+
+    try {
+      return await navigator.storage.estimate();
+    } catch (error) {
+      console.error('Error estimating storage usage:', error);
+      return null;
+    }
+  }
+
+  private getCacheLookupKeys(modelId: string): string[] {
+    const entry = this.manageableModels.find(model => model.id === modelId);
+    return entry?.cacheKeys?.length ? entry.cacheKeys : [modelId];
   }
 
   private loadCloudSettings(): void {

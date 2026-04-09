@@ -1,4 +1,4 @@
-import { Component, inject, ChangeDetectionStrategy, OnDestroy, OnInit } from '@angular/core';
+import { Component, computed, inject, ChangeDetectionStrategy, OnDestroy, OnInit, signal } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 
 import { MatCardModule } from '@angular/material/card';
@@ -7,13 +7,14 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDialog } from '@angular/material/dialog';
+import { MatTabsModule } from '@angular/material/tabs';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { FormsModule } from '@angular/forms';
 import { SettingsService } from '../../../services/settings.service';
-import { AiCloudProvider, AiService } from '../../../services/ai.service';
+import { AiCloudProvider, AiManagedModelStatus, AiModelStorageReport, AiService } from '../../../services/ai.service';
 import { AiInfoDialogComponent } from '../../../components/ai-info-dialog/ai-info-dialog.component';
 import { PanelActionsService } from '../../../services/panel-actions.service';
 import { RightPanelService } from '../../../services/right-panel.service';
@@ -28,6 +29,7 @@ import { PanelNavigationService } from '../../../services/panel-navigation.servi
     MatSelectModule,
     MatButtonModule,
     MatIconModule,
+    MatTabsModule,
     MatTooltipModule,
     MatFormFieldModule,
     MatInputModule,
@@ -49,6 +51,24 @@ export class AiSettingsComponent implements OnInit, OnDestroy {
 
   readonly isInRightPanel = this.route.outlet === 'right';
   readonly cloudProviders: AiCloudProvider[] = ['xai', 'openai'];
+  readonly modelStorageReport = signal<AiModelStorageReport | null>(null);
+  readonly modelStorageLoading = signal(false);
+  readonly clearingModelIds = signal<Set<string>>(new Set());
+  readonly clearingAllModels = signal(false);
+  readonly modelStorageSummary = computed(() => {
+    const report = this.modelStorageReport();
+    if (!report) {
+      return null;
+    }
+
+    return {
+      cachedCount: report.models.filter(model => model.cached || model.bytes > 0).length,
+      totalCount: report.models.length,
+      totalBytes: report.totalBytes,
+      quotaBytes: report.storageQuotaBytes,
+      usageBytes: report.storageUsageBytes,
+    };
+  });
 
   openAiApiKey = '';
   xAiApiKey = '';
@@ -62,6 +82,8 @@ export class AiSettingsComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
+    void this.refreshModelStorage();
+
     if (this.isInRightPanel) {
       this.panelActions.setRightPanelActions([
         {
@@ -177,6 +199,90 @@ export class AiSettingsComponent implements OnInit, OnDestroy {
     }
 
     this.aiService.updateCloudSettings({ xaiChatModel: model });
+  }
+
+  async refreshModelStorage(): Promise<void> {
+    this.modelStorageLoading.set(true);
+
+    try {
+      this.modelStorageReport.set(await this.aiService.getModelStorageReport());
+    } catch (error) {
+      console.error('Failed to refresh AI model storage report', error);
+      this.snackBar.open('Could not read downloaded model storage.', 'Dismiss', { duration: 3500 });
+    } finally {
+      this.modelStorageLoading.set(false);
+    }
+  }
+
+  async clearModel(model: AiManagedModelStatus): Promise<void> {
+    this.clearingModelIds.update(ids => new Set(ids).add(model.id));
+
+    try {
+      const success = await this.aiService.deleteModelFromCache(model.id);
+      if (!success) {
+        this.snackBar.open(`Could not remove ${model.name} from local storage.`, 'Dismiss', { duration: 3500 });
+        return;
+      }
+
+      this.snackBar.open(`${model.name} removed from local storage.`, 'Dismiss', { duration: 2800 });
+      await this.refreshModelStorage();
+    } finally {
+      this.clearingModelIds.update(ids => {
+        const next = new Set(ids);
+        next.delete(model.id);
+        return next;
+      });
+    }
+  }
+
+  async clearAllModels(): Promise<void> {
+    this.clearingAllModels.set(true);
+
+    try {
+      const success = await this.aiService.clearAllCache();
+      if (!success) {
+        this.snackBar.open('Could not clear downloaded models.', 'Dismiss', { duration: 3500 });
+        return;
+      }
+
+      this.snackBar.open('All downloaded models removed from local storage.', 'Dismiss', { duration: 3200 });
+      await this.refreshModelStorage();
+    } finally {
+      this.clearingAllModels.set(false);
+    }
+  }
+
+  isClearingModel(modelId: string): boolean {
+    return this.clearingModelIds().has(modelId);
+  }
+
+  formatBytes(bytes?: number): string {
+    if (!bytes || bytes <= 0) {
+      return '0 B';
+    }
+
+    if (bytes < 1024) {
+      return `${bytes} B`;
+    }
+
+    if (bytes < 1024 * 1024) {
+      return `${Math.round((bytes / 1024) * 10) / 10} KB`;
+    }
+
+    if (bytes < 1024 * 1024 * 1024) {
+      return `${Math.round((bytes / (1024 * 1024)) * 10) / 10} MB`;
+    }
+
+    return `${Math.round((bytes / (1024 * 1024 * 1024)) * 100) / 100} GB`;
+  }
+
+  storageUsagePercent(): number | null {
+    const summary = this.modelStorageSummary();
+    if (!summary?.usageBytes || !summary.quotaBytes || summary.quotaBytes <= 0) {
+      return null;
+    }
+
+    return Math.min(100, Math.round((summary.usageBytes / summary.quotaBytes) * 100));
   }
 
   goBack(): void {

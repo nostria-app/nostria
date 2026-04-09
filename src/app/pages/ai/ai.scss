@@ -729,6 +729,25 @@
   color: var(--mat-sys-on-surface-variant);
   font: inherit;
   font-size: 0.8rem;
+  cursor: pointer;
+  transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease, transform 160ms ease, box-shadow 160ms ease;
+}
+
+.message-action-button:hover {
+  background: var(--mat-sys-surface-container-highest);
+  border-color: var(--mat-sys-outline-variant);
+  color: var(--mat-sys-on-surface);
+}
+
+.message-action-button:focus-visible {
+  outline: none;
+  border-color: var(--mat-sys-primary);
+  color: var(--mat-sys-on-surface);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--mat-sys-primary) 18%, transparent);
+}
+
+.message-action-button:active {
+  transform: translateY(1px);
 }
 
 .message-action-button mat-icon {
