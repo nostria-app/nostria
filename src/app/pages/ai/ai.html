@@ -285,6 +285,12 @@
           [class.message-assistant]="message.role === 'assistant'">
           <div class="message-row-head">
             <div class="message-actions">
+                @if (message.role === 'assistant' && message.content.trim().length > 0) {
+                <button type="button" class="message-action-button" (click)="setShareTarget(message)" [matMenuTriggerFor]="assistantShareMenu">
+                  <mat-icon>share</mat-icon>
+                  <span>Share</span>
+                </button>
+                }
               <button type="button" class="message-action-button" (click)="copyMessage(message)">
                 <mat-icon>content_copy</mat-icon>
                 <span>Copy</span>
@@ -374,6 +380,25 @@
           <button mat-menu-item type="button" (click)="openAttachmentPicker()">
             <mat-icon>attach_file</mat-icon>
             <span>Attach files</span>
+          </button>
+        </mat-menu>
+
+        <mat-menu #assistantShareMenu="matMenu">
+          <button mat-menu-item type="button" (click)="shareToArticleEditor()">
+            <mat-icon>article</mat-icon>
+            <span>Copy to Article Editor</span>
+          </button>
+          <button mat-menu-item type="button" (click)="shareToNoteEditor()">
+            <mat-icon>edit_note</mat-icon>
+            <span>Copy to Note Editor</span>
+          </button>
+          <button mat-menu-item type="button" (click)="shareToPublicChat()">
+            <mat-icon>forum</mat-icon>
+            <span>Copy to Public Chat</span>
+          </button>
+          <button mat-menu-item type="button" (click)="shareViaDirectMessage()">
+            <mat-icon>mail</mat-icon>
+            <span>Send in Direct Message</span>
           </button>
         </mat-menu>
 

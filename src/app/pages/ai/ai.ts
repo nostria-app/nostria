@@ -12,6 +12,8 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { SafeHtml } from '@angular/platform-browser';
 import { AiChatMessage, AiCloudProvider, AiGeneratedImage, AiGenerationProgress, AiModelLoadOptions, AiService } from '../../services/ai.service';
 import { AiChatHistoryService } from '../../services/ai-chat-history.service';
+import type { ArticleEditorDialogInitialDraft } from '../../components/article-editor-dialog/article-editor-dialog.component';
+import { EventService } from '../../services/event';
 import { FormatService } from '../../services/format/format.service';
 import { LayoutService } from '../../services/layout.service';
 import { LoggerService } from '../../services/logger.service';
@@ -85,6 +87,7 @@ export class AiComponent {
   private readonly historyService = inject(AiChatHistoryService);
   private readonly layout = inject(LayoutService);
   private readonly logger = inject(LoggerService);
+  private readonly eventService = inject(EventService);
   private readonly panelNav = inject(PanelNavigationService);
   private readonly platformId = inject(PLATFORM_ID);
   private readonly snackBar = inject(MatSnackBar);
@@ -105,6 +108,7 @@ export class AiComponent {
   readonly showHistoryDrawer = signal(false);
   readonly workspaceView = signal<AiWorkspaceView>('chat');
   readonly historyQuery = signal('');
+  readonly activeShareMessage = signal<ConversationMessage | null>(null);
   readonly renderedAssistantMessages = signal<Record<string, SafeHtml>>({});
   readonly attachedFiles = signal<ComposerAttachment[]>([]);
   readonly imagePrompt = signal('');
@@ -239,8 +243,9 @@ export class AiComponent {
     return lastMessage?.role === 'assistant';
   });
   readonly chatQuickPrompts: AiQuickPrompt[] = [
+    { label: 'Draft an article', prompt: 'Draft an article for me about [this topic] and add hashtags at the bottom.' },
     { label: 'Summarize a feature', prompt: 'Summarize the latest Nostria architecture direction.' },
-    { label: 'Draft a post', prompt: 'Help me write a better Nostr post about this idea.' },
+    { label: 'Draft a post', prompt: 'Help me write a better Nostr post about [this idea].' },
     { label: 'Explain code', prompt: 'Explain this code change in simple terms.' },
     { label: 'Brainstorm', prompt: 'Brainstorm improvements for this product flow.' },
   ];
@@ -358,6 +363,10 @@ export class AiComponent {
 
   setWorkspaceView(view: AiWorkspaceView): void {
     this.workspaceView.set(view);
+  }
+
+  setShareTarget(message: ConversationMessage): void {
+    this.activeShareMessage.set(message);
   }
 
   createNewChat(): void {
@@ -500,18 +509,57 @@ export class AiComponent {
   }
 
   async copyMessage(message: ConversationMessage): Promise<void> {
-    if (!this.isBrowser || typeof navigator === 'undefined' || !navigator.clipboard) {
-      this.snackBar.open('Clipboard access is not available in this browser.', 'Dismiss', { duration: 3500 });
-      return;
-    }
-
     try {
-      await navigator.clipboard.writeText(message.content);
+      await this.copyTextToClipboard(message.content);
       this.snackBar.open(message.role === 'assistant' ? 'Reply copied.' : 'Prompt copied.', 'Dismiss', { duration: 2400 });
     } catch (error) {
       this.logger.warn('Failed to copy AI message', error);
       this.snackBar.open('Could not copy that message.', 'Dismiss', { duration: 3500 });
     }
+  }
+
+  async shareToArticleEditor(): Promise<void> {
+    const message = this.activeShareMessage();
+    if (!message?.content.trim()) {
+      return;
+    }
+
+    const draft = this.parseArticleDraft(message.content);
+    await this.layout.createArticle(undefined, undefined, draft);
+    this.snackBar.open('Opened in article editor.', 'Dismiss', { duration: 2600 });
+  }
+
+  async shareToNoteEditor(): Promise<void> {
+    const message = this.activeShareMessage();
+    if (!message?.content.trim()) {
+      return;
+    }
+
+    await this.eventService.createNote({ content: message.content.trim() });
+  }
+
+  async shareToPublicChat(): Promise<void> {
+    const message = this.activeShareMessage();
+    if (!message?.content.trim()) {
+      return;
+    }
+
+    try {
+      await this.copyTextToClipboard(message.content.trim());
+      this.snackBar.open('Copied for public chat. Open a public chat and paste it there.', 'Dismiss', { duration: 3200 });
+    } catch (error) {
+      this.logger.warn('Failed to copy AI message for public chat', error);
+      this.snackBar.open('Could not copy the message for public chat.', 'Dismiss', { duration: 3500 });
+    }
+  }
+
+  async shareViaDirectMessage(): Promise<void> {
+    const message = this.activeShareMessage();
+    if (!message?.content.trim()) {
+      return;
+    }
+
+    await this.layout.openMessagesWithDraft(message.content.trim());
   }
 
   reuseMessage(message: ConversationMessage): void {
@@ -1033,5 +1081,77 @@ export class AiComponent {
     }
 
     return JSON.stringify(firstResult, null, 2);
+  }
+
+  private async copyTextToClipboard(text: string): Promise<void> {
+    if (!this.isBrowser || typeof navigator === 'undefined' || !navigator.clipboard) {
+      throw new Error('Clipboard access is not available in this browser.');
+    }
+
+    await navigator.clipboard.writeText(text);
+  }
+
+  private parseArticleDraft(content: string): ArticleEditorDialogInitialDraft {
+    const normalized = content.replace(/\r\n/g, '\n').trim();
+    const lines = normalized.split('\n');
+    const hashtags = new Set<string>();
+
+    const footerLines: string[] = [];
+    let cursor = lines.length - 1;
+    while (cursor >= 0) {
+      const candidate = lines[cursor].trim();
+      if (!candidate) {
+        footerLines.unshift(lines[cursor]);
+        cursor--;
+        continue;
+      }
+
+      if (this.isHashtagFooterLine(candidate)) {
+        footerLines.unshift(lines[cursor]);
+        for (const tag of candidate.match(/#([a-zA-Z0-9_]+)/g) ?? []) {
+          hashtags.add(tag.slice(1).toLowerCase());
+        }
+        cursor--;
+        continue;
+      }
+
+      break;
+    }
+
+    const bodyLines = lines.slice(0, cursor + 1);
+    while (bodyLines.length > 0 && !bodyLines[bodyLines.length - 1].trim()) {
+      bodyLines.pop();
+    }
+
+    let title = '';
+    if (bodyLines.length > 0) {
+      const firstLine = bodyLines[0].trim();
+      if (/^#{1,6}\s+/.test(firstLine)) {
+        title = firstLine.replace(/^#{1,6}\s+/, '').trim();
+        bodyLines.shift();
+      } else if (firstLine.length > 0 && firstLine.length <= 120) {
+        title = firstLine;
+        bodyLines.shift();
+      }
+    }
+
+    while (bodyLines.length > 0 && !bodyLines[0].trim()) {
+      bodyLines.shift();
+    }
+
+    const body = bodyLines.join('\n').trim();
+    const summarySource = body.split(/\n\n+/).find(paragraph => paragraph.trim().length > 0) ?? '';
+    const summary = summarySource.length > 180 ? `${summarySource.slice(0, 177).trimEnd()}...` : summarySource;
+
+    return {
+      title,
+      summary,
+      content: body,
+      tags: [...hashtags],
+    };
+  }
+
+  private isHashtagFooterLine(value: string): boolean {
+    return /^#?[a-zA-Z0-9_]+(?:[\s,]+#?[a-zA-Z0-9_]+)*$/.test(value) && value.includes('#');
   }
 }

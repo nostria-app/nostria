@@ -45,6 +45,8 @@ import { RightPanelService } from './right-panel.service';
 import { getSettingsSectionComponent } from '../pages/settings/settings-section-components.map';
 import { PanelNavigationService } from './panel-navigation.service';
 import { ThreadedEvent } from './event';
+import type { ArticleEditorDialogInitialDraft } from '../components/article-editor-dialog/article-editor-dialog.component';
+import { AccountLocalStateService } from './account-local-state.service';
 
 /** Options for passing pre-loaded data when opening an event */
 export interface OpenEventOptions {
@@ -79,6 +81,7 @@ export class LayoutService implements OnDestroy {
   optimalProfilePosition = 240;
 
   accountStateService = inject(AccountStateService);
+  private accountLocalState = inject(AccountLocalStateService);
   private userRelayService = inject(UserRelayService);
   private feedService = inject(FeedService);
   private pool = inject(RelayPoolService);
@@ -2137,7 +2140,11 @@ export class LayoutService implements OnDestroy {
     this.scrollToOptimalPosition(this.optimalProfilePosition);
   }
 
-  async createArticle(articleId?: string, articleEvent?: Event): Promise<CustomDialogRef<any>> {
+  async createArticle(
+    articleId?: string,
+    articleEvent?: Event,
+    initialDraft?: ArticleEditorDialogInitialDraft,
+  ): Promise<CustomDialogRef<any>> {
     // Open the article editor dialog
     const { ArticleEditorDialogComponent } = await import('../components/article-editor-dialog/article-editor-dialog.component');
 
@@ -2148,13 +2155,13 @@ export class LayoutService implements OnDestroy {
       disableEnterSubmit: true,
       showCloseButton: true,
       title: articleId ? 'Edit Article' : 'New Article',
-      data: { articleId, articleEvent },
+      data: { articleId, articleEvent, initialDraft },
       panelClass: 'article-editor-dialog'
     });
 
     // Set the dialogRef and data on the component instance
     dialogRef.componentInstance.dialogRef = dialogRef;
-    dialogRef.componentInstance.data = { articleId, articleEvent };
+    dialogRef.componentInstance.data = { articleId, articleEvent, initialDraft };
 
     return dialogRef;
   }
@@ -2181,9 +2188,33 @@ export class LayoutService implements OnDestroy {
     dialogRef.afterClosed$.subscribe(({ result }) => {
       if (result) {
         const chatResult = result as StartChatDialogResult;
-        this.rightPanel.clearHistory();
-        this.panelNavigation.clearRightStack();
-        this.router.navigateByUrl(`/messages?pubkey=${encodeURIComponent(chatResult.pubkey)}`);
+        this.openSendMessage(chatResult.pubkey);
+      }
+    });
+  }
+
+  async openMessagesWithDraft(draftText: string): Promise<void> {
+    const trimmedDraft = draftText.trim();
+    if (!trimmedDraft) {
+      return;
+    }
+
+    const { StartChatDialogComponent } = await import('../components/start-chat-dialog/start-chat-dialog.component');
+    type StartChatDialogResult = import('../components/start-chat-dialog/start-chat-dialog.component').StartChatDialogResult;
+
+    const dialogRef = this.customDialog.open<typeof StartChatDialogComponent.prototype, StartChatDialogResult | undefined>(
+      StartChatDialogComponent,
+      {
+        title: $localize`:@@create.message.dialog.title:Start New Chat`,
+        width: 'min(500px, calc(100vw - 24px))',
+        maxWidth: 'calc(100vw - 24px)',
+      },
+    );
+
+    dialogRef.afterClosed$.subscribe(({ result }) => {
+      if (result) {
+        const chatResult = result as StartChatDialogResult;
+        this.openSendMessage(chatResult.pubkey, trimmedDraft);
       }
     });
   }
@@ -3018,8 +3049,14 @@ export class LayoutService implements OnDestroy {
    * Navigate to messages page to start a new chat with this user.
    * Always opens messages in full width (1400px) by clearing the right panel.
    */
-  openSendMessage(pubkey: string) {
+  openSendMessage(pubkey: string, draftText?: string) {
     this.logger.debug('Message requested for:', pubkey);
+
+    const accountPubkey = this.accountStateService.pubkey();
+    const trimmedDraft = draftText?.trim();
+    if (accountPubkey && trimmedDraft) {
+      this.accountLocalState.setChatDraft(accountPubkey, pubkey, trimmedDraft);
+    }
 
     // Clear right panel to ensure messages opens in full 1400px width
     this.rightPanel.clearHistory();

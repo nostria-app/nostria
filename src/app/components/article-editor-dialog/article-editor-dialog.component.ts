@@ -59,6 +59,16 @@ import JSZip from '@progress/jszip-esm';
 export interface ArticleEditorDialogData {
   articleId?: string;
   articleEvent?: NostrEvent;
+  initialDraft?: ArticleEditorDialogInitialDraft;
+}
+
+export interface ArticleEditorDialogInitialDraft {
+  title?: string;
+  summary?: string;
+  image?: string;
+  content?: string;
+  tags?: string[];
+  dTag?: string;
 }
 
 interface ArticleDraft {
@@ -276,6 +286,7 @@ export class ArticleEditorDialogComponent implements OnDestroy, AfterViewInit {
     'mp4', 'webm', 'mov', 'm4v', 'mkv', 'avi', 'ogv',
     'mp3', 'wav', 'm4a', 'aac', 'flac', 'oga'
   ]);
+  private initialDraftApplied = false;
 
   constructor() {
     this.initializeSplitViewSupport();
@@ -316,6 +327,7 @@ export class ArticleEditorDialogComponent implements OnDestroy, AfterViewInit {
       const articleEvent = this.data.articleEvent;
       if (articleId && typeof articleId === 'string') {
         this.isEditMode.set(true);
+        this.initialDraftApplied = false;
 
         untracked(async () => {
           await this.loadArticle(articleId, articleEvent);
@@ -325,7 +337,10 @@ export class ArticleEditorDialogComponent implements OnDestroy, AfterViewInit {
         this.isEditMode.set(false);
         // Defer auto-draft loading to ensure it doesn't interfere with article loading
         setTimeout(() => {
-          if (!this.isEditMode()) {
+          if (!this.isEditMode() && this.data.initialDraft && !this.initialDraftApplied) {
+            this.applyInitialDraft(this.data.initialDraft);
+            this.initialDraftApplied = true;
+          } else if (!this.isEditMode() && !this.data.initialDraft) {
             this.loadAutoDraft();
           }
         }, 0);
@@ -343,9 +358,10 @@ export class ArticleEditorDialogComponent implements OnDestroy, AfterViewInit {
     // Effect to reload draft when account changes
     effect(() => {
       const pubkey = this.accountState.pubkey();
+      const hasInitialDraft = !!this.data.initialDraft;
 
       // Only load draft if we have an account and we're not in edit mode
-      if (pubkey && !this.isEditMode() && !this.isLoadingArticle()) {
+      if (pubkey && !this.isEditMode() && !this.isLoadingArticle() && !hasInitialDraft) {
         untracked(() => {
           // Clear current article and load the new account's draft
           this.loadAutoDraft();
@@ -634,6 +650,28 @@ export class ArticleEditorDialogComponent implements OnDestroy, AfterViewInit {
   private getTagValue(tags: string[][], tagName: string): string | undefined {
     const tag = tags.find(t => t[0] === tagName);
     return tag ? tag[1] : undefined;
+  }
+
+  private applyInitialDraft(initialDraft: ArticleEditorDialogInitialDraft): void {
+    const current = this.article();
+    const nextTitle = initialDraft.title?.trim() ?? '';
+    const nextSummary = initialDraft.summary?.trim() ?? '';
+    const nextImage = initialDraft.image?.trim() ?? '';
+    const nextContent = initialDraft.content?.trim() ?? '';
+    const nextTags = (initialDraft.tags ?? []).map(tag => tag.trim().toLowerCase()).filter(Boolean);
+
+    this.article.set({
+      ...current,
+      title: nextTitle,
+      summary: nextSummary,
+      image: nextImage,
+      content: nextContent,
+      tags: [...new Set(nextTags)],
+      dTag: initialDraft.dTag?.trim() || current.dTag,
+    });
+
+    this.previewImage.set(nextImage || null);
+    this.showArticleImage.set(!!nextImage);
   }
 
   addTag(): void {
