@@ -23,6 +23,8 @@ export interface AiCloudSettings {
   openaiApiKey?: string;
   xaiApiKey?: string;
   preferredImageProvider: AiCloudProvider;
+  openaiChatModel: string;
+  xaiChatModel: string;
   openaiImageModel: string;
   xaiImageModel: string;
 }
@@ -35,6 +37,20 @@ export interface AiGeneratedImage {
   prompt: string;
   revisedPrompt?: string;
   src: string;
+  cacheKey?: string;
+  mimeType?: string;
+}
+
+interface AiCloudChatCompletionPayload {
+  choices?: Array<{
+    message?: {
+      content?: string | Array<{ type?: string; text?: string }>;
+    };
+  }>;
+  error?: {
+    message?: string;
+  } | string;
+  message?: string;
 }
 
 interface AiImageApiPayload {
@@ -63,6 +79,8 @@ export class AiService {
 
   private readonly defaultCloudSettings: AiCloudSettings = {
     preferredImageProvider: 'xai',
+    openaiChatModel: 'gpt-4.1-mini',
+    xaiChatModel: 'grok-3-mini',
     openaiImageModel: 'gpt-image-1',
     xaiImageModel: 'grok-imagine-image',
   };
@@ -273,6 +291,11 @@ export class AiService {
     return provider === 'openai' ? cloudSettings.openaiImageModel : cloudSettings.xaiImageModel;
   }
 
+  getChatModel(provider: AiCloudProvider): string {
+    const cloudSettings = this.cloudSettings();
+    return provider === 'openai' ? cloudSettings.openaiChatModel : cloudSettings.xaiChatModel;
+  }
+
   hasCloudApiKey(provider: AiCloudProvider): boolean {
     const cloudSettings = this.cloudSettings();
     return provider === 'openai'
@@ -332,6 +355,34 @@ export class AiService {
       : this.generateXAiImage(trimmedPrompt);
   }
 
+  async generateCloudText(messages: AiChatMessage[], provider: AiCloudProvider, model?: string): Promise<string> {
+    const apiKey = provider === 'openai' ? this.cloudSettings().openaiApiKey : this.cloudSettings().xaiApiKey;
+    if (!apiKey) {
+      throw new Error(`${this.getProviderLabel(provider)} API key is missing.`);
+    }
+
+    const resolvedModel = model?.trim() || this.getChatModel(provider);
+    if (!resolvedModel) {
+      throw new Error(`${this.getProviderLabel(provider)} chat model is not configured.`);
+    }
+
+    const url = provider === 'openai'
+      ? 'https://api.openai.com/v1/chat/completions'
+      : 'https://api.x.ai/v1/chat/completions';
+
+    const payload = await this.fetchChatCompletion(url, apiKey, {
+      model: resolvedModel,
+      messages,
+    });
+
+    const content = this.extractChatCompletionText(payload);
+    if (!content) {
+      throw new Error('The provider returned an empty reply.');
+    }
+
+    return content;
+  }
+
   async deleteModelFromCache(modelId: string) {
     if ('caches' in window) {
       try {
@@ -388,6 +439,8 @@ export class AiService {
   private normalizeCloudSettings(settings: Partial<AiCloudSettings>): AiCloudSettings {
     return {
       preferredImageProvider: settings.preferredImageProvider === 'openai' ? 'openai' : 'xai',
+      openaiChatModel: settings.openaiChatModel?.trim() || this.defaultCloudSettings.openaiChatModel,
+      xaiChatModel: settings.xaiChatModel?.trim() || this.defaultCloudSettings.xaiChatModel,
       openaiImageModel: settings.openaiImageModel?.trim() || this.defaultCloudSettings.openaiImageModel,
       xaiImageModel: settings.xaiImageModel?.trim() || this.defaultCloudSettings.xaiImageModel,
       openaiApiKey: this.normalizeApiKey(settings.openaiApiKey),
@@ -448,6 +501,69 @@ export class AiService {
     }
 
     return payload;
+  }
+
+  private async fetchChatCompletion(url: string, apiKey: string, body: Record<string, unknown>): Promise<AiCloudChatCompletionPayload> {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+
+    const payload = await this.parseChatCompletionResponse(response);
+    if (!response.ok) {
+      throw new Error(this.extractChatCompletionError(payload) || `Chat completion failed with status ${response.status}.`);
+    }
+
+    return payload;
+  }
+
+  private async parseChatCompletionResponse(response: Response): Promise<AiCloudChatCompletionPayload> {
+    const text = await response.text();
+    if (!text) {
+      return {};
+    }
+
+    try {
+      return JSON.parse(text) as AiCloudChatCompletionPayload;
+    } catch {
+      return { message: text };
+    }
+  }
+
+  private extractChatCompletionError(payload: AiCloudChatCompletionPayload): string | null {
+    if (typeof payload.error === 'string' && payload.error.trim()) {
+      return payload.error.trim();
+    }
+
+    if (typeof payload.error === 'object' && typeof payload.error?.message === 'string' && payload.error.message.trim()) {
+      return payload.error.message.trim();
+    }
+
+    if (typeof payload.message === 'string' && payload.message.trim()) {
+      return payload.message.trim();
+    }
+
+    return null;
+  }
+
+  private extractChatCompletionText(payload: AiCloudChatCompletionPayload): string {
+    const content = payload.choices?.[0]?.message?.content;
+    if (typeof content === 'string') {
+      return content.trim();
+    }
+
+    if (Array.isArray(content)) {
+      return content
+        .map(part => typeof part?.text === 'string' ? part.text : '')
+        .join('')
+        .trim();
+    }
+
+    return '';
   }
 
   private async parseApiResponse(response: Response): Promise<AiImageApiPayload> {

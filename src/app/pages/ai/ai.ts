@@ -11,12 +11,13 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { SafeHtml } from '@angular/platform-browser';
 import { AiChatMessage, AiCloudProvider, AiGeneratedImage, AiGenerationProgress, AiModelLoadOptions, AiService } from '../../services/ai.service';
-import { AiChatHistoryService } from '../../services/ai-chat-history.service';
+import { AiChatHistoryService, AiHistoryGeneratedImage } from '../../services/ai-chat-history.service';
 import type { ArticleEditorDialogInitialDraft } from '../../components/article-editor-dialog/article-editor-dialog.component';
 import { EventService } from '../../services/event';
 import { FormatService } from '../../services/format/format.service';
 import { LayoutService } from '../../services/layout.service';
 import { LoggerService } from '../../services/logger.service';
+import { MediaService } from '../../services/media.service';
 import { PanelNavigationService } from '../../services/panel-navigation.service';
 
 interface ModelInfo {
@@ -30,6 +31,9 @@ interface ModelInfo {
   loaded: boolean;
   cached: boolean;
   runtime: string;
+  source?: 'local' | 'cloud';
+  provider?: AiCloudProvider;
+  cloudModel?: string;
   loadOptions?: AiModelLoadOptions;
   chatMode?: 'messages' | 'prompt';
   chatDisabledReason?: string;
@@ -43,6 +47,7 @@ interface ConversationMessage {
   streaming?: boolean;
   attachments?: ComposerAttachment[];
   attachmentContext?: string;
+  generatedImages?: AiGeneratedImage[];
 }
 
 interface ComposerAttachment {
@@ -54,8 +59,6 @@ interface ComposerAttachment {
   context: string;
   cacheKey: string;
 }
-
-type AiWorkspaceView = 'chat' | 'create';
 
 interface AiQuickPrompt {
   label: string;
@@ -96,6 +99,7 @@ export class AiComponent {
   private readonly layout = inject(LayoutService);
   private readonly logger = inject(LoggerService);
   private readonly eventService = inject(EventService);
+  private readonly mediaService = inject(MediaService);
   private readonly panelNav = inject(PanelNavigationService);
   private readonly platformId = inject(PLATFORM_ID);
   private readonly snackBar = inject(MatSnackBar);
@@ -115,15 +119,11 @@ export class AiComponent {
   readonly currentConversationId = signal<string | null>(null);
   readonly narrowHistoryMode = signal(false);
   readonly showHistoryDrawer = signal(false);
-  readonly workspaceView = signal<AiWorkspaceView>('chat');
   readonly historyQuery = signal('');
   readonly activeShareMessage = signal<ConversationMessage | null>(null);
+  readonly activeGeneratedImage = signal<AiGeneratedImage | null>(null);
   readonly renderedAssistantMessages = signal<Record<string, SafeHtml>>({});
   readonly attachedFiles = signal<ComposerAttachment[]>([]);
-  readonly imagePrompt = signal('');
-  readonly generatedImages = signal<AiGeneratedImage[]>([]);
-  readonly imageGenerationError = signal('');
-  readonly isGeneratingImage = signal(false);
   readonly hideHistoryRail = computed(() => this.splitPaneMode() || this.narrowHistoryMode());
 
   readonly models = signal<ModelInfo[]>([
@@ -273,11 +273,70 @@ export class AiComponent {
     },
   ]);
 
-  readonly chatModels = computed(() => this.models().filter(model => model.task === 'text-generation'));
-  readonly availableImageProviders = computed(() => this.aiService.getConfiguredImageProviders());
-  readonly selectedImageProvider = signal<AiCloudProvider | null>(this.aiService.getActiveImageProvider());
-  readonly selectedChatModelId = signal(this.webGpuAvailable ? 'onnx-community/gemma-4-E2B-it-ONNX' : 'Xenova/distilgpt2');
-  readonly selectedChatModel = computed(() => this.chatModels().find(model => model.id === this.selectedChatModelId()) ?? null);
+  readonly localChatModels = computed(() => this.models().filter(model => model.task === 'text-generation'));
+  readonly cloudChatModels = computed<ModelInfo[]>(() => {
+    const providers: AiCloudProvider[] = ['xai', 'openai'];
+    return providers
+      .filter(provider => this.aiService.hasCloudApiKey(provider))
+      .map(provider => ({
+        id: `cloud-chat:${provider}`,
+        task: 'text-generation',
+        name: this.aiService.getProviderLabel(provider),
+        description: `Hosted chat replies through ${this.aiService.getProviderLabel(provider)}.`,
+        size: 'Hosted API',
+        loading: false,
+        progress: 100,
+        loaded: true,
+        cached: false,
+        runtime: `${this.aiService.getProviderLabel(provider)} API`,
+        source: 'cloud',
+        provider,
+        cloudModel: this.aiService.getChatModel(provider),
+        chatMode: 'messages',
+      }));
+  });
+  readonly imageModels = computed<ModelInfo[]>(() => {
+    const preferredProvider = this.aiService.getActiveImageProvider();
+    const providers: AiCloudProvider[] = ['xai', 'openai'];
+    const sortedProviders = providers
+      .filter(provider => this.aiService.hasCloudApiKey(provider))
+      .sort((left, right) => {
+        if (left === preferredProvider) {
+          return -1;
+        }
+
+        if (right === preferredProvider) {
+          return 1;
+        }
+
+        return 0;
+      });
+
+    return sortedProviders.map(provider => ({
+      id: `cloud-image:${provider}`,
+      task: 'image-generation',
+      name: `${this.aiService.getProviderLabel(provider)} Image`,
+      description: `Generate images with ${this.aiService.getProviderLabel(provider)}.`,
+      size: 'Hosted API',
+      loading: false,
+      progress: 100,
+      loaded: true,
+      cached: false,
+      runtime: `${this.aiService.getProviderLabel(provider)} API`,
+      source: 'cloud',
+      provider,
+      cloudModel: this.aiService.getImageModel(provider),
+    }));
+  });
+  readonly composerModels = computed(() => [
+    ...this.localChatModels(),
+    ...this.cloudChatModels(),
+    ...this.imageModels(),
+  ]);
+  readonly selectedModelId = signal(this.webGpuAvailable ? 'onnx-community/gemma-4-E2B-it-ONNX' : 'Xenova/distilgpt2');
+  readonly selectedModel = computed(() => this.composerModels().find(model => model.id === this.selectedModelId()) ?? null);
+  readonly isImageMode = computed(() => this.selectedModel()?.task === 'image-generation');
+  readonly activeQuickPrompts = computed(() => this.isImageMode() ? this.imageQuickPrompts : this.chatQuickPrompts);
   readonly histories = this.historyService.histories;
   readonly filteredHistories = computed(() => {
     const query = this.historyQuery().trim().toLowerCase();
@@ -301,12 +360,12 @@ export class AiComponent {
   readonly conversationAttachmentCount = computed(() => this.conversation().reduce((total, message) => total + (message.attachments?.length ?? 0), 0));
   readonly currentConversationTitle = computed(() => this.activeHistory()?.title ?? 'New local chat');
   readonly canRetryLastReply = computed(() => {
-    if (this.isGenerating() || this.selectedChatModel()?.chatDisabledReason) {
+    if (this.isGenerating() || this.selectedModel()?.chatDisabledReason || this.isImageMode()) {
       return false;
     }
 
     const lastMessage = this.conversation().at(-1);
-    return lastMessage?.role === 'assistant';
+    return lastMessage?.role === 'assistant' && !lastMessage.generatedImages?.length;
   });
   readonly chatQuickPrompts: AiQuickPrompt[] = [
     { label: 'Draft an article', prompt: 'Draft an article for me about [this topic] and add hashtags at the bottom.' },
@@ -325,14 +384,14 @@ export class AiComponent {
     {
       id: this.createMessageId(),
       role: 'assistant',
-      content: 'Choose a local model, load it, and start chatting. Responses stay on your device.',
+      content: 'Choose a model and start chatting or generating images. Local models stay on your device.',
     },
   ]);
   readonly composerText = signal('');
   readonly isGenerating = signal(false);
   readonly chatError = signal('');
   readonly canSend = computed(() => {
-    const model = this.selectedChatModel();
+    const model = this.selectedModel();
     if (!model || this.isGenerating()) {
       return false;
     }
@@ -350,13 +409,6 @@ export class AiComponent {
       this.narrowHistoryMode.set(result.matches);
       if (!result.matches) {
         this.showHistoryDrawer.set(false);
-      }
-    });
-
-    effect(() => {
-      const activeProvider = this.aiService.getActiveImageProvider(this.selectedImageProvider());
-      if (activeProvider !== this.selectedImageProvider()) {
-        this.selectedImageProvider.set(activeProvider);
       }
     });
 
@@ -426,31 +478,30 @@ export class AiComponent {
     this.layout.navigateToRightPanel('ai/settings');
   }
 
-  setWorkspaceView(view: AiWorkspaceView): void {
-    this.workspaceView.set(view);
-  }
-
   setShareTarget(message: ConversationMessage): void {
     this.activeShareMessage.set(message);
+  }
+
+  setActiveGeneratedImage(image: AiGeneratedImage): void {
+    this.activeGeneratedImage.set(image);
   }
 
   createNewChat(): void {
     this.currentConversationId.set(null);
     this.attachedFiles.set([]);
     this.showHistoryDrawer.set(false);
-    this.workspaceView.set('chat');
     this.clearConversation();
   }
 
-  openHistory(historyId: string): void {
+  async openHistory(historyId: string): Promise<void> {
     const history = this.historyService.getHistory(historyId);
     if (!history) {
       this.snackBar.open('That AI chat could not be found.', 'Dismiss', { duration: 4000 });
       return;
     }
 
-    if (this.chatModels().some(model => model.id === history.modelId)) {
-      this.selectedChatModelId.set(history.modelId);
+    if (this.composerModels().some(model => model.id === history.modelId)) {
+      this.selectedModelId.set(history.modelId);
     }
 
     this.currentConversationId.set(history.id);
@@ -458,16 +509,18 @@ export class AiComponent {
     this.attachedFiles.set([]);
     this.autoScrollPinned.set(true);
     this.showHistoryDrawer.set(false);
-    this.workspaceView.set('chat');
-    this.conversation.set(history.messages.map(message => ({
+    this.conversation.set(await Promise.all(history.messages.map(async message => ({
       id: this.createMessageId(),
       role: message.role,
       content: message.content,
-    })));
+      generatedImages: message.generatedImages?.length
+        ? await this.restoreGeneratedImages(message.generatedImages)
+        : undefined,
+    }))));
   }
 
-  selectChatModel(modelId: string): void {
-    this.selectedChatModelId.set(modelId);
+  selectModel(modelId: string): void {
+    this.selectedModelId.set(modelId);
   }
 
   onComposerKeydown(event: KeyboardEvent): void {
@@ -487,32 +540,6 @@ export class AiComponent {
     }
 
     this.showHistoryDrawer.update(value => !value);
-  }
-
-  selectImageProvider(provider: AiCloudProvider): void {
-    this.selectedImageProvider.set(provider);
-    this.workspaceView.set('create');
-  }
-
-  async generateImage(): Promise<void> {
-    const prompt = this.imagePrompt().trim();
-    if (!prompt || this.isGeneratingImage()) {
-      return;
-    }
-
-    this.imageGenerationError.set('');
-    this.isGeneratingImage.set(true);
-    this.workspaceView.set('create');
-
-    try {
-      const generatedImages = await this.aiService.generateImage(prompt, this.selectedImageProvider());
-      this.generatedImages.set(generatedImages);
-    } catch (err) {
-      this.logger.error('AI image generation error:', err);
-      this.imageGenerationError.set(err instanceof Error ? err.message : String(err));
-    } finally {
-      this.isGeneratingImage.set(false);
-    }
   }
 
   openImageSettings(): void {
@@ -546,14 +573,18 @@ export class AiComponent {
   }
 
   applyChatPrompt(prompt: string): void {
-    this.workspaceView.set('chat');
     this.composerText.set(prompt);
     this.focusComposerPromptPlaceholder(prompt);
   }
 
   applyImagePrompt(prompt: string): void {
-    this.workspaceView.set('create');
-    this.imagePrompt.set(prompt);
+    const imageModel = this.imageModels()[0];
+    if (imageModel) {
+      this.selectedModelId.set(imageModel.id);
+    }
+
+    this.composerText.set(prompt);
+    this.focusComposerPromptPlaceholder(prompt);
   }
 
   clearHistoryQuery(): void {
@@ -628,18 +659,60 @@ export class AiComponent {
     await this.layout.openMessagesWithDraft(message.content.trim());
   }
 
+  async shareGeneratedImageToNoteEditor(): Promise<void> {
+    const image = this.activeGeneratedImage();
+    if (!image) {
+      return;
+    }
+
+    try {
+      const file = await this.createFileFromGeneratedImage(image);
+      await this.eventService.createNote({
+        content: image.revisedPrompt || image.prompt,
+        files: [file],
+      });
+      this.snackBar.open('Opened in note editor.', 'Dismiss', { duration: 2600 });
+    } catch (error) {
+      this.logger.error('Failed to open generated image in note editor', error);
+      this.snackBar.open('Could not open the generated image in note editor.', 'Dismiss', { duration: 3500 });
+    }
+  }
+
+  async publishGeneratedImage(): Promise<void> {
+    const image = this.activeGeneratedImage();
+    if (!image) {
+      return;
+    }
+
+    try {
+      const file = await this.createFileFromGeneratedImage(image);
+      const uploadResult = await this.mediaService.uploadFile(file, false, this.mediaService.mediaServers());
+      if (uploadResult.status === 'success' && uploadResult.item) {
+        const published = await this.layout.publishSingleItem(uploadResult.item);
+        if (published) {
+          this.snackBar.open('Generated image published.', 'Dismiss', { duration: 2600 });
+        }
+        return;
+      }
+
+      throw new Error(uploadResult.message ?? 'Upload failed.');
+    } catch (error) {
+      this.logger.error('Failed to publish generated image', error);
+      this.snackBar.open('Could not publish the generated image.', 'Dismiss', { duration: 3500 });
+    }
+  }
+
   reuseMessage(message: ConversationMessage): void {
-    this.workspaceView.set('chat');
     this.composerText.set(message.content);
     this.snackBar.open(message.role === 'assistant' ? 'Reply moved into the composer.' : 'Prompt ready to edit.', 'Dismiss', { duration: 2400 });
   }
 
   async retryLastReply(): Promise<void> {
-    const model = this.selectedChatModel();
+    const model = this.selectedModel();
     const currentConversation = this.conversation();
     const lastMessage = currentConversation.at(-1);
 
-    if (!model || lastMessage?.role !== 'assistant' || this.isGenerating()) {
+    if (!model || model.task !== 'text-generation' || lastMessage?.role !== 'assistant' || this.isGenerating()) {
       return;
     }
 
@@ -652,7 +725,7 @@ export class AiComponent {
     ]);
     this.autoScrollPinned.set(true);
 
-    if (!model.loaded) {
+    if (model.source !== 'cloud' && !model.loaded) {
       const loaded = await this.ensureChatModelReady(model);
       if (!loaded) {
         this.replaceMessageContent(assistantMessageId, 'The selected model could not be loaded in this browser.', false);
@@ -665,17 +738,18 @@ export class AiComponent {
 
     try {
       const input = this.buildGenerationInput(model, generationConversation);
-      const result = await this.aiService.generateText(
-        input,
-        model.preferredParams,
-        model.id,
-        (progress: AiGenerationProgress) => {
-          if (progress.status === 'stream') {
-            this.appendToMessage(assistantMessageId, progress.text);
-          }
-        },
-      );
-      const assistantReply = this.extractAssistantReply(result);
+      const assistantReply = model.source === 'cloud' && model.provider
+        ? await this.aiService.generateCloudText(input as AiChatMessage[], model.provider, model.cloudModel)
+        : this.extractAssistantReply(await this.aiService.generateText(
+          input,
+          model.preferredParams,
+          model.id,
+          (progress: AiGenerationProgress) => {
+            if (progress.status === 'stream') {
+              this.appendToMessage(assistantMessageId, progress.text);
+            }
+          },
+        ));
       const currentReply = this.getMessageContent(assistantMessageId);
       this.replaceMessageContent(assistantMessageId, currentReply.trim().length > 0 ? currentReply.trimEnd() : assistantReply, false);
       this.persistCurrentConversation();
@@ -691,7 +765,11 @@ export class AiComponent {
   }
 
   useImagePromptInChat(image: AiGeneratedImage): void {
-    this.workspaceView.set('chat');
+    const textModel = this.localChatModels()[0] ?? this.cloudChatModels()[0];
+    if (textModel) {
+      this.selectedModelId.set(textModel.id);
+    }
+
     this.composerText.set(`Use this image concept as context and turn it into a polished post or product idea:\n\n${image.revisedPrompt || image.prompt}`);
   }
 
@@ -731,6 +809,10 @@ export class AiComponent {
   }
 
   statusLabel(model: ModelInfo): string {
+    if (model.source === 'cloud') {
+      return model.task === 'image-generation' ? 'Image' : 'Hosted';
+    }
+
     if (model.loading) {
       return `Loading ${Math.round(model.progress)}%`;
     }
@@ -789,15 +871,6 @@ export class AiComponent {
     ]);
   }
 
-  imageProviderLabel(provider: AiCloudProvider | null): string {
-    return provider ? this.aiService.getProviderLabel(provider) : 'Unavailable';
-  }
-
-  selectedImageModel(): string {
-    const provider = this.selectedImageProvider();
-    return provider ? this.aiService.getImageModel(provider) : '';
-  }
-
   onConversationScroll(event: Event): void {
     const panel = event.target as HTMLDivElement;
     const distanceFromBottom = panel.scrollHeight - panel.scrollTop - panel.clientHeight;
@@ -805,11 +878,16 @@ export class AiComponent {
   }
 
   async sendMessage(): Promise<void> {
-    const model = this.selectedChatModel();
+    const model = this.selectedModel();
     const promptText = this.composerText().trim();
     const attachments = this.attachedFiles();
 
     if (!model || (!promptText && attachments.length === 0)) {
+      return;
+    }
+
+    if (model.task === 'image-generation') {
+      await this.generateImageMessage(model, promptText, attachments);
       return;
     }
 
@@ -827,7 +905,6 @@ export class AiComponent {
       return;
     }
 
-    this.workspaceView.set('chat');
     this.chatError.set('');
     const assistantMessageId = this.createMessageId();
     const userMessage: ConversationMessage = {
@@ -847,7 +924,7 @@ export class AiComponent {
     this.autoScrollPinned.set(true);
     this.showHistoryDrawer.set(false);
 
-    if (!model.loaded) {
+    if (model.source !== 'cloud' && !model.loaded) {
       const loaded = await this.ensureChatModelReady(model);
       if (!loaded) {
         this.replaceMessageContent(assistantMessageId, 'The selected model could not be loaded in this browser.', false);
@@ -860,17 +937,18 @@ export class AiComponent {
 
     try {
       const input = this.buildGenerationInput(model, generationConversation);
-      const result = await this.aiService.generateText(
-        input,
-        model.preferredParams,
-        model.id,
-        (progress: AiGenerationProgress) => {
-          if (progress.status === 'stream') {
-            this.appendToMessage(assistantMessageId, progress.text);
-          }
-        },
-      );
-      const assistantReply = this.extractAssistantReply(result);
+      const assistantReply = model.source === 'cloud' && model.provider
+        ? await this.aiService.generateCloudText(input as AiChatMessage[], model.provider, model.cloudModel)
+        : this.extractAssistantReply(await this.aiService.generateText(
+          input,
+          model.preferredParams,
+          model.id,
+          (progress: AiGenerationProgress) => {
+            if (progress.status === 'stream') {
+              this.appendToMessage(assistantMessageId, progress.text);
+            }
+          },
+        ));
       const currentReply = this.getMessageContent(assistantMessageId);
       this.replaceMessageContent(assistantMessageId, currentReply.trim().length > 0 ? currentReply.trimEnd() : assistantReply, false);
       this.persistCurrentConversation();
@@ -993,7 +1071,7 @@ export class AiComponent {
   }
 
   private persistCurrentConversation(): void {
-    const model = this.selectedChatModel();
+    const model = this.selectedModel();
     if (!model) {
       return;
     }
@@ -1005,10 +1083,183 @@ export class AiComponent {
       messages: this.conversation().map(message => ({
         role: message.role,
         content: message.content,
+        generatedImages: message.generatedImages?.map(image => this.toHistoryGeneratedImage(image)),
       })),
     });
 
     this.currentConversationId.set(savedId);
+  }
+
+  private async generateImageMessage(model: ModelInfo, promptText: string, attachments: ComposerAttachment[]): Promise<void> {
+    if (attachments.length > 0) {
+      this.chatError.set('Image generation does not support file attachments yet.');
+      return;
+    }
+
+    if (!model.provider) {
+      this.chatError.set('Select an image provider first.');
+      return;
+    }
+
+    const prompt = promptText.trim();
+    if (!prompt) {
+      return;
+    }
+
+    const assistantMessageId = this.createMessageId();
+    const userMessage: ConversationMessage = {
+      id: this.createMessageId(),
+      role: 'user',
+      content: prompt,
+    };
+
+    this.chatError.set('');
+    this.conversation.set([
+      ...this.conversation(),
+      userMessage,
+      { id: assistantMessageId, role: 'assistant', content: '', streaming: true },
+    ]);
+    this.composerText.set('');
+    this.autoScrollPinned.set(true);
+    this.showHistoryDrawer.set(false);
+    this.isGenerating.set(true);
+
+    try {
+      const images = await this.aiService.generateImage(prompt, model.provider);
+      const cachedImages = await Promise.all(images.map(image => this.cacheGeneratedImage(image)));
+      this.conversation.update(messages => messages.map(message => {
+        if (message.id !== assistantMessageId) {
+          return message;
+        }
+
+        return {
+          ...message,
+          content: '',
+          streaming: false,
+          generatedImages: cachedImages,
+        };
+      }));
+      this.persistCurrentConversation();
+    } catch (err) {
+      this.logger.error('AI image generation error:', err);
+      const message = err instanceof Error ? err.message : String(err);
+      this.chatError.set(message);
+      this.replaceMessageContent(assistantMessageId, `Image generation error: ${message}`, false);
+      this.persistCurrentConversation();
+    } finally {
+      this.isGenerating.set(false);
+    }
+  }
+
+  private async cacheGeneratedImage(image: AiGeneratedImage): Promise<AiGeneratedImage> {
+    if (!this.isBrowser || typeof caches === 'undefined') {
+      return image;
+    }
+
+    const cacheKey = `https://nostria.local/cache/ai/generated/${encodeURIComponent(image.id)}`;
+    const response = await fetch(image.src);
+    if (!response.ok) {
+      throw new Error(`Could not cache generated image (${response.status}).`);
+    }
+
+    const blob = await response.blob();
+    const cache = await caches.open(AiComponent.AI_UPLOAD_CACHE);
+    await cache.put(cacheKey, new Response(blob, {
+      headers: new Headers({
+        'content-type': blob.type || image.mimeType || 'image/png',
+      }),
+    }));
+
+    return {
+      ...image,
+      cacheKey,
+      mimeType: blob.type || image.mimeType || 'image/png',
+    };
+  }
+
+  private async restoreGeneratedImages(images: AiHistoryGeneratedImage[]): Promise<AiGeneratedImage[]> {
+    return Promise.all(images.map(async image => ({
+      ...image,
+      src: await this.resolveGeneratedImageSource(image),
+    })));
+  }
+
+  private async resolveGeneratedImageSource(image: AiHistoryGeneratedImage): Promise<string> {
+    if (!this.isBrowser || typeof caches === 'undefined' || !image.cacheKey) {
+      return '';
+    }
+
+    try {
+      const cache = await caches.open(AiComponent.AI_UPLOAD_CACHE);
+      const response = await cache.match(image.cacheKey);
+      if (!response?.ok) {
+        return '';
+      }
+
+      const blob = await response.blob();
+      return await this.blobToDataUrl(blob);
+    } catch (error) {
+      this.logger.warn('Failed to restore generated image from cache', error);
+      return '';
+    }
+  }
+
+  private blobToDataUrl(blob: Blob): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(typeof reader.result === 'string' ? reader.result : '');
+      reader.onerror = () => reject(reader.error ?? new Error('Could not read image data.'));
+      reader.readAsDataURL(blob);
+    });
+  }
+
+  private async createFileFromGeneratedImage(image: AiGeneratedImage): Promise<File> {
+    const blob = await this.getGeneratedImageBlob(image);
+    const extension = this.fileExtensionForMimeType(blob.type || image.mimeType || 'image/png');
+    return new File([blob], `${image.id}.${extension}`, { type: blob.type || image.mimeType || 'image/png' });
+  }
+
+  private async getGeneratedImageBlob(image: AiGeneratedImage): Promise<Blob> {
+    if (this.isBrowser && typeof caches !== 'undefined' && image.cacheKey) {
+      const cache = await caches.open(AiComponent.AI_UPLOAD_CACHE);
+      const cached = await cache.match(image.cacheKey);
+      if (cached?.ok) {
+        return cached.blob();
+      }
+    }
+
+    const response = await fetch(image.src);
+    if (!response.ok) {
+      throw new Error(`Could not fetch generated image (${response.status}).`);
+    }
+
+    return response.blob();
+  }
+
+  private fileExtensionForMimeType(mimeType: string): string {
+    switch (mimeType) {
+      case 'image/jpeg':
+        return 'jpg';
+      case 'image/webp':
+        return 'webp';
+      case 'image/gif':
+        return 'gif';
+      default:
+        return 'png';
+    }
+  }
+
+  private toHistoryGeneratedImage(image: AiGeneratedImage): AiHistoryGeneratedImage {
+    return {
+      id: image.id,
+      provider: image.provider,
+      providerLabel: image.providerLabel,
+      model: image.model,
+      prompt: image.prompt,
+      revisedPrompt: image.revisedPrompt,
+      cacheKey: image.cacheKey,
+      mimeType: image.mimeType,
+    };
   }
 
   private async preparePromptSubmission(promptText: string, attachments: ComposerAttachment[]): Promise<{ prompt: string; attachmentContext: string }> {

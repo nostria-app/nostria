@@ -170,6 +170,15 @@ export class AiSettingsComponent implements OnInit, OnDestroy {
     this.aiService.updateCloudSettings({ xaiImageModel: model });
   }
 
+  updateChatModel(provider: AiCloudProvider, model: string): void {
+    if (provider === 'openai') {
+      this.aiService.updateCloudSettings({ openaiChatModel: model });
+      return;
+    }
+
+    this.aiService.updateCloudSettings({ xaiChatModel: model });
+  }
+
   goBack(): void {
     if (this.isInRightPanel) {
       this.panelNav.goBackRight();

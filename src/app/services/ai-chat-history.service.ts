@@ -1,12 +1,25 @@
 import { Injectable, computed, effect, inject, signal } from '@angular/core';
 import { AccountStateService } from './account-state.service';
+import { AiCloudProvider } from './ai.service';
 import { DatabaseService, StoredAiChatHistoryEntry } from './database.service';
 import { LoggerService } from './logger.service';
 import { LocalStorageService } from './local-storage.service';
 
+export interface AiHistoryGeneratedImage {
+  id: string;
+  provider: AiCloudProvider;
+  providerLabel: string;
+  model: string;
+  prompt: string;
+  revisedPrompt?: string;
+  cacheKey?: string;
+  mimeType?: string;
+}
+
 export interface AiHistoryMessage {
   role: 'user' | 'assistant';
   content: string;
+  generatedImages?: AiHistoryGeneratedImage[];
 }
 
 export interface AiChatHistoryEntry {
@@ -156,6 +169,9 @@ export class AiChatHistoryService {
       messages: entry.messages.map(message => ({
         role: message.role,
         content: message.content,
+        generatedImages: message.generatedImages?.map(image => ({
+          ...image,
+        })),
       })),
     }));
   }
@@ -171,6 +187,9 @@ export class AiChatHistoryService {
       messages: entry.messages.map(message => ({
         role: message.role,
         content: message.content,
+        generatedImages: message.generatedImages?.map(image => ({
+          ...image,
+        })),
       })),
     }));
   }

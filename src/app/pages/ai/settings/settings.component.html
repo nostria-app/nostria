@@ -128,6 +128,12 @@
             </mat-form-field>
 
             <mat-form-field appearance="outline">
+              <mat-label>OpenAI chat model</mat-label>
+              <input matInput [ngModel]="aiService.cloudSettings().openaiChatModel"
+                (ngModelChange)="updateChatModel('openai', $event)" placeholder="gpt-4.1-mini" />
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
               <mat-label>OpenAI image model</mat-label>
               <input matInput [ngModel]="aiService.cloudSettings().openaiImageModel"
                 (ngModelChange)="updateImageModel('openai', $event)" placeholder="gpt-image-1" />
@@ -161,6 +167,12 @@
                 [attr.aria-label]="showXAiApiKey ? 'Hide API key' : 'Show API key'">
                 <mat-icon>{{ showXAiApiKey ? 'visibility_off' : 'visibility' }}</mat-icon>
               </button>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>xAI chat model</mat-label>
+              <input matInput [ngModel]="aiService.cloudSettings().xaiChatModel"
+                (ngModelChange)="updateChatModel('xai', $event)" placeholder="grok-3-mini" />
             </mat-form-field>
 
             <mat-form-field appearance="outline">

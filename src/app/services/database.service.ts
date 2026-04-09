@@ -261,6 +261,16 @@ export interface StoredAiChatHistoryEntry {
   messages: Array<{
     role: 'user' | 'assistant';
     content: string;
+    generatedImages?: Array<{
+      id: string;
+      provider: 'openai' | 'xai';
+      providerLabel: string;
+      model: string;
+      prompt: string;
+      revisedPrompt?: string;
+      cacheKey?: string;
+      mimeType?: string;
+    }>;
   }>;
 }
 

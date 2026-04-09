@@ -87,29 +87,15 @@
       </header>
 
       <section class="workspace-toolbar">
-        <div class="workspace-switch" aria-label="AI workspace mode">
-          <button type="button" class="workspace-switch-button"
-            [class.workspace-switch-button-active]="workspaceView() === 'chat'"
-            [attr.aria-pressed]="workspaceView() === 'chat'" (click)="setWorkspaceView('chat')">
-            <mat-icon>chat</mat-icon>
-            Chat
-          </button>
-          <button type="button" class="workspace-switch-button"
-            [class.workspace-switch-button-active]="workspaceView() === 'create'"
-            [attr.aria-pressed]="workspaceView() === 'create'" (click)="setWorkspaceView('create')">
-            <mat-icon>image</mat-icon>
-            Create
-          </button>
-        </div>
-
         <div class="workspace-stats">
           <span class="workspace-stat-pill">{{ currentConversationTitle() }}</span>
           <span class="workspace-stat-pill">{{ conversationMessageCount() }} messages</span>
           @if (conversationAttachmentCount() > 0) {
           <span class="workspace-stat-pill">{{ conversationAttachmentCount() }} attachments</span>
           }
-          @if (selectedChatModel(); as model) {
+          @if (selectedModel(); as model) {
           <span class="workspace-stat-pill">{{ model.runtime }}</span>
+          <span class="workspace-stat-pill">{{ model.name }}</span>
           }
         </div>
       </section>
@@ -121,104 +107,18 @@
       </div>
       }
 
-      @if (workspaceView() === 'create') {
-      <section class="image-studio section-focused">
-        <div class="image-studio-header">
-          <div>
-            <p class="eyebrow">Cloud image generation</p>
-            <h3>Generate images with your own provider key</h3>
-          </div>
-
-          @if (availableImageProviders().length > 0) {
-          <mat-form-field appearance="outline" class="image-provider-field">
-            <mat-label>Provider</mat-label>
-            <mat-select [value]="selectedImageProvider()" (selectionChange)="selectImageProvider($event.value)">
-              @for (provider of availableImageProviders(); track provider) {
-              <mat-option [value]="provider">{{ imageProviderLabel(provider) }}</mat-option>
-              }
-            </mat-select>
-          </mat-form-field>
-          }
-        </div>
-
-        @if (availableImageProviders().length === 0) {
-        <div class="notice warning-notice">
-          <mat-icon>vpn_key</mat-icon>
-          <span>Add an OpenAI or xAI API key in AI Settings to generate hosted images.</span>
-          <button mat-button type="button" (click)="openImageSettings()">Open settings</button>
-        </div>
-        } @else {
-        <div class="image-studio-shell">
-          <textarea class="image-prompt-input" [ngModel]="imagePrompt()" (ngModelChange)="imagePrompt.set($event)"
-            rows="2" placeholder="Describe the image you want to create..." [disabled]="isGeneratingImage()"></textarea>
-
-          <div class="image-studio-actions">
-            <div class="image-studio-meta">
-              <span>Provider: {{ imageProviderLabel(selectedImageProvider()) }}</span>
-              <span>Model: {{ selectedImageModel() }}</span>
-            </div>
-            <button mat-flat-button type="button" (click)="generateImage()"
-              [disabled]="!imagePrompt().trim() || isGeneratingImage()">
-              <mat-icon>image</mat-icon>
-              {{ isGeneratingImage() ? 'Generating...' : 'Generate image' }}
-            </button>
-          </div>
-        </div>
-
-        <div class="tool-suggestion-strip">
-          @for (prompt of imageQuickPrompts; track prompt.label) {
-          <button type="button" class="tool-suggestion-chip" (click)="applyImagePrompt(prompt.prompt)">
-            {{ prompt.label }}
-          </button>
-          }
-        </div>
-        }
-
-        @if (imageGenerationError()) {
-        <div class="notice error-notice">
-          <mat-icon>error</mat-icon>
-          <span>{{ imageGenerationError() }}</span>
-        </div>
-        }
-
-        @if (generatedImages().length > 0) {
-        <div class="generated-image-grid">
-          @for (image of generatedImages(); track image.id) {
-          <article class="generated-image-card">
-            <img [src]="image.src" [attr.alt]="image.prompt" [attr.title]="image.prompt"
-              class="generated-image-preview" />
-            <div class="generated-image-copy">
-              <div class="generated-image-meta">
-                <span>{{ image.providerLabel }}</span>
-                <span>{{ image.model }}</span>
-              </div>
-              <p>{{ image.revisedPrompt || image.prompt }}</p>
-              <div class="generated-image-actions">
-                <button mat-button type="button"
-                  (click)="applyImagePrompt(image.revisedPrompt || image.prompt)">Remix</button>
-                <button mat-button type="button" (click)="useImagePromptInChat(image)">Use in chat</button>
-                <button mat-button type="button" (click)="downloadImage(image)">Download</button>
-                <a [href]="image.src" target="_blank" rel="noopener noreferrer">Open image</a>
-              </div>
-            </div>
-          </article>
-          }
-        </div>
-        }
-      </section>
-      }
-
-      @if (selectedChatModel()?.chatDisabledReason) {
+      @if (selectedModel()?.chatDisabledReason) {
       <div class="notice warning-notice">
         <mat-icon>warning</mat-icon>
-        <span>{{ selectedChatModel()?.chatDisabledReason }}</span>
+        <span>{{ selectedModel()?.chatDisabledReason }}</span>
       </div>
       }
 
       <div class="chat-workspace">
         @if (conversation().length <= 1) { <section class="prompt-suggestions">
-          @for (prompt of chatQuickPrompts; track prompt.label) {
-          <button mat-stroked-button type="button" (click)="applyChatPrompt(prompt.prompt)">{{ prompt.label }}</button>
+          @for (prompt of activeQuickPrompts(); track prompt.label) {
+          <button mat-stroked-button type="button"
+            (click)="isImageMode() ? applyImagePrompt(prompt.prompt) : applyChatPrompt(prompt.prompt)">{{ prompt.label }}</button>
           }
     </section>
     }
@@ -256,6 +156,29 @@
         <div class="message-bubble markdown-bubble" [class.pending-bubble]="message.streaming">
           @if (message.content.trim().length > 0) {
           <div class="message-markdown" [innerHTML]="renderedAssistantMessage(message.id)"></div>
+          }
+          @if (message.generatedImages?.length) {
+          <div class="generated-image-grid">
+            @for (image of message.generatedImages!; track image.id) {
+            <article class="generated-image-card">
+              <img [src]="image.src" alt="Generated image" [attr.title]="image.prompt" class="generated-image-preview" />
+              <div class="generated-image-copy">
+                <div class="generated-image-meta">
+                  <span>{{ image.providerLabel }}</span>
+                  <span>{{ image.model }}</span>
+                </div>
+                <p>{{ image.revisedPrompt || image.prompt }}</p>
+                <div class="generated-image-actions">
+                  <button mat-button type="button" (click)="applyImagePrompt(image.revisedPrompt || image.prompt)">Remix</button>
+                  <button mat-button type="button" (click)="useImagePromptInChat(image)">Use in chat</button>
+                  <button mat-button type="button" (click)="downloadImage(image)">Download</button>
+                  <button mat-button type="button" (click)="setActiveGeneratedImage(image)" [matMenuTriggerFor]="generatedImageMenu">Share</button>
+                  <a [href]="image.src" target="_blank" rel="noopener noreferrer">Open image</a>
+                </div>
+              </div>
+            </article>
+            }
+          </div>
           } @else {
           <div class="stream-placeholder">Generating...</div>
           }
@@ -281,7 +204,7 @@
       }
 
       @if (isGenerating()) {
-      <div class="typing-indicator" aria-live="polite">Generating a local reply...</div>
+      <div class="typing-indicator" aria-live="polite">{{ isImageMode() ? 'Generating image...' : 'Generating reply...' }}</div>
       }
 
       <div class="conversation-anchor" #conversationEnd aria-hidden="true"></div>
@@ -311,7 +234,7 @@
           <mat-icon>add</mat-icon>
         </button>
 
-        @if (selectedChatModel(); as model) {
+        @if (selectedModel(); as model) {
         <button mat-icon-button type="button" class="composer-model-button" [matMenuTriggerFor]="modelMenu"
           [class.composer-model-button-loaded]="model.loaded"
           [class.composer-model-button-cached]="!model.loaded && model.cached"
@@ -324,11 +247,14 @@
 
         <textarea #composerInput class="composer-input" [ngModel]="composerText()"
           (ngModelChange)="composerText.set($event)" (keydown)="onComposerKeydown($event)" rows="1"
-          placeholder="Ask anything or use #fetch https://example.com" [disabled]="isGenerating()"></textarea>
+          placeholder="{{ isImageMode() ? 'Describe the image you want to create' : 'Ask anything or use #fetch https://example.com' }}"
+          aria-label="{{ isImageMode() ? 'Image prompt' : 'Chat prompt' }}"
+          title="{{ isImageMode() ? 'Image prompt' : 'Chat prompt' }}"
+          [disabled]="isGenerating()"></textarea>
 
         <button mat-icon-button type="button" class="composer-send-button" (click)="sendMessage()"
-          [disabled]="!canSend()" aria-label="Send message">
-          <mat-icon>send</mat-icon>
+          [disabled]="!canSend()" [attr.aria-label]="isImageMode() ? 'Generate image' : 'Send message'">
+          <mat-icon>{{ isImageMode() ? 'image' : 'send' }}</mat-icon>
         </button>
       </div>
 
@@ -340,8 +266,8 @@
       </mat-menu>
 
       <mat-menu #modelMenu="matMenu" class="model-selector-menu">
-        @for (chatModel of chatModels(); track chatModel.id) {
-        <button mat-menu-item type="button" (click)="selectChatModel(chatModel.id)">
+        @for (chatModel of composerModels(); track chatModel.id) {
+        <button mat-menu-item type="button" (click)="selectModel(chatModel.id)">
           <div class="model-menu-item">
             <div class="model-menu-copy">
               <span class="model-menu-title">{{ chatModel.name }}</span>
@@ -356,6 +282,17 @@
           </div>
         </button>
         }
+      </mat-menu>
+
+      <mat-menu #generatedImageMenu="matMenu">
+        <button mat-menu-item type="button" (click)="shareGeneratedImageToNoteEditor()">
+          <mat-icon>edit_note</mat-icon>
+          <span>Open in Note Editor</span>
+        </button>
+        <button mat-menu-item type="button" (click)="publishGeneratedImage()">
+          <mat-icon>image</mat-icon>
+          <span>Publish as Picture Event</span>
+        </button>
       </mat-menu>
 
       <mat-menu #assistantShareMenu="matMenu">
