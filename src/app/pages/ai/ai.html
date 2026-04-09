@@ -127,7 +127,8 @@
     <div class="conversation-panel" #conversationPanel (scroll)="onConversationScroll($event)">
       @for (message of conversation(); track message.id) {
       <article class="message-row" [class.message-user]="message.role === 'user'"
-        [class.message-assistant]="message.role === 'assistant'">
+        [class.message-assistant]="message.role === 'assistant'"
+        [class.message-row-generated]="!!message.generatedImages?.length">
         <div class="message-row-head">
           <div class="message-actions">
             @if (message.role === 'assistant' && message.content.trim().length > 0) {
@@ -154,7 +155,8 @@
           </div>
         </div>
         @if (message.role === 'assistant') {
-        <div class="message-bubble markdown-bubble" [class.pending-bubble]="message.streaming">
+        <div class="message-bubble markdown-bubble" [class.pending-bubble]="message.streaming"
+          [class.generated-images-bubble]="!!message.generatedImages?.length">
           @if (message.content.trim().length > 0) {
           <div class="message-markdown" [innerHTML]="renderedAssistantMessage(message.id)"></div>
           }
@@ -162,23 +164,39 @@
           <div class="generated-image-grid">
             @for (image of message.generatedImages!; track image.id) {
             <article class="generated-image-card">
-              <img [src]="image.src" alt="Generated image" [attr.title]="image.prompt"
-                class="generated-image-preview" />
+              <div class="generated-image-head">
+                <div class="message-actions generated-image-actions">
+                  <button type="button" class="message-action-button"
+                    (click)="applyImagePrompt(image.revisedPrompt || image.prompt)">
+                    <mat-icon>auto_fix_high</mat-icon>
+                    <span>Remix</span>
+                  </button>
+                  <button type="button" class="message-action-button" (click)="useImagePromptInChat(image)">
+                    <mat-icon>chat</mat-icon>
+                    <span>Use in chat</span>
+                  </button>
+                  <button type="button" class="message-action-button" (click)="downloadImage(image)">
+                    <mat-icon>download</mat-icon>
+                    <span>Download</span>
+                  </button>
+                  <button type="button" class="message-action-button" (click)="setActiveGeneratedImage(image)"
+                    [matMenuTriggerFor]="generatedImageMenu">
+                    <mat-icon>share</mat-icon>
+                    <span>Share</span>
+                  </button>
+                </div>
+              </div>
+              <button type="button" class="generated-image-preview-button" (click)="openGeneratedImagePreview(image)"
+                [attr.aria-label]="'Preview generated image for ' + (image.revisedPrompt || image.prompt)"
+                [attr.title]="image.revisedPrompt || image.prompt">
+                <img [src]="image.src" alt="Generated image" class="generated-image-preview" />
+              </button>
               <div class="generated-image-copy">
                 <div class="generated-image-meta">
                   <span>{{ image.providerLabel }}</span>
                   <span>{{ image.model }}</span>
                 </div>
                 <p>{{ image.revisedPrompt || image.prompt }}</p>
-                <div class="generated-image-actions">
-                  <button mat-button type="button"
-                    (click)="applyImagePrompt(image.revisedPrompt || image.prompt)">Remix</button>
-                  <button mat-button type="button" (click)="useImagePromptInChat(image)">Use in chat</button>
-                  <button mat-button type="button" (click)="downloadImage(image)">Download</button>
-                  <button mat-button type="button" (click)="setActiveGeneratedImage(image)"
-                    [matMenuTriggerFor]="generatedImageMenu">Share</button>
-                  <a [href]="image.src" target="_blank" rel="noopener noreferrer">Open image</a>
-                </div>
               </div>
             </article>
             }
@@ -206,11 +224,6 @@
         </div>
         }
       </article>
-      }
-
-      @if (isGenerating()) {
-      <div class="typing-indicator" aria-live="polite">{{ isImageMode() ? 'Generating image...' : 'Generating reply...'
-        }}</div>
       }
 
       <div class="conversation-anchor" #conversationEnd aria-hidden="true"></div>
@@ -241,13 +254,17 @@
         </button>
 
         @if (selectedModel(); as model) {
-        <button mat-icon-button type="button" class="composer-model-button" [matMenuTriggerFor]="modelMenu"
+        <button mat-stroked-button type="button" class="composer-model-button" [matMenuTriggerFor]="modelMenu"
           [class.composer-model-button-loaded]="model.loaded"
           [class.composer-model-button-cached]="!model.loaded && model.cached"
           [class.composer-model-button-idle]="!model.loaded && !model.cached && !model.loading"
           [class.composer-model-button-loading]="model.loading" [attr.aria-label]="'Select model: ' + model.name"
           [attr.title]="model.name">
           <mat-icon>model_training</mat-icon>
+          <span class="composer-model-button-copy">
+            <span class="composer-model-button-name">{{ model.name }}</span>
+            <span class="composer-model-button-meta">{{ selectedStatusLabel(model) }}</span>
+          </span>
         </button>
         }
 
@@ -273,17 +290,22 @@
       <mat-menu #modelMenu="matMenu" class="model-selector-menu">
         @for (chatModel of composerModels(); track chatModel.id) {
         <button mat-menu-item type="button" (click)="selectModel(chatModel.id)">
-          <div class="model-menu-item">
+          <div class="model-menu-item" [class.model-menu-item-selected]="chatModel.id === selectedModelId()">
             <div class="model-menu-copy">
               <span class="model-menu-title">{{ chatModel.name }}</span>
               <span class="model-menu-meta">{{ chatModel.runtime }}</span>
             </div>
-            <span class="status-chip" [class.status-loaded]="chatModel.loaded"
-              [class.status-cached]="!chatModel.loaded && chatModel.cached"
-              [class.status-idle]="!chatModel.loaded && !chatModel.cached && !chatModel.loading"
-              [class.status-loading]="chatModel.loading">
-              {{ statusLabel(chatModel) }}
-            </span>
+            <div class="model-menu-trailing">
+              <span class="status-chip" [class.status-loaded]="chatModel.loaded"
+                [class.status-cached]="!chatModel.loaded && chatModel.cached"
+                [class.status-idle]="!chatModel.loaded && !chatModel.cached && !chatModel.loading"
+                [class.status-loading]="chatModel.loading">
+                {{ statusLabel(chatModel) }}
+              </span>
+              @if (chatModel.id === selectedModelId()) {
+              <mat-icon class="model-menu-selected-icon">check_circle</mat-icon>
+              }
+            </div>
           </div>
         </button>
         }

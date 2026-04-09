@@ -18,7 +18,9 @@ import { FormatService } from '../../services/format/format.service';
 import { LayoutService } from '../../services/layout.service';
 import { LoggerService } from '../../services/logger.service';
 import { MediaService } from '../../services/media.service';
+import { CustomDialogService } from '../../services/custom-dialog.service';
 import { PanelNavigationService } from '../../services/panel-navigation.service';
+import { GeneratedImagePreviewDialogComponent } from './generated-image-preview-dialog.component';
 
 interface ModelInfo {
   id: string;
@@ -100,6 +102,7 @@ export class AiComponent {
   private readonly logger = inject(LoggerService);
   private readonly eventService = inject(EventService);
   private readonly mediaService = inject(MediaService);
+  private readonly customDialog = inject(CustomDialogService);
   private readonly panelNav = inject(PanelNavigationService);
   private readonly platformId = inject(PLATFORM_ID);
   private readonly snackBar = inject(MatSnackBar);
@@ -790,6 +793,15 @@ export class AiComponent {
     this.composerText.set(`Use this image concept as context and turn it into a polished post or product idea:\n\n${image.revisedPrompt || image.prompt}`);
   }
 
+  openGeneratedImagePreview(image: AiGeneratedImage): void {
+    this.customDialog.open(GeneratedImagePreviewDialogComponent, {
+      title: 'Generated image',
+      width: 'min(92vw, 960px)',
+      maxWidth: '96vw',
+      data: { image },
+    });
+  }
+
   downloadImage(image: AiGeneratedImage): void {
     if (!this.isBrowser || typeof document === 'undefined') {
       return;
@@ -843,6 +855,26 @@ export class AiComponent {
     }
 
     return 'Not loaded';
+  }
+
+  selectedStatusLabel(model: ModelInfo): string {
+    if (model.source === 'cloud') {
+      return model.task === 'image-generation' ? 'Hosted image' : 'Hosted chat';
+    }
+
+    if (model.loading) {
+      return `Loading ${Math.round(model.progress)}%`;
+    }
+
+    if (model.loaded) {
+      return 'Ready on device';
+    }
+
+    if (model.cached) {
+      return 'Cached locally';
+    }
+
+    return 'Local model';
   }
 
   async loadModel(model: ModelInfo): Promise<boolean> {

@@ -90,6 +90,7 @@
 .message-row-head,
 .message-actions,
 .message-attachments,
+.model-menu-trailing,
 .composer-attachments {
   display: flex;
   align-items: center;
@@ -101,6 +102,20 @@
 .composer-footer,
 .model-menu-item {
   justify-content: space-between;
+}
+
+.model-menu-item-selected {
+  position: relative;
+}
+
+.model-menu-item-selected::before {
+  content: '';
+  position: absolute;
+  inset: -8px -10px;
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--mat-sys-primary-container) 42%, transparent);
+  border: 1px solid var(--mat-sys-primary);
+  z-index: -1;
 }
 
 .history-sidebar-topbar {
@@ -416,6 +431,15 @@
   color: var(--mat-sys-on-surface);
 }
 
+.model-menu-trailing {
+  justify-content: flex-end;
+  flex: 0 0 auto;
+}
+
+.model-menu-selected-icon {
+  color: var(--mat-sys-primary);
+}
+
 .notice {
   display: flex;
   align-items: center;
@@ -527,17 +551,35 @@
 
 .generated-image-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: minmax(0, 1fr);
   gap: 14px;
 }
 
 .generated-image-card {
+  position: relative;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
-  border: 1px solid var(--mat-sys-outline-variant);
-  border-radius: 20px;
-  background: var(--mat-sys-surface);
+  gap: 12px;
+}
+
+.generated-image-head {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  z-index: 1;
+  padding: 10px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--mat-sys-scrim) 42%, transparent) 0%, transparent 100%);
+}
+
+.generated-image-preview-button {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
 }
 
 .generated-image-preview {
@@ -545,13 +587,14 @@
   aspect-ratio: 1;
   object-fit: cover;
   background: var(--mat-sys-surface-container);
+  border-radius: 20px;
 }
 
 .generated-image-copy {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  padding: 14px;
+  padding: 0 4px 2px;
 
   p {
     margin: 0;
@@ -573,8 +616,7 @@
 }
 
 .generated-image-actions {
-  display: flex;
-  align-items: center;
+  justify-content: flex-start;
   flex-wrap: wrap;
   gap: 4px;
 }
@@ -642,6 +684,10 @@
   max-width: min(82%, 760px);
 }
 
+.message-row-generated {
+  max-width: min(94%, 1040px);
+}
+
 .message-user {
   margin-left: auto;
   align-items: flex-end;
@@ -697,6 +743,10 @@
   border: 1px solid var(--mat-sys-outline-variant);
   background: var(--mat-sys-surface-container-low);
   color: var(--mat-sys-on-surface);
+}
+
+.generated-images-bubble {
+  padding: 8px;
 }
 
 .user-bubble {
@@ -822,12 +872,6 @@
   color: var(--mat-sys-on-surface-variant);
 }
 
-.typing-indicator {
-  padding: 0 4px 4px;
-  color: var(--mat-sys-on-surface-variant);
-  font-size: 0.9rem;
-}
-
 .conversation-anchor {
   block-size: 1px;
 }
@@ -874,7 +918,6 @@
 .composer-model-button,
 .composer-send-button {
   flex: 0 0 auto;
-  inline-size: 36px;
   block-size: 36px;
   padding: 0 !important;
   display: flex !important;
@@ -883,9 +926,38 @@
 }
 
 .composer-model-button {
+  gap: 10px;
+  min-width: 0;
+  padding: 0 12px !important;
   border: 1px solid var(--mat-sys-outline-variant);
   background: var(--mat-sys-surface-container);
   color: var(--mat-sys-on-surface-variant);
+}
+
+.composer-model-button-copy {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+  line-height: 1.1;
+}
+
+.composer-model-button-name,
+.composer-model-button-meta {
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.composer-model-button-name {
+  color: var(--mat-sys-on-surface);
+  font-size: 0.84rem;
+}
+
+.composer-model-button-meta {
+  color: inherit;
+  font-size: 0.72rem;
 }
 
 .composer-model-button.composer-model-button-loaded {
@@ -1051,8 +1123,21 @@
   .composer-plus-button,
   .composer-model-button,
   .composer-send-button {
-    inline-size: 34px;
     block-size: 34px;
+  }
+
+  .composer-model-button {
+    max-width: 180px;
+    padding-inline: 10px !important;
+  }
+
+  .composer-model-button-copy {
+    gap: 2px;
+  }
+
+  .composer-model-button-name,
+  .composer-model-button-meta {
+    max-width: 110px;
   }
 
   .workspace-switch {
