@@ -367,7 +367,7 @@
             <mat-icon>add</mat-icon>
           </button>
 
-          <textarea class="composer-input" [ngModel]="composerText()" (ngModelChange)="composerText.set($event)"
+          <textarea #composerInput class="composer-input" [ngModel]="composerText()" (ngModelChange)="composerText.set($event)"
             (keydown)="onComposerKeydown($event)" rows="1" placeholder="Message Nostria assistant..."
             [disabled]="isGenerating()"></textarea>
 

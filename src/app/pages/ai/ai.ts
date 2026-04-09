@@ -94,6 +94,7 @@ export class AiComponent {
   private readonly conversationPanelRef = viewChild<ElementRef<HTMLDivElement>>('conversationPanel');
   private readonly conversationEndRef = viewChild<ElementRef<HTMLDivElement>>('conversationEnd');
   private readonly attachmentInputRef = viewChild<ElementRef<HTMLInputElement>>('attachmentInput');
+  private readonly composerInputRef = viewChild<ElementRef<HTMLTextAreaElement>>('composerInput');
 
   private readonly isBrowser = isPlatformBrowser(this.platformId);
   private readonly systemPrompt = 'You are Nostria\'s local AI assistant. Keep replies concise, practical, and grounded in the user\'s request.';
@@ -483,6 +484,7 @@ export class AiComponent {
   applyChatPrompt(prompt: string): void {
     this.workspaceView.set('chat');
     this.composerText.set(prompt);
+    this.focusComposerPromptPlaceholder(prompt);
   }
 
   applyImagePrompt(prompt: string): void {
@@ -877,6 +879,30 @@ export class AiComponent {
 
       const panel = this.conversationPanelRef()?.nativeElement;
       panel?.scrollTo({ top: panel.scrollHeight, behavior });
+    });
+  }
+
+  private focusComposerPromptPlaceholder(prompt: string): void {
+    if (!this.isBrowser) {
+      return;
+    }
+
+    requestAnimationFrame(() => {
+      const textarea = this.composerInputRef()?.nativeElement;
+      if (!textarea) {
+        return;
+      }
+
+      textarea.focus();
+
+      const placeholderMatch = /\[[^\]]+\]/.exec(prompt);
+      if (placeholderMatch && typeof placeholderMatch.index === 'number') {
+        textarea.setSelectionRange(placeholderMatch.index, placeholderMatch.index + placeholderMatch[0].length);
+        return;
+      }
+
+      const end = textarea.value.length;
+      textarea.setSelectionRange(end, end);
     });
   }
 
