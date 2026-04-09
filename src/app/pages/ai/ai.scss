@@ -846,6 +846,16 @@
 .stream-placeholder {
   color: var(--mat-sys-on-surface-variant);
   font-style: italic;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 32px;
+}
+
+.stream-progress {
+  margin-left: auto;
+  color: var(--mat-sys-on-surface-variant);
+  font-style: normal;
 }
 
 :host ::ng-deep .message-markdown>* {
@@ -891,6 +901,81 @@
   color: var(--mat-sys-on-surface-variant);
 }
 
+.assistant-thinking-block {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 14px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  border: 1px solid var(--mat-sys-outline-variant);
+  background: var(--mat-sys-surface-container);
+}
+
+.assistant-thinking-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 0.82rem;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.assistant-thinking-label mat-icon {
+  width: 16px;
+  height: 16px;
+  font-size: 16px;
+}
+
+.assistant-thinking-content {
+  color: var(--mat-sys-on-surface-variant);
+  line-height: 1.6;
+}
+
+:host ::ng-deep .assistant-thinking-content>* {
+  margin: 0 0 12px;
+}
+
+:host ::ng-deep .assistant-thinking-content> :last-child {
+  margin-bottom: 0;
+}
+
+:host ::ng-deep .assistant-thinking-content a {
+  color: var(--mat-sys-primary);
+}
+
+:host ::ng-deep .assistant-thinking-content code {
+  padding: 0.12rem 0.35rem;
+  border-radius: 8px;
+  background: var(--mat-sys-surface-container-highest);
+  font-size: 0.92em;
+}
+
+:host ::ng-deep .assistant-thinking-content pre {
+  overflow-x: auto;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: var(--mat-sys-surface-container-highest);
+}
+
+:host ::ng-deep .assistant-thinking-content pre code {
+  padding: 0;
+  background: transparent;
+}
+
+:host ::ng-deep .assistant-thinking-content ul,
+:host ::ng-deep .assistant-thinking-content ol {
+  padding-left: 1.25rem;
+}
+
+:host ::ng-deep .assistant-thinking-content blockquote {
+  margin-left: 0;
+  padding-left: 14px;
+  border-left: 3px solid var(--mat-sys-outline);
+  color: var(--mat-sys-on-surface-variant);
+}
+
 .conversation-anchor {
   block-size: 1px;
 }
@@ -911,6 +996,74 @@
   box-shadow: var(--mat-sys-level1);
   overflow: hidden;
   box-sizing: border-box;
+}
+
+.composer-processing-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 34px;
+  padding: 0 6px 6px;
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 0.82rem;
+}
+
+.composer-processing-copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.composer-processing-progress {
+  flex: 0 0 auto;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.processing-dots {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.processing-dots span {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: currentColor;
+  opacity: 0.28;
+  animation: ai-processing-dot 1.05s ease-in-out infinite;
+}
+
+.processing-dots span:nth-child(2) {
+  animation-delay: 0.16s;
+}
+
+.processing-dots span:nth-child(3) {
+  animation-delay: 0.32s;
+}
+
+@keyframes ai-processing-dot {
+  0%,
+  80%,
+  100% {
+    opacity: 0.28;
+    transform: scale(0.92);
+  }
+
+  40% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .processing-dots span {
+    animation: none;
+    opacity: 0.72;
+    transform: none;
+  }
 }
 
 :host-context(.dark) .composer-panel {

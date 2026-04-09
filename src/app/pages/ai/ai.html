@@ -161,7 +161,18 @@
         <div class="message-bubble markdown-bubble" [class.pending-bubble]="message.streaming"
           [class.generated-images-bubble]="!!message.generatedImages?.length">
           @if (message.content.trim().length > 0) {
-          <div class="message-markdown" [innerHTML]="renderedAssistantMessage(message.id)"></div>
+          @if (renderedAssistantThinking(message.id); as thinking) {
+          <section class="assistant-thinking-block">
+            <div class="assistant-thinking-label">
+              <mat-icon>psychology_alt</mat-icon>
+              <span>Thinking</span>
+            </div>
+            <div class="assistant-thinking-content" [innerHTML]="thinking"></div>
+          </section>
+          }
+          @if (renderedAssistantAnswer(message.id); as answer) {
+          <div class="message-markdown" [innerHTML]="answer"></div>
+          }
           }
           @if (message.generatedImages?.length) {
           <div class="generated-image-grid">
@@ -211,7 +222,17 @@
           </div>
           }
           @if (message.streaming && message.content.trim().length === 0 && !message.generatedImages?.length) {
-          <div class="stream-placeholder">Generating...</div>
+          <div class="stream-placeholder">
+            <span class="processing-dots" aria-hidden="true">
+              <span></span>
+              <span></span>
+              <span></span>
+            </span>
+            <span>{{ processingStatusLabel() || 'Processing...' }}</span>
+            @if (activeModelProgress() !== null) {
+            <span class="stream-progress">{{ activeModelProgress() }}%</span>
+            }
+          </div>
           }
         </div>
         } @else {
@@ -238,6 +259,22 @@
     </div>
 
     <div class="composer-panel">
+      @if (showProcessingStatus()) {
+      <div class="composer-processing-status" aria-live="polite">
+        <div class="composer-processing-copy">
+          <span class="processing-dots" aria-hidden="true">
+            <span></span>
+            <span></span>
+            <span></span>
+          </span>
+          <span>{{ processingStatusLabel() || 'Processing...' }}</span>
+        </div>
+        @if (activeModelProgress() !== null) {
+        <span class="composer-processing-progress">{{ activeModelProgress() }}%</span>
+        }
+      </div>
+      }
+
       @if (attachedFiles().length > 0) {
       <div class="composer-attachments">
         @for (attachment of attachedFiles(); track attachment.id) {

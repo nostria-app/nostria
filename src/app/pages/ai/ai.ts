@@ -67,6 +67,16 @@ interface AiQuickPrompt {
   prompt: string;
 }
 
+interface RenderedAssistantContent {
+  thinking: SafeHtml | null;
+  answer: SafeHtml | null;
+}
+
+interface VisualIntent {
+  task: 'image-generation' | 'image-upscaling';
+  prompt: string;
+}
+
 interface FetchedPromptContext {
   url: string;
   markdown: string;
@@ -112,7 +122,7 @@ export class AiComponent {
   private readonly composerInputRef = viewChild<ElementRef<HTMLTextAreaElement>>('composerInput');
 
   private readonly isBrowser = isPlatformBrowser(this.platformId);
-  private readonly systemPrompt = 'You are Nostria\'s local AI assistant. Keep replies concise, practical, and grounded in the user\'s request.';
+  private readonly systemPrompt = 'You are Nostria\'s local AI assistant. Keep replies concise, practical, and grounded in the user\'s request. If you are answering in text mode, do not claim that you directly generated or upscaled an image. You can help refine prompts or explain what to do next, but only claim actions that actually happened in the current chat.';
   private readonly nextMessageId = signal(0);
   private readonly renderedAssistantSource = new Map<string, string>();
   private readonly renderedAssistantVersion = new Map<string, number>();
@@ -125,7 +135,7 @@ export class AiComponent {
   readonly historyQuery = signal('');
   readonly activeShareMessage = signal<ConversationMessage | null>(null);
   readonly activeGeneratedImage = signal<AiGeneratedImage | null>(null);
-  readonly renderedAssistantMessages = signal<Record<string, SafeHtml>>({});
+  readonly renderedAssistantMessages = signal<Record<string, RenderedAssistantContent>>({});
   readonly attachedFiles = signal<ComposerAttachment[]>([]);
   readonly hideHistoryRail = computed(() => this.splitPaneMode() || this.narrowHistoryMode());
 
@@ -441,6 +451,25 @@ export class AiComponent {
   readonly composerText = signal('');
   readonly isGenerating = signal(false);
   readonly chatError = signal('');
+  readonly workerProcessingState = this.aiService.processingState;
+  readonly workerTaskLabel = computed(() => this.aiService.getTaskName(this.workerProcessingState().task));
+  readonly activeModelProgress = computed(() => {
+    const model = this.selectedModel();
+    if (model?.loading) {
+      return Math.max(0, Math.min(100, Math.round(model.progress)));
+    }
+
+    return null;
+  });
+  readonly processingStatusLabel = computed(() => {
+    const model = this.selectedModel();
+    if (model?.loading) {
+      return model.cached ? `Loading ${model.name}...` : `Downloading ${model.name}...`;
+    }
+
+    return this.workerTaskLabel() || (this.isGenerating() ? 'Processing...' : '');
+  });
+  readonly showProcessingStatus = computed(() => this.workerProcessingState().isProcessing || !!this.selectedModel()?.loading || this.isGenerating());
   readonly canSend = computed(() => {
     const model = this.selectedModel();
     if (!model || this.isGenerating()) {
@@ -503,20 +532,15 @@ export class AiComponent {
         const nextVersion = (this.renderedAssistantVersion.get(message.id) ?? 0) + 1;
         this.renderedAssistantVersion.set(message.id, nextVersion);
 
-        const initialHtml = this.formatService.markdownToHtmlNonBlocking(message.content, updatedHtml => {
-          if (this.renderedAssistantVersion.get(message.id) !== nextVersion) {
-            return;
-          }
-
-          this.renderedAssistantMessages.update(rendered => ({
-            ...rendered,
-            [message.id]: updatedHtml,
-          }));
-        });
+        const sections = this.parseAssistantMessageContent(message.content);
+        const initialRendered: RenderedAssistantContent = {
+          thinking: this.renderAssistantSection(message.id, nextVersion, 'thinking', sections.thinking),
+          answer: this.renderAssistantSection(message.id, nextVersion, 'answer', sections.answer),
+        };
 
         this.renderedAssistantMessages.update(rendered => ({
           ...rendered,
-          [message.id]: initialHtml,
+          [message.id]: initialRendered,
         }));
       }
     });
@@ -923,7 +947,15 @@ export class AiComponent {
   }
 
   renderedAssistantMessage(id: string): SafeHtml | string {
-    return this.renderedAssistantMessages()[id] ?? '';
+    return this.renderedAssistantMessages()[id]?.answer ?? '';
+  }
+
+  renderedAssistantThinking(id: string): SafeHtml | null {
+    return this.renderedAssistantMessages()[id]?.thinking ?? null;
+  }
+
+  renderedAssistantAnswer(id: string): SafeHtml | null {
+    return this.renderedAssistantMessages()[id]?.answer ?? null;
   }
 
   formatHistoryTimestamp(timestamp: number): string {
@@ -1029,6 +1061,13 @@ export class AiComponent {
 
     if (!model || (!promptText && attachments.length === 0)) {
       return;
+    }
+
+    if (model.task === 'text-generation') {
+      const visualIntent = this.detectVisualIntent(promptText, attachments);
+      if (visualIntent && await this.routeVisualIntent(visualIntent, attachments)) {
+        return;
+      }
     }
 
     if (model.task === 'image-generation') {
@@ -1218,6 +1257,127 @@ export class AiComponent {
       const end = textarea.value.length;
       textarea.setSelectionRange(end, end);
     });
+  }
+
+  private parseAssistantMessageContent(content: string): { thinking: string; answer: string } {
+    const thinkPattern = /<think>([\s\S]*?)(?:<\/think>|$)/gi;
+    const thinkingBlocks: string[] = [];
+    const answerParts: string[] = [];
+    let cursor = 0;
+
+    for (const match of content.matchAll(thinkPattern)) {
+      const start = match.index ?? 0;
+      if (start > cursor) {
+        answerParts.push(content.slice(cursor, start));
+      }
+
+      const thinking = (match[1] ?? '').trim();
+      if (thinking) {
+        thinkingBlocks.push(thinking);
+      }
+
+      cursor = start + match[0].length;
+    }
+
+    if (cursor < content.length) {
+      answerParts.push(content.slice(cursor));
+    }
+
+    const answer = answerParts.join('').replace(/<\/think>/gi, '').trim();
+    const thinking = thinkingBlocks.join('\n\n').trim();
+
+    if (!thinking) {
+      return {
+        thinking: '',
+        answer: content.trim(),
+      };
+    }
+
+    return { thinking, answer };
+  }
+
+  private renderAssistantSection(
+    messageId: string,
+    version: number,
+    section: keyof RenderedAssistantContent,
+    content: string,
+  ): SafeHtml | null {
+    const trimmed = content.trim();
+    if (!trimmed) {
+      return null;
+    }
+
+    return this.formatService.markdownToHtmlNonBlocking(trimmed, updatedHtml => {
+      if (this.renderedAssistantVersion.get(messageId) !== version) {
+        return;
+      }
+
+      this.renderedAssistantMessages.update(rendered => ({
+        ...rendered,
+        [messageId]: {
+          thinking: rendered[messageId]?.thinking ?? null,
+          answer: rendered[messageId]?.answer ?? null,
+          [section]: updatedHtml,
+        },
+      }));
+    });
+  }
+
+  private detectVisualIntent(promptText: string, attachments: ComposerAttachment[]): VisualIntent | null {
+    const prompt = promptText.trim();
+    if (!prompt) {
+      return null;
+    }
+
+    if (
+      attachments.length === 1
+      && attachments[0].mimeType.startsWith('image/')
+      && /(upscale|enhance|sharpen|super[- ]resolution|higher[- ]resolution|increase resolution|denoise|restore|improve (?:this )?(?:image|photo|artwork|screenshot))/i.test(prompt)
+    ) {
+      return { task: 'image-upscaling', prompt };
+    }
+
+    if (
+      attachments.length === 0
+      && /(^\/?image\b|\b(generate|create|make|render|draw|illustrate|paint|design)\b[\s\S]{0,80}\b(image|picture|photo|art|artwork|illustration|poster|cover|portrait|scene|logo|wallpaper)\b|\b(image|picture|photo|art|artwork|illustration|poster|cover|portrait|scene|logo|wallpaper)\b[\s\S]{0,80}\b(generate|create|make|render|draw|illustrate|paint|design)\b)/i.test(prompt)
+    ) {
+      return { task: 'image-generation', prompt };
+    }
+
+    return null;
+  }
+
+  private async routeVisualIntent(intent: VisualIntent, attachments: ComposerAttachment[]): Promise<boolean> {
+    const model = this.pickVisualModel(intent.task);
+    if (!model) {
+      this.chatError.set(
+        intent.task === 'image-generation'
+          ? 'No image generation model is available. Select Janus Pro or configure a hosted image provider.'
+          : 'No image upscaling model is available.',
+      );
+      return true;
+    }
+
+    this.selectedModelId.set(model.id);
+    this.snackBar.open(
+      intent.task === 'image-generation'
+        ? `Using ${model.name} to generate the image.`
+        : `Using ${model.name} to upscale the image.`,
+      'Dismiss',
+      { duration: 2400 },
+    );
+
+    if (intent.task === 'image-generation') {
+      await this.generateImageMessage(model, intent.prompt, attachments);
+      return true;
+    }
+
+    await this.upscaleImageMessage(model, intent.prompt, attachments);
+    return true;
+  }
+
+  private pickVisualModel(task: VisualIntent['task']): ModelInfo | null {
+    return this.imageModels().find(model => model.task === task && !model.chatDisabledReason) ?? null;
   }
 
   private persistCurrentConversation(): void {
