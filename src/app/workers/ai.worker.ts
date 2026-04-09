@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { pipeline, env, Tensor, AutoProcessor, AutoTokenizer, BaseStreamer, MultiModalityCausalLM, SpeechT5ForTextToSpeech, SpeechT5HifiGan, TextStreamer } from '@huggingface/transformers';
+import { pipeline, env, Tensor, AutoModelForImageTextToText, AutoProcessor, AutoTokenizer, BaseStreamer, MultiModalityCausalLM, RawImage, SpeechT5ForTextToSpeech, SpeechT5HifiGan, TextStreamer } from '@huggingface/transformers';
 
 // Configure environment to use the Cache API for storing models
 env.allowLocalModels = false;
@@ -13,6 +13,7 @@ let transcriber: any = null;
 const translators = new Map<string, any>();
 const imageGenerators = new Map<string, { processor: Promise<any>, model: Promise<any> }>();
 const imageUpscalers = new Map<string, any>();
+const multimodalGenerators = new Map<string, { processor: Promise<any>, model: Promise<any> }>();
 let fp16Supported = false;
 
 class TTSPipeline {
@@ -114,6 +115,26 @@ async function getImageGenerator(modelId: string, progressCallback: (data: unkno
   return Promise.all([processor, model]);
 }
 
+async function getMultimodalGenerator(
+  modelId: string,
+  progressCallback: (data: unknown) => void,
+  options: { device?: 'webgpu' | 'wasm'; dtype?: string | Record<string, string> } = {},
+) {
+  const existing = multimodalGenerators.get(modelId);
+  if (existing) {
+    return Promise.all([existing.processor, existing.model]);
+  }
+
+  const processor = AutoProcessor.from_pretrained(modelId, { progress_callback: progressCallback });
+  const model = AutoModelForImageTextToText.from_pretrained(modelId, {
+    ...options,
+    progress_callback: progressCallback,
+  });
+
+  multimodalGenerators.set(modelId, { processor, model });
+  return Promise.all([processor, model]);
+}
+
 addEventListener('message', async ({ data }) => {
   const { type, payload, id } = data;
 
@@ -124,6 +145,9 @@ addEventListener('message', async ({ data }) => {
         break;
       case 'generate':
         await handleGenerate(payload, id);
+        break;
+      case 'generate-multimodal':
+        await handleGenerateMultimodal(payload, id);
         break;
       case 'summarize':
         await handleSummarize(payload, id);
@@ -174,6 +198,8 @@ async function handleLoad(payload: { task: string, model: string, options?: Reco
   if (task === 'text-generation') {
     const textGenerator = await pipeline(task, model, { ...options, progress_callback: progressCallback });
     textGenerators.set(model, textGenerator);
+  } else if (task === 'image-text-to-text') {
+    await getMultimodalGenerator(model, progressCallback, options);
   } else if (task === 'summarization') {
     summarizer = await pipeline(task, model, { ...options, progress_callback: progressCallback });
   } else if (task === 'sentiment-analysis') {
@@ -228,6 +254,83 @@ async function handleGenerate(payload: { input: string | { role: string, content
     type: 'result',
     id,
     payload: result
+  });
+}
+
+async function handleGenerateMultimodal(
+  payload: {
+    input: Array<{
+      role: string;
+      content: Array<
+        | { type: 'text'; text: string }
+        | { type: 'image'; image: Blob }
+      >;
+    }>;
+    model: string;
+    params?: any;
+  },
+  id: string,
+) {
+  const multimodalGenerator = multimodalGenerators.get(payload.model);
+  if (!multimodalGenerator) {
+    throw new Error(`Multimodal generation model ${payload.model} not loaded`);
+  }
+
+  const [processor, model] = await Promise.all([multimodalGenerator.processor, multimodalGenerator.model]);
+  const messages = payload.input;
+  const images = await Promise.all(
+    messages
+      .flatMap(message => message.content)
+      .filter((part): part is { type: 'image'; image: Blob } => part.type === 'image')
+      .map(part => RawImage.read(part.image)),
+  );
+  const preparedMessages = messages.map(message => ({
+    role: message.role,
+    content: message.content.map(part => part.type === 'text'
+      ? { type: 'text', text: part.text }
+      : { type: 'image' as const }),
+  }));
+
+  const prompt = processor.apply_chat_template(preparedMessages, {
+    add_generation_prompt: true,
+  });
+  const inputs = images.length > 0
+    ? await processor(prompt, images)
+    : await processor(prompt);
+
+  const streamer = new TextStreamer(processor.tokenizer, {
+    skip_prompt: true,
+    skip_special_tokens: true,
+    callback_function: (text: string) => {
+      if (!text) {
+        return;
+      }
+
+      postMessage({
+        type: 'progress',
+        id,
+        payload: {
+          status: 'stream',
+          text,
+        }
+      });
+    },
+  });
+
+  const { sequences } = await model.generate({
+    ...inputs,
+    ...payload.params,
+    streamer,
+    return_dict_in_generate: true,
+  });
+  const decoded = processor.batch_decode(sequences.slice(null, [inputs.input_ids.dims.at(-1), null]), {
+    skip_special_tokens: true,
+  });
+
+  postMessage({
+    type: 'result',
+    id,
+    payload: decoded[0] ?? '',
   });
 }
 
@@ -507,6 +610,7 @@ async function handleCheck(payload: { task: string, model: string }, id: string)
 
   // Check memory
   if (task === 'text-generation') isLoaded = textGenerators.has(model);
+  else if (task === 'image-text-to-text') isLoaded = multimodalGenerators.has(model);
   else if (task === 'summarization') isLoaded = !!summarizer;
   else if (task === 'sentiment-analysis') isLoaded = !!sentiment;
   else if (task === 'translation') isLoaded = translators.has(model);

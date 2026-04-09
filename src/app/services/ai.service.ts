@@ -12,6 +12,23 @@ export interface AiChatMessage {
   content: string;
 }
 
+export interface AiMultimodalTextPart {
+  type: 'text';
+  text: string;
+}
+
+export interface AiMultimodalImagePart {
+  type: 'image';
+  image: Blob;
+}
+
+export type AiMultimodalChatPart = AiMultimodalTextPart | AiMultimodalImagePart;
+
+export interface AiMultimodalChatMessage {
+  role: 'system' | 'user' | 'assistant';
+  content: AiMultimodalChatPart[];
+}
+
 export interface AiGenerationProgress {
   status: 'stream';
   text: string;
@@ -227,6 +244,14 @@ export class AiService {
       sizeHint: '~0.8B parameters',
     },
     {
+      id: 'onnx-community/Qwen3.5-0.8B-ONNX',
+      task: 'image-text-to-text',
+      name: 'Qwen 3.5 0.8B Vision',
+      description: 'Multimodal Qwen 3.5 model for local image-aware chat in the browser.',
+      runtime: 'WebGPU · q4f16 · vision',
+      sizeHint: '~0.8B parameters',
+    },
+    {
       id: 'Xenova/distilgpt2',
       task: 'text-generation',
       name: 'DistilGPT2',
@@ -273,6 +298,7 @@ export class AiService {
     if (!task) return '';
     switch (task) {
       case 'text-generation': return 'Generating text...';
+      case 'image-text-to-text': return 'Analyzing image...';
       case 'summarization': return 'Summarizing...';
       case 'sentiment-analysis': return 'Analyzing sentiment...';
       case 'translation': return 'Translating...';
@@ -284,6 +310,7 @@ export class AiService {
       case 'synthesize': return 'Synthesizing speech...'; // The postMessage type is 'synthesize'
       case 'upscale-image': return 'Upscaling image...';
       case 'generate': return 'Generating text...';
+      case 'generate-multimodal': return 'Analyzing image...';
       case 'summarize': return 'Summarizing...';
       case 'sentiment': return 'Analyzing sentiment...';
       case 'translate': return 'Translating...';
@@ -366,6 +393,7 @@ export class AiService {
   async loadModel(task: string, model: string, progressCallback?: (data: unknown) => void, options?: AiModelLoadOptions) {
     return this.postMessage('load', { task, model, options }, progressCallback).then((res) => {
       if (task === 'text-generation') this.textModelLoaded.set(true);
+      if (task === 'image-text-to-text') this.textModelLoaded.set(true);
       if (task === 'translation') this.translationModelLoaded.set(true);
       if (task === 'summarization') this.summarizationModelLoaded.set(true);
       if (task === 'sentiment-analysis') this.sentimentModelLoaded.set(true);
@@ -390,6 +418,20 @@ export class AiService {
   ) {
     if (!this.settings.settings().aiEnabled) throw new Error('AI is disabled');
     return this.postMessage('generate', { input, params, model }, progressCallback as ((data: unknown) => void) | undefined);
+  }
+
+  async generateMultimodalText(
+    input: AiMultimodalChatMessage[],
+    params?: unknown,
+    model = 'onnx-community/Qwen3.5-0.8B-ONNX',
+    progressCallback?: (data: AiGenerationProgress) => void,
+  ): Promise<string> {
+    if (!this.settings.settings().aiEnabled) throw new Error('AI is disabled');
+    return this.postMessage(
+      'generate-multimodal',
+      { input, params, model },
+      progressCallback as ((data: unknown) => void) | undefined,
+    ) as Promise<string>;
   }
 
   async summarizeText(text: string, params?: unknown) {

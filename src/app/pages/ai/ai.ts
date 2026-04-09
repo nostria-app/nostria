@@ -11,7 +11,7 @@ import { MatMenuModule } from '@angular/material/menu';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { SafeHtml } from '@angular/platform-browser';
-import { AiChatMessage, AiCloudProvider, AiGeneratedImage, AiGenerationProgress, AiModelLoadOptions, AiService } from '../../services/ai.service';
+import { AiChatMessage, AiCloudProvider, AiGeneratedImage, AiGenerationProgress, AiModelLoadOptions, AiMultimodalChatMessage, AiMultimodalChatPart, AiService } from '../../services/ai.service';
 import { AiChatHistoryService, AiHistoryGeneratedImage } from '../../services/ai-chat-history.service';
 import type { ArticleEditorDialogInitialDraft } from '../../components/article-editor-dialog/article-editor-dialog.component';
 import { EventService } from '../../services/event';
@@ -248,6 +248,25 @@ export class AiComponent {
       },
     },
     {
+      id: 'onnx-community/Qwen3.5-0.8B-ONNX',
+      task: 'image-text-to-text',
+      name: 'Qwen 3.5 0.8B Vision',
+      description: 'Multimodal Qwen 3.5 model for local browser image-aware chat and visual analysis.',
+      size: '~0.8B parameters',
+      loading: false,
+      progress: 0,
+      loaded: false,
+      cached: false,
+      runtime: 'WebGPU · q4f16 · vision',
+      loadOptions: { device: 'webgpu', dtype: 'q4f16' },
+      chatMode: 'messages',
+      chatDisabledReason: this.webGpuAvailable ? undefined : 'Requires WebGPU support in the browser.',
+      preferredParams: {
+        max_new_tokens: 384,
+        do_sample: false,
+      },
+    },
+    {
       id: 'Xenova/distilgpt2',
       task: 'text-generation',
       name: 'DistilGPT2',
@@ -316,7 +335,7 @@ export class AiComponent {
     },
   ]);
 
-  readonly localChatModels = computed(() => this.models().filter(model => model.task === 'text-generation'));
+  readonly localChatModels = computed(() => this.models().filter(model => this.isChatGenerationTask(model.task) && model.source !== 'cloud'));
   readonly cloudChatModels = computed<ModelInfo[]>(() => {
     const providers: AiCloudProvider[] = ['xai', 'openai'];
     return providers
@@ -827,7 +846,7 @@ export class AiComponent {
     const currentConversation = this.conversation();
     const lastMessage = currentConversation.at(-1);
 
-    if (!model || model.task !== 'text-generation' || lastMessage?.role !== 'assistant' || this.isGenerating()) {
+    if (!model || !this.isChatGenerationTask(model.task) || lastMessage?.role !== 'assistant' || this.isGenerating()) {
       return;
     }
 
@@ -852,10 +871,25 @@ export class AiComponent {
     this.isGenerating.set(true);
 
     try {
-      const input = this.buildGenerationInput(model, generationConversation);
-      const assistantReply = model.source === 'cloud' && model.provider
-        ? await this.aiService.generateCloudText(input as AiChatMessage[], model.provider, model.cloudModel)
-        : this.extractAssistantReply(await this.aiService.generateText(
+      let assistantReply: string;
+      if (model.source === 'cloud' && model.provider) {
+        const input = this.buildGenerationInput(model, generationConversation) as AiChatMessage[];
+        assistantReply = await this.aiService.generateCloudText(input, model.provider, model.cloudModel);
+      } else if (model.task === 'image-text-to-text') {
+        const input = await this.buildMultimodalGenerationInput(generationConversation);
+        assistantReply = await this.aiService.generateMultimodalText(
+          input,
+          model.preferredParams,
+          model.id,
+          (progress: AiGenerationProgress) => {
+            if (progress.status === 'stream') {
+              this.appendToMessage(assistantMessageId, progress.text);
+            }
+          },
+        );
+      } else {
+        const input = this.buildGenerationInput(model, generationConversation);
+        assistantReply = this.extractAssistantReply(await this.aiService.generateText(
           input,
           model.preferredParams,
           model.id,
@@ -865,6 +899,7 @@ export class AiComponent {
             }
           },
         ));
+      }
       const currentReply = this.getMessageContent(assistantMessageId);
       this.replaceMessageContent(assistantMessageId, currentReply.trim().length > 0 ? currentReply.trimEnd() : assistantReply, false);
       this.persistCurrentConversation();
@@ -1071,7 +1106,7 @@ export class AiComponent {
       return;
     }
 
-    if (model.task === 'text-generation') {
+    if (this.isChatGenerationTask(model.task)) {
       const visualIntent = this.detectVisualIntent(promptText, attachments);
       if (visualIntent && await this.routeVisualIntent(visualIntent, attachments)) {
         return;
@@ -1133,10 +1168,25 @@ export class AiComponent {
     this.isGenerating.set(true);
 
     try {
-      const input = this.buildGenerationInput(model, generationConversation);
-      const assistantReply = model.source === 'cloud' && model.provider
-        ? await this.aiService.generateCloudText(input as AiChatMessage[], model.provider, model.cloudModel)
-        : this.extractAssistantReply(await this.aiService.generateText(
+      let assistantReply: string;
+      if (model.source === 'cloud' && model.provider) {
+        const input = this.buildGenerationInput(model, generationConversation) as AiChatMessage[];
+        assistantReply = await this.aiService.generateCloudText(input, model.provider, model.cloudModel);
+      } else if (model.task === 'image-text-to-text') {
+        const input = await this.buildMultimodalGenerationInput(generationConversation);
+        assistantReply = await this.aiService.generateMultimodalText(
+          input,
+          model.preferredParams,
+          model.id,
+          (progress: AiGenerationProgress) => {
+            if (progress.status === 'stream') {
+              this.appendToMessage(assistantMessageId, progress.text);
+            }
+          },
+        );
+      } else {
+        const input = this.buildGenerationInput(model, generationConversation);
+        assistantReply = this.extractAssistantReply(await this.aiService.generateText(
           input,
           model.preferredParams,
           model.id,
@@ -1146,6 +1196,7 @@ export class AiComponent {
             }
           },
         ));
+      }
       const currentReply = this.getMessageContent(assistantMessageId);
       this.replaceMessageContent(assistantMessageId, currentReply.trim().length > 0 ? currentReply.trimEnd() : assistantReply, false);
       this.persistCurrentConversation();
@@ -1162,6 +1213,10 @@ export class AiComponent {
 
   private updateModelStatus(id: string, updates: Partial<ModelInfo>): void {
     this.models.update(models => models.map(model => model.id === id ? { ...model, ...updates } : model));
+  }
+
+  private isChatGenerationTask(task: string): boolean {
+    return task === 'text-generation' || task === 'image-text-to-text';
   }
 
   private async initializeModelStatus(): Promise<void> {
@@ -1843,6 +1898,39 @@ export class AiComponent {
       .join('\n\n');
 
     return `${this.systemPrompt}\n\n${transcript}\n\nAssistant:`;
+  }
+
+  private async buildMultimodalGenerationInput(conversation: ConversationMessage[]): Promise<AiMultimodalChatMessage[]> {
+    const messages = await Promise.all(conversation.map(message => this.buildMultimodalMessage(message)));
+    return [
+      {
+        role: 'system',
+        content: [{ type: 'text', text: this.systemPrompt }],
+      },
+      ...messages,
+    ];
+  }
+
+  private async buildMultimodalMessage(message: ConversationMessage): Promise<AiMultimodalChatMessage> {
+    const parts: AiMultimodalChatPart[] = [];
+    const imageAttachments = (message.attachments ?? []).filter(attachment => attachment.mimeType.startsWith('image/'));
+
+    for (const attachment of imageAttachments) {
+      parts.push({
+        type: 'image',
+        image: await this.readAttachmentBlob(attachment),
+      });
+    }
+
+    const text = this.buildGenerationMessageContent(message).trim();
+    if (text || parts.length === 0) {
+      parts.push({ type: 'text', text });
+    }
+
+    return {
+      role: message.role,
+      content: parts,
+    };
   }
 
   private buildGenerationMessageContent(message: ConversationMessage): string {
