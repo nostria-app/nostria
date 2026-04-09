@@ -177,7 +177,8 @@
       </div>
       }
 
-      <section class="image-studio" [class.section-focused]="workspaceView() === 'create'">
+      @if (workspaceView() === 'create') {
+      <section class="image-studio section-focused">
         <div class="image-studio-header">
           <div>
             <p class="eyebrow">Cloud image generation</p>
@@ -261,6 +262,7 @@
         </div>
         }
       </section>
+      }
 
       @if (selectedChatModel()?.chatDisabledReason) {
       <div class="notice warning-notice">
@@ -282,7 +284,6 @@
         <article class="message-row" [class.message-user]="message.role === 'user'"
           [class.message-assistant]="message.role === 'assistant'">
           <div class="message-row-head">
-            <div class="message-label">{{ message.role === 'user' ? 'You' : 'AI' }}</div>
             <div class="message-actions">
               <button type="button" class="message-action-button" (click)="copyMessage(message)">
                 <mat-icon>content_copy</mat-icon>
@@ -367,16 +368,6 @@
             [disabled]="!canSend()" aria-label="Send message">
             <mat-icon>send</mat-icon>
           </button>
-        </div>
-
-        <div class="composer-footer">
-          <span class="composer-hint">Local chat. Files stay on this device unless you share them elsewhere.</span>
-          <div class="composer-footer-actions">
-            <button mat-button type="button" class="composer-secondary-button" (click)="retryLastReply()"
-              [disabled]="!canRetryLastReply()">Retry last reply</button>
-            <button mat-button type="button" class="composer-secondary-button" (click)="createNewChat()">New
-              Chat</button>
-          </div>
         </div>
 
         <mat-menu #attachmentMenu="matMenu">
