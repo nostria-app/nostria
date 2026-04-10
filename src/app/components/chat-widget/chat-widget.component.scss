@@ -267,24 +267,20 @@
 
 @keyframes chat-widget-expand {
   from {
-    opacity: 0.72;
-    transform: scale(0.86);
+    transform: scale(0.92);
   }
 
   to {
-    opacity: 1;
     transform: scale(1);
   }
 }
 
 @keyframes chat-widget-collapse {
   from {
-    opacity: 0.9;
-    transform: scale(1.08);
+    transform: scale(1.04);
   }
 
   to {
-    opacity: 1;
     transform: scale(1);
   }
 }
