@@ -1,0 +1,63 @@
+<mat-card class="featured-feed-card" appearance="outlined"
+  [class.tone-primary]="card().tone === 'primary'"
+  [class.tone-secondary]="card().tone === 'secondary'"
+  [class.tone-tertiary]="card().tone === 'tertiary'">
+  <div class="card-glow glow-a"></div>
+  <div class="card-glow glow-b"></div>
+
+  <div class="featured-card-header">
+    <div class="eyebrow-pill">
+      <mat-icon>{{ card().icon }}</mat-icon>
+      <span>{{ card().eyebrow }}</span>
+    </div>
+
+    <button mat-icon-button type="button" class="dismiss-button" (click)="dismiss()" aria-label="Dismiss featured card">
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
+
+  <div class="featured-card-content">
+    <h3>{{ card().title }}</h3>
+    <p>{{ card().description }}</p>
+
+    @if (card().profiles?.length) {
+    <div class="profiles-list">
+      @for (profile of card().profiles; track profile.pubkey) {
+      <div class="profile-row">
+        <app-user-profile [pubkey]="profile.pubkey" view="chip" [hostWidthAuto]="true"></app-user-profile>
+        <span class="profile-score">{{ profile.scoreLabel }}</span>
+      </div>
+      }
+    </div>
+    }
+
+    @if (card().articles?.length) {
+    <div class="articles-list">
+      @for (article of card().articles; track article.eventId) {
+      <button type="button" class="article-pill" (click)="openArticle(article.naddr)">
+        <span class="article-title">{{ article.title }}</span>
+        <span class="article-summary">{{ article.summary }}</span>
+      </button>
+      }
+    </div>
+    }
+
+    @if (card().highlights?.length) {
+    <div class="highlight-list">
+      @for (highlight of card().highlights; track highlight) {
+      <span class="highlight-chip">{{ highlight }}</span>
+      }
+    </div>
+    }
+  </div>
+
+  <div class="featured-card-actions">
+    <button mat-flat-button type="button" class="primary-action" (click)="openPrimary()">{{ card().ctaLabel }}</button>
+
+    @if (card().secondaryCtaLabel && card().secondaryRoute) {
+    <button mat-stroked-button type="button" class="secondary-action" (click)="openSecondary()">
+      {{ card().secondaryCtaLabel }}
+    </button>
+    }
+  </div>
+</mat-card>

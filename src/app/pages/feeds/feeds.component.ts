@@ -65,6 +65,8 @@ import { PanelNavigationService } from '../../services/panel-navigation.service'
 import { FollowSetsService } from '../../services/follow-sets.service';
 import { TrustService } from '../../services/trust.service';
 import { formatDuration } from '../../utils/format-duration';
+import { FeaturedFeedCardComponent } from './featured-feed-card/featured-feed-card.component';
+import { FeaturedFeedCard, FeaturedFeedCardsService } from '../../services/featured-feed-cards.service';
 
 // NavLink interface removed because it was unused.
 
@@ -93,6 +95,7 @@ import { formatDuration } from '../../utils/format-duration';
     ListColumnComponent,
     FeedFilterPanelComponent,
     FilterButtonComponent,
+    FeaturedFeedCardComponent,
   ],
   templateUrl: './feeds.component.html',
   styleUrl: './feeds.component.scss',
@@ -123,6 +126,7 @@ export class FeedsComponent implements OnDestroy {
   private panelNav = inject(PanelNavigationService);
   private followSetsService = inject(FollowSetsService);
   private trustService = inject(TrustService);
+  private featuredFeedCards = inject(FeaturedFeedCardsService);
 
   // Dialog State Signals
   showNewFeedDialog = signal(false);
@@ -506,6 +510,23 @@ export class FeedsComponent implements OnDestroy {
   // Track rendered event counts per feed (virtual list)
   renderedEventCounts = signal<Record<string, number>>({});
 
+  feedRenderItems = computed(() => {
+    const renderedEvents = this.columnEvents();
+    const items = new Map<string, FeedRenderItem[]>();
+    const activeFeed = this.activeFeed();
+    const dynamicFeed = this.dynamicFeed();
+
+    if (activeFeed) {
+      items.set(activeFeed.id, this.buildFeedRenderItems(activeFeed, renderedEvents.get(activeFeed.id) || []));
+    }
+
+    if (dynamicFeed) {
+      items.set(dynamicFeed.id, this.buildFeedRenderItems(dynamicFeed, renderedEvents.get(dynamicFeed.id) || []));
+    }
+
+    return items;
+  });
+
   // Scroll detection for network loading more content
   lastLoadTime = 0;
   LOAD_MORE_COOLDOWN_MS = 250;
@@ -617,6 +638,32 @@ export class FeedsComponent implements OnDestroy {
     });
 
     return renderedEvents;
+  }
+
+  private buildFeedRenderItems(feed: FeedConfig, events: Event[]): FeedRenderItem[] {
+    const placements = this.featuredFeedCards.getPlacements(feed, events);
+    const placementMap = new Map(placements.map(placement => [placement.afterEventId, placement]));
+    const items: FeedRenderItem[] = [];
+
+    for (const event of events) {
+      items.push({
+        kind: 'event',
+        key: event.id,
+        event,
+      });
+
+      const placement = placementMap.get(event.id);
+      if (placement) {
+        items.push({
+          kind: 'featured-card',
+          key: placement.key,
+          instanceId: placement.instanceId,
+          card: placement.card,
+        });
+      }
+    }
+
+    return items;
   }
 
   // Computed signal for ALL events (in-memory, not rendered)
@@ -2538,3 +2585,18 @@ export class FeedsComponent implements OnDestroy {
     }
   }
 }
+
+interface FeedEventRenderItem {
+  kind: 'event';
+  key: string;
+  event: Event;
+}
+
+interface FeedFeaturedCardRenderItem {
+  kind: 'featured-card';
+  key: string;
+  instanceId: string;
+  card: FeaturedFeedCard;
+}
+
+type FeedRenderItem = FeedEventRenderItem | FeedFeaturedCardRenderItem;

@@ -231,8 +231,13 @@
             </div>
             } @else {
             <div class="column-items">
-              @for (event of dynamicEvents; track event.id) {
-              <app-event [event]="event" [inFeedsPanel]="true"></app-event>
+              @let dynamicRenderItems = feedRenderItems().get(dynFeed.id);
+              @for (item of dynamicRenderItems || []; track item.key) {
+              @if (item.kind === 'event') {
+              <app-event [event]="item.event" [inFeedsPanel]="true"></app-event>
+              } @else {
+              <app-featured-feed-card [card]="item.card" [instanceId]="item.instanceId"></app-featured-feed-card>
+              }
               }
 
               @if (hasMoreEventsToRender(dynFeed.id)) {
@@ -362,10 +367,14 @@
             </div>
             } @else {
             <div class="column-items">
-              @let columnEventsData = columnEvents().get(feed.id);
-              @if (columnEventsData && columnEventsData.length > 0) {
-              @for (event of columnEventsData; track event.id) {
-              <app-event [event]="event" [inFeedsPanel]="true"></app-event>
+              @let feedItems = feedRenderItems().get(feed.id);
+              @if (feedItems && feedItems.length > 0) {
+              @for (item of feedItems; track item.key) {
+              @if (item.kind === 'event') {
+              <app-event [event]="item.event" [inFeedsPanel]="true"></app-event>
+              } @else {
+              <app-featured-feed-card [card]="item.card" [instanceId]="item.instanceId"></app-featured-feed-card>
+              }
               }
 
               <!-- "Show more" manual fallback. Auto-rendering keeps this out of view during

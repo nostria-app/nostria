@@ -41,6 +41,34 @@ export interface StoredFeedConfig {
   isSystem?: boolean;
 }
 
+export type FeaturedFeedCardId =
+  | 'popular-profiles'
+  | 'support-nostria'
+  | 'nostria-subscription'
+  | 'interesting-articles'
+  | 'nostria-music'
+  | 'nostria-ai';
+
+export interface FeaturedFeedCardHistoryEntry {
+  cardId: FeaturedFeedCardId;
+  action: 'shown' | 'clicked' | 'dismissed';
+  timestamp: number;
+}
+
+export interface FeaturedFeedCardStats {
+  impressions: number;
+  clicks: number;
+  dismissals: number;
+  lastShownAt?: number;
+  lastClickedAt?: number;
+  lastDismissedAt?: number;
+}
+
+export interface FeaturedFeedCardsState {
+  cards: Partial<Record<FeaturedFeedCardId, FeaturedFeedCardStats>>;
+  history?: FeaturedFeedCardHistoryEntry[];
+}
+
 /**
  * Per-account state stored in localStorage
  */
@@ -143,6 +171,7 @@ interface AccountLocalState {
   followSetsLastSync?: number; // Unix timestamp (seconds) when follow sets subscription last completed (EOSE)
   metricsLastScan?: number; // Unix timestamp (seconds) when metrics historical scan last completed
   channelReactionsLastSync?: number; // Unix timestamp (seconds) when channel reactions subscription last completed (EOSE)
+  featuredFeedCards?: FeaturedFeedCardsState; // Rotation and impression history for featured feed cards
 }
 
 /**
@@ -517,6 +546,21 @@ export class AccountLocalStateService {
    */
   setMetricsLastScan(pubkey: string, timestamp: number): void {
     this.updateAccountState(pubkey, { metricsLastScan: timestamp });
+  }
+
+  /**
+   * Get featured feed card state for an account.
+   */
+  getFeaturedFeedCards(pubkey: string): FeaturedFeedCardsState | undefined {
+    const state = this.getAccountState(pubkey);
+    return state.featuredFeedCards;
+  }
+
+  /**
+   * Persist featured feed card state for an account.
+   */
+  setFeaturedFeedCards(pubkey: string, featuredFeedCards: FeaturedFeedCardsState | null | undefined): void {
+    this.updateAccountState(pubkey, { featuredFeedCards: featuredFeedCards || undefined });
   }
 
   /**
