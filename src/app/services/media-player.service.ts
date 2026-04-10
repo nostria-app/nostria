@@ -1146,6 +1146,14 @@ export class MediaPlayerService implements OnInitialized {
     }
   }
 
+  /**
+   * Background playback transitions need to hand the next source to the media
+   * element immediately so lock-screen autoplay is not blocked by async work.
+   */
+  private shouldPrioritizeImmediatePlaybackStart(): boolean {
+    return this.app.isBrowser() && typeof document !== 'undefined' && document.hidden;
+  }
+
   private handleAudioError = async (event: Event): Promise<void> => {
     if (!this.audio) {
       return;
@@ -1300,7 +1308,8 @@ export class MediaPlayerService implements OnInitialized {
     // Clean up previous media before starting new one
     this.cleanupCurrentMedia();
 
-    const resolvedArtwork = await this.resolveArtworkUrl(file);
+    const prioritizeImmediateStart = this.shouldPrioritizeImmediatePlaybackStart();
+    const resolvedArtwork = prioritizeImmediateStart ? file.artwork : await this.resolveArtworkUrl(file);
     const currentFile = resolvedArtwork !== file.artwork
       ? { ...file, artwork: resolvedArtwork }
       : file;
@@ -1373,7 +1382,7 @@ export class MediaPlayerService implements OnInitialized {
 
       // Check if this track is available offline and use cached URL if so
       let audioSource = file.source;
-      if (file.type === 'Music') {
+      if (!prioritizeImmediateStart && file.type === 'Music') {
         try {
           audioSource = await this.offlineMusicService.getCachedAudioUrl(file.source);
           if (audioSource !== file.source) {
@@ -1386,7 +1395,7 @@ export class MediaPlayerService implements OnInitialized {
 
       // For podcasts and other audio, resolve redirects and get actual content-type
       // This fixes issues where URLs redirect to files with generic extensions like .bin
-      if (file.type === 'Podcast' || file.type === 'Music') {
+      if (!prioritizeImmediateStart && (file.type === 'Podcast' || file.type === 'Music')) {
         if (this.shouldResolveAudioUrlViaFetch(audioSource)) {
           try {
             audioSource = await this.resolveAudioUrl(audioSource);

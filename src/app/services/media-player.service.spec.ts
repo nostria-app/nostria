@@ -1,6 +1,9 @@
-import type { Mock } from "vitest";
+import '@angular/compiler';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { Mock } from 'vitest';
 import { TestBed } from '@angular/core/testing';
-import { provideZonelessChangeDetection } from '@angular/core';
+import { provideZonelessChangeDetection, signal } from '@angular/core';
+import { BrowserDynamicTestingModule, platformBrowserDynamicTesting } from '@angular/platform-browser-dynamic/testing';
 import { MediaPlayerService } from './media-player.service';
 import { ApplicationService } from './application.service';
 import { LocalStorageService } from './local-storage.service';
@@ -12,13 +15,17 @@ import { AccountStateService } from './account-state.service';
 import { AccountLocalStateService } from './account-local-state.service';
 import { DomSanitizer } from '@angular/platform-browser';
 import { Router } from '@angular/router';
+import { MediaItem } from '../interfaces';
 
 describe('MediaPlayerService - Media Session API', () => {
     let service: MediaPlayerService;
     let mockMediaSession: any;
     let setActionHandlerSpy: Mock;
 
+    TestBed.initTestEnvironment(BrowserDynamicTestingModule, platformBrowserDynamicTesting());
+
     beforeEach(async () => {
+        TestBed.resetTestingModule();
         // Mock Media Session API
         setActionHandlerSpy = vi.fn();
         mockMediaSession = {
@@ -242,5 +249,125 @@ describe('MediaPlayerService - Media Session API', () => {
         // Call the private initializeMediaSession method
         // Should catch the error and not crash
         expect(() => (newService as any).initializeMediaSession()).not.toThrow();
+    });
+
+    it('should auto-advance while backgrounded without waiting for async audio resolution', async () => {
+        const originalHidden = document.hidden;
+        const playSpy = vi.fn().mockResolvedValue(undefined);
+
+        class MockAudio {
+            src = '';
+            crossOrigin: string | null = null;
+            error = null;
+            currentTime = 0;
+            duration = 0;
+            playbackRate = 1;
+            volume = 1;
+            muted = false;
+            private listeners = new Map<string, Set<EventListener>>();
+
+            addEventListener(type: string, listener: EventListenerOrEventListenerObject): void {
+                const callback = typeof listener === 'function'
+                    ? listener
+                    : listener.handleEvent.bind(listener);
+                const listeners = this.listeners.get(type) ?? new Set<EventListener>();
+                listeners.add(callback);
+                this.listeners.set(type, listeners);
+            }
+
+            removeEventListener(type: string, listener: EventListenerOrEventListenerObject): void {
+                const callback = typeof listener === 'function'
+                    ? listener
+                    : listener.handleEvent.bind(listener);
+                this.listeners.get(type)?.delete(callback);
+            }
+
+            play(): Promise<void> {
+                return playSpy();
+            }
+
+            pause(): void {}
+            load(): void {}
+        }
+
+        const originalAudio = globalThis.Audio;
+        const originalMediaMetadata = globalThis.MediaMetadata;
+        vi.stubGlobal('Audio', MockAudio as unknown as typeof Audio);
+        vi.stubGlobal('MediaMetadata', class {
+            constructor(_init?: MediaMetadataInit) {}
+        });
+
+        const blockingPromise = new Promise<string>(() => {});
+        const getCachedAudioUrl = vi.fn().mockReturnValue(blockingPromise);
+        const showMediaPlayer = signal(false);
+        const expandedMediaPlayer = signal(false);
+
+        const testBed = TestBed.configureTestingModule({
+            providers: [
+                provideZonelessChangeDetection(),
+                MediaPlayerService,
+                { provide: ApplicationService, useValue: { isBrowser: () => true, initialized: () => false } },
+                { provide: LocalStorageService, useValue: { getItem: () => null, setItem: () => { }, removeItem: () => { } } },
+                { provide: LayoutService, useValue: { showMediaPlayer, expandedMediaPlayer } },
+                { provide: UtilitiesService, useValue: { sanitizeUrlAndBypassFrame: (url: string) => url } },
+                { provide: WakeLockService, useValue: {} },
+                { provide: OfflineMusicService, useValue: { getCachedAudioUrl, getCachedImageUrl: vi.fn().mockImplementation(async (url: string) => url) } },
+                { provide: AccountStateService, useValue: { pubkey: () => null } },
+                { provide: AccountLocalStateService, useValue: {} },
+                { provide: DomSanitizer, useValue: { bypassSecurityTrustResourceUrl: (url: string) => url } },
+                { provide: Router, useValue: {} },
+            ],
+        });
+
+        const backgroundService = testBed.inject(MediaPlayerService);
+        const tracks: MediaItem[] = [
+            {
+                artwork: 'https://example.com/cover-1.jpg',
+                title: 'Track 1',
+                artist: 'Artist',
+                source: 'https://example.com/track-1.mp3',
+                type: 'Music',
+            },
+            {
+                artwork: 'https://example.com/cover-2.jpg',
+                title: 'Track 2',
+                artist: 'Artist',
+                source: 'https://example.com/track-2.mp3',
+                type: 'Music',
+            },
+        ];
+
+        backgroundService.media.set(tracks);
+        backgroundService.index = 0;
+
+        Object.defineProperty(document, 'hidden', {
+            value: true,
+            writable: true,
+            configurable: true,
+        });
+
+        try {
+            await backgroundService.start();
+
+            expect(backgroundService.current()?.source).toBe(tracks[0].source);
+            expect(playSpy).toHaveBeenCalledTimes(1);
+
+            (backgroundService as any).handleMediaEnded();
+
+            expect(backgroundService.index).toBe(1);
+            expect(backgroundService.current()?.source).toBe(tracks[1].source);
+            expect(backgroundService.audio?.src).toBe(tracks[1].source);
+            expect(playSpy).toHaveBeenCalledTimes(2);
+            expect(getCachedAudioUrl).not.toHaveBeenCalled();
+        } finally {
+            Object.defineProperty(document, 'hidden', {
+                value: originalHidden,
+                writable: true,
+                configurable: true,
+            });
+
+            vi.stubGlobal('Audio', originalAudio);
+            vi.stubGlobal('MediaMetadata', originalMediaMetadata);
+        }
     });
 });

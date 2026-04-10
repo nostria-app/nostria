@@ -1,8 +1,11 @@
+import '@angular/compiler';
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideZonelessChangeDetection } from '@angular/core';
 import { DomSanitizer } from '@angular/platform-browser';
 import { Router } from '@angular/router';
+import { BrowserDynamicTestingModule, platformBrowserDynamicTesting } from '@angular/platform-browser-dynamic/testing';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { MediaItem } from '../interfaces';
 import { AccountLocalStateService } from './account-local-state.service';
 import { AccountStateService } from './account-state.service';
@@ -28,7 +31,10 @@ describe('MediaPlayerService expanded state switching', () => {
     artist: 'Artist',
   };
 
+  TestBed.initTestEnvironment(BrowserDynamicTestingModule, platformBrowserDynamicTesting());
+
   beforeEach(async () => {
+    TestBed.resetTestingModule();
     await TestBed.configureTestingModule({
       providers: [
         provideZonelessChangeDetection(),
