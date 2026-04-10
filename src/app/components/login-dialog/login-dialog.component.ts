@@ -97,6 +97,7 @@ export class LoginDialogComponent implements OnDestroy {
   nostrConnectUrl = signal('');
   nostrConnectError = signal<string | null>(null);
   nostrConnectLoading = signal<boolean>(false);
+  signerConnecting = signal(false);
   readonly isDesktopTauri = computed(() =>
     this.app.isBrowser() && isTauri() && !/Android/i.test(window.navigator.userAgent)
   );
@@ -285,6 +286,29 @@ export class LoginDialogComponent implements OnDestroy {
     this.logger.debug('Starting account creation flow');
     this.signupRegion.set(null);
     this.goToStep(LoginStep.REGION_SELECTION);
+  }
+
+  async openSignerLoginFlow(): Promise<void> {
+    if (!this.usesLocalSigner()) {
+      this.goToStep(LoginStep.NOSTR_CONNECT);
+      return;
+    }
+
+    if (this.signerConnecting()) {
+      return;
+    }
+
+    this.signerConnecting.set(true);
+
+    try {
+      await this.connectAndroidSigner();
+    } finally {
+      this.signerConnecting.set(false);
+    }
+  }
+
+  usesLocalSigner(): boolean {
+    return this.androidSigner.isSupported();
   }
 
   setSignupRegion(region: 'us' | 'eu'): void {

@@ -124,6 +124,106 @@ describe('LoginDialogComponent', () => {
     expect(component.currentStep()).toBe('region');
   });
 
+  it('should navigate to remote signer when signer is not local', async () => {
+    createComponent();
+
+    await component.openSignerLoginFlow();
+
+    expect(component.currentStep()).toBe(component.LoginStep.NOSTR_CONNECT);
+  });
+
+  it('should connect local signer when supported', async () => {
+    TestBed.resetTestingModule();
+    const loginWithAndroidSigner = vi.fn().mockResolvedValue({ pubkey: 'pubkey' });
+
+    TestBed.configureTestingModule({
+      imports: [LoginDialogComponent],
+      providers: [
+        provideZonelessChangeDetection(),
+        { provide: MatDialogRef, useValue: { close: vi.fn() } },
+        { provide: MatDialog, useValue: { open: vi.fn() } },
+        { provide: MatSnackBar, useValue: { open: vi.fn() } },
+        {
+          provide: NostrService, useValue: {
+            loginWithAndroidSigner,
+            loginWithExtension: vi.fn(),
+            loginWithNsec: vi.fn(),
+            loginWithNostrConnect: vi.fn(),
+            generateNewKey: vi.fn(),
+            usePreviewAccount: vi.fn(),
+            switchToUser: vi.fn(),
+            removeAccount: vi.fn(),
+            setAccount: vi.fn(),
+            hasRelayConfiguration: vi.fn().mockResolvedValue(true),
+            setupNewAccountWithDefaults: vi.fn(),
+            users: vi.fn().mockReturnValue([]),
+          }
+        },
+        {
+          provide: LoggerService, useValue: {
+            debug: vi.fn(),
+            info: vi.fn(),
+            error: vi.fn(),
+            warn: vi.fn(),
+          }
+        },
+        {
+          provide: MnemonicService, useValue: {
+            isMnemonic: vi.fn().mockReturnValue(false),
+          }
+        },
+        {
+          provide: Profile, useValue: {
+            createInitialProfile: vi.fn(),
+          }
+        },
+        {
+          provide: AccountStateService, useValue: {
+            account: vi.fn().mockReturnValue(null),
+            addToCache: vi.fn(),
+            profile: { set: vi.fn() },
+          }
+        },
+        {
+          provide: DataService, useValue: {
+            toRecord: vi.fn(),
+          }
+        },
+        {
+          provide: LayoutService, useValue: {
+            openTermsOfUse: vi.fn(),
+            handleTermsDialogClose: vi.fn(),
+            isMobile: vi.fn().mockReturnValue(false),
+          }
+        },
+        {
+          provide: RegionService, useValue: {
+            getRelayServer: vi.fn().mockReturnValue(null),
+          }
+        },
+        {
+          provide: AndroidSignerService, useValue: {
+            isSupported: vi.fn().mockReturnValue(true),
+          }
+        },
+        {
+          provide: ApplicationService, useValue: {
+            isBrowser: signal(true),
+          }
+        },
+      ],
+    });
+
+    fixture = TestBed.createComponent(LoginDialogComponent);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+
+    await component.openSignerLoginFlow();
+
+    expect(loginWithAndroidSigner).toHaveBeenCalledOnce();
+    expect(component.signerConnecting()).toBe(false);
+  });
+
   it('should validate empty nsec key as invalid', () => {
     createComponent();
     component.nsecKey = '';

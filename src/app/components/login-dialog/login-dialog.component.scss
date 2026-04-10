@@ -294,6 +294,49 @@
 
 }
 
+.login-card.signer {
+  @media (min-width: 400px) {
+    grid-column: 1 / -1;
+  }
+
+  .card-content {
+    flex-direction: row;
+    gap: 0.75rem;
+
+    .card-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 40px;
+      height: 40px;
+      flex-shrink: 0;
+      border-radius: 50%;
+      background-color: rgba(255, 255, 255, 0.1);
+
+      .client-logo {
+        display: block;
+        width: 24px;
+        height: 24px;
+        object-fit: contain;
+      }
+    }
+
+    .card-text {
+      flex: 1;
+      min-width: 0;
+      text-align: left;
+
+      h3 {
+        justify-content: flex-start;
+      }
+    }
+  }
+}
+
+.login-card.pending {
+  pointer-events: none;
+}
+
 .login-card.login-card-disabled {
   cursor: default;
   opacity: 0.65;

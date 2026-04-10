@@ -25,6 +25,26 @@
           </div>
         </mat-card-content>
       </mat-card>
+
+      <mat-card class="login-card signer" [class.pending]="signerConnecting()" (click)="openSignerLoginFlow()">
+        <mat-card-content>
+          <div class="card-content">
+            <div class="card-icon">
+              <img src="/logos/clients/amber.png" alt="Amber" class="client-logo" />
+            </div>
+            <div class="card-text">
+              <h3 i18n="@@introduction.signer.title">Login with Signer (Amber)</h3>
+              @if (signerConnecting()) {
+              <p i18n="@@introduction.signer.connecting">Opening the signer app...</p>
+              } @else if (usesLocalSigner()) {
+              <p i18n="@@introduction.signer.local-description">Open the local signer</p>
+              } @else {
+              <p i18n="@@introduction.signer.remote-description">Open the remote signer</p>
+              }
+            </div>
+          </div>
+        </mat-card-content>
+      </mat-card>
     </div>
 
     <div class="terms-of-use-notice">
