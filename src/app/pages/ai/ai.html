@@ -184,6 +184,20 @@
               @if (suggestion.renderedContent; as suggestionBody) {
               <div class="message-markdown assistant-suggestion-body" [innerHTML]="suggestionBody"></div>
               }
+              <div class="assistant-suggestion-actions">
+                <button mat-flat-button type="button" (click)="shareSuggestionToNoteEditorDirect(suggestion)">
+                  <mat-icon>edit_note</mat-icon>
+                  <span>Create post</span>
+                </button>
+                <button mat-stroked-button type="button" (click)="shareSuggestionToArticleEditorDirect(suggestion)">
+                  <mat-icon>article</mat-icon>
+                  <span>Create article</span>
+                </button>
+                <button mat-stroked-button type="button" (click)="useSuggestionInComposerDirect(suggestion)">
+                  <mat-icon>edit</mat-icon>
+                  <span>Use in composer</span>
+                </button>
+              </div>
             </article>
             }
           </div>

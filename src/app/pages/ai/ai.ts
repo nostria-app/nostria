@@ -869,7 +869,12 @@ export class AiComponent {
       return;
     }
 
+    this.useSuggestionInComposerDirect(suggestion);
+  }
+
+  useSuggestionInComposerDirect(suggestion: AssistantSuggestion): void {
     this.composerText.set(this.suggestionShareContent(suggestion));
+    this.showHistoryDrawer.set(false);
     this.snackBar.open('Suggestion moved into the composer.', 'Dismiss', { duration: 2400 });
   }
 
@@ -879,6 +884,10 @@ export class AiComponent {
       return;
     }
 
+    await this.shareSuggestionToArticleEditorDirect(suggestion);
+  }
+
+  async shareSuggestionToArticleEditorDirect(suggestion: AssistantSuggestion): Promise<void> {
     const articleSource = this.suggestionArticleSource(suggestion);
     const draft = this.parseArticleDraft(articleSource);
     await this.layout.createArticle(undefined, undefined, draft);
@@ -891,7 +900,12 @@ export class AiComponent {
       return;
     }
 
+    await this.shareSuggestionToNoteEditorDirect(suggestion);
+  }
+
+  async shareSuggestionToNoteEditorDirect(suggestion: AssistantSuggestion): Promise<void> {
     await this.eventService.createNote({ content: this.suggestionShareContent(suggestion) });
+    this.snackBar.open('Opened in note editor.', 'Dismiss', { duration: 2600 });
   }
 
   async shareToArticleEditor(): Promise<void> {
@@ -1606,22 +1620,35 @@ export class AiComponent {
       return null;
     }
 
-    const headerPattern = /^Option\s+[^\n:]+:\s*.+$/gm;
-    const matches = Array.from(normalized.matchAll(headerPattern));
-    if (matches.length < 2) {
+    const headerMatches = Array.from(normalized.matchAll(/(^.*$)/gm))
+      .map(match => {
+        const rawLine = match[0] ?? '';
+        const title = this.parseSuggestionHeader(rawLine);
+        if (!title) {
+          return null;
+        }
+
+        return {
+          index: match.index ?? 0,
+          rawLine,
+          title,
+        };
+      })
+      .filter((match): match is { index: number; rawLine: string; title: string } => match !== null);
+
+    if (headerMatches.length === 0) {
       return null;
     }
 
-    const intro = normalized.slice(0, matches[0].index ?? 0).trim();
-    const suggestions = matches.map((match, index) => {
-      const title = match[0].trim();
-      const start = (match.index ?? 0) + match[0].length;
-      const end = index + 1 < matches.length ? (matches[index + 1].index ?? normalized.length) : normalized.length;
+    const intro = normalized.slice(0, headerMatches[0].index).trim();
+    const suggestions = headerMatches.map((match, index) => {
+      const start = match.index + match.rawLine.length;
+      const end = index + 1 < headerMatches.length ? headerMatches[index + 1].index : normalized.length;
       const content = normalized.slice(start, end).trim();
 
       return {
-        id: `${index + 1}-${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
-        title,
+        id: `${index + 1}-${match.title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
+        title: match.title,
         content,
       } satisfies AssistantSuggestion;
     });
@@ -1641,16 +1668,40 @@ export class AiComponent {
   }
 
   private suggestionShareContent(suggestion: AssistantSuggestion): string {
-    return suggestion.content.trim();
+    const normalized = suggestion.content
+      .replace(/\r\n/g, '\n')
+      .split('\n')
+      .map(line => line.replace(/^\s*>\s?/, ''))
+      .join('\n')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
+
+    return normalized;
   }
 
   private suggestionArticleSource(suggestion: AssistantSuggestion): string {
-    const title = suggestion.title.replace(/^Option\s+[^\n:]+:\s*/, '').trim();
+    const title = suggestion.title.replace(/^(?:Option|Choice|Version|Variation)\s+\d+\s*[:.-]?\s*/i, '').trim();
     if (!title) {
       return this.suggestionShareContent(suggestion);
     }
 
     return `${title}\n\n${this.suggestionShareContent(suggestion)}`;
+  }
+
+  private parseSuggestionHeader(value: string): string | null {
+    const normalized = value
+      .trim()
+      .replace(/^>\s*/, '')
+      .replace(/^#{1,6}\s+/, '')
+      .replace(/^\*\*(.+)\*\*$/, '$1')
+      .replace(/^__(.+)__$/, '$1')
+      .trim();
+
+    if (/^(?:Option|Choice|Version|Variation)\s+\d+[\w\s.-]*:\s*.+$/i.test(normalized)) {
+      return normalized;
+    }
+
+    return null;
   }
 
   private detectVisualIntent(promptText: string, attachments: ComposerAttachment[]): VisualIntent | null {

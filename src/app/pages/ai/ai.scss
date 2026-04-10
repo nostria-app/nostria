@@ -1066,10 +1066,26 @@
   color: var(--mat-sys-on-surface-variant);
 }
 
+.assistant-suggestion-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.assistant-suggestion-actions button {
+  min-height: 38px;
+}
+
 .assistant-suggestion-intro,
 .assistant-suggestion-outro,
 .assistant-suggestion-body {
   line-height: 1.6;
+}
+
+@media (max-width: 640px) {
+  .assistant-suggestion-actions button {
+    flex: 1 1 100%;
+  }
 }
 
 :host ::ng-deep .assistant-thinking-content>* {

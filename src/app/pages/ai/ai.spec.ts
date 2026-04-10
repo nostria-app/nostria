@@ -5,27 +5,7 @@ import { AiComponent } from './ai';
 
 function createComponent(): AiComponent {
   const component = Object.create(AiComponent.prototype) as AiComponent;
-
-  (component as any).aiService = {
-    generateText: vi.fn().mockResolvedValue([{ generated_text: 'Assistant reply' }]),
-  };
-  (component as any).historyService = {
-    saveConversation: vi.fn().mockReturnValue('ai-history-id'),
-  };
-  (component as any).logger = {
-    error: vi.fn(),
-  };
-  (component as any).workspaceView = signal<'chat' | 'create'>('chat');
-  (component as any).chatError = signal('');
-  (component as any).composerText = signal('');
-  (component as any).attachedFiles = signal([]);
-  (component as any).conversation = signal([]);
-  (component as any).autoScrollPinned = signal(false);
-  (component as any).showHistoryDrawer = signal(true);
-  (component as any).currentConversationId = signal<string | null>(null);
-  (component as any).isGenerating = signal(false);
-  (component as any).nextMessageId = signal(0);
-  (component as any).selectedChatModel = signal({
+  const selectedModel = {
     id: 'model-1',
     name: 'Test Model',
     task: 'text-generation',
@@ -38,7 +18,30 @@ function createComponent(): AiComponent {
     runtime: 'test',
     chatMode: 'messages',
     preferredParams: undefined,
-  });
+  };
+
+  (component as any).aiService = {
+    generateText: vi.fn().mockResolvedValue([{ generated_text: 'Assistant reply' }]),
+    isAbortError: vi.fn().mockReturnValue(false),
+  };
+  (component as any).historyService = {
+    saveConversation: vi.fn().mockReturnValue('ai-history-id'),
+  };
+  (component as any).logger = {
+    error: vi.fn(),
+    warn: vi.fn(),
+  };
+  (component as any).chatError = signal('');
+  (component as any).composerText = signal('');
+  (component as any).attachedFiles = signal([]);
+  (component as any).conversation = signal([]);
+  (component as any).autoScrollPinned = signal(false);
+  (component as any).showHistoryDrawer = signal(true);
+  (component as any).currentConversationId = signal<string | null>(null);
+  (component as any).isGenerating = signal(false);
+  (component as any).nextMessageId = signal(0);
+  (component as any).selectedModel = () => selectedModel;
+  (component as any).systemPrompt = 'Test system prompt';
 
   return component;
 }
@@ -103,12 +106,31 @@ describe('AiComponent #fetch prompt support', () => {
     const fetchMock = vi.fn();
     vi.stubGlobal('fetch', fetchMock);
 
-    (component as any).composerText.set('#fetch not-a-url');
+    (component as any).composerText.set('#fetch');
 
     await component.sendMessage();
 
     expect(fetchMock).not.toHaveBeenCalled();
     expect((component as any).chatError()).toContain('Invalid #fetch URL');
     expect((component as any).aiService.generateText).not.toHaveBeenCalled();
+  });
+
+  it('parses markdown suggestion headings and preserves each option as a separate card', () => {
+    const parsed = (component as any).parseAssistantSuggestions(`Here are a few options for a short-form Nostr note.\n\n**Option 1: Informative/Historical**\n\n> Tributary tales from the Viking Age. Explore the seafaring prowess and expansion of these formidable Norse seafarers. #Vikings\n\n**Option 2: Evocative/Mysterious**\n\n> Echoes of longships and frost. What secrets do the Vikings still hold? #NorseMyth`);
+
+    expect(parsed).not.toBeNull();
+    expect(parsed.suggestions).toHaveLength(2);
+    expect(parsed.suggestions[0].title).toBe('Option 1: Informative/Historical');
+    expect(parsed.suggestions[1].title).toBe('Option 2: Evocative/Mysterious');
+  });
+
+  it('normalizes quoted suggestion content before using it for sharing', () => {
+    const shared = (component as any).suggestionShareContent({
+      id: 'option-1',
+      title: 'Option 1: Informative/Historical',
+      content: '> Tributary tales from the Viking Age.\n> #Vikings #History',
+    });
+
+    expect(shared).toBe('Tributary tales from the Viking Age.\n#Vikings #History');
   });
 });
