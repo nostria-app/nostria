@@ -17,8 +17,6 @@ import { RouterModule, Router, NavigationEnd } from '@angular/router';
 import { filter, Subscription } from 'rxjs';
 import { Wallets, Wallet } from '../../services/wallets';
 import { NwcService, WalletData, NwcTransaction } from '../../services/nwc.service';
-import { NWCClient } from '@getalby/sdk/nwc';
-import { LightningAddress, getSatoshiValue } from '@getalby/lightning-tools';
 import { UserProfileComponent } from '../../components/user-profile/user-profile.component';
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { CustomDialogService } from '../../services/custom-dialog.service';
@@ -27,6 +25,7 @@ import { SettingsService } from '../../services/settings.service';
 import { LoggerService } from '../../services/logger.service';
 import { ZapHistoryComponent } from '../../components/zap-history/zap-history.component';
 import { QrCodeComponent } from '../../components/qr-code/qr-code.component';
+import { SupportNostriaComponent } from '../../components/support-nostria/support-nostria.component';
 
 @Component({
   selector: 'app-wallet',
@@ -49,6 +48,7 @@ import { QrCodeComponent } from '../../components/qr-code/qr-code.component';
     DatePipe,
     ZapHistoryComponent,
     QrCodeComponent,
+    SupportNostriaComponent,
   ],
   templateUrl: './wallet.component.html',
   styleUrl: './wallet.component.scss',
@@ -85,13 +85,6 @@ export class WalletComponent implements OnDestroy {
   // Track which wallets have had their balance loaded to prevent re-loading
   private loadedWalletBalances = new Set<string>();
 
-  // Donation-related properties
-  developerPubkeys = [
-    '17e2889fba01021d048a13fd0ba108ad31c38326295460c21e69c43fa8fbe515',
-    'cbec30a9038fe934b55272b046df47eb4d20ef006de0acbe46b0c0dae06e5d5b',
-    '5f432a9f39b58ff132fc0a4c8af10d42efd917d8076f68bb7f2f91ed7d4f6a41',
-    '7e2b09f951ed9be483284e7469ac20ac427d3264633d250c9d01e4265c99ed42',
-  ];
   bitcoinDonationAddress = 'bc1p733wvkgpew822jwdwxdps46uqr4zpsnt0c8splhln965mtsf0mls4z3yxr';
 
   nwcProviders = [
@@ -121,13 +114,6 @@ export class WalletComponent implements OnDestroy {
       description: 'Web-based Bitcoin and Lightning wallet',
     },
   ];
-  selectedConnectionString = signal<string | null>(null);
-  selectedDonationAmount = signal<number | null>(5);
-  customDonationAmount = new FormControl<number | null>(null, [Validators.min(0.01)]);
-  isDonating = signal(false);
-  donationSuccess = signal(false);
-  donationError = signal<string | null>(null);
-
   // Wallet transfer properties
   transferFromPubkey = signal<string | null>(null);
   transferToPubkey = signal<string | null>(null);
@@ -156,19 +142,6 @@ export class WalletComponent implements OnDestroy {
       .subscribe(event => {
         this.syncTabFromUrl(event.urlAfterRedirects);
       });
-
-    // Auto-select the primary wallet's connection for donations
-    effect(() => {
-      const primaryWallet = this.wallets.getPrimaryWallet();
-      untracked(() => {
-        if (!this.selectedConnectionString() && primaryWallet) {
-          const [, wallet] = primaryWallet;
-          if (wallet.connections.length > 0) {
-            this.selectedConnectionString.set(wallet.connections[0]);
-          }
-        }
-      });
-    });
 
     // Auto-load wallet balances when wallets change
     effect(() => {
@@ -288,129 +261,6 @@ export class WalletComponent implements OnDestroy {
       horizontalPosition: 'center',
       verticalPosition: 'bottom',
     });
-  }
-
-  selectDonationAmount(amount: number): void {
-    this.selectedDonationAmount.set(amount);
-    this.customDonationAmount.reset();
-    this.donationError.set(null);
-  }
-
-  selectCustomAmount(): void {
-    this.selectedDonationAmount.set(null);
-    this.donationError.set(null);
-  }
-
-  getDonationAmount(): number | null {
-    if (this.selectedDonationAmount() !== null) {
-      return this.selectedDonationAmount();
-    }
-    return this.customDonationAmount.value;
-  }
-
-  selectConnection(connectionString: string): void {
-    this.selectedConnectionString.set(connectionString);
-  }
-
-  /**
-   * Returns all connections across all wallets as a flat list
-   * Each entry contains the connection string and wallet info for display
-   */
-  getAllConnections(): { connectionString: string; walletName: string; walletPubkey: string; index: number }[] {
-    const connections: { connectionString: string; walletName: string; walletPubkey: string; index: number }[] = [];
-    const walletEntries = this.getWalletEntries();
-
-    for (const [pubkey, wallet] of walletEntries) {
-      wallet.connections.forEach((conn, index) => {
-        const name =
-          wallet.connections.length > 1
-            ? `${this.getWalletName(wallet)} #${index + 1}`
-            : this.getWalletName(wallet);
-        connections.push({
-          connectionString: conn,
-          walletName: name,
-          walletPubkey: pubkey,
-          index,
-        });
-      });
-    }
-
-    return connections;
-  }
-
-  async donateWithSelectedWallet(): Promise<void> {
-    const allConnections = this.getAllConnections();
-    let connectionString = this.selectedConnectionString();
-
-    // Auto-select first connection if only one exists
-    if (!connectionString && allConnections.length === 1) {
-      connectionString = allConnections[0].connectionString;
-    }
-
-    if (!connectionString) {
-      this.snackBar.open('Please select a wallet connection', 'Dismiss', {
-        duration: 3000,
-        horizontalPosition: 'center',
-        verticalPosition: 'bottom',
-      });
-      return;
-    }
-
-    const amount = this.getDonationAmount();
-    if (!amount || amount <= 0) {
-      this.snackBar.open('Please select or enter a donation amount', 'Dismiss', {
-        duration: 3000,
-        horizontalPosition: 'center',
-        verticalPosition: 'bottom',
-      });
-      return;
-    }
-
-    this.isDonating.set(true);
-    this.donationSuccess.set(false);
-    this.donationError.set(null);
-
-    try {
-      // Convert USD amount to satoshis
-      const satoshi = await getSatoshiValue({ amount, currency: 'USD' });
-
-      // Fetch invoice from lightning address
-      const ln = new LightningAddress('nostria@rizful.com');
-      await ln.fetch();
-      const invoiceObj = await ln.requestInvoice({ satoshi });
-      const invoice = invoiceObj.paymentRequest;
-
-      // Pay the invoice without passing the amount parameter to avoid
-      // "Amount in invoice does not match amount in request" errors.
-      // The amount is already encoded in the BOLT-11 invoice.
-      const nwcClient = new NWCClient({ nostrWalletConnectUrl: connectionString });
-      try {
-        await nwcClient.payInvoice({ invoice });
-      } finally {
-        nwcClient.close();
-      }
-
-      this.donationSuccess.set(true);
-      this.snackBar.open(`Thank you for your $${amount.toFixed(2)} donation!`, 'Dismiss', {
-        duration: 5000,
-        horizontalPosition: 'center',
-        verticalPosition: 'bottom',
-      });
-
-      // Reset donation state after success (reset to default preset, not null which triggers custom mode)
-      this.selectedDonationAmount.set(5);
-      this.customDonationAmount.reset();
-    } catch (error) {
-      console.error('Donation failed:', error);
-      this.donationError.set('Donation failed. Please try again.');
-      this.snackBar.open('Donation failed. Please try again.', 'Dismiss', {
-        duration: 3000,
-        horizontalPosition: 'center',
-        verticalPosition: 'bottom',
-      });
-    } finally {
-      this.isDonating.set(false);
-    }
   }
 
   getWalletEntries() {

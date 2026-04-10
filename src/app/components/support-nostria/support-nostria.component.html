@@ -1,0 +1,81 @@
+<div class="support-nostria-content">
+  <p class="support-copy">
+    Nostria is built by independent developers. If you want to help the work continue, this is a direct and voluntary way to support the people shipping it.
+  </p>
+
+  <div class="support-highlight-list">
+    @for (highlight of supportHighlights; track highlight) {
+    <span class="support-highlight-chip">{{ highlight }}</span>
+    }
+  </div>
+
+  <div class="developers-section">
+    <h4>Meet the developers</h4>
+    <div class="developer-profiles">
+      @for (pubkey of developerPubkeys; track pubkey) {
+      <app-user-profile [pubkey]="pubkey" view="small" [hostWidthAuto]="true"></app-user-profile>
+      }
+    </div>
+  </div>
+
+  @if (getAllConnections().length > 1) {
+  <div class="wallet-selection">
+    <h4>Select wallet connection</h4>
+    <mat-form-field appearance="outline" class="wallet-select-field">
+      <mat-label>Pay from</mat-label>
+      <mat-select [value]="selectedConnectionString()" (selectionChange)="selectConnection($event.value)">
+        @for (conn of getAllConnections(); track conn.connectionString) {
+        <mat-option [value]="conn.connectionString">{{ conn.walletName }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+  </div>
+  }
+
+  <div class="donation-amounts">
+    <h4>Choose amount</h4>
+    <div class="amount-buttons">
+      <button mat-stroked-button [class.selected]="selectedDonationAmount() === 0.5" (click)="selectDonationAmount(0.5)">$0.50</button>
+      <button mat-stroked-button [class.selected]="selectedDonationAmount() === 5" (click)="selectDonationAmount(5)">$5.00</button>
+      <button mat-stroked-button [class.selected]="selectedDonationAmount() === null && !!customDonationAmount.value" (click)="selectCustomAmount()">Custom</button>
+    </div>
+
+    @if (selectedDonationAmount() === null) {
+    <mat-form-field appearance="outline" class="custom-amount-field">
+      <mat-label>Custom amount (USD)</mat-label>
+      <span matPrefix>$&nbsp;</span>
+      <input matInput [formControl]="customDonationAmount" type="number" min="0.01" step="0.01" placeholder="Enter amount" />
+      @if (customDonationAmount.hasError('min')) {
+      <mat-error>Minimum amount is $0.01</mat-error>
+      }
+    </mat-form-field>
+    }
+  </div>
+
+  @if (donationError()) {
+  <div class="donation-error">
+    <mat-icon>error</mat-icon>
+    <span>{{ donationError() }}</span>
+  </div>
+  }
+
+  @if (donationSuccess()) {
+  <div class="donation-success">
+    <mat-icon>check_circle</mat-icon>
+    <span>Thank you for your support!</span>
+  </div>
+  }
+
+  <div class="support-actions">
+    <button mat-flat-button (click)="donateWithSelectedWallet()"
+      [disabled]="isDonating() || (!selectedDonationAmount() && !customDonationAmount.value) || (getAllConnections().length > 1 && !selectedConnectionString())">
+      @if (isDonating()) {
+      <span>Processing...</span>
+      } @else if (getDonationAmount()) {
+      <span>Donate ${{ getDonationAmount()?.toFixed(2) }}</span>
+      } @else {
+      <span>Select amount</span>
+      }
+    </button>
+  </div>
+</div>

@@ -1,17 +1,29 @@
-import { ChangeDetectionStrategy, Component, effect, inject, input, untracked } from '@angular/core';
+import { ChangeDetectionStrategy, Component, effect, inject, input, signal, untracked } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
+import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
+import { MatInputModule } from '@angular/material/input';
+import { MatSnackBar } from '@angular/material/snack-bar';
 import { Router } from '@angular/router';
+import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { FeaturedFeedCard, FeaturedFeedCardsService } from '../../../services/featured-feed-cards.service';
 import { UserProfileComponent } from '../../../components/user-profile/user-profile.component';
+import { AccountStateService } from '../../../services/account-state.service';
+import { MediaPlayerService } from '../../../services/media-player.service';
+import { AiService } from '../../../services/ai.service';
+import { CustomDialogService } from '../../../services/custom-dialog.service';
+import { SupportNostriaComponent } from '../../../components/support-nostria/support-nostria.component';
 
 @Component({
   selector: 'app-featured-feed-card',
   imports: [
     MatButtonModule,
     MatCardModule,
+    MatFormFieldModule,
     MatIconModule,
+    MatInputModule,
+    ReactiveFormsModule,
     UserProfileComponent,
   ],
   templateUrl: './featured-feed-card.component.html',
@@ -21,9 +33,16 @@ import { UserProfileComponent } from '../../../components/user-profile/user-prof
 export class FeaturedFeedCardComponent {
   private readonly router = inject(Router);
   private readonly featuredFeedCards = inject(FeaturedFeedCardsService);
+  private readonly accountState = inject(AccountStateService);
+  private readonly snackBar = inject(MatSnackBar);
+  private readonly mediaPlayer = inject(MediaPlayerService);
+  private readonly aiService = inject(AiService);
+  private readonly customDialog = inject(CustomDialogService);
 
   readonly card = input.required<FeaturedFeedCard>();
   readonly instanceId = input.required<string>();
+  readonly aiPromptControl = new FormControl('');
+  readonly followInProgress = signal<Record<string, boolean>>({});
 
   constructor() {
     effect(() => {
@@ -43,6 +62,16 @@ export class FeaturedFeedCardComponent {
 
   openPrimary(): void {
     const card = this.card();
+    if (card.id === 'support-nostria') {
+      this.featuredFeedCards.markClick(card.id);
+      this.customDialog.open(SupportNostriaComponent, {
+        title: 'Support Nostria Development',
+        width: 'min(560px, calc(100vw - 24px))',
+        maxWidth: 'calc(100vw - 24px)',
+      });
+      return;
+    }
+
     this.featuredFeedCards.markClick(card.id);
     void this.router.navigate(card.primaryRoute);
   }
@@ -60,5 +89,65 @@ export class FeaturedFeedCardComponent {
   openArticle(naddr: string): void {
     this.featuredFeedCards.markClick(this.card().id);
     void this.router.navigate(['/a', naddr]);
+  }
+
+  async follow(pubkey: string): Promise<void> {
+    const authenticated = !!this.accountState.pubkey();
+    if (!authenticated || this.isFollowing(pubkey) || this.followInProgress()[pubkey]) {
+      return;
+    }
+
+    this.followInProgress.update((current: Record<string, boolean>) => ({ ...current, [pubkey]: true }));
+    try {
+      await this.accountState.follow(pubkey);
+      this.featuredFeedCards.markClick(this.card().id);
+      this.snackBar.open('Following account', 'Dismiss', { duration: 2000 });
+    } catch {
+      this.snackBar.open('Unable to follow account', 'Dismiss', { duration: 2500 });
+    } finally {
+      this.followInProgress.update((current: Record<string, boolean>) => ({ ...current, [pubkey]: false }));
+    }
+  }
+
+  isFollowing(pubkey: string): boolean {
+    return this.accountState.followingList().includes(pubkey);
+  }
+
+  playTrack(index: number): void {
+    const track = this.card().musicTracks?.[index];
+    if (!track) {
+      return;
+    }
+
+    this.featuredFeedCards.markClick(this.card().id);
+    this.mediaPlayer.replaceQueue([{
+      source: track.source,
+      title: track.title,
+      artist: track.artist,
+      artwork: track.imageUrl || '/icons/icon-192x192.png',
+      type: 'Music',
+      eventPubkey: track.pubkey,
+      eventIdentifier: track.identifier,
+      eventKind: 36787,
+    }]);
+  }
+
+  openTrack(naddr: string): void {
+    this.featuredFeedCards.markClick(this.card().id);
+    void this.router.navigate(['/music/song', naddr]);
+  }
+
+  askAi(): void {
+    const prompt = this.aiPromptControl.value?.trim();
+    if (!prompt) {
+      return;
+    }
+
+    this.featuredFeedCards.markClick(this.card().id);
+    this.aiService.queueStandardPrompt({
+      title: 'Feed prompt',
+      prompt,
+    });
+    void this.router.navigate(['/ai']);
   }
 }

@@ -159,9 +159,12 @@ import { MatDividerModule } from '@angular/material/divider';
       transition: transform 0.2s ease, background-color 0.2s ease;
       overflow: hidden;
       min-width: 0;
+      background-color: var(--mat-sys-surface-container-high);
+      box-shadow: 0 1px 2px color-mix(in srgb, var(--mat-sys-shadow) 10%, transparent);
 
       &:hover {
         transform: translateY(-2px);
+        background-color: var(--mat-sys-surface-container-highest);
 
         .play-btn,
         .hover-action-row {
@@ -178,6 +181,8 @@ import { MatDividerModule } from '@angular/material/divider';
       }
 
       &:focus-within {
+        background-color: var(--mat-sys-surface-container-highest);
+
         .play-btn,
         .hover-action-row {
           opacity: 1;
@@ -202,6 +207,16 @@ import { MatDividerModule } from '@angular/material/divider';
         outline: 2px solid var(--mat-sys-primary);
         outline-offset: 2px;
       }
+    }
+
+    :host-context(.dark) .playlist-card {
+      background-color: var(--mat-sys-surface-container);
+      box-shadow: none;
+    }
+
+    :host-context(.dark) .playlist-card:hover,
+    :host-context(.dark) .playlist-card:focus-within {
+      background-color: var(--mat-sys-surface-container-high);
     }
 
     .playlist-cover {

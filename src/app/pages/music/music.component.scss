@@ -306,17 +306,29 @@
   align-items: center;
   border-radius: var(--mat-sys-corner-small);
   cursor: pointer;
-  transition: background-color 0.15s ease;
+  transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
   overflow: hidden;
-  background-color: var(--mat-sys-surface-container);
+  background-color: var(--mat-sys-surface-container-high);
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--mat-sys-shadow) 10%, transparent);
   height: 56px;
   min-width: 0;
 
   &:hover,
   &:focus {
-    background-color: var(--mat-sys-surface-container-high);
+    background-color: var(--mat-sys-surface-container-highest);
     outline: none;
   }
+}
+
+:host-context(.dark) .yours-card {
+  background-color: var(--mat-sys-surface-container);
+  border-color: transparent;
+  box-shadow: none;
+}
+
+:host-context(.dark) .yours-card:hover,
+:host-context(.dark) .yours-card:focus {
+  background-color: var(--mat-sys-surface-container-high);
 }
 
 .yours-card-cover {

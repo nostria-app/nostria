@@ -132,7 +132,9 @@
         </div>
         }
         @if (image()) {
-        <img [src]="image()" [alt]="title()" title="Track cover" class="hero-art" />
+        <button type="button" class="hero-art-button" (click)="openArtworkPreview()" [attr.aria-label]="'Open cover art for ' + title()">
+          <img [src]="image()" [alt]="title()" title="Track cover" class="hero-art" />
+        </button>
         } @else if (gradient()) {
         <div class="hero-art hero-art-gradient" [style.background]="gradient()">
           <mat-icon>music_note</mat-icon>

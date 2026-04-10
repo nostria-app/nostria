@@ -12,6 +12,8 @@ import { DatabaseService } from './database.service';
 import { LoggerService } from './logger.service';
 import { UtilitiesService } from './utilities.service';
 import { FeedConfig } from './feed.service';
+import { RelayPoolService } from './relays/relay-pool';
+import { RelaysService } from './relays/relays';
 
 export interface FeaturedProfileSuggestion {
   pubkey: string;
@@ -25,8 +27,21 @@ export interface FeaturedProfileSuggestion {
 export interface FeaturedArticleSuggestion {
   eventId: string;
   naddr: string;
+  pubkey: string;
   title: string;
   summary: string;
+  imageUrl?: string;
+}
+
+export interface FeaturedMusicSuggestion {
+  eventId: string;
+  naddr: string;
+  pubkey: string;
+  identifier: string;
+  title: string;
+  artist: string;
+  source: string;
+  imageUrl?: string;
 }
 
 export interface FeaturedFeedCard {
@@ -43,6 +58,8 @@ export interface FeaturedFeedCard {
   highlights?: string[];
   profiles?: FeaturedProfileSuggestion[];
   articles?: FeaturedArticleSuggestion[];
+  musicTracks?: FeaturedMusicSuggestion[];
+  aiPromptPlaceholder?: string;
 }
 
 export interface FeaturedFeedPlacement {
@@ -70,9 +87,12 @@ export class FeaturedFeedCardsService {
   private readonly database = inject(DatabaseService);
   private readonly logger = inject(LoggerService);
   private readonly utilities = inject(UtilitiesService);
+  private readonly relayPool = inject(RelayPoolService);
+  private readonly relays = inject(RelaysService);
 
   private readonly popularProfiles = signal<FeaturedProfileSuggestion[]>([]);
   private readonly articleSuggestions = signal<FeaturedArticleSuggestion[]>([]);
+  private readonly musicSuggestions = signal<FeaturedMusicSuggestion[]>([]);
   private readonly dismissedInstances = signal<Record<string, true>>({});
   private readonly scoringSnapshot = signal<FeaturedFeedCardsState>({ cards: {} });
 
@@ -84,6 +104,7 @@ export class FeaturedFeedCardsService {
   private readonly cardSignals = computed(() => ({
     profiles: this.popularProfiles(),
     articles: this.articleSuggestions(),
+    music: this.musicSuggestions(),
     scoring: this.scoringSnapshot(),
     dismissed: this.dismissedInstances(),
     subscriptionActive: !!this.accountState.hasActiveSubscription(),
@@ -107,7 +128,7 @@ export class FeaturedFeedCardsService {
   }
 
   getPlacements(feed: FeedConfig, events: Event[]): FeaturedFeedPlacement[] {
-    const { profiles, articles, scoring, dismissed, subscriptionActive, authenticated } = this.cardSignals();
+    const { profiles, articles, music, scoring, dismissed, subscriptionActive, authenticated } = this.cardSignals();
 
     if (events.length <= FEATURED_CARD_START_INDEX) {
       return [];
@@ -116,6 +137,7 @@ export class FeaturedFeedCardsService {
     const eligibleCards = this.buildEligibleCards({
       profiles,
       articles,
+      music,
       subscriptionActive,
       authenticated,
     });
@@ -151,7 +173,7 @@ export class FeaturedFeedCardsService {
         key: `featured:${instanceId}`,
         instanceId,
         afterEventId: anchorEvent.id,
-        card,
+        card: this.materializeCardForSlot(card, placements.length),
       });
 
       usedCardIds.add(card.id);
@@ -197,6 +219,7 @@ export class FeaturedFeedCardsService {
   private buildEligibleCards(context: {
     profiles: FeaturedProfileSuggestion[];
     articles: FeaturedArticleSuggestion[];
+    music: FeaturedMusicSuggestion[];
     subscriptionActive: boolean;
     authenticated: boolean;
   }): FeaturedFeedCard[] {
@@ -209,11 +232,11 @@ export class FeaturedFeedCardsService {
         eyebrow: 'Social momentum',
         title: 'Popular profiles you are not following',
         description: 'Picked from locally cached reactions, reposts, and replies already moving through your feed.',
-        ctaLabel: 'Discover people',
+        ctaLabel: 'Discover more people',
         primaryRoute: ['/people/discover'],
         tone: 'primary',
-        profiles: context.profiles.slice(0, 3),
-        highlights: ['Local cache only', 'Reaction-heavy', 'Fresh activity'],
+        profiles: context.profiles,
+        highlights: ['Local cache only', 'Picked from real feed activity', 'Follow instantly'],
       });
     }
 
@@ -223,11 +246,11 @@ export class FeaturedFeedCardsService {
         icon: 'favorite',
         eyebrow: 'Independent product',
         title: 'Support the development of Nostria, donate now!',
-        description: 'Help fund faster releases, more Nostr experiments, and the boring infrastructure work that keeps everything alive.',
-        ctaLabel: 'Open donation flow',
+        description: 'Nostria is built independently. If you want to help the developer keep shipping and improving the app, you can support the work directly.',
+        ctaLabel: 'Support Nostria',
         primaryRoute: ['/wallet'],
         tone: 'secondary',
-        highlights: ['Lightning ready', 'Wallet built in', 'Direct support'],
+        highlights: ['Independent development', 'Voluntary support', 'Helps ship faster'],
       });
     }
 
@@ -249,8 +272,8 @@ export class FeaturedFeedCardsService {
       cards.push({
         id: 'interesting-articles',
         icon: 'article',
-        eyebrow: 'Long-form picks',
-        title: 'Here are some articles that might interest you',
+        eyebrow: 'Article picks',
+        title: 'Article picks',
         description: 'Recent cached long-form posts surfaced straight from what Nostria already has locally.',
         ctaLabel: 'Open first article',
         primaryRoute: ['/a', context.articles[0].naddr],
@@ -261,17 +284,19 @@ export class FeaturedFeedCardsService {
       });
     }
 
-    cards.push({
-      id: 'nostria-music',
-      icon: 'music_note',
-      eyebrow: 'Built in music',
-      title: 'Did you know that Nostria has music?',
-      description: 'Tracks, albums, playlists, and offline-friendly listening are already inside the app.',
-      ctaLabel: 'Open music',
-      primaryRoute: ['/music'],
-      tone: 'secondary',
-      highlights: ['Tracks and albums', 'Playlists', 'Offline playback'],
-    });
+    if (context.music.length > 0) {
+      cards.push({
+        id: 'nostria-music',
+        icon: 'music_note',
+        eyebrow: 'Built in music',
+        title: 'Did you know that Nostria has music?',
+        description: 'Tracks, albums, playlists, and offline-friendly listening are already inside the app.',
+        ctaLabel: 'Open music',
+        primaryRoute: ['/music'],
+        tone: 'secondary',
+        musicTracks: context.music,
+      });
+    }
 
     cards.push({
       id: 'nostria-ai',
@@ -279,15 +304,53 @@ export class FeaturedFeedCardsService {
       eyebrow: 'AI features',
       title: 'Did you know that Nostria has AI?',
       description: 'Use summaries, translation, chat, image generation, and browser-local models without leaving Nostria.',
-      ctaLabel: 'Open AI',
+      ctaLabel: 'Ask AI',
       primaryRoute: ['/ai'],
-      secondaryCtaLabel: 'AI settings',
-      secondaryRoute: ['/ai/settings'],
       tone: 'tertiary',
       highlights: ['Summaries', 'Translation', 'Local and cloud models'],
+      aiPromptPlaceholder: 'Ask Nostria AI about anything...',
     });
 
     return cards;
+  }
+
+  private materializeCardForSlot(card: FeaturedFeedCard, slotIndex: number): FeaturedFeedCard {
+    if (card.id === 'popular-profiles' && card.profiles?.length) {
+      return {
+        ...card,
+        profiles: this.takeWrapped(card.profiles, slotIndex * 2, Math.min(2, card.profiles.length)),
+      };
+    }
+
+    if (card.id === 'interesting-articles' && card.articles?.length) {
+      const visibleArticles = this.takeWrapped(card.articles, slotIndex * 2, Math.min(2, card.articles.length));
+      return {
+        ...card,
+        articles: visibleArticles,
+        primaryRoute: ['/a', visibleArticles[0].naddr],
+      };
+    }
+
+    if (card.id === 'nostria-music' && card.musicTracks?.length) {
+      return {
+        ...card,
+        musicTracks: this.takeWrapped(card.musicTracks, slotIndex * 2, Math.min(2, card.musicTracks.length)),
+      };
+    }
+
+    return card;
+  }
+
+  private takeWrapped<T>(items: T[], start: number, count: number): T[] {
+    if (items.length <= count) {
+      return items;
+    }
+
+    const visible: T[] = [];
+    for (let index = 0; index < count; index++) {
+      visible.push(items[(start + index) % items.length]);
+    }
+    return visible;
   }
 
   private pickCardForSlot(
@@ -368,13 +431,15 @@ export class FeaturedFeedCardsService {
       try {
         await this.database.init();
 
-        const [profiles, articles] = await Promise.all([
+        const [profiles, articles, music] = await Promise.all([
           this.loadPopularProfilesFromCache(),
           this.loadArticleSuggestionsFromCache(),
+          this.loadMusicSuggestions(),
         ]);
 
         this.popularProfiles.set(profiles);
         this.articleSuggestions.set(articles);
+        this.musicSuggestions.set(music);
       } catch (error) {
         this.logger.warn('[FeaturedFeedCards] Failed to refresh recommendations', error);
       } finally {
@@ -565,8 +630,10 @@ export class FeaturedFeedCardsService {
         uniqueArticles.set(article.id, {
           eventId: article.id,
           naddr,
+          pubkey: article.pubkey,
           title,
           summary,
+          imageUrl: this.utilities.getImageTag(article) || this.utilities.getThumbTag(article),
         });
       } catch (error) {
         this.logger.warn('[FeaturedFeedCards] Failed to encode cached article naddr', error);
@@ -578,6 +645,70 @@ export class FeaturedFeedCardsService {
     }
 
     return Array.from(uniqueArticles.values());
+  }
+
+  private async loadMusicSuggestions(): Promise<FeaturedMusicSuggestion[]> {
+    const cachedTracks = await this.getMusicSuggestionsFromEvents(await this.database.getEventsByKind(36787));
+    if (cachedTracks.length > 0) {
+      return cachedTracks;
+    }
+
+    const relayUrls = this.relays.getConnectedRelays();
+    const targetRelays = relayUrls.length > 0 ? relayUrls.slice(0, 6) : this.utilities.preferredRelays.slice(0, 6);
+    if (targetRelays.length === 0) {
+      return [];
+    }
+
+    try {
+      const events = await this.relayPool.query(targetRelays, { kinds: [36787], limit: 10 }, 4000);
+      for (const event of events) {
+        await this.database.saveEvent(event);
+      }
+      return this.getMusicSuggestionsFromEvents(events);
+    } catch (error) {
+      this.logger.warn('[FeaturedFeedCards] Failed to load fallback music suggestions', error);
+      return [];
+    }
+  }
+
+  private async getMusicSuggestionsFromEvents(events: Event[]): Promise<FeaturedMusicSuggestion[]> {
+    const uniqueTracks = new Map<string, FeaturedMusicSuggestion>();
+    const sortedEvents = [...events].sort((left, right) => right.created_at - left.created_at);
+
+    for (const event of sortedEvents) {
+      const identifier = this.utilities.getTagValue(event, 'd');
+      const source = this.utilities.getMusicAudioUrl(event);
+      if (!identifier || !source) {
+        continue;
+      }
+
+      try {
+        const naddr = nip19.naddrEncode({
+          pubkey: event.pubkey,
+          kind: 36787,
+          identifier,
+        });
+
+        uniqueTracks.set(`${event.pubkey}:${identifier}`, {
+          eventId: event.id,
+          naddr,
+          pubkey: event.pubkey,
+          identifier,
+          title: this.utilities.getMusicTitle(event) || 'Untitled track',
+          artist: this.utilities.getMusicArtist(event) || 'Unknown artist',
+          source,
+          imageUrl: this.utilities.getMusicImage(event),
+        });
+      } catch (error) {
+        this.logger.warn('[FeaturedFeedCards] Failed to encode music track naddr', error);
+      }
+
+      if (uniqueTracks.size >= 10) {
+        break;
+      }
+    }
+
+    return Array.from(uniqueTracks.values());
   }
 
   private extractTextPreview(content: string, maxLength: number): string {

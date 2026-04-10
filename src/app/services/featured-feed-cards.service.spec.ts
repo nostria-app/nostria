@@ -8,6 +8,8 @@ import { DatabaseService } from './database.service';
 import { LoggerService } from './logger.service';
 import { UtilitiesService } from './utilities.service';
 import { FeedConfig } from './feed.service';
+import { RelayPoolService } from './relays/relay-pool';
+import { RelaysService } from './relays/relays';
 
 describe('FeaturedFeedCardsService', () => {
   let service: FeaturedFeedCardsService;
@@ -103,12 +105,31 @@ describe('FeaturedFeedCardsService', () => {
           },
         },
         {
+          provide: RelayPoolService,
+          useValue: {
+            query: async () => [],
+          },
+        },
+        {
+          provide: RelaysService,
+          useValue: {
+            getConnectedRelays: () => [],
+          },
+        },
+        {
           provide: UtilitiesService,
           useValue: {
             safeGetHexPubkey: (pubkey: string) => pubkey,
             isRootPost: (event: Event) => !event.tags.some(tag => tag[0] === 'e'),
             getTagValue: (event: Event, tagName: string) => event.tags.find(tag => tag[0] === tagName)?.[1],
             getTitleTag: (event: Event) => event.tags.find(tag => tag[0] === 'title')?.[1],
+            getImageTag: () => undefined,
+            getThumbTag: () => undefined,
+            preferredRelays: [],
+            getMusicAudioUrl: () => 'https://example.com/song.mp3',
+            getMusicTitle: (event: Event) => event.tags.find(tag => tag[0] === 'title')?.[1],
+            getMusicArtist: () => 'Test artist',
+            getMusicImage: () => undefined,
           },
         },
       ],

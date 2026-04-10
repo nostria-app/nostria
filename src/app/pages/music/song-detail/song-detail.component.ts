@@ -48,6 +48,7 @@ import { CustomDialogService } from '../../../services/custom-dialog.service';
 import { EventActionsToolbarComponent } from '../../../components/event-actions-toolbar/event-actions-toolbar.component';
 import { BookmarkListSelectorComponent } from '../../../components/bookmark-list-selector/bookmark-list-selector.component';
 import { DeleteEventService } from '../../../services/delete-event.service';
+import { MediaPreviewDialogComponent } from '../../../components/media-preview-dialog/media-preview.component';
 
 interface TopZapper {
   pubkey: string;
@@ -866,6 +867,25 @@ export class SongDetailComponent implements OnInit, OnDestroy {
     };
 
     this.mediaPlayer.play(mediaItem);
+  }
+
+  openArtworkPreview(): void {
+    const artwork = this.image();
+    if (!artwork) {
+      return;
+    }
+
+    this.dialog.open(MediaPreviewDialogComponent, {
+      data: {
+        mediaItems: [{ url: artwork, type: 'image/jpeg', title: `${this.title()} cover art` }],
+        initialIndex: 0,
+      },
+      maxWidth: '100vw',
+      maxHeight: '100vh',
+      width: '100vw',
+      height: '100vh',
+      panelClass: 'image-dialog-panel',
+    });
   }
 
   goToArtist(): void {

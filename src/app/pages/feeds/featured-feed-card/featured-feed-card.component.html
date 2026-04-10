@@ -1,7 +1,5 @@
-<mat-card class="featured-feed-card" appearance="outlined"
-  [class.tone-primary]="card().tone === 'primary'"
-  [class.tone-secondary]="card().tone === 'secondary'"
-  [class.tone-tertiary]="card().tone === 'tertiary'">
+<mat-card class="featured-feed-card" appearance="outlined" [class.tone-primary]="card().tone === 'primary'"
+  [class.tone-secondary]="card().tone === 'secondary'" [class.tone-tertiary]="card().tone === 'tertiary'">
   <div class="card-glow glow-a"></div>
   <div class="card-glow glow-b"></div>
 
@@ -24,8 +22,17 @@
     <div class="profiles-list">
       @for (profile of card().profiles; track profile.pubkey) {
       <div class="profile-row">
-        <app-user-profile [pubkey]="profile.pubkey" view="chip" [hostWidthAuto]="true"></app-user-profile>
-        <span class="profile-score">{{ profile.scoreLabel }}</span>
+        <div class="profile-main">
+          <app-user-profile [pubkey]="profile.pubkey" view="chip" [hostWidthAuto]="true"></app-user-profile>
+          <span class="profile-score">{{ profile.scoreLabel }}</span>
+        </div>
+        @if (!isFollowing(profile.pubkey)) {
+        <button mat-stroked-button type="button" class="profile-follow-button" (click)="follow(profile.pubkey)">
+          Follow
+        </button>
+        } @else {
+        <span class="profile-following">Following</span>
+        }
       </div>
       }
     </div>
@@ -35,9 +42,40 @@
     <div class="articles-list">
       @for (article of card().articles; track article.eventId) {
       <button type="button" class="article-pill" (click)="openArticle(article.naddr)">
-        <span class="article-title">{{ article.title }}</span>
-        <span class="article-summary">{{ article.summary }}</span>
+        <div class="article-layout">
+          @if (article.imageUrl) {
+          <img class="article-image" [src]="article.imageUrl" alt="Article cover" />
+          }
+          <div class="article-body">
+            <div class="article-publisher">
+              <app-user-profile [pubkey]="article.pubkey" view="tiny" [hostWidthAuto]="true" [disableLink]="true"></app-user-profile>
+            </div>
+            <span class="article-title">{{ article.title }}</span>
+            <span class="article-summary">{{ article.summary }}</span>
+          </div>
+        </div>
       </button>
+      }
+    </div>
+    }
+
+    @if (card().musicTracks?.length) {
+    <div class="music-track-list">
+      @for (track of card().musicTracks; track track.eventId; let trackIndex = $index) {
+      <div class="music-track-row">
+        <button type="button" class="music-track-main" (click)="openTrack(track.naddr)">
+          @if (track.imageUrl) {
+          <img class="music-track-image" [src]="track.imageUrl" alt="Track cover" />
+          } @else {
+          <div class="music-track-image placeholder"><mat-icon>music_note</mat-icon></div>
+          }
+          <span class="music-track-meta">
+            <span class="music-track-title">{{ track.title }}</span>
+            <span class="music-track-artist">{{ track.artist }}</span>
+          </span>
+        </button>
+        <button mat-flat-button type="button" class="music-play-button" (click)="playTrack(trackIndex)">Play</button>
+      </div>
       }
     </div>
     }
@@ -50,6 +88,16 @@
     </div>
     }
   </div>
+
+  @if (card().id === 'nostria-ai') {
+  <div class="ai-prompt-row">
+    <mat-form-field appearance="outline" class="ai-prompt-field">
+      <mat-label>{{ card().aiPromptPlaceholder || 'Ask AI...' }}</mat-label>
+      <input matInput [formControl]="aiPromptControl" placeholder="Ask AI" title="Ask AI" />
+    </mat-form-field>
+    <button mat-flat-button type="button" class="ai-submit-button" (click)="askAi()" [disabled]="!aiPromptControl.value?.trim()">Ask AI</button>
+  </div>
+  }
 
   <div class="featured-card-actions">
     <button mat-flat-button type="button" class="primary-action" (click)="openPrimary()">{{ card().ctaLabel }}</button>

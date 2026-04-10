@@ -152,6 +152,25 @@
   }
 }
 
+.hero-art-button {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  border-radius: 8px;
+  cursor: zoom-in;
+
+  .hero-art {
+    transition: transform 0.2s ease;
+  }
+
+  &:hover .hero-art,
+  &:focus-visible .hero-art {
+    transform: scale(1.01);
+  }
+}
+
 .hero-info {
   display: flex;
   flex-direction: column;

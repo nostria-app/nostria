@@ -49,16 +49,21 @@ import { ImageCacheService } from '../../services/image-cache.service';
     }
   `,
   styles: [`
+    :host {
+      display: block;
+    }
+
     .playlist-card {
       display: block;
       overflow: hidden;
       cursor: pointer;
       border-radius: var(--mat-sys-corner-medium);
-      background-color: var(--mat-sys-surface-container);
+      background-color: var(--mat-sys-surface-container-high);
+      box-shadow: 0 1px 2px color-mix(in srgb, var(--mat-sys-shadow) 10%, transparent);
 
       &:hover,
       &:focus {
-        background-color: var(--mat-sys-surface-container-high);
+        background-color: var(--mat-sys-surface-container-highest);
         outline: none;
       }
     }
@@ -71,15 +76,37 @@ import { ImageCacheService } from '../../services/image-cache.service';
       cursor: pointer;
       transition: background-color 0.15s ease;
       overflow: hidden;
-      background-color: var(--mat-sys-surface-container);
+      background-color: var(--mat-sys-surface-container-high);
+      box-shadow: 0 1px 2px color-mix(in srgb, var(--mat-sys-shadow) 10%, transparent);
       height: 56px;
+      width: 100%;
       min-width: 0;
 
       &:hover,
       &:focus {
-        background-color: var(--mat-sys-surface-container-high);
+        background-color: var(--mat-sys-surface-container-highest);
         outline: none;
       }
+    }
+
+    :host-context(.dark) .compact-playlist-card {
+      background-color: var(--mat-sys-surface-container);
+      box-shadow: none;
+    }
+
+    :host-context(.dark) .compact-playlist-card:hover,
+    :host-context(.dark) .compact-playlist-card:focus {
+      background-color: var(--mat-sys-surface-container-high);
+    }
+
+    :host-context(.dark) .playlist-card {
+      background-color: var(--mat-sys-surface-container);
+      box-shadow: none;
+    }
+
+    :host-context(.dark) .playlist-card:hover,
+    :host-context(.dark) .playlist-card:focus {
+      background-color: var(--mat-sys-surface-container-high);
     }
 
     .cover {

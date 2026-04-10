@@ -7,6 +7,7 @@ import { MatMenuModule } from '@angular/material/menu';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatDialog } from '@angular/material/dialog';
 import { Event, nip19 } from 'nostr-tools';
 import { MusicBookmarkPlaylistService } from '../../../services/music-bookmark-playlist.service';
 import { UtilitiesService } from '../../../services/utilities.service';
@@ -27,6 +28,7 @@ import {
   EditMusicBookmarkPlaylistDialogData,
 } from '../edit-music-bookmark-playlist-dialog/edit-music-bookmark-playlist-dialog.component';
 import { MediaItem } from '../../../interfaces';
+import { MediaPreviewDialogComponent } from '../../../components/media-preview-dialog/media-preview.component';
 
 @Component({
   selector: 'app-music-bookmark-playlist',
@@ -66,13 +68,16 @@ import { MediaItem } from '../../../interfaces';
         <div class="state"><mat-icon>playlist_remove</mat-icon><p>Playlist not found.</p></div>
       } @else {
         <div class="hero">
-          <div class="header-icon hero-art" [style.background]="gradient() || ''">
-            @if (coverImage(); as cover) {
+          @if (coverImage(); as cover) {
+            <button type="button" class="header-icon hero-art hero-art-button" [style.background]="gradient() || ''"
+              (click)="openArtworkPreview()" [attr.aria-label]="'Open cover art for ' + title()">
               <img [src]="cover" [alt]="title()" />
-            } @else {
+            </button>
+          } @else {
+            <div class="header-icon hero-art" [style.background]="gradient() || ''">
               <mat-icon>playlist_play</mat-icon>
-            }
-          </div>
+            </div>
+          }
           <div class="header-text hero-info">
             <h1>{{ title() }}</h1>
             <p class="subtitle">{{ tracks().length }} tracks</p>
@@ -217,7 +222,15 @@ import { MediaItem } from '../../../interfaces';
       align-items: center;
       justify-content: center;
     }
+    .hero-art-button {
+      padding: 0;
+      border: 0;
+      cursor: zoom-in;
+    }
     .hero-art img { width: 100%; height: 100%; object-fit: cover; }
+    .hero-art-button img { transition: transform 0.2s ease; }
+    .hero-art-button:hover img,
+    .hero-art-button:focus-visible img { transform: scale(1.01); }
     .hero-art mat-icon { font-size: 2rem; width: 2rem; height: 2rem; color: var(--mat-sys-on-primary-container); }
     .header-text {
       display: flex;
@@ -557,6 +570,7 @@ export class MusicBookmarkPlaylistComponent {
   private snackBar = inject(MatSnackBar);
   private customDialog = inject(CustomDialogService);
   private userRelays = inject(UserRelaysService);
+  private dialog = inject(MatDialog);
 
   playlist = signal<Event | null>(null);
   tracks = signal<Event[]>([]);
@@ -753,6 +767,25 @@ export class MusicBookmarkPlaylistComponent {
 
   playAll(): void {
     this.playTrack(0);
+  }
+
+  openArtworkPreview(): void {
+    const artwork = this.coverImage();
+    if (!artwork) {
+      return;
+    }
+
+    this.dialog.open(MediaPreviewDialogComponent, {
+      data: {
+        mediaItems: [{ url: artwork, type: 'image/jpeg', title: `${this.title()} cover art` }],
+        initialIndex: 0,
+      },
+      maxWidth: '100vw',
+      maxHeight: '100vh',
+      width: '100vw',
+      height: '100vh',
+      panelClass: 'image-dialog-panel',
+    });
   }
 
   playTrack(index: number): void {
