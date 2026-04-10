@@ -48,7 +48,8 @@
           }
           <div class="article-body">
             <div class="article-publisher">
-              <app-user-profile [pubkey]="article.pubkey" view="tiny" [hostWidthAuto]="true" [disableLink]="true"></app-user-profile>
+              <app-user-profile [pubkey]="article.pubkey" view="tiny" [hostWidthAuto]="true"
+                [disableLink]="true"></app-user-profile>
             </div>
             <span class="article-title">{{ article.title }}</span>
             <span class="article-summary">{{ article.summary }}</span>
@@ -93,14 +94,18 @@
   <div class="ai-prompt-row">
     <mat-form-field appearance="outline" class="ai-prompt-field">
       <mat-label>{{ card().aiPromptPlaceholder || 'Ask AI...' }}</mat-label>
-      <input matInput [formControl]="aiPromptControl" placeholder="Ask AI" title="Ask AI" />
+      <input matInput [formControl]="aiPromptControl" placeholder="Ask AI" title="Ask AI"
+        (keydown.enter)="$event.preventDefault(); askAi()" />
     </mat-form-field>
-    <button mat-flat-button type="button" class="ai-submit-button" (click)="askAi()" [disabled]="!aiPromptControl.value?.trim()">Ask AI</button>
+    <button mat-flat-button type="button" class="ai-submit-button" (click)="askAi()"
+      [disabled]="!aiPromptControl.value?.trim()">Ask AI</button>
   </div>
   }
 
+  @if (card().id !== 'interesting-articles') {
   <div class="featured-card-actions">
-    <button mat-flat-button type="button" class="primary-action" (click)="openPrimary()">{{ card().ctaLabel }}</button>
+    <button mat-flat-button type="button" class="primary-action" [class.standard-primary-action]="card().id === 'nostria-music'"
+      (click)="openPrimary()">{{ card().ctaLabel }}</button>
 
     @if (card().secondaryCtaLabel && card().secondaryRoute) {
     <button mat-stroked-button type="button" class="secondary-action" (click)="openSecondary()">
@@ -108,4 +113,5 @@
     </button>
     }
   </div>
+  }
 </mat-card>

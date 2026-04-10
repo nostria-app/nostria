@@ -1,6 +1,7 @@
 <div class="support-nostria-content">
   <p class="support-copy">
-    Nostria is built by independent developers. If you want to help the work continue, this is a direct and voluntary way to support the people shipping it.
+    Nostria is built by independent developers. If you want to help the work continue, this is a direct and voluntary
+    way to support the people shipping it.
   </p>
 
   <div class="support-highlight-list">
@@ -35,16 +36,20 @@
   <div class="donation-amounts">
     <h4>Choose amount</h4>
     <div class="amount-buttons">
-      <button mat-stroked-button [class.selected]="selectedDonationAmount() === 0.5" (click)="selectDonationAmount(0.5)">$0.50</button>
-      <button mat-stroked-button [class.selected]="selectedDonationAmount() === 5" (click)="selectDonationAmount(5)">$5.00</button>
-      <button mat-stroked-button [class.selected]="selectedDonationAmount() === null && !!customDonationAmount.value" (click)="selectCustomAmount()">Custom</button>
+      <button mat-stroked-button [class.selected]="selectedDonationAmount() === 0.5"
+        (click)="selectDonationAmount(0.5)">$0.50</button>
+      <button mat-stroked-button [class.selected]="selectedDonationAmount() === 5"
+        (click)="selectDonationAmount(5)">$5.00</button>
+      <button mat-stroked-button [class.selected]="selectedDonationAmount() === null && !!customDonationAmount.value"
+        (click)="selectCustomAmount()">Custom</button>
     </div>
 
     @if (selectedDonationAmount() === null) {
     <mat-form-field appearance="outline" class="custom-amount-field">
       <mat-label>Custom amount (USD)</mat-label>
       <span matPrefix>$&nbsp;</span>
-      <input matInput [formControl]="customDonationAmount" type="number" min="0.01" step="0.01" placeholder="Enter amount" />
+      <input matInput [formControl]="customDonationAmount" type="number" min="0.01" step="0.01"
+        placeholder="Enter amount" />
       @if (customDonationAmount.hasError('min')) {
       <mat-error>Minimum amount is $0.01</mat-error>
       }

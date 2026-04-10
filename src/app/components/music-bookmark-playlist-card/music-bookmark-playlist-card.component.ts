@@ -81,6 +81,7 @@ import { ImageCacheService } from '../../services/image-cache.service';
       height: 56px;
       width: 100%;
       min-width: 0;
+      isolation: isolate;
 
       &:hover,
       &:focus {
@@ -125,6 +126,7 @@ import { ImageCacheService } from '../../services/image-cache.service';
       border-radius: var(--mat-sys-corner-small) 0 0 var(--mat-sys-corner-small);
       overflow: hidden;
       background: linear-gradient(135deg, var(--mat-sys-primary-container), var(--mat-sys-secondary-container));
+      flex-shrink: 0;
 
       img {
         width: 100%;
@@ -188,6 +190,7 @@ import { ImageCacheService } from '../../services/image-cache.service';
       min-width: 0;
       overflow: hidden;
       flex: 1;
+      background: transparent;
     }
 
     .title,

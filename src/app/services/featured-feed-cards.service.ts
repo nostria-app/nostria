@@ -232,11 +232,12 @@ export class FeaturedFeedCardsService {
         eyebrow: 'Social momentum',
         title: 'Popular profiles you are not following',
         description: 'Picked from locally cached reactions, reposts, and replies already moving through your feed.',
-        ctaLabel: 'Discover more people',
-        primaryRoute: ['/people/discover'],
+        ctaLabel: 'Open cached profiles',
+        primaryRoute: ['/people/list', 'nostria-cached-profiles'],
+        secondaryCtaLabel: 'Discover people',
+        secondaryRoute: ['/people/discover'],
         tone: 'primary',
         profiles: context.profiles,
-        highlights: ['Local cache only', 'Picked from real feed activity', 'Follow instantly'],
       });
     }
 
@@ -304,10 +305,9 @@ export class FeaturedFeedCardsService {
       eyebrow: 'AI features',
       title: 'Did you know that Nostria has AI?',
       description: 'Use summaries, translation, chat, image generation, and browser-local models without leaving Nostria.',
-      ctaLabel: 'Ask AI',
+      ctaLabel: 'Open AI',
       primaryRoute: ['/ai'],
       tone: 'tertiary',
-      highlights: ['Summaries', 'Translation', 'Local and cloud models'],
       aiPromptPlaceholder: 'Ask Nostria AI about anything...',
     });
 

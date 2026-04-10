@@ -229,17 +229,20 @@
               <mat-icon>currency_bitcoin</mat-icon>
               <span i18n="@@wallet.bitcoin-donation.title">On-chain Bitcoin Donation</span>
             </mat-card-title>
-            <mat-card-subtitle i18n="@@wallet.bitcoin-donation.subtitle">Support Nostria development with an on-chain Bitcoin donation</mat-card-subtitle>
+            <mat-card-subtitle i18n="@@wallet.bitcoin-donation.subtitle">Support Nostria development with an on-chain
+              Bitcoin donation</mat-card-subtitle>
           </mat-card-header>
 
           <mat-card-content>
             <div class="bitcoin-donation-content">
               <div class="bitcoin-qr-container">
-                <qr-code [qrdata]="'bitcoin:' + bitcoinDonationAddress" [width]="200" errorCorrectionLevel="medium"></qr-code>
+                <qr-code [qrdata]="'bitcoin:' + bitcoinDonationAddress" [width]="200"
+                  errorCorrectionLevel="medium"></qr-code>
               </div>
               <div class="bitcoin-address-container">
                 <code class="bitcoin-address">{{ bitcoinDonationAddress }}</code>
-                <button mat-icon-button matTooltip="Copy address" i18n-matTooltip="@@wallet.copy-btc-address" (click)="copyToClipboard(bitcoinDonationAddress, 'Bitcoin address')">
+                <button mat-icon-button matTooltip="Copy address" i18n-matTooltip="@@wallet.copy-btc-address"
+                  (click)="copyToClipboard(bitcoinDonationAddress, 'Bitcoin address')">
                   <mat-icon>content_copy</mat-icon>
                 </button>
               </div>
@@ -254,7 +257,8 @@
               <mat-icon>link</mat-icon>
               <span i18n="@@wallet.nwc-providers.title">Nostr Wallet Connect Providers</span>
             </mat-card-title>
-            <mat-card-subtitle i18n="@@wallet.nwc-providers.subtitle">Get a wallet that supports Nostr Wallet Connect to use with Nostria</mat-card-subtitle>
+            <mat-card-subtitle i18n="@@wallet.nwc-providers.subtitle">Get a wallet that supports Nostr Wallet Connect to
+              use with Nostria</mat-card-subtitle>
           </mat-card-header>
 
           <mat-card-content>
@@ -289,7 +293,8 @@
               <mat-icon>link</mat-icon>
               <span i18n="@@wallet.nwc-providers.title">Nostr Wallet Connect Providers</span>
             </mat-card-title>
-            <mat-card-subtitle i18n="@@wallet.nwc-providers.subtitle">Get a wallet that supports Nostr Wallet Connect to use with Nostria</mat-card-subtitle>
+            <mat-card-subtitle i18n="@@wallet.nwc-providers.subtitle">Get a wallet that supports Nostr Wallet Connect to
+              use with Nostria</mat-card-subtitle>
           </mat-card-header>
 
           <mat-card-content>

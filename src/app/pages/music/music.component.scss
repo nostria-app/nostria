@@ -265,6 +265,7 @@
   gap: 0.5rem;
   padding: 0.5rem 0;
   max-width: 100%;
+  overflow: visible;
 
   app-music-bookmark-playlist-card {
     min-width: 0;
@@ -277,7 +278,7 @@
 }
 
 .compact-playlists-grid-single-row {
-  overflow: hidden;
+  overflow: visible;
 }
 
 // "Yours" section grid - compact horizontal rows
