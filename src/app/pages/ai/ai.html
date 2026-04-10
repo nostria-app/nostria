@@ -335,7 +335,7 @@
 
         <textarea #composerInput class="composer-input" [ngModel]="composerText()"
           (ngModelChange)="composerText.set($event)" (keydown)="onComposerKeydown($event)" rows="1"
-          placeholder="{{ isImageUpscalingMode() ? 'Attach one image to upscale' : isImageGenerationMode() ? 'Describe the image you want to create' : 'Ask anything or use #fetch https://example.com' }}"
+          placeholder="{{ isImageUpscalingMode() ? 'Attach one image to upscale' : isImageGenerationMode() ? 'Describe the image you want to create' : 'Ask anything or use #fetch example.com' }}"
           aria-label="{{ isImageUpscalingMode() ? 'Upscaling instruction' : isImageGenerationMode() ? 'Image prompt' : 'Chat prompt' }}"
           title="{{ isImageUpscalingMode() ? 'Upscaling instruction' : isImageGenerationMode() ? 'Image prompt' : 'Chat prompt' }}"
           [disabled]="isGenerating()"></textarea>

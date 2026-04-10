@@ -66,7 +66,7 @@ export class ChatWidgetComponent {
   @ViewChild('chatMessagesContainer') chatMessagesContainer?: ElementRef<HTMLDivElement>;
   @ViewChild('widgetMessageInput') widgetMessageInput?: ElementRef<HTMLTextAreaElement>;
 
-  state = signal<WidgetState>('collapsed');
+  state = signal<WidgetState>('compact');
   private compactRestoreState = signal<Exclude<WidgetState, 'compact'>>('collapsed');
   activeChatId = signal<string | null>(null);
   activeChatIsGroup = signal(false);
@@ -85,12 +85,11 @@ export class ChatWidgetComponent {
   private dragStartOffset = { x: 0, y: 0 };
   private readonly DRAG_THRESHOLD = 5;
 
-  /** Combined transform: drag offset + clamp adjustment + sidebar shift */
+  /** Combined transform: drag offset + clamp adjustment */
   widgetTransform = computed(() => {
     const offset = this.dragOffset();
     const clamp = this.clampAdjustment();
-    const sidebarShift = this.rightSidebarOpen() ? -68 : 0;
-    const x = offset.x + clamp.x + sidebarShift;
+    const x = offset.x + clamp.x;
     const y = offset.y + clamp.y;
     if (x === 0 && y === 0) return '';
     return `translate(${x}px, ${y}px)`;
@@ -128,11 +127,6 @@ export class ChatWidgetComponent {
   });
 
   unreadCount = computed(() => this.messaging.unreadBadgeCount());
-
-  /** Whether the right sidebar is visible (shifts widget left) */
-  rightSidebarOpen = computed(() => {
-    return !this.layout.isHandset() && this.settings.settings().rightSidebarEnabled === true;
-  });
 
   /** The active chat object */
   activeChat = computed(() => {

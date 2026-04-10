@@ -64,25 +64,8 @@
 
 .featured-card-header {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-}
-
-.eyebrow-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
-  padding: 0.45rem 0.75rem;
-  border-radius: 999px;
-  color: var(--mat-sys-on-surface);
-  background: color-mix(in srgb, var(--mat-sys-surface-container-highest) 82%, var(--card-accent) 18%);
-
-  mat-icon {
-    width: 18px;
-    height: 18px;
-    font-size: 18px;
-  }
+  justify-content: flex-end;
+  margin-bottom: -0.4rem;
 }
 
 .dismiss-button {
@@ -97,6 +80,20 @@
   h3,
   p {
     margin: 0;
+  }
+
+  .title-row {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+  }
+
+  .title-icon {
+    width: 22px;
+    height: 22px;
+    font-size: 22px;
+    color: var(--card-accent);
+    flex-shrink: 0;
   }
 
   h3 {

@@ -4,18 +4,16 @@
   <div class="card-glow glow-b"></div>
 
   <div class="featured-card-header">
-    <div class="eyebrow-pill">
-      <mat-icon>{{ card().icon }}</mat-icon>
-      <span>{{ card().eyebrow }}</span>
-    </div>
-
     <button mat-icon-button type="button" class="dismiss-button" (click)="dismiss()" aria-label="Dismiss featured card">
       <mat-icon>close</mat-icon>
     </button>
   </div>
 
   <div class="featured-card-content">
-    <h3>{{ card().title }}</h3>
+    <div class="title-row">
+      <mat-icon class="title-icon">{{ card().icon }}</mat-icon>
+      <h3>{{ card().title }}</h3>
+    </div>
     <p>{{ card().description }}</p>
 
     @if (card().profiles?.length) {
@@ -104,8 +102,9 @@
 
   @if (card().id !== 'interesting-articles') {
   <div class="featured-card-actions">
-    <button mat-flat-button type="button" class="primary-action" [class.standard-primary-action]="card().id === 'nostria-music'"
-      (click)="openPrimary()">{{ card().ctaLabel }}</button>
+    <button mat-flat-button type="button" class="primary-action"
+      [class.standard-primary-action]="card().id === 'nostria-music'" (click)="openPrimary()">{{ card().ctaLabel
+      }}</button>
 
     @if (card().secondaryCtaLabel && card().secondaryRoute) {
     <button mat-stroked-button type="button" class="secondary-action" (click)="openSecondary()">

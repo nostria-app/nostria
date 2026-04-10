@@ -12,6 +12,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { SafeHtml } from '@angular/platform-browser';
 import { firstValueFrom } from 'rxjs';
+import { environment } from '../../../environments/environment';
 import { AiChatMessage, AiCloudProvider, AiGeneratedImage, AiGenerationProgress, AiModelLoadOptions, AiMultimodalChatMessage, AiMultimodalChatPart, AiService } from '../../services/ai.service';
 import { AiChatHistoryService, AiHistoryGeneratedImage } from '../../services/ai-chat-history.service';
 import { AiInfoDialogComponent, type AiInfoDialogResult } from '../../components/ai-info-dialog/ai-info-dialog.component';
@@ -46,6 +47,7 @@ interface ModelInfo {
   chatMode?: 'messages' | 'prompt';
   chatDisabledReason?: string;
   preferredParams?: Record<string, unknown>;
+  fetchContextCharLimit?: number;
 }
 
 interface ConversationMessage {
@@ -208,6 +210,7 @@ export class AiComponent {
       loadOptions: { device: 'webgpu', dtype: 'q4f16' },
       chatMode: 'messages',
       chatDisabledReason: this.webGpuAvailable ? undefined : 'Requires WebGPU support in the browser.',
+      fetchContextCharLimit: 4000,
       preferredParams: {
         max_new_tokens: 384,
         do_sample: true,
@@ -1081,7 +1084,11 @@ export class AiComponent {
       }
 
       this.logger.error('AI retry error:', err);
-      const message = err instanceof Error ? err.message : String(err);
+      const attachmentContext = generationConversation
+        .filter(message => message.role === 'user')
+        .map(message => message.attachmentContext ?? '')
+        .join('\n\n');
+      const message = this.resolveGenerationErrorMessage(model, err, attachmentContext);
       this.chatError.set(message);
       this.replaceMessageContent(assistantMessageId, `Model error: ${message}`, false);
       this.persistCurrentConversation();
@@ -1288,7 +1295,7 @@ export class AiComponent {
     let preparedPrompt: { prompt: string; attachmentContext: string };
 
     try {
-      preparedPrompt = await this.preparePromptSubmission(promptText, attachments);
+      preparedPrompt = await this.preparePromptSubmission(model, promptText, attachments);
     } catch (err) {
       this.logger.error('AI prompt preparation error:', err);
       this.chatError.set(err instanceof Error ? err.message : String(err));
@@ -1369,7 +1376,7 @@ export class AiComponent {
       }
 
       this.logger.error('AI chat error:', err);
-      const message = err instanceof Error ? err.message : String(err);
+      const message = this.resolveGenerationErrorMessage(model, err, preparedPrompt.attachmentContext);
       this.chatError.set(message);
       this.replaceMessageContent(assistantMessageId, `Model error: ${message}`, false);
       this.persistCurrentConversation();
@@ -2019,8 +2026,8 @@ export class AiComponent {
     };
   }
 
-  private async preparePromptSubmission(promptText: string, attachments: ComposerAttachment[]): Promise<{ prompt: string; attachmentContext: string }> {
-    const fetchedContexts = await this.resolveFetchedPromptContexts(promptText);
+  private async preparePromptSubmission(model: ModelInfo, promptText: string, attachments: ComposerAttachment[]): Promise<{ prompt: string; attachmentContext: string }> {
+    const fetchedContexts = await this.resolveFetchedPromptContexts(model, promptText);
     const prompt = this.resolvePromptText(promptText, attachments, fetchedContexts);
 
     return {
@@ -2064,7 +2071,7 @@ export class AiComponent {
       .join('\n\n');
   }
 
-  private async resolveFetchedPromptContexts(promptText: string): Promise<FetchedPromptContext[]> {
+  private async resolveFetchedPromptContexts(model: ModelInfo, promptText: string): Promise<FetchedPromptContext[]> {
     const urls = this.extractFetchUrls(promptText);
     if (urls.length === 0 && AiComponent.FETCH_KEYWORD_PATTERN.test(promptText)) {
       throw new Error('Invalid #fetch URL. Use #fetch followed by a URL or domain name.');
@@ -2074,7 +2081,8 @@ export class AiComponent {
       return [];
     }
 
-    return Promise.all(urls.map(url => this.fetchMarkdownContext(url)));
+    const fetchContextCharLimit = model.fetchContextCharLimit ?? AiComponent.FETCH_MARKDOWN_CHAR_LIMIT;
+    return Promise.all(urls.map(url => this.fetchMarkdownContext(url, fetchContextCharLimit)));
   }
 
   private extractFetchUrls(promptText: string): string[] {
@@ -2123,8 +2131,11 @@ export class AiComponent {
       .trim();
   }
 
-  private async fetchMarkdownContext(url: string): Promise<FetchedPromptContext> {
-    const apiUrl = `https://metadata.nostria.app/markdown?url=${encodeURIComponent(url)}`;
+  private async fetchMarkdownContext(url: string, charLimit = AiComponent.FETCH_MARKDOWN_CHAR_LIMIT): Promise<FetchedPromptContext> {
+    const metadataBaseUrl = environment.metadataUrl.endsWith('/')
+      ? environment.metadataUrl
+      : `${environment.metadataUrl}/`;
+    const apiUrl = `${metadataBaseUrl}markdown?url=${encodeURIComponent(url)}`;
     const response = await fetch(apiUrl, {
       headers: {
         accept: 'text/markdown, text/plain;q=0.9, */*;q=0.1',
@@ -2140,8 +2151,8 @@ export class AiComponent {
       throw new Error(`No markdown content was returned for ${url}.`);
     }
 
-    const truncatedMarkdown = markdown.length > AiComponent.FETCH_MARKDOWN_CHAR_LIMIT
-      ? `${markdown.slice(0, AiComponent.FETCH_MARKDOWN_CHAR_LIMIT).trimEnd()}\n\n[Truncated for AI context]`
+    const truncatedMarkdown = markdown.length > charLimit
+      ? `${markdown.slice(0, charLimit).trimEnd()}\n\n[Truncated for AI context]`
       : markdown;
 
     return {
@@ -2177,6 +2188,19 @@ export class AiComponent {
       .join('\n\n');
 
     return `${this.systemPrompt}\n\n${transcript}\n\nAssistant:`;
+  }
+
+  private resolveGenerationErrorMessage(model: ModelInfo, error: unknown, attachmentContext = ''): string {
+    const message = error instanceof Error ? error.message : String(error);
+    const includesFetchedContext = attachmentContext.includes('Fetched web content:');
+
+    if (model.id === 'onnx-community/gemma-4-E2B-it-ONNX' && message.includes('operation does not support unaligned accesses')) {
+      return includesFetchedContext
+        ? 'Gemma 4 hit a WebGPU runtime limitation while processing fetched page content. The #fetch command itself is already stripped before inference, but the fetched markdown context can still trigger this Gemma backend error. Try Qwen 3.5, a cloud model, or a shorter fetched page.'
+        : 'Gemma 4 hit a WebGPU runtime limitation in this browser. Try Qwen 3.5 or a cloud model for this prompt.';
+    }
+
+    return message;
   }
 
   private async buildMultimodalGenerationInput(conversation: ConversationMessage[]): Promise<AiMultimodalChatMessage[]> {
