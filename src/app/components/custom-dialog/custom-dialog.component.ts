@@ -88,6 +88,7 @@ interface ScrollLockStyles {
           [showHeader]="showHeader()"
           [showDefaultActions]="false"
           [showCloseButton]="getShowCloseButton()"
+          [showActions]="showActions()"
           [closeResult]="false"
           (closed)="onCloseClick()">
           @if (getShowBackButton()) {
@@ -102,9 +103,11 @@ interface ScrollLockStyles {
             <ng-content select="[dialog-content]"></ng-content>
           </div>
 
+          @if (showActions()) {
           <div dialog-actions>
             <ng-content select="[dialog-actions]"></ng-content>
           </div>
+          }
         </app-material-custom-dialog>
       </div>
     </div>
@@ -128,6 +131,7 @@ export class CustomDialogComponent implements AfterViewInit, OnDestroy {
   secondaryHeaderAriaLabel = input<string>('Dialog status');
   showBackButton = input<boolean>(false);
   showCloseButton = input<boolean>(true);
+  showActions = input<boolean>(true);
   disableClose = input<boolean>(false);
   disableEnterSubmit = input<boolean>(false);
   width = input<string>('600px');

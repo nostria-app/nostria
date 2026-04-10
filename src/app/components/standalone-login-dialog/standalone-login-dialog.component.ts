@@ -41,18 +41,33 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
       [headerIcon]="'/icons/icon-128x128.png'"
       [showBackButton]="shouldShowBackButton()"
       [showCloseButton]="shouldShowCloseButton()"
+      [showActions]="shouldShowActions()"
       [disableClose]="false"
       [width]="'600px'"
       [maxWidth]="'95vw'"
       (closed)="handleClose()"
       (backClicked)="handleBackButton()">
       
-      <div dialog-content>
+      <div dialog-content class="standalone-login-content">
         <app-unified-login-dialog (dialogClosed)="handleClose()" />
       </div>
       
       <div dialog-actions>
         @if (viewInitialized() && loginComponent) {
+          @if (loginComponent.currentStep() === loginComponent.LoginStep.REGION_SELECTION) {
+            <button mat-button type="button" (click)="loginComponent.goToStep(loginComponent.LoginStep.INITIAL)">
+              Back
+            </button>
+            <button mat-flat-button type="button" [disabled]="loginComponent.loading() || !loginComponent.signupRegion()"
+              (click)="loginComponent.generateNewKey()">
+              @if (loginComponent.loading()) {
+                <mat-spinner diameter="20" class="button-spinner"></mat-spinner>
+                <span>Creating Account...</span>
+              } @else {
+                <span>Create Account</span>
+              }
+            </button>
+          }
           @if (loginComponent.currentStep() === loginComponent.LoginStep.NSEC_LOGIN) {
             <button mat-flat-button (click)="loginComponent.loginWithNsec()" [disabled]="!loginComponent.isNsecKeyValid() || loginComponent.loading()">
               @if (loginComponent.loading()) {
@@ -86,7 +101,11 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
       </div>
     </app-custom-dialog>
   `,
-  styles: []
+  styles: [`
+    .standalone-login-content ::ng-deep .profile-setup-actions {
+      display: none;
+    }
+  `]
 })
 export class StandaloneLoginDialogComponent implements AfterViewInit {
   private logger = inject(LoggerService);
@@ -169,6 +188,19 @@ export class StandaloneLoginDialogComponent implements AfterViewInit {
   shouldShowCloseButton(): boolean {
     // Always show close button on all steps
     return true;
+  }
+
+  shouldShowActions(): boolean {
+    const step = this.loginComponent?.currentStep();
+    const LoginStep = this.loginComponent?.LoginStep;
+
+    return step === LoginStep?.REGION_SELECTION
+      || step === LoginStep?.NSEC_LOGIN
+      || (step === LoginStep?.NOSTR_CONNECT && (
+        this.loginComponent?.nostrConnectLoading()
+        || (this.loginComponent?.nostrConnectUrl()?.length ?? 0) >= 10
+      ))
+      || step === LoginStep?.PREVIEW;
   }
 
   handleBackButton(): void {

@@ -56,6 +56,7 @@
     <ng-content select="[dialog-content]"></ng-content>
   </div>
 
+  @if (showActions()) {
   <div mat-dialog-actions class="dialog-actions">
     @if (actionsTemplate(); as template) {
     <ng-container [ngTemplateOutlet]="template"></ng-container>
@@ -72,4 +73,5 @@
     </button>
     }
   </div>
+  }
 </div>

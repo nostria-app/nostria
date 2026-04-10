@@ -46,6 +46,7 @@ export class MaterialCustomDialogComponent {
   showHeader = input(true);
   showDefaultActions = input(true);
   showCloseButton = input(true);
+  showActions = input(true);
   closeResult = input<boolean>(false);
 
   closed = output<boolean>();
