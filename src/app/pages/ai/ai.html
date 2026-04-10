@@ -155,8 +155,33 @@
             <div class="assistant-thinking-content" [innerHTML]="thinking"></div>
           </section>
           }
+          @if (renderedAssistantSuggestionIntro(message.id); as suggestionIntro) {
+          <div class="message-markdown assistant-suggestion-intro" [innerHTML]="suggestionIntro"></div>
+          }
+          @if (renderedAssistantSuggestions(message.id).length > 0) {
+          <div class="assistant-suggestion-list">
+            @for (suggestion of renderedAssistantSuggestions(message.id); track suggestion.id) {
+            <article class="assistant-suggestion-card">
+              <div class="assistant-suggestion-head">
+                <h3>{{ suggestion.title }}</h3>
+                <button mat-icon-button type="button" class="assistant-suggestion-menu-button"
+                  (click)="setActiveSuggestion(suggestion)" [matMenuTriggerFor]="assistantSuggestionMenu"
+                  [attr.aria-label]="'Open actions for ' + suggestion.title">
+                  <mat-icon>more_horiz</mat-icon>
+                </button>
+              </div>
+              @if (suggestion.renderedContent; as suggestionBody) {
+              <div class="message-markdown assistant-suggestion-body" [innerHTML]="suggestionBody"></div>
+              }
+            </article>
+            }
+          </div>
+          }
           @if (renderedAssistantAnswer(message.id); as answer) {
           <div class="message-markdown" [innerHTML]="answer"></div>
+          }
+          @if (renderedAssistantSuggestionOutro(message.id); as suggestionOutro) {
+          <div class="message-markdown assistant-suggestion-outro" [innerHTML]="suggestionOutro"></div>
           }
           }
           @if (message.generatedImages?.length) {
@@ -208,12 +233,12 @@
           }
           @if (message.streaming && message.content.trim().length === 0 && !message.generatedImages?.length) {
           <div class="stream-placeholder">
-            <span class="processing-dots" aria-hidden="true">
-              <span></span>
-              <span></span>
-              <span></span>
+            <span>{{ processingStatusText() || 'Processing' }}</span>
+            <span class="processing-ellipsis" aria-hidden="true">
+              <span>.</span>
+              <span>.</span>
+              <span>.</span>
             </span>
-            <span>{{ processingStatusLabel() || 'Processing...' }}</span>
             @if (activeModelProgress() !== null) {
             <span class="stream-progress">{{ activeModelProgress() }}%</span>
             }
@@ -247,12 +272,12 @@
       @if (showProcessingStatus()) {
       <div class="composer-processing-status" aria-live="polite">
         <div class="composer-processing-copy">
-          <span class="processing-dots" aria-hidden="true">
-            <span></span>
-            <span></span>
-            <span></span>
+          <span>{{ processingStatusText() || 'Processing' }}</span>
+          <span class="processing-ellipsis" aria-hidden="true">
+            <span>.</span>
+            <span>.</span>
+            <span>.</span>
           </span>
-          <span>{{ processingStatusLabel() || 'Processing...' }}</span>
         </div>
         @if (activeModelProgress() !== null) {
         <span class="composer-processing-progress">{{ activeModelProgress() }}%</span>
@@ -376,6 +401,25 @@
         <button mat-menu-item type="button" (click)="shareViaDirectMessage()">
           <mat-icon>mail</mat-icon>
           <span>Send in Direct Message</span>
+        </button>
+      </mat-menu>
+
+      <mat-menu #assistantSuggestionMenu="matMenu">
+        <button mat-menu-item type="button" (click)="shareSuggestionToNoteEditor()">
+          <mat-icon>edit_note</mat-icon>
+          <span>Open in Note Editor</span>
+        </button>
+        <button mat-menu-item type="button" (click)="shareSuggestionToArticleEditor()">
+          <mat-icon>article</mat-icon>
+          <span>Open in Article Editor</span>
+        </button>
+        <button mat-menu-item type="button" (click)="useSuggestionInComposer()">
+          <mat-icon>edit</mat-icon>
+          <span>Use in composer</span>
+        </button>
+        <button mat-menu-item type="button" (click)="copySuggestion()">
+          <mat-icon>content_copy</mat-icon>
+          <span>Copy suggestion</span>
         </button>
       </mat-menu>
 

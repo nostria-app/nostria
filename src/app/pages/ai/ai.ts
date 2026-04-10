@@ -74,9 +74,22 @@ interface AiQuickPrompt {
   task?: 'image-generation';
 }
 
+interface AssistantSuggestion {
+  id: string;
+  title: string;
+  content: string;
+}
+
+interface RenderedAssistantSuggestion extends AssistantSuggestion {
+  renderedContent: SafeHtml | null;
+}
+
 interface RenderedAssistantContent {
   thinking: SafeHtml | null;
   answer: SafeHtml | null;
+  suggestionIntro: SafeHtml | null;
+  suggestionOutro: SafeHtml | null;
+  suggestions: RenderedAssistantSuggestion[];
 }
 
 interface VisualIntent {
@@ -147,6 +160,7 @@ export class AiComponent {
   readonly historyQuery = signal('');
   readonly activeShareMessage = signal<ConversationMessage | null>(null);
   readonly activeGeneratedImage = signal<AiGeneratedImage | null>(null);
+  readonly activeSuggestion = signal<AssistantSuggestion | null>(null);
   readonly renderedAssistantMessages = signal<Record<string, RenderedAssistantContent>>({});
   readonly attachedFiles = signal<ComposerAttachment[]>([]);
   readonly hideHistoryRail = computed(() => this.splitPaneMode() || this.narrowHistoryMode());
@@ -494,6 +508,7 @@ export class AiComponent {
 
     return this.workerTaskLabel() || (this.isGenerating() ? 'Processing...' : '');
   });
+  readonly processingStatusText = computed(() => this.processingStatusLabel().replace(/\.{3}$/, '').trim());
   readonly hasInlineStreamingIndicator = computed(() => this.conversation().some(message => message.role === 'assistant' && !!message.streaming && !message.content.trim().length && !(message.generatedImages?.length ?? 0)));
   readonly showProcessingStatus = computed(() => {
     const busy = this.workerProcessingState().isProcessing || !!this.selectedModel()?.loading || this.isGenerating();
@@ -562,9 +577,22 @@ export class AiComponent {
         this.renderedAssistantVersion.set(message.id, nextVersion);
 
         const sections = this.parseAssistantMessageContent(message.content);
+        const suggestionLayout = this.parseAssistantSuggestions(sections.answer);
         const initialRendered: RenderedAssistantContent = {
           thinking: this.renderAssistantSection(message.id, nextVersion, 'thinking', sections.thinking),
-          answer: this.renderAssistantSection(message.id, nextVersion, 'answer', sections.answer),
+          answer: suggestionLayout ? null : this.renderAssistantSection(message.id, nextVersion, 'answer', sections.answer),
+          suggestionIntro: suggestionLayout
+            ? this.renderAssistantSection(message.id, nextVersion, 'suggestionIntro', suggestionLayout.intro)
+            : null,
+          suggestionOutro: suggestionLayout
+            ? this.renderAssistantSection(message.id, nextVersion, 'suggestionOutro', suggestionLayout.outro)
+            : null,
+          suggestions: suggestionLayout
+            ? suggestionLayout.suggestions.map(suggestion => ({
+              ...suggestion,
+              renderedContent: this.renderAssistantSuggestion(message.id, nextVersion, suggestion),
+            }))
+            : [],
         };
 
         this.renderedAssistantMessages.update(rendered => ({
@@ -656,6 +684,10 @@ export class AiComponent {
 
   setActiveGeneratedImage(image: AiGeneratedImage): void {
     this.activeGeneratedImage.set(image);
+  }
+
+  setActiveSuggestion(suggestion: AssistantSuggestion): void {
+    this.activeSuggestion.set(suggestion);
   }
 
   createNewChat(): void {
@@ -803,6 +835,52 @@ export class AiComponent {
       this.logger.warn('Failed to copy AI message', error);
       this.snackBar.open('Could not copy that message.', 'Dismiss', { duration: 3500 });
     }
+  }
+
+  async copySuggestion(): Promise<void> {
+    const suggestion = this.activeSuggestion();
+    if (!suggestion) {
+      return;
+    }
+
+    try {
+      await this.copyTextToClipboard(this.suggestionShareContent(suggestion));
+      this.snackBar.open('Suggestion copied.', 'Dismiss', { duration: 2400 });
+    } catch (error) {
+      this.logger.warn('Failed to copy AI suggestion', error);
+      this.snackBar.open('Could not copy that suggestion.', 'Dismiss', { duration: 3500 });
+    }
+  }
+
+  useSuggestionInComposer(): void {
+    const suggestion = this.activeSuggestion();
+    if (!suggestion) {
+      return;
+    }
+
+    this.composerText.set(this.suggestionShareContent(suggestion));
+    this.snackBar.open('Suggestion moved into the composer.', 'Dismiss', { duration: 2400 });
+  }
+
+  async shareSuggestionToArticleEditor(): Promise<void> {
+    const suggestion = this.activeSuggestion();
+    if (!suggestion) {
+      return;
+    }
+
+    const articleSource = this.suggestionArticleSource(suggestion);
+    const draft = this.parseArticleDraft(articleSource);
+    await this.layout.createArticle(undefined, undefined, draft);
+    this.snackBar.open('Opened in article editor.', 'Dismiss', { duration: 2600 });
+  }
+
+  async shareSuggestionToNoteEditor(): Promise<void> {
+    const suggestion = this.activeSuggestion();
+    if (!suggestion) {
+      return;
+    }
+
+    await this.eventService.createNote({ content: this.suggestionShareContent(suggestion) });
   }
 
   async shareToArticleEditor(): Promise<void> {
@@ -1091,6 +1169,18 @@ export class AiComponent {
     return this.renderedAssistantMessages()[id]?.answer ?? null;
   }
 
+  renderedAssistantSuggestionIntro(id: string): SafeHtml | null {
+    return this.renderedAssistantMessages()[id]?.suggestionIntro ?? null;
+  }
+
+  renderedAssistantSuggestionOutro(id: string): SafeHtml | null {
+    return this.renderedAssistantMessages()[id]?.suggestionOutro ?? null;
+  }
+
+  renderedAssistantSuggestions(id: string): RenderedAssistantSuggestion[] {
+    return this.renderedAssistantMessages()[id]?.suggestions ?? [];
+  }
+
   formatHistoryTimestamp(timestamp: number): string {
     return new Intl.DateTimeFormat(undefined, {
       month: 'short',
@@ -1229,7 +1319,7 @@ export class AiComponent {
       }
     }
 
-  this.isGenerating.set(true);
+    this.isGenerating.set(true);
 
     try {
       let assistantReply: string;
@@ -1444,15 +1534,108 @@ export class AiComponent {
         return;
       }
 
-      this.renderedAssistantMessages.update(rendered => ({
-        ...rendered,
-        [messageId]: {
-          thinking: rendered[messageId]?.thinking ?? null,
-          answer: rendered[messageId]?.answer ?? null,
-          [section]: updatedHtml,
-        },
-      }));
+      this.renderedAssistantMessages.update(rendered => {
+        const current = rendered[messageId];
+        if (!current) {
+          return rendered;
+        }
+
+        return {
+          ...rendered,
+          [messageId]: {
+            ...current,
+            [section]: updatedHtml,
+          },
+        };
+      });
     });
+  }
+
+  private renderAssistantSuggestion(
+    messageId: string,
+    version: number,
+    suggestion: AssistantSuggestion,
+  ): SafeHtml | null {
+    const trimmed = suggestion.content.trim();
+    if (!trimmed) {
+      return null;
+    }
+
+    return this.formatService.markdownToHtmlNonBlocking(trimmed, updatedHtml => {
+      if (this.renderedAssistantVersion.get(messageId) !== version) {
+        return;
+      }
+
+      this.renderedAssistantMessages.update(rendered => {
+        const current = rendered[messageId];
+        if (!current) {
+          return rendered;
+        }
+
+        return {
+          ...rendered,
+          [messageId]: {
+            ...current,
+            suggestions: current.suggestions.map(entry => entry.id === suggestion.id
+              ? { ...entry, renderedContent: updatedHtml }
+              : entry),
+          },
+        };
+      });
+    });
+  }
+
+  private parseAssistantSuggestions(answer: string): { intro: string; suggestions: AssistantSuggestion[]; outro: string } | null {
+    const normalized = answer.replace(/\r\n/g, '\n').trim();
+    if (!normalized) {
+      return null;
+    }
+
+    const headerPattern = /^Option\s+[^\n:]+:\s*.+$/gm;
+    const matches = Array.from(normalized.matchAll(headerPattern));
+    if (matches.length < 2) {
+      return null;
+    }
+
+    const intro = normalized.slice(0, matches[0].index ?? 0).trim();
+    const suggestions = matches.map((match, index) => {
+      const title = match[0].trim();
+      const start = (match.index ?? 0) + match[0].length;
+      const end = index + 1 < matches.length ? (matches[index + 1].index ?? normalized.length) : normalized.length;
+      const content = normalized.slice(start, end).trim();
+
+      return {
+        id: `${index + 1}-${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
+        title,
+        content,
+      } satisfies AssistantSuggestion;
+    });
+
+    let outro = '';
+    const lastSuggestion = suggestions.at(-1);
+    if (lastSuggestion) {
+      const splitMatch = /\n\n([^\n][\s\S]*)$/.exec(lastSuggestion.content);
+      const trailingText = splitMatch?.[1]?.trim() ?? '';
+      if (trailingText && /\?$/.test(trailingText) && !trailingText.startsWith('>') && !trailingText.startsWith('- ')) {
+        outro = trailingText;
+        lastSuggestion.content = lastSuggestion.content.slice(0, splitMatch!.index).trimEnd();
+      }
+    }
+
+    return { intro, suggestions, outro };
+  }
+
+  private suggestionShareContent(suggestion: AssistantSuggestion): string {
+    return suggestion.content.trim();
+  }
+
+  private suggestionArticleSource(suggestion: AssistantSuggestion): string {
+    const title = suggestion.title.replace(/^Option\s+[^\n:]+:\s*/, '').trim();
+    if (!title) {
+      return this.suggestionShareContent(suggestion);
+    }
+
+    return `${title}\n\n${this.suggestionShareContent(suggestion)}`;
   }
 
   private detectVisualIntent(promptText: string, attachments: ComposerAttachment[]): VisualIntent | null {
