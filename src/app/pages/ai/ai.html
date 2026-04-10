@@ -172,30 +172,18 @@
           @if (renderedAssistantSuggestions(message.id).length > 0) {
           <div class="assistant-suggestion-list">
             @for (suggestion of renderedAssistantSuggestions(message.id); track suggestion.id) {
-            <article class="assistant-suggestion-card">
-              <div class="assistant-suggestion-head">
-                <h3>{{ suggestion.title }}</h3>
+            <article class="assistant-suggestion-item">
+              <div class="assistant-suggestion-main">
+                <h3 class="assistant-suggestion-title">{{ suggestion.title }}</h3>
+                @if (suggestion.renderedContent; as suggestionBody) {
+                <div class="message-markdown assistant-suggestion-body" [innerHTML]="suggestionBody"></div>
+                }
+              </div>
+              <div class="assistant-suggestion-menu-shell">
                 <button mat-icon-button type="button" class="assistant-suggestion-menu-button"
                   (click)="setActiveSuggestion(suggestion)" [matMenuTriggerFor]="assistantSuggestionMenu"
                   [attr.aria-label]="'Open actions for ' + suggestion.title">
                   <mat-icon>more_horiz</mat-icon>
-                </button>
-              </div>
-              @if (suggestion.renderedContent; as suggestionBody) {
-              <div class="message-markdown assistant-suggestion-body" [innerHTML]="suggestionBody"></div>
-              }
-              <div class="assistant-suggestion-actions">
-                <button mat-flat-button type="button" (click)="shareSuggestionToNoteEditorDirect(suggestion)">
-                  <mat-icon>edit_note</mat-icon>
-                  <span>Create post</span>
-                </button>
-                <button mat-stroked-button type="button" (click)="shareSuggestionToArticleEditorDirect(suggestion)">
-                  <mat-icon>article</mat-icon>
-                  <span>Create article</span>
-                </button>
-                <button mat-stroked-button type="button" (click)="useSuggestionInComposerDirect(suggestion)">
-                  <mat-icon>edit</mat-icon>
-                  <span>Use in composer</span>
                 </button>
               </div>
             </article>

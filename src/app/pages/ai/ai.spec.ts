@@ -133,4 +133,30 @@ describe('AiComponent #fetch prompt support', () => {
 
     expect(shared).toBe('Tributary tales from the Viking Age.\n#Vikings #History');
   });
+
+  it('moves trailing follow-up questions out of the last suggestion', () => {
+    const parsed = (component as any).parseAssistantSuggestions(`Here are a few options for a short-form Nostr note.\n\nOption 1: Informative/Historical\n\n> Viking lore: Raiders, explorers, and masterful seafarers. #Vikings\n\nOption 2: Intriguing/Mysterious\n\n> Echoes of the longships. What secrets do the Vikings still hold? #VikingAge\n\nOption 3: Simple/Engaging\n\n> Thinking about Viking sagas today. Incredible stories of exploration and bravery. #NorseMyth\n\nWhich style do you prefer, or would you like me to adjust the focus?`);
+
+    expect(parsed).not.toBeNull();
+    expect(parsed.suggestions).toHaveLength(3);
+    expect(parsed.suggestions[2].content).not.toContain('Which style do you prefer');
+    expect(parsed.outro).toBe('Which style do you prefer, or would you like me to adjust the focus?');
+  });
+
+  it('moves single-line trailing follow-up text out of the last suggestion without a blank separator', () => {
+    const parsed = (component as any).parseAssistantSuggestions(`Here are a few options for a short-form Nostr note.\n\nOption 1: Informative/Historical\n\n> Viking saga alert! These Norse seafarers shaped history. #Vikings\n\nOption 2: Intriguing/Mysterious\n\n> Echoes of the longships. What secrets do the Vikings still hold? #VikingLore\n\nOption 3: Short & Punchy\n\n> Vikings: Warriors, traders, and explorers. Powerful legacy. #Norse #HistoryFacts\nWhich style works best for what you're looking for? I can refine one further!`);
+
+    expect(parsed).not.toBeNull();
+    expect(parsed.suggestions[2].content).toContain('Vikings: Warriors, traders, and explorers.');
+    expect(parsed.suggestions[2].content).not.toContain('Which style works best');
+    expect(parsed.outro).toBe("Which style works best for what you're looking for? I can refine one further!");
+  });
+
+  it('moves parenthetical follow-up prompts out of the last suggestion card', () => {
+    const parsed = (component as any).parseAssistantSuggestions(`Here are a few options for a short-form Nostr note post about Vikings, depending on the tone you want:\n\nOption 1: Informative/Historical\n\n> Viking lore: Fierce seafarers and explorers who shaped early medieval Europe. #Vikings #History #Norse\n\nOption 2: Evocative/Mysterious\n\n> Echoes of the North. Vikings. Warriors of the sea, charting unknown horizons. #NorseMyth #AncientHistory\n\nOption 3: Short & Punchy\n\n> Vikings: Raiders, traders, pioneers. A legacy carved into history. #HistoryFacts #VikingAge\n\nWhich style do you prefer, or would you like me to adjust the focus (e.g., focus more on mythology, exploration, or daily life)?`);
+
+    expect(parsed).not.toBeNull();
+    expect(parsed.suggestions[2].content).not.toContain('Which style do you prefer');
+    expect(parsed.outro).toBe('Which style do you prefer, or would you like me to adjust the focus (e.g., focus more on mythology, exploration, or daily life)?');
+  });
 });

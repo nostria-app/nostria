@@ -1026,32 +1026,39 @@
 .assistant-suggestion-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 4px;
   margin: 14px 0;
 }
 
-.assistant-suggestion-card {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 14px 16px;
-  border-radius: 18px;
-  border: 1px solid var(--mat-sys-outline-variant);
-  background: var(--mat-sys-surface-container);
+.assistant-suggestion-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: start;
+  padding: 10px 0;
+  border-top: 1px solid var(--mat-sys-outline-variant);
 }
 
-.assistant-suggestion-head {
+.assistant-suggestion-item:first-child {
+  border-top: none;
+  padding-top: 4px;
+}
+
+.assistant-suggestion-main {
+  min-width: 0;
+}
+
+.assistant-suggestion-title {
+  margin: 0 0 2px;
+  font-size: 1rem;
+  line-height: 1.35;
+  color: var(--mat-sys-on-surface);
+}
+
+.assistant-suggestion-menu-shell {
   display: flex;
   align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-
-  h3 {
-    margin: 0;
-    font-size: 1rem;
-    line-height: 1.35;
-    color: var(--mat-sys-on-surface);
-  }
+  justify-content: flex-end;
 }
 
 .assistant-suggestion-menu-button {
@@ -1066,25 +1073,23 @@
   color: var(--mat-sys-on-surface-variant);
 }
 
-.assistant-suggestion-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.assistant-suggestion-actions button {
-  min-height: 38px;
-}
-
 .assistant-suggestion-intro,
 .assistant-suggestion-outro,
 .assistant-suggestion-body {
   line-height: 1.6;
 }
 
+:host ::ng-deep .assistant-suggestion-body> :first-child {
+  margin-top: 0;
+}
+
+:host ::ng-deep .assistant-suggestion-body>blockquote:first-child {
+  margin-top: 0;
+}
+
 @media (max-width: 640px) {
-  .assistant-suggestion-actions button {
-    flex: 1 1 100%;
+  .assistant-suggestion-item {
+    gap: 6px;
   }
 }
 

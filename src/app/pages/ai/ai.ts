@@ -869,12 +869,7 @@ export class AiComponent {
       return;
     }
 
-    this.useSuggestionInComposerDirect(suggestion);
-  }
-
-  useSuggestionInComposerDirect(suggestion: AssistantSuggestion): void {
     this.composerText.set(this.suggestionShareContent(suggestion));
-    this.showHistoryDrawer.set(false);
     this.snackBar.open('Suggestion moved into the composer.', 'Dismiss', { duration: 2400 });
   }
 
@@ -884,10 +879,6 @@ export class AiComponent {
       return;
     }
 
-    await this.shareSuggestionToArticleEditorDirect(suggestion);
-  }
-
-  async shareSuggestionToArticleEditorDirect(suggestion: AssistantSuggestion): Promise<void> {
     const articleSource = this.suggestionArticleSource(suggestion);
     const draft = this.parseArticleDraft(articleSource);
     await this.layout.createArticle(undefined, undefined, draft);
@@ -900,10 +891,6 @@ export class AiComponent {
       return;
     }
 
-    await this.shareSuggestionToNoteEditorDirect(suggestion);
-  }
-
-  async shareSuggestionToNoteEditorDirect(suggestion: AssistantSuggestion): Promise<void> {
     await this.eventService.createNote({ content: this.suggestionShareContent(suggestion) });
     this.snackBar.open('Opened in note editor.', 'Dismiss', { duration: 2600 });
   }
@@ -1656,12 +1643,9 @@ export class AiComponent {
     let outro = '';
     const lastSuggestion = suggestions.at(-1);
     if (lastSuggestion) {
-      const splitMatch = /\n\n([^\n][\s\S]*)$/.exec(lastSuggestion.content);
-      const trailingText = splitMatch?.[1]?.trim() ?? '';
-      if (trailingText && /\?$/.test(trailingText) && !trailingText.startsWith('>') && !trailingText.startsWith('- ')) {
-        outro = trailingText;
-        lastSuggestion.content = lastSuggestion.content.slice(0, splitMatch!.index).trimEnd();
-      }
+      const extracted = this.extractSuggestionOutro(lastSuggestion.content);
+      outro = extracted.outro;
+      lastSuggestion.content = extracted.content;
     }
 
     return { intro, suggestions, outro };
@@ -1702,6 +1686,59 @@ export class AiComponent {
     }
 
     return null;
+  }
+
+  private extractSuggestionOutro(content: string): { content: string; outro: string } {
+    const normalized = content.replace(/\r\n/g, '\n').trim();
+    const lines = normalized.split('\n');
+
+    for (let startIndex = lines.length - 1; startIndex > 0; startIndex--) {
+      const outro = lines.slice(startIndex).join('\n').trim();
+      const body = lines.slice(0, startIndex).join('\n').trim();
+
+      if (!body || !outro) {
+        continue;
+      }
+
+      if (!this.isSuggestionOutroParagraph(outro)) {
+        continue;
+      }
+
+      return {
+        content: body,
+        outro,
+      };
+    }
+
+    const inlineMatch = /^(?<body>[\s\S]*?)\n{1,2}(?<outro>(?:Which|What|Would|Do you|Should|Want|Need|Prefer|Let me know|Tell me|I can refine|I can adjust|I can tune)[\s\S]*)$/i.exec(normalized);
+    const body = inlineMatch?.groups?.['body']?.trim() ?? '';
+    const outro = inlineMatch?.groups?.['outro']?.trim() ?? '';
+
+    if (!body || !outro || !this.isSuggestionOutroParagraph(outro)) {
+      return { content: normalized, outro: '' };
+    }
+
+    return {
+      content: body,
+      outro,
+    };
+  }
+
+  private isSuggestionOutroParagraph(value: string): boolean {
+    const normalized = value.trim();
+    if (!normalized) {
+      return false;
+    }
+
+    if (normalized.startsWith('>') || normalized.startsWith('- ') || normalized.startsWith('* ')) {
+      return false;
+    }
+
+    if (!normalized.includes('?') && !/(refine|adjust|tune|change the focus|pick one|choose one)/i.test(normalized)) {
+      return false;
+    }
+
+    return /^(which|what|would|do you|should|want|need|prefer|let me know|tell me|i can refine|i can adjust|i can tune)/i.test(normalized);
   }
 
   private detectVisualIntent(promptText: string, attachments: ComposerAttachment[]): VisualIntent | null {
