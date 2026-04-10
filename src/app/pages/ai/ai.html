@@ -83,6 +83,11 @@
         </div>
         <div class="chat-header-controls">
           @if (narrowHistoryMode()) {
+          <button mat-flat-button type="button" class="new-chat-button chat-header-new-chat-button"
+            (click)="createNewChat()">
+            <mat-icon>add</mat-icon>
+            New Chat
+          </button>
           <button mat-stroked-button type="button" class="history-toggle-button" (click)="toggleHistoryPanel()">
             <mat-icon>history</mat-icon>
             History

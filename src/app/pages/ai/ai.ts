@@ -120,7 +120,7 @@ interface FetchedPromptContext {
 export class AiComponent {
   private static readonly AI_UPLOAD_CACHE = 'nostria-ai';
   private static readonly AI_INFO_SEEN_STORAGE_KEY = 'nostria-ai-info-dialog-seen';
-  private static readonly FETCH_COMMAND_PATTERN = /(^|\s)#fetch\s+(https?:\/\/\S+)/gi;
+  private static readonly FETCH_COMMAND_PATTERN = /(^|\s)#fetch\s+(\S+)/gi;
   private static readonly FETCH_KEYWORD_PATTERN = /(^|\s)#fetch\b/i;
   private static readonly FETCH_MARKDOWN_CHAR_LIMIT = 12000;
 
@@ -2067,7 +2067,7 @@ export class AiComponent {
   private async resolveFetchedPromptContexts(promptText: string): Promise<FetchedPromptContext[]> {
     const urls = this.extractFetchUrls(promptText);
     if (urls.length === 0 && AiComponent.FETCH_KEYWORD_PATTERN.test(promptText)) {
-      throw new Error('Invalid #fetch URL. Use #fetch followed by a full http or https URL.');
+      throw new Error('Invalid #fetch URL. Use #fetch followed by a URL or domain name.');
     }
 
     if (urls.length === 0) {
@@ -2097,12 +2097,13 @@ export class AiComponent {
   }
 
   private normalizeFetchUrl(rawUrl: string): string {
+    const normalizedInput = /^[a-zA-Z][a-zA-Z\d+.-]*:/.test(rawUrl) ? rawUrl : `https://${rawUrl}`;
     let parsedUrl: URL;
 
     try {
-      parsedUrl = new URL(rawUrl);
+      parsedUrl = new URL(normalizedInput);
     } catch {
-      throw new Error('Invalid #fetch URL. Use #fetch followed by a full http or https URL.');
+      throw new Error('Invalid #fetch URL. Use #fetch followed by a URL or domain name.');
     }
 
     if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
