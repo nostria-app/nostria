@@ -1103,9 +1103,11 @@
 
 .composer-plus-button,
 .composer-model-button,
+.composer-stop-button,
 .composer-send-button {
   flex: 0 0 auto;
   block-size: 36px;
+  min-inline-size: 36px;
   padding: 0 !important;
   display: flex !important;
   align-items: center;
@@ -1113,38 +1115,16 @@
 }
 
 .composer-model-button {
-  gap: 10px;
-  min-width: 0;
-  padding: 0 12px !important;
+  inline-size: 36px;
+  min-inline-size: 36px;
   border: 1px solid var(--mat-sys-outline-variant);
   background: var(--mat-sys-surface-container);
   color: var(--mat-sys-on-surface-variant);
 }
 
-.composer-model-button-copy {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  min-width: 0;
-  line-height: 1.1;
-}
-
-.composer-model-button-name,
-.composer-model-button-meta {
-  max-width: 160px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.composer-model-button-name {
-  color: var(--mat-sys-on-surface);
-  font-size: 0.84rem;
-}
-
-.composer-model-button-meta {
-  color: inherit;
-  font-size: 0.72rem;
+.composer-stop-button {
+  background: var(--mat-sys-error-container);
+  color: var(--mat-sys-on-error-container);
 }
 
 .composer-model-button.composer-model-button-loaded {
@@ -1309,22 +1289,14 @@
 
   .composer-plus-button,
   .composer-model-button,
+  .composer-stop-button,
   .composer-send-button {
     block-size: 34px;
+    min-inline-size: 34px;
   }
 
   .composer-model-button {
-    max-width: 180px;
-    padding-inline: 10px !important;
-  }
-
-  .composer-model-button-copy {
-    gap: 2px;
-  }
-
-  .composer-model-button-name,
-  .composer-model-button-meta {
-    max-width: 110px;
+    inline-size: 34px;
   }
 
   .workspace-switch {

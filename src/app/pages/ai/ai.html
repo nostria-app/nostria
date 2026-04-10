@@ -287,17 +287,13 @@
         </button>
 
         @if (selectedModel(); as model) {
-        <button mat-stroked-button type="button" class="composer-model-button" [matMenuTriggerFor]="modelMenu"
+        <button mat-icon-button type="button" class="composer-model-button" [matMenuTriggerFor]="modelMenu"
           [class.composer-model-button-loaded]="model.loaded"
           [class.composer-model-button-cached]="!model.loaded && model.cached"
           [class.composer-model-button-idle]="!model.loaded && !model.cached && !model.loading"
           [class.composer-model-button-loading]="model.loading" [attr.aria-label]="'Select model: ' + model.name"
           [attr.title]="model.name">
           <mat-icon>model_training</mat-icon>
-          <span class="composer-model-button-copy">
-            <span class="composer-model-button-name">{{ model.name }}</span>
-            <span class="composer-model-button-meta">{{ selectedStatusLabel(model) }}</span>
-          </span>
         </button>
         }
 
@@ -308,11 +304,18 @@
           title="{{ isImageUpscalingMode() ? 'Upscaling instruction' : isImageGenerationMode() ? 'Image prompt' : 'Chat prompt' }}"
           [disabled]="isGenerating()"></textarea>
 
+        @if (isGenerating()) {
+        <button mat-icon-button type="button" class="composer-stop-button" (click)="stopGeneration()"
+          aria-label="Stop generation" title="Stop generation">
+          <mat-icon>stop</mat-icon>
+        </button>
+        } @else {
         <button mat-icon-button type="button" class="composer-send-button" (click)="sendMessage()"
           [disabled]="!canSend()"
           [attr.aria-label]="isImageUpscalingMode() ? 'Upscale image' : isImageGenerationMode() ? 'Generate image' : 'Send message'">
           <mat-icon>{{ isImageUpscalingMode() ? 'zoom_in' : isImageGenerationMode() ? 'image' : 'send' }}</mat-icon>
         </button>
+        }
       </div>
 
       <mat-menu #attachmentMenu="matMenu">

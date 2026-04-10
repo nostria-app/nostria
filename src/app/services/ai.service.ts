@@ -131,6 +131,7 @@ interface AiLocalUpscaledImageWorkerPayload {
 }
 
 interface WorkerCallback {
+  type: string;
   resolve: (value: unknown) => void;
   reject: (reason: unknown) => void;
   progress?: (data: unknown) => void;
@@ -155,6 +156,7 @@ export class AiService {
   private localStorage = inject(LocalStorageService);
   private worker: Worker | null = null;
   private callbacks: Record<string, WorkerCallback> = {};
+  private readonly activeAbortControllers = new Set<AbortController>();
 
   // Signals for UI
   textModelLoaded = signal(false);
@@ -370,30 +372,94 @@ export class AiService {
   constructor() {
     this.loadCloudSettings();
 
-    if (typeof Worker !== 'undefined') {
-      this.worker = new Worker(new URL('../workers/ai.worker', import.meta.url));
-      this.worker.onmessage = ({ data }) => {
-        const { type, id, payload } = data;
-        if (type === 'progress') {
-          if (this.callbacks[id]?.progress) {
-            this.callbacks[id].progress!(payload);
-          }
-        } else if (type === 'error') {
-          if (this.callbacks[id]) {
-            this.callbacks[id].reject(payload);
-            delete this.callbacks[id];
-          }
-        } else {
-          if (this.callbacks[id]) {
-            this.callbacks[id].resolve(payload);
-            delete this.callbacks[id];
-          }
-        }
-      };
-    } else {
-      // Fallback or error
-      console.error('Web Workers are not supported in this environment.');
+    this.initializeWorker();
+  }
+
+  stopActiveGeneration(): void {
+    const abortError = this.createAbortError();
+
+    for (const controller of this.activeAbortControllers) {
+      controller.abort(abortError);
     }
+    this.activeAbortControllers.clear();
+
+    const pendingIds = Object.entries(this.callbacks)
+      .filter(([, callback]) => callback.type !== 'check')
+      .map(([id]) => id);
+
+    for (const id of pendingIds) {
+      this.callbacks[id]?.reject(abortError);
+      delete this.callbacks[id];
+    }
+
+    this._processingCount = 0;
+    this.processingState.set({ isProcessing: false, task: null });
+
+    if (this.worker) {
+      this.worker.terminate();
+      this.worker = null;
+    }
+
+    this.initializeWorker();
+  }
+
+  isAbortError(error: unknown): boolean {
+    if (error instanceof DOMException) {
+      return error.name === 'AbortError';
+    }
+
+    if (!(error instanceof Error)) {
+      return false;
+    }
+
+    return error.name === 'AbortError' || error.message === 'Generation stopped.';
+  }
+
+  private initializeWorker(): void {
+    if (typeof Worker === 'undefined') {
+      console.error('Web Workers are not supported in this environment.');
+      return;
+    }
+
+    this.worker = new Worker(new URL('../workers/ai.worker', import.meta.url));
+    this.worker.onmessage = ({ data }) => {
+      const { type, id, payload } = data;
+      if (type === 'progress') {
+        if (this.callbacks[id]?.progress) {
+          this.callbacks[id].progress!(payload);
+        }
+      } else if (type === 'error') {
+        if (this.callbacks[id]) {
+          this.callbacks[id].reject(payload);
+          delete this.callbacks[id];
+        }
+      } else {
+        if (this.callbacks[id]) {
+          this.callbacks[id].resolve(payload);
+          delete this.callbacks[id];
+        }
+      }
+    };
+  }
+
+  private createAbortError(): Error {
+    if (typeof DOMException !== 'undefined') {
+      return new DOMException('Generation stopped.', 'AbortError');
+    }
+
+    const error = new Error('Generation stopped.');
+    error.name = 'AbortError';
+    return error;
+  }
+
+  private createAbortController(): AbortController {
+    const controller = new AbortController();
+    this.activeAbortControllers.add(controller);
+    return controller;
+  }
+
+  private clearAbortController(controller: AbortController): void {
+    this.activeAbortControllers.delete(controller);
   }
 
   async loadModel(task: string, model: string, progressCallback?: (data: unknown) => void, options?: AiModelLoadOptions) {
@@ -805,39 +871,53 @@ export class AiService {
   }
 
   private async fetchImageGeneration(url: string, apiKey: string, body: Record<string, unknown>): Promise<AiImageApiPayload> {
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(body),
-    });
+    const controller = this.createAbortController();
 
-    const payload = await this.parseApiResponse(response);
-    if (!response.ok) {
-      throw new Error(this.extractApiError(payload) || `Image generation failed with status ${response.status}.`);
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body),
+        signal: controller.signal,
+      });
+
+      const payload = await this.parseApiResponse(response);
+      if (!response.ok) {
+        throw new Error(this.extractApiError(payload) || `Image generation failed with status ${response.status}.`);
+      }
+
+      return payload;
+    } finally {
+      this.clearAbortController(controller);
     }
-
-    return payload;
   }
 
   private async fetchChatCompletion(url: string, apiKey: string, body: Record<string, unknown>): Promise<AiCloudChatCompletionPayload> {
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(body),
-    });
+    const controller = this.createAbortController();
 
-    const payload = await this.parseChatCompletionResponse(response);
-    if (!response.ok) {
-      throw new Error(this.extractChatCompletionError(payload) || `Chat completion failed with status ${response.status}.`);
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body),
+        signal: controller.signal,
+      });
+
+      const payload = await this.parseChatCompletionResponse(response);
+      if (!response.ok) {
+        throw new Error(this.extractChatCompletionError(payload) || `Chat completion failed with status ${response.status}.`);
+      }
+
+      return payload;
+    } finally {
+      this.clearAbortController(controller);
     }
-
-    return payload;
   }
 
   private async parseChatCompletionResponse(response: Response): Promise<AiCloudChatCompletionPayload> {
@@ -1031,6 +1111,7 @@ export class AiService {
     return new Promise((resolve, reject) => {
       const id = Math.random().toString(36).substring(7);
       this.callbacks[id] = {
+        type,
         resolve: (val) => {
           if (type !== 'check') {
             this._processingCount--;

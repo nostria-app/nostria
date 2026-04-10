@@ -722,6 +722,15 @@ export class AiComponent {
     this.attachmentInputRef()?.nativeElement.click();
   }
 
+  stopGeneration(): void {
+    if (!this.isGenerating()) {
+      return;
+    }
+
+    this.chatError.set('');
+    this.aiService.stopActiveGeneration();
+  }
+
   async onAttachmentSelected(event: Event): Promise<void> {
     const input = event.target as HTMLInputElement;
     const files = Array.from(input.files ?? []);
@@ -980,6 +989,11 @@ export class AiComponent {
       this.replaceMessageContent(assistantMessageId, currentReply.trim().length > 0 ? currentReply.trimEnd() : assistantReply, false);
       this.persistCurrentConversation();
     } catch (err) {
+      if (this.aiService.isAbortError(err)) {
+        this.finalizeStoppedGeneration(assistantMessageId);
+        return;
+      }
+
       this.logger.error('AI retry error:', err);
       const message = err instanceof Error ? err.message : String(err);
       this.chatError.set(message);
@@ -1104,26 +1118,6 @@ export class AiComponent {
     return 'Not loaded';
   }
 
-  selectedStatusLabel(model: ModelInfo): string {
-    if (model.source === 'cloud') {
-      return model.task === 'image-generation' ? 'Hosted image' : 'Hosted chat';
-    }
-
-    if (model.loading) {
-      return `Loading ${Math.round(model.progress)}%`;
-    }
-
-    if (model.loaded) {
-      return 'Ready on device';
-    }
-
-    if (model.cached) {
-      return 'Cached locally';
-    }
-
-    return 'Local model';
-  }
-
   async loadModel(model: ModelInfo): Promise<boolean> {
     if (model.chatDisabledReason) {
       this.chatError.set(model.chatDisabledReason);
@@ -1235,7 +1229,7 @@ export class AiComponent {
       }
     }
 
-    this.isGenerating.set(true);
+  this.isGenerating.set(true);
 
     try {
       let assistantReply: string;
@@ -1271,6 +1265,11 @@ export class AiComponent {
       this.replaceMessageContent(assistantMessageId, currentReply.trim().length > 0 ? currentReply.trimEnd() : assistantReply, false);
       this.persistCurrentConversation();
     } catch (err) {
+      if (this.aiService.isAbortError(err)) {
+        this.finalizeStoppedGeneration(assistantMessageId);
+        return;
+      }
+
       this.logger.error('AI chat error:', err);
       const message = err instanceof Error ? err.message : String(err);
       this.chatError.set(message);
@@ -1600,6 +1599,11 @@ export class AiComponent {
       }));
       this.persistCurrentConversation();
     } catch (err) {
+      if (this.aiService.isAbortError(err)) {
+        this.finalizeStoppedGeneration(assistantMessageId);
+        return;
+      }
+
       this.logger.error('AI image generation error:', err);
       const message = err instanceof Error ? err.message : String(err);
       this.chatError.set(message);
@@ -1671,6 +1675,11 @@ export class AiComponent {
       }));
       this.persistCurrentConversation();
     } catch (err) {
+      if (this.aiService.isAbortError(err)) {
+        this.finalizeStoppedGeneration(assistantMessageId);
+        return;
+      }
+
       this.logger.error('AI image upscaling error:', err);
       const message = err instanceof Error ? err.message : String(err);
       this.chatError.set(message);
@@ -1679,6 +1688,14 @@ export class AiComponent {
     } finally {
       this.isGenerating.set(false);
     }
+  }
+
+  private finalizeStoppedGeneration(assistantMessageId: string): void {
+    const currentReply = this.getMessageContent(assistantMessageId).trimEnd();
+    this.chatError.set('');
+    this.replaceMessageContent(assistantMessageId, currentReply || 'Generation stopped.', false);
+    this.persistCurrentConversation();
+    this.snackBar.open('Generation stopped.', 'Dismiss', { duration: 1800 });
   }
 
   private async cacheGeneratedImage(image: AiGeneratedImage): Promise<AiGeneratedImage> {
