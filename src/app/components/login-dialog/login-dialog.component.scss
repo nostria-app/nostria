@@ -8,12 +8,12 @@
 .unified-login-dialog {
   // padding: 16px 0;
   position: relative;
-  max-height: 90vh;
 
   display: flex;
+  flex: 1 1 auto;
   flex-direction: column;
   width: 100%;
-  min-width: 320px; // Reduced from 480px to support smaller screens
+  min-width: 0;
 
   // Remove min-width on very small screens
   @media (max-width: 400px) {
@@ -21,31 +21,8 @@
   }
 }
 
-:host ::ng-deep .mat-mdc-dialog-content {
-  max-height: 60vh;
-  overflow-y: auto;
-  overflow-x: hidden;
-  padding: 16px 24px;
-  margin: 0;
-  padding-bottom: 24px;
+.dialog-content {
   width: 100%;
-
-  // Reduce padding on smaller/height-constrained screens
-  @media (max-width: 400px),
-  (max-height: 700px) {
-    padding: 12px 16px;
-    padding-bottom: 16px;
-  }
-
-  @media (max-height: 600px) {
-    padding: 8px 12px;
-    padding-bottom: 12px;
-    max-height: 65vh;
-  }
-}
-
-:host ::ng-deep .cdk-overlay-pane {
-  max-height: 90vh;
 }
 
 // Header styles
@@ -1499,16 +1476,6 @@
   display: inline-block;
   margin-right: 8px;
   vertical-align: middle;
-}
-
-/* Fix for dialog content width */
-:host ::ng-deep .mat-mdc-dialog-content {
-  max-height: 60vh;
-  overflow-y: auto;
-  overflow-x: hidden;
-  padding: 16px 24px;
-  margin: 0;
-  padding-bottom: 24px;
 }
 
 /* Fix for the mat-mdc-raised-button alignment */
