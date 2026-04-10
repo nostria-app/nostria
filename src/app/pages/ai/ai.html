@@ -73,7 +73,13 @@
     <section class="chat-surface">
       <header class="chat-header">
         <div class="chat-header-copy">
-          <h2>How can I help you?</h2>
+          <div class="chat-header-title-row">
+            <h2>How can I help you?</h2>
+            <button mat-icon-button type="button" class="ai-info-button" (click)="openAiInfoDialog()"
+              aria-label="Open AI information" title="Open AI information">
+              <mat-icon>info</mat-icon>
+            </button>
+          </div>
         </div>
         <div class="chat-header-controls">
           @if (narrowHistoryMode()) {

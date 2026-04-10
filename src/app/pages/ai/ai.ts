@@ -633,6 +633,10 @@ export class AiComponent {
     }
   }
 
+  async openAiInfoDialog(): Promise<void> {
+    await this.showAiInfoDialog(false);
+  }
+
   private async openFirstRunAiDialogIfNeeded(): Promise<void> {
     if (this.hasSeenAiInfoDialog()) {
       return;
@@ -640,11 +644,15 @@ export class AiComponent {
 
     this.markAiInfoDialogSeen();
 
+    await this.showAiInfoDialog(true);
+  }
+
+  private async showAiInfoDialog(firstRun: boolean): Promise<void> {
     const dialogRef = this.customDialog.open<AiInfoDialogComponent, AiInfoDialogResult>(AiInfoDialogComponent, {
       width: 'min(680px, calc(100vw - 24px))',
       maxWidth: 'calc(100vw - 24px)',
       data: {
-        firstRun: true,
+        firstRun,
         showSettingsAction: true,
       },
     });
