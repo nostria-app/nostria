@@ -73,7 +73,6 @@
     <section class="chat-surface">
       <header class="chat-header">
         <div class="chat-header-copy">
-          <p class="eyebrow">Nostria assistant</p>
           <h2>How can I help you?</h2>
         </div>
         <div class="chat-header-controls">
@@ -85,20 +84,6 @@
           }
         </div>
       </header>
-
-      <section class="workspace-toolbar">
-        <div class="workspace-stats">
-          <span class="workspace-stat-pill">{{ currentConversationTitle() }}</span>
-          <span class="workspace-stat-pill">{{ conversationMessageCount() }} messages</span>
-          @if (conversationAttachmentCount() > 0) {
-          <span class="workspace-stat-pill">{{ conversationAttachmentCount() }} attachments</span>
-          }
-          @if (selectedModel(); as model) {
-          <span class="workspace-stat-pill">{{ model.runtime }}</span>
-          <span class="workspace-stat-pill">{{ model.name }}</span>
-          }
-        </div>
-      </section>
 
       @if (chatError()) {
       <div class="notice error-notice">
@@ -117,7 +102,7 @@
       <div class="chat-workspace">
         @if (conversation().length <= 1) { <section class="prompt-suggestions">
           @for (prompt of activeQuickPrompts(); track prompt.label) {
-          <button mat-stroked-button type="button" (click)="applyActiveQuickPrompt(prompt.prompt)">{{ prompt.label
+          <button mat-stroked-button type="button" (click)="applyActiveQuickPrompt(prompt)">{{ prompt.label
             }}</button>
           }
     </section>

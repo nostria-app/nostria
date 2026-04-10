@@ -71,6 +71,7 @@ interface ComposerAttachment {
 interface AiQuickPrompt {
   label: string;
   prompt: string;
+  task?: 'image-generation';
 }
 
 interface RenderedAssistantContent {
@@ -454,9 +455,9 @@ export class AiComponent {
     return lastMessage?.role === 'assistant' && !lastMessage.generatedImages?.length;
   });
   readonly chatQuickPrompts: AiQuickPrompt[] = [
-    { label: 'Draft an article', prompt: 'Draft an article for me about [this topic] and add hashtags at the bottom.' },
-    { label: 'Summarize a feature', prompt: 'Summarize the latest Nostria architecture direction.' },
-    { label: 'Draft a post', prompt: 'Help me write a better Nostr post about [this idea].' },
+    { label: 'Draft a post', prompt: 'Draft a short-form Nostr note post about [topic].' },
+    { label: 'Draft an article', prompt: 'Draft an article for me about [topic] and add hashtags at the bottom.' },
+    { label: 'Create an image', prompt: 'Create an image about [topic].', task: 'image-generation' },
     { label: 'Fetch a page', prompt: '#fetch https://nostria.app' },
     { label: 'Explain code', prompt: 'Explain this code change in simple terms.' },
     { label: 'Brainstorm', prompt: 'Brainstorm improvements for this product flow.' },
@@ -471,13 +472,7 @@ export class AiComponent {
     { label: 'Sharpen photo', prompt: 'Upscale the attached photo and preserve natural textures.' },
     { label: 'Improve screenshot', prompt: 'Upscale the attached screenshot while keeping UI text crisp.' },
   ];
-  readonly conversation = signal<ConversationMessage[]>([
-    {
-      id: this.createMessageId(),
-      role: 'assistant',
-      content: 'Choose a model and start chatting, generating images, or upscaling an attached image. Local models stay on your device.',
-    },
-  ]);
+  readonly conversation = signal<ConversationMessage[]>([]);
   readonly composerText = signal('');
   readonly isGenerating = signal(false);
   readonly chatError = signal('');
@@ -764,13 +759,13 @@ export class AiComponent {
     this.focusComposerPromptPlaceholder(prompt);
   }
 
-  applyActiveQuickPrompt(prompt: string): void {
-    if (this.isImageGenerationMode()) {
-      this.applyImagePrompt(prompt);
+  applyActiveQuickPrompt(prompt: AiQuickPrompt): void {
+    if (prompt.task === 'image-generation' || this.isImageGenerationMode()) {
+      this.applyImagePrompt(prompt.prompt);
       return;
     }
 
-    this.applyChatPrompt(prompt);
+    this.applyChatPrompt(prompt.prompt);
   }
 
   clearHistoryQuery(): void {
@@ -1163,13 +1158,7 @@ export class AiComponent {
 
   clearConversation(): void {
     this.chatError.set('');
-    this.conversation.set([
-      {
-        id: this.createMessageId(),
-        role: 'assistant',
-        content: 'Conversation cleared. Ask a new question whenever you are ready.',
-      },
-    ]);
+    this.conversation.set([]);
   }
 
   onConversationScroll(event: Event): void {

@@ -81,7 +81,6 @@
 .history-sidebar-topbar,
 .chat-header,
 .chat-header-controls,
-.workspace-toolbar,
 .history-sidebar-actions,
 .model-selector-content,
 .model-selector-leading,
@@ -293,12 +292,6 @@
   padding: 4px 2px 0;
 }
 
-.workspace-toolbar {
-  justify-content: space-between;
-  flex-wrap: wrap;
-  padding: 0 2px;
-}
-
 .workspace-switch {
   display: inline-flex;
   align-items: center;
@@ -327,24 +320,6 @@
   color: var(--mat-sys-on-primary-container);
 }
 
-.workspace-stats {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.workspace-stat-pill {
-  display: inline-flex;
-  align-items: center;
-  min-height: 34px;
-  padding: 0 12px;
-  border-radius: 999px;
-  background: var(--mat-sys-surface-container-low);
-  border: 1px solid var(--mat-sys-outline-variant);
-  color: var(--mat-sys-on-surface-variant);
-  font-size: 0.84rem;
-}
 
 .chat-header-copy {
   display: flex;
@@ -634,8 +609,8 @@
 .prompt-suggestions {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
-  padding: 0 6px;
+  gap: 8px;
+  padding: 0 2px;
 }
 
 .prompt-suggestions button {
@@ -1271,7 +1246,6 @@
 
   .chat-header,
   .chat-header-controls,
-  .workspace-toolbar,
   .image-studio-header {
     flex-direction: column;
     align-items: stretch;
