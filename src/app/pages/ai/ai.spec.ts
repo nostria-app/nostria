@@ -134,6 +134,34 @@ describe('AiComponent #fetch prompt support', () => {
     expect(shared).toBe('Tributary tales from the Viking Age.\n#Vikings #History');
   });
 
+  it('strips trailing follow-up prompts from copied suggestion content', () => {
+    const shared = (component as any).suggestionShareContent({
+      id: 'option-3',
+      title: 'Option 3: Short & Punchy',
+      content: '> Vikings: Masters of the sea. Powerful, mysterious, and shaping the history of the North Atlantic.\n> #HistoryBuff #Vikings\n\nWhich one works best for your intended audience?',
+    });
+
+    expect(shared).toBe('Vikings: Masters of the sea. Powerful, mysterious, and shaping the history of the North Atlantic.\n#HistoryBuff #Vikings');
+  });
+
+  it('strips bold trailing follow-up prompts from copied suggestion content', () => {
+    const shared = (component as any).suggestionShareContent({
+      id: 'option-3',
+      title: 'Option 3: Short & Punchy',
+      content: 'Vikings: Masters of the sea. Powerful history. 🌊 #Viking #HistoryFacts\n\n**Which style do you prefer, or would you like me to try a different angle (e.g., focusing on mythology or exploration)?**',
+    });
+
+    expect(shared).toBe('Vikings: Masters of the sea. Powerful history. 🌊 #Viking #HistoryFacts');
+  });
+
+  it('moves intended-audience follow-up prompts out of the last suggestion', () => {
+    const parsed = (component as any).parseAssistantSuggestions(`Here are a few options for a short-form Nostr note post about Vikings, depending on the tone you want:\n\nOption 1: Informative/Historical\n\n> Vikings: Fierce seafarers and traders who roamed from Scandinavia across Europe from the late 8th to 11th centuries. #History #VikingAge\n\nOption 2: Evocative/Mysterious\n\n> Echoes of the North: The legendary Vikings. Warriors, explorers, and architects of the early medieval world. #Norse #HistoryFacts\n\nOption 3: Short & Punchy\n\n> Vikings: Masters of the sea. Powerful, mysterious, and shaping the history of the North Atlantic.\n> #HistoryBuff #Vikings\n\nWhich one works best for your intended audience?`);
+
+    expect(parsed).not.toBeNull();
+    expect(parsed.suggestions[2].content).not.toContain('Which one works best');
+    expect(parsed.outro).toBe('Which one works best for your intended audience?');
+  });
+
   it('moves trailing follow-up questions out of the last suggestion', () => {
     const parsed = (component as any).parseAssistantSuggestions(`Here are a few options for a short-form Nostr note.\n\nOption 1: Informative/Historical\n\n> Viking lore: Raiders, explorers, and masterful seafarers. #Vikings\n\nOption 2: Intriguing/Mysterious\n\n> Echoes of the longships. What secrets do the Vikings still hold? #VikingAge\n\nOption 3: Simple/Engaging\n\n> Thinking about Viking sagas today. Incredible stories of exploration and bravery. #NorseMyth\n\nWhich style do you prefer, or would you like me to adjust the focus?`);
 

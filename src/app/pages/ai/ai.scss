@@ -1036,11 +1036,9 @@
   gap: 10px;
   align-items: start;
   padding: 10px 0;
-  border-top: 1px solid var(--mat-sys-outline-variant);
 }
 
 .assistant-suggestion-item:first-child {
-  border-top: none;
   padding-top: 4px;
 }
 

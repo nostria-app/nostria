@@ -46,6 +46,7 @@ export class AiInfoDialogComponent {
   private readonly settingsService = inject(SettingsService);
   private readonly platformId = inject(PLATFORM_ID);
   private readonly isBrowser = isPlatformBrowser(this.platformId);
+  private readonly initialAiEnabled = this.settingsService.settings().aiEnabled;
 
   data?: AiInfoDialogData;
 
@@ -54,7 +55,7 @@ export class AiInfoDialogComponent {
   readonly guidance = signal<AiDeviceGuidance>(buildAiDeviceGuidance(this.deviceSnapshot()));
 
   constructor() {
-    this.disableAi = !this.settingsService.settings().aiEnabled;
+    this.disableAi = !this.initialAiEnabled;
 
     if (this.isBrowser) {
       void this.loadStorageEstimate();
@@ -78,20 +79,12 @@ export class AiInfoDialogComponent {
   }
 
   close(): void {
-    if (this.disableAi) {
-      this.settingsService.updateSettings({ aiEnabled: false });
-      this.dialogRef.close(false);
-    } else {
-      this.settingsService.updateSettings({ aiEnabled: true });
-      this.dialogRef.close(true);
-    }
+    this.persistAiEnabledIfChanged();
+    this.dialogRef.close(!this.disableAi);
   }
 
   openSettings(): void {
-    if (this.disableAi) {
-      this.settingsService.updateSettings({ aiEnabled: false });
-    }
-
+    this.persistAiEnabledIfChanged();
     this.dialogRef.close('settings');
   }
 
@@ -182,6 +175,15 @@ export class AiInfoDialogComponent {
       this.guidance.set(buildAiDeviceGuidance(next));
       return next;
     });
+  }
+
+  private persistAiEnabledIfChanged(): void {
+    const nextAiEnabled = !this.disableAi;
+    if (nextAiEnabled === this.initialAiEnabled) {
+      return;
+    }
+
+    void this.settingsService.updateSettings({ aiEnabled: nextAiEnabled });
   }
 
   private getNavigatorLike(): NavigatorLike | undefined {

@@ -1660,7 +1660,7 @@ export class AiComponent {
       .replace(/\n{3,}/g, '\n\n')
       .trim();
 
-    return normalized;
+    return this.extractSuggestionOutro(normalized).content;
   }
 
   private suggestionArticleSource(suggestion: AssistantSuggestion): string {
@@ -1725,7 +1725,7 @@ export class AiComponent {
   }
 
   private isSuggestionOutroParagraph(value: string): boolean {
-    const normalized = value.trim();
+    const normalized = this.normalizeSuggestionOutroText(value);
     if (!normalized) {
       return false;
     }
@@ -1739,6 +1739,17 @@ export class AiComponent {
     }
 
     return /^(which|what|would|do you|should|want|need|prefer|let me know|tell me|i can refine|i can adjust|i can tune)/i.test(normalized);
+  }
+
+  private normalizeSuggestionOutroText(value: string): string {
+    return value
+      .trim()
+      .replace(/^>\s*/, '')
+      .replace(/^\*\*(.+)\*\*$/s, '$1')
+      .replace(/^__(.+)__$/s, '$1')
+      .replace(/^\*(.+)\*$/s, '$1')
+      .replace(/^_(.+)_$/s, '$1')
+      .trim();
   }
 
   private detectVisualIntent(promptText: string, attachments: ComposerAttachment[]): VisualIntent | null {

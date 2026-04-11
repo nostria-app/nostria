@@ -129,6 +129,8 @@ export interface LocalSettings {
   chatWidgetEnabled: boolean;
   /** Whether optional analytics collection is enabled app-wide on this device. */
   analyticsEnabled: boolean;
+  /** Enable the experimental rich note editor experience. */
+  noteEditorNewExperience: boolean;
 }
 
 const DEFAULT_LOCAL_SETTINGS: LocalSettings = {
@@ -158,6 +160,7 @@ const DEFAULT_LOCAL_SETTINGS: LocalSettings = {
   lockScreenRotation: false,
   chatWidgetEnabled: true,
   analyticsEnabled: false,
+  noteEditorNewExperience: false,
 };
 
 /**
@@ -210,6 +213,7 @@ export class LocalSettingsService {
   readonly articleEditorShowToolbar = computed(() => this.settings().articleEditorShowToolbar ?? true);
   readonly lockScreenRotation = computed(() => this.settings().lockScreenRotation ?? false);
   readonly analyticsEnabled = computed(() => this.settings().analyticsEnabled ?? false);
+  readonly noteEditorNewExperience = computed(() => this.settings().noteEditorNewExperience ?? false);
 
   /** Default menu item IDs in order (used when no custom config is set) */
   private readonly defaultMenuIds = [...DEFAULT_MENU_ITEM_IDS];
@@ -666,6 +670,13 @@ export class LocalSettingsService {
    */
   setAnalyticsEnabled(analyticsEnabled: boolean): void {
     this.updateSettings({ analyticsEnabled });
+  }
+
+  /**
+   * Set experimental note editor experience preference.
+   */
+  setNoteEditorNewExperience(noteEditorNewExperience: boolean): void {
+    this.updateSettings({ noteEditorNewExperience });
   }
 
   /**

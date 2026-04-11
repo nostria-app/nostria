@@ -138,14 +138,55 @@
               }
             </div>
             }
-            <textarea [value]="content()" (input)="onContentInput($event)" (focus)="onContentFocus()"
+            @if (useNewEditorExperience()) {
+            <div contenteditable="true" spellcheck="true" (beforeinput)="onContentBeforeInput($event)"
+              (input)="onContentInput($event)" (focus)="onContentFocus()" (blur)="onContentBlur()"
+              (keydown)="onContentKeyDown($event)" (keyup)="onContentKeyUp($event)" (click)="onContentClick($event)"
+              (mouseup)="onContentSelectionChange($event)" title="{{ inlineMode() ? 'Reply content' : 'Note content' }}"
+              aria-label="{{ inlineMode() ? 'Reply content' : 'Note content' }}" aria-multiline="true" role="textbox"
+              class="content-textarea content-editor-surface" #contentTextarea></div>
+
+            @if (showInlineEmbeds()) {
+            <div class="content-inline-embeds" aria-live="polite">
+              @if (composerMentionPreviews().length > 0) {
+              <div class="composer-mention-previews">
+                @for (mention of composerMentionPreviews(); track mention.mention) {
+                <div class="composer-mention-pill">
+                  <app-user-profile [pubkey]="mention.pubkey" view="icon" [disableLink]="true"
+                    [disableHoverCard]="true"></app-user-profile>
+                  <span class="composer-mention-name">{{ mention.displayName }}</span>
+                </div>
+                }
+              </div>
+              }
+
+              @if (composerReferencePreviews().length > 0) {
+              <div class="composer-reference-previews">
+                @for (reference of composerReferencePreviews(); track reference.id) {
+                <div class="composer-reference-card">
+                  <mat-icon class="composer-reference-icon">
+                    {{ reference.type === 'event' ? 'bolt' : reference.type === 'profile' ? 'person' : reference.type === 'address' ? 'bookmark' : 'link' }}
+                  </mat-icon>
+                  <div class="composer-reference-copy">
+                    <span class="composer-reference-label">{{ reference.label }}</span>
+                    @if (reference.secondaryLabel) {
+                    <span class="composer-reference-secondary">{{ reference.secondaryLabel }}</span>
+                    }
+                  </div>
+                </div>
+                }
+              </div>
+              }
+            </div>
+            }
+            } @else {
+            <textarea spellcheck="true" [value]="content()" (input)="onContentInput($event)" (focus)="onContentFocus()"
               (blur)="onContentBlur()" (keydown)="onContentKeyDown($event)" (keyup)="onContentKeyUp($event)"
-              (click)="onContentClick($event)" (select)="onContentSelectionChange($event)"
-              [attr.placeholder]="isContentFocused() ? (inlineMode() ? 'Write your reply... Use @ to mention, / for commands' : 'Write your note... Use @ to mention, / for commands') : null"
-              title="{{ inlineMode() ? 'Reply content' : 'Note content' }}"
-              aria-label="{{ inlineMode() ? 'Reply content' : 'Note content' }}" class="content-textarea"
-              #contentTextarea>
-          </textarea>
+              (click)="onContentClick($event)" (mouseup)="onContentSelectionChange($event)"
+              (select)="onContentSelectionChange($event)" title="{{ inlineMode() ? 'Reply content' : 'Note content' }}"
+              aria-label="{{ inlineMode() ? 'Reply content' : 'Note content' }}" aria-multiline="true"
+              class="content-textarea legacy-content-textarea" #contentTextarea></textarea>
+            }
           </div>
 
           <!-- Mention Autocomplete positioned relative to textarea -->
@@ -161,6 +202,7 @@
             (commandSelected)="onSlashCommandSelected($event)"
             (dismissed)="onSlashCommandDismissed()"></app-slash-command-menu>
           }
+
         </div>
 
         <!-- Hidden file input -->
@@ -209,6 +251,16 @@
 
         <!-- Client Metadata Options -->
         <div class="option-row option-grouped-row">
+          <div class="option-group-section">
+            <div class="option-header">
+              <mat-slide-toggle [checked]="useNewEditorExperience()"
+                (change)="onNoteEditorExperienceToggle($event.checked)">
+                <span>New Editor Experience</span>
+              </mat-slide-toggle>
+              <span class="option-description">Enable the rich editor with inline attachments and enhanced embeds.</span>
+            </div>
+          </div>
+
           <div class="option-group-section">
             <div class="option-header">
               <mat-slide-toggle [checked]="addClientTag()" (change)="addClientTag.set($event.checked)" color="primary">

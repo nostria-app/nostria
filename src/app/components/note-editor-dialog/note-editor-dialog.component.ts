@@ -91,7 +91,32 @@ import { MaterialCustomDialogComponent } from '../material-custom-dialog/materia
 // Re-export for backward compatibility
 export type { NoteEditorDialogData } from '../../interfaces/note-editor';
 
-type NoteEditorDialogResult = { published: boolean; event?: NostrEvent };
+interface NoteEditorDialogResult {
+  published: boolean;
+  event?: NostrEvent;
+}
+
+interface EditableContentElement extends HTMLDivElement {
+  value: string;
+  selectionStart: number;
+  selectionEnd: number;
+  setSelectionRange(start: number, end: number): void;
+  __nostriaEditorBridge?: boolean;
+}
+
+interface EditorSelectionRange {
+  start: number;
+  end: number;
+}
+
+interface EditorMediaSegment {
+  type: 'text' | 'media' | 'event';
+  value: string;
+  media?: MediaMetadata;
+  referencePreview?: ComposerReferencePreview;
+}
+
+const INLINE_MEDIA_DRAG_TYPE = 'application/x-nostria-inline-media';
 
 interface MediaMetadata {
   id?: string;
@@ -165,6 +190,29 @@ interface SentimentHeaderState {
   icon: string;
   text: string;
   score?: number;
+}
+
+interface ComposerMentionPreview {
+  mention: string;
+  pubkey: string;
+  displayName: string;
+}
+
+interface ComposerMediaPreview {
+  id: string;
+  url: string;
+  thumbnailUrl: string;
+  mimeType?: string;
+  pending: boolean;
+  label: string;
+}
+
+interface ComposerReferencePreview {
+  id: string;
+  type: 'event' | 'profile' | 'address' | 'link';
+  value: string;
+  label: string;
+  secondaryLabel?: string;
 }
 
 @Component({
@@ -303,7 +351,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   }
 
   @ViewChild('contentTextarea')
-  contentTextarea!: ElementRef<HTMLTextAreaElement>;
+  contentTextarea!: ElementRef<EditableContentElement>;
   @ViewChild('contentField') contentField?: ElementRef<HTMLElement>;
   @ViewChild('noteEditorLayout') noteEditorLayout?: ElementRef<HTMLElement>;
   @ViewChild('dialogContentWrapper') dialogContentWrapper?: ElementRef<HTMLElement>;
@@ -323,6 +371,8 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   private viewportResizeTimeout: ReturnType<typeof setTimeout> | null = null;
   private pendingMenuOpenTimeout: ReturnType<typeof setTimeout> | null = null;
   private viewportHeightBaseline = 0;
+  private editorBridgeReady = signal(false);
+  private draggedInlineMediaToken: string | null = null;
 
   // Signals for reactive state
   content = signal('');
@@ -334,6 +384,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
 
   showPreview = signal(false);
   showAdvancedOptions = signal(false);
+  useNewEditorExperience = computed(() => this.localSettings.noteEditorNewExperience());
   isContentFocused = signal(false);
   isKeyboardCompactMode = signal(false);
   private lastCursorPosition: number | null = null;
@@ -629,6 +680,88 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   previewContent = computed((): string => {
     if (!this.showPreview()) return '';
 
+    return this.buildPreviewContent(true);
+  });
+
+  composerMentionPreviews = computed<ComposerMentionPreview[]>(() => {
+    const currentContent = this.content();
+    const previews: ComposerMentionPreview[] = [];
+
+    for (const [mention, uri] of this.mentionMap.entries()) {
+      if (!currentContent.includes(mention)) {
+        continue;
+      }
+
+      const pubkey = this.extractPubkeyFromMentionUri(uri);
+      if (!pubkey) {
+        continue;
+      }
+
+      previews.push({
+        mention,
+        pubkey,
+        displayName: this.getMentionDisplayName(pubkey),
+      });
+    }
+
+    return previews;
+  });
+
+  composerMediaPreviews = computed<ComposerMediaPreview[]>(() => this.mediaMetadata().map((media, index) => ({
+    id: media.id || media.placeholderToken || media.url || `media-${index}`,
+    url: media.url,
+    thumbnailUrl: this.getMediaThumbnailUrl(media),
+    mimeType: media.mimeType,
+    pending: !!media.pendingUpload,
+    label: media.fileName
+      || (media.mimeType?.startsWith('video/') ? 'Video attachment' : 'Image attachment'),
+  })));
+
+  composerReferencePreviews = computed<ComposerReferencePreview[]>(() => {
+    const preview = this.buildPreviewContent(false);
+    if (!preview.trim()) {
+      return [];
+    }
+
+    const matches = preview.match(/(?:nostr:)?(?:npub|nprofile|note|nevent|naddr)1[a-zA-Z0-9]+|https?:\/\/[^\s]+/g) || [];
+    const seen = new Set<string>();
+    const references: ComposerReferencePreview[] = [];
+
+    for (const match of matches) {
+      if (seen.has(match) || this.isComposerMentionReference(match) || this.isComposerMediaReference(match)) {
+        continue;
+      }
+
+      const previewItem = this.buildComposerReferencePreview(match);
+      if (!previewItem) {
+        continue;
+      }
+
+      if (this.useNewEditorExperience() && previewItem.type === 'event') {
+        continue;
+      }
+
+      seen.add(match);
+      references.push(previewItem);
+    }
+
+    return references;
+  });
+
+  showInlineEmbeds = computed(() => {
+    if (this.showPreview() || this.showAdvancedOptions()) {
+      return false;
+    }
+
+    if (this.composerMediaPreviews().length > 0) {
+      return this.composerMentionPreviews().length > 0;
+    }
+
+    return this.composerMentionPreviews().length > 0
+      || this.composerReferencePreviews().length > 0;
+  });
+
+  private buildPreviewContent(includeEmptyPlaceholder: boolean): string {
     const content = this.resolvePendingMediaReferences(this.content(), true);
 
     if (this.isMediaMode()) {
@@ -649,10 +782,107 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       return this.processContentForPublishing(content) + '\n\n[Media Story will be attached here]';
     }
 
-    if (!content.trim()) return 'Nothing to preview...';
+    if (!content.trim()) return includeEmptyPlaceholder ? 'Nothing to preview...' : '';
 
     return this.processContentForPublishing(content);
-  });
+  }
+
+  private extractPubkeyFromMentionUri(uri: string): string | null {
+    const normalized = uri.startsWith('nostr:') ? uri.slice(6) : uri;
+
+    try {
+      const decoded = nip19.decode(normalized);
+      if (decoded.type === 'npub') {
+        return decoded.data as string;
+      }
+
+      if (decoded.type === 'nprofile') {
+        return (decoded.data as { pubkey: string }).pubkey;
+      }
+    } catch {
+      // Ignore invalid mention URIs in preview extraction
+    }
+
+    return null;
+  }
+
+  private isComposerMentionReference(reference: string): boolean {
+    return Array.from(this.mentionMap.values()).some(uri => uri === reference || `nostr:${uri.replace(/^nostr:/, '')}` === reference);
+  }
+
+  private isComposerMediaReference(reference: string): boolean {
+    return this.mediaMetadata().some(media => {
+      const previewUrl = this.getPendingMediaPreviewReference(media);
+      return media.url === reference
+        || media.previewUrl === reference
+        || previewUrl === reference
+        || this.getMediaThumbnailUrl(media) === reference;
+    });
+  }
+
+  private buildComposerReferencePreview(reference: string): ComposerReferencePreview | null {
+    if (reference.startsWith('http://') || reference.startsWith('https://')) {
+      try {
+        const url = new URL(reference);
+        return {
+          id: reference,
+          type: 'link',
+          value: reference,
+          label: url.hostname,
+          secondaryLabel: url.pathname === '/' ? undefined : url.pathname,
+        };
+      } catch {
+        return {
+          id: reference,
+          type: 'link',
+          value: reference,
+          label: reference,
+        };
+      }
+    }
+
+    const normalized = reference.startsWith('nostr:') ? reference.slice(6) : reference;
+
+    try {
+      const decoded = nip19.decode(normalized);
+      if (decoded.type === 'note' || decoded.type === 'nevent') {
+        const eventId = decoded.type === 'note' ? decoded.data as string : (decoded.data as { id: string }).id;
+        return {
+          id: reference,
+          type: 'event',
+          value: reference,
+          label: 'Embedded event',
+          secondaryLabel: `${eventId.slice(0, 10)}...`,
+        };
+      }
+
+      if (decoded.type === 'npub' || decoded.type === 'nprofile') {
+        const pubkey = decoded.type === 'npub' ? decoded.data as string : (decoded.data as { pubkey: string }).pubkey;
+        return {
+          id: reference,
+          type: 'profile',
+          value: reference,
+          label: this.getMentionDisplayName(pubkey),
+          secondaryLabel: 'Profile mention',
+        };
+      }
+
+      if (decoded.type === 'naddr') {
+        const address = decoded.data as { identifier: string; kind: number };
+        return {
+          id: reference,
+          type: 'address',
+          value: reference,
+          label: address.identifier || 'Address reference',
+          secondaryLabel: `Kind ${address.kind}`,
+        };
+      }
+    } catch {
+      return null;
+    }
+
+    return null;
+  }
 
   // Computed property for the unsigned media event for preview
   previewMediaEvent = computed((): NostrEvent | null => {
@@ -1069,6 +1299,8 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     this.dragCounter = 0;
     this.isDragOver.set(false);
 
+    this.setupContentEditorBridge();
+
     // Add paste event listener for clipboard image handling
     this.setupPasteHandler();
     window.addEventListener('resize', this.handleViewportResize);
@@ -1136,6 +1368,8 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   };
 
   ngOnDestroy() {
+    this.editorBridgeReady.set(false);
+
     if (this.textareaRefreshFrame !== null) {
       cancelAnimationFrame(this.textareaRefreshFrame);
       this.textareaRefreshFrame = null;
@@ -2671,7 +2905,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
 
   // Mention input handling methods
   onContentInput(event: Event): void {
-    const target = event.target as HTMLTextAreaElement;
+    const target = event.target as EditableContentElement;
     const newContent = target.value;
     this.content.set(newContent);
     this.sentimentError.set('');
@@ -2714,6 +2948,19 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     this.isContentFocused.set(false);
     this.updateKeyboardCompactMode();
     this.scheduleTextareaRefresh();
+  }
+
+  onContentBeforeInput(event: InputEvent): void {
+    if (!this.useNewEditorExperience()) {
+      return;
+    }
+
+    if (event.inputType !== 'insertParagraph' && event.inputType !== 'insertLineBreak') {
+      return;
+    }
+
+    event.preventDefault();
+    this.insertTextAtSelection('\n');
   }
 
   private openMenuAfterKeyboardDismiss(trigger: MatMenuTrigger): void {
@@ -2789,6 +3036,530 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     this.isKeyboardCompactMode.set(enabled);
   }
 
+  private setupContentEditorBridge(): void {
+    if (!this.useNewEditorExperience()) {
+      this.editorBridgeReady.set(false);
+      return;
+    }
+
+    const editor = this.contentTextarea?.nativeElement;
+    if (!editor) {
+      return;
+    }
+
+    this.decorateEditorElement(editor);
+    this.writeEditorValue(editor, this.content());
+    this.editorBridgeReady.set(true);
+
+    effect(() => {
+      const content = this.content();
+      const mediaReferences = this.mediaMetadata()
+        .map(media => `${this.getMediaContentReference(media)}|${this.getMediaThumbnailUrl(media)}|${media.pendingUpload ? 'pending' : 'ready'}`)
+        .join('||');
+
+      if (!this.editorBridgeReady()) {
+        return;
+      }
+
+      const editor = this.contentTextarea?.nativeElement;
+      if (!editor) {
+        return;
+      }
+
+      void mediaReferences;
+
+      if (this.readEditorValue(editor) !== content) {
+        this.writeEditorValue(editor, content);
+        return;
+      }
+
+      this.writeEditorValue(editor, content);
+    }, { allowSignalWrites: true });
+  }
+
+  private restoreEditorAfterViewToggle(): void {
+    setTimeout(() => {
+      if (this.useNewEditorExperience()) {
+        this.setupContentEditorBridge();
+        this.refreshEditorContent();
+      }
+      this.scheduleTextareaRefresh();
+    }, 0);
+  }
+
+  private decorateEditorElement(editor: EditableContentElement): void {
+    if (editor.__nostriaEditorBridge) {
+      return;
+    }
+
+    if (editor instanceof HTMLTextAreaElement) {
+      editor.__nostriaEditorBridge = true;
+      return;
+    }
+
+    Object.defineProperties(editor, {
+      value: {
+        configurable: true,
+        get: () => this.readEditorValue(editor),
+        set: (value: string) => this.writeEditorValue(editor, value ?? ''),
+      },
+      selectionStart: {
+        configurable: true,
+        get: () => this.getEditorSelection(editor)?.start ?? 0,
+      },
+      selectionEnd: {
+        configurable: true,
+        get: () => this.getEditorSelection(editor)?.end ?? 0,
+      },
+      setSelectionRange: {
+        configurable: true,
+        value: (start: number, end: number) => this.setEditorSelection(editor, start, end),
+      },
+    });
+
+    editor.__nostriaEditorBridge = true;
+  }
+
+  private readEditorValue(editor: HTMLElement): string {
+    if (editor instanceof HTMLTextAreaElement) {
+      return editor.value
+        .replace(/\r\n/g, '\n')
+        .replace(/\r/g, '\n');
+    }
+
+    const readNode = (node: Node): string => {
+      if (node.nodeType === Node.TEXT_NODE) {
+        return (node.textContent ?? '');
+      }
+
+      if (node instanceof HTMLElement) {
+        if (node.dataset['mediaToken']) {
+          return node.dataset['mediaToken'];
+        }
+
+        if (node.dataset['referenceToken']) {
+          return node.dataset['referenceToken'];
+        }
+      }
+
+      let text = '';
+      node.childNodes.forEach(child => {
+        text += readNode(child);
+      });
+      return text;
+    };
+
+    return readNode(editor)
+      .replace(/\u00a0/g, ' ')
+      .replace(/\r\n/g, '\n')
+      .replace(/\r/g, '\n');
+  }
+
+  private writeEditorValue(editor: HTMLElement, value: string): void {
+    if (editor instanceof HTMLTextAreaElement) {
+      if (editor.value !== value) {
+        editor.value = value;
+      }
+      return;
+    }
+
+    if (this.readEditorValue(editor) === value) {
+      return;
+    }
+
+    const fragment = document.createDocumentFragment();
+    const segments = this.buildEditorMediaSegments(value);
+
+    for (const segment of segments) {
+      if (segment.type === 'text') {
+        fragment.appendChild(document.createTextNode(segment.value));
+        continue;
+      }
+
+      if (segment.type === 'event') {
+        const preview = segment.referencePreview;
+        if (!preview) {
+          fragment.appendChild(document.createTextNode(segment.value));
+          continue;
+        }
+
+        const chip = document.createElement('span');
+        chip.className = 'composer-inline-reference-chip composer-inline-reference-chip-event';
+        chip.contentEditable = 'false';
+        chip.dataset['referenceToken'] = segment.value;
+
+        const icon = document.createElement('span');
+        icon.className = 'composer-inline-reference-chip-icon material-symbols-outlined';
+        icon.textContent = 'bolt';
+        chip.appendChild(icon);
+
+        const label = document.createElement('span');
+        label.className = 'composer-inline-reference-chip-label';
+        label.textContent = preview.label;
+        chip.appendChild(label);
+
+        if (preview.secondaryLabel) {
+          const secondary = document.createElement('span');
+          secondary.className = 'composer-inline-reference-chip-secondary';
+          secondary.textContent = preview.secondaryLabel;
+          chip.appendChild(secondary);
+        }
+
+        fragment.appendChild(chip);
+        continue;
+      }
+
+      const media = segment.media;
+      if (!media) {
+        fragment.appendChild(document.createTextNode(segment.value));
+        continue;
+      }
+
+      const chip = document.createElement('span');
+      chip.className = 'composer-inline-media-chip';
+      chip.contentEditable = 'false';
+      chip.dataset['mediaToken'] = segment.value;
+      chip.draggable = true;
+      chip.addEventListener('dragstart', this.onInlineMediaDragStart);
+      chip.addEventListener('dragend', this.onInlineMediaDragEnd);
+
+      const image = document.createElement('img');
+      image.className = 'composer-inline-media-chip-thumb';
+      image.src = this.getMediaThumbnailUrl(media);
+      image.alt = media.fileName || 'Attachment';
+      image.title = media.fileName || 'Attachment';
+      chip.appendChild(image);
+
+      const label = document.createElement('span');
+      label.className = 'composer-inline-media-chip-label';
+      label.textContent = media.pendingUpload ? 'Image' : 'Attachment';
+      chip.appendChild(label);
+
+      fragment.appendChild(chip);
+    }
+
+    editor.replaceChildren(fragment);
+  }
+
+  private refreshEditorContent(): void {
+    if (!this.useNewEditorExperience() || !this.editorBridgeReady()) {
+      return;
+    }
+
+    const editor = this.contentTextarea?.nativeElement;
+    if (!editor) {
+      return;
+    }
+
+    this.writeEditorValue(editor, this.content());
+  }
+
+  private readonly onInlineMediaDragStart = (event: DragEvent): void => {
+    const chip = event.currentTarget as HTMLElement | null;
+    const token = chip?.dataset['mediaToken'];
+    if (!token || !event.dataTransfer) {
+      return;
+    }
+
+    this.draggedInlineMediaToken = token;
+    event.dataTransfer.setData(INLINE_MEDIA_DRAG_TYPE, token);
+    event.dataTransfer.effectAllowed = 'move';
+  };
+
+  private readonly onInlineMediaDragEnd = (): void => {
+    this.draggedInlineMediaToken = null;
+  };
+
+  private isInternalInlineMediaDrag(event: DragEvent): boolean {
+    const types = event.dataTransfer?.types;
+    return !!types && Array.from(types).includes(INLINE_MEDIA_DRAG_TYPE);
+  }
+
+  private getInsertionAnchorFromDropPoint(event: DragEvent): number | null {
+    const editor = this.contentTextarea?.nativeElement;
+    if (!editor) {
+      return null;
+    }
+
+    const pointCaret = (document as Document & {
+      caretPositionFromPoint?: (x: number, y: number) => { offsetNode: Node; offset: number } | null;
+      caretRangeFromPoint?: (x: number, y: number) => Range | null;
+    });
+
+    if (pointCaret.caretPositionFromPoint) {
+      const position = pointCaret.caretPositionFromPoint(event.clientX, event.clientY);
+      if (position && editor.contains(position.offsetNode)) {
+        return this.getEditorOffset(editor, position.offsetNode, position.offset);
+      }
+    }
+
+    if (pointCaret.caretRangeFromPoint) {
+      const range = pointCaret.caretRangeFromPoint(event.clientX, event.clientY);
+      if (range && editor.contains(range.startContainer)) {
+        return this.getEditorOffset(editor, range.startContainer, range.startOffset);
+      }
+    }
+
+    return this.getCurrentInsertionAnchor();
+  }
+
+  private moveInlineMediaToken(token: string, targetAnchor: number): void {
+    const currentContent = this.content();
+    const currentIndex = currentContent.indexOf(token);
+    if (currentIndex < 0) {
+      return;
+    }
+
+    const before = currentContent.substring(0, currentIndex);
+    const after = currentContent.substring(currentIndex + token.length);
+    let contentWithoutToken = before + after;
+    let adjustedAnchor = targetAnchor;
+
+    if (adjustedAnchor > currentIndex) {
+      adjustedAnchor -= token.length;
+    }
+
+    if (before.endsWith(' ') && after.startsWith(' ')) {
+      contentWithoutToken = before + after.substring(1);
+      if (adjustedAnchor > currentIndex) {
+        adjustedAnchor -= 1;
+      }
+    }
+
+    const clampedAnchor = Math.max(0, Math.min(adjustedAnchor, contentWithoutToken.length));
+    const insertBefore = contentWithoutToken.substring(0, clampedAnchor);
+    const insertAfter = contentWithoutToken.substring(clampedAnchor);
+    const needsSpaceBefore = insertBefore.length > 0 && !insertBefore.endsWith(' ') && !insertBefore.endsWith('\n');
+    const needsSpaceAfter = insertAfter.length > 0 && !insertAfter.startsWith(' ') && !insertAfter.startsWith('\n');
+    const prefix = needsSpaceBefore ? ' ' : '';
+    const suffix = needsSpaceAfter ? ' ' : '';
+    const nextContent = insertBefore + prefix + token + suffix + insertAfter;
+    const nextCursorPosition = clampedAnchor + prefix.length + token.length + suffix.length;
+
+    this.content.set(nextContent);
+    this.lastCursorPosition = nextCursorPosition;
+    this.refreshEditorContent();
+    this.setCursorAfterRender(nextCursorPosition);
+  }
+
+  private getEditorSelection(editor: HTMLElement): EditorSelectionRange | null {
+    if (typeof window === 'undefined') {
+      return null;
+    }
+
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) {
+      return null;
+    }
+
+    const range = selection.getRangeAt(0);
+    if (!editor.contains(range.startContainer) || !editor.contains(range.endContainer)) {
+      return null;
+    }
+
+    return {
+      start: this.getEditorOffset(editor, range.startContainer, range.startOffset),
+      end: this.getEditorOffset(editor, range.endContainer, range.endOffset),
+    };
+  }
+
+  private getEditorOffset(root: HTMLElement, node: Node, offset: number): number {
+    let total = 0;
+
+    const visit = (current: Node): boolean => {
+      if (current === node) {
+        if (current.nodeType === Node.TEXT_NODE) {
+          total += offset;
+        } else {
+          const children = Array.from(current.childNodes);
+          for (let index = 0; index < offset; index++) {
+            total += this.getEditorNodeTextLength(children[index]);
+          }
+        }
+        return true;
+      }
+
+      if (current instanceof HTMLElement && (current.dataset['mediaToken'] || current.dataset['referenceToken'])) {
+        total += (current.dataset['mediaToken'] || current.dataset['referenceToken'] || '').length;
+        return false;
+      }
+
+      if (current.nodeType === Node.TEXT_NODE) {
+        total += current.textContent?.length ?? 0;
+        return false;
+      }
+
+      for (const child of Array.from(current.childNodes)) {
+        if (visit(child)) {
+          return true;
+        }
+      }
+
+      return false;
+    };
+
+    visit(root);
+    return total;
+  }
+
+  private setEditorSelection(editor: HTMLElement, start: number, end: number): void {
+    if (typeof document === 'undefined' || typeof window === 'undefined') {
+      return;
+    }
+
+    const selection = window.getSelection();
+    if (!selection) {
+      return;
+    }
+
+    const range = document.createRange();
+    const startPoint = this.resolveEditorPoint(editor, start);
+    const endPoint = this.resolveEditorPoint(editor, end);
+
+    range.setStart(startPoint.node, startPoint.offset);
+    range.setEnd(endPoint.node, endPoint.offset);
+    selection.removeAllRanges();
+    selection.addRange(range);
+  }
+
+  private resolveEditorPoint(root: HTMLElement, targetOffset: number): { node: Node; offset: number } {
+    let remaining = Math.max(0, targetOffset);
+
+    const visit = (current: Node): { node: Node; offset: number } | null => {
+      if (current instanceof HTMLElement && (current.dataset['mediaToken'] || current.dataset['referenceToken'])) {
+        const tokenLength = (current.dataset['mediaToken'] || current.dataset['referenceToken'] || '').length;
+        if (remaining <= tokenLength) {
+          const parent = current.parentNode ?? root;
+          const index = Array.from(parent.childNodes).indexOf(current);
+          return { node: parent, offset: index + (remaining < tokenLength ? 0 : 1) };
+        }
+
+        remaining -= tokenLength;
+        return null;
+      }
+
+      if (current.nodeType === Node.TEXT_NODE) {
+        const length = current.textContent?.length ?? 0;
+        if (remaining <= length) {
+          return { node: current, offset: remaining };
+        }
+
+        remaining -= length;
+        return null;
+      }
+
+      for (const child of Array.from(current.childNodes)) {
+        const result = visit(child);
+        if (result) {
+          return result;
+        }
+      }
+
+      return null;
+    };
+
+    const resolved = visit(root);
+    if (resolved) {
+      return resolved;
+    }
+
+    if (root.lastChild && root.lastChild.nodeType === Node.TEXT_NODE) {
+      const lastText = root.lastChild;
+      return { node: lastText, offset: lastText.textContent?.length ?? 0 };
+    }
+
+    return { node: root, offset: root.childNodes.length };
+  }
+
+  private getEditorNodeTextLength(node: Node | undefined): number {
+    if (!node) {
+      return 0;
+    }
+
+    if (node instanceof HTMLElement && (node.dataset['mediaToken'] || node.dataset['referenceToken'])) {
+      return (node.dataset['mediaToken'] || node.dataset['referenceToken'] || '').length;
+    }
+
+    if (node.nodeType === Node.TEXT_NODE) {
+      return node.textContent?.length ?? 0;
+    }
+
+    return Array.from(node.childNodes).reduce((sum, child) => sum + this.getEditorNodeTextLength(child), 0);
+  }
+
+  private buildEditorMediaSegments(value: string): EditorMediaSegment[] {
+    if (!value) {
+      return [{ type: 'text', value: '' }];
+    }
+
+    const references = this.mediaMetadata()
+      .map(media => ({ media, reference: this.getMediaContentReference(media) }))
+      .filter(entry => !!entry.reference)
+      .sort((a, b) => b.reference.length - a.reference.length);
+
+    const eventReferences = this.getInlineEventReferencePreviews(value);
+
+    if (references.length === 0 && eventReferences.length === 0) {
+      return [{ type: 'text', value }];
+    }
+
+    const segments: EditorMediaSegment[] = [];
+    let cursor = 0;
+
+    while (cursor < value.length) {
+      const match = references.find(entry => value.startsWith(entry.reference, cursor));
+      const eventMatch = eventReferences.find(entry => value.startsWith(entry.reference, cursor));
+
+      if (!match && !eventMatch) {
+        const nextIndex = references
+          .map(entry => value.indexOf(entry.reference, cursor))
+          .concat(eventReferences.map(entry => value.indexOf(entry.reference, cursor)))
+          .filter(index => index >= 0)
+          .sort((a, b) => a - b)[0] ?? value.length;
+
+        segments.push({
+          type: 'text',
+          value: value.slice(cursor, nextIndex),
+        });
+        cursor = nextIndex;
+        continue;
+      }
+
+      if (eventMatch && (!match || eventMatch.reference.length >= match.reference.length)) {
+        segments.push({
+          type: 'event',
+          value: eventMatch.reference,
+          referencePreview: eventMatch.preview,
+        });
+        cursor += eventMatch.reference.length;
+        continue;
+      }
+
+      if (!match) {
+        break;
+      }
+
+      segments.push({
+        type: 'media',
+        value: match.reference,
+        media: match.media,
+      });
+      cursor += match.reference.length;
+    }
+
+    return segments;
+  }
+
+  private getInlineEventReferencePreviews(value: string): { reference: string; preview: ComposerReferencePreview }[] {
+    const matches = value.match(/(?:nostr:)?(?:note|nevent)1[a-zA-Z0-9]+/g) ?? [];
+    return matches
+      .map(reference => ({
+        reference,
+        preview: this.buildComposerReferencePreview(reference),
+      }))
+      .filter((entry): entry is { reference: string; preview: ComposerReferencePreview } => !!entry.preview && entry.preview.type === 'event');
+  }
+
   private scheduleTextareaRefresh(
     cursorPosition?: number,
     focus = false,
@@ -2799,6 +3570,11 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     const textarea = this.contentTextarea?.nativeElement;
     if (!textarea) {
       return;
+    }
+
+    if (!textarea.__nostriaEditorBridge) {
+      this.decorateEditorElement(textarea);
+      this.writeEditorValue(textarea, this.content());
     }
 
     const dialogContentWrapper = this.dialogContentWrapper?.nativeElement;
@@ -2859,7 +3635,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     });
   }
 
-  private ensureCaretVisible(textarea: HTMLTextAreaElement): void {
+  private ensureCaretVisible(textarea: EditableContentElement): void {
     const caret = this.getCaretCoordinates(textarea);
     const visibleTop = textarea.scrollTop;
     const visibleBottom = textarea.scrollTop + textarea.clientHeight;
@@ -2878,7 +3654,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     }
   }
 
-  private scheduleCaretVisibilityCheck(textarea: HTMLTextAreaElement): void {
+  private scheduleCaretVisibilityCheck(textarea: EditableContentElement): void {
     setTimeout(() => {
       if (typeof document === 'undefined' || document.activeElement !== textarea || !this.isCompactDialogLayout()) {
         return;
@@ -2888,7 +3664,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     }, 0);
   }
 
-  private shouldKeepTextareaScrolledToBottom(textarea: HTMLTextAreaElement, cursorPosition?: number): boolean {
+  private shouldKeepTextareaScrolledToBottom(textarea: EditableContentElement, cursorPosition?: number): boolean {
     if (typeof document === 'undefined' || document.activeElement !== textarea) {
       return true;
     }
@@ -2917,6 +3693,25 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     }, 0);
   }
 
+  private insertTextAtSelection(text: string): void {
+    const editor = this.contentTextarea?.nativeElement;
+    if (!editor) {
+      return;
+    }
+
+    const selection = this.getEditorSelection(editor) ?? {
+      start: this.lastCursorPosition ?? this.content().length,
+      end: this.lastCursorPosition ?? this.content().length,
+    };
+    const currentContent = this.content();
+    const nextContent = currentContent.substring(0, selection.start) + text + currentContent.substring(selection.end);
+    const nextCursor = selection.start + text.length;
+
+    this.content.set(nextContent);
+    this.lastCursorPosition = nextCursor;
+    this.scheduleTextareaRefresh(nextCursor, true, true);
+  }
+
   private clearCompactTextareaSize(): void {
     this.noteEditorLayout?.nativeElement.style.removeProperty('--note-editor-mobile-textarea-max-height');
     this.noteEditorLayout?.nativeElement.style.removeProperty('--note-editor-mobile-viewport-cap');
@@ -2936,7 +3731,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     }
   }
 
-  private syncTextareaHeight(textarea: HTMLTextAreaElement): void {
+  private syncTextareaHeight(textarea: EditableContentElement): void {
     if (this.inlineMode()) {
       // Inline mode: auto-grow with max-height cap
       const minHeight = 88;
@@ -3201,6 +3996,12 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
         return;
       }
     }
+
+    if (this.useNewEditorExperience() && event.key === 'Enter' && !this.platformService.hasModifierKey(event)) {
+      event.preventDefault();
+      this.insertTextAtSelection('\n');
+      return;
+    }
   }
 
   onContentKeyUp(event: KeyboardEvent): void {
@@ -3209,12 +4010,12 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       return;
     }
 
-    const target = event.target as HTMLTextAreaElement;
+    const target = event.target as EditableContentElement;
     this.syncSlashAndMentionStateFromSelection(target);
   }
 
   onContentClick(event: MouseEvent): void {
-    const target = event.target as HTMLTextAreaElement;
+    const target = event.target as EditableContentElement;
     this.syncSlashAndMentionStateFromSelection(target);
     if (this.platformService.isIOS() && this.isCompactDialogLayout()) {
       this.scheduleCaretVisibilityCheck(target);
@@ -3222,14 +4023,14 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   }
 
   onContentSelectionChange(event: Event): void {
-    const target = event.target as HTMLTextAreaElement;
+    const target = event.target as EditableContentElement;
     this.syncSlashAndMentionStateFromSelection(target);
     if (this.platformService.isIOS() && this.isCompactDialogLayout()) {
       this.scheduleCaretVisibilityCheck(target);
     }
   }
 
-  private syncSlashAndMentionStateFromSelection(textarea: HTMLTextAreaElement): void {
+  private syncSlashAndMentionStateFromSelection(textarea: EditableContentElement): void {
     this.lastCursorPosition = textarea.selectionStart;
     if (textarea.selectionStart !== textarea.selectionEnd) {
       this.onMentionDismissed();
@@ -3270,7 +4071,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     }
   }
 
-  private calculateMentionPosition(textarea: HTMLTextAreaElement): { top: number; left: number } {
+  private calculateMentionPosition(textarea: EditableContentElement): { top: number; left: number } {
     // Get cursor coordinates relative to the textarea
     const cursorCoords = this.getCaretCoordinates(textarea);
 
@@ -3303,7 +4104,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     };
   }
 
-  private getCaretCoordinates(element: HTMLTextAreaElement): { top: number; left: number; height: number } {
+  private getCaretCoordinates(element: EditableContentElement): { top: number; left: number; height: number } {
     // Create a mirror div to calculate caret position
     const div = document.createElement('div');
     const style = getComputedStyle(element);
@@ -3608,10 +4409,8 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     this.showPreview.update(current => !current);
 
     if (wasInPreview) {
-      // Coming back from preview, re-trigger textarea auto-resize after it renders
-      setTimeout(() => {
-        this.scheduleTextareaRefresh();
-      }, 0);
+      // Coming back from preview recreates the editor DOM, so restore the bridge first.
+      this.restoreEditorAfterViewToggle();
     } else {
       // Entering preview, focus the Back button after it renders
       setTimeout(() => {
@@ -3626,10 +4425,13 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     this.showAdvancedOptions.update(current => !current);
 
     if (wasInAdvancedOptions) {
-      setTimeout(() => {
-        this.scheduleTextareaRefresh();
-      }, 0);
+      this.restoreEditorAfterViewToggle();
     }
+  }
+
+  onNoteEditorExperienceToggle(enabled: boolean): void {
+    this.localSettings.setNoteEditorNewExperience(enabled);
+    this.editorBridgeReady.set(false);
   }
 
   async analyzeSentimentInline(): Promise<void> {
@@ -4155,6 +4957,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       const suffix = this.startsWithMediaReference(after) ? ' ' : '';
 
       this.content.set(before + prefix + url + suffix + after);
+      this.refreshEditorContent();
       this.pendingMediaInsertionAnchors.delete(placeholderToken);
       return;
     }
@@ -4199,6 +5002,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     currentContent = currentContent.replace(new RegExp('\\s*' + escapedReference + '\\s*', 'g'), ' ');
     currentContent = currentContent.replace(/[ \t]+/g, ' ').replace(/\n\s*\n/g, '\n\n').trim();
     this.content.set(currentContent);
+    this.refreshEditorContent();
     this.scheduleTextareaRefresh();
   }
 
@@ -4372,6 +5176,11 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   }
 
   onDragEnter(event: DragEvent): void {
+    if (this.isInternalInlineMediaDrag(event)) {
+      event.preventDefault();
+      return;
+    }
+
     event.preventDefault();
     event.stopPropagation();
     this.dragCounter++;
@@ -4382,11 +5191,21 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
 
   onDragOver(event: DragEvent): void {
     event.preventDefault();
+    if (this.isInternalInlineMediaDrag(event)) {
+      event.dataTransfer!.dropEffect = 'move';
+      return;
+    }
+
     event.stopPropagation();
     // Don't change state here, just prevent default
   }
 
   onDragLeave(event: DragEvent): void {
+    if (this.isInternalInlineMediaDrag(event)) {
+      event.preventDefault();
+      return;
+    }
+
     event.preventDefault();
     event.stopPropagation();
     this.dragCounter--;
@@ -4398,6 +5217,18 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
 
   onDrop(event: DragEvent): void {
     event.preventDefault();
+    if (this.isInternalInlineMediaDrag(event)) {
+      const token = event.dataTransfer?.getData(INLINE_MEDIA_DRAG_TYPE) || this.draggedInlineMediaToken;
+      if (token) {
+        const targetAnchor = this.getInsertionAnchorFromDropPoint(event);
+        if (targetAnchor !== null) {
+          this.moveInlineMediaToken(token, targetAnchor);
+        }
+      }
+      this.draggedInlineMediaToken = null;
+      return;
+    }
+
     event.stopPropagation();
     this.dragCounter = 0;
     this.isDragOver.set(false);
@@ -4872,6 +5703,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
 
     const newContent = beforeCursor + prefix + url + suffix + afterCursor;
     this.content.set(newContent);
+    this.refreshEditorContent();
 
     const insertionStart = cursorPosition + prefix.length;
     const newCursorPosition = cursorPosition + prefix.length + url.length + suffix.length;

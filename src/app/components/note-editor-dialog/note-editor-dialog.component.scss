@@ -1278,7 +1278,6 @@
         width: 100%;
         border: 0;
         background: transparent;
-        resize: none;
         overflow-y: hidden;
         min-height: 120px;
         box-sizing: border-box;
@@ -1291,12 +1290,6 @@
         font: inherit;
         font-size: 16px;
         caret-color: var(--mat-sys-primary);
-        // Use -webkit-overflow-scrolling for smooth scrolling on iOS
-        -webkit-overflow-scrolling: touch;
-
-        &::placeholder {
-          color: var(--mat-sys-on-surface-variant);
-        }
 
         &:focus {
           outline: none;
@@ -1316,6 +1309,192 @@
 
         @media (max-width: 400px) {
           min-height: 80px;
+        }
+      }
+
+      .legacy-content-textarea {
+        field-sizing: content;
+        resize: none;
+      }
+
+      .content-editor-surface {
+        cursor: text;
+
+        ::ng-deep .composer-inline-media-chip {
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+          height: 1.7em;
+          margin: 0 0.15em;
+          padding: 0 0.45em 0 0.1em;
+          border: 1px solid var(--mat-sys-outline-variant);
+          border-radius: var(--mat-sys-corner-full);
+          background: var(--mat-sys-surface-container-high);
+          color: var(--mat-sys-on-surface);
+          vertical-align: text-bottom;
+          box-sizing: border-box;
+          cursor: grab;
+          -webkit-user-select: none;
+          user-select: none;
+        }
+
+        ::ng-deep .composer-inline-media-chip:active {
+          cursor: grabbing;
+        }
+
+        ::ng-deep .composer-inline-media-chip-thumb {
+          width: 1.45em;
+          height: 1.45em;
+          border-radius: calc(var(--mat-sys-corner-full) - 2px);
+          object-fit: cover;
+          flex: 0 0 auto;
+        }
+
+        ::ng-deep .composer-inline-media-chip-label {
+          font-size: 0.85em;
+          line-height: 1;
+          white-space: nowrap;
+        }
+
+        ::ng-deep .composer-inline-reference-chip {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.38em;
+          min-height: 1.7em;
+          margin: 0 0.15em;
+          padding: 0 0.5em;
+          border: 1px solid var(--mat-sys-outline-variant);
+          border-radius: var(--mat-sys-corner-full);
+          background: var(--mat-sys-surface-container-high);
+          color: var(--mat-sys-on-surface);
+          vertical-align: text-bottom;
+          box-sizing: border-box;
+          white-space: nowrap;
+        }
+
+        ::ng-deep .composer-inline-reference-chip-event {
+          background: color-mix(in srgb, var(--mat-sys-primary) 12%, var(--mat-sys-surface-container-high));
+        }
+
+        ::ng-deep .composer-inline-reference-chip-icon {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          width: 1em;
+          height: 1em;
+          font-size: 0.95em;
+          color: var(--mat-sys-primary);
+          flex: 0 0 auto;
+        }
+
+        ::ng-deep .composer-inline-reference-chip-label,
+        ::ng-deep .composer-inline-reference-chip-secondary {
+          font-size: 0.82em;
+          line-height: 1;
+          white-space: nowrap;
+        }
+
+        ::ng-deep .composer-inline-reference-chip-secondary {
+          color: var(--mat-sys-on-surface-variant);
+          max-width: 10em;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+      }
+
+      .content-inline-embeds {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        padding: 0 12px 12px;
+        border-top: 1px solid var(--mat-sys-outline-variant);
+        background: var(--mat-sys-surface-container-low);
+
+        @media (max-width: 700px),
+        (max-height: 700px) {
+          gap: 8px;
+          padding: 0 10px 10px;
+        }
+
+        .composer-mention-previews,
+        .composer-reference-previews {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+          padding-top: 10px;
+
+          @media (max-width: 700px),
+          (max-height: 700px) {
+            padding-top: 8px;
+          }
+        }
+
+        .composer-mention-pill {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          min-height: 40px;
+          padding: 6px 10px 6px 6px;
+          border-radius: var(--mat-sys-corner-large);
+          background: var(--mat-sys-surface-container);
+          border: 1px solid var(--mat-sys-outline-variant);
+          color: var(--mat-sys-on-surface);
+        }
+
+        .composer-mention-name {
+          max-width: 180px;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .composer-reference-card {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          min-width: 0;
+          max-width: min(100%, 240px);
+          padding-top: 10px;
+          padding: 10px 12px;
+          border-radius: var(--mat-sys-corner-medium);
+          border: 1px solid var(--mat-sys-outline-variant);
+          background: var(--mat-sys-surface-container);
+
+          @media (max-width: 700px),
+          (max-height: 700px) {
+            max-width: 100%;
+            padding: 8px 10px;
+          }
+        }
+
+        .composer-reference-icon {
+          width: 16px;
+          height: 16px;
+          font-size: 16px;
+          color: var(--mat-sys-primary);
+          flex: 0 0 auto;
+        }
+
+        .composer-reference-copy {
+          display: flex;
+          flex-direction: column;
+          min-width: 0;
+        }
+
+        .composer-reference-label,
+        .composer-reference-secondary {
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .composer-reference-label {
+          color: var(--mat-sys-on-surface);
+        }
+
+        .composer-reference-secondary {
+          color: var(--mat-sys-on-surface-variant);
+          font-size: 12px;
         }
       }
     }

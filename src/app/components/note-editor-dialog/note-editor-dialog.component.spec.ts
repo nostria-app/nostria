@@ -81,6 +81,7 @@ describe('NoteEditorDialogComponent', () => {
   let mockSnackBar: {
     open: Mock;
   };
+  let noteEditorNewExperience: ReturnType<typeof signal>;
 
   function createComponent(beforeDetectChanges?: (instance: NoteEditorDialogComponent) => void) {
     mockPlatformService = {
@@ -151,6 +152,8 @@ describe('NoteEditorDialogComponent', () => {
       open: vi.fn(),
     };
 
+    noteEditorNewExperience = signal(false);
+
     TestBed.configureTestingModule({
       imports: [NoteEditorDialogComponent],
       providers: [
@@ -162,7 +165,12 @@ describe('NoteEditorDialogComponent', () => {
         { provide: LocalStorageService, useValue: { get: () => null, set: vi.fn() } },
         {
           provide: LocalSettingsService,
-          useValue: { addClientTag: signal(true), removeTrackingParameters: signal(false) },
+          useValue: {
+            addClientTag: signal(true),
+            removeTrackingParameters: signal(false),
+            noteEditorNewExperience,
+            setNoteEditorNewExperience: vi.fn((enabled: boolean) => noteEditorNewExperience.set(enabled)),
+          },
         },
         {
           provide: AccountStateService,
@@ -215,6 +223,26 @@ describe('NoteEditorDialogComponent', () => {
     expect(component).toBeTruthy();
   });
 
+  it('should use the legacy textarea by default', async () => {
+    createComponent();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('textarea.legacy-content-textarea')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('.content-editor-surface')).toBeNull();
+  });
+
+  it('should render the new editor when the setting is enabled', async () => {
+    createComponent();
+    noteEditorNewExperience.set(true);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('.content-editor-surface')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('textarea.legacy-content-textarea')).toBeNull();
+  });
+
   describe('reply preview', () => {
     it('should show the replied note content and short id', async () => {
       const replyEvent: NostrEvent = {
@@ -242,6 +270,98 @@ describe('NoteEditorDialogComponent', () => {
       const preview = fixture.nativeElement.querySelector('.reply-preview-content');
       expect(preview?.textContent).toContain('Original reply content that should be visible in the composer preview.');
       expect(fixture.nativeElement.querySelector('.reply-note-id')).toBeNull();
+    });
+  });
+
+  describe('inline embeds', () => {
+    it('should extract compact mention previews without full preview mode', async () => {
+      createComponent();
+      await fixture.whenStable();
+
+      const nprofile = nip19.nprofileEncode({
+        pubkey: 'abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789',
+        relays: [],
+      });
+
+      const privateComponent = component as unknown as {
+        mentionMap: Map<string, string>;
+      };
+
+      privateComponent.mentionMap.set('@alice', `nostr:${nprofile}`);
+      component.content.set('Hello @alice');
+
+      expect(component.composerMentionPreviews()).toEqual([
+        {
+          mention: '@alice',
+          pubkey: 'abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789',
+          displayName: 'abcdef0123456789...',
+        },
+      ]);
+      expect(component.showInlineEmbeds()).toBe(true);
+    });
+
+    it('should expose pending media for inline editor chips', async () => {
+      createComponent();
+      await fixture.whenStable();
+
+      component.content.set('Check this out [image1]');
+      component.mediaMetadata.set([
+        {
+          url: 'blob:preview-image',
+          mimeType: 'image/png',
+          previewUrl: 'blob:preview-image-local',
+          placeholderToken: '[image1]',
+          pendingUpload: true,
+        },
+      ]);
+
+      expect(component.composerMediaPreviews()).toEqual([
+        {
+          id: '[image1]',
+          url: 'blob:preview-image',
+          thumbnailUrl: 'blob:preview-image-local',
+          mimeType: 'image/png',
+          pending: true,
+          label: 'Image attachment',
+        },
+      ]);
+      expect(component.showInlineEmbeds()).toBe(false);
+    });
+
+    it('should tokenize embedded events as inline chips instead of preview cards', async () => {
+      createComponent();
+      noteEditorNewExperience.set(true);
+      await fixture.whenStable();
+
+      const nevent = nip19.neventEncode({
+        id: '6a61adaf56be9d9d9a2d55555555555555555555555555555555555555555555',
+        author: 'abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789',
+        kind: 1,
+        relays: [],
+      });
+
+      component.content.set(`nostr:${nevent}`);
+      fixture.detectChanges();
+
+      expect(component.composerReferencePreviews()).toEqual([]);
+
+      const privateComponent = component as unknown as {
+        buildEditorMediaSegments: (value: string) => Array<{ type: string; value: string; referencePreview?: { label: string } }>;
+      };
+
+      expect(privateComponent.buildEditorMediaSegments(`nostr:${nevent}`)).toEqual([
+        {
+          type: 'event',
+          value: `nostr:${nevent}`,
+          referencePreview: {
+            id: `nostr:${nevent}`,
+            type: 'event',
+            value: `nostr:${nevent}`,
+            label: 'Embedded event',
+            secondaryLabel: '6a61adaf56...',
+          },
+        },
+      ]);
     });
   });
 
