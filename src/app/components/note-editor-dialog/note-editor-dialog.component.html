@@ -165,7 +165,8 @@
                 @for (reference of composerReferencePreviews(); track reference.id) {
                 <div class="composer-reference-card">
                   <mat-icon class="composer-reference-icon">
-                    {{ reference.type === 'event' ? 'bolt' : reference.type === 'profile' ? 'person' : reference.type === 'address' ? 'bookmark' : 'link' }}
+                    {{ reference.type === 'event' ? 'bolt' : reference.type === 'profile' ? 'person' : reference.type
+                    === 'address' ? 'bookmark' : 'link' }}
                   </mat-icon>
                   <div class="composer-reference-copy">
                     <span class="composer-reference-label">{{ reference.label }}</span>
@@ -257,7 +258,8 @@
                 (change)="onNoteEditorExperienceToggle($event.checked)">
                 <span>New Editor Experience</span>
               </mat-slide-toggle>
-              <span class="option-description">Enable the rich editor with inline attachments and enhanced embeds.</span>
+              <span class="option-description">Enable the rich editor with inline attachments and enhanced
+                embeds.</span>
             </div>
           </div>
 

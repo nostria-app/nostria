@@ -2960,6 +2960,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     }
 
     event.preventDefault();
+    event.stopPropagation();
     this.insertTextAtSelection('\n');
   }
 
@@ -3709,6 +3710,11 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
 
     this.content.set(nextContent);
     this.lastCursorPosition = nextCursor;
+
+    if (this.useNewEditorExperience()) {
+      this.refreshEditorContent();
+    }
+
     this.scheduleTextareaRefresh(nextCursor, true, true);
   }
 
@@ -3999,6 +4005,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
 
     if (this.useNewEditorExperience() && event.key === 'Enter' && !this.platformService.hasModifierKey(event)) {
       event.preventDefault();
+      event.stopPropagation();
       this.insertTextAtSelection('\n');
       return;
     }
