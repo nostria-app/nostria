@@ -238,7 +238,8 @@
         <mat-label i18n="@@login.nsec-or-recovery">Private Key (nsec) or Recovery Phrase</mat-label>
         <input matInput [(ngModel)]="nsecKey" type="password" placeholder="nsec1... or 12-word phrase"
           i18n-placeholder="@@login.nsec-or-recovery.placeholder" autocomplete="off" autocorrect="off"
-          spellcheck="false" name="nostr-private-key" readonly onfocus="this.removeAttribute('readonly');"
+          spellcheck="false" name="field-l1" id="input-l1" data-1p-ignore data-bwignore="true" data-lpignore="true"
+          data-form-type="other" data-protonpass-ignore="true" readonly onfocus="this.removeAttribute('readonly');"
           (keydown.enter)="loginWithNsec()" />
       </mat-form-field>
 

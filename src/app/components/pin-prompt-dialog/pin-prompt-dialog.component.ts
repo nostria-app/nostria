@@ -57,6 +57,13 @@ export interface PinPromptDialogData {
             placeholder="Enter your PIN"
             (keyup.enter)="onSubmit()"
             autocomplete="off"
+            name="field-d1"
+            id="input-d1"
+            data-1p-ignore
+            data-bwignore="true"
+            data-lpignore="true"
+            data-form-type="other"
+            data-protonpass-ignore="true"
             cdkFocusInitial
           />
           <button

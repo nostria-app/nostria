@@ -519,7 +519,8 @@
             <mat-form-field appearance="outline" class="full-width">
               <mat-label>Current PIN</mat-label>
               <input matInput [formControl]="oldPinControl" type="password" placeholder="Enter current PIN"
-                autocomplete="off" />
+                autocomplete="off" name="field-c1" id="input-c1" data-1p-ignore data-bwignore="true"
+                data-lpignore="true" data-form-type="other" data-protonpass-ignore="true" />
               <mat-hint>Default PIN is "0000" if you haven't changed it</mat-hint>
               @if (oldPinControl.hasError('required')) {
               <mat-error>Current PIN is required</mat-error>
@@ -532,7 +533,8 @@
             <mat-form-field appearance="outline" class="full-width">
               <mat-label>New PIN</mat-label>
               <input matInput [formControl]="newPinControl" type="password" placeholder="Enter new PIN"
-                autocomplete="off" />
+                autocomplete="off" name="field-c2" id="input-c2" data-1p-ignore data-bwignore="true"
+                data-lpignore="true" data-form-type="other" data-protonpass-ignore="true" />
               <mat-hint>Choose a PIN with at least 4 characters</mat-hint>
               @if (newPinControl.hasError('required')) {
               <mat-error>New PIN is required</mat-error>
@@ -545,7 +547,9 @@
             <mat-form-field appearance="outline" class="full-width">
               <mat-label>Confirm New PIN</mat-label>
               <input matInput [formControl]="confirmPinControl" type="password" placeholder="Re-enter new PIN"
-                autocomplete="off" (keydown.enter)="changePin()" />
+                autocomplete="off" name="field-c3" id="input-c3" data-1p-ignore data-bwignore="true"
+                data-lpignore="true" data-form-type="other" data-protonpass-ignore="true"
+                (keydown.enter)="changePin()" />
               @if (confirmPinControl.hasError('required')) {
               <mat-error>Confirmation is required</mat-error>
               }
@@ -580,7 +584,9 @@
             <mat-form-field appearance="outline" class="full-width">
               <mat-label>Current PIN</mat-label>
               <input matInput [formControl]="resetPinControl" type="password" placeholder="Enter your current PIN"
-                autocomplete="off" (keydown.enter)="resetPinToDefault()" />
+                autocomplete="off" name="field-c4" id="input-c4" data-1p-ignore data-bwignore="true"
+                data-lpignore="true" data-form-type="other" data-protonpass-ignore="true"
+                (keydown.enter)="resetPinToDefault()" />
               <mat-hint>Enter your current PIN to confirm the reset</mat-hint>
               @if (resetPinControl.hasError('required')) {
               <mat-error>Current PIN is required</mat-error>
