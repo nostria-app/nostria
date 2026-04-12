@@ -235,8 +235,7 @@
                     <mat-icon>zoom_in</mat-icon>
                     <span>Upscale</span>
                   </button>
-                  <button type="button" class="message-action-button"
-                    (click)="applyImagePrompt(image.revisedPrompt || image.prompt)">
+                  <button type="button" class="message-action-button" (click)="remixGeneratedImage(image)">
                     <mat-icon>auto_fix_high</mat-icon>
                     <span>Remix</span>
                   </button>
@@ -426,6 +425,10 @@
       <div class="composer-attachments">
         @for (attachment of attachedFiles(); track attachment.id) {
         <div class="composer-attachment-chip">
+          @if (attachment.previewUrl && attachment.mimeType.startsWith('image/')) {
+          <img [src]="attachment.previewUrl" alt="Attached image preview" title="Attached image preview"
+            class="composer-attachment-preview" />
+          }
           <div class="composer-attachment-copy">
             <span class="composer-attachment-name">{{ attachment.name }}</span>
             <span class="composer-attachment-meta">{{ formatFileSize(attachment.size) }}</span>

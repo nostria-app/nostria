@@ -964,6 +964,15 @@
   padding-right: 4px;
 }
 
+.composer-attachment-preview {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  object-fit: cover;
+  background: var(--mat-sys-surface-container);
+  flex: 0 0 auto;
+}
+
 .composer-attachment-copy {
   display: flex;
   flex-direction: column;

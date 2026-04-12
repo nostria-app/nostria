@@ -68,6 +68,7 @@ interface ComposerAttachment {
   kind: 'text' | 'file';
   context: string;
   cacheKey: string;
+  previewUrl?: string;
 }
 
 interface AiQuickPrompt {
@@ -912,7 +913,7 @@ export class AiComponent {
     this.activeGeneratedImage.set(null);
     this.activeGeneratedVideo.set(null);
     this.activeGeneratedAudio.set(null);
-    this.attachedFiles.set([]);
+    this.clearAttachedFiles();
     this.showHistoryDrawer.set(false);
     this.clearConversation();
   }
@@ -933,7 +934,7 @@ export class AiComponent {
     this.activeGeneratedImage.set(null);
     this.activeGeneratedVideo.set(null);
     this.activeGeneratedAudio.set(null);
-    this.attachedFiles.set([]);
+    this.clearAttachedFiles();
     this.autoScrollPinned.set(true);
     this.showHistoryDrawer.set(false);
     this.releaseGeneratedVideoUrls(this.conversation().flatMap(message => message.generatedVideos ?? []));
@@ -1071,7 +1072,11 @@ export class AiComponent {
   }
 
   removeAttachment(id: string): void {
-    this.attachedFiles.update(attachments => attachments.filter(attachment => attachment.id !== id));
+    this.attachedFiles.update(attachments => {
+      const removed = attachments.find(attachment => attachment.id === id);
+      this.releaseAttachmentPreviewUrls(removed ? [removed] : undefined);
+      return attachments.filter(attachment => attachment.id !== id);
+    });
   }
 
   applyChatPrompt(prompt: string): void {
@@ -1464,12 +1469,15 @@ export class AiComponent {
   }
 
   useImagePromptInChat(image: AiGeneratedImage): void {
-    const textModel = this.localChatModels()[0] ?? this.cloudChatModels()[0];
-    if (textModel) {
-      this.selectedModelId.set(textModel.id);
-    }
+    void this.prepareGeneratedImageForNextPrompt(
+      image,
+      'chat',
+      `Use this image concept as context and turn it into a polished post or product idea:\n\n${image.revisedPrompt || image.prompt}`,
+    );
+  }
 
-    this.composerText.set(`Use this image concept as context and turn it into a polished post or product idea:\n\n${image.revisedPrompt || image.prompt}`);
+  remixGeneratedImage(image: AiGeneratedImage): void {
+    void this.prepareGeneratedImageForNextPrompt(image, 'image', image.revisedPrompt || image.prompt);
   }
 
   useVideoPromptInChat(video: AiGeneratedVideo): void {
@@ -1502,7 +1510,7 @@ export class AiComponent {
       const attachment = await this.createAttachment(file);
       this.selectedModelId.set(videoModel.id);
       this.xAiVideoMode.set('extend-video');
-      this.attachedFiles.set([attachment]);
+      this.setComposerAttachments([attachment]);
       this.composerText.set(`Continue this video seamlessly. Keep the same subject and style, then: [describe what happens next]`);
       this.focusComposerPromptPlaceholder(this.composerText());
       this.snackBar.open('Source video attached. Add what should happen next.', 'Dismiss', { duration: 3000 });
@@ -1510,6 +1518,35 @@ export class AiComponent {
       this.logger.error('Failed to prepare generated video for extension', error);
       this.chatError.set(error instanceof Error ? error.message : 'Could not prepare the generated video for extension.');
       this.snackBar.open('Could not prepare the generated video for extension.', 'Dismiss', { duration: 3500 });
+    }
+  }
+
+  private async prepareGeneratedImageForNextPrompt(
+    image: AiGeneratedImage,
+    target: 'chat' | 'image',
+    prompt: string,
+  ): Promise<void> {
+    const model = target === 'image'
+      ? this.imageModels().find(candidate => candidate.task === 'image-generation')
+      : this.localChatModels()[0] ?? this.cloudChatModels()[0];
+
+    if (!model) {
+      this.chatError.set(target === 'image' ? 'No image generation model is available.' : 'No chat model is available.');
+      return;
+    }
+
+    try {
+      const file = await this.createFileFromGeneratedImage(image);
+      const attachment = await this.createAttachment(file);
+      this.selectedModelId.set(model.id);
+      this.setComposerAttachments([attachment]);
+      this.composerText.set(prompt);
+      this.focusComposerPromptPlaceholder(prompt);
+      this.snackBar.open(target === 'image' ? 'Image attached for remix.' : 'Image attached for chat.', 'Dismiss', { duration: 2600 });
+    } catch (error) {
+      this.logger.error('Failed to prepare generated image for follow-up prompt', error);
+      this.chatError.set(error instanceof Error ? error.message : 'Could not prepare the image for the next prompt.');
+      this.snackBar.open('Could not attach the selected image.', 'Dismiss', { duration: 3500 });
     }
   }
 
@@ -1715,6 +1752,7 @@ export class AiComponent {
   }
 
   clearConversation(): void {
+    this.clearAttachedFiles();
     this.releaseGeneratedVideoUrls(this.conversation().flatMap(message => message.generatedVideos ?? []));
     this.releaseGeneratedAudioUrls(this.conversation().flatMap(message => message.generatedAudios ?? []));
     this.chatError.set('');
@@ -1795,7 +1833,7 @@ export class AiComponent {
       { id: assistantMessageId, role: 'assistant', content: '', streaming: true },
     ]);
     this.composerText.set('');
-    this.attachedFiles.set([]);
+    this.clearAttachedFiles();
     this.autoScrollPinned.set(true);
     this.showHistoryDrawer.set(false);
 
@@ -2358,7 +2396,7 @@ export class AiComponent {
       { id: assistantMessageId, role: 'assistant', content: '', streaming: true },
     ]);
     this.composerText.set('');
-    this.attachedFiles.set([]);
+    this.clearAttachedFiles();
     this.autoScrollPinned.set(true);
     this.showHistoryDrawer.set(false);
     this.isGenerating.set(true);
@@ -2419,7 +2457,7 @@ export class AiComponent {
       { id: assistantMessageId, role: 'assistant', content: '', streaming: true },
     ]);
     this.composerText.set('');
-    this.attachedFiles.set([]);
+    this.clearAttachedFiles();
     this.autoScrollPinned.set(true);
     this.showHistoryDrawer.set(false);
     this.isGenerating.set(true);
@@ -2489,7 +2527,7 @@ export class AiComponent {
       { id: assistantMessageId, role: 'assistant', content: '', streaming: true },
     ]);
     this.composerText.set('');
-    this.attachedFiles.set([]);
+    this.clearAttachedFiles();
     this.autoScrollPinned.set(true);
     this.showHistoryDrawer.set(false);
     this.isGenerating.set(true);
@@ -3332,6 +3370,7 @@ export class AiComponent {
     const isTextFile = this.isTextLikeFile(file);
     const fileId = `${file.name}-${file.lastModified}-${file.size}-${this.createMessageId()}`;
     const cacheKey = this.getAiUploadCacheKey(fileId, file.name);
+    const previewUrl = mimeType.startsWith('image/') ? URL.createObjectURL(file) : undefined;
 
     await this.storeFileInCache(cacheKey, file);
 
@@ -3344,6 +3383,7 @@ export class AiComponent {
         kind: 'file',
         context: `- ${file.name} (${mimeType}, ${this.formatFileSize(file.size)}). Binary file attached; include only its metadata in your reasoning.`,
         cacheKey,
+        previewUrl,
       };
     }
 
@@ -3361,7 +3401,30 @@ export class AiComponent {
       kind: 'text',
       context: `- ${file.name} (${mimeType}, ${this.formatFileSize(file.size)})\n\n${codeFence}\n${truncated}${note}\n${'```'}`,
       cacheKey,
+      previewUrl,
     };
+  }
+
+  private setComposerAttachments(attachments: ComposerAttachment[]): void {
+    this.releaseAttachmentPreviewUrls(this.attachedFiles());
+    this.attachedFiles.set(attachments);
+  }
+
+  private clearAttachedFiles(): void {
+    this.releaseAttachmentPreviewUrls(this.attachedFiles());
+    this.attachedFiles.set([]);
+  }
+
+  private releaseAttachmentPreviewUrls(attachments?: ComposerAttachment[]): void {
+    if (!attachments?.length) {
+      return;
+    }
+
+    for (const attachment of attachments) {
+      if (attachment.previewUrl?.startsWith('blob:')) {
+        URL.revokeObjectURL(attachment.previewUrl);
+      }
+    }
   }
 
   private getAiUploadCacheKey(attachmentId: string, fileName: string): string {
