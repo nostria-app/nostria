@@ -1194,7 +1194,9 @@ export class AiComponent {
       return;
     }
 
-    this.composerText.set(this.suggestionShareContent(suggestion));
+    const content = this.suggestionShareContent(suggestion);
+    this.composerText.set(content);
+    this.focusComposerPromptPlaceholder(content);
     this.snackBar.open('Suggestion moved into the composer.', 'Dismiss', { duration: 2400 });
   }
 
@@ -1352,6 +1354,7 @@ export class AiComponent {
 
   reuseMessage(message: ConversationMessage): void {
     this.composerText.set(message.content);
+    this.focusComposerPromptPlaceholder(message.content);
     this.snackBar.open(message.role === 'assistant' ? 'Reply moved into the composer.' : 'Prompt ready to edit.', 'Dismiss', { duration: 2400 });
   }
 
@@ -1500,7 +1503,10 @@ export class AiComponent {
       this.selectedModelId.set(textModel.id);
     }
 
-    this.composerText.set(`Use this video concept as context and turn it into a polished post, storyboard, or campaign idea:\n\n${video.prompt}`);
+    const prompt = `Use this video concept as context and turn it into a polished post, storyboard, or campaign idea:\n\n${video.prompt}`;
+    this.composerText.set(prompt);
+    this.focusComposerPromptPlaceholder(prompt);
+    this.snackBar.open('Video prompt moved into text chat.', 'Dismiss', { duration: 2400 });
   }
 
   useAudioPromptInChat(audio: AiGeneratedAudio): void {
@@ -1509,7 +1515,10 @@ export class AiComponent {
       this.selectedModelId.set(textModel.id);
     }
 
-    this.composerText.set(`Use this voice-over concept as context and turn it into a polished post, script, or campaign idea:\n\n${audio.prompt}`);
+    const prompt = `Use this voice-over concept as context and turn it into a polished post, script, or campaign idea:\n\n${audio.prompt}`;
+    this.composerText.set(prompt);
+    this.focusComposerPromptPlaceholder(prompt);
+    this.snackBar.open('Voice prompt moved into text chat.', 'Dismiss', { duration: 2400 });
   }
 
   async extendGeneratedVideo(video: AiGeneratedVideo): Promise<void> {
@@ -2091,6 +2100,7 @@ export class AiComponent {
         return;
       }
 
+      textarea.scrollIntoView({ block: 'nearest', inline: 'nearest' });
       textarea.focus();
 
       const placeholderMatch = /\[[^\]]+\]/.exec(prompt);

@@ -241,7 +241,7 @@
                   </button>
                   <button type="button" class="message-action-button" (click)="useImagePromptInChat(image)">
                     <mat-icon>chat</mat-icon>
-                    <span>Use in chat</span>
+                    <span>Draft text</span>
                   </button>
                   <button type="button" class="message-action-button" (click)="downloadImage(image)">
                     <mat-icon>download</mat-icon>
@@ -276,12 +276,12 @@
               <div class="generated-image-head">
                 <div class="message-actions generated-image-actions">
                   <button type="button" class="message-action-button" (click)="applyVideoPrompt(video.prompt)">
-                    <mat-icon>auto_fix_high</mat-icon>
-                    <span>Remix</span>
+                    <mat-icon>refresh</mat-icon>
+                    <span>Generate again</span>
                   </button>
                   <button type="button" class="message-action-button" (click)="useVideoPromptInChat(video)">
                     <mat-icon>chat</mat-icon>
-                    <span>Use in chat</span>
+                    <span>Draft text</span>
                   </button>
                   <button type="button" class="message-action-button" (click)="extendGeneratedVideo(video)">
                     <mat-icon>timeline</mat-icon>
@@ -319,24 +319,24 @@
           <div class="generated-audio-grid">
             @for (audio of message.generatedAudios!; track audio.id) {
             <article class="generated-audio-card">
-              <div class="generated-image-head">
-                <div class="message-actions generated-image-actions">
+              <div class="generated-audio-player-shell">
+                <audio class="generated-audio-player" [src]="audio.src" controls preload="metadata"></audio>
+              </div>
+              <div class="generated-audio-actions-shell">
+                <div class="message-actions generated-image-actions generated-audio-actions">
                   <button type="button" class="message-action-button" (click)="applyVoicePrompt(audio.prompt)">
-                    <mat-icon>auto_fix_high</mat-icon>
-                    <span>Remix</span>
+                    <mat-icon>refresh</mat-icon>
+                    <span>Generate again</span>
                   </button>
                   <button type="button" class="message-action-button" (click)="useAudioPromptInChat(audio)">
                     <mat-icon>chat</mat-icon>
-                    <span>Use in chat</span>
+                    <span>Draft text</span>
                   </button>
                   <button type="button" class="message-action-button" (click)="downloadAudio(audio)">
                     <mat-icon>download</mat-icon>
                     <span>Download</span>
                   </button>
                 </div>
-              </div>
-              <div class="generated-audio-player-shell">
-                <audio class="generated-audio-player" [src]="audio.src" controls preload="metadata"></audio>
               </div>
               <div class="generated-image-copy">
                 <div class="generated-image-meta">

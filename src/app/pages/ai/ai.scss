@@ -680,6 +680,10 @@
   background: var(--mat-sys-surface-container-low);
 }
 
+.generated-audio-actions-shell {
+  padding: 0 4px;
+}
+
 .generated-audio-player {
   display: block;
   width: 100%;
@@ -778,6 +782,10 @@
   justify-content: flex-start;
   flex-wrap: wrap;
   gap: 4px;
+}
+
+.generated-audio-actions {
+  justify-content: flex-start;
 }
 
 .chat-workspace {
