@@ -68,6 +68,7 @@ interface ComposerAttachment {
   kind: 'text' | 'file';
   context: string;
   cacheKey: string;
+  sourceUrl?: string;
   previewUrl?: string;
 }
 
@@ -2734,7 +2735,9 @@ export class AiComponent {
     }
 
     return {
-      inputImages: await Promise.all(imageAttachments.map(attachment => this.readAttachmentAsDataUrl(attachment))),
+      inputImages: await Promise.all(imageAttachments.map(attachment => attachment.sourceUrl?.trim()
+        ? Promise.resolve(attachment.sourceUrl.trim())
+        : this.readAttachmentAsDataUrl(attachment))),
     };
   }
 
@@ -3101,6 +3104,7 @@ export class AiComponent {
       kind: 'file',
       context: `- ${fileName} (${mimeType}, ${this.formatFileSize(blob.size)}). Binary file attached; include only its metadata in your reasoning.`,
       cacheKey: image.cacheKey,
+      sourceUrl: image.provider === 'xai' ? image.originalUrl : undefined,
       previewUrl: URL.createObjectURL(blob),
     };
   }
@@ -3199,6 +3203,7 @@ export class AiComponent {
       model: image.model,
       prompt: image.prompt,
       revisedPrompt: image.revisedPrompt,
+      originalUrl: image.originalUrl,
       cacheKey: image.cacheKey,
       mimeType: image.mimeType,
       imageSettings: image.imageSettings,

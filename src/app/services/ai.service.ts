@@ -104,6 +104,7 @@ export interface AiGeneratedImage {
   prompt: string;
   revisedPrompt?: string;
   src: string;
+  originalUrl?: string;
   cacheKey?: string;
   mimeType?: string;
   imageSettings?: AiGeneratedImageSettings;
@@ -1021,28 +1022,52 @@ export class AiService {
     const cloudSettings = this.cloudSettings();
     const referenceImages = (options?.referenceImages ?? []).filter(value => value.trim().length > 0).slice(0, 5);
     const inputImages = (options?.inputImages ?? []).filter(value => value.trim().length > 0);
-    const imageBody = inputImages.length > 1
-      ? { image_urls: inputImages.slice(0, 5) }
-      : inputImages.length === 1
-        ? { image_url: inputImages[0] }
-        : {};
-    const requestBody: Record<string, unknown> = {
+    const baseRequestBody: Record<string, unknown> = {
       model: cloudSettings.xaiImageModel,
       prompt,
       n: cloudSettings.xaiImageCount,
       aspect_ratio: cloudSettings.xaiImageAspectRatio,
       resolution: cloudSettings.xaiImageResolution,
-      response_format: 'b64_json',
-      ...imageBody,
     };
 
     if (referenceImages.length > 0) {
-      requestBody['reference_images'] = referenceImages.map(url => ({ url }));
+      baseRequestBody['reference_images'] = referenceImages.map(url => ({ url }));
     }
 
-    const payload = await this.fetchImageGeneration('https://api.x.ai/v1/images/generations', apiKey, requestBody);
+    const request = inputImages.length > 0
+      ? this.buildXAiImageEditRequest(inputImages, baseRequestBody)
+      : {
+        url: 'https://api.x.ai/v1/images/generations',
+        body: baseRequestBody,
+      };
+
+    const payload = await this.fetchImageGeneration(request.url, apiKey, request.body);
 
     return this.mapGeneratedImages(payload, 'xai', prompt);
+  }
+
+  private buildXAiImageEditRequest(inputImages: string[], baseRequestBody: Record<string, unknown>): { url: string; body: Record<string, unknown> } {
+    const trimmedImages = inputImages.slice(0, 5);
+    if (trimmedImages.length === 1) {
+      return {
+        url: 'https://api.x.ai/v1/images/edits',
+        body: {
+          ...baseRequestBody,
+          image: {
+            url: trimmedImages[0],
+            type: 'image_url',
+          },
+        },
+      };
+    }
+
+    return {
+      url: 'https://api.x.ai/v1/images/edits',
+      body: {
+        ...baseRequestBody,
+        images: trimmedImages.map(url => ({ url, type: 'image_url' })),
+      },
+    };
   }
 
   private async generateXAiVideo(prompt: string, options?: AiVideoGenerationOptions): Promise<AiGeneratedVideo[]> {
@@ -1443,6 +1468,7 @@ export class AiService {
         prompt,
         revisedPrompt: entry.revised_prompt,
         src,
+        originalUrl: entry.url,
         imageSettings,
       };
     });

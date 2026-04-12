@@ -268,6 +268,7 @@ export interface StoredAiChatHistoryEntry {
       model: string;
       prompt: string;
       revisedPrompt?: string;
+      originalUrl?: string;
       cacheKey?: string;
       mimeType?: string;
       imageSettings?: {
