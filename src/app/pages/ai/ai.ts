@@ -5,16 +5,14 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
-import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
-import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { SafeHtml } from '@angular/platform-browser';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { AiChatMessage, AiCloudProvider, AiGeneratedImage, AiGenerationProgress, AiModelLoadOptions, AiMultimodalChatMessage, AiMultimodalChatPart, AiService } from '../../services/ai.service';
-import { AiChatHistoryService, AiHistoryGeneratedImage } from '../../services/ai-chat-history.service';
+import { AiChatMessage, AiCloudProvider, AiGeneratedAudio, AiGeneratedImage, AiGeneratedVideo, AiGenerationProgress, AiImageGenerationOptions, AiModelLoadOptions, AiMultimodalChatMessage, AiMultimodalChatPart, AiService, AiVideoGenerationOptions } from '../../services/ai.service';
+import { AiChatHistoryService, AiHistoryGeneratedAudio, AiHistoryGeneratedImage, AiHistoryGeneratedVideo } from '../../services/ai-chat-history.service';
 import { AiInfoDialogComponent, type AiInfoDialogResult } from '../../components/ai-info-dialog/ai-info-dialog.component';
 import type { ArticleEditorDialogInitialDraft } from '../../components/article-editor-dialog/article-editor-dialog.component';
 import { AccountLocalStateService } from '../../services/account-local-state.service';
@@ -58,6 +56,8 @@ interface ConversationMessage {
   attachments?: ComposerAttachment[];
   attachmentContext?: string;
   generatedImages?: AiGeneratedImage[];
+  generatedVideos?: AiGeneratedVideo[];
+  generatedAudios?: AiGeneratedAudio[];
 }
 
 interface ComposerAttachment {
@@ -73,7 +73,7 @@ interface ComposerAttachment {
 interface AiQuickPrompt {
   label: string;
   prompt: string;
-  task?: 'image-generation';
+  task?: 'image-generation' | 'video-generation' | 'voice-generation';
 }
 
 interface AssistantSuggestion {
@@ -95,9 +95,16 @@ interface RenderedAssistantContent {
 }
 
 interface VisualIntent {
-  task: 'image-generation' | 'image-upscaling';
+  task: 'image-generation' | 'image-upscaling' | 'video-generation';
   prompt: string;
 }
+
+interface ChoiceOption {
+  value: string;
+  label: string;
+}
+
+type XAiComposerMode = 'text' | 'image' | 'video' | 'voice';
 
 interface FetchedPromptContext {
   url: string;
@@ -110,10 +117,8 @@ interface FetchedPromptContext {
     CommonModule,
     FormsModule,
     MatButtonModule,
-    MatFormFieldModule,
     MatIconModule,
     MatMenuModule,
-    MatSelectModule,
   ],
   templateUrl: './ai.html',
   styleUrl: './ai.scss',
@@ -162,40 +167,15 @@ export class AiComponent {
   readonly historyQuery = signal('');
   readonly activeShareMessage = signal<ConversationMessage | null>(null);
   readonly activeGeneratedImage = signal<AiGeneratedImage | null>(null);
+  readonly activeGeneratedVideo = signal<AiGeneratedVideo | null>(null);
+  readonly activeGeneratedAudio = signal<AiGeneratedAudio | null>(null);
   readonly activeSuggestion = signal<AssistantSuggestion | null>(null);
   readonly renderedAssistantMessages = signal<Record<string, RenderedAssistantContent>>({});
   readonly attachedFiles = signal<ComposerAttachment[]>([]);
+  readonly cloudSettings = this.aiService.cloudSettings;
   readonly hideHistoryRail = computed(() => this.splitPaneMode() || this.narrowHistoryMode());
 
   readonly models = signal<ModelInfo[]>([
-    {
-      id: 'Xenova/swin2SR-classical-sr-x2-64',
-      task: 'image-upscaling',
-      name: 'Swin2SR x2',
-      description: 'Local image upscaling for attached artwork, screenshots, and photos.',
-      size: 'x2 super-resolution',
-      loading: false,
-      progress: 0,
-      loaded: false,
-      cached: false,
-      runtime: 'WASM/CPU · q8',
-      source: 'local',
-      loadOptions: { device: 'wasm', dtype: 'q8' },
-    },
-    {
-      id: 'onnx-community/Janus-Pro-1B-ONNX',
-      task: 'image-generation',
-      name: 'Janus Pro 1B',
-      description: 'Local browser image generation with DeepSeek Janus Pro via Transformers.js.',
-      size: '~1B parameters',
-      loading: false,
-      progress: 0,
-      loaded: false,
-      cached: false,
-      runtime: 'WebGPU · multimodal',
-      source: 'local',
-      chatDisabledReason: this.webGpuAvailable ? undefined : 'Requires WebGPU support in the browser.',
-    },
     {
       id: 'onnx-community/gemma-4-E2B-it-ONNX',
       task: 'text-generation',
@@ -218,40 +198,21 @@ export class AiComponent {
       },
     },
     {
-      id: 'onnx-community/Qwen3-0.6B-ONNX',
-      task: 'text-generation',
-      name: 'Qwen 3 0.6B',
-      description: 'Compact Qwen 3 chat model for fast local browser inference.',
-      size: '~0.6B parameters',
+      id: 'onnx-community/Qwen3.5-0.8B-ONNX',
+      task: 'image-text-to-text',
+      name: 'Qwen 3.5 0.8B Vision',
+      description: 'Multimodal Qwen 3.5 model for local browser image-aware chat and visual analysis.',
+      size: '~0.8B parameters',
       loading: false,
       progress: 0,
       loaded: false,
       cached: false,
-      runtime: 'WebGPU · q4f16',
+      runtime: 'WebGPU · q4f16 · vision',
       loadOptions: { device: 'webgpu', dtype: 'q4f16' },
       chatMode: 'messages',
       chatDisabledReason: this.webGpuAvailable ? undefined : 'Requires WebGPU support in the browser.',
       preferredParams: {
         max_new_tokens: 384,
-        do_sample: false,
-      },
-    },
-    {
-      id: 'onnx-community/Qwen3-1.7B-ONNX',
-      task: 'text-generation',
-      name: 'Qwen 3 1.7B',
-      description: 'Higher-capacity Qwen 3 local chat model for stronger answers on capable GPUs.',
-      size: '~1.7B parameters',
-      loading: false,
-      progress: 0,
-      loaded: false,
-      cached: false,
-      runtime: 'WebGPU · q4f16',
-      loadOptions: { device: 'webgpu', dtype: 'q4f16' },
-      chatMode: 'messages',
-      chatDisabledReason: this.webGpuAvailable ? undefined : 'Requires WebGPU support in the browser.',
-      preferredParams: {
-        max_new_tokens: 512,
         do_sample: false,
       },
     },
@@ -275,16 +236,16 @@ export class AiComponent {
       },
     },
     {
-      id: 'onnx-community/Qwen3.5-0.8B-ONNX',
-      task: 'image-text-to-text',
-      name: 'Qwen 3.5 0.8B Vision',
-      description: 'Multimodal Qwen 3.5 model for local browser image-aware chat and visual analysis.',
-      size: '~0.8B parameters',
+      id: 'onnx-community/Qwen3-0.6B-ONNX',
+      task: 'text-generation',
+      name: 'Qwen 3 0.6B',
+      description: 'Compact Qwen 3 chat model for fast local browser inference.',
+      size: '~0.6B parameters',
       loading: false,
       progress: 0,
       loaded: false,
       cached: false,
-      runtime: 'WebGPU · q4f16 · vision',
+      runtime: 'WebGPU · q4f16',
       loadOptions: { device: 'webgpu', dtype: 'q4f16' },
       chatMode: 'messages',
       chatDisabledReason: this.webGpuAvailable ? undefined : 'Requires WebGPU support in the browser.',
@@ -311,6 +272,34 @@ export class AiComponent {
         temperature: 0.8,
         return_full_text: false,
       },
+    },
+    {
+      id: 'onnx-community/Janus-Pro-1B-ONNX',
+      task: 'image-generation',
+      name: 'Janus Pro 1B',
+      description: 'Local browser image generation with DeepSeek Janus Pro via Transformers.js.',
+      size: '~1B parameters',
+      loading: false,
+      progress: 0,
+      loaded: false,
+      cached: false,
+      runtime: 'WebGPU · multimodal',
+      source: 'local',
+      chatDisabledReason: this.webGpuAvailable ? undefined : 'Requires WebGPU support in the browser.',
+    },
+    {
+      id: 'Xenova/swin2SR-classical-sr-x2-64',
+      task: 'image-upscaling',
+      name: 'Swin2SR x2',
+      description: 'Local image upscaling for attached artwork, screenshots, and photos.',
+      size: 'x2 super-resolution',
+      loading: false,
+      progress: 0,
+      loaded: false,
+      cached: false,
+      runtime: 'WASM/CPU · q8',
+      source: 'local',
+      loadOptions: { device: 'wasm', dtype: 'q8' },
     },
     {
       id: 'Xenova/distilbart-cnn-6-6',
@@ -420,19 +409,163 @@ export class AiComponent {
 
     return [...localImageModels, ...cloudImageModels];
   });
+  readonly videoModels = computed<ModelInfo[]>(() => {
+    if (!this.aiService.hasCloudApiKey('xai')) {
+      return [];
+    }
+
+    return [{
+      id: 'cloud-video:xai',
+      task: 'video-generation',
+      name: 'xAI / Grok Video',
+      description: 'Generate videos with Grok Imagine Video.',
+      size: 'Hosted API',
+      loading: false,
+      progress: 100,
+      loaded: true,
+      cached: false,
+      runtime: 'xAI Video API',
+      source: 'cloud',
+      provider: 'xai',
+      cloudModel: this.aiService.getVideoModel('xai'),
+    }];
+  });
+  readonly voiceModels = computed<ModelInfo[]>(() => {
+    if (!this.aiService.hasCloudApiKey('xai')) {
+      return [];
+    }
+
+    return [{
+      id: 'cloud-voice:xai',
+      task: 'text-to-speech',
+      name: 'xAI / Grok Voice',
+      description: 'Generate speech with xAI text-to-speech.',
+      size: 'Hosted API',
+      loading: false,
+      progress: 100,
+      loaded: true,
+      cached: false,
+      runtime: 'xAI Voice API',
+      source: 'cloud',
+      provider: 'xai',
+      cloudModel: this.aiService.getVoiceModel('xai'),
+    }];
+  });
+  readonly xAiModeOptions: ChoiceOption[] = [
+    { value: 'text', label: 'Text' },
+    { value: 'image', label: 'Image' },
+    { value: 'video', label: 'Video' },
+    { value: 'voice', label: 'Voice' },
+  ];
+  readonly xAiImageCountOptions: ChoiceOption[] = Array.from({ length: 10 }, (_, index) => ({
+    value: String(index + 1),
+    label: `${index + 1}`,
+  }));
+  readonly xAiVisualAspectRatioOptions: ChoiceOption[] = [
+    { value: '1:1', label: '1:1' },
+    { value: '16:9', label: '16:9' },
+    { value: '9:16', label: '9:16' },
+    { value: '4:3', label: '4:3' },
+    { value: '3:4', label: '3:4' },
+    { value: '3:2', label: '3:2' },
+    { value: '2:3', label: '2:3' },
+  ];
+  readonly xAiImageExtendedAspectRatioOptions: ChoiceOption[] = [
+    ...this.xAiVisualAspectRatioOptions,
+    { value: '2:1', label: '2:1' },
+    { value: '1:2', label: '1:2' },
+    { value: '19.5:9', label: '19.5:9' },
+    { value: '9:19.5', label: '9:19.5' },
+    { value: '20:9', label: '20:9' },
+    { value: '9:20', label: '9:20' },
+    { value: 'auto', label: 'Auto' },
+  ];
+  readonly xAiVideoDurationOptions: ChoiceOption[] = Array.from({ length: 15 }, (_, index) => ({
+    value: String(index + 1),
+    label: `${index + 1}s`,
+  }));
+  readonly xAiVoiceOptions: ChoiceOption[] = [
+    { value: 'ara', label: 'Ara' },
+    { value: 'eve', label: 'Eve' },
+    { value: 'leo', label: 'Leo' },
+    { value: 'rex', label: 'Rex' },
+    { value: 'sal', label: 'Sal' },
+  ];
+  readonly xAiVoiceLanguageOptions: ChoiceOption[] = [
+    { value: 'auto', label: 'Auto' },
+    { value: 'en', label: 'English' },
+    { value: 'es-ES', label: 'Spanish' },
+    { value: 'fr', label: 'French' },
+    { value: 'de', label: 'German' },
+    { value: 'ja', label: 'Japanese' },
+    { value: 'pt-BR', label: 'Portuguese (BR)' },
+  ];
+  readonly xAiVoiceCodecOptions: ChoiceOption[] = [
+    { value: 'mp3', label: 'MP3' },
+    { value: 'wav', label: 'WAV' },
+  ];
   readonly composerModels = computed(() => [
     ...this.localChatModels(),
     ...this.cloudChatModels(),
     ...this.imageModels(),
+    ...this.videoModels(),
+    ...this.voiceModels(),
   ]);
+  readonly visibleComposerModels = computed(() => {
+    if (this.isVoiceGenerationMode()) {
+      return this.voiceModels();
+    }
+
+    if (this.isVideoGenerationMode()) {
+      return this.videoModels();
+    }
+
+    if (this.isImageMode()) {
+      return this.imageModels();
+    }
+
+    return [
+      ...this.localChatModels(),
+      ...this.cloudChatModels(),
+    ];
+  });
   readonly selectedModelId = signal(this.webGpuAvailable ? 'onnx-community/gemma-4-E2B-it-ONNX' : 'Xenova/distilgpt2');
   readonly selectedModel = computed(() => this.composerModels().find(model => model.id === this.selectedModelId()) ?? null);
+  readonly isXAiTextMode = computed(() => this.selectedModel()?.provider === 'xai' && this.selectedModel()?.source === 'cloud' && this.selectedModel()?.task === 'text-generation');
   readonly isImageGenerationMode = computed(() => this.selectedModel()?.task === 'image-generation');
   readonly isImageUpscalingMode = computed(() => this.selectedModel()?.task === 'image-upscaling');
+  readonly isVideoGenerationMode = computed(() => this.selectedModel()?.task === 'video-generation');
+  readonly isVoiceGenerationMode = computed(() => this.selectedModel()?.provider === 'xai' && this.selectedModel()?.task === 'text-to-speech');
   readonly isImageMode = computed(() => this.isImageGenerationMode() || this.isImageUpscalingMode());
+  readonly isVisualGenerationMode = computed(() => this.isImageMode() || this.isVideoGenerationMode());
+  readonly isGeneratedMediaMode = computed(() => this.isVisualGenerationMode() || this.isVoiceGenerationMode());
+  readonly hasXAiChatTypePicker = computed(() => this.cloudChatModels().some(model => model.provider === 'xai'));
+  readonly isXAiComposerMode = computed(() => this.selectedModel()?.provider === 'xai' && this.selectedModel()?.source === 'cloud' && (this.isXAiTextMode() || this.isImageGenerationMode() || this.isVideoGenerationMode() || this.isVoiceGenerationMode()));
+  readonly currentXAiMode = computed<XAiComposerMode>(() => this.isVoiceGenerationMode() ? 'voice' : this.isVideoGenerationMode() ? 'video' : this.isImageGenerationMode() ? 'image' : 'text');
+  readonly currentXAiModeLabel = computed(() => this.xAiModeOptions.find(option => option.value === this.currentXAiMode())?.label ?? 'Text');
+  readonly isXAiImageQualityMode = computed(() => this.cloudSettings().xaiImageResolution === '2k');
+  readonly xAiImageModeLabel = computed(() => this.isXAiImageQualityMode() ? 'Quality' : 'Speed');
+  readonly xAiImageCountLabel = computed(() => {
+    const count = this.aiService.cloudSettings().xaiImageCount;
+    return `${count} image${count === 1 ? '' : 's'}`;
+  });
+  readonly xAiImageAspectRatioLabel = computed(() => this.aiService.cloudSettings().xaiImageAspectRatio || 'Auto');
+  readonly xAiVideoAspectRatioLabel = computed(() => this.aiService.cloudSettings().xaiVideoAspectRatio || '16:9');
+  readonly xAiVideoDurationLabel = computed(() => `${this.aiService.cloudSettings().xaiVideoDuration}s`);
+  readonly xAiVoiceLabel = computed(() => this.xAiVoiceOptions.find(option => option.value === this.aiService.cloudSettings().xaiVoiceId)?.label ?? 'Eve');
+  readonly xAiVoiceLanguageLabel = computed(() => this.xAiVoiceLanguageOptions.find(option => option.value === this.aiService.cloudSettings().xaiVoiceLanguage)?.label ?? 'English');
+  readonly xAiVoiceCodecLabel = computed(() => this.xAiVoiceCodecOptions.find(option => option.value === this.aiService.cloudSettings().xaiVoiceCodec)?.label ?? 'MP3');
   readonly activeQuickPrompts = computed(() => {
     if (this.isImageGenerationMode()) {
       return this.imageQuickPrompts;
+    }
+
+    if (this.isVideoGenerationMode()) {
+      return this.videoQuickPrompts;
+    }
+
+    if (this.isVoiceGenerationMode()) {
+      return this.voiceQuickPrompts;
     }
 
     if (this.isImageUpscalingMode()) {
@@ -464,15 +597,15 @@ export class AiComponent {
   readonly conversationAttachmentCount = computed(() => this.conversation().reduce((total, message) => total + (message.attachments?.length ?? 0), 0));
   readonly currentConversationTitle = computed(() => this.activeHistory()?.title ?? 'New local chat');
   readonly canRetryLastReply = computed(() => {
-    if (this.isGenerating() || this.selectedModel()?.chatDisabledReason || this.isImageMode()) {
+    if (this.isGenerating() || this.selectedModel()?.chatDisabledReason || this.isGeneratedMediaMode()) {
       return false;
     }
 
     const lastMessage = this.conversation().at(-1);
-    return lastMessage?.role === 'assistant' && !lastMessage.generatedImages?.length;
+    return lastMessage?.role === 'assistant' && !lastMessage.generatedImages?.length && !lastMessage.generatedVideos?.length && !lastMessage.generatedAudios?.length;
   });
   readonly chatQuickPrompts: AiQuickPrompt[] = [
-    { label: 'Draft a post', prompt: 'Draft a short-form Nostr note post about [topic].' },
+    { label: 'Draft a post', prompt: 'Draft a post about [topic].' },
     { label: 'Draft an article', prompt: 'Draft an article for me about [topic] and add hashtags at the bottom.' },
     { label: 'Create an image', prompt: 'Create an image about [topic].', task: 'image-generation' },
     { label: 'Fetch a page', prompt: '#fetch https://nostria.app' },
@@ -484,6 +617,17 @@ export class AiComponent {
     { label: 'Product hero', prompt: 'Create a premium product hero image for a futuristic social app running on glass screens in a bright studio scene.' },
     { label: 'Poster concept', prompt: 'Generate a contemporary poster illustration for a Nostr community event with layered typography and editorial texture.' },
   ];
+  readonly videoQuickPrompts: AiQuickPrompt[] = [
+    { label: 'Launch scene', prompt: 'Create a cinematic launch video of [subject].', task: 'video-generation' },
+    { label: 'Product teaser', prompt: 'Create a short product teaser video for [product].', task: 'video-generation' },
+    { label: 'Ambient loop', prompt: 'Create a short ambient loop of [scene].', task: 'video-generation' },
+    { label: 'Animate image', prompt: 'Animate the attached image into a short video.', task: 'video-generation' },
+  ];
+  readonly voiceQuickPrompts: AiQuickPrompt[] = [
+    { label: 'Trailer VO', prompt: 'Read this like a cinematic trailer voice-over: [script]', task: 'voice-generation' },
+    { label: 'Warm narration', prompt: 'Read this with a warm, natural narration style: [script]', task: 'voice-generation' },
+    { label: 'Fast teaser', prompt: 'Read this with energetic pacing for a short teaser: [script]', task: 'voice-generation' },
+  ];
   readonly upscalingQuickPrompts: AiQuickPrompt[] = [
     { label: 'Enhance artwork', prompt: 'Upscale the attached artwork while keeping clean edges and fine line detail.' },
     { label: 'Sharpen photo', prompt: 'Upscale the attached photo and preserve natural textures.' },
@@ -492,6 +636,10 @@ export class AiComponent {
   readonly conversation = signal<ConversationMessage[]>([]);
   readonly composerText = signal('');
   readonly isGenerating = signal(false);
+  readonly xAiVideoMode = signal<'generate' | 'extend-video'>('generate');
+  readonly activeVideoOperation = signal<'generate' | 'animate' | 'reference' | 'edit' | 'extend' | null>(null);
+  readonly activeVideoStartedAt = signal<number | null>(null);
+  readonly statusClock = signal(Date.now());
   readonly chatError = signal('');
   readonly workerProcessingState = this.aiService.processingState;
   readonly workerTaskLabel = computed(() => this.aiService.getTaskName(this.workerProcessingState().task));
@@ -509,10 +657,51 @@ export class AiComponent {
       return model.cached ? `Loading ${model.name}...` : `Downloading ${model.name}...`;
     }
 
+    switch (this.activeVideoOperation()) {
+      case 'animate':
+        return 'Animating image into Grok video...';
+      case 'reference':
+        return 'Generating Grok video from references...';
+      case 'edit':
+        return 'Editing Grok video...';
+      case 'extend':
+        return 'Extending Grok video...';
+      case 'generate':
+        return 'Generating Grok video...';
+    }
+
     return this.workerTaskLabel() || (this.isGenerating() ? 'Processing...' : '');
   });
   readonly processingStatusText = computed(() => this.processingStatusLabel().replace(/\.{3}$/, '').trim());
-  readonly hasInlineStreamingIndicator = computed(() => this.conversation().some(message => message.role === 'assistant' && !!message.streaming && !message.content.trim().length && !(message.generatedImages?.length ?? 0)));
+  readonly activeVideoElapsedLabel = computed(() => {
+    const startedAt = this.activeVideoStartedAt();
+    if (!startedAt) {
+      return '';
+    }
+
+    const elapsedSeconds = Math.max(0, Math.floor((this.statusClock() - startedAt) / 1000));
+    const minutes = Math.floor(elapsedSeconds / 60);
+    const seconds = elapsedSeconds % 60;
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  });
+  readonly videoProcessingHint = computed(() => {
+    const operation = this.activeVideoOperation();
+    if (!operation) {
+      return '';
+    }
+
+    const elapsed = this.activeVideoElapsedLabel();
+    const prefix = elapsed ? `${elapsed} elapsed` : 'Working';
+    return `${prefix}. xAI video jobs are asynchronous and can take several minutes.`;
+  });
+  readonly hasInlineStreamingIndicator = computed(() => this.conversation().some(
+    message => message.role === 'assistant'
+      && !!message.streaming
+      && !message.content.trim().length
+      && !(message.generatedImages?.length ?? 0)
+      && !(message.generatedVideos?.length ?? 0)
+      && !(message.generatedAudios?.length ?? 0)
+  ));
   readonly showProcessingStatus = computed(() => {
     const busy = this.workerProcessingState().isProcessing || !!this.selectedModel()?.loading || this.isGenerating();
     return busy && !this.hasInlineStreamingIndicator();
@@ -530,6 +719,13 @@ export class AiComponent {
     return this.composerText().trim().length > 0 || this.attachedFiles().length > 0;
   });
   constructor() {
+    if (this.isBrowser) {
+      const intervalId = window.setInterval(() => {
+        this.statusClock.set(Date.now());
+      }, 1000);
+      this.destroyRef.onDestroy(() => window.clearInterval(intervalId));
+    }
+
     this.breakpointObserver.observe('(max-width: 1120px)').pipe(
       takeUntilDestroyed(this.destroyRef),
     ).subscribe(result => {
@@ -697,12 +893,25 @@ export class AiComponent {
     this.activeGeneratedImage.set(image);
   }
 
+  setActiveGeneratedVideo(video: AiGeneratedVideo): void {
+    this.activeGeneratedVideo.set(video);
+  }
+
+  setActiveGeneratedAudio(audio: AiGeneratedAudio): void {
+    this.activeGeneratedAudio.set(audio);
+  }
+
   setActiveSuggestion(suggestion: AssistantSuggestion): void {
     this.activeSuggestion.set(suggestion);
   }
 
   createNewChat(): void {
+    this.releaseGeneratedVideoUrls(this.conversation().flatMap(message => message.generatedVideos ?? []));
+    this.releaseGeneratedAudioUrls(this.conversation().flatMap(message => message.generatedAudios ?? []));
     this.currentConversationId.set(null);
+    this.activeGeneratedImage.set(null);
+    this.activeGeneratedVideo.set(null);
+    this.activeGeneratedAudio.set(null);
     this.attachedFiles.set([]);
     this.showHistoryDrawer.set(false);
     this.clearConversation();
@@ -721,15 +930,26 @@ export class AiComponent {
 
     this.currentConversationId.set(history.id);
     this.chatError.set('');
+    this.activeGeneratedImage.set(null);
+    this.activeGeneratedVideo.set(null);
+    this.activeGeneratedAudio.set(null);
     this.attachedFiles.set([]);
     this.autoScrollPinned.set(true);
     this.showHistoryDrawer.set(false);
+    this.releaseGeneratedVideoUrls(this.conversation().flatMap(message => message.generatedVideos ?? []));
+    this.releaseGeneratedAudioUrls(this.conversation().flatMap(message => message.generatedAudios ?? []));
     this.conversation.set(await Promise.all(history.messages.map(async message => ({
       id: this.createMessageId(),
       role: message.role,
       content: message.content,
       generatedImages: message.generatedImages?.length
         ? await this.restoreGeneratedImages(message.generatedImages)
+        : undefined,
+      generatedVideos: message.generatedVideos?.length
+        ? await this.restoreGeneratedVideos(message.generatedVideos)
+        : undefined,
+      generatedAudios: message.generatedAudios?.length
+        ? await this.restoreGeneratedAudios(message.generatedAudios)
         : undefined,
     }))));
   }
@@ -759,6 +979,64 @@ export class AiComponent {
 
   openImageSettings(): void {
     this.openSettingsPanel();
+  }
+
+  selectGrokMode(mode: XAiComposerMode): void {
+    const model = mode === 'text'
+      ? this.cloudChatModels().find(candidate => candidate.provider === 'xai')
+      : mode === 'image'
+        ? this.imageModels().find(candidate => candidate.task === 'image-generation' && candidate.provider === 'xai')
+        : mode === 'video'
+          ? this.videoModels().find(candidate => candidate.task === 'video-generation' && candidate.provider === 'xai')
+          : this.voiceModels().find(candidate => candidate.task === 'text-to-speech' && candidate.provider === 'xai');
+
+    if (model) {
+      this.selectedModelId.set(model.id);
+    }
+  }
+
+  updateXAiImageCount(value: string | number): void {
+    this.aiService.updateCloudSettings({ xaiImageCount: this.parsePositiveInt(value, this.aiService.cloudSettings().xaiImageCount) });
+  }
+
+  updateXAiImageResolution(value: string): void {
+    this.aiService.updateCloudSettings({ xaiImageResolution: value === '2k' ? '2k' : '1k' });
+  }
+
+  setXAiImageGenerationMode(mode: 'speed' | 'quality'): void {
+    this.updateXAiImageResolution(mode === 'quality' ? '2k' : '1k');
+  }
+
+  updateXAiImageAspectRatio(value: string): void {
+    this.aiService.updateCloudSettings({ xaiImageAspectRatio: value.trim() || this.aiService.cloudSettings().xaiImageAspectRatio });
+  }
+
+  updateXAiVideoDuration(value: string | number): void {
+    this.aiService.updateCloudSettings({ xaiVideoDuration: this.parsePositiveInt(value, this.aiService.cloudSettings().xaiVideoDuration) });
+  }
+
+  updateXAiVideoResolution(value: string): void {
+    this.aiService.updateCloudSettings({ xaiVideoResolution: value === '720p' ? '720p' : '480p' });
+  }
+
+  updateXAiVideoAspectRatio(value: string): void {
+    this.aiService.updateCloudSettings({ xaiVideoAspectRatio: value.trim() || this.aiService.cloudSettings().xaiVideoAspectRatio });
+  }
+
+  updateXAiVoiceId(value: string): void {
+    this.aiService.updateCloudSettings({ xaiVoiceId: value.trim() || this.aiService.cloudSettings().xaiVoiceId });
+  }
+
+  updateXAiVoiceLanguage(value: string): void {
+    this.aiService.updateCloudSettings({ xaiVoiceLanguage: value.trim() || this.aiService.cloudSettings().xaiVoiceLanguage });
+  }
+
+  updateXAiVoiceCodec(value: 'mp3' | 'wav'): void {
+    this.aiService.updateCloudSettings({ xaiVoiceCodec: value === 'wav' ? 'wav' : 'mp3' });
+  }
+
+  setXAiVideoMode(mode: 'generate' | 'extend-video'): void {
+    this.xAiVideoMode.set(mode);
   }
 
   openAttachmentPicker(): void {
@@ -811,7 +1089,37 @@ export class AiComponent {
     this.focusComposerPromptPlaceholder(prompt);
   }
 
+  applyVideoPrompt(prompt: string): void {
+    const videoModel = this.videoModels().find(model => model.task === 'video-generation');
+    if (videoModel) {
+      this.selectedModelId.set(videoModel.id);
+    }
+
+    this.composerText.set(prompt);
+    this.focusComposerPromptPlaceholder(prompt);
+  }
+
+  applyVoicePrompt(prompt: string): void {
+    const voiceModel = this.voiceModels().find(model => model.task === 'text-to-speech');
+    if (voiceModel) {
+      this.selectedModelId.set(voiceModel.id);
+    }
+
+    this.composerText.set(prompt);
+    this.focusComposerPromptPlaceholder(prompt);
+  }
+
   applyActiveQuickPrompt(prompt: AiQuickPrompt): void {
+    if (prompt.task === 'voice-generation' || this.isVoiceGenerationMode()) {
+      this.applyVoicePrompt(prompt.prompt);
+      return;
+    }
+
+    if (prompt.task === 'video-generation' || this.isVideoGenerationMode()) {
+      this.applyVideoPrompt(prompt.prompt);
+      return;
+    }
+
     if (prompt.task === 'image-generation' || this.isImageGenerationMode()) {
       this.applyImagePrompt(prompt.prompt);
       return;
@@ -982,6 +1290,49 @@ export class AiComponent {
     }
   }
 
+  async shareGeneratedVideoToNoteEditor(): Promise<void> {
+    const video = this.activeGeneratedVideo();
+    if (!video) {
+      return;
+    }
+
+    try {
+      const file = await this.createFileFromGeneratedVideo(video);
+      await this.eventService.createNote({
+        content: video.prompt,
+        files: [file],
+      });
+      this.snackBar.open('Opened in note editor.', 'Dismiss', { duration: 2600 });
+    } catch (error) {
+      this.logger.error('Failed to open generated video in note editor', error);
+      this.snackBar.open('Could not open the generated video in note editor.', 'Dismiss', { duration: 3500 });
+    }
+  }
+
+  async publishGeneratedVideo(): Promise<void> {
+    const video = this.activeGeneratedVideo();
+    if (!video) {
+      return;
+    }
+
+    try {
+      const file = await this.createFileFromGeneratedVideo(video);
+      const uploadResult = await this.mediaService.uploadFile(file, false, this.mediaService.mediaServers());
+      if (uploadResult.status === 'success' && uploadResult.item) {
+        const published = await this.layout.publishSingleItem(uploadResult.item);
+        if (published) {
+          this.snackBar.open('Generated video published.', 'Dismiss', { duration: 2600 });
+        }
+        return;
+      }
+
+      throw new Error(uploadResult.message ?? 'Upload failed.');
+    } catch (error) {
+      this.logger.error('Failed to publish generated video', error);
+      this.snackBar.open('Could not publish the generated video.', 'Dismiss', { duration: 3500 });
+    }
+  }
+
   reuseMessage(message: ConversationMessage): void {
     this.composerText.set(message.content);
     this.snackBar.open(message.role === 'assistant' ? 'Reply moved into the composer.' : 'Prompt ready to edit.', 'Dismiss', { duration: 2400 });
@@ -991,6 +1342,10 @@ export class AiComponent {
     const nextConversation = this.conversation().filter(entry => entry.id !== message.id);
 
     await this.removeGeneratedImagesFromCache(message.generatedImages);
+    await this.removeGeneratedVideosFromCache(message.generatedVideos);
+    await this.removeGeneratedAudiosFromCache(message.generatedAudios);
+    this.releaseGeneratedVideoUrls(message.generatedVideos);
+    this.releaseGeneratedAudioUrls(message.generatedAudios);
 
     if (this.activeShareMessage()?.id === message.id) {
       this.activeShareMessage.set(null);
@@ -999,6 +1354,16 @@ export class AiComponent {
     const activeGeneratedImage = this.activeGeneratedImage();
     if (activeGeneratedImage && message.generatedImages?.some(image => image.id === activeGeneratedImage.id)) {
       this.activeGeneratedImage.set(null);
+    }
+
+    const activeGeneratedVideo = this.activeGeneratedVideo();
+    if (activeGeneratedVideo && message.generatedVideos?.some(video => video.id === activeGeneratedVideo.id)) {
+      this.activeGeneratedVideo.set(null);
+    }
+
+    const activeGeneratedAudio = this.activeGeneratedAudio();
+    if (activeGeneratedAudio && message.generatedAudios?.some(audio => audio.id === activeGeneratedAudio.id)) {
+      this.activeGeneratedAudio.set(null);
     }
 
     if (this.hasPersistableMessages(nextConversation)) {
@@ -1107,6 +1472,47 @@ export class AiComponent {
     this.composerText.set(`Use this image concept as context and turn it into a polished post or product idea:\n\n${image.revisedPrompt || image.prompt}`);
   }
 
+  useVideoPromptInChat(video: AiGeneratedVideo): void {
+    const textModel = this.localChatModels()[0] ?? this.cloudChatModels()[0];
+    if (textModel) {
+      this.selectedModelId.set(textModel.id);
+    }
+
+    this.composerText.set(`Use this video concept as context and turn it into a polished post, storyboard, or campaign idea:\n\n${video.prompt}`);
+  }
+
+  useAudioPromptInChat(audio: AiGeneratedAudio): void {
+    const textModel = this.localChatModels()[0] ?? this.cloudChatModels()[0];
+    if (textModel) {
+      this.selectedModelId.set(textModel.id);
+    }
+
+    this.composerText.set(`Use this voice-over concept as context and turn it into a polished post, script, or campaign idea:\n\n${audio.prompt}`);
+  }
+
+  async extendGeneratedVideo(video: AiGeneratedVideo): Promise<void> {
+    const videoModel = this.videoModels().find(model => model.task === 'video-generation');
+    if (!videoModel) {
+      this.chatError.set('No video generation model is available. Add an xAI API key in AI Settings.');
+      return;
+    }
+
+    try {
+      const file = await this.createFileFromGeneratedVideo(video);
+      const attachment = await this.createAttachment(file);
+      this.selectedModelId.set(videoModel.id);
+      this.xAiVideoMode.set('extend-video');
+      this.attachedFiles.set([attachment]);
+      this.composerText.set(`Continue this video seamlessly. Keep the same subject and style, then: [describe what happens next]`);
+      this.focusComposerPromptPlaceholder(this.composerText());
+      this.snackBar.open('Source video attached. Add what should happen next.', 'Dismiss', { duration: 3000 });
+    } catch (error) {
+      this.logger.error('Failed to prepare generated video for extension', error);
+      this.chatError.set(error instanceof Error ? error.message : 'Could not prepare the generated video for extension.');
+      this.snackBar.open('Could not prepare the generated video for extension.', 'Dismiss', { duration: 3500 });
+    }
+  }
+
   async upscaleGeneratedImage(image: AiGeneratedImage): Promise<void> {
     if (this.isGenerating()) {
       return;
@@ -1149,6 +1555,21 @@ export class AiComponent {
     });
   }
 
+  openGeneratedVideoPreview(video: AiGeneratedVideo): void {
+    this.dialog.open(MediaPreviewDialogComponent, {
+      data: {
+        mediaUrl: video.src,
+        mediaType: 'video',
+        mediaTitle: video.prompt || 'Generated video',
+      },
+      maxWidth: '100vw',
+      maxHeight: '100vh',
+      width: '100vw',
+      height: '100vh',
+      panelClass: 'image-dialog-panel',
+    });
+  }
+
   downloadImage(image: AiGeneratedImage): void {
     if (!this.isBrowser || typeof document === 'undefined') {
       return;
@@ -1157,6 +1578,31 @@ export class AiComponent {
     const link = document.createElement('a');
     link.href = image.src;
     link.download = `${image.id}.png`;
+    link.rel = 'noopener';
+    link.click();
+  }
+
+  downloadVideo(video: AiGeneratedVideo): void {
+    if (!this.isBrowser || typeof document === 'undefined') {
+      return;
+    }
+
+    const link = document.createElement('a');
+    link.href = video.src;
+    link.download = `${video.id}.mp4`;
+    link.rel = 'noopener';
+    link.click();
+  }
+
+  downloadAudio(audio: AiGeneratedAudio): void {
+    if (!this.isBrowser || typeof document === 'undefined') {
+      return;
+    }
+
+    const extension = this.fileExtensionForMimeType(audio.mimeType || 'audio/mpeg');
+    const link = document.createElement('a');
+    link.href = audio.src;
+    link.download = `${audio.id}.${extension}`;
     link.rel = 'noopener';
     link.click();
   }
@@ -1206,7 +1652,19 @@ export class AiComponent {
 
   statusLabel(model: ModelInfo): string {
     if (model.source === 'cloud') {
-      return model.task === 'image-generation' ? 'Image' : 'Hosted';
+      if (model.task === 'image-generation') {
+        return 'Image';
+      }
+
+      if (model.task === 'video-generation') {
+        return 'Video';
+      }
+
+      if (model.task === 'text-to-speech') {
+        return 'Voice';
+      }
+
+      return 'Hosted';
     }
 
     if (model.loading) {
@@ -1257,7 +1715,12 @@ export class AiComponent {
   }
 
   clearConversation(): void {
+    this.releaseGeneratedVideoUrls(this.conversation().flatMap(message => message.generatedVideos ?? []));
+    this.releaseGeneratedAudioUrls(this.conversation().flatMap(message => message.generatedAudios ?? []));
     this.chatError.set('');
+    this.activeGeneratedImage.set(null);
+    this.activeGeneratedVideo.set(null);
+    this.activeGeneratedAudio.set(null);
     this.conversation.set([]);
   }
 
@@ -1285,6 +1748,16 @@ export class AiComponent {
 
     if (model.task === 'image-generation') {
       await this.generateImageMessage(model, promptText, attachments);
+      return;
+    }
+
+    if (model.task === 'video-generation') {
+      await this.generateVideoMessage(model, promptText, attachments);
+      return;
+    }
+
+    if (model.task === 'text-to-speech') {
+      await this.generateVoiceMessage(model, promptText);
       return;
     }
 
@@ -1408,6 +1881,15 @@ export class AiComponent {
   private createMessageId(): string {
     this.nextMessageId.update(value => value + 1);
     return `msg-${this.nextMessageId()}`;
+  }
+
+  private parsePositiveInt(value: string | number, fallback: number): number {
+    const parsed = typeof value === 'number' ? value : Number.parseInt(value, 10);
+    if (!Number.isFinite(parsed) || parsed <= 0) {
+      return fallback;
+    }
+
+    return Math.round(parsed);
   }
 
   private appendToMessage(id: string, text: string): void {
@@ -1767,6 +2249,12 @@ export class AiComponent {
     }
 
     if (
+      /(^\/?video\b|\b(generate|create|make|render|animate|produce)\b[\s\S]{0,80}\b(video|clip|animation|teaser|motion graphic|scene)\b|\b(video|clip|animation|teaser|motion graphic|scene)\b[\s\S]{0,80}\b(generate|create|make|render|animate|produce)\b)/i.test(prompt)
+    ) {
+      return { task: 'video-generation', prompt };
+    }
+
+    if (
       attachments.length === 0
       && /(^\/?image\b|\b(generate|create|make|render|draw|illustrate|paint|design)\b[\s\S]{0,80}\b(image|picture|photo|art|artwork|illustration|poster|cover|portrait|scene|logo|wallpaper)\b|\b(image|picture|photo|art|artwork|illustration|poster|cover|portrait|scene|logo|wallpaper)\b[\s\S]{0,80}\b(generate|create|make|render|draw|illustrate|paint|design)\b)/i.test(prompt)
     ) {
@@ -1782,7 +2270,9 @@ export class AiComponent {
       this.chatError.set(
         intent.task === 'image-generation'
           ? 'No image generation model is available. Select Janus Pro or configure a hosted image provider.'
-          : 'No image upscaling model is available.',
+          : intent.task === 'video-generation'
+            ? 'No video generation model is available. Add an xAI API key in AI Settings.'
+            : 'No image upscaling model is available.',
       );
       return true;
     }
@@ -1791,13 +2281,20 @@ export class AiComponent {
     this.snackBar.open(
       intent.task === 'image-generation'
         ? `Using ${model.name} to generate the image.`
-        : `Using ${model.name} to upscale the image.`,
+        : intent.task === 'video-generation'
+          ? `Using ${model.name} to generate the video.`
+          : `Using ${model.name} to upscale the image.`,
       'Dismiss',
       { duration: 2400 },
     );
 
     if (intent.task === 'image-generation') {
       await this.generateImageMessage(model, intent.prompt, attachments);
+      return true;
+    }
+
+    if (intent.task === 'video-generation') {
+      await this.generateVideoMessage(model, intent.prompt, attachments);
       return true;
     }
 
@@ -1823,6 +2320,8 @@ export class AiComponent {
         role: message.role,
         content: message.content,
         generatedImages: message.generatedImages?.map(image => this.toHistoryGeneratedImage(image)),
+        generatedVideos: message.generatedVideos?.map(video => this.toHistoryGeneratedVideo(video)),
+        generatedAudios: message.generatedAudios?.map(audio => this.toHistoryGeneratedAudio(audio)),
       })),
     });
 
@@ -1835,16 +2334,11 @@ export class AiComponent {
         return true;
       }
 
-      return (message.generatedImages?.length ?? 0) > 0;
+      return (message.generatedImages?.length ?? 0) > 0 || (message.generatedVideos?.length ?? 0) > 0 || (message.generatedAudios?.length ?? 0) > 0;
     });
   }
 
-  private async generateImageMessage(model: ModelInfo, promptText: string, attachments: ComposerAttachment[]): Promise<void> {
-    if (attachments.length > 0) {
-      this.chatError.set('Image generation does not support file attachments yet.');
-      return;
-    }
-
+  private async generateVoiceMessage(model: ModelInfo, promptText: string): Promise<void> {
     const prompt = promptText.trim();
     if (!prompt) {
       return;
@@ -1864,6 +2358,68 @@ export class AiComponent {
       { id: assistantMessageId, role: 'assistant', content: '', streaming: true },
     ]);
     this.composerText.set('');
+    this.attachedFiles.set([]);
+    this.autoScrollPinned.set(true);
+    this.showHistoryDrawer.set(false);
+    this.isGenerating.set(true);
+
+    try {
+      const audios = await this.aiService.generateVoice(prompt);
+      const cachedAudios = await Promise.all(audios.map(audio => this.cacheGeneratedAudio(audio)));
+
+      this.conversation.update(messages => messages.map(message => {
+        if (message.id !== assistantMessageId) {
+          return message;
+        }
+
+        return {
+          ...message,
+          content: '',
+          streaming: false,
+          generatedAudios: cachedAudios,
+        };
+      }));
+      this.persistCurrentConversation();
+    } catch (err) {
+      if (this.aiService.isAbortError(err)) {
+        this.finalizeStoppedGeneration(assistantMessageId);
+        return;
+      }
+
+      this.logger.error('AI voice generation error:', err);
+      const message = err instanceof Error ? err.message : String(err);
+      this.chatError.set(message);
+      this.replaceMessageContent(assistantMessageId, `Voice generation error: ${message}`, false);
+      this.persistCurrentConversation();
+    } finally {
+      this.isGenerating.set(false);
+    }
+  }
+
+  private async generateImageMessage(model: ModelInfo, promptText: string, attachments: ComposerAttachment[]): Promise<void> {
+    const prompt = promptText.trim();
+    if (!prompt) {
+      return;
+    }
+
+    const imageOptions = await this.buildImageGenerationOptions(model, attachments);
+
+    const assistantMessageId = this.createMessageId();
+    const userMessage: ConversationMessage = {
+      id: this.createMessageId(),
+      role: 'user',
+      content: prompt,
+      attachments: attachments.length ? attachments : undefined,
+    };
+
+    this.chatError.set('');
+    this.conversation.set([
+      ...this.conversation(),
+      userMessage,
+      { id: assistantMessageId, role: 'assistant', content: '', streaming: true },
+    ]);
+    this.composerText.set('');
+    this.attachedFiles.set([]);
     this.autoScrollPinned.set(true);
     this.showHistoryDrawer.set(false);
     this.isGenerating.set(true);
@@ -1879,7 +2435,7 @@ export class AiComponent {
       }
 
       const images = model.source === 'cloud'
-        ? await this.aiService.generateImage(prompt, model.provider)
+        ? await this.aiService.generateImage(prompt, model.provider, imageOptions)
         : await this.aiService.generateLocalImage(prompt, model.id);
       const cachedImages = await Promise.all(images.map(image => this.cacheGeneratedImage(image)));
       this.conversation.update(messages => messages.map(message => {
@@ -1907,6 +2463,68 @@ export class AiComponent {
       this.replaceMessageContent(assistantMessageId, `Image generation error: ${message}`, false);
       this.persistCurrentConversation();
     } finally {
+      this.isGenerating.set(false);
+    }
+  }
+
+  private async generateVideoMessage(model: ModelInfo, promptText: string, attachments: ComposerAttachment[]): Promise<void> {
+    const prompt = promptText.trim();
+    if (!prompt) {
+      return;
+    }
+
+    const videoOptions = await this.buildVideoGenerationOptions(attachments);
+    const assistantMessageId = this.createMessageId();
+    const userMessage: ConversationMessage = {
+      id: this.createMessageId(),
+      role: 'user',
+      content: prompt,
+      attachments: attachments.length ? attachments : undefined,
+    };
+
+    this.chatError.set('');
+    this.conversation.set([
+      ...this.conversation(),
+      userMessage,
+      { id: assistantMessageId, role: 'assistant', content: '', streaming: true },
+    ]);
+    this.composerText.set('');
+    this.attachedFiles.set([]);
+    this.autoScrollPinned.set(true);
+    this.showHistoryDrawer.set(false);
+    this.isGenerating.set(true);
+    this.beginVideoOperation(this.resolveVideoOperation(videoOptions));
+
+    try {
+      const videos = await this.aiService.generateVideo(prompt, videoOptions);
+      const cachedVideos = await Promise.all(videos.map(video => this.cacheGeneratedVideo(video)));
+
+      this.conversation.update(messages => messages.map(message => {
+        if (message.id !== assistantMessageId) {
+          return message;
+        }
+
+        return {
+          ...message,
+          content: '',
+          streaming: false,
+          generatedVideos: cachedVideos,
+        };
+      }));
+      this.persistCurrentConversation();
+    } catch (err) {
+      if (this.aiService.isAbortError(err)) {
+        this.finalizeStoppedGeneration(assistantMessageId);
+        return;
+      }
+
+      this.logger.error('AI video generation error:', err);
+      const message = err instanceof Error ? err.message : String(err);
+      this.chatError.set(message);
+      this.replaceMessageContent(assistantMessageId, `Video generation error: ${message}`, false);
+      this.persistCurrentConversation();
+    } finally {
+      this.endVideoOperation();
       this.isGenerating.set(false);
     }
   }
@@ -1995,6 +2613,108 @@ export class AiComponent {
     this.snackBar.open('Generation stopped.', 'Dismiss', { duration: 1800 });
   }
 
+  private async buildImageGenerationOptions(model: ModelInfo, attachments: ComposerAttachment[]): Promise<AiImageGenerationOptions | undefined> {
+    if (attachments.length === 0) {
+      return undefined;
+    }
+
+    if (model.provider !== 'xai') {
+      throw new Error('Hosted image attachments are currently supported only for xAI / Grok image generation.');
+    }
+
+    const imageAttachments = attachments.filter(attachment => attachment.mimeType.startsWith('image/'));
+    if (imageAttachments.length !== attachments.length) {
+      throw new Error('xAI image generation only supports image attachments.');
+    }
+
+    return {
+      inputImages: await Promise.all(imageAttachments.map(attachment => this.readAttachmentAsDataUrl(attachment))),
+    };
+  }
+
+  private async buildVideoGenerationOptions(attachments: ComposerAttachment[]): Promise<AiVideoGenerationOptions | undefined> {
+    if (attachments.length === 0) {
+      if (this.xAiVideoMode() === 'extend-video') {
+        throw new Error('Attach one source video to use Grok video extension mode.');
+      }
+
+      return undefined;
+    }
+
+    const imageAttachments = attachments.filter(attachment => attachment.mimeType.startsWith('image/'));
+    const videoAttachments = attachments.filter(attachment => attachment.mimeType.startsWith('video/'));
+
+    if (imageAttachments.length > 0 && videoAttachments.length > 0) {
+      throw new Error('Use either image attachments or a single video attachment for Grok video generation, not both together.');
+    }
+
+    if (videoAttachments.length > 1) {
+      throw new Error('Attach at most one source video when editing or extending with Grok video.');
+    }
+
+    if (videoAttachments.length === 1) {
+      return {
+        mode: this.xAiVideoMode(),
+        inputVideo: await this.readAttachmentAsDataUrl(videoAttachments[0]),
+      };
+    }
+
+    if (imageAttachments.length === 1) {
+      if (this.xAiVideoMode() === 'extend-video') {
+        throw new Error('Grok video extension mode requires a video attachment, not an image.');
+      }
+
+      return {
+        mode: 'generate',
+        inputImage: await this.readAttachmentAsDataUrl(imageAttachments[0]),
+      };
+    }
+
+    if (imageAttachments.length > 1) {
+      if (this.xAiVideoMode() === 'extend-video') {
+        throw new Error('Grok video extension mode requires a single source video attachment.');
+      }
+
+      return {
+        mode: 'generate',
+        referenceImages: await Promise.all(imageAttachments.map(attachment => this.readAttachmentAsDataUrl(attachment))),
+      };
+    }
+
+    throw new Error('Grok video generation supports image or video attachments only.');
+  }
+
+  private resolveVideoOperation(options?: AiVideoGenerationOptions): 'generate' | 'animate' | 'reference' | 'edit' | 'extend' {
+    if (options?.mode === 'extend-video') {
+      return 'extend';
+    }
+
+    if (options?.inputVideo) {
+      return 'edit';
+    }
+
+    if (options?.referenceImages?.length) {
+      return 'reference';
+    }
+
+    if (options?.inputImage) {
+      return 'animate';
+    }
+
+    return 'generate';
+  }
+
+  private beginVideoOperation(operation: 'generate' | 'animate' | 'reference' | 'edit' | 'extend'): void {
+    this.activeVideoOperation.set(operation);
+    this.activeVideoStartedAt.set(Date.now());
+    this.statusClock.set(Date.now());
+  }
+
+  private endVideoOperation(): void {
+    this.activeVideoOperation.set(null);
+    this.activeVideoStartedAt.set(null);
+  }
+
   private async cacheGeneratedImage(image: AiGeneratedImage): Promise<AiGeneratedImage> {
     if (!this.isBrowser || typeof caches === 'undefined') {
       return image;
@@ -2021,6 +2741,60 @@ export class AiComponent {
     };
   }
 
+  private async cacheGeneratedVideo(video: AiGeneratedVideo): Promise<AiGeneratedVideo> {
+    if (!this.isBrowser || typeof caches === 'undefined') {
+      return video;
+    }
+
+    const cacheKey = `https://nostria.local/cache/ai/generated/${encodeURIComponent(video.id)}`;
+    const response = await fetch(video.src);
+    if (!response.ok) {
+      throw new Error(`Could not cache generated video (${response.status}).`);
+    }
+
+    const blob = await response.blob();
+    const cache = await caches.open(AiComponent.AI_UPLOAD_CACHE);
+    await cache.put(cacheKey, new Response(blob, {
+      headers: new Headers({
+        'content-type': blob.type || video.mimeType || 'video/mp4',
+      }),
+    }));
+
+    return {
+      ...video,
+      src: URL.createObjectURL(blob),
+      cacheKey,
+      mimeType: blob.type || video.mimeType || 'video/mp4',
+    };
+  }
+
+  private async cacheGeneratedAudio(audio: AiGeneratedAudio): Promise<AiGeneratedAudio> {
+    if (!this.isBrowser || typeof caches === 'undefined') {
+      return audio;
+    }
+
+    const cacheKey = `https://nostria.local/cache/ai/generated/${encodeURIComponent(audio.id)}`;
+    const response = await fetch(audio.src);
+    if (!response.ok) {
+      throw new Error(`Could not cache generated audio (${response.status}).`);
+    }
+
+    const blob = await response.blob();
+    const cache = await caches.open(AiComponent.AI_UPLOAD_CACHE);
+    await cache.put(cacheKey, new Response(blob, {
+      headers: new Headers({
+        'content-type': blob.type || audio.mimeType || 'audio/mpeg',
+      }),
+    }));
+
+    return {
+      ...audio,
+      src: URL.createObjectURL(blob),
+      cacheKey,
+      mimeType: blob.type || audio.mimeType || 'audio/mpeg',
+    };
+  }
+
   private async removeGeneratedImagesFromCache(images?: AiGeneratedImage[]): Promise<void> {
     if (!this.isBrowser || typeof caches === 'undefined' || !images?.length) {
       return;
@@ -2040,10 +2814,62 @@ export class AiComponent {
     }
   }
 
+  private async removeGeneratedVideosFromCache(videos?: AiGeneratedVideo[]): Promise<void> {
+    if (!this.isBrowser || typeof caches === 'undefined' || !videos?.length) {
+      return;
+    }
+
+    try {
+      const cache = await caches.open(AiComponent.AI_UPLOAD_CACHE);
+      await Promise.all(videos.map(async video => {
+        if (!video.cacheKey) {
+          return;
+        }
+
+        await cache.delete(video.cacheKey);
+      }));
+    } catch (error) {
+      this.logger.warn('Failed to delete generated video cache entries', error);
+    }
+  }
+
+  private async removeGeneratedAudiosFromCache(audios?: AiGeneratedAudio[]): Promise<void> {
+    if (!this.isBrowser || typeof caches === 'undefined' || !audios?.length) {
+      return;
+    }
+
+    try {
+      const cache = await caches.open(AiComponent.AI_UPLOAD_CACHE);
+      await Promise.all(audios.map(async audio => {
+        if (!audio.cacheKey) {
+          return;
+        }
+
+        await cache.delete(audio.cacheKey);
+      }));
+    } catch (error) {
+      this.logger.warn('Failed to delete generated audio cache entries', error);
+    }
+  }
+
   private async restoreGeneratedImages(images: AiHistoryGeneratedImage[]): Promise<AiGeneratedImage[]> {
     return Promise.all(images.map(async image => ({
       ...image,
       src: await this.resolveGeneratedImageSource(image),
+    })));
+  }
+
+  private async restoreGeneratedVideos(videos: AiHistoryGeneratedVideo[]): Promise<AiGeneratedVideo[]> {
+    return Promise.all(videos.map(async video => ({
+      ...video,
+      src: await this.resolveGeneratedVideoSource(video),
+    })));
+  }
+
+  private async restoreGeneratedAudios(audios: AiHistoryGeneratedAudio[]): Promise<AiGeneratedAudio[]> {
+    return Promise.all(audios.map(async audio => ({
+      ...audio,
+      src: await this.resolveGeneratedAudioSource(audio),
     })));
   }
 
@@ -2067,6 +2893,70 @@ export class AiComponent {
     }
   }
 
+  private async resolveGeneratedVideoSource(video: AiHistoryGeneratedVideo): Promise<string> {
+    if (!this.isBrowser || typeof caches === 'undefined' || !video.cacheKey) {
+      return '';
+    }
+
+    try {
+      const cache = await caches.open(AiComponent.AI_UPLOAD_CACHE);
+      const response = await cache.match(video.cacheKey);
+      if (!response?.ok) {
+        return '';
+      }
+
+      const blob = await response.blob();
+      return URL.createObjectURL(blob);
+    } catch (error) {
+      this.logger.warn('Failed to restore generated video from cache', error);
+      return '';
+    }
+  }
+
+  private async resolveGeneratedAudioSource(audio: AiHistoryGeneratedAudio): Promise<string> {
+    if (!this.isBrowser || typeof caches === 'undefined' || !audio.cacheKey) {
+      return '';
+    }
+
+    try {
+      const cache = await caches.open(AiComponent.AI_UPLOAD_CACHE);
+      const response = await cache.match(audio.cacheKey);
+      if (!response?.ok) {
+        return '';
+      }
+
+      const blob = await response.blob();
+      return URL.createObjectURL(blob);
+    } catch (error) {
+      this.logger.warn('Failed to restore generated audio from cache', error);
+      return '';
+    }
+  }
+
+  private releaseGeneratedVideoUrls(videos?: AiGeneratedVideo[]): void {
+    if (!videos?.length) {
+      return;
+    }
+
+    for (const video of videos) {
+      if (video.src.startsWith('blob:')) {
+        URL.revokeObjectURL(video.src);
+      }
+    }
+  }
+
+  private releaseGeneratedAudioUrls(audios?: AiGeneratedAudio[]): void {
+    if (!audios?.length) {
+      return;
+    }
+
+    for (const audio of audios) {
+      if (audio.src.startsWith('blob:')) {
+        URL.revokeObjectURL(audio.src);
+      }
+    }
+  }
+
   private blobToDataUrl(blob: Blob): Promise<string> {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -2080,6 +2970,18 @@ export class AiComponent {
     const blob = await this.getGeneratedImageBlob(image);
     const extension = this.fileExtensionForMimeType(blob.type || image.mimeType || 'image/png');
     return new File([blob], `${image.id}.${extension}`, { type: blob.type || image.mimeType || 'image/png' });
+  }
+
+  private async createFileFromGeneratedVideo(video: AiGeneratedVideo): Promise<File> {
+    const blob = await this.getGeneratedVideoBlob(video);
+    const extension = this.fileExtensionForMimeType(blob.type || video.mimeType || 'video/mp4');
+    return new File([blob], `${video.id}.${extension}`, { type: blob.type || video.mimeType || 'video/mp4' });
+  }
+
+  private async createFileFromGeneratedAudio(audio: AiGeneratedAudio): Promise<File> {
+    const blob = await this.getGeneratedAudioBlob(audio);
+    const extension = this.fileExtensionForMimeType(blob.type || audio.mimeType || 'audio/mpeg');
+    return new File([blob], `${audio.id}.${extension}`, { type: blob.type || audio.mimeType || 'audio/mpeg' });
   }
 
   private async getGeneratedImageBlob(image: AiGeneratedImage): Promise<Blob> {
@@ -2099,6 +3001,40 @@ export class AiComponent {
     return response.blob();
   }
 
+  private async getGeneratedVideoBlob(video: AiGeneratedVideo): Promise<Blob> {
+    if (this.isBrowser && typeof caches !== 'undefined' && video.cacheKey) {
+      const cache = await caches.open(AiComponent.AI_UPLOAD_CACHE);
+      const cached = await cache.match(video.cacheKey);
+      if (cached?.ok) {
+        return cached.blob();
+      }
+    }
+
+    const response = await fetch(video.src);
+    if (!response.ok) {
+      throw new Error(`Could not fetch generated video (${response.status}).`);
+    }
+
+    return response.blob();
+  }
+
+  private async getGeneratedAudioBlob(audio: AiGeneratedAudio): Promise<Blob> {
+    if (this.isBrowser && typeof caches !== 'undefined' && audio.cacheKey) {
+      const cache = await caches.open(AiComponent.AI_UPLOAD_CACHE);
+      const cached = await cache.match(audio.cacheKey);
+      if (cached?.ok) {
+        return cached.blob();
+      }
+    }
+
+    const response = await fetch(audio.src);
+    if (!response.ok) {
+      throw new Error(`Could not fetch generated audio (${response.status}).`);
+    }
+
+    return response.blob();
+  }
+
   private fileExtensionForMimeType(mimeType: string): string {
     switch (mimeType) {
       case 'image/jpeg':
@@ -2107,6 +3043,16 @@ export class AiComponent {
         return 'webp';
       case 'image/gif':
         return 'gif';
+      case 'video/mp4':
+        return 'mp4';
+      case 'video/webm':
+        return 'webm';
+      case 'audio/wav':
+      case 'audio/x-wav':
+        return 'wav';
+      case 'audio/mpeg':
+      case 'audio/mp3':
+        return 'mp3';
       default:
         return 'png';
     }
@@ -2122,6 +3068,33 @@ export class AiComponent {
       revisedPrompt: image.revisedPrompt,
       cacheKey: image.cacheKey,
       mimeType: image.mimeType,
+    };
+  }
+
+  private toHistoryGeneratedVideo(video: AiGeneratedVideo): AiHistoryGeneratedVideo {
+    return {
+      id: video.id,
+      provider: video.provider,
+      providerLabel: video.providerLabel,
+      model: video.model,
+      prompt: video.prompt,
+      cacheKey: video.cacheKey,
+      mimeType: video.mimeType,
+      duration: video.duration,
+    };
+  }
+
+  private toHistoryGeneratedAudio(audio: AiGeneratedAudio): AiHistoryGeneratedAudio {
+    return {
+      id: audio.id,
+      provider: audio.provider,
+      providerLabel: audio.providerLabel,
+      model: audio.model,
+      prompt: audio.prompt,
+      cacheKey: audio.cacheKey,
+      mimeType: audio.mimeType,
+      voiceId: audio.voiceId,
+      language: audio.language,
     };
   }
 
@@ -2443,6 +3416,11 @@ export class AiComponent {
     }
 
     return response.blob();
+  }
+
+  private async readAttachmentAsDataUrl(attachment: ComposerAttachment): Promise<string> {
+    const blob = await this.readAttachmentBlob(attachment);
+    return this.blobToDataUrl(blob);
   }
 
   private isTextLikeFile(file: File): boolean {

@@ -271,6 +271,27 @@ export interface StoredAiChatHistoryEntry {
       cacheKey?: string;
       mimeType?: string;
     }>;
+    generatedVideos?: Array<{
+      id: string;
+      provider: 'openai' | 'xai' | 'local';
+      providerLabel: string;
+      model: string;
+      prompt: string;
+      cacheKey?: string;
+      mimeType?: string;
+      duration?: number;
+    }>;
+    generatedAudios?: Array<{
+      id: string;
+      provider: 'openai' | 'xai' | 'local';
+      providerLabel: string;
+      model: string;
+      prompt: string;
+      cacheKey?: string;
+      mimeType?: string;
+      voiceId?: string;
+      language?: string;
+    }>;
   }>;
 }
 

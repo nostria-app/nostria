@@ -111,6 +111,33 @@
       }
 
       <div class="chat-workspace">
+        @if (conversation().length === 0 && hasXAiChatTypePicker()) {
+        <section class="initial-chat-type-picker" aria-label="Choose chat type">
+          <div class="initial-chat-type-actions" role="group" aria-label="Chat type">
+            <button type="button" class="grok-toolbar-chip grok-toolbar-chip-icon"
+              [class.grok-toolbar-chip-active]="isXAiTextMode()" (click)="selectGrokMode('text')">
+              <mat-icon>chat</mat-icon>
+              <span>Text</span>
+            </button>
+            <button type="button" class="grok-toolbar-chip grok-toolbar-chip-icon"
+              [class.grok-toolbar-chip-active]="isImageGenerationMode()" (click)="selectGrokMode('image')">
+              <mat-icon>image</mat-icon>
+              <span>Image</span>
+            </button>
+            <button type="button" class="grok-toolbar-chip grok-toolbar-chip-icon"
+              [class.grok-toolbar-chip-active]="isVideoGenerationMode()" (click)="selectGrokMode('video')">
+              <mat-icon>videocam</mat-icon>
+              <span>Video</span>
+            </button>
+            <button type="button" class="grok-toolbar-chip grok-toolbar-chip-icon"
+              [class.grok-toolbar-chip-active]="isVoiceGenerationMode()" (click)="selectGrokMode('voice')">
+              <mat-icon>graphic_eq</mat-icon>
+              <span>Voice</span>
+            </button>
+          </div>
+        </section>
+        }
+
         @if (conversation().length <= 1) { <section class="prompt-suggestions">
           @for (prompt of activeQuickPrompts(); track prompt.label) {
           <button mat-stroked-button type="button" (click)="applyActiveQuickPrompt(prompt)">{{ prompt.label
@@ -123,7 +150,7 @@
       @for (message of conversation(); track message.id) {
       <article class="message-row" [class.message-user]="message.role === 'user'"
         [class.message-assistant]="message.role === 'assistant'"
-        [class.message-row-generated]="!!message.generatedImages?.length">
+        [class.message-row-generated]="!!message.generatedImages?.length || !!message.generatedVideos?.length || !!message.generatedAudios?.length">
         <div class="message-row-head">
           <div class="message-actions">
             @if (message.role === 'assistant' && message.content.trim().length > 0) {
@@ -155,7 +182,7 @@
         </div>
         @if (message.role === 'assistant') {
         <div class="message-bubble markdown-bubble" [class.pending-bubble]="message.streaming"
-          [class.generated-images-bubble]="!!message.generatedImages?.length">
+          [class.generated-images-bubble]="!!message.generatedImages?.length || !!message.generatedVideos?.length || !!message.generatedAudios?.length">
           @if (message.content.trim().length > 0) {
           @if (renderedAssistantThinking(message.id); as thinking) {
           <section class="assistant-thinking-block">
@@ -244,14 +271,103 @@
             }
           </div>
           }
-          @if (message.streaming && message.content.trim().length === 0 && !message.generatedImages?.length) {
+          @if (message.generatedVideos?.length) {
+          <div class="generated-video-grid">
+            @for (video of message.generatedVideos!; track video.id) {
+            <article class="generated-video-card">
+              <div class="generated-image-head">
+                <div class="message-actions generated-image-actions">
+                  <button type="button" class="message-action-button" (click)="applyVideoPrompt(video.prompt)">
+                    <mat-icon>auto_fix_high</mat-icon>
+                    <span>Remix</span>
+                  </button>
+                  <button type="button" class="message-action-button" (click)="useVideoPromptInChat(video)">
+                    <mat-icon>chat</mat-icon>
+                    <span>Use in chat</span>
+                  </button>
+                  <button type="button" class="message-action-button" (click)="extendGeneratedVideo(video)">
+                    <mat-icon>timeline</mat-icon>
+                    <span>Extend</span>
+                  </button>
+                  <button type="button" class="message-action-button" (click)="downloadVideo(video)">
+                    <mat-icon>download</mat-icon>
+                    <span>Download</span>
+                  </button>
+                  <button type="button" class="message-action-button" (click)="setActiveGeneratedVideo(video)"
+                    [matMenuTriggerFor]="generatedVideoMenu">
+                    <mat-icon>share</mat-icon>
+                    <span>Share</span>
+                  </button>
+                </div>
+              </div>
+              <button type="button" class="generated-image-preview-button" (click)="openGeneratedVideoPreview(video)"
+                [attr.aria-label]="'Preview generated video for ' + video.prompt"
+                [attr.title]="video.prompt || 'Preview generated video'">
+                <span class="sr-only">Preview generated video</span>
+                <video [src]="video.src" class="generated-video-preview" muted preload="metadata"></video>
+              </button>
+              <div class="generated-image-copy">
+                <div class="generated-image-meta">
+                  <span>{{ video.providerLabel }}</span>
+                  <span>{{ video.model }}</span>
+                </div>
+                <p>{{ video.prompt }}</p>
+              </div>
+            </article>
+            }
+          </div>
+          }
+          @if (message.generatedAudios?.length) {
+          <div class="generated-audio-grid">
+            @for (audio of message.generatedAudios!; track audio.id) {
+            <article class="generated-audio-card">
+              <div class="generated-image-head">
+                <div class="message-actions generated-image-actions">
+                  <button type="button" class="message-action-button" (click)="applyVoicePrompt(audio.prompt)">
+                    <mat-icon>auto_fix_high</mat-icon>
+                    <span>Remix</span>
+                  </button>
+                  <button type="button" class="message-action-button" (click)="useAudioPromptInChat(audio)">
+                    <mat-icon>chat</mat-icon>
+                    <span>Use in chat</span>
+                  </button>
+                  <button type="button" class="message-action-button" (click)="downloadAudio(audio)">
+                    <mat-icon>download</mat-icon>
+                    <span>Download</span>
+                  </button>
+                </div>
+              </div>
+              <div class="generated-audio-player-shell">
+                <audio class="generated-audio-player" [src]="audio.src" controls preload="metadata"></audio>
+              </div>
+              <div class="generated-image-copy">
+                <div class="generated-image-meta">
+                  <span>{{ audio.providerLabel }}</span>
+                  <span>{{ audio.voiceId || audio.model }}</span>
+                  <span>{{ audio.language || 'auto' }}</span>
+                </div>
+                <p>{{ audio.prompt }}</p>
+              </div>
+            </article>
+            }
+          </div>
+          }
+          @if (message.streaming && message.content.trim().length === 0 && !message.generatedImages?.length &&
+          !message.generatedVideos?.length && !message.generatedAudios?.length) {
           <div class="stream-placeholder">
-            <span>{{ processingStatusText() || 'Processing' }}</span>
-            <span class="processing-ellipsis" aria-hidden="true">
-              <span>.</span>
-              <span>.</span>
-              <span>.</span>
-            </span>
+            <div class="stream-placeholder-copy">
+              <div class="stream-placeholder-line">
+                <span>{{ processingStatusText() || 'Processing' }}</span>
+                <span class="processing-ellipsis" aria-hidden="true">
+                  <span>.</span>
+                  <span>.</span>
+                  <span>.</span>
+                </span>
+              </div>
+              @if (videoProcessingHint()) {
+              <div class="stream-placeholder-hint">{{ videoProcessingHint() }}</div>
+              }
+            </div>
             @if (activeModelProgress() !== null) {
             <span class="stream-progress">{{ activeModelProgress() }}%</span>
             }
@@ -285,12 +401,17 @@
       @if (showProcessingStatus()) {
       <div class="composer-processing-status" aria-live="polite">
         <div class="composer-processing-copy">
-          <span>{{ processingStatusText() || 'Processing' }}</span>
-          <span class="processing-ellipsis" aria-hidden="true">
-            <span>.</span>
-            <span>.</span>
-            <span>.</span>
-          </span>
+          <div class="composer-processing-line">
+            <span>{{ processingStatusText() || 'Processing' }}</span>
+            <span class="processing-ellipsis" aria-hidden="true">
+              <span>.</span>
+              <span>.</span>
+              <span>.</span>
+            </span>
+          </div>
+          @if (videoProcessingHint()) {
+          <div class="composer-processing-hint">{{ videoProcessingHint() }}</div>
+          }
         </div>
         @if (activeModelProgress() !== null) {
         <span class="composer-processing-progress">{{ activeModelProgress() }}%</span>
@@ -337,9 +458,9 @@
 
         <textarea #composerInput class="composer-input" [ngModel]="composerText()"
           (ngModelChange)="composerText.set($event)" (keydown)="onComposerKeydown($event)" rows="1"
-          placeholder="{{ isImageUpscalingMode() ? 'Attach one image to upscale' : isImageGenerationMode() ? 'Describe the image you want to create' : 'Ask anything or use #fetch example.com' }}"
-          aria-label="{{ isImageUpscalingMode() ? 'Upscaling instruction' : isImageGenerationMode() ? 'Image prompt' : 'Chat prompt' }}"
-          title="{{ isImageUpscalingMode() ? 'Upscaling instruction' : isImageGenerationMode() ? 'Image prompt' : 'Chat prompt' }}"
+          placeholder="{{ isImageUpscalingMode() ? 'Attach one image to upscale' : isImageGenerationMode() ? 'Describe the image you want to create' : isVideoGenerationMode() ? (xAiVideoMode() === 'extend-video' ? 'Attach one video and describe what happens next' : 'Describe the video you want to create, or attach an image or video as source material') : isVoiceGenerationMode() ? 'Paste or write the script you want spoken aloud' : 'Ask anything or use #fetch example.com' }}"
+          aria-label="{{ isImageUpscalingMode() ? 'Upscaling instruction' : isImageGenerationMode() ? 'Image prompt' : isVideoGenerationMode() ? 'Video prompt' : isVoiceGenerationMode() ? 'Voice prompt' : 'Chat prompt' }}"
+          title="{{ isImageUpscalingMode() ? 'Upscaling instruction' : isImageGenerationMode() ? 'Image prompt' : isVideoGenerationMode() ? 'Video prompt' : isVoiceGenerationMode() ? 'Voice prompt' : 'Chat prompt' }}"
           [disabled]="isGenerating()"></textarea>
 
         @if (isGenerating()) {
@@ -350,11 +471,117 @@
         } @else {
         <button mat-icon-button type="button" class="composer-send-button" (click)="sendMessage()"
           [disabled]="!canSend()"
-          [attr.aria-label]="isImageUpscalingMode() ? 'Upscale image' : isImageGenerationMode() ? 'Generate image' : 'Send message'">
-          <mat-icon>{{ isImageUpscalingMode() ? 'zoom_in' : isImageGenerationMode() ? 'image' : 'send' }}</mat-icon>
+          [attr.aria-label]="isImageUpscalingMode() ? 'Upscale image' : isImageGenerationMode() ? 'Generate image' : isVideoGenerationMode() ? 'Generate video' : isVoiceGenerationMode() ? 'Generate voice' : 'Send message'">
+          <mat-icon>{{ isImageUpscalingMode() ? 'zoom_in' : isImageGenerationMode() ? 'image' : isVideoGenerationMode()
+            ? 'movie' : isVoiceGenerationMode() ? 'graphic_eq' : 'send' }}</mat-icon>
         </button>
         }
       </div>
+
+      @if (isXAiComposerMode()) {
+      <div class="grok-visual-toolbar" aria-label="Grok media controls">
+        <button type="button" class="grok-toolbar-chip grok-toolbar-chip-icon grok-toolbar-mode-button"
+          [matMenuTriggerFor]="xAiModeMenu" [disabled]="isGenerating()"
+          [attr.title]="'Current mode: ' + currentXAiModeLabel()" aria-label="Mode">
+          <mat-icon>{{ currentXAiMode() === 'text' ? 'chat' : currentXAiMode() === 'image' ? 'image' : currentXAiMode()
+            === 'video' ? 'videocam' : 'graphic_eq' }}</mat-icon>
+          <span>{{ currentXAiModeLabel() }}</span>
+          <mat-icon>expand_more</mat-icon>
+        </button>
+
+        @if (isImageGenerationMode()) {
+        <div class="grok-toolbar-group" role="group" aria-label="Image settings">
+          <div class="grok-toolbar-segmented" role="group" aria-label="Image speed or quality mode"
+            [attr.title]="'Current mode: ' + xAiImageModeLabel() + '. Speed uses 1k, Quality uses 2k.'">
+            <button type="button" class="grok-toolbar-chip grok-toolbar-segment"
+              [class.grok-toolbar-chip-active]="!isXAiImageQualityMode()" (click)="setXAiImageGenerationMode('speed')"
+              [disabled]="isGenerating()" [attr.aria-pressed]="!isXAiImageQualityMode()"
+              title="Speed mode uses 1k image generation for faster results">
+              <span>Speed</span>
+            </button>
+            <button type="button" class="grok-toolbar-chip grok-toolbar-segment"
+              [class.grok-toolbar-chip-active]="isXAiImageQualityMode()" (click)="setXAiImageGenerationMode('quality')"
+              [disabled]="isGenerating()" [attr.aria-pressed]="isXAiImageQualityMode()"
+              title="Quality mode uses 2k image generation for higher detail">
+              <span>Quality</span>
+            </button>
+          </div>
+          <button type="button" class="grok-toolbar-chip" [matMenuTriggerFor]="xAiImageCountMenu"
+            [disabled]="isGenerating()" [attr.title]="'Generate ' + xAiImageCountLabel()">
+            <span>{{ xAiImageCountLabel() }}</span>
+            <mat-icon>expand_more</mat-icon>
+          </button>
+          <button type="button" class="grok-toolbar-chip" [matMenuTriggerFor]="xAiImageAspectRatioMenu"
+            [disabled]="isGenerating()" [attr.title]="'Image aspect ratio ' + xAiImageAspectRatioLabel()">
+            <span>{{ xAiImageAspectRatioLabel() }}</span>
+            <mat-icon>expand_more</mat-icon>
+          </button>
+        </div>
+        } @else if (isVideoGenerationMode()) {
+        <div class="grok-toolbar-group" role="group" aria-label="Video settings">
+          <div class="grok-toolbar-segmented" role="group" aria-label="Video generate or extend mode">
+            <button type="button" class="grok-toolbar-chip grok-toolbar-segment"
+              [class.grok-toolbar-chip-active]="xAiVideoMode() === 'generate'" (click)="setXAiVideoMode('generate')"
+              [disabled]="isGenerating()" [attr.aria-pressed]="xAiVideoMode() === 'generate'"
+              title="Generate a new video from text, an image, or references">
+              <span>Generate</span>
+            </button>
+            <button type="button" class="grok-toolbar-chip grok-toolbar-segment"
+              [class.grok-toolbar-chip-active]="xAiVideoMode() === 'extend-video'"
+              (click)="setXAiVideoMode('extend-video')" [disabled]="isGenerating()"
+              [attr.aria-pressed]="xAiVideoMode() === 'extend-video'"
+              title="Extend an attached source video by generating what happens next">
+              <span>Extend</span>
+            </button>
+          </div>
+          <button type="button" class="grok-toolbar-chip"
+            [class.grok-toolbar-chip-active]="cloudSettings().xaiVideoResolution === '480p'"
+            (click)="updateXAiVideoResolution('480p')" [disabled]="isGenerating()">
+            <span>480p</span>
+          </button>
+          <button type="button" class="grok-toolbar-chip"
+            [class.grok-toolbar-chip-active]="cloudSettings().xaiVideoResolution === '720p'"
+            (click)="updateXAiVideoResolution('720p')" [disabled]="isGenerating()">
+            <span>720p</span>
+          </button>
+          <button type="button" class="grok-toolbar-chip" [matMenuTriggerFor]="xAiVideoDurationMenu"
+            [disabled]="isGenerating()" [attr.title]="'Video duration ' + xAiVideoDurationLabel()">
+            <span>{{ xAiVideoDurationLabel() }}</span>
+            <mat-icon>expand_more</mat-icon>
+          </button>
+          <button type="button" class="grok-toolbar-chip" [matMenuTriggerFor]="xAiVideoAspectRatioMenu"
+            [disabled]="isGenerating()" [attr.title]="'Video aspect ratio ' + xAiVideoAspectRatioLabel()">
+            <span>{{ xAiVideoAspectRatioLabel() }}</span>
+            <mat-icon>expand_more</mat-icon>
+          </button>
+        </div>
+        } @else if (isVoiceGenerationMode()) {
+        <div class="grok-toolbar-group" role="group" aria-label="Voice settings">
+          <button type="button" class="grok-toolbar-chip" [matMenuTriggerFor]="xAiVoiceMenu" [disabled]="isGenerating()"
+            [attr.title]="'Voice ' + xAiVoiceLabel()">
+            <span>{{ xAiVoiceLabel() }}</span>
+            <mat-icon>expand_more</mat-icon>
+          </button>
+          <button type="button" class="grok-toolbar-chip" [matMenuTriggerFor]="xAiVoiceLanguageMenu"
+            [disabled]="isGenerating()" [attr.title]="'Language ' + xAiVoiceLanguageLabel()">
+            <span>{{ xAiVoiceLanguageLabel() }}</span>
+            <mat-icon>expand_more</mat-icon>
+          </button>
+          <button type="button" class="grok-toolbar-chip" [matMenuTriggerFor]="xAiVoiceCodecMenu"
+            [disabled]="isGenerating()" [attr.title]="'Format ' + xAiVoiceCodecLabel()">
+            <span>{{ xAiVoiceCodecLabel() }}</span>
+            <mat-icon>expand_more</mat-icon>
+          </button>
+        </div>
+        }
+
+        <button type="button" class="grok-toolbar-chip grok-toolbar-chip-icon" (click)="openImageSettings()"
+          [disabled]="isGenerating()" title="Open full Grok media settings">
+          <mat-icon>tune</mat-icon>
+          <span>More</span>
+        </button>
+      </div>
+      }
 
       <mat-menu #attachmentMenu="matMenu">
         <button mat-menu-item type="button" (click)="openAttachmentPicker()">
@@ -363,8 +590,83 @@
         </button>
       </mat-menu>
 
+      <mat-menu #xAiImageCountMenu="matMenu">
+        @for (option of xAiImageCountOptions; track option.value) {
+        <button mat-menu-item type="button" (click)="updateXAiImageCount(option.value)">
+          <span>{{ option.label }} {{ option.value === '1' ? 'image' : 'images' }}</span>
+        </button>
+        }
+      </mat-menu>
+
+      <mat-menu #xAiModeMenu="matMenu">
+        <button mat-menu-item type="button" (click)="selectGrokMode('text')">
+          <mat-icon>chat</mat-icon>
+          <span>Text</span>
+        </button>
+        <button mat-menu-item type="button" (click)="selectGrokMode('image')">
+          <mat-icon>image</mat-icon>
+          <span>Image</span>
+        </button>
+        <button mat-menu-item type="button" (click)="selectGrokMode('video')">
+          <mat-icon>videocam</mat-icon>
+          <span>Video</span>
+        </button>
+        <button mat-menu-item type="button" (click)="selectGrokMode('voice')">
+          <mat-icon>graphic_eq</mat-icon>
+          <span>Voice</span>
+        </button>
+      </mat-menu>
+
+      <mat-menu #xAiImageAspectRatioMenu="matMenu">
+        @for (option of xAiImageExtendedAspectRatioOptions; track option.value) {
+        <button mat-menu-item type="button" (click)="updateXAiImageAspectRatio(option.value)">
+          <span>{{ option.label }}</span>
+        </button>
+        }
+      </mat-menu>
+
+      <mat-menu #xAiVideoDurationMenu="matMenu">
+        @for (option of xAiVideoDurationOptions; track option.value) {
+        <button mat-menu-item type="button" (click)="updateXAiVideoDuration(option.value)">
+          <span>{{ option.label }}</span>
+        </button>
+        }
+      </mat-menu>
+
+      <mat-menu #xAiVideoAspectRatioMenu="matMenu">
+        @for (option of xAiVisualAspectRatioOptions; track option.value) {
+        <button mat-menu-item type="button" (click)="updateXAiVideoAspectRatio(option.value)">
+          <span>{{ option.label }}</span>
+        </button>
+        }
+      </mat-menu>
+
+      <mat-menu #xAiVoiceMenu="matMenu">
+        @for (option of xAiVoiceOptions; track option.value) {
+        <button mat-menu-item type="button" (click)="updateXAiVoiceId(option.value)">
+          <span>{{ option.label }}</span>
+        </button>
+        }
+      </mat-menu>
+
+      <mat-menu #xAiVoiceLanguageMenu="matMenu">
+        @for (option of xAiVoiceLanguageOptions; track option.value) {
+        <button mat-menu-item type="button" (click)="updateXAiVoiceLanguage(option.value)">
+          <span>{{ option.label }}</span>
+        </button>
+        }
+      </mat-menu>
+
+      <mat-menu #xAiVoiceCodecMenu="matMenu">
+        @for (option of xAiVoiceCodecOptions; track option.value) {
+        <button mat-menu-item type="button" (click)="updateXAiVoiceCodec(option.value === 'wav' ? 'wav' : 'mp3')">
+          <span>{{ option.label }}</span>
+        </button>
+        }
+      </mat-menu>
+
       <mat-menu #modelMenu="matMenu" class="model-selector-menu">
-        @for (chatModel of composerModels(); track chatModel.id) {
+        @for (chatModel of visibleComposerModels(); track chatModel.id) {
         <button mat-menu-item type="button" (click)="selectModel(chatModel.id)">
           <div class="model-menu-item" [class.model-menu-item-selected]="chatModel.id === selectedModelId()">
             <div class="model-menu-copy">
@@ -395,6 +697,21 @@
         <button mat-menu-item type="button" (click)="publishGeneratedImage()">
           <mat-icon>image</mat-icon>
           <span>Publish as Picture Event</span>
+        </button>
+      </mat-menu>
+
+      <mat-menu #generatedVideoMenu="matMenu">
+        <button mat-menu-item type="button" (click)="extendGeneratedVideo(activeGeneratedVideo()!)">
+          <mat-icon>timeline</mat-icon>
+          <span>Extend this Video</span>
+        </button>
+        <button mat-menu-item type="button" (click)="shareGeneratedVideoToNoteEditor()">
+          <mat-icon>edit_note</mat-icon>
+          <span>Open in Note Editor</span>
+        </button>
+        <button mat-menu-item type="button" (click)="publishGeneratedVideo()">
+          <mat-icon>movie</mat-icon>
+          <span>Publish as Video Event</span>
         </button>
       </mat-menu>
 

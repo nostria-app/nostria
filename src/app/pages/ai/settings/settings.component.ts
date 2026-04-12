@@ -27,6 +27,11 @@ interface StandardPromptItem {
   preview: string;
 }
 
+interface ChoiceOption {
+  value: string;
+  label: string;
+}
+
 const STANDARD_PROMPTS_SOURCE_URL = 'https://raw.githubusercontent.com/mlc-ai/web-llm-chat/223895cb1be677504cf26904df5e3b0b451ba992/public/prompts.json';
 const STANDARD_PROMPTS_SOURCE_LABEL = 'MLC web-llm-chat prompts.json';
 const STANDARD_PROMPTS_BLOCKLIST = /(Gaslighter|AI Trying to Escape the Box|Unconstrained AI model DAN|\bDAN\b|Lunatic|Plagiarism Checker)/i;
@@ -63,6 +68,47 @@ export class AiSettingsComponent implements OnInit, OnDestroy {
 
   readonly isInRightPanel = this.route.outlet === 'right';
   readonly cloudProviders: AiCloudProvider[] = ['xai', 'openai'];
+  readonly xAiImageAspectRatioOptions: ChoiceOption[] = [
+    { value: 'auto', label: 'Auto' },
+    { value: '1:1', label: '1:1 Square' },
+    { value: '16:9', label: '16:9 Landscape' },
+    { value: '9:16', label: '9:16 Portrait' },
+    { value: '4:3', label: '4:3 Landscape' },
+    { value: '3:4', label: '3:4 Portrait' },
+    { value: '3:2', label: '3:2 Photo' },
+    { value: '2:3', label: '2:3 Portrait Photo' },
+    { value: '2:1', label: '2:1 Banner' },
+    { value: '1:2', label: '1:2 Tall Banner' },
+    { value: '19.5:9', label: '19.5:9 Phone' },
+    { value: '9:19.5', label: '9:19.5 Tall Phone' },
+    { value: '20:9', label: '20:9 Ultra-wide' },
+    { value: '9:20', label: '9:20 Tall Ultra-wide' },
+  ];
+  readonly xAiImageResolutionOptions: ChoiceOption[] = [
+    { value: '1k', label: '1k' },
+    { value: '2k', label: '2k' },
+  ];
+  readonly xAiImageCountOptions: ChoiceOption[] = Array.from({ length: 10 }, (_, index) => ({
+    value: String(index + 1),
+    label: String(index + 1),
+  }));
+  readonly xAiVideoAspectRatioOptions: ChoiceOption[] = [
+    { value: '1:1', label: '1:1 Square' },
+    { value: '16:9', label: '16:9 Landscape' },
+    { value: '9:16', label: '9:16 Portrait' },
+    { value: '4:3', label: '4:3 Landscape' },
+    { value: '3:4', label: '3:4 Portrait' },
+    { value: '3:2', label: '3:2 Photo' },
+    { value: '2:3', label: '2:3 Portrait Photo' },
+  ];
+  readonly xAiVideoResolutionOptions: ChoiceOption[] = [
+    { value: '480p', label: '480p' },
+    { value: '720p', label: '720p' },
+  ];
+  readonly xAiVideoDurationOptions: ChoiceOption[] = Array.from({ length: 15 }, (_, index) => ({
+    value: String(index + 1),
+    label: `${index + 1} sec`,
+  }));
   readonly modelStorageReport = signal<AiModelStorageReport | null>(null);
   readonly modelStorageLoading = signal(false);
   readonly standardPromptQuery = signal('');
@@ -216,6 +262,34 @@ export class AiSettingsComponent implements OnInit, OnDestroy {
     }
 
     this.aiService.updateCloudSettings({ xaiImageModel: model });
+  }
+
+  updateXAiImageAspectRatio(aspectRatio: string): void {
+    this.aiService.updateCloudSettings({ xaiImageAspectRatio: aspectRatio });
+  }
+
+  updateXAiImageResolution(resolution: string): void {
+    this.aiService.updateCloudSettings({ xaiImageResolution: resolution });
+  }
+
+  updateXAiImageCount(count: string | number): void {
+    this.aiService.updateCloudSettings({ xaiImageCount: Number(count) });
+  }
+
+  updateXAiVideoModel(model: string): void {
+    this.aiService.updateCloudSettings({ xaiVideoModel: model });
+  }
+
+  updateXAiVideoDuration(duration: string | number): void {
+    this.aiService.updateCloudSettings({ xaiVideoDuration: Number(duration) });
+  }
+
+  updateXAiVideoAspectRatio(aspectRatio: string): void {
+    this.aiService.updateCloudSettings({ xaiVideoAspectRatio: aspectRatio });
+  }
+
+  updateXAiVideoResolution(resolution: string): void {
+    this.aiService.updateCloudSettings({ xaiVideoResolution: resolution });
   }
 
   updateChatModel(provider: AiCloudProvider, model: string): void {

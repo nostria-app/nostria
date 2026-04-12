@@ -74,6 +74,10 @@ export class ArticleReferencePickerDialogComponent {
   private readonly authorNameCache = new Map<string, string>();
   private readonly SEARCH_DEBOUNCE_MS = 250;
   private readonly MAX_SEARCH_RESULTS = 200;
+  private readonly RECENT_POST_LIMIT = 5;
+  private readonly POSTS_TAB_INDEX = 1;
+  private readonly MY_ARTICLES_TAB_INDEX = 2;
+  private readonly PROFILES_TAB_INDEX = 3;
   private searchDebounceTimer?: ReturnType<typeof setTimeout>;
   private activeSearchToken = 0;
 
@@ -101,7 +105,7 @@ export class ArticleReferencePickerDialogComponent {
 
   onTabIndexChange(index: number): void {
     this.activeTabIndex.set(index);
-    if (index === 1) {
+    if (index === this.MY_ARTICLES_TAB_INDEX) {
       this.loadMyArticles();
     } else {
       this.scheduleSearchForActiveTab();
@@ -218,7 +222,7 @@ export class ArticleReferencePickerDialogComponent {
     const q = this.query().trim();
 
     // My Articles tab: re-filter loaded articles
-    if (tabIndex === 1) {
+    if (tabIndex === this.MY_ARTICLES_TAB_INDEX) {
       if (this.myArticleResults().length > 0 || this.myArticlesLoading()) {
         this.loadMyArticlesFiltered();
       } else {
@@ -227,16 +231,21 @@ export class ArticleReferencePickerDialogComponent {
       return;
     }
 
-    if (tabIndex !== 2 && tabIndex !== 3) {
+    if (tabIndex === this.POSTS_TAB_INDEX && !q) {
+      void this.loadRecentPosts();
+      return;
+    }
+
+    if (tabIndex !== this.POSTS_TAB_INDEX && tabIndex !== this.PROFILES_TAB_INDEX) {
       return;
     }
 
     if (!q) {
-      if (tabIndex === 2) {
+      if (tabIndex === this.PROFILES_TAB_INDEX) {
         this.profileSearchResults.set([]);
         this.profilesLoading.set(false);
       }
-      if (tabIndex === 3) {
+      if (tabIndex === this.POSTS_TAB_INDEX) {
         this.eventSearchResults.set([]);
         this.eventsLoading.set(false);
       }
@@ -249,6 +258,39 @@ export class ArticleReferencePickerDialogComponent {
   }
 
   private readonly allMyArticles = new Map<string, Event>();
+
+  private async loadRecentPosts(): Promise<void> {
+    const pubkey = this.accountState.pubkey();
+    if (!pubkey) {
+      this.eventSearchResults.set([]);
+      this.eventsLoading.set(false);
+      return;
+    }
+
+    const token = ++this.activeSearchToken;
+    this.eventsLoading.set(true);
+
+    try {
+      const ownEvents = await this.database.getEventsByPubkey(pubkey);
+      if (token !== this.activeSearchToken) {
+        return;
+      }
+
+      const recentPosts = this.getDisplayableEvents(ownEvents).slice(0, this.RECENT_POST_LIMIT);
+      this.eventSearchResults.set(recentPosts);
+      void this.resolveAuthorNames(recentPosts.map((event) => event.pubkey));
+    } catch (error) {
+      if (token === this.activeSearchToken) {
+        this.eventSearchResults.set([]);
+        this.snackBar.open('Failed to load your recent posts', 'Close', { duration: 3000 });
+        console.error('Failed to load recent posts:', error);
+      }
+    } finally {
+      if (token === this.activeSearchToken) {
+        this.eventsLoading.set(false);
+      }
+    }
+  }
 
   private loadMyArticlesFiltered(): void {
     const pubkey = this.accountState.pubkey();
@@ -270,7 +312,7 @@ export class ArticleReferencePickerDialogComponent {
   private async searchActiveTab(query: string, tabIndex: number): Promise<void> {
     const token = ++this.activeSearchToken;
 
-    if (tabIndex === 2) {
+    if (tabIndex === this.PROFILES_TAB_INDEX) {
       this.profilesLoading.set(true);
 
       try {
@@ -294,7 +336,7 @@ export class ArticleReferencePickerDialogComponent {
       return;
     }
 
-    if (tabIndex === 3) {
+    if (tabIndex === this.POSTS_TAB_INDEX) {
       this.eventsLoading.set(true);
 
       try {
@@ -350,21 +392,7 @@ export class ArticleReferencePickerDialogComponent {
 
   private filterEvents(events: Event[], query: string): Event[] {
     const q = query.trim().toLowerCase();
-    const deduplicatedEventsById = new Map<string, Event>();
-
-    for (const event of events) {
-      if (!event || !event.id) {
-        continue;
-      }
-
-      const existing = deduplicatedEventsById.get(event.id);
-      if (!existing || event.created_at > existing.created_at) {
-        deduplicatedEventsById.set(event.id, event);
-      }
-    }
-
-    return Array.from(deduplicatedEventsById.values())
-      .filter((event) => event.kind !== 0)
+    return this.getDisplayableEvents(events)
       .filter((event) => {
         const title = this.getEventTitle(event).toLowerCase();
         const kind = String(event.kind);
@@ -381,6 +409,25 @@ export class ArticleReferencePickerDialogComponent {
           content.includes(q)
         );
       })
+      .slice(0, this.MAX_SEARCH_RESULTS);
+  }
+
+  private getDisplayableEvents(events: Event[]): Event[] {
+    const deduplicatedEventsById = new Map<string, Event>();
+
+    for (const event of events) {
+      if (!event || !event.id) {
+        continue;
+      }
+
+      const existing = deduplicatedEventsById.get(event.id);
+      if (!existing || event.created_at > existing.created_at) {
+        deduplicatedEventsById.set(event.id, event);
+      }
+    }
+
+    return Array.from(deduplicatedEventsById.values())
+      .filter((event) => event.kind !== 0)
       .sort((a, b) => b.created_at - a.created_at)
       .slice(0, this.MAX_SEARCH_RESULTS);
   }

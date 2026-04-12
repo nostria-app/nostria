@@ -1,13 +1,13 @@
 import { Injectable, computed, effect, inject, signal } from '@angular/core';
 import { AccountStateService } from './account-state.service';
-import { AiImageProvider } from './ai.service';
+import { AiGeneratedMediaProvider } from './ai.service';
 import { DatabaseService, StoredAiChatHistoryEntry } from './database.service';
 import { LoggerService } from './logger.service';
 import { LocalStorageService } from './local-storage.service';
 
 export interface AiHistoryGeneratedImage {
   id: string;
-  provider: AiImageProvider;
+  provider: AiGeneratedMediaProvider;
   providerLabel: string;
   model: string;
   prompt: string;
@@ -16,10 +16,35 @@ export interface AiHistoryGeneratedImage {
   mimeType?: string;
 }
 
+export interface AiHistoryGeneratedVideo {
+  id: string;
+  provider: AiGeneratedMediaProvider;
+  providerLabel: string;
+  model: string;
+  prompt: string;
+  cacheKey?: string;
+  mimeType?: string;
+  duration?: number;
+}
+
+export interface AiHistoryGeneratedAudio {
+  id: string;
+  provider: AiGeneratedMediaProvider;
+  providerLabel: string;
+  model: string;
+  prompt: string;
+  cacheKey?: string;
+  mimeType?: string;
+  voiceId?: string;
+  language?: string;
+}
+
 export interface AiHistoryMessage {
   role: 'user' | 'assistant';
   content: string;
   generatedImages?: AiHistoryGeneratedImage[];
+  generatedVideos?: AiHistoryGeneratedVideo[];
+  generatedAudios?: AiHistoryGeneratedAudio[];
 }
 
 export interface AiChatHistoryEntry {
@@ -68,7 +93,9 @@ export class AiChatHistoryService {
         return true;
       }
 
-      return (message.generatedImages?.length ?? 0) > 0;
+      return (message.generatedImages?.length ?? 0) > 0
+        || (message.generatedVideos?.length ?? 0) > 0
+        || (message.generatedAudios?.length ?? 0) > 0;
     });
     if (trimmedMessages.length === 0) {
       return input.id ?? this.createId();
@@ -178,6 +205,12 @@ export class AiChatHistoryService {
         generatedImages: message.generatedImages?.map(image => ({
           ...image,
         })),
+        generatedVideos: message.generatedVideos?.map(video => ({
+          ...video,
+        })),
+        generatedAudios: message.generatedAudios?.map(audio => ({
+          ...audio,
+        })),
       })),
     }));
   }
@@ -195,6 +228,12 @@ export class AiChatHistoryService {
         content: message.content,
         generatedImages: message.generatedImages?.map(image => ({
           ...image,
+        })),
+        generatedVideos: message.generatedVideos?.map(video => ({
+          ...video,
+        })),
+        generatedAudios: message.generatedAudios?.map(audio => ({
+          ...audio,
         })),
       })),
     }));

@@ -189,6 +189,92 @@
                       (ngModelChange)="updateImageModel('xai', $event)" placeholder="grok-imagine-image" />
                   </mat-form-field>
 
+                  <div class="provider-image-options-grid">
+                    <mat-form-field appearance="outline">
+                      <mat-label>Grok image count</mat-label>
+                      <mat-select [value]="aiService.cloudSettings().xaiImageCount.toString()"
+                        (selectionChange)="updateXAiImageCount($event.value)">
+                        @for (option of xAiImageCountOptions; track option.value) {
+                        <mat-option [value]="option.value">{{ option.label }}</mat-option>
+                        }
+                      </mat-select>
+                    </mat-form-field>
+
+                    <mat-form-field appearance="outline">
+                      <mat-label>Grok image aspect ratio</mat-label>
+                      <mat-select [value]="aiService.cloudSettings().xaiImageAspectRatio"
+                        (selectionChange)="updateXAiImageAspectRatio($event.value)">
+                        @for (option of xAiImageAspectRatioOptions; track option.value) {
+                        <mat-option [value]="option.value">{{ option.label }}</mat-option>
+                        }
+                      </mat-select>
+                    </mat-form-field>
+
+                    <mat-form-field appearance="outline">
+                      <mat-label>Grok image resolution</mat-label>
+                      <mat-select [value]="aiService.cloudSettings().xaiImageResolution"
+                        (selectionChange)="updateXAiImageResolution($event.value)">
+                        @for (option of xAiImageResolutionOptions; track option.value) {
+                        <mat-option [value]="option.value">{{ option.label }}</mat-option>
+                        }
+                      </mat-select>
+                    </mat-form-field>
+                  </div>
+
+                  <p class="provider-hint">
+                    Grok image generation here supports prompt-only generation, multi-image edits through attachments on
+                    the
+                    AI page, image count, aspect ratio, and resolution.
+                  </p>
+                  <p class="provider-hint">
+                    A separate quality toggle is not exposed here because xAI's public image API docs currently document
+                    aspect ratio and resolution, but not a dedicated quality field for image generation.
+                  </p>
+
+                  <div class="provider-image-options-grid provider-video-options-grid">
+                    <mat-form-field appearance="outline">
+                      <mat-label>Grok video model</mat-label>
+                      <input matInput [ngModel]="aiService.cloudSettings().xaiVideoModel"
+                        (ngModelChange)="updateXAiVideoModel($event)" placeholder="grok-imagine-video" />
+                    </mat-form-field>
+
+                    <mat-form-field appearance="outline">
+                      <mat-label>Grok video duration</mat-label>
+                      <mat-select [value]="aiService.cloudSettings().xaiVideoDuration.toString()"
+                        (selectionChange)="updateXAiVideoDuration($event.value)">
+                        @for (option of xAiVideoDurationOptions; track option.value) {
+                        <mat-option [value]="option.value">{{ option.label }}</mat-option>
+                        }
+                      </mat-select>
+                    </mat-form-field>
+
+                    <mat-form-field appearance="outline">
+                      <mat-label>Grok video aspect ratio</mat-label>
+                      <mat-select [value]="aiService.cloudSettings().xaiVideoAspectRatio"
+                        (selectionChange)="updateXAiVideoAspectRatio($event.value)">
+                        @for (option of xAiVideoAspectRatioOptions; track option.value) {
+                        <mat-option [value]="option.value">{{ option.label }}</mat-option>
+                        }
+                      </mat-select>
+                    </mat-form-field>
+
+                    <mat-form-field appearance="outline">
+                      <mat-label>Grok video resolution</mat-label>
+                      <mat-select [value]="aiService.cloudSettings().xaiVideoResolution"
+                        (selectionChange)="updateXAiVideoResolution($event.value)">
+                        @for (option of xAiVideoResolutionOptions; track option.value) {
+                        <mat-option [value]="option.value">{{ option.label }}</mat-option>
+                        }
+                      </mat-select>
+                    </mat-form-field>
+                  </div>
+
+                  <p class="provider-hint">
+                    Grok video generation uses xAI's separate asynchronous video API. On the AI page you can use it for
+                    text-to-video, image-to-video, reference-image video generation, and single-video edit prompts by
+                    attaching the corresponding source files.
+                  </p>
+
                   <div class="provider-actions">
                     <button mat-flat-button type="button" (click)="saveApiKey('xai')">Save key</button>
                     <button mat-stroked-button type="button" (click)="clearApiKey('xai')"

@@ -67,6 +67,18 @@
   grid-column: 1 / -1;
 }
 
+.provider-image-options-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.provider-hint {
+  margin: 4px 0 0;
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 13px;
+}
+
 .prompt-library-card {
   display: flex;
   flex-direction: column;

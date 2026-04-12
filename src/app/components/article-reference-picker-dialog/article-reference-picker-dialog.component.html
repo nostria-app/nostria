@@ -1,12 +1,12 @@
 <app-material-custom-dialog title="Insert Reference" icon="link" [showDefaultActions]="false">
   <div dialog-content class="article-reference-picker-dialog">
     <div class="reference-toolbar">
-      <mat-form-field appearance="outline" class="search-field">
-        <mat-icon matPrefix>search</mat-icon>
-        <input matInput [ngModel]="query()" (ngModelChange)="onSearchQueryChange($event)"
-          placeholder="Search profiles, events, or articles" />
-      </mat-form-field>
-    </div>
+        <mat-form-field appearance="outline" class="search-field">
+          <mat-icon matPrefix>search</mat-icon>
+          <input matInput [ngModel]="query()" (ngModelChange)="onSearchQueryChange($event)"
+            placeholder="Search profiles, posts, or articles" />
+        </mat-form-field>
+      </div>
 
     <mat-tab-group (selectedIndexChange)="onTabIndexChange($event)">
       <mat-tab label="Paste">
@@ -23,6 +23,92 @@
               Insert reference
             </button>
           </div>
+        </div>
+      </mat-tab>
+
+      <mat-tab label="Posts">
+        <div class="tab-content">
+          <div class="filter-bar">
+            <mat-chip-set aria-label="Post kind filter">
+              <mat-chip [highlighted]="eventKindFilter() === 'all'" (click)="onEventKindFilterChange('all')">
+                All
+              </mat-chip>
+              <mat-chip [highlighted]="eventKindFilter() === 'articles'" (click)="onEventKindFilterChange('articles')">
+                <mat-icon matChipAvatar>article</mat-icon>
+                Articles
+              </mat-chip>
+              <mat-chip [highlighted]="eventKindFilter() === 'notes'" (click)="onEventKindFilterChange('notes')">
+                <mat-icon matChipAvatar>short_text</mat-icon>
+                Notes
+              </mat-chip>
+              <mat-chip [highlighted]="eventKindFilter() === 'media'" (click)="onEventKindFilterChange('media')">
+                <mat-icon matChipAvatar>perm_media</mat-icon>
+                Media
+              </mat-chip>
+              <mat-chip [highlighted]="eventKindFilter() === 'other'" (click)="onEventKindFilterChange('other')">
+                <mat-icon matChipAvatar>more_horiz</mat-icon>
+                Other
+              </mat-chip>
+            </mat-chip-set>
+          </div>
+
+          @if (!isLoggedIn()) {
+          <div class="empty-state">
+            <mat-icon class="empty-icon">login</mat-icon>
+            <span>Log in to see your recent posts.</span>
+          </div>
+          } @else if (eventsLoading()) {
+          <div class="loading-state">
+            <mat-spinner diameter="28"></mat-spinner>
+          </div>
+          } @else if (filteredEvents().length === 0) {
+          <div class="empty-state">
+            <mat-icon class="empty-icon">search_off</mat-icon>
+            @if (query().trim()) {
+            <span>No cached posts matched your search.</span>
+            } @else {
+            <span>No recent posts found.</span>
+            }
+          </div>
+          } @else {
+          <div class="results-list">
+            @for (event of filteredEvents(); track event.id) {
+            <div class="result-card event-card" tabindex="0" (click)="insertEventReference(event)"
+              (keydown.enter)="insertEventReference(event)">
+              <div class="event-kind-badge" [matTooltip]="getKindLabel(event.kind)">
+                <mat-icon>{{ getKindIcon(event.kind) }}</mat-icon>
+              </div>
+              <div class="card-body">
+                <div class="card-header">
+                  <span class="card-title">{{ getEventTitle(event) }}</span>
+                </div>
+                <div class="card-meta">
+                  <span class="meta-kind">{{ getKindLabel(event.kind) }}</span>
+                  <span class="meta-separator">·</span>
+                  <span class="meta-time">{{ event.created_at | ago }}</span>
+                </div>
+                @if (getEventSummary(event)) {
+                <div class="card-summary event-summary">{{ getEventSummary(event) }}</div>
+                }
+                <div class="card-meta event-author-row">
+                  <div class="author-avatar">
+                    <app-user-profile [pubkey]="event.pubkey" view="icon" [showRank]="false" [disableLink]="true"
+                      [hostWidthAuto]="true" />
+                  </div>
+                  <span class="author-name">{{ getAuthorName(event.pubkey) }}</span>
+                  @for (tag of getEventHashtags(event); track tag) {
+                  <span class="meta-tag">#{{ tag }}</span>
+                  }
+                </div>
+              </div>
+              <button mat-button type="button" class="insert-btn"
+                (click)="insertEventReference(event); $event.stopPropagation()">
+                Insert
+              </button>
+            </div>
+            }
+          </div>
+          }
         </div>
       </mat-tab>
 
@@ -119,87 +205,6 @@
               </div>
               <button mat-button type="button" class="insert-btn"
                 (click)="insertProfileReference(profile.pubkey); $event.stopPropagation()">
-                Insert
-              </button>
-            </div>
-            }
-          </div>
-          }
-        </div>
-      </mat-tab>
-
-      <mat-tab label="Events">
-        <div class="tab-content">
-          <div class="filter-bar">
-            <mat-chip-set aria-label="Event kind filter">
-              <mat-chip [highlighted]="eventKindFilter() === 'all'" (click)="onEventKindFilterChange('all')">
-                All
-              </mat-chip>
-              <mat-chip [highlighted]="eventKindFilter() === 'articles'" (click)="onEventKindFilterChange('articles')">
-                <mat-icon matChipAvatar>article</mat-icon>
-                Articles
-              </mat-chip>
-              <mat-chip [highlighted]="eventKindFilter() === 'notes'" (click)="onEventKindFilterChange('notes')">
-                <mat-icon matChipAvatar>short_text</mat-icon>
-                Notes
-              </mat-chip>
-              <mat-chip [highlighted]="eventKindFilter() === 'media'" (click)="onEventKindFilterChange('media')">
-                <mat-icon matChipAvatar>perm_media</mat-icon>
-                Media
-              </mat-chip>
-              <mat-chip [highlighted]="eventKindFilter() === 'other'" (click)="onEventKindFilterChange('other')">
-                <mat-icon matChipAvatar>more_horiz</mat-icon>
-                Other
-              </mat-chip>
-            </mat-chip-set>
-          </div>
-
-          @if (!query().trim()) {
-          <div class="empty-state">
-            <mat-icon class="empty-icon">manage_search</mat-icon>
-            <span>Type in search to find cached events.</span>
-          </div>
-          } @else if (eventsLoading()) {
-          <div class="loading-state">
-            <mat-spinner diameter="28"></mat-spinner>
-          </div>
-          } @else if (filteredEvents().length === 0) {
-          <div class="empty-state">
-            <mat-icon class="empty-icon">search_off</mat-icon>
-            <span>No cached events matched your search.</span>
-          </div>
-          } @else {
-          <div class="results-list">
-            @for (event of filteredEvents(); track event.id) {
-            <div class="result-card event-card" tabindex="0" (click)="insertEventReference(event)"
-              (keydown.enter)="insertEventReference(event)">
-              <div class="event-kind-badge" [matTooltip]="getKindLabel(event.kind)">
-                <mat-icon>{{ getKindIcon(event.kind) }}</mat-icon>
-              </div>
-              <div class="card-body">
-                <div class="card-header">
-                  <span class="card-title">{{ getEventTitle(event) }}</span>
-                </div>
-                <div class="card-meta">
-                  <span class="meta-kind">{{ getKindLabel(event.kind) }}</span>
-                  <span class="meta-separator">·</span>
-                  <span class="meta-time">{{ event.created_at | ago }}</span>
-                </div>
-                @if (getEventSummary(event)) {
-                <div class="card-summary event-summary">{{ getEventSummary(event) }}</div>
-                }
-                <div class="card-meta event-author-row">
-                  <div class="author-avatar">
-                    <app-user-profile [pubkey]="event.pubkey" view="icon" [showRank]="false" [disableLink]="true" />
-                  </div>
-                  <span class="author-name">{{ getAuthorName(event.pubkey) }}</span>
-                  @for (tag of getEventHashtags(event); track tag) {
-                  <span class="meta-tag">#{{ tag }}</span>
-                  }
-                </div>
-              </div>
-              <button mat-button type="button" class="insert-btn"
-                (click)="insertEventReference(event); $event.stopPropagation()">
                 Insert
               </button>
             </div>

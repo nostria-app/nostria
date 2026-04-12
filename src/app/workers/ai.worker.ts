@@ -299,14 +299,72 @@ async function handleLoad(payload: { task: string, model: string, options?: Reco
   });
 }
 
+function normalizeChatRole(role: string): 'system' | 'user' | 'assistant' {
+  if (role === 'assistant' || role === 'system') {
+    return role;
+  }
+
+  return 'user';
+}
+
+function serializeGemma4Chat(messages: { role: string; content: string }[]): string {
+  const turns = messages
+    .map(message => ({
+      role: normalizeChatRole(message.role),
+      content: message.content.trim(),
+    }))
+    .filter(message => message.content.length > 0)
+    .map(message => `<|turn|>${message.role}\n${message.content}<turn|>`);
+
+  return `<bos>${turns.join('\n')}\n<|turn|>assistant\n`;
+}
+
+function serializeGenericChat(messages: { role: string; content: string }[]): string {
+  const transcript = messages
+    .map(message => ({
+      role: normalizeChatRole(message.role),
+      content: message.content.trim(),
+    }))
+    .filter(message => message.content.length > 0)
+    .map(message => `${message.role === 'system' ? 'System' : message.role === 'assistant' ? 'Assistant' : 'User'}: ${message.content}`)
+    .join('\n\n');
+
+  return `${transcript}\n\nAssistant:`;
+}
+
+function resolveGenerationInput(
+  input: string | { role: string; content: string }[],
+  modelId: string,
+  tokenizer: { chat_template?: string | null } | undefined,
+): { input: string | { role: string; content: string }[]; usedFallbackTemplate: boolean } {
+  if (!Array.isArray(input) || tokenizer?.chat_template) {
+    return { input, usedFallbackTemplate: false };
+  }
+
+  const serialized = modelId.includes('gemma-4')
+    ? serializeGemma4Chat(input)
+    : serializeGenericChat(input);
+
+  return {
+    input: serialized,
+    usedFallbackTemplate: true,
+  };
+}
+
 async function handleGenerate(payload: { input: string | { role: string, content: string }[], model: string, params?: any }, id: string) {
   const textGenerator = textGenerators.get(payload.model);
   if (!textGenerator) {
     throw new Error(`Text generation model ${payload.model} not loaded`);
   }
 
+  const generationInput = resolveGenerationInput(payload.input, payload.model, textGenerator.tokenizer);
+  const generationParams = generationInput.usedFallbackTemplate && !Object.prototype.hasOwnProperty.call(payload.params ?? {}, 'return_full_text')
+    ? { ...payload.params, return_full_text: false }
+    : { ...payload.params };
+
   const streamer = new TextStreamer(textGenerator.tokenizer, {
     skip_prompt: true,
+    skip_special_tokens: true,
     callback_function: (text: string) => {
       if (!text) {
         return;
@@ -323,7 +381,7 @@ async function handleGenerate(payload: { input: string | { role: string, content
     },
   });
 
-  const result = await textGenerator(payload.input, { ...payload.params, streamer });
+  const result = await textGenerator(generationInput.input, { ...generationParams, streamer });
   postMessage({
     type: 'result',
     id,

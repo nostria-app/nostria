@@ -5738,6 +5738,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
 
     let hasMediaFile = false;
     const mediaFiles: File[] = [];
+    const pastedHtml = event.clipboardData?.getData('text/html') || '';
 
     // Check for media files (images and videos) in clipboard
     for (const item of Array.from(items)) {
@@ -5750,6 +5751,14 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       }
     }
 
+    if (!hasMediaFile && pastedHtml) {
+      const extractedImageFiles = this.extractImageFilesFromPastedHtml(pastedHtml);
+      if (extractedImageFiles.length > 0) {
+        hasMediaFile = true;
+        mediaFiles.push(...extractedImageFiles);
+      }
+    }
+
     // If we found media files, prevent default behavior and upload them
     if (hasMediaFile && mediaFiles.length > 0) {
       event.preventDefault();
@@ -5759,7 +5768,11 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     }
 
     // Check for NIP-19 identifiers in text and auto-prefix with nostr:
-    let text = event.clipboardData?.getData('text/plain');
+    let text = event.clipboardData?.getData('text/plain') || '';
+    if (!text && this.useNewEditorExperience() && pastedHtml) {
+      text = this.extractPlainTextFromHtml(pastedHtml);
+    }
+
     if (text) {
       // Check if tracking parameter removal is enabled and clean URLs
       // For performance, only process text up to 10KB (most pastes are much smaller)
@@ -5782,6 +5795,13 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
         this.insertTextWithNostrPrefix(text);
         return;
       }
+
+      if (this.useNewEditorExperience()) {
+        event.preventDefault();
+        event.stopPropagation();
+        this.insertCleanedText(text);
+        return;
+      }
     }
 
     // If no media files or NIP-19 identifiers, allow normal text pasting
@@ -5796,6 +5816,77 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     // Additional check by file extension as fallback
     const mediaExtensions = /\.(jpg|jpeg|png|gif|webp|svg|bmp|ico|tiff|avif|heic|heif|mp4|webm|mov|avi|mkv|m4v)$/i;
     return mediaExtensions.test(file.name);
+  }
+
+  private extractImageFilesFromPastedHtml(html: string): File[] {
+    if (typeof document === 'undefined' || !html.trim()) {
+      return [];
+    }
+
+    const container = document.createElement('div');
+    container.innerHTML = html;
+
+    return Array.from(container.querySelectorAll('img'))
+      .map((image, index) => this.createFileFromDataUrl(image.getAttribute('src') || '', index))
+      .filter((file): file is File => !!file);
+  }
+
+  private createFileFromDataUrl(dataUrl: string, index: number): File | null {
+    const match = dataUrl.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/);
+    if (!match) {
+      return null;
+    }
+
+    const [, mimeType, base64] = match;
+    const binary = atob(base64);
+    const bytes = new Uint8Array(binary.length);
+
+    for (let i = 0; i < binary.length; i++) {
+      bytes[i] = binary.charCodeAt(i);
+    }
+
+    const extension = this.getFileExtensionForMimeType(mimeType);
+    return new File([bytes], `pasted-image-${index + 1}.${extension}`, { type: mimeType });
+  }
+
+  private getFileExtensionForMimeType(mimeType: string): string {
+    switch (mimeType) {
+      case 'image/jpeg':
+        return 'jpg';
+      case 'image/png':
+        return 'png';
+      case 'image/gif':
+        return 'gif';
+      case 'image/webp':
+        return 'webp';
+      case 'image/svg+xml':
+        return 'svg';
+      case 'image/bmp':
+        return 'bmp';
+      case 'image/tiff':
+        return 'tiff';
+      case 'image/avif':
+        return 'avif';
+      case 'image/heic':
+        return 'heic';
+      case 'image/heif':
+        return 'heif';
+      default:
+        return mimeType.split('/')[1]?.replace(/[^a-z0-9]/gi, '') || 'png';
+    }
+  }
+
+  private extractPlainTextFromHtml(html: string): string {
+    if (typeof document === 'undefined' || !html.trim()) {
+      return '';
+    }
+
+    const container = document.createElement('div');
+    container.innerHTML = html;
+
+    return (container.innerText || container.textContent || '')
+      .replace(/\r\n/g, '\n')
+      .replace(/\r/g, '\n');
   }
 
   /**

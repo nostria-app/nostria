@@ -41,6 +41,31 @@ export interface AiImageGenerationProgress {
 
 export type AiCloudProvider = 'openai' | 'xai';
 export type AiImageProvider = AiCloudProvider | 'local';
+export type AiGeneratedMediaProvider = AiImageProvider;
+
+export interface AiImageGenerationOptions {
+  inputImages?: string[];
+}
+
+export interface AiVideoGenerationOptions {
+  mode?: 'generate' | 'extend-video';
+  inputImage?: string;
+  referenceImages?: string[];
+  inputVideo?: string;
+}
+
+export interface AiGeneratedAudio {
+  id: string;
+  provider: AiGeneratedMediaProvider;
+  providerLabel: string;
+  model: string;
+  prompt: string;
+  src: string;
+  cacheKey?: string;
+  mimeType?: string;
+  voiceId?: string;
+  language?: string;
+}
 
 export interface AiCloudSettings {
   openaiApiKey?: string;
@@ -50,6 +75,16 @@ export interface AiCloudSettings {
   xaiChatModel: string;
   openaiImageModel: string;
   xaiImageModel: string;
+  xaiImageAspectRatio: string;
+  xaiImageResolution: string;
+  xaiImageCount: number;
+  xaiVideoModel: string;
+  xaiVideoDuration: number;
+  xaiVideoAspectRatio: string;
+  xaiVideoResolution: string;
+  xaiVoiceId: string;
+  xaiVoiceLanguage: string;
+  xaiVoiceCodec: 'mp3' | 'wav';
 }
 
 export interface AiGeneratedImage {
@@ -62,6 +97,18 @@ export interface AiGeneratedImage {
   src: string;
   cacheKey?: string;
   mimeType?: string;
+}
+
+export interface AiGeneratedVideo {
+  id: string;
+  provider: AiGeneratedMediaProvider;
+  providerLabel: string;
+  model: string;
+  prompt: string;
+  src: string;
+  cacheKey?: string;
+  mimeType?: string;
+  duration?: number;
 }
 
 export interface AiManageableModel {
@@ -116,6 +163,28 @@ interface AiImageApiPayload {
   message?: string;
 }
 
+interface AiVideoGenerationStartPayload {
+  request_id?: string;
+  error?: {
+    message?: string;
+  } | string;
+  message?: string;
+}
+
+interface AiVideoGenerationStatusPayload {
+  status?: 'pending' | 'done' | 'failed' | 'expired';
+  model?: string;
+  video?: {
+    url?: string;
+    duration?: number;
+    respect_moderation?: boolean;
+  };
+  error?: {
+    message?: string;
+  } | string;
+  message?: string;
+}
+
 interface AiLocalImageWorkerPayload {
   images?: Array<{
     blob?: Blob;
@@ -150,6 +219,16 @@ export class AiService {
     xaiChatModel: 'grok-3-mini',
     openaiImageModel: 'gpt-image-1',
     xaiImageModel: 'grok-imagine-image',
+    xaiImageAspectRatio: '1:1',
+    xaiImageResolution: '1k',
+    xaiImageCount: 1,
+    xaiVideoModel: 'grok-imagine-video',
+    xaiVideoDuration: 10,
+    xaiVideoAspectRatio: '16:9',
+    xaiVideoResolution: '720p',
+    xaiVoiceId: 'eve',
+    xaiVoiceLanguage: 'en',
+    xaiVoiceCodec: 'mp3',
   };
 
   private settings = inject(SettingsService);
@@ -204,52 +283,12 @@ export class AiService {
 
   readonly manageableModels: AiManageableModel[] = [
     {
-      id: 'Xenova/swin2SR-classical-sr-x2-64',
-      task: 'image-upscaling',
-      name: 'Swin2SR x2',
-      description: 'Local image upscaling model for attached artwork, screenshots, and photos.',
-      runtime: 'WASM/CPU · q8',
-      sizeHint: 'x2 super-resolution',
-    },
-    {
-      id: 'onnx-community/Janus-Pro-1B-ONNX',
-      task: 'image-generation',
-      name: 'Janus Pro 1B',
-      description: 'Local browser image generation with DeepSeek Janus Pro via Transformers.js.',
-      runtime: 'WebGPU · multimodal',
-      sizeHint: '~1B parameters',
-    },
-    {
       id: 'onnx-community/gemma-4-E2B-it-ONNX',
       task: 'text-generation',
       name: 'Gemma 4 E2B',
       description: 'Instruction-tuned Gemma 4 chat model for local browser inference.',
       runtime: 'WebGPU · q4f16',
       sizeHint: '~2B parameters',
-    },
-    {
-      id: 'onnx-community/Qwen3-0.6B-ONNX',
-      task: 'text-generation',
-      name: 'Qwen 3 0.6B',
-      description: 'Compact Qwen 3 chat model for fast local browser inference.',
-      runtime: 'WebGPU · q4f16',
-      sizeHint: '~0.6B parameters',
-    },
-    {
-      id: 'onnx-community/Qwen3-1.7B-ONNX',
-      task: 'text-generation',
-      name: 'Qwen 3 1.7B',
-      description: 'Higher-capacity Qwen 3 local chat model for stronger answers on capable GPUs.',
-      runtime: 'WebGPU · q4f16',
-      sizeHint: '~1.7B parameters',
-    },
-    {
-      id: 'onnx-community/Qwen3.5-0.8B-Text-ONNX',
-      task: 'text-generation',
-      name: 'Qwen 3.5 0.8B',
-      description: 'Verified Qwen 3.5 text-only chat model for local browser inference.',
-      runtime: 'WebGPU · q4f16',
-      sizeHint: '~0.8B parameters',
     },
     {
       id: 'onnx-community/Qwen3.5-0.8B-ONNX',
@@ -260,12 +299,44 @@ export class AiService {
       sizeHint: '~0.8B parameters',
     },
     {
+      id: 'onnx-community/Qwen3.5-0.8B-Text-ONNX',
+      task: 'text-generation',
+      name: 'Qwen 3.5 0.8B',
+      description: 'Verified Qwen 3.5 text-only chat model for local browser inference.',
+      runtime: 'WebGPU · q4f16',
+      sizeHint: '~0.8B parameters',
+    },
+    {
+      id: 'onnx-community/Qwen3-0.6B-ONNX',
+      task: 'text-generation',
+      name: 'Qwen 3 0.6B',
+      description: 'Compact Qwen 3 chat model for fast local browser inference.',
+      runtime: 'WebGPU · q4f16',
+      sizeHint: '~0.6B parameters',
+    },
+    {
       id: 'Xenova/distilgpt2',
       task: 'text-generation',
       name: 'DistilGPT2',
       description: 'Small fallback chat model for lighter devices and browsers without WebGPU.',
       runtime: 'WASM/CPU',
       sizeHint: '~85MB',
+    },
+    {
+      id: 'onnx-community/Janus-Pro-1B-ONNX',
+      task: 'image-generation',
+      name: 'Janus Pro 1B',
+      description: 'Local browser image generation with DeepSeek Janus Pro via Transformers.js.',
+      runtime: 'WebGPU · multimodal',
+      sizeHint: '~1B parameters',
+    },
+    {
+      id: 'Xenova/swin2SR-classical-sr-x2-64',
+      task: 'image-upscaling',
+      name: 'Swin2SR x2',
+      description: 'Local image upscaling model for attached artwork, screenshots, and photos.',
+      runtime: 'WASM/CPU · q8',
+      sizeHint: 'x2 super-resolution',
     },
     {
       id: 'Xenova/distilbart-cnn-6-6',
@@ -562,6 +633,19 @@ export class AiService {
     return provider === 'openai' ? cloudSettings.openaiImageModel : cloudSettings.xaiImageModel;
   }
 
+  getVideoModel(provider: AiCloudProvider): string {
+    const cloudSettings = this.cloudSettings();
+    return provider === 'xai' ? cloudSettings.xaiVideoModel : '';
+  }
+
+  getVoiceModel(provider: AiCloudProvider): string {
+    if (provider !== 'xai') {
+      return '';
+    }
+
+    return 'xAI Voice';
+  }
+
   getChatModel(provider: AiCloudProvider): string {
     const cloudSettings = this.cloudSettings();
     return provider === 'openai' ? cloudSettings.openaiChatModel : cloudSettings.xaiChatModel;
@@ -577,6 +661,14 @@ export class AiService {
   getConfiguredImageProviders(): AiCloudProvider[] {
     const providers: AiCloudProvider[] = ['xai', 'openai'];
     return providers.filter(provider => this.hasCloudApiKey(provider));
+  }
+
+  getConfiguredVideoProviders(): AiCloudProvider[] {
+    return this.hasCloudApiKey('xai') ? ['xai'] : [];
+  }
+
+  getConfiguredVoiceProviders(): AiCloudProvider[] {
+    return this.hasCloudApiKey('xai') ? ['xai'] : [];
   }
 
   getActiveImageProvider(preferredProvider?: AiCloudProvider | null): AiCloudProvider | null {
@@ -610,7 +702,11 @@ export class AiService {
     this.updateCloudSettings(provider === 'openai' ? { openaiApiKey: '' } : { xaiApiKey: '' });
   }
 
-  async generateImage(prompt: string, provider?: AiCloudProvider | null): Promise<AiGeneratedImage[]> {
+  async generateImage(
+    prompt: string,
+    provider?: AiCloudProvider | null,
+    options?: AiImageGenerationOptions,
+  ): Promise<AiGeneratedImage[]> {
     const activeProvider = this.getActiveImageProvider(provider);
     if (!activeProvider) {
       throw new Error('Add an OpenAI or xAI API key in AI Settings first.');
@@ -623,7 +719,35 @@ export class AiService {
 
     return activeProvider === 'openai'
       ? this.generateOpenAiImage(trimmedPrompt)
-      : this.generateXAiImage(trimmedPrompt);
+      : this.generateXAiImage(trimmedPrompt, options);
+  }
+
+  async generateVideo(prompt: string, options?: AiVideoGenerationOptions): Promise<AiGeneratedVideo[]> {
+    const apiKey = this.cloudSettings().xaiApiKey;
+    if (!apiKey) {
+      throw new Error('xAI API key is missing.');
+    }
+
+    const trimmedPrompt = prompt.trim();
+    if (!trimmedPrompt) {
+      throw new Error('Video prompt cannot be empty.');
+    }
+
+    return this.generateXAiVideo(trimmedPrompt, options);
+  }
+
+  async generateVoice(prompt: string): Promise<AiGeneratedAudio[]> {
+    const apiKey = this.cloudSettings().xaiApiKey;
+    if (!apiKey) {
+      throw new Error('xAI API key is missing.');
+    }
+
+    const trimmedPrompt = prompt.trim();
+    if (!trimmedPrompt) {
+      throw new Error('Voice prompt cannot be empty.');
+    }
+
+    return this.generateXAiVoice(trimmedPrompt);
   }
 
   async generateLocalImage(
@@ -828,6 +952,16 @@ export class AiService {
       xaiChatModel: settings.xaiChatModel?.trim() || this.defaultCloudSettings.xaiChatModel,
       openaiImageModel: settings.openaiImageModel?.trim() || this.defaultCloudSettings.openaiImageModel,
       xaiImageModel: settings.xaiImageModel?.trim() || this.defaultCloudSettings.xaiImageModel,
+      xaiImageAspectRatio: settings.xaiImageAspectRatio?.trim() || this.defaultCloudSettings.xaiImageAspectRatio,
+      xaiImageResolution: settings.xaiImageResolution?.trim() || this.defaultCloudSettings.xaiImageResolution,
+      xaiImageCount: this.normalizeIntegerSetting(settings.xaiImageCount, this.defaultCloudSettings.xaiImageCount, 1, 10),
+      xaiVideoModel: settings.xaiVideoModel?.trim() || this.defaultCloudSettings.xaiVideoModel,
+      xaiVideoDuration: this.normalizeIntegerSetting(settings.xaiVideoDuration, this.defaultCloudSettings.xaiVideoDuration, 1, 15),
+      xaiVideoAspectRatio: settings.xaiVideoAspectRatio?.trim() || this.defaultCloudSettings.xaiVideoAspectRatio,
+      xaiVideoResolution: settings.xaiVideoResolution?.trim() || this.defaultCloudSettings.xaiVideoResolution,
+      xaiVoiceId: settings.xaiVoiceId?.trim() || this.defaultCloudSettings.xaiVoiceId,
+      xaiVoiceLanguage: settings.xaiVoiceLanguage?.trim() || this.defaultCloudSettings.xaiVoiceLanguage,
+      xaiVoiceCodec: settings.xaiVoiceCodec === 'wav' ? 'wav' : 'mp3',
       openaiApiKey: this.normalizeApiKey(settings.openaiApiKey),
       xaiApiKey: this.normalizeApiKey(settings.xaiApiKey),
     };
@@ -836,6 +970,20 @@ export class AiService {
   private normalizeApiKey(value?: string): string | undefined {
     const trimmed = value?.trim();
     return trimmed ? trimmed : undefined;
+  }
+
+  private normalizeIntegerSetting(value: unknown, fallback: number, min: number, max: number): number {
+    const parsed = typeof value === 'number'
+      ? value
+      : typeof value === 'string'
+        ? Number.parseInt(value, 10)
+        : Number.NaN;
+
+    if (!Number.isFinite(parsed)) {
+      return fallback;
+    }
+
+    return Math.min(Math.max(Math.round(parsed), min), max);
   }
 
   private async generateOpenAiImage(prompt: string): Promise<AiGeneratedImage[]> {
@@ -854,20 +1002,173 @@ export class AiService {
     return this.mapGeneratedImages(payload, 'openai', prompt);
   }
 
-  private async generateXAiImage(prompt: string): Promise<AiGeneratedImage[]> {
+  private async generateXAiImage(prompt: string, options?: AiImageGenerationOptions): Promise<AiGeneratedImage[]> {
     const apiKey = this.cloudSettings().xaiApiKey;
     if (!apiKey) {
       throw new Error('xAI API key is missing.');
     }
 
+    const cloudSettings = this.cloudSettings();
+    const inputImages = (options?.inputImages ?? []).filter(value => value.trim().length > 0);
+    const imageBody = inputImages.length > 1
+      ? { image_urls: inputImages.slice(0, 5) }
+      : inputImages.length === 1
+        ? { image_url: inputImages[0] }
+        : {};
+
     const payload = await this.fetchImageGeneration('https://api.x.ai/v1/images/generations', apiKey, {
-      model: this.cloudSettings().xaiImageModel,
+      model: cloudSettings.xaiImageModel,
       prompt,
-      n: 1,
+      n: cloudSettings.xaiImageCount,
+      aspect_ratio: cloudSettings.xaiImageAspectRatio,
+      resolution: cloudSettings.xaiImageResolution,
       response_format: 'b64_json',
+      ...imageBody,
     });
 
     return this.mapGeneratedImages(payload, 'xai', prompt);
+  }
+
+  private async generateXAiVideo(prompt: string, options?: AiVideoGenerationOptions): Promise<AiGeneratedVideo[]> {
+    const apiKey = this.cloudSettings().xaiApiKey;
+    if (!apiKey) {
+      throw new Error('xAI API key is missing.');
+    }
+
+    const cloudSettings = this.cloudSettings();
+    const requestBody = this.buildXAiVideoRequestBody(prompt, options, cloudSettings);
+    const endpoint = options?.mode === 'extend-video'
+      ? 'https://api.x.ai/v1/videos/extensions'
+      : options?.inputVideo?.trim()
+        ? 'https://api.x.ai/v1/videos/edits'
+        : 'https://api.x.ai/v1/videos/generations';
+    const controller = this.createAbortController();
+
+    try {
+      const startResponse = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+        signal: controller.signal,
+      });
+
+      const startPayload = await this.parseVideoStartResponse(startResponse);
+      if (!startResponse.ok) {
+        throw new Error(this.extractVideoError(startPayload) || `Video generation failed with status ${startResponse.status}.`);
+      }
+
+      const requestId = startPayload.request_id?.trim();
+      if (!requestId) {
+        throw new Error('The xAI video API did not return a request id.');
+      }
+
+      const statusPayload = await this.pollXAiVideoGeneration(requestId, apiKey, controller.signal);
+      const videoUrl = statusPayload.video?.url?.trim();
+      if (!videoUrl) {
+        throw new Error('The xAI video API completed without returning a video URL.');
+      }
+
+      return [{
+        id: `xai-video-${Date.now()}`,
+        provider: 'xai',
+        providerLabel: this.getProviderLabel('xai'),
+        model: statusPayload.model?.trim() || cloudSettings.xaiVideoModel,
+        prompt,
+        src: videoUrl,
+        duration: statusPayload.video?.duration,
+        mimeType: 'video/mp4',
+      }];
+    } finally {
+      this.clearAbortController(controller);
+    }
+  }
+
+  private async generateXAiVoice(prompt: string): Promise<AiGeneratedAudio[]> {
+    const apiKey = this.cloudSettings().xaiApiKey;
+    if (!apiKey) {
+      throw new Error('xAI API key is missing.');
+    }
+
+    const cloudSettings = this.cloudSettings();
+    const controller = this.createAbortController();
+
+    try {
+      const response = await fetch('https://api.x.ai/v1/tts', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          text: prompt,
+          voice_id: cloudSettings.xaiVoiceId,
+          language: cloudSettings.xaiVoiceLanguage,
+          output_format: {
+            codec: cloudSettings.xaiVoiceCodec,
+          },
+        }),
+        signal: controller.signal,
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || `Voice generation failed with status ${response.status}.`);
+      }
+
+      const blob = await response.blob();
+      const src = URL.createObjectURL(blob);
+      return [{
+        id: `xai-audio-${Date.now()}`,
+        provider: 'xai',
+        providerLabel: this.getProviderLabel('xai'),
+        model: this.getVoiceModel('xai'),
+        prompt,
+        src,
+        mimeType: blob.type || (cloudSettings.xaiVoiceCodec === 'wav' ? 'audio/wav' : 'audio/mpeg'),
+        voiceId: cloudSettings.xaiVoiceId,
+        language: cloudSettings.xaiVoiceLanguage,
+      }];
+    } finally {
+      this.clearAbortController(controller);
+    }
+  }
+
+  private buildXAiVideoRequestBody(
+    prompt: string,
+    options: AiVideoGenerationOptions | undefined,
+    cloudSettings: AiCloudSettings,
+  ): Record<string, unknown> {
+    const referenceImages = (options?.referenceImages ?? []).filter(value => value.trim().length > 0).slice(0, 5);
+
+    const requestBody: Record<string, unknown> = {
+      model: cloudSettings.xaiVideoModel,
+      prompt,
+      duration: cloudSettings.xaiVideoDuration,
+    };
+
+    if (options?.mode !== 'extend-video') {
+      requestBody['aspect_ratio'] = cloudSettings.xaiVideoAspectRatio;
+      requestBody['resolution'] = cloudSettings.xaiVideoResolution;
+    }
+
+    if (options?.inputVideo?.trim()) {
+      requestBody['video'] = { url: options.inputVideo.trim() };
+      return requestBody;
+    }
+
+    if (referenceImages.length > 0) {
+      requestBody['reference_images'] = referenceImages.map(url => ({ url }));
+      return requestBody;
+    }
+
+    if (options?.inputImage?.trim()) {
+      requestBody['image'] = { url: options.inputImage.trim() };
+    }
+
+    return requestBody;
   }
 
   private async fetchImageGeneration(url: string, apiKey: string, body: Record<string, unknown>): Promise<AiImageApiPayload> {
@@ -918,6 +1219,102 @@ export class AiService {
     } finally {
       this.clearAbortController(controller);
     }
+  }
+
+  private async pollXAiVideoGeneration(
+    requestId: string,
+    apiKey: string,
+    signal: AbortSignal,
+  ): Promise<AiVideoGenerationStatusPayload> {
+    while (true) {
+      const response = await fetch(`https://api.x.ai/v1/videos/${encodeURIComponent(requestId)}`, {
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+        },
+        signal,
+      });
+
+      const payload = await this.parseVideoStatusResponse(response);
+      if (!response.ok) {
+        throw new Error(this.extractVideoError(payload) || `Video status check failed with status ${response.status}.`);
+      }
+
+      switch (payload.status) {
+        case 'done':
+          return payload;
+        case 'failed':
+          throw new Error(this.extractVideoError(payload) || 'Video generation failed.');
+        case 'expired':
+          throw new Error('The video generation request expired before the result was ready.');
+        case 'pending':
+        default:
+          await this.waitForVideoPollInterval(signal, 2000);
+          break;
+      }
+    }
+  }
+
+  private waitForVideoPollInterval(signal: AbortSignal, delayMs: number): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const timeoutId = globalThis.setTimeout(() => {
+        cleanup();
+        resolve();
+      }, delayMs);
+
+      const onAbort = () => {
+        cleanup();
+        reject(signal.reason ?? this.createAbortError());
+      };
+
+      const cleanup = () => {
+        globalThis.clearTimeout(timeoutId);
+        signal.removeEventListener('abort', onAbort);
+      };
+
+      signal.addEventListener('abort', onAbort, { once: true });
+    });
+  }
+
+  private async parseVideoStartResponse(response: Response): Promise<AiVideoGenerationStartPayload> {
+    const text = await response.text();
+    if (!text) {
+      return {};
+    }
+
+    try {
+      return JSON.parse(text) as AiVideoGenerationStartPayload;
+    } catch {
+      return { message: text };
+    }
+  }
+
+  private async parseVideoStatusResponse(response: Response): Promise<AiVideoGenerationStatusPayload> {
+    const text = await response.text();
+    if (!text) {
+      return {};
+    }
+
+    try {
+      return JSON.parse(text) as AiVideoGenerationStatusPayload;
+    } catch {
+      return { message: text };
+    }
+  }
+
+  private extractVideoError(payload: AiVideoGenerationStartPayload | AiVideoGenerationStatusPayload): string | null {
+    if (typeof payload.error === 'string' && payload.error.trim()) {
+      return payload.error.trim();
+    }
+
+    if (typeof payload.error === 'object' && typeof payload.error?.message === 'string' && payload.error.message.trim()) {
+      return payload.error.message.trim();
+    }
+
+    if (typeof payload.message === 'string' && payload.message.trim()) {
+      return payload.message.trim();
+    }
+
+    return null;
   }
 
   private async parseChatCompletionResponse(response: Response): Promise<AiCloudChatCompletionPayload> {
