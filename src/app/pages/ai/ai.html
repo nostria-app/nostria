@@ -562,7 +562,7 @@
             <mat-icon>expand_more</mat-icon>
           </button>
         </div>
-        } @else if (isVoiceGenerationMode()) {
+        } @else if (isXAiVoiceGenerationMode()) {
         <div class="grok-toolbar-group" role="group" aria-label="Voice settings">
           <button type="button" class="grok-toolbar-chip" [matMenuTriggerFor]="xAiVoiceMenu" [disabled]="isGenerating()"
             [attr.title]="'Voice ' + xAiVoiceLabel()">

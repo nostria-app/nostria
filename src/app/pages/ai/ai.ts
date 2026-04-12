@@ -434,25 +434,26 @@ export class AiComponent {
     }];
   });
   readonly voiceModels = computed<ModelInfo[]>(() => {
-    if (!this.aiService.hasCloudApiKey('xai')) {
-      return [];
-    }
+    const localVoiceModels = this.models().filter(model => model.task === 'text-to-speech');
+    const cloudVoiceModels = this.aiService.hasCloudApiKey('xai')
+      ? [{
+        id: 'cloud-voice:xai',
+        task: 'text-to-speech',
+        name: 'xAI / Grok Voice',
+        description: 'Generate speech with xAI text-to-speech.',
+        size: 'Hosted API',
+        loading: false,
+        progress: 100,
+        loaded: true,
+        cached: false,
+        runtime: 'xAI Voice API',
+        source: 'cloud' as const,
+        provider: 'xai' as const,
+        cloudModel: this.aiService.getVoiceModel('xai'),
+      }]
+      : [];
 
-    return [{
-      id: 'cloud-voice:xai',
-      task: 'text-to-speech',
-      name: 'xAI / Grok Voice',
-      description: 'Generate speech with xAI text-to-speech.',
-      size: 'Hosted API',
-      loading: false,
-      progress: 100,
-      loaded: true,
-      cached: false,
-      runtime: 'xAI Voice API',
-      source: 'cloud',
-      provider: 'xai',
-      cloudModel: this.aiService.getVoiceModel('xai'),
-    }];
+    return [...localVoiceModels, ...cloudVoiceModels];
   });
   readonly xAiModeOptions: ChoiceOption[] = [
     { value: 'text', label: 'Text' },
@@ -538,7 +539,8 @@ export class AiComponent {
   readonly isImageGenerationMode = computed(() => this.selectedModel()?.task === 'image-generation');
   readonly isImageUpscalingMode = computed(() => this.selectedModel()?.task === 'image-upscaling');
   readonly isVideoGenerationMode = computed(() => this.selectedModel()?.task === 'video-generation');
-  readonly isVoiceGenerationMode = computed(() => this.selectedModel()?.provider === 'xai' && this.selectedModel()?.task === 'text-to-speech');
+  readonly isVoiceGenerationMode = computed(() => this.selectedModel()?.task === 'text-to-speech');
+  readonly isXAiVoiceGenerationMode = computed(() => this.selectedModel()?.provider === 'xai' && this.selectedModel()?.task === 'text-to-speech');
   readonly isImageMode = computed(() => this.isImageGenerationMode() || this.isImageUpscalingMode());
   readonly isVisualGenerationMode = computed(() => this.isImageMode() || this.isVideoGenerationMode());
   readonly isGeneratedMediaMode = computed(() => this.isVisualGenerationMode() || this.isVoiceGenerationMode());
@@ -2499,7 +2501,18 @@ export class AiComponent {
     this.isGenerating.set(true);
 
     try {
-      const audios = await this.aiService.generateVoice(prompt);
+      if (model.source !== 'cloud' && !model.loaded) {
+        const loaded = await this.ensureLocalModelReady(model);
+        if (!loaded) {
+          this.replaceMessageContent(assistantMessageId, 'The selected model could not be loaded in this browser.', false);
+          this.persistCurrentConversation();
+          return;
+        }
+      }
+
+      const audios = model.source === 'cloud'
+        ? await this.aiService.generateVoice(prompt, model.provider ?? 'xai')
+        : await this.aiService.generateVoice(prompt, 'local', model.id);
       const cachedAudios = await Promise.all(audios.map(audio => this.cacheGeneratedAudio(audio)));
 
       this.conversation.update(messages => messages.map(message => {

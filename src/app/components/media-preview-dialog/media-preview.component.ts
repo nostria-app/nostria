@@ -4,6 +4,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { InlineVideoPlayerComponent } from '../inline-video-player/inline-video-player.component';
+import { ImageCacheService } from '../../services/image-cache.service';
 
 interface MediaItem {
   url: string;
@@ -36,6 +37,7 @@ interface MediaPreviewData {
 export class MediaPreviewDialogComponent implements OnDestroy {
   private dialogRef = inject(MatDialogRef<MediaPreviewDialogComponent>);
   private snackBar = inject(MatSnackBar);
+  private imageCache = inject(ImageCacheService);
   data: MediaPreviewData = inject(MAT_DIALOG_DATA);
   private popstateHandler: ((event: PopStateEvent) => void) | null = null;
 
@@ -463,12 +465,7 @@ export class MediaPreviewDialogComponent implements OnDestroy {
     if (!media) return;
 
     try {
-      const response = await fetch(media.url);
-      if (!response.ok) {
-        throw new Error(`Could not download media (${response.status}).`);
-      }
-
-      const blob = await response.blob();
+      const blob = await this.downloadMediaBlob(media);
       const fileName = this.getDownloadFileName(media, blob.type);
       const objectUrl = URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -485,6 +482,32 @@ export class MediaPreviewDialogComponent implements OnDestroy {
     }
 
     this.resetHideControlsTimer();
+  }
+
+  private async downloadMediaBlob(media: MediaItem): Promise<Blob> {
+    try {
+      return await this.fetchBlob(media.url);
+    } catch (error) {
+      if (!media.type.startsWith('image/')) {
+        throw error;
+      }
+
+      const proxiedUrl = this.imageCache.getOptimizedImageUrlWithSize(media.url, 2048, 2048);
+      if (proxiedUrl === media.url) {
+        throw error;
+      }
+
+      return this.fetchBlob(proxiedUrl);
+    }
+  }
+
+  private async fetchBlob(url: string): Promise<Blob> {
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Could not download media (${response.status}).`);
+    }
+
+    return response.blob();
   }
 
   private getDownloadFileName(media: MediaItem, mimeType: string): string {

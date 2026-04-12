@@ -747,18 +747,42 @@ export class AiService {
     return this.generateXAiVideo(trimmedPrompt, options);
   }
 
-  async generateVoice(prompt: string): Promise<AiGeneratedAudio[]> {
-    const apiKey = this.cloudSettings().xaiApiKey;
-    if (!apiKey) {
-      throw new Error('xAI API key is missing.');
-    }
-
+  async generateVoice(prompt: string, provider: AiCloudProvider | 'local' = 'xai', model = this.speechModelId): Promise<AiGeneratedAudio[]> {
     const trimmedPrompt = prompt.trim();
     if (!trimmedPrompt) {
       throw new Error('Voice prompt cannot be empty.');
     }
 
+    if (provider === 'local') {
+      return this.generateLocalVoice(trimmedPrompt, model);
+    }
+
+    const apiKey = this.cloudSettings().xaiApiKey;
+    if (!apiKey) {
+      throw new Error('xAI API key is missing.');
+    }
+
     return this.generateXAiVoice(trimmedPrompt);
+  }
+
+  private async generateLocalVoice(prompt: string, model: string): Promise<AiGeneratedAudio[]> {
+    const payload = await this.synthesizeSpeech(prompt) as { blob?: Blob };
+    if (!(payload?.blob instanceof Blob)) {
+      throw new Error('The local speech model did not return audio content.');
+    }
+
+    const mimeType = payload.blob.type || 'audio/wav';
+    return [{
+      id: `local-audio-${Date.now()}`,
+      provider: 'local',
+      providerLabel: this.getProviderLabel('local'),
+      model,
+      prompt,
+      src: URL.createObjectURL(payload.blob),
+      mimeType,
+      voiceId: 'SpeechT5',
+      language: 'en',
+    }];
   }
 
   async generateLocalImage(
