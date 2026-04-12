@@ -2734,7 +2734,7 @@ export class AiComponent {
     }
 
     return {
-      referenceImages: await Promise.all(imageAttachments.map(attachment => this.readAttachmentAsDataUrl(attachment))),
+      inputImages: await Promise.all(imageAttachments.map(attachment => this.readAttachmentAsDataUrl(attachment))),
     };
   }
 
