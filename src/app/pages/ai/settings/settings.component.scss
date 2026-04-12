@@ -281,6 +281,10 @@
     p {
       color: var(--mat-sys-on-surface-variant);
     }
+
+    .cache-file-key {
+      overflow-wrap: anywhere;
+    }
   }
 
   .model-storage-title-row {

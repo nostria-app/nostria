@@ -258,14 +258,13 @@
                 [attr.aria-label]="'Preview generated image for ' + (image.revisedPrompt || image.prompt)"
                 [attr.title]="image.revisedPrompt || image.prompt">
                 <img [src]="image.src" alt="Generated image" class="generated-image-preview" />
-              </button>
-              <div class="generated-image-copy">
-                <div class="generated-image-meta">
-                  <span>{{ image.providerLabel }}</span>
-                  <span>{{ image.model }}</span>
+                <div class="generated-image-overlay">
+                  <div class="generated-image-meta generated-image-meta-overlay">
+                    <span>{{ image.providerLabel }}</span>
+                    <span>{{ image.model }}</span>
+                  </div>
                 </div>
-                <p>{{ image.revisedPrompt || image.prompt }}</p>
-              </div>
+              </button>
             </article>
             }
           </div>

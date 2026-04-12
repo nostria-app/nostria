@@ -32,9 +32,17 @@ interface ChoiceOption {
   label: string;
 }
 
+interface AiCachedFileItem {
+  key: string;
+  name: string;
+  mimeType: string;
+  bytes: number;
+}
+
 const STANDARD_PROMPTS_SOURCE_URL = 'https://raw.githubusercontent.com/mlc-ai/web-llm-chat/223895cb1be677504cf26904df5e3b0b451ba992/public/prompts.json';
 const STANDARD_PROMPTS_SOURCE_LABEL = 'MLC web-llm-chat prompts.json';
 const STANDARD_PROMPTS_BLOCKLIST = /(Gaslighter|AI Trying to Escape the Box|Unconstrained AI model DAN|\bDAN\b|Lunatic|Plagiarism Checker)/i;
+const AI_BROWSER_CACHE = 'nostria-ai';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -111,6 +119,10 @@ export class AiSettingsComponent implements OnInit, OnDestroy {
   }));
   readonly modelStorageReport = signal<AiModelStorageReport | null>(null);
   readonly modelStorageLoading = signal(false);
+  readonly aiCacheFiles = signal<AiCachedFileItem[]>([]);
+  readonly aiCacheLoading = signal(false);
+  readonly clearingAiCacheKeys = signal<Set<string>>(new Set());
+  readonly clearingAllAiCacheFiles = signal(false);
   readonly standardPromptQuery = signal('');
   readonly standardPrompts = signal<StandardPromptItem[]>([]);
   readonly standardPromptsLoading = signal(false);
@@ -139,6 +151,13 @@ export class AiSettingsComponent implements OnInit, OnDestroy {
 
     return this.standardPrompts().filter(prompt => prompt.title.toLowerCase().includes(query) || prompt.prompt.toLowerCase().includes(query));
   });
+  readonly aiCacheSummary = computed(() => {
+    const files = this.aiCacheFiles();
+    return {
+      count: files.length,
+      totalBytes: files.reduce((total, file) => total + file.bytes, 0),
+    };
+  });
 
   openAiApiKey = '';
   xAiApiKey = '';
@@ -153,6 +172,7 @@ export class AiSettingsComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     void this.refreshModelStorage();
+    void this.refreshAiCacheFiles();
     void this.loadStandardPrompts();
 
     if (this.isInRightPanel) {
@@ -352,6 +372,89 @@ export class AiSettingsComponent implements OnInit, OnDestroy {
     }
   }
 
+  async refreshAiCacheFiles(): Promise<void> {
+    this.aiCacheLoading.set(true);
+
+    try {
+      if (typeof caches === 'undefined') {
+        this.aiCacheFiles.set([]);
+        return;
+      }
+
+      const cache = await caches.open(AI_BROWSER_CACHE);
+      const requests = await cache.keys();
+      const files = await Promise.all(requests.map(async request => {
+        const response = await cache.match(request);
+        if (!response) {
+          return null;
+        }
+
+        const blob = await response.clone().blob();
+        return {
+          key: request.url,
+          name: this.resolveAiCacheFileName(request.url, response),
+          mimeType: response.headers.get('content-type') || blob.type || 'Unknown type',
+          bytes: blob.size,
+        } satisfies AiCachedFileItem;
+      }));
+
+      this.aiCacheFiles.set(files.filter((file): file is AiCachedFileItem => !!file).sort((left, right) => left.name.localeCompare(right.name)));
+    } catch (error) {
+      console.error('Failed to read AI cache files', error);
+      this.snackBar.open('Could not read cached AI files.', 'Dismiss', { duration: 3500 });
+    } finally {
+      this.aiCacheLoading.set(false);
+    }
+  }
+
+  async deleteAiCacheFile(file: AiCachedFileItem): Promise<void> {
+    this.clearingAiCacheKeys.update(keys => new Set(keys).add(file.key));
+
+    try {
+      if (typeof caches === 'undefined') {
+        return;
+      }
+
+      const cache = await caches.open(AI_BROWSER_CACHE);
+      const deleted = await cache.delete(file.key);
+      if (!deleted) {
+        this.snackBar.open(`Could not remove ${file.name} from the AI cache.`, 'Dismiss', { duration: 3500 });
+        return;
+      }
+
+      this.snackBar.open(`${file.name} removed from the AI cache.`, 'Dismiss', { duration: 2800 });
+      await this.refreshAiCacheFiles();
+    } finally {
+      this.clearingAiCacheKeys.update(keys => {
+        const next = new Set(keys);
+        next.delete(file.key);
+        return next;
+      });
+    }
+  }
+
+  async clearAllAiCache(): Promise<void> {
+    this.clearingAllAiCacheFiles.set(true);
+
+    try {
+      if (typeof caches === 'undefined') {
+        this.aiCacheFiles.set([]);
+        return;
+      }
+
+      const cache = await caches.open(AI_BROWSER_CACHE);
+      const requests = await cache.keys();
+      await Promise.all(requests.map(request => cache.delete(request)));
+      this.snackBar.open('All cached AI files removed from browser storage.', 'Dismiss', { duration: 3200 });
+      await this.refreshAiCacheFiles();
+    } catch (error) {
+      console.error('Failed to clear AI cache files', error);
+      this.snackBar.open('Could not clear cached AI files.', 'Dismiss', { duration: 3500 });
+    } finally {
+      this.clearingAllAiCacheFiles.set(false);
+    }
+  }
+
   async loadStandardPrompts(): Promise<void> {
     this.standardPromptsLoading.set(true);
     this.standardPromptsError.set('');
@@ -401,6 +504,10 @@ export class AiSettingsComponent implements OnInit, OnDestroy {
 
   isClearingModel(modelId: string): boolean {
     return this.clearingModelIds().has(modelId);
+  }
+
+  isClearingAiCacheFile(cacheKey: string): boolean {
+    return this.clearingAiCacheKeys().has(cacheKey);
   }
 
   formatBytes(bytes?: number): string {
@@ -478,5 +585,24 @@ export class AiSettingsComponent implements OnInit, OnDestroy {
     }
 
     return `${compact.slice(0, 177).trimEnd()}...`;
+  }
+
+  private resolveAiCacheFileName(cacheKey: string, response: Response): string {
+    const headerName = response.headers.get('x-nostria-file-name');
+    if (headerName?.trim()) {
+      return headerName.trim();
+    }
+
+    try {
+      const url = new URL(cacheKey);
+      const lastSegment = url.pathname.split('/').filter(Boolean).at(-1);
+      if (lastSegment) {
+        return decodeURIComponent(lastSegment);
+      }
+    } catch {
+      // Ignore malformed cache keys and fall back to the raw key.
+    }
+
+    return cacheKey;
   }
 }

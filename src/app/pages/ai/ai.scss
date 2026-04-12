@@ -696,6 +696,7 @@
 }
 
 .generated-image-preview-button {
+  position: relative;
   display: block;
   width: 100%;
   padding: 0;
@@ -713,6 +714,15 @@
   object-fit: contain;
   background: var(--mat-sys-surface-container);
   border-radius: 20px;
+}
+
+.generated-image-overlay {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  padding: 44px 14px 14px;
+  background: linear-gradient(180deg, transparent 0%, color-mix(in srgb, var(--mat-sys-scrim) 64%, transparent) 100%);
 }
 
 .generated-video-preview {
@@ -758,6 +768,10 @@
   gap: 12px;
   color: var(--mat-sys-on-surface-variant);
   font-size: 0.84rem;
+}
+
+.generated-image-meta-overlay {
+  color: var(--mat-sys-on-surface);
 }
 
 .generated-image-actions {

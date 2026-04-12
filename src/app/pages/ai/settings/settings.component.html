@@ -391,6 +391,74 @@
           <div class="storage-empty-state">Model storage details are not available in this browser yet.</div>
           }
         </section>
+
+        <section class="model-storage-card">
+          <div class="storage-summary-row">
+            <div>
+              <h3>Cached AI files</h3>
+              @if (aiCacheSummary(); as summary) {
+              <p>
+                {{ summary.count }} cached files
+                <span class="summary-separator">•</span>
+                {{ formatBytes(summary.totalBytes) }} used by uploaded and generated media
+              </p>
+              } @else {
+              <p>Inspect cached AI uploads and generated media stored in this browser.</p>
+              }
+            </div>
+
+            <div class="storage-summary-actions">
+              <button mat-stroked-button type="button" (click)="refreshAiCacheFiles()" [disabled]="aiCacheLoading()">
+                <mat-icon>refresh</mat-icon>
+                Refresh
+              </button>
+              <button mat-flat-button type="button" (click)="clearAllAiCache()"
+                [disabled]="clearingAllAiCacheFiles() || !aiCacheSummary().count">
+                <mat-icon>delete_sweep</mat-icon>
+                {{ clearingAllAiCacheFiles() ? 'Clearing…' : 'Clear all cached files' }}
+              </button>
+            </div>
+          </div>
+
+          @if (aiCacheSummary().count) {
+          <div class="storage-metrics">
+            <div class="storage-metric-pill">Cached files: {{ aiCacheSummary().count }}</div>
+            <div class="storage-metric-pill">AI cache: {{ formatBytes(aiCacheSummary().totalBytes) }}</div>
+          </div>
+          }
+
+          @if (aiCacheLoading()) {
+          <div class="storage-empty-state">Checking cached AI files…</div>
+          } @else if (aiCacheSummary().count) {
+          <div class="model-storage-list">
+            @for (file of aiCacheFiles(); track file.key) {
+            <section class="model-storage-item model-storage-item-cached">
+              <div class="model-storage-copy">
+                <div class="model-storage-title-row">
+                  <h3>{{ file.name }}</h3>
+                  <span class="model-storage-status model-storage-status-cached">Cached</span>
+                </div>
+                <p class="cache-file-key">{{ file.key }}</p>
+                <div class="model-storage-meta">
+                  <span>{{ file.mimeType }}</span>
+                  <span>{{ formatBytes(file.bytes) }}</span>
+                </div>
+              </div>
+
+              <div class="model-storage-actions">
+                <button mat-stroked-button type="button" (click)="deleteAiCacheFile(file)"
+                  [disabled]="isClearingAiCacheFile(file.key)">
+                  <mat-icon>delete</mat-icon>
+                  {{ isClearingAiCacheFile(file.key) ? 'Deleting…' : 'Delete' }}
+                </button>
+              </div>
+            </section>
+            }
+          </div>
+          } @else {
+          <div class="storage-empty-state">No cached AI files are stored in this browser right now.</div>
+          }
+        </section>
       </div>
     </mat-tab>
 

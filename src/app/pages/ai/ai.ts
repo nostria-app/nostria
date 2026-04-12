@@ -1138,9 +1138,19 @@ export class AiComponent {
   }
 
   deleteHistory(historyId: string): void {
+    void this.deleteHistoryWithCacheCleanup(historyId);
+  }
+
+  private async deleteHistoryWithCacheCleanup(historyId: string): Promise<void> {
     const history = this.historyService.getHistory(historyId);
     if (!history) {
       return;
+    }
+
+    await this.removeHistoryAssetsFromCache(history);
+
+    if (this.currentConversationId() === historyId) {
+      await this.removeConversationAttachmentsFromCache(this.conversation());
     }
 
     this.historyService.deleteHistory(historyId);
@@ -2887,6 +2897,34 @@ export class AiComponent {
       }));
     } catch (error) {
       this.logger.warn('Failed to delete generated audio cache entries', error);
+    }
+  }
+
+  private async removeConversationAttachmentsFromCache(messages: ConversationMessage[]): Promise<void> {
+    const cacheKeys = messages.flatMap(message => message.attachments?.map(attachment => attachment.cacheKey) ?? []);
+    await this.removeCacheEntries(cacheKeys, 'Failed to delete chat attachment cache entries');
+  }
+
+  private async removeHistoryAssetsFromCache(history: import('../../services/ai-chat-history.service').AiChatHistoryEntry): Promise<void> {
+    const cacheKeys = history.messages.flatMap(message => [
+      ...(message.generatedImages?.map(image => image.cacheKey).filter((cacheKey): cacheKey is string => !!cacheKey) ?? []),
+      ...(message.generatedVideos?.map(video => video.cacheKey).filter((cacheKey): cacheKey is string => !!cacheKey) ?? []),
+      ...(message.generatedAudios?.map(audio => audio.cacheKey).filter((cacheKey): cacheKey is string => !!cacheKey) ?? []),
+    ]);
+
+    await this.removeCacheEntries(cacheKeys, 'Failed to delete chat asset cache entries');
+  }
+
+  private async removeCacheEntries(cacheKeys: string[], warningMessage: string): Promise<void> {
+    if (!this.isBrowser || typeof caches === 'undefined' || cacheKeys.length === 0) {
+      return;
+    }
+
+    try {
+      const cache = await caches.open(AiComponent.AI_UPLOAD_CACHE);
+      await Promise.all([...new Set(cacheKeys)].map(cacheKey => cache.delete(cacheKey)));
+    } catch (error) {
+      this.logger.warn(warningMessage, error);
     }
   }
 
