@@ -3,6 +3,7 @@ import { pipeline, env, Tensor, AutoModelForImageTextToText, AutoProcessor, Auto
 
 const HUGGING_FACE_REMOTE_HOST = 'https://huggingface.co/';
 const SPEAKER_EMBEDDINGS_URL = 'https://huggingface.co/datasets/Xenova/transformers.js-docs/resolve/main/speaker_embeddings.bin';
+const ONNX_RUNTIME_ASSET_PATH = '/assets/onnxruntime/';
 const nativeFetch = globalThis.fetch.bind(globalThis);
 const allowedExternalHosts = new Set([
   'huggingface.co',
@@ -74,6 +75,7 @@ env.allowRemoteModels = true;
 env.remoteHost = HUGGING_FACE_REMOTE_HOST;
 env.allowLocalModels = false;
 env.useBrowserCache = true;
+env.backends.onnx.wasm.wasmPaths = ONNX_RUNTIME_ASSET_PATH;
 env.fetch = secureWorkerFetch;
 globalThis.fetch = secureWorkerFetch;
 

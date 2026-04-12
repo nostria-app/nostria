@@ -29,6 +29,11 @@
                 "glob": "**/*",
                 "input": "public"
               },
+              {
+                "glob": "ort-wasm-simd-threaded*",
+                "input": "node_modules/onnxruntime-web/dist",
+                "output": "/assets/onnxruntime"
+              },
               "src/locale",
               "src/service-worker.js"
             ],
