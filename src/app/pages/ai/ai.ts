@@ -2830,12 +2830,11 @@ export class AiComponent {
     }
 
     const cacheKey = `https://nostria.local/cache/ai/generated/${encodeURIComponent(image.id)}`;
-    const response = await fetch(image.src);
-    if (!response.ok) {
-      throw new Error(`Could not cache generated image (${response.status}).`);
+    const blob = await this.fetchGeneratedAssetBlob(image.src, 'image');
+    if (!blob) {
+      return image;
     }
 
-    const blob = await response.blob();
     const cache = await caches.open(AiComponent.AI_UPLOAD_CACHE);
     await cache.put(cacheKey, new Response(blob, {
       headers: new Headers({
@@ -2848,6 +2847,36 @@ export class AiComponent {
       cacheKey,
       mimeType: blob.type || image.mimeType || 'image/png',
     };
+  }
+
+  private async fetchGeneratedAssetBlob(url: string, assetType: 'image'): Promise<Blob | null> {
+    const maxAttempts = 4;
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+      try {
+        const response = await fetch(url);
+        if (!response.ok) {
+          throw new Error(`Could not cache generated ${assetType} (${response.status}).`);
+        }
+
+        return await response.blob();
+      } catch (error) {
+        if (attempt === maxAttempts) {
+          this.logger.warn(`Failed to cache generated ${assetType}; keeping original URL instead.`, error);
+          return null;
+        }
+
+        await this.delay(750);
+      }
+    }
+
+    return null;
+  }
+
+  private delay(ms: number): Promise<void> {
+    return new Promise(resolve => {
+      globalThis.setTimeout(resolve, ms);
+    });
   }
 
   private async cacheGeneratedVideo(video: AiGeneratedVideo): Promise<AiGeneratedVideo> {
@@ -2988,21 +3017,21 @@ export class AiComponent {
 
   private async resolveGeneratedImageSource(image: AiHistoryGeneratedImage): Promise<string> {
     if (!this.isBrowser || typeof caches === 'undefined' || !image.cacheKey) {
-      return '';
+      return image.originalUrl ?? '';
     }
 
     try {
       const cache = await caches.open(AiComponent.AI_UPLOAD_CACHE);
       const response = await cache.match(image.cacheKey);
       if (!response?.ok) {
-        return '';
+        return image.originalUrl ?? '';
       }
 
       const blob = await response.blob();
       return await this.blobToDataUrl(blob);
     } catch (error) {
       this.logger.warn('Failed to restore generated image from cache', error);
-      return '';
+      return image.originalUrl ?? '';
     }
   }
 
