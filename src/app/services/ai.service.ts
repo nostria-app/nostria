@@ -45,6 +45,15 @@ export type AiGeneratedMediaProvider = AiImageProvider;
 
 export interface AiImageGenerationOptions {
   inputImages?: string[];
+  referenceImages?: string[];
+}
+
+export interface AiGeneratedImageSettings {
+  provider: AiImageProvider;
+  model: string;
+  xaiImageAspectRatio?: string;
+  xaiImageResolution?: string;
+  xaiImageCount?: number;
 }
 
 export interface AiVideoGenerationOptions {
@@ -97,6 +106,7 @@ export interface AiGeneratedImage {
   src: string;
   cacheKey?: string;
   mimeType?: string;
+  imageSettings?: AiGeneratedImageSettings;
 }
 
 export interface AiGeneratedVideo {
@@ -1009,14 +1019,14 @@ export class AiService {
     }
 
     const cloudSettings = this.cloudSettings();
+    const referenceImages = (options?.referenceImages ?? []).filter(value => value.trim().length > 0).slice(0, 5);
     const inputImages = (options?.inputImages ?? []).filter(value => value.trim().length > 0);
     const imageBody = inputImages.length > 1
       ? { image_urls: inputImages.slice(0, 5) }
       : inputImages.length === 1
         ? { image_url: inputImages[0] }
         : {};
-
-    const payload = await this.fetchImageGeneration('https://api.x.ai/v1/images/generations', apiKey, {
+    const requestBody: Record<string, unknown> = {
       model: cloudSettings.xaiImageModel,
       prompt,
       n: cloudSettings.xaiImageCount,
@@ -1024,7 +1034,13 @@ export class AiService {
       resolution: cloudSettings.xaiImageResolution,
       response_format: 'b64_json',
       ...imageBody,
-    });
+    };
+
+    if (referenceImages.length > 0) {
+      requestBody['reference_images'] = referenceImages.map(url => ({ url }));
+    }
+
+    const payload = await this.fetchImageGeneration('https://api.x.ai/v1/images/generations', apiKey, requestBody);
 
     return this.mapGeneratedImages(payload, 'xai', prompt);
   }
@@ -1396,6 +1412,20 @@ export class AiService {
       throw new Error('The provider returned no images.');
     }
 
+    const cloudSettings = this.cloudSettings();
+    const imageSettings: AiGeneratedImageSettings = provider === 'xai'
+      ? {
+        provider,
+        model: this.getImageModel(provider),
+        xaiImageAspectRatio: cloudSettings.xaiImageAspectRatio,
+        xaiImageResolution: cloudSettings.xaiImageResolution,
+        xaiImageCount: cloudSettings.xaiImageCount,
+      }
+      : {
+        provider,
+        model: this.getImageModel(provider),
+      };
+
     return payload.data.map((entry, index) => {
       const src = entry.b64_json
         ? this.buildBase64DataUrl(entry.b64_json)
@@ -1413,6 +1443,7 @@ export class AiService {
         prompt,
         revisedPrompt: entry.revised_prompt,
         src,
+        imageSettings,
       };
     });
   }
@@ -1440,6 +1471,10 @@ export class AiService {
         prompt,
         src: await this.blobToDataUrl(entry.blob),
         mimeType,
+        imageSettings: {
+          provider: 'local',
+          model,
+        },
       };
     }));
   }

@@ -270,6 +270,13 @@ export interface StoredAiChatHistoryEntry {
       revisedPrompt?: string;
       cacheKey?: string;
       mimeType?: string;
+      imageSettings?: {
+        provider: 'openai' | 'xai' | 'local';
+        model: string;
+        xaiImageAspectRatio?: string;
+        xaiImageResolution?: string;
+        xaiImageCount?: number;
+      };
     }>;
     generatedVideos?: Array<{
       id: string;

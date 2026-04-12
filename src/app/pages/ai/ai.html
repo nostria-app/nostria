@@ -381,7 +381,12 @@
           <div class="message-attachments">
             @for (attachment of message.attachments!; track attachment.id) {
             <div class="message-attachment-chip">
+              @if (attachment.previewUrl && attachment.mimeType.startsWith('image/')) {
+              <img [src]="attachment.previewUrl" alt="Attached image preview" title="Attached image preview"
+                class="message-attachment-preview" />
+              } @else {
               <mat-icon>{{ attachment.kind === 'text' ? 'description' : 'attach_file' }}</mat-icon>
+              }
               <span>{{ attachment.name }}</span>
             </div>
             }

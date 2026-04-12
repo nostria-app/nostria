@@ -1362,6 +1362,7 @@ export class AiComponent {
     await this.removeGeneratedAudiosFromCache(message.generatedAudios, retainedCacheKeys);
     this.releaseGeneratedVideoUrls(message.generatedVideos);
     this.releaseGeneratedAudioUrls(message.generatedAudios);
+    this.releaseAttachmentPreviewUrls(message.attachments);
 
     if (this.activeShareMessage()?.id === message.id) {
       this.activeShareMessage.set(null);
@@ -1538,7 +1539,7 @@ export class AiComponent {
     prompt: string,
   ): Promise<void> {
     const model = target === 'image'
-      ? this.imageModels().find(candidate => candidate.task === 'image-generation')
+      ? this.selectGeneratedImageRemixModel(image)
       : this.localChatModels()[0] ?? this.cloudChatModels()[0];
 
     if (!model) {
@@ -1558,6 +1559,58 @@ export class AiComponent {
       this.chatError.set(error instanceof Error ? error.message : 'Could not prepare the image for the next prompt.');
       this.snackBar.open('Could not attach the selected image.', 'Dismiss', { duration: 3500 });
     }
+  }
+
+  private selectGeneratedImageRemixModel(image: AiGeneratedImage): ModelInfo | null {
+    if (image.provider === 'local') {
+      const localModel = this.imageModels().find(candidate => candidate.task === 'image-generation' && candidate.source !== 'cloud' && candidate.id === image.model)
+        ?? this.imageModels().find(candidate => candidate.task === 'image-generation' && candidate.source !== 'cloud');
+
+      if (localModel) {
+        this.selectedModelId.set(localModel.id);
+      }
+
+      return localModel ?? null;
+    }
+
+    if (image.provider === 'xai' || image.provider === 'openai') {
+      const nextSettings: Partial<import('../../services/ai.service').AiCloudSettings> = {
+        preferredImageProvider: image.provider,
+      };
+
+      if (image.provider === 'xai') {
+        nextSettings['xaiImageModel'] = image.imageSettings?.model || image.model;
+        if (image.imageSettings?.xaiImageAspectRatio) {
+          nextSettings['xaiImageAspectRatio'] = image.imageSettings.xaiImageAspectRatio;
+        }
+        if (image.imageSettings?.xaiImageResolution) {
+          nextSettings['xaiImageResolution'] = image.imageSettings.xaiImageResolution;
+        }
+        if (image.imageSettings?.xaiImageCount) {
+          nextSettings['xaiImageCount'] = image.imageSettings.xaiImageCount;
+        }
+      } else {
+        nextSettings['openaiImageModel'] = image.imageSettings?.model || image.model;
+      }
+
+      this.aiService.updateCloudSettings(nextSettings);
+
+      const cloudModel = this.imageModels().find(candidate => candidate.task === 'image-generation' && candidate.provider === image.provider)
+        ?? this.imageModels().find(candidate => candidate.task === 'image-generation');
+
+      if (cloudModel) {
+        this.selectedModelId.set(cloudModel.id);
+      }
+
+      return cloudModel ?? null;
+    }
+
+    const fallbackModel = this.imageModels().find(candidate => candidate.task === 'image-generation') ?? null;
+    if (fallbackModel) {
+      this.selectedModelId.set(fallbackModel.id);
+    }
+
+    return fallbackModel;
   }
 
   async upscaleGeneratedImage(image: AiGeneratedImage): Promise<void> {
@@ -1762,6 +1815,7 @@ export class AiComponent {
 
   clearConversation(): void {
     this.clearAttachedFiles();
+    this.releaseConversationAttachmentPreviewUrls(this.conversation());
     this.releaseGeneratedVideoUrls(this.conversation().flatMap(message => message.generatedVideos ?? []));
     this.releaseGeneratedAudioUrls(this.conversation().flatMap(message => message.generatedAudios ?? []));
     this.chatError.set('');
@@ -1814,9 +1868,11 @@ export class AiComponent {
     }
 
     let preparedPrompt: { prompt: string; attachmentContext: string };
+    let messageAttachments: ComposerAttachment[] | undefined;
 
     try {
       preparedPrompt = await this.preparePromptSubmission(model, promptText, attachments);
+      messageAttachments = await this.createMessageAttachments(attachments);
     } catch (err) {
       this.logger.error('AI prompt preparation error:', err);
       this.chatError.set(err instanceof Error ? err.message : String(err));
@@ -1833,7 +1889,7 @@ export class AiComponent {
       id: this.createMessageId(),
       role: 'user',
       content: preparedPrompt.prompt,
-      attachments,
+      attachments: messageAttachments,
       attachmentContext: preparedPrompt.attachmentContext,
     };
     const generationConversation = [...this.conversation(), userMessage];
@@ -2450,13 +2506,14 @@ export class AiComponent {
     }
 
     const imageOptions = await this.buildImageGenerationOptions(model, attachments);
+    const messageAttachments = await this.createMessageAttachments(attachments);
 
     const assistantMessageId = this.createMessageId();
     const userMessage: ConversationMessage = {
       id: this.createMessageId(),
       role: 'user',
       content: prompt,
-      attachments: attachments.length ? attachments : undefined,
+      attachments: messageAttachments,
     };
 
     this.chatError.set('');
@@ -2521,12 +2578,13 @@ export class AiComponent {
     }
 
     const videoOptions = await this.buildVideoGenerationOptions(attachments);
+    const messageAttachments = await this.createMessageAttachments(attachments);
     const assistantMessageId = this.createMessageId();
     const userMessage: ConversationMessage = {
       id: this.createMessageId(),
       role: 'user',
       content: prompt,
-      attachments: attachments.length ? attachments : undefined,
+      attachments: messageAttachments,
     };
 
     this.chatError.set('');
@@ -2589,12 +2647,13 @@ export class AiComponent {
     }
 
     const prompt = promptText.trim() || `Upscale ${attachment.name}`;
+    const messageAttachments = await this.createMessageAttachments(attachments);
     const assistantMessageId = this.createMessageId();
     const userMessage: ConversationMessage = {
       id: this.createMessageId(),
       role: 'user',
       content: prompt,
-      attachments,
+      attachments: messageAttachments,
     };
 
     this.chatError.set('');
@@ -2675,7 +2734,7 @@ export class AiComponent {
     }
 
     return {
-      inputImages: await Promise.all(imageAttachments.map(attachment => this.readAttachmentAsDataUrl(attachment))),
+      referenceImages: await Promise.all(imageAttachments.map(attachment => this.readAttachmentAsDataUrl(attachment))),
     };
   }
 
@@ -3142,6 +3201,7 @@ export class AiComponent {
       revisedPrompt: image.revisedPrompt,
       cacheKey: image.cacheKey,
       mimeType: image.mimeType,
+      imageSettings: image.imageSettings,
     };
   }
 
@@ -3441,6 +3501,24 @@ export class AiComponent {
     };
   }
 
+  private async createMessageAttachments(attachments: ComposerAttachment[]): Promise<ComposerAttachment[] | undefined> {
+    if (attachments.length === 0) {
+      return undefined;
+    }
+
+    return Promise.all(attachments.map(async attachment => {
+      if (!attachment.mimeType.startsWith('image/')) {
+        return { ...attachment };
+      }
+
+      const blob = await this.readAttachmentBlob(attachment);
+      return {
+        ...attachment,
+        previewUrl: URL.createObjectURL(blob),
+      };
+    }));
+  }
+
   private setComposerAttachments(attachments: ComposerAttachment[]): void {
     this.releaseAttachmentPreviewUrls(this.attachedFiles());
     this.attachedFiles.set(attachments);
@@ -3460,6 +3538,12 @@ export class AiComponent {
       if (attachment.previewUrl?.startsWith('blob:')) {
         URL.revokeObjectURL(attachment.previewUrl);
       }
+    }
+  }
+
+  private releaseConversationAttachmentPreviewUrls(messages: ConversationMessage[]): void {
+    for (const message of messages) {
+      this.releaseAttachmentPreviewUrls(message.attachments);
     }
   }
 

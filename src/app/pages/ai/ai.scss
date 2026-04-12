@@ -987,6 +987,15 @@
   flex: 0 0 auto;
 }
 
+.message-attachment-preview {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  object-fit: cover;
+  background: var(--mat-sys-surface-container);
+  flex: 0 0 auto;
+}
+
 .composer-attachment-copy {
   display: flex;
   flex-direction: column;
