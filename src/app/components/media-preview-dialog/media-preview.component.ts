@@ -2,6 +2,7 @@ import { Component, inject, signal, computed, ViewChild, ElementRef, OnDestroy, 
 import { MAT_DIALOG_DATA, MatDialogRef, MatDialogModule } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { MatSnackBar } from '@angular/material/snack-bar';
 import { InlineVideoPlayerComponent } from '../inline-video-player/inline-video-player.component';
 
 interface MediaItem {
@@ -34,6 +35,7 @@ interface MediaPreviewData {
 })
 export class MediaPreviewDialogComponent implements OnDestroy {
   private dialogRef = inject(MatDialogRef<MediaPreviewDialogComponent>);
+  private snackBar = inject(MatSnackBar);
   data: MediaPreviewData = inject(MAT_DIALOG_DATA);
   private popstateHandler: ((event: PopStateEvent) => void) | null = null;
 
@@ -456,23 +458,95 @@ export class MediaPreviewDialogComponent implements OnDestroy {
     this.resetHideControlsTimer();
   }
 
-  downloadMedia(): void {
+  async downloadMedia(): Promise<void> {
     const media = this.currentMedia();
     if (!media) return;
 
-    // Create a temporary anchor element to trigger download
-    const link = document.createElement('a');
-    link.href = media.url;
-    link.download = media.title || `media-${Date.now()}`;
-    link.target = '_blank';
+    try {
+      const response = await fetch(media.url);
+      if (!response.ok) {
+        throw new Error(`Could not download media (${response.status}).`);
+      }
 
-    // For cross-origin resources, this will open in a new tab instead of downloading
-    // But for same-origin or properly configured CORS resources, it will download
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+      const blob = await response.blob();
+      const fileName = this.getDownloadFileName(media, blob.type);
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = objectUrl;
+      link.download = fileName;
+      link.rel = 'noopener';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      globalThis.setTimeout(() => URL.revokeObjectURL(objectUrl), 0);
+    } catch (error) {
+      this.snackBar.open('Could not download this media.', 'Dismiss', { duration: 3500 });
+      console.error('Failed to download preview media', error);
+    }
 
     this.resetHideControlsTimer();
+  }
+
+  private getDownloadFileName(media: MediaItem, mimeType: string): string {
+    const trimmedTitle = media.title?.trim();
+    const extension = this.extensionForMedia(media.type, mimeType);
+
+    if (trimmedTitle) {
+      return trimmedTitle.includes('.') ? trimmedTitle : `${trimmedTitle}.${extension}`;
+    }
+
+    const urlPath = this.extractFileNameFromUrl(media.url);
+    if (urlPath) {
+      return urlPath;
+    }
+
+    return `media-${Date.now()}.${extension}`;
+  }
+
+  private extractFileNameFromUrl(url: string): string | null {
+    try {
+      const parsedUrl = new URL(url, globalThis.location?.origin);
+      const pathSegment = parsedUrl.pathname.split('/').pop()?.trim();
+      return pathSegment || null;
+    } catch {
+      return null;
+    }
+  }
+
+  private extensionForMedia(mediaType: string, mimeType: string): string {
+    if (mimeType === 'image/png') {
+      return 'png';
+    }
+
+    if (mimeType === 'image/jpeg') {
+      return 'jpg';
+    }
+
+    if (mimeType === 'image/webp') {
+      return 'webp';
+    }
+
+    if (mimeType === 'image/gif') {
+      return 'gif';
+    }
+
+    if (mimeType === 'video/mp4') {
+      return 'mp4';
+    }
+
+    if (mimeType === 'video/webm') {
+      return 'webm';
+    }
+
+    if (mimeType === 'audio/mpeg') {
+      return 'mp3';
+    }
+
+    if (mimeType === 'audio/wav') {
+      return 'wav';
+    }
+
+    return mediaType.startsWith('video') ? 'mp4' : mediaType.startsWith('audio') ? 'mp3' : 'png';
   }
 
   onWheel(event: WheelEvent): void {

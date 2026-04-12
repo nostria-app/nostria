@@ -160,6 +160,7 @@ export class AiComponent {
   private readonly nextMessageId = signal(0);
   private readonly renderedAssistantSource = new Map<string, string>();
   private readonly renderedAssistantVersion = new Map<string, number>();
+  private readonly pendingGeneratedImageCacheIds = new Set<string>();
   readonly webGpuAvailable = this.isBrowser && typeof navigator !== 'undefined' && 'gpu' in navigator;
   readonly autoScrollPinned = signal(true);
   readonly splitPaneMode = computed(() => this.panelNav.hasRightContent() && !this.panelNav.isMobile());
@@ -1670,41 +1671,61 @@ export class AiComponent {
     });
   }
 
-  downloadImage(image: AiGeneratedImage): void {
+  async downloadImage(image: AiGeneratedImage): Promise<void> {
     if (!this.isBrowser || typeof document === 'undefined') {
       return;
     }
 
-    const link = document.createElement('a');
-    link.href = image.src;
-    link.download = `${image.id}.png`;
-    link.rel = 'noopener';
-    link.click();
+    try {
+      const blob = await this.getGeneratedImageBlob(image);
+      const extension = this.fileExtensionForMimeType(blob.type || image.mimeType || 'image/png');
+      this.downloadBlob(blob, `${image.id}.${extension}`);
+    } catch (error) {
+      this.logger.warn('Failed to download generated image', error);
+      this.snackBar.open('Could not download the generated image.', 'Dismiss', { duration: 3500 });
+    }
   }
 
-  downloadVideo(video: AiGeneratedVideo): void {
+  async downloadVideo(video: AiGeneratedVideo): Promise<void> {
     if (!this.isBrowser || typeof document === 'undefined') {
       return;
     }
 
-    const link = document.createElement('a');
-    link.href = video.src;
-    link.download = `${video.id}.mp4`;
-    link.rel = 'noopener';
-    link.click();
+    try {
+      const blob = await this.getGeneratedVideoBlob(video);
+      const extension = this.fileExtensionForMimeType(blob.type || video.mimeType || 'video/mp4');
+      this.downloadBlob(blob, `${video.id}.${extension}`);
+    } catch (error) {
+      this.logger.warn('Failed to download generated video', error);
+      this.snackBar.open('Could not download the generated video.', 'Dismiss', { duration: 3500 });
+    }
   }
 
-  downloadAudio(audio: AiGeneratedAudio): void {
+  async downloadAudio(audio: AiGeneratedAudio): Promise<void> {
     if (!this.isBrowser || typeof document === 'undefined') {
       return;
     }
 
-    const extension = this.fileExtensionForMimeType(audio.mimeType || 'audio/mpeg');
+    try {
+      const blob = await this.getGeneratedAudioBlob(audio);
+      const extension = this.fileExtensionForMimeType(blob.type || audio.mimeType || 'audio/mpeg');
+      this.downloadBlob(blob, `${audio.id}.${extension}`);
+    } catch (error) {
+      this.logger.warn('Failed to download generated audio', error);
+      this.snackBar.open('Could not download the generated audio.', 'Dismiss', { duration: 3500 });
+    }
+  }
+
+  private downloadBlob(blob: Blob, fileName: string): void {
+    const objectUrl = URL.createObjectURL(blob);
     const link = document.createElement('a');
-    link.href = audio.src;
-    link.download = `${audio.id}.${extension}`;
+    link.href = objectUrl;
+    link.download = fileName;
     link.rel = 'noopener';
+    document.body.appendChild(link);
     link.click();
+    link.remove();
+    globalThis.setTimeout(() => URL.revokeObjectURL(objectUrl), 0);
   }
 
   formatFileSize(size: number): string {
@@ -2556,6 +2577,7 @@ export class AiComponent {
         };
       }));
       this.persistCurrentConversation();
+      this.queueGeneratedImageCacheBackfill(cachedImages);
     } catch (err) {
       if (this.aiService.isAbortError(err)) {
         this.finalizeStoppedGeneration(assistantMessageId);
@@ -2696,6 +2718,7 @@ export class AiComponent {
         };
       }));
       this.persistCurrentConversation();
+      this.queueGeneratedImageCacheBackfill(cachedImages);
     } catch (err) {
       if (this.aiService.isAbortError(err)) {
         this.finalizeStoppedGeneration(assistantMessageId);
@@ -2824,13 +2847,16 @@ export class AiComponent {
     this.activeVideoStartedAt.set(null);
   }
 
-  private async cacheGeneratedImage(image: AiGeneratedImage): Promise<AiGeneratedImage> {
+  private async cacheGeneratedImage(
+    image: AiGeneratedImage,
+    options?: { maxAttempts?: number; delayMs?: number; logFailure?: boolean },
+  ): Promise<AiGeneratedImage> {
     if (!this.isBrowser || typeof caches === 'undefined') {
       return image;
     }
 
     const cacheKey = `https://nostria.local/cache/ai/generated/${encodeURIComponent(image.id)}`;
-    const blob = await this.fetchGeneratedAssetBlob(image.src, 'image');
+    const blob = await this.fetchGeneratedAssetBlob(image.originalUrl || image.src, 'image', options);
     if (!blob) {
       return image;
     }
@@ -2849,8 +2875,55 @@ export class AiComponent {
     };
   }
 
-  private async fetchGeneratedAssetBlob(url: string, assetType: 'image'): Promise<Blob | null> {
-    const maxAttempts = 4;
+  private queueGeneratedImageCacheBackfill(images: AiGeneratedImage[]): void {
+    const imagesToCache = images.filter(image => !image.cacheKey && !this.pendingGeneratedImageCacheIds.has(image.id));
+    if (imagesToCache.length === 0) {
+      return;
+    }
+
+    imagesToCache.forEach(image => this.pendingGeneratedImageCacheIds.add(image.id));
+    void this.backfillGeneratedImagesInCache(imagesToCache);
+  }
+
+  private async backfillGeneratedImagesInCache(images: AiGeneratedImage[]): Promise<void> {
+    try {
+      const recachedImages = await Promise.all(images.map(image => this.cacheGeneratedImage(image, {
+        maxAttempts: 20,
+        delayMs: 1500,
+        logFailure: false,
+      })));
+      const updatedImages = recachedImages.filter((image, index) => image.cacheKey && image.cacheKey !== images[index].cacheKey);
+      if (updatedImages.length > 0) {
+        this.replaceGeneratedImages(updatedImages);
+      }
+    } finally {
+      images.forEach(image => this.pendingGeneratedImageCacheIds.delete(image.id));
+    }
+  }
+
+  private replaceGeneratedImages(updatedImages: AiGeneratedImage[]): void {
+    const updatedById = new Map(updatedImages.map(image => [image.id, image]));
+    this.conversation.update(messages => messages.map(message => {
+      if (!message.generatedImages?.some(image => updatedById.has(image.id))) {
+        return message;
+      }
+
+      return {
+        ...message,
+        generatedImages: message.generatedImages.map(image => updatedById.get(image.id) ?? image),
+      };
+    }));
+    this.persistCurrentConversation();
+  }
+
+  private async fetchGeneratedAssetBlob(
+    url: string,
+    assetType: 'image',
+    options?: { maxAttempts?: number; delayMs?: number; logFailure?: boolean },
+  ): Promise<Blob | null> {
+    const maxAttempts = options?.maxAttempts ?? 4;
+    const delayMs = options?.delayMs ?? 750;
+    const logFailure = options?.logFailure ?? true;
 
     for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
       try {
@@ -2862,11 +2935,13 @@ export class AiComponent {
         return await response.blob();
       } catch (error) {
         if (attempt === maxAttempts) {
-          this.logger.warn(`Failed to cache generated ${assetType}; keeping original URL instead.`, error);
+          if (logFailure) {
+            this.logger.warn(`Failed to cache generated ${assetType}; keeping original URL instead.`, error);
+          }
           return null;
         }
 
-        await this.delay(750);
+        await this.delay(delayMs);
       }
     }
 
