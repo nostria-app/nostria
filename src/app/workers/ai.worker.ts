@@ -333,13 +333,11 @@ async function handleGenerate(payload: { input: string | { role: string, content
 
 async function handleGenerateMultimodal(
   payload: {
-    input: Array<{
+    input: {
       role: string;
-      content: Array<
-        | { type: 'text'; text: string }
-        | { type: 'image'; image: Blob }
-      >;
-    }>;
+      content: (| { type: 'text'; text: string }
+        | { type: 'image'; image: Blob })[];
+    }[];
     model: string;
     params?: any;
   },
