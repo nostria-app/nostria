@@ -1355,10 +1355,11 @@ export class AiComponent {
 
   async deleteMessage(message: ConversationMessage): Promise<void> {
     const nextConversation = this.conversation().filter(entry => entry.id !== message.id);
+    const retainedCacheKeys = this.collectRetainedCacheKeys(nextConversation, this.attachedFiles());
 
-    await this.removeGeneratedImagesFromCache(message.generatedImages);
-    await this.removeGeneratedVideosFromCache(message.generatedVideos);
-    await this.removeGeneratedAudiosFromCache(message.generatedAudios);
+    await this.removeGeneratedImagesFromCache(message.generatedImages, retainedCacheKeys);
+    await this.removeGeneratedVideosFromCache(message.generatedVideos, retainedCacheKeys);
+    await this.removeGeneratedAudiosFromCache(message.generatedAudios, retainedCacheKeys);
     this.releaseGeneratedVideoUrls(message.generatedVideos);
     this.releaseGeneratedAudioUrls(message.generatedAudios);
 
@@ -1546,8 +1547,7 @@ export class AiComponent {
     }
 
     try {
-      const file = await this.createFileFromGeneratedImage(image);
-      const attachment = await this.createAttachment(file);
+      const attachment = await this.createAttachmentFromGeneratedImage(image);
       this.selectedModelId.set(model.id);
       this.setComposerAttachments([attachment]);
       this.composerText.set(prompt);
@@ -1572,8 +1572,7 @@ export class AiComponent {
     }
 
     try {
-      const file = await this.createFileFromGeneratedImage(image);
-      const attachment = await this.createAttachment(file);
+      const attachment = await this.createAttachmentFromGeneratedImage(image);
       this.selectedModelId.set(model.id);
       await this.upscaleImageMessage(
         model,
@@ -2843,61 +2842,37 @@ export class AiComponent {
     };
   }
 
-  private async removeGeneratedImagesFromCache(images?: AiGeneratedImage[]): Promise<void> {
+  private async removeGeneratedImagesFromCache(images?: AiGeneratedImage[], retainedCacheKeys?: ReadonlySet<string>): Promise<void> {
     if (!this.isBrowser || typeof caches === 'undefined' || !images?.length) {
       return;
     }
 
-    try {
-      const cache = await caches.open(AiComponent.AI_UPLOAD_CACHE);
-      await Promise.all(images.map(async image => {
-        if (!image.cacheKey) {
-          return;
-        }
-
-        await cache.delete(image.cacheKey);
-      }));
-    } catch (error) {
-      this.logger.warn('Failed to delete generated image cache entries', error);
-    }
+    const cacheKeys = images
+      .map(image => image.cacheKey)
+      .filter((cacheKey): cacheKey is string => !!cacheKey && !retainedCacheKeys?.has(cacheKey));
+    await this.removeCacheEntries(cacheKeys, 'Failed to delete generated image cache entries');
   }
 
-  private async removeGeneratedVideosFromCache(videos?: AiGeneratedVideo[]): Promise<void> {
+  private async removeGeneratedVideosFromCache(videos?: AiGeneratedVideo[], retainedCacheKeys?: ReadonlySet<string>): Promise<void> {
     if (!this.isBrowser || typeof caches === 'undefined' || !videos?.length) {
       return;
     }
 
-    try {
-      const cache = await caches.open(AiComponent.AI_UPLOAD_CACHE);
-      await Promise.all(videos.map(async video => {
-        if (!video.cacheKey) {
-          return;
-        }
-
-        await cache.delete(video.cacheKey);
-      }));
-    } catch (error) {
-      this.logger.warn('Failed to delete generated video cache entries', error);
-    }
+    const cacheKeys = videos
+      .map(video => video.cacheKey)
+      .filter((cacheKey): cacheKey is string => !!cacheKey && !retainedCacheKeys?.has(cacheKey));
+    await this.removeCacheEntries(cacheKeys, 'Failed to delete generated video cache entries');
   }
 
-  private async removeGeneratedAudiosFromCache(audios?: AiGeneratedAudio[]): Promise<void> {
+  private async removeGeneratedAudiosFromCache(audios?: AiGeneratedAudio[], retainedCacheKeys?: ReadonlySet<string>): Promise<void> {
     if (!this.isBrowser || typeof caches === 'undefined' || !audios?.length) {
       return;
     }
 
-    try {
-      const cache = await caches.open(AiComponent.AI_UPLOAD_CACHE);
-      await Promise.all(audios.map(async audio => {
-        if (!audio.cacheKey) {
-          return;
-        }
-
-        await cache.delete(audio.cacheKey);
-      }));
-    } catch (error) {
-      this.logger.warn('Failed to delete generated audio cache entries', error);
-    }
+    const cacheKeys = audios
+      .map(audio => audio.cacheKey)
+      .filter((cacheKey): cacheKey is string => !!cacheKey && !retainedCacheKeys?.has(cacheKey));
+    await this.removeCacheEntries(cacheKeys, 'Failed to delete generated audio cache entries');
   }
 
   private async removeConversationAttachmentsFromCache(messages: ConversationMessage[]): Promise<void> {
@@ -3046,6 +3021,29 @@ export class AiComponent {
     const blob = await this.getGeneratedImageBlob(image);
     const extension = this.fileExtensionForMimeType(blob.type || image.mimeType || 'image/png');
     return new File([blob], `${image.id}.${extension}`, { type: blob.type || image.mimeType || 'image/png' });
+  }
+
+  private async createAttachmentFromGeneratedImage(image: AiGeneratedImage): Promise<ComposerAttachment> {
+    if (!image.cacheKey) {
+      const file = await this.createFileFromGeneratedImage(image);
+      return this.createAttachment(file);
+    }
+
+    const blob = await this.getGeneratedImageBlob(image);
+    const mimeType = blob.type || image.mimeType || 'image/png';
+    const extension = this.fileExtensionForMimeType(mimeType);
+    const fileName = `${image.id}.${extension}`;
+
+    return {
+      id: `generated-${image.id}`,
+      name: fileName,
+      size: blob.size,
+      mimeType,
+      kind: 'file',
+      context: `- ${fileName} (${mimeType}, ${this.formatFileSize(blob.size)}). Binary file attached; include only its metadata in your reasoning.`,
+      cacheKey: image.cacheKey,
+      previewUrl: URL.createObjectURL(blob),
+    };
   }
 
   private async createFileFromGeneratedVideo(video: AiGeneratedVideo): Promise<File> {
@@ -3522,6 +3520,16 @@ export class AiComponent {
   private async readAttachmentAsDataUrl(attachment: ComposerAttachment): Promise<string> {
     const blob = await this.readAttachmentBlob(attachment);
     return this.blobToDataUrl(blob);
+  }
+
+  private collectRetainedCacheKeys(messages: ConversationMessage[], attachments: ComposerAttachment[] = []): Set<string> {
+    return new Set([
+      ...messages.flatMap(message => message.attachments?.map(attachment => attachment.cacheKey) ?? []),
+      ...messages.flatMap(message => message.generatedImages?.map(image => image.cacheKey).filter((cacheKey): cacheKey is string => !!cacheKey) ?? []),
+      ...messages.flatMap(message => message.generatedVideos?.map(video => video.cacheKey).filter((cacheKey): cacheKey is string => !!cacheKey) ?? []),
+      ...messages.flatMap(message => message.generatedAudios?.map(audio => audio.cacheKey).filter((cacheKey): cacheKey is string => !!cacheKey) ?? []),
+      ...attachments.map(attachment => attachment.cacheKey),
+    ]);
   }
 
   private isTextLikeFile(file: File): boolean {

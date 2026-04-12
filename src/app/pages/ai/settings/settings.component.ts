@@ -37,6 +37,8 @@ interface AiCachedFileItem {
   name: string;
   mimeType: string;
   bytes: number;
+  kind: 'image' | 'video' | 'file';
+  previewUrl?: string;
 }
 
 const STANDARD_PROMPTS_SOURCE_URL = 'https://raw.githubusercontent.com/mlc-ai/web-llm-chat/223895cb1be677504cf26904df5e3b0b451ba992/public/prompts.json';
@@ -189,6 +191,8 @@ export class AiSettingsComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.releaseAiCachePreviewUrls(this.aiCacheFiles());
+
     if (this.isInRightPanel) {
       this.panelActions.clearRightPanelActions();
     }
@@ -377,7 +381,7 @@ export class AiSettingsComponent implements OnInit, OnDestroy {
 
     try {
       if (typeof caches === 'undefined') {
-        this.aiCacheFiles.set([]);
+        this.replaceAiCacheFiles([]);
         return;
       }
 
@@ -395,10 +399,16 @@ export class AiSettingsComponent implements OnInit, OnDestroy {
           name: this.resolveAiCacheFileName(request.url, response),
           mimeType: response.headers.get('content-type') || blob.type || 'Unknown type',
           bytes: blob.size,
+          kind: this.resolveAiCacheFileKind(response.headers.get('content-type') || blob.type || ''),
+          previewUrl: this.supportsAiCachePreview(response.headers.get('content-type') || blob.type || '')
+            ? URL.createObjectURL(blob)
+            : undefined,
         } satisfies AiCachedFileItem;
       }));
 
-      this.aiCacheFiles.set(files.filter((file): file is AiCachedFileItem => !!file).sort((left, right) => left.name.localeCompare(right.name)));
+      const resolvedFiles = files.filter((file): file is NonNullable<typeof file> => file !== null);
+      resolvedFiles.sort((left, right) => left.name.localeCompare(right.name));
+      this.replaceAiCacheFiles(resolvedFiles);
     } catch (error) {
       console.error('Failed to read AI cache files', error);
       this.snackBar.open('Could not read cached AI files.', 'Dismiss', { duration: 3500 });
@@ -438,7 +448,7 @@ export class AiSettingsComponent implements OnInit, OnDestroy {
 
     try {
       if (typeof caches === 'undefined') {
-        this.aiCacheFiles.set([]);
+        this.replaceAiCacheFiles([]);
         return;
       }
 
@@ -604,5 +614,34 @@ export class AiSettingsComponent implements OnInit, OnDestroy {
     }
 
     return cacheKey;
+  }
+
+  private replaceAiCacheFiles(files: AiCachedFileItem[]): void {
+    this.releaseAiCachePreviewUrls(this.aiCacheFiles());
+    this.aiCacheFiles.set(files);
+  }
+
+  private releaseAiCachePreviewUrls(files: AiCachedFileItem[]): void {
+    for (const file of files) {
+      if (file.previewUrl) {
+        URL.revokeObjectURL(file.previewUrl);
+      }
+    }
+  }
+
+  private resolveAiCacheFileKind(mimeType: string): 'image' | 'video' | 'file' {
+    if (mimeType.startsWith('image/')) {
+      return 'image';
+    }
+
+    if (mimeType.startsWith('video/')) {
+      return 'video';
+    }
+
+    return 'file';
+  }
+
+  private supportsAiCachePreview(mimeType: string): boolean {
+    return mimeType.startsWith('image/') || mimeType.startsWith('video/');
   }
 }

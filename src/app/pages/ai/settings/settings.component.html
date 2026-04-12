@@ -304,7 +304,7 @@
 
     <mat-tab label="Models">
       <div class="tab-panel">
-        <section class="model-storage-card">
+        <section class="model-storage-card ai-cache-card">
           <div class="storage-summary-row">
             <div>
               <h3>Local model storage</h3>
@@ -433,6 +433,18 @@
           <div class="model-storage-list">
             @for (file of aiCacheFiles(); track file.key) {
             <section class="model-storage-item model-storage-item-cached">
+              <div class="cache-file-preview" [class.cache-file-preview-generic]="file.kind === 'file'">
+                @if (file.kind === 'image' && file.previewUrl) {
+                <img [src]="file.previewUrl" alt="Cached image preview" title="Cached image preview"
+                  class="cache-file-preview-media" />
+                } @else if (file.kind === 'video' && file.previewUrl) {
+                <video [src]="file.previewUrl" class="cache-file-preview-media" muted preload="metadata"></video>
+                } @else {
+                <mat-icon>insert_drive_file</mat-icon>
+                <span>{{ file.name.split('.').at(-1)?.toUpperCase() || 'FILE' }}</span>
+                }
+              </div>
+
               <div class="model-storage-copy">
                 <div class="model-storage-title-row">
                   <h3>{{ file.name }}</h3>
