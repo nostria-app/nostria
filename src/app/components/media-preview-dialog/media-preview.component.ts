@@ -4,18 +4,21 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { InlineVideoPlayerComponent } from '../inline-video-player/inline-video-player.component';
-import { ImageCacheService } from '../../services/image-cache.service';
 
 interface MediaItem {
   url: string;
   type: string;
   title?: string;
+  originalUrl?: string;
+  cacheKey?: string;
 }
 
 interface MediaPreviewData {
   mediaUrl?: string; // Legacy single media support
   mediaType?: string;
   mediaTitle?: string;
+  mediaOriginalUrl?: string;
+  mediaCacheKey?: string;
   mediaItems?: MediaItem[]; // New multi-media support
   initialIndex?: number; // Starting index for multi-media
 }
@@ -37,7 +40,6 @@ interface MediaPreviewData {
 export class MediaPreviewDialogComponent implements OnDestroy {
   private dialogRef = inject(MatDialogRef<MediaPreviewDialogComponent>);
   private snackBar = inject(MatSnackBar);
-  private imageCache = inject(ImageCacheService);
   data: MediaPreviewData = inject(MAT_DIALOG_DATA);
   private popstateHandler: ((event: PopStateEvent) => void) | null = null;
 
@@ -93,6 +95,8 @@ export class MediaPreviewDialogComponent implements OnDestroy {
           url: this.data.mediaUrl,
           type: this.data.mediaType || 'image',
           title: this.data.mediaTitle,
+          originalUrl: this.data.mediaOriginalUrl,
+          cacheKey: this.data.mediaCacheKey,
         },
       ];
     }
@@ -477,28 +481,39 @@ export class MediaPreviewDialogComponent implements OnDestroy {
       link.remove();
       globalThis.setTimeout(() => URL.revokeObjectURL(objectUrl), 0);
     } catch (error) {
-      this.snackBar.open('Could not download this media.', 'Dismiss', { duration: 3500 });
-      console.error('Failed to download preview media', error);
+      console.warn('Direct media download failed; opening in new tab instead.', error);
+      if (this.openUrlInNewTab(media.originalUrl || media.url)) {
+        this.snackBar.open('Opened the original media in a new tab.', 'Dismiss', { duration: 3200 });
+      } else {
+        this.snackBar.open('Could not download this media.', 'Dismiss', { duration: 3500 });
+      }
     }
 
     this.resetHideControlsTimer();
   }
 
   private async downloadMediaBlob(media: MediaItem): Promise<Blob> {
-    try {
-      return await this.fetchBlob(media.url);
-    } catch (error) {
-      if (!media.type.startsWith('image/')) {
-        throw error;
+    if (typeof caches !== 'undefined' && media.cacheKey) {
+      const cache = await caches.open('nostria-ai');
+      const cached = await cache.match(media.cacheKey);
+      if (cached?.ok) {
+        return cached.blob();
       }
-
-      const proxiedUrl = this.imageCache.getOptimizedImageUrlWithSize(media.url, 2048, 2048);
-      if (proxiedUrl === media.url) {
-        throw error;
-      }
-
-      return this.fetchBlob(proxiedUrl);
     }
+
+    const candidateUrls = [media.originalUrl, media.url]
+      .filter((value): value is string => typeof value === 'string' && value.trim().length > 0);
+
+    let lastError: unknown;
+    for (const url of candidateUrls) {
+      try {
+        return await this.fetchBlob(url);
+      } catch (error) {
+        lastError = error;
+      }
+    }
+
+    throw lastError ?? new Error('Could not download this media.');
   }
 
   private async fetchBlob(url: string): Promise<Blob> {
@@ -508,6 +523,15 @@ export class MediaPreviewDialogComponent implements OnDestroy {
     }
 
     return response.blob();
+  }
+
+  private openUrlInNewTab(url: string | undefined): boolean {
+    if (!url?.trim()) {
+      return false;
+    }
+
+    const openedWindow = globalThis.open(url.trim(), '_blank', 'noopener,noreferrer');
+    return openedWindow !== null;
   }
 
   private getDownloadFileName(media: MediaItem, mimeType: string): string {

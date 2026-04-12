@@ -26,6 +26,7 @@ import { MediaService } from '../../services/media.service';
 import { MediaPreviewDialogComponent } from '../../components/media-preview-dialog/media-preview.component';
 import { CustomDialogService } from '../../services/custom-dialog.service';
 import { PanelNavigationService } from '../../services/panel-navigation.service';
+import { CorsProxyService } from '../../services/cors-proxy.service';
 
 interface ModelInfo {
   id: string;
@@ -145,6 +146,7 @@ export class AiComponent {
   private readonly dialog = inject(MatDialog);
   private readonly eventService = inject(EventService);
   private readonly mediaService = inject(MediaService);
+  private readonly corsProxy = inject(CorsProxyService);
   private readonly customDialog = inject(CustomDialogService);
   private readonly localStorage = inject(LocalStorageService);
   private readonly panelNav = inject(PanelNavigationService);
@@ -1656,8 +1658,10 @@ export class AiComponent {
     this.dialog.open(MediaPreviewDialogComponent, {
       data: {
         mediaUrl: image.src,
-        mediaType: 'image',
+        mediaType: image.mimeType || 'image/png',
         mediaTitle: image.revisedPrompt || image.prompt || 'Generated image',
+        mediaOriginalUrl: image.originalUrl,
+        mediaCacheKey: image.cacheKey,
       },
       maxWidth: '100vw',
       maxHeight: '100vh',
@@ -1688,11 +1692,16 @@ export class AiComponent {
     }
 
     try {
-      const blob = await this.getGeneratedImageBlob(image);
+      const blob = await this.getGeneratedImageDownloadBlob(image);
       const extension = this.fileExtensionForMimeType(blob.type || image.mimeType || 'image/png');
       this.downloadBlob(blob, `${image.id}.${extension}`);
     } catch (error) {
-      this.logger.warn('Failed to download generated image', error);
+      this.logger.warn('Direct download failed for generated image; opening in new tab instead.', error);
+      if (this.openUrlInNewTab(image.originalUrl || image.src)) {
+        this.snackBar.open('Opened the original image in a new tab.', 'Dismiss', { duration: 3200 });
+        return;
+      }
+
       this.snackBar.open('Could not download the generated image.', 'Dismiss', { duration: 3500 });
     }
   }
@@ -1737,6 +1746,44 @@ export class AiComponent {
     link.click();
     link.remove();
     globalThis.setTimeout(() => URL.revokeObjectURL(objectUrl), 0);
+  }
+
+  private async getGeneratedImageDownloadBlob(image: AiGeneratedImage): Promise<Blob> {
+    if (this.isBrowser && typeof caches !== 'undefined' && image.cacheKey) {
+      const cache = await caches.open(AiComponent.AI_UPLOAD_CACHE);
+      const cached = await cache.match(image.cacheKey);
+      if (cached?.ok) {
+        return cached.blob();
+      }
+    }
+
+    const candidateUrls = [image.originalUrl, image.src]
+      .filter((value): value is string => typeof value === 'string' && value.trim().length > 0);
+
+    let lastError: unknown;
+    for (const url of candidateUrls) {
+      try {
+        const response = await fetch(url);
+        if (!response.ok) {
+          throw new Error(`Could not fetch generated image (${response.status}).`);
+        }
+
+        return response.blob();
+      } catch (error) {
+        lastError = error;
+      }
+    }
+
+    throw lastError ?? new Error('Could not fetch generated image.');
+  }
+
+  private openUrlInNewTab(url: string | undefined): boolean {
+    if (!url?.trim() || !this.isBrowser) {
+      return false;
+    }
+
+    const openedWindow = globalThis.open(url.trim(), '_blank', 'noopener,noreferrer');
+    return openedWindow !== null;
   }
 
   formatFileSize(size: number): string {
@@ -3257,9 +3304,24 @@ export class AiComponent {
       }
     }
 
-    const response = await fetch(image.src);
+    const remoteSources = [image.originalUrl, image.src]
+      .filter((value): value is string => typeof value === 'string' && value.trim().length > 0);
+
+    for (const source of remoteSources) {
+      try {
+        return await this.fetchImageBlobWithProxyFallback(source);
+      } catch {
+        continue;
+      }
+    }
+
+    throw new Error('Could not fetch generated image.');
+  }
+
+  private async fetchImageBlobWithProxyFallback(url: string): Promise<Blob> {
+    const response = await this.corsProxy.fetch(url);
     if (!response.ok) {
-      throw new Error(`Could not fetch generated image (${response.status}).`);
+      throw new Error(`Could not fetch asset (${response.status}).`);
     }
 
     return response.blob();
