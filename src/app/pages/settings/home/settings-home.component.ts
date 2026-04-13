@@ -312,12 +312,12 @@ export class SettingsHomeComponent implements OnInit {
       const sectionId = params.get('section');
 
       if (sectionId === 'profile') {
-        this.layout.openProfileEdit();
+        void this.openProfileFromSettings();
         return;
       }
 
       if (sectionId === 'wallet-subscriptions') {
-        void this.openWalletInRightPanel();
+        void this.openWalletFromSettings();
         return;
       }
 
@@ -411,7 +411,12 @@ export class SettingsHomeComponent implements OnInit {
     const sectionMatch = item.route.match(/\/settings\/([^?#/]+)/);
     if (sectionMatch && sectionMatch[1]) {
       if (sectionMatch[1] === 'profile') {
-        this.layout.openProfileEdit();
+        await this.openProfileFromSettings();
+        return;
+      }
+
+      if (sectionMatch[1] === 'wallet-subscriptions') {
+        await this.openWalletFromSettings();
         return;
       }
 
@@ -425,12 +430,12 @@ export class SettingsHomeComponent implements OnInit {
 
   async navigateToSection(section: SettingsSection): Promise<void> {
     if (section.id === 'profile') {
-      this.layout.openProfileEdit();
+      await this.openProfileFromSettings();
       return;
     }
 
     if (section.id === 'wallet-subscriptions') {
-      await this.router.navigate(['/settings', section.id]);
+      await this.openWalletFromSettings();
       return;
     }
 
@@ -465,6 +470,24 @@ export class SettingsHomeComponent implements OnInit {
     } catch (error) {
       this.logger.error('Failed to load wallet settings panel', error);
     }
+  }
+
+  private async openProfileFromSettings(): Promise<void> {
+    await this.navigateToSettingsRootIfNeeded();
+    this.layout.openProfileEdit();
+  }
+
+  private async openWalletFromSettings(): Promise<void> {
+    await this.navigateToSettingsRootIfNeeded();
+    await this.openWalletInRightPanel();
+  }
+
+  private async navigateToSettingsRootIfNeeded(): Promise<void> {
+    if (!this.route.snapshot.paramMap.get('section')) {
+      return;
+    }
+
+    await this.router.navigate(['/settings'], { replaceUrl: true });
   }
 
   private async clearRouterRightPanelIfNeeded(): Promise<void> {
