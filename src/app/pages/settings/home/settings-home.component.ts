@@ -2,7 +2,7 @@ import { Component, inject, OnInit, computed, ElementRef, viewChild, effect, Cha
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule, NgComponentOutlet } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router, ActivatedRoute } from '@angular/router';
+import { Router, ActivatedRoute, PRIMARY_OUTLET } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -393,6 +393,8 @@ export class SettingsHomeComponent implements OnInit {
     if (!componentLoader) return;
 
     try {
+      await this.clearRouterRightPanelIfNeeded();
+
       const component = await componentLoader();
       this.rightPanel.open({
         component,
@@ -452,6 +454,8 @@ export class SettingsHomeComponent implements OnInit {
 
   private async openWalletInRightPanel(): Promise<void> {
     try {
+      await this.clearRouterRightPanelIfNeeded();
+
       const { WalletComponent } = await import('../../wallet/wallet.component');
       this.rightPanel.open({
         component: WalletComponent,
@@ -461,5 +465,21 @@ export class SettingsHomeComponent implements OnInit {
     } catch (error) {
       this.logger.error('Failed to load wallet settings panel', error);
     }
+  }
+
+  private async clearRouterRightPanelIfNeeded(): Promise<void> {
+    const tree = this.router.parseUrl(this.router.url);
+    if (!tree.root.children['right']) {
+      return;
+    }
+
+    const primaryPath = tree.root.children[PRIMARY_OUTLET]?.toString() ?? '';
+    const commands = primaryPath ? ['/', ...primaryPath.split('/')] : ['/'];
+    const targetTree = this.router.createUrlTree(commands, {
+      queryParams: tree.queryParams,
+      fragment: tree.fragment ?? undefined,
+    });
+
+    await this.router.navigateByUrl(targetTree, { replaceUrl: true });
   }
 }
