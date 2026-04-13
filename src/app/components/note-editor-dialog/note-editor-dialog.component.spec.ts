@@ -244,6 +244,31 @@ describe('NoteEditorDialogComponent', () => {
   });
 
   describe('rich paste handling', () => {
+    it('should strip Word styling markup from parsed html content', async () => {
+      createComponent();
+      noteEditorNewExperience.set(true);
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      const privateComponent = component as unknown as {
+        parsePastedHtml: (html: string) => Promise<{ text: string; mediaFiles: File[]; placeholderTokens: string[] }>;
+      };
+
+      const parsed = await privateComponent.parsePastedHtml(`
+        <style>
+          <!--
+          p.MsoNormal { margin: 0; }
+          -->
+        </style>
+        <!--[if gte mso 9]><xml><w:WordDocument></w:WordDocument></xml><![endif]-->
+        <p class="MsoNormal" style="margin:0">Hello <img src="data:image/png;base64,aW1hZ2U=" /> world</p>
+      `);
+
+      expect(parsed.text).toBe('Hello [image1] world');
+      expect(parsed.placeholderTokens).toEqual(['[image1]']);
+      expect(parsed.mediaFiles).toHaveLength(1);
+    });
+
     it('should paste rich html as plain text in the new editor', async () => {
       createComponent();
       noteEditorNewExperience.set(true);
@@ -283,7 +308,7 @@ describe('NoteEditorDialogComponent', () => {
       expect(editor.textContent).toBe('Bold Italic Underline');
     });
 
-    it('should route pasted html images through the pending upload flow', async () => {
+    it('should route pasted html images through the pending upload flow at the original inline position', async () => {
       createComponent();
       noteEditorNewExperience.set(true);
       fixture.detectChanges();
@@ -295,7 +320,7 @@ describe('NoteEditorDialogComponent', () => {
 
       const privateComponent = component as unknown as {
         handlePaste: (event: ClipboardEvent) => Promise<void>;
-        uploadFiles: (files: File[], insertionAnchor?: number) => Promise<void>;
+        uploadFiles: (files: File[], insertionAnchor?: number, placeholderTokens?: string[]) => Promise<void>;
       };
       const uploadFilesSpy = vi.spyOn(privateComponent, 'uploadFiles').mockResolvedValue();
       const event = {
@@ -303,11 +328,11 @@ describe('NoteEditorDialogComponent', () => {
           items: [],
           getData: (type: string) => {
             if (type === 'text/plain') {
-              return '';
+              return 'Hello world';
             }
 
             if (type === 'text/html') {
-              return '<p>Hello</p><img src="data:image/png;base64,aW1hZ2U=" alt="pasted image">';
+              return 'Hello <img src="data:image/png;base64,aW1hZ2U=" alt="pasted image"> world';
             }
 
             return '';
@@ -320,7 +345,7 @@ describe('NoteEditorDialogComponent', () => {
       await privateComponent.handlePaste(event);
 
       expect(event.preventDefault).toHaveBeenCalledTimes(1);
-      expect(component.content()).toBe('Hello');
+      expect(component.content()).toBe('Hello [image1] world');
       expect(uploadFilesSpy).toHaveBeenCalledTimes(1);
       expect(uploadFilesSpy).toHaveBeenCalledWith(
         [
@@ -329,8 +354,46 @@ describe('NoteEditorDialogComponent', () => {
             type: 'image/png',
           }),
         ],
-        5
+        20,
+        ['[image1]']
       );
+    });
+
+    it('should render a pending inline media chip instead of raw placeholder text while upload preparation runs', async () => {
+      createComponent();
+      noteEditorNewExperience.set(true);
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      const editor = component.contentTextarea.nativeElement;
+      component.content.set('Hello [image1] world');
+      fixture.detectChanges();
+
+      let resolvePrepare: ((value: { file: File; uploadOriginal: boolean; wasProcessed: boolean }) => void) | undefined;
+      mockMediaProcessingService.prepareFileForUpload.mockImplementation(() => new Promise(resolve => {
+        resolvePrepare = resolve;
+      }));
+
+      const imageFile = new File(['image-data'], 'photo.png', { type: 'image/png' });
+      const privateComponent = component as unknown as {
+        uploadFiles: (files: File[], insertionAnchor?: number, placeholderTokens?: string[]) => Promise<void>;
+      };
+
+      const uploadPromise = privateComponent.uploadFiles([imageFile], 20, ['[image1]']);
+      await Promise.resolve();
+      fixture.detectChanges();
+      await new Promise(resolve => requestAnimationFrame(resolve));
+
+      expect(component.mediaMetadata()[0]?.placeholderToken).toBe('[image1]');
+      expect(editor.textContent).not.toContain('[image1]');
+      expect(editor.querySelector('.composer-inline-media-chip')).not.toBeNull();
+
+      resolvePrepare?.({
+        file: imageFile,
+        uploadOriginal: false,
+        wasProcessed: false,
+      });
+      await uploadPromise;
     });
 
     it('should block formatting commands in the new editor', async () => {
@@ -1788,6 +1851,30 @@ describe('NoteEditorDialogComponent', () => {
       expect(jsonToggle?.textContent ?? '').not.toContain('Show Event JSON');
     });
 
+  });
+
+  describe('clear draft', () => {
+    it('should clear the new editor surface content', async () => {
+      createComponent();
+      noteEditorNewExperience.set(true);
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      const editor = component.contentTextarea.nativeElement;
+      const privateComponent = component as unknown as {
+        refreshEditorContent: () => void;
+      };
+
+      component.content.set('Temporary content');
+      privateComponent.refreshEditorContent();
+      fixture.detectChanges();
+
+      component.clearDraft();
+      await new Promise(resolve => requestAnimationFrame(resolve));
+
+      expect(component.content()).toBe('');
+      expect(editor.textContent).toBe('');
+    });
   });
 
   describe('inline sentiment analysis', () => {

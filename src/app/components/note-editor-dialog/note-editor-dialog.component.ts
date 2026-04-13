@@ -102,6 +102,7 @@ interface EditableContentElement extends HTMLDivElement {
   selectionEnd: number;
   setSelectionRange(start: number, end: number): void;
   __nostriaEditorBridge?: boolean;
+  __nostriaRenderSignature?: string;
 }
 
 interface EditorSelectionRange {
@@ -114,6 +115,12 @@ interface EditorMediaSegment {
   value: string;
   media?: MediaMetadata;
   referencePreview?: ComposerReferencePreview;
+}
+
+interface ParsedPastedHtmlResult {
+  text: string;
+  mediaFiles: File[];
+  placeholderTokens: string[];
 }
 
 const INLINE_MEDIA_DRAG_TYPE = 'application/x-nostria-inline-media';
@@ -3168,7 +3175,10 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       return;
     }
 
-    if (this.readEditorValue(editor) === value) {
+    const renderSignature = this.buildEditorRenderSignature(value);
+    const editableEditor = editor as EditableContentElement;
+
+    if (this.readEditorValue(editor) === value && editableEditor.__nostriaRenderSignature === renderSignature) {
       return;
     }
 
@@ -3244,6 +3254,15 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     }
 
     editor.replaceChildren(fragment);
+    editableEditor.__nostriaRenderSignature = renderSignature;
+  }
+
+  private buildEditorRenderSignature(value: string): string {
+    const mediaReferences = this.mediaMetadata()
+      .map(media => `${this.getMediaContentReference(media)}|${this.getMediaThumbnailUrl(media)}|${media.pendingUpload ? 'pending' : 'ready'}`)
+      .join('||');
+
+    return `${value}__MEDIA__${mediaReferences}`;
   }
 
   private refreshEditorContent(): void {
@@ -4389,11 +4408,13 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   // Clear draft - reset all editable fields to initial state
   clearDraft(): void {
     this.content.set(this.initialContent);
+    this.lastCursorPosition = this.initialContent.length;
     this.mentions.set([...this.initialMentions]);
     this.mentionMap.clear();
     this.pubkeyToNameMap.clear();
     this.mediaMetadata().forEach(media => this.revokeMediaPreviewUrls(media));
     this.mediaMetadata.set([...this.initialMediaMetadata]);
+    this.pendingMediaInsertionAnchors.clear();
     this.title.set(this.initialTitle);
     this.isMediaMode.set(false);
     this.expirationEnabled.set(false);
@@ -4407,7 +4428,8 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     // Clear auto-saved draft from storage
     this.clearAutoDraft();
 
-    this.scheduleTextareaRefresh();
+    this.refreshEditorContent();
+    this.scheduleTextareaRefresh(this.lastCursorPosition);
 
     this.snackBar.open('Draft cleared', 'Dismiss', {
       duration: 2000,
@@ -5249,7 +5271,11 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     }
   }
 
-  private async uploadFiles(files: File[], insertionAnchor = this.getCurrentInsertionAnchor()): Promise<void> {
+  private async uploadFiles(
+    files: File[],
+    insertionAnchor = this.getCurrentInsertionAnchor(),
+    placeholderTokens?: string[],
+  ): Promise<void> {
     if (files.length === 0) return;
 
     const hasMediaServers = await this.ensureConfiguredMediaServers();
@@ -5273,6 +5299,15 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
         try {
           const fileLabel = totalFiles > 1 ? ` (${index + 1}/${totalFiles})` : '';
           this.uploadStatus.set(`Preparing ${file.name}${fileLabel}...`);
+          const placeholderToken = placeholderTokens?.[index];
+          const existingMedia = placeholderToken
+            ? this.mediaMetadata().find(media => media.placeholderToken === placeholderToken)
+            : undefined;
+
+          if (placeholderToken && !existingMedia) {
+            const provisionalMedia = this.createImmediatePendingMediaMetadata(file, placeholderToken);
+            this.mediaMetadata.set([...this.mediaMetadata(), provisionalMedia]);
+          }
 
           const preparedFile = await this.mediaProcessing.prepareFileForUpload(
             file,
@@ -5285,18 +5320,43 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
             }
           );
 
-          const pendingMedia = await this.createPendingMediaMetadata(file, preparedFile, fileLabel, uploadSettings);
-          this.mediaMetadata.set([...this.mediaMetadata(), pendingMedia]);
+          const pendingMedia = await this.createPendingMediaMetadata(
+            file,
+            preparedFile,
+            fileLabel,
+            uploadSettings,
+            placeholderToken
+              ? this.mediaMetadata().find(media => media.placeholderToken === placeholderToken)
+              : undefined,
+            placeholderToken,
+          );
+          const refreshedMetadata = [...this.mediaMetadata()];
+          const existingIndex = refreshedMetadata.findIndex(media => media.id === pendingMedia.id);
+          if (existingIndex >= 0) {
+            this.revokeMediaPreviewUrls(refreshedMetadata[existingIndex]);
+            refreshedMetadata[existingIndex] = pendingMedia;
+          } else {
+            refreshedMetadata.push(pendingMedia);
+          }
+          this.mediaMetadata.set(refreshedMetadata);
 
           if (!this.isMediaMode()) {
             const reference = pendingMedia.placeholderToken || pendingMedia.url;
-            const { start, end } = this.insertFileUrl(reference, insertionAnchor);
+            const preInsertedAnchor = pendingMedia.placeholderToken
+              ? this.content().indexOf(pendingMedia.placeholderToken)
+              : -1;
 
-            if (pendingMedia.placeholderToken) {
-              this.pendingMediaInsertionAnchors.set(pendingMedia.placeholderToken, start);
+            if (preInsertedAnchor >= 0 && pendingMedia.placeholderToken) {
+              this.pendingMediaInsertionAnchors.set(pendingMedia.placeholderToken, preInsertedAnchor);
+            } else {
+              const { start, end } = this.insertFileUrl(reference, insertionAnchor);
+
+              if (pendingMedia.placeholderToken) {
+                this.pendingMediaInsertionAnchors.set(pendingMedia.placeholderToken, start);
+              }
+
+              insertionAnchor = end;
             }
-
-            insertionAnchor = end;
           }
 
           preparedFiles++;
@@ -5347,10 +5407,13 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     fileLabel: string,
     uploadSettings: MediaUploadSettings,
     existingMedia?: MediaMetadata,
+    placeholderTokenOverride?: string,
   ): Promise<MediaMetadata> {
     const mimeType = this.mediaService.getFileMimeType(preparedFile.file);
     const previewUrl = URL.createObjectURL(preparedFile.file);
-    const placeholderToken = existingMedia?.placeholderToken ?? this.createPendingMediaPlaceholder(mimeType);
+    const placeholderToken = existingMedia?.placeholderToken
+      ?? placeholderTokenOverride
+      ?? this.createPendingMediaPlaceholder(mimeType);
 
     const pendingMedia: MediaMetadata = {
       id: existingMedia?.id ?? crypto.randomUUID(),
@@ -5737,8 +5800,11 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     const items = Array.from(clipboardData.items ?? []);
     const pastedHtml = clipboardData.getData('text/html') || '';
     const htmlContainsImage = /<img\b/i.test(pastedHtml);
-    let text = clipboardData.getData('text/plain') || '';
-    if (!text && pastedHtml) {
+    const parsedHtml = htmlContainsImage ? await this.parsePastedHtml(pastedHtml) : null;
+    let text = parsedHtml?.text ?? (clipboardData.getData('text/plain') || '');
+    if (!text && parsedHtml) {
+      text = parsedHtml.text;
+    } else if (!text && pastedHtml) {
       text = this.extractPlainTextFromHtml(pastedHtml);
     }
 
@@ -5770,20 +5836,27 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     event.preventDefault();
     event.stopPropagation();
 
-    const mediaFiles: File[] = [];
+    const mediaFiles = parsedHtml ? [...parsedHtml.mediaFiles] : [];
+    const placeholderTokens = parsedHtml ? [...parsedHtml.placeholderTokens] : [];
 
-    for (const item of items) {
-      if (item.kind !== 'file') {
-        continue;
-      }
+    if (placeholderTokens.length > 0 && mediaFiles.length > 0) {
+      this.stageImmediatePendingMedia(mediaFiles, placeholderTokens);
+    }
 
-      const file = item.getAsFile();
-      if (file && this.isMediaFile(file)) {
-        mediaFiles.push(file);
+    if (!parsedHtml || parsedHtml.mediaFiles.length === 0) {
+      for (const item of items) {
+        if (item.kind !== 'file') {
+          continue;
+        }
+
+        const file = item.getAsFile();
+        if (file && this.isMediaFile(file)) {
+          mediaFiles.push(file);
+        }
       }
     }
 
-    if (mediaFiles.length === 0 && pastedHtml) {
+    if (mediaFiles.length === 0 && pastedHtml && !parsedHtml) {
       mediaFiles.push(...await this.extractImageFilesFromPastedHtml(pastedHtml));
     }
 
@@ -5794,7 +5867,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     }
 
     if (mediaFiles.length > 0) {
-      void this.uploadFiles(mediaFiles, selectionStart + normalizedText.length);
+      void this.uploadFiles(mediaFiles, selectionStart + normalizedText.length, placeholderTokens);
     }
   }
 
@@ -5823,6 +5896,66 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     );
 
     return extractedFiles.filter((file): file is File => !!file);
+  }
+
+  private async parsePastedHtml(html: string): Promise<ParsedPastedHtmlResult> {
+    if (typeof document === 'undefined' || !html.trim()) {
+      return {
+        text: '',
+        mediaFiles: [],
+        placeholderTokens: [],
+      };
+    }
+
+    const container = document.createElement('div');
+    container.innerHTML = html;
+    this.stripUnsupportedPastedHtmlNodes(container);
+
+    const images = Array.from(container.querySelectorAll('img'));
+    const imageFiles = await Promise.all(
+      images.map((image, index) => this.createFileFromImageSource(image.getAttribute('src') || '', index))
+    );
+    const mediaFiles = imageFiles.filter((file): file is File => !!file);
+    const placeholderTokens = this.createPendingMediaPlaceholdersForFiles(mediaFiles);
+    let placeholderIndex = 0;
+
+    images.forEach((image, index) => {
+      const file = imageFiles[index];
+      if (!file) {
+        image.replaceWith(document.createTextNode(''));
+        return;
+      }
+
+      image.replaceWith(document.createTextNode(placeholderTokens[placeholderIndex++] ?? ''));
+    });
+
+    return {
+      text: this.extractPlainTextFromHtml(container),
+      mediaFiles,
+      placeholderTokens,
+    };
+  }
+
+  private createPendingMediaPlaceholdersForFiles(files: File[]): string[] {
+    const usedTokens = new Set(
+      this.mediaMetadata()
+        .map(media => media.placeholderToken)
+        .filter((token): token is string => !!token)
+    );
+
+    return files.map(file => {
+      const mediaType = file.type.startsWith('video/') ? 'video' : 'image';
+      let index = 1;
+      let token = `[${mediaType}${index}]`;
+
+      while (usedTokens.has(token)) {
+        index++;
+        token = `[${mediaType}${index}]`;
+      }
+
+      usedTokens.add(token);
+      return token;
+    });
   }
 
   private async createFileFromImageSource(source: string, index: number): Promise<File | null> {
@@ -5857,6 +5990,51 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       console.warn('Failed to extract pasted image source', normalizedSource, error);
       return null;
     }
+  }
+
+  private stageImmediatePendingMedia(files: File[], placeholderTokens: string[]): void {
+    if (files.length === 0 || placeholderTokens.length === 0) {
+      return;
+    }
+
+    const nextMedia = [...this.mediaMetadata()];
+
+    files.forEach((file, index) => {
+      const placeholderToken = placeholderTokens[index];
+      if (!placeholderToken) {
+        return;
+      }
+
+      const existingIndex = nextMedia.findIndex(media => media.placeholderToken === placeholderToken);
+      if (existingIndex >= 0) {
+        return;
+      }
+
+      nextMedia.push(this.createImmediatePendingMediaMetadata(file, placeholderToken));
+    });
+
+    this.mediaMetadata.set(nextMedia);
+  }
+
+  private createImmediatePendingMediaMetadata(file: File, placeholderToken: string): MediaMetadata {
+    const mimeType = this.mediaService.getFileMimeType(file);
+    const previewUrl = URL.createObjectURL(file);
+
+    return {
+      id: crypto.randomUUID(),
+      url: previewUrl,
+      mimeType,
+      previewUrl: mimeType.startsWith('image/') ? previewUrl : undefined,
+      placeholderToken,
+      pendingUpload: true,
+      fileName: file.name,
+      originalSize: file.size,
+      processedSize: file.size,
+      optimizedSize: file.size,
+      localFile: file,
+      sourceFile: file,
+      uploadOriginal: false,
+    };
   }
 
   private createFileFromDataUrl(dataUrl: string, index: number): File | null {
@@ -5904,17 +6082,47 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     }
   }
 
-  private extractPlainTextFromHtml(html: string): string {
-    if (typeof document === 'undefined' || !html.trim()) {
+  private stripUnsupportedPastedHtmlNodes(container: HTMLElement): void {
+    container.querySelectorAll('style, script, meta, link, title, xml').forEach(node => node.remove());
+    container.querySelectorAll('[style]').forEach(node => node.removeAttribute('style'));
+    container.querySelectorAll('[class]').forEach(node => node.removeAttribute('class'));
+
+    const walker = document.createTreeWalker(container, NodeFilter.SHOW_COMMENT);
+    const commentsToRemove: Comment[] = [];
+    let currentNode = walker.nextNode();
+    while (currentNode) {
+      commentsToRemove.push(currentNode as Comment);
+      currentNode = walker.nextNode();
+    }
+
+    commentsToRemove.forEach(comment => comment.remove());
+  }
+
+  private extractPlainTextFromHtml(htmlOrContainer: string | HTMLElement): string {
+    if (typeof document === 'undefined') {
       return '';
     }
 
-    const container = document.createElement('div');
-    container.innerHTML = html;
+    const container = typeof htmlOrContainer === 'string'
+      ? document.createElement('div')
+      : htmlOrContainer;
+
+    if (typeof htmlOrContainer === 'string') {
+      if (!htmlOrContainer.trim()) {
+        return '';
+      }
+      container.innerHTML = htmlOrContainer;
+      this.stripUnsupportedPastedHtmlNodes(container);
+    } else if (!container.innerHTML.trim() && !container.textContent?.trim()) {
+      return '';
+    }
 
     return (container.innerText || container.textContent || '')
       .replace(/\r\n/g, '\n')
-      .replace(/\r/g, '\n');
+      .replace(/\r/g, '\n')
+      .replace(/[ \t]+\n/g, '\n')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
   }
 
   private normalizePastedText(text: string): string {
