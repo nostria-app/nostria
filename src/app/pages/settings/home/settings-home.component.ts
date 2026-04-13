@@ -311,6 +311,16 @@ export class SettingsHomeComponent implements OnInit {
     ).subscribe(params => {
       const sectionId = params.get('section');
 
+      if (sectionId === 'profile') {
+        this.layout.openProfileEdit();
+        return;
+      }
+
+      if (sectionId === 'wallet-subscriptions') {
+        void this.openWalletInRightPanel();
+        return;
+      }
+
       if (sectionId === 'wallet') {
         void this.router.navigate(['/wallet']);
         return;
@@ -398,6 +408,11 @@ export class SettingsHomeComponent implements OnInit {
     // Extract section from route (e.g., /settings/general -> general)
     const sectionMatch = item.route.match(/\/settings\/([^?#/]+)/);
     if (sectionMatch && sectionMatch[1]) {
+      if (sectionMatch[1] === 'profile') {
+        this.layout.openProfileEdit();
+        return;
+      }
+
       await this.router.navigate(['/settings', sectionMatch[1]]);
       return;
     }
@@ -407,6 +422,16 @@ export class SettingsHomeComponent implements OnInit {
   }
 
   async navigateToSection(section: SettingsSection): Promise<void> {
+    if (section.id === 'profile') {
+      this.layout.openProfileEdit();
+      return;
+    }
+
+    if (section.id === 'wallet-subscriptions') {
+      await this.router.navigate(['/settings', section.id]);
+      return;
+    }
+
     await this.router.navigate(['/settings', section.id]);
   }
 
@@ -423,5 +448,18 @@ export class SettingsHomeComponent implements OnInit {
         this.layout.scrollToTop('.left-panel');
       }
     });
+  }
+
+  private async openWalletInRightPanel(): Promise<void> {
+    try {
+      const { WalletComponent } = await import('../../wallet/wallet.component');
+      this.rightPanel.open({
+        component: WalletComponent,
+        title: $localize`:@@settings.sections.wallet-subscriptions:Wallet & subscriptions`,
+      });
+      this.scheduleScrollReset();
+    } catch (error) {
+      this.logger.error('Failed to load wallet settings panel', error);
+    }
   }
 }

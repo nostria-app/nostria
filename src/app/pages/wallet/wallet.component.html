@@ -1,4 +1,9 @@
 <div class="panel-header">
+  @if (rightPanel.hasContent()) {
+  <button mat-icon-button (click)="goBack()" matTooltip="Back" i18n-matTooltip="@@common.back">
+    <mat-icon>arrow_back</mat-icon>
+  </button>
+  }
   <h2 class="panel-title title-font">Wallet</h2>
   @if (wallets.hasWallets()) {
   <div class="toolbar-balance">

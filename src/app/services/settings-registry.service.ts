@@ -48,9 +48,11 @@ export class SettingsRegistryService {
   /** All registered settings sections */
   readonly sections: SettingsSection[] = [
     { id: 'general', title: $localize`:@@settings.sections.general:General`, icon: 'settings', route: '/settings/general' },
+    { id: 'profile', title: $localize`:@@settings.sections.profile:Profile`, icon: 'person', route: '/settings/profile', authenticated: true },
     { id: 'appearance', title: $localize`:@@settings.sections.appearance:Appearance`, icon: 'palette', route: '/settings/appearance' },
     { id: 'navigation', title: $localize`:@@settings.sections.navigation:Menu & Navigation`, icon: 'menu', route: '/settings/navigation' },
     { id: 'content', title: $localize`:@@settings.sections.content:Feed & Content`, icon: 'article', route: '/settings/content' },
+    { id: 'wallet-subscriptions', title: $localize`:@@settings.sections.wallet-subscriptions:Wallet & subscriptions`, icon: 'account_balance_wallet', route: '/settings/wallet-subscriptions', authenticated: true },
     { id: 'network', title: $localize`:@@settings.sections.network:Relays & Network`, icon: 'dns', route: '/settings/network', authenticated: true },
     { id: 'privacy', title: $localize`:@@settings.sections.privacy:Privacy & Safety`, icon: 'security', route: '/settings/privacy', authenticated: true },
     { id: 'web-of-trust', title: $localize`:@@settings.sections.web-of-trust:Web of Trust`, icon: 'verified_user', route: '/settings/web-of-trust', authenticated: true },
@@ -64,6 +66,45 @@ export class SettingsRegistryService {
   /** All registered settings items (searchable) */
   readonly items: SettingsItem[] = [
     // General Settings
+    {
+      id: 'edit-profile',
+      title: $localize`:@@settings.profile.edit:Edit Profile`,
+      description: $localize`:@@settings.profile.edit.description:Update your name, picture, bio, and profile links`,
+      keywords: ['profile', 'edit', 'bio', 'avatar', 'picture', 'name', 'metadata'],
+      section: 'profile',
+      sectionTitle: $localize`:@@settings.sections.profile:Profile`,
+      icon: 'edit',
+      route: '/settings/profile',
+      authenticated: true,
+      priority: 0,
+      popular: true,
+    },
+    {
+      id: 'wallet-overview',
+      title: $localize`:@@settings.wallet.overview:Wallet`,
+      description: $localize`:@@settings.wallet.overview.description:Open your wallet, transactions, zaps, and wallet settings`,
+      keywords: ['wallet', 'lightning', 'bitcoin', 'zaps', 'transactions', 'payments', 'nwc'],
+      section: 'wallet-subscriptions',
+      sectionTitle: $localize`:@@settings.sections.wallet-subscriptions:Wallet & subscriptions`,
+      icon: 'account_balance_wallet',
+      route: '/settings/wallet-subscriptions',
+      authenticated: true,
+      priority: 1,
+      popular: true,
+    },
+    {
+      id: 'premium-subscription',
+      title: $localize`:@@settings.wallet.premium:Premium Subscription`,
+      description: $localize`:@@settings.wallet.premium.description:Manage your Nostria premium plan and subscription status`,
+      keywords: ['premium', 'subscription', 'subscriptions', 'upgrade', 'plan', 'billing', 'pro'],
+      section: 'wallet-subscriptions',
+      sectionTitle: $localize`:@@settings.sections.wallet-subscriptions:Wallet & subscriptions`,
+      icon: 'workspace_premium',
+      route: '/settings/wallet-subscriptions',
+      authenticated: true,
+      priority: 2,
+      popular: true,
+    },
     {
       id: 'dark-mode',
       title: $localize`:@@settings.dark-mode:Dark Mode`,

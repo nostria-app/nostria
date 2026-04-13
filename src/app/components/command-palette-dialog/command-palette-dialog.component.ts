@@ -372,6 +372,13 @@ export class CommandPaletteDialogComponent implements AfterViewInit, OnDestroy {
       keywords: ['general settings', 'language', 'calendar', 'time format', 'release channel']
     },
     {
+      id: 'nav-settings-profile',
+      label: 'Settings: Profile',
+      icon: 'person',
+      action: () => this.router.navigate(['/settings/profile']),
+      keywords: ['profile settings', 'edit profile', 'bio', 'avatar', 'profile metadata']
+    },
+    {
       id: 'nav-settings-appearance',
       label: 'Settings: Appearance',
       icon: 'palette',
@@ -446,6 +453,13 @@ export class CommandPaletteDialogComponent implements AfterViewInit, OnDestroy {
       icon: 'account_balance_wallet',
       action: () => this.router.navigate(['/wallet']),
       keywords: ['wallet', 'nwc', 'lightning', 'bitcoin', 'payments', 'zap']
+    },
+    {
+      id: 'nav-settings-wallet-subscriptions',
+      label: 'Settings: Wallet & subscriptions',
+      icon: 'account_balance_wallet',
+      action: () => this.router.navigate(['/settings/wallet-subscriptions']),
+      keywords: ['wallet settings', 'subscriptions', 'premium', 'billing', 'payments', 'zaps']
     },
     {
       id: 'toggle-music-status',

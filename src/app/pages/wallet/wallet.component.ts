@@ -23,6 +23,7 @@ import { CustomDialogService } from '../../services/custom-dialog.service';
 import { AddWalletDialogComponent } from './add-wallet-dialog/add-wallet-dialog.component';
 import { SettingsService } from '../../services/settings.service';
 import { LoggerService } from '../../services/logger.service';
+import { RightPanelService } from '../../services/right-panel.service';
 import { ZapHistoryComponent } from '../../components/zap-history/zap-history.component';
 import { QrCodeComponent } from '../../components/qr-code/qr-code.component';
 import { SupportNostriaComponent } from '../../components/support-nostria/support-nostria.component';
@@ -68,6 +69,7 @@ export class WalletComponent implements OnDestroy {
   private settingsService = inject(SettingsService);
   private logger = inject(LoggerService);
   private router = inject(Router);
+  readonly rightPanel = inject(RightPanelService);
   private routerSubscription: Subscription;
 
   connectionStringControl = new FormControl('', [
@@ -188,6 +190,10 @@ export class WalletComponent implements OnDestroy {
 
   ngOnDestroy(): void {
     this.routerSubscription.unsubscribe();
+  }
+
+  goBack(): void {
+    this.rightPanel.goBack();
   }
 
   openAddWalletDialog(): void {

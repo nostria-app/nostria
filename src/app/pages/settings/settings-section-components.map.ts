@@ -8,6 +8,7 @@ import { Type } from '@angular/core';
  */
 export const SETTINGS_SECTION_COMPONENT_MAP: Record<string, () => Promise<Type<unknown>>> = {
   'general': () => import('./general-preferences.component').then(m => m.GeneralPreferencesSettingsComponent),
+  'profile': () => import('./profile-settings.component').then(m => m.ProfileSettingsComponent),
   'appearance': () => import('./appearance-settings.component').then(m => m.AppearanceSettingsComponent),
   'navigation': () => import('./menu-navigation-settings.component').then(m => m.MenuNavigationSettingsComponent),
   'content': () => import('./feed-content-settings.component').then(m => m.FeedContentSettingsComponent),
