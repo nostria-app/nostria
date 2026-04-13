@@ -139,11 +139,13 @@
             </div>
             }
             @if (useNewEditorExperience()) {
-            <div contenteditable="true" spellcheck="true" (beforeinput)="onContentBeforeInput($event)"
+            <div contenteditable="plaintext-only" spellcheck="true" (beforeinput)="onContentBeforeInput($event)"
+              (paste)="onContentPaste($event)"
               (input)="onContentInput($event)" (focus)="onContentFocus()" (blur)="onContentBlur()"
               (keydown)="onContentKeyDown($event)" (keyup)="onContentKeyUp($event)" (click)="onContentClick($event)"
               (mouseup)="onContentSelectionChange($event)" title="{{ inlineMode() ? 'Reply content' : 'Note content' }}"
               aria-label="{{ inlineMode() ? 'Reply content' : 'Note content' }}" aria-multiline="true" role="textbox"
+              tabindex="0"
               class="content-textarea content-editor-surface" #contentTextarea></div>
 
             @if (showInlineEmbeds()) {
@@ -181,7 +183,8 @@
             </div>
             }
             } @else {
-            <textarea spellcheck="true" [value]="content()" (input)="onContentInput($event)" (focus)="onContentFocus()"
+            <textarea spellcheck="true" [value]="content()" (paste)="onContentPaste($event)"
+              (input)="onContentInput($event)" (focus)="onContentFocus()"
               (blur)="onContentBlur()" (keydown)="onContentKeyDown($event)" (keyup)="onContentKeyUp($event)"
               (click)="onContentClick($event)" (mouseup)="onContentSelectionChange($event)"
               (select)="onContentSelectionChange($event)" title="{{ inlineMode() ? 'Reply content' : 'Note content' }}"

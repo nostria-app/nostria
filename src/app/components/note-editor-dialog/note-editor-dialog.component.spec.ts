@@ -243,6 +243,115 @@ describe('NoteEditorDialogComponent', () => {
     expect(fixture.nativeElement.querySelector('textarea.legacy-content-textarea')).toBeNull();
   });
 
+  describe('rich paste handling', () => {
+    it('should paste rich html as plain text in the new editor', async () => {
+      createComponent();
+      noteEditorNewExperience.set(true);
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      const editor = component.contentTextarea.nativeElement;
+      editor.focus();
+      editor.setSelectionRange(0, 0);
+
+      const privateComponent = component as unknown as {
+        handlePaste: (event: ClipboardEvent) => Promise<void>;
+      };
+      const event = {
+        clipboardData: {
+          items: [],
+          getData: (type: string) => {
+            if (type === 'text/plain') {
+              return '';
+            }
+
+            if (type === 'text/html') {
+              return '<p><strong>Bold</strong> <em>Italic</em> <u>Underline</u></p>';
+            }
+
+            return '';
+          },
+        },
+        preventDefault: vi.fn(),
+        stopPropagation: vi.fn(),
+      } as unknown as ClipboardEvent;
+
+      await privateComponent.handlePaste(event);
+
+      expect(event.preventDefault).toHaveBeenCalledTimes(1);
+      expect(component.content()).toBe('Bold Italic Underline');
+      expect(editor.textContent).toBe('Bold Italic Underline');
+    });
+
+    it('should route pasted html images through the pending upload flow', async () => {
+      createComponent();
+      noteEditorNewExperience.set(true);
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      const editor = component.contentTextarea.nativeElement;
+      editor.focus();
+      editor.setSelectionRange(0, 0);
+
+      const privateComponent = component as unknown as {
+        handlePaste: (event: ClipboardEvent) => Promise<void>;
+        uploadFiles: (files: File[], insertionAnchor?: number) => Promise<void>;
+      };
+      const uploadFilesSpy = vi.spyOn(privateComponent, 'uploadFiles').mockResolvedValue();
+      const event = {
+        clipboardData: {
+          items: [],
+          getData: (type: string) => {
+            if (type === 'text/plain') {
+              return '';
+            }
+
+            if (type === 'text/html') {
+              return '<p>Hello</p><img src="data:image/png;base64,aW1hZ2U=" alt="pasted image">';
+            }
+
+            return '';
+          },
+        },
+        preventDefault: vi.fn(),
+        stopPropagation: vi.fn(),
+      } as unknown as ClipboardEvent;
+
+      await privateComponent.handlePaste(event);
+
+      expect(event.preventDefault).toHaveBeenCalledTimes(1);
+      expect(component.content()).toBe('Hello');
+      expect(uploadFilesSpy).toHaveBeenCalledTimes(1);
+      expect(uploadFilesSpy).toHaveBeenCalledWith(
+        [
+          expect.objectContaining({
+            name: 'pasted-image-1.png',
+            type: 'image/png',
+          }),
+        ],
+        5
+      );
+    });
+
+    it('should block formatting commands in the new editor', async () => {
+      createComponent();
+      noteEditorNewExperience.set(true);
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      const event = {
+        inputType: 'formatBold',
+        preventDefault: vi.fn(),
+        stopPropagation: vi.fn(),
+      } as unknown as InputEvent;
+
+      component.onContentBeforeInput(event);
+
+      expect(event.preventDefault).toHaveBeenCalledTimes(1);
+      expect(event.stopPropagation).toHaveBeenCalledTimes(1);
+    });
+  });
+
   describe('reply preview', () => {
     it('should show the replied note content and short id', async () => {
       const replyEvent: NostrEvent = {
@@ -346,7 +455,7 @@ describe('NoteEditorDialogComponent', () => {
       expect(component.composerReferencePreviews()).toEqual([]);
 
       const privateComponent = component as unknown as {
-        buildEditorMediaSegments: (value: string) => Array<{ type: string; value: string; referencePreview?: { label: string } }>;
+        buildEditorMediaSegments: (value: string) => { type: string; value: string; referencePreview?: { label: string } }[];
       };
 
       expect(privateComponent.buildEditorMediaSegments(`nostr:${nevent}`)).toEqual([

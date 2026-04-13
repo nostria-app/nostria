@@ -299,7 +299,6 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   private pendingVideoProfileMenuTimeout: ReturnType<typeof setTimeout> | null = null;
   private suppressThumbnailClickUntil = 0;
   private readonly VIDEO_PROFILE_MENU_HOLD_DELAY = 450;
-  private readonly pasteHandler = (event: ClipboardEvent): void => this.handlePaste(event);
   private readonly handleViewportResize = (): void => {
     const textarea = this.contentTextarea?.nativeElement;
     const isFocusedCompactTextarea = this.platformService.isIOS()
@@ -1301,8 +1300,6 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
 
     this.setupContentEditorBridge();
 
-    // Add paste event listener for clipboard image handling
-    this.setupPasteHandler();
     window.addEventListener('resize', this.handleViewportResize);
     window.visualViewport?.addEventListener('resize', this.handleViewportResize);
 
@@ -1387,9 +1384,6 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
 
     this.clearPendingVideoProfileMenuOpen();
 
-    if (this.contentTextarea?.nativeElement) {
-      this.contentTextarea.nativeElement.removeEventListener('paste', this.pasteHandler);
-    }
     window.removeEventListener('resize', this.handleViewportResize);
     window.visualViewport?.removeEventListener('resize', this.handleViewportResize);
 
@@ -2955,6 +2949,12 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       return;
     }
 
+    if (event.inputType.startsWith('format')) {
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
+
     if (event.inputType !== 'insertParagraph' && event.inputType !== 'insertLineBreak') {
       return;
     }
@@ -2962,6 +2962,10 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     event.preventDefault();
     event.stopPropagation();
     this.insertTextAtSelection('\n');
+  }
+
+  onContentPaste(event: ClipboardEvent): void {
+    void this.handlePaste(event);
   }
 
   private openMenuAfterKeyboardDismiss(trigger: MatMenuTrigger): void {
@@ -5245,7 +5249,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     }
   }
 
-  private async uploadFiles(files: File[]): Promise<void> {
+  private async uploadFiles(files: File[], insertionAnchor = this.getCurrentInsertionAnchor()): Promise<void> {
     if (files.length === 0) return;
 
     const hasMediaServers = await this.ensureConfiguredMediaServers();
@@ -5255,8 +5259,6 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
 
     this.isUploading.set(true);
     this.uploadStatus.set('Preparing media...');
-
-    let insertionAnchor = this.getCurrentInsertionAnchor();
 
     try {
       await this.mediaService.load();
@@ -5726,85 +5728,74 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     };
   }
 
-  private setupPasteHandler(): void {
-    if (this.contentTextarea) {
-      this.contentTextarea.nativeElement.addEventListener('paste', this.pasteHandler);
-    }
-  }
-
-  private handlePaste(event: ClipboardEvent): void {
-    const items = event.clipboardData?.items;
-    if (!items) return;
-
-    let hasMediaFile = false;
-    const mediaFiles: File[] = [];
-    const pastedHtml = event.clipboardData?.getData('text/html') || '';
-
-    // Check for media files (images and videos) in clipboard
-    for (const item of Array.from(items)) {
-      if (item.kind === 'file') {
-        const file = item.getAsFile();
-        if (file && this.isMediaFile(file)) {
-          hasMediaFile = true;
-          mediaFiles.push(file);
-        }
-      }
-    }
-
-    if (!hasMediaFile && pastedHtml) {
-      const extractedImageFiles = this.extractImageFilesFromPastedHtml(pastedHtml);
-      if (extractedImageFiles.length > 0) {
-        hasMediaFile = true;
-        mediaFiles.push(...extractedImageFiles);
-      }
-    }
-
-    // If we found media files, prevent default behavior and upload them
-    if (hasMediaFile && mediaFiles.length > 0) {
-      event.preventDefault();
-      event.stopPropagation();
-      this.uploadFiles(mediaFiles);
+  private async handlePaste(event: ClipboardEvent): Promise<void> {
+    const clipboardData = event.clipboardData;
+    if (!clipboardData) {
       return;
     }
 
-    // Check for NIP-19 identifiers in text and auto-prefix with nostr:
-    let text = event.clipboardData?.getData('text/plain') || '';
-    if (!text && this.useNewEditorExperience() && pastedHtml) {
+    const items = Array.from(clipboardData.items ?? []);
+    const pastedHtml = clipboardData.getData('text/html') || '';
+    const htmlContainsImage = /<img\b/i.test(pastedHtml);
+    let text = clipboardData.getData('text/plain') || '';
+    if (!text && pastedHtml) {
       text = this.extractPlainTextFromHtml(pastedHtml);
     }
 
-    if (text) {
-      // Check if tracking parameter removal is enabled and clean URLs
-      // For performance, only process text up to 10KB (most pastes are much smaller)
-      if (this.localSettings.removeTrackingParameters() && text.length < 10000) {
-        const cleanedText = cleanTrackingParametersFromText(text);
-        if (cleanedText !== text) {
-          // Text was modified, prevent default paste and insert cleaned text
-          event.preventDefault();
-          event.stopPropagation();
-          text = cleanedText;
-          this.insertCleanedText(text);
-          return;
-        }
+    const normalizedText = text ? this.normalizePastedText(text) : '';
+    const hasDirectMediaFiles = items.some(item => {
+      if (item.kind !== 'file') {
+        return false;
       }
 
-      // Check for NIP-19 identifiers and auto-prefix with nostr:
-      if (this.containsNip19Identifier(text)) {
-        event.preventDefault();
-        event.stopPropagation();
-        this.insertTextWithNostrPrefix(text);
-        return;
+      const file = item.getAsFile();
+      return !!file && this.isMediaFile(file);
+    });
+    const useCustomTextPaste = !!normalizedText && (
+      this.useNewEditorExperience()
+      || normalizedText !== text
+      || !!pastedHtml
+      || hasDirectMediaFiles
+      || htmlContainsImage
+    );
+    const shouldPreventDefault = hasDirectMediaFiles
+      || htmlContainsImage
+      || (!!pastedHtml && this.useNewEditorExperience())
+      || useCustomTextPaste;
+
+    if (!shouldPreventDefault) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    const mediaFiles: File[] = [];
+
+    for (const item of items) {
+      if (item.kind !== 'file') {
+        continue;
       }
 
-      if (this.useNewEditorExperience()) {
-        event.preventDefault();
-        event.stopPropagation();
-        this.insertCleanedText(text);
-        return;
+      const file = item.getAsFile();
+      if (file && this.isMediaFile(file)) {
+        mediaFiles.push(file);
       }
     }
 
-    // If no media files or NIP-19 identifiers, allow normal text pasting
+    if (mediaFiles.length === 0 && pastedHtml) {
+      mediaFiles.push(...await this.extractImageFilesFromPastedHtml(pastedHtml));
+    }
+
+    const selectionStart = this.getCurrentInsertionAnchor();
+
+    if (normalizedText) {
+      this.insertTextAtSelection(normalizedText);
+    }
+
+    if (mediaFiles.length > 0) {
+      void this.uploadFiles(mediaFiles, selectionStart + normalizedText.length);
+    }
   }
 
   private isMediaFile(file: File): boolean {
@@ -5818,7 +5809,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     return mediaExtensions.test(file.name);
   }
 
-  private extractImageFilesFromPastedHtml(html: string): File[] {
+  private async extractImageFilesFromPastedHtml(html: string): Promise<File[]> {
     if (typeof document === 'undefined' || !html.trim()) {
       return [];
     }
@@ -5826,9 +5817,46 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     const container = document.createElement('div');
     container.innerHTML = html;
 
-    return Array.from(container.querySelectorAll('img'))
-      .map((image, index) => this.createFileFromDataUrl(image.getAttribute('src') || '', index))
-      .filter((file): file is File => !!file);
+    const extractedFiles = await Promise.all(
+      Array.from(container.querySelectorAll('img'))
+        .map((image, index) => this.createFileFromImageSource(image.getAttribute('src') || '', index))
+    );
+
+    return extractedFiles.filter((file): file is File => !!file);
+  }
+
+  private async createFileFromImageSource(source: string, index: number): Promise<File | null> {
+    const normalizedSource = source.trim();
+    if (!normalizedSource) {
+      return null;
+    }
+
+    if (normalizedSource.startsWith('data:image/')) {
+      return this.createFileFromDataUrl(normalizedSource, index);
+    }
+
+    if (!/^(blob:|https?:)/i.test(normalizedSource)) {
+      return null;
+    }
+
+    try {
+      const response = await fetch(normalizedSource);
+      if (!response.ok) {
+        console.warn('Failed to fetch pasted image source', normalizedSource, response.status);
+        return null;
+      }
+
+      const blob = await response.blob();
+      if (!blob.type.startsWith('image/')) {
+        return null;
+      }
+
+      const extension = this.getFileExtensionForMimeType(blob.type);
+      return new File([blob], `pasted-image-${index + 1}.${extension}`, { type: blob.type });
+    } catch (error) {
+      console.warn('Failed to extract pasted image source', normalizedSource, error);
+      return null;
+    }
   }
 
   private createFileFromDataUrl(dataUrl: string, index: number): File | null {
@@ -5887,6 +5915,20 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     return (container.innerText || container.textContent || '')
       .replace(/\r\n/g, '\n')
       .replace(/\r/g, '\n');
+  }
+
+  private normalizePastedText(text: string): string {
+    let normalizedText = text;
+
+    if (this.localSettings.removeTrackingParameters() && normalizedText.length < 10000) {
+      normalizedText = cleanTrackingParametersFromText(normalizedText);
+    }
+
+    if (this.containsNip19Identifier(normalizedText)) {
+      normalizedText = this.addNostrPrefixToText(normalizedText);
+    }
+
+    return normalizedText;
   }
 
   /**
@@ -6053,49 +6095,11 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
    * Insert text with NIP-19 identifiers automatically prefixed with nostr:
    * According to NIP-27, all references should be in the format nostr:<identifier>
    */
-  private insertTextWithNostrPrefix(text: string): void {
-    const textarea = this.contentTextarea.nativeElement;
-    const cursorPosition = textarea.selectionStart || 0;
-    const currentContent = this.content();
-
-    // Replace NIP-19 identifiers with nostr: prefix if not already present
-    // This regex matches NIP-19 identifiers that don't already have nostr: prefix
-    // and are not part of a URL (preceded by /)
-    const processedText = text.replace(
+  private addNostrPrefixToText(text: string): string {
+    return text.replace(
       /(?<!nostr:)(?<!\/)(\b(note1|nevent1|npub1|nprofile1|naddr1|nsec1)((?:(?!(?:note|nevent|npub|nprofile|naddr|nsec)1)[a-zA-Z0-9])+)\b)/g,
       'nostr:$1'
     );
-
-    // Insert the processed text at cursor position
-    const newContent =
-      currentContent.substring(0, cursorPosition) +
-      processedText +
-      currentContent.substring(cursorPosition);
-
-    this.content.set(newContent);
-
-    const newCursorPosition = cursorPosition + processedText.length;
-    this.scheduleTextareaRefresh(newCursorPosition, true, true);
-  }
-
-  /**
-   * Insert cleaned text (with tracking parameters removed)
-   */
-  private insertCleanedText(text: string): void {
-    const textarea = this.contentTextarea.nativeElement;
-    const cursorPosition = textarea.selectionStart || 0;
-    const currentContent = this.content();
-
-    // Insert the cleaned text at cursor position
-    const newContent =
-      currentContent.substring(0, cursorPosition) +
-      text +
-      currentContent.substring(cursorPosition);
-
-    this.content.set(newContent);
-
-    const newCursorPosition = cursorPosition + text.length;
-    this.scheduleTextareaRefresh(newCursorPosition, true, true);
   }
 
   // Proof of Work methods
