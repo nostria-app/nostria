@@ -1077,6 +1077,8 @@ npm run tauri:build:macos    # Universal macOS DMG
 
 - Native window management
 - Local bundled Angular frontend from `dist/app/browser`
+- Packaged desktop and Android Tauri builds load bundled `index.html`, JS, and CSS from the local app package, not from `https://nostria.app`
+- Angular service worker is disabled inside Tauri so packaged builds do not keep serving stale cached shells after an app update
 - GitHub Actions workflows for desktop build validation and release publishing
 
 ### Mobile

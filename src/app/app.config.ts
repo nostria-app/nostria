@@ -30,8 +30,36 @@ import { CustomReuseStrategy } from './services/custom-reuse-strategy';
 import { DesktopUpdaterService } from './services/desktop-updater.service';
 import { ExternalLinkService } from './services/external-link.service';
 import { getAngularLocaleCode, normalizeLocale } from './utils/supported-locales';
+import { isTauri } from '@tauri-apps/api/core';
 
 let appLang = 'en';
+
+function isTauriRuntime(): boolean {
+  return typeof window !== 'undefined' && isTauri();
+}
+
+async function clearTauriServiceWorkerState(): Promise<void> {
+  if (!isTauriRuntime() || typeof navigator === 'undefined' || !('serviceWorker' in navigator)) {
+    return;
+  }
+
+  try {
+    const registrations = await navigator.serviceWorker.getRegistrations();
+    await Promise.all(registrations.map(registration => registration.unregister()));
+
+    if (!('caches' in window)) {
+      return;
+    }
+
+    const cacheNames = await caches.keys();
+    const ngswCacheNames = cacheNames.filter(cacheName => cacheName.includes('ngsw'));
+    await Promise.all(ngswCacheNames.map(cacheName => caches.delete(cacheName)));
+  } catch (error) {
+    console.warn('[AppConfig] Failed to clear service worker state for Tauri runtime.', error);
+  }
+}
+
+const shouldEnableServiceWorker = !isDevMode() && !isTauriRuntime();
 
 if (typeof window !== 'undefined') {
   const settings = localStorage.getItem('nostria-settings');
@@ -66,6 +94,7 @@ export const appConfig: ApplicationConfig = {
     provideAppInitializer(() => {
       inject(DesktopUpdaterService).initialize();
     }),
+    provideAppInitializer(() => clearTauriServiceWorkerState()),
     provideAppInitializer(() => {
       inject(ExternalLinkService).initialize();
     }),
@@ -131,7 +160,7 @@ export const appConfig: ApplicationConfig = {
     provideHttpClient(withFetch(), withInterceptors([nip98AuthInterceptor])),
     provideClientHydration(withEventReplay()),
     provideServiceWorker('service-worker.js', {
-      enabled: !isDevMode(),
+      enabled: shouldEnableServiceWorker,
       // enabled: true, // For development, set to true to test service worker. Also add "serviceWorker" in angular.json.
       registrationStrategy: 'registerWhenStable:30000',
     }),
