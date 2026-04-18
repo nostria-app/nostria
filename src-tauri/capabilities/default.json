@@ -8,6 +8,8 @@
   "permissions": [
     "core:default",
     "android-signer:default",
+    "media-session:default",
+    "media:default",
     "opener:default",
     "updater:default"
   ]

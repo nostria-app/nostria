@@ -36,6 +36,7 @@ private get isMediaSessionSupported(): boolean {
 ```
 
 This checks:
+
 - `navigator` exists (not in SSR)
 - `navigator.mediaSession` is truthy (not `undefined`, `null`, or other falsy values)
 
@@ -55,7 +56,7 @@ private initializeMediaSession(): void {
       await this.resume();
     });
     // ... other handlers ...
-    
+
     this.mediaSessionInitialized = true;
   } catch (error) {
     console.warn('Failed to initialize Media Session API handlers:', error);
@@ -80,6 +81,7 @@ if (this.isMediaSessionSupported) {
 ```
 
 This applies to:
+
 - `navigator.mediaSession.playbackState` (7 locations)
 - `navigator.mediaSession.metadata` (1 location)
 
@@ -108,9 +110,10 @@ To test the fix:
    Object.defineProperty(navigator, 'mediaSession', {
      value: undefined,
      writable: true,
-     configurable: true
+     configurable: true,
    });
    ```
+
    - App should load without errors
    - Playback should work normally
    - No media session integration (expected)
@@ -118,6 +121,7 @@ To test the fix:
 ### Unit Tests
 
 Created `media-player.service.spec.ts` with tests for:
+
 - Service creation
 - No initialization in constructor
 - Graceful handling of missing API
@@ -132,6 +136,7 @@ Created `media-player.service.spec.ts` with tests for:
 ## Compatibility
 
 This fix ensures the app works in:
+
 - ✅ Modern browsers with Media Session API
 - ✅ Older browsers without Media Session API
 - ✅ Embedded WebViews (Android, iOS)
@@ -152,3 +157,15 @@ This fix ensures the app works in:
 ## Conclusion
 
 This fix resolves the crash in Android WebViews while maintaining full functionality in supported browsers. The solution follows Angular best practices (feature detection, defensive coding) and ensures graceful degradation for maximum compatibility.
+
+## Tauri Native Media Controls
+
+The browser-only fix above is still not enough for Android Tauri builds, because Tauri on Android runs inside Android WebView and Android WebView does not implement the Media Session API. That means PWA lock-screen controls can work while the installed Tauri build shows nothing unless the app also bridges into native media-session APIs.
+
+The current implementation now uses a split approach:
+
+- Browsers and PWAs keep using `navigator.mediaSession`
+- Tauri Android and iOS use `tauri-plugin-media-session`
+- Tauri desktop uses `tauri-plugin-media` plus a small Rust event bridge that forwards native transport actions back into Angular
+
+This keeps one playback owner in `MediaPlayerService` while allowing Android, Windows, macOS, and Linux builds to publish native metadata and respond to play, pause, next, previous, and seek actions from OS media controls.

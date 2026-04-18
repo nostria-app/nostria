@@ -12,6 +12,7 @@ import { AccountStateService } from './account-state.service';
 import { AccountLocalStateService } from './account-local-state.service';
 import { UserStatusService } from './user-status.service';
 import { SettingsService } from './settings.service';
+import { NativeMediaActionEvent, NativeMediaSessionService } from './native-media-session.service';
 
 // YouTube Player API types
 interface YouTubePlayer {
@@ -41,6 +42,7 @@ export class MediaPlayerService implements OnInitialized {
   private accountLocalState = inject(AccountLocalStateService);
   private userStatusService = inject(UserStatusService);
   private settingsService = inject(SettingsService);
+  private nativeMediaSession = inject(NativeMediaSessionService);
   media = signal<MediaItem[]>([]);
   audio?: HTMLAudioElement;
   current = signal<MediaItem | undefined>(undefined);
@@ -128,6 +130,8 @@ export class MediaPlayerService implements OnInitialized {
   private lastPodcastPositionSave = 0;
   private readonly PODCAST_SAVE_INTERVAL = 2000; // Save every 2 seconds
   private readonly POSITION_SAFETY_MARGIN_SECONDS = 2; // Buffer before end of media
+  private readonly NATIVE_TIMELINE_SYNC_INTERVAL = 5000;
+  private lastNativeTimelineSync = 0;
 
   // Flag to track if media session handlers have been initialized
   private mediaSessionInitialized = false;
@@ -141,6 +145,10 @@ export class MediaPlayerService implements OnInitialized {
   }
 
   constructor() {
+    this.nativeMediaSession.setActionHandler(event => {
+      void this.handleNativeMediaAction(event);
+    });
+
     if (!this.app.isBrowser()) {
       return;
     }
@@ -209,6 +217,149 @@ export class MediaPlayerService implements OnInitialized {
     } catch (error) {
       console.warn('Failed to initialize Media Session API handlers:', error);
     }
+  }
+
+  private async handleNativeMediaAction(event: NativeMediaActionEvent): Promise<void> {
+    switch (event.action) {
+      case 'play':
+        if (this.current()) {
+          await this.resume();
+        } else if (this.hasQueue()) {
+          await this.start();
+        }
+        break;
+      case 'toggle':
+        if (this.paused) {
+          if (this.current()) {
+            await this.resume();
+          } else if (this.hasQueue()) {
+            await this.start();
+          }
+        } else {
+          this.pause();
+        }
+        break;
+      case 'pause':
+      case 'stop':
+        this.pause();
+        break;
+      case 'next':
+        if (this.canNext()) {
+          this.next();
+        }
+        break;
+      case 'previous':
+        if (this.canPrevious()) {
+          this.previous();
+        }
+        break;
+      case 'seek':
+        if (typeof event.seekPosition === 'number') {
+          this.seekToPosition(event.seekPosition);
+        }
+        break;
+    }
+  }
+
+  private getCurrentPlaybackPosition(): number | undefined {
+    if (this.videoMode() && this.videoElement && Number.isFinite(this.videoElement.currentTime)) {
+      return this.videoElement.currentTime;
+    }
+
+    if (this.audio && Number.isFinite(this.audio.currentTime)) {
+      return this.audio.currentTime;
+    }
+
+    const position = this.currentTimeSig();
+    return Number.isFinite(position) ? position : undefined;
+  }
+
+  private getCurrentPlaybackDuration(): number | undefined {
+    if (this.videoMode() && this.videoElement && Number.isFinite(this.videoElement.duration) && this.videoElement.duration > 0) {
+      return this.videoElement.duration;
+    }
+
+    if (this.audio && Number.isFinite(this.audio.duration) && this.audio.duration > 0) {
+      return this.audio.duration;
+    }
+
+    const duration = this.durationSig();
+    return Number.isFinite(duration) && duration > 0 ? duration : undefined;
+  }
+
+  private canSeekCurrentItem(item: MediaItem | undefined): boolean {
+    if (!item || item.isLiveStream) {
+      return false;
+    }
+
+    return item.type !== 'YouTube' && item.type !== 'LiveKit' && item.type !== 'External';
+  }
+
+  private syncNativeMediaState(): void {
+    const currentItem = this.current();
+    if (!currentItem) {
+      void this.nativeMediaSession.clear();
+      return;
+    }
+
+    void this.nativeMediaSession.updateState({
+      title: currentItem.title,
+      artist: currentItem.artist,
+      album: 'Nostria',
+      artworkUrl: currentItem.artwork,
+      duration: this.getCurrentPlaybackDuration(),
+      position: this.getCurrentPlaybackPosition(),
+      playbackSpeed: this.playbackRate(),
+      isPlaying: !this.paused,
+      canPrev: this.canPrevious(),
+      canNext: this.canNext(),
+      canSeek: this.canSeekCurrentItem(currentItem),
+    });
+  }
+
+  private syncNativeTimeline(force = false): void {
+    const currentItem = this.current();
+    if (!currentItem || !this.canSeekCurrentItem(currentItem)) {
+      return;
+    }
+
+    const now = Date.now();
+    if (!force && now - this.lastNativeTimelineSync < this.NATIVE_TIMELINE_SYNC_INTERVAL) {
+      return;
+    }
+
+    this.lastNativeTimelineSync = now;
+
+    void this.nativeMediaSession.updateTimeline({
+      position: this.getCurrentPlaybackPosition(),
+      duration: this.getCurrentPlaybackDuration(),
+      playbackSpeed: this.playbackRate(),
+    });
+  }
+
+  private seekToPosition(position: number): void {
+    const clampedPosition = Math.max(0, position);
+
+    if (this.videoMode() && this.videoElement) {
+      const duration = Number.isFinite(this.videoElement.duration) && this.videoElement.duration > 0
+        ? this.videoElement.duration
+        : undefined;
+      this.videoElement.currentTime = duration ? Math.min(duration, clampedPosition) : clampedPosition;
+      this.currentTimeSig.set(this.videoElement.currentTime);
+      this.syncNativeTimeline(true);
+      return;
+    }
+
+    if (!this.audio) {
+      return;
+    }
+
+    const duration = Number.isFinite(this.audio.duration) && this.audio.duration > 0
+      ? this.audio.duration
+      : undefined;
+    this.audio.currentTime = duration ? Math.min(duration, clampedPosition) : clampedPosition;
+    this.currentTimeSig.set(this.audio.currentTime);
+    this.syncNativeTimeline(true);
   }
 
   initialize(): void {
@@ -646,6 +797,7 @@ export class MediaPlayerService implements OnInitialized {
     // this.layout.showMediaPlayer.set(true);
     this.media.update(files => [...files, file]);
     this.save();
+    this.syncNativeMediaState();
   }
 
   dequeue(file: MediaItem) {
@@ -657,6 +809,7 @@ export class MediaPlayerService implements OnInitialized {
       return files.filter((_, i) => i !== index);
     });
     this.save();
+    this.syncNativeMediaState();
   }
 
   async save() {
@@ -970,23 +1123,27 @@ export class MediaPlayerService implements OnInitialized {
     this._isPaused.set(false);
     console.log('[MediaPlayer] Video playing, enabling wake lock');
     this.wakeLockService.enable();
+    this.syncNativeMediaState();
   };
 
   private handleVideoPause = () => {
     this._isPaused.set(true);
     console.log('[MediaPlayer] Video paused, disabling wake lock');
     this.wakeLockService.disable();
+    this.syncNativeMediaState();
   };
 
   private handleVideoTimeUpdate = () => {
     if (this.videoElement) {
       this.currentTimeSig.set(this.videoElement.currentTime);
+      this.syncNativeTimeline();
     }
   };
 
   private handleVideoLoadedMetadata = () => {
     if (this.videoElement) {
       this.durationSig.set(this.videoElement.duration);
+      this.syncNativeMediaState();
     }
   };
 
@@ -1083,6 +1240,7 @@ export class MediaPlayerService implements OnInitialized {
       if (this.isMediaSessionSupported) {
         navigator.mediaSession.playbackState = 'none';
       }
+      this.syncNativeMediaState();
     }
   };
 
@@ -1193,6 +1351,7 @@ export class MediaPlayerService implements OnInitialized {
   private handleTimeUpdate = () => {
     if (this.audio) {
       this.currentTimeSig.set(this.audio.currentTime);
+      this.syncNativeTimeline();
 
       // Save podcast position periodically (only for podcasts), throttled to every 2 seconds
       const currentItem = this.current();
@@ -1226,6 +1385,8 @@ export class MediaPlayerService implements OnInitialized {
       if (currentItem?.type === 'Music') {
         this.publishMusicStatusForItem(currentItem);
       }
+
+      this.syncNativeMediaState();
     }
   };
 
@@ -1455,6 +1616,8 @@ export class MediaPlayerService implements OnInitialized {
     if (file.type === 'Music' && file.video?.trim()) {
       this.publishMusicStatusForItem(file);
     }
+
+    this.syncNativeMediaState();
   }
 
   private async resolveArtworkUrl(file: MediaItem): Promise<string> {
@@ -1697,6 +1860,8 @@ export class MediaPlayerService implements OnInitialized {
     if (this.videoMode()) {
       this.pausedYouTubeUrl.set(undefined);
     }
+
+    this.lastNativeTimelineSync = 0;
   }
 
   /**
@@ -1770,6 +1935,7 @@ export class MediaPlayerService implements OnInitialized {
       try {
         await this.audio.play();
         this._isPaused.set(false);
+        this.syncNativeMediaState();
       } catch (err) {
         console.error('Error resuming after audio element recreation:', err);
       }
@@ -1826,6 +1992,8 @@ export class MediaPlayerService implements OnInitialized {
         this.publishMusicStatusForItem(currentItem, remainingTime);
       }
     }
+
+    this.syncNativeMediaState();
   }
 
   pause() {
@@ -1853,6 +2021,7 @@ export class MediaPlayerService implements OnInitialized {
       if (this.isMediaSessionSupported) {
         navigator.mediaSession.playbackState = 'none';
       }
+      this.syncNativeMediaState();
       return;
     }
 
@@ -1883,6 +2052,8 @@ export class MediaPlayerService implements OnInitialized {
         console.warn('[MediaPlayer] Failed to clear music status on pause:', err);
       });
     }
+
+    this.syncNativeMediaState();
   }
 
   async pictureInPicture(): Promise<void> {
@@ -1975,6 +2146,7 @@ export class MediaPlayerService implements OnInitialized {
 
   toggleShuffle(): void {
     this.shuffle.update(v => !v);
+    this.syncNativeMediaState();
   }
 
   toggleRepeat(): void {
@@ -1983,6 +2155,7 @@ export class MediaPlayerService implements OnInitialized {
       if (v === 'all') return 'one';
       return 'off';
     });
+    this.syncNativeMediaState();
   }
 
   get error() {
@@ -2020,6 +2193,8 @@ export class MediaPlayerService implements OnInitialized {
     }
 
     this.audio.currentTime = value;
+    this.currentTimeSig.set(this.audio.currentTime);
+    this.syncNativeTimeline(true);
   }
 
   get duration() {
@@ -2052,6 +2227,9 @@ export class MediaPlayerService implements OnInitialized {
     } else if (this.audio) {
       this.audio.currentTime += value;
     }
+
+    this.currentTimeSig.set(this.getCurrentPlaybackPosition() ?? this.currentTimeSig());
+    this.syncNativeTimeline(true);
   }
 
   rewind(value: number) {
@@ -2065,6 +2243,9 @@ export class MediaPlayerService implements OnInitialized {
     } else if (this.audio) {
       this.audio.currentTime -= value;
     }
+
+    this.currentTimeSig.set(this.getCurrentPlaybackPosition() ?? this.currentTimeSig());
+    this.syncNativeTimeline(true);
   }
 
   rate() {
@@ -2086,6 +2267,13 @@ export class MediaPlayerService implements OnInitialized {
       this.audio.playbackRate = speed;
       this.playbackRate.set(speed);
     }
+
+    if (this.videoMode() && this.videoElement) {
+      this.videoElement.playbackRate = speed;
+      this.playbackRate.set(speed);
+    }
+
+    this.syncNativeMediaState();
   }
 
   /**
@@ -2147,6 +2335,8 @@ export class MediaPlayerService implements OnInitialized {
     if (this.isMediaSessionSupported) {
       navigator.mediaSession.playbackState = 'none';
     }
+
+    void this.nativeMediaSession.clear();
 
     console.log('Media queue completely cleared');
   }
