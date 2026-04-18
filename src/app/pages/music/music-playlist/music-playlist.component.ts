@@ -48,6 +48,7 @@ import { MusicTrackMenuComponent } from '../../../components/music-track-menu/mu
 import { ConfirmDialogComponent, ConfirmDialogData } from '../../../components/confirm-dialog/confirm-dialog.component';
 import { DeleteEventService } from '../../../services/delete-event.service';
 import { MusicTrackDialogComponent, MusicTrackDialogData } from '../music-track-dialog/music-track-dialog.component';
+import { OfflineMusicService } from '../../../services/offline-music.service';
 
 const MUSIC_KINDS = [...UtilitiesService.MUSIC_KINDS];
 const MUSIC_ALBUM_KIND = 34139;
@@ -101,6 +102,7 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
   private colorExtraction = inject(ColorExtractionService);
   private themeService = inject(ThemeService);
   private deleteEventService = inject(DeleteEventService);
+  private offlineMusicService = inject(OfflineMusicService);
 
   // Template for playlist menu (used in panel header)
   @ViewChild('playlistMenuTemplate') playlistMenuTemplate!: TemplateRef<unknown>;
@@ -133,6 +135,7 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
   private currentPlaylistKey = ''; // Track current pubkey+dTag to detect changes
   private currentTrackRefsKey = ''; // Track current playlist track refs to avoid redundant reloads
   private routeRelayHints: string[] = [];
+  private checkedDeletionForPlaylistId: string | null = null;
 
   // Store event from router state (must be captured in constructor before navigation ends)
   private routerStateEvent: Event | null = null;
@@ -335,6 +338,18 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
       }
     });
 
+    effect(() => {
+      const event = this.playlist();
+      if (!event || this.checkedDeletionForPlaylistId === event.id) {
+        return;
+      }
+
+      this.checkedDeletionForPlaylistId = event.id;
+      untracked(() => {
+        void this.checkDeletionRequestForPlaylist(event);
+      });
+    });
+
     // Extract colors from album art
     effect(() => {
       const image = this.coverImage();
@@ -419,6 +434,7 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
     this.isLiking.set(false);
     this.trackMap.clear();
     this.currentTrackRefsKey = '';
+    this.checkedDeletionForPlaylistId = null;
     this.artistProfiles.set(new Map());
     this.pendingArtistProfileFetches.clear();
 
@@ -620,6 +636,120 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
       }
     } catch (error) {
       this.logger.warn('[MusicPlaylist] Failed to load cached playlist:', error);
+    }
+  }
+
+  private async checkDeletionRequestForPlaylist(event: Event): Promise<void> {
+    const dTag = event.tags.find(tag => tag[0] === 'd' && tag[1]?.trim())?.[1]?.trim();
+    if (!dTag) {
+      return;
+    }
+
+    const aTagValue = `${event.kind}:${event.pubkey}:${dTag}`;
+
+    try {
+      const authorRelays = await this.userRelaysService.getUserRelaysForPublishing(event.pubkey);
+      const relayUrls = this.utilities.getUniqueNormalizedRelayUrls(authorRelays);
+
+      if (relayUrls.length === 0) {
+        return;
+      }
+
+      const [deletionEventsByEventId, deletionEventsByAddress] = await Promise.all([
+        this.pool.query(relayUrls, {
+          kinds: [kinds.EventDeletion],
+          authors: [event.pubkey],
+          '#e': [event.id],
+        }, 5000),
+        this.pool.query(relayUrls, {
+          kinds: [kinds.EventDeletion],
+          authors: [event.pubkey],
+          '#a': [aTagValue],
+        }, 5000),
+      ]);
+
+      const deletionEvent = [...deletionEventsByEventId, ...deletionEventsByAddress]
+        .filter(candidate => this.isValidPlaylistDeletionRequest(candidate, event, aTagValue))
+        .sort((a, b) => b.created_at - a.created_at)[0];
+
+      if (!deletionEvent) {
+        return;
+      }
+
+      this.logger.info('[MusicPlaylist] Album has been deleted by author', {
+        albumEventId: event.id,
+        deletionEventId: deletionEvent.id,
+        reason: deletionEvent.content || '(no reason given)',
+      });
+
+      await Promise.all([
+        this.removeOfflineTracksForPlaylist(event),
+        this.eventService.deleteEventFromLocalStorage(event.id),
+        this.database.deleteEvent(deletionEvent.id),
+      ]);
+
+      this.playlist.set(null);
+      this.tracks.set([]);
+      this.loading.set(false);
+      this.loadingTracks.set(false);
+      this.snackBar.open('This album has been deleted by its author', 'Close', { duration: 4000 });
+    } catch (error) {
+      this.logger.error('[MusicPlaylist] Error checking deletion request for album:', error);
+    }
+  }
+
+  private isValidPlaylistDeletionRequest(deletionEvent: Event, targetEvent: Event, aTagValue: string): boolean {
+    if (deletionEvent.kind !== kinds.EventDeletion || deletionEvent.pubkey !== targetEvent.pubkey) {
+      return false;
+    }
+
+    return deletionEvent.tags.some(tag => {
+      if (tag[0] === 'e') {
+        return tag[1] === targetEvent.id;
+      }
+
+      if (tag[0] === 'a') {
+        return tag[1] === aTagValue;
+      }
+
+      return false;
+    });
+  }
+
+  private async removeOfflineTracksForPlaylist(event: Event): Promise<void> {
+    const refs = this.utilities.getMusicPlaylistTrackRefs(event);
+    const offlineTrackCoordinates = refs
+      .map(ref => this.utilities.parseMusicTrackCoordinate(ref))
+      .filter((coordinate): coordinate is { kind: number; pubkey: string; identifier: string } => !!coordinate)
+      .filter(coordinate => this.offlineMusicService.isTrackOffline(coordinate.pubkey, coordinate.identifier));
+
+    if (offlineTrackCoordinates.length === 0) {
+      return;
+    }
+
+    const uniqueTrackKeys = new Set<string>();
+    const uniqueOfflineTracks = offlineTrackCoordinates.filter(coordinate => {
+      const key = `${coordinate.pubkey}:${coordinate.identifier}`;
+      if (uniqueTrackKeys.has(key)) {
+        return false;
+      }
+
+      uniqueTrackKeys.add(key);
+      return true;
+    });
+
+    const results = await Promise.all(
+      uniqueOfflineTracks.map(coordinate =>
+        this.offlineMusicService.removeTrackOffline(coordinate.pubkey, coordinate.identifier)
+      )
+    );
+
+    const removedCount = results.filter(Boolean).length;
+    if (removedCount > 0) {
+      this.logger.info('[MusicPlaylist] Removed offline tracks for deleted album', {
+        albumEventId: event.id,
+        removedCount,
+      });
     }
   }
 
