@@ -21,6 +21,9 @@ const MEDIA_SESSION_COMMANDS: &[&str] = &[
     "clear",
 ];
 
+#[cfg(target_os = "macos")]
+const IOS_MEDIA_SESSION_PACKAGE_NAME: &str = "nostria-media-session";
+
 fn main() {
     configure_target_aliases();
     setup_media_session_mobile_sources().expect("failed to wire mobile media-session sources");
@@ -95,10 +98,7 @@ fn setup_ios_sources(source: &Path) -> Result<(), Box<dyn std::error::Error>> {
         .join(".tauri/tauri-api");
     copy_folder(&tauri_library_path, &tauri_dep_path, &[".build", "Package.resolved", "Tests"])?;
 
-    tauri_utils::build::link_apple_library(
-        &env::var("CARGO_PKG_NAME")?,
-        source.to_path_buf(),
-    );
+    tauri_utils::build::link_apple_library(IOS_MEDIA_SESSION_PACKAGE_NAME, source.to_path_buf());
 
     Ok(())
 }
