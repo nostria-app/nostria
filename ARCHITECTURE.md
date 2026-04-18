@@ -614,6 +614,16 @@ interface MediaItem {
 - Wake lock to prevent screen sleep
 - Expandable player UI
 
+### Native Media Session Bridge
+
+`MediaPlayerService` stays the playback owner, but OS-level media integration is split by runtime:
+
+- Browsers and PWAs use the standard browser `navigator.mediaSession` API.
+- Tauri desktop uses the repo-owned Rust bridge in `src-tauri/src/media_session.rs`, which publishes metadata through `souvlaki` and emits `media_action` events back to Angular.
+- Tauri Android and iOS use the repo-owned mobile plugin sources under `src-tauri/media-session/`, exposed through the same `media-session` command namespace that the Angular service calls.
+
+This design keeps one playback state machine in Angular while avoiding Android WebView limitations and the instability of the previous third-party desktop plugin path.
+
 ### Playback Modes
 
 - **Minimized**: Small bar at bottom of screen

@@ -30,36 +30,16 @@ export interface NativeMediaTimelineUpdate extends Record<string, unknown> {
   playbackSpeed?: number;
 }
 
-interface DesktopMediaMetadata {
-  title: string;
-  artist?: string;
-  album?: string;
-  albumArtist?: string;
-  duration?: number;
-  artworkUrl?: string;
-}
-
-interface DesktopPlaybackInfo {
-  status: 'playing' | 'paused' | 'stopped';
-  position: number;
-  shuffle: boolean;
-  repeatMode: 'none' | 'track' | 'list';
-  playbackRate: number;
-}
-
 @Injectable({
   providedIn: 'root',
 })
 export class NativeMediaSessionService {
-  private readonly desktopEventName = 'native-media-action';
-  private readonly appId = 'nostria';
-  private readonly appName = 'Nostria';
   private readonly mobileUserAgentPattern = /Android|iPhone|iPad|iPod/i;
 
   private readonly app: ApplicationService;
 
   private pluginListener?: PluginListener;
-  private unlistenDesktop?: UnlistenFn;
+  private desktopUnlisten?: UnlistenFn;
   private actionHandler?: (event: NativeMediaActionEvent) => void;
   private initialized = false;
   private state: NativeMediaState = {};
@@ -89,13 +69,7 @@ export class NativeMediaSessionService {
     };
 
     await this.ensureInitialized();
-
-    if (this.isMobileTauriRuntime()) {
-      await invoke('plugin:media-session|update_state', update);
-      return;
-    }
-
-    await this.updateDesktopState();
+    await invoke('plugin:media-session|update_state', update);
   }
 
   async updateTimeline(update: NativeMediaTimelineUpdate): Promise<void> {
@@ -109,13 +83,7 @@ export class NativeMediaSessionService {
     };
 
     await this.ensureInitialized();
-
-    if (this.isMobileTauriRuntime()) {
-      await invoke('plugin:media-session|update_timeline', update);
-      return;
-    }
-
-    await this.updateDesktopPlaybackInfo();
+    await invoke('plugin:media-session|update_timeline', update);
   }
 
   async clear(): Promise<void> {
@@ -125,19 +93,12 @@ export class NativeMediaSessionService {
 
     this.state = {};
 
-    if (this.isMobileTauriRuntime()) {
-      await invoke('plugin:media-session|clear');
-      this.initialized = false;
-      return;
-    }
-
-    await this.ensureInitialized();
-    await invoke('plugin:media|set_playback_status', { status: 'stopped' });
-    await invoke('plugin:media|clear_metadata');
+    await invoke('plugin:media-session|clear');
+    this.initialized = false;
   }
 
   private async registerListeners(): Promise<void> {
-    if (this.isMobileTauriRuntime()) {
+    if (this.isMobileRuntime()) {
       this.pluginListener = await addPluginListener<NativeMediaActionEvent>(
         'media-session',
         'media_action',
@@ -146,12 +107,7 @@ export class NativeMediaSessionService {
       return;
     }
 
-    if (this.isDesktopTauriRuntime()) {
-      this.unlistenDesktop = await listen<NativeMediaActionEvent>(
-        this.desktopEventName,
-        event => this.actionHandler?.(event.payload)
-      );
-    }
+    this.desktopUnlisten = await listen<NativeMediaActionEvent>('media_action', event => this.actionHandler?.(event.payload));
   }
 
   private async ensureInitialized(): Promise<void> {
@@ -159,72 +115,16 @@ export class NativeMediaSessionService {
       return;
     }
 
-    if (this.isMobileTauriRuntime()) {
-      await invoke('plugin:media-session|initialize');
-    } else if (this.isDesktopTauriRuntime()) {
-      await invoke('plugin:media|initialize_session', {
-        request: {
-          appId: this.appId,
-          appName: this.appName,
-        },
-      });
-    }
+    await invoke('plugin:media-session|initialize');
 
     this.initialized = true;
-  }
-
-  private async updateDesktopState(): Promise<void> {
-    await invoke('plugin:media|set_metadata', {
-      metadata: this.getDesktopMetadata(),
-    });
-
-    await this.updateDesktopPlaybackInfo();
-  }
-
-  private async updateDesktopPlaybackInfo(): Promise<void> {
-    await invoke('plugin:media|set_playback_info', {
-      info: this.getDesktopPlaybackInfo(),
-    });
-  }
-
-  private getDesktopMetadata(): DesktopMediaMetadata {
-    return {
-      title: this.state.title ?? this.appName,
-      artist: this.state.artist,
-      album: this.state.album,
-      albumArtist: this.state.artist,
-      duration: this.normalizeNumber(this.state.duration),
-      artworkUrl: this.state.artworkUrl,
-    };
-  }
-
-  private getDesktopPlaybackInfo(): DesktopPlaybackInfo {
-    return {
-      status: this.state.isPlaying === false ? 'paused' : 'playing',
-      position: this.normalizeNumber(this.state.position) ?? 0,
-      shuffle: false,
-      repeatMode: 'none',
-      playbackRate: this.normalizeNumber(this.state.playbackSpeed) ?? 1,
-    };
-  }
-
-  private normalizeNumber(value: number | undefined): number | undefined {
-    if (typeof value !== 'number' || !Number.isFinite(value)) {
-      return undefined;
-    }
-
-    return value;
   }
 
   private isSupportedRuntime(): boolean {
     return this.app.isBrowser() && isTauri();
   }
 
-  private isMobileTauriRuntime(): boolean {
-    return this.isSupportedRuntime() && this.mobileUserAgentPattern.test(navigator.userAgent);
-  }
-
-  private isDesktopTauriRuntime(): boolean {
-    return this.isSupportedRuntime() && !this.mobileUserAgentPattern.test(navigator.userAgent);
+  private isMobileRuntime(): boolean {
+    return this.mobileUserAgentPattern.test(navigator.userAgent);
   }
 }

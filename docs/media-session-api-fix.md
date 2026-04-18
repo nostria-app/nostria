@@ -160,12 +160,23 @@ This fix resolves the crash in Android WebViews while maintaining full functiona
 
 ## Tauri Native Media Controls
 
-The browser-only fix above is still not enough for Android Tauri builds, because Tauri on Android runs inside Android WebView and Android WebView does not implement the Media Session API. That means PWA lock-screen controls can work while the installed Tauri build shows nothing unless the app also bridges into native media-session APIs.
+The browser-only fix above is still not enough for Tauri builds. Android Tauri runs inside Android WebView, which does not implement the Media Session API, and desktop Tauri needs an explicit native bridge to publish metadata and receive transport events from the operating system.
 
-The current implementation now uses a split approach:
+The current implementation uses a custom split approach:
 
 - Browsers and PWAs keep using `navigator.mediaSession`
-- Tauri Android and iOS use `tauri-plugin-media-session`
-- Tauri desktop uses `tauri-plugin-media` plus a small Rust event bridge that forwards native transport actions back into Angular
+- Tauri Android and iOS use a repo-owned `media-session` mobile plugin under `src-tauri/media-session/`
+- Tauri desktop uses a repo-owned Rust bridge in `src-tauri/src/media_session.rs` backed by `souvlaki`
 
-This keeps one playback owner in `MediaPlayerService` while allowing Android, Windows, macOS, and Linux builds to publish native metadata and respond to play, pause, next, previous, and seek actions from OS media controls.
+This keeps one playback owner in `MediaPlayerService` while letting each runtime use the integration path it actually supports.
+
+### Current Native Bridge Design
+
+- `MediaPlayerService` remains the source of truth for playback state and actions.
+- `NativeMediaSessionService` is the Angular bridge that forwards metadata and timeline updates into Tauri and routes native transport actions back into Angular.
+- Desktop emits standard Tauri app events named `media_action`, which avoids depending on plugin-listener plumbing for non-mobile targets.
+- Mobile keeps the `media-session` plugin command surface so the frontend contract stays stable.
+
+### Why This Replaced Third-Party Plugins
+
+The earlier split between `tauri-plugin-media-session` on mobile and `tauri-plugin-media` on desktop turned out to be too brittle for this app. The custom implementation keeps the same high-level behavior but moves the critical native bridge into the repository so desktop and mobile behavior can evolve together.

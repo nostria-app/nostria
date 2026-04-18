@@ -1,10 +1,6 @@
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 mod android_signer;
-
-#[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
-use tauri::Emitter;
-#[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
-use tauri_plugin_media::{MediaControlEventType, MediaExt};
+mod media_session;
 
 #[derive(serde::Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -65,80 +61,15 @@ fn install_rustls_crypto_provider() {
     let _ = rustls::crypto::ring::default_provider().install_default();
 }
 
-#[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
-#[derive(Clone, serde::Serialize)]
-#[serde(rename_all = "camelCase")]
-struct NativeMediaActionPayload {
-    action: &'static str,
-    seek_position: Option<f64>,
-}
-
-#[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
-fn desktop_media_action_payload(event_type: MediaControlEventType) -> Option<NativeMediaActionPayload> {
-    match event_type {
-        MediaControlEventType::Play => Some(NativeMediaActionPayload {
-            action: "play",
-            seek_position: None,
-        }),
-        MediaControlEventType::Pause => Some(NativeMediaActionPayload {
-            action: "pause",
-            seek_position: None,
-        }),
-        MediaControlEventType::PlayPause => Some(NativeMediaActionPayload {
-            action: "toggle",
-            seek_position: None,
-        }),
-        MediaControlEventType::Stop => Some(NativeMediaActionPayload {
-            action: "stop",
-            seek_position: None,
-        }),
-        MediaControlEventType::Next => Some(NativeMediaActionPayload {
-            action: "next",
-            seek_position: None,
-        }),
-        MediaControlEventType::Previous => Some(NativeMediaActionPayload {
-            action: "previous",
-            seek_position: None,
-        }),
-        MediaControlEventType::SeekTo(position) | MediaControlEventType::SetPosition(position) => {
-            Some(NativeMediaActionPayload {
-                action: "seek",
-                seek_position: Some(position),
-            })
-        }
-        MediaControlEventType::FastForward
-        | MediaControlEventType::Rewind
-        | MediaControlEventType::SetPlaybackRate(_) => None,
-    }
-}
-
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     install_rustls_crypto_provider();
 
-    let mut builder = tauri::Builder::default()
+    tauri::Builder::default()
         .plugin(android_signer::init())
-        .plugin(tauri_plugin_media_session::init())
+        .plugin(media_session::init())
         .plugin(tauri_plugin_opener::init())
-        .plugin(tauri_plugin_updater::Builder::new().build());
-
-    #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
-    {
-        builder = builder
-            .plugin(tauri_plugin_media::init())
-            .setup(|app| {
-                let app_handle = app.handle().clone();
-                app.media().set_event_handler(move |event| {
-                    if let Some(payload) = desktop_media_action_payload(event.event_type) {
-                        let _ = app_handle.emit("native-media-action", payload);
-                    }
-                });
-
-                Ok(())
-            });
-    }
-
-    builder
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .invoke_handler(tauri::generate_handler![greet, desktop_update_context])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
