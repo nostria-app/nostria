@@ -15,11 +15,6 @@ export interface UserSettingsResponse {
   pubkey?: string;
 
   /**
-   * Release channel preference
-   */
-  releaseChannel?: 'stable' | 'beta' | 'alpha';
-
-  /**
    * Social sharing preference
    */
   socialSharing?: boolean;

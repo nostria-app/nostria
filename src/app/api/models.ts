@@ -29,7 +29,6 @@ export type { SuccessResponse } from './models/success-response';
 export { Tier } from './models/tier';
 export type { TierDetails } from './models/tier-details';
 export type { UpdateAccountRequest } from './models/update-account-request';
-export type { UsersByReleaseChannel } from './models/users-by-release-channel';
 export type { UserSettingsResponse } from './models/user-settings-response';
 export type { UserSettingsUpdate } from './models/user-settings-update';
 export type { VapidKey } from './models/vapid-key';

@@ -1,4 +1,7 @@
-import { Injectable, signal, inject } from '@angular/core';
+import { Injectable, computed, effect, signal, inject } from '@angular/core';
+
+import { AccountStateService } from './account-state.service';
+import { GrokApiService, GrokHostedPayment, GrokPublicConfig, GrokStatus } from './grok-api.service';
 import { LocalStorageService } from './local-storage.service';
 import { SettingsService } from './settings.service';
 
@@ -227,7 +230,7 @@ export class AiService {
   private readonly defaultCloudSettings: AiCloudSettings = {
     preferredImageProvider: 'xai',
     openaiChatModel: 'gpt-4.1-mini',
-    xaiChatModel: 'grok-3-mini',
+    xaiChatModel: 'grok-4-1-fast-reasoning',
     openaiImageModel: 'gpt-image-1',
     xaiImageModel: 'grok-imagine-image',
     xaiImageAspectRatio: '1:1',
@@ -244,6 +247,8 @@ export class AiService {
 
   private settings = inject(SettingsService);
   private localStorage = inject(LocalStorageService);
+  private accountState = inject(AccountStateService);
+  private grokApi = inject(GrokApiService);
   private worker: Worker | null = null;
   private callbacks: Record<string, WorkerCallback> = {};
   private readonly activeAbortControllers = new Set<AbortController>();
@@ -262,6 +267,15 @@ export class AiService {
 
   loadedModels = signal<Set<string>>(new Set());
   cloudSettings = signal<AiCloudSettings>({ ...this.defaultCloudSettings });
+  grokConfig = signal<GrokPublicConfig | null>(null);
+  grokStatus = signal<GrokStatus | null>(null);
+  grokConfigLoading = signal(false);
+  grokStatusLoading = signal(false);
+  grokError = signal('');
+  readonly hasHostedGrokAccess = computed(() => {
+    const config = this.grokConfig();
+    return !!config?.enabled && !!this.accountState.hasActiveSubscription();
+  });
 
   availableTranslationModels = [
     'Xenova/opus-mt-es-fr', 'Xenova/opus-mt-es-it', 'Xenova/opus-mt-es-ru', 'Xenova/opus-mt-fr-es',
@@ -453,6 +467,18 @@ export class AiService {
 
   constructor() {
     this.loadCloudSettings();
+    void this.refreshGrokConfig();
+
+    effect(() => {
+      const pubkey = this.accountState.pubkey();
+      const hasActiveSubscription = this.accountState.hasActiveSubscription();
+      if (!pubkey || !hasActiveSubscription) {
+        this.grokStatus.set(null);
+        return;
+      }
+
+      void this.refreshGrokStatus();
+    });
 
     this.initializeWorker();
   }
@@ -641,7 +667,13 @@ export class AiService {
 
   getImageModel(provider: AiCloudProvider): string {
     const cloudSettings = this.cloudSettings();
-    return provider === 'openai' ? cloudSettings.openaiImageModel : cloudSettings.xaiImageModel;
+    if (provider === 'openai') {
+      return cloudSettings.openaiImageModel;
+    }
+
+    return this.hasCloudApiKey('xai')
+      ? cloudSettings.xaiImageModel
+      : this.grokConfig()?.defaults.imageModel || cloudSettings.xaiImageModel;
   }
 
   getVideoModel(provider: AiCloudProvider): string {
@@ -659,7 +691,13 @@ export class AiService {
 
   getChatModel(provider: AiCloudProvider): string {
     const cloudSettings = this.cloudSettings();
-    return provider === 'openai' ? cloudSettings.openaiChatModel : cloudSettings.xaiChatModel;
+    if (provider === 'openai') {
+      return cloudSettings.openaiChatModel;
+    }
+
+    return this.hasCloudApiKey('xai')
+      ? cloudSettings.xaiChatModel
+      : this.grokConfig()?.defaults.responseModel || cloudSettings.xaiChatModel;
   }
 
   hasCloudApiKey(provider: AiCloudProvider): boolean {
@@ -669,26 +707,46 @@ export class AiService {
       : typeof cloudSettings.xaiApiKey === 'string' && cloudSettings.xaiApiKey.length > 0;
   }
 
+  hasCloudChatAccess(provider: AiCloudProvider): boolean {
+    return provider === 'openai'
+      ? this.hasCloudApiKey('openai')
+      : this.hasCloudApiKey('xai') || this.hasHostedGrokAccess();
+  }
+
+  hasCloudImageAccess(provider: AiCloudProvider): boolean {
+    return provider === 'openai'
+      ? this.hasCloudApiKey('openai')
+      : this.hasCloudApiKey('xai') || this.hasHostedGrokAccess();
+  }
+
+  hasCloudVideoAccess(provider: AiCloudProvider): boolean {
+    return provider === 'xai' && this.hasCloudApiKey('xai');
+  }
+
+  hasCloudVoiceAccess(provider: AiCloudProvider): boolean {
+    return provider === 'xai' && this.hasCloudApiKey('xai');
+  }
+
   getConfiguredImageProviders(): AiCloudProvider[] {
     const providers: AiCloudProvider[] = ['xai', 'openai'];
-    return providers.filter(provider => this.hasCloudApiKey(provider));
+    return providers.filter(provider => this.hasCloudImageAccess(provider));
   }
 
   getConfiguredVideoProviders(): AiCloudProvider[] {
-    return this.hasCloudApiKey('xai') ? ['xai'] : [];
+    return this.hasCloudVideoAccess('xai') ? ['xai'] : [];
   }
 
   getConfiguredVoiceProviders(): AiCloudProvider[] {
-    return this.hasCloudApiKey('xai') ? ['xai'] : [];
+    return this.hasCloudVoiceAccess('xai') ? ['xai'] : [];
   }
 
   getActiveImageProvider(preferredProvider?: AiCloudProvider | null): AiCloudProvider | null {
-    if (preferredProvider && this.hasCloudApiKey(preferredProvider)) {
+    if (preferredProvider && this.hasCloudImageAccess(preferredProvider)) {
       return preferredProvider;
     }
 
     const defaultProvider = this.cloudSettings().preferredImageProvider;
-    if (this.hasCloudApiKey(defaultProvider)) {
+    if (this.hasCloudImageAccess(defaultProvider)) {
       return defaultProvider;
     }
 
@@ -720,7 +778,7 @@ export class AiService {
   ): Promise<AiGeneratedImage[]> {
     const activeProvider = this.getActiveImageProvider(provider);
     if (!activeProvider) {
-      throw new Error('Add an OpenAI or xAI API key in AI Settings first.');
+      throw new Error('Add an OpenAI API key or use a premium account with Nostria Grok credits first.');
     }
 
     const trimmedPrompt = prompt.trim();
@@ -819,6 +877,25 @@ export class AiService {
 
   async generateCloudText(messages: AiChatMessage[], provider: AiCloudProvider, model?: string): Promise<string> {
     const apiKey = provider === 'openai' ? this.cloudSettings().openaiApiKey : this.cloudSettings().xaiApiKey;
+    if (provider === 'xai' && !apiKey && this.hasHostedGrokAccess()) {
+      const pubkey = this.accountState.pubkey();
+      if (!pubkey) {
+        throw new Error('Log in to use hosted Grok credits.');
+      }
+
+      const payload = await this.grokApi.createResponse(pubkey, {
+        model: model?.trim() || this.getChatModel('xai'),
+        messages,
+      });
+      const content = this.extractChatCompletionText(payload.data);
+      if (!content) {
+        throw new Error('The provider returned an empty reply.');
+      }
+
+      await this.refreshGrokStatus();
+      return content;
+    }
+
     if (!apiKey) {
       throw new Error(`${this.getProviderLabel(provider)} API key is missing.`);
     }
@@ -1039,6 +1116,39 @@ export class AiService {
 
   private async generateXAiImage(prompt: string, options?: AiImageGenerationOptions): Promise<AiGeneratedImage[]> {
     const apiKey = this.cloudSettings().xaiApiKey;
+    if (!apiKey && this.hasHostedGrokAccess()) {
+      const pubkey = this.accountState.pubkey();
+      if (!pubkey) {
+        throw new Error('Log in to use hosted Grok credits.');
+      }
+
+      const cloudSettings = this.cloudSettings();
+      const referenceImages = (options?.referenceImages ?? []).filter(value => value.trim().length > 0).slice(0, 5);
+      const inputImages = (options?.inputImages ?? []).filter(value => value.trim().length > 0);
+      const baseRequestBody: Record<string, unknown> = {
+        model: this.getImageModel('xai'),
+        prompt,
+        n: cloudSettings.xaiImageCount,
+        aspect_ratio: cloudSettings.xaiImageAspectRatio,
+        resolution: cloudSettings.xaiImageResolution,
+      };
+
+      if (referenceImages.length > 0) {
+        baseRequestBody['reference_images'] = referenceImages.map(url => ({ url }));
+      }
+
+      const request = inputImages.length > 0
+        ? this.buildXAiImageEditRequest(inputImages, baseRequestBody)
+        : {
+          url: 'https://api.x.ai/v1/images/generations',
+          body: baseRequestBody,
+        };
+      const payload = await this.grokApi.createImages(pubkey, request.body);
+
+      await this.refreshGrokStatus();
+      return this.mapGeneratedImages(payload.data, 'xai', prompt);
+    }
+
     if (!apiKey) {
       throw new Error('xAI API key is missing.');
     }
@@ -1068,6 +1178,62 @@ export class AiService {
     const payload = await this.fetchImageGeneration(request.url, apiKey, request.body);
 
     return this.mapGeneratedImages(payload, 'xai', prompt);
+  }
+
+  async refreshGrokConfig(): Promise<GrokPublicConfig | null> {
+    this.grokConfigLoading.set(true);
+    try {
+      const config = await this.grokApi.getPublicConfig();
+      this.grokConfig.set(config);
+      this.grokError.set('');
+      return config;
+    } catch (error) {
+      this.grokConfig.set(null);
+      this.grokError.set(error instanceof Error ? error.message : 'Failed to load Grok configuration.');
+      return null;
+    } finally {
+      this.grokConfigLoading.set(false);
+    }
+  }
+
+  async refreshGrokStatus(): Promise<GrokStatus | null> {
+    const pubkey = this.accountState.pubkey();
+    if (!pubkey || !this.accountState.hasActiveSubscription()) {
+      this.grokStatus.set(null);
+      return null;
+    }
+
+    this.grokStatusLoading.set(true);
+    try {
+      const status = await this.grokApi.getStatus(pubkey);
+      this.grokStatus.set(status);
+      this.grokError.set('');
+      return status;
+    } catch (error) {
+      this.grokStatus.set(null);
+      this.grokError.set(error instanceof Error ? error.message : 'Failed to load Grok status.');
+      return null;
+    } finally {
+      this.grokStatusLoading.set(false);
+    }
+  }
+
+  async createGrokTopUp(amountCents: number): Promise<GrokHostedPayment> {
+    const pubkey = this.accountState.pubkey();
+    if (!pubkey) {
+      throw new Error('Log in to create a Grok top-up invoice.');
+    }
+
+    return this.grokApi.createTopUp(pubkey, amountCents);
+  }
+
+  async getGrokPayment(paymentId: string): Promise<GrokHostedPayment> {
+    const pubkey = this.accountState.pubkey();
+    if (!pubkey) {
+      throw new Error('Log in to check a Grok payment.');
+    }
+
+    return this.grokApi.getPayment(pubkey, paymentId);
   }
 
   private buildXAiImageEditRequest(inputImages: string[], baseRequestBody: Record<string, unknown>): { url: string; body: Record<string, unknown> } {

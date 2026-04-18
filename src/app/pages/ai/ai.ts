@@ -360,7 +360,7 @@ export class AiComponent {
   readonly cloudChatModels = computed<ModelInfo[]>(() => {
     const providers: AiCloudProvider[] = ['xai', 'openai'];
     return providers
-      .filter(provider => this.aiService.hasCloudApiKey(provider))
+      .filter(provider => this.aiService.hasCloudChatAccess(provider))
       .map(provider => ({
         id: `cloud-chat:${provider}`,
         task: 'text-generation',
@@ -383,7 +383,7 @@ export class AiComponent {
     const preferredProvider = this.aiService.getActiveImageProvider();
     const providers: AiCloudProvider[] = ['xai', 'openai'];
     const sortedProviders = providers
-      .filter(provider => this.aiService.hasCloudApiKey(provider))
+      .filter(provider => this.aiService.hasCloudImageAccess(provider))
       .sort((left, right) => {
         if (left === preferredProvider) {
           return -1;
@@ -415,7 +415,7 @@ export class AiComponent {
     return [...localImageModels, ...cloudImageModels];
   });
   readonly videoModels = computed<ModelInfo[]>(() => {
-    if (!this.aiService.hasCloudApiKey('xai')) {
+    if (!this.aiService.hasCloudVideoAccess('xai')) {
       return [];
     }
 
@@ -437,7 +437,7 @@ export class AiComponent {
   });
   readonly voiceModels = computed<ModelInfo[]>(() => {
     const localVoiceModels = this.models().filter(model => model.task === 'text-to-speech');
-    const cloudVoiceModels = this.aiService.hasCloudApiKey('xai')
+    const cloudVoiceModels = this.aiService.hasCloudVoiceAccess('xai')
       ? [{
         id: 'cloud-voice:xai',
         task: 'text-to-speech',

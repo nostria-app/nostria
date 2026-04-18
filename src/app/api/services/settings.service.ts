@@ -11,8 +11,6 @@ import { BaseService } from '../base-service';
 import { ApiConfiguration } from '../api-configuration';
 import { StrictHttpResponse } from '../strict-http-response';
 
-import { settingsAdminReleaseChannelChannelGet } from '../fn/settings/settings-admin-release-channel-channel-get';
-import { SettingsAdminReleaseChannelChannelGet$Params } from '../fn/settings/settings-admin-release-channel-channel-get';
 import { settingsPubkeyDelete } from '../fn/settings/settings-pubkey-delete';
 import { SettingsPubkeyDelete$Params } from '../fn/settings/settings-pubkey-delete';
 import { settingsPubkeyGet } from '../fn/settings/settings-pubkey-get';
@@ -22,7 +20,6 @@ import { SettingsPubkeyPatch$Params } from '../fn/settings/settings-pubkey-patch
 import { settingsPubkeyPost } from '../fn/settings/settings-pubkey-post';
 import { SettingsPubkeyPost$Params } from '../fn/settings/settings-pubkey-post';
 import { SuccessResponse } from '../models/success-response';
-import { UsersByReleaseChannel } from '../models/users-by-release-channel';
 
 
 /**
@@ -76,7 +73,7 @@ export class SettingsService extends BaseService {
    * Create or update user settings.
    *
    * Create new user settings or update existing ones. Requires NIP-98 authentication.
-   * Validates release channel and social sharing preferences before saving.
+    * Validates social sharing preferences before saving.
    *
    * This method provides access to the full `HttpResponse`, allowing access to response headers.
    * To access only the response body, use `settingsPubkeyPost()` instead.
@@ -91,7 +88,7 @@ export class SettingsService extends BaseService {
    * Create or update user settings.
    *
    * Create new user settings or update existing ones. Requires NIP-98 authentication.
-   * Validates release channel and social sharing preferences before saving.
+    * Validates social sharing preferences before saving.
    *
    * This method provides access only to the response body.
    * To access the full response (for headers, for example), `settingsPubkeyPost$Response()` instead.
@@ -183,41 +180,6 @@ export class SettingsService extends BaseService {
   settingsPubkeyPatch(params: SettingsPubkeyPatch$Params, context?: HttpContext): Observable<SuccessResponse> {
     return this.settingsPubkeyPatch$Response(params, context).pipe(
       map((r: StrictHttpResponse<SuccessResponse>): SuccessResponse => r.body)
-    );
-  }
-
-  /** Path part for operation `settingsAdminReleaseChannelChannelGet()` */
-  static readonly SettingsAdminReleaseChannelChannelGetPath = '/settings/admin/release-channel/{channel}';
-
-  /**
-   * Get users by release channel (admin endpoint).
-   *
-   * Administrative endpoint to retrieve all users subscribed to a specific release channel.
-   * Returns user count and list of public keys for marketing or deployment purposes.
-   *
-   * This method provides access to the full `HttpResponse`, allowing access to response headers.
-   * To access only the response body, use `settingsAdminReleaseChannelChannelGet()` instead.
-   *
-   * This method doesn't expect any request body.
-   */
-  settingsAdminReleaseChannelChannelGet$Response(params: SettingsAdminReleaseChannelChannelGet$Params, context?: HttpContext): Observable<StrictHttpResponse<UsersByReleaseChannel>> {
-    return settingsAdminReleaseChannelChannelGet(this.http, this.rootUrl, params, context);
-  }
-
-  /**
-   * Get users by release channel (admin endpoint).
-   *
-   * Administrative endpoint to retrieve all users subscribed to a specific release channel.
-   * Returns user count and list of public keys for marketing or deployment purposes.
-   *
-   * This method provides access only to the response body.
-   * To access the full response (for headers, for example), `settingsAdminReleaseChannelChannelGet$Response()` instead.
-   *
-   * This method doesn't expect any request body.
-   */
-  settingsAdminReleaseChannelChannelGet(params: SettingsAdminReleaseChannelChannelGet$Params, context?: HttpContext): Observable<UsersByReleaseChannel> {
-    return this.settingsAdminReleaseChannelChannelGet$Response(params, context).pipe(
-      map((r: StrictHttpResponse<UsersByReleaseChannel>): UsersByReleaseChannel => r.body)
     );
   }
 

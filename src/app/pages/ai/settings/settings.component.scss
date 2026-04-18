@@ -79,6 +79,49 @@
   font-size: 13px;
 }
 
+.provider-error {
+  color: var(--mat-sys-error);
+}
+
+.grok-status-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 16px 0;
+}
+
+.grok-status-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: var(--mat-sys-surface);
+  border: 1px solid var(--mat-sys-outline-variant);
+}
+
+.grok-topup-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, max-content));
+  gap: 12px;
+  align-items: start;
+  margin-top: 16px;
+}
+
+.grok-invoice-shell {
+  display: grid;
+  gap: 16px;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--mat-sys-outline-variant);
+}
+
+.grok-invoice-meta {
+  p {
+    margin: 0 0 6px;
+  }
+}
+
 .prompt-library-card {
   display: flex;
   flex-direction: column;

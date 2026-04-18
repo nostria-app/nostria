@@ -39,6 +39,76 @@
 
         @if (settings.settings().aiEnabled) {
         <div class="features-grid">
+          <mat-card class="settings-card provider-card provider-card-wide">
+            <mat-card-header>
+              <mat-card-title>Nostria Grok Credits</mat-card-title>
+            </mat-card-header>
+            <mat-card-content>
+              <p class="provider-intro">
+                Premium accounts can use Nostria-hosted Grok for chat and image generation without storing a personal
+                xAI key.
+              </p>
+
+              @if (grokConfigLoading() || grokStatusLoading()) {
+              <p class="provider-hint">Loading Grok access and balance…</p>
+              } @else if (grokError()) {
+              <p class="provider-hint provider-error">{{ grokError() }}</p>
+              } @else if (!grokHasHostedAccess()) {
+              <p class="provider-hint">Hosted Grok is available when your account has an active Basic, Premium, or
+                Premium+ subscription.</p>
+              } @else if (grokStatus(); as status) {
+              <div class="grok-status-grid">
+                <div class="grok-status-pill">Tier: {{ status.tier }}</div>
+                <div class="grok-status-pill">Balance: {{ formatUsdFromNanos(status.balanceNanosUsd) }}</div>
+                <div class="grok-status-pill">Included images left: {{ status.includedImagesRemaining }} / {{
+                  status.includedImagesPerMonth }}</div>
+                <div class="grok-status-pill">Used today: {{ status.imagesUsedToday }}@if (status.dailyImageLimit) { /
+                  {{ status.dailyImageLimit }} }</div>
+              </div>
+
+              <p class="provider-hint">Default hosted models: {{ status.defaultResponseModel }} for chat and {{
+                status.defaultImageModel }} for images.</p>
+
+              <div class="grok-topup-grid">
+                @for (amount of status.defaultTopUpOptionsCents; track amount) {
+                <button mat-stroked-button type="button" (click)="setGrokTopUpAmount(amount)">
+                  ${{ (amount / 100).toFixed(2) }}
+                </button>
+                }
+
+                <mat-form-field appearance="outline">
+                  <mat-label>Top-up amount (cents)</mat-label>
+                  <input matInput type="number" [(ngModel)]="grokTopUpAmountCents" min="1"
+                    name="grokTopUpAmountCents" />
+                </mat-form-field>
+
+                <button mat-flat-button type="button" (click)="createGrokTopUp()" [disabled]="grokTopUpLoading()">
+                  {{ grokTopUpLoading() ? 'Creating…' : 'Create top-up invoice' }}
+                </button>
+
+                <button mat-stroked-button type="button" (click)="refreshHostedGrok()">Refresh Grok balance</button>
+              </div>
+
+              @if (grokTopUpError()) {
+              <p class="provider-hint provider-error">{{ grokTopUpError() }}</p>
+              }
+
+              @if (grokTopUpPayment(); as payment) {
+              <div class="grok-invoice-shell">
+                <div class="grok-invoice-meta">
+                  <p>Current top-up invoice: {{ payment.id }}</p>
+                  <p>Status: {{ payment.status }}</p>
+                  @if (grokTopUpPolling()) {
+                  <p>Waiting for payment confirmation…</p>
+                  }
+                </div>
+                <app-bolt11-invoice [invoice]="payment.lnInvoice"></app-bolt11-invoice>
+              </div>
+              }
+              }
+            </mat-card-content>
+          </mat-card>
+
           <mat-card class="settings-card">
             <mat-card-header>
               <mat-card-title>Voice</mat-card-title>
@@ -158,7 +228,8 @@
                   <div class="provider-heading-row">
                     <div>
                       <h3>xAI / Grok</h3>
-                      <p>Enable Grok Imagine image generation with your xAI API key.</p>
+                      <p>Optional direct xAI API key for video, voice, or personal API usage outside Nostria-hosted
+                        credits.</p>
                     </div>
                     <span class="provider-status" [class.configured]="providerConfigured('xai')">
                       {{ providerConfigured('xai') ? 'Configured' : 'Not configured' }}

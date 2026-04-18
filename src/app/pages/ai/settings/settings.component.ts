@@ -13,6 +13,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { FormsModule } from '@angular/forms';
+import { Bolt11InvoiceComponent } from '../../../components/bolt11-invoice/bolt11-invoice.component';
 import { SettingsService } from '../../../services/settings.service';
 import { AiCloudProvider, AiManagedModelStatus, AiModelStorageReport, AiService } from '../../../services/ai.service';
 import { AiInfoDialogComponent } from '../../../components/ai-info-dialog/ai-info-dialog.component';
@@ -20,6 +21,7 @@ import { CustomDialogService } from '../../../services/custom-dialog.service';
 import { PanelActionsService } from '../../../services/panel-actions.service';
 import { RightPanelService } from '../../../services/right-panel.service';
 import { PanelNavigationService } from '../../../services/panel-navigation.service';
+import { GrokHostedPayment } from '../../../services/grok-api.service';
 
 interface StandardPromptItem {
   title: string;
@@ -59,7 +61,8 @@ const AI_BROWSER_CACHE = 'nostria-ai';
     MatTooltipModule,
     MatFormFieldModule,
     MatInputModule,
-    FormsModule
+    FormsModule,
+    Bolt11InvoiceComponent
   ],
   templateUrl: './settings.component.html',
   styleUrl: './settings.component.scss',
@@ -160,11 +163,23 @@ export class AiSettingsComponent implements OnInit, OnDestroy {
       totalBytes: files.reduce((total, file) => total + file.bytes, 0),
     };
   });
+  readonly grokConfig = this.aiService.grokConfig;
+  readonly grokStatus = this.aiService.grokStatus;
+  readonly grokConfigLoading = this.aiService.grokConfigLoading;
+  readonly grokStatusLoading = this.aiService.grokStatusLoading;
+  readonly grokError = this.aiService.grokError;
+  readonly grokHasHostedAccess = this.aiService.hasHostedGrokAccess;
 
   openAiApiKey = '';
   xAiApiKey = '';
   showOpenAiApiKey = false;
   showXAiApiKey = false;
+  grokTopUpAmountCents = 1000;
+  grokTopUpPayment = signal<GrokHostedPayment | null>(null);
+  grokTopUpLoading = signal(false);
+  grokTopUpError = signal('');
+  grokTopUpPolling = signal(false);
+  private grokTopUpPollingTimer: ReturnType<typeof setInterval> | null = null;
 
   constructor() {
     const cloudSettings = this.aiService.cloudSettings();
@@ -173,6 +188,8 @@ export class AiSettingsComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
+    void this.aiService.refreshGrokConfig();
+    void this.aiService.refreshGrokStatus();
     void this.refreshModelStorage();
     void this.refreshAiCacheFiles();
     void this.loadStandardPrompts();
@@ -192,6 +209,7 @@ export class AiSettingsComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.releaseAiCachePreviewUrls(this.aiCacheFiles());
+    this.stopGrokTopUpPolling();
 
     if (this.isInRightPanel) {
       this.panelActions.clearRightPanelActions();
@@ -244,6 +262,68 @@ export class AiSettingsComponent implements OnInit, OnDestroy {
 
   providerConfigured(provider: AiCloudProvider): boolean {
     return this.aiService.hasCloudApiKey(provider);
+  }
+
+  formatUsdFromNanos(nanosUsd: number): string {
+    return `$${(nanosUsd / 1000000000).toFixed(2)}`;
+  }
+
+  setGrokTopUpAmount(amountCents: number): void {
+    this.grokTopUpAmountCents = amountCents;
+  }
+
+  async refreshHostedGrok(): Promise<void> {
+    await Promise.all([
+      this.aiService.refreshGrokConfig(),
+      this.aiService.refreshGrokStatus(),
+    ]);
+  }
+
+  async createGrokTopUp(): Promise<void> {
+    this.grokTopUpLoading.set(true);
+    this.grokTopUpError.set('');
+
+    try {
+      const payment = await this.aiService.createGrokTopUp(this.grokTopUpAmountCents);
+      this.grokTopUpPayment.set(payment);
+      this.startGrokTopUpPolling(payment.id);
+      this.snackBar.open('Grok top-up invoice created.', 'Dismiss', { duration: 3000 });
+    } catch (error) {
+      this.grokTopUpError.set(error instanceof Error ? error.message : 'Failed to create Grok top-up invoice.');
+    } finally {
+      this.grokTopUpLoading.set(false);
+    }
+  }
+
+  private startGrokTopUpPolling(paymentId: string): void {
+    this.stopGrokTopUpPolling();
+    this.grokTopUpPolling.set(true);
+    void this.checkGrokTopUpPayment(paymentId);
+    this.grokTopUpPollingTimer = setInterval(() => {
+      void this.checkGrokTopUpPayment(paymentId);
+    }, 5000);
+  }
+
+  private stopGrokTopUpPolling(): void {
+    this.grokTopUpPolling.set(false);
+    if (this.grokTopUpPollingTimer) {
+      clearInterval(this.grokTopUpPollingTimer);
+      this.grokTopUpPollingTimer = null;
+    }
+  }
+
+  private async checkGrokTopUpPayment(paymentId: string): Promise<void> {
+    try {
+      const payment = await this.aiService.getGrokPayment(paymentId);
+      this.grokTopUpPayment.set(payment);
+      if (payment.status === 'paid') {
+        this.stopGrokTopUpPolling();
+        await this.aiService.refreshGrokStatus();
+        this.snackBar.open('Grok credits added to your balance.', 'Dismiss', { duration: 3500 });
+      }
+    } catch (error) {
+      this.grokTopUpError.set(error instanceof Error ? error.message : 'Failed to refresh Grok payment status.');
+    }
   }
 
   toggleApiKeyVisibility(provider: AiCloudProvider): void {
