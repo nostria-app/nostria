@@ -1,11 +1,17 @@
-use std::sync::{Arc, Mutex};
-use std::time::Duration;
-
 use serde::{Deserialize, Serialize};
 use tauri::{
     plugin::{Builder, TauriPlugin},
-    AppHandle, Emitter, Manager, Runtime, WebviewWindow,
+    AppHandle, Manager, Runtime, WebviewWindow,
 };
+
+#[cfg(desktop)]
+use std::{
+    sync::{Arc, Mutex},
+    time::Duration,
+};
+
+#[cfg(desktop)]
+use tauri::Emitter;
 
 #[cfg(desktop)]
 use std::ffi::c_void;
@@ -63,6 +69,7 @@ pub struct TimelineUpdate {
     pub playback_speed: Option<f64>,
 }
 
+#[cfg(desktop)]
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 struct MediaActionPayload {

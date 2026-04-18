@@ -105,6 +105,7 @@ To test the fix:
    - Media keys should work (play/pause/next/previous)
 
 2. **Without Media Session Support** (simulated):
+
    ```javascript
    // In browser console before loading
    Object.defineProperty(navigator, 'mediaSession', {

@@ -7,7 +7,6 @@ edition = "2021"
 homepage = "https://nostria.app"
 repository = "https://github.com/nostria-app/nostria"
 license = "MIT"
-links = "nostria"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -20,7 +19,7 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
 tauri-build = { version = "=2.5.6", features = [] }
-tauri-plugin = { version = "2.0.2", features = ["build"] }
+tauri-utils = "=2.8.3"
 
 [dependencies]
 tauri = { version = "=2.10.3", features = [] }

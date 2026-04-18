@@ -2438,9 +2438,9 @@ dependencies = [
  "souvlaki",
  "tauri",
  "tauri-build",
- "tauri-plugin",
  "tauri-plugin-opener",
  "tauri-plugin-updater",
+ "tauri-utils",
 ]
 
 [[package]]
