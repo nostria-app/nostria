@@ -11,7 +11,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { SafeHtml } from '@angular/platform-browser';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { AiChatMessage, AiCloudProvider, AiGeneratedAudio, AiGeneratedImage, AiGeneratedVideo, AiGenerationProgress, AiImageGenerationOptions, AiModelLoadOptions, AiMultimodalChatMessage, AiMultimodalChatPart, AiService, AiVideoGenerationOptions } from '../../services/ai.service';
+import { AiChatMessage, AiCloudAccessMode, AiCloudProvider, AiGeneratedAudio, AiGeneratedImage, AiGeneratedVideo, AiGenerationProgress, AiImageGenerationOptions, AiModelLoadOptions, AiMultimodalChatMessage, AiMultimodalChatPart, AiService, AiVideoGenerationOptions } from '../../services/ai.service';
 import { AiChatHistoryService, AiHistoryGeneratedAudio, AiHistoryGeneratedImage, AiHistoryGeneratedVideo } from '../../services/ai-chat-history.service';
 import { AiInfoDialogComponent, type AiInfoDialogResult } from '../../components/ai-info-dialog/ai-info-dialog.component';
 import type { ArticleEditorDialogInitialDraft } from '../../components/article-editor-dialog/article-editor-dialog.component';
@@ -41,6 +41,7 @@ interface ModelInfo {
   runtime: string;
   source?: 'local' | 'cloud';
   provider?: AiCloudProvider;
+  cloudAccessMode?: AiCloudAccessMode;
   cloudModel?: string;
   loadOptions?: AiModelLoadOptions;
   chatMode?: 'messages' | 'prompt';
@@ -179,6 +180,7 @@ export class AiComponent {
   readonly attachedFiles = signal<ComposerAttachment[]>([]);
   readonly cloudSettings = this.aiService.cloudSettings;
   readonly hideHistoryRail = computed(() => this.splitPaneMode() || this.narrowHistoryMode());
+  readonly preferredXAiChatAccessMode = signal<AiCloudAccessMode>('api-key');
 
   readonly models = signal<ModelInfo[]>([
     {
@@ -358,25 +360,69 @@ export class AiComponent {
 
   readonly localChatModels = computed(() => this.models().filter(model => this.isChatGenerationTask(model.task) && model.source !== 'cloud'));
   readonly cloudChatModels = computed<ModelInfo[]>(() => {
-    const providers: AiCloudProvider[] = ['xai', 'openai'];
-    return providers
-      .filter(provider => this.aiService.hasCloudChatAccess(provider))
-      .map(provider => ({
-        id: `cloud-chat:${provider}`,
+    const models: ModelInfo[] = [];
+
+    if (this.aiService.hasCloudChatAccessMode('xai', 'api-key')) {
+      models.push({
+        id: 'cloud-chat:xai:api-key',
         task: 'text-generation',
-        name: this.aiService.getProviderLabel(provider),
-        description: `Hosted chat replies through ${this.aiService.getProviderLabel(provider)}.`,
+        name: this.aiService.getCloudModelDisplayName('xai', 'api-key'),
+        description: 'Chat with xAI using your own API key.',
         size: 'Hosted API',
         loading: false,
         progress: 100,
         loaded: true,
         cached: false,
-        runtime: `${this.aiService.getProviderLabel(provider)} API`,
+        runtime: this.aiService.getCloudAccessLabel('xai', 'api-key'),
         source: 'cloud',
-        provider,
-        cloudModel: this.aiService.getChatModel(provider),
+        provider: 'xai',
+        cloudAccessMode: 'api-key',
+        cloudModel: this.aiService.getChatModel('xai', 'api-key'),
         chatMode: 'messages',
-      }));
+      });
+    }
+
+    if (this.aiService.hasCloudChatAccessMode('xai', 'hosted')) {
+      models.push({
+        id: 'cloud-chat:xai:hosted',
+        task: 'text-generation',
+        name: this.aiService.getCloudModelDisplayName('xai', 'hosted'),
+        description: 'Chat with Nostria hosted Grok using your subscription and credits.',
+        size: 'Hosted API',
+        loading: false,
+        progress: 100,
+        loaded: true,
+        cached: false,
+        runtime: this.aiService.getCloudAccessLabel('xai', 'hosted'),
+        source: 'cloud',
+        provider: 'xai',
+        cloudAccessMode: 'hosted',
+        cloudModel: this.aiService.getChatModel('xai', 'hosted'),
+        chatMode: 'messages',
+      });
+    }
+
+    if (this.aiService.hasCloudChatAccessMode('openai', 'api-key')) {
+      models.push({
+        id: 'cloud-chat:openai',
+        task: 'text-generation',
+        name: this.aiService.getCloudModelDisplayName('openai', 'api-key'),
+        description: 'Chat with OpenAI using your own API key.',
+        size: 'Hosted API',
+        loading: false,
+        progress: 100,
+        loaded: true,
+        cached: false,
+        runtime: this.aiService.getCloudAccessLabel('openai', 'api-key'),
+        source: 'cloud',
+        provider: 'openai',
+        cloudAccessMode: 'api-key',
+        cloudModel: this.aiService.getChatModel('openai', 'api-key'),
+        chatMode: 'messages',
+      });
+    }
+
+    return models;
   });
   readonly imageModels = computed<ModelInfo[]>(() => {
     const localImageModels = this.models().filter(model => model.task === 'image-generation' || model.task === 'image-upscaling');
@@ -809,6 +855,18 @@ export class AiComponent {
     });
 
     effect(() => {
+      const hasApiKeyAccess = this.cloudChatModels().some(model => model.provider === 'xai' && model.cloudAccessMode === 'api-key');
+      const hasHostedAccess = this.cloudChatModels().some(model => model.provider === 'xai' && model.cloudAccessMode === 'hosted');
+      const preferred = this.preferredXAiChatAccessMode();
+
+      if (preferred === 'api-key' && !hasApiKeyAccess && hasHostedAccess) {
+        this.preferredXAiChatAccessMode.set('hosted');
+      } else if (preferred === 'hosted' && !hasHostedAccess && hasApiKeyAccess) {
+        this.preferredXAiChatAccessMode.set('api-key');
+      }
+    });
+
+    effect(() => {
       const selection = this.aiService.queuedStandardPrompt();
       if (!selection) {
         return;
@@ -931,8 +989,9 @@ export class AiComponent {
       return;
     }
 
-    if (this.composerModels().some(model => model.id === history.modelId)) {
-      this.selectedModelId.set(history.modelId);
+    const resolvedModelId = this.resolveModelId(history.modelId);
+    if (resolvedModelId) {
+      this.selectModel(resolvedModelId);
     }
 
     this.currentConversationId.set(history.id);
@@ -962,7 +1021,16 @@ export class AiComponent {
   }
 
   selectModel(modelId: string): void {
-    this.selectedModelId.set(modelId);
+    const model = this.composerModels().find(candidate => candidate.id === modelId);
+    if (!model) {
+      return;
+    }
+
+    if (model.provider === 'xai' && model.task === 'text-generation' && model.source === 'cloud') {
+      this.preferredXAiChatAccessMode.set(model.cloudAccessMode === 'hosted' ? 'hosted' : 'api-key');
+    }
+
+    this.selectedModelId.set(model.id);
   }
 
   onComposerKeydown(event: KeyboardEvent): void {
@@ -990,7 +1058,7 @@ export class AiComponent {
 
   selectGrokMode(mode: XAiComposerMode): void {
     const model = mode === 'text'
-      ? this.cloudChatModels().find(candidate => candidate.provider === 'xai')
+      ? this.getPreferredXAiTextModel()
       : mode === 'image'
         ? this.imageModels().find(candidate => candidate.task === 'image-generation' && candidate.provider === 'xai')
         : mode === 'video'
@@ -1440,7 +1508,7 @@ export class AiComponent {
       let assistantReply: string;
       if (model.source === 'cloud' && model.provider) {
         const input = this.buildGenerationInput(model, generationConversation) as AiChatMessage[];
-        assistantReply = await this.aiService.generateCloudText(input, model.provider, model.cloudModel);
+        assistantReply = await this.aiService.generateCloudText(input, model.provider, model.cloudModel, model.cloudAccessMode);
       } else if (model.task === 'image-text-to-text') {
         const input = await this.buildMultimodalGenerationInput(generationConversation);
         assistantReply = await this.aiService.generateMultimodalText(
@@ -1831,6 +1899,20 @@ export class AiComponent {
 
   statusLabel(model: ModelInfo): string {
     if (model.source === 'cloud') {
+      if (model.task === 'text-generation') {
+        if (model.provider === 'openai') {
+          return 'Key';
+        }
+
+        if (model.provider === 'xai') {
+          return model.cloudAccessMode === 'hosted' ? 'Hosted' : 'Key';
+        }
+      }
+
+      if (model.task === 'text-generation' && model.provider === 'xai') {
+        return model.cloudAccessMode === 'hosted' ? 'Hosted' : 'Key';
+      }
+
       if (model.task === 'image-generation') {
         return 'Image';
       }
@@ -1859,6 +1941,24 @@ export class AiComponent {
     }
 
     return 'Not loaded';
+  }
+
+  private getPreferredXAiTextModel(): ModelInfo | undefined {
+    const preferredMode = this.preferredXAiChatAccessMode();
+    return this.cloudChatModels().find(candidate => candidate.provider === 'xai' && candidate.cloudAccessMode === preferredMode)
+      ?? this.cloudChatModels().find(candidate => candidate.provider === 'xai');
+  }
+
+  private resolveModelId(modelId: string): string | null {
+    if (this.composerModels().some(model => model.id === modelId)) {
+      return modelId;
+    }
+
+    if (modelId === 'cloud-chat:xai') {
+      return this.getPreferredXAiTextModel()?.id ?? null;
+    }
+
+    return null;
   }
 
   async loadModel(model: ModelInfo): Promise<boolean> {
@@ -1997,7 +2097,7 @@ export class AiComponent {
       let assistantReply: string;
       if (model.source === 'cloud' && model.provider) {
         const input = this.buildGenerationInput(model, generationConversation) as AiChatMessage[];
-        assistantReply = await this.aiService.generateCloudText(input, model.provider, model.cloudModel);
+        assistantReply = await this.aiService.generateCloudText(input, model.provider, model.cloudModel, model.cloudAccessMode);
       } else if (model.task === 'image-text-to-text') {
         const input = await this.buildMultimodalGenerationInput(generationConversation);
         assistantReply = await this.aiService.generateMultimodalText(

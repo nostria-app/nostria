@@ -678,7 +678,7 @@
           <div class="model-menu-item" [class.model-menu-item-selected]="chatModel.id === selectedModelId()">
             <div class="model-menu-copy">
               <span class="model-menu-title">{{ chatModel.name }}</span>
-              <span class="model-menu-meta">{{ chatModel.runtime }}</span>
+              <span class="model-menu-meta">{{ chatModel.runtime }}@if (chatModel.cloudModel) { · {{ chatModel.cloudModel }} }</span>
             </div>
             <div class="model-menu-trailing">
               <span class="status-chip" [class.status-loaded]="chatModel.loaded"

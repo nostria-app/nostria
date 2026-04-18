@@ -43,6 +43,7 @@ export interface AiImageGenerationProgress {
 }
 
 export type AiCloudProvider = 'openai' | 'xai';
+export type AiCloudAccessMode = 'api-key' | 'hosted';
 export type AiImageProvider = AiCloudProvider | 'local';
 export type AiGeneratedMediaProvider = AiImageProvider;
 
@@ -665,6 +666,22 @@ export class AiService {
     return provider === 'openai' ? 'OpenAI' : 'xAI / Grok';
   }
 
+  getCloudAccessLabel(provider: AiCloudProvider, accessMode: AiCloudAccessMode = 'api-key'): string {
+    if (provider === 'openai') {
+      return 'Your API key';
+    }
+
+    return accessMode === 'hosted' ? 'Nostria backend' : 'Your xAI key';
+  }
+
+  getCloudModelDisplayName(provider: AiCloudProvider, accessMode: AiCloudAccessMode = 'api-key'): string {
+    if (provider === 'openai') {
+      return 'OpenAI';
+    }
+
+    return accessMode === 'hosted' ? 'Nostria Grok' : 'xAI / Grok';
+  }
+
   getImageModel(provider: AiCloudProvider): string {
     const cloudSettings = this.cloudSettings();
     if (provider === 'openai') {
@@ -689,13 +706,15 @@ export class AiService {
     return 'xAI Voice';
   }
 
-  getChatModel(provider: AiCloudProvider): string {
+  getChatModel(provider: AiCloudProvider, accessMode: AiCloudAccessMode = 'api-key'): string {
     const cloudSettings = this.cloudSettings();
     if (provider === 'openai') {
       return cloudSettings.openaiChatModel;
     }
 
-    return this.hasCloudApiKey('xai')
+    return accessMode === 'hosted'
+      ? this.grokConfig()?.defaults.responseModel || cloudSettings.xaiChatModel
+      : this.hasCloudApiKey('xai')
       ? cloudSettings.xaiChatModel
       : this.grokConfig()?.defaults.responseModel || cloudSettings.xaiChatModel;
   }
@@ -711,6 +730,14 @@ export class AiService {
     return provider === 'openai'
       ? this.hasCloudApiKey('openai')
       : this.hasCloudApiKey('xai') || this.hasHostedGrokAccess();
+  }
+
+  hasCloudChatAccessMode(provider: AiCloudProvider, accessMode: AiCloudAccessMode = 'api-key'): boolean {
+    if (provider === 'openai') {
+      return accessMode === 'api-key' && this.hasCloudApiKey('openai');
+    }
+
+    return accessMode === 'hosted' ? this.hasHostedGrokAccess() : this.hasCloudApiKey('xai');
   }
 
   hasCloudImageAccess(provider: AiCloudProvider): boolean {
@@ -875,16 +902,16 @@ export class AiService {
     return this.mapUpscaledImage(payload, model, prompt);
   }
 
-  async generateCloudText(messages: AiChatMessage[], provider: AiCloudProvider, model?: string): Promise<string> {
+  async generateCloudText(messages: AiChatMessage[], provider: AiCloudProvider, model?: string, accessMode: AiCloudAccessMode = 'api-key'): Promise<string> {
     const apiKey = provider === 'openai' ? this.cloudSettings().openaiApiKey : this.cloudSettings().xaiApiKey;
-    if (provider === 'xai' && !apiKey && this.hasHostedGrokAccess()) {
+    if (provider === 'xai' && (accessMode === 'hosted' || (!apiKey && this.hasHostedGrokAccess()))) {
       const pubkey = this.accountState.pubkey();
       if (!pubkey) {
         throw new Error('Log in to use hosted Grok credits.');
       }
 
       const payload = await this.grokApi.createResponse(pubkey, {
-        model: model?.trim() || this.getChatModel('xai'),
+        model: model?.trim() || this.getChatModel('xai', 'hosted'),
         messages,
       });
       const content = this.extractChatCompletionText(payload.data);
@@ -897,10 +924,10 @@ export class AiService {
     }
 
     if (!apiKey) {
-      throw new Error(`${this.getProviderLabel(provider)} API key is missing.`);
+      throw new Error(`${this.getCloudAccessLabel(provider, accessMode)} is not configured.`);
     }
 
-    const resolvedModel = model?.trim() || this.getChatModel(provider);
+    const resolvedModel = model?.trim() || this.getChatModel(provider, accessMode);
     if (!resolvedModel) {
       throw new Error(`${this.getProviderLabel(provider)} chat model is not configured.`);
     }
