@@ -1,5 +1,6 @@
 .ai-page {
   --ai-chat-surface-background: var(--mat-sys-surface);
+  --ai-history-sidebar-width: 250px;
   --ai-page-vertical-padding: 16px;
   display: flex;
   flex-direction: column;
@@ -14,7 +15,7 @@
 .ai-shell {
   flex: 1 1 auto;
   display: grid;
-  grid-template-columns: 250px minmax(0, 1fr);
+  grid-template-columns: var(--ai-history-sidebar-width) minmax(0, 1fr);
   gap: 20px;
   min-height: calc(100dvh - var(--toolbar-height, 64px) - (var(--ai-page-vertical-padding) * 2));
   height: calc(100dvh - var(--toolbar-height, 64px) - (var(--ai-page-vertical-padding) * 2));
@@ -1589,18 +1590,6 @@
 
 .hidden-file-input {
   display: none;
-}
-
-@media (max-width: 1380px) {
-  .ai-shell {
-    grid-template-columns: 300px minmax(0, 1fr);
-  }
-}
-
-@media (max-width: 1240px) {
-  .ai-shell {
-    grid-template-columns: 280px minmax(0, 1fr);
-  }
 }
 
 @media (max-width: 1120px) {
