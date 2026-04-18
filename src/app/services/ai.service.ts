@@ -715,8 +715,8 @@ export class AiService {
     return accessMode === 'hosted'
       ? this.grokConfig()?.defaults.responseModel || cloudSettings.xaiChatModel
       : this.hasCloudApiKey('xai')
-      ? cloudSettings.xaiChatModel
-      : this.grokConfig()?.defaults.responseModel || cloudSettings.xaiChatModel;
+        ? cloudSettings.xaiChatModel
+        : this.grokConfig()?.defaults.responseModel || cloudSettings.xaiChatModel;
   }
 
   hasCloudApiKey(provider: AiCloudProvider): boolean {
