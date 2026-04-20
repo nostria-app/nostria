@@ -440,9 +440,10 @@ class MediaSessionPlugin(private val activity: Activity) : Plugin(activity) {
                         .setUsage(C.USAGE_MEDIA)
                         .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
                         .build(),
-                    true
+                    false
                 )
                 setWakeMode(C.WAKE_MODE_NETWORK)
+                volume = 1f
             }
 
         val listener = object : Player.Listener {
@@ -462,6 +463,18 @@ class MediaSessionPlugin(private val activity: Activity) : Plugin(activity) {
                 }
             }
 
+            override fun onPlaybackParametersChanged(playbackParameters: PlaybackParameters) {
+                currentPlaybackSpeed = playbackParameters.speed.toDouble()
+                emitPlaybackState()
+            }
+
+            override fun onPlayerError(error: PlaybackException) {
+                Log.e(TAG, "Player error: ${error.errorCodeName} - ${error.message}", error)
+                currentIsPlaying = false
+                stopNativePlaybackTicker()
+                emitPlaybackState(error = error.message ?: "native audio playback failed")
+            }
+
             override fun onPlaybackStateChanged(playbackState: Int) {
                 currentPosition = player.currentPosition.coerceAtLeast(0L) / 1000.0
                 val duration = player.duration
@@ -475,17 +488,6 @@ class MediaSessionPlugin(private val activity: Activity) : Plugin(activity) {
                 if (playbackState == Player.STATE_ENDED) {
                     stopNativePlaybackTicker()
                 }
-            }
-
-            override fun onPlaybackParametersChanged(playbackParameters: PlaybackParameters) {
-                currentPlaybackSpeed = playbackParameters.speed.toDouble()
-                emitPlaybackState()
-            }
-
-            override fun onPlayerError(error: PlaybackException) {
-                currentIsPlaying = false
-                stopNativePlaybackTicker()
-                emitPlaybackState(error = error.message ?: "native audio playback failed")
             }
         }
 
