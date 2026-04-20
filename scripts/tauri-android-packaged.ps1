@@ -69,7 +69,7 @@ function Get-ConnectedDevices {
     ForEach-Object {
       $serial = ($_ -split "\t")[0].Trim()
       [PSCustomObject]@{
-        Serial = $serial
+        Serial     = $serial
         IsEmulator = $serial.StartsWith('emulator-')
       }
     }
@@ -79,22 +79,22 @@ function Get-ConnectedDevices {
 function Resolve-TargetConfig {
   if ($Emulator) {
     return [PSCustomObject]@{
-      Abi = 'x86_64'
-      Arch = 'x86_64'
-      Target = 'x86_64'
-      Flavor = 'x86_64'
-      Reason = 'packaging only the emulator ABI (x86_64)'
+      Abi             = 'x86_64'
+      Arch            = 'x86_64'
+      Target          = 'x86_64'
+      Flavor          = 'x86_64'
+      Reason          = 'packaging only the emulator ABI (x86_64)'
       RequireEmulator = $true
     }
   }
 
   if ($PhysicalDevice) {
     return [PSCustomObject]@{
-      Abi = 'arm64-v8a'
-      Arch = 'arm64'
-      Target = 'aarch64'
-      Flavor = 'arm64'
-      Reason = 'packaging only the physical-device ABI (arm64-v8a)'
+      Abi             = 'arm64-v8a'
+      Arch            = 'arm64'
+      Target          = 'aarch64'
+      Flavor          = 'arm64'
+      Reason          = 'packaging only the physical-device ABI (arm64-v8a)'
       RequireEmulator = $false
     }
   }
