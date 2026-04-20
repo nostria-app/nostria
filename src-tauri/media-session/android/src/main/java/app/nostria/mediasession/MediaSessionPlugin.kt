@@ -18,6 +18,7 @@ import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
+import android.util.Log
 import android.media.AudioManager
 import android.support.v4.media.MediaMetadataCompat
 import android.support.v4.media.session.MediaSessionCompat
@@ -124,12 +125,14 @@ class MediaSessionPlugin(private val activity: Activity) : Plugin(activity) {
     private val sessionTag: String by lazy { "${activity.packageName}.MediaSession" }
 
     init {
+        Log.i(TAG, "MediaSessionPlugin instance constructed for ${activity.packageName}")
         activeInstance?.takeOverSession(this)
         activeInstance = this
     }
 
     @Command
     fun initialize(invoke: Invoke) {
+        Log.i(TAG, "initialize() invoked")
         requestNotificationPermission()
         ensureSession()
         invoke.resolve()
@@ -196,13 +199,21 @@ class MediaSessionPlugin(private val activity: Activity) : Plugin(activity) {
 
     @Command
     fun clear(invoke: Invoke) {
-        releaseSession()
-        invoke.resolve()
+        runOnPlayerThread {
+            try {
+                releaseSession()
+                invoke.resolve()
+            } catch (error: Throwable) {
+                Log.e(TAG, "clear failed", error)
+                invoke.reject(error.message ?: "clear failed")
+            }
+        }
     }
 
     @Command
     fun playAudio(invoke: Invoke) {
         val args = invoke.parseArgs(PlayAudioArgs::class.java)
+        Log.i(TAG, "playAudio() invoked source=${args.source} title=${args.title}")
         if (args.source.isBlank()) {
             invoke.reject("audio source is required")
             return
@@ -212,102 +223,152 @@ class MediaSessionPlugin(private val activity: Activity) : Plugin(activity) {
             return
         }
 
-        requestNotificationPermission()
-        val session = ensureSession() ?: run {
-            invoke.reject("media session unavailable")
-            return
-        }
+        runOnPlayerThread {
+            try {
+                requestNotificationPermission()
+                val session = ensureSession() ?: run {
+                    invoke.reject("media session unavailable")
+                    return@runOnPlayerThread
+                }
 
-        args.title?.let { currentTitle = it.trim() }
-        args.artist?.let { currentArtist = it.trim() }
-        args.album?.let { currentAlbum = it.trim() }
-        args.playbackSpeed?.let { currentPlaybackSpeed = it }
-        args.canPrev?.let { currentCanPrev = it }
-        args.canNext?.let { currentCanNext = it }
-        args.canSeek?.let { currentCanSeek = it }
+                args.title?.let { currentTitle = it.trim() }
+                args.artist?.let { currentArtist = it.trim() }
+                args.album?.let { currentAlbum = it.trim() }
+                args.playbackSpeed?.let { currentPlaybackSpeed = it }
+                args.canPrev?.let { currentCanPrev = it }
+                args.canNext?.let { currentCanNext = it }
+                args.canSeek?.let { currentCanSeek = it }
 
-        args.artworkUrl?.let { artworkUrl ->
-            if (artworkUrl.isBlank()) {
-                cachedArtworkUrl = null
-                recycleCachedArtworkBitmap()
-                cachedArtworkBitmap = getFallbackArtworkBitmap()
-            } else if (artworkUrl != cachedArtworkUrl) {
-                cachedArtworkUrl = artworkUrl
-                downloadAndApplyArtwork(artworkUrl)
+                args.artworkUrl?.let { artworkUrl ->
+                    if (artworkUrl.isBlank()) {
+                        cachedArtworkUrl = null
+                        recycleCachedArtworkBitmap()
+                        cachedArtworkBitmap = getFallbackArtworkBitmap()
+                    } else if (artworkUrl != cachedArtworkUrl) {
+                        cachedArtworkUrl = artworkUrl
+                        downloadAndApplyArtwork(artworkUrl)
+                    }
+                }
+
+                val player = ensureNativePlayer()
+                player.setMediaItem(ExoMediaItem.fromUri(args.source))
+                player.prepare()
+
+                val seekPositionMs = ((args.position ?: 0.0).coerceAtLeast(0.0) * 1000.0).toLong()
+                if (seekPositionMs > 0) {
+                    player.seekTo(seekPositionMs)
+                }
+
+                player.playbackParameters = PlaybackParameters((args.playbackSpeed ?: 1.0).toFloat())
+                player.playWhenReady = true
+
+                currentPosition = args.position ?: 0.0
+                currentIsPlaying = true
+                val metadata = buildMetadata()
+                session.setMetadata(metadata)
+                session.setPlaybackState(buildPlaybackState())
+                session.isActive = true
+                updateNotification(metadata)?.let { MediaSessionCleanupService.start(appContext, it) }
+                emitPlaybackState()
+                startNativePlaybackTicker()
+                invoke.resolve()
+            } catch (error: Throwable) {
+                Log.e(TAG, "playAudio failed", error)
+                invoke.reject(error.message ?: "native audio playback failed")
             }
         }
-
-        val player = ensureNativePlayer()
-        player.setMediaItem(ExoMediaItem.fromUri(args.source))
-        player.prepare()
-
-        val seekPositionMs = ((args.position ?: 0.0).coerceAtLeast(0.0) * 1000.0).toLong()
-        if (seekPositionMs > 0) {
-            player.seekTo(seekPositionMs)
-        }
-
-        player.playbackParameters = PlaybackParameters((args.playbackSpeed ?: 1.0).toFloat())
-        player.playWhenReady = true
-
-        currentPosition = args.position ?: 0.0
-        currentIsPlaying = true
-        val metadata = buildMetadata()
-        session.setMetadata(metadata)
-        session.setPlaybackState(buildPlaybackState())
-        session.isActive = true
-        updateNotification(metadata)?.let { MediaSessionCleanupService.start(appContext, it) }
-        emitPlaybackState()
-        startNativePlaybackTicker()
-        invoke.resolve()
     }
 
     @Command
     fun pauseAudio(invoke: Invoke) {
-        nativePlayer?.pause()
-        currentIsPlaying = false
-        refreshBackgroundPlaybackProtection()
-        emitPlaybackState()
-        invoke.resolve()
+        runOnPlayerThread {
+            try {
+                nativePlayer?.pause()
+                currentIsPlaying = false
+                refreshBackgroundPlaybackProtection()
+                emitPlaybackState()
+                invoke.resolve()
+            } catch (error: Throwable) {
+                Log.e(TAG, "pauseAudio failed", error)
+                invoke.reject(error.message ?: "pauseAudio failed")
+            }
+        }
     }
 
     @Command
     fun resumeAudio(invoke: Invoke) {
-        val player = nativePlayer ?: run {
-            invoke.reject("native audio is not initialized")
-            return
-        }
+        runOnPlayerThread {
+            try {
+                val player = nativePlayer ?: run {
+                    invoke.reject("native audio is not initialized")
+                    return@runOnPlayerThread
+                }
 
-        player.play()
-        currentIsPlaying = true
-        refreshBackgroundPlaybackProtection()
-        emitPlaybackState()
-        startNativePlaybackTicker()
-        invoke.resolve()
+                player.play()
+                currentIsPlaying = true
+                refreshBackgroundPlaybackProtection()
+                emitPlaybackState()
+                startNativePlaybackTicker()
+                invoke.resolve()
+            } catch (error: Throwable) {
+                Log.e(TAG, "resumeAudio failed", error)
+                invoke.reject(error.message ?: "resumeAudio failed")
+            }
+        }
     }
 
     @Command
     fun stopAudio(invoke: Invoke) {
-        stopNativeAudio(false)
-        emitPlaybackState()
-        invoke.resolve()
+        runOnPlayerThread {
+            try {
+                stopNativeAudio(false)
+                emitPlaybackState()
+                invoke.resolve()
+            } catch (error: Throwable) {
+                Log.e(TAG, "stopAudio failed", error)
+                invoke.reject(error.message ?: "stopAudio failed")
+            }
+        }
     }
 
     @Command
     fun seekAudio(invoke: Invoke) {
         val args = invoke.parseArgs(SeekAudioArgs::class.java)
-        nativePlayer?.seekTo((args.position.coerceAtLeast(0.0) * 1000.0).toLong())
-        currentPosition = args.position.coerceAtLeast(0.0)
-        emitPlaybackState()
-        invoke.resolve()
+        runOnPlayerThread {
+            try {
+                nativePlayer?.seekTo((args.position.coerceAtLeast(0.0) * 1000.0).toLong())
+                currentPosition = args.position.coerceAtLeast(0.0)
+                emitPlaybackState()
+                invoke.resolve()
+            } catch (error: Throwable) {
+                Log.e(TAG, "seekAudio failed", error)
+                invoke.reject(error.message ?: "seekAudio failed")
+            }
+        }
     }
 
     @Command
     fun setAudioRate(invoke: Invoke) {
         val args = invoke.parseArgs(SetAudioRateArgs::class.java)
-        nativePlayer?.playbackParameters = PlaybackParameters(args.playbackSpeed.toFloat())
-        currentPlaybackSpeed = args.playbackSpeed
-        emitPlaybackState()
-        invoke.resolve()
+        runOnPlayerThread {
+            try {
+                nativePlayer?.playbackParameters = PlaybackParameters(args.playbackSpeed.toFloat())
+                currentPlaybackSpeed = args.playbackSpeed
+                emitPlaybackState()
+                invoke.resolve()
+            } catch (error: Throwable) {
+                Log.e(TAG, "setAudioRate failed", error)
+                invoke.reject(error.message ?: "setAudioRate failed")
+            }
+        }
+    }
+
+    private fun runOnPlayerThread(block: () -> Unit) {
+        if (Looper.myLooper() == Looper.getMainLooper()) {
+            block()
+        } else {
+            mainHandler.post(block)
+        }
     }
 
     override fun onDestroy() {
@@ -371,16 +432,18 @@ class MediaSessionPlugin(private val activity: Activity) : Plugin(activity) {
     private fun ensureNativePlayer(): ExoPlayer {
         nativePlayer?.let { return it }
 
-        val player = ExoPlayer.Builder(appContext).build().apply {
-            setAudioAttributes(
-                AudioAttributes.Builder()
-                    .setUsage(C.USAGE_MEDIA)
-                    .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
-                    .build(),
-                true
-            )
-            setWakeMode(C.WAKE_MODE_NETWORK)
-        }
+        val player = ExoPlayer.Builder(appContext)
+            .setLooper(Looper.getMainLooper())
+            .build().apply {
+                setAudioAttributes(
+                    AudioAttributes.Builder()
+                        .setUsage(C.USAGE_MEDIA)
+                        .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
+                        .build(),
+                    true
+                )
+                setWakeMode(C.WAKE_MODE_NETWORK)
+            }
 
         val listener = object : Player.Listener {
             override fun onIsPlayingChanged(isPlaying: Boolean) {
@@ -889,6 +952,7 @@ class MediaSessionPlugin(private val activity: Activity) : Plugin(activity) {
     }
 
     companion object {
+        private const val TAG = "plugin/media-session"
         private const val NOTIFICATION_PERMISSION_REQUEST_CODE = 9402
         private const val MAX_ARTWORK_SIZE = 512
         private const val RC_PLAY = 1

@@ -506,6 +506,12 @@ fn sanitize_dbus_name(identifier: &str) -> String {
 }
 
 #[tauri::command]
+fn log<R: Runtime>(_app: AppHandle<R>, message: String) -> Result<(), String> {
+    eprintln!("[media-session] {}", message);
+    Ok(())
+}
+
+#[tauri::command]
 fn initialize<R: Runtime>(app: AppHandle<R>, window: WebviewWindow<R>) -> Result<(), String> {
     #[cfg(mobile)]
     {
@@ -720,6 +726,7 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            log,
             initialize,
             update_state,
             update_timeline,

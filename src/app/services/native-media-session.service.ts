@@ -130,7 +130,7 @@ export class NativeMediaSessionService {
       return;
     }
 
-    await invoke('plugin:media-session|play_audio', request);
+    await invoke('plugin:media-session|play_audio', { request });
     this.initialized = true;
   }
 
@@ -163,7 +163,7 @@ export class NativeMediaSessionService {
       return;
     }
 
-    await invoke('plugin:media-session|seek_audio', { position });
+    await invoke('plugin:media-session|seek_audio', { request: { position } });
   }
 
   async setAudioRate(playbackSpeed: number): Promise<void> {
@@ -171,7 +171,7 @@ export class NativeMediaSessionService {
       return;
     }
 
-    await invoke('plugin:media-session|set_audio_rate', { playbackSpeed });
+    await invoke('plugin:media-session|set_audio_rate', { request: { playbackSpeed } });
   }
 
   private async registerListeners(): Promise<void> {

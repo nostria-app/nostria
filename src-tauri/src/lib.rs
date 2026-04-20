@@ -15,6 +15,11 @@ fn greet(name: &str) -> String {
 }
 
 #[tauri::command]
+fn log_js(message: String) {
+    eprintln!("[js] {}", message);
+}
+
+#[tauri::command]
 fn desktop_update_context() -> DesktopUpdateContext {
     #[cfg(target_os = "linux")]
     {
@@ -70,7 +75,7 @@ pub fn run() {
         .plugin(media_session::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
-        .invoke_handler(tauri::generate_handler![greet, desktop_update_context])
+        .invoke_handler(tauri::generate_handler![greet, log_js, desktop_update_context])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

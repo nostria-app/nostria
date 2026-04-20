@@ -223,23 +223,15 @@ export class MediaPlayerService implements OnInitialized {
   }
 
   private canUseNativeAndroidAudio(source: string, file: MediaItem): boolean {
-    if (!this.nativeMediaSession.isAndroidRuntime()) {
-      return false;
-    }
-
-    if (!(file.type === 'Music' || file.type === 'Podcast')) {
-      return false;
-    }
-
+    const isAndroid = this.nativeMediaSession.isAndroidRuntime();
+    const type = file.type;
     const normalizedSource = source.trim().toLowerCase();
-    if (
-      normalizedSource.startsWith('blob:')
+    const badScheme = normalizedSource.startsWith('blob:')
       || normalizedSource.startsWith('data:')
-      || normalizedSource.startsWith('file:')
-    ) {
-      return false;
-    }
-
+      || normalizedSource.startsWith('file:');
+    if (!isAndroid) return false;
+    if (!(type === 'Music' || type === 'Podcast')) return false;
+    if (badScheme) return false;
     return true;
   }
 
@@ -1614,6 +1606,10 @@ export class MediaPlayerService implements OnInitialized {
   });
 
   async start() {
+    console.log('[media-session] start() invoked index=', this.index, 'queueLen=', this.media().length);
+    import('@tauri-apps/api/core').then(({ invoke, isTauri }) => {
+      if (isTauri()) invoke('log_js', { message: `[media-session] start() index=${this.index} queueLen=${this.media().length}` }).catch(() => { });
+    }).catch(() => { });
     if (this.index === -1) {
       this.index = 0;
     }

@@ -15,10 +15,17 @@ const ANDROID_SIGNER_COMMANDS: &[&str] = &[
 ];
 
 const MEDIA_SESSION_COMMANDS: &[&str] = &[
+    "log",
     "initialize",
     "update_state",
     "update_timeline",
     "clear",
+    "play_audio",
+    "pause_audio",
+    "resume_audio",
+    "stop_audio",
+    "seek_audio",
+    "set_audio_rate",
 ];
 
 const ANDROID_MEDIA_SESSION_ENV: &str = "DEP_MEDIA_SESSION_ANDROID_LIBRARY_PATH";
