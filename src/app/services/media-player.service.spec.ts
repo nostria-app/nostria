@@ -16,6 +16,7 @@ import { AccountLocalStateService } from './account-local-state.service';
 import { DomSanitizer } from '@angular/platform-browser';
 import { Router } from '@angular/router';
 import { MediaItem } from '../interfaces';
+import { NativeMediaSessionService } from './native-media-session.service';
 
 describe('MediaPlayerService - Media Session API', () => {
     let service: MediaPlayerService;
@@ -368,6 +369,99 @@ describe('MediaPlayerService - Media Session API', () => {
 
             vi.stubGlobal('Audio', originalAudio);
             vi.stubGlobal('MediaMetadata', originalMediaMetadata);
+        }
+    });
+
+    it('falls back to HTML audio when native Android audio rejects immediately', async () => {
+        const originalAudio = globalThis.Audio;
+        const originalUserAgent = navigator.userAgent;
+        const playSpy = vi.fn().mockResolvedValue(undefined);
+        const showMediaPlayer = signal(false);
+        const expandedMediaPlayer = signal(false);
+        const mockNativeMediaSession = {
+            setActionHandler: vi.fn(),
+            setPlaybackStateHandler: vi.fn(),
+            isAndroidRuntime: vi.fn().mockReturnValue(true),
+            playAudio: vi.fn().mockRejectedValue(new Error('native playback unavailable')),
+            stopAudio: vi.fn().mockResolvedValue(undefined),
+            pauseAudio: vi.fn().mockResolvedValue(undefined),
+            resumeAudio: vi.fn().mockResolvedValue(undefined),
+            seekAudio: vi.fn().mockResolvedValue(undefined),
+            setAudioRate: vi.fn().mockResolvedValue(undefined),
+            updateState: vi.fn().mockResolvedValue(undefined),
+            updateTimeline: vi.fn().mockResolvedValue(undefined),
+            clear: vi.fn().mockResolvedValue(undefined),
+        };
+
+        class MockAudio {
+            src = '';
+            crossOrigin: string | null = null;
+            error = null;
+            currentTime = 0;
+            duration = 0;
+            playbackRate = 1;
+            volume = 1;
+            muted = false;
+
+            addEventListener = vi.fn();
+            removeEventListener = vi.fn();
+            play = playSpy;
+            pause = vi.fn();
+            load = vi.fn();
+        }
+
+        vi.stubGlobal('Audio', MockAudio as unknown as typeof Audio);
+
+        Object.defineProperty(navigator, 'userAgent', {
+            value: 'Mozilla/5.0 (Linux; Android 14; sdk_gphone64_x86_64) AppleWebKit/537.36 Chrome/123.0.0.0 Mobile Safari/537.36',
+            writable: true,
+            configurable: true,
+        });
+
+        const testBed = TestBed.configureTestingModule({
+            providers: [
+                provideZonelessChangeDetection(),
+                MediaPlayerService,
+                { provide: ApplicationService, useValue: { isBrowser: () => true, initialized: () => false } },
+                { provide: NativeMediaSessionService, useValue: mockNativeMediaSession },
+                { provide: LocalStorageService, useValue: { getItem: () => null, setItem: () => { }, removeItem: () => { } } },
+                { provide: LayoutService, useValue: { showMediaPlayer, expandedMediaPlayer } },
+                { provide: UtilitiesService, useValue: { sanitizeUrlAndBypassFrame: (url: string) => url } },
+                { provide: WakeLockService, useValue: {} },
+                { provide: OfflineMusicService, useValue: { getCachedAudioUrl: vi.fn().mockImplementation(async (url: string) => url), getCachedImageUrl: vi.fn().mockImplementation(async (url: string) => url) } },
+                { provide: AccountStateService, useValue: { pubkey: () => null } },
+                { provide: AccountLocalStateService, useValue: {} },
+                { provide: DomSanitizer, useValue: { bypassSecurityTrustResourceUrl: (url: string) => url } },
+                { provide: Router, useValue: {} },
+            ],
+        });
+
+        const androidService = testBed.inject(MediaPlayerService);
+        androidService.media.set([
+            {
+                artwork: 'https://example.com/cover.jpg',
+                title: 'Track 1',
+                artist: 'Artist',
+                source: 'https://example.com/track.mp3',
+                type: 'Music',
+            },
+        ]);
+        androidService.index = 0;
+
+        try {
+            await androidService.start();
+
+            expect(mockNativeMediaSession.playAudio).toHaveBeenCalledTimes(1);
+            expect(playSpy).toHaveBeenCalledTimes(1);
+            expect(androidService.audio?.src).toBe('https://example.com/track.mp3');
+            expect((androidService as any).nativeAndroidAudioActive).toBe(false);
+        } finally {
+            vi.stubGlobal('Audio', originalAudio);
+            Object.defineProperty(navigator, 'userAgent', {
+                value: originalUserAgent,
+                writable: true,
+                configurable: true,
+            });
         }
     });
 });

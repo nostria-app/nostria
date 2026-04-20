@@ -308,8 +308,16 @@
                 <div class="generated-image-meta">
                   <span>{{ video.providerLabel }}</span>
                   <span>{{ video.model }}</span>
+                  @if (video.costInUsdTicks !== undefined) {
+                  <span>Cost {{ formatUsdTicks(video.costInUsdTicks) }}</span>
+                  }
                 </div>
                 <p>{{ video.prompt }}</p>
+                @if (video.originalUrl || video.src) {
+                <a [href]="video.originalUrl || video.src" target="_blank" rel="noopener noreferrer" download>
+                  Download original video
+                </a>
+                }
               </div>
             </article>
             }
@@ -556,11 +564,13 @@
             <span>{{ xAiVideoDurationLabel() }}</span>
             <mat-icon>expand_more</mat-icon>
           </button>
+          @if (!hasImageVideoInput()) {
           <button type="button" class="grok-toolbar-chip" [matMenuTriggerFor]="xAiVideoAspectRatioMenu"
             [disabled]="isGenerating()" [attr.title]="'Video aspect ratio ' + xAiVideoAspectRatioLabel()">
             <span>{{ xAiVideoAspectRatioLabel() }}</span>
             <mat-icon>expand_more</mat-icon>
           </button>
+          }
         </div>
         } @else if (isXAiVoiceGenerationMode()) {
         <div class="grok-toolbar-group" role="group" aria-label="Voice settings">

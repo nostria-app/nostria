@@ -74,6 +74,11 @@ interface ComposerAttachment {
   previewUrl?: string;
 }
 
+interface ImageDimensions {
+  width: number;
+  height: number;
+}
+
 interface AiQuickPrompt {
   label: string;
   prompt: string;
@@ -134,6 +139,9 @@ export class AiComponent {
   private static readonly FETCH_COMMAND_PATTERN = /(^|\s)#fetch\s+(\S+)/gi;
   private static readonly FETCH_KEYWORD_PATTERN = /(^|\s)#fetch\b/i;
   private static readonly FETCH_MARKDOWN_CHAR_LIMIT = 12000;
+  private static readonly GENERATED_VIDEO_FETCH_INITIAL_DELAY_MS = 1500;
+  private static readonly GENERATED_VIDEO_FETCH_RETRY_DELAY_MS = 2000;
+  private static readonly GENERATED_VIDEO_FETCH_MAX_ATTEMPTS = 4;
 
   private readonly accountLocalState = inject(AccountLocalStateService);
   private readonly accountState = inject(AccountStateService);
@@ -164,6 +172,7 @@ export class AiComponent {
   private readonly renderedAssistantSource = new Map<string, string>();
   private readonly renderedAssistantVersion = new Map<string, number>();
   private readonly pendingGeneratedImageCacheIds = new Set<string>();
+  private readonly pendingGeneratedVideoCacheIds = new Set<string>();
   readonly webGpuAvailable = this.isBrowser && typeof navigator !== 'undefined' && 'gpu' in navigator;
   readonly autoScrollPinned = signal(true);
   readonly splitPaneMode = computed(() => this.panelNav.hasRightContent() && !this.panelNav.isMobile());
@@ -514,6 +523,7 @@ export class AiComponent {
     label: `${index + 1}`,
   }));
   readonly xAiVisualAspectRatioOptions: ChoiceOption[] = [
+    { value: 'auto', label: 'Auto' },
     { value: '1:1', label: '1:1' },
     { value: '16:9', label: '16:9' },
     { value: '9:16', label: '9:16' },
@@ -603,7 +613,7 @@ export class AiComponent {
     return `${count} image${count === 1 ? '' : 's'}`;
   });
   readonly xAiImageAspectRatioLabel = computed(() => this.aiService.cloudSettings().xaiImageAspectRatio || 'Auto');
-  readonly xAiVideoAspectRatioLabel = computed(() => this.aiService.cloudSettings().xaiVideoAspectRatio || '16:9');
+  readonly xAiVideoAspectRatioLabel = computed(() => this.aiService.cloudSettings().xaiVideoAspectRatio || 'Auto');
   readonly xAiVideoDurationLabel = computed(() => `${this.aiService.cloudSettings().xaiVideoDuration}s`);
   readonly xAiVoiceLabel = computed(() => this.xAiVoiceOptions.find(option => option.value === this.aiService.cloudSettings().xaiVoiceId)?.label ?? 'Eve');
   readonly xAiVoiceLanguageLabel = computed(() => this.xAiVoiceLanguageOptions.find(option => option.value === this.aiService.cloudSettings().xaiVoiceLanguage)?.label ?? 'English');
@@ -726,6 +736,9 @@ export class AiComponent {
     return this.workerTaskLabel() || (this.isGenerating() ? 'Processing...' : '');
   });
   readonly processingStatusText = computed(() => this.processingStatusLabel().replace(/\.{3}$/, '').trim());
+  readonly hasImageVideoInput = computed(() => this.isVideoGenerationMode()
+    && this.xAiVideoMode() !== 'extend-video'
+    && this.attachedFiles().some(attachment => attachment.mimeType.startsWith('image/')));
   readonly activeVideoElapsedLabel = computed(() => {
     const startedAt = this.activeVideoStartedAt();
     if (!startedAt) {
@@ -1745,6 +1758,7 @@ export class AiComponent {
         mediaUrl: video.src,
         mediaType: 'video',
         mediaTitle: video.prompt || 'Generated video',
+        mediaOriginalUrl: video.originalUrl,
       },
       maxWidth: '100vw',
       maxHeight: '100vh',
@@ -1785,6 +1799,11 @@ export class AiComponent {
       this.downloadBlob(blob, `${video.id}.${extension}`);
     } catch (error) {
       this.logger.warn('Failed to download generated video', error);
+      if (this.openUrlInNewTab(video.originalUrl || video.src)) {
+        this.snackBar.open('Opened the original video in a new tab.', 'Dismiss', { duration: 3200 });
+        return;
+      }
+
       this.snackBar.open('Could not download the generated video.', 'Dismiss', { duration: 3500 });
     }
   }
@@ -2810,6 +2829,7 @@ export class AiComponent {
         };
       }));
       this.persistCurrentConversation();
+      this.queueGeneratedVideoCacheBackfill(cachedVideos);
     } catch (err) {
       if (this.aiService.isAbortError(err)) {
         this.finalizeStoppedGeneration(assistantMessageId);
@@ -3088,7 +3108,7 @@ export class AiComponent {
 
   private async fetchGeneratedAssetBlob(
     url: string,
-    assetType: 'image',
+    assetType: 'image' | 'video',
     options?: { maxAttempts?: number; delayMs?: number; logFailure?: boolean },
   ): Promise<Blob | null> {
     const maxAttempts = options?.maxAttempts ?? 4;
@@ -3124,18 +3144,23 @@ export class AiComponent {
     });
   }
 
-  private async cacheGeneratedVideo(video: AiGeneratedVideo): Promise<AiGeneratedVideo> {
+  private async cacheGeneratedVideo(
+    video: AiGeneratedVideo,
+    options?: { maxAttempts?: number; delayMs?: number; logFailure?: boolean },
+  ): Promise<AiGeneratedVideo> {
     if (!this.isBrowser || typeof caches === 'undefined') {
       return video;
     }
 
     const cacheKey = `https://nostria.local/cache/ai/generated/${encodeURIComponent(video.id)}`;
-    const response = await fetch(video.src);
-    if (!response.ok) {
-      throw new Error(`Could not cache generated video (${response.status}).`);
+    const blob = await this.fetchGeneratedAssetBlob(video.originalUrl || video.src, 'video', options);
+    if (!blob) {
+      return {
+        ...video,
+        originalUrl: video.originalUrl || video.src,
+      };
     }
 
-    const blob = await response.blob();
     const cache = await caches.open(AiComponent.AI_UPLOAD_CACHE);
     await cache.put(cacheKey, new Response(blob, {
       headers: new Headers({
@@ -3146,9 +3171,62 @@ export class AiComponent {
     return {
       ...video,
       src: URL.createObjectURL(blob),
+      originalUrl: video.originalUrl || video.src,
       cacheKey,
       mimeType: blob.type || video.mimeType || 'video/mp4',
     };
+  }
+
+  private queueGeneratedVideoCacheBackfill(videos: AiGeneratedVideo[]): void {
+    const videosToCache = videos.filter(video => !video.cacheKey && !this.pendingGeneratedVideoCacheIds.has(video.id));
+    if (videosToCache.length === 0) {
+      return;
+    }
+
+    videosToCache.forEach(video => this.pendingGeneratedVideoCacheIds.add(video.id));
+    void this.backfillGeneratedVideosInCache(videosToCache);
+  }
+
+  private async backfillGeneratedVideosInCache(videos: AiGeneratedVideo[]): Promise<void> {
+    try {
+      const recachedVideos = await Promise.all(videos.map(video => this.cacheGeneratedVideo(video, {
+        maxAttempts: 20,
+        delayMs: 1500,
+        logFailure: false,
+      })));
+      const updatedVideos = recachedVideos.filter((video, index) => video.cacheKey && video.cacheKey !== videos[index].cacheKey);
+      if (updatedVideos.length > 0) {
+        this.replaceGeneratedVideos(updatedVideos);
+      }
+    } finally {
+      videos.forEach(video => this.pendingGeneratedVideoCacheIds.delete(video.id));
+    }
+  }
+
+  private replaceGeneratedVideos(updatedVideos: AiGeneratedVideo[]): void {
+    const updatedById = new Map(updatedVideos.map(video => [video.id, video]));
+    this.conversation.update(messages => messages.map(message => {
+      if (!message.generatedVideos?.some(video => updatedById.has(video.id))) {
+        return message;
+      }
+
+      return {
+        ...message,
+        generatedVideos: message.generatedVideos.map(video => {
+          const updatedVideo = updatedById.get(video.id);
+          if (!updatedVideo) {
+            return video;
+          }
+
+          if (video.src.startsWith('blob:') && video.src !== updatedVideo.src) {
+            URL.revokeObjectURL(video.src);
+          }
+
+          return updatedVideo;
+        }),
+      };
+    }));
+    this.persistCurrentConversation();
   }
 
   private async cacheGeneratedAudio(audio: AiGeneratedAudio): Promise<AiGeneratedAudio> {
@@ -3282,21 +3360,21 @@ export class AiComponent {
 
   private async resolveGeneratedVideoSource(video: AiHistoryGeneratedVideo): Promise<string> {
     if (!this.isBrowser || typeof caches === 'undefined' || !video.cacheKey) {
-      return '';
+      return video.originalUrl ?? '';
     }
 
     try {
       const cache = await caches.open(AiComponent.AI_UPLOAD_CACHE);
       const response = await cache.match(video.cacheKey);
       if (!response?.ok) {
-        return '';
+        return video.originalUrl ?? '';
       }
 
       const blob = await response.blob();
       return URL.createObjectURL(blob);
     } catch (error) {
       this.logger.warn('Failed to restore generated video from cache', error);
-      return '';
+      return video.originalUrl ?? '';
     }
   }
 
@@ -3436,12 +3514,49 @@ export class AiComponent {
       }
     }
 
-    const response = await fetch(video.src);
-    if (!response.ok) {
-      throw new Error(`Could not fetch generated video (${response.status}).`);
+    return this.fetchGeneratedVideoBlobWithRetry(video, 'download');
+  }
+
+  formatUsdTicks(costInUsdTicks: number | undefined): string {
+    if (typeof costInUsdTicks !== 'number' || !Number.isFinite(costInUsdTicks)) {
+      return '';
     }
 
-    return response.blob();
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 4,
+    }).format(costInUsdTicks / 10_000_000_000);
+  }
+
+  private async fetchGeneratedVideoBlobWithRetry(video: Pick<AiGeneratedVideo, 'src' | 'originalUrl' | 'mimeType'>, reason: 'cache' | 'download'): Promise<Blob> {
+    const videoUrl = (video.originalUrl || video.src || '').trim();
+    if (!videoUrl) {
+      throw new Error('Could not fetch generated video.');
+    }
+
+    let lastError: unknown = null;
+
+    for (let attempt = 0; attempt < AiComponent.GENERATED_VIDEO_FETCH_MAX_ATTEMPTS; attempt += 1) {
+      const delayMs = attempt === 0
+        ? AiComponent.GENERATED_VIDEO_FETCH_INITIAL_DELAY_MS
+        : AiComponent.GENERATED_VIDEO_FETCH_RETRY_DELAY_MS;
+      await this.delay(delayMs);
+
+      try {
+        const response = await fetch(videoUrl);
+        if (!response.ok) {
+          throw new Error(`Could not ${reason} generated video (${response.status}).`);
+        }
+
+        return await response.blob();
+      } catch (error) {
+        lastError = error;
+      }
+    }
+
+    throw lastError instanceof Error ? lastError : new Error(`Could not ${reason} generated video.`);
   }
 
   private async getGeneratedAudioBlob(audio: AiGeneratedAudio): Promise<Blob> {
@@ -3506,6 +3621,8 @@ export class AiComponent {
       providerLabel: video.providerLabel,
       model: video.model,
       prompt: video.prompt,
+      originalUrl: video.originalUrl,
+      costInUsdTicks: video.costInUsdTicks,
       cacheKey: video.cacheKey,
       mimeType: video.mimeType,
       duration: video.duration,

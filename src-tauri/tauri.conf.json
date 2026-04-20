@@ -5,7 +5,6 @@
   "identifier": "app.nostria",
   "build": {
     "beforeDevCommand": "npm run start",
-    "devUrl": "http://localhost:4200",
     "beforeBuildCommand": "npm run build:tauri",
     "frontendDist": "../dist/app/browser"
   },

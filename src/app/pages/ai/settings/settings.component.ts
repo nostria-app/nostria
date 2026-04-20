@@ -106,6 +106,7 @@ export class AiSettingsComponent implements OnInit, OnDestroy {
     label: String(index + 1),
   }));
   readonly xAiVideoAspectRatioOptions: ChoiceOption[] = [
+    { value: 'auto', label: 'Auto' },
     { value: '1:1', label: '1:1 Square' },
     { value: '16:9', label: '16:9 Landscape' },
     { value: '9:16', label: '9:16 Portrait' },

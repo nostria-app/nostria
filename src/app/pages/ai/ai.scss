@@ -770,6 +770,7 @@
 .generated-image-meta {
   display: flex;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: 12px;
   color: var(--mat-sys-on-surface-variant);
   font-size: 0.84rem;

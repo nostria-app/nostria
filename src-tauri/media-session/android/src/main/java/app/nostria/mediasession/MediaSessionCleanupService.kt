@@ -30,7 +30,7 @@ class MediaSessionCleanupService : Service() {
             pendingNotification = notification
             val service = instance
             if (service != null) {
-                service.postNotification(notification)
+                service.reinforcePlayback(notification)
                 return
             }
 
@@ -61,7 +61,7 @@ class MediaSessionCleanupService : Service() {
         if (intent?.action == ACTION_INIT) {
             val notification = pendingNotification ?: run {
                 stopSelf()
-                return START_NOT_STICKY
+                return START_STICKY
             }
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -79,7 +79,7 @@ class MediaSessionCleanupService : Service() {
             registerNoisyReceiver()
         }
 
-        return START_NOT_STICKY
+        return START_STICKY
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -108,6 +108,13 @@ class MediaSessionCleanupService : Service() {
     internal fun postNotification(notification: Notification) {
         val manager = getSystemService(NOTIFICATION_SERVICE) as android.app.NotificationManager
         manager.notify(NOTIFICATION_ID, notification)
+    }
+
+    internal fun reinforcePlayback(notification: Notification) {
+        postNotification(notification)
+        acquireWakeLock()
+        requestAudioFocus(force = true)
+        registerNoisyReceiver()
     }
 
     private fun handleStop() {
@@ -150,11 +157,16 @@ class MediaSessionCleanupService : Service() {
         wakeLock = null
     }
 
-    private fun requestAudioFocus() {
+    private fun requestAudioFocus(force: Boolean = false) {
         val audioManager = getSystemService(AUDIO_SERVICE) as AudioManager
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            if (audioFocusRequest != null) {
+            if (audioFocusRequest != null && !force) {
                 return
+            }
+
+            if (force) {
+                audioFocusRequest?.let { audioManager.abandonAudioFocusRequest(it) }
+                audioFocusRequest = null
             }
 
             val request = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
@@ -181,6 +193,11 @@ class MediaSessionCleanupService : Service() {
                 audioFocusRequest = request
             }
         } else {
+            if (force) {
+                @Suppress("DEPRECATION")
+                audioManager.abandonAudioFocus(null)
+            }
+
             @Suppress("DEPRECATION")
             audioManager.requestAudioFocus(
                 { change ->

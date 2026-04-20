@@ -21,6 +21,9 @@ const MEDIA_SESSION_COMMANDS: &[&str] = &[
     "clear",
 ];
 
+const ANDROID_MEDIA_SESSION_ENV: &str = "DEP_MEDIA_SESSION_ANDROID_LIBRARY_PATH";
+const ANDROID_MEDIA_SESSION_MODULE: &str = "media-session";
+
 #[cfg(target_os = "macos")]
 const IOS_MEDIA_SESSION_PACKAGE_NAME: &str = "nostria-media-session";
 
@@ -44,6 +47,9 @@ fn main() {
             ),
     )
     .expect("failed to run tauri build");
+
+    finalize_android_media_session_project()
+        .expect("failed to finalize Android media-session Gradle wiring");
 }
 
 fn configure_target_aliases() {
@@ -71,6 +77,16 @@ fn setup_media_session_mobile_sources() -> Result<(), Box<dyn std::error::Error>
     Ok(())
 }
 
+fn finalize_android_media_session_project() -> Result<(), Box<dyn std::error::Error>> {
+    if env::var("CARGO_CFG_TARGET_OS")?.as_str() != "android" {
+        return Ok(());
+    }
+
+    let manifest_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR")?);
+    link_android_library(&manifest_dir.join("media-session/android"))?;
+    Ok(())
+}
+
 fn setup_android_sources(source: &Path) -> Result<(), Box<dyn std::error::Error>> {
     let tauri_library_path = PathBuf::from(
         env::var("DEP_TAURI_ANDROID_LIBRARY_PATH")
@@ -79,6 +95,8 @@ fn setup_android_sources(source: &Path) -> Result<(), Box<dyn std::error::Error>
 
     println!("cargo:rerun-if-env-changed=DEP_TAURI_ANDROID_LIBRARY_PATH");
     copy_folder(&tauri_library_path, &source.join(".tauri/tauri-api"), &[])?;
+    env::set_var(ANDROID_MEDIA_SESSION_ENV, normalize_gradle_path(source));
+    println!("cargo:rerun-if-env-changed={ANDROID_MEDIA_SESSION_ENV}");
     println!("cargo:android_library_path={}", source.display());
     Ok(())
 }
@@ -152,3 +170,103 @@ fn copy_folder_recursive(
 
     Ok(())
 }
+
+fn link_android_library(source: &Path) -> Result<(), Box<dyn std::error::Error>> {
+    let Some(project_path) = env::var_os("TAURI_ANDROID_PROJECT_PATH").map(PathBuf::from) else {
+        return Ok(());
+    };
+
+    let gradle_path = normalize_gradle_path(source)
+        .display()
+        .to_string()
+        .replace('\\', "\\\\");
+
+    let settings_path = project_path.join("tauri.settings.gradle");
+    if settings_path.exists() {
+        let settings_contents = fs::read_to_string(&settings_path)?;
+        let include_line = format!("include ':{ANDROID_MEDIA_SESSION_MODULE}'");
+        let project_line = format!(
+            "project(':{ANDROID_MEDIA_SESSION_MODULE}').projectDir = new File(\"{gradle_path}\")"
+        );
+
+        let mut lines = Vec::new();
+        let mut include_present = false;
+        let mut project_written = false;
+
+        for line in settings_contents.lines() {
+            if line == include_line {
+                if !include_present {
+                    lines.push(include_line.clone());
+                    include_present = true;
+                }
+                continue;
+            }
+
+            if line.starts_with(&format!("project(':{ANDROID_MEDIA_SESSION_MODULE}').projectDir = ")) {
+                if !project_written {
+                    lines.push(project_line.clone());
+                    project_written = true;
+                }
+                continue;
+            }
+
+            lines.push(line.to_string());
+        }
+
+        if !include_present {
+            lines.push(include_line);
+        }
+        if !project_written {
+            lines.push(project_line);
+        }
+
+        let mut updated = lines.join("\n");
+        if settings_contents.ends_with('\n') {
+            updated.push('\n');
+        }
+
+        if updated != settings_contents {
+            fs::write(&settings_path, updated)?;
+        }
+    }
+
+    let app_gradle_path = project_path.join("app").join("tauri.build.gradle.kts");
+    if app_gradle_path.exists() {
+        let app_gradle_contents = fs::read_to_string(&app_gradle_path)?;
+        let dependency_line = format!("  implementation(project(\":{ANDROID_MEDIA_SESSION_MODULE}\"))");
+
+        if !app_gradle_contents.contains(&dependency_line) {
+            let insertion_point = "  implementation(project(\":tauri-android\"))\n";
+            let updated = if app_gradle_contents.contains(insertion_point) {
+                app_gradle_contents.replacen(
+                    insertion_point,
+                    &format!("{insertion_point}{dependency_line}\n"),
+                    1,
+                )
+            } else {
+                let mut contents = app_gradle_contents;
+                if !contents.ends_with('\n') {
+                    contents.push('\n');
+                }
+                contents.push_str(&dependency_line);
+                contents.push('\n');
+                contents
+            };
+
+            fs::write(&app_gradle_path, updated)?;
+        }
+    }
+
+    Ok(())
+}
+
+fn normalize_gradle_path(path: &Path) -> PathBuf {
+    let normalized = path.canonicalize().unwrap_or_else(|_| path.to_path_buf());
+    let normalized_string = normalized.display().to_string();
+    if let Some(stripped) = normalized_string.strip_prefix(r"\\?\") {
+        PathBuf::from(stripped)
+    } else {
+        normalized
+    }
+}
+

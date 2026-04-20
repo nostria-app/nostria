@@ -24,6 +24,8 @@ export interface AiHistoryGeneratedVideo {
   providerLabel: string;
   model: string;
   prompt: string;
+  originalUrl?: string;
+  costInUsdTicks?: number;
   cacheKey?: string;
   mimeType?: string;
   duration?: number;

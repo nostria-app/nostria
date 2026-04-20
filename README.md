@@ -291,6 +291,19 @@ Make browser config 1024x1366 with 2x pixel density.
 
 https://vscode.dev/redirect/mcp/install?name=io.github.ChromeDevTools%2Fchrome-devtools-mcp&config=%7B%22command%22%3A%22npx%22%2C%22args%22%3A%5B%22-y%22%2C%22chrome-devtools-mcp%22%5D%2C%22env%22%3A%7B%7D%7D
 
+### ADB Logs
+
+```pws
+& "C:\Users\user\AppData\Local\Android\Sdk\platform-tools\adb.exe" logcat | Select-String 'AndroidRuntime|RustStdoutStderr|nostria|media-session'
+& "C:\Users\user\AppData\Local\Android\Sdk\platform-tools\adb.exe" logcat | Select-String 'app.nostria|MediaSessionPlugin|ExoPlayer|playback_state|RustStdoutStderr'
+```
+
+### Run in Emulator in packaged mode
+
+```bash
+npm run tauri:android:run:packaged:emulator
+```
+
 ## License
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.

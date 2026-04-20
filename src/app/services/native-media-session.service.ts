@@ -30,6 +30,28 @@ export interface NativeMediaTimelineUpdate extends Record<string, unknown> {
   playbackSpeed?: number;
 }
 
+export interface NativeAudioPlayRequest extends Record<string, unknown> {
+  source: string;
+  title?: string;
+  artist?: string;
+  album?: string;
+  artworkUrl?: string;
+  position?: number;
+  playbackSpeed?: number;
+  canPrev?: boolean;
+  canNext?: boolean;
+  canSeek?: boolean;
+}
+
+export interface NativeAudioPlaybackEvent {
+  isPlaying?: boolean;
+  position?: number;
+  duration?: number;
+  playbackSpeed?: number;
+  ended?: boolean;
+  error?: string;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -39,8 +61,10 @@ export class NativeMediaSessionService {
   private readonly app: ApplicationService;
 
   private pluginListener?: PluginListener;
+  private playbackListener?: PluginListener;
   private desktopUnlisten?: UnlistenFn;
   private actionHandler?: (event: NativeMediaActionEvent) => void;
+  private playbackStateHandler?: (event: NativeAudioPlaybackEvent) => void;
   private initialized = false;
   private state: NativeMediaState = {};
 
@@ -56,6 +80,10 @@ export class NativeMediaSessionService {
 
   setActionHandler(handler: (event: NativeMediaActionEvent) => void): void {
     this.actionHandler = handler;
+  }
+
+  setPlaybackStateHandler(handler: (event: NativeAudioPlaybackEvent) => void): void {
+    this.playbackStateHandler = handler;
   }
 
   async updateState(update: NativeMediaState): Promise<void> {
@@ -97,12 +125,67 @@ export class NativeMediaSessionService {
     this.initialized = false;
   }
 
+  async playAudio(request: NativeAudioPlayRequest): Promise<void> {
+    if (!this.isAndroidRuntime()) {
+      return;
+    }
+
+    await invoke('plugin:media-session|play_audio', request);
+    this.initialized = true;
+  }
+
+  async pauseAudio(): Promise<void> {
+    if (!this.isAndroidRuntime()) {
+      return;
+    }
+
+    await invoke('plugin:media-session|pause_audio');
+  }
+
+  async resumeAudio(): Promise<void> {
+    if (!this.isAndroidRuntime()) {
+      return;
+    }
+
+    await invoke('plugin:media-session|resume_audio');
+  }
+
+  async stopAudio(): Promise<void> {
+    if (!this.isAndroidRuntime()) {
+      return;
+    }
+
+    await invoke('plugin:media-session|stop_audio');
+  }
+
+  async seekAudio(position: number): Promise<void> {
+    if (!this.isAndroidRuntime()) {
+      return;
+    }
+
+    await invoke('plugin:media-session|seek_audio', { position });
+  }
+
+  async setAudioRate(playbackSpeed: number): Promise<void> {
+    if (!this.isAndroidRuntime()) {
+      return;
+    }
+
+    await invoke('plugin:media-session|set_audio_rate', { playbackSpeed });
+  }
+
   private async registerListeners(): Promise<void> {
     if (this.isMobileRuntime()) {
       this.pluginListener = await addPluginListener<NativeMediaActionEvent>(
         'media-session',
         'media_action',
         payload => this.actionHandler?.(payload)
+      );
+
+      this.playbackListener = await addPluginListener<NativeAudioPlaybackEvent>(
+        'media-session',
+        'playback_state',
+        payload => this.playbackStateHandler?.(payload)
       );
       return;
     }
@@ -122,6 +205,10 @@ export class NativeMediaSessionService {
 
   private isSupportedRuntime(): boolean {
     return this.app.isBrowser() && isTauri();
+  }
+
+  isAndroidRuntime(): boolean {
+    return this.isSupportedRuntime() && /Android/i.test(navigator.userAgent);
   }
 
   private isMobileRuntime(): boolean {

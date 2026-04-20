@@ -12,7 +12,11 @@ import { AccountStateService } from './account-state.service';
 import { AccountLocalStateService } from './account-local-state.service';
 import { UserStatusService } from './user-status.service';
 import { SettingsService } from './settings.service';
-import { NativeMediaActionEvent, NativeMediaSessionService } from './native-media-session.service';
+import {
+  NativeAudioPlaybackEvent,
+  NativeMediaActionEvent,
+  NativeMediaSessionService,
+} from './native-media-session.service';
 
 // YouTube Player API types
 interface YouTubePlayer {
@@ -132,6 +136,9 @@ export class MediaPlayerService implements OnInitialized {
   private readonly POSITION_SAFETY_MARGIN_SECONDS = 2; // Buffer before end of media
   private readonly NATIVE_TIMELINE_SYNC_INTERVAL = 5000;
   private lastNativeTimelineSync = 0;
+  private nativeAndroidAudioActive = false;
+  private nativeAndroidAudioSource?: string;
+  private nativeAndroidAudioFallbackAttempted = false;
 
   // Flag to track if media session handlers have been initialized
   private mediaSessionInitialized = false;
@@ -148,6 +155,9 @@ export class MediaPlayerService implements OnInitialized {
     this.nativeMediaSession.setActionHandler(event => {
       void this.handleNativeMediaAction(event);
     });
+    this.nativeMediaSession.setPlaybackStateHandler(event => {
+      this.handleNativePlaybackState(event);
+    });
 
     if (!this.app.isBrowser()) {
       return;
@@ -158,6 +168,147 @@ export class MediaPlayerService implements OnInitialized {
         this.initialize();
       }
     });
+  }
+
+  private handleNativePlaybackState(event: NativeAudioPlaybackEvent): void {
+    if (!this.nativeAndroidAudioActive) {
+      return;
+    }
+
+    if (typeof event.position === 'number' && Number.isFinite(event.position)) {
+      this.currentTimeSig.set(event.position);
+    }
+
+    if (typeof event.duration === 'number' && Number.isFinite(event.duration) && event.duration > 0) {
+      const previousDuration = this.durationSig();
+      this.durationSig.set(event.duration);
+
+      const currentItem = this.current();
+      if (currentItem?.type === 'Music' && previousDuration <= 0) {
+        this.publishMusicStatusForItem(currentItem);
+      }
+    }
+
+    if (typeof event.playbackSpeed === 'number' && Number.isFinite(event.playbackSpeed) && event.playbackSpeed > 0) {
+      this.playbackRate.set(event.playbackSpeed);
+    }
+
+    if (typeof event.isPlaying === 'boolean') {
+      this._isPaused.set(!event.isPlaying);
+      if (this.isMediaSessionSupported) {
+        navigator.mediaSession.playbackState = event.isPlaying ? 'playing' : 'paused';
+      }
+    }
+
+    const currentItem = this.current();
+    if (currentItem?.type === 'Podcast' && typeof event.position === 'number') {
+      const now = Date.now();
+      if (now - this.lastPodcastPositionSave >= this.PODCAST_SAVE_INTERVAL) {
+        this.savePodcastPosition(currentItem.source, event.position, event.duration);
+        this.lastPodcastPositionSave = now;
+      }
+    }
+
+    if (event.error) {
+      console.error('Native Android audio playback error:', event.error);
+      if (!this.nativeAndroidAudioFallbackAttempted) {
+        this.nativeAndroidAudioFallbackAttempted = true;
+        void this.fallbackFromNativeAndroidAudio();
+      }
+    }
+
+    if (event.ended) {
+      this.handleMediaEnded();
+    }
+  }
+
+  private canUseNativeAndroidAudio(source: string, file: MediaItem): boolean {
+    if (!this.nativeMediaSession.isAndroidRuntime()) {
+      return false;
+    }
+
+    if (!(file.type === 'Music' || file.type === 'Podcast')) {
+      return false;
+    }
+
+    const normalizedSource = source.trim().toLowerCase();
+    if (
+      normalizedSource.startsWith('blob:')
+      || normalizedSource.startsWith('data:')
+      || normalizedSource.startsWith('file:')
+    ) {
+      return false;
+    }
+
+    return true;
+  }
+
+  private normalizeNativeAudioSource(source: string): string {
+    if (!this.app.isBrowser()) {
+      return source;
+    }
+
+    try {
+      return new URL(source, window.location.origin).toString();
+    } catch {
+      return source;
+    }
+  }
+
+  private async startHtmlAudioPlayback(file: MediaItem, audioSource: string, prioritizeImmediateStart: boolean): Promise<void> {
+    let resolvedAudioSource = audioSource;
+
+    if (!prioritizeImmediateStart && (file.type === 'Podcast' || file.type === 'Music')) {
+      if (this.shouldResolveAudioUrlViaFetch(resolvedAudioSource)) {
+        try {
+          resolvedAudioSource = await this.resolveAudioUrl(resolvedAudioSource);
+        } catch (err) {
+          console.warn('Failed to resolve audio URL, using original source:', err);
+        }
+      }
+    }
+
+    if (!this.audio) {
+      this.audio = new Audio();
+      this.setAudioCrossOrigin(this.audio, resolvedAudioSource);
+      this.audio.src = resolvedAudioSource;
+      this.audio.addEventListener('ratechange', () => {
+        if (this.audio) {
+          this.playbackRate.set(this.audio.playbackRate);
+        }
+      });
+    } else {
+      this.setAudioCrossOrigin(this.audio, resolvedAudioSource);
+      this.audio.src = resolvedAudioSource;
+    }
+
+    this.audioCorsFallbackRetriedSources.delete(this.audio.src);
+    this.playbackRate.set(this.audio.playbackRate);
+    this.audio.addEventListener('ended', this.handleMediaEnded);
+    this.audio.addEventListener('timeupdate', this.handleTimeUpdate);
+    this.audio.addEventListener('loadedmetadata', this.handleLoadedMetadata);
+    this.audio.addEventListener('error', this.handleAudioError);
+
+    console.log('Starting audio playback for:', file.source);
+    await this.audio.play();
+    this._isPaused.set(false);
+  }
+
+  private async fallbackFromNativeAndroidAudio(): Promise<void> {
+    const currentItem = this.current();
+    const nativeSource = this.nativeAndroidAudioSource;
+    if (!currentItem || !nativeSource || this.videoMode()) {
+      return;
+    }
+
+    try {
+      this.nativeAndroidAudioActive = false;
+      await this.nativeMediaSession.stopAudio();
+      await this.startHtmlAudioPlayback(currentItem, nativeSource, false);
+      this.syncNativeMediaState();
+    } catch (error) {
+      console.error('Failed to fall back from native Android audio playback:', error);
+    }
   }
 
   /**
@@ -346,6 +497,13 @@ export class MediaPlayerService implements OnInitialized {
         : undefined;
       this.videoElement.currentTime = duration ? Math.min(duration, clampedPosition) : clampedPosition;
       this.currentTimeSig.set(this.videoElement.currentTime);
+      this.syncNativeTimeline(true);
+      return;
+    }
+
+    if (this.nativeAndroidAudioActive) {
+      this.currentTimeSig.set(clampedPosition);
+      void this.nativeMediaSession.seekAudio(clampedPosition);
       this.syncNativeTimeline(true);
       return;
     }
@@ -1466,6 +1624,15 @@ export class MediaPlayerService implements OnInitialized {
       return;
     }
 
+    if (this.nativeAndroidAudioActive) {
+      this.nativeAndroidAudioActive = false;
+      try {
+        await this.nativeMediaSession.stopAudio();
+      } catch (error) {
+        console.warn('Failed to stop previous native Android audio before starting next item:', error);
+      }
+    }
+
     // Clean up previous media before starting new one
     this.cleanupCurrentMedia();
 
@@ -1534,6 +1701,7 @@ export class MediaPlayerService implements OnInitialized {
       this.videoMode.set(false);
       this.youtubeUrl.set(undefined);
       this.videoUrl.set(undefined);
+      this.nativeAndroidAudioActive = false;
 
       // Remove event listeners from previous audio element
       if (this.audio) {
@@ -1554,46 +1722,36 @@ export class MediaPlayerService implements OnInitialized {
         }
       }
 
-      // For podcasts and other audio, resolve redirects and get actual content-type
-      // This fixes issues where URLs redirect to files with generic extensions like .bin
-      if (!prioritizeImmediateStart && (file.type === 'Podcast' || file.type === 'Music')) {
-        if (this.shouldResolveAudioUrlViaFetch(audioSource)) {
-          try {
-            audioSource = await this.resolveAudioUrl(audioSource);
-          } catch (err) {
-            console.warn('Failed to resolve audio URL, using original source:', err);
-          }
-        }
-      }
+      const podcastPosition = file.type === 'Podcast'
+        ? this.restorePodcastPosition(file.source)
+        : 0;
 
-      if (!this.audio) {
-        this.audio = new Audio();
-        this.setAudioCrossOrigin(this.audio, audioSource);
-        this.audio.src = audioSource;
-        this.audio.addEventListener('ratechange', () => {
-          if (this.audio) {
-            this.playbackRate.set(this.audio.playbackRate);
-          }
+      if (this.canUseNativeAndroidAudio(audioSource, file)) {
+        this.nativeAndroidAudioSource = audioSource;
+        this.nativeAndroidAudioFallbackAttempted = false;
+        await this.nativeMediaSession.playAudio({
+          source: this.normalizeNativeAudioSource(audioSource),
+          title: currentFile.title,
+          artist: currentFile.artist,
+          album: 'Nostria',
+          artworkUrl: currentFile.artwork,
+          position: podcastPosition,
+          playbackSpeed: this.playbackRate(),
+          canPrev: this.canPrevious(),
+          canNext: this.canNext(),
+          canSeek: this.canSeekCurrentItem(file),
         });
+
+        this.nativeAndroidAudioActive = true;
+        this.currentTimeSig.set(podcastPosition);
+        this.durationSig.set(0);
+        this._isPaused.set(false);
+        this.audio = undefined;
       } else {
-        this.setAudioCrossOrigin(this.audio, audioSource);
-        this.audio.src = audioSource;
+        this.nativeAndroidAudioSource = undefined;
+        this.nativeAndroidAudioFallbackAttempted = false;
+        await this.startHtmlAudioPlayback(file, audioSource, prioritizeImmediateStart);
       }
-
-      this.audioCorsFallbackRetriedSources.delete(this.audio.src);
-
-      // Sync signal
-      this.playbackRate.set(this.audio.playbackRate);
-
-      // Add event listeners to audio
-      this.audio.addEventListener('ended', this.handleMediaEnded);
-      this.audio.addEventListener('timeupdate', this.handleTimeUpdate);
-      this.audio.addEventListener('loadedmetadata', this.handleLoadedMetadata);
-      this.audio.addEventListener('error', this.handleAudioError);
-
-      console.log('Starting audio playback for:', file.source);
-      await this.audio.play();
-      this._isPaused.set(false);
     }
 
     // Initialize media session handlers lazily on first playback
@@ -1793,8 +1951,12 @@ export class MediaPlayerService implements OnInitialized {
   private cleanupCurrentMedia() {
     // Save podcast position before cleanup
     const currentItem = this.current();
-    if (currentItem?.type === 'Podcast' && this.audio) {
-      this.savePodcastPosition(currentItem.source, this.audio.currentTime, this.audio.duration);
+    if (currentItem?.type === 'Podcast') {
+      if (this.nativeAndroidAudioActive) {
+        this.savePodcastPosition(currentItem.source, this.currentTimeSig(), this.durationSig());
+      } else if (this.audio) {
+        this.savePodcastPosition(currentItem.source, this.audio.currentTime, this.audio.duration);
+      }
     }
 
     // Reset initialization flag
@@ -1822,6 +1984,13 @@ export class MediaPlayerService implements OnInitialized {
       this.audio.removeEventListener('loadedmetadata', this.handleLoadedMetadata);
       this.audio.removeEventListener('error', this.handleAudioError);
     }
+
+    if (this.nativeAndroidAudioActive) {
+      void this.nativeMediaSession.stopAudio();
+      this.nativeAndroidAudioActive = false;
+    }
+    this.nativeAndroidAudioSource = undefined;
+    this.nativeAndroidAudioFallbackAttempted = false;
 
     // Cleanup HLS instance
     if (this.hlsInstance) {
@@ -1967,17 +2136,26 @@ export class MediaPlayerService implements OnInitialized {
         this._isPaused.set(false);
       }
     } else {
-      if (!this.audio) {
-        this.start();
-        return;
-      }
+      if (this.nativeAndroidAudioActive) {
+        try {
+          await this.nativeMediaSession.resumeAudio();
+          this._isPaused.set(false);
+        } catch (err) {
+          console.error('Error resuming native Android audio:', err);
+        }
+      } else {
+        if (!this.audio) {
+          this.start();
+          return;
+        }
 
-      console.log('RESUME!');
-      try {
-        await this.audio.play();
-        this._isPaused.set(false);
-      } catch (err) {
-        console.error(err);
+        console.log('RESUME!');
+        try {
+          await this.audio.play();
+          this._isPaused.set(false);
+        } catch (err) {
+          console.error(err);
+        }
       }
     }
 
@@ -2034,11 +2212,15 @@ export class MediaPlayerService implements OnInitialized {
         this.youtubeUrl.set(undefined);
       }
     } else {
-      if (!this.audio) {
-        return;
-      }
+      if (this.nativeAndroidAudioActive) {
+        void this.nativeMediaSession.pauseAudio();
+      } else {
+        if (!this.audio) {
+          return;
+        }
 
-      this.audio.pause();
+        this.audio.pause();
+      }
     }
 
     this._isPaused.set(true);
@@ -2180,6 +2362,10 @@ export class MediaPlayerService implements OnInitialized {
   }
 
   get time() {
+    if (this.nativeAndroidAudioActive) {
+      return Math.floor(this.currentTimeSig());
+    }
+
     if (!this.audio) {
       return 10;
     }
@@ -2188,6 +2374,11 @@ export class MediaPlayerService implements OnInitialized {
   }
 
   set time(value) {
+    if (this.nativeAndroidAudioActive) {
+      this.seekToPosition(value);
+      return;
+    }
+
     if (!this.audio) {
       return;
     }
@@ -2198,6 +2389,10 @@ export class MediaPlayerService implements OnInitialized {
   }
 
   get duration() {
+    if (this.nativeAndroidAudioActive) {
+      return Math.floor(this.durationSig() || 0);
+    }
+
     if (!this.audio) {
       return 100;
     }
@@ -2226,6 +2421,9 @@ export class MediaPlayerService implements OnInitialized {
       }
     } else if (this.audio) {
       this.audio.currentTime += value;
+    } else if (this.nativeAndroidAudioActive) {
+      this.seekToPosition(this.currentTimeSig() + value);
+      return;
     }
 
     this.currentTimeSig.set(this.getCurrentPlaybackPosition() ?? this.currentTimeSig());
@@ -2242,6 +2440,9 @@ export class MediaPlayerService implements OnInitialized {
       }
     } else if (this.audio) {
       this.audio.currentTime -= value;
+    } else if (this.nativeAndroidAudioActive) {
+      this.seekToPosition(this.currentTimeSig() - value);
+      return;
     }
 
     this.currentTimeSig.set(this.getCurrentPlaybackPosition() ?? this.currentTimeSig());
@@ -2249,6 +2450,15 @@ export class MediaPlayerService implements OnInitialized {
   }
 
   rate() {
+    if (this.nativeAndroidAudioActive) {
+      if (this.playbackRate() === 2.0) {
+        this.setPlaybackRate(1.0);
+      } else {
+        this.setPlaybackRate(2.0);
+      }
+      return;
+    }
+
     if (!this.audio) {
       return;
     }
@@ -2263,6 +2473,11 @@ export class MediaPlayerService implements OnInitialized {
   }
 
   setPlaybackRate(speed: number) {
+    if (this.nativeAndroidAudioActive) {
+      this.playbackRate.set(speed);
+      void this.nativeMediaSession.setAudioRate(speed);
+    }
+
     if (this.audio) {
       this.audio.playbackRate = speed;
       this.playbackRate.set(speed);

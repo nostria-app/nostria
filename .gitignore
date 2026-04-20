@@ -68,3 +68,12 @@ Thumbs.db
 target/rust-analyzer/*
 ssr-debug-output.html
 src-android/*
+
+# Vendored native Android library build outputs
+src-tauri/media-session/android/build/
+src-tauri/media-session/android/.gradle/
+src-tauri/media-session/android/.kotlin/
+
+# Generated Tauri mobile plugin API copies
+src-tauri/media-session/android/.tauri/
+src-tauri/media-session/ios/.tauri/

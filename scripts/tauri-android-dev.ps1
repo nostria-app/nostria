@@ -68,13 +68,13 @@ function Get-ConnectedDevices {
 }
 
 function Get-RequestedDevice {
-  param([string[]]$Args)
+  param([string[]]$DeviceTokens)
 
-  for ($index = 0; $index -lt $Args.Length; $index++) {
-    $arg = $Args[$index]
+  for ($index = 0; $index -lt $DeviceTokens.Length; $index++) {
+    $arg = $DeviceTokens[$index]
 
-    if ($arg -eq '--device' -and $index + 1 -lt $Args.Length) {
-      return $Args[$index + 1]
+    if ($arg -eq '--device' -and $index + 1 -lt $DeviceTokens.Length) {
+      return $DeviceTokens[$index + 1]
     }
 
     if ($arg.StartsWith('--device=')) {
@@ -91,13 +91,15 @@ function Get-RequestedDevice {
 
 $hostOverride = $null
 $hostReason = $null
+$skipDevServerWait = $false
 
 if ($Emulator) {
   $hostOverride = '10.0.2.2'
   $hostReason = 'forced emulator mode'
+  $skipDevServerWait = $true
 }
 elseif ($PhysicalDevice) {
-  $requestedDevice = Get-RequestedDevice -Args $TauriArgs
+  $requestedDevice = Get-RequestedDevice -DeviceTokens $TauriArgs
   $connectedDevices = Get-ConnectedDevices
   $physicalDevices = @($connectedDevices | Where-Object { -not $_.IsEmulator })
 
@@ -120,17 +122,19 @@ elseif ($PhysicalDevice) {
   }
 }
 else {
-  $requestedDevice = Get-RequestedDevice -Args $TauriArgs
+  $requestedDevice = Get-RequestedDevice -DeviceTokens $TauriArgs
   $connectedDevices = @(Get-ConnectedDevices)
   $emulatorDevices = @($connectedDevices | Where-Object { $_.IsEmulator })
 
   if ($requestedDevice -and $requestedDevice.StartsWith('emulator-')) {
     $hostOverride = '10.0.2.2'
     $hostReason = "requested device '$requestedDevice' is an emulator"
+    $skipDevServerWait = $true
   }
   elseif ($connectedDevices.Count -eq 1 -and $connectedDevices[0].IsEmulator) {
     $hostOverride = '10.0.2.2'
     $hostReason = "detected emulator '$($connectedDevices[0].Serial)'"
+    $skipDevServerWait = $true
   }
   elseif ($connectedDevices.Count -eq 1) {
     $hostReason = "detected physical device '$($connectedDevices[0].Serial)'"
@@ -141,14 +145,20 @@ else {
   }
 }
 
-$commandArgs = @('android', 'dev')
+$commandArgs = @('android', 'dev', '--config', 'src-tauri/tauri.dev.conf.json')
 if ($hostOverride) {
   $commandArgs += @('--host', $hostOverride)
+}
+if ($skipDevServerWait) {
+  $commandArgs += '--no-dev-server-wait'
 }
 $commandArgs += $TauriArgs
 
 if ($hostReason) {
   Write-Host "Starting Tauri Android dev ($hostReason)."
+}
+if ($skipDevServerWait) {
+  Write-Host 'Skipping Tauri dev-server wait because 10.0.2.2 is only reachable inside the emulator.'
 }
 
 if ($DryRun) {

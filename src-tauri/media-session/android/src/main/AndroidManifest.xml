@@ -13,6 +13,7 @@
         <service
             android:name="app.nostria.mediasession.MediaSessionCleanupService"
             android:foregroundServiceType="mediaPlayback"
+            android:stopWithTask="false"
             android:exported="false" />
     </application>
 </manifest>

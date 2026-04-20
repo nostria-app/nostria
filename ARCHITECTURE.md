@@ -622,6 +622,12 @@ interface MediaItem {
 - Tauri desktop uses the repo-owned Rust bridge in `src-tauri/src/media_session.rs`, which publishes metadata through `souvlaki` and emits `media_action` events back to Angular.
 - Tauri Android and iOS use the repo-owned mobile plugin sources under `src-tauri/media-session/`, exposed through the same `media-session` command namespace that the Angular service calls.
 
+Android has an additional split inside the playback layer itself:
+
+- Network-backed music and podcast playback uses the repo-owned Android native player inside `src-tauri/media-session/android/` so playback can continue after the Tauri WebView is backgrounded.
+- Offline and blob-backed audio still uses the browser `HTMLAudioElement` path because Android native playback cannot consume WebView `blob:` URLs produced by the offline cache.
+- Queue, repeat, shuffle, podcast progress, and metadata publishing still remain centralized in `MediaPlayerService`, with the native Android player only taking over transport control and timeline reporting when selected.
+
 This design keeps one playback state machine in Angular while avoiding Android WebView limitations and the instability of the previous third-party desktop plugin path.
 
 ### Playback Modes

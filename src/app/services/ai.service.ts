@@ -65,6 +65,7 @@ export interface AiVideoGenerationOptions {
   inputImage?: string;
   referenceImages?: string[];
   inputVideo?: string;
+  aspectRatio?: string;
 }
 
 export interface AiGeneratedAudio {
@@ -121,6 +122,8 @@ export interface AiGeneratedVideo {
   model: string;
   prompt: string;
   src: string;
+  originalUrl?: string;
+  costInUsdTicks?: number;
   cacheKey?: string;
   mimeType?: string;
   duration?: number;
@@ -180,6 +183,9 @@ interface AiImageApiPayload {
 
 interface AiVideoGenerationStartPayload {
   request_id?: string;
+  usage?: {
+    cost_in_usd_ticks?: number;
+  };
   error?: {
     message?: string;
   } | string;
@@ -189,6 +195,9 @@ interface AiVideoGenerationStartPayload {
 interface AiVideoGenerationStatusPayload {
   status?: 'pending' | 'done' | 'failed' | 'expired';
   model?: string;
+  usage?: {
+    cost_in_usd_ticks?: number;
+  };
   video?: {
     url?: string;
     duration?: number;
@@ -1336,6 +1345,8 @@ export class AiService {
         model: statusPayload.model?.trim() || cloudSettings.xaiVideoModel,
         prompt,
         src: videoUrl,
+        originalUrl: videoUrl,
+        costInUsdTicks: this.extractVideoUsageCostInUsdTicks(statusPayload),
         duration: statusPayload.video?.duration,
         mimeType: 'video/mp4',
       }];
@@ -1408,7 +1419,10 @@ export class AiService {
     };
 
     if (options?.mode !== 'extend-video') {
-      requestBody['aspect_ratio'] = cloudSettings.xaiVideoAspectRatio;
+      const aspectRatio = options?.aspectRatio?.trim() || cloudSettings.xaiVideoAspectRatio.trim();
+      if (aspectRatio && aspectRatio !== 'auto') {
+        requestBody['aspect_ratio'] = aspectRatio;
+      }
       requestBody['resolution'] = cloudSettings.xaiVideoResolution;
     }
 
@@ -1494,16 +1508,16 @@ export class AiService {
 
       const payload = await this.parseVideoStatusResponse(response);
       if (!response.ok) {
-        throw new Error(this.extractVideoError(payload) || `Video status check failed with status ${response.status}.`);
+        throw new Error(this.buildVideoErrorMessage(payload, `Video status check failed with status ${response.status}.`));
       }
 
       switch (payload.status) {
         case 'done':
           return payload;
         case 'failed':
-          throw new Error(this.extractVideoError(payload) || 'Video generation failed.');
+          throw new Error(this.buildVideoErrorMessage(payload, 'Video generation failed.'));
         case 'expired':
-          throw new Error('The video generation request expired before the result was ready.');
+          throw new Error(this.buildVideoErrorMessage(payload, 'The video generation request expired before the result was ready.'));
         case 'pending':
         default:
           await this.waitForVideoPollInterval(signal, 2000);
@@ -1573,6 +1587,30 @@ export class AiService {
     }
 
     return null;
+  }
+
+  private extractVideoUsageCostInUsdTicks(payload: AiVideoGenerationStartPayload | AiVideoGenerationStatusPayload): number | undefined {
+    const ticks = payload.usage?.cost_in_usd_ticks;
+    return typeof ticks === 'number' && Number.isFinite(ticks) ? ticks : undefined;
+  }
+
+  private buildVideoErrorMessage(payload: AiVideoGenerationStartPayload | AiVideoGenerationStatusPayload, fallback: string): string {
+    const message = this.extractVideoError(payload) || fallback;
+    const costInUsdTicks = this.extractVideoUsageCostInUsdTicks(payload);
+    if (costInUsdTicks === undefined) {
+      return message;
+    }
+
+    return `${message} Reported usage cost: ${this.formatVideoUsageCost(costInUsdTicks)}.`;
+  }
+
+  private formatVideoUsageCost(costInUsdTicks: number): string {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 4,
+    }).format(costInUsdTicks / 10_000_000_000);
   }
 
   private async parseChatCompletionResponse(response: Response): Promise<AiCloudChatCompletionPayload> {

@@ -69,6 +69,42 @@ pub struct TimelineUpdate {
     pub playback_speed: Option<f64>,
 }
 
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NativeAudioRequest {
+    pub source: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub title: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub artist: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub album: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub artwork_url: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub position: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub playback_speed: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub can_prev: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub can_next: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub can_seek: Option<bool>,
+}
+
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NativeAudioSeekRequest {
+    pub position: f64,
+}
+
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NativeAudioRateRequest {
+    pub playback_speed: f64,
+}
+
 #[cfg(desktop)]
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -104,6 +140,42 @@ impl<R: Runtime> MediaSession<R> {
     fn clear(&self) -> Result<(), String> {
         self.0
             .run_mobile_plugin::<()>("clear", ())
+            .map_err(|error| format!("{error}"))
+    }
+
+    fn play_audio(&self, request: NativeAudioRequest) -> Result<(), String> {
+        self.0
+            .run_mobile_plugin("playAudio", request)
+            .map_err(|error| format!("{error}"))
+    }
+
+    fn pause_audio(&self) -> Result<(), String> {
+        self.0
+            .run_mobile_plugin::<()>("pauseAudio", ())
+            .map_err(|error| format!("{error}"))
+    }
+
+    fn resume_audio(&self) -> Result<(), String> {
+        self.0
+            .run_mobile_plugin::<()>("resumeAudio", ())
+            .map_err(|error| format!("{error}"))
+    }
+
+    fn stop_audio(&self) -> Result<(), String> {
+        self.0
+            .run_mobile_plugin::<()>("stopAudio", ())
+            .map_err(|error| format!("{error}"))
+    }
+
+    fn seek_audio(&self, request: NativeAudioSeekRequest) -> Result<(), String> {
+        self.0
+            .run_mobile_plugin("seekAudio", request)
+            .map_err(|error| format!("{error}"))
+    }
+
+    fn set_audio_rate(&self, request: NativeAudioRateRequest) -> Result<(), String> {
+        self.0
+            .run_mobile_plugin("setAudioRate", request)
             .map_err(|error| format!("{error}"))
     }
 }
@@ -528,6 +600,108 @@ fn clear<R: Runtime>(app: AppHandle<R>, window: WebviewWindow<R>) -> Result<(), 
     }
 }
 
+#[tauri::command]
+fn play_audio<R: Runtime>(
+    app: AppHandle<R>,
+    window: WebviewWindow<R>,
+    request: NativeAudioRequest,
+) -> Result<(), String> {
+    #[cfg(mobile)]
+    {
+        let _ = window;
+        return app.media_session().play_audio(request);
+    }
+
+    #[allow(unreachable_code)]
+    {
+        let _ = (app, window, request);
+        Ok(())
+    }
+}
+
+#[tauri::command]
+fn pause_audio<R: Runtime>(app: AppHandle<R>, window: WebviewWindow<R>) -> Result<(), String> {
+    #[cfg(mobile)]
+    {
+        let _ = window;
+        return app.media_session().pause_audio();
+    }
+
+    #[allow(unreachable_code)]
+    {
+        let _ = (app, window);
+        Ok(())
+    }
+}
+
+#[tauri::command]
+fn resume_audio<R: Runtime>(app: AppHandle<R>, window: WebviewWindow<R>) -> Result<(), String> {
+    #[cfg(mobile)]
+    {
+        let _ = window;
+        return app.media_session().resume_audio();
+    }
+
+    #[allow(unreachable_code)]
+    {
+        let _ = (app, window);
+        Ok(())
+    }
+}
+
+#[tauri::command]
+fn stop_audio<R: Runtime>(app: AppHandle<R>, window: WebviewWindow<R>) -> Result<(), String> {
+    #[cfg(mobile)]
+    {
+        let _ = window;
+        return app.media_session().stop_audio();
+    }
+
+    #[allow(unreachable_code)]
+    {
+        let _ = (app, window);
+        Ok(())
+    }
+}
+
+#[tauri::command]
+fn seek_audio<R: Runtime>(
+    app: AppHandle<R>,
+    window: WebviewWindow<R>,
+    request: NativeAudioSeekRequest,
+) -> Result<(), String> {
+    #[cfg(mobile)]
+    {
+        let _ = window;
+        return app.media_session().seek_audio(request);
+    }
+
+    #[allow(unreachable_code)]
+    {
+        let _ = (app, window, request);
+        Ok(())
+    }
+}
+
+#[tauri::command]
+fn set_audio_rate<R: Runtime>(
+    app: AppHandle<R>,
+    window: WebviewWindow<R>,
+    request: NativeAudioRateRequest,
+) -> Result<(), String> {
+    #[cfg(mobile)]
+    {
+        let _ = window;
+        return app.media_session().set_audio_rate(request);
+    }
+
+    #[allow(unreachable_code)]
+    {
+        let _ = (app, window, request);
+        Ok(())
+    }
+}
+
 pub fn init<R: Runtime>() -> TauriPlugin<R> {
     Builder::new("media-session")
         .setup(|app, _api| {
@@ -549,7 +723,13 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
             initialize,
             update_state,
             update_timeline,
-            clear
+            clear,
+            play_audio,
+            pause_audio,
+            resume_audio,
+            stop_audio,
+            seek_audio,
+            set_audio_rate
         ])
         .build()
 }

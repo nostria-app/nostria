@@ -37,6 +37,7 @@ dependencies {
     implementation("androidx.core:core-ktx:1.9.0")
     implementation("androidx.appcompat:appcompat:1.6.0")
     implementation("androidx.media:media:1.7.0")
+    implementation("androidx.media3:media3-exoplayer:1.5.1")
     implementation("com.google.android.material:material:1.7.0")
     implementation(project(":tauri-android"))
 }
