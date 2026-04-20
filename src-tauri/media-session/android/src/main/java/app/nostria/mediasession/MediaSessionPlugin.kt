@@ -669,7 +669,7 @@ class MediaSessionPlugin(private val activity: Activity) : Plugin(activity) {
         }
 
         val session = MediaSessionCompat(appContext, sessionTag)
-        session.setCallback(sessionCallback)
+        session.setCallback(sessionCallback, mainHandler)
         session.setPlaybackToLocal(AudioManager.STREAM_MUSIC)
         session.setFlags(
             MediaSessionCompat.FLAG_HANDLES_MEDIA_BUTTONS or

@@ -26,6 +26,8 @@ const MEDIA_SESSION_COMMANDS: &[&str] = &[
     "stop_audio",
     "seek_audio",
     "set_audio_rate",
+    "registerListener",
+    "removeListener",
 ];
 
 const ANDROID_MEDIA_SESSION_ENV: &str = "DEP_MEDIA_SESSION_ANDROID_LIBRARY_PATH";
