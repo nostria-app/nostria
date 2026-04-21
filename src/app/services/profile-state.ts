@@ -659,6 +659,27 @@ export class ProfileState {
     }
   }
 
+  /**
+   * Compute the newest created_at timestamp across already-loaded timeline
+   * records (notes, replies, reposts, audio, media). Used to pick a `since`
+   * filter for the initial relay query so we close any gap between last-cache
+   * and now in one round-trip, instead of relying on the user to paginate.
+   *
+   * Returns 0 when there is nothing cached yet.
+   */
+  private getNewestCachedTimelineTimestamp(): number {
+    let newest = 0;
+    const update = (ts: number | undefined): void => {
+      if (typeof ts === 'number' && ts > newest) newest = ts;
+    };
+    for (const rec of this.notes()) update(rec.event.created_at);
+    for (const rec of this.replies()) update(rec.event.created_at);
+    for (const rec of this.reposts()) update(rec.event.created_at);
+    for (const rec of this.audio()) update(rec.event.created_at);
+    for (const rec of this.media()) update(rec.event.created_at);
+    return newest;
+  }
+
   async loadUserData(pubkey: string) {
     // Note: currentlyLoadingPubkey, isInitiallyLoading, and loadCachedEvents 
     // are now handled in the constructor effect for faster initial display
@@ -697,12 +718,34 @@ export class ProfileState {
 
     this.logger.debug(`PRIORITY 1: Loading timeline events for ${pubkey}`);
 
-    // Subscribe to content events (notes, reposts, and optionally reactions)
-    const events = await this.userRelayService.query(pubkey, {
+    // Gap-fill strategy: if cache already has events, query everything SINCE the
+    // newest cached timestamp (with a higher cap) so we close the gap between
+    // last visit and now in a single round-trip. Otherwise fall back to the
+    // "50 newest" initial-load query.
+    const newestCachedTimestamp = this.getNewestCachedTimelineTimestamp();
+    const hasCache = newestCachedTimestamp > 0;
+    const queryFilter: {
+      kinds: number[];
+      authors: string[];
+      limit: number;
+      since?: number;
+    } = {
       kinds: kindsToQuery,
       authors: [pubkey],
-      limit: 50, // Increased limit for better initial load
-    }, { useFullRelaySet: true });
+      limit: hasCache ? 500 : 50,
+    };
+    if (hasCache) {
+      // Small buffer (60s) in case of clock skew between relays.
+      queryFilter.since = Math.max(0, newestCachedTimestamp - 60);
+      this.logger.debug(
+        `[loadUserData] Gap-fill: querying since=${queryFilter.since} (newestCached=${newestCachedTimestamp}), limit=${queryFilter.limit}`
+      );
+    }
+
+    // Subscribe to content events (notes, reposts, and optionally reactions)
+    const events = await this.userRelayService.query(pubkey, queryFilter, {
+      useFullRelaySet: true,
+    });
 
     // Critical check: verify we're still loading data for this pubkey
     if (this.currentlyLoadingPubkey() !== pubkey) {
