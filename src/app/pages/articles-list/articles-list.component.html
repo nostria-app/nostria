@@ -106,6 +106,7 @@
               <mat-icon>more_vert</mat-icon>
             </button>
             <mat-menu #articleMenu="matMenu">
+<ng-template matMenuContent>
               @if (selectedTab() === 0) {
               <button mat-menu-item (click)="deleteDraft(article)">
                 <mat-icon>delete</mat-icon>
@@ -117,7 +118,8 @@
                 <span i18n="@@common.delete">Delete</span>
               </button>
               }
-            </mat-menu>
+            </ng-template>
+</mat-menu>
           </div>
 
           <!-- <p class="article-summary">{{ article.summary }}</p> -->

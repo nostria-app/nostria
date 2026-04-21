@@ -77,6 +77,7 @@
               <mat-icon>more_vert</mat-icon>
             </button>
             <mat-menu #zapMenu="matMenu">
+<ng-template matMenuContent>
               <button mat-menu-item (click)="copyEventData(zap)">
                 <mat-icon>content_copy</mat-icon>
                 <span>Copy Event Data</span>
@@ -85,7 +86,8 @@
                 <mat-icon>publish</mat-icon>
                 <span>Publish Event</span>
               </button>
-            </mat-menu>
+            </ng-template>
+</mat-menu>
           </div>
         </div>
 

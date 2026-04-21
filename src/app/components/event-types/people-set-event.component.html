@@ -15,6 +15,7 @@
   </div>
 
   <mat-menu #actionsMenu="matMenu">
+<ng-template matMenuContent>
     <button mat-menu-item (click)="followAll()" [disabled]="allFollowed() || isFollowingAll()">
       @if (isFollowingAll()) {
       <mat-spinner diameter="18"></mat-spinner>
@@ -35,7 +36,8 @@
       <mat-icon>content_copy</mat-icon>
       <span>Copy List</span>
     </button>
-  </mat-menu>
+  </ng-template>
+</mat-menu>
 
   <div class="people-set-content">
     @if (publicKeys().length > 0) {

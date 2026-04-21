@@ -83,6 +83,7 @@
           <mat-icon>more_vert</mat-icon>
         </button>
         <mat-menu #packMenu="matMenu">
+<ng-template matMenuContent>
           <button mat-menu-item (click)="copyPackData(pack)">
             <mat-icon>content_copy</mat-icon>
             <span>Copy Data</span>
@@ -95,7 +96,8 @@
             <mat-icon>delete</mat-icon>
             <span>Delete</span>
           </button>
-        </mat-menu>
+        </ng-template>
+</mat-menu>
         }
       </div>
     </div>

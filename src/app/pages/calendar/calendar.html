@@ -375,6 +375,7 @@
                     </button>
 
                     <mat-menu #eventMenu="matMenu">
+<ng-template matMenuContent>
                       <button mat-menu-item (click)="respondToEvent(event, 'accepted')">
                         <mat-icon color="primary">check_circle</mat-icon>
                         <span>Accept</span>
@@ -394,7 +395,8 @@
                         <span>Delete Event</span>
                       </button>
                       }
-                    </mat-menu>
+                    </ng-template>
+</mat-menu>
                   </div>
                 </mat-card-header>
 

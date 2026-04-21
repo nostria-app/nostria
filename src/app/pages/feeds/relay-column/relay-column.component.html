@@ -36,6 +36,7 @@
         <mat-icon>more_vert</mat-icon>
       </button>
       <mat-menu #relayMenu="matMenu">
+<ng-template matMenuContent>
         <button mat-menu-item (click)="toggleShowReplies()">
           <mat-icon>{{ showReplies() ? 'check_box' : 'check_box_outline_blank' }}</mat-icon>
           <span>Show Replies</span>
@@ -44,7 +45,8 @@
           <mat-icon>{{ showReposts() ? 'check_box' : 'check_box_outline_blank' }}</mat-icon>
           <span>Show Reposts</span>
         </button>
-      </mat-menu>
+      </ng-template>
+</mat-menu>
 
       <button mat-icon-button (click)="toggleExpanded()" [matTooltip]="isExpanded() ? 'Collapse' : 'Show relay info'">
         <mat-icon>{{ isExpanded() ? 'expand_less' : 'expand_more' }}</mat-icon>

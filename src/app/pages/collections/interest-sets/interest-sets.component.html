@@ -72,6 +72,7 @@
           <mat-icon>more_vert</mat-icon>
         </button>
         <mat-menu #listMenu="matMenu">
+<ng-template matMenuContent>
           <button mat-menu-item (click)="startEditing(set)">
             <mat-icon>edit</mat-icon>
             <span>Edit</span>
@@ -86,7 +87,8 @@
             <mat-icon>delete</mat-icon>
             <span>Delete</span>
           </button>
-        </mat-menu>
+        </ng-template>
+</mat-menu>
         }
       </div>
     </div>

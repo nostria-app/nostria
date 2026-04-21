@@ -5,6 +5,7 @@
 </button>
 
 <mat-menu #menu="matMenu">
+<ng-template matMenuContent>
   @if (canRepostOrQuote() && !!repostByCurrentAccount()) {
   <button mat-menu-item (click)="deleteRepost()">
     <mat-icon>repeat</mat-icon>
@@ -20,4 +21,5 @@
     <span>Quote</span>
   </button>
   }
+</ng-template>
 </mat-menu>

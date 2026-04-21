@@ -13,6 +13,7 @@
   </button>
 
   <mat-menu #contextMenu="matMenu">
+<ng-template matMenuContent>
     <button mat-menu-item (click)="copyEventUrl()">
       <mat-icon>link</mat-icon>
       <span>Copy Stream URL</span>
@@ -25,7 +26,8 @@
       <mat-icon>open_in_new</mat-icon>
       <span>View Event Details</span>
     </button>
-  </mat-menu>
+  </ng-template>
+</mat-menu>
 
   <!-- Thumbnail or Participant Banner Fallback -->
   @if (thumbnailUrl && !thumbnailError()) {
