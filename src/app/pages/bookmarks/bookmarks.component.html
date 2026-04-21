@@ -234,26 +234,28 @@
           <mat-icon>more_horiz</mat-icon>
         </button>
         <mat-menu #eventRowActionsMenu="matMenu">
-          <button mat-menu-item
-            (click)="openAddToAnotherList(bookmark.id, 'e', $event, bookmark.relay, bookmark.pubkey)">
-            <mat-icon>bookmark_add</mat-icon>
-            <span>Add to another folder</span>
-          </button>
-          <mat-divider></mat-divider>
-          @if (getMoveTargetLists().length === 0) {
-          <button mat-menu-item disabled>
-            <mat-icon>drive_file_move</mat-icon>
-            <span>No other lists available</span>
-          </button>
-          } @else {
-          @for (targetList of getMoveTargetLists(); track targetList.id) {
-          <button mat-menu-item
-            (click)="moveToAnotherList(bookmark.id, 'e', targetList.id, $event, bookmark.relay, bookmark.pubkey)">
-            <mat-icon>drive_file_move</mat-icon>
-            <span>Move to {{ targetList.name }}</span>
-          </button>
-          }
-          }
+          <ng-template matMenuContent>
+            <button mat-menu-item
+              (click)="openAddToAnotherList(bookmark.id, 'e', $event, bookmark.relay, bookmark.pubkey)">
+              <mat-icon>bookmark_add</mat-icon>
+              <span>Add to another folder</span>
+            </button>
+            <mat-divider></mat-divider>
+            @if (getMoveTargetLists().length === 0) {
+            <button mat-menu-item disabled>
+              <mat-icon>drive_file_move</mat-icon>
+              <span>No other lists available</span>
+            </button>
+            } @else {
+            @for (targetList of getMoveTargetLists(); track targetList.id) {
+            <button mat-menu-item
+              (click)="moveToAnotherList(bookmark.id, 'e', targetList.id, $event, bookmark.relay, bookmark.pubkey)">
+              <mat-icon>drive_file_move</mat-icon>
+              <span>Move to {{ targetList.name }}</span>
+            </button>
+            }
+            }
+          </ng-template>
         </mat-menu>
         <button mat-icon-button class="compact-remove-btn" (click)="removeEventBookmark(bookmark.id, $event)"
           matTooltip="Remove from this list">
@@ -283,25 +285,27 @@
           <mat-icon>more_horiz</mat-icon>
         </button>
         <mat-menu #articleRowActionsMenu="matMenu">
-          <button mat-menu-item
-            (click)="openAddToAnotherList(bookmark.id, 'a', $event, bookmark.relay, undefined, bm.kind)">
-            <mat-icon>bookmark_add</mat-icon>
-            <span>Add to another folder</span>
-          </button>
-          <mat-divider></mat-divider>
-          @if (getMoveTargetLists().length === 0) {
-          <button mat-menu-item disabled>
-            <mat-icon>drive_file_move</mat-icon>
-            <span>No other lists available</span>
-          </button>
-          } @else {
-          @for (targetList of getMoveTargetLists(); track targetList.id) {
-          <button mat-menu-item (click)="moveToAnotherList(bookmark.id, 'a', targetList.id, $event, bookmark.relay)">
-            <mat-icon>drive_file_move</mat-icon>
-            <span>Move to {{ targetList.name }}</span>
-          </button>
-          }
-          }
+          <ng-template matMenuContent>
+            <button mat-menu-item
+              (click)="openAddToAnotherList(bookmark.id, 'a', $event, bookmark.relay, undefined, bm.kind)">
+              <mat-icon>bookmark_add</mat-icon>
+              <span>Add to another folder</span>
+            </button>
+            <mat-divider></mat-divider>
+            @if (getMoveTargetLists().length === 0) {
+            <button mat-menu-item disabled>
+              <mat-icon>drive_file_move</mat-icon>
+              <span>No other lists available</span>
+            </button>
+            } @else {
+            @for (targetList of getMoveTargetLists(); track targetList.id) {
+            <button mat-menu-item (click)="moveToAnotherList(bookmark.id, 'a', targetList.id, $event, bookmark.relay)">
+              <mat-icon>drive_file_move</mat-icon>
+              <span>Move to {{ targetList.name }}</span>
+            </button>
+            }
+            }
+          </ng-template>
         </mat-menu>
         <button mat-icon-button class="compact-remove-btn" (click)="removeArticleBookmark(bookmark.id, $event)"
           matTooltip="Remove from this list">
@@ -324,24 +328,26 @@
           <mat-icon>more_horiz</mat-icon>
         </button>
         <mat-menu #urlRowActionsMenu="matMenu">
-          <button mat-menu-item (click)="openAddToAnotherList(bookmark.id, 'r', $event)">
-            <mat-icon>bookmark_add</mat-icon>
-            <span>Add to another folder</span>
-          </button>
-          <mat-divider></mat-divider>
-          @if (getMoveTargetLists().length === 0) {
-          <button mat-menu-item disabled>
-            <mat-icon>drive_file_move</mat-icon>
-            <span>No other lists available</span>
-          </button>
-          } @else {
-          @for (targetList of getMoveTargetLists(); track targetList.id) {
-          <button mat-menu-item (click)="moveToAnotherList(bookmark.id, 'r', targetList.id, $event)">
-            <mat-icon>drive_file_move</mat-icon>
-            <span>Move to {{ targetList.name }}</span>
-          </button>
-          }
-          }
+          <ng-template matMenuContent>
+            <button mat-menu-item (click)="openAddToAnotherList(bookmark.id, 'r', $event)">
+              <mat-icon>bookmark_add</mat-icon>
+              <span>Add to another folder</span>
+            </button>
+            <mat-divider></mat-divider>
+            @if (getMoveTargetLists().length === 0) {
+            <button mat-menu-item disabled>
+              <mat-icon>drive_file_move</mat-icon>
+              <span>No other lists available</span>
+            </button>
+            } @else {
+            @for (targetList of getMoveTargetLists(); track targetList.id) {
+            <button mat-menu-item (click)="moveToAnotherList(bookmark.id, 'r', targetList.id, $event)">
+              <mat-icon>drive_file_move</mat-icon>
+              <span>Move to {{ targetList.name }}</span>
+            </button>
+            }
+            }
+          </ng-template>
         </mat-menu>
         <button mat-icon-button class="compact-remove-btn" (click)="removeUrlBookmark(bookmark.id, $event)"
           matTooltip="Remove from this list">

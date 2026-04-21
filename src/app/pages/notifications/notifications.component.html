@@ -189,24 +189,26 @@
                   <mat-icon>more_vert</mat-icon>
                 </button>
                 <mat-menu #systemNotificationMenu="matMenu">
-                  @if (!notification.read) {
-                    <button
-                      mat-menu-item
-                      class="menu-mark-read-btn"
-                      (click)="markAsRead(notification.id)"
-                    >
-                      <mat-icon>check</mat-icon>
-                      <span>Mark as Read</span>
+                  <ng-template matMenuContent>
+                    @if (!notification.read) {
+                      <button
+                        mat-menu-item
+                        class="menu-mark-read-btn"
+                        (click)="markAsRead(notification.id)"
+                      >
+                        <mat-icon>check</mat-icon>
+                        <span>Mark as Read</span>
+                      </button>
+                    }
+                    <button mat-menu-item (click)="removeNotification(notification.id)">
+                      <mat-icon>close</mat-icon>
+                      <span>Remove</span>
                     </button>
-                  }
-                  <button mat-menu-item (click)="removeNotification(notification.id)">
-                    <mat-icon>close</mat-icon>
-                    <span>Remove</span>
-                  </button>
-                  <button mat-menu-item (click)="copyNotificationData(notification)">
-                    <mat-icon>content_copy</mat-icon>
-                    <span>Copy event data</span>
-                  </button>
+                    <button mat-menu-item (click)="copyNotificationData(notification)">
+                      <mat-icon>content_copy</mat-icon>
+                      <span>Copy event data</span>
+                    </button>
+                  </ng-template>
                 </mat-menu>
               </div>
             </div>
@@ -353,24 +355,26 @@
                 <mat-icon>more_vert</mat-icon>
               </button>
               <mat-menu #notificationMenu="matMenu">
-                @if (!notification.read) {
-                  <button
-                    mat-menu-item
-                    class="menu-mark-read-btn"
-                    (click)="markAsRead(notification.id)"
-                  >
-                    <mat-icon>check</mat-icon>
-                    <span>Mark as Read</span>
+                <ng-template matMenuContent>
+                  @if (!notification.read) {
+                    <button
+                      mat-menu-item
+                      class="menu-mark-read-btn"
+                      (click)="markAsRead(notification.id)"
+                    >
+                      <mat-icon>check</mat-icon>
+                      <span>Mark as Read</span>
+                    </button>
+                  }
+                  <button mat-menu-item (click)="removeNotification(notification.id)">
+                    <mat-icon>close</mat-icon>
+                    <span>Remove</span>
                   </button>
-                }
-                <button mat-menu-item (click)="removeNotification(notification.id)">
-                  <mat-icon>close</mat-icon>
-                  <span>Remove</span>
-                </button>
-                <button mat-menu-item (click)="copyNotificationData(notification)">
-                  <mat-icon>content_copy</mat-icon>
-                  <span>Copy event data</span>
-                </button>
+                  <button mat-menu-item (click)="copyNotificationData(notification)">
+                    <mat-icon>content_copy</mat-icon>
+                    <span>Copy event data</span>
+                  </button>
+                </ng-template>
               </mat-menu>
             </div>
           </div>

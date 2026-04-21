@@ -119,10 +119,10 @@ export class CommentsListComponent implements AfterViewInit {
       // Comments will be loaded by the effect in constructor
     }
 
-    // Set up scroll listener for infinite scroll
+    // Set up scroll listener for infinite scroll (passive for smoother scrolling)
     if (this.commentsContainer) {
       const container = this.commentsContainer.nativeElement;
-      container.addEventListener('scroll', this.onScroll.bind(this));
+      container.addEventListener('scroll', this.onScroll, { passive: true });
     }
   }
 
@@ -136,7 +136,7 @@ export class CommentsListComponent implements AfterViewInit {
     }
   }
 
-  private onScroll(): void {
+  private onScroll = (): void => {
     if (!this.commentsContainer) return;
 
     const container = this.commentsContainer.nativeElement;
@@ -147,7 +147,7 @@ export class CommentsListComponent implements AfterViewInit {
     if (scrollPosition >= scrollHeight - 200 && !this.isLoadingMore() && this.hasMore()) {
       this.loadMoreComments();
     }
-  }
+  };
 
   async loadComments(): Promise<void> {
     const event = this.event();

@@ -55,16 +55,18 @@
     </div>
 
     <mat-menu #addToListMenu="matMenu">
-      @for (set of availableFollowSets(); track set.id) {
-      <button mat-menu-item (click)="addAllToFollowSet(set.dTag, $event)">
-        <mat-icon>playlist_add</mat-icon>
-        <span>{{ set.title }}</span>
-      </button>
-      }
-      <button mat-menu-item (click)="createListAndAddAll($event)">
-        <mat-icon>add_circle</mat-icon>
-        <span>Create new list</span>
-      </button>
+      <ng-template matMenuContent>
+        @for (set of availableFollowSets(); track set.id) {
+        <button mat-menu-item (click)="addAllToFollowSet(set.dTag, $event)">
+          <mat-icon>playlist_add</mat-icon>
+          <span>{{ set.title }}</span>
+        </button>
+        }
+        <button mat-menu-item (click)="createListAndAddAll($event)">
+          <mat-icon>add_circle</mat-icon>
+          <span>Create new list</span>
+        </button>
+      </ng-template>
     </mat-menu>
 
     @if (image()) {

@@ -429,6 +429,7 @@
                   <mat-icon>add_reaction</mat-icon>
                 </button>
                 <mat-menu #reactionMenu="matMenu" class="reaction-picker-menu">
+<ng-template matMenuContent>
                   <div class="reaction-picker" (click)="$event.stopPropagation()">
                     @for (emoji of quickReactions; track emoji) {
                     <button mat-icon-button class="emoji-button" (click)="addReaction(entry.data, emoji)">
@@ -436,12 +437,14 @@
                     </button>
                     }
                   </div>
-                </mat-menu>
+                </ng-template>
+</mat-menu>
                 <button mat-icon-button class="more-button" #msgMenuTrigger="matMenuTrigger"
                   [matMenuTriggerFor]="msgMenu" (click)="$event.stopPropagation()" matTooltip="More options">
                   <mat-icon>more_vert</mat-icon>
                 </button>
                 <mat-menu #msgMenu="matMenu">
+<ng-template matMenuContent>
                   <button mat-menu-item (click)="setReplyTo(entry.data)">
                     <mat-icon>reply</mat-icon>
                     <span>Reply</span>
@@ -478,7 +481,8 @@
                     <span>Mute User</span>
                   </button>
                   }
-                </mat-menu>
+                </ng-template>
+</mat-menu>
               </div>
             </div>
 

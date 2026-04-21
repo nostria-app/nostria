@@ -623,6 +623,7 @@
                   <mat-icon>more_vert</mat-icon>
                 </button>
                 <mat-menu #messageMenu="matMenu">
+<ng-template matMenuContent>
                   @if (!message.isOutgoing && !isReactionMessage(message)) {
                   <button mat-menu-item [matMenuTriggerFor]="reactionMenu">
                     <mat-icon>sentiment_satisfied</mat-icon>
@@ -670,9 +671,11 @@
                     <span>Hide</span>
                   </button>
                   }
-                </mat-menu>
+                </ng-template>
+</mat-menu>
 
                 <mat-menu #reactionMenu="matMenu">
+<ng-template matMenuContent>
                   @for (reactionItem of quickReactionMenuItems(); track reactionItem.content) {
                   <button mat-menu-item
                     (click)="sendReaction(message, reactionItem.content, reactionItem.customEmojiUrl)">
@@ -688,7 +691,8 @@
                   <button mat-menu-item (click)="openReactionPickerDialog(message)">
                     <mat-icon>add_reaction</mat-icon>
                   </button>
-                </mat-menu>
+                </ng-template>
+</mat-menu>
               </div>
             </div>
 
@@ -786,6 +790,7 @@
               <mat-icon>more_vert</mat-icon>
             </button>
             <mat-menu #messageMenu="matMenu">
+<ng-template matMenuContent>
               @if (!message.isOutgoing && !isReactionMessage(message)) {
               <button mat-menu-item [matMenuTriggerFor]="reactionMenu">
                 <mat-icon>sentiment_satisfied</mat-icon>
@@ -833,9 +838,11 @@
                 <span>Hide</span>
               </button>
               }
-            </mat-menu>
+            </ng-template>
+</mat-menu>
 
             <mat-menu #reactionMenu="matMenu">
+<ng-template matMenuContent>
               @for (reactionItem of quickReactionMenuItems(); track reactionItem.content) {
               <button mat-menu-item (click)="sendReaction(message, reactionItem.content, reactionItem.customEmojiUrl)">
                 @if (reactionItem.customEmojiUrl) {
@@ -850,7 +857,8 @@
               <button mat-menu-item (click)="openReactionPickerDialog(message)">
                 <mat-icon>add_reaction</mat-icon>
               </button>
-            </mat-menu>
+            </ng-template>
+</mat-menu>
           </div>
           }
         </div>
