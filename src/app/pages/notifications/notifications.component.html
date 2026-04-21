@@ -1,20 +1,15 @@
 <div class="notifications-page">
   <!-- Panel Header -->
   <div class="panel-header">
-    <button
-      type="button"
-      class="panel-title-button title-font"
-      [matMenuTriggerFor]="notificationViewMenu"
-      #notificationViewTrigger="matMenuTrigger"
-      [class.panel-title-button-open]="notificationViewTrigger.menuOpen"
-      aria-label="Select notifications view"
-    >
+    <button type="button" class="panel-title-button title-font" [matMenuTriggerFor]="notificationViewMenu"
+      #notificationViewTrigger="matMenuTrigger" [class.panel-title-button-open]="notificationViewTrigger.menuOpen"
+      aria-label="Select notifications view">
       <mat-icon class="panel-title-icon">{{
         showSystemNotifications() ? 'priority' : 'notifications'
-      }}</mat-icon>
+        }}</mat-icon>
       <span class="panel-title-text">{{
         showSystemNotifications() ? 'System Notifications' : 'Notifications'
-      }}</span>
+        }}</span>
       <mat-icon class="panel-title-chevron">expand_more</mat-icon>
     </button>
     <mat-menu #notificationViewMenu="matMenu">
@@ -22,45 +17,35 @@
         <mat-icon>notifications</mat-icon>
         <span>Notifications</span>
         @if (!showSystemNotifications()) {
-          <mat-icon>check</mat-icon>
+        <mat-icon>check</mat-icon>
         }
       </button>
       <button mat-menu-item (click)="setNotificationsView(true)">
         <mat-icon>priority</mat-icon>
         <span>System Notifications</span>
         @if (showSystemNotifications()) {
-          <mat-icon>check</mat-icon>
+        <mat-icon>check</mat-icon>
         }
       </button>
     </mat-menu>
     @if (newNotificationCount() > 0) {
-      <span class="notification-badge">{{ newNotificationCount() }}</span>
+    <span class="notification-badge">{{ newNotificationCount() }}</span>
     }
     <span class="panel-header-spacer"></span>
-    <button
-      mat-icon-button
-      (click)="toggleSearch()"
-      matTooltip="Search notifications"
-      class="hide-small"
-    >
+    <button mat-icon-button (click)="toggleSearch()" matTooltip="Search notifications" class="hide-small">
       <mat-icon>search</mat-icon>
     </button>
     <!-- Filter button with overlay panel -->
     <app-filter-button [active]="hasActiveFilters()" tooltip="Filter">
-      <app-notifications-filter-panel
-        [filters]="notificationFilters()"
-        [showUnreadOnly]="showUnreadOnly()"
-        [wotFilterLevel]="wotFilterLevel()"
-        (filtersChanged)="onFiltersChanged($event)"
-        (showUnreadOnlyChanged)="onUnreadOnlyChanged($event)"
-        (wotFilterLevelChanged)="onWotFilterLevelChanged($event)"
-      >
+      <app-notifications-filter-panel [filters]="notificationFilters()" [showUnreadOnly]="showUnreadOnly()"
+        [wotFilterLevel]="wotFilterLevel()" (filtersChanged)="onFiltersChanged($event)"
+        (showUnreadOnlyChanged)="onUnreadOnlyChanged($event)" (wotFilterLevelChanged)="onWotFilterLevelChanged($event)">
       </app-notifications-filter-panel>
     </app-filter-button>
     @if (notifications().length > 0) {
-      <button mat-icon-button (click)="markAllAsRead()" matTooltip="Mark all as read">
-        <mat-icon>done_all</mat-icon>
-      </button>
+    <button mat-icon-button (click)="markAllAsRead()" matTooltip="Mark all as read">
+      <mat-icon>done_all</mat-icon>
+    </button>
     }
     <button mat-icon-button [matMenuTriggerFor]="notificationsMenu" matTooltip="More options">
       <mat-icon>more_vert</mat-icon>
@@ -75,17 +60,17 @@
 
       <button mat-menu-item (click)="refreshNotifications()" [disabled]="isRefreshing()">
         @if (isRefreshing()) {
-          <mat-spinner diameter="18"></mat-spinner>
+        <mat-spinner diameter="18"></mat-spinner>
         } @else {
-          <mat-icon>refresh</mat-icon>
+        <mat-icon>refresh</mat-icon>
         }
         <span>Refresh</span>
       </button>
       @if (notifications().length > 0) {
-        <button mat-menu-item (click)="clearNotifications()">
-          <mat-icon>close</mat-icon>
-          <span>Clear All</span>
-        </button>
+      <button mat-menu-item (click)="clearNotifications()">
+        <mat-icon>close</mat-icon>
+        <span>Clear All</span>
+      </button>
       }
       <mat-divider></mat-divider>
       <button mat-menu-item routerLink="/notifications/settings">
@@ -95,309 +80,248 @@
     </mat-menu>
   </div>
   @if (isLoadingNotifications()) {
-    <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+  <mat-progress-bar mode="indeterminate"></mat-progress-bar>
   }
 
   <!-- Search Input (toggled by global search button) -->
   @if (showSearch()) {
-    <div class="search-container">
-      <mat-form-field appearance="outline" class="search-field">
-        <mat-icon matPrefix>search</mat-icon>
-        <input
-          #searchInputElement
-          matInput
-          placeholder="Search by name or content..."
-          [ngModel]="searchQuery()"
-          (ngModelChange)="searchQuery.set($event)"
-        />
-        <button matSuffix mat-icon-button (click)="toggleSearch()" matTooltip="Close search">
-          <mat-icon>close</mat-icon>
-        </button>
-      </mat-form-field>
-    </div>
+  <div class="search-container">
+    <mat-form-field appearance="outline" class="search-field">
+      <mat-icon matPrefix>search</mat-icon>
+      <input #searchInputElement matInput placeholder="Search by name or content..." [ngModel]="searchQuery()"
+        (ngModelChange)="searchQuery.set($event)" />
+      <button matSuffix mat-icon-button (click)="toggleSearch()" matTooltip="Close search">
+        <mat-icon>close</mat-icon>
+      </button>
+    </mat-form-field>
+  </div>
   }
 
   <!-- Notifications Content -->
   <div class="notifications-container">
     @if (showSystemNotifications()) {
-      <!-- System Notifications View -->
-      @if (systemNotifications().length === 0) {
-        <div class="empty-state">
-          <mat-icon class="empty-icon">settings</mat-icon>
-          <h2>No system notifications</h2>
-          <p>Technical notifications and system messages will appear here.</p>
-        </div>
-      } @else {
-        <div class="notification-list">
-          @for (
-            notification of systemNotifications();
-            track trackByNotificationId($index, notification)
-          ) {
-            <div class="notification-system-item" [class.unread]="!notification.read">
-              <div class="notification-icon-wrapper">
-                <mat-icon class="notification-bell">notifications</mat-icon>
-              </div>
-
-              <div class="notification-content">
-                <div class="notification-header">
-                  <span class="notification-title">{{
-                    getFormattedNotificationTitle(notification)
-                  }}</span>
-                  @if (!notification.read) {
-                    <span class="new-indicator">NEW</span>
-                  }
-                </div>
-
-                @if (notification.message) {
-                  <div class="notification-message">{{ notification.message | resolveNostr }}</div>
-                }
-
-                <div class="notification-meta">
-                  <mat-icon class="time-icon">schedule</mat-icon>
-                  <span class="notification-time">{{ notification.timestamp / 1000 | ago }}</span>
-                </div>
-
-                @if (isRelayPublishingNotification(notification)) {
-                  <div class="notification-extra">
-                    <app-relay-publish-status
-                      [notification]="notification"
-                      (retry)="onRetryPublish($event)"
-                      (republish)="onRepublish($event)"
-                    >
-                    </app-relay-publish-status>
-                  </div>
-                }
-              </div>
-
-              <div class="notification-actions">
-                @if (!notification.read) {
-                  <button
-                    mat-icon-button
-                    (click)="markAsRead(notification.id)"
-                    matTooltip="Mark as read"
-                    class="action-icon-button mark-read-btn"
-                  >
-                    <mat-icon>check</mat-icon>
-                  </button>
-                }
-                <button
-                  mat-icon-button
-                  [matMenuTriggerFor]="systemNotificationMenu"
-                  matTooltip="More options"
-                  class="action-icon-button"
-                >
-                  <mat-icon>more_vert</mat-icon>
-                </button>
-                <mat-menu #systemNotificationMenu="matMenu">
-                  <ng-template matMenuContent>
-                    @if (!notification.read) {
-                      <button
-                        mat-menu-item
-                        class="menu-mark-read-btn"
-                        (click)="markAsRead(notification.id)"
-                      >
-                        <mat-icon>check</mat-icon>
-                        <span>Mark as Read</span>
-                      </button>
-                    }
-                    <button mat-menu-item (click)="removeNotification(notification.id)">
-                      <mat-icon>close</mat-icon>
-                      <span>Remove</span>
-                    </button>
-                    <button mat-menu-item (click)="copyNotificationData(notification)">
-                      <mat-icon>content_copy</mat-icon>
-                      <span>Copy event data</span>
-                    </button>
-                  </ng-template>
-                </mat-menu>
-              </div>
-            </div>
-          }
-        </div>
-      }
+    <!-- System Notifications View -->
+    @if (systemNotifications().length === 0) {
+    <div class="empty-state">
+      <mat-icon class="empty-icon">settings</mat-icon>
+      <h2>No system notifications</h2>
+      <p>Technical notifications and system messages will appear here.</p>
+    </div>
     } @else {
-      <!-- Activity Notifications View -->
-      @if (contentNotifications().length === 0 && !searchQuery()) {
-        <div class="empty-state">
-          <mat-icon class="empty-icon">people</mat-icon>
-          <h2>No activity yet</h2>
-          <p>You'll see mentions, follows, reposts, and other interactions here.</p>
+    <div class="notification-list">
+      @for (
+      notification of systemNotifications();
+      track trackByNotificationId($index, notification)
+      ) {
+      <div class="notification-system-item" [class.unread]="!notification.read">
+        <div class="notification-icon-wrapper">
+          <mat-icon class="notification-bell">notifications</mat-icon>
         </div>
-      } @else if (contentNotifications().length === 0 && searchQuery()) {
-        <div class="empty-state">
-          <mat-icon class="empty-icon">search_off</mat-icon>
-          <h2>No matching notifications</h2>
-          <p>No notifications found matching "{{ searchQuery() }}"</p>
-          <button mat-flat-button (click)="clearSearch()">
-            <mat-icon>close</mat-icon>
-            Clear search
-          </button>
-        </div>
-      } @else {
-        <cdk-virtual-scroll-viewport
-          [itemSize]="102"
-          [minBufferPx]="800"
-          [maxBufferPx]="1400"
-          class="notification-viewport"
-          (scrolledIndexChange)="onScrolledIndexChange($event)"
-        >
-          <div
-            *cdkVirtualFor="
-              let notification of contentNotifications();
-              trackBy: trackByNotificationId
-            "
-            class="notification-item"
-            [class.read]="notification.read"
-            [class.clickable]="getEventId(notification)"
-            [attr.data-notification-type]="notification.type"
-          >
-            <div
-              class="notification-avatar-wrapper"
-              (click)="viewAuthorProfile(notification); $event.stopPropagation()"
-            >
-              @if (getAuthorPubkey(notification)) {
-                <app-user-profile
-                  [pubkey]="getAuthorPubkey(notification)!"
-                  [view]="'small'"
-                  [disableLink]="true"
-                  [prefetchedProfile]="getPrefetchedProfile(notification)"
-                ></app-user-profile>
-              } @else {
-                <div class="notification-default-avatar">
-                  <mat-icon>account_circle</mat-icon>
-                </div>
-              }
-              <div class="notification-type-badge" [attr.data-badge-type]="notification.type">
-                <mat-icon>{{ getNotificationTypeIcon(notification.type) }}</mat-icon>
-              </div>
-            </div>
 
-            <div
-              class="notification-content"
-              (click)="getEventId(notification) ? viewEvent(notification) : null"
-              (keydown.enter)="getEventId(notification) ? viewEvent(notification) : null"
-              [attr.tabindex]="getEventId(notification) ? 0 : null"
-              [attr.role]="getEventId(notification) ? 'button' : null"
-            >
-              <div class="notification-header">
-                @if (getAuthorPubkey(notification)) {
-                  <span
-                    class="notification-author-name"
-                    (click)="viewAuthorProfile(notification); $event.stopPropagation()"
-                  >
-                    {{ getNotificationAuthorDisplayName(notification) }}
-                  </span>
-                }
-                <span class="notification-title">
-                  @if (getCustomEmojiTitleSegments(notification); as customEmojiTitle) {
-                    <span>{{ customEmojiTitle.prefix }}</span>
-                    <img
-                      [src]="getCustomEmojiUrl(notification)!"
-                      alt="custom emoji"
-                      title="custom emoji"
-                      [attr.title]="getCustomEmojiAlt(notification)"
-                      class="notification-custom-emoji"
-                    />
-                    @if (customEmojiTitle.suffix) {
-                      <span>{{ customEmojiTitle.suffix }}</span>
-                    }
-                  } @else {
-                    {{ getFormattedNotificationTitle(notification) }}
-                  }
-                </span>
-              </div>
-
-              @if (notification.message && notification.type !== 'zap') {
-                <div class="notification-message">{{ notification.message | resolveNostr }}</div>
-              }
-
-              @if (notification.message && notification.type === 'zap') {
-                <div class="notification-message">
-                  {{ notification.message }}
-                  @if (getZapContent(notification)) {
-                    <span> · {{ getZapContent(notification)! | resolveNostr }}</span>
-                  }
-                </div>
-              } @else if (getZapContent(notification)) {
-                <div class="notification-message">
-                  {{ getZapContent(notification)! | resolveNostr }}
-                </div>
-              }
-
-              <div class="notification-meta">
-                <mat-icon class="time-icon">schedule</mat-icon>
-                <span class="notification-time">{{ notification.timestamp / 1000 | ago }}</span>
-                @if (getRelayHintLabel(notification); as relayHint) {
-                  <mat-icon class="time-icon">dns</mat-icon>
-                  <span class="notification-time">{{ relayHint }}</span>
-                }
-              </div>
-            </div>
-
-            <div class="notification-actions">
-              @if (!notification.read) {
-                <button
-                  mat-icon-button
-                  (click)="markAsRead(notification.id); $event.stopPropagation()"
-                  matTooltip="Mark as read"
-                  class="action-icon-button mark-read-btn"
-                >
-                  <mat-icon>check</mat-icon>
-                </button>
-              }
-              <button
-                mat-icon-button
-                [matMenuTriggerFor]="notificationMenu"
-                (click)="$event.stopPropagation()"
-                matTooltip="More options"
-                class="action-icon-button"
-              >
-                <mat-icon>more_vert</mat-icon>
-              </button>
-              <mat-menu #notificationMenu="matMenu">
-                <ng-template matMenuContent>
-                  @if (!notification.read) {
-                    <button
-                      mat-menu-item
-                      class="menu-mark-read-btn"
-                      (click)="markAsRead(notification.id)"
-                    >
-                      <mat-icon>check</mat-icon>
-                      <span>Mark as Read</span>
-                    </button>
-                  }
-                  <button mat-menu-item (click)="removeNotification(notification.id)">
-                    <mat-icon>close</mat-icon>
-                    <span>Remove</span>
-                  </button>
-                  <button mat-menu-item (click)="copyNotificationData(notification)">
-                    <mat-icon>content_copy</mat-icon>
-                    <span>Copy event data</span>
-                  </button>
-                </ng-template>
-              </mat-menu>
-            </div>
+        <div class="notification-content">
+          <div class="notification-header">
+            <span class="notification-title">{{
+              getFormattedNotificationTitle(notification)
+              }}</span>
+            @if (!notification.read) {
+            <span class="new-indicator">NEW</span>
+            }
           </div>
 
-          <!-- Load More Indicator -->
-          @if (isLoadingMore()) {
-            <div class="load-more-indicator">
-              <mat-spinner diameter="24"></mat-spinner>
-              <span>Loading older notifications...</span>
-            </div>
-          } @else if (hasMoreNotifications() && contentNotifications().length >= 10) {
-            <div class="load-more-indicator clickable" (click)="loadMoreNotifications()">
-              <mat-icon>expand_more</mat-icon>
-              <span>Load more notifications</span>
-            </div>
-          } @else if (!hasMoreNotifications()) {
-            <div class="load-more-indicator end">
-              <mat-icon>check_circle</mat-icon>
-              <span>You've reached the end</span>
-            </div>
+          @if (notification.message) {
+          <div class="notification-message">{{ notification.message | resolveNostr }}</div>
           }
-        </cdk-virtual-scroll-viewport>
+
+          <div class="notification-meta">
+            <mat-icon class="time-icon">schedule</mat-icon>
+            <span class="notification-time">{{ notification.timestamp / 1000 | ago }}</span>
+          </div>
+
+          @if (isRelayPublishingNotification(notification)) {
+          <div class="notification-extra">
+            <app-relay-publish-status [notification]="notification" (retry)="onRetryPublish($event)"
+              (republish)="onRepublish($event)">
+            </app-relay-publish-status>
+          </div>
+          }
+        </div>
+
+        <div class="notification-actions">
+          @if (!notification.read) {
+          <button mat-icon-button (click)="markAsRead(notification.id)" matTooltip="Mark as read"
+            class="action-icon-button mark-read-btn">
+            <mat-icon>check</mat-icon>
+          </button>
+          }
+          <button mat-icon-button [matMenuTriggerFor]="systemNotificationMenu" matTooltip="More options"
+            class="action-icon-button">
+            <mat-icon>more_vert</mat-icon>
+          </button>
+          <mat-menu #systemNotificationMenu="matMenu">
+            <ng-template matMenuContent>
+              @if (!notification.read) {
+              <button mat-menu-item class="menu-mark-read-btn" (click)="markAsRead(notification.id)">
+                <mat-icon>check</mat-icon>
+                <span>Mark as Read</span>
+              </button>
+              }
+              <button mat-menu-item (click)="removeNotification(notification.id)">
+                <mat-icon>close</mat-icon>
+                <span>Remove</span>
+              </button>
+              <button mat-menu-item (click)="copyNotificationData(notification)">
+                <mat-icon>content_copy</mat-icon>
+                <span>Copy event data</span>
+              </button>
+            </ng-template>
+          </mat-menu>
+        </div>
+      </div>
       }
+    </div>
+    }
+    } @else {
+    <!-- Activity Notifications View -->
+    @if (contentNotifications().length === 0 && !searchQuery()) {
+    <div class="empty-state">
+      <mat-icon class="empty-icon">people</mat-icon>
+      <h2>No activity yet</h2>
+      <p>You'll see mentions, follows, reposts, and other interactions here.</p>
+    </div>
+    } @else if (contentNotifications().length === 0 && searchQuery()) {
+    <div class="empty-state">
+      <mat-icon class="empty-icon">search_off</mat-icon>
+      <h2>No matching notifications</h2>
+      <p>No notifications found matching "{{ searchQuery() }}"</p>
+      <button mat-flat-button (click)="clearSearch()">
+        <mat-icon>close</mat-icon>
+        Clear search
+      </button>
+    </div>
+    } @else {
+    <cdk-virtual-scroll-viewport [itemSize]="102" [minBufferPx]="800" [maxBufferPx]="1400" class="notification-viewport"
+      (scrolledIndexChange)="onScrolledIndexChange($event)">
+      <div *cdkVirtualFor="
+              let notification of contentNotifications();
+              trackBy: trackByNotificationId
+            " class="notification-item" [class.read]="notification.read" [class.clickable]="getEventId(notification)"
+        [attr.data-notification-type]="notification.type">
+        <div class="notification-avatar-wrapper" (click)="viewAuthorProfile(notification); $event.stopPropagation()">
+          @if (getAuthorPubkey(notification)) {
+          <app-user-profile [pubkey]="getAuthorPubkey(notification)!" [view]="'small'" [disableLink]="true"
+            [prefetchedProfile]="getPrefetchedProfile(notification)"></app-user-profile>
+          } @else {
+          <div class="notification-default-avatar">
+            <mat-icon>account_circle</mat-icon>
+          </div>
+          }
+          <div class="notification-type-badge" [attr.data-badge-type]="notification.type">
+            <mat-icon>{{ getNotificationTypeIcon(notification.type) }}</mat-icon>
+          </div>
+        </div>
+
+        <div class="notification-content" (click)="getEventId(notification) ? viewEvent(notification) : null"
+          (keydown.enter)="getEventId(notification) ? viewEvent(notification) : null"
+          [attr.tabindex]="getEventId(notification) ? 0 : null"
+          [attr.role]="getEventId(notification) ? 'button' : null">
+          <div class="notification-header">
+            @if (getAuthorPubkey(notification)) {
+            <span class="notification-author-name" (click)="viewAuthorProfile(notification); $event.stopPropagation()">
+              {{ getNotificationAuthorDisplayName(notification) }}
+            </span>
+            }
+            <span class="notification-title">
+              @if (getCustomEmojiTitleSegments(notification); as customEmojiTitle) {
+              <span>{{ customEmojiTitle.prefix }}</span>
+              <img [src]="getCustomEmojiUrl(notification)!" alt="custom emoji" title="custom emoji"
+                [attr.title]="getCustomEmojiAlt(notification)" class="notification-custom-emoji" />
+              @if (customEmojiTitle.suffix) {
+              <span>{{ customEmojiTitle.suffix }}</span>
+              }
+              } @else {
+              {{ getFormattedNotificationTitle(notification) }}
+              }
+            </span>
+          </div>
+
+          @if (notification.message && notification.type !== 'zap') {
+          <div class="notification-message">{{ notification.message | resolveNostr }}</div>
+          }
+
+          @if (notification.message && notification.type === 'zap') {
+          <div class="notification-message">
+            {{ notification.message }}
+            @if (getZapContent(notification)) {
+            <span> · {{ getZapContent(notification)! | resolveNostr }}</span>
+            }
+          </div>
+          } @else if (getZapContent(notification)) {
+          <div class="notification-message">
+            {{ getZapContent(notification)! | resolveNostr }}
+          </div>
+          }
+
+          <div class="notification-meta">
+            <mat-icon class="time-icon">schedule</mat-icon>
+            <span class="notification-time">{{ notification.timestamp / 1000 | ago }}</span>
+            @if (getRelayHintLabel(notification); as relayHint) {
+            <mat-icon class="time-icon">dns</mat-icon>
+            <span class="notification-time">{{ relayHint }}</span>
+            }
+          </div>
+        </div>
+
+        <div class="notification-actions">
+          @if (!notification.read) {
+          <button mat-icon-button (click)="markAsRead(notification.id); $event.stopPropagation()"
+            matTooltip="Mark as read" class="action-icon-button mark-read-btn">
+            <mat-icon>check</mat-icon>
+          </button>
+          }
+          <button mat-icon-button [matMenuTriggerFor]="notificationMenu" (click)="$event.stopPropagation()"
+            matTooltip="More options" class="action-icon-button">
+            <mat-icon>more_vert</mat-icon>
+          </button>
+          <mat-menu #notificationMenu="matMenu">
+            <ng-template matMenuContent>
+              @if (!notification.read) {
+              <button mat-menu-item class="menu-mark-read-btn" (click)="markAsRead(notification.id)">
+                <mat-icon>check</mat-icon>
+                <span>Mark as Read</span>
+              </button>
+              }
+              <button mat-menu-item (click)="removeNotification(notification.id)">
+                <mat-icon>close</mat-icon>
+                <span>Remove</span>
+              </button>
+              <button mat-menu-item (click)="copyNotificationData(notification)">
+                <mat-icon>content_copy</mat-icon>
+                <span>Copy event data</span>
+              </button>
+            </ng-template>
+          </mat-menu>
+        </div>
+      </div>
+
+      <!-- Load More Indicator -->
+      @if (isLoadingMore()) {
+      <div class="load-more-indicator">
+        <mat-spinner diameter="24"></mat-spinner>
+        <span>Loading older notifications...</span>
+      </div>
+      } @else if (hasMoreNotifications() && contentNotifications().length >= 10) {
+      <div class="load-more-indicator clickable" (click)="loadMoreNotifications()">
+        <mat-icon>expand_more</mat-icon>
+        <span>Load more notifications</span>
+      </div>
+      } @else if (!hasMoreNotifications()) {
+      <div class="load-more-indicator end">
+        <mat-icon>check_circle</mat-icon>
+        <span>You've reached the end</span>
+      </div>
+      }
+    </cdk-virtual-scroll-viewport>
+    }
     }
   </div>
 </div>
