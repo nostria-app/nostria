@@ -70,7 +70,11 @@ export class EncryptionService {
     const message = error.message.toLowerCase();
     return message.includes('invalid payload length')
       || message.includes('content does not appear to be encrypted')
-      || message.includes('decryption returned empty result');
+      || message.includes('decryption returned empty result')
+      || message.includes('current account cannot decrypt')
+      || message.includes('private key not available for decryption')
+      || message.includes('browser extension nip-04 not available')
+      || message.includes('browser extension nip-44 not available');
   }
 
   constructor() {
@@ -481,7 +485,11 @@ export class EncryptionService {
       const privateKeyBytes = hexToBytes(decryptedPrivkey);
       return await nip04.decrypt(privateKeyBytes, pubkey, ciphertext);
     } catch (error) {
-      this.logger.error('Failed to decrypt with NIP-04', error);
+      if (this.isExpectedDecryptFailure(error)) {
+        this.logger.debug('Skipped NIP-04 decryption (expected failure)', error);
+      } else {
+        this.logger.error('Failed to decrypt with NIP-04', error);
+      }
       if (error instanceof Error) {
         throw error;
       }

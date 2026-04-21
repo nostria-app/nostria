@@ -29,6 +29,21 @@ export class OpenGraphService {
   private document = inject(DOCUMENT);
   private sanitizer = inject(DomSanitizer);
   private cache = new Map<string, OpenGraphData>();
+  // Bound the cache to prevent unbounded memory growth while browsing feeds with
+  // many link previews. LRU-ish: oldest entry evicted when limit is exceeded.
+  private readonly MAX_CACHE_SIZE = 500;
+
+  private setCacheEntry(key: string, value: OpenGraphData): void {
+    if (this.cache.has(key)) {
+      this.cache.delete(key);
+    } else if (this.cache.size >= this.MAX_CACHE_SIZE) {
+      const oldestKey = this.cache.keys().next().value;
+      if (oldestKey !== undefined) {
+        this.cache.delete(oldestKey);
+      }
+    }
+    this.cache.set(key, value);
+  }
 
   /**
    * Fetches OpenGraph metadata for a given URL
@@ -42,7 +57,7 @@ export class OpenGraphService {
     if (this.shouldSkipPreview(normalizedUrl)) {
       const blockedData = this.createBlockedPreview(normalizedUrl);
 
-      this.cache.set(cacheKey, blockedData);
+      this.setCacheEntry(cacheKey, blockedData);
       return blockedData;
     }
 
@@ -57,7 +72,7 @@ export class OpenGraphService {
           const xPostEmbed = await this.getXPostEmbedData(normalizedUrl);
 
           if (xPostEmbed) {
-            this.cache.set(cacheKey, xPostEmbed);
+            this.setCacheEntry(cacheKey, xPostEmbed);
             return xPostEmbed;
           }
         } catch (error) {
@@ -106,14 +121,14 @@ export class OpenGraphService {
       }
 
       // Cache the result
-      this.cache.set(cacheKey, enrichedMetadata);
+      this.setCacheEntry(cacheKey, enrichedMetadata);
       return enrichedMetadata;
     } catch (error) {
       console.error(`Error fetching OpenGraph data for ${normalizedUrl}:`, error);
 
       const youtubeFallback = this.createYouTubeFallbackPreview(normalizedUrl);
       if (youtubeFallback) {
-        this.cache.set(cacheKey, youtubeFallback);
+        this.setCacheEntry(cacheKey, youtubeFallback);
         return youtubeFallback;
       }
 
@@ -125,7 +140,7 @@ export class OpenGraphService {
       };
 
       // Cache the error result too, but with a shorter TTL in a real app
-      this.cache.set(cacheKey, errorData);
+      this.setCacheEntry(cacheKey, errorData);
       return errorData;
     }
   }

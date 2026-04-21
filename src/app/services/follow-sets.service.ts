@@ -715,6 +715,12 @@ export class FollowSetsService {
       return { pubkeys: [], title: null };
     }
 
+    // Skip decryption entirely for accounts that cannot decrypt (e.g. preview).
+    // Attempting here would fire N failed decrypt logs per private follow set.
+    if (!this.accountState.canDecrypt()) {
+      return { pubkeys: [], title: null };
+    }
+
     try {
       const pubkey = this.accountState.pubkey();
       if (!pubkey) {

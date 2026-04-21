@@ -318,6 +318,11 @@ export class BookmarkService {
       return; // Not a private list or no event
     }
 
+    // Skip decryption for accounts that cannot decrypt (e.g. preview).
+    if (!this.accountState.canDecrypt()) {
+      return;
+    }
+
     if (!list.event.content) {
       return; // No content to decrypt
     }

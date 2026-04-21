@@ -2224,6 +2224,12 @@ export class MessagingService implements NostriaService {
     const myPubkey = this.accountState.pubkey();
     if (!myPubkey) return null;
 
+    // Skip decryption for accounts that cannot decrypt (e.g. preview).
+    // Prevents logging an error for every NIP-04 message when we already know we can't read them.
+    if (!this.accountState.canDecrypt()) {
+      return null;
+    }
+
     try {
       // For NIP-04 messages, the sender is the event pubkey
       const tags = this.utilities.getPTagsValuesFromEvent(event);
@@ -2284,6 +2290,11 @@ export class MessagingService implements NostriaService {
   private async unwrapMessageInternal(wrappedEvent: any): Promise<any | null> {
     const myPubkey = this.accountState.pubkey();
     if (!myPubkey) return null;
+
+    // Skip gift-wrap decryption for accounts that cannot decrypt (e.g. preview).
+    if (!this.accountState.canDecrypt()) {
+      return null;
+    }
 
     if (!wrappedEvent?.id) {
       return null;
