@@ -122,6 +122,12 @@ export class LazyIframeComponent implements OnInit, OnDestroy {
     if (this.allowfullscreen()) iframe.setAttribute('allowfullscreen', '');
     iframe.setAttribute('frameborder', '0');
     iframe.setAttribute('loading', 'lazy');
+    // Imperatively-created elements don't pick up Angular's scoped component
+    // styles, so size the iframe inline to fill its slot.
+    iframe.style.width = '100%';
+    iframe.style.height = '100%';
+    iframe.style.border = '0';
+    iframe.style.display = 'block';
     slot.appendChild(iframe);
     this.mountedIframe = iframe;
   }
