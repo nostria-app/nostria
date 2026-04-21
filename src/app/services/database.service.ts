@@ -258,10 +258,10 @@ export interface StoredAiChatHistoryEntry {
   updatedAt: number;
   modelId: string;
   modelName: string;
-  messages: Array<{
+  messages: {
     role: 'user' | 'assistant';
     content: string;
-    generatedImages?: Array<{
+    generatedImages?: {
       id: string;
       provider: 'openai' | 'xai' | 'local';
       providerLabel: string;
@@ -278,8 +278,8 @@ export interface StoredAiChatHistoryEntry {
         xaiImageResolution?: string;
         xaiImageCount?: number;
       };
-    }>;
-    generatedVideos?: Array<{
+    }[];
+    generatedVideos?: {
       id: string;
       provider: 'openai' | 'xai' | 'local';
       providerLabel: string;
@@ -288,8 +288,8 @@ export interface StoredAiChatHistoryEntry {
       cacheKey?: string;
       mimeType?: string;
       duration?: number;
-    }>;
-    generatedAudios?: Array<{
+    }[];
+    generatedAudios?: {
       id: string;
       provider: 'openai' | 'xai' | 'local';
       providerLabel: string;
@@ -299,8 +299,8 @@ export interface StoredAiChatHistoryEntry {
       mimeType?: string;
       voiceId?: string;
       language?: string;
-    }>;
-  }>;
+    }[];
+  }[];
 }
 
 /**

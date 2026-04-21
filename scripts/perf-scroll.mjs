@@ -54,7 +54,7 @@ async function counts(label) {
 
 const samples = [];
 await page.goto(BASE + '/f', { waitUntil: 'domcontentloaded', timeout: 60000 });
-try { await page.waitForLoadState('networkidle', { timeout: 15000 }); } catch {}
+try { await page.waitForLoadState('networkidle', { timeout: 15000 }); } catch { }
 await page.waitForTimeout(4000);
 samples.push(await counts('f-initial'));
 

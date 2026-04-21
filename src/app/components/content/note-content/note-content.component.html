@@ -49,7 +49,8 @@
   <button type="button" class="carousel-side-preview carousel-side-preview-prev"
     [class.blurred-preview]="shouldBlurImages() && !isImageRevealed(previousImage.content)"
     (click)="goToPrevious(item.id, item.images); $event.stopPropagation()" aria-label="Previous image preview">
-    <img [src]="getImageSrc(previousImage.content)" alt="" loading="lazy" (error)="onImageError(previousImage.content)" />
+    <img [src]="getImageSrc(previousImage.content)" alt="" loading="lazy"
+      (error)="onImageError(previousImage.content)" />
     <span class="carousel-side-preview-scrim"></span>
   </button>
   }
@@ -74,8 +75,8 @@
           <mat-icon>broken_image</mat-icon>
         </div>
         }
-        <img [src]="getImageSrc(currentImage.content)" alt="Image {{ currentIndex + 1 }} of {{ item.images.length }}" loading="lazy"
-          (click)="openCarouselImageDialog(item.images, currentIndex)"
+        <img [src]="getImageSrc(currentImage.content)" alt="Image {{ currentIndex + 1 }} of {{ item.images.length }}"
+          loading="lazy" (click)="openCarouselImageDialog(item.images, currentIndex)"
           [class.clickable-image]="!shouldBlurImages() || isImageRevealed(currentImage.content)"
           [class.failed]="hasImageFailed(currentImage.content)"
           [class.hidden]="shouldBlurImages() && !isImageRevealed(currentImage.content)"
@@ -462,8 +463,8 @@
 <a class="hashtag-link" [routerLink]="['/f']" [queryParams]="{t: token.content.toLowerCase()}">#{{ token.content }}</a>
 } @else if (token.type === 'url') {
 @if (token.previewTitle || token.previewSiteName || token.previewLoading || token.previewError) {
-<a class="preview-link" [href]="token.content" target="_blank" rel="noopener noreferrer"
-  [matTooltip]="token.content" [attr.aria-label]="getUrlButtonAriaLabel(token)">
+<a class="preview-link" [href]="token.content" target="_blank" rel="noopener noreferrer" [matTooltip]="token.content"
+  [attr.aria-label]="getUrlButtonAriaLabel(token)">
   <span class="preview-link-label">{{ getUrlButtonLabel(token) }}</span>
   <mat-icon class="preview-link-icon">open_in_new</mat-icon>
 </a>
