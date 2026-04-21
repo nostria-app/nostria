@@ -44,6 +44,7 @@ import { SettingsEventComponent } from '../../event-types/settings-event.compone
 import { RelayListEventComponent } from '../../event-types/relay-list-event.component';
 import { ChannelEmbedComponent } from '../../channel-embed/channel-embed.component';
 import { UserProfileComponent } from '../../user-profile/user-profile.component';
+import { LazyIframeComponent } from '../../lazy-iframe/lazy-iframe.component';
 import { NostrRecord } from '../../../interfaces';
 import { AgoPipe } from '../../../pipes/ago.pipe';
 import { TimestampPipe } from '../../../pipes/timestamp.pipe';
@@ -98,6 +99,7 @@ export interface DisplayItem {
     UserProfileComponent,
     AgoPipe,
     TimestampPipe,
+    LazyIframeComponent,
   ],
   templateUrl: './note-content.component.html',
   styleUrl: './note-content.component.scss',

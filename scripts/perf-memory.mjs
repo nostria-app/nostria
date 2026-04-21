@@ -63,7 +63,7 @@ async function sample(label) {
 
 await page.goto(BASE + '/', { waitUntil: 'domcontentloaded', timeout: 60000 });
 await sample('dcl');
-try { await page.waitForLoadState('networkidle', { timeout: 15000 }); } catch {}
+try { await page.waitForLoadState('networkidle', { timeout: 15000 }); } catch { }
 await sample('networkidle');
 await page.waitForTimeout(3000);
 await sample('idle-3s');

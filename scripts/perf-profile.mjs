@@ -56,7 +56,7 @@ await context.addInitScript((user) => {
       }
     });
     po.observe({ entryTypes: ['longtask'] });
-  } catch {}
+  } catch { }
 }, previewUser);
 
 const page = await context.newPage();
@@ -123,7 +123,7 @@ memory.push(await snapshotMemory('domcontentloaded'));
 
 try {
   await page.waitForLoadState('networkidle', { timeout: 20000 });
-} catch {}
+} catch { }
 memory.push(await snapshotMemory('networkidle'));
 
 // Wait a bit for idle preloads

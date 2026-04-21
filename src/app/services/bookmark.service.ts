@@ -33,11 +33,11 @@ export interface BookmarkList {
   isPrivate: boolean; // true for encrypted lists
 }
 
-type ReorderableBookmarkItem = {
+interface ReorderableBookmarkItem {
   id: string;
   relay?: string;
   pubkey?: string;
-};
+}
 
 @Injectable({
   providedIn: 'root',

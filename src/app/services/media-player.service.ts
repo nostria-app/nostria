@@ -1543,14 +1543,11 @@ export class MediaPlayerService implements OnInitialized {
   getYouTubeEmbedUrl = computed(() => {
     // Return a function that caches YouTube embed URLs
     return (url: string, query?: string): SafeResourceUrl => {
-      console.log('getYouTubeEmbedUrl called with:', url, 'and query:', query);
-
       // Create cache key including query parameter
       const cacheKey = query ? `${url}?${query}` : url;
 
       // Check if we already have this URL cached
       if (this._youtubeUrlCache.has(cacheKey)) {
-        console.log('Returning cached YouTube embed URL for:', cacheKey);
         return this._youtubeUrlCache.get(cacheKey)!;
       }
 
@@ -1572,7 +1569,6 @@ export class MediaPlayerService implements OnInitialized {
 
       // Cache the result
       this._youtubeUrlCache.set(cacheKey, embedUrl);
-      console.log('Cached YouTube embed URL for:', cacheKey);
 
       return embedUrl;
     };

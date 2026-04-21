@@ -232,27 +232,26 @@
 <!-- YouTube Video Embed -->
 <div class="media-container youtube-container" [class.youtube-short]="token.isYouTubeShort">
   @if (token.processedUrl) {
-  <iframe [src]="token.processedUrl" frameborder="0"
+  <app-lazy-iframe [src]="token.processedUrl"
     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-    referrerpolicy="strict-origin-when-cross-origin" allowfullscreen loading="lazy"></iframe>
+    referrerpolicy="strict-origin-when-cross-origin" [allowfullscreen]="true"></app-lazy-iframe>
   }
 </div>
 } @else if (token.type === 'tidal') {
 <!-- Tidal Embed -->
 <div class="media-container tidal-container">
   @if (token.processedUrl) {
-  <iframe [src]="token.processedUrl" frameborder="0" allow="encrypted-media; clipboard-write" title="Tidal music embed"
-    sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"
-    loading="lazy"></iframe>
+  <app-lazy-iframe [src]="token.processedUrl" allow="encrypted-media; clipboard-write" title="Tidal music embed"
+    sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"></app-lazy-iframe>
   }
 </div>
 } @else if (token.type === 'spotify') {
 <!-- Spotify Embed -->
 <div class="media-container spotify-container">
   @if (token.processedUrl) {
-  <iframe [src]="token.processedUrl" frameborder="0"
+  <app-lazy-iframe [src]="token.processedUrl"
     allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-    loading="lazy" title="Spotify music embed"></iframe>
+    title="Spotify music embed"></app-lazy-iframe>
   }
 </div>
 } @else if (token.type === 'nostr-mention' && (token.nostrData?.type === 'npub' || token.nostrData?.type ===

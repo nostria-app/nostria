@@ -469,7 +469,8 @@ export class FeedService {
   private async loadCachedEventsFromDb(pubkey: string, feedId: string): Promise<Event[]> {
     try {
       await this.database.init();
-      const cachedEvents = await this.database.loadCachedEvents(pubkey, feedId);
+      const limits = this.getFeedMemoryLimits();
+      const cachedEvents = await this.database.loadCachedEvents(pubkey, feedId, limits.maxCache);
       const limitedEvents = this.limitDisplayedEvents(cachedEvents);
 
       if (limitedEvents.length > 0) {

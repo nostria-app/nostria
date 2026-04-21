@@ -76,7 +76,7 @@ export class FollowingDataService {
 
   // Cached events from following (in memory), scoped per kinds selection.
   private cachedEventsByKinds = signal<Map<string, Event[]>>(new Map());
-  private readonly MAX_IN_MEMORY_EVENTS = 2400;
+  private readonly MAX_IN_MEMORY_EVENTS = 500;
   private readonly MAX_IN_MEMORY_KIND_CACHES = 4;
 
   // Current fetch promises to avoid duplicate requests per kinds selection

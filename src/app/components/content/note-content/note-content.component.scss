@@ -402,7 +402,8 @@
   background: var(--mat-sys-surface-container);
   margin: 12px 0;
 
-  iframe {
+  iframe,
+  app-lazy-iframe {
     position: absolute;
     inset: 0;
     width: 100%;
@@ -430,7 +431,8 @@
   background: #000;
   margin: 12px 0;
 
-  iframe {
+  iframe,
+  app-lazy-iframe {
     display: block;
     width: 100%;
     height: 130px;
@@ -440,7 +442,8 @@
   @media (max-width: 480px) {
     border-radius: 8px;
 
-    iframe {
+    iframe,
+    app-lazy-iframe {
       height: 130px;
     }
   }
@@ -455,7 +458,8 @@
   background: #121212;
   margin: 12px 0;
 
-  iframe {
+  iframe,
+  app-lazy-iframe {
     display: block;
     width: 100%;
     height: 152px;
@@ -465,7 +469,8 @@
   @media (max-width: 480px) {
     border-radius: 8px;
 
-    iframe {
+    iframe,
+    app-lazy-iframe {
       height: 152px;
     }
   }

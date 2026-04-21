@@ -2999,9 +2999,15 @@ export class DatabaseService {
   }
 
   /**
-   * Load cached events for a feed column (account DB)
+   * Load cached events for a feed column (account DB).
+   * @param limit Optional max number of events to return (newest first). Events
+   *   beyond the limit remain in the DB and can be paged in later.
    */
-  async loadCachedEvents(accountPubkey: string, columnId: string): Promise<Event[]> {
+  async loadCachedEvents(
+    accountPubkey: string,
+    columnId: string,
+    limit?: number
+  ): Promise<Event[]> {
     const db = this.getAccountDb();
     if (!db) return [];
 
@@ -3020,11 +3026,15 @@ export class DatabaseService {
           .map((cached: CachedFeedEvent) => cached.event)
           .sort((a: Event, b: Event) => (b.created_at || 0) - (a.created_at || 0));
 
-        if (events.length > 0) {
-          this.logger.info(`✅ Loaded ${events.length} cached events for column ${columnId}`);
+        const limited = typeof limit === 'number' && limit > 0 && events.length > limit
+          ? events.slice(0, limit)
+          : events;
+
+        if (limited.length > 0) {
+          this.logger.info(`✅ Loaded ${limited.length} cached events for column ${columnId}`);
         }
 
-        resolve(events);
+        resolve(limited);
       };
       request.onerror = () => reject(request.error);
     });

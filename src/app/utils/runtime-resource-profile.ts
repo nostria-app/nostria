@@ -24,15 +24,15 @@ export interface RuntimeResourceProfile {
 }
 
 export const DEFAULT_FEED_MEMORY_LIMITS: FeedMemoryLimits = {
-  maxEvents: 1600,
-  maxPending: 320,
-  maxCache: 1920,
+  maxEvents: 300,
+  maxPending: 120,
+  maxCache: 500,
 };
 
 export const CONSTRAINED_FEED_MEMORY_LIMITS: FeedMemoryLimits = {
-  maxEvents: 900,
-  maxPending: 180,
-  maxCache: 1080,
+  maxEvents: 150,
+  maxPending: 60,
+  maxCache: 250,
 };
 
 export function getRuntimeResourceProfile(navigatorLike = getNavigatorLike()): RuntimeResourceProfile {
