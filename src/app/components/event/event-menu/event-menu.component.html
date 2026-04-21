@@ -8,7 +8,8 @@
 </button>
 }
 
-<mat-menu #menu="matMenu">
+<mat-menu #menu="matMenu">  <ng-template matMenuContent>
+
   <button mat-menu-item [matMenuTriggerFor]="copyMenu">
     <mat-icon>content_copy</mat-icon>
     Copy
@@ -106,9 +107,11 @@
   </button>
   }
 
+  </ng-template>
 </mat-menu>
 
-<mat-menu #mediaMenu="matMenu">
+<mat-menu #mediaMenu="matMenu">  <ng-template matMenuContent>
+
   <button mat-menu-item (click)="addMediaToQueue()">
     <mat-icon>playlist_add</mat-icon>
     Add to Queue
@@ -121,9 +124,11 @@
     <mat-icon>play_circle</mat-icon>
     Play in Media Player
   </button>
+  </ng-template>
 </mat-menu>
 
-<mat-menu #profileMenu="matMenu">
+<mat-menu #profileMenu="matMenu">  <ng-template matMenuContent>
+
   <button mat-menu-item (click)="toggleAuthorFollow()">
     <mat-icon>{{ isAuthorFollowed() ? 'person_remove' : 'person_add' }}</mat-icon>
     {{ isAuthorFollowed() ? 'Unfollow' : 'Follow' }}
@@ -136,9 +141,11 @@
     <mat-icon>group_add</mat-icon>
     Add to list
   </button>
+  </ng-template>
 </mat-menu>
 
-<mat-menu #profileListsMenu="matMenu">
+<mat-menu #profileListsMenu="matMenu">  <ng-template matMenuContent>
+
   @for (set of availableFollowSets(); track set.id) {
   <button mat-menu-item (click)="addAuthorToFollowSet(set.dTag)">
     <mat-icon>{{ isAuthorInFollowSet(set.dTag) ? 'check_circle' : 'radio_button_unchecked' }}</mat-icon>
@@ -150,9 +157,11 @@
     <mat-icon>add_circle</mat-icon>
     Create new list
   </button>
+  </ng-template>
 </mat-menu>
 
-<mat-menu #copyMenu="matMenu">
+<mat-menu #copyMenu="matMenu">  <ng-template matMenuContent>
+
   <button mat-menu-item (click)="layout.copyToClipboard(eventLink(), 'text')">
     <mat-icon>link</mat-icon>
     Link
@@ -183,9 +192,11 @@
     <mat-icon>content_copy</mat-icon>
     Data
   </button> -->
+  </ng-template>
 </mat-menu>
 
-<mat-menu #playlistMenu="matMenu">
+<mat-menu #playlistMenu="matMenu">  <ng-template matMenuContent>
+
   <button mat-menu-item (click)="addMediaToPlaylist('watch-later')">
     <mat-icon>watch_later</mat-icon>
     Watch Later
@@ -201,9 +212,11 @@
   }
   }
   }
+  </ng-template>
 </mat-menu>
 
-<mat-menu #advancedMenu="matMenu">
+<mat-menu #advancedMenu="matMenu">  <ng-template matMenuContent>
+
   <button mat-menu-item (click)="openEventDetails()">
     <mat-icon>info</mat-icon>
     Details
@@ -228,4 +241,5 @@
     Analytics
   </button>
   }
+  </ng-template>
 </mat-menu>

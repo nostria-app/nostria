@@ -71,6 +71,16 @@ export class MediaPlayerService implements OnInitialized {
 
   // Cache for YouTube embed URLs
   private _youtubeUrlCache = new Map<string, SafeResourceUrl>();
+  // Cap embed-URL caches so long-lived sessions scrolling through many feeds
+  // don't accumulate an ever-growing Map of sanitized URLs.
+  private readonly MEDIA_URL_CACHE_MAX = 200;
+  private putLimited<T>(cache: Map<string, T>, key: string, value: T): void {
+    if (cache.size >= this.MEDIA_URL_CACHE_MAX) {
+      const first = cache.keys().next();
+      if (!first.done) cache.delete(first.value);
+    }
+    cache.set(key, value);
+  }
 
   // Convert to computed signals - consider shuffle and repeat states
   canPrevious = computed(() => {
@@ -1567,8 +1577,8 @@ export class MediaPlayerService implements OnInitialized {
         embedUrl = this.sanitizer.bypassSecurityTrustResourceUrl('');
       }
 
-      // Cache the result
-      this._youtubeUrlCache.set(cacheKey, embedUrl);
+      // Cache the result (bounded)
+      this.putLimited(this._youtubeUrlCache, cacheKey, embedUrl);
 
       return embedUrl;
     };
@@ -1584,7 +1594,7 @@ export class MediaPlayerService implements OnInitialized {
       }
 
       const safeUrl = this.sanitizer.bypassSecurityTrustResourceUrl(embedUrl);
-      this._tidalUrlCache.set(embedUrl, safeUrl);
+      this.putLimited(this._tidalUrlCache, embedUrl, safeUrl);
       return safeUrl;
     };
   });
@@ -1596,7 +1606,7 @@ export class MediaPlayerService implements OnInitialized {
       }
 
       const safeUrl = this.sanitizer.bypassSecurityTrustResourceUrl(embedUrl);
-      this._spotifyUrlCache.set(embedUrl, safeUrl);
+      this.putLimited(this._spotifyUrlCache, embedUrl, safeUrl);
       return safeUrl;
     };
   });
