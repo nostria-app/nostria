@@ -73,11 +73,13 @@
   <div class="hidden-menu-trigger" [matMenuTriggerFor]="reactionMenuFull" #menuTriggerFull="matMenuTrigger"></div>
 
   <mat-menu #reactionMenuFull="matMenu" class="reaction-picker-menu">
-    <div class="emoji-picker-container" tabindex="-1" (click)="$event.stopPropagation()"
-      (keydown)="$event.stopPropagation()">
-      <app-emoji-picker mode="reaction" [allowPreferredReactionShortcut]="true"
-        (emojiSelected)="addReaction($event)"></app-emoji-picker>
-    </div>
+    <ng-template matMenuContent>
+      <div class="emoji-picker-container" tabindex="-1" (click)="$event.stopPropagation()"
+        (keydown)="$event.stopPropagation()">
+        <app-emoji-picker mode="reaction" [allowPreferredReactionShortcut]="true"
+          (emojiSelected)="addReaction($event)"></app-emoji-picker>
+      </div>
+    </ng-template>
   </mat-menu>
   } @else {
   <!-- Full view with reaction groups -->
@@ -108,11 +110,13 @@
 
     <!-- Reaction picker menu (full view) -->
     <mat-menu #reactionMenuFull="matMenu" class="reaction-picker-menu">
-      <div class="emoji-picker-container" tabindex="-1" (click)="$event.stopPropagation()"
-        (keydown)="$event.stopPropagation()">
-        <app-emoji-picker mode="reaction" [allowPreferredReactionShortcut]="true"
-          (emojiSelected)="addReaction($event)"></app-emoji-picker>
-      </div>
+      <ng-template matMenuContent>
+        <div class="emoji-picker-container" tabindex="-1" (click)="$event.stopPropagation()"
+          (keydown)="$event.stopPropagation()">
+          <app-emoji-picker mode="reaction" [allowPreferredReactionShortcut]="true"
+            (emojiSelected)="addReaction($event)"></app-emoji-picker>
+        </div>
+      </ng-template>
     </mat-menu>
   </div>
 

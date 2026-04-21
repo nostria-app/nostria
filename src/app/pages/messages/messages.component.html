@@ -1098,12 +1098,14 @@
           </button>
           } @else {
           <button mat-icon-button type="button" [matMenuTriggerFor]="emojiMenu" class="emoji-button"
-            (menuOpened)="emojiPickerRef?.resetTab()" [disabled]="isSending()" matTooltip="Emoji">
+            [disabled]="isSending()" matTooltip="Emoji">
             <mat-icon>sentiment_satisfied</mat-icon>
           </button>
           <mat-menu #emojiMenu="matMenu" class="emoji-picker-menu">
-            <app-emoji-picker #emojiPickerRef mode="content" (emojiSelected)="insertEmoji($event)"
-              (gifSelected)="insertGifUrl($event)"></app-emoji-picker>
+            <ng-template matMenuContent>
+              <app-emoji-picker #emojiPickerRef mode="content" (emojiSelected)="insertEmoji($event)"
+                (gifSelected)="insertGifUrl($event)"></app-emoji-picker>
+            </ng-template>
           </mat-menu>
           }
 

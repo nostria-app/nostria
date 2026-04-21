@@ -188,13 +188,15 @@
         <mat-icon>sentiment_satisfied</mat-icon>
       </button>
       } @else {
-      <button mat-icon-button type="button" [matMenuTriggerFor]="emojiMenu" (menuOpened)="emojiPickerRef?.resetTab()"
+      <button mat-icon-button type="button" [matMenuTriggerFor]="emojiMenu"
         [disabled]="interactionDisabled() || isUploading() || isPublishing()" matTooltip="Emoji">
         <mat-icon>sentiment_satisfied</mat-icon>
       </button>
       <mat-menu #emojiMenu="matMenu" class="emoji-picker-menu">
-        <app-emoji-picker #emojiPickerRef mode="content" (emojiSelected)="insertEmoji($event)"
-          (gifSelected)="insertGifUrl($event)"></app-emoji-picker>
+        <ng-template matMenuContent>
+          <app-emoji-picker #emojiPickerRef mode="content" (emojiSelected)="insertEmoji($event)"
+            (gifSelected)="insertGifUrl($event)"></app-emoji-picker>
+        </ng-template>
       </mat-menu>
       }
     </div>
