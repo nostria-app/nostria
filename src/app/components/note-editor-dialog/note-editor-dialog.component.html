@@ -140,28 +140,15 @@
             }
             @if (useNewEditorExperience()) {
             <div contenteditable="plaintext-only" spellcheck="true" (beforeinput)="onContentBeforeInput($event)"
-              (paste)="onContentPaste($event)"
-              (input)="onContentInput($event)" (focus)="onContentFocus()" (blur)="onContentBlur()"
-              (keydown)="onContentKeyDown($event)" (keyup)="onContentKeyUp($event)" (click)="onContentClick($event)"
-              (mouseup)="onContentSelectionChange($event)" title="{{ inlineMode() ? 'Reply content' : 'Note content' }}"
+              (paste)="onContentPaste($event)" (input)="onContentInput($event)" (focus)="onContentFocus()"
+              (blur)="onContentBlur()" (keydown)="onContentKeyDown($event)" (keyup)="onContentKeyUp($event)"
+              (click)="onContentClick($event)" (mouseup)="onContentSelectionChange($event)"
+              title="{{ inlineMode() ? 'Reply content' : 'Note content' }}"
               aria-label="{{ inlineMode() ? 'Reply content' : 'Note content' }}" aria-multiline="true" role="textbox"
-              tabindex="0"
-              class="content-textarea content-editor-surface" #contentTextarea></div>
+              tabindex="0" class="content-textarea content-editor-surface" #contentTextarea></div>
 
             @if (showInlineEmbeds()) {
             <div class="content-inline-embeds" aria-live="polite">
-              @if (composerMentionPreviews().length > 0) {
-              <div class="composer-mention-previews">
-                @for (mention of composerMentionPreviews(); track mention.mention) {
-                <div class="composer-mention-pill">
-                  <app-user-profile [pubkey]="mention.pubkey" view="icon" [disableLink]="true"
-                    [disableHoverCard]="true"></app-user-profile>
-                  <span class="composer-mention-name">{{ mention.displayName }}</span>
-                </div>
-                }
-              </div>
-              }
-
               @if (composerReferencePreviews().length > 0) {
               <div class="composer-reference-previews">
                 @for (reference of composerReferencePreviews(); track reference.id) {
@@ -184,10 +171,10 @@
             }
             } @else {
             <textarea spellcheck="true" [value]="content()" (paste)="onContentPaste($event)"
-              (input)="onContentInput($event)" (focus)="onContentFocus()"
-              (blur)="onContentBlur()" (keydown)="onContentKeyDown($event)" (keyup)="onContentKeyUp($event)"
-              (click)="onContentClick($event)" (mouseup)="onContentSelectionChange($event)"
-              (select)="onContentSelectionChange($event)" title="{{ inlineMode() ? 'Reply content' : 'Note content' }}"
+              (input)="onContentInput($event)" (focus)="onContentFocus()" (blur)="onContentBlur()"
+              (keydown)="onContentKeyDown($event)" (keyup)="onContentKeyUp($event)" (click)="onContentClick($event)"
+              (mouseup)="onContentSelectionChange($event)" (select)="onContentSelectionChange($event)"
+              title="{{ inlineMode() ? 'Reply content' : 'Note content' }}"
               aria-label="{{ inlineMode() ? 'Reply content' : 'Note content' }}" aria-multiline="true"
               class="content-textarea legacy-content-textarea" #contentTextarea></textarea>
             }

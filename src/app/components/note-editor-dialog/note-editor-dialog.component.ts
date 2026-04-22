@@ -729,11 +729,20 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       return [];
     }
 
-    const matches = preview.match(/(?:nostr:)?(?:npub|nprofile|note|nevent|naddr)1[a-zA-Z0-9]+|https?:\/\/[^\s]+/g) || [];
+    const regex = /(?:nostr:)?(?:npub|nprofile|note|nevent|naddr)1[a-zA-Z0-9]+|https?:\/\/[^\s]+/g;
     const seen = new Set<string>();
     const references: ComposerReferencePreview[] = [];
+    let execMatch: RegExpExecArray | null;
 
-    for (const match of matches) {
+    while ((execMatch = regex.exec(preview)) !== null) {
+      const match = execMatch[0];
+
+      // Skip URLs that are part of a blob: URL (e.g. blob:http://localhost:4200/uuid)
+      // which are used as in-memory previews for pending media uploads.
+      if (execMatch.index >= 5 && preview.slice(execMatch.index - 5, execMatch.index) === 'blob:') {
+        continue;
+      }
+
       if (seen.has(match) || this.isComposerMentionReference(match) || this.isComposerMediaReference(match)) {
         continue;
       }
@@ -759,12 +768,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       return false;
     }
 
-    if (this.composerMediaPreviews().length > 0) {
-      return this.composerMentionPreviews().length > 0;
-    }
-
-    return this.composerMentionPreviews().length > 0
-      || this.composerReferencePreviews().length > 0;
+    return this.composerReferencePreviews().length > 0;
   });
 
   private buildPreviewContent(includeEmptyPlaceholder: boolean): string {

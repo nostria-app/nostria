@@ -469,7 +469,7 @@ describe('NoteEditorDialogComponent', () => {
           displayName: 'abcdef0123456789...',
         },
       ]);
-      expect(component.showInlineEmbeds()).toBe(true);
+      expect(component.showInlineEmbeds()).toBe(false);
     });
 
     it('should expose pending media for inline editor chips', async () => {
