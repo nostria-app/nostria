@@ -160,6 +160,22 @@
             <mat-icon>link</mat-icon>
             <span>Media from URL</span>
           </button>
+          <mat-divider></mat-divider>
+          <button mat-menu-item [matMenuTriggerFor]="compressionMenu">
+            <mat-icon>tune</mat-icon>
+            <span>Image optimization</span>
+          </button>
+        </mat-menu>
+
+        <mat-menu #compressionMenu="matMenu">
+          @for (option of mediaOptimizationOptions; track option.value) {
+            <button mat-menu-item (click)="onMediaOptimizationChange(option.value)"
+              [class.is-selected]="selectedMediaOptimization() === option.value"
+              [matTooltip]="option.description" matTooltipPosition="left">
+              <mat-icon>{{ selectedMediaOptimization() === option.value ? 'check' : '' }}</mat-icon>
+              <span>{{ option.label }}</span>
+            </button>
+          }
         </mat-menu>
 
         <button mat-icon-button (click)="openAnyFileDialog()" [disabled]="isUploading() || actionsDisabled()"

@@ -5,6 +5,7 @@ import { BreakpointObserver } from '@angular/cdk/layout';
 import { isPlatformBrowser } from '@angular/common';
 import { Subject, debounceTime } from 'rxjs';
 import { getSupportedLocale, normalizeLocale } from '../utils/supported-locales';
+import type { MediaOptimizationOptionValue } from '../interfaces/media-upload';
 
 export type CalendarType = 'gregorian' | 'chronia' | 'ethiopian';
 export type TimeFormat = '12h' | '24h';
@@ -123,6 +124,8 @@ export interface LocalSettings {
   defaultReactionEmoji: string;
   /** Show the article editor formatting toolbar above the body editor. */
   articleEditorShowToolbar: boolean;
+  /** Default media optimization preset applied to images uploaded from the article editor. */
+  articleEditorMediaOptimization: MediaOptimizationOptionValue;
   /** Lock app screen orientation to portrait mode when supported. */
   lockScreenRotation: boolean;
   /** Show the floating chat widget on desktop. */
@@ -157,6 +160,7 @@ const DEFAULT_LOCAL_SETTINGS: LocalSettings = {
   maxTaggedAccountsFilter: 100, // Filter mass-tagging by default
   defaultReactionEmoji: '+', // Default reaction sent on single-tap
   articleEditorShowToolbar: true,
+  articleEditorMediaOptimization: 'balanced',
   lockScreenRotation: false,
   chatWidgetEnabled: true,
   analyticsEnabled: false,
@@ -211,6 +215,9 @@ export class LocalSettingsService {
   readonly maxTaggedAccountsFilter = computed(() => this.settings().maxTaggedAccountsFilter ?? 100);
   readonly defaultReactionEmoji = computed(() => this.settings().defaultReactionEmoji ?? '❤️');
   readonly articleEditorShowToolbar = computed(() => this.settings().articleEditorShowToolbar ?? true);
+  readonly articleEditorMediaOptimization = computed<MediaOptimizationOptionValue>(
+    () => this.settings().articleEditorMediaOptimization ?? 'balanced'
+  );
   readonly lockScreenRotation = computed(() => this.settings().lockScreenRotation ?? false);
   readonly analyticsEnabled = computed(() => this.settings().analyticsEnabled ?? false);
   readonly noteEditorNewExperience = computed(() => this.settings().noteEditorNewExperience ?? false);
@@ -656,6 +663,13 @@ export class LocalSettingsService {
    */
   setArticleEditorShowToolbar(articleEditorShowToolbar: boolean): void {
     this.updateSettings({ articleEditorShowToolbar });
+  }
+
+  /**
+   * Set the default media optimization preset used by the article editor.
+   */
+  setArticleEditorMediaOptimization(articleEditorMediaOptimization: MediaOptimizationOptionValue): void {
+    this.updateSettings({ articleEditorMediaOptimization });
   }
 
   /**

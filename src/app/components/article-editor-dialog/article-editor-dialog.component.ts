@@ -33,14 +33,26 @@ import { NostrService } from '../../services/nostr.service';
 import { DataService } from '../../services/data.service';
 import { DatabaseService } from '../../services/database.service';
 import { LocalStorageService } from '../../services/local-storage.service';
+import { LocalSettingsService } from '../../services/local-settings.service';
 import { MatCardModule } from '@angular/material/card';
 import { AccountStateService } from '../../services/account-state.service';
 import { RichTextEditorComponent } from '../rich-text-editor/rich-text-editor.component';
+import type { RichTextPendingMedia } from '../rich-text-editor/rich-text-editor.component';
 import { nip19, type Event as NostrEvent } from 'nostr-tools';
 import { DecodedNaddr } from 'nostr-tools/nip19';
 import { AccountRelayService } from '../../services/relays/account-relay';
 import { MediaService } from '../../services/media.service';
+import { MediaProcessingService } from '../../services/media-processing.service';
+import {
+  getMediaOptimizationOption,
+  getMediaUploadSettingsForOptimization,
+  MEDIA_OPTIMIZATION_OPTIONS,
+  shouldUploadOriginal,
+  type MediaOptimizationOptionValue,
+  type MediaUploadSettings,
+} from '../../interfaces/media-upload';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
+import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { ImageUrlDialogComponent } from '../image-url-dialog/image-url-dialog.component';
 import { ConfirmDialogComponent } from '../confirm-dialog/confirm-dialog.component';
 import type { ArticleData } from '../article-display/article-display.component';
@@ -136,6 +148,7 @@ interface PackageImportFile {
     MatTooltipModule,
     MatSlideToggleModule,
     MatMenuModule,
+    MatButtonToggleModule,
     ArticleDisplayComponent,
   ],
   templateUrl: './article-editor-dialog.component.html',
@@ -162,7 +175,9 @@ export class ArticleEditorDialogComponent implements OnDestroy, AfterViewInit {
   private formatService = inject(FormatService);
   private accountState = inject(AccountStateService);
   private media = inject(MediaService);
+  private mediaProcessing = inject(MediaProcessingService);
   private localStorage = inject(LocalStorageService);
+  private localSettings = inject(LocalSettingsService);
   private customDialog = inject(CustomDialogService);
   private logger = inject(LoggerService);
   private readonly DEFAULT_DIALOG_WIDTH = '920px';
@@ -276,6 +291,350 @@ export class ArticleEditorDialogComponent implements OnDestroy, AfterViewInit {
   // Track editor mode to restore after preview
   editorIsRichTextMode = signal(true);
 
+  // Upload/compression settings for media pasted, dropped or uploaded from the editor
+  editorUploadSettings = computed<MediaUploadSettings>(() =>
+    getMediaUploadSettingsForOptimization(this.localSettings.articleEditorMediaOptimization())
+  );
+
+  selectedMediaOptimization = computed<MediaOptimizationOptionValue>(() => {
+    const settings = this.editorUploadSettings();
+    return getMediaOptimizationOption(settings.mode, settings.compressionStrength);
+  });
+
+  onMediaOptimizationToggleChange(value: MediaOptimizationOptionValue): void {
+    const settings = {
+      ...getMediaUploadSettingsForOptimization(value),
+      videoOptimizationProfile: this.editorUploadSettings().videoOptimizationProfile,
+    };
+    this.onEditorUploadSettingsChange(settings);
+  }
+
+  onEditorUploadSettingsChange(settings: MediaUploadSettings): void {
+    const optimization = getMediaOptimizationOption(settings.mode, settings.compressionStrength);
+    this.localSettings.setArticleEditorMediaOptimization(optimization);
+
+    // Re-apply the newly chosen preset to any pending media that has not yet been uploaded.
+    // The user expects "changing compression" to affect what will actually be uploaded on publish.
+    const current = this.pendingMediaFiles();
+    if (current.length > 0) {
+      this.pendingMediaFiles.set(
+        current.map(entry => this.resetCompressionForEntry({ ...entry, uploadSettings: { ...settings } }))
+      );
+      void this.recompressAllPendingMedia();
+    }
+  }
+
+  // Pending media: files added via paste / drop / upload that will be uploaded on publish
+  readonly mediaOptimizationOptions = MEDIA_OPTIMIZATION_OPTIONS;
+  pendingMediaFiles = signal<RichTextPendingMedia[]>([]);
+  hasPendingMedia = computed(() => this.pendingMediaFiles().length > 0);
+
+  private compressionRunId = 0;
+
+  onEditorPendingMediaAdded(entries: RichTextPendingMedia[]): void {
+    if (!entries.length) return;
+    this.pendingMediaFiles.update(list => [...list, ...entries]);
+    void this.compressEntries(entries.map(e => e.id));
+  }
+
+  /**
+   * Drop any previously-generated compression preview for the entry so we
+   * can regenerate it with the new upload settings. Revokes the old blob URL.
+   */
+  private resetCompressionForEntry(entry: RichTextPendingMedia): RichTextPendingMedia {
+    if (entry.compressedBlobUrl) {
+      try { URL.revokeObjectURL(entry.compressedBlobUrl); } catch { /* ignore */ }
+    }
+    return {
+      ...entry,
+      compressedFile: undefined,
+      compressedBlobUrl: undefined,
+      compressedSize: undefined,
+      processing: false,
+    };
+  }
+
+  private async recompressAllPendingMedia(): Promise<void> {
+    const ids = this.pendingMediaFiles().map(entry => entry.id);
+    await this.compressEntries(ids);
+  }
+
+  /**
+   * Generate compression previews for the given pending-media entries using
+   * whatever upload settings are currently snapshotted on each entry. The
+   * resulting compressed `File` is reused at publish time so no extra work
+   * needs to happen then.
+   */
+  private async compressEntries(ids: string[]): Promise<void> {
+    if (ids.length === 0) return;
+
+    const runId = ++this.compressionRunId;
+    const isStale = () => runId !== this.compressionRunId;
+
+    // Mark as processing up-front so UI shows a spinner immediately
+    this.pendingMediaFiles.update(list =>
+      list.map(entry => (ids.includes(entry.id) ? { ...entry, processing: true } : entry))
+    );
+
+    for (const id of ids) {
+      if (isStale()) return;
+
+      const entry = this.pendingMediaFiles().find(e => e.id === id);
+      if (!entry) continue;
+
+      // Skip non-image files — we only preview image compression here.
+      if (!entry.mimeType.startsWith('image/')) {
+        this.pendingMediaFiles.update(list =>
+          list.map(item => (item.id === id ? { ...item, processing: false } : item))
+        );
+        continue;
+      }
+
+      try {
+        const prepared = await this.mediaProcessing.prepareFileForUpload(
+          entry.file,
+          entry.uploadSettings
+        );
+
+        if (isStale()) return;
+
+        let compressedBlobUrl: string | undefined;
+        try {
+          compressedBlobUrl = URL.createObjectURL(prepared.file);
+        } catch {
+          compressedBlobUrl = undefined;
+        }
+
+        this.pendingMediaFiles.update(list =>
+          list.map(item => {
+            if (item.id !== id) return item;
+            // If another compression run replaced the settings meanwhile, skip.
+            if (item.uploadSettings !== entry.uploadSettings) {
+              if (compressedBlobUrl) {
+                try { URL.revokeObjectURL(compressedBlobUrl); } catch { /* ignore */ }
+              }
+              return item;
+            }
+            // Revoke any previously stored compressed URL for this entry
+            if (item.compressedBlobUrl) {
+              try { URL.revokeObjectURL(item.compressedBlobUrl); } catch { /* ignore */ }
+            }
+            return {
+              ...item,
+              compressedFile: prepared.file,
+              compressedBlobUrl,
+              compressedSize: prepared.file.size,
+              processing: false,
+            };
+          })
+        );
+      } catch (error) {
+        this.logger.warn('Article editor: compression preview failed', error);
+        this.pendingMediaFiles.update(list =>
+          list.map(item => (item.id === id ? { ...item, processing: false } : item))
+        );
+      }
+    }
+  }
+
+  /** Open the media preview dialog showing the compressed preview. */
+  async previewPendingMedia(entry: RichTextPendingMedia): Promise<void> {
+    const url = entry.compressedBlobUrl || entry.blobUrl;
+    if (!url) return;
+
+    const { MediaPreviewDialogComponent } = await import(
+      '../media-preview-dialog/media-preview.component'
+    );
+
+    this.dialog.open(MediaPreviewDialogComponent, {
+      data: {
+        mediaItems: [
+          {
+            url,
+            type: entry.mimeType.startsWith('video/') ? 'video' : 'image',
+            title: entry.name,
+          },
+        ],
+        initialIndex: 0,
+      },
+      maxWidth: '100vw',
+      maxHeight: '100vh',
+      width: '100vw',
+      height: '100vh',
+      panelClass: 'image-dialog-panel',
+    });
+  }
+
+  /** Human-readable savings percent (e.g. "-34%" or "+12%"). */
+  getPendingMediaSavingsLabel(entry: RichTextPendingMedia): string {
+    const pct = this.getPendingMediaSavingsPercent(entry);
+    if (pct === null) return '';
+    if (pct > 0) return `-${pct}%`;
+    if (pct < 0) return `+${Math.abs(pct)}%`;
+    return '0%';
+  }
+
+  getPendingMediaSavingsTone(entry: RichTextPendingMedia): 'decrease' | 'increase' | 'neutral' | 'none' {
+    const pct = this.getPendingMediaSavingsPercent(entry);
+    if (pct === null) return 'none';
+    if (pct > 0) return 'decrease';
+    if (pct < 0) return 'increase';
+    return 'neutral';
+  }
+
+  private getPendingMediaSavingsPercent(entry: RichTextPendingMedia): number | null {
+    if (!entry.compressedSize || !entry.size) return null;
+    return Math.round((1 - entry.compressedSize / entry.size) * 100);
+  }
+
+  getPendingMediaDisplaySize(entry: RichTextPendingMedia): string {
+    const size = entry.compressedSize ?? entry.size;
+    return this.formatPendingMediaSize(size);
+  }
+
+  removePendingMedia(id: string): void {
+    const entry = this.pendingMediaFiles().find(item => item.id === id);
+    if (!entry) return;
+
+    try {
+      URL.revokeObjectURL(entry.blobUrl);
+    } catch {
+      // ignore
+    }
+    if (entry.compressedBlobUrl) {
+      try { URL.revokeObjectURL(entry.compressedBlobUrl); } catch { /* ignore */ }
+    }
+
+    this.pendingMediaFiles.update(list => list.filter(item => item.id !== id));
+
+    // Remove any references to the blob URL from the current article content
+    const current = this.article().content;
+    if (current && current.includes(entry.blobUrl)) {
+      const escaped = entry.blobUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const pattern = new RegExp(`!?\\[[^\\]]*\\]\\(${escaped}\\)`, 'g');
+      const updated = current.replace(pattern, '').replace(/\n{3,}/g, '\n\n');
+      this.article.update(a => ({ ...a, content: updated }));
+      this.contentEditor?.setContent(updated);
+    }
+  }
+
+  getPendingMediaOptimizationLabel(entry: RichTextPendingMedia): string {
+    const value = getMediaOptimizationOption(
+      entry.uploadSettings.mode,
+      entry.uploadSettings.compressionStrength
+    );
+    return MEDIA_OPTIMIZATION_OPTIONS.find(option => option.value === value)?.label ?? value;
+  }
+
+  formatPendingMediaSize(bytes: number): string {
+    if (!bytes || bytes <= 0) return '—';
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  }
+
+  isPendingMediaImage(entry: RichTextPendingMedia): boolean {
+    return entry.mimeType.startsWith('image/');
+  }
+
+  /**
+   * Strip `blob:` URL image/link references from content. Blob URLs only
+   * reference in-memory data and cannot be restored after reload, so they
+   * must not be persisted to the auto-draft.
+   */
+  private stripBlobUrlsFromContent(content: string): string {
+    if (!content) return content;
+    return content.replace(/!?\[[^\]]*\]\(blob:[^\s)]+\)/g, '').replace(/\n{3,}/g, '\n\n');
+  }
+
+  private revokeAllPendingMedia(): void {
+    for (const entry of this.pendingMediaFiles()) {
+      try {
+        URL.revokeObjectURL(entry.blobUrl);
+      } catch {
+        // ignore
+      }
+      if (entry.compressedBlobUrl) {
+        try { URL.revokeObjectURL(entry.compressedBlobUrl); } catch { /* ignore */ }
+      }
+    }
+    this.pendingMediaFiles.set([]);
+  }
+
+  /**
+   * Upload all pending media files to the user's configured media servers
+   * using the compression preset snapshotted on each entry, then replace the
+   * local blob: URLs in `content` with the resulting public URLs.
+   *
+   * Entries whose blob URL is no longer referenced from the content are
+   * skipped (the user likely removed the embed).
+   */
+  private async uploadPendingMediaAndRewrite(content: string): Promise<string> {
+    const entries = this.pendingMediaFiles();
+    if (entries.length === 0) return content;
+
+    const mediaServers = await this.getMediaServersForUpload();
+    if (mediaServers.length === 0) {
+      throw new Error('No media server configured. Please add a media server before publishing.');
+    }
+
+    let updated = content;
+    const remaining: RichTextPendingMedia[] = [];
+    const uploadedIds: string[] = [];
+
+    for (const entry of entries) {
+      if (!updated.includes(entry.blobUrl)) {
+        // User removed the embed from the article body — drop the entry without uploading
+        try { URL.revokeObjectURL(entry.blobUrl); } catch { /* ignore */ }
+        continue;
+      }
+
+      const settings = entry.uploadSettings;
+
+      // Prefer the already-compressed preview file so we don't pay the cost
+      // of compressing the same image twice. Fall back to running the media
+      // processor on the fly if no preview is available (e.g. non-image or
+      // preview still in flight).
+      let fileToUpload = entry.compressedFile;
+      let uploadOriginal = shouldUploadOriginal(settings.mode);
+      if (!fileToUpload) {
+        const prepared = await this.mediaProcessing.prepareFileForUpload(entry.file, settings);
+        fileToUpload = prepared.file;
+        uploadOriginal = prepared.uploadOriginal ?? uploadOriginal;
+      }
+
+      const uploadResult = await this.media.uploadFile(
+        fileToUpload,
+        uploadOriginal,
+        mediaServers
+      );
+
+      if (!uploadResult.item) {
+        throw new Error(uploadResult.message || `Failed to upload ${entry.name}`);
+      }
+
+      const escaped = entry.blobUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      updated = updated.replace(new RegExp(escaped, 'g'), uploadResult.item.url);
+
+      try { URL.revokeObjectURL(entry.blobUrl); } catch { /* ignore */ }
+      if (entry.compressedBlobUrl) {
+        try { URL.revokeObjectURL(entry.compressedBlobUrl); } catch { /* ignore */ }
+      }
+      uploadedIds.push(entry.id);
+
+      if (updated.includes(entry.blobUrl)) {
+        // Defensive: keep the entry around if something wasn't replaced
+        remaining.push(entry);
+      }
+    }
+
+    this.pendingMediaFiles.update(list =>
+      list.filter(entry => !uploadedIds.includes(entry.id)).concat(remaining.filter(e => !uploadedIds.includes(e.id)))
+    );
+
+    return updated;
+  }
+
   // Drag and drop state for featured image
   isFeaturedImageDragOver = signal(false);
   private featuredImageDragCounter = 0;
@@ -388,6 +747,9 @@ export class ArticleEditorDialogComponent implements OnDestroy, AfterViewInit {
     if (this.autoSaveTimer) {
       clearTimeout(this.autoSaveTimer);
     }
+
+    // Release any blob URLs for pending (unpublished) media
+    this.revokeAllPendingMedia();
   }
 
   private initializeSplitViewSupport(): void {
@@ -472,7 +834,7 @@ export class ArticleEditorDialogComponent implements OnDestroy, AfterViewInit {
       title: article.title,
       summary: article.summary,
       image: article.image,
-      content: article.content,
+      content: this.stripBlobUrlsFromContent(article.content),
       tags: [...article.tags],
       dTag: article.dTag,
       lastModified: Date.now(),
@@ -762,7 +1124,25 @@ export class ArticleEditorDialogComponent implements OnDestroy, AfterViewInit {
     try {
       this.isPublishing.set(true);
       const art = this.article();
-      const normalizedContent = normalizeMarkdownLinkDestinations(art.content);
+      let normalizedContent = normalizeMarkdownLinkDestinations(art.content);
+
+      // Upload any pending media (images pasted, dropped, or uploaded from the editor)
+      // and replace their blob: URLs in the article content with the uploaded URLs.
+      if (this.pendingMediaFiles().length > 0) {
+        try {
+          normalizedContent = await this.uploadPendingMediaAndRewrite(normalizedContent);
+        } catch (error) {
+          console.error('Error uploading article media:', error);
+          this.snackBar.open(
+            `Failed to upload media: ${error instanceof Error ? error.message : 'Unknown error'}`,
+            'Close',
+            { duration: 5000 }
+          );
+          this.isPublishing.set(false);
+          this.publishInitiated = false;
+          return null;
+        }
+      }
 
       // Handle image upload if selected file exists or image is base64 data URL
       let imageUrl = art.image.trim();

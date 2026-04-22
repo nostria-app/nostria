@@ -25,6 +25,16 @@ import { DomSanitizer } from '@angular/platform-browser';
 import { Router } from '@angular/router';
 import { marked } from 'marked';
 import { MediaService } from '../../services/media.service';
+import { MediaProcessingService } from '../../services/media-processing.service';
+import {
+  DEFAULT_MEDIA_UPLOAD_SETTINGS,
+  MEDIA_OPTIMIZATION_OPTIONS,
+  getMediaOptimizationOption,
+  getMediaUploadSettingsForOptimization,
+  shouldUploadOriginal,
+  type MediaOptimizationOptionValue,
+  type MediaUploadSettings,
+} from '../../interfaces/media-upload';
 import { ImageUrlDialogComponent } from '../image-url-dialog/image-url-dialog.component';
 import {
   FloatingToolbarComponent,
@@ -33,6 +43,22 @@ import {
 import { LocalSettingsService } from '../../services/local-settings.service';
 import { cleanTrackingParametersFromText } from '../../utils/url-cleaner';
 import { ConfirmDialogComponent } from '../confirm-dialog/confirm-dialog.component';
+
+export interface RichTextPendingMedia {
+  id: string;
+  file: File;
+  blobUrl: string;
+  name: string;
+  size: number;
+  mimeType: string;
+  uploadSettings: MediaUploadSettings;
+  /** Result of local compression for the current `uploadSettings`. */
+  compressedFile?: File;
+  compressedBlobUrl?: string;
+  compressedSize?: number;
+  /** True while a compression preview is being generated. */
+  processing?: boolean;
+}
 
 @Component({
   selector: 'app-rich-text-editor',
@@ -70,6 +96,11 @@ export class RichTextEditorComponent implements AfterViewInit {
   readonly recording = input(false);
   readonly transcribing = input(false);
   readonly requireContentFocusForActions = input(true);
+  readonly uploadSettings = input<MediaUploadSettings>(DEFAULT_MEDIA_UPLOAD_SETTINGS);
+  readonly deferUploads = input(false);
+
+  readonly uploadSettingsChange = output<MediaUploadSettings>();
+  readonly pendingMediaAdded = output<RichTextPendingMedia[]>();
 
   readonly insertReferenceRequest = output<void>();
   readonly aiActionRequest = output<'generate' | 'translate' | 'sentiment'>();
@@ -96,6 +127,11 @@ export class RichTextEditorComponent implements AfterViewInit {
   disableContextActions = computed(() =>
     this.requireContentFocusForActions() && !this.isContentFocused()
   );
+  readonly mediaOptimizationOptions = MEDIA_OPTIMIZATION_OPTIONS;
+  readonly selectedMediaOptimization = computed<MediaOptimizationOptionValue>(() => {
+    const settings = this.uploadSettings();
+    return getMediaOptimizationOption(settings.mode, settings.compressionStrength);
+  });
   private dragCounter = 0;
   private isInternalChange = false; // Flag to track internal vs external changes
   private viewInitialized = false;
@@ -106,6 +142,7 @@ export class RichTextEditorComponent implements AfterViewInit {
 
   private sanitizer = inject(DomSanitizer);
   private mediaService = inject(MediaService);
+  private mediaProcessing = inject(MediaProcessingService);
   private snackBar = inject(MatSnackBar);
   private dialog = inject(MatDialog);
   private router = inject(Router);
@@ -537,6 +574,15 @@ export class RichTextEditorComponent implements AfterViewInit {
     this.fileInput.nativeElement.click();
   }
 
+  onMediaOptimizationChange(optimization: MediaOptimizationOptionValue): void {
+    const settings = getMediaUploadSettingsForOptimization(optimization);
+    this.uploadSettingsChange.emit({
+      ...settings,
+      videoOptimizationProfile:
+        this.uploadSettings().videoOptimizationProfile ?? settings.videoOptimizationProfile,
+    });
+  }
+
   private hasConfiguredMediaServers(): boolean {
     return this.mediaService.mediaServers().length > 0;
   }
@@ -889,17 +935,29 @@ export class RichTextEditorComponent implements AfterViewInit {
   private async uploadFiles(files: File[]): Promise<void> {
     if (files.length === 0) return Promise.resolve();
 
+    // Deferred mode: don't upload now — keep the File locally, insert a blob URL
+    // into the editor, and notify the parent so it can render a media list and
+    // perform the actual upload at publish time.
+    if (this.deferUploads()) {
+      this.addDeferredFiles(files);
+      return Promise.resolve();
+    }
+
     this.isUploading.set(true);
 
     try {
       // Load media service if not already loaded
       await this.mediaService.load();
 
+      const settings = this.uploadSettings();
+      const uploadOriginal = shouldUploadOriginal(settings.mode);
+
       const uploadPromises = files.map(async file => {
         try {
+          const prepared = await this.mediaProcessing.prepareFileForUpload(file, settings);
           const result = await this.mediaService.uploadFile(
-            file,
-            false,
+            prepared.file,
+            prepared.uploadOriginal ?? uploadOriginal,
             this.mediaService.mediaServers()
           );
 
@@ -950,6 +1008,54 @@ export class RichTextEditorComponent implements AfterViewInit {
     }
 
     return Promise.resolve();
+  }
+
+  /**
+   * Register files locally without uploading (deferred mode). A blob URL is
+   * inserted into the editor so the user can see the image; the parent
+   * component tracks the pending files and uploads them when the article is
+   * actually published.
+   */
+  private addDeferredFiles(files: File[]): void {
+    const settings = this.uploadSettings();
+    const entries: RichTextPendingMedia[] = [];
+
+    for (const file of files) {
+      let blobUrl = '';
+      try {
+        blobUrl = URL.createObjectURL(file);
+      } catch {
+        continue;
+      }
+
+      const id = this.generatePendingMediaId();
+      entries.push({
+        id,
+        file,
+        blobUrl,
+        name: file.name,
+        size: file.size,
+        mimeType: file.type,
+        uploadSettings: { ...settings },
+      });
+
+      this.insertFileLink(blobUrl, file.name, file.type);
+    }
+
+    if (entries.length > 0) {
+      this.pendingMediaAdded.emit(entries);
+    }
+  }
+
+  private generatePendingMediaId(): string {
+    try {
+      if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+        return crypto.randomUUID();
+      }
+    } catch {
+      // fall through
+    }
+    return `pending-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
   }
 
   private insertFileLink(url: string, fileName: string, fileType: string): void {
@@ -1181,14 +1287,106 @@ export class RichTextEditorComponent implements AfterViewInit {
         event.preventDefault();
         event.stopPropagation();
 
-        const cleanedHtml = this.stripColorStyles(html);
+        // Extract any inline base64 images (common when pasting from Word / Google Docs)
+        // and schedule them for upload to the media server instead of embedding them
+        // as data URLs inside the event content.
+        const { html: htmlWithoutBase64, files: extractedFiles } =
+          this.extractBase64ImagesFromHtml(html);
+
+        const cleanedHtml = this.stripColorStyles(htmlWithoutBase64);
         this.insertCleanedHtml(cleanedHtml);
+
+        if (extractedFiles.length > 0) {
+          this.snackBar.open(
+            `Uploading ${extractedFiles.length} embedded image(s) to media server...`,
+            'Close',
+            { duration: 3000 }
+          );
+          void this.uploadFiles(extractedFiles);
+        }
         return;
       }
     }
 
     // If no special handling needed, allow normal text pasting
     // The browser will handle text pasting automatically
+  }
+
+  /**
+   * Extract embedded base64 data URL images from pasted HTML, returning the
+   * HTML with those `<img>` tags removed and a list of File objects that can
+   * be uploaded to the media server.
+   *
+   * Pasting from Word, Google Docs and similar sources embeds photos as
+   * `data:image/...;base64,...` URLs inside the HTML. We must never let those
+   * reach the Nostr event body, since they would bloat the event with
+   * hundreds of KB of base64 data.
+   */
+  private extractBase64ImagesFromHtml(html: string): { html: string; files: File[] } {
+    const files: File[] = [];
+
+    if (typeof window === 'undefined' || typeof DOMParser === 'undefined') {
+      return { html, files };
+    }
+
+    try {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(html, 'text/html');
+      const images = doc.querySelectorAll('img');
+
+      images.forEach((img, index) => {
+        const src = img.getAttribute('src');
+        if (!src || !/^data:image\//i.test(src)) {
+          return;
+        }
+
+        const file = this.dataUrlToFile(src, `pasted-image-${Date.now()}-${index}`);
+        if (file) {
+          files.push(file);
+        }
+        // Remove the image (and any anchor wrapping it) so the base64 data
+        // never ends up in the editor content.
+        const parent = img.parentElement;
+        img.remove();
+        if (parent && parent.tagName === 'A' && !parent.textContent?.trim() && parent.children.length === 0) {
+          parent.remove();
+        }
+      });
+
+      if (files.length === 0) {
+        return { html, files };
+      }
+
+      return { html: doc.body.innerHTML, files };
+    } catch {
+      return { html, files };
+    }
+  }
+
+  /**
+   * Convert a `data:image/...;base64,...` URL into a File object.
+   */
+  private dataUrlToFile(dataUrl: string, fallbackName: string): File | null {
+    try {
+      const [metadata, base64Data] = dataUrl.split(',');
+      if (!metadata || !base64Data) {
+        return null;
+      }
+
+      const mimeMatch = metadata.match(/data:([^;]+);base64/i);
+      const mimeType = mimeMatch?.[1] || 'image/png';
+      const extension = mimeType.split('/')[1]?.split('+')[0] || 'png';
+
+      const binary = atob(base64Data);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) {
+        bytes[i] = binary.charCodeAt(i);
+      }
+
+      return new File([bytes], `${fallbackName}.${extension}`, { type: mimeType });
+    } catch {
+      return null;
+    }
   }
 
   private isImageFile(file: File): boolean {

@@ -29,6 +29,19 @@ export class FormatService {
   private userRelaysService = inject(UserRelaysService);
 
   /**
+   * DOMPurify URI regex that extends the default allowlist with `blob:`
+   * so locally-generated object URLs (e.g. draft images pasted into the
+   * article editor) render in markdown previews. `blob:` URLs are
+   * device-local and cannot leak data cross-origin.
+   */
+  private static readonly SANITIZE_URI_REGEXP =
+    /^(?:(?:(?:f|ht)tps?|mailto|tel|callto|sms|cid|xmpp|blob):|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i;
+
+  private static readonly SANITIZE_CONFIG = {
+    ALLOWED_URI_REGEXP: FormatService.SANITIZE_URI_REGEXP,
+  } as const;
+
+  /**
    * Escape HTML special characters to prevent XSS.
    * Uses UtilitiesService.escapeHtml() for consistency.
    */
@@ -905,14 +918,14 @@ export class FormatService {
       htmlContent = await this.replaceNostrTokensOutsideLinks(htmlContent);
 
       // Now sanitize the resulting HTML to remove any malicious content
-      const sanitizedHtmlContent = DOMPurify.sanitize(htmlContent);
+      const sanitizedHtmlContent = DOMPurify.sanitize(htmlContent, FormatService.SANITIZE_CONFIG) as unknown as string;
 
       // Set the sanitized HTML content
       return this.sanitizer.bypassSecurityTrustHtml(sanitizedHtmlContent);
     } catch (error) {
       this.logger.error('Error parsing markdown:', error);
       // Fallback to plain text
-      const sanitizedHtmlContent = DOMPurify.sanitize(this.normalizeRenderedContent(rawMarkdown).replace(/\n/g, '<br>'));
+      const sanitizedHtmlContent = DOMPurify.sanitize(this.normalizeRenderedContent(rawMarkdown).replace(/\n/g, '<br>'), FormatService.SANITIZE_CONFIG) as unknown as string;
       return this.sanitizer.bypassSecurityTrustHtml(sanitizedHtmlContent);
     }
   }
@@ -982,7 +995,7 @@ export class FormatService {
           });
 
           const htmlContent = marked.parse(content) as string;
-          const sanitizedHtmlContent = DOMPurify.sanitize(htmlContent);
+          const sanitizedHtmlContent = DOMPurify.sanitize(htmlContent, FormatService.SANITIZE_CONFIG) as unknown as string;
           const safeHtml = this.sanitizer.bypassSecurityTrustHtml(sanitizedHtmlContent);
 
           if (onUpdate) {
@@ -1028,12 +1041,12 @@ export class FormatService {
       });
 
       const htmlContent = marked.parse(urlsToMarkdownLinks(initialResolvedContent)) as string;
-      const sanitizedHtmlContent = DOMPurify.sanitize(htmlContent);
+      const sanitizedHtmlContent = DOMPurify.sanitize(htmlContent, FormatService.SANITIZE_CONFIG) as unknown as string;
 
       return this.sanitizer.bypassSecurityTrustHtml(sanitizedHtmlContent);
     } catch (error) {
       this.logger.error('Error parsing markdown:', error);
-      const sanitizedHtmlContent = DOMPurify.sanitize(this.normalizeRenderedContent(rawMarkdown).replace(/\n/g, '<br>'));
+      const sanitizedHtmlContent = DOMPurify.sanitize(this.normalizeRenderedContent(rawMarkdown).replace(/\n/g, '<br>'), FormatService.SANITIZE_CONFIG) as unknown as string;
       return this.sanitizer.bypassSecurityTrustHtml(sanitizedHtmlContent);
     }
   }

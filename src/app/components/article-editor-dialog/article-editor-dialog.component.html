@@ -42,6 +42,10 @@
               [splitViewActive]="showSplitView()" [canUseSplitView]="canUseSplitView()"
               [showEditorContent]="!showPreview() || showSplitView()" [actionsDisabled]="isPublishing()"
               [recording]="isRecording()" [transcribing]="isTranscribing()" [requireContentFocusForActions]="false"
+              [uploadSettings]="editorUploadSettings()"
+              [deferUploads]="true"
+              (uploadSettingsChange)="onEditorUploadSettingsChange($event)"
+              (pendingMediaAdded)="onEditorPendingMediaAdded($event)"
               (featuredImageUploadRequest)="openFeaturedImageUpload()"
               (featuredImageLibraryRequest)="openFeaturedImageChooser()"
               (featuredImageUrlRequest)="openFeaturedImageUrl()" (insertReferenceRequest)="openReferencePicker()"
@@ -124,6 +128,78 @@
           </mat-chip>
           }
         </div>
+        }
+      </div>
+
+      <!-- Article Media (pending uploads) -->
+      <div class="article-media-section">
+        <div class="article-media-header">
+          <h3>Article Media</h3>
+          <div class="article-media-compression">
+            <span class="compression-label">Compression</span>
+            <mat-button-toggle-group class="compression-toggle-group"
+              [value]="selectedMediaOptimization()"
+              (change)="onMediaOptimizationToggleChange($event.value)"
+              [hideSingleSelectionIndicator]="true"
+              aria-label="Image compression">
+              @for (option of mediaOptimizationOptions; track option.value) {
+              <mat-button-toggle [value]="option.value" [matTooltip]="option.description">
+                {{ option.label }}
+              </mat-button-toggle>
+              }
+            </mat-button-toggle-group>
+          </div>
+        </div>
+
+        @if (hasPendingMedia()) {
+        <div class="pending-media-list">
+          @for (entry of pendingMediaFiles(); track entry.id) {
+          <div class="pending-media-item">
+            <button type="button" class="pending-media-thumb-button"
+              [disabled]="!isPendingMediaImage(entry)"
+              (click)="previewPendingMedia(entry)"
+              [matTooltip]="isPendingMediaImage(entry) ? 'Preview compressed image' : ''">
+              @if (isPendingMediaImage(entry)) {
+                <img class="pending-media-thumb"
+                  [src]="entry.compressedBlobUrl || entry.blobUrl"
+                  [alt]="entry.name" title="Article image" loading="lazy" />
+              } @else {
+                <div class="pending-media-thumb fallback">
+                  <mat-icon>insert_drive_file</mat-icon>
+                </div>
+              }
+              @if (entry.processing) {
+                <div class="pending-media-spinner">
+                  <mat-icon class="spin">sync</mat-icon>
+                </div>
+              }
+              @if (!entry.processing && getPendingMediaSavingsLabel(entry); as savings) {
+                <span class="pending-media-savings"
+                  [class.decrease]="getPendingMediaSavingsTone(entry) === 'decrease'"
+                  [class.increase]="getPendingMediaSavingsTone(entry) === 'increase'"
+                  [class.neutral]="getPendingMediaSavingsTone(entry) === 'neutral'">
+                  {{ savings }}
+                </span>
+              }
+            </button>
+            <div class="pending-media-meta">
+              <span class="pending-media-name" [matTooltip]="entry.name">{{ entry.name }}</span>
+              <span class="pending-media-size">
+                {{ getPendingMediaDisplaySize(entry) }}
+                <span class="pending-media-preset">· {{ getPendingMediaOptimizationLabel(entry) }}</span>
+              </span>
+            </div>
+            <button mat-icon-button type="button" class="pending-media-remove"
+              (click)="removePendingMedia(entry.id)" matTooltip="Remove from article">
+              <mat-icon>close</mat-icon>
+            </button>
+          </div>
+          }
+        </div>
+        } @else {
+        <p class="pending-media-empty">
+          Images you paste, drop, or upload will appear here and be uploaded to your media server when you publish.
+        </p>
         }
       </div>
     </div>
