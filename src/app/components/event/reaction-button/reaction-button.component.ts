@@ -331,7 +331,7 @@ export class ReactionButtonComponent {
 
   /** Opens the reaction picker menu. Called from parent when label is clicked. */
   openMenu(): void {
-    if (this.disabled()) {
+    if (this.disabled() || this.reactionPending()) {
       return;
     }
 
@@ -346,7 +346,7 @@ export class ReactionButtonComponent {
   openFullReactionPicker(event: globalThis.MouseEvent): void {
     event.stopPropagation();
 
-    if (this.disabled()) {
+    if (this.disabled() || this.reactionPending()) {
       return;
     }
 
@@ -378,7 +378,7 @@ export class ReactionButtonComponent {
    * If the user already reacted, toggle off their reaction instead.
    */
   sendDefaultReaction(): void {
-    if (this.disabled()) {
+    if (this.disabled() || this.isLoadingReactions() || this.reactionPending()) {
       return;
     }
 
@@ -710,6 +710,13 @@ export class ReactionButtonComponent {
   }
 
   isLoadingReactions = signal<boolean>(false);
+  /**
+   * Set while a reaction add/remove is in-flight OR while we are waiting for the
+   * follow-up network reload to confirm the new state. Prevents the user from
+   * clicking Like again immediately (which would otherwise toggle into a delete).
+   */
+  reactionPending = signal<boolean>(false);
+  private reactionReloadTimer: ReturnType<typeof setTimeout> | null = null;
   reactions = signal<ReactionEvents>({ events: [], data: new Map() });
   customEmojis = signal<{ shortcode: string; url: string }[]>([]);
   emojiSets = signal<EmojiSetGroup[]>([]);
@@ -995,7 +1002,7 @@ export class ReactionButtonComponent {
   }
 
   async addReaction(emoji: string, closePicker = true) {
-    if (this.isLoadingReactions()) {
+    if (this.isLoadingReactions() || this.reactionPending()) {
       return;
     }
 
@@ -1122,6 +1129,8 @@ export class ReactionButtonComponent {
 
   private async removeReaction(reaction: NostrRecord, emoji: string) {
     this.isLoadingReactions.set(true);
+    this.reactionPending.set(true);
+    let success = false;
     try {
       this.updateReactionsOptimistically(this.accountState.pubkey()!, emoji, false);
       const result = await this.reactionService.deleteReaction(reaction.event);
@@ -1129,13 +1138,17 @@ export class ReactionButtonComponent {
         this.updateReactionsOptimistically(this.accountState.pubkey()!, emoji, true);
         this.handleReactionError(result.error, 'Failed to remove reaction. Please try again.');
       } else {
+        success = true;
         // Notify parent to reload reactions
         this.reactionChanged.emit();
       }
-      // Reload reactions in the background to sync
-      setTimeout(() => this.loadReactions(true), 2000);
     } finally {
       this.isLoadingReactions.set(false);
+      if (success) {
+        this.scheduleReactionReload();
+      } else {
+        this.reactionPending.set(false);
+      }
     }
   }
 
@@ -1144,6 +1157,8 @@ export class ReactionButtonComponent {
     if (!event) return;
 
     this.isLoadingReactions.set(true);
+    this.reactionPending.set(true);
+    let success = false;
     try {
       // Look up emoji URL from customEmojis or emojiSets before creating reaction
       // This ensures the emoji tag is added to the reaction event (NIP-30)
@@ -1178,6 +1193,7 @@ export class ReactionButtonComponent {
           }
         }
 
+        success = true;
         this.haptics.triggerLight();
         this.zapSound.playLikeSound();
         this.triggerReactionCelebration(emoji);
@@ -1186,14 +1202,23 @@ export class ReactionButtonComponent {
         // Notify parent to reload reactions
         this.reactionChanged.emit();
       }
-      // Reload reactions in the background to sync
-      setTimeout(() => this.loadReactions(true), 2000);
     } finally {
       this.isLoadingReactions.set(false);
+      if (success) {
+        this.scheduleReactionReload();
+      } else {
+        this.reactionPending.set(false);
+      }
     }
   }
 
   async toggleLike() {
+    // Prevent rapid double-taps from accidentally toggling a freshly added
+    // like into a delete before the network has confirmed the new state.
+    if (this.isLoadingReactions() || this.reactionPending()) {
+      return;
+    }
+
     // Check if user is logged in
     const userPubkey = this.accountState.pubkey();
     const currentAccount = this.accountState.account();
@@ -1207,6 +1232,8 @@ export class ReactionButtonComponent {
     if (!event) return;
 
     this.isLoadingReactions.set(true);
+    this.reactionPending.set(true);
+    let success = false;
 
     try {
       const existingLikeReaction = this.userReaction();
@@ -1221,6 +1248,7 @@ export class ReactionButtonComponent {
           this.updateReactionsOptimistically(userPubkey, existingLikeReaction.event.content, true);
           this.handleReactionError(result.error, 'Failed to remove like. Please try again.');
         } else {
+          success = true;
           this.reactionChanged.emit();
         }
       } else {
@@ -1237,21 +1265,43 @@ export class ReactionButtonComponent {
         }
 
         if (result.success) {
+          success = true;
           this.haptics.triggerMedium();
           this.zapSound.playLikeSound();
           this.triggerReactionCelebration('+');
           this.reactionChanged.emit();
         }
       }
-
-      // Reload reactions in the background to sync with the network
-      setTimeout(() => {
-        this.loadReactions(true);
-      }, 2000);
-
     } finally {
       this.isLoadingReactions.set(false);
+      if (success) {
+        // Keep the button disabled until we've reloaded and confirmed the
+        // published reaction state.
+        this.scheduleReactionReload();
+      } else {
+        this.reactionPending.set(false);
+      }
     }
+  }
+
+  /**
+   * Schedules a background reload of reactions to sync with the network.
+   * Keeps `reactionPending` true until the reload finishes so the Like button
+   * stays disabled between publish and confirmation.
+   */
+  private scheduleReactionReload(delayMs = 2000): void {
+    if (this.reactionReloadTimer) {
+      clearTimeout(this.reactionReloadTimer);
+    }
+    this.reactionPending.set(true);
+    this.reactionReloadTimer = setTimeout(async () => {
+      this.reactionReloadTimer = null;
+      try {
+        await this.loadReactions(true);
+      } finally {
+        this.reactionPending.set(false);
+      }
+    }, delayMs);
   }
 
   isExtensionError(error?: string): boolean {

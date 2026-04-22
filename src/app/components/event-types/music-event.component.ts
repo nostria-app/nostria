@@ -72,7 +72,7 @@ import { MatDividerModule } from '@angular/material/divider';
           </button>
           <div class="hover-action-row">
             <button mat-icon-button class="media-action-button like-action" [class.is-liked]="isLiked()"
-              (click)="likeTrack($any($event))" [attr.aria-label]="isLiked() ? 'Unlike track' : 'Like track'"
+              (click)="likeTrack($any($event))" [disabled]="isLiking()" [attr.aria-label]="isLiked() ? 'Unlike track' : 'Like track'"
               [title]="isLiked() ? 'Unlike' : 'Like'">
               <mat-icon [class.is-liked]="isLiked()">{{ isLiked() ? 'favorite' : 'favorite_border' }}</mat-icon>
             </button>
@@ -241,7 +241,7 @@ import { MatDividerModule } from '@angular/material/divider';
       }
       <mat-divider></mat-divider>
       @if (isAuthenticated()) {
-        <button mat-menu-item (click)="likeTrack($any($event))">
+        <button mat-menu-item (click)="likeTrack($any($event))" [disabled]="isLiking()">
           <mat-icon>{{ isLiked() ? 'favorite' : 'favorite_border' }}</mat-icon>
           <span>{{ isLiked() ? 'Unlike' : 'Like' }}</span>
         </button>
@@ -1353,6 +1353,12 @@ export class MusicEventComponent implements OnDestroy {
   // Track liked state hydrated from relays and updated locally on like/unlike.
   private likedReaction = signal<Event | null>(null);
   isLiked = computed(() => this.likedSongsService.isTrackLiked(this.event()));
+  /**
+   * Set while a like/unlike is in-flight to prevent rapid double-taps from
+   * immediately toggling a freshly published reaction into a delete event
+   * before the new state is reflected locally.
+   */
+  isLiking = signal(false);
 
   private getReactionCacheKey(track: Event, userPubkey: string): string {
     const dTag = track.tags.find(tag => tag[0] === 'd')?.[1] || '';
@@ -1595,6 +1601,10 @@ export class MusicEventComponent implements OnDestroy {
   async likeTrack(event: MouseEvent | KeyboardEvent): Promise<void> {
     event.stopPropagation();
 
+    if (this.isLiking()) {
+      return;
+    }
+
     const userPubkey = this.accountState.pubkey();
     const currentAccount = this.accountState.account();
     if (!userPubkey || currentAccount?.source === 'preview') {
@@ -1604,27 +1614,32 @@ export class MusicEventComponent implements OnDestroy {
 
     const ev = this.event();
 
-    if (this.isLiked()) {
-      const existingReaction = this.likedReaction();
-      const result = existingReaction
-        ? await this.reactionService.deleteReaction(existingReaction)
-        : await this.reactionService.deleteLikeForTarget(ev);
-      if (result.success) {
-        this.likedReaction.set(null);
-        this.snackBar.open('Like removed', 'Close', { duration: 2000 });
-      } else {
-        this.snackBar.open('Failed to remove like', 'Close', { duration: 3000 });
+    this.isLiking.set(true);
+    try {
+      if (this.isLiked()) {
+        const existingReaction = this.likedReaction();
+        const result = existingReaction
+          ? await this.reactionService.deleteReaction(existingReaction)
+          : await this.reactionService.deleteLikeForTarget(ev);
+        if (result.success) {
+          this.likedReaction.set(null);
+          this.snackBar.open('Like removed', 'Close', { duration: 2000 });
+        } else {
+          this.snackBar.open('Failed to remove like', 'Close', { duration: 3000 });
+        }
+        return;
       }
-      return;
-    }
 
-    const result = await this.reactionService.addLike(ev);
-    if (result.success) {
-      const reactionEvent = result.event ?? null;
-      this.likedReaction.set(reactionEvent);
-      this.snackBar.open('Liked!', 'Close', { duration: 2000 });
-    } else {
-      this.snackBar.open('Failed to like', 'Close', { duration: 3000 });
+      const result = await this.reactionService.addLike(ev);
+      if (result.success) {
+        const reactionEvent = result.event ?? null;
+        this.likedReaction.set(reactionEvent);
+        this.snackBar.open('Liked!', 'Close', { duration: 2000 });
+      } else {
+        this.snackBar.open('Failed to like', 'Close', { duration: 3000 });
+      }
+    } finally {
+      this.isLiking.set(false);
     }
   }
 

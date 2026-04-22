@@ -4,7 +4,7 @@
   <app-celebration-burst theme="like" mode="button" [tier]="likeCelebrationTier()">
     <button class="reaction-button-trigger celebration-target" mat-icon-button cdkOverlayOrigin
       #quickReactionOrigin="cdkOverlayOrigin" [class.active]="!!userReaction()" [class.reacted]="!!userReaction()"
-      [disabled]="isLoadingReactions() || disabled()" (pointerdown)="onPointerDown($event)"
+      [disabled]="isLoadingReactions() || disabled() || reactionPending()" (pointerdown)="onPointerDown($event)"
       (pointerup)="onPointerUp($event)" (pointerleave)="onPointerLeave()" (mouseenter)="onDesktopMouseEnter()"
       (mouseleave)="onDesktopMouseLeave()" (contextmenu)="$event.preventDefault()" (click)="onClick($event)">
       @if (userReaction()) {
@@ -89,7 +89,7 @@
     <!-- Main reaction button -->
     <app-celebration-burst theme="like" mode="button" [tier]="likeCelebrationTier()">
       <button mat-button class="celebration-target" [class.active]="!!userReaction()" [class.reacted]="!!userReaction()"
-        [disabled]="isLoadingReactions() || disabled()" [matMenuTriggerFor]="null"
+        [disabled]="isLoadingReactions() || disabled() || reactionPending()" [matMenuTriggerFor]="null"
         (click)="openFullReactionPicker($event)">
         @if (userReaction()) {
         @if (getCustomEmojiUrl(userReaction()!.event)) {
