@@ -63,13 +63,29 @@
 }
 
 .featured-card-header {
-  display: flex;
-  justify-content: flex-end;
-  margin-bottom: -0.4rem;
+  position: absolute;
+  top: 0.25rem;
+  right: 0.25rem;
+  z-index: 2;
 }
 
 .dismiss-button {
   color: var(--mat-sys-on-surface-variant);
+  width: 32px;
+  height: 32px;
+  padding: 0 !important;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+
+  ::ng-deep .mat-mdc-button-touch-target {
+    width: 32px;
+    height: 32px;
+  }
+}
+
+.featured-card-content {
+  padding-right: 2rem;
 }
 
 .featured-card-content {
