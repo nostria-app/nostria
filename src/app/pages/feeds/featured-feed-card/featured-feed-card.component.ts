@@ -13,6 +13,7 @@ import { AccountStateService } from '../../../services/account-state.service';
 import { MediaPlayerService } from '../../../services/media-player.service';
 import { AiService } from '../../../services/ai.service';
 import { CustomDialogService } from '../../../services/custom-dialog.service';
+import { LayoutService } from '../../../services/layout.service';
 import { SupportNostriaComponent } from '../../../components/support-nostria/support-nostria.component';
 
 @Component({
@@ -38,6 +39,7 @@ export class FeaturedFeedCardComponent {
   private readonly mediaPlayer = inject(MediaPlayerService);
   private readonly aiService = inject(AiService);
   private readonly customDialog = inject(CustomDialogService);
+  private readonly layout = inject(LayoutService);
 
   readonly card = input.required<FeaturedFeedCard>();
   readonly instanceId = input.required<string>();
@@ -89,6 +91,18 @@ export class FeaturedFeedCardComponent {
   openArticle(naddr: string): void {
     this.featuredFeedCards.markClick(this.card().id);
     void this.router.navigate(['/a', naddr]);
+  }
+
+  openProfile(pubkey: string, event: MouseEvent): void {
+    // Allow modifier keys (ctrl/cmd/middle-click) to use default browser behavior
+    if (event.ctrlKey || event.metaKey || event.shiftKey || event.button === 1) {
+      return;
+    }
+    event.preventDefault();
+    this.featuredFeedCards.markClick(this.card().id);
+    // Intentionally omit sourceEvent so the profile opens in the right panel
+    // (otherwise the click bubbles from within .left-panel and forces left-panel navigation).
+    this.layout.openProfile(pubkey);
   }
 
   async follow(pubkey: string): Promise<void> {
