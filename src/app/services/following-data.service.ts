@@ -214,23 +214,26 @@ export class FollowingDataService {
     const sinceTimestamp = since ?? this.calculateInitialCacheSinceTimestamp();
 
     try {
-      // Fetch events for each kind and combine
-      const allEvents: Event[] = [];
+      // Fetch events for all kinds in parallel to avoid serial IndexedDB contention,
+      // which can take many seconds per kind when other transactions (notifications,
+      // event writes, interaction lookups) are competing for the database.
+      const perKindResults = await Promise.all(
+        kinds.map(kind =>
+          this.database.getAllEventsByPubkeyKindSince(
+            pubkey,
+            followingList,
+            kind,
+            sinceTimestamp
+          )
+        )
+      );
 
-      for (const kind of kinds) {
-        const events = await this.database.getAllEventsByPubkeyKindSince(
-          pubkey,
-          followingList,
-          kind,
-          sinceTimestamp
-        );
-        allEvents.push(...events);
-      }
-
-      // Sort by timestamp descending and deduplicate
+      // Deduplicate by event ID
       const eventMap = new Map<string, Event>();
-      for (const event of allEvents) {
-        eventMap.set(event.id, event);
+      for (const events of perKindResults) {
+        for (const event of events) {
+          eventMap.set(event.id, event);
+        }
       }
 
       return this.limitEvents(Array.from(eventMap.values()));

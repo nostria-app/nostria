@@ -751,7 +751,7 @@ export class ReactionButtonComponent {
   // Quick reactions for the picker
   readonly quickReactions = ['❤️', '👍', '😂', '😮', '😢', '🔥'];
 
-  desktopQuickReactions = computed<Array<{ emoji: string; url?: string }>>(() => {
+  desktopQuickReactions = computed<{ emoji: string; url?: string }[]>(() => {
     const pubkey = this.accountState.pubkey();
     const recent = pubkey ? this.accountLocalState.getRecentEmojis(pubkey) : [];
     const recentItems = recent
@@ -767,7 +767,7 @@ export class ReactionButtonComponent {
     const baseItems = [...recentItems, defaultItem, ...this.quickReactions.map(emoji => ({ emoji }))]
       .filter((item): item is { emoji: string; url?: string } => !!item?.emoji);
 
-    const uniqueItems: Array<{ emoji: string; url?: string }> = [];
+    const uniqueItems: { emoji: string; url?: string }[] = [];
     for (const item of baseItems) {
       if (uniqueItems.some(existing => existing.emoji === item.emoji && existing.url === item.url)) {
         continue;
