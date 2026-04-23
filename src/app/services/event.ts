@@ -1190,7 +1190,6 @@ export class EventService {
   static readonly INTERACTION_QUERY_LIMIT = 11;
   private static readonly TIMELINE_INTERACTION_CACHE_TIMEOUT_MS = 30 * 1000;
   private static readonly EMPTY_TIMELINE_INTERACTION_CACHE_TIMEOUT_MS = 5 * 1000;
-  private static readonly TIMELINE_REACTION_FALLBACK_LIMIT_MULTIPLIER = 6;
 
   /**
    * Load event interactions (reactions, reposts, reports, replies) with optional limits.
@@ -1305,45 +1304,48 @@ export class EventService {
       save: true,
     };
 
-    const interactionKinds = skipReplies
-      ? [kinds.Reaction, repostKind, kinds.Report]
-      : [kinds.Reaction, repostKind, kinds.Report, kinds.ShortTextNote, 1111, 1244];
-    const interactionBucketCount = skipReplies ? 3 : 4;
-    const combinedLimit = limit * interactionBucketCount;
-    const allRecords = await this.userDataService.getEventsByKindsAndEventTag(
-      pubkey,
-      interactionKinds,
-      eventId,
-      { ...queryOptions, limit: combinedLimit },
-    );
+    // Split into two parallel queries so replies don't consume the limit budget
+    // and starve reactions/reposts on popular posts. Each relay limit is scoped
+    // per-filter, so separating these categories means reactions can never be
+    // truncated out by a flood of replies returned first.
+    const reactionFamilyKinds = [kinds.Reaction, repostKind, kinds.Report, 1244];
+    const replyKinds = [kinds.ShortTextNote, 1111];
 
-    const querySaturated = allRecords.length >= combinedLimit;
-    let reactionRecords = allRecords.filter((record) => record.event.kind === kinds.Reaction);
-    let reactionFallbackSaturated = false;
+    // Reactions bucket: 3 sub-kinds + some headroom -> limit * 4
+    const reactionFamilyLimit = limit * 4;
+    // Replies bucket: 2 sub-kinds + headroom for heavily-replied posts -> limit * 3
+    const replyLimit = limit * 3;
 
-    if (reactionRecords.length === 0) {
-      const reactionFallbackLimit = limit * EventService.TIMELINE_REACTION_FALLBACK_LIMIT_MULTIPLIER;
-      reactionRecords = await this.userDataService.getEventsByKindsAndEventTag(
+    const [reactionFamilyRecords, replyBucketRecords] = await Promise.all([
+      this.userDataService.getEventsByKindsAndEventTag(
         pubkey,
-        [kinds.Reaction],
+        reactionFamilyKinds,
         eventId,
-        { ...queryOptions, limit: reactionFallbackLimit },
-      );
-      reactionFallbackSaturated = reactionRecords.length >= reactionFallbackLimit;
-
-      if (reactionRecords.length > 0) {
-        this.logger.info(
-          'Recovered timeline reactions with focused fallback query:',
+        { ...queryOptions, limit: reactionFamilyLimit },
+      ),
+      skipReplies
+        ? Promise.resolve([] as NostrRecord[])
+        : this.userDataService.getEventsByKindsAndEventTag(
+          pubkey,
+          replyKinds,
           eventId,
-          'reactions:',
-          reactionRecords.length,
-          reactionFallbackSaturated ? '(fallback saturated)' : '',
-        );
-      }
-    }
+          { ...queryOptions, limit: replyLimit },
+        ),
+    ]);
 
-    const repostRecords = allRecords.filter((record) => record.event.kind === repostKind);
-    const reportRecords = allRecords.filter((record) => record.event.kind === kinds.Report);
+    const allRecords = skipReplies
+      ? reactionFamilyRecords
+      : [...reactionFamilyRecords, ...replyBucketRecords];
+
+    const reactionFamilySaturated = reactionFamilyRecords.length >= reactionFamilyLimit;
+    const replyBucketSaturated = !skipReplies && replyBucketRecords.length >= replyLimit;
+    // Preserve the existing downstream "saturated" signal so verification/retry paths keep working.
+    const querySaturated = reactionFamilySaturated || replyBucketSaturated;
+    const reactionRecords = reactionFamilyRecords.filter((record) => record.event.kind === kinds.Reaction);
+    const reactionFallbackSaturated = reactionFamilySaturated;
+
+    const repostRecords = reactionFamilyRecords.filter((record) => record.event.kind === repostKind);
+    const reportRecords = reactionFamilyRecords.filter((record) => record.event.kind === kinds.Report);
 
     // Process replies
     let replyCount = 0;

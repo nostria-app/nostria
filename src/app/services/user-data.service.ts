@@ -871,7 +871,19 @@ export class UserDataService {
 
     // Check if any of these kinds are replaceable
     const hasReplaceableKind = kinds.some(kind => this.utilities.shouldAlwaysFetchFromRelay(kind));
-    const shouldReadDatabase = options?.save && !options?.invalidateCache && !hasReplaceableKind;
+    // Timeline/feed-mode lookups pass a `limit`. For those, skip the IndexedDB
+    // cursor scan: it is a full scan of the by-kind index filtered in-memory,
+    // which on long-lived accounts (10k+ text notes) can take 10+ seconds under
+    // concurrent write load. Feed first-paint needs sub-second interaction
+    // counts; the relay query is capped at 3.5s and the in-memory cache (5 min
+    // TTL) still serves repeated loads for the same event. For non-timeline
+    // callers (thread/detail views, no limit) we keep the DB scan so cached
+    // interactions are available offline.
+    const isTimelineLookup = options?.limit !== undefined;
+    const shouldReadDatabase = options?.save
+      && !options?.invalidateCache
+      && !hasReplaceableKind
+      && !isTimelineLookup;
 
     const dbEventsPromise = shouldReadDatabase
       ? this.database.getEventsByKindsAndEventTag(kinds, eventTag)

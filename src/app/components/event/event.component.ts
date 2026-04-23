@@ -1522,6 +1522,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
           this.hasLoadedEdit = false;
           this.retriedVisibleInteractionRecoveryEventId = undefined;
           this.fullVisibleInteractionRecoveryEventId = undefined;
+          this.retriedPartialInteractionEventId = undefined;
           this.interactionLoadGeneration += 1;
           this.interactionAbortController?.abort();
           this.interactionAbortController = undefined;
@@ -1846,7 +1847,11 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   private readonly initialBatchPreloadCount = this.runtimeResourceProfile.likelyConstrained ? 4 : 12;
   private readonly interactionVerificationLimitMultiplier = 4;
   private readonly visibleRecoveryLimitMultiplier = 12;
-  private readonly emptyInteractionRetryMinAgeSeconds = 600;
+  // Was 600s (10 min). Lowered to 60s: most feed content is > 1 min old, so
+  // relaxing the age guard lets genuine empty-reaction recovery retries fire
+  // where they previously never did. Events younger than 60s legitimately
+  // often have 0 engagement, so we still skip retries for those.
+  private readonly emptyInteractionRetryMinAgeSeconds = 60;
   private readonly actualVisibilityObserverOptions = {
     rootMargin: '0px',
     threshold: 0.01,
@@ -1854,6 +1859,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   private retriedEmptyInteractionEventId?: string;
   private retriedVisibleInteractionRecoveryEventId?: string;
   private fullVisibleInteractionRecoveryEventId?: string;
+  private retriedPartialInteractionEventId?: string;
 
   private static startInteractionPreload(component: EventComponent, priority: number): void {
     EventComponent.queuedInteractionPreloads.delete(component);
@@ -2153,7 +2159,13 @@ export class EventComponent implements AfterViewInit, OnDestroy {
       return false;
     }
 
-    if (this.retriedVisibleInteractionRecoveryEventId === currentEventId) {
+    // Don't fire a recovery query while the initial load is still in flight.
+    // scheduleVisibleInteractionRetry() is queued when the load is enqueued, not
+    // when it resolves, so on slow relays the 900ms timer can fire before the
+    // first query returns. The signals are still empty from clearInteractionState()
+    // and would otherwise trigger an expensive duplicate query (limit * 12) for
+    // essentially every event in the feed, doubling relay traffic.
+    if (this.isLoadingReactions() || this.isLoadingZaps()) {
       return false;
     }
 
@@ -2161,13 +2173,32 @@ export class EventComponent implements AfterViewInit, OnDestroy {
       return false;
     }
 
-    const hasAnyEngagementLoaded = this.reactions().events.length > 0
-      || this.reposts().length > 0
-      || this.replyCount() > 0
-      || this.quotes().length > 0
-      || this.zaps().length > 0;
+    const hasReactions = this.reactions().events.length > 0;
+    const hasReposts = this.reposts().length > 0;
+    const hasReplies = this.replyCount() > 0;
+    const hasQuotes = this.quotes().length > 0;
+    const hasZaps = this.zaps().length > 0;
+    const hasAnyEngagementLoaded = hasReactions || hasReposts || hasReplies || hasQuotes || hasZaps;
 
     if (hasAnyEngagementLoaded) {
+      // Partial-load case: we got replies/zaps/quotes but reactions+reposts are
+      // still 0. This typically happens when the reaction query timed out or
+      // the author's reaction relays weren't reached, while reply relays did
+      // respond. Allow ONE partial-recovery retry (tracked separately from the
+      // all-empty retry) to try to fill in the missing categories.
+      //
+      // Guard: only when the partial signal is suspicious — replies or zaps
+      // indicate the post has engagement, so reactions being 0 is likely a
+      // fetch miss, not reality.
+      if (this.retriedPartialInteractionEventId === currentEventId) {
+        return false;
+      }
+      const hasReactionFamily = hasReactions || hasReposts;
+      const hasOtherEngagement = hasReplies || hasZaps || hasQuotes;
+      return !hasReactionFamily && hasOtherEngagement;
+    }
+
+    if (this.retriedVisibleInteractionRecoveryEventId === currentEventId) {
       return false;
     }
 
@@ -2177,11 +2208,27 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   }
 
   private async retryVisibleTimelineInteractions(currentEventId: string): Promise<void> {
-    if (this.retriedVisibleInteractionRecoveryEventId === currentEventId) {
-      return;
+    // Distinguish between all-empty retry (first-time) and partial-load retry
+    // (we have replies/zaps but reactions/reposts are still 0). Partial path
+    // gets a separate guard flag so it can run even if an all-empty retry
+    // previously fired and filled in the "other" categories.
+    const hasReactions = this.reactions().events.length > 0;
+    const hasReposts = this.reposts().length > 0;
+    const hasOther = this.replyCount() > 0 || this.zaps().length > 0 || this.quotes().length > 0;
+    const isPartialRetry = !hasReactions && !hasReposts && hasOther;
+
+    if (isPartialRetry) {
+      if (this.retriedPartialInteractionEventId === currentEventId) {
+        return;
+      }
+      this.retriedPartialInteractionEventId = currentEventId;
+    } else {
+      if (this.retriedVisibleInteractionRecoveryEventId === currentEventId) {
+        return;
+      }
+      this.retriedVisibleInteractionRecoveryEventId = currentEventId;
     }
 
-    this.retriedVisibleInteractionRecoveryEventId = currentEventId;
     const loadGeneration = ++this.interactionLoadGeneration;
     const recoveryLimit = EventService.INTERACTION_QUERY_LIMIT * this.visibleRecoveryLimitMultiplier;
 
@@ -2410,13 +2457,13 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     const eventAuthorPubkey = targetRecordData.event.pubkey;
     const queryLimit = queryLimitOverride ?? EventService.INTERACTION_QUERY_LIMIT;
 
-    await this.loadTimelineQuotes(targetEventId, eventAuthorPubkey, invalidateCache, queryLimit, signal, loadGeneration);
-
-    if (signal?.aborted || this.interactionLoadGeneration !== loadGeneration || this.targetRecord()?.event.id !== targetEventId) {
-      return;
-    }
-
-    await this.loadZaps(signal, loadGeneration, invalidateCache);
+    // Run zaps and quotes in parallel rather than sequentially so zap counts
+    // (which typically resolve faster via account relays) don't get held up
+    // behind a slow quotes query on event-author relays.
+    await Promise.allSettled([
+      this.loadTimelineQuotes(targetEventId, eventAuthorPubkey, invalidateCache, queryLimit, signal, loadGeneration),
+      this.loadZaps(signal, loadGeneration, invalidateCache),
+    ]);
   }
 
   private resolveObserverRoot(element: HTMLElement): HTMLElement | null {

@@ -578,7 +578,13 @@ export class UserRelayService {
       limit?: number;
     }
   ): Promise<Event[]> {
-    return this.pool.query(relayUrls, filter);
+    // Use a shorter timeout than the pool default (5s) for these tag-filtered
+    // interaction/quote lookups. These queries fan out across the event
+    // author's relays + the current account's relays, so a single stalled
+    // relay could otherwise hold the query for 5s even after all responsive
+    // relays had already emitted EOSE. A 3.5s cap keeps the feed feeling
+    // responsive while still giving slow relays a reasonable window.
+    return this.pool.query(relayUrls, filter, 3500);
   }
 
   /**

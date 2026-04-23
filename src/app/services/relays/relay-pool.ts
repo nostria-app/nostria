@@ -46,10 +46,21 @@ export class RelayPoolService {
 
   // Pool instance identifier
   private readonly poolInstanceId = `RelayPoolService_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-  // Timeline cards now use fewer per-event queries, so we can allow a slightly wider
-  // one-shot request window without hitting the subscription caps that previously caused drops.
-  private readonly maxConcurrentRequests = 6;
-  private readonly maxConcurrentRequestsPerRelay = 3;
+  // Concurrency caps for outbound relay requests.
+  //
+  // strfry (the most widely deployed relay implementation) defaults to
+  //   maxSubsPerConnection = 200
+  // nostr-rs-relay and khatru typically allow 20+ concurrent subscriptions per
+  // connection. Our previous 4/relay cap was extremely conservative and caused
+  // severe queue backpressure during feed bootstrap (each visible event issues
+  // 3-4 queries: reactions, replies, quotes, zaps).
+  //
+  // Values chosen to:
+  //  - keep fan-out comfortably below strfry's 200 limit (100x margin)
+  //  - stay under the strictest production relays (~20/conn) with a 20% buffer
+  //  - let a single feed first-paint drain without queueing
+  private readonly maxConcurrentRequests = 24;
+  private readonly maxConcurrentRequestsPerRelay = 16;
   private activeRequestCount = 0;
   private readonly activeRequestsByRelay = new Map<string, number>();
   private readonly requestQueue: {
