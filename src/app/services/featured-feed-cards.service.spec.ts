@@ -8,6 +8,7 @@ import { DatabaseService } from './database.service';
 import { LoggerService } from './logger.service';
 import { UtilitiesService } from './utilities.service';
 import { FeedConfig } from './feed.service';
+import { LocalSettingsService } from './local-settings.service';
 import { RelayPoolService } from './relays/relay-pool';
 import { RelaysService } from './relays/relays';
 
@@ -29,6 +30,7 @@ describe('FeaturedFeedCardsService', () => {
     const pubkeySignal = signal('viewer');
     const followingSignal = signal<string[]>([]);
     const subscriptionSignal = signal(false);
+    const featuredFeedCardsEnabledSignal = signal(true);
     const accountLocalStateStub = {
       getFeaturedFeedCards: () => storedState,
       setFeaturedFeedCards: (_: string, state: FeaturedFeedCardsState) => {
@@ -95,6 +97,12 @@ describe('FeaturedFeedCardsService', () => {
           useValue: accountLocalStateStub,
         },
         {
+          provide: LocalSettingsService,
+          useValue: {
+            featuredFeedCardsEnabled: featuredFeedCardsEnabledSignal,
+          },
+        },
+        {
           provide: DatabaseService,
           useValue: databaseStub,
         },
@@ -159,6 +167,28 @@ describe('FeaturedFeedCardsService', () => {
     expect(placements.length).toBe(2);
     expect(placements[0].afterEventId).toBe('event-4');
     expect(placements[1].afterEventId).toBe('event-15');
+  });
+
+  it('should not return placements when featured feed cards are disabled', () => {
+    const localSettings = TestBed.inject(LocalSettingsService) as unknown as {
+      featuredFeedCardsEnabled: ReturnType<typeof signal<boolean>>;
+    };
+    localSettings.featuredFeedCardsEnabled.set(false);
+
+    const events = Array.from({ length: 18 }, (_, index) => makeEvent(`event-${index}`, `author-${index}`, 200 - index));
+    const feed: FeedConfig = {
+      id: 'default-feed-for-you',
+      label: 'For You',
+      icon: 'for_you',
+      type: 'notes',
+      kinds: [kinds.ShortTextNote],
+      source: 'for-you',
+      relayConfig: 'account',
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    };
+
+    expect(service.getPlacements(feed, events)).toEqual([]);
   });
 
   it('should persist impressions and clicks for future prioritization', () => {

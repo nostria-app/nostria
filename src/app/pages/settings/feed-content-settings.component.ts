@@ -56,6 +56,15 @@ import { SettingReactionEmojiComponent } from './sections/reaction-emoji.compone
         </p>
 
         <div class="setting-item">
+          <span i18n="@@settings.feed.featured-cards">Show In-Feed Promotion Cards</span>
+          <mat-slide-toggle [checked]="localSettings.featuredFeedCardsEnabled()" (change)="toggleFeaturedFeedCards()">
+          </mat-slide-toggle>
+        </div>
+        <p class="setting-description" i18n="@@settings.feed.featured-cards.description">
+          Show featured recommendation and promotion cards between feed posts.
+        </p>
+
+        <div class="setting-item">
           <span i18n="@@settings.navigation.show-thread-lines">Show Thread Lines</span>
           <mat-slide-toggle [checked]="localSettings.showThreadLines()" (change)="toggleShowThreadLines()">
           </mat-slide-toggle>
@@ -128,6 +137,10 @@ export class FeedContentSettingsComponent {
 
   toggleStartFeedsOnLastEvent(): void {
     this.localSettings.setStartFeedsOnLastEvent(!this.localSettings.startFeedsOnLastEvent());
+  }
+
+  toggleFeaturedFeedCards(): void {
+    this.localSettings.setFeaturedFeedCardsEnabled(!this.localSettings.featuredFeedCardsEnabled());
   }
 
   toggleShowThreadLines(): void {

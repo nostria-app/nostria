@@ -103,6 +103,7 @@ export interface LocalSettings {
   trustRelay: string;
   startOnLastRoute: boolean;
   startFeedsOnLastEvent: boolean;
+  featuredFeedCardsEnabled: boolean;
   showThreadLines: boolean;
   openThreadsExpanded: boolean;
   removeTrackingParameters: boolean;
@@ -149,6 +150,7 @@ const DEFAULT_LOCAL_SETTINGS: LocalSettings = {
   trustRelay: 'wss://nip85.nosfabrica.com',
   startOnLastRoute: true,
   startFeedsOnLastEvent: true,
+  featuredFeedCardsEnabled: true,
   showThreadLines: true,
   openThreadsExpanded: true,
   removeTrackingParameters: true,
@@ -204,6 +206,7 @@ export class LocalSettingsService {
   readonly trustRelay = computed(() => this.settings().trustRelay);
   readonly startOnLastRoute = computed(() => this.settings().startOnLastRoute);
   readonly startFeedsOnLastEvent = computed(() => this.settings().startFeedsOnLastEvent);
+  readonly featuredFeedCardsEnabled = computed(() => this.settings().featuredFeedCardsEnabled ?? true);
   readonly showThreadLines = computed(() => this.settings().showThreadLines);
   readonly openThreadsExpanded = computed(() => this.settings().openThreadsExpanded);
   readonly removeTrackingParameters = computed(() => this.settings().removeTrackingParameters);
@@ -353,6 +356,9 @@ export class LocalSettingsService {
           // Explicitly ensure startFeedsOnLastEvent defaults to true for existing users
           // who don't have this property yet
           startFeedsOnLastEvent: stored.startFeedsOnLastEvent !== undefined ? stored.startFeedsOnLastEvent : true,
+          // Explicitly ensure featured feed cards default to true for existing users
+          // who don't have this property yet
+          featuredFeedCardsEnabled: stored.featuredFeedCardsEnabled !== undefined ? stored.featuredFeedCardsEnabled : true,
           // Explicitly ensure autoRelayAuth defaults to false for existing users
           // who don't have this property yet (most users don't use authentication)
           autoRelayAuth: stored.autoRelayAuth !== undefined ? stored.autoRelayAuth : false,
@@ -513,6 +519,13 @@ export class LocalSettingsService {
    */
   setStartFeedsOnLastEvent(startFeedsOnLastEvent: boolean): void {
     this.updateSettings({ startFeedsOnLastEvent });
+  }
+
+  /**
+   * Set whether featured in-feed cards are shown.
+   */
+  setFeaturedFeedCardsEnabled(featuredFeedCardsEnabled: boolean): void {
+    this.updateSettings({ featuredFeedCardsEnabled });
   }
 
   /**

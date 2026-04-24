@@ -12,6 +12,7 @@ import { DatabaseService } from './database.service';
 import { LoggerService } from './logger.service';
 import { UtilitiesService } from './utilities.service';
 import { FeedConfig } from './feed.service';
+import { LocalSettingsService } from './local-settings.service';
 import { RelayPoolService } from './relays/relay-pool';
 import { RelaysService } from './relays/relays';
 
@@ -87,6 +88,7 @@ export class FeaturedFeedCardsService {
   private readonly database = inject(DatabaseService);
   private readonly logger = inject(LoggerService);
   private readonly utilities = inject(UtilitiesService);
+  private readonly localSettings = inject(LocalSettingsService);
   private readonly relayPool = inject(RelayPoolService);
   private readonly relays = inject(RelaysService);
 
@@ -129,6 +131,10 @@ export class FeaturedFeedCardsService {
 
   getPlacements(feed: FeedConfig, events: Event[]): FeaturedFeedPlacement[] {
     const { profiles, articles, music, scoring, dismissed, subscriptionActive, authenticated } = this.cardSignals();
+
+    if (!this.localSettings.featuredFeedCardsEnabled()) {
+      return [];
+    }
 
     if (events.length <= FEATURED_CARD_START_INDEX) {
       return [];
