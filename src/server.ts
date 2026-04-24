@@ -790,6 +790,27 @@ app.get('/api/share-target/:id', (req, res) => {
   sharedFilesCache.delete(id);
 });
 
+app.get('/api/bitcoin-price', async (_req, res) => {
+  try {
+    const upstreamResponse = await fetch('https://pay.ariton.app/price');
+
+    if (!upstreamResponse.ok) {
+      res.status(upstreamResponse.status).json({ error: 'Upstream price request failed' });
+      return;
+    }
+
+    const body = await upstreamResponse.text();
+    const contentType = upstreamResponse.headers.get('content-type') ?? 'application/json; charset=utf-8';
+
+    res.setHeader('Cache-Control', 'public, max-age=60, s-maxage=60, stale-while-revalidate=120');
+    res.setHeader('Content-Type', contentType);
+    res.send(body);
+  } catch (error) {
+    console.error('[Bitcoin Price Proxy] Error:', error);
+    res.status(502).json({ error: 'Failed to fetch Bitcoin price' });
+  }
+});
+
 /**
  * NIP-05 Nostr identifier endpoint
  * Handles requests to /.well-known/nostr.json?name=<username>

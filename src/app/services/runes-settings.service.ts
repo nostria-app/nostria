@@ -5,6 +5,7 @@ export type RuneId = 'bitcoin-price' | 'weather' | 'nostr-swiss-knife' | 'music-
 export type SidebarWidgetId = 'favorites' | 'runes';
 
 export const BITCOIN_PRICE_API = 'https://pay.ariton.app/price';
+export const BITCOIN_PRICE_PROXY_API = '/api/bitcoin-price';
 
 export interface WeatherLocationPreference {
   latitude: number;

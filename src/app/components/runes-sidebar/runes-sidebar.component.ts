@@ -1,4 +1,5 @@
-import { ChangeDetectionStrategy, Component, OnDestroy, computed, effect, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnDestroy, PLATFORM_ID, computed, effect, inject, signal } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
@@ -12,7 +13,7 @@ import { AccountStateService } from '../../services/account-state.service';
 import { DataService } from '../../services/data.service';
 import { MediaPlayerService } from '../../services/media-player.service';
 import { LoggerService } from '../../services/logger.service';
-import { RunesSettingsService, RuneId, SidebarWidgetId, WeatherLocationPreference, BITCOIN_PRICE_API } from '../../services/runes-settings.service';
+import { RunesSettingsService, RuneId, SidebarWidgetId, WeatherLocationPreference, BITCOIN_PRICE_API, BITCOIN_PRICE_PROXY_API } from '../../services/runes-settings.service';
 import { Playlist } from '../../interfaces';
 import { UtilitiesService } from '../../services/utilities.service';
 import { ExternalLinkHandlerService } from '../../services/external-link-handler.service';
@@ -417,6 +418,7 @@ export class RunesSidebarComponent implements OnDestroy {
       void this.loadWeather();
     }
   }, this.WEATHER_REFRESH_INTERVAL_MS);
+  private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
 
   constructor() {
     if (this.runesSettings.isRuneEnabled('bitcoin-price')) {
@@ -1141,7 +1143,7 @@ export class RunesSidebarComponent implements OnDestroy {
     }));
 
     try {
-      const response = await fetch(BITCOIN_PRICE_API);
+      const response = await fetch(this.getBitcoinPriceUrl());
       if (!response.ok) {
         throw new Error(`Price request failed (${response.status})`);
       }
@@ -1169,6 +1171,10 @@ export class RunesSidebarComponent implements OnDestroy {
         error: 'Failed to fetch Bitcoin price',
       }));
     }
+  }
+
+  private getBitcoinPriceUrl(): string {
+    return this.isBrowser ? BITCOIN_PRICE_PROXY_API : BITCOIN_PRICE_API;
   }
 
   private async loadWeather(): Promise<void> {
