@@ -17,6 +17,7 @@ import { UtilitiesService } from '../../services/utilities.service';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { IgdbService, GameData } from '../../services/igdb.service';
 import { GameHoverCardService } from '../../services/game-hover-card.service';
+import { SatAmountComponent } from '../sat-amount/sat-amount.component';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -30,6 +31,7 @@ import { GameHoverCardService } from '../../services/game-hover-card.service';
     MatProgressBarModule,
     RouterModule,
     UserProfileComponent,
+    SatAmountComponent,
   ],
   template: `
     <div class="stream-info-bar">
@@ -77,9 +79,9 @@ import { GameHoverCardService } from '../../services/game-hover-card.service';
         <div class="zap-goal-header">
           <span class="zap-goal-label">
             <mat-icon>bolt</mat-icon>
-            Zap Goal: {{ formatSats(zapGoalAmount()) }}
+            Zap Goal: <app-sat-amount [sats]="zapGoalAmount()" [compact]="true"></app-sat-amount>
           </span>
-          <span class="zap-goal-progress">{{ formatSats(currentZapAmount()) }} / {{ formatSats(zapGoalAmount()) }}</span>
+          <span class="zap-goal-progress"><app-sat-amount [sats]="currentZapAmount()" [compact]="true"></app-sat-amount> / <app-sat-amount [sats]="zapGoalAmount()" [compact]="true"></app-sat-amount></span>
         </div>
         <mat-progress-bar 
           mode="determinate" 

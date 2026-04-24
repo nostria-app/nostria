@@ -105,8 +105,8 @@
         <h3 i18n="@@zap.dialog.select-amount">Select Amount</h3>
         @if (amountLimits()) {
         <p class="limits-info" i18n="@@zap.dialog.amount-range">
-          This recipient accepts {{ amountLimits()!.minSats }} -
-          {{ amountLimits()!.maxSats }} sats
+          This recipient accepts {{ satDisplay.formatSats(amountLimits()!.minSats) }} -
+          {{ satDisplay.formatSats(amountLimits()!.maxSats) }}
         </p>
         } @else if (isLoadingLnurlInfo()) {
         <p class="limits-info" i18n="@@zap.dialog.loading-payment-limits">Loading payment limits...</p>
@@ -221,7 +221,7 @@
         i18n="@@common.cancel">Cancel</button>
       <button mat-flat-button type="button" class="primary" (click)="proceedToConfirmation()"
         [disabled]="isProcessing() || !zapForm.valid" i18n="@@zap.dialog.continue">
-        Continue ({{ getFinalAmount() }} sats)
+        Continue ({{ satDisplay.formatSats(getFinalAmount()) }})
       </button>
     </div>
     }
@@ -283,8 +283,7 @@
         <h3>Amount</h3>
         <div class="amount-display">
           <mat-icon>bolt</mat-icon>
-          <span class="amount">{{ formatAmount(getFinalAmount()) }}</span>
-          <span class="unit">sats</span>
+          <span class="amount"><app-sat-amount [sats]="getFinalAmount()" [compact]="true"></app-sat-amount></span>
         </div>
       </div>
 

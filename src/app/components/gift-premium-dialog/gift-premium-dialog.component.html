@@ -105,8 +105,7 @@
             @if (loadingPrice()) {
             <mat-spinner diameter="16"></mat-spinner>
             } @else {
-            {{ (getDollarAmount(giftForm.get('premiumType')?.value ?? 'basic', 1) / bitcoinPrice()!.usd * 100000000) |
-            number:'1.0-0' }} sats
+            <app-sat-amount [sats]="getDurationAmountSats(1)"></app-sat-amount>
             }
           </span>
         </button>
@@ -119,8 +118,7 @@
             @if (loadingPrice()) {
             <mat-spinner diameter="16"></mat-spinner>
             } @else {
-            {{ (getDollarAmount(giftForm.get('premiumType')?.value ?? 'basic', 3) / bitcoinPrice()!.usd * 100000000) |
-            number:'1.0-0' }} sats
+            <app-sat-amount [sats]="getDurationAmountSats(3)"></app-sat-amount>
             }
           </span>
         </button>
@@ -136,8 +134,7 @@
           <mat-spinner diameter="20"></mat-spinner>
           } @else {
           <mat-icon class="lightning-icon">bolt</mat-icon>
-          <span class="amount-sats">{{ totalAmount().toLocaleString() }}</span>
-          <span class="amount-unit">sats</span>
+          <span class="amount-sats"><app-sat-amount [sats]="totalAmount()"></app-sat-amount></span>
           <span class="amount-usd">({{ pricingInfo()?.usd }})</span>
           }
         </div>
@@ -188,7 +185,7 @@
         <span class="summary-label">Amount</span>
         <div class="summary-amount">
           <mat-icon class="lightning-icon">bolt</mat-icon>
-          <span class="amount-value">{{ totalAmount().toLocaleString() }} sats</span>
+          <span class="amount-value"><app-sat-amount [sats]="totalAmount()"></app-sat-amount></span>
           <span class="amount-fiat">({{ pricingInfo()?.usd }})</span>
         </div>
       </div>

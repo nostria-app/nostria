@@ -462,6 +462,21 @@ export class CommandPaletteDialogComponent implements AfterViewInit, OnDestroy {
       keywords: ['wallet settings', 'subscriptions', 'premium', 'billing', 'payments', 'zaps']
     },
     {
+      id: 'toggle-wallet-usd-display',
+      label: 'Toggle Wallet Dollar Display',
+      icon: 'attach_money',
+      action: () => {
+        const current = this.settings.settings().displaySatsInUsd === true;
+        this.settings.updateSettings({ displaySatsInUsd: !current }).then(() => {
+          this.snackBar.open(!current ? 'Dollar display enabled' : 'Sats display enabled', 'Dismiss', {
+            duration: 3000,
+          });
+        });
+      },
+      keywords: ['wallet', 'usd', 'dollar', 'sats', 'currency', 'display'],
+      description: 'Switch sat-denominated values between sats and USD across the app',
+    },
+    {
       id: 'toggle-music-status',
       label: 'Toggle Music Status',
       icon: 'music_note',

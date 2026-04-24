@@ -12,7 +12,7 @@ import { QrCodeComponent } from '../qr-code/qr-code.component';
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-bolt12-offer',
-  imports: [MatCardModule, MatIconModule, MatButtonModule, MatTooltipModule, OverlayModule, QrCodeComponent],
+  imports: [MatCardModule, MatIconModule, MatButtonModule, MatTooltipModule, OverlayModule],
   templateUrl: './bolt12-offer.component.html',
   styleUrl: './bolt12-offer.component.scss',
 })

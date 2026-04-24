@@ -32,6 +32,7 @@ import { NostrRecord } from '../../interfaces';
 import { UserProfileComponent } from '../../components/user-profile/user-profile.component';
 import { EventComponent } from '../../components/event/event.component';
 import { AgoPipe } from '../../pipes/ago.pipe';
+import { SatAmountComponent } from '../../components/sat-amount/sat-amount.component';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -45,6 +46,7 @@ import { AgoPipe } from '../../pipes/ago.pipe';
     UserProfileComponent,
     EventComponent,
     AgoPipe,
+    SatAmountComponent,
   ],
   templateUrl: './zap-detail.component.html',
   styleUrl: './zap-detail.component.scss',

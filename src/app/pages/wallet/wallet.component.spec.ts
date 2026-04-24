@@ -27,7 +27,27 @@ function createComponent(): WalletComponent {
         getWalletData: vi.fn().mockReturnValue(null),
     };
     (component as any).settingsService = {
-        settings: signal({ hideWalletAmounts: false }),
+        settings: signal({ hideWalletAmounts: false, displaySatsInUsd: false }),
+    };
+    (component as any).satDisplay = {
+        formatMsats: vi.fn((msats: number, options?: { hideWhenWalletHidden?: boolean; prefix?: string }) => {
+            if (options?.hideWhenWalletHidden && (component as any).settingsService.settings().hideWalletAmounts) {
+                return `${options?.prefix ?? ''}****`;
+            }
+
+            return `${options?.prefix ?? ''}${Math.floor(msats / 1000).toLocaleString()} sats`;
+        }),
+        getDisplayValueFromMsats: vi.fn((msats: number | undefined, options?: { hideWhenWalletHidden?: boolean; placeholder?: string }) => {
+            if (typeof msats !== 'number') {
+                return { value: options?.placeholder ?? '0' };
+            }
+
+            if (options?.hideWhenWalletHidden && (component as any).settingsService.settings().hideWalletAmounts) {
+                return { value: '****' };
+            }
+
+            return { value: Math.floor(msats / 1000).toLocaleString() };
+        }),
     };
     (component as any).snackBar = {
         open: vi.fn(),
@@ -118,7 +138,7 @@ describe('WalletComponent', () => {
         it('should return "****" when hideWalletAmounts is enabled', () => {
             const component = createComponent();
             (component as any).settingsService = {
-                settings: signal({ hideWalletAmounts: true }),
+                settings: signal({ hideWalletAmounts: true, displaySatsInUsd: false }),
             };
             expect(component.getDisplayBalance(100000)).toBe('****');
         });

@@ -13,6 +13,7 @@ import { AccountStateService } from '../../../services/account-state.service';
 import { ReactionService } from '../../../services/reaction.service';
 import { EventRelaySourcesService } from '../../../services/event-relay-sources.service';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { SatAmountComponent } from '../../sat-amount/sat-amount.component';
 
 export type ReactionSummaryTab = 'reactions' | 'reposts' | 'quotes' | 'zaps';
 
@@ -35,6 +36,7 @@ export interface ZapInfo {
     EventHeaderComponent,
     CustomEmojiComponent,
     MatTooltipModule,
+    SatAmountComponent,
   ],
   templateUrl: './reaction-summary.component.html',
   styleUrl: './reaction-summary.component.scss',

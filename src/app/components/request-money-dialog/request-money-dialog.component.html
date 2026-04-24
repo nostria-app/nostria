@@ -12,7 +12,7 @@
       <button mat-stroked-button type="button" class="quick-amount-btn"
         [class.selected]="satsControl.value === amount" (click)="selectQuickAmount(amount)">
         <span class="quick-amount-content">
-          <span class="quick-amount-sats">{{ formatSats(amount) }} sats</span>
+          <span class="quick-amount-sats"><app-sat-amount [sats]="amount"></app-sat-amount></span>
           @if (satsToUsd(amount); as usd) {
           <span class="quick-amount-usd">{{ usd }}</span>
           }
@@ -66,7 +66,7 @@
   @if (hasMultipleWallets()) {
   <mat-form-field appearance="outline" class="wallet-field">
     <mat-label>Receive to wallet</mat-label>
-    <mat-select [value]="selectedWallet()?.pubkey" (valueChange)="onWalletSelected($event)">
+    <mat-select [value]="selectedWalletValue()" (valueChange)="onWalletSelected($event)">
       @for (wallet of walletOptions(); track wallet.pubkey) {
       <mat-option [value]="wallet.pubkey">
         {{ wallet.name }}@if (wallet.isPrimary) { (primary)}

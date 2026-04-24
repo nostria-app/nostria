@@ -3,8 +3,7 @@
   <div class="invoice-details">
     <div class="amount-display">
       <mat-icon class="amount-icon">bolt</mat-icon>
-      <span class="amount-value">{{ formatSats(data.amountSats) }}</span>
-      <span class="amount-unit">sats</span>
+      <app-sat-amount [sats]="data.amountSats"></app-sat-amount>
     </div>
 
     @if (data.description) {
@@ -34,7 +33,7 @@
   @if (hasMultipleWallets()) {
   <mat-form-field appearance="outline" class="wallet-field">
     <mat-label>Pay from wallet</mat-label>
-    <mat-select [value]="selectedWallet()?.pubkey" (valueChange)="onWalletSelected($event)">
+    <mat-select [value]="selectedWalletValue()" (valueChange)="onWalletSelected($event)">
       @for (wallet of walletOptions(); track wallet.pubkey) {
       <mat-option [value]="wallet.pubkey">
         {{ wallet.name }}@if (wallet.isPrimary) { (primary)}
@@ -80,7 +79,7 @@
     } @else {
     <ng-container>
       <mat-icon>bolt</mat-icon>
-      <span>Pay {{ formatSats(data.amountSats) }} sats</span>
+      <span>Pay {{ satDisplay.formatSats(data.amountSats) }}</span>
     </ng-container>
     }
   </button>

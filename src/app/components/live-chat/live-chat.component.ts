@@ -22,6 +22,7 @@ import { ZapService } from '../../services/zap.service';
 import { ReactionService } from '../../services/reaction.service';
 import { MatMenuModule } from '@angular/material/menu';
 import { ChatContentComponent } from './chat-content/chat-content.component';
+import { SatAmountComponent } from '../sat-amount/sat-amount.component';
 
 interface ChatReaction {
   content: string; // emoji or + or -
@@ -60,6 +61,7 @@ interface ChatMessage {
     UserProfileComponent,
     ProfileDisplayNameComponent,
     ChatContentComponent,
+    SatAmountComponent,
   ],
   templateUrl: './live-chat.component.html',
   styleUrl: './live-chat.component.scss',

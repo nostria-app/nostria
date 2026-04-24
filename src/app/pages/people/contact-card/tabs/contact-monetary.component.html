@@ -14,7 +14,7 @@
       </div>
       <div class="stat-value">
         <mat-icon class="bolt-icon">bolt</mat-icon>
-        <span>{{ formatAmount(totalSent()) }} sats</span>
+        <span><app-sat-amount [sats]="totalSent()" [compact]="true"></app-sat-amount></span>
       </div>
     </div>
 
@@ -25,7 +25,7 @@
       </div>
       <div class="stat-value">
         <mat-icon class="bolt-icon">bolt</mat-icon>
-        <span>{{ formatAmount(totalReceived()) }} sats</span>
+        <span><app-sat-amount [sats]="totalReceived()" [compact]="true"></app-sat-amount></span>
       </div>
     </div>
 
@@ -36,7 +36,7 @@
       </div>
       <div class="stat-value">
         <mat-icon class="bolt-icon">bolt</mat-icon>
-        <span>{{ balance() > 0 ? '+' : '' }}{{ formatAmount(balance()) }} sats</span>
+        <span><app-sat-amount [sats]="balanceAbs()" [compact]="true" [prefix]="balance() > 0 ? '+' : balance() < 0 ? '-' : ''"></app-sat-amount></span>
       </div>
       <div class="balance-description">
         @if (balance() > 0) {
@@ -68,7 +68,7 @@
           <div class="zap-info">
             <div class="zap-amount">
               <mat-icon class="bolt-icon">bolt</mat-icon>
-              <span class="amount">{{ formatAmount(zap.amount) }} sats</span>
+              <span class="amount"><app-sat-amount [sats]="zap.amount" [compact]="true"></app-sat-amount></span>
             </div>
             <div class="zap-time" [matTooltip]="zap.timestamp | timestamp: 'medium'">
               {{ zap.timestamp | ago }}

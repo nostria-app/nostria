@@ -11,7 +11,7 @@ import {
   untracked,
   ChangeDetectionStrategy,
 } from '@angular/core';
-import { DatePipe, DecimalPipe } from '@angular/common';
+import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -40,6 +40,7 @@ import { Event as NostrEvent } from 'nostr-tools';
 import { UserProfileComponent } from '../../components/user-profile/user-profile.component';
 import { ProfileDisplayNameComponent } from '../../components/user-profile/display-name/profile-display-name.component';
 import { MessageContentComponent } from '../../components/message-content/message-content.component';
+import { SatAmountComponent } from '../../components/sat-amount/sat-amount.component';
 import { AgoPipe } from '../../pipes/ago.pipe';
 import {
   ChatChannelsService,
@@ -113,9 +114,9 @@ export type TimelineEntry =
     UserProfileComponent,
     ProfileDisplayNameComponent,
     MessageContentComponent,
+    SatAmountComponent,
     AgoPipe,
     DatePipe,
-    DecimalPipe,
     ListFilterMenuComponent,
     ChatsSettingsDialogComponent,
   ],

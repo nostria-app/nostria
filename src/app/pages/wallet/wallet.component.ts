@@ -27,6 +27,7 @@ import { RightPanelService } from '../../services/right-panel.service';
 import { ZapHistoryComponent } from '../../components/zap-history/zap-history.component';
 import { QrCodeComponent } from '../../components/qr-code/qr-code.component';
 import { SupportNostriaComponent } from '../../components/support-nostria/support-nostria.component';
+import { SatDisplayService } from '../../services/sat-display.service';
 
 @Component({
   selector: 'app-wallet',
@@ -70,6 +71,7 @@ export class WalletComponent implements OnDestroy {
   private logger = inject(LoggerService);
   private router = inject(Router);
   readonly rightPanel = inject(RightPanelService);
+  readonly satDisplay = inject(SatDisplayService);
   private routerSubscription: Subscription;
 
   connectionStringControl = new FormControl('', [
@@ -134,6 +136,9 @@ export class WalletComponent implements OnDestroy {
 
   // Wallet settings - Hide Wallet Amounts
   hideWalletAmountsEnabled = signal(false);
+
+  // Wallet settings - Show USD values
+  displaySatsInUsdEnabled = signal(false);
 
   constructor() {
     this.syncTabFromUrl(this.router.url);
@@ -439,7 +444,7 @@ export class WalletComponent implements OnDestroy {
    * Format millisatoshis to readable string
    */
   formatMsats(msats: number): string {
-    return this.nwcService.formatMsats(msats);
+    return this.satDisplay.formatMsats(msats);
   }
 
   /**
@@ -467,12 +472,11 @@ export class WalletComponent implements OnDestroy {
    * Format transaction amount with sign
    */
   formatTransactionAmount(tx: NwcTransaction): string {
-    if (this.settingsService.settings().hideWalletAmounts) {
-      const sign = tx.type === 'incoming' ? '+' : '-';
-      return `${sign}****`;
-    }
     const sign = tx.type === 'incoming' ? '+' : '-';
-    return `${sign}${this.formatMsats(tx.amount)}`;
+    return this.satDisplay.formatMsats(tx.amount, {
+      hideWhenWalletHidden: true,
+      prefix: sign,
+    });
   }
 
   /**
@@ -608,29 +612,22 @@ export class WalletComponent implements OnDestroy {
       return '...';
     }
 
-    // Check if amounts should be hidden
-    if (this.settingsService.settings().hideWalletAmounts) {
-      return '****';
-    }
-
-    const sats = Math.floor(totalMsats / 1000);
-    return sats.toLocaleString();
+    return this.satDisplay.getDisplayValueFromMsats(totalMsats, {
+      showUnit: false,
+      hideWhenWalletHidden: true,
+      placeholder: '...',
+    }).value;
   }
 
   /**
    * Format balance to sats or hide if setting is enabled
    */
   getDisplayBalance(msats: number | undefined): string {
-    if (msats === undefined) {
-      return '...';
-    }
-
-    if (this.settingsService.settings().hideWalletAmounts) {
-      return '****';
-    }
-
-    const sats = Math.floor(msats / 1000);
-    return sats.toLocaleString();
+    return this.satDisplay.getDisplayValueFromMsats(msats, {
+      showUnit: false,
+      hideWhenWalletHidden: true,
+      placeholder: '...',
+    }).value;
   }
 
   /**
@@ -741,6 +738,7 @@ export class WalletComponent implements OnDestroy {
     this.quickZapEnabled.set(currentSettings.quickZapEnabled ?? false);
     this.quickZapAmount.set(currentSettings.quickZapAmount ?? 21);
     this.hideWalletAmountsEnabled.set(currentSettings.hideWalletAmounts ?? false);
+    this.displaySatsInUsdEnabled.set(currentSettings.displaySatsInUsd ?? false);
   }
 
   async toggleQuickZap(): Promise<void> {
@@ -779,6 +777,26 @@ export class WalletComponent implements OnDestroy {
       });
     } catch (error) {
       this.logger.error('Failed to save quick zap amount:', error);
+      this.snackBar.open('Failed to save settings', 'Dismiss', { duration: 3000 });
+    }
+  }
+
+  async toggleDisplaySatsInUsd(): Promise<void> {
+    const newValue = !this.displaySatsInUsdEnabled();
+    this.displaySatsInUsdEnabled.set(newValue);
+
+    try {
+      await this.settingsService.updateSettings({
+        displaySatsInUsd: newValue,
+      });
+      this.snackBar.open(
+        newValue ? 'Dollar display enabled' : 'Sats display enabled',
+        'Dismiss',
+        { duration: 2000 },
+      );
+    } catch (error) {
+      this.logger.error('Failed to save sats display setting:', error);
+      this.displaySatsInUsdEnabled.set(!newValue);
       this.snackBar.open('Failed to save settings', 'Dismiss', { duration: 3000 });
     }
   }

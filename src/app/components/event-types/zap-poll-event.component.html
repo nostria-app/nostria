@@ -8,13 +8,13 @@
     @if (poll().valueMinimum) {
     <span class="constraint">
       <mat-icon>arrow_downward</mat-icon>
-      Min: {{ poll().valueMinimum }} sats
+      Min: <app-sat-amount [sats]="poll().valueMinimum!"></app-sat-amount>
     </span>
     }
     @if (poll().valueMaximum) {
     <span class="constraint">
       <mat-icon>arrow_upward</mat-icon>
-      Max: {{ poll().valueMaximum }} sats
+      Max: <app-sat-amount [sats]="poll().valueMaximum!"></app-sat-amount>
     </span>
     }
   </div>

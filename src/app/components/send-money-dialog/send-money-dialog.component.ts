@@ -14,6 +14,8 @@ import { Wallets, Wallet } from '../../services/wallets';
 import { DataService } from '../../services/data.service';
 import { MessagingService } from '../../services/messaging.service';
 import { UserProfileComponent } from '../user-profile/user-profile.component';
+import { SatDisplayService } from '../../services/sat-display.service';
+import { SatAmountComponent } from '../sat-amount/sat-amount.component';
 
 interface LnurlPayInfo {
   callback: string;
@@ -50,6 +52,7 @@ interface WalletOption {
     MatDividerModule,
     MatSelectModule,
     UserProfileComponent,
+    SatAmountComponent,
   ],
   templateUrl: './send-money-dialog.component.html',
   styleUrl: './send-money-dialog.component.scss',
@@ -61,6 +64,7 @@ export class SendMoneyDialogComponent {
   private wallets = inject(Wallets);
   private dataService = inject(DataService);
   private messagingService = inject(MessagingService);
+  private satDisplay = inject(SatDisplayService);
   dialogRef = inject(CustomDialogRef);
 
   data!: SendMoneyDialogData;
@@ -108,6 +112,7 @@ export class SendMoneyDialogComponent {
     }
     return options.find(w => w.isPrimary) ?? options[0] ?? null;
   });
+  selectedWalletValue = computed(() => this.selectedWallet()?.pubkey ?? null);
 
   // Cached exchange rate (sats per dollar)
   private satsPerDollar = signal<number | null>(null);
@@ -159,21 +164,14 @@ export class SendMoneyDialogComponent {
   }
 
   private async fetchExchangeRate(): Promise<void> {
-    try {
-      const { getSatoshiValue } = await import('@getalby/lightning-tools');
-      const rate = await getSatoshiValue({ amount: 1, currency: 'USD' });
-      this.satsPerDollar.set(rate);
-    } catch {
-      // Exchange rate fetch failed - USD hints won't show
-    }
+    const rate = await this.satDisplay.getSatsPerDollar();
+    this.satsPerDollar.set(rate);
   }
 
   satsToUsd(sats: number): string | null {
     const rate = this.satsPerDollar();
     if (!rate || rate <= 0) return null;
-    const usd = sats / rate;
-    if (usd < 0.01) return '< $0.01';
-    return '$' + usd.toFixed(2);
+    return this.satDisplay.formatUsdValue(sats / rate);
   }
 
   selectQuickAmount(sats: number): void {
@@ -224,11 +222,8 @@ export class SendMoneyDialogComponent {
     this.conversionTimeout = setTimeout(async () => {
       this.isConverting.set(true);
       try {
-        const { getSatoshiValue } = await import('@getalby/lightning-tools');
-        // getSatoshiValue converts USD to sats, so we need the inverse
-        // Get the value of $1 in sats, then divide
-        const satsPerDollar = await getSatoshiValue({ amount: 1, currency: 'USD' });
-        if (satsPerDollar > 0) {
+        const satsPerDollar = await this.satDisplay.getSatsPerDollar();
+        if (typeof satsPerDollar === 'number' && satsPerDollar > 0) {
           this.satsPerDollar.set(satsPerDollar);
           const dollars = sats / satsPerDollar;
           this.dollarsControl.setValue(Math.round(dollars * 100) / 100, { emitEvent: false });
@@ -249,10 +244,11 @@ export class SendMoneyDialogComponent {
     this.conversionTimeout = setTimeout(async () => {
       this.isConverting.set(true);
       try {
-        const { getSatoshiValue } = await import('@getalby/lightning-tools');
-        const sats = await getSatoshiValue({ amount: dollars, currency: 'USD' });
-        this.satsPerDollar.set(dollars > 0 ? sats / dollars : null);
-        this.satsControl.setValue(Math.round(sats), { emitEvent: false });
+        const sats = await this.satDisplay.convertUsdToSats(dollars);
+        if (typeof sats === 'number' && sats > 0) {
+          this.satsPerDollar.set(dollars > 0 ? sats / dollars : null);
+          this.satsControl.setValue(Math.round(sats), { emitEvent: false });
+        }
       } catch {
         // Conversion failed silently
       } finally {
@@ -382,7 +378,7 @@ export class SendMoneyDialogComponent {
   }
 
   formatSats(sats: number): string {
-    return sats.toLocaleString();
+    return this.satDisplay.getDisplayValueFromSats(sats, { showUnit: false }).value;
   }
 
   cancel(): void {

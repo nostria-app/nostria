@@ -14,6 +14,8 @@ import { PayInvoiceDialogComponent, PayInvoiceDialogData, PayInvoiceDialogResult
 import { Wallets } from '../../services/wallets';
 import { NwcService } from '../../services/nwc.service';
 import { AccountStateService } from '../../services/account-state.service';
+import { SatDisplayService } from '../../services/sat-display.service';
+import { SatAmountComponent } from '../sat-amount/sat-amount.component';
 
 type InvoiceState = 'pending' | 'settled' | 'failed' | 'accepted' | 'expired' | 'unknown';
 
@@ -28,7 +30,7 @@ interface DecodedInvoiceData {
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-bolt11-invoice',
-  imports: [MatCardModule, MatIconModule, MatButtonModule, MatTooltipModule, OverlayModule, QrCodeComponent],
+  imports: [MatCardModule, MatIconModule, MatButtonModule, MatTooltipModule, OverlayModule, SatAmountComponent],
   templateUrl: './bolt11-invoice.component.html',
   styleUrl: './bolt11-invoice.component.scss',
 })
@@ -42,6 +44,7 @@ export class Bolt11InvoiceComponent implements OnInit, OnDestroy {
   private wallets = inject(Wallets);
   private nwcService = inject(NwcService);
   private accountState = inject(AccountStateService);
+  private satDisplay = inject(SatDisplayService);
   private isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
 
   showQrCode = signal(false);
@@ -238,7 +241,7 @@ export class Bolt11InvoiceComponent implements OnInit, OnDestroy {
    * Format sats for display
    */
   formatSats(sats: number): string {
-    return sats.toLocaleString();
+    return this.satDisplay.getDisplayValueFromSats(sats, { showUnit: false }).value;
   }
 
   /**

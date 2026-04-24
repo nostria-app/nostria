@@ -1,6 +1,5 @@
 import { Component, inject, signal, input, effect, computed, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -16,6 +15,7 @@ import { AgoPipe } from '../../../../pipes/ago.pipe';
 import { TimestampPipe } from '../../../../pipes/timestamp.pipe';
 import { LayoutService } from '../../../../services/layout.service';
 import { LoggerService } from '../../../../services/logger.service';
+import { SatAmountComponent } from '../../../../components/sat-amount/sat-amount.component';
 
 interface ZapHistoryEntry {
   type: 'sent' | 'received';
@@ -33,7 +33,6 @@ interface ZapHistoryEntry {
   selector: 'app-contact-monetary',
   imports: [
     CommonModule,
-    RouterLink,
     MatCardModule,
     MatIconModule,
     MatButtonModule,
@@ -42,6 +41,7 @@ interface ZapHistoryEntry {
     MatMenuModule,
     AgoPipe,
     TimestampPipe,
+    SatAmountComponent,
   ],
   templateUrl: './contact-monetary.component.html',
   styleUrl: './contact-monetary.component.scss',
@@ -74,6 +74,7 @@ export class ContactMonetaryComponent {
   balance = computed(() => {
     return this.totalSent() - this.totalReceived();
   });
+  balanceAbs = computed(() => Math.abs(this.balance()));
 
   private lastLoadedPubkey = '';
   private loadingInProgress = false;

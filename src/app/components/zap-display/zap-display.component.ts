@@ -10,6 +10,7 @@ import { ZapService } from '../../services/zap.service';
 import { AgoPipe } from '../../pipes/ago.pipe';
 import { TimestampPipe } from '../../pipes/timestamp.pipe';
 import { UserProfileComponent } from '../user-profile/user-profile.component';
+import { SatAmountComponent } from '../sat-amount/sat-amount.component';
 
 interface ZapReceipt {
   receipt: Event;
@@ -34,6 +35,7 @@ interface ZapReceipt {
     AgoPipe,
     TimestampPipe,
     UserProfileComponent,
+    SatAmountComponent,
   ],
   template: `
     @if (zaps().length > 0) {
@@ -41,7 +43,7 @@ interface ZapReceipt {
         <div class="zaps-header">
           <mat-icon class="zap-icon">bolt</mat-icon>
           <span class="zaps-title">
-            {{ totalAmount() }} sats from {{ zaps().length }} zap{{
+            <app-sat-amount [sats]="totalAmount()"></app-sat-amount> from {{ zaps().length }} zap{{
               zaps().length === 1 ? '' : 's'
             }}
           </span>
@@ -62,7 +64,7 @@ interface ZapReceipt {
                     </div>
                     <div class="zap-amount">
                       <mat-icon class="small-icon">bolt</mat-icon>
-                      <span class="amount">{{ formatAmount(zap.amount) }} sats</span>
+                      <span class="amount"><app-sat-amount [sats]="zap.amount" [compact]="true"></app-sat-amount></span>
                     </div>
                     <div class="zap-time" [matTooltip]="zap.timestamp | timestamp: 'medium'">
                       {{ zap.timestamp | ago }}
@@ -85,7 +87,7 @@ interface ZapReceipt {
             @for (zap of sortedZaps(); track zap.receipt.id) {
               <div class="simple-zap-item">
                 <app-user-profile [pubkey]="zap.senderPubkey" view="icon"></app-user-profile>
-                <span class="zap-info"> {{ formatAmount(zap.amount) }} sats </span>
+                <span class="zap-info"><app-sat-amount [sats]="zap.amount" [compact]="true"></app-sat-amount></span>
                 @if (zap.comment) {
                   <span class="zap-comment-inline">"{{ zap.comment }}"</span>
                 }

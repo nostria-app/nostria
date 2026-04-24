@@ -24,6 +24,8 @@ import { ZapService } from '../../services/zap.service';
 import { UtilitiesService } from '../../services/utilities.service';
 import { LayoutService } from '../../services/layout.service';
 import { UserProfileComponent } from '../../components/user-profile/user-profile.component';
+import { SatAmountComponent } from '../../components/sat-amount/sat-amount.component';
+import { SatDisplayService } from '../../services/sat-display.service';
 import { getKindLabel } from '../../utils/kind-labels';
 
 interface EventStats {
@@ -60,6 +62,7 @@ interface TopEngager {
     DecimalPipe,
     DatePipe,
     UserProfileComponent,
+    SatAmountComponent,
   ],
   templateUrl: './event-analytics.component.html',
   styleUrl: './event-analytics.component.scss',
@@ -72,6 +75,7 @@ export class EventAnalyticsComponent implements OnInit {
   private readonly logger = inject(LoggerService);
   private readonly zapService = inject(ZapService);
   private readonly utilities = inject(UtilitiesService);
+  protected readonly satDisplay = inject(SatDisplayService);
   protected readonly app = inject(ApplicationService);
   protected readonly layout = inject(LayoutService);
 
@@ -413,12 +417,6 @@ export class EventAnalyticsComponent implements OnInit {
   }
 
   formatSats(sats: number): string {
-    if (sats >= 1000000) {
-      return (sats / 1000000).toFixed(1) + 'M';
-    }
-    if (sats >= 1000) {
-      return (sats / 1000).toFixed(1) + 'k';
-    }
-    return sats.toString();
+    return this.satDisplay.getDisplayValueFromSats(sats, { showUnit: false, compact: true }).value;
   }
 }

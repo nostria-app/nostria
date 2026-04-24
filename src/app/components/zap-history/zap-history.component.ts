@@ -20,6 +20,7 @@ import { AgoPipe } from '../../pipes/ago.pipe';
 import { TimestampPipe } from '../../pipes/timestamp.pipe';
 import { UserProfileComponent } from '../user-profile/user-profile.component';
 import { LayoutService } from '../../services/layout.service';
+import { SatAmountComponent } from '../sat-amount/sat-amount.component';
 
 interface ZapHistoryEntry {
   type: 'sent' | 'received';
@@ -47,6 +48,7 @@ interface ZapHistoryEntry {
     AgoPipe,
     TimestampPipe,
     UserProfileComponent,
+    SatAmountComponent,
   ],
   template: `
     <div class="zap-history-page">
@@ -72,16 +74,16 @@ interface ZapHistoryEntry {
         <div class="stats-row">
           <div class="stat">
             <span class="stat-label">Total Sent:</span>
-            <span class="stat-value sent">{{ totalSent() }} sats</span>
+            <span class="stat-value sent"><app-sat-amount [sats]="totalSent()"></app-sat-amount></span>
           </div>
           <div class="stat">
             <span class="stat-label">Total Received:</span>
-            <span class="stat-value received">{{ totalReceived() }} sats</span>
+            <span class="stat-value received"><app-sat-amount [sats]="totalReceived()"></app-sat-amount></span>
           </div>
           <div class="stat">
             <span class="stat-label">Net:</span>
             <span class="stat-value" [class.sent]="netAmount() < 0" [class.received]="netAmount() > 0">
-              {{ netAmount() }} sats
+              <app-sat-amount [sats]="netAmountAbs()" [prefix]="netAmount() > 0 ? '+' : netAmount() < 0 ? '-' : ''"></app-sat-amount>
             </span>
           </div>
         </div>
@@ -121,7 +123,7 @@ interface ZapHistoryEntry {
                   <span class="spacer"></span>
                   <div class="zap-amount">
                     <mat-icon class="bolt-icon">bolt</mat-icon>
-                    <span class="amount">{{ formatAmount(zap.amount) }}</span>
+                    <span class="amount"><app-sat-amount [sats]="zap.amount" [showUnit]="false" [compact]="true"></app-sat-amount></span>
                   </div>
                   <div class="zap-time" [matTooltip]="zap.timestamp | timestamp: 'medium'">
                     {{ zap.timestamp | ago }}
@@ -503,6 +505,7 @@ export class ZapHistoryComponent implements OnDestroy {
   prefetchedProfiles = signal<Record<string, unknown>>({});
   filterMode = signal<'all' | 'sent' | 'received'>('all');
   sortBy = signal<'date' | 'amount'>('date');
+  netAmountAbs = computed(() => Math.abs(this.netAmount()));
 
   // Computed properties
   sentZaps = computed(() => this.allZaps().filter(zap => zap.type === 'sent'));

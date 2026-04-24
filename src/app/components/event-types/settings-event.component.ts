@@ -1,9 +1,11 @@
-import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatIconModule } from '@angular/material/icon';
 import { Event } from 'nostr-tools';
+import { SatAmountComponent } from '../sat-amount/sat-amount.component';
+import { SatDisplayService } from '../../services/sat-display.service';
 
 interface CustomFeed {
   label?: string;
@@ -36,13 +38,14 @@ interface SettingsSnapshot {
 
 @Component({
   selector: 'app-settings-event',
-  imports: [CommonModule, MatCardModule, MatChipsModule, MatIconModule],
+  imports: [CommonModule, MatCardModule, MatChipsModule, MatIconModule, SatAmountComponent],
   templateUrl: './settings-event.component.html',
   styleUrl: './settings-event.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class SettingsEventComponent {
   event = input.required<Event>();
+  private satDisplay = inject(SatDisplayService);
 
   settings = computed<SettingsSnapshot | null>(() => {
     const currentEvent = this.event();
@@ -72,7 +75,7 @@ export class SettingsEventComponent {
       { label: 'Relay discovery', value: this.prettyValue(settings.relayDiscoveryMode) },
       { label: 'Media privacy', value: this.prettyValue(settings.mediaPrivacy) },
       { label: 'Placeholder', value: this.prettyValue(settings.placeholderAlgorithm) },
-      { label: 'Quick zap', value: settings.quickZapEnabled ? `${settings.quickZapAmount ?? 0} sats` : 'Off' },
+      { label: 'Quick zap', value: settings.quickZapEnabled ? this.satDisplay.formatSats(settings.quickZapAmount ?? 0) : 'Off' },
       { label: 'Video autoplay', value: settings.autoPlayVideos ? 'On' : 'Off' },
       { label: 'Music status', value: settings.publishMusicStatus ? 'On' : 'Off' },
       { label: 'Image cache', value: settings.imageCacheEnabled ? 'On' : 'Off' },

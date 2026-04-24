@@ -38,9 +38,11 @@ import { AccountRelayService } from '../../services/relays/account-relay';
 import { ZapService } from '../../services/zap.service';
 import { Metrics } from '../../services/metrics';
 import { UserProfileComponent } from '../../components/user-profile/user-profile.component';
+import { SatAmountComponent } from '../../components/sat-amount/sat-amount.component';
 import { LayoutService } from '../../services/layout.service';
 import { DiscoveryRelayService } from '../../services/relays/discovery-relay';
 import { LocalStorageService } from '../../services/local-storage.service';
+import { SatDisplayService } from '../../services/sat-display.service';
 import { SimplePool } from 'nostr-tools';
 
 // Time period options
@@ -167,6 +169,7 @@ interface FollowerDiscoveryCache {
     FormsModule,
     UserProfileComponent,
     ScrollingModule,
+    SatAmountComponent,
   ],
   templateUrl: './analytics.component.html',
   styleUrl: './analytics.component.scss',
@@ -180,6 +183,7 @@ export class AnalyticsComponent implements OnInit, OnDestroy {
   private readonly metricsService = inject(Metrics);
   private readonly discoveryRelay = inject(DiscoveryRelayService);
   private readonly localStorage = inject(LocalStorageService);
+  protected readonly satDisplay = inject(SatDisplayService);
   protected readonly app = inject(ApplicationService);
   protected readonly layout = inject(LayoutService);
 
@@ -1030,12 +1034,7 @@ export class AnalyticsComponent implements OnInit, OnDestroy {
   }
 
   formatSats(sats: number): string {
-    if (sats >= 1000000) {
-      return (sats / 1000000).toFixed(2) + 'M';
-    } else if (sats >= 1000) {
-      return (sats / 1000).toFixed(1) + 'K';
-    }
-    return sats.toString();
+    return this.satDisplay.getDisplayValueFromSats(sats, { showUnit: false, compact: true }).value;
   }
 
   getEngagementScore(item: TopEngager): string {

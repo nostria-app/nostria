@@ -20,6 +20,7 @@ import { AccountStateService } from '../../services/account-state.service';
 import { UserRelaysService } from '../../services/relays/user-relays';
 import { ReactionService } from '../../services/reaction.service';
 import { MaterialCustomDialogComponent } from '../material-custom-dialog/material-custom-dialog.component';
+import { SatAmountComponent } from '../sat-amount/sat-amount.component';
 
 export interface ReactionsDialogData {
   event: Event;
@@ -49,6 +50,7 @@ export interface ReactionsDialogData {
     MatListModule,
     UserProfileComponent,
     AgoPipe,
+    SatAmountComponent,
   ],
   template: `
     <app-material-custom-dialog
@@ -132,7 +134,7 @@ export interface ReactionsDialogData {
           <mat-tab>
             <ng-template mat-tab-label>
               <mat-icon>bolt</mat-icon>
-              <span><span class="hide-small">Zaps</span> ({{ totalZapAmount() }} sats)</span>
+              <span><span class="hide-small">Zaps</span> (<app-sat-amount [sats]="totalZapAmount()"></app-sat-amount>)</span>
             </ng-template>
 
             <div class="tab-content">
@@ -151,7 +153,7 @@ export interface ReactionsDialogData {
                           view="compact"
                         ></app-user-profile>
                         <div class="zap-meta">
-                          <span class="zap-amount">{{ formatAmount(zap.amount) }} sats</span>
+                          <span class="zap-amount"><app-sat-amount [sats]="zap.amount" [compact]="true"></app-sat-amount></span>
                           <span class="reaction-time">{{ zap.timestamp | ago }}</span>
                         </div>
                       </div>

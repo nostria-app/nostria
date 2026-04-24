@@ -14,6 +14,7 @@ import { SettingsService } from '../../../services/settings.service';
 import { LoggerService } from '../../../services/logger.service';
 import { PanelActionsService } from '../../../services/panel-actions.service';
 import { RightPanelService } from '../../../services/right-panel.service';
+import { SatDisplayService } from '../../../services/sat-display.service';
 
 interface ZapAmount {
   value: number;
@@ -46,6 +47,7 @@ export class WalletSettingsComponent implements OnInit, OnDestroy {
   private panelActions = inject(PanelActionsService);
   private rightPanel = inject(RightPanelService);
   private router = inject(Router);
+  private satDisplay = inject(SatDisplayService);
 
   // Predefined default amounts for quick zap menu (legacy)
   private defaultAmounts = [21, 69, 100, 210, 420, 500, 1000, 2100, 5000, 10000, 21000, 42000, 100000];
@@ -59,6 +61,9 @@ export class WalletSettingsComponent implements OnInit, OnDestroy {
 
   // Hide wallet amounts setting
   hideWalletAmounts = signal(false);
+
+  // Display sats as USD setting
+  displaySatsInUsd = signal(false);
 
   constructor() {
     this.loadSettings();
@@ -93,6 +98,7 @@ export class WalletSettingsComponent implements OnInit, OnDestroy {
 
     // Load hide wallet amounts setting
     this.hideWalletAmounts.set(currentSettings.hideWalletAmounts ?? false);
+    this.displaySatsInUsd.set(currentSettings.displaySatsInUsd ?? false);
 
     // Load zap amounts for legacy menu
     const enabledAmounts = currentSettings.zapQuickAmounts || [];
@@ -167,6 +173,26 @@ export class WalletSettingsComponent implements OnInit, OnDestroy {
     } catch (error) {
       this.logger.error('Failed to save hide wallet amounts setting:', error);
       this.hideWalletAmounts.set(!newValue); // Revert
+      this.snackBar.open('Failed to save settings', 'Dismiss', { duration: 3000 });
+    }
+  }
+
+  async toggleDisplaySatsInUsd(): Promise<void> {
+    const newValue = !this.displaySatsInUsd();
+    this.displaySatsInUsd.set(newValue);
+
+    try {
+      await this.settingsService.updateSettings({
+        displaySatsInUsd: newValue,
+      });
+      this.snackBar.open(
+        newValue ? 'Dollar display enabled' : 'Sats display enabled',
+        'Dismiss',
+        { duration: 2000 }
+      );
+    } catch (error) {
+      this.logger.error('Failed to save sats display setting:', error);
+      this.displaySatsInUsd.set(!newValue);
       this.snackBar.open('Failed to save settings', 'Dismiss', { duration: 3000 });
     }
   }
@@ -249,12 +275,6 @@ export class WalletSettingsComponent implements OnInit, OnDestroy {
   }
 
   formatAmount(value: number): string {
-    if (value >= 1000000) {
-      return `${(value / 1000000).toFixed(1)}M`;
-    }
-    if (value >= 1000) {
-      return `${(value / 1000).toFixed(1)}K`;
-    }
-    return value.toString();
+    return this.satDisplay.getDisplayValueFromSats(value, { showUnit: false, compact: true }).value;
   }
 }

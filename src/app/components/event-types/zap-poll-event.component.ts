@@ -14,6 +14,8 @@ import { DataService } from '../../services/data.service';
 import { PollOption } from '../../interfaces';
 import { PollContentComponent } from './poll-content.component';
 import { type ZapInfo } from '../event/reaction-summary/reaction-summary.component';
+import { SatAmountComponent } from '../sat-amount/sat-amount.component';
+import { SatDisplayService } from '../../services/sat-display.service';
 
 export interface ZapPoll {
   id: string;
@@ -40,6 +42,7 @@ interface ZapPollResult {
     MatIconModule,
     MatProgressBarModule,
     PollContentComponent,
+    SatAmountComponent,
   ],
   templateUrl: './zap-poll-event.component.html',
   styleUrl: './zap-poll-event.component.scss',
@@ -53,6 +56,7 @@ export class ZapPollEventComponent {
   private dialog = inject(MatDialog);
   private dataService = inject(DataService);
   private destroyRef = inject(DestroyRef);
+  protected readonly satDisplay = inject(SatDisplayService);
 
   event = input.required<NostrEvent>();
   zaps = input<ZapInfo[] | null>(null);
@@ -319,13 +323,7 @@ export class ZapPollEventComponent {
   }
 
   formatSats(sats: number): string {
-    if (sats >= 1000000) {
-      return `${(sats / 1000000).toFixed(1)}M sats`;
-    }
-    if (sats >= 1000) {
-      return `${(sats / 1000).toFixed(1)}k sats`;
-    }
-    return `${sats} sats`;
+    return this.satDisplay.formatSats(sats, { compact: true });
   }
 
   private parseZapPollEvent(event: NostrEvent): ZapPoll {

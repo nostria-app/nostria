@@ -5,7 +5,7 @@
     </div>
     <div class="bolt11-info">
       @if (decoded(); as d) {
-      <div class="bolt11-amount">{{ formatSats(d.satoshi) }} sats</div>
+      <div class="bolt11-amount"><app-sat-amount [sats]="d.satoshi"></app-sat-amount></div>
       @if (d.description) {
       <div class="bolt11-description">{{ d.description }}</div>
       }

@@ -12,7 +12,9 @@
       (keydown.space)="toggleHideWalletAmounts()">
       {{ getTotalBalance() }}
     </span>
-    <span class="balance-label" i18n="@@wallet.sats">sats</span>
+    <span class="balance-label" tabindex="0" role="button" matTooltip="Click to toggle sats and dollar display"
+      (click)="toggleDisplaySatsInUsd()" (keydown.enter)="toggleDisplaySatsInUsd()"
+      (keydown.space)="toggleDisplaySatsInUsd()">{{ displaySatsInUsdEnabled() ? 'USD' : 'sats' }}</span>
   </div>
   }
   <span class="panel-header-spacer"></span>
@@ -64,7 +66,7 @@
                 (keydown.enter)="toggleHideWalletAmounts()" (keydown.space)="toggleHideWalletAmounts()">
                 {{ getDisplayBalance(walletData!.balance!.balance) }}
               </span>
-              <span class="balance-label" i18n="@@wallet.sats">sats</span>
+              <span class="balance-label">{{ displaySatsInUsdEnabled() ? 'USD' : 'sats' }}</span>
               <button mat-icon-button matTooltip="Refresh balance" i18n-matTooltip="@@wallet.refresh-balance"
                 (click)="refreshBalance(wallet[0]); $event.stopPropagation()" [disabled]="walletData?.loading"
                 class="refresh-btn">
@@ -400,6 +402,30 @@
 
       <div class="tab-content">
         <div class="wallet-settings-content">
+          <mat-card appearance="outlined" class="settings-card">
+            <mat-card-header>
+              <mat-icon mat-card-avatar>attach_money</mat-icon>
+              <mat-card-title>Display sats as dollar values</mat-card-title>
+              <mat-card-subtitle>
+                Use the live Bitcoin price to show USD instead of sats across the app.
+              </mat-card-subtitle>
+            </mat-card-header>
+            <mat-card-content>
+              <div class="settings-toggle-section">
+                <mat-slide-toggle [checked]="displaySatsInUsdEnabled()" (change)="toggleDisplaySatsInUsd()">
+                  Show dollar values instead of sats
+                </mat-slide-toggle>
+
+                <div class="settings-info">
+                  <mat-icon class="settings-info-icon">info</mat-icon>
+                  <p>
+                    When enabled, sat amounts throughout Nostria are converted to USD using the current Bitcoin price.
+                  </p>
+                </div>
+              </div>
+            </mat-card-content>
+          </mat-card>
+
           <!-- Hide Wallet Amounts Settings -->
           <mat-card appearance="outlined" class="settings-card">
             <mat-card-header>

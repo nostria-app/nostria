@@ -47,7 +47,7 @@
       <h4>Quick Zap Presets</h4>
       <mat-chip-set>
         @for (amount of quickZapAmounts(); track amount) {
-        <mat-chip>{{ amount }} sats</mat-chip>
+        <mat-chip><app-sat-amount [sats]="amount"></app-sat-amount></mat-chip>
         }
       </mat-chip-set>
     </section>

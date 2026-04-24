@@ -368,8 +368,7 @@
           <div class="zap-entry-content">
             <mat-icon class="zap-entry-icon">bolt</mat-icon>
             <app-profile-display-name [pubkey]="entry.data.senderPubkey" />
-            <span class="zap-entry-text">zapped <span class="zap-entry-amount">{{ entry.data.amount | number }}</span>
-              sats</span>
+            <span class="zap-entry-text">zapped <span class="zap-entry-amount"><app-sat-amount [sats]="entry.data.amount"></app-sat-amount></span></span>
             @if (entry.data.comment) {
             <span class="zap-entry-comment">&mdash; {{ entry.data.comment }}</span>
             }
@@ -492,7 +491,7 @@
               <span class="reaction-chip zap-chip"
                 matTooltip="{{ entry.data.zapCount }} zap{{ entry.data.zapCount > 1 ? 's' : '' }}">
                 <mat-icon class="zap-chip-icon">bolt</mat-icon>
-                <span class="reaction-count">{{ entry.data.zapTotal | number }}</span>
+                <span class="reaction-count"><app-sat-amount [sats]="entry.data.zapTotal" [showUnit]="false" [compact]="true"></app-sat-amount></span>
               </span>
               }
               @for (reaction of getReactionsArray(entry.data); track reaction.content) {
@@ -529,7 +528,7 @@
       <div class="zap-celebration-overlay">
         <div class="zap-celebration-content">
           <mat-icon class="zap-celebration-icon">bolt</mat-icon>
-          <span class="zap-celebration-amount">{{ zapInfo.amount | number }} sats</span>
+          <span class="zap-celebration-amount"><app-sat-amount [sats]="zapInfo.amount"></app-sat-amount></span>
         </div>
       </div>
       }

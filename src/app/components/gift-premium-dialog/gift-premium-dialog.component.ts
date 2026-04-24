@@ -15,6 +15,7 @@ import { BreakpointObserver } from '@angular/cdk/layout';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { UserProfileComponent } from '../user-profile/user-profile.component';
 import { QrCodeComponent } from '../qr-code/qr-code.component';
+import { SatAmountComponent } from '../sat-amount/sat-amount.component';
 import { ZapService } from '../../services/zap.service';
 import { Wallets } from '../../services/wallets';
 import { CustomDialogRef } from '../../services/custom-dialog.service';
@@ -100,6 +101,7 @@ export interface GiftPremiumDialogResult {
     ReactiveFormsModule,
     UserProfileComponent,
     QrCodeComponent,
+    SatAmountComponent,
   ],
   templateUrl: './gift-premium-dialog.component.html',
   styleUrls: ['./gift-premium-dialog.component.scss'],
@@ -190,6 +192,17 @@ export class GiftPremiumDialogComponent {
     // Convert to sats: (dollars / btc_price_in_dollars) * 100,000,000
     return Math.round((adjustedDollarAmount / price.usd) * 100000000);
   });
+
+  getDurationAmountSats(duration: Duration): number {
+    const price = this.bitcoinPrice();
+    if (!price) {
+      return 0;
+    }
+
+    const premiumType = this.giftForm.get('premiumType')?.value as PremiumType;
+    const dollarAmount = this.getDollarAmount(premiumType, duration);
+    return Math.round((dollarAmount / price.usd) * 100000000);
+  }
 
   // Computed pricing display text
   pricingInfo = computed<{ sats: number; usd: string } | null>(() => {

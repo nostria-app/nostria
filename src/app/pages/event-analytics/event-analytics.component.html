@@ -166,7 +166,7 @@
         <div class="stat-details">
           <span class="stat-value">{{ eventStats().zaps | number }}</span>
           <span class="stat-label">Zaps</span>
-          <span class="stat-secondary">{{ formatSats(eventStats().zapAmount) }} sats</span>
+          <span class="stat-secondary"><app-sat-amount [sats]="eventStats().zapAmount" [compact]="true"></app-sat-amount></span>
         </div>
       </mat-card-content>
     </mat-card>
@@ -228,7 +228,7 @@
           </span>
           }
           @if (engager.zaps > 0) {
-          <span class="count zaps" matTooltip="{{ engager.zapAmount }} sats">
+          <span class="count zaps" matTooltip="{{ satDisplay.formatSats(engager.zapAmount) }}">
             <mat-icon>bolt</mat-icon>
             {{ engager.zaps }}
           </span>

@@ -1,6 +1,5 @@
 import { Component, inject, signal, effect, computed, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -24,6 +23,7 @@ import { LayoutService } from '../../../services/layout.service';
 import { AgoPipe } from '../../../pipes/ago.pipe';
 import { TimestampPipe } from '../../../pipes/timestamp.pipe';
 import { CustomEmojiComponent } from '../../../components/custom-emoji/custom-emoji.component';
+import { SatAmountComponent } from '../../../components/sat-amount/sat-amount.component';
 import { cleanWebsiteValue, normalizeWebsiteUrl } from '../../../utils/website-url';
 
 // Interfaces
@@ -79,7 +79,6 @@ interface ZapHistoryEntry {
   selector: 'app-profile-connection',
   imports: [
     CommonModule,
-    RouterLink,
     MatCardModule,
     MatIconModule,
     MatButtonModule,
@@ -93,6 +92,7 @@ interface ZapHistoryEntry {
     AgoPipe,
     TimestampPipe,
     CustomEmojiComponent,
+    SatAmountComponent,
   ],
   templateUrl: './profile-connection.component.html',
   styleUrl: './profile-connection.component.scss',
@@ -141,6 +141,7 @@ export class ProfileConnectionComponent {
   totalSent = computed(() => this.sentZaps().reduce((total, zap) => total + zap.amount, 0));
   totalReceived = computed(() => this.receivedZaps().reduce((total, zap) => total + zap.amount, 0));
   balance = computed(() => this.totalSent() - this.totalReceived());
+  balanceAbs = computed(() => Math.abs(this.balance()));
 
   private lastLoadedPubkey = '';
   private loadingInProgress = false;
@@ -722,16 +723,6 @@ export class ProfileConnectionComponent {
     } finally {
       this.isLoadingZaps.set(false);
     }
-  }
-
-  formatAmount(amount: number): string {
-    if (amount >= 1000000) {
-      return `${(amount / 1000000).toFixed(1)}M`;
-    }
-    if (amount >= 1000) {
-      return `${(amount / 1000).toFixed(1)}K`;
-    }
-    return amount.toLocaleString();
   }
 
   async copyEventData(zap: ZapHistoryEntry): Promise<void> {

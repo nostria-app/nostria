@@ -16,11 +16,13 @@ import { Router } from '@angular/router';
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { ProfileDisplayNameComponent } from '../user-profile/display-name/profile-display-name.component';
 import { QrCodeComponent } from '../qr-code/qr-code.component';
+import { SatAmountComponent } from '../sat-amount/sat-amount.component';
 import { ZapService } from '../../services/zap.service';
 import { Wallets } from '../../services/wallets';
 import { ZapErrorHandlerService } from '../../services/zap-error-handler.service';
 import { DataService } from '../../services/data.service';
 import { UtilitiesService } from '../../services/utilities.service';
+import { SatDisplayService } from '../../services/sat-display.service';
 import { Event } from 'nostr-tools';
 import { MaterialCustomDialogComponent } from '../material-custom-dialog/material-custom-dialog.component';
 
@@ -84,7 +86,8 @@ const VIDEO_HOSTING_DOMAINS = ['youtube.com', 'youtu.be', 'vimeo.com', 'twitch.t
     MatTooltipModule,
     ReactiveFormsModule,
     ProfileDisplayNameComponent,
-    QrCodeComponent
+    QrCodeComponent,
+    SatAmountComponent
   ],
   templateUrl: './zap-dialog.component.html',
   styleUrls: ['./zap-dialog.component.scss'],
@@ -100,6 +103,7 @@ export class ZapDialogComponent {
   private dataService = inject(DataService);
   private utilities = inject(UtilitiesService);
   private destroyRef = inject(DestroyRef);
+  protected readonly satDisplay = inject(SatDisplayService);
 
   data: ZapDialogData = inject(MAT_DIALOG_DATA);
 
@@ -486,12 +490,7 @@ export class ZapDialogComponent {
   }
 
   formatAmount(amount: number): string {
-    if (amount >= 1000000) {
-      return (amount / 1000000).toFixed(1) + 'M';
-    } else if (amount >= 1000) {
-      return (amount / 1000).toFixed(1) + 'K';
-    }
-    return amount.toLocaleString();
+    return this.satDisplay.getDisplayValueFromSats(amount, { showUnit: false, compact: true }).value;
   }
 
   getSelectedWalletName(): string {

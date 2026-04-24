@@ -8,6 +8,8 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { CustomDialogRef } from '../../services/custom-dialog.service';
 import { Wallets } from '../../services/wallets';
 import { NwcService } from '../../services/nwc.service';
+import { SatDisplayService } from '../../services/sat-display.service';
+import { SatAmountComponent } from '../sat-amount/sat-amount.component';
 
 export interface PayInvoiceDialogData {
   invoice: string;
@@ -36,6 +38,7 @@ interface WalletOption {
     MatProgressSpinnerModule,
     MatSelectModule,
     MatFormFieldModule,
+    SatAmountComponent,
   ],
   templateUrl: './pay-invoice-dialog.component.html',
   styleUrl: './pay-invoice-dialog.component.scss',
@@ -45,6 +48,7 @@ export class PayInvoiceDialogComponent {
   private snackBar = inject(MatSnackBar);
   private wallets = inject(Wallets);
   private nwcService = inject(NwcService);
+  protected readonly satDisplay = inject(SatDisplayService);
   dialogRef = inject(CustomDialogRef);
 
   data!: PayInvoiceDialogData;
@@ -76,6 +80,7 @@ export class PayInvoiceDialogComponent {
     }
     return options.find(w => w.isPrimary) ?? options[0] ?? null;
   });
+  selectedWalletValue = computed(() => this.selectedWallet()?.pubkey ?? null);
 
   isExpired = computed(() => {
     const expiry = this.data?.expiry;
@@ -105,7 +110,7 @@ export class PayInvoiceDialogComponent {
   }
 
   formatSats(sats: number): string {
-    return sats.toLocaleString();
+    return this.satDisplay.getDisplayValueFromSats(sats, { showUnit: false }).value;
   }
 
   async payInvoice(): Promise<void> {
@@ -143,7 +148,7 @@ export class PayInvoiceDialogComponent {
 
       this.paymentSuccess.set(true);
       this.snackBar.open(
-        `Paid ${this.formatSats(this.data.amountSats)} sats successfully!`,
+        `Paid ${this.satDisplay.formatSats(this.data.amountSats)} successfully!`,
         'Dismiss',
         {
           duration: 5000,

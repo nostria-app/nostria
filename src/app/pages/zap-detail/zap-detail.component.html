@@ -26,8 +26,7 @@
       <div class="zap-icon">
         <mat-icon>bolt</mat-icon>
       </div>
-      <div class="zap-amount">{{ formatSats(zapAmount()) }}</div>
-      <div class="zap-unit">sats</div>
+      <div class="zap-amount"><app-sat-amount [sats]="zapAmount()"></app-sat-amount></div>
     </div>
 
     <!-- Sender Section -->
@@ -89,7 +88,7 @@
       <div class="zapped-event-section">
         <div class="section-label">Zapped Note</div>
         @if (zappedEvent()) {
-          <div class="event-preview" (click)="openZappedEvent()" (keydown.enter)="openZappedEvent()" tabindex="0" role="button">
+          <div class="event-preview" (click)="openZappedEvent()" (keydown.enter)="openZappedEvent()" tabindex="0" role="button" aria-label="Open zapped note" title="Open zapped note">
             <app-event [event]="zappedEvent()!" appearance="card" [navigationDisabled]="true"></app-event>
           </div>
         } @else {
