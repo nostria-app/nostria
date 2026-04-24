@@ -49,13 +49,8 @@
     <button mat-icon-button (click)="openInWallet()" matTooltip="Open in external wallet" class="open-wallet-button">
       <mat-icon>open_in_new</mat-icon>
     </button>
-    <button
-      mat-icon-button
-      class="qr-button"
-      (click)="toggleQrCode($event)"
-      (mouseenter)="onQrButtonMouseEnter($event)"
-      (mouseleave)="onQrButtonMouseLeave()"
-      [class.active]="showQrCode()">
+    <button mat-icon-button class="qr-button" (click)="toggleQrCode($event)" (mouseenter)="onQrButtonMouseEnter($event)"
+      (mouseleave)="onQrButtonMouseLeave()" [class.active]="showQrCode()">
       <mat-icon>qr_code_2</mat-icon>
     </button>
     <button mat-icon-button (click)="copyInvoice()" matTooltip="Copy invoice to clipboard">

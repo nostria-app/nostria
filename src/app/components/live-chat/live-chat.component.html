@@ -57,7 +57,8 @@
           <mat-icon class="zap-icon">bolt</mat-icon>
           <app-user-profile [pubkey]="message.zapSender!" view="compact" [hostWidthAuto]="true"
             class="zap-sender-avatar" />
-          <span class="zap-info">zapped <span class="zap-amount"><app-sat-amount [sats]="message.zapAmount ?? 0"></app-sat-amount></span></span>
+          <span class="zap-info">zapped <span class="zap-amount"><app-sat-amount
+                [sats]="message.zapAmount ?? 0"></app-sat-amount></span></span>
         </div>
         @if (message.content) {
         <div class="zap-content"><app-chat-content [content]="message.content" /></div>

@@ -9,8 +9,8 @@
   <div class="amount-section">
     <div class="quick-amounts">
       @for (amount of quickAmounts; track amount) {
-      <button mat-stroked-button type="button" class="quick-amount-btn"
-        [class.selected]="satsControl.value === amount" (click)="selectQuickAmount(amount)">
+      <button mat-stroked-button type="button" class="quick-amount-btn" [class.selected]="satsControl.value === amount"
+        (click)="selectQuickAmount(amount)">
         <span class="quick-amount-content">
           <span class="quick-amount-sats"><app-sat-amount [sats]="amount"></app-sat-amount></span>
           @if (satsToUsd(amount); as usd) {
@@ -24,8 +24,8 @@
     <div class="input-fields">
       <mat-form-field appearance="outline" class="amount-field">
         <mat-label>Amount in sats</mat-label>
-        <input matInput type="number" [formControl]="satsControl" placeholder="0" min="1"
-          (focus)="setInputMode('sats')" (input)="onSatsChanged()" />
+        <input matInput type="number" [formControl]="satsControl" placeholder="0" min="1" (focus)="setInputMode('sats')"
+          (input)="onSatsChanged()" />
         <span matSuffix class="input-suffix">sats</span>
       </mat-form-field>
 

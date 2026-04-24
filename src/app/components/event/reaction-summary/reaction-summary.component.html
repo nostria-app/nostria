@@ -22,11 +22,13 @@
         <app-user-profile [pubkey]="reaction.event.pubkey" view="compact"></app-user-profile>
         <div class="item-meta">
           <div class="reaction-time-container">
-            <button class="item-time reaction-time-trigger" type="button" [class.reaction-time-trigger-touch]="isHandset()"
-              [matTooltip]="getReactionRelayTooltip(reaction)" matTooltipPosition="above"
-              [matTooltipTouchGestures]="'off'" [matTooltipHideDelay]="100" [matTooltipShowDelay]="150"
+            <button class="item-time reaction-time-trigger" type="button"
+              [class.reaction-time-trigger-touch]="isHandset()" [matTooltip]="getReactionRelayTooltip(reaction)"
+              matTooltipPosition="above" [matTooltipTouchGestures]="'off'" [matTooltipHideDelay]="100"
+              [matTooltipShowDelay]="150"
               [matTooltipDisabled]="isHandset() || getReactionRelayUrls(reaction).length === 0"
-              (click)="toggleReactionRelayTooltip(reaction, $event)">{{ reaction.event.created_at | ago:'short' }} ago</button>
+              (click)="toggleReactionRelayTooltip(reaction, $event)">{{ reaction.event.created_at | ago:'short' }}
+              ago</button>
 
             @if (isHandset() && isRelayTooltipOpen(reaction)) {
             <div class="reaction-relay-popover" (click)="$event.stopPropagation()">
@@ -38,11 +40,12 @@
           </div>
           @if (canDeleteReaction(reaction)) {
           <button class="reaction-delete-toggle" type="button" [disabled]="deletingReactionIds().has(reaction.event.id)"
-            (click)="deleteReaction(reaction, $event)" [attr.aria-label]="'Delete reaction ' + getReactionDisplay(reaction.event.content)"
-            title="Delete reaction">
+            (click)="deleteReaction(reaction, $event)"
+            [attr.aria-label]="'Delete reaction ' + getReactionDisplay(reaction.event.content)" title="Delete reaction">
             @if (getCustomEmojiUrl(reaction.event)) {
             <app-custom-emoji [src]="getCustomEmojiUrl(reaction.event)!" [alt]="reaction.event.content"
-              cssClass="reaction-emoji-img reaction-delete-emoji" [emojiSetAddress]="getEmojiSetAddress(reaction.event)" />
+              cssClass="reaction-emoji-img reaction-delete-emoji"
+              [emojiSetAddress]="getEmojiSetAddress(reaction.event)" />
             } @else {
             <span class="reaction-emoji reaction-delete-emoji">{{ getReactionDisplay(reaction.event.content) }}</span>
             }

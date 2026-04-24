@@ -207,7 +207,8 @@
         <div class="stat-details">
           <span class="stat-value">{{ engagementStats().totalZaps | number }}</span>
           <span class="stat-label">Zaps</span>
-          <span class="stat-secondary"><app-sat-amount [sats]="engagementStats().totalZapAmount" [compact]="true"></app-sat-amount></span>
+          <span class="stat-secondary"><app-sat-amount [sats]="engagementStats().totalZapAmount"
+              [compact]="true"></app-sat-amount></span>
         </div>
       </mat-card-content>
     </mat-card>
@@ -421,7 +422,8 @@
               <span class="trend-bar zap-bar" [style.width.%]="getBarWidth(day.zaps, 'zaps')"></span>
               {{ day.zaps }}
             </span>
-            <span class="trend-col sats-col"><app-sat-amount [sats]="day.zapAmount" [compact]="true"></app-sat-amount></span>
+            <span class="trend-col sats-col"><app-sat-amount [sats]="day.zapAmount"
+                [compact]="true"></app-sat-amount></span>
           </div>
           }
         </div>
@@ -446,7 +448,8 @@
             </mat-card>
             <mat-card class="zap-stat-card">
               <mat-card-content>
-                <div class="zap-stat-value"><app-sat-amount [sats]="zapAnalytics().satsReceived" [compact]="true"></app-sat-amount></div>
+                <div class="zap-stat-value"><app-sat-amount [sats]="zapAnalytics().satsReceived"
+                    [compact]="true"></app-sat-amount></div>
                 <div class="zap-stat-label">Sats Received</div>
               </mat-card-content>
             </mat-card>
@@ -458,7 +461,8 @@
             </mat-card>
             <mat-card class="zap-stat-card">
               <mat-card-content>
-                <div class="zap-stat-value"><app-sat-amount [sats]="zapAnalytics().satsSent" [compact]="true"></app-sat-amount></div>
+                <div class="zap-stat-value"><app-sat-amount [sats]="zapAnalytics().satsSent"
+                    [compact]="true"></app-sat-amount></div>
                 <div class="zap-stat-label">Sats Sent</div>
               </mat-card-content>
             </mat-card>

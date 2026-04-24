@@ -335,7 +335,8 @@
         </div>
         <div class="stat-value-row">
           <mat-icon class="bolt-icon">bolt</mat-icon>
-          <span><app-sat-amount [sats]="balanceAbs()" [compact]="true" [prefix]="balance() > 0 ? '+' : balance() < 0 ? '-' : ''"></app-sat-amount></span>
+          <span><app-sat-amount [sats]="balanceAbs()" [compact]="true"
+              [prefix]="balance() > 0 ? '+' : balance() < 0 ? '-' : ''"></app-sat-amount></span>
         </div>
         <div class="balance-description">
           @if (balance() > 0) {

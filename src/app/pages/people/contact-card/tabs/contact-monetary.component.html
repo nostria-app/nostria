@@ -36,7 +36,8 @@
       </div>
       <div class="stat-value">
         <mat-icon class="bolt-icon">bolt</mat-icon>
-        <span><app-sat-amount [sats]="balanceAbs()" [compact]="true" [prefix]="balance() > 0 ? '+' : balance() < 0 ? '-' : ''"></app-sat-amount></span>
+        <span><app-sat-amount [sats]="balanceAbs()" [compact]="true"
+            [prefix]="balance() > 0 ? '+' : balance() < 0 ? '-' : ''"></app-sat-amount></span>
       </div>
       <div class="balance-description">
         @if (balance() > 0) {
@@ -77,17 +78,17 @@
               <mat-icon>more_vert</mat-icon>
             </button>
             <mat-menu #zapMenu="matMenu">
-<ng-template matMenuContent>
-              <button mat-menu-item (click)="copyEventData(zap)">
-                <mat-icon>content_copy</mat-icon>
-                <span>Copy Event Data</span>
-              </button>
-              <button mat-menu-item (click)="layout.publishEvent(zap.zapReceipt)">
-                <mat-icon>publish</mat-icon>
-                <span>Publish Event</span>
-              </button>
-            </ng-template>
-</mat-menu>
+              <ng-template matMenuContent>
+                <button mat-menu-item (click)="copyEventData(zap)">
+                  <mat-icon>content_copy</mat-icon>
+                  <span>Copy Event Data</span>
+                </button>
+                <button mat-menu-item (click)="layout.publishEvent(zap.zapReceipt)">
+                  <mat-icon>publish</mat-icon>
+                  <span>Publish Event</span>
+                </button>
+              </ng-template>
+            </mat-menu>
           </div>
         </div>
 

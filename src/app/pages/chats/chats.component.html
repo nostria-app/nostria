@@ -368,7 +368,8 @@
           <div class="zap-entry-content">
             <mat-icon class="zap-entry-icon">bolt</mat-icon>
             <app-profile-display-name [pubkey]="entry.data.senderPubkey" />
-            <span class="zap-entry-text">zapped <span class="zap-entry-amount"><app-sat-amount [sats]="entry.data.amount"></app-sat-amount></span></span>
+            <span class="zap-entry-text">zapped <span class="zap-entry-amount"><app-sat-amount
+                  [sats]="entry.data.amount"></app-sat-amount></span></span>
             @if (entry.data.comment) {
             <span class="zap-entry-comment">&mdash; {{ entry.data.comment }}</span>
             }
@@ -428,60 +429,60 @@
                   <mat-icon>add_reaction</mat-icon>
                 </button>
                 <mat-menu #reactionMenu="matMenu" class="reaction-picker-menu">
-<ng-template matMenuContent>
-                  <div class="reaction-picker" (click)="$event.stopPropagation()">
-                    @for (emoji of quickReactions; track emoji) {
-                    <button mat-icon-button class="emoji-button" (click)="addReaction(entry.data, emoji)">
-                      {{ emoji }}
-                    </button>
-                    }
-                  </div>
-                </ng-template>
-</mat-menu>
+                  <ng-template matMenuContent>
+                    <div class="reaction-picker" (click)="$event.stopPropagation()">
+                      @for (emoji of quickReactions; track emoji) {
+                      <button mat-icon-button class="emoji-button" (click)="addReaction(entry.data, emoji)">
+                        {{ emoji }}
+                      </button>
+                      }
+                    </div>
+                  </ng-template>
+                </mat-menu>
                 <button mat-icon-button class="more-button" #msgMenuTrigger="matMenuTrigger"
                   [matMenuTriggerFor]="msgMenu" (click)="$event.stopPropagation()" matTooltip="More options">
                   <mat-icon>more_vert</mat-icon>
                 </button>
                 <mat-menu #msgMenu="matMenu">
-<ng-template matMenuContent>
-                  <button mat-menu-item (click)="setReplyTo(entry.data)">
-                    <mat-icon>reply</mat-icon>
-                    <span>Reply</span>
-                  </button>
-                  @if (isAuthenticated()) {
-                  <button mat-menu-item (click)="zapMessage(entry.data)">
-                    <mat-icon>bolt</mat-icon>
-                    <span>Zap</span>
-                  </button>
-                  }
-                  <button mat-menu-item (click)="copyMessageData(entry.data)">
-                    <mat-icon>content_copy</mat-icon>
-                    <span>Copy Data</span>
-                  </button>
-                  @if (getMessageImageUrls(entry.data).length > 0) {
-                  <button mat-menu-item (click)="openSaveToGifsDialog(entry.data)">
-                    <mat-icon>gif_box</mat-icon>
-                    <span>Save to Gifs Set</span>
-                  </button>
-                  }
-                  @if (entry.data.pubkey === currentPubkey()) {
-                  <button mat-menu-item (click)="deleteMessage(entry.data)">
-                    <mat-icon>delete</mat-icon>
-                    <span>Delete Message</span>
-                  </button>
-                  }
-                  @if (entry.data.pubkey !== currentPubkey()) {
-                  <button mat-menu-item (click)="hideMessage(entry.data)">
-                    <mat-icon>visibility_off</mat-icon>
-                    <span>Hide Message</span>
-                  </button>
-                  <button mat-menu-item (click)="muteUser(entry.data.pubkey)">
-                    <mat-icon>block</mat-icon>
-                    <span>Mute User</span>
-                  </button>
-                  }
-                </ng-template>
-</mat-menu>
+                  <ng-template matMenuContent>
+                    <button mat-menu-item (click)="setReplyTo(entry.data)">
+                      <mat-icon>reply</mat-icon>
+                      <span>Reply</span>
+                    </button>
+                    @if (isAuthenticated()) {
+                    <button mat-menu-item (click)="zapMessage(entry.data)">
+                      <mat-icon>bolt</mat-icon>
+                      <span>Zap</span>
+                    </button>
+                    }
+                    <button mat-menu-item (click)="copyMessageData(entry.data)">
+                      <mat-icon>content_copy</mat-icon>
+                      <span>Copy Data</span>
+                    </button>
+                    @if (getMessageImageUrls(entry.data).length > 0) {
+                    <button mat-menu-item (click)="openSaveToGifsDialog(entry.data)">
+                      <mat-icon>gif_box</mat-icon>
+                      <span>Save to Gifs Set</span>
+                    </button>
+                    }
+                    @if (entry.data.pubkey === currentPubkey()) {
+                    <button mat-menu-item (click)="deleteMessage(entry.data)">
+                      <mat-icon>delete</mat-icon>
+                      <span>Delete Message</span>
+                    </button>
+                    }
+                    @if (entry.data.pubkey !== currentPubkey()) {
+                    <button mat-menu-item (click)="hideMessage(entry.data)">
+                      <mat-icon>visibility_off</mat-icon>
+                      <span>Hide Message</span>
+                    </button>
+                    <button mat-menu-item (click)="muteUser(entry.data.pubkey)">
+                      <mat-icon>block</mat-icon>
+                      <span>Mute User</span>
+                    </button>
+                    }
+                  </ng-template>
+                </mat-menu>
               </div>
             </div>
 
@@ -491,7 +492,8 @@
               <span class="reaction-chip zap-chip"
                 matTooltip="{{ entry.data.zapCount }} zap{{ entry.data.zapCount > 1 ? 's' : '' }}">
                 <mat-icon class="zap-chip-icon">bolt</mat-icon>
-                <span class="reaction-count"><app-sat-amount [sats]="entry.data.zapTotal" [showUnit]="false" [compact]="true"></app-sat-amount></span>
+                <span class="reaction-count"><app-sat-amount [sats]="entry.data.zapTotal" [showUnit]="false"
+                    [compact]="true"></app-sat-amount></span>
               </span>
               }
               @for (reaction of getReactionsArray(entry.data); track reaction.content) {
@@ -614,13 +616,12 @@
 
           <textarea #messageInput class="message-input" [ngModel]="newMessageText()"
             (ngModelChange)="newMessageText.set($event)" placeholder="Message this public chat"
-            [disabled]="isUploading()" (keydown)="onMessageKeydown($event)"
-            (paste)="onMessagePaste($event)" rows="1"></textarea>
+            [disabled]="isUploading()" (keydown)="onMessageKeydown($event)" (paste)="onMessagePaste($event)"
+            rows="1"></textarea>
           <button mat-icon-button type="button" class="send-button"
             [disabled]="!newMessageText().trim() || isSending() || isUploading()"
             (pointerdown)="preventButtonFocusSteal($event)" (mousedown)="preventButtonFocusSteal($event)"
-            (click)="sendMessage()"
-            matTooltip="Send message">
+            (click)="sendMessage()" matTooltip="Send message">
             @if (isSending() || isUploading()) {
             <mat-spinner diameter="24"></mat-spinner>
             } @else {
