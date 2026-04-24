@@ -1,0 +1,16 @@
+<app-custom-dialog [title]="'Hide promotion cards?'" [showCloseButton]="true" [disableClose]="false"
+  [width]="'min(520px, calc(100vw - 24px))'" [maxWidth]="'calc(100vw - 24px)'"
+  [panelClass]="'featured-feed-card-dismiss-dialog'" (closed)="cancel()">
+
+  <div dialog-content class="dismiss-dialog-content">
+    <p>
+      Do you want to hide only this card, or turn off in-feed promotion cards completely?
+    </p>
+  </div>
+
+  <div dialog-actions class="dismiss-dialog-actions">
+    <button mat-button type="button" (click)="cancel()">Cancel</button>
+    <button mat-stroked-button type="button" (click)="hideOne()">Hide this card</button>
+    <button mat-flat-button type="button" (click)="disableAll()">Turn off cards</button>
+  </div>
+</app-custom-dialog>

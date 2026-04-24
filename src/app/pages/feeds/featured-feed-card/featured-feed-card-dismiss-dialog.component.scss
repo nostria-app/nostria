@@ -1,0 +1,17 @@
+.dismiss-dialog-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.dismiss-dialog-content p {
+  margin: 0;
+  color: var(--mat-sys-on-surface);
+}
+
+.dismiss-dialog-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 12px;
+}

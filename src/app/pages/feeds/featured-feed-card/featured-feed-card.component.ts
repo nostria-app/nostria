@@ -7,6 +7,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { Router } from '@angular/router';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
+import { firstValueFrom } from 'rxjs';
 import { FeaturedFeedCard, FeaturedFeedCardsService } from '../../../services/featured-feed-cards.service';
 import { UserProfileComponent } from '../../../components/user-profile/user-profile.component';
 import { AccountStateService } from '../../../services/account-state.service';
@@ -14,7 +15,12 @@ import { MediaPlayerService } from '../../../services/media-player.service';
 import { AiService } from '../../../services/ai.service';
 import { CustomDialogService } from '../../../services/custom-dialog.service';
 import { LayoutService } from '../../../services/layout.service';
+import { LocalSettingsService } from '../../../services/local-settings.service';
 import { SupportNostriaComponent } from '../../../components/support-nostria/support-nostria.component';
+import {
+  FeaturedFeedCardDismissAction,
+  FeaturedFeedCardDismissDialogComponent,
+} from './featured-feed-card-dismiss-dialog.component';
 
 @Component({
   selector: 'app-featured-feed-card',
@@ -40,6 +46,7 @@ export class FeaturedFeedCardComponent {
   private readonly aiService = inject(AiService);
   private readonly customDialog = inject(CustomDialogService);
   private readonly layout = inject(LayoutService);
+  private readonly localSettings = inject(LocalSettingsService);
 
   readonly card = input.required<FeaturedFeedCard>();
   readonly instanceId = input.required<string>();
@@ -57,9 +64,27 @@ export class FeaturedFeedCardComponent {
     });
   }
 
-  dismiss(): void {
+  async dismiss(): Promise<void> {
     const card = this.card();
-    this.featuredFeedCards.dismiss(this.instanceId(), card.id);
+    const dialogRef = this.customDialog.open<FeaturedFeedCardDismissDialogComponent, FeaturedFeedCardDismissAction>(
+      FeaturedFeedCardDismissDialogComponent,
+      {
+        title: 'Hide promotion cards?',
+        width: 'min(520px, calc(100vw - 24px))',
+        maxWidth: 'calc(100vw - 24px)',
+        data: { title: card.title },
+      }
+    );
+    const closeResult = await firstValueFrom(dialogRef.afterClosed$);
+
+    if (closeResult.result === 'disable-all') {
+      this.localSettings.setFeaturedFeedCardsEnabled(false);
+      return;
+    }
+
+    if (closeResult.result === 'hide-one') {
+      this.featuredFeedCards.dismiss(this.instanceId(), card.id);
+    }
   }
 
   openPrimary(): void {
