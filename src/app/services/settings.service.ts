@@ -31,6 +31,7 @@ export interface SyncedFeedConfig {
   showReplies?: boolean;
   showReposts?: boolean;
   hideWordle?: boolean;
+  hideSeen?: boolean;
   wotFilter?: boolean;
   wotMinRank?: number;
   createdAt: number;

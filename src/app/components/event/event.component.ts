@@ -72,6 +72,7 @@ import { UserRelaysService } from '../../services/relays/user-relays';
 import { ShareArticleDialogComponent, ShareArticleDialogData } from '../share-article-dialog/share-article-dialog.component';
 import { CustomDialogService } from '../../services/custom-dialog.service';
 import { IntersectionObserverService } from '../../services/intersection-observer.service';
+import { SeenEventsService } from '../../services/seen-events.service';
 import { ParsingService } from '../../services/parsing.service';
 import { SocialPreviewComponent } from '../social-preview/social-preview.component';
 import { MediaPreviewDialogComponent } from '../media-preview-dialog/media-preview.component';
@@ -228,6 +229,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   private elementRef = inject(ElementRef);
   private observedEventId?: string; // Track which event we're observing for
   private readonly intersectionObserverService = inject(IntersectionObserverService);
+  private readonly seenEventsService = inject(SeenEventsService);
 
   // Off-screen virtualization: use CSS content-visibility to skip rendering work
   // for events that scroll far off-screen, without removing them from the DOM.
@@ -1961,6 +1963,14 @@ export class EventComponent implements AfterViewInit, OnDestroy {
       (isIntersecting) => {
         if (isIntersecting) {
           this.hasBeenActuallyVisible = true;
+          // Mark as seen when actually visible in the Feeds panel (not loaded
+          // below the viewport). Only tracked for feed contexts.
+          if (this.inFeedsPanel()) {
+            const eventId = this.event()?.id ?? this.record()?.event.id;
+            if (eventId) {
+              this.seenEventsService.markSeen(eventId);
+            }
+          }
         }
       },
       {

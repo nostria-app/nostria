@@ -85,6 +85,7 @@ export interface FeedConfig {
   showReplies?: boolean; // Whether to show replies in the feed (default: false)
   showReposts?: boolean; // Whether to show reposts in the feed (default: true)
   hideWordle?: boolean; // Whether to hide Wordle posts tagged with t=wordle
+  hideSeen?: boolean; // Whether to hide events the user has already seen (viewed) in earlier sessions
   wotFilter?: boolean; // Legacy toggle for Web of Trust filtering
   wotMinRank?: number; // Minimum Web of Trust rank to include (0 = any positive rank)
   createdAt: number;
@@ -4141,6 +4142,7 @@ export class FeedService {
       showReplies: feed.showReplies,
       showReposts: feed.showReposts,
       hideWordle: feed.hideWordle,
+      hideSeen: feed.hideSeen,
       wotFilter: feed.wotFilter,
       wotMinRank: feed.wotMinRank,
       createdAt: feed.createdAt,
@@ -4359,6 +4361,7 @@ export class FeedService {
         feed1.showReplies !== feed2.showReplies ||
         feed1.showReposts !== feed2.showReposts ||
         feed1.hideWordle !== feed2.hideWordle ||
+        feed1.hideSeen !== feed2.hideSeen ||
         feed1.isSystem !== feed2.isSystem ||
         !this.arraysEqual(feed1.kinds, feed2.kinds) ||
         !this.arraysEqual(feed1.customUsers, feed2.customUsers) ||

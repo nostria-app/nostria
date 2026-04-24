@@ -67,6 +67,7 @@ import { TrustService } from '../../services/trust.service';
 import { formatDuration } from '../../utils/format-duration';
 import { FeaturedFeedCardComponent } from './featured-feed-card/featured-feed-card.component';
 import { FeaturedFeedCard, FeaturedFeedCardsService } from '../../services/featured-feed-cards.service';
+import { SeenEventsService } from '../../services/seen-events.service';
 
 // NavLink interface removed because it was unused.
 
@@ -127,6 +128,7 @@ export class FeedsComponent implements OnDestroy {
   private followSetsService = inject(FollowSetsService);
   private trustService = inject(TrustService);
   private featuredFeedCards = inject(FeaturedFeedCardsService);
+  protected seenEvents = inject(SeenEventsService);
 
   // Dialog State Signals
   showNewFeedDialog = signal(false);
@@ -247,10 +249,12 @@ export class FeedsComponent implements OnDestroy {
       const showReplies = feed.showReplies ?? false;
       const showReposts = feed.showReposts ?? true;
       const hideWordle = feed.hideWordle ?? true;
+      const hideSeen = feed.hideSeen ?? false;
       return !kindsMatch
         || showReplies !== DEFAULT_CONTENT_FILTER.showReplies
         || showReposts !== DEFAULT_CONTENT_FILTER.showReposts
         || hideWordle !== DEFAULT_CONTENT_FILTER.hideWordle
+        || hideSeen !== (DEFAULT_CONTENT_FILTER.hideSeen ?? false)
         || isWotFilterEnabled(feed);
     }
     // Global filter
@@ -261,6 +265,7 @@ export class FeedsComponent implements OnDestroy {
       || filter.showReplies !== DEFAULT_CONTENT_FILTER.showReplies
       || filter.showReposts !== DEFAULT_CONTENT_FILTER.showReposts
       || filter.hideWordle !== DEFAULT_CONTENT_FILTER.hideWordle
+      || (filter.hideSeen ?? false) !== (DEFAULT_CONTENT_FILTER.hideSeen ?? false)
       || isWotFilterEnabled(filter);
   });
 
@@ -551,10 +556,17 @@ export class FeedsComponent implements OnDestroy {
     const showReplies = feed.showReplies ?? false;
     const showReposts = feed.showReposts ?? true;
     const hideWordle = feed.hideWordle ?? true;
+    const hideSeen = feed.hideSeen ?? false;
     const allowedKinds = feed.kinds || [];
     const wotMinRank = getEffectiveWotMinRank(feed);
 
     return events.filter(event => {
+      // Hide events already seen in previous sessions (snapshot-only; session
+      // views stay visible until next reload).
+      if (hideSeen && this.seenEvents.isSeenInSnapshot(event.id)) {
+        return false;
+      }
+
       // WoT filtering: 0 means any positive rank, higher values are minimum rank thresholds.
       if (wotMinRank >= 0) {
         const rank = this.trustService.getRankSignal(event.pubkey);
@@ -600,6 +612,8 @@ export class FeedsComponent implements OnDestroy {
       feed.showReplies ?? false,
       feed.showReposts ?? true,
       feed.hideWordle ?? true,
+      feed.hideSeen ?? false,
+      this.seenEvents.snapshotVersion(),
       getEffectiveWotMinRank(feed),
       (feed.kinds || []).join(','),
     ].join('|');
@@ -2294,6 +2308,7 @@ export class FeedsComponent implements OnDestroy {
           showReplies: result.showReplies,
           showReposts: result.showReposts,
           hideWordle: result.hideWordle,
+          hideSeen: result.hideSeen,
         });
       } else {
         // Add new feed
@@ -2313,6 +2328,7 @@ export class FeedsComponent implements OnDestroy {
           showReplies: result.showReplies,
           showReposts: result.showReposts,
           hideWordle: result.hideWordle,
+          hideSeen: result.hideSeen,
           filters: result.filters || {},
         });
 

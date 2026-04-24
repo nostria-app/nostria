@@ -42,6 +42,8 @@ export interface ContentFilterSettings {
   showReposts: boolean;
   /** Whether to hide Wordle posts tagged with t=wordle */
   hideWordle: boolean;
+  /** Whether to hide events the user has already seen (viewed in the viewport) in earlier sessions. */
+  hideSeen?: boolean;
   /** Legacy boolean toggle for Web of Trust filtering. Prefer wotMinRank for new code. */
   wotFilter?: boolean;
   /** Minimum Web of Trust rank to include. 0 means any positive rank. */
@@ -54,6 +56,7 @@ export const DEFAULT_CONTENT_FILTER: ContentFilterSettings = {
   showReplies: false,
   showReposts: true,
   hideWordle: true,
+  hideSeen: false,
 };
 
 /**
@@ -608,6 +611,14 @@ export class LocalSettingsService {
   setContentFilterHideWordle(hideWordle: boolean): void {
     const current = this.contentFilter();
     this.setContentFilter({ ...current, hideWordle });
+  }
+
+  /**
+   * Set content filter "Hide Seen" setting.
+   */
+  setContentFilterHideSeen(hideSeen: boolean): void {
+    const current = this.contentFilter();
+    this.setContentFilter({ ...current, hideSeen });
   }
 
   /**

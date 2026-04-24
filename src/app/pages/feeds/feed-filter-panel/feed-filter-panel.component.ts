@@ -21,7 +21,7 @@ interface ContentType {
 }
 
 interface ToggleFilterOption {
-  id: 'showReplies' | 'hideWordle';
+  id: 'showReplies' | 'hideWordle' | 'hideSeen';
   label: string;
   description: string;
   icon: string;
@@ -44,6 +44,7 @@ const CONTENT_TYPES: ContentType[] = [
 const TOGGLE_FILTER_OPTIONS: ToggleFilterOption[] = [
   { id: 'showReplies', label: 'Show Replies', description: 'Comments on other posts', icon: 'reply' },
   { id: 'hideWordle', label: 'Hide Wordle', description: 'Filter out posts tagged wordle', icon: 'grid_view' },
+  { id: 'hideSeen', label: 'Hide Seen', description: 'Hide posts you\u2019ve already viewed', icon: 'visibility_off' },
 ];
 
 /**
@@ -651,6 +652,14 @@ export class FeedFilterPanelComponent {
     return this.localSettings.contentFilter().hideWordle;
   });
 
+  currentHideSeen = computed(() => {
+    const feedConfig = this.feed();
+    if (feedConfig) {
+      return feedConfig.hideSeen ?? false;
+    }
+    return this.localSettings.contentFilter().hideSeen ?? false;
+  });
+
   // Track whether WoT filtering is enabled - from feed config if available
   currentWotEnabled = computed(() => {
     const feedConfig = this.feed();
@@ -741,6 +750,8 @@ export class FeedFilterPanelComponent {
         return this.currentShowReplies();
       case 'hideWordle':
         return this.currentHideWordle();
+      case 'hideSeen':
+        return this.currentHideSeen();
     }
   }
 
@@ -751,6 +762,9 @@ export class FeedFilterPanelComponent {
         return;
       case 'hideWordle':
         this.onHideWordleChange(!this.currentHideWordle());
+        return;
+      case 'hideSeen':
+        this.onHideSeenChange(!this.currentHideSeen());
         return;
     }
   }
@@ -764,6 +778,10 @@ export class FeedFilterPanelComponent {
 
   onHideWordleChange(checked: boolean): void {
     this.updateHideWordle(checked);
+  }
+
+  onHideSeenChange(checked: boolean): void {
+    this.updateHideSeen(checked);
   }
 
   /**
@@ -938,6 +956,15 @@ export class FeedFilterPanelComponent {
       this.feedService.updateFeed(feedConfig.id, { hideWordle });
     } else {
       this.localSettings.setContentFilterHideWordle(hideWordle);
+    }
+  }
+
+  private updateHideSeen(hideSeen: boolean): void {
+    const feedConfig = this.feed();
+    if (feedConfig) {
+      this.feedService.updateFeed(feedConfig.id, { hideSeen });
+    } else {
+      this.localSettings.setContentFilterHideSeen(hideSeen);
     }
   }
 

@@ -143,6 +143,7 @@
               [showReposts]="localSettings.contentFilter().showReposts" [mentionedMode]="listMentionedMode()"
               [filterKinds]="localSettings.contentFilter().kinds"
               [hideWordle]="localSettings.contentFilter().hideWordle"
+              [hideSeen]="localSettings.contentFilter().hideSeen ?? false"
               [wotMinRank]="localSettings.contentFilter().wotFilter ? localSettings.contentFilter().wotMinRank : undefined">
             </app-list-column>
           </div>

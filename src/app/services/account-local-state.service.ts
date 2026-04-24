@@ -33,6 +33,7 @@ export interface StoredFeedConfig {
   showReplies?: boolean;
   showReposts?: boolean;
   hideWordle?: boolean;
+  hideSeen?: boolean;
   wotFilter?: boolean;
   wotMinRank?: number;
   createdAt: number;

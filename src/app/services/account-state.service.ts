@@ -5,6 +5,7 @@ import { LocalStorageService } from './local-storage.service';
 import { ApplicationStateService } from './application-state.service';
 import { DataService } from './data.service';
 import { DatabaseService } from './database.service';
+import { SeenEventsService } from './seen-events.service';
 import { NostrUser } from './nostr.service';
 import { AccountService } from '../api/services';
 import { Account, Feature } from '../api/models';
@@ -44,6 +45,7 @@ export class AccountStateService implements OnDestroy {
   private readonly data = inject(DataService);
   private readonly accountService = inject(AccountService);
   private readonly database = inject(DatabaseService);
+  private readonly seenEvents = inject(SeenEventsService);
   private readonly utilities = inject(UtilitiesService);
   private readonly wallets = inject(Wallets);
   private readonly cache = inject(Cache);
@@ -576,8 +578,10 @@ export class AccountStateService implements OnDestroy {
     // Switch database to the new account (or anonymous mode)
     if (account) {
       await this.database.switchAccount(account.pubkey);
+      await this.seenEvents.loadSnapshot();
     } else {
       await this.database.initAnonymous();
+      this.seenEvents.reset();
     }
 
     // Immediately set profile from cache if available

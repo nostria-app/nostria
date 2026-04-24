@@ -344,17 +344,24 @@ export interface InfoRecord {
 
 /**
  * Database configuration
+ *
+ * v3 databases ('nostria-shared-3', 'nostria-account-3-<pubkey>') are a fresh
+ * generation with improved indexing and a new `seenEvents` store.
+ * Older v1/v2 databases are deleted on first launch — no data migration.
  */
-const SHARED_DB_NAME = 'nostria-shared';
-const ACCOUNT_DB_PREFIX = 'nostria-account-';
-const DB_VERSION = 3;
+const SHARED_DB_NAME = 'nostria-shared-3';
+const ACCOUNT_DB_PREFIX = 'nostria-account-3-';
+const DB_VERSION = 2;
 
-/** Legacy database names to delete during migration */
-const LEGACY_DB_NAMES = ['nostria-db', 'nostria'];
+/** Legacy database names (exact) to delete during migration */
+const LEGACY_DB_NAMES = ['nostria-db', 'nostria', 'nostria-shared'];
 
-/** localStorage key to track that migration to multi-DB has occurred */
+/** Legacy account database prefix to sweep and delete during migration */
+const LEGACY_ACCOUNT_DB_PREFIX = 'nostria-account-';
+
+/** localStorage key to track that migration to current DB generation has occurred */
 const MULTI_DB_VERSION_KEY = 'nostria-multi-db-version';
-const MULTI_DB_CURRENT_VERSION = 2;
+const MULTI_DB_CURRENT_VERSION = 3;
 
 /**
  * Event kinds that belong in the shared database.
@@ -377,6 +384,7 @@ const STORES = {
   EVENTS_CACHE: 'eventsCache',
   MESSAGES: 'messages',
   AI_CHAT_HISTORY: 'aiChatHistory',
+  SEEN_EVENTS: 'seenEvents',
 } as const;
 
 /** Stores that live in the shared database */
@@ -397,6 +405,7 @@ const ACCOUNT_STORES = new Set([
   STORES.EVENTS_CACHE,
   STORES.MESSAGES,
   STORES.AI_CHAT_HISTORY,
+  STORES.SEEN_EVENTS,
 ]);
 
 /**
@@ -406,8 +415,11 @@ const EVENT_INDEXES = {
   BY_KIND: 'by-kind',
   BY_PUBKEY: 'by-pubkey',
   BY_CREATED: 'by-created',
+  BY_KIND_CREATED: 'by-kind-created',
   BY_PUBKEY_KIND: 'by-pubkey-kind',
+  BY_PUBKEY_KIND_CREATED: 'by-pubkey-kind-created',
   BY_PUBKEY_KIND_DTAG: 'by-pubkey-kind-d-tag',
+  BY_T_TAG: 'by-t-tag',
 } as const;
 
 /**
@@ -446,6 +458,44 @@ export class DatabaseService {
   }
 
   /**
+   * Extract the unique, lowercased set of `t` (hashtag) tag values from an
+   * event. Used to populate a multi-entry IndexedDB index so hashtag / topic
+   * lookups can hit an index instead of scanning.
+   */
+  private extractTTags(event: Event): string[] | undefined {
+    if (!event || !event.tags || !Array.isArray(event.tags)) {
+      return undefined;
+    }
+    const set = new Set<string>();
+    for (const tag of event.tags) {
+      if (tag?.[0] === 't' && typeof tag[1] === 'string' && tag[1].length > 0) {
+        set.add(tag[1].toLowerCase());
+      }
+    }
+    return set.size > 0 ? [...set] : undefined;
+  }
+
+  /**
+   * Annotate an event with the derived fields used by IndexedDB indexes
+   * (`dTag` for parameterized replaceable events, `tTags` for hashtag lookups).
+   * Called on every save so lookups can hit indexes instead of scanning.
+   */
+  private annotateEventForStorage(event: Event & { dTag?: string; tTags?: string[] }): void {
+    if (event.kind >= 30000 && event.kind < 40000) {
+      const dTag = this.extractDTag(event);
+      if (dTag) {
+        event.dTag = dTag;
+      }
+    }
+    const tTags = this.extractTTags(event);
+    if (tTags) {
+      event.tTags = tTags;
+    } else if ('tTags' in event) {
+      delete event.tTags;
+    }
+  }
+
+  /**
    * Check if an event has expired according to NIP-40
    * @param event The event to check
    * @returns true if the event has expired, false otherwise
@@ -477,32 +527,61 @@ export class DatabaseService {
    * @param events Array of events to filter
    * @returns Array of non-expired events
    */
-  private async filterAndDeleteExpiredEvents(events: Event[]): Promise<Event[]> {
+  /**
+   * Filter out expired events from an array. Expired event IDs are queued for
+   * a periodic batched sweep rather than deleted inline on every read — this
+   * keeps read paths from incurring hidden `readwrite` transactions.
+   */
+  private filterExpiredEvents(events: Event[]): Event[] {
     const validEvents: Event[] = [];
-    const expiredEventIds: string[] = [];
-
     for (const event of events) {
-      // Skip null/undefined events
-      if (!event) {
-        continue;
-      }
-
+      if (!event) continue;
       if (this.isEventExpired(event)) {
-        expiredEventIds.push(event.id);
+        this.expiredEventQueue.add(event.id);
       } else {
         validEvents.push(event);
       }
     }
-
-    // Delete expired events from database in background
-    if (expiredEventIds.length > 0) {
-      this.logger.info(`Cleaning up ${expiredEventIds.length} expired events from database`);
-      this.deleteEvents(expiredEventIds).catch(err => {
-        this.logger.error('Failed to delete expired events:', err);
-      });
+    if (this.expiredEventQueue.size > 0) {
+      this.scheduleExpiredSweep();
     }
-
     return validEvents;
+  }
+
+  /**
+   * Compatibility wrapper — older call sites used the async name. Kept as a
+   * sync-equivalent returning Promise so existing `await` sites are unchanged.
+   */
+  private async filterAndDeleteExpiredEvents(events: Event[]): Promise<Event[]> {
+    return this.filterExpiredEvents(events);
+  }
+
+  /** IDs of events observed to be expired, awaiting a batched delete. */
+  private readonly expiredEventQueue = new Set<string>();
+  private expiredSweepHandle: ReturnType<typeof setTimeout> | null = null;
+  private readonly expiredSweepDelayMs = 3_000;
+
+  private scheduleExpiredSweep(): void {
+    if (this.expiredSweepHandle !== null) return;
+    this.expiredSweepHandle = setTimeout(() => {
+      this.expiredSweepHandle = null;
+      void this.runExpiredSweep();
+    }, this.expiredSweepDelayMs);
+  }
+
+  /** Delete all queued expired events in a single batched transaction per DB. */
+  private async runExpiredSweep(): Promise<void> {
+    if (this.expiredEventQueue.size === 0) return;
+    const ids = [...this.expiredEventQueue];
+    this.expiredEventQueue.clear();
+    try {
+      await this.deleteEvents(ids);
+      this.logger.debug(`Swept ${ids.length} expired events from database`);
+    } catch (error) {
+      this.logger.warn('Failed to sweep expired events, re-queuing:', error);
+      for (const id of ids) this.expiredEventQueue.add(id);
+      this.scheduleExpiredSweep();
+    }
   }
   private initPromise: Promise<void> | null = null;
 
@@ -578,6 +657,20 @@ export class DatabaseService {
       this.lastError.set(null);
       this.storageFailureMode.set('none');
     }
+
+    // Kick off the periodic expired-event background sweep so read paths
+    // don't need to delete inline.
+    this.startPeriodicExpiredSweep();
+  }
+
+  private periodicSweepHandle: ReturnType<typeof setInterval> | null = null;
+  private readonly periodicSweepIntervalMs = 10 * 60 * 1000; // 10 minutes
+
+  private startPeriodicExpiredSweep(): void {
+    if (this.periodicSweepHandle !== null) return;
+    this.periodicSweepHandle = setInterval(() => {
+      void this.runExpiredSweep();
+    }, this.periodicSweepIntervalMs);
   }
 
   private isRecoverableSharedDatabaseError(error: unknown): boolean {
@@ -833,8 +926,11 @@ export class DatabaseService {
       eventsStore.createIndex(EVENT_INDEXES.BY_KIND, 'kind', { unique: false });
       eventsStore.createIndex(EVENT_INDEXES.BY_PUBKEY, 'pubkey', { unique: false });
       eventsStore.createIndex(EVENT_INDEXES.BY_CREATED, 'created_at', { unique: false });
+      eventsStore.createIndex(EVENT_INDEXES.BY_KIND_CREATED, ['kind', 'created_at'], { unique: false });
       eventsStore.createIndex(EVENT_INDEXES.BY_PUBKEY_KIND, ['pubkey', 'kind'], { unique: false });
+      eventsStore.createIndex(EVENT_INDEXES.BY_PUBKEY_KIND_CREATED, ['pubkey', 'kind', 'created_at'], { unique: false });
       eventsStore.createIndex(EVENT_INDEXES.BY_PUBKEY_KIND_DTAG, ['pubkey', 'kind', 'dTag'], { unique: false });
+      eventsStore.createIndex(EVENT_INDEXES.BY_T_TAG, 'tTags', { unique: false, multiEntry: true });
       this.logger.debug('Created shared events store');
     }
 
@@ -894,8 +990,11 @@ export class DatabaseService {
       eventsStore.createIndex(EVENT_INDEXES.BY_KIND, 'kind', { unique: false });
       eventsStore.createIndex(EVENT_INDEXES.BY_PUBKEY, 'pubkey', { unique: false });
       eventsStore.createIndex(EVENT_INDEXES.BY_CREATED, 'created_at', { unique: false });
+      eventsStore.createIndex(EVENT_INDEXES.BY_KIND_CREATED, ['kind', 'created_at'], { unique: false });
       eventsStore.createIndex(EVENT_INDEXES.BY_PUBKEY_KIND, ['pubkey', 'kind'], { unique: false });
+      eventsStore.createIndex(EVENT_INDEXES.BY_PUBKEY_KIND_CREATED, ['pubkey', 'kind', 'created_at'], { unique: false });
       eventsStore.createIndex(EVENT_INDEXES.BY_PUBKEY_KIND_DTAG, ['pubkey', 'kind', 'dTag'], { unique: false });
+      eventsStore.createIndex(EVENT_INDEXES.BY_T_TAG, 'tTags', { unique: false, multiEntry: true });
       this.logger.debug('Created account events store');
     }
 
@@ -940,6 +1039,13 @@ export class DatabaseService {
       aiChatHistoryStore.createIndex('by-account', 'accountPubkey', { unique: false });
       aiChatHistoryStore.createIndex('by-updated', 'updatedAt', { unique: false });
       this.logger.debug('Created aiChatHistory store');
+    }
+
+    // Create seen events store (tracks which events the user has viewed in feeds)
+    if (!db.objectStoreNames.contains(STORES.SEEN_EVENTS)) {
+      const seenStore = db.createObjectStore(STORES.SEEN_EVENTS, { keyPath: 'id' });
+      seenStore.createIndex('by-seen-at', 'seenAt', { unique: false });
+      this.logger.debug('Created seenEvents store');
     }
   }
 
@@ -1017,9 +1123,9 @@ export class DatabaseService {
       return; // Already migrated
     }
 
-    this.logger.info('Migrating to multi-database storage (start fresh)');
+    this.logger.info('Migrating to v3 databases (start fresh)');
 
-    // Delete all legacy databases
+    // Delete all exact-named legacy databases (including old 'nostria-shared')
     for (const legacyName of LEGACY_DB_NAMES) {
       try {
         await this.deleteDatabaseByName(legacyName);
@@ -1029,8 +1135,36 @@ export class DatabaseService {
       }
     }
 
+    // Sweep and delete all legacy per-account databases from v1/v2
+    // (prefix 'nostria-account-' but NOT the new 'nostria-account-3-' prefix).
+    const indexedDbWithDatabases = indexedDB as IDBFactory & {
+      databases?: () => Promise<{ name?: string }[]>;
+    };
+    if (indexedDbWithDatabases.databases) {
+      try {
+        const allDbs = await indexedDbWithDatabases.databases();
+        for (const dbInfo of allDbs) {
+          const name = dbInfo.name;
+          if (
+            name &&
+            name.startsWith(LEGACY_ACCOUNT_DB_PREFIX) &&
+            !name.startsWith(ACCOUNT_DB_PREFIX)
+          ) {
+            try {
+              await this.deleteDatabaseByName(name);
+              this.logger.info(`Deleted legacy account database: ${name}`);
+            } catch (error) {
+              this.logger.warn(`Failed to delete legacy account database ${name}:`, error);
+            }
+          }
+        }
+      } catch (error) {
+        this.logger.warn('Could not enumerate legacy databases:', error);
+      }
+    }
+
     localStorage.setItem(MULTI_DB_VERSION_KEY, String(MULTI_DB_CURRENT_VERSION));
-    this.logger.info('Migration to multi-database storage complete');
+    this.logger.info('Migration to v3 databases complete');
   }
 
   /**
@@ -1072,7 +1206,7 @@ export class DatabaseService {
    * Routes to shared DB for shared kinds (0, 3, 10002) or account DB for others.
    * Skips saving if the event has already expired (NIP-40)
    */
-  async saveEvent(event: Event & { dTag?: string }): Promise<void> {
+  async saveEvent(event: Event & { dTag?: string; tTags?: string[] }): Promise<void> {
     // Validate event structure
     if (!event || !event.id || typeof event.kind !== 'number') {
       this.logger.warn('Attempted to save malformed event:', event);
@@ -1090,13 +1224,8 @@ export class DatabaseService {
       return;
     }
 
-    // Extract and add dTag for parameterized replaceable events (kind 30000-39999)
-    if (event.kind >= 30000 && event.kind < 40000) {
-      const dTag = this.extractDTag(event);
-      if (dTag) {
-        event.dTag = dTag;
-      }
-    }
+    // Populate derived index fields (dTag, tTags)
+    this.annotateEventForStorage(event);
 
     const db = this.getDbForEventKind(event.kind);
     if (!db) {
@@ -1127,7 +1256,7 @@ export class DatabaseService {
    * @param event The event to save
    * @returns true if the event was saved, false if a newer event already exists
    */
-  async saveReplaceableEvent(event: Event & { dTag?: string }): Promise<boolean> {
+  async saveReplaceableEvent(event: Event & { dTag?: string; tTags?: string[] }): Promise<boolean> {
     // Validate event structure
     if (!event || !event.id || typeof event.kind !== 'number' || !event.pubkey) {
       this.logger.warn('Attempted to save malformed replaceable event:', event);
@@ -1199,7 +1328,7 @@ export class DatabaseService {
    * Groups events by shared vs per-account and saves them respectively.
    * Filters out expired events (NIP-40) before saving.
    */
-  async saveEvents(events: (Event & { dTag?: string })[]): Promise<void> {
+  async saveEvents(events: (Event & { dTag?: string; tTags?: string[] })[]): Promise<void> {
     // Filter out malformed and expired events
     const validEvents = events.filter(event => {
       if (!event || !event.id || typeof event.kind !== 'number') {
@@ -1218,9 +1347,14 @@ export class DatabaseService {
       this.logger.debug(`Filtered out ${events.length - validEvents.length} invalid/expired events before saving`);
     }
 
+    // Populate derived index fields on every event before writing.
+    for (const event of validEvents) {
+      this.annotateEventForStorage(event);
+    }
+
     // Group by destination database
-    const sharedEvents: (Event & { dTag?: string })[] = [];
-    const accountEvents: (Event & { dTag?: string })[] = [];
+    const sharedEvents: (Event & { dTag?: string; tTags?: string[] })[] = [];
+    const accountEvents: (Event & { dTag?: string; tTags?: string[] })[] = [];
 
     for (const event of validEvents) {
       if (SHARED_EVENT_KINDS.has(event.kind)) {
@@ -1704,6 +1838,278 @@ export class DatabaseService {
     return this.filterAndDeleteExpiredEvents(events);
   }
 
+  // ============================================================================
+  // CURSOR-BASED EFFICIENT QUERIES
+  // ============================================================================
+
+  /**
+   * Get the most recent events of a given kind, walking the
+   * `[kind, created_at]` composite index newest-first.
+   *
+   * Preferred over `getEventsByKind` for feed-style UIs because it:
+   *   - avoids loading all events of the kind into memory,
+   *   - avoids a JS-side sort,
+   *   - short-circuits after `limit` events.
+   *
+   * @param kind   Event kind to query
+   * @param limit  Maximum number of events to return (defaults 100)
+   * @param until  Upper-bound created_at (exclusive). Useful for paging.
+   * @param since  Lower-bound created_at (inclusive). Useful to bound the scan.
+   */
+  async getRecentEventsByKind(
+    kind: number,
+    options: { limit?: number; until?: number; since?: number } = {}
+  ): Promise<Event[]> {
+    const db = this.getDbForEventKind(kind);
+    if (!db) return [];
+
+    const limit = options.limit ?? 100;
+    if (limit <= 0) return [];
+
+    const lower: [number, number] = [kind, options.since ?? 0];
+    const upper: [number, number] = [kind, options.until ?? Number.MAX_SAFE_INTEGER];
+    const range = IDBKeyRange.bound(lower, upper, false, false);
+
+    const events = await new Promise<Event[]>((resolve, reject) => {
+      const transaction = db.transaction(STORES.EVENTS, 'readonly');
+      const store = transaction.objectStore(STORES.EVENTS);
+      const index = store.index(EVENT_INDEXES.BY_KIND_CREATED);
+      const request = index.openCursor(range, 'prev');
+      const results: Event[] = [];
+      request.onsuccess = () => {
+        const cursor = request.result;
+        if (!cursor) return resolve(results);
+        results.push(cursor.value as Event);
+        if (results.length >= limit) {
+          resolve(results);
+          return;
+        }
+        cursor.continue();
+      };
+      request.onerror = () => reject(request.error);
+      transaction.onerror = () => reject(transaction.error);
+    });
+
+    return this.filterExpiredEvents(events);
+  }
+
+  /**
+   * Get the most recent events authored by one or more pubkeys of a given
+   * kind, walking the `[pubkey, kind, created_at]` composite index
+   * newest-first and merging per-pubkey cursors via a k-way merge.
+   *
+   * This is the primary fast path for list/timeline feeds that need
+   * `limit` recent events across many authors without loading the full
+   * per-author history into memory.
+   */
+  async getRecentEventsByPubkeysAndKind(
+    pubkeys: string[],
+    kind: number,
+    options: { limit?: number; until?: number; since?: number } = {}
+  ): Promise<Event[]> {
+    const db = this.getDbForEventKind(kind);
+    if (!db) return [];
+
+    const validPubkeys = pubkeys.filter(pk => pk && pk !== 'undefined' && pk.trim());
+    if (validPubkeys.length === 0) return [];
+
+    const limit = options.limit ?? 100;
+    if (limit <= 0) return [];
+
+    const since = options.since ?? 0;
+    const until = options.until ?? Number.MAX_SAFE_INTEGER;
+
+    const events = await new Promise<Event[]>((resolve, reject) => {
+      const transaction = db.transaction(STORES.EVENTS, 'readonly');
+      const store = transaction.objectStore(STORES.EVENTS);
+      const index = store.index(EVENT_INDEXES.BY_PUBKEY_KIND_CREATED);
+
+      const results: Event[] = [];
+      let remaining = validPubkeys.length;
+      let settled = false;
+      const finish = () => {
+        if (settled) return;
+        settled = true;
+        // Results are a union of per-author newest-first streams; sort once.
+        results.sort((a, b) => b.created_at - a.created_at);
+        resolve(results.slice(0, limit));
+      };
+
+      for (const pk of validPubkeys) {
+        const lower: [string, number, number] = [pk, kind, since];
+        const upper: [string, number, number] = [pk, kind, until];
+        const range = IDBKeyRange.bound(lower, upper, false, false);
+        const request = index.openCursor(range, 'prev');
+        let countForAuthor = 0;
+
+        request.onsuccess = () => {
+          const cursor = request.result;
+          if (!cursor) {
+            if (--remaining === 0) finish();
+            return;
+          }
+          results.push(cursor.value as Event);
+          countForAuthor++;
+          // Short-circuit: we only need up to `limit` newest events per author
+          // since the merge will re-sort anyway.
+          if (countForAuthor >= limit) {
+            if (--remaining === 0) finish();
+            return;
+          }
+          cursor.continue();
+        };
+        request.onerror = () => reject(request.error);
+      }
+
+      transaction.onerror = () => reject(transaction.error);
+    });
+
+    return this.filterExpiredEvents(events);
+  }
+
+  /**
+   * Get the most recent events across several authors AND several kinds.
+   * Fans out one cursor per (pubkey, kind) pair inside a single transaction
+   * and merges the streams.
+   */
+  async getRecentEventsByPubkeysAndKinds(
+    pubkeys: string[],
+    kinds: number[],
+    options: { limit?: number; until?: number; since?: number } = {}
+  ): Promise<Event[]> {
+    const validPubkeys = pubkeys.filter(pk => pk && pk !== 'undefined' && pk.trim());
+    if (validPubkeys.length === 0 || kinds.length === 0) return [];
+
+    // Split kinds by destination database so each DB runs one transaction.
+    const sharedKinds = kinds.filter(k => SHARED_EVENT_KINDS.has(k));
+    const accountKinds = kinds.filter(k => !SHARED_EVENT_KINDS.has(k));
+
+    const limit = options.limit ?? 100;
+    const since = options.since ?? 0;
+    const until = options.until ?? Number.MAX_SAFE_INTEGER;
+
+    const queryDb = (db: IDBDatabase, kindsForDb: number[]): Promise<Event[]> => {
+      return new Promise((resolve, reject) => {
+        const transaction = db.transaction(STORES.EVENTS, 'readonly');
+        const store = transaction.objectStore(STORES.EVENTS);
+        const index = store.index(EVENT_INDEXES.BY_PUBKEY_KIND_CREATED);
+        const results: Event[] = [];
+        const totalStreams = validPubkeys.length * kindsForDb.length;
+        let remaining = totalStreams;
+        let settled = false;
+
+        const finish = () => {
+          if (settled) return;
+          settled = true;
+          resolve(results);
+        };
+
+        if (totalStreams === 0) {
+          finish();
+          return;
+        }
+
+        for (const pk of validPubkeys) {
+          for (const kind of kindsForDb) {
+            const lower: [string, number, number] = [pk, kind, since];
+            const upper: [string, number, number] = [pk, kind, until];
+            const range = IDBKeyRange.bound(lower, upper, false, false);
+            const request = index.openCursor(range, 'prev');
+            let countForStream = 0;
+
+            request.onsuccess = () => {
+              const cursor = request.result;
+              if (!cursor) {
+                if (--remaining === 0) finish();
+                return;
+              }
+              results.push(cursor.value as Event);
+              countForStream++;
+              if (countForStream >= limit) {
+                if (--remaining === 0) finish();
+                return;
+              }
+              cursor.continue();
+            };
+            request.onerror = () => reject(request.error);
+          }
+        }
+
+        transaction.onerror = () => reject(transaction.error);
+      });
+    };
+
+    const promises: Promise<Event[]>[] = [];
+    if (sharedKinds.length > 0 && this.sharedDb) {
+      promises.push(queryDb(this.sharedDb, sharedKinds));
+    }
+    if (accountKinds.length > 0 && this.accountDb) {
+      promises.push(queryDb(this.accountDb, accountKinds));
+    }
+
+    const results = (await Promise.all(promises)).flat();
+
+    // Deduplicate (shouldn't happen across DBs, but harmless) and sort newest-first.
+    const seen = new Set<string>();
+    const unique = results.filter(e => (seen.has(e.id) ? false : (seen.add(e.id), true)));
+    unique.sort((a, b) => b.created_at - a.created_at);
+
+    return this.filterExpiredEvents(unique).slice(0, limit);
+  }
+
+  /**
+   * Look up events by a (lower-cased) `t` hashtag using the multi-entry
+   * `by-t-tag` index. Returns newest-first up to `limit` events.
+   * Queries both databases and merges.
+   */
+  async getEventsByTTag(
+    tagValue: string,
+    options: { limit?: number; kinds?: number[] } = {}
+  ): Promise<Event[]> {
+    const normalized = tagValue.toLowerCase();
+    const limit = options.limit ?? 100;
+    const kindFilter = options.kinds && options.kinds.length > 0 ? new Set(options.kinds) : null;
+
+    const queryDb = (db: IDBDatabase): Promise<Event[]> => {
+      return new Promise((resolve, reject) => {
+        const transaction = db.transaction(STORES.EVENTS, 'readonly');
+        const store = transaction.objectStore(STORES.EVENTS);
+        const index = store.index(EVENT_INDEXES.BY_T_TAG);
+        const request = index.getAll(normalized);
+        request.onsuccess = () => resolve((request.result as Event[]) ?? []);
+        request.onerror = () => reject(request.error);
+      });
+    };
+
+    const promises: Promise<Event[]>[] = [];
+    if (this.sharedDb) promises.push(queryDb(this.sharedDb));
+    if (this.accountDb) promises.push(queryDb(this.accountDb));
+
+    const all = (await Promise.all(promises)).flat();
+    const filtered = kindFilter ? all.filter(e => kindFilter.has(e.kind)) : all;
+
+    // Dedup by ID and sort newest-first
+    const seen = new Set<string>();
+    const unique = filtered.filter(e => (seen.has(e.id) ? false : (seen.add(e.id), true)));
+    unique.sort((a, b) => b.created_at - a.created_at);
+
+    return this.filterExpiredEvents(unique).slice(0, limit);
+  }
+
+  /**
+   * Manually trigger the expired-event sweep. Useful to call periodically
+   * (e.g. on startup and every few hours) to keep the DB tidy.
+   */
+  async sweepExpiredEvents(): Promise<number> {
+    if (this.expiredSweepHandle !== null) {
+      clearTimeout(this.expiredSweepHandle);
+      this.expiredSweepHandle = null;
+    }
+    const count = this.expiredEventQueue.size;
+    await this.runExpiredSweep();
+    return count;
+  }
+
   /**
    * Get all events from both databases (use with caution - can be slow for large datasets)
    */
@@ -2166,6 +2572,88 @@ export class DatabaseService {
       transaction.onerror = () => reject(transaction.error);
       transaction.onabort = () => reject(transaction.error);
     });
+  }
+
+  // ============================================================================
+  // SEEN EVENTS OPERATIONS (ACCOUNT DB)
+  // ============================================================================
+
+  /**
+   * Save a batch of seen event IDs to the per-account database.
+   * Uses a single transaction for efficiency.
+   */
+  async saveSeenEvents(ids: string[], seenAt: number): Promise<void> {
+    const db = this.getAccountDb();
+    if (!db || ids.length === 0) return;
+
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORES.SEEN_EVENTS, 'readwrite');
+      const store = transaction.objectStore(STORES.SEEN_EVENTS);
+      for (const id of ids) {
+        store.put({ id, seenAt });
+      }
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error);
+      transaction.onabort = () => reject(transaction.error);
+    });
+  }
+
+  /**
+   * Return the full set of previously-seen event IDs from the per-account DB.
+   * Used once on startup to build an in-memory snapshot.
+   */
+  async getAllSeenEventIds(): Promise<Set<string>> {
+    const db = this.getAccountDb();
+    if (!db) return new Set<string>();
+
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORES.SEEN_EVENTS, 'readonly');
+      const store = transaction.objectStore(STORES.SEEN_EVENTS);
+      const request = store.getAllKeys();
+      request.onsuccess = () => {
+        const keys = (request.result ?? []) as IDBValidKey[];
+        resolve(new Set(keys.map(k => String(k))));
+      };
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  /**
+   * Delete seen-event records older than the given timestamp (ms since epoch).
+   * Returns the number of deleted records.
+   */
+  async pruneSeenEvents(olderThanMs: number): Promise<number> {
+    const db = this.getAccountDb();
+    if (!db) return 0;
+
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORES.SEEN_EVENTS, 'readwrite');
+      const store = transaction.objectStore(STORES.SEEN_EVENTS);
+      const index = store.index('by-seen-at');
+      const range = IDBKeyRange.upperBound(olderThanMs, true);
+      let deleted = 0;
+      const request = index.openCursor(range);
+      request.onsuccess = () => {
+        const cursor = request.result;
+        if (cursor) {
+          cursor.delete();
+          deleted++;
+          cursor.continue();
+        }
+      };
+      request.onerror = () => reject(request.error);
+      transaction.oncomplete = () => resolve(deleted);
+      transaction.onerror = () => reject(transaction.error);
+    });
+  }
+
+  /**
+   * Clear all seen-event records.
+   */
+  async clearSeenEvents(): Promise<void> {
+    const db = this.getAccountDb();
+    if (!db) return;
+    await this.clearStoreInDb(db, STORES.SEEN_EVENTS);
   }
 
   // ============================================================================

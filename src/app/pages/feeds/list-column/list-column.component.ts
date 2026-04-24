@@ -21,6 +21,7 @@ import { SharedRelayService } from '../../../services/relays/shared-relay';
 import { AccountRelayService } from '../../../services/relays/account-relay';
 import { DatabaseService } from '../../../services/database.service';
 import { TrustService } from '../../../services/trust.service';
+import { SeenEventsService } from '../../../services/seen-events.service';
 import { Event } from 'nostr-tools';
 
 const PAGE_SIZE = 10;
@@ -128,6 +129,7 @@ export class ListColumnComponent implements OnDestroy {
   private accountRelay = inject(AccountRelayService);
   private database = inject(DatabaseService);
   private trustService = inject(TrustService);
+  private seenEvents = inject(SeenEventsService);
 
   // Input for the list data
   listData = input<ListFeedData | null>(null);
@@ -169,6 +171,7 @@ export class ListColumnComponent implements OnDestroy {
   filterKinds = input<number[]>([]);
 
   hideWordle = input(true);
+  hideSeen = input(false);
   wotMinRank = input<number | undefined>(undefined);
 
   // State
@@ -190,11 +193,19 @@ export class ListColumnComponent implements OnDestroy {
     const showReposts = this.showReposts();
     const filterKinds = this.filterKinds();
     const hideWordle = this.hideWordle();
+    const hideSeen = this.hideSeen();
     const wotMinRank = this.wotMinRank();
+    // Track the seen-events snapshot so newly loaded seen IDs invalidate the filter
+    const seenVersion = this.seenEvents.snapshotVersion();
+    void seenVersion;
 
     return events.filter(event => {
       // Filter by kinds if specified
       if (filterKinds.length > 0 && !filterKinds.includes(event.kind)) {
+        return false;
+      }
+
+      if (hideSeen && this.seenEvents.isSeenInSnapshot(event.id)) {
         return false;
       }
 
@@ -356,18 +367,39 @@ export class ListColumnComponent implements OnDestroy {
   }
 
   /**
-   * Load events from local database for the given pubkeys
+   * Load events from local database for the given pubkeys.
+   *
+   * Issues one `getRecentEventsByPubkeysAndKind` call per kind (each opens a
+   * single cursor-backed transaction on the account DB) so we walk the
+   * `[pubkey, kind, created_at]` index newest-first and short-circuit at the
+   * per-kind limit. Falls back to a simple per-kind `getEventsByPubkeyAndKind`
+   * if the cursor API rejects so we always return something.
    */
   private async loadEventsFromDatabase(pubkeys: string[]): Promise<Event[]> {
-    const allCachedEvents: Event[] = [];
     const kinds = this.getQueryKinds();
+    if (pubkeys.length === 0 || kinds.length === 0) {
+      return [];
+    }
+
+    const perKindLimit = Math.max(100, pubkeys.length * 15);
+    const allCachedEvents: Event[] = [];
 
     for (const kind of kinds) {
       try {
-        const events = await this.database.getEventsByPubkeyAndKind(pubkeys, kind);
+        const events = await this.database.getRecentEventsByPubkeysAndKind(
+          pubkeys,
+          kind,
+          { limit: perKindLimit }
+        );
         allCachedEvents.push(...events);
       } catch (err) {
-        this.logger.debug(`[ListColumn] Failed to load kind ${kind} from database:`, err);
+        this.logger.debug(`[ListColumn] Cursor load for kind ${kind} failed, falling back:`, err);
+        try {
+          const events = await this.database.getEventsByPubkeyAndKind(pubkeys, kind);
+          allCachedEvents.push(...events);
+        } catch (fallbackErr) {
+          this.logger.debug(`[ListColumn] Fallback load for kind ${kind} failed:`, fallbackErr);
+        }
       }
     }
 

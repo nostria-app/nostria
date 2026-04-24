@@ -98,6 +98,7 @@ import { CustomDialogService } from './services/custom-dialog.service';
 import { SpeechService } from './services/speech.service';
 import { CommandPaletteDialogComponent } from './components/command-palette-dialog/command-palette-dialog.component';
 import { DatabaseService } from './services/database.service';
+import { SeenEventsService } from './services/seen-events.service';
 import { MetricsTrackingService } from './services/metrics-tracking.service';
 import { AnalyticsService } from './services/analytics.service';
 import { FollowingBackupService } from './services/following-backup.service';
@@ -239,6 +240,7 @@ export class App implements OnInit, OnDestroy {
   ai = inject(AiService);
   customDialog = inject(CustomDialogService);
   database = inject(DatabaseService);
+  private readonly seenEvents = inject(SeenEventsService);
   protected readonly wallets = inject(Wallets);
   private readonly nwcService = inject(NwcService);
   private readonly platform = inject(PLATFORM_ID);
@@ -1210,15 +1212,19 @@ export class App implements OnInit, OnDestroy {
           const account = JSON.parse(accountJson);
           if (account?.pubkey) {
             await this.database.initAccount(account.pubkey);
+            await this.seenEvents.loadSnapshot();
           } else {
             await this.database.initAnonymous();
+            this.seenEvents.reset();
           }
         } else {
           await this.database.initAnonymous();
+          this.seenEvents.reset();
         }
       } catch (accountDbError) {
         this.logger.warn('[App] Failed to open per-account database, continuing in anonymous mode', accountDbError);
         await this.database.initAnonymous();
+        this.seenEvents.reset();
       }
 
       // Persist relay statistics that were added during initialization
