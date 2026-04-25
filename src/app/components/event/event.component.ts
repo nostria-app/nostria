@@ -77,6 +77,7 @@ import { SocialPreviewComponent } from '../social-preview/social-preview.compone
 import { MediaPreviewDialogComponent } from '../media-preview-dialog/media-preview.component';
 import { InlineVideoPlayerComponent } from '../inline-video-player/inline-video-player.component';
 import { HapticsService } from '../../services/haptics.service';
+import { SatDisplayService } from '../../services/sat-display.service';
 import { resolveClientLogo } from '../../utils/client-logo-map';
 import { visualContentLength } from '../../utils/visual-content-length';
 import { getRuntimeResourceProfile } from '../../utils/runtime-resource-profile';
@@ -287,6 +288,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   private readonly logger = inject(LoggerService);
   private readonly accountLocalState = inject(AccountLocalStateService);
   private readonly haptics = inject(HapticsService);
+  private readonly satDisplay = inject(SatDisplayService);
   private readonly platformId = inject(PLATFORM_ID);
   private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
   reactions = signal<ReactionEvents>({ events: [], data: new Map() });
@@ -3247,13 +3249,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   }
 
   formatZapAmount(amount: number): string {
-    if (amount >= 1000000) {
-      return `${(amount / 1000000).toFixed(1)}M`;
-    }
-    if (amount >= 1000) {
-      return `${(amount / 1000).toFixed(1)}K`;
-    }
-    return amount.toLocaleString();
+    return this.satDisplay.getDisplayValueFromSats(amount, { showUnit: false, compact: true }).value;
   }
 
   openReactionsDialog(selectedTab: 'likes' | 'zaps' | 'reposts' | 'quotes' = 'likes') {

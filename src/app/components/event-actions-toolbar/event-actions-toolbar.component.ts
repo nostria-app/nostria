@@ -17,6 +17,7 @@ import { AccountStateService } from '../../services/account-state.service';
 import { AccountLocalStateService } from '../../services/account-local-state.service';
 import { ReactionService } from '../../services/reaction.service';
 import { LayoutService } from '../../services/layout.service';
+import { SatDisplayService } from '../../services/sat-display.service';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -108,6 +109,7 @@ export class EventActionsToolbarComponent {
   private accountLocalState = inject(AccountLocalStateService);
   private reactionService = inject(ReactionService);
   private layout = inject(LayoutService);
+  private satDisplay = inject(SatDisplayService);
 
   // Display mode for action buttons: 'labels-only', 'icons-and-labels', 'icons-only'
   actionsDisplayMode = computed<string>(() => {
@@ -577,13 +579,7 @@ export class EventActionsToolbarComponent {
   }
 
   formatZapAmount(sats: number): string {
-    if (sats >= 1000000) {
-      return (sats / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
-    }
-    if (sats >= 1000) {
-      return (sats / 1000).toFixed(1).replace(/\.0$/, '') + 'k';
-    }
-    return sats.toString();
+    return this.satDisplay.getDisplayValueFromSats(sats, { showUnit: false, compact: true }).value;
   }
 
   toggleReactionsSummary(tab: 'reactions' | 'reposts' | 'quotes' | 'zaps' = 'reactions'): void {

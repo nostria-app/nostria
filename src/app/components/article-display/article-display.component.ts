@@ -58,6 +58,7 @@ import { MediaPreviewDialogComponent } from '../media-preview-dialog/media-previ
 import { MusicEmbedComponent } from '../music-embed/music-embed.component';
 import { EventComponent as NostrEventComponent } from '../event/event.component';
 import { ReferencedEventService } from '../../services/referenced-event.service';
+import { SatDisplayService } from '../../services/sat-display.service';
 
 type ArticleEmbedState = 'loading' | 'loaded' | 'failed';
 
@@ -243,6 +244,7 @@ export class ArticleDisplayComponent implements OnDestroy {
   private referencedEventService = inject(ReferencedEventService);
   private userRelaysService = inject(UserRelaysService);
   private accountLocalState = inject(AccountLocalStateService);
+  private satDisplay = inject(SatDisplayService);
   private environmentInjector = inject(EnvironmentInjector);
   private appRef = inject(ApplicationRef);
 
@@ -897,13 +899,7 @@ export class ArticleDisplayComponent implements OnDestroy {
    * Format zap amount for display (e.g., 1000 -> "1k", 1500000 -> "1.5M")
    */
   formatZapAmount(sats: number): string {
-    if (sats >= 1000000) {
-      return (sats / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
-    }
-    if (sats >= 1000) {
-      return (sats / 1000).toFixed(1).replace(/\.0$/, '') + 'k';
-    }
-    return sats.toString();
+    return this.satDisplay.getDisplayValueFromSats(sats, { showUnit: false, compact: true }).value;
   }
 
   /**
