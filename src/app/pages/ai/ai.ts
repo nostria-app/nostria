@@ -11,7 +11,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { SafeHtml } from '@angular/platform-browser';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { AiChatMessage, AiCloudAccessMode, AiCloudProvider, AiGeneratedAudio, AiGeneratedImage, AiGeneratedVideo, AiGenerationProgress, AiImageGenerationOptions, AiModelLoadOptions, AiMultimodalChatMessage, AiMultimodalChatPart, AiService, AiVideoGenerationOptions } from '../../services/ai.service';
+import { AiChatMessage, AiCloudAccessMode, AiCloudProvider, AiGeneratedAudio, AiGeneratedImage, AiGeneratedVideo, AiGenerationProgress, AiImageGenerationOptions, AiModelLoadOptions, AiMultimodalChatMessage, AiMultimodalChatPart, AiService, AiVideoGenerationOptions, AiVideoGenerationProgress } from '../../services/ai.service';
 import { AiChatHistoryService, AiHistoryGeneratedAudio, AiHistoryGeneratedImage, AiHistoryGeneratedVideo } from '../../services/ai-chat-history.service';
 import { AiInfoDialogComponent, type AiInfoDialogResult } from '../../components/ai-info-dialog/ai-info-dialog.component';
 import type { ArticleEditorDialogInitialDraft } from '../../components/article-editor-dialog/article-editor-dialog.component';
@@ -540,7 +540,6 @@ export class AiComponent {
     { value: '9:19.5', label: '9:19.5' },
     { value: '20:9', label: '20:9' },
     { value: '9:20', label: '9:20' },
-    { value: 'auto', label: 'Auto' },
   ];
   readonly xAiVideoDurationOptions: ChoiceOption[] = Array.from({ length: 15 }, (_, index) => ({
     value: String(index + 1),
@@ -702,6 +701,8 @@ export class AiComponent {
   readonly xAiVideoMode = signal<'generate' | 'extend-video'>('generate');
   readonly activeVideoOperation = signal<'generate' | 'animate' | 'reference' | 'edit' | 'extend' | null>(null);
   readonly activeVideoStartedAt = signal<number | null>(null);
+  readonly activeVideoStatus = signal<AiVideoGenerationProgress['status'] | null>(null);
+  readonly activeVideoProgress = signal<number | null>(null);
   readonly statusClock = signal(Date.now());
   readonly chatError = signal('');
   readonly workerProcessingState = this.aiService.processingState;
@@ -714,10 +715,16 @@ export class AiComponent {
 
     return null;
   });
+  readonly activeProcessingProgress = computed(() => this.activeModelProgress() ?? this.activeVideoProgress());
   readonly processingStatusLabel = computed(() => {
     const model = this.selectedModel();
     if (model?.loading) {
       return model.cached ? `Loading ${model.name}...` : `Downloading ${model.name}...`;
+    }
+
+    const videoStatus = this.activeVideoStatus();
+    if (videoStatus) {
+      return `Grok video ${videoStatus}`;
     }
 
     switch (this.activeVideoOperation()) {
@@ -758,7 +765,10 @@ export class AiComponent {
 
     const elapsed = this.activeVideoElapsedLabel();
     const prefix = elapsed ? `${elapsed} elapsed` : 'Working';
-    return `${prefix}. xAI video jobs are asynchronous and can take several minutes.`;
+    const status = this.activeVideoStatus();
+    const progress = this.activeVideoProgress();
+    const statusText = status ? ` Status: ${status}${progress === null ? '' : ` ${progress}%`}.` : '';
+    return `${prefix}.${statusText} xAI video jobs are asynchronous and can take several minutes.`;
   });
   readonly hasInlineStreamingIndicator = computed(() => this.conversation().some(
     message => message.role === 'assistant'
@@ -2813,8 +2823,12 @@ export class AiComponent {
     this.beginVideoOperation(this.resolveVideoOperation(videoOptions));
 
     try {
-      const videos = await this.aiService.generateVideo(prompt, videoOptions);
-      const cachedVideos = await Promise.all(videos.map(video => this.cacheGeneratedVideo(video)));
+      const videos = await this.aiService.generateVideo(
+        prompt,
+        videoOptions,
+        progress => this.updateVideoGenerationProgress(progress),
+      );
+      const displayVideos = videos.map(video => this.prepareGeneratedVideo(video));
 
       this.conversation.update(messages => messages.map(message => {
         if (message.id !== assistantMessageId) {
@@ -2825,11 +2839,10 @@ export class AiComponent {
           ...message,
           content: '',
           streaming: false,
-          generatedVideos: cachedVideos,
+          generatedVideos: displayVideos,
         };
       }));
       this.persistCurrentConversation();
-      this.queueGeneratedVideoCacheBackfill(cachedVideos);
     } catch (err) {
       if (this.aiService.isAbortError(err)) {
         this.finalizeStoppedGeneration(assistantMessageId);
@@ -3029,12 +3042,29 @@ export class AiComponent {
   private beginVideoOperation(operation: 'generate' | 'animate' | 'reference' | 'edit' | 'extend'): void {
     this.activeVideoOperation.set(operation);
     this.activeVideoStartedAt.set(Date.now());
+    this.activeVideoStatus.set(null);
+    this.activeVideoProgress.set(null);
     this.statusClock.set(Date.now());
   }
 
   private endVideoOperation(): void {
     this.activeVideoOperation.set(null);
     this.activeVideoStartedAt.set(null);
+    this.activeVideoStatus.set(null);
+    this.activeVideoProgress.set(null);
+  }
+
+  private updateVideoGenerationProgress(progress: AiVideoGenerationProgress): void {
+    this.activeVideoStatus.set(progress.status);
+    this.activeVideoProgress.set(typeof progress.progress === 'number' ? progress.progress : null);
+  }
+
+  private prepareGeneratedVideo(video: AiGeneratedVideo): AiGeneratedVideo {
+    return {
+      ...video,
+      originalUrl: video.originalUrl || video.src,
+      mimeType: video.mimeType || 'video/mp4',
+    };
   }
 
   private async cacheGeneratedImage(

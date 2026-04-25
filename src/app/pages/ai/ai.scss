@@ -1316,6 +1316,11 @@
   animation: ai-processing-rail 1.2s ease-in-out infinite;
 }
 
+.composer-processing-rail-bar-determinate {
+  animation: none;
+  transform: none;
+}
+
 .composer-processing-copy {
   display: flex;
   flex-direction: column;

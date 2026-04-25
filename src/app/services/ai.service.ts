@@ -42,6 +42,11 @@ export interface AiImageGenerationProgress {
   progress: number;
 }
 
+export interface AiVideoGenerationProgress {
+  status: 'pending' | 'done' | 'failed' | 'expired';
+  progress?: number;
+}
+
 export type AiCloudProvider = 'openai' | 'xai';
 export type AiCloudAccessMode = 'api-key' | 'hosted';
 export type AiImageProvider = AiCloudProvider | 'local';
@@ -194,6 +199,7 @@ interface AiVideoGenerationStartPayload {
 
 interface AiVideoGenerationStatusPayload {
   status?: 'pending' | 'done' | 'failed' | 'expired';
+  progress?: number;
   model?: string;
   usage?: {
     cost_in_usd_ticks?: number;
@@ -827,7 +833,11 @@ export class AiService {
       : this.generateXAiImage(trimmedPrompt, options);
   }
 
-  async generateVideo(prompt: string, options?: AiVideoGenerationOptions): Promise<AiGeneratedVideo[]> {
+  async generateVideo(
+    prompt: string,
+    options?: AiVideoGenerationOptions,
+    progressCallback?: (data: AiVideoGenerationProgress) => void,
+  ): Promise<AiGeneratedVideo[]> {
     const apiKey = this.cloudSettings().xaiApiKey;
     if (!apiKey) {
       throw new Error('xAI API key is missing.');
@@ -838,7 +848,7 @@ export class AiService {
       throw new Error('Video prompt cannot be empty.');
     }
 
-    return this.generateXAiVideo(trimmedPrompt, options);
+    return this.generateXAiVideo(trimmedPrompt, options, progressCallback);
   }
 
   async generateVoice(prompt: string, provider: AiCloudProvider | 'local' = 'xai', model = this.speechModelId): Promise<AiGeneratedAudio[]> {
@@ -1296,7 +1306,11 @@ export class AiService {
     };
   }
 
-  private async generateXAiVideo(prompt: string, options?: AiVideoGenerationOptions): Promise<AiGeneratedVideo[]> {
+  private async generateXAiVideo(
+    prompt: string,
+    options?: AiVideoGenerationOptions,
+    progressCallback?: (data: AiVideoGenerationProgress) => void,
+  ): Promise<AiGeneratedVideo[]> {
     const apiKey = this.cloudSettings().xaiApiKey;
     if (!apiKey) {
       throw new Error('xAI API key is missing.');
@@ -1332,7 +1346,7 @@ export class AiService {
         throw new Error('The xAI video API did not return a request id.');
       }
 
-      const statusPayload = await this.pollXAiVideoGeneration(requestId, apiKey, controller.signal);
+      const statusPayload = await this.pollXAiVideoGeneration(requestId, apiKey, controller.signal, progressCallback);
       const videoUrl = statusPayload.video?.url?.trim();
       if (!videoUrl) {
         throw new Error('The xAI video API completed without returning a video URL.');
@@ -1497,6 +1511,7 @@ export class AiService {
     requestId: string,
     apiKey: string,
     signal: AbortSignal,
+    progressCallback?: (data: AiVideoGenerationProgress) => void,
   ): Promise<AiVideoGenerationStatusPayload> {
     while (true) {
       const response = await fetch(`https://api.x.ai/v1/videos/${encodeURIComponent(requestId)}`, {
@@ -1511,6 +1526,8 @@ export class AiService {
         throw new Error(this.buildVideoErrorMessage(payload, `Video status check failed with status ${response.status}.`));
       }
 
+      this.reportXAiVideoProgress(payload, progressCallback);
+
       switch (payload.status) {
         case 'done':
           return payload;
@@ -1524,6 +1541,26 @@ export class AiService {
           break;
       }
     }
+  }
+
+  private reportXAiVideoProgress(
+    payload: AiVideoGenerationStatusPayload,
+    progressCallback?: (data: AiVideoGenerationProgress) => void,
+  ): void {
+    if (!progressCallback || !payload.status) {
+      return;
+    }
+
+    const progress = typeof payload.progress === 'number' && Number.isFinite(payload.progress)
+      ? Math.max(0, Math.min(100, Math.round(payload.progress)))
+      : payload.status === 'done'
+        ? 100
+        : undefined;
+
+    progressCallback({
+      status: payload.status,
+      progress,
+    });
   }
 
   private waitForVideoPollInterval(signal: AbortSignal, delayMs: number): Promise<void> {

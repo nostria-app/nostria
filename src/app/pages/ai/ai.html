@@ -374,8 +374,8 @@
               <div class="stream-placeholder-hint">{{ videoProcessingHint() }}</div>
               }
             </div>
-            @if (activeModelProgress() !== null) {
-            <span class="stream-progress">{{ activeModelProgress() }}%</span>
+            @if (activeProcessingProgress() !== null) {
+            <span class="stream-progress">{{ activeProcessingProgress() }}%</span>
             }
           </div>
           }
@@ -424,12 +424,14 @@
           <div class="composer-processing-hint">{{ videoProcessingHint() }}</div>
           }
         </div>
-        @if (activeModelProgress() !== null) {
-        <span class="composer-processing-progress">{{ activeModelProgress() }}%</span>
+        @if (activeProcessingProgress() !== null) {
+        <span class="composer-processing-progress">{{ activeProcessingProgress() }}%</span>
         }
       </div>
       <div class="composer-processing-rail" aria-hidden="true">
-        <span class="composer-processing-rail-bar"></span>
+        <span class="composer-processing-rail-bar"
+          [class.composer-processing-rail-bar-determinate]="activeProcessingProgress() !== null"
+          [style.width.%]="activeProcessingProgress() ?? null"></span>
       </div>
       }
 
