@@ -359,32 +359,34 @@
   .material-custom-dialog-panel {
     --material-custom-dialog-width: 100vw;
     --material-custom-dialog-min-height: 0;
-    --material-custom-dialog-max-height: 100dvh;
+    --material-custom-dialog-max-height: calc(100dvh - var(--safe-area-top, 0px));
 
     .cdk-global-overlay-wrapper:has(&) {
       align-items: stretch !important;
-      padding: 0 !important;
+      box-sizing: border-box;
+      padding: var(--safe-area-top, 0px) 0 0 !important;
     }
   }
 
   .cdk-global-overlay-wrapper:has(.material-custom-dialog-panel) {
     align-items: stretch !important;
-    padding: 0 !important;
+    box-sizing: border-box;
+    padding: var(--safe-area-top, 0px) 0 0 !important;
   }
 
   .material-custom-dialog-panel.cdk-overlay-pane {
     width: 100vw !important;
     max-width: 100vw !important;
-    height: 100dvh !important;
-    max-height: 100dvh !important;
+    height: calc(100dvh - var(--safe-area-top, 0px)) !important;
+    max-height: calc(100dvh - var(--safe-area-top, 0px)) !important;
   }
 
   .material-custom-dialog-panel {
     .mat-mdc-dialog-container {
       width: 100vw !important;
       max-width: 100vw !important;
-      height: 100dvh !important;
-      max-height: 100dvh !important;
+      height: calc(100dvh - var(--safe-area-top, 0px)) !important;
+      max-height: calc(100dvh - var(--safe-area-top, 0px)) !important;
     }
 
     .mat-mdc-dialog-inner-container {
@@ -438,7 +440,7 @@
 
     .dialog-actions {
       flex-shrink: 0;
-      padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px));
+      padding: 12px 16px calc(12px + var(--safe-area-bottom, 0px));
     }
 
     .dialog-actions button {
@@ -453,7 +455,7 @@
     }
 
     app-material-custom-dialog.note-editor-shell .dialog-actions {
-      padding: 10px 10px calc(10px + env(safe-area-inset-bottom, 0px));
+      padding: 10px 10px calc(10px + var(--safe-area-bottom, 0px));
     }
 
     app-material-custom-dialog.note-editor-shell .dialog-content>.note-editor-dialog {
