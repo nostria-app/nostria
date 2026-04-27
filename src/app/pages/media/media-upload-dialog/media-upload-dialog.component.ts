@@ -3,7 +3,7 @@ import { Component, computed, inject, OnDestroy, signal, ViewChild, ChangeDetect
 import { MatButtonModule } from '@angular/material/button';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatCheckboxModule } from '@angular/material/checkbox';
-import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
+import { MatDialogRef } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
@@ -12,7 +12,7 @@ import { MatMenuModule, MatMenuTrigger } from '@angular/material/menu';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MediaService } from '../../../services/media.service';
 import { LoggerService } from '../../../services/logger.service';
-import { CustomDialogService } from '../../../services/custom-dialog.service';
+import { CustomDialogRef, CustomDialogService } from '../../../services/custom-dialog.service';
 import {
   DEFAULT_MEDIA_UPLOAD_SETTINGS,
   getMediaOptimizationDescription,
@@ -47,7 +47,6 @@ interface SelectedFileEntry {
     MatButtonModule,
     MatButtonToggleModule,
     MatCheckboxModule,
-    MatDialogModule,
     MatIconModule,
     MatInputModule,
     MatProgressBarModule,
@@ -59,7 +58,14 @@ interface SelectedFileEntry {
   styleUrls: ['./media-upload-dialog.component.scss'],
 })
 export class MediaUploadDialogComponent implements OnDestroy {
-  private dialogRef = inject(MatDialogRef<MediaUploadDialogComponent, MediaUploadDialogResult | undefined>);
+  private readonly customDialogRef = inject(
+    CustomDialogRef<MediaUploadDialogComponent, MediaUploadDialogResult | undefined>,
+    { optional: true }
+  );
+  private readonly materialDialogRef = inject(
+    MatDialogRef<MediaUploadDialogComponent, MediaUploadDialogResult | undefined>,
+    { optional: true }
+  );
   private mediaService = inject(MediaService);
   private readonly logger = inject(LoggerService);
   private readonly customDialog = inject(CustomDialogService);
@@ -351,7 +357,7 @@ export class MediaUploadDialogComponent implements OnDestroy {
   onSubmit(): void {
     if (this.hasFiles()) {
       this.isUploading.set(true);
-      this.dialogRef.close({
+      this.closeDialog({
         files: this.selectedFiles().map(e => e.file),
         uploadSettings: this.getCurrentUploadSettings(),
         fileUploadSettings: this.selectedFiles().map(entry => ({
@@ -365,7 +371,7 @@ export class MediaUploadDialogComponent implements OnDestroy {
   }
 
   cancel(): void {
-    this.dialogRef.close();
+    this.closeDialog();
   }
 
   getFileTypeIcon(file: File): string {
@@ -478,6 +484,11 @@ export class MediaUploadDialogComponent implements OnDestroy {
     if (url?.startsWith('blob:')) {
       URL.revokeObjectURL(url);
     }
+  }
+
+  private closeDialog(result?: MediaUploadDialogResult): void {
+    this.customDialogRef?.close(result);
+    this.materialDialogRef?.close(result);
   }
 
   // Drag and drop handlers

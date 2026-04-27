@@ -1,5 +1,4 @@
-<h2 mat-dialog-title>Upload Media</h2>
-<mat-dialog-content>
+<div dialog-content>
   <div class="upload-container" (dragover)="onDragOver($event)" (dragleave)="onDragLeave($event)"
     (drop)="onDrop($event)">
     @if (!hasFiles()) {
@@ -122,8 +121,8 @@
     </button>
     }
   </mat-menu>
-</mat-dialog-content>
-<mat-dialog-actions align="end">
+</div>
+<div dialog-actions>
   <button mat-button (click)="cancel()" [disabled]="isUploading()">Cancel</button>
   <button mat-flat-button [disabled]="
       !hasFiles() || isUploading() || (showServerSelection() && selectedServers().length === 0)
@@ -137,4 +136,4 @@
     <span>Upload{{ selectedFiles().length > 1 ? ' ' + selectedFiles().length + ' files' : '' }}</span>
     }
   </button>
-</mat-dialog-actions>
+</div>

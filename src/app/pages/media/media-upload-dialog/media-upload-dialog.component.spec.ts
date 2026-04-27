@@ -36,6 +36,7 @@ describe('MediaUploadDialogComponent', () => {
     const file = new File(['video'], 'clip.mp4', { type: 'video/mp4' });
 
     component.selectedFiles.set([{
+      id: 'video-1',
       file,
       previewUrl: null,
       isImage: false,
@@ -54,6 +55,7 @@ describe('MediaUploadDialogComponent', () => {
     const file = new File(['video'], 'clip.mp4', { type: 'video/mp4' });
 
     component.selectedFiles.set([{
+      id: 'video-1',
       file,
       previewUrl: null,
       isImage: false,

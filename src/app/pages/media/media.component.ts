@@ -451,13 +451,17 @@ export class MediaComponent {
 
   // Open dialogs
   openUploadDialog(): void {
-    const dialogRef = this.dialog.open(MediaUploadDialogComponent, {
-      width: '500px',
-      panelClass: 'responsive-dialog',
-      disableClose: true,
-    });
+    const dialogRef = this.customDialog.open<MediaUploadDialogComponent, MediaUploadDialogResult>(
+      MediaUploadDialogComponent,
+      {
+        title: 'Upload Media',
+        width: '500px',
+        maxWidth: '95vw',
+        disableClose: true,
+      }
+    );
 
-    dialogRef.afterClosed().subscribe(async (result: MediaUploadDialogResult | undefined) => {
+    dialogRef.afterClosed$.subscribe(async ({ result }) => {
       if (result && result.files && result.files.length > 0) {
         try {
           this.mediaService.uploading.set(true);
