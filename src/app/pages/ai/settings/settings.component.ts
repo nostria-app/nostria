@@ -101,6 +101,22 @@ export class AiSettingsComponent implements OnInit, OnDestroy {
     { value: '1k', label: '1k' },
     { value: '2k', label: '2k' },
   ];
+  readonly openAiImageSizeOptions: ChoiceOption[] = [
+    { value: 'auto', label: 'Auto' },
+    { value: '1024x1024', label: '1024x1024 Square' },
+    { value: '1536x1024', label: '1536x1024 Landscape' },
+    { value: '1024x1536', label: '1024x1536 Portrait' },
+    { value: '2048x2048', label: '2048x2048 2K Square' },
+    { value: '2048x1152', label: '2048x1152 2K Landscape' },
+    { value: '3840x2160', label: '3840x2160 4K Landscape' },
+    { value: '2160x3840', label: '2160x3840 4K Portrait' },
+  ];
+  readonly openAiImageQualityOptions: ChoiceOption[] = [
+    { value: 'auto', label: 'Auto' },
+    { value: 'low', label: 'Low' },
+    { value: 'medium', label: 'Medium' },
+    { value: 'high', label: 'High' },
+  ];
   readonly xAiImageCountOptions: ChoiceOption[] = Array.from({ length: 10 }, (_, index) => ({
     value: String(index + 1),
     label: String(index + 1),
@@ -367,6 +383,18 @@ export class AiSettingsComponent implements OnInit, OnDestroy {
     }
 
     this.aiService.updateCloudSettings({ xaiImageModel: model });
+  }
+
+  updateOpenAiImageSize(size: string): void {
+    this.aiService.updateCloudSettings({ openaiImageSize: size });
+  }
+
+  updateOpenAiImageQuality(quality: string): void {
+    this.aiService.updateCloudSettings({ openaiImageQuality: quality });
+  }
+
+  updateOpenAiImageCount(count: string | number): void {
+    this.aiService.updateCloudSettings({ openaiImageCount: Number(count) });
   }
 
   updateXAiImageAspectRatio(aspectRatio: string): void {

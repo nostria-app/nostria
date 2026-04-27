@@ -541,6 +541,22 @@ export class AiComponent {
     { value: '20:9', label: '20:9' },
     { value: '9:20', label: '9:20' },
   ];
+  readonly openAiImageSizeOptions: ChoiceOption[] = [
+    { value: 'auto', label: 'Auto' },
+    { value: '1024x1024', label: '1024 square' },
+    { value: '1536x1024', label: 'Landscape' },
+    { value: '1024x1536', label: 'Portrait' },
+    { value: '2048x2048', label: '2K square' },
+    { value: '2048x1152', label: '2K landscape' },
+    { value: '3840x2160', label: '4K landscape' },
+    { value: '2160x3840', label: '4K portrait' },
+  ];
+  readonly openAiImageQualityOptions: ChoiceOption[] = [
+    { value: 'auto', label: 'Auto' },
+    { value: 'low', label: 'Low' },
+    { value: 'medium', label: 'Medium' },
+    { value: 'high', label: 'High' },
+  ];
   readonly xAiVideoDurationOptions: ChoiceOption[] = Array.from({ length: 15 }, (_, index) => ({
     value: String(index + 1),
     label: `${index + 1}s`,
@@ -593,6 +609,7 @@ export class AiComponent {
   readonly selectedModelId = signal(this.webGpuAvailable ? 'onnx-community/gemma-4-E2B-it-ONNX' : 'Xenova/distilgpt2');
   readonly selectedModel = computed(() => this.composerModels().find(model => model.id === this.selectedModelId()) ?? null);
   readonly isXAiTextMode = computed(() => this.selectedModel()?.provider === 'xai' && this.selectedModel()?.source === 'cloud' && this.selectedModel()?.task === 'text-generation');
+  readonly isOpenAiImageGenerationMode = computed(() => this.selectedModel()?.provider === 'openai' && this.selectedModel()?.source === 'cloud' && this.selectedModel()?.task === 'image-generation');
   readonly isImageGenerationMode = computed(() => this.selectedModel()?.task === 'image-generation');
   readonly isImageUpscalingMode = computed(() => this.selectedModel()?.task === 'image-upscaling');
   readonly isVideoGenerationMode = computed(() => this.selectedModel()?.task === 'video-generation');
@@ -612,6 +629,12 @@ export class AiComponent {
     return `${count} image${count === 1 ? '' : 's'}`;
   });
   readonly xAiImageAspectRatioLabel = computed(() => this.aiService.cloudSettings().xaiImageAspectRatio || 'Auto');
+  readonly openAiImageCountLabel = computed(() => {
+    const count = this.aiService.cloudSettings().openaiImageCount;
+    return `${count} image${count === 1 ? '' : 's'}`;
+  });
+  readonly openAiImageSizeLabel = computed(() => this.openAiImageSizeOptions.find(option => option.value === this.aiService.cloudSettings().openaiImageSize)?.label ?? this.aiService.cloudSettings().openaiImageSize);
+  readonly openAiImageQualityLabel = computed(() => this.openAiImageQualityOptions.find(option => option.value === this.aiService.cloudSettings().openaiImageQuality)?.label ?? 'Auto');
   readonly xAiVideoAspectRatioLabel = computed(() => this.aiService.cloudSettings().xaiVideoAspectRatio || 'Auto');
   readonly xAiVideoDurationLabel = computed(() => `${this.aiService.cloudSettings().xaiVideoDuration}s`);
   readonly xAiVoiceLabel = computed(() => this.xAiVoiceOptions.find(option => option.value === this.aiService.cloudSettings().xaiVoiceId)?.label ?? 'Eve');
@@ -1103,6 +1126,18 @@ export class AiComponent {
 
   setXAiImageGenerationMode(mode: 'speed' | 'quality'): void {
     this.updateXAiImageResolution(mode === 'quality' ? '2k' : '1k');
+  }
+
+  updateOpenAiImageCount(value: string | number): void {
+    this.aiService.updateCloudSettings({ openaiImageCount: this.parsePositiveInt(value, this.aiService.cloudSettings().openaiImageCount) });
+  }
+
+  updateOpenAiImageSize(value: string): void {
+    this.aiService.updateCloudSettings({ openaiImageSize: value.trim() || this.aiService.cloudSettings().openaiImageSize });
+  }
+
+  updateOpenAiImageQuality(value: string): void {
+    this.aiService.updateCloudSettings({ openaiImageQuality: value.trim() || this.aiService.cloudSettings().openaiImageQuality });
   }
 
   updateXAiImageAspectRatio(value: string): void {
@@ -1697,6 +1732,15 @@ export class AiComponent {
         }
       } else {
         nextSettings['openaiImageModel'] = image.imageSettings?.model || image.model;
+        if (image.imageSettings?.openaiImageSize) {
+          nextSettings['openaiImageSize'] = image.imageSettings.openaiImageSize;
+        }
+        if (image.imageSettings?.openaiImageQuality) {
+          nextSettings['openaiImageQuality'] = image.imageSettings.openaiImageQuality;
+        }
+        if (image.imageSettings?.openaiImageCount) {
+          nextSettings['openaiImageCount'] = image.imageSettings.openaiImageCount;
+        }
       }
 
       this.aiService.updateCloudSettings(nextSettings);

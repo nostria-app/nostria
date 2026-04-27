@@ -60,6 +60,9 @@ export interface AiImageGenerationOptions {
 export interface AiGeneratedImageSettings {
   provider: AiImageProvider;
   model: string;
+  openaiImageSize?: string;
+  openaiImageQuality?: string;
+  openaiImageCount?: number;
   xaiImageAspectRatio?: string;
   xaiImageResolution?: string;
   xaiImageCount?: number;
@@ -93,6 +96,9 @@ export interface AiCloudSettings {
   openaiChatModel: string;
   xaiChatModel: string;
   openaiImageModel: string;
+  openaiImageSize: string;
+  openaiImageQuality: string;
+  openaiImageCount: number;
   xaiImageModel: string;
   xaiImageAspectRatio: string;
   xaiImageResolution: string;
@@ -247,7 +253,10 @@ export class AiService {
     preferredImageProvider: 'xai',
     openaiChatModel: 'gpt-4.1-mini',
     xaiChatModel: 'grok-4-1-fast-reasoning',
-    openaiImageModel: 'gpt-image-1',
+    openaiImageModel: 'gpt-image-2',
+    openaiImageSize: 'auto',
+    openaiImageQuality: 'auto',
+    openaiImageCount: 1,
     xaiImageModel: 'grok-imagine-image',
     xaiImageAspectRatio: '1:1',
     xaiImageResolution: '1k',
@@ -1109,6 +1118,9 @@ export class AiService {
       openaiChatModel: settings.openaiChatModel?.trim() || this.defaultCloudSettings.openaiChatModel,
       xaiChatModel: settings.xaiChatModel?.trim() || this.defaultCloudSettings.xaiChatModel,
       openaiImageModel: settings.openaiImageModel?.trim() || this.defaultCloudSettings.openaiImageModel,
+      openaiImageSize: this.normalizeOpenAiImageSize(settings.openaiImageSize),
+      openaiImageQuality: this.normalizeChoiceSetting(settings.openaiImageQuality, this.defaultCloudSettings.openaiImageQuality, ['auto', 'low', 'medium', 'high']),
+      openaiImageCount: this.normalizeIntegerSetting(settings.openaiImageCount, this.defaultCloudSettings.openaiImageCount, 1, 10),
       xaiImageModel: settings.xaiImageModel?.trim() || this.defaultCloudSettings.xaiImageModel,
       xaiImageAspectRatio: settings.xaiImageAspectRatio?.trim() || this.defaultCloudSettings.xaiImageAspectRatio,
       xaiImageResolution: settings.xaiImageResolution?.trim() || this.defaultCloudSettings.xaiImageResolution,
@@ -1144,17 +1156,53 @@ export class AiService {
     return Math.min(Math.max(Math.round(parsed), min), max);
   }
 
+  private normalizeChoiceSetting(value: unknown, fallback: string, choices: readonly string[]): string {
+    const trimmed = typeof value === 'string' ? value.trim() : '';
+    return choices.includes(trimmed) ? trimmed : fallback;
+  }
+
+  private normalizeOpenAiImageSize(value: unknown): string {
+    const trimmed = typeof value === 'string' ? value.trim() : '';
+    if (!trimmed) {
+      return this.defaultCloudSettings.openaiImageSize;
+    }
+
+    if (trimmed === 'auto') {
+      return trimmed;
+    }
+
+    if (!/^\d+x\d+$/.test(trimmed)) {
+      return this.defaultCloudSettings.openaiImageSize;
+    }
+
+    const [width, height] = trimmed.split('x').map(part => Number.parseInt(part, 10));
+    if (!Number.isFinite(width) || !Number.isFinite(height)) {
+      return this.defaultCloudSettings.openaiImageSize;
+    }
+
+    const longEdge = Math.max(width, height);
+    const shortEdge = Math.min(width, height);
+    const pixels = width * height;
+    if (longEdge > 3840 || width % 16 !== 0 || height % 16 !== 0 || longEdge / shortEdge > 3 || pixels < 655360 || pixels > 8294400) {
+      return this.defaultCloudSettings.openaiImageSize;
+    }
+
+    return trimmed;
+  }
+
   private async generateOpenAiImage(prompt: string): Promise<AiGeneratedImage[]> {
     const apiKey = this.cloudSettings().openaiApiKey;
     if (!apiKey) {
       throw new Error('OpenAI API key is missing.');
     }
 
+    const cloudSettings = this.cloudSettings();
     const payload = await this.fetchImageGeneration('https://api.openai.com/v1/images/generations', apiKey, {
-      model: this.cloudSettings().openaiImageModel,
+      model: cloudSettings.openaiImageModel,
       prompt,
-      n: 1,
-      size: '1024x1024',
+      n: cloudSettings.openaiImageCount,
+      size: cloudSettings.openaiImageSize,
+      quality: cloudSettings.openaiImageQuality,
     });
 
     return this.mapGeneratedImages(payload, 'openai', prompt);
@@ -1741,6 +1789,9 @@ export class AiService {
       : {
         provider,
         model: this.getImageModel(provider),
+        openaiImageSize: cloudSettings.openaiImageSize,
+        openaiImageQuality: cloudSettings.openaiImageQuality,
+        openaiImageCount: cloudSettings.openaiImageCount,
       };
 
     return payload.data.map((entry, index) => {

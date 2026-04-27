@@ -214,8 +214,40 @@
                   <mat-form-field appearance="outline">
                     <mat-label>OpenAI image model</mat-label>
                     <input matInput [ngModel]="aiService.cloudSettings().openaiImageModel"
-                      (ngModelChange)="updateImageModel('openai', $event)" placeholder="gpt-image-1" />
+                      (ngModelChange)="updateImageModel('openai', $event)" placeholder="gpt-image-2" />
                   </mat-form-field>
+
+                  <div class="provider-image-options-grid">
+                    <mat-form-field appearance="outline">
+                      <mat-label>OpenAI image count</mat-label>
+                      <mat-select [value]="aiService.cloudSettings().openaiImageCount.toString()"
+                        (selectionChange)="updateOpenAiImageCount($event.value)">
+                        @for (option of xAiImageCountOptions; track option.value) {
+                        <mat-option [value]="option.value">{{ option.label }}</mat-option>
+                        }
+                      </mat-select>
+                    </mat-form-field>
+
+                    <mat-form-field appearance="outline">
+                      <mat-label>OpenAI image size</mat-label>
+                      <mat-select [value]="aiService.cloudSettings().openaiImageSize"
+                        (selectionChange)="updateOpenAiImageSize($event.value)">
+                        @for (option of openAiImageSizeOptions; track option.value) {
+                        <mat-option [value]="option.value">{{ option.label }}</mat-option>
+                        }
+                      </mat-select>
+                    </mat-form-field>
+
+                    <mat-form-field appearance="outline">
+                      <mat-label>OpenAI image quality</mat-label>
+                      <mat-select [value]="aiService.cloudSettings().openaiImageQuality"
+                        (selectionChange)="updateOpenAiImageQuality($event.value)">
+                        @for (option of openAiImageQualityOptions; track option.value) {
+                        <mat-option [value]="option.value">{{ option.label }}</mat-option>
+                        }
+                      </mat-select>
+                    </mat-form-field>
+                  </div>
 
                   <div class="provider-actions">
                     <button mat-flat-button type="button" (click)="saveApiKey('openai')">Save key</button>

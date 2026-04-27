@@ -602,6 +602,34 @@
       </div>
       }
 
+      @if (isOpenAiImageGenerationMode()) {
+      <div class="grok-visual-toolbar" aria-label="OpenAI image controls">
+        <div class="grok-toolbar-group" role="group" aria-label="Image settings">
+          <button type="button" class="grok-toolbar-chip" [matMenuTriggerFor]="openAiImageQualityMenu"
+            [disabled]="isGenerating()" [attr.title]="'Image quality ' + openAiImageQualityLabel()">
+            <span>{{ openAiImageQualityLabel() }}</span>
+            <mat-icon>expand_more</mat-icon>
+          </button>
+          <button type="button" class="grok-toolbar-chip" [matMenuTriggerFor]="openAiImageCountMenu"
+            [disabled]="isGenerating()" [attr.title]="'Generate ' + openAiImageCountLabel()">
+            <span>{{ openAiImageCountLabel() }}</span>
+            <mat-icon>expand_more</mat-icon>
+          </button>
+          <button type="button" class="grok-toolbar-chip" [matMenuTriggerFor]="openAiImageSizeMenu"
+            [disabled]="isGenerating()" [attr.title]="'Image size ' + openAiImageSizeLabel()">
+            <span>{{ openAiImageSizeLabel() }}</span>
+            <mat-icon>expand_more</mat-icon>
+          </button>
+        </div>
+
+        <button type="button" class="grok-toolbar-chip grok-toolbar-chip-icon" (click)="openImageSettings()"
+          [disabled]="isGenerating()" title="Open full image settings">
+          <mat-icon>tune</mat-icon>
+          <span>More</span>
+        </button>
+      </div>
+      }
+
       <mat-menu #attachmentMenu="matMenu">
         <button mat-menu-item type="button" (click)="openAttachmentPicker()">
           <mat-icon>attach_file</mat-icon>
@@ -613,6 +641,30 @@
         @for (option of xAiImageCountOptions; track option.value) {
         <button mat-menu-item type="button" (click)="updateXAiImageCount(option.value)">
           <span>{{ option.label }} {{ option.value === '1' ? 'image' : 'images' }}</span>
+        </button>
+        }
+      </mat-menu>
+
+      <mat-menu #openAiImageCountMenu="matMenu">
+        @for (option of xAiImageCountOptions; track option.value) {
+        <button mat-menu-item type="button" (click)="updateOpenAiImageCount(option.value)">
+          <span>{{ option.label }} {{ option.value === '1' ? 'image' : 'images' }}</span>
+        </button>
+        }
+      </mat-menu>
+
+      <mat-menu #openAiImageSizeMenu="matMenu">
+        @for (option of openAiImageSizeOptions; track option.value) {
+        <button mat-menu-item type="button" (click)="updateOpenAiImageSize(option.value)">
+          <span>{{ option.label }}</span>
+        </button>
+        }
+      </mat-menu>
+
+      <mat-menu #openAiImageQualityMenu="matMenu">
+        @for (option of openAiImageQualityOptions; track option.value) {
+        <button mat-menu-item type="button" (click)="updateOpenAiImageQuality(option.value)">
+          <span>{{ option.label }}</span>
         </button>
         }
       </mat-menu>

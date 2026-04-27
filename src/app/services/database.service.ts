@@ -274,6 +274,9 @@ export interface StoredAiChatHistoryEntry {
       imageSettings?: {
         provider: 'openai' | 'xai' | 'local';
         model: string;
+        openaiImageSize?: string;
+        openaiImageQuality?: string;
+        openaiImageCount?: number;
         xaiImageAspectRatio?: string;
         xaiImageResolution?: string;
         xaiImageCount?: number;
