@@ -163,11 +163,11 @@ export interface AiModelStorageReport {
 }
 
 interface AiCloudChatCompletionPayload {
-  choices?: Array<{
+  choices?: {
     message?: {
-      content?: string | Array<{ type?: string; text?: string }>;
+      content?: string | { type?: string; text?: string }[];
     };
-  }>;
+  }[];
   error?: {
     message?: string;
   } | string;
@@ -175,11 +175,11 @@ interface AiCloudChatCompletionPayload {
 }
 
 interface AiImageApiPayload {
-  data?: Array<{
+  data?: {
     b64_json?: string;
     revised_prompt?: string;
     url?: string;
-  }>;
+  }[];
   error?: {
     message?: string;
   } | string;
@@ -216,10 +216,10 @@ interface AiVideoGenerationStatusPayload {
 }
 
 interface AiLocalImageWorkerPayload {
-  images?: Array<{
+  images?: {
     blob?: Blob;
     mimeType?: string;
-  }>;
+  }[];
 }
 
 interface AiLocalUpscaledImageWorkerPayload {

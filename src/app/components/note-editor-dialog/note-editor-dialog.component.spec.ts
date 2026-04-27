@@ -606,6 +606,36 @@ describe('NoteEditorDialogComponent', () => {
       expect(queuedMedia.processedSize).toBe(compressedFile.size);
     });
 
+    it('should queue dropped PDF files as generic files instead of images', async () => {
+      createComponent();
+      await fixture.whenStable();
+
+      Object.defineProperty(URL, 'createObjectURL', { configurable: true, value: vi.fn(() => 'blob:mock-pdf-url') });
+      Object.defineProperty(URL, 'revokeObjectURL', { configurable: true, value: vi.fn() });
+
+      const pdfFile = new File(['%PDF-1.7'], 'document.pdf', { type: 'application/pdf' });
+
+      const privateComponent = component as unknown as {
+        uploadFiles: (files: File[]) => Promise<void>;
+      };
+
+      await privateComponent.uploadFiles([pdfFile]);
+
+      const queuedMedia = component.mediaMetadata()[0];
+      expect(mockMediaService.uploadFile).not.toHaveBeenCalled();
+      expect(queuedMedia.pendingUpload).toBe(true);
+      expect(queuedMedia.mimeType).toBe('application/pdf');
+      expect(queuedMedia.placeholderToken).toBe('[file1]');
+      expect(queuedMedia.previewUrl).toBeUndefined();
+      expect(component.getMediaThumbnailUrl(queuedMedia)).toBe('');
+      expect(component.getMediaFallbackIcon(queuedMedia)).toBe('picture_as_pdf');
+      expect(component.content()).toContain('[file1]');
+
+      component.showPreview.set(true);
+      expect(component.previewContent()).toContain('blob:mock-pdf-url');
+      expect(component.previewContent()).not.toContain('#nostria-image');
+    });
+
     it('should upload pending media on publish and replace the placeholder with the final URL', async () => {
       createComponent();
       await fixture.whenStable();

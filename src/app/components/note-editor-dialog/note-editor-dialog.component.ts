@@ -720,7 +720,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     mimeType: media.mimeType,
     pending: !!media.pendingUpload,
     label: media.fileName
-      || (media.mimeType?.startsWith('video/') ? 'Video attachment' : 'Image attachment'),
+      || this.getMediaAttachmentLabel(media.mimeType),
   })));
 
   composerReferencePreviews = computed<ComposerReferencePreview[]>(() => {
@@ -1076,7 +1076,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
 
     const previewableMedia = this.mediaMetadata()
       .map((item, itemIndex) => ({ item, itemIndex }))
-      .filter(({ item }) => !!item.url);
+      .filter(({ item }) => !!item.url && this.isPreviewableMedia(item));
 
     const selectedIndex = previewableMedia.findIndex(entry => entry.itemIndex === index);
     if (selectedIndex === -1) {
@@ -1089,7 +1089,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       data: {
         mediaItems: previewableMedia.map(({ item }) => ({
           url: item.url,
-          type: item.mimeType?.startsWith('video/') ? 'video' : 'image',
+          type: this.isVideoMimeType(item.mimeType) ? 'video' : 'image',
           title: item.alt || item.fileName,
         })),
         initialIndex: selectedIndex,
@@ -3242,16 +3242,24 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       chip.addEventListener('dragstart', this.onInlineMediaDragStart);
       chip.addEventListener('dragend', this.onInlineMediaDragEnd);
 
-      const image = document.createElement('img');
-      image.className = 'composer-inline-media-chip-thumb';
-      image.src = this.getMediaThumbnailUrl(media);
-      image.alt = media.fileName || 'Attachment';
-      image.title = media.fileName || 'Attachment';
-      chip.appendChild(image);
+      const thumbnailUrl = this.getMediaThumbnailUrl(media);
+      if (thumbnailUrl) {
+        const image = document.createElement('img');
+        image.className = 'composer-inline-media-chip-thumb';
+        image.src = thumbnailUrl;
+        image.alt = media.fileName || 'Attachment';
+        image.title = media.fileName || 'Attachment';
+        chip.appendChild(image);
+      } else {
+        const icon = document.createElement('span');
+        icon.className = 'composer-inline-media-chip-icon material-symbols-outlined';
+        icon.textContent = this.getMediaFallbackIcon(media);
+        chip.appendChild(icon);
+      }
 
       const label = document.createElement('span');
       label.className = 'composer-inline-media-chip-label';
-      label.textContent = media.pendingUpload ? 'Image' : 'Attachment';
+      label.textContent = media.fileName || this.getMediaAttachmentLabel(media.mimeType);
       chip.appendChild(label);
 
       fragment.appendChild(chip);
@@ -4740,16 +4748,76 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   }
 
   getMediaThumbnailUrl(media: MediaMetadata): string {
-    if (media.mimeType?.startsWith('video/')) {
+    if (this.isVideoMimeType(media.mimeType)) {
       return media.image || '';
     }
 
-    return media.previewUrl || media.url;
+    if (this.isImageMimeType(media.mimeType)) {
+      return media.previewUrl || media.url;
+    }
+
+    return '';
+  }
+
+  getMediaFallbackIcon(media: MediaMetadata): string {
+    if (this.isVideoMimeType(media.mimeType)) {
+      return 'movie';
+    }
+
+    if (this.isImageMimeType(media.mimeType)) {
+      return 'image';
+    }
+
+    if (this.isAudioMimeType(media.mimeType)) {
+      return 'audio_file';
+    }
+
+    if (media.mimeType === 'application/pdf') {
+      return 'picture_as_pdf';
+    }
+
+    return 'draft';
+  }
+
+  private getMediaAttachmentLabel(mimeType: string | undefined): string {
+    if (this.isVideoMimeType(mimeType)) {
+      return 'Video attachment';
+    }
+
+    if (this.isImageMimeType(mimeType)) {
+      return 'Image attachment';
+    }
+
+    if (this.isAudioMimeType(mimeType)) {
+      return 'Audio attachment';
+    }
+
+    return 'File attachment';
+  }
+
+  private isPreviewableMedia(media: MediaMetadata): boolean {
+    return this.isImageMimeType(media.mimeType) || this.isVideoMimeType(media.mimeType);
+  }
+
+  private isImageMimeType(mimeType: string | undefined): boolean {
+    return !!mimeType?.startsWith('image/');
+  }
+
+  private isVideoMimeType(mimeType: string | undefined): boolean {
+    return !!mimeType?.startsWith('video/');
+  }
+
+  private isAudioMimeType(mimeType: string | undefined): boolean {
+    return !!mimeType?.startsWith('audio/');
   }
 
   getMediaThumbnailAriaLabel(media: MediaMetadata): string {
     if (this.shouldReinsertPendingMediaReference(media)) {
       return 'Reinsert pending media placeholder';
+    }
+
+    if (!this.isPreviewableMedia(media)) {
+      return media.fileName ? `Attached file: ${media.fileName}` : 'Attached file';
     }
 
     return media.pendingUpload ? 'Open optimized media preview' : 'Open media preview';
@@ -4758,6 +4826,10 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   getMediaThumbnailTooltip(media: MediaMetadata): string {
     if (this.shouldReinsertPendingMediaReference(media)) {
       return 'Reinsert placeholder tag';
+    }
+
+    if (!this.isPreviewableMedia(media)) {
+      return media.fileName ? `Attached file: ${media.fileName}` : 'Attached file';
     }
 
     const baseTooltip = media.pendingUpload ? 'Open optimized preview' : 'Open preview';
@@ -4928,7 +5000,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   }
 
   private getPendingMediaPreviewReference(media: MediaMetadata): string {
-    const previewUrl = media.mimeType?.startsWith('video/') ? media.url : (media.previewUrl || media.url);
+    const previewUrl = this.isVideoMimeType(media.mimeType) ? media.url : (media.previewUrl || media.url);
     return this.decoratePreviewMediaUrl(previewUrl, media.mimeType);
   }
 
@@ -4937,15 +5009,19 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       return url;
     }
 
-    if (mimeType?.startsWith('video/')) {
+    if (this.isVideoMimeType(mimeType)) {
       return `${url}#nostria-video`;
     }
 
-    if (mimeType?.startsWith('audio/')) {
+    if (this.isAudioMimeType(mimeType)) {
       return `${url}#nostria-audio`;
     }
 
-    return `${url}#nostria-image`;
+    if (this.isImageMimeType(mimeType)) {
+      return `${url}#nostria-image`;
+    }
+
+    return url;
   }
 
   private resolvePendingMediaReferences(content: string, forPreview = false): string {
@@ -4969,7 +5045,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   }
 
   private createPendingMediaPlaceholder(mimeType: string): string {
-    const mediaType = mimeType.startsWith('video/') ? 'video' : 'image';
+    const mediaType = this.getPendingMediaPlaceholderType(mimeType);
     const prefix = `[${mediaType}`;
     let index = 1;
 
@@ -4978,6 +5054,22 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     }
 
     return `${prefix}${index}]`;
+  }
+
+  private getPendingMediaPlaceholderType(mimeType: string): 'image' | 'video' | 'audio' | 'file' {
+    if (this.isVideoMimeType(mimeType)) {
+      return 'video';
+    }
+
+    if (this.isImageMimeType(mimeType)) {
+      return 'image';
+    }
+
+    if (this.isAudioMimeType(mimeType)) {
+      return 'audio';
+    }
+
+    return 'file';
   }
 
   private replaceMediaPlaceholderInContent(placeholderToken: string | undefined, url: string): void {
@@ -5008,11 +5100,11 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   }
 
   private startsWithMediaReference(value: string): boolean {
-    return /^(\[(?:image|video)\d+\]|https?:\/\/\S+|blob:\S+)/.test(value);
+    return /^(\[(?:image|video|audio|file)\d+\]|https?:\/\/\S+|blob:\S+)/.test(value);
   }
 
   private endsWithMediaReference(value: string): boolean {
-    return /(\[(?:image|video)\d+\]|https?:\/\/\S+|blob:\S+)$/.test(value);
+    return /(\[(?:image|video|audio|file)\d+\]|https?:\/\/\S+|blob:\S+)$/.test(value);
   }
 
   private revokeMediaPreviewUrls(media: MediaMetadata | undefined): void {

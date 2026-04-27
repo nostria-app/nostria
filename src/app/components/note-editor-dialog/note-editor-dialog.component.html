@@ -524,12 +524,11 @@
           (pointerleave)="onMediaThumbnailPointerUp()" (pointercancel)="onMediaThumbnailPointerUp()"
           (keydown)="onMediaThumbnailKeyDown(i, $event)" (contextmenu)="onMediaThumbnailContextMenu(i, $event)"
           (click)="onMediaThumbnailClick(i, $event)">
-          @if (getMediaThumbnailUrl(media); as thumbnailUrl) {
-          <img [src]="thumbnailUrl" class="thumbnail-img" alt="Media thumbnail" title="Media thumbnail">
-          } @else {
-          <mat-icon class="media-fallback-icon">{{ media.mimeType?.startsWith('video/') ? 'movie' : 'image'
-            }}</mat-icon>
-          }
+            @if (getMediaThumbnailUrl(media); as thumbnailUrl) {
+            <img [src]="thumbnailUrl" class="thumbnail-img" alt="Media thumbnail" title="Media thumbnail">
+            } @else {
+            <mat-icon class="media-fallback-icon">{{ getMediaFallbackIcon(media) }}</mat-icon>
+            }
           @if (media.mimeType?.startsWith('video/')) {
           <span class="video-profile-badge">{{ getVideoOptimizationProfileBadgeLabelForMedia(media) }}</span>
           }

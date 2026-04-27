@@ -1350,6 +1350,18 @@
           flex: 0 0 auto;
         }
 
+        ::ng-deep .composer-inline-media-chip-icon {
+          width: 1.45em;
+          height: 1.45em;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          flex: 0 0 auto;
+          color: var(--mat-sys-on-surface-variant);
+          font-size: 1.25em;
+          line-height: 1;
+        }
+
         ::ng-deep .composer-inline-media-chip-label {
           font-size: 0.85em;
           line-height: 1;

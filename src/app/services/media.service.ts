@@ -996,6 +996,7 @@ export class MediaService implements NostriaService {
       '.avi': 'video/x-msvideo',
       '.mov': 'video/quicktime',
       '.qt': 'video/quicktime',
+      '.pdf': 'application/pdf',
     };
 
     // Get file extension
