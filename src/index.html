@@ -192,7 +192,13 @@
       var isStandalone = window.matchMedia('(display-mode: standalone)').matches ||
         window.navigator.standalone === true;
       var nativeParam = new URLSearchParams(window.location.search).get('app_context');
-      var isNativeAndroid = nativeParam === 'android' || document.referrer.indexOf('android-app://') === 0;
+      var isAndroidWebView = isAndroid && /\bwv\b/i.test(navigator.userAgent);
+      var isTauriLocation = window.location.protocol === 'tauri:' ||
+        window.location.protocol === 'asset:' ||
+        window.location.hostname === 'tauri.localhost';
+      var isNativeAndroid = nativeParam === 'android' ||
+        document.referrer.indexOf('android-app://') === 0 ||
+        (isAndroid && (isAndroidWebView || isTauriLocation));
       var isNativeIOS = nativeParam === 'ios';
       if (isAndroid) {
         document.documentElement.setAttribute('data-platform', 'android');

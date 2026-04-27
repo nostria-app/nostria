@@ -20,7 +20,7 @@ nav {
   flex-direction: column;
   margin-top: 0;
   box-sizing: border-box;
-  height: 100dvh;
+  height: calc(100dvh - var(--safe-area-top, 0px));
   overflow: hidden;
   width: 100%;
   position: fixed;
@@ -36,6 +36,7 @@ nav {
 
 .app-container[data-fullscreen="true"] {
   top: 0;
+  height: 100dvh;
 }
 
 // Glass toolbar styles - positioned beside sidenav (not fixed)
@@ -1928,7 +1929,7 @@ mat-sidenav-content {
 // ============================================
 .mobile-bottom-cube {
   position: fixed;
-  bottom: max(6px, calc(6px + env(safe-area-inset-bottom, 0px)));
+  bottom: max(6px, var(--safe-area-bottom, 0px));
   left: 50%;
   transform: translateX(-50%);
   right: auto;

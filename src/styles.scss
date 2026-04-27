@@ -238,6 +238,7 @@ mat-nav-list,
 html[data-app-context="native-android"],
 html[data-platform="android"][data-display-mode="standalone"] {
   --safe-area-top: max(24px, env(safe-area-inset-top, 0px));
+  --safe-area-bottom: max(24px, env(safe-area-inset-bottom, 0px));
 }
 
 .cdk-global-overlay-wrapper:has(.safe-area-top-snackbar) {
@@ -1821,6 +1822,12 @@ app-media-queue {
   z-index: 100 !important;
 }
 
+// Bottom sheets are rendered in the global CDK overlay, outside .app-container.
+// Keep their content clear of Android/iOS gesture navigation.
+.mat-bottom-sheet-container {
+  padding-bottom: calc(8px + var(--safe-area-bottom, 0px)) !important;
+}
+
 // Glass bottom sheet styles
 .glass-bottom-sheet {
 
@@ -1930,8 +1937,10 @@ app-media-queue {
 // Android-specific safe area fix for mobile navigation
 // Android often doesn't report safe-area-inset-bottom correctly for gesture navigation
 html[data-platform="android"][data-display-mode="standalone"] .mobile-nav,
-html[data-platform="android"][data-display-mode="standalone"] .mobile-bottom-cube {
-  bottom: 8px !important;
+html[data-platform="android"][data-display-mode="standalone"] .mobile-bottom-cube,
+html[data-app-context="native-android"] .mobile-nav,
+html[data-app-context="native-android"] .mobile-bottom-cube {
+  bottom: max(8px, var(--safe-area-bottom, 0px)) !important;
 }
 
 // iOS standalone/PWA: some WebView wrappers report an inflated safe-area inset,

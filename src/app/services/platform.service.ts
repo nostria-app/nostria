@@ -144,7 +144,7 @@ export class PlatformService {
     const urlParams = new URLSearchParams(window.location.search);
     const nativeParam = urlParams.get('app_context');
 
-    if (nativeParam === 'android' || this.detectTWA()) {
+    if (nativeParam === 'android' || this.detectTWA() || this.detectAndroidWebViewShell()) {
       this.isNativeAndroid.set(true);
     } else if (nativeParam === 'ios' || (isStandalone && this.isIOS())) {
       // On iOS, standalone + iOS means it's from the App Store wrapper or PWA.
@@ -161,6 +161,23 @@ export class PlatformService {
    */
   private detectTWA(): boolean {
     return document.referrer.startsWith('android-app://');
+  }
+
+  /**
+   * Detect native Android shells such as Tauri WebView.
+   */
+  private detectAndroidWebViewShell(): boolean {
+    if (!this.isAndroid()) {
+      return false;
+    }
+
+    const userAgent = navigator.userAgent;
+    const isAndroidWebView = /\bwv\b/i.test(userAgent);
+    const isTauriLocation = window.location.protocol === 'tauri:'
+      || window.location.protocol === 'asset:'
+      || window.location.hostname === 'tauri.localhost';
+
+    return isAndroidWebView || isTauriLocation;
   }
 
   /**
