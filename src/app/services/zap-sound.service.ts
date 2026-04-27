@@ -1,6 +1,7 @@
 import { Injectable, PLATFORM_ID, inject } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { SettingsService } from './settings.service';
+import { MediaPlayerService } from './media-player.service';
 
 /**
  * Zap intensity tiers based on sat amount:
@@ -24,8 +25,13 @@ export function getZapTier(amount: number): ZapTier {
 export class ZapSoundService {
   private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
   private readonly settingsService = inject(SettingsService);
+  private readonly mediaPlayer = inject(MediaPlayerService);
   private audioContext: AudioContext | null = null;
   private likeAudio: HTMLAudioElement | null = null;
+
+  private shouldMuteInteractionSounds(): boolean {
+    return this.mediaPlayer.isMusicPlaying();
+  }
 
   private getAudioContext(): AudioContext | null {
     if (!this.isBrowser) {
@@ -49,7 +55,7 @@ export class ZapSoundService {
 
   /** Play a zap sound scaled to the sat amount. */
   playZapSound(amount: number): void {
-    if (this.settingsService.settings().zapSoundsEnabled === false) {
+    if (this.settingsService.settings().zapSoundsEnabled === false || this.shouldMuteInteractionSounds()) {
       return;
     }
 
@@ -88,7 +94,11 @@ export class ZapSoundService {
 
   /** Play a light confirmation sound for likes. */
   playLikeSound(): void {
-    if (!this.isBrowser || this.settingsService.settings().zapSoundsEnabled === false) {
+    if (
+      !this.isBrowser
+      || this.settingsService.settings().zapSoundsEnabled === false
+      || this.shouldMuteInteractionSounds()
+    ) {
       return;
     }
 

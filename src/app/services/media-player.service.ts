@@ -117,6 +117,7 @@ export class MediaPlayerService implements OnInitialized {
 
   // Signal for paused state - updated by play/pause actions and video element events
   private _isPaused = signal(true);
+  readonly isMusicPlaying = computed(() => this.current()?.type === 'Music' && !this._isPaused());
 
   // Video element reference
   private videoElement?: HTMLVideoElement;
