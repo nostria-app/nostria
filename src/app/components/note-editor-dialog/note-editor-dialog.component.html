@@ -533,11 +533,13 @@
           <span class="video-profile-badge">{{ getVideoOptimizationProfileBadgeLabelForMedia(media) }}</span>
           }
           <div class="media-thumbnail-meta">
-            <span class="media-savings" [class.empty]="!getMediaThumbnailSavingsLabel(media)"
+            @if (getMediaThumbnailSavingsLabel(media); as savingsLabel) {
+            <span class="media-savings"
               [class.decrease]="getMediaThumbnailSavingsTone(media) === 'decrease'"
               [class.increase]="getMediaThumbnailSavingsTone(media) === 'increase'"
               [class.neutral]="getMediaThumbnailSavingsTone(media) === 'neutral'">{{
-              getMediaThumbnailSavingsLabel(media) }}</span>
+              savingsLabel }}</span>
+            }
             <span class="media-size">{{ getMediaThumbnailSizeLabel(media) }}</span>
           </div>
         </button>

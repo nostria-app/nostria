@@ -997,6 +997,21 @@ export class MediaService implements NostriaService {
       '.mov': 'video/quicktime',
       '.qt': 'video/quicktime',
       '.pdf': 'application/pdf',
+      '.txt': 'text/plain',
+      '.md': 'text/markdown',
+      '.markdown': 'text/markdown',
+      '.json': 'application/json',
+      '.csv': 'text/csv',
+      '.html': 'text/html',
+      '.htm': 'text/html',
+      '.xml': 'application/xml',
+      '.zip': 'application/zip',
+      '.doc': 'application/msword',
+      '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      '.xls': 'application/vnd.ms-excel',
+      '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      '.ppt': 'application/vnd.ms-powerpoint',
+      '.pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
     };
 
     // Get file extension

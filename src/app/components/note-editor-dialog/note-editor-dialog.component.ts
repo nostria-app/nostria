@@ -4776,6 +4776,26 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       return 'picture_as_pdf';
     }
 
+    if (media.mimeType?.startsWith('text/') || media.mimeType === 'application/json' || media.mimeType === 'application/xml') {
+      return 'article';
+    }
+
+    if (media.mimeType === 'application/zip') {
+      return 'folder_zip';
+    }
+
+    if (media.mimeType?.includes('spreadsheet') || media.mimeType === 'application/vnd.ms-excel') {
+      return 'table_chart';
+    }
+
+    if (media.mimeType?.includes('presentation') || media.mimeType === 'application/vnd.ms-powerpoint') {
+      return 'slideshow';
+    }
+
+    if (media.mimeType?.includes('wordprocessing') || media.mimeType === 'application/msword') {
+      return 'description';
+    }
+
     return 'draft';
   }
 
@@ -4847,6 +4867,10 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   }
 
   getMediaThumbnailSavingsLabel(media: MediaMetadata): string {
+    if (!this.canShowMediaCompressionSavings(media)) {
+      return '';
+    }
+
     const savings = this.getMediaCompressionChangePercent(media);
 
     if (savings === null) {
@@ -4865,6 +4889,10 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   }
 
   getMediaThumbnailSavingsTone(media: MediaMetadata): 'decrease' | 'increase' | 'neutral' | 'none' {
+    if (!this.canShowMediaCompressionSavings(media)) {
+      return 'none';
+    }
+
     const savings = this.getMediaCompressionChangePercent(media);
 
     if (savings === null) {
@@ -4921,6 +4949,10 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   }
 
   private getMediaCompressionChangePercent(media: MediaMetadata): number | null {
+    if (!this.canShowMediaCompressionSavings(media)) {
+      return null;
+    }
+
     const originalSize = this.getMediaOriginalSize(media);
     const comparisonSize = this.getMediaComparisonSize(media);
 
@@ -4929,6 +4961,10 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     }
 
     return Math.round((1 - comparisonSize / originalSize) * 100);
+  }
+
+  private canShowMediaCompressionSavings(media: MediaMetadata): boolean {
+    return this.isImageMimeType(media.mimeType) || this.isVideoMimeType(media.mimeType);
   }
 
   private serializeMediaMetadata(media: MediaMetadata[]): string {

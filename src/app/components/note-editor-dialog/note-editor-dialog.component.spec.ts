@@ -629,10 +629,43 @@ describe('NoteEditorDialogComponent', () => {
       expect(queuedMedia.previewUrl).toBeUndefined();
       expect(component.getMediaThumbnailUrl(queuedMedia)).toBe('');
       expect(component.getMediaFallbackIcon(queuedMedia)).toBe('picture_as_pdf');
+      expect(component.getMediaThumbnailSavingsLabel(queuedMedia)).toBe('');
       expect(component.content()).toContain('[file1]');
 
       component.showPreview.set(true);
       expect(component.previewContent()).toContain('blob:mock-pdf-url');
+      expect(component.previewContent()).not.toContain('#nostria-image');
+    });
+
+    it('should queue dropped non-media files as generic files without compression savings', async () => {
+      createComponent();
+      await fixture.whenStable();
+
+      Object.defineProperty(URL, 'createObjectURL', { configurable: true, value: vi.fn(() => 'blob:mock-text-url') });
+      Object.defineProperty(URL, 'revokeObjectURL', { configurable: true, value: vi.fn() });
+
+      const textFile = new File(['plain text'], 'notes.txt', { type: 'text/plain' });
+
+      const privateComponent = component as unknown as {
+        uploadFiles: (files: File[]) => Promise<void>;
+      };
+
+      await privateComponent.uploadFiles([textFile]);
+
+      const queuedMedia = component.mediaMetadata()[0];
+      expect(mockMediaService.uploadFile).not.toHaveBeenCalled();
+      expect(queuedMedia.pendingUpload).toBe(true);
+      expect(queuedMedia.mimeType).toBe('text/plain');
+      expect(queuedMedia.placeholderToken).toBe('[file1]');
+      expect(queuedMedia.previewUrl).toBeUndefined();
+      expect(component.getMediaThumbnailUrl(queuedMedia)).toBe('');
+      expect(component.getMediaFallbackIcon(queuedMedia)).toBe('article');
+      expect(component.getMediaThumbnailSavingsLabel(queuedMedia)).toBe('');
+      expect(component.getMediaThumbnailSavingsTone(queuedMedia)).toBe('none');
+      expect(component.content()).toContain('[file1]');
+
+      component.showPreview.set(true);
+      expect(component.previewContent()).toContain('blob:mock-text-url');
       expect(component.previewContent()).not.toContain('#nostria-image');
     });
 
