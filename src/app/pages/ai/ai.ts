@@ -660,6 +660,7 @@ export class AiComponent {
     return this.chatQuickPrompts;
   });
   readonly histories = this.historyService.histories;
+  readonly unavailableGeneratedImageIds = signal<Set<string>>(new Set());
   readonly filteredHistories = computed(() => {
     const query = this.historyQuery().trim().toLowerCase();
     if (!query) {
@@ -1625,6 +1626,32 @@ export class AiComponent {
 
   remixGeneratedImage(image: AiGeneratedImage): void {
     void this.prepareGeneratedImageForNextPrompt(image, 'image', image.revisedPrompt || image.prompt);
+  }
+
+  isGeneratedImageAvailable(image: AiGeneratedImage): boolean {
+    return image.src.trim().length > 0 && !this.unavailableGeneratedImageIds().has(image.id);
+  }
+
+  markGeneratedImageAvailable(image: AiGeneratedImage): void {
+    if (!this.unavailableGeneratedImageIds().has(image.id)) {
+      return;
+    }
+
+    this.unavailableGeneratedImageIds.update(ids => {
+      const next = new Set(ids);
+      next.delete(image.id);
+      return next;
+    });
+  }
+
+  markGeneratedImageUnavailable(image: AiGeneratedImage): void {
+    this.unavailableGeneratedImageIds.update(ids => {
+      if (ids.has(image.id)) {
+        return ids;
+      }
+
+      return new Set(ids).add(image.id);
+    });
   }
 
   useVideoPromptInChat(video: AiGeneratedVideo): void {

@@ -228,6 +228,7 @@
           <div class="generated-image-grid">
             @for (image of message.generatedImages!; track image.id) {
             <article class="generated-image-card">
+              @if (isGeneratedImageAvailable(image)) {
               <div class="generated-image-head">
                 <div class="message-actions generated-image-actions">
                   <button type="button" class="message-action-button" (click)="upscaleGeneratedImage(image)"
@@ -257,7 +258,8 @@
               <button type="button" class="generated-image-preview-button" (click)="openGeneratedImagePreview(image)"
                 [attr.aria-label]="'Preview generated image for ' + (image.revisedPrompt || image.prompt)"
                 [attr.title]="image.revisedPrompt || image.prompt">
-                <img [src]="image.src" alt="Generated image" class="generated-image-preview" />
+                <img [src]="image.src" alt="Generated image" class="generated-image-preview"
+                  (load)="markGeneratedImageAvailable(image)" (error)="markGeneratedImageUnavailable(image)" />
                 <div class="generated-image-overlay">
                   <div class="generated-image-meta generated-image-meta-overlay">
                     <span>{{ image.providerLabel }}</span>
@@ -265,6 +267,18 @@
                   </div>
                 </div>
               </button>
+              } @else {
+              <div class="generated-image-unavailable">
+                <mat-icon>broken_image</mat-icon>
+                <div class="generated-image-unavailable-copy">
+                  <div class="generated-image-meta">
+                    <span>{{ image.providerLabel }}</span>
+                    <span>{{ image.model }}</span>
+                  </div>
+                  <p>Generated image is no longer available on this device.</p>
+                </div>
+              </div>
+              }
             </article>
             }
           </div>
