@@ -750,6 +750,17 @@
       object-fit: cover;
     }
 
+    .media-fallback-icon {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 28px;
+      height: 28px;
+      font-size: 28px;
+      color: var(--mat-sys-on-surface-variant) !important;
+    }
+
     .video-profile-badge {
       position: absolute;
       top: 4px;
