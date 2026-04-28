@@ -53,6 +53,11 @@ targets:
           - UIInterfaceOrientationLandscapeRight
         CFBundleShortVersionString: 3.1.32
         CFBundleVersion: "3.1.32"
+        CFBundleURLTypes:
+          - CFBundleURLName: app.nostria.nostr
+            CFBundleURLSchemes:
+              - nostr
+              - nostr+walletconnect
     entitlements:
       path: nostria_iOS/nostria_iOS.entitlements
     scheme:

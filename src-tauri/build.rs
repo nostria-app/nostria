@@ -57,6 +57,9 @@ fn main() {
     )
     .expect("failed to run tauri build");
 
+    ensure_ios_deep_link_url_schemes()
+        .expect("failed to ensure iOS deep-link URL schemes");
+
     finalize_android_media_session_project()
         .expect("failed to finalize Android media-session Gradle wiring");
 }
@@ -93,6 +96,50 @@ fn finalize_android_media_session_project() -> Result<(), Box<dyn std::error::Er
 
     let manifest_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR")?);
     link_android_library(&manifest_dir.join("media-session/android"))?;
+    Ok(())
+}
+
+fn ensure_ios_deep_link_url_schemes() -> Result<(), Box<dyn std::error::Error>> {
+    if env::var("CARGO_CFG_TARGET_OS")?.as_str() != "ios" {
+        return Ok(());
+    }
+
+    let manifest_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR")?);
+    let info_plist_path = manifest_dir
+        .join("gen")
+        .join("apple")
+        .join("nostria_iOS")
+        .join("Info.plist");
+
+    if !info_plist_path.exists() {
+        return Ok(());
+    }
+
+    let mut plist = plist::Value::from_file(&info_plist_path)?;
+    let Some(root) = plist.as_dictionary_mut() else {
+        return Ok(());
+    };
+
+    root.insert(
+        "CFBundleURLTypes".into(),
+        plist::Value::Array(vec![plist::Value::Dictionary({
+            let mut dictionary = plist::Dictionary::new();
+            dictionary.insert(
+                "CFBundleURLName".into(),
+                plist::Value::String("app.nostria.nostr".into()),
+            );
+            dictionary.insert(
+                "CFBundleURLSchemes".into(),
+                plist::Value::Array(vec![
+                    plist::Value::String("nostr".into()),
+                    plist::Value::String("nostr+walletconnect".into()),
+                ]),
+            );
+            dictionary
+        })]),
+    );
+
+    plist.to_file_xml(info_plist_path)?;
     Ok(())
 }
 

@@ -2667,7 +2667,10 @@ export class App implements OnInit, OnDestroy {
   private toNostrProtocolLaunchUrl(url: string): string | null {
     const lowerUrl = url.toLowerCase();
 
-    if (lowerUrl.startsWith('nostr+walletconnect:') || lowerUrl.startsWith('web+nostr+walletconnect:')) {
+    if (
+      lowerUrl.startsWith('nostr+walletconnect:') ||
+      lowerUrl.startsWith('web+nostr+walletconnect:')
+    ) {
       return `tauri://localhost/?nwc=${encodeURIComponent(url)}`;
     }
 

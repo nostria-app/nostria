@@ -18,6 +18,18 @@
 	<string>3.1.32</string>
 	<key>CFBundleVersion</key>
 	<string>3.1.32</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>app.nostria.nostr</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>nostr</string>
+				<string>nostr+walletconnect</string>
+			</array>
+		</dict>
+	</array>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>UILaunchStoryboardName</key>
