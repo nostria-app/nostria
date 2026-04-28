@@ -8,6 +8,7 @@
   "permissions": [
     "core:default",
     "android-signer:default",
+    "deep-link:default",
     "media-session:default",
     "opener:default",
     "updater:default"

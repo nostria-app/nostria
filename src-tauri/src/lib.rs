@@ -2,6 +2,9 @@
 mod android_signer;
 mod media_session;
 
+#[cfg(desktop)]
+use tauri::Manager;
+
 #[derive(serde::Serialize)]
 #[serde(rename_all = "camelCase")]
 struct DesktopUpdateContext {
@@ -70,11 +73,34 @@ fn install_rustls_crypto_provider() {
 pub fn run() {
     install_rustls_crypto_provider();
 
-    tauri::Builder::default()
+    let builder = tauri::Builder::default();
+
+    #[cfg(desktop)]
+    let builder = builder.plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+        if let Some(window) = app.get_webview_window("main") {
+            let _ = window.show();
+            let _ = window.set_focus();
+        }
+    }));
+
+    builder
         .plugin(android_signer::init())
+        .plugin(tauri_plugin_deep_link::init())
         .plugin(media_session::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
+        .setup(|app| {
+            #[cfg(any(windows, target_os = "linux"))]
+            {
+                use tauri_plugin_deep_link::DeepLinkExt;
+
+                if let Err(error) = app.deep_link().register_all() {
+                    eprintln!("failed to register deep link schemes: {error}");
+                }
+            }
+
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![greet, log_js, desktop_update_context])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

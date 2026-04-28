@@ -196,6 +196,7 @@ export class App implements OnInit, OnDestroy {
   // Subject for managing subscription cleanup
   private readonly destroy$ = new Subject<void>();
   private backdropInteractionHandler?: (event: Event) => void;
+  private tauriDeepLinkUnlisten?: () => void;
 
   // Computed tooltip for profile caching progress
   cachingTooltip = computed(() => {
@@ -894,6 +895,8 @@ export class App implements OnInit, OnDestroy {
       });
     }
 
+    void this.initializeTauriDeepLinks();
+
     // Track previous handset state to detect transitions
     let previousIsHandset = this.layout.isHandset();
     let isFirstRun = true;
@@ -1279,6 +1282,8 @@ export class App implements OnInit, OnDestroy {
     // Clean up subscriptions
     this.destroy$.next();
     this.destroy$.complete();
+    this.tauriDeepLinkUnlisten?.();
+    this.tauriDeepLinkUnlisten = undefined;
 
     this.clearSettingsQuickCardCloseTimer();
     this.unregisterSettingsQuickCardOutsideHandler();
@@ -2598,7 +2603,7 @@ export class App implements OnInit, OnDestroy {
     try {
       const currentUrl = window.location.href;
 
-      if (currentUrl.includes('nostr=')) {
+      if (currentUrl.includes('nostr=') || currentUrl.includes('nwc=')) {
         await this.nostrProtocol.handleNostrProtocol(currentUrl);
       }
     } catch (error) {
@@ -2616,6 +2621,65 @@ export class App implements OnInit, OnDestroy {
         timestamp: new Date().toISOString(),
       });
     }
+  }
+
+  private async initializeTauriDeepLinks(): Promise<void> {
+    try {
+      const [{ isTauri }, deepLink] = await Promise.all([
+        import('@tauri-apps/api/core'),
+        import('@tauri-apps/plugin-deep-link'),
+      ]);
+
+      if (!isTauri()) {
+        return;
+      }
+
+      const startUrls = await deepLink.getCurrent();
+      if (startUrls) {
+        await this.handleTauriDeepLinkUrls(startUrls);
+      }
+
+      this.tauriDeepLinkUnlisten = await deepLink.onOpenUrl((urls) => {
+        void this.handleTauriDeepLinkUrls(urls);
+      });
+    } catch (error) {
+      this.logger.error('[App] Failed to initialize Tauri deep links:', error);
+    }
+  }
+
+  private async handleTauriDeepLinkUrls(urls: string[]): Promise<void> {
+    for (const url of urls) {
+      const protocolUrl = this.toNostrProtocolLaunchUrl(url);
+
+      if (!protocolUrl) {
+        this.logger.warn('[App] Ignoring unsupported Tauri deep link URL:', url);
+        continue;
+      }
+
+      try {
+        await this.nostrProtocol.handleNostrProtocol(protocolUrl);
+      } catch (error) {
+        this.logger.error('[App] Tauri deep link protocol error:', error);
+      }
+    }
+  }
+
+  private toNostrProtocolLaunchUrl(url: string): string | null {
+    const lowerUrl = url.toLowerCase();
+
+    if (lowerUrl.startsWith('nostr+walletconnect:') || lowerUrl.startsWith('web+nostr+walletconnect:')) {
+      return `tauri://localhost/?nwc=${encodeURIComponent(url)}`;
+    }
+
+    if (lowerUrl.startsWith('nostr:') || lowerUrl.startsWith('web+nostr:')) {
+      return `tauri://localhost/?nostr=${encodeURIComponent(url)}`;
+    }
+
+    if (url.includes('nostr=') || url.includes('nwc=')) {
+      return url;
+    }
+
+    return null;
   }
 
   openWhatsNewDialog(): void {
