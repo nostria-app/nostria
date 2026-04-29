@@ -67,6 +67,8 @@ import { TrustService } from '../../services/trust.service';
 import { formatDuration } from '../../utils/format-duration';
 import { FeaturedFeedCardComponent } from './featured-feed-card/featured-feed-card.component';
 import { FeaturedFeedCard, FeaturedFeedCardsService } from '../../services/featured-feed-cards.service';
+import { TtsSequencePlayerService } from '../../services/tts-sequence-player.service';
+import { SettingsService } from '../../services/settings.service';
 
 // NavLink interface removed because it was unused.
 
@@ -127,6 +129,8 @@ export class FeedsComponent implements OnDestroy {
   private followSetsService = inject(FollowSetsService);
   private trustService = inject(TrustService);
   private featuredFeedCards = inject(FeaturedFeedCardsService);
+  protected settings = inject(SettingsService);
+  protected ttsSequence = inject(TtsSequencePlayerService);
 
   // Dialog State Signals
   showNewFeedDialog = signal(false);
@@ -480,6 +484,24 @@ export class FeedsComponent implements OnDestroy {
   // Method to navigate to People discovery page
   navigateToPeople(): void {
     this.router.navigate(['/people/discover']);
+  }
+
+  startFeedReadAloud(modelId: string): void {
+    const events = this.getCurrentFeedTtsEvents();
+    this.ttsSequence.start('feed', this.feedLabel(), events, modelId);
+  }
+
+  private getCurrentFeedTtsEvents(): Event[] {
+    if (this.showListFeed()) {
+      return this.listColumn?.displayedEvents() ?? [];
+    }
+
+    const feed = this.currentScrollableFeed();
+    if (!feed) {
+      return [];
+    }
+
+    return this.allColumnEvents().get(feed.id) ?? this.columnEvents().get(feed.id) ?? [];
   }
 
   // Drag state to prevent unnecessary re-renders during column reordering

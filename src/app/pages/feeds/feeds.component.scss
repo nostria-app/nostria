@@ -78,6 +78,12 @@ app-user-profile {
   }
 }
 
+.feed-menu-item-meta {
+  margin-left: 8px;
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 0.78rem;
+}
+
 .home-container {
   display: flex;
   flex-direction: column;

@@ -46,6 +46,8 @@ import { TrustService } from '../../services/trust.service';
 import { PublishEventBus, PublishRelayResultEvent } from '../../services/publish-event-bus.service';
 import { UserRelayService } from '../../services/relays/user-relay';
 import { DatabaseService } from '../../services/database.service';
+import { TtsSequencePlayerService } from '../../services/tts-sequence-player.service';
+import { SettingsService } from '../../services/settings.service';
 
 /** Description of the EventPageComponent
  *
@@ -148,6 +150,8 @@ export class EventPageComponent {
   private publishEventBus = inject(PublishEventBus);
   private readonly userRelayService = inject(UserRelayService);
   private readonly database = inject(DatabaseService);
+  protected readonly ttsSequence = inject(TtsSequencePlayerService);
+  protected readonly settings = inject(SettingsService);
   id = signal<string | null>(null);
   userRelays: string[] = [];
   app = inject(ApplicationService);
@@ -202,6 +206,38 @@ export class EventPageComponent {
       count += this.countAllReplies(reply.replies);
     }
     return count;
+  }
+
+  startThreadReadAloud(modelId: string): void {
+    const events = this.getThreadTtsEvents();
+    this.ttsSequence.start('thread', 'Thread', events, modelId);
+  }
+
+  private getThreadTtsEvents(): Event[] {
+    const mainEvent = this.event();
+    const events = [
+      ...this.parentEvents(),
+      ...(mainEvent ? [mainEvent] : []),
+      ...this.flattenThreadedEvents(this.filteredThreadedReplies()),
+    ];
+
+    const seen = new Set<string>();
+    return events.filter(event => {
+      if (seen.has(event.id)) {
+        return false;
+      }
+
+      seen.add(event.id);
+      return true;
+    });
+  }
+
+  private flattenThreadedEvents(replies: ThreadedEvent[]): Event[] {
+    const events: Event[] = [];
+    for (const reply of replies) {
+      events.push(reply.event, ...this.flattenThreadedEvents(reply.replies));
+    }
+    return events;
   }
 
   // Reply filter state

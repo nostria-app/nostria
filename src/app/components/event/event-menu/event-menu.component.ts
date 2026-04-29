@@ -53,6 +53,8 @@ import { ImageCacheService } from '../../../services/image-cache.service';
 import { EventRelaySourcesService } from '../../../services/event-relay-sources.service';
 import { DeleteEventService } from '../../../services/delete-event.service';
 import { EventTtsPlaybackService } from '../../../services/event-tts-playback.service';
+import { extractTextForTts } from '../../../utils/tts-text';
+import { TtsSequencePlayerService } from '../../../services/tts-sequence-player.service';
 
 interface LocalTtsMenuOption {
   id: string;
@@ -105,6 +107,7 @@ export class EventMenuComponent {
   private imageCacheService = inject(ImageCacheService);
   private deleteEventService = inject(DeleteEventService);
   private eventTtsPlayback = inject(EventTtsPlaybackService);
+  private ttsSequence = inject(TtsSequencePlayerService);
 
   event = input.required<Event>();
   view = input<'icon' | 'full'>('icon');
@@ -235,12 +238,6 @@ export class EventMenuComponent {
   // YouTube URL patterns: youtube.com/watch?v=, youtu.be/, youtube.com/embed/, youtube.com/shorts/, youtube.com/live/
   // Supports YouTube subdomains (e.g., music.youtube.com)
   private youtubeRegex = /(?:https?:\/\/)?(?:[a-zA-Z0-9-]+\.)?(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/|live\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})(?:[^\s]*)?/gi;
-  private readonly markdownLinkRegex = /\[([^\]]+)\]\((?:(?:https?|wss?):\/\/|(?:web\+)?nostr:)[^)]+\)/gi;
-  private readonly urlRegex = /\b(?:https?|wss?):\/\/[^\s<>"{}|\\^`[\]]+/gi;
-  private readonly nostrUriRegex = /\b(?:web\+)?nostr:[^\s<>"{}|\\^`[\]]+/gi;
-  private readonly nip19ReferenceRegex = /\b(?:npub|nprofile|note|nevent|naddr)1[a-z0-9]+\b/gi;
-  private readonly nostrTagReferenceRegex = /#\[\d+\]/g;
-
   // Extract media URLs from event content
   mediaUrls = computed<{ url: string; type: 'audio' | 'video'; isYouTube?: boolean; youtubeId?: string }[]>(() => {
     const event = this.event();
@@ -378,8 +375,9 @@ export class EventMenuComponent {
     const event = this.event();
     if (!event || this.isReadingAloud()) return;
 
+    this.ttsSequence.close();
     const playbackRequestId = this.eventTtsPlayback.start(event.id, model.label);
-    const speechText = this.extractTextForTts(event.content);
+    const speechText = extractTextForTts(event.content);
     if (!speechText) {
       this.eventTtsPlayback.close(playbackRequestId);
       this.snackBar.open('No readable text found for speech.', 'Dismiss', { duration: 3000 });
@@ -416,17 +414,6 @@ export class EventMenuComponent {
     } finally {
       this.isReadingAloud.set(false);
     }
-  }
-
-  private extractTextForTts(content: string): string {
-    return content
-      .replace(this.markdownLinkRegex, '$1')
-      .replace(this.urlRegex, ' ')
-      .replace(this.nostrUriRegex, ' ')
-      .replace(this.nip19ReferenceRegex, ' ')
-      .replace(this.nostrTagReferenceRegex, ' ')
-      .replace(/\s+/g, ' ')
-      .trim();
   }
 
   async shareEventDialog(): Promise<void> {

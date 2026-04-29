@@ -56,7 +56,8 @@
 </mat-card>
 } @else if (targetItem && item) {
 <mat-card class="note-card" [class.plain]="isPlain()" [class.clickable]="isCardClickable()" appearance="outlined"
-  [class.selected]="isCurrentlySelected()" [attr.tabindex]="isCardClickable() ? 0 : null"
+  [class.selected]="isCurrentlySelected()" [class.tts-sequence-active]="isActiveSequenceEvent()"
+  [attr.tabindex]="isCardClickable() ? 0 : null"
   [style.cursor]="isCardClickable() ? 'pointer' : 'auto'" (click)="onCardClick($event)">
   @if (repostedEvent) {
   <!-- Repost structure -->

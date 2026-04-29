@@ -1,0 +1,108 @@
+@let state = player.state();
+@if (state) {
+<section class="tts-sequence-player" aria-label="Text to speech player">
+  <div class="tts-art" aria-hidden="true">
+    <mat-icon>record_voice_over</mat-icon>
+  </div>
+
+  <div class="tts-info">
+    <div class="tts-title">{{ state.title }}</div>
+    <div class="tts-subtitle">
+      {{ player.currentModel().label }} · {{ player.selectedVoiceLabel() }} · {{ state.currentIndex + 1 }} / {{
+      state.items.length }}
+    </div>
+  </div>
+
+  <div class="tts-controls">
+    <button mat-icon-button matTooltip="Previous post" [disabled]="!player.canPrevious()" (click)="player.previous()">
+      <mat-icon>skip_previous</mat-icon>
+    </button>
+
+    @if (state.status === 'playing') {
+    <button mat-icon-button class="tts-play-button" matTooltip="Pause" (click)="player.toggle()">
+      <mat-icon>pause</mat-icon>
+    </button>
+    } @else {
+    <button mat-icon-button class="tts-play-button" matTooltip="Play" [disabled]="state.status === 'loading' || state.status === 'generating' || state.status === 'error'"
+      (click)="player.toggle()">
+      <mat-icon>play_arrow</mat-icon>
+    </button>
+    }
+
+    <button mat-icon-button matTooltip="Next post" [disabled]="!player.canNext()" (click)="player.next()">
+      <mat-icon>skip_next</mat-icon>
+    </button>
+  </div>
+
+  <div class="tts-timeline">
+    <span>{{ formatTime(player.currentTime()) }}</span>
+    <div class="tts-progress-track" aria-hidden="true">
+      <div class="tts-progress-fill" [style.width.%]="progressPercent()"></div>
+    </div>
+    <span>{{ formatTime(player.duration()) }}</span>
+  </div>
+
+  <div class="tts-current-text">
+    @if (state.message) {
+    <span>{{ state.message }}</span>
+    } @else {
+    <span>{{ player.activeParagraph() || player.currentItem()?.label }}</span>
+    }
+  </div>
+
+  <button mat-button class="tts-settings-button" [matMenuTriggerFor]="settingsMenu">
+    <mat-icon>tune</mat-icon>
+    <span>{{ player.selectedSpeed().toFixed(1) }}x</span>
+  </button>
+
+  <button mat-icon-button matTooltip="Close" (click)="player.close()">
+    <mat-icon>close</mat-icon>
+  </button>
+</section>
+
+<mat-menu #settingsMenu="matMenu">
+  <button mat-menu-item [matMenuTriggerFor]="modelMenu">
+    <mat-icon>model_training</mat-icon>
+    <span>Model: {{ player.currentModel().label }}</span>
+  </button>
+  <button mat-menu-item [matMenuTriggerFor]="voiceMenu">
+    <mat-icon>record_voice_over</mat-icon>
+    <span>Voice: {{ player.selectedVoiceLabel() }}</span>
+  </button>
+  <button mat-menu-item [matMenuTriggerFor]="speedMenu">
+    <mat-icon>speed</mat-icon>
+    <span>Speed: {{ player.selectedSpeed().toFixed(1) }}x</span>
+  </button>
+</mat-menu>
+
+<mat-menu #modelMenu="matMenu">
+  @for (model of player.models; track model.id) {
+  <button mat-menu-item (click)="player.selectModel(model.id)">
+    <mat-icon>{{ player.selectedModelId() === model.id ? 'check_circle' : 'graphic_eq' }}</mat-icon>
+    <span>{{ model.label }}</span>
+    <span class="tts-menu-meta">{{ model.description }}</span>
+  </button>
+  }
+</mat-menu>
+
+<mat-menu #voiceMenu="matMenu">
+  @for (voice of player.voiceOptions(); track voice.value) {
+  <button mat-menu-item (click)="player.selectVoice(voice.value)">
+    <mat-icon>{{ player.selectedVoice() === voice.value ? 'check_circle' : 'record_voice_over' }}</mat-icon>
+    <span>{{ voice.label }}</span>
+    @if (voice.description) {
+    <span class="tts-menu-meta">{{ voice.description }}</span>
+    }
+  </button>
+  }
+</mat-menu>
+
+<mat-menu #speedMenu="matMenu">
+  @for (speed of player.speedOptions; track speed) {
+  <button mat-menu-item (click)="player.selectSpeed(speed)">
+    <mat-icon>{{ player.selectedSpeed() === speed ? 'check_circle' : 'speed' }}</mat-icon>
+    <span>{{ speed.toFixed(1) }}x</span>
+  </button>
+  }
+</mat-menu>
+}

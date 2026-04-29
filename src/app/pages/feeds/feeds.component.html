@@ -97,6 +97,12 @@
             <mat-icon>refresh</mat-icon>
             <span>Refresh Content</span>
           </button>
+          @if (settings.settings().aiEnabled && settings.settings().aiSpeechEnabled) {
+          <button mat-menu-item [matMenuTriggerFor]="feedReadAloudMenu">
+            <mat-icon>record_voice_over</mat-icon>
+            <span>Read feed aloud</span>
+          </button>
+          }
           <mat-divider></mat-divider>
           }
 
@@ -124,6 +130,16 @@
             <mat-icon>restore</mat-icon>
             <span>Reset Feeds</span>
           </button>
+        </mat-menu>
+
+        <mat-menu #feedReadAloudMenu="matMenu">
+          @for (model of ttsSequence.models; track model.id) {
+          <button mat-menu-item (click)="startFeedReadAloud(model.id)">
+            <mat-icon>graphic_eq</mat-icon>
+            <span>{{ model.label }}</span>
+            <span class="feed-menu-item-meta">{{ model.description }}</span>
+          </button>
+          }
         </mat-menu>
         }
       </div>

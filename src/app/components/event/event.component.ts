@@ -83,6 +83,7 @@ import { visualContentLength } from '../../utils/visual-content-length';
 import { getRuntimeResourceProfile } from '../../utils/runtime-resource-profile';
 import { DatabaseService } from '../../services/database.service';
 import { EventTtsPlaybackService } from '../../services/event-tts-playback.service';
+import { TtsSequencePlayerService } from '../../services/tts-sequence-player.service';
 
 type EventCardAppearance = 'card' | 'plain';
 
@@ -285,6 +286,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   parsingService = inject(ParsingService);
   database = inject(DatabaseService);
   eventTtsPlayback = inject(EventTtsPlaybackService);
+  ttsSequence = inject(TtsSequencePlayerService);
   private utilities = inject(UtilitiesService);
   private userRelaysService = inject(UserRelaysService);
   private readonly logger = inject(LoggerService);
@@ -295,6 +297,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
   reactions = signal<ReactionEvents>({ events: [], data: new Map() });
   reports = signal<ReactionEvents>({ events: [], data: new Map() });
+  isActiveSequenceEvent = computed<boolean>(() => this.ttsSequence.isActiveEvent(this.record()?.event.id));
 
   private consumeBlockedThreadInteraction(event?: globalThis.Event): boolean {
     if (!this.isThreadInteractionBlocked()) {

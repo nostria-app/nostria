@@ -8,6 +8,12 @@
   <h2 class="panel-title title-font">Thread</h2>
   <span class="panel-header-spacer"></span>
 
+  @if (settings.settings().aiEnabled && settings.settings().aiSpeechEnabled && event()) {
+  <button mat-icon-button [matMenuTriggerFor]="threadReadAloudMenu" matTooltip="Read thread aloud">
+    <mat-icon>record_voice_over</mat-icon>
+  </button>
+  }
+
   <!-- Comment Kind Toggle -->
   @if (showKindFilter()) {
   <mat-button-toggle-group [value]="commentKindFilter()" (change)="setCommentKindFilter($event.value)"
@@ -25,6 +31,16 @@
     <mat-icon>{{ isReplyFilterActive() ? 'filter_alt' : 'filter_alt_off' }}</mat-icon>
   </button>
 </div>
+
+<mat-menu #threadReadAloudMenu="matMenu">
+  @for (model of ttsSequence.models; track model.id) {
+  <button mat-menu-item (click)="startThreadReadAloud(model.id)">
+    <mat-icon>graphic_eq</mat-icon>
+    <span>{{ model.label }}</span>
+    <span class="thread-menu-item-meta">{{ model.description }}</span>
+  </button>
+  }
+</mat-menu>
 
 <!-- Reply Filter Menu -->
 <mat-menu #replyFilterMenu="matMenu" class="reply-filter-menu" panelClass="reply-filter-menu-panel">

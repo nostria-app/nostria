@@ -123,6 +123,7 @@ import { SettingsQuickCardComponent } from './components/settings-quick-card/set
 import { getRuntimeResourceProfile } from './utils/runtime-resource-profile';
 import { ColorExtractionService } from './services/color-extraction.service';
 import { ChatWidgetComponent } from './components/chat-widget/chat-widget.component';
+import { TtsSequencePlayerComponent } from './components/tts-sequence-player/tts-sequence-player.component';
 
 interface NavItem {
   path: string;
@@ -180,6 +181,7 @@ interface NavItem {
     RightPanelContainerComponent,
     SettingsQuickCardComponent,
     ChatWidgetComponent,
+    TtsSequencePlayerComponent,
   ],
   templateUrl: './app.html',
   styleUrl: './app.scss',
