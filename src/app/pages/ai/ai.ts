@@ -955,8 +955,8 @@ export class AiComponent {
     { label: 'Animate image', prompt: 'Animate the attached image into a short video.', task: 'video-generation' },
   ];
   readonly voiceQuickPrompts: AiQuickPrompt[] = [
-    { label: 'Trailer VO', prompt: 'Welcome to Nostria - Your Social Network. Built for human connections. See your friends again. Nostria is social without the noise.', task: 'voice-generation' },
-    { label: 'Warm narration', prompt: 'Welcome to Nostria. A calmer place to follow your friends, share what matters, and stay connected without the noise.', task: 'voice-generation' },
+    { label: 'News brief', prompt: 'Good evening. Researchers announced a breakthrough today in clean energy storage, promising lighter batteries, faster charging, and a future where cities can run longer on renewable power.', task: 'voice-generation' },
+    { label: 'Viking tale', prompt: 'Under a sky bright with northern lights, Astrid raised her shield and steered the longship toward the black cliffs, where an ancient bell was said to wake the sea.', task: 'voice-generation' },
     { label: 'Fast teaser', prompt: 'New post. New voice. Same open network. Nostria helps you create, share, and connect in seconds.', task: 'voice-generation' },
   ];
   readonly upscalingQuickPrompts: AiQuickPrompt[] = [
