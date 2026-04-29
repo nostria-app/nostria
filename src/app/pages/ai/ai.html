@@ -70,7 +70,7 @@
     }
 
     @if (showChatPanel()) {
-    <section class="chat-surface">
+    <section class="chat-surface" #chatSurface (scroll)="onConversationScroll($event)">
       <header class="chat-header">
         @if (hasXAiChatTypePicker()) {
         <section class="initial-chat-type-picker" aria-label="Choose chat type">
@@ -140,7 +140,7 @@
     </section>
     }
 
-    <div class="conversation-panel" #conversationPanel (scroll)="onConversationScroll($event)">
+    <div class="conversation-panel">
       @for (message of conversation(); track message.id) {
       <article class="message-row" [class.message-user]="message.role === 'user'"
         [class.message-assistant]="message.role === 'assistant'"
@@ -451,7 +451,7 @@
       <div class="conversation-anchor" #conversationEnd aria-hidden="true"></div>
     </div>
 
-    <div class="composer-panel">
+    <div class="composer-panel" [class.composer-panel-settings-open]="voiceSettingsPanelOpen()">
       @if (showProcessingStatus()) {
       <div class="composer-processing-status" aria-live="polite">
         <div class="composer-processing-copy">

@@ -128,6 +128,8 @@ interface AudioPlaybackState {
 
 type XAiComposerMode = 'text' | 'image' | 'video' | 'voice';
 
+type AiModeModelSelections = Partial<Record<XAiComposerMode, string>>;
+
 interface FetchedPromptContext {
   url: string;
   markdown: string;
@@ -155,6 +157,7 @@ export class AiComponent {
   private static readonly GENERATED_VIDEO_FETCH_INITIAL_DELAY_MS = 1500;
   private static readonly GENERATED_VIDEO_FETCH_RETRY_DELAY_MS = 2000;
   private static readonly GENERATED_VIDEO_FETCH_MAX_ATTEMPTS = 4;
+  private static readonly MODE_MODEL_SELECTIONS_STORAGE_KEY = 'nostria-ai-mode-model-selections';
 
   private readonly accountLocalState = inject(AccountLocalStateService);
   private readonly accountState = inject(AccountStateService);
@@ -175,7 +178,7 @@ export class AiComponent {
   private readonly panelNav = inject(PanelNavigationService);
   private readonly platformId = inject(PLATFORM_ID);
   private readonly snackBar = inject(MatSnackBar);
-  private readonly conversationPanelRef = viewChild<ElementRef<HTMLDivElement>>('conversationPanel');
+  private readonly chatSurfaceRef = viewChild<ElementRef<HTMLDivElement>>('chatSurface');
   private readonly conversationEndRef = viewChild<ElementRef<HTMLDivElement>>('conversationEnd');
   private readonly attachmentInputRef = viewChild<ElementRef<HTMLInputElement>>('attachmentInput');
   private readonly composerInputRef = viewChild<ElementRef<HTMLTextAreaElement>>('composerInput');
@@ -725,7 +728,7 @@ export class AiComponent {
       ...this.cloudChatModels(),
     ];
   });
-  readonly selectedModelId = signal(this.webGpuAvailable ? 'onnx-community/gemma-4-E2B-it-ONNX' : 'Xenova/distilgpt2');
+  readonly selectedModelId = signal(this.getInitialSelectedModelId());
   readonly selectedModel = computed(() => this.composerModels().find(model => model.id === this.selectedModelId()) ?? null);
   readonly isXAiTextMode = computed(() => this.selectedModel()?.provider === 'xai' && this.selectedModel()?.source === 'cloud' && this.selectedModel()?.task === 'text-generation');
   readonly isOpenAiImageGenerationMode = computed(() => this.selectedModel()?.provider === 'openai' && this.selectedModel()?.source === 'cloud' && this.selectedModel()?.task === 'image-generation');
@@ -1108,6 +1111,32 @@ export class AiComponent {
     });
 
     effect(() => {
+      const model = this.selectedModel();
+      if (!model) {
+        return;
+      }
+
+      const mode = this.modelSelectionModeForModel(model);
+      if (!mode) {
+        return;
+      }
+
+      untracked(() => this.storeLastModelSelection(mode, model.id));
+    });
+
+    effect(() => {
+      const model = this.selectedModel();
+      if (model) {
+        return;
+      }
+
+      const fallback = this.getPreferredModelForMode('text') ?? this.composerModels()[0];
+      if (fallback) {
+        this.selectedModelId.set(fallback.id);
+      }
+    });
+
+    effect(() => {
       const selection = this.aiService.queuedStandardPrompt();
       if (!selection) {
         return;
@@ -1244,7 +1273,9 @@ export class AiComponent {
     this.showHistoryDrawer.set(false);
     this.releaseGeneratedVideoUrls(this.conversation().flatMap(message => message.generatedVideos ?? []));
     this.releaseGeneratedAudioUrls(this.conversation().flatMap(message => message.generatedAudios ?? []));
-    this.conversation.set(await Promise.all(history.messages.map(async message => ({
+    this.autoPlayedAudioIds.clear();
+
+    const restoredMessages = await Promise.all(history.messages.map(async message => ({
       id: this.createMessageId(),
       role: message.role,
       content: message.content,
@@ -1258,7 +1289,13 @@ export class AiComponent {
       generatedAudios: message.generatedAudios?.length
         ? await this.restoreGeneratedAudios(message.generatedAudios)
         : undefined,
-    }))));
+    })));
+
+    for (const audio of restoredMessages.flatMap(message => message.generatedAudios ?? [])) {
+      this.autoPlayedAudioIds.add(audio.id);
+    }
+
+    this.conversation.set(restoredMessages);
   }
 
   selectModel(modelId: string): void {
@@ -1298,13 +1335,7 @@ export class AiComponent {
   }
 
   selectGrokMode(mode: XAiComposerMode): void {
-    const model = mode === 'text'
-      ? this.getPreferredXAiTextModel()
-      : mode === 'image'
-        ? this.imageModels().find(candidate => candidate.task === 'image-generation' && candidate.provider === 'xai')
-        : mode === 'video'
-          ? this.videoModels().find(candidate => candidate.task === 'video-generation' && candidate.provider === 'xai')
-          : this.voiceModels().find(candidate => candidate.task === 'text-to-speech' && candidate.provider === 'xai');
+    const model = this.getPreferredModelForMode(mode) ?? this.getFallbackModelForMode(mode);
 
     if (model) {
       this.selectedModelId.set(model.id);
@@ -2436,6 +2467,94 @@ export class AiComponent {
       ?? this.cloudChatModels().find(candidate => candidate.provider === 'xai');
   }
 
+  private getInitialSelectedModelId(): string {
+    return this.getPreferredModelForMode('text')?.id
+      ?? (this.webGpuAvailable ? 'onnx-community/gemma-4-E2B-it-ONNX' : 'Xenova/distilgpt2');
+  }
+
+  private getPreferredModelForMode(mode: XAiComposerMode): ModelInfo | undefined {
+    const selectedId = this.readLastModelSelections()[mode];
+    if (!selectedId) {
+      return undefined;
+    }
+
+    return this.composerModels().find(model => model.id === selectedId && this.isModelForMode(model, mode));
+  }
+
+  private getFallbackModelForMode(mode: XAiComposerMode): ModelInfo | undefined {
+    if (mode === 'text') {
+      return this.getPreferredXAiTextModel()
+        ?? this.localChatModels()[0]
+        ?? this.cloudChatModels()[0];
+    }
+
+    if (mode === 'image') {
+      return this.imageModels().find(candidate => candidate.task === 'image-generation' && candidate.provider === 'xai')
+        ?? this.imageModels().find(candidate => candidate.task === 'image-generation')
+        ?? this.imageModels()[0];
+    }
+
+    if (mode === 'video') {
+      return this.videoModels().find(candidate => candidate.task === 'video-generation' && candidate.provider === 'xai')
+        ?? this.videoModels()[0];
+    }
+
+    return this.voiceModels().find(candidate => candidate.task === 'text-to-speech' && candidate.provider === 'xai')
+      ?? this.voiceModels()[0];
+  }
+
+  private isModelForMode(model: ModelInfo, mode: XAiComposerMode): boolean {
+    if (mode === 'text') {
+      return this.isChatGenerationTask(model.task);
+    }
+
+    if (mode === 'image') {
+      return model.task === 'image-generation' || model.task === 'image-upscaling';
+    }
+
+    if (mode === 'video') {
+      return model.task === 'video-generation';
+    }
+
+    return model.task === 'text-to-speech';
+  }
+
+  private modelSelectionModeForModel(model: ModelInfo): XAiComposerMode | null {
+    if (this.isChatGenerationTask(model.task)) {
+      return 'text';
+    }
+
+    if (model.task === 'image-generation' || model.task === 'image-upscaling') {
+      return 'image';
+    }
+
+    if (model.task === 'video-generation') {
+      return 'video';
+    }
+
+    if (model.task === 'text-to-speech') {
+      return 'voice';
+    }
+
+    return null;
+  }
+
+  private readLastModelSelections(): AiModeModelSelections {
+    return this.localStorage.getObject<AiModeModelSelections>(AiComponent.MODE_MODEL_SELECTIONS_STORAGE_KEY) ?? {};
+  }
+
+  private storeLastModelSelection(mode: XAiComposerMode, modelId: string): void {
+    const selections = this.readLastModelSelections();
+    if (selections[mode] === modelId) {
+      return;
+    }
+
+    this.localStorage.setObject<AiModeModelSelections>(AiComponent.MODE_MODEL_SELECTIONS_STORAGE_KEY, {
+      ...selections,
+      [mode]: modelId,
+    });
+  }
+
   private resolveModelId(modelId: string): string | null {
     if (this.composerModels().some(model => model.id === modelId)) {
       return modelId;
@@ -2490,6 +2609,7 @@ export class AiComponent {
     this.activeGeneratedImage.set(null);
     this.activeGeneratedVideo.set(null);
     this.activeGeneratedAudio.set(null);
+    this.autoPlayedAudioIds.clear();
     this.conversation.set([]);
   }
 
@@ -2813,14 +2933,13 @@ export class AiComponent {
 
   private scrollConversationToEnd(behavior: ScrollBehavior): void {
     requestAnimationFrame(() => {
-      const anchor = this.conversationEndRef()?.nativeElement;
-      if (anchor) {
-        anchor.scrollIntoView({ behavior, block: 'end' });
+      const surface = this.chatSurfaceRef()?.nativeElement;
+      if (surface) {
+        surface.scrollTo({ top: surface.scrollHeight, behavior });
         return;
       }
 
-      const panel = this.conversationPanelRef()?.nativeElement;
-      panel?.scrollTo({ top: panel.scrollHeight, behavior });
+      this.conversationEndRef()?.nativeElement.scrollIntoView({ behavior, block: 'end' });
     });
   }
 
