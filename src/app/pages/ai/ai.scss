@@ -290,7 +290,7 @@
 }
 
 .chat-header {
-  padding: 4px 2px 0;
+  padding: 0 2px;
 }
 
 .workspace-switch {
@@ -321,25 +321,9 @@
   color: var(--mat-sys-on-primary-container);
 }
 
-.chat-header-copy {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.chat-header-title-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.chat-header h2 {
-  font-size: clamp(2rem, 2.5vw, 3rem);
-  line-height: 1.05;
-}
-
 .ai-info-button {
   flex: 0 0 auto;
+  margin-left: auto;
   inline-size: 36px;
   block-size: 36px;
   min-inline-size: 36px;
@@ -351,8 +335,9 @@
 }
 
 .chat-header-controls {
+  width: 100%;
   flex-wrap: wrap;
-  justify-content: flex-end;
+  justify-content: flex-start;
 }
 
 .chat-header-new-chat-button {
@@ -437,20 +422,10 @@
   color: var(--mat-sys-primary);
 }
 
-.chat-header-copy {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.chat-header h2 {
-  font-size: clamp(2rem, 2.5vw, 3rem);
-  line-height: 1.05;
-}
-
 .chat-header-controls {
+  width: 100%;
   flex-wrap: wrap;
-  justify-content: flex-end;
+  justify-content: flex-start;
 }
 
 .history-toggle-button,
@@ -1688,10 +1663,6 @@
 
   .message-actions {
     justify-content: flex-start;
-  }
-
-  .chat-header h2 {
-    font-size: clamp(1.8rem, 9vw, 2.5rem);
   }
 
   .composer-hint {

@@ -620,6 +620,31 @@ export class AiComponent {
   readonly isGeneratedMediaMode = computed(() => this.isVisualGenerationMode() || this.isVoiceGenerationMode());
   readonly hasXAiChatTypePicker = computed(() => this.cloudChatModels().some(model => model.provider === 'xai'));
   readonly isXAiComposerMode = computed(() => this.selectedModel()?.provider === 'xai' && this.selectedModel()?.source === 'cloud' && (this.isXAiTextMode() || this.isImageGenerationMode() || this.isVideoGenerationMode() || this.isVoiceGenerationMode()));
+  readonly composerPlaceholder = computed(() => {
+    const compact = this.narrowHistoryMode();
+
+    if (this.isImageUpscalingMode()) {
+      return compact ? 'Attach image' : 'Attach one image to upscale';
+    }
+
+    if (this.isImageGenerationMode()) {
+      return compact ? 'Describe image' : 'Describe the image you want to create';
+    }
+
+    if (this.isVideoGenerationMode()) {
+      if (this.xAiVideoMode() === 'extend-video') {
+        return compact ? 'Describe next scene' : 'Attach one video and describe what happens next';
+      }
+
+      return compact ? 'Describe video' : 'Describe the video you want to create, or attach an image or video as source material';
+    }
+
+    if (this.isVoiceGenerationMode()) {
+      return compact ? 'Write script' : 'Paste or write the script you want spoken aloud';
+    }
+
+    return compact ? 'Ask anything' : 'Ask anything or use #fetch example.com';
+  });
   readonly currentXAiMode = computed<XAiComposerMode>(() => this.isVoiceGenerationMode() ? 'voice' : this.isVideoGenerationMode() ? 'video' : this.isImageGenerationMode() ? 'image' : 'text');
   readonly currentXAiModeLabel = computed(() => this.xAiModeOptions.find(option => option.value === this.currentXAiMode())?.label ?? 'Text');
   readonly isXAiImageQualityMode = computed(() => this.cloudSettings().xaiImageResolution === '2k');

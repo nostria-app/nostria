@@ -72,15 +72,6 @@
     @if (showChatPanel()) {
     <section class="chat-surface">
       <header class="chat-header">
-        <div class="chat-header-copy">
-          <div class="chat-header-title-row">
-            <h2>How can I help you?</h2>
-            <button mat-icon-button type="button" class="ai-info-button" (click)="openAiInfoDialog()"
-              aria-label="Open AI information" title="Open AI information">
-              <mat-icon>info</mat-icon>
-            </button>
-          </div>
-        </div>
         <div class="chat-header-controls">
           @if (narrowHistoryMode()) {
           <button mat-flat-button type="button" class="new-chat-button chat-header-new-chat-button"
@@ -93,6 +84,10 @@
             History
           </button>
           }
+          <button mat-icon-button type="button" class="ai-info-button" (click)="openAiInfoDialog()"
+            aria-label="Open AI information" title="Open AI information">
+            <mat-icon>info</mat-icon>
+          </button>
         </div>
       </header>
 
@@ -489,7 +484,7 @@
 
         <textarea #composerInput class="composer-input" [ngModel]="composerText()"
           (ngModelChange)="composerText.set($event)" (keydown)="onComposerKeydown($event)" rows="1"
-          placeholder="{{ isImageUpscalingMode() ? 'Attach one image to upscale' : isImageGenerationMode() ? 'Describe the image you want to create' : isVideoGenerationMode() ? (xAiVideoMode() === 'extend-video' ? 'Attach one video and describe what happens next' : 'Describe the video you want to create, or attach an image or video as source material') : isVoiceGenerationMode() ? 'Paste or write the script you want spoken aloud' : 'Ask anything or use #fetch example.com' }}"
+          [placeholder]="composerPlaceholder()"
           aria-label="{{ isImageUpscalingMode() ? 'Upscaling instruction' : isImageGenerationMode() ? 'Image prompt' : isVideoGenerationMode() ? 'Video prompt' : isVoiceGenerationMode() ? 'Voice prompt' : 'Chat prompt' }}"
           title="{{ isImageUpscalingMode() ? 'Upscaling instruction' : isImageGenerationMode() ? 'Image prompt' : isVideoGenerationMode() ? 'Video prompt' : isVoiceGenerationMode() ? 'Voice prompt' : 'Chat prompt' }}"
           [disabled]="isGenerating()"></textarea>
