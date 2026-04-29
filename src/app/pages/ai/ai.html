@@ -466,6 +466,9 @@
           @if (videoProcessingHint()) {
           <div class="composer-processing-hint">{{ videoProcessingHint() }}</div>
           }
+          @if (dictationLoadingHint()) {
+          <div class="composer-processing-hint">{{ dictationLoadingHint() }}</div>
+          }
         </div>
         @if (activeProcessingProgress() !== null) {
         <span class="composer-processing-progress">{{ activeProcessingProgress() }}%</span>
@@ -837,12 +840,40 @@
       </mat-menu>
 
       <mat-menu #dictationModelMenu="matMenu" class="model-selector-menu" [overlapTrigger]="false" yPosition="above">
+        <button mat-menu-item type="button" (click)="selectDictationMode('single')">
+          <div class="model-menu-item" [class.model-menu-item-selected]="dictationMode() === 'single'">
+            <div class="model-menu-copy">
+              <span class="model-menu-title">One-shot dictation</span>
+              <span class="model-menu-meta">Stops after a pause and inserts the transcription.</span>
+            </div>
+            <div class="model-menu-trailing">
+              @if (dictationMode() === 'single') {
+              <mat-icon class="model-menu-selected-icon">check_circle</mat-icon>
+              }
+            </div>
+          </div>
+        </button>
+        <button mat-menu-item type="button" (click)="selectDictationMode('continuous')">
+          <div class="model-menu-item" [class.model-menu-item-selected]="dictationMode() === 'continuous'">
+            <div class="model-menu-copy">
+              <span class="model-menu-title">Continuous dictation</span>
+              <span class="model-menu-meta">Keeps listening and transcribes each spoken chunk.</span>
+            </div>
+            <div class="model-menu-trailing">
+              @if (dictationMode() === 'continuous') {
+              <mat-icon class="model-menu-selected-icon">check_circle</mat-icon>
+              }
+            </div>
+          </div>
+        </button>
+        <mat-divider></mat-divider>
         @for (model of dictationModels; track model.id) {
         <button mat-menu-item type="button" (click)="selectDictationModel(model.id)">
           <div class="model-menu-item" [class.model-menu-item-selected]="model.id === selectedDictationModel().id">
             <div class="model-menu-copy">
               <span class="model-menu-title">{{ model.name }}</span>
-              <span class="model-menu-meta">{{ model.runtime }} · {{ model.size }}</span>
+              <span class="model-menu-meta">{{ model.runtime }} · {{ model.size }}{{ model.highMemory ? ' · high memory' : '' }}</span>
+              <span class="model-menu-meta">{{ model.description }}</span>
             </div>
             <div class="model-menu-trailing">
               @if (model.id === selectedDictationModel().id) {

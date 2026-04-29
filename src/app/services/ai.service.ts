@@ -634,6 +634,34 @@ export class AiService {
         }
       }
     };
+    this.worker.onerror = (event) => {
+      event.preventDefault();
+      this.handleWorkerFailure(new Error(event.message || 'AI worker failed.'));
+    };
+    this.worker.onmessageerror = () => {
+      this.handleWorkerFailure(new Error('AI worker sent an unreadable response.'));
+    };
+  }
+
+  private handleWorkerFailure(error: Error): void {
+    console.error('AI worker failure:', error);
+
+    const pendingCallbacks = Object.values(this.callbacks);
+    this.callbacks = {};
+
+    for (const callback of pendingCallbacks) {
+      callback.reject(error);
+    }
+
+    this._processingCount = 0;
+    this.processingState.set({ isProcessing: false, task: null });
+
+    if (this.worker) {
+      this.worker.terminate();
+      this.worker = null;
+    }
+
+    this.initializeWorker();
   }
 
   private createAbortError(): Error {
@@ -2129,6 +2157,15 @@ export class AiService {
   }
 
   private postMessage(type: string, payload: unknown, progressCallback?: (data: unknown) => void): Promise<unknown> {
+    if (!this.worker) {
+      this.initializeWorker();
+    }
+
+    const worker = this.worker;
+    if (!worker) {
+      return Promise.reject(new Error('AI worker is unavailable.'));
+    }
+
     if (type !== 'check') {
       this._processingCount++;
       this.processingState.set({ isProcessing: true, task: type });
@@ -2160,7 +2197,19 @@ export class AiService {
         },
         progress: progressCallback
       };
-      this.worker?.postMessage({ type, payload, id });
+      try {
+        worker.postMessage({ type, payload, id });
+      } catch (error) {
+        delete this.callbacks[id];
+        if (type !== 'check') {
+          this._processingCount--;
+          if (this._processingCount <= 0) {
+            this._processingCount = 0;
+            this.processingState.set({ isProcessing: false, task: null });
+          }
+        }
+        reject(error);
+      }
     });
   }
 }

@@ -6,6 +6,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
+import { MatDividerModule } from '@angular/material/divider';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule, MatMenuTrigger } from '@angular/material/menu';
 import { MatSnackBar } from '@angular/material/snack-bar';
@@ -142,6 +143,7 @@ interface FetchedPromptContext {
     CommonModule,
     FormsModule,
     MatButtonModule,
+    MatDividerModule,
     MatIconModule,
     MatMenuModule,
     OverlayModule,
@@ -968,6 +970,8 @@ export class AiComponent {
   readonly unavailableGeneratedImageIds = signal<Set<string>>(new Set());
   readonly dictationModels = this.speechService.transcriptionModels;
   readonly selectedDictationModel = this.speechService.selectedTranscriptionModel;
+  readonly dictationMode = this.speechService.dictationMode;
+  readonly dictationLoadingState = this.speechService.transcriptionLoadingState;
   readonly filteredHistories = computed(() => {
     const query = this.historyQuery().trim().toLowerCase();
     if (!query) {
@@ -1047,6 +1051,11 @@ export class AiComponent {
   readonly workerProcessingState = this.aiService.processingState;
   readonly workerTaskLabel = computed(() => this.aiService.getTaskName(this.workerProcessingState().task));
   readonly activeModelProgress = computed(() => {
+    const dictationLoading = this.dictationLoadingState();
+    if (dictationLoading.isLoading && dictationLoading.progress !== null) {
+      return dictationLoading.progress;
+    }
+
     const model = this.selectedModel();
     if (model?.loading) {
       const progress = Math.max(0, Math.min(94, Math.round(model.progress)));
@@ -1057,6 +1066,12 @@ export class AiComponent {
   });
   readonly activeProcessingProgress = computed(() => this.activeModelProgress() ?? this.activeVideoProgress());
   readonly processingStatusLabel = computed(() => {
+    const dictationLoading = this.dictationLoadingState();
+    if (dictationLoading.isLoading) {
+      const status = dictationLoading.status || 'Loading';
+      return `${status} ${dictationLoading.modelName}...`;
+    }
+
     const model = this.selectedModel();
     if (model?.loading) {
       return model.cached ? `Loading ${model.name}...` : `Downloading ${model.name}...`;
@@ -1083,6 +1098,25 @@ export class AiComponent {
     return this.workerTaskLabel() || (this.isGenerating() ? 'Processing...' : '');
   });
   readonly processingStatusText = computed(() => this.processingStatusLabel().replace(/\.{3}$/, '').trim());
+  readonly dictationLoadingHint = computed(() => {
+    const state = this.dictationLoadingState();
+    if (!state.isLoading) {
+      return '';
+    }
+
+    const details: string[] = [];
+    if (state.file) {
+      details.push(state.file);
+    }
+
+    if (state.loadedBytes !== null && state.totalBytes !== null && state.totalBytes > 0) {
+      details.push(`${this.formatFileSize(state.loadedBytes)} of ${this.formatFileSize(state.totalBytes)}`);
+    } else if (state.loadedBytes !== null) {
+      details.push(this.formatFileSize(state.loadedBytes));
+    }
+
+    return details.join(' · ');
+  });
   readonly hasImageVideoInput = computed(() => this.isVideoGenerationMode()
     && this.xAiVideoMode() !== 'extend-video'
     && this.attachedFiles().some(attachment => attachment.mimeType.startsWith('image/')));
@@ -1119,7 +1153,10 @@ export class AiComponent {
       && !(message.generatedAudios?.length ?? 0)
   ));
   readonly showProcessingStatus = computed(() => {
-    const busy = this.workerProcessingState().isProcessing || !!this.selectedModel()?.loading || this.isGenerating();
+    const busy = this.workerProcessingState().isProcessing
+      || !!this.selectedModel()?.loading
+      || this.dictationLoadingState().isLoading
+      || this.isGenerating();
     return busy && !this.hasInlineStreamingIndicator();
   });
   readonly canSend = computed(() => {
@@ -1573,6 +1610,10 @@ export class AiComponent {
 
   selectDictationModel(modelId: string): void {
     this.speechService.selectTranscriptionModel(modelId);
+  }
+
+  selectDictationMode(mode: 'single' | 'continuous'): void {
+    this.speechService.setDictationMode(mode);
   }
 
   onDictationPointerDown(event: PointerEvent, trigger: MatMenuTrigger): void {

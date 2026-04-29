@@ -22,6 +22,8 @@ export interface TranscriptionRule {
   replacement: string;
 }
 
+export type DictationMode = 'single' | 'continuous';
+
 export interface DictationModelOption {
   id: string;
   name: string;
@@ -29,6 +31,17 @@ export interface DictationModelOption {
   size: string;
   runtime: string;
   loadOptions?: AiModelLoadOptions;
+  highMemory?: boolean;
+}
+
+export interface DictationLoadingState {
+  isLoading: boolean;
+  modelName: string;
+  status: string;
+  file: string;
+  progress: number | null;
+  loadedBytes: number | null;
+  totalBytes: number | null;
 }
 
 @Injectable({
@@ -36,6 +49,7 @@ export interface DictationModelOption {
 })
 export class SpeechService {
   private static readonly SELECTED_MODEL_STORAGE_KEY = 'nostria-dictation-model';
+  private static readonly DICTATION_MODE_STORAGE_KEY = 'nostria-dictation-mode';
 
   private aiService = inject(AiService);
   private settings = inject(SettingsService);
@@ -61,10 +75,20 @@ export class SpeechService {
     {
       id: 'onnx-community/whisper-large-v3-turbo',
       name: 'Whisper Large V3 Turbo',
-      description: 'Higher quality Whisper Turbo model.',
+      description: 'Higher quality Whisper Turbo model. Requires much more browser memory.',
       size: '~809MB',
       runtime: this.webGpuAvailable() ? 'WebGPU' : 'WASM/CPU',
-      loadOptions: this.webGpuAvailable() ? { device: 'webgpu', dtype: 'fp32' } : { device: 'wasm', dtype: 'fp32' },
+      loadOptions: this.webGpuAvailable() ? {
+        device: 'webgpu',
+        dtype: {
+          encoder_model: 'fp32',
+          decoder_model_merged: 'q4',
+        },
+      } : {
+        device: 'wasm',
+        dtype: 'q8',
+      },
+      highMemory: true,
     },
     {
       id: 'onnx-community/moonshine-tiny-ONNX',
@@ -85,6 +109,16 @@ export class SpeechService {
   ];
 
   readonly selectedTranscriptionModel = signal<DictationModelOption>(this.getInitialTranscriptionModel());
+  readonly dictationMode = signal<DictationMode>(this.getInitialDictationMode());
+  readonly transcriptionLoadingState = signal<DictationLoadingState>({
+    isLoading: false,
+    modelName: '',
+    status: '',
+    file: '',
+    progress: null,
+    loadedBytes: null,
+    totalBytes: null,
+  });
 
   // Recording state
   isRecording = signal(false);
@@ -100,10 +134,13 @@ export class SpeechService {
   private microphone: MediaStreamAudioSourceNode | null = null;
   private silenceStart: number | null = null;
   private animationFrameId: number | null = null;
+  private restartAfterCurrentRecording = false;
+  private manualStopRequested = false;
 
   // Default options
   private readonly DEFAULT_SILENCE_THRESHOLD = 0.02;
   private readonly DEFAULT_SILENCE_DURATION = 2000;
+  private readonly MODEL_LOAD_TIMEOUT_MS = 240000;
 
   // Current recording options
   private currentOptions: SpeechRecordingOptions = {};
@@ -116,6 +153,11 @@ export class SpeechService {
 
     this.selectedTranscriptionModel.set(model);
     this.localStorage.setItem(SpeechService.SELECTED_MODEL_STORAGE_KEY, model.id);
+  }
+
+  setDictationMode(mode: DictationMode): void {
+    this.dictationMode.set(mode);
+    this.localStorage.setItem(SpeechService.DICTATION_MODE_STORAGE_KEY, mode);
   }
 
   /**
@@ -251,17 +293,24 @@ export class SpeechService {
       };
 
       this.mediaRecorder.onstop = async () => {
+        const stoppedStream = this.stream;
+        const shouldRestart = this.restartAfterCurrentRecording && !this.manualStopRequested;
+        this.restartAfterCurrentRecording = false;
         const audioBlob = new Blob(this.audioChunks, { type: 'audio/wav' });
-        await this.processAudio(audioBlob);
+        await this.processAudio(audioBlob, shouldRestart);
 
-        if (this.stream) {
-          this.stream.getTracks().forEach(track => track.stop());
+        if (stoppedStream) {
+          stoppedStream.getTracks().forEach(track => track.stop());
+        }
+
+        if (this.stream === stoppedStream) {
           this.stream = null;
         }
       };
 
       this.mediaRecorder.start();
       this.isRecording.set(true);
+      this.manualStopRequested = false;
       options.onRecordingStateChange?.(true);
 
       // Start silence detection
@@ -305,7 +354,8 @@ export class SpeechService {
         if (this.silenceStart === null) {
           this.silenceStart = Date.now();
         } else if (Date.now() - this.silenceStart > silenceDuration) {
-          this.stopRecording();
+          this.restartAfterCurrentRecording = this.dictationMode() === 'continuous';
+          this.stopRecording(false);
           return;
         }
       } else {
@@ -321,7 +371,12 @@ export class SpeechService {
   /**
    * Stop recording audio.
    */
-  stopRecording(): void {
+  stopRecording(manual = true): void {
+    if (manual) {
+      this.manualStopRequested = true;
+      this.restartAfterCurrentRecording = false;
+    }
+
     if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
       this.mediaRecorder.stop();
       this.isRecording.set(false);
@@ -347,7 +402,7 @@ export class SpeechService {
   /**
    * Process the recorded audio blob and transcribe it.
    */
-  private async processAudio(blob: Blob): Promise<void> {
+  private async processAudio(blob: Blob, restartWhenFinished = false): Promise<void> {
     this.isTranscribing.set(true);
     this.currentOptions.onTranscribingStateChange?.(true);
 
@@ -355,7 +410,7 @@ export class SpeechService {
       const model = this.selectedTranscriptionModel();
       const status = await this.aiService.checkModel('automatic-speech-recognition', model.id);
       if (!status.loaded) {
-        await this.aiService.loadModel('automatic-speech-recognition', model.id, undefined, model.loadOptions);
+        await this.loadSelectedTranscriptionModel(model);
       }
 
       // Convert Blob to Float32Array
@@ -378,6 +433,9 @@ export class SpeechService {
     } finally {
       this.isTranscribing.set(false);
       this.currentOptions.onTranscribingStateChange?.(false);
+      if (restartWhenFinished && this.dictationMode() === 'continuous' && !this.manualStopRequested) {
+        await this.startRecording(this.currentOptions);
+      }
     }
   }
 
@@ -392,7 +450,7 @@ export class SpeechService {
       const model = this.selectedTranscriptionModel();
       const status = await this.aiService.checkModel('automatic-speech-recognition', model.id);
       if (!status.loaded) {
-        await this.aiService.loadModel('automatic-speech-recognition', model.id, undefined, model.loadOptions);
+        await this.loadSelectedTranscriptionModel(model);
       }
 
       // Convert Blob to Float32Array
@@ -427,10 +485,125 @@ export class SpeechService {
     this.stopRecording();
   }
 
+  private async loadSelectedTranscriptionModel(model: DictationModelOption): Promise<void> {
+    this.transcriptionLoadingState.set({
+      isLoading: true,
+      modelName: model.name,
+      status: 'Preparing download',
+      file: '',
+      progress: null,
+      loadedBytes: null,
+      totalBytes: null,
+    });
+
+    try {
+      await this.withTimeout(
+        this.aiService.loadModel(
+          'automatic-speech-recognition',
+          model.id,
+          data => this.updateTranscriptionLoadingState(model, data),
+          model.loadOptions,
+        ),
+        this.MODEL_LOAD_TIMEOUT_MS,
+        `${model.name} did not finish loading. Try a smaller dictation model if this browser runs out of memory.`,
+      );
+    } catch (error) {
+      if (error instanceof Error && error.name === 'TimeoutError') {
+        this.aiService.stopActiveGeneration();
+      }
+
+      throw error;
+    } finally {
+      this.transcriptionLoadingState.set({
+        isLoading: false,
+        modelName: '',
+        status: '',
+        file: '',
+        progress: null,
+        loadedBytes: null,
+        totalBytes: null,
+      });
+    }
+  }
+
+  private updateTranscriptionLoadingState(model: DictationModelOption, data: unknown): void {
+    if (!data || typeof data !== 'object') {
+      return;
+    }
+
+    const payload = data as {
+      status?: string;
+      file?: string;
+      name?: string;
+      progress?: number;
+      loaded?: number;
+      total?: number;
+    };
+    const rawProgress = typeof payload.progress === 'number' && Number.isFinite(payload.progress)
+      ? payload.progress
+      : null;
+    const progress = rawProgress === null
+      ? null
+      : Math.max(0, Math.min(99, Math.round(rawProgress <= 1 ? rawProgress * 100 : rawProgress)));
+    const status = this.describeLoadingStatus(payload.status);
+
+    this.transcriptionLoadingState.set({
+      isLoading: true,
+      modelName: model.name,
+      status,
+      file: payload.file ?? payload.name ?? '',
+      progress,
+      loadedBytes: typeof payload.loaded === 'number' ? payload.loaded : null,
+      totalBytes: typeof payload.total === 'number' ? payload.total : null,
+    });
+  }
+
+  private describeLoadingStatus(status: string | undefined): string {
+    switch (status) {
+      case 'initiate':
+        return 'Starting download';
+      case 'download':
+        return 'Downloading';
+      case 'progress':
+        return 'Downloading';
+      case 'done':
+        return 'Downloaded';
+      case 'ready':
+        return 'Loading into memory';
+      default:
+        return status ? status.replace(/[-_]/g, ' ') : 'Loading';
+    }
+  }
+
+  private withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string): Promise<T> {
+    return new Promise<T>((resolve, reject) => {
+      const timeoutId = globalThis.setTimeout(() => {
+        const error = new Error(message);
+        error.name = 'TimeoutError';
+        reject(error);
+      }, timeoutMs);
+      promise.then(
+        value => {
+          globalThis.clearTimeout(timeoutId);
+          resolve(value);
+        },
+        error => {
+          globalThis.clearTimeout(timeoutId);
+          reject(error);
+        },
+      );
+    });
+  }
+
   private getInitialTranscriptionModel(): DictationModelOption {
     const storedModelId = this.localStorage.getItem(SpeechService.SELECTED_MODEL_STORAGE_KEY);
     return this.transcriptionModels.find(model => model.id === storedModelId)
       ?? this.transcriptionModels[0];
+  }
+
+  private getInitialDictationMode(): DictationMode {
+    const storedMode = this.localStorage.getItem(SpeechService.DICTATION_MODE_STORAGE_KEY);
+    return storedMode === 'continuous' ? 'continuous' : 'single';
   }
 
   private webGpuAvailable(): boolean {
