@@ -354,6 +354,32 @@
   }
 }
 
+.material-custom-dialog-panel.database-error-dialog-panel {
+  --material-custom-dialog-width: min(550px, 90vw);
+  --material-custom-dialog-min-height: 0;
+  --material-custom-dialog-max-height: min(720px, calc(100dvh - var(--safe-area-top, 0px) - 32px));
+
+  app-material-custom-dialog {
+    display: flex;
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
+  app-material-custom-dialog .material-custom-dialog {
+    min-height: 0;
+  }
+
+  app-material-custom-dialog .dialog-content {
+    flex: 1 1 auto;
+    min-height: 0;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  app-material-custom-dialog .dialog-content>[dialog-content] {
+    min-height: 0;
+  }
+}
+
 @media (max-width: 700px),
 (max-height: 700px) {
   .material-custom-dialog-panel {
@@ -461,6 +487,15 @@
     app-material-custom-dialog.note-editor-shell .dialog-content>.note-editor-dialog {
       height: 100%;
       max-height: 100%;
+    }
+  }
+
+  .material-custom-dialog-panel.database-error-dialog-panel {
+    --material-custom-dialog-width: 100vw;
+    --material-custom-dialog-max-height: calc(100dvh - var(--safe-area-top, 0px));
+
+    app-material-custom-dialog .dialog-content {
+      padding-bottom: 16px;
     }
   }
 }

@@ -1302,6 +1302,7 @@ export class App implements OnInit, OnDestroy {
       hasBackdrop: true,
       width: '90vw',
       maxWidth: '550px',
+      panelClass: ['material-custom-dialog-panel', 'database-error-dialog-panel'],
     });
   }
 
