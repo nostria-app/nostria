@@ -516,10 +516,16 @@
         </button>
         }
 
+        <button mat-icon-button type="button" class="dictation-menu-anchor" #dictationModelTrigger="matMenuTrigger"
+          [matMenuTriggerFor]="dictationModelMenu" tabindex="-1" aria-hidden="true"></button>
+
         <button mat-icon-button type="button" class="composer-dictation-button" (click)="togglePromptDictation()"
+          (contextmenu)="openDictationModelMenu($event, dictationModelTrigger)"
+          (pointerdown)="onDictationPointerDown($event, dictationModelTrigger)" (pointerup)="onDictationPointerEnd()"
+          (pointercancel)="onDictationPointerEnd()" (pointerleave)="onDictationPointerEnd()"
           [disabled]="isGenerating() || isDictationTranscribing()"
           [attr.aria-label]="isDictating() ? 'Stop dictation' : 'Start dictation'"
-          [attr.title]="isDictating() ? 'Stop dictation' : 'Start dictation'">
+          [attr.title]="(isDictating() ? 'Stop dictation' : 'Start dictation') + ' · ' + selectedDictationModel().name">
           <mat-icon>{{ isDictating() ? 'stop_circle' : isDictationTranscribing() ? 'hourglass_empty' : 'mic' }}</mat-icon>
         </button>
 
@@ -828,6 +834,24 @@
           <mat-icon>attach_file</mat-icon>
           <span>Attach files</span>
         </button>
+      </mat-menu>
+
+      <mat-menu #dictationModelMenu="matMenu" class="model-selector-menu" [overlapTrigger]="false" yPosition="above">
+        @for (model of dictationModels; track model.id) {
+        <button mat-menu-item type="button" (click)="selectDictationModel(model.id)">
+          <div class="model-menu-item" [class.model-menu-item-selected]="model.id === selectedDictationModel().id">
+            <div class="model-menu-copy">
+              <span class="model-menu-title">{{ model.name }}</span>
+              <span class="model-menu-meta">{{ model.runtime }} · {{ model.size }}</span>
+            </div>
+            <div class="model-menu-trailing">
+              @if (model.id === selectedDictationModel().id) {
+              <mat-icon class="model-menu-selected-icon">check_circle</mat-icon>
+              }
+            </div>
+          </div>
+        </button>
+        }
       </mat-menu>
 
       <mat-menu #xAiImageCountMenu="matMenu">

@@ -7,7 +7,7 @@ import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
-import { MatMenuModule } from '@angular/material/menu';
+import { MatMenuModule, MatMenuTrigger } from '@angular/material/menu';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { SafeHtml } from '@angular/platform-browser';
 import { firstValueFrom } from 'rxjs';
@@ -184,6 +184,8 @@ export class AiComponent {
   private readonly conversationEndRef = viewChild<ElementRef<HTMLDivElement>>('conversationEnd');
   private readonly attachmentInputRef = viewChild<ElementRef<HTMLInputElement>>('attachmentInput');
   private readonly composerInputRef = viewChild<ElementRef<HTMLTextAreaElement>>('composerInput');
+  private dictationLongPressTimer: ReturnType<typeof setTimeout> | null = null;
+  private suppressNextDictationClick = false;
 
   private readonly isBrowser = isPlatformBrowser(this.platformId);
   private readonly systemPrompt = 'You are Nostria\'s local AI assistant. Keep replies concise, practical, and grounded in the user\'s request. If you are answering in text mode, do not claim that you directly generated or upscaled an image. You can help refine prompts or explain what to do next, but only claim actions that actually happened in the current chat.';
@@ -365,13 +367,57 @@ export class AiComponent {
       id: 'Xenova/whisper-tiny.en',
       task: 'automatic-speech-recognition',
       name: 'Whisper Tiny',
-      description: 'Speech-to-text model used for local transcription.',
+      description: 'Small English speech-to-text model used for local transcription.',
       size: '~40MB',
       loading: false,
       progress: 0,
       loaded: false,
       cached: false,
       runtime: 'WASM/CPU',
+      source: 'local',
+      loadOptions: { device: 'wasm', dtype: 'fp32' },
+    },
+    {
+      id: 'onnx-community/moonshine-tiny-ONNX',
+      task: 'automatic-speech-recognition',
+      name: 'Moonshine Tiny',
+      description: 'Fast, lightweight local speech-to-text model.',
+      size: '~60MB',
+      loading: false,
+      progress: 0,
+      loaded: false,
+      cached: false,
+      runtime: 'WASM/CPU',
+      source: 'local',
+      loadOptions: { device: 'wasm', dtype: 'fp32' },
+    },
+    {
+      id: 'onnx-community/granite-4.0-1b-speech-ONNX',
+      task: 'automatic-speech-recognition',
+      name: 'Granite 4.0 1B',
+      description: 'Larger multilingual speech-to-text model for local transcription.',
+      size: '~1B params',
+      loading: false,
+      progress: 0,
+      loaded: false,
+      cached: false,
+      runtime: this.webGpuAvailable ? 'WebGPU · fp32' : 'WASM/CPU · fp32',
+      source: 'local',
+      loadOptions: this.webGpuAvailable ? { device: 'webgpu', dtype: 'fp32' } : { device: 'wasm', dtype: 'fp32' },
+    },
+    {
+      id: 'onnx-community/whisper-large-v3-turbo',
+      task: 'automatic-speech-recognition',
+      name: 'Whisper Large V3 Turbo',
+      description: 'Higher-quality local Whisper Turbo transcription model.',
+      size: '~809MB',
+      loading: false,
+      progress: 0,
+      loaded: false,
+      cached: false,
+      runtime: this.webGpuAvailable ? 'WebGPU · fp32' : 'WASM/CPU · fp32',
+      source: 'local',
+      loadOptions: this.webGpuAvailable ? { device: 'webgpu', dtype: 'fp32' } : { device: 'wasm', dtype: 'fp32' },
     },
     {
       id: 'Xenova/speecht5_tts',
@@ -906,6 +952,8 @@ export class AiComponent {
   });
   readonly histories = this.historyService.histories;
   readonly unavailableGeneratedImageIds = signal<Set<string>>(new Set());
+  readonly dictationModels = this.speechService.transcriptionModels;
+  readonly selectedDictationModel = this.speechService.selectedTranscriptionModel;
   readonly filteredHistories = computed(() => {
     const query = this.historyQuery().trim().toLowerCase();
     if (!query) {
@@ -1491,6 +1539,11 @@ export class AiComponent {
   }
 
   async togglePromptDictation(): Promise<void> {
+    if (this.suppressNextDictationClick) {
+      this.suppressNextDictationClick = false;
+      return;
+    }
+
     if (!this.isBrowser || this.isGenerating()) {
       return;
     }
@@ -1502,6 +1555,45 @@ export class AiComponent {
         this.focusComposerPromptPlaceholder(this.composerText());
       },
     });
+  }
+
+  selectDictationModel(modelId: string): void {
+    this.speechService.selectTranscriptionModel(modelId);
+  }
+
+  onDictationPointerDown(event: PointerEvent, trigger: MatMenuTrigger): void {
+    if (event.button !== 0 || this.isGenerating() || this.isDictationTranscribing()) {
+      return;
+    }
+
+    this.clearDictationLongPressTimer();
+    this.dictationLongPressTimer = setTimeout(() => {
+      this.suppressNextDictationClick = true;
+      this.openDictationModelMenu(event, trigger);
+    }, 550);
+  }
+
+  onDictationPointerEnd(): void {
+    this.clearDictationLongPressTimer();
+  }
+
+  openDictationModelMenu(event: Event, trigger: MatMenuTrigger): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.clearDictationLongPressTimer();
+
+    if (this.isDictating()) {
+      this.speechService.stopRecording();
+    }
+
+    trigger.openMenu();
+  }
+
+  private clearDictationLongPressTimer(): void {
+    if (this.dictationLongPressTimer) {
+      clearTimeout(this.dictationLongPressTimer);
+      this.dictationLongPressTimer = null;
+    }
   }
 
   setXAiVideoMode(mode: 'generate' | 'extend-video'): void {

@@ -1,6 +1,8 @@
 import { inject, Injectable, signal } from '@angular/core';
 import { AiService } from './ai.service';
 import { SettingsService } from './settings.service';
+import { LocalStorageService } from './local-storage.service';
+import type { AiModelLoadOptions } from './ai.service';
 
 export interface SpeechRecordingOptions {
   /** Silence threshold (0-1), lower = more sensitive. Default: 0.02 */
@@ -20,12 +22,61 @@ export interface TranscriptionRule {
   replacement: string;
 }
 
+export interface DictationModelOption {
+  id: string;
+  name: string;
+  description: string;
+  size: string;
+  runtime: string;
+  loadOptions?: AiModelLoadOptions;
+}
+
 @Injectable({
   providedIn: 'root'
 })
 export class SpeechService {
+  private static readonly SELECTED_MODEL_STORAGE_KEY = 'nostria-dictation-model';
+
   private aiService = inject(AiService);
   private settings = inject(SettingsService);
+  private localStorage = inject(LocalStorageService);
+
+  readonly transcriptionModels: DictationModelOption[] = [
+    {
+      id: 'Xenova/whisper-tiny.en',
+      name: 'Whisper Tiny',
+      description: 'Current default. Small English dictation model.',
+      size: '~40MB',
+      runtime: 'WASM/CPU',
+      loadOptions: { device: 'wasm', dtype: 'fp32' },
+    },
+    {
+      id: 'onnx-community/moonshine-tiny-ONNX',
+      name: 'Moonshine Tiny',
+      description: 'Fast, lightweight local ASR model.',
+      size: '~60MB',
+      runtime: 'WASM/CPU',
+      loadOptions: { device: 'wasm', dtype: 'fp32' },
+    },
+    {
+      id: 'onnx-community/granite-4.0-1b-speech-ONNX',
+      name: 'Granite 4.0 1B',
+      description: 'Larger multilingual speech model.',
+      size: '~1B params',
+      runtime: this.webGpuAvailable() ? 'WebGPU' : 'WASM/CPU',
+      loadOptions: this.webGpuAvailable() ? { device: 'webgpu', dtype: 'fp32' } : { device: 'wasm', dtype: 'fp32' },
+    },
+    {
+      id: 'onnx-community/whisper-large-v3-turbo',
+      name: 'Whisper Large V3 Turbo',
+      description: 'Higher quality Whisper Turbo model.',
+      size: '~809MB',
+      runtime: this.webGpuAvailable() ? 'WebGPU' : 'WASM/CPU',
+      loadOptions: this.webGpuAvailable() ? { device: 'webgpu', dtype: 'fp32' } : { device: 'wasm', dtype: 'fp32' },
+    },
+  ];
+
+  readonly selectedTranscriptionModel = signal<DictationModelOption>(this.getInitialTranscriptionModel());
 
   // Recording state
   isRecording = signal(false);
@@ -48,6 +99,16 @@ export class SpeechService {
 
   // Current recording options
   private currentOptions: SpeechRecordingOptions = {};
+
+  selectTranscriptionModel(modelId: string): void {
+    const model = this.transcriptionModels.find(option => option.id === modelId);
+    if (!model) {
+      return;
+    }
+
+    this.selectedTranscriptionModel.set(model);
+    this.localStorage.setItem(SpeechService.SELECTED_MODEL_STORAGE_KEY, model.id);
+  }
 
   /**
    * Transcription normalization rules.
@@ -283,13 +344,10 @@ export class SpeechService {
     this.currentOptions.onTranscribingStateChange?.(true);
 
     try {
-      // Check/Load Whisper model
-      const status = await this.aiService.checkModel('automatic-speech-recognition', 'Xenova/whisper-tiny.en');
+      const model = this.selectedTranscriptionModel();
+      const status = await this.aiService.checkModel('automatic-speech-recognition', model.id);
       if (!status.loaded) {
-        await this.aiService.loadModel('automatic-speech-recognition', 'Xenova/whisper-tiny.en', undefined, {
-          device: 'wasm',
-          dtype: 'fp32',
-        });
+        await this.aiService.loadModel('automatic-speech-recognition', model.id, undefined, model.loadOptions);
       }
 
       // Convert Blob to Float32Array
@@ -323,13 +381,10 @@ export class SpeechService {
     this.isTranscribing.set(true);
 
     try {
-      // Check/Load Whisper model
-      const status = await this.aiService.checkModel('automatic-speech-recognition', 'Xenova/whisper-tiny.en');
+      const model = this.selectedTranscriptionModel();
+      const status = await this.aiService.checkModel('automatic-speech-recognition', model.id);
       if (!status.loaded) {
-        await this.aiService.loadModel('automatic-speech-recognition', 'Xenova/whisper-tiny.en', undefined, {
-          device: 'wasm',
-          dtype: 'fp32',
-        });
+        await this.aiService.loadModel('automatic-speech-recognition', model.id, undefined, model.loadOptions);
       }
 
       // Convert Blob to Float32Array
@@ -362,5 +417,15 @@ export class SpeechService {
    */
   cleanup(): void {
     this.stopRecording();
+  }
+
+  private getInitialTranscriptionModel(): DictationModelOption {
+    const storedModelId = this.localStorage.getItem(SpeechService.SELECTED_MODEL_STORAGE_KEY);
+    return this.transcriptionModels.find(model => model.id === storedModelId)
+      ?? this.transcriptionModels[0];
+  }
+
+  private webGpuAvailable(): boolean {
+    return typeof navigator !== 'undefined' && 'gpu' in navigator;
   }
 }

@@ -101,6 +101,7 @@ const textGenerators = new Map<string, any>();
 let summarizer: any = null;
 let sentiment: any = null;
 let transcriber: any = null;
+let transcriberModelId: string | null = null;
 // let synthesizer: any = null; // Replaced by TTSPipeline
 const translators = new Map<string, any>();
 const imageGenerators = new Map<string, { processor: Promise<any>, model: Promise<any> }>();
@@ -484,6 +485,7 @@ async function handleLoad(payload: { task: string, model: string, options?: Reco
       ...options,
       progress_callback: progressCallback
     });
+    transcriberModelId = model;
   } else if (task === 'text-to-speech') {
     if (model === KOKORO_MODEL_ID) {
       kokoroTts = await KokoroLocalTTS.fromPretrained(model, {
@@ -1315,7 +1317,7 @@ async function handleCheck(payload: { task: string, model: string }, id: string)
   else if (task === 'summarization') isLoaded = !!summarizer;
   else if (task === 'sentiment-analysis') isLoaded = !!sentiment;
   else if (task === 'translation') isLoaded = translators.has(model);
-  else if (task === 'automatic-speech-recognition') isLoaded = !!transcriber;
+  else if (task === 'automatic-speech-recognition') isLoaded = !!transcriber && transcriberModelId === model;
   else if (task === 'text-to-speech') {
     if (model === KOKORO_MODEL_ID) {
       isLoaded = !!kokoroTts;
