@@ -1,13 +1,27 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { pipeline, env, Tensor, AutoModelForImageTextToText, AutoProcessor, AutoTokenizer, BaseStreamer, MultiModalityCausalLM, RawImage, SpeechT5ForTextToSpeech, SpeechT5HifiGan, TextStreamer } from '@huggingface/transformers';
+import { pipeline, env, Tensor, AutoModelForImageTextToText, AutoProcessor, AutoTokenizer, BaseStreamer, MultiModalityCausalLM, RawImage, SpeechT5ForTextToSpeech, SpeechT5HifiGan, StyleTextToSpeech2Model, TextStreamer } from '@huggingface/transformers';
 
 const HUGGING_FACE_REMOTE_HOST = 'https://huggingface.co/';
 const SPEAKER_EMBEDDINGS_URL = 'https://huggingface.co/datasets/Xenova/transformers.js-docs/resolve/main/speaker_embeddings.bin';
 const ONNX_RUNTIME_ASSET_PATH = '/assets/onnxruntime/';
+const SPEECHT5_MODEL_ID = 'Xenova/speecht5_tts';
+const KOKORO_MODEL_ID = 'onnx-community/Kokoro-82M-v1.0-ONNX';
+const PIPER_MODEL_ID = 'rhasspy/piper-voices/en_US-libritts_r-medium';
+const PIPER_MODEL_URL = 'https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/libritts_r/medium/en_US-libritts_r-medium.onnx';
+const PIPER_CONFIG_URL = 'https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/libritts_r/medium/en_US-libritts_r-medium.onnx.json';
+const PHONEMIZER_MODULE_URL = 'https://cdn.jsdelivr.net/npm/phonemizer@1.2.1/dist/phonemizer.js';
+const TTS_ASSET_CACHE_NAME = 'nostria-ai-tts-assets';
+const KOKORO_VOICES = new Set([
+  'af_heart', 'af_alloy', 'af_aoede', 'af_bella', 'af_jessica', 'af_kore', 'af_nicole', 'af_nova', 'af_river', 'af_sarah', 'af_sky',
+  'am_adam', 'am_echo', 'am_eric', 'am_fenrir', 'am_liam', 'am_michael', 'am_onyx', 'am_puck', 'am_santa',
+  'bf_alice', 'bf_emma', 'bf_isabella', 'bf_lily',
+  'bm_daniel', 'bm_fable', 'bm_george', 'bm_lewis',
+]);
 const nativeFetch = globalThis.fetch.bind(globalThis);
 const allowedExternalHosts = new Set([
   'huggingface.co',
   'hf.co',
+  'cdn.jsdelivr.net',
   'cdn-lfs.huggingface.co',
   'cas-bridge.xethub.hf.co',
   'cas-server.xethub.hf.co',
@@ -88,7 +102,10 @@ const translators = new Map<string, any>();
 const imageGenerators = new Map<string, { processor: Promise<any>, model: Promise<any> }>();
 const imageUpscalers = new Map<string, any>();
 const multimodalGenerators = new Map<string, { processor: Promise<any>, model: Promise<any> }>();
+let kokoroTts: any = null;
+let piperTts: PiperTTS | null = null;
 let fp16Supported = false;
+let phonemizerModulePromise: Promise<{ phonemize: (text: string, voice?: string) => Promise<string[] | string> }> | null = null;
 
 class TTSPipeline {
   static model_id = 'Xenova/speecht5_tts';
@@ -109,6 +126,173 @@ class TTSPipeline {
     }
 
     return Promise.all([this.tokenizer, this.model, this.vocoder]);
+  }
+}
+
+class KokoroLocalTTS {
+  private readonly voiceDataCache = new Map<string, Float32Array>();
+
+  private constructor(
+    private readonly model: any,
+    private readonly tokenizer: any,
+  ) { }
+
+  static async fromPretrained(
+    modelId: string,
+    options: { dtype?: 'fp32' | 'fp16' | 'q8' | 'q4' | 'q4f16'; device?: 'wasm' | 'webgpu' | 'cpu' | null; progress_callback?: any },
+  ): Promise<KokoroLocalTTS> {
+    const [model, tokenizer] = await Promise.all([
+      StyleTextToSpeech2Model.from_pretrained(modelId, options),
+      AutoTokenizer.from_pretrained(modelId, { progress_callback: options.progress_callback }),
+    ]);
+
+    return new KokoroLocalTTS(model, tokenizer);
+  }
+
+  async synthesize(text: string, options: { voice?: string; speed?: number }): Promise<Blob> {
+    const voice = this.validateVoice(options.voice);
+    const voicePrefix = voice.at(0) === 'b' ? 'b' : 'a';
+    const phonemes = await phonemizeKokoroText(text, voicePrefix);
+    const { input_ids } = this.tokenizer(phonemes, { truncation: true });
+    const tokenCount = input_ids.dims.at(-1) ?? 0;
+    const voiceData = await this.getVoiceData(voice);
+    const offset = 256 * Math.min(Math.max(tokenCount - 2, 0), 509);
+    const style = voiceData.slice(offset, offset + 256);
+    const speed = normalizeVoiceSpeed(options.speed);
+    const { waveform } = await this.model({
+      input_ids,
+      style: new Tensor('float32', style, [1, 256]),
+      speed: new Tensor('float32', [speed], [1]),
+    });
+
+    return rawAudioToWavBlob(waveform.data, 24000);
+  }
+
+  private validateVoice(voice: unknown): string {
+    const candidate = typeof voice === 'string' && KOKORO_VOICES.has(voice) ? voice : 'af_heart';
+    return candidate;
+  }
+
+  private async getVoiceData(voice: string): Promise<Float32Array> {
+    const cached = this.voiceDataCache.get(voice);
+    if (cached) {
+      return cached;
+    }
+
+    const url = `https://huggingface.co/onnx-community/Kokoro-82M-v1.0-ONNX/resolve/main/voices/${voice}.bin`;
+    const response = await cachedFetch(url);
+    const data = new Float32Array(await response.arrayBuffer());
+    this.voiceDataCache.set(voice, data);
+    return data;
+  }
+}
+
+class PiperRawAudio {
+  constructor(
+    readonly audio: Float32Array,
+    readonly samplingRate: number,
+  ) { }
+
+  toBlob(): Blob {
+    return new Blob([encodeWAV(this.audio, this.samplingRate)], { type: 'audio/wav' });
+  }
+}
+
+class PiperTTS {
+  private constructor(
+    private readonly voiceConfig: any,
+    private readonly session: any,
+  ) { }
+
+  static async fromPretrained(progressCallback: (data: unknown) => void): Promise<PiperTTS> {
+    const ort = await import('onnxruntime-web');
+    ort.env.wasm.wasmPaths = ONNX_RUNTIME_ASSET_PATH;
+
+    progressCallback({ status: 'progress', progress: 0.05 });
+    const [modelResponse, configResponse] = await Promise.all([
+      cachedFetch(PIPER_MODEL_URL),
+      cachedFetch(PIPER_CONFIG_URL),
+    ]);
+    progressCallback({ status: 'progress', progress: 0.35 });
+
+    const [modelBuffer, voiceConfig] = await Promise.all([
+      modelResponse.arrayBuffer(),
+      configResponse.json(),
+    ]);
+    progressCallback({ status: 'progress', progress: 0.55 });
+
+    const session = await ort.InferenceSession.create(modelBuffer, {
+      executionProviders: [{ name: 'wasm', simd: true }],
+    });
+    progressCallback({ status: 'progress', progress: 1 });
+
+    return new PiperTTS(voiceConfig, session);
+  }
+
+  async synthesize(text: string, options: { voice?: number; speed?: number }): Promise<Blob> {
+    const chunks = await Promise.all(
+      chunkTextForTts(text).map(chunk => this.synthesizeChunk(chunk, options)),
+    );
+    const audio = mergeAudioChunks(chunks);
+    normalizePeak(audio.audio, 0.9);
+    return new PiperRawAudio(trimSilence(audio.audio, 0.002, Math.floor(audio.samplingRate * 0.02)), audio.samplingRate).toBlob();
+  }
+
+  private async synthesizeChunk(text: string, options: { voice?: number; speed?: number }): Promise<PiperRawAudio> {
+    const ort = await import('onnxruntime-web');
+    const textPhonemes = await this.textToPhonemes(text);
+    const phonemeIds = this.phonemesToIds(textPhonemes);
+    const speed = typeof options.speed === 'number' && Number.isFinite(options.speed) ? options.speed : 1;
+    const lengthScale = 1 / Math.min(Math.max(speed, 0.5), 2);
+    const inputs: Record<string, unknown> = {
+      input: new ort.Tensor('int64', new BigInt64Array(phonemeIds.map(id => BigInt(id))), [1, phonemeIds.length]),
+      input_lengths: new ort.Tensor('int64', BigInt64Array.from([BigInt(phonemeIds.length)]), [1]),
+      scales: new ort.Tensor('float32', Float32Array.from([0.667, lengthScale, 0.8]), [3]),
+    };
+
+    if (this.voiceConfig.num_speakers > 1) {
+      const voice = Math.min(Math.max(Math.round(options.voice ?? 0), 0), this.voiceConfig.num_speakers - 1);
+      inputs['sid'] = new ort.Tensor('int64', BigInt64Array.from([BigInt(voice)]), [1]);
+    }
+
+    const results = await this.session.run(inputs);
+    const audioOutput = results.output;
+    return new PiperRawAudio(new Float32Array(audioOutput.data), this.voiceConfig.audio.sample_rate);
+  }
+
+  private async textToPhonemes(text: string): Promise<string[][]> {
+    if (this.voiceConfig.phoneme_type === 'text') {
+      return [Array.from(text.normalize('NFD'))];
+    }
+
+    const { phonemize } = await loadPhonemizer();
+    const phonemes = await phonemize(text, this.voiceConfig.espeak?.voice || 'en-us');
+    const phonemeText = Array.isArray(phonemes) ? phonemes.join(' ') : String(phonemes || text);
+    return phonemeText
+      .split(/[.!?]+/)
+      .map(sentence => sentence.trim())
+      .filter(Boolean)
+      .map(sentence => Array.from(sentence.normalize('NFD')));
+  }
+
+  private phonemesToIds(textPhonemes: string[][]): number[] {
+    const idMap = this.voiceConfig.phoneme_id_map;
+    if (!idMap) {
+      throw new Error('Piper phoneme ID map is not available.');
+    }
+
+    const phonemeIds: number[] = [];
+    for (const sentencePhonemes of textPhonemes) {
+      phonemeIds.push(idMap['^'], idMap['_']);
+      for (const phoneme of sentencePhonemes) {
+        if (phoneme in idMap) {
+          phonemeIds.push(idMap[phoneme], idMap['_']);
+        }
+      }
+      phonemeIds.push(idMap['$']);
+    }
+
+    return phonemeIds;
   }
 }
 
@@ -284,7 +468,17 @@ async function handleLoad(payload: { task: string, model: string, options?: Reco
   } else if (task === 'automatic-speech-recognition') {
     transcriber = await pipeline(task, model, { ...options, progress_callback: progressCallback });
   } else if (task === 'text-to-speech') {
-    await TTSPipeline.getInstance(progressCallback);
+    if (model === KOKORO_MODEL_ID) {
+      kokoroTts = await KokoroLocalTTS.fromPretrained(model, {
+        dtype: normalizeKokoroDtype(options['dtype']),
+        device: normalizeKokoroDevice(options['device']),
+        progress_callback: progressCallback,
+      });
+    } else if (model === PIPER_MODEL_ID) {
+      piperTts = await PiperTTS.fromPretrained(progressCallback);
+    } else {
+      await TTSPipeline.getInstance(progressCallback);
+    }
   } else if (task === 'image-generation') {
     await getImageGenerator(model, progressCallback);
   } else if (task === 'image-upscaling') {
@@ -586,6 +780,18 @@ async function handleTranscribe(payload: { audio: Float32Array, params?: any }, 
 }
 
 async function handleSynthesize(payload: { text: string, params?: any }, id: string) {
+  const modelId = payload.params?.model ?? SPEECHT5_MODEL_ID;
+
+  if (modelId === KOKORO_MODEL_ID) {
+    await handleKokoroSynthesize(payload, id);
+    return;
+  }
+
+  if (modelId === PIPER_MODEL_ID) {
+    await handlePiperSynthesize(payload, id);
+    return;
+  }
+
   if (!TTSPipeline.model) {
     throw new Error('Text-to-speech model not loaded');
   }
@@ -655,10 +861,71 @@ async function handleSynthesize(payload: { text: string, params?: any }, id: str
   });
 }
 
-function encodeWAV(samples: Float32Array) {
+async function handleKokoroSynthesize(payload: { text: string, params?: any }, id: string) {
+  if (!kokoroTts) {
+    throw new Error('Kokoro text-to-speech model not loaded');
+  }
+
+  const voice = typeof payload.params?.voice === 'string' ? payload.params.voice : 'af_heart';
+  const speed = normalizeVoiceSpeed(payload.params?.speed);
+  const blob = await kokoroTts.synthesize(payload.text, { voice, speed });
+
+  postMessage({
+    type: 'result',
+    id,
+    payload: {
+      blob,
+      sampling_rate: 24000,
+      voiceId: voice,
+      language: voice.startsWith('b') ? 'en-gb' : 'en-us',
+    }
+  });
+}
+
+async function handlePiperSynthesize(payload: { text: string, params?: any }, id: string) {
+  if (!piperTts) {
+    throw new Error('Piper text-to-speech model not loaded');
+  }
+
+  const voice = normalizePiperVoice(payload.params?.voice);
+  const speed = normalizeVoiceSpeed(payload.params?.speed);
+  const blob = await piperTts.synthesize(payload.text, { voice, speed });
+
+  postMessage({
+    type: 'result',
+    id,
+    payload: {
+      blob,
+      sampling_rate: 22050,
+      voiceId: `Voice ${voice + 1}`,
+      language: 'en-us',
+    }
+  });
+}
+
+function rawAudioToWavBlob(audio: any, fallbackSampleRate: number): Blob {
+  if (typeof audio?.toBlob === 'function') {
+    return audio.toBlob();
+  }
+
+  const samples = audio?.audio instanceof Float32Array
+    ? audio.audio
+    : audio?.data instanceof Float32Array
+      ? audio.data
+      : audio instanceof Float32Array
+        ? audio
+        : null;
+
+  if (!samples) {
+    throw new Error('The TTS model returned an unsupported audio payload.');
+  }
+
+  return new Blob([encodeWAV(samples, audio?.sampling_rate ?? audio?.samplingRate ?? fallbackSampleRate)], { type: 'audio/wav' });
+}
+
+function encodeWAV(samples: Float32Array, sampleRate = 16000) {
   const buffer = new ArrayBuffer(44 + samples.length * 2);
   const view = new DataView(buffer);
-  const sampleRate = 16000;
 
   /* RIFF identifier */
   writeString(view, 0, 'RIFF');
@@ -700,6 +967,165 @@ function writeString(view: DataView, offset: number, string: string) {
   for (let i = 0; i < string.length; ++i) {
     view.setUint8(offset + i, string.charCodeAt(i))
   }
+}
+
+async function cachedFetch(url: string): Promise<Response> {
+  let cache: Cache | null = null;
+  try {
+    cache = await caches.open(TTS_ASSET_CACHE_NAME);
+    const cached = await cache.match(url);
+    if (cached) {
+      return cached;
+    }
+  } catch (error) {
+    console.warn('Unable to open TTS asset cache', error);
+  }
+
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch TTS model asset (${response.status}).`);
+  }
+
+  if (cache) {
+    try {
+      await cache.put(url, response.clone());
+    } catch (error) {
+      console.warn('Unable to cache TTS model asset', error);
+    }
+  }
+
+  return response;
+}
+
+async function phonemizeKokoroText(text: string, voicePrefix: string): Promise<string> {
+  const normalized = text
+    .replace(/[‘’]/g, '\'')
+    .replace(/[“”]/g, '"')
+    .replace(/、/g, ', ')
+    .replace(/。/g, '. ')
+    .replace(/[^\S \n]/g, ' ')
+    .replace(/ {2,}/g, ' ')
+    .trim();
+  const { phonemize } = await loadPhonemizer();
+  const voice = voicePrefix === 'a' ? 'en-us' : 'en';
+  const phonemes = await phonemize(normalized, voice);
+  const phonemeText = Array.isArray(phonemes) ? phonemes.join(' ') : String(phonemes || normalized);
+
+  return phonemeText
+    .replace(/kəkˈoːɹoʊ/g, 'kˈoʊkəɹoʊ')
+    .replace(/kəkˈɔːɹəʊ/g, 'kˈəʊkəɹəʊ')
+    .replace(/ʲ/g, 'j')
+    .replace(/r/g, 'ɹ')
+    .replace(/x/g, 'k')
+    .replace(/ɬ/g, 'l')
+    .trim();
+}
+
+async function loadPhonemizer(): Promise<{ phonemize: (text: string, voice?: string) => Promise<string[] | string> }> {
+  if (!phonemizerModulePromise) {
+    const dynamicImport = new Function('specifier', 'return import(specifier)') as (specifier: string) => Promise<{ phonemize: (text: string, voice?: string) => Promise<string[] | string> }>;
+    phonemizerModulePromise = dynamicImport(PHONEMIZER_MODULE_URL);
+  }
+
+  return phonemizerModulePromise;
+}
+
+function chunkTextForTts(text: string): string[] {
+  const normalized = text.replace(/\s+/g, ' ').trim();
+  if (!normalized) {
+    return [];
+  }
+
+  const sentences = normalized.match(/[^.!?]+[.!?]*/g) ?? [normalized];
+  const chunks: string[] = [];
+  let current = '';
+
+  for (const sentence of sentences.map(value => value.trim()).filter(Boolean)) {
+    if (current && `${current} ${sentence}`.length > 320) {
+      chunks.push(current);
+      current = sentence;
+    } else {
+      current = current ? `${current} ${sentence}` : sentence;
+    }
+  }
+
+  if (current) {
+    chunks.push(current);
+  }
+
+  return chunks;
+}
+
+function mergeAudioChunks(chunks: PiperRawAudio[]): PiperRawAudio {
+  if (chunks.length === 0) {
+    return new PiperRawAudio(new Float32Array(), 22050);
+  }
+
+  const samplingRate = chunks[0].samplingRate;
+  const totalLength = chunks.reduce((total, chunk) => total + chunk.audio.length, 0);
+  const merged = new Float32Array(totalLength);
+  let offset = 0;
+
+  for (const chunk of chunks) {
+    merged.set(chunk.audio, offset);
+    offset += chunk.audio.length;
+  }
+
+  return new PiperRawAudio(merged, samplingRate);
+}
+
+function normalizePeak(samples: Float32Array, target = 0.9): void {
+  if (!samples.length) {
+    return;
+  }
+
+  let max = 1e-9;
+  for (const sample of samples) {
+    max = Math.max(max, Math.abs(sample));
+  }
+
+  const gain = Math.min(4, target / max);
+  if (gain < 1) {
+    for (let index = 0; index < samples.length; index++) {
+      samples[index] *= gain;
+    }
+  }
+}
+
+function trimSilence(samples: Float32Array, threshold = 0.002, paddingSamples = 480): Float32Array {
+  let start = 0;
+  let end = samples.length - 1;
+
+  while (start < end && Math.abs(samples[start]) < threshold) {
+    start++;
+  }
+
+  while (end > start && Math.abs(samples[end]) < threshold) {
+    end--;
+  }
+
+  start = Math.max(0, start - paddingSamples);
+  end = Math.min(samples.length, end + paddingSamples);
+
+  return samples.slice(start, end);
+}
+
+function normalizeVoiceSpeed(value: unknown): number {
+  const speed = typeof value === 'number' ? value : typeof value === 'string' ? Number.parseFloat(value) : 1;
+  return Number.isFinite(speed) ? Math.min(Math.max(speed, 0.5), 2) : 1;
+}
+
+function normalizePiperVoice(value: unknown): number {
+  const voice = typeof value === 'number' ? value : typeof value === 'string' ? Number.parseInt(value, 10) : 0;
+  return Number.isFinite(voice) ? Math.min(Math.max(Math.round(voice), 0), 903) : 0;
+}
+
+function normalizeKokoroDtype(value: unknown): 'fp32' | 'fp16' | 'q8' | 'q4' | 'q4f16' {
+  return value === 'fp32' || value === 'fp16' || value === 'q4' || value === 'q4f16' ? value : 'q8';
+}
+
+function normalizeKokoroDevice(value: unknown): 'wasm' | 'webgpu' | 'cpu' | null {
+  return value === 'webgpu' || value === 'cpu' ? value : 'wasm';
 }
 
 function parseNpy(buffer: ArrayBuffer): Float32Array {
@@ -745,18 +1171,28 @@ async function handleCheck(payload: { task: string, model: string }, id: string)
   else if (task === 'sentiment-analysis') isLoaded = !!sentiment;
   else if (task === 'translation') isLoaded = translators.has(model);
   else if (task === 'automatic-speech-recognition') isLoaded = !!transcriber;
-  else if (task === 'text-to-speech') isLoaded = !!TTSPipeline.model;
+  else if (task === 'text-to-speech') {
+    if (model === KOKORO_MODEL_ID) {
+      isLoaded = !!kokoroTts;
+    } else if (model === PIPER_MODEL_ID) {
+      isLoaded = !!piperTts;
+    } else {
+      isLoaded = !!TTSPipeline.model;
+    }
+  }
   else if (task === 'image-generation') isLoaded = imageGenerators.has(model);
   else if (task === 'image-upscaling') isLoaded = imageUpscalers.has(model);
 
   // Check cache if not loaded
   if (!isLoaded) {
     try {
-      const cache = await caches.open('transformers-cache');
+      const cache = await caches.open(model === PIPER_MODEL_ID ? TTS_ASSET_CACHE_NAME : 'transformers-cache');
       // We check for the existence of the model config file in the cache
       // The URL pattern is usually: https://huggingface.co/{model}/resolve/main/config.json
       // But it might vary.
-      const modelPath = model.startsWith('http') ? model : `https://huggingface.co/${model}/resolve/main/config.json`;
+      const modelPath = model === PIPER_MODEL_ID
+        ? PIPER_CONFIG_URL
+        : model.startsWith('http') ? model : `https://huggingface.co/${model}/resolve/main/config.json`;
       const match = await cache.match(modelPath);
       if (match) {
         isCached = true;

@@ -110,6 +110,10 @@ export interface AiCloudSettings {
   xaiVoiceId: string;
   xaiVoiceLanguage: string;
   xaiVoiceCodec: 'mp3' | 'wav';
+  kokoroVoiceId: string;
+  kokoroVoiceSpeed: number;
+  piperVoiceId: number;
+  piperVoiceSpeed: number;
 }
 
 export interface AiGeneratedImage {
@@ -148,6 +152,7 @@ export interface AiManageableModel {
   runtime: string;
   sizeHint: string;
   cacheKeys?: string[];
+  cacheNames?: string[];
 }
 
 export interface AiManagedModelStatus extends AiManageableModel {
@@ -248,6 +253,7 @@ interface WorkerCallback {
 export class AiService {
   private static readonly CLOUD_SETTINGS_STORAGE_KEY = 'nostria-ai-cloud-settings';
   private static readonly TRANSFORMERS_CACHE_NAME = 'transformers-cache';
+  private static readonly TTS_ASSET_CACHE_NAME = 'nostria-ai-tts-assets';
 
   private readonly defaultCloudSettings: AiCloudSettings = {
     preferredImageProvider: 'xai',
@@ -268,6 +274,10 @@ export class AiService {
     xaiVoiceId: 'eve',
     xaiVoiceLanguage: 'en',
     xaiVoiceCodec: 'mp3',
+    kokoroVoiceId: 'af_heart',
+    kokoroVoiceSpeed: 1,
+    piperVoiceId: 0,
+    piperVoiceSpeed: 1,
   };
 
   private settings = inject(SettingsService);
@@ -326,6 +336,8 @@ export class AiService {
 
   // Default models
   readonly speechModelId = 'Xenova/speecht5_tts';
+  readonly kokoroSpeechModelId = 'onnx-community/Kokoro-82M-v1.0-ONNX';
+  readonly piperSpeechModelId = 'rhasspy/piper-voices/en_US-libritts_r-medium';
   readonly transcriptionModelId = 'Xenova/whisper-tiny';
   readonly summarizationModelId = 'Xenova/distilbart-cnn-6-6';
   readonly sentimentModelId = 'Xenova/distilbert-base-uncased-finetuned-sst-2-english';
@@ -420,6 +432,24 @@ export class AiService {
       runtime: 'WASM/CPU',
       sizeHint: '~180MB',
       cacheKeys: ['Xenova/speecht5_tts', 'Xenova/speecht5_hifigan'],
+    },
+    {
+      id: 'onnx-community/Kokoro-82M-v1.0-ONNX',
+      task: 'text-to-speech',
+      name: 'Kokoro 82M',
+      description: 'High-quality Kokoro voice synthesis running locally in the browser.',
+      runtime: 'WASM/WebGPU · q8',
+      sizeHint: '~92MB q8',
+    },
+    {
+      id: 'rhasspy/piper-voices/en_US-libritts_r-medium',
+      task: 'text-to-speech',
+      name: 'Piper LibriTTS',
+      description: 'Piper TTS LibriTTS multi-speaker voice model running locally in the browser.',
+      runtime: 'WASM · 904 voices',
+      sizeHint: '~79MB',
+      cacheNames: [AiService.TTS_ASSET_CACHE_NAME],
+      cacheKeys: ['en_US-libritts_r-medium.onnx', 'en_US-libritts_r-medium.onnx.json'],
     },
   ];
 
@@ -879,12 +909,14 @@ export class AiService {
   }
 
   private async generateLocalVoice(prompt: string, model: string): Promise<AiGeneratedAudio[]> {
-    const payload = await this.synthesizeSpeech(prompt) as { blob?: Blob };
+    const params = this.getLocalVoiceSynthesisParams(model);
+    const payload = await this.synthesizeSpeech(prompt, params) as { blob?: Blob; voiceId?: string | number; language?: string };
     if (!(payload?.blob instanceof Blob)) {
       throw new Error('The local speech model did not return audio content.');
     }
 
     const mimeType = payload.blob.type || 'audio/wav';
+    const voiceId = payload.voiceId === undefined ? this.getLocalVoiceLabel(model, params) : String(payload.voiceId);
     return [{
       id: `local-audio-${Date.now()}`,
       provider: 'local',
@@ -893,8 +925,8 @@ export class AiService {
       prompt,
       src: URL.createObjectURL(payload.blob),
       mimeType,
-      voiceId: 'SpeechT5',
-      language: 'en',
+      voiceId,
+      language: payload.language ?? this.getLocalVoiceLanguage(model, params),
     }];
   }
 
@@ -980,14 +1012,17 @@ export class AiService {
   async deleteModelFromCache(modelId: string) {
     if (typeof window !== 'undefined' && 'caches' in window) {
       try {
-        const cache = await caches.open(AiService.TRANSFORMERS_CACHE_NAME);
+        const cacheNames = this.getCacheLookupNames(modelId);
         const cacheKeys = this.getCacheLookupKeys(modelId);
-        const keys = await cache.keys();
-        const deletions = keys
-          .filter(request => cacheKeys.some(cacheKey => request.url.includes(cacheKey)))
-          .map(request => cache.delete(request));
+        const deletions = await Promise.all(cacheNames.map(async cacheName => {
+          const cache = await caches.open(cacheName);
+          const keys = await cache.keys();
+          return keys
+            .filter(request => cacheKeys.some(cacheKey => request.url.includes(cacheKey)))
+            .map(request => cache.delete(request));
+        }));
 
-        await Promise.all(deletions);
+        await Promise.all(deletions.flat());
 
         // Update local state
         this.loadedModels.update(models => {
@@ -1008,7 +1043,10 @@ export class AiService {
   async clearAllCache() {
     if (typeof window !== 'undefined' && 'caches' in window) {
       try {
-        await caches.delete(AiService.TRANSFORMERS_CACHE_NAME);
+        await Promise.all([
+          caches.delete(AiService.TRANSFORMERS_CACHE_NAME),
+          caches.delete(AiService.TTS_ASSET_CACHE_NAME),
+        ]);
         this.loadedModels.set(new Set());
         return true;
       } catch (error) {
@@ -1050,29 +1088,33 @@ export class AiService {
     }
 
     try {
-      const cache = await caches.open(AiService.TRANSFORMERS_CACHE_NAME);
+      const cacheNames = this.getCacheLookupNames(modelId);
       const cacheKeys = this.getCacheLookupKeys(modelId);
-      const requests = await cache.keys();
-      const matchingRequests = requests.filter(request => cacheKeys.some(cacheKey => request.url.includes(cacheKey)));
 
       let totalBytes = 0;
-      for (const request of matchingRequests) {
-        const response = await cache.match(request);
-        if (!response) {
-          continue;
-        }
+      for (const cacheName of cacheNames) {
+        const cache = await caches.open(cacheName);
+        const requests = await cache.keys();
+        const matchingRequests = requests.filter(request => cacheKeys.some(cacheKey => request.url.includes(cacheKey)));
 
-        const contentLength = response.headers.get('content-length');
-        if (contentLength) {
-          const parsed = Number(contentLength);
-          if (Number.isFinite(parsed) && parsed >= 0) {
-            totalBytes += parsed;
+        for (const request of matchingRequests) {
+          const response = await cache.match(request);
+          if (!response) {
             continue;
           }
-        }
 
-        const blob = await response.clone().blob();
-        totalBytes += blob.size;
+          const contentLength = response.headers.get('content-length');
+          if (contentLength) {
+            const parsed = Number(contentLength);
+            if (Number.isFinite(parsed) && parsed >= 0) {
+              totalBytes += parsed;
+              continue;
+            }
+          }
+
+          const blob = await response.clone().blob();
+          totalBytes += blob.size;
+        }
       }
 
       return totalBytes;
@@ -1098,6 +1140,11 @@ export class AiService {
   private getCacheLookupKeys(modelId: string): string[] {
     const entry = this.manageableModels.find(model => model.id === modelId);
     return entry?.cacheKeys?.length ? entry.cacheKeys : [modelId];
+  }
+
+  private getCacheLookupNames(modelId: string): string[] {
+    const entry = this.manageableModels.find(model => model.id === modelId);
+    return entry?.cacheNames?.length ? entry.cacheNames : [AiService.TRANSFORMERS_CACHE_NAME];
   }
 
   private loadCloudSettings(): void {
@@ -1132,6 +1179,10 @@ export class AiService {
       xaiVoiceId: settings.xaiVoiceId?.trim() || this.defaultCloudSettings.xaiVoiceId,
       xaiVoiceLanguage: settings.xaiVoiceLanguage?.trim() || this.defaultCloudSettings.xaiVoiceLanguage,
       xaiVoiceCodec: settings.xaiVoiceCodec === 'wav' ? 'wav' : 'mp3',
+      kokoroVoiceId: settings.kokoroVoiceId?.trim() || this.defaultCloudSettings.kokoroVoiceId,
+      kokoroVoiceSpeed: this.normalizeNumberSetting(settings.kokoroVoiceSpeed, this.defaultCloudSettings.kokoroVoiceSpeed, 0.5, 2),
+      piperVoiceId: this.normalizeIntegerSetting(settings.piperVoiceId, this.defaultCloudSettings.piperVoiceId, 0, 903),
+      piperVoiceSpeed: this.normalizeNumberSetting(settings.piperVoiceSpeed, this.defaultCloudSettings.piperVoiceSpeed, 0.5, 2),
       openaiApiKey: this.normalizeApiKey(settings.openaiApiKey),
       xaiApiKey: this.normalizeApiKey(settings.xaiApiKey),
     };
@@ -1154,6 +1205,62 @@ export class AiService {
     }
 
     return Math.min(Math.max(Math.round(parsed), min), max);
+  }
+
+  private normalizeNumberSetting(value: unknown, fallback: number, min: number, max: number): number {
+    const parsed = typeof value === 'number'
+      ? value
+      : typeof value === 'string'
+        ? Number.parseFloat(value)
+        : Number.NaN;
+
+    if (!Number.isFinite(parsed)) {
+      return fallback;
+    }
+
+    return Math.min(Math.max(parsed, min), max);
+  }
+
+  private getLocalVoiceSynthesisParams(model: string): Record<string, unknown> {
+    const settings = this.cloudSettings();
+
+    if (model === this.kokoroSpeechModelId) {
+      return {
+        model,
+        voice: settings.kokoroVoiceId,
+        speed: settings.kokoroVoiceSpeed,
+      };
+    }
+
+    if (model === this.piperSpeechModelId) {
+      return {
+        model,
+        voice: settings.piperVoiceId,
+        speed: settings.piperVoiceSpeed,
+      };
+    }
+
+    return { model };
+  }
+
+  private getLocalVoiceLabel(model: string, params: Record<string, unknown>): string {
+    if (model === this.kokoroSpeechModelId && typeof params['voice'] === 'string') {
+      return params['voice'];
+    }
+
+    if (model === this.piperSpeechModelId && typeof params['voice'] === 'number') {
+      return `Voice ${params['voice'] + 1}`;
+    }
+
+    return 'SpeechT5';
+  }
+
+  private getLocalVoiceLanguage(model: string, params: Record<string, unknown>): string {
+    if (model === this.piperSpeechModelId || model === this.kokoroSpeechModelId) {
+      return 'en';
+    }
+
+    return typeof params['language'] === 'string' ? params['language'] : 'en';
   }
 
   private normalizeChoiceSetting(value: unknown, fallback: string, choices: readonly string[]): string {

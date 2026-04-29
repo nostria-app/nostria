@@ -76,11 +76,6 @@ interface ComposerAttachment {
   previewUrl?: string;
 }
 
-interface ImageDimensions {
-  width: number;
-  height: number;
-}
-
 interface AiQuickPrompt {
   label: string;
   prompt: string;
@@ -367,6 +362,33 @@ export class AiComponent {
       cached: false,
       runtime: 'WASM/CPU',
     },
+    {
+      id: 'onnx-community/Kokoro-82M-v1.0-ONNX',
+      task: 'text-to-speech',
+      name: 'Kokoro 82M',
+      description: 'High-quality local text-to-speech with selectable Kokoro voices.',
+      size: '~92MB q8',
+      loading: false,
+      progress: 0,
+      loaded: false,
+      cached: false,
+      runtime: 'WASM/WebGPU · q8',
+      source: 'local',
+      loadOptions: { dtype: 'q8', device: 'wasm' },
+    },
+    {
+      id: 'rhasspy/piper-voices/en_US-libritts_r-medium',
+      task: 'text-to-speech',
+      name: 'Piper LibriTTS',
+      description: 'Local Piper TTS model with 904 selectable LibriTTS voices.',
+      size: '~79MB',
+      loading: false,
+      progress: 0,
+      loaded: false,
+      cached: false,
+      runtime: 'WASM · 904 voices',
+      source: 'local',
+    },
   ]);
 
   readonly localChatModels = computed(() => this.models().filter(model => this.isChatGenerationTask(model.task) && model.source !== 'cloud'));
@@ -583,6 +605,49 @@ export class AiComponent {
     { value: 'mp3', label: 'MP3' },
     { value: 'wav', label: 'WAV' },
   ];
+  readonly kokoroVoiceOptions: ChoiceOption[] = [
+    { value: 'af_heart', label: 'Heart · American Female' },
+    { value: 'af_alloy', label: 'Alloy · American Female' },
+    { value: 'af_aoede', label: 'Aoede · American Female' },
+    { value: 'af_bella', label: 'Bella · American Female' },
+    { value: 'af_jessica', label: 'Jessica · American Female' },
+    { value: 'af_kore', label: 'Kore · American Female' },
+    { value: 'af_nicole', label: 'Nicole · American Female' },
+    { value: 'af_nova', label: 'Nova · American Female' },
+    { value: 'af_river', label: 'River · American Female' },
+    { value: 'af_sarah', label: 'Sarah · American Female' },
+    { value: 'af_sky', label: 'Sky · American Female' },
+    { value: 'am_adam', label: 'Adam · American Male' },
+    { value: 'am_echo', label: 'Echo · American Male' },
+    { value: 'am_eric', label: 'Eric · American Male' },
+    { value: 'am_fenrir', label: 'Fenrir · American Male' },
+    { value: 'am_liam', label: 'Liam · American Male' },
+    { value: 'am_michael', label: 'Michael · American Male' },
+    { value: 'am_onyx', label: 'Onyx · American Male' },
+    { value: 'am_puck', label: 'Puck · American Male' },
+    { value: 'am_santa', label: 'Santa · American Male' },
+    { value: 'bf_alice', label: 'Alice · British Female' },
+    { value: 'bf_emma', label: 'Emma · British Female' },
+    { value: 'bf_isabella', label: 'Isabella · British Female' },
+    { value: 'bf_lily', label: 'Lily · British Female' },
+    { value: 'bm_daniel', label: 'Daniel · British Male' },
+    { value: 'bm_fable', label: 'Fable · British Male' },
+    { value: 'bm_george', label: 'George · British Male' },
+    { value: 'bm_lewis', label: 'Lewis · British Male' },
+  ];
+  readonly localVoiceSpeedOptions: ChoiceOption[] = [
+    { value: '0.5', label: '0.5x' },
+    { value: '0.75', label: '0.75x' },
+    { value: '1', label: '1.0x' },
+    { value: '1.25', label: '1.25x' },
+    { value: '1.5', label: '1.5x' },
+    { value: '1.75', label: '1.75x' },
+    { value: '2', label: '2.0x' },
+  ];
+  readonly piperVoiceOptions: ChoiceOption[] = Array.from({ length: 904 }, (_, index) => ({
+    value: String(index),
+    label: `Voice ${index + 1}`,
+  }));
   readonly composerModels = computed(() => [
     ...this.localChatModels(),
     ...this.cloudChatModels(),
@@ -617,6 +682,8 @@ export class AiComponent {
   readonly isVideoGenerationMode = computed(() => this.selectedModel()?.task === 'video-generation');
   readonly isVoiceGenerationMode = computed(() => this.selectedModel()?.task === 'text-to-speech');
   readonly isXAiVoiceGenerationMode = computed(() => this.selectedModel()?.provider === 'xai' && this.selectedModel()?.task === 'text-to-speech');
+  readonly isKokoroVoiceGenerationMode = computed(() => this.selectedModelId() === this.aiService.kokoroSpeechModelId);
+  readonly isPiperVoiceGenerationMode = computed(() => this.selectedModelId() === this.aiService.piperSpeechModelId);
   readonly isImageMode = computed(() => this.isImageGenerationMode() || this.isImageUpscalingMode());
   readonly isVisualGenerationMode = computed(() => this.isImageMode() || this.isVideoGenerationMode());
   readonly isGeneratedMediaMode = computed(() => this.isVisualGenerationMode() || this.isVoiceGenerationMode());
@@ -667,6 +734,10 @@ export class AiComponent {
   readonly xAiVoiceLabel = computed(() => this.xAiVoiceOptions.find(option => option.value === this.aiService.cloudSettings().xaiVoiceId)?.label ?? 'Eve');
   readonly xAiVoiceLanguageLabel = computed(() => this.xAiVoiceLanguageOptions.find(option => option.value === this.aiService.cloudSettings().xaiVoiceLanguage)?.label ?? 'English');
   readonly xAiVoiceCodecLabel = computed(() => this.xAiVoiceCodecOptions.find(option => option.value === this.aiService.cloudSettings().xaiVoiceCodec)?.label ?? 'MP3');
+  readonly kokoroVoiceLabel = computed(() => this.kokoroVoiceOptions.find(option => option.value === this.aiService.cloudSettings().kokoroVoiceId)?.label ?? this.aiService.cloudSettings().kokoroVoiceId);
+  readonly kokoroVoiceSpeedLabel = computed(() => `${this.aiService.cloudSettings().kokoroVoiceSpeed.toFixed(1)}x`);
+  readonly piperVoiceLabel = computed(() => `Voice ${this.aiService.cloudSettings().piperVoiceId + 1}`);
+  readonly piperVoiceSpeedLabel = computed(() => `${this.aiService.cloudSettings().piperVoiceSpeed.toFixed(1)}x`);
   readonly activeQuickPrompts = computed(() => {
     if (this.isImageGenerationMode()) {
       return this.imageQuickPrompts;
@@ -737,7 +808,7 @@ export class AiComponent {
     { label: 'Animate image', prompt: 'Animate the attached image into a short video.', task: 'video-generation' },
   ];
   readonly voiceQuickPrompts: AiQuickPrompt[] = [
-    { label: 'Trailer VO', prompt: 'In a world where your social feed finally belongs to you, Nostria brings people back to the center. Share freely. Connect directly. Own your voice.', task: 'voice-generation' },
+    { label: 'Trailer VO', prompt: 'Welcome to Nostria - Your Social Network. Built for human connections. See your friends again. Nostria is social without the noise.', task: 'voice-generation' },
     { label: 'Warm narration', prompt: 'Welcome to Nostria. A calmer place to follow your friends, share what matters, and stay connected without the noise.', task: 'voice-generation' },
     { label: 'Fast teaser', prompt: 'New post. New voice. Same open network. Nostria helps you create, share, and connect in seconds.', task: 'voice-generation' },
   ];
@@ -1195,6 +1266,25 @@ export class AiComponent {
 
   updateXAiVoiceCodec(value: 'mp3' | 'wav'): void {
     this.aiService.updateCloudSettings({ xaiVoiceCodec: value === 'wav' ? 'wav' : 'mp3' });
+  }
+
+  updateKokoroVoiceId(value: string): void {
+    this.aiService.updateCloudSettings({ kokoroVoiceId: value.trim() || this.aiService.cloudSettings().kokoroVoiceId });
+  }
+
+  updateKokoroVoiceSpeed(value: string | number): void {
+    this.aiService.updateCloudSettings({ kokoroVoiceSpeed: this.parseBoundedNumber(value, this.aiService.cloudSettings().kokoroVoiceSpeed, 0.5, 2) });
+  }
+
+  updatePiperVoiceId(value: string | number): void {
+    const parsed = typeof value === 'number' ? value : Number.parseInt(value, 10);
+    this.aiService.updateCloudSettings({
+      piperVoiceId: Number.isFinite(parsed) ? Math.min(Math.max(Math.round(parsed), 0), 903) : this.aiService.cloudSettings().piperVoiceId,
+    });
+  }
+
+  updatePiperVoiceSpeed(value: string | number): void {
+    this.aiService.updateCloudSettings({ piperVoiceSpeed: this.parseBoundedNumber(value, this.aiService.cloudSettings().piperVoiceSpeed, 0.5, 2) });
   }
 
   setXAiVideoMode(mode: 'generate' | 'extend-video'): void {
@@ -2317,6 +2407,15 @@ export class AiComponent {
     }
 
     return Math.round(parsed);
+  }
+
+  private parseBoundedNumber(value: string | number, fallback: number, min: number, max: number): number {
+    const parsed = typeof value === 'number' ? value : Number.parseFloat(value);
+    if (!Number.isFinite(parsed)) {
+      return fallback;
+    }
+
+    return Math.min(Math.max(parsed, min), max);
   }
 
   private appendToMessage(id: string, text: string): void {

@@ -589,8 +589,9 @@
           </button>
           }
         </div>
-        } @else if (isXAiVoiceGenerationMode()) {
+        } @else if (isVoiceGenerationMode()) {
         <div class="grok-toolbar-group" role="group" aria-label="Voice settings">
+          @if (isXAiVoiceGenerationMode()) {
           <button type="button" class="grok-toolbar-chip" [matMenuTriggerFor]="xAiVoiceMenu" [disabled]="isGenerating()"
             [attr.title]="'Voice ' + xAiVoiceLabel()">
             <span>{{ xAiVoiceLabel() }}</span>
@@ -606,6 +607,33 @@
             <span>{{ xAiVoiceCodecLabel() }}</span>
             <mat-icon>expand_more</mat-icon>
           </button>
+          } @else if (isKokoroVoiceGenerationMode()) {
+          <button type="button" class="grok-toolbar-chip" [matMenuTriggerFor]="kokoroVoiceMenu"
+            [disabled]="isGenerating()" [attr.title]="'Kokoro voice ' + kokoroVoiceLabel()">
+            <span>{{ kokoroVoiceLabel() }}</span>
+            <mat-icon>expand_more</mat-icon>
+          </button>
+          <button type="button" class="grok-toolbar-chip" [matMenuTriggerFor]="kokoroVoiceSpeedMenu"
+            [disabled]="isGenerating()" [attr.title]="'Voice speed ' + kokoroVoiceSpeedLabel()">
+            <span>{{ kokoroVoiceSpeedLabel() }}</span>
+            <mat-icon>expand_more</mat-icon>
+          </button>
+          } @else if (isPiperVoiceGenerationMode()) {
+          <button type="button" class="grok-toolbar-chip" [matMenuTriggerFor]="piperVoiceMenu"
+            [disabled]="isGenerating()" [attr.title]="'Piper voice ' + piperVoiceLabel()">
+            <span>{{ piperVoiceLabel() }}</span>
+            <mat-icon>expand_more</mat-icon>
+          </button>
+          <button type="button" class="grok-toolbar-chip" [matMenuTriggerFor]="piperVoiceSpeedMenu"
+            [disabled]="isGenerating()" [attr.title]="'Voice speed ' + piperVoiceSpeedLabel()">
+            <span>{{ piperVoiceSpeedLabel() }}</span>
+            <mat-icon>expand_more</mat-icon>
+          </button>
+          } @else {
+          <button type="button" class="grok-toolbar-chip" disabled>
+            <span>Default voice</span>
+          </button>
+          }
         </div>
         }
 
@@ -746,6 +774,38 @@
       <mat-menu #xAiVoiceCodecMenu="matMenu">
         @for (option of xAiVoiceCodecOptions; track option.value) {
         <button mat-menu-item type="button" (click)="updateXAiVoiceCodec(option.value === 'wav' ? 'wav' : 'mp3')">
+          <span>{{ option.label }}</span>
+        </button>
+        }
+      </mat-menu>
+
+      <mat-menu #kokoroVoiceMenu="matMenu">
+        @for (option of kokoroVoiceOptions; track option.value) {
+        <button mat-menu-item type="button" (click)="updateKokoroVoiceId(option.value)">
+          <span>{{ option.label }}</span>
+        </button>
+        }
+      </mat-menu>
+
+      <mat-menu #kokoroVoiceSpeedMenu="matMenu">
+        @for (option of localVoiceSpeedOptions; track option.value) {
+        <button mat-menu-item type="button" (click)="updateKokoroVoiceSpeed(option.value)">
+          <span>{{ option.label }}</span>
+        </button>
+        }
+      </mat-menu>
+
+      <mat-menu #piperVoiceMenu="matMenu">
+        @for (option of piperVoiceOptions; track option.value) {
+        <button mat-menu-item type="button" (click)="updatePiperVoiceId(option.value)">
+          <span>{{ option.label }}</span>
+        </button>
+        }
+      </mat-menu>
+
+      <mat-menu #piperVoiceSpeedMenu="matMenu">
+        @for (option of localVoiceSpeedOptions; track option.value) {
+        <button mat-menu-item type="button" (click)="updatePiperVoiceSpeed(option.value)">
           <span>{{ option.label }}</span>
         </button>
         }
