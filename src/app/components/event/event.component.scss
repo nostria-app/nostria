@@ -65,12 +65,12 @@
   gap: 6px;
   width: fit-content;
   max-width: calc(100% - 24px);
-  margin: 0 12px 8px;
+  margin: 8px 12px 10px;
   padding: 3px 6px;
-  border: 1px solid var(--mat-sys-outline-variant);
+  border: 1px solid color-mix(in srgb, var(--mat-sys-tertiary) 45%, transparent);
   border-radius: 999px;
-  background: var(--mat-sys-secondary-container);
-  color: var(--mat-sys-on-secondary-container);
+  background: var(--mat-sys-tertiary-container);
+  color: var(--mat-sys-on-tertiary-container);
   cursor: default;
 }
 
@@ -101,7 +101,7 @@
 }
 
 .event-tts-pill-model {
-  color: var(--mat-sys-on-surface-variant);
+  color: color-mix(in srgb, var(--mat-sys-on-tertiary-container) 72%, transparent);
 }
 
 // Dark mode: lift cards above the near-black background for better visual separation
