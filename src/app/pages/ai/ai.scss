@@ -486,6 +486,24 @@
   width: 100%;
 }
 
+:host ::ng-deep .dictation-selector-menu.mat-mdc-menu-panel {
+  width: min(320px, calc(100vw - 24px));
+  max-width: min(320px, calc(100vw - 24px));
+}
+
+:host ::ng-deep .dictation-selector-menu .mat-mdc-menu-item {
+  min-height: 48px;
+}
+
+:host ::ng-deep .dictation-selector-menu .model-menu-item {
+  gap: 8px;
+}
+
+:host ::ng-deep .dictation-selector-menu .model-menu-item-selected::before {
+  inset: -5px -8px;
+  border-radius: 10px;
+}
+
 .chat-header-controls {
   width: auto;
   flex: 0 0 auto;

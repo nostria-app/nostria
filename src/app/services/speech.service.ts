@@ -136,10 +136,16 @@ export class SpeechService {
   private animationFrameId: number | null = null;
   private restartAfterCurrentRecording = false;
   private manualStopRequested = false;
+  private recordingStartedAt = 0;
+  private speechDetected = false;
 
   // Default options
   private readonly DEFAULT_SILENCE_THRESHOLD = 0.02;
   private readonly DEFAULT_SILENCE_DURATION = 2000;
+  private readonly CONTINUOUS_SILENCE_DURATION = 850;
+  private readonly CONTINUOUS_MAX_SEGMENT_DURATION = 10000;
+  private readonly MIN_TRANSCRIBABLE_DURATION_SECONDS = 0.45;
+  private readonly MIN_TRANSCRIBABLE_RMS = 0.006;
   private readonly MODEL_LOAD_TIMEOUT_MS = 240000;
 
   // Current recording options
@@ -297,7 +303,6 @@ export class SpeechService {
         const shouldRestart = this.restartAfterCurrentRecording && !this.manualStopRequested;
         this.restartAfterCurrentRecording = false;
         const audioBlob = new Blob(this.audioChunks, { type: 'audio/wav' });
-        await this.processAudio(audioBlob, shouldRestart);
 
         if (stoppedStream) {
           stoppedStream.getTracks().forEach(track => track.stop());
@@ -306,11 +311,19 @@ export class SpeechService {
         if (this.stream === stoppedStream) {
           this.stream = null;
         }
+
+        if (shouldRestart && this.dictationMode() === 'continuous' && !this.manualStopRequested) {
+          void this.startRecording(this.currentOptions);
+        }
+
+        await this.processAudio(audioBlob);
       };
 
       this.mediaRecorder.start();
       this.isRecording.set(true);
       this.manualStopRequested = false;
+      this.recordingStartedAt = Date.now();
+      this.speechDetected = false;
       options.onRecordingStateChange?.(true);
 
       // Start silence detection
@@ -325,7 +338,8 @@ export class SpeechService {
    */
   private startSilenceDetection(stream: MediaStream, options: SpeechRecordingOptions): void {
     const silenceThreshold = options.silenceThreshold ?? this.DEFAULT_SILENCE_THRESHOLD;
-    const silenceDuration = options.silenceDuration ?? this.DEFAULT_SILENCE_DURATION;
+    const silenceDuration = options.silenceDuration
+      ?? (this.dictationMode() === 'continuous' ? this.CONTINUOUS_SILENCE_DURATION : this.DEFAULT_SILENCE_DURATION);
 
     this.audioContext = new AudioContext();
     this.analyser = this.audioContext.createAnalyser();
@@ -350,10 +364,22 @@ export class SpeechService {
       }
       const rms = Math.sqrt(sum / bufferLength);
 
+      if (rms >= silenceThreshold) {
+        this.speechDetected = true;
+      }
+
+      if (this.dictationMode() === 'continuous'
+        && this.speechDetected
+        && Date.now() - this.recordingStartedAt > this.CONTINUOUS_MAX_SEGMENT_DURATION) {
+        this.restartAfterCurrentRecording = true;
+        this.stopRecording(false);
+        return;
+      }
+
       if (rms < silenceThreshold) {
         if (this.silenceStart === null) {
           this.silenceStart = Date.now();
-        } else if (Date.now() - this.silenceStart > silenceDuration) {
+        } else if ((this.speechDetected || this.dictationMode() !== 'continuous') && Date.now() - this.silenceStart > silenceDuration) {
           this.restartAfterCurrentRecording = this.dictationMode() === 'continuous';
           this.stopRecording(false);
           return;
@@ -402,25 +428,24 @@ export class SpeechService {
   /**
    * Process the recorded audio blob and transcribe it.
    */
-  private async processAudio(blob: Blob, restartWhenFinished = false): Promise<void> {
+  private async processAudio(blob: Blob): Promise<void> {
     this.isTranscribing.set(true);
     this.currentOptions.onTranscribingStateChange?.(true);
 
     try {
+      // Convert Blob to Float32Array
+      const decodedAudio = await this.decodeAudioBlob(blob);
+      if (!this.shouldTranscribeAudio(decodedAudio.audioData, decodedAudio.duration)) {
+        return;
+      }
+
       const model = this.selectedTranscriptionModel();
       const status = await this.aiService.checkModel('automatic-speech-recognition', model.id);
       if (!status.loaded) {
         await this.loadSelectedTranscriptionModel(model);
       }
 
-      // Convert Blob to Float32Array
-      const arrayBuffer = await blob.arrayBuffer();
-      const audioContext = new AudioContext({ sampleRate: 16000 });
-      const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-      const audioData = new Float32Array(audioBuffer.getChannelData(0));
-      await audioContext.close();
-
-      const result = await this.aiService.transcribeAudio(audioData) as { text: string };
+      const result = await this.aiService.transcribeAudio(decodedAudio.audioData) as { text: string };
 
       if (result && result.text) {
         let text = result.text.trim();
@@ -433,9 +458,6 @@ export class SpeechService {
     } finally {
       this.isTranscribing.set(false);
       this.currentOptions.onTranscribingStateChange?.(false);
-      if (restartWhenFinished && this.dictationMode() === 'continuous' && !this.manualStopRequested) {
-        await this.startRecording(this.currentOptions);
-      }
     }
   }
 
@@ -453,12 +475,7 @@ export class SpeechService {
         await this.loadSelectedTranscriptionModel(model);
       }
 
-      // Convert Blob to Float32Array
-      const arrayBuffer = await blob.arrayBuffer();
-      const audioContext = new AudioContext({ sampleRate: 16000 });
-      const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-      const audioData = new Float32Array(audioBuffer.getChannelData(0));
-      await audioContext.close();
+      const { audioData } = await this.decodeAudioBlob(blob);
 
       const result = await this.aiService.transcribeAudio(audioData) as { text: string };
 
@@ -483,6 +500,29 @@ export class SpeechService {
    */
   cleanup(): void {
     this.stopRecording();
+  }
+
+  private async decodeAudioBlob(blob: Blob): Promise<{ audioData: Float32Array; duration: number }> {
+    const arrayBuffer = await blob.arrayBuffer();
+    const audioContext = new AudioContext({ sampleRate: 16000 });
+    const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+    const audioData = new Float32Array(audioBuffer.getChannelData(0));
+    const duration = audioBuffer.duration;
+    await audioContext.close();
+    return { audioData, duration };
+  }
+
+  private shouldTranscribeAudio(audioData: Float32Array, duration: number): boolean {
+    if (duration < this.MIN_TRANSCRIBABLE_DURATION_SECONDS || audioData.length === 0) {
+      return false;
+    }
+
+    let sum = 0;
+    for (let i = 0; i < audioData.length; i++) {
+      sum += audioData[i] * audioData[i];
+    }
+
+    return Math.sqrt(sum / audioData.length) >= this.MIN_TRANSCRIBABLE_RMS;
   }
 
   private async loadSelectedTranscriptionModel(model: DictationModelOption): Promise<void> {

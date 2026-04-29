@@ -36,6 +36,12 @@ export interface TtsSequenceState {
   message?: string;
 }
 
+interface AudioCacheEntry {
+  key: string;
+  promise: Promise<string>;
+  src?: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class TtsSequencePlayerService {
   private readonly ai = inject(AiService);
@@ -173,10 +179,12 @@ export class TtsSequencePlayerService {
   private audio: HTMLAudioElement | null = null;
   private currentObjectUrl: string | null = null;
   private requestId = 0;
+  private readonly audioCache = new Map<number, AudioCacheEntry>();
 
   start(source: 'feed' | 'thread', title: string, events: Event[], modelId = this.selectedModelId()): void {
     this.eventTtsPlayback.close();
     this.close();
+    this.clearAudioCache();
 
     const requestId = ++this.requestId;
     this.selectedModelId.set(modelId);
@@ -185,9 +193,15 @@ export class TtsSequencePlayerService {
     void this.prepareAndPlay(requestId, events);
   }
 
-  startArticle(title: string, item: TtsSequenceItem, modelId = this.selectedModelId()): void {
+  startArticle(title: string, items: TtsSequenceItem[], modelId = this.selectedModelId()): void {
+    const readableItems = items.filter(item => item.text.trim().length > 0);
+    if (readableItems.length === 0) {
+      return;
+    }
+
     this.eventTtsPlayback.close();
     this.close();
+    this.clearAudioCache();
 
     const requestId = ++this.requestId;
     this.selectedModelId.set(modelId);
@@ -196,7 +210,7 @@ export class TtsSequencePlayerService {
       requestId,
       source: 'article',
       title,
-      items: [item],
+      items: readableItems,
       currentIndex: 0,
       status: 'loading',
       message: 'Preparing speech...',
@@ -232,6 +246,7 @@ export class TtsSequencePlayerService {
   close(): void {
     this.requestId++;
     this.disposeAudio();
+    this.clearAudioCache();
     this.state.set(null);
     this.currentTime.set(0);
     this.duration.set(0);
@@ -276,6 +291,7 @@ export class TtsSequencePlayerService {
 
     const requestId = ++this.requestId;
     this.disposeAudio();
+    this.clearAudioCache();
     this.state.set({ ...state, requestId, status: 'loading', message: 'Preparing speech...' });
     void this.generateAndPlay(requestId);
   }
@@ -311,19 +327,17 @@ export class TtsSequencePlayerService {
 
       if (!this.isCurrent(requestId)) return;
 
-      this.applyCurrentSettings();
-      this.patchState({ status: 'generating', message: `Generating post ${state.currentIndex + 1} of ${state.items.length}...` });
-      const [audio] = await this.ai.generateVoice(item.text, 'local', model.id);
-      if (!audio) {
-        throw new Error('No audio was generated.');
-      }
+      const unitLabel = state.source === 'article' ? 'section' : 'post';
+      this.patchState({ status: 'generating', message: `Generating ${unitLabel} ${state.currentIndex + 1} of ${state.items.length}...` });
+      const src = await this.getAudioUrlForIndex(state.currentIndex, item, model);
 
       if (!this.isCurrent(requestId)) {
-        URL.revokeObjectURL(audio.src);
+        URL.revokeObjectURL(src);
         return;
       }
 
-      await this.playObjectUrl(requestId, audio.src);
+      await this.playObjectUrl(requestId, src);
+      this.prefetchNextAudio(requestId);
     } catch (error) {
       if (!this.isCurrent(requestId)) return;
       this.patchState({ status: 'error', message: error instanceof Error ? error.message : String(error) });
@@ -386,6 +400,105 @@ export class TtsSequencePlayerService {
     } else {
       this.ai.updateCloudSettings({ kokoroVoiceSpeed: speed });
     }
+  }
+
+  private getAudioUrlForIndex(index: number, item: TtsSequenceItem, model: TtsSequenceModelOption): Promise<string> {
+    const key = this.getAudioCacheKey(item, model);
+    const entry = this.ensureAudioCacheEntry(index, key, item, model);
+
+    return entry.promise.then(src => {
+      if (this.audioCache.get(index) === entry) {
+        entry.src = undefined;
+        this.audioCache.delete(index);
+      }
+
+      return src;
+    });
+  }
+
+  private prefetchNextAudio(requestId: number): void {
+    const state = this.state();
+    if (!state || !this.isCurrent(requestId) || state.currentIndex >= state.items.length - 1) {
+      return;
+    }
+
+    const nextIndex = state.currentIndex + 1;
+    const nextItem = state.items[nextIndex];
+    const model = this.currentModel();
+    if (!nextItem || !this.ai.isModelLoaded(model.id)) {
+      return;
+    }
+
+    const key = this.getAudioCacheKey(nextItem, model);
+    this.ensureAudioCacheEntry(nextIndex, key, nextItem, model).promise.catch(() => undefined);
+  }
+
+  private ensureAudioCacheEntry(
+    index: number,
+    key: string,
+    item: TtsSequenceItem,
+    model: TtsSequenceModelOption,
+  ): AudioCacheEntry {
+    const existing = this.audioCache.get(index);
+    if (existing?.key === key) {
+      return existing;
+    }
+
+    if (existing?.src) {
+      URL.revokeObjectURL(existing.src);
+    }
+
+    const entry: AudioCacheEntry = {
+      key,
+      promise: Promise.resolve(''),
+    };
+
+    entry.promise = this.createAudioUrlPromise(index, key, item, model, entry);
+    this.audioCache.set(index, entry);
+    return entry;
+  }
+
+  private async createAudioUrlPromise(
+    index: number,
+    key: string,
+    item: TtsSequenceItem,
+    model: TtsSequenceModelOption,
+    entry: AudioCacheEntry,
+  ): Promise<string> {
+    this.applyCurrentSettings();
+    const [audio] = await this.ai.generateVoice(item.text, 'local', model.id);
+    if (!audio) {
+      throw new Error('No audio was generated.');
+    }
+
+    if (this.audioCache.get(index)?.key !== key) {
+      URL.revokeObjectURL(audio.src);
+      throw new Error('Speech generation was superseded.');
+    }
+
+    entry.src = audio.src;
+    return audio.src;
+  }
+
+  private getAudioCacheKey(item: TtsSequenceItem, model: TtsSequenceModelOption): string {
+    return [
+      model.id,
+      this.selectedVoice(),
+      this.selectedSpeed(),
+      item.text,
+    ].join('\u001f');
+  }
+
+  private clearAudioCache(): void {
+    for (const entry of this.audioCache.values()) {
+      if (entry.src) {
+        URL.revokeObjectURL(entry.src);
+      } else {
+        entry.promise.then(src => URL.revokeObjectURL(src)).catch(() => undefined);
+      }
+    }
+
+    this.audioCache.clear();
   }
 
   private async prepareAndPlay(requestId: number, events: Event[]): Promise<void> {

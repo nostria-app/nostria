@@ -9,6 +9,13 @@
   }
 }
 
+:host ::ng-deep .article-tts-active-section {
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--mat-sys-primary-container) 58%, transparent);
+  box-shadow: 0 0 0 6px color-mix(in srgb, var(--mat-sys-primary-container) 32%, transparent);
+  transition: background-color 160ms ease, box-shadow 160ms ease;
+}
+
 // Top actions bar
 .article-top-actions {
   display: flex;

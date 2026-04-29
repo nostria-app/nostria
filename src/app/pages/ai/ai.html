@@ -526,7 +526,7 @@
           (contextmenu)="openDictationModelMenu($event, dictationModelTrigger)"
           (pointerdown)="onDictationPointerDown($event, dictationModelTrigger)" (pointerup)="onDictationPointerEnd()"
           (pointercancel)="onDictationPointerEnd()" (pointerleave)="onDictationPointerEnd()"
-          [disabled]="isGenerating() || isDictationTranscribing()"
+          [disabled]="isGenerating() || (!isDictating() && isDictationTranscribing())"
           [attr.aria-label]="isDictating() ? 'Stop dictation' : 'Start dictation'"
           [attr.title]="(isDictating() ? 'Stop dictation' : 'Start dictation') + ' · ' + selectedDictationModel().name">
           <mat-icon>{{ isDictating() ? 'stop_circle' : isDictationTranscribing() ? 'hourglass_empty' : 'mic' }}</mat-icon>
@@ -839,12 +839,13 @@
         </button>
       </mat-menu>
 
-      <mat-menu #dictationModelMenu="matMenu" class="model-selector-menu" [overlapTrigger]="false" yPosition="above">
+      <mat-menu #dictationModelMenu="matMenu" class="model-selector-menu dictation-selector-menu"
+        [overlapTrigger]="false" yPosition="above">
         <button mat-menu-item type="button" (click)="selectDictationMode('single')">
           <div class="model-menu-item" [class.model-menu-item-selected]="dictationMode() === 'single'">
             <div class="model-menu-copy">
-              <span class="model-menu-title">One-shot dictation</span>
-              <span class="model-menu-meta">Stops after a pause and inserts the transcription.</span>
+              <span class="model-menu-title">One-shot</span>
+              <span class="model-menu-meta">Stops after a pause</span>
             </div>
             <div class="model-menu-trailing">
               @if (dictationMode() === 'single') {
@@ -856,8 +857,8 @@
         <button mat-menu-item type="button" (click)="selectDictationMode('continuous')">
           <div class="model-menu-item" [class.model-menu-item-selected]="dictationMode() === 'continuous'">
             <div class="model-menu-copy">
-              <span class="model-menu-title">Continuous dictation</span>
-              <span class="model-menu-meta">Keeps listening and transcribes each spoken chunk.</span>
+              <span class="model-menu-title">Continuous</span>
+              <span class="model-menu-meta">Keeps listening</span>
             </div>
             <div class="model-menu-trailing">
               @if (dictationMode() === 'continuous') {
@@ -873,7 +874,6 @@
             <div class="model-menu-copy">
               <span class="model-menu-title">{{ model.name }}</span>
               <span class="model-menu-meta">{{ model.runtime }} · {{ model.size }}{{ model.highMemory ? ' · high memory' : '' }}</span>
-              <span class="model-menu-meta">{{ model.description }}</span>
             </div>
             <div class="model-menu-trailing">
               @if (model.id === selectedDictationModel().id) {
