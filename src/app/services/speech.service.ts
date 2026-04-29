@@ -51,26 +51,10 @@ export class SpeechService {
       loadOptions: { device: 'wasm', dtype: 'fp32' },
     },
     {
-      id: 'onnx-community/moonshine-tiny-ONNX',
-      name: 'Moonshine Tiny',
-      description: 'Fast, lightweight local ASR model.',
-      size: '~60MB',
-      runtime: 'WASM/CPU',
-      loadOptions: { device: 'wasm', dtype: 'fp32' },
-    },
-    {
       id: 'onnx-community/whisper-small',
       name: 'Whisper Small',
       description: 'Balanced Whisper transcription model with better accuracy than Tiny.',
       size: '~290MB',
-      runtime: this.webGpuAvailable() ? 'WebGPU' : 'WASM/CPU',
-      loadOptions: this.webGpuAvailable() ? { device: 'webgpu', dtype: 'fp32' } : { device: 'wasm', dtype: 'fp32' },
-    },
-    {
-      id: 'onnx-community/granite-4.0-1b-speech-ONNX',
-      name: 'Granite 4.0 1B',
-      description: 'Larger multilingual speech model.',
-      size: '~1B params',
       runtime: this.webGpuAvailable() ? 'WebGPU' : 'WASM/CPU',
       loadOptions: this.webGpuAvailable() ? { device: 'webgpu', dtype: 'fp32' } : { device: 'wasm', dtype: 'fp32' },
     },
@@ -81,6 +65,14 @@ export class SpeechService {
       size: '~809MB',
       runtime: this.webGpuAvailable() ? 'WebGPU' : 'WASM/CPU',
       loadOptions: this.webGpuAvailable() ? { device: 'webgpu', dtype: 'fp32' } : { device: 'wasm', dtype: 'fp32' },
+    },
+    {
+      id: 'onnx-community/moonshine-tiny-ONNX',
+      name: 'Moonshine Tiny',
+      description: 'Fast, lightweight local ASR model.',
+      size: '~60MB',
+      runtime: 'WASM/CPU',
+      loadOptions: { device: 'wasm', dtype: 'fp32' },
     },
   ];
 
