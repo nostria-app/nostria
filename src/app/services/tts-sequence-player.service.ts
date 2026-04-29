@@ -28,7 +28,7 @@ export interface TtsSequenceItem {
 
 export interface TtsSequenceState {
   requestId: number;
-  source: 'feed' | 'thread';
+  source: 'feed' | 'thread' | 'article';
   title: string;
   items: TtsSequenceItem[];
   currentIndex: number;
@@ -183,6 +183,25 @@ export class TtsSequencePlayerService {
     this.applyCurrentSettings();
     this.state.set({ requestId, source, title, items: [], currentIndex: 0, status: 'loading', message: 'Preparing speech...' });
     void this.prepareAndPlay(requestId, events);
+  }
+
+  startArticle(title: string, item: TtsSequenceItem, modelId = this.selectedModelId()): void {
+    this.eventTtsPlayback.close();
+    this.close();
+
+    const requestId = ++this.requestId;
+    this.selectedModelId.set(modelId);
+    this.applyCurrentSettings();
+    this.state.set({
+      requestId,
+      source: 'article',
+      title,
+      items: [item],
+      currentIndex: 0,
+      status: 'loading',
+      message: 'Preparing speech...',
+    });
+    void this.generateAndPlay(requestId);
   }
 
   toggle(): void {

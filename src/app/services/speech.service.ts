@@ -81,12 +81,12 @@ export class SpeechService {
       loadOptions: this.webGpuAvailable() ? {
         device: 'webgpu',
         dtype: {
-          encoder_model: 'fp32',
+          encoder_model: 'q4',
           decoder_model_merged: 'q4',
         },
       } : {
         device: 'wasm',
-        dtype: 'q8',
+        dtype: 'q4',
       },
       highMemory: true,
     },

@@ -112,6 +112,23 @@ let supertonicTts: any = null;
 let piperTts: PiperTTS | null = null;
 let fp16Supported = false;
 let phonemizerModulePromise: Promise<{ phonemize: (text: string, voice?: string) => Promise<string[] | string> }> | null = null;
+const activeRequestIds = new Set<string>();
+
+globalThis.addEventListener('unhandledrejection', event => {
+  event.preventDefault();
+  const reason = event.reason;
+  const message = reason instanceof Error ? reason.message : String(reason);
+
+  for (const id of activeRequestIds) {
+    postMessage({
+      type: 'error',
+      id,
+      payload: message
+    });
+  }
+
+  activeRequestIds.clear();
+});
 
 class TTSPipeline {
   static model_id = 'Xenova/speecht5_tts';
@@ -405,6 +422,7 @@ async function getMultimodalGenerator(
 
 addEventListener('message', async ({ data }) => {
   const { type, payload, id } = data;
+  activeRequestIds.add(id);
 
   try {
     switch (type) {
@@ -451,6 +469,8 @@ addEventListener('message', async ({ data }) => {
       id,
       payload: error instanceof Error ? error.message : String(error)
     });
+  } finally {
+    activeRequestIds.delete(id);
   }
 });
 

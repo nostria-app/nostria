@@ -6,14 +6,16 @@ import {
   inject,
   input,
   OnDestroy,
+  SecurityContext,
   signal,
 } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
+import { MatMenuModule } from '@angular/material/menu';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import type { SafeHtml } from '@angular/platform-browser';
+import { DomSanitizer, type SafeHtml } from '@angular/platform-browser';
 import { ActivatedRoute, type ParamMap, Router } from '@angular/router';
 import { type Event, kinds, nip19 } from 'nostr-tools';
 import { firstValueFrom } from 'rxjs';
@@ -37,6 +39,9 @@ import { EventMenuComponent } from '../../components/event/event-menu/event-menu
 import { UserRelaysService } from '../../services/relays/user-relays';
 import { EventComponent as NostrEventComponent } from '../../components/event/event.component';
 import { normalizeMarkdownLinkDestinations } from '../../services/format/utils';
+import { SettingsService } from '../../services/settings.service';
+import { TtsSequencePlayerService, type TtsSequenceItem } from '../../services/tts-sequence-player.service';
+import { extractTextForTts, splitTtsParagraphs } from '../../utils/tts-text';
 
 @Component({
   selector: 'app-article-page',
@@ -44,6 +49,7 @@ import { normalizeMarkdownLinkDestinations } from '../../services/format/utils';
     MatCardModule,
     MatButtonModule,
     MatIconModule,
+    MatMenuModule,
     MatProgressSpinnerModule,
     MatTooltipModule,
     ArticleDisplayComponent,
@@ -70,6 +76,9 @@ export class ArticleComponent implements OnDestroy {
   private readonly rightPanel = inject(RightPanelService);
   private readonly panelNav = inject(PanelNavigationService);
   private readonly userRelaysService = inject(UserRelaysService);
+  protected readonly settings = inject(SettingsService);
+  protected readonly ttsSequence = inject(TtsSequencePlayerService);
+  private readonly sanitizer = inject(DomSanitizer);
 
   private routeSubscription?: Subscription;
 
@@ -351,6 +360,20 @@ export class ArticleComponent implements OnDestroy {
     }
   }
 
+  startArticleReadAloud(modelId: string): void {
+    const event = this.event();
+    if (!event || event.kind !== kinds.LongFormArticle) {
+      return;
+    }
+
+    const item = this.buildArticleTtsItem(event);
+    if (!item.text) {
+      return;
+    }
+
+    this.ttsSequence.startArticle(this.title() || 'Article', item, modelId);
+  }
+
   onArticleUpdated(event: Event): void {
     this.applyUpdatedArticle(event);
   }
@@ -363,6 +386,54 @@ export class ArticleComponent implements OnDestroy {
       kind: event.kind,
       pubkey: event.pubkey,
     });
+  }
+
+  private buildArticleTtsItem(event: Event): TtsSequenceItem {
+    const sections = [
+      this.title(),
+      this.summary(),
+      this.extractRenderedArticleText() || extractTextForTts(event.content),
+    ]
+      .map(section => section.trim())
+      .filter(Boolean);
+    const text = sections.join('\n\n').replace(/\n{3,}/g, '\n\n').trim();
+
+    return {
+      eventId: event.id,
+      text,
+      paragraphs: splitTtsParagraphs(text),
+      label: text.length > 80 ? `${text.slice(0, 77)}...` : text,
+    };
+  }
+
+  private extractRenderedArticleText(): string {
+    const sanitizedHtml = this.sanitizer.sanitize(SecurityContext.HTML, this.parsedContent()) ?? '';
+    if (!sanitizedHtml.trim()) {
+      return '';
+    }
+
+    if (typeof document === 'undefined') {
+      return sanitizedHtml
+        .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+        .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+        .replace(/<[^>]+>/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+    }
+
+    const container = document.createElement('div');
+    container.innerHTML = sanitizedHtml;
+    container.querySelectorAll('script, style, img, video, audio, iframe, pre, code').forEach(node => node.remove());
+    const text = container.innerText || container.textContent || '';
+    return text
+      .replace(/\b(?:https?|wss?):\/\/\S+/gi, ' ')
+      .replace(/\b(?:web\+)?nostr:\S+/gi, ' ')
+      .replace(/\b(?:npub|nprofile|note|nevent|naddr)1[a-z0-9]+\b/gi, ' ')
+      .replace(/[ \t]+\n/g, '\n')
+      .replace(/\n[ \t]+/g, '\n')
+      .replace(/[ \t]{2,}/g, ' ')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
   }
 
   private isAddressableFormat(value: string): boolean {

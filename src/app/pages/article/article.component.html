@@ -7,6 +7,11 @@
   <span class="panel-header-spacer"></span>
 
   @if (event()) {
+  @if (settings.settings().aiEnabled && settings.settings().aiSpeechEnabled && isLongFormArticle()) {
+  <button mat-icon-button [matMenuTriggerFor]="articleReadAloudMenu" matTooltip="Read article aloud">
+    <mat-icon>record_voice_over</mat-icon>
+  </button>
+  }
   @if (isLongFormArticle() && accountState.isCurrentUser(authorPubkey())) {
   <button mat-icon-button (click)="editArticle($event)" matTooltip="Edit Article">
     <mat-icon>edit</mat-icon>
@@ -15,6 +20,16 @@
   <app-event-menu [event]="event()!" [view]="'icon'"></app-event-menu>
   }
 </div>
+
+<mat-menu #articleReadAloudMenu="matMenu">
+  @for (model of ttsSequence.models; track model.id) {
+  <button mat-menu-item (click)="startArticleReadAloud(model.id)">
+    <mat-icon>graphic_eq</mat-icon>
+    <span>{{ model.label }}</span>
+    <span class="article-menu-item-meta">{{ model.description }}</span>
+  </button>
+  }
+</mat-menu>
 
 @let article = event();
 
