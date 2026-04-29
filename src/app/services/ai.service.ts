@@ -112,6 +112,9 @@ export interface AiCloudSettings {
   xaiVoiceCodec: 'mp3' | 'wav';
   kokoroVoiceId: string;
   kokoroVoiceSpeed: number;
+  supertonicVoiceId: string;
+  supertonicVoiceSpeed: number;
+  supertonicLanguage: string;
   piperVoiceId: number;
   piperVoiceSpeed: number;
 }
@@ -276,6 +279,9 @@ export class AiService {
     xaiVoiceCodec: 'mp3',
     kokoroVoiceId: 'af_heart',
     kokoroVoiceSpeed: 1,
+    supertonicVoiceId: 'F1',
+    supertonicVoiceSpeed: 1.05,
+    supertonicLanguage: 'en',
     piperVoiceId: 0,
     piperVoiceSpeed: 1,
   };
@@ -337,6 +343,7 @@ export class AiService {
   // Default models
   readonly speechModelId = 'Xenova/speecht5_tts';
   readonly kokoroSpeechModelId = 'onnx-community/Kokoro-82M-v1.0-ONNX';
+  readonly supertonicSpeechModelId = 'onnx-community/Supertonic-TTS-2-ONNX';
   readonly piperSpeechModelId = 'rhasspy/piper-voices/en_US-libritts_r-medium';
   readonly transcriptionModelId = 'Xenova/whisper-tiny';
   readonly summarizationModelId = 'Xenova/distilbart-cnn-6-6';
@@ -438,8 +445,16 @@ export class AiService {
       task: 'text-to-speech',
       name: 'Kokoro 82M',
       description: 'High-quality Kokoro voice synthesis running locally in the browser.',
-      runtime: 'WASM/WebGPU · q8',
-      sizeHint: '~92MB q8',
+      runtime: 'WebGPU fp32 / WASM q8',
+      sizeHint: '~92MB',
+    },
+    {
+      id: 'onnx-community/Supertonic-TTS-2-ONNX',
+      task: 'text-to-speech',
+      name: 'Supertonic 2',
+      description: 'High-quality local voice synthesis with 10 expressive voices.',
+      runtime: 'WebGPU/WASM · fp32',
+      sizeHint: '~305MB',
     },
     {
       id: 'rhasspy/piper-voices/en_US-libritts_r-medium',
@@ -1181,6 +1196,9 @@ export class AiService {
       xaiVoiceCodec: settings.xaiVoiceCodec === 'wav' ? 'wav' : 'mp3',
       kokoroVoiceId: settings.kokoroVoiceId?.trim() || this.defaultCloudSettings.kokoroVoiceId,
       kokoroVoiceSpeed: this.normalizeNumberSetting(settings.kokoroVoiceSpeed, this.defaultCloudSettings.kokoroVoiceSpeed, 0.5, 2),
+      supertonicVoiceId: this.normalizeChoiceSetting(settings.supertonicVoiceId, this.defaultCloudSettings.supertonicVoiceId, ['F1', 'F2', 'F3', 'F4', 'F5', 'M1', 'M2', 'M3', 'M4', 'M5']),
+      supertonicVoiceSpeed: this.normalizeNumberSetting(settings.supertonicVoiceSpeed, this.defaultCloudSettings.supertonicVoiceSpeed, 0.5, 2),
+      supertonicLanguage: this.normalizeChoiceSetting(settings.supertonicLanguage, this.defaultCloudSettings.supertonicLanguage, ['en', 'ko', 'es', 'pt', 'fr']),
       piperVoiceId: this.normalizeIntegerSetting(settings.piperVoiceId, this.defaultCloudSettings.piperVoiceId, 0, 903),
       piperVoiceSpeed: this.normalizeNumberSetting(settings.piperVoiceSpeed, this.defaultCloudSettings.piperVoiceSpeed, 0.5, 2),
       openaiApiKey: this.normalizeApiKey(settings.openaiApiKey),
@@ -1240,6 +1258,15 @@ export class AiService {
       };
     }
 
+    if (model === this.supertonicSpeechModelId) {
+      return {
+        model,
+        voice: settings.supertonicVoiceId,
+        speed: settings.supertonicVoiceSpeed,
+        language: settings.supertonicLanguage,
+      };
+    }
+
     return { model };
   }
 
@@ -1252,10 +1279,18 @@ export class AiService {
       return `Voice ${params['voice'] + 1}`;
     }
 
+    if (model === this.supertonicSpeechModelId && typeof params['voice'] === 'string') {
+      return params['voice'];
+    }
+
     return 'SpeechT5';
   }
 
   private getLocalVoiceLanguage(model: string, params: Record<string, unknown>): string {
+    if (model === this.supertonicSpeechModelId) {
+      return typeof params['language'] === 'string' ? params['language'] : this.defaultCloudSettings.supertonicLanguage;
+    }
+
     if (model === this.piperSpeechModelId || model === this.kokoroSpeechModelId) {
       return 'en';
     }

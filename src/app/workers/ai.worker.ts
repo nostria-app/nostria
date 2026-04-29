@@ -6,7 +6,9 @@ const SPEAKER_EMBEDDINGS_URL = 'https://huggingface.co/datasets/Xenova/transform
 const ONNX_RUNTIME_ASSET_PATH = '/assets/onnxruntime/';
 const SPEECHT5_MODEL_ID = 'Xenova/speecht5_tts';
 const KOKORO_MODEL_ID = 'onnx-community/Kokoro-82M-v1.0-ONNX';
+const SUPERTONIC_MODEL_ID = 'onnx-community/Supertonic-TTS-2-ONNX';
 const PIPER_MODEL_ID = 'rhasspy/piper-voices/en_US-libritts_r-medium';
+const SUPERTONIC_VOICE_BASE_URL = 'https://huggingface.co/onnx-community/Supertonic-TTS-2-ONNX/resolve/main/voices';
 const PIPER_MODEL_URL = 'https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/libritts_r/medium/en_US-libritts_r-medium.onnx';
 const PIPER_CONFIG_URL = 'https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/libritts_r/medium/en_US-libritts_r-medium.onnx.json';
 const PHONEMIZER_MODULE_URL = 'https://cdn.jsdelivr.net/npm/phonemizer@1.2.1/dist/phonemizer.js';
@@ -17,6 +19,8 @@ const KOKORO_VOICES = new Set([
   'bf_alice', 'bf_emma', 'bf_isabella', 'bf_lily',
   'bm_daniel', 'bm_fable', 'bm_george', 'bm_lewis',
 ]);
+const SUPERTONIC_VOICES = new Set(['F1', 'F2', 'F3', 'F4', 'F5', 'M1', 'M2', 'M3', 'M4', 'M5']);
+const SUPERTONIC_LANGUAGES = new Set(['en', 'ko', 'es', 'pt', 'fr']);
 const nativeFetch = globalThis.fetch.bind(globalThis);
 const allowedExternalHosts = new Set([
   'huggingface.co',
@@ -103,6 +107,7 @@ const imageGenerators = new Map<string, { processor: Promise<any>, model: Promis
 const imageUpscalers = new Map<string, any>();
 const multimodalGenerators = new Map<string, { processor: Promise<any>, model: Promise<any> }>();
 let kokoroTts: any = null;
+let supertonicTts: any = null;
 let piperTts: PiperTTS | null = null;
 let fp16Supported = false;
 let phonemizerModulePromise: Promise<{ phonemize: (text: string, voice?: string) => Promise<string[] | string> }> | null = null;
@@ -474,6 +479,13 @@ async function handleLoad(payload: { task: string, model: string, options?: Reco
         device: normalizeKokoroDevice(options['device']),
         progress_callback: progressCallback,
       });
+    } else if (model === SUPERTONIC_MODEL_ID) {
+      supertonicTts = await pipeline('text-to-speech', model, {
+        dtype: 'fp32',
+        device: normalizeSupertonicDevice(options['device']),
+        progress_callback: progressCallback,
+      });
+      patchSupertonicPostprocessWaveform(supertonicTts);
     } else if (model === PIPER_MODEL_ID) {
       piperTts = await PiperTTS.fromPretrained(progressCallback);
     } else {
@@ -792,6 +804,11 @@ async function handleSynthesize(payload: { text: string, params?: any }, id: str
     return;
   }
 
+  if (modelId === SUPERTONIC_MODEL_ID) {
+    await handleSupertonicSynthesize(payload, id);
+    return;
+  }
+
   if (!TTSPipeline.model) {
     throw new Error('Text-to-speech model not loaded');
   }
@@ -899,6 +916,34 @@ async function handlePiperSynthesize(payload: { text: string, params?: any }, id
       sampling_rate: 22050,
       voiceId: `Voice ${voice + 1}`,
       language: 'en-us',
+    }
+  });
+}
+
+async function handleSupertonicSynthesize(payload: { text: string, params?: any }, id: string) {
+  if (!supertonicTts) {
+    throw new Error('Supertonic text-to-speech model not loaded');
+  }
+
+  const voice = normalizeSupertonicVoice(payload.params?.voice);
+  const language = normalizeSupertonicLanguage(payload.params?.language);
+  const speed = normalizeVoiceSpeed(payload.params?.speed);
+  const result = await supertonicTts(`<${language}>${payload.text}</${language}>`, {
+    speaker_embeddings: `${SUPERTONIC_VOICE_BASE_URL}/${voice}.bin`,
+    num_inference_steps: 5,
+    speed,
+  });
+  const samplingRate = result?.sampling_rate ?? result?.samplingRate ?? 24000;
+  const blob = rawAudioToWavBlob(result, samplingRate);
+
+  postMessage({
+    type: 'result',
+    id,
+    payload: {
+      blob,
+      sampling_rate: samplingRate,
+      voiceId: voice,
+      language,
     }
   });
 }
@@ -1128,6 +1173,39 @@ function normalizeKokoroDevice(value: unknown): 'wasm' | 'webgpu' | 'cpu' | null
   return value === 'webgpu' || value === 'cpu' ? value : 'wasm';
 }
 
+function normalizeSupertonicDevice(value: unknown): 'wasm' | 'webgpu' {
+  return value === 'webgpu' ? 'webgpu' : 'wasm';
+}
+
+function normalizeSupertonicVoice(value: unknown): string {
+  const voice = typeof value === 'string' ? value.trim() : '';
+  return SUPERTONIC_VOICES.has(voice) ? voice : 'F1';
+}
+
+function normalizeSupertonicLanguage(value: unknown): string {
+  const language = typeof value === 'string' ? value.trim() : '';
+  return SUPERTONIC_LANGUAGES.has(language) ? language : 'en';
+}
+
+function patchSupertonicPostprocessWaveform(pipelineInstance: any): void {
+  const model = pipelineInstance?.model;
+  if (!model || typeof model._postprocess_waveform !== 'function' || model.__nostriaPostprocessPatchApplied) {
+    return;
+  }
+
+  const originalPostprocess = model._postprocess_waveform.bind(model);
+  model._postprocess_waveform = function patchedPostprocessWaveform(waveform: any, ...args: any[]) {
+    if (waveform?.dims?.length === 1 && typeof waveform.view === 'function') {
+      waveform = waveform.view(1, waveform.dims[0]);
+    } else if (waveform?.dims?.length === 3 && waveform.dims[1] === 1 && typeof waveform.view === 'function') {
+      waveform = waveform.view(waveform.dims[0], waveform.dims[2]);
+    }
+
+    return originalPostprocess(waveform, ...args);
+  };
+  model.__nostriaPostprocessPatchApplied = true;
+}
+
 function parseNpy(buffer: ArrayBuffer): Float32Array {
   const view = new DataView(buffer);
   // Check magic number
@@ -1174,6 +1252,8 @@ async function handleCheck(payload: { task: string, model: string }, id: string)
   else if (task === 'text-to-speech') {
     if (model === KOKORO_MODEL_ID) {
       isLoaded = !!kokoroTts;
+    } else if (model === SUPERTONIC_MODEL_ID) {
+      isLoaded = !!supertonicTts;
     } else if (model === PIPER_MODEL_ID) {
       isLoaded = !!piperTts;
     } else {

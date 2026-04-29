@@ -337,7 +337,26 @@
             @for (audio of message.generatedAudios!; track audio.id) {
             <article class="generated-audio-card">
               <div class="generated-audio-player-shell">
-                <audio class="generated-audio-player" [src]="audio.src" controls preload="metadata"></audio>
+                <audio class="generated-audio-native-player" [attr.data-audio-id]="audio.id" [src]="audio.src"
+                  preload="metadata" (loadedmetadata)="onGeneratedAudioLoaded(audio, $event)"
+                  (timeupdate)="onGeneratedAudioTimeUpdate(audio, $event)" (play)="onGeneratedAudioPlay(audio)"
+                  (pause)="onGeneratedAudioPause(audio)" (ended)="onGeneratedAudioEnded(audio, $event)"></audio>
+                <button type="button" class="generated-audio-play-button" (click)="toggleAudioPlayback(audio, $event)"
+                  [attr.aria-label]="audioState(audio).playing ? 'Pause generated voice' : 'Play generated voice'">
+                  <mat-icon>{{ audioState(audio).playing ? 'pause' : 'play_arrow' }}</mat-icon>
+                </button>
+                <div class="generated-audio-waveform" aria-hidden="true">
+                  @for (bar of audioWaveformBars; track bar) {
+                  <span [class.generated-audio-waveform-active]="bar <= audioProgress(audio) / 100 * 24"></span>
+                  }
+                </div>
+                <input class="generated-audio-progress" type="range" min="0" max="100" step="0.1"
+                  [value]="audioProgress(audio)" (input)="seekGeneratedAudio(audio, $event)"
+                  aria-label="Audio progress" />
+                <span class="generated-audio-time">
+                  {{ formatAudioTime(audioState(audio).currentTime) }} / {{ formatAudioTime(audioState(audio).duration)
+                  }}
+                </span>
               </div>
               <div class="generated-audio-actions-shell">
                 <div class="message-actions generated-image-actions generated-audio-actions">
@@ -471,6 +490,111 @@
       </div>
       }
 
+      @if (hasVoiceControls() && voiceSettingsPanelOpen()) {
+      <section class="voice-settings-panel" aria-label="Voice generation settings">
+        <div class="voice-settings-section">
+          <div class="voice-settings-label">Voice</div>
+          <div class="voice-card-grid">
+            @if (isXAiVoiceGenerationMode()) {
+            @for (option of xAiVoiceOptions; track option.value) {
+            <button type="button" class="voice-card"
+              [class.voice-card-active]="cloudSettings().xaiVoiceId === option.value"
+              (click)="updateXAiVoiceId(option.value)" [disabled]="isGenerating()">
+              <span>{{ option.label }}</span>
+              <small>{{ option.description }}</small>
+            </button>
+            }
+            } @else if (isKokoroVoiceGenerationMode()) {
+            @for (option of kokoroVoiceOptions; track option.value) {
+            <button type="button" class="voice-card"
+              [class.voice-card-active]="cloudSettings().kokoroVoiceId === option.value"
+              (click)="updateKokoroVoiceId(option.value)" [disabled]="isGenerating()">
+              <span>{{ option.label }}</span>
+              <small>{{ option.description }}</small>
+            </button>
+            }
+            } @else if (isSupertonicVoiceGenerationMode()) {
+            @for (option of supertonicVoiceOptions; track option.value) {
+            <button type="button" class="voice-card"
+              [class.voice-card-active]="cloudSettings().supertonicVoiceId === option.value"
+              (click)="updateSupertonicVoiceId(option.value)" [disabled]="isGenerating()">
+              <span>{{ option.label }}</span>
+              <small>{{ option.description }}</small>
+            </button>
+            }
+            } @else if (isPiperVoiceGenerationMode()) {
+            <button type="button" class="voice-wide-select" [matMenuTriggerFor]="piperVoiceMenu"
+              [disabled]="isGenerating()">
+              <mat-icon>record_voice_over</mat-icon>
+              <span>{{ piperVoiceLabel() }}</span>
+              <mat-icon>expand_more</mat-icon>
+            </button>
+            } @else {
+            <button type="button" class="voice-wide-select" disabled>
+              <mat-icon>record_voice_over</mat-icon>
+              <span>Default voice</span>
+            </button>
+            }
+          </div>
+        </div>
+
+        @if (isSupertonicVoiceGenerationMode() || isXAiVoiceGenerationMode()) {
+        <div class="voice-settings-section">
+          <div class="voice-settings-label">Language</div>
+          @if (isSupertonicVoiceGenerationMode()) {
+          <button type="button" class="voice-wide-select"
+            [matMenuTriggerFor]="supertonicLanguageMenu" [disabled]="isGenerating()">
+            <mat-icon>language</mat-icon>
+            <span>{{ supertonicLanguageLabel() }}</span>
+            <mat-icon>expand_more</mat-icon>
+          </button>
+          } @else {
+          <button type="button" class="voice-wide-select"
+            [matMenuTriggerFor]="xAiVoiceLanguageMenu" [disabled]="isGenerating()">
+            <mat-icon>language</mat-icon>
+            <span>{{ xAiVoiceLanguageLabel() }}</span>
+            <mat-icon>expand_more</mat-icon>
+          </button>
+          }
+        </div>
+        }
+
+        @if (isXAiVoiceGenerationMode()) {
+        <div class="voice-settings-section">
+          <div class="voice-settings-label">Format</div>
+          <button type="button" class="voice-wide-select" [matMenuTriggerFor]="xAiVoiceCodecMenu"
+            [disabled]="isGenerating()">
+            <mat-icon>graphic_eq</mat-icon>
+            <span>{{ xAiVoiceCodecLabel() }}</span>
+            <mat-icon>expand_more</mat-icon>
+          </button>
+        </div>
+        }
+
+        @if (!isXAiVoiceGenerationMode()) {
+        <div class="voice-settings-section">
+          <div class="voice-settings-label">Speed</div>
+          <div class="voice-speed-row">
+            <input class="voice-speed-slider" type="range" min="0.5" max="2" step="0.25"
+              [value]="isKokoroVoiceGenerationMode() ? cloudSettings().kokoroVoiceSpeed : isPiperVoiceGenerationMode() ? cloudSettings().piperVoiceSpeed : cloudSettings().supertonicVoiceSpeed"
+              (input)="isKokoroVoiceGenerationMode() ? updateKokoroVoiceSpeed($any($event.target).value) : isPiperVoiceGenerationMode() ? updatePiperVoiceSpeed($any($event.target).value) : updateSupertonicVoiceSpeed($any($event.target).value)"
+              [disabled]="isGenerating()" aria-label="Voice speed" />
+            <span>{{ activeVoiceSpeedLabel() }}</span>
+          </div>
+        </div>
+        }
+
+        <div class="voice-settings-section">
+          <div class="voice-settings-label">Dictation</div>
+          <button type="button" class="voice-wide-select" [class.voice-wide-select-active]="dictationEnabled()"
+            (click)="toggleDictationEnabled()" [disabled]="isGenerating()">
+            <mat-icon>{{ dictationEnabled() ? 'mic' : 'mic_off' }}</mat-icon>
+            <span>{{ dictationEnabled() ? 'Enabled' : 'Disabled' }}</span>
+          </button>
+        </div>
+      </section>
+      }
+
       <div class="composer-shell">
         <button mat-icon-button type="button" class="composer-plus-button" [matMenuTriggerFor]="attachmentMenu"
           [disabled]="isGenerating()" aria-label="Add attachment">
@@ -485,6 +609,15 @@
           [class.composer-model-button-loading]="model.loading" [attr.aria-label]="'Select model: ' + model.name"
           [attr.title]="model.name">
           <mat-icon>model_training</mat-icon>
+        </button>
+        }
+
+        @if (dictationEnabled()) {
+        <button mat-icon-button type="button" class="composer-dictation-button" (click)="togglePromptDictation()"
+          [disabled]="isGenerating() || isDictationTranscribing()"
+          [attr.aria-label]="isDictating() ? 'Stop dictation' : 'Start dictation'"
+          [attr.title]="isDictating() ? 'Stop dictation' : 'Start dictation'">
+          <mat-icon>{{ isDictating() ? 'stop_circle' : isDictationTranscribing() ? 'hourglass_empty' : 'mic' }}</mat-icon>
         </button>
         }
 
@@ -510,7 +643,21 @@
         }
       </div>
 
-      @if (isXAiComposerMode()) {
+      @if (hasVoiceControls()) {
+      <div class="voice-composer-toolbar" aria-label="Voice controls">
+        <button type="button" class="grok-toolbar-chip grok-toolbar-chip-icon" (click)="toggleVoiceSettingsPanel()"
+          [disabled]="isGenerating()" [class.grok-toolbar-chip-active]="voiceSettingsPanelOpen()"
+          [attr.title]="'Voice settings: ' + activeVoiceLabel()">
+          <mat-icon>tune</mat-icon>
+          <span>{{ activeVoiceLabel() }}</span>
+          <span class="voice-toolbar-separator">·</span>
+          <span>{{ isXAiVoiceGenerationMode() ? xAiVoiceLanguageLabel() : activeVoiceSpeedLabel() }}</span>
+          <mat-icon>{{ voiceSettingsPanelOpen() ? 'expand_less' : 'expand_more' }}</mat-icon>
+        </button>
+      </div>
+      }
+
+      @if (isXAiComposerMode() && !isVoiceGenerationMode()) {
       <div class="grok-visual-toolbar" aria-label="Grok media controls">
         <button type="button" class="grok-toolbar-chip grok-toolbar-chip-icon grok-toolbar-mode-button"
           [matMenuTriggerFor]="xAiModeMenu" [disabled]="isGenerating()"
@@ -790,6 +937,14 @@
       <mat-menu #kokoroVoiceSpeedMenu="matMenu">
         @for (option of localVoiceSpeedOptions; track option.value) {
         <button mat-menu-item type="button" (click)="updateKokoroVoiceSpeed(option.value)">
+          <span>{{ option.label }}</span>
+        </button>
+        }
+      </mat-menu>
+
+      <mat-menu #supertonicLanguageMenu="matMenu">
+        @for (option of supertonicLanguageOptions; track option.value) {
+        <button mat-menu-item type="button" (click)="updateSupertonicLanguage(option.value)">
           <span>{{ option.label }}</span>
         </button>
         }

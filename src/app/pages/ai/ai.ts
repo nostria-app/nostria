@@ -27,6 +27,7 @@ import { MediaPreviewDialogComponent } from '../../components/media-preview-dial
 import { CustomDialogService } from '../../services/custom-dialog.service';
 import { PanelNavigationService } from '../../services/panel-navigation.service';
 import { CorsProxyService } from '../../services/cors-proxy.service';
+import { SpeechService } from '../../services/speech.service';
 
 interface ModelInfo {
   id: string;
@@ -110,6 +111,16 @@ interface ChoiceOption {
   label: string;
 }
 
+interface VoiceChoiceOption extends ChoiceOption {
+  description: string;
+}
+
+interface AudioPlaybackState {
+  playing: boolean;
+  currentTime: number;
+  duration: number;
+}
+
 type XAiComposerMode = 'text' | 'image' | 'video' | 'voice';
 
 interface FetchedPromptContext {
@@ -153,6 +164,7 @@ export class AiComponent {
   private readonly eventService = inject(EventService);
   private readonly mediaService = inject(MediaService);
   private readonly corsProxy = inject(CorsProxyService);
+  private readonly speechService = inject(SpeechService);
   private readonly customDialog = inject(CustomDialogService);
   private readonly localStorage = inject(LocalStorageService);
   private readonly panelNav = inject(PanelNavigationService);
@@ -170,6 +182,7 @@ export class AiComponent {
   private readonly renderedAssistantVersion = new Map<string, number>();
   private readonly pendingGeneratedImageCacheIds = new Set<string>();
   private readonly pendingGeneratedVideoCacheIds = new Set<string>();
+  private readonly autoPlayedAudioIds = new Set<string>();
   readonly webGpuAvailable = this.isBrowser && typeof navigator !== 'undefined' && 'gpu' in navigator;
   readonly autoScrollPinned = signal(true);
   readonly splitPaneMode = computed(() => this.panelNav.hasRightContent() && !this.panelNav.isMobile());
@@ -367,14 +380,28 @@ export class AiComponent {
       task: 'text-to-speech',
       name: 'Kokoro 82M',
       description: 'High-quality local text-to-speech with selectable Kokoro voices.',
-      size: '~92MB q8',
+      size: '~92MB q8 · ~310MB fp32',
       loading: false,
       progress: 0,
       loaded: false,
       cached: false,
-      runtime: 'WASM/WebGPU · q8',
+      runtime: this.webGpuAvailable ? 'WebGPU · fp32' : 'WASM · q8',
       source: 'local',
-      loadOptions: { dtype: 'q8', device: 'wasm' },
+      loadOptions: this.webGpuAvailable ? { dtype: 'fp32', device: 'webgpu' } : { dtype: 'q8', device: 'wasm' },
+    },
+    {
+      id: 'onnx-community/Supertonic-TTS-2-ONNX',
+      task: 'text-to-speech',
+      name: 'Supertonic 2',
+      description: 'Fast multilingual on-device text-to-speech with 10 preset voices.',
+      size: '~305MB',
+      loading: false,
+      progress: 0,
+      loaded: false,
+      cached: false,
+      runtime: this.webGpuAvailable ? 'WebGPU · fp32' : 'WASM · fp32',
+      source: 'local',
+      loadOptions: this.webGpuAvailable ? { dtype: 'fp32', device: 'webgpu' } : { dtype: 'fp32', device: 'wasm' },
     },
     {
       id: 'rhasspy/piper-voices/en_US-libritts_r-medium',
@@ -585,12 +612,12 @@ export class AiComponent {
     value: String(index + 1),
     label: `${index + 1}s`,
   }));
-  readonly xAiVoiceOptions: ChoiceOption[] = [
-    { value: 'ara', label: 'Ara' },
-    { value: 'eve', label: 'Eve' },
-    { value: 'leo', label: 'Leo' },
-    { value: 'rex', label: 'Rex' },
-    { value: 'sal', label: 'Sal' },
+  readonly xAiVoiceOptions: VoiceChoiceOption[] = [
+    { value: 'ara', label: 'Ara', description: 'Upbeat Female' },
+    { value: 'eve', label: 'Eve', description: 'Soothing Female' },
+    { value: 'leo', label: 'Leo', description: 'British Male' },
+    { value: 'rex', label: 'Rex', description: 'Calm Male' },
+    { value: 'sal', label: 'Sal', description: 'Smooth Male' },
   ];
   readonly xAiVoiceLanguageOptions: ChoiceOption[] = [
     { value: 'auto', label: 'Auto' },
@@ -605,35 +632,54 @@ export class AiComponent {
     { value: 'mp3', label: 'MP3' },
     { value: 'wav', label: 'WAV' },
   ];
-  readonly kokoroVoiceOptions: ChoiceOption[] = [
-    { value: 'af_heart', label: 'Heart · American Female' },
-    { value: 'af_alloy', label: 'Alloy · American Female' },
-    { value: 'af_aoede', label: 'Aoede · American Female' },
-    { value: 'af_bella', label: 'Bella · American Female' },
-    { value: 'af_jessica', label: 'Jessica · American Female' },
-    { value: 'af_kore', label: 'Kore · American Female' },
-    { value: 'af_nicole', label: 'Nicole · American Female' },
-    { value: 'af_nova', label: 'Nova · American Female' },
-    { value: 'af_river', label: 'River · American Female' },
-    { value: 'af_sarah', label: 'Sarah · American Female' },
-    { value: 'af_sky', label: 'Sky · American Female' },
-    { value: 'am_adam', label: 'Adam · American Male' },
-    { value: 'am_echo', label: 'Echo · American Male' },
-    { value: 'am_eric', label: 'Eric · American Male' },
-    { value: 'am_fenrir', label: 'Fenrir · American Male' },
-    { value: 'am_liam', label: 'Liam · American Male' },
-    { value: 'am_michael', label: 'Michael · American Male' },
-    { value: 'am_onyx', label: 'Onyx · American Male' },
-    { value: 'am_puck', label: 'Puck · American Male' },
-    { value: 'am_santa', label: 'Santa · American Male' },
-    { value: 'bf_alice', label: 'Alice · British Female' },
-    { value: 'bf_emma', label: 'Emma · British Female' },
-    { value: 'bf_isabella', label: 'Isabella · British Female' },
-    { value: 'bf_lily', label: 'Lily · British Female' },
-    { value: 'bm_daniel', label: 'Daniel · British Male' },
-    { value: 'bm_fable', label: 'Fable · British Male' },
-    { value: 'bm_george', label: 'George · British Male' },
-    { value: 'bm_lewis', label: 'Lewis · British Male' },
+  readonly kokoroVoiceOptions: VoiceChoiceOption[] = [
+    { value: 'af_heart', label: 'Heart', description: 'American Female' },
+    { value: 'af_alloy', label: 'Alloy', description: 'American Female' },
+    { value: 'af_aoede', label: 'Aoede', description: 'American Female' },
+    { value: 'af_bella', label: 'Bella', description: 'American Female' },
+    { value: 'af_jessica', label: 'Jessica', description: 'American Female' },
+    { value: 'af_kore', label: 'Kore', description: 'American Female' },
+    { value: 'af_nicole', label: 'Nicole', description: 'American Female' },
+    { value: 'af_nova', label: 'Nova', description: 'American Female' },
+    { value: 'af_river', label: 'River', description: 'American Female' },
+    { value: 'af_sarah', label: 'Sarah', description: 'American Female' },
+    { value: 'af_sky', label: 'Sky', description: 'American Female' },
+    { value: 'am_adam', label: 'Adam', description: 'American Male' },
+    { value: 'am_echo', label: 'Echo', description: 'American Male' },
+    { value: 'am_eric', label: 'Eric', description: 'American Male' },
+    { value: 'am_fenrir', label: 'Fenrir', description: 'American Male' },
+    { value: 'am_liam', label: 'Liam', description: 'American Male' },
+    { value: 'am_michael', label: 'Michael', description: 'American Male' },
+    { value: 'am_onyx', label: 'Onyx', description: 'American Male' },
+    { value: 'am_puck', label: 'Puck', description: 'American Male' },
+    { value: 'am_santa', label: 'Santa', description: 'American Male' },
+    { value: 'bf_alice', label: 'Alice', description: 'British Female' },
+    { value: 'bf_emma', label: 'Emma', description: 'British Female' },
+    { value: 'bf_isabella', label: 'Isabella', description: 'British Female' },
+    { value: 'bf_lily', label: 'Lily', description: 'British Female' },
+    { value: 'bm_daniel', label: 'Daniel', description: 'British Male' },
+    { value: 'bm_fable', label: 'Fable', description: 'British Male' },
+    { value: 'bm_george', label: 'George', description: 'British Male' },
+    { value: 'bm_lewis', label: 'Lewis', description: 'British Male' },
+  ];
+  readonly supertonicVoiceOptions: VoiceChoiceOption[] = [
+    { value: 'F1', label: 'Calm', description: 'Female' },
+    { value: 'F2', label: 'Cheerful', description: 'Female' },
+    { value: 'F3', label: 'Professional', description: 'Female' },
+    { value: 'F4', label: 'Confident', description: 'Female' },
+    { value: 'F5', label: 'Gentle', description: 'Female' },
+    { value: 'M1', label: 'Energetic', description: 'Male' },
+    { value: 'M2', label: 'Deep', description: 'Male' },
+    { value: 'M3', label: 'Authoritative', description: 'Male' },
+    { value: 'M4', label: 'Friendly', description: 'Male' },
+    { value: 'M5', label: 'Storyteller', description: 'Male' },
+  ];
+  readonly supertonicLanguageOptions: ChoiceOption[] = [
+    { value: 'en', label: 'English' },
+    { value: 'ko', label: 'Korean' },
+    { value: 'es', label: 'Spanish' },
+    { value: 'pt', label: 'Portuguese' },
+    { value: 'fr', label: 'French' },
   ];
   readonly localVoiceSpeedOptions: ChoiceOption[] = [
     { value: '0.5', label: '0.5x' },
@@ -648,6 +694,7 @@ export class AiComponent {
     value: String(index),
     label: `Voice ${index + 1}`,
   }));
+  readonly audioWaveformBars = Array.from({ length: 24 }, (_, index) => index + 1);
   readonly composerModels = computed(() => [
     ...this.localChatModels(),
     ...this.cloudChatModels(),
@@ -684,6 +731,8 @@ export class AiComponent {
   readonly isXAiVoiceGenerationMode = computed(() => this.selectedModel()?.provider === 'xai' && this.selectedModel()?.task === 'text-to-speech');
   readonly isKokoroVoiceGenerationMode = computed(() => this.selectedModelId() === this.aiService.kokoroSpeechModelId);
   readonly isPiperVoiceGenerationMode = computed(() => this.selectedModelId() === this.aiService.piperSpeechModelId);
+  readonly isSupertonicVoiceGenerationMode = computed(() => this.selectedModelId() === this.aiService.supertonicSpeechModelId);
+  readonly hasVoiceControls = computed(() => this.isVoiceGenerationMode());
   readonly isImageMode = computed(() => this.isImageGenerationMode() || this.isImageUpscalingMode());
   readonly isVisualGenerationMode = computed(() => this.isImageMode() || this.isVideoGenerationMode());
   readonly isGeneratedMediaMode = computed(() => this.isVisualGenerationMode() || this.isVoiceGenerationMode());
@@ -738,6 +787,43 @@ export class AiComponent {
   readonly kokoroVoiceSpeedLabel = computed(() => `${this.aiService.cloudSettings().kokoroVoiceSpeed.toFixed(1)}x`);
   readonly piperVoiceLabel = computed(() => `Voice ${this.aiService.cloudSettings().piperVoiceId + 1}`);
   readonly piperVoiceSpeedLabel = computed(() => `${this.aiService.cloudSettings().piperVoiceSpeed.toFixed(1)}x`);
+  readonly supertonicVoiceLabel = computed(() => this.supertonicVoiceOptions.find(option => option.value === this.aiService.cloudSettings().supertonicVoiceId)?.label ?? this.aiService.cloudSettings().supertonicVoiceId);
+  readonly supertonicVoiceSpeedLabel = computed(() => `${this.aiService.cloudSettings().supertonicVoiceSpeed.toFixed(1)}x`);
+  readonly supertonicLanguageLabel = computed(() => this.supertonicLanguageOptions.find(option => option.value === this.aiService.cloudSettings().supertonicLanguage)?.label ?? 'English');
+  readonly activeVoiceLabel = computed(() => {
+    if (this.isXAiVoiceGenerationMode()) {
+      return this.xAiVoiceLabel();
+    }
+
+    if (this.isKokoroVoiceGenerationMode()) {
+      return this.kokoroVoiceLabel();
+    }
+
+    if (this.isPiperVoiceGenerationMode()) {
+      return this.piperVoiceLabel();
+    }
+
+    if (this.isSupertonicVoiceGenerationMode()) {
+      return this.supertonicVoiceLabel();
+    }
+
+    return 'Default';
+  });
+  readonly activeVoiceSpeedLabel = computed(() => {
+    if (this.isKokoroVoiceGenerationMode()) {
+      return this.kokoroVoiceSpeedLabel();
+    }
+
+    if (this.isPiperVoiceGenerationMode()) {
+      return this.piperVoiceSpeedLabel();
+    }
+
+    if (this.isSupertonicVoiceGenerationMode()) {
+      return this.supertonicVoiceSpeedLabel();
+    }
+
+    return '1.0x';
+  });
   readonly activeQuickPrompts = computed(() => {
     if (this.isImageGenerationMode()) {
       return this.imageQuickPrompts;
@@ -820,6 +906,11 @@ export class AiComponent {
   readonly conversation = signal<ConversationMessage[]>([]);
   readonly composerText = signal('');
   readonly isGenerating = signal(false);
+  readonly voiceSettingsPanelOpen = signal(false);
+  readonly dictationEnabled = signal(false);
+  readonly isDictating = this.speechService.isRecording;
+  readonly isDictationTranscribing = this.speechService.isTranscribing;
+  readonly audioPlayback = signal<Record<string, AudioPlaybackState>>({});
   readonly xAiVideoMode = signal<'generate' | 'extend-video'>('generate');
   readonly activeVideoOperation = signal<'generate' | 'animate' | 'reference' | 'edit' | 'extend' | null>(null);
   readonly activeVideoStartedAt = signal<number | null>(null);
@@ -1285,6 +1376,40 @@ export class AiComponent {
 
   updatePiperVoiceSpeed(value: string | number): void {
     this.aiService.updateCloudSettings({ piperVoiceSpeed: this.parseBoundedNumber(value, this.aiService.cloudSettings().piperVoiceSpeed, 0.5, 2) });
+  }
+
+  updateSupertonicVoiceId(value: string): void {
+    this.aiService.updateCloudSettings({ supertonicVoiceId: value.trim() || this.aiService.cloudSettings().supertonicVoiceId });
+  }
+
+  updateSupertonicVoiceSpeed(value: string | number): void {
+    this.aiService.updateCloudSettings({ supertonicVoiceSpeed: this.parseBoundedNumber(value, this.aiService.cloudSettings().supertonicVoiceSpeed, 0.5, 2) });
+  }
+
+  updateSupertonicLanguage(value: string): void {
+    this.aiService.updateCloudSettings({ supertonicLanguage: value.trim() || this.aiService.cloudSettings().supertonicLanguage });
+  }
+
+  toggleVoiceSettingsPanel(): void {
+    this.voiceSettingsPanelOpen.update(value => !value);
+  }
+
+  toggleDictationEnabled(): void {
+    this.dictationEnabled.update(value => !value);
+  }
+
+  async togglePromptDictation(): Promise<void> {
+    if (!this.dictationEnabled() || !this.isBrowser || this.isGenerating()) {
+      return;
+    }
+
+    await this.speechService.toggleRecording({
+      onTranscription: text => {
+        const current = this.composerText().trimEnd();
+        this.composerText.set(current ? `${current} ${text}` : text);
+        this.focusComposerPromptPlaceholder(this.composerText());
+      },
+    });
   }
 
   setXAiVideoMode(mode: 'generate' | 'extend-video'): void {
@@ -2025,6 +2150,90 @@ export class AiComponent {
     }
   }
 
+  audioState(audio: AiGeneratedAudio): AudioPlaybackState {
+    return this.audioPlayback()[audio.id] ?? { playing: false, currentTime: 0, duration: 0 };
+  }
+
+  audioProgress(audio: AiGeneratedAudio): number {
+    const state = this.audioState(audio);
+    if (state.duration <= 0) {
+      return 0;
+    }
+
+    return Math.max(0, Math.min(100, (state.currentTime / state.duration) * 100));
+  }
+
+  formatAudioTime(seconds: number): string {
+    if (!Number.isFinite(seconds) || seconds < 0) {
+      return '0:00';
+    }
+
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = Math.floor(seconds % 60);
+    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+  }
+
+  toggleAudioPlayback(audio: AiGeneratedAudio, event: Event): void {
+    const player = this.findAudioPlayer(audio, event);
+    if (!player) {
+      return;
+    }
+
+    if (player.paused) {
+      void player.play();
+    } else {
+      player.pause();
+    }
+  }
+
+  seekGeneratedAudio(audio: AiGeneratedAudio, event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const player = this.findAudioPlayer(audio, event);
+    const duration = this.audioState(audio).duration;
+    if (!player || duration <= 0) {
+      return;
+    }
+
+    const nextTime = Math.max(0, Math.min(duration, (Number(input.value) / 100) * duration));
+    player.currentTime = nextTime;
+    this.updateAudioPlaybackState(audio.id, { currentTime: nextTime });
+  }
+
+  onGeneratedAudioLoaded(audio: AiGeneratedAudio, event: Event): void {
+    const player = event.target as HTMLAudioElement;
+    const duration = Number.isFinite(player.duration) ? player.duration : 0;
+    this.updateAudioPlaybackState(audio.id, { duration, currentTime: player.currentTime || 0 });
+
+    if (!this.autoPlayedAudioIds.has(audio.id)) {
+      this.autoPlayedAudioIds.add(audio.id);
+      void player.play().catch(() => {
+        this.updateAudioPlaybackState(audio.id, { playing: false });
+      });
+    }
+  }
+
+  onGeneratedAudioTimeUpdate(audio: AiGeneratedAudio, event: Event): void {
+    const player = event.target as HTMLAudioElement;
+    this.updateAudioPlaybackState(audio.id, {
+      currentTime: player.currentTime || 0,
+      duration: Number.isFinite(player.duration) ? player.duration : this.audioState(audio).duration,
+    });
+  }
+
+  onGeneratedAudioPlay(audio: AiGeneratedAudio): void {
+    this.updateAudioPlaybackState(audio.id, { playing: true });
+  }
+
+  onGeneratedAudioPause(audio: AiGeneratedAudio): void {
+    this.updateAudioPlaybackState(audio.id, { playing: false });
+  }
+
+  onGeneratedAudioEnded(audio: AiGeneratedAudio, event: Event): void {
+    const player = event.target as HTMLAudioElement;
+    player.loop = false;
+    this.updateAudioPlaybackState(audio.id, { playing: false, currentTime: 0 });
+  }
+
   private downloadBlob(blob: Blob, fileName: string): void {
     const objectUrl = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -2416,6 +2625,28 @@ export class AiComponent {
     }
 
     return Math.min(Math.max(parsed, min), max);
+  }
+
+  private findAudioPlayer(audio: AiGeneratedAudio, event: Event): HTMLAudioElement | null {
+    const host = (event.currentTarget as HTMLElement | null)?.closest('.generated-audio-card');
+    const players = Array.from(host?.querySelectorAll<HTMLAudioElement>('audio[data-audio-id]') ?? []);
+    return players.find(player => player.dataset['audioId'] === audio.id) ?? null;
+  }
+
+  private updateAudioPlaybackState(audioId: string, patch: Partial<AudioPlaybackState>): void {
+    const fallbackState: AudioPlaybackState = {
+      playing: false,
+      currentTime: 0,
+      duration: 0,
+    };
+
+    this.audioPlayback.update(states => ({
+      ...states,
+      [audioId]: {
+        ...(states[audioId] ?? fallbackState),
+        ...patch,
+      },
+    }));
   }
 
   private appendToMessage(id: string, text: string): void {
@@ -2922,7 +3153,6 @@ export class AiComponent {
       return;
     }
 
-    const assistantMessageId = this.createMessageId();
     const userMessage: ConversationMessage = {
       id: this.createMessageId(),
       role: 'user',
@@ -2930,27 +3160,37 @@ export class AiComponent {
     };
 
     this.chatError.set('');
-    this.conversation.set([
-      ...this.conversation(),
-      userMessage,
-      this.createPendingAssistantMessage(assistantMessageId),
-    ]);
+    this.conversation.set([...this.conversation(), userMessage]);
     this.composerText.set('');
     this.clearAttachedFiles();
     this.autoScrollPinned.set(true);
     this.showHistoryDrawer.set(false);
     this.isGenerating.set(true);
 
+    let assistantMessageId: string | null = null;
+
     try {
       if (model.source !== 'cloud' && !model.loaded) {
         const loaded = await this.ensureLocalModelReady(model);
         if (!loaded) {
-          this.replaceMessageContent(assistantMessageId, 'The selected model could not be loaded in this browser.', false);
-          this.finishMessageProcessing(assistantMessageId);
+          this.conversation.update(messages => [
+            ...messages,
+            {
+              id: this.createMessageId(),
+              role: 'assistant',
+              content: 'The selected voice model could not be loaded in this browser.',
+            },
+          ]);
           this.persistCurrentConversation();
           return;
         }
       }
+
+      assistantMessageId = this.createMessageId();
+      this.conversation.update(messages => [
+        ...messages,
+        this.createPendingAssistantMessage(assistantMessageId!),
+      ]);
 
       const audios = model.source === 'cloud'
         ? await this.aiService.generateVoice(prompt, model.provider ?? 'xai')
@@ -2973,15 +3213,28 @@ export class AiComponent {
       this.persistCurrentConversation();
     } catch (err) {
       if (this.aiService.isAbortError(err)) {
-        this.finalizeStoppedGeneration(assistantMessageId);
+        if (assistantMessageId) {
+          this.finalizeStoppedGeneration(assistantMessageId);
+        }
         return;
       }
 
       this.logger.error('AI voice generation error:', err);
       const message = err instanceof Error ? err.message : String(err);
       this.chatError.set(message);
-      this.replaceMessageContent(assistantMessageId, `Voice generation error: ${message}`, false);
-      this.finishMessageProcessing(assistantMessageId);
+      if (assistantMessageId) {
+        this.replaceMessageContent(assistantMessageId, `Voice generation error: ${message}`, false);
+        this.finishMessageProcessing(assistantMessageId);
+      } else {
+        this.conversation.update(messages => [
+          ...messages,
+          {
+            id: this.createMessageId(),
+            role: 'assistant',
+            content: `Voice generation error: ${message}`,
+          },
+        ]);
+      }
       this.persistCurrentConversation();
     } finally {
       this.isGenerating.set(false);
