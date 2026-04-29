@@ -1,16 +1,17 @@
 @let state = player.state();
 @if (state) {
 <section class="tts-sequence-player" aria-label="Text to speech player">
-  <div class="tts-art" aria-hidden="true">
-    <mat-icon>record_voice_over</mat-icon>
-  </div>
-
   <div class="tts-info">
     <div class="tts-title">{{ state.title }}</div>
-    <div class="tts-subtitle">
-      {{ player.currentModel().label }} · {{ player.selectedVoiceLabel() }} · {{ state.currentIndex + 1 }} / {{
-      state.items.length }}
-    </div>
+    <div class="tts-subtitle">{{ state.currentIndex + 1 }} / {{ state.items.length }}</div>
+  </div>
+
+  <div class="tts-current-text">
+    @if (state.message) {
+    <span>{{ state.message }}</span>
+    } @else {
+    <span>{{ player.activeParagraph() || player.currentItem()?.label }}</span>
+    }
   </div>
 
   <div class="tts-controls">
@@ -40,14 +41,6 @@
       <div class="tts-progress-fill" [style.width.%]="progressPercent()"></div>
     </div>
     <span>{{ formatTime(player.duration()) }}</span>
-  </div>
-
-  <div class="tts-current-text">
-    @if (state.message) {
-    <span>{{ state.message }}</span>
-    } @else {
-    <span>{{ player.activeParagraph() || player.currentItem()?.label }}</span>
-    }
   </div>
 
   <button mat-button class="tts-settings-button" [matMenuTriggerFor]="settingsMenu">

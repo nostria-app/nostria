@@ -240,6 +240,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   private lastHeight = 0;
   private virtualizeTimer?: ReturnType<typeof setTimeout>;
   private hasViewInitialized = false;
+  private lastAutoScrolledTtsEventId?: string;
   private visibleInteractionRetryTimer?: ReturnType<typeof setTimeout>;
   private interactionLoadGeneration = 0;
   private lastAppliedSharedInteractionSnapshotAt = 0;
@@ -1556,6 +1557,17 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     });
 
     effect(() => {
+      const active = this.isActiveSequenceEvent();
+      const eventId = this.record()?.event.id;
+      if (!active || !eventId || !this.isBrowser || !this.hasViewInitialized || this.lastAutoScrolledTtsEventId === eventId) {
+        return;
+      }
+
+      this.lastAutoScrolledTtsEventId = eventId;
+      setTimeout(() => this.scrollActiveTtsEventIntoView(eventId), 80);
+    });
+
+    effect(() => {
       const snapshot = this.eventService.latestInteractionSnapshot();
       const targetRecordData = this.targetRecord();
 
@@ -1950,6 +1962,27 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     this.checkAndLoadInteractionsIfVisible();
     this.maybePreloadInteractionsImmediately();
     this.scheduleVisibleInteractionRetry();
+  }
+
+  private scrollActiveTtsEventIntoView(eventId: string): void {
+    if (!this.ttsSequence.isActiveEvent(eventId)) {
+      return;
+    }
+
+    const element = this.elementRef.nativeElement as HTMLElement;
+    const rect = element.getBoundingClientRect();
+    const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+    const fullyComfortable = rect.top >= 96 && rect.bottom <= viewportHeight - 140;
+
+    if (fullyComfortable) {
+      return;
+    }
+
+    element.scrollIntoView({
+      behavior: 'smooth',
+      block: 'center',
+      inline: 'nearest',
+    });
   }
 
   /**
